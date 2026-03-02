@@ -3,9 +3,10 @@
 <code>
 
 Metacello new
-    repository: 'github://YourUsername/GemStone-Pharo-Bridge:main/src';
-    baseline: 'GemStonePharo';
-    load.
+repository: 'github://unicompute/GemStone-Pharo-Bridge:master/src';
+baseline: 'GemStonePharo';
+load.
+
 
 </code>
 
