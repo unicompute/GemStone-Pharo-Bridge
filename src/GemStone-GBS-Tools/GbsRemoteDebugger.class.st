@@ -3,70 +3,105 @@ Class {
 	#superclass : 'SpPresenter',
 	#instVars : [
 		'session',
-		'exception',
-		'listFrames',
-		'textSource'
+		'processOop',
+		'stackList',
+		'sourceText',
+		'variablesTable',
+		'stepOverButton',
+		'stepIntoButton',
+		'resumeButton',
+		'terminateButton',
+		'errorMessageLabel'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }
 
-{ #category : 'initialization' }
-GbsRemoteDebugger >> connectPresenters [
+{ #category : 'instance creation' }
+GbsRemoteDebugger class >> openOn: anErrorString process: processOop session: aSession [
+	| debugger |
+	debugger := self new.
+	debugger debugError: anErrorString process: processOop session: aSession.
+	debugger open.
+	
+	"Set the window title"
+	debugger withWindowDo: [ :win | win title: 'GemStone Remote Debugger' ].
+	^ debugger
+]
 
-  listFrames whenSelectionChangedDo: [ :selection |
-    selection selectedItem ifNotNil: [ :item | self fetchSourceForSelectedFrame ] ]
+{ #category : 'accessing' }
+GbsRemoteDebugger >> debugError: anErrorString process: anOop session: aSession [
+	session := aSession.
+	processOop := anOop.
+	errorMessageLabel label: anErrorString.
+	
+	self fetchStackFrames.
 ]
 
 { #category : 'layout' }
 GbsRemoteDebugger >> defaultLayout [
-	^ SpPanedLayout newVertical
-		positionOfSlider: 0.3; "<-- Use a raw Float to bypass the broken math!"
-		add: listFrames;
-		add: textSource;
+	^ SpBoxLayout newVertical
+		spacing: 5;
+		add: errorMessageLabel expand: false;
+		add: (SpBoxLayout newHorizontal
+			spacing: 5;
+			add: stepIntoButton; add: stepOverButton; add: resumeButton; add: terminateButton;
+			yourself) expand: false;
+		add: (SpPanedLayout newVertical
+			add: stackList;
+			add: (SpPanedLayout newHorizontal
+				add: sourceText;
+				add: variablesTable;
+				yourself);
+			yourself);
 		yourself
 ]
 
-{ #category : 'accessing' }
-GbsRemoteDebugger >> exception: aGbsError [
-	exception := aGbsError.
-	"Only populate frames once we have the exception"
-	self populateFrames
-]
-
 { #category : 'actions' }
-GbsRemoteDebugger >> fetchSourceForSelectedFrame [
-	| contextOop script sourceText |
+GbsRemoteDebugger >> fetchStackFrames [
+	| script rawData frames |
 	
-	(exception isNil or: [ exception tag isNil ]) ifTrue: [ ^ self ].
-	(exception tag respondsTo: #context) ifFalse: [ ^ self ].
+	"Query the suspended GemStone process for its stack depth and frame details"
+	script := '[
+		| proc stream |
+		proc := Object _objectForOop: ', processOop asString, '.
+		stream := WriteStream on: String new.
+		proc ifNotNil: [
+			1 to: (proc stackDepth min: 30) do: [ :level |
+				stream nextPutAll: (proc _frameReportAt: level); lf.
+			]
+		].
+		stream contents
+	] value'.
 	
-	contextOop := exception tag context.
-	contextOop ifNil: [ ^ self ].
+	rawData := session executeAndFetch: script.
 	
-	script := '
-	| ctx |
-	ctx := Object _objectForOop: ', contextOop asString, '.
-	(ctx class name == #GsProcess) 
-		ifTrue: [ ctx _report ] 
-		ifFalse: [ 
-			(ctx respondsTo: #sourceString) 
-				ifTrue: [ ctx sourceString ] 
-				ifFalse: [ ctx asString ]
-		]'.
-		
-	sourceText := session evaluate: script.
-	textSource text: sourceText asString.
+	frames := (rawData splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty.
+	stackList items: frames.
 ]
 
 { #category : 'initialization' }
 GbsRemoteDebugger >> initializePresenters [
-	listFrames := self newList.
-	listFrames headerTitle: 'Remote Execution Stack'.
+	errorMessageLabel := self newLabel.
+	errorMessageLabel addStyle: 'danger'. "Makes the error text red in Pharo 13"
+
+	stepOverButton := self newButton label: 'Step Over'; iconName: #glamorousStepOver.
+	stepIntoButton := self newButton label: 'Step Into'; iconName: #glamorousStepInto.
+	resumeButton := self newButton label: 'Resume'; iconName: #glamorousGo.
+	terminateButton := self newButton label: 'Terminate'; iconName: #glamorousTrash.
+
+	stackList := self newList.
+	sourceText := self newText.
+	variablesTable := self newTable.
 	
-	textSource := self newCode.
-	textSource text: '"Select a frame to see source code..."'.
-	textSource beNotEditable.
+	variablesTable 
+		addColumn: (SpStringTableColumn title: 'Variable' evaluated: [ :item | item first ]);
+		addColumn: (SpStringTableColumn title: 'Value' evaluated: [ :item | item second ]).
+
+	"When you click a stack frame, fetch its source code and variables!"
+	stackList whenSelectionChangedDo: [ :selection | 
+		self stackFrameSelected: selection selectedItem 
+	].
 ]
 
 { #category : 'layout' }
@@ -76,37 +111,7 @@ GbsRemoteDebugger >> initializeWindow: aWindowPresenter [
 		initialExtent: 700@500.
 ]
 
-{ #category : 'initialization' }
-GbsRemoteDebugger >> populateFrames [
-
-  | errTag contextOop |
-  errTag := exception tag.
-
-  "1. Bulletproof check: If the tag is missing or is just a string"
-  ( errTag isNil or: [ errTag isString ] ) ifTrue: [
-      listFrames items: { ( 'Remote Error: ' , exception messageText ) }.
-      ^ self
-      ].
-
-  "2. Safely check if the struct actually understands #context"
-  ( errTag respondsTo: #context )
-    ifTrue: [ contextOop := errTag context asString ]
-    ifFalse: [ contextOop := 'Unavailable (Add #context to GciError struct)' ].
-
-  "3. Display both the error message and the context OOP"
-  listFrames items: {
-      ( 'Exception: ' , exception messageText ).
-      ( 'Remote Context OOP: ' , contextOop ) }
-]
-
 { #category : 'accessing' }
 GbsRemoteDebugger >> session: aSession [
 	session := aSession
-]
-
-{ #category : 'as yet unclassified' }
-GbsRemoteDebugger >> session: aSession exception: aGbsError [
-	session := aSession.
-	exception := aGbsError.
-	self populateFrames.
 ]

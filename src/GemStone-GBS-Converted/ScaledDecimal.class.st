@@ -96,6 +96,16 @@ ScaledDecimal >> adaptToInteger: rcvr andSend: selector [
 	^(rcvr asScaledDecimal: 0) perform: selector with: self
 ]
 
+{ #category : 'converting' }
+ScaledDecimal >> asFraction [
+	"Convert the receiver to a Fraction.
+	Avoid using numerator / denominator to save a useless and costly gcd: computation"
+
+	^denominator = 1
+		ifTrue: [numerator]
+		ifFalse: [Fraction numerator: numerator denominator: denominator]
+]
+
 { #category : 'private' }
 ScaledDecimal >> coerce: aNumber [
 	"Note: this quick hack could be replaced by double dispatching"
@@ -110,6 +120,21 @@ ScaledDecimal >> isFraction [
 	"Though kind of Fraction, pretend we are not a Fraction to let coercion works correctly"
 
 	^false
+]
+
+{ #category : 'testing' }
+ScaledDecimal >> isLiteral [
+	"Answer if this number could be a well behaved literal.
+	Well, it would only if evaluating back to self.
+	This is not the case of all ScaledDecimals.
+	Some have an infinite precision and would need an infinite number of digits to print literally.
+	Try for example (3.00s2 reciprocal)."
+
+	^denominator = 1 "first test trivial case before engaging arithmetic"
+		or: ["Exactly we should test:
+				(numerator * (10 raisedTo; scale)) \\ denominator = 0.
+				But since we can assume fraction is reduced already this will be simply:"
+			(10 raisedTo: scale) \\ denominator = 0]
 ]
 
 { #category : 'accessing' }
