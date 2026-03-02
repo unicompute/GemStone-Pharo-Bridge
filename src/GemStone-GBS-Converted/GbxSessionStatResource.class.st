@@ -1,0 +1,30 @@
+Class {
+	#name : 'GbxSessionStatResource',
+	#superclass : 'GbxStatResource',
+	#instVars : [
+		'bytesSentByStoreTraversal',
+		'bytesTraversed',
+		'changedObjNotifications',
+		'freeOopsFetched',
+		'gciCallsToGem',
+		'gciCallsToGemTime',
+		'gciErrors',
+		'lostOtRoots',
+		'nbEndResultNoProgress',
+		'nbEndResultProgressed',
+		'nbEndResultReady',
+		'objectsStoredByTraversal',
+		'objectsTraversed',
+		'serverMapSize',
+		'session',
+		'sessionProtectInvocations',
+		'sessionSignals',
+		'sigAborts',
+		'storeTraversals',
+		'traversalUnpackingTime',
+		'traverseCallTime',
+		'traverseCalls'
+	],
+	#category : 'GemStone-GBS-Converted',
+	#package : 'GemStone-GBS-Converted'
+}

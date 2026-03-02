@@ -1,0 +1,6 @@
+Class {
+	#name : 'GbsRtErrReclaimAllMissingGcGem',
+	#superclass : 'GbsInterpreterError',
+	#category : 'GemStone-GBS-Converted',
+	#package : 'GemStone-GBS-Converted'
+}

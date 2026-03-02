@@ -1,0 +1,6 @@
+Class {
+	#name : 'GbsObjErrDateTimeOutOfRange',
+	#superclass : 'GbsInterpreterError',
+	#category : 'GemStone-GBS-Converted',
+	#package : 'GemStone-GBS-Converted'
+}
