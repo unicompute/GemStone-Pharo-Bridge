@@ -29,7 +29,7 @@ GbsLauncher >> connectPresenters [
 	btnCommit action: [ self doCommit ].
 	btnAbort action: [ self doAbort ].
 	btnWorkspace action: [ GbsWorkspace new open ].
-	btnBrowser action: [ GbsBrowser new open ].
+	btnBrowser action: [ GbsBrowser openOn: GbsSessionParameters currentSession ].
 	
 	"Wire the Transcript button to open our custom VW-ported window!"
 	btnTranscript action: [ GbsRemoteTranscript new open ].
