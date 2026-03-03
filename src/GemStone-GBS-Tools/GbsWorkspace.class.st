@@ -46,20 +46,18 @@ GbsWorkspace >> doCommit [
 GbsWorkspace >> doIt [
 	| code activeSession script |
 	
-	"1. CRITICAL FIX: Only grab the highlighted code, not the whole file!"
 	code := self selectedCodeOrAll copyReplaceAll: String cr with: String lf.
 	code ifEmpty: [ ^ self ].
 	
 	script := '[ ', code, ' ] value'.		
-	
-	"2. Get the active session"	
 	activeSession := GbsSessionParameters currentSession.
 	activeSession ifNil: [ ^ self inform: 'No Session' ].		
 	
-	"3. Execute safely on the main thread"	
-	activeSession execute: script.
+	"RESTORED: Catch the error and route it to the Debugger!"	
+	[ activeSession execute: script ]
+		on: GbsError 
+		do: [ :ex | self openRemoteDebuggerOn: ex session: activeSession ].
 	
-	"4. Trigger the Transcript update"	
 	GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
 ]
 
@@ -266,13 +264,13 @@ GbsWorkspace >> localPrintIt [
     do: [ :ex | self inform: 'Local Error: ' , ex messageText ]
 ]
 
-{ #category : 'initialization' }
-GbsWorkspace >> openRemoteDebuggerOn: aGbsError session: aSession [
-
-  GbsRemoteDebugger new
-    session: aSession;
-    exception: aGbsError;
-    open
+{ #category : 'actions' }
+GbsWorkspace >> openRemoteDebuggerOn: anException session: aSession [
+	"Launch the new Spec2 Debugger!"
+	GbsRemoteDebugger 
+		openOn: anException messageText 
+		process: anException tag 
+		session: aSession.
 ]
 
 { #category : 'private' }

@@ -67,27 +67,21 @@ GbsSession >> basicEvaluate: aString [
 
 { #category : 'error handling' }
 GbsSession >> checkForError [
-	| buffer hasError stream val |
+	| errorStruct hasError contextOop |
 	
-	"1. Allocate 2112 bytes as a native Pharo array. UFFI pins this safely and automatically!"
-	buffer := ByteArray new: 2112.
+	errorStruct := GciError new.
+	hasError := GbsServerInterface uniqueInstance apiGciErr: errorStruct.
+	hasError ifFalse: [ ^ nil ].
 	
-	"2. Pass it directly to the C library"
-	hasError := GbsServerInterface uniqueInstance apiGciErrBuffer: buffer.
-	
-	"3. If an error exists, extract the string"
-	(hasError == true or: [ hasError = 1 ]) ifTrue: [ 
-		stream := WriteStream on: String new.
+	"Safely extract the context OOP if it exists, otherwise use 20 (nil)"
+	contextOop := (errorStruct respondsTo: #context) 
+		ifTrue: [ errorStruct context ] 
+		ifFalse: [ 20 ].
 		
-		"In GemStone's error struct, the message array starts exactly at byte offset 40"
-		1 to: 1024 do: [ :i |
-			val := buffer at: 40 + i.
-			val = 0 ifTrue: [ ^ stream contents ]. "Stop at the null terminator"
-			stream nextPut: (Character value: val).
-		].
-		^ stream contents
-	].
-
+	"Signal a Pharo error, attaching the context OOP to the exception tag"
+	(GbsError new 
+		messageText: errorStruct message asString;
+		tag: contextOop) signal.
 	^ nil
 ]
 
@@ -172,19 +166,18 @@ GbsSession >> evaluateString: aString [
 
 { #category : 'execution' }
 GbsSession >> execute: script [
-	"Executes code and maps it back to proper Pharo objects using the 64-bit parser"
-	| interface stringOop |
+	| interface resultOop |
 	
 	interface := GbsServerInterface uniqueInstance.
-	stringOop := interface apiGciExecuteStr: script context: 20 env: 0.
+	resultOop := interface apiGciExecuteStr: script context: 20 env: 0.
 	
-	stringOop = 1 ifTrue: [ 
-		self inform: 'GemStone Compile Error'.
+	"1 = OOP_ILLEGAL. This will now signal GbsError!"
+	resultOop = 1 ifTrue: [ 
+		self checkForError.
 		^ nil 
 	].
 	
-	"CRITICAL FIX: Route to GbsSession's own perfect 64-bit resultFor: method!"
-	^ self resultFor: stringOop.
+	^ self resultFor: resultOop.
 ]
 
 { #category : 'execution' }
