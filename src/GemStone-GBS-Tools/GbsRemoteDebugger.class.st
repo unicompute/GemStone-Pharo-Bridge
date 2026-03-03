@@ -88,7 +88,7 @@ GbsRemoteDebugger >> initializePresenters [
 	].
 
 	sourceText := self newText.
-	sourceText beReadOnly.
+	sourceText beNotEditable.
 
 	variablesTable := self newTable.
 	variablesTable
