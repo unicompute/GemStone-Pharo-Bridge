@@ -188,16 +188,13 @@ GbsSession >> evaluateString: aString [
 
 { #category : 'execution' }
 GbsSession >> execute: script [
-	| interface resultOop |
-	interface := GbsServerInterface uniqueInstance.
+	| resultOop |
 	
-	"Matches your C++: GciExecuteStr_(script, 20, 0)"
-	resultOop := interface apiGciExecuteStr: script context: 20 env: 0.
+	resultOop := GbsServerInterface uniqueInstance 
+		apiGciExecuteStr: script context: 20 env: 0.
 	
-	"If result is 1, follow the C++ logic: consume the error immediately"
-	resultOop = 1 ifTrue: [ 
-		^ self handleGciError 
-	].
+	"If result is 1, follow C++ logic: handle the error IMMEDIATELY"
+	resultOop = 1 ifTrue: [ ^ self handleGciError ].
 	
 	^ self resultFor: resultOop.
 ]
@@ -428,31 +425,21 @@ GbsSession >> gciPollForSignal [
 
 { #category : 'error handling' }
 GbsSession >> handleGciError [
-	"Expert Implementation: Follows GciErr(&err) from your C++ test"
-	| buffer errNum errMsg contextOop |
+	| buffer errMsg contextOop |
 	
-	"1. Allocate the verified 2168-byte struct"
+	"Allocate the 2168-byte struct from your gci_layout_mac.txt"
 	buffer := ExternalAddress allocate: 2168.
-	
 	[
-		"2. Call GciErr to populate the buffer and RESET the library state"
+		"Linear Call: Fetch error and RESET the library state"
 		GbsServerInterface uniqueInstance apiGciErr: buffer.
 		
-		"3. Use verified GS64 Mac M3 offsets"
-		"Context (GsProcess) is at offset 8 (index 9)"
+		"Extract 64-bit context from offset 8 (Pharo index 9)"
 		contextOop := buffer unsignedLongLongAt: 9. 
-		
-		"Error number is at offset 104 (index 105)"
-		errNum := buffer signedLongAt: 105.
-		
-		"Message string starts at offset 113"
+		"Extract message from offset 113"
 		errMsg := (buffer + 113) readString.
 		
-		"4. Signal the error. The 'tag' carries the REAL process context."
-		(GbsError new 
-			messageText: errMsg; 
-			number: errNum;
-			tag: contextOop) signal.
+		"Signal the error. tag carries the context for the debugger."
+		(GbsError new messageText: errMsg; tag: contextOop) signal.
 
 	] ensure: [ buffer free ].
 	^ nil

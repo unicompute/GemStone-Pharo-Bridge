@@ -110,6 +110,7 @@ GbsServerInterface >> apiGciExecuteStr: s context: c [ ^ self ffiCall: #(void* G
 
 { #category : 'api' }
 GbsServerInterface >> apiGciExecuteStr: source context: contextOop env: env [
+    "Force optNonThreaded to match your stable C++ environment"
     ^ self 
         ffiCall: #(uint64 GciExecuteStr_(String source, uint64 contextOop, int env))
         module: libraryPath
