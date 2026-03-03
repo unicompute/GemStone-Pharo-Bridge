@@ -1,17 +1,32 @@
+"
+A remote debugger for GemStone that runs in Pharo 13.
+This debugger displays stack frames from GemStone server execution,
+allows stepping through server code, and inspecting server objects.
+
+Based on the VisualWorks GbxDebuggerService architecture.
+
+Usage:
+  GbsRemoteDebugger openOn: 'Error message' process: processOop session: aSession
+"
 Class {
 	#name : 'GbsRemoteDebugger',
 	#superclass : 'SpPresenter',
 	#instVars : [
+		'service',
 		'session',
 		'processOop',
+		'contextList',
+		'selectedContextIndex',
 		'stackList',
 		'sourceText',
 		'variablesTable',
 		'stepOverButton',
 		'stepIntoButton',
+		'stepReturnButton',
 		'resumeButton',
 		'terminateButton',
-		'errorMessageLabel'
+		'errorMessageLabel',
+		'glueIsHidden'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -19,23 +34,68 @@ Class {
 
 { #category : 'instance creation' }
 GbsRemoteDebugger class >> openOn: anErrorString process: processOop session: aSession [
-	| debugger |
-	debugger := self new.
-	debugger debugError: anErrorString process: processOop session: aSession.
-	debugger open.
+	| debugger service |
+	service := GbxDebuggerService new.
+	service session: aSession.
+	service processOop: processOop.
+	service label: anErrorString.
+	service initializeForDebugging.
 	
-	"Set the window title"
+	debugger := self new.
+	debugger service: service.
+	debugger session: aSession.
+	debugger processOop: processOop.
+	debugger label: anErrorString.
+	debugger open.
 	debugger withWindowDo: [ :win | win title: 'GemStone Remote Debugger' ].
 	^ debugger
 ]
 
 { #category : 'accessing' }
-GbsRemoteDebugger >> debugError: anErrorString process: anOop session: aSession [
-	session := aSession.
-	processOop := anOop.
-	errorMessageLabel label: anErrorString.
-	
-	self fetchStackFrames.
+GbsRemoteDebugger >> service: aService [
+	service := aService
+]
+
+{ #category : 'accessing' }
+GbsRemoteDebugger >> service [
+	^ service
+]
+
+{ #category : 'initialization' }
+GbsRemoteDebugger >> initializePresenters [
+	errorMessageLabel := self newLabel.
+	errorMessageLabel addStyle: 'danger'.
+
+	stepOverButton := self newButton 
+		label: 'Step Over'; 
+		action: [ self stepOver ].
+	stepIntoButton := self newButton 
+		label: 'Step Into'; 
+		action: [ self stepInto ].
+	stepReturnButton := self newButton 
+		label: 'Step Return'; 
+		action: [ self stepReturn ].
+	resumeButton := self newButton 
+		label: 'Resume'; 
+		action: [ self resume ].
+	terminateButton := self newButton 
+		label: 'Terminate'; 
+		action: [ self terminate ].
+
+	stackList := self newList.
+	stackList whenSelectionChangedDo: [ :selection |
+		self contextSelected: selection selectedItem
+	].
+
+	sourceText := self newText.
+	sourceText readOnly: true.
+
+	variablesTable := self newTable.
+	variablesTable
+		addColumn: (SpStringTableColumn title: 'Name' evaluated: [ :item | item first ]);
+		addColumn: (SpStringTableColumn title: 'Value' evaluated: [ :item | item second ]).
+
+	glueIsHidden := true.
 ]
 
 { #category : 'layout' }
@@ -45,7 +105,11 @@ GbsRemoteDebugger >> defaultLayout [
 		add: errorMessageLabel expand: false;
 		add: (SpBoxLayout newHorizontal
 			spacing: 5;
-			add: stepIntoButton; add: stepOverButton; add: resumeButton; add: terminateButton;
+			add: stepIntoButton; 
+			add: stepOverButton; 
+			add: stepReturnButton;
+			add: resumeButton; 
+			add: terminateButton;
 			yourself) expand: false;
 		add: (SpPanedLayout newVertical
 			add: stackList;
@@ -57,179 +121,146 @@ GbsRemoteDebugger >> defaultLayout [
 		yourself
 ]
 
+{ #category : 'accessing' }
+GbsRemoteDebugger >> session: aSession [
+	session := aSession
+]
+
+{ #category : 'accessing' }
+GbsRemoteDebugger >> processOop: anOop [
+	processOop := anOop.
+	self fetchStackFrames.
+]
+
+{ #category : 'accessing' }
+GbsRemoteDebugger >> label: aString [
+	errorMessageLabel label: aString
+]
+
 { #category : 'actions' }
 GbsRemoteDebugger >> fetchStackFrames [
-	| script rawData frames |
+	| contexts |
 
-	"SAFETY CHECK: Prevent infinite loop if context is nil"
 	(processOop isNil or: [ processOop = 20 ]) ifTrue: [
 		stackList items: #('No stack frames available (Context is nil)').
 		^ self
 	].
 
+	"Use the service's context policy to fetch contexts"
+	contexts := service ifNotNil: [ 
+		service contextStackPolicy computeContextList 
+	] ifnil: [ 
+		self fetchContextsDirectly 
+	].
+
+	contextList := contexts.
+	stackList items: (contexts collect: [ :ctx | ctx printString ]).
+
+	contexts ifNotEmpty: [ 
+		stackList selectIndex: 1.
+		self contextSelected: (contexts at: 1)
+	].
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> fetchContextsDirectly [
+	"Direct context fetching fallback"
+	| script rawData contexts |
+	
 	script := '[
 		| proc stream |
 		proc := Object _objectForOop: ', processOop asString, '.
 		stream := WriteStream on: String new.
 		proc ifNotNil: [
 			1 to: (proc stackDepth min: 30) do: [ :level |
-				stream nextPutAll: (proc _frameReportAt: level); lf.
+				| frameId fullEntry methodOrNil selector className |
+				frameId := proc _gsiStackReportFromLevel: level toLevel: level.
+				frameId ifNotNil: [
+					fullEntry := frameId first.
+					fullEntry ifNotNil: [
+						methodOrNil := fullEntry first.
+						selector := fullEntry size >= 4 ifTrue: [ fullEntry at: 4 ] ifFalse: [ nil ].
+						className := methodOrNil ifNotNil: [ 
+							methodOrNil inClass ifNotNil: [ methodOrNil inClass name ] 
+						] ifNil: [ nil ].
+						stream 
+							nextPutAll: level asString; tab;
+							nextPutAll: (className ifNil: ['<unknown>'] ifNotNil: [ className ]); tab;
+							nextPutAll: (selector ifNil: ['<unknown>'] ifNotNil: [ selector asString ]);
+							lf.
+					].
+				].
 			]
 		].
 		stream contents
 	] value'.
-
-	"CRITICAL: Must execute in the context of the session, not nil (20)"
+	
 	rawData := session executeAndFetch: script context: session sessionOop.
-	frames := (rawData splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty.
-	stackList items: frames.
-]
-
-{ #category : 'initialization' }
-GbsRemoteDebugger >> initializePresenters [
-	errorMessageLabel := self newLabel.
-	errorMessageLabel addStyle: 'danger'. "Makes the error text red in Pharo 13"
-
-	stepOverButton := self newButton 
-		label: 'Step Over'; 
-		iconName: #glamorousStepOver;
-		action: [ self stepOver ].
-	stepIntoButton := self newButton 
-		label: 'Step Into'; 
-		iconName: #glamorousStepInto;
-		action: [ self stepInto ].
-	resumeButton := self newButton 
-		label: 'Resume'; 
-		iconName: #glamorousGo;
-		action: [ self resume ].
-	terminateButton := self newButton 
-		label: 'Terminate'; 
-		iconName: #glamorousTrash;
-		action: [ self terminate ].
-
-	stackList := self newList.
-	sourceText := self newText.
-	variablesTable := self newTable.
-
-	variablesTable
-		addColumn: (SpStringTableColumn title: 'Variable' evaluated: [ :item | item first ]);
-		addColumn: (SpStringTableColumn title: 'Value' evaluated: [ :item | item second ]).
-
-	"When you click a stack frame, fetch its source code and variables!"
-	stackList whenSelectionChangedDo: [ :selection |
-		self stackFrameSelected: selection selectedItem
-	].
-]
-
-{ #category : 'layout' }
-GbsRemoteDebugger >> initializeWindow: aWindowPresenter [
-	aWindowPresenter
-		title: 'GemStone Remote Debugger';
-		initialExtent: 700@500.
-]
-
-{ #category : 'accessing' }
-GbsRemoteDebugger >> session: aSession [
-	session := aSession
+	contexts := (rawData splitOn: Character lf) 
+		collect: [ :line | 
+			| parts |
+			parts := line splitOn: Character tab.
+			parts size >= 3 ifTrue: [
+				GbxActivation new
+					level: (parts first asInteger);
+					session: session;
+					processOop: processOop;
+					gsMethodId: (parts at: 2);
+					selector: (parts at: 3) asSymbol;
+					yourself
+			]
+		] thenSelect: #isNotNil.
+	
+	^ contexts
 ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> stackFrameSelected: selectedItem [
-	| level script sourceCode varsScript variables |
+GbsRemoteDebugger >> contextSelected: selectedItem [
+	| level context sourceCode variables |
 	
 	selectedItem ifNil: [ ^ self ].
 	
-	"Extract level number from frame description (e.g., 'level 1: Method >> selector')"
-	level := (selectedItem findTokens: ' ') detect: [ :token | token isAllDigits ] ifNone: [ 1 ].
+	"Get the context from the service"
+	context := service ifNotNil: [ service currentContext ] ifnil: [ nil ].
+	context ifNil: [ ^ self ].
 	
-	"Fetch source code for this frame"
-	script := '[
-		| proc frame |
-		proc := Object _objectForOop: ', processOop asString, '.
-		frame := proc _frameAt: ', level asString, '.
-		frame ifNotNil: [ frame sourceCode ] ifnil: [ ''<no source available>'' ]
-	] value'.
+	"Display source code"
+	sourceCode := context sourceCode.
+	sourceText text: (sourceCode ifNil: [ '' ]).
 	
-	sourceCode := session executeAndFetch: script context: session sessionOop.
-	sourceText text: sourceCode.
-	
-	"Fetch variables for this frame"
-	varsScript := '[
-		| proc frame stream |
-		proc := Object _objectForOop: ', processOop asString, '.
-		frame := proc _frameAt: ', level asString, '.
-		stream := WriteStream on: String new.
-		frame ifNotNil: [
-			frame tempNames do: [ :name |
-				| val |
-				val := frame tempNamed: name.
-				stream nextPutAll: name; tab; print: val; lf.
-			].
-			frame instVarNames do: [ :name |
-				| val |
-				val := frame receiver instVarNamed: name.
-				stream nextPutAll: name; tab; print: val; lf.
-			].
-		].
-		stream contents
-	] value'.
-	
-	variables := session executeAndFetch: varsScript context: session sessionOop.
-	variablesTable items: (variables lines select: #isNotEmpty thenCollect: [ :line | line splitOn: Character tab ]).
+	"Fetch and display variables"
+	variables := context tempNamesAndValues.
+	variablesTable items: (variables associations collect: [ :assoc | 
+		{ assoc key. assoc value asString }
+	]).
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> stepInto [
-	| script |
-	script := '[
-		| proc |
-		proc := Object _objectForOop: ', processOop asString, '.
-		proc step.
-		''stepped''
-	] value'.
-	
-	session executeAndFetch: script context: session sessionOop.
+	service ifNotNil: [ service stepInto ].
 	self fetchStackFrames.
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> stepOver [
-	| script |
-	script := '[
-		| proc |
-		proc := Object _objectForOop: ', processOop asString, '.
-		proc stepOver.
-		''stepped''
-	] value'.
-	
-	session executeAndFetch: script context: session sessionOop.
+	service ifNotNil: [ service stepOver ].
+	self fetchStackFrames.
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> stepReturn [
+	service ifNotNil: [ service stepReturn ].
 	self fetchStackFrames.
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> resume [
-	| script |
-	script := '[
-		| proc |
-		proc := Object _objectForOop: ', processOop asString, '.
-		proc resume.
-		''resumed''
-	] value'.
-	
-	session executeAndFetch: script context: session sessionOop.
+	service ifNotNil: [ service resume ].
 	self parent ifNotNil: [ self parent delete ].
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> terminate [
-	| script |
-	script := '[
-		| proc |
-		proc := Object _objectForOop: ', processOop asString, '.
-		proc terminate.
-		''terminated''
-	] value'.
-	
-	session executeAndFetch: script context: session sessionOop.
+	service ifNotNil: [ service terminate ].
 	self parent ifNotNil: [ self parent delete ].
 ]
