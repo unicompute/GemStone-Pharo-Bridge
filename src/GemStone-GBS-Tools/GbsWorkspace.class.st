@@ -266,11 +266,11 @@ GbsWorkspace >> localPrintIt [
 
 { #category : 'actions' }
 GbsWorkspace >> openRemoteDebuggerOn: anException session: aSession [
-	"Launch the new Spec2 Debugger!"
-	GbsRemoteDebugger 
-		openOn: anException messageText 
-		process: anException tag 
-		session: aSession.
+	"Diagnostic: Just show a basic Pharo popup to prove we caught it!"
+	self inform: 'CAUGHT ERROR: ', anException messageText asString.
+	
+	"Print the raw context OOP to the Transcript to prove we have it"
+	Transcript show: 'Suspended Process OOP: ', anException tag asString; cr.
 ]
 
 { #category : 'private' }

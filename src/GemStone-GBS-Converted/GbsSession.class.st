@@ -67,21 +67,26 @@ GbsSession >> basicEvaluate: aString [
 
 { #category : 'error handling' }
 GbsSession >> checkForError [
-	| errorStruct hasError contextOop |
+	| errorStruct hasError contextOop errorMsg |
 	
 	errorStruct := GciError new.
 	hasError := GbsServerInterface uniqueInstance apiGciErr: errorStruct.
-	hasError ifFalse: [ ^ nil ].
 	
-	"Safely extract the context OOP if it exists, otherwise use 20 (nil)"
+	"1. If we got an error message, use it. Otherwise, use a fallback string."
+	errorMsg := hasError 
+		ifTrue: [ errorStruct message asString ] 
+		ifFalse: [ 'Unknown GemStone Error (GciErr returned false)' ].
+	
+	"2. Safely grab the context OOP if the struct supports it"
 	contextOop := (errorStruct respondsTo: #context) 
 		ifTrue: [ errorStruct context ] 
 		ifFalse: [ 20 ].
 		
-	"Signal a Pharo error, attaching the context OOP to the exception tag"
+	"3. GUARANTEE the exception is thrown so the Workspace can catch it!"
 	(GbsError new 
-		messageText: errorStruct message asString;
+		messageText: errorMsg;
 		tag: contextOop) signal.
+		
 	^ nil
 ]
 
