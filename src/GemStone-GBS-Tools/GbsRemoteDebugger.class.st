@@ -61,8 +61,7 @@ GbsRemoteDebugger >> defaultLayout [
 GbsRemoteDebugger >> fetchStackFrames [
 	| script rawData frames |
 	
-	"SAFETY CHECK: If the process OOP is nil (20), stop here."
-	"This prevents the recursive StackOverflow found in your crash.dmp"
+	"SAFETY CHECK: Prevent infinite loop if context is nil"
 	(processOop isNil or: [ processOop = 20 ]) ifTrue: [ 
 		stackList items: #('No stack frames available (Context is nil)').
 		^ self 
