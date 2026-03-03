@@ -169,9 +169,26 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 	"Direct context fetching fallback"
 	| script rawData contexts |
 
+	"First, get the process from the context OOP"
+	script := '[
+		| ctx proc |
+		ctx := Object _objectForOop: ', processOop asString, '.
+		proc := ctx ifNotNil: [ ctx process ] ifNil: [ nil ].
+		proc ifNil: [ ^ ''<no process>'' ].
+		proc asOop asString
+	] value'.
+
+	| realProcessOop |
+	realProcessOop := session executeAndFetch: script context: session sessionOop.
+	(realProcessOop beginsWith: '<') ifTrue: [
+		^ #( )
+	].
+	realProcessOop := realProcessOop asInteger.
+
+	"Now fetch stack frames from the process"
 	script := '[
 		| proc stream |
-		proc := Object _objectForOop: ', processOop asString, '.
+		proc := Object _objectForOop: ', realProcessOop asString, '.
 		stream := WriteStream on: String new.
 		proc ifNotNil: [
 			1 to: (proc stackDepth min: 30) do: [ :level |
@@ -204,7 +221,7 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 			parts := line splitOn: Character tab.
 			parts size >= 3 ifTrue: [
 				[ GbxActivation
-					processOop: processOop
+					processOop: realProcessOop
 					level: parts first asInteger
 					session: session ] on: Error do: [ :ex | 
 						Transcript show: 'Error creating activation: ', ex messageText; cr.
