@@ -68,6 +68,7 @@ GbsServerInterface >> apiGciEncrypt: s into: b size: z [ ^ self ffiCall: #(void*
 
 { #category : 'api' }
 GbsServerInterface >> apiGciErr: aBuffer [
+    "Exactly matches GciErr(GciErrSType*)"
     ^ self 
         ffiCall: #(bool GciErr_(void *aBuffer))
         module: libraryPath
@@ -110,6 +111,7 @@ GbsServerInterface >> apiGciExecuteStr: s context: c [ ^ self ffiCall: #(void* G
 
 { #category : 'api' }
 GbsServerInterface >> apiGciExecuteStr: source context: contextOop env: env [
+    "Exactly matches GciExecuteStr_(const char*, OopType, int)"
     ^ self 
         ffiCall: #(uint64 GciExecuteStr_(String source, uint64 contextOop, int env))
         module: libraryPath

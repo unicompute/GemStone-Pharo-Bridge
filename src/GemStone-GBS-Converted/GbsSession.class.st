@@ -188,18 +188,16 @@ GbsSession >> evaluateString: aString [
 
 { #category : 'execution' }
 GbsSession >> execute: script [
-	| interface resultOop |
-	interface := GbsServerInterface uniqueInstance.
-	
-	"Match your C++ exactly: GciExecuteStr_(script, 20, 0)"
-	resultOop := interface apiGciExecuteStr: script context: 20 env: 0.
-	
-	"If result is 1 (OOP_ILLEGAL), handle the error state linearly"
-	resultOop = 1 ifTrue: [ 
-		^ self handleGciError 
-	].
-	
-	^ self resultFor: resultOop.
+    | interface resultOop |
+    interface := GbsServerInterface uniqueInstance.
+    
+    "Exactly matches your C++: GciExecuteStr_(script, 20, 0)"
+    resultOop := interface apiGciExecuteStr: script context: 20 env: 0.
+    
+    "If result is 1 (OOP_ILLEGAL), we MUST consume the error now"
+    resultOop = 1 ifTrue: [ ^ self handleGciError ].
+    
+    ^ self resultFor: resultOop.
 ]
 
 { #category : 'execution' }
@@ -428,34 +426,24 @@ GbsSession >> gciPollForSignal [
 
 { #category : 'error handling' }
 GbsSession >> handleGciError [
-	"Expert Implementation: Mirrors the GciErr(&err) logic from your C++ test"
-	| buffer errNum errMsg contextOop |
-	
-	"1. Use the 2168-byte size from your C layout check"
-	buffer := ExternalAddress allocate: 2168.
-	
-	[
-		"2. Call GciErr to populate the buffer and RESET the library flag"
-		GbsServerInterface uniqueInstance apiGciErr: buffer.
-		
-		"3. Use verified GS64 Mac M3 offsets"
-		"Context (GsProcess) is at offset 8 (Pharo index 9)"
-		contextOop := buffer unsignedLongLongAt: 9. 
-		
-		"Error number is at offset 104 (Pharo index 105)"
-		errNum := buffer signedLongAt: 105.
-		
-		"Message string starts at offset 113 (Pointer buffer + 113)"
-		errMsg := (buffer + 113) readString.
-		
-		"4. Signal the error. The 'tag' is the REAL process OOP for the debugger."
-		(GbsError new 
-			messageText: errMsg; 
-			number: errNum;
-			tag: contextOop) signal.
-
-	] ensure: [ buffer free ].
-	^ nil
+    "Expert Implementation: Mirrors your working C++ logic"
+    | buffer errMsg contextOop |
+    
+    "Use the 2168-byte size from your C layout check"
+    buffer := ExternalAddress allocate: 2168.
+    [
+        "1. Fetch the error and RESET the library state"
+        GbsServerInterface uniqueInstance apiGciErr: buffer.
+        
+        "2. Use verified Mac M3 offsets from gci_layout_mac.txt"
+        "Context (GsProcess) is at offset 8 (index 9)"
+        contextOop := buffer unsignedLongLongAt: 9. 
+        "Message starts at offset 113"
+        errMsg := (buffer + 113) readString.
+        
+        "3. Signal the error. The 'tag' is the process for the debugger."
+        (GbsError new messageText: errMsg; tag: contextOop) signal.
+    ] ensure: [ buffer free ].
 ]
 
 { #category : 'initialization' }
