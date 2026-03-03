@@ -192,34 +192,15 @@ GbsSession >> evaluateString: aString [
 
 { #category : 'execution' }
 GbsSession >> execute: script [
-	| resultOop errorScript |
-
-	"Wrap the script to catch errors and return error info"
-	errorScript := '[
-		| result |
-		[ ', script, ' ] on: Error do: [ :ex |
-			''<GEMSTONE_ERROR>'', ex description
-		]
-	] value'.
+	| resultOop |
 
 	resultOop := GbsServerInterface uniqueInstance
-		apiGciExecuteStr: errorScript context: 20 env: 0.
+		apiGciExecuteStr: script context: 20 env: 0.
 
 	"If result is 1, follow C++ logic: handle the error IMMEDIATELY"
 	resultOop = 1 ifTrue: [ ^ self handleGciError ].
 
-	"Check if we got an error string"
-	| result |
-	result := self resultFor: resultOop.
-	result isString ifTrue: [
-		(result beginsWith: '<GEMSTONE_ERROR>') ifTrue: [
-			| errorMessage |
-			errorMessage := (result copyFrom: 17 to: result size).
-			(GbsError new messageText: errorMessage; tag: 20) signal.
-		].
-	].
-
-	^ result
+	^ self resultFor: resultOop
 ]
 
 { #category : 'execution' }
