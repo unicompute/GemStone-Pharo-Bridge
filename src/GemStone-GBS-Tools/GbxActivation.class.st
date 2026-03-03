@@ -145,14 +145,14 @@ GbxActivation >> printString [
 { #category : 'private' }
 GbxActivation >> reset [
 	"Fetch activation data from GemStone"
-	| script result |
+	| script result parts |
 	
 	script := '[
-		| frame fullEntry methodOrNil thisReceiver thisSelf numArgsTemps |
+		| frame fullEntry methodOrNil thisReceiver thisSelf numArgsTemps className selectorName sourceStr |
 		frame := self _gsiDebuggerDetailedReportAt: ', level asString, '.
-		frame ifNil: [ ^ nil ].
+		frame ifNil: [ ^ ''ERROR|nil'' ].
 		fullEntry := frame first.
-		fullEntry ifNil: [ ^ nil ].
+		fullEntry ifNil: [ ^ ''ERROR|nil'' ].
 		methodOrNil := fullEntry first.
 		thisReceiver := fullEntry at: 2.
 		thisSelf := fullEntry at: 3.
@@ -162,29 +162,33 @@ GbxActivation >> reset [
 					methodOrNil ifNil: [ 0 ] ifNotNil: [ methodOrNil _numArgsTempsCblkargs ]
 				]
 				ifFalse: [ methodOrNil _numArgsTempsCblkargs ].
-		Array
-			with: (methodOrNil ifNil: [ ''<unknown>'' ] ifNotNil: [ methodOrNil inClass name, ''>>'', methodOrNil selector asString ])
-			with: (fullEntry at: 4)
-			with: (fullEntry at: 5)
-			with: (fullEntry at: 6)
-			with: (fullEntry at: 7)
-			with: (fullEntry at: 9)
-			with: (fullEntry at: 10)
-			with: numArgsTemps
-			with: (fullEntry at: 8) size
-			with: (methodOrNil ifNil: [ ''<None>'' ] ifNotNil: [ methodOrNil inClass name ])
-			with: thisReceiver
-			with: thisReceiver class name
-			with: thisSelf
+		className := methodOrNil ifNil: [ ''<unknown>'' ] ifNotNil: [ methodOrNil inClass ifNil: [ ''<unknown>'' ] ifNotNil: [ methodOrNil inClass name ] ].
+		selectorName := fullEntry at: 4.
+		selectorName ifNil: [ selectorName := ''<unknown>'' ].
+		sourceStr := fullEntry at: 9.
+		sourceStr ifNil: [ sourceStr := '''' ].
+		"Return pipe-separated values for easy parsing"
+		className, ''|'', selectorName asString, ''|'', 
+		(fullEntry at: 5) printString, ''|'',
+		(fullEntry at: 6) printString, ''|'',
+		(fullEntry at: 7) printString, ''|'',
+		sourceStr, ''|'',
+		(fullEntry at: 10) printString, ''|'',
+		numArgsTemps printString, ''|'',
+		(fullEntry at: 8) size printString, ''|'',
+		className, ''|'',
+		thisReceiver printString, ''|'',
+		thisReceiver class name, ''|'',
+		thisSelf printString
 	] value'.
 	
 	result := session executeAndFetch: script context: session sessionOop.
-	result = 'nil' ifTrue: [ ^ self ].
+	(result beginsWith: 'ERROR') ifTrue: [ ^ self ].
 	
-	| parts |
-	parts := result splitOn: Character space.
+	"Parse the pipe-separated result"
+	parts := result splitOn: $|.
 	parts size >= 13 ifTrue: [
-		gsMethodId := parts at: 1.
+		gsMethodId := (parts at: 1), '>>', (parts at: 2).
 		selector := (parts at: 2) asSymbol.
 		quickStepPoint := (parts at: 3) asInteger.
 		sourceOffsets := (parts at: 4) splitOn: $,.
