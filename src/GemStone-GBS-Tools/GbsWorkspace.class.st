@@ -60,9 +60,13 @@ GbsWorkspace >> doIt [
 		| contextOop |
 		contextOop := ex tag.
 		
+		Transcript show: 'Error: ', ex class name, ' - ', ex messageText; cr.
+		Transcript show: 'Tag: ', contextOop asString, ' (', contextOop class name, ')'; cr.
+		
 		"Check if tag is a valid context OOP (number) or just an error message"
 		contextOop isNumber 
 			ifTrue: [
+				Transcript show: 'Opening debugger with processOop=', contextOop asString; cr.
 				(contextOop = 0 or: [ contextOop = 20 ]) 
 					ifTrue: [ self inform: 'Error: ', ex messageText, ' (Invalid context OOP)' ]
 					ifFalse: [ self openRemoteDebuggerOn: ex messageText processOop: contextOop session: activeSession ]

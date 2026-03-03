@@ -141,17 +141,13 @@ GbsRemoteDebugger >> label: aString [
 GbsRemoteDebugger >> fetchStackFrames [
 	| contexts |
 
-	(processOop isNil or: [ processOop = 20 ]) ifTrue: [
+	(processOop isNil or: [ processOop = 20 or: [ processOop = 0 ]]) ifTrue: [
 		stackList items: #('No stack frames available (Context is nil)').
 		^ self
 	].
 
-	"Use service policy when possible, but fall back to direct fetch on any inconsistency."
-	contexts := [
-		service isNotNil
-			ifTrue: [ service contextStackPolicy computeContextList ]
-			ifFalse: [ self fetchContextsDirectly ]
-	] on: Error do: [ :ex | self fetchContextsDirectly ].
+	"Always use direct fetch - more reliable"
+	contexts := self fetchContextsDirectly.
 
 	contextList := contexts ifNil: [ #( ) ].
 	contextList ifEmpty: [
@@ -172,7 +168,7 @@ GbsRemoteDebugger >> fetchStackFrames [
 GbsRemoteDebugger >> fetchContextsDirectly [
 	"Direct context fetching fallback"
 	| script rawData contexts |
-	
+
 	script := '[
 		| proc stream |
 		proc := Object _objectForOop: ', processOop asString, '.
@@ -186,10 +182,10 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 					fullEntry ifNotNil: [
 						methodOrNil := fullEntry first.
 						selector := fullEntry size >= 4 ifTrue: [ fullEntry at: 4 ] ifFalse: [ nil ].
-						className := methodOrNil ifNotNil: [ 
-							methodOrNil inClass ifNotNil: [ methodOrNil inClass name ] 
+						className := methodOrNil ifNotNil: [
+							methodOrNil inClass ifNotNil: [ methodOrNil inClass name ]
 						] ifNil: [ nil ].
-							stream 
+							stream
 								nextPutAll: level asString; tab;
 								nextPutAll: (className ifNil: [''<unknown>''] ifNotNil: [ className ]); tab;
 								nextPutAll: (selector ifNil: [''<unknown>''] ifNotNil: [ selector asString ]);
@@ -200,7 +196,7 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 		].
 		stream contents
 	] value'.
-	
+
 	rawData := session executeAndFetch: script context: session sessionOop.
 	contexts := (rawData splitOn: Character lf)
 		collect: [ :line |

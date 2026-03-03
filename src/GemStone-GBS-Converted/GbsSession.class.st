@@ -92,8 +92,11 @@ GbsSession >> checkForError [
 		(result = 1 or: [ result == true ]) ifTrue: [
 			"CRITICAL: Exact GS64 64-bit Memory Offsets!"
 			errNum := buffer signedLongAt: 105. "C-offset 104"
-			contextOop := buffer unsignedLongLongAt: 9. "C-offset 8"
+			contextOop := buffer unsignedLongLongAt: 9. "C-offset 8 - this is the suspended context"
 			errMsg := (buffer + 113) readString. "C-offset 113"
+
+			"Log for debugging"
+			Transcript show: 'checkForError: result=', result asString, ' contextOop=', contextOop asString; cr.
 
 			"We now pass the REAL suspended Process OOP to the UI!"
 			(GbsError new messageText: errMsg; tag: contextOop) signal.
