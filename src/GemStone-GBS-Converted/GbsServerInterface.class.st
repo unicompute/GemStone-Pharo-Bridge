@@ -176,9 +176,11 @@ GbsServerInterface >> apiGciFetchSize: anOop [
 
 { #category : 'ffi' }
 GbsServerInterface >> apiGciGetClass: anOop [
-    "Fetch the Class OOP of a remote object"
-    ^ self ffiCall: #( uint64 GciFetchClass ( uint64 anOop ) ) 
-           module: libraryPath
+    "CRITICAL FIX: Added trailing underscore and optNonThreaded to prevent VM SegFaults!"
+    ^ self 
+		ffiCall: #( uint64 GciFetchClass_(uint64 anOop) ) 
+		module: libraryPath
+		options: #( + optNonThreaded )
 ]
 
 { #category : 'api' }
