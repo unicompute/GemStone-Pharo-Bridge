@@ -107,7 +107,7 @@ GbxActivation >> sourceString [
 
 { #category : 'accessing' }
 GbxActivation >> sourceCode [
-	"Fetch source code by walking the context sender chain"
+	"Fetch source code from GemStone using process stack report"
 	| script result |
 	
 	"Check if we have required data"
@@ -116,18 +116,18 @@ GbxActivation >> sourceCode [
 	level ifNil: [ ^ '<no source: level is nil>' ].
 	
 	script := '[
-		| ctx currentLevel src |
+		| ctx proc frame |
 		ctx := Object _objectForOop: ', processOop asString, '.
 		ctx ifNil: [ ^ ''<no source: ctx is nil>'' ].
-		currentLevel := 0.
-		[ ctx notNil and: [ currentLevel < ', level asString, ' ] ] whileTrue: [
-			currentLevel := currentLevel + 1.
-			ctx := ctx sender.
+		proc := ctx process.
+		proc ifNil: [ ^ ''<no source: proc is nil>'' ].
+		frame := proc _gsiDebuggerDetailedReportAt: ', level asString, '.
+		frame ifNil: [ ^ ''<no source: frame is nil>'' ].
+		frame first ifNil: [ ^ ''<no source: entry is nil>'' ].
+		frame first size >= 9 ifFalse: [ 
+			^ ''<no source: entry too small>'' 
 		].
-		ctx ifNil: [ ^ ''<no source: context not found at level>'' ].
-		src := ctx sourceCode.
-		src ifNil: [ ^ ''<no source: sourceCode is nil>'' ].
-		^ src
+		^ (frame first at: 9) ifNil: [ ''<no source: sourceString is nil>'' ]
 	] value'.
 	
 	[
@@ -283,25 +283,23 @@ GbxActivation >> marshalValue: anObject [
 
 { #category : 'temp variables' }
 GbxActivation >> tempNamesAndValues [
-	"Return a dictionary of temp names and their values by walking context chain"
+	"Return a dictionary of temp names and their values from GemStone"
 	| script result |
 	
 	script := '[
-		| ctx currentLevel dict |
+		| ctx proc frame dict |
 		ctx := Object _objectForOop: ', processOop asString, '.
 		ctx ifNil: [ ^ Dictionary new ].
-		currentLevel := 0.
-		[ ctx notNil and: [ currentLevel < ', level asString, ' ] ] whileTrue: [
-			currentLevel := currentLevel + 1.
-			ctx := ctx sender.
-		].
-		ctx ifNil: [ ^ Dictionary new ].
+		proc := ctx process.
+		proc ifNil: [ ^ Dictionary new ].
+		frame := proc _frameContentsAt: ', level asString, '.
+		frame ifNil: [ ^ Dictionary new ].
 		dict := Dictionary new.
-		"Get temp names and values"
-		ctx tempNames keysAndValuesDo: [ :i :name |
+		"Frame contents: [method, receiver, self, ...args/temps...] starting at index 10"
+		10 to: frame size do: [ :i |
 			| val |
-			val := ctx getTempVar: (ctx localScope temps at: i).
-			dict at: name put: val.
+			val := frame at: i.
+			dict at: ''temp'', (i-9) asString put: val.
 		].
 		dict
 	] value'.

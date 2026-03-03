@@ -166,29 +166,41 @@ GbsRemoteDebugger >> fetchStackFrames [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> fetchContextsDirectly [
-	"Direct context fetching fallback - walk context sender chain"
+	"Direct context fetching fallback - use GsProcess stack report"
 	| script rawData contexts |
 
-	"Walk the context's sender chain directly"
+	"Get the process from the context and fetch stack frames"
 	script := '[
-		| ctx stream level |
+		| ctx proc stream depth |
 		ctx := Object _objectForOop: ', processOop asString, '.
-		stream := WriteStream on: String new.
 		ctx ifNil: [ ^ ''<ctx is nil>'' ].
-		level := 0.
-		[ ctx notNil and: [ level < 30 ] ] whileTrue: [
-			level := level + 1.
-			| methodOrNil selector className |
-			methodOrNil := ctx method.
-			selector := ctx selector.
-			className := methodOrNil ifNotNil: [
-				methodOrNil inClass ifNotNil: [ methodOrNil inClass name ]
-			] ifNil: [ nil ].
-			stream
-				nextPutAll: level asString; tab;
-				nextPutAll: (className ifNil: [''<unknown>''] ifNotNil: [ className ]); tab;
-				nextPutAll: (selector ifNil: [''<unknown>''] ifNotNil: [ selector asString ]); lf.
-			ctx := ctx sender.
+		proc := ctx process.
+		proc ifNil: [ ^ ''<proc is nil>'' ].
+		stream := WriteStream on: String new.
+		depth := proc stackDepth.
+		stream nextPutAll: ''depth='', depth asString; lf.
+		1 to: (depth min: 30) do: [ :level |
+			| frameId fullEntry methodOrNil selector className |
+			frameId := proc _gsiStackReportFromLevel: level toLevel: level.
+			stream nextPutAll: ''level='', level asString; tab.
+			frameId ifNil: [ 
+				stream nextPutAll: ''<frameId is nil>''; lf 
+			] ifNotNil: [
+				fullEntry := frameId first.
+				fullEntry ifNil: [ 
+					stream nextPutAll: ''<fullEntry is nil>''; lf 
+				] ifNotNil: [
+					methodOrNil := fullEntry first.
+					selector := fullEntry size >= 4 ifTrue: [ fullEntry at: 4 ] ifFalse: [ nil ].
+					className := methodOrNil ifNotNil: [
+						methodOrNil inClass ifNotNil: [ methodOrNil inClass name ]
+					] ifNil: [ nil ].
+					stream
+						nextPutAll: (className ifNil: [''<unknown>''] ifNotNil: [ className ]); tab;
+						nextPutAll: (selector ifNil: [''<unknown>''] ifNotNil: [ selector asString ]);
+						lf.
+				].
+			].
 		].
 		stream contents
 	] value'.
