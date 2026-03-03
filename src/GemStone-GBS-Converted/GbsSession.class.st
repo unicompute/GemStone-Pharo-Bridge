@@ -83,7 +83,7 @@ GbsSession >> checkAndClearError [
 
 { #category : 'error handling' }
 GbsSession >> checkForError [
-	| buffer result errNum errMsg contextOop |
+	| buffer result errNum errMsg contextOop gbsError |
 
 	buffer := ExternalAddress allocate: 2168.
 	[
@@ -99,10 +99,7 @@ GbsSession >> checkForError [
 			Transcript show: 'checkForError: result=', result asString, ' contextOop=', contextOop asString; cr.
 
 			"Create the error with BOTH the message and the context OOP"
-			| gbsError |
-			gbsError := GbsError new 
-				messageText: errMsg; 
-				tag: contextOop.
+			gbsError := GbsError new messageText: errMsg; tag: contextOop.
 			gbsError gemStoneExceptionProxy: nil.
 			gbsError signal.
 		].
