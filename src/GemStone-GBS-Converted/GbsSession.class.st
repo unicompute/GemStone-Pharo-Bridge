@@ -191,10 +191,10 @@ GbsSession >> execute: script [
 	| interface resultOop |
 	interface := GbsServerInterface uniqueInstance.
 	
-	"Exactly matches your C++: GciExecuteStr_(script, 20, 0)"
+	"Match your C++ exactly: GciExecuteStr_(script, 20, 0)"
 	resultOop := interface apiGciExecuteStr: script context: 20 env: 0.
 	
-	"If result is 1, follow the C++ logic and fetch the GciErrSType"
+	"If result is 1 (OOP_ILLEGAL), handle the error state linearly"
 	resultOop = 1 ifTrue: [ 
 		^ self handleGciError 
 	].
@@ -428,27 +428,27 @@ GbsSession >> gciPollForSignal [
 
 { #category : 'error handling' }
 GbsSession >> handleGciError [
-	"Expert Implementation: Follows GciErr(&err) from your C++ test"
+	"Expert Implementation: Mirrors the GciErr(&err) logic from your C++ test"
 	| buffer errNum errMsg contextOop |
 	
-	"1. Allocate the 2168-byte struct verified by your C layout check"
+	"1. Use the 2168-byte size from your C layout check"
 	buffer := ExternalAddress allocate: 2168.
 	
 	[
-		"2. Call the C-API to populate the buffer and reset the library state"
+		"2. Call GciErr to populate the buffer and RESET the library flag"
 		GbsServerInterface uniqueInstance apiGciErr: buffer.
 		
-		"3. Extract 64-bit values using verified Mac M3 offsets"
-		"Context (GsProcess) is at offset 8"
+		"3. Use verified GS64 Mac M3 offsets"
+		"Context (GsProcess) is at offset 8 (Pharo index 9)"
 		contextOop := buffer unsignedLongLongAt: 9. 
 		
-		"Error number is at offset 104"
+		"Error number is at offset 104 (Pharo index 105)"
 		errNum := buffer signedLongAt: 105.
 		
-		"Message string starts at offset 113"
+		"Message string starts at offset 113 (Pointer buffer + 113)"
 		errMsg := (buffer + 113) readString.
 		
-		"4. Signal the error. The 'tag' is the process we will debug."
+		"4. Signal the error. The 'tag' is the REAL process OOP for the debugger."
 		(GbsError new 
 			messageText: errMsg; 
 			number: errNum;
