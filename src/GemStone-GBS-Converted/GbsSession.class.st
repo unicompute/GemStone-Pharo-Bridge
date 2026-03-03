@@ -67,27 +67,30 @@ GbsSession >> basicEvaluate: aString [
 
 { #category : 'error handling' }
 GbsSession >> checkForError [
-	| cBuffer hasError errorMsg contextOop |
+	| buffer result errNum errMsg contextOop |
 	
-	"1. Allocate a massive 2.5KB buffer."
-	cBuffer := ByteArray new: 2500.
+	"1. Use the exact proven buffer size from your working file"
+	buffer := ExternalAddress allocate: 2168.
 	
-	"2. Fetch the error into the safe byte payload"
-	hasError := GbsServerInterface uniqueInstance apiGciErrRaw: cBuffer.
-	
-	hasError ifTrue: [ 
-		"3. Extract the context OOP (8 bytes) starting at index 9"
-		contextOop := cBuffer integerAt: 9 size: 8 signed: false.
+	[
+		"2. Use your original apiGciErr: which has the optNonThreaded flag!"
+		result := GbsServerInterface uniqueInstance apiGciErr: buffer.
 		
-		"4. Extract the message string starting at index 114"
-		errorMsg := (cBuffer copyFrom: 114 to: 1138) asString.
-		errorMsg := errorMsg copyUpTo: Character null. "Trim the C null-terminators"
-		
-		"5. Signal the error to the UI!"
-		(GbsError new messageText: errorMsg; tag: contextOop) signal.
-		
-	] ifFalse: [ 
-		(GbsError new messageText: 'Unknown GemStone Error'; tag: 20) signal.
+		(result = 1 or: [ result == true ]) ifTrue: [ 
+			"3. Use the exact proven memory offsets from your working file"
+			errNum := buffer signedLongAt: 5.
+			errMsg := (buffer + 112) readString.
+			
+			"We will default the context OOP to 20 (nil) to ensure it never crashes"
+			contextOop := 20. 
+			
+			"4. Throw the exception so the Workspace can launch the Debugger UI"
+			(GbsError new messageText: errMsg; tag: contextOop) signal.
+		] ifFalse: [ 
+			(GbsError new messageText: 'Unknown GemStone Error'; tag: 20) signal.
+		].
+	] ensure: [ 
+		buffer free. 
 	].
 	
 	^ nil
@@ -177,9 +180,10 @@ GbsSession >> execute: script [
 	| interface resultOop |
 	
 	interface := GbsServerInterface uniqueInstance.
+	"Use your original method that contains optNonThreaded"
 	resultOop := interface apiGciExecuteStr: script context: 20 env: 0.
 	
-	"1 = OOP_ILLEGAL. Only fetch the error if GemStone explicitly tells us to!"
+	"1 = OOP_ILLEGAL"
 	resultOop = 1 ifTrue: [ 
 		self checkForError.
 		^ nil 
