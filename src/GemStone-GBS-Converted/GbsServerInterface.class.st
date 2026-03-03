@@ -87,6 +87,12 @@ GbsServerInterface >> apiGciErrRaw: aByteArray [
 	^ self ffiCall: #(bool GciErr_(void * aByteArray))
 ]
 
+{ #category : 'ffi' }
+GbsServerInterface >> apiGciErrSafe: aVoidPointer [
+	"Uses void* so UFFI passes the raw pointer, completely preventing C-stack buffer overflows"
+	^ self ffiCall: #(bool GciErr_(void *aVoidPointer))
+]
+
 { #category : 'api - execution' }
 GbsServerInterface >> apiGciExecute: aString context: aContext [
     <primitive: #primitiveNativeCall error: errorCode>
