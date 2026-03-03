@@ -173,15 +173,24 @@ GbsSession >> evaluateString: aString [
 GbsSession >> execute: script [
 	| interface resultOop |
 	
+	"1. Log the script we are sending"
+	Transcript show: '--- SENDING TO GEMSTONE ---'; cr.
+	Transcript show: script; cr.
+	
 	interface := GbsServerInterface uniqueInstance.
 	resultOop := interface apiGciExecuteStr: script context: 20 env: 0.
 	
-	"1 = OOP_ILLEGAL. This will now signal GbsError!"
+	"2. Log the EXACT integer the C-library returns!"
+	Transcript show: 'RAW RESULT OOP: ', resultOop asString; cr.
+	
+	"3. If it is 1, it's a hard error"
 	resultOop = 1 ifTrue: [ 
+		Transcript show: 'ERROR DETECTED! Triggering checkForError...'; cr.
 		self checkForError.
 		^ nil 
 	].
 	
+	Transcript show: 'Execution finished cleanly.'; cr.
 	^ self resultFor: resultOop.
 ]
 
