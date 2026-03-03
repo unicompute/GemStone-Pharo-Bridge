@@ -67,12 +67,12 @@ GbsServerInterface >> apiGciEncrypt: s into: b size: z [ ^ self ffiCall: #(void*
 ]
 
 { #category : 'api' }
-GbsServerInterface >> apiGciErr: anErrorStruct [
-	"Forcing optNonThreaded bypasses the worker-thread pinning crash!"
-	^ self 
-		ffiCall: #(bool GciErr(GciError *anErrorStruct)) 
-		module: libraryPath 
-		options: #( + optNonThreaded )
+GbsServerInterface >> apiGciErr: aBuffer [
+    "Exactly matches GciErr(GciErrSType*)"
+    ^ self 
+        ffiCall: #(bool GciErr_(void *aBuffer))
+        module: libraryPath
+        options: #( + optNonThreaded )
 ]
 
 { #category : 'ffi' }
@@ -109,14 +109,14 @@ GbsServerInterface >> apiGciExecute: aString context: aContext [
 GbsServerInterface >> apiGciExecuteStr: s context: c [ ^ self ffiCall: #(void* GciExecuteStr(String s, void* c)) module: libraryPath
 ]
 
-{ #category : 'ffi' }
-GbsServerInterface >> apiGciExecuteStr: cStringPointer context: ctx env: env [
-	"CRITICAL: void* prevents UFFI from pinning Pharo objects during execution!
-	 optNonThreaded prevents worker-thread crashes."
-	^ self 
-		ffiCall: #(int64 GciExecuteStr_(void* cStringPointer, int64 ctx, int env)) 
-		module: libraryPath
-		options: #( + optNonThreaded )
+{ #category : 'api' }
+GbsServerInterface >> apiGciExecuteStr: source context: contextOop env: env [
+    "Exactly matches GciExecuteStr_(const char*, OopType, int)"
+    "CRITICAL: optNonThreaded prevents the VM from using worker threads"
+    ^ self 
+        ffiCall: #(uint64 GciExecuteStr_(String source, uint64 contextOop, int env))
+        module: libraryPath
+        options: #( + optNonThreaded )
 ]
 
 { #category : 'api - execution' }
@@ -244,6 +244,15 @@ GbsServerInterface >> apiGciLogout [ ^ self ffiCall: #(int GciLogout())
 GbsServerInterface >> apiGciLogout: sessionId [
     <primitive: #primitiveNativeCall error: errorCode>
     ^ self ffiCall: #(bool GciLogout(int sessionId))
+]
+
+{ #category : 'api' }
+GbsServerInterface >> apiGciSetNet: aStone [
+    "Mandatory GS64 step found in C++ test"
+    ^ self 
+        ffiCall: #(void GciSetNet(String aStone, void* nil1, void* nil2, void* nil3))
+        module: libraryPath
+        options: #( + optNonThreaded )
 ]
 
 { #category : 'api' }
