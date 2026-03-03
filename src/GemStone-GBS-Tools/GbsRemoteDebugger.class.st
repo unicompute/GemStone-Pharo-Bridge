@@ -265,11 +265,11 @@ GbsRemoteDebugger >> stepReturn [
 { #category : 'actions' }
 GbsRemoteDebugger >> resume [
 	service ifNotNil: [ service resume ].
-	self parent ifNotNil: [ self parent delete ].
+	self withWindowDo: [ :window | window close ]
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> terminate [
 	service ifNotNil: [ service terminate ].
-	self parent ifNotNil: [ self parent delete ].
+	self withWindowDo: [ :window | window close ]
 ]
