@@ -38,6 +38,20 @@ GbsErrorFFITest >> test02ErrorWithExternalAddress [
 ]
 
 { #category : 'tests' }
+GbsErrorFFITest >> test03ExecuteSafe [
+	"Diagnostic: Can we safely execute an error without blowing up the C-stack?"
+	| interface resultOop |
+	
+	interface := GbsServerInterface uniqueInstance.
+	
+	"Use the new 2-argument safe execution method!"
+	resultOop := interface apiGciExecuteStrSafe: 'Object thisMessageDoesNotExist' context: 20.
+	
+	"If GemStone safely caught the error, it will return OOP_ILLEGAL (1)."
+	self assert: resultOop equals: 1.
+]
+
+{ #category : 'tests' }
 GbsErrorFFITest >> testSafeErrorFetch [
 	| interface cBuffer hasError errorBytes errorString |
 	

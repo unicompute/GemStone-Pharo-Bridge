@@ -127,6 +127,12 @@ GbsServerInterface >> apiGciExecuteStr: aString context: aContext environment: e
            options: #( + optNonThreaded )
 ]
 
+{ #category : 'ffi' }
+GbsServerInterface >> apiGciExecuteStrSafe: sourceString context: contextOop [
+	"Strict 64-bit ABI compliance. Exactly 2 arguments. Prevents Stack Unwind SegFaults!"
+	^ self ffiCall: #(uint64 GciExecuteStr_(String sourceString, uint64 contextOop))
+]
+
 { #category : 'api - fetching' }
 GbsServerInterface >> apiGciFetchBytes: anOop into: aBuffer size: bufferSize [
     <primitive: #primitiveNativeCall error: errorCode>
