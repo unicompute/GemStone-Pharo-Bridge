@@ -60,12 +60,18 @@ GbsWorkspace >> doIt [
 		| contextOop |
 		Transcript show: 'GbsError caught: ', ex messageText; cr.
 		contextOop := ex tag.
-		Transcript show: 'Context OOP: ', contextOop asString; cr.
+		Transcript show: 'Context OOP: ', contextOop asString, ' (', contextOop class name, ')'; cr.
 		
 		"Open debugger if we have a valid context OOP"
 		(contextOop isNumber and: [ contextOop > 20 ])
-			ifTrue: [ self openRemoteDebuggerOn: ex messageText processOop: contextOop session: activeSession ]
-			ifFalse: [ self inform: 'GemStone Error: ', ex messageText ]
+			ifTrue: [ 
+				Transcript show: 'Opening debugger with processOop=', contextOop asString; cr.
+				self openRemoteDebuggerOn: ex messageText processOop: contextOop session: activeSession 
+			]
+			ifFalse: [ 
+				Transcript show: 'Invalid context OOP, showing error only'; cr.
+				self inform: 'GemStone Error: ', ex messageText 
+			]
 	].
 ]
 
