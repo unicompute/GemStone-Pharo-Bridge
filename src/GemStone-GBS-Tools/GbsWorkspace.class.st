@@ -49,11 +49,16 @@ GbsWorkspace >> doIt [
 	code := self selectedCodeOrAll copyReplaceAll: String cr with: String lf.
 	code ifEmpty: [ ^ self ].
 	
-	script := '[ ', code, ' ] value'.		
+	"CRITICAL FIX: Wrap the script so GemStone safely catches its own errors natively!"
+	script := '[ 
+		[ ', code, ' ] value 
+	] on: Error do: [ :ex | 
+		''<GEMSTONE_RUNTIME_ERROR>'', ex description 
+	]'.		
+			
 	activeSession := GbsSessionParameters currentSession.
 	activeSession ifNil: [ ^ self inform: 'No Session' ].		
-	
-	"RESTORED: Catch the error and route it to the Debugger!"	
+		
 	[ activeSession execute: script ]
 		on: GbsError 
 		do: [ :ex | self openRemoteDebuggerOn: ex session: activeSession ].

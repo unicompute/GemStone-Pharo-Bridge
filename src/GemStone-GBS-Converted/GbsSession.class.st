@@ -177,34 +177,31 @@ GbsSession >> evaluateString: aString [
 
 { #category : 'execution' }
 GbsSession >> execute: script [
-	| interface utf8Bytes cString resultOop |
+	| interface resultOop mappedResult |
 	
 	interface := GbsServerInterface uniqueInstance.
 	
-	"1. Convert to bytes and allocate safe C-memory for the input string"
-	utf8Bytes := script utf8Encoded.
-	cString := ExternalAddress allocate: utf8Bytes size + 1.
+	"Use your original, working FFI call!"
+	resultOop := interface apiGciExecuteStr: script context: 20 env: 0.
 	
-	[
-		"2. Write the bytes manually and null-terminate"
-		1 to: utf8Bytes size do: [ :i | cString unsignedByteAt: i put: (utf8Bytes at: i) ].
-		cString unsignedByteAt: utf8Bytes size + 1 put: 0.
-		
-		"3. Execute using the safe C-pointer! No UFFI object pinning."
-		resultOop := interface apiGciExecuteStr: cString context: 20 env: 0.
-		
-		"1 = OOP_ILLEGAL (Error occurred safely)"
-		resultOop = 1 ifTrue: [ 
-			self checkForError.
-			^ nil 
-		].
-	] ensure: [ 
-		"4. ALWAYS free the input string memory"
-		cString free. 
+	"1 = OOP_ILLEGAL (Syntax Error: The block completely failed to compile)"
+	resultOop = 1 ifTrue: [ 
+		(GbsError new messageText: 'GemStone Syntax Error'; tag: 20) signal.
+		^ nil 
 	].
 	
-	"5. Map the successful result back to Pharo"
-	^ self resultFor: resultOop.
+	"Map the result safely using your working string fetcher"
+	mappedResult := self resultFor: resultOop.
+	
+	"Did the GemStone server intercept a runtime error for us?"
+	(mappedResult isString and: [ mappedResult beginsWith: '<GEMSTONE_RUNTIME_ERROR>' ]) ifTrue: [ 
+		(GbsError new 
+			messageText: (mappedResult copyReplaceAll: '<GEMSTONE_RUNTIME_ERROR>' with: ''); 
+			tag: 20) signal.
+		^ nil
+	].
+	
+	^ mappedResult.
 ]
 
 { #category : 'execution' }
