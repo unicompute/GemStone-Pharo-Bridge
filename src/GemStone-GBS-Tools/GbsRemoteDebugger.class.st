@@ -146,17 +146,25 @@ GbsRemoteDebugger >> fetchStackFrames [
 		^ self
 	].
 
-	"Use the service's context policy to fetch contexts"
-	contexts := service isNotNil
-		ifTrue: [ service contextStackPolicy computeContextList ]
-		ifFalse: [ self fetchContextsDirectly ].
+	"Use service policy when possible, but fall back to direct fetch on any inconsistency."
+	contexts := [
+		service isNotNil
+			ifTrue: [ service contextStackPolicy computeContextList ]
+			ifFalse: [ self fetchContextsDirectly ]
+	] on: Error do: [ :ex | self fetchContextsDirectly ].
 
-	contextList := contexts.
-	stackList items: (contexts collect: [ :ctx | ctx printString ]).
+	contextList := contexts ifNil: [ #( ) ].
+	contextList ifEmpty: [
+		stackList items: #('No stack frames available').
+		sourceText text: ''.
+		variablesTable items: #().
+		^ self
+	].
+	stackList items: (contextList collect: [ :ctx | ctx printString ]).
 
-	contexts ifNotEmpty: [
+	contextList ifNotEmpty: [
 		stackList selectIndex: 1.
-		self contextSelected: (contexts at: 1)
+		self contextSelected: (contextList at: 1)
 	].
 ]
 
@@ -199,13 +207,10 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 			| parts |
 			parts := line splitOn: Character tab.
 			parts size >= 3 ifTrue: [
-				GbxActivation new
-					level: (parts first asInteger);
-					session: session;
-					processOop: processOop;
-					gsMethodId: (parts at: 2);
-					selector: (parts at: 3) asSymbol;
-					yourself
+				[ GbxActivation
+					processOop: processOop
+					level: parts first asInteger
+					session: session ] on: Error do: [ :ex | nil ]
 			]
 		] thenSelect: #isNotNil.
 	
@@ -218,10 +223,9 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 
 	selectedItem ifNil: [ ^ self ].
 
-	"Get the context from the service"
-	context := service isNotNil
-		ifTrue: [ service currentContext ]
-		ifFalse: [ nil ].
+	"Use the selected context, not stale service state."
+	context := selectedItem.
+	service ifNotNil: [ service selectContext: context ].
 	context ifNil: [ ^ self ].
 
 	"Display source code"
@@ -229,7 +233,7 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 	sourceText text: (sourceCode ifNil: [ '' ]).
 
 	"Fetch and display variables"
-	variables := context tempNamesAndValues.
+	variables := [ context tempNamesAndValues ] on: Error do: [ :ex | Dictionary new ].
 	variablesTable items: (variables associations collect: [ :assoc |
 		{ assoc key. assoc value asString }
 	]).
