@@ -108,12 +108,13 @@ GbxActivation >> sourceString [
 { #category : 'accessing' }
 GbxActivation >> sourceCode [
 	"Return source code, fetching from GemStone if not cached"
+	| script result |
+	
 	sourceString ifNotNil: [ 
 		sourceString isEmpty ifFalse: [ ^ sourceString ]
 	].
 	
 	"Fetch source code directly from GemStone"
-	| script result |
 	script := '[
 		| frame entry |
 		frame := self _gsiDebuggerDetailedReportAt: ', level asString, '.
@@ -124,11 +125,12 @@ GbxActivation >> sourceCode [
 		^ (entry at: 9) ifNil: [ ''<no source: sourceString is nil>'' ]
 	] value'.
 	
-	result := [ session executeAndFetch: script context: session sessionOop ] 
-		on: Error 
-		do: [ :ex | '<error fetching source: ', ex messageText, '>' ].
-	
-	^ result ifNil: [ '<no source: result is nil>' ] ifNotNil: [ result ]
+	[
+		result := session executeAndFetch: script context: session sessionOop.
+		^ result ifNil: [ '<no source: result is nil>' ] ifNotNil: [ result ]
+	] on: Error do: [ :ex |
+		^ '<error fetching source: ', ex messageText, '>'
+	]
 ]
 
 { #category : 'accessing' }
