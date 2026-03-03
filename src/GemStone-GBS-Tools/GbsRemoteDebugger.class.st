@@ -222,6 +222,11 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 	| context sourceCode variables |
 
 	selectedItem ifNil: [ ^ self ].
+	(selectedItem respondsTo: #sourceCode) ifFalse: [
+		sourceText text: ''.
+		variablesTable items: #().
+		^ self
+	].
 
 	"Use the selected context, not stale service state."
 	context := selectedItem.
