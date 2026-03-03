@@ -194,40 +194,11 @@ GbsSession >> evaluateString: aString [
 GbsSession >> execute: script [
 	| resultOop errorScript |
 
-	"Wrap the script to capture error context info before it propagates"
+	"Wrap the script to catch errors and return error info"
 	errorScript := '[
 		| result |
 		[ ', script, ' ] on: Error do: [ :ex |
-			| ctx proc stackInfo stream |
-			ctx := Processor activeProcess topContext.
-			proc := ctx process.
-			stackInfo := Array new.
-			[ ctx notNil and: [ stackInfo size < 30 ] ] whileTrue: [
-				stackInfo add: {
-					ctx selector ifNil: [ ''<unknown>'' ] ifNotNil: [ :s | s asString ].
-					ctx method ifNil: [ ''<unknown>'' ] ifNotNil: [ :m | m selector asString ].
-					ctx sourceCode ifNil: [ ''<no source>'' ].
-				}.
-				ctx := ctx sender.
-			].
-			stream := WriteStream on: String new.
-			stream nextPutAll: ''<GEMSTONE_ERROR>'';
-				nextPutAll: ex description;
-				nextPutAll: ''|'';
-				nextPutAll: stackInfo size asString;
-				nextPutAll: ''|''.
-			stackInfo do: [ :each |
-				stream 
-					nextPutAll: each first;
-					nextPutAll: ''|'';
-					nextPutAll: each second;
-					nextPutAll: ''|'';
-					nextPutAll: each third;
-					nextPutAll: ''^''.
-			].
-			stream contents
-		] ifError: [ :err |
-			''<GEMSTONE_ERROR>'', err, ''|0|''
+			''<GEMSTONE_ERROR>'', ex description
 		]
 	] value'.
 
@@ -242,20 +213,9 @@ GbsSession >> execute: script [
 	result := self resultFor: resultOop.
 	result isString ifTrue: [
 		(result beginsWith: '<GEMSTONE_ERROR>') ifTrue: [
-			| parts errorMessage stackCount stackData |
-			parts := result splitOn: $|.
-			errorMessage := parts size >= 2 ifTrue: [ parts at: 2 ] ifFalse: [ 'Unknown error' ].
-			stackCount := parts size >= 3 ifTrue: [ (parts at: 3) asInteger ] ifFalse: [ 0 ].
-			stackData := parts size >= 4 ifTrue: [
-				(parts copyFrom: 4 to: parts size) join: $|
-			] ifFalse: [ '' ].
-
-			"Create error with stack data in tag"
-			| gbsError |
-			gbsError := GbsError new
-				messageText: errorMessage;
-				tag: { stackCount. stackData }.
-			gbsError signal.
+			| errorMessage |
+			errorMessage := (result copyFrom: 17 to: result size).
+			(GbsError new messageText: errorMessage; tag: 20) signal.
 		].
 	].
 
