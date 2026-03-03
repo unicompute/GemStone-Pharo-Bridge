@@ -177,31 +177,21 @@ GbsSession >> evaluateString: aString [
 
 { #category : 'execution' }
 GbsSession >> execute: script [
-	| interface resultOop mappedResult |
+	| interface resultOop |
 	
 	interface := GbsServerInterface uniqueInstance.
 	
-	"Use your original, working FFI call!"
-	resultOop := interface apiGciExecuteStr: script context: 20 env: 0.
+	"Use your exact, working signature that includes optNonThreaded"
+	resultOop := interface apiGciExecuteStr: script context: 20 environment: 0.
 	
-	"1 = OOP_ILLEGAL (Syntax Error: The block completely failed to compile)"
+	"1 = OOP_ILLEGAL (GemStone encountered an exception)"
 	resultOop = 1 ifTrue: [ 
-		(GbsError new messageText: 'GemStone Syntax Error'; tag: 20) signal.
+		"Call your working error checker!"
+		interface checkError.
 		^ nil 
 	].
 	
-	"Map the result safely using your working string fetcher"
-	mappedResult := self resultFor: resultOop.
-	
-	"Did the GemStone server intercept a runtime error for us?"
-	(mappedResult isString and: [ mappedResult beginsWith: '<GEMSTONE_RUNTIME_ERROR>' ]) ifTrue: [ 
-		(GbsError new 
-			messageText: (mappedResult copyReplaceAll: '<GEMSTONE_RUNTIME_ERROR>' with: ''); 
-			tag: 20) signal.
-		^ nil
-	].
-	
-	^ mappedResult.
+	^ self resultFor: resultOop.
 ]
 
 { #category : 'execution' }

@@ -270,17 +270,21 @@ GbsServerInterface >> apiGciTsVersion [
 
 { #category : 'error handling' }
 GbsServerInterface >> checkError [
-    "FIXED: Allocate a safe 2168-byte buffer to prevent C-library memory overflows"
-    | buffer result errNum errMsg |
-    buffer := ExternalAddress allocate: 2168.
-    [
-        result := self apiGciErr: buffer.
-        (result = 1 or: [ result == true ]) ifTrue: [
-            errNum := buffer signedLongAt: 5.
-            errMsg := (buffer + 112) readString.
-            GbsError signal: 'GemStone Error ', errNum asString, ': ', errMsg.
-        ].
-    ] ensure: [ buffer free ].
+	"Using your proven 2168-byte buffer logic!"
+	| buffer result errNum errMsg |
+	buffer := ExternalAddress allocate: 2168.
+	[
+		result := self apiGciErr: buffer.
+		(result = 1 or: [ result == true ]) ifTrue: [
+			errNum := buffer signedLongAt: 5.
+			errMsg := (buffer + 112) readString.
+			
+			"Signal the error to the UI! tag: 20 represents the nil context"
+			(GbsError new messageText: errMsg; tag: 20) signal.
+		].
+	] ensure: [ 
+		buffer free 
+	].
 ]
 
 { #category : 'error handling' }
