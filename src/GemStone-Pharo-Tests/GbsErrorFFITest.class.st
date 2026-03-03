@@ -6,6 +6,38 @@ Class {
 }
 
 { #category : 'tests' }
+GbsErrorFFITest >> test01ExecuteOnly [
+	"Diagnostic: Does the crash happen DURING execution?"
+	| interface |
+	interface := GbsServerInterface uniqueInstance.
+	
+	"Trigger the runtime error, but DO NOT call GciErr_"
+	interface apiGciExecuteStr: 'Object thisMessageDoesNotExist' context: 20 env: 0.
+	
+	"If we reach this line, GciExecuteStr is innocent!"
+	self assert: true.
+]
+
+{ #category : 'tests' }
+GbsErrorFFITest >> test02ErrorWithExternalAddress [
+	"Diagnostic: Does the crash happen DURING error fetching?"
+	| interface cBuffer hasError |
+	interface := GbsServerInterface uniqueInstance.
+	
+	interface apiGciExecuteStr: 'Object thisMessageDoesNotExist' context: 20 env: 0.
+	
+	"Allocate 8 Kilobytes of raw C-memory. Impossible to overflow."
+	cBuffer := ExternalAddress allocate: 8192.
+	
+	[
+		hasError := interface apiGciErrAddress: cBuffer.
+		self assert: hasError description: 'Should flag an error'.
+	] ensure: [ 
+		cBuffer free. 
+	].
+]
+
+{ #category : 'tests' }
 GbsErrorFFITest >> testSafeErrorFetch [
 	| interface cBuffer hasError errorBytes errorString |
 	

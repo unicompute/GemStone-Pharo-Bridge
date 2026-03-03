@@ -75,6 +75,12 @@ GbsServerInterface >> apiGciErr: anErrorStruct [
 		options: #( + optNonThreaded )
 ]
 
+{ #category : 'ffi' }
+GbsServerInterface >> apiGciErrAddress: anExternalAddress [
+	"Strictly takes an ExternalAddress pointer allocated on the OS heap"
+	^ self ffiCall: #(bool GciErr_(void *anExternalAddress))
+]
+
 { #category : 'api' }
 GbsServerInterface >> apiGciErrBuffer: aByteArray [
 	"Bypass all UFFI struct coercions by passing a raw byte buffer"
