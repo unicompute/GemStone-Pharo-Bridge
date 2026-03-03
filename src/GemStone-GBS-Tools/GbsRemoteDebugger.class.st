@@ -167,18 +167,16 @@ GbsRemoteDebugger >> fetchStackFrames [
 { #category : 'actions' }
 GbsRemoteDebugger >> fetchContextsDirectly [
 	"Direct context fetching fallback"
-	| script rawData contexts |
+	| script rawData contexts realProcessOop |
 
 	"First, get the process from the context OOP"
 	script := '[
 		| ctx proc |
 		ctx := Object _objectForOop: ', processOop asString, '.
 		proc := ctx ifNotNil: [ ctx process ] ifNil: [ nil ].
-		proc ifNil: [ ^ ''<no process>'' ].
-		proc asOop asString
+		proc ifNil: [ ''<no process>'' ] ifNotNil: [ proc asOop asString ]
 	] value'.
 
-	| realProcessOop |
 	realProcessOop := session executeAndFetch: script context: session sessionOop.
 	(realProcessOop beginsWith: '<') ifTrue: [
 		^ #( )
