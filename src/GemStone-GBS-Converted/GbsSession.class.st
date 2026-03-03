@@ -67,31 +67,27 @@ GbsSession >> basicEvaluate: aString [
 
 { #category : 'error handling' }
 GbsSession >> checkForError [
-	| errorStruct cBuffer hasError errorMsg contextOop |
+	| cBuffer hasError errorMsg contextOop |
 	
-	"1. ALLOCATE SAFELY ON THE C-HEAP (Prevents Pharo VM Segfaults!)"
-	"We allocate 4KB to ensure massive error strings never overflow into Pharo memory"
-	cBuffer := ExternalAddress allocate: 4096.
+	"1. Allocate a massive 2.5KB buffer."
+	cBuffer := ByteArray new: 2500.
 	
-	[
-		"2. Map our Pharo struct definition onto the safe C-memory"
-		errorStruct := GciError fromHandle: cBuffer.
-		hasError := GbsServerInterface uniqueInstance apiGciErr: errorStruct.
+	"2. Fetch the error into the safe byte payload"
+	hasError := GbsServerInterface uniqueInstance apiGciErrRaw: cBuffer.
+	
+	hasError ifTrue: [ 
+		"3. Extract the context OOP (8 bytes) starting at index 9"
+		contextOop := cBuffer integerAt: 9 size: 8 signed: false.
 		
-		hasError ifTrue: [ 
-			errorMsg := errorStruct message asString.
-			contextOop := (errorStruct respondsTo: #context) 
-				ifTrue: [ errorStruct context ] 
-				ifFalse: [ 20 ].
-			
-			"3. Throw the error so the Workspace UI can catch it!"
-			(GbsError new messageText: errorMsg; tag: contextOop) signal.
-		] ifFalse: [ 
-			(GbsError new messageText: 'Unknown GemStone Error'; tag: 20) signal.
-		].
-	] ensure: [ 
-		"4. ALWAYS FREE THE C-MEMORY to prevent memory leaks"
-		cBuffer free.
+		"4. Extract the message string starting at index 114"
+		errorMsg := (cBuffer copyFrom: 114 to: 1138) asString.
+		errorMsg := errorMsg copyUpTo: Character null. "Trim the C null-terminators"
+		
+		"5. Signal the error to the UI!"
+		(GbsError new messageText: errorMsg; tag: contextOop) signal.
+		
+	] ifFalse: [ 
+		(GbsError new messageText: 'Unknown GemStone Error'; tag: 20) signal.
 	].
 	
 	^ nil

@@ -83,8 +83,8 @@ GbsServerInterface >> apiGciErrBuffer: aByteArray [
 
 { #category : 'ffi' }
 GbsServerInterface >> apiGciErrRaw: aByteArray [
-	"Bypasses the buggy GciError struct to prevent C-stack buffer overflows"
-	^ self ffiCall: #(bool GciErr_(ByteArray aByteArray))
+	"CRITICAL FIX: 'void *' tells Pharo to pass the safe byte payload, NOT the object header!"
+	^ self ffiCall: #(bool GciErr_(void * aByteArray))
 ]
 
 { #category : 'api - execution' }
