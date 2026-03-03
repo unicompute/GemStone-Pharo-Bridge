@@ -67,26 +67,33 @@ GbsSession >> basicEvaluate: aString [
 
 { #category : 'error handling' }
 GbsSession >> checkForError [
-	| errorStruct hasError contextOop errorMsg |
+	| errorStruct cBuffer hasError errorMsg contextOop |
 	
-	errorStruct := GciError new.
-	hasError := GbsServerInterface uniqueInstance apiGciErr: errorStruct.
+	"1. ALLOCATE SAFELY ON THE C-HEAP (Prevents Pharo VM Segfaults!)"
+	"We allocate 4KB to ensure massive error strings never overflow into Pharo memory"
+	cBuffer := ExternalAddress allocate: 4096.
 	
-	"1. If we got an error message, use it. Otherwise, use a fallback string."
-	errorMsg := hasError 
-		ifTrue: [ errorStruct message asString ] 
-		ifFalse: [ 'Unknown GemStone Error (GciErr returned false)' ].
-	
-	"2. Safely grab the context OOP if the struct supports it"
-	contextOop := (errorStruct respondsTo: #context) 
-		ifTrue: [ errorStruct context ] 
-		ifFalse: [ 20 ].
+	[
+		"2. Map our Pharo struct definition onto the safe C-memory"
+		errorStruct := GciError fromHandle: cBuffer.
+		hasError := GbsServerInterface uniqueInstance apiGciErr: errorStruct.
 		
-	"3. GUARANTEE the exception is thrown so the Workspace can catch it!"
-	(GbsError new 
-		messageText: errorMsg;
-		tag: contextOop) signal.
-		
+		hasError ifTrue: [ 
+			errorMsg := errorStruct message asString.
+			contextOop := (errorStruct respondsTo: #context) 
+				ifTrue: [ errorStruct context ] 
+				ifFalse: [ 20 ].
+			
+			"3. Throw the error so the Workspace UI can catch it!"
+			(GbsError new messageText: errorMsg; tag: contextOop) signal.
+		] ifFalse: [ 
+			(GbsError new messageText: 'Unknown GemStone Error'; tag: 20) signal.
+		].
+	] ensure: [ 
+		"4. ALWAYS FREE THE C-MEMORY to prevent memory leaks"
+		cBuffer free.
+	].
+	
 	^ nil
 ]
 
@@ -173,24 +180,15 @@ GbsSession >> evaluateString: aString [
 GbsSession >> execute: script [
 	| interface resultOop |
 	
-	"1. Log the script we are sending"
-	Transcript show: '--- SENDING TO GEMSTONE ---'; cr.
-	Transcript show: script; cr.
-	
 	interface := GbsServerInterface uniqueInstance.
 	resultOop := interface apiGciExecuteStr: script context: 20 env: 0.
 	
-	"2. Log the EXACT integer the C-library returns!"
-	Transcript show: 'RAW RESULT OOP: ', resultOop asString; cr.
-	
-	"3. If it is 1, it's a hard error"
+	"1 = OOP_ILLEGAL. Only fetch the error if GemStone explicitly tells us to!"
 	resultOop = 1 ifTrue: [ 
-		Transcript show: 'ERROR DETECTED! Triggering checkForError...'; cr.
 		self checkForError.
 		^ nil 
 	].
 	
-	Transcript show: 'Execution finished cleanly.'; cr.
 	^ self resultFor: resultOop.
 ]
 
