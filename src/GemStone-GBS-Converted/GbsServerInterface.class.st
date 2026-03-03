@@ -109,11 +109,12 @@ GbsServerInterface >> apiGciExecute: aString context: aContext [
 GbsServerInterface >> apiGciExecuteStr: s context: c [ ^ self ffiCall: #(void* GciExecuteStr(String s, void* c)) module: libraryPath
 ]
 
-{ #category : 'api' }
-GbsServerInterface >> apiGciExecuteStr: string context: ctx env: env [
-	"CRITICAL: optNonThreaded prevents the VM memory pinning crash!"
+{ #category : 'ffi' }
+GbsServerInterface >> apiGciExecuteStr: cStringPointer context: ctx env: env [
+	"CRITICAL: void* prevents UFFI from pinning Pharo objects during execution!
+	 optNonThreaded prevents worker-thread crashes."
 	^ self 
-		ffiCall: #(int64 GciExecuteStr_(String string, int64 ctx, int env)) 
+		ffiCall: #(int64 GciExecuteStr_(void* cStringPointer, int64 ctx, int env)) 
 		module: libraryPath
 		options: #( + optNonThreaded )
 ]

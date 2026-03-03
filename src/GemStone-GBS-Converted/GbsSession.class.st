@@ -177,18 +177,33 @@ GbsSession >> evaluateString: aString [
 
 { #category : 'execution' }
 GbsSession >> execute: script [
-	| interface resultOop |
+	| interface utf8Bytes cString resultOop |
 	
 	interface := GbsServerInterface uniqueInstance.
-	"Use your original method that contains optNonThreaded"
-	resultOop := interface apiGciExecuteStr: script context: 20 env: 0.
 	
-	"1 = OOP_ILLEGAL"
-	resultOop = 1 ifTrue: [ 
-		self checkForError.
-		^ nil 
+	"1. Convert to bytes and allocate safe C-memory for the input string"
+	utf8Bytes := script utf8Encoded.
+	cString := ExternalAddress allocate: utf8Bytes size + 1.
+	
+	[
+		"2. Write the bytes manually and null-terminate"
+		1 to: utf8Bytes size do: [ :i | cString unsignedByteAt: i put: (utf8Bytes at: i) ].
+		cString unsignedByteAt: utf8Bytes size + 1 put: 0.
+		
+		"3. Execute using the safe C-pointer! No UFFI object pinning."
+		resultOop := interface apiGciExecuteStr: cString context: 20 env: 0.
+		
+		"1 = OOP_ILLEGAL (Error occurred safely)"
+		resultOop = 1 ifTrue: [ 
+			self checkForError.
+			^ nil 
+		].
+	] ensure: [ 
+		"4. ALWAYS free the input string memory"
+		cString free. 
 	].
 	
+	"5. Map the successful result back to Pharo"
 	^ self resultFor: resultOop.
 ]
 
