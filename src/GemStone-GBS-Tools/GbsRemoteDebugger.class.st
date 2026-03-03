@@ -166,58 +166,29 @@ GbsRemoteDebugger >> fetchStackFrames [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> fetchContextsDirectly [
-	"Direct context fetching fallback"
-	| script rawData contexts realProcessOop |
+	"Direct context fetching fallback - walk context sender chain"
+	| script rawData contexts |
 
-	"The contextOop is a Context. Get the Process from it."
+	"Walk the context's sender chain directly"
 	script := '[
-		| ctx proc |
+		| ctx stream level |
 		ctx := Object _objectForOop: ', processOop asString, '.
-		ctx ifNil: [ ^ ''<ctx is nil>'' ].
-		proc := ctx process.
-		proc ifNil: [ ^ ''<proc is nil>'' ].
-		proc asOop asString
-	] value'.
-
-	realProcessOop := session executeAndFetch: script context: session sessionOop.
-	Transcript show: 'Got realProcessOop=', realProcessOop asString; cr.
-	
-	(realProcessOop beginsWith: '<') ifTrue: [
-		Transcript show: 'Failed: ', realProcessOop; cr.
-		^ #( )
-	].
-	realProcessOop := realProcessOop asInteger.
-
-	"Now fetch stack frames from the process"
-	script := '[
-		| proc stream depth |
-		proc := Object _objectForOop: ', realProcessOop asString, '.
 		stream := WriteStream on: String new.
-		proc ifNil: [ ^ ''<proc is nil>'' ].
-		depth := proc stackDepth.
-		stream nextPutAll: ''depth='', depth asString; lf.
-		1 to: (depth min: 30) do: [ :level |
-			| frameId fullEntry methodOrNil selector className |
-			frameId := proc _gsiStackReportFromLevel: level toLevel: level.
-			stream nextPutAll: ''level='', level asString; tab.
-			frameId ifNil: [ 
-				stream nextPutAll: ''<frameId is nil>''; lf 
-			] ifNotNil: [
-				fullEntry := frameId first.
-				fullEntry ifNil: [ 
-					stream nextPutAll: ''<fullEntry is nil>''; lf 
-				] ifNotNil: [
-					methodOrNil := fullEntry first.
-					selector := fullEntry size >= 4 ifTrue: [ fullEntry at: 4 ] ifFalse: [ nil ].
-					className := methodOrNil ifNotNil: [
-						methodOrNil inClass ifNotNil: [ methodOrNil inClass name ]
-					] ifNil: [ nil ].
-					stream
-						nextPutAll: (className ifNil: [''<unknown>''] ifNotNil: [ className ]); tab;
-						nextPutAll: (selector ifNil: [''<unknown>''] ifNotNil: [ selector asString ]);
-						lf.
-				].
-			].
+		ctx ifNil: [ ^ ''<ctx is nil>'' ].
+		level := 0.
+		[ ctx notNil and: [ level < 30 ] ] whileTrue: [
+			level := level + 1.
+			| methodOrNil selector className |
+			methodOrNil := ctx method.
+			selector := ctx selector.
+			className := methodOrNil ifNotNil: [
+				methodOrNil inClass ifNotNil: [ methodOrNil inClass name ]
+			] ifNil: [ nil ].
+			stream
+				nextPutAll: level asString; tab;
+				nextPutAll: (className ifNil: [''<unknown>''] ifNotNil: [ className ]); tab;
+				nextPutAll: (selector ifNil: [''<unknown>''] ifNotNil: [ selector asString ]); lf.
+			ctx := ctx sender.
 		].
 		stream contents
 	] value'.
@@ -231,7 +202,7 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 			parts := line splitOn: Character tab.
 			parts size >= 3 ifTrue: [
 				[ GbxActivation
-					processOop: realProcessOop
+					processOop: processOop
 					level: parts first asInteger
 					session: session ] on: Error do: [ :ex | 
 						Transcript show: 'Error creating activation: ', ex messageText; cr.

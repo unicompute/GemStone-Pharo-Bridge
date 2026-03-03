@@ -107,24 +107,26 @@ GbxActivation >> sourceString [
 
 { #category : 'accessing' }
 GbxActivation >> sourceCode [
-	"Fetch source code directly from GemStone"
+	"Fetch source code by walking the context sender chain"
 	| script result |
 	
 	"Check if we have required data"
 	session ifNil: [ ^ '<no source: session is nil>' ].
+	processOop ifNil: [ ^ '<no source: processOop is nil>' ].
 	level ifNil: [ ^ '<no source: level is nil>' ].
 	
 	script := '[
-		| frame entry src |
-		frame := self _gsiDebuggerDetailedReportAt: ', level asString, '.
-		frame ifNil: [ ^ ''<no source: frame is nil>'' ].
-		entry := frame first.
-		entry ifNil: [ ^ ''<no source: entry is nil>'' ].
-		entry size >= 9 ifFalse: [ 
-			^ ''<no source: entry size='', entry size asString,''>''.
+		| ctx currentLevel src |
+		ctx := Object _objectForOop: ', processOop asString, '.
+		ctx ifNil: [ ^ ''<no source: ctx is nil>'' ].
+		currentLevel := 0.
+		[ ctx notNil and: [ currentLevel < ', level asString, ' ] ] whileTrue: [
+			currentLevel := currentLevel + 1.
+			ctx := ctx sender.
 		].
-		src := entry at: 9.
-		src ifNil: [ ^ ''<no source: src is nil>'' ].
+		ctx ifNil: [ ^ ''<no source: context not found at level>'' ].
+		src := ctx sourceCode.
+		src ifNil: [ ^ ''<no source: sourceCode is nil>'' ].
 		^ src
 	] value'.
 	
@@ -281,16 +283,35 @@ GbxActivation >> marshalValue: anObject [
 
 { #category : 'temp variables' }
 GbxActivation >> tempNamesAndValues [
-	"Return a dictionary of temp names and their values"
-	| dict |
-	dict := Dictionary new.
-	1 to: self tempNames size do: [ :i |
-		| name value |
-		name := self tempNames at: i.
-		value := self tempAt: i.
-		dict at: name put: value.
-	].
-	^ dict
+	"Return a dictionary of temp names and their values by walking context chain"
+	| script result |
+	
+	script := '[
+		| ctx currentLevel dict |
+		ctx := Object _objectForOop: ', processOop asString, '.
+		ctx ifNil: [ ^ Dictionary new ].
+		currentLevel := 0.
+		[ ctx notNil and: [ currentLevel < ', level asString, ' ] ] whileTrue: [
+			currentLevel := currentLevel + 1.
+			ctx := ctx sender.
+		].
+		ctx ifNil: [ ^ Dictionary new ].
+		dict := Dictionary new.
+		"Get temp names and values"
+		ctx tempNames keysAndValuesDo: [ :i :name |
+			| val |
+			val := ctx getTempVar: (ctx localScope temps at: i).
+			dict at: name put: val.
+		].
+		dict
+	] value'.
+	
+	[
+		result := session executeAndFetch: script context: session sessionOop.
+		^ result ifNil: [ Dictionary new ] ifNotNil: [ result ]
+	] on: Error do: [ :ex |
+		^ Dictionary new
+	]
 ]
 
 { #category : 'source map' }
