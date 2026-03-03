@@ -81,6 +81,12 @@ GbsServerInterface >> apiGciErrBuffer: aByteArray [
 	^ self ffiCall: #(bool GciErr(void *aByteArray)) module: libraryPath
 ]
 
+{ #category : 'ffi' }
+GbsServerInterface >> apiGciErrRaw: aByteArray [
+	"Bypasses the buggy GciError struct to prevent C-stack buffer overflows"
+	^ self ffiCall: #(bool GciErr_(ByteArray aByteArray))
+]
+
 { #category : 'api - execution' }
 GbsServerInterface >> apiGciExecute: aString context: aContext [
     <primitive: #primitiveNativeCall error: errorCode>
@@ -260,20 +266,29 @@ GbsServerInterface >> checkError [
 
 { #category : 'error handling' }
 GbsServerInterface >> checkForError [
-	| errStruct hasError errorMessage |
+	| cBuffer hasError errorMsg contextOop |
 	
-	"1. Safely use your perfectly defined FFIExternalStructure"
-	errStruct := GciError new. 
+	"1. Allocate a massive 2.5KB buffer. No structs, impossible to overflow!"
+	cBuffer := ByteArray new: 2500.
 	
-	"2. Execute synchronously on the main thread (No crashes!)"
-	hasError := GbsServerInterface uniqueInstance apiGciErr: errStruct.
+	"2. Fetch the error directly into our raw bytes"
+	hasError := GbsServerInterface uniqueInstance apiGciErrRaw: cBuffer.
 	
-	"3. Parse the message if an error occurred"
-	(hasError == true or: [ hasError = 1 ]) ifTrue: [ 
-		errorMessage := errStruct message asString.
-		^ errorMessage
+	hasError ifTrue: [ 
+		"3. Extract the context OOP (8 bytes) starting at index 9"
+		contextOop := cBuffer integerAt: 9 size: 8 signed: false.
+		
+		"4. Extract the message string starting at index 114"
+		errorMsg := (cBuffer copyFrom: 114 to: 1138) asString.
+		errorMsg := errorMsg copyUpTo: Character null. "Trim the C null-terminators"
+		
+		"5. Signal the error to the UI!"
+		(GbsError new messageText: errorMsg; tag: contextOop) signal.
+		
+	] ifFalse: [ 
+		(GbsError new messageText: 'Unknown GemStone Error'; tag: 20) signal.
 	].
-
+	
 	^ nil
 ]
 
