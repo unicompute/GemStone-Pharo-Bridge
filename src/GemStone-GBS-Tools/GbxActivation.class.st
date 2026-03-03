@@ -107,39 +107,8 @@ GbxActivation >> sourceString [
 
 { #category : 'accessing' }
 GbxActivation >> sourceCode [
-	"Return cached source string if available"
-	sourceString ifNotNil: [ 
-		sourceString isEmpty ifFalse: [ ^ sourceString ]
-	].
-	
-	"Fetch source code from GemStone by walking context sender chain"
-	| script result |
-	
-	"Check if we have required data"
-	session ifNil: [ ^ '<no source: session is nil>' ].
-	processOop ifNil: [ ^ '<no source: processOop is nil>' ].
-	level ifNil: [ ^ '<no source: level is nil>' ].
-	
-	script := '[
-		| ctx currentLevel |
-		ctx := Object _objectForOop: ', processOop asString, '.
-		ctx ifNil: [ ^ ''<no source: ctx is nil>'' ].
-		currentLevel := 0.
-		[ ctx notNil and: [ currentLevel < ', level asString, ' ] ] whileTrue: [
-			currentLevel := currentLevel + 1.
-			ctx := ctx sender.
-		].
-		ctx ifNil: [ ^ ''<no source: context not found>'' ].
-		^ ctx sourceCode ifNil: [ ''<no source: sourceCode is nil>'' ]
-	] value'.
-	
-	[
-		result := session executeAndFetch: script context: session sessionOop.
-		result ifNil: [ ^ '<no source: result is nil>' ].
-		^ result
-	] on: Error do: [ :ex |
-		^ '<error fetching source: ', ex messageText, '>'
-	]
+	"Return cached source string"
+	^ sourceString ifNil: [ '' ]
 ]
 
 { #category : 'accessing' }
