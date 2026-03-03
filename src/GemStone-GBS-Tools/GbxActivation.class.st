@@ -115,21 +115,13 @@ GbxActivation >> sourceCode [
 	"Fetch source code directly from GemStone"
 	| script result |
 	script := '[
-		| frame src |
+		| frame entry |
 		frame := self _gsiDebuggerDetailedReportAt: ', level asString, '.
-		frame ifNil: [ ''<no source: frame is nil>'' ]
-		ifNotNil: [
-			frame first ifNil: [ ''<no source: entry is nil>'' ]
-			ifNotNil: [
-				frame first size >= 9 
-					ifTrue: [ 
-						src := frame first at: 9.
-						src ifNil: [ ''<no source: sourceString is nil>'' ]
-						ifNotNil: [ src ]
-					]
-					ifFalse: [ ''<no source: entry too small>'' ]
-			]
-		]
+		frame ifNil: [ ^ ''<no source: frame is nil>'' ].
+		entry := frame first.
+		entry ifNil: [ ^ ''<no source: entry is nil>'' ].
+		entry size >= 9 ifFalse: [ ^ ''<no source: entry too small>'' ].
+		^ (entry at: 9) ifNil: [ ''<no source: sourceString is nil>'' ]
 	] value'.
 	
 	result := [ session executeAndFetch: script context: session sessionOop ] 
