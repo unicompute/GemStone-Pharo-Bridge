@@ -178,41 +178,51 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 	] value'.
 
 	realProcessOop := session executeAndFetch: script context: session sessionOop.
+	Transcript show: 'realProcessOop=', realProcessOop asString; cr.
+	
 	(realProcessOop beginsWith: '<') ifTrue: [
+		Transcript show: 'Failed to get process: ', realProcessOop; cr.
 		^ #( )
 	].
 	realProcessOop := realProcessOop asInteger.
 
 	"Now fetch stack frames from the process"
 	script := '[
-		| proc stream |
+		| proc stream depth |
 		proc := Object _objectForOop: ', realProcessOop asString, '.
 		stream := WriteStream on: String new.
-		proc ifNotNil: [
-			1 to: (proc stackDepth min: 30) do: [ :level |
-				| frameId fullEntry methodOrNil selector className |
-				frameId := proc _gsiStackReportFromLevel: level toLevel: level.
-				frameId ifNotNil: [
-					fullEntry := frameId first.
-					fullEntry ifNotNil: [
-						methodOrNil := fullEntry first.
-						selector := fullEntry size >= 4 ifTrue: [ fullEntry at: 4 ] ifFalse: [ nil ].
-						className := methodOrNil ifNotNil: [
-							methodOrNil inClass ifNotNil: [ methodOrNil inClass name ]
-						] ifNil: [ nil ].
-							stream
-								nextPutAll: level asString; tab;
-								nextPutAll: (className ifNil: [''<unknown>''] ifNotNil: [ className ]); tab;
-								nextPutAll: (selector ifNil: [''<unknown>''] ifNotNil: [ selector asString ]);
-								lf.
-					].
+		proc ifNil: [ ^ ''<proc is nil>'' ].
+		depth := proc stackDepth.
+		stream nextPutAll: ''depth='', depth asString; lf.
+		1 to: (depth min: 30) do: [ :level |
+			| frameId fullEntry methodOrNil selector className |
+			frameId := proc _gsiStackReportFromLevel: level toLevel: level.
+			stream nextPutAll: ''level='', level asString; tab.
+			frameId ifNil: [ 
+				stream nextPutAll: ''<frameId is nil>''; lf 
+			] ifNotNil: [
+				fullEntry := frameId first.
+				fullEntry ifNil: [ 
+					stream nextPutAll: ''<fullEntry is nil>''; lf 
+				] ifNotNil: [
+					methodOrNil := fullEntry first.
+					selector := fullEntry size >= 4 ifTrue: [ fullEntry at: 4 ] ifFalse: [ nil ].
+					className := methodOrNil ifNotNil: [
+						methodOrNil inClass ifNotNil: [ methodOrNil inClass name ]
+					] ifNil: [ nil ].
+					stream
+						nextPutAll: (className ifNil: [''<unknown>''] ifNotNil: [ className ]); tab;
+						nextPutAll: (selector ifNil: [''<unknown>''] ifNotNil: [ selector asString ]);
+						lf.
 				].
-			]
+			].
 		].
 		stream contents
 	] value'.
 
 	rawData := session executeAndFetch: script context: session sessionOop.
+	Transcript show: 'rawData: ', rawData; cr.
+	
 	contexts := (rawData splitOn: Character lf)
 		collect: [ :line |
 			| parts |
