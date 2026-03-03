@@ -198,7 +198,7 @@ GbsSession >> execute: script [
 	errorScript := '[
 		| result |
 		[ ', script, ' ] on: Error do: [ :ex |
-			| ctx proc stackInfo |
+			| ctx proc stackInfo stream |
 			ctx := Processor activeProcess topContext.
 			proc := ctx process.
 			stackInfo := Array new.
@@ -210,8 +210,22 @@ GbsSession >> execute: script [
 				}.
 				ctx := ctx sender.
 			].
-			''<GEMSTONE_ERROR>'', ex description, ''|'', stackInfo size asString, ''|'', 
-			(stackInfo inject: '''' into: [ :sum :each | sum, each first, ''|'', each second, ''|'', each third, ''^'' ])
+			stream := WriteStream on: String new.
+			stream nextPutAll: ''<GEMSTONE_ERROR>'';
+				nextPutAll: ex description;
+				nextPutAll: ''|'';
+				nextPutAll: stackInfo size asString;
+				nextPutAll: ''|''.
+			stackInfo do: [ :each |
+				stream 
+					nextPutAll: each first;
+					nextPutAll: ''|'';
+					nextPutAll: each second;
+					nextPutAll: ''|'';
+					nextPutAll: each third;
+					nextPutAll: ''^''.
+			].
+			stream contents
 		] ifError: [ :err |
 			''<GEMSTONE_ERROR>'', err, ''|0|''
 		]
@@ -222,7 +236,7 @@ GbsSession >> execute: script [
 
 	"If result is 1, follow C++ logic: handle the error IMMEDIATELY"
 	resultOop = 1 ifTrue: [ ^ self handleGciError ].
-	
+
 	"Check if we got an error string"
 	| result |
 	result := self resultFor: resultOop.
@@ -232,14 +246,14 @@ GbsSession >> execute: script [
 			parts := result splitOn: $|.
 			errorMessage := parts size >= 2 ifTrue: [ parts at: 2 ] ifFalse: [ 'Unknown error' ].
 			stackCount := parts size >= 3 ifTrue: [ (parts at: 3) asInteger ] ifFalse: [ 0 ].
-			stackData := parts size >= 4 ifTrue: [ 
+			stackData := parts size >= 4 ifTrue: [
 				(parts copyFrom: 4 to: parts size) join: $|
 			] ifFalse: [ '' ].
-			
+
 			"Create error with stack data in tag"
 			| gbsError |
-			gbsError := GbsError new 
-				messageText: errorMessage; 
+			gbsError := GbsError new
+				messageText: errorMessage;
 				tag: { stackCount. stackData }.
 			gbsError signal.
 		].
