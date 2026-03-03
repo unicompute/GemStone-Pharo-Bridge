@@ -57,13 +57,20 @@ GbsWorkspace >> doIt [
 		result := activeSession execute: code.
 		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
 	] on: Error do: [ :ex |
-		ex tag ifNotNil: [ :contextOop |
-			(contextOop isNil or: [ contextOop = 20 ]) 
-				ifTrue: [ self inform: 'Error: ', ex messageText, ' (Invalid context OOP)' ]
-				ifFalse: [ self openRemoteDebuggerOn: ex messageText processOop: contextOop session: activeSession ]
-		] ifNil: [
-			self inform: 'Error: ', ex messageText
-		]
+		| contextOop |
+		contextOop := ex tag.
+		
+		"Check if tag is a valid context OOP (number) or just an error message"
+		contextOop isNumber 
+			ifTrue: [
+				(contextOop = 0 or: [ contextOop = 20 ]) 
+					ifTrue: [ self inform: 'Error: ', ex messageText, ' (Invalid context OOP)' ]
+					ifFalse: [ self openRemoteDebuggerOn: ex messageText processOop: contextOop session: activeSession ]
+			]
+			ifFalse: [
+				"Tag is not a number, just show the error"
+				self inform: 'Error: ', ex messageText
+			]
 	].
 ]
 
@@ -87,13 +94,20 @@ GbsWorkspace >> gemStoneDebugIt [
 		activeSession evaluate: text.
 		self inform: 'GemStone: Executed (No errors to debug)'.
 	] on: Error do: [ :ex |
-		ex tag ifNotNil: [ :contextOop |
-			(contextOop isNil or: [ contextOop = 20 ]) 
-				ifTrue: [ self inform: 'Error: ', ex messageText ]
-				ifFalse: [ self openRemoteDebuggerOn: ex messageText processOop: contextOop session: activeSession ]
-		] ifNil: [
-			self inform: 'Error: ', ex messageText
-		]
+		| contextOop |
+		contextOop := ex tag.
+		
+		"Check if tag is a valid context OOP (number) or just an error message"
+		contextOop isNumber 
+			ifTrue: [
+				(contextOop = 0 or: [ contextOop = 20 ]) 
+					ifTrue: [ self inform: 'Error: ', ex messageText ]
+					ifFalse: [ self openRemoteDebuggerOn: ex messageText processOop: contextOop session: activeSession ]
+			]
+			ifFalse: [
+				"Tag is not a number, just show the error"
+				self inform: 'Error: ', ex messageText
+			]
 	].
 ]
 
@@ -275,15 +289,19 @@ GbsWorkspace >> localPrintIt [
 { #category : 'actions' }
 GbsWorkspace >> openRemoteDebuggerOn: errorString processOop: processOop session: aSession [
 	"Open the GbsRemoteDebugger on a GemStone error"
-	
+	| errorText |
+
+	"Ensure errorString is actually a string"
+	errorText := errorString ifNil: [ 'Unknown Error' ] ifNotNil: [ :es | es asString ].
+
 	"Validate the process OOP"
-	(processOop isNil or: [ processOop = 20 ]) ifTrue: [
-		^ self inform: 'Error: ', errorString, ' (No debuggable process available)'
+	(processOop isNil or: [ processOop = 0 or: [ processOop = 20 ]]) ifTrue: [
+		^ self inform: 'Error: ', errorText, ' (No debuggable process available)'
 	].
-	
+
 	"Open the remote debugger"
 	[
-		GbsRemoteDebugger openOn: errorString process: processOop session: aSession.
+		GbsRemoteDebugger openOn: errorText process: processOop session: aSession.
 	] on: Error do: [ :ex |
 		self inform: 'Failed to open remote debugger: ', ex messageText
 	].
