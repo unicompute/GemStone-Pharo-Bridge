@@ -56,40 +56,16 @@ GbsWorkspace >> doIt [
 	[
 		result := activeSession execute: code.
 		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
-	] on: Error do: [ :ex |
-		| tagData |
-		tagData := ex tag.
-
-		Transcript show: 'Error: ', ex class name, ' - ', ex messageText; cr.
-		Transcript show: 'Tag: ', tagData asString, ' (', tagData class name, ')'; cr.
-
-		"Check if tag contains stack data (Array) or context OOP (Number)"
-		tagData isArray
-			ifTrue: [
-				"New format: stack data captured at error time"
-				| stackCount stackData |
-				stackCount := tagData first.
-				stackData := tagData second.
-				Transcript show: 'Stack frames: ', stackCount asString; cr.
-
-				stackCount > 0
-					ifTrue: [ self openRemoteDebuggerWithStack: stackData session: activeSession ]
-					ifFalse: [ self inform: 'Error: ', ex messageText ]
-			]
-			ifFalse: [
-				"Old format: context OOP"
-				tagData isNumber
-					ifTrue: [
-						Transcript show: 'Opening debugger with processOop=', tagData asString; cr.
-						(tagData = 0 or: [ tagData = 20 ])
-							ifTrue: [ self inform: 'Error: ', ex messageText, ' (Invalid context OOP)' ]
-							ifFalse: [ self openRemoteDebuggerOn: ex messageText processOop: tagData session: activeSession ]
-					]
-					ifFalse: [
-						"Tag is not a number, just show the error"
-						self inform: 'Error: ', ex messageText
-					]
-			]
+	] on: GbsError do: [ :ex |
+		| contextOop |
+		Transcript show: 'GbsError caught: ', ex messageText; cr.
+		contextOop := ex tag.
+		Transcript show: 'Context OOP: ', contextOop asString; cr.
+		
+		"Open debugger if we have a valid context OOP"
+		(contextOop isNumber and: [ contextOop > 20 ])
+			ifTrue: [ self openRemoteDebuggerOn: ex messageText processOop: contextOop session: activeSession ]
+			ifFalse: [ self inform: 'GemStone Error: ', ex messageText ]
 	].
 ]
 

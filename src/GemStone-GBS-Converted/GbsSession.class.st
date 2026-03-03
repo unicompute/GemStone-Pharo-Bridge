@@ -434,21 +434,24 @@ GbsSession >> gciPollForSignal [
 
 { #category : 'error handling' }
 GbsSession >> handleGciError [
-	| buffer errMsg contextOop |
-	
+	| buffer errMsg contextOop gbsError |
+
 	"Allocate the 2168-byte struct from your gci_layout_mac.txt"
 	buffer := ExternalAddress allocate: 2168.
 	[
 		"Linear Call: Fetch error and RESET the library state"
 		GbsServerInterface uniqueInstance apiGciErr: buffer.
-		
+
 		"Extract 64-bit context from offset 8 (Pharo index 9)"
-		contextOop := buffer unsignedLongLongAt: 9. 
+		contextOop := buffer unsignedLongLongAt: 9.
 		"Extract message from offset 113"
 		errMsg := (buffer + 113) readString.
-		
+
+		Transcript show: 'handleGciError: contextOop=', contextOop asString, ' msg=', errMsg; cr.
+
 		"Signal the error. tag carries the context for the debugger."
-		(GbsError new messageText: errMsg; tag: contextOop) signal.
+		gbsError := GbsError new messageText: errMsg; tag: contextOop.
+		gbsError signal.
 
 	] ensure: [ buffer free ].
 	^ nil
