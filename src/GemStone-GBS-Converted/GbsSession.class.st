@@ -89,15 +89,12 @@ GbsSession >> checkForError [
 	[
 		result := GbsServerInterface uniqueInstance apiGciErr: buffer.
 
-		Transcript show: 'checkForError: result=', result asString; cr.
-
 		(result = 1 or: [ result == true ]) ifTrue: [
 			"CRITICAL: Exact GS64 64-bit Memory Offsets!"
 			errNum := buffer signedLongAt: 105. "C-offset 104"
 			contextOop := buffer unsignedLongLongAt: 9. "C-offset 8"
 			errMsg := (buffer + 113) readString. "C-offset 113"
 
-			Transcript show: 'GCI Error detected: ', errMsg; cr.
 			"We now pass the REAL suspended Process OOP to the UI!"
 			(GbsError new messageText: errMsg; tag: contextOop) signal.
 		].

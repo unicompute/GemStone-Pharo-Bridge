@@ -52,18 +52,12 @@ GbsWorkspace >> doIt [
 	activeSession := GbsSessionParameters currentSession.
 	activeSession ifNil: [ ^ self inform: 'No Session' ].
 
-	"Execute and catch errors - use Error not GbsError to catch all"
-	Transcript show: 'Executing: ', code; cr.
-	
+	"Execute and catch errors"
 	[
 		result := activeSession execute: code.
-		Transcript show: 'Result: ', result asString; cr.
 		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
 	] on: Error do: [ :ex |
-		Transcript show: 'Error caught: ', ex class name, ' - ', ex messageText; cr.
-		Transcript show: 'Tag: ', ex tag asString; cr.
 		ex tag ifNotNil: [ :contextOop |
-			Transcript show: 'Context OOP: ', contextOop asString; cr.
 			(contextOop isNil or: [ contextOop = 20 ]) 
 				ifTrue: [ self inform: 'Error: ', ex messageText, ' (Invalid context OOP)' ]
 				ifFalse: [ self openRemoteDebuggerOn: ex messageText processOop: contextOop session: activeSession ]
@@ -93,10 +87,10 @@ GbsWorkspace >> gemStoneDebugIt [
 		activeSession evaluate: text.
 		self inform: 'GemStone: Executed (No errors to debug)'.
 	] on: Error do: [ :ex |
-		Transcript show: 'Error caught: ', ex class name, ' - ', ex messageText; cr.
 		ex tag ifNotNil: [ :contextOop |
-			Transcript show: 'Context OOP: ', contextOop asString; cr.
-			self openRemoteDebuggerOn: ex messageText processOop: contextOop session: activeSession
+			(contextOop isNil or: [ contextOop = 20 ]) 
+				ifTrue: [ self inform: 'Error: ', ex messageText ]
+				ifFalse: [ self openRemoteDebuggerOn: ex messageText processOop: contextOop session: activeSession ]
 		] ifNil: [
 			self inform: 'Error: ', ex messageText
 		]

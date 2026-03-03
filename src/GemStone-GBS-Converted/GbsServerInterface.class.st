@@ -69,7 +69,7 @@ GbsServerInterface >> apiGciEncrypt: s into: b size: z [ ^ self ffiCall: #(void*
 { #category : 'api' }
 GbsServerInterface >> apiGciErr: aBuffer [
     ^ self 
-        ffiCall: #(bool GciErr_(void *aBuffer))
+        ffiCall: #(bool GciErr(void *aBuffer))
         module: libraryPath
         options: #( + optNonThreaded )
 ]
@@ -77,7 +77,7 @@ GbsServerInterface >> apiGciErr: aBuffer [
 { #category : 'ffi' }
 GbsServerInterface >> apiGciErrAddress: anExternalAddress [
 	"Strictly takes an ExternalAddress pointer allocated on the OS heap"
-	^ self ffiCall: #(bool GciErr_(void *anExternalAddress))
+	^ self ffiCall: #(bool GciErr(void *anExternalAddress))
 ]
 
 { #category : 'api' }
@@ -89,13 +89,13 @@ GbsServerInterface >> apiGciErrBuffer: aByteArray [
 { #category : 'ffi' }
 GbsServerInterface >> apiGciErrRaw: aByteArray [
 	"CRITICAL FIX: 'void *' tells Pharo to pass the safe byte payload, NOT the object header!"
-	^ self ffiCall: #(bool GciErr_(void * aByteArray))
+	^ self ffiCall: #(bool GciErr(void * aByteArray))
 ]
 
 { #category : 'ffi' }
 GbsServerInterface >> apiGciErrSafe: aVoidPointer [
 	"Uses void* so UFFI passes the raw pointer, completely preventing C-stack buffer overflows"
-	^ self ffiCall: #(bool GciErr_(void *aVoidPointer))
+	^ self ffiCall: #(bool GciErr(void *aVoidPointer))
 ]
 
 { #category : 'api - execution' }
