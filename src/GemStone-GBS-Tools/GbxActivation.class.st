@@ -107,7 +107,33 @@ GbxActivation >> sourceString [
 
 { #category : 'accessing' }
 GbxActivation >> sourceCode [
-	^ self sourceString
+	"Return source code, fetching from GemStone if not cached"
+	sourceString ifNotNil: [ 
+		sourceString isEmpty ifFalse: [ ^ sourceString ]
+	].
+	
+	"Fetch source code directly from GemStone"
+	| script result |
+	script := '[
+		| frame |
+		frame := self _gsiDebuggerDetailedReportAt: ', level asString, '.
+		frame ifNil: [ ^ ''<no source: frame is nil>'' ].
+		frame first ifNil: [ ^ ''<no source: entry is nil>'' ].
+		frame first size >= 9 
+			ifTrue: [ 
+				| src |
+				src := frame first at: 9.
+				src ifNil: [ ^ ''<no source: sourceString is nil>'' ].
+				^ src
+			]
+			ifFalse: [ ^ ''<no source: entry too small>'' ]
+	] value'.
+	
+	result := [ session executeAndFetch: script context: session sessionOop ] 
+		on: Error 
+		do: [ :ex | '<error fetching source: ', ex messageText, '>' ].
+	
+	^ result ifNil: [ '<no source: result is nil>' ] ifNotNil: [ result ]
 ]
 
 { #category : 'accessing' }
@@ -163,13 +189,14 @@ GbxActivation >> reset [
 				]
 				ifFalse: [ methodOrNil _numArgsTempsCblkargs ].
 		className := methodOrNil ifNil: [ ''<unknown>'' ] ifNotNil: [ methodOrNil inClass ifNil: [ ''<unknown>'' ] ifNotNil: [ methodOrNil inClass name ] ].
-		selectorName := fullEntry at: 4.
-		selectorName ifNil: [ selectorName := ''<unknown>'' ].
-		sourceStr := fullEntry at: 9.
-		sourceStr ifNil: [ sourceStr := '''' ].
-		"Return pipe-separated values for easy parsing"
-		className, ''|'', selectorName asString, ''|'', 
-		(fullEntry at: 5) printString, ''|'',
+			selectorName := fullEntry at: 4.
+			selectorName ifNil: [ selectorName := ''<unknown>'' ].
+			sourceStr := fullEntry at: 9.
+			sourceStr ifNil: [ sourceStr := '''' ].
+			sourceStr := sourceStr copyReplaceAll: ''|'' with: ''<PIPE>''.
+			"Return pipe-separated values for easy parsing"
+			className, ''|'', selectorName asString, ''|'', 
+			(fullEntry at: 5) printString, ''|'',
 		(fullEntry at: 6) printString, ''|'',
 		(fullEntry at: 7) printString, ''|'',
 		sourceStr, ''|'',
@@ -191,10 +218,10 @@ GbxActivation >> reset [
 		gsMethodId := (parts at: 1), '>>', (parts at: 2).
 		selector := (parts at: 2) asSymbol.
 		quickStepPoint := (parts at: 3) asInteger.
-		sourceOffsets := (parts at: 4) splitOn: $,.
-		argAndTempNames := (parts at: 5) splitOn: $,.
-		sourceString := parts at: 6.
-		ipOffset := (parts at: 7) asInteger.
+			sourceOffsets := (parts at: 4) splitOn: $,.
+			argAndTempNames := (parts at: 5) splitOn: $,.
+			sourceString := (parts at: 6) copyReplaceAll: '<PIPE>' with: '|'.
+			ipOffset := (parts at: 7) asInteger.
 		numArgsAndTemps := (parts at: 8) asInteger.
 		stackP := (parts at: 9) asInteger.
 		methodClass := parts at: 10.

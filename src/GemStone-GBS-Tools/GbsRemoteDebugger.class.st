@@ -202,18 +202,21 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 	] value'.
 	
 	rawData := session executeAndFetch: script context: session sessionOop.
-	contexts := (rawData splitOn: Character lf) 
-		collect: [ :line | 
+	contexts := (rawData splitOn: Character lf)
+		collect: [ :line |
 			| parts |
 			parts := line splitOn: Character tab.
 			parts size >= 3 ifTrue: [
 				[ GbxActivation
 					processOop: processOop
 					level: parts first asInteger
-					session: session ] on: Error do: [ :ex | nil ]
+					session: session ] on: Error do: [ :ex | 
+						Transcript show: 'Error creating activation: ', ex messageText; cr.
+						nil 
+				]
 			]
 		] thenSelect: #isNotNil.
-	
+
 	^ contexts
 ]
 
@@ -233,15 +236,23 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 	service ifNotNil: [ service selectContext: context ].
 	context ifNil: [ ^ self ].
 
-	"Display source code"
-	sourceCode := context sourceCode.
-	sourceText text: (sourceCode ifNil: [ '' ]).
+	"Display source code - fetch it fresh from GemStone"
+	[
+		sourceCode := context sourceCode.
+		sourceText text: (sourceCode ifNil: [ '' ]).
+	] on: Error do: [ :ex |
+		sourceText text: 'Error fetching source: ', ex messageText.
+	].
 
 	"Fetch and display variables"
-	variables := [ context tempNamesAndValues ] on: Error do: [ :ex | Dictionary new ].
-	variablesTable items: (variables associations collect: [ :assoc |
-		{ assoc key. assoc value asString }
-	]).
+	[
+		variables := context tempNamesAndValues.
+		variablesTable items: (variables associations collect: [ :assoc |
+			{ assoc key. assoc value asString }
+		]).
+	] on: Error do: [ :ex |
+		variablesTable items: #().
+	].
 ]
 
 { #category : 'actions' }
