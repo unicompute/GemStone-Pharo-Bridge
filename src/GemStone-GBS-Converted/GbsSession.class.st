@@ -84,26 +84,28 @@ GbsSession >> checkAndClearError [
 { #category : 'error handling' }
 GbsSession >> checkForError [
 	| buffer result errNum errMsg contextOop |
-	
+
 	buffer := ExternalAddress allocate: 2168.
 	[
 		result := GbsServerInterface uniqueInstance apiGciErr: buffer.
-		
-		(result = 1 or: [ result == true ]) ifTrue: [ 
+
+		Transcript show: 'checkForError: result=', result asString; cr.
+
+		(result = 1 or: [ result == true ]) ifTrue: [
 			"CRITICAL: Exact GS64 64-bit Memory Offsets!"
 			errNum := buffer signedLongAt: 105. "C-offset 104"
 			contextOop := buffer unsignedLongLongAt: 9. "C-offset 8"
 			errMsg := (buffer + 113) readString. "C-offset 113"
-			
+
+			Transcript show: 'GCI Error detected: ', errMsg; cr.
 			"We now pass the REAL suspended Process OOP to the UI!"
 			(GbsError new messageText: errMsg; tag: contextOop) signal.
-		] ifFalse: [ 
-			(GbsError new messageText: 'Unknown GemStone Error'; tag: 20) signal.
 		].
-	] ensure: [ 
-		buffer free. 
+		"Only signal if there's actually an error (result = 1 or true)"
+	] ensure: [
+		buffer free.
 	].
-	
+
 	^ nil
 ]
 
@@ -189,13 +191,16 @@ GbsSession >> evaluateString: aString [
 { #category : 'execution' }
 GbsSession >> execute: script [
 	| resultOop |
-	
-	resultOop := GbsServerInterface uniqueInstance 
+
+	resultOop := GbsServerInterface uniqueInstance
 		apiGciExecuteStr: script context: 20 env: 0.
-	
+
 	"If result is 1, follow C++ logic: handle the error IMMEDIATELY"
 	resultOop = 1 ifTrue: [ ^ self handleGciError ].
 	
+	"Check if there's an error in the GCI error buffer (for exceptions that don't return 1)"
+	self checkForError.
+
 	^ self resultFor: resultOop.
 ]
 
