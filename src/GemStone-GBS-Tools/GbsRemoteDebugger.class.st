@@ -189,11 +189,11 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 						className := methodOrNil ifNotNil: [ 
 							methodOrNil inClass ifNotNil: [ methodOrNil inClass name ] 
 						] ifNil: [ nil ].
-						stream 
-							nextPutAll: level asString; tab;
-							nextPutAll: (className ifNil: ['<unknown>'] ifNotNil: [ className ]); tab;
-							nextPutAll: (selector ifNil: ['<unknown>'] ifNotNil: [ selector asString ]);
-							lf.
+							stream 
+								nextPutAll: level asString; tab;
+								nextPutAll: (className ifNil: [''<unknown>''] ifNotNil: [ className ]); tab;
+								nextPutAll: (selector ifNil: [''<unknown>''] ifNotNil: [ selector asString ]);
+								lf.
 					].
 				].
 			]
