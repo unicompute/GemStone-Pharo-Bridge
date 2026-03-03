@@ -201,16 +201,21 @@ GbsSession >> execute: script [
 
 { #category : 'execution' }
 GbsSession >> executeAndFetch: script [
+	^ self executeAndFetch: script context: 20
+]
+
+{ #category : 'execution' }
+GbsSession >> executeAndFetch: script context: contextOop [
 	"Executes code and fetches the resulting String safely."
 	| interface stringOop |
-	
+
 	interface := GbsServerInterface uniqueInstance.
-	stringOop := interface apiGciExecuteStr: script context: 20 env: 0.
-	
+	stringOop := interface apiGciExecuteStr: script context: contextOop env: 0.
+
 	"SAFE ERROR CHECKING - No C-Structs!"
 	stringOop = 1 ifTrue: [ ^ 'Error: GemStone Compile Error' ].
 	stringOop = 20 ifTrue: [ ^ 'nil' ].
-	
+
 	^ interface fetchString: stringOop.
 ]
 
