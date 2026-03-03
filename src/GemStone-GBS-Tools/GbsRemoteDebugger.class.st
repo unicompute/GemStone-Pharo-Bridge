@@ -61,13 +61,13 @@ GbsRemoteDebugger >> defaultLayout [
 GbsRemoteDebugger >> fetchStackFrames [
 	| script rawData frames |
 	
-	"CRITICAL FIX: Break the Infinite Loop! 20 is nil. Do not touch the C-library!"
+	"FOLLOW THE C TEST: If the result is 20 (nil), stop immediately. 
+	 This breaks the infinite recursion loop."
 	(processOop isNil or: [ processOop = 20 ]) ifTrue: [ 
-		stackList items: #('No stack frames available (Context is nil)').
+		stackList items: #('No stack frames available - Context is nil').
 		^ self 
 	].
 	
-	"Query the suspended GemStone process for its stack depth and frame details"
 	script := '[
 		| proc stream |
 		proc := Object _objectForOop: ', processOop asString, '.
@@ -81,7 +81,6 @@ GbsRemoteDebugger >> fetchStackFrames [
 	] value'.
 	
 	rawData := session executeAndFetch: script.
-	
 	frames := (rawData splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty.
 	stackList items: frames.
 ]

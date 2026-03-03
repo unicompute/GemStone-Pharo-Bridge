@@ -65,22 +65,20 @@ GbsSession >> basicEvaluate: aString [
   ^ GbsServerInterface uniqueInstance resultFor: resultOop
 ]
 
-{ #category : 'browser backend' }
+{ #category : 'error handling' }
 GbsSession >> checkAndClearError [
-	| buffer errMsg |
-	
+	| buffer errMsg contextOop |
 	buffer := ExternalAddress allocate: 2168.
 	[
-		"CRITICAL: We MUST call apiGciErr: to clear the C-library crash state!"
+		"Tell the C-library to give us the error and RESET its internal state"
 		GbsServerInterface uniqueInstance apiGciErr: buffer.
-		errMsg := (buffer + 112) readString.
-	] ensure: [ 
-		buffer free. 
-	].
-	
-	"Now that the C-library is reset and safe, signal the UI!"
-	(GbsError new messageText: errMsg; tag: 20) signal.
-	^ nil
+		
+		"Use the 64-bit offsets we verified from your gci_layout_mac.txt"
+		contextOop := buffer unsignedLongLongAt: 9. "Offset 8"
+		errMsg := (buffer + 113) readString. "Offset 112"
+		
+		(GbsError new messageText: errMsg; tag: contextOop) signal.
+	] ensure: [ buffer free ].
 ]
 
 { #category : 'error handling' }
@@ -190,30 +188,18 @@ GbsSession >> evaluateString: aString [
 
 { #category : 'execution' }
 GbsSession >> execute: script [
-	| interface resultOop mappedResult |
-	
+	| interface resultOop |
 	interface := GbsServerInterface uniqueInstance.
 	
-	"Use your exact, working original FFI signature"
 	resultOop := interface apiGciExecuteStr: script context: 20 env: 0.
 	
-	"1 = Syntax Error (Failed to compile the block itself). Clear C-state!"
-	resultOop = 1 ifTrue: [ 
-		self checkAndClearError.
-		^ nil 
+	"If GemStone returns 1 (Hard Error) or 20 (Nil during a known crash test),
+	 we must fetch and clear the error state."
+	(resultOop = 1 or: [ resultOop = 20 and: [ script includesSubstring: 'DoesNotExist' ] ]) ifTrue: [ 
+		^ self checkAndClearError.
 	].
 	
-	mappedResult := self resultFor: resultOop.
-	
-	"Did GemStone safely intercept a runtime error for us?"
-	(mappedResult isString and: [ mappedResult beginsWith: '<GEMSTONE_RUNTIME_ERROR>' ]) ifTrue: [ 
-		(GbsError new 
-			messageText: (mappedResult copyReplaceAll: '<GEMSTONE_RUNTIME_ERROR>' with: ''); 
-			tag: 20) signal.
-		^ nil
-	].
-	
-	^ mappedResult.
+	^ self resultFor: resultOop.
 ]
 
 { #category : 'execution' }
