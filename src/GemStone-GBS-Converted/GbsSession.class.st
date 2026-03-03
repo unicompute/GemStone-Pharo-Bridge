@@ -98,8 +98,13 @@ GbsSession >> checkForError [
 			"Log for debugging"
 			Transcript show: 'checkForError: result=', result asString, ' contextOop=', contextOop asString; cr.
 
-			"We now pass the REAL suspended Process OOP to the UI!"
-			(GbsError new messageText: errMsg; tag: contextOop) signal.
+			"Create the error with BOTH the message and the context OOP"
+			| gbsError |
+			gbsError := GbsError new 
+				messageText: errMsg; 
+				tag: contextOop.
+			gbsError gemStoneExceptionProxy: nil.
+			gbsError signal.
 		].
 		"Only signal if there's actually an error (result = 1 or true)"
 	] ensure: [
@@ -190,18 +195,60 @@ GbsSession >> evaluateString: aString [
 
 { #category : 'execution' }
 GbsSession >> execute: script [
-	| resultOop |
+	| resultOop errorScript |
+
+	"Wrap the script to capture error context info before it propagates"
+	errorScript := '[
+		| result |
+		[ ', script, ' ] on: Error do: [ :ex |
+			| ctx proc stackInfo |
+			ctx := Processor activeProcess topContext.
+			proc := ctx process.
+			stackInfo := Array new.
+			[ ctx notNil and: [ stackInfo size < 30 ] ] whileTrue: [
+				stackInfo add: {
+					ctx selector ifNil: [ ''<unknown>'' ] ifNotNil: [ :s | s asString ].
+					ctx method ifNil: [ ''<unknown>'' ] ifNotNil: [ :m | m selector asString ].
+					ctx sourceCode ifNil: [ ''<no source>'' ].
+				}.
+				ctx := ctx sender.
+			].
+			''<GEMSTONE_ERROR>'', ex description, ''|'', stackInfo size asString, ''|'', 
+			(stackInfo inject: '''' into: [ :sum :each | sum, each first, ''|'', each second, ''|'', each third, ''^'' ])
+		] ifError: [ :err |
+			''<GEMSTONE_ERROR>'', err, ''|0|''
+		]
+	] value'.
 
 	resultOop := GbsServerInterface uniqueInstance
-		apiGciExecuteStr: script context: 20 env: 0.
+		apiGciExecuteStr: errorScript context: 20 env: 0.
 
 	"If result is 1, follow C++ logic: handle the error IMMEDIATELY"
 	resultOop = 1 ifTrue: [ ^ self handleGciError ].
 	
-	"Check if there's an error in the GCI error buffer (for exceptions that don't return 1)"
-	self checkForError.
+	"Check if we got an error string"
+	| result |
+	result := self resultFor: resultOop.
+	result isString ifTrue: [
+		(result beginsWith: '<GEMSTONE_ERROR>') ifTrue: [
+			| parts errorMessage stackCount stackData |
+			parts := result splitOn: $|.
+			errorMessage := parts size >= 2 ifTrue: [ parts at: 2 ] ifFalse: [ 'Unknown error' ].
+			stackCount := parts size >= 3 ifTrue: [ (parts at: 3) asInteger ] ifFalse: [ 0 ].
+			stackData := parts size >= 4 ifTrue: [ 
+				(parts copyFrom: 4 to: parts size) join: $|
+			] ifFalse: [ '' ].
+			
+			"Create error with stack data in tag"
+			| gbsError |
+			gbsError := GbsError new 
+				messageText: errorMessage; 
+				tag: { stackCount. stackData }.
+			gbsError signal.
+		].
+	].
 
-	^ self resultFor: resultOop.
+	^ result
 ]
 
 { #category : 'execution' }

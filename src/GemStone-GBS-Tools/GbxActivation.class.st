@@ -107,7 +107,12 @@ GbxActivation >> sourceString [
 
 { #category : 'accessing' }
 GbxActivation >> sourceCode [
-	"Fetch source code by walking context sender chain"
+	"Return cached source string if available"
+	sourceString ifNotNil: [ 
+		sourceString isEmpty ifFalse: [ ^ sourceString ]
+	].
+	
+	"Fetch source code from GemStone by walking context sender chain"
 	| script result |
 	
 	"Check if we have required data"

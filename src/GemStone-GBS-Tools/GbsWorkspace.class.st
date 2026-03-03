@@ -57,23 +57,38 @@ GbsWorkspace >> doIt [
 		result := activeSession execute: code.
 		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
 	] on: Error do: [ :ex |
-		| contextOop |
-		contextOop := ex tag.
-		
+		| tagData |
+		tagData := ex tag.
+
 		Transcript show: 'Error: ', ex class name, ' - ', ex messageText; cr.
-		Transcript show: 'Tag: ', contextOop asString, ' (', contextOop class name, ')'; cr.
-		
-		"Check if tag is a valid context OOP (number) or just an error message"
-		contextOop isNumber 
+		Transcript show: 'Tag: ', tagData asString, ' (', tagData class name, ')'; cr.
+
+		"Check if tag contains stack data (Array) or context OOP (Number)"
+		tagData isArray
 			ifTrue: [
-				Transcript show: 'Opening debugger with processOop=', contextOop asString; cr.
-				(contextOop = 0 or: [ contextOop = 20 ]) 
-					ifTrue: [ self inform: 'Error: ', ex messageText, ' (Invalid context OOP)' ]
-					ifFalse: [ self openRemoteDebuggerOn: ex messageText processOop: contextOop session: activeSession ]
+				"New format: stack data captured at error time"
+				| stackCount stackData |
+				stackCount := tagData first.
+				stackData := tagData second.
+				Transcript show: 'Stack frames: ', stackCount asString; cr.
+
+				stackCount > 0
+					ifTrue: [ self openRemoteDebuggerWithStack: stackData session: activeSession ]
+					ifFalse: [ self inform: 'Error: ', ex messageText ]
 			]
 			ifFalse: [
-				"Tag is not a number, just show the error"
-				self inform: 'Error: ', ex messageText
+				"Old format: context OOP"
+				tagData isNumber
+					ifTrue: [
+						Transcript show: 'Opening debugger with processOop=', tagData asString; cr.
+						(tagData = 0 or: [ tagData = 20 ])
+							ifTrue: [ self inform: 'Error: ', ex messageText, ' (Invalid context OOP)' ]
+							ifFalse: [ self openRemoteDebuggerOn: ex messageText processOop: tagData session: activeSession ]
+					]
+					ifFalse: [
+						"Tag is not a number, just show the error"
+						self inform: 'Error: ', ex messageText
+					]
 			]
 	].
 ]
@@ -284,6 +299,20 @@ GbsWorkspace >> openRemoteDebuggerOn: errorString processOop: processOop session
 	] on: Error do: [ :ex |
 		self inform: 'Failed to open remote debugger: ', ex messageText
 	].
+]
+
+{ #category : 'actions' }
+GbsWorkspace >> openRemoteDebuggerWithStack: stackData session: aSession [
+	"Open debugger with pre-captured stack data"
+	| debugger |
+	
+	debugger := GbsRemoteDebugger new.
+	debugger session: aSession.
+	debugger processOop: 0.
+	debugger label: 'GemStone Error'.
+	debugger stackData: stackData.
+	debugger open.
+	debugger withWindowDo: [ :win | win title: 'GemStone Remote Debugger' ].
 ]
 
 { #category : 'private' }

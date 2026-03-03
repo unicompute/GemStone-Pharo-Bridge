@@ -26,7 +26,8 @@ Class {
 		'resumeButton',
 		'terminateButton',
 		'errorMessageLabel',
-		'glueIsHidden'
+		'glueIsHidden',
+		'stackData'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -137,9 +138,20 @@ GbsRemoteDebugger >> label: aString [
 	errorMessageLabel label: aString
 ]
 
+{ #category : 'accessing' }
+GbsRemoteDebugger >> stackData: anArray [
+	stackData := anArray.
+	self fetchStackFrames.
+]
+
 { #category : 'actions' }
 GbsRemoteDebugger >> fetchStackFrames [
 	| contexts |
+
+	"Check if we have captured stack data"
+	stackData ifNotNil: [
+		^ self fetchStackFramesFromData
+	].
 
 	(processOop isNil or: [ processOop = 20 or: [ processOop = 0 ]]) ifTrue: [
 		stackList items: #('No stack frames available (Context is nil)').
@@ -161,6 +173,37 @@ GbsRemoteDebugger >> fetchStackFrames [
 	contextList ifNotEmpty: [
 		stackList selectIndex: 1.
 		self contextSelected: (contextList at: 1)
+	].
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> fetchStackFramesFromData [
+	"Build context list from captured stack data"
+	| contexts index |
+	
+	index := 0.
+	contexts := stackData splitOn: $^ thenCollect: [ :frameStr |
+		| parts |
+		parts := frameStr splitOn: $|.
+		parts size >= 3 ifTrue: [
+			index := index + 1.
+			GbxActivation new
+				session: session;
+				processOop: 0;
+				level: index;
+				selector: (parts at: 1) asSymbol;
+				gsMethodId: (parts at: 2);
+				sourceString: (parts at: 3);
+				yourself
+		]
+	] thenSelect: #isNotNil.
+	
+	contextList := contexts.
+	stackList items: (contexts collect: [ :ctx | ctx printString ]).
+	
+	contexts ifNotEmpty: [
+		stackList selectIndex: 1.
+		self contextSelected: (contexts at: 1)
 	].
 ]
 
@@ -226,18 +269,17 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 		^ self
 	].
 
-	"Use the selected context, not stale service state."
+	"Use the selected context"
 	context := selectedItem.
 	service ifNotNil: [ service selectContext: context ].
 	context ifNil: [ ^ self ].
 
-	"Display source code - fetch it fresh from GemStone"
-	[
-		sourceCode := context sourceCode.
-		sourceText text: (sourceCode ifNil: [ '' ]).
-	] on: Error do: [ :ex |
-		sourceText text: 'Error fetching source: ', ex messageText.
-	].
+	"Display source code - use cached source if available"
+	sourceCode := context sourceCode.
+	sourceText text: (sourceCode ifNil: [ 
+		"Try to get from cached sourceString"
+		context sourceString ifNil: [ '' ]
+	]).
 
 	"Fetch and display variables"
 	[
