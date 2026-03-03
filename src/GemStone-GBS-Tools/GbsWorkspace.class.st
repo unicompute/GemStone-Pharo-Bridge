@@ -44,7 +44,7 @@ GbsWorkspace >> doCommit [
 
 { #category : 'actions' }
 GbsWorkspace >> doIt [
-	| code activeSession script |
+	| code activeSession result |
 
 	code := self selectedCodeOrAll copyReplaceAll: String cr with: String lf.
 	code ifEmpty: [ ^ self ].
@@ -52,13 +52,24 @@ GbsWorkspace >> doIt [
 	activeSession := GbsSessionParameters currentSession.
 	activeSession ifNil: [ ^ self inform: 'No Session' ].
 
-	"Execute directly without wrapping - let GbsError be signaled with proper context OOP"
+	"Execute and catch errors - use Error not GbsError to catch all"
+	Transcript show: 'Executing: ', code; cr.
+	
 	[
-		activeSession execute: code.
+		result := activeSession execute: code.
+		Transcript show: 'Result: ', result asString; cr.
 		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
-	] on: GbsError do: [ :ex |
-		"ex tag contains the context OOP from GbsSession"
-		self openRemoteDebuggerOn: ex messageText processOop: ex tag session: activeSession
+	] on: Error do: [ :ex |
+		Transcript show: 'Error caught: ', ex class name, ' - ', ex messageText; cr.
+		Transcript show: 'Tag: ', ex tag asString; cr.
+		ex tag ifNotNil: [ :contextOop |
+			Transcript show: 'Context OOP: ', contextOop asString; cr.
+			(contextOop isNil or: [ contextOop = 20 ]) 
+				ifTrue: [ self inform: 'Error: ', ex messageText, ' (Invalid context OOP)' ]
+				ifFalse: [ self openRemoteDebuggerOn: ex messageText processOop: contextOop session: activeSession ]
+		] ifNil: [
+			self inform: 'Error: ', ex messageText
+		]
 	].
 ]
 
@@ -81,8 +92,14 @@ GbsWorkspace >> gemStoneDebugIt [
 	[
 		activeSession evaluate: text.
 		self inform: 'GemStone: Executed (No errors to debug)'.
-	] on: GbsError do: [ :ex |
-		self openRemoteDebuggerOn: ex messageText processOop: ex tag session: activeSession
+	] on: Error do: [ :ex |
+		Transcript show: 'Error caught: ', ex class name, ' - ', ex messageText; cr.
+		ex tag ifNotNil: [ :contextOop |
+			Transcript show: 'Context OOP: ', contextOop asString; cr.
+			self openRemoteDebuggerOn: ex messageText processOop: contextOop session: activeSession
+		] ifNil: [
+			self inform: 'Error: ', ex messageText
+		]
 	].
 ]
 
