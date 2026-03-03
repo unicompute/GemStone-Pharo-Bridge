@@ -82,33 +82,8 @@ GbsWorkspace >> executeInGemStone [
 
 { #category : 'actions' }
 GbsWorkspace >> gemStoneDebugIt [
-	| text activeSession |
-	text := textEditor selectedText.
-	text isEmpty ifTrue: [ text := textEditor text ].
-
-	activeSession := GbsSessionParameters currentSession.
-	activeSession ifNil: [ ^ self inform: 'Not connected to GemStone!' ].
-
-	"Execute directly - let GbsError be signaled with proper context OOP"
-	[
-		activeSession evaluate: text.
-		self inform: 'GemStone: Executed (No errors to debug)'.
-	] on: Error do: [ :ex |
-		| contextOop |
-		contextOop := ex tag.
-		
-		"Check if tag is a valid context OOP (number) or just an error message"
-		contextOop isNumber 
-			ifTrue: [
-				(contextOop = 0 or: [ contextOop = 20 ]) 
-					ifTrue: [ self inform: 'Error: ', ex messageText ]
-					ifFalse: [ self openRemoteDebuggerOn: ex messageText processOop: contextOop session: activeSession ]
-			]
-			ifFalse: [
-				"Tag is not a number, just show the error"
-				self inform: 'Error: ', ex messageText
-			]
-	].
+	"Use the same path as DoIt so GbsError carries a real process OOP for remote debugging."
+	^ self doIt
 ]
 
 { #category : 'actions' }
