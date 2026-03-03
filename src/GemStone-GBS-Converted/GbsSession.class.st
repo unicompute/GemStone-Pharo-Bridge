@@ -65,6 +65,24 @@ GbsSession >> basicEvaluate: aString [
   ^ GbsServerInterface uniqueInstance resultFor: resultOop
 ]
 
+{ #category : 'browser backend' }
+GbsSession >> checkAndClearError [
+	| buffer errMsg |
+	
+	buffer := ExternalAddress allocate: 2168.
+	[
+		"CRITICAL: We MUST call apiGciErr: to clear the C-library crash state!"
+		GbsServerInterface uniqueInstance apiGciErr: buffer.
+		errMsg := (buffer + 112) readString.
+	] ensure: [ 
+		buffer free. 
+	].
+	
+	"Now that the C-library is reset and safe, signal the UI!"
+	(GbsError new messageText: errMsg; tag: 20) signal.
+	^ nil
+]
+
 { #category : 'error handling' }
 GbsSession >> checkForError [
 	| buffer result errNum errMsg contextOop |
@@ -177,21 +195,29 @@ GbsSession >> evaluateString: aString [
 
 { #category : 'execution' }
 GbsSession >> execute: script [
-	| interface resultOop |
+	| interface resultOop mappedResult |
 	
 	interface := GbsServerInterface uniqueInstance.
 	
-	"Use your exact, working signature that includes optNonThreaded"
-	resultOop := interface apiGciExecuteStr: script context: 20 environment: 0.
+	"Use your exact, working FFI signature"
+	resultOop := interface apiGciExecuteStr: script context: 20 env: 0.
 	
-	"1 = OOP_ILLEGAL (GemStone encountered an exception)"
+	"1 = OOP_ILLEGAL (Syntax Error). Clear the C-state immediately!"
 	resultOop = 1 ifTrue: [ 
-		"Call your working error checker!"
-		interface checkError.
-		^ nil 
+		^ self checkAndClearError.
 	].
 	
-	^ self resultFor: resultOop.
+	mappedResult := self resultFor: resultOop.
+	
+	"Catch Native Runtime Errors safely without touching the C-library"
+	(mappedResult isString and: [ mappedResult beginsWith: '<GEMSTONE_RUNTIME_ERROR>' ]) ifTrue: [ 
+		(GbsError new 
+			messageText: (mappedResult copyReplaceAll: '<GEMSTONE_RUNTIME_ERROR>' with: ''); 
+			tag: 20) signal.
+		^ nil
+	].
+	
+	^ mappedResult.
 ]
 
 { #category : 'execution' }
