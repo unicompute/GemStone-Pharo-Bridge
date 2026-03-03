@@ -87,22 +87,17 @@ GbsSession >> checkAndClearError [
 GbsSession >> checkForError [
 	| buffer result errNum errMsg contextOop |
 	
-	"1. Use the exact proven buffer size from your working file"
 	buffer := ExternalAddress allocate: 2168.
-	
 	[
-		"2. Use your original apiGciErr: which has the optNonThreaded flag!"
 		result := GbsServerInterface uniqueInstance apiGciErr: buffer.
 		
 		(result = 1 or: [ result == true ]) ifTrue: [ 
-			"3. Use the exact proven memory offsets from your working file"
-			errNum := buffer signedLongAt: 5.
-			errMsg := (buffer + 112) readString.
+			"CRITICAL: Exact GS64 64-bit Memory Offsets!"
+			errNum := buffer signedLongAt: 105. "C-offset 104"
+			contextOop := buffer unsignedLongLongAt: 9. "C-offset 8"
+			errMsg := (buffer + 113) readString. "C-offset 113"
 			
-			"We will default the context OOP to 20 (nil) to ensure it never crashes"
-			contextOop := 20. 
-			
-			"4. Throw the exception so the Workspace can launch the Debugger UI"
+			"We now pass the REAL suspended Process OOP to the UI!"
 			(GbsError new messageText: errMsg; tag: contextOop) signal.
 		] ifFalse: [ 
 			(GbsError new messageText: 'Unknown GemStone Error'; tag: 20) signal.
@@ -195,29 +190,18 @@ GbsSession >> evaluateString: aString [
 
 { #category : 'execution' }
 GbsSession >> execute: script [
-	| interface resultOop mappedResult |
+	| interface resultOop |
 	
 	interface := GbsServerInterface uniqueInstance.
-	
-	"Use your exact, working FFI signature"
 	resultOop := interface apiGciExecuteStr: script context: 20 env: 0.
 	
-	"1 = OOP_ILLEGAL (Syntax Error). Clear the C-state immediately!"
+	"1 = OOP_ILLEGAL (Error safely caught by GemStone)"
 	resultOop = 1 ifTrue: [ 
-		^ self checkAndClearError.
+		self checkForError.
+		^ nil 
 	].
 	
-	mappedResult := self resultFor: resultOop.
-	
-	"Catch Native Runtime Errors safely without touching the C-library"
-	(mappedResult isString and: [ mappedResult beginsWith: '<GEMSTONE_RUNTIME_ERROR>' ]) ifTrue: [ 
-		(GbsError new 
-			messageText: (mappedResult copyReplaceAll: '<GEMSTONE_RUNTIME_ERROR>' with: ''); 
-			tag: 20) signal.
-		^ nil
-	].
-	
-	^ mappedResult.
+	^ self resultFor: resultOop.
 ]
 
 { #category : 'execution' }

@@ -49,23 +49,16 @@ GbsWorkspace >> doIt [
 	code := self selectedCodeOrAll copyReplaceAll: String cr with: String lf.
 	code ifEmpty: [ ^ self ].
 	
-	"CRITICAL FIX: Use 'Exception'. This safely catches MNUs natively on the server!"
-	script := '[ 
-		[ ', code, ' ] value 
-	] on: Exception do: [ :ex | 
-		''<GEMSTONE_RUNTIME_ERROR>'', ex description 
-	]'.		
-			
+	script := '[ ', code, ' ] value'.		
 	activeSession := GbsSessionParameters currentSession.
 	activeSession ifNil: [ ^ self inform: 'No Session' ].		
-		
-	[ 
-		activeSession execute: script.
-		"Only fetch the transcript if execution and error handling finished safely!"
-		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
-	] on: GbsError do: [ :ex | 
-		self openRemoteDebuggerOn: ex session: activeSession 
-	].
+	
+	"Execute safely. If it errors, route the REAL Process OOP to the Debugger!"	
+	[ activeSession execute: script ]
+		on: GbsError 
+		do: [ :ex | self openRemoteDebuggerOn: ex session: activeSession ].
+	
+	GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
 ]
 
 { #category : 'actions' }
