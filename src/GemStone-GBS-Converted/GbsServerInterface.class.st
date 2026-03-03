@@ -280,19 +280,21 @@ GbsServerInterface >> apiGciTsVersion [
 { #category : 'error handling' }
 GbsServerInterface >> checkError [
 	"Using your proven 2168-byte buffer logic!"
-	| buffer result errNum errMsg |
+	| buffer result errNum errMsg contextOop |
 	buffer := ExternalAddress allocate: 2168.
 	[
 		result := self apiGciErr: buffer.
 		(result = 1 or: [ result == true ]) ifTrue: [
 			errNum := buffer signedLongAt: 5.
 			errMsg := (buffer + 112) readString.
-			
-			"Signal the error to the UI! tag: 20 represents the nil context"
-			(GbsError new messageText: errMsg; tag: 20) signal.
+			"Extract the context OOP from offset 8 (index 9) for debugger"
+			contextOop := buffer unsignedLongLongAt: 9.
+
+			"Signal the error to the UI! tag carries the context for debugger"
+			(GbsError new messageText: errMsg; tag: contextOop) signal.
 		].
-	] ensure: [ 
-		buffer free 
+	] ensure: [
+		buffer free
 	].
 ]
 

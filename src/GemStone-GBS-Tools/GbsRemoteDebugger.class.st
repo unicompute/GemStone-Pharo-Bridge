@@ -147,16 +147,14 @@ GbsRemoteDebugger >> fetchStackFrames [
 	].
 
 	"Use the service's context policy to fetch contexts"
-	contexts := service ifNotNil: [ 
-		service contextStackPolicy computeContextList 
-	] ifnil: [ 
-		self fetchContextsDirectly 
-	].
+	contexts := service isNotNil
+		ifTrue: [ service contextStackPolicy computeContextList ]
+		ifFalse: [ self fetchContextsDirectly ].
 
 	contextList := contexts.
 	stackList items: (contexts collect: [ :ctx | ctx printString ]).
 
-	contexts ifNotEmpty: [ 
+	contexts ifNotEmpty: [
 		stackList selectIndex: 1.
 		self contextSelected: (contexts at: 1)
 	].
@@ -216,21 +214,23 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> contextSelected: selectedItem [
-	| level context sourceCode variables |
-	
+	| context sourceCode variables |
+
 	selectedItem ifNil: [ ^ self ].
-	
+
 	"Get the context from the service"
-	context := service ifNotNil: [ service currentContext ] ifnil: [ nil ].
+	context := service isNotNil
+		ifTrue: [ service currentContext ]
+		ifFalse: [ nil ].
 	context ifNil: [ ^ self ].
-	
+
 	"Display source code"
 	sourceCode := context sourceCode.
 	sourceText text: (sourceCode ifNil: [ '' ]).
-	
+
 	"Fetch and display variables"
 	variables := context tempNamesAndValues.
-	variablesTable items: (variables associations collect: [ :assoc | 
+	variablesTable items: (variables associations collect: [ :assoc |
 		{ assoc key. assoc value asString }
 	]).
 ]

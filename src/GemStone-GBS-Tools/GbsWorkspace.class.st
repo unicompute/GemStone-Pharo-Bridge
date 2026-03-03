@@ -49,30 +49,13 @@ GbsWorkspace >> doIt [
 	code := self selectedCodeOrAll copyReplaceAll: String cr with: String lf.
 	code ifEmpty: [ ^ self ].
 
-	"Wrap the script so GemStone catches its own errors natively and returns the suspended process!"
-	script := '[
-		[ ', code, ' ] value
-	] on: Exception do: [ :ex |
-		"Return the suspended process that we can debug"
-		''<GEMSTONE_DEBUG_PROCESS>'', Processor activeProcess asOop asString
-	]'.
-
 	activeSession := GbsSessionParameters currentSession.
 	activeSession ifNil: [ ^ self inform: 'No Session' ].
 
+	"Execute directly without wrapping - let GbsError be signaled with proper context OOP"
 	[
-		| result |
-		result := activeSession executeAndFetch: script.
-		
-		"Check if we got a debug process marker"
-		(result beginsWith: '<GEMSTONE_DEBUG_PROCESS>') ifTrue: [
-			| processOopString processOop |
-			processOopString := (result copyFrom: 25 to: result size) trimBoth.
-			processOop := processOopString asInteger.
-			self openRemoteDebuggerOn: 'GemStone Runtime Error' processOop: processOop session: activeSession.
-		] ifFalse: [
-			GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
-		].
+		activeSession execute: code.
+		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
 	] on: GbsError do: [ :ex |
 		"ex tag contains the context OOP from GbsSession"
 		self openRemoteDebuggerOn: ex messageText processOop: ex tag session: activeSession
@@ -87,33 +70,17 @@ GbsWorkspace >> executeInGemStone [
 
 { #category : 'actions' }
 GbsWorkspace >> gemStoneDebugIt [
-	| text activeSession script |
+	| text activeSession |
 	text := textEditor selectedText.
 	text isEmpty ifTrue: [ text := textEditor text ].
 
 	activeSession := GbsSessionParameters currentSession.
 	activeSession ifNil: [ ^ self inform: 'Not connected to GemStone!' ].
 
-	"Wrap in a block that returns the suspended process on error"
-	script := '[
-		[ ', text, ' ] value
-	] on: Exception do: [ :ex |
-		''<GEMSTONE_DEBUG_PROCESS>'', Processor activeProcess asOop asString
-	]'.
-
+	"Execute directly - let GbsError be signaled with proper context OOP"
 	[
-		| result |
-		result := activeSession executeAndFetch: script.
-		
-		"Check if we got a debug process marker"
-		(result beginsWith: '<GEMSTONE_DEBUG_PROCESS>') ifTrue: [
-			| processOopString processOop |
-			processOopString := (result copyFrom: 25 to: result size) trimBoth.
-			processOop := processOopString asInteger.
-			self openRemoteDebuggerOn: 'GemStone Debug It' processOop: processOop session: activeSession.
-		] ifFalse: [
-			self inform: 'GemStone: Executed (No errors to debug)'.
-		].
+		activeSession evaluate: text.
+		self inform: 'GemStone: Executed (No errors to debug)'.
 	] on: GbsError do: [ :ex |
 		self openRemoteDebuggerOn: ex messageText processOop: ex tag session: activeSession
 	].
