@@ -22,6 +22,14 @@ MockGbsSession >> evaluate: aString [
 	^ self stubs at: #evaluate ifAbsent: [ '' ]
 ]
 
+{ #category : 'execution' }
+MockGbsSession >> execute: script [
+	| block |
+	block := self stubs at: #execute ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block value: script ].
+	^ self stubs at: #executeResult ifAbsent: [ true ]
+]
+
 { #category : 'accessing' }
 MockGbsSession >> gciAbort [
 	^ self stubs at: #gciAbort ifAbsent: [ 1 ]
