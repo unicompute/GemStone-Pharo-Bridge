@@ -186,8 +186,10 @@ GbsRemoteDebugger >> fetchStackFrames [
 	stackList items: (contextList collect: [ :ctx | ctx printString ]).
 
 	contextList ifNotEmpty: [
-		stackList selectIndex: 1.
-		self contextSelected: (contextList at: 1)
+		| preferredIndex |
+		preferredIndex := self preferredInitialContextIndex.
+		stackList selectIndex: preferredIndex.
+		self contextSelected: (contextList at: preferredIndex)
 	].
 ]
 
@@ -217,8 +219,10 @@ GbsRemoteDebugger >> fetchStackFramesFromData [
 	stackList items: (contexts collect: [ :ctx | ctx printString ]).
 	
 	contexts ifNotEmpty: [
-		stackList selectIndex: 1.
-		self contextSelected: (contexts at: 1)
+		| preferredIndex |
+		preferredIndex := self preferredInitialContextIndex.
+		stackList selectIndex: preferredIndex.
+		self contextSelected: (contexts at: preferredIndex)
 	].
 ]
 
@@ -414,4 +418,34 @@ GbsRemoteDebugger >> resume [
 GbsRemoteDebugger >> terminate [
 	service ifNotNil: [ service terminate ].
 	self withWindowDo: [ :window | window close ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> preferredInitialContextIndex [
+	| index |
+	contextList ifNil: [ ^ 1 ].
+	contextList isEmpty ifTrue: [ ^ 1 ].
+
+	index := contextList
+		findFirst: [ :ctx | self isLikelyUserFrame: ctx ].
+	index = 0 ifTrue: [ ^ 1 ].
+	^ index
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> isLikelyUserFrame: aContext [
+	| className selectorName source |
+	aContext ifNil: [ ^ false ].
+
+	className := [ aContext methodClassOrUnknown ] on: Error do: [ '<unknown>' ].
+	selectorName := [ aContext selectorOrUnknown asString ] on: Error do: [ '<unknown>' ].
+	source := [ aContext sourceString ifNil: [ '' ] ] on: Error do: [ '' ].
+
+	(className beginsWith: 'AbstractException') ifTrue: [ ^ false ].
+	(className beginsWith: 'GsNMethod') ifTrue: [ ^ false ].
+	(selectorName beginsWith: '_') ifTrue: [ ^ false ].
+	(#('signal' 'defaultAction' '_defaultAction' '_signal' '_signalToDebugger') includes: selectorName) ifTrue: [ ^ false ].
+	source isEmpty ifTrue: [ ^ false ].
+
+	^ true
 ]
