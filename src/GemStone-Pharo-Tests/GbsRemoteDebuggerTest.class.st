@@ -16,19 +16,21 @@ GbsRemoteDebuggerTest >> setUp [
 
 { #category : 'tests' }
 GbsRemoteDebuggerTest >> testContextOopIsValid [
-	"Test that we can fetch a valid context OOP from GemStone"
-	| contextOop |
-	
+	"Validate the error-driven oop that the remote debugger actually uses."
+	| raisedError processOop |
+
 	session ifNil: [ self skip: 'No session' ].
-	
-	"Execute code that will give us a context"
-	contextOop := session evaluate: 'Processor activeProcess topContext asOop'.
-	
-	self deny: contextOop equals: 20.
-	self deny: contextOop equals: nil.
-	self assert: contextOop isNumber.
-	
-	Transcript show: 'Context OOP: ', contextOop asString; cr.
+
+	raisedError := nil.
+	[
+		session execute: '| a b | a := 10. b := 0. a / b'.
+	] on: GbsError do: [ :ex | raisedError := ex ].
+
+	self assert: raisedError notNil.
+	processOop := raisedError serverProcessOop ifNil: [ raisedError tag ].
+	self assert: processOop notNil.
+	self deny: processOop equals: 0.
+	self deny: processOop equals: 20.
 ]
 
 { #category : 'tests' }
@@ -51,60 +53,81 @@ GbsRemoteDebuggerTest >> testContextHasSender [
 
 { #category : 'tests' }
 GbsRemoteDebuggerTest >> testContextSourceCode [
-	"Test that we can fetch source code from a context"
-	| contextOop sourceCode |
-	
+	| raisedError processOop service contexts topContext sourceCode |
+
 	session ifNil: [ self skip: 'No session' ].
-	
-	contextOop := session evaluate: 'Processor activeProcess topContext asOop'.
-	
-	sourceCode := session evaluate: '[
-		| ctx |
-		ctx := Object _objectForOop: ', contextOop asString, '.
-		ctx sourceCode
-	] value'.
-	
-	Transcript show: 'Source code: ', sourceCode; cr.
-	
-	self deny: sourceCode equals: nil.
+
+	raisedError := nil.
+	[
+		session execute: '| a b | a := 10. b := 0. a / b'.
+	] on: GbsError do: [ :ex | raisedError := ex ].
+
+	self assert: raisedError notNil.
+	processOop := raisedError serverProcessOop ifNil: [ raisedError tag ].
+
+	service := GbxDebuggerService new.
+	service
+		session: session;
+		processOop: processOop.
+	service initializeForDebugging.
+
+	contexts := service contextList.
+	self assert: contexts notEmpty.
+	topContext := contexts first.
+	sourceCode := topContext sourceCode.
+	self assert: sourceCode notNil.
 ]
 
 { #category : 'tests' }
 GbsRemoteDebuggerTest >> testContextMethod [
-	"Test that we can fetch method from a context"
-	| contextOop methodName |
-	
+	| raisedError processOop service contexts topContext |
+
 	session ifNil: [ self skip: 'No session' ].
-	
-	contextOop := session evaluate: 'Processor activeProcess topContext asOop'.
-	
-	methodName := session evaluate: '[
-		| ctx |
-		ctx := Object _objectForOop: ', contextOop asString, '.
-		ctx method ifNil: [ ''nil'' ] ifNotNil: [ :m | m selector asString ]
-	] value'.
-	
-	Transcript show: 'Method: ', methodName; cr.
-	
-	self deny: methodName equals: 'nil'.
+
+	raisedError := nil.
+	[
+		session execute: '| a b | a := 10. b := 0. a / b'.
+	] on: GbsError do: [ :ex | raisedError := ex ].
+
+	self assert: raisedError notNil.
+	processOop := raisedError serverProcessOop ifNil: [ raisedError tag ].
+
+	service := GbxDebuggerService new.
+	service
+		session: session;
+		processOop: processOop.
+	service initializeForDebugging.
+
+	contexts := service contextList.
+	self assert: contexts notEmpty.
+	topContext := contexts first.
+	self assert: topContext gsMethodIdOrUnknown ~= '<unknown>'.
 ]
 
 { #category : 'tests' }
 GbsRemoteDebuggerTest >> testContextSelector [
-	"Test that we can fetch selector from a context"
-	| contextOop selector |
-	
+	| raisedError processOop service contexts topContext |
+
 	session ifNil: [ self skip: 'No session' ].
-	
-	contextOop := session evaluate: 'Processor activeProcess topContext asOop'.
-	
-	selector := session evaluate: '[
-		| ctx |
-		ctx := Object _objectForOop: ', contextOop asString, '.
-		ctx selector ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ]
-	] value'.
-	
-	Transcript show: 'Selector: ', selector; cr.
+
+	raisedError := nil.
+	[
+		session execute: '| a b | a := 10. b := 0. a / b'.
+	] on: GbsError do: [ :ex | raisedError := ex ].
+
+	self assert: raisedError notNil.
+	processOop := raisedError serverProcessOop ifNil: [ raisedError tag ].
+
+	service := GbxDebuggerService new.
+	service
+		session: session;
+		processOop: processOop.
+	service initializeForDebugging.
+
+	contexts := service contextList.
+	self assert: contexts notEmpty.
+	topContext := contexts first.
+	self deny: topContext selectorOrUnknown equals: #unboundMethod.
 ]
 
 { #category : 'tests' }
@@ -145,36 +168,28 @@ GbsRemoteDebuggerTest >> testErrorContextFetch [
 
 { #category : 'tests' }
 GbsRemoteDebuggerTest >> testSimpleStackWalk [
-	"Test walking the sender chain from an error context"
-	| script result |
-	
+	| raisedError processOop service contexts summary |
+
 	session ifNil: [ self skip: 'No session' ].
-	
-	script := '[
-		| ctx stream depth |
-		[ 1 / 0 ] on: Error do: [ :ex |
-			ctx := Processor activeProcess topContext.
-		].
-		stream := WriteStream on: String new.
-		depth := 0.
-		[ ctx notNil and: [ depth < 10 ] ] whileTrue: [
-			depth := depth + 1.
-			stream 
-				nextPutAll: depth asString; tab;
-				nextPutAll: (ctx selector ifNil: [''<no selector>'' ] ifNotNil: [ :s | s asString ]); tab;
-				nextPutAll: (ctx method ifNil: [''<no method>'' ] ifNotNil: [ :m | m selector asString ]);
-				lf.
-			ctx := ctx sender.
-		].
-		stream contents
-	] value'.
-	
-	result := session evaluate: script.
-	
-	Transcript show: 'Stack walk result: ', result; cr.
-	
-	self deny: result isNil.
-	self deny: result isEmpty.
+
+	raisedError := nil.
+	[
+		session execute: '| a b | a := 10. b := 0. a / b'.
+	] on: GbsError do: [ :ex | raisedError := ex ].
+
+	self assert: raisedError notNil.
+	processOop := raisedError serverProcessOop ifNil: [ raisedError tag ].
+
+	service := GbxDebuggerService new.
+	service
+		session: session;
+		processOop: processOop.
+	service initializeForDebugging.
+
+	contexts := service contextList.
+	self assert: contexts notEmpty.
+	summary := contexts collect: [ :ctx | ctx printString ].
+	self assert: summary notEmpty.
 ]
 
 { #category : 'tests' }
