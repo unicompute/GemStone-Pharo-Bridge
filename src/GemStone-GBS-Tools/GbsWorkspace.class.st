@@ -71,17 +71,6 @@ GbsWorkspace >> doIt [
 			openRemoteDebuggerOn: ex messageText
 			processOop: processOop
 			session: activeSession
-	] on: Error do: [ :ex |
-		Transcript
-			show: 'Error: ';
-			show: ex class name;
-			show: ': ';
-			show: ex messageText;
-			cr.
-		self
-			openRemoteDebuggerOn: ex messageText
-			processOop: 20
-			session: activeSession
 	].
 ]
 
