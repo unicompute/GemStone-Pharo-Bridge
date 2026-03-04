@@ -86,8 +86,28 @@ GbxActivation >> selector [
 ]
 
 { #category : 'accessing' }
+GbxActivation >> selector: aSymbol [
+	selector := aSymbol
+]
+
+{ #category : 'accessing' }
+GbxActivation >> gsMethodId [
+	^ gsMethodId
+]
+
+{ #category : 'accessing' }
+GbxActivation >> gsMethodId: aString [
+	gsMethodId := aString
+]
+
+{ #category : 'accessing' }
 GbxActivation >> methodClass [
 	^ methodClass
+]
+
+{ #category : 'accessing' }
+GbxActivation >> methodClass: aString [
+	methodClass := aString
 ]
 
 { #category : 'accessing' }
@@ -96,13 +116,28 @@ GbxActivation >> receiver [
 ]
 
 { #category : 'accessing' }
+GbxActivation >> receiver: anObject [
+	receiver := anObject
+]
+
+{ #category : 'accessing' }
 GbxActivation >> receiverClass [
 	^ receiverClass
 ]
 
 { #category : 'accessing' }
+GbxActivation >> receiverClass: aString [
+	receiverClass := aString
+]
+
+{ #category : 'accessing' }
 GbxActivation >> sourceString [
 	^ sourceString ifNil: [ '' ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> sourceString: aString [
+	sourceString := aString
 ]
 
 { #category : 'accessing' }
@@ -255,38 +290,170 @@ GbxActivation >> marshalValue: anObject [
 
 { #category : 'temp variables' }
 GbxActivation >> tempNamesAndValues [
-	"Return a dictionary of temp names and their values by walking context chain"
+	"Return a dictionary of temp names and their values from this activation context oop"
 	| script result |
 	
 	script := '[
-		| ctx currentLevel dict |
+		| ctx dict |
 		ctx := Object _objectForOop: ', processOop asString, '.
 		ctx ifNil: [ ^ Dictionary new ].
-		currentLevel := 0.
-		[ ctx notNil and: [ currentLevel < ', level asString, ' ] ] whileTrue: [
-			currentLevel := currentLevel + 1.
-			ctx := ctx sender.
-		].
-		ctx ifNil: [ ^ Dictionary new ].
 		dict := Dictionary new.
-		"Get temp names and values from context"
-		ctx method ifNotNil: [ :m |
-			m tempNames keysAndValuesDo: [ :i :name |
+		[ ctx method ifNotNil: [ :m |
+			m tempNames doWithIndex: [ :name :i |
 				| val |
-				[ val := ctx getTempVar: (ctx localScope temps at: i).
-				dict at: name put: val.
-				] on: Error do: [].
-			].
-		].
+				[ 
+					val := ctx tempAt: i.
+					dict at: name put: val
+				] on: Error do: [ ].
+			]
+		] ] on: Error do: [ ].
 		dict
 	] value'.
 	
 	[
-		result := session executeAndFetch: script context: session sessionOop.
+		result := session evaluate: script.
 		^ result ifNil: [ Dictionary new ] ifNotNil: [ result ]
 	] on: Error do: [ :ex |
 		^ Dictionary new
 	]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> selfOop [
+	^ selfOop
+]
+
+{ #category : 'accessing' }
+GbxActivation >> selfOop: anObject [
+	selfOop := anObject
+]
+
+{ #category : 'accessing' }
+GbxActivation >> argAndTempNames: aCollection [
+	argAndTempNames := aCollection
+]
+
+{ #category : 'accessing' }
+GbxActivation >> numArgsAndTemps: anInteger [
+	numArgsAndTemps := anInteger
+]
+
+{ #category : 'accessing' }
+GbxActivation >> sourceOffsets: aCollection [
+	sourceOffsets := aCollection
+]
+
+{ #category : 'accessing' }
+GbxActivation >> ipOffset: anInteger [
+	ipOffset := anInteger
+]
+
+{ #category : 'accessing' }
+GbxActivation >> stackP: anInteger [
+	stackP := anInteger
+]
+
+{ #category : 'accessing' }
+GbxActivation >> quickStepPoint: anInteger [
+	quickStepPoint := anInteger
+]
+
+{ #category : 'accessing' }
+GbxActivation >> processOop [
+	^ processOop
+]
+
+{ #category : 'accessing' }
+GbxActivation >> session [
+	^ session
+]
+
+{ #category : 'accessing' }
+GbxActivation >> numArgsAndTemps [
+	^ numArgsAndTemps ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> argAndTempNames [
+	^ argAndTempNames ifNil: [ #( ) ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> quickStepPoint [
+	^ quickStepPoint ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> ipOffset [
+	^ ipOffset ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> stackP [
+	^ stackP ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> sourceOffsetAt: anIndex [
+	^ (self sourceOffsets at: anIndex ifAbsent: [ 0 ])
+]
+
+{ #category : 'accessing' }
+GbxActivation >> sourceOffsetsSize [
+	^ self sourceOffsets size
+]
+
+{ #category : 'accessing' }
+GbxActivation >> gsMethodIdOrUnknown [
+	^ gsMethodId ifNil: [ '<unknown>' ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> methodClassOrUnknown [
+	^ methodClass ifNil: [ '<unknown>' ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> receiverClassOrUnknown [
+	^ receiverClass ifNil: [ '<unknown>' ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> selectorOrUnknown [
+	^ selector ifNil: [ #unboundMethod ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> hasSourceString [
+	^ sourceString isNotNil and: [ sourceString isEmpty not ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> ensureSourceString [
+	sourceString ifNil: [ sourceString := '' ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> ensureArgAndTempNames [
+	argAndTempNames ifNil: [ argAndTempNames := #( ) ].
+	numArgsAndTemps ifNil: [ numArgsAndTemps := 0 ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> ensureSourceOffsets [
+	sourceOffsets ifNil: [ sourceOffsets := #( ) ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> initializeFromClass: className selector: selectorName source: sourceText contextOop: contextOop [
+	self methodClass: className.
+	self selector: selectorName.
+	self gsMethodId: className, '>>', selectorName asString.
+	self sourceString: sourceText.
+	self processOop: contextOop.
+	self ensureSourceString.
+	self ensureArgAndTempNames.
+	self ensureSourceOffsets
 ]
 
 { #category : 'source map' }
