@@ -54,22 +54,33 @@ GbsWorkspace >> doIt [
 
 	"Execute and catch errors - open debugger on any error"
 	[
-		result := activeSession execute: code.
-		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
-	] on: GbsError do: [ :ex |
-		processOop := (ex respondsTo: #tag)
-			ifTrue: [ ex tag ]
-			ifFalse: [ 20 ].
-		processOop ifNil: [ processOop := 20 ].
+		[
+			result := activeSession execute: code.
+			GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
+		] on: GbsError do: [ :ex |
+			processOop := (ex respondsTo: #tag)
+				ifTrue: [ ex tag ]
+				ifFalse: [ 20 ].
+			processOop ifNil: [ processOop := 20 ].
+			Transcript
+				show: 'GbsError: ';
+				show: ex messageText;
+				show: ' processOop=';
+				show: processOop asString;
+				cr.
+			self
+				openRemoteDebuggerOn: ex messageText
+				processOop: processOop
+				session: activeSession
+		].
+	] on: Error do: [ :ex |
 		Transcript
-			show: 'GbsError: ';
+			show: 'Workspace execute error: ';
 			show: ex messageText;
-			show: ' processOop=';
-			show: processOop asString;
 			cr.
 		self
 			openRemoteDebuggerOn: ex messageText
-			processOop: processOop
+			processOop: 20
 			session: activeSession
 	].
 ]
@@ -264,17 +275,31 @@ GbsWorkspace >> localPrintIt [
 { #category : 'actions' }
 GbsWorkspace >> openRemoteDebuggerOn: errorString processOop: processOop session: aSession [
 	"Open the GbsRemoteDebugger on a GemStone error"
-	| errorText safeProcessOop |
+	| errorText safeProcessOop debugger |
 
 	"Ensure errorString is actually a string"
 	errorText := errorString ifNil: [ 'Unknown Error' ] ifNotNil: [ :es | es asString ].
 	safeProcessOop := processOop ifNil: [ 20 ].
 
 	"Open through the debugger service, matching the VW service->client flow"
-	GbxDebuggerService
-		openOn: errorText
-		process: safeProcessOop
-		session: aSession.
+	[
+		GbxDebuggerService
+			openOn: errorText
+			process: safeProcessOop
+			session: aSession
+	] on: Error do: [ :ex |
+		Transcript
+			show: 'Failed to open debugger through service: ';
+			show: ex messageText;
+			cr.
+		"Fallback: open a basic debugger shell so the user is not blocked."
+		debugger := GbsRemoteDebugger new.
+		debugger session: aSession.
+		debugger open.
+		debugger label: errorText.
+		[ debugger processOop: safeProcessOop ] on: Error do: [ :ignored | ].
+		debugger withWindowDo: [ :win | win title: 'GemStone Remote Debugger' ].
+	].
 ]
 
 { #category : 'actions' }

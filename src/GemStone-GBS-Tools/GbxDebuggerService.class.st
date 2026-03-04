@@ -44,7 +44,14 @@ GbxDebuggerService class >> openOn: anErrorString process: processOop session: a
 	service session: aSession.
 	service processOop: processOop.
 	service label: anErrorString.
-	service initializeForDebugging.
+	[
+		service initializeForDebugging
+	] on: Error do: [ :ex |
+		Transcript
+			show: 'GbxDebuggerService initializeForDebugging failed: ';
+			show: ex messageText;
+			cr
+	].
 
 	^ GbsRemoteDebugger
 		openOn: anErrorString
