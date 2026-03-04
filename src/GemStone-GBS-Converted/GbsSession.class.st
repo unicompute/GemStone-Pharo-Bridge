@@ -67,7 +67,7 @@ GbsSession >> basicEvaluate: aString [
 
 { #category : 'error handling' }
 GbsSession >> checkAndClearError [
-	| buffer errMsg contextOop |
+	| buffer errMsg contextOop exceptionOop debugOop |
 	buffer := ExternalAddress allocate: 2168.
 	[
 		"Tell the C-library to give us the error and RESET its internal state"
@@ -75,15 +75,20 @@ GbsSession >> checkAndClearError [
 		
 		"Use the 64-bit offsets we verified from your gci_layout_mac.txt"
 		contextOop := buffer unsignedLongLongAt: 9. "Offset 8"
+		exceptionOop := buffer unsignedLongLongAt: 17. "Offset 16"
+		debugOop := ((contextOop isNil or: [ contextOop = 0 or: [ contextOop = 20 ] ])
+			ifTrue: [ exceptionOop ]
+			ifFalse: [ contextOop ]).
+		(debugOop isNil or: [ debugOop = 0 ]) ifTrue: [ debugOop := 20 ].
 		errMsg := (buffer + 113) readString. "Offset 112"
 		
-		(GbsError new messageText: errMsg; tag: contextOop) signal.
+		(GbsError new messageText: errMsg; tag: debugOop) signal.
 	] ensure: [ buffer free ].
 ]
 
 { #category : 'error handling' }
 GbsSession >> checkForError [
-	| buffer result errNum errMsg contextOop gbsError |
+	| buffer result errNum errMsg contextOop exceptionOop debugOop gbsError |
 
 	buffer := ExternalAddress allocate: 2168.
 	[
@@ -93,13 +98,27 @@ GbsSession >> checkForError [
 			"CRITICAL: Exact GS64 64-bit Memory Offsets!"
 			errNum := buffer signedLongAt: 105. "C-offset 104"
 			contextOop := buffer unsignedLongLongAt: 9. "C-offset 8 - this is the suspended context"
+			exceptionOop := buffer unsignedLongLongAt: 17. "C-offset 16 - exception object"
 			errMsg := (buffer + 113) readString. "C-offset 113"
+			debugOop := ((contextOop isNil or: [ contextOop = 0 or: [ contextOop = 20 ] ])
+				ifTrue: [ exceptionOop ]
+				ifFalse: [ contextOop ]).
+			(debugOop isNil or: [ debugOop = 0 ]) ifTrue: [ debugOop := 20 ].
 
 			"Log for debugging"
-			Transcript show: 'checkForError: result=', result asString, ' contextOop=', contextOop asString; cr.
+			Transcript
+				show: 'checkForError: result=';
+				show: result asString;
+				show: ' contextOop=';
+				show: contextOop asString;
+				show: ' exceptionOop=';
+				show: exceptionOop asString;
+				show: ' debugOop=';
+				show: debugOop asString;
+				cr.
 
 			"Create the error with BOTH the message and the context OOP"
-			gbsError := GbsError new messageText: errMsg; tag: contextOop.
+			gbsError := GbsError new messageText: errMsg; tag: debugOop.
 			gbsError gemStoneExceptionProxy: nil.
 			gbsError signal.
 		].
@@ -438,7 +457,7 @@ GbsSession >> gciPollForSignal [
 
 { #category : 'error handling' }
 GbsSession >> handleGciError [
-	| buffer errMsg contextOop gbsError |
+	| buffer errMsg contextOop exceptionOop debugOop gbsError |
 
 	"Allocate the 2168-byte struct from your gci_layout_mac.txt"
 	buffer := ExternalAddress allocate: 2168.
@@ -448,13 +467,27 @@ GbsSession >> handleGciError [
 
 		"Extract 64-bit context from offset 8 (Pharo index 9)"
 		contextOop := buffer unsignedLongLongAt: 9.
+		exceptionOop := buffer unsignedLongLongAt: 17.
+		debugOop := ((contextOop isNil or: [ contextOop = 0 or: [ contextOop = 20 ] ])
+			ifTrue: [ exceptionOop ]
+			ifFalse: [ contextOop ]).
+		(debugOop isNil or: [ debugOop = 0 ]) ifTrue: [ debugOop := 20 ].
 		"Extract message from offset 113"
 		errMsg := (buffer + 113) readString.
 
-		Transcript show: 'handleGciError: contextOop=', contextOop asString, ' msg=', errMsg; cr.
+		Transcript
+			show: 'handleGciError: contextOop=';
+			show: contextOop asString;
+			show: ' exceptionOop=';
+			show: exceptionOop asString;
+			show: ' debugOop=';
+			show: debugOop asString;
+			show: ' msg=';
+			show: errMsg;
+			cr.
 
 		"Signal the error. tag carries the context for the debugger."
-		gbsError := GbsError new messageText: errMsg; tag: contextOop.
+		gbsError := GbsError new messageText: errMsg; tag: debugOop.
 		gbsError signal.
 
 	] ensure: [ buffer free ].
