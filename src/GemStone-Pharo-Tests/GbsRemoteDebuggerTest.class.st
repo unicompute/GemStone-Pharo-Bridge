@@ -176,3 +176,47 @@ GbsRemoteDebuggerTest >> testSimpleStackWalk [
 	self deny: result isNil.
 	self deny: result isEmpty.
 ]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerTest >> testZeroDivideErrorCarriesServerProcessOop [
+	| raisedError |
+
+	session ifNil: [ self skip: 'No session' ].
+
+	raisedError := nil.
+	[
+		session execute: '| a b | a := 10. b := 0. a / b'.
+	] on: GbsError do: [ :ex | raisedError := ex ].
+
+	self assert: raisedError notNil.
+	self assert: (raisedError respondsTo: #serverProcessOop).
+	self assert: raisedError serverProcessOop isNotNil.
+	self deny: raisedError serverProcessOop equals: 0.
+	self deny: raisedError serverProcessOop equals: 20.
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerTest >> testZeroDivideBuildsNonEmptyContextListFromDebuggerService [
+	| raisedError processOop service contexts |
+
+	session ifNil: [ self skip: 'No session' ].
+
+	raisedError := nil.
+	[
+		session execute: '| a b | a := 10. b := 0. a / b'.
+	] on: GbsError do: [ :ex | raisedError := ex ].
+
+	self assert: raisedError notNil.
+	processOop := raisedError serverProcessOop ifNil: [ raisedError tag ].
+	self assert: processOop notNil.
+	self deny: processOop equals: 20.
+
+	service := GbxDebuggerService new.
+	service
+		session: session;
+		processOop: processOop.
+	service initializeForDebugging.
+
+	contexts := service contextList.
+	self assert: contexts notEmpty.
+]

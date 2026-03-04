@@ -87,7 +87,7 @@ GbxContextListPolicy >> fetchServerContexts [
 	(processOop isNil or: [ processOop = 20 ]) ifTrue: [ ^ #( ) ].
 	
 	script := '[
-		| obj gbsError gsProcess stream maxDepth stackReport fullEntry frameId methodOrNil className selectorName source ctxOop |
+		| obj gbsError gsProcess stream maxDepth level stackReport fullEntry frameId methodOrNil className selectorName source ctxOop |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ '''' ].
 		gbsError := nil.
@@ -117,54 +117,57 @@ GbxContextListPolicy >> fetchServerContexts [
 					ifTrue: [ gsProcess := [ top process ] on: Error do: [ nil ] ]
 			]
 		].
-		(gsProcess isNil or: [ (gsProcess respondsTo: #_gsiStackReportFromLevel:toLevel:) not ])
-			ifTrue: [ ^ '''' ].
+		gsProcess isNil ifTrue: [ ^ '''' ].
 		stream := WriteStream on: String new.
-		maxDepth := ([ gsProcess stackDepth ] on: Error do: [ 0 ]) min: 80.
-		1 to: maxDepth do: [ :level |
+		maxDepth := 80.
+		level := 1.
+		[ level <= maxDepth ] whileTrue: [
 			stackReport := [ gsProcess _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
-			(stackReport notNil and: [ stackReport size >= 2 ]) ifTrue: [
-				frameId := stackReport at: 1.
-				fullEntry := stackReport at: 2.
-				methodOrNil := (fullEntry notNil and: [ fullEntry isEmpty not ])
-					ifTrue: [ fullEntry first ]
-					ifFalse: [ nil ].
-				className := [ 
-					methodOrNil ifNil: [ ''<unknown>'' ] ifNotNil: [ 
-						methodOrNil inClass ifNil: [ ''<unknown>'' ] ifNotNil: [ methodOrNil inClass name ]
-					]
-				] on: Error do: [ ''<unknown>'' ].
-				selectorName := [
-					(fullEntry notNil and: [ fullEntry size >= 4 ])
-						ifTrue: [
-							(fullEntry at: 4)
-								ifNil: [ ''<unknown>'' ]
-								ifNotNil: [ :sel | sel asString ]
+			(stackReport isNil or: [ stackReport size < 2 ])
+				ifTrue: [ level := maxDepth + 1 ]
+				ifFalse: [
+					frameId := stackReport at: 1.
+					fullEntry := stackReport at: 2.
+					methodOrNil := (fullEntry notNil and: [ fullEntry isEmpty not ])
+						ifTrue: [ fullEntry first ]
+						ifFalse: [ nil ].
+					className := [ 
+						methodOrNil ifNil: [ ''<unknown>'' ] ifNotNil: [ 
+							methodOrNil inClass ifNil: [ ''<unknown>'' ] ifNotNil: [ methodOrNil inClass name ]
 						]
-						ifFalse: [ ''<unknown>'' ]
-				] on: Error do: [ ''<unknown>'' ].
-				source := [
-					(fullEntry notNil and: [ fullEntry size >= 9 ])
-						ifTrue: [
-							(fullEntry at: 9)
-								ifNil: [ '''' ]
-								ifNotNil: [ :src | src asString ]
-						]
-						ifFalse: [ '''' ]
-				] on: Error do: [ '''' ].
-				source := source
-					copyReplaceAll: String cr with: '' '';
-					copyReplaceAll: String lf with: '' '';
-					copyReplaceAll: Character tab asString with: '' ''.
-				ctxOop := [ frameId asString ] on: Error do: [ ''0'' ].
-				stream
-					nextPutAll: level asString; tab;
-					nextPutAll: className; tab;
-					nextPutAll: selectorName; tab;
-					nextPutAll: source; tab;
-					nextPutAll: ctxOop;
-					lf
-			]
+					] on: Error do: [ ''<unknown>'' ].
+					selectorName := [
+						(fullEntry notNil and: [ fullEntry size >= 4 ])
+							ifTrue: [
+								(fullEntry at: 4)
+									ifNil: [ ''<unknown>'' ]
+									ifNotNil: [ :sel | sel asString ]
+							]
+							ifFalse: [ ''<unknown>'' ]
+					] on: Error do: [ ''<unknown>'' ].
+					source := [
+						(fullEntry notNil and: [ fullEntry size >= 9 ])
+							ifTrue: [
+								(fullEntry at: 9)
+									ifNil: [ '''' ]
+									ifNotNil: [ :src | src asString ]
+							]
+							ifFalse: [ '''' ]
+					] on: Error do: [ '''' ].
+					source := source
+						copyReplaceAll: String cr with: '' '';
+						copyReplaceAll: String lf with: '' '';
+						copyReplaceAll: Character tab asString with: '' ''.
+					ctxOop := [ frameId asString ] on: Error do: [ ''0'' ].
+					stream
+						nextPutAll: level asString; tab;
+						nextPutAll: className; tab;
+						nextPutAll: selectorName; tab;
+						nextPutAll: source; tab;
+						nextPutAll: ctxOop;
+						lf.
+					level := level + 1
+				]
 		].
 		stream contents
 	] value'.
