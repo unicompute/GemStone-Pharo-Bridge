@@ -237,20 +237,32 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 	].
 
 	script := '[
-		| ctx stream depth |
-		ctx := Object _objectForOop: ', processOop asString, '.
+		| obj ctx proc stream depth |
+		obj := Object _objectForOop: ', processOop asString, '.
 		stream := WriteStream on: String new.
+		obj ifNil: [ ^ '''' ].
+		ctx := nil.
+		proc := nil.
+		(obj respondsTo: #sender) ifTrue: [ ctx := obj ].
+		(ctx isNil and: [ obj respondsTo: #topContext ])
+			ifTrue: [ ctx := [ obj topContext ] on: Error do: [ nil ] ].
+		(ctx isNil and: [ obj respondsTo: #process ])
+			ifTrue: [ proc := [ obj process ] on: Error do: [ nil ] ].
+		(proc isNil and: [ obj respondsTo: #_gsiStackReportFromLevel:toLevel: ])
+			ifTrue: [ proc := obj ].
+		(ctx isNil and: [ proc notNil and: [ proc respondsTo: #topContext ] ])
+			ifTrue: [ ctx := [ proc topContext ] on: Error do: [ nil ] ].
 		ctx ifNil: [ ^ ''<ctx is nil>'' ].
 		depth := 0.
 		[ ctx notNil and: [ depth < 30 ] ] whileTrue: [
 			depth := depth + 1.
 			stream
 				nextPutAll: depth asString; tab;
-				nextPutAll: (ctx selector ifNil: [''<unknown>''] ifNotNil: [ :s | s asString ]); tab;
-				nextPutAll: (ctx method ifNil: [''<unknown>''] ifNotNil: [ :m | m selector asString ]); tab;
+				nextPutAll: (([ ctx selector asString ] on: Error do: [ ''<unknown>'' ])); tab;
+				nextPutAll: (([ ctx method ifNil: [ ''<unknown>'' ] ifNotNil: [ :m | m selector asString ] ] on: Error do: [ ''<unknown>'' ])); tab;
 				nextPutAll: (ctx sourceCode ifNil: [''<no source>''] ifNotNil: [ :src | src ]);
 				lf.
-			ctx := ctx sender.
+			ctx := [ ctx sender ] on: Error do: [ nil ].
 		].
 		stream contents
 	] value'.
