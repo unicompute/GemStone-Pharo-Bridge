@@ -153,17 +153,12 @@ GbsRemoteDebugger >> fetchStackFrames [
 		^ self fetchStackFramesFromData
 	].
 
-	(processOop isNil or: [ processOop = 20 or: [ processOop = 0 ]]) ifTrue: [
-		stackList items: #('No stack frames available (Context is nil)').
-		^ self
-	].
-
-	"Always use direct fetch - more reliable"
+	"Always try to fetch contexts - even with processOop 20"
 	contexts := self fetchContextsDirectly.
 
 	contextList := contexts ifNil: [ #( ) ].
 	contextList ifEmpty: [
-		stackList items: #('No stack frames available').
+		stackList items: #('No stack frames available - error occurred in GemStone').
 		sourceText text: ''.
 		variablesTable items: #().
 		^ self

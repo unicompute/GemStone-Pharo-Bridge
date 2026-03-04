@@ -52,13 +52,13 @@ GbsWorkspace >> doIt [
 	activeSession := GbsSessionParameters currentSession.
 	activeSession ifNil: [ ^ self inform: 'No Session' ].
 
-	"Execute and catch errors"
+	"Execute and catch errors - open debugger on any error"
 	[
 		result := activeSession execute: code.
 		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
 	] on: GbsError do: [ :ex |
 		Transcript show: 'GbsError: ', ex messageText; cr.
-		self inform: 'GemStone Error: ', ex messageText
+		self openRemoteDebuggerOn: ex messageText processOop: 20 session: activeSession
 	].
 ]
 
@@ -252,22 +252,18 @@ GbsWorkspace >> localPrintIt [
 { #category : 'actions' }
 GbsWorkspace >> openRemoteDebuggerOn: errorString processOop: processOop session: aSession [
 	"Open the GbsRemoteDebugger on a GemStone error"
-	| errorText |
+	| errorText debugger |
 
 	"Ensure errorString is actually a string"
 	errorText := errorString ifNil: [ 'Unknown Error' ] ifNotNil: [ :es | es asString ].
 
-	"Validate the process OOP"
-	(processOop isNil or: [ processOop = 0 or: [ processOop = 20 ]]) ifTrue: [
-		^ self inform: 'Error: ', errorText, ' (No debuggable process available)'
-	].
-
 	"Open the remote debugger"
-	[
-		GbsRemoteDebugger openOn: errorText process: processOop session: aSession.
-	] on: Error do: [ :ex |
-		self inform: 'Failed to open remote debugger: ', ex messageText
-	].
+	debugger := GbsRemoteDebugger new.
+	debugger session: aSession.
+	debugger processOop: processOop.
+	debugger label: errorText.
+	debugger open.
+	debugger withWindowDo: [ :win | win title: 'GemStone Remote Debugger' ].
 ]
 
 { #category : 'actions' }
