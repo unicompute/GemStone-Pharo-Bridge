@@ -52,30 +52,30 @@ GbsWorkspace >> doIt [
 	activeSession := GbsSessionParameters currentSession.
 	activeSession ifNil: [ ^ self inform: 'No Session' ].
 
-	"Execute and catch errors - open debugger on any error"
+	"Execute and catch ALL errors - open debugger on any error"
 	[
-		[
-			result := activeSession execute: code.
-			GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
-		] on: GbsError do: [ :ex |
-			processOop := (ex respondsTo: #tag)
-				ifTrue: [ ex tag ]
-				ifFalse: [ 20 ].
-			processOop ifNil: [ processOop := 20 ].
-			Transcript
-				show: 'GbsError: ';
-				show: ex messageText;
-				show: ' processOop=';
-				show: processOop asString;
-				cr.
-			self
-				openRemoteDebuggerOn: ex messageText
-				processOop: processOop
-				session: activeSession
-		].
+		result := activeSession execute: code.
+		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
+	] on: GbsError do: [ :ex |
+		processOop := (ex respondsTo: #tag)
+			ifTrue: [ ex tag ]
+			ifFalse: [ 20 ].
+		processOop ifNil: [ processOop := 20 ].
+		Transcript
+			show: 'GbsError: ';
+			show: ex messageText;
+			show: ' processOop=';
+			show: processOop asString;
+			cr.
+		self
+			openRemoteDebuggerOn: ex messageText
+			processOop: processOop
+			session: activeSession
 	] on: Error do: [ :ex |
 		Transcript
-			show: 'Workspace execute error: ';
+			show: 'Error: ';
+			show: ex class name;
+			show: ': ';
 			show: ex messageText;
 			cr.
 		self
@@ -275,30 +275,24 @@ GbsWorkspace >> localPrintIt [
 { #category : 'actions' }
 GbsWorkspace >> openRemoteDebuggerOn: errorString processOop: processOop session: aSession [
 	"Open the GbsRemoteDebugger on a GemStone error"
-	| errorText safeProcessOop debugger |
+	| errorText safeProcessOop |
 
 	"Ensure errorString is actually a string"
 	errorText := errorString ifNil: [ 'Unknown Error' ] ifNotNil: [ :es | es asString ].
 	safeProcessOop := processOop ifNil: [ 20 ].
 
-	"Open through the debugger service, matching the VW service->client flow"
+	"Open the debugger using the class-side method"
 	[
-		GbxDebuggerService
-			openOn: errorText
-			process: safeProcessOop
+		GbsRemoteDebugger 
+			openOn: errorText 
+			process: safeProcessOop 
 			session: aSession
 	] on: Error do: [ :ex |
 		Transcript
-			show: 'Failed to open debugger through service: ';
+			show: 'Failed to open debugger: ';
 			show: ex messageText;
 			cr.
-		"Fallback: open a basic debugger shell so the user is not blocked."
-		debugger := GbsRemoteDebugger new.
-		debugger session: aSession.
-		debugger open.
-		debugger label: errorText.
-		[ debugger processOop: safeProcessOop ] on: Error do: [ :ignored | ].
-		debugger withWindowDo: [ :win | win title: 'GemStone Remote Debugger' ].
+		self inform: 'Error opening debugger: ', ex messageText
 	].
 ]
 
