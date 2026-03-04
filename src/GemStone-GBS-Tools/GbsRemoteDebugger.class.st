@@ -240,15 +240,15 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 		| ctx stream depth |
 		ctx := Object _objectForOop: ', processOop asString, '.
 		stream := WriteStream on: String new.
-		ctx ifNil: [ ^ ''<ctx is nil>'' ].
+		ctx ifNil: [ ^ '''<ctx is nil>''' ].
 		depth := 0.
 		[ ctx notNil and: [ depth < 30 ] ] whileTrue: [
 			depth := depth + 1.
 			stream
 				nextPutAll: depth asString; tab;
-				nextPutAll: (ctx selector ifNil: [''<unknown>''] ifNotNil: [ :s | s asString ]); tab;
-				nextPutAll: (ctx method ifNil: [''<unknown>''] ifNotNil: [ :m | m selector asString ]); tab;
-				nextPutAll: (ctx sourceCode ifNil: [''<no source>''] ifNotNil: [ :s | s ]);
+				nextPutAll: (ctx selector ifNil: ['''<unknown>'''] ifNotNil: [ :s | s asString ]); tab;
+				nextPutAll: (ctx method ifNil: ['''<unknown>'''] ifNotNil: [ :m | m selector asString ]); tab;
+				nextPutAll: (ctx sourceCode ifNil: ['''<no source>'''] ifNotNil: [ :s | s ]);
 				lf.
 			ctx := ctx sender.
 		].
