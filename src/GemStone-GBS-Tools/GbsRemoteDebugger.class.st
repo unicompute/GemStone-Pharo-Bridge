@@ -240,20 +240,20 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 		| ctx stream depth sel meth src |
 		ctx := Object _objectForOop: ', processOop asString, '.
 		stream := WriteStream on: String new.
-		ctx ifNil: [ stream nextPutAll: ''<ctx is nil>''; contents. ^ stream contents ].
+		ctx ifNil: [ stream nextPutAll: ''<ctx is nil>''; ^ stream contents ].
 		depth := 0.
 		[ ctx notNil and: [ depth < 30 ] ] whileTrue: [
 			depth := depth + 1.
-			sel := [ ctx selector ] on: Error do: [ ''<error getting selector>'' ].
-			meth := [ ctx method ] on: Error do: [ nil ].
-			src := [ ctx sourceCode ] on: Error do: [ ''<error getting source>'' ].
+			sel := ctx selector.
+			meth := ctx method.
+			src := ctx sourceCode.
 			stream
 				nextPutAll: depth asString; tab;
 				nextPutAll: (sel ifNil: [''<unknown>''] ifNotNil: [ :s | s asString ]); tab;
 				nextPutAll: (meth ifNil: [''<unknown>''] ifNotNil: [ :m | m selector asString ]); tab;
 				nextPutAll: (src ifNil: [''<no source>''] ifNotNil: [ :s | s copyReplaceAll: String lf with: '' '' ]);
 				lf.
-			ctx := [ ctx sender ] on: Error do: [ nil ].
+			ctx := ctx sender.
 		].
 		stream contents
 	] value'.
