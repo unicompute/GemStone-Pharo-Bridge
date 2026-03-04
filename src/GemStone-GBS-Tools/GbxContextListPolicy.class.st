@@ -154,10 +154,10 @@ GbxContextListPolicy >> fetchServerContexts [
 								ifFalse: [ '''' ]
 						] on: Error do: [ '''' ].
 						source := source
-							copyReplaceAll: String cr with: '' '';
-							copyReplaceAll: String lf with: '' '';
-							copyReplaceAll: Character tab asString with: '' ''.
-						ctxOop := [ frameId asString ] on: Error do: [ ''0'' ].
+							copyReplaceAll: String cr with: ''<CR>'';
+							copyReplaceAll: String lf with: ''<LF>'';
+							copyReplaceAll: Character tab asString with: ''<TAB>''.
+						ctxOop := [ gsProcess asOop printString ] on: Error do: [ ''0'' ].
 						stream
 							nextPutAll: level asString; tab;
 							nextPutAll: className; tab;
@@ -185,9 +185,9 @@ GbxContextListPolicy >> fetchServerContexts [
 				source := [ ctx sourceCode ] on: Error do: [ '''' ].
 				source := source ifNil: [ '''' ].
 				source := source
-					copyReplaceAll: String cr with: '' '';
-					copyReplaceAll: String lf with: '' '';
-					copyReplaceAll: Character tab asString with: '' ''.
+					copyReplaceAll: String cr with: ''<CR>'';
+					copyReplaceAll: String lf with: ''<LF>'';
+					copyReplaceAll: Character tab asString with: ''<TAB>''.
 				ctxOop := [ ctx asOop printString ] on: Error do: [ ''0'' ].
 				stream
 					nextPutAll: level asString; tab;
@@ -227,7 +227,10 @@ GbxContextListPolicy >> fetchServerContexts [
 					level: ([ parts first asInteger ] on: Error do: [ 1 ]);
 					initializeFromClass: (parts at: 2)
 						selector: selectorSymbol
-						source: (parts at: 4)
+						source: ((((parts at: 4)
+							copyReplaceAll: '<TAB>' with: Character tab asString)
+							copyReplaceAll: '<CR>' with: String cr)
+							copyReplaceAll: '<LF>' with: String lf)
 						contextOop: ctxOop;
 					yourself
 			]

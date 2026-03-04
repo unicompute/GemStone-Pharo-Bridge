@@ -286,6 +286,67 @@ GbsRemoteDebuggerTest >> testZeroDivideErrorOopsFrameProbe [
 		or: [ (exceptionFrames isNil or: [ exceptionFrames isEmpty ]) not ]).
 ]
 
+{ #category : 'tests' }
+GbsRemoteDebuggerTest >> testZeroDivideContextListContainsUserSourceFrame [
+	| raisedError processOop service contexts userFrame |
+
+	session ifNil: [ self skip: 'No session' ].
+
+	raisedError := nil.
+	[
+		session execute: '| a b | a := 10. b := 0. a / b'.
+	] on: GbsError do: [ :ex | raisedError := ex ].
+
+	self assert: raisedError notNil.
+	processOop := raisedError serverProcessOop ifNil: [ raisedError tag ].
+
+	service := GbxDebuggerService new.
+	service
+		session: session;
+		processOop: processOop.
+	service initializeForDebugging.
+
+	contexts := service contextList.
+	self assert: contexts notEmpty.
+
+	userFrame := contexts
+		detect: [ :ctx | (ctx sourceCode includesSubstring: 'a / b') ]
+		ifNone: [ nil ].
+	self assert: userFrame notNil.
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerTest >> testZeroDivideUserFrameTempVariablesIncludeAAndB [
+	| raisedError processOop service contexts userFrame temps |
+
+	session ifNil: [ self skip: 'No session' ].
+
+	raisedError := nil.
+	[
+		session execute: '| a b | a := 10. b := 0. a / b'.
+	] on: GbsError do: [ :ex | raisedError := ex ].
+
+	self assert: raisedError notNil.
+	processOop := raisedError serverProcessOop ifNil: [ raisedError tag ].
+
+	service := GbxDebuggerService new.
+	service
+		session: session;
+		processOop: processOop.
+	service initializeForDebugging.
+	contexts := service contextList.
+
+	userFrame := contexts
+		detect: [ :ctx | (ctx sourceCode includesSubstring: 'a / b') ]
+		ifNone: [ nil ].
+	self assert: userFrame notNil.
+
+	temps := userFrame tempNamesAndValues.
+	self assert: (temps respondsTo: #includesKey:).
+	self assert: (temps includesKey: 'a').
+	self assert: (temps includesKey: 'b').
+]
+
 { #category : 'private' }
 GbsRemoteDebuggerTest >> frameProbeTextForOop: anOop [
 	| oopText |

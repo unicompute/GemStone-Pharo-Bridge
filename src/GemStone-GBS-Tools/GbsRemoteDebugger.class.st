@@ -139,9 +139,19 @@ GbsRemoteDebugger >> session: aSession [
 ]
 
 { #category : 'accessing' }
+GbsRemoteDebugger >> session [
+	^ session
+]
+
+{ #category : 'accessing' }
 GbsRemoteDebugger >> processOop: anOop [
 	processOop := anOop.
 	stackList ifNotNil: [ self fetchStackFrames ].
+]
+
+{ #category : 'accessing' }
+GbsRemoteDebugger >> processOop [
+	^ processOop
 ]
 
 { #category : 'accessing' }
@@ -272,11 +282,11 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 						sourceText := [ (fullEntry at: 9) asString ] on: Error do: [ '''' ].
 						sourceText ifNil: [ sourceText := '''' ].
 						sourceText := sourceText
-							copyReplaceAll: (String with: Character cr) with: '' '';
-							copyReplaceAll: (String with: Character lf) with: '' '';
-							copyReplaceAll: String cr with: '' '';
-							copyReplaceAll: String lf with: '' '';
-							copyReplaceAll: Character tab asString with: '' ''.
+							copyReplaceAll: (String with: Character cr) with: ''<CR>'';
+							copyReplaceAll: (String with: Character lf) with: ''<LF>'';
+							copyReplaceAll: String cr with: ''<CR>'';
+							copyReplaceAll: String lf with: ''<LF>'';
+							copyReplaceAll: Character tab asString with: ''<TAB>''.
 						stream
 							nextPutAll: level asString; tab;
 							nextPutAll: className; tab;
@@ -297,11 +307,11 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 				sourceText := [ ctx sourceCode asString ] on: Error do: [ '''' ].
 				sourceText ifNil: [ sourceText := '''' ].
 				sourceText := sourceText
-					copyReplaceAll: (String with: Character cr) with: '' '';
-					copyReplaceAll: (String with: Character lf) with: '' '';
-					copyReplaceAll: String cr with: '' '';
-					copyReplaceAll: String lf with: '' '';
-					copyReplaceAll: Character tab asString with: '' ''.
+					copyReplaceAll: (String with: Character cr) with: ''<CR>'';
+					copyReplaceAll: (String with: Character lf) with: ''<LF>'';
+					copyReplaceAll: String cr with: ''<CR>'';
+					copyReplaceAll: String lf with: ''<LF>'';
+					copyReplaceAll: Character tab asString with: ''<TAB>''.
 			depth := depth + 1.
 			stream
 				nextPutAll: depth asString; tab;
@@ -347,7 +357,10 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 						methodClass: (parts at: 2);
 						selector: (parts at: 3) asSymbol;
 						gsMethodId: (parts at: 4);
-						sourceString: (parts at: 5);
+						sourceString: (((parts at: 5)
+							copyReplaceAll: '<TAB>' with: Character tab asString)
+							copyReplaceAll: '<CR>' with: String cr;
+							copyReplaceAll: '<LF>' with: String lf);
 						yourself
 					] on: Error do: [ :ex |
 						Transcript show: 'Error creating activation: ', ex messageText; cr.
@@ -362,7 +375,7 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> contextSelected: selectedItem [
-	| context sourceCode variables |
+	| context sourceCode variables associations |
 
 	selectedItem ifNil: [ ^ self ].
 	(selectedItem respondsTo: #sourceCode) ifFalse: [
@@ -386,7 +399,10 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 	"Fetch and display variables"
 	[
 		variables := context tempNamesAndValues.
-		variablesTable items: (variables associations collect: [ :assoc |
+		associations := (variables respondsTo: #associations)
+			ifTrue: [ variables associations ]
+			ifFalse: [ #() ].
+		variablesTable items: (associations collect: [ :assoc |
 			{ assoc key. assoc value asString }
 		]).
 	] on: Error do: [ :ex |

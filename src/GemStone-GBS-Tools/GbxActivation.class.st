@@ -297,7 +297,7 @@ GbxActivation >> tempNamesAndValues [
 	| script result |
 	
 	script := '[
-		| obj dict frame names vals maxCount |
+		| obj dict frame names vals maxCount receiverObj |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj ifNil: [ ^ Dictionary new ].
 		dict := Dictionary new.
@@ -306,6 +306,8 @@ GbxActivation >> tempNamesAndValues [
 		(obj respondsTo: #_gsiDebuggerDetailedReportAt:) ifTrue: [
 			frame := [ obj _gsiDebuggerDetailedReportAt: ', level asString, ' ] on: Error do: [ nil ].
 			frame ifNotNil: [
+				receiverObj := [ (frame at: 1) at: 2 ] on: Error do: [ nil ].
+				receiverObj ifNotNil: [ dict at: ''self'' put: receiverObj ].
 				names := [ frame at: 7 ] on: Error do: [ #() ].
 				vals := [ frame at: 8 ] on: Error do: [ #() ].
 				maxCount := (names size min: vals size) min: 200.
@@ -318,6 +320,7 @@ GbxActivation >> tempNamesAndValues [
 
 		"Fallback: context tempAt: path"
 		(obj respondsTo: #method) ifTrue: [
+			[ dict at: ''self'' put: (obj receiver) ] on: Error do: [ ].
 			[ obj method ifNotNil: [ :m |
 				m tempNames doWithIndex: [ :name :i |
 					| val |
