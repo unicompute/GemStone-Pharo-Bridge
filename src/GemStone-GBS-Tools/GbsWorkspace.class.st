@@ -264,19 +264,17 @@ GbsWorkspace >> localPrintIt [
 { #category : 'actions' }
 GbsWorkspace >> openRemoteDebuggerOn: errorString processOop: processOop session: aSession [
 	"Open the GbsRemoteDebugger on a GemStone error"
-	| errorText debugger safeProcessOop |
+	| errorText safeProcessOop |
 
 	"Ensure errorString is actually a string"
 	errorText := errorString ifNil: [ 'Unknown Error' ] ifNotNil: [ :es | es asString ].
 	safeProcessOop := processOop ifNil: [ 20 ].
 
-	"Open the remote debugger"
-	debugger := GbsRemoteDebugger new.
-	debugger session: aSession.
-	debugger open.
-	debugger label: errorText.
-	debugger processOop: safeProcessOop.
-	debugger withWindowDo: [ :win | win title: 'GemStone Remote Debugger' ].
+	"Open through the debugger service, matching the VW service->client flow"
+	GbxDebuggerService
+		openOn: errorText
+		process: safeProcessOop
+		session: aSession.
 ]
 
 { #category : 'actions' }

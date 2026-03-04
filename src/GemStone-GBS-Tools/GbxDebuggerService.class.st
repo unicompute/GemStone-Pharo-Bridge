@@ -39,16 +39,18 @@ GbxDebuggerService class >> context: aContext label: aString [
 { #category : 'instance creation' }
 GbxDebuggerService class >> openOn: anErrorString process: processOop session: aSession [
 	"Open a remote debugger on a GemStone process"
-	| service debugger |
+	| service |
 	service := self new.
 	service session: aSession.
 	service processOop: processOop.
 	service label: anErrorString.
 	service initializeForDebugging.
-	
-	debugger := GbsRemoteDebugger openOn: anErrorString process: processOop session: aSession.
-	debugger service: service.
-	^ service
+
+	^ GbsRemoteDebugger
+		openOn: anErrorString
+		process: processOop
+		session: aSession
+		service: service
 ]
 
 { #category : 'initialization' }

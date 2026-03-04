@@ -35,15 +35,25 @@ Class {
 
 { #category : 'instance creation' }
 GbsRemoteDebugger class >> openOn: anErrorString process: processOop session: aSession [
-	| debugger service |
+	| service |
 	service := GbxDebuggerService new.
 	service session: aSession.
 	service processOop: processOop.
 	service label: anErrorString.
 	service initializeForDebugging.
-	
+
+	^ self
+		openOn: anErrorString
+		process: processOop
+		session: aSession
+		service: service
+]
+
+{ #category : 'instance creation' }
+GbsRemoteDebugger class >> openOn: anErrorString process: processOop session: aSession service: aService [
+	| debugger |
 	debugger := self new.
-	debugger service: service.
+	debugger service: aService.
 	debugger session: aSession.
 	debugger open.
 	debugger label: anErrorString.
