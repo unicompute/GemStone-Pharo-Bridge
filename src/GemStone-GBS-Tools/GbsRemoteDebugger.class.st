@@ -248,7 +248,7 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 				nextPutAll: depth asString; tab;
 				nextPutAll: (ctx selector ifNil: [''<unknown>''] ifNotNil: [ :s | s asString ]); tab;
 				nextPutAll: (ctx method ifNil: [''<unknown>''] ifNotNil: [ :m | m selector asString ]); tab;
-				nextPutAll: (ctx sourceCode ifNil: [''<no source>''] ifNotNil: [ :s | s ]);
+				nextPutAll: (ctx sourceCode ifNil: [''<no source>''] ifNotNil: [ :src | src ]);
 				lf.
 			ctx := ctx sender.
 		].
@@ -260,35 +260,36 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 		Transcript show: 'fetchContextsDirectly rawData: ', rawData; cr.
 	] on: Error do: [ :ex |
 		Transcript show: 'fetchContextsDirectly error: ', ex messageText; cr.
-		^ #( ).
+		^ #( )
 	].
 
 	rawData ifNil: [
 		Transcript show: 'fetchContextsDirectly: rawData is nil'; cr.
-		^ #( ).
+		^ #( )
 	].
 	rawData isEmpty ifTrue: [
 		Transcript show: 'fetchContextsDirectly: rawData is empty'; cr.
-		^ #( ).
+		^ #( )
 	].
 
 	contexts := (rawData splitOn: Character lf)
 		collect: [ :line |
-			line isEmpty ifTrue: [ ^ nil ].
 			| parts |
-			parts := line splitOn: Character tab.
-			parts size >= 4 ifTrue: [
-				[ GbxActivation new
-					processOop: processOop;
-					level: parts first asInteger;
-					session: session;
-					selector: (parts at: 2) asSymbol;
-					gsMethodId: (parts at: 3);
-					sourceString: (parts at: 4);
-					yourself
-				] on: Error do: [ :ex | 
-					Transcript show: 'Error creating activation: ', ex messageText; cr.
-					nil 
+			line isEmpty ifTrue: [ nil ] ifFalse: [
+				parts := line splitOn: Character tab.
+				parts size >= 4 ifTrue: [
+					[ GbxActivation new
+						processOop: processOop;
+						level: parts first asInteger;
+						session: session;
+						selector: (parts at: 2) asSymbol;
+						gsMethodId: (parts at: 3);
+						sourceString: (parts at: 4);
+						yourself
+					] on: Error do: [ :ex |
+						Transcript show: 'Error creating activation: ', ex messageText; cr.
+						nil
+					]
 				]
 			]
 		] thenSelect: #isNotNil.
