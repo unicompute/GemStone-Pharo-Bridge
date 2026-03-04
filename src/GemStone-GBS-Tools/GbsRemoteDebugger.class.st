@@ -254,7 +254,10 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 		stream contents
 	] value'.
 
-	rawData := session executeAndFetch: script context: session sessionOop.
+	rawData := [ session evaluate: script ] on: Error do: [ nil ].
+	(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
+	rawData ifNil: [ rawData := '' ].
+	rawData = 'nil' ifTrue: [ rawData := '' ].
 	Transcript show: 'rawData: ', rawData; cr.
 	
 	contexts := (rawData splitOn: Character lf)

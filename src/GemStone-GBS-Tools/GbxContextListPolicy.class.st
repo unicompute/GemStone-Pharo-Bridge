@@ -113,7 +113,10 @@ GbxContextListPolicy >> fetchServerContexts [
 		stream contents
 	] value'.
 	
-	rawData := debugger session executeAndFetch: script context: debugger session sessionOop.
+	rawData := [ debugger session evaluate: script ] on: Error do: [ nil ].
+	(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
+	rawData ifNil: [ rawData := '' ].
+	rawData = 'nil' ifTrue: [ rawData := '' ].
 	contexts := (rawData splitOn: Character lf) 
 		collect: [ :line | 
 			| parts |

@@ -219,7 +219,9 @@ GbxActivation >> reset [
 		thisSelf printString
 	] value'.
 	
-	result := session executeAndFetch: script context: session sessionOop.
+	result := [ session evaluate: script ] on: Error do: [ 'ERROR|nil' ].
+	(result respondsTo: #asLocalString) ifTrue: [ result := result asLocalString ].
+	result ifNil: [ result := 'ERROR|nil' ].
 	(result beginsWith: 'ERROR') ifTrue: [ ^ self ].
 	
 	"Parse the pipe-separated result"
@@ -255,7 +257,7 @@ GbxActivation >> tempAt: index [
 		] ifNil: [ nil ]
 	] value'.
 	
-	^ session executeAndFetch: script context: session sessionOop
+	^ [ session evaluate: script ] on: Error do: [ nil ]
 ]
 
 { #category : 'temp variables' }
@@ -271,7 +273,7 @@ GbxActivation >> tempAt: index put: anObject [
 		]
 	] value'.
 	
-	session executeAndFetch: script context: session sessionOop.
+	[ session evaluate: script ] on: Error do: [ ].
 	self reset.
 ]
 
