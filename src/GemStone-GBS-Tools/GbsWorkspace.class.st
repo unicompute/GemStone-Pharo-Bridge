@@ -44,7 +44,7 @@ GbsWorkspace >> doCommit [
 
 { #category : 'actions' }
 GbsWorkspace >> doIt [
-	| code activeSession result |
+	| code activeSession result processOop |
 
 	code := self selectedCodeOrAll copyReplaceAll: String cr with: String lf.
 	code ifEmpty: [ ^ self ].
@@ -57,8 +57,20 @@ GbsWorkspace >> doIt [
 		result := activeSession execute: code.
 		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
 	] on: GbsError do: [ :ex |
-		Transcript show: 'GbsError: ', ex messageText; cr.
-		self openRemoteDebuggerOn: ex messageText processOop: 20 session: activeSession
+		processOop := (ex respondsTo: #tag)
+			ifTrue: [ ex tag ]
+			ifFalse: [ 20 ].
+		processOop ifNil: [ processOop := 20 ].
+		Transcript
+			show: 'GbsError: ';
+			show: ex messageText;
+			show: ' processOop=';
+			show: processOop asString;
+			cr.
+		self
+			openRemoteDebuggerOn: ex messageText
+			processOop: processOop
+			session: activeSession
 	].
 ]
 
@@ -252,17 +264,18 @@ GbsWorkspace >> localPrintIt [
 { #category : 'actions' }
 GbsWorkspace >> openRemoteDebuggerOn: errorString processOop: processOop session: aSession [
 	"Open the GbsRemoteDebugger on a GemStone error"
-	| errorText debugger |
+	| errorText debugger safeProcessOop |
 
 	"Ensure errorString is actually a string"
 	errorText := errorString ifNil: [ 'Unknown Error' ] ifNotNil: [ :es | es asString ].
+	safeProcessOop := processOop ifNil: [ 20 ].
 
 	"Open the remote debugger"
 	debugger := GbsRemoteDebugger new.
 	debugger session: aSession.
-	debugger processOop: processOop.
-	debugger label: errorText.
 	debugger open.
+	debugger label: errorText.
+	debugger processOop: safeProcessOop.
 	debugger withWindowDo: [ :win | win title: 'GemStone Remote Debugger' ].
 ]
 
@@ -273,10 +286,10 @@ GbsWorkspace >> openRemoteDebuggerWithStack: stackData session: aSession [
 	
 	debugger := GbsRemoteDebugger new.
 	debugger session: aSession.
-	debugger processOop: 0.
-	debugger label: 'GemStone Error'.
-	debugger stackData: stackData.
 	debugger open.
+	debugger label: 'GemStone Error'.
+	debugger processOop: 0.
+	debugger stackData: stackData.
 	debugger withWindowDo: [ :win | win title: 'GemStone Remote Debugger' ].
 ]
 

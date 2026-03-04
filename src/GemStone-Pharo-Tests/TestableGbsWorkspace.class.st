@@ -15,7 +15,7 @@ TestableGbsWorkspace >> debuggerOpened [
 ]
 
 { #category : 'initialization' }
-TestableGbsWorkspace >> openRemoteDebuggerOn: anException session: aSession [
+TestableGbsWorkspace >> openRemoteDebuggerOn: anException processOop: processOop session: aSession [
   "Instead of opening the physical window, just flip our test flag to true!"
 
   debuggerOpened := true

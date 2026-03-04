@@ -45,9 +45,9 @@ GbsRemoteDebugger class >> openOn: anErrorString process: processOop session: aS
 	debugger := self new.
 	debugger service: service.
 	debugger session: aSession.
-	debugger processOop: processOop.
-	debugger label: anErrorString.
 	debugger open.
+	debugger label: anErrorString.
+	debugger processOop: processOop.
 	debugger withWindowDo: [ :win | win title: 'GemStone Remote Debugger' ].
 	^ debugger
 ]
@@ -130,18 +130,18 @@ GbsRemoteDebugger >> session: aSession [
 { #category : 'accessing' }
 GbsRemoteDebugger >> processOop: anOop [
 	processOop := anOop.
-	self fetchStackFrames.
+	stackList ifNotNil: [ self fetchStackFrames ].
 ]
 
 { #category : 'accessing' }
 GbsRemoteDebugger >> label: aString [
-	errorMessageLabel label: aString
+	errorMessageLabel ifNotNil: [ errorMessageLabel label: aString ]
 ]
 
 { #category : 'accessing' }
 GbsRemoteDebugger >> stackData: anArray [
 	stackData := anArray.
-	self fetchStackFrames.
+	stackList ifNotNil: [ self fetchStackFrames ].
 ]
 
 { #category : 'actions' }
