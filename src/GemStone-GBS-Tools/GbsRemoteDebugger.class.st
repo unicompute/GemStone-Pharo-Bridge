@@ -237,7 +237,7 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 	].
 
 	script := '[
-		| obj ctx proc stream depth |
+		| obj ctx proc stream depth level stackReport fullEntry selectorName methodName sourceText |
 		obj := Object _objectForOop: ', processOop asString, '.
 		stream := WriteStream on: String new.
 		obj ifNil: [ ^ '''' ].
@@ -252,6 +252,32 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 			ifTrue: [ proc := obj ].
 		(ctx isNil and: [ proc notNil and: [ proc respondsTo: #topContext ] ])
 			ifTrue: [ ctx := [ proc topContext ] on: Error do: [ nil ] ].
+
+		"Preferred path: process stack report (works when topContext is unavailable)"
+		(proc notNil and: [ proc respondsTo: #_gsiStackReportFromLevel:toLevel: ]) ifTrue: [
+			level := 1.
+			[ level <= 30 ] whileTrue: [
+				stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
+				(stackReport isNil or: [ stackReport size < 2 ])
+					ifTrue: [ level := 31 ]
+					ifFalse: [
+						fullEntry := stackReport at: 2.
+						selectorName := [ (fullEntry at: 4) asString ] on: Error do: [ ''<unknown>'' ].
+						methodName := [ (fullEntry first selector) asString ] on: Error do: [ ''<unknown>'' ].
+						sourceText := [ (fullEntry at: 9) ] on: Error do: [ '''' ].
+						sourceText ifNil: [ sourceText := '''' ].
+						stream
+							nextPutAll: level asString; tab;
+							nextPutAll: selectorName; tab;
+							nextPutAll: methodName; tab;
+							nextPutAll: sourceText;
+							lf.
+						level := level + 1
+					]
+			].
+			stream position > 0 ifTrue: [ ^ stream contents ].
+		].
+
 		ctx ifNil: [ ^ ''<ctx is nil>'' ].
 		depth := 0.
 		[ ctx notNil and: [ depth < 30 ] ] whileTrue: [
