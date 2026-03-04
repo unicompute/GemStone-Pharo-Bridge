@@ -269,9 +269,11 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 						className := [ fullEntry first inClass name ] on: Error do: [ ''<unknown>'' ].
 						selectorName := [ (fullEntry at: 4) asString ] on: Error do: [ ''<unknown>'' ].
 						methodName := [ (fullEntry first selector) asString ] on: Error do: [ ''<unknown>'' ].
-						sourceText := [ (fullEntry at: 9) ] on: Error do: [ '''' ].
+						sourceText := [ (fullEntry at: 9) asString ] on: Error do: [ '''' ].
 						sourceText ifNil: [ sourceText := '''' ].
 						sourceText := sourceText
+							copyReplaceAll: (String with: Character cr) with: '' '';
+							copyReplaceAll: (String with: Character lf) with: '' '';
 							copyReplaceAll: String cr with: '' '';
 							copyReplaceAll: String lf with: '' '';
 							copyReplaceAll: Character tab asString with: '' ''.
@@ -292,12 +294,14 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 		depth := 0.
 		[ ctx notNil and: [ depth < 30 ] ] whileTrue: [
 			className := [ ctx method inClass name ] on: Error do: [ ''<unknown>'' ].
-			sourceText := [ ctx sourceCode ] on: Error do: [ '''' ].
-			sourceText ifNil: [ sourceText := '''' ].
-			sourceText := sourceText
-				copyReplaceAll: String cr with: '' '';
-				copyReplaceAll: String lf with: '' '';
-				copyReplaceAll: Character tab asString with: '' ''.
+				sourceText := [ ctx sourceCode asString ] on: Error do: [ '''' ].
+				sourceText ifNil: [ sourceText := '''' ].
+				sourceText := sourceText
+					copyReplaceAll: (String with: Character cr) with: '' '';
+					copyReplaceAll: (String with: Character lf) with: '' '';
+					copyReplaceAll: String cr with: '' '';
+					copyReplaceAll: String lf with: '' '';
+					copyReplaceAll: Character tab asString with: '' ''.
 			depth := depth + 1.
 			stream
 				nextPutAll: depth asString; tab;

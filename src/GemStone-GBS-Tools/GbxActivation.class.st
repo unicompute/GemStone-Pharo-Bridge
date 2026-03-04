@@ -292,23 +292,42 @@ GbxActivation >> marshalValue: anObject [
 
 { #category : 'temp variables' }
 GbxActivation >> tempNamesAndValues [
-	"Return a dictionary of temp names and their values from this activation context oop"
+	"Return temp/arg values for this activation.
+	Supports both context-backed and process-backed stack frames."
 	| script result |
 	
 	script := '[
-		| ctx dict |
-		ctx := Object _objectForOop: ', processOop asString, '.
-		ctx ifNil: [ ^ Dictionary new ].
+		| obj dict frame names vals maxCount |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj ifNil: [ ^ Dictionary new ].
 		dict := Dictionary new.
-		[ ctx method ifNotNil: [ :m |
-			m tempNames doWithIndex: [ :name :i |
-				| val |
-				[ 
-					val := ctx tempAt: i.
-					dict at: name put: val
-				] on: Error do: [ ].
+
+		"Preferred: process/frame report path (VW correspondence)"
+		(obj respondsTo: #_gsiDebuggerDetailedReportAt:) ifTrue: [
+			frame := [ obj _gsiDebuggerDetailedReportAt: ', level asString, ' ] on: Error do: [ nil ].
+			frame ifNotNil: [
+				names := [ frame at: 7 ] on: Error do: [ #() ].
+				vals := [ frame at: 8 ] on: Error do: [ #() ].
+				maxCount := (names size min: vals size) min: 200.
+				1 to: maxCount do: [ :i |
+					[ dict at: (names at: i) asString put: (vals at: i) ] on: Error do: [ ].
+				].
+				^ dict
 			]
-		] ] on: Error do: [ ].
+		].
+
+		"Fallback: context tempAt: path"
+		(obj respondsTo: #method) ifTrue: [
+			[ obj method ifNotNil: [ :m |
+				m tempNames doWithIndex: [ :name :i |
+					| val |
+					[
+						val := obj tempAt: i.
+						dict at: name asString put: val
+					] on: Error do: [ ].
+				]
+			] ] on: Error do: [ ].
+		].
 		dict
 	] value'.
 	
