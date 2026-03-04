@@ -67,7 +67,7 @@ GbsSession >> basicEvaluate: aString [
 
 { #category : 'error handling' }
 GbsSession >> checkAndClearError [
-	| buffer errMsg contextOop exceptionOop debugOop |
+	| buffer errMsg contextOop exceptionOop debugOop gbsError |
 	buffer := ExternalAddress allocate: 2168.
 	[
 		"Tell the C-library to give us the error and RESET its internal state"
@@ -82,7 +82,13 @@ GbsSession >> checkAndClearError [
 		(debugOop isNil or: [ debugOop = 0 ]) ifTrue: [ debugOop := 20 ].
 		errMsg := (buffer + 113) readString. "Offset 112"
 		
-		(GbsError new messageText: errMsg; tag: debugOop) signal.
+		gbsError := GbsError new
+			messageText: errMsg;
+			tag: debugOop;
+			serverProcessOop: contextOop;
+			exceptionOop: exceptionOop;
+			yourself.
+		gbsError signal.
 	] ensure: [ buffer free ].
 ]
 
@@ -118,7 +124,12 @@ GbsSession >> checkForError [
 				cr.
 
 			"Create the error with BOTH the message and the context OOP"
-			gbsError := GbsError new messageText: errMsg; tag: debugOop.
+			gbsError := GbsError new
+				messageText: errMsg;
+				tag: debugOop;
+				serverProcessOop: contextOop;
+				exceptionOop: exceptionOop;
+				yourself.
 			gbsError gemStoneExceptionProxy: nil.
 			gbsError signal.
 		].
@@ -487,7 +498,12 @@ GbsSession >> handleGciError [
 			cr.
 
 		"Signal the error. tag carries the context for the debugger."
-		gbsError := GbsError new messageText: errMsg; tag: debugOop.
+		gbsError := GbsError new
+			messageText: errMsg;
+			tag: debugOop;
+			serverProcessOop: contextOop;
+			exceptionOop: exceptionOop;
+			yourself.
 		gbsError signal.
 
 	] ensure: [ buffer free ].

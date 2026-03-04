@@ -2,7 +2,9 @@ Class {
 	#name : 'GbsError',
 	#superclass : 'Error',
 	#instVars : [
-		'gemStoneExceptionProxy'
+		'gemStoneExceptionProxy',
+		'serverProcessOop',
+		'exceptionOop'
 	],
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'
@@ -18,4 +20,28 @@ GbsError >> gemStoneExceptionProxy [
 GbsError >> gemStoneExceptionProxy: anObject [
 
 	gemStoneExceptionProxy := anObject
+]
+
+{ #category : 'accessing' }
+GbsError >> serverProcessOop [
+
+	^ serverProcessOop
+]
+
+{ #category : 'accessing' }
+GbsError >> serverProcessOop: anObject [
+
+	serverProcessOop := anObject
+]
+
+{ #category : 'accessing' }
+GbsError >> exceptionOop [
+
+	^ exceptionOop
+]
+
+{ #category : 'accessing' }
+GbsError >> exceptionOop: anObject [
+
+	exceptionOop := anObject
 ]

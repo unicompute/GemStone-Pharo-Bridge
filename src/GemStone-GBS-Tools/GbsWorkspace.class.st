@@ -57,14 +57,33 @@ GbsWorkspace >> doIt [
 		result := activeSession execute: code.
 		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
 	] on: GbsError do: [ :ex |
-		processOop := (ex respondsTo: #tag)
-			ifTrue: [ ex tag ]
-			ifFalse: [ 20 ].
-		processOop ifNil: [ processOop := 20 ].
+		processOop := (ex respondsTo: #serverProcessOop)
+			ifTrue: [ ex serverProcessOop ]
+			ifFalse: [ nil ].
+		(processOop isNil or: [ processOop = 0 or: [ processOop = 20 ] ]) ifTrue: [
+			processOop := (ex respondsTo: #tag)
+				ifTrue: [ ex tag ]
+				ifFalse: [ 20 ]
+		].
+		(processOop isNil or: [ processOop = 0 ]) ifTrue: [
+			processOop := (ex respondsTo: #exceptionOop)
+				ifTrue: [ ex exceptionOop ]
+				ifFalse: [ 20 ]
+		].
+		processOop := processOop ifNil: [ 20 ].
+		processOop := (processOop = 0) ifTrue: [ 20 ] ifFalse: [ processOop ].
 		Transcript
 			show: 'GbsError: ';
 			show: ex messageText;
-			show: ' processOop=';
+			show: ' serverProcessOop=';
+			show: ((ex respondsTo: #serverProcessOop)
+				ifTrue: [ ex serverProcessOop asString ]
+				ifFalse: [ 'nil' ]);
+			show: ' exceptionOop=';
+			show: ((ex respondsTo: #exceptionOop)
+				ifTrue: [ ex exceptionOop asString ]
+				ifFalse: [ 'nil' ]);
+			show: ' chosenProcessOop=';
 			show: processOop asString;
 			cr.
 		self
