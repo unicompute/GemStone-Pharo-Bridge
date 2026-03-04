@@ -227,31 +227,28 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 	"Fetch contexts by walking the context sender chain"
 	| script rawData contexts |
 
-	processOop ifNil: [ 
+	processOop ifNil: [
 		Transcript show: 'fetchContextsDirectly: processOop is nil'; cr.
-		^ #( ) 
+		^ #( )
 	].
-	processOop = 0 ifTrue: [ 
+	processOop = 0 ifTrue: [
 		Transcript show: 'fetchContextsDirectly: processOop is 0'; cr.
-		^ #( ) 
+		^ #( )
 	].
 
 	script := '[
-		| ctx stream depth sel meth src |
+		| ctx stream depth |
 		ctx := Object _objectForOop: ', processOop asString, '.
 		stream := WriteStream on: String new.
-		ctx ifNil: [ stream nextPutAll: ''<ctx is nil>''; ^ stream contents ].
+		ctx ifNil: [ ^ ''<ctx is nil>'' ].
 		depth := 0.
 		[ ctx notNil and: [ depth < 30 ] ] whileTrue: [
 			depth := depth + 1.
-			sel := ctx selector.
-			meth := ctx method.
-			src := ctx sourceCode.
 			stream
 				nextPutAll: depth asString; tab;
-				nextPutAll: (sel ifNil: [''<unknown>''] ifNotNil: [ :s | s asString ]); tab;
-				nextPutAll: (meth ifNil: [''<unknown>''] ifNotNil: [ :m | m selector asString ]); tab;
-				nextPutAll: (src ifNil: [''<no source>''] ifNotNil: [ :s | s copyReplaceAll: String lf with: '' '' ]);
+				nextPutAll: (ctx selector ifNil: [''<unknown>''] ifNotNil: [ :s | s asString ]); tab;
+				nextPutAll: (ctx method ifNil: [''<unknown>''] ifNotNil: [ :m | m selector asString ]); tab;
+				nextPutAll: (ctx sourceCode ifNil: [''<no source>''] ifNotNil: [ :s | s ]);
 				lf.
 			ctx := ctx sender.
 		].
@@ -266,11 +263,11 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 		^ #( ).
 	].
 
-	rawData ifNil: [ 
+	rawData ifNil: [
 		Transcript show: 'fetchContextsDirectly: rawData is nil'; cr.
 		^ #( ).
 	].
-	rawData isEmpty ifTrue: [ 
+	rawData isEmpty ifTrue: [
 		Transcript show: 'fetchContextsDirectly: rawData is empty'; cr.
 		^ #( ).
 	].
