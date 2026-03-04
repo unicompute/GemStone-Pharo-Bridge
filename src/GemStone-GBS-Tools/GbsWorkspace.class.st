@@ -44,7 +44,7 @@ GbsWorkspace >> doCommit [
 
 { #category : 'actions' }
 GbsWorkspace >> doIt [
-	| code activeSession result processOop |
+	| code activeSession result processOop exceptionCandidate currentUsable exceptionUsable |
 
 	code := self selectedCodeOrAll copyReplaceAll: String cr with: String lf.
 	code ifEmpty: [ ^ self ].
@@ -72,6 +72,19 @@ GbsWorkspace >> doIt [
 		].
 		processOop := processOop ifNil: [ 20 ].
 		processOop := (processOop = 0) ifTrue: [ 20 ] ifFalse: [ processOop ].
+
+		exceptionCandidate := (ex respondsTo: #exceptionOop)
+			ifTrue: [ ex exceptionOop ]
+			ifFalse: [ nil ].
+		currentUsable := self
+			isDebuggerStackCandidateOop: processOop
+			session: activeSession.
+		(currentUsable not and: [ exceptionCandidate notNil and: [ exceptionCandidate ~= 0 and: [ exceptionCandidate ~= 20 ] ] ]) ifTrue: [
+			exceptionUsable := self
+				isDebuggerStackCandidateOop: exceptionCandidate
+				session: activeSession.
+			exceptionUsable ifTrue: [ processOop := exceptionCandidate ].
+		].
 		Transcript
 			show: 'GbsError: ';
 			show: ex messageText;
@@ -91,6 +104,38 @@ GbsWorkspace >> doIt [
 			processOop: processOop
 			session: activeSession
 	].
+]
+
+{ #category : 'private' }
+GbsWorkspace >> isDebuggerStackCandidateOop: anOop session: aSession [
+	| script answer |
+
+	(anOop isNil or: [ anOop = 0 or: [ anOop = 20 ] ]) ifTrue: [ ^ false ].
+	aSession ifNil: [ ^ false ].
+
+	script := '[
+		| obj top proc snd |
+		obj := Object _objectForOop: ', anOop asString, '.
+		obj isNil ifTrue: [ ^ false ].
+		(obj respondsTo: #_gsiStackReportFromLevel:toLevel:) ifTrue: [ ^ true ].
+		(obj respondsTo: #serverProcess) ifTrue: [ ^ true ].
+		(obj respondsTo: #topContext) ifTrue: [
+			top := [ obj topContext ] on: Error do: [ nil ].
+			top notNil ifTrue: [ ^ true ].
+		].
+		(obj respondsTo: #process) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ].
+			proc notNil ifTrue: [ ^ true ].
+		].
+		(obj respondsTo: #sender) ifTrue: [
+			snd := [ obj sender ] on: Error do: [ nil ].
+			snd notNil ifTrue: [ ^ true ].
+		].
+		false
+	] value'.
+
+	answer := [ aSession evaluate: script ] on: Error do: [ false ].
+	^ (answer == true or: [ answer = 'true' ])
 ]
 
 { #category : 'actions' }
