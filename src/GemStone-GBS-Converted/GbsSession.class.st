@@ -200,6 +200,10 @@ GbsSession >> execute: script [
 	"If result is 1, follow C++ logic: handle the error IMMEDIATELY"
 	resultOop = 1 ifTrue: [ ^ self handleGciError ].
 
+	"VW/GBS correspondence: execution may still leave a pending GCI error
+	even when the returned oop is not OOP_ILLEGAL. Always drain/check GciErr."
+	self checkForError.
+
 	^ self resultFor: resultOop
 ]
 
