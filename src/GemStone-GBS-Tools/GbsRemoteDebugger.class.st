@@ -52,6 +52,7 @@ GbsRemoteDebugger class >> openOn: anErrorString process: processOop session: aS
 { #category : 'instance creation' }
 GbsRemoteDebugger class >> openOn: anErrorString process: processOop session: aSession service: aService [
 	| debugger |
+	[aService glueIsHidden: false] on: Error do: [ ].
 	debugger := self new.
 	debugger service: aService.
 	debugger session: aSession.

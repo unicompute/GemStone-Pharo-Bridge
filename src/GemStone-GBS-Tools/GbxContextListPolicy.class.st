@@ -87,16 +87,19 @@ GbxContextListPolicy >> fetchServerContexts [
 	(processOop isNil or: [ processOop = 20 ]) ifTrue: [ ^ #( ) ].
 	
 	script := '[
-		| obj gbsError gsProcess stream maxDepth level stackReport fullEntry frameId methodOrNil className selectorName source ctxOop |
+		| obj gbsError gsProcess ctx stream maxDepth level stackReport fullEntry frameId methodOrNil className selectorName source ctxOop |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ '''' ].
+		stream := WriteStream on: String new.
 		gbsError := nil.
+		gsProcess := nil.
+		ctx := nil.
+
 		(obj respondsTo: #serverProcess) ifTrue: [ gbsError := obj ].
 		gbsError isNil ifTrue: [
 			(obj respondsTo: #gbxResult)
 				ifTrue: [ gbsError := [ obj gbxResult ] on: Error do: [ nil ] ]
 		].
-		gsProcess := nil.
 		gbsError notNil ifTrue: [
 			gsProcess := [ gbsError serverProcess ] on: Error do: [ nil ]
 		].
@@ -105,69 +108,97 @@ GbxContextListPolicy >> fetchServerContexts [
 				ifTrue: [ gsProcess := obj ]
 		].
 		gsProcess isNil ifTrue: [
-			(obj respondsTo: #process) ifTrue: [
-				gsProcess := [ obj process ] on: Error do: [ nil ]
+			(obj respondsTo: #process)
+				ifTrue: [ gsProcess := [ obj process ] on: Error do: [ nil ] ]
+		].
+		(gsProcess isNil and: [ obj respondsTo: #topContext ]) ifTrue: [
+			ctx := [ obj topContext ] on: Error do: [ nil ].
+			(ctx notNil and: [ ctx respondsTo: #process ])
+				ifTrue: [ gsProcess := [ ctx process ] on: Error do: [ nil ] ]
+		].
+
+		((gsProcess notNil) and: [ gsProcess respondsTo: #_gsiStackReportFromLevel:toLevel: ]) ifTrue: [
+			maxDepth := 200.
+			level := 1.
+			[ level <= maxDepth ] whileTrue: [
+				stackReport := [ gsProcess _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
+				(stackReport isNil or: [ stackReport size < 2 ])
+					ifTrue: [ level := maxDepth + 1 ]
+					ifFalse: [
+						frameId := stackReport at: 1.
+						fullEntry := stackReport at: 2.
+						methodOrNil := (fullEntry notNil and: [ fullEntry isEmpty not ])
+							ifTrue: [ fullEntry first ]
+							ifFalse: [ nil ].
+						className := [
+							methodOrNil ifNil: [ ''<unknown>'' ] ifNotNil: [
+								methodOrNil inClass ifNil: [ ''<unknown>'' ] ifNotNil: [ methodOrNil inClass name ]
+							]
+						] on: Error do: [ ''<unknown>'' ].
+						selectorName := [
+							(fullEntry notNil and: [ fullEntry size >= 4 ])
+								ifTrue: [
+									(fullEntry at: 4)
+										ifNil: [ ''<unknown>'' ]
+										ifNotNil: [ :sel | sel asString ]
+								]
+								ifFalse: [ ''<unknown>'' ]
+						] on: Error do: [ ''<unknown>'' ].
+						source := [
+							(fullEntry notNil and: [ fullEntry size >= 9 ])
+								ifTrue: [
+									(fullEntry at: 9)
+										ifNil: [ '''' ]
+										ifNotNil: [ :src | src asString ]
+								]
+								ifFalse: [ '''' ]
+						] on: Error do: [ '''' ].
+						source := source
+							copyReplaceAll: String cr with: '' '';
+							copyReplaceAll: String lf with: '' '';
+							copyReplaceAll: Character tab asString with: '' ''.
+						ctxOop := [ frameId asString ] on: Error do: [ ''0'' ].
+						stream
+							nextPutAll: level asString; tab;
+							nextPutAll: className; tab;
+							nextPutAll: selectorName; tab;
+							nextPutAll: source; tab;
+							nextPutAll: ctxOop;
+							lf.
+						level := level + 1
+					]
 			]
 		].
-		gsProcess isNil ifTrue: [
-			(obj respondsTo: #topContext) ifTrue: [
-				| top |
-				top := [ obj topContext ] on: Error do: [ nil ].
-				(top notNil and: [ top respondsTo: #process ])
-					ifTrue: [ gsProcess := [ top process ] on: Error do: [ nil ] ]
+
+		"Fallback: sender-chain walk when stack report is unavailable."
+		stream position = 0 ifTrue: [
+			ctx isNil ifTrue: [
+				(obj respondsTo: #sender) ifTrue: [ ctx := obj ].
+				(ctx isNil and: [ gsProcess notNil and: [ gsProcess respondsTo: #topContext ] ])
+					ifTrue: [ ctx := [ gsProcess topContext ] on: Error do: [ nil ] ]
+			].
+			maxDepth := 200.
+			level := 1.
+			[ ctx notNil and: [ level <= maxDepth ] ] whileTrue: [
+				className := [ ctx method inClass name ] on: Error do: [ ''<unknown>'' ].
+				selectorName := [ ctx selector asString ] on: Error do: [ ''<unknown>'' ].
+				source := [ ctx sourceCode ] on: Error do: [ '''' ].
+				source := source ifNil: [ '''' ].
+				source := source
+					copyReplaceAll: String cr with: '' '';
+					copyReplaceAll: String lf with: '' '';
+					copyReplaceAll: Character tab asString with: '' ''.
+				ctxOop := [ ctx asOop printString ] on: Error do: [ ''0'' ].
+				stream
+					nextPutAll: level asString; tab;
+					nextPutAll: className; tab;
+					nextPutAll: selectorName; tab;
+					nextPutAll: source; tab;
+					nextPutAll: ctxOop;
+					lf.
+				ctx := [ ctx sender ] on: Error do: [ nil ].
+				level := level + 1
 			]
-		].
-		gsProcess isNil ifTrue: [ ^ '''' ].
-		stream := WriteStream on: String new.
-		maxDepth := 80.
-		level := 1.
-		[ level <= maxDepth ] whileTrue: [
-			stackReport := [ gsProcess _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
-			(stackReport isNil or: [ stackReport size < 2 ])
-				ifTrue: [ level := maxDepth + 1 ]
-				ifFalse: [
-					frameId := stackReport at: 1.
-					fullEntry := stackReport at: 2.
-					methodOrNil := (fullEntry notNil and: [ fullEntry isEmpty not ])
-						ifTrue: [ fullEntry first ]
-						ifFalse: [ nil ].
-					className := [ 
-						methodOrNil ifNil: [ ''<unknown>'' ] ifNotNil: [ 
-							methodOrNil inClass ifNil: [ ''<unknown>'' ] ifNotNil: [ methodOrNil inClass name ]
-						]
-					] on: Error do: [ ''<unknown>'' ].
-					selectorName := [
-						(fullEntry notNil and: [ fullEntry size >= 4 ])
-							ifTrue: [
-								(fullEntry at: 4)
-									ifNil: [ ''<unknown>'' ]
-									ifNotNil: [ :sel | sel asString ]
-							]
-							ifFalse: [ ''<unknown>'' ]
-					] on: Error do: [ ''<unknown>'' ].
-					source := [
-						(fullEntry notNil and: [ fullEntry size >= 9 ])
-							ifTrue: [
-								(fullEntry at: 9)
-									ifNil: [ '''' ]
-									ifNotNil: [ :src | src asString ]
-							]
-							ifFalse: [ '''' ]
-					] on: Error do: [ '''' ].
-					source := source
-						copyReplaceAll: String cr with: '' '';
-						copyReplaceAll: String lf with: '' '';
-						copyReplaceAll: Character tab asString with: '' ''.
-					ctxOop := [ frameId asString ] on: Error do: [ ''0'' ].
-					stream
-						nextPutAll: level asString; tab;
-						nextPutAll: className; tab;
-						nextPutAll: selectorName; tab;
-						nextPutAll: source; tab;
-						nextPutAll: ctxOop;
-						lf.
-					level := level + 1
-				]
 		].
 		stream contents
 	] value'.
