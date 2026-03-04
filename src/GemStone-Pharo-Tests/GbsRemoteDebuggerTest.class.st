@@ -238,37 +238,23 @@ GbsRemoteDebuggerTest >> testZeroDivideBuildsNonEmptyContextListFromDebuggerServ
 
 { #category : 'tests' }
 GbsRemoteDebuggerTest >> testZeroDivideScriptServerSideStackDumpHasFrames [
-	| stackText |
+	| raisedError stackText |
 
 	session ifNil: [ self skip: 'No session' ].
 
-	stackText := session evaluate: '[
-		| stream ctx depth |
-		[
-			| a b |
-			a := 10.
-			b := 0.
-			a / b
-		] on: Error do: [ :ex |
-			stream := WriteStream on: String new.
-			ctx := ex signalerContext ifNil: [ Processor activeProcess topContext ].
-			depth := 0.
-			[ ctx notNil and: [ depth < 30 ] ] whileTrue: [
-				depth := depth + 1.
-				stream
-					nextPutAll: depth asString; tab;
-					nextPutAll: (([ ctx selector asString ] on: Error do: [ ''<no selector>'' ])); tab;
-					nextPutAll: (([ ctx method ifNil: [ ''<no method>'' ] ifNotNil: [ :m | m selector asString ] ] on: Error do: [ ''<no method>'' ]));
-					lf.
-				ctx := [ ctx sender ] on: Error do: [ nil ].
-			].
-			^stream contents
-		].
-		''<no error>''
-	] value'.
+	raisedError := nil.
+	[
+		session execute: '| a b | a := 10. b := 0. a / b'.
+	] on: GbsError do: [ :ex | raisedError := ex ].
+
+	self assert: raisedError notNil.
+	stackText := self frameProbeTextForOop: raisedError serverProcessOop.
+	(stackText isNil or: [ stackText isEmpty ]) ifTrue: [
+		stackText := self frameProbeTextForOop: raisedError exceptionOop
+	].
 
 	Transcript show: 'testZeroDivideScriptServerSideStackDumpHasFrames:'; cr.
-	Transcript show: stackText; cr.
+	Transcript show: (stackText ifNil: [ '<nil>' ]); cr.
 
 	self assert: stackText notNil.
 	self deny: stackText isEmpty.

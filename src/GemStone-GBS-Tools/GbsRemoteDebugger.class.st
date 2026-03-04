@@ -256,7 +256,9 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 	] value'.
 
 	[
-		rawData := session executeAndFetch: script context: session sessionOop.
+		rawData := session evaluate: script.
+		(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
+		rawData ifNil: [ rawData := '' ].
 		Transcript show: 'fetchContextsDirectly rawData: ', rawData; cr.
 	] on: Error do: [ :ex |
 		Transcript show: 'fetchContextsDirectly error: ', ex messageText; cr.
