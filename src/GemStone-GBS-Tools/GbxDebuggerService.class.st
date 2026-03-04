@@ -120,6 +120,12 @@ GbxDebuggerService >> currentContext [
 ]
 
 { #category : 'accessing' }
+GbxDebuggerService >> topContext [
+	"Best-effort client top context for mixed client/server stack logic."
+	^ thisContext sender
+]
+
+{ #category : 'accessing' }
 GbxDebuggerService >> contextList [
 	^ contextStackPolicy contextList
 ]

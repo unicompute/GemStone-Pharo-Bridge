@@ -65,10 +65,21 @@ GbxContextListPolicy >> contextList [
 
 { #category : 'context list' }
 GbxContextListPolicy >> computeContextList [
-	"Compute the logical context list from the GemStone process"
-	| allContexts |
-	
-	allContexts := self fetchServerContexts.
+	"Compute the logical context list from GemStone plus any client contexts
+	above the top server context (VW mixed-stack parity)."
+	| allContexts serverContexts topServerContext firstClientContext |
+
+	serverContexts := self fetchServerContexts.
+	allContexts := OrderedCollection new.
+	allContexts addAll: serverContexts.
+
+	topServerContext := serverContexts ifEmpty: [ nil ] ifNotEmpty: [ serverContexts first ].
+	topServerContext ifNotNil: [
+		firstClientContext := self firstClientContextAbove: topServerContext.
+		firstClientContext ifNotNil: [
+			allContexts addAll: (self clientContextsStartingAt: firstClientContext)
+		]
+	].
 	
 	glueIsHidden 
 		ifTrue: [ contextList := self filterOutGlue: allContexts ]
@@ -244,7 +255,7 @@ GbxContextListPolicy >> filterOutGlue: contexts [
 	"Filter out GBS glue contexts from the context list"
 	| filtered |
 	filtered := contexts select: [ :ctx | 
-		(self isGlueContext: ctx) not
+		(self isGlue: ctx) not
 	].
 	^ filtered
 ]
@@ -268,6 +279,25 @@ GbxContextListPolicy >> isGlueContext: aContext [
 	^ false
 ]
 
+{ #category : 'testing' }
+GbxContextListPolicy >> isGlue: aContext [
+	| className |
+	aContext ifNil: [ ^ false ].
+	(aContext respondsTo: #isGlue) ifTrue: [ ^ aContext isGlue ].
+	(aContext respondsTo: #gbxIsServerCallContext)
+		ifTrue: [ aContext gbxIsServerCallContext ifTrue: [ ^ true ] ].
+	(aContext respondsTo: #gbxIsGsTopGlue)
+		ifTrue: [ aContext gbxIsGsTopGlue ifTrue: [ ^ true ] ].
+	(aContext respondsTo: #gbxIsGsBottomGlue)
+		ifTrue: [ aContext gbxIsGsBottomGlue ifTrue: [ ^ true ] ].
+	(aContext respondsTo: #gbxIsServerContext)
+		ifTrue: [ aContext gbxIsServerContext ifTrue: [ ^ self isGlueContext: aContext ] ].
+	className := aContext class name asString.
+	((className beginsWith: 'Gbs') or: [ className beginsWith: 'Gbx' ])
+		ifTrue: [ ^ true ].
+	^ false
+]
+
 { #category : 'context list' }
 GbxContextListPolicy >> topServerContext [
 	"Return the topmost server context"
@@ -278,8 +308,57 @@ GbxContextListPolicy >> topServerContext [
 
 { #category : 'context list' }
 GbxContextListPolicy >> firstClientContextAbove: gsContext [
-	"Find the first client context above a server context"
-	"Currently not implemented - would need client stack integration"
+	"Ported from VW: find nearest non-glue client context above gsContext,
+	bounded by the matching server-call glue marker for that server process."
+	| ctx bestSoFar targetGsProcess rcvr markerProcess |
+	gsContext ifNil: [ ^ nil ].
+	bestSoFar := nil.
+	targetGsProcess := self processIdentityForContext: gsContext.
+	ctx := (debugger respondsTo: #topContext)
+		ifTrue: [ debugger topContext ]
+		ifFalse: [ nil ].
+	[ ctx notNil ] whileTrue: [
+		(self isGlue: ctx)
+			ifFalse: [ bestSoFar := ctx ]
+			ifTrue: [
+				rcvr := [ ctx receiver ] on: Error do: [ nil ].
+				markerProcess := self processIdentityForErrorLike: rcvr.
+				(markerProcess notNil and: [ markerProcess = targetGsProcess ])
+					ifTrue: [ ^ bestSoFar ]
+			].
+		ctx := [ ctx sender ] on: Error do: [ nil ].
+	].
+	^ nil
+]
+
+{ #category : 'private' }
+GbxContextListPolicy >> clientContextsStartingAt: aContext [
+	| contexts ctx |
+	contexts := OrderedCollection new.
+	ctx := aContext.
+	[ ctx notNil ] whileTrue: [
+		contexts add: ctx.
+		ctx := [ ctx sender ] on: Error do: [ nil ].
+	].
+	^ contexts
+]
+
+{ #category : 'private' }
+GbxContextListPolicy >> processIdentityForContext: aContext [
+	aContext ifNil: [ ^ nil ].
+	(aContext respondsTo: #processOop) ifTrue: [ ^ aContext processOop ].
+	(aContext respondsTo: #process) ifTrue: [ ^ aContext process ].
+	^ nil
+]
+
+{ #category : 'private' }
+GbxContextListPolicy >> processIdentityForErrorLike: anObject [
+	anObject ifNil: [ ^ nil ].
+	(anObject respondsTo: #gbxIsGSError)
+		ifTrue: [ anObject gbxIsGSError ifFalse: [ ^ nil ] ]
+		ifFalse: [ ^ nil ].
+	(anObject respondsTo: #serverProcessOop) ifTrue: [ ^ anObject serverProcessOop ].
+	(anObject respondsTo: #serverProcess) ifTrue: [ ^ anObject serverProcess ].
 	^ nil
 ]
 
