@@ -227,38 +227,58 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 	"Fetch contexts by walking the context sender chain"
 	| script rawData contexts |
 
-	processOop ifNil: [ ^ #( ) ].
-	processOop = 0 ifTrue: [ ^ #( ) ].
+	processOop ifNil: [ 
+		Transcript show: 'fetchContextsDirectly: processOop is nil'; cr.
+		^ #( ) 
+	].
+	processOop = 0 ifTrue: [ 
+		Transcript show: 'fetchContextsDirectly: processOop is 0'; cr.
+		^ #( ) 
+	].
 
 	script := '[
 		| ctx stream depth sel meth src |
 		ctx := Object _objectForOop: ', processOop asString, '.
 		stream := WriteStream on: String new.
-		ctx ifNil: [ ^ ''<ctx is nil>'' ].
+		ctx ifNil: [ stream nextPutAll: ''<ctx is nil>''; contents. ^ stream contents ].
 		depth := 0.
 		[ ctx notNil and: [ depth < 30 ] ] whileTrue: [
 			depth := depth + 1.
-			sel := ctx selector.
-			meth := ctx method.
-			src := ctx sourceCode.
+			sel := [ ctx selector ] on: Error do: [ ''<error getting selector>'' ].
+			meth := [ ctx method ] on: Error do: [ nil ].
+			src := [ ctx sourceCode ] on: Error do: [ ''<error getting source>'' ].
 			stream
 				nextPutAll: depth asString; tab;
 				nextPutAll: (sel ifNil: [''<unknown>''] ifNotNil: [ :s | s asString ]); tab;
 				nextPutAll: (meth ifNil: [''<unknown>''] ifNotNil: [ :m | m selector asString ]); tab;
 				nextPutAll: (src ifNil: [''<no source>''] ifNotNil: [ :s | s copyReplaceAll: String lf with: '' '' ]);
 				lf.
-			ctx := ctx sender.
+			ctx := [ ctx sender ] on: Error do: [ nil ].
 		].
 		stream contents
 	] value'.
 
-	rawData := session executeAndFetch: script context: session sessionOop.
-	Transcript show: 'fetchContextsDirectly rawData: ', rawData; cr.
+	[
+		rawData := session executeAndFetch: script context: session sessionOop.
+		Transcript show: 'fetchContextsDirectly rawData: ', rawData; cr.
+	] on: Error do: [ :ex |
+		Transcript show: 'fetchContextsDirectly error: ', ex messageText; cr.
+		^ #( ).
+	].
+
+	rawData ifNil: [ 
+		Transcript show: 'fetchContextsDirectly: rawData is nil'; cr.
+		^ #( ).
+	].
+	rawData isEmpty ifTrue: [ 
+		Transcript show: 'fetchContextsDirectly: rawData is empty'; cr.
+		^ #( ).
+	].
 
 	contexts := (rawData splitOn: Character lf)
 		collect: [ :line |
-			| parts |
 			line isEmpty ifTrue: [ ^ nil ].
+			| parts |
 			parts := line splitOn: Character tab.
 			parts size >= 4 ifTrue: [
 				[ GbxActivation new
