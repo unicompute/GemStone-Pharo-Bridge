@@ -224,13 +224,59 @@ GbsRemoteDebugger >> fetchStackFramesFromData [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> fetchContextsDirectly [
-	"Fallback to the service policy path; this mirrors VW where stack
-	frames are derived from the server process carried by the error."
-	| policy |
-	service ifNil: [ ^ #( ) ].
-	policy := service contextStackPolicy.
-	policy ifNil: [ ^ #( ) ].
-	^ [ policy fetchServerContexts ] on: Error do: [ #( ) ]
+	"Fetch contexts by walking the context sender chain"
+	| script rawData contexts |
+
+	processOop ifNil: [ ^ #( ) ].
+	processOop = 0 ifTrue: [ ^ #( ) ].
+
+	script := '[
+		| ctx stream depth sel meth src |
+		ctx := Object _objectForOop: ', processOop asString, '.
+		stream := WriteStream on: String new.
+		ctx ifNil: [ ^ ''<ctx is nil>'' ].
+		depth := 0.
+		[ ctx notNil and: [ depth < 30 ] ] whileTrue: [
+			depth := depth + 1.
+			sel := ctx selector.
+			meth := ctx method.
+			src := ctx sourceCode.
+			stream
+				nextPutAll: depth asString; tab;
+				nextPutAll: (sel ifNil: [''<unknown>''] ifNotNil: [ :s | s asString ]); tab;
+				nextPutAll: (meth ifNil: [''<unknown>''] ifNotNil: [ :m | m selector asString ]); tab;
+				nextPutAll: (src ifNil: [''<no source>''] ifNotNil: [ :s | s copyReplaceAll: String lf with: '' '' ]);
+				lf.
+			ctx := ctx sender.
+		].
+		stream contents
+	] value'.
+
+	rawData := session executeAndFetch: script context: session sessionOop.
+	Transcript show: 'fetchContextsDirectly rawData: ', rawData; cr.
+
+	contexts := (rawData splitOn: Character lf)
+		collect: [ :line |
+			| parts |
+			line isEmpty ifTrue: [ ^ nil ].
+			parts := line splitOn: Character tab.
+			parts size >= 4 ifTrue: [
+				[ GbxActivation new
+					processOop: processOop;
+					level: parts first asInteger;
+					session: session;
+					selector: (parts at: 2) asSymbol;
+					gsMethodId: (parts at: 3);
+					sourceString: (parts at: 4);
+					yourself
+				] on: Error do: [ :ex | 
+					Transcript show: 'Error creating activation: ', ex messageText; cr.
+					nil 
+				]
+			]
+		] thenSelect: #isNotNil.
+
+	^ contexts
 ]
 
 { #category : 'actions' }
