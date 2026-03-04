@@ -15,6 +15,9 @@ GbsWorkspaceTest >> testDoItHandlesGemStoneError [
 	workspace textEditor text: '1 / 0'.
 	
 	"2. Inject our manual mock session globally"
+	mockSession stubs
+		at: #execute
+		put: [ :script | (GbsError new messageText: 'boom'; tag: 20; yourself) signal ].
 	GbsSessionParameters classPool at: #CurrentSession put: mockSession.
 	
 	"3. Action: Run the workspace evaluation"
