@@ -1,9 +1,24 @@
 Class {
 	#name : 'GbsWorkspaceTest',
 	#superclass : 'TestCase',
+	#instVars : [
+		'previousSession'
+	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
 }
+
+{ #category : 'running' }
+GbsWorkspaceTest >> setUp [
+	super setUp.
+	previousSession := GbsSessionParameters currentSession
+]
+
+{ #category : 'running' }
+GbsWorkspaceTest >> tearDown [
+	GbsSessionParameters currentSession: previousSession.
+	super tearDown
+]
 
 { #category : 'tests' }
 GbsWorkspaceTest >> testDoItHandlesGemStoneError [
@@ -18,7 +33,7 @@ GbsWorkspaceTest >> testDoItHandlesGemStoneError [
 	mockSession stubs
 		at: #execute
 		put: [ :script | (GbsError new messageText: 'boom'; tag: 20; yourself) signal ].
-	GbsSessionParameters classPool at: #CurrentSession put: mockSession.
+	GbsSessionParameters currentSession: mockSession.
 	
 	"3. Action: Run the workspace evaluation"
 	workspace doIt.
@@ -45,7 +60,7 @@ GbsWorkspaceTest >> testDoItPrefersServerProcessOopOverTag [
 				exceptionOop: 333;
 				yourself) signal ].
 
-	GbsSessionParameters classPool at: #CurrentSession put: mockSession.
+	GbsSessionParameters currentSession: mockSession.
 
 	workspace doIt.
 
