@@ -294,12 +294,12 @@ GbxActivation >> marshalValue: anObject [
 GbxActivation >> tempNamesAndValues [
 	"Return temp/arg values for this activation.
 	Supports both context-backed and process-backed stack frames."
-	| script result |
+	| script result localDict |
 	
 	script := '[
-		| obj dict frame names vals maxCount receiverObj |
+		| obj dict frame names vals maxCount receiverObj stream keyText valueText |
 		obj := Object _objectForOop: ', processOop asString, '.
-		obj ifNil: [ ^ Dictionary new ].
+		obj ifNil: [ ^ '''' ].
 		dict := Dictionary new.
 
 		"Preferred: process/frame report path (VW correspondence)"
@@ -313,8 +313,7 @@ GbxActivation >> tempNamesAndValues [
 				maxCount := (names size min: vals size) min: 200.
 				1 to: maxCount do: [ :i |
 					[ dict at: (names at: i) asString put: (vals at: i) ] on: Error do: [ ].
-				].
-				^ dict
+				]
 			]
 		].
 
@@ -329,14 +328,55 @@ GbxActivation >> tempNamesAndValues [
 						dict at: name asString put: val
 					] on: Error do: [ ].
 				]
-			] ] on: Error do: [ ].
+				] ] on: Error do: [ ].
 		].
-		dict
+
+		stream := WriteStream on: String new.
+		dict keysAndValuesDo: [ :k :v |
+			keyText := [ k asString ] on: Error do: [ ''<key-error>'' ].
+			valueText := [ v printString ] on: Error do: [ ''<value-error>'' ].
+			keyText := keyText
+				copyReplaceAll: Character tab asString with: ''<TAB>'';
+				copyReplaceAll: String cr with: ''<CR>'';
+				copyReplaceAll: String lf with: ''<LF>''.
+			valueText := valueText
+				copyReplaceAll: Character tab asString with: ''<TAB>'';
+				copyReplaceAll: String cr with: ''<CR>'';
+				copyReplaceAll: String lf with: ''<LF>''.
+			stream
+				nextPutAll: keyText;
+				tab;
+				nextPutAll: valueText;
+				lf.
+		].
+		stream contents
 	] value'.
 	
 	[
 		result := session evaluate: script.
-		^ result ifNil: [ Dictionary new ] ifNotNil: [ result ]
+		(result respondsTo: #asLocalString) ifTrue: [ result := result asLocalString ].
+		result ifNil: [ ^ Dictionary new ].
+		result isString ifFalse: [ ^ Dictionary new ].
+
+		localDict := Dictionary new.
+		(result splitOn: Character lf) do: [ :line |
+			| parts key value |
+			line isEmpty ifFalse: [
+				parts := line splitOn: Character tab.
+				parts size >= 2 ifTrue: [
+					key := ((((parts at: 1)
+						copyReplaceAll: '<TAB>' with: Character tab asString)
+						copyReplaceAll: '<CR>' with: String cr)
+						copyReplaceAll: '<LF>' with: String lf).
+					value := ((((parts at: 2)
+						copyReplaceAll: '<TAB>' with: Character tab asString)
+						copyReplaceAll: '<CR>' with: String cr)
+						copyReplaceAll: '<LF>' with: String lf).
+					localDict at: key put: value.
+				].
+			].
+		].
+		^ localDict
 	] on: Error do: [ :ex |
 		^ Dictionary new
 	]
