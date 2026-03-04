@@ -163,8 +163,17 @@ GbsRemoteDebugger >> fetchStackFrames [
 		^ self fetchStackFramesFromData
 	].
 
-	"Always try to fetch contexts - even with processOop 20"
-	contexts := self fetchContextsDirectly.
+	contexts := #( ).
+	service ifNotNil: [
+		[
+			service recomputeContextList.
+			contexts := service contextList
+		] on: Error do: [ contexts := #( ) ]
+	].
+
+	contexts ifEmpty: [
+		contexts := self fetchContextsDirectly
+	].
 
 	contextList := contexts ifNil: [ #( ) ].
 	contextList ifEmpty: [
@@ -214,77 +223,13 @@ GbsRemoteDebugger >> fetchStackFramesFromData [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> fetchContextsDirectly [
-	"Direct context fetching fallback.
-	Supports either an error context oop or a process oop."
-	| script rawData contexts |
-
-	script := '[
-		| obj ctx stream depth className selectorName source oopText |
-		obj := Object _objectForOop: ', processOop asString, '.
-		ctx := nil.
-		(obj notNil and: [obj respondsTo: #sender]) ifTrue: [ ctx := obj ].
-		(ctx isNil and: [obj notNil and: [obj respondsTo: #topContext]])
-			ifTrue: [ ctx := obj topContext ].
-		(ctx isNil and: [obj notNil and: [obj respondsTo: #process]])
-			ifTrue: [ ctx := obj process ].
-		(ctx notNil and: [ctx respondsTo: #topContext]) ifTrue: [ ctx := ctx topContext ].
-		ctx ifNil: [ ^ ''<ctx is nil>'' ].
-		stream := WriteStream on: String new.
-		depth := 0.
-		[ ctx notNil and: [ depth < 30 ] ] whileTrue: [
-			depth := depth + 1.
-			className := [ ctx method inClass name ] on: Error do: [ ''<unknown>'' ].
-			selectorName := [ ctx selector asString ] on: Error do: [ ''<unknown>'' ].
-			source := [ ctx sourceCode ] on: Error do: [ '''' ].
-			source := source ifNil: [ '''' ].
-			source := source
-				copyReplaceAll: String cr with: '' '';
-				copyReplaceAll: String lf with: '' '';
-				copyReplaceAll: Character tab asString with: '' ''.
-			oopText := [ ctx asOop printString ] on: Error do: [ ''0'' ].
-			stream
-				nextPutAll: depth asString; tab;
-				nextPutAll: className; tab;
-				nextPutAll: selectorName; tab;
-				nextPutAll: source; tab;
-				nextPutAll: oopText;
-				lf.
-			ctx := ctx sender.
-		].
-		stream contents
-	] value'.
-
-	rawData := [ session evaluate: script ] on: Error do: [ nil ].
-	(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
-	rawData ifNil: [ rawData := '' ].
-	rawData = 'nil' ifTrue: [ rawData := '' ].
-	Transcript show: 'rawData: ', rawData; cr.
-	
-	contexts := (rawData splitOn: Character lf)
-		collect: [ :line |
-			| parts |
-			parts := line splitOn: Character tab.
-			parts size >= 5 ifTrue: [
-				[ | activation selectorSymbol ctxOop |
-				selectorSymbol := [ (parts at: 3) asSymbol ] on: Error do: [ #unboundMethod ].
-				ctxOop := [ (parts at: 5) asInteger ] on: Error do: [ processOop ].
-				activation := GbxActivation new.
-				activation
-					session: session;
-					level: (parts first asInteger);
-					initializeFromClass: (parts at: 2)
-						selector: selectorSymbol
-						source: (parts at: 4)
-						contextOop: ctxOop;
-					yourself.
-				activation ] on: Error do: [ :ex | 
-					Transcript show: 'Error creating activation: ', ex messageText; cr.
-					nil 
-				]
-			]
-		] thenSelect: #isNotNil.
-
-	^ contexts
+	"Fallback to the service policy path; this mirrors VW where stack
+	frames are derived from the server process carried by the error."
+	| policy |
+	service ifNil: [ ^ #( ) ].
+	policy := service contextStackPolicy.
+	policy ifNil: [ ^ #( ) ].
+	^ [ policy fetchServerContexts ] on: Error do: [ #( ) ]
 ]
 
 { #category : 'actions' }

@@ -79,35 +79,91 @@ GbxContextListPolicy >> computeContextList [
 
 { #category : 'context list' }
 GbxContextListPolicy >> fetchServerContexts [
-	"Fetch all server contexts from GemStone"
+	"Fetch server activations using the VW flow:
+	serverCall/error oop -> gbsError -> serverProcess -> stack report."
 	| processOop script rawData contexts |
 	
 	processOop := debugger processOop.
 	(processOop isNil or: [ processOop = 20 ]) ifTrue: [ ^ #( ) ].
 	
 	script := '[
-		| proc stream |
-		proc := Object _objectForOop: ', processOop asString, '.
+		| obj gbsError gsProcess stream maxDepth stackReport fullEntry frameId methodOrNil className selectorName source ctxOop |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ '''' ].
+		gbsError := nil.
+		(obj respondsTo: #serverProcess) ifTrue: [ gbsError := obj ].
+		gbsError isNil ifTrue: [
+			(obj respondsTo: #gbxResult)
+				ifTrue: [ gbsError := [ obj gbxResult ] on: Error do: [ nil ] ]
+		].
+		gsProcess := nil.
+		gbsError notNil ifTrue: [
+			gsProcess := [ gbsError serverProcess ] on: Error do: [ nil ]
+		].
+		gsProcess isNil ifTrue: [
+			(obj respondsTo: #_gsiStackReportFromLevel:toLevel:)
+				ifTrue: [ gsProcess := obj ]
+		].
+		gsProcess isNil ifTrue: [
+			(obj respondsTo: #process) ifTrue: [
+				gsProcess := [ obj process ] on: Error do: [ nil ]
+			]
+		].
+		gsProcess isNil ifTrue: [
+			(obj respondsTo: #topContext) ifTrue: [
+				| top |
+				top := [ obj topContext ] on: Error do: [ nil ].
+				(top notNil and: [ top respondsTo: #process ])
+					ifTrue: [ gsProcess := [ top process ] on: Error do: [ nil ] ]
+			]
+		].
+		(gsProcess isNil or: [ (gsProcess respondsTo: #_gsiStackReportFromLevel:toLevel:) not ])
+			ifTrue: [ ^ '''' ].
 		stream := WriteStream on: String new.
-		proc ifNotNil: [
-			1 to: (proc stackDepth min: 50) do: [ :level |
-				| frameId fullEntry methodOrNil selector className |
-				frameId := proc _gsiStackReportFromLevel: level toLevel: level.
-				frameId ifNotNil: [
-					fullEntry := frameId first.
-					fullEntry ifNotNil: [
-						methodOrNil := fullEntry first.
-						selector := fullEntry size >= 4 ifTrue: [ fullEntry at: 4 ] ifFalse: [ nil ].
-						className := methodOrNil ifNotNil: [ 
-							methodOrNil inClass ifNotNil: [ methodOrNil inClass name ] 
-						] ifNil: [ nil ].
-						stream 
-							nextPutAll: level asString; tab;
-							nextPutAll: (className ifNil: [ ''<unknown>'' ] ifNotNil: [ className ]); tab;
-							nextPutAll: (selector ifNil: [ ''<unknown>'' ] ifNotNil: [ selector asString ]);
-							lf.
-					].
-				].
+		maxDepth := ([ gsProcess stackDepth ] on: Error do: [ 0 ]) min: 80.
+		1 to: maxDepth do: [ :level |
+			stackReport := [ gsProcess _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
+			(stackReport notNil and: [ stackReport size >= 2 ]) ifTrue: [
+				frameId := stackReport at: 1.
+				fullEntry := stackReport at: 2.
+				methodOrNil := (fullEntry notNil and: [ fullEntry isEmpty not ])
+					ifTrue: [ fullEntry first ]
+					ifFalse: [ nil ].
+				className := [ 
+					methodOrNil ifNil: [ ''<unknown>'' ] ifNotNil: [ 
+						methodOrNil inClass ifNil: [ ''<unknown>'' ] ifNotNil: [ methodOrNil inClass name ]
+					]
+				] on: Error do: [ ''<unknown>'' ].
+				selectorName := [
+					(fullEntry notNil and: [ fullEntry size >= 4 ])
+						ifTrue: [
+							(fullEntry at: 4)
+								ifNil: [ ''<unknown>'' ]
+								ifNotNil: [ :sel | sel asString ]
+						]
+						ifFalse: [ ''<unknown>'' ]
+				] on: Error do: [ ''<unknown>'' ].
+				source := [
+					(fullEntry notNil and: [ fullEntry size >= 9 ])
+						ifTrue: [
+							(fullEntry at: 9)
+								ifNil: [ '''' ]
+								ifNotNil: [ :src | src asString ]
+						]
+						ifFalse: [ '''' ]
+				] on: Error do: [ '''' ].
+				source := source
+					copyReplaceAll: String cr with: '' '';
+					copyReplaceAll: String lf with: '' '';
+					copyReplaceAll: Character tab asString with: '' ''.
+				ctxOop := [ frameId asString ] on: Error do: [ ''0'' ].
+				stream
+					nextPutAll: level asString; tab;
+					nextPutAll: className; tab;
+					nextPutAll: selectorName; tab;
+					nextPutAll: source; tab;
+					nextPutAll: ctxOop;
+					lf
 			]
 		].
 		stream contents
@@ -121,13 +177,18 @@ GbxContextListPolicy >> fetchServerContexts [
 		collect: [ :line | 
 			| parts |
 			parts := line splitOn: Character tab.
-			parts size >= 3 ifTrue: [
-				GbxActivation new
-					level: (parts first asInteger);
+			parts size >= 5 ifTrue: [
+				| activation selectorSymbol ctxOop |
+				selectorSymbol := [ (parts at: 3) asSymbol ] on: Error do: [ #unboundMethod ].
+				ctxOop := [ (parts at: 5) asInteger ] on: Error do: [ processOop ].
+				activation := GbxActivation new.
+				activation
 					session: debugger session;
-					processOop: processOop;
-					gsMethodId: (parts at: 2);
-					selector: (parts at: 3) asSymbol;
+					level: ([ parts first asInteger ] on: Error do: [ 1 ]);
+					initializeFromClass: (parts at: 2)
+						selector: selectorSymbol
+						source: (parts at: 4)
+						contextOop: ctxOop;
 					yourself
 			]
 		] thenSelect: #isNotNil.
@@ -140,7 +201,7 @@ GbxContextListPolicy >> filterOutGlue: contexts [
 	"Filter out GBS glue contexts from the context list"
 	| filtered |
 	filtered := contexts select: [ :ctx | 
-		self isGlueContext: ctx not
+		(self isGlueContext: ctx) not
 	].
 	^ filtered
 ]
@@ -156,8 +217,8 @@ GbxContextListPolicy >> isGlueContext: aContext [
 	(className beginsWith: 'Gbs') ifTrue: [ ^ true ].
 	(className beginsWith: 'Gbx') ifTrue: [ 
 		"Some Gbx classes are glue, some are not"
-		#( #apiGciExecuteStr:context:env: #gciExecute:context:env: #execute: #evaluate: ) 
-			includes: selector 
+		(#( #apiGciExecuteStr:context:env: #gciExecute:context:env: #execute: #evaluate: )
+			includes: selector)
 			ifTrue: [ ^ true ]
 	].
 	
