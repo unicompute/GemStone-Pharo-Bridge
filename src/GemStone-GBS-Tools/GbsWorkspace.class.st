@@ -79,6 +79,7 @@ GbsWorkspace >> doIt [
 		currentUsable := self
 			isDebuggerStackCandidateOop: processOop
 			session: activeSession.
+		exceptionUsable := false.
 		(currentUsable not and: [ exceptionCandidate notNil and: [ exceptionCandidate ~= 0 and: [ exceptionCandidate ~= 20 ] ] ]) ifTrue: [
 			exceptionUsable := self
 				isDebuggerStackCandidateOop: exceptionCandidate
@@ -98,6 +99,10 @@ GbsWorkspace >> doIt [
 				ifFalse: [ 'nil' ]);
 			show: ' chosenProcessOop=';
 			show: processOop asString;
+			show: ' currentUsable=';
+			show: currentUsable asString;
+			show: ' exceptionUsable=';
+			show: exceptionUsable asString;
 			cr.
 		self
 			openRemoteDebuggerOn: ex messageText
@@ -114,23 +119,40 @@ GbsWorkspace >> isDebuggerStackCandidateOop: anOop session: aSession [
 	aSession ifNil: [ ^ false ].
 
 	script := '[
-		| obj top proc snd |
+		| obj proc ctx stackReport |
 		obj := Object _objectForOop: ', anOop asString, '.
 		obj isNil ifTrue: [ ^ false ].
-		(obj respondsTo: #_gsiStackReportFromLevel:toLevel:) ifTrue: [ ^ true ].
-		(obj respondsTo: #serverProcess) ifTrue: [ ^ true ].
-		(obj respondsTo: #topContext) ifTrue: [
-			top := [ obj topContext ] on: Error do: [ nil ].
-			top notNil ifTrue: [ ^ true ].
+
+		"Prefer a process and verify it has at least frame 1"
+		proc := nil.
+		(obj respondsTo: #_gsiStackReportFromLevel:toLevel:) ifTrue: [ proc := obj ].
+		proc isNil ifTrue: [
+			(obj respondsTo: #serverProcess)
+				ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ]
 		].
-		(obj respondsTo: #process) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ].
-			proc notNil ifTrue: [ ^ true ].
+		proc isNil ifTrue: [
+			(obj respondsTo: #process)
+				ifTrue: [ proc := [ obj process ] on: Error do: [ nil ] ]
 		].
-		(obj respondsTo: #sender) ifTrue: [
-			snd := [ obj sender ] on: Error do: [ nil ].
-			snd notNil ifTrue: [ ^ true ].
+		proc isNil ifTrue: [
+			(obj respondsTo: #topContext) ifTrue: [
+				ctx := [ obj topContext ] on: Error do: [ nil ].
+				(ctx notNil and: [ ctx respondsTo: #process ])
+					ifTrue: [ proc := [ ctx process ] on: Error do: [ nil ] ].
+			]
 		].
+		proc notNil ifTrue: [
+			stackReport := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
+			(stackReport notNil and: [ stackReport size >= 2 ]) ifTrue: [ ^ true ].
+		].
+
+		"Fallback: context sender chain must have at least one frame"
+		ctx := nil.
+		(obj respondsTo: #sender) ifTrue: [ ctx := obj ].
+		(ctx isNil and: [ obj respondsTo: #topContext ])
+			ifTrue: [ ctx := [ obj topContext ] on: Error do: [ nil ] ].
+		ctx notNil ifTrue: [ ^ true ].
+
 		false
 	] value'.
 
