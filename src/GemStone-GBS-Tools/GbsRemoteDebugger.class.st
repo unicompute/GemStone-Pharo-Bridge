@@ -237,7 +237,7 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 	].
 
 	script := '[
-		| obj ctx proc stream depth level stackReport fullEntry selectorName methodName sourceText |
+		| obj ctx proc stream depth level stackReport fullEntry selectorName methodName className sourceText |
 		obj := Object _objectForOop: ', processOop asString, '.
 		stream := WriteStream on: String new.
 		obj ifNil: [ ^ '''' ].
@@ -262,12 +262,18 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 					ifTrue: [ level := 31 ]
 					ifFalse: [
 						fullEntry := stackReport at: 2.
+						className := [ fullEntry first inClass name ] on: Error do: [ ''<unknown>'' ].
 						selectorName := [ (fullEntry at: 4) asString ] on: Error do: [ ''<unknown>'' ].
 						methodName := [ (fullEntry first selector) asString ] on: Error do: [ ''<unknown>'' ].
 						sourceText := [ (fullEntry at: 9) ] on: Error do: [ '''' ].
 						sourceText ifNil: [ sourceText := '''' ].
+						sourceText := sourceText
+							copyReplaceAll: String cr with: '' '';
+							copyReplaceAll: String lf with: '' '';
+							copyReplaceAll: Character tab asString with: '' ''.
 						stream
 							nextPutAll: level asString; tab;
+							nextPutAll: className; tab;
 							nextPutAll: selectorName; tab;
 							nextPutAll: methodName; tab;
 							nextPutAll: sourceText;
@@ -281,12 +287,20 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 		ctx ifNil: [ ^ ''<ctx is nil>'' ].
 		depth := 0.
 		[ ctx notNil and: [ depth < 30 ] ] whileTrue: [
+			className := [ ctx method inClass name ] on: Error do: [ ''<unknown>'' ].
+			sourceText := [ ctx sourceCode ] on: Error do: [ '''' ].
+			sourceText ifNil: [ sourceText := '''' ].
+			sourceText := sourceText
+				copyReplaceAll: String cr with: '' '';
+				copyReplaceAll: String lf with: '' '';
+				copyReplaceAll: Character tab asString with: '' ''.
 			depth := depth + 1.
 			stream
 				nextPutAll: depth asString; tab;
+				nextPutAll: className; tab;
 				nextPutAll: (([ ctx selector asString ] on: Error do: [ ''<unknown>'' ])); tab;
 				nextPutAll: (([ ctx method ifNil: [ ''<unknown>'' ] ifNotNil: [ :m | m selector asString ] ] on: Error do: [ ''<unknown>'' ])); tab;
-				nextPutAll: (ctx sourceCode ifNil: [''<no source>''] ifNotNil: [ :src | src ]);
+				nextPutAll: sourceText;
 				lf.
 			ctx := [ ctx sender ] on: Error do: [ nil ].
 		].
@@ -317,14 +331,15 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 			| parts |
 			line isEmpty ifTrue: [ nil ] ifFalse: [
 				parts := line splitOn: Character tab.
-				parts size >= 4 ifTrue: [
+				parts size >= 5 ifTrue: [
 					[ GbxActivation new
 						processOop: processOop;
 						level: parts first asInteger;
 						session: session;
-						selector: (parts at: 2) asSymbol;
-						gsMethodId: (parts at: 3);
-						sourceString: (parts at: 4);
+						methodClass: (parts at: 2);
+						selector: (parts at: 3) asSymbol;
+						gsMethodId: (parts at: 4);
+						sourceString: (parts at: 5);
 						yourself
 					] on: Error do: [ :ex |
 						Transcript show: 'Error creating activation: ', ex messageText; cr.
