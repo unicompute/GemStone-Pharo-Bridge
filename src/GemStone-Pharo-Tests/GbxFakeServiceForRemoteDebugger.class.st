@@ -5,6 +5,9 @@ Class {
 		'inspectReceiverCalls',
 		'inspectProcessCalls',
 		'inspectFrameCalls',
+		'inspectVariableCalls',
+		'lastInspectedVariableName',
+		'toggleBreakPointCalls',
 		'setBreakPointCalls',
 		'removeBreakPointCalls',
 		'removeAllBreakPointsCalls',
@@ -32,6 +35,13 @@ GbxFakeServiceForRemoteDebugger >> inspectCurrentFrame [
 	^ true
 ]
 
+{ #category : 'actions' }
+GbxFakeServiceForRemoteDebugger >> inspectVariableNamed: aVariableName [
+	inspectVariableCalls := self inspectVariableCalls + 1.
+	lastInspectedVariableName := aVariableName.
+	^ true
+]
+
 { #category : 'accessing' }
 GbxFakeServiceForRemoteDebugger >> inspectReceiverCalls [
 	^ inspectReceiverCalls ifNil: [ 0 ]
@@ -47,9 +57,25 @@ GbxFakeServiceForRemoteDebugger >> inspectFrameCalls [
 	^ inspectFrameCalls ifNil: [ 0 ]
 ]
 
+{ #category : 'accessing' }
+GbxFakeServiceForRemoteDebugger >> inspectVariableCalls [
+	^ inspectVariableCalls ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+GbxFakeServiceForRemoteDebugger >> lastInspectedVariableName [
+	^ lastInspectedVariableName
+]
+
 { #category : 'breakpoint support' }
 GbxFakeServiceForRemoteDebugger >> setBreakPointIn: aTextWidget [
 	setBreakPointCalls := self setBreakPointCalls + 1.
+	^ true
+]
+
+{ #category : 'breakpoint support' }
+GbxFakeServiceForRemoteDebugger >> toggleBreakPointIn: aTextWidget [
+	toggleBreakPointCalls := self toggleBreakPointCalls + 1.
 	^ true
 ]
 
@@ -68,6 +94,11 @@ GbxFakeServiceForRemoteDebugger >> removeAllBreakPoints [
 { #category : 'breakpoint support' }
 GbxFakeServiceForRemoteDebugger >> setBreakPointCalls [
 	^ setBreakPointCalls ifNil: [ 0 ]
+]
+
+{ #category : 'breakpoint support' }
+GbxFakeServiceForRemoteDebugger >> toggleBreakPointCalls [
+	^ toggleBreakPointCalls ifNil: [ 0 ]
 ]
 
 { #category : 'breakpoint support' }

@@ -179,6 +179,19 @@ GbsBrowser >> loadDictionaries [
 ]
 
 { #category : 'actions' }
+GbsBrowser >> selectDictionaryNamed: aDictionaryName [
+	| dicts |
+	(aDictionaryName isString and: [ aDictionaryName isEmpty not ]) ifFalse: [ ^ self ].
+	dicts := (dictionariesList respondsTo: #items)
+		ifTrue: [ dictionariesList items ]
+		ifFalse: [ #( ) ].
+	(dicts includes: aDictionaryName) ifTrue: [
+		(dictionariesList respondsTo: #selectItem:) ifTrue: [ dictionariesList selectItem: aDictionaryName ].
+		self dictionarySelected: aDictionaryName
+	]
+]
+
+{ #category : 'actions' }
 GbsBrowser >> methodSelected: selectorName [
 	| script rawSource className metaString |
 	

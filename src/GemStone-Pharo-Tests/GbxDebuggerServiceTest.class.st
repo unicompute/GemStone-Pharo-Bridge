@@ -25,7 +25,9 @@ GbxDebuggerServiceTest >> setUp [
 		level: 3;
 		selector: #foo;
 		methodClass: 'DemoClass';
-		sourceOffsets: #(10 20 30).
+		sourceOffsets: #(10 20 30);
+		quickStepPoint: 2;
+		visibleSourceMap: { 1 -> (10 to: 10). 2 -> (20 to: 20). 3 -> (30 to: 30) }.
 	service currentContext: context.
 ]
 
@@ -72,6 +74,29 @@ GbxDebuggerServiceTest >> testInspectCurrentFrameUsesFrameContentsOop [
 ]
 
 { #category : 'tests' }
+GbxDebuggerServiceTest >> testInspectVariableNamedUsesServerFrameLocalOop [
+	| opened |
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			(script includesSubstring: 'idx := 0')
+				ifTrue: [ '444' ]
+				ifFalse: [ '0' ] ].
+
+	opened := service inspectVariableNamed: 'a'.
+
+	self assert: opened.
+	self assert: GbxFakeInspectorForService lastOop equals: 444
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testInspectVariableNamedReturnsFalseWhenUnresolvable [
+	session stubs at: #executeAndFetchContext put: [ :script :ctx | '0' ].
+
+	self deny: (service inspectVariableNamed: 'a')
+]
+
+{ #category : 'tests' }
 GbxDebuggerServiceTest >> testInspectCurrentReceiverReturnsFalseWhenNoContext [
 	service currentContext: nil.
 
@@ -115,6 +140,19 @@ GbxDebuggerServiceTest >> testSetBreakPointInDelegatesToBrowserClass [
 ]
 
 { #category : 'tests' }
+GbxDebuggerServiceTest >> testSetBreakPointInDoesNotDuplicateWhenBreakpointAlreadyAtCurrentStepPoint [
+	| existing |
+	existing := GbxFakeBreakPointForService
+		selector: #foo
+		remoteClass: 'DemoClass'
+		stepPoint: 2.
+	GbxFakeBreakPointForService breakPointList: { existing }.
+
+	self deny: (service setBreakPointIn: nil).
+	self assert: GbxFakeBrowserForService setBreakCalls equals: 0
+]
+
+{ #category : 'tests' }
 GbxDebuggerServiceTest >> testRemoveBreakPointClearsFirstMatchingBreakpoint [
 	| bp1 bp2 |
 	bp1 := GbxFakeBreakPointForService
@@ -128,8 +166,8 @@ GbxDebuggerServiceTest >> testRemoveBreakPointClearsFirstMatchingBreakpoint [
 	GbxFakeBreakPointForService breakPointList: { bp1. bp2 }.
 
 	self assert: service removeBreakPoint.
-	self assert: bp1 cleared.
-	self deny: bp2 cleared.
+	self deny: bp1 cleared.
+	self assert: bp2 cleared.
 ]
 
 { #category : 'tests' }
@@ -149,6 +187,24 @@ GbxDebuggerServiceTest >> testRemoveBreakInClearsBreakpointMatchingSelectionOffs
 	widget selectionInterval: (19 to: 21). "Matches stepPoint 2 => offset 20"
 
 	self assert: (service removeBreakIn: widget).
+	self deny: bp1 cleared.
+	self assert: bp2 cleared.
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testRemoveBreakPointUsesCurrentStepPointWhenNoSelection [
+	| bp1 bp2 |
+	bp1 := GbxFakeBreakPointForService
+		selector: #foo
+		remoteClass: 'DemoClass'
+		stepPoint: 1.
+	bp2 := GbxFakeBreakPointForService
+		selector: #foo
+		remoteClass: 'DemoClass'
+		stepPoint: 2.
+	GbxFakeBreakPointForService breakPointList: { bp1. bp2 }.
+
+	self assert: service removeBreakPoint.
 	self deny: bp1 cleared.
 	self assert: bp2 cleared.
 ]
@@ -180,9 +236,66 @@ GbxDebuggerServiceTest >> testCanRemoveBreakPointReflectsExistingMethodBreakpoin
 	bp := GbxFakeBreakPointForService
 		selector: #foo
 		remoteClass: 'DemoClass'
-		stepPoint: 1.
+		stepPoint: 2.
 	GbxFakeBreakPointForService breakPointList: { bp }.
 
 	self assert: service canRemoveBreakPoint.
 	self assert: service canRemoveAllBreakPoints.
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testCanSetBreakPointIsFalseWhenBreakpointAtCurrentStepPoint [
+	| bp |
+	bp := GbxFakeBreakPointForService
+		selector: #foo
+		remoteClass: 'DemoClass'
+		stepPoint: 2.
+	GbxFakeBreakPointForService breakPointList: { bp }.
+
+	self deny: service canSetBreakPoint
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testToggleBreakPointRemovesWhenCurrentStepPointAlreadyHasBreakpoint [
+	| bp |
+	bp := GbxFakeBreakPointForService
+		selector: #foo
+		remoteClass: 'DemoClass'
+		stepPoint: 2.
+	GbxFakeBreakPointForService breakPointList: { bp }.
+
+	self assert: service toggleBreakPoint.
+	self assert: bp cleared.
+	self assert: GbxFakeBrowserForService setBreakCalls equals: 0
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testToggleBreakPointSetsWhenNoBreakpointAtCurrentStepPoint [
+	| bp |
+	bp := GbxFakeBreakPointForService
+		selector: #foo
+		remoteClass: 'DemoClass'
+		stepPoint: 1.
+	GbxFakeBreakPointForService breakPointList: { bp }.
+
+	self assert: service toggleBreakPoint.
+	self assert: GbxFakeBrowserForService setBreakCalls equals: 1
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testCurrentSourceSelectionIntervalUsesCurrentStepPoint [
+	| interval |
+	interval := service currentSourceSelectionInterval.
+
+	self assert: interval equals: (20 to: 20)
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testCurrentSourceSelectionIntervalFallsBackToFirstWhenStepPointMissing [
+	| interval |
+	context quickStepPoint: 999.
+
+	interval := service currentSourceSelectionInterval.
+
+	self assert: interval equals: (10 to: 10)
 ]

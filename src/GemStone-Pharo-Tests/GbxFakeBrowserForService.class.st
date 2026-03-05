@@ -5,7 +5,8 @@ Class {
 		'LastBreakView',
 		'LastModel',
 		'LastMethod',
-		'LastClass'
+		'LastClass',
+		'SetBreakCalls'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -13,6 +14,7 @@ Class {
 
 { #category : 'breakpoint support' }
 GbxFakeBrowserForService class >> setBreakInView: aView model: aModel method: aSelector class: aClassName [
+	SetBreakCalls := self setBreakCalls + 1.
 	LastBreakView := aView.
 	LastModel := aModel.
 	LastMethod := aSelector.
@@ -41,8 +43,14 @@ GbxFakeBrowserForService class >> lastClass [
 
 { #category : 'accessing' }
 GbxFakeBrowserForService class >> reset [
+	SetBreakCalls := 0.
 	LastBreakView := nil.
 	LastModel := nil.
 	LastMethod := nil.
 	LastClass := nil
+]
+
+{ #category : 'accessing' }
+GbxFakeBrowserForService class >> setBreakCalls [
+	^ SetBreakCalls ifNil: [ 0 ]
 ]

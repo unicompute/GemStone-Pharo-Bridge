@@ -45,3 +45,14 @@ GbxActivationTest >> testVisibleSourceMapSkipsNilAndOutOfBoundsOffsets [
 	self assert: map first key equals: 4.
 	self assert: map first value equals: (2 to: 3).
 ]
+
+{ #category : 'tests' }
+GbxActivationTest >> testSourceIntervalForStepPoint [
+	| activation |
+	activation := GbxActivation new.
+	activation sourceString: 'x := y + z'.
+	activation sourceOffsets: #(1 6 10).
+
+	self assert: (activation sourceIntervalForStepPoint: 2) equals: (6 to: 6).
+	self assert: (activation sourceIntervalForStepPoint: 99) isNil
+]

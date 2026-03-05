@@ -36,9 +36,37 @@ GbsRemoteDebuggerPresenterTest >> testInspectFrameDelegatesToService [
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testInspectVariableDelegatesSelectedVariableNameToService [
+	| fakeTable |
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeTable selectedItem: #('a' '10').
+	debugger instVarNamed: 'variablesTable' put: fakeTable.
+
+	self assert: debugger inspectVariable.
+	self assert: service inspectVariableCalls equals: 1.
+	self assert: service lastInspectedVariableName equals: 'a'
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testInspectVariableReturnsFalseWhenNoSelection [
+	| fakeTable |
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	debugger instVarNamed: 'variablesTable' put: fakeTable.
+
+	self deny: debugger inspectVariable.
+	self assert: service inspectVariableCalls equals: 0
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testSetBreakPointDelegatesToService [
 	self assert: debugger setBreakPoint.
 	self assert: service setBreakPointCalls equals: 1.
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testToggleBreakPointDelegatesToService [
+	self assert: debugger toggleBreakPoint.
+	self assert: service toggleBreakPointCalls equals: 1.
 ]
 
 { #category : 'tests' }

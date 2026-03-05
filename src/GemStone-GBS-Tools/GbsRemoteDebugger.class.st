@@ -28,6 +28,7 @@ Class {
 		'inspectReceiverButton',
 		'inspectProcessButton',
 		'inspectFrameButton',
+		'inspectVariableButton',
 		'errorMessageLabel',
 		'glueIsHidden',
 		'stackData'
@@ -105,6 +106,9 @@ GbsRemoteDebugger >> initializePresenters [
 	inspectFrameButton := self newButton
 		label: 'Inspect Frame';
 		action: [ self inspectFrame ].
+	inspectVariableButton := self newButton
+		label: 'Inspect Variable';
+		action: [ self inspectVariable ].
 
 	stackList := self newList.
 	stackList whenSelectionChangedDo: [ :selection |
@@ -147,6 +151,7 @@ GbsRemoteDebugger >> defaultLayout [
 			add: inspectReceiverButton;
 			add: inspectProcessButton;
 			add: inspectFrameButton;
+			add: inspectVariableButton;
 			yourself) expand: false;
 		add: (SpPanedLayout newVertical
 			add: stackList;
@@ -568,9 +573,26 @@ GbsRemoteDebugger >> inspectFrame [
 ]
 
 { #category : 'actions' }
+GbsRemoteDebugger >> inspectVariable [
+	| variableName |
+	service ifNil: [ ^ false ].
+	variableName := self selectedVariableName.
+	variableName ifNil: [ ^ false ].
+	(service respondsTo: #inspectVariableNamed:)
+		ifTrue: [ ^ service inspectVariableNamed: variableName ].
+	^ false
+]
+
+{ #category : 'actions' }
 GbsRemoteDebugger >> setBreakPoint [
 	service ifNil: [ ^ false ].
 	^ [ service setBreakPointIn: sourceText ] on: Error do: [ false ]
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> toggleBreakPoint [
+	service ifNil: [ ^ false ].
+	^ [ service toggleBreakPointIn: sourceText ] on: Error do: [ false ]
 ]
 
 { #category : 'actions' }
@@ -592,6 +614,10 @@ GbsRemoteDebugger >> sourceMenu [
 	menu addGroup: [ :group |
 		group addItem: [ :item |
 			item
+				name: 'Toggle Breakpoint';
+				action: [ self toggleBreakPoint ] ].
+		group addItem: [ :item |
+			item
 				name: 'Set Breakpoint';
 				action: [ self setBreakPoint ] ].
 		group addItem: [ :item |
@@ -605,8 +631,30 @@ GbsRemoteDebugger >> sourceMenu [
 	menu addGroup: [ :group |
 		group addItem: [ :item | item name: 'Inspect Receiver'; action: [ self inspectReceiver ] ].
 		group addItem: [ :item | item name: 'Inspect Process'; action: [ self inspectProcess ] ].
-		group addItem: [ :item | item name: 'Inspect Frame'; action: [ self inspectFrame ] ] ].
+		group addItem: [ :item | item name: 'Inspect Frame'; action: [ self inspectFrame ] ].
+		group addItem: [ :item | item name: 'Inspect Variable'; action: [ self inspectVariable ] ] ].
 	^ menu
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> selectedVariableName [
+	| selectedItem |
+	variablesTable ifNil: [ ^ nil ].
+	selectedItem := (variablesTable respondsTo: #selectedItem)
+		ifTrue: [ variablesTable selectedItem ]
+		ifFalse: [
+			((variablesTable respondsTo: #selection) and: [ variablesTable selection notNil ])
+				ifTrue: [
+					(variablesTable selection respondsTo: #selectedItem)
+						ifTrue: [ variablesTable selection selectedItem ]
+						ifFalse: [ nil ]
+				]
+				ifFalse: [ nil ]
+		].
+	selectedItem ifNil: [ ^ nil ].
+	(selectedItem isArray and: [ selectedItem size >= 1 ]) ifTrue: [ ^ selectedItem first asString ].
+	(selectedItem respondsTo: #key) ifTrue: [ ^ selectedItem key asString ].
+	^ nil
 ]
 
 { #category : 'private' }
@@ -615,7 +663,10 @@ GbsRemoteDebugger >> applySourceMapHighlightFor: aContext [
 	sourceText ifNil: [ ^ self ].
 	map := self sourceMapFor: aContext.
 	(map isCollection and: [ map isEmpty not ]) ifFalse: [ ^ self clearSourceHighlight ].
-	interval := map first value.
+	interval := (service notNil and: [ service respondsTo: #currentSourceSelectionInterval ])
+		ifTrue: [ [ service currentSourceSelectionInterval ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	interval ifNil: [ interval := map first value ].
 	(interval isNil or: [ (interval respondsTo: #first) not or: [ (interval respondsTo: #last) not ] ]) ifTrue: [
 		^ self clearSourceHighlight
 	].

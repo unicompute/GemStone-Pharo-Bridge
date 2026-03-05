@@ -582,6 +582,23 @@ GbxActivation >> visibleSourceMap [
 	^ map
 ]
 
+{ #category : 'source map' }
+GbxActivation >> stepPoint [
+	"VW parity alias used by debugger/source-map consumers."
+	^ self quickStepPoint
+]
+
+{ #category : 'source map' }
+GbxActivation >> sourceIntervalForStepPoint: aStepPoint [
+	| map entry |
+	aStepPoint ifNil: [ ^ nil ].
+	map := self visibleSourceMap.
+	entry := map
+		detect: [ :assoc | (assoc respondsTo: #key) and: [ assoc key = aStepPoint ] ]
+		ifNone: [ nil ].
+	^ entry ifNil: [ nil ] ifNotNil: [ entry value ]
+]
+
 { #category : 'comparing' }
 GbxActivation >> = other [
 	^ other isKindOf: GbxActivation

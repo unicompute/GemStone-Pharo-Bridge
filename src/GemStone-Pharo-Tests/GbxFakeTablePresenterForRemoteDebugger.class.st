@@ -2,7 +2,8 @@ Class {
 	#name : 'GbxFakeTablePresenterForRemoteDebugger',
 	#superclass : 'Object',
 	#instVars : [
-		'items'
+		'items',
+		'selectedItem'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -16,4 +17,14 @@ GbxFakeTablePresenterForRemoteDebugger >> items [
 { #category : 'accessing' }
 GbxFakeTablePresenterForRemoteDebugger >> items: aCollection [
 	items := aCollection
+]
+
+{ #category : 'accessing' }
+GbxFakeTablePresenterForRemoteDebugger >> selectedItem [
+	^ selectedItem
+]
+
+{ #category : 'accessing' }
+GbxFakeTablePresenterForRemoteDebugger >> selectedItem: anObject [
+	selectedItem := anObject
 ]

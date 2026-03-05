@@ -7,7 +7,9 @@ Class {
 		'selector',
 		'methodClass',
 		'sourceOffsets',
-		'isServerContext'
+		'isServerContext',
+		'quickStepPoint',
+		'visibleSourceMap'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -35,7 +37,12 @@ GbxFakeActivationForService >> level: anInteger [
 
 { #category : 'source map' }
 GbxFakeActivationForService >> visibleSourceMap [
-	^ #()
+	^ visibleSourceMap ifNil: [ #( ) ]
+]
+
+{ #category : 'source map' }
+GbxFakeActivationForService >> visibleSourceMap: aCollection [
+	visibleSourceMap := aCollection
 ]
 
 { #category : 'accessing' }
@@ -76,6 +83,21 @@ GbxFakeActivationForService >> sourceOffsets [
 { #category : 'accessing' }
 GbxFakeActivationForService >> sourceOffsets: aCollection [
 	sourceOffsets := aCollection
+]
+
+{ #category : 'accessing' }
+GbxFakeActivationForService >> quickStepPoint [
+	^ quickStepPoint ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+GbxFakeActivationForService >> quickStepPoint: anInteger [
+	quickStepPoint := anInteger
+]
+
+{ #category : 'accessing' }
+GbxFakeActivationForService >> stepPoint [
+	^ self quickStepPoint
 ]
 
 { #category : 'testing' }

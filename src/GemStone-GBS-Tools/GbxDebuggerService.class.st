@@ -318,6 +318,47 @@ GbxDebuggerService >> updateSourceMapFromCurrentContext [
 		]
 ]
 
+{ #category : 'source code' }
+GbxDebuggerService >> currentStepPoint [
+	| raw |
+	currentContext ifNil: [ ^ nil ].
+	raw := (currentContext respondsTo: #stepPoint)
+		ifTrue: [ currentContext stepPoint ]
+		ifFalse: [
+			(currentContext respondsTo: #quickStepPoint)
+				ifTrue: [ currentContext quickStepPoint ]
+				ifFalse: [ nil ]
+		].
+	raw ifNil: [ ^ nil ].
+	raw := [ raw asInteger ] on: Error do: [ nil ].
+	(raw isNil or: [ raw <= 0 ]) ifTrue: [ ^ nil ].
+	^ raw
+]
+
+{ #category : 'source code' }
+GbxDebuggerService >> currentSourceSelectionInterval [
+	| map stepPoint entry |
+	map := self sourceMap.
+	(map isCollection and: [ map isEmpty not ]) ifFalse: [
+		selectionRange := nil.
+		^ nil
+	].
+
+	stepPoint := self currentStepPoint.
+	stepPoint ifNotNil: [
+		entry := map
+			detect: [ :assoc | (assoc respondsTo: #key) and: [ assoc key = stepPoint ] ]
+			ifNone: [ nil ].
+		entry ifNotNil: [
+			selectionRange := entry value.
+			^ selectionRange
+		]
+	].
+
+	selectionRange := map first value.
+	^ selectionRange
+]
+
 { #category : 'variables' }
 GbxDebuggerService >> tempNamesAndValues [
 	"Get temp variable names and values for current context"
@@ -357,6 +398,12 @@ GbxDebuggerService >> inspectCurrentReceiver [
 { #category : 'inspector' }
 GbxDebuggerService >> inspectCurrentFrame [
 	^ self openInspectorOnOop: self currentFrameOop
+]
+
+{ #category : 'inspector' }
+GbxDebuggerService >> inspectVariableNamed: aVariableName [
+	(aVariableName isString and: [ aVariableName isEmpty not ]) ifFalse: [ ^ false ].
+	^ self openInspectorOnOop: (self oopForVariableNamed: aVariableName)
 ]
 
 { #category : 'inspector' }
@@ -424,6 +471,41 @@ GbxDebuggerService >> currentContextLevel [
 ]
 
 { #category : 'inspector' }
+GbxDebuggerService >> oopForVariableNamed: aVariableName [
+	| procOop lvl escapedName script |
+	procOop := self currentProcessOop.
+	lvl := self currentContextLevel.
+	(procOop isNil or: [ lvl isNil ]) ifTrue: [ ^ nil ].
+	escapedName := aVariableName copyReplaceAll: '''' with: ''''''.
+	script := '[
+		| proc frame fullEntry receiverObj names vals idx value |
+		proc := Object _objectForOop: ', procOop asString, '.
+		proc ifNil: [ ^ ''0'' ].
+		frame := [ proc _gsiDebuggerDetailedReportAt: ', lvl asString, ' ] on: Error do: [ nil ].
+		frame ifNil: [ ^ ''0'' ].
+		fullEntry := [ frame first ] on: Error do: [ nil ].
+		fullEntry ifNil: [ ^ ''0'' ].
+		(''', escapedName, ''' = ''self'') ifTrue: [
+			receiverObj := [ fullEntry at: 2 ] on: Error do: [ nil ].
+			receiverObj ifNil: [ ^ ''0'' ].
+			^ (Reflection oopOf: receiverObj) asString
+		].
+		names := [ frame at: 7 ] on: Error do: [ #() ].
+		vals := [ frame at: 8 ] on: Error do: [ #() ].
+		idx := 0.
+		1 to: (names size min: vals size) do: [ :i |
+			(((names at: i) asString = ''', escapedName, ''') and: [ idx = 0 ])
+				ifTrue: [ idx := i ]
+		].
+		idx = 0 ifTrue: [ ^ ''0'' ].
+		value := [ vals at: idx ] on: Error do: [ nil ].
+		value ifNil: [ ^ ''0'' ].
+		(Reflection oopOf: value) asString
+	] value'.
+	^ self evaluateOopFromScript: script
+]
+
+{ #category : 'inspector' }
 GbxDebuggerService >> evaluateOopFromScript: scriptString [
 	| raw |
 	raw := [ session executeAndFetch: scriptString context: session sessionOop ] on: Error do: [ nil ].
@@ -466,6 +548,7 @@ GbxDebuggerService >> setBreakPoint [
 GbxDebuggerService >> setBreakPointIn: aTextWidget [
 	| browserKlass |
 	(self canManageBreakPoints) ifFalse: [ ^ false ].
+	(self hasBreakPointIn: aTextWidget) ifTrue: [ ^ false ].
 	browserKlass := self browserClass.
 	browserKlass ifNil: [ ^ false ].
 
@@ -481,6 +564,18 @@ GbxDebuggerService >> setBreakPointIn: aTextWidget [
 GbxDebuggerService >> removeBreakPoint [
 	"Remove breakpoint at current location"
 	^ self removeBreakIn: nil
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> toggleBreakPoint [
+	^ self toggleBreakPointIn: nil
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> toggleBreakPointIn: aTextWidget [
+	(self hasBreakPointIn: aTextWidget)
+		ifTrue: [ ^ self removeBreakIn: aTextWidget ]
+		ifFalse: [ ^ self setBreakPointIn: aTextWidget ]
 ]
 
 { #category : 'breakpoint support' }
@@ -525,17 +620,22 @@ GbxDebuggerService >> canManageBreakPoints [
 
 { #category : 'breakpoint support' }
 GbxDebuggerService >> canSetBreakPoint [
-	^ self canManageBreakPoints
+	^ self canManageBreakPoints and: [ (self hasBreakPointIn: nil) not ]
 ]
 
 { #category : 'breakpoint support' }
 GbxDebuggerService >> canRemoveBreakPoint [
-	^ self breakpointsInSelectedMethod isNotEmpty
+	^ self hasBreakPointIn: nil
 ]
 
 { #category : 'breakpoint support' }
 GbxDebuggerService >> canRemoveAllBreakPoints [
 	^ self breakpointsInSelectedMethod isNotEmpty
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> canToggleBreakPoint [
+	^ self canManageBreakPoints
 ]
 
 { #category : 'breakpoint support' }
@@ -556,12 +656,34 @@ GbxDebuggerService >> selectedMethodClassName [
 
 { #category : 'breakpoint support' }
 GbxDebuggerService >> breakpointToRemoveIn: aTextWidget from: breakpoints [
-	| selection |
+	| selection stepPointMatch |
 	selection := self selectionIntervalForTextWidget: aTextWidget.
-	selection ifNil: [ ^ breakpoints first ].
+	selection ifNil: [
+		stepPointMatch := self currentStepPoint.
+		stepPointMatch ifNotNil: [
+			^ breakpoints
+				detect: [ :bp | (bp respondsTo: #stepPoint) and: [ bp stepPoint = stepPointMatch ] ]
+				ifNone: [ breakpoints first ]
+		].
+		^ breakpoints first
+	].
 	^ breakpoints
 		detect: [ :bp | self breakpoint: bp matchesSelection: selection ]
 		ifNone: [ nil ]
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> hasBreakPointIn: aTextWidget [
+	| bps selection stepPoint |
+	bps := self breakpointsInSelectedMethod.
+	bps isEmpty ifTrue: [ ^ false ].
+	selection := self selectionIntervalForTextWidget: aTextWidget.
+	selection ifNotNil: [
+		^ bps anySatisfy: [ :bp | self breakpoint: bp matchesSelection: selection ]
+	].
+	stepPoint := self currentStepPoint.
+	stepPoint ifNil: [ ^ false ].
+	^ bps anySatisfy: [ :bp | (bp respondsTo: #stepPoint) and: [ bp stepPoint = stepPoint ] ]
 ]
 
 { #category : 'breakpoint support' }
