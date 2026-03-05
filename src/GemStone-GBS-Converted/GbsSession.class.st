@@ -544,6 +544,11 @@ GbsSession >> isLoggedIn [
 	^ isLoggedIn
 ]
 
+{ #category : 'initialization' }
+GbsSession >> isLoggedIn: aBoolean [
+	isLoggedIn := aBoolean
+]
+
 { #category : 'polling' }
 GbsSession >> isPolling [
 

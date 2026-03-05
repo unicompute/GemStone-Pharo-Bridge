@@ -324,16 +324,16 @@ GbsSessionParameters >> login [
         emptyPtr free
     ].
 
-    "5. UI STATE UPDATES (Crucial for Launcher)"
-    
-    "Set the session ID on THIS object so the UI knows we are connected"
-    sessionId := 1. 
+	    "5. UI STATE UPDATES (Crucial for Launcher)"
+	    sessionId := result.
 
-    "Create the GbsSession wrapper (Your logic)"
-    CurrentSession := GbsSession new
-                        sessionOop: 1;
-                        parameters: self;
-                        yourself.
+	    "Create the active session wrapper and mark it logged in"
+	    CurrentSession := GbsSession new
+	                        sessionId: result;
+	                        sessionOop: result;
+	                        isLoggedIn: true;
+	                        parameters: self;
+	                        yourself.
                         
     "Register so it appears in the bottom list"
     self class registerSession: self.

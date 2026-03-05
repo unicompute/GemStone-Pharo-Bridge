@@ -204,20 +204,21 @@ GbsClassicLauncher >> doEditParameter [
 
 { #category : 'actions' }
 GbsClassicLauncher >> doLoginRpc [
+	| session |
     parametersList selection selectedItem ifNotNil: [ :params |
         
         "Show progress"
         UIManager default showWaitCursorWhile: [ 
             [
                 "Use the SELECTED object to login"
-                params login.
+                session := params login.
                 
                 "Update the UI"
                 self refreshAll.
                 
                 params isConnected 
                     ifTrue: [ 
-                        GbsSessionParameters currentSession: params.
+                        GbsSessionParameters currentSession: session.
                         self inform: 'Login Successful: ', params name 
                     ].
                 
