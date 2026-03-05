@@ -422,6 +422,17 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 
 	"Display source code - use cached source if available"
 	sourceCode := context sourceCode.
+	(((context respondsTo: #methodClass) and: [ context methodClass = 'nil' ])
+		and: [ (sourceCode includes: Character lf) not ])
+		ifTrue: [
+			| fullSource |
+			fullSource := self fetchFullSourceFor: context.
+			fullSource ifNotEmpty: [
+				sourceCode := fullSource.
+				(context respondsTo: #sourceString:)
+					ifTrue: [ context sourceString: fullSource ].
+			].
+		].
 	sourceText text: (sourceCode ifNil: [ 
 		"Try to get from cached sourceString"
 		context sourceString ifNil: [ '' ]
@@ -440,6 +451,46 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 	] on: Error do: [ :ex |
 		variablesTable items: #().
 	].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> fetchFullSourceFor: aContext [
+	| ctxProcessOop levelValue script raw |
+	aContext ifNil: [ ^ '' ].
+	session ifNil: [ ^ '' ].
+	levelValue := (aContext respondsTo: #level)
+		ifTrue: [ aContext level ifNil: [ 0 ] ]
+		ifFalse: [ 0 ].
+	levelValue <= 0 ifTrue: [ ^ '' ].
+	ctxProcessOop := (aContext respondsTo: #processOop)
+		ifTrue: [ aContext processOop ]
+		ifFalse: [ processOop ].
+	(ctxProcessOop isNil or: [ ctxProcessOop = 0 ]) ifTrue: [ ^ '' ].
+
+	script := '[
+		| obj stackReport fullEntry src |
+		obj := Object _objectForOop: ', ctxProcessOop asString, '.
+		obj ifNil: [ ^ '''' ].
+		stackReport := [ obj _gsiStackReportFromLevel: ', levelValue asString, ' toLevel: ', levelValue asString, ' ] on: Error do: [ nil ].
+		(stackReport isNil or: [ stackReport size < 2 ]) ifTrue: [ ^ '''' ].
+		fullEntry := stackReport at: 2.
+		(fullEntry isNil or: [ fullEntry size < 9 ]) ifTrue: [ ^ '''' ].
+		src := [ fullEntry at: 9 ] on: Error do: [ '''' ].
+		src ifNil: [ ^ '''' ].
+		src := src asString.
+		src := src
+			copyReplaceAll: String cr with: ''<CR>'';
+			copyReplaceAll: String lf with: ''<LF>'';
+			copyReplaceAll: Character tab asString with: ''<TAB>''.
+		src
+	] value'.
+
+	raw := [ session evaluate: script ] on: Error do: [ '' ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	raw ifNil: [ ^ '' ].
+	^ ((raw copyReplaceAll: '<TAB>' with: Character tab asString)
+		copyReplaceAll: '<CR>' with: String cr;
+		copyReplaceAll: '<LF>' with: String lf)
 ]
 
 { #category : 'actions' }
