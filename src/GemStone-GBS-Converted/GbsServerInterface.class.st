@@ -101,7 +101,10 @@ GbsServerInterface >> apiGciErrSafe: aVoidPointer [
 { #category : 'api - execution' }
 GbsServerInterface >> apiGciExecute: aString context: aContext [
     <primitive: #primitiveNativeCall error: errorCode>
-    ^ self ffiCall: #(int64 GciExecuteStr(char* aString, int64 aContext)) module: libraryPath
+    ^ self
+        ffiCall: #(uint64 GciExecuteStr_(String aString, uint64 aContext, int 0))
+        module: libraryPath
+        options: #( + optNonThreaded )
 ]
 
 { #category : 'api' }
@@ -112,9 +115,11 @@ GbsServerInterface >> apiGciExecuteStr: s context: c [
 
 { #category : 'api' }
 GbsServerInterface >> apiGciExecuteStr: source context: contextOop env: env [
-    "Safety fallback: route via the proven 2-arg execute path.
-    Current callers pass env=0, so behavior is preserved."
-    ^ self apiGciExecute: source context: contextOop
+    "Exact C ABI: const char* + 64-bit context + 32-bit env."
+    ^ self 
+        ffiCall: #(uint64 GciExecuteStr_(String source, uint64 contextOop, int env))
+        module: libraryPath
+        options: #( + optNonThreaded )
 ]
 
 { #category : 'api - execution' }
