@@ -167,9 +167,7 @@ GbsRemoteDebuggerTest >> testErrorContextFetch [
 	] value'.
 	
 	contextOop := session evaluate: script.
-	
-	Transcript show: 'Error context OOP: ', contextOop asString; cr.
-	
+
 	contextOop ifNotNil: [
 		"Try to get source code"
 		| sourceCode |
@@ -178,8 +176,7 @@ GbsRemoteDebuggerTest >> testErrorContextFetch [
 			ctx := Object _objectForOop: ', contextOop asString, '.
 			ctx sourceCode
 		] value'.
-		
-		Transcript show: 'Error context source: ', sourceCode; cr.
+		sourceCode.
 	].
 ]
 
@@ -270,9 +267,6 @@ GbsRemoteDebuggerTest >> testZeroDivideScriptServerSideStackDumpHasFrames [
 		stackText := self frameProbeTextForOop: raisedError exceptionOop
 	].
 
-	Transcript show: 'testZeroDivideScriptServerSideStackDumpHasFrames:'; cr.
-	Transcript show: (stackText ifNil: [ '<nil>' ]); cr.
-
 	self assert: stackText notNil.
 	self deny: stackText isEmpty.
 ]
@@ -292,11 +286,6 @@ GbsRemoteDebuggerTest >> testZeroDivideErrorOopsFrameProbe [
 
 	contextFrames := self frameProbeTextForOop: raisedError serverProcessOop.
 	exceptionFrames := self frameProbeTextForOop: raisedError exceptionOop.
-
-	Transcript show: 'contextOop probe:'; cr.
-	Transcript show: contextFrames; cr.
-	Transcript show: 'exceptionOop probe:'; cr.
-	Transcript show: exceptionFrames; cr.
 
 	"At least one should provide usable frame text."
 	self assert: ((contextFrames isNil or: [ contextFrames isEmpty ]) not

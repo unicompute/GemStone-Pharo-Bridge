@@ -488,17 +488,6 @@ GbsSession >> handleGciError [
 		"Extract message from offset 113"
 		errMsg := (buffer + 113) readString.
 
-		Transcript
-			show: 'handleGciError: contextOop=';
-			show: contextOop asString;
-			show: ' exceptionOop=';
-			show: exceptionOop asString;
-			show: ' debugOop=';
-			show: debugOop asString;
-			show: ' msg=';
-			show: errMsg;
-			cr.
-
 		"Signal the error. tag carries the context for the debugger."
 		gbsError := GbsError new
 			messageText: errMsg;

@@ -218,12 +218,6 @@ GbxContextListPolicy >> fetchServerContexts [
 	(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
 	rawData ifNil: [ rawData := '' ].
 	rawData = 'nil' ifTrue: [ rawData := '' ].
-	rawData isEmpty ifTrue: [
-		Transcript
-			show: 'fetchServerContexts: empty stack data for processOop=';
-			show: processOop asString;
-			cr
-	].
 	contexts := (rawData splitOn: Character lf) 
 		collect: [ :line | 
 			| parts |

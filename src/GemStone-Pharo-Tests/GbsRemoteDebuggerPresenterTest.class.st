@@ -66,3 +66,36 @@ GbsRemoteDebuggerPresenterTest >> testApplySourceMapHighlightSelectsIntervalOnSo
 
 	self assert: fakeText selectionInterval equals: (2 to: 4).
 ]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testContextSelectedFetchesFullSourceForSingleLineNilFrame [
+	| mockSession fakeText fakeTable context rendered |
+	mockSession := MockGbsSession new.
+	mockSession stubs
+		at: #evaluate
+		put: ' | a b |<LF>a := 10.<LF>b := 0.<LF><LF>a / b'.
+
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	context := GbxFakeContextForRemoteDebugger new
+		methodClass: 'nil';
+		sourceString: '| a b |';
+		processOop: 222;
+		level: 8;
+		tempNamesAndValues: (Dictionary new
+			at: 'a' put: '10';
+			at: 'b' put: '0';
+			yourself);
+		yourself.
+
+	debugger session: mockSession.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+	debugger instVarNamed: 'variablesTable' put: fakeTable.
+
+	debugger contextSelected: context.
+
+	rendered := fakeText text.
+	self assert: (rendered includes: Character lf).
+	self assert: (rendered includesSubstring: 'a / b').
+	self assert: context sourceString equals: rendered.
+]
