@@ -30,6 +30,22 @@ MockGbsSession >> execute: script [
 	^ self stubs at: #executeResult ifAbsent: [ true ]
 ]
 
+{ #category : 'execution' }
+MockGbsSession >> executeAndFetch: script [
+	| block |
+	block := self stubs at: #executeAndFetch ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: script ].
+	^ self stubs at: #executeAndFetchResult ifAbsent: [ '' ]
+]
+
+{ #category : 'execution' }
+MockGbsSession >> executeAndFetch: script context: contextOop [
+	| block |
+	block := self stubs at: #executeAndFetchContext ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: script cull: contextOop ].
+	^ self executeAndFetch: script
+]
+
 { #category : 'accessing' }
 MockGbsSession >> gciAbort [
 	^ self stubs at: #gciAbort ifAbsent: [ 1 ]

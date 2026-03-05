@@ -121,6 +121,12 @@ GbxDebuggerService >> currentContext [
 ]
 
 { #category : 'accessing' }
+GbxDebuggerService >> currentContext: aContext [
+	currentContext := aContext.
+	self updateSourceMapFromCurrentContext
+]
+
+{ #category : 'accessing' }
 GbxDebuggerService >> topContext [
 	"Best-effort client top context for mixed client/server stack logic."
 	^ thisContext sender
@@ -331,6 +337,100 @@ GbxDebuggerService >> receiverClass [
 	"Get the class of the receiver"
 	currentContext ifNil: [ ^ nil ].
 	^ currentContext receiverClass
+]
+
+{ #category : 'inspector' }
+GbxDebuggerService >> inspectorClass [
+	^ GbsInspector
+]
+
+{ #category : 'inspector' }
+GbxDebuggerService >> inspectCurrentProcess [
+	^ self openInspectorOnOop: self currentProcessOop
+]
+
+{ #category : 'inspector' }
+GbxDebuggerService >> inspectCurrentReceiver [
+	^ self openInspectorOnOop: self currentReceiverOop
+]
+
+{ #category : 'inspector' }
+GbxDebuggerService >> inspectCurrentFrame [
+	^ self openInspectorOnOop: self currentFrameOop
+]
+
+{ #category : 'inspector' }
+GbxDebuggerService >> openInspectorOnOop: anOop [
+	(anOop isNil or: [ anOop <= 20 ]) ifTrue: [ ^ false ].
+	[
+		self inspectorClass inspect: anOop session: session.
+		^ true
+	] on: Error do: [ :ex |
+		^ false
+	]
+]
+
+{ #category : 'inspector' }
+GbxDebuggerService >> currentProcessOop [
+	currentContext ifNil: [ ^ nil ].
+	(currentContext respondsTo: #processOop) ifTrue: [ ^ currentContext processOop ].
+	(currentContext respondsTo: #process) ifTrue: [ ^ currentContext process ].
+	^ nil
+]
+
+{ #category : 'inspector' }
+GbxDebuggerService >> currentReceiverOop [
+	| procOop lvl script |
+	procOop := self currentProcessOop.
+	lvl := self currentContextLevel.
+	(procOop isNil or: [ lvl isNil ]) ifTrue: [ ^ nil ].
+	script := '[
+		| proc frame fullEntry receiverObj |
+		proc := Object _objectForOop: ', procOop asString, '.
+		proc ifNil: [ ^ ''0'' ].
+		frame := [ proc _gsiDebuggerDetailedReportAt: ', lvl asString, ' ] on: Error do: [ nil ].
+		frame ifNil: [ ^ ''0'' ].
+		fullEntry := [ frame first ] on: Error do: [ nil ].
+		fullEntry ifNil: [ ^ ''0'' ].
+		receiverObj := [ fullEntry at: 2 ] on: Error do: [ nil ].
+		receiverObj ifNil: [ ^ ''0'' ].
+		(Reflection oopOf: receiverObj) asString
+	] value'.
+	^ self evaluateOopFromScript: script
+]
+
+{ #category : 'inspector' }
+GbxDebuggerService >> currentFrameOop [
+	| procOop lvl script |
+	procOop := self currentProcessOop.
+	lvl := self currentContextLevel.
+	(procOop isNil or: [ lvl isNil ]) ifTrue: [ ^ nil ].
+	script := '[
+		| proc frameObj |
+		proc := Object _objectForOop: ', procOop asString, '.
+		proc ifNil: [ ^ ''0'' ].
+		frameObj := [ proc _frameContentsAt: ', lvl asString, ' ] on: Error do: [ nil ].
+		frameObj ifNil: [ ^ ''0'' ].
+		(Reflection oopOf: frameObj) asString
+	] value'.
+	^ self evaluateOopFromScript: script
+]
+
+{ #category : 'inspector' }
+GbxDebuggerService >> currentContextLevel [
+	currentContext ifNil: [ ^ nil ].
+	(currentContext respondsTo: #level) ifTrue: [ ^ currentContext level ].
+	^ nil
+]
+
+{ #category : 'inspector' }
+GbxDebuggerService >> evaluateOopFromScript: scriptString [
+	| raw |
+	raw := [ session executeAndFetch: scriptString context: session sessionOop ] on: Error do: [ nil ].
+	raw ifNil: [ ^ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	(raw isString and: [ raw = 'nil' or: [ raw beginsWith: 'Error:' ] ]) ifTrue: [ ^ nil ].
+	^ [ raw asInteger ] on: Error do: [ nil ]
 ]
 
 { #category : 'breakpoint support' }

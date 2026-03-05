@@ -25,6 +25,9 @@ Class {
 		'stepReturnButton',
 		'resumeButton',
 		'terminateButton',
+		'inspectReceiverButton',
+		'inspectProcessButton',
+		'inspectFrameButton',
 		'errorMessageLabel',
 		'glueIsHidden',
 		'stackData'
@@ -93,6 +96,15 @@ GbsRemoteDebugger >> initializePresenters [
 	terminateButton := self newButton 
 		label: 'Terminate'; 
 		action: [ self terminate ].
+	inspectReceiverButton := self newButton
+		label: 'Inspect Receiver';
+		action: [ self inspectReceiver ].
+	inspectProcessButton := self newButton
+		label: 'Inspect Process';
+		action: [ self inspectProcess ].
+	inspectFrameButton := self newButton
+		label: 'Inspect Frame';
+		action: [ self inspectFrame ].
 
 	stackList := self newList.
 	stackList whenSelectionChangedDo: [ :selection |
@@ -122,6 +134,12 @@ GbsRemoteDebugger >> defaultLayout [
 			add: stepReturnButton;
 			add: resumeButton; 
 			add: terminateButton;
+			yourself) expand: false;
+		add: (SpBoxLayout newHorizontal
+			spacing: 5;
+			add: inspectReceiverButton;
+			add: inspectProcessButton;
+			add: inspectFrameButton;
 			yourself) expand: false;
 		add: (SpPanedLayout newVertical
 			add: stackList;
@@ -438,6 +456,24 @@ GbsRemoteDebugger >> resume [
 GbsRemoteDebugger >> terminate [
 	service ifNotNil: [ service terminate ].
 	self withWindowDo: [ :window | window close ]
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> inspectReceiver [
+	service ifNotNil: [ ^ service inspectCurrentReceiver ].
+	^ false
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> inspectProcess [
+	service ifNotNil: [ ^ service inspectCurrentProcess ].
+	^ false
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> inspectFrame [
+	service ifNotNil: [ ^ service inspectCurrentFrame ].
+	^ false
 ]
 
 { #category : 'private' }
