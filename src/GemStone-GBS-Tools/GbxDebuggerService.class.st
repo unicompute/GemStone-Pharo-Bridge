@@ -77,6 +77,7 @@ GbxDebuggerService >> initializeForDebugging [
 	contextStackPolicy contextList ifNotEmpty: [ :contexts |
 		currentContext := contexts first.
 	].
+	self updateSourceMapFromCurrentContext.
 ]
 
 { #category : 'accessing' }
@@ -147,6 +148,7 @@ GbxDebuggerService >> selectContextAt: anIndex [
 	contexts := self contextList.
 	anIndex <= contexts size ifTrue: [
 		currentContext := contexts at: anIndex.
+		self updateSourceMapFromCurrentContext.
 		self notifyContextChanged.
 	].
 ]
@@ -156,6 +158,7 @@ GbxDebuggerService >> selectContext: aContext [
 	"Select a specific context"
 	currentContext == aContext ifTrue: [ ^ self ].
 	currentContext := aContext.
+	self updateSourceMapFromCurrentContext.
 	self notifyContextChanged.
 ]
 
@@ -172,7 +175,7 @@ GbxDebuggerService >> recomputeContextList [
 			currentContext := contexts first.
 		].
 	].
-	
+	self updateSourceMapFromCurrentContext.
 	self notifyContextChanged.
 ]
 
@@ -295,8 +298,18 @@ GbxDebuggerService >> sourceCode [
 { #category : 'source code' }
 GbxDebuggerService >> sourceMap [
 	"Get the source map for highlighting"
-	currentContext ifNil: [ ^ #( ) ].
-	^ currentContext visibleSourceMap
+	currentContext ifNil: [ sourceMap := #( ). ^ sourceMap ].
+	sourceMap ifNil: [ self updateSourceMapFromCurrentContext ].
+	^ sourceMap
+]
+
+{ #category : 'source code' }
+GbxDebuggerService >> updateSourceMapFromCurrentContext [
+	sourceMap := currentContext
+		ifNil: [ #( ) ]
+		ifNotNil: [
+			[ currentContext visibleSourceMap ] on: Error do: [ #( ) ]
+		]
 ]
 
 { #category : 'variables' }

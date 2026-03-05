@@ -522,17 +522,56 @@ GbxActivation >> initializeFromClass: className selector: selectorName source: s
 
 { #category : 'source map' }
 GbxActivation >> visibleSourceMap [
-	"Create a source map for highlighting"
-	| map numStepPoints |
-	numStepPoints := sourceOffsets size.
+	"VW parity: infer highlight range from source offset and token class."
+	| map numStepPoints binaryCharClass keywordFirstCharClass keywordCharClass nullCharClass sourceText |
+	binaryCharClass := '+-*~<>=|/&@%,?!'.
+	keywordFirstCharClass := '_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'.
+	keywordCharClass := keywordFirstCharClass , ':0123456789'.
+	nullCharClass := ''.
+	sourceText := self sourceString ifNil: [ '' ].
+	numStepPoints := self sourceOffsets size.
 	map := OrderedCollection new: numStepPoints.
-	
+
+	sourceText isEmpty ifTrue: [ ^ map ].
+
 	1 to: numStepPoints do: [ :i |
-		| startOffset |
-		startOffset := (sourceOffsets at: i) asInteger.
-		startOffset > 0 ifTrue: [
-			map add: (i -> (startOffset to: startOffset + 10))
-		].
+		| rawOffset startOffset endOffset limit currentChar foundEnd charClass |
+		rawOffset := self sourceOffsets at: i ifAbsent: [ nil ].
+		rawOffset ifNotNil: [
+			startOffset := [ rawOffset asInteger ] on: Error do: [ nil ].
+			startOffset ifNotNil: [
+				(startOffset > 0 and: [ startOffset <= sourceText size ]) ifTrue: [
+					limit := sourceText size.
+					endOffset := startOffset.
+					currentChar := sourceText at: startOffset.
+					foundEnd := false.
+
+					currentChar = $^
+						ifFalse: [
+							(currentChar = $:
+								and: [ (startOffset + 1 <= limit) and: [ (sourceText at: startOffset + 1) = $= ] ])
+								ifTrue: [ endOffset := startOffset + 1 ]
+								ifFalse: [
+									charClass := (keywordFirstCharClass includes: currentChar)
+										ifTrue: [ keywordCharClass ]
+										ifFalse: [
+											(binaryCharClass includes: currentChar)
+												ifTrue: [ binaryCharClass ]
+												ifFalse: [ nullCharClass ]
+										].
+									[ (endOffset < limit) and: [ foundEnd not ] ] whileTrue: [
+										endOffset := endOffset + 1.
+										currentChar := sourceText at: endOffset.
+										foundEnd := (charClass includes: currentChar) not.
+										foundEnd ifTrue: [ endOffset := endOffset - 1 ].
+									]
+								]
+						].
+
+					map add: (i -> (startOffset to: endOffset))
+				]
+			]
+		]
 	].
 	^ map
 ]
