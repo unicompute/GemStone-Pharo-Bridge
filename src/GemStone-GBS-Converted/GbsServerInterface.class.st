@@ -114,7 +114,7 @@ GbsServerInterface >> apiGciExecuteStr: s context: c [
 GbsServerInterface >> apiGciExecuteStr: source context: contextOop env: env [
     "Exact C ABI: const char* + 64-bit context + 32-bit env."
     ^ self 
-        ffiCall: #(uint64 GciExecuteStr_(char* source, uint64 contextOop, int env))
+        ffiCall: #(uint64 GciExecuteStr_(String source, uint64 contextOop, int env))
         module: libraryPath
         options: #( + optNonThreaded )
 ]
