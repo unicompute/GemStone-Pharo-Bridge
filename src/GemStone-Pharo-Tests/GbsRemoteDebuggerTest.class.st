@@ -109,13 +109,14 @@ GbsRemoteDebuggerTest >> testContextSourceCode [
 
 { #category : 'tests' }
 GbsRemoteDebuggerTest >> testContextMethod [
-	| raisedError processOop service contexts topContext |
+	| activeSession raisedError processOop service contexts topContext |
 
-	session ifNil: [ self skip: 'No session' ].
+	activeSession := session ifNil: [ GbsSessionParameters currentSession ].
+	activeSession ifNil: [ self skip: 'No session' ].
 
 	raisedError := nil.
 	[
-		session execute: '| a b | a := 10. b := 0. a / b'.
+		activeSession execute: '| a b | a := 10. b := 0. a / b'.
 	] on: GbsError do: [ :ex | raisedError := ex ].
 
 	self assert: raisedError notNil.
@@ -123,7 +124,7 @@ GbsRemoteDebuggerTest >> testContextMethod [
 
 	service := GbxDebuggerService new.
 	service
-		session: session;
+		session: activeSession;
 		processOop: processOop.
 	service initializeForDebugging.
 
