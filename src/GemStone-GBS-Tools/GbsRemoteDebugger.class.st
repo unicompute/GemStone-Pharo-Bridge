@@ -349,26 +349,31 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 
 	contexts := (rawData splitOn: Character lf)
 		collect: [ :line |
-			| parts |
+			| parts levelValue classValue selectorValue methodValue sourceValue |
 			line isEmpty ifTrue: [ nil ] ifFalse: [
 				parts := line splitOn: Character tab.
-				parts size >= 5 ifTrue: [
+				parts size >= 3 ifTrue: [
+					levelValue := ([ parts first asInteger ] on: Error do: [ 1 ]).
+					classValue := (parts size >= 2 ifTrue: [ parts at: 2 ] ifFalse: [ '<unknown>' ]).
+					selectorValue := (parts size >= 3 ifTrue: [ parts at: 3 ] ifFalse: [ '<unknown>' ]).
+					methodValue := (parts size >= 4 ifTrue: [ parts at: 4 ] ifFalse: [ selectorValue ]).
+					sourceValue := (parts size >= 5
+						ifTrue: [ parts at: 5 ]
+						ifFalse: [ '' ]).
 					[ GbxActivation new
 						processOop: processOop;
-						level: parts first asInteger;
+						level: levelValue;
 						session: session;
-						methodClass: (parts at: 2);
-						selector: (parts at: 3) asSymbol;
-						gsMethodId: (parts at: 4);
-						sourceString: (((parts at: 5)
+						methodClass: classValue;
+						selector: ([ selectorValue asSymbol ] on: Error do: [ #unknown ]);
+						gsMethodId: methodValue;
+						sourceString: ((sourceValue
 							copyReplaceAll: '<TAB>' with: Character tab asString)
 							copyReplaceAll: '<CR>' with: String cr;
 							copyReplaceAll: '<LF>' with: String lf);
 						yourself
-						] on: Error do: [ :ex |
-							nil
-						]
-					]
+					] on: Error do: [ nil ]
+				]
 			]
 		] thenSelect: #isNotNil.
 
