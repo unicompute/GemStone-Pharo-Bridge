@@ -104,10 +104,16 @@ GbsWorkspace >> doIt [
 			show: ' exceptionUsable=';
 			show: exceptionUsable asString;
 			cr.
-		self
-			openRemoteDebuggerOn: ex messageText
-			processOop: processOop
-			session: activeSession
+		((processOop isNumber and: [ processOop > 20 ]) and: [ currentUsable or: [ exceptionUsable ] ])
+			ifTrue: [
+				self
+					openRemoteDebuggerOn: ex messageText
+					processOop: processOop
+					session: activeSession
+			]
+			ifFalse: [
+				self inform: 'GemStone Error: ', ex messageText
+			]
 	].
 ]
 

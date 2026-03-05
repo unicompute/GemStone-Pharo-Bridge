@@ -223,6 +223,7 @@ GbsSession >> evaluateString: aString [
 { #category : 'execution' }
 GbsSession >> execute: script [
 	| resultOop |
+	self validateReadyForExecution: script.
 
 	resultOop := GbsServerInterface uniqueInstance
 		apiGciExecuteStr: script context: 20 env: 0.
@@ -239,6 +240,7 @@ GbsSession >> execute: script [
 
 { #category : 'execution' }
 GbsSession >> executeAndFetch: script [
+	self validateReadyForExecution: script.
 	^ self executeAndFetch: script context: 20
 ]
 
@@ -246,6 +248,7 @@ GbsSession >> executeAndFetch: script [
 GbsSession >> executeAndFetch: script context: contextOop [
 	"Executes code and fetches the resulting String safely."
 	| interface stringOop |
+	self validateReadyForExecution: script.
 
 	interface := GbsServerInterface uniqueInstance.
 	stringOop := interface apiGciExecuteStr: script context: contextOop env: 0.
@@ -255,6 +258,18 @@ GbsSession >> executeAndFetch: script context: contextOop [
 	stringOop = 20 ifTrue: [ ^ 'nil' ].
 
 	^ interface fetchString: stringOop.
+]
+
+{ #category : 'execution' }
+GbsSession >> validateReadyForExecution: script [
+	(script isString and: [ script isEmpty not ]) ifFalse: [
+		GbsError signal: 'Cannot execute empty script.' ].
+
+	self isLoggedIn ifFalse: [
+		GbsError signal: 'Not logged in to GemStone.' ].
+
+	(self sessionOop isNil or: [ self sessionOop = 0 ]) ifTrue: [
+		GbsError signal: 'Invalid GemStone session context.' ]
 ]
 
 { #category : 'error handling' }

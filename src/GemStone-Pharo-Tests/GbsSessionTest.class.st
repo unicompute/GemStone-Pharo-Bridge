@@ -61,6 +61,13 @@ GbsSessionTest >> testExecuteStringReturnsUnboxedObject [
 ]
 
 { #category : 'tests' }
+GbsSessionTest >> testExecuteSignalsErrorWhenNotLoggedIn [
+	self
+		should: [ session execute: '1 + 1' ]
+		raise: GbsError
+]
+
+{ #category : 'tests' }
 GbsSessionTest >> testExecuteStringSignalsError [
 	| mockSession |
 	mockSession := MockGbsSession new.
