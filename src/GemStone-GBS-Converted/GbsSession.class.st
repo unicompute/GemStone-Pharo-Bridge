@@ -455,7 +455,7 @@ GbsSession >> gciCommit [
 { #category : 'ffi' }
 GbsSession >> gciExecute: string context: ctx env: env [
     "String correctly maps to const char*, and we stay on the main thread"
-    ^ self ffiCall: #(int64 GciExecuteStr_(String string, int64 ctx, int env)) options: #( + optNonThreaded )
+    ^ self ffiCall: #(uint64 GciExecuteStr_(String string, uint64 ctx, ushort env)) options: #( + optNonThreaded )
 ]
 
 { #category : 'as yet unclassified' }

@@ -102,7 +102,7 @@ GbsServerInterface >> apiGciErrSafe: aVoidPointer [
 GbsServerInterface >> apiGciExecute: aString context: aContext [
     <primitive: #primitiveNativeCall error: errorCode>
     ^ self
-        ffiCall: #(uint64 GciExecuteStr_(String aString, uint64 aContext, int 0))
+        ffiCall: #(uint64 GciExecuteStr(String aString, uint64 aContext))
         module: libraryPath
         options: #( + optNonThreaded )
 ]
@@ -117,7 +117,7 @@ GbsServerInterface >> apiGciExecuteStr: s context: c [
 GbsServerInterface >> apiGciExecuteStr: source context: contextOop env: env [
     "Exact C ABI: const char* + 64-bit context + 32-bit env."
     ^ self 
-        ffiCall: #(uint64 GciExecuteStr_(String source, uint64 contextOop, int env))
+        ffiCall: #(uint64 GciExecuteStr_(String source, uint64 contextOop, ushort env))
         module: libraryPath
         options: #( + optNonThreaded )
 ]
@@ -131,7 +131,7 @@ GbsServerInterface >> apiGciExecuteStr: aString context: aContext environment: e
 { #category : 'ffi' }
 GbsServerInterface >> apiGciExecuteStrSafe: sourceString context: contextOop [
 	"Strict 64-bit ABI compliance. Exactly 2 arguments. Prevents Stack Unwind SegFaults!"
-	^ self ffiCall: #(uint64 GciExecuteStr_(String sourceString, uint64 contextOop))
+	^ self ffiCall: #(uint64 GciExecuteStr(String sourceString, uint64 contextOop))
 ]
 
 { #category : 'api - fetching' }
