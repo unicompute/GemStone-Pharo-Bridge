@@ -78,19 +78,23 @@ GbsRemoteDebuggerTest >> testFetchContextsDirectlyParsesRowsWithOnlyThreeOrFourC
 { #category : 'tests' }
 GbsRemoteDebuggerTest >> testContextHasSender [
 	"Test that we can walk the context sender chain"
-	| contextOop hasSender |
+	| activeSession contextOop hasSender |
 	
-	session ifNil: [ self skip: 'No session' ].
+	activeSession := session ifNil: [ GbsSessionParameters currentSession ].
+	(activeSession isNil or: [
+		(activeSession respondsTo: #isLoggedIn) and: [ activeSession isLoggedIn not ] ]) ifTrue: [
+		self skip: 'No session'
+	].
 	
-	contextOop := session evaluate: 'Processor activeProcess topContext asOop'.
+	contextOop := activeSession evaluate: 'Processor activeProcess topContext asOop'.
 	
-	hasSender := session evaluate: '[
+	hasSender := activeSession evaluate: '[
 		| ctx |
 		ctx := Object _objectForOop: ', contextOop asString, '.
 		ctx sender notNil
 	] value'.
-	
-	Transcript show: 'Context has sender: ', hasSender asString; cr.
+
+	self assert: (hasSender == true or: [ hasSender = 'true' ])
 ]
 
 { #category : 'tests' }
