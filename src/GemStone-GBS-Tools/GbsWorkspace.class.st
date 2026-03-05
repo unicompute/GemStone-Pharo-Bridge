@@ -111,10 +111,10 @@ GbsWorkspace >> doIt [
 			show: exceptionUsable asString;
 			cr.
 
-		((processOop isNumber and: [ processOop > 20 ]) and: [ currentUsable or: [ exceptionUsable ] ])
-			ifTrue: [
-				self
-					openRemoteDebuggerOn: ex messageText
+			((processOop isNumber and: [ processOop > 20 ]) and: [ hasRemoteMetadata ])
+				ifTrue: [
+					self
+						openRemoteDebuggerOn: ex messageText
 					processOop: processOop
 					session: activeSession
 			]
@@ -131,8 +131,6 @@ GbsWorkspace >> isDebuggerStackCandidateOop: anOop session: aSession [
 	(anOop isNil or: [ anOop = 0 or: [ anOop = 20 ] ]) ifTrue: [ ^ false ].
 	aSession ifNil: [ ^ false ].
 	((aSession respondsTo: #isLoggedIn) and: [ aSession isLoggedIn not ]) ifTrue: [ ^ false ].
-	((aSession respondsTo: #sessionOop)
-		and: [ aSession sessionOop isNil or: [ aSession sessionOop <= 1 ] ]) ifTrue: [ ^ false ].
 
 	script := '[
 		| obj proc ctx stackReport |
