@@ -59,8 +59,9 @@ GbsRemoteDebuggerTest >> testFetchContextsDirectlyParsesRowsWithOnlyThreeOrFourC
 	mockSession := MockGbsSession new.
 	mockSession stubs
 		at: #evaluate
-		put: '1	AbstractException	_signalToDebugger
-2	SmallInteger	/	/'.
+		put: '1	AbstractException	_signalToDebugger',
+			String lf,
+			'2	SmallInteger	/	/'.
 
 	debugger := GbsRemoteDebugger new.
 	debugger session: mockSession.
