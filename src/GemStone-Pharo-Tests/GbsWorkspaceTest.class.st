@@ -32,7 +32,13 @@ GbsWorkspaceTest >> testDoItHandlesGemStoneError [
 	"2. Inject our manual mock session globally"
 	mockSession stubs
 		at: #execute
-		put: [ :script | (GbsError new messageText: 'boom'; tag: 20; yourself) signal ].
+		put: [ :script |
+			(GbsError new
+				messageText: 'boom';
+				tag: 20;
+				serverProcessOop: 222;
+				exceptionOop: 333;
+				yourself) signal ].
 	GbsSessionParameters currentSession: mockSession.
 	
 	"3. Action: Run the workspace evaluation"
@@ -40,6 +46,7 @@ GbsWorkspaceTest >> testDoItHandlesGemStoneError [
 	
 	"4. Assertion: Verify the error was caught and routed to the debugger method"
 	self assert: workspace debuggerOpened.
+	self assert: workspace lastOpenedProcessOop equals: 222.
 ]
 
 { #category : 'tests' }
@@ -66,4 +73,25 @@ GbsWorkspaceTest >> testDoItPrefersServerProcessOopOverTag [
 
 	self assert: workspace debuggerOpened.
 	self assert: workspace lastOpenedProcessOop equals: 222.
+]
+
+{ #category : 'tests' }
+GbsWorkspaceTest >> testDoItDoesNotProbeOrOpenDebuggerForLocalError [
+	| workspace mockSession |
+	workspace := TestableGbsWorkspace new.
+	mockSession := MockGbsSession new.
+
+	workspace textEditor text: '1 / 0'.
+
+	mockSession stubs
+		at: #execute
+		put: [ :script | (GbsError new messageText: 'Not logged in to GemStone.'; tag: 222; yourself) signal ].
+	mockSession stubs
+		at: #evaluate
+		put: [ self fail: 'Workspace should not evaluate server probe for local/non-remote errors.' ].
+	GbsSessionParameters currentSession: mockSession.
+
+	workspace doIt.
+
+	self deny: workspace debuggerOpened.
 ]

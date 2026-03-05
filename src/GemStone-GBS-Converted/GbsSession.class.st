@@ -174,6 +174,7 @@ GbsSession >> commitTransaction [
 { #category : 'execution' }
 GbsSession >> evaluate: s [ 
     | i r | 
+    self validateReadyForExecution: s.
     i := GbsServerInterface uniqueInstance.
     r := i apiGciExecuteStr: s context: 20 environment: 0. 
     
@@ -189,6 +190,7 @@ GbsSession >> evaluate: s [
 { #category : 'evaluating' }
 GbsSession >> evaluateAndFetchString: aString [
     | resultOop |
+    self validateReadyForExecution: aString.
     resultOop := GbsServerInterface uniqueInstance 
         apiGciExecuteStr: aString 
         context: sessionOop 

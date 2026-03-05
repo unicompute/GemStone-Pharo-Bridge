@@ -44,7 +44,7 @@ GbsWorkspace >> doCommit [
 
 { #category : 'actions' }
 GbsWorkspace >> doIt [
-	| code activeSession result processOop exceptionCandidate currentUsable exceptionUsable |
+	| code activeSession result processOop exceptionCandidate currentUsable exceptionUsable hasRemoteMetadata serverCandidate |
 
 	code := self selectedCodeOrAll copyReplaceAll: String cr with: String lf.
 	code ifEmpty: [ ^ self ].
@@ -57,9 +57,10 @@ GbsWorkspace >> doIt [
 		result := activeSession execute: code.
 		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
 	] on: GbsError do: [ :ex |
-		processOop := (ex respondsTo: #serverProcessOop)
-			ifTrue: [ ex serverProcessOop ]
-			ifFalse: [ nil ].
+			serverCandidate := (ex respondsTo: #serverProcessOop)
+				ifTrue: [ ex serverProcessOop ]
+				ifFalse: [ nil ].
+			processOop := serverCandidate.
 		(processOop isNil or: [ processOop = 0 or: [ processOop = 20 ] ]) ifTrue: [
 			processOop := (ex respondsTo: #tag)
 				ifTrue: [ ex tag ]
@@ -73,17 +74,25 @@ GbsWorkspace >> doIt [
 		processOop := processOop ifNil: [ 20 ].
 		processOop := (processOop = 0) ifTrue: [ 20 ] ifFalse: [ processOop ].
 
-		exceptionCandidate := (ex respondsTo: #exceptionOop)
-			ifTrue: [ ex exceptionOop ]
-			ifFalse: [ nil ].
-		currentUsable := self
-			isDebuggerStackCandidateOop: processOop
-			session: activeSession.
-		exceptionUsable := false.
-		(currentUsable not and: [ exceptionCandidate notNil and: [ exceptionCandidate ~= 0 and: [ exceptionCandidate ~= 20 ] ] ]) ifTrue: [
-			exceptionUsable := self
-				isDebuggerStackCandidateOop: exceptionCandidate
-				session: activeSession.
+			exceptionCandidate := (ex respondsTo: #exceptionOop)
+				ifTrue: [ ex exceptionOop ]
+				ifFalse: [ nil ].
+			hasRemoteMetadata := ((serverCandidate notNil
+				and: [ serverCandidate ~= 0 and: [ serverCandidate ~= 20 ] ])
+				or: [ exceptionCandidate notNil
+					and: [ exceptionCandidate ~= 0 and: [ exceptionCandidate ~= 20 ] ] ]).
+			currentUsable := false.
+			hasRemoteMetadata ifTrue: [
+				currentUsable := self
+					isDebuggerStackCandidateOop: processOop
+					session: activeSession
+			].
+			exceptionUsable := false.
+			(hasRemoteMetadata and: [
+				currentUsable not and: [ exceptionCandidate notNil and: [ exceptionCandidate ~= 0 and: [ exceptionCandidate ~= 20 ] ] ] ]) ifTrue: [
+				exceptionUsable := self
+					isDebuggerStackCandidateOop: exceptionCandidate
+					session: activeSession.
 			exceptionUsable ifTrue: [ processOop := exceptionCandidate ].
 		].
 		Transcript
@@ -123,6 +132,9 @@ GbsWorkspace >> isDebuggerStackCandidateOop: anOop session: aSession [
 
 	(anOop isNil or: [ anOop = 0 or: [ anOop = 20 ] ]) ifTrue: [ ^ false ].
 	aSession ifNil: [ ^ false ].
+	((aSession respondsTo: #isLoggedIn) and: [ aSession isLoggedIn not ]) ifTrue: [ ^ false ].
+	((aSession respondsTo: #sessionOop)
+		and: [ aSession sessionOop isNil or: [ aSession sessionOop = 0 ] ]) ifTrue: [ ^ false ].
 
 	script := '[
 		| obj proc ctx stackReport |
