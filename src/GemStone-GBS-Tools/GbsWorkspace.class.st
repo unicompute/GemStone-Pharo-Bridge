@@ -132,7 +132,7 @@ GbsWorkspace >> isDebuggerStackCandidateOop: anOop session: aSession [
 	aSession ifNil: [ ^ false ].
 	((aSession respondsTo: #isLoggedIn) and: [ aSession isLoggedIn not ]) ifTrue: [ ^ false ].
 	((aSession respondsTo: #sessionOop)
-		and: [ aSession sessionOop isNil or: [ aSession sessionOop = 0 ] ]) ifTrue: [ ^ false ].
+		and: [ aSession sessionOop isNil or: [ aSession sessionOop <= 1 ] ]) ifTrue: [ ^ false ].
 
 	script := '[
 		| obj proc ctx stackReport |
@@ -371,6 +371,9 @@ GbsWorkspace >> openRemoteDebuggerOn: errorString processOop: processOop session
 	"Ensure errorString is actually a string"
 	errorText := errorString ifNil: [ 'Unknown Error' ] ifNotNil: [ :es | es asString ].
 	safeProcessOop := processOop ifNil: [ 20 ].
+	((safeProcessOop isNumber not) or: [ safeProcessOop <= 20 ]) ifTrue: [
+		^ self inform: 'GemStone Error: ', errorText
+	].
 
 	"Open the debugger using the class-side method"
 	[

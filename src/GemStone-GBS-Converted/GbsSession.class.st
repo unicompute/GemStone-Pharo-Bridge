@@ -264,15 +264,8 @@ GbsSession >> executeAndFetch: script context: contextOop [
 
 { #category : 'execution' }
 GbsSession >> validateReadyForExecution: script [
-	| hasSessionIdentity |
 	(script isString and: [ script isEmpty not ]) ifFalse: [
 		GbsError signal: 'Cannot execute empty script.' ].
-
-	hasSessionIdentity := (self sessionId isNumber and: [ self sessionId > 0 ])
-		or: [ self sessionOop isNumber and: [ self sessionOop > 0 ] ].
-	(self isLoggedIn not and: [ hasSessionIdentity ]) ifTrue: [
-		self isLoggedIn: true
-	].
 
 	self isLoggedIn ifFalse: [
 		GbsError signal: 'Not logged in to GemStone.' ].
@@ -663,10 +656,7 @@ GbsSession >> sessionOop [
 
 { #category : 'accessing' }
 GbsSession >> sessionOop: anInteger [
-    sessionOop := anInteger.
-    ((anInteger isNumber and: [ anInteger > 0 ]) and: [ isLoggedIn ~= true ]) ifTrue: [
-        isLoggedIn := true
-    ]
+    sessionOop := anInteger
 ]
 
 { #category : 'signalling' }
