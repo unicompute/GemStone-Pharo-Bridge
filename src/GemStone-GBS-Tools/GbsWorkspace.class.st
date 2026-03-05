@@ -55,6 +55,13 @@ GbsWorkspace >> doIt [
 		^ self inform: 'No Session - please login to GemStone first' 
 	].
 	
+	"Force session to be the actual logged in session"
+	activeSession := GbsSessionManager current currentSession.
+	activeSession ifNil: [
+		Transcript show: 'No session in SessionManager'; cr.
+		^ self inform: 'No Session - please login to GemStone first'
+	].
+	
 	Transcript 
 		show: 'Session: ', activeSession printString; 
 		show: ' isLoggedIn: ', activeSession isLoggedIn asString; 
@@ -77,6 +84,7 @@ GbsWorkspace >> doIt [
 		(processOop isNil or: [ processOop = 0 or: [ processOop = 20 ] ]) ifTrue: [
 			processOop := 20.
 		].
+		Transcript show: 'Opening debugger with processOop=', processOop asString; cr.
 		self
 			openRemoteDebuggerOn: ex messageText
 			processOop: processOop
