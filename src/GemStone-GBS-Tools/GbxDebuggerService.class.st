@@ -436,16 +436,17 @@ GbxDebuggerService >> evaluateOopFromScript: scriptString [
 { #category : 'breakpoint support' }
 GbxDebuggerService >> currentBreakPointList [
 	"Get breakpoints for current session"
-	^ GbxBreakPoint breakPointListFor: session
+	^ self breakpointClass breakPointListFor: session
 ]
 
 { #category : 'breakpoint support' }
 GbxDebuggerService >> breakpointsInSelectedMethod [
 	"Get breakpoints in the currently selected method"
 	| selector className |
-	currentContext ifNil: [ ^ #( ) ].
-	selector := currentContext selector.
-	className := currentContext methodClass.
+	(self canManageBreakPoints) ifFalse: [ ^ #( ) ].
+	selector := self selectedMethodSelector.
+	className := self selectedMethodClassName.
+	(selector isNil or: [ className isNil ]) ifTrue: [ ^ #( ) ].
 	
 	^ self currentBreakPointList select: [ :bp |
 		bp selector = selector and: [ bp remoteClass = className ]
@@ -455,25 +456,143 @@ GbxDebuggerService >> breakpointsInSelectedMethod [
 { #category : 'breakpoint support' }
 GbxDebuggerService >> setBreakPoint [
 	"Set a breakpoint at the current location"
-	currentContext ifNil: [ ^ self ].
-	
-	GbxBrowser
-		setBreakInView: nil  "Would need text widget reference"
+	^ self setBreakPointIn: nil
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> setBreakPointIn: aTextWidget [
+	(self canManageBreakPoints) ifFalse: [ ^ false ].
+
+	self browserClass
+		setBreakInView: aTextWidget
 		model: currentContext
-		method: currentContext selector
-		class: currentContext methodClass.
+		method: self selectedMethodSelector
+		class: self selectedMethodClassName.
+	^ true
 ]
 
 { #category : 'breakpoint support' }
 GbxDebuggerService >> removeBreakPoint [
 	"Remove breakpoint at current location"
-	self breakpointsInSelectedMethod do: [ :bp | bp clear ].
+	^ self removeBreakIn: nil
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> removeBreakIn: aTextWidget [
+	| bps target |
+	bps := self breakpointsInSelectedMethod.
+	bps isEmpty ifTrue: [ ^ false ].
+	target := self breakpointToRemoveIn: aTextWidget from: bps.
+	target ifNil: [ ^ false ].
+	target clear.
+	^ true
 ]
 
 { #category : 'breakpoint support' }
 GbxDebuggerService >> removeAllBreakPoints [
 	"Remove all breakpoints in selected method"
-	self breakpointsInSelectedMethod do: [ :bp | bp clear ].
+	| bps |
+	bps := self breakpointsInSelectedMethod.
+	bps do: [ :bp | bp clear ].
+	^ bps size
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> breakpointClass [
+	^ GbxBreakPoint
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> browserClass [
+	^ GbxBrowser
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> canManageBreakPoints [
+	currentContext ifNil: [ ^ false ].
+	(currentContext respondsTo: #gbxIsServerContext)
+		ifTrue: [ currentContext gbxIsServerContext ifFalse: [ ^ false ] ].
+	(self selectedMethodSelector isNil or: [ self selectedMethodSelector = #unboundMethod ])
+		ifTrue: [ ^ false ].
+	^ self selectedMethodClassName isNotNil
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> canSetBreakPoint [
+	^ self canManageBreakPoints
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> canRemoveBreakPoint [
+	^ self breakpointsInSelectedMethod isNotEmpty
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> canRemoveAllBreakPoints [
+	^ self breakpointsInSelectedMethod isNotEmpty
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> selectedMethodSelector [
+	currentContext ifNil: [ ^ nil ].
+	(currentContext respondsTo: #selectorOrUnknown) ifTrue: [ ^ currentContext selectorOrUnknown ].
+	(currentContext respondsTo: #selector) ifTrue: [ ^ currentContext selector ].
+	^ nil
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> selectedMethodClassName [
+	currentContext ifNil: [ ^ nil ].
+	(currentContext respondsTo: #methodClassOrUnknown) ifTrue: [ ^ currentContext methodClassOrUnknown ].
+	(currentContext respondsTo: #methodClass) ifTrue: [ ^ currentContext methodClass ].
+	^ nil
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> breakpointToRemoveIn: aTextWidget from: breakpoints [
+	| selection |
+	selection := self selectionIntervalForTextWidget: aTextWidget.
+	selection ifNil: [ ^ breakpoints first ].
+	^ breakpoints
+		detect: [ :bp | self breakpoint: bp matchesSelection: selection ]
+		ifNone: [ nil ]
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> selectionIntervalForTextWidget: aTextWidget [
+	| controller start stop |
+	aTextWidget ifNil: [ ^ nil ].
+	(aTextWidget respondsTo: #selectionInterval) ifTrue: [ ^ aTextWidget selectionInterval ].
+	(aTextWidget respondsTo: #controller) ifFalse: [ ^ nil ].
+	controller := aTextWidget controller.
+	((controller respondsTo: #selectionStartIndex) and: [ controller respondsTo: #selectionStopIndex ])
+		ifFalse: [ ^ nil ].
+	start := controller selectionStartIndex.
+	stop := controller selectionStopIndex.
+	(start isNil or: [ stop isNil ]) ifTrue: [ ^ nil ].
+	^ start to: stop
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> breakpoint: aBreakPoint matchesSelection: anInterval [
+	| offset |
+	offset := self sourceOffsetForBreakPoint: aBreakPoint.
+	offset ifNil: [ ^ false ].
+	^ anInterval first <= offset and: [ anInterval last >= offset ]
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> sourceOffsetForBreakPoint: aBreakPoint [
+	| stepPoint offsets rawOffset |
+	currentContext ifNil: [ ^ nil ].
+	(aBreakPoint respondsTo: #stepPoint) ifFalse: [ ^ nil ].
+	stepPoint := aBreakPoint stepPoint.
+	stepPoint ifNil: [ ^ nil ].
+	(currentContext respondsTo: #sourceOffsets) ifFalse: [ ^ nil ].
+	offsets := currentContext sourceOffsets.
+	rawOffset := [ offsets at: stepPoint ] on: Error do: [ nil ].
+	rawOffset ifNil: [ ^ nil ].
+	^ [ rawOffset asInteger ] on: Error do: [ nil ]
 ]
 
 { #category : 'testing' }
