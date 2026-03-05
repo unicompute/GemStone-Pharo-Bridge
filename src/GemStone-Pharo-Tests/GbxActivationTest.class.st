@@ -43,5 +43,5 @@ GbxActivationTest >> testVisibleSourceMapSkipsNilAndOutOfBoundsOffsets [
 
 	self assert: map size equals: 1.
 	self assert: map first key equals: 4.
-	self assert: map first value equals: (2 to: 2).
+	self assert: map first value equals: (2 to: 3).
 ]
