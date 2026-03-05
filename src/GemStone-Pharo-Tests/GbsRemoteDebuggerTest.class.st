@@ -111,6 +111,10 @@ GbsRemoteDebuggerTest >> testContextSourceCode [
 GbsRemoteDebuggerTest >> testContextMethod [
 	| activeSession raisedError processOop service contexts topContext |
 
+	(Smalltalk globals at: #GbsRunDangerousLiveDebuggerTests ifAbsent: [ false ]) ifFalse: [
+		self skip: 'Dangerous live FFI test disabled'
+	].
+
 	activeSession := session ifNil: [ GbsSessionParameters currentSession ].
 	activeSession ifNil: [ self skip: 'No session' ].
 

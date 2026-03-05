@@ -81,19 +81,14 @@ GbsWorkspace >> doIt [
 		hasRemoteMetadata := ((serverCandidate isNumber and: [ serverCandidate > 20 ])
 			or: [ exceptionCandidate isNumber and: [ exceptionCandidate > 20 ] ]).
 
-		currentUsable := false.
-		hasRemoteMetadata ifTrue: [
-			currentUsable := self
-				isDebuggerStackCandidateOop: processOop
-				session: activeSession
-		].
+		"Do not run extra remote probe calls here; they can destabilize the GCI state.
+		Prefer serverProcessOop, fall back to exceptionOop when needed."
+		currentUsable := hasRemoteMetadata.
 		exceptionUsable := false.
-		(hasRemoteMetadata and: [
-			currentUsable not and: [ exceptionCandidate isNumber and: [ exceptionCandidate > 20 ] ] ]) ifTrue: [
-			exceptionUsable := self
-				isDebuggerStackCandidateOop: exceptionCandidate
-				session: activeSession.
-			exceptionUsable ifTrue: [ processOop := exceptionCandidate ].
+		(currentUsable not and: [ exceptionCandidate isNumber and: [ exceptionCandidate > 20 ] ]) ifTrue: [
+			processOop := exceptionCandidate.
+			currentUsable := true.
+			exceptionUsable := true
 		].
 
 		((processOop isNumber and: [ processOop > 20 ]) and: [ hasRemoteMetadata ])
