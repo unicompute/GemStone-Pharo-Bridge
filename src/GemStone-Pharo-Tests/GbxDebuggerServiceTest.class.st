@@ -17,6 +17,9 @@ GbxDebuggerServiceTest >> setUp [
 	GbxFakeBreakPointForService reset.
 	GbxFakeBrowserForService reset.
 	session := MockGbsSession new.
+	session
+		isLoggedIn: true;
+		sessionOop: 1.
 	service := GbxTestableDebuggerService new.
 	service session: session.
 	context := GbxFakeActivationForService new.
@@ -25,6 +28,7 @@ GbxDebuggerServiceTest >> setUp [
 		level: 3;
 		selector: #foo;
 		methodClass: 'DemoClass';
+		sourceString: 'foo ^ 1';
 		sourceOffsets: #(10 20 30);
 		quickStepPoint: 2;
 		visibleSourceMap: { 1 -> (10 to: 10). 2 -> (20 to: 20). 3 -> (30 to: 30) }.
@@ -130,7 +134,9 @@ GbxDebuggerServiceTest >> testBreakpointsInSelectedMethodFiltersBySelectorAndCla
 GbxDebuggerServiceTest >> testSetBreakPointInDelegatesToBrowserClass [
 	| widget |
 	widget := GbxFakeTextWidgetForService new.
-	widget selectionInterval: (1 to: 1).
+	widget
+		selectionInterval: (1 to: 1);
+		text: 'foo ^ 1'.
 
 	self assert: (service setBreakPointIn: widget).
 	self assert: GbxFakeBrowserForService lastBreakView == widget.
@@ -298,4 +304,65 @@ GbxDebuggerServiceTest >> testCurrentSourceSelectionIntervalFallsBackToFirstWhen
 	interval := service currentSourceSelectionInterval.
 
 	self assert: interval equals: (10 to: 10)
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testSetBreakPointInReturnsFalseWhenSourceWasEdited [
+	| widget |
+	widget := GbxFakeTextWidgetForService new.
+	widget
+		selectionInterval: (1 to: 1);
+		text: 'edited source text'.
+
+	self deny: (service setBreakPointIn: widget).
+	self assert: GbxFakeBrowserForService setBreakCalls equals: 0
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testRecompileCurrentMethodWithSourceReturnsTrueOnOk [
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			(script includesSubstring: 'compileMethod:')
+				ifTrue: [ 'OK' ]
+				ifFalse: [ '0' ] ].
+
+	self assert: (service recompileCurrentMethodWithSource: 'foo ^ 1')
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testGsPrintItEvaluatesInCurrentContext [
+	| result |
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			(script includesSubstring: 'printString')
+				ifTrue: [ '42' ]
+				ifFalse: [ '0' ] ].
+
+	result := service gsPrintIt: '21+21'.
+	self assert: result equals: '42'
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testInspectCurrentProcessReturnsFalseWhenSessionNotUsable [
+	session isLoggedIn: false.
+
+	self deny: service inspectCurrentProcess.
+	self assert: GbxFakeInspectorForService lastOop isNil
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testStepIntoReturnsFalseWhenNoUsableProcessOop [
+	service processOop: 20.
+
+	self deny: service stepInto
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testStepIntoReturnsFalseWhenExecutionErrors [
+	session stubs at: #executeAndFetchContext put: [ :script :ctx | Error signal: 'boom' ].
+	service processOop: 111.
+
+	self deny: service stepInto
 ]

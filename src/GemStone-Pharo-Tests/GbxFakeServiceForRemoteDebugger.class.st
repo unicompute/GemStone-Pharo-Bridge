@@ -7,11 +7,17 @@ Class {
 		'inspectFrameCalls',
 		'inspectVariableCalls',
 		'lastInspectedVariableName',
+		'gsDoItCalls',
+		'gsPrintItCalls',
+		'gsInspectItCalls',
+		'recompileCalls',
+		'lastRecompiledSource',
 		'toggleBreakPointCalls',
 		'setBreakPointCalls',
 		'removeBreakPointCalls',
 		'removeAllBreakPointsCalls',
-		'sourceMap'
+		'sourceMap',
+		'raiseOnInspectReceiver'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -19,6 +25,7 @@ Class {
 
 { #category : 'actions' }
 GbxFakeServiceForRemoteDebugger >> inspectCurrentReceiver [
+	raiseOnInspectReceiver ifTrue: [ Error signal: 'inspect receiver failed' ].
 	inspectReceiverCalls := self inspectReceiverCalls + 1.
 	^ true
 ]
@@ -39,6 +46,31 @@ GbxFakeServiceForRemoteDebugger >> inspectCurrentFrame [
 GbxFakeServiceForRemoteDebugger >> inspectVariableNamed: aVariableName [
 	inspectVariableCalls := self inspectVariableCalls + 1.
 	lastInspectedVariableName := aVariableName.
+	^ true
+]
+
+{ #category : 'actions' }
+GbxFakeServiceForRemoteDebugger >> gsDoIt: codeString [
+	gsDoItCalls := self gsDoItCalls + 1.
+	^ true
+]
+
+{ #category : 'actions' }
+GbxFakeServiceForRemoteDebugger >> gsPrintIt: codeString [
+	gsPrintItCalls := self gsPrintItCalls + 1.
+	^ '42'
+]
+
+{ #category : 'actions' }
+GbxFakeServiceForRemoteDebugger >> gsInspectIt: codeString [
+	gsInspectItCalls := self gsInspectItCalls + 1.
+	^ true
+]
+
+{ #category : 'actions' }
+GbxFakeServiceForRemoteDebugger >> recompileCurrentMethodWithSource: sourceString [
+	recompileCalls := self recompileCalls + 1.
+	lastRecompiledSource := sourceString.
 	^ true
 ]
 
@@ -65,6 +97,31 @@ GbxFakeServiceForRemoteDebugger >> inspectVariableCalls [
 { #category : 'accessing' }
 GbxFakeServiceForRemoteDebugger >> lastInspectedVariableName [
 	^ lastInspectedVariableName
+]
+
+{ #category : 'accessing' }
+GbxFakeServiceForRemoteDebugger >> gsDoItCalls [
+	^ gsDoItCalls ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+GbxFakeServiceForRemoteDebugger >> gsPrintItCalls [
+	^ gsPrintItCalls ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+GbxFakeServiceForRemoteDebugger >> gsInspectItCalls [
+	^ gsInspectItCalls ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+GbxFakeServiceForRemoteDebugger >> recompileCalls [
+	^ recompileCalls ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+GbxFakeServiceForRemoteDebugger >> lastRecompiledSource [
+	^ lastRecompiledSource
 ]
 
 { #category : 'breakpoint support' }
@@ -119,6 +176,11 @@ GbxFakeServiceForRemoteDebugger >> sourceMap [
 { #category : 'source map' }
 GbxFakeServiceForRemoteDebugger >> sourceMap: aCollection [
 	sourceMap := aCollection
+]
+
+{ #category : 'testing' }
+GbxFakeServiceForRemoteDebugger >> raiseOnInspectReceiver: aBoolean [
+	raiseOnInspectReceiver := aBoolean
 ]
 
 { #category : 'selection' }

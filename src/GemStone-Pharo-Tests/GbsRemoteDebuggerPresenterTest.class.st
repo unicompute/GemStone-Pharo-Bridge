@@ -36,6 +36,14 @@ GbsRemoteDebuggerPresenterTest >> testInspectFrameDelegatesToService [
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testInspectReceiverReturnsFalseWhenServiceRaises [
+	service raiseOnInspectReceiver: true.
+
+	self deny: debugger inspectReceiver.
+	self assert: service inspectReceiverCalls equals: 0.
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testInspectVariableDelegatesSelectedVariableNameToService [
 	| fakeTable |
 	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
@@ -67,6 +75,52 @@ GbsRemoteDebuggerPresenterTest >> testSetBreakPointDelegatesToService [
 GbsRemoteDebuggerPresenterTest >> testToggleBreakPointDelegatesToService [
 	self assert: debugger toggleBreakPoint.
 	self assert: service toggleBreakPointCalls equals: 1.
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testGsDoItDelegatesToService [
+	| fakeText |
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: '1 + 1'.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+
+	self assert: debugger gsDoIt.
+	self assert: service gsDoItCalls equals: 1.
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testGsPrintItDelegatesToServiceAndAppendsResult [
+	| fakeText |
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: '21+21'.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+
+	self assert: debugger gsPrintIt.
+	self assert: service gsPrintItCalls equals: 1.
+	self assert: (fakeText text includesSubstring: '"42"').
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testGsInspectItDelegatesToService [
+	| fakeText |
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: 'Array new'.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+
+	self assert: debugger gsInspectIt.
+	self assert: service gsInspectItCalls equals: 1.
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testAcceptSourceEditsDelegatesRecompileWithCurrentText [
+	| fakeText |
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: 'foo ^ 1'.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+
+	self assert: debugger acceptSourceEdits.
+	self assert: service recompileCalls equals: 1.
+	self assert: service lastRecompiledSource equals: 'foo ^ 1'
 ]
 
 { #category : 'tests' }
@@ -126,4 +180,23 @@ GbsRemoteDebuggerPresenterTest >> testContextSelectedFetchesFullSourceForSingleL
 	self assert: (rendered includes: Character lf).
 	self assert: (rendered includesSubstring: 'a / b').
 	self assert: context sourceString equals: rendered.
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testContextSelectedDoesNotRaiseWhenSourceAndVariableWidgetsAreMissing [
+	| context |
+	context := GbxFakeContextForRemoteDebugger new
+		methodClass: 'nil';
+		sourceString: '| a |';
+		processOop: 222;
+		level: 1;
+		tempNamesAndValues: Dictionary new;
+		yourself.
+
+	self shouldnt: [ debugger contextSelected: context ] raise: Error
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testStepIntoDoesNotRaiseWhenServiceDoesNotImplementStepInto [
+	self shouldnt: [ debugger stepInto ] raise: Error
 ]

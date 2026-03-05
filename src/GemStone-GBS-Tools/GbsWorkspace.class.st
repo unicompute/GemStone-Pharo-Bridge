@@ -167,6 +167,11 @@ GbsWorkspace >> gemStoneDebugIt [
 ]
 
 { #category : 'actions' }
+GbsWorkspace >> gsDoIt [
+	^ self doIt
+]
+
+{ #category : 'actions' }
 GbsWorkspace >> gemStonePrintIt [
 	| code activeSession printScript resultString currentText |
 	
@@ -186,6 +191,11 @@ GbsWorkspace >> gemStonePrintIt [
 	textEditor text: currentText asString, ' " ', resultString, ' "'.
 	
 	GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
+]
+
+{ #category : 'actions' }
+GbsWorkspace >> gsPrintIt [
+	^ self gemStonePrintIt
 ]
 
 { #category : 'initialization' }
@@ -264,6 +274,11 @@ GbsWorkspace >> inspectIt [
 	(rawOop = 1 or: [ rawOop = 20 ]) 
 		ifTrue: [ self inform: 'Result is nil or execution failed.' ]
 		ifFalse: [ GbsInspector inspect: rawOop session: activeSession ].
+]
+
+{ #category : 'actions' }
+GbsWorkspace >> gsInspectIt [
+	^ self inspectIt
 ]
 
 { #category : 'local actions' }
@@ -434,16 +449,16 @@ GbsWorkspace >> workspaceMenu [
 	"--- GEMSTONE ACTIONS ---"
 	menu addGroup: [ :group | 
 		group addItem: [ :item |
-			item name: 'GemStone Do it'; shortcut: $d command; icon: (self iconNamed: #smallDoIt);
+			item name: 'GS-Do it'; shortcut: $d command; icon: (self iconNamed: #smallDoIt);
 			"CRITICAL FIX: Defer the action so the menu closes first!"
 			action: [ UIManager default defer: [ self doIt ] ] ].
 			
 		group addItem: [ :item |
-			item name: 'GemStone Inspect it'; shortcut: $i command; icon: (self iconNamed: #smallInspectIt);
+			item name: 'GS-Inspect it'; shortcut: $i command; icon: (self iconNamed: #smallInspectIt);
 			action: [ UIManager default defer: [ self inspectIt ] ] ].
 			
 		group addItem: [ :item |
-			item name: 'GemStone Print it'; shortcut: $p command; icon: (self iconNamed: #smallPrintIt);
+			item name: 'GS-Print it'; shortcut: $p command; icon: (self iconNamed: #smallPrintIt);
 			"CRITICAL FIX: Defer the action so the menu closes first!"
 			action: [ UIManager default defer: [ self gemStonePrintIt ] ] ].
 			

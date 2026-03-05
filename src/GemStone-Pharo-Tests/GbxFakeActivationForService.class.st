@@ -6,6 +6,7 @@ Class {
 		'level',
 		'selector',
 		'methodClass',
+		'sourceString',
 		'sourceOffsets',
 		'isServerContext',
 		'quickStepPoint',
@@ -73,6 +74,21 @@ GbxFakeActivationForService >> methodClass: aString [
 { #category : 'accessing' }
 GbxFakeActivationForService >> methodClassOrUnknown [
 	^ self methodClass
+]
+
+{ #category : 'accessing' }
+GbxFakeActivationForService >> sourceString [
+	^ sourceString ifNil: [ '' ]
+]
+
+{ #category : 'accessing' }
+GbxFakeActivationForService >> sourceString: aString [
+	sourceString := aString
+]
+
+{ #category : 'accessing' }
+GbxFakeActivationForService >> sourceCode [
+	^ self sourceString
 ]
 
 { #category : 'accessing' }

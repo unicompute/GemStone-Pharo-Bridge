@@ -200,98 +200,56 @@ GbxDebuggerService >> updateStackList: aList [
 { #category : 'stepping' }
 GbxDebuggerService >> stepInto [
 	"Step into the next message send"
-	| script |
-	
-	script := '[
-		| proc |
-		proc := Object _objectForOop: ', processOop asString, '.
-		proc step.
-		true
-	] value'.
-	
-	session executeAndFetch: script context: session sessionOop.
-	self recomputeContextList.
+	(self runDebugProcessCommand: 'step' recompute: true)
+		ifTrue: [ ^ true ].
+	^ false
 ]
 
 { #category : 'stepping' }
 GbxDebuggerService >> stepOver [
 	"Step over the next message send (step through without entering)"
-	| script |
-	
-	script := '[
-		| proc |
-		proc := Object _objectForOop: ', processOop asString, '.
-		proc stepOver.
-		true
-	] value'.
-	
-	session executeAndFetch: script context: session sessionOop.
-	self recomputeContextList.
+	(self runDebugProcessCommand: 'stepOver' recompute: true)
+		ifTrue: [ ^ true ].
+	^ false
 ]
 
 { #category : 'stepping' }
 GbxDebuggerService >> stepReturn [
 	"Step out of the current context (return to sender)"
-	| script |
-	
-	script := '[
-		| proc |
-		proc := Object _objectForOop: ', processOop asString, '.
-		proc stepReturn.
-		true
-	] value'.
-	
-	session executeAndFetch: script context: session sessionOop.
-	self recomputeContextList.
+	(self runDebugProcessCommand: 'stepReturn' recompute: true)
+		ifTrue: [ ^ true ].
+	^ false
 ]
 
 { #category : 'process control' }
 GbxDebuggerService >> resume [
 	"Resume execution of the debugged process"
-	| script |
-	
-	script := '[
-		| proc |
-		proc := Object _objectForOop: ', processOop asString, '.
-		proc resume.
-		true
-	] value'.
-	
-	[ session executeAndFetch: script context: session sessionOop ] 
-		on: Error 
-		do: [ :ex | ].
+	(self runDebugProcessCommand: 'resume' recompute: false)
+		ifTrue: [ ^ true ].
+	^ false
 ]
 
 { #category : 'process control' }
 GbxDebuggerService >> terminate [
 	"Terminate the debugged process"
-	| script |
-	
-	script := '[
-		| proc |
-		proc := Object _objectForOop: ', processOop asString, '.
-		proc terminate.
-		true
-	] value'.
-	
-	[ session executeAndFetch: script context: session sessionOop ] 
-		on: Error 
-		do: [ :ex | ].
+	(self runDebugProcessCommand: 'terminate' recompute: false)
+		ifTrue: [ ^ true ].
+	^ false
 ]
 
 { #category : 'process control' }
 GbxDebuggerService >> isTerminated [
 	"Check if the debugged process is terminated"
-	| script result |
-	
-	script := '[
+	| result |
+	(self canExecuteOnDebugProcess) ifFalse: [ ^ true ].
+	result := self executeDebugScript: '[
 		| proc |
 		proc := Object _objectForOop: ', processOop asString, '.
+		proc ifNil: [ ^ ''true'' ].
 		proc isTerminated
 	] value'.
-	
-	result := session executeAndFetch: script context: session sessionOop.
-	^ result = 'true'
+	result ifNil: [ ^ true ].
+	^ self asBooleanResult: result default: true
 ]
 
 { #category : 'source code' }
@@ -299,6 +257,102 @@ GbxDebuggerService >> sourceCode [
 	"Get the source code for the current context"
 	currentContext ifNil: [ ^ '' ].
 	^ currentContext sourceCode
+]
+
+{ #category : 'evaluation' }
+GbxDebuggerService >> gsDoIt: codeString [
+	| raw |
+	raw := self evaluateCodeInCurrentFrame: codeString.
+	^ raw notNil and: [ (raw beginsWith: 'Error:') not ]
+]
+
+{ #category : 'evaluation' }
+GbxDebuggerService >> gsPrintIt: codeString [
+	| script |
+	codeString ifNil: [ ^ nil ].
+	script := '[ ', codeString, ' ] value printString'.
+	^ self evaluateCodeInCurrentFrame: script
+]
+
+{ #category : 'evaluation' }
+GbxDebuggerService >> gsInspectIt: codeString [
+	| contextOop resultOop |
+	codeString ifNil: [ ^ false ].
+	self isSessionUsable ifFalse: [ ^ false ].
+	contextOop := self currentExecutionContextOop.
+	contextOop ifNil: [ ^ false ].
+	resultOop := [
+		session serverInterface
+			apiGciExecuteStr: codeString
+			context: contextOop
+			env: 0
+	] on: Error do: [ nil ].
+	^ self openInspectorOnOop: resultOop
+]
+
+{ #category : 'evaluation' }
+GbxDebuggerService >> evaluateCodeInCurrentFrame: codeString [
+	| contextOop raw |
+	(codeString isString and: [ codeString isEmpty not ]) ifFalse: [ ^ nil ].
+	self isSessionUsable ifFalse: [ ^ nil ].
+	contextOop := self currentExecutionContextOop.
+	contextOop ifNil: [ ^ nil ].
+	raw := [ session executeAndFetch: codeString context: contextOop ] on: Error do: [ nil ].
+	raw ifNil: [ ^ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	^ raw
+]
+
+{ #category : 'evaluation' }
+GbxDebuggerService >> currentExecutionContextOop [
+	| frameOop |
+	frameOop := self currentFrameOop.
+	(frameOop isNumber and: [ frameOop > 20 ]) ifTrue: [ ^ frameOop ].
+	((self currentProcessOop) isNumber and: [ self currentProcessOop > 20 ]) ifTrue: [ ^ self currentProcessOop ].
+	^ nil
+]
+
+{ #category : 'evaluation' }
+GbxDebuggerService >> recompileCurrentMethodWithSource: sourceText [
+	| className selector isMeta classLookupName escapedSource script raw |
+	currentContext ifNil: [ ^ false ].
+	self isSessionUsable ifFalse: [ ^ false ].
+	className := self selectedMethodClassName.
+	selector := self selectedMethodSelector.
+	(className isNil or: [ selector isNil or: [ selector = #unboundMethod ] ]) ifTrue: [ ^ false ].
+
+	isMeta := className asString endsWith: ' class'.
+	classLookupName := isMeta
+		ifTrue: [ (className asString copyFrom: 1 to: className size - 6) ]
+		ifFalse: [ className asString ].
+	escapedSource := self escapeForScriptLiteral: sourceText.
+
+	script := '[
+		| cls sel protocol result source |
+		cls := System myUserProfile symbolList objectNamed: #', classLookupName, '.
+		cls ifNil: [ ^ ''ERROR|Class not found'' ].
+		', (isMeta ifTrue: [ 'cls := cls class.' ] ifFalse: [ '' ]), '
+		sel := #', selector asString, '.
+		source := ''', escapedSource, '''.
+		protocol := [ cls categoryOfSelector: sel ] on: Error do: [ ''as yet unclassified'' ].
+		protocol ifNil: [ protocol := ''as yet unclassified'' ].
+		result := [ cls compileMethod: source category: protocol ] on: Error do: [ :ex | ''ERROR|'', ex description ].
+		(result isString and: [ result beginsWith: ''ERROR|'' ]) ifTrue: [ ^ result ].
+		(result isKindOf: Array) ifTrue: [ ^ ''ERROR|Compilation failed'' ].
+		''OK''
+	] value'.
+
+	raw := [ session executeAndFetch: script context: session sessionOop ] on: Error do: [ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	^ raw = 'OK'
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> escapeForScriptLiteral: aString [
+	| s |
+	s := aString ifNil: [ '' ] ifNotNil: [ :txt | txt asString ].
+	s := s copyReplaceAll: String cr with: String lf.
+	^ s copyReplaceAll: '''' with: ''''''
 ]
 
 { #category : 'source code' }
@@ -402,12 +456,16 @@ GbxDebuggerService >> inspectCurrentFrame [
 
 { #category : 'inspector' }
 GbxDebuggerService >> inspectVariableNamed: aVariableName [
+	| variableName |
 	(aVariableName isString and: [ aVariableName isEmpty not ]) ifFalse: [ ^ false ].
-	^ self openInspectorOnOop: (self oopForVariableNamed: aVariableName)
+	variableName := aVariableName withBlanksTrimmed.
+	variableName isEmpty ifTrue: [ ^ false ].
+	^ self openInspectorOnOop: (self oopForVariableNamed: variableName)
 ]
 
 { #category : 'inspector' }
 GbxDebuggerService >> openInspectorOnOop: anOop [
+	self isSessionUsable ifFalse: [ ^ false ].
 	(anOop isNil or: [ anOop <= 20 ]) ifTrue: [ ^ false ].
 	[
 		self inspectorClass inspect: anOop session: session.
@@ -508,11 +566,65 @@ GbxDebuggerService >> oopForVariableNamed: aVariableName [
 { #category : 'inspector' }
 GbxDebuggerService >> evaluateOopFromScript: scriptString [
 	| raw |
+	self isSessionUsable ifFalse: [ ^ nil ].
 	raw := [ session executeAndFetch: scriptString context: session sessionOop ] on: Error do: [ nil ].
 	raw ifNil: [ ^ nil ].
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
 	(raw isString and: [ raw = 'nil' or: [ raw beginsWith: 'Error:' ] ]) ifTrue: [ ^ nil ].
 	^ [ raw asInteger ] on: Error do: [ nil ]
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> canExecuteOnDebugProcess [
+	(self isSessionUsable and: [ processOop isNumber ]) ifFalse: [ ^ false ].
+	^ processOop > 20
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> isSessionUsable [
+	| loggedIn |
+	session ifNil: [ ^ false ].
+	(session respondsTo: #isLoggedIn) ifFalse: [ ^ true ].
+	loggedIn := [ session isLoggedIn ] on: Error do: [ false ].
+	^ loggedIn = true
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> executeDebugScript: scriptString [
+	self isSessionUsable ifFalse: [ ^ nil ].
+	^ [ session executeAndFetch: scriptString context: session sessionOop ]
+		on: Error
+		do: [ nil ]
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> runDebugProcessCommand: commandName recompute: shouldRecompute [
+	| result script |
+	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
+	script := '[
+		| proc |
+		proc := Object _objectForOop: ', processOop asString, '.
+		proc ifNil: [ ^ ''false'' ].
+		proc ', commandName, '.
+		true
+	] value'.
+	result := self executeDebugScript: script.
+	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
+	shouldRecompute ifTrue: [ self recomputeContextList ].
+	^ true
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> asBooleanResult: raw default: defaultBoolean [
+	raw ifNil: [ ^ defaultBoolean ].
+	raw = true ifTrue: [ ^ true ].
+	raw = false ifTrue: [ ^ false ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	(raw respondsTo: #asString) ifFalse: [ ^ defaultBoolean ].
+	raw := raw asString asLowercase.
+	(#('true' '1' 'yes' 'ok') includes: raw) ifTrue: [ ^ true ].
+	(#('false' '0' 'no' 'nil' '') includes: raw) ifTrue: [ ^ false ].
+	^ defaultBoolean
 ]
 
 { #category : 'breakpoint support' }
@@ -548,6 +660,7 @@ GbxDebuggerService >> setBreakPoint [
 GbxDebuggerService >> setBreakPointIn: aTextWidget [
 	| browserKlass |
 	(self canManageBreakPoints) ifFalse: [ ^ false ].
+	(self sourceMatchesCurrentMethodIn: aTextWidget) ifFalse: [ ^ false ].
 	(self hasBreakPointIn: aTextWidget) ifTrue: [ ^ false ].
 	browserKlass := self browserClass.
 	browserKlass ifNil: [ ^ false ].
@@ -684,6 +797,21 @@ GbxDebuggerService >> hasBreakPointIn: aTextWidget [
 	stepPoint := self currentStepPoint.
 	stepPoint ifNil: [ ^ false ].
 	^ bps anySatisfy: [ :bp | (bp respondsTo: #stepPoint) and: [ bp stepPoint = stepPoint ] ]
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> sourceMatchesCurrentMethodIn: aTextWidget [
+	| widgetText sourceText |
+	aTextWidget ifNil: [ ^ true ].
+	(aTextWidget respondsTo: #text) ifFalse: [ ^ true ].
+	currentContext ifNil: [ ^ true ].
+	sourceText := (currentContext respondsTo: #sourceCode)
+		ifTrue: [ currentContext sourceCode ]
+		ifFalse: [ (currentContext respondsTo: #sourceString) ifTrue: [ currentContext sourceString ] ifFalse: [ nil ] ].
+	sourceText ifNil: [ ^ true ].
+	widgetText := [ aTextWidget text asString ] on: Error do: [ nil ].
+	widgetText ifNil: [ ^ true ].
+	^ widgetText = sourceText asString
 ]
 
 { #category : 'breakpoint support' }
