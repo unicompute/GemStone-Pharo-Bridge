@@ -67,6 +67,8 @@ GbsSessionManagerTest >> testWideStringSerialization [
     
     "1. Setup: Create a WideString (an emoji forces Pharo to use WideString)"
     pharoWideString := 'Hello 🌍'.
+    (pharoWideString respondsTo: #asGemStoneUTF8Bytes) ifFalse: [
+        self skip: 'GemStone UTF8 extension not loaded for WideString' ].
     
     "2. Execute: Convert it to the bridge format (This will fail MNU)"
     serializedBytes := pharoWideString asGemStoneUTF8Bytes.

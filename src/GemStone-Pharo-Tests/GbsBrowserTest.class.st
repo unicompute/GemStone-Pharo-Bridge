@@ -10,7 +10,8 @@ GbsBrowserTest >> testFetchRemoteClasses [
 	| session script rawData classes |
 	
 	session := GbsSessionParameters currentSession.
-	self assert: session isNotNil description: 'You must be logged in!'.
+	(session isNil or: [ session isConnected not ]) ifTrue: [
+		self skip: 'Requires an active GemStone session' ].
 	
 	script := '[
 		| dict classNames stream |

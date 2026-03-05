@@ -7,11 +7,13 @@ Class {
 
 { #category : 'tests' }
 GciExecutionTest >> testRawCExecution [
-	| interface cString result |
+	| interface session cString result |
 	interface := GbsServerInterface uniqueInstance.
+	session := GbsSessionParameters currentSession.
 	
-	self assert: GbsSessionParameters currentSession isConnected 
-	     description: 'You must be logged in to run this test!'.
+	(session isNil or: [ session isConnected not ]) ifTrue: [
+		self skip: 'Requires an active GemStone session' ].
+	interface ifNil: [ self skip: 'GemStone server interface unavailable' ].
 	
 	"1. SAFELY ALLOCATE IN C-HEAP: Hides the string from Pharo's Garbage Collector"
 	cString := ExternalAddress fromString: '1+1'.

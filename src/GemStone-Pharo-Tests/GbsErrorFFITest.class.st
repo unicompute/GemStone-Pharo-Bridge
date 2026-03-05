@@ -5,11 +5,22 @@ Class {
 	#package : 'GemStone-Pharo-Tests'
 }
 
+{ #category : 'private' }
+GbsErrorFFITest >> requireLiveSessionAndInterface [
+	| session interface |
+	session := GbsSessionParameters currentSession.
+	(session isNil or: [ session isConnected not ]) ifTrue: [
+		self skip: 'Requires an active GemStone session' ].
+	interface := GbsServerInterface uniqueInstance.
+	interface ifNil: [ self skip: 'GemStone server interface unavailable' ].
+	^ interface
+]
+
 { #category : 'tests' }
 GbsErrorFFITest >> test01ExecuteOnly [
 	"Diagnostic: Does the crash happen DURING execution?"
 	| interface |
-	interface := GbsServerInterface uniqueInstance.
+	interface := self requireLiveSessionAndInterface.
 	
 	"Trigger the runtime error, but DO NOT call GciErr_"
 	interface apiGciExecuteStr: 'Object thisMessageDoesNotExist' context: 20 env: 0.
@@ -22,7 +33,7 @@ GbsErrorFFITest >> test01ExecuteOnly [
 GbsErrorFFITest >> test02ErrorWithExternalAddress [
 	"Diagnostic: Does the crash happen DURING error fetching?"
 	| interface cBuffer hasError |
-	interface := GbsServerInterface uniqueInstance.
+	interface := self requireLiveSessionAndInterface.
 	
 	interface apiGciExecuteStr: 'Object thisMessageDoesNotExist' context: 20 env: 0.
 	
@@ -42,7 +53,7 @@ GbsErrorFFITest >> test03ExecuteSafe [
 	"Diagnostic: Can we safely execute an error without blowing up the C-stack?"
 	| interface resultOop |
 	
-	interface := GbsServerInterface uniqueInstance.
+	interface := self requireLiveSessionAndInterface.
 	
 	"Use the new 2-argument safe execution method!"
 	resultOop := interface apiGciExecuteStrSafe: 'Object thisMessageDoesNotExist' context: 20.
@@ -55,7 +66,7 @@ GbsErrorFFITest >> test03ExecuteSafe [
 GbsErrorFFITest >> testSafeErrorFetch [
 	| interface cBuffer hasError errorBytes errorString |
 	
-	interface := GbsServerInterface uniqueInstance.
+	interface := self requireLiveSessionAndInterface.
 	
 	"1. Trigger the massive error that previously crashed Pharo"
 	interface apiGciExecuteStr: 'Object thisMessageDoesNotExist' context: 20 env: 0.

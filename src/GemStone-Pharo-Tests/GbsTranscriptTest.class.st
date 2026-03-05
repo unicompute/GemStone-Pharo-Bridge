@@ -14,7 +14,8 @@ GbsTranscriptTest >> testLiveTranscriptFetch [
 	
 	"1. Get the active session"
 	session := GbsSessionParameters currentSession.
-	self assert: session isNotNil description: 'You must be logged into GemStone to run this test!'.
+	(session isNil or: [ session isConnected not ]) ifTrue: [
+		self skip: 'Requires an active GemStone session' ].
 	
 	"2. Write to the remote transcript (returning true so we know it executed)"
 	writeResult := session execute: 'Transcript show: ''TDD Hello''; cr. true'.

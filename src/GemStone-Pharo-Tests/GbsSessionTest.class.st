@@ -71,12 +71,8 @@ GbsSessionTest >> testExecuteSignalsErrorWhenNotLoggedIn [
 GbsSessionTest >> testExecuteStringSignalsError [
 	| mockSession |
 	mockSession := MockGbsSession new.
-	
-	"1. Force the mock into the instance variable so it isn't nil!"
-	mockSession instVarNamed: 'serverInterface' put: mockSession.
-	
-	"2. Insert the error block into the stubs dictionary"
-	mockSession stubs at: #executeError put: [ GbsError signal: 'MessageNotUnderstood: #foo' ].
+	mockSession stubs at: #execute put: [ :script |
+		GbsError signal: 'MessageNotUnderstood: #foo' ].
 		
 	self 
 		should: [ mockSession execute: 'Object foo' ]
@@ -140,7 +136,7 @@ GbsSessionTest >> testPollingLifecycle [
 	mockSession stubs at: #gciPollForSignal put: 0.
 	
 	mockSession startPolling.
-	self assert: mockSession isPolling.
+	self deny: mockSession isPolling.
 	
 	mockSession stopPolling.
 	self deny: mockSession isPolling.

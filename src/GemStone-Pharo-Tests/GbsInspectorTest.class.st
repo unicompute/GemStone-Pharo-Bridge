@@ -10,7 +10,8 @@ GbsInspectorTest >> testFetchAndParseLiveInstanceVariables [
 	| session targetOop rawData parsedItems |
 	
 	session := GbsSessionParameters currentSession.
-	self assert: session isNotNil description: 'You must be logged into GemStone to run this test!'.
+	(session isNil or: [ session isConnected not ]) ifTrue: [
+		self skip: 'Requires an active GemStone session' ].
 	
 	"1. Use a guaranteed global object that cannot fail to compile"
 	targetOop := session execute: 'UserGlobals'.
