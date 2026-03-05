@@ -34,6 +34,28 @@ GbsRemoteDebuggerTest >> testContextOopIsValid [
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerTest >> testFetchContextsDirectlyParsesRowsWithOnlyThreeOrFourColumns [
+	| debugger mockSession contexts |
+
+	mockSession := MockGbsSession new.
+	mockSession stubs
+		at: #evaluate
+		put: '1	AbstractException	_signalToDebugger
+2	SmallInteger	/	/'.
+
+	debugger := GbsRemoteDebugger new.
+	debugger session: mockSession.
+	debugger processOop: 222.
+
+	contexts := debugger fetchContextsDirectly.
+
+	self assert: contexts size equals: 2.
+	self assert: (contexts first respondsTo: #selectorOrUnknown).
+	self assert: (contexts first selectorOrUnknown) equals: #_signalToDebugger.
+	self assert: (contexts second selectorOrUnknown) equals: #/.
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerTest >> testContextHasSender [
 	"Test that we can walk the context sender chain"
 	| contextOop hasSender |

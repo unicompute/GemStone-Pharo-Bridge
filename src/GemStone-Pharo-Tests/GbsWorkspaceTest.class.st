@@ -76,6 +76,34 @@ GbsWorkspaceTest >> testDoItPrefersServerProcessOopOverTag [
 ]
 
 { #category : 'tests' }
+GbsWorkspaceTest >> testDoItOpensDebuggerWithServerProcessOopWhenProbeIsFalse [
+	| workspace mockSession |
+	workspace := TestableGbsWorkspace new.
+	mockSession := MockGbsSession new.
+	workspace textEditor text: '1 / 0'.
+
+	mockSession stubs
+		at: #execute
+		put: [ :script |
+			(GbsError new
+				messageText: 'boom';
+				tag: 20;
+				serverProcessOop: 222;
+				exceptionOop: nil;
+				yourself) signal ].
+	mockSession stubs
+		at: #evaluate
+		put: false.
+
+	GbsSessionParameters currentSession: mockSession.
+
+	workspace doIt.
+
+	self assert: workspace debuggerOpened.
+	self assert: workspace lastOpenedProcessOop equals: 222.
+]
+
+{ #category : 'tests' }
 GbsWorkspaceTest >> testDoItDoesNotProbeOrOpenDebuggerForLocalError [
 	| workspace mockSession |
 	workspace := TestableGbsWorkspace new.
