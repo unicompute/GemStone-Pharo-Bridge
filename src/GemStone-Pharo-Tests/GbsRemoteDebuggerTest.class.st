@@ -79,6 +79,10 @@ GbsRemoteDebuggerTest >> testFetchContextsDirectlyParsesRowsWithOnlyThreeOrFourC
 GbsRemoteDebuggerTest >> testContextHasSender [
 	"Test that we can walk the context sender chain"
 	| activeSession contextOop hasSender |
+
+	(Smalltalk globals at: #GbsRunDangerousLiveDebuggerTests ifAbsent: [ false ]) ifFalse: [
+		self skip: 'Dangerous live FFI test disabled'
+	].
 	
 	activeSession := session ifNil: [ GbsSessionParameters currentSession ].
 	(activeSession isNil or: [
