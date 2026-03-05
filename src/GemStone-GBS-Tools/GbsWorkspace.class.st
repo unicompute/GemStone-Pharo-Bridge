@@ -49,6 +49,7 @@ GbsWorkspace >> doIt [
 	code := self selectedCodeOrAll copyReplaceAll: String cr with: String lf.
 	code ifEmpty: [ ^ self ].
 
+	"Get the actual logged-in GbsSession (class variable CurrentSession)"
 	activeSession := GbsSessionParameters currentSession.
 	activeSession ifNil: [ 
 		Transcript show: 'No current session'; cr.
