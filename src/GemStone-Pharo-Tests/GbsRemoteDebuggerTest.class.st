@@ -10,8 +10,27 @@ Class {
 
 { #category : 'running' }
 GbsRemoteDebuggerTest >> setUp [
+	| runLive sessionCandidate |
 	super setUp.
-	session := GbsSessionParameters currentSession.
+	runLive := Smalltalk globals
+		at: #GbsRunLiveDebuggerTests
+		ifAbsent: [ false ].
+	runLive ifFalse: [
+		session := nil.
+		^ self
+	].
+
+	sessionCandidate := GbsSessionParameters currentSession.
+	session := sessionCandidate.
+	session ifNotNil: [
+		((session respondsTo: #isLoggedIn) and: [ session isLoggedIn not ]) ifTrue: [
+			session := nil
+		].
+		((session respondsTo: #sessionOop)
+			and: [ session sessionOop isNil or: [ session sessionOop <= 1 ] ]) ifTrue: [
+			session := nil
+		]
+	]
 ]
 
 { #category : 'tests' }
