@@ -61,18 +61,20 @@ GbsWorkspace >> doIt [
 				ifTrue: [ ex serverProcessOop ]
 				ifFalse: [ nil ].
 			processOop := serverCandidate.
-		(processOop isNil or: [ processOop = 0 or: [ processOop = 20 ] ]) ifTrue: [
-			processOop := (ex respondsTo: #tag)
-				ifTrue: [ ex tag ]
-				ifFalse: [ 20 ]
-		].
-		(processOop isNil or: [ processOop = 0 ]) ifTrue: [
-			processOop := (ex respondsTo: #exceptionOop)
-				ifTrue: [ ex exceptionOop ]
-				ifFalse: [ 20 ]
-		].
-		processOop := processOop ifNil: [ 20 ].
-		processOop := (processOop = 0) ifTrue: [ 20 ] ifFalse: [ processOop ].
+			(processOop isNil or: [ processOop = 0 or: [ processOop = 20 ] ]) ifTrue: [
+				processOop := (ex respondsTo: #tag)
+					ifTrue: [ ex tag ]
+					ifFalse: [ 20 ]
+			].
+			(processOop isNumber not) ifTrue: [ processOop := 20 ].
+			(processOop isNil or: [ processOop = 0 ]) ifTrue: [
+				processOop := (ex respondsTo: #exceptionOop)
+					ifTrue: [ ex exceptionOop ]
+					ifFalse: [ 20 ]
+			].
+			(processOop isNumber not) ifTrue: [ processOop := 20 ].
+			processOop := processOop ifNil: [ 20 ].
+			processOop := (processOop = 0) ifTrue: [ 20 ] ifFalse: [ processOop ].
 
 			exceptionCandidate := (ex respondsTo: #exceptionOop)
 				ifTrue: [ ex exceptionOop ]
