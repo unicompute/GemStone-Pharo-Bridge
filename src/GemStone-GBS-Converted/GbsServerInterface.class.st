@@ -112,11 +112,9 @@ GbsServerInterface >> apiGciExecuteStr: s context: c [
 
 { #category : 'api' }
 GbsServerInterface >> apiGciExecuteStr: source context: contextOop env: env [
-    "Exact C ABI: const char* + 64-bit context + 32-bit env."
-    ^ self 
-        ffiCall: #(uint64 GciExecuteStr_(String source, uint64 contextOop, int env))
-        module: libraryPath
-        options: #( + optNonThreaded )
+    "Safety fallback: route via the proven 2-arg execute path.
+    Current callers pass env=0, so behavior is preserved."
+    ^ self apiGciExecute: source context: contextOop
 ]
 
 { #category : 'api - execution' }
