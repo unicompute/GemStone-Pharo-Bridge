@@ -44,87 +44,43 @@ GbsWorkspace >> doCommit [
 
 { #category : 'actions' }
 GbsWorkspace >> doIt [
-	| code activeSession result processOop exceptionCandidate currentUsable exceptionUsable hasRemoteMetadata serverCandidate |
+	| code activeSession result processOop |
 
 	code := self selectedCodeOrAll copyReplaceAll: String cr with: String lf.
 	code ifEmpty: [ ^ self ].
 
 	activeSession := GbsSessionParameters currentSession.
-	activeSession ifNil: [ ^ self inform: 'No Session' ].
+	activeSession ifNil: [ 
+		Transcript show: 'No current session'; cr.
+		^ self inform: 'No Session - please login to GemStone first' 
+	].
+	
+	Transcript 
+		show: 'Session: ', activeSession printString; 
+		show: ' isLoggedIn: ', activeSession isLoggedIn asString; 
+		cr.
 
 	"Execute and catch ALL errors - open debugger on any error"
 	[
 		result := activeSession execute: code.
 		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
 	] on: GbsError do: [ :ex |
-			serverCandidate := (ex respondsTo: #serverProcessOop)
-				ifTrue: [ ex serverProcessOop ]
-				ifFalse: [ nil ].
-			processOop := serverCandidate.
-			(processOop isNil or: [ processOop = 0 or: [ processOop = 20 ] ]) ifTrue: [
-				processOop := (ex respondsTo: #tag)
-					ifTrue: [ ex tag ]
-					ifFalse: [ 20 ]
-			].
-			(processOop isNumber not) ifTrue: [ processOop := 20 ].
-			(processOop isNil or: [ processOop = 0 ]) ifTrue: [
-				processOop := (ex respondsTo: #exceptionOop)
-					ifTrue: [ ex exceptionOop ]
-					ifFalse: [ 20 ]
-			].
-			(processOop isNumber not) ifTrue: [ processOop := 20 ].
-			processOop := processOop ifNil: [ 20 ].
-			processOop := (processOop = 0) ifTrue: [ 20 ] ifFalse: [ processOop ].
-
-			exceptionCandidate := (ex respondsTo: #exceptionOop)
-				ifTrue: [ ex exceptionOop ]
-				ifFalse: [ nil ].
-			hasRemoteMetadata := ((serverCandidate notNil
-				and: [ serverCandidate ~= 0 and: [ serverCandidate ~= 20 ] ])
-				or: [ exceptionCandidate notNil
-					and: [ exceptionCandidate ~= 0 and: [ exceptionCandidate ~= 20 ] ] ]).
-			currentUsable := false.
-			hasRemoteMetadata ifTrue: [
-				currentUsable := self
-					isDebuggerStackCandidateOop: processOop
-					session: activeSession
-			].
-			exceptionUsable := false.
-			(hasRemoteMetadata and: [
-				currentUsable not and: [ exceptionCandidate notNil and: [ exceptionCandidate ~= 0 and: [ exceptionCandidate ~= 20 ] ] ] ]) ifTrue: [
-				exceptionUsable := self
-					isDebuggerStackCandidateOop: exceptionCandidate
-					session: activeSession.
-			exceptionUsable ifTrue: [ processOop := exceptionCandidate ].
-		].
-		Transcript
-			show: 'GbsError: ';
-			show: ex messageText;
-			show: ' serverProcessOop=';
-			show: ((ex respondsTo: #serverProcessOop)
-				ifTrue: [ ex serverProcessOop asString ]
-				ifFalse: [ 'nil' ]);
-			show: ' exceptionOop=';
-			show: ((ex respondsTo: #exceptionOop)
-				ifTrue: [ ex exceptionOop asString ]
-				ifFalse: [ 'nil' ]);
-			show: ' chosenProcessOop=';
-			show: processOop asString;
-			show: ' currentUsable=';
-			show: currentUsable asString;
-			show: ' exceptionUsable=';
-			show: exceptionUsable asString;
+		Transcript 
+			show: 'GbsError: ', ex messageText; 
+			show: ' serverProcessOop=', (ex serverProcessOop ifNil: ['nil'] ifNotNil: #asString);
+			show: ' exceptionOop=', (ex exceptionOop ifNil: ['nil'] ifNotNil: #asString);
 			cr.
-		((processOop isNumber and: [ processOop > 20 ]) and: [ currentUsable or: [ exceptionUsable ] ])
-			ifTrue: [
-				self
-					openRemoteDebuggerOn: ex messageText
-					processOop: processOop
-					session: activeSession
-			]
-			ifFalse: [
-				self inform: 'GemStone Error: ', ex messageText
-			]
+		processOop := ex serverProcessOop.
+		(processOop isNil or: [ processOop = 0 or: [ processOop = 20 ] ]) ifTrue: [
+			processOop := ex exceptionOop.
+		].
+		(processOop isNil or: [ processOop = 0 or: [ processOop = 20 ] ]) ifTrue: [
+			processOop := 20.
+		].
+		self
+			openRemoteDebuggerOn: ex messageText
+			processOop: processOop
+			session: activeSession
 	].
 ]
 
