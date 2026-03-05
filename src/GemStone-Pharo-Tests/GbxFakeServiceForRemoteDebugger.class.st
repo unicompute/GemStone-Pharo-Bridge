@@ -89,3 +89,8 @@ GbxFakeServiceForRemoteDebugger >> sourceMap [
 GbxFakeServiceForRemoteDebugger >> sourceMap: aCollection [
 	sourceMap := aCollection
 ]
+
+{ #category : 'selection' }
+GbxFakeServiceForRemoteDebugger >> selectContext: aContext [
+	"Presenter tests only need this to exist."
+]
