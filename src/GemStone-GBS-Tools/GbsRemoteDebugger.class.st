@@ -260,11 +260,9 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 	| script rawData contexts |
 
 	processOop ifNil: [
-		Transcript show: 'fetchContextsDirectly: processOop is nil'; cr.
 		^ #( )
 	].
 	processOop = 0 ifTrue: [
-		Transcript show: 'fetchContextsDirectly: processOop is 0'; cr.
 		^ #( )
 	].
 
@@ -338,18 +336,14 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 		rawData := session evaluate: script.
 		(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
 		rawData ifNil: [ rawData := '' ].
-		Transcript show: 'fetchContextsDirectly rawData: ', rawData; cr.
 	] on: Error do: [ :ex |
-		Transcript show: 'fetchContextsDirectly error: ', ex messageText; cr.
 		^ #( )
 	].
 
 	rawData ifNil: [
-		Transcript show: 'fetchContextsDirectly: rawData is nil'; cr.
 		^ #( )
 	].
 	rawData isEmpty ifTrue: [
-		Transcript show: 'fetchContextsDirectly: rawData is empty'; cr.
 		^ #( )
 	].
 
@@ -371,11 +365,10 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 							copyReplaceAll: '<CR>' with: String cr;
 							copyReplaceAll: '<LF>' with: String lf);
 						yourself
-					] on: Error do: [ :ex |
-						Transcript show: 'Error creating activation: ', ex messageText; cr.
-						nil
+						] on: Error do: [ :ex |
+							nil
+						]
 					]
-				]
 			]
 		] thenSelect: #isNotNil.
 

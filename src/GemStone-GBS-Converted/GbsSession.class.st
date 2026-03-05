@@ -111,20 +111,8 @@ GbsSession >> checkForError [
 				ifFalse: [ contextOop ]).
 			(debugOop isNil or: [ debugOop = 0 ]) ifTrue: [ debugOop := 20 ].
 
-			"Log for debugging"
-			Transcript
-				show: 'checkForError: result=';
-				show: result asString;
-				show: ' contextOop=';
-				show: contextOop asString;
-				show: ' exceptionOop=';
-				show: exceptionOop asString;
-				show: ' debugOop=';
-				show: debugOop asString;
-				cr.
-
-			"Create the error with BOTH the message and the context OOP"
-			gbsError := GbsError new
+				"Create the error with BOTH the message and the context OOP"
+				gbsError := GbsError new
 				messageText: errMsg;
 				tag: debugOop;
 				serverProcessOop: contextOop;

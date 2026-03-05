@@ -96,25 +96,10 @@ GbsWorkspace >> doIt [
 			exceptionUsable ifTrue: [ processOop := exceptionCandidate ].
 		].
 
-		Transcript
-			show: 'GbsError: ';
-			show: ex messageText;
-			show: ' serverProcessOop=';
-			show: (serverCandidate ifNil: [ 'nil' ] ifNotNil: [ serverCandidate asString ]);
-			show: ' exceptionOop=';
-			show: (exceptionCandidate ifNil: [ 'nil' ] ifNotNil: [ exceptionCandidate asString ]);
-			show: ' chosenProcessOop=';
-			show: processOop asString;
-			show: ' currentUsable=';
-			show: currentUsable asString;
-			show: ' exceptionUsable=';
-			show: exceptionUsable asString;
-			cr.
-
-			((processOop isNumber and: [ processOop > 20 ]) and: [ hasRemoteMetadata ])
-				ifTrue: [
-					self
-						openRemoteDebuggerOn: ex messageText
+		((processOop isNumber and: [ processOop > 20 ]) and: [ hasRemoteMetadata ])
+			ifTrue: [
+				self
+					openRemoteDebuggerOn: ex messageText
 					processOop: processOop
 					session: activeSession
 			]
