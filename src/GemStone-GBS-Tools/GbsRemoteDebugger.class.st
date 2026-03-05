@@ -108,7 +108,13 @@ GbsRemoteDebugger >> initializePresenters [
 
 	stackList := self newList.
 	stackList whenSelectionChangedDo: [ :selection |
-		self contextSelected: selection selectedItem
+		| index |
+		index := (selection respondsTo: #selectedIndex)
+			ifTrue: [ selection selectedIndex ifNil: [ 0 ] ]
+			ifFalse: [ 0 ].
+		(index > 0 and: [ contextList notNil and: [ index <= contextList size ] ])
+			ifTrue: [ self contextSelected: (contextList at: index) ]
+			ifFalse: [ self contextSelected: selection selectedItem ]
 	].
 
 	sourceText := self newText.
@@ -394,14 +400,23 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 	| context sourceCode variables associations |
 
 	selectedItem ifNil: [ ^ self ].
+	context := selectedItem.
+	(context respondsTo: #sourceCode) ifFalse: [
+		| index |
+		index := (stackList respondsTo: #selectedIndex)
+			ifTrue: [ stackList selectedIndex ifNil: [ 0 ] ]
+			ifFalse: [ 0 ].
+		(index > 0 and: [ contextList notNil and: [ index <= contextList size ] ])
+			ifTrue: [ context := contextList at: index ].
+	].
 	(selectedItem respondsTo: #sourceCode) ifFalse: [
+		(context respondsTo: #sourceCode) ifTrue: [ ^ self contextSelected: context ].
 		sourceText text: ''.
 		variablesTable items: #().
 		^ self
 	].
 
 	"Use the selected context"
-	context := selectedItem.
 	service ifNotNil: [ service selectContext: context ].
 	context ifNil: [ ^ self ].
 
