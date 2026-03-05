@@ -164,7 +164,7 @@ GbsSession >> evaluate: s [
     | i r | 
     self validateReadyForExecution: s.
     i := GbsServerInterface uniqueInstance.
-    r := i apiGciExecuteStr: s context: 20 environment: 0. 
+    r := i apiGciExecuteStr: s context: 20 env: 0. 
     
     "CRITICAL: Only check for errors if GemStone returned OOP_ILLEGAL (1)"
     r = 1 ifTrue: [ 
@@ -182,7 +182,7 @@ GbsSession >> evaluateAndFetchString: aString [
     resultOop := GbsServerInterface uniqueInstance 
         apiGciExecuteStr: aString 
         context: sessionOop 
-        environment: 0.
+        env: 0.
     ^ GbsServerInterface uniqueInstance fetchString: resultOop.
 ]
 
