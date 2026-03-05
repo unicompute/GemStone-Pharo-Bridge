@@ -436,7 +436,10 @@ GbxDebuggerService >> evaluateOopFromScript: scriptString [
 { #category : 'breakpoint support' }
 GbxDebuggerService >> currentBreakPointList [
 	"Get breakpoints for current session"
-	^ self breakpointClass breakPointListFor: session
+	| klass |
+	klass := self breakpointClass.
+	klass ifNil: [ ^ #( ) ].
+	^ klass breakPointListFor: session
 ]
 
 { #category : 'breakpoint support' }
@@ -461,9 +464,12 @@ GbxDebuggerService >> setBreakPoint [
 
 { #category : 'breakpoint support' }
 GbxDebuggerService >> setBreakPointIn: aTextWidget [
+	| browserKlass |
 	(self canManageBreakPoints) ifFalse: [ ^ false ].
+	browserKlass := self browserClass.
+	browserKlass ifNil: [ ^ false ].
 
-	self browserClass
+	browserKlass
 		setBreakInView: aTextWidget
 		model: currentContext
 		method: self selectedMethodSelector
@@ -499,12 +505,12 @@ GbxDebuggerService >> removeAllBreakPoints [
 
 { #category : 'breakpoint support' }
 GbxDebuggerService >> breakpointClass [
-	^ GbxBreakPoint
+	^ Smalltalk at: #GbxBreakPoint ifAbsent: [ nil ]
 ]
 
 { #category : 'breakpoint support' }
 GbxDebuggerService >> browserClass [
-	^ GbxBrowser
+	^ Smalltalk at: #GbxBrowser ifAbsent: [ nil ]
 ]
 
 { #category : 'breakpoint support' }
