@@ -419,9 +419,6 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 	"Use the selected context"
 	service ifNotNil: [ service selectContext: context ].
 	context ifNil: [ ^ self ].
-	(context respondsTo: #reset) ifTrue: [
-		[ context reset ] on: Error do: [ ].
-	].
 
 	"Display source code - use cached source if available"
 	sourceCode := context sourceCode.
