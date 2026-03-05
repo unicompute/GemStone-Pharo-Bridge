@@ -188,8 +188,10 @@ GbxActivation >> reset [
 	| script result parts |
 	
 	script := '[
-		| frame fullEntry methodOrNil thisReceiver thisSelf numArgsTemps className selectorName sourceStr |
-		frame := self _gsiDebuggerDetailedReportAt: ', level asString, '.
+		| obj frame fullEntry methodOrNil thisReceiver thisSelf numArgsTemps className selectorName sourceStr |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj ifNil: [ ^ ''ERROR|nil'' ].
+		frame := [ obj _gsiDebuggerDetailedReportAt: ', level asString, ' ] on: Error do: [ nil ].
 		frame ifNil: [ ^ ''ERROR|nil'' ].
 		fullEntry := frame first.
 		fullEntry ifNil: [ ^ ''ERROR|nil'' ].
