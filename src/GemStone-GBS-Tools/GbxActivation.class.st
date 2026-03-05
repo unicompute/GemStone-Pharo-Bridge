@@ -37,12 +37,16 @@ Class {
 
 { #category : 'instance creation' }
 GbxActivation class >> processOop: procOop level: aLevel session: aSession [
-	^ self new
+	| activation |
+	activation := self new.
+	activation
 		processOop: procOop;
-		level: aLevel;
-		session: aSession;
-		reset;
-		yourself
+		level: aLevel.
+	(activation respondsTo: #session:)
+		ifTrue: [ activation session: aSession ]
+		ifFalse: [ activation instVarNamed: 'session' put: aSession ].
+	activation reset.
+	^ activation
 ]
 
 { #category : 'testing' }

@@ -233,8 +233,10 @@ GbxContextListPolicy >> fetchServerContexts [
 				selectorSymbol := [ (parts at: 3) asSymbol ] on: Error do: [ #unboundMethod ].
 				ctxOop := [ (parts at: 5) asInteger ] on: Error do: [ processOop ].
 				activation := GbxActivation new.
+				(activation respondsTo: #session:)
+					ifTrue: [ activation session: debugger session ]
+					ifFalse: [ activation instVarNamed: 'session' put: debugger session ].
 				activation
-					session: debugger session;
 					level: ([ parts first asInteger ] on: Error do: [ 1 ]);
 					initializeFromClass: (parts at: 2)
 						selector: selectorSymbol

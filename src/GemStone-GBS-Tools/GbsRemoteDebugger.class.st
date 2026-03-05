@@ -230,12 +230,15 @@ GbsRemoteDebugger >> fetchStackFramesFromData [
 	
 	index := 0.
 	contexts := stackData splitOn: $^ thenCollect: [ :frameStr |
-		| parts |
+		| parts activation |
 		parts := frameStr splitOn: $|.
 		parts size >= 3 ifTrue: [
 			index := index + 1.
-			GbxActivation new
-				session: session;
+			activation := GbxActivation new.
+			(activation respondsTo: #session:)
+				ifTrue: [ activation session: session ]
+				ifFalse: [ activation instVarNamed: 'session' put: session ].
+			activation
 				processOop: 0;
 				level: index;
 				selector: (parts at: 1) asSymbol;
@@ -362,10 +365,14 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 					sourceValue := (parts size >= 5
 						ifTrue: [ parts at: 5 ]
 						ifFalse: [ '' ]).
-					[ GbxActivation new
+					[ | activation |
+					activation := GbxActivation new.
+					(activation respondsTo: #session:)
+						ifTrue: [ activation session: session ]
+						ifFalse: [ activation instVarNamed: 'session' put: session ].
+					activation
 						processOop: processOop;
 						level: levelValue;
-						session: session;
 						methodClass: classValue;
 						selector: ([ selectorValue asSymbol ] on: Error do: [ #unknown ]);
 						gsMethodId: methodValue;
