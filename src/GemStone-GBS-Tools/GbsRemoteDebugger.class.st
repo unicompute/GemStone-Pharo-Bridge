@@ -113,6 +113,7 @@ GbsRemoteDebugger >> initializePresenters [
 
 	sourceText := self newText.
 	sourceText beNotEditable.
+	sourceText contextMenu: [ self sourceMenu ].
 
 	variablesTable := self newTable.
 	variablesTable
@@ -208,6 +209,7 @@ GbsRemoteDebugger >> fetchStackFrames [
 	contextList ifEmpty: [
 		stackList items: #('No stack frames available - error occurred in GemStone').
 		sourceText text: ''.
+		self clearSourceHighlight.
 		variablesTable items: #().
 		^ self
 	].
@@ -402,6 +404,7 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 		"Try to get from cached sourceString"
 		context sourceString ifNil: [ '' ]
 	]).
+	self applySourceMapHighlightFor: context.
 
 	"Fetch and display variables"
 	[
@@ -463,6 +466,92 @@ GbsRemoteDebugger >> inspectProcess [
 GbsRemoteDebugger >> inspectFrame [
 	service ifNotNil: [ ^ service inspectCurrentFrame ].
 	^ false
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> setBreakPoint [
+	service ifNil: [ ^ false ].
+	^ [ service setBreakPointIn: sourceText ] on: Error do: [ false ]
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> removeBreakPoint [
+	service ifNil: [ ^ false ].
+	^ [ service removeBreakIn: sourceText ] on: Error do: [ false ]
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> removeAllBreakPoints [
+	service ifNil: [ ^ 0 ].
+	^ [ service removeAllBreakPoints ] on: Error do: [ 0 ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> sourceMenu [
+	| menu |
+	menu := self newMenu.
+	menu addGroup: [ :group |
+		group addItem: [ :item |
+			item
+				name: 'Set Breakpoint';
+				action: [ self setBreakPoint ] ].
+		group addItem: [ :item |
+			item
+				name: 'Remove Breakpoint';
+				action: [ self removeBreakPoint ] ].
+		group addItem: [ :item |
+			item
+				name: 'Remove All Breakpoints';
+				action: [ self removeAllBreakPoints ] ] ].
+	menu addGroup: [ :group |
+		group addItem: [ :item | item name: 'Inspect Receiver'; action: [ self inspectReceiver ] ].
+		group addItem: [ :item | item name: 'Inspect Process'; action: [ self inspectProcess ] ].
+		group addItem: [ :item | item name: 'Inspect Frame'; action: [ self inspectFrame ] ] ].
+	^ menu
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> applySourceMapHighlightFor: aContext [
+	| map interval |
+	sourceText ifNil: [ ^ self ].
+	map := self sourceMapFor: aContext.
+	(map isCollection and: [ map isEmpty not ]) ifFalse: [ ^ self clearSourceHighlight ].
+	interval := map first value.
+	(interval isNil or: [ (interval respondsTo: #first) not or: [ (interval respondsTo: #last) not ] ]) ifTrue: [
+		^ self clearSourceHighlight
+	].
+	[
+		(sourceText respondsTo: #selectionInterval:)
+			ifTrue: [ sourceText selectionInterval: (interval first to: interval last) ]
+			ifFalse: [
+				(sourceText respondsTo: #selectFrom:to:)
+					ifTrue: [ sourceText selectFrom: interval first to: interval last ]
+			]
+	] on: Error do: [ ].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> clearSourceHighlight [
+	| textSize |
+	sourceText ifNil: [ ^ self ].
+	[
+		(sourceText respondsTo: #text)
+			ifTrue: [ textSize := sourceText text asString size ]
+			ifFalse: [ textSize := 0 ].
+		(sourceText respondsTo: #selectionInterval:)
+			ifTrue: [ sourceText selectionInterval: (textSize + 1 to: textSize) ]
+	] on: Error do: [ ].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> sourceMapFor: aContext [
+	| map |
+	map := #( ).
+	service ifNotNil: [
+		map := [ service sourceMap ] on: Error do: [ #( ) ]
+	].
+	((map isCollection and: [ map isEmpty not ]) or: [ aContext isNil ]) ifTrue: [ ^ map ].
+	^ [ aContext visibleSourceMap ] on: Error do: [ #( ) ]
 ]
 
 { #category : 'private' }
