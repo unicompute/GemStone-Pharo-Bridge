@@ -322,21 +322,12 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 		depth := 0.
 		[ ctx notNil and: [ depth < 30 ] ] whileTrue: [
 			className := [ ctx method inClass name ] on: Error do: [ ''<unknown>'' ].
-				sourceText := [ ctx sourceCode asString ] on: Error do: [ '''' ].
-				sourceText ifNil: [ sourceText := '''' ].
-				sourceText := sourceText
-					copyReplaceAll: (String with: Character cr) with: ''<CR>'';
-					copyReplaceAll: (String with: Character lf) with: ''<LF>'';
-					copyReplaceAll: String cr with: ''<CR>'';
-					copyReplaceAll: String lf with: ''<LF>'';
-					copyReplaceAll: Character tab asString with: ''<TAB>''.
 			depth := depth + 1.
 			stream
 				nextPutAll: depth asString; tab;
 				nextPutAll: className; tab;
 				nextPutAll: (([ ctx selector asString ] on: Error do: [ ''<unknown>'' ])); tab;
-				nextPutAll: (([ ctx method ifNil: [ ''<unknown>'' ] ifNotNil: [ :m | m selector asString ] ] on: Error do: [ ''<unknown>'' ])); tab;
-				nextPutAll: sourceText;
+				nextPutAll: (([ ctx method ifNil: [ ''<unknown>'' ] ifNotNil: [ :m | m selector asString ] ] on: Error do: [ ''<unknown>'' ]));
 				lf.
 			ctx := [ ctx sender ] on: Error do: [ nil ].
 		].
