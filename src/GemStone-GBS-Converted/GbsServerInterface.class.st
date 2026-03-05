@@ -105,7 +105,9 @@ GbsServerInterface >> apiGciExecute: aString context: aContext [
 ]
 
 { #category : 'api' }
-GbsServerInterface >> apiGciExecuteStr: s context: c [ ^ self ffiCall: #(void* GciExecuteStr(String s, void* c)) module: libraryPath
+GbsServerInterface >> apiGciExecuteStr: s context: c [
+	"Canonical entrypoint delegates to 3-arg GciExecuteStr_ with env=0."
+	^ self apiGciExecuteStr: s context: c env: 0
 ]
 
 { #category : 'api' }
@@ -119,11 +121,8 @@ GbsServerInterface >> apiGciExecuteStr: source context: contextOop env: env [
 
 { #category : 'api - execution' }
 GbsServerInterface >> apiGciExecuteStr: aString context: aContext environment: envId [
-    <primitive: #primitiveNativeCall error: errorCode>
-    "Use String - matching your standalone test exactly"
-    ^ self ffiCall: #(int64 GciExecuteStr_(String aString, int64 aContext, int envId)) 
-           module: libraryPath 
-           options: #( + optNonThreaded )
+	"Compatibility selector; keep all ABI details in #apiGciExecuteStr:context:env:."
+	^ self apiGciExecuteStr: aString context: aContext env: envId
 ]
 
 { #category : 'ffi' }
