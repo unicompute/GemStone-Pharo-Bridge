@@ -107,3 +107,78 @@ GbxContextListPolicyTest >> testComputeContextListMergesServerAndClientContexts 
 	self assert: (list at: 2) == topClient.
 	self assert: (list at: 3) == bottomClient.
 ]
+
+{ #category : 'tests' }
+GbxContextListPolicyTest >> testIsGlueTreatsIntermediateContextsAsGlue [
+	| debugger policy topClient topGlue intermediate bottomGlue visibleBelow |
+
+	debugger := GbxFakeDebuggerForPolicy new.
+	policy := GbxTestableContextListPolicy debugger: debugger.
+
+	visibleBelow := GbxFakeContextForPolicy new.
+	visibleBelow isGlue: false.
+
+	bottomGlue := GbxFakeContextForPolicy new.
+	bottomGlue
+		gbxIsGsBottomGlue: true;
+		sender: visibleBelow.
+
+	intermediate := GbxFakeContextForPolicy new.
+	intermediate
+		isGlue: false;
+		sender: bottomGlue.
+
+	topGlue := GbxFakeContextForPolicy new.
+	topGlue
+		gbxIsGsTopGlue: true;
+		sender: intermediate.
+
+	topClient := GbxFakeContextForPolicy new.
+	topClient
+		isGlue: false;
+		sender: topGlue.
+
+	debugger topContext: topClient.
+
+	self assert: (policy isGlue: intermediate).
+	self deny: (policy isGlue: visibleBelow)
+]
+
+{ #category : 'tests' }
+GbxContextListPolicyTest >> testFirstClientContextAboveDoesNotCountIntermediateGlueContexts [
+	| debugger policy gsContext gsError markerTopGlue intermediate bottomGlue visibleBelow |
+
+	debugger := GbxFakeDebuggerForPolicy new.
+	policy := GbxTestableContextListPolicy debugger: debugger.
+
+	gsContext := GbxFakeContextForPolicy new.
+	gsContext
+		gbxIsServerContext: true;
+		processOop: 88.
+
+	gsError := GbxFakeGbsErrorForPolicy new.
+	gsError serverProcessOop: 88.
+
+	visibleBelow := GbxFakeContextForPolicy new.
+	visibleBelow isGlue: false.
+
+	bottomGlue := GbxFakeContextForPolicy new.
+	bottomGlue
+		gbxIsGsBottomGlue: true;
+		sender: visibleBelow.
+
+	intermediate := GbxFakeContextForPolicy new.
+	intermediate
+		isGlue: false;
+		sender: bottomGlue.
+
+	markerTopGlue := GbxFakeContextForPolicy new.
+	markerTopGlue
+		gbxIsGsTopGlue: true;
+		receiver: gsError;
+		sender: intermediate.
+
+	debugger topContext: markerTopGlue.
+
+	self assert: (policy firstClientContextAbove: gsContext) isNil
+]

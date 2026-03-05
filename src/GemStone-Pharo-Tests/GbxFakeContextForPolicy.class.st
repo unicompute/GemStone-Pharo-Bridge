@@ -6,6 +6,9 @@ Class {
 		'receiver',
 		'isGlue',
 		'isServer',
+		'isTopGlue',
+		'isBottomGlue',
+		'isServerCall',
 		'processOop',
 		'methodClass',
 		'selector'
@@ -52,6 +55,36 @@ GbxFakeContextForPolicy >> gbxIsServerContext [
 { #category : 'accessing' }
 GbxFakeContextForPolicy >> gbxIsServerContext: aBoolean [
 	isServer := aBoolean
+]
+
+{ #category : 'testing' }
+GbxFakeContextForPolicy >> gbxIsGsTopGlue [
+	^ isTopGlue ifNil: [ false ]
+]
+
+{ #category : 'accessing' }
+GbxFakeContextForPolicy >> gbxIsGsTopGlue: aBoolean [
+	isTopGlue := aBoolean
+]
+
+{ #category : 'testing' }
+GbxFakeContextForPolicy >> gbxIsGsBottomGlue [
+	^ isBottomGlue ifNil: [ false ]
+]
+
+{ #category : 'accessing' }
+GbxFakeContextForPolicy >> gbxIsGsBottomGlue: aBoolean [
+	isBottomGlue := aBoolean
+]
+
+{ #category : 'testing' }
+GbxFakeContextForPolicy >> gbxIsServerCallContext [
+	^ isServerCall ifNil: [ false ]
+]
+
+{ #category : 'accessing' }
+GbxFakeContextForPolicy >> gbxIsServerCallContext: aBoolean [
+	isServerCall := aBoolean
 ]
 
 { #category : 'accessing' }

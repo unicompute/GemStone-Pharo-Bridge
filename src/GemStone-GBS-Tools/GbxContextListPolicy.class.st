@@ -277,20 +277,30 @@ GbxContextListPolicy >> isGlueContext: aContext [
 
 { #category : 'testing' }
 GbxContextListPolicy >> isGlue: aContext [
-	| className |
+	| inGlue nextVisibleContext ctx |
 	aContext ifNil: [ ^ false ].
-	(aContext respondsTo: #isGlue) ifTrue: [ ^ aContext isGlue ].
-	(aContext respondsTo: #gbxIsServerCallContext)
-		ifTrue: [ aContext gbxIsServerCallContext ifTrue: [ ^ true ] ].
-	(aContext respondsTo: #gbxIsGsTopGlue)
-		ifTrue: [ aContext gbxIsGsTopGlue ifTrue: [ ^ true ] ].
-	(aContext respondsTo: #gbxIsGsBottomGlue)
-		ifTrue: [ aContext gbxIsGsBottomGlue ifTrue: [ ^ true ] ].
-	(aContext respondsTo: #gbxIsServerContext)
-		ifTrue: [ aContext gbxIsServerContext ifTrue: [ ^ self isGlueContext: aContext ] ].
-	className := aContext class name asString.
-	((className beginsWith: 'Gbs') or: [ className beginsWith: 'Gbx' ])
-		ifTrue: [ ^ true ].
+
+	(self isDirectGlueContext: aContext) ifTrue: [ ^ true ].
+
+	"VW parity: a context can be glue even when it is not itself marked as top/bottom
+	if it lies inside a top-glue to bottom-glue run."
+	inGlue := false.
+	nextVisibleContext := nil.
+	ctx := (debugger respondsTo: #topContext)
+		ifTrue: [ debugger topContext ]
+		ifFalse: [ nil ].
+	[ ctx notNil ] whileTrue: [
+		inGlue
+			ifTrue: [ ctx == nextVisibleContext ifTrue: [ inGlue := false ] ]
+			ifFalse: [
+				(self isTopGlueContext: ctx) ifTrue: [
+					inGlue := true.
+					nextVisibleContext := (self bottomGlueFrom: ctx) sender
+				]
+			].
+		ctx == aContext ifTrue: [ ^ inGlue ].
+		ctx := [ ctx sender ] on: Error do: [ nil ].
+	].
 	^ false
 ]
 
@@ -325,6 +335,64 @@ GbxContextListPolicy >> firstClientContextAbove: gsContext [
 		ctx := [ ctx sender ] on: Error do: [ nil ].
 	].
 	^ nil
+]
+
+{ #category : 'private' }
+GbxContextListPolicy >> isDirectGlueContext: aContext [
+	| className |
+	aContext ifNil: [ ^ false ].
+	(aContext respondsTo: #isGlue) ifTrue: [ ^ aContext isGlue ].
+	(self isServerCallContext: aContext) ifTrue: [ ^ true ].
+	(self isTopGlueContext: aContext) ifTrue: [ ^ true ].
+	(self isBottomGlueContext: aContext) ifTrue: [ ^ true ].
+	(aContext respondsTo: #gbxIsGsGlue)
+		ifTrue: [ aContext gbxIsGsGlue ifTrue: [ ^ true ] ].
+	(aContext respondsTo: #gbxIsServerContext)
+		ifTrue: [ aContext gbxIsServerContext ifTrue: [ ^ self isGlueContext: aContext ] ].
+	className := aContext class name asString.
+	((className beginsWith: 'Gbs') or: [ className beginsWith: 'Gbx' ])
+		ifTrue: [ ^ true ].
+	^ false
+]
+
+{ #category : 'private' }
+GbxContextListPolicy >> isServerCallContext: aContext [
+	(aContext respondsTo: #gbxIsServerCallContext)
+		ifTrue: [ ^ aContext gbxIsServerCallContext ].
+	^ false
+]
+
+{ #category : 'private' }
+GbxContextListPolicy >> isTopGlueContext: aContext [
+	(aContext respondsTo: #gbxIsGsTopGlue)
+		ifTrue: [ ^ aContext gbxIsGsTopGlue ].
+	^ false
+]
+
+{ #category : 'private' }
+GbxContextListPolicy >> isBottomGlueContext: aContext [
+	(aContext respondsTo: #gbxIsGsBottomGlue)
+		ifTrue: [ ^ aContext gbxIsGsBottomGlue ].
+	^ false
+]
+
+{ #category : 'private' }
+GbxContextListPolicy >> bottomGlueFrom: topGlueContext [
+	"VW parity: given the top context of a glue run, find the bottom glue context."
+	| ctx bottomGlue |
+	ctx := topGlueContext.
+	[ ctx isNil or: [ self isServerCallContext: ctx ] ]
+		whileFalse: [ ctx := [ ctx sender ] on: Error do: [ nil ] ].
+	ctx isNil ifTrue: [ ctx := topGlueContext ].
+
+	bottomGlue := topGlueContext.
+	[
+		ctx := [ ctx sender ] on: Error do: [ nil ].
+		ctx isNil or: [ (self isServerCallContext: ctx) or: [ self isTopGlueContext: ctx ] ]
+	] whileFalse: [
+		(self isBottomGlueContext: ctx) ifTrue: [ bottomGlue := ctx ]
+	].
+	^ bottomGlue
 ]
 
 { #category : 'private' }
