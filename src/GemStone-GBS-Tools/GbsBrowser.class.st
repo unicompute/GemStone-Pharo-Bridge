@@ -217,7 +217,7 @@ GbsBrowser >> gsPrintIt [
 
 { #category : 'initialization' }
 GbsBrowser >> initializePresenters [
-	mainMenu := self buildMenuBar.
+	mainMenu := [ self buildMenuBar ] on: Error do: [ self newMenuBar ].
 	autoCommitEnabled := false.
 	dictionariesList := self newList.
 	classesList := self newList.
@@ -382,16 +382,17 @@ GbsBrowser >> textMenu [
 
 { #category : 'menus' }
 GbsBrowser >> buildMenuBar [
-	^ self newMenuBar
-		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Find'; subMenu: self menuFind ].
-			group addItem: [ :item | item name: 'Dictionary'; subMenu: self menuDictionary ].
-			group addItem: [ :item | item name: 'Class'; subMenu: self menuClass ].
-			group addItem: [ :item | item name: 'Category'; subMenu: self menuCategory ].
-			group addItem: [ :item | item name: 'Method'; subMenu: self menuMethod ].
-			group addItem: [ :item | item name: 'Session'; subMenu: self menuSession ].
-			group addItem: [ :item | item name: 'Window'; subMenu: self menuWindow ] ];
-		yourself
+	| menu |
+	menu := self newMenuBar.
+	menu addGroup: [ :group |
+		group addItem: [ :item | item name: 'Find'; subMenu: self menuFind ].
+		group addItem: [ :item | item name: 'Dictionary'; subMenu: self menuDictionary ].
+		group addItem: [ :item | item name: 'Class'; subMenu: self menuClass ].
+		group addItem: [ :item | item name: 'Category'; subMenu: self menuCategory ].
+		group addItem: [ :item | item name: 'Method'; subMenu: self menuMethod ].
+		group addItem: [ :item | item name: 'Session'; subMenu: self menuSession ].
+		group addItem: [ :item | item name: 'Window'; subMenu: self menuWindow ] ].
+	^ menu
 ]
 
 { #category : 'menus' }
