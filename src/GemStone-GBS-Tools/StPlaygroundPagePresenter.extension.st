@@ -1,6 +1,13 @@
 Extension { #name : 'StPlaygroundPagePresenter' }
 
 { #category : '*GemStone-GBS-Tools-playground' }
+StPlaygroundPagePresenter class >> extendedMenuCommands [
+
+	^ StPlaygroundMenuExtensionCommand allCommands
+		reject: [ :each | each name beginsWith: 'GbsPlayground' ]
+]
+
+{ #category : '*GemStone-GBS-Tools-playground' }
 StPlaygroundPagePresenter >> menuActionsFor: aCodePresenter [
 
 	^ CmCommandGroup forSpec
