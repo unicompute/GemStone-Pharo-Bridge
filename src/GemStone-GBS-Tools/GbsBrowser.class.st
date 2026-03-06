@@ -18,10 +18,13 @@ Class {
 
 { #category : 'instance creation' }
 GbsBrowser class >> openOn: aSession [
-	| browser |
+	| browser loggedIn |
 	aSession ifNil: [ ^ self inform: 'You must log into GemStone first!' ].
-	((aSession respondsTo: #isLoggedIn) and: [ aSession isLoggedIn not ])
-		ifTrue: [ ^ self inform: 'You must log into GemStone first!' ].
+	loggedIn := true.
+	(aSession respondsTo: #isLoggedIn) ifTrue: [
+		loggedIn := [ aSession isLoggedIn = true ] on: Error do: [ false ]
+	].
+	loggedIn ifFalse: [ ^ self inform: 'You must log into GemStone first!' ].
 	
 	^ [
 		browser := self new.
