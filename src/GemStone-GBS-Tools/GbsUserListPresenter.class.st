@@ -10,6 +10,18 @@ Class {
 	#package : 'GemStone-GBS-Tools'
 }
 
+{ #category : 'instance creation' }
+GbsUserListPresenter class >> openOn: aSession [
+	| presenter |
+	aSession ifNil: [ ^ self inform: 'No connected GemStone session. Please login first.' ].
+	((aSession respondsTo: #isLoggedIn) and: [ aSession isLoggedIn not ])
+		ifTrue: [ ^ self inform: 'No connected GemStone session. Please login first.' ].
+	presenter := self new.
+	presenter session: aSession.
+	presenter open.
+	^ presenter
+]
+
 { #category : 'layout' }
 GbsUserListPresenter >> connectPresenters [
 	"1. Keep your existing selection logic"
@@ -20,9 +32,11 @@ GbsUserListPresenter >> connectPresenters [
 	].
 	
 	"2. Automatically grab the active session if it hasn't been injected"
-	session ifNil: [ 
-		"Uses the Singleton we discussed, with a fallback just in case"
-		session := GbsSessionParameters classPool at: #CurrentSession ifAbsent: [ nil ] 
+	session ifNil: [ session := GbsSessionParameters currentSession ].
+	(self isSessionUsable not) ifTrue: [
+		userList items: #( ).
+		groupList items: #( ).
+		^ self
 	].
 	
 	"3. Force the lists to populate right before the window appears!"
@@ -41,7 +55,7 @@ GbsUserListPresenter >> defaultLayout [
 { #category : 'layout' }
 GbsUserListPresenter >> fetchGroupsFor: userName [
 	| script rawString groupNames |
-	session ifNil: [ ^ self ].
+	(self isSessionUsable not) ifTrue: [ ^ self ].
 	
 	"1. Use 'g name' because GemStone groups are UserProfileGroup objects!"
 	script := '
@@ -57,7 +71,7 @@ GbsUserListPresenter >> fetchGroupsFor: userName [
 	strm contents'.
 	
 	"2. Fetch and unpack"
-	rawString := session evaluate: script.
+	rawString := [ session evaluate: script ] on: Error do: [ '' ].
 	
 	"3. Safely parse"
 	(rawString isString and: [ rawString isNotEmpty ]) 
@@ -65,6 +79,14 @@ GbsUserListPresenter >> fetchGroupsFor: userName [
 		ifFalse: [ groupNames := #() ].
 		
 	groupList items: groupNames asSortedCollection asArray
+]
+
+{ #category : 'private' }
+GbsUserListPresenter >> isSessionUsable [
+	session ifNil: [ ^ false ].
+	(session respondsTo: #isLoggedIn)
+		ifTrue: [ ^ [ session isLoggedIn ] on: Error do: [ false ] ].
+	^ true
 ]
 
 { #category : 'accessing - deprecated' }
@@ -96,7 +118,7 @@ GbsUserListPresenter >> initializeWindow: aWindowPresenter [
 { #category : 'accessing' }
 GbsUserListPresenter >> refreshUserList [
 	| script rawString userNames |
-	session ifNil: [ ^ self ].
+	(self isSessionUsable not) ifTrue: [ ^ self ].
 	
 	"Iterate over the UserProfileSet and extract the userId"
 	script := '
@@ -108,7 +130,7 @@ GbsUserListPresenter >> refreshUserList [
 	].
 	strm contents'.
 	
-	rawString := session evaluate: script.
+	rawString := [ session evaluate: script ] on: Error do: [ '' ].
 	
 	(rawString isString and: [ rawString isNotEmpty ]) 
 		ifTrue: [ userNames := (rawString splitOn: ',') reject: #isEmpty ]
@@ -120,7 +142,10 @@ GbsUserListPresenter >> refreshUserList [
 { #category : 'accessing' }
 GbsUserListPresenter >> session: aGbsSession [
     session := aGbsSession.
-    self refreshUserList. "Automatically fetch data when the session is set"
+    self isSessionUsable ifTrue: [ self refreshUserList ] ifFalse: [
+		userList ifNotNil: [ userList items: #( ) ].
+		groupList ifNotNil: [ groupList items: #( ) ].
+	]
 ]
 
 { #category : 'accessing - deprecated' }

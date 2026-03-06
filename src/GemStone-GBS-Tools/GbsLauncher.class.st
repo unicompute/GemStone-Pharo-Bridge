@@ -34,7 +34,7 @@ GbsLauncher >> connectPresenters [
 	"Wire the Transcript button to open our custom VW-ported window!"
 	btnTranscript action: [ GbsRemoteTranscript new open ].
 	
-	btnUsers action: [ GbsUserListPresenter new open ].
+	btnUsers action: [ self openUsers ].
 	btnPolling action: [ self togglePollingPreference ].
 ]
 
@@ -49,6 +49,20 @@ GbsLauncher >> openSystemBrowser [
 		GbsBrowser openOn: session
 	] on: Error do: [ :ex |
 		self inform: 'Could not open browser: ', ex messageText
+	].
+]
+
+{ #category : 'actions' }
+GbsLauncher >> openUsers [
+	| session |
+	session := GbsSessionParameters currentSession.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		^ self inform: 'No connected GemStone session. Please login first.'
+	].
+	[
+		GbsUserListPresenter openOn: session
+	] on: Error do: [ :ex |
+		self inform: 'Could not open users list: ', ex messageText
 	].
 ]
 
