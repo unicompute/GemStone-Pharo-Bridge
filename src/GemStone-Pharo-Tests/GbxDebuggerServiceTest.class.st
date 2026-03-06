@@ -428,3 +428,60 @@ GbxDebuggerServiceTest >> testRestartReturnsFalseWhenTrimStackFails [
 
 	self deny: service restart
 ]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testRestartSelectsExecutedCodeFrameAtLineOne [
+	| oldContext nonExecuted restartedExecuted fakePolicy didRestart |
+	oldContext := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 3
+		sourceOffsets: #(1 6 7)
+		source: '1+1.', String lf, String lf, '1/0'.
+	nonExecuted := self
+		makeActivationMethodClass: 'SmallInteger'
+		selector: #/
+		stepPoint: 3
+		sourceOffsets: #(1 6 7)
+		source: '1+1.', String lf, String lf, '1/0'.
+	restartedExecuted := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 1
+		sourceOffsets: #(1 6 7)
+		source: '1+1.', String lf, String lf, '1/0'.
+
+	service currentContext: oldContext.
+	service processOop: 111.
+	fakePolicy := GbxFakeContextListPolicyForService new.
+	fakePolicy contextList: { nonExecuted. restartedExecuted }.
+	service instVarNamed: 'contextStackPolicy' put: fakePolicy.
+
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			(script includesSubstring: '_trimStackToLevel:')
+				ifTrue: [ 'true' ]
+				ifFalse: [ '' ] ].
+
+	didRestart := service restart.
+
+	self assert: didRestart.
+	self assert: service currentContext == restartedExecuted.
+	self assert: service currentContext printString equals: 'GS: Executed code @1 line 1'
+]
+
+{ #category : 'private' }
+GbxDebuggerServiceTest >> makeActivationMethodClass: className selector: selectorSymbol stepPoint: step sourceOffsets: offsets source: sourceText [
+	| activation |
+	activation := GbxActivation new.
+	activation
+		processOop: 111;
+		level: 8;
+		methodClass: className;
+		selector: selectorSymbol;
+		sourceString: sourceText;
+		sourceOffsets: offsets;
+		quickStepPoint: step.
+	^ activation
+]
