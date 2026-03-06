@@ -237,21 +237,29 @@ GbsClassicLauncher >> doLoginRpc [
 
 { #category : 'actions' }
 GbsClassicLauncher >> doLogout [
-    sessionList selection selectedItem ifNotNil: [ :session |
-        "1. Unselect first to prevent SubscriptOutOfBounds in Spec2"
-        sessionList unselectAll.
-        
-        "2. Perform the logout"
-        session logout.
-        
-        "3. Clear global current session if it matches"
-        GbsSessionParameters currentSession == session ifTrue: [
-            GbsSessionParameters currentSession: nil.
-        ].
-        
-        "4. Refresh the UI"
-        self refreshAll.
-    ].
+	| session |
+	session := self selectedSessionForLogout.
+	session ifNil: [ ^ self inform: 'Please select a session from the list.' ].
+
+	"Unselect first to prevent SubscriptOutOfBounds in Spec2"
+	(sessionList respondsTo: #unselectAll) ifTrue: [ sessionList unselectAll ].
+
+	[ session logout ] on: Error do: [ :ex |
+		self inform: 'Error logging out: ', ex messageText.
+		^ false
+	].
+
+	"Clear global current session if it matches, or if it is the simple-launcher session name."
+	((GbsSessionParameters currentSession == session)
+		or: [ (session respondsTo: #name) and: [ session name = 'Simple Launcher Session' ] ])
+		ifTrue: [ GbsSessionParameters currentSession: nil ].
+
+	"Sync all open launchers."
+	UIManager default defer: [
+		GbsLauncher allInstancesDo: [ :launcher | launcher updateUIState ].
+		GbsClassicLauncher allInstancesDo: [ :launcher | launcher refreshAll ].
+	].
+	^ true
 ]
 
 { #category : 'initialization' }
@@ -471,6 +479,16 @@ GbsClassicLauncher >> requestSymbolDictionaryName [
 	^ UIManager default
 		request: 'Symbol Dictionary name (optional):'
 		initialAnswer: ''
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> selectedSessionForLogout [
+	| selected |
+	selected := nil.
+	(sessionList notNil and: [ sessionList respondsTo: #selection ]) ifTrue: [
+		selected := [ sessionList selection selectedItem ] on: Error do: [ nil ]
+	].
+	^ selected ifNil: [ GbsSessionParameters currentSession ]
 ]
 
 { #category : 'private' }
