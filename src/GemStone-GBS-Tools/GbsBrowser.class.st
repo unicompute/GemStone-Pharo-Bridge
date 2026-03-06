@@ -18,12 +18,19 @@ Class {
 GbsBrowser class >> openOn: aSession [
 	| browser |
 	aSession ifNil: [ ^ self inform: 'You must log into GemStone first!' ].
+	((aSession respondsTo: #isLoggedIn) and: [ aSession isLoggedIn not ])
+		ifTrue: [ ^ self inform: 'You must log into GemStone first!' ].
 	
-	browser := self new.
-	browser session: aSession.
-	browser loadDictionaries.
-	browser open.
-	^ browser
+	^ [
+		browser := self new.
+		browser session: aSession.
+		browser loadDictionaries.
+		browser open.
+		browser
+	] on: Error do: [ :ex |
+		self inform: 'Could not open GemStone browser: ', ex messageText.
+		nil
+	]
 ]
 
 { #category : 'actions' }

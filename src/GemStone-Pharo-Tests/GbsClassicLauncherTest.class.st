@@ -46,6 +46,19 @@ GbsClassicLauncherTest >> testOpenSystemBrowserWithoutSessionShowsMessage [
 ]
 
 { #category : 'tests' }
+GbsClassicLauncherTest >> testOpenSystemBrowserWithLoggedOutSessionShowsMessage [
+	| fakeSession |
+	fakeSession := MockGbsSession new.
+	fakeSession isLoggedIn: false.
+	launcher forcedSession: fakeSession.
+
+	self deny: launcher openSystemBrowser.
+	self assert: launcher openBrowserCalls equals: 0.
+	self assert: launcher infoMessages size equals: 1.
+	self assert: launcher infoMessages first equals: 'Select or log into a GemStone session first.'
+]
+
+{ #category : 'tests' }
 GbsClassicLauncherTest >> testOpenSymbolDictionaryBrowserPassesDictionaryName [
 	| fakeSession |
 	fakeSession := Object new.

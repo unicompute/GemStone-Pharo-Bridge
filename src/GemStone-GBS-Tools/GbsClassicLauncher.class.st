@@ -372,13 +372,19 @@ GbsClassicLauncher >> menuWindow [
 { #category : 'private' }
 GbsClassicLauncher >> openBrowserOn: aSession dictionary: aDictionaryName [
 	| browser |
-	browser := self browserClass openOn: aSession.
-	(browser notNil
-		and: [ aDictionaryName isString
-		and: [ aDictionaryName isEmpty not
-		and: [ browser respondsTo: #selectDictionaryNamed: ] ] ])
-		ifTrue: [ browser selectDictionaryNamed: aDictionaryName ].
-	^ browser
+	(self isSessionUsableForBrowsing: aSession) ifFalse: [ ^ false ].
+	[
+		browser := self browserClass openOn: aSession.
+		(browser notNil
+			and: [ aDictionaryName isString
+			and: [ aDictionaryName isEmpty not
+			and: [ browser respondsTo: #selectDictionaryNamed: ] ] ])
+			ifTrue: [ browser selectDictionaryNamed: aDictionaryName ].
+		^ browser notNil
+	] on: Error do: [ :ex |
+		self inform: 'Could not open browser: ', ex messageText.
+		^ false
+	]
 ]
 
 { #category : 'actions' }
@@ -390,7 +396,7 @@ GbsClassicLauncher >> openClassBrowser [
 GbsClassicLauncher >> openSymbolDictionaryBrowser [
 	| session dictName |
 	session := self sessionForBrowsing.
-	session ifNil: [
+	(self isSessionUsableForBrowsing: session) ifFalse: [
 		self inform: 'Select or log into a GemStone session first.'.
 		^ false
 	].
@@ -404,12 +410,20 @@ GbsClassicLauncher >> openSymbolDictionaryBrowser [
 GbsClassicLauncher >> openSystemBrowser [
 	| session |
 	session := self sessionForBrowsing.
-	session ifNil: [
+	(self isSessionUsableForBrowsing: session) ifFalse: [
 		self inform: 'Select or log into a GemStone session first.'.
 		^ false
 	].
 	GbsSessionParameters currentSession: session.
 	self openBrowserOn: session dictionary: nil.
+	^ true
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> isSessionUsableForBrowsing: aSession [
+	aSession ifNil: [ ^ false ].
+	(aSession respondsTo: #isLoggedIn)
+		ifTrue: [ ^ [ aSession isLoggedIn ] on: Error do: [ false ] ].
 	^ true
 ]
 

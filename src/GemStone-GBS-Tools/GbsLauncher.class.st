@@ -29,13 +29,27 @@ GbsLauncher >> connectPresenters [
 	btnCommit action: [ self doCommit ].
 	btnAbort action: [ self doAbort ].
 	btnWorkspace action: [ GbsWorkspace new open ].
-	btnBrowser action: [ GbsBrowser openOn: GbsSessionParameters currentSession ].
+	btnBrowser action: [ self openSystemBrowser ].
 	
 	"Wire the Transcript button to open our custom VW-ported window!"
 	btnTranscript action: [ GbsRemoteTranscript new open ].
 	
 	btnUsers action: [ GbsUserListPresenter new open ].
 	btnPolling action: [ self togglePollingPreference ].
+]
+
+{ #category : 'actions' }
+GbsLauncher >> openSystemBrowser [
+	| session |
+	session := GbsSessionParameters currentSession.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		^ self inform: 'No connected GemStone session. Please login first.'
+	].
+	[
+		GbsBrowser openOn: session
+	] on: Error do: [ :ex |
+		self inform: 'Could not open browser: ', ex messageText
+	].
 ]
 
 { #category : 'layout' }
@@ -230,4 +244,12 @@ GbsLauncher >> updateUIState [
 		btnWorkspace disable. btnBrowser disable. btnTranscript disable.
 		btnUsers ifNotNil: [ btnUsers disable ].
 	].
+]
+
+{ #category : 'private' }
+GbsLauncher >> isSessionUsableForBrowsing: aSession [
+	aSession ifNil: [ ^ false ].
+	(aSession respondsTo: #isLoggedIn)
+		ifTrue: [ ^ [ aSession isLoggedIn ] on: Error do: [ false ] ].
+	^ true
 ]
