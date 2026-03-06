@@ -33,7 +33,11 @@ GbsBrowser class >> openOn: aSession [
 		browser open.
 		browser
 	] on: Error do: [ :ex |
-		self inform: 'Could not open GemStone browser: ', ex messageText.
+		self inform: ('Could not open GemStone browser: {1} ({2}) in {3}' format: {
+			ex messageText.
+			ex class name.
+			(ex signalerContext ifNil: [ '<none>' ] ifNotNil: [ :ctx | ctx printString ])
+		}).
 		nil
 	]
 ]
@@ -66,6 +70,9 @@ GbsBrowser >> classSelected: className [
 	] value'.
 	
 	rawData := session executeAndFetch: script.
+	rawData := rawData
+		ifNil: [ '' ]
+		ifNotNil: [ rawData asString ].
 	categories := (rawData splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty.
 	categories := {'-- all --'} asOrderedCollection addAll: categories; yourself.
 	protocolsList items: categories.
@@ -146,6 +153,9 @@ GbsBrowser >> dictionarySelected: dictName [
 	] value'.
 	
 	rawData := session executeAndFetch: script.
+	rawData := rawData
+		ifNil: [ '' ]
+		ifNotNil: [ rawData asString ].
 	
 	"Parse and trim the C-strings safely"
 	classes := (rawData splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty.
@@ -225,6 +235,9 @@ GbsBrowser >> loadDictionaries [
 	] value'.
 	
 	rawData := session executeAndFetch: script.
+	rawData := rawData
+		ifNil: [ '' ]
+		ifNotNil: [ rawData asString ].
 	
 	"Parse and trim the C-strings safely"
 	dicts := (rawData splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty.
@@ -280,6 +293,9 @@ GbsBrowser >> protocolSelected: protocolName [
 	] value'.
 	
 	rawData := session executeAndFetch: script.
+	rawData := rawData
+		ifNil: [ '' ]
+		ifNotNil: [ rawData asString ].
 	selectors := (rawData splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty.
 	methodsList items: selectors.
 ]
