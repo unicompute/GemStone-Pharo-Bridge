@@ -217,8 +217,8 @@ GbsBrowser >> gsPrintIt [
 
 { #category : 'initialization' }
 GbsBrowser >> initializePresenters [
-	mainMenu := [ self buildMenuBar ] on: Error do: [ self newMenuBar ].
 	autoCommitEnabled := false.
+	mainMenu := [ self buildMenuBar ] on: Error do: [ self newMenuBar ].
 	dictionariesList := self newList.
 	classesList := self newList.
 	protocolsList := self newList.
@@ -1332,7 +1332,7 @@ GbsBrowser >> openQueryResults: references [
 
 { #category : 'private' }
 GbsBrowser >> autoCommitMenuLabel [
-	^ autoCommitEnabled
+	^ (autoCommitEnabled == true)
 		ifTrue: [ '✓ Auto-Commit' ]
 		ifFalse: [ 'Auto-Commit' ]
 ]
