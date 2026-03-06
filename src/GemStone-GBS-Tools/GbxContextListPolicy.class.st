@@ -445,7 +445,12 @@ GbxContextListPolicy >> isGlueContext: aContext [
 	| className selector |
 	className := aContext methodClass ifNil: [ ^ false ].
 	selector := aContext selector ifNil: [ ^ false ].
-	
+
+	"Server-side exception plumbing and VM return frames should be hidden by default."
+	(className = 'AbstractException') ifTrue: [ ^ true ].
+	(className = 'GsNMethod class') ifTrue: [ ^ true ].
+	((className = 'Number') and: [ selector = #_errorDivideByZero ]) ifTrue: [ ^ true ].
+
 	"GBS glue classes"
 	(className beginsWith: 'Gbs') ifTrue: [ ^ true ].
 	(className beginsWith: 'Gbx') ifTrue: [ 

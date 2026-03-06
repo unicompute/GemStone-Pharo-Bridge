@@ -826,6 +826,7 @@ GbxDebuggerService >> restart [
 	result := self executeDebugScript: script.
 	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
 	self recomputeContextList.
+	self selectRestartTargetContext.
 	stepAfter := self currentStepPoint.
 	didResetWithStepPoint := false.
 	(stepAfter isNil or: [ stepAfter > 1 ]) ifTrue: [
@@ -833,9 +834,61 @@ GbxDebuggerService >> restart [
 			or: [ self runDebugProcessCommand: 'runToStepPoint' withInteger: 1 recompute: true ]
 	].
 	(stepAfter isNil or: [ stepAfter > 1 ]) ifTrue: [
-		didResetWithStepPoint ifFalse: [ self recomputeContextList ]
+		didResetWithStepPoint
+			ifFalse: [
+				self forceRestartPositionToMethodStart.
+				self recomputeContextList.
+				self selectRestartTargetContext
+			]
 	].
 	^ true
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> forceRestartPositionToMethodStart [
+	| target |
+	target := self restartTargetContext.
+	target ifNil: [ ^ self ].
+	(target respondsTo: #quickStepPoint:)
+		ifTrue: [ target quickStepPoint: 1 ].
+	(target respondsTo: #ipOffset:)
+		ifTrue: [ target ipOffset: 1 ].
+	(target respondsTo: #sourceOffsets) ifTrue: [
+		| offsets |
+		offsets := target sourceOffsets.
+		(offsets isCollection and: [ offsets isEmpty not ]) ifTrue: [
+			(target respondsTo: #sourceOffsets:)
+				ifTrue: [
+					| copy |
+					copy := offsets asArray copy.
+					copy at: 1 put: ((copy at: 1 ifAbsent: [ 1 ]) ifNil: [ 1 ]).
+					target sourceOffsets: copy
+				]
+		]
+	].
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> restartTargetContext [
+	| contexts |
+	contexts := self contextList.
+	contexts ifEmpty: [ ^ nil ].
+	^ contexts
+		detect: [ :ctx |
+			| className selectorName |
+			className := [ ctx methodClassOrUnknown asString ] on: Error do: [ '' ].
+			selectorName := [ ctx selectorOrUnknown asString ] on: Error do: [ '' ].
+			(className = 'nil' or: [ className = '<unknown>' ])
+				and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ] ]
+		ifNone: [ contexts first ]
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> selectRestartTargetContext [
+	| target |
+	target := self restartTargetContext.
+	target ifNil: [ ^ self ].
+	self selectContext: target
 ]
 
 { #category : 'private' }

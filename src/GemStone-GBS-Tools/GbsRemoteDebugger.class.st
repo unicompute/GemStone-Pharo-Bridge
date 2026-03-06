@@ -22,6 +22,8 @@ Class {
 		'stackList',
 		'sourceText',
 		'variablesTable',
+		'frameInfoTable',
+		'processInfoTable',
 		'stepOverButton',
 		'stepIntoButton',
 		'stepButton',
@@ -237,6 +239,8 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 		(context respondsTo: #sourceCode) ifTrue: [ ^ self contextSelected: context ].
 		self setSourceText: ''.
 		self setVariableTableItems: #().
+		self setFrameInfoItems: #().
+		self setProcessInfoItems: #().
 		^ self
 	].
 
@@ -285,6 +289,17 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 	] on: Error do: [ :ex |
 		self setVariableTableItems: #().
 	].
+
+	self setFrameInfoItems: {
+		{ 'Class'. ([ context methodClassOrUnknown asString ] on: Error do: [ '<unknown>' ]) }.
+		{ 'Selector'. ([ context selectorOrUnknown asString ] on: Error do: [ '<unknown>' ]) }.
+		{ 'Level'. ([ context level asString ] on: Error do: [ '0' ]) }.
+		{ 'Step'. ([ context quickStepPoint asString ] on: Error do: [ '0' ]) }
+	}.
+	self setProcessInfoItems: {
+		{ 'Process OOP'. ([ context processOop asString ] on: Error do: [ '0' ]) }.
+		{ 'Method'. ([ context methodId asString ] on: Error do: [ '<unknown>' ]) }
+	}.
 	self refreshUiState.
 ]
 
@@ -321,6 +336,8 @@ GbsRemoteDebugger >> defaultLayout [
 			add: (SpPanedLayout newHorizontal
 				add: sourceText;
 				add: variablesTable;
+				add: frameInfoTable;
+				add: processInfoTable;
 				yourself);
 			yourself);
 		yourself
@@ -586,6 +603,8 @@ GbsRemoteDebugger >> fetchStackFrames [
 		self setSourceText: ''.
 		self clearSourceHighlight.
 		self setVariableTableItems: #().
+		self setFrameInfoItems: #().
+		self setProcessInfoItems: #().
 		self refreshUiState.
 		^ self
 	].
@@ -760,6 +779,16 @@ GbsRemoteDebugger >> initializePresenters [
 		ifTrue: [ variablesTable whenActivatedDo: [ self inspectVariable ] ].
 	(variablesTable respondsTo: #whenDoubleClickDo:)
 		ifTrue: [ variablesTable whenDoubleClickDo: [ self inspectVariable ] ].
+
+	frameInfoTable := self newTable.
+	frameInfoTable
+		addColumn: (SpStringTableColumn title: 'Frame' evaluated: [ :item | item first ]);
+		addColumn: (SpStringTableColumn title: 'Value' evaluated: [ :item | item second ]).
+
+	processInfoTable := self newTable.
+	processInfoTable
+		addColumn: (SpStringTableColumn title: 'Process' evaluated: [ :item | item first ]);
+		addColumn: (SpStringTableColumn title: 'Value' evaluated: [ :item | item second ]).
 
 	glueIsHidden := true.
 	bookmarkContextIndex := nil.
@@ -977,6 +1006,20 @@ GbsRemoteDebugger >> setVariableTableItems: aCollection [
 		ifTrue: [
 			[ variablesTable items: aCollection ] on: Error do: [ ]
 		].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> setFrameInfoItems: aCollection [
+	frameInfoTable ifNil: [ ^ self ].
+	(frameInfoTable respondsTo: #items:)
+		ifTrue: [ [ frameInfoTable items: aCollection ] on: Error do: [ ] ].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> setProcessInfoItems: aCollection [
+	processInfoTable ifNil: [ ^ self ].
+	(processInfoTable respondsTo: #items:)
+		ifTrue: [ [ processInfoTable items: aCollection ] on: Error do: [ ] ].
 ]
 
 { #category : 'private' }
