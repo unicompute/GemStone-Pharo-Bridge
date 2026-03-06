@@ -22,6 +22,7 @@ Class {
 		'stackList',
 		'sourceText',
 		'variablesTable',
+		'receiverInfoTable',
 		'frameInfoTable',
 		'processInfoTable',
 		'stepOverButton',
@@ -239,6 +240,7 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 		(context respondsTo: #sourceCode) ifTrue: [ ^ self contextSelected: context ].
 		self setSourceText: ''.
 		self setVariableTableItems: #().
+		self setReceiverInfoItems: #().
 		self setFrameInfoItems: #().
 		self setProcessInfoItems: #().
 		^ self
@@ -290,6 +292,10 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 		self setVariableTableItems: #().
 	].
 
+	self setReceiverInfoItems: {
+		{ 'self'. ([ context receiverClassOrUnknown asString ] on: Error do: [ '<unknown>' ]) }.
+		{ 'self oop'. ([ context selfOop asString ] on: Error do: [ 'nil' ]) }
+	}.
 	self setFrameInfoItems: {
 		{ 'Class'. ([ context methodClassOrUnknown asString ] on: Error do: [ '<unknown>' ]) }.
 		{ 'Selector'. ([ context selectorOrUnknown asString ] on: Error do: [ '<unknown>' ]) }.
@@ -305,18 +311,22 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 
 { #category : 'layout' }
 GbsRemoteDebugger >> defaultLayout [
-	| bottomLeft bottomRight bottomAll |
-	bottomLeft := SpPanedLayout newHorizontal
-		add: sourceText;
+	| varsLeft varsRight varsAll sourceAndVars |
+	varsLeft := SpPanedLayout newHorizontal
 		add: variablesTable;
+		add: receiverInfoTable;
 		yourself.
-	bottomRight := SpPanedLayout newHorizontal
+	varsRight := SpPanedLayout newHorizontal
 		add: frameInfoTable;
 		add: processInfoTable;
 		yourself.
-	bottomAll := SpPanedLayout newHorizontal
-		add: bottomLeft;
-		add: bottomRight;
+	varsAll := SpPanedLayout newHorizontal
+		add: varsLeft;
+		add: varsRight;
+		yourself.
+	sourceAndVars := SpPanedLayout newVertical
+		add: sourceText;
+		add: varsAll;
 		yourself.
 
 	^ SpBoxLayout newVertical
@@ -347,7 +357,7 @@ GbsRemoteDebugger >> defaultLayout [
 			yourself) expand: false;
 		add: (SpPanedLayout newVertical
 			add: stackList;
-			add: bottomAll;
+			add: sourceAndVars;
 			yourself);
 		yourself
 ]
@@ -612,6 +622,7 @@ GbsRemoteDebugger >> fetchStackFrames [
 		self setSourceText: ''.
 		self clearSourceHighlight.
 		self setVariableTableItems: #().
+		self setReceiverInfoItems: #().
 		self setFrameInfoItems: #().
 		self setProcessInfoItems: #().
 		self refreshUiState.
@@ -788,6 +799,11 @@ GbsRemoteDebugger >> initializePresenters [
 		ifTrue: [ variablesTable whenActivatedDo: [ self inspectVariable ] ].
 	(variablesTable respondsTo: #whenDoubleClickDo:)
 		ifTrue: [ variablesTable whenDoubleClickDo: [ self inspectVariable ] ].
+
+	receiverInfoTable := self newTable.
+	receiverInfoTable
+		addColumn: (SpStringTableColumn title: 'Receiver' evaluated: [ :item | item first ]);
+		addColumn: (SpStringTableColumn title: 'Value' evaluated: [ :item | item second ]).
 
 	frameInfoTable := self newTable.
 	frameInfoTable
@@ -1015,6 +1031,13 @@ GbsRemoteDebugger >> setVariableTableItems: aCollection [
 		ifTrue: [
 			[ variablesTable items: aCollection ] on: Error do: [ ]
 		].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> setReceiverInfoItems: aCollection [
+	receiverInfoTable ifNil: [ ^ self ].
+	(receiverInfoTable respondsTo: #items:)
+		ifTrue: [ [ receiverInfoTable items: aCollection ] on: Error do: [ ] ].
 ]
 
 { #category : 'private' }
