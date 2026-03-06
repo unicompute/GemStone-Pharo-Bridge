@@ -24,8 +24,16 @@ Class {
 		'variablesTable',
 		'stepOverButton',
 		'stepIntoButton',
+		'stepButton',
 		'stepReturnButton',
+		'restartButton',
 		'resumeButton',
+		'runUntilReturnButton',
+		'runWithBreakAgainButton',
+		'runToCaretButton',
+		'jumpToCaretButton',
+		'returnButton',
+		'pauseButton',
 		'terminateButton',
 		'inspectReceiverButton',
 		'inspectProcessButton',
@@ -102,10 +110,17 @@ GbsRemoteDebugger >> acceptSourceEdits [
 
 { #category : 'private' }
 GbsRemoteDebugger >> applySourceMapHighlightFor: aContext [
-	| map interval |
+	| map interval lineNumber |
 	sourceText ifNil: [ ^ self ].
 	map := self sourceMapFor: aContext.
-	(map isCollection and: [ map isEmpty not ]) ifFalse: [ ^ self clearSourceHighlight ].
+	(map isCollection and: [ map isEmpty not ]) ifFalse: [
+		lineNumber := (aContext respondsTo: #displayedLineNumber)
+			ifTrue: [ [ aContext displayedLineNumber ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		(lineNumber isNumber and: [ lineNumber > 0 ])
+			ifTrue: [ ^ self selectLineNumber: lineNumber inTextPresenter: sourceText ].
+		^ self clearSourceHighlight
+	].
 	interval := (service notNil and: [ service respondsTo: #currentSourceSelectionInterval ])
 		ifTrue: [ [ service currentSourceSelectionInterval ] on: Error do: [ nil ] ]
 		ifFalse: [ nil ].
@@ -282,9 +297,16 @@ GbsRemoteDebugger >> defaultLayout [
 		add: (SpBoxLayout newHorizontal
 			spacing: 5;
 			add: stepIntoButton; 
+			add: stepButton;
 			add: stepOverButton; 
-			add: stepReturnButton;
-			add: resumeButton; 
+			add: restartButton;
+			add: resumeButton;
+			add: runUntilReturnButton;
+			add: runWithBreakAgainButton;
+			add: runToCaretButton;
+			add: jumpToCaretButton;
+			add: returnButton;
+			add: pauseButton;
 			add: terminateButton;
 			yourself) expand: false;
 		add: (SpBoxLayout newHorizontal
@@ -670,12 +692,36 @@ GbsRemoteDebugger >> initializePresenters [
 	stepIntoButton := self newButton 
 		label: 'Step Into'; 
 		action: [ self stepInto ].
+	stepButton := self newButton
+		label: 'Step';
+		action: [ self step ].
 	stepReturnButton := self newButton 
-		label: 'Step Return'; 
+		label: 'Step Return';
 		action: [ self stepReturn ].
+	restartButton := self newButton
+		label: 'Restart';
+		action: [ self restart ].
 	resumeButton := self newButton 
-		label: 'Resume'; 
+		label: 'Run';
 		action: [ self resume ].
+	runUntilReturnButton := self newButton
+		label: 'Run until Return';
+		action: [ self runUntilReturn ].
+	runWithBreakAgainButton := self newButton
+		label: 'Run with Break Again';
+		action: [ self runWithBreakAgain ].
+	runToCaretButton := self newButton
+		label: 'Run to Caret';
+		action: [ self runToCaret ].
+	jumpToCaretButton := self newButton
+		label: 'Jump to Caret';
+		action: [ self jumpToCaret ].
+	returnButton := self newButton
+		label: 'Return...';
+		action: [ self returnFromFrame ].
+	pauseButton := self newButton
+		label: 'Pause';
+		action: [ self pauseProcess ].
 	terminateButton := self newButton 
 		label: 'Terminate'; 
 		action: [ self terminate ].
@@ -1039,6 +1085,11 @@ GbsRemoteDebugger >> stepInto [
 ]
 
 { #category : 'actions' }
+GbsRemoteDebugger >> step [
+	^ self stepInto
+]
+
+{ #category : 'actions' }
 GbsRemoteDebugger >> stepOver [
 	self safeServiceCall: [ service stepOver ] default: false.
 	self fetchStackFrames.
@@ -1048,6 +1099,18 @@ GbsRemoteDebugger >> stepOver [
 GbsRemoteDebugger >> stepReturn [
 	self safeServiceCall: [ service stepReturn ] default: false.
 	self fetchStackFrames.
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> runUntilReturn [
+	^ self stepReturn
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> runWithBreakAgain [
+	self safeServiceCall: [ service resume ] default: false.
+	self fetchStackFrames.
+	^ true
 ]
 
 { #category : 'private' }
@@ -1423,10 +1486,12 @@ GbsRemoteDebugger >> informUnsupported: aString [
 
 { #category : 'private' }
 GbsRemoteDebugger >> jumpToCaret [
-	| stepPoint |
+	| stepPoint didJump |
 	stepPoint := self selectedStepPointFromCaret.
 	stepPoint ifNil: [ ^ false ].
-	^ self safeServiceCall: [ service jumpToStepPoint: stepPoint ] default: false
+	didJump := self safeServiceCall: [ service jumpToStepPoint: stepPoint ] default: false.
+	didJump ifTrue: [ self fetchStackFrames ].
+	^ didJump
 ]
 
 { #category : 'private' }
@@ -1555,7 +1620,10 @@ GbsRemoteDebugger >> localPrintIt [
 
 { #category : 'private' }
 GbsRemoteDebugger >> pauseProcess [
-	^ self safeServiceCall: [ service pause ] default: false
+	| didPause |
+	didPause := self safeServiceCall: [ service pause ] default: false.
+	didPause ifTrue: [ self fetchStackFrames ].
+	^ didPause
 ]
 
 { #category : 'private' }
@@ -1573,10 +1641,12 @@ GbsRemoteDebugger >> returnFromFrame [
 
 { #category : 'private' }
 GbsRemoteDebugger >> runToCaret [
-	| stepPoint |
+	| stepPoint didRun |
 	stepPoint := self selectedStepPointFromCaret.
 	stepPoint ifNil: [ ^ false ].
-	^ self safeServiceCall: [ service runToStepPoint: stepPoint ] default: false
+	didRun := self safeServiceCall: [ service runToStepPoint: stepPoint ] default: false.
+	didRun ifTrue: [ self fetchStackFrames ].
+	^ didRun
 ]
 
 { #category : 'private' }

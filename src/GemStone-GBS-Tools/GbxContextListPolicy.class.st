@@ -134,7 +134,7 @@ GbxContextListPolicy >> fetchServerContexts [
 	(processOop isNil or: [ processOop = 20 ]) ifTrue: [ ^ #( ) ].
 	
 	script := '[
-		| obj gbsError gsProcess ctx stream maxDepth level stackReport fullEntry frameId methodOrNil className selectorName source ctxOop |
+		| obj gbsError gsProcess ctx stream maxDepth level stackReport fullEntry frameId methodOrNil className selectorName source ctxOop quickStep offsets offsetsText lineNumber offset |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ '''' ].
 		stream := WriteStream on: String new.
@@ -200,6 +200,40 @@ GbxContextListPolicy >> fetchServerContexts [
 								]
 								ifFalse: [ '''' ]
 						] on: Error do: [ '''' ].
+						quickStep := [
+							(fullEntry notNil and: [ fullEntry size >= 5 ])
+								ifTrue: [ fullEntry at: 5 ]
+								ifFalse: [ 0 ]
+						] on: Error do: [ 0 ].
+						quickStep ifNil: [ quickStep := 0 ].
+						offsets := [
+							(fullEntry notNil and: [ fullEntry size >= 6 ])
+								ifTrue: [ fullEntry at: 6 ]
+								ifFalse: [ #() ]
+						] on: Error do: [ #() ].
+						offsets ifNil: [ offsets := #() ].
+						offsetsText := String streamContents: [ :offsetStream |
+							1 to: offsets size do: [ :idx |
+								| raw |
+								raw := offsets at: idx.
+								raw isNil
+									ifTrue: [ offsetStream nextPutAll: ''nil'' ]
+									ifFalse: [ offsetStream nextPutAll: raw asString ].
+								idx < offsets size ifTrue: [ offsetStream nextPut: $, ]
+							]
+						].
+						lineNumber := 0.
+						(quickStep isNumber and: [ quickStep > 0 and: [ quickStep <= offsets size ] ]) ifTrue: [
+							offset := [ (offsets at: quickStep) asInteger ] on: Error do: [ nil ].
+							(offset isNumber and: [ offset > 0 ]) ifTrue: [
+								lineNumber := 1.
+								1 to: ((offset - 1) min: source size) do: [ :i |
+									| ch |
+									ch := source at: i.
+									(ch = Character lf or: [ ch = Character cr ]) ifTrue: [ lineNumber := lineNumber + 1 ]
+								]
+							]
+						].
 						source := source
 							copyReplaceAll: String cr with: ''<CR>'';
 							copyReplaceAll: String lf with: ''<LF>'';
@@ -210,7 +244,10 @@ GbxContextListPolicy >> fetchServerContexts [
 							nextPutAll: className; tab;
 							nextPutAll: selectorName; tab;
 							nextPutAll: source; tab;
-							nextPutAll: ctxOop;
+							nextPutAll: ctxOop; tab;
+							nextPutAll: quickStep asString; tab;
+							nextPutAll: offsetsText; tab;
+							nextPutAll: lineNumber asString;
 							lf.
 						level := level + 1
 					]
@@ -259,9 +296,27 @@ GbxContextListPolicy >> fetchServerContexts [
 			| parts |
 			parts := line splitOn: Character tab.
 			parts size >= 5 ifTrue: [
-				| activation selectorSymbol ctxOop |
+				| activation selectorSymbol ctxOop quickStepValue offsetsTokens offsetsValue lineNumberValue |
 				selectorSymbol := [ (parts at: 3) asSymbol ] on: Error do: [ #unboundMethod ].
 				ctxOop := [ (parts at: 5) asInteger ] on: Error do: [ processOop ].
+				quickStepValue := (parts size >= 6
+					ifTrue: [ [ (parts at: 6) asInteger ] on: Error do: [ 0 ] ]
+					ifFalse: [ 0 ]).
+				offsetsTokens := (parts size >= 7
+					ifTrue: [ (parts at: 7) splitOn: $, ]
+					ifFalse: [ #() ]).
+				lineNumberValue := (parts size >= 8
+					ifTrue: [ [ (parts at: 8) asInteger ] on: Error do: [ 0 ] ]
+					ifFalse: [ 0 ]).
+				offsetsValue := offsetsTokens collect: [ :token |
+					| cleaned |
+					cleaned := token withBlanksTrimmed.
+					cleaned isEmpty ifTrue: [ nil ] ifFalse: [
+						cleaned = 'nil'
+							ifTrue: [ nil ]
+							ifFalse: [ [ cleaned asInteger ] on: Error do: [ nil ] ]
+					]
+				].
 				activation := GbxActivation new.
 				(activation respondsTo: #session:)
 					ifTrue: [ activation session: debugger session ]
@@ -275,6 +330,9 @@ GbxContextListPolicy >> fetchServerContexts [
 							copyReplaceAll: '<CR>' with: String cr)
 							copyReplaceAll: '<LF>' with: String lf)
 						contextOop: ctxOop;
+					quickStepPoint: quickStepValue;
+					sourceOffsets: offsetsValue;
+					ipOffset: lineNumberValue;
 					yourself
 			]
 		] thenSelect: #isNotNil.

@@ -164,6 +164,26 @@ GbsRemoteDebuggerPresenterTest >> testApplySourceMapHighlightSelectsIntervalOnSo
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testApplySourceMapHighlightFallsBackToDisplayedLineNumber [
+	| fakeText context |
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: 'aa', String lf, 'bb', String lf, 'cc'.
+	service sourceMap: #().
+	debugger instVarNamed: 'sourceText' put: fakeText.
+
+	context := GbxActivation new.
+	context
+		methodClass: 'nil';
+		selector: #nil;
+		ipOffset: 2;
+		sourceString: ''.
+
+	debugger applySourceMapHighlightFor: context.
+
+	self assert: fakeText selectionInterval equals: (4 to: 5)
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testContextSelectedFetchesFullSourceForSingleLineNilFrame [
 	| mockSession fakeText fakeTable context rendered |
 	mockSession := MockGbsSession new.
