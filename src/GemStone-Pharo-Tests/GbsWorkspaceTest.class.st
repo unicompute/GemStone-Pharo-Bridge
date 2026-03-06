@@ -123,3 +123,18 @@ GbsWorkspaceTest >> testDoItDoesNotProbeOrOpenDebuggerForLocalError [
 
 	self deny: workspace debuggerOpened.
 ]
+
+{ #category : 'tests' }
+GbsWorkspaceTest >> testGsActionAliasesRouteToPrimaryActions [
+	| workspace |
+	workspace := TestableGbsWorkspaceActions new.
+
+	self assert: workspace gsDoIt.
+	self assert: workspace didDoIt.
+
+	self assert: workspace gsInspectIt.
+	self assert: workspace didInspectIt.
+
+	self assert: workspace gsPrintIt.
+	self assert: workspace didPrintIt
+]

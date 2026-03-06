@@ -17,6 +17,14 @@ MockGbsSession >> apiGciExecute: aString context: anInteger [
 	^ self stubs at: #apiGciExecute ifAbsent: [ 268 ] "268 = true in GS64"
 ]
 
+{ #category : 'accessing' }
+MockGbsSession >> apiGciExecuteStr: scriptString context: contextOop env: envId [
+	| block |
+	block := self stubs at: #apiGciExecuteStrContextEnv ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: scriptString cull: contextOop cull: envId ].
+	^ self stubs at: #apiGciExecuteStr ifAbsent: [ 20 ]
+]
+
 { #category : 'execution' }
 MockGbsSession >> evaluate: aString [
 	^ self stubs at: #evaluate ifAbsent: [ '' ]

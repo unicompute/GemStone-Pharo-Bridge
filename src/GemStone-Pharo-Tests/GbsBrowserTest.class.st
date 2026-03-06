@@ -1,9 +1,24 @@
 Class {
 	#name : 'GbsBrowserTest',
 	#superclass : 'TestCase',
+	#instVars : [
+		'previousSession'
+	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
 }
+
+{ #category : 'running' }
+GbsBrowserTest >> setUp [
+	super setUp.
+	previousSession := GbsSessionParameters currentSession
+]
+
+{ #category : 'running' }
+GbsBrowserTest >> tearDown [
+	GbsSessionParameters currentSession: previousSession.
+	super tearDown
+]
 
 { #category : 'tests' }
 GbsBrowserTest >> testFetchRemoteClasses [
@@ -40,4 +55,78 @@ GbsBrowserTest >> testFetchRemoteClasses [
 	"4. Assertions"
 	self assert: classes isNotEmpty description: 'No classes were found in Globals'.
 	self assert: (classes includes: 'Association') description: 'Standard classes are missing!'.
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testAcceptTextDelegatesToCompileMethod [
+	| browser |
+	browser := TestableGbsBrowser new.
+	browser enableCompileSpy.
+
+	self assert: (browser acceptText: 'foo ^ 1') equals: #compiled.
+	self assert: browser lastCompileSource equals: 'foo ^ 1'
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testCompileMethodCompilesSelectedClassAndProtocol [
+	| browser session classes protocols meta capturedScript |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeAndFetch put: [ :script |
+		capturedScript := script.
+		'Success'
+	].
+
+	classes := GbxFakeListPresenterForBrowser new.
+	classes selectedItem: 'DemoClass'.
+	protocols := GbxFakeListPresenterForBrowser new.
+	protocols selectedItem: 'testing'.
+	meta := GbxFakeCheckBoxForBrowser new.
+	meta state: false.
+
+	browser session: session.
+	browser instVarNamed: 'classesList' put: classes.
+	browser instVarNamed: 'protocolsList' put: protocols.
+	browser instVarNamed: 'metaCheckbox' put: meta.
+
+	browser runSuperCompileMethod: 'foo ^ 1'.
+	self assert: (capturedScript includesSubstring: 'objectNamed: #DemoClass').
+	self assert: (capturedScript includesSubstring: 'compileMethod: source category: #''testing''').
+	self assert: browser lastInfoMessage equals: 'Compiled successfully!'.
+	self assert: browser lastProtocolSelected equals: 'testing'
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testGsDoItUsesSelectedTextOrWholeSource [
+	| browser session text |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeAndFetchContext put: [ :script :ctx | 'ok' ].
+
+	text := GbxFakeTextPresenterForBrowser new.
+	text
+		text: '1 + 1';
+		selectedText: '2 + 2'.
+
+	browser session: session.
+	browser instVarNamed: 'sourceText' put: text.
+
+	self assert: browser gsDoIt
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testGsPrintItAppendsResult [
+	| browser session text |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeAndFetchContext put: [ :script :ctx | '42' ].
+
+	text := GbxFakeTextPresenterForBrowser new.
+	text text: '21+21'.
+
+	browser session: session.
+	browser instVarNamed: 'sourceText' put: text.
+
+	self assert: browser gsPrintIt.
+	self assert: (text text includesSubstring: '"42"')
 ]
