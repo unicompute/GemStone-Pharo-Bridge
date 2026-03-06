@@ -305,6 +305,20 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 
 { #category : 'layout' }
 GbsRemoteDebugger >> defaultLayout [
+	| bottomLeft bottomRight bottomAll |
+	bottomLeft := SpPanedLayout newHorizontal
+		add: sourceText;
+		add: variablesTable;
+		yourself.
+	bottomRight := SpPanedLayout newHorizontal
+		add: frameInfoTable;
+		add: processInfoTable;
+		yourself.
+	bottomAll := SpPanedLayout newHorizontal
+		add: bottomLeft;
+		add: bottomRight;
+		yourself.
+
 	^ SpBoxLayout newVertical
 		spacing: 5;
 		add: mainMenu expand: false;
@@ -333,12 +347,7 @@ GbsRemoteDebugger >> defaultLayout [
 			yourself) expand: false;
 		add: (SpPanedLayout newVertical
 			add: stackList;
-			add: (SpPanedLayout newHorizontal
-				add: sourceText;
-				add: variablesTable;
-				add: frameInfoTable;
-				add: processInfoTable;
-				yourself);
+			add: bottomAll;
 			yourself);
 		yourself
 ]
