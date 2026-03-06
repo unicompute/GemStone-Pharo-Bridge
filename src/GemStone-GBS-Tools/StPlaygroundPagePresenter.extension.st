@@ -24,20 +24,11 @@ StPlaygroundPagePresenter >> menuActionsFor: aCodePresenter [
 			yourself);
 		register: ((CmCommandGroup named: 'GemStone') asSpecGroup
 			beDisplayedAsGroup;
-			register: (self gsBlockCommandNamed: 'GS-Do it' do: [ GbsPlaygroundActions gsDoItIn: self ]);
-			register: (self gsBlockCommandNamed: 'GS-Print it' do: [ GbsPlaygroundActions gsPrintItIn: self ]);
-			register: (self gsBlockCommandNamed: 'GS-Inspect it' do: [ GbsPlaygroundActions gsInspectItIn: self ]);
-			register: (self gsBlockCommandNamed: 'GS-Debug it' do: [ GbsPlaygroundActions gsDebugItIn: self ]);
-			register: (self gsBlockCommandNamed: 'GS-File it in' do: [ GbsPlaygroundActions gsFileItInIn: self ]);
+			register: (GbsPlaygroundMenuDoItCommand forSpecContext: self);
+			register: (GbsPlaygroundMenuPrintItCommand forSpecContext: self);
+			register: (GbsPlaygroundMenuInspectItCommand forSpecContext: self);
+			register: (GbsPlaygroundMenuDebugItCommand forSpecContext: self);
+			register: (GbsPlaygroundMenuFileItInCommand forSpecContext: self);
 			yourself);
 		yourself
-]
-
-{ #category : '*GemStone-GBS-Tools-playground' }
-StPlaygroundPagePresenter >> gsBlockCommandNamed: aName do: aBlock [
-	^ (CmBlockCommand new
-		context: self;
-		name: aName;
-		block: aBlock;
-		yourself)
 ]
