@@ -70,3 +70,14 @@ GbsClassicLauncherTest >> testOpenSymbolDictionaryBrowserPassesDictionaryName [
 	self assert: launcher lastOpenedSession == fakeSession.
 	self assert: launcher lastOpenedDictionary equals: 'UserGlobals'
 ]
+
+{ #category : 'tests' }
+GbsClassicLauncherTest >> testBrowsingSessionFromParametersUsesCurrentSession [
+	| params liveSession |
+	params := GbsSessionParameters new.
+	liveSession := MockGbsSession new.
+	liveSession isLoggedIn: true.
+	GbsSessionParameters currentSession: liveSession.
+
+	self assert: (launcher browsingSessionFrom: params) == liveSession
+]

@@ -373,6 +373,10 @@ GbsClassicLauncher >> menuWindow [
 GbsClassicLauncher >> openBrowserOn: aSession dictionary: aDictionaryName [
 	| browser |
 	(self isSessionUsableForBrowsing: aSession) ifFalse: [ ^ false ].
+	((aSession respondsTo: #executeAndFetch:) not) ifTrue: [
+		self inform: 'Selected item is not a live GemStone session.'.
+		^ false
+	].
 	[
 		browser := self browserClass openOn: aSession.
 		(browser notNil
@@ -476,7 +480,18 @@ GbsClassicLauncher >> sessionForBrowsing [
 	(sessionList notNil and: [ sessionList respondsTo: #selection ]) ifTrue: [
 		selected := [ sessionList selection selectedItem ] on: Error do: [ nil ]
 	].
-	^ selected ifNil: [ GbsSessionParameters currentSession ]
+	selected := selected ifNil: [ GbsSessionParameters currentSession ].
+	^ self browsingSessionFrom: selected
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> browsingSessionFrom: selectedObject [
+	"Classic launcher list can contain parameter records, but browsers need a live GbsSession."
+	selectedObject ifNil: [ ^ nil ].
+	(selectedObject respondsTo: #executeAndFetch:) ifTrue: [ ^ selectedObject ].
+	(selectedObject class name = #GbsSessionParameters)
+		ifTrue: [ ^ GbsSessionParameters currentSession ].
+	^ GbsSessionParameters currentSession
 ]
 
 { #category : 'polling' }
