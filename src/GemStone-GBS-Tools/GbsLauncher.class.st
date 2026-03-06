@@ -160,6 +160,7 @@ GbsLauncher >> initializePresenters [
 
 { #category : 'initialization' }
 GbsLauncher >> initializeWindow: aWindowPresenter [
+    super initializeWindow: aWindowPresenter.
     aWindowPresenter 
         title: 'GemStone GBS Launcher';
         initialExtent: 350@400.

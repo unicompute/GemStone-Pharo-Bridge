@@ -43,6 +43,11 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
         ].
 ]
 
+{ #category : 'private' }
+GbsClassicLauncher >> browserClass [
+	^ GbsBrowser
+]
+
 { #category : 'menus' }
 GbsClassicLauncher >> buildMenuBar [
     ^ self newMenuBar
@@ -318,72 +323,6 @@ GbsClassicLauncher >> menuBrowse [
         yourself.
 ]
 
-{ #category : 'actions' }
-GbsClassicLauncher >> openSystemBrowser [
-	| session |
-	session := self sessionForBrowsing.
-	session ifNil: [
-		self inform: 'Select or log into a GemStone session first.'.
-		^ false
-	].
-	GbsSessionParameters currentSession: session.
-	self openBrowserOn: session dictionary: nil.
-	^ true
-]
-
-{ #category : 'actions' }
-GbsClassicLauncher >> openClassBrowser [
-	^ self openSystemBrowser
-]
-
-{ #category : 'actions' }
-GbsClassicLauncher >> openSymbolDictionaryBrowser [
-	| session dictName |
-	session := self sessionForBrowsing.
-	session ifNil: [
-		self inform: 'Select or log into a GemStone session first.'.
-		^ false
-	].
-	dictName := self requestSymbolDictionaryName.
-	GbsSessionParameters currentSession: session.
-	self openBrowserOn: session dictionary: dictName.
-	^ true
-]
-
-{ #category : 'private' }
-GbsClassicLauncher >> openBrowserOn: aSession dictionary: aDictionaryName [
-	| browser |
-	browser := self browserClass openOn: aSession.
-	(browser notNil
-		and: [ aDictionaryName isString
-		and: [ aDictionaryName isEmpty not
-		and: [ browser respondsTo: #selectDictionaryNamed: ] ] ])
-		ifTrue: [ browser selectDictionaryNamed: aDictionaryName ].
-	^ browser
-]
-
-{ #category : 'private' }
-GbsClassicLauncher >> sessionForBrowsing [
-	| selected |
-	selected := nil.
-	(sessionList notNil and: [ sessionList respondsTo: #selection ]) ifTrue: [
-		selected := [ sessionList selection selectedItem ] on: Error do: [ nil ]
-	].
-	^ selected ifNil: [ GbsSessionParameters currentSession ]
-]
-
-{ #category : 'private' }
-GbsClassicLauncher >> requestSymbolDictionaryName [
-	^ UIManager default
-		request: 'Symbol Dictionary name (optional):'
-		initialAnswer: ''
-]
-
-{ #category : 'private' }
-GbsClassicLauncher >> browserClass [
-	^ GbsBrowser
-]
-
 { #category : 'menus' }
 GbsClassicLauncher >> menuParameters [
     ^ self newMenu
@@ -430,6 +369,50 @@ GbsClassicLauncher >> menuWindow [
         yourself.
 ]
 
+{ #category : 'private' }
+GbsClassicLauncher >> openBrowserOn: aSession dictionary: aDictionaryName [
+	| browser |
+	browser := self browserClass openOn: aSession.
+	(browser notNil
+		and: [ aDictionaryName isString
+		and: [ aDictionaryName isEmpty not
+		and: [ browser respondsTo: #selectDictionaryNamed: ] ] ])
+		ifTrue: [ browser selectDictionaryNamed: aDictionaryName ].
+	^ browser
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> openClassBrowser [
+	^ self openSystemBrowser
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> openSymbolDictionaryBrowser [
+	| session dictName |
+	session := self sessionForBrowsing.
+	session ifNil: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false
+	].
+	dictName := self requestSymbolDictionaryName.
+	GbsSessionParameters currentSession: session.
+	self openBrowserOn: session dictionary: dictName.
+	^ true
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> openSystemBrowser [
+	| session |
+	session := self sessionForBrowsing.
+	session ifNil: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false
+	].
+	GbsSessionParameters currentSession: session.
+	self openBrowserOn: session dictionary: nil.
+	^ true
+]
+
 { #category : 'actions' }
 GbsClassicLauncher >> openWorkspaceFor: aSession [
     aSession ifNil: [ ^ self ].
@@ -463,6 +446,23 @@ GbsClassicLauncher >> refreshSessionList [
     sessionList items: GbsSessionParameters allSessions.
     parametersList items: GbsSessionParameters allParameters. "Assuming this collection exists"
     GbsSessionParameters currentSession ifNotNil: [ :s | sessionList selectItem: s ].
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> requestSymbolDictionaryName [
+	^ UIManager default
+		request: 'Symbol Dictionary name (optional):'
+		initialAnswer: ''
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> sessionForBrowsing [
+	| selected |
+	selected := nil.
+	(sessionList notNil and: [ sessionList respondsTo: #selection ]) ifTrue: [
+		selected := [ sessionList selection selectedItem ] on: Error do: [ nil ]
+	].
+	^ selected ifNil: [ GbsSessionParameters currentSession ]
 ]
 
 { #category : 'polling' }

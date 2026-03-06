@@ -27,6 +27,11 @@ GbsBrowser class >> openOn: aSession [
 ]
 
 { #category : 'actions' }
+GbsBrowser >> acceptText: newText [
+	^ self compileMethod: newText
+]
+
+{ #category : 'actions' }
 GbsBrowser >> classSelected: className [
 	| script rawData categories metaString |
 	
@@ -133,6 +138,37 @@ GbsBrowser >> dictionarySelected: dictName [
 	classesList items: classes.
 ]
 
+{ #category : 'actions' }
+GbsBrowser >> gsDoIt [
+	| code |
+	code := self selectedCodeOrAll.
+	code isEmpty ifTrue: [ ^ false ].
+	^ (session executeAndFetch: code context: 20) notNil
+]
+
+{ #category : 'actions' }
+GbsBrowser >> gsInspectIt [
+	| code oop |
+	code := self selectedCodeOrAll.
+	code isEmpty ifTrue: [ ^ false ].
+	oop := session serverInterface apiGciExecuteStr: code context: 20 env: 0.
+	^ (oop isNumber and: [ oop > 20 ])
+		ifTrue: [ GbsInspector inspect: oop session: session. true ]
+		ifFalse: [ false ]
+]
+
+{ #category : 'actions' }
+GbsBrowser >> gsPrintIt [
+	| code result currentText |
+	code := self selectedCodeOrAll.
+	code isEmpty ifTrue: [ ^ false ].
+	result := session executeAndFetch: '[ ', code, ' ] value printString' context: 20.
+	result ifNil: [ ^ false ].
+	currentText := sourceText text asString.
+	sourceText text: currentText, ' "', result asString, '"'.
+	^ true
+]
+
 { #category : 'initialization' }
 GbsBrowser >> initializePresenters [
 	dictionariesList := self newList.
@@ -180,19 +216,6 @@ GbsBrowser >> loadDictionaries [
 ]
 
 { #category : 'actions' }
-GbsBrowser >> selectDictionaryNamed: aDictionaryName [
-	| dicts |
-	(aDictionaryName isString and: [ aDictionaryName isEmpty not ]) ifFalse: [ ^ self ].
-	dicts := (dictionariesList respondsTo: #items)
-		ifTrue: [ dictionariesList items ]
-		ifFalse: [ #( ) ].
-	(dicts includes: aDictionaryName) ifTrue: [
-		(dictionariesList respondsTo: #selectItem:) ifTrue: [ dictionariesList selectItem: aDictionaryName ].
-		self dictionarySelected: aDictionaryName
-	]
-]
-
-{ #category : 'actions' }
 GbsBrowser >> methodSelected: selectorName [
 	| script rawSource className metaString |
 	
@@ -214,64 +237,6 @@ GbsBrowser >> methodSelected: selectorName [
 	rawSource := session executeAndFetch: script.
 	(rawSource beginsWith: 'Error:') ifTrue: [ rawSource := 'Could not fetch source code.' ].
 	sourceText text: rawSource.
-]
-
-{ #category : 'actions' }
-GbsBrowser >> acceptText: newText [
-	^ self compileMethod: newText
-]
-
-{ #category : 'actions' }
-GbsBrowser >> gsDoIt [
-	| code |
-	code := self selectedCodeOrAll.
-	code isEmpty ifTrue: [ ^ false ].
-	^ (session executeAndFetch: code context: 20) notNil
-]
-
-{ #category : 'actions' }
-GbsBrowser >> gsPrintIt [
-	| code result currentText |
-	code := self selectedCodeOrAll.
-	code isEmpty ifTrue: [ ^ false ].
-	result := session executeAndFetch: '[ ', code, ' ] value printString' context: 20.
-	result ifNil: [ ^ false ].
-	currentText := sourceText text asString.
-	sourceText text: currentText, ' "', result asString, '"'.
-	^ true
-]
-
-{ #category : 'actions' }
-GbsBrowser >> gsInspectIt [
-	| code oop |
-	code := self selectedCodeOrAll.
-	code isEmpty ifTrue: [ ^ false ].
-	oop := session serverInterface apiGciExecuteStr: code context: 20 env: 0.
-	^ (oop isNumber and: [ oop > 20 ])
-		ifTrue: [ GbsInspector inspect: oop session: session. true ]
-		ifFalse: [ false ]
-]
-
-{ #category : 'private' }
-GbsBrowser >> selectedCodeOrAll [
-	| code |
-	code := (sourceText respondsTo: #selectedText)
-		ifTrue: [ sourceText selectedText ]
-		ifFalse: [ '' ].
-	(code isString and: [ code isEmpty not ]) ifTrue: [ ^ code ].
-	^ sourceText text asString
-]
-
-{ #category : 'menus' }
-GbsBrowser >> textMenu [
-	| menu |
-	menu := self newMenu.
-	menu addGroup: [ :group |
-		group addItem: [ :item | item name: 'Accept'; action: [ self acceptText: sourceText text asString ] ].
-		group addItem: [ :item | item name: 'GS-Do it'; action: [ self gsDoIt ] ].
-		group addItem: [ :item | item name: 'GS-Print it'; action: [ self gsPrintIt ] ].
-		group addItem: [ :item | item name: 'GS-Inspect it'; action: [ self gsInspectIt ] ] ].
-	^ menu
 ]
 
 { #category : 'actions' }
@@ -303,7 +268,42 @@ GbsBrowser >> protocolSelected: protocolName [
 	methodsList items: selectors.
 ]
 
+{ #category : 'actions' }
+GbsBrowser >> selectDictionaryNamed: aDictionaryName [
+	| dicts |
+	(aDictionaryName isString and: [ aDictionaryName isEmpty not ]) ifFalse: [ ^ self ].
+	dicts := (dictionariesList respondsTo: #items)
+		ifTrue: [ dictionariesList items ]
+		ifFalse: [ #( ) ].
+	(dicts includes: aDictionaryName) ifTrue: [
+		(dictionariesList respondsTo: #selectItem:) ifTrue: [ dictionariesList selectItem: aDictionaryName ].
+		self dictionarySelected: aDictionaryName
+	]
+]
+
+{ #category : 'private' }
+GbsBrowser >> selectedCodeOrAll [
+	| code |
+	code := (sourceText respondsTo: #selectedText)
+		ifTrue: [ sourceText selectedText ]
+		ifFalse: [ '' ].
+	(code isString and: [ code isEmpty not ]) ifTrue: [ ^ code ].
+	^ sourceText text asString
+]
+
 { #category : 'accessing' }
 GbsBrowser >> session: aSession [
 	session := aSession.
+]
+
+{ #category : 'menus' }
+GbsBrowser >> textMenu [
+	| menu |
+	menu := self newMenu.
+	menu addGroup: [ :group |
+		group addItem: [ :item | item name: 'Accept'; action: [ self acceptText: sourceText text asString ] ].
+		group addItem: [ :item | item name: 'GS-Do it'; action: [ self gsDoIt ] ].
+		group addItem: [ :item | item name: 'GS-Print it'; action: [ self gsPrintIt ] ].
+		group addItem: [ :item | item name: 'GS-Inspect it'; action: [ self gsInspectIt ] ] ].
+	^ menu
 ]

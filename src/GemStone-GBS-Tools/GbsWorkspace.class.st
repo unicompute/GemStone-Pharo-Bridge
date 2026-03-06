@@ -104,56 +104,6 @@ GbsWorkspace >> doIt [
 	].
 ]
 
-{ #category : 'private' }
-GbsWorkspace >> isDebuggerStackCandidateOop: anOop session: aSession [
-	| script answer |
-
-	(anOop isNil or: [ anOop = 0 or: [ anOop = 20 ] ]) ifTrue: [ ^ false ].
-	aSession ifNil: [ ^ false ].
-	((aSession respondsTo: #isLoggedIn) and: [ aSession isLoggedIn not ]) ifTrue: [ ^ false ].
-
-	script := '[
-		| obj proc ctx stackReport |
-		obj := Object _objectForOop: ', anOop asString, '.
-		obj isNil ifTrue: [ ^ false ].
-
-		"Prefer a process and verify it has at least frame 1"
-		proc := nil.
-		(obj respondsTo: #_gsiStackReportFromLevel:toLevel:) ifTrue: [ proc := obj ].
-		proc isNil ifTrue: [
-			(obj respondsTo: #serverProcess)
-				ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ]
-		].
-		proc isNil ifTrue: [
-			(obj respondsTo: #process)
-				ifTrue: [ proc := [ obj process ] on: Error do: [ nil ] ]
-		].
-		proc isNil ifTrue: [
-			(obj respondsTo: #topContext) ifTrue: [
-				ctx := [ obj topContext ] on: Error do: [ nil ].
-				(ctx notNil and: [ ctx respondsTo: #process ])
-					ifTrue: [ proc := [ ctx process ] on: Error do: [ nil ] ].
-			]
-		].
-		proc notNil ifTrue: [
-			stackReport := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
-			(stackReport notNil and: [ stackReport size >= 2 ]) ifTrue: [ ^ true ].
-		].
-
-		"Fallback: context sender chain must have at least one frame"
-		ctx := nil.
-		(obj respondsTo: #sender) ifTrue: [ ctx := obj ].
-		(ctx isNil and: [ obj respondsTo: #topContext ])
-			ifTrue: [ ctx := [ obj topContext ] on: Error do: [ nil ] ].
-		ctx notNil ifTrue: [ ^ true ].
-
-		false
-	] value'.
-
-	answer := [ aSession evaluate: script ] on: Error do: [ false ].
-	^ (answer == true or: [ answer = 'true' ])
-]
-
 { #category : 'actions' }
 GbsWorkspace >> executeInGemStone [
 	"Safely catch any old Cmd+G shortcuts and route them to the correct, main-thread method"
@@ -163,11 +113,6 @@ GbsWorkspace >> executeInGemStone [
 { #category : 'actions' }
 GbsWorkspace >> gemStoneDebugIt [
 	"Use the same path as DoIt so GbsError carries a real process OOP for remote debugging."
-	^ self doIt
-]
-
-{ #category : 'actions' }
-GbsWorkspace >> gsDoIt [
 	^ self doIt
 ]
 
@@ -191,6 +136,16 @@ GbsWorkspace >> gemStonePrintIt [
 	textEditor text: currentText asString, ' " ', resultString, ' "'.
 	
 	GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
+]
+
+{ #category : 'actions' }
+GbsWorkspace >> gsDoIt [
+	^ self doIt
+]
+
+{ #category : 'actions' }
+GbsWorkspace >> gsInspectIt [
+	^ self inspectIt
 ]
 
 { #category : 'actions' }
@@ -276,9 +231,54 @@ GbsWorkspace >> inspectIt [
 		ifFalse: [ GbsInspector inspect: rawOop session: activeSession ].
 ]
 
-{ #category : 'actions' }
-GbsWorkspace >> gsInspectIt [
-	^ self inspectIt
+{ #category : 'private' }
+GbsWorkspace >> isDebuggerStackCandidateOop: anOop session: aSession [
+	| script answer |
+
+	(anOop isNil or: [ anOop = 0 or: [ anOop = 20 ] ]) ifTrue: [ ^ false ].
+	aSession ifNil: [ ^ false ].
+	((aSession respondsTo: #isLoggedIn) and: [ aSession isLoggedIn not ]) ifTrue: [ ^ false ].
+
+	script := '[
+		| obj proc ctx stackReport |
+		obj := Object _objectForOop: ', anOop asString, '.
+		obj isNil ifTrue: [ ^ false ].
+
+		"Prefer a process and verify it has at least frame 1"
+		proc := nil.
+		(obj respondsTo: #_gsiStackReportFromLevel:toLevel:) ifTrue: [ proc := obj ].
+		proc isNil ifTrue: [
+			(obj respondsTo: #serverProcess)
+				ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ]
+		].
+		proc isNil ifTrue: [
+			(obj respondsTo: #process)
+				ifTrue: [ proc := [ obj process ] on: Error do: [ nil ] ]
+		].
+		proc isNil ifTrue: [
+			(obj respondsTo: #topContext) ifTrue: [
+				ctx := [ obj topContext ] on: Error do: [ nil ].
+				(ctx notNil and: [ ctx respondsTo: #process ])
+					ifTrue: [ proc := [ ctx process ] on: Error do: [ nil ] ].
+			]
+		].
+		proc notNil ifTrue: [
+			stackReport := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
+			(stackReport notNil and: [ stackReport size >= 2 ]) ifTrue: [ ^ true ].
+		].
+
+		"Fallback: context sender chain must have at least one frame"
+		ctx := nil.
+		(obj respondsTo: #sender) ifTrue: [ ctx := obj ].
+		(ctx isNil and: [ obj respondsTo: #topContext ])
+			ifTrue: [ ctx := [ obj topContext ] on: Error do: [ nil ] ].
+		ctx notNil ifTrue: [ ^ true ].
+
+		false
+	] value'.
+
+	answer := [ aSession evaluate: script ] on: Error do: [ false ].
+	^ (answer == true or: [ answer = 'true' ])
 ]
 
 { #category : 'local actions' }

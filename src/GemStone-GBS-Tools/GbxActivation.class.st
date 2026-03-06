@@ -49,49 +49,49 @@ GbxActivation class >> processOop: procOop level: aLevel session: aSession [
 	^ activation
 ]
 
-{ #category : 'testing' }
-GbxActivation >> isBlockContext [
-	^ gsMethodId beginsWith: '[]'
+{ #category : 'comparing' }
+GbxActivation >> = other [
+	^ other isKindOf: GbxActivation
+		and: [ other level = level 
+		and: [ other gsMethodId = gsMethodId ] ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> argAndTempNames [
+	^ argAndTempNames ifNil: [ #( ) ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> argAndTempNames: aCollection [
+	argAndTempNames := aCollection
+]
+
+{ #category : 'accessing' }
+GbxActivation >> argNames [
+	"Return argument names only"
+	argAndTempNames ifNil: [ ^ #( ) ].
+	^ argAndTempNames copyFrom: 1 to: numArgsAndTemps
+]
+
+{ #category : 'accessing' }
+GbxActivation >> ensureArgAndTempNames [
+	argAndTempNames ifNil: [ argAndTempNames := #( ) ].
+	numArgsAndTemps ifNil: [ numArgsAndTemps := 0 ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> ensureSourceOffsets [
+	sourceOffsets ifNil: [ sourceOffsets := #( ) ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> ensureSourceString [
+	sourceString ifNil: [ sourceString := '' ]
 ]
 
 { #category : 'testing' }
 GbxActivation >> gbxIsServerContext [
 	^ true
-]
-
-{ #category : 'testing' }
-GbxActivation >> isValid [
-	^ processOop isNotNil and: [ processOop ~= 20 ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> processOop: anOop [
-	processOop := anOop
-]
-
-{ #category : 'accessing' }
-GbxActivation >> level: anInteger [
-	level := anInteger
-]
-
-{ #category : 'accessing' }
-GbxActivation >> session: aSession [
-	session := aSession
-]
-
-{ #category : 'accessing' }
-GbxActivation >> level [
-	^ level
-]
-
-{ #category : 'accessing' }
-GbxActivation >> selector [
-	^ selector ifNil: [ #unboundMethod ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> selector: aSymbol [
-	selector := aSymbol
 ]
 
 { #category : 'accessing' }
@@ -105,6 +105,76 @@ GbxActivation >> gsMethodId: aString [
 ]
 
 { #category : 'accessing' }
+GbxActivation >> gsMethodIdOrUnknown [
+	^ gsMethodId ifNil: [ '<unknown>' ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> hasSourceString [
+	^ sourceString isNotNil and: [ sourceString isEmpty not ]
+]
+
+{ #category : 'comparing' }
+GbxActivation >> hash [
+	^ gsMethodId hash bitXor: level
+]
+
+{ #category : 'accessing' }
+GbxActivation >> initializeFromClass: className selector: selectorName source: sourceText contextOop: contextOop [
+	self methodClass: className.
+	self selector: selectorName.
+	self gsMethodId: className, '>>', selectorName asString.
+	self sourceString: sourceText.
+	self processOop: contextOop.
+	self ensureSourceString.
+	self ensureArgAndTempNames.
+	self ensureSourceOffsets
+]
+
+{ #category : 'accessing' }
+GbxActivation >> ipOffset [
+	^ ipOffset ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> ipOffset: anInteger [
+	ipOffset := anInteger
+]
+
+{ #category : 'testing' }
+GbxActivation >> isBlockContext [
+	^ gsMethodId beginsWith: '[]'
+]
+
+{ #category : 'testing' }
+GbxActivation >> isValid [
+	^ processOop isNotNil and: [ processOop ~= 20 ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> level [
+	^ level
+]
+
+{ #category : 'accessing' }
+GbxActivation >> level: anInteger [
+	level := anInteger
+]
+
+{ #category : 'temp variables' }
+GbxActivation >> marshalValue: anObject [
+	"Convert a Pharo object to GemStone syntax"
+	anObject ifNil: [ ^ 'nil' ].
+	anObject == true ifTrue: [ ^ 'true' ].
+	anObject == false ifTrue: [ ^ 'false' ].
+	anObject isInteger ifTrue: [ ^ anObject asString ].
+	anObject isString ifTrue: [ 
+		^ '''', (anObject copyReplaceAll: '''' with: ''''''), '''' 
+	].
+	^ 'nil'
+]
+
+{ #category : 'accessing' }
 GbxActivation >> methodClass [
 	^ methodClass
 ]
@@ -112,6 +182,54 @@ GbxActivation >> methodClass [
 { #category : 'accessing' }
 GbxActivation >> methodClass: aString [
 	methodClass := aString
+]
+
+{ #category : 'accessing' }
+GbxActivation >> methodClassOrUnknown [
+	^ methodClass ifNil: [ '<unknown>' ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> methodId [
+	^ gsMethodId ifNil: [ '<unknown>' ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> numArgsAndTemps [
+	^ numArgsAndTemps ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> numArgsAndTemps: anInteger [
+	numArgsAndTemps := anInteger
+]
+
+{ #category : 'printing' }
+GbxActivation >> printString [
+	| className selectorString |
+	className := methodClass ifNil: [ '<unknown>' ] ifNotNil: [ methodClass ].
+	selectorString := selector ifNil: [ '<unknown>' ] ifNotNil: [ selector ].
+	^ className, '>>', selectorString
+]
+
+{ #category : 'accessing' }
+GbxActivation >> processOop [
+	^ processOop
+]
+
+{ #category : 'accessing' }
+GbxActivation >> processOop: anOop [
+	processOop := anOop
+]
+
+{ #category : 'accessing' }
+GbxActivation >> quickStepPoint [
+	^ quickStepPoint ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> quickStepPoint: anInteger [
+	quickStepPoint := anInteger
 ]
 
 { #category : 'accessing' }
@@ -135,51 +253,8 @@ GbxActivation >> receiverClass: aString [
 ]
 
 { #category : 'accessing' }
-GbxActivation >> sourceString [
-	^ sourceString ifNil: [ '' ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> sourceString: aString [
-	sourceString := aString
-]
-
-{ #category : 'accessing' }
-GbxActivation >> sourceCode [
-	"Return cached source string"
-	^ sourceString ifNil: [ '' ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> sourceOffsets [
-	^ sourceOffsets ifNil: [ #( ) ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> tempNames [
-	"Return temp variable names (includes arguments)"
-	argAndTempNames ifNil: [ ^ #( ) ].
-	^ argAndTempNames copyFrom: 1 to: (numArgsAndTemps min: argAndTempNames size)
-]
-
-{ #category : 'accessing' }
-GbxActivation >> argNames [
-	"Return argument names only"
-	argAndTempNames ifNil: [ ^ #( ) ].
-	^ argAndTempNames copyFrom: 1 to: numArgsAndTemps
-]
-
-{ #category : 'accessing' }
-GbxActivation >> methodId [
-	^ gsMethodId ifNil: [ '<unknown>' ]
-]
-
-{ #category : 'printing' }
-GbxActivation >> printString [
-	| className selectorString |
-	className := methodClass ifNil: [ '<unknown>' ] ifNotNil: [ methodClass ].
-	selectorString := selector ifNil: [ '<unknown>' ] ifNotNil: [ selector ].
-	^ className, '>>', selectorString
+GbxActivation >> receiverClassOrUnknown [
+	^ receiverClass ifNil: [ '<unknown>' ]
 ]
 
 { #category : 'private' }
@@ -249,6 +324,104 @@ GbxActivation >> reset [
 	].
 ]
 
+{ #category : 'accessing' }
+GbxActivation >> selector [
+	^ selector ifNil: [ #unboundMethod ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> selector: aSymbol [
+	selector := aSymbol
+]
+
+{ #category : 'accessing' }
+GbxActivation >> selectorOrUnknown [
+	^ selector ifNil: [ #unboundMethod ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> selfOop [
+	^ selfOop
+]
+
+{ #category : 'accessing' }
+GbxActivation >> selfOop: anObject [
+	selfOop := anObject
+]
+
+{ #category : 'accessing' }
+GbxActivation >> session [
+	^ session
+]
+
+{ #category : 'accessing' }
+GbxActivation >> session: aSession [
+	session := aSession
+]
+
+{ #category : 'accessing' }
+GbxActivation >> sourceCode [
+	"Return cached source string"
+	^ sourceString ifNil: [ '' ]
+]
+
+{ #category : 'source map' }
+GbxActivation >> sourceIntervalForStepPoint: aStepPoint [
+	| map entry |
+	aStepPoint ifNil: [ ^ nil ].
+	map := self visibleSourceMap.
+	entry := map
+		detect: [ :assoc | (assoc respondsTo: #key) and: [ assoc key = aStepPoint ] ]
+		ifNone: [ nil ].
+	^ entry ifNil: [ nil ] ifNotNil: [ entry value ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> sourceOffsetAt: anIndex [
+	^ (self sourceOffsets at: anIndex ifAbsent: [ 0 ])
+]
+
+{ #category : 'accessing' }
+GbxActivation >> sourceOffsets [
+	^ sourceOffsets ifNil: [ #( ) ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> sourceOffsets: aCollection [
+	sourceOffsets := aCollection
+]
+
+{ #category : 'accessing' }
+GbxActivation >> sourceOffsetsSize [
+	^ self sourceOffsets size
+]
+
+{ #category : 'accessing' }
+GbxActivation >> sourceString [
+	^ sourceString ifNil: [ '' ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> sourceString: aString [
+	sourceString := aString
+]
+
+{ #category : 'accessing' }
+GbxActivation >> stackP [
+	^ stackP ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+GbxActivation >> stackP: anInteger [
+	stackP := anInteger
+]
+
+{ #category : 'source map' }
+GbxActivation >> stepPoint [
+	"VW parity alias used by debugger/source-map consumers."
+	^ self quickStepPoint
+]
+
 { #category : 'temp variables' }
 GbxActivation >> tempAt: index [
 	"Get the value of a temp variable at index"
@@ -283,17 +456,11 @@ GbxActivation >> tempAt: index put: anObject [
 	self reset.
 ]
 
-{ #category : 'temp variables' }
-GbxActivation >> marshalValue: anObject [
-	"Convert a Pharo object to GemStone syntax"
-	anObject ifNil: [ ^ 'nil' ].
-	anObject == true ifTrue: [ ^ 'true' ].
-	anObject == false ifTrue: [ ^ 'false' ].
-	anObject isInteger ifTrue: [ ^ anObject asString ].
-	anObject isString ifTrue: [ 
-		^ '''', (anObject copyReplaceAll: '''' with: ''''''), '''' 
-	].
-	^ 'nil'
+{ #category : 'accessing' }
+GbxActivation >> tempNames [
+	"Return temp variable names (includes arguments)"
+	argAndTempNames ifNil: [ ^ #( ) ].
+	^ argAndTempNames copyFrom: 1 to: (numArgsAndTemps min: argAndTempNames size)
 ]
 
 { #category : 'temp variables' }
@@ -388,144 +555,6 @@ GbxActivation >> tempNamesAndValues [
 	]
 ]
 
-{ #category : 'accessing' }
-GbxActivation >> selfOop [
-	^ selfOop
-]
-
-{ #category : 'accessing' }
-GbxActivation >> selfOop: anObject [
-	selfOop := anObject
-]
-
-{ #category : 'accessing' }
-GbxActivation >> argAndTempNames: aCollection [
-	argAndTempNames := aCollection
-]
-
-{ #category : 'accessing' }
-GbxActivation >> numArgsAndTemps: anInteger [
-	numArgsAndTemps := anInteger
-]
-
-{ #category : 'accessing' }
-GbxActivation >> sourceOffsets: aCollection [
-	sourceOffsets := aCollection
-]
-
-{ #category : 'accessing' }
-GbxActivation >> ipOffset: anInteger [
-	ipOffset := anInteger
-]
-
-{ #category : 'accessing' }
-GbxActivation >> stackP: anInteger [
-	stackP := anInteger
-]
-
-{ #category : 'accessing' }
-GbxActivation >> quickStepPoint: anInteger [
-	quickStepPoint := anInteger
-]
-
-{ #category : 'accessing' }
-GbxActivation >> processOop [
-	^ processOop
-]
-
-{ #category : 'accessing' }
-GbxActivation >> session [
-	^ session
-]
-
-{ #category : 'accessing' }
-GbxActivation >> numArgsAndTemps [
-	^ numArgsAndTemps ifNil: [ 0 ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> argAndTempNames [
-	^ argAndTempNames ifNil: [ #( ) ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> quickStepPoint [
-	^ quickStepPoint ifNil: [ 0 ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> ipOffset [
-	^ ipOffset ifNil: [ 0 ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> stackP [
-	^ stackP ifNil: [ 0 ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> sourceOffsetAt: anIndex [
-	^ (self sourceOffsets at: anIndex ifAbsent: [ 0 ])
-]
-
-{ #category : 'accessing' }
-GbxActivation >> sourceOffsetsSize [
-	^ self sourceOffsets size
-]
-
-{ #category : 'accessing' }
-GbxActivation >> gsMethodIdOrUnknown [
-	^ gsMethodId ifNil: [ '<unknown>' ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> methodClassOrUnknown [
-	^ methodClass ifNil: [ '<unknown>' ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> receiverClassOrUnknown [
-	^ receiverClass ifNil: [ '<unknown>' ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> selectorOrUnknown [
-	^ selector ifNil: [ #unboundMethod ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> hasSourceString [
-	^ sourceString isNotNil and: [ sourceString isEmpty not ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> ensureSourceString [
-	sourceString ifNil: [ sourceString := '' ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> ensureArgAndTempNames [
-	argAndTempNames ifNil: [ argAndTempNames := #( ) ].
-	numArgsAndTemps ifNil: [ numArgsAndTemps := 0 ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> ensureSourceOffsets [
-	sourceOffsets ifNil: [ sourceOffsets := #( ) ]
-]
-
-{ #category : 'accessing' }
-GbxActivation >> initializeFromClass: className selector: selectorName source: sourceText contextOop: contextOop [
-	self methodClass: className.
-	self selector: selectorName.
-	self gsMethodId: className, '>>', selectorName asString.
-	self sourceString: sourceText.
-	self processOop: contextOop.
-	self ensureSourceString.
-	self ensureArgAndTempNames.
-	self ensureSourceOffsets
-]
-
 { #category : 'source map' }
 GbxActivation >> visibleSourceMap [
 	"VW parity: infer highlight range from source offset and token class."
@@ -580,33 +609,4 @@ GbxActivation >> visibleSourceMap [
 		]
 	].
 	^ map
-]
-
-{ #category : 'source map' }
-GbxActivation >> stepPoint [
-	"VW parity alias used by debugger/source-map consumers."
-	^ self quickStepPoint
-]
-
-{ #category : 'source map' }
-GbxActivation >> sourceIntervalForStepPoint: aStepPoint [
-	| map entry |
-	aStepPoint ifNil: [ ^ nil ].
-	map := self visibleSourceMap.
-	entry := map
-		detect: [ :assoc | (assoc respondsTo: #key) and: [ assoc key = aStepPoint ] ]
-		ifNone: [ nil ].
-	^ entry ifNil: [ nil ] ifNotNil: [ entry value ]
-]
-
-{ #category : 'comparing' }
-GbxActivation >> = other [
-	^ other isKindOf: GbxActivation
-		and: [ other level = level 
-		and: [ other gsMethodId = gsMethodId ] ]
-]
-
-{ #category : 'comparing' }
-GbxActivation >> hash [
-	^ gsMethodId hash bitXor: level
 ]

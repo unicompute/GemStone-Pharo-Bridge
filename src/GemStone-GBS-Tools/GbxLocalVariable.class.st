@@ -27,14 +27,31 @@ GbxLocalVariable class >> context: aGbxActivation name: aString index: anInteger
 		yourself
 ]
 
+{ #category : 'comparing' }
+GbxLocalVariable >> = other [
+	^ other isKindOf: GbxLocalVariable
+		and: [ other name = name 
+		and: [ other context = context ] ]
+]
+
+{ #category : 'accessing' }
+GbxLocalVariable >> context [
+	^ context
+]
+
 { #category : 'accessing' }
 GbxLocalVariable >> context: aGbxActivation [
 	context := aGbxActivation
 ]
 
+{ #category : 'comparing' }
+GbxLocalVariable >> hash [
+	^ name hash bitXor: context hash
+]
+
 { #category : 'accessing' }
-GbxLocalVariable >> name: aString [
-	name := aString
+GbxLocalVariable >> index [
+	^ index
 ]
 
 { #category : 'accessing' }
@@ -48,13 +65,13 @@ GbxLocalVariable >> name [
 ]
 
 { #category : 'accessing' }
-GbxLocalVariable >> index [
-	^ index
+GbxLocalVariable >> name: aString [
+	name := aString
 ]
 
-{ #category : 'accessing' }
-GbxLocalVariable >> context [
-	^ context
+{ #category : 'printing' }
+GbxLocalVariable >> printString [
+	^ name, ' = ', (self value ifNil: [ 'nil' ] ifNotNil: [ :v | v printString ])
 ]
 
 { #category : 'accessing' }
@@ -67,21 +84,4 @@ GbxLocalVariable >> value [
 GbxLocalVariable >> value: anObject [
 	"Set the value of this local variable"
 	^ context tempAt: index put: anObject
-]
-
-{ #category : 'printing' }
-GbxLocalVariable >> printString [
-	^ name, ' = ', (self value ifNil: [ 'nil' ] ifNotNil: [ :v | v printString ])
-]
-
-{ #category : 'comparing' }
-GbxLocalVariable >> = other [
-	^ other isKindOf: GbxLocalVariable
-		and: [ other name = name 
-		and: [ other context = context ] ]
-]
-
-{ #category : 'comparing' }
-GbxLocalVariable >> hash [
-	^ name hash bitXor: context hash
 ]

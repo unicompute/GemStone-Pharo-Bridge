@@ -30,11 +30,6 @@ Class {
 	#package : 'GemStone-GBS-Tools'
 }
 
-{ #category : 'class initialization' }
-GbxContextListPolicy class >> initialize [
-	GlueIsHiddenDefault := true
-]
-
 { #category : 'instance creation' }
 GbxContextListPolicy class >> debugger: aDebugger [
 	^ self new
@@ -42,25 +37,52 @@ GbxContextListPolicy class >> debugger: aDebugger [
 		yourself
 ]
 
-{ #category : 'initialization' }
-GbxContextListPolicy >> debugger: aDebugger [
-	debugger := aDebugger.
-	glueIsHidden := GlueIsHiddenDefault
+{ #category : 'class initialization' }
+GbxContextListPolicy class >> initialize [
+	GlueIsHiddenDefault := true
 ]
 
-{ #category : 'accessing' }
-GbxContextListPolicy >> glueIsHidden [
-	^ glueIsHidden
+{ #category : 'private' }
+GbxContextListPolicy >> bottomGlueFrom: topGlueContext [
+	"VW parity: given the top context of a glue run, find the bottom glue context."
+	| ctx bottomGlue |
+	ctx := topGlueContext.
+	[ ctx isNil or: [ self isServerCallContext: ctx ] ]
+		whileFalse: [ ctx := [ ctx sender ] on: Error do: [ nil ] ].
+	ctx isNil ifTrue: [ ctx := topGlueContext ].
+
+	bottomGlue := topGlueContext.
+	[
+		ctx := [ ctx sender ] on: Error do: [ nil ].
+		ctx isNil or: [ (self isServerCallContext: ctx) or: [ self isTopGlueContext: ctx ] ]
+	] whileFalse: [
+		(self isBottomGlueContext: ctx) ifTrue: [ bottomGlue := ctx ]
+	].
+	^ bottomGlue
 ]
 
-{ #category : 'accessing' }
-GbxContextListPolicy >> glueIsHidden: aBoolean [
-	glueIsHidden := aBoolean
+{ #category : 'private' }
+GbxContextListPolicy >> clientContextsStartingAt: aContext [
+	| contexts ctx |
+	contexts := OrderedCollection new.
+	ctx := aContext.
+	[ ctx notNil ] whileTrue: [
+		contexts add: ctx.
+		ctx := [ ctx sender ] on: Error do: [ nil ].
+	].
+	^ contexts
 ]
 
-{ #category : 'context list' }
-GbxContextListPolicy >> contextList [
-	^ contextList ifNil: [ #( ) ]
+{ #category : 'private' }
+GbxContextListPolicy >> clientContextsStartingAt: aContext upToContextExclusive: stopContext [
+	| contexts ctx |
+	contexts := OrderedCollection new.
+	ctx := aContext.
+	[ ctx notNil and: [ ctx ~~ stopContext ] ] whileTrue: [
+		contexts add: ctx.
+		ctx := [ ctx sender ] on: Error do: [ nil ].
+	].
+	^ contexts
 ]
 
 { #category : 'context list' }
@@ -89,6 +111,17 @@ GbxContextListPolicy >> computeContextList [
 		ifFalse: [ contextList := allContexts ].
 	
 	^ contextList
+]
+
+{ #category : 'context list' }
+GbxContextListPolicy >> contextList [
+	^ contextList ifNil: [ #( ) ]
+]
+
+{ #category : 'initialization' }
+GbxContextListPolicy >> debugger: aDebugger [
+	debugger := aDebugger.
+	glueIsHidden := GlueIsHiddenDefault
 ]
 
 { #category : 'context list' }
@@ -259,22 +292,63 @@ GbxContextListPolicy >> filterOutGlue: contexts [
 	^ filtered
 ]
 
-{ #category : 'testing' }
-GbxContextListPolicy >> isGlueContext: aContext [
-	"Check if a context is GBS glue code"
-	| className selector |
-	className := aContext methodClass ifNil: [ ^ false ].
-	selector := aContext selector ifNil: [ ^ false ].
-	
-	"GBS glue classes"
-	(className beginsWith: 'Gbs') ifTrue: [ ^ true ].
-	(className beginsWith: 'Gbx') ifTrue: [ 
-		"Some Gbx classes are glue, some are not"
-		(#( #apiGciExecuteStr:context:env: #gciExecute:context:env: #execute: #evaluate: )
-			includes: selector)
-			ifTrue: [ ^ true ]
+{ #category : 'context list' }
+GbxContextListPolicy >> firstClientContextAbove: gsContext [
+	"Ported from VW: find nearest non-glue client context above gsContext,
+	bounded by the matching server-call glue marker for that server process."
+	| ctx bestSoFar targetGsProcess rcvr markerProcess |
+	gsContext ifNil: [ ^ nil ].
+	bestSoFar := nil.
+	targetGsProcess := self processIdentityForContext: gsContext.
+	ctx := (debugger respondsTo: #topContext)
+		ifTrue: [ debugger topContext ]
+		ifFalse: [ nil ].
+	[ ctx notNil ] whileTrue: [
+		(self isGlue: ctx)
+			ifFalse: [ bestSoFar := ctx ]
+			ifTrue: [
+				rcvr := [ ctx receiver ] on: Error do: [ nil ].
+				markerProcess := self processIdentityForErrorLike: rcvr.
+				(markerProcess notNil and: [ markerProcess = targetGsProcess ])
+					ifTrue: [ ^ bestSoFar ]
+			].
+		ctx := [ ctx sender ] on: Error do: [ nil ].
 	].
-	
+	^ nil
+]
+
+{ #category : 'accessing' }
+GbxContextListPolicy >> glueIsHidden [
+	^ glueIsHidden
+]
+
+{ #category : 'accessing' }
+GbxContextListPolicy >> glueIsHidden: aBoolean [
+	glueIsHidden := aBoolean
+]
+
+{ #category : 'private' }
+GbxContextListPolicy >> isBottomGlueContext: aContext [
+	(aContext respondsTo: #gbxIsGsBottomGlue)
+		ifTrue: [ ^ aContext gbxIsGsBottomGlue ].
+	^ false
+]
+
+{ #category : 'private' }
+GbxContextListPolicy >> isDirectGlueContext: aContext [
+	| className |
+	aContext ifNil: [ ^ false ].
+	(aContext respondsTo: #isGlue) ifTrue: [ ^ aContext isGlue ].
+	(self isServerCallContext: aContext) ifTrue: [ ^ true ].
+	(self isTopGlueContext: aContext) ifTrue: [ ^ true ].
+	(self isBottomGlueContext: aContext) ifTrue: [ ^ true ].
+	(aContext respondsTo: #gbxIsGsGlue)
+		ifTrue: [ aContext gbxIsGsGlue ifTrue: [ ^ true ] ].
+	(aContext respondsTo: #gbxIsServerContext)
+		ifTrue: [ aContext gbxIsServerContext ifTrue: [ ^ self isGlueContext: aContext ] ].
+	className := aContext class name asString.
+	((className beginsWith: 'Gbs') or: [ className beginsWith: 'Gbx' ])
+		ifTrue: [ ^ true ].
 	^ false
 ]
 
@@ -307,37 +381,43 @@ GbxContextListPolicy >> isGlue: aContext [
 	^ false
 ]
 
-{ #category : 'context list' }
-GbxContextListPolicy >> topServerContext [
-	"Return the topmost server context"
-	| list |
-	list := self contextList.
-	^ list ifEmpty: [ nil ] ifNotEmpty: [ list first ]
+{ #category : 'testing' }
+GbxContextListPolicy >> isGlueContext: aContext [
+	"Check if a context is GBS glue code"
+	| className selector |
+	className := aContext methodClass ifNil: [ ^ false ].
+	selector := aContext selector ifNil: [ ^ false ].
+	
+	"GBS glue classes"
+	(className beginsWith: 'Gbs') ifTrue: [ ^ true ].
+	(className beginsWith: 'Gbx') ifTrue: [ 
+		"Some Gbx classes are glue, some are not"
+		(#( #apiGciExecuteStr:context:env: #gciExecute:context:env: #execute: #evaluate: )
+			includes: selector)
+			ifTrue: [ ^ true ]
+	].
+	
+	^ false
 ]
 
 { #category : 'context list' }
-GbxContextListPolicy >> firstClientContextAbove: gsContext [
-	"Ported from VW: find nearest non-glue client context above gsContext,
-	bounded by the matching server-call glue marker for that server process."
-	| ctx bestSoFar targetGsProcess rcvr markerProcess |
-	gsContext ifNil: [ ^ nil ].
-	bestSoFar := nil.
-	targetGsProcess := self processIdentityForContext: gsContext.
-	ctx := (debugger respondsTo: #topContext)
-		ifTrue: [ debugger topContext ]
-		ifFalse: [ nil ].
-	[ ctx notNil ] whileTrue: [
-		(self isGlue: ctx)
-			ifFalse: [ bestSoFar := ctx ]
-			ifTrue: [
-				rcvr := [ ctx receiver ] on: Error do: [ nil ].
-				markerProcess := self processIdentityForErrorLike: rcvr.
-				(markerProcess notNil and: [ markerProcess = targetGsProcess ])
-					ifTrue: [ ^ bestSoFar ]
-			].
-		ctx := [ ctx sender ] on: Error do: [ nil ].
-	].
-	^ nil
+GbxContextListPolicy >> isHiddenGlue: aContext [
+	"Check if a context should be hidden as glue"
+	^ glueIsHidden and: [ self isGlueContext: aContext ]
+]
+
+{ #category : 'private' }
+GbxContextListPolicy >> isServerCallContext: aContext [
+	(aContext respondsTo: #gbxIsServerCallContext)
+		ifTrue: [ ^ aContext gbxIsServerCallContext ].
+	^ false
+]
+
+{ #category : 'private' }
+GbxContextListPolicy >> isTopGlueContext: aContext [
+	(aContext respondsTo: #gbxIsGsTopGlue)
+		ifTrue: [ ^ aContext gbxIsGsTopGlue ].
+	^ false
 ]
 
 { #category : 'context list' }
@@ -356,88 +436,6 @@ GbxContextListPolicy >> matchingServerCallMarkerForServerContext: gsContext [
 		ctx := [ ctx sender ] on: Error do: [ nil ].
 	].
 	^ nil
-]
-
-{ #category : 'private' }
-GbxContextListPolicy >> isDirectGlueContext: aContext [
-	| className |
-	aContext ifNil: [ ^ false ].
-	(aContext respondsTo: #isGlue) ifTrue: [ ^ aContext isGlue ].
-	(self isServerCallContext: aContext) ifTrue: [ ^ true ].
-	(self isTopGlueContext: aContext) ifTrue: [ ^ true ].
-	(self isBottomGlueContext: aContext) ifTrue: [ ^ true ].
-	(aContext respondsTo: #gbxIsGsGlue)
-		ifTrue: [ aContext gbxIsGsGlue ifTrue: [ ^ true ] ].
-	(aContext respondsTo: #gbxIsServerContext)
-		ifTrue: [ aContext gbxIsServerContext ifTrue: [ ^ self isGlueContext: aContext ] ].
-	className := aContext class name asString.
-	((className beginsWith: 'Gbs') or: [ className beginsWith: 'Gbx' ])
-		ifTrue: [ ^ true ].
-	^ false
-]
-
-{ #category : 'private' }
-GbxContextListPolicy >> isServerCallContext: aContext [
-	(aContext respondsTo: #gbxIsServerCallContext)
-		ifTrue: [ ^ aContext gbxIsServerCallContext ].
-	^ false
-]
-
-{ #category : 'private' }
-GbxContextListPolicy >> isTopGlueContext: aContext [
-	(aContext respondsTo: #gbxIsGsTopGlue)
-		ifTrue: [ ^ aContext gbxIsGsTopGlue ].
-	^ false
-]
-
-{ #category : 'private' }
-GbxContextListPolicy >> isBottomGlueContext: aContext [
-	(aContext respondsTo: #gbxIsGsBottomGlue)
-		ifTrue: [ ^ aContext gbxIsGsBottomGlue ].
-	^ false
-]
-
-{ #category : 'private' }
-GbxContextListPolicy >> bottomGlueFrom: topGlueContext [
-	"VW parity: given the top context of a glue run, find the bottom glue context."
-	| ctx bottomGlue |
-	ctx := topGlueContext.
-	[ ctx isNil or: [ self isServerCallContext: ctx ] ]
-		whileFalse: [ ctx := [ ctx sender ] on: Error do: [ nil ] ].
-	ctx isNil ifTrue: [ ctx := topGlueContext ].
-
-	bottomGlue := topGlueContext.
-	[
-		ctx := [ ctx sender ] on: Error do: [ nil ].
-		ctx isNil or: [ (self isServerCallContext: ctx) or: [ self isTopGlueContext: ctx ] ]
-	] whileFalse: [
-		(self isBottomGlueContext: ctx) ifTrue: [ bottomGlue := ctx ]
-	].
-	^ bottomGlue
-]
-
-{ #category : 'private' }
-GbxContextListPolicy >> clientContextsStartingAt: aContext [
-	| contexts ctx |
-	contexts := OrderedCollection new.
-	ctx := aContext.
-	[ ctx notNil ] whileTrue: [
-		contexts add: ctx.
-		ctx := [ ctx sender ] on: Error do: [ nil ].
-	].
-	^ contexts
-]
-
-{ #category : 'private' }
-GbxContextListPolicy >> clientContextsStartingAt: aContext upToContextExclusive: stopContext [
-	| contexts ctx |
-	contexts := OrderedCollection new.
-	ctx := aContext.
-	[ ctx notNil and: [ ctx ~~ stopContext ] ] whileTrue: [
-		contexts add: ctx.
-		ctx := [ ctx sender ] on: Error do: [ nil ].
-	].
-	^ contexts
 ]
 
 { #category : 'private' }
@@ -460,9 +458,11 @@ GbxContextListPolicy >> processIdentityForErrorLike: anObject [
 ]
 
 { #category : 'context list' }
-GbxContextListPolicy >> isHiddenGlue: aContext [
-	"Check if a context should be hidden as glue"
-	^ glueIsHidden and: [ self isGlueContext: aContext ]
+GbxContextListPolicy >> topServerContext [
+	"Return the topmost server context"
+	| list |
+	list := self contextList.
+	^ list ifEmpty: [ nil ] ifNotEmpty: [ list first ]
 ]
 
 { #category : 'context list' }

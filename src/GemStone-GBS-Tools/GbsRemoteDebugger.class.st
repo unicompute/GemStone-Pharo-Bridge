@@ -67,73 +67,198 @@ GbsRemoteDebugger class >> openOn: anErrorString process: processOop session: aS
 	^ debugger
 ]
 
-{ #category : 'accessing' }
-GbsRemoteDebugger >> service: aService [
-	service := aService
+{ #category : 'actions' }
+GbsRemoteDebugger >> acceptSourceEdits [
+	| code ok |
+	service ifNil: [ ^ false ].
+	code := (sourceText respondsTo: #text)
+		ifTrue: [ sourceText text asString ]
+		ifFalse: [ '' ].
+	ok := [ service recompileCurrentMethodWithSource: code ] on: Error do: [ false ].
+	ok ifTrue: [
+		(contextList notNil and: [ contextList isEmpty not ]) ifTrue: [
+			| idx |
+			idx := (stackList respondsTo: #selectedIndex)
+				ifTrue: [ stackList selectedIndex ifNil: [ 1 ] ]
+				ifFalse: [ 1 ].
+			(idx > 0 and: [ idx <= contextList size ]) ifTrue: [
+				| ctx |
+				ctx := contextList at: idx.
+				(ctx respondsTo: #sourceString:) ifTrue: [ ctx sourceString: code ].
+				(ctx respondsTo: #sourceCode:) ifTrue: [ ctx sourceCode: code ].
+			].
+		].
+		self fetchStackFrames.
+		self clearServiceCompileError.
+		self syncBreakpointMarker.
+		self refreshUiState.
+	] ifFalse: [
+		self showCompileErrorInSourcePane.
+	].
+	^ ok
 ]
 
-{ #category : 'accessing' }
-GbsRemoteDebugger >> service [
-	^ service
+{ #category : 'private' }
+GbsRemoteDebugger >> applySourceMapHighlightFor: aContext [
+	| map interval |
+	sourceText ifNil: [ ^ self ].
+	map := self sourceMapFor: aContext.
+	(map isCollection and: [ map isEmpty not ]) ifFalse: [ ^ self clearSourceHighlight ].
+	interval := (service notNil and: [ service respondsTo: #currentSourceSelectionInterval ])
+		ifTrue: [ [ service currentSourceSelectionInterval ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	interval ifNil: [ interval := map first value ].
+	(interval isNil or: [ (interval respondsTo: #first) not or: [ (interval respondsTo: #last) not ] ]) ifTrue: [
+		^ self clearSourceHighlight
+	].
+	[
+		(sourceText respondsTo: #selectionInterval:)
+			ifTrue: [ sourceText selectionInterval: (interval first to: interval last) ]
+			ifFalse: [
+				(sourceText respondsTo: #selectFrom:to:)
+					ifTrue: [ sourceText selectFrom: interval first to: interval last ]
+			]
+	] on: Error do: [ ].
 ]
 
-{ #category : 'initialization' }
-GbsRemoteDebugger >> initializePresenters [
-	errorMessageLabel := self newLabel.
-	errorMessageLabel addStyle: 'danger'.
+{ #category : 'private' }
+GbsRemoteDebugger >> canAcceptRecompile [
+	^ self safeServiceCall: [ service currentContext notNil ] default: false
+]
 
-	stepOverButton := self newButton 
-		label: 'Step Over'; 
-		action: [ self stepOver ].
-	stepIntoButton := self newButton 
-		label: 'Step Into'; 
-		action: [ self stepInto ].
-	stepReturnButton := self newButton 
-		label: 'Step Return'; 
-		action: [ self stepReturn ].
-	resumeButton := self newButton 
-		label: 'Resume'; 
-		action: [ self resume ].
-	terminateButton := self newButton 
-		label: 'Terminate'; 
-		action: [ self terminate ].
-	inspectReceiverButton := self newButton
-		label: 'Inspect Receiver';
-		action: [ self inspectReceiver ].
-	inspectProcessButton := self newButton
-		label: 'Inspect Process';
-		action: [ self inspectProcess ].
-	inspectFrameButton := self newButton
-		label: 'Inspect Frame';
-		action: [ self inspectFrame ].
-	inspectVariableButton := self newButton
-		label: 'Inspect Variable';
-		action: [ self inspectVariable ].
+{ #category : 'private' }
+GbsRemoteDebugger >> canInspectFrame [
+	^ self safeServiceCall: [ (service respondsTo: #canInspectCurrentFrame)
+		ifTrue: [ service canInspectCurrentFrame ]
+		ifFalse: [ true ] ] default: false
+]
 
-	stackList := self newList.
-	stackList whenSelectionChangedDo: [ :selection |
+{ #category : 'private' }
+GbsRemoteDebugger >> canInspectProcess [
+	^ self safeServiceCall: [ (service respondsTo: #canInspectCurrentProcess)
+		ifTrue: [ service canInspectCurrentProcess ]
+		ifFalse: [ true ] ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canInspectReceiver [
+	^ self safeServiceCall: [ (service respondsTo: #canInspectCurrentReceiver)
+		ifTrue: [ service canInspectCurrentReceiver ]
+		ifFalse: [ true ] ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canInspectVariable [
+	^ self selectedVariableName notNil
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canRemoveAllBreakpoints [
+	^ self safeServiceCall: [ service canRemoveAllBreakPoints ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canRemoveBreakpoint [
+	^ self safeServiceCall: [ service canRemoveBreakPoint ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canSetBreakpoint [
+	^ self safeServiceCall: [ service canSetBreakPoint ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canToggleBreakpoint [
+	^ self safeServiceCall: [ service canToggleBreakPoint ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> clearServiceCompileError [
+	service ifNil: [ ^ self ].
+	(service respondsTo: #clearCompileError)
+		ifTrue: [ [ service clearCompileError ] on: Error do: [ ] ].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> clearSourceHighlight [
+	| textSize |
+	sourceText ifNil: [ ^ self ].
+	[
+		(sourceText respondsTo: #text)
+			ifTrue: [ textSize := sourceText text asString size ]
+			ifFalse: [ textSize := 0 ].
+		(sourceText respondsTo: #selectionInterval:)
+			ifTrue: [ sourceText selectionInterval: (textSize + 1 to: textSize) ]
+	] on: Error do: [ ].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> configureMenuItem: aMenuGroup named: labelText action: actionBlock enabled: enabledBoolean [
+	aMenuGroup addItem: [ :item |
+		item
+			name: labelText;
+			action: [ enabledBoolean ifTrue: [ actionBlock value ] ].
+		(item respondsTo: #enabled:)
+			ifTrue: [ item enabled: enabledBoolean ] ].
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> contextSelected: selectedItem [
+	| context sourceCode variables associations |
+
+	selectedItem ifNil: [ ^ self ].
+	context := selectedItem.
+	(context respondsTo: #sourceCode) ifFalse: [
 		| index |
-		index := (selection respondsTo: #selectedIndex)
-			ifTrue: [ selection selectedIndex ifNil: [ 0 ] ]
+		index := (stackList respondsTo: #selectedIndex)
+			ifTrue: [ stackList selectedIndex ifNil: [ 0 ] ]
 			ifFalse: [ 0 ].
 		(index > 0 and: [ contextList notNil and: [ index <= contextList size ] ])
-			ifTrue: [ self contextSelected: (contextList at: index) ]
-			ifFalse: [ self contextSelected: selection selectedItem ]
+			ifTrue: [ context := contextList at: index ].
+	].
+	(selectedItem respondsTo: #sourceCode) ifFalse: [
+		(context respondsTo: #sourceCode) ifTrue: [ ^ self contextSelected: context ].
+		self setSourceText: ''.
+		self setVariableTableItems: #().
+		^ self
 	].
 
-	sourceText := self newText.
-	sourceText contextMenu: [ self sourceMenu ].
+	"Use the selected context"
+	service ifNotNil: [ service selectContext: context ].
+	context ifNil: [ ^ self ].
 
-	variablesTable := self newTable.
-	variablesTable
-		addColumn: (SpStringTableColumn title: 'Name' evaluated: [ :item | item first ]);
-		addColumn: (SpStringTableColumn title: 'Value' evaluated: [ :item | item second ]).
-	(variablesTable respondsTo: #whenActivatedDo:)
-		ifTrue: [ variablesTable whenActivatedDo: [ self inspectVariable ] ].
-	(variablesTable respondsTo: #whenDoubleClickDo:)
-		ifTrue: [ variablesTable whenDoubleClickDo: [ self inspectVariable ] ].
+	"Display source code - use cached source if available"
+	sourceCode := context sourceCode.
+	(((context respondsTo: #methodClass) and: [ context methodClass = 'nil' ])
+		and: [ (sourceCode includes: Character lf) not ])
+		ifTrue: [
+			| fullSource |
+			fullSource := self fetchFullSourceFor: context.
+			fullSource ifNotEmpty: [
+				sourceCode := fullSource.
+				(context respondsTo: #sourceString:)
+					ifTrue: [ context sourceString: fullSource ].
+			].
+		].
+	self setSourceText: (sourceCode ifNil: [ 
+		"Try to get from cached sourceString"
+		context sourceString ifNil: [ '' ]
+	]).
+	self applySourceMapHighlightFor: context.
+	self syncBreakpointMarker.
 
-	glueIsHidden := true.
+	"Fetch and display variables"
+	[
+		variables := context tempNamesAndValues.
+		associations := (variables respondsTo: #associations)
+			ifTrue: [ variables associations ]
+			ifFalse: [ #() ].
+		self setVariableTableItems: (associations collect: [ :assoc |
+			{ assoc key. assoc value asString }
+		]).
+	] on: Error do: [ :ex |
+		self setVariableTableItems: #().
+	].
 	self refreshUiState.
 ]
 
@@ -165,115 +290,6 @@ GbsRemoteDebugger >> defaultLayout [
 				yourself);
 			yourself);
 		yourself
-]
-
-{ #category : 'accessing' }
-GbsRemoteDebugger >> session: aSession [
-	session := aSession
-]
-
-{ #category : 'accessing' }
-GbsRemoteDebugger >> session [
-	^ session
-]
-
-{ #category : 'accessing' }
-GbsRemoteDebugger >> processOop: anOop [
-	processOop := anOop.
-	stackList ifNotNil: [ self fetchStackFrames ].
-]
-
-{ #category : 'accessing' }
-GbsRemoteDebugger >> processOop [
-	^ processOop
-]
-
-{ #category : 'accessing' }
-GbsRemoteDebugger >> label: aString [
-	errorMessageLabel ifNotNil: [ errorMessageLabel label: aString ]
-]
-
-{ #category : 'accessing' }
-GbsRemoteDebugger >> stackData: anArray [
-	stackData := anArray.
-	stackList ifNotNil: [ self fetchStackFrames ].
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> fetchStackFrames [
-	| contexts |
-
-	"Check if we have captured stack data"
-	stackData ifNotNil: [
-		^ self fetchStackFramesFromData
-	].
-
-	contexts := #( ).
-	service ifNotNil: [
-		[
-			service recomputeContextList.
-			contexts := service contextList
-		] on: Error do: [ contexts := #( ) ]
-	].
-
-	contexts ifEmpty: [
-		contexts := self fetchContextsDirectly
-	].
-
-	contextList := contexts ifNil: [ #( ) ].
-	contextList ifEmpty: [
-		stackList items: #('No stack frames available - error occurred in GemStone').
-		self setSourceText: ''.
-		self clearSourceHighlight.
-		self setVariableTableItems: #().
-		self refreshUiState.
-		^ self
-	].
-	stackList items: (contextList collect: [ :ctx | ctx printString ]).
-
-	contextList ifNotEmpty: [
-		| preferredIndex |
-		preferredIndex := self preferredInitialContextIndex.
-		stackList selectIndex: preferredIndex.
-		self contextSelected: (contextList at: preferredIndex)
-	].
-	self refreshUiState.
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> fetchStackFramesFromData [
-	"Build context list from captured stack data"
-	| contexts index |
-	
-	index := 0.
-	contexts := stackData splitOn: $^ thenCollect: [ :frameStr |
-		| parts activation |
-		parts := frameStr splitOn: $|.
-		parts size >= 3 ifTrue: [
-			index := index + 1.
-			activation := GbxActivation new.
-			(activation respondsTo: #session:)
-				ifTrue: [ activation session: session ]
-				ifFalse: [ activation instVarNamed: 'session' put: session ].
-			activation
-				processOop: 0;
-				level: index;
-				selector: (parts at: 1) asSymbol;
-				gsMethodId: (parts at: 2);
-				sourceString: (parts at: 3);
-				yourself
-		]
-	] thenSelect: #isNotNil.
-	
-	contextList := contexts.
-	stackList items: (contexts collect: [ :ctx | ctx printString ]).
-	
-	contexts ifNotEmpty: [
-		| preferredIndex |
-		preferredIndex := self preferredInitialContextIndex.
-		stackList selectIndex: preferredIndex.
-		self contextSelected: (contexts at: preferredIndex)
-	].
 ]
 
 { #category : 'actions' }
@@ -406,66 +422,6 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 	^ contexts
 ]
 
-{ #category : 'actions' }
-GbsRemoteDebugger >> contextSelected: selectedItem [
-	| context sourceCode variables associations |
-
-	selectedItem ifNil: [ ^ self ].
-	context := selectedItem.
-	(context respondsTo: #sourceCode) ifFalse: [
-		| index |
-		index := (stackList respondsTo: #selectedIndex)
-			ifTrue: [ stackList selectedIndex ifNil: [ 0 ] ]
-			ifFalse: [ 0 ].
-		(index > 0 and: [ contextList notNil and: [ index <= contextList size ] ])
-			ifTrue: [ context := contextList at: index ].
-	].
-	(selectedItem respondsTo: #sourceCode) ifFalse: [
-		(context respondsTo: #sourceCode) ifTrue: [ ^ self contextSelected: context ].
-		self setSourceText: ''.
-		self setVariableTableItems: #().
-		^ self
-	].
-
-	"Use the selected context"
-	service ifNotNil: [ service selectContext: context ].
-	context ifNil: [ ^ self ].
-
-	"Display source code - use cached source if available"
-	sourceCode := context sourceCode.
-	(((context respondsTo: #methodClass) and: [ context methodClass = 'nil' ])
-		and: [ (sourceCode includes: Character lf) not ])
-		ifTrue: [
-			| fullSource |
-			fullSource := self fetchFullSourceFor: context.
-			fullSource ifNotEmpty: [
-				sourceCode := fullSource.
-				(context respondsTo: #sourceString:)
-					ifTrue: [ context sourceString: fullSource ].
-			].
-		].
-	self setSourceText: (sourceCode ifNil: [ 
-		"Try to get from cached sourceString"
-		context sourceString ifNil: [ '' ]
-	]).
-	self applySourceMapHighlightFor: context.
-	self syncBreakpointMarker.
-
-	"Fetch and display variables"
-	[
-		variables := context tempNamesAndValues.
-		associations := (variables respondsTo: #associations)
-			ifTrue: [ variables associations ]
-			ifFalse: [ #() ].
-		self setVariableTableItems: (associations collect: [ :assoc |
-			{ assoc key. assoc value asString }
-		]).
-	] on: Error do: [ :ex |
-		self setVariableTableItems: #().
-	].
-	self refreshUiState.
-]
-
 { #category : 'private' }
 GbsRemoteDebugger >> fetchFullSourceFor: aContext [
 	| ctxProcessOop levelValue script raw |
@@ -533,71 +489,80 @@ GbsRemoteDebugger >> fetchFullSourceFor: aContext [
 ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> stepInto [
-	self safeServiceCall: [ service stepInto ] default: false.
-	self fetchStackFrames.
+GbsRemoteDebugger >> fetchStackFrames [
+	| contexts |
+
+	"Check if we have captured stack data"
+	stackData ifNotNil: [
+		^ self fetchStackFramesFromData
+	].
+
+	contexts := #( ).
+	service ifNotNil: [
+		[
+			service recomputeContextList.
+			contexts := service contextList
+		] on: Error do: [ contexts := #( ) ]
+	].
+
+	contexts ifEmpty: [
+		contexts := self fetchContextsDirectly
+	].
+
+	contextList := contexts ifNil: [ #( ) ].
+	contextList ifEmpty: [
+		stackList items: #('No stack frames available - error occurred in GemStone').
+		self setSourceText: ''.
+		self clearSourceHighlight.
+		self setVariableTableItems: #().
+		self refreshUiState.
+		^ self
+	].
+	stackList items: (contextList collect: [ :ctx | ctx printString ]).
+
+	contextList ifNotEmpty: [
+		| preferredIndex |
+		preferredIndex := self preferredInitialContextIndex.
+		stackList selectIndex: preferredIndex.
+		self contextSelected: (contextList at: preferredIndex)
+	].
+	self refreshUiState.
 ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> stepOver [
-	self safeServiceCall: [ service stepOver ] default: false.
-	self fetchStackFrames.
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> stepReturn [
-	self safeServiceCall: [ service stepReturn ] default: false.
-	self fetchStackFrames.
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> resume [
-	self safeServiceCall: [ service resume ] default: false.
-	self withWindowDo: [ :window | window close ]
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> terminate [
-	self safeServiceCall: [ service terminate ] default: false.
-	self withWindowDo: [ :window | window close ]
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> inspectReceiver [
-	^ self safeServiceCall: [ service inspectCurrentReceiver ] default: false
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> inspectProcess [
-	^ self safeServiceCall: [ service inspectCurrentProcess ] default: false
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> inspectFrame [
-	^ self safeServiceCall: [ service inspectCurrentFrame ] default: false
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> inspectVariable [
-	| variableName |
-	service ifNil: [ ^ false ].
-	variableName := self selectedVariableName.
-	variableName ifNil: [ ^ false ].
-	(service respondsTo: #inspectVariableNamed:)
-		ifTrue: [ ^ self safeServiceCall: [ service inspectVariableNamed: variableName ] default: false ].
-	^ false
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> setBreakPoint [
-	service ifNil: [ ^ false ].
-	^ self withBreakpointRefresh: [ service setBreakPointIn: sourceText ]
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> toggleBreakPoint [
-	service ifNil: [ ^ false ].
-	^ self withBreakpointRefresh: [ service toggleBreakPointIn: sourceText ]
+GbsRemoteDebugger >> fetchStackFramesFromData [
+	"Build context list from captured stack data"
+	| contexts index |
+	
+	index := 0.
+	contexts := stackData splitOn: $^ thenCollect: [ :frameStr |
+		| parts activation |
+		parts := frameStr splitOn: $|.
+		parts size >= 3 ifTrue: [
+			index := index + 1.
+			activation := GbxActivation new.
+			(activation respondsTo: #session:)
+				ifTrue: [ activation session: session ]
+				ifFalse: [ activation instVarNamed: 'session' put: session ].
+			activation
+				processOop: 0;
+				level: index;
+				selector: (parts at: 1) asSymbol;
+				gsMethodId: (parts at: 2);
+				sourceString: (parts at: 3);
+				yourself
+		]
+	] thenSelect: #isNotNil.
+	
+	contextList := contexts.
+	stackList items: (contexts collect: [ :ctx | ctx printString ]).
+	
+	contexts ifNotEmpty: [
+		| preferredIndex |
+		preferredIndex := self preferredInitialContextIndex.
+		stackList selectIndex: preferredIndex.
+		self contextSelected: (contexts at: preferredIndex)
+	].
 ]
 
 { #category : 'actions' }
@@ -606,6 +571,14 @@ GbsRemoteDebugger >> gsDoIt [
 	service ifNil: [ ^ false ].
 	code := self selectedSourceOrAll.
 	^ [ service gsDoIt: code ] on: Error do: [ false ]
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> gsInspectIt [
+	| code |
+	service ifNil: [ ^ false ].
+	code := self selectedSourceOrAll.
+	^ [ service gsInspectIt: code ] on: Error do: [ false ]
 ]
 
 { #category : 'actions' }
@@ -621,43 +594,165 @@ GbsRemoteDebugger >> gsPrintIt [
 	^ true
 ]
 
-{ #category : 'actions' }
-GbsRemoteDebugger >> gsInspectIt [
-	| code |
-	service ifNil: [ ^ false ].
-	code := self selectedSourceOrAll.
-	^ [ service gsInspectIt: code ] on: Error do: [ false ]
+{ #category : 'private' }
+GbsRemoteDebugger >> highlightSourceLineFromCompileError: errorMessage [
+	| lower lineToken idx start lineNumber |
+	(errorMessage isString and: [ errorMessage isEmpty not ]) ifFalse: [ ^ self ].
+	(sourceText respondsTo: #text) ifFalse: [ ^ self ].
+	lower := errorMessage asLowercase.
+	lineToken := 'line '.
+	idx := lower findString: lineToken startingAt: 1.
+	idx = 0 ifTrue: [ ^ self ].
+	start := idx + lineToken size.
+	lineNumber := [ (lower copyFrom: start to: lower size) asNumber ] on: Error do: [ nil ].
+	lineNumber ifNil: [ ^ self ].
+	self selectLineNumber: lineNumber inTextPresenter: sourceText.
+]
+
+{ #category : 'initialization' }
+GbsRemoteDebugger >> initializePresenters [
+	errorMessageLabel := self newLabel.
+	errorMessageLabel addStyle: 'danger'.
+
+	stepOverButton := self newButton 
+		label: 'Step Over'; 
+		action: [ self stepOver ].
+	stepIntoButton := self newButton 
+		label: 'Step Into'; 
+		action: [ self stepInto ].
+	stepReturnButton := self newButton 
+		label: 'Step Return'; 
+		action: [ self stepReturn ].
+	resumeButton := self newButton 
+		label: 'Resume'; 
+		action: [ self resume ].
+	terminateButton := self newButton 
+		label: 'Terminate'; 
+		action: [ self terminate ].
+	inspectReceiverButton := self newButton
+		label: 'Inspect Receiver';
+		action: [ self inspectReceiver ].
+	inspectProcessButton := self newButton
+		label: 'Inspect Process';
+		action: [ self inspectProcess ].
+	inspectFrameButton := self newButton
+		label: 'Inspect Frame';
+		action: [ self inspectFrame ].
+	inspectVariableButton := self newButton
+		label: 'Inspect Variable';
+		action: [ self inspectVariable ].
+
+	stackList := self newList.
+	stackList whenSelectionChangedDo: [ :selection |
+		| index |
+		index := (selection respondsTo: #selectedIndex)
+			ifTrue: [ selection selectedIndex ifNil: [ 0 ] ]
+			ifFalse: [ 0 ].
+		(index > 0 and: [ contextList notNil and: [ index <= contextList size ] ])
+			ifTrue: [ self contextSelected: (contextList at: index) ]
+			ifFalse: [ self contextSelected: selection selectedItem ]
+	].
+
+	sourceText := self newText.
+	sourceText contextMenu: [ self sourceMenu ].
+
+	variablesTable := self newTable.
+	variablesTable
+		addColumn: (SpStringTableColumn title: 'Name' evaluated: [ :item | item first ]);
+		addColumn: (SpStringTableColumn title: 'Value' evaluated: [ :item | item second ]).
+	(variablesTable respondsTo: #whenActivatedDo:)
+		ifTrue: [ variablesTable whenActivatedDo: [ self inspectVariable ] ].
+	(variablesTable respondsTo: #whenDoubleClickDo:)
+		ifTrue: [ variablesTable whenDoubleClickDo: [ self inspectVariable ] ].
+
+	glueIsHidden := true.
+	self refreshUiState.
 ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> acceptSourceEdits [
-	| code ok |
+GbsRemoteDebugger >> inspectFrame [
+	^ self safeServiceCall: [ service inspectCurrentFrame ] default: false
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> inspectProcess [
+	^ self safeServiceCall: [ service inspectCurrentProcess ] default: false
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> inspectReceiver [
+	^ self safeServiceCall: [ service inspectCurrentReceiver ] default: false
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> inspectVariable [
+	| variableName |
 	service ifNil: [ ^ false ].
-	code := (sourceText respondsTo: #text)
-		ifTrue: [ sourceText text asString ]
-		ifFalse: [ '' ].
-	ok := [ service recompileCurrentMethodWithSource: code ] on: Error do: [ false ].
-	ok ifTrue: [
-		(contextList notNil and: [ contextList isEmpty not ]) ifTrue: [
-			| idx |
-			idx := (stackList respondsTo: #selectedIndex)
-				ifTrue: [ stackList selectedIndex ifNil: [ 1 ] ]
-				ifFalse: [ 1 ].
-			(idx > 0 and: [ idx <= contextList size ]) ifTrue: [
-				| ctx |
-				ctx := contextList at: idx.
-				(ctx respondsTo: #sourceString:) ifTrue: [ ctx sourceString: code ].
-				(ctx respondsTo: #sourceCode:) ifTrue: [ ctx sourceCode: code ].
-			].
-		].
-		self fetchStackFrames.
-		self clearServiceCompileError.
-		self syncBreakpointMarker.
-		self refreshUiState.
-	] ifFalse: [
-		self showCompileErrorInSourcePane.
-	].
-	^ ok
+	variableName := self selectedVariableName.
+	variableName ifNil: [ ^ false ].
+	(service respondsTo: #inspectVariableNamed:)
+		ifTrue: [ ^ self safeServiceCall: [ service inspectVariableNamed: variableName ] default: false ].
+	^ false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> isLikelyUserFrame: aContext [
+	| className selectorName source |
+	aContext ifNil: [ ^ false ].
+
+	className := [ aContext methodClassOrUnknown ] on: Error do: [ '<unknown>' ].
+	selectorName := [ aContext selectorOrUnknown asString ] on: Error do: [ '<unknown>' ].
+	source := [ aContext sourceString ifNil: [ '' ] ] on: Error do: [ '' ].
+
+	(className beginsWith: 'AbstractException') ifTrue: [ ^ false ].
+	(className beginsWith: 'GsNMethod') ifTrue: [ ^ false ].
+	(selectorName beginsWith: '_') ifTrue: [ ^ false ].
+	(#('signal' 'defaultAction' '_defaultAction' '_signal' '_signalToDebugger') includes: selectorName) ifTrue: [ ^ false ].
+	source isEmpty ifTrue: [ ^ false ].
+
+	^ true
+]
+
+{ #category : 'accessing' }
+GbsRemoteDebugger >> label: aString [
+	errorMessageLabel ifNotNil: [ errorMessageLabel label: aString ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> preferredInitialContextIndex [
+	| index |
+	contextList ifNil: [ ^ 1 ].
+	contextList isEmpty ifTrue: [ ^ 1 ].
+
+	index := contextList
+		findFirst: [ :ctx | self isLikelyUserFrame: ctx ].
+	index = 0 ifTrue: [ ^ 1 ].
+	^ index
+]
+
+{ #category : 'accessing' }
+GbsRemoteDebugger >> processOop [
+	^ processOop
+]
+
+{ #category : 'accessing' }
+GbsRemoteDebugger >> processOop: anOop [
+	processOop := anOop.
+	stackList ifNotNil: [ self fetchStackFrames ].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> refreshUiState [
+	self updateButton: inspectReceiverButton enabled: self canInspectReceiver.
+	self updateButton: inspectProcessButton enabled: self canInspectProcess.
+	self updateButton: inspectFrameButton enabled: self canInspectFrame.
+	self updateButton: inspectVariableButton enabled: self canInspectVariable.
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> removeAllBreakPoints [
+	service ifNil: [ ^ 0 ].
+	^ self withBreakpointRefresh: [ service removeAllBreakPoints ]
 ]
 
 { #category : 'actions' }
@@ -667,9 +762,147 @@ GbsRemoteDebugger >> removeBreakPoint [
 ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> removeAllBreakPoints [
-	service ifNil: [ ^ 0 ].
-	^ self withBreakpointRefresh: [ service removeAllBreakPoints ]
+GbsRemoteDebugger >> resume [
+	self safeServiceCall: [ service resume ] default: false.
+	self withWindowDo: [ :window | window close ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> safeServiceCall: aBlock default: defaultValue [
+	service ifNil: [ ^ defaultValue ].
+	^ [ aBlock value ] on: Error do: [ defaultValue ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> selectLineNumber: lineNumber inTextPresenter: aTextPresenter [
+	| text pos currentLine lineStart lineEnd |
+	(lineNumber isNumber and: [ lineNumber > 0 ]) ifFalse: [ ^ self ].
+	text := aTextPresenter text asString.
+	text isEmpty ifTrue: [ ^ self ].
+	pos := 1.
+	currentLine := 1.
+	[ currentLine < lineNumber and: [ pos <= text size ] ] whileTrue: [
+		(text at: pos) = Character lf ifTrue: [ currentLine := currentLine + 1 ].
+		pos := pos + 1
+	].
+	currentLine = lineNumber ifFalse: [ ^ self ].
+	lineStart := pos min: text size.
+	lineEnd := lineStart.
+	[ lineEnd <= text size and: [ (text at: lineEnd) ~= Character lf ] ] whileTrue: [
+		lineEnd := lineEnd + 1
+	].
+	lineEnd := lineEnd - 1.
+	lineEnd < lineStart ifTrue: [ lineEnd := lineStart ].
+	[
+		(aTextPresenter respondsTo: #selectionInterval:)
+			ifTrue: [ aTextPresenter selectionInterval: (lineStart to: lineEnd) ]
+			ifFalse: [
+				(aTextPresenter respondsTo: #selectFrom:to:)
+					ifTrue: [ aTextPresenter selectFrom: lineStart to: lineEnd ]
+			]
+	] on: Error do: [ ].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> selectedSourceOrAll [
+	| selected text |
+	sourceText ifNil: [ ^ '' ].
+	selected := (sourceText respondsTo: #selectedText)
+		ifTrue: [ sourceText selectedText ]
+		ifFalse: [ nil ].
+	(selected isString and: [ selected isEmpty not ]) ifTrue: [ ^ selected ].
+	text := (sourceText respondsTo: #text)
+		ifTrue: [ sourceText text ]
+		ifFalse: [ '' ].
+	^ text asString
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> selectedVariableName [
+	| selectedItem |
+	variablesTable ifNil: [ ^ nil ].
+	selectedItem := (variablesTable respondsTo: #selectedItem)
+		ifTrue: [ variablesTable selectedItem ]
+		ifFalse: [
+			((variablesTable respondsTo: #selection) and: [ variablesTable selection notNil ])
+				ifTrue: [
+					(variablesTable selection respondsTo: #selectedItem)
+						ifTrue: [ variablesTable selection selectedItem ]
+						ifFalse: [ nil ]
+				]
+				ifFalse: [ nil ]
+		].
+	selectedItem ifNil: [ ^ nil ].
+	(selectedItem isArray and: [ selectedItem size >= 1 ]) ifTrue: [ ^ selectedItem first asString ].
+	(selectedItem respondsTo: #key) ifTrue: [ ^ selectedItem key asString ].
+	^ nil
+]
+
+{ #category : 'accessing' }
+GbsRemoteDebugger >> service [
+	^ service
+]
+
+{ #category : 'accessing' }
+GbsRemoteDebugger >> service: aService [
+	service := aService
+]
+
+{ #category : 'accessing' }
+GbsRemoteDebugger >> session [
+	^ session
+]
+
+{ #category : 'accessing' }
+GbsRemoteDebugger >> session: aSession [
+	session := aSession
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> setBreakPoint [
+	service ifNil: [ ^ false ].
+	^ self withBreakpointRefresh: [ service setBreakPointIn: sourceText ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> setSourceText: aString [
+	sourceText ifNil: [ ^ self ].
+	(sourceText respondsTo: #text:)
+		ifTrue: [
+			[ sourceText text: aString ] on: Error do: [ ]
+		].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> setVariableTableItems: aCollection [
+	variablesTable ifNil: [ ^ self ].
+	(variablesTable respondsTo: #items:)
+		ifTrue: [
+			[ variablesTable items: aCollection ] on: Error do: [ ]
+		].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> showCompileErrorInSourcePane [
+	| message currentText |
+	message := self safeServiceCall: [ service lastCompileError ] default: nil.
+	message ifNil: [ message := 'Compile failed in GemStone.' ].
+	currentText := (sourceText respondsTo: #text)
+		ifTrue: [ sourceText text asString ]
+		ifFalse: [ '' ].
+	self setSourceText: currentText, String lf, String lf, '"Compile error: ', message asString, '"'.
+	self highlightSourceLineFromCompileError: message.
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> sourceMapFor: aContext [
+	| map |
+	map := #( ).
+	service ifNotNil: [
+		map := [ service sourceMap ] on: Error do: [ #( ) ]
+	].
+	((map isCollection and: [ map isEmpty not ]) or: [ aContext isNil ]) ifTrue: [ ^ map ].
+	^ [ aContext visibleSourceMap ] on: Error do: [ #( ) ]
 ]
 
 { #category : 'private' }
@@ -742,61 +975,28 @@ GbsRemoteDebugger >> sourceMenu [
 	^ menu
 ]
 
-{ #category : 'private' }
-GbsRemoteDebugger >> configureMenuItem: aMenuGroup named: labelText action: actionBlock enabled: enabledBoolean [
-	aMenuGroup addItem: [ :item |
-		item
-			name: labelText;
-			action: [ enabledBoolean ifTrue: [ actionBlock value ] ].
-		(item respondsTo: #enabled:)
-			ifTrue: [ item enabled: enabledBoolean ] ].
+{ #category : 'accessing' }
+GbsRemoteDebugger >> stackData: anArray [
+	stackData := anArray.
+	stackList ifNotNil: [ self fetchStackFrames ].
 ]
 
-{ #category : 'private' }
-GbsRemoteDebugger >> selectedSourceOrAll [
-	| selected text |
-	sourceText ifNil: [ ^ '' ].
-	selected := (sourceText respondsTo: #selectedText)
-		ifTrue: [ sourceText selectedText ]
-		ifFalse: [ nil ].
-	(selected isString and: [ selected isEmpty not ]) ifTrue: [ ^ selected ].
-	text := (sourceText respondsTo: #text)
-		ifTrue: [ sourceText text ]
-		ifFalse: [ '' ].
-	^ text asString
+{ #category : 'actions' }
+GbsRemoteDebugger >> stepInto [
+	self safeServiceCall: [ service stepInto ] default: false.
+	self fetchStackFrames.
 ]
 
-{ #category : 'private' }
-GbsRemoteDebugger >> safeServiceCall: aBlock default: defaultValue [
-	service ifNil: [ ^ defaultValue ].
-	^ [ aBlock value ] on: Error do: [ defaultValue ]
+{ #category : 'actions' }
+GbsRemoteDebugger >> stepOver [
+	self safeServiceCall: [ service stepOver ] default: false.
+	self fetchStackFrames.
 ]
 
-{ #category : 'private' }
-GbsRemoteDebugger >> setSourceText: aString [
-	sourceText ifNil: [ ^ self ].
-	(sourceText respondsTo: #text:)
-		ifTrue: [
-			[ sourceText text: aString ] on: Error do: [ ]
-		].
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> setVariableTableItems: aCollection [
-	variablesTable ifNil: [ ^ self ].
-	(variablesTable respondsTo: #items:)
-		ifTrue: [
-			[ variablesTable items: aCollection ] on: Error do: [ ]
-		].
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> withBreakpointRefresh: aBlock [
-	| result |
-	result := [ aBlock value ] on: Error do: [ false ].
-	self syncBreakpointMarker.
-	self refreshUiState.
-	^ result
+{ #category : 'actions' }
+GbsRemoteDebugger >> stepReturn [
+	self safeServiceCall: [ service stepReturn ] default: false.
+	self fetchStackFrames.
 ]
 
 { #category : 'private' }
@@ -812,12 +1012,16 @@ GbsRemoteDebugger >> syncBreakpointMarker [
 		window title: base, ' - ', summary ].
 ]
 
-{ #category : 'private' }
-GbsRemoteDebugger >> refreshUiState [
-	self updateButton: inspectReceiverButton enabled: self canInspectReceiver.
-	self updateButton: inspectProcessButton enabled: self canInspectProcess.
-	self updateButton: inspectFrameButton enabled: self canInspectFrame.
-	self updateButton: inspectVariableButton enabled: self canInspectVariable.
+{ #category : 'actions' }
+GbsRemoteDebugger >> terminate [
+	self safeServiceCall: [ service terminate ] default: false.
+	self withWindowDo: [ :window | window close ]
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> toggleBreakPoint [
+	service ifNil: [ ^ false ].
+	^ self withBreakpointRefresh: [ service toggleBreakPointIn: sourceText ]
 ]
 
 { #category : 'private' }
@@ -828,214 +1032,10 @@ GbsRemoteDebugger >> updateButton: aButton enabled: enabledBoolean [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> canSetBreakpoint [
-	^ self safeServiceCall: [ service canSetBreakPoint ] default: false
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> canRemoveBreakpoint [
-	^ self safeServiceCall: [ service canRemoveBreakPoint ] default: false
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> canRemoveAllBreakpoints [
-	^ self safeServiceCall: [ service canRemoveAllBreakPoints ] default: false
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> canToggleBreakpoint [
-	^ self safeServiceCall: [ service canToggleBreakPoint ] default: false
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> canAcceptRecompile [
-	^ self safeServiceCall: [ service currentContext notNil ] default: false
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> canInspectReceiver [
-	^ self safeServiceCall: [ (service respondsTo: #canInspectCurrentReceiver)
-		ifTrue: [ service canInspectCurrentReceiver ]
-		ifFalse: [ true ] ] default: false
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> canInspectProcess [
-	^ self safeServiceCall: [ (service respondsTo: #canInspectCurrentProcess)
-		ifTrue: [ service canInspectCurrentProcess ]
-		ifFalse: [ true ] ] default: false
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> canInspectFrame [
-	^ self safeServiceCall: [ (service respondsTo: #canInspectCurrentFrame)
-		ifTrue: [ service canInspectCurrentFrame ]
-		ifFalse: [ true ] ] default: false
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> canInspectVariable [
-	^ self selectedVariableName notNil
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> clearServiceCompileError [
-	service ifNil: [ ^ self ].
-	(service respondsTo: #clearCompileError)
-		ifTrue: [ [ service clearCompileError ] on: Error do: [ ] ].
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> showCompileErrorInSourcePane [
-	| message currentText |
-	message := self safeServiceCall: [ service lastCompileError ] default: nil.
-	message ifNil: [ message := 'Compile failed in GemStone.' ].
-	currentText := (sourceText respondsTo: #text)
-		ifTrue: [ sourceText text asString ]
-		ifFalse: [ '' ].
-	self setSourceText: currentText, String lf, String lf, '"Compile error: ', message asString, '"'.
-	self highlightSourceLineFromCompileError: message.
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> highlightSourceLineFromCompileError: errorMessage [
-	| lower lineToken idx start lineNumber |
-	(errorMessage isString and: [ errorMessage isEmpty not ]) ifFalse: [ ^ self ].
-	(sourceText respondsTo: #text) ifFalse: [ ^ self ].
-	lower := errorMessage asLowercase.
-	lineToken := 'line '.
-	idx := lower findString: lineToken startingAt: 1.
-	idx = 0 ifTrue: [ ^ self ].
-	start := idx + lineToken size.
-	lineNumber := [ (lower copyFrom: start to: lower size) asNumber ] on: Error do: [ nil ].
-	lineNumber ifNil: [ ^ self ].
-	self selectLineNumber: lineNumber inTextPresenter: sourceText.
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> selectLineNumber: lineNumber inTextPresenter: aTextPresenter [
-	| text pos currentLine lineStart lineEnd |
-	(lineNumber isNumber and: [ lineNumber > 0 ]) ifFalse: [ ^ self ].
-	text := aTextPresenter text asString.
-	text isEmpty ifTrue: [ ^ self ].
-	pos := 1.
-	currentLine := 1.
-	[ currentLine < lineNumber and: [ pos <= text size ] ] whileTrue: [
-		(text at: pos) = Character lf ifTrue: [ currentLine := currentLine + 1 ].
-		pos := pos + 1
-	].
-	currentLine = lineNumber ifFalse: [ ^ self ].
-	lineStart := pos min: text size.
-	lineEnd := lineStart.
-	[ lineEnd <= text size and: [ (text at: lineEnd) ~= Character lf ] ] whileTrue: [
-		lineEnd := lineEnd + 1
-	].
-	lineEnd := lineEnd - 1.
-	lineEnd < lineStart ifTrue: [ lineEnd := lineStart ].
-	[
-		(aTextPresenter respondsTo: #selectionInterval:)
-			ifTrue: [ aTextPresenter selectionInterval: (lineStart to: lineEnd) ]
-			ifFalse: [
-				(aTextPresenter respondsTo: #selectFrom:to:)
-					ifTrue: [ aTextPresenter selectFrom: lineStart to: lineEnd ]
-			]
-	] on: Error do: [ ].
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> selectedVariableName [
-	| selectedItem |
-	variablesTable ifNil: [ ^ nil ].
-	selectedItem := (variablesTable respondsTo: #selectedItem)
-		ifTrue: [ variablesTable selectedItem ]
-		ifFalse: [
-			((variablesTable respondsTo: #selection) and: [ variablesTable selection notNil ])
-				ifTrue: [
-					(variablesTable selection respondsTo: #selectedItem)
-						ifTrue: [ variablesTable selection selectedItem ]
-						ifFalse: [ nil ]
-				]
-				ifFalse: [ nil ]
-		].
-	selectedItem ifNil: [ ^ nil ].
-	(selectedItem isArray and: [ selectedItem size >= 1 ]) ifTrue: [ ^ selectedItem first asString ].
-	(selectedItem respondsTo: #key) ifTrue: [ ^ selectedItem key asString ].
-	^ nil
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> applySourceMapHighlightFor: aContext [
-	| map interval |
-	sourceText ifNil: [ ^ self ].
-	map := self sourceMapFor: aContext.
-	(map isCollection and: [ map isEmpty not ]) ifFalse: [ ^ self clearSourceHighlight ].
-	interval := (service notNil and: [ service respondsTo: #currentSourceSelectionInterval ])
-		ifTrue: [ [ service currentSourceSelectionInterval ] on: Error do: [ nil ] ]
-		ifFalse: [ nil ].
-	interval ifNil: [ interval := map first value ].
-	(interval isNil or: [ (interval respondsTo: #first) not or: [ (interval respondsTo: #last) not ] ]) ifTrue: [
-		^ self clearSourceHighlight
-	].
-	[
-		(sourceText respondsTo: #selectionInterval:)
-			ifTrue: [ sourceText selectionInterval: (interval first to: interval last) ]
-			ifFalse: [
-				(sourceText respondsTo: #selectFrom:to:)
-					ifTrue: [ sourceText selectFrom: interval first to: interval last ]
-			]
-	] on: Error do: [ ].
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> clearSourceHighlight [
-	| textSize |
-	sourceText ifNil: [ ^ self ].
-	[
-		(sourceText respondsTo: #text)
-			ifTrue: [ textSize := sourceText text asString size ]
-			ifFalse: [ textSize := 0 ].
-		(sourceText respondsTo: #selectionInterval:)
-			ifTrue: [ sourceText selectionInterval: (textSize + 1 to: textSize) ]
-	] on: Error do: [ ].
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> sourceMapFor: aContext [
-	| map |
-	map := #( ).
-	service ifNotNil: [
-		map := [ service sourceMap ] on: Error do: [ #( ) ]
-	].
-	((map isCollection and: [ map isEmpty not ]) or: [ aContext isNil ]) ifTrue: [ ^ map ].
-	^ [ aContext visibleSourceMap ] on: Error do: [ #( ) ]
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> preferredInitialContextIndex [
-	| index |
-	contextList ifNil: [ ^ 1 ].
-	contextList isEmpty ifTrue: [ ^ 1 ].
-
-	index := contextList
-		findFirst: [ :ctx | self isLikelyUserFrame: ctx ].
-	index = 0 ifTrue: [ ^ 1 ].
-	^ index
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> isLikelyUserFrame: aContext [
-	| className selectorName source |
-	aContext ifNil: [ ^ false ].
-
-	className := [ aContext methodClassOrUnknown ] on: Error do: [ '<unknown>' ].
-	selectorName := [ aContext selectorOrUnknown asString ] on: Error do: [ '<unknown>' ].
-	source := [ aContext sourceString ifNil: [ '' ] ] on: Error do: [ '' ].
-
-	(className beginsWith: 'AbstractException') ifTrue: [ ^ false ].
-	(className beginsWith: 'GsNMethod') ifTrue: [ ^ false ].
-	(selectorName beginsWith: '_') ifTrue: [ ^ false ].
-	(#('signal' 'defaultAction' '_defaultAction' '_signal' '_signalToDebugger') includes: selectorName) ifTrue: [ ^ false ].
-	source isEmpty ifTrue: [ ^ false ].
-
-	^ true
+GbsRemoteDebugger >> withBreakpointRefresh: aBlock [
+	| result |
+	result := [ aBlock value ] on: Error do: [ false ].
+	self syncBreakpointMarker.
+	self refreshUiState.
+	^ result
 ]
