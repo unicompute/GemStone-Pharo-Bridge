@@ -33,13 +33,35 @@ GbsBrowser class >> openOn: aSession [
 		browser open.
 		browser
 	] on: Error do: [ :ex |
-		self inform: ('Could not open GemStone browser: {1} ({2}) in {3}' format: {
+		self inform: ('Could not open GemStone browser: {1} ({2}) in {3}
+Top senders:
+{4}' format: {
 			ex messageText.
 			ex class name.
 			(ex signalerContext ifNil: [ '<none>' ] ifNotNil: [ :ctx | ctx printString ])
+			((self stackSummaryFrom: ex signalerContext maxFrames: 12) ifNil: [ '<none>' ])
 		}).
 		nil
 	]
+]
+
+{ #category : 'private' }
+GbsBrowser class >> stackSummaryFrom: aContext maxFrames: maxFrames [
+	| stream ctx idx |
+	aContext ifNil: [ ^ '<none>' ].
+	stream := String new writeStream.
+	ctx := aContext.
+	idx := 0.
+	[ (ctx notNil) and: [ idx < maxFrames ] ] whileTrue: [
+		stream
+			nextPutAll: idx asString;
+			nextPutAll: ': ';
+			nextPutAll: ctx printString;
+			lf.
+		ctx := ctx sender.
+		idx := idx + 1
+	].
+	^ stream contents
 ]
 
 { #category : 'actions' }
