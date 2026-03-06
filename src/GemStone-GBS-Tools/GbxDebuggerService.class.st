@@ -752,6 +752,14 @@ GbxDebuggerService >> resume [
 	^ false
 ]
 
+{ #category : 'process control' }
+GbxDebuggerService >> restart [
+	"Restart execution at current frame when supported by server process."
+	(self runDebugProcessCommand: 'restart' recompute: true)
+		ifTrue: [ ^ true ].
+	^ false
+]
+
 { #category : 'private' }
 GbxDebuggerService >> runDebugProcessCommand: commandName recompute: shouldRecompute [
 	| result script |
@@ -761,6 +769,24 @@ GbxDebuggerService >> runDebugProcessCommand: commandName recompute: shouldRecom
 		proc := Object _objectForOop: ', processOop asString, '.
 		proc ifNil: [ ^ ''false'' ].
 		proc ', commandName, '.
+		true
+	] value'.
+	result := self executeDebugScript: script.
+	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
+	shouldRecompute ifTrue: [ self recomputeContextList ].
+	^ true
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> runDebugProcessCommand: commandName withInteger: anInteger recompute: shouldRecompute [
+	| result script |
+	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
+	anInteger ifNil: [ ^ false ].
+	script := '[
+		| proc |
+		proc := Object _objectForOop: ', processOop asString, '.
+		proc ifNil: [ ^ ''false'' ].
+		[ proc perform: #', commandName, ': with: ', anInteger asString, ' ] on: Error do: [ ^ ''false'' ].
 		true
 	] value'.
 	result := self executeDebugScript: script.
@@ -922,6 +948,35 @@ GbxDebuggerService >> stepReturn [
 	^ false
 ]
 
+{ #category : 'process control' }
+GbxDebuggerService >> pause [
+	"Best effort: interrupt the active GemStone session."
+	self isSessionUsable ifFalse: [ ^ false ].
+	^ [ 
+		(session respondsTo: #sendInterrupt)
+			ifTrue: [ session sendInterrupt. true ]
+			ifFalse: [ false ]
+	] on: Error do: [ false ]
+]
+
+{ #category : 'process control' }
+GbxDebuggerService >> runToStepPoint: aStepPoint [
+	(self runDebugProcessCommand: 'runToStepPoint' withInteger: aStepPoint recompute: true)
+		ifTrue: [ ^ true ].
+	(self runDebugProcessCommand: 'runTo' withInteger: aStepPoint recompute: true)
+		ifTrue: [ ^ true ].
+	^ false
+]
+
+{ #category : 'process control' }
+GbxDebuggerService >> jumpToStepPoint: aStepPoint [
+	(self runDebugProcessCommand: 'jumpToStepPoint' withInteger: aStepPoint recompute: true)
+		ifTrue: [ ^ true ].
+	(self runDebugProcessCommand: 'jumpTo' withInteger: aStepPoint recompute: true)
+		ifTrue: [ ^ true ].
+	^ false
+]
+
 { #category : 'variables' }
 GbxDebuggerService >> tempNamesAndValues [
 	"Get temp variable names and values for current context"
@@ -934,6 +989,52 @@ GbxDebuggerService >> terminate [
 	"Terminate the debugged process"
 	(self runDebugProcessCommand: 'terminate' recompute: false)
 		ifTrue: [ ^ true ].
+	^ false
+]
+
+{ #category : 'evaluation' }
+GbxDebuggerService >> correctCurrentSelectorWithSource: sourceText [
+	| className selector isMeta classLookupName escapedSource script raw |
+	currentContext ifNil: [ ^ false ].
+	self isSessionUsable ifFalse: [ ^ false ].
+	self clearCompileError.
+	className := self selectedMethodClassName.
+	selector := self selectedMethodSelector.
+	(className isNil or: [ selector isNil or: [ selector = #unboundMethod ] ]) ifTrue: [ ^ false ].
+
+	isMeta := className asString endsWith: ' class'.
+	classLookupName := isMeta
+		ifTrue: [ (className asString copyFrom: 1 to: className size - 6) ]
+		ifFalse: [ className asString ].
+	escapedSource := self escapeForScriptLiteral: sourceText.
+
+	script := '[
+		| cls oldSel protocol result newSel source |
+		cls := System myUserProfile symbolList objectNamed: #', classLookupName, '.
+		cls ifNil: [ ^ ''ERROR|Class not found'' ].
+		', (isMeta ifTrue: [ 'cls := cls class.' ] ifFalse: [ '' ]), '
+		oldSel := #', selector asString, '.
+		source := ''', escapedSource, '''.
+		protocol := [ cls categoryOfSelector: oldSel ] on: Error do: [ ''as yet unclassified'' ].
+		protocol ifNil: [ protocol := ''as yet unclassified'' ].
+		result := [ cls compileMethod: source category: protocol ] on: Error do: [ :ex | ''ERROR|'', ex description ].
+		(result isString and: [ result beginsWith: ''ERROR|'' ]) ifTrue: [ ^ result ].
+		(result isKindOf: Array) ifTrue: [ ^ ''ERROR|Compilation failed'' ].
+		newSel := [ result selector ] on: Error do: [ oldSel ].
+		(newSel ~= oldSel and: [ cls includesSelector: oldSel ]) ifTrue: [
+			[ cls removeSelector: oldSel ] on: Error do: [ :ex | ]
+		].
+		''OK''
+	] value'.
+
+	raw := [ session executeAndFetch: script context: session sessionOop ] on: Error do: [ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	raw ifNil: [
+		lastCompileError := 'Correct selector failed: no response from GemStone'.
+		^ false
+	].
+	(raw = 'OK') ifTrue: [ ^ true ].
+	lastCompileError := (self normalizedCompileErrorFrom: raw).
 	^ false
 ]
 

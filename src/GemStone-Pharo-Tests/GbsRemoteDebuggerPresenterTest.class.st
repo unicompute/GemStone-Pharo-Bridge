@@ -214,3 +214,74 @@ GbsRemoteDebuggerPresenterTest >> testContextSelectedDoesNotRaiseWhenSourceAndVa
 GbsRemoteDebuggerPresenterTest >> testStepIntoDoesNotRaiseWhenServiceDoesNotImplementStepInto [
 	self shouldnt: [ debugger stepInto ] raise: Error
 ]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testStackReportStringIncludesAllContextPrintStrings [
+	| ctx1 ctx2 report |
+	ctx1 := Object new.
+	ctx2 := Object new.
+	debugger instVarNamed: 'contextList' put: { ctx1. ctx2 }.
+
+	report := debugger stackReportString.
+
+	self assert: (report includesSubstring: ctx1 printString).
+	self assert: (report includesSubstring: ctx2 printString)
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testToggleGlueHidingDelegatesToService [
+	self assert: debugger toggleGlueHiding.
+	self assert: service toggleGlueHidingCalls equals: 1
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testCorrectSelectorDelegatesToService [
+	| fakeText |
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: 'foo: x ^ x + 1'.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+
+	self assert: debugger correctSelector.
+	self assert: service correctSelectorCalls equals: 1.
+	self assert: service lastRecompiledSource equals: 'foo: x ^ x + 1'
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testRestartDelegatesToService [
+	self assert: debugger restart.
+	self assert: service restartCalls equals: 1
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testPauseProcessDelegatesToService [
+	self assert: debugger pauseProcess.
+	self assert: service pauseCalls equals: 1
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testRunToCaretUsesSelectedStepPoint [
+	| fakeText |
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: 'abcde'.
+	fakeText selectionInterval: (3 to: 3).
+	service sourceMap: { 2 -> (2 to: 4) }.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+
+	self assert: debugger runToCaret.
+	self assert: service runToStepPointCalls equals: 1.
+	self assert: service lastStepPoint equals: 2
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testJumpToCaretUsesSelectedStepPoint [
+	| fakeText |
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: 'abcde'.
+	fakeText selectionInterval: (3 to: 3).
+	service sourceMap: { 4 -> (2 to: 4) }.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+
+	self assert: debugger jumpToCaret.
+	self assert: service jumpToStepPointCalls equals: 1.
+	self assert: service lastStepPoint equals: 4
+]

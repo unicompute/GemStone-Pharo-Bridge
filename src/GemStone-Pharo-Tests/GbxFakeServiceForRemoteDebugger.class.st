@@ -10,9 +10,17 @@ Class {
 		'gsDoItCalls',
 		'gsPrintItCalls',
 		'gsInspectItCalls',
+		'gsDebugItCalls',
 		'recompileCalls',
+		'correctSelectorCalls',
 		'lastRecompiledSource',
 		'toggleBreakPointCalls',
+		'toggleGlueHidingCalls',
+		'restartCalls',
+		'pauseCalls',
+		'runToStepPointCalls',
+		'jumpToStepPointCalls',
+		'lastStepPoint',
 		'setBreakPointCalls',
 		'removeBreakPointCalls',
 		'removeAllBreakPointsCalls',
@@ -77,6 +85,13 @@ GbxFakeServiceForRemoteDebugger >> gsInspectIt: codeString [
 ]
 
 { #category : 'actions' }
+GbxFakeServiceForRemoteDebugger >> correctCurrentSelectorWithSource: sourceString [
+	correctSelectorCalls := self correctSelectorCalls + 1.
+	lastRecompiledSource := sourceString.
+	^ recompileShouldSucceed ifNil: [ true ]
+]
+
+{ #category : 'actions' }
 GbxFakeServiceForRemoteDebugger >> recompileCurrentMethodWithSource: sourceString [
 	recompileCalls := self recompileCalls + 1.
 	lastRecompiledSource := sourceString.
@@ -124,6 +139,11 @@ GbxFakeServiceForRemoteDebugger >> gsInspectItCalls [
 ]
 
 { #category : 'accessing' }
+GbxFakeServiceForRemoteDebugger >> correctSelectorCalls [
+	^ correctSelectorCalls ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
 GbxFakeServiceForRemoteDebugger >> recompileCalls [
 	^ recompileCalls ifNil: [ 0 ]
 ]
@@ -142,6 +162,38 @@ GbxFakeServiceForRemoteDebugger >> setBreakPointIn: aTextWidget [
 { #category : 'breakpoint support' }
 GbxFakeServiceForRemoteDebugger >> toggleBreakPointIn: aTextWidget [
 	toggleBreakPointCalls := self toggleBreakPointCalls + 1.
+	^ true
+]
+
+{ #category : 'context list' }
+GbxFakeServiceForRemoteDebugger >> toggleGlueHiding [
+	toggleGlueHidingCalls := self toggleGlueHidingCalls + 1.
+	^ true
+]
+
+{ #category : 'process control' }
+GbxFakeServiceForRemoteDebugger >> restart [
+	restartCalls := self restartCalls + 1.
+	^ true
+]
+
+{ #category : 'process control' }
+GbxFakeServiceForRemoteDebugger >> pause [
+	pauseCalls := self pauseCalls + 1.
+	^ true
+]
+
+{ #category : 'process control' }
+GbxFakeServiceForRemoteDebugger >> runToStepPoint: aStepPoint [
+	runToStepPointCalls := self runToStepPointCalls + 1.
+	lastStepPoint := aStepPoint.
+	^ true
+]
+
+{ #category : 'process control' }
+GbxFakeServiceForRemoteDebugger >> jumpToStepPoint: aStepPoint [
+	jumpToStepPointCalls := self jumpToStepPointCalls + 1.
+	lastStepPoint := aStepPoint.
 	^ true
 ]
 
@@ -165,6 +217,36 @@ GbxFakeServiceForRemoteDebugger >> setBreakPointCalls [
 { #category : 'breakpoint support' }
 GbxFakeServiceForRemoteDebugger >> toggleBreakPointCalls [
 	^ toggleBreakPointCalls ifNil: [ 0 ]
+]
+
+{ #category : 'context list' }
+GbxFakeServiceForRemoteDebugger >> toggleGlueHidingCalls [
+	^ toggleGlueHidingCalls ifNil: [ 0 ]
+]
+
+{ #category : 'process control' }
+GbxFakeServiceForRemoteDebugger >> restartCalls [
+	^ restartCalls ifNil: [ 0 ]
+]
+
+{ #category : 'process control' }
+GbxFakeServiceForRemoteDebugger >> pauseCalls [
+	^ pauseCalls ifNil: [ 0 ]
+]
+
+{ #category : 'process control' }
+GbxFakeServiceForRemoteDebugger >> runToStepPointCalls [
+	^ runToStepPointCalls ifNil: [ 0 ]
+]
+
+{ #category : 'process control' }
+GbxFakeServiceForRemoteDebugger >> jumpToStepPointCalls [
+	^ jumpToStepPointCalls ifNil: [ 0 ]
+]
+
+{ #category : 'process control' }
+GbxFakeServiceForRemoteDebugger >> lastStepPoint [
+	^ lastStepPoint
 ]
 
 { #category : 'breakpoint support' }

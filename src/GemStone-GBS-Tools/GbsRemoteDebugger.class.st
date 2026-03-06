@@ -15,7 +15,9 @@ Class {
 		'service',
 		'session',
 		'processOop',
+		'mainMenu',
 		'contextList',
+		'bookmarkContextIndex',
 		'selectedContextIndex',
 		'stackList',
 		'sourceText',
@@ -266,6 +268,7 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 GbsRemoteDebugger >> defaultLayout [
 	^ SpBoxLayout newVertical
 		spacing: 5;
+		add: mainMenu expand: false;
 		add: errorMessageLabel expand: false;
 		add: (SpBoxLayout newHorizontal
 			spacing: 5;
@@ -611,6 +614,7 @@ GbsRemoteDebugger >> highlightSourceLineFromCompileError: errorMessage [
 
 { #category : 'initialization' }
 GbsRemoteDebugger >> initializePresenters [
+	mainMenu := self buildMenuBar.
 	errorMessageLabel := self newLabel.
 	errorMessageLabel addStyle: 'danger'.
 
@@ -666,6 +670,7 @@ GbsRemoteDebugger >> initializePresenters [
 		ifTrue: [ variablesTable whenDoubleClickDo: [ self inspectVariable ] ].
 
 	glueIsHidden := true.
+	bookmarkContextIndex := nil.
 	self refreshUiState.
 ]
 
@@ -1038,4 +1043,576 @@ GbsRemoteDebugger >> withBreakpointRefresh: aBlock [
 	self syncBreakpointMarker.
 	self refreshUiState.
 	^ result
+]
+
+{ #category : 'menus' }
+GbsRemoteDebugger >> buildMenuBar [
+	^ self newMenuBar
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Stack'; subMenu: self stackMenu ].
+			group addItem: [ :item | item name: 'Method'; subMenu: self methodMenu ].
+			group addItem: [ :item | item name: 'Edit'; subMenu: self editMenu ].
+			group addItem: [ :item | item name: 'Execute'; subMenu: self executeMenu ].
+			group addItem: [ :item | item name: 'Correct'; subMenu: self correctMenu ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsRemoteDebugger >> correctMenu [
+	^ self newMenu
+		addItem: [ :item |
+			item
+				name: 'Define Method';
+				action: [ self acceptSourceEdits ] ];
+		addItem: [ :item |
+			item
+				name: 'Correct Selector';
+				action: [ self correctSelector ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsRemoteDebugger >> editMenu [
+	^ self newMenu
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Accepting'; action: [ self acceptSourceEdits ] ].
+			group addItem: [ :item | item name: 'Format'; action: [ self formatSource ] ].
+			group addItem: [ :item | item name: 'Insert Breakpoint'; action: [ self setBreakPoint ] ].
+			group addItem: [ :item | item name: 'Remove This Probe'; action: [ self removeBreakPoint ] ].
+			group addItem: [ :item | item name: 'GS-Insert Breakpoint'; action: [ self setBreakPoint ] ].
+			group addItem: [ :item | item name: 'GS-Remove Breakpoint'; action: [ self removeBreakPoint ] ].
+			group addItem: [ :item | item name: 'GS-Remove All Breakpoints'; action: [ self removeAllBreakPoints ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Do it'; action: [ self localDoIt ] ].
+			group addItem: [ :item | item name: 'Print it'; action: [ self localPrintIt ] ].
+			group addItem: [ :item | item name: 'Inspect it'; action: [ self localInspectIt ] ].
+			group addItem: [ :item | item name: 'Debug it'; action: [ self localDebugIt ] ].
+			group addItem: [ :item | item name: 'GS-Do it'; action: [ self gsDoIt ] ].
+			group addItem: [ :item | item name: 'GS-Print it'; action: [ self gsPrintIt ] ].
+			group addItem: [ :item | item name: 'GS-Inspect it'; action: [ self gsInspectIt ] ].
+			group addItem: [ :item | item name: 'GS-Debug it'; action: [ self gsDebugIt ] ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsRemoteDebugger >> executeMenu [
+	^ self newMenu
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Step Into'; action: [ self stepInto ] ].
+			group addItem: [ :item | item name: 'Step'; action: [ self stepInto ] ].
+			group addItem: [ :item | item name: 'Step Over'; action: [ self stepOver ] ].
+			group addItem: [ :item | item name: 'Restart'; action: [ self restart ] ].
+			group addItem: [ :item | item name: 'Run'; action: [ self resume ] ].
+			group addItem: [ :item | item name: 'Run until Return'; action: [ self stepReturn ] ].
+			group addItem: [ :item | item name: 'Run with Break Again'; action: [ self resume ] ].
+			group addItem: [ :item | item name: 'Run to Caret'; action: [ self runToCaret ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Jump to Caret'; action: [ self jumpToCaret ] ].
+			group addItem: [ :item | item name: 'Return...'; action: [ self returnFromFrame ] ].
+			group addItem: [ :item | item name: 'Pause'; action: [ self pauseProcess ] ].
+			group addItem: [ :item | item name: 'Terminate'; action: [ self terminate ] ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsRemoteDebugger >> methodMenu [
+	^ self newMenu
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Browse'; action: [ self browseSelectedMethod ] ].
+			group addItem: [ :item | item name: 'GS-Senders'; action: [ self gsBrowseAllReferences ] ].
+			group addItem: [ :item | item name: 'GS-Implementors'; action: [ self gsBrowseAllImplementors ] ].
+			group addItem: [ :item | item name: 'GS-Hierarchy Senders'; action: [ self gsBrowseAllHierarchyReferences ] ].
+			group addItem: [ :item | item name: 'GS-Hierarchy Implementors'; action: [ self gsBrowseAllHierarchyImplementors ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Senders'; action: [ self browseLocalSenders ] ].
+			group addItem: [ :item | item name: 'Implementors'; action: [ self browseLocalImplementors ] ].
+			group addItem: [ :item | item name: 'Hierarchy Senders'; action: [ self browseLocalHierarchySenders ] ].
+			group addItem: [ :item | item name: 'Hierarchy Implementors'; action: [ self browseLocalHierarchyImplementors ] ].
+			group addItem: [ :item | item name: 'Show Containing Package...'; action: [ self showContainingPackage ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Recompile with Full Blocks'; action: [ self acceptSourceEdits ] ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsRemoteDebugger >> stackMenu [
+	^ self newMenu
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Copy Stack Report'; action: [ self copyStackReport ] ].
+			group addItem: [ :item | item name: 'Show More'; action: [ self showMoreContexts ] ].
+			group addItem: [ :item | item name: 'Filter Stack'; action: [ self toggleFilterStack ] ].
+			group addItem: [ :item | item name: 'Select Home Context'; action: [ self selectHomeContext ] ].
+			group addItem: [ :item | item name: 'Inspect Context'; action: [ self inspectFrame ] ].
+			group addItem: [ :item | item name: 'Bookmark Context'; action: [ self bookmarkContext ] ].
+			group addItem: [ :item | item name: 'Clear Bookmark'; action: [ self clearBookmarkContext ] ].
+			group addItem: [ :item | item name: 'Inspect Process'; action: [ self inspectProcess ] ].
+			group addItem: [ :item | item name: 'Show Glue'; action: [ self toggleGlueHiding ] ] ];
+		yourself
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> bookmarkContext [
+	| index |
+	stackList ifNil: [ ^ false ].
+	index := (stackList respondsTo: #selectedIndex)
+		ifTrue: [ stackList selectedIndex ]
+		ifFalse: [ nil ].
+	index ifNil: [ ^ false ].
+	bookmarkContextIndex := index.
+	^ true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> browseSelectedMethod [
+	(service respondsTo: #browseMethod)
+		ifTrue: [ ^ self safeServiceCall: [ service browseMethod ] default: false ].
+	^ self openServerMethodReference: self selectedServerMethodReference
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> clearBookmarkContext [
+	bookmarkContextIndex := nil.
+	^ true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> copyStackReport [
+	| report |
+	report := self stackReportString.
+	report isEmpty ifTrue: [ ^ false ].
+	Clipboard clipboardText: report.
+	^ true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> correctSelector [
+	| code ok |
+	service ifNil: [ ^ false ].
+	code := self selectedSourceOrAll.
+	code isEmpty ifTrue: [ ^ false ].
+	ok := self safeServiceCall: [ service correctCurrentSelectorWithSource: code ] default: false.
+	ok ifTrue: [
+		self clearServiceCompileError.
+		self fetchStackFrames
+	] ifFalse: [
+		self showCompileErrorInSourcePane
+	].
+	^ ok
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> firstUserContextIndex [
+	^ self preferredInitialContextIndex
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> formatSource [
+	| text |
+	sourceText ifNil: [ ^ false ].
+	(sourceText respondsTo: #text) ifFalse: [ ^ false ].
+	text := sourceText text asString.
+	(sourceText respondsTo: #text:)
+		ifTrue: [ sourceText text: text withBlanksTrimmed ].
+	^ true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> gsDebugIt [
+	| code errorText processCandidate |
+	session ifNil: [ ^ false ].
+	code := self selectedSourceOrAll.
+	code isEmpty ifTrue: [ ^ false ].
+	^ [ 
+		session execute: code.
+		true
+	] on: GbsError do: [ :ex |
+		errorText := ex messageText.
+		processCandidate := self processOopFromGbsError: ex.
+		(processCandidate isNumber and: [ processCandidate > 20 ])
+			ifTrue: [
+				self class
+					openOn: errorText
+					process: processCandidate
+					session: session.
+				true
+			]
+			ifFalse: [ UIManager default inform: errorText. false ]
+	]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> gsBrowseAllHierarchyImplementors [
+	^ self gsBrowseQueryFor: self selectedServerSelector hierarchyOnly: true senders: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> gsBrowseAllHierarchyReferences [
+	^ self gsBrowseQueryFor: self selectedServerSelector hierarchyOnly: true senders: true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> gsBrowseAllImplementors [
+	^ self gsBrowseQueryFor: self selectedServerSelector hierarchyOnly: false senders: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> gsBrowseAllReferences [
+	^ self gsBrowseQueryFor: self selectedServerSelector hierarchyOnly: false senders: true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> gsBrowseQueryFor: aSelector hierarchyOnly: hierarchyOnly senders: sendersOnly [
+	| references selected |
+	aSelector ifNil: [ ^ false ].
+	references := self serverMethodReferencesFor: aSelector hierarchyOnly: hierarchyOnly senders: sendersOnly.
+	references isEmpty ifTrue: [
+		UIManager default inform: 'No matching GemStone methods found.'.
+		^ false
+	].
+	selected := self chooseMethodReferenceFrom: references title: 'GemStone Methods'.
+	selected ifNil: [ ^ false ].
+	^ self openServerMethodReference: selected
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> selectedServerSelector [
+	service ifNil: [ ^ nil ].
+	^ self safeServiceCall: [ service selectedMethodSelector ] default: nil
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> selectedServerClassName [
+	service ifNil: [ ^ nil ].
+	^ self safeServiceCall: [ service selectedMethodClassName ] default: nil
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> selectedServerMethodReference [
+	| className selector |
+	className := self selectedServerClassName.
+	selector := self selectedServerSelector.
+	(className isNil or: [ selector isNil ]) ifTrue: [ ^ nil ].
+	^ className asString , '>>' , selector asString
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> chooseMethodReferenceFrom: references title: aTitle [
+	| labels index |
+	(references isCollection and: [ references isEmpty not ]) ifFalse: [ ^ nil ].
+	labels := references collect: [ :each | each asString ].
+	index := UIManager default chooseFrom: labels title: aTitle.
+	index = 0 ifTrue: [ ^ nil ].
+	^ labels at: index
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> serverMethodReferencesFor: aSelector hierarchyOnly: hierarchyOnly senders: sendersOnly [
+	| className escapedSelector escapedClass script raw |
+	session ifNil: [ ^ #( ) ].
+	className := self selectedServerClassName.
+	escapedSelector := aSelector asString copyReplaceAll: '''' with: ''''''.
+	escapedClass := (className ifNil: [ '' ]) asString copyReplaceAll: '''' with: ''''''.
+	script := '[
+		| sel className classes target root stream |
+		sel := #''', escapedSelector, '''.
+		className := ''', escapedClass, '''.
+		stream := WriteStream on: String new.
+		classes := IdentitySet new.
+		System myUserProfile symbolList do: [ :dict |
+			dict keysAndValuesDo: [ :k :v |
+				(v isBehavior) ifTrue: [ classes add: v ] ] ].
+		root := nil.
+		className isEmpty ifFalse: [
+			(className endsWith: '' class'')
+				ifTrue: [ | baseName |
+					baseName := className copyFrom: 1 to: className size - 6.
+					root := (System myUserProfile symbolList objectNamed: baseName asSymbol) class ]
+				ifFalse: [ root := (System myUserProfile symbolList objectNamed: className asSymbol) ] ].
+		', (hierarchyOnly
+			ifTrue: [ 'root notNil ifTrue: [
+				classes := (root withAllSuperclasses , root withAllSubclasses) asIdentitySet ]' ]
+			ifFalse: [ '' ]), '.
+		classes asArray do: [ :cls |
+			| sels |
+			', (sendersOnly
+				ifTrue: [ 'sels := [ cls whichSelectorsReferTo: sel ] on: Error do: [ #() ]' ]
+				ifFalse: [ 'sels := (cls includesSelector: sel) ifTrue: [ Array with: sel ] ifFalse: [ #() ]' ]), '.
+			sels do: [ :s |
+				stream nextPutAll: cls name asString; nextPutAll: ''>>''; nextPutAll: s asString; lf ].
+			', (sendersOnly
+				ifTrue: [ 'sels := [ cls class whichSelectorsReferTo: sel ] on: Error do: [ #() ]' ]
+				ifFalse: [ 'sels := (cls class includesSelector: sel) ifTrue: [ Array with: sel ] ifFalse: [ #() ]' ]), '.
+			sels do: [ :s |
+				stream nextPutAll: cls name asString; nextPutAll: '' class>>''; nextPutAll: s asString; lf ] ].
+		stream contents
+	] value'.
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	^ (raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> openServerMethodReference: aReferenceString [
+	| split classPart selectorPart browser classSide className |
+	(aReferenceString isString and: [ aReferenceString includesSubstring: '>>' ]) ifFalse: [ ^ false ].
+	split := aReferenceString findString: '>>' startingAt: 1.
+	classPart := (aReferenceString copyFrom: 1 to: split - 1) trimBoth.
+	selectorPart := (aReferenceString copyFrom: split + 2 to: aReferenceString size) trimBoth.
+	classSide := classPart endsWith: ' class'.
+	className := classSide
+		ifTrue: [ classPart copyFrom: 1 to: classPart size - 6 ]
+		ifFalse: [ classPart ].
+	browser := GbsBrowser openOn: session.
+	(browser respondsTo: #selectClassNamed:classSide:method:)
+		ifTrue: [ browser selectClassNamed: className classSide: classSide method: selectorPart ].
+	^ true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> informUnsupported: aString [
+	(UIManager default respondsTo: #inform:)
+		ifTrue: [ UIManager default inform: aString ].
+	^ false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> jumpToCaret [
+	| stepPoint |
+	stepPoint := self selectedStepPointFromCaret.
+	stepPoint ifNil: [ ^ false ].
+	^ self safeServiceCall: [ service jumpToStepPoint: stepPoint ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> localDebugIt [
+	| code |
+	code := self selectedSourceOrAll.
+	code isEmpty ifTrue: [ ^ false ].
+	^ [ Smalltalk compiler evaluate: code. true ]
+		on: Error
+		do: [ :ex | ex pass ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> browseLocalImplementors [
+	| selector |
+	selector := self selectedServerSelector.
+	selector ifNil: [ ^ false ].
+	(SystemNavigation default respondsTo: #browseAllImplementorsOf:)
+		ifTrue: [ SystemNavigation default browseAllImplementorsOf: selector. ^ true ].
+	^ false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> browseLocalSenders [
+	| selector |
+	selector := self selectedServerSelector.
+	selector ifNil: [ ^ false ].
+	(SystemNavigation default respondsTo: #browseAllSendersOf:)
+		ifTrue: [ SystemNavigation default browseAllSendersOf: selector. ^ true ].
+	^ false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> browseLocalHierarchyImplementors [
+	| selector className behavior methods |
+	selector := self selectedServerSelector.
+	className := self selectedServerClassName.
+	(selector isNil or: [ className isNil ]) ifTrue: [ ^ false ].
+	behavior := self localBehaviorFromServerClassName: className.
+	behavior ifNil: [ ^ false ].
+	methods := (behavior withAllSuperclasses , behavior withAllSubclasses)
+		collect: [ :cls | cls compiledMethodAt: selector ifAbsent: [ nil ] ]
+		thenReject: #isNil.
+	methods isEmpty ifTrue: [ ^ false ].
+	methods size = 1
+		ifTrue: [ methods first browse ]
+		ifFalse: [ methods inspect ].
+	^ true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> browseLocalHierarchySenders [
+	| selector className behavior methods |
+	selector := self selectedServerSelector.
+	className := self selectedServerClassName.
+	(selector isNil or: [ className isNil ]) ifTrue: [ ^ false ].
+	behavior := self localBehaviorFromServerClassName: className.
+	behavior ifNil: [ ^ false ].
+	methods := OrderedCollection new.
+	(behavior withAllSuperclasses , behavior withAllSubclasses) do: [ :cls |
+		methods addAll: (cls whichSelectorsReferTo: selector) collect: [ :sel |
+			cls compiledMethodAt: sel ifAbsent: [ nil ] ] ].
+	methods := methods thenReject: #isNil.
+	methods isEmpty ifTrue: [ ^ false ].
+	methods size = 1
+		ifTrue: [ methods first browse ]
+		ifFalse: [ methods inspect ].
+	^ true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> showContainingPackage [
+	| className behavior package |
+	className := self selectedServerClassName.
+	className ifNil: [ ^ false ].
+	behavior := self localBehaviorFromServerClassName: className.
+	behavior ifNil: [ ^ false ].
+	package := behavior package ifNil: [ ^ false ].
+	(UIManager default respondsTo: #inform:)
+		ifTrue: [ UIManager default inform: package name ].
+	^ true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> localBehaviorFromServerClassName: classNameString [
+	| baseName |
+	classNameString ifNil: [ ^ nil ].
+	baseName := classNameString asString.
+	(baseName endsWith: ' class')
+		ifTrue: [ baseName := baseName copyFrom: 1 to: baseName size - 6 ].
+	^ Smalltalk at: baseName asSymbol ifAbsent: [ nil ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> localDoIt [
+	| code |
+	code := self selectedSourceOrAll.
+	code isEmpty ifTrue: [ ^ false ].
+	[ Smalltalk compiler evaluate: code ] on: Error do: [ :ex | ^ false ].
+	^ true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> localInspectIt [
+	| code value |
+	code := self selectedSourceOrAll.
+	code isEmpty ifTrue: [ ^ false ].
+	value := [ Smalltalk compiler evaluate: code ] on: Error do: [ :ex | ^ false ].
+	value inspect.
+	^ true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> localPrintIt [
+	| code value currentText |
+	code := self selectedSourceOrAll.
+	code isEmpty ifTrue: [ ^ false ].
+	value := [ Smalltalk compiler evaluate: code ] on: Error do: [ :ex | ^ false ].
+	currentText := (sourceText respondsTo: #text)
+		ifTrue: [ sourceText text asString ]
+		ifFalse: [ '' ].
+	(sourceText respondsTo: #text:)
+		ifTrue: [ sourceText text: currentText, ' "', value printString, '"' ].
+	^ true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> pauseProcess [
+	^ self safeServiceCall: [ service pause ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restart [
+	| didRestart |
+	didRestart := self safeServiceCall: [ service restart ] default: false.
+	didRestart ifTrue: [ self fetchStackFrames ].
+	^ didRestart
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> returnFromFrame [
+	^ self stepReturn
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> runToCaret [
+	| stepPoint |
+	stepPoint := self selectedStepPointFromCaret.
+	stepPoint ifNil: [ ^ false ].
+	^ self safeServiceCall: [ service runToStepPoint: stepPoint ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> processOopFromGbsError: anError [
+	| candidate |
+	candidate := (anError respondsTo: #serverProcessOop)
+		ifTrue: [ anError serverProcessOop ]
+		ifFalse: [ nil ].
+	((candidate isNumber and: [ candidate > 20 ]) not) ifTrue: [
+		candidate := (anError respondsTo: #exceptionOop)
+			ifTrue: [ anError exceptionOop ]
+			ifFalse: [ nil ]
+	].
+	((candidate isNumber and: [ candidate > 20 ]) not) ifTrue: [
+		candidate := (anError respondsTo: #tag)
+			ifTrue: [ anError tag ]
+			ifFalse: [ nil ]
+	].
+	^ candidate
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> selectedStepPointFromCaret [
+	| caret map entries sorted match context |
+	sourceText ifNil: [ ^ nil ].
+	(sourceText respondsTo: #selectionInterval) ifFalse: [ ^ nil ].
+	caret := sourceText selectionInterval first.
+	context := (service notNil and: [ service respondsTo: #currentContext ])
+		ifTrue: [ service currentContext ]
+		ifFalse: [ nil ].
+	map := self sourceMapFor: context.
+	(map isCollection and: [ map isEmpty not ]) ifFalse: [ ^ nil ].
+	entries := map collect: [ :assoc |
+		| interval key |
+		key := assoc key.
+		interval := assoc value.
+		(key isNumber and: [ interval respondsTo: #first ])
+			ifTrue: [ assoc ]
+			ifFalse: [ nil ] ] thenReject: #isNil.
+	entries isEmpty ifTrue: [ ^ nil ].
+	sorted := entries asSortedCollection: [ :a :b | a value first <= b value first ].
+	match := sorted detect: [ :each |
+		(each value first <= caret) and: [ (each value last ifNil: [ each value first ]) >= caret ] ]
+		ifNone: [ sorted detect: [ :each | each value first >= caret ] ifNone: [ sorted last ] ].
+	^ match key
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> selectHomeContext [
+	| index |
+	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ false ].
+	index := self firstUserContextIndex.
+	(index isNil or: [ index <= 0 or: [ index > contextList size ] ])
+		ifTrue: [ index := 1 ].
+	stackList selectIndex: index.
+	self contextSelected: (contextList at: index).
+	^ true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> showMoreContexts [
+	self fetchStackFrames.
+	^ true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> stackReportString [
+	| rows |
+	contextList ifNil: [ ^ '' ].
+	rows := contextList collect: [ :ctx | ctx printString ].
+	^ String crlf join: rows
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> toggleFilterStack [
+	self toggleGlueHiding.
+	^ true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> toggleGlueHiding [
+	self safeServiceCall: [ service toggleGlueHiding ] default: false.
+	self fetchStackFrames.
+	^ true
 ]

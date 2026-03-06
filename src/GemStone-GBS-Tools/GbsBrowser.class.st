@@ -281,6 +281,24 @@ GbsBrowser >> selectDictionaryNamed: aDictionaryName [
 	]
 ]
 
+{ #category : 'actions' }
+GbsBrowser >> selectClassNamed: aClassName classSide: classSideBoolean method: aSelectorString [
+	| clsItems chosenProtocol |
+	(aClassName isString and: [ aClassName isEmpty not ]) ifFalse: [ ^ self ].
+	(metaCheckbox respondsTo: #state:) ifTrue: [ metaCheckbox state: classSideBoolean ].
+	clsItems := (classesList respondsTo: #items)
+		ifTrue: [ classesList items ]
+		ifFalse: [ #( ) ].
+	(clsItems includes: aClassName) ifFalse: [ ^ self ].
+	(classesList respondsTo: #selectItem:) ifTrue: [ classesList selectItem: aClassName ].
+	self classSelected: aClassName.
+	chosenProtocol := '-- all --'.
+	(protocolsList respondsTo: #selectItem:) ifTrue: [ protocolsList selectItem: chosenProtocol ].
+	self protocolSelected: chosenProtocol.
+	(methodsList respondsTo: #selectItem:) ifTrue: [ methodsList selectItem: aSelectorString ].
+	self methodSelected: aSelectorString
+]
+
 { #category : 'private' }
 GbsBrowser >> selectedCodeOrAll [
 	| code |
