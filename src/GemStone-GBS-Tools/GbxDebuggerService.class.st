@@ -756,7 +756,7 @@ GbxDebuggerService >> resume [
 GbxDebuggerService >> restart [
 	"Restart/reenter execution at the selected frame.
 	Prefer level-aware selectors (VW-like reenter semantics), then fall back."
-	| lvl script result |
+	| lvl script result stepAfter didResetWithStepPoint |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
 	lvl := self currentContextLevel.
 	lvl ifNil: [ lvl := 1 ].
@@ -784,6 +784,15 @@ GbxDebuggerService >> restart [
 	result := self executeDebugScript: script.
 	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
 	self recomputeContextList.
+	stepAfter := self currentStepPoint.
+	didResetWithStepPoint := false.
+	(stepAfter isNil or: [ stepAfter > 1 ]) ifTrue: [
+		didResetWithStepPoint := (self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true)
+			or: [ self runDebugProcessCommand: 'runToStepPoint' withInteger: 1 recompute: true ]
+	].
+	(stepAfter isNil or: [ stepAfter > 1 ]) ifTrue: [
+		didResetWithStepPoint ifFalse: [ self recomputeContextList ]
+	].
 	^ true
 ]
 
