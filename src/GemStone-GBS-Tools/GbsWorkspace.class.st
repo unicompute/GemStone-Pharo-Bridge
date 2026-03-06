@@ -54,7 +54,7 @@ GbsWorkspace >> doIt [
 
 	[
 		result := activeSession execute: code.
-		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
+		GbsRemoteTranscript drainSessionLogsToWindowsAndLocal: activeSession.
 	] on: GbsError do: [ :ex |
 		serverCandidate := (ex respondsTo: #serverProcessOop)
 			ifTrue: [ ex serverProcessOop ]
@@ -135,7 +135,7 @@ GbsWorkspace >> gemStonePrintIt [
 	currentText := textEditor text ifNil: [ '' ].
 	textEditor text: currentText asString, ' " ', resultString, ' "'.
 	
-	GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
+	GbsRemoteTranscript drainSessionLogsToWindowsAndLocal: activeSession.
 ]
 
 { #category : 'actions' }
@@ -162,7 +162,7 @@ GbsWorkspace >> gsFileItIn [
 	activeSession ifNil: [ ^ self inform: 'No Session - please login to GemStone first' ].
 	[
 		activeSession execute: code.
-		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
+		GbsRemoteTranscript drainSessionLogsToWindowsAndLocal: activeSession.
 		self inform: 'GemStone file-in executed.'
 	] on: GbsError do: [ :ex |
 		self inform: 'GemStone file-in failed: ', ex messageText

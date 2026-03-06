@@ -66,7 +66,7 @@ GbsPlaygroundActions class >> gsEvaluateIn: aPlaygroundPresenter debugOnError: d
 
 	[
 		result := activeSession execute: code.
-		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
+		GbsRemoteTranscript drainSessionLogsToWindowsAndLocal: activeSession.
 		^ result
 	] on: GbsError do: [ :ex |
 		serverCandidate := (ex respondsTo: #serverProcessOop)
@@ -136,6 +136,7 @@ GbsPlaygroundActions class >> gsPrintItIn: aPlaygroundPresenter [
 	activeSession ifNil: [ ^ self ].
 	resultString := activeSession executeAndFetch: printScript.
 	self appendPrintedResult: resultString in: aPlaygroundPresenter.
+	GbsRemoteTranscript drainSessionLogsToWindowsAndLocal: activeSession.
 ]
 
 { #category : 'actions' }
@@ -146,6 +147,7 @@ GbsPlaygroundActions class >> gsFileItInIn: aPlaygroundPresenter [
 	activeSession := self activeSessionOrInform.
 	activeSession ifNil: [ ^ self ].
 	[ activeSession execute: code.
+	  GbsRemoteTranscript drainSessionLogsToWindowsAndLocal: activeSession.
 	  UIManager default inform: 'GemStone file-in executed.' ]
 		on: Error
 		do: [ :ex | UIManager default inform: 'GS-File it in failed: ', ex messageText ].

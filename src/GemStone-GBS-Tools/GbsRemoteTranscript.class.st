@@ -21,6 +21,27 @@ GbsRemoteTranscript class >> installForwarder [
     for: self
 ]
 
+{ #category : 'updating' }
+GbsRemoteTranscript class >> drainCurrentSessionLogsToWindowsAndLocal [
+	| session |
+	session := GbsSessionParameters currentSession.
+	session ifNil: [ ^ '' ].
+	^ self drainSessionLogsToWindowsAndLocal: session
+]
+
+{ #category : 'updating' }
+GbsRemoteTranscript class >> drainSessionLogsToWindowsAndLocal: aSession [
+	| newLogs safeLogs |
+	aSession ifNil: [ ^ '' ].
+	newLogs := [ aSession fetchTranscriptLogs ] on: Error do: [ '' ].
+	(newLogs isNil or: [ newLogs isEmpty ]) ifTrue: [ ^ '' ].
+	safeLogs := newLogs asString.
+	(safeLogs beginsWith: 'Error:') ifTrue: [ ^ '' ].
+	self allInstancesDo: [ :win | win appendLog: safeLogs ].
+	Transcript show: safeLogs.
+	^ safeLogs
+]
+
 { #category : 'gemstone integration' }
 GbsRemoteTranscript class >> installGemStoneProxy [
 
