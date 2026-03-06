@@ -153,6 +153,22 @@ GbsWorkspace >> gsPrintIt [
 	^ self gemStonePrintIt
 ]
 
+{ #category : 'actions' }
+GbsWorkspace >> gsFileItIn [
+	| code activeSession |
+	code := self selectedCodeOrAll copyReplaceAll: String cr with: String lf.
+	code ifEmpty: [ ^ self ].
+	activeSession := GbsSessionParameters currentSession.
+	activeSession ifNil: [ ^ self inform: 'No Session - please login to GemStone first' ].
+	[
+		activeSession execute: code.
+		GbsRemoteTranscript allInstances do: [ :win | win fetchNewEntries ].
+		self inform: 'GemStone file-in executed.'
+	] on: GbsError do: [ :ex |
+		self inform: 'GemStone file-in failed: ', ex messageText
+	].
+]
+
 { #category : 'initialization' }
 GbsWorkspace >> initialize [
 
@@ -455,17 +471,21 @@ GbsWorkspace >> workspaceMenu [
 			action: [ UIManager default defer: [ self doIt ] ] ].
 			
 		group addItem: [ :item |
-			item name: 'GS-Inspect it'; shortcut: $i command; icon: (self iconNamed: #smallInspectIt);
-			action: [ UIManager default defer: [ self inspectIt ] ] ].
-			
-		group addItem: [ :item |
 			item name: 'GS-Print it'; shortcut: $p command; icon: (self iconNamed: #smallPrintIt);
 			"CRITICAL FIX: Defer the action so the menu closes first!"
 			action: [ UIManager default defer: [ self gemStonePrintIt ] ] ].
 			
 		group addItem: [ :item |
-			item name: 'GemStone Debug it'; icon: (self iconNamed: #smallDebug);
+			item name: 'GS-Inspect it'; shortcut: $i command; icon: (self iconNamed: #smallInspectIt);
+			action: [ UIManager default defer: [ self inspectIt ] ] ].
+			
+		group addItem: [ :item |
+			item name: 'GS-Debug it'; icon: (self iconNamed: #smallDebug);
 			action: [ UIManager default defer: [ self gemStoneDebugIt ] ] ].
+
+		group addItem: [ :item |
+			item name: 'GS-File it in'; icon: (self iconNamed: #smallSave);
+			action: [ UIManager default defer: [ self gsFileItIn ] ] ].
 	].
 
 	"--- LOCAL ACTIONS (These don't use FFI, so they don't need defer) ---"
