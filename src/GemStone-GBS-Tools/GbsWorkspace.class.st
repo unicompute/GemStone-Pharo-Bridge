@@ -462,37 +462,31 @@ GbsWorkspace >> textEditor [
 GbsWorkspace >> workspaceMenu [
 	| menu |
 	menu := self newMenu.
-	
-	"--- GEMSTONE ACTIONS ---"
-	menu addGroup: [ :group | 
-		group addItem: [ :item |
-			item name: 'GS-Do it'; shortcut: $d command; icon: (self iconNamed: #smallDoIt);
-			"CRITICAL FIX: Defer the action so the menu closes first!"
-			action: [ UIManager default defer: [ self doIt ] ] ].
-			
-		group addItem: [ :item |
-			item name: 'GS-Print it'; shortcut: $p command; icon: (self iconNamed: #smallPrintIt);
-			"CRITICAL FIX: Defer the action so the menu closes first!"
-			action: [ UIManager default defer: [ self gemStonePrintIt ] ] ].
-			
-		group addItem: [ :item |
-			item name: 'GS-Inspect it'; shortcut: $i command; icon: (self iconNamed: #smallInspectIt);
-			action: [ UIManager default defer: [ self inspectIt ] ] ].
-			
-		group addItem: [ :item |
-			item name: 'GS-Debug it'; icon: (self iconNamed: #smallDebug);
-			action: [ UIManager default defer: [ self gemStoneDebugIt ] ] ].
-
-		group addItem: [ :item |
-			item name: 'GS-File it in'; icon: (self iconNamed: #smallSave);
-			action: [ UIManager default defer: [ self gsFileItIn ] ] ].
-	].
 
 	"--- LOCAL ACTIONS (These don't use FFI, so they don't need defer) ---"
 	menu addGroup: [ :group | 
 		group addItem: [ :item | item name: 'Local Do it'; icon: (self iconNamed: #smallDoIt); action: [ self localDoIt ] ].
 		group addItem: [ :item | item name: 'Local Inspect it'; icon: (self iconNamed: #smallInspectIt); action: [ self localInspectIt ] ].
 		group addItem: [ :item | item name: 'Local Print it'; icon: (self iconNamed: #smallPrintIt); action: [ self localPrintIt ] ].
+	].
+
+	"--- GEMSTONE ACTIONS (requested last) ---"
+	menu addGroup: [ :group |
+		group addItem: [ :item |
+			item name: 'GS-Do it'; shortcut: $d command; icon: (self iconNamed: #smallDoIt);
+			action: [ UIManager default defer: [ self doIt ] ] ].
+		group addItem: [ :item |
+			item name: 'GS-Print it'; shortcut: $p command; icon: (self iconNamed: #smallPrintIt);
+			action: [ UIManager default defer: [ self gemStonePrintIt ] ] ].
+		group addItem: [ :item |
+			item name: 'GS-Inspect it'; shortcut: $i command; icon: (self iconNamed: #smallInspectIt);
+			action: [ UIManager default defer: [ self inspectIt ] ] ].
+		group addItem: [ :item |
+			item name: 'GS-Debug it'; icon: (self iconNamed: #smallDebug);
+			action: [ UIManager default defer: [ self gemStoneDebugIt ] ] ].
+		group addItem: [ :item |
+			item name: 'GS-File it in'; icon: (self iconNamed: #smallSave);
+			action: [ UIManager default defer: [ self gsFileItIn ] ] ].
 	].
 	
 	^ menu
