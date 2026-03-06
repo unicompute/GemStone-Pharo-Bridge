@@ -754,10 +754,37 @@ GbxDebuggerService >> resume [
 
 { #category : 'process control' }
 GbxDebuggerService >> restart [
-	"Restart execution at current frame when supported by server process."
-	(self runDebugProcessCommand: 'restart' recompute: true)
-		ifTrue: [ ^ true ].
-	^ false
+	"Restart/reenter execution at the selected frame.
+	Prefer level-aware selectors (VW-like reenter semantics), then fall back."
+	| lvl script result |
+	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
+	lvl := self currentContextLevel.
+	lvl ifNil: [ lvl := 1 ].
+
+	script := '[
+		| proc level ok |
+		proc := Object _objectForOop: ', processOop asString, '.
+		proc ifNil: [ ^ ''false'' ].
+		level := ', lvl asString, '.
+		ok := false.
+
+		#(#reenterAtLevel: #restartAtLevel: #reenterFrame: #restartFrame: #reenter:)
+			do: [ :sel |
+				(ok not and: [ proc respondsTo: sel ]) ifTrue: [
+					[ proc perform: sel with: level. ok := true ] on: Error do: [ ] ] ].
+
+		ok ifFalse: [
+			#(#reenter #restart) do: [ :sel |
+				(ok not and: [ proc respondsTo: sel ]) ifTrue: [
+					[ proc perform: sel. ok := true ] on: Error do: [ ] ] ] ].
+
+		ok ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]
+	] value'.
+
+	result := self executeDebugScript: script.
+	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
+	self recomputeContextList.
+	^ true
 ]
 
 { #category : 'private' }
