@@ -373,10 +373,10 @@ GbsBrowser >> textMenu [
 	| menu |
 	menu := self newMenu.
 	menu addGroup: [ :group |
-		group addItem: [ :item | item name: 'Accept'; icon: (self iconNamedSafe: #smallSave); action: [ self acceptText: sourceText text asString ] ].
-		group addItem: [ :item | item name: 'GS-Do it'; icon: (self iconNamedSafe: #smallDoIt); action: [ self gsDoIt ] ].
-		group addItem: [ :item | item name: 'GS-Print it'; icon: (self iconNamedSafe: #smallPrintIt); action: [ self gsPrintIt ] ].
-		group addItem: [ :item | item name: 'GS-Inspect it'; icon: (self iconNamedSafe: #smallInspectIt); action: [ self gsInspectIt ] ] ].
+		group addItem: [ :item | item name: 'Accept'; action: [ self acceptText: sourceText text asString ] ].
+		group addItem: [ :item | item name: 'GS-Do it'; action: [ self gsDoIt ] ].
+		group addItem: [ :item | item name: 'GS-Print it'; action: [ self gsPrintIt ] ].
+		group addItem: [ :item | item name: 'GS-Inspect it'; action: [ self gsInspectIt ] ] ].
 	^ menu
 ]
 
@@ -385,13 +385,13 @@ GbsBrowser >> buildMenuBar [
 	| menu |
 	menu := self newMenuBar.
 	menu addGroup: [ :group |
-		group addItem: [ :item | item name: 'Find'; icon: (self iconNamedSafe: #smallFind); subMenu: self menuFind ].
-		group addItem: [ :item | item name: 'Dictionary'; icon: (self iconNamedSafe: #smallObjects); subMenu: self menuDictionary ].
-		group addItem: [ :item | item name: 'Class'; icon: (self iconNamedSafe: #smallClass); subMenu: self menuClass ].
-		group addItem: [ :item | item name: 'Category'; icon: (self iconNamedSafe: #smallPackage); subMenu: self menuCategory ].
-		group addItem: [ :item | item name: 'Method'; icon: (self iconNamedSafe: #smallLanguage); subMenu: self menuMethod ].
-		group addItem: [ :item | item name: 'Session'; icon: (self iconNamedSafe: #smallConfiguration); subMenu: self menuSession ].
-		group addItem: [ :item | item name: 'Window'; icon: (self iconNamedSafe: #smallWindow); subMenu: self menuWindow ] ].
+		group addItem: [ :item | item name: 'Find'; subMenu: self menuFind ].
+		group addItem: [ :item | item name: 'Dictionary'; subMenu: self menuDictionary ].
+		group addItem: [ :item | item name: 'Class'; subMenu: self menuClass ].
+		group addItem: [ :item | item name: 'Category'; subMenu: self menuCategory ].
+		group addItem: [ :item | item name: 'Method'; subMenu: self menuMethod ].
+		group addItem: [ :item | item name: 'Session'; subMenu: self menuSession ].
+		group addItem: [ :item | item name: 'Window'; subMenu: self menuWindow ] ].
 	^ menu
 ]
 
@@ -399,14 +399,14 @@ GbsBrowser >> buildMenuBar [
 GbsBrowser >> menuFind [
 	^ self newMenu
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Find Dictionary ...'; icon: (self iconNamedSafe: #smallFind); action: [ self deferAction: [ self findDictionary ] ] ].
-			group addItem: [ :item | item name: 'Find Class ...'; icon: (self iconNamedSafe: #smallFind); action: [ self deferAction: [ self findClass ] ] ] ];
+			group addItem: [ :item | item name: 'Find Dictionary ...'; action: [ self deferAction: [ self findDictionary ] ] ].
+			group addItem: [ :item | item name: 'Find Class ...'; action: [ self deferAction: [ self findClass ] ] ] ];
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Implementors Of ...'; icon: (self iconNamedSafe: #smallSystemBrowser); action: [ self deferAction: [ self queryImplementors ] ] ].
-			group addItem: [ :item | item name: 'Senders Of ...'; icon: (self iconNamedSafe: #smallSystemBrowser); action: [ self deferAction: [ self querySenders ] ] ].
-			group addItem: [ :item | item name: 'References to ...'; icon: (self iconNamedSafe: #smallSystemBrowser); action: [ self deferAction: [ self queryReferences ] ] ] ];
+			group addItem: [ :item | item name: 'Implementors Of ...'; action: [ self deferAction: [ self queryImplementors ] ] ].
+			group addItem: [ :item | item name: 'Senders Of ...'; action: [ self deferAction: [ self querySenders ] ] ].
+			group addItem: [ :item | item name: 'References to ...'; action: [ self deferAction: [ self queryReferences ] ] ] ];
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Methods With String Matching ...'; icon: (self iconNamedSafe: #smallFind); action: [ self deferAction: [ self queryMethodsWithString ] ] ] ];
+			group addItem: [ :item | item name: 'Methods With String Matching ...'; action: [ self deferAction: [ self queryMethodsWithString ] ] ] ];
 		yourself
 ]
 
@@ -414,16 +414,16 @@ GbsBrowser >> menuFind [
 GbsBrowser >> menuDictionary [
 	^ self newMenu
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'File Out As ...'; icon: (self iconNamedSafe: #smallSave); action: [ self deferAction: [ self fileOutDictionary ] ] ].
-			group addItem: [ :item | item name: 'File Out Methods As ...'; icon: (self iconNamedSafe: #smallSave); action: [ self deferAction: [ self fileOutDictionaryMethods ] ] ] ];
+			group addItem: [ :item | item name: 'File Out As ...'; action: [ self deferAction: [ self fileOutDictionary ] ] ].
+			group addItem: [ :item | item name: 'File Out Methods As ...'; action: [ self deferAction: [ self fileOutDictionaryMethods ] ] ] ];
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Browse'; icon: (self iconNamedSafe: #smallSystemBrowser); action: [ self deferAction: [ self browseDictionary ] ] ] ];
+			group addItem: [ :item | item name: 'Browse'; action: [ self deferAction: [ self browseDictionary ] ] ] ];
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Add...'; icon: (self iconNamedSafe: #add); action: [ self deferAction: [ self addDictionary ] ] ].
-			group addItem: [ :item | item name: 'Rename As...'; icon: (self iconNamedSafe: #edit); action: [ self deferAction: [ self renameDictionary ] ] ].
-			group addItem: [ :item | item name: 'Remove...'; icon: (self iconNamedSafe: #delete); action: [ self deferAction: [ self removeDictionary ] ] ] ];
+			group addItem: [ :item | item name: 'Add...'; action: [ self deferAction: [ self addDictionary ] ] ].
+			group addItem: [ :item | item name: 'Rename As...'; action: [ self deferAction: [ self renameDictionary ] ] ].
+			group addItem: [ :item | item name: 'Remove...'; action: [ self deferAction: [ self removeDictionary ] ] ] ];
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Inspect'; icon: (self iconNamedSafe: #smallInspectIt); action: [ self deferAction: [ self inspectDictionary ] ] ] ];
+			group addItem: [ :item | item name: 'Inspect'; action: [ self deferAction: [ self inspectDictionary ] ] ] ];
 		yourself
 ]
 
@@ -490,11 +490,11 @@ GbsBrowser >> menuMethod [
 GbsBrowser >> menuSession [
 	^ self newMenu
 		addGroup: [ :group |
-			group addItem: [ :item | item name: self autoCommitMenuLabel; icon: (self iconNamedSafe: #smallUpdate); action: [ self deferAction: [ self toggleAutoCommit ] ] ] ];
+			group addItem: [ :item | item name: self autoCommitMenuLabel; action: [ self deferAction: [ self toggleAutoCommit ] ] ] ];
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Commit Transaction'; icon: (self iconNamedSafe: #smallSave); action: [ self deferAction: [ self commitSession ] ] ].
-			group addItem: [ :item | item name: 'Abort Transaction'; icon: (self iconNamedSafe: #smallCancel); action: [ self deferAction: [ self abortSession ] ] ].
-			group addItem: [ :item | item name: 'Begin Transaction'; icon: (self iconNamedSafe: #smallForward); action: [ self deferAction: [ self beginSessionTransaction ] ] ] ];
+			group addItem: [ :item | item name: 'Commit Transaction'; action: [ self deferAction: [ self commitSession ] ] ].
+			group addItem: [ :item | item name: 'Abort Transaction'; action: [ self deferAction: [ self abortSession ] ] ].
+			group addItem: [ :item | item name: 'Begin Transaction'; action: [ self deferAction: [ self beginSessionTransaction ] ] ] ];
 		yourself
 ]
 
@@ -502,21 +502,21 @@ GbsBrowser >> menuSession [
 GbsBrowser >> menuWindow [
 	^ self newMenu
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Raise GemStone Windows'; icon: (self iconNamedSafe: #smallWindow); action: [ self deferAction: [ self raiseGemStoneWindows ] ] ].
-			group addItem: [ :item | item name: 'Collapse GemStone Windows'; icon: (self iconNamedSafe: #smallWindow); action: [ self deferAction: [ self collapseGemStoneWindows ] ] ] ];
+			group addItem: [ :item | item name: 'Raise GemStone Windows'; action: [ self deferAction: [ self raiseGemStoneWindows ] ] ].
+			group addItem: [ :item | item name: 'Collapse GemStone Windows'; action: [ self deferAction: [ self collapseGemStoneWindows ] ] ] ];
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Refresh from GS Server'; icon: (self iconNamedSafe: #smallUpdate); action: [ self deferAction: [ self refreshBrowserFromServer ] ] ].
-			group addItem: [ :item | item name: 'Raise GemStone Launcher'; icon: (self iconNamedSafe: #smallForward); action: [ self deferAction: [ self raiseGemStoneLauncher ] ] ] ];
+			group addItem: [ :item | item name: 'Refresh from GS Server'; action: [ self deferAction: [ self refreshBrowserFromServer ] ] ].
+			group addItem: [ :item | item name: 'Raise GemStone Launcher'; action: [ self deferAction: [ self raiseGemStoneLauncher ] ] ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsBrowser >> menuClassAdd [
 	^ self newMenu
-		addItem: [ :item | item name: 'New Class ...'; icon: (self iconNamedSafe: #add); action: [ self deferAction: [ self addClass ] ] ];
-		addItem: [ :item | item name: 'Instance Var ...'; icon: (self iconNamedSafe: #add); action: [ self deferAction: [ self addInstanceVariable ] ] ];
-		addItem: [ :item | item name: 'Class Var ...'; icon: (self iconNamedSafe: #add); action: [ self deferAction: [ self addClassVariable ] ] ];
-		addItem: [ :item | item name: 'Class Inst Var ...'; icon: (self iconNamedSafe: #add); action: [ self deferAction: [ self addClassInstanceVariable ] ] ];
+		addItem: [ :item | item name: 'New Class ...'; action: [ self deferAction: [ self addClass ] ] ];
+		addItem: [ :item | item name: 'Instance Var ...'; action: [ self deferAction: [ self addInstanceVariable ] ] ];
+		addItem: [ :item | item name: 'Class Var ...'; action: [ self deferAction: [ self addClassVariable ] ] ];
+		addItem: [ :item | item name: 'Class Inst Var ...'; action: [ self deferAction: [ self addClassInstanceVariable ] ] ];
 		yourself
 ]
 
