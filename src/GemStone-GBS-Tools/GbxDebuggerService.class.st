@@ -716,11 +716,6 @@ GbxDebuggerService >> recomputeContextList [
 			currentContext := contexts first.
 		].
 	].
-	(restartHomeResetPasses isNumber and: [ restartHomeResetPasses > 0 ]) ifTrue: [
-		self selectRestartTargetContext.
-		self forceRestartPositionToMethodStart.
-		restartHomeResetPasses := restartHomeResetPasses - 1
-	].
 	self updateSourceMapFromCurrentContext.
 	self notifyContextChanged.
 ]
@@ -761,92 +756,28 @@ GbxDebuggerService >> resume [
 
 { #category : 'process control' }
 GbxDebuggerService >> restart [
-	"Restart/reenter execution at the selected frame.
-	Prefer level-aware selectors (VW-like reenter semantics), then fall back."
-	| lvl script result stepAfter didResetWithStepPoint |
+	"VW parity: for server frames restart is cutback to selected level.
+	This maps to GsProcess>>#_trimStackToLevel:."
+	| lvl script result |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
 	lvl := self currentContextLevel.
 	lvl ifNil: [ lvl := 1 ].
 
 	script := '[
-		| proc frameObj frameOop level ok tryOn |
+		| proc level |
 		proc := Object _objectForOop: ', processOop asString, '.
 		proc ifNil: [ ^ ''false'' ].
 		level := ', lvl asString, '.
-		frameObj := [ proc _frameContentsAt: level ] on: Error do: [ nil ].
-		frameOop := frameObj ifNil: [ nil ] ifNotNil: [ [ Reflection oopOf: frameObj ] on: Error do: [ nil ] ].
-		ok := false.
-
-		tryOn := [ :target :sel :args |
-			| cm |
-			(ok or: [ target isNil ]) ifTrue: [ ^ nil ].
-			(target respondsTo: sel) ifFalse: [ ^ nil ].
-			cm := [ target class compiledMethodAt: sel ] on: Error do: [ nil ].
-			cm ifNil: [ ^ nil ].
-			(cm numArgs = args size) ifFalse: [ ^ nil ].
-			[ target perform: sel withArguments: args. ok := true ] on: Error do: [ ].
-		].
-
-		"Most specific first (VW reenter/cutback intent)."
-		tryOn value: proc value: #reenterAtLevel: value: (Array with: level).
-		tryOn value: proc value: #restartAtLevel: value: (Array with: level).
-		tryOn value: proc value: #reenterFrame: value: (Array with: level).
-		tryOn value: proc value: #restartFrame: value: (Array with: level).
-		tryOn value: proc value: #reenter: value: (Array with: level).
-		tryOn value: proc value: #restartAt: value: (Array with: level).
-		tryOn value: proc value: #reenterAt: value: (Array with: level).
-		tryOn value: proc value: #cutbackTo: value: (Array with: level).
-		tryOn value: proc value: #cutBackTo: value: (Array with: level).
-		tryOn value: proc value: #cutbackToFrame: value: (Array with: level).
-		tryOn value: proc value: #cutBackToFrame: value: (Array with: level).
-		tryOn value: proc value: #_cutbackToFrame: value: (Array with: level).
-		tryOn value: proc value: #_cutBackToFrame: value: (Array with: level).
-
-		frameOop ifNotNil: [
-			tryOn value: proc value: #reenterFrame: value: (Array with: frameOop).
-			tryOn value: proc value: #restartFrame: value: (Array with: frameOop).
-			tryOn value: proc value: #reenterAt: value: (Array with: frameOop).
-			tryOn value: proc value: #restartAt: value: (Array with: frameOop).
-			tryOn value: proc value: #cutbackTo: value: (Array with: frameOop).
-			tryOn value: proc value: #cutBackTo: value: (Array with: frameOop).
-			tryOn value: proc value: #cutbackToFrame: value: (Array with: frameOop).
-			tryOn value: proc value: #cutBackToFrame: value: (Array with: frameOop).
-			tryOn value: proc value: #_cutbackToFrame: value: (Array with: frameOop).
-			tryOn value: proc value: #_cutBackToFrame: value: (Array with: frameOop)
-		].
-
-		frameObj ifNotNil: [
-			tryOn value: frameObj value: #reenter value: #().
-			tryOn value: frameObj value: #restart value: #().
-			tryOn value: frameObj value: #reenterAtLevel: value: (Array with: level).
-			tryOn value: frameObj value: #restartAtLevel: value: (Array with: level)
-		].
-
-		ok ifFalse: [
-			tryOn value: proc value: #reenter value: #().
-			tryOn value: proc value: #restart value: #()
-		].
-
-		ok ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]
+		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
+		[ proc _trimStackToLevel: level ] on: Error do: [ ^ ''false'' ].
+		''true''
 	] value'.
 
 	result := self executeDebugScript: script.
 	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
-	restartHomeResetPasses := 2.
 	self recomputeContextList.
-	stepAfter := self currentStepPoint.
-	didResetWithStepPoint := false.
-	(stepAfter isNil or: [ stepAfter > 1 ]) ifTrue: [
-		didResetWithStepPoint := (self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true)
-			or: [ self runDebugProcessCommand: 'runToStepPoint' withInteger: 1 recompute: true ]
-	].
-	(stepAfter isNil or: [ stepAfter > 1 ]) ifTrue: [
-		didResetWithStepPoint
-			ifFalse: [
-				restartHomeResetPasses := restartHomeResetPasses max: 2.
-				self recomputeContextList
-			]
-	].
+	self selectRestartTargetContext.
+	self updateSourceMapFromCurrentContext.
 	^ true
 ]
 

@@ -396,3 +396,35 @@ GbxDebuggerServiceTest >> testStepIntoReturnsFalseWhenExecutionErrors [
 
 	self deny: service stepInto
 ]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testRestartUsesTrimStackToLevelCommand [
+	| scripts didRestart |
+	scripts := OrderedCollection new.
+	service processOop: 111.
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			scripts add: script.
+			(script includesSubstring: '_trimStackToLevel:')
+				ifTrue: [ 'true' ]
+				ifFalse: [ '' ] ].
+
+	didRestart := service restart.
+
+	self assert: didRestart.
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: '_trimStackToLevel:' ])
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testRestartReturnsFalseWhenTrimStackFails [
+	service processOop: 111.
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			(script includesSubstring: '_trimStackToLevel:')
+				ifTrue: [ 'false' ]
+				ifFalse: [ '' ] ].
+
+	self deny: service restart
+]
