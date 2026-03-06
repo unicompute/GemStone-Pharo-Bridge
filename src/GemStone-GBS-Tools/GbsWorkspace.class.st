@@ -237,7 +237,8 @@ GbsWorkspace >> isDebuggerStackCandidateOop: anOop session: aSession [
 
 	(anOop isNil or: [ anOop = 0 or: [ anOop = 20 ] ]) ifTrue: [ ^ false ].
 	aSession ifNil: [ ^ false ].
-	((aSession respondsTo: #isLoggedIn) and: [ aSession isLoggedIn not ]) ifTrue: [ ^ false ].
+	(aSession respondsTo: #isLoggedIn)
+		ifTrue: [ ([ aSession isLoggedIn = true ] on: Error do: [ false ]) ifFalse: [ ^ false ] ].
 
 	script := '[
 		| obj proc ctx stackReport |

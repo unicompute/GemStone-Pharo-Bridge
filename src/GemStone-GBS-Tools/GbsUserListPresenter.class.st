@@ -14,8 +14,9 @@ Class {
 GbsUserListPresenter class >> openOn: aSession [
 	| presenter |
 	aSession ifNil: [ ^ self inform: 'No connected GemStone session. Please login first.' ].
-	((aSession respondsTo: #isLoggedIn) and: [ aSession isLoggedIn not ])
-		ifTrue: [ ^ self inform: 'No connected GemStone session. Please login first.' ].
+	(aSession respondsTo: #isLoggedIn)
+		ifTrue: [ ([ aSession isLoggedIn = true ] on: Error do: [ false ])
+			ifFalse: [ ^ self inform: 'No connected GemStone session. Please login first.' ] ].
 	presenter := self new.
 	presenter session: aSession.
 	presenter open.
@@ -85,7 +86,7 @@ GbsUserListPresenter >> fetchGroupsFor: userName [
 GbsUserListPresenter >> isSessionUsable [
 	session ifNil: [ ^ false ].
 	(session respondsTo: #isLoggedIn)
-		ifTrue: [ ^ [ session isLoggedIn ] on: Error do: [ false ] ].
+		ifTrue: [ ^ [ session isLoggedIn = true ] on: Error do: [ false ] ].
 	^ true
 ]
 

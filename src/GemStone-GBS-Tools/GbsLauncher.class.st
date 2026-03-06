@@ -264,6 +264,6 @@ GbsLauncher >> updateUIState [
 GbsLauncher >> isSessionUsableForBrowsing: aSession [
 	aSession ifNil: [ ^ false ].
 	(aSession respondsTo: #isLoggedIn)
-		ifTrue: [ ^ [ aSession isLoggedIn ] on: Error do: [ false ] ].
+		ifTrue: [ ^ [ aSession isLoggedIn = true ] on: Error do: [ false ] ].
 	^ true
 ]
