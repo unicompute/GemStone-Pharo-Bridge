@@ -317,9 +317,9 @@ GbsClassicLauncher >> makeCurrent [
 { #category : 'menus' }
 GbsClassicLauncher >> menuBrowse [
     ^ self newMenu
-        addItem: [ :item | item name: 'System'; action: [ self openSystemBrowser ] ];
-        addItem: [ :item | item name: 'Class...'; action: [ self openClassBrowser ] ];
-        addItem: [ :item | item name: 'Symbol Dictionary...'; action: [ self openSymbolDictionaryBrowser ] ];
+        addItem: [ :item | item name: 'System'; action: [ UIManager default defer: [ self openSystemBrowser ] ] ];
+        addItem: [ :item | item name: 'Class...'; action: [ UIManager default defer: [ self openClassBrowser ] ] ];
+        addItem: [ :item | item name: 'Symbol Dictionary...'; action: [ UIManager default defer: [ self openSymbolDictionaryBrowser ] ] ];
         yourself.
 ]
 

@@ -142,7 +142,7 @@ GbsUserListPresenter >> refreshUserList [
 { #category : 'accessing' }
 GbsUserListPresenter >> session: aGbsSession [
     session := aGbsSession.
-    self isSessionUsable ifTrue: [ self refreshUserList ] ifFalse: [
+    self isSessionUsable ifFalse: [
 		userList ifNotNil: [ userList items: #( ) ].
 		groupList ifNotNil: [ groupList items: #( ) ].
 	]

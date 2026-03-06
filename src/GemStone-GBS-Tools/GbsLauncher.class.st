@@ -29,12 +29,12 @@ GbsLauncher >> connectPresenters [
 	btnCommit action: [ self doCommit ].
 	btnAbort action: [ self doAbort ].
 	btnWorkspace action: [ GbsWorkspace new open ].
-	btnBrowser action: [ self openSystemBrowser ].
+	btnBrowser action: [ UIManager default defer: [ self openSystemBrowser ] ].
 	
 	"Wire the Transcript button to open our custom VW-ported window!"
 	btnTranscript action: [ GbsRemoteTranscript new open ].
 	
-	btnUsers action: [ self openUsers ].
+	btnUsers action: [ UIManager default defer: [ self openUsers ] ].
 	btnPolling action: [ self togglePollingPreference ].
 ]
 
