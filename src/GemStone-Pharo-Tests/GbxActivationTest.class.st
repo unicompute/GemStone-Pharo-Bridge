@@ -56,3 +56,31 @@ GbxActivationTest >> testSourceIntervalForStepPoint [
 	self assert: (activation sourceIntervalForStepPoint: 2) equals: (6 to: 6).
 	self assert: (activation sourceIntervalForStepPoint: 99) isNil
 ]
+
+{ #category : 'tests' }
+GbxActivationTest >> testExecutedCodePrintStringIncludesStepAndLine [
+	| activation |
+	activation := GbxActivation new.
+	activation
+		methodClass: 'nil';
+		selector: #nil;
+		level: 8;
+		quickStepPoint: 3;
+		sourceString: '| a b |', String lf, 'a := 10.', String lf, 'b := 0.', String lf, 'a / b';
+		sourceOffsets: #(1 9 12 26).
+
+	self assert: activation printString equals: 'GS: Executed code @3 line 2'
+]
+
+{ #category : 'tests' }
+GbxActivationTest >> testExecutedCodePrintStringFallsBackToLevelWhenStepPointMissing [
+	| activation |
+	activation := GbxActivation new.
+	activation
+		methodClass: 'nil';
+		selector: #nil;
+		level: 8;
+		sourceString: '| a b |', String lf, 'a := 10.'.
+
+	self assert: activation printString equals: 'GS: Executed code @8'
+]

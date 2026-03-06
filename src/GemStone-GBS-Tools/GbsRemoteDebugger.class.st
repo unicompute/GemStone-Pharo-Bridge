@@ -308,7 +308,7 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 	].
 
 	script := '[
-		| obj ctx proc stream depth level stackReport fullEntry selectorName methodName className sourceText |
+		| obj ctx proc stream depth level stackReport fullEntry selectorName methodName className sourceText quickStep offsets offsetsText |
 		obj := Object _objectForOop: ', processOop asString, '.
 		stream := WriteStream on: String new.
 		obj ifNil: [ ^ '''' ].
@@ -336,6 +336,20 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 						className := [ fullEntry first inClass name ] on: Error do: [ ''<unknown>'' ].
 						selectorName := [ (fullEntry at: 4) asString ] on: Error do: [ ''<unknown>'' ].
 						methodName := [ (fullEntry first selector) asString ] on: Error do: [ ''<unknown>'' ].
+						quickStep := [ (fullEntry at: 5) ] on: Error do: [ 0 ].
+						quickStep ifNil: [ quickStep := 0 ].
+						offsets := [ fullEntry at: 6 ] on: Error do: [ #() ].
+						offsets ifNil: [ offsets := #() ].
+						offsetsText := String streamContents: [ :offsetStream |
+							1 to: offsets size do: [ :idx |
+								| raw |
+								raw := offsets at: idx.
+								raw isNil
+									ifTrue: [ offsetStream nextPutAll: ''nil'' ]
+									ifFalse: [ offsetStream nextPutAll: raw asString ].
+								idx < offsets size ifTrue: [ offsetStream nextPut: $, ]
+							]
+						].
 						sourceText := [ (fullEntry at: 9) asString ] on: Error do: [ '''' ].
 						sourceText ifNil: [ sourceText := '''' ].
 						sourceText := sourceText
@@ -349,7 +363,9 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 							nextPutAll: className; tab;
 							nextPutAll: selectorName; tab;
 							nextPutAll: methodName; tab;
-							nextPutAll: sourceText;
+							nextPutAll: sourceText; tab;
+							nextPutAll: quickStep asString; tab;
+							nextPutAll: offsetsText;
 							lf.
 						level := level + 1
 					]
@@ -390,7 +406,7 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 
 	contexts := (rawData splitOn: Character lf)
 		collect: [ :line |
-			| parts levelValue classValue selectorValue methodValue sourceValue |
+			| parts levelValue classValue selectorValue methodValue sourceValue quickStepValue offsetsTokens offsetsValue |
 			line isEmpty ifTrue: [ nil ] ifFalse: [
 				parts := line splitOn: Character tab.
 				parts size >= 3 ifTrue: [
@@ -401,6 +417,21 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 					sourceValue := (parts size >= 5
 						ifTrue: [ parts at: 5 ]
 						ifFalse: [ '' ]).
+					quickStepValue := (parts size >= 6
+						ifTrue: [ [ (parts at: 6) asInteger ] on: Error do: [ 0 ] ]
+						ifFalse: [ 0 ]).
+					offsetsTokens := (parts size >= 7
+						ifTrue: [ (parts at: 7) splitOn: $, ]
+						ifFalse: [ #() ]).
+					offsetsValue := offsetsTokens collect: [ :token |
+						| cleaned |
+						cleaned := token withBlanksTrimmed.
+						cleaned isEmpty ifTrue: [ nil ] ifFalse: [
+							cleaned = 'nil'
+								ifTrue: [ nil ]
+								ifFalse: [ [ cleaned asInteger ] on: Error do: [ nil ] ]
+						]
+					].
 					[ | activation |
 					activation := GbxActivation new.
 					(activation respondsTo: #session:)
@@ -412,6 +443,8 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 						methodClass: classValue;
 						selector: ([ selectorValue asSymbol ] on: Error do: [ #unknown ]);
 						gsMethodId: methodValue;
+						quickStepPoint: quickStepValue;
+						sourceOffsets: offsetsValue;
 						sourceString: ((sourceValue
 							copyReplaceAll: '<TAB>' with: Character tab asString)
 							copyReplaceAll: '<CR>' with: String cr;
