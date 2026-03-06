@@ -22,7 +22,7 @@ GbsBrowser class >> openOn: aSession [
 	aSession ifNil: [ ^ self inform: 'You must log into GemStone first!' ].
 	loggedIn := true.
 	(aSession respondsTo: #isLoggedIn) ifTrue: [
-		loggedIn := [ aSession isLoggedIn = true ] on: Error do: [ false ]
+		loggedIn := [ aSession isLoggedIn == true ] on: Error do: [ false ]
 	].
 	loggedIn ifFalse: [ ^ self inform: 'You must log into GemStone first!' ].
 	
@@ -57,7 +57,7 @@ GbsBrowser >> classSelected: className [
 	].
 	
 	"The Metaclass switch!"
-	metaString := (metaCheckbox state = true) ifTrue: [ ' class' ] ifFalse: [ '' ].
+	metaString := (metaCheckbox state == true) ifTrue: [ ' class' ] ifFalse: [ '' ].
 	
 	script := '[
 		| cls stream |
@@ -89,7 +89,7 @@ GbsBrowser >> compileMethod: newSource [
 	protocol := protocolsList selection selectedItem.
 	(protocol isNil or: [ protocol = '-- all --' ]) ifTrue: [ protocol := 'as yet unclassified' ].
 	
-	metaString := (metaCheckbox state = true) ifTrue: [ ' class' ] ifFalse: [ '' ].
+	metaString := (metaCheckbox state == true) ifTrue: [ ' class' ] ifFalse: [ '' ].
 	
 	"Sanitize line endings and escape single quotes for the script compiler"
 	cleanSource := newSource copyReplaceAll: String cr with: String lf.
@@ -253,7 +253,7 @@ GbsBrowser >> methodSelected: selectorName [
 	className ifNil: [ ^ self ].
 	
 	"The Metaclass switch!"
-	metaString := (metaCheckbox state = true) ifTrue: [ ' class' ] ifFalse: [ '' ].
+	metaString := (metaCheckbox state == true) ifTrue: [ ' class' ] ifFalse: [ '' ].
 	
 	script := '[
 		| cls meth |
@@ -277,7 +277,7 @@ GbsBrowser >> protocolSelected: protocolName [
 	className ifNil: [ ^ self ].
 	
 	"The Metaclass switch!"
-	metaString := (metaCheckbox state = true) ifTrue: [ ' class' ] ifFalse: [ '' ].
+	metaString := (metaCheckbox state == true) ifTrue: [ ' class' ] ifFalse: [ '' ].
 	
 	script := '[
 		| cls stream sels |
