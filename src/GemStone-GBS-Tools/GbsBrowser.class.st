@@ -356,110 +356,115 @@ GbsBrowser >> buildMenuBar [
 { #category : 'menus' }
 GbsBrowser >> menuFind [
 	^ self newMenu
-		addItem: [ :item | item name: 'Find Dictionary ...'; action: [ self deferAction: [ self findDictionary ] ] ];
-		addItem: [ :item | item name: 'Find Class ...'; action: [ self deferAction: [ self findClass ] ] ];
-		addLine;
-		addItem: [ :item | item name: 'Implementors Of ...'; action: [ self deferAction: [ self queryImplementors ] ] ];
-		addItem: [ :item | item name: 'Senders Of ...'; action: [ self deferAction: [ self querySenders ] ] ];
-		addItem: [ :item | item name: 'References to ...'; action: [ self deferAction: [ self queryReferences ] ] ];
-		addLine;
-		addItem: [ :item | item name: 'Methods With String Matching ...'; action: [ self deferAction: [ self queryMethodsWithString ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Find Dictionary ...'; action: [ self deferAction: [ self findDictionary ] ] ].
+			group addItem: [ :item | item name: 'Find Class ...'; action: [ self deferAction: [ self findClass ] ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Implementors Of ...'; action: [ self deferAction: [ self queryImplementors ] ] ].
+			group addItem: [ :item | item name: 'Senders Of ...'; action: [ self deferAction: [ self querySenders ] ] ].
+			group addItem: [ :item | item name: 'References to ...'; action: [ self deferAction: [ self queryReferences ] ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Methods With String Matching ...'; action: [ self deferAction: [ self queryMethodsWithString ] ] ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsBrowser >> menuDictionary [
 	^ self newMenu
-		addItem: [ :item | item name: 'File Out As ...'; action: [ self deferAction: [ self fileOutDictionary ] ] ];
-		addItem: [ :item | item name: 'File Out Methods As ...'; action: [ self deferAction: [ self fileOutDictionaryMethods ] ] ];
-		addLine;
-		addItem: [ :item | item name: 'Browse'; action: [ self deferAction: [ self browseDictionary ] ] ];
-		addLine;
-		addItem: [ :item | item name: 'Add...'; action: [ self deferAction: [ self addDictionary ] ] ];
-		addItem: [ :item | item name: 'Rename As...'; action: [ self deferAction: [ self renameDictionary ] ] ];
-		addItem: [ :item | item name: 'Remove...'; action: [ self deferAction: [ self removeDictionary ] ] ];
-		addLine;
-		addItem: [ :item | item name: 'Inspect'; action: [ self deferAction: [ self inspectDictionary ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'File Out As ...'; action: [ self deferAction: [ self fileOutDictionary ] ] ].
+			group addItem: [ :item | item name: 'File Out Methods As ...'; action: [ self deferAction: [ self fileOutDictionaryMethods ] ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Browse'; action: [ self deferAction: [ self browseDictionary ] ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Add...'; action: [ self deferAction: [ self addDictionary ] ] ].
+			group addItem: [ :item | item name: 'Rename As...'; action: [ self deferAction: [ self renameDictionary ] ] ].
+			group addItem: [ :item | item name: 'Remove...'; action: [ self deferAction: [ self removeDictionary ] ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Inspect'; action: [ self deferAction: [ self inspectDictionary ] ] ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsBrowser >> menuClass [
 	^ self newMenu
-		addItem: [ :item | item name: 'File Out As ...'; action: [ self deferAction: [ self fileOutClass ] ] ];
-		addItem: [ :item | item name: 'File Out Methods As ...'; action: [ self deferAction: [ self fileOutClassMethods ] ] ];
-		addLine;
-		addItem: [ :item | item name: 'Browse Class'; action: [ self deferAction: [ self browseClass ] ] ];
-		addItem: [ :item | item name: 'Browse Hierarchy'; action: [ self deferAction: [ self browseHierarchy ] ] ];
-		addItem: [ :item | item name: 'Browse Versions'; action: [ self deferAction: [ self browseVersions ] ] ];
-		addItem: [ :item | item name: 'Browse References'; action: [ self deferAction: [ self browseClassReferences ] ] ];
-		addLine;
-		addItem: [ :item | item name: 'Add'; subMenu: self menuClassAdd ];
-		addItem: [ :item | item name: 'Move To ...'; action: [ self deferAction: [ self moveClassToDictionary ] ] ];
-		addItem: [ :item | item name: 'Remove ...'; action: [ self deferAction: [ self removeClass ] ] ];
-		addLine;
-		addItem: [ :item | item name: 'Create Accessors ...'; action: [ self deferAction: [ self createAccessors ] ] ];
-		addLine;
-		addItem: [ :item | item name: 'Create Client Class'; action: [ self deferAction: [ self createClientClass ] ] ];
-		addItem: [ :item | item name: 'Compile Client Class'; action: [ self deferAction: [ self compileClientClass ] ] ];
-		addLine;
-		addItem: [ :item | item name: 'Inspect All Instances'; action: [ self deferAction: [ self inspectAllInstances ] ] ];
-		addItem: [ :item | item name: 'Inspect Class'; action: [ self deferAction: [ self inspectClass ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'File Out As ...'; action: [ self deferAction: [ self fileOutClass ] ] ].
+			group addItem: [ :item | item name: 'File Out Methods As ...'; action: [ self deferAction: [ self fileOutClassMethods ] ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Browse Class'; action: [ self deferAction: [ self browseClass ] ] ].
+			group addItem: [ :item | item name: 'Browse Hierarchy'; action: [ self deferAction: [ self browseHierarchy ] ] ].
+			group addItem: [ :item | item name: 'Browse Versions'; action: [ self deferAction: [ self browseVersions ] ] ].
+			group addItem: [ :item | item name: 'Browse References'; action: [ self deferAction: [ self browseClassReferences ] ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Add'; subMenu: self menuClassAdd ].
+			group addItem: [ :item | item name: 'Move To ...'; action: [ self deferAction: [ self moveClassToDictionary ] ] ].
+			group addItem: [ :item | item name: 'Remove ...'; action: [ self deferAction: [ self removeClass ] ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Create Accessors ...'; action: [ self deferAction: [ self createAccessors ] ] ].
+			group addItem: [ :item | item name: 'Create Client Class'; action: [ self deferAction: [ self createClientClass ] ] ].
+			group addItem: [ :item | item name: 'Compile Client Class'; action: [ self deferAction: [ self compileClientClass ] ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Inspect All Instances'; action: [ self deferAction: [ self inspectAllInstances ] ] ].
+			group addItem: [ :item | item name: 'Inspect Class'; action: [ self deferAction: [ self inspectClass ] ] ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsBrowser >> menuCategory [
 	^ self newMenu
-		addItem: [ :item | item name: 'Add...'; action: [ self deferAction: [ self addCategory ] ] ];
-		addItem: [ :item | item name: 'Rename As...'; action: [ self deferAction: [ self renameCategory ] ] ];
-		addItem: [ :item | item name: 'Remove...'; action: [ self deferAction: [ self removeCategory ] ] ];
-		addLine;
-		addItem: [ :item | item name: 'Browse'; action: [ self deferAction: [ self browseCategory ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Add...'; action: [ self deferAction: [ self addCategory ] ] ].
+			group addItem: [ :item | item name: 'Rename As...'; action: [ self deferAction: [ self renameCategory ] ] ].
+			group addItem: [ :item | item name: 'Remove...'; action: [ self deferAction: [ self removeCategory ] ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Browse'; action: [ self deferAction: [ self browseCategory ] ] ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsBrowser >> menuMethod [
 	^ self newMenu
-		addItem: [ :item | item name: 'File Out As ...'; action: [ self deferAction: [ self fileOutMethod ] ] ];
-		addLine;
-		addItem: [ :item | item name: 'Browse'; action: [ self deferAction: [ self browseMethod ] ] ];
-		addItem: [ :item | item name: 'Browse Hierarchy'; action: [ self deferAction: [ self browseHierarchy ] ] ];
-		addLine;
-		addItem: [ :item | item name: 'Browse Senders'; subMenu: (self selectorSubMenuDo: [ :sel | self browseSendersOf: sel ]) ];
-		addItem: [ :item | item name: 'Browse Implementors'; subMenu: (self selectorSubMenuDo: [ :sel | self browseImplementorsOf: sel ]) ];
-		addItem: [ :item | item name: 'Browse Hierarchy Senders'; subMenu: (self selectorSubMenuDo: [ :sel | self browseHierarchySendersOf: sel ]) ];
-		addItem: [ :item | item name: 'Browse Hierarchy Implementors'; subMenu: (self selectorSubMenuDo: [ :sel | self browseHierarchyImplementorsOf: sel ]) ];
-		addLine;
-		addItem: [ :item | item name: 'Move To ...'; action: [ self deferAction: [ self moveMethodToCategory ] ] ];
-		addItem: [ :item | item name: 'Remove...'; action: [ self deferAction: [ self removeMethod ] ] ];
-		addLine;
-		addItem: [ :item | item name: 'Compile Client Method'; action: [ self deferAction: [ self acceptText: sourceText text asString ] ] ];
-		addLine;
-		addItem: [ :item | item name: 'Inspect'; action: [ self deferAction: [ self inspectMethod ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'File Out As ...'; action: [ self deferAction: [ self fileOutMethod ] ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Browse'; action: [ self deferAction: [ self browseMethod ] ] ].
+			group addItem: [ :item | item name: 'Browse Hierarchy'; action: [ self deferAction: [ self browseHierarchy ] ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Browse Senders'; subMenu: (self selectorSubMenuDo: [ :sel | self browseSendersOf: sel ]) ].
+			group addItem: [ :item | item name: 'Browse Implementors'; subMenu: (self selectorSubMenuDo: [ :sel | self browseImplementorsOf: sel ]) ].
+			group addItem: [ :item | item name: 'Browse Hierarchy Senders'; subMenu: (self selectorSubMenuDo: [ :sel | self browseHierarchySendersOf: sel ]) ].
+			group addItem: [ :item | item name: 'Browse Hierarchy Implementors'; subMenu: (self selectorSubMenuDo: [ :sel | self browseHierarchyImplementorsOf: sel ]) ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Move To ...'; action: [ self deferAction: [ self moveMethodToCategory ] ] ].
+			group addItem: [ :item | item name: 'Remove...'; action: [ self deferAction: [ self removeMethod ] ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Compile Client Method'; action: [ self deferAction: [ self acceptText: sourceText text asString ] ] ].
+			group addItem: [ :item | item name: 'Inspect'; action: [ self deferAction: [ self inspectMethod ] ] ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsBrowser >> menuSession [
 	^ self newMenu
-		addItem: [ :item | item name: self autoCommitMenuLabel; action: [ self deferAction: [ self toggleAutoCommit ] ] ];
-		addLine;
-		addItem: [ :item | item name: 'Commit Transaction'; action: [ self deferAction: [ self commitSession ] ] ];
-		addItem: [ :item | item name: 'Abort Transaction'; action: [ self deferAction: [ self abortSession ] ] ];
-		addItem: [ :item | item name: 'Begin Transaction'; action: [ self deferAction: [ self beginSessionTransaction ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: self autoCommitMenuLabel; action: [ self deferAction: [ self toggleAutoCommit ] ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Commit Transaction'; action: [ self deferAction: [ self commitSession ] ] ].
+			group addItem: [ :item | item name: 'Abort Transaction'; action: [ self deferAction: [ self abortSession ] ] ].
+			group addItem: [ :item | item name: 'Begin Transaction'; action: [ self deferAction: [ self beginSessionTransaction ] ] ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsBrowser >> menuWindow [
 	^ self newMenu
-		addItem: [ :item | item name: 'Raise GemStone Windows'; action: [ self deferAction: [ self raiseGemStoneWindows ] ] ];
-		addItem: [ :item | item name: 'Collapse GemStone Windows'; action: [ self deferAction: [ self collapseGemStoneWindows ] ] ];
-		addLine;
-		addItem: [ :item | item name: 'Refresh from GS Server'; action: [ self deferAction: [ self refreshBrowserFromServer ] ] ];
-		addItem: [ :item | item name: 'Raise GemStone Launcher'; action: [ self deferAction: [ self raiseGemStoneLauncher ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Raise GemStone Windows'; action: [ self deferAction: [ self raiseGemStoneWindows ] ] ].
+			group addItem: [ :item | item name: 'Collapse GemStone Windows'; action: [ self deferAction: [ self collapseGemStoneWindows ] ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Refresh from GS Server'; action: [ self deferAction: [ self refreshBrowserFromServer ] ] ].
+			group addItem: [ :item | item name: 'Raise GemStone Launcher'; action: [ self deferAction: [ self raiseGemStoneLauncher ] ] ] ];
 		yourself
 ]
 
