@@ -163,7 +163,7 @@ GbsLauncher >> initializeWindow: aWindowPresenter [
     super initializeWindow: aWindowPresenter.
     aWindowPresenter 
         title: 'GemStone GBS Launcher';
-        initialExtent: 350@400.
+        initialExtent: 350@420.
 ]
 
 { #category : 'polling' }
