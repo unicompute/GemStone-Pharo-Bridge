@@ -762,21 +762,63 @@ GbxDebuggerService >> restart [
 	lvl ifNil: [ lvl := 1 ].
 
 	script := '[
-		| proc level ok |
+		| proc frameObj frameOop level ok tryOn |
 		proc := Object _objectForOop: ', processOop asString, '.
 		proc ifNil: [ ^ ''false'' ].
 		level := ', lvl asString, '.
+		frameObj := [ proc _frameContentsAt: level ] on: Error do: [ nil ].
+		frameOop := frameObj ifNil: [ nil ] ifNotNil: [ [ Reflection oopOf: frameObj ] on: Error do: [ nil ] ].
 		ok := false.
 
-		#(#reenterAtLevel: #restartAtLevel: #reenterFrame: #restartFrame: #reenter:)
-			do: [ :sel |
-				(ok not and: [ proc respondsTo: sel ]) ifTrue: [
-					[ proc perform: sel with: level. ok := true ] on: Error do: [ ] ] ].
+		tryOn := [ :target :sel :args |
+			| cm |
+			(ok or: [ target isNil ]) ifTrue: [ ^ nil ].
+			(target respondsTo: sel) ifFalse: [ ^ nil ].
+			cm := [ target class compiledMethodAt: sel ] on: Error do: [ nil ].
+			cm ifNil: [ ^ nil ].
+			(cm numArgs = args size) ifFalse: [ ^ nil ].
+			[ target perform: sel withArguments: args. ok := true ] on: Error do: [ ].
+		].
+
+		"Most specific first (VW reenter/cutback intent)."
+		tryOn value: proc value: #reenterAtLevel: value: (Array with: level).
+		tryOn value: proc value: #restartAtLevel: value: (Array with: level).
+		tryOn value: proc value: #reenterFrame: value: (Array with: level).
+		tryOn value: proc value: #restartFrame: value: (Array with: level).
+		tryOn value: proc value: #reenter: value: (Array with: level).
+		tryOn value: proc value: #restartAt: value: (Array with: level).
+		tryOn value: proc value: #reenterAt: value: (Array with: level).
+		tryOn value: proc value: #cutbackTo: value: (Array with: level).
+		tryOn value: proc value: #cutBackTo: value: (Array with: level).
+		tryOn value: proc value: #cutbackToFrame: value: (Array with: level).
+		tryOn value: proc value: #cutBackToFrame: value: (Array with: level).
+		tryOn value: proc value: #_cutbackToFrame: value: (Array with: level).
+		tryOn value: proc value: #_cutBackToFrame: value: (Array with: level).
+
+		frameOop ifNotNil: [
+			tryOn value: proc value: #reenterFrame: value: (Array with: frameOop).
+			tryOn value: proc value: #restartFrame: value: (Array with: frameOop).
+			tryOn value: proc value: #reenterAt: value: (Array with: frameOop).
+			tryOn value: proc value: #restartAt: value: (Array with: frameOop).
+			tryOn value: proc value: #cutbackTo: value: (Array with: frameOop).
+			tryOn value: proc value: #cutBackTo: value: (Array with: frameOop).
+			tryOn value: proc value: #cutbackToFrame: value: (Array with: frameOop).
+			tryOn value: proc value: #cutBackToFrame: value: (Array with: frameOop).
+			tryOn value: proc value: #_cutbackToFrame: value: (Array with: frameOop).
+			tryOn value: proc value: #_cutBackToFrame: value: (Array with: frameOop)
+		].
+
+		frameObj ifNotNil: [
+			tryOn value: frameObj value: #reenter value: #().
+			tryOn value: frameObj value: #restart value: #().
+			tryOn value: frameObj value: #reenterAtLevel: value: (Array with: level).
+			tryOn value: frameObj value: #restartAtLevel: value: (Array with: level)
+		].
 
 		ok ifFalse: [
-			#(#reenter #restart) do: [ :sel |
-				(ok not and: [ proc respondsTo: sel ]) ifTrue: [
-					[ proc perform: sel. ok := true ] on: Error do: [ ] ] ] ].
+			tryOn value: proc value: #reenter value: #().
+			tryOn value: proc value: #restart value: #()
+		].
 
 		ok ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]
 	] value'.
