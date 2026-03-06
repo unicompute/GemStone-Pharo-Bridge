@@ -496,20 +496,31 @@ GbsBrowser >> refreshBrowser [
 
 { #category : 'private' }
 GbsBrowser >> selectedDictionaryName [
-	^ dictionariesList selection selectedItem
+	^ self selectedItemOf: dictionariesList
 ]
 
 { #category : 'private' }
 GbsBrowser >> selectedClassName [
-	^ classesList selection selectedItem
+	^ self selectedItemOf: classesList
 ]
 
 { #category : 'private' }
 GbsBrowser >> selectedMethodSelector [
 	| methodName |
-	methodName := methodsList selection selectedItem.
+	methodName := self selectedItemOf: methodsList.
 	methodName ifNil: [ ^ nil ].
 	^ methodName asSymbol
+]
+
+{ #category : 'private' }
+GbsBrowser >> selectedItemOf: aListPresenter [
+	| selection |
+	aListPresenter ifNil: [ ^ nil ].
+	(aListPresenter respondsTo: #selection) ifFalse: [ ^ nil ].
+	selection := aListPresenter selection.
+	selection ifNil: [ ^ nil ].
+	(selection respondsTo: #selectedItem) ifFalse: [ ^ nil ].
+	^ selection selectedItem
 ]
 
 { #category : 'actions' }
