@@ -616,14 +616,16 @@ GbxDebuggerService >> runDebugProcessCommand: commandName recompute: shouldRecom
 
 { #category : 'private' }
 GbxDebuggerService >> asBooleanResult: raw default: defaultBoolean [
-	raw ifNil: [ ^ defaultBoolean ].
-	raw = true ifTrue: [ ^ true ].
-	raw = false ifTrue: [ ^ false ].
-	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
-	(raw respondsTo: #asString) ifFalse: [ ^ defaultBoolean ].
-	raw := raw asString asLowercase.
-	(#('true' '1' 'yes' 'ok') includes: raw) ifTrue: [ ^ true ].
-	(#('false' '0' 'no' 'nil' '') includes: raw) ifTrue: [ ^ false ].
+	| value |
+	value := raw.
+	value ifNil: [ ^ defaultBoolean ].
+	value = true ifTrue: [ ^ true ].
+	value = false ifTrue: [ ^ false ].
+	(value respondsTo: #asLocalString) ifTrue: [ value := value asLocalString ].
+	(value respondsTo: #asString) ifFalse: [ ^ defaultBoolean ].
+	value := value asString asLowercase.
+	(#('true' '1' 'yes' 'ok') includes: value) ifTrue: [ ^ true ].
+	(#('false' '0' 'no' 'nil' '') includes: value) ifTrue: [ ^ false ].
 	^ defaultBoolean
 ]
 
