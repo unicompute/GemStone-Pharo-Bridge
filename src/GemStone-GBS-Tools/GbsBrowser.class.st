@@ -38,7 +38,7 @@ Top senders:
 {4}' format: {
 			ex messageText.
 			ex class name.
-			(ex signalerContext ifNil: [ '<none>' ] ifNotNil: [ :ctx | ctx printString ])
+			(ex signalerContext ifNil: [ '<none>' ] ifNotNil: [ :ctx | ctx printString ]).
 			((self stackSummaryFrom: ex signalerContext maxFrames: 12) ifNil: [ '<none>' ])
 		}).
 		nil
