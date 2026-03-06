@@ -357,7 +357,10 @@ GbxActivation >> selectorOrUnknown [
 GbxActivation >> displayedLineNumber [
 	| stepPoint rawOffset offset source line pos |
 	source := self sourceString.
-	source isEmpty ifTrue: [ ^ nil ].
+	source isEmpty ifTrue: [
+		(ipOffset isNumber and: [ ipOffset > 0 ]) ifTrue: [ ^ ipOffset ].
+		^ nil
+	].
 
 	stepPoint := self quickStepPoint.
 	stepPoint > 0 ifFalse: [ ^ nil ].

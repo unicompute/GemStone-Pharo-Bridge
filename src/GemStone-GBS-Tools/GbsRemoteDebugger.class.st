@@ -231,6 +231,15 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 
 	"Display source code - use cached source if available"
 	sourceCode := context sourceCode.
+	(sourceCode isNil or: [ sourceCode isEmpty ]) ifTrue: [
+		| fullSource |
+		fullSource := self fetchFullSourceFor: context.
+		fullSource ifNotEmpty: [
+			sourceCode := fullSource.
+			(context respondsTo: #sourceString:)
+				ifTrue: [ context sourceString: fullSource ]
+		]
+	].
 	(((context respondsTo: #methodClass) and: [ context methodClass = 'nil' ])
 		and: [ (sourceCode includes: Character lf) not ])
 		ifTrue: [
@@ -308,7 +317,7 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 	].
 
 	script := '[
-		| obj ctx proc stream depth level stackReport fullEntry selectorName methodName className sourceText quickStep offsets offsetsText |
+		| obj ctx proc stream depth level stackReport fullEntry selectorName methodName className quickStep offsets offsetsText lineNumber sourceText offset |
 		obj := Object _objectForOop: ', processOop asString, '.
 		stream := WriteStream on: String new.
 		obj ifNil: [ ^ '''' ].
@@ -350,22 +359,28 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 								idx < offsets size ifTrue: [ offsetStream nextPut: $, ]
 							]
 						].
+						lineNumber := 0.
 						sourceText := [ (fullEntry at: 9) asString ] on: Error do: [ '''' ].
 						sourceText ifNil: [ sourceText := '''' ].
-						sourceText := sourceText
-							copyReplaceAll: (String with: Character cr) with: ''<CR>'';
-							copyReplaceAll: (String with: Character lf) with: ''<LF>'';
-							copyReplaceAll: String cr with: ''<CR>'';
-							copyReplaceAll: String lf with: ''<LF>'';
-							copyReplaceAll: Character tab asString with: ''<TAB>''.
+						(quickStep isNumber and: [ quickStep > 0 and: [ quickStep <= offsets size ] ]) ifTrue: [
+							offset := [ (offsets at: quickStep) asInteger ] on: Error do: [ nil ].
+							(offset isNumber and: [ offset > 0 ]) ifTrue: [
+								lineNumber := 1.
+								1 to: ((offset - 1) min: sourceText size) do: [ :i |
+									| ch |
+									ch := sourceText at: i.
+									(ch = Character lf or: [ ch = Character cr ]) ifTrue: [ lineNumber := lineNumber + 1 ]
+								]
+							]
+						].
 						stream
 							nextPutAll: level asString; tab;
 							nextPutAll: className; tab;
 							nextPutAll: selectorName; tab;
 							nextPutAll: methodName; tab;
-							nextPutAll: sourceText; tab;
 							nextPutAll: quickStep asString; tab;
-							nextPutAll: offsetsText;
+							nextPutAll: offsetsText; tab;
+							nextPutAll: lineNumber asString;
 							lf.
 						level := level + 1
 					]
@@ -406,7 +421,7 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 
 	contexts := (rawData splitOn: Character lf)
 		collect: [ :line |
-			| parts levelValue classValue selectorValue methodValue sourceValue quickStepValue offsetsTokens offsetsValue |
+			| parts levelValue classValue selectorValue methodValue quickStepValue offsetsTokens offsetsValue lineNumberValue |
 			line isEmpty ifTrue: [ nil ] ifFalse: [
 				parts := line splitOn: Character tab.
 				parts size >= 3 ifTrue: [
@@ -414,15 +429,15 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 					classValue := (parts size >= 2 ifTrue: [ parts at: 2 ] ifFalse: [ '<unknown>' ]).
 					selectorValue := (parts size >= 3 ifTrue: [ parts at: 3 ] ifFalse: [ '<unknown>' ]).
 					methodValue := (parts size >= 4 ifTrue: [ parts at: 4 ] ifFalse: [ selectorValue ]).
-					sourceValue := (parts size >= 5
-						ifTrue: [ parts at: 5 ]
-						ifFalse: [ '' ]).
-					quickStepValue := (parts size >= 6
-						ifTrue: [ [ (parts at: 6) asInteger ] on: Error do: [ 0 ] ]
+					quickStepValue := (parts size >= 5
+						ifTrue: [ [ (parts at: 5) asInteger ] on: Error do: [ 0 ] ]
 						ifFalse: [ 0 ]).
-					offsetsTokens := (parts size >= 7
-						ifTrue: [ (parts at: 7) splitOn: $, ]
+					offsetsTokens := (parts size >= 6
+						ifTrue: [ (parts at: 6) splitOn: $, ]
 						ifFalse: [ #() ]).
+					lineNumberValue := (parts size >= 7
+						ifTrue: [ [ (parts at: 7) asInteger ] on: Error do: [ 0 ] ]
+						ifFalse: [ 0 ]).
 					offsetsValue := offsetsTokens collect: [ :token |
 						| cleaned |
 						cleaned := token withBlanksTrimmed.
@@ -445,10 +460,8 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 						gsMethodId: methodValue;
 						quickStepPoint: quickStepValue;
 						sourceOffsets: offsetsValue;
-						sourceString: ((sourceValue
-							copyReplaceAll: '<TAB>' with: Character tab asString)
-							copyReplaceAll: '<CR>' with: String cr;
-							copyReplaceAll: '<LF>' with: String lf);
+						sourceString: '';
+						ipOffset: lineNumberValue;
 						yourself
 					] on: Error do: [ nil ]
 				]
