@@ -124,6 +124,20 @@ GbsRemoteDebuggerPresenterTest >> testAcceptSourceEditsDelegatesRecompileWithCur
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testAcceptSourceEditsShowsCompileErrorWhenRecompileFails [
+	| fakeText |
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: 'foo ^'.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+	service
+		recompileShouldSucceed: false;
+		lastCompileError: 'Syntax error near ^'.
+
+	self deny: debugger acceptSourceEdits.
+	self assert: (fakeText text includesSubstring: 'Compile error: Syntax error near ^')
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testRemoveBreakPointDelegatesToService [
 	self assert: debugger removeBreakPoint.
 	self assert: service removeBreakPointCalls equals: 1.

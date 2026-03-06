@@ -17,15 +17,24 @@ Class {
 		'removeBreakPointCalls',
 		'removeAllBreakPointsCalls',
 		'sourceMap',
-		'raiseOnInspectReceiver'
+		'raiseOnInspectReceiver',
+		'recompileShouldSucceed',
+		'compileErrorMessage'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
 }
 
+{ #category : 'initialization' }
+GbxFakeServiceForRemoteDebugger >> initialize [
+	super initialize.
+	raiseOnInspectReceiver := false.
+	recompileShouldSucceed := true.
+]
+
 { #category : 'actions' }
 GbxFakeServiceForRemoteDebugger >> inspectCurrentReceiver [
-	raiseOnInspectReceiver ifTrue: [ Error signal: 'inspect receiver failed' ].
+	raiseOnInspectReceiver = true ifTrue: [ Error signal: 'inspect receiver failed' ].
 	inspectReceiverCalls := self inspectReceiverCalls + 1.
 	^ true
 ]
@@ -71,7 +80,7 @@ GbxFakeServiceForRemoteDebugger >> gsInspectIt: codeString [
 GbxFakeServiceForRemoteDebugger >> recompileCurrentMethodWithSource: sourceString [
 	recompileCalls := self recompileCalls + 1.
 	lastRecompiledSource := sourceString.
-	^ true
+	^ recompileShouldSucceed ifNil: [ true ]
 ]
 
 { #category : 'accessing' }
@@ -176,6 +185,51 @@ GbxFakeServiceForRemoteDebugger >> sourceMap [
 { #category : 'source map' }
 GbxFakeServiceForRemoteDebugger >> sourceMap: aCollection [
 	sourceMap := aCollection
+]
+
+{ #category : 'evaluation' }
+GbxFakeServiceForRemoteDebugger >> recompileShouldSucceed: aBoolean [
+	recompileShouldSucceed := aBoolean
+]
+
+{ #category : 'evaluation' }
+GbxFakeServiceForRemoteDebugger >> lastCompileError [
+	^ compileErrorMessage ifNil: [ 'compile failed' ]
+]
+
+{ #category : 'evaluation' }
+GbxFakeServiceForRemoteDebugger >> lastCompileError: aString [
+	compileErrorMessage := aString
+]
+
+{ #category : 'evaluation' }
+GbxFakeServiceForRemoteDebugger >> clearCompileError [
+	compileErrorMessage := nil
+]
+
+{ #category : 'breakpoint support' }
+GbxFakeServiceForRemoteDebugger >> canSetBreakPoint [
+	^ true
+]
+
+{ #category : 'breakpoint support' }
+GbxFakeServiceForRemoteDebugger >> canRemoveBreakPoint [
+	^ true
+]
+
+{ #category : 'breakpoint support' }
+GbxFakeServiceForRemoteDebugger >> canRemoveAllBreakPoints [
+	^ true
+]
+
+{ #category : 'breakpoint support' }
+GbxFakeServiceForRemoteDebugger >> canToggleBreakPoint [
+	^ true
+]
+
+{ #category : 'breakpoint support' }
+GbxFakeServiceForRemoteDebugger >> breakpointSummaryString [
+	^ 'Breakpoints step points: 2'
 ]
 
 { #category : 'testing' }

@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+VM="${PHARO_VM:-/Users/tariq/Documents/Pharo/vms/130-x64/Pharo.app/Contents/MacOS/Pharo}"
+SRC_IMAGE="${1:-/Users/tariq/Documents/Pharo/images/Pharo 13.0 - qwen/Pharo 13.0 - qwen.image}"
+SRC_DIR="$(dirname "${SRC_IMAGE}")"
+SRC_BASE="$(basename "${SRC_IMAGE}" .image)"
+WORK_DIR="${2:-${SRC_DIR}}"
+WORK_IMAGE="${WORK_DIR}/${SRC_BASE} - cleanreload.image"
+SRC_CHANGES="${SRC_IMAGE%.image}.changes"
+WORK_CHANGES="${WORK_IMAGE%.image}.changes"
+
+mkdir -p "${WORK_DIR}"
+cp -f "${SRC_IMAGE}" "${WORK_IMAGE}"
+if [[ -f "${SRC_CHANGES}" ]]; then
+  cp -f "${SRC_CHANGES}" "${WORK_CHANGES}"
+fi
+
+if ls "${SRC_DIR}"/Pharo*.sources >/dev/null 2>&1; then
+  cp -f "${SRC_DIR}"/Pharo*.sources "${WORK_DIR}/" || true
+fi
+
+echo "Using work image: ${WORK_IMAGE}"
+
+reload_output="$("${VM}" --headless "${WORK_IMAGE}" st "/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/clean_reload_gemstone.st" 2>&1 || true)"
+echo "${reload_output}"
+if grep -q "LOAD_ERROR" <<< "${reload_output}"; then
+  echo "Clean reload failed." >&2
+  exit 1
+fi
+
+test_output="$("${VM}" --headless "${WORK_IMAGE}" st "/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/run_live_debugger_regressions.st" 2>&1 || true)"
+echo "${test_output}"
+if grep -q "LOAD_ERROR" <<< "${test_output}"; then
+  echo "Regression run failed due to load error." >&2
+  exit 1
+fi
+
+echo "CLEAN_RELOAD_AND_REGRESSION_RUN_DONE"

@@ -21,7 +21,8 @@ Class {
 		'tags',
 		'pendingEvents',
 		'doStepIntoBlock',
-		'dontUpdateInspectors'
+		'dontUpdateInspectors',
+		'lastCompileError'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -66,6 +67,7 @@ GbxDebuggerService >> initialize [
 	tags := Set new.
 	pendingEvents := OrderedCollection new.
 	dontUpdateInspectors := false.
+	lastCompileError := nil.
 ]
 
 { #category : 'initialization' }
@@ -317,6 +319,7 @@ GbxDebuggerService >> recompileCurrentMethodWithSource: sourceText [
 	| className selector isMeta classLookupName escapedSource script raw |
 	currentContext ifNil: [ ^ false ].
 	self isSessionUsable ifFalse: [ ^ false ].
+	self clearCompileError.
 	className := self selectedMethodClassName.
 	selector := self selectedMethodSelector.
 	(className isNil or: [ selector isNil or: [ selector = #unboundMethod ] ]) ifTrue: [ ^ false ].
@@ -344,7 +347,13 @@ GbxDebuggerService >> recompileCurrentMethodWithSource: sourceText [
 
 	raw := [ session executeAndFetch: script context: session sessionOop ] on: Error do: [ nil ].
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
-	^ raw = 'OK'
+	raw ifNil: [
+		lastCompileError := 'Compile failed: no response from GemStone'.
+		^ false
+	].
+	(raw = 'OK') ifTrue: [ ^ true ].
+	lastCompileError := (self normalizedCompileErrorFrom: raw).
+	^ false
 ]
 
 { #category : 'private' }
@@ -456,9 +465,16 @@ GbxDebuggerService >> inspectCurrentFrame [
 
 { #category : 'inspector' }
 GbxDebuggerService >> inspectVariableNamed: aVariableName [
-	| variableName |
+	| variableName start stop |
 	(aVariableName isString and: [ aVariableName isEmpty not ]) ifFalse: [ ^ false ].
-	variableName := aVariableName withBlanksTrimmed.
+	variableName := aVariableName asString.
+	start := 1.
+	stop := variableName size.
+	[ start <= stop and: [ (variableName at: start) isSeparator ] ] whileTrue: [ start := start + 1 ].
+	[ stop >= start and: [ (variableName at: stop) isSeparator ] ] whileTrue: [ stop := stop - 1 ].
+	variableName := start <= stop
+		ifTrue: [ variableName copyFrom: start to: stop ]
+		ifFalse: [ '' ].
 	variableName isEmpty ifTrue: [ ^ false ].
 	^ self openInspectorOnOop: (self oopForVariableNamed: variableName)
 ]
@@ -574,6 +590,25 @@ GbxDebuggerService >> evaluateOopFromScript: scriptString [
 	^ [ raw asInteger ] on: Error do: [ nil ]
 ]
 
+{ #category : 'evaluation' }
+GbxDebuggerService >> lastCompileError [
+	^ lastCompileError
+]
+
+{ #category : 'evaluation' }
+GbxDebuggerService >> clearCompileError [
+	lastCompileError := nil
+]
+
+{ #category : 'evaluation' }
+GbxDebuggerService >> normalizedCompileErrorFrom: rawResult [
+	| text |
+	text := rawResult asString.
+	(text beginsWith: 'ERROR|')
+		ifTrue: [ ^ (text copyFrom: 7 to: text size) ].
+	^ text
+]
+
 { #category : 'private' }
 GbxDebuggerService >> canExecuteOnDebugProcess [
 	(self isSessionUsable and: [ processOop isNumber ]) ifFalse: [ ^ false ].
@@ -636,6 +671,33 @@ GbxDebuggerService >> currentBreakPointList [
 	klass := self breakpointClass.
 	klass ifNil: [ ^ #( ) ].
 	^ klass breakPointListFor: session
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> breakpointIntervalsInCurrentMethod [
+	| intervals |
+	intervals := OrderedCollection new.
+	self breakpointsInSelectedMethod do: [ :bp |
+		| offset |
+		offset := self sourceOffsetForBreakPoint: bp.
+		offset ifNotNil: [ intervals add: (offset to: offset) ]
+	].
+	^ intervals asArray
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> breakpointSummaryString [
+	| points stream |
+	points := (self breakpointsInSelectedMethod
+		collect: [ :bp | (bp respondsTo: #stepPoint) ifTrue: [ bp stepPoint ] ifFalse: [ nil ] ])
+		select: #notNil.
+	points isEmpty ifTrue: [ ^ 'No breakpoints in method' ].
+	stream := WriteStream on: String new.
+	points
+		doWithIndex: [ :sp :idx |
+			idx > 1 ifTrue: [ stream nextPutAll: ', ' ].
+			stream nextPutAll: sp asString ].
+	^ 'Breakpoints step points: ', stream contents
 ]
 
 { #category : 'breakpoint support' }
@@ -751,6 +813,21 @@ GbxDebuggerService >> canRemoveAllBreakPoints [
 { #category : 'breakpoint support' }
 GbxDebuggerService >> canToggleBreakPoint [
 	^ self canManageBreakPoints
+]
+
+{ #category : 'inspector' }
+GbxDebuggerService >> canInspectCurrentReceiver [
+	^ self currentContext isNotNil
+]
+
+{ #category : 'inspector' }
+GbxDebuggerService >> canInspectCurrentProcess [
+	^ self currentContext isNotNil
+]
+
+{ #category : 'inspector' }
+GbxDebuggerService >> canInspectCurrentFrame [
+	^ self currentContext isNotNil
 ]
 
 { #category : 'breakpoint support' }

@@ -128,8 +128,13 @@ GbsRemoteDebugger >> initializePresenters [
 	variablesTable
 		addColumn: (SpStringTableColumn title: 'Name' evaluated: [ :item | item first ]);
 		addColumn: (SpStringTableColumn title: 'Value' evaluated: [ :item | item second ]).
+	(variablesTable respondsTo: #whenActivatedDo:)
+		ifTrue: [ variablesTable whenActivatedDo: [ self inspectVariable ] ].
+	(variablesTable respondsTo: #whenDoubleClickDo:)
+		ifTrue: [ variablesTable whenDoubleClickDo: [ self inspectVariable ] ].
 
 	glueIsHidden := true.
+	self refreshUiState.
 ]
 
 { #category : 'layout' }
@@ -218,9 +223,10 @@ GbsRemoteDebugger >> fetchStackFrames [
 	contextList := contexts ifNil: [ #( ) ].
 	contextList ifEmpty: [
 		stackList items: #('No stack frames available - error occurred in GemStone').
-		sourceText text: ''.
+		self setSourceText: ''.
 		self clearSourceHighlight.
-		variablesTable items: #().
+		self setVariableTableItems: #().
+		self refreshUiState.
 		^ self
 	].
 	stackList items: (contextList collect: [ :ctx | ctx printString ]).
@@ -231,6 +237,7 @@ GbsRemoteDebugger >> fetchStackFrames [
 		stackList selectIndex: preferredIndex.
 		self contextSelected: (contextList at: preferredIndex)
 	].
+	self refreshUiState.
 ]
 
 { #category : 'actions' }
@@ -442,6 +449,7 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 		context sourceString ifNil: [ '' ]
 	]).
 	self applySourceMapHighlightFor: context.
+	self syncBreakpointMarker.
 
 	"Fetch and display variables"
 	[
@@ -455,6 +463,7 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 	] on: Error do: [ :ex |
 		self setVariableTableItems: #().
 	].
+	self refreshUiState.
 ]
 
 { #category : 'private' }
@@ -582,13 +591,13 @@ GbsRemoteDebugger >> inspectVariable [
 { #category : 'actions' }
 GbsRemoteDebugger >> setBreakPoint [
 	service ifNil: [ ^ false ].
-	^ [ service setBreakPointIn: sourceText ] on: Error do: [ false ]
+	^ self withBreakpointRefresh: [ service setBreakPointIn: sourceText ]
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> toggleBreakPoint [
 	service ifNil: [ ^ false ].
-	^ [ service toggleBreakPointIn: sourceText ] on: Error do: [ false ]
+	^ self withBreakpointRefresh: [ service toggleBreakPointIn: sourceText ]
 ]
 
 { #category : 'actions' }
@@ -642,6 +651,11 @@ GbsRemoteDebugger >> acceptSourceEdits [
 			].
 		].
 		self fetchStackFrames.
+		self clearServiceCompileError.
+		self syncBreakpointMarker.
+		self refreshUiState.
+	] ifFalse: [
+		self showCompileErrorInSourcePane.
 	].
 	^ ok
 ]
@@ -649,13 +663,13 @@ GbsRemoteDebugger >> acceptSourceEdits [
 { #category : 'actions' }
 GbsRemoteDebugger >> removeBreakPoint [
 	service ifNil: [ ^ false ].
-	^ [ service removeBreakIn: sourceText ] on: Error do: [ false ]
+	^ self withBreakpointRefresh: [ service removeBreakIn: sourceText ]
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> removeAllBreakPoints [
 	service ifNil: [ ^ 0 ].
-	^ [ service removeAllBreakPoints ] on: Error do: [ 0 ]
+	^ self withBreakpointRefresh: [ service removeAllBreakPoints ]
 ]
 
 { #category : 'private' }
@@ -663,45 +677,79 @@ GbsRemoteDebugger >> sourceMenu [
 	| menu |
 	menu := self newMenu.
 	menu addGroup: [ :group |
-		group addItem: [ :item |
-			item
-				name: 'GS-Do it';
-				action: [ self gsDoIt ] ].
-		group addItem: [ :item |
-			item
-				name: 'GS-Print it';
-				action: [ self gsPrintIt ] ].
-		group addItem: [ :item |
-			item
-				name: 'GS-Inspect it';
-				action: [ self gsInspectIt ] ].
-		group addItem: [ :item |
-			item
-				name: 'Accept/Recompile';
-				action: [ self acceptSourceEdits ] ] ].
+		self
+			configureMenuItem: group
+			named: 'GS-Do it'
+			action: [ self gsDoIt ]
+			enabled: true.
+		self
+			configureMenuItem: group
+			named: 'GS-Print it'
+			action: [ self gsPrintIt ]
+			enabled: true.
+		self
+			configureMenuItem: group
+			named: 'GS-Inspect it'
+			action: [ self gsInspectIt ]
+			enabled: true.
+		self
+			configureMenuItem: group
+			named: 'Accept/Recompile'
+			action: [ self acceptSourceEdits ]
+			enabled: self canAcceptRecompile ].
 	menu addGroup: [ :group |
-		group addItem: [ :item |
-			item
-				name: 'Toggle Breakpoint';
-				action: [ self toggleBreakPoint ] ].
-		group addItem: [ :item |
-			item
-				name: 'Set Breakpoint';
-				action: [ self setBreakPoint ] ].
-		group addItem: [ :item |
-			item
-				name: 'Remove Breakpoint';
-				action: [ self removeBreakPoint ] ].
-		group addItem: [ :item |
-			item
-				name: 'Remove All Breakpoints';
-				action: [ self removeAllBreakPoints ] ] ].
+		self
+			configureMenuItem: group
+			named: 'Toggle Breakpoint'
+			action: [ self toggleBreakPoint ]
+			enabled: (self canToggleBreakpoint).
+		self
+			configureMenuItem: group
+			named: 'Set Breakpoint'
+			action: [ self setBreakPoint ]
+			enabled: (self canSetBreakpoint).
+		self
+			configureMenuItem: group
+			named: 'Remove Breakpoint'
+			action: [ self removeBreakPoint ]
+			enabled: (self canRemoveBreakpoint).
+		self
+			configureMenuItem: group
+			named: 'Remove All Breakpoints'
+			action: [ self removeAllBreakPoints ]
+			enabled: (self canRemoveAllBreakpoints) ].
 	menu addGroup: [ :group |
-		group addItem: [ :item | item name: 'Inspect Receiver'; action: [ self inspectReceiver ] ].
-		group addItem: [ :item | item name: 'Inspect Process'; action: [ self inspectProcess ] ].
-		group addItem: [ :item | item name: 'Inspect Frame'; action: [ self inspectFrame ] ].
-		group addItem: [ :item | item name: 'Inspect Variable'; action: [ self inspectVariable ] ] ].
+		self
+			configureMenuItem: group
+			named: 'Inspect Receiver'
+			action: [ self inspectReceiver ]
+			enabled: (self canInspectReceiver).
+		self
+			configureMenuItem: group
+			named: 'Inspect Process'
+			action: [ self inspectProcess ]
+			enabled: (self canInspectProcess).
+		self
+			configureMenuItem: group
+			named: 'Inspect Frame'
+			action: [ self inspectFrame ]
+			enabled: (self canInspectFrame).
+		self
+			configureMenuItem: group
+			named: 'Inspect Variable'
+			action: [ self inspectVariable ]
+			enabled: (self canInspectVariable) ].
 	^ menu
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> configureMenuItem: aMenuGroup named: labelText action: actionBlock enabled: enabledBoolean [
+	aMenuGroup addItem: [ :item |
+		item
+			name: labelText;
+			action: [ enabledBoolean ifTrue: [ actionBlock value ] ].
+		(item respondsTo: #enabled:)
+			ifTrue: [ item enabled: enabledBoolean ] ].
 ]
 
 { #category : 'private' }
@@ -740,6 +788,158 @@ GbsRemoteDebugger >> setVariableTableItems: aCollection [
 		ifTrue: [
 			[ variablesTable items: aCollection ] on: Error do: [ ]
 		].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> withBreakpointRefresh: aBlock [
+	| result |
+	result := [ aBlock value ] on: Error do: [ false ].
+	self syncBreakpointMarker.
+	self refreshUiState.
+	^ result
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> syncBreakpointMarker [
+	| summary |
+	service ifNil: [ ^ self ].
+	(service respondsTo: #breakpointSummaryString) ifFalse: [ ^ self ].
+	summary := [ service breakpointSummaryString ] on: Error do: [ nil ].
+	summary ifNil: [ ^ self ].
+	self withWindowDo: [ :window |
+		| base |
+		base := 'GemStone Remote Debugger'.
+		window title: base, ' - ', summary ].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> refreshUiState [
+	self updateButton: inspectReceiverButton enabled: self canInspectReceiver.
+	self updateButton: inspectProcessButton enabled: self canInspectProcess.
+	self updateButton: inspectFrameButton enabled: self canInspectFrame.
+	self updateButton: inspectVariableButton enabled: self canInspectVariable.
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> updateButton: aButton enabled: enabledBoolean [
+	aButton ifNil: [ ^ self ].
+	(aButton respondsTo: #enabled:)
+		ifTrue: [ [ aButton enabled: enabledBoolean ] on: Error do: [ ] ].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canSetBreakpoint [
+	^ self safeServiceCall: [ service canSetBreakPoint ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canRemoveBreakpoint [
+	^ self safeServiceCall: [ service canRemoveBreakPoint ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canRemoveAllBreakpoints [
+	^ self safeServiceCall: [ service canRemoveAllBreakPoints ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canToggleBreakpoint [
+	^ self safeServiceCall: [ service canToggleBreakPoint ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canAcceptRecompile [
+	^ self safeServiceCall: [ service currentContext notNil ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canInspectReceiver [
+	^ self safeServiceCall: [ (service respondsTo: #canInspectCurrentReceiver)
+		ifTrue: [ service canInspectCurrentReceiver ]
+		ifFalse: [ true ] ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canInspectProcess [
+	^ self safeServiceCall: [ (service respondsTo: #canInspectCurrentProcess)
+		ifTrue: [ service canInspectCurrentProcess ]
+		ifFalse: [ true ] ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canInspectFrame [
+	^ self safeServiceCall: [ (service respondsTo: #canInspectCurrentFrame)
+		ifTrue: [ service canInspectCurrentFrame ]
+		ifFalse: [ true ] ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canInspectVariable [
+	^ self selectedVariableName notNil
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> clearServiceCompileError [
+	service ifNil: [ ^ self ].
+	(service respondsTo: #clearCompileError)
+		ifTrue: [ [ service clearCompileError ] on: Error do: [ ] ].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> showCompileErrorInSourcePane [
+	| message currentText |
+	message := self safeServiceCall: [ service lastCompileError ] default: nil.
+	message ifNil: [ message := 'Compile failed in GemStone.' ].
+	currentText := (sourceText respondsTo: #text)
+		ifTrue: [ sourceText text asString ]
+		ifFalse: [ '' ].
+	self setSourceText: currentText, String lf, String lf, '"Compile error: ', message asString, '"'.
+	self highlightSourceLineFromCompileError: message.
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> highlightSourceLineFromCompileError: errorMessage [
+	| lower lineToken idx start lineNumber |
+	(errorMessage isString and: [ errorMessage isEmpty not ]) ifFalse: [ ^ self ].
+	(sourceText respondsTo: #text) ifFalse: [ ^ self ].
+	lower := errorMessage asLowercase.
+	lineToken := 'line '.
+	idx := lower findString: lineToken startingAt: 1.
+	idx = 0 ifTrue: [ ^ self ].
+	start := idx + lineToken size.
+	lineNumber := [ (lower copyFrom: start to: lower size) asNumber ] on: Error do: [ nil ].
+	lineNumber ifNil: [ ^ self ].
+	self selectLineNumber: lineNumber inTextPresenter: sourceText.
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> selectLineNumber: lineNumber inTextPresenter: aTextPresenter [
+	| text pos currentLine lineStart lineEnd |
+	(lineNumber isNumber and: [ lineNumber > 0 ]) ifFalse: [ ^ self ].
+	text := aTextPresenter text asString.
+	text isEmpty ifTrue: [ ^ self ].
+	pos := 1.
+	currentLine := 1.
+	[ currentLine < lineNumber and: [ pos <= text size ] ] whileTrue: [
+		(text at: pos) = Character lf ifTrue: [ currentLine := currentLine + 1 ].
+		pos := pos + 1
+	].
+	currentLine = lineNumber ifFalse: [ ^ self ].
+	lineStart := pos min: text size.
+	lineEnd := lineStart.
+	[ lineEnd <= text size and: [ (text at: lineEnd) ~= Character lf ] ] whileTrue: [
+		lineEnd := lineEnd + 1
+	].
+	lineEnd := lineEnd - 1.
+	lineEnd < lineStart ifTrue: [ lineEnd := lineStart ].
+	[
+		(aTextPresenter respondsTo: #selectionInterval:)
+			ifTrue: [ aTextPresenter selectionInterval: (lineStart to: lineEnd) ]
+			ifFalse: [
+				(aTextPresenter respondsTo: #selectFrom:to:)
+					ifTrue: [ aTextPresenter selectFrom: lineStart to: lineEnd ]
+			]
+	] on: Error do: [ ].
 ]
 
 { #category : 'private' }

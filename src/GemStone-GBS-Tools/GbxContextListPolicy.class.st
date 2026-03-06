@@ -67,7 +67,7 @@ GbxContextListPolicy >> contextList [
 GbxContextListPolicy >> computeContextList [
 	"Compute the logical context list from GemStone plus any client contexts
 	above the top server context (VW mixed-stack parity)."
-	| allContexts serverContexts topServerContext firstClientContext |
+	| allContexts serverContexts topServerContext firstClientContext marker |
 
 	serverContexts := self fetchServerContexts.
 	allContexts := OrderedCollection new.
@@ -77,7 +77,10 @@ GbxContextListPolicy >> computeContextList [
 	topServerContext ifNotNil: [
 		firstClientContext := self firstClientContextAbove: topServerContext.
 		firstClientContext ifNotNil: [
-			allContexts addAll: (self clientContextsStartingAt: firstClientContext)
+			marker := self matchingServerCallMarkerForServerContext: topServerContext.
+			allContexts addAll: (self
+				clientContextsStartingAt: firstClientContext
+				upToContextExclusive: marker)
 		]
 	].
 	
@@ -337,6 +340,24 @@ GbxContextListPolicy >> firstClientContextAbove: gsContext [
 	^ nil
 ]
 
+{ #category : 'context list' }
+GbxContextListPolicy >> matchingServerCallMarkerForServerContext: gsContext [
+	| ctx targetGsProcess rcvr markerProcess |
+	gsContext ifNil: [ ^ nil ].
+	targetGsProcess := self processIdentityForContext: gsContext.
+	ctx := (debugger respondsTo: #topContext)
+		ifTrue: [ debugger topContext ]
+		ifFalse: [ nil ].
+	[ ctx notNil ] whileTrue: [
+		rcvr := [ ctx receiver ] on: Error do: [ nil ].
+		markerProcess := self processIdentityForErrorLike: rcvr.
+		(markerProcess notNil and: [ markerProcess = targetGsProcess ])
+			ifTrue: [ ^ ctx ].
+		ctx := [ ctx sender ] on: Error do: [ nil ].
+	].
+	^ nil
+]
+
 { #category : 'private' }
 GbxContextListPolicy >> isDirectGlueContext: aContext [
 	| className |
@@ -401,6 +422,18 @@ GbxContextListPolicy >> clientContextsStartingAt: aContext [
 	contexts := OrderedCollection new.
 	ctx := aContext.
 	[ ctx notNil ] whileTrue: [
+		contexts add: ctx.
+		ctx := [ ctx sender ] on: Error do: [ nil ].
+	].
+	^ contexts
+]
+
+{ #category : 'private' }
+GbxContextListPolicy >> clientContextsStartingAt: aContext upToContextExclusive: stopContext [
+	| contexts ctx |
+	contexts := OrderedCollection new.
+	ctx := aContext.
+	[ ctx notNil and: [ ctx ~~ stopContext ] ] whileTrue: [
 		contexts add: ctx.
 		ctx := [ ctx sender ] on: Error do: [ nil ].
 	].

@@ -331,6 +331,16 @@ GbxDebuggerServiceTest >> testRecompileCurrentMethodWithSourceReturnsTrueOnOk [
 ]
 
 { #category : 'tests' }
+GbxDebuggerServiceTest >> testRecompileCurrentMethodWithSourceStoresCompileErrorOnFailure [
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx | 'ERROR|Syntax error near ''^''' ].
+
+	self deny: (service recompileCurrentMethodWithSource: 'foo ^').
+	self assert: service lastCompileError equals: 'Syntax error near ''^'''
+]
+
+{ #category : 'tests' }
 GbxDebuggerServiceTest >> testGsPrintItEvaluatesInCurrentContext [
 	| result |
 	session stubs
@@ -350,6 +360,26 @@ GbxDebuggerServiceTest >> testInspectCurrentProcessReturnsFalseWhenSessionNotUsa
 
 	self deny: service inspectCurrentProcess.
 	self assert: GbxFakeInspectorForService lastOop isNil
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testBreakpointIntervalsInCurrentMethodUsesSourceOffsets [
+	| bp1 bp2 intervals |
+	bp1 := GbxFakeBreakPointForService
+		selector: #foo
+		remoteClass: 'DemoClass'
+		stepPoint: 1.
+	bp2 := GbxFakeBreakPointForService
+		selector: #foo
+		remoteClass: 'DemoClass'
+		stepPoint: 3.
+	GbxFakeBreakPointForService breakPointList: { bp1. bp2 }.
+
+	intervals := service breakpointIntervalsInCurrentMethod.
+
+	self assert: intervals size equals: 2.
+	self assert: intervals first equals: (10 to: 10).
+	self assert: intervals second equals: (30 to: 30)
 ]
 
 { #category : 'tests' }

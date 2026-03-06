@@ -102,10 +102,38 @@ GbxContextListPolicyTest >> testComputeContextListMergesServerAndClientContexts 
 
 	list := policy computeContextList.
 
-	self assert: list size equals: 3.
+	self assert: list size equals: 2.
 	self assert: (list at: 1) == gsContext.
 	self assert: (list at: 2) == topClient.
-	self assert: (list at: 3) == bottomClient.
+]
+
+{ #category : 'tests' }
+GbxContextListPolicyTest >> testMatchingServerCallMarkerForServerContextReturnsMarkerContext [
+	| debugger policy gsContext gsError topClient glueMarker |
+
+	debugger := GbxFakeDebuggerForPolicy new.
+	policy := GbxTestableContextListPolicy debugger: debugger.
+
+	gsContext := GbxFakeContextForPolicy new.
+	gsContext
+		gbxIsServerContext: true;
+		processOop: 123.
+
+	gsError := GbxFakeGbsErrorForPolicy new.
+	gsError serverProcessOop: 123.
+
+	glueMarker := GbxFakeContextForPolicy new.
+	glueMarker
+		isGlue: true;
+		receiver: gsError.
+
+	topClient := GbxFakeContextForPolicy new.
+	topClient
+		isGlue: false;
+		sender: glueMarker.
+	debugger topContext: topClient.
+
+	self assert: (policy matchingServerCallMarkerForServerContext: gsContext) == glueMarker
 ]
 
 { #category : 'tests' }
