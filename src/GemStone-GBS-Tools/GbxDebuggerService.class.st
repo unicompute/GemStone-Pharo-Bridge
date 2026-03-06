@@ -22,7 +22,8 @@ Class {
 		'pendingEvents',
 		'doStepIntoBlock',
 		'dontUpdateInspectors',
-		'lastCompileError'
+		'lastCompileError',
+		'restartHomeResetPasses'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -469,6 +470,7 @@ GbxDebuggerService >> initialize [
 	pendingEvents := OrderedCollection new.
 	dontUpdateInspectors := false.
 	lastCompileError := nil.
+	restartHomeResetPasses := 0.
 ]
 
 { #category : 'initialization' }
@@ -714,6 +716,11 @@ GbxDebuggerService >> recomputeContextList [
 			currentContext := contexts first.
 		].
 	].
+	(restartHomeResetPasses isNumber and: [ restartHomeResetPasses > 0 ]) ifTrue: [
+		self selectRestartTargetContext.
+		self forceRestartPositionToMethodStart.
+		restartHomeResetPasses := restartHomeResetPasses - 1
+	].
 	self updateSourceMapFromCurrentContext.
 	self notifyContextChanged.
 ]
@@ -825,8 +832,8 @@ GbxDebuggerService >> restart [
 
 	result := self executeDebugScript: script.
 	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
+	restartHomeResetPasses := 2.
 	self recomputeContextList.
-	self selectRestartTargetContext.
 	stepAfter := self currentStepPoint.
 	didResetWithStepPoint := false.
 	(stepAfter isNil or: [ stepAfter > 1 ]) ifTrue: [
@@ -836,9 +843,8 @@ GbxDebuggerService >> restart [
 	(stepAfter isNil or: [ stepAfter > 1 ]) ifTrue: [
 		didResetWithStepPoint
 			ifFalse: [
-				self forceRestartPositionToMethodStart.
-				self recomputeContextList.
-				self selectRestartTargetContext
+				restartHomeResetPasses := restartHomeResetPasses max: 2.
+				self recomputeContextList
 			]
 	].
 	^ true
