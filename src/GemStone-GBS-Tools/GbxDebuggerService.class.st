@@ -237,6 +237,7 @@ GbxDebuggerService >> clearCompileError [
 
 { #category : 'accessing' }
 GbxDebuggerService >> contextList [
+	contextStackPolicy ifNil: [ ^ #( ) ].
 	^ contextStackPolicy contextList
 ]
 
@@ -706,6 +707,11 @@ GbxDebuggerService >> recompileCurrentMethodWithSource: sourceText [
 { #category : 'context list' }
 GbxDebuggerService >> recomputeContextList [
 	"Recompute the context list after a step operation"
+	contextStackPolicy ifNil: [
+		self updateSourceMapFromCurrentContext.
+		self notifyContextChanged.
+		^ self
+	].
 	contextStackPolicy computeContextList.
 	
 	"If current context is no longer valid, select top"
@@ -758,7 +764,7 @@ GbxDebuggerService >> resume [
 GbxDebuggerService >> restart [
 	"VW parity: for server frames restart is cutback to selected level.
 	This maps to GsProcess>>#_trimStackToLevel:."
-	| lvl script result |
+	| lvl script result stepAfter |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
 	lvl := self currentContextLevel.
 	lvl ifNil: [ lvl := 1 ].
@@ -777,6 +783,16 @@ GbxDebuggerService >> restart [
 	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
 	self recomputeContextList.
 	self selectRestartTargetContext.
+	self forceRestartPositionToMethodStart.
+	stepAfter := self currentStepPoint.
+	(stepAfter isNil or: [ stepAfter > 1 ]) ifTrue: [
+		((self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true)
+			or: [ self runDebugProcessCommand: 'runToStepPoint' withInteger: 1 recompute: true ])
+				ifTrue: [
+					self selectRestartTargetContext.
+					self forceRestartPositionToMethodStart
+				]
+	].
 	self updateSourceMapFromCurrentContext.
 	^ true
 ]
