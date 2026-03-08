@@ -1705,7 +1705,10 @@ GbsRemoteDebugger >> pauseProcess [
 GbsRemoteDebugger >> restart [
 	| didRestart |
 	didRestart := self safeServiceCall: [ service restart ] default: false.
-	didRestart ifTrue: [ self fetchStackFrames ].
+	didRestart ifTrue: [
+		self fetchStackFrames.
+		self moveSourceCursorToStart
+	].
 	^ didRestart
 ]
 
@@ -1785,6 +1788,24 @@ GbsRemoteDebugger >> selectHomeContext [
 GbsRemoteDebugger >> showMoreContexts [
 	self fetchStackFrames.
 	^ true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> moveSourceCursorToStart [
+	| text |
+	sourceText ifNil: [ ^ self ].
+	text := [ (sourceText respondsTo: #text)
+		ifTrue: [ sourceText text asString ]
+		ifFalse: [ '' ] ] on: Error do: [ '' ].
+	text isEmpty ifTrue: [ ^ self ].
+	[
+		(sourceText respondsTo: #selectionInterval:)
+			ifTrue: [ sourceText selectionInterval: (1 to: 1) ]
+			ifFalse: [
+				(sourceText respondsTo: #selectFrom:to:)
+					ifTrue: [ sourceText selectFrom: 1 to: 1 ]
+			]
+	] on: Error do: [ ].
 ]
 
 { #category : 'private' }

@@ -273,6 +273,19 @@ GbsRemoteDebuggerPresenterTest >> testRestartDelegatesToService [
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testMoveSourceCursorToStartSelectsFirstCharacter [
+	| fakeText |
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: '1+1.', String lf, '1/0'.
+	fakeText selectionInterval: (5 to: 5).
+	debugger instVarNamed: 'sourceText' put: fakeText.
+
+	debugger moveSourceCursorToStart.
+
+	self assert: fakeText selectionInterval equals: (1 to: 1)
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testPauseProcessDelegatesToService [
 	self assert: debugger pauseProcess.
 	self assert: service pauseCalls equals: 1
