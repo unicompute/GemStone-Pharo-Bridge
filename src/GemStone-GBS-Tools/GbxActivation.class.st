@@ -51,7 +51,7 @@ GbxActivation class >> processOop: procOop level: aLevel session: aSession [
 
 { #category : 'comparing' }
 GbxActivation >> = other [
-	^ other isKindOf: GbxActivation
+	^ (other isKindOf: GbxActivation)
 		and: [ other level = level 
 		and: [ other gsMethodId = gsMethodId ] ]
 ]

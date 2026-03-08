@@ -402,6 +402,7 @@ GbxDebuggerServiceTest >> testRestartUsesTrimStackToLevelCommand [
 	| scripts didRestart |
 	scripts := OrderedCollection new.
 	service processOop: 111.
+	service instVarNamed: 'contextStackPolicy' put: (GbxFakeContextListPolicyForService new contextList: { context }; yourself).
 	session stubs
 		at: #executeAndFetchContext
 		put: [ :script :ctx |
@@ -419,6 +420,7 @@ GbxDebuggerServiceTest >> testRestartUsesTrimStackToLevelCommand [
 { #category : 'tests' }
 GbxDebuggerServiceTest >> testRestartReturnsFalseWhenTrimStackFails [
 	service processOop: 111.
+	service instVarNamed: 'contextStackPolicy' put: (GbxFakeContextListPolicyForService new contextList: { context }; yourself).
 	session stubs
 		at: #executeAndFetchContext
 		put: [ :script :ctx |
