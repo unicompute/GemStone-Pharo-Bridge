@@ -134,7 +134,7 @@ GbxContextListPolicy >> fetchServerContexts [
 	(processOop isNil or: [ processOop = 20 ]) ifTrue: [ ^ #( ) ].
 	
 	script := '[
-		| obj gbsError gsProcess ctx stream maxDepth level stackReport fullEntry frameId methodOrNil className selectorName source ctxOop quickStep offsets offsetsText lineNumber offset |
+		| obj gbsError gsProcess ctx stream maxDepth level frame fullEntry methodOrNil className selectorName source ctxOop quickStep offsets offsetsText lineNumber offset |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ '''' ].
 		stream := WriteStream on: String new.
@@ -164,16 +164,15 @@ GbxContextListPolicy >> fetchServerContexts [
 				ifTrue: [ gsProcess := [ ctx process ] on: Error do: [ nil ] ]
 		].
 
-		((gsProcess notNil) and: [ gsProcess respondsTo: #_gsiStackReportFromLevel:toLevel: ]) ifTrue: [
+		((gsProcess notNil) and: [ gsProcess respondsTo: #_gsiDebuggerDetailedReportAt: ]) ifTrue: [
 			maxDepth := 200.
 			level := 1.
 			[ level <= maxDepth ] whileTrue: [
-				stackReport := [ gsProcess _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
-				(stackReport isNil or: [ stackReport size < 2 ])
+				frame := [ gsProcess _gsiDebuggerDetailedReportAt: level ] on: Error do: [ nil ].
+				(frame isNil or: [ frame isEmpty ])
 					ifTrue: [ level := maxDepth + 1 ]
 					ifFalse: [
-						frameId := stackReport at: 1.
-						fullEntry := stackReport at: 2.
+						fullEntry := frame first.
 						methodOrNil := (fullEntry notNil and: [ fullEntry isEmpty not ])
 							ifTrue: [ fullEntry first ]
 							ifFalse: [ nil ].
@@ -183,13 +182,17 @@ GbxContextListPolicy >> fetchServerContexts [
 							]
 						] on: Error do: [ ''<unknown>'' ].
 						selectorName := [
-							(fullEntry notNil and: [ fullEntry size >= 4 ])
-								ifTrue: [
-									(fullEntry at: 4)
-										ifNil: [ ''<unknown>'' ]
-										ifNotNil: [ :sel | sel asString ]
-								]
-								ifFalse: [ ''<unknown>'' ]
+							methodOrNil ifNil: [
+								(fullEntry notNil and: [ fullEntry size >= 4 ])
+									ifTrue: [
+										(fullEntry at: 4)
+											ifNil: [ ''<unknown>'' ]
+											ifNotNil: [ :sel | sel asString ]
+									]
+									ifFalse: [ ''<unknown>'' ]
+							] ifNotNil: [
+								[ methodOrNil selector asString ] on: Error do: [ ''<unknown>'' ]
+							]
 						] on: Error do: [ ''<unknown>'' ].
 						source := [
 							(fullEntry notNil and: [ fullEntry size >= 9 ])
