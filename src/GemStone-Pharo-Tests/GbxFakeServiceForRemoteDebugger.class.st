@@ -27,7 +27,9 @@ Class {
 		'sourceMap',
 		'raiseOnInspectReceiver',
 		'recompileShouldSucceed',
-		'compileErrorMessage'
+		'compileErrorMessage',
+		'contextList',
+		'currentContext'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -321,5 +323,25 @@ GbxFakeServiceForRemoteDebugger >> raiseOnInspectReceiver: aBoolean [
 
 { #category : 'selection' }
 GbxFakeServiceForRemoteDebugger >> selectContext: aContext [
-	"Presenter tests only need this to exist."
+	currentContext := aContext
+]
+
+{ #category : 'context list' }
+GbxFakeServiceForRemoteDebugger >> contextList [
+	^ contextList ifNil: [ #( ) ]
+]
+
+{ #category : 'context list' }
+GbxFakeServiceForRemoteDebugger >> contextList: aCollection [
+	contextList := aCollection
+]
+
+{ #category : 'context list' }
+GbxFakeServiceForRemoteDebugger >> recomputeContextList [
+	^ self
+]
+
+{ #category : 'accessing' }
+GbxFakeServiceForRemoteDebugger >> currentContext [
+	^ currentContext
 ]

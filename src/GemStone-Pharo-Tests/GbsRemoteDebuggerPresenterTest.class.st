@@ -273,6 +273,52 @@ GbsRemoteDebuggerPresenterTest >> testRestartDelegatesToService [
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testRestartPromotesExecutedCodeFrameToTopAndSelectsSourceStart [
+	| fakeText fakeList nonExecuted executed |
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: ''.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+	debugger instVarNamed: 'variablesTable' put: GbxFakeTablePresenterForRemoteDebugger new.
+	debugger instVarNamed: 'receiverInfoTable' put: GbxFakeTablePresenterForRemoteDebugger new.
+	debugger instVarNamed: 'frameInfoTable' put: GbxFakeTablePresenterForRemoteDebugger new.
+	debugger instVarNamed: 'processInfoTable' put: GbxFakeTablePresenterForRemoteDebugger new.
+	fakeList := GbxFakeListPresenterForRemoteDebugger new.
+	debugger instVarNamed: 'stackList' put: fakeList.
+
+	nonExecuted := GbxActivation new.
+	nonExecuted
+		processOop: 111;
+		level: 1;
+		initializeFromClass: 'SmallInteger'
+			selector: #/
+			source: '1+1.', String lf, '1/0'
+			contextOop: 111;
+		quickStepPoint: 3;
+		sourceOffsets: #(1 6 7);
+		ipOffset: 2.
+
+	executed := GbxActivation new.
+	executed
+		processOop: 111;
+		level: 2;
+		initializeFromClass: 'nil'
+			selector: #unboundMethod
+			source: '1+1.', String lf, '1/0'
+			contextOop: 111;
+		quickStepPoint: 3;
+		sourceOffsets: #(1 6 7);
+		ipOffset: 2.
+
+	service contextList: { nonExecuted. executed }.
+	self assert: debugger restart.
+
+	self assert: service restartCalls equals: 1.
+	self assert: (debugger instVarNamed: 'contextList') first printString equals: 'GS: Executed code @1 line 1'.
+	self assert: fakeList selectedIndex equals: 1.
+	self assert: fakeText selectionInterval equals: (1 to: 1)
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testMoveSourceCursorToStartSelectsFirstCharacter [
 	| fakeText |
 	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
