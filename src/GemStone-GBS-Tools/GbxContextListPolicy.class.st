@@ -134,7 +134,7 @@ GbxContextListPolicy >> fetchServerContexts [
 	(processOop isNil or: [ processOop = 20 ]) ifTrue: [ ^ #( ) ].
 	
 	script := '[
-		| obj gbsError gsProcess ctx stream maxDepth level stackReport fullEntry frameId methodOrNil className selectorName source ctxOop quickStep offsets offsetsText lineNumber offset |
+		| obj gbsError gsProcess ctx stream maxDepth level stackReport fullEntry frameId methodOrNil className selectorName source ctxOop quickStep offsets offsetsText lineNumber offset looksLikeOffsets |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ '''' ].
 		stream := WriteStream on: String new.
@@ -183,13 +183,17 @@ GbxContextListPolicy >> fetchServerContexts [
 							]
 						] on: Error do: [ ''<unknown>'' ].
 						selectorName := [
-							(fullEntry notNil and: [ fullEntry size >= 4 ])
-								ifTrue: [
-									(fullEntry at: 4)
-										ifNil: [ ''<unknown>'' ]
-										ifNotNil: [ :sel | sel asString ]
-								]
-								ifFalse: [ ''<unknown>'' ]
+							methodOrNil ifNil: [
+								(fullEntry notNil and: [ fullEntry size >= 4 ])
+									ifTrue: [
+										(fullEntry at: 4)
+											ifNil: [ ''<unknown>'' ]
+											ifNotNil: [ :sel | sel asString ]
+									]
+									ifFalse: [ ''<unknown>'' ]
+							] ifNotNil: [
+								[ methodOrNil selector asString ] on: Error do: [ ''<unknown>'' ]
+							]
 						] on: Error do: [ ''<unknown>'' ].
 						source := [
 							(fullEntry notNil and: [ fullEntry size >= 9 ])
@@ -200,6 +204,17 @@ GbxContextListPolicy >> fetchServerContexts [
 								]
 								ifFalse: [ '''' ]
 						] on: Error do: [ '''' ].
+						looksLikeOffsets := [ :txt |
+							| s |
+							s := txt ifNil: [ '''' ] ifNotNil: [ :t | t asString ].
+							s := s withBlanksTrimmed.
+							s isEmpty ifTrue: [ false ] ifFalse: [
+								s allSatisfy: [ :ch |
+									ch isDigit or: [ ch = $, or: [ ch = Character space ] ]
+								]
+							]
+						].
+						(looksLikeOffsets value: source) ifTrue: [ source := '''' ].
 						quickStep := [
 							(fullEntry notNil and: [ fullEntry size >= 5 ])
 								ifTrue: [ fullEntry at: 5 ]
@@ -296,8 +311,20 @@ GbxContextListPolicy >> fetchServerContexts [
 			| parts |
 			parts := line splitOn: Character tab.
 			parts size >= 5 ifTrue: [
-				| activation selectorSymbol ctxOop quickStepValue offsetsTokens offsetsValue lineNumberValue |
-				selectorSymbol := [ (parts at: 3) asSymbol ] on: Error do: [ #unboundMethod ].
+				| activation selectorText classText sourceText selectorSymbol ctxOop quickStepValue offsetsTokens offsetsValue lineNumberValue |
+				classText := parts at: 2.
+				selectorText := parts at: 3.
+				sourceText := ((((parts at: 4)
+					copyReplaceAll: '<TAB>' with: Character tab asString)
+					copyReplaceAll: '<CR>' with: String cr)
+					copyReplaceAll: '<LF>' with: String lf).
+				(self stringLooksNumeric: classText)
+					ifTrue: [ classText := '<unknown>' ].
+				(self stringLooksNumeric: selectorText)
+					ifTrue: [ selectorText := 'unboundMethod' ].
+				(self sourceLooksLikeOffsets: sourceText)
+					ifTrue: [ sourceText := '' ].
+				selectorSymbol := [ selectorText asSymbol ] on: Error do: [ #unboundMethod ].
 				ctxOop := [ (parts at: 5) asInteger ] on: Error do: [ processOop ].
 				quickStepValue := (parts size >= 6
 					ifTrue: [ [ (parts at: 6) asInteger ] on: Error do: [ 0 ] ]
@@ -323,12 +350,9 @@ GbxContextListPolicy >> fetchServerContexts [
 					ifFalse: [ activation instVarNamed: 'session' put: debugger session ].
 				activation
 					level: ([ parts first asInteger ] on: Error do: [ 1 ]);
-					initializeFromClass: (parts at: 2)
+					initializeFromClass: classText
 						selector: selectorSymbol
-						source: ((((parts at: 4)
-							copyReplaceAll: '<TAB>' with: Character tab asString)
-							copyReplaceAll: '<CR>' with: String cr)
-							copyReplaceAll: '<LF>' with: String lf)
+						source: sourceText
 						contextOop: ctxOop;
 					quickStepPoint: quickStepValue;
 					sourceOffsets: offsetsValue;
@@ -518,6 +542,27 @@ GbxContextListPolicy >> processIdentityForErrorLike: anObject [
 	(anObject respondsTo: #serverProcessOop) ifTrue: [ ^ anObject serverProcessOop ].
 	(anObject respondsTo: #serverProcess) ifTrue: [ ^ anObject serverProcess ].
 	^ nil
+]
+
+{ #category : 'private' }
+GbxContextListPolicy >> sourceLooksLikeOffsets: aString [
+	| text |
+	aString ifNil: [ ^ false ].
+	text := [ aString asString withBlanksTrimmed ] on: Error do: [ ^ false ].
+	text isEmpty ifTrue: [ ^ false ].
+	(text includes: $,)
+		ifFalse: [ ^ false ].
+	^ (text allSatisfy: [ :ch |
+		ch isDigit or: [ ch = $, or: [ ch isSeparator ] ] ])
+]
+
+{ #category : 'private' }
+GbxContextListPolicy >> stringLooksNumeric: aString [
+	| text |
+	aString ifNil: [ ^ false ].
+	text := [ aString asString withBlanksTrimmed ] on: Error do: [ ^ false ].
+	text isEmpty ifTrue: [ ^ false ].
+	^ (text allSatisfy: [ :ch | ch isDigit ])
 ]
 
 { #category : 'context list' }
