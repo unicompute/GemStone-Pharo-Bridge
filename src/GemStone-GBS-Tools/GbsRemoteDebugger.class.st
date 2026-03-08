@@ -1707,6 +1707,7 @@ GbsRemoteDebugger >> restart [
 	didRestart := self safeServiceCall: [ service restart ] default: false.
 	didRestart ifTrue: [
 		self fetchStackFrames.
+		self normalizeRestartSelectionAndPosition.
 		self moveSourceCursorToStart
 	].
 	^ didRestart
@@ -1806,6 +1807,36 @@ GbsRemoteDebugger >> moveSourceCursorToStart [
 					ifTrue: [ sourceText selectFrom: 1 to: 1 ]
 			]
 	] on: Error do: [ ].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
+	| index context offsets copy |
+	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
+	index := contextList
+		findFirst: [ :ctx |
+			[ ctx printString beginsWith: 'GS: Executed code @' ] on: Error do: [ false ] ].
+	index = 0 ifTrue: [ index := self preferredInitialContextIndex ].
+	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
+	context := contextList at: index.
+
+	(context respondsTo: #quickStepPoint:)
+		ifTrue: [ context quickStepPoint: 1 ].
+	(context respondsTo: #ipOffset:)
+		ifTrue: [ context ipOffset: 1 ].
+	(context respondsTo: #sourceOffsets) ifTrue: [
+		offsets := [ context sourceOffsets ] on: Error do: [ #() ].
+		(offsets isCollection and: [ offsets isEmpty not ]) ifTrue: [
+			copy := offsets asArray copy.
+			copy at: 1 put: 1.
+			(context respondsTo: #sourceOffsets:)
+				ifTrue: [ context sourceOffsets: copy ]
+		]
+	].
+
+	(stackList respondsTo: #selectIndex:)
+		ifTrue: [ stackList selectIndex: index ].
+	self contextSelected: context.
 ]
 
 { #category : 'private' }
