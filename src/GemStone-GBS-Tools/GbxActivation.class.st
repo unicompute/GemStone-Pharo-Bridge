@@ -398,7 +398,7 @@ GbxActivation >> isExecutedCodeFrame [
 { #category : 'testing' }
 GbxActivation >> markAsExecutedCodeFrame [
 	"Mark this frame as an executed code frame (for restart)"
-	methodClass := '<unknown>'.
+	methodClass := 'nil'.
 	selector := #unboundMethod.
 ]
 

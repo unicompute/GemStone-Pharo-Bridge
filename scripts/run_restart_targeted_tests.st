@@ -1,10 +1,11 @@
-| result tests failures errors cls |
+| result tests failures errors cls out |
 [
+    out := FileLocator workingDirectory / 'restart_tests.log' writeStream.
 	[ Metacello new
 		baseline: 'GemStonePharo';
 		repository: 'tonel:///Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src';
 		load: 'default' ] on: Error do: [ :ex |
-			Transcript show: 'LOAD_ERROR: ', ex messageText; cr ].
+			out nextPutAll: 'LOAD_ERROR: ', ex messageText; cr ].
 
 	tests := OrderedCollection new.
 	cls := Smalltalk at: #GbxDebuggerServiceTest ifAbsent: [ nil ].
@@ -19,16 +20,17 @@
 
 	failures := result failures size.
 	errors := result errors size.
-	Transcript
-		show: 'RESTART_TARGETED RUN=' , result runCount asString,
+	out
+		nextPutAll: 'RESTART_TARGETED RUN=' , result runCount asString,
 			' FAIL=' , failures asString,
 			' ERR=' , errors asString;
 		cr.
 
 	failures > 0 ifTrue: [
-		Transcript show: 'FAILURES:'; cr.
-		result failures do: [ :f | Transcript show: f printString; cr ] ].
+		out nextPutAll: 'FAILURES:'; cr.
+		result failures do: [ :f | out nextPutAll: f printString; cr ] ].
 	errors > 0 ifTrue: [
-		Transcript show: 'ERRORS:'; cr.
-		result errors do: [ :e | Transcript show: e printString; cr ] ].
-] ensure: [ Smalltalk snapshot: false andQuit: true ].
+		out nextPutAll: 'ERRORS:'; cr.
+		result errors do: [ :e | out nextPutAll: e printString; cr ] ].
+    out close.
+] ensure: [ Smalltalk exit: ((failures ifNil: [ 0 ]) + (errors ifNil: [ 0 ]) > 0 ifTrue: [ 1 ] ifFalse: [ 0 ]) ].
