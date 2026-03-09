@@ -399,7 +399,7 @@ GbxActivation >> isExecutedCodeFrame [
 GbxActivation >> markAsExecutedCodeFrame [
 	"Mark this frame as an executed code frame (for restart)"
 	"Sets class/selector to unknown and step/line to 1"
-	methodClass := ''nil''.
+	methodClass := 'nil'.
 	selector := #unboundMethod.
 	quickStepPoint := 1.
 	ipOffset := 1.
