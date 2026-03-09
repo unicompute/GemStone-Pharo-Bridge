@@ -1856,10 +1856,10 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	index := contextList
 		findFirst: [ :ctx |
 			| className selectorName |
-			className := [ ctx methodClassOrUnknown asString ] on: Error do: [ '''' ].
-			selectorName := [ ctx selectorOrUnknown asString ] on: Error do: [ '''' ].
-			(className = ''nil'' or: [ className = ''<unknown>'' ])
-				and: [ selectorName = ''nil'' or: [ selectorName = ''unboundMethod'' ] ] ].
+			className := [ ctx methodClassOrUnknown asString ] on: Error do: [ '' ].
+			selectorName := [ ctx selectorOrUnknown asString ] on: Error do: [ '' ].
+			(className = 'nil' or: [ className = '<unknown>' ])
+				and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ] ].
 	
 	index = 0 ifTrue: [ index := 1 ].
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
