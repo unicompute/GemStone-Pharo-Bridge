@@ -801,9 +801,18 @@ GbxDebuggerService >> restart [
 
 	result := self executeDebugScript: script.
 	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
-	
+
 	"Recompute context list after trim"
 	self recomputeContextList.
+	
+	"Mark the first context as executed code frame BEFORE selecting it"
+	self contextList ifNotEmpty: [ :contexts |
+		targetContext := contexts first.
+		(targetContext respondsTo: #markAsExecutedCodeFrame) ifTrue: [
+			targetContext markAsExecutedCodeFrame.
+		].
+	].
+	
 	self selectRestartTargetContext.
 	self forceRestartPositionToMethodStart.
 	self updateSourceMapFromCurrentContext.
