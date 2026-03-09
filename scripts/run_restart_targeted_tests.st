@@ -1,6 +1,6 @@
 | result tests failures errors cls out |
 [
-    out := FileLocator workingDirectory / 'restart_tests.log' writeStream.
+    out := (FileLocator workingDirectory / 'restart_tests.log') writeStream.
 	[ Metacello new
 		baseline: 'GemStonePharo';
 		repository: 'tonel:///Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src';
@@ -32,5 +32,7 @@
 	errors > 0 ifTrue: [
 		out nextPutAll: 'ERRORS:'; cr.
 		result errors do: [ :e | out nextPutAll: e printString; cr ] ].
-    out close.
-] ensure: [ Smalltalk exit: ((failures ifNil: [ 0 ]) + (errors ifNil: [ 0 ]) > 0 ifTrue: [ 1 ] ifFalse: [ 0 ]) ].
+] ensure: [ 
+	out ifNotNil: [ out close ].
+	Smalltalk exit: ((failures ifNil: [ 0 ]) + (errors ifNil: [ 0 ]) > 0 ifTrue: [ 1 ] ifFalse: [ 0 ]) 
+].

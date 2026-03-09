@@ -1849,7 +1849,7 @@ GbsRemoteDebugger >> moveSourceCursorToStart [
 
 { #category : 'private' }
 GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
-	| index context offsets copy |
+	| index context |
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
 
 	"First, mark the first context as executed code frame with step=1, line=1"
@@ -1866,27 +1866,9 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
 	context := contextList at: index.
 
-	(context respondsTo: #quickStepPoint:)
-		ifTrue: [ context quickStepPoint: 1 ].
-	(context respondsTo: #ipOffset:)
-		ifTrue: [ context ipOffset: 1 ].
-	(context respondsTo: #sourceOffsets) ifTrue: [
-		offsets := [ context sourceOffsets ] on: Error do: [ #( 1 ) ].
-		(offsets isCollection and: [ offsets isEmpty not ]) ifTrue: [
-			copy := offsets asArray copy.
-			copy size > 0 ifTrue: [ copy at: 1 put: 1 ].
-			(context respondsTo: #sourceOffsets:)
-				ifTrue: [ context sourceOffsets: copy ]
-		] ifFalse: [
-			(context respondsTo: #sourceOffsets:)
-				ifTrue: [ context sourceOffsets: #( 1 ) ]
-		]
-	].
-
 	(stackList respondsTo: #selectIndex:)
 		ifTrue: [ stackList selectIndex: index ].
 	self contextSelected: context.
-	"Move source cursor to start of code"
 	self moveSourceCursorToStart.
 ]
 
