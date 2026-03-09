@@ -764,7 +764,7 @@ GbxDebuggerService >> resume [
 GbxDebuggerService >> restart [
 	"VW parity: for server frames restart is cutback to selected level.
 	This maps to GsProcess>>#_trimStackToLevel:."
-	| lvl script result targetContext serverLevel |
+	| lvl script result targetContext serverLevel proc |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
 	
 	"Try to find the executed code level from server stack first"
@@ -821,6 +821,7 @@ GbxDebuggerService >> restart [
 	
 	self forceRestartPositionToMethodStart.
 	self updateSourceMapFromCurrentContext.
+	self notifyContextChanged.
 	^ true
 ]
 

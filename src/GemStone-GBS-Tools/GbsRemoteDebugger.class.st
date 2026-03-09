@@ -643,12 +643,10 @@ GbsRemoteDebugger >> fetchStackFrames [
 	stackList items: (contextList collect: [ :ctx | ctx printString ]).
 
 	contextList ifNotEmpty: [
-		| preferredIndex firstContext |
-		"Mark first frame as executed code frame so it shows 'GS: Executed code @...'"
-		firstContext := contextList at: 1.
-		(firstContext respondsTo: #markAsExecutedCodeFrame) ifTrue: [
-			firstContext markAsExecutedCodeFrame.
-		].
+		| preferredIndex |
+		"We no longer unconditionally mark the first context here.
+		Executed code frames are identified by their class/selector in printString.
+		Special marking/resetting for Restart is handled in normalizeRestartSelectionAndPosition."
 		preferredIndex := self preferredInitialContextIndex.
 		stackList selectIndex: preferredIndex.
 		self contextSelected: (contextList at: preferredIndex)
@@ -1746,7 +1744,6 @@ GbsRemoteDebugger >> restart [
 	didRestart ifTrue: [
 		self fetchStackFrames.
 		self normalizeRestartSelectionAndPosition.
-		self moveSourceCursorToStart
 	].
 	^ didRestart
 ]
@@ -1879,8 +1876,8 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 		ifTrue: [ stackList selectIndex: index ].
 	
 	"Force context selection to update source highlight and variables"
-	self contextSelected: context.
 	self moveSourceCursorToStart.
+	self contextSelected: context.
 ]
 
 { #category : 'private' }
