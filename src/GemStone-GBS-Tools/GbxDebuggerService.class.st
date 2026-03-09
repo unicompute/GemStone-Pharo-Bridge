@@ -778,9 +778,9 @@ GbxDebuggerService >> restart [
 	(serverLevel isNumber and: [ serverLevel > 0 ]) ifTrue: [ lvl := serverLevel ].
 	lvl ifNil: [ lvl := 1 ].
 
-	script := ''[
+	script := '[
 		| obj proc ctx level |
-		obj := Object _objectForOop: '', processOop asString, ''.
+		obj := Object _objectForOop: ', processOop asString, '.
 		proc := nil.
 		(obj isNil or: [ obj = 20 ]) ifTrue: [ proc := GciSession current process ].
 		proc isNil ifTrue: [
@@ -801,10 +801,10 @@ GbxDebuggerService >> restart [
 		proc isNil ifTrue: [ proc := obj ].
 		
 		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
-		level := '', lvl asString, ''.
+		level := ', lvl asString, '.
 		[ proc _trimStackToLevel: level ] on: Error do: [ ^ ''false'' ].
 		''true''
-	] value''.
+	] value'.
 
 	result := self executeDebugScript: script.
 	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
@@ -828,9 +828,9 @@ GbxDebuggerService >> restart [
 GbxDebuggerService >> restartLevelFromServerStack [
 	| raw lines |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ nil ].
-	raw := self executeDebugScript: ''[
+	raw := self executeDebugScript: '[
 		| obj proc stream maxDepth level stackReport fullEntry methodOrNil className selectorName source quick offsets line offset |
-		obj := Object _objectForOop: '', processOop asString, ''.
+		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ '''' ].
 		proc := obj.
 		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
@@ -875,7 +875,7 @@ GbxDebuggerService >> restartLevelFromServerStack [
 				]
 		].
 		stream contents
-	] value''.
+	] value'.
 	raw ifNil: [ ^ nil ].
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
 	(raw respondsTo: [ #splitOn: ] asSymbol) ifFalse: [ ^ nil ].
@@ -884,10 +884,10 @@ GbxDebuggerService >> restartLevelFromServerStack [
 		| parts className selectorName |
 		parts := line splitOn: Character tab.
 		parts size >= 3 ifTrue: [
-			className := [ (parts at: 2) asString ] on: Error do: [ '''' ].
-			selectorName := [ (parts at: 3) asString ] on: Error do: [ '''' ].
-			((className = ''nil'' or: [ className = ''<unknown>'' ])
-				and: [ selectorName = ''nil'' or: [ selectorName = ''unboundMethod'' ] ])
+			className := [ (parts at: 2) asString ] on: Error do: [ '' ].
+			selectorName := [ (parts at: 3) asString ] on: Error do: [ '' ].
+			((className = 'nil' or: [ className = '<unknown>' ])
+				and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ])
 				ifTrue: [ ^ [ parts first asInteger ] on: Error do: [ nil ] ]
 		]
 	].
