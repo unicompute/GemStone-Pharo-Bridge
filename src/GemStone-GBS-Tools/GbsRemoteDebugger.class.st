@@ -479,6 +479,12 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 	rawData ifNil: [
 		^ #( )
 	].
+	rawData = false ifTrue: [
+		^ #( )
+	].
+	(rawData respondsTo: #isEmpty) ifFalse: [
+		^ #( )
+	].
 	rawData isEmpty ifTrue: [
 		^ #( )
 	].
