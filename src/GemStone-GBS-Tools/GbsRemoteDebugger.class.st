@@ -1192,8 +1192,15 @@ GbsRemoteDebugger >> stackData: anArray [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> stepInto [
-	self safeServiceCall: [ service stepInto ] default: false.
-	self fetchStackFrames.
+	| didStep |
+	didStep := self safeServiceCall: [ service stepInto ] default: false.
+	didStep ifFalse: [
+		didStep := self
+			directStepWithPrimarySelector: '_stepIntoInFrame:'
+			fallbackSelector: '_stepOverInFrame:'
+	].
+	didStep ifTrue: [ self fetchStackFrames ].
+	^ didStep
 ]
 
 { #category : 'actions' }
@@ -1203,14 +1210,85 @@ GbsRemoteDebugger >> step [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> stepOver [
-	self safeServiceCall: [ service stepOver ] default: false.
-	self fetchStackFrames.
+	| didStep |
+	didStep := self safeServiceCall: [ service stepOver ] default: false.
+	didStep ifFalse: [
+		didStep := self
+			directStepWithPrimarySelector: '_stepOverInFrame:'
+			fallbackSelector: nil
+	].
+	didStep ifTrue: [ self fetchStackFrames ].
+	^ didStep
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> stepReturn [
-	self safeServiceCall: [ service stepReturn ] default: false.
-	self fetchStackFrames.
+	| didStep |
+	didStep := self safeServiceCall: [ service stepReturn ] default: false.
+	didStep ifTrue: [ self fetchStackFrames ].
+	^ didStep
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> currentSelectedFrameLevel [
+	| context index |
+	service ifNotNil: [
+		context := self safeServiceCall: [ service currentContext ] default: nil.
+		(context notNil and: [ context respondsTo: #level ]) ifTrue: [ ^ context level ].
+	].
+	index := (stackList notNil and: [ stackList respondsTo: #selectedIndex ])
+		ifTrue: [ stackList selectedIndex ifNil: [ 0 ] ]
+		ifFalse: [ 0 ].
+	(index > 0 and: [ contextList notNil and: [ index <= contextList size ] ]) ifTrue: [
+		context := contextList at: index.
+		(context respondsTo: #level) ifTrue: [ ^ context level ]
+	].
+	^ 1
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> directStepWithPrimarySelector: primarySelector fallbackSelector: fallbackSelector [
+	| level script raw value |
+	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
+	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ false ].
+	level := self currentSelectedFrameLevel.
+	level ifNil: [ level := 1 ].
+
+	script := '[
+		| obj proc level selector ok |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc isNil or: [ (proc respondsTo: #perform:with:) not ]) ifTrue: [ ^ ''false'' ].
+		level := ', level asString, '.
+		selector := #', primarySelector, '.
+		ok := [ proc perform: selector with: level ] on: Error do: [ nil ].
+		(ok isNil and: [ ''', (fallbackSelector ifNil: '' ifNotNil: [ fallbackSelector ]), ''' notEmpty ]) ifTrue: [
+			ok := [ proc perform: #', (fallbackSelector ifNil: '_doesNotExist:' ifNotNil: [ fallbackSelector ]), ' with: level ] on: Error do: [ nil ]
+		].
+		ok isNil ifTrue: [ ^ ''false'' ].
+		''true''
+	] value'.
+
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	raw ifNil: [ ^ false ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	value := (raw respondsTo: #asString)
+		ifTrue: [ raw asString asLowercase ]
+		ifFalse: [ '' ].
+	^ value = 'true' or: [ value = '1' or: [ value = 'ok' ] ]
 ]
 
 { #category : 'actions' }
