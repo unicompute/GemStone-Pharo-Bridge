@@ -97,12 +97,21 @@ GbsWorkspace >> doIt [
 					openRemoteDebuggerOn: ex messageText
 					processOop: processOop
 					session: activeSession
-					sourceCode: code
 			]
 			ifFalse: [
 				self inform: 'GemStone Error: ', ex messageText
 			]
 	].
+]
+
+{ #category : 'actions' }
+GbsWorkspace >> openRemoteDebuggerOn: errorString processOop: processOop session: aSession [
+	"Compatibility entry-point (used by tests and legacy call sites)."
+	^ self
+		openRemoteDebuggerOn: errorString
+		processOop: processOop
+		session: aSession
+		sourceCode: self selectedCodeOrAll
 ]
 
 { #category : 'actions' }

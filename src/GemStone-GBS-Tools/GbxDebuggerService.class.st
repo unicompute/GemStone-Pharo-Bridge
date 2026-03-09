@@ -764,9 +764,12 @@ GbxDebuggerService >> resume [
 GbxDebuggerService >> restart [
 	"VW parity: for server frames restart is cutback to selected level.
 	This maps to GsProcess>>#_trimStackToLevel:."
-	| lvl script result stepAfter targetContext |
+	| lvl script result targetContext |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
-	lvl := self currentContextLevel.
+	targetContext := self restartTargetContext.
+	lvl := (targetContext notNil and: [ targetContext respondsTo: #level ])
+		ifTrue: [ targetContext level ]
+		ifFalse: [ self currentContextLevel ].
 	lvl ifNil: [ lvl := 1 ].
 
 	script := '[
@@ -784,26 +787,8 @@ GbxDebuggerService >> restart [
 	
 	"Recompute context list after trim"
 	self recomputeContextList.
-	
-	"Mark the first context as executed code frame so it shows 'GS: Executed code @...'"
-	self contextList ifNotEmpty: [ :contexts |
-		targetContext := contexts first.
-		(targetContext respondsTo: #markAsExecutedCodeFrame) ifTrue: [
-			targetContext markAsExecutedCodeFrame.
-		].
-	].
-	
 	self selectRestartTargetContext.
 	self forceRestartPositionToMethodStart.
-	stepAfter := self currentStepPoint.
-	(stepAfter isNil or: [ stepAfter > 1 ]) ifTrue: [
-		((self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true)
-			or: [ self runDebugProcessCommand: 'runToStepPoint' withInteger: 1 recompute: true ])
-				ifTrue: [
-					self selectRestartTargetContext.
-					self forceRestartPositionToMethodStart
-				]
-	].
 	self updateSourceMapFromCurrentContext.
 	^ true
 ]
@@ -836,6 +821,7 @@ GbxDebuggerService >> forceRestartPositionToMethodStart [
 GbxDebuggerService >> restartTargetContext [
 	| contexts |
 	contexts := self contextList.
+	(contexts isCollection and: [ contexts respondsTo: #isEmpty ]) ifFalse: [ ^ nil ].
 	contexts ifEmpty: [ ^ nil ].
 	^ contexts
 		detect: [ :ctx |
