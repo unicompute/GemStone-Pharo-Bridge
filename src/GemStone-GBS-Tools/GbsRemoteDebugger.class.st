@@ -637,7 +637,12 @@ GbsRemoteDebugger >> fetchStackFrames [
 	stackList items: (contextList collect: [ :ctx | ctx printString ]).
 
 	contextList ifNotEmpty: [
-		| preferredIndex |
+		| preferredIndex firstContext |
+		"Mark first frame as executed code frame so it shows 'GS: Executed code @...'"
+		firstContext := contextList at: 1.
+		(firstContext respondsTo: #markAsExecutedCodeFrame) ifTrue: [
+			firstContext markAsExecutedCodeFrame.
+		].
 		preferredIndex := self preferredInitialContextIndex.
 		stackList selectIndex: preferredIndex.
 		self contextSelected: (contextList at: preferredIndex)
@@ -672,9 +677,14 @@ GbsRemoteDebugger >> fetchStackFramesFromData [
 	
 	contextList := contexts.
 	stackList items: (contexts collect: [ :ctx | ctx printString ]).
-	
+
 	contexts ifNotEmpty: [
-		| preferredIndex |
+		| preferredIndex firstContext |
+		"Mark first frame as executed code frame so it shows 'GS: Executed code @...'"
+		firstContext := contexts at: 1.
+		(firstContext respondsTo: #markAsExecutedCodeFrame) ifTrue: [
+			firstContext markAsExecutedCodeFrame.
+		].
 		preferredIndex := self preferredInitialContextIndex.
 		stackList selectIndex: preferredIndex.
 		self contextSelected: (contexts at: preferredIndex)
@@ -1841,6 +1851,11 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	index = 0 ifTrue: [ index := self preferredInitialContextIndex ].
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
 	context := contextList at: index.
+
+	"Mark as executed code frame so it shows 'GS: Executed code @...' in printString"
+	(context respondsTo: #markAsExecutedCodeFrame) ifTrue: [
+		context markAsExecutedCodeFrame.
+	].
 
 	(context respondsTo: #quickStepPoint:)
 		ifTrue: [ context quickStepPoint: 1 ].

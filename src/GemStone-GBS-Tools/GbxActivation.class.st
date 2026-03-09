@@ -395,6 +395,13 @@ GbxActivation >> isExecutedCodeFrame [
 		and: [ selectorString = 'nil' or: [ selectorString = 'unboundMethod' ] ]
 ]
 
+{ #category : 'testing' }
+GbxActivation >> markAsExecutedCodeFrame [
+	"Mark this frame as an executed code frame (for restart)"
+	methodClass := '<unknown>'.
+	selector := #unboundMethod.
+]
+
 { #category : 'accessing' }
 GbxActivation >> selfOop [
 	^ selfOop
