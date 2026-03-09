@@ -763,20 +763,19 @@ GbxDebuggerService >> resume [
 { #category : 'actions' }
 GbxDebuggerService >> basicReenterServerContext [
 	"Executed in a debugger service process.
-	A server context is selected. Reset to the initial state of that context, 
-	as if it had just been entered. Discard any execution since the 
-	context was entered."
+	Identify the target context for restart (usually the Do-it frame).
+	Reset to the initial state of that context, as if it had just been entered.
+	Discard any execution since the context was entered."
 	| theContext |
-	theContext := currentContext.
+	theContext := self restartTargetContext.
+	theContext ifNil: [ theContext := currentContext ].
 	theContext ifNil: [ ^ false ].
 	
 	self cutbackToGsContext: theContext
 		finishWith: [
-			"Level numbers may have changed, and client contexts 
-			above me may have been removed. In either case, must 
-			recompute context, and if level numbers have changed 
-			the GbxActivation will be a new instance, so I must 
-			immediately compute new stack and reset the selection."
+			"Level numbers have changed, and client contexts 
+			above the target have been removed. Recompute the context 
+			list and select the reset target context."
 			self recomputeContextList.
 			self selectRestartTargetContext.
 			currentContext ifNotNil: [
@@ -835,13 +834,14 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 		
 		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
 		[ 
+			"Trim everything above the target level"
 			proc _trimStackToLevel: ', lvl asString, '.
-			"If we are at level 1 (Executed code), we must explicitly reset the PC to 1"
-			', lvl asString, ' = 1 ifTrue: [
-				[ proc _restart: 1 ] on: Error do: [
-					"Fallback if _restart: isn''t available or fails"
-					[ (proc contextAt: 1) pc: 1 ] on: Error do: [ nil ]
-				]
+			
+			"Now that we have trimmed, the target frame is at level 1.
+			We must explicitly reset its instruction pointer to start from the beginning."
+			[ proc _restart: 1 ] on: Error do: [
+				"Fallback if _restart: isn''t available or fails"
+				[ (proc contextAt: 1) pc: 1 ] on: Error do: [ nil ]
 			].
 		] on: Error do: [ ^ ''false'' ].
 		''true''
