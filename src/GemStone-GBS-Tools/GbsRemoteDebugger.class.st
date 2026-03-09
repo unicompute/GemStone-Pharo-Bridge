@@ -131,14 +131,7 @@ GbsRemoteDebugger >> applySourceMapHighlightFor: aContext [
 	(interval isNil or: [ (interval respondsTo: #first) not or: [ (interval respondsTo: #last) not ] ]) ifTrue: [
 		^ self clearSourceHighlight
 	].
-	[
-		(sourceText respondsTo: #selectionInterval:)
-			ifTrue: [ sourceText selectionInterval: (interval first to: interval last) ]
-			ifFalse: [
-				(sourceText respondsTo: #selectFrom:to:)
-					ifTrue: [ sourceText selectFrom: interval first to: interval last ]
-			]
-	] on: Error do: [ ].
+	self selectAndRevealFrom: interval first to: interval last inTextPresenter: sourceText.
 ]
 
 { #category : 'private' }
@@ -207,8 +200,10 @@ GbsRemoteDebugger >> clearSourceHighlight [
 		(sourceText respondsTo: #text)
 			ifTrue: [ textSize := sourceText text asString size ]
 			ifFalse: [ textSize := 0 ].
-		(sourceText respondsTo: #selectionInterval:)
-			ifTrue: [ sourceText selectionInterval: (textSize + 1 to: textSize) ]
+		self
+			selectAndRevealFrom: textSize + 1
+			to: textSize
+			inTextPresenter: sourceText
 	] on: Error do: [ ].
 ]
 
@@ -981,13 +976,43 @@ GbsRemoteDebugger >> selectLineNumber: lineNumber inTextPresenter: aTextPresente
 	].
 	lineEnd := lineEnd - 1.
 	lineEnd < lineStart ifTrue: [ lineEnd := lineStart ].
+	self selectAndRevealFrom: lineStart to: lineEnd inTextPresenter: aTextPresenter.
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> selectAndRevealFrom: startIndex to: endIndex inTextPresenter: aTextPresenter [
+	| start stop widget controller |
+	aTextPresenter ifNil: [ ^ self ].
+	start := startIndex ifNil: [ 1 ].
+	stop := endIndex ifNil: [ start ].
+	stop < start ifTrue: [ stop := start ].
+
 	[
 		(aTextPresenter respondsTo: #selectionInterval:)
-			ifTrue: [ aTextPresenter selectionInterval: (lineStart to: lineEnd) ]
+			ifTrue: [ aTextPresenter selectionInterval: (start to: stop) ]
 			ifFalse: [
 				(aTextPresenter respondsTo: #selectFrom:to:)
-					ifTrue: [ aTextPresenter selectFrom: lineStart to: lineEnd ]
-			]
+					ifTrue: [ aTextPresenter selectFrom: start to: stop ]
+			].
+
+		"VW-like behavior: ensure selection is visible and scrolled into view."
+		(aTextPresenter respondsTo: #withAdapterDo:)
+			ifTrue: [
+				aTextPresenter withAdapterDo: [ :adapter |
+					widget := [ adapter widget ] on: Error do: [ nil ].
+					widget ifNotNil: [
+						(widget respondsTo: #displaySelection:)
+							ifTrue: [ widget displaySelection: true ].
+						controller := [ widget controller ] on: Error do: [ nil ].
+						controller ifNotNil: [
+							(controller respondsTo: #selectAndScrollFrom:to:)
+								ifTrue: [ controller selectAndScrollFrom: start to: stop ].
+							(controller respondsTo: #selectFrom:to:)
+								ifTrue: [ controller selectFrom: start to: stop ].
+						]
+					]
+				]
+			].
 	] on: Error do: [ ].
 ]
 
@@ -1978,14 +2003,7 @@ GbsRemoteDebugger >> moveSourceCursorToStart [
 		ifTrue: [ sourceText text asString ]
 		ifFalse: [ '' ] ] on: Error do: [ '' ].
 	text isEmpty ifTrue: [ ^ self ].
-	[
-		(sourceText respondsTo: #selectionInterval:)
-			ifTrue: [ sourceText selectionInterval: (1 to: 1) ]
-			ifFalse: [
-				(sourceText respondsTo: #selectFrom:to:)
-					ifTrue: [ sourceText selectFrom: 1 to: 1 ]
-			]
-	] on: Error do: [ ].
+	self selectAndRevealFrom: 1 to: 1 inTextPresenter: sourceText.
 ]
 
 { #category : 'private' }
