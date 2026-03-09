@@ -113,8 +113,29 @@ GbsRemoteDebugger >> acceptSourceEdits [
 
 { #category : 'private' }
 GbsRemoteDebugger >> applySourceMapHighlightFor: aContext [
-	| map interval lineNumber |
+	| map interval lineNumber stepPoint sourceOffsets |
 	sourceText ifNil: [ ^ self ].
+	
+	"Check if this is an executed code frame (restart position)"
+	(aContext respondsTo: #isExecutedCodeFrame) ifTrue: [
+		aContext isExecutedCodeFrame ifTrue: [
+			"Highlight the start of the source code for executed code frames"
+			stepPoint := aContext quickStepPoint ifNil: [ 1 ].
+			sourceOffsets := aContext sourceOffsets ifNil: [ #( 1 ) ].
+			
+			"Use source offset to highlight the correct position"
+			(sourceOffsets isCollection and: [ sourceOffsets isEmpty not and: [ stepPoint <= sourceOffsets size ] ]) ifTrue: [
+				interval := sourceOffsets at: stepPoint ifAbsent: [ 1 ].
+				interval ifNil: [ interval := 1 ].
+				interval > 0 ifTrue: [
+					^ self selectAndRevealFrom: interval to: interval inTextPresenter: sourceText
+				]
+			].
+			"Fall back to line 1 highlighting"
+			^ self selectLineNumber: 1 inTextPresenter: sourceText
+		]
+	].
+	
 	map := self sourceMapFor: aContext.
 	(map isCollection and: [ map isEmpty not ]) ifFalse: [
 		lineNumber := (aContext respondsTo: #displayedLineNumber)
