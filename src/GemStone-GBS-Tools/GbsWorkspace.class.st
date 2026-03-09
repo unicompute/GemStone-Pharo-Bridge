@@ -97,6 +97,7 @@ GbsWorkspace >> doIt [
 					openRemoteDebuggerOn: ex messageText
 					processOop: processOop
 					session: activeSession
+					sourceCode: code
 			]
 			ifFalse: [
 				self inform: 'GemStone Error: ', ex messageText
@@ -374,9 +375,9 @@ GbsWorkspace >> localPrintIt [
 ]
 
 { #category : 'actions' }
-GbsWorkspace >> openRemoteDebuggerOn: errorString processOop: processOop session: aSession [
-	"Open the GbsRemoteDebugger on a GemStone error"
-	| errorText safeProcessOop |
+GbsWorkspace >> openRemoteDebuggerOn: errorString processOop: processOop session: aSession sourceCode: sourceCode [
+	"Open the GbsRemoteDebugger on a GemStone error with source code"
+	| errorText safeProcessOop debugger |
 
 	"Ensure errorString is actually a string"
 	errorText := errorString ifNil: [ 'Unknown Error' ] ifNotNil: [ :es | es asString ].
@@ -387,10 +388,12 @@ GbsWorkspace >> openRemoteDebuggerOn: errorString processOop: processOop session
 
 	"Open the debugger using the class-side method"
 	[
-		GbsRemoteDebugger 
-			openOn: errorText 
-			process: safeProcessOop 
-			session: aSession
+		debugger := GbsRemoteDebugger
+			openOn: errorText
+			process: safeProcessOop
+			session: aSession.
+		"Set the initial source code for the first frame"
+		debugger setInitialSourceCode: sourceCode.
 	] on: Error do: [ :ex |
 		Transcript
 			show: 'Failed to open debugger: ';

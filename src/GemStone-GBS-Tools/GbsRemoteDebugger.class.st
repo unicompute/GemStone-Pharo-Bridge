@@ -250,8 +250,14 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 	service ifNotNil: [ service selectContext: context ].
 	context ifNil: [ ^ self ].
 
-	"Display source code - use cached source if available"
-	sourceCode := context sourceCode.
+	"Display source code - use cached sourceString if available (from setInitialSourceCode)"
+	sourceCode := nil.
+	(context respondsTo: #sourceString) ifTrue: [
+		sourceCode := context sourceString.
+	].
+	(sourceCode isNil or: [ sourceCode isEmpty ]) ifTrue: [
+		sourceCode := context sourceCode.
+	].
 	(sourceCode isNil or: [ sourceCode isEmpty ]) ifTrue: [
 		| fullSource |
 		fullSource := self fetchFullSourceFor: context.
@@ -867,6 +873,20 @@ GbsRemoteDebugger >> isLikelyUserFrame: aContext [
 { #category : 'accessing' }
 GbsRemoteDebugger >> label: aString [
 	errorMessageLabel ifNotNil: [ errorMessageLabel label: aString ]
+]
+
+{ #category : 'accessing' }
+GbsRemoteDebugger >> setInitialSourceCode: aString [
+	"Set the source code for the first (top) context - the code that was being executed"
+	contextList ifEmpty: [ ^ self ].
+	| topContext |
+	topContext := contextList at: 1.
+	(topContext respondsTo: #sourceString:) ifTrue: [
+		topContext sourceString: aString.
+	].
+	"Select the top context to show the source"
+	stackList selectIndex: 1.
+	self contextSelected: topContext.
 ]
 
 { #category : 'private' }
