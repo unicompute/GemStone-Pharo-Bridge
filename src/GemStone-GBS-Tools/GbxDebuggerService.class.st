@@ -779,11 +779,13 @@ GbxDebuggerService >> basicReenterServerContext [
 			immediately compute new stack and reset the selection."
 			self recomputeContextList.
 			self selectRestartTargetContext.
-			(currentContext notNil and: [ currentContext respondsTo: #markAsExecutedCodeFrame ]) ifTrue: [
-				currentContext markAsExecutedCodeFrame.
+			currentContext ifNotNil: [
+				(currentContext respondsTo: #markAsExecutedCodeFrame) ifTrue: [
+					currentContext markAsExecutedCodeFrame.
+				].
+				self forceRestartPositionToMethodStart.
+				self updateSourceMapFromCurrentContext.
 			].
-			self forceRestartPositionToMethodStart.
-			self updateSourceMapFromCurrentContext.
 			self notifyContextChanged.
 		].
 	^ true

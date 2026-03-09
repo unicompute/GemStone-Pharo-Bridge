@@ -1866,6 +1866,12 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	(context respondsTo: #markAsExecutedCodeFrame) ifTrue: [
 		context markAsExecutedCodeFrame.
 	].
+	
+	"Update service to reflect changed state"
+	service ifNotNil: [
+		service currentContext: context.
+		service updateSourceMapFromCurrentContext.
+	].
 
 	"Refresh list strings so the '@1 line 1' update is visible"
 	stackList ifNotNil: [
