@@ -800,10 +800,10 @@ GbxDebuggerService >> restart [
 		].
 		proc isNil ifTrue: [ proc := obj ].
 		
-		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''''false'''' ].
+		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
 		level := '', lvl asString, ''.
-		[ proc _trimStackToLevel: level ] on: Error do: [ ^ ''''false'''' ].
-		''''true''''
+		[ proc _trimStackToLevel: level ] on: Error do: [ ^ ''false'' ].
+		''true''
 	] value''.
 
 	result := self executeDebugScript: script.
@@ -831,7 +831,7 @@ GbxDebuggerService >> restartLevelFromServerStack [
 	raw := self executeDebugScript: ''[
 		| obj proc stream maxDepth level stackReport fullEntry methodOrNil className selectorName source quick offsets line offset |
 		obj := Object _objectForOop: '', processOop asString, ''.
-		obj isNil ifTrue: [ ^ '''''' ].
+		obj isNil ifTrue: [ ^ '''' ].
 		proc := obj.
 		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
 			(obj respondsTo: #serverProcess) ifTrue: [
@@ -848,7 +848,7 @@ GbxDebuggerService >> restartLevelFromServerStack [
 				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
 		].
 		(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ])
-			ifTrue: [ ^ '''''' ].
+			ifTrue: [ ^ '''' ].
 		stream := WriteStream on: String new.
 		maxDepth := 200.
 		level := 1.
@@ -863,9 +863,9 @@ GbxDebuggerService >> restartLevelFromServerStack [
 					methodOrNil := ((fullEntry respondsTo: #at:) and: [ fullEntry size >= 1 ])
 						ifTrue: [ [ fullEntry at: 1 ] on: Error do: [ nil ] ]
 						ifFalse: [ nil ].
-					className := [ methodOrNil inClass name asString ] on: Error do: [ ''''nil'''' ].
-					selectorName := [ (fullEntry at: 4) ifNil: [ ''''nil'''' ] ifNotNil: [ :s | s asString ] ]
-						on: Error do: [ ''''nil'''' ].
+					className := [ methodOrNil inClass name asString ] on: Error do: [ ''nil'' ].
+					selectorName := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ]
+						on: Error do: [ ''nil'' ].
 					stream
 						nextPutAll: level asString; tab;
 						nextPutAll: className; tab;
@@ -878,7 +878,7 @@ GbxDebuggerService >> restartLevelFromServerStack [
 	] value''.
 	raw ifNil: [ ^ nil ].
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
-	(raw respondsTo: #splitOn) ifFalse: [ ^ nil ].
+	(raw respondsTo: [ #splitOn: ] asSymbol) ifFalse: [ ^ nil ].
 	lines := raw splitOn: Character lf.
 	lines do: [ :line |
 		| parts className selectorName |
