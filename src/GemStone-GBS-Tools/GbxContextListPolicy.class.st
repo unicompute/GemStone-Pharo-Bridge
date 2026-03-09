@@ -460,15 +460,20 @@ GbxContextListPolicy >> isGlue: aContext [
 
 { #category : 'testing' }
 GbxContextListPolicy >> isGlueContext: aContext [
-	"Check if a context is GBS glue code"
+	"Check if a context is GBS glue code or server-side exception plumbing that should be hidden."
 	| className selector |
 	className := aContext methodClass ifNil: [ ^ false ].
 	selector := aContext selector ifNil: [ ^ false ].
 
 	"Server-side exception plumbing and VM return frames should be hidden by default."
-	(className = 'AbstractException') ifTrue: [ ^ true ].
-	(className = 'GsNMethod class') ifTrue: [ ^ true ].
+	(className = 'AbstractException') ifTrue: [ 
+		^ #( #signal #_signal #defaultAction #_defaultAction #_signalToDebugger ) includes: selector
+	].
+	(className = 'GsNMethod class') ifTrue: [ 
+		^ #( #_gsReturnToC ) includes: selector
+	].
 	((className = 'Number') and: [ selector = #_errorDivideByZero ]) ifTrue: [ ^ true ].
+	((className = 'SmallInteger') and: [ selector = #/ ]) ifTrue: [ ^ true ].
 
 	"GBS glue classes"
 	(className beginsWith: 'Gbs') ifTrue: [ ^ true ].
