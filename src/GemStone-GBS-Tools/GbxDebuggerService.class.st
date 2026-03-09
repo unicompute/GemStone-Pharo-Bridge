@@ -882,13 +882,24 @@ GbxDebuggerService >> restartLevelFromServerStack [
 
 { #category : 'private' }
 GbxDebuggerService >> forceRestartPositionToMethodStart [
+	"Force the restart target context to position at method start (step=1, line=1)"
 	| target |
 	target := self restartTargetContext.
 	target ifNil: [ ^ self ].
+	
+	"Reset step point to 1"
 	(target respondsTo: #quickStepPoint:)
 		ifTrue: [ target quickStepPoint: 1 ].
+	(target respondsTo: #stepPoint)
+		ifTrue: [ target instVarNamed: #quickStepPoint put: 1 ].
+		
+	"Reset IP offset to 1"
 	(target respondsTo: #ipOffset:)
 		ifTrue: [ target ipOffset: 1 ].
+	(target respondsTo: #ipOffset)
+		ifTrue: [ target instVarNamed: #ipOffset put: 1 ].
+		
+	"Reset source offsets to start at position 1"
 	(target respondsTo: #sourceOffsets) ifTrue: [
 		| offsets |
 		offsets := target sourceOffsets.
@@ -897,10 +908,15 @@ GbxDebuggerService >> forceRestartPositionToMethodStart [
 				ifTrue: [
 					| copy |
 					copy := offsets asArray copy.
-					copy at: 1 put: ((copy at: 1 ifAbsent: [ 1 ]) ifNil: [ 1 ]).
+					copy size > 0 ifTrue: [ copy at: 1 put: 1 ].
 					target sourceOffsets: copy
 				]
 		]
+	].
+	
+	"Reset displayed line number to 1"
+	(target respondsTo: #displayedLineNumber) ifTrue: [
+		target instVarNamed: #quickStepPoint put: 1
 	].
 ]
 

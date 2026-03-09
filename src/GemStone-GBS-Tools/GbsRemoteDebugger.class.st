@@ -1852,7 +1852,13 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	| index context offsets copy |
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
 
-	"Find server-reported executed-code frame. Do not mutate arbitrary frame metadata."
+	"First, mark the first context as executed code frame with step=1, line=1"
+	context := contextList at: 1.
+	(context respondsTo: #markAsExecutedCodeFrame) ifTrue: [
+		context markAsExecutedCodeFrame.
+	].
+
+	"Find server-reported executed-code frame (should now show @1 line 1)"
 	index := contextList
 		findFirst: [ :ctx |
 			[ ctx printString beginsWith: 'GS: Executed code @' ] on: Error do: [ false ] ].
@@ -1865,12 +1871,15 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	(context respondsTo: #ipOffset:)
 		ifTrue: [ context ipOffset: 1 ].
 	(context respondsTo: #sourceOffsets) ifTrue: [
-		offsets := [ context sourceOffsets ] on: Error do: [ #() ].
+		offsets := [ context sourceOffsets ] on: Error do: [ #( 1 ) ].
 		(offsets isCollection and: [ offsets isEmpty not ]) ifTrue: [
 			copy := offsets asArray copy.
-			copy at: 1 put: 1.
+			copy size > 0 ifTrue: [ copy at: 1 put: 1 ].
 			(context respondsTo: #sourceOffsets:)
 				ifTrue: [ context sourceOffsets: copy ]
+		] ifFalse: [
+			(context respondsTo: #sourceOffsets:)
+				ifTrue: [ context sourceOffsets: #( 1 ) ]
 		]
 	].
 
