@@ -781,19 +781,21 @@ GbxDebuggerService >> basicReenterServerContext [
 	theContext := self restartTargetContext.
 	theContext ifNil: [ theContext := currentContext ].
 	theContext ifNil: [ ^ false ].
-	
+
 	(self cutbackToGsContext: theContext
 		finishWith: [
-			"Level numbers have changed, and client contexts 
-			above the target have been removed. Recompute the context 
+			"Level numbers have changed, and client contexts
+			above the target have been removed. Recompute the context
 			list and select the reset target context."
 			self recomputeContextList.
 			self selectRestartTargetContext.
 			currentContext ifNotNil: [
+				"Force position to method start FIRST"
+				self forceRestartPositionToMethodStart.
+				"Then mark as executed code frame (this ensures step=1, line=1)"
 				(currentContext respondsTo: #markAsExecutedCodeFrame) ifTrue: [
 					currentContext markAsExecutedCodeFrame.
 				].
-				self forceRestartPositionToMethodStart.
 				self updateSourceMapFromCurrentContext.
 			].
 			self notifyContextChanged.
@@ -935,39 +937,25 @@ GbxDebuggerService >> restartLevelFromServerStack [
 GbxDebuggerService >> forceRestartPositionToMethodStart [
 	"Force the restart target context to position at method start (step=1, line=1)"
 	| target |
-	target := self restartTargetContext.
+	target := self currentContext.
+	target ifNil: [ target := self restartTargetContext ].
 	target ifNil: [ ^ self ].
-	
-	"Reset step point to 1"
-	(target respondsTo: #quickStepPoint:)
-		ifTrue: [ target quickStepPoint: 1 ].
-	(target respondsTo: #stepPoint)
-		ifTrue: [ target instVarNamed: #quickStepPoint put: 1 ].
-		
+
+	"Reset step point to 1 - use instVar access to bypass any validation"
+	target instVarNamed: #quickStepPoint put: 1.
+
 	"Reset IP offset to 1"
-	(target respondsTo: #ipOffset:)
-		ifTrue: [ target ipOffset: 1 ].
-	(target respondsTo: #ipOffset)
-		ifTrue: [ target instVarNamed: #ipOffset put: 1 ].
-		
+	target instVarNamed: #ipOffset put: 1.
+
 	"Reset source offsets to start at position 1"
-	(target respondsTo: #sourceOffsets) ifTrue: [
-		| offsets |
-		offsets := target sourceOffsets.
-		(offsets isCollection and: [ offsets isEmpty not ]) ifTrue: [
-			(target respondsTo: #sourceOffsets:)
-				ifTrue: [
-					| copy |
-					copy := offsets asArray copy.
-					copy size > 0 ifTrue: [ copy at: 1 put: 1 ].
-					target sourceOffsets: copy
-				]
-		]
-	].
+	target instVarNamed: #sourceOffsets put: #( 1 ).
 	
-	"Reset displayed line number to 1"
-	(target respondsTo: #displayedLineNumber) ifTrue: [
-		target instVarNamed: #quickStepPoint put: 1
+	"Force refresh of displayed values"
+	target ifNotNil: [
+		"Ensure the context knows it's at the start"
+		(target respondsTo: #markAsExecutedCodeFrame) ifTrue: [
+			target markAsExecutedCodeFrame
+		]
 	].
 ]
 
