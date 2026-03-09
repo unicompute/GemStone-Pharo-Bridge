@@ -403,7 +403,8 @@ GbxActivation >> markAsExecutedCodeFrame [
 	selector := #unboundMethod.
 	quickStepPoint := 1.
 	ipOffset := 1.
-	sourceOffsets := #( 1 ).
+	"Provide some default offsets so that step points 1-5 at least highlight the start"
+	sourceOffsets := #( 1 1 1 1 1 ).
 ]
 
 { #category : 'accessing' }

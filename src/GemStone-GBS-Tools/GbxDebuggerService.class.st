@@ -339,9 +339,20 @@ GbxDebuggerService >> currentSourceSelectionInterval [
 
 	stepPoint := self currentStepPoint.
 	stepPoint ifNotNil: [
+		"Find exact match first"
 		entry := map
 			detect: [ :assoc | (assoc respondsTo: #key) and: [ assoc key = stepPoint ] ]
 			ifNone: [ nil ].
+			
+		"Fallback: find the highest step point number <= current stepPoint"
+		entry ifNil: [
+			| candidates |
+			candidates := map select: [ :assoc | (assoc respondsTo: #key) and: [ assoc key <= stepPoint ] ].
+			candidates ifNotEmpty: [
+				entry := candidates last. "Assuming map is sorted by key"
+			]
+		].
+
 		entry ifNotNil: [
 			selectionRange := entry value.
 			^ selectionRange
