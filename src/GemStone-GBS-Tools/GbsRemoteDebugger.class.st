@@ -981,13 +981,14 @@ GbsRemoteDebugger >> selectLineNumber: lineNumber inTextPresenter: aTextPresente
 
 { #category : 'private' }
 GbsRemoteDebugger >> selectAndRevealFrom: startIndex to: endIndex inTextPresenter: aTextPresenter [
-	| start stop widget controller |
+	| start stop |
 	aTextPresenter ifNil: [ ^ self ].
 	start := startIndex ifNil: [ 1 ].
 	stop := endIndex ifNil: [ start ].
 	stop < start ifTrue: [ stop := start ].
 
 	[
+		"Standard Spec2 way"
 		(aTextPresenter respondsTo: #selectionInterval:)
 			ifTrue: [ aTextPresenter selectionInterval: (start to: stop) ]
 			ifFalse: [
@@ -995,25 +996,29 @@ GbsRemoteDebugger >> selectAndRevealFrom: startIndex to: endIndex inTextPresente
 					ifTrue: [ aTextPresenter selectFrom: start to: stop ]
 			].
 
-		"VW-like behavior: ensure selection is visible and scrolled into view."
-		(aTextPresenter respondsTo: #withAdapterDo:)
-			ifTrue: [
-				aTextPresenter withAdapterDo: [ :adapter |
-					widget := [ adapter widget ] on: Error do: [ nil ].
-					widget ifNotNil: [
-						(widget respondsTo: #displaySelection:)
-							ifTrue: [ widget displaySelection: true ].
-						controller := [ widget controller ] on: Error do: [ nil ].
-						controller ifNotNil: [
-							(controller respondsTo: #selectAndScrollFrom:to:)
-								ifTrue: [ controller selectAndScrollFrom: start to: stop ].
-							(controller respondsTo: #selectFrom:to:)
-								ifTrue: [ controller selectFrom: start to: stop ].
-						]
+		"Pharo 13/Spec2 visibility hacks"
+		aTextPresenter withAdapterDo: [ :adapter |
+			| widget |
+			widget := [ adapter widget ] on: Error do: [ nil ].
+			widget ifNotNil: [
+				"Morph-level ensuring of selection"
+				(widget respondsTo: #setSelection:) ifTrue: [ widget setSelection: (start to: stop) ].
+				
+				"Scroll into view"
+				(widget respondsTo: #scrollSelectionIntoView) ifTrue: [ widget scrollSelectionIntoView ].
+				
+				"If it's a RubScrolledTextMorph (common in P13)"
+				(widget respondsTo: #textArea) ifTrue: [
+					| textArea |
+					textArea := widget textArea.
+					textArea ifNotNil: [
+						(textArea respondsTo: #selectFrom:to:) ifTrue: [ textArea selectFrom: start to: stop ].
+						(textArea respondsTo: #scrollSelectionIntoView) ifTrue: [ textArea scrollSelectionIntoView ].
 					]
 				]
-			].
-	] on: Error do: [ ].
+			]
+		].
+	] on: Error do: [ :ex | ].
 ]
 
 { #category : 'private' }

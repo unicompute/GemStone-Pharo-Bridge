@@ -1293,7 +1293,8 @@ GbxDebuggerService >> updateSourceMapFromCurrentContext [
 		ifNil: [ #( ) ]
 		ifNotNil: [
 			[ currentContext visibleSourceMap ] on: Error do: [ #( ) ]
-		]
+		].
+	self currentSourceSelectionInterval.
 ]
 
 { #category : 'context list' }
