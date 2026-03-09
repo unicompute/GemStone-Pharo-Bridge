@@ -626,7 +626,7 @@ GbxActivation >> tempNamesAndValues [
 GbxActivation >> visibleSourceMap [
 	"VW parity: infer highlight range from source offset and token class."
 	| map numStepPoints binaryCharClass keywordFirstCharClass keywordCharClass nullCharClass sourceText |
-	binaryCharClass := '+-*~<>=|/&@%,?!'.
+	binaryCharClass := '+-*~<>=|/&@%,?!\'.
 	keywordFirstCharClass := '_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'.
 	keywordCharClass := keywordFirstCharClass , ':0123456789'.
 	nullCharClass := ''.
