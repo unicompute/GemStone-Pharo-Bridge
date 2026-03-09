@@ -1845,17 +1845,20 @@ GbsRemoteDebugger >> moveSourceCursorToStart [
 GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	| index context offsets copy reordered |
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
-	index := contextList
-		findFirst: [ :ctx |
-			[ ctx printString beginsWith: 'GS: Executed code @' ] on: Error do: [ false ] ].
-	index = 0 ifTrue: [ index := self preferredInitialContextIndex ].
-	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
-	context := contextList at: index.
-
-	"Mark as executed code frame so it shows 'GS: Executed code @...' in printString"
+	
+	"First, mark the first context as executed code frame"
+	context := contextList at: 1.
 	(context respondsTo: #markAsExecutedCodeFrame) ifTrue: [
 		context markAsExecutedCodeFrame.
 	].
+	
+	"Now find it by its printString"
+	index := contextList
+		findFirst: [ :ctx |
+			[ ctx printString beginsWith: 'GS: Executed code @' ] on: Error do: [ false ] ].
+	index = 0 ifTrue: [ index := 1 ].
+	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
+	context := contextList at: index.
 
 	(context respondsTo: #quickStepPoint:)
 		ifTrue: [ context quickStepPoint: 1 ].
@@ -1886,6 +1889,8 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	(stackList respondsTo: #selectIndex:)
 		ifTrue: [ stackList selectIndex: 1 ].
 	self contextSelected: context.
+	"Move source cursor to start of code"
+	self moveSourceCursorToStart.
 ]
 
 { #category : 'private' }
