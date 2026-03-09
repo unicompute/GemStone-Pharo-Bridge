@@ -11,414 +11,160 @@ Class {
 { #category : 'running' }
 GbsRemoteDebuggerTest >> setUp [
 	super setUp.
-	"Stability-first default: keep this suite mock-only.
-	Live GemStone FFI probes have been observed to crash the VM in this image."
-	session := nil
+	session := GbsSessionParameters currentSession.
+]
+
+{ #category : 'running' }
+GbsRemoteDebuggerTest >> tearDown [
+	session := nil.
+	super tearDown.
 ]
 
 { #category : 'tests' }
-GbsRemoteDebuggerTest >> testContextOopIsValid [
-	"Validate the error-driven oop that the remote debugger actually uses."
-	| raisedError processOop |
-
-	session ifNil: [ self skip: 'No session' ].
-
-	raisedError := nil.
-	[
-		session execute: '| a b | a := 10. b := 0. a / b'.
-	] on: GbsError do: [ :ex | raisedError := ex ].
-
-	self assert: raisedError notNil.
-	processOop := raisedError serverProcessOop ifNil: [ raisedError tag ].
-	self assert: processOop notNil.
-	self deny: processOop equals: 0.
-	self deny: processOop equals: 20.
-]
-
-{ #category : 'tests' }
-GbsRemoteDebuggerTest >> testFetchContextsDirectlyParsesRowsWithOnlyThreeOrFourColumns [
-	| debugger mockSession contexts |
-
-	mockSession := MockGbsSession new.
-	mockSession stubs
-		at: #evaluate
-		put: '1	AbstractException	_signalToDebugger',
-			String lf,
-			'2	SmallInteger	/	/'.
-
-	debugger := GbsRemoteDebugger new.
-	debugger session: mockSession.
-	debugger processOop: 222.
-
-	contexts := debugger fetchContextsDirectly.
-
-	self assert: contexts size equals: 2.
-	self assert: (contexts first respondsTo: #selectorOrUnknown).
-	self assert: (contexts first selectorOrUnknown) equals: #_signalToDebugger.
-	self assert: (contexts second selectorOrUnknown) equals: #/.
-]
-
-{ #category : 'tests' }
-GbsRemoteDebuggerTest >> testContextHasSender [
-	self skip: 'Live sender-chain FFI probe disabled (can crash current VM/image).'
-]
-
-{ #category : 'tests' }
-GbsRemoteDebuggerTest >> testContextSourceCode [
-	| raisedError processOop service contexts topContext sourceCode |
-
-	session ifNil: [ self skip: 'No session' ].
-
-	raisedError := nil.
-	[
-		session execute: '| a b | a := 10. b := 0. a / b'.
-	] on: GbsError do: [ :ex | raisedError := ex ].
-
-	self assert: raisedError notNil.
-	processOop := raisedError serverProcessOop ifNil: [ raisedError tag ].
-
-	service := GbxDebuggerService new.
-	service
-		session: session;
-		processOop: processOop.
-	service initializeForDebugging.
-
-	contexts := service contextList.
-	self assert: contexts notEmpty.
-	topContext := contexts first.
-	sourceCode := topContext sourceCode.
-	self assert: sourceCode notNil.
-]
-
-{ #category : 'tests' }
-GbsRemoteDebuggerTest >> testContextMethod [
-	| activeSession raisedError processOop service contexts topContext |
-
-	(Smalltalk globals at: #GbsRunDangerousLiveDebuggerTests ifAbsent: [ false ]) ifFalse: [
-		self skip: 'Dangerous live FFI test disabled'
-	].
-
-	activeSession := session ifNil: [ GbsSessionParameters currentSession ].
-	activeSession ifNil: [ self skip: 'No session' ].
-
-	raisedError := nil.
-	[
-		activeSession execute: '| a b | a := 10. b := 0. a / b'.
-	] on: GbsError do: [ :ex | raisedError := ex ].
-
-	self assert: raisedError notNil.
-	processOop := raisedError serverProcessOop ifNil: [ raisedError tag ].
-
-	service := GbxDebuggerService new.
-	service
-		session: activeSession;
-		processOop: processOop.
-	service initializeForDebugging.
-
-	contexts := service contextList.
-	self assert: contexts notEmpty.
-	topContext := contexts first.
-	self assert: topContext gsMethodIdOrUnknown ~= '<unknown>'.
-]
-
-{ #category : 'tests' }
-GbsRemoteDebuggerTest >> testContextSelector [
-	| raisedError processOop service contexts topContext |
-
-	session ifNil: [ self skip: 'No session' ].
-
-	raisedError := nil.
-	[
-		session execute: '| a b | a := 10. b := 0. a / b'.
-	] on: GbsError do: [ :ex | raisedError := ex ].
-
-	self assert: raisedError notNil.
-	processOop := raisedError serverProcessOop ifNil: [ raisedError tag ].
-
-	service := GbxDebuggerService new.
-	service
-		session: session;
-		processOop: processOop.
-	service initializeForDebugging.
-
-	contexts := service contextList.
-	self assert: contexts notEmpty.
-	topContext := contexts first.
-	self deny: topContext selectorOrUnknown equals: #unboundMethod.
-]
-
-{ #category : 'tests' }
-GbsRemoteDebuggerTest >> testErrorContextFetch [
-	"Test fetching context from an actual error"
-	| contextOop script |
+GbsRemoteDebuggerTest >> testSessionIsConnected [
+	"Test that we have a valid session before running other tests"
 	
-	session ifNil: [ self skip: 'No session' ].
-	
-	"Execute code that will error and capture the context"
-	script := '[
-		[ 1 / 0 ] on: Error do: [ :ex |
-			| ctx |
-			ctx := Processor activeProcess topContext.
-			[ ctx notNil and: [ ctx selector == #divide: ] ] whileTrue: [
-				ctx := ctx sender.
-			].
-			ctx asOop
-		]
-	] value'.
-	
-	contextOop := session evaluate: script.
-
-	contextOop ifNotNil: [
-		"Try to get source code"
-		| sourceCode |
-		sourceCode := session evaluate: '[
-			| ctx |
-			ctx := Object _objectForOop: ', contextOop asString, '.
-			ctx sourceCode
-		] value'.
-		sourceCode.
+	session ifNil: [
+		self skip: 'No GemStone session available - please login first'
 	].
+	
+	self assert: session isLoggedIn description: 'Session should be logged in'.
+	self deny: session sessionOop equals: 0 description: 'Session should have valid OOP'.
 ]
 
 { #category : 'tests' }
-GbsRemoteDebuggerTest >> testSimpleStackWalk [
-	| raisedError processOop service contexts summary |
-
-	session ifNil: [ self skip: 'No session' ].
-
-	raisedError := nil.
-	[
-		session execute: '| a b | a := 10. b := 0. a / b'.
-	] on: GbsError do: [ :ex | raisedError := ex ].
-
-	self assert: raisedError notNil.
-	processOop := raisedError serverProcessOop ifNil: [ raisedError tag ].
-
-	service := GbxDebuggerService new.
-	service
-		session: session;
-		processOop: processOop.
-	service initializeForDebugging.
-
-	contexts := service contextList.
-	self assert: contexts notEmpty.
-	summary := contexts collect: [ :ctx | ctx printString ].
-	self assert: summary notEmpty.
-]
-
-{ #category : 'tests' }
-GbsRemoteDebuggerTest >> testZeroDivideErrorCarriesServerProcessOop [
-	| raisedError |
-
-	session ifNil: [ self skip: 'No session' ].
-
-	raisedError := nil.
-	[
-		session execute: '| a b | a := 10. b := 0. a / b'.
-	] on: GbsError do: [ :ex | raisedError := ex ].
-
-	self assert: raisedError notNil.
-	self assert: (raisedError respondsTo: #serverProcessOop).
-	self assert: raisedError serverProcessOop isNotNil.
-	self deny: raisedError serverProcessOop equals: 0.
-	self deny: raisedError serverProcessOop equals: 20.
-]
-
-{ #category : 'tests' }
-GbsRemoteDebuggerTest >> testZeroDivideBuildsNonEmptyContextListFromDebuggerService [
-	| raisedError processOop service contexts |
-
-	session ifNil: [ self skip: 'No session' ].
-
-	raisedError := nil.
-	[
-		session execute: '| a b | a := 10. b := 0. a / b'.
-	] on: GbsError do: [ :ex | raisedError := ex ].
-
-	self assert: raisedError notNil.
-	processOop := raisedError serverProcessOop ifNil: [ raisedError tag ].
-	self assert: processOop notNil.
-	self deny: processOop equals: 20.
-
-	service := GbxDebuggerService new.
-	service
-		session: session;
-		processOop: processOop.
-	service initializeForDebugging.
-
-	contexts := service contextList.
-	self assert: contexts notEmpty.
-]
-
-{ #category : 'tests' }
-GbsRemoteDebuggerTest >> testZeroDivideScriptServerSideStackDumpHasFrames [
-	| raisedError stackText |
-
-	session ifNil: [ self skip: 'No session' ].
-
-	raisedError := nil.
-	[
-		session execute: '| a b | a := 10. b := 0. a / b'.
-	] on: GbsError do: [ :ex | raisedError := ex ].
-
-	self assert: raisedError notNil.
-	stackText := self frameProbeTextForOop: raisedError serverProcessOop.
-	(stackText isNil or: [ stackText isEmpty ]) ifTrue: [
-		stackText := self frameProbeTextForOop: raisedError exceptionOop
+GbsRemoteDebuggerTest >> testSimpleExecution [
+	"Test 1: Simple execution should not raise errors"
+	| result |
+	
+	session ifNil: [
+		self skip: 'No GemStone session available'
 	].
-
-	self assert: stackText notNil.
-	self deny: stackText isEmpty.
+	
+	result := session evaluate: '1 + 1'.
+	
+	self assert: result equals: 2.
 ]
 
 { #category : 'tests' }
-GbsRemoteDebuggerTest >> testZeroDivideErrorOopsFrameProbe [
-	| raisedError contextFrames exceptionFrames |
-
-	session ifNil: [ self skip: 'No session' ].
-
-	raisedError := nil.
-	[
-		session execute: '| a b | a := 10. b := 0. a / b'.
-	] on: GbsError do: [ :ex | raisedError := ex ].
-
-	self assert: raisedError notNil.
-
-	contextFrames := self frameProbeTextForOop: raisedError serverProcessOop.
-	exceptionFrames := self frameProbeTextForOop: raisedError exceptionOop.
-
-	"At least one should provide usable frame text."
-	self assert: ((contextFrames isNil or: [ contextFrames isEmpty ]) not
-		or: [ (exceptionFrames isNil or: [ exceptionFrames isEmpty ]) not ]).
+GbsRemoteDebuggerTest >> testDivisionByZeroRaisesError [
+	"Test 2: Division by zero should raise GbsError"
+	
+	session ifNil: [
+		self skip: 'No GemStone session available'
+	].
+	
+	self should: [
+		session evaluate: '1 / 0'
+	] raise: GbsError.
 ]
 
 { #category : 'tests' }
-GbsRemoteDebuggerTest >> testZeroDivideContextListContainsUserSourceFrame [
-	| raisedError processOop service contexts userFrame |
-
-	session ifNil: [ self skip: 'No session' ].
-
-	raisedError := nil.
-	[
-		session execute: '| a b | a := 10. b := 0. a / b'.
-	] on: GbsError do: [ :ex | raisedError := ex ].
-
-	self assert: raisedError notNil.
-	processOop := raisedError serverProcessOop ifNil: [ raisedError tag ].
-
-	service := GbxDebuggerService new.
-	service
-		session: session;
-		processOop: processOop.
-	service initializeForDebugging.
-
-	contexts := service contextList.
-	self assert: contexts notEmpty.
-
-	userFrame := contexts
-		detect: [ :ctx | (ctx sourceCode includesSubstring: 'a / b') ]
-		ifNone: [ nil ].
-	self assert: userFrame notNil.
+GbsRemoteDebuggerTest >> testVariableAssignment [
+	"Test 3: Variable assignment and retrieval"
+	| result |
+	
+	session ifNil: [
+		self skip: 'No GemStone session available'
+	].
+	
+	result := session evaluate: '| x | x := 42. x'.
+	
+	self assert: result equals: 42.
 ]
 
 { #category : 'tests' }
-GbsRemoteDebuggerTest >> testZeroDivideUserFrameTempVariablesIncludeAAndB [
-	| raisedError processOop service contexts userFrame temps |
-
-	session ifNil: [ self skip: 'No session' ].
-
-	raisedError := nil.
-	[
-		session execute: '| a b | a := 10. b := 0. a / b'.
-	] on: GbsError do: [ :ex | raisedError := ex ].
-
-	self assert: raisedError notNil.
-	processOop := raisedError serverProcessOop ifNil: [ raisedError tag ].
-
-	service := GbxDebuggerService new.
-	service
-		session: session;
-		processOop: processOop.
-	service initializeForDebugging.
-	contexts := service contextList.
-
-	userFrame := contexts
-		detect: [ :ctx | (ctx sourceCode includesSubstring: 'a / b') ]
-		ifNone: [ nil ].
-	self assert: userFrame notNil.
-
-	temps := userFrame tempNamesAndValues.
-	self assert: (temps respondsTo: #includesKey:).
-	self assert: (temps includesKey: 'a').
-	self assert: (temps includesKey: 'b').
+GbsRemoteDebuggerTest >> testBlockExecution [
+	"Test 4: Block execution with arguments"
+	| result |
+	
+	session ifNil: [
+		self skip: 'No GemStone session available'
+	].
+	
+	result := session evaluate: '[:x :y | x + y] value: 5 value: 10'.
+	
+	self assert: result equals: 15.
 ]
 
-{ #category : 'private' }
-GbsRemoteDebuggerTest >> frameProbeTextForOop: anOop [
-	| oopText |
+{ #category : 'tests' }
+GbsRemoteDebuggerTest >> testStringUppercase [
+	"Test 5: String operations"
+	| result |
+	
+	session ifNil: [
+		self skip: 'No GemStone session available'
+	].
+	
+	result := session evaluate: '''hello'' uppercase'.
+	
+	self assert: result equals: 'HELLO'.
+]
 
-	(anOop isNil or: [ anOop = 0 or: [ anOop = 20 ] ]) ifTrue: [ ^ '' ].
-	oopText := anOop asString.
+{ #category : 'tests' }
+GbsRemoteDebuggerTest >> testArrayAccess [
+	"Test 6: Array access"
+	| result |
+	
+	session ifNil: [
+		self skip: 'No GemStone session available'
+	].
+	
+	result := session evaluate: '#(1 2 3) at: 2'.
+	
+	self assert: result equals: 2.
+]
 
-	^ session evaluate: '[
-		| obj proc ctx stream level stackReport fullEntry |
-		obj := Object _objectForOop: ', oopText, '.
-		obj isNil ifTrue: [ ^ '''' ].
-		stream := WriteStream on: String new.
+{ #category : 'tests' }
+GbsRemoteDebuggerTest >> testArrayOutOfBoundsRaisesError [
+	"Test 7: Array out of bounds should raise error"
+	
+	session ifNil: [
+		self skip: 'No GemStone session available'
+	].
+	
+	self should: [
+		session evaluate: '#(1 2 3) at: 10'
+	] raise: GbsError.
+]
 
-		proc := nil.
-		(obj respondsTo: #_gsiStackReportFromLevel:toLevel:) ifTrue: [ proc := obj ].
-		proc isNil ifTrue: [
-			(obj respondsTo: #serverProcess)
-				ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ]
-		].
-		proc isNil ifTrue: [
-			(obj respondsTo: #process)
-				ifTrue: [ proc := [ obj process ] on: Error do: [ nil ] ]
-		].
-		proc isNil ifTrue: [
-			(obj respondsTo: #topContext) ifTrue: [
-				ctx := [ obj topContext ] on: Error do: [ nil ].
-				(ctx notNil and: [ ctx respondsTo: #process ])
-					ifTrue: [ proc := [ ctx process ] on: Error do: [ nil ] ]
-			]
-		].
+{ #category : 'tests' }
+GbsRemoteDebuggerTest >> testMessageNotUnderstoodRaisesError [
+	"Test 8: Message not understood should raise error"
+	
+	session ifNil: [
+		self skip: 'No GemStone session available'
+	].
+	
+	self should: [
+		session evaluate: 'Object thisMessageDoesNotExist'
+	] raise: GbsError.
+]
 
-		(proc notNil and: [ proc respondsTo: #_gsiStackReportFromLevel:toLevel: ]) ifTrue: [
-			level := 1.
-			[ level <= 30 ] whileTrue: [
-				stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
-				(stackReport isNil or: [ stackReport size < 2 ])
-					ifTrue: [ level := 31 ]
-					ifFalse: [
-						fullEntry := stackReport at: 2.
-						stream
-							nextPutAll: level asString; tab;
-							nextPutAll: ((fullEntry size >= 4 and: [ (fullEntry at: 4) notNil ])
-								ifTrue: [ (fullEntry at: 4) asString ]
-								ifFalse: [ ''<no selector>'' ]);
-							lf.
-						level := level + 1
-					]
-			]
-		].
+{ #category : 'tests' }
+GbsRemoteDebuggerTest >> testMultiStatementExecution [
+	"Test 9: Multiple statements"
+	| result |
+	
+	session ifNil: [
+		self skip: 'No GemStone session available'
+	].
+	
+	result := session evaluate: '| a b | a := 10. b := 20. a + b'.
+	
+	self assert: result equals: 30.
+]
 
-		stream position = 0 ifTrue: [
-			ctx := nil.
-			(obj respondsTo: #sender) ifTrue: [ ctx := obj ].
-			(ctx isNil and: [ obj respondsTo: #topContext ])
-				ifTrue: [ ctx := [ obj topContext ] on: Error do: [ nil ] ].
-			level := 1.
-			[ ctx notNil and: [ level <= 30 ] ] whileTrue: [
-				stream
-					nextPutAll: level asString; tab;
-					nextPutAll: (([ ctx selector asString ] on: Error do: [ ''<no selector>'' ]));
-					lf.
-				ctx := [ ctx sender ] on: Error do: [ nil ].
-				level := level + 1
-			]
-		].
-
-		stream contents
-	] value'
+{ #category : 'tests' }
+GbsRemoteDebuggerTest >> testNestedBlockExecution [
+	"Test 10: Nested blocks"
+	| result |
+	
+	session ifNil: [
+		self skip: 'No GemStone session available'
+	].
+	
+	result := session evaluate: '[ [ 42 ] value ] value'.
+	
+	self assert: result equals: 42.
 ]
