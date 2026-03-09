@@ -1849,16 +1849,10 @@ GbsRemoteDebugger >> moveSourceCursorToStart [
 
 { #category : 'private' }
 GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
-	| index context offsets copy reordered |
+	| index context offsets copy |
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
-	
-	"First, mark the first context as executed code frame"
-	context := contextList at: 1.
-	(context respondsTo: #markAsExecutedCodeFrame) ifTrue: [
-		context markAsExecutedCodeFrame.
-	].
-	
-	"Now find it by its printString"
+
+	"Find server-reported executed-code frame. Do not mutate arbitrary frame metadata."
 	index := contextList
 		findFirst: [ :ctx |
 			[ ctx printString beginsWith: 'GS: Executed code @' ] on: Error do: [ false ] ].
@@ -1880,20 +1874,8 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 		]
 	].
 
-	"VW intent: restarted executed frame should be top/selected."
-	index ~= 1 ifTrue: [
-		reordered := OrderedCollection new: contextList size.
-		reordered add: context.
-		1 to: contextList size do: [ :i |
-			i = index ifFalse: [ reordered add: (contextList at: i) ] ].
-		contextList := reordered asArray.
-		stackList ifNotNil: [
-			(stackList respondsTo: #items:)
-				ifTrue: [ stackList items: (contextList collect: [ :ctx | ctx printString ]) ]
-		]
-	].
 	(stackList respondsTo: #selectIndex:)
-		ifTrue: [ stackList selectIndex: 1 ].
+		ifTrue: [ stackList selectIndex: index ].
 	self contextSelected: context.
 	"Move source cursor to start of code"
 	self moveSourceCursorToStart.

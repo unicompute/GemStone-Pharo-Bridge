@@ -764,17 +764,34 @@ GbxDebuggerService >> resume [
 GbxDebuggerService >> restart [
 	"VW parity: for server frames restart is cutback to selected level.
 	This maps to GsProcess>>#_trimStackToLevel:."
-	| lvl script result targetContext |
+	| lvl script result targetContext serverLevel |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
 	targetContext := self restartTargetContext.
+	serverLevel := self restartLevelFromServerStack.
 	lvl := (targetContext notNil and: [ targetContext respondsTo: #level ])
 		ifTrue: [ targetContext level ]
 		ifFalse: [ self currentContextLevel ].
+	(serverLevel isNumber and: [ serverLevel > 0 ]) ifTrue: [ lvl := serverLevel ].
 	lvl ifNil: [ lvl := 1 ].
 
 	script := '[
-		| proc level |
-		proc := Object _objectForOop: ', processOop asString, '.
+		| obj proc level |
+		obj := Object _objectForOop: ', processOop asString, '.
+		proc := obj.
+		((proc respondsTo: #_trimStackToLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [
+				proc := [ obj serverProcess ] on: Error do: [ nil ]
+			]
+		].
+		((proc isNil or: [ (proc respondsTo: #_trimStackToLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_trimStackToLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
 		proc ifNil: [ ^ ''false'' ].
 		level := ', lvl asString, '.
 		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
@@ -791,6 +808,76 @@ GbxDebuggerService >> restart [
 	self forceRestartPositionToMethodStart.
 	self updateSourceMapFromCurrentContext.
 	^ true
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> restartLevelFromServerStack [
+	| raw lines |
+	(self canExecuteOnDebugProcess) ifFalse: [ ^ nil ].
+	raw := self executeDebugScript: '[
+		| obj proc stream maxDepth level stackReport fullEntry methodOrNil className selectorName |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ '''' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [
+				proc := [ obj serverProcess ] on: Error do: [ nil ]
+			]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ])
+			ifTrue: [ ^ '''' ].
+		stream := WriteStream on: String new.
+		maxDepth := 200.
+		level := 1.
+		[ level <= maxDepth ] whileTrue: [
+			fullEntry := nil.
+			stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
+			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
+				ifTrue: [ fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ] ].
+			fullEntry isNil
+				ifTrue: [ level := maxDepth + 1 ]
+				ifFalse: [
+					methodOrNil := ((fullEntry respondsTo: #at:) and: [ fullEntry size >= 1 ])
+						ifTrue: [ [ fullEntry at: 1 ] on: Error do: [ nil ] ]
+						ifFalse: [ nil ].
+					className := [ methodOrNil inClass name asString ] on: Error do: [ ''nil'' ].
+					selectorName := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ]
+						on: Error do: [ ''nil'' ].
+					stream
+						nextPutAll: level asString; tab;
+						nextPutAll: className; tab;
+						nextPutAll: selectorName;
+						lf.
+					level := level + 1
+				]
+		].
+		stream contents
+	] value'.
+	raw ifNil: [ ^ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	(raw respondsTo: #splitOn) ifFalse: [ ^ nil ].
+	lines := raw splitOn: Character lf.
+	lines do: [ :line |
+		| parts className selectorName |
+		parts := line splitOn: Character tab.
+		parts size >= 3 ifTrue: [
+			className := [ (parts at: 2) asString ] on: Error do: [ '' ].
+			selectorName := [ (parts at: 3) asString ] on: Error do: [ '' ].
+			((className = 'nil' or: [ className = '<unknown>' ])
+				and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ])
+				ifTrue: [ ^ [ parts first asInteger ] on: Error do: [ nil ] ]
+		]
+	].
+	^ nil
 ]
 
 { #category : 'private' }
