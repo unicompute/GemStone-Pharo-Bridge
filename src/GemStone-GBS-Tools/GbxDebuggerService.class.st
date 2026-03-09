@@ -760,26 +760,63 @@ GbxDebuggerService >> resume [
 	^ false
 ]
 
-{ #category : 'process control' }
-GbxDebuggerService >> restart [
-	"VW parity: for server frames restart is cutback to selected level.
-	This maps to GsProcess>>#_trimStackToLevel:."
-	| lvl script result targetContext serverLevel proc |
-	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
+{ #category : 'actions' }
+GbxDebuggerService >> basicReenterServerContext [
+	"Executed in a debugger service process.
+	A server context is selected. Reset to the initial state of that context, 
+	as if it had just been entered. Discard any execution since the 
+	context was entered."
+	| theContext |
+	theContext := currentContext.
+	theContext ifNil: [ ^ false ].
 	
-	"Try to find the executed code level from server stack first"
-	serverLevel := self restartLevelFromServerStack.
-	
-	targetContext := self restartTargetContext.
-	lvl := (targetContext notNil and: [ targetContext respondsTo: #level ])
-		ifTrue: [ targetContext level ]
-		ifFalse: [ self currentContextLevel ].
-		
-	(serverLevel isNumber and: [ serverLevel > 0 ]) ifTrue: [ lvl := serverLevel ].
-	lvl ifNil: [ lvl := 1 ].
+	self cutbackToGsContext: theContext
+		finishWith: [
+			"Level numbers may have changed, and client contexts 
+			above me may have been removed. In either case, must 
+			recompute context, and if level numbers have changed 
+			the GbxActivation will be a new instance, so I must 
+			immediately compute new stack and reset the selection."
+			self recomputeContextList.
+			self selectRestartTargetContext.
+			(currentContext notNil and: [ currentContext respondsTo: #markAsExecutedCodeFrame ]) ifTrue: [
+				currentContext markAsExecutedCodeFrame.
+			].
+			self forceRestartPositionToMethodStart.
+			self updateSourceMapFromCurrentContext.
+			self notifyContextChanged.
+		].
+	^ true
+]
 
+{ #category : 'actions' }
+GbxDebuggerService >> cutbackToGsContext: gsContext finishWith: finishBlockArg [
+	"gsContext must be a GemStone server context.
+	Discard any partially-completed execution above and 
+	within gsContext on my stack, then evaluate finishBlockArg.
+	This operation is performed on the logical stack which 
+	consists of both client and server contexts, so both client 
+	and server contexts may be terminated."
+	
+	"In Pharo, we primarily need to ensure the server stack is trimmed.
+	Client-side cutback logic would go here if we were in a recursive client call."
+	
+	self cutbackGsTo: gsContext.
+	finishBlockArg value
+]
+
+{ #category : 'actions' }
+GbxDebuggerService >> cutbackGsTo: gsContext [
+	"gsContext must be a GemStone server context.
+	Discard any partially-completed server execution above 
+	gsContext on the stack of its GSProcess. Also discards 
+	any partial execution in gsContext, resetting it to the 
+	beginning."
+	| lvl script result |
+	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ 1 ].
+	
 	script := '[
-		| obj proc ctx level |
+		| obj proc |
 		obj := Object _objectForOop: ', processOop asString, '.
 		proc := nil.
 		(obj isNil or: [ obj = 20 ]) ifTrue: [ proc := GciSession current process ].
@@ -792,37 +829,21 @@ GbxDebuggerService >> restart [
 				(res notNil and: [ res respondsTo: #serverProcess ]) ifTrue: [ proc := res serverProcess ]
 			].
 		].
-		proc isNil ifTrue: [
-			(obj respondsTo: #topContext) ifTrue: [
-				ctx := [ obj topContext ] on: Error do: [ nil ].
-				(ctx notNil and: [ ctx respondsTo: #process ]) ifTrue: [ proc := ctx process ]
-			]
-		].
 		proc isNil ifTrue: [ proc := obj ].
 		
 		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
-		level := ', lvl asString, '.
-		[ proc _trimStackToLevel: level ] on: Error do: [ ^ ''false'' ].
+		[ proc _trimStackToLevel: ', lvl asString, ' ] on: Error do: [ ^ ''false'' ].
 		''true''
 	] value'.
 
 	result := self executeDebugScript: script.
-	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
+	^ self asBooleanResult: result default: false
+]
 
-	"Recompute context list after trim"
-	self recomputeContextList.
-	
-	"Mark the executed code context as executed code frame BEFORE selecting it"
-	self selectRestartTargetContext.
-	targetContext := self currentContext.
-	(targetContext notNil and: [ targetContext respondsTo: #markAsExecutedCodeFrame ]) ifTrue: [
-		targetContext markAsExecutedCodeFrame.
-	].
-	
-	self forceRestartPositionToMethodStart.
-	self updateSourceMapFromCurrentContext.
-	self notifyContextChanged.
-	^ true
+{ #category : 'process control' }
+GbxDebuggerService >> restart [
+	"Restart the current context using the coordinated reenter operation."
+	^ self basicReenterServerContext
 ]
 
 { #category : 'private' }
