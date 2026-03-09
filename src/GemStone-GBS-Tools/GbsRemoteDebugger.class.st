@@ -1870,8 +1870,15 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 		context markAsExecutedCodeFrame.
 	].
 
+	"Refresh list strings so the '@1 line 1' update is visible"
+	stackList ifNotNil: [
+		stackList items: (contextList collect: [ :ctx | ctx printString ]).
+	].
+
 	(stackList respondsTo: #selectIndex:)
 		ifTrue: [ stackList selectIndex: index ].
+	
+	"Force context selection to update source highlight and variables"
 	self contextSelected: context.
 	self moveSourceCursorToStart.
 ]

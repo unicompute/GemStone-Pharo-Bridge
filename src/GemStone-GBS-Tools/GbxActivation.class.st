@@ -403,9 +403,7 @@ GbxActivation >> markAsExecutedCodeFrame [
 	selector := #unboundMethod.
 	quickStepPoint := 1.
 	ipOffset := 1.
-	(sourceOffsets isNil or: [ sourceOffsets isEmpty ]) ifTrue: [
-		sourceOffsets := #( 1 ).
-	].
+	sourceOffsets := #( 1 ).
 ]
 
 { #category : 'accessing' }
