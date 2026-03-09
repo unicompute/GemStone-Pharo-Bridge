@@ -134,7 +134,7 @@ GbxContextListPolicy >> fetchServerContexts [
 	(processOop isNil or: [ processOop = 20 ]) ifTrue: [ ^ #( ) ].
 	
 	script := '[
-		| obj gbsError gsProcess ctx stream maxDepth level frame fullEntry methodOrNil className selectorName source ctxOop quickStep offsets offsetsText lineNumber offset |
+		| obj gbsError gsProcess ctx stream maxDepth level frame stackReport fullEntry methodOrNil className selectorName source ctxOop quickStep offsets offsetsText lineNumber offset |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ '''' ].
 		stream := WriteStream on: String new.
@@ -164,17 +164,31 @@ GbxContextListPolicy >> fetchServerContexts [
 				ifTrue: [ gsProcess := [ ctx process ] on: Error do: [ nil ] ]
 		].
 
-		((gsProcess notNil) and: [ gsProcess respondsTo: #_gsiDebuggerDetailedReportAt: ]) ifTrue: [
+		((gsProcess notNil) and: [
+			(gsProcess respondsTo: #_gsiStackReportFromLevel:toLevel:)
+				or: [ gsProcess respondsTo: #_gsiDebuggerDetailedReportAt: ] ]) ifTrue: [
 			maxDepth := 200.
 			level := 1.
 			[ level <= maxDepth ] whileTrue: [
-				frame := [ gsProcess _gsiDebuggerDetailedReportAt: level ] on: Error do: [ nil ].
-				(frame isNil or: [ frame isEmpty ])
+				fullEntry := nil.
+				(gsProcess respondsTo: #_gsiStackReportFromLevel:toLevel:)
+					ifTrue: [
+						stackReport := [ gsProcess _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
+						(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
+							ifTrue: [ fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ] ]
+					].
+				fullEntry isNil ifTrue: [
+					(gsProcess respondsTo: #_gsiDebuggerDetailedReportAt:) ifTrue: [
+						frame := [ gsProcess _gsiDebuggerDetailedReportAt: level ] on: Error do: [ nil ].
+						(frame notNil and: [ (frame respondsTo: #size) and: [ frame size >= 1 ] ])
+							ifTrue: [ fullEntry := [ frame first ] on: Error do: [ nil ] ]
+					]
+				].
+				fullEntry isNil
 					ifTrue: [ level := maxDepth + 1 ]
 					ifFalse: [
-						fullEntry := frame first.
-						methodOrNil := (fullEntry notNil and: [ fullEntry isEmpty not ])
-							ifTrue: [ fullEntry first ]
+						methodOrNil := ((fullEntry respondsTo: #at:) and: [ fullEntry size >= 1 ])
+							ifTrue: [ [ fullEntry at: 1 ] on: Error do: [ nil ] ]
 							ifFalse: [ nil ].
 						className := [
 							methodOrNil ifNil: [ ''<unknown>'' ] ifNotNil: [
@@ -183,7 +197,7 @@ GbxContextListPolicy >> fetchServerContexts [
 						] on: Error do: [ ''<unknown>'' ].
 						selectorName := [
 							methodOrNil ifNil: [
-								(fullEntry notNil and: [ fullEntry size >= 4 ])
+								((fullEntry respondsTo: #size) and: [ fullEntry size >= 4 ])
 									ifTrue: [
 										(fullEntry at: 4)
 											ifNil: [ ''<unknown>'' ]
@@ -195,7 +209,7 @@ GbxContextListPolicy >> fetchServerContexts [
 							]
 						] on: Error do: [ ''<unknown>'' ].
 						source := [
-							(fullEntry notNil and: [ fullEntry size >= 9 ])
+							((fullEntry respondsTo: #size) and: [ fullEntry size >= 9 ])
 								ifTrue: [
 									(fullEntry at: 9)
 										ifNil: [ '''' ]
@@ -204,13 +218,13 @@ GbxContextListPolicy >> fetchServerContexts [
 								ifFalse: [ '''' ]
 						] on: Error do: [ '''' ].
 						quickStep := [
-							(fullEntry notNil and: [ fullEntry size >= 5 ])
+							((fullEntry respondsTo: #size) and: [ fullEntry size >= 5 ])
 								ifTrue: [ fullEntry at: 5 ]
 								ifFalse: [ 0 ]
 						] on: Error do: [ 0 ].
 						quickStep ifNil: [ quickStep := 0 ].
 						offsets := [
-							(fullEntry notNil and: [ fullEntry size >= 6 ])
+							((fullEntry respondsTo: #size) and: [ fullEntry size >= 6 ])
 								ifTrue: [ fullEntry at: 6 ]
 								ifFalse: [ #() ]
 						] on: Error do: [ #() ].
@@ -293,7 +307,9 @@ GbxContextListPolicy >> fetchServerContexts [
 	rawData := [ debugger session evaluate: script ] on: Error do: [ nil ].
 	(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
 	rawData ifNil: [ rawData := '' ].
+	rawData = false ifTrue: [ rawData := '' ].
 	rawData = 'nil' ifTrue: [ rawData := '' ].
+	(rawData respondsTo: #splitOn) ifFalse: [ rawData := '' ].
 	contexts := (rawData splitOn: Character lf) 
 		collect: [ :line | 
 			| parts |
