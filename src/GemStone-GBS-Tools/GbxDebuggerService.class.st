@@ -394,7 +394,7 @@ GbxDebuggerService >> evaluateCodeInCurrentFrame: codeString [
 GbxDebuggerService >> evaluateOopFromScript: scriptString [
 	| raw |
 	self isSessionUsable ifFalse: [ ^ nil ].
-	raw := [ session executeAndFetch: scriptString context: session sessionOop ] on: Error do: [ nil ].
+	raw := [ session executeAndFetch: scriptString context: 20 ] on: Error do: [ nil ].
 	raw ifNil: [ ^ nil ].
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
 	(raw isString and: [ raw = 'nil' or: [ raw beginsWith: 'Error:' ] ]) ifTrue: [ ^ nil ].
@@ -404,7 +404,7 @@ GbxDebuggerService >> evaluateOopFromScript: scriptString [
 { #category : 'private' }
 GbxDebuggerService >> executeDebugScript: scriptString [
 	self isSessionUsable ifFalse: [ ^ nil ].
-	^ [ session executeAndFetch: scriptString context: session sessionOop ]
+	^ [ session executeAndFetch: scriptString context: 20 ]
 		on: Error
 		do: [ nil ]
 ]
@@ -771,7 +771,7 @@ GbxDebuggerService >> basicReenterServerContext [
 	theContext ifNil: [ theContext := currentContext ].
 	theContext ifNil: [ ^ false ].
 	
-	self cutbackToGsContext: theContext
+	(self cutbackToGsContext: theContext
 		finishWith: [
 			"Level numbers have changed, and client contexts 
 			above the target have been removed. Recompute the context 
@@ -786,7 +786,7 @@ GbxDebuggerService >> basicReenterServerContext [
 				self updateSourceMapFromCurrentContext.
 			].
 			self notifyContextChanged.
-		].
+		]) ifFalse: [ ^ false ].
 	^ true
 ]
 
@@ -802,8 +802,9 @@ GbxDebuggerService >> cutbackToGsContext: gsContext finishWith: finishBlockArg [
 	"In Pharo, we primarily need to ensure the server stack is trimmed.
 	Client-side cutback logic would go here if we were in a recursive client call."
 	
-	self cutbackGsTo: gsContext.
-	finishBlockArg value
+	(self cutbackGsTo: gsContext) ifFalse: [ ^ false ].
+	finishBlockArg value.
+	^ true
 ]
 
 { #category : 'actions' }
@@ -813,8 +814,10 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	gsContext on the stack of its GSProcess. Also discards 
 	any partial execution in gsContext, resetting it to the 
 	beginning."
-	| lvl script result |
+	| lvl script result serverLevel |
 	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ 1 ].
+	serverLevel := self restartLevelFromServerStack.
+	(serverLevel isNumber and: [ serverLevel > 0 ]) ifTrue: [ lvl := serverLevel ].
 	
 	script := '[
 		| obj proc |
@@ -833,17 +836,7 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 		proc isNil ifTrue: [ proc := obj ].
 		
 		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
-		[ 
-			"Trim everything above the target level"
-			proc _trimStackToLevel: ', lvl asString, '.
-			
-			"Now that we have trimmed, the target frame is at level 1.
-			We must explicitly reset its instruction pointer to start from the beginning."
-			[ proc _restart: 1 ] on: Error do: [
-				"Fallback if _restart: isn''t available or fails"
-				[ (proc contextAt: 1) pc: 1 ] on: Error do: [ nil ]
-			].
-		] on: Error do: [ ^ ''false'' ].
+		[ proc _trimStackToLevel: ', lvl asString, ' ] on: Error do: [ ^ ''false'' ].
 		''true''
 	] value'.
 

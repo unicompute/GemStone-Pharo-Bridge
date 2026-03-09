@@ -619,7 +619,8 @@ GbsRemoteDebugger >> fetchStackFrames [
 	contexts := #( ).
 	service ifNotNil: [
 		[
-			service recomputeContextList.
+			(service respondsTo: #recomputeContextList)
+				ifTrue: [ service recomputeContextList ].
 			contexts := service contextList
 		] on: Error do: [ contexts := #( ) ]
 	].
@@ -1739,13 +1740,78 @@ GbsRemoteDebugger >> pauseProcess [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restart [
-	| didRestart |
-	didRestart := self safeServiceCall: [ service restart ] default: false.
+	| didRestart serviceRestart |
+	serviceRestart := self safeServiceCall: [ service restart ] default: false.
+	didRestart := self restartUsingDirectTrimFromExecutedFrame.
+	didRestart ifFalse: [ didRestart := serviceRestart ].
 	didRestart ifTrue: [
 		self fetchStackFrames.
 		self normalizeRestartSelectionAndPosition.
+		self moveSourceCursorToStart.
 	].
 	^ didRestart
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartUsingDirectTrimFromExecutedFrame [
+	| script raw value |
+	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
+	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ false ].
+
+	script := '[
+		| obj proc maxDepth level stackReport fullEntry methodOrNil className selectorName restartLevel |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ ^ ''false'' ].
+
+		restartLevel := nil.
+		maxDepth := 200.
+		level := 1.
+		[ level <= maxDepth and: [ restartLevel isNil ] ] whileTrue: [
+			fullEntry := nil.
+			stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
+			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
+				ifTrue: [ fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ] ].
+			fullEntry isNil
+				ifTrue: [ level := maxDepth + 1 ]
+				ifFalse: [
+					methodOrNil := ((fullEntry respondsTo: #at:) and: [ fullEntry size >= 1 ])
+						ifTrue: [ [ fullEntry at: 1 ] on: Error do: [ nil ] ]
+						ifFalse: [ nil ].
+					className := [ methodOrNil inClass name asString ] on: Error do: [ ''nil'' ].
+					selectorName := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ]
+						on: Error do: [ ''nil'' ].
+					((className = ''nil'' or: [ className = ''<unknown>'' ])
+						and: [ selectorName = ''nil'' or: [ selectorName = ''unboundMethod'' ] ])
+						ifTrue: [ restartLevel := level ].
+					level := level + 1
+				]
+		].
+		restartLevel ifNil: [ ^ ''false'' ].
+		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ^ ''false'' ].
+		''true''
+	] value'.
+
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	raw ifNil: [ ^ false ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	value := (raw respondsTo: #asString)
+		ifTrue: [ raw asString asLowercase ]
+		ifFalse: [ '' ].
+	^ value = 'true' or: [ value = '1' or: [ value = 'ok' ] ]
 ]
 
 { #category : 'private' }
@@ -1846,7 +1912,7 @@ GbsRemoteDebugger >> moveSourceCursorToStart [
 
 { #category : 'private' }
 GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
-	| index context |
+	| index context offsets copy reordered |
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
 
 	"Find server-reported executed-code frame"
@@ -1862,28 +1928,46 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
 	context := contextList at: index.
 
-	"Mark the context as executed code frame with step=1, line=1"
-	(context respondsTo: #markAsExecutedCodeFrame) ifTrue: [
-		context markAsExecutedCodeFrame.
-	].
-	
-	"Update service to reflect changed state"
-	service ifNotNil: [
-		service currentContext: context.
-		service updateSourceMapFromCurrentContext.
+	(context respondsTo: #quickStepPoint:)
+		ifTrue: [ context quickStepPoint: 1 ].
+	(context respondsTo: #ipOffset:)
+		ifTrue: [ context ipOffset: 1 ].
+	(context respondsTo: #sourceOffsets) ifTrue: [
+		offsets := [ context sourceOffsets ] on: Error do: [ #() ].
+		(offsets isCollection and: [ offsets isEmpty not ]) ifTrue: [
+			copy := offsets asArray copy.
+			copy at: 1 put: 1.
+			(context respondsTo: #sourceOffsets:)
+				ifTrue: [ context sourceOffsets: copy ]
+		]
 	].
 
-	"Refresh list strings so the '@1 line 1' update is visible"
+	index ~= 1 ifTrue: [
+		reordered := OrderedCollection new: contextList size.
+		reordered add: context.
+		1 to: contextList size do: [ :i |
+			i = index ifFalse: [ reordered add: (contextList at: i) ] ].
+		contextList := reordered asArray.
+		index := 1
+	].
+
+	service ifNotNil: [
+		(service respondsTo: #currentContext:)
+			ifTrue: [ service currentContext: context ].
+		(service respondsTo: #updateSourceMapFromCurrentContext)
+			ifTrue: [ service updateSourceMapFromCurrentContext ]
+	].
+
 	stackList ifNotNil: [
-		stackList items: (contextList collect: [ :ctx | ctx printString ]).
+		(stackList respondsTo: #items:)
+			ifTrue: [ stackList items: (contextList collect: [ :ctx | ctx printString ]) ]
 	].
 
 	(stackList respondsTo: #selectIndex:)
 		ifTrue: [ stackList selectIndex: index ].
 	
-	"Force context selection to update source highlight and variables"
-	self moveSourceCursorToStart.
 	self contextSelected: context.
+	self moveSourceCursorToStart.
 ]
 
 { #category : 'private' }
