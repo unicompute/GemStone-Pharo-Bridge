@@ -878,15 +878,17 @@ GbsRemoteDebugger >> label: aString [
 { #category : 'accessing' }
 GbsRemoteDebugger >> setInitialSourceCode: aString [
 	"Set the source code for the first (top) context - the code that was being executed"
-	contextList ifEmpty: [ ^ self ].
 	| topContext |
+
+	contextList ifEmpty: [ ^ self ].
 	topContext := contextList at: 1.
-	(topContext respondsTo: #sourceString:) ifTrue: [
-		topContext sourceString: aString.
-	].
+
+	"Set source string directly on the context"
+	topContext instVarNamed: #sourceString put: aString.
+
 	"Select the top context to show the source"
 	stackList selectIndex: 1.
-	self contextSelected: topContext.
+	self contextSelected: topContext
 ]
 
 { #category : 'private' }
