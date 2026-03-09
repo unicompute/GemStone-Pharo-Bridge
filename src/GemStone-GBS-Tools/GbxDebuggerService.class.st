@@ -834,7 +834,16 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 		proc isNil ifTrue: [ proc := obj ].
 		
 		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
-		[ proc _trimStackToLevel: ', lvl asString, ' ] on: Error do: [ ^ ''false'' ].
+		[ 
+			proc _trimStackToLevel: ', lvl asString, '.
+			"If we are at level 1 (Executed code), we must explicitly reset the PC to 1"
+			', lvl asString, ' = 1 ifTrue: [
+				[ proc _restart: 1 ] on: Error do: [
+					"Fallback if _restart: isn''t available or fails"
+					[ (proc contextAt: 1) pc: 1 ] on: Error do: [ nil ]
+				]
+			].
+		] on: Error do: [ ^ ''false'' ].
 		''true''
 	] value'.
 
