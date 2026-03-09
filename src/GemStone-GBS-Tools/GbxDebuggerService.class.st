@@ -766,38 +766,45 @@ GbxDebuggerService >> restart [
 	This maps to GsProcess>>#_trimStackToLevel:."
 	| lvl script result targetContext serverLevel |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
-	targetContext := self restartTargetContext.
+	
+	"Try to find the executed code level from server stack first"
 	serverLevel := self restartLevelFromServerStack.
+	
+	targetContext := self restartTargetContext.
 	lvl := (targetContext notNil and: [ targetContext respondsTo: #level ])
 		ifTrue: [ targetContext level ]
 		ifFalse: [ self currentContextLevel ].
+		
 	(serverLevel isNumber and: [ serverLevel > 0 ]) ifTrue: [ lvl := serverLevel ].
 	lvl ifNil: [ lvl := 1 ].
 
-	script := '[
-		| obj proc level |
-		obj := Object _objectForOop: ', processOop asString, '.
-		proc := obj.
-		((proc respondsTo: #_trimStackToLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [
-				proc := [ obj serverProcess ] on: Error do: [ nil ]
+	script := ''[
+		| obj proc ctx level |
+		obj := Object _objectForOop: '', processOop asString, ''.
+		proc := nil.
+		(obj isNil or: [ obj = 20 ]) ifTrue: [ proc := GciSession current process ].
+		proc isNil ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := obj serverProcess ].
+		].
+		proc isNil ifTrue: [
+			(obj respondsTo: #gbxResult) ifTrue: [ 
+				| res | res := [ obj gbxResult ] on: Error do: [ nil ].
+				(res notNil and: [ res respondsTo: #serverProcess ]) ifTrue: [ proc := res serverProcess ]
+			].
+		].
+		proc isNil ifTrue: [
+			(obj respondsTo: #topContext) ifTrue: [
+				ctx := [ obj topContext ] on: Error do: [ nil ].
+				(ctx notNil and: [ ctx respondsTo: #process ]) ifTrue: [ proc := ctx process ]
 			]
 		].
-		((proc isNil or: [ (proc respondsTo: #_trimStackToLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ]
-		].
-		((proc isNil or: [ (proc respondsTo: #_trimStackToLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
-			| top |
-			top := [ obj topContext ] on: Error do: [ nil ].
-			(top notNil and: [ top respondsTo: #process ])
-				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
-		].
-		proc ifNil: [ ^ ''false'' ].
-		level := ', lvl asString, '.
-		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
-		[ proc _trimStackToLevel: level ] on: Error do: [ ^ ''false'' ].
-		''true''
-	] value'.
+		proc isNil ifTrue: [ proc := obj ].
+		
+		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''''false'''' ].
+		level := '', lvl asString, ''.
+		[ proc _trimStackToLevel: level ] on: Error do: [ ^ ''''false'''' ].
+		''''true''''
+	] value''.
 
 	result := self executeDebugScript: script.
 	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
@@ -805,15 +812,13 @@ GbxDebuggerService >> restart [
 	"Recompute context list after trim"
 	self recomputeContextList.
 	
-	"Mark the first context as executed code frame BEFORE selecting it"
-	self contextList ifNotEmpty: [ :contexts |
-		targetContext := contexts first.
-		(targetContext respondsTo: #markAsExecutedCodeFrame) ifTrue: [
-			targetContext markAsExecutedCodeFrame.
-		].
+	"Mark the executed code context as executed code frame BEFORE selecting it"
+	self selectRestartTargetContext.
+	targetContext := self currentContext.
+	(targetContext notNil and: [ targetContext respondsTo: #markAsExecutedCodeFrame ]) ifTrue: [
+		targetContext markAsExecutedCodeFrame.
 	].
 	
-	self selectRestartTargetContext.
 	self forceRestartPositionToMethodStart.
 	self updateSourceMapFromCurrentContext.
 	^ true
@@ -823,10 +828,10 @@ GbxDebuggerService >> restart [
 GbxDebuggerService >> restartLevelFromServerStack [
 	| raw lines |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ nil ].
-	raw := self executeDebugScript: '[
-		| obj proc stream maxDepth level stackReport fullEntry methodOrNil className selectorName |
-		obj := Object _objectForOop: ', processOop asString, '.
-		obj isNil ifTrue: [ ^ '''' ].
+	raw := self executeDebugScript: ''[
+		| obj proc stream maxDepth level stackReport fullEntry methodOrNil className selectorName source quick offsets line offset |
+		obj := Object _objectForOop: '', processOop asString, ''.
+		obj isNil ifTrue: [ ^ '''''' ].
 		proc := obj.
 		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
 			(obj respondsTo: #serverProcess) ifTrue: [
@@ -843,7 +848,7 @@ GbxDebuggerService >> restartLevelFromServerStack [
 				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
 		].
 		(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ])
-			ifTrue: [ ^ '''' ].
+			ifTrue: [ ^ '''''' ].
 		stream := WriteStream on: String new.
 		maxDepth := 200.
 		level := 1.
@@ -858,9 +863,9 @@ GbxDebuggerService >> restartLevelFromServerStack [
 					methodOrNil := ((fullEntry respondsTo: #at:) and: [ fullEntry size >= 1 ])
 						ifTrue: [ [ fullEntry at: 1 ] on: Error do: [ nil ] ]
 						ifFalse: [ nil ].
-					className := [ methodOrNil inClass name asString ] on: Error do: [ ''nil'' ].
-					selectorName := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ]
-						on: Error do: [ ''nil'' ].
+					className := [ methodOrNil inClass name asString ] on: Error do: [ ''''nil'''' ].
+					selectorName := [ (fullEntry at: 4) ifNil: [ ''''nil'''' ] ifNotNil: [ :s | s asString ] ]
+						on: Error do: [ ''''nil'''' ].
 					stream
 						nextPutAll: level asString; tab;
 						nextPutAll: className; tab;
@@ -870,7 +875,7 @@ GbxDebuggerService >> restartLevelFromServerStack [
 				]
 		].
 		stream contents
-	] value'.
+	] value''.
 	raw ifNil: [ ^ nil ].
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
 	(raw respondsTo: #splitOn) ifFalse: [ ^ nil ].
@@ -879,10 +884,10 @@ GbxDebuggerService >> restartLevelFromServerStack [
 		| parts className selectorName |
 		parts := line splitOn: Character tab.
 		parts size >= 3 ifTrue: [
-			className := [ (parts at: 2) asString ] on: Error do: [ '' ].
-			selectorName := [ (parts at: 3) asString ] on: Error do: [ '' ].
-			((className = 'nil' or: [ className = '<unknown>' ])
-				and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ])
+			className := [ (parts at: 2) asString ] on: Error do: [ '''' ].
+			selectorName := [ (parts at: 3) asString ] on: Error do: [ '''' ].
+			((className = ''nil'' or: [ className = ''<unknown>'' ])
+				and: [ selectorName = ''nil'' or: [ selectorName = ''unboundMethod'' ] ])
 				ifTrue: [ ^ [ parts first asInteger ] on: Error do: [ nil ] ]
 		]
 	].

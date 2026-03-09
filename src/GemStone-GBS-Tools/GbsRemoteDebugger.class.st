@@ -1852,19 +1852,23 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	| index context |
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
 
-	"First, mark the first context as executed code frame with step=1, line=1"
-	context := contextList at: 1.
-	(context respondsTo: #markAsExecutedCodeFrame) ifTrue: [
-		context markAsExecutedCodeFrame.
-	].
-
-	"Find server-reported executed-code frame (should now show @1 line 1)"
+	"Find server-reported executed-code frame"
 	index := contextList
 		findFirst: [ :ctx |
-			[ ctx printString beginsWith: 'GS: Executed code @' ] on: Error do: [ false ] ].
+			| className selectorName |
+			className := [ ctx methodClassOrUnknown asString ] on: Error do: [ '''' ].
+			selectorName := [ ctx selectorOrUnknown asString ] on: Error do: [ '''' ].
+			(className = ''nil'' or: [ className = ''<unknown>'' ])
+				and: [ selectorName = ''nil'' or: [ selectorName = ''unboundMethod'' ] ] ].
+	
 	index = 0 ifTrue: [ index := 1 ].
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
 	context := contextList at: index.
+
+	"Mark the context as executed code frame with step=1, line=1"
+	(context respondsTo: #markAsExecutedCodeFrame) ifTrue: [
+		context markAsExecutedCodeFrame.
+	].
 
 	(stackList respondsTo: #selectIndex:)
 		ifTrue: [ stackList selectIndex: index ].
