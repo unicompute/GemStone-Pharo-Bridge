@@ -1349,7 +1349,7 @@ GbsRemoteDebugger >> stepInto [
 	didStep ifFalse: [
 		didStep := self
 			directStepWithPrimarySelector: '_stepIntoInFrame:'
-			fallbackSelector: '_stepOverInFrame:'
+			fallbackSelector: nil
 	].
 	didStep ifTrue: [ self fetchStackFrames ].
 	^ didStep
