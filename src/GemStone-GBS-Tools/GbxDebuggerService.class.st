@@ -348,7 +348,10 @@ GbxDebuggerService >> currentSourceSelectionInterval [
 		entry ifNil: [
 			| candidates |
 			candidates := map select: [ :assoc | (assoc respondsTo: #key) and: [ assoc key <= stepPoint ] ].
-			candidates ifNotEmpty: [
+			((candidates isEmpty not) and: [
+				(map anySatisfy: [ :assoc | (assoc respondsTo: #key) and: [ assoc key = stepPoint ] ])
+					or: [ stepPoint <= map last key ]
+			]) ifTrue: [
 				entry := candidates last. "Assuming map is sorted by key"
 			]
 		].
@@ -774,32 +777,37 @@ GbxDebuggerService >> resume [
 { #category : 'actions' }
 GbxDebuggerService >> basicReenterServerContext [
 	"Executed in a debugger service process.
-	Identify the target context for restart (usually the Do-it frame).
-	Reset to the initial state of that context, as if it had just been entered.
-	Discard any execution since the context was entered."
+	A server context is selected. Reset to the initial state of that context,
+	as if it had just been entered. Discard any execution since the context
+	was entered."
 	| theContext |
-	theContext := self restartTargetContext.
-	theContext ifNil: [ theContext := currentContext ].
+	theContext := currentContext.
 	theContext ifNil: [ ^ false ].
 
-	(self cutbackToGsContext: theContext
+	(self cutbackTo: theContext
 		finishWith: [
-			"Level numbers have changed, and client contexts
-			above the target have been removed. Recompute the context
-			list and select the reset target context."
-			self recomputeContextList.
-			self selectRestartTargetContext.
-			currentContext ifNotNil: [
-				"Force position to method start FIRST"
-				self forceRestartPositionToMethodStart.
-				"Then mark as executed code frame (this ensures step=1, line=1)"
-				(currentContext respondsTo: #markAsExecutedCodeFrame) ifTrue: [
-					currentContext markAsExecutedCodeFrame.
-				].
-				self updateSourceMapFromCurrentContext.
-			].
-			self notifyContextChanged.
+			"Level numbers may have changed; recompute and select top server context."
+			self selectTopServerContext
 		]) ifFalse: [ ^ false ].
+	^ true
+]
+
+{ #category : 'actions' }
+GbxDebuggerService >> cutbackTo: aContext finishWith: aBlock [
+	"Discard any partially-completed execution above aContext on the logical
+	stack, then evaluate aBlock.
+	If aContext is a server context, also discard partially-completed execution
+	within that server context."
+
+	| isServer |
+	aContext ifNil: [ ^ false ].
+	isServer := (aContext respondsTo: #gbxIsServerContext)
+		and: [ aContext gbxIsServerContext ].
+	isServer
+		ifTrue: [ ^ self cutbackToGsContext: aContext finishWith: aBlock ].
+
+	self cutbackGsProcessesAbove: aContext.
+	aBlock value.
 	^ true
 ]
 
@@ -812,9 +820,7 @@ GbxDebuggerService >> cutbackToGsContext: gsContext finishWith: finishBlockArg [
 	consists of both client and server contexts, so both client 
 	and server contexts may be terminated."
 	
-	"In Pharo, we primarily need to ensure the server stack is trimmed.
-	Client-side cutback logic would go here if we were in a recursive client call."
-	
+	self cutbackClientContextsAbove: gsContext.
 	(self cutbackGsTo: gsContext) ifFalse: [ ^ false ].
 	finishBlockArg value.
 	^ true
@@ -827,10 +833,8 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	gsContext on the stack of its GSProcess. Also discards 
 	any partial execution in gsContext, resetting it to the 
 	beginning."
-	| lvl script result serverLevel |
+	| lvl script result |
 	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ 1 ].
-	serverLevel := self restartLevelFromServerStack.
-	(serverLevel isNumber and: [ serverLevel > 0 ]) ifTrue: [ lvl := serverLevel ].
 	
 	script := '[
 		| obj proc |
@@ -855,6 +859,53 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 
 	result := self executeDebugScript: script.
 	^ self asBooleanResult: result default: false
+]
+
+{ #category : 'actions' }
+GbxDebuggerService >> cutbackClientContextsAbove: gsContext [
+	"gsContext must be a GemStone server context.
+	Discard any partially-completed client execution above gsContext."
+	| ctx |
+	contextStackPolicy ifNil: [ ^ self ].
+	(contextStackPolicy respondsTo: #firstClientContextAbove:) ifFalse: [ ^ self ].
+	ctx := contextStackPolicy firstClientContextAbove: gsContext.
+	ctx ifNotNil: [ self cutbackTo: ctx finishWith: [ ] ]
+]
+
+{ #category : 'actions' }
+GbxDebuggerService >> cutbackGsProcessesAbove: clientContext [
+	"clientContext must be a client context.
+	Discard any partially-completed server execution above clientContext."
+	| ctx |
+	ctx := self firstServerContextAbove: clientContext.
+	ctx ifNotNil: [ self cutbackToGsProcessOf: ctx ]
+]
+
+{ #category : 'actions' }
+GbxDebuggerService >> cutbackToGsProcessOf: gsContext [
+	"gsContext must be a GemStone server context.
+	Discard execution above the owning GS process and terminate that process."
+	self cutbackClientContextsAbove: gsContext.
+	self cutbackGsTo: gsContext
+]
+
+{ #category : 'actions' }
+GbxDebuggerService >> firstServerContextAbove: clientContext [
+	"Return the first server context above clientContext in the logical stack."
+	| ctxList gsContext i ctx numContexts |
+	ctxList := self contextList.
+	gsContext := nil.
+	i := 1.
+	ctx := nil.
+	numContexts := ctxList size.
+	[ i <= numContexts and: [ ctx ~~ clientContext ] ] whileTrue: [
+		ctx := ctxList at: i.
+		((ctx respondsTo: #gbxIsServerContext) and: [ ctx gbxIsServerContext ])
+			ifTrue: [ gsContext := ctx ].
+		i := i + 1
+	].
+	ctx == clientContext ifFalse: [ ^ nil ].
+	^ gsContext
 ]
 
 { #category : 'process control' }
@@ -917,7 +968,7 @@ GbxDebuggerService >> restartLevelFromServerStack [
 	] value'.
 	raw ifNil: [ ^ nil ].
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
-	(raw respondsTo: [ #splitOn: ] asSymbol) ifFalse: [ ^ nil ].
+	(raw respondsTo: #splitOn:) ifFalse: [ ^ nil ].
 	lines := raw splitOn: Character lf.
 	lines do: [ :line |
 		| parts className selectorName |
@@ -981,6 +1032,36 @@ GbxDebuggerService >> selectRestartTargetContext [
 	target := self restartTargetContext.
 	target ifNil: [ ^ self ].
 	self selectContext: target
+]
+
+{ #category : 'context list' }
+GbxDebuggerService >> selectTopServerContext [
+	"The stack has changed. Recompute and select the top GemStone context.
+	Then refresh the displayed list without a second recompute."
+	| topServer |
+	contextStackPolicy ifNil: [ ^ self ].
+	contextStackPolicy computeContextList.
+	topServer := (contextStackPolicy respondsTo: #topServerContext)
+		ifTrue: [ contextStackPolicy topServerContext ]
+		ifFalse: [ nil ].
+	topServer ifNil: [ topServer := self restartTargetContext ].
+	topServer ifNil: [
+		topServer := contextStackPolicy contextList
+			ifEmpty: [ nil ]
+			ifNotEmpty: [ :contexts | contexts first ]
+	].
+	topServer ifNotNil: [ self selectContext: topServer ].
+	self schedulePrecomputedContextListUpdate
+]
+
+{ #category : 'private-event processing' }
+GbxDebuggerService >> schedulePrecomputedContextListUpdate [
+	self updatePrecomputedContextList
+]
+
+{ #category : 'private-event processing' }
+GbxDebuggerService >> updatePrecomputedContextList [
+	self updateStackList: self contextList
 ]
 
 { #category : 'private' }
