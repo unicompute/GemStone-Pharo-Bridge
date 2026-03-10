@@ -168,7 +168,9 @@ GbsRemoteDebugger >> applySourceMapHighlightFor: aContext [
 		(interval isNil or: [ (interval respondsTo: #first) not or: [ (interval respondsTo: #last) not ] ]) ifTrue: [
 			^ self clearSourceHighlight
 		].
-		^ self selectAndRevealFrom: interval first to: interval last inTextPresenter: sourceText.
+		self selectAndRevealFrom: interval first to: interval last inTextPresenter: sourceText.
+		self placeCaretAt: interval first inTextPresenter: sourceText.
+		^ self.
 	].
 
 	lineNumber := (aContext respondsTo: #displayedLineNumber)
@@ -186,7 +188,9 @@ GbsRemoteDebugger >> applySourceMapHighlightFor: aContext [
 				interval := sourceOffsets at: stepPoint ifAbsent: [ 1 ].
 				interval ifNil: [ interval := 1 ].
 				interval > 0 ifTrue: [
-					^ self selectAndRevealFrom: interval to: interval inTextPresenter: sourceText
+					self selectAndRevealFrom: interval to: interval inTextPresenter: sourceText.
+					self placeCaretAt: interval inTextPresenter: sourceText.
+					^ self
 				]
 			].
 			^ self selectLineNumber: 1 inTextPresenter: sourceText
@@ -203,6 +207,39 @@ GbsRemoteDebugger >> integerFromSourceMapKey: rawKey [
 	value := rawKey.
 	(value respondsTo: #asLocalString) ifTrue: [ value := value asLocalString ].
 	^ [ value asString asInteger ] on: Error do: [ nil ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> placeCaretAt: anIndex inTextPresenter: aTextPresenter [
+	| caret |
+	aTextPresenter ifNil: [ ^ self ].
+	caret := anIndex ifNil: [ 1 ].
+	[
+		aTextPresenter withAdapterDo: [ :adapter |
+			| widget textArea editor |
+			widget := [ adapter widget ] on: Error do: [ nil ].
+			widget ifNil: [ ^ self ].
+			(widget respondsTo: #takeKeyboardFocus)
+				ifTrue: [ [ widget takeKeyboardFocus ] on: Error do: [ ] ].
+			textArea := (widget respondsTo: #textArea)
+				ifTrue: [ [ widget textArea ] on: Error do: [ nil ] ]
+				ifFalse: [ nil ].
+			textArea ifNotNil: [
+				(textArea respondsTo: #takeKeyboardFocus)
+					ifTrue: [ [ textArea takeKeyboardFocus ] on: Error do: [ ] ].
+				editor := (textArea respondsTo: #editor)
+					ifTrue: [ [ textArea editor ] on: Error do: [ nil ] ]
+					ifFalse: [ nil ].
+				editor ifNotNil: [
+					(editor respondsTo: #markIndex:) ifTrue: [ editor markIndex: caret ].
+					(editor respondsTo: #pointIndex:) ifTrue: [ editor pointIndex: caret ].
+					(editor respondsTo: #selectAt:) ifTrue: [ editor selectAt: caret ].
+				].
+				(textArea respondsTo: #scrollSelectionIntoView)
+					ifTrue: [ [ textArea scrollSelectionIntoView ] on: Error do: [ ] ].
+			].
+		]
+	] on: Error do: [ ].
 ]
 
 { #category : 'private' }
