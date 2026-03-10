@@ -418,11 +418,51 @@ GbxDebuggerServiceTest >> testStepIntoReturnsFalseWhenNoUsableProcessOop [
 ]
 
 { #category : 'tests' }
+GbxDebuggerServiceTest >> testStepIntoUsesServerStepOverFrameWithStepIntoFlag [
+	| scripts didStep |
+	scripts := OrderedCollection new.
+	service processOop: 111.
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			scripts add: script.
+			(script includesSubstring: '_stepOverInFrame:')
+				ifTrue: [ 'true' ]
+				ifFalse: [ '' ] ].
+
+	didStep := service stepInto.
+
+	self assert: didStep.
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: '_stepOverInFrame:' ]).
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: '4294967299' ])
+]
+
+{ #category : 'tests' }
 GbxDebuggerServiceTest >> testStepIntoReturnsFalseWhenExecutionErrors [
 	session stubs at: #executeAndFetchContext put: [ :script :ctx | Error signal: 'boom' ].
 	service processOop: 111.
 
 	self deny: service stepInto
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testStepOverUsesServerStepOverFrameWithCurrentLevel [
+	| scripts didStep |
+	scripts := OrderedCollection new.
+	service processOop: 111.
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			scripts add: script.
+			(script includesSubstring: '_stepOverInFrame:')
+				ifTrue: [ 'true' ]
+				ifFalse: [ '' ] ].
+
+	didStep := service stepOver.
+
+	self assert: didStep.
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: '_stepOverInFrame:' ]).
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'stepLevel := 3' ])
 ]
 
 { #category : 'tests' }

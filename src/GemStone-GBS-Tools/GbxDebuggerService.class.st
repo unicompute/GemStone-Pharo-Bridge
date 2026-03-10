@@ -1250,18 +1250,20 @@ GbxDebuggerService >> sourceOffsetForBreakPoint: aBreakPoint [
 
 { #category : 'stepping' }
 GbxDebuggerService >> stepInto [
-	"Step into the next message send"
-	(self runDebugProcessCommand: 'step' recompute: true)
-		ifTrue: [ ^ true ].
-	^ false
+	"VW parity: step-into on server contexts is implemented by _stepOverInFrame:
+	with the step-through flag in the high bit of level."
+	| level |
+	level := self currentContextLevel.
+	level ifNil: [ ^ false ].
+	^ self serverStepOverFrameLevel: (level bitOr: 16r100000000)
 ]
 
 { #category : 'stepping' }
 GbxDebuggerService >> stepOver [
-	"Step over the next message send (step through without entering)"
-	(self runDebugProcessCommand: 'stepOver' recompute: true)
-		ifTrue: [ ^ true ].
-	^ false
+	| level |
+	level := self currentContextLevel.
+	level ifNil: [ ^ false ].
+	^ self serverStepOverFrameLevel: level
 ]
 
 { #category : 'stepping' }
@@ -1299,6 +1301,40 @@ GbxDebuggerService >> jumpToStepPoint: aStepPoint [
 	(self runDebugProcessCommand: 'jumpTo' withInteger: aStepPoint recompute: true)
 		ifTrue: [ ^ true ].
 	^ false
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> serverStepOverFrameLevel: levelValue [
+	| result script |
+	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
+	levelValue ifNil: [ ^ false ].
+	script := '[
+		| obj proc stepLevel ok |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc isNil or: [ (proc respondsTo: #perform:with:) not ]) ifTrue: [ ^ ''false'' ].
+		stepLevel := ', levelValue asString, '.
+		ok := [ proc perform: #_stepOverInFrame: with: stepLevel ] on: Error do: [ nil ].
+		ok isNil ifTrue: [ ^ ''false'' ].
+		''true''
+	] value'.
+	result := self executeDebugScript: script.
+	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
+	self recomputeContextList.
+	^ true
 ]
 
 { #category : 'variables' }
