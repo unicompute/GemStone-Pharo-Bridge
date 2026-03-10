@@ -720,22 +720,30 @@ GbxDebuggerService >> recompileCurrentMethodWithSource: sourceText [
 
 { #category : 'context list' }
 GbxDebuggerService >> recomputeContextList [
-	"Recompute the context list after a step operation"
+	"Recompute the context list after a step operation.
+	Always rebind currentContext to the freshly-computed list entry, even when
+	an equal/stale context object is still considered present."
+	| contexts refreshed |
 	contextStackPolicy ifNil: [
 		self updateSourceMapFromCurrentContext.
 		self notifyContextChanged.
 		^ self
 	].
 	contextStackPolicy computeContextList.
+	contexts := contextStackPolicy contextList.
 	
-	"If current context is no longer valid, select top"
-	(currentContext isNil or: [ 
-		(contextStackPolicy contextList includes: currentContext) not 
-	]) ifTrue: [
-		contextStackPolicy contextList ifNotEmpty: [ :contexts |
-			currentContext := contexts first.
+	currentContext isNil
+		ifTrue: [
+			contexts ifNotEmpty: [ :list | currentContext := list first ]
+		]
+		ifFalse: [
+			refreshed := contexts
+				detect: [ :each | (each == currentContext) or: [ each = currentContext ] ]
+				ifNone: [ nil ].
+			refreshed
+				ifNil: [ contexts ifNotEmpty: [ :list | currentContext := list first ] ]
+				ifNotNil: [ currentContext := refreshed ]
 		].
-	].
 	self updateSourceMapFromCurrentContext.
 	self notifyContextChanged.
 ]

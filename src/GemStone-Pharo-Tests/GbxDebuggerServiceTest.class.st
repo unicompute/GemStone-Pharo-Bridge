@@ -307,6 +307,34 @@ GbxDebuggerServiceTest >> testCurrentSourceSelectionIntervalFallsBackToFirstWhen
 ]
 
 { #category : 'tests' }
+GbxDebuggerServiceTest >> testRecomputeContextListRebindsCurrentContextToFreshMatchingEntry [
+	| oldContext refreshedContext policy interval |
+	oldContext := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 1
+		sourceOffsets: #(1 6 10)
+		source: '1+1.', String lf, '1/0'.
+	refreshedContext := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 2
+		sourceOffsets: #(1 6 10)
+		source: '1+1.', String lf, '1/0'.
+	policy := GbxFakeContextListPolicyForService new.
+	policy contextList: { refreshedContext }.
+	service instVarNamed: 'contextStackPolicy' put: policy.
+	service currentContext: oldContext.
+
+	service recomputeContextList.
+	interval := service currentSourceSelectionInterval.
+
+	self assert: service currentContext == refreshedContext.
+	self assert: service currentStepPoint equals: 2.
+	self assert: interval equals: (6 to: 6)
+]
+
+{ #category : 'tests' }
 GbxDebuggerServiceTest >> testSetBreakPointInReturnsFalseWhenSourceWasEdited [
 	| widget |
 	widget := GbxFakeTextWidgetForService new.
