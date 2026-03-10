@@ -1106,9 +1106,23 @@ GbxDebuggerService >> runDebugProcessCommand: commandName recompute: shouldRecom
 	| result script |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
 	script := '[
-		| proc |
-		proc := Object _objectForOop: ', processOop asString, '.
-		proc ifNil: [ ^ ''false'' ].
+		| obj proc |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		proc isNil ifTrue: [ ^ ''false'' ].
 		proc ', commandName, '.
 		true
 	] value'.
@@ -1124,9 +1138,23 @@ GbxDebuggerService >> runDebugProcessCommand: commandName withInteger: anInteger
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
 	anInteger ifNil: [ ^ false ].
 	script := '[
-		| proc |
-		proc := Object _objectForOop: ', processOop asString, '.
-		proc ifNil: [ ^ ''false'' ].
+		| obj proc |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		proc isNil ifTrue: [ ^ ''false'' ].
 		[ proc perform: #', commandName, ': with: ', anInteger asString, ' ] on: Error do: [ ^ ''false'' ].
 		true
 	] value'.
