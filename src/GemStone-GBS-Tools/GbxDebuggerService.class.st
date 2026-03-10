@@ -1255,7 +1255,11 @@ GbxDebuggerService >> stepInto [
 	| level |
 	level := self currentContextLevel.
 	level ifNil: [ ^ false ].
-	^ self serverStepOverFrameLevel: (level bitOr: 16r100000000)
+	(self serverStepOverFrameLevel: (level bitOr: 16r100000000))
+		ifTrue: [ ^ true ].
+	(self runDebugProcessCommand: 'step' recompute: true)
+		ifTrue: [ ^ true ].
+	^ false
 ]
 
 { #category : 'stepping' }
@@ -1263,7 +1267,11 @@ GbxDebuggerService >> stepOver [
 	| level |
 	level := self currentContextLevel.
 	level ifNil: [ ^ false ].
-	^ self serverStepOverFrameLevel: level
+	(self serverStepOverFrameLevel: level)
+		ifTrue: [ ^ true ].
+	(self runDebugProcessCommand: 'stepOver' recompute: true)
+		ifTrue: [ ^ true ].
+	^ false
 ]
 
 { #category : 'stepping' }
