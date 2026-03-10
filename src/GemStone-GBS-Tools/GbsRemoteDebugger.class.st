@@ -1976,8 +1976,30 @@ GbsRemoteDebugger >> restart [
 	didRestart ifTrue: [
 		self fetchStackFrames.
 		self normalizeRestartSelectionAndPosition.
+		self restartNeedsServerRewind ifTrue: [
+			(self restartUsingDirectTrimFromExecutedFrame) ifTrue: [
+				self fetchStackFrames.
+				self normalizeRestartSelectionAndPosition
+			]
+		].
 	].
 	^ didRestart
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartNeedsServerRewind [
+	| executed step |
+	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ false ].
+	executed := contextList
+		detect: [ :ctx |
+			(ctx respondsTo: #isExecutedCodeFrame)
+				and: [ ctx isExecutedCodeFrame ] ]
+		ifNone: [ nil ].
+	executed ifNil: [ ^ false ].
+	step := (executed respondsTo: #quickStepPoint)
+		ifTrue: [ [ executed quickStepPoint asInteger ] on: Error do: [ 0 ] ]
+		ifFalse: [ 0 ].
+	^ step > 1
 ]
 
 { #category : 'private' }
