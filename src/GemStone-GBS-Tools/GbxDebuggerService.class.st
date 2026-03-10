@@ -789,26 +789,13 @@ GbxDebuggerService >> basicReenterServerContext [
 	as if it had just been entered. Discard any execution since the context
 	was entered."
 	| theContext |
-	theContext := self restartTargetContext.
-	theContext ifNil: [ theContext := currentContext ].
+	theContext := currentContext.
 	theContext ifNil: [ ^ false ].
 
 	(self cutbackTo: theContext
 		finishWith: [
 			"Level numbers may have changed; recompute and select top server context."
-			self selectTopServerContext.
-			"AFTER selectTopServerContext, currentContext is a fresh instance from server.
-			We need to force step to 1 and mark as executed code frame."
-			currentContext ifNotNil: [
-				"First force the step/offset values to 1"
-				self forceRestartPositionToMethodStart.
-				"Then mark as executed code frame (this ensures printString shows @1 line 1)"
-				(currentContext respondsTo: #markAsExecutedCodeFrame) ifTrue: [
-					currentContext markAsExecutedCodeFrame.
-				].
-			].
-			"Notify the debugger UI that the context has changed"
-			self notifyContextChanged.
+			self selectTopServerContext
 		]) ifFalse: [ ^ false ].
 	
 	^ true

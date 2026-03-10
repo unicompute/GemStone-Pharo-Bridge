@@ -1365,12 +1365,33 @@ GbsRemoteDebugger >> stepOver [
 	| didStep |
 	didStep := self safeServiceCall: [ service stepOver ] default: false.
 	didStep ifFalse: [
-		didStep := self
-			directStepWithPrimarySelector: '_stepOverInFrame:'
-			fallbackSelector: nil
+		(self currentSelectedContextIsExecutedCodeFrame)
+			ifFalse: [
+				didStep := self
+					directStepWithPrimarySelector: '_stepOverInFrame:'
+					fallbackSelector: nil
+			]
 	].
 	didStep ifTrue: [ self fetchStackFrames ].
 	^ didStep
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> currentSelectedContextIsExecutedCodeFrame [
+	| context index |
+	context := (service notNil and: [ service respondsTo: #currentContext ])
+		ifTrue: [ self safeServiceCall: [ service currentContext ] default: nil ]
+		ifFalse: [ nil ].
+	context ifNil: [
+		index := (stackList notNil and: [ stackList respondsTo: #selectedIndex ])
+			ifTrue: [ stackList selectedIndex ifNil: [ 0 ] ]
+			ifFalse: [ 0 ].
+		(index > 0 and: [ contextList notNil and: [ index <= contextList size ] ])
+			ifTrue: [ context := contextList at: index ]
+	].
+	context ifNil: [ ^ false ].
+	^ (context respondsTo: #isExecutedCodeFrame)
+		and: [ context isExecutedCodeFrame ]
 ]
 
 { #category : 'actions' }
