@@ -36,6 +36,12 @@ GbsRemoteDebuggerPresenterTest >> testInspectFrameDelegatesToService [
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testInspectStackFallsBackToFrameInspectionServiceCall [
+	self assert: debugger inspectStack.
+	self assert: service inspectFrameCalls equals: 1.
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testInspectReceiverReturnsFalseWhenServiceRaises [
 	service raiseOnInspectReceiver: true.
 

@@ -502,6 +502,15 @@ GbxDebuggerService >> initializeForDebugging [
 
 { #category : 'inspector' }
 GbxDebuggerService >> inspectCurrentFrame [
+	| contextInspectorClass |
+	currentContext ifNotNil: [
+		contextInspectorClass := Smalltalk at: #GbxContextInspector ifAbsent: [ nil ].
+		(contextInspectorClass notNil and: [ contextInspectorClass respondsTo: #openOn:service: ]) ifTrue: [
+			[ contextInspectorClass openOn: currentContext service: self. ^ true ]
+				on: Error
+				do: [ ].
+		]
+	].
 	^ self openInspectorOnOop: self currentFrameOop
 ]
 

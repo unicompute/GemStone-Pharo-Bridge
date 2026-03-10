@@ -41,6 +41,7 @@ Class {
 		'inspectReceiverButton',
 		'inspectProcessButton',
 		'inspectFrameButton',
+		'inspectStackButton',
 		'inspectVariableButton',
 		'errorMessageLabel',
 		'glueIsHidden',
@@ -274,6 +275,11 @@ GbsRemoteDebugger >> canInspectVariable [
 ]
 
 { #category : 'private' }
+GbsRemoteDebugger >> canInspectStack [
+	^ self canInspectFrame
+]
+
+{ #category : 'private' }
 GbsRemoteDebugger >> canRemoveAllBreakpoints [
 	^ self safeServiceCall: [ service canRemoveAllBreakPoints ] default: false
 ]
@@ -462,6 +468,7 @@ GbsRemoteDebugger >> defaultLayout [
 			add: inspectReceiverButton;
 			add: inspectProcessButton;
 			add: inspectFrameButton;
+			add: inspectStackButton;
 			add: inspectVariableButton;
 			yourself) expand: false;
 		add: (SpPanedLayout newVertical
@@ -895,8 +902,11 @@ GbsRemoteDebugger >> initializePresenters [
 		label: 'Inspect Process';
 		action: [ self inspectProcess ].
 	inspectFrameButton := self newButton
-		label: 'Inspect Frame';
+		label: 'Inspect Context';
 		action: [ self inspectFrame ].
+	inspectStackButton := self newButton
+		label: 'Inspect Stack';
+		action: [ self inspectStack ].
 	inspectVariableButton := self newButton
 		label: 'Inspect Variable';
 		action: [ self inspectVariable ].
@@ -946,6 +956,7 @@ GbsRemoteDebugger >> initializePresenters [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> inspectFrame [
+	(self openInspectorClassNamed: #GbxContextInspector) ifTrue: [ ^ true ].
 	^ self safeServiceCall: [ service inspectCurrentFrame ] default: false
 ]
 
@@ -968,6 +979,12 @@ GbsRemoteDebugger >> inspectVariable [
 	(service respondsTo: #inspectVariableNamed:)
 		ifTrue: [ ^ self safeServiceCall: [ service inspectVariableNamed: variableName ] default: false ].
 	^ false
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> inspectStack [
+	(self openInspectorClassNamed: #GbxStackInspector) ifTrue: [ ^ true ].
+	^ self inspectFrame
 ]
 
 { #category : 'private' }
@@ -1037,6 +1054,7 @@ GbsRemoteDebugger >> refreshUiState [
 	self updateButton: inspectReceiverButton enabled: self canInspectReceiver.
 	self updateButton: inspectProcessButton enabled: self canInspectProcess.
 	self updateButton: inspectFrameButton enabled: self canInspectFrame.
+	self updateButton: inspectStackButton enabled: self canInspectStack.
 	self updateButton: inspectVariableButton enabled: self canInspectVariable.
 ]
 
@@ -1615,11 +1633,40 @@ GbsRemoteDebugger >> stackMenu [
 			group addItem: [ :item | item name: 'Filter Stack'; action: [ self toggleFilterStack ] ].
 			group addItem: [ :item | item name: 'Select Home Context'; action: [ self selectHomeContext ] ].
 			group addItem: [ :item | item name: 'Inspect Context'; action: [ self inspectFrame ] ].
+			group addItem: [ :item | item name: 'Inspect Stack'; action: [ self inspectStack ] ].
 			group addItem: [ :item | item name: 'Bookmark Context'; action: [ self bookmarkContext ] ].
 			group addItem: [ :item | item name: 'Clear Bookmark'; action: [ self clearBookmarkContext ] ].
 			group addItem: [ :item | item name: 'Inspect Process'; action: [ self inspectProcess ] ].
 			group addItem: [ :item | item name: 'Show Glue'; action: [ self toggleGlueHiding ] ] ];
 		yourself
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> selectedContextForInspector [
+	| context index |
+	context := (service notNil and: [ service respondsTo: #currentContext ])
+		ifTrue: [ self safeServiceCall: [ service currentContext ] default: nil ]
+		ifFalse: [ nil ].
+	context ifNotNil: [ ^ context ].
+	index := (stackList notNil and: [ stackList respondsTo: #selectedIndex ])
+		ifTrue: [ stackList selectedIndex ifNil: [ 0 ] ]
+		ifFalse: [ 0 ].
+	(index > 0 and: [ contextList notNil and: [ index <= contextList size ] ])
+		ifTrue: [ ^ contextList at: index ].
+	^ nil
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> openInspectorClassNamed: classSymbol [
+	| inspectorClass context |
+	inspectorClass := Smalltalk at: classSymbol ifAbsent: [ nil ].
+	inspectorClass ifNil: [ ^ false ].
+	(inspectorClass respondsTo: #openOn:service:) ifFalse: [ ^ false ].
+	context := self selectedContextForInspector.
+	context ifNil: [ ^ false ].
+	^ [ inspectorClass openOn: context service: service. true ]
+		on: Error
+		do: [ false ]
 ]
 
 { #category : 'private' }
