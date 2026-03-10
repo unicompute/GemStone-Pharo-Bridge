@@ -794,13 +794,49 @@ GbxDebuggerService >> basicReenterServerContext [
 
 	(self cutbackTo: theContext
 		finishWith: [
+			"First, reset the server-side PC to step 1 BEFORE fetching the context list.
+			This ensures the server reports the correct step point."
+			self resetServerPCToStepOne.
+			
 			"Level numbers may have changed; recompute and select top server context."
 			self selectTopServerContext.
-			"After restart, force the step point to 1 to ensure stepping starts from the beginning"
-			self forceRestartPositionToMethodStart
+			
+			"After restart, mark the context as an executed code frame with step=1.
+			This ensures the display shows 'GS: Executed code @1'."
+			self markCurrentContextAsRestarted
 		]) ifFalse: [ ^ false ].
 
 	^ true
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> resetServerPCToStepOne [
+	"Reset the server-side PC to step 1. This is critical for correct stepping after restart.
+	Called after cutback but before context list refresh, so the server knows which frame to reset."
+	| result |
+	result := [self jumpToStepPoint: 1] on: Error do: [ false ].
+	result ifFalse: [
+		"Try alternative: run to step 1"
+		[self runToStepPoint: 1] on: Error do: [ ]
+	]
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> markCurrentContextAsRestarted [
+	"Mark the current context as restarted (step=1, at method entry).
+	This ensures the display shows 'GS: Executed code @1' and stepping starts correctly."
+	| target |
+	target := self currentContext.
+	target ifNil: [ target := self restartTargetContext ].
+	target ifNil: [ ^ self ].
+
+	"Mark as executed code frame - this sets class/selector to unknown and step to 1"
+	(target respondsTo: #markAsExecutedCodeFrame) ifTrue: [
+		target markAsExecutedCodeFrame
+	].
+	
+	"Update the source map to reflect the new step point"
+	self updateSourceMapFromCurrentContext
 ]
 
 { #category : 'private' }
@@ -1294,9 +1330,11 @@ GbxDebuggerService >> stepInto [
 	"VW parity: step-into on server contexts is implemented by _stepOverInFrame:
 	with the step-through flag in the high bit of level."
 	| level |
-	(self isCurrentExecutedCodeFrame
-		and: [ self runDebugProcessCommand: 'step' recompute: true ])
-		ifTrue: [ ^ true ].
+	(self isCurrentExecutedCodeFrame) ifTrue: [
+		"Ensure server PC is at step 1 before stepping from a restarted frame"
+		self resetServerPCToStepOne.
+		(self runDebugProcessCommand: 'step' recompute: true) ifTrue: [ ^ true ].
+	].
 	level := self currentContextLevel.
 	level ifNil: [ ^ false ].
 	(self serverStepOverFrameLevel: (level bitOr: 16r100000000))
@@ -1309,9 +1347,11 @@ GbxDebuggerService >> stepInto [
 { #category : 'stepping' }
 GbxDebuggerService >> stepOver [
 	| level |
-	(self isCurrentExecutedCodeFrame
-		and: [ self runDebugProcessCommand: 'step' recompute: true ])
-		ifTrue: [ ^ true ].
+	(self isCurrentExecutedCodeFrame) ifTrue: [
+		"Ensure server PC is at step 1 before stepping from a restarted frame"
+		self resetServerPCToStepOne.
+		(self runDebugProcessCommand: 'step' recompute: true) ifTrue: [ ^ true ].
+	].
 	level := self currentContextLevel.
 	level ifNil: [ ^ false ].
 	(self serverStepOverFrameLevel: level)
