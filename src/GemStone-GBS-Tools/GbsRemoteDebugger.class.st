@@ -113,14 +113,57 @@ GbsRemoteDebugger >> acceptSourceEdits [
 
 { #category : 'private' }
 GbsRemoteDebugger >> applySourceMapHighlightFor: aContext [
-	| map interval lineNumber stepPoint sourceOffsets |
+	| map interval lineNumber stepPoint sourceOffsets stepEntry stepCandidates |
 	sourceText ifNil: [ ^ self ].
 
 	map := self sourceMapFor: aContext.
 	(map isCollection and: [ map isEmpty not ]) ifTrue: [
-		interval := (service notNil and: [ service respondsTo: #currentSourceSelectionInterval ])
-			ifTrue: [ [ service currentSourceSelectionInterval ] on: Error do: [ nil ] ]
+		"Primary: anchor highlight to the selected frame's current step point."
+		stepPoint := (aContext respondsTo: #stepPoint)
+			ifTrue: [ [ aContext stepPoint ] on: Error do: [ nil ] ]
 			ifFalse: [ nil ].
+		stepPoint ifNil: [
+			stepPoint := (aContext respondsTo: #quickStepPoint)
+				ifTrue: [ [ aContext quickStepPoint ] on: Error do: [ nil ] ]
+				ifFalse: [ nil ]
+		].
+		stepPoint := [ stepPoint asInteger ] on: Error do: [ nil ].
+		(stepPoint isNumber and: [ stepPoint > 0 ]) ifTrue: [
+			stepEntry := map
+				detect: [ :assoc |
+					| key |
+					(assoc respondsTo: #key) ifFalse: [ false ] ifTrue: [
+						key := self integerFromSourceMapKey: assoc key.
+						key = stepPoint
+					] ]
+				ifNone: [ nil ].
+			stepEntry ifNil: [
+				stepCandidates := map
+					select: [ :assoc |
+						| key |
+						(assoc respondsTo: #key) ifFalse: [ false ] ifTrue: [
+							key := self integerFromSourceMapKey: assoc key.
+							key isNumber and: [ key <= stepPoint ]
+						] ].
+				stepCandidates ifNotEmpty: [
+					stepEntry := stepCandidates first.
+					stepCandidates allButFirstDo: [ :each |
+						| eachKey currentKey |
+						eachKey := self integerFromSourceMapKey: each key.
+						currentKey := self integerFromSourceMapKey: stepEntry key.
+						(eachKey isNumber and: [ currentKey isNumber and: [ eachKey > currentKey ] ])
+							ifTrue: [ stepEntry := each ]
+					]
+				]
+			].
+			stepEntry ifNotNil: [ interval := stepEntry value ].
+		].
+
+		interval ifNil: [
+			interval := (service notNil and: [ service respondsTo: #currentSourceSelectionInterval ])
+				ifTrue: [ [ service currentSourceSelectionInterval ] on: Error do: [ nil ] ]
+				ifFalse: [ nil ]
+		].
 		interval ifNil: [ interval := map first value ].
 		(interval isNil or: [ (interval respondsTo: #first) not or: [ (interval respondsTo: #last) not ] ]) ifTrue: [
 			^ self clearSourceHighlight
@@ -150,15 +193,16 @@ GbsRemoteDebugger >> applySourceMapHighlightFor: aContext [
 		]
 	].
 
-	(map isCollection and: [ map isEmpty not ]) ifFalse: [
-		lineNumber := (aContext respondsTo: #displayedLineNumber)
-			ifTrue: [ [ aContext displayedLineNumber ] on: Error do: [ nil ] ]
-			ifFalse: [ nil ].
-		(lineNumber isNumber and: [ lineNumber > 0 ])
-			ifTrue: [ ^ self selectLineNumber: lineNumber inTextPresenter: sourceText ].
-		^ self clearSourceHighlight
-	].
 	self clearSourceHighlight.
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> integerFromSourceMapKey: rawKey [
+	| value |
+	rawKey ifNil: [ ^ nil ].
+	value := rawKey.
+	(value respondsTo: #asLocalString) ifTrue: [ value := value asLocalString ].
+	^ [ value asString asInteger ] on: Error do: [ nil ]
 ]
 
 { #category : 'private' }
@@ -1008,11 +1052,16 @@ GbsRemoteDebugger >> selectLineNumber: lineNumber inTextPresenter: aTextPresente
 
 { #category : 'private' }
 GbsRemoteDebugger >> selectAndRevealFrom: startIndex to: endIndex inTextPresenter: aTextPresenter [
-	| start stop |
+	| start stop textSize |
 	aTextPresenter ifNil: [ ^ self ].
 	start := startIndex ifNil: [ 1 ].
 	stop := endIndex ifNil: [ start ].
 	stop < start ifTrue: [ stop := start ].
+	textSize := [ aTextPresenter text asString size ] on: Error do: [ 0 ].
+	textSize > 0 ifTrue: [
+		start := (start max: 1) min: textSize.
+		stop := (stop max: start) min: textSize
+	].
 
 	[
 		"Standard Spec2 way"
@@ -1036,10 +1085,19 @@ GbsRemoteDebugger >> selectAndRevealFrom: startIndex to: endIndex inTextPresente
 				
 				"If it's a RubScrolledTextMorph (common in P13)"
 				(widget respondsTo: #textArea) ifTrue: [
-					| textArea |
+					| textArea editor |
 					textArea := widget textArea.
 					textArea ifNotNil: [
 						(textArea respondsTo: #selectFrom:to:) ifTrue: [ textArea selectFrom: start to: stop ].
+						editor := (textArea respondsTo: #editor)
+							ifTrue: [ [ textArea editor ] on: Error do: [ nil ] ]
+							ifFalse: [ nil ].
+						editor ifNotNil: [
+							(editor respondsTo: #markIndex:) ifTrue: [ editor markIndex: start ].
+							(editor respondsTo: #pointIndex:) ifTrue: [ editor pointIndex: stop ].
+							(editor respondsTo: #selectFrom:to:) ifTrue: [ editor selectFrom: start to: stop ].
+							(editor respondsTo: #selectAt:) ifTrue: [ editor selectAt: stop ].
+						].
 						(textArea respondsTo: #scrollSelectionIntoView) ifTrue: [ textArea scrollSelectionIntoView ].
 					]
 				]
