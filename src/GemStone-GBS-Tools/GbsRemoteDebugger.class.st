@@ -2007,7 +2007,7 @@ GbsRemoteDebugger >> restartUsingDirectTrimFromExecutedFrame [
 	((targetLevel isNumber and: [ targetLevel > 0 ]) not) ifTrue: [ targetLevel := 1 ].
 
 	script := '[
-		| obj proc restartLevel |
+		| obj proc restartLevel stackReport fullEntry quick |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
@@ -2027,6 +2027,24 @@ GbsRemoteDebugger >> restartUsingDirectTrimFromExecutedFrame [
 
 		restartLevel := ', targetLevel asString, '.
 		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ^ ''false'' ].
+
+		"If trim did not rewind the current frame, force jump to first step point."
+		quick := 0.
+		stackReport := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
+		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
+			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+			fullEntry ifNotNil: [
+				quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ]
+			]
+		].
+		quick > 1 ifTrue: [
+			(proc respondsTo: #jumpToStepPoint:)
+				ifTrue: [ [ proc jumpToStepPoint: 1 ] on: Error do: [ ] ]
+				ifFalse: [
+					(proc respondsTo: #jumpTo:)
+						ifTrue: [ [ proc jumpTo: 1 ] on: Error do: [ ] ]
+				]
+		].
 		''true''
 	] value'.
 
