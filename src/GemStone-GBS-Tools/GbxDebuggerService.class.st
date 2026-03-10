@@ -795,9 +795,11 @@ GbxDebuggerService >> basicReenterServerContext [
 	(self cutbackTo: theContext
 		finishWith: [
 			"Level numbers may have changed; recompute and select top server context."
-			self selectTopServerContext
+			self selectTopServerContext.
+			"After restart, force the step point to 1 to ensure stepping starts from the beginning"
+			self forceRestartPositionToMethodStart
 		]) ifFalse: [ ^ false ].
-	
+
 	^ true
 ]
 
@@ -1032,8 +1034,11 @@ GbxDebuggerService >> forceRestartPositionToMethodStart [
 	"Reset IP offset to 1"
 	target instVarNamed: #ipOffset put: 1.
 
-	"Reset source offsets to start at position 1"
-	target instVarNamed: #sourceOffsets put: #( 1 ).
+	"Clear source offsets - they will be recalculated when needed from the server"
+	target instVarNamed: #sourceOffsets put: #( ).
+	
+	"Update the source map to reflect the new step point"
+	self updateSourceMapFromCurrentContext
 ]
 
 { #category : 'private' }
