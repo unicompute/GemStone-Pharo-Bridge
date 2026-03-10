@@ -789,7 +789,8 @@ GbxDebuggerService >> basicReenterServerContext [
 	as if it had just been entered. Discard any execution since the context
 	was entered."
 	| theContext |
-	theContext := currentContext.
+	theContext := self restartTargetContext.
+	theContext ifNil: [ theContext := currentContext ].
 	theContext ifNil: [ ^ false ].
 
 	(self cutbackTo: theContext
@@ -841,8 +842,12 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	gsContext on the stack of its GSProcess. Also discards 
 	any partial execution in gsContext, resetting it to the 
 	beginning."
-	| lvl script result |
+	| lvl computed script result |
 	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ 1 ].
+	((gsContext respondsTo: #isExecutedCodeFrame) and: [ gsContext isExecutedCodeFrame ]) ifTrue: [
+		computed := self restartLevelFromServerStack.
+		(computed isNumber and: [ computed > 0 ]) ifTrue: [ lvl := computed ].
+	].
 	
 	script := '[
 		| obj proc |
