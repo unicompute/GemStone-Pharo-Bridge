@@ -738,6 +738,16 @@ GbsRemoteDebugger >> fetchStackFrames [
 	contexts ifEmpty: [
 		contexts := self fetchContextsDirectly
 	].
+	contexts ifEmpty: [
+		| resolved |
+		resolved := self resolveDebugProcessOopFromCurrentProcessOop.
+		((resolved isNumber and: [ resolved > 20 ]) and: [ resolved ~= processOop ]) ifTrue: [
+			processOop := resolved.
+			(service notNil and: [ service respondsTo: #processOop: ])
+				ifTrue: [ [ service processOop: resolved ] on: Error do: [ ] ].
+			contexts := self fetchContextsDirectly.
+		].
+	].
 
 	contextList := contexts ifNil: [ #( ) ].
 	contextList ifEmpty: [
@@ -763,6 +773,65 @@ GbsRemoteDebugger >> fetchStackFrames [
 		self contextSelected: (contextList at: preferredIndex)
 	].
 	self refreshUiState.
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> resolveDebugProcessOopFromCurrentProcessOop [
+	| script raw resolved |
+	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ nil ].
+	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ nil ].
+
+	script := '[
+		| obj candidate top hasStack |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''0'' ].
+
+		hasStack := [ :proc |
+			| report |
+			(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ false ] ifFalse: [
+				report := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
+				(report notNil and: [ (report respondsTo: #size) and: [ report size >= 2 ] ])
+			]
+		].
+
+		(hasStack value: obj) ifTrue: [ ^ (Reflection oopOf: obj) asString ].
+
+		candidate := (obj respondsTo: #serverProcess)
+			ifTrue: [ [ obj serverProcess ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+
+		candidate := (obj respondsTo: #process)
+			ifTrue: [ [ obj process ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+
+		top := (obj respondsTo: #topContext)
+			ifTrue: [ [ obj topContext ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		top ifNotNil: [
+			candidate := (top respondsTo: #process)
+				ifTrue: [ [ top process ] on: Error do: [ nil ] ]
+				ifFalse: [ nil ].
+			(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+			(hasStack value: top) ifTrue: [ ^ (Reflection oopOf: top) asString ].
+		].
+
+		(obj respondsTo: #sender) ifTrue: [
+			candidate := (obj respondsTo: #process)
+				ifTrue: [ [ obj process ] on: Error do: [ nil ] ]
+				ifFalse: [ nil ].
+			(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+		].
+
+		''0''
+	] value'.
+
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	raw ifNil: [ ^ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	resolved := [ raw asString asInteger ] on: Error do: [ nil ].
+	^ resolved
 ]
 
 { #category : 'actions' }
