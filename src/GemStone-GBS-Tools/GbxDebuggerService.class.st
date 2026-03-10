@@ -798,7 +798,19 @@ GbxDebuggerService >> basicReenterServerContext [
 			"Level numbers may have changed; recompute and select top server context."
 			self selectTopServerContext
 		]) ifFalse: [ ^ false ].
+	self ensureRestartAtStepOne.
 	^ true
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> ensureRestartAtStepOne [
+	| step |
+	(self isCurrentExecutedCodeFrame) ifFalse: [ ^ self ].
+	step := self currentStepPoint ifNil: [ 1 ].
+	step > 1 ifFalse: [ ^ self ].
+	(self jumpToStepPoint: 1)
+		ifFalse: [ self runToStepPoint: 1 ].
+	self selectTopServerContext
 ]
 
 { #category : 'actions' }
