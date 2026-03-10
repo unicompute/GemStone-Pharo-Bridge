@@ -1345,7 +1345,6 @@ GbsRemoteDebugger >> stackData: anArray [
 { #category : 'actions' }
 GbsRemoteDebugger >> stepInto [
 	| didStep |
-	(self tryAdvanceExecutedCodeByOneStepPoint) ifTrue: [ ^ true ].
 	didStep := self safeServiceCall: [ service stepInto ] default: false.
 	didStep ifFalse: [
 		didStep := self
@@ -1364,7 +1363,6 @@ GbsRemoteDebugger >> step [
 { #category : 'actions' }
 GbsRemoteDebugger >> stepOver [
 	| didStep |
-	(self tryAdvanceExecutedCodeByOneStepPoint) ifTrue: [ ^ true ].
 	didStep := self safeServiceCall: [ service stepOver ] default: false.
 	didStep ifFalse: [
 		didStep := self
@@ -1373,27 +1371,6 @@ GbsRemoteDebugger >> stepOver [
 	].
 	didStep ifTrue: [ self fetchStackFrames ].
 	^ didStep
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> tryAdvanceExecutedCodeByOneStepPoint [
-	| context currentStep offsetsCount targetStep didRun |
-	service ifNil: [ ^ false ].
-	context := self safeServiceCall: [ service currentContext ] default: nil.
-	context ifNil: [ ^ false ].
-	((context respondsTo: #isExecutedCodeFrame) and: [ context isExecutedCodeFrame ]) ifFalse: [ ^ false ].
-	currentStep := (context respondsTo: #quickStepPoint)
-		ifTrue: [ [ context quickStepPoint asInteger ] on: Error do: [ 0 ] ]
-		ifFalse: [ 0 ].
-	currentStep <= 0 ifTrue: [ currentStep := 1 ].
-	offsetsCount := (context respondsTo: #sourceOffsets)
-		ifTrue: [ [ context sourceOffsets size ] on: Error do: [ 0 ] ]
-		ifFalse: [ 0 ].
-	(currentStep >= offsetsCount) ifTrue: [ ^ false ].
-	targetStep := currentStep + 1.
-	didRun := self safeServiceCall: [ service runToStepPoint: targetStep ] default: false.
-	didRun ifTrue: [ self fetchStackFrames ].
-	^ didRun
 ]
 
 { #category : 'actions' }
