@@ -473,6 +473,43 @@ GbxDebuggerServiceTest >> testRestartSelectsExecutedCodeFrameAtLineOne [
 	self assert: service currentContext printString equals: 'GS: Executed code @1 line 1'
 ]
 
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testCutbackToGsProcessOfTerminatesProcessAndClearsErrorSession [
+	| gsContext fakeError |
+	gsContext := GbxFakeActivationForService new.
+	gsContext
+		processOop: 111;
+		level: 2.
+	fakeError := GbxFakeGbsErrorForService new.
+	fakeError session: session.
+	gsContext gbsError: fakeError.
+
+	self assert: (service cutbackToGsProcessOf: gsContext).
+	self assert: gsContext terminateCalled.
+	self assert: fakeError session isNil
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testCutbackGsProcessesAboveUsesFirstServerContextAndTerminatesIt [
+	| clientContext serverContext policy fakeError |
+	clientContext := Object new.
+	serverContext := GbxFakeActivationForService new.
+	serverContext
+		processOop: 111;
+		level: 2.
+	fakeError := GbxFakeGbsErrorForService new.
+	fakeError session: session.
+	serverContext gbsError: fakeError.
+
+	policy := GbxFakeContextListPolicyForService new.
+	policy contextList: { serverContext. clientContext }.
+	service instVarNamed: 'contextStackPolicy' put: policy.
+
+	service cutbackGsProcessesAbove: clientContext.
+	self assert: serverContext terminateCalled.
+	self assert: fakeError session isNil
+]
+
 { #category : 'private' }
 GbxDebuggerServiceTest >> makeActivationMethodClass: className selector: selectorSymbol stepPoint: step sourceOffsets: offsets source: sourceText [
 	| activation |

@@ -115,15 +115,30 @@ GbsRemoteDebugger >> acceptSourceEdits [
 GbsRemoteDebugger >> applySourceMapHighlightFor: aContext [
 	| map interval lineNumber stepPoint sourceOffsets |
 	sourceText ifNil: [ ^ self ].
-	
-	"Check if this is an executed code frame (restart position)"
+
+	map := self sourceMapFor: aContext.
+	(map isCollection and: [ map isEmpty not ]) ifTrue: [
+		interval := (service notNil and: [ service respondsTo: #currentSourceSelectionInterval ])
+			ifTrue: [ [ service currentSourceSelectionInterval ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		interval ifNil: [ interval := map first value ].
+		(interval isNil or: [ (interval respondsTo: #first) not or: [ (interval respondsTo: #last) not ] ]) ifTrue: [
+			^ self clearSourceHighlight
+		].
+		^ self selectAndRevealFrom: interval first to: interval last inTextPresenter: sourceText.
+	].
+
+	lineNumber := (aContext respondsTo: #displayedLineNumber)
+		ifTrue: [ [ aContext displayedLineNumber ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	(lineNumber isNumber and: [ lineNumber > 0 ])
+		ifTrue: [ ^ self selectLineNumber: lineNumber inTextPresenter: sourceText ].
+
+	"Final fallback for executed-code frames when map/line data is unavailable."
 	(aContext respondsTo: #isExecutedCodeFrame) ifTrue: [
 		aContext isExecutedCodeFrame ifTrue: [
-			"Highlight the start of the source code for executed code frames"
 			stepPoint := aContext quickStepPoint ifNil: [ 1 ].
 			sourceOffsets := aContext sourceOffsets ifNil: [ #( 1 ) ].
-			
-			"Use source offset to highlight the correct position"
 			(sourceOffsets isCollection and: [ sourceOffsets isEmpty not and: [ stepPoint <= sourceOffsets size ] ]) ifTrue: [
 				interval := sourceOffsets at: stepPoint ifAbsent: [ 1 ].
 				interval ifNil: [ interval := 1 ].
@@ -131,12 +146,10 @@ GbsRemoteDebugger >> applySourceMapHighlightFor: aContext [
 					^ self selectAndRevealFrom: interval to: interval inTextPresenter: sourceText
 				]
 			].
-			"Fall back to line 1 highlighting"
 			^ self selectLineNumber: 1 inTextPresenter: sourceText
 		]
 	].
-	
-	map := self sourceMapFor: aContext.
+
 	(map isCollection and: [ map isEmpty not ]) ifFalse: [
 		lineNumber := (aContext respondsTo: #displayedLineNumber)
 			ifTrue: [ [ aContext displayedLineNumber ] on: Error do: [ nil ] ]
@@ -145,14 +158,7 @@ GbsRemoteDebugger >> applySourceMapHighlightFor: aContext [
 			ifTrue: [ ^ self selectLineNumber: lineNumber inTextPresenter: sourceText ].
 		^ self clearSourceHighlight
 	].
-	interval := (service notNil and: [ service respondsTo: #currentSourceSelectionInterval ])
-		ifTrue: [ [ service currentSourceSelectionInterval ] on: Error do: [ nil ] ]
-		ifFalse: [ nil ].
-	interval ifNil: [ interval := map first value ].
-	(interval isNil or: [ (interval respondsTo: #first) not or: [ (interval respondsTo: #last) not ] ]) ifTrue: [
-		^ self clearSourceHighlight
-	].
-	self selectAndRevealFrom: interval first to: interval last inTextPresenter: sourceText.
+	self clearSourceHighlight.
 ]
 
 { #category : 'private' }

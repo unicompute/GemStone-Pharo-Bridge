@@ -346,12 +346,12 @@ GbxDebuggerService >> currentSourceSelectionInterval [
 			
 		"Fallback: find the highest step point number <= current stepPoint"
 		entry ifNil: [
-			| candidates |
+			| candidates maxKey |
 			candidates := map select: [ :assoc | (assoc respondsTo: #key) and: [ assoc key <= stepPoint ] ].
-			((candidates isEmpty not) and: [
-				(map anySatisfy: [ :assoc | (assoc respondsTo: #key) and: [ assoc key = stepPoint ] ])
-					or: [ stepPoint <= map last key ]
-			]) ifTrue: [
+			maxKey := ((map collect: [ :assoc | assoc key ]) select: [ :k | k isNumber ])
+				ifEmpty: [ nil ]
+				ifNotEmpty: [ :keys | keys max ].
+			(candidates isNotEmpty and: [ maxKey isNumber and: [ stepPoint <= maxKey ] ]) ifTrue: [
 				entry := candidates last. "Assuming map is sorted by key"
 			]
 		].
@@ -885,8 +885,18 @@ GbxDebuggerService >> cutbackGsProcessesAbove: clientContext [
 GbxDebuggerService >> cutbackToGsProcessOf: gsContext [
 	"gsContext must be a GemStone server context.
 	Discard execution above the owning GS process and terminate that process."
+	| gbsError |
 	self cutbackClientContextsAbove: gsContext.
-	self cutbackGsTo: gsContext
+	(gsContext respondsTo: #terminateProcess) ifTrue: [
+		[ gsContext terminateProcess ] on: Error do: [ ]
+	].
+	gbsError := (gsContext respondsTo: #gbsError)
+		ifTrue: [ [ gsContext gbsError ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	(gbsError notNil and: [ gbsError respondsTo: #session: ]) ifTrue: [
+		[ gbsError session: nil ] on: Error do: [ ]
+	].
+	^ true
 ]
 
 { #category : 'actions' }
@@ -1041,10 +1051,12 @@ GbxDebuggerService >> selectTopServerContext [
 	| topServer |
 	contextStackPolicy ifNil: [ ^ self ].
 	contextStackPolicy computeContextList.
-	topServer := (contextStackPolicy respondsTo: #topServerContext)
-		ifTrue: [ contextStackPolicy topServerContext ]
-		ifFalse: [ nil ].
-	topServer ifNil: [ topServer := self restartTargetContext ].
+	topServer := self restartTargetContext.
+	topServer ifNil: [
+		topServer := (contextStackPolicy respondsTo: #topServerContext)
+			ifTrue: [ contextStackPolicy topServerContext ]
+			ifFalse: [ nil ]
+	].
 	topServer ifNil: [
 		topServer := contextStackPolicy contextList
 			ifEmpty: [ nil ]

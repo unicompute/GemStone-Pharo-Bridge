@@ -10,7 +10,9 @@ Class {
 		'sourceOffsets',
 		'isServerContext',
 		'quickStepPoint',
-		'visibleSourceMap'
+		'visibleSourceMap',
+		'gbsError',
+		'terminateCalled'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -124,4 +126,24 @@ GbxFakeActivationForService >> gbxIsServerContext [
 { #category : 'testing' }
 GbxFakeActivationForService >> gbxIsServerContext: aBoolean [
 	isServerContext := aBoolean
+]
+
+{ #category : 'accessing' }
+GbxFakeActivationForService >> gbsError [
+	^ gbsError
+]
+
+{ #category : 'accessing' }
+GbxFakeActivationForService >> gbsError: anObject [
+	gbsError := anObject
+]
+
+{ #category : 'testing' }
+GbxFakeActivationForService >> terminateCalled [
+	^ terminateCalled = true
+]
+
+{ #category : 'process control' }
+GbxFakeActivationForService >> terminateProcess [
+	terminateCalled := true
 ]

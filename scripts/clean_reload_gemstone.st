@@ -1,6 +1,7 @@
-| packageNames organizer checks |
+| packageNames organizer checks classNamesToForceRemove |
 [
   organizer := (Smalltalk at: #RPackageOrganizer ifAbsent: [ nil ]).
+  classNamesToForceRemove := OrderedCollection new.
   packageNames := #(
     'GemStone-Pharo-Tests'
     'GemStone-GBS-Tools'
@@ -12,6 +13,17 @@
       | pkg |
       pkg := [ organizer default packageNamed: pkgName ] on: Error do: [ nil ].
       pkg ifNotNil: [
+        [ pkg definedClasses do: [ :eachClass |
+            classNamesToForceRemove add: eachClass name ] ]
+          on: Error
+          do: [ :ex |
+            Transcript
+              show: 'UNLOAD_WARN ';
+              show: pkgName;
+              show: ' classes :: ';
+              show: ex messageText;
+              cr
+          ].
         [ pkg removeFromSystem ] on: Error do: [ :ex |
           Transcript
             show: 'UNLOAD_WARN ';
@@ -24,37 +36,83 @@
     ].
   ].
 
+  classNamesToForceRemove asSet do: [ :className |
+    | cls |
+    cls := Smalltalk at: className asSymbol ifAbsent: [ nil ].
+    cls ifNotNil: [
+      [ cls removeFromSystem ] on: Error do: [ :ex |
+        Transcript
+          show: 'UNLOAD_WARN class ';
+          show: className;
+          show: ' :: ';
+          show: ex messageText;
+          cr
+      ].
+    ].
+  ].
+
   [ Metacello new
       baseline: 'GemStonePharo';
       repository: 'tonel:///Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src';
       load: 'default' ] on: Error do: [ :ex |
         Transcript show: 'LOAD_ERROR: ', ex messageText; cr ].
 
+  "Force-apply key Tonel definitions to avoid stale cached method bodies
+  in long-lived images (observed for GbxDebuggerService)."
+  #(
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbxDebuggerService.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsRemoteDebugger.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/GbxFakeGbsErrorForService.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/GbxFakeActivationForService.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/GbxFakeContextListPolicyForService.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/GbxDebuggerServiceTest.class.st'
+  ) do: [ :pathString |
+    | file defs |
+    file := pathString asFileReference.
+    file exists ifTrue: [
+      [ defs := TonelReader new parseTonelFile: file.
+      defs do: [ :def | def load ] ]
+        on: Error
+        do: [ :ex |
+          Transcript
+            show: 'FORCE_LOAD_WARN ';
+            show: file basename;
+            show: ' :: ';
+            show: ex messageText;
+            cr
+        ].
+    ].
+  ].
+
   checks := {
-    { #GbxDebuggerService. #inspectVariableNamed:. 'withBlanksTrimmed' }.
-    { #GbxFakeServiceForRemoteDebugger. #inspectCurrentReceiver. 'raiseOnInspectReceiver ifTrue:' }.
-    { #GbxFakeServiceForRemoteDebugger. #initialize. 'recompileShouldSucceed' }
+    { #GbxDebuggerService. #basicReenterServerContext. 'self selectTopServerContext'. false }.
+    { #GbxDebuggerService. #restartLevelFromServerStack. 'respondsTo: #splitOn:'. false }.
+    { #GbxDebuggerService. #cutbackToGsProcessOf:. 'terminateProcess'. false }.
+    { #GbxDebuggerService. #restartLevelFromServerStack. 'respondsTo: [ #splitOn: ] asSymbol'. true }.
+    { #GbxDebuggerService. #basicReenterServerContext. 'Identify the target context for restart'. true }
   }.
 
   checks do: [ :triple |
-    | cls sel forbidden cm src |
+    | cls sel snippet mustBeAbsent cm src hasSnippet |
     cls := Smalltalk at: triple first ifAbsent: [ nil ].
     sel := triple second.
-    forbidden := triple third.
+    snippet := triple third.
+    mustBeAbsent := triple fourth.
     (cls isNil or: [ (cls includesSelector: sel) not ]) ifTrue: [
       Transcript show: 'CHECK_MISSING '; show: triple first asString; show: '>>#'; show: sel asString; cr.
     ] ifFalse: [
       cm := cls >> sel.
       src := cm sourceCode ifNil: [ '' ].
-      (src includesSubstring: forbidden)
+      hasSnippet := src includesSubstring: snippet.
+      ((mustBeAbsent and: [ hasSnippet ]) or: [ mustBeAbsent not and: [ hasSnippet not ] ])
         ifTrue: [
           Transcript
             show: 'CHECK_FAIL ';
             show: triple first asString;
             show: '>>#';
             show: sel asString;
-            show: ' contains ';
-            show: forbidden;
+            show: (mustBeAbsent ifTrue: [ ' contains forbidden ' ] ifFalse: [ ' missing expected ' ]);
+            show: snippet;
             cr
         ]
         ifFalse: [

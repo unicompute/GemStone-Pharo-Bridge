@@ -22,3 +22,15 @@ GbxFakeContextListPolicyForService >> contextList [
 GbxFakeContextListPolicyForService >> contextList: aCollection [
 	contexts := aCollection
 ]
+
+{ #category : 'accessing' }
+GbxFakeContextListPolicyForService >> firstClientContextAbove: gsContext [
+	^ nil
+]
+
+{ #category : 'accessing' }
+GbxFakeContextListPolicyForService >> topServerContext [
+	^ self contextList
+		ifEmpty: [ nil ]
+		ifNotEmpty: [ :list | list first ]
+]
