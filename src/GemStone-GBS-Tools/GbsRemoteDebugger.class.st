@@ -2053,7 +2053,9 @@ GbsRemoteDebugger >> restartUsingDirectTrimFromExecutedFrame [
 					level := level + 1
 				]
 		].
-		restartLevel ifNil: [ ^ ''false'' ].
+		"Idempotent restart: if executed-code marker is not discoverable,
+		fall back to trimming to top frame."
+		restartLevel ifNil: [ restartLevel := 1 ].
 		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ^ ''false'' ].
 		''true''
 	] value'.
