@@ -2007,12 +2007,14 @@ GbsRemoteDebugger >> restart [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restartUsingDirectTrimFromExecutedFrame [
-	| script raw value |
+	| script raw value targetLevel |
 	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
 	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ false ].
+	targetLevel := self currentSelectedFrameLevel.
+	((targetLevel isNumber and: [ targetLevel > 0 ]) not) ifTrue: [ targetLevel := 1 ].
 
 	script := '[
-		| obj proc maxDepth level stackReport fullEntry methodOrNil className selectorName restartLevel |
+		| obj proc restartLevel |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
@@ -2030,32 +2032,7 @@ GbsRemoteDebugger >> restartUsingDirectTrimFromExecutedFrame [
 		].
 		(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ ^ ''false'' ].
 
-		restartLevel := nil.
-		maxDepth := 200.
-		level := 1.
-		[ level <= maxDepth and: [ restartLevel isNil ] ] whileTrue: [
-			fullEntry := nil.
-			stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
-			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
-				ifTrue: [ fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ] ].
-			fullEntry isNil
-				ifTrue: [ level := maxDepth + 1 ]
-				ifFalse: [
-					methodOrNil := ((fullEntry respondsTo: #at:) and: [ fullEntry size >= 1 ])
-						ifTrue: [ [ fullEntry at: 1 ] on: Error do: [ nil ] ]
-						ifFalse: [ nil ].
-					className := [ methodOrNil inClass name asString ] on: Error do: [ ''nil'' ].
-					selectorName := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ]
-						on: Error do: [ ''nil'' ].
-					((className = ''nil'' or: [ className = ''<unknown>'' ])
-						and: [ selectorName = ''nil'' or: [ selectorName = ''unboundMethod'' ] ])
-						ifTrue: [ restartLevel := level ].
-					level := level + 1
-				]
-		].
-		"Idempotent restart: if executed-code marker is not discoverable,
-		fall back to trimming to top frame."
-		restartLevel ifNil: [ restartLevel := 1 ].
+		restartLevel := ', targetLevel asString, '.
 		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ^ ''false'' ].
 		''true''
 	] value'.
