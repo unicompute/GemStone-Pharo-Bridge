@@ -1318,7 +1318,7 @@ GbxDebuggerService >> stepInto [
 GbxDebuggerService >> stepOver [
 	| level |
 	(self isCurrentExecutedCodeFrame
-		and: [ self runDebugProcessCommand: 'stepOver' recompute: true ])
+		and: [ self runDebugProcessCommand: 'step' recompute: true ])
 		ifTrue: [ ^ true ].
 	level := self currentContextLevel.
 	level ifNil: [ ^ false ].
