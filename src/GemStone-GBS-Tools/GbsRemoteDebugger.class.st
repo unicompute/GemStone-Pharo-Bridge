@@ -1345,6 +1345,7 @@ GbsRemoteDebugger >> stackData: anArray [
 { #category : 'actions' }
 GbsRemoteDebugger >> stepInto [
 	| didStep |
+	(self tryAdvanceExecutedCodeByOneStepPoint) ifTrue: [ ^ true ].
 	didStep := self safeServiceCall: [ service stepInto ] default: false.
 	didStep ifFalse: [
 		didStep := self
@@ -1363,6 +1364,7 @@ GbsRemoteDebugger >> step [
 { #category : 'actions' }
 GbsRemoteDebugger >> stepOver [
 	| didStep |
+	(self tryAdvanceExecutedCodeByOneStepPoint) ifTrue: [ ^ true ].
 	didStep := self safeServiceCall: [ service stepOver ] default: false.
 	didStep ifFalse: [
 		didStep := self
@@ -1371,6 +1373,27 @@ GbsRemoteDebugger >> stepOver [
 	].
 	didStep ifTrue: [ self fetchStackFrames ].
 	^ didStep
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> tryAdvanceExecutedCodeByOneStepPoint [
+	| context currentStep offsetsCount targetStep didRun |
+	service ifNil: [ ^ false ].
+	context := self safeServiceCall: [ service currentContext ] default: nil.
+	context ifNil: [ ^ false ].
+	((context respondsTo: #isExecutedCodeFrame) and: [ context isExecutedCodeFrame ]) ifFalse: [ ^ false ].
+	currentStep := (context respondsTo: #quickStepPoint)
+		ifTrue: [ [ context quickStepPoint asInteger ] on: Error do: [ 0 ] ]
+		ifFalse: [ 0 ].
+	currentStep <= 0 ifTrue: [ currentStep := 1 ].
+	offsetsCount := (context respondsTo: #sourceOffsets)
+		ifTrue: [ [ context sourceOffsets size ] on: Error do: [ 0 ] ]
+		ifFalse: [ 0 ].
+	(currentStep >= offsetsCount) ifTrue: [ ^ false ].
+	targetStep := currentStep + 1.
+	didRun := self safeServiceCall: [ service runToStepPoint: targetStep ] default: false.
+	didRun ifTrue: [ self fetchStackFrames ].
+	^ didRun
 ]
 
 { #category : 'actions' }
@@ -1971,14 +1994,11 @@ GbsRemoteDebugger >> pauseProcess [
 { #category : 'private' }
 GbsRemoteDebugger >> restart [
 	| didRestart |
-	didRestart := self restartUsingDirectTrimFromExecutedFrame.
-	didRestart ifFalse: [
-		didRestart := self safeServiceCall: [ service restart ] default: false
-	].
+	didRestart := self safeServiceCall: [ service restart ] default: false.
+	didRestart ifFalse: [ didRestart := self restartUsingDirectTrimFromExecutedFrame ].
 	didRestart ifTrue: [
 		self fetchStackFrames.
 		self normalizeRestartSelectionAndPosition.
-		self moveSourceCursorToStart.
 	].
 	^ didRestart
 ]
@@ -2136,7 +2156,7 @@ GbsRemoteDebugger >> moveSourceCursorToStart [
 
 { #category : 'private' }
 GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
-	| index context offsets copy reordered |
+	| index context reordered |
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
 
 	"Find server-reported executed-code frame"
@@ -2151,20 +2171,6 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	index = 0 ifTrue: [ index := 1 ].
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
 	context := contextList at: index.
-
-	(context respondsTo: #quickStepPoint:)
-		ifTrue: [ context quickStepPoint: 1 ].
-	(context respondsTo: #ipOffset:)
-		ifTrue: [ context ipOffset: 1 ].
-	(context respondsTo: #sourceOffsets) ifTrue: [
-		offsets := [ context sourceOffsets ] on: Error do: [ #() ].
-		(offsets isCollection and: [ offsets isEmpty not ]) ifTrue: [
-			copy := offsets asArray copy.
-			copy at: 1 put: 1.
-			(context respondsTo: #sourceOffsets:)
-				ifTrue: [ context sourceOffsets: copy ]
-		]
-	].
 
 	index ~= 1 ifTrue: [
 		reordered := OrderedCollection new: contextList size.
@@ -2191,7 +2197,6 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 		ifTrue: [ stackList selectIndex: index ].
 	
 	self contextSelected: context.
-	self moveSourceCursorToStart.
 ]
 
 { #category : 'private' }
