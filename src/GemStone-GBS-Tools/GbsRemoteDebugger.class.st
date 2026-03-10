@@ -1971,14 +1971,11 @@ GbsRemoteDebugger >> pauseProcess [
 { #category : 'private' }
 GbsRemoteDebugger >> restart [
 	| didRestart |
-	didRestart := self restartUsingDirectTrimFromExecutedFrame.
-	didRestart ifFalse: [
-		didRestart := self safeServiceCall: [ service restart ] default: false
-	].
+	didRestart := self safeServiceCall: [ service restart ] default: false.
+	didRestart ifFalse: [ didRestart := self restartUsingDirectTrimFromExecutedFrame ].
 	didRestart ifTrue: [
 		self fetchStackFrames.
 		self normalizeRestartSelectionAndPosition.
-		self forceExecutedFrameToStepOneAfterRestart.
 	].
 	^ didRestart
 ]
@@ -2148,7 +2145,7 @@ GbsRemoteDebugger >> moveSourceCursorToStart [
 
 { #category : 'private' }
 GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
-	| index context reordered |
+	| index context offsets copy reordered |
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
 
 	"Find server-reported executed-code frame"
@@ -2163,6 +2160,20 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	index = 0 ifTrue: [ index := 1 ].
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
 	context := contextList at: index.
+
+	(context respondsTo: #quickStepPoint:)
+		ifTrue: [ context quickStepPoint: 1 ].
+	(context respondsTo: #ipOffset:)
+		ifTrue: [ context ipOffset: 1 ].
+	(context respondsTo: #sourceOffsets) ifTrue: [
+		offsets := [ context sourceOffsets ] on: Error do: [ #() ].
+		(offsets isCollection and: [ offsets isEmpty not ]) ifTrue: [
+			copy := offsets asArray copy.
+			copy at: 1 put: 1.
+			(context respondsTo: #sourceOffsets:)
+				ifTrue: [ context sourceOffsets: copy ]
+		]
+	].
 
 	index ~= 1 ifTrue: [
 		reordered := OrderedCollection new: contextList size.
@@ -2189,6 +2200,7 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 		ifTrue: [ stackList selectIndex: index ].
 	
 	self contextSelected: context.
+	self moveSourceCursorToStart.
 ]
 
 { #category : 'private' }
