@@ -3,7 +3,8 @@ Class {
 	#superclass : 'Object',
 	#classVars : [
 		'LastOop',
-		'LastSession'
+		'LastSession',
+		'LastContext'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -13,6 +14,15 @@ Class {
 GbxFakeInspectorForService class >> inspect: anOop session: aSession [
 	LastOop := anOop.
 	LastSession := aSession.
+	LastContext := nil.
+	^ self new
+]
+
+{ #category : 'instance creation' }
+GbxFakeInspectorForService class >> inspect: anOop session: aSession context: aContextOop [
+	LastOop := anOop.
+	LastSession := aSession.
+	LastContext := aContextOop.
 	^ self new
 ]
 
@@ -27,7 +37,13 @@ GbxFakeInspectorForService class >> lastSession [
 ]
 
 { #category : 'accessing' }
+GbxFakeInspectorForService class >> lastContext [
+	^ LastContext
+]
+
+{ #category : 'accessing' }
 GbxFakeInspectorForService class >> reset [
 	LastOop := nil.
-	LastSession := nil
+	LastSession := nil.
+	LastContext := nil
 ]

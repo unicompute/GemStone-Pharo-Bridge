@@ -627,10 +627,15 @@ GbxDebuggerService >> oopForVariableNamed: aVariableName [
 
 { #category : 'inspector' }
 GbxDebuggerService >> openInspectorOnOop: anOop [
+	| contextOop inspectorKlass |
 	self isSessionUsable ifFalse: [ ^ false ].
 	(anOop isNil or: [ anOop <= 20 ]) ifTrue: [ ^ false ].
+	inspectorKlass := self inspectorClass.
+	contextOop := self currentExecutionContextOop.
 	[
-		self inspectorClass inspect: anOop session: session.
+		(inspectorKlass respondsTo: #inspect:session:context:)
+			ifTrue: [ inspectorKlass inspect: anOop session: session context: contextOop ]
+			ifFalse: [ inspectorKlass inspect: anOop session: session ].
 		^ true
 	] on: Error do: [ :ex |
 		^ false
@@ -794,49 +799,11 @@ GbxDebuggerService >> basicReenterServerContext [
 
 	(self cutbackTo: theContext
 		finishWith: [
-			"First, reset the server-side PC to step 1 BEFORE fetching the context list.
-			This ensures the server reports the correct step point."
-			self resetServerPCToStepOne.
-			
 			"Level numbers may have changed; recompute and select top server context."
-			self selectTopServerContext.
-			
-			"After restart, mark the context as an executed code frame with step=1.
-			This ensures the display shows 'GS: Executed code @1'."
-			self markCurrentContextAsRestarted
+			self selectTopServerContext
 		]) ifFalse: [ ^ false ].
 
 	^ true
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> resetServerPCToStepOne [
-	"Reset the server-side PC to step 1. This is critical for correct stepping after restart.
-	Called after cutback but before context list refresh, so the server knows which frame to reset."
-	| result |
-	result := [self jumpToStepPoint: 1] on: Error do: [ false ].
-	result ifFalse: [
-		"Try alternative: run to step 1"
-		[self runToStepPoint: 1] on: Error do: [ ]
-	]
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> markCurrentContextAsRestarted [
-	"Mark the current context as restarted (step=1, at method entry).
-	This ensures the display shows 'GS: Executed code @1' and stepping starts correctly."
-	| target |
-	target := self currentContext.
-	target ifNil: [ target := self restartTargetContext ].
-	target ifNil: [ ^ self ].
-
-	"Mark as executed code frame - this sets class/selector to unknown and step to 1"
-	(target respondsTo: #markAsExecutedCodeFrame) ifTrue: [
-		target markAsExecutedCodeFrame
-	].
-	
-	"Update the source map to reflect the new step point"
-	self updateSourceMapFromCurrentContext
 ]
 
 { #category : 'private' }
@@ -982,8 +949,14 @@ GbxDebuggerService >> firstServerContextAbove: clientContext [
 
 { #category : 'process control' }
 GbxDebuggerService >> restart [
-	"Restart the current context using the coordinated reenter operation."
-	^ self basicReenterServerContext
+	"Restart deterministically on the executed-code target when available,
+	then enforce step-point 1."
+	| target didRestart |
+	target := self restartTargetContext.
+	target ifNotNil: [ self selectContext: target ].
+	didRestart := self basicReenterServerContext.
+	didRestart ifTrue: [ self ensureRestartAtStepOne ].
+	^ didRestart
 ]
 
 { #category : 'private' }

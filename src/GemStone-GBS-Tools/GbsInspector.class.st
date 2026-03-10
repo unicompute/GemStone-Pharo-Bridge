@@ -5,7 +5,12 @@ Class {
 		'session',
 		'oop',
 		'classLabel',
-		'stateTable'
+		'stateTable',
+		'codeEditor',
+		'doItButton',
+		'printItButton',
+		'inspectItButton',
+		'evaluationContextOop'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -43,6 +48,15 @@ GbsInspector class >> inspect: anOop session: aSession [
 	^ inspector
 ]
 
+{ #category : 'instance creation' }
+GbsInspector class >> inspect: anOop session: aSession context: aContextOop [
+	| inspector |
+	inspector := self new.
+	inspector inspectOop: anOop session: aSession context: aContextOop.
+	inspector open.
+	^ inspector
+]
+
 { #category : 'reflection' }
 GbsInspector class >> parseReflectionString: aString [
 	"Converts the GemStone string into an Array of { Name . Value . OOP }"
@@ -69,6 +83,12 @@ GbsInspector >> defaultLayout [
 		spacing: 5;
 		add: classLabel height: 30;
 		add: stateTable;
+		add: (SpBoxLayout newHorizontal
+			add: doItButton;
+			add: printItButton;
+			add: inspectItButton;
+			yourself) height: 30;
+		add: codeEditor;
 		yourself
 ]
 
@@ -76,6 +96,16 @@ GbsInspector >> defaultLayout [
 GbsInspector >> initializePresenters [
 	classLabel := self newLabel.
 	stateTable := self newTable.
+	codeEditor := self newCode.
+	doItButton := self newButton
+		label: 'GS-Do it';
+		action: [ self gsDoIt ].
+	printItButton := self newButton
+		label: 'GS-Print it';
+		action: [ self gsPrintIt ].
+	inspectItButton := self newButton
+		label: 'GS-Inspect it';
+		action: [ self gsInspectIt ].
 	
 	stateTable 
 		addColumn: (SpStringTableColumn title: 'Variable' evaluated: [ :item | item first ]);
@@ -91,9 +121,15 @@ GbsInspector >> initializeWindow: aWindowPresenter [
 
 { #category : 'accessing' }
 GbsInspector >> inspectOop: anOop session: aSession [
+	self inspectOop: anOop session: aSession context: nil
+]
+
+{ #category : 'accessing' }
+GbsInspector >> inspectOop: anOop session: aSession context: aContextOop [
 	| className printString rawData parsedItems items |
 	oop := anOop.
 	session := aSession.
+	evaluationContextOop := aContextOop.
 	
 	"1. Get Basic Info"
 	className := session executeAndFetch: '(Object _objectForOop: ', anOop asString, ') class name asString'.
@@ -121,4 +157,97 @@ GbsInspector >> inspectOop: anOop session: aSession [
 			GbsInspector inspect: childOop session: session 
 		].
 	].
+]
+
+{ #category : 'evaluation' }
+GbsInspector >> evaluationContextOop [
+	((evaluationContextOop isNumber) and: [ evaluationContextOop > 20 ])
+		ifTrue: [ ^ evaluationContextOop ].
+	^ (session respondsTo: #sessionOop)
+		ifTrue: [ session sessionOop ]
+		ifFalse: [ 20 ]
+]
+
+{ #category : 'evaluation' }
+GbsInspector >> evaluateCodeInContext: codeString [
+	| contextOop raw |
+	(codeString isString and: [ codeString isEmpty not ]) ifFalse: [ ^ nil ].
+	session ifNil: [ ^ nil ].
+	contextOop := self evaluationContextOop.
+	raw := [ session executeAndFetch: codeString context: contextOop ] on: Error do: [ nil ].
+	raw ifNil: [ ^ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	^ raw
+]
+
+{ #category : 'evaluation' }
+GbsInspector >> gsDoIt [
+	| code |
+	code := self selectedCodeOrAll.
+	code isEmpty ifTrue: [ ^ false ].
+	^ self gsDoIt: code
+]
+
+{ #category : 'evaluation' }
+GbsInspector >> gsDoIt: codeString [
+	| raw |
+	raw := self evaluateCodeInContext: codeString.
+	^ raw notNil and: [ (raw asString beginsWith: 'Error:') not ]
+]
+
+{ #category : 'evaluation' }
+GbsInspector >> gsInspectIt [
+	| code |
+	code := self selectedCodeOrAll.
+	code isEmpty ifTrue: [ ^ false ].
+	^ self gsInspectIt: code
+]
+
+{ #category : 'evaluation' }
+GbsInspector >> gsInspectIt: codeString [
+	| contextOop resultOop |
+	session ifNil: [ ^ false ].
+	contextOop := self evaluationContextOop.
+	resultOop := [
+		session serverInterface
+			apiGciExecuteStr: codeString
+			context: contextOop
+			env: 0
+	] on: Error do: [ nil ].
+	((resultOop isNumber and: [ resultOop > 20 ]) not) ifTrue: [ ^ false ].
+	GbsInspector inspect: resultOop session: session context: contextOop.
+	^ true
+]
+
+{ #category : 'evaluation' }
+GbsInspector >> gsPrintIt [
+	| code value currentText |
+	code := self selectedCodeOrAll.
+	code isEmpty ifTrue: [ ^ false ].
+	value := self gsPrintIt: code.
+	value ifNil: [ ^ false ].
+	currentText := (codeEditor respondsTo: #text)
+		ifTrue: [ codeEditor text asString ]
+		ifFalse: [ '' ].
+	(codeEditor respondsTo: #text:)
+		ifTrue: [ codeEditor text: currentText, ' "', value asString, '"' ].
+	^ true
+]
+
+{ #category : 'evaluation' }
+GbsInspector >> gsPrintIt: codeString [
+	| script |
+	codeString ifNil: [ ^ nil ].
+	script := '[ ', codeString, ' ] value printString'.
+	^ self evaluateCodeInContext: script
+]
+
+{ #category : 'evaluation' }
+GbsInspector >> selectedCodeOrAll [
+	| fullText |
+	codeEditor ifNil: [ ^ '' ].
+	fullText := (codeEditor respondsTo: #text)
+		ifTrue: [ codeEditor text asString ]
+		ifFalse: [ '' ].
+	^ fullText
 ]

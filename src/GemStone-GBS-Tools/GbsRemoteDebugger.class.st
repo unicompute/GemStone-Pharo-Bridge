@@ -1992,19 +1992,11 @@ GbsRemoteDebugger >> pauseProcess [
 { #category : 'private' }
 GbsRemoteDebugger >> restart [
 	| didRestart |
-	didRestart := self restartUsingDirectTrimFromExecutedFrame.
-	didRestart ifFalse: [
-		didRestart := self safeServiceCall: [ service restart ] default: false
-	].
+	didRestart := self safeServiceCall: [ service restart ] default: false.
+	didRestart ifFalse: [ didRestart := self restartUsingDirectTrimFromExecutedFrame ].
 	didRestart ifTrue: [
 		self fetchStackFrames.
 		self normalizeRestartSelectionAndPosition.
-		self restartNeedsServerRewind ifTrue: [
-			(self restartUsingDirectTrimFromExecutedFrame) ifTrue: [
-				self fetchStackFrames.
-				self normalizeRestartSelectionAndPosition
-			]
-		].
 	].
 	^ didRestart
 ]

@@ -32,3 +32,43 @@ GbsInspectorTest >> testFetchAndParseLiveInstanceVariables [
 	self assert: parsedItems first second isString. "The variable value string"
 	self assert: parsedItems first third isInteger. "The child OOP for diving"
 ]
+
+{ #category : 'tests' }
+GbsInspectorTest >> testGsPrintItUsesProvidedEvaluationContextOop [
+	| inspector session seenContext value |
+	session := MockGbsSession new.
+	session isLoggedIn: true.
+	session sessionOop: 1.
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			seenContext := ctx.
+			'42' ].
+
+	inspector := GbsInspector new.
+	inspector inspectOop: 123 session: session context: 456.
+	value := inspector gsPrintIt: '21+21'.
+
+	self assert: value equals: '42'.
+	self assert: seenContext equals: 456
+]
+
+{ #category : 'tests' }
+GbsInspectorTest >> testGsDoItUsesSessionOopWhenNoEvaluationContextProvided [
+	| inspector session seenContext ok |
+	session := MockGbsSession new.
+	session isLoggedIn: true.
+	session sessionOop: 777.
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			seenContext := ctx.
+			'true' ].
+
+	inspector := GbsInspector new.
+	inspector inspectOop: 123 session: session context: nil.
+	ok := inspector gsDoIt: '1+1'.
+
+	self assert: ok.
+	self assert: seenContext equals: 777
+]
