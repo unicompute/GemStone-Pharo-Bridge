@@ -466,6 +466,62 @@ GbxDebuggerServiceTest >> testStepOverUsesServerStepOverFrameWithCurrentLevel [
 ]
 
 { #category : 'tests' }
+GbxDebuggerServiceTest >> testStepIntoUsesServerStepOverForExecutedCodeFrame [
+	| scripts didStep executed |
+	scripts := OrderedCollection new.
+	executed := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 3
+		sourceOffsets: #(1 6 7)
+		source: '1+1.', String lf, String lf, '1/0'.
+	executed level: 3.
+	service currentContext: executed.
+	service processOop: 111.
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			scripts add: script.
+			(script includesSubstring: '_stepOverInFrame:')
+				ifTrue: [ 'true' ]
+				ifFalse: [ '' ] ].
+
+	didStep := service stepInto.
+
+	self assert: didStep.
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: '_stepOverInFrame:' ]).
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: '4294967299' ])
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testStepOverUsesServerStepOverForExecutedCodeFrame [
+	| scripts didStep executed |
+	scripts := OrderedCollection new.
+	executed := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 3
+		sourceOffsets: #(1 6 7)
+		source: '1+1.', String lf, String lf, '1/0'.
+	executed level: 3.
+	service currentContext: executed.
+	service processOop: 111.
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			scripts add: script.
+			(script includesSubstring: '_stepOverInFrame:')
+				ifTrue: [ 'true' ]
+				ifFalse: [ '' ] ].
+
+	didStep := service stepOver.
+
+	self assert: didStep.
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: '_stepOverInFrame:' ]).
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'stepLevel := 3' ])
+]
+
+{ #category : 'tests' }
 GbxDebuggerServiceTest >> testRestartUsesTrimStackToLevelCommand [
 	"Kept for selector stability in long-lived images."
 	self assert: true

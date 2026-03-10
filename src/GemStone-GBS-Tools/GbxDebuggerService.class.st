@@ -1303,16 +1303,9 @@ GbxDebuggerService >> stepInto [
 	"VW parity: step-into on server contexts is implemented by _stepOverInFrame:
 	with the step-through flag in the high bit of level."
 	| level |
-	(self isCurrentExecutedCodeFrame) ifTrue: [
-		"Ensure server PC is at step 1 before stepping from a restarted frame"
-		self resetServerPCToStepOne.
-		(self runDebugProcessCommand: 'step' recompute: true) ifTrue: [ ^ true ].
-	].
 	level := self currentContextLevel.
-	level ifNil: [ ^ false ].
+	level ifNil: [ level := 1 ].
 	(self serverStepOverFrameLevel: (level bitOr: 16r100000000))
-		ifTrue: [ ^ true ].
-	(self runDebugProcessCommand: 'step' recompute: true)
 		ifTrue: [ ^ true ].
 	^ false
 ]
@@ -1320,16 +1313,9 @@ GbxDebuggerService >> stepInto [
 { #category : 'stepping' }
 GbxDebuggerService >> stepOver [
 	| level |
-	(self isCurrentExecutedCodeFrame) ifTrue: [
-		"Ensure server PC is at step 1 before stepping from a restarted frame"
-		self resetServerPCToStepOne.
-		(self runDebugProcessCommand: 'step' recompute: true) ifTrue: [ ^ true ].
-	].
 	level := self currentContextLevel.
-	level ifNil: [ ^ false ].
+	level ifNil: [ level := 1 ].
 	(self serverStepOverFrameLevel: level)
-		ifTrue: [ ^ true ].
-	(self runDebugProcessCommand: 'stepOver' recompute: true)
 		ifTrue: [ ^ true ].
 	^ false
 ]
