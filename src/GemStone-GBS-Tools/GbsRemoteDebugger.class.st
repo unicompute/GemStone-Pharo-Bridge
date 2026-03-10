@@ -2047,7 +2047,7 @@ GbsRemoteDebugger >> restartUsingDirectTrimFromExecutedFrame [
 	((targetLevel isNumber and: [ targetLevel > 0 ]) not) ifTrue: [ targetLevel := 1 ].
 
 	script := '[
-		| obj proc restartLevel stackReport fullEntry quick |
+		| obj proc restartLevel stackReport fullEntry quick level maxDepth methodOrNil className selectorName |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
@@ -2065,7 +2065,36 @@ GbsRemoteDebugger >> restartUsingDirectTrimFromExecutedFrame [
 		].
 		(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ ^ ''false'' ].
 
+		"Prefer the executed-code frame level (nil class + nil selector) from server stack."
 		restartLevel := ', targetLevel asString, '.
+		level := 1.
+		maxDepth := 200.
+		[ level <= maxDepth ] whileTrue: [
+			stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
+			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
+				ifFalse: [ level := maxDepth + 1 ]
+				ifTrue: [
+					fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+					fullEntry isNil
+						ifTrue: [ level := maxDepth + 1 ]
+						ifFalse: [
+							methodOrNil := ((fullEntry respondsTo: #at:) and: [ fullEntry size >= 1 ])
+								ifTrue: [ [ fullEntry at: 1 ] on: Error do: [ nil ] ]
+								ifFalse: [ nil ].
+							className := [ methodOrNil inClass name asString ] on: Error do: [ ''nil'' ].
+							selectorName := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ]
+								on: Error do: [ ''nil'' ].
+							((className = ''nil'' or: [ className = ''<unknown>'' ])
+								and: [ selectorName = ''nil'' or: [ selectorName = ''unboundMethod'' ] ])
+								ifTrue: [
+									restartLevel := level.
+									level := maxDepth + 1
+								]
+								ifFalse: [ level := level + 1 ]
+						]
+				]
+		].
+
 		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ^ ''false'' ].
 
 		"If trim did not rewind the current frame, force jump to first step point."
