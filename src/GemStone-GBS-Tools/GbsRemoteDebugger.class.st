@@ -2001,8 +2001,24 @@ GbsRemoteDebugger >> restart [
 	didRestart ifTrue: [
 		self fetchStackFrames.
 		self normalizeRestartSelectionAndPosition.
+		self forceExecutedFrameToStepOneAfterRestart.
 	].
 	^ didRestart
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> forceExecutedFrameToStepOneAfterRestart [
+	| context step didJump |
+	service ifNil: [ ^ self ].
+	context := self safeServiceCall: [ service currentContext ] default: nil.
+	context ifNil: [ ^ self ].
+	((context respondsTo: #isExecutedCodeFrame) and: [ context isExecutedCodeFrame ]) ifFalse: [ ^ self ].
+	step := (context respondsTo: #quickStepPoint)
+		ifTrue: [ [ context quickStepPoint asInteger ] on: Error do: [ 0 ] ]
+		ifFalse: [ 0 ].
+	step <= 1 ifTrue: [ ^ self ].
+	didJump := self safeServiceCall: [ service jumpToStepPoint: 1 ] default: false.
+	didJump ifTrue: [ self fetchStackFrames ].
 ]
 
 { #category : 'private' }
