@@ -3,11 +3,10 @@ Class {
 	#superclass : 'SpPresenter',
 	#instVars : [
 		'session',
+		'mainMenu',
 		'policiesTable',
 		'groupsTable',
-		'membersList',
-		'refreshButton',
-		'closeButton'
+		'membersList'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -30,8 +29,6 @@ GbsSecurityPoliciesPresenter >> connectPresenters [
 		selection selectedItem
 			ifNotNil: [ :row | self refreshGroupsAndMembersForPolicyName: (row at: 3 ifAbsent: [ '' ]) ]
 			ifNil: [ groupsTable items: #(). membersList items: #() ] ].
-	refreshButton action: [ self refreshAll ].
-	closeButton action: [ self closeWindow ].
 	self refreshAll
 ]
 
@@ -41,20 +38,20 @@ GbsSecurityPoliciesPresenter >> defaultLayout [
 	lower := SpBoxLayout newLeftToRight
 		add: groupsTable;
 		add: membersList;
+		spacing: 8;
 		yourself.
 	^ SpBoxLayout newTopToBottom
+		add: mainMenu expand: false;
 		add: policiesTable;
 		add: lower;
-		add: (SpBoxLayout newLeftToRight
-			add: refreshButton;
-			add: closeButton;
-			spacing: 8;
-			yourself) expand: false;
+		spacing: 8;
 		yourself
 ]
 
 { #category : 'initialization' }
 GbsSecurityPoliciesPresenter >> initializePresenters [
+	mainMenu := self buildMenuBar.
+
 	policiesTable := self newTable.
 	policiesTable
 		addColumn: (SpStringTableColumn title: 'Current' evaluated: [ :row | row at: 1 ifAbsent: [ '' ] ]);
@@ -75,16 +72,7 @@ GbsSecurityPoliciesPresenter >> initializePresenters [
 
 	membersList := self newList.
 	membersList headerTitle: 'Group Member List'.
-	membersList display: [ :each | each asString ].
-
-	refreshButton := self newButton
-		label: 'Refresh';
-		icon: (self iconNamed: #smallUpdate);
-		yourself.
-	closeButton := self newButton
-		label: 'Close';
-		icon: (self iconNamed: #smallCancel);
-		yourself
+	membersList display: [ :each | each asString ]
 ]
 
 { #category : 'initialization' }
@@ -92,6 +80,100 @@ GbsSecurityPoliciesPresenter >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'Security Policy Tool';
 		initialExtent: 980 @ 560
+]
+
+{ #category : 'menus' }
+GbsSecurityPoliciesPresenter >> buildMenuBar [
+	^ self newMenuBar
+		addGroup: [ :group |
+			group
+				addItem: [ :item | item name: 'File'; subMenu: self menuFile ];
+				addItem: [ :item | item name: 'Security Policy'; subMenu: self menuSecurityPolicy ];
+				addItem: [ :item | item name: 'Group'; subMenu: self menuGroup ];
+				addItem: [ :item | item name: 'Member'; subMenu: self menuMember ];
+				addItem: [ :item | item name: 'Report'; subMenu: self menuReport ];
+				addItem: [ :item | item name: 'Help'; subMenu: self menuHelp ] ]
+]
+
+{ #category : 'menus' }
+GbsSecurityPoliciesPresenter >> menuFile [
+	^ self newMenu
+		addItem: [ :item | item name: 'Refresh'; action: [ self refreshAll ] ];
+		addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsSecurityPoliciesPresenter >> menuSecurityPolicy [
+	^ self newMenu
+		addItem: [ :item | item name: 'Refresh'; action: [ self refreshAll ] ];
+		addItem: [ :item | item name: 'Inspect Selected'; action: [ self inspectSelectedPolicy ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsSecurityPoliciesPresenter >> menuGroup [
+	^ self newMenu
+		addItem: [ :item | item name: 'Refresh Groups'; action: [ self refreshSelectedPolicyGroups ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsSecurityPoliciesPresenter >> menuMember [
+	^ self newMenu
+		addItem: [ :item | item name: 'Refresh Members'; action: [ self refreshSelectedPolicyMembers ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsSecurityPoliciesPresenter >> menuReport [
+	^ self newMenu
+		addItem: [ :item | item name: 'Copy Policy Report'; action: [ self copyPolicyReport ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsSecurityPoliciesPresenter >> menuHelp [
+	^ self newMenu
+		addItem: [ :item | item name: 'About Security Policy Tool'; action: [ self aboutTool ] ];
+		yourself
+]
+
+{ #category : 'actions' }
+GbsSecurityPoliciesPresenter >> aboutTool [
+	UIManager default inform: 'GemStone Security Policy Tool'
+]
+
+{ #category : 'actions' }
+GbsSecurityPoliciesPresenter >> copyPolicyReport [
+	| report |
+	report := String streamContents: [ :stream |
+		(policiesTable items ifNil: [ #() ]) do: [ :row |
+			stream nextPutAll: ((row collect: [ :each | each asString ]) joinUsing: Character tab asString); cr ] ].
+	Clipboard clipboardText: report
+]
+
+{ #category : 'actions' }
+GbsSecurityPoliciesPresenter >> inspectSelectedPolicy [
+	| row |
+	row := policiesTable selection selectedItem.
+	row ifNil: [ ^ self ].
+	UIManager default inform: 'Policy: ', (row at: 3 ifAbsent: [ '' ])
+]
+
+{ #category : 'actions' }
+GbsSecurityPoliciesPresenter >> refreshSelectedPolicyGroups [
+	| row policyName |
+	row := policiesTable selection selectedItem.
+	row ifNil: [ ^ self ].
+	policyName := row at: 3 ifAbsent: [ '' ].
+	policyName isEmpty ifTrue: [ ^ self ].
+	self refreshGroupsAndMembersForPolicyName: policyName
+]
+
+{ #category : 'actions' }
+GbsSecurityPoliciesPresenter >> refreshSelectedPolicyMembers [
+	^ self refreshSelectedPolicyGroups
 ]
 
 { #category : 'private' }
@@ -183,16 +265,35 @@ GbsSecurityPoliciesPresenter >> membersScriptForPolicyName: policyName [
 	| allPolicies policy strm |
 	strm := WriteStream on: String new.
 	allPolicies := System myUserProfile symbolList objectNamed: #AllSecurityPolicies.
+	allPolicies ifNil: [ allPolicies := System myUserProfile symbolList objectNamed: #AllObjectSecurityPolicies ].
+	allPolicies ifNil: [
+		| resolved |
+		resolved := (System myUserProfile respondsTo: #resolveSymbol:)
+			ifTrue: [ System myUserProfile resolveSymbol: #SystemRepository ]
+			ifFalse: [ nil ].
+		allPolicies := (resolved respondsTo: #value)
+			ifTrue: [ resolved value ]
+			ifFalse: [ resolved ] ].
 	allPolicies ifNil: [ ^ '''' ].
 	policy := allPolicies
 		detect: [ :p | ((p respondsTo: #name) ifTrue: [ p name asString ] ifFalse: [ p printString ]) = ', nameLiteral, ' ]
 		ifNone: [ nil ].
 	policy ifNil: [ ^ '''' ].
-	(policy respondsTo: #groups) ifTrue: [
-		policy groups do: [ :g |
-			(g respondsTo: #members) ifTrue: [
-				g members do: [ :member |
-					strm nextPutAll: member asString; cr ] ] ] ].
+	(policy respondsTo: #groups) ifFalse: [ ^ '''' ].
+	(policy groups respondsTo: #keysAndValuesDo:)
+		ifTrue: [
+			(policy groups keysAndValuesDo: [ :groupName :auth |
+				| grp |
+				grp := (System myUserProfile symbolList objectNamed: #AllGroups)
+					ifNotNil: [ :allGroups | (allGroups at: groupName ifAbsent: [ nil ]) ]
+					ifNil: [ nil ].
+				(grp notNil and: [ grp respondsTo: #members ])
+					ifTrue: [ grp members do: [ :member | strm nextPutAll: member asString; cr ] ] ]) ]
+		ifFalse: [
+			policy groups do: [ :g |
+				(g respondsTo: #members) ifTrue: [
+					g members do: [ :member |
+						strm nextPutAll: member asString; cr ] ] ] ].
 	strm contents'
 ]
 
