@@ -66,7 +66,8 @@ GbsConnectorBrowserPresenter >> connectPresenters [
 	removeInvalidCheck state: true.
 	noneRadio state: true.
 
-	self refreshAll
+	self refreshAll.
+	self selectDefaultGroupAndRefresh
 ]
 
 { #category : 'layout' }
@@ -131,7 +132,7 @@ GbsConnectorBrowserPresenter >> buildMenuBar [
 { #category : 'menus' }
 GbsConnectorBrowserPresenter >> menuFile [
 	^ self newMenu
-		addItem: [ :item | item name: 'Refresh'; action: [ self refreshAll ] ];
+		addItem: [ :item | item name: 'Update'; action: [ self refreshAll ] ];
 		addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ];
 		yourself
 ]
@@ -139,16 +140,17 @@ GbsConnectorBrowserPresenter >> menuFile [
 { #category : 'menus' }
 GbsConnectorBrowserPresenter >> menuGroup [
 	^ self newMenu
-		addItem: [ :item | item name: 'Refresh Groups'; action: [ self refreshGroups ] ];
+		addItem: [ :item | item name: 'Initialize'; action: [ self initializeFastConnectors ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsConnectorBrowserPresenter >> menuConnector [
 	^ self newMenu
-		addItem: [ :item | item name: 'Initialize Fast Connectors'; action: [ self initializeFastConnectors ] ];
-		addItem: [ :item | item name: 'Generate Class Connectors'; action: [ self generateClassConnectors ] ];
-		addItem: [ :item | item name: 'Remove Invalid Connectors'; action: [ self removeInvalidConnectors ] ];
+		addItem: [ :item | item name: 'Inspect Client'; action: [ self inspectSelectedClientConnector ] ];
+		addItem: [ :item | item name: 'Inspect Server'; action: [ self inspectSelectedServerConnector ] ];
+		addItem: [ :item | item name: 'Add'; action: [ self addConnector ] ];
+		addItem: [ :item | item name: 'Remove'; action: [ self removeConnector ] ];
 		yourself
 ]
 
@@ -165,6 +167,17 @@ GbsConnectorBrowserPresenter >> refreshGroups [
 	groups add: 'Global connectors'.
 	groups add: self sessionGroupLabel.
 	groupList items: groups asArray
+]
+
+{ #category : 'actions' }
+GbsConnectorBrowserPresenter >> selectDefaultGroupAndRefresh [
+	| items |
+	items := groupList items ifNil: [ #() ].
+	items isEmpty ifTrue: [ ^ self ].
+	(groupList respondsTo: #selectIndex:)
+		ifTrue: [ groupList selectIndex: 1 ]
+		ifFalse: [ (groupList respondsTo: #selectItem:) ifTrue: [ groupList selectItem: items first ] ].
+	self refreshConnectorsForGroup: (items first)
 ]
 
 { #category : 'actions' }
@@ -248,6 +261,36 @@ GbsConnectorBrowserPresenter >> removeInvalidConnectors [
 			on: Error
 			do: [ :ex | ^ self inform: 'Remove invalid connectors failed: ', ex messageText ] ].
 	self refreshAll
+]
+
+{ #category : 'actions' }
+GbsConnectorBrowserPresenter >> addConnector [
+	self generateClassConnectors
+]
+
+{ #category : 'actions' }
+GbsConnectorBrowserPresenter >> removeConnector [
+	self removeInvalidConnectors
+]
+
+{ #category : 'actions' }
+GbsConnectorBrowserPresenter >> inspectSelectedClientConnector [
+	| row |
+	row := connectorTable selection selectedItem.
+	row ifNil: [ ^ self inform: 'Select a connector first.' ].
+	(row size >= 2)
+		ifTrue: [ UIManager default inform: 'Client connector: ', (row at: 2) asString ]
+		ifFalse: [ UIManager default inform: 'Client connector not available for selection.' ]
+]
+
+{ #category : 'actions' }
+GbsConnectorBrowserPresenter >> inspectSelectedServerConnector [
+	| row |
+	row := connectorTable selection selectedItem.
+	row ifNil: [ ^ self inform: 'Select a connector first.' ].
+	(row size >= 3)
+		ifTrue: [ UIManager default inform: 'Server connector: ', (row at: 3) asString ]
+		ifFalse: [ UIManager default inform: 'Server connector not available for selection.' ]
 ]
 
 { #category : 'accessing' }
