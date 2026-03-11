@@ -7,7 +7,8 @@ Class {
 		'sourceString',
 		'processOop',
 		'level',
-		'temps'
+		'temps',
+		'quickStepPoint'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -91,4 +92,14 @@ GbxFakeContextForRemoteDebugger >> tempNamesAndValues: aDictionary [
 { #category : 'source map' }
 GbxFakeContextForRemoteDebugger >> visibleSourceMap [
 	^ #()
+]
+
+{ #category : 'accessing' }
+GbxFakeContextForRemoteDebugger >> quickStepPoint [
+	^ quickStepPoint ifNil: [ 1 ]
+]
+
+{ #category : 'accessing' }
+GbxFakeContextForRemoteDebugger >> quickStepPoint: anInteger [
+	quickStepPoint := anInteger
 ]

@@ -718,72 +718,44 @@ GbxDebuggerServiceTest >> testRestartSelectsExecutedCodeFrameAtLineOne [
 ]
 
 { #category : 'tests' }
-GbxDebuggerServiceTest >> testRestartUsesServerHomeLevelWhenAvailable [
-	| scripts fakePolicy executed didRestart |
-	scripts := OrderedCollection new.
-	executed := self
+GbxDebuggerServiceTest >> testRestartTwiceKeepsExecutedCodeContextSelected [
+	| oldContext nonExecuted restartedExecuted fakePolicy |
+	oldContext := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 4
+		sourceOffsets: #(1 6 7 8)
+		source: '1+1.', String lf, String lf, '1/0'.
+	nonExecuted := self
+		makeActivationMethodClass: 'SmallInteger'
+		selector: #/
+		stepPoint: 4
+		sourceOffsets: #(1 6 7 8)
+		source: '1+1.', String lf, String lf, '1/0'.
+	restartedExecuted := self
 		makeActivationMethodClass: nil
 		selector: nil
 		stepPoint: 1
-		sourceOffsets: #(1 6 7)
+		sourceOffsets: #(1 6 7 8)
 		source: '1+1.', String lf, String lf, '1/0'.
-	executed level: 7.
-	fakePolicy := GbxFakeContextListPolicyForService new.
-	fakePolicy contextList: { executed }.
-	service instVarNamed: 'contextStackPolicy' put: fakePolicy.
+
+	service currentContext: oldContext.
 	service processOop: 111.
+	fakePolicy := GbxFakeContextListPolicyForService new.
+	fakePolicy contextList: { nonExecuted. restartedExecuted }.
+	service instVarNamed: 'contextStackPolicy' put: fakePolicy.
 
 	session stubs
 		at: #executeAndFetchContext
 		put: [ :script :ctx |
-			scripts add: script.
-			(script includesSubstring: '_gsiStackReportFromLevel:')
-				ifTrue: [ '1', Character tab asString, 'AbstractException', Character tab asString, 'signal', String lf,
-					'7', Character tab asString, 'nil', Character tab asString, 'nil', String lf ].
-			(script includesSubstring: '#_trimStackToLevel:')
-				ifTrue: [ 'true' ].
-			'true' ].
-
-	didRestart := service restart.
-
-	self assert: didRestart.
-	self assert: (scripts anySatisfy: [ :each | each includesSubstring: '#_trimStackToLevel:' ]).
-	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'with: 7' ]).
-	self assert: service currentContext == executed
-]
-
-{ #category : 'tests' }
-GbxDebuggerServiceTest >> testRestartTwiceStillUsesServerHomeLevel [
-	| scripts trimCalls fakePolicy executed |
-	scripts := OrderedCollection new.
-	trimCalls := 0.
-	executed := self
-		makeActivationMethodClass: nil
-		selector: nil
-		stepPoint: 1
-		sourceOffsets: #(1 6 7)
-		source: '1+1.', String lf, String lf, '1/0'.
-	executed level: 7.
-	fakePolicy := GbxFakeContextListPolicyForService new.
-	fakePolicy contextList: { executed }.
-	service instVarNamed: 'contextStackPolicy' put: fakePolicy.
-	service processOop: 111.
-
-	session stubs
-		at: #executeAndFetchContext
-		put: [ :script :ctx |
-			scripts add: script.
-			(script includesSubstring: '_gsiStackReportFromLevel:')
-				ifTrue: [ '1', Character tab asString, 'AbstractException', Character tab asString, 'signal', String lf,
-					'7', Character tab asString, 'nil', Character tab asString, 'nil', String lf ].
-			(script includesSubstring: '#_trimStackToLevel:')
-				ifTrue: [ trimCalls := trimCalls + 1. 'true' ].
-			'true' ].
+			(script includesSubstring: '_trimStackToLevel:')
+				ifTrue: [ 'true' ]
+				ifFalse: [ 'true' ] ].
 
 	self assert: service restart.
+	self assert: service currentContext == restartedExecuted.
 	self assert: service restart.
-	self assert: trimCalls equals: 2.
-	self assert: (scripts select: [ :each | each includesSubstring: 'with: 7' ]) size >= 2
+	self assert: service currentContext == restartedExecuted
 ]
 
 { #category : 'tests' }

@@ -17,6 +17,8 @@ Class {
 		'toggleBreakPointCalls',
 		'toggleGlueHidingCalls',
 		'restartCalls',
+		'stepIntoCalls',
+		'stepOverCalls',
 		'pauseCalls',
 		'resumeCalls',
 		'runWithBreakAgainCalls',
@@ -32,7 +34,10 @@ Class {
 		'recompileShouldSucceed',
 		'compileErrorMessage',
 		'contextList',
-		'currentContext'
+		'currentContext',
+		'onRestartBlock',
+		'onStepOverBlock',
+		'onStepIntoBlock'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -179,6 +184,21 @@ GbxFakeServiceForRemoteDebugger >> toggleGlueHiding [
 { #category : 'process control' }
 GbxFakeServiceForRemoteDebugger >> restart [
 	restartCalls := self restartCalls + 1.
+	onRestartBlock ifNotNil: [ onRestartBlock value ].
+	^ true
+]
+
+{ #category : 'stepping' }
+GbxFakeServiceForRemoteDebugger >> stepInto [
+	stepIntoCalls := self stepIntoCalls + 1.
+	onStepIntoBlock ifNotNil: [ onStepIntoBlock value ].
+	^ true
+]
+
+{ #category : 'stepping' }
+GbxFakeServiceForRemoteDebugger >> stepOver [
+	stepOverCalls := self stepOverCalls + 1.
+	onStepOverBlock ifNotNil: [ onStepOverBlock value ].
 	^ true
 ]
 
@@ -250,6 +270,16 @@ GbxFakeServiceForRemoteDebugger >> toggleGlueHidingCalls [
 { #category : 'process control' }
 GbxFakeServiceForRemoteDebugger >> restartCalls [
 	^ restartCalls ifNil: [ 0 ]
+]
+
+{ #category : 'stepping' }
+GbxFakeServiceForRemoteDebugger >> stepIntoCalls [
+	^ stepIntoCalls ifNil: [ 0 ]
+]
+
+{ #category : 'stepping' }
+GbxFakeServiceForRemoteDebugger >> stepOverCalls [
+	^ stepOverCalls ifNil: [ 0 ]
 ]
 
 { #category : 'process control' }
@@ -395,4 +425,24 @@ GbxFakeServiceForRemoteDebugger >> recomputeContextList [
 { #category : 'accessing' }
 GbxFakeServiceForRemoteDebugger >> currentContext [
 	^ currentContext
+]
+
+{ #category : 'accessing' }
+GbxFakeServiceForRemoteDebugger >> currentContext: aContext [
+	currentContext := aContext
+]
+
+{ #category : 'stepping' }
+GbxFakeServiceForRemoteDebugger >> onRestartDo: aBlock [
+	onRestartBlock := aBlock
+]
+
+{ #category : 'stepping' }
+GbxFakeServiceForRemoteDebugger >> onStepIntoDo: aBlock [
+	onStepIntoBlock := aBlock
+]
+
+{ #category : 'stepping' }
+GbxFakeServiceForRemoteDebugger >> onStepOverDo: aBlock [
+	onStepOverBlock := aBlock
 ]
