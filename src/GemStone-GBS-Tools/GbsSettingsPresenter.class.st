@@ -402,7 +402,8 @@ GbsSettingsPresenter >> saveSettings [
 
 	GbsConfiguration current: configuration.
 	[ GbsServerInterface uniqueInstance libraryPath: (libraryField text asString) ] on: Error do: [ ].
-	UIManager default inform: 'GemBuilder settings saved.'
+	UIManager default inform: 'GemBuilder settings saved.'.
+	self closeWindow
 ]
 
 { #category : 'private' }
