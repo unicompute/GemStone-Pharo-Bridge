@@ -2,6 +2,7 @@ Class {
 	#name : 'GbsUserListPresenter',
 	#superclass : 'SpPresenter',
 	#instVars : [
+		'mainMenu',
 		'userList',
 		'session',
 		'groupList',
@@ -75,10 +76,46 @@ GbsUserListPresenter >> defaultLayout [
 		spacing: 10;
 		yourself.
 	^ SpBoxLayout newTopToBottom
+		add: mainMenu expand: false;
 		add: topLists;
 		add: userRow expand: false;
 		add: buttonsRow expand: false;
 		spacing: 8;
+		yourself
+]
+
+{ #category : 'menus' }
+GbsUserListPresenter >> buildMenuBar [
+	^ self newMenuBar
+		addGroup: [ :group |
+			group
+				addItem: [ :item | item name: 'File'; subMenu: self menuFile ];
+				addItem: [ :item | item name: 'User'; subMenu: self menuUser ];
+				addItem: [ :item | item name: 'Help'; subMenu: self menuHelp ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsUserListPresenter >> menuFile [
+	^ self newMenu
+		addItem: [ :item | item name: 'Refresh'; action: [ self refreshUserList ] ];
+		addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsUserListPresenter >> menuUser [
+	^ self newMenu
+		addItem: [ :item | item name: 'Create User...'; action: [ self openCreateUserDialog ] ];
+		addItem: [ :item | item name: 'Show User Info'; action: [ self showSelectedUserInfo ] ];
+		addItem: [ :item | item name: 'Delete User...'; action: [ self deleteSelectedUser ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsUserListPresenter >> menuHelp [
+	^ self newMenu
+		addItem: [ :item | item name: 'About GemStone User List'; action: [ UIManager default inform: 'GemStone User List' ] ];
 		yourself
 ]
 
@@ -126,6 +163,8 @@ GbsUserListPresenter >> initialExtent [
 
 { #category : 'accessing' }
 GbsUserListPresenter >> initializePresenters [
+	mainMenu := self buildMenuBar.
+
 	userList := self newList.
 	userList headerTitle: 'Users'.
 	userList display: [ :each | each asString ].
@@ -257,9 +296,18 @@ GbsUserListPresenter >> selectedUserName [
 
 { #category : 'actions' }
 GbsUserListPresenter >> showSelectedUserInfo [
-	| userName script info |
+	| userName info |
 	userName := self selectedUserName.
 	userName ifNil: [ ^ self ].
+	info := self userInfoTextFor: userName.
+	[ GbsUserInfoPresenter openForUser: userName text: info ]
+		on: Error
+		do: [ :ex | UIManager default inform: 'Could not open user info window: ', ex messageText ]
+]
+
+{ #category : 'private' }
+GbsUserListPresenter >> userInfoTextFor: userName [
+	| script info |
 	script := '
 	| users user strm |
 	strm := WriteStream on: String new.
@@ -291,7 +339,7 @@ GbsUserListPresenter >> showSelectedUserInfo [
 				strm cr ] ] ].
 	strm contents'.
 	info := [ session evaluate: script ] on: Error do: [ :ex | 'Could not fetch user info: ', ex messageText ].
-	UIManager default inform: (info ifNil: [ 'No information available.' ] ifNotNil: [ info asString ])
+	^ info ifNil: [ 'No information available.' ] ifNotNil: [ info asString ]
 ]
 
 { #category : 'private' }

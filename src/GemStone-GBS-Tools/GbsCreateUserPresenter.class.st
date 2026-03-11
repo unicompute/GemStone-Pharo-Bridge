@@ -5,6 +5,7 @@ Class {
 		'session',
 		'createdBlock',
 		'pendingPrivileges',
+		'mainMenu',
 		'userField',
 		'passwordField',
 		'confirmPasswordField',
@@ -49,6 +50,8 @@ GbsCreateUserPresenter >> createdBlock: aBlock [
 
 { #category : 'initialization' }
 GbsCreateUserPresenter >> initializePresenters [
+	mainMenu := self buildMenuBar.
+
 	userField := self newTextInput.
 	passwordField := self newTextInput bePassword.
 	confirmPasswordField := self newTextInput bePassword.
@@ -186,6 +189,7 @@ GbsCreateUserPresenter >> defaultLayout [
 		yourself.
 
 	^ SpBoxLayout newTopToBottom
+		add: mainMenu expand: false;
 		add: headerRow expand: false;
 		add: (SpBoxLayout newLeftToRight add: sideButtons; add: authPane; spacing: 12; yourself) expand: true;
 		add: groupsPane;
@@ -503,11 +507,14 @@ GbsCreateUserPresenter >> editPrivileges [
 	current := pendingPrivileges
 		ifNil: [ self fetchPrivilegesForUser: userName ]
 		ifNotNil: [ pendingPrivileges copy ].
-	GbsUserPrivilegesPresenter
-		openForUser: userName
-		initialPrivileges: current
-		onAccept: [ :updated |
-			pendingPrivileges := updated copy ]
+	[
+		GbsUserPrivilegesPresenter
+			openForUser: userName
+			initialPrivileges: current
+			onAccept: [ :updated |
+				pendingPrivileges := updated copy ]
+	] on: Error do: [ :ex |
+		self inform: 'Could not open privileges window: ', ex messageText ]
 ]
 
 { #category : 'actions' }
@@ -532,4 +539,40 @@ GbsCreateUserPresenter >> closeWindow [
 	self window
 		ifNotNil: [ self window close ]
 		ifNil: [ self delete ]
+]
+
+{ #category : 'menus' }
+GbsCreateUserPresenter >> buildMenuBar [
+	^ self newMenuBar
+		addGroup: [ :group |
+			group
+				addItem: [ :item | item name: 'File'; subMenu: self menuFile ];
+				addItem: [ :item | item name: 'User'; subMenu: self menuUser ];
+				addItem: [ :item | item name: 'Help'; subMenu: self menuHelp ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsCreateUserPresenter >> menuFile [
+	^ self newMenu
+		addItem: [ :item | item name: 'Save'; action: [ self saveUserCommit: false ] ];
+		addItem: [ :item | item name: 'Save And Commit'; action: [ self saveUserCommit: true ] ];
+		addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsCreateUserPresenter >> menuUser [
+	^ self newMenu
+		addItem: [ :item | item name: 'Privileges...'; action: [ self editPrivileges ] ];
+		addItem: [ :item | item name: 'Symbol List...'; action: [ self editSymbolList ] ];
+		addItem: [ :item | item name: 'Object Security Policies...'; action: [ self editSecurityPolicies ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsCreateUserPresenter >> menuHelp [
+	^ self newMenu
+		addItem: [ :item | item name: 'About GemStone User'; action: [ UIManager default inform: 'GemStone User Editor' ] ];
+		yourself
 ]
