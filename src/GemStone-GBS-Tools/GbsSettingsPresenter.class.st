@@ -266,7 +266,7 @@ GbsSettingsPresenter >> booleanAt: ivarName default: defaultBoolean [
 	| value |
 	configuration ifNil: [ ^ defaultBoolean ].
 	value := configuration valueAt: ivarName ifAbsent: defaultBoolean.
-	(value isBoolean) ifTrue: [ ^ value ].
+	(value == true or: [ value == false ]) ifTrue: [ ^ value ].
 	^ defaultBoolean
 ]
 
