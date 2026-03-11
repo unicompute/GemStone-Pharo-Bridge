@@ -230,8 +230,7 @@ GbsSettingsPresenter >> chooseLibraryPath [
 
 { #category : 'actions' }
 GbsSettingsPresenter >> loadFromConfiguration [
-	| cfg |
-	cfg := configuration ifNil: [ GbsConfiguration current ].
+	configuration := configuration ifNil: [ GbsConfiguration current ].
 	libraryField text: (self stringValueAt: #libraryName default: '').
 	initialCacheSizeField text: (self stringValueAt: #clientMapCapacity default: 5003).
 	initialDirtyPoolField text: (self stringValueAt: #initialDirtyPoolSize default: 157).
@@ -259,13 +258,13 @@ GbsSettingsPresenter >> loadFromConfiguration [
 	self setYesNo: { blockingProtocolRpcYes. blockingProtocolRpcNo } value: (self booleanAt: #blockingProtocolRpc default: false).
 	self setYesNo: { fullCompressionYes. fullCompressionNo } value: (self booleanAt: #fullCompression default: false).
 	self setYesNo: { confirmYes. confirmNo } value: (self booleanAt: #confirm default: true).
-	self setYesNo: { verboseYes. verboseNo } value: (self booleanAt: #verbose default: true).
-	configuration := cfg
+	self setYesNo: { verboseYes. verboseNo } value: (self booleanAt: #verbose default: true)
 ]
 
 { #category : 'private' }
 GbsSettingsPresenter >> booleanAt: ivarName default: defaultBoolean [
 	| value |
+	configuration ifNil: [ ^ defaultBoolean ].
 	value := configuration valueAt: ivarName ifAbsent: defaultBoolean.
 	(value isBoolean) ifTrue: [ ^ value ].
 	^ defaultBoolean
@@ -274,6 +273,7 @@ GbsSettingsPresenter >> booleanAt: ivarName default: defaultBoolean [
 { #category : 'private' }
 GbsSettingsPresenter >> stringValueAt: ivarName default: defaultValue [
 	| value |
+	configuration ifNil: [ ^ defaultValue asString ].
 	value := configuration valueAt: ivarName ifAbsent: defaultValue.
 	^ value asString
 ]
