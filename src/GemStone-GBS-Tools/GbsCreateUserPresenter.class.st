@@ -109,7 +109,11 @@ GbsCreateUserPresenter >> initializePresenters [
 
 { #category : 'initialization' }
 GbsCreateUserPresenter >> connectPresenters [
+	self configureAuthRadioGroup.
+	self wireAuthRadioEvents.
 	gemStoneAuthRadio state: true.
+	unixAuthRadio state: false.
+	ldapAuthRadio state: false.
 	baseDnField enabled: false.
 	filterDnField enabled: false.
 	pendingPrivileges := nil.
@@ -183,7 +187,7 @@ GbsCreateUserPresenter >> defaultLayout [
 
 	^ SpBoxLayout newTopToBottom
 		add: headerRow expand: false;
-		add: (SpBoxLayout newLeftToRight add: sideButtons; add: authPane; spacing: 12; yourself) expand: false;
+		add: (SpBoxLayout newLeftToRight add: sideButtons; add: authPane; spacing: 12; yourself) expand: true;
 		add: groupsPane;
 		add: groupsButtons expand: false;
 		add: actionRow expand: false;
@@ -247,7 +251,7 @@ GbsCreateUserPresenter >> groupsScript [
 { #category : 'actions' }
 GbsCreateUserPresenter >> addSelectedGroup [
 	| group members avail |
-	group := availableGroupsList selection selectedItem.
+	group := self selectedItemFromList: availableGroupsList.
 	group ifNil: [ ^ self ].
 	members := memberGroupsList items asOrderedCollection.
 	(members includes: group) ifFalse: [ members add: group ].
@@ -260,7 +264,7 @@ GbsCreateUserPresenter >> addSelectedGroup [
 { #category : 'actions' }
 GbsCreateUserPresenter >> removeSelectedGroup [
 	| group members avail |
-	group := memberGroupsList selection selectedItem.
+	group := self selectedItemFromList: memberGroupsList.
 	group ifNil: [ ^ self ].
 	members := memberGroupsList items asOrderedCollection.
 	members remove: group ifAbsent: [ ].
@@ -279,6 +283,55 @@ GbsCreateUserPresenter >> createGroup [
 	(avail includes: groupName) ifFalse: [ avail add: groupName ].
 	availableGroupsList items: (avail asSortedCollection asArray).
 	newGroupField text: ''
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> configureAuthRadioGroup [
+	(gemStoneAuthRadio respondsTo: #associatedRadioButtons:)
+		ifTrue: [ gemStoneAuthRadio associatedRadioButtons: { unixAuthRadio. ldapAuthRadio } ].
+	(unixAuthRadio respondsTo: #associatedRadioButtons:)
+		ifTrue: [ unixAuthRadio associatedRadioButtons: { gemStoneAuthRadio. ldapAuthRadio } ].
+	(ldapAuthRadio respondsTo: #associatedRadioButtons:)
+		ifTrue: [ ldapAuthRadio associatedRadioButtons: { gemStoneAuthRadio. unixAuthRadio } ].
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> wireAuthRadioEvents [
+	(gemStoneAuthRadio respondsTo: #whenChangedDo:)
+		ifTrue: [ gemStoneAuthRadio whenChangedDo: [ self updateAuthFieldVisibility ] ].
+	(unixAuthRadio respondsTo: #whenChangedDo:)
+		ifTrue: [ unixAuthRadio whenChangedDo: [ self updateAuthFieldVisibility ] ].
+	(ldapAuthRadio respondsTo: #whenChangedDo:)
+		ifTrue: [ ldapAuthRadio whenChangedDo: [ self updateAuthFieldVisibility ] ].
+	(gemStoneAuthRadio respondsTo: #whenActivatedDo:)
+		ifTrue: [ gemStoneAuthRadio whenActivatedDo: [ self updateAuthFieldVisibility ] ].
+	(unixAuthRadio respondsTo: #whenActivatedDo:)
+		ifTrue: [ unixAuthRadio whenActivatedDo: [ self updateAuthFieldVisibility ] ].
+	(ldapAuthRadio respondsTo: #whenActivatedDo:)
+		ifTrue: [ ldapAuthRadio whenActivatedDo: [ self updateAuthFieldVisibility ] ].
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> updateAuthFieldVisibility [
+	| ldapSelected |
+	ldapSelected := ldapAuthRadio state == true.
+	baseDnField enabled: ldapSelected.
+	filterDnField enabled: ldapSelected.
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> selectedItemFromList: aListPresenter [
+	| selected |
+	aListPresenter ifNil: [ ^ nil ].
+	(aListPresenter respondsTo: #selectedItem)
+		ifTrue: [
+			selected := [ aListPresenter selectedItem ] on: Error do: [ nil ].
+			selected ifNotNil: [ ^ selected ] ].
+	(aListPresenter respondsTo: #selection)
+		ifTrue: [
+			selected := [ aListPresenter selection selectedItem ] on: Error do: [ nil ].
+			selected ifNotNil: [ ^ selected ] ].
+	^ nil
 ]
 
 { #category : 'actions' }

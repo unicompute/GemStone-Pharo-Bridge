@@ -274,10 +274,14 @@ GbsUserListPresenter >> showSelectedUserInfo [
 				| groupNames |
 				groupNames := OrderedCollection new.
 				user groups do: [ :g |
-					| gName |
+					| gName open close |
 					gName := (g respondsTo: #name)
 						ifTrue: [ g name asString ]
 						ifFalse: [ g asString ].
+					open := gName indexOf: $( ifAbsent: [ 0 ].
+					close := gName indexOf: $) ifAbsent: [ 0 ].
+					(open > 0 and: [ close > open ])
+						ifTrue: [ gName := (gName copyFrom: open + 1 to: close - 1) withBlanksTrimmed ].
 					((gName isNil or: [ gName asString isEmpty ]) not) ifTrue: [ groupNames add: gName ] ].
 				groupNames := groupNames asArray asSet asArray asSortedCollection.
 				strm nextPutAll: ''Groups: ''.
