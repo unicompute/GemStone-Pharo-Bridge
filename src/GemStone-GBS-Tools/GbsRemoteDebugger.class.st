@@ -479,6 +479,7 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 		{ 'Method'. ([ context methodId asString ] on: Error do: [ '<unknown>' ]) }
 	}.
 	self refreshUiState.
+	self reinforceSourceCaretVisibility.
 ]
 
 { #category : 'layout' }
@@ -2393,6 +2394,30 @@ GbsRemoteDebugger >> moveSourceCursorToStart [
 		ifFalse: [ '' ] ] on: Error do: [ '' ].
 	text isEmpty ifTrue: [ ^ self ].
 	self selectAndRevealFrom: 1 to: 1 inTextPresenter: sourceText.
+	self reinforceSourceCaretVisibility.
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> reinforceSourceCaretVisibility [
+	| caret worldStateClass |
+	sourceText ifNil: [ ^ self ].
+	(sourceText respondsTo: #selectionInterval) ifFalse: [ ^ self ].
+	caret := [ sourceText selectionInterval first ] on: Error do: [ 1 ].
+	caret ifNil: [ caret := 1 ].
+
+	"Immediate pass"
+	self placeCaretAt: caret inTextPresenter: sourceText.
+
+	"Deferred pass to survive focus/refresh churn after stepping/restart"
+	worldStateClass := Smalltalk at: #WorldState ifAbsent: [ nil ].
+	worldStateClass ifNotNil: [
+		(worldStateClass respondsTo: #addDeferredUIMessage:)
+			ifTrue: [
+				[ worldStateClass addDeferredUIMessage: [
+					self placeCaretAt: caret inTextPresenter: sourceText
+				] ] on: Error do: [ ]
+			]
+	].
 ]
 
 { #category : 'private' }
