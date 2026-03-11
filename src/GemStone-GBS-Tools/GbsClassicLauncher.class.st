@@ -49,18 +49,24 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
             (aBuilder item: #GbsConnectors)
                 label: 'Connectors';
                 with: [
-                    (aBuilder item: #OpenConnectorBrowser)
-                        label: 'Connector Browser';
-                        action: [ self openConnectorBrowserOnCurrentSession ].
-                    (aBuilder item: #InitializeFastConnectors)
-                        label: 'Initialize Fast Connectors';
-                        action: [ self initializeFastConnectors ].
-                    (aBuilder item: #GenerateClassConnectors)
-                        label: 'Generate Class Connectors';
-                        action: [ self generateClassConnectors ].
-                    (aBuilder item: #RemoveInvalidConnectors)
-                        label: 'Remove Invalid Connectors';
-                        action: [ self removeInvalidConnectors ] ].
+                    (aBuilder item: #ConnectorBrowserGroup)
+                        label: 'Browser';
+                        with: [
+                            (aBuilder item: #OpenConnectorBrowser)
+                                label: 'Connector Browser';
+                                action: [ self openConnectorBrowserOnCurrentSession ] ].
+                    (aBuilder item: #ConnectorMaintenanceGroup)
+                        label: 'Maintenance';
+                        with: [
+                            (aBuilder item: #InitializeFastConnectors)
+                                label: 'Initialize Fast Connectors';
+                                action: [ self initializeFastConnectors ].
+                            (aBuilder item: #GenerateClassConnectors)
+                                label: 'Generate Class Connectors';
+                                action: [ self generateClassConnectors ].
+                            (aBuilder item: #RemoveInvalidConnectors)
+                                label: 'Remove Invalid Connectors';
+                                action: [ self removeInvalidConnectors ] ] ].
 
             (aBuilder item: #GbsBrowse)
                 label: 'Browse';
