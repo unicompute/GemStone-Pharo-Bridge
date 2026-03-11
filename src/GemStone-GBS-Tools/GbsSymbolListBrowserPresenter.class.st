@@ -159,7 +159,7 @@ GbsSymbolListBrowserPresenter >> refreshUsers [
 		ifTrue: [ (raw splitOn: Character tab) reject: [ :each | each isEmpty ] ]
 		ifFalse: [ #() ].
 	userDropList items: users asArray.
-	defaultUser := (targetUserName notEmpty and: [ users includes: targetUserName ])
+	defaultUser := ((targetUserName isString and: [ targetUserName isEmpty not ]) and: [ users includes: targetUserName ])
 		ifTrue: [ targetUserName ]
 		ifFalse: [ users ifEmpty: [ nil ] ifNotEmpty: [ users first ] ].
 	defaultUser ifNotNil: [

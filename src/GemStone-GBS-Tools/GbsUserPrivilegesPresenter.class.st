@@ -59,6 +59,7 @@ GbsUserPrivilegesPresenter >> initializePresenters [
 
 { #category : 'initialization' }
 GbsUserPrivilegesPresenter >> connectPresenters [
+	privileges ifNil: [ privileges := Dictionary new ].
 	self rebuildChecksFromPrivileges
 ]
 
@@ -90,6 +91,7 @@ GbsUserPrivilegesPresenter >> rebuildChecksFromPrivileges [
 	| orderedNames |
 	checkContainer ifNil: [ checkContainer := SpBoxLayout newTopToBottom ].
 	(checkContainer respondsTo: #removeAll) ifTrue: [ checkContainer removeAll ].
+	privileges ifNil: [ privileges := Dictionary new ].
 	checkBoxesByName := Dictionary new.
 	orderedNames := self orderedPrivilegeNames.
 	orderedNames do: [ :privName |
