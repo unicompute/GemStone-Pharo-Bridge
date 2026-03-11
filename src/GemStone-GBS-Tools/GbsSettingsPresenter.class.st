@@ -203,10 +203,16 @@ GbsSettingsPresenter >> sectionTitle: aString [
 
 { #category : 'layout' }
 GbsSettingsPresenter >> yesNoRowLabel: labelString yes: yesButton no: noButton [
+	| yesNoPair |
+	yesNoPair := SpBoxLayout newLeftToRight
+		add: yesButton width: 58;
+		add: noButton width: 52;
+		spacing: 2;
+		yourself.
 	^ SpBoxLayout newLeftToRight
 		add: (self newLabel label: labelString) width: self rowLabelWidth;
-		add: yesButton expand: false;
-		add: noButton expand: false;
+		add: yesNoPair expand: false;
+		add: (self newLabel label: '') expand: true;
 		spacing: 0;
 		yourself
 ]
