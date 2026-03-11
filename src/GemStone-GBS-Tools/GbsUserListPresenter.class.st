@@ -60,22 +60,25 @@ GbsUserListPresenter >> defaultLayout [
 	topLists := SpBoxLayout newLeftToRight
 		add: userList;
 		add: groupList;
+		spacing: 8;
 		yourself.
 	userRow := SpBoxLayout newLeftToRight
 		add: (self newLabel label: 'User') expand: false;
 		add: userNameField;
+		spacing: 8;
 		yourself.
 	buttonsRow := SpBoxLayout newLeftToRight
 		add: createUserButton;
 		add: showUserInfoButton;
 		add: deleteUserButton;
 		add: closeButton;
-		spacing: 8;
+		spacing: 10;
 		yourself.
 	^ SpBoxLayout newTopToBottom
 		add: topLists;
 		add: userRow expand: false;
 		add: buttonsRow expand: false;
+		spacing: 8;
 		yourself
 ]
 
@@ -155,7 +158,7 @@ GbsUserListPresenter >> initializePresenters [
 GbsUserListPresenter >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GemStone User List';
-		initialExtent: 520 @ 520
+		initialExtent: 760 @ 560
 ]
 
 { #category : 'accessing' }
