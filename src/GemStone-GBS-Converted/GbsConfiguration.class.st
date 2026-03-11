@@ -39,7 +39,8 @@ Class {
 		'useGbsMemoryPolicy',
 		'useDiagnosticSpecialConverter',
 		'verbose',
-		'socketWaitTimeout'
+		'socketWaitTimeout',
+		'postConnectAction'
 	],
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'
@@ -64,8 +65,11 @@ GbsConfiguration class >> generateClassConnectors [
 	cfg valueAt: #generateClassConnectors put: true.
 	(Smalltalk at: #GbsSessionManager ifAbsent: [ nil ])
 		ifNotNil: [ :mgr |
-			(mgr respondsTo: #initializeFastConnectors)
-				ifTrue: [ mgr initializeFastConnectors ] ].
+			(mgr respondsTo: #generateClassConnectors)
+				ifTrue: [ mgr generateClassConnectors ]
+				ifFalse: [
+					(mgr respondsTo: #initializeFastConnectors)
+						ifTrue: [ mgr initializeFastConnectors ] ] ].
 	^ true
 ]
 
@@ -74,6 +78,10 @@ GbsConfiguration class >> removeInvalidConnectors [
 	| cfg |
 	cfg := self current.
 	cfg valueAt: #removeInvalidConnectors put: true.
+	(Smalltalk at: #GbsSessionManager ifAbsent: [ nil ])
+		ifNotNil: [ :mgr |
+			(mgr respondsTo: #removeInvalidConnectors)
+				ifTrue: [ mgr removeInvalidConnectors ] ].
 	^ true
 ]
 
@@ -104,7 +112,8 @@ GbsConfiguration >> initializeDefaults [
 	eventPollingFrequency ifNil: [ eventPollingFrequency := 300 ].
 	eventPriority ifNil: [ eventPriority := 3 ].
 	confirm ifNil: [ confirm := true ].
-	verbose ifNil: [ verbose := true ]
+	verbose ifNil: [ verbose := true ].
+	postConnectAction ifNil: [ postConnectAction := 'none' ]
 ]
 
 { #category : 'accessing' }

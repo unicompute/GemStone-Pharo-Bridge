@@ -27,7 +27,10 @@ MockGbsSession >> apiGciExecuteStr: scriptString context: contextOop env: envId 
 
 { #category : 'execution' }
 MockGbsSession >> evaluate: aString [
-	^ self stubs at: #evaluate ifAbsent: [ '' ]
+	| value |
+	value := self stubs at: #evaluate ifAbsent: [ '' ].
+	(value respondsTo: #cull:) ifTrue: [ ^ value cull: aString ].
+	^ value
 ]
 
 { #category : 'execution' }

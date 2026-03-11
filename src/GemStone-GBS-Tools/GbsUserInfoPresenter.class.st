@@ -4,9 +4,12 @@ Class {
 	#instVars : [
 		'userName',
 		'infoText',
+		'session',
+		'privilegesEditorBlock',
 		'mainMenu',
 		'textPresenter',
-		'closeButton'
+		'closeButton',
+		'privilegesButton'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -14,11 +17,17 @@ Class {
 
 { #category : 'instance creation' }
 GbsUserInfoPresenter class >> openForUser: aUserName text: aString [
+	^ self openForUser: aUserName text: aString session: nil
+]
+
+{ #category : 'instance creation' }
+GbsUserInfoPresenter class >> openForUser: aUserName text: aString session: aSession [
 	| presenter |
 	presenter := self new.
 	presenter
 		userName: aUserName;
 		infoText: aString;
+		session: aSession;
 		open.
 	^ presenter
 ]
@@ -33,11 +42,25 @@ GbsUserInfoPresenter >> infoText: aString [
 	infoText := aString ifNil: [ '' ] ifNotNil: [ aString asString ]
 ]
 
+{ #category : 'accessing' }
+GbsUserInfoPresenter >> session: aSession [
+	session := aSession
+]
+
+{ #category : 'accessing' }
+GbsUserInfoPresenter >> privilegesEditorBlock: aBlock [
+	privilegesEditorBlock := aBlock
+]
+
 { #category : 'initialization' }
 GbsUserInfoPresenter >> initializePresenters [
 	mainMenu := self buildMenuBar.
 	textPresenter := self newText.
 	(textPresenter respondsTo: #beNotEditable) ifTrue: [ textPresenter beNotEditable ].
+	privilegesButton := self newButton
+		label: 'Privileges...';
+		action: [ self editPrivileges ];
+		yourself.
 	closeButton := self newButton
 		label: 'Close';
 		icon: (self iconNamed: #smallCancel);
@@ -57,6 +80,7 @@ GbsUserInfoPresenter >> defaultLayout [
 		add: textPresenter;
 		add: (SpBoxLayout newLeftToRight
 			add: (self newLabel label: '');
+			add: privilegesButton expand: false;
 			add: closeButton expand: false;
 			yourself) expand: false;
 		spacing: 8;
@@ -76,6 +100,7 @@ GbsUserInfoPresenter >> buildMenuBar [
 		addGroup: [ :group |
 			group
 				addItem: [ :item | item name: 'File'; subMenu: self menuFile ];
+				addItem: [ :item | item name: 'User'; subMenu: self menuUser ];
 				addItem: [ :item | item name: 'Help'; subMenu: self menuHelp ] ];
 		yourself
 ]
@@ -93,6 +118,103 @@ GbsUserInfoPresenter >> menuHelp [
 	^ self newMenu
 		addItem: [ :item | item name: 'About User Info'; action: [ UIManager default inform: 'GemStone User Info' ] ];
 		yourself
+]
+
+{ #category : 'menus' }
+GbsUserInfoPresenter >> menuUser [
+	^ self newMenu
+		addItem: [ :item | item name: 'Privileges...'; action: [ self editPrivileges ] ];
+		addItem: [ :item | item name: 'Refresh'; action: [ self refreshInfoText ] ];
+		yourself
+]
+
+{ #category : 'actions' }
+GbsUserInfoPresenter >> editPrivileges [
+	| creator currentPrivileges groups |
+	session ifNil: [ ^ self ].
+	creator := GbsCreateUserPresenter new.
+	creator session: session.
+	currentPrivileges := creator fetchPrivilegesForUser: userName.
+	groups := self fetchGroupsForUser: userName.
+	[
+		self
+			openPrivilegesEditorForUser: userName
+			initialPrivileges: currentPrivileges
+			onAccept: [ :updated |
+				| script |
+				script := creator
+					scriptToSaveUser: userName
+					password: ''
+					groups: groups
+					privileges: updated.
+				session execute: script.
+				self refreshInfoText ]
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open privileges window: ', ex messageText ]
+]
+
+{ #category : 'private' }
+GbsUserInfoPresenter >> openPrivilegesEditorForUser: aUserName initialPrivileges: privilegeMap onAccept: acceptBlock [
+	privilegesEditorBlock ifNotNil: [
+		^ privilegesEditorBlock
+			value: aUserName
+			value: privilegeMap
+			value: acceptBlock ].
+	^ GbsUserPrivilegesPresenter
+		openForUser: aUserName
+		initialPrivileges: privilegeMap
+		onAccept: acceptBlock
+]
+
+{ #category : 'private' }
+GbsUserInfoPresenter >> fetchGroupsForUser: aUserName [
+	| script raw |
+	session ifNil: [ ^ #() ].
+	script := '
+	| users user names |
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNil: [ ^ '''' ].
+	user := users detect: [ :u | u userId asString = ''', aUserName, ''' ] ifNone: [ nil ].
+	user ifNil: [ ^ '''' ].
+	names := (user respondsTo: #groups)
+		ifTrue: [ user groups collect: [ :g | (g respondsTo: #name) ifTrue: [ g name asString ] ifFalse: [ g asString ] ] ]
+		ifFalse: [ #() ].
+	String streamContents: [ :s |
+		names asSortedCollection
+			do: [ :n | s nextPutAll: n asString ]
+			separatedBy: [ s nextPut: $, ] ]'.
+	raw := [ session evaluate: script ] on: Error do: [ '' ].
+	(raw isString and: [ raw isNotEmpty ])
+		ifTrue: [ ^ (raw splitOn: $,) reject: [ :each | each isEmpty ] ].
+	^ #()
+]
+
+{ #category : 'actions' }
+GbsUserInfoPresenter >> refreshInfoText [
+	| script raw |
+	session ifNil: [ ^ self ].
+	script := '
+	| users user strm |
+	strm := WriteStream on: String new.
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNotNil: [
+		user := users detect: [ :u | u userId asString = ''', userName, ''' ] ifNone: [ nil ].
+		user ifNotNil: [
+			strm
+				nextPutAll: ''User: ''; nextPutAll: user userId asString; cr;
+				nextPutAll: ''Class: ''; nextPutAll: user class name asString; cr.
+			(user respondsTo: #groups) ifTrue: [
+				| names |
+				names := user groups collect: [ :g | (g respondsTo: #name) ifTrue: [ g name asString ] ifFalse: [ g asString ] ].
+				strm nextPutAll: ''Groups: ''.
+				names asSortedCollection
+					do: [ :n | strm nextPutAll: n asString ]
+					separatedBy: [ strm nextPutAll: '', '' ].
+				strm cr ] ] ].
+	strm contents'.
+	raw := [ session evaluate: script ] on: Error do: [ infoText ].
+	infoText := raw ifNil: [ infoText ] ifNotNil: [ raw asString ].
+	(textPresenter respondsTo: #text:) ifTrue: [ textPresenter text: infoText ]
 ]
 
 { #category : 'actions' }

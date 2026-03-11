@@ -125,12 +125,19 @@ GbsSymbolListBrowserPresenter >> menuFile [
 GbsSymbolListBrowserPresenter >> menuDictionary [
 	^ self newMenu
 		addItem: [ :item | item name: 'Refresh Dictionaries'; action: [ self refreshDictionariesFor: userDropList selectedItem ] ];
+		addItem: [ :item | item name: 'Add...'; action: [ self addDictionary ] ];
+		addItem: [ :item | item name: 'Rename As...'; action: [ self renameDictionary ] ];
+		addItem: [ :item | item name: 'Remove...'; action: [ self removeDictionary ] ];
+		addItem: [ :item | item name: 'Inspect'; action: [ self inspectDictionary ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsSymbolListBrowserPresenter >> menuEntry [
 	^ self newMenu
+		addItem: [ :item | item name: 'Add...'; action: [ self addEntry ] ];
+		addItem: [ :item | item name: 'Rename As...'; action: [ self renameEntry ] ];
+		addItem: [ :item | item name: 'Remove...'; action: [ self removeEntry ] ];
 		addItem: [ :item | item name: 'Inspect Entry'; action: [ self inspectSelectedEntry ] ];
 		yourself
 ]
@@ -145,10 +152,136 @@ GbsSymbolListBrowserPresenter >> menuHelp [
 { #category : 'actions' }
 GbsSymbolListBrowserPresenter >> inspectSelectedEntry [
 	| key value |
-	key := entriesList selection selectedItem.
+	key := self selectedEntryName.
 	key ifNil: [ ^ self ].
 	value := entryValuesByKey at: key ifAbsent: [ '' ].
 	UIManager default inform: key asString, ' => ', value asString
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> inspectDictionary [
+	| userName dictName raw |
+	userName := self selectedUserName.
+	dictName := self selectedDictionaryName.
+	(userName isNil or: [ dictName isNil ]) ifTrue: [ ^ self ].
+	raw := [ session evaluate: (self inspectDictionaryScriptForUser: userName dictionary: dictName) ]
+		on: Error do: [ :ex | 'Inspect dictionary failed: ', ex messageText ].
+	UIManager default inform: raw asString
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> addDictionary [
+	| userName dictName script |
+	userName := self selectedUserName.
+	userName ifNil: [ ^ self ].
+	dictName := UIManager default request: 'New Dictionary name:' initialAnswer: 'DictionaryName'.
+	(dictName isNil or: [ dictName trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	script := self addDictionaryScriptForUser: userName dictionary: dictName trimBoth.
+	[
+		session execute: script.
+		self refreshDictionariesFor: userName
+	] on: Error do: [ :ex | UIManager default inform: 'Add dictionary failed: ', ex messageText ].
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> renameDictionary [
+	| userName oldName newName script |
+	userName := self selectedUserName.
+	oldName := self selectedDictionaryName.
+	(userName isNil or: [ oldName isNil ]) ifTrue: [ ^ self ].
+	newName := UIManager default request: 'Rename dictionary to:' initialAnswer: oldName.
+	(newName isNil or: [ newName trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	script := self
+		renameDictionaryScriptForUser: userName
+		oldName: oldName
+		newName: newName trimBoth.
+	[
+		session execute: script.
+		self refreshDictionariesFor: userName
+	] on: Error do: [ :ex | UIManager default inform: 'Rename dictionary failed: ', ex messageText ].
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> removeDictionary [
+	| userName dictName script critical |
+	userName := self selectedUserName.
+	dictName := self selectedDictionaryName.
+	(userName isNil or: [ dictName isNil ]) ifTrue: [ ^ self ].
+	critical := #( 'Globals' 'Published' 'UserGlobals' ) includes: dictName asString.
+	(critical and: [
+		(UIManager default
+			confirm: dictName asString, ' is a standard GemStone dictionary. Remove anyway?'
+			label: 'Remove Critical Dictionary') not ])
+		ifTrue: [ ^ self ].
+	(UIManager default
+		confirm: 'Remove dictionary "', dictName asString, '"?'
+		label: 'Remove Dictionary') ifFalse: [ ^ self ].
+	script := self removeDictionaryScriptForUser: userName dictionary: dictName.
+	[
+		session execute: script.
+		self refreshDictionariesFor: userName
+	] on: Error do: [ :ex | UIManager default inform: 'Remove dictionary failed: ', ex messageText ].
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> addEntry [
+	| userName dictName keyName valueExpr script |
+	userName := self selectedUserName.
+	dictName := self selectedDictionaryName.
+	(userName isNil or: [ dictName isNil ]) ifTrue: [ ^ self ].
+	keyName := UIManager default request: 'New entry key:' initialAnswer: 'newKey'.
+	(keyName isNil or: [ keyName trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	valueExpr := UIManager default request: 'Value expression (GemStone Smalltalk):' initialAnswer: 'nil'.
+	valueExpr ifNil: [ ^ self ].
+	script := self
+		addEntryScriptForUser: userName
+		dictionary: dictName
+		keyName: keyName trimBoth
+		valueExpression: valueExpr.
+	[
+		session execute: script.
+		self refreshEntriesForDictionary: dictName
+	] on: Error do: [ :ex | UIManager default inform: 'Add entry failed: ', ex messageText ].
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> renameEntry [
+	| userName dictName oldKey newKey script |
+	userName := self selectedUserName.
+	dictName := self selectedDictionaryName.
+	oldKey := self selectedEntryName.
+	(userName isNil or: [ dictName isNil or: [ oldKey isNil ] ]) ifTrue: [ ^ self ].
+	newKey := UIManager default request: 'Rename entry to:' initialAnswer: oldKey.
+	(newKey isNil or: [ newKey trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	script := self
+		renameEntryScriptForUser: userName
+		dictionary: dictName
+		oldKeyName: oldKey
+		newKeyName: newKey trimBoth.
+	[
+		session execute: script.
+		self refreshEntriesForDictionary: dictName
+	] on: Error do: [ :ex | UIManager default inform: 'Rename entry failed: ', ex messageText ].
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> removeEntry [
+	| userName dictName keyName script |
+	userName := self selectedUserName.
+	dictName := self selectedDictionaryName.
+	keyName := self selectedEntryName.
+	(userName isNil or: [ dictName isNil or: [ keyName isNil ] ]) ifTrue: [ ^ self ].
+	(UIManager default
+		confirm: 'Remove entry "', keyName, '" from "', dictName asString, '"?'
+		label: 'Remove Entry') ifFalse: [ ^ self ].
+	script := self
+		removeEntryScriptForUser: userName
+		dictionary: dictName
+		keyName: keyName.
+	[
+		session execute: script.
+		self refreshEntriesForDictionary: dictName
+	] on: Error do: [ :ex | UIManager default inform: 'Remove entry failed: ', ex messageText ].
 ]
 
 { #category : 'actions' }
@@ -186,9 +319,11 @@ GbsSymbolListBrowserPresenter >> refreshDictionariesFor: userName [
 
 { #category : 'actions' }
 GbsSymbolListBrowserPresenter >> refreshEntriesForDictionary: dictName [
-	| raw lines keys |
+	| raw lines keys userName |
 	dictName ifNil: [ ^ self ].
-	raw := [ session evaluate: (self entriesScriptForUser: (userDropList selectedItem asString) dictionary: dictName asString) ]
+	userName := self selectedUserName.
+	userName ifNil: [ ^ self ].
+	raw := [ session evaluate: (self entriesScriptForUser: userName dictionary: dictName asString) ]
 		on: Error do: [ '' ].
 	lines := (raw isString and: [ raw isNotEmpty ])
 		ifTrue: [ raw lines ]
@@ -206,6 +341,48 @@ GbsSymbolListBrowserPresenter >> refreshEntriesForDictionary: dictName [
 	entriesList items: keys asArray.
 	selectionField text: ''.
 	(valueText respondsTo: #text:) ifTrue: [ valueText text: '' ]
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> selectedUserName [
+	| selected |
+	(userDropList respondsTo: #selectedItem)
+		ifTrue: [
+			selected := [ userDropList selectedItem ] on: Error do: [ nil ].
+			selected ifNotNil: [ ^ selected asString ] ].
+	(userDropList respondsTo: #selection)
+		ifTrue: [
+			selected := [ userDropList selection selectedItem ] on: Error do: [ nil ].
+			selected ifNotNil: [ ^ selected asString ] ].
+	^ nil
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> selectedDictionaryName [
+	| selected |
+	(dictionariesList respondsTo: #selection)
+		ifTrue: [
+			selected := [ dictionariesList selection selectedItem ] on: Error do: [ nil ].
+			selected ifNotNil: [ ^ selected asString ] ].
+	(dictionariesList respondsTo: #selectedItem)
+		ifTrue: [
+			selected := [ dictionariesList selectedItem ] on: Error do: [ nil ].
+			selected ifNotNil: [ ^ selected asString ] ].
+	^ nil
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> selectedEntryName [
+	| selected |
+	(entriesList respondsTo: #selection)
+		ifTrue: [
+			selected := [ entriesList selection selectedItem ] on: Error do: [ nil ].
+			selected ifNotNil: [ ^ selected asString ] ].
+	(entriesList respondsTo: #selectedItem)
+		ifTrue: [
+			selected := [ entriesList selectedItem ] on: Error do: [ nil ].
+			selected ifNotNil: [ ^ selected asString ] ].
+	^ nil
 ]
 
 { #category : 'actions' }
@@ -276,6 +453,176 @@ GbsSymbolListBrowserPresenter >> entriesScriptForUser: userName dictionary: dict
 			nextPutAll: v printString;
 			cr ].
 	strm contents'
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> inspectDictionaryScriptForUser: userName dictionary: dictName [
+	| u d |
+	u := self literalString: userName.
+	d := self literalString: dictName.
+	^ '
+	| users user sl dict |
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNil: [ ^ ''AllUsers not found'' ].
+	user := users detect: [ :x | x userId asString = ', u, ' ] ifNone: [ nil ].
+	user ifNil: [ ^ ''User not found'' ].
+	sl := user symbolList.
+	dict := sl detect: [ :each |
+		| name |
+		name := (each respondsTo: #name) ifTrue: [ each name asString ] ifFalse: [ each printString ].
+		name = ', d, ' ] ifNone: [ nil ].
+	dict ifNil: [ ^ ''Dictionary not found'' ].
+	dict printString'
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> addDictionaryScriptForUser: userName dictionary: dictName [
+	| u d |
+	u := self literalString: userName.
+	d := self literalString: dictName.
+	^ '
+	| users user sl exists newDict idx |
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNil: [ self error: ''AllUsers not found'' ].
+	user := users detect: [ :x | x userId asString = ', u, ' ] ifNone: [ nil ].
+	user ifNil: [ self error: ''User not found'' ].
+	sl := user symbolList.
+	exists := sl detect: [ :each |
+		| nm |
+		nm := (each respondsTo: #name) ifTrue: [ each name asString ] ifFalse: [ each printString ].
+		nm = ', d, ' ] ifNone: [ nil ].
+	exists ifNotNil: [ self error: ''Dictionary already exists'' ].
+	newDict := SymbolDictionary new.
+	newDict name: ', d, '.
+	newDict at: ', d, ' asSymbol put: newDict.
+	idx := (sl respondsTo: #size) ifTrue: [ sl size + 1 ] ifFalse: [ 1 ].
+	(user respondsTo: #insertDictionary:at:)
+		ifTrue: [ user insertDictionary: newDict at: idx ]
+		ifFalse: [
+			(sl respondsTo: #add:)
+				ifTrue: [ sl add: newDict ]
+				ifFalse: [ self error: ''Cannot add dictionary with available API'' ] ].
+	true'
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> renameDictionaryScriptForUser: userName oldName: oldName newName: newName [
+	| u o n |
+	u := self literalString: userName.
+	o := self literalString: oldName.
+	n := self literalString: newName.
+	^ '
+	| users user sl dict |
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNil: [ self error: ''AllUsers not found'' ].
+	user := users detect: [ :x | x userId asString = ', u, ' ] ifNone: [ nil ].
+	user ifNil: [ self error: ''User not found'' ].
+	sl := user symbolList.
+	dict := sl detect: [ :each |
+		| nm |
+		nm := (each respondsTo: #name) ifTrue: [ each name asString ] ifFalse: [ each printString ].
+		nm = ', o, ' ] ifNone: [ nil ].
+	dict ifNil: [ self error: ''Dictionary not found'' ].
+	(sl respondsTo: #removeKey:ifAbsent:)
+		ifTrue: [ sl removeKey: ', o, ' asSymbol ifAbsent: [ ] ].
+	(sl respondsTo: #at:put:)
+		ifTrue: [ sl at: ', n, ' asSymbol put: dict ].
+	(dict respondsTo: #name:) ifTrue: [ dict name: ', n, ' ].
+	true'
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> removeDictionaryScriptForUser: userName dictionary: dictName [
+	| u d |
+	u := self literalString: userName.
+	d := self literalString: dictName.
+	^ '
+	| users user sl dict |
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNil: [ self error: ''AllUsers not found'' ].
+	user := users detect: [ :x | x userId asString = ', u, ' ] ifNone: [ nil ].
+	user ifNil: [ self error: ''User not found'' ].
+	sl := user symbolList.
+	dict := sl detect: [ :each |
+		| nm |
+		nm := (each respondsTo: #name) ifTrue: [ each name asString ] ifFalse: [ each printString ].
+		nm = ', d, ' ] ifNone: [ nil ].
+	dict ifNil: [ self error: ''Dictionary not found'' ].
+	(sl respondsTo: #removeKey:ifAbsent:)
+		ifTrue: [ sl removeKey: ', d, ' asSymbol ifAbsent: [ ] ].
+	(sl respondsTo: #remove:ifAbsent:)
+		ifTrue: [ sl remove: dict ifAbsent: [ ] ].
+	true'
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> addEntryScriptForUser: userName dictionary: dictName keyName: keyName valueExpression: valueExpression [
+	| u d k |
+	u := self literalString: userName.
+	d := self literalString: dictName.
+	k := self literalString: keyName.
+	^ '
+	| users user sl dict value |
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNil: [ self error: ''AllUsers not found'' ].
+	user := users detect: [ :x | x userId asString = ', u, ' ] ifNone: [ nil ].
+	user ifNil: [ self error: ''User not found'' ].
+	sl := user symbolList.
+	dict := sl detect: [ :each |
+		| nm |
+		nm := (each respondsTo: #name) ifTrue: [ each name asString ] ifFalse: [ each printString ].
+		nm = ', d, ' ] ifNone: [ nil ].
+	dict ifNil: [ self error: ''Dictionary not found'' ].
+	value := [ ', valueExpression, ' ] value.
+	dict at: ', k, ' asSymbol put: value.
+	true'
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> renameEntryScriptForUser: userName dictionary: dictName oldKeyName: oldKeyName newKeyName: newKeyName [
+	| u d o n |
+	u := self literalString: userName.
+	d := self literalString: dictName.
+	o := self literalString: oldKeyName.
+	n := self literalString: newKeyName.
+	^ '
+	| users user sl dict value |
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNil: [ self error: ''AllUsers not found'' ].
+	user := users detect: [ :x | x userId asString = ', u, ' ] ifNone: [ nil ].
+	user ifNil: [ self error: ''User not found'' ].
+	sl := user symbolList.
+	dict := sl detect: [ :each |
+		| nm |
+		nm := (each respondsTo: #name) ifTrue: [ each name asString ] ifFalse: [ each printString ].
+		nm = ', d, ' ] ifNone: [ nil ].
+	dict ifNil: [ self error: ''Dictionary not found'' ].
+	value := dict at: ', o, ' asSymbol ifAbsent: [ self error: ''Entry not found'' ].
+	dict at: ', n, ' asSymbol put: value.
+	dict removeKey: ', o, ' asSymbol ifAbsent: [ ].
+	true'
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> removeEntryScriptForUser: userName dictionary: dictName keyName: keyName [
+	| u d k |
+	u := self literalString: userName.
+	d := self literalString: dictName.
+	k := self literalString: keyName.
+	^ '
+	| users user sl dict |
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNil: [ self error: ''AllUsers not found'' ].
+	user := users detect: [ :x | x userId asString = ', u, ' ] ifNone: [ nil ].
+	user ifNil: [ self error: ''User not found'' ].
+	sl := user symbolList.
+	dict := sl detect: [ :each |
+		| nm |
+		nm := (each respondsTo: #name) ifTrue: [ each name asString ] ifFalse: [ each printString ].
+		nm = ', d, ' ] ifNone: [ nil ].
+	dict ifNil: [ self error: ''Dictionary not found'' ].
+	dict removeKey: ', k, ' asSymbol ifAbsent: [ self error: ''Entry not found'' ].
+	true'
 ]
 
 { #category : 'private' }

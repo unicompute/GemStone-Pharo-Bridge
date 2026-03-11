@@ -130,3 +130,43 @@ GbsBrowserTest >> testGsPrintItAppendsResult [
 	self assert: browser gsPrintIt.
 	self assert: (text text includesSubstring: '"42"')
 ]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testQueryImplementorsUsesPromptAndOpensSingleResult [
+	| browser |
+	browser := TestableGbsBrowser new.
+	browser enqueueRequestAnswer: 'initialize'.
+	browser queryResults: #('Object>>initialize') forMode: 'implementors'.
+
+	self assert: browser queryImplementors.
+	self assert: browser lastQueriedSelector equals: 'initialize'.
+	self assert: browser lastQueriedMode equals: 'implementors'.
+	self assert: browser lastOpenedReference equals: 'Object>>initialize'
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testOpenQueryResultsChoosesFromMultipleReferences [
+	| browser |
+	browser := TestableGbsBrowser new.
+	browser enqueueChooseAnswer: 2.
+
+	self assert: (browser openQueryResults: #('Object>>initialize' 'Behavior>>initialize')).
+	self assert: browser lastOpenedReference equals: 'Behavior>>initialize'
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testQueryMethodsWithStringUsesOpenQueryResultsPath [
+	| browser session capturedScript |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeAndFetch put: [ :script |
+		capturedScript := script.
+		'Object>>initialize', Character lf asString, 'Behavior>>initialize' ].
+	browser session: session.
+	browser enqueueRequestAnswer: 'init'.
+	browser enqueueChooseAnswer: 1.
+
+	self assert: browser queryMethodsWithString.
+	self assert: (capturedScript includesSubstring: 'init').
+	self assert: browser lastOpenedReference equals: 'Behavior>>initialize'
+]

@@ -5,11 +5,25 @@ Class {
 		'lastInfoMessage',
 		'lastProtocolSelected',
 		'lastCompileSource',
-		'compileSpyEnabled'
+		'compileSpyEnabled',
+		'requestAnswers',
+		'chooseAnswers',
+		'queryResultsByMode',
+		'lastOpenedReference',
+		'lastQueriedSelector',
+		'lastQueriedMode'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
 }
+
+{ #category : 'initialization' }
+TestableGbsBrowser >> initialize [
+	super initialize.
+	requestAnswers := OrderedCollection new.
+	chooseAnswers := OrderedCollection new.
+	queryResultsByMode := Dictionary new
+]
 
 { #category : 'testing' }
 TestableGbsBrowser >> enableCompileSpy [
@@ -41,6 +55,48 @@ TestableGbsBrowser >> protocolSelected: protocolName [
 	lastProtocolSelected := protocolName
 ]
 
+{ #category : 'testing' }
+TestableGbsBrowser >> enqueueRequestAnswer: aStringOrNil [
+	requestAnswers add: aStringOrNil
+]
+
+{ #category : 'testing' }
+TestableGbsBrowser >> enqueueChooseAnswer: anInteger [
+	chooseAnswers add: anInteger
+]
+
+{ #category : 'testing' }
+TestableGbsBrowser >> queryResults: aCollection forMode: modeString [
+	queryResultsByMode at: modeString put: aCollection asArray
+]
+
+{ #category : 'private' }
+TestableGbsBrowser >> uiRequest: prompt initialAnswer: defaultString [
+	^ requestAnswers
+		ifEmpty: [ defaultString ]
+		ifNotEmpty: [ requestAnswers removeFirst ]
+]
+
+{ #category : 'private' }
+TestableGbsBrowser >> uiChooseFrom: choices title: titleString [
+	^ chooseAnswers
+		ifEmpty: [ 0 ]
+		ifNotEmpty: [ chooseAnswers removeFirst ]
+]
+
+{ #category : 'private' }
+TestableGbsBrowser >> queryServerMethodsForSelector: selectorName mode: modeString [
+	lastQueriedSelector := selectorName.
+	lastQueriedMode := modeString.
+	^ queryResultsByMode at: modeString ifAbsent: [ #() ]
+]
+
+{ #category : 'private' }
+TestableGbsBrowser >> openMethodReference: referenceString [
+	lastOpenedReference := referenceString.
+	^ true
+]
+
 { #category : 'accessing' }
 TestableGbsBrowser >> lastInfoMessage [
 	^ lastInfoMessage
@@ -54,4 +110,19 @@ TestableGbsBrowser >> lastProtocolSelected [
 { #category : 'accessing' }
 TestableGbsBrowser >> lastCompileSource [
 	^ lastCompileSource
+]
+
+{ #category : 'accessing' }
+TestableGbsBrowser >> lastOpenedReference [
+	^ lastOpenedReference
+]
+
+{ #category : 'accessing' }
+TestableGbsBrowser >> lastQueriedSelector [
+	^ lastQueriedSelector
+]
+
+{ #category : 'accessing' }
+TestableGbsBrowser >> lastQueriedMode [
+	^ lastQueriedMode
 ]

@@ -62,10 +62,12 @@ GbsConnectorBrowserPresenter >> initializePresenters [
 GbsConnectorBrowserPresenter >> connectPresenters [
 	groupList whenSelectionChangedDo: [ :selection |
 		self refreshConnectorsForGroup: selection selectedItem ].
+	(connectorTable respondsTo: #whenActivatedDo:) ifTrue: [
+		connectorTable whenActivatedDo: [ :selection |
+			selection selectedItem ifNotNil: [ self inspectSelectedClientConnector ] ] ].
 
-	verificationCheck state: true.
-	removeInvalidCheck state: true.
-	noneRadio state: true.
+	self loadOptionsFromConfiguration.
+	self wireOptionChangeNotifications.
 
 	self refreshAll
 ]
@@ -163,6 +165,8 @@ GbsConnectorBrowserPresenter >> refreshAll [
 			(groupList respondsTo: #selectIndex:)
 				ifTrue: [ groupList selectIndex: 1 ]
 				ifFalse: [ (groupList respondsTo: #selectItem:) ifTrue: [ groupList selectItem: groupItems first ] ].
+			(self fastConnectorPairs isEmpty and: [ verificationCheck state = true ])
+				ifTrue: [ [ self managerPerform: #initializeFastConnectors ifUnavailable: [ nil ] ] on: Error do: [ ] ].
 			self refreshConnectorsForGroup: groupItems first ]
 ]
 
@@ -193,10 +197,11 @@ GbsConnectorBrowserPresenter >> connectorRowsForGroup: aGroupLabel [
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> fastConnectorPairs [
-	| mgrClass pairs |
-	mgrClass := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
-	mgrClass ifNil: [ ^ #() ].
-	pairs := [ mgrClass globalFastConnectorsList ] on: Error do: [ #() ].
+	| pairs |
+	pairs := [ self managerPerform: #connectorPairs ifUnavailable: [
+		self managerPerform: #globalFastConnectorsList ifUnavailable: [ #() ] ] ]
+		on: Error
+		do: [ #() ].
 	^ pairs ifNil: [ #() ]
 ]
 
@@ -227,12 +232,11 @@ GbsConnectorBrowserPresenter >> sessionParameters [
 
 { #category : 'actions' }
 GbsConnectorBrowserPresenter >> initializeFastConnectors [
-	| mgr |
-	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
-	(mgr notNil and: [ mgr respondsTo: #initializeFastConnectors ]) ifTrue: [
-		[ mgr initializeFastConnectors ]
-			on: Error
-			do: [ :ex | ^ self inform: 'Initialize fast connectors failed: ', ex messageText ] ].
+	[
+		self managerPerform: #initializeFastConnectors ifUnavailable: [
+			^ self inform: 'Initialize fast connectors is not available in this image.' ]
+	] on: Error do: [ :ex |
+		^ self inform: 'Initialize fast connectors failed: ', ex messageText ].
 	self refreshAll
 ]
 
@@ -244,6 +248,10 @@ GbsConnectorBrowserPresenter >> generateClassConnectors [
 		[ cfg generateClassConnectors ]
 			on: Error
 			do: [ :ex | ^ self inform: 'Generate class connectors failed: ', ex messageText ] ].
+	[
+		self managerPerform: #generateClassConnectors ifUnavailable: [ nil ]
+	] on: Error do: [ :ex |
+		^ self inform: 'Generate class connectors failed: ', ex messageText ].
 	self refreshAll
 ]
 
@@ -255,17 +263,46 @@ GbsConnectorBrowserPresenter >> removeInvalidConnectors [
 		[ cfg removeInvalidConnectors ]
 			on: Error
 			do: [ :ex | ^ self inform: 'Remove invalid connectors failed: ', ex messageText ] ].
+	[
+		self managerPerform: #removeInvalidConnectors ifUnavailable: [ nil ]
+	] on: Error do: [ :ex |
+		^ self inform: 'Remove invalid connectors failed: ', ex messageText ].
 	self refreshAll
 ]
 
 { #category : 'actions' }
 GbsConnectorBrowserPresenter >> addConnector [
-	self generateClassConnectors
+	| clientName serverName |
+	clientName := UIManager default request: 'Client class name:' initialAnswer: ''.
+	(clientName isNil or: [ clientName trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	serverName := UIManager default request: 'Server class name:' initialAnswer: ''.
+	(serverName isNil or: [ serverName trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	[
+		self
+			managerPerform: #addConnectorClient:server:
+			withArguments: { clientName trimBoth. serverName trimBoth }
+			ifUnavailable: [ ^ self inform: 'Add connector is not available in this image.' ].
+	] on: Error do: [ :ex | ^ self inform: 'Add connector failed: ', ex messageText ].
+	self refreshAll
 ]
 
 { #category : 'actions' }
 GbsConnectorBrowserPresenter >> removeConnector [
-	self removeInvalidConnectors
+	| row clientName serverName |
+	row := connectorTable selection selectedItem.
+	row ifNil: [ ^ self inform: 'Select a connector first.' ].
+	clientName := row at: 2 ifAbsent: [ '' ].
+	serverName := row at: 3 ifAbsent: [ '' ].
+	(UIManager default
+		confirm: 'Remove connector "', clientName asString, ' -> ', serverName asString, '"?'
+		label: 'Remove Connector') ifFalse: [ ^ self ].
+	[
+		self
+			managerPerform: #removeConnectorClient:server:
+			withArguments: { clientName asString. serverName asString }
+			ifUnavailable: [ ^ self inform: 'Remove connector is not available in this image.' ].
+	] on: Error do: [ :ex | ^ self inform: 'Remove connector failed: ', ex messageText ].
+	self refreshAll
 ]
 
 { #category : 'actions' }
@@ -274,7 +311,7 @@ GbsConnectorBrowserPresenter >> inspectSelectedClientConnector [
 	row := connectorTable selection selectedItem.
 	row ifNil: [ ^ self inform: 'Select a connector first.' ].
 	(row size >= 2)
-		ifTrue: [ UIManager default inform: 'Client connector: ', (row at: 2) asString ]
+		ifTrue: [ self inspectClassNamed: (row at: 2) asString fallbackLabel: 'Client connector' ]
 		ifFalse: [ UIManager default inform: 'Client connector not available for selection.' ]
 ]
 
@@ -284,8 +321,40 @@ GbsConnectorBrowserPresenter >> inspectSelectedServerConnector [
 	row := connectorTable selection selectedItem.
 	row ifNil: [ ^ self inform: 'Select a connector first.' ].
 	(row size >= 3)
-		ifTrue: [ UIManager default inform: 'Server connector: ', (row at: 3) asString ]
+		ifTrue: [ self inspectClassNamed: (row at: 3) asString fallbackLabel: 'Server connector' ]
 		ifFalse: [ UIManager default inform: 'Server connector not available for selection.' ]
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> managerClass [
+	^ Smalltalk at: #GbsSessionManager ifAbsent: [ nil ]
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> managerPerform: aSelector ifUnavailable: unavailableBlock [
+	^ self managerPerform: aSelector withArguments: #() ifUnavailable: unavailableBlock
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> managerPerform: aSelector withArguments: args ifUnavailable: unavailableBlock [
+	| cls manager |
+	cls := self managerClass.
+	(cls notNil and: [ cls respondsTo: aSelector ]) ifTrue: [ ^ cls perform: aSelector withArguments: args ].
+	manager := (cls notNil and: [ cls respondsTo: #current ])
+		ifTrue: [ [ cls current ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	(manager notNil and: [ manager respondsTo: aSelector ]) ifTrue: [
+		^ manager perform: aSelector withArguments: args ].
+	^ unavailableBlock value
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> inspectClassNamed: aString fallbackLabel: labelString [
+	| classObject symbolObject |
+	classObject := Smalltalk at: aString asSymbol ifAbsent: [ nil ].
+	classObject ifNotNil: [ ^ classObject inspect ].
+	symbolObject := aString asSymbol.
+	^ symbolObject inspect
 ]
 
 { #category : 'accessing' }
@@ -295,7 +364,83 @@ GbsConnectorBrowserPresenter >> session: aSession [
 
 { #category : 'actions' }
 GbsConnectorBrowserPresenter >> closeWindow [
+	self saveOptionsToConfiguration.
 	self window
 		ifNotNil: [ self window close ]
 		ifNil: [ self delete ]
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> configuration [
+	^ GbsConfiguration current
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> loadOptionsFromConfiguration [
+	| cfg |
+	cfg := self configuration.
+	verificationCheck state: (self asBooleanResult: (cfg valueAt: #connectVerification ifAbsent: true) default: true).
+	removeInvalidCheck state: (self asBooleanResult: (cfg valueAt: #removeInvalidConnectors ifAbsent: true) default: true).
+	self applyPostConnectAction: (cfg valueAt: #postConnectAction ifAbsent: 'none')
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> saveOptionsToConfiguration [
+	| cfg |
+	cfg := self configuration.
+	cfg
+		valueAt: #connectVerification put: (verificationCheck state == true);
+		valueAt: #removeInvalidConnectors put: (removeInvalidCheck state == true);
+		valueAt: #postConnectAction put: self selectedPostConnectAction
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> wireOptionChangeNotifications [
+	{
+		verificationCheck.
+		removeInvalidCheck.
+		connectedRadio.
+		disconnectedRadio.
+		updateStRadio.
+		updateGsRadio.
+		forwarderRadio.
+		clientForwarderRadio.
+		noneRadio.
+	} do: [ :presenter | self wireChangeNotificationOn: presenter ]
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> wireChangeNotificationOn: aPresenter [
+	(aPresenter respondsTo: #whenChangedDo:)
+		ifTrue: [ aPresenter whenChangedDo: [ self saveOptionsToConfiguration ] ]
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> applyPostConnectAction: rawValue [
+	| value |
+	value := rawValue ifNil: [ 'none' ] ifNotNil: [ rawValue asString asLowercase ].
+	updateStRadio state: value = 'updatest'.
+	updateGsRadio state: value = 'updategs'.
+	forwarderRadio state: value = 'forwarder'.
+	clientForwarderRadio state: value = 'clientforwarder'.
+	noneRadio state: (value = 'none' or: [ value isEmpty ])
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> selectedPostConnectAction [
+	updateStRadio state == true ifTrue: [ ^ 'updateST' ].
+	updateGsRadio state == true ifTrue: [ ^ 'updateGS' ].
+	forwarderRadio state == true ifTrue: [ ^ 'forwarder' ].
+	clientForwarderRadio state == true ifTrue: [ ^ 'clientForwarder' ].
+	^ 'none'
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> asBooleanResult: raw default: defaultBoolean [
+	raw ifNil: [ ^ defaultBoolean ].
+	(raw == true or: [ raw == false ]) ifTrue: [ ^ raw ].
+	(raw respondsTo: #asString) ifFalse: [ ^ defaultBoolean ].
+	(#('true' '1' 'yes') includes: raw asString asLowercase) ifTrue: [ ^ true ].
+	(#('false' '0' 'no' 'nil' '') includes: raw asString asLowercase) ifTrue: [ ^ false ].
+	^ defaultBoolean
 ]

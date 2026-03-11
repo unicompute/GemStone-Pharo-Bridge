@@ -683,14 +683,12 @@ GbsBrowser >> queryReferences [
 
 { #category : 'private' }
 GbsBrowser >> queryMethodsForSelectorPrompt: prompt mode: modeString [
-	| selectorName references selected |
-	selectorName := UIManager default request: prompt initialAnswer: ''.
+	| selectorName references |
+	selectorName := self uiRequest: prompt initialAnswer: ''.
 	(selectorName isNil or: [ selectorName isEmpty ]) ifTrue: [ ^ false ].
 	references := self queryServerMethodsForSelector: selectorName trimBoth mode: modeString.
 	references isEmpty ifTrue: [ ^ self informNotImplemented: 'No matches found.' ].
-	selected := UIManager default chooseFrom: references title: 'Matches'.
-	selected = 0 ifTrue: [ ^ false ].
-	^ self openMethodReference: (references at: selected)
+	^ self openQueryResults: references
 ]
 
 { #category : 'private' }
@@ -724,7 +722,7 @@ GbsBrowser >> queryServerMethodsForSelector: selectorName mode: modeString [
 		stream contents
 	] value'.
 	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
-	^ (raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty
+	^ ((raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asSortedCollection asArray
 ]
 
 { #category : 'private' }
@@ -744,7 +742,7 @@ GbsBrowser >> openMethodReference: referenceString [
 { #category : 'actions' }
 GbsBrowser >> queryMethodsWithString [
 	| pattern script raw matches selected |
-	pattern := UIManager default request: 'Source substring:' initialAnswer: ''.
+	pattern := self uiRequest: 'Source substring:' initialAnswer: ''.
 	(pattern isNil or: [ pattern isEmpty ]) ifTrue: [ ^ false ].
 	script := '[
 		| classes stream p |
@@ -767,9 +765,8 @@ GbsBrowser >> queryMethodsWithString [
 	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
 	matches := (raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty.
 	matches isEmpty ifTrue: [ ^ self informNotImplemented: 'No methods matched.' ].
-	selected := UIManager default chooseFrom: matches title: 'Matching Methods'.
-	selected = 0 ifTrue: [ ^ false ].
-	^ self openMethodReference: (matches at: selected)
+	selected := matches asSortedCollection asArray.
+	^ self openQueryResults: selected
 ]
 
 { #category : 'actions' }
@@ -1325,9 +1322,20 @@ GbsBrowser >> browseHierarchyImplementorsOf: aSelector [
 GbsBrowser >> openQueryResults: references [
 	| selected |
 	references isEmpty ifTrue: [ ^ false ].
-	selected := UIManager default chooseFrom: references title: 'Matches'.
+	references size = 1 ifTrue: [ ^ self openMethodReference: references first ].
+	selected := self uiChooseFrom: references title: 'Matches'.
 	selected = 0 ifTrue: [ ^ false ].
 	^ self openMethodReference: (references at: selected)
+]
+
+{ #category : 'private' }
+GbsBrowser >> uiRequest: prompt initialAnswer: defaultString [
+	^ UIManager default request: prompt initialAnswer: defaultString
+]
+
+{ #category : 'private' }
+GbsBrowser >> uiChooseFrom: choices title: titleString [
+	^ UIManager default chooseFrom: choices title: titleString
 ]
 
 { #category : 'private' }

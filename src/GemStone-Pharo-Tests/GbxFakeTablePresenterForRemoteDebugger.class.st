@@ -28,3 +28,13 @@ GbxFakeTablePresenterForRemoteDebugger >> selectedItem [
 GbxFakeTablePresenterForRemoteDebugger >> selectedItem: anObject [
 	selectedItem := anObject
 ]
+
+{ #category : 'accessing' }
+GbxFakeTablePresenterForRemoteDebugger >> selection [
+	^ self
+]
+
+{ #category : 'accessing' }
+GbxFakeTablePresenterForRemoteDebugger >> selectItem: anObject [
+	selectedItem := anObject
+]

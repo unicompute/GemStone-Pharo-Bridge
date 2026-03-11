@@ -86,6 +86,70 @@ GbsSessionManager class >> initializeFastConnectors [
     self fastConnectorRegistry: registry.
 ]
 
+{ #category : 'actions' }
+GbsSessionManager class >> generateClassConnectors [
+	^ self initializeFastConnectors
+]
+
+{ #category : 'actions' }
+GbsSessionManager class >> removeInvalidConnectors [
+	| registry cleaned |
+	registry := self fastConnectorRegistry ifNil: [ Dictionary new ].
+	cleaned := Dictionary new.
+	registry keysAndValuesDo: [ :clientName :serverName |
+		| clientClass |
+		clientClass := Smalltalk globals at: clientName asSymbol ifAbsent: [ nil ].
+		clientClass ifNotNil: [
+			cleaned at: clientName asString put: serverName asString.
+			cleaned at: serverName asString put: clientName asString ] ].
+	self fastConnectorRegistry: cleaned.
+	^ cleaned
+]
+
+{ #category : 'accessing' }
+GbsSessionManager class >> connectorPairs [
+	| registry pairs seen |
+	registry := self fastConnectorRegistry.
+	(registry isNil or: [ registry isEmpty ]) ifTrue: [
+		self initializeFastConnectors.
+		registry := self fastConnectorRegistry ].
+	pairs := OrderedCollection new.
+	seen := Set new.
+	registry keysAndValuesDo: [ :clientName :serverName |
+		| clientClass pairKey |
+		clientClass := Smalltalk globals at: clientName asSymbol ifAbsent: [ nil ].
+		clientClass ifNotNil: [
+			pairKey := clientName asString, '->', serverName asString.
+			(seen includes: pairKey) ifFalse: [
+				pairs add: { clientName asString. serverName asString }.
+				seen add: pairKey ] ] ].
+	^ pairs asArray
+]
+
+{ #category : 'actions' }
+GbsSessionManager class >> addConnectorClient: clientClassName server: serverClassName [
+	| registry c s |
+	c := clientClassName ifNil: [ '' ] ifNotNil: [ clientClassName asString ].
+	s := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+	(c isEmpty or: [ s isEmpty ]) ifTrue: [ ^ self ].
+	registry := self fastConnectorRegistry ifNil: [ Dictionary new ].
+	registry at: c put: s.
+	registry at: s put: c.
+	self fastConnectorRegistry: registry.
+]
+
+{ #category : 'actions' }
+GbsSessionManager class >> removeConnectorClient: clientClassName server: serverClassName [
+	| registry c s |
+	c := clientClassName ifNil: [ '' ] ifNotNil: [ clientClassName asString ].
+	s := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+	registry := self fastConnectorRegistry ifNil: [ Dictionary new ].
+	(registry respondsTo: #removeKey:ifAbsent:) ifTrue: [
+		registry removeKey: c ifAbsent: [ ].
+		registry removeKey: s ifAbsent: [ ] ].
+	self fastConnectorRegistry: registry.
+]
+
 { #category : 'accessing' }
 GbsSessionManager class >> fastConnectorRegistry [
 	^ Smalltalk globals at: #GbsFastConnectorRegistry ifAbsent: [ Dictionary new ]

@@ -152,16 +152,23 @@ GbsClassicLauncher class >> currentSessionOrInform [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> generateClassConnectors [
-	| cfg |
+	| cfg mgr didWork |
+	didWork := false.
 	cfg := Smalltalk at: #GbsConfiguration ifAbsent: [ nil ].
 	(cfg notNil and: [ cfg respondsTo: #generateClassConnectors ]) ifTrue: [
 		[ cfg generateClassConnectors.
-		  UIManager default inform: 'Generated class connectors.' ]
+		  didWork := true ]
 			on: Error
-			do: [ :ex | UIManager default inform: 'Generate connectors failed: ', ex messageText ].
-		^ self
-	].
-	UIManager default inform: 'Generate class connectors is not available in this image.'.
+			do: [ :ex | UIManager default inform: 'Generate connectors failed: ', ex messageText. ^ self ] ].
+	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
+	(mgr notNil and: [ mgr respondsTo: #generateClassConnectors ]) ifTrue: [
+		[ mgr generateClassConnectors.
+		  didWork := true ]
+			on: Error
+			do: [ :ex | UIManager default inform: 'Generate connectors failed: ', ex messageText. ^ self ] ].
+	didWork
+		ifTrue: [ UIManager default inform: 'Generated class connectors.' ]
+		ifFalse: [ UIManager default inform: 'Generate class connectors is not available in this image.' ].
 ]
 
 { #category : 'menus' }
@@ -368,16 +375,23 @@ GbsClassicLauncher class >> openSettings [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> removeInvalidConnectors [
-	| cfg |
+	| cfg mgr didWork |
+	didWork := false.
 	cfg := Smalltalk at: #GbsConfiguration ifAbsent: [ nil ].
 	(cfg notNil and: [ cfg respondsTo: #removeInvalidConnectors ]) ifTrue: [
 		[ cfg removeInvalidConnectors.
-		  UIManager default inform: 'Removed invalid connectors.' ]
+		  didWork := true ]
 			on: Error
-			do: [ :ex | UIManager default inform: 'Remove invalid connectors failed: ', ex messageText ].
-		^ self
-	].
-	UIManager default inform: 'Remove invalid connectors is not available in this image.'.
+			do: [ :ex | UIManager default inform: 'Remove invalid connectors failed: ', ex messageText. ^ self ] ].
+	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
+	(mgr notNil and: [ mgr respondsTo: #removeInvalidConnectors ]) ifTrue: [
+		[ mgr removeInvalidConnectors.
+		  didWork := true ]
+			on: Error
+			do: [ :ex | UIManager default inform: 'Remove invalid connectors failed: ', ex messageText. ^ self ] ].
+	didWork
+		ifTrue: [ UIManager default inform: 'Removed invalid connectors.' ]
+		ifFalse: [ UIManager default inform: 'Remove invalid connectors is not available in this image.' ].
 ]
 
 { #category : 'private' }

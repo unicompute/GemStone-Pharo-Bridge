@@ -300,7 +300,7 @@ GbsUserListPresenter >> showSelectedUserInfo [
 	userName := self selectedUserName.
 	userName ifNil: [ ^ self ].
 	info := self userInfoTextFor: userName.
-	[ GbsUserInfoPresenter openForUser: userName text: info ]
+	[ GbsUserInfoPresenter openForUser: userName text: info session: session ]
 		on: Error
 		do: [ :ex | UIManager default inform: 'Could not open user info window: ', ex messageText ]
 ]
