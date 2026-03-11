@@ -387,6 +387,92 @@ GbsAdminToolsPresenterTest >> testConnectorBrowserSaveOptionsToConfigurationStor
 ]
 
 { #category : 'tests' }
+GbsAdminToolsPresenterTest >> testConnectorBrowserApplyConnectionStateMapsDisconnectedSelection [
+	| connected disconnected |
+	connected := GbxFakeTogglePresenter new.
+	disconnected := GbxFakeTogglePresenter new.
+
+	connectorBrowserPresenter instVarNamed: 'connectedRadio' put: connected.
+	connectorBrowserPresenter instVarNamed: 'disconnectedRadio' put: disconnected.
+
+	connectorBrowserPresenter applyConnectionState: 'disconnected'.
+
+	self deny: connected state.
+	self assert: disconnected state.
+	self assert: connectorBrowserPresenter selectedConnectionState equals: 'disconnected'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testConnectorBrowserFilteredConnectorPairsHidesSessionRowsWhenDisconnected [
+	| connected disconnected pairs filtered |
+	connected := GbxFakeTogglePresenter new.
+	disconnected := GbxFakeTogglePresenter new.
+	disconnected state: true.
+
+	connectorBrowserPresenter instVarNamed: 'connectedRadio' put: connected.
+	connectorBrowserPresenter instVarNamed: 'disconnectedRadio' put: disconnected.
+
+	pairs := { #('Array' 'OArray'). #('String' 'OByteString') }.
+	filtered := connectorBrowserPresenter
+		filteredConnectorPairs: pairs
+		forGroupLabel: 'Session connectors - ''DataCurator'' on ''gs64stone'''.
+
+	self assert: filtered equals: #()
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testConnectorBrowserOptionSelectionChangedSavesAndRefreshes [
+	| cfg verify remove connected disconnected updateSt updateGs fwd cfwd none fakeGroupList fakeTable |
+	cfg := GbsConfiguration new.
+	GbsConfiguration current: cfg.
+
+	verify := GbxFakeTogglePresenter new.
+	remove := GbxFakeTogglePresenter new.
+	connected := GbxFakeTogglePresenter new.
+	disconnected := GbxFakeTogglePresenter new.
+	updateSt := GbxFakeTogglePresenter new.
+	updateGs := GbxFakeTogglePresenter new.
+	fwd := GbxFakeTogglePresenter new.
+	cfwd := GbxFakeTogglePresenter new.
+	none := GbxFakeTogglePresenter new.
+	verify state: true.
+	remove state: false.
+	connected state: false.
+	disconnected state: true.
+	updateSt state: false.
+	updateGs state: false.
+	fwd state: true.
+	cfwd state: false.
+	none state: false.
+
+	fakeGroupList := GbxFakeListPresenterForBrowser new.
+	fakeGroupList selectedItem: 'Session connectors - ''DataCurator'' on ''gs64stone'''.
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeTable items: { #('sentinel') }.
+
+	connectorBrowserPresenter instVarNamed: 'verificationCheck' put: verify.
+	connectorBrowserPresenter instVarNamed: 'removeInvalidCheck' put: remove.
+	connectorBrowserPresenter instVarNamed: 'connectedRadio' put: connected.
+	connectorBrowserPresenter instVarNamed: 'disconnectedRadio' put: disconnected.
+	connectorBrowserPresenter instVarNamed: 'updateStRadio' put: updateSt.
+	connectorBrowserPresenter instVarNamed: 'updateGsRadio' put: updateGs.
+	connectorBrowserPresenter instVarNamed: 'forwarderRadio' put: fwd.
+	connectorBrowserPresenter instVarNamed: 'clientForwarderRadio' put: cfwd.
+	connectorBrowserPresenter instVarNamed: 'noneRadio' put: none.
+	connectorBrowserPresenter instVarNamed: 'groupList' put: fakeGroupList.
+	connectorBrowserPresenter instVarNamed: 'groupItems' put: { fakeGroupList selectedItem }.
+	connectorBrowserPresenter instVarNamed: 'connectorTable' put: fakeTable.
+
+	connectorBrowserPresenter optionSelectionChanged.
+
+	self assert: (cfg valueAt: #connectVerification ifAbsent: nil) equals: true.
+	self assert: (cfg valueAt: #removeInvalidConnectors ifAbsent: nil) equals: false.
+	self assert: (cfg valueAt: #connectorConnectionState ifAbsent: nil) equals: 'disconnected'.
+	self assert: (cfg valueAt: #postConnectAction ifAbsent: nil) equals: 'forwarder'.
+	self assert: fakeTable items equals: #()
+]
+
+{ #category : 'tests' }
 GbsAdminToolsPresenterTest >> testUserInfoFetchGroupsForUserParsesCsv [
 	| mockSession groups |
 	userInfoPresenter ifNil: [ self skip: 'GbsUserInfoPresenter not loaded' ].

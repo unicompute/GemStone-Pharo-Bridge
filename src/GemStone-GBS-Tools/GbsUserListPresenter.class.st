@@ -302,7 +302,21 @@ GbsUserListPresenter >> showSelectedUserInfo [
 	info := self userInfoTextFor: userName.
 	[ GbsUserInfoPresenter openForUser: userName text: info session: session ]
 		on: Error
-		do: [ :ex | UIManager default inform: 'Could not open user info window: ', ex messageText ]
+		do: [ :ex |
+			(self openUserInfoFallbackText: info forUser: userName)
+				ifFalse: [ UIManager default inform: 'Could not open user info window: ', ex messageText ] ]
+]
+
+{ #category : 'private' }
+GbsUserListPresenter >> openUserInfoFallbackText: infoTextValue forUser: userName [
+	| label text |
+	text := infoTextValue ifNil: [ '' ] ifNotNil: [ infoTextValue asString ].
+	label := 'GemStone User Info - ', (userName ifNil: [ '' ] ifNotNil: [ userName asString ]).
+	(UIManager default respondsTo: #edit:label:)
+		ifTrue: [ UIManager default edit: text label: label. ^ true ].
+	(UIManager default respondsTo: #inform:)
+		ifTrue: [ UIManager default inform: text. ^ true ].
+	^ false
 ]
 
 { #category : 'private' }

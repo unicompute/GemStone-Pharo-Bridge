@@ -229,8 +229,19 @@ GbsConnectorBrowserPresenter >> refreshConnectorsForGroup: aGroupLabel [
 GbsConnectorBrowserPresenter >> connectorRowsForGroup: aGroupLabel [
 	| list |
 	list := self fastConnectorPairs.
+	list := self filteredConnectorPairs: list forGroupLabel: aGroupLabel.
 	^ list collect: [ :pair |
 		{ 'Fast'. (pair at: 1 ifAbsent: [ '' ]) asString. (pair at: 2 ifAbsent: [ '' ]) asString } ]
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> filteredConnectorPairs: pairs forGroupLabel: aGroupLabel [
+	| label |
+	pairs ifNil: [ ^ #() ].
+	label := aGroupLabel ifNil: [ '' ] ifNotNil: [ aGroupLabel asString ].
+	((label beginsWith: 'Session connectors') and: [ self selectedConnectionState = 'disconnected' ])
+		ifTrue: [ ^ #() ].
+	^ pairs
 ]
 
 { #category : 'private' }
@@ -452,9 +463,24 @@ GbsConnectorBrowserPresenter >> wireOptionChangeNotifications [
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> wireChangeNotificationOn: aPresenter [
 	(aPresenter respondsTo: #whenChangedDo:)
-		ifTrue: [ aPresenter whenChangedDo: [ self saveOptionsToConfiguration ] ].
+		ifTrue: [ aPresenter whenChangedDo: [ self optionSelectionChanged ] ].
 	(aPresenter respondsTo: #whenActivatedDo:)
-		ifTrue: [ aPresenter whenActivatedDo: [ self saveOptionsToConfiguration ] ]
+		ifTrue: [ aPresenter whenActivatedDo: [ self optionSelectionChanged ] ]
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> optionSelectionChanged [
+	self saveOptionsToConfiguration.
+	self refreshConnectorsForCurrentGroup
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> refreshConnectorsForCurrentGroup [
+	| selected |
+	selected := [ groupList selection selectedItem ] on: Error do: [ nil ].
+	selected ifNil: [
+		selected := [ groupItems first ] on: Error do: [ nil ] ].
+	self refreshConnectorsForGroup: selected
 ]
 
 { #category : 'private' }
