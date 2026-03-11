@@ -44,7 +44,7 @@ GbsWorkspace >> doCommit [
 
 { #category : 'actions' }
 GbsWorkspace >> doIt [
-	| code activeSession result processOop exceptionCandidate currentUsable exceptionUsable hasRemoteMetadata serverCandidate |
+	| code activeSession result processOop exceptionCandidate hasRemoteMetadata serverCandidate |
 
 	code := self selectedCodeOrAll copyReplaceAll: String cr with: String lf.
 	code ifEmpty: [ ^ self ].
@@ -81,14 +81,11 @@ GbsWorkspace >> doIt [
 		hasRemoteMetadata := ((serverCandidate isNumber and: [ serverCandidate > 20 ])
 			or: [ exceptionCandidate isNumber and: [ exceptionCandidate > 20 ] ]).
 
-		"Do not run extra remote probe calls here; they can destabilize the GCI state.
-		Prefer serverProcessOop, fall back to exceptionOop when needed."
-		currentUsable := hasRemoteMetadata.
-		exceptionUsable := false.
-		(currentUsable not and: [ exceptionCandidate isNumber and: [ exceptionCandidate > 20 ] ]) ifTrue: [
-			processOop := exceptionCandidate.
-			currentUsable := true.
-			exceptionUsable := true
+		"Deterministic parity with VW: prefer server process whenever present.
+		Only fall back to exception oop when server oop is missing/invalid."
+		((serverCandidate isNumber and: [ serverCandidate > 20 ]) not
+			and: [ exceptionCandidate isNumber and: [ exceptionCandidate > 20 ] ]) ifTrue: [
+			processOop := exceptionCandidate
 		].
 
 		((processOop isNumber and: [ processOop > 20 ]) and: [ hasRemoteMetadata ])
