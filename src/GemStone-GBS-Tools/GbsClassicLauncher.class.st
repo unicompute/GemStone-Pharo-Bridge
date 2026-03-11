@@ -120,7 +120,7 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                         action: [ self gsFileInOnCurrentSession ].
                     (aBuilder item: #GSSettings)
                         label: 'Settings';
-                        action: [ GbsClassicLauncher new open ].
+                        action: [ self openSettings ].
                     (aBuilder item: #GSBreakpoints)
                         label: 'Breakpoints';
                         action: [ self openBreakpointsBrowser ].
@@ -210,18 +210,24 @@ GbsClassicLauncher class >> logoutCurrentSession [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openBreakpointsBrowser [
-	| klass |
-	klass := Smalltalk at: #GbxBreakpointBrowser ifAbsent: [ nil ].
-	(klass notNil and: [ klass respondsTo: #open ]) ifTrue: [ ^ klass open ].
-	UIManager default inform: 'Breakpoint browser is not available in this image.'.
+	| session |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	^ [ GbsBreakpointBrowserPresenter openOn: session ]
+		on: Error
+		do: [ :ex |
+			UIManager default inform: 'Could not open breakpoints browser: ', ex messageText ].
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openConnectorBrowserOnCurrentSession [
-	| klass |
-	klass := Smalltalk at: #GbxConnectorBrowser ifAbsent: [ nil ].
-	(klass notNil and: [ klass respondsTo: #open ]) ifTrue: [ ^ klass open ].
-	UIManager default inform: 'Connector browser is not available in this image.'.
+	| session |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	^ [ GbsConnectorBrowserPresenter openOn: session ]
+		on: Error
+		do: [ :ex |
+			UIManager default inform: 'Could not open connector browser: ', ex messageText ].
 ]
 
 { #category : 'menus' }
@@ -324,6 +330,13 @@ GbsClassicLauncher class >> openSecurityPoliciesOnCurrentSession [
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Could not open security policies tool: ', ex messageText
 	].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openSettings [
+	^ [ GbsSettingsPresenter open ]
+		on: Error
+		do: [ :ex | UIManager default inform: 'Could not open settings: ', ex messageText ]
 ]
 
 { #category : 'menus' }
