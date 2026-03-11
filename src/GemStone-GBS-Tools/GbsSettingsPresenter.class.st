@@ -240,20 +240,21 @@ GbsSettingsPresenter >> initializeWindow: aWindowPresenter [
 
 { #category : 'actions' }
 GbsSettingsPresenter >> chooseLibraryPath [
-	| dialogClass presenterClass selected |
-	dialogClass := Smalltalk at: #StOpenFileDialog ifAbsent: [ nil ].
+	| dialogClass presenterClass selected dlg initialPath |
 	selected := nil.
-	dialogClass ifNotNil: [
-		selected := [ dialogClass chooseModal ] on: Error do: [ nil ] ].
+	initialPath := self currentLibraryPathCandidate.
+	presenterClass := Smalltalk at: #StOpenFilePresenter ifAbsent: [ nil ].
+	presenterClass ifNotNil: [
+		selected := [
+			dlg := presenterClass new.
+			(dlg respondsTo: #title:) ifTrue: [ dlg title: 'Select GemBuilder library' ].
+			self primeFileDialog: dlg withInitialPath: initialPath.
+			dlg openModal
+		] on: Error do: [ nil ] ].
 	selected ifNil: [
-		presenterClass := Smalltalk at: #StOpenFilePresenter ifAbsent: [ nil ].
-		presenterClass ifNotNil: [
-			selected := [
-				| dlg |
-				dlg := presenterClass new.
-				(dlg respondsTo: #title:) ifTrue: [ dlg title: 'Select GemBuilder library' ].
-				dlg openModal
-			] on: Error do: [ nil ] ] ].
+		dialogClass := Smalltalk at: #StOpenFileDialog ifAbsent: [ nil ].
+		dialogClass ifNotNil: [
+			selected := [ dialogClass chooseModal ] on: Error do: [ nil ] ] ].
 	selected ifNil: [ ^ self ].
 	(selected isCollection and: [ selected isEmpty not ])
 		ifTrue: [ ^ libraryField text: selected first asFileReference fullName ].
@@ -264,8 +265,10 @@ GbsSettingsPresenter >> chooseLibraryPath [
 
 { #category : 'actions' }
 GbsSettingsPresenter >> loadFromConfiguration [
+	| resolvedLibrary |
 	configuration := configuration ifNil: [ GbsConfiguration current ].
-	libraryField text: (self stringValueAt: #libraryName default: '').
+	resolvedLibrary := self currentLibraryPathCandidate.
+	libraryField text: resolvedLibrary.
 	initialCacheSizeField text: (self formattedIntegerValueAt: #clientMapCapacity default: 5003).
 	initialDirtyPoolField text: (self stringValueAt: #initialDirtyPoolSize default: 157).
 	haltOnErrorField text: (self stringValueAt: #faultLevelLnk default: -1).
@@ -293,6 +296,18 @@ GbsSettingsPresenter >> loadFromConfiguration [
 	self setYesNo: { fullCompressionYes. fullCompressionNo } value: (self booleanAt: #fullCompression default: false).
 	self setYesNo: { confirmYes. confirmNo } value: (self booleanAt: #confirm default: true).
 	self setYesNo: { verboseYes. verboseNo } value: (self booleanAt: #verbose default: true)
+]
+
+{ #category : 'private' }
+GbsSettingsPresenter >> currentLibraryPathCandidate [
+	| fromConfig fromServer fromLibrary |
+	fromConfig := self stringValueAt: #libraryName default: ''.
+	(fromConfig isNil or: [ fromConfig isEmpty ]) ifFalse: [ ^ fromConfig ].
+	fromServer := [ GbsServerInterface uniqueInstance libraryPath ] on: Error do: [ '' ].
+	(fromServer isNil or: [ fromServer asString isEmpty ]) ifFalse: [ ^ fromServer asString ].
+	fromLibrary := [ GbsLibrary macLibraryName ] on: Error do: [ '' ].
+	(fromLibrary isNil or: [ fromLibrary asString isEmpty ]) ifFalse: [ ^ fromLibrary asString ].
+	^ ''
 ]
 
 { #category : 'private' }
@@ -395,6 +410,22 @@ GbsSettingsPresenter >> integerFromField: aField default: anInteger [
 	| raw |
 	raw := aField text asString copyWithout: $,.
 	^ [ raw asInteger ] on: Error do: [ anInteger ]
+]
+
+{ #category : 'private' }
+GbsSettingsPresenter >> primeFileDialog: aDialog withInitialPath: aPathString [
+	| ref dir |
+	(aPathString isNil or: [ aPathString asString isEmpty ]) ifTrue: [ ^ self ].
+	ref := [ aPathString asFileReference ] on: Error do: [ nil ].
+	ref ifNil: [ ^ self ].
+	dir := ref isDirectory ifTrue: [ ref ] ifFalse: [ ref parent ].
+	(aDialog respondsTo: #path:) ifTrue: [ [ aDialog path: dir ] on: Error do: [ ] ].
+	(aDialog respondsTo: #folder:) ifTrue: [ [ aDialog folder: dir ] on: Error do: [ ] ].
+	(aDialog respondsTo: #directory:) ifTrue: [ [ aDialog directory: dir ] on: Error do: [ ] ].
+	(aDialog respondsTo: #initialDirectory:) ifTrue: [ [ aDialog initialDirectory: dir ] on: Error do: [ ] ].
+	(aDialog respondsTo: #initialFolder:) ifTrue: [ [ aDialog initialFolder: dir ] on: Error do: [ ] ].
+	(aDialog respondsTo: #defaultFolder:) ifTrue: [ [ aDialog defaultFolder: dir ] on: Error do: [ ] ].
+	(aDialog respondsTo: #initialFile:) ifTrue: [ [ aDialog initialFile: ref ] on: Error do: [ ] ]
 ]
 
 { #category : 'actions' }
