@@ -522,6 +522,70 @@ GbxDebuggerServiceTest >> testStepOverUsesServerStepOverForExecutedCodeFrame [
 ]
 
 { #category : 'tests' }
+GbxDebuggerServiceTest >> testStepOverUsesResolvedExecutedCodeLevelWhenAvailable [
+	| scripts executed didStep |
+	scripts := OrderedCollection new.
+	executed := GbxFakeActivationForService new.
+	executed
+		processOop: 111;
+		level: 1;
+		methodClass: 'nil';
+		selector: #unboundMethod;
+		sourceString: '1+1.', String lf, String lf, '1/0';
+		sourceOffsets: #(1 6 7);
+		quickStepPoint: 1.
+	service currentContext: executed.
+	service processOop: 111.
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			scripts add: script.
+			(script includesSubstring: '_gsiStackReportFromLevel:')
+				ifTrue: [ '1', Character tab asString, 'AbstractException', Character tab asString, 'signal', String lf,
+					'7', Character tab asString, 'nil', Character tab asString, 'nil', String lf ].
+			(script includesSubstring: '_stepOverInFrame:')
+				ifTrue: [ 'true' ].
+			'true' ].
+
+	didStep := service stepOver.
+
+	self assert: didStep.
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'stepLevel := 7' ])
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testStepIntoUsesResolvedExecutedCodeLevelWhenAvailable [
+	| scripts executed didStep |
+	scripts := OrderedCollection new.
+	executed := GbxFakeActivationForService new.
+	executed
+		processOop: 111;
+		level: 1;
+		methodClass: 'nil';
+		selector: #unboundMethod;
+		sourceString: '1+1.', String lf, String lf, '1/0';
+		sourceOffsets: #(1 6 7);
+		quickStepPoint: 1.
+	service currentContext: executed.
+	service processOop: 111.
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			scripts add: script.
+			(script includesSubstring: '_gsiStackReportFromLevel:')
+				ifTrue: [ '1', Character tab asString, 'AbstractException', Character tab asString, 'signal', String lf,
+					'7', Character tab asString, 'nil', Character tab asString, 'nil', String lf ].
+			(script includesSubstring: '_stepOverInFrame:')
+				ifTrue: [ 'true' ].
+			'true' ].
+
+	didStep := service stepInto.
+
+	self assert: didStep.
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: '4294967303' ])
+]
+
+{ #category : 'tests' }
 GbxDebuggerServiceTest >> testRunToStepPointRejectsInvalidStepPoint [
 	| scripts |
 	scripts := OrderedCollection new.
@@ -651,6 +715,75 @@ GbxDebuggerServiceTest >> testRestartSelectsExecutedCodeFrameAtLineOne [
 	self assert: didRestart.
 	self assert: service currentContext == restartedExecuted.
 	self assert: service currentContext printString equals: 'GS: Executed code @1 line 1'
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testRestartUsesServerHomeLevelWhenAvailable [
+	| scripts fakePolicy executed didRestart |
+	scripts := OrderedCollection new.
+	executed := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 1
+		sourceOffsets: #(1 6 7)
+		source: '1+1.', String lf, String lf, '1/0'.
+	executed level: 7.
+	fakePolicy := GbxFakeContextListPolicyForService new.
+	fakePolicy contextList: { executed }.
+	service instVarNamed: 'contextStackPolicy' put: fakePolicy.
+	service processOop: 111.
+
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			scripts add: script.
+			(script includesSubstring: '_gsiStackReportFromLevel:')
+				ifTrue: [ '1', Character tab asString, 'AbstractException', Character tab asString, 'signal', String lf,
+					'7', Character tab asString, 'nil', Character tab asString, 'nil', String lf ].
+			(script includesSubstring: '#_trimStackToLevel:')
+				ifTrue: [ 'true' ].
+			'true' ].
+
+	didRestart := service restart.
+
+	self assert: didRestart.
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: '#_trimStackToLevel:' ]).
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'with: 7' ]).
+	self assert: service currentContext == executed
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testRestartTwiceStillUsesServerHomeLevel [
+	| scripts trimCalls fakePolicy executed |
+	scripts := OrderedCollection new.
+	trimCalls := 0.
+	executed := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 1
+		sourceOffsets: #(1 6 7)
+		source: '1+1.', String lf, String lf, '1/0'.
+	executed level: 7.
+	fakePolicy := GbxFakeContextListPolicyForService new.
+	fakePolicy contextList: { executed }.
+	service instVarNamed: 'contextStackPolicy' put: fakePolicy.
+	service processOop: 111.
+
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			scripts add: script.
+			(script includesSubstring: '_gsiStackReportFromLevel:')
+				ifTrue: [ '1', Character tab asString, 'AbstractException', Character tab asString, 'signal', String lf,
+					'7', Character tab asString, 'nil', Character tab asString, 'nil', String lf ].
+			(script includesSubstring: '#_trimStackToLevel:')
+				ifTrue: [ trimCalls := trimCalls + 1. 'true' ].
+			'true' ].
+
+	self assert: service restart.
+	self assert: service restart.
+	self assert: trimCalls equals: 2.
+	self assert: (scripts select: [ :each | each includesSubstring: 'with: 7' ]) size >= 2
 ]
 
 { #category : 'tests' }

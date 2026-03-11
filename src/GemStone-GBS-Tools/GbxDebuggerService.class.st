@@ -1015,11 +1015,28 @@ GbxDebuggerService >> firstServerContextAbove: clientContext [
 GbxDebuggerService >> restart [
 	"Restart deterministically on the executed-code target when available,
 	then enforce step-point 1."
-	| target didRestart |
+	| target didRestart homeLevel |
+	homeLevel := self restartLevelFromServerStack.
+	(homeLevel isNumber and: [ homeLevel > 0 ]) ifTrue: [
+		didRestart := self
+			runDebugProcessCommand: '_trimStackToLevel'
+			withInteger: homeLevel
+			recompute: true.
+		didRestart ifTrue: [
+			self selectRestartTargetContext.
+			self ensureRestartAtStepOne.
+			self selectRestartTargetContext.
+			^ true
+		]
+	].
 	target := self restartTargetContext.
 	target ifNotNil: [ self selectContext: target ].
 	didRestart := self basicReenterServerContext.
-	didRestart ifTrue: [ self ensureRestartAtStepOne ].
+	didRestart ifTrue: [
+		self selectRestartTargetContext.
+		self ensureRestartAtStepOne.
+		self selectRestartTargetContext
+	].
 	^ didRestart
 ]
 
@@ -1381,7 +1398,7 @@ GbxDebuggerService >> stepInto [
 	"VW parity: step-into on server contexts is implemented by _stepOverInFrame:
 	with the step-through flag in the high bit of level."
 	| level |
-	level := self currentContextLevel.
+	level := self effectiveServerStepLevel.
 	level ifNil: [ level := 1 ].
 	(self serverStepOverFrameLevel: (level bitOr: 16r100000000))
 		ifTrue: [ ^ true ].
@@ -1391,11 +1408,21 @@ GbxDebuggerService >> stepInto [
 { #category : 'stepping' }
 GbxDebuggerService >> stepOver [
 	| level |
-	level := self currentContextLevel.
+	level := self effectiveServerStepLevel.
 	level ifNil: [ level := 1 ].
 	(self serverStepOverFrameLevel: level)
 		ifTrue: [ ^ true ].
 	^ false
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> effectiveServerStepLevel [
+	| level resolved |
+	level := self currentContextLevel.
+	(self isCurrentExecutedCodeFrame not) ifTrue: [ ^ level ].
+	resolved := self restartLevelFromServerStack.
+	(resolved isNumber and: [ resolved > 0 ]) ifTrue: [ ^ resolved ].
+	^ level
 ]
 
 { #category : 'private' }

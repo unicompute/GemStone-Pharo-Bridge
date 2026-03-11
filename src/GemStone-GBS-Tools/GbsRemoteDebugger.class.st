@@ -1554,6 +1554,11 @@ GbsRemoteDebugger >> stackData: anArray [
 { #category : 'actions' }
 GbsRemoteDebugger >> stepInto [
 	| didStep |
+	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
+		didStep := self directStepOverExecutedFrame: true.
+		didStep ifTrue: [ self fetchStackFrames ].
+		^ didStep
+	].
 	didStep := self safeServiceCall: [ service stepInto ] default: false.
 	didStep ifFalse: [
 		didStep := self
@@ -1572,6 +1577,11 @@ GbsRemoteDebugger >> step [
 { #category : 'actions' }
 GbsRemoteDebugger >> stepOver [
 	| didStep |
+	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
+		didStep := self directStepOverExecutedFrame: false.
+		didStep ifTrue: [ self fetchStackFrames ].
+		^ didStep
+	].
 	didStep := self safeServiceCall: [ service stepOver ] default: false.
 	didStep ifFalse: [
 		(self currentSelectedContextIsExecutedCodeFrame)
@@ -1583,6 +1593,124 @@ GbsRemoteDebugger >> stepOver [
 	].
 	didStep ifTrue: [ self fetchStackFrames ].
 	^ didStep
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> directStepOverExecutedFrame: stepIntoBoolean [
+	| level effectiveLevel raw value script |
+	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
+	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ false ].
+
+	level := self currentSelectedFrameLevel.
+	(level isNumber and: [ level > 0 ]) ifFalse: [ level := 1 ].
+	effectiveLevel := self resolveExecutedFrameLevelFromServer.
+	(effectiveLevel isNumber and: [ effectiveLevel > 0 ]) ifTrue: [ level := effectiveLevel ].
+	stepIntoBoolean ifTrue: [ level := level bitOr: 16r100000000 ].
+
+	script := '[
+		| obj proc stepLevel ok |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc isNil or: [ (proc respondsTo: #perform:with:) not ]) ifTrue: [ ^ ''false'' ].
+		stepLevel := ', level asString, '.
+		ok := [ proc perform: #_stepOverInFrame: with: stepLevel ] on: Error do: [ nil ].
+		ok isNil ifTrue: [ ^ ''false'' ].
+		''true''
+	] value'.
+
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	raw ifNil: [ ^ false ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	value := (raw respondsTo: #asString)
+		ifTrue: [ raw asString asLowercase ]
+		ifFalse: [ '' ].
+	^ value = 'true' or: [ value = '1' or: [ value = 'ok' ] ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> resolveExecutedFrameLevelFromServer [
+	| script raw lines |
+	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ nil ].
+	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ nil ].
+
+	script := '[
+		| obj proc stream maxDepth level stackReport fullEntry methodOrNil className selectorName |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ '''' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ ^ '''' ].
+		stream := WriteStream on: String new.
+		maxDepth := 200.
+		level := 1.
+		[ level <= maxDepth ] whileTrue: [
+			stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
+			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
+				ifFalse: [ level := maxDepth + 1 ]
+				ifTrue: [
+					fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+					fullEntry isNil
+						ifTrue: [ level := maxDepth + 1 ]
+						ifFalse: [
+							methodOrNil := ((fullEntry respondsTo: #at:) and: [ fullEntry size >= 1 ])
+								ifTrue: [ [ fullEntry at: 1 ] on: Error do: [ nil ] ]
+								ifFalse: [ nil ].
+							className := [ methodOrNil inClass name asString ] on: Error do: [ ''nil'' ].
+							selectorName := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ]
+								on: Error do: [ ''nil'' ].
+							stream
+								nextPutAll: level asString; tab;
+								nextPutAll: className; tab;
+								nextPutAll: selectorName;
+								lf.
+							level := level + 1
+						]
+				]
+		].
+		stream contents
+	] value'.
+
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	raw ifNil: [ ^ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	(raw respondsTo: #splitOn:) ifFalse: [ ^ nil ].
+	lines := raw splitOn: Character lf.
+	lines do: [ :line |
+		| parts className selectorName |
+		parts := line splitOn: Character tab.
+		parts size >= 3 ifTrue: [
+			className := [ (parts at: 2) asString ] on: Error do: [ '' ].
+			selectorName := [ (parts at: 3) asString ] on: Error do: [ '' ].
+			((className = 'nil' or: [ className = '<unknown>' ])
+				and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ])
+				ifTrue: [ ^ [ parts first asInteger ] on: Error do: [ nil ] ]
+		]
+	].
+	^ nil
 ]
 
 { #category : 'private' }
