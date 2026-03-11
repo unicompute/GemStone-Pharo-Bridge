@@ -204,9 +204,7 @@ GbsSettingsPresenter >> sectionTitle: aString [
 { #category : 'layout' }
 GbsSettingsPresenter >> yesNoRowLabel: labelString yes: yesButton no: noButton [
 	^ SpBoxLayout newLeftToRight
-		add: (self newLabel label: labelString) expand: false;
-		add: (self newLabel label: '') "stretch spacer to align radio columns"
-			expand: true;
+		add: (self newLabel label: labelString) width: self rowLabelWidth;
 		add: yesButton expand: false;
 		add: noButton expand: false;
 		spacing: 0;
@@ -216,11 +214,15 @@ GbsSettingsPresenter >> yesNoRowLabel: labelString yes: yesButton no: noButton [
 { #category : 'layout' }
 GbsSettingsPresenter >> textRowLabel: labelString field: aField [
 	^ SpBoxLayout newLeftToRight
-		add: (self newLabel label: labelString) expand: false;
-		add: (self newLabel label: '') expand: true;
+		add: (self newLabel label: labelString) width: self rowLabelWidth;
 		add: aField width: 220;
 		spacing: 0;
 		yourself
+]
+
+{ #category : 'layout' }
+GbsSettingsPresenter >> rowLabelWidth [
+	^ 170
 ]
 
 { #category : 'initialization' }
@@ -232,26 +234,26 @@ GbsSettingsPresenter >> initializeWindow: aWindowPresenter [
 
 { #category : 'actions' }
 GbsSettingsPresenter >> chooseLibraryPath [
-	| presenter selected path |
-	presenter := Smalltalk at: #StOpenFilePresenter ifAbsent: [ nil ].
-	presenter ifNotNil: [
-		selected := [
-			| dlg result |
-			dlg := presenter new.
-			(dlg respondsTo: #title:) ifTrue: [ dlg title: 'Select GemBuilder library' ].
-			result := dlg openModal.
-			result
-		] on: Error do: [ nil ].
-		selected ifNotNil: [
-			(selected isCollection and: [ selected isEmpty not ])
-				ifTrue: [ ^ libraryField text: selected first asFileReference fullName ].
-			(selected respondsTo: #asFileReference)
-				ifTrue: [ ^ libraryField text: selected asFileReference fullName ] ] ].
-
-	path := UIManager default
-		request: 'Path to libgcirpc library:'
-		initialAnswer: (libraryField text ifNil: [ '' ]).
-	path ifNotNil: [ libraryField text: path ]
+	| dialogClass presenterClass selected |
+	dialogClass := Smalltalk at: #StOpenFileDialog ifAbsent: [ nil ].
+	selected := nil.
+	dialogClass ifNotNil: [
+		selected := [ dialogClass chooseModal ] on: Error do: [ nil ] ].
+	selected ifNil: [
+		presenterClass := Smalltalk at: #StOpenFilePresenter ifAbsent: [ nil ].
+		presenterClass ifNotNil: [
+			selected := [
+				| dlg |
+				dlg := presenterClass new.
+				(dlg respondsTo: #title:) ifTrue: [ dlg title: 'Select GemBuilder library' ].
+				dlg openModal
+			] on: Error do: [ nil ] ] ].
+	selected ifNil: [ ^ self ].
+	(selected isCollection and: [ selected isEmpty not ])
+		ifTrue: [ ^ libraryField text: selected first asFileReference fullName ].
+	(selected respondsTo: #asFileReference)
+		ifTrue: [ ^ libraryField text: selected asFileReference fullName ].
+	libraryField text: selected asString
 ]
 
 { #category : 'actions' }
