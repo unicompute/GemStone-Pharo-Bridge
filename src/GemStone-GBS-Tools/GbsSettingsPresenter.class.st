@@ -4,14 +4,16 @@ Class {
 	#instVars : [
 		'configuration',
 		'libraryField',
+		'initialCacheSizeField',
 		'initialDirtyPoolField',
+		'haltOnErrorField',
 		'faultLevelRpcField',
 		'delayInterruptField',
 		'traversalBufferField',
 		'eventPollingField',
 		'eventPriorityField',
-		'blockReplicationPolicyField',
-		'defaultFaultPolicyField',
+		'blockReplicationPolicyDrop',
+		'defaultFaultPolicyDrop',
 		'bulkLoadYes',
 		'bulkLoadNo',
 		'generateClassConnectorsYes',
@@ -72,14 +74,18 @@ GbsSettingsPresenter >> configuration: aConfiguration [
 { #category : 'initialization' }
 GbsSettingsPresenter >> initializePresenters [
 	libraryField := self newTextInput.
+	initialCacheSizeField := self newTextInput.
 	initialDirtyPoolField := self newTextInput.
+	haltOnErrorField := self newTextInput.
 	faultLevelRpcField := self newTextInput.
 	delayInterruptField := self newTextInput.
 	traversalBufferField := self newTextInput.
 	eventPollingField := self newTextInput.
 	eventPriorityField := self newTextInput.
-	blockReplicationPolicyField := self newTextInput.
-	defaultFaultPolicyField := self newTextInput.
+	blockReplicationPolicyDrop := self newDropList.
+	defaultFaultPolicyDrop := self newDropList.
+	blockReplicationPolicyDrop items: #( 'replicate' 'stub' 'none' ).
+	defaultFaultPolicyDrop items: #( 'lazy' 'eager' 'none' ).
 
 	browseButton := self newButton
 		label: 'Browse';
@@ -133,6 +139,7 @@ GbsSettingsPresenter >> defaultLayout [
 	leftCol := SpBoxLayout newTopToBottom
 		add: (self sectionTitle: 'CacheTuning') expand: false;
 		add: (self yesNoRowLabel: 'bulkLoad' yes: bulkLoadYes no: bulkLoadNo) expand: false;
+		add: (self textRowLabel: 'initialCacheSize' field: initialCacheSizeField) expand: false;
 		add: (self textRowLabel: 'initialDirtyPoolSize' field: initialDirtyPoolField) expand: false;
 		add: (self sectionTitle: 'ClassGeneration') expand: false;
 		add: (self yesNoRowLabel: 'generateClassConnectors' yes: generateClassConnectorsYes no: generateClassConnectorsNo) expand: false;
@@ -145,6 +152,7 @@ GbsSettingsPresenter >> defaultLayout [
 		add: (self sectionTitle: 'Debugging') expand: false;
 		add: (self yesNoRowLabel: 'assertionChecks' yes: assertionChecksYes no: assertionChecksNo) expand: false;
 		add: (self yesNoRowLabel: 'forwarderDebugging' yes: forwarderDebuggingYes no: forwarderDebuggingNo) expand: false;
+		add: (self textRowLabel: 'haltOnError' field: haltOnErrorField) expand: false;
 		add: (self yesNoRowLabel: 'stubDebugging' yes: stubDebuggingYes no: stubDebuggingNo) expand: false;
 		spacing: 4;
 		yourself.
@@ -152,8 +160,8 @@ GbsSettingsPresenter >> defaultLayout [
 		add: (self sectionTitle: 'Replication') expand: false;
 		add: (self yesNoRowLabel: 'autoMarkDirty' yes: autoMarkDirtyYes no: autoMarkDirtyNo) expand: false;
 		add: (self yesNoRowLabel: 'blockReplicationEnabled' yes: blockReplicationEnabledYes no: blockReplicationEnabledNo) expand: false;
-		add: (self textRowLabel: 'blockReplicationPolicy' field: blockReplicationPolicyField) expand: false;
-		add: (self textRowLabel: 'defaultFaultPolicy' field: defaultFaultPolicyField) expand: false;
+		add: (self textRowLabel: 'blockReplicationPolicy' field: blockReplicationPolicyDrop) expand: false;
+		add: (self textRowLabel: 'defaultFaultPolicy' field: defaultFaultPolicyDrop) expand: false;
 		add: (self textRowLabel: 'faultLevelRpc' field: faultLevelRpcField) expand: false;
 		add: (self yesNoRowLabel: 'freeSlotsOnStubbing' yes: freeSlotsOnStubbingYes no: freeSlotsOnStubbingNo) expand: false;
 		add: (self sectionTitle: 'ServerCommunication') expand: false;
@@ -225,14 +233,16 @@ GbsSettingsPresenter >> loadFromConfiguration [
 	| cfg |
 	cfg := configuration ifNil: [ GbsConfiguration current ].
 	libraryField text: (self stringValueAt: #libraryName default: '').
+	initialCacheSizeField text: (self stringValueAt: #clientMapCapacity default: 5003).
 	initialDirtyPoolField text: (self stringValueAt: #initialDirtyPoolSize default: 157).
+	haltOnErrorField text: (self stringValueAt: #faultLevelLnk default: -1).
 	faultLevelRpcField text: (self stringValueAt: #faultLevelRpc default: 4).
 	delayInterruptField text: (self stringValueAt: #socketWaitTimeout default: 10).
 	traversalBufferField text: (self stringValueAt: #traversalBufferSize default: 250000).
 	eventPollingField text: (self stringValueAt: #eventPollingFrequency default: 300).
 	eventPriorityField text: (self stringValueAt: #eventPriority default: 3).
-	blockReplicationPolicyField text: (self stringValueAt: #blockReplicationPolicy default: 'replicate').
-	defaultFaultPolicyField text: (self stringValueAt: #defaultFaultPolicy default: 'lazy').
+	self selectDrop: blockReplicationPolicyDrop value: (self stringValueAt: #blockReplicationPolicy default: 'replicate').
+	self selectDrop: defaultFaultPolicyDrop value: (self stringValueAt: #defaultFaultPolicy default: 'lazy').
 	self setYesNo: { bulkLoadYes. bulkLoadNo } value: (self booleanAt: #bulkLoad default: false).
 	self setYesNo: { generateClassConnectorsYes. generateClassConnectorsNo } value: (self booleanAt: #generateClassConnectors default: true).
 	self setYesNo: { generateClientClassesYes. generateClientClassesNo } value: (self booleanAt: #generateClientClasses default: true).
@@ -275,6 +285,25 @@ GbsSettingsPresenter >> setYesNo: pair value: aBoolean [
 ]
 
 { #category : 'private' }
+GbsSettingsPresenter >> selectDrop: aDropList value: aString [
+	| value |
+	value := aString asString.
+	(aDropList respondsTo: #selectItem:)
+		ifTrue: [ aDropList selectItem: value ]
+		ifFalse: [
+			(aDropList respondsTo: #selectedItem:)
+				ifTrue: [ aDropList selectedItem: value ] ]
+]
+
+{ #category : 'private' }
+GbsSettingsPresenter >> selectedDropText: aDropList default: defaultString [
+	| selected |
+	selected := [ aDropList selectedItem ] on: Error do: [ nil ].
+	selected ifNil: [ ^ defaultString ].
+	^ selected asString
+]
+
+{ #category : 'private' }
 GbsSettingsPresenter >> yesNoValueFor: pair [
 	^ (pair at: 1) state == true
 ]
@@ -284,14 +313,16 @@ GbsSettingsPresenter >> saveSettings [
 	configuration ifNil: [ configuration := GbsConfiguration current ].
 	configuration
 		valueAt: #libraryName put: libraryField text asString;
+		valueAt: #clientMapCapacity put: (self integerFromField: initialCacheSizeField default: 5003);
 		valueAt: #initialDirtyPoolSize put: (self integerFromField: initialDirtyPoolField default: 157);
+		valueAt: #faultLevelLnk put: (self integerFromField: haltOnErrorField default: -1);
 		valueAt: #faultLevelRpc put: (self integerFromField: faultLevelRpcField default: 4);
 		valueAt: #socketWaitTimeout put: (self integerFromField: delayInterruptField default: 10);
 		valueAt: #traversalBufferSize put: (self integerFromField: traversalBufferField default: 250000);
 		valueAt: #eventPollingFrequency put: (self integerFromField: eventPollingField default: 300);
 		valueAt: #eventPriority put: (self integerFromField: eventPriorityField default: 3);
-		valueAt: #blockReplicationPolicy put: blockReplicationPolicyField text asString;
-		valueAt: #defaultFaultPolicy put: defaultFaultPolicyField text asString;
+		valueAt: #blockReplicationPolicy put: (self selectedDropText: blockReplicationPolicyDrop default: 'replicate');
+		valueAt: #defaultFaultPolicy put: (self selectedDropText: defaultFaultPolicyDrop default: 'lazy');
 		valueAt: #bulkLoad put: (self yesNoValueFor: { bulkLoadYes. bulkLoadNo });
 		valueAt: #generateClassConnectors put: (self yesNoValueFor: { generateClassConnectorsYes. generateClassConnectorsNo });
 		valueAt: #generateClientClasses put: (self yesNoValueFor: { generateClientClassesYes. generateClientClassesNo });

@@ -72,7 +72,7 @@ GbsConnectorBrowserPresenter >> connectPresenters [
 
 { #category : 'layout' }
 GbsConnectorBrowserPresenter >> defaultLayout [
-	| optionsLeft optionsCenter optionsRight optionsRow topSection |
+	| optionsLeft optionsCenter optionsRight optionsRow |
 	optionsLeft := SpBoxLayout newTopToBottom
 		add: verificationCheck expand: false;
 		add: removeInvalidCheck expand: false;
@@ -98,16 +98,12 @@ GbsConnectorBrowserPresenter >> defaultLayout [
 		add: optionsRight;
 		spacing: 24;
 		yourself.
-	topSection := SpBoxLayout newTopToBottom
-		add: groupList;
-		add: connectorTable;
-		spacing: 4;
-		yourself.
 
 	^ SpBoxLayout newTopToBottom
 		spacing: 2;
 		add: mainMenu expand: false;
-		add: topSection;
+		add: groupList expand: false;
+		add: connectorTable;
 		add: optionsRow expand: false;
 		yourself
 ]
