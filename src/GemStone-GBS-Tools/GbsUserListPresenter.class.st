@@ -271,9 +271,18 @@ GbsUserListPresenter >> showSelectedUserInfo [
 				nextPutAll: ''User: ''; nextPutAll: user userId asString; cr;
 				nextPutAll: ''Class: ''; nextPutAll: user class name asString; cr.
 			(user respondsTo: #groups) ifTrue: [
+				| groupNames |
+				groupNames := OrderedCollection new.
+				user groups do: [ :g |
+					| gName |
+					gName := (g respondsTo: #name)
+						ifTrue: [ g name asString ]
+						ifFalse: [ g asString ].
+					((gName isNil or: [ gName asString isEmpty ]) not) ifTrue: [ groupNames add: gName ] ].
+				groupNames := groupNames asArray asSet asArray asSortedCollection.
 				strm nextPutAll: ''Groups: ''.
-				user groups
-					do: [ :g | strm nextPutAll: g name asString ]
+				groupNames
+					do: [ :each | strm nextPutAll: each ]
 					separatedBy: [ strm nextPutAll: '', '' ].
 				strm cr ] ] ].
 	strm contents'.
