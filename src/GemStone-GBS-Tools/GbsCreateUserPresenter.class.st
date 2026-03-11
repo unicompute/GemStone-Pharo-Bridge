@@ -372,7 +372,7 @@ GbsCreateUserPresenter >> scriptToSaveUser: userName password: password groups: 
 	groupsLiteral := self literalArrayOfStrings: groupNames.
 	privilegesLiteral := self literalDictionary: privilegeMap.
 	^ '
-	| allUsers user groupsWanted privilegeMap applyFlag ensureGroup removeGroup |
+		| allUsers user groupsWanted privilegeMap applyFlag ensureGroup removeGroup |
 	allUsers := System myUserProfile symbolList objectNamed: #AllUsers.
 	allUsers ifNil: [ self error: ''AllUsers not found'' ].
 	user := allUsers detect: [ :u | u userId asString = ', userLiteral, ' ] ifNone: [ nil ].
@@ -403,18 +403,26 @@ GbsCreateUserPresenter >> scriptToSaveUser: userName password: password groups: 
 	removeGroup := [ :groupName |
 		(user respondsTo: #removeFromGroupNamed:)
 			ifTrue: [ user removeFromGroupNamed: groupName ] ].
-	applyFlag := [ :getterSel :setterSel :groupName :enabled |
-		(user respondsTo: setterSel)
-			ifTrue: [ user perform: setterSel with: enabled ]
-			ifFalse: [ enabled ifTrue: [ ensureGroup value: groupName ] ifFalse: [ removeGroup value: groupName ] ] ].
-	privilegeMap := ', privilegesLiteral, '.
-	applyFlag value: #isDataCurator value: #isDataCurator: value: ''DataCuratorGroup'' value: ((privilegeMap at: #DataCurator ifAbsent: [ false ]) == true).
-	applyFlag value: #isSystemUser value: #isSystemUser: value: ''System'' value: ((privilegeMap at: #SystemUser ifAbsent: [ false ]) == true).
-	applyFlag value: #isHostAgentUser value: #isHostAgentUser: value: ''HostAgentUser'' value: ((privilegeMap at: #HostAgentUser ifAbsent: [ false ]) == true).
-	applyFlag value: #isSymbolUser value: #isSymbolUser: value: ''SymbolUser'' value: ((privilegeMap at: #SymbolUser ifAbsent: [ false ]) == true).
-	applyFlag value: #isNameless value: #isNameless: value: ''Nameless'' value: ((privilegeMap at: #Nameless ifAbsent: [ false ]) == true).
-	applyFlag value: #isGcUser value: #isGcUser: value: ''GcUser'' value: ((privilegeMap at: #GcUser ifAbsent: [ false ]) == true).
-	true'
+		applyFlag := [ :privName :enabled |
+			| setter1 setter2 base alt |
+			base := privName asString.
+			alt := (base isEmpty)
+				ifTrue: [ base ]
+				ifFalse: [ (base first asLowercase asString), (base allButFirst) ].
+			setter1 := (''is'', base, '':'') asSymbol.
+			setter2 := (alt, '':'') asSymbol.
+			(user respondsTo: setter1)
+				ifTrue: [ user perform: setter1 with: enabled ]
+				ifFalse: [
+					(user respondsTo: setter2)
+						ifTrue: [ user perform: setter2 with: enabled ] ] ].
+		privilegeMap := ', privilegesLiteral, '.
+		privilegeMap keysAndValuesDo: [ :k :v | applyFlag value: k value: (v == true) ].
+		((privilegeMap at: #DataCurator ifAbsent: [ false ]) == true)
+			ifTrue: [ ensureGroup value: ''DataCuratorGroup'' ].
+		((privilegeMap at: #DataCurator ifAbsent: [ false ]) == false)
+			ifTrue: [ removeGroup value: ''DataCuratorGroup'' ].
+		true'
 ]
 
 { #category : 'private' }
@@ -439,14 +447,46 @@ GbsCreateUserPresenter >> literalDictionary: aDictionary [
 
 { #category : 'private' }
 GbsCreateUserPresenter >> defaultPrivilegesDictionary [
-	^ Dictionary newFrom: {
-		#DataCurator -> false.
-		#SystemUser -> false.
-		#HostAgentUser -> false.
-		#SymbolUser -> false.
-		#Nameless -> false.
-		#GcUser -> false
-	}
+	| dict |
+	dict := Dictionary new.
+	self supportedPrivilegeNames do: [ :each | dict at: each put: false ].
+	^ dict
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> supportedPrivilegeNames [
+	^ #(
+		SystemControl
+		ObsoleteStatistics
+		SessionAccess
+		UserPassword
+		DefaultObjectSecurityPolicy
+		PrivUnused5
+		OtherPassword
+		ObjectSecurityPolicyCreation
+		ObjectSecurityPolicyProtection
+		FileControl
+		GarbageCollection
+		CodeModification
+		NoPerformOnServer
+		NoUserAction
+		NoGsFileOnServer
+		NoGsFileOnClient
+		SessionPriority
+		CompilePrimitives
+		ChangeUserId
+		MigrateObjects
+		DisableObjectReadLogging
+		DynamicDisableObjectReadLogging
+		ReadOtherUserProfile
+		CreateOnetimePassword
+		DataCurator
+		SystemUser
+		HostAgentUser
+		SymbolUser
+		Nameless
+		GcUser
+	)
 ]
 
 { #category : 'private' }
@@ -470,10 +510,11 @@ GbsCreateUserPresenter >> fetchPrivilegesForUser: userName [
 
 { #category : 'private' }
 GbsCreateUserPresenter >> privilegesScriptForUser: userName [
-	| userLiteral |
+	| userLiteral privilegeArrayLiteral |
 	userLiteral := self literalString: userName.
+	privilegeArrayLiteral := self literalArrayOfSymbols: self supportedPrivilegeNames.
 	^ '
-	| users user strm groups flagFor |
+	| users user strm groups privilegeNames valueFor |
 	strm := WriteStream on: String new.
 	users := System myUserProfile symbolList objectNamed: #AllUsers.
 	users ifNil: [ ^ '''' ].
@@ -482,20 +523,40 @@ GbsCreateUserPresenter >> privilegesScriptForUser: userName [
 	groups := (user respondsTo: #groups)
 		ifTrue: [ user groups collect: [ :g | (g respondsTo: #name) ifTrue: [ g name asString ] ifFalse: [ g asString ] ] ]
 		ifFalse: [ #() ].
-	flagFor := [ :getterSel :groupName |
-		(user respondsTo: getterSel)
-			ifTrue: [ (user perform: getterSel) == true ]
-			ifFalse: [ groups includes: groupName ] ].
-	{
-		#DataCurator -> (flagFor value: #isDataCurator value: ''DataCuratorGroup'').
-		#SystemUser -> (flagFor value: #isSystemUser value: ''System'').
-		#HostAgentUser -> (flagFor value: #isHostAgentUser value: ''HostAgentUser'').
-		#SymbolUser -> (flagFor value: #isSymbolUser value: ''SymbolUser'').
-		#Nameless -> (flagFor value: #isNameless value: ''Nameless'').
-		#GcUser -> (flagFor value: #isGcUser value: ''GcUser'')
-	} do: [ :assoc |
-		strm nextPutAll: assoc key asString; tab; nextPutAll: (assoc value ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]); cr ].
+	privilegeNames := ', privilegeArrayLiteral, '.
+	valueFor := [ :privName |
+		| base alt getter1 getter2 |
+		base := privName asString.
+		alt := (base isEmpty)
+			ifTrue: [ base ]
+			ifFalse: [ (base first asLowercase asString), (base allButFirst) ].
+		getter1 := (''is'', base) asSymbol.
+		getter2 := alt asSymbol.
+		(user respondsTo: getter1)
+			ifTrue: [ ^ (user perform: getter1) == true ].
+		(user respondsTo: getter2)
+			ifTrue: [ ^ (user perform: getter2) == true ].
+		(base = ''DataCurator'') ifTrue: [ ^ groups includes: ''DataCuratorGroup'' ].
+		(base = ''SystemUser'') ifTrue: [ ^ groups includes: ''System'' ].
+		(base = ''HostAgentUser'') ifTrue: [ ^ groups includes: ''HostAgentUser'' ].
+		(base = ''SymbolUser'') ifTrue: [ ^ groups includes: ''SymbolUser'' ].
+		(base = ''Nameless'') ifTrue: [ ^ groups includes: ''Nameless'' ].
+		(base = ''GcUser'') ifTrue: [ ^ groups includes: ''GcUser'' ].
+		^ false ].
+	privilegeNames do: [ :name |
+		strm
+			nextPutAll: name asString;
+			tab;
+			nextPutAll: ((valueFor value: name) ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]);
+			cr ].
 	strm contents'
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> literalArrayOfSymbols: aCollection [
+	| parts |
+	parts := (aCollection ifNil: [ #() ]) collect: [ :each | each storeString ].
+	^ '#( ', (parts joinUsing: ' '), ' )'
 ]
 
 { #category : 'actions' }
@@ -519,8 +580,14 @@ GbsCreateUserPresenter >> editPrivileges [
 
 { #category : 'actions' }
 GbsCreateUserPresenter >> editSymbolList [
+	| userName |
 	session ifNil: [ ^ self ].
-	[ GbsNamespacesPresenter openOn: session ] on: Error do: [ :ex | self inform: ex messageText ]
+	userName := userField text asString withBlanksTrimmed.
+	[
+		GbsSymbolListBrowserPresenter
+			openOn: session
+			userName: userName
+	] on: Error do: [ :ex | self inform: 'Could not open Symbol List Browser: ', ex messageText ]
 ]
 
 { #category : 'actions' }

@@ -5,13 +5,8 @@ Class {
 		'userName',
 		'privileges',
 		'onAcceptBlock',
-		'headerLabel',
-		'dataCuratorCheck',
-		'systemUserCheck',
-		'hostAgentUserCheck',
-		'symbolUserCheck',
-		'namelessCheck',
-		'gcUserCheck',
+		'checkContainer',
+		'checkBoxesByName',
 		'saveButton',
 		'cancelButton'
 	],
@@ -48,20 +43,15 @@ GbsUserPrivilegesPresenter >> onAcceptBlock: aBlock [
 
 { #category : 'initialization' }
 GbsUserPrivilegesPresenter >> initializePresenters [
-	headerLabel := self newLabel.
-	dataCuratorCheck := self newCheckBox label: 'DataCurator'.
-	systemUserCheck := self newCheckBox label: 'SystemUser'.
-	hostAgentUserCheck := self newCheckBox label: 'HostAgentUser'.
-	symbolUserCheck := self newCheckBox label: 'SymbolUser'.
-	namelessCheck := self newCheckBox label: 'Nameless'.
-	gcUserCheck := self newCheckBox label: 'GcUser'.
+	checkContainer := SpBoxLayout newTopToBottom.
+	checkBoxesByName := Dictionary new.
 	saveButton := self newButton
-		label: 'Save';
+		label: 'OK';
 		icon: (self iconNamed: #smallOk);
 		action: [ self acceptChanges ];
 		yourself.
 	cancelButton := self newButton
-		label: 'Close';
+		label: 'Cancel';
 		icon: (self iconNamed: #smallCancel);
 		action: [ self closeWindow ];
 		yourself
@@ -69,30 +59,20 @@ GbsUserPrivilegesPresenter >> initializePresenters [
 
 { #category : 'initialization' }
 GbsUserPrivilegesPresenter >> connectPresenters [
-	headerLabel label: 'User ID: ', userName.
-	self loadFromPrivileges
+	self rebuildChecksFromPrivileges
 ]
 
 { #category : 'layout' }
 GbsUserPrivilegesPresenter >> defaultLayout [
-	| checksRow buttonsRow |
-	checksRow := SpBoxLayout newTopToBottom
-		add: dataCuratorCheck expand: false;
-		add: systemUserCheck expand: false;
-		add: hostAgentUserCheck expand: false;
-		add: symbolUserCheck expand: false;
-		add: namelessCheck expand: false;
-		add: gcUserCheck expand: false;
-		spacing: 6;
-		yourself.
+	| buttonsRow |
 	buttonsRow := SpBoxLayout newLeftToRight
+		add: (self newLabel label: '');
 		add: saveButton expand: false;
 		add: cancelButton expand: false;
 		spacing: 8;
 		yourself.
 	^ SpBoxLayout newTopToBottom
-		add: headerLabel expand: false;
-		add: checksRow;
+		add: checkContainer;
 		add: buttonsRow expand: false;
 		spacing: 8;
 		yourself
@@ -101,35 +81,69 @@ GbsUserPrivilegesPresenter >> defaultLayout [
 { #category : 'initialization' }
 GbsUserPrivilegesPresenter >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
-		title: 'GemStone User Privileges';
-		initialExtent: 420 @ 300
+		title: 'Privileges';
+		initialExtent: 360 @ 760
 ]
 
 { #category : 'private' }
-GbsUserPrivilegesPresenter >> loadFromPrivileges [
-	self setCheck: dataCuratorCheck from: #DataCurator.
-	self setCheck: systemUserCheck from: #SystemUser.
-	self setCheck: hostAgentUserCheck from: #HostAgentUser.
-	self setCheck: symbolUserCheck from: #SymbolUser.
-	self setCheck: namelessCheck from: #Nameless.
-	self setCheck: gcUserCheck from: #GcUser
-]
-
-{ #category : 'private' }
-GbsUserPrivilegesPresenter >> setCheck: aCheck from: aKey [
-	aCheck state: ((privileges at: aKey ifAbsent: [ false ]) == true)
+GbsUserPrivilegesPresenter >> rebuildChecksFromPrivileges [
+	| orderedNames |
+	checkContainer ifNil: [ checkContainer := SpBoxLayout newTopToBottom ].
+	(checkContainer respondsTo: #removeAll) ifTrue: [ checkContainer removeAll ].
+	checkBoxesByName := Dictionary new.
+	orderedNames := self orderedPrivilegeNames.
+	orderedNames do: [ :privName |
+		| check |
+		check := self newCheckBox label: privName asString.
+		check state: ((privileges at: privName ifAbsent: [ false ]) == true).
+		checkContainer add: check expand: false.
+		checkBoxesByName at: privName put: check ].
+	checkContainer spacing: 6
 ]
 
 { #category : 'private' }
 GbsUserPrivilegesPresenter >> currentPrivilegesDictionary [
-	^ Dictionary newFrom: {
-		#DataCurator -> (dataCuratorCheck state == true).
-		#SystemUser -> (systemUserCheck state == true).
-		#HostAgentUser -> (hostAgentUserCheck state == true).
-		#SymbolUser -> (symbolUserCheck state == true).
-		#Nameless -> (namelessCheck state == true).
-		#GcUser -> (gcUserCheck state == true)
-	}
+	| dict |
+	dict := Dictionary new.
+	checkBoxesByName keysAndValuesDo: [ :k :check |
+		dict at: k put: (check state == true) ].
+	^ dict
+]
+
+{ #category : 'private' }
+GbsUserPrivilegesPresenter >> orderedPrivilegeNames [
+	^ #(
+		SystemControl
+		ObsoleteStatistics
+		SessionAccess
+		UserPassword
+		DefaultObjectSecurityPolicy
+		PrivUnused5
+		OtherPassword
+		ObjectSecurityPolicyCreation
+		ObjectSecurityPolicyProtection
+		FileControl
+		GarbageCollection
+		CodeModification
+		NoPerformOnServer
+		NoUserAction
+		NoGsFileOnServer
+		NoGsFileOnClient
+		SessionPriority
+		CompilePrimitives
+		ChangeUserId
+		MigrateObjects
+		DisableObjectReadLogging
+		DynamicDisableObjectReadLogging
+		ReadOtherUserProfile
+		CreateOnetimePassword
+		DataCurator
+		SystemUser
+		HostAgentUser
+		SymbolUser
+		Nameless
+		GcUser
+	)
 ]
 
 { #category : 'actions' }
