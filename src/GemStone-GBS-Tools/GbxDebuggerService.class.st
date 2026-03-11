@@ -177,11 +177,16 @@ GbxDebuggerService >> canInspectCurrentReceiver [
 
 { #category : 'breakpoint support' }
 GbxDebuggerService >> canManageBreakPoints [
+	| selector |
 	currentContext ifNil: [ ^ false ].
 	(currentContext respondsTo: #gbxIsServerContext)
 		ifTrue: [ currentContext gbxIsServerContext ifFalse: [ ^ false ] ].
-	(self selectedMethodSelector isNil or: [ self selectedMethodSelector = #unboundMethod ])
-		ifTrue: [ ^ false ].
+	selector := self selectedMethodSelector.
+	selector isNil ifTrue: [ ^ false ].
+	(selector = #unboundMethod) ifTrue: [
+		^ (currentContext respondsTo: #isExecutedCodeFrame)
+			and: [ currentContext isExecutedCodeFrame ]
+	].
 	^ self selectedMethodClassName isNotNil
 ]
 
@@ -549,7 +554,9 @@ GbxDebuggerService >> initializeForDebugging [
 
 { #category : 'inspector' }
 GbxDebuggerService >> inspectCurrentFrame [
-	| contextInspectorClass |
+	| oop contextInspectorClass |
+	oop := self currentFrameOop.
+	(self openInspectorOnOop: oop) ifTrue: [ ^ true ].
 	currentContext ifNotNil: [
 		contextInspectorClass := Smalltalk at: #GbxContextInspector ifAbsent: [ nil ].
 		(contextInspectorClass notNil and: [ contextInspectorClass respondsTo: #openOn:service: ]) ifTrue: [
@@ -558,7 +565,7 @@ GbxDebuggerService >> inspectCurrentFrame [
 				do: [ ].
 		]
 	].
-	^ self openInspectorOnOop: self currentFrameOop
+	^ false
 ]
 
 { #category : 'inspector' }
@@ -1427,9 +1434,14 @@ GbxDebuggerService >> effectiveServerStepLevel [
 
 { #category : 'private' }
 GbxDebuggerService >> isCurrentExecutedCodeFrame [
+	| className selectorName |
 	currentContext ifNil: [ ^ false ].
-	^ (currentContext respondsTo: #isExecutedCodeFrame)
-		and: [ currentContext isExecutedCodeFrame ]
+	((currentContext respondsTo: #isExecutedCodeFrame)
+		and: [ currentContext isExecutedCodeFrame ]) ifTrue: [ ^ true ].
+	className := [ currentContext methodClassOrUnknown asString ] on: Error do: [ '' ].
+	selectorName := [ currentContext selectorOrUnknown asString ] on: Error do: [ '' ].
+	^ (className = 'nil' or: [ className = '<unknown>' ])
+		and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ]
 ]
 
 { #category : 'stepping' }

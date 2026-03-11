@@ -1,0 +1,10 @@
+
+
+GS_STONE=gs64stone \
+  GS_USER=DataCurator \
+  GS_PASS=swordfish \
+  "/Users/tariq/Documents/Pharo/vms/130-x64/Pharo.app/Contents/MacOS/Pharo" --headless \
+  "/Users/tariq/Documents/Pharo/images/Pharo 13.0 - qwen/Pharo 13.0 - qwen.image" \
+  st /Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/run_live_restart_step_integration_with_login.st
+
+

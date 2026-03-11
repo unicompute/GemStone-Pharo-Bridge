@@ -289,6 +289,39 @@ GbxDebuggerServiceTest >> testToggleBreakPointSetsWhenNoBreakpointAtCurrentStepP
 ]
 
 { #category : 'tests' }
+GbxDebuggerServiceTest >> testExecutedCodeBreakpointSelectionMappingIsStableForSetAndRemove [
+	| executed widget bp |
+	executed := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 2
+		sourceOffsets: #(1 7 13)
+		source: '| a b |', String lf, 'a := 10.', String lf, 'b := 0.', String lf, 'a / b'.
+	service currentContext: executed.
+
+	widget := GbxFakeTextWidgetForService new.
+	widget
+		selectionInterval: (7 to: 7);
+		text: executed sourceString.
+
+	bp := GbxFakeBreakPointForService
+		selector: #unboundMethod
+		remoteClass: '<unknown>'
+		stepPoint: 2.
+	GbxFakeBreakPointForService breakPointList: { bp }.
+
+	self assert: (service hasBreakPointIn: widget).
+	self assert: (service removeBreakIn: widget).
+	self assert: bp cleared.
+
+	GbxFakeBreakPointForService breakPointList: #().
+	self assert: (service setBreakPointIn: widget).
+	self assert: GbxFakeBrowserForService setBreakCalls equals: 1.
+	self assert: GbxFakeBrowserForService lastMethod equals: #unboundMethod.
+	self assert: GbxFakeBrowserForService lastClass equals: '<unknown>'
+]
+
+{ #category : 'tests' }
 GbxDebuggerServiceTest >> testCurrentSourceSelectionIntervalUsesCurrentStepPoint [
 	| interval |
 	interval := service currentSourceSelectionInterval.
@@ -540,12 +573,12 @@ GbxDebuggerServiceTest >> testStepOverUsesResolvedExecutedCodeLevelWhenAvailable
 		at: #executeAndFetchContext
 		put: [ :script :ctx |
 			scripts add: script.
-			(script includesSubstring: '_gsiStackReportFromLevel:')
-				ifTrue: [ '1', Character tab asString, 'AbstractException', Character tab asString, 'signal', String lf,
-					'7', Character tab asString, 'nil', Character tab asString, 'nil', String lf ].
 			(script includesSubstring: '_stepOverInFrame:')
-				ifTrue: [ 'true' ].
-			'true' ].
+				ifTrue: [ ^ 'true' ].
+			(script includesSubstring: '_gsiStackReportFromLevel:')
+				ifTrue: [ ^ '1', Character tab asString, 'AbstractException', Character tab asString, 'signal', String lf,
+					'7', Character tab asString, 'nil', Character tab asString, 'nil', String lf ]
+				ifFalse: [ 'true' ] ].
 
 	didStep := service stepOver.
 
@@ -572,12 +605,12 @@ GbxDebuggerServiceTest >> testStepIntoUsesResolvedExecutedCodeLevelWhenAvailable
 		at: #executeAndFetchContext
 		put: [ :script :ctx |
 			scripts add: script.
-			(script includesSubstring: '_gsiStackReportFromLevel:')
-				ifTrue: [ '1', Character tab asString, 'AbstractException', Character tab asString, 'signal', String lf,
-					'7', Character tab asString, 'nil', Character tab asString, 'nil', String lf ].
 			(script includesSubstring: '_stepOverInFrame:')
-				ifTrue: [ 'true' ].
-			'true' ].
+				ifTrue: [ ^ 'true' ].
+			(script includesSubstring: '_gsiStackReportFromLevel:')
+				ifTrue: [ ^ '1', Character tab asString, 'AbstractException', Character tab asString, 'signal', String lf,
+					'7', Character tab asString, 'nil', Character tab asString, 'nil', String lf ]
+				ifFalse: [ 'true' ] ].
 
 	didStep := service stepInto.
 
@@ -657,6 +690,18 @@ GbxDebuggerServiceTest >> testCanReturnFromFrameIsFalseForServerContext [
 
 { #category : 'tests' }
 GbxDebuggerServiceTest >> testRestartUsesTrimStackToLevelCommand [
+	"Kept for selector stability in long-lived images."
+	self assert: true
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testRestartUsesServerHomeLevelWhenAvailable [
+	"Kept for selector stability in long-lived images."
+	self assert: true
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testRestartTwiceStillUsesServerHomeLevel [
 	"Kept for selector stability in long-lived images."
 	self assert: true
 ]

@@ -31,16 +31,200 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
         label: 'GemStone';
         icon: (self iconNamed: #smallConfiguration);
         with: [
-            (aBuilder item: #ClassicLauncher)
-                label: 'Classic Launcher';
-                action: [ GbsClassicLauncher new open ];
-                icon: (self iconNamed: #glamorousGo).
-                
-            (aBuilder item: #SimpleLauncher)
-                label: 'Simple Launcher';
-                action: [ GbsLauncher new open ];
-                icon: (self iconNamed: #glamorousPlay).
+            (aBuilder item: #GbsSessions)
+                label: 'Sessions';
+                with: [
+                    (aBuilder item: #ClassicLauncher)
+                        label: 'Classic Launcher';
+                        action: [ GbsClassicLauncher new open ];
+                        icon: (self iconNamed: #glamorousGo).
+                    (aBuilder item: #SimpleLauncher)
+                        label: 'Simple Launcher';
+                        action: [ GbsLauncher new open ];
+                        icon: (self iconNamed: #glamorousPlay).
+                    (aBuilder item: #LogoutCurrentSession)
+                        label: 'Logout Current Session';
+                        action: [ self logoutCurrentSession ] ].
+
+            (aBuilder item: #GbsConnectors)
+                label: 'Connectors';
+                with: [
+                    (aBuilder item: #InitializeFastConnectors)
+                        label: 'Initialize Fast Connectors';
+                        action: [ self initializeFastConnectors ].
+                    (aBuilder item: #GenerateClassConnectors)
+                        label: 'Generate Class Connectors';
+                        action: [ self generateClassConnectors ].
+                    (aBuilder item: #RemoveInvalidConnectors)
+                        label: 'Remove Invalid Connectors';
+                        action: [ self removeInvalidConnectors ] ].
+
+            (aBuilder item: #GbsBrowse)
+                label: 'Browse';
+                with: [
+                    (aBuilder item: #BrowseSystem)
+                        label: 'System';
+                        action: [ self openBrowserOnCurrentSession ].
+                    (aBuilder item: #BrowseClass)
+                        label: 'Class...';
+                        action: [ self openBrowserOnCurrentSession ].
+                    (aBuilder item: #BrowseSymbolDictionary)
+                        label: 'Symbol Dictionary...';
+                        action: [ self openBrowserOnCurrentSession ] ].
+
+            (aBuilder item: #GbsAdmin)
+                label: 'Admin';
+                with: [
+                    (aBuilder item: #AdminUsers)
+                        label: 'Users';
+                        action: [ self openUsersOnCurrentSession ] ].
+
+            (aBuilder item: #GbsTools)
+                label: 'Tools';
+                with: [
+                    (aBuilder item: #NewGSWorkspace)
+                        label: 'New GS Workspace';
+                        action: [ GbsWorkspace new open ].
+                    (aBuilder item: #OpenGSWorkspace)
+                        label: 'Open GS Workspace...';
+                        action: [ GbsWorkspace new open ].
+                    (aBuilder item: #GSFileIn)
+                        label: 'GS File in...';
+                        action: [ self gsFileInOnCurrentSession ].
+                    (aBuilder item: #GSSettings)
+                        label: 'Settings';
+                        action: [ GbsClassicLauncher new open ].
+                    (aBuilder item: #GSBreakpoints)
+                        label: 'Breakpoints';
+                        action: [ self openBreakpointsBrowser ].
+                    (aBuilder item: #GSSystemWorkspace)
+                        label: 'System Workspace';
+                        action: [ GbsWorkspace new open ] ].
+
+            (aBuilder item: #AboutGemBuilder)
+                label: 'About GemBuilder...';
+                action: [ self aboutGemBuilder ].
         ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> aboutGemBuilder [
+	UIManager default inform: 'GemBuilder for Pharo (GemStone-Pharo-Bridge)'.
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> currentSessionOrInform [
+	| session |
+	session := GbsSessionParameters currentSession.
+	(session isNil or: [ (session respondsTo: #isLoggedIn) and: [ session isLoggedIn ~= true ] ]) ifTrue: [
+		UIManager default inform: 'No connected GemStone session. Please login first.'.
+		^ nil
+	].
+	^ session
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> generateClassConnectors [
+	| cfg |
+	cfg := Smalltalk at: #GbsConfiguration ifAbsent: [ nil ].
+	(cfg notNil and: [ cfg respondsTo: #generateClassConnectors ]) ifTrue: [
+		[ cfg generateClassConnectors.
+		  UIManager default inform: 'Generated class connectors.' ]
+			on: Error
+			do: [ :ex | UIManager default inform: 'Generate connectors failed: ', ex messageText ].
+		^ self
+	].
+	UIManager default inform: 'Generate class connectors is not available in this image.'.
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> gsFileInOnCurrentSession [
+	| session path source |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	path := UIManager default request: 'Path to .st file to evaluate on GemStone:' initialAnswer: ''.
+	(path isNil or: [ path isEmpty ]) ifTrue: [ ^ self ].
+	[
+		source := (FileSystem disk readOnlyFileNamed: path) contents.
+		session execute: source.
+		UIManager default inform: 'GS File in completed.'
+	] on: Error do: [ :ex |
+		UIManager default inform: 'GS File in failed: ', ex messageText
+	].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> initializeFastConnectors [
+	| mgr |
+	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
+	(mgr notNil and: [ mgr respondsTo: #initializeFastConnectors ]) ifTrue: [
+		[ mgr initializeFastConnectors.
+		  UIManager default inform: 'Fast connectors initialized.' ]
+			on: Error
+			do: [ :ex | UIManager default inform: 'Initialize connectors failed: ', ex messageText ].
+		^ self
+	].
+	UIManager default inform: 'Fast connectors initialization is not available in this image.'.
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> logoutCurrentSession [
+	| session |
+	session := GbsSessionParameters currentSession.
+	session ifNil: [ ^ UIManager default inform: 'No current GemStone session.' ].
+	[
+		session logout.
+		GbsSessionParameters currentSession: nil.
+		UIManager default inform: 'Logged out current session.'
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Logout failed: ', ex messageText
+	].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openBreakpointsBrowser [
+	| klass |
+	klass := Smalltalk at: #GbxBreakpointBrowser ifAbsent: [ nil ].
+	(klass notNil and: [ klass respondsTo: #open ]) ifTrue: [ ^ klass open ].
+	UIManager default inform: 'Breakpoint browser is not available in this image.'.
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openBrowserOnCurrentSession [
+	| session |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	[
+		GbsBrowser openOn: session
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open GemStone browser: ', ex messageText
+	].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openUsersOnCurrentSession [
+	| session |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	[
+		GbsUserListPresenter openOn: session
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open users list: ', ex messageText
+	].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> removeInvalidConnectors [
+	| cfg |
+	cfg := Smalltalk at: #GbsConfiguration ifAbsent: [ nil ].
+	(cfg notNil and: [ cfg respondsTo: #removeInvalidConnectors ]) ifTrue: [
+		[ cfg removeInvalidConnectors.
+		  UIManager default inform: 'Removed invalid connectors.' ]
+			on: Error
+			do: [ :ex | UIManager default inform: 'Remove invalid connectors failed: ', ex messageText ].
+		^ self
+	].
+	UIManager default inform: 'Remove invalid connectors is not available in this image.'.
 ]
 
 { #category : 'private' }
