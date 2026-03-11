@@ -301,15 +301,18 @@ GbsAdminToolsPresenterTest >> testSecurityPoliciesSetPolicyTrackReadsScriptWrite
 
 { #category : 'tests' }
 GbsAdminToolsPresenterTest >> testConnectorBrowserLoadOptionsFromConfigurationAppliesPostConnectAction [
-	| cfg verify remove updateSt updateGs fwd cfwd none |
+	| cfg verify remove connected disconnected updateSt updateGs fwd cfwd none |
 	cfg := GbsConfiguration new.
 	cfg valueAt: #connectVerification put: false.
 	cfg valueAt: #removeInvalidConnectors put: true.
+	cfg valueAt: #connectorConnectionState put: 'disconnected'.
 	cfg valueAt: #postConnectAction put: 'forwarder'.
 	GbsConfiguration current: cfg.
 
 	verify := GbxFakeTogglePresenter new.
 	remove := GbxFakeTogglePresenter new.
+	connected := GbxFakeTogglePresenter new.
+	disconnected := GbxFakeTogglePresenter new.
 	updateSt := GbxFakeTogglePresenter new.
 	updateGs := GbxFakeTogglePresenter new.
 	fwd := GbxFakeTogglePresenter new.
@@ -318,6 +321,8 @@ GbsAdminToolsPresenterTest >> testConnectorBrowserLoadOptionsFromConfigurationAp
 
 	connectorBrowserPresenter instVarNamed: 'verificationCheck' put: verify.
 	connectorBrowserPresenter instVarNamed: 'removeInvalidCheck' put: remove.
+	connectorBrowserPresenter instVarNamed: 'connectedRadio' put: connected.
+	connectorBrowserPresenter instVarNamed: 'disconnectedRadio' put: disconnected.
 	connectorBrowserPresenter instVarNamed: 'updateStRadio' put: updateSt.
 	connectorBrowserPresenter instVarNamed: 'updateGsRadio' put: updateGs.
 	connectorBrowserPresenter instVarNamed: 'forwarderRadio' put: fwd.
@@ -328,6 +333,8 @@ GbsAdminToolsPresenterTest >> testConnectorBrowserLoadOptionsFromConfigurationAp
 
 	self deny: verify state.
 	self assert: remove state.
+	self deny: connected state.
+	self assert: disconnected state.
 	self assert: fwd state.
 	self deny: updateSt state.
 	self deny: updateGs state.
@@ -337,12 +344,14 @@ GbsAdminToolsPresenterTest >> testConnectorBrowserLoadOptionsFromConfigurationAp
 
 { #category : 'tests' }
 GbsAdminToolsPresenterTest >> testConnectorBrowserSaveOptionsToConfigurationStoresCurrentValues [
-	| cfg verify remove updateSt updateGs fwd cfwd none |
+	| cfg verify remove connected disconnected updateSt updateGs fwd cfwd none |
 	cfg := GbsConfiguration new.
 	GbsConfiguration current: cfg.
 
 	verify := GbxFakeTogglePresenter new.
 	remove := GbxFakeTogglePresenter new.
+	connected := GbxFakeTogglePresenter new.
+	disconnected := GbxFakeTogglePresenter new.
 	updateSt := GbxFakeTogglePresenter new.
 	updateGs := GbxFakeTogglePresenter new.
 	fwd := GbxFakeTogglePresenter new.
@@ -351,6 +360,8 @@ GbsAdminToolsPresenterTest >> testConnectorBrowserSaveOptionsToConfigurationStor
 
 	verify state: true.
 	remove state: false.
+	connected state: false.
+	disconnected state: true.
 	updateSt state: false.
 	updateGs state: true.
 	fwd state: false.
@@ -359,6 +370,8 @@ GbsAdminToolsPresenterTest >> testConnectorBrowserSaveOptionsToConfigurationStor
 
 	connectorBrowserPresenter instVarNamed: 'verificationCheck' put: verify.
 	connectorBrowserPresenter instVarNamed: 'removeInvalidCheck' put: remove.
+	connectorBrowserPresenter instVarNamed: 'connectedRadio' put: connected.
+	connectorBrowserPresenter instVarNamed: 'disconnectedRadio' put: disconnected.
 	connectorBrowserPresenter instVarNamed: 'updateStRadio' put: updateSt.
 	connectorBrowserPresenter instVarNamed: 'updateGsRadio' put: updateGs.
 	connectorBrowserPresenter instVarNamed: 'forwarderRadio' put: fwd.
@@ -369,6 +382,7 @@ GbsAdminToolsPresenterTest >> testConnectorBrowserSaveOptionsToConfigurationStor
 
 	self assert: (cfg valueAt: #connectVerification ifAbsent: nil) equals: true.
 	self assert: (cfg valueAt: #removeInvalidConnectors ifAbsent: nil) equals: false.
+	self assert: (cfg valueAt: #connectorConnectionState ifAbsent: nil) equals: 'disconnected'.
 	self assert: (cfg valueAt: #postConnectAction ifAbsent: nil) equals: 'updateGS'
 ]
 
@@ -441,6 +455,22 @@ GbsAdminToolsPresenterTest >> testUserInfoEditPrivilegesPersistsUpdatedPrivilege
 	self assert: capturedUser equals: 'DataCurator'.
 	self assert: ((capturedInitial at: #SystemControl ifAbsent: [ nil ]) == false).
 	self assert: (executedScript includesSubstring: 'isSystemControl: true')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testUserInfoInitializeSetsSafeDefaults [
+	| presenter |
+	presenter := (Smalltalk at: #GbsUserInfoPresenter ifAbsent: [ nil ]) new.
+	self assert: (presenter instVarNamed: 'userName') equals: ''.
+	self assert: (presenter instVarNamed: 'infoText') equals: ''
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testUserInfoInfoTextSetterNormalizesNilToEmptyString [
+	| presenter |
+	presenter := (Smalltalk at: #GbsUserInfoPresenter ifAbsent: [ nil ]) new.
+	presenter infoText: nil.
+	self assert: (presenter instVarNamed: 'infoText') equals: ''
 ]
 
 { #category : 'tests' }

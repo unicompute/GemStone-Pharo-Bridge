@@ -55,7 +55,10 @@ GbsConnectorBrowserPresenter >> initializePresenters [
 	updateGsRadio := self newRadioButton label: 'updateGS'.
 	forwarderRadio := self newRadioButton label: 'forwarder'.
 	clientForwarderRadio := self newRadioButton label: 'clientForwarder'.
-	noneRadio := self newRadioButton label: 'none'
+	noneRadio := self newRadioButton label: 'none'.
+
+	self configureRadioGroups.
+	self enableOptionControls
 ]
 
 { #category : 'initialization' }
@@ -70,6 +73,41 @@ GbsConnectorBrowserPresenter >> connectPresenters [
 	self wireOptionChangeNotifications.
 
 	self refreshAll
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> configureRadioGroups [
+	(connectedRadio respondsTo: #associatedRadioButtons:)
+		ifTrue: [ connectedRadio associatedRadioButtons: { disconnectedRadio } ].
+	(disconnectedRadio respondsTo: #associatedRadioButtons:)
+		ifTrue: [ disconnectedRadio associatedRadioButtons: { connectedRadio } ].
+	(updateStRadio respondsTo: #associatedRadioButtons:)
+		ifTrue: [ updateStRadio associatedRadioButtons: { updateGsRadio. forwarderRadio. clientForwarderRadio. noneRadio } ].
+	(updateGsRadio respondsTo: #associatedRadioButtons:)
+		ifTrue: [ updateGsRadio associatedRadioButtons: { updateStRadio. forwarderRadio. clientForwarderRadio. noneRadio } ].
+	(forwarderRadio respondsTo: #associatedRadioButtons:)
+		ifTrue: [ forwarderRadio associatedRadioButtons: { updateStRadio. updateGsRadio. clientForwarderRadio. noneRadio } ].
+	(clientForwarderRadio respondsTo: #associatedRadioButtons:)
+		ifTrue: [ clientForwarderRadio associatedRadioButtons: { updateStRadio. updateGsRadio. forwarderRadio. noneRadio } ].
+	(noneRadio respondsTo: #associatedRadioButtons:)
+		ifTrue: [ noneRadio associatedRadioButtons: { updateStRadio. updateGsRadio. forwarderRadio. clientForwarderRadio } ]
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> enableOptionControls [
+	{
+		verificationCheck.
+		removeInvalidCheck.
+		connectedRadio.
+		disconnectedRadio.
+		updateStRadio.
+		updateGsRadio.
+		forwarderRadio.
+		clientForwarderRadio.
+		noneRadio.
+	} do: [ :presenter |
+		(presenter respondsTo: #enabled:)
+			ifTrue: [ presenter enabled: true ] ]
 ]
 
 { #category : 'layout' }
@@ -381,6 +419,7 @@ GbsConnectorBrowserPresenter >> loadOptionsFromConfiguration [
 	cfg := self configuration.
 	verificationCheck state: (self asBooleanResult: (cfg valueAt: #connectVerification ifAbsent: true) default: true).
 	removeInvalidCheck state: (self asBooleanResult: (cfg valueAt: #removeInvalidConnectors ifAbsent: true) default: true).
+	self applyConnectionState: (cfg valueAt: #connectorConnectionState ifAbsent: 'connected').
 	self applyPostConnectAction: (cfg valueAt: #postConnectAction ifAbsent: 'none')
 ]
 
@@ -391,6 +430,7 @@ GbsConnectorBrowserPresenter >> saveOptionsToConfiguration [
 	cfg
 		valueAt: #connectVerification put: (verificationCheck state == true);
 		valueAt: #removeInvalidConnectors put: (removeInvalidCheck state == true);
+		valueAt: #connectorConnectionState put: self selectedConnectionState;
 		valueAt: #postConnectAction put: self selectedPostConnectAction
 ]
 
@@ -412,7 +452,23 @@ GbsConnectorBrowserPresenter >> wireOptionChangeNotifications [
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> wireChangeNotificationOn: aPresenter [
 	(aPresenter respondsTo: #whenChangedDo:)
-		ifTrue: [ aPresenter whenChangedDo: [ self saveOptionsToConfiguration ] ]
+		ifTrue: [ aPresenter whenChangedDo: [ self saveOptionsToConfiguration ] ].
+	(aPresenter respondsTo: #whenActivatedDo:)
+		ifTrue: [ aPresenter whenActivatedDo: [ self saveOptionsToConfiguration ] ]
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> applyConnectionState: rawValue [
+	| value |
+	value := rawValue ifNil: [ 'connected' ] ifNotNil: [ rawValue asString asLowercase ].
+	connectedRadio state: value ~= 'disconnected'.
+	disconnectedRadio state: value = 'disconnected'
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> selectedConnectionState [
+	disconnectedRadio state == true ifTrue: [ ^ 'disconnected' ].
+	^ 'connected'
 ]
 
 { #category : 'private' }

@@ -32,6 +32,13 @@ GbsUserInfoPresenter class >> openForUser: aUserName text: aString session: aSes
 	^ presenter
 ]
 
+{ #category : 'initialization' }
+GbsUserInfoPresenter >> initialize [
+	super initialize.
+	userName := ''.
+	infoText := ''
+]
+
 { #category : 'accessing' }
 GbsUserInfoPresenter >> userName: aString [
 	userName := aString ifNil: [ '' ] ifNotNil: [ aString asString ]
@@ -55,8 +62,8 @@ GbsUserInfoPresenter >> privilegesEditorBlock: aBlock [
 { #category : 'initialization' }
 GbsUserInfoPresenter >> initializePresenters [
 	mainMenu := self buildMenuBar.
-	textPresenter := self newText.
-	(textPresenter respondsTo: #beNotEditable) ifTrue: [ textPresenter beNotEditable ].
+	textPresenter := self newList.
+	self updateInfoDisplay.
 	privilegesButton := self newButton
 		label: 'Privileges...';
 		action: [ self editPrivileges ];
@@ -70,7 +77,7 @@ GbsUserInfoPresenter >> initializePresenters [
 
 { #category : 'initialization' }
 GbsUserInfoPresenter >> connectPresenters [
-	(textPresenter respondsTo: #text:) ifTrue: [ textPresenter text: infoText ]
+	self updateInfoDisplay
 ]
 
 { #category : 'layout' }
@@ -214,7 +221,24 @@ GbsUserInfoPresenter >> refreshInfoText [
 	strm contents'.
 	raw := [ session evaluate: script ] on: Error do: [ infoText ].
 	infoText := raw ifNil: [ infoText ] ifNotNil: [ raw asString ].
-	(textPresenter respondsTo: #text:) ifTrue: [ textPresenter text: infoText ]
+	self updateInfoDisplay
+]
+
+{ #category : 'private' }
+GbsUserInfoPresenter >> displayLinesFromInfoText [
+	| text |
+	text := infoText ifNil: [ '' ] ifNotNil: [ infoText asString ].
+	text isEmpty ifTrue: [ ^ #() ].
+	^ text lines
+]
+
+{ #category : 'private' }
+GbsUserInfoPresenter >> updateInfoDisplay [
+	textPresenter ifNil: [ ^ self ].
+	(textPresenter respondsTo: #text:)
+		ifTrue: [ textPresenter text: (infoText ifNil: [ '' ] ifNotNil: [ infoText asString ]) ].
+	(textPresenter respondsTo: #items:)
+		ifTrue: [ textPresenter items: self displayLinesFromInfoText ]
 ]
 
 { #category : 'actions' }
