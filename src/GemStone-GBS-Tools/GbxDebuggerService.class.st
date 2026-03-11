@@ -200,6 +200,11 @@ GbxDebuggerService >> canResume [
 	^ self isTerminated not
 ]
 
+{ #category : 'testing' }
+GbxDebuggerService >> canIssueContextCommand [
+	^ currentContext isNotNil and: [ self isTerminated not ]
+]
+
 { #category : 'breakpoint support' }
 GbxDebuggerService >> canSetBreakPoint [
 	^ self canManageBreakPoints and: [ (self hasBreakPointIn: nil) not ]
@@ -207,22 +212,36 @@ GbxDebuggerService >> canSetBreakPoint [
 
 { #category : 'testing' }
 GbxDebuggerService >> canStepInto [
-	^ currentContext isNotNil and: [ self isTerminated not ]
+	^ self canIssueContextCommand
 ]
 
 { #category : 'testing' }
 GbxDebuggerService >> canStepOver [
-	^ currentContext isNotNil and: [ self isTerminated not ]
+	^ self canIssueContextCommand
 ]
 
 { #category : 'testing' }
 GbxDebuggerService >> canStepReturn [
-	^ currentContext isNotNil and: [ self isTerminated not ]
+	^ self canIssueContextCommand
 ]
 
 { #category : 'testing' }
 GbxDebuggerService >> canTerminate [
 	^ self isTerminated not
+]
+
+{ #category : 'testing' }
+GbxDebuggerService >> hasLoopControlContext [
+	"VW compatibility hook for Next Loop enablement."
+	^ false
+]
+
+{ #category : 'testing' }
+GbxDebuggerService >> isMethodContextSelected [
+	currentContext ifNil: [ ^ false ].
+	(currentContext respondsTo: #isExecutedCodeFrame)
+		ifTrue: [ ^ currentContext isExecutedCodeFrame not ].
+	^ true
 ]
 
 { #category : 'breakpoint support' }

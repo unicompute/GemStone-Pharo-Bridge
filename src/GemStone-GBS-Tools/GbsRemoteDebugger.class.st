@@ -280,6 +280,63 @@ GbsRemoteDebugger >> canInspectStack [
 ]
 
 { #category : 'private' }
+GbsRemoteDebugger >> canStepInto [
+	^ self safeServiceCall: [ (service respondsTo: #canStepInto)
+		ifTrue: [ service canStepInto ]
+		ifFalse: [ service currentContext notNil ] ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canStepOver [
+	^ self safeServiceCall: [ (service respondsTo: #canStepOver)
+		ifTrue: [ service canStepOver ]
+		ifFalse: [ service currentContext notNil ] ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canStepReturn [
+	^ self safeServiceCall: [ (service respondsTo: #canStepReturn)
+		ifTrue: [ service canStepReturn ]
+		ifFalse: [ service currentContext notNil ] ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canRestartExecution [
+	^ self canStepInto
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canResumeExecution [
+	^ self safeServiceCall: [ (service respondsTo: #canResume)
+		ifTrue: [ service canResume ]
+		ifFalse: [ true ] ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canTerminateExecution [
+	^ self safeServiceCall: [ (service respondsTo: #canTerminate)
+		ifTrue: [ service canTerminate ]
+		ifFalse: [ true ] ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canPauseExecution [
+	^ self safeServiceCall: [ (service respondsTo: #canResume)
+		ifTrue: [ service canResume ]
+		ifFalse: [ true ] ] default: false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canRunToCaret [
+	^ self canStepInto and: [ self selectedStepPointFromCaret notNil ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> canJumpToCaret [
+	^ self canStepInto and: [ self selectedStepPointFromCaret notNil ]
+]
+
+{ #category : 'private' }
 GbsRemoteDebugger >> canRemoveAllBreakpoints [
 	^ self safeServiceCall: [ service canRemoveAllBreakPoints ] default: false
 ]
@@ -1120,6 +1177,19 @@ GbsRemoteDebugger >> processOop: anOop [
 
 { #category : 'private' }
 GbsRemoteDebugger >> refreshUiState [
+	self updateButton: stepIntoButton enabled: self canStepInto.
+	self updateButton: stepButton enabled: self canStepInto.
+	self updateButton: stepOverButton enabled: self canStepOver.
+	self updateButton: stepReturnButton enabled: self canStepReturn.
+	self updateButton: restartButton enabled: self canRestartExecution.
+	self updateButton: resumeButton enabled: self canResumeExecution.
+	self updateButton: runUntilReturnButton enabled: self canStepReturn.
+	self updateButton: runWithBreakAgainButton enabled: self canResumeExecution.
+	self updateButton: runToCaretButton enabled: self canRunToCaret.
+	self updateButton: jumpToCaretButton enabled: self canJumpToCaret.
+	self updateButton: returnButton enabled: self canStepReturn.
+	self updateButton: pauseButton enabled: self canPauseExecution.
+	self updateButton: terminateButton enabled: self canTerminateExecution.
 	self updateButton: inspectReceiverButton enabled: self canInspectReceiver.
 	self updateButton: inspectProcessButton enabled: self canInspectProcess.
 	self updateButton: inspectFrameButton enabled: self canInspectFrame.
@@ -2327,7 +2397,7 @@ GbsRemoteDebugger >> moveSourceCursorToStart [
 
 { #category : 'private' }
 GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
-	| index context reordered |
+	| index context |
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
 
 	"Find server-reported executed-code frame"
@@ -2343,25 +2413,11 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
 	context := contextList at: index.
 
-	index ~= 1 ifTrue: [
-		reordered := OrderedCollection new: contextList size.
-		reordered add: context.
-		1 to: contextList size do: [ :i |
-			i = index ifFalse: [ reordered add: (contextList at: i) ] ].
-		contextList := reordered asArray.
-		index := 1
-	].
-
 	service ifNotNil: [
 		(service respondsTo: #currentContext:)
 			ifTrue: [ service currentContext: context ].
 		(service respondsTo: #updateSourceMapFromCurrentContext)
 			ifTrue: [ service updateSourceMapFromCurrentContext ]
-	].
-
-	stackList ifNotNil: [
-		(stackList respondsTo: #items:)
-			ifTrue: [ stackList items: (contextList collect: [ :ctx | ctx printString ]) ]
 	].
 
 	(stackList respondsTo: #selectIndex:)

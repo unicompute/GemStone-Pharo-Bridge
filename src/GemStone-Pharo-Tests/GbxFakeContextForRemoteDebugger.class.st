@@ -3,6 +3,7 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'methodClass',
+		'selector',
 		'sourceString',
 		'processOop',
 		'level',
@@ -18,8 +19,28 @@ GbxFakeContextForRemoteDebugger >> methodClass [
 ]
 
 { #category : 'accessing' }
+GbxFakeContextForRemoteDebugger >> methodClassOrUnknown [
+	^ self methodClass
+]
+
+{ #category : 'accessing' }
 GbxFakeContextForRemoteDebugger >> methodClass: aString [
 	methodClass := aString
+]
+
+{ #category : 'accessing' }
+GbxFakeContextForRemoteDebugger >> selector [
+	^ selector ifNil: [ #nil ]
+]
+
+{ #category : 'accessing' }
+GbxFakeContextForRemoteDebugger >> selector: aSymbol [
+	selector := aSymbol
+]
+
+{ #category : 'accessing' }
+GbxFakeContextForRemoteDebugger >> selectorOrUnknown [
+	^ self selector
 ]
 
 { #category : 'accessing' }
