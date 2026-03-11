@@ -1,10 +1,6 @@
 Class {
 	#name : 'CstMessageHandlerVa',
 	#superclass : 'CstMessageHandler',
-	#instVars : [
-		'hostSignal',
-		'hostPrompter'
-	],
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'
 }
