@@ -205,9 +205,12 @@ GbsSettingsPresenter >> sectionTitle: aString [
 GbsSettingsPresenter >> yesNoRowLabel: labelString yes: yesButton no: noButton [
 	^ SpBoxLayout newLeftToRight
 		add: (self newLabel label: labelString) expand: false;
+		add: (self newLabel label: '') "stretch spacer to align radio columns"
+			expand: true;
 		add: yesButton expand: false;
+		add: (self newLabel label: '   ') expand: false;
 		add: noButton expand: false;
-		spacing: 8;
+		spacing: 6;
 		yourself
 ]
 
