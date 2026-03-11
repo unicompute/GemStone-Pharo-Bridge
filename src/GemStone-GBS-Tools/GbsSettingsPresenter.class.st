@@ -132,7 +132,7 @@ GbsSettingsPresenter >> defaultLayout [
 	| libraryRow leftCol rightCol buttonRow columnsRow |
 	libraryRow := SpBoxLayout newLeftToRight
 		add: (self newLabel label: 'libraryName*') expand: false;
-		add: libraryField;
+		add: libraryField width: 500;
 		add: browseButton expand: false;
 		spacing: 6;
 		yourself.
@@ -218,7 +218,7 @@ GbsSettingsPresenter >> yesNoRowLabel: labelString yes: yesButton no: noButton [
 GbsSettingsPresenter >> textRowLabel: labelString field: aField [
 	^ SpBoxLayout newLeftToRight
 		add: (self newLabel label: labelString) expand: false;
-		add: aField;
+		add: aField width: 220;
 		spacing: 6;
 		yourself
 ]
