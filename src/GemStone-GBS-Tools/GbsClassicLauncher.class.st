@@ -49,6 +49,9 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
             (aBuilder item: #GbsConnectors)
                 label: 'Connectors';
                 with: [
+                    (aBuilder item: #OpenConnectorBrowser)
+                        label: 'Connector Browser';
+                        action: [ self openConnectorBrowserOnCurrentSession ].
                     (aBuilder item: #InitializeFastConnectors)
                         label: 'Initialize Fast Connectors';
                         action: [ self initializeFastConnectors ].
@@ -205,6 +208,14 @@ GbsClassicLauncher class >> openBreakpointsBrowser [
 	klass := Smalltalk at: #GbxBreakpointBrowser ifAbsent: [ nil ].
 	(klass notNil and: [ klass respondsTo: #open ]) ifTrue: [ ^ klass open ].
 	UIManager default inform: 'Breakpoint browser is not available in this image.'.
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openConnectorBrowserOnCurrentSession [
+	| klass |
+	klass := Smalltalk at: #GbxConnectorBrowser ifAbsent: [ nil ].
+	(klass notNil and: [ klass respondsTo: #open ]) ifTrue: [ ^ klass open ].
+	UIManager default inform: 'Connector browser is not available in this image.'.
 ]
 
 { #category : 'menus' }
