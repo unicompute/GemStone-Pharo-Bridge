@@ -77,7 +77,13 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                 with: [
                     (aBuilder item: #AdminUsers)
                         label: 'Users';
-                        action: [ self openUsersOnCurrentSession ] ].
+                        action: [ self openUsersOnCurrentSession ].
+                    (aBuilder item: #AdminNamespaces)
+                        label: 'Namespaces';
+                        action: [ self openNamespacesOnCurrentSession ].
+                    (aBuilder item: #AdminSecurityPolicies)
+                        label: 'Security Policies';
+                        action: [ self openSecurityPoliciesOnCurrentSession ] ].
 
             (aBuilder item: #GbsTools)
                 label: 'Tools';
@@ -211,6 +217,34 @@ GbsClassicLauncher class >> openUsersOnCurrentSession [
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Could not open users list: ', ex messageText
 	].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openNamespacesOnCurrentSession [
+	| session klass |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	klass := Smalltalk at: #GbxDbaSymbolListBrowser ifAbsent: [ nil ].
+	(klass notNil and: [ klass respondsTo: #openOn: ]) ifTrue: [
+		^ [ klass openOn: session ]
+			on: Error
+			do: [ :ex | UIManager default inform: 'Could not open namespaces tool: ', ex messageText ].
+	].
+	UIManager default inform: 'Namespaces tool is not available in this image yet.'.
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openSecurityPoliciesOnCurrentSession [
+	| session klass |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	klass := Smalltalk at: #GbxDbaUserPrivilegesBrowser ifAbsent: [ nil ].
+	(klass notNil and: [ klass respondsTo: #openOn: ]) ifTrue: [
+		^ [ klass openOn: session ]
+			on: Error
+			do: [ :ex | UIManager default inform: 'Could not open security policies tool: ', ex messageText ].
+	].
+	UIManager default inform: 'Security Policies tool is not available in this image yet.'.
 ]
 
 { #category : 'menus' }
