@@ -178,9 +178,9 @@ GbsSettingsPresenter >> defaultLayout [
 		spacing: 4;
 		yourself.
 	columnsRow := SpBoxLayout newLeftToRight
-		add: leftCol;
+		add: leftCol width: 430;
 		add: rightCol;
-		spacing: 16;
+		spacing: 10;
 		yourself.
 	buttonRow := SpBoxLayout newLeftToRight
 		add: (self newLabel label: '');
@@ -208,9 +208,9 @@ GbsSettingsPresenter >> yesNoRowLabel: labelString yes: yesButton no: noButton [
 		add: (self newLabel label: '') "stretch spacer to align radio columns"
 			expand: true;
 		add: yesButton expand: false;
-		add: (self newLabel label: '   ') expand: false;
+		add: (self newLabel label: ' ') expand: false;
 		add: noButton expand: false;
-		spacing: 6;
+		spacing: 2;
 		yourself
 ]
 
