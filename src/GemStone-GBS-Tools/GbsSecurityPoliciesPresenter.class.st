@@ -29,6 +29,10 @@ GbsSecurityPoliciesPresenter >> connectPresenters [
 		selection selectedItem
 			ifNotNil: [ :row | self refreshGroupsAndMembersForPolicyName: (row at: 3 ifAbsent: [ '' ]) ]
 			ifNil: [ groupsTable items: #(). membersList items: #() ] ].
+	(policiesTable respondsTo: #whenActivatedDo:) ifTrue: [
+		policiesTable whenActivatedDo: [ :selection |
+			selection selectedItem
+				ifNotNil: [ :row | self refreshGroupsAndMembersForPolicyName: (row at: 3 ifAbsent: [ '' ]) ] ] ].
 	self refreshAll
 ]
 
@@ -199,12 +203,24 @@ GbsSecurityPoliciesPresenter >> refreshAll [
 	policies := self parseRows: raw expectedColumns: 8.
 	policiesTable items: policies.
 	groupsTable items: #().
-	membersList items: #()
+	membersList items: #().
+	(policies isEmpty not) ifTrue: [
+		(policiesTable respondsTo: #selectIndex:)
+			ifTrue: [ policiesTable selectIndex: 1 ]
+			ifFalse: [
+				(policiesTable respondsTo: #selectItem:)
+					ifTrue: [ policiesTable selectItem: policies first ] ].
+		self refreshGroupsAndMembersForPolicyName: (policies first at: 3 ifAbsent: [ '' ])
+	]
 ]
 
 { #category : 'actions' }
 GbsSecurityPoliciesPresenter >> refreshGroupsAndMembersForPolicyName: policyName [
 	| rawGroup rawMembers |
+	(policyName isString and: [ policyName isEmpty ]) ifTrue: [ 
+		groupsTable items: #().
+		membersList items: #().
+		^ self ].
 	rawGroup := [ session evaluate: (self groupsScriptForPolicyName: policyName) ] on: Error do: [ '' ].
 	groupsTable items: (self parseRows: rawGroup expectedColumns: 2).
 	rawMembers := [ session evaluate: (self membersScriptForPolicyName: policyName) ] on: Error do: [ '' ].
@@ -262,7 +278,7 @@ GbsSecurityPoliciesPresenter >> membersScriptForPolicyName: policyName [
 	| nameLiteral |
 	nameLiteral := self literalString: policyName.
 	^ '
-	| allPolicies policy strm |
+	| allPolicies policy strm allGroups |
 	strm := WriteStream on: String new.
 	allPolicies := System myUserProfile symbolList objectNamed: #AllSecurityPolicies.
 	allPolicies ifNil: [ allPolicies := System myUserProfile symbolList objectNamed: #AllObjectSecurityPolicies ].
@@ -280,13 +296,14 @@ GbsSecurityPoliciesPresenter >> membersScriptForPolicyName: policyName [
 		ifNone: [ nil ].
 	policy ifNil: [ ^ '''' ].
 	(policy respondsTo: #groups) ifFalse: [ ^ '''' ].
+	allGroups := System myUserProfile symbolList objectNamed: #AllGroups.
 	(policy groups respondsTo: #keysAndValuesDo:)
 		ifTrue: [
 			(policy groups keysAndValuesDo: [ :groupName :auth |
 				| grp |
-				grp := (System myUserProfile symbolList objectNamed: #AllGroups)
-					ifNotNil: [ :allGroups | (allGroups at: groupName ifAbsent: [ nil ]) ]
-					ifNil: [ nil ].
+				grp := allGroups
+					ifNil: [ nil ]
+					ifNotNil: [ allGroups at: groupName ifAbsent: [ nil ] ].
 				(grp notNil and: [ grp respondsTo: #members ])
 					ifTrue: [ grp members do: [ :member | strm nextPutAll: member asString; cr ] ] ]) ]
 		ifFalse: [
