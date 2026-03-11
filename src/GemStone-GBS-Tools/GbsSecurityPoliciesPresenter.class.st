@@ -134,20 +134,44 @@ GbsSecurityPoliciesPresenter >> groupsScriptForPolicyName: policyName [
 	| nameLiteral |
 	nameLiteral := self literalString: policyName.
 	^ '
-	| allPolicies policy strm |
+	| allPolicies policy strm groups |
 	strm := WriteStream on: String new.
 	allPolicies := System myUserProfile symbolList objectNamed: #AllSecurityPolicies.
+	allPolicies ifNil: [ allPolicies := System myUserProfile symbolList objectNamed: #AllObjectSecurityPolicies ].
+	allPolicies ifNil: [
+		| resolved |
+		resolved := (System myUserProfile respondsTo: #resolveSymbol:)
+			ifTrue: [ System myUserProfile resolveSymbol: #SystemRepository ]
+			ifFalse: [ nil ].
+		allPolicies := (resolved respondsTo: #value)
+			ifTrue: [ resolved value ]
+			ifFalse: [ resolved ] ].
 	allPolicies ifNil: [ ^ '''' ].
 	policy := allPolicies
 		detect: [ :p | ((p respondsTo: #name) ifTrue: [ p name asString ] ifFalse: [ p printString ]) = ', nameLiteral, ' ]
 		ifNone: [ nil ].
 	policy ifNil: [ ^ '''' ].
-	(policy respondsTo: #groups) ifTrue: [
-		policy groups do: [ :g |
-			| gName gAccess |
-			gName := (g respondsTo: #name) ifTrue: [ g name asString ] ifFalse: [ g printString ].
-			gAccess := (g respondsTo: #groupAccess) ifTrue: [ g groupAccess asString ] ifFalse: [ '' ].
-			strm nextPutAll: gName; tab; nextPutAll: gAccess; cr ] ].
+	(policy respondsTo: #groups) ifFalse: [ ^ '''' ].
+	groups := policy groups.
+	(groups respondsTo: #keysAndValuesDo:)
+		ifTrue: [
+			groups keysAndValuesDo: [ :groupName :auth |
+				strm
+					nextPutAll: groupName asString;
+					tab;
+					nextPutAll: auth asString;
+					cr ] ]
+		ifFalse: [
+			groups do: [ :each |
+				| gName gAccess |
+				(each isAssociation)
+					ifTrue: [
+						gName := each key asString.
+						gAccess := each value asString ]
+					ifFalse: [
+						gName := each asString.
+						gAccess := '''' ].
+				strm nextPutAll: gName; tab; nextPutAll: gAccess; cr ] ].
 	strm contents'
 ]
 
@@ -178,12 +202,27 @@ GbsSecurityPoliciesPresenter >> securityPoliciesScript [
 	| allPolicies currentPolicy defaultPolicy strm |
 	strm := WriteStream on: String new.
 	allPolicies := System myUserProfile symbolList objectNamed: #AllSecurityPolicies.
+	allPolicies ifNil: [ allPolicies := System myUserProfile symbolList objectNamed: #AllObjectSecurityPolicies ].
+	allPolicies ifNil: [
+		| resolved |
+		resolved := (System myUserProfile respondsTo: #resolveSymbol:)
+			ifTrue: [ System myUserProfile resolveSymbol: #SystemRepository ]
+			ifFalse: [ nil ].
+		allPolicies := (resolved respondsTo: #value)
+			ifTrue: [ resolved value ]
+			ifFalse: [ resolved ] ].
 	currentPolicy := (System myUserProfile respondsTo: #securityPolicy)
 		ifTrue: [ System myUserProfile securityPolicy ]
-		ifFalse: [ nil ].
-	defaultPolicy := (System myUserProfile class respondsTo: #defaultSecurityPolicy)
-		ifTrue: [ System myUserProfile class defaultSecurityPolicy ]
-		ifFalse: [ nil ].
+		ifFalse: [
+			(System respondsTo: #currentObjectSecurityPolicy)
+				ifTrue: [ System currentObjectSecurityPolicy ]
+				ifFalse: [ nil ] ].
+	defaultPolicy := (System myUserProfile respondsTo: #defaultObjectSecurityPolicy)
+		ifTrue: [ System myUserProfile defaultObjectSecurityPolicy ]
+		ifFalse: [
+			(System myUserProfile class respondsTo: #defaultSecurityPolicy)
+				ifTrue: [ System myUserProfile class defaultSecurityPolicy ]
+				ifFalse: [ nil ] ].
 	allPolicies ifNil: [ ^ strm contents ].
 	allPolicies do: [ :policy |
 		| currentMark defaultMark name owner ownerAccess worldAccess id trackReads |
@@ -193,10 +232,18 @@ GbsSecurityPoliciesPresenter >> securityPoliciesScript [
 		owner := (policy respondsTo: #owner)
 			ifTrue: [ (policy owner ifNil: [ '''' ]) asString ]
 			ifFalse: [ '''' ].
-		ownerAccess := (policy respondsTo: #ownerAccess) ifTrue: [ policy ownerAccess asString ] ifFalse: [ '''' ].
-		worldAccess := (policy respondsTo: #worldAccess) ifTrue: [ policy worldAccess asString ] ifFalse: [ '''' ].
-		id := (policy respondsTo: #id) ifTrue: [ policy id asString ] ifFalse: [ '''' ].
-		trackReads := (policy respondsTo: #trackReads) ifTrue: [ policy trackReads printString ] ifFalse: [ '''' ].
+		ownerAccess := (policy respondsTo: #ownerAuthorization)
+			ifTrue: [ policy ownerAuthorization asString ]
+			ifFalse: [ (policy respondsTo: #ownerAccess) ifTrue: [ policy ownerAccess asString ] ifFalse: [ '''' ] ].
+		worldAccess := (policy respondsTo: #worldAuthorization)
+			ifTrue: [ policy worldAuthorization asString ]
+			ifFalse: [ (policy respondsTo: #worldAccess) ifTrue: [ policy worldAccess asString ] ifFalse: [ '''' ] ].
+		id := (policy respondsTo: #objectSecurityPolicyId)
+			ifTrue: [ policy objectSecurityPolicyId asString ]
+			ifFalse: [ (policy respondsTo: #id) ifTrue: [ policy id asString ] ifFalse: [ '''' ] ].
+		trackReads := (policy respondsTo: #trackReads)
+			ifTrue: [ policy trackReads printString ]
+			ifFalse: [ (policy respondsTo: #isTrackingReads) ifTrue: [ policy isTrackingReads printString ] ifFalse: [ '''' ] ].
 		strm
 			nextPutAll: currentMark;
 			tab;

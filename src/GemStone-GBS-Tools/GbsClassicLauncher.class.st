@@ -62,15 +62,27 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
             (aBuilder item: #GbsBrowse)
                 label: 'Browse';
                 with: [
-                    (aBuilder item: #BrowseSystem)
-                        label: 'System';
-                        action: [ self openBrowserOnCurrentSession ].
+                    (aBuilder item: #BrowseAllClasses)
+                        label: 'All Classes';
+                        action: [ self browseAllClassesOnCurrentSession ].
                     (aBuilder item: #BrowseClass)
                         label: 'Class...';
-                        action: [ self openBrowserOnCurrentSession ].
-                    (aBuilder item: #BrowseSymbolDictionary)
-                        label: 'Symbol Dictionary...';
-                        action: [ self openBrowserOnCurrentSession ] ].
+                        action: [ self browseClassOnCurrentSession ].
+                    (aBuilder item: #BrowseNamespace)
+                        label: 'Namespace...';
+                        action: [ self browseNamespaceOnCurrentSession ].
+                    (aBuilder item: #BrowseSenders)
+                        label: 'Senders of...';
+                        action: [ self browseSendersOnCurrentSession ].
+                    (aBuilder item: #BrowseImplementors)
+                        label: 'Implementors of...';
+                        action: [ self browseImplementorsOnCurrentSession ].
+                    (aBuilder item: #BrowseReferences)
+                        label: 'References to...';
+                        action: [ self browseReferencesOnCurrentSession ].
+                    (aBuilder item: #BrowseStringMatch)
+                        label: 'Methods with substring...';
+                        action: [ self browseMethodsWithSubstringOnCurrentSession ] ].
 
             (aBuilder item: #GbsAdmin)
                 label: 'Admin';
@@ -205,6 +217,60 @@ GbsClassicLauncher class >> openBrowserOnCurrentSession [
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Could not open GemStone browser: ', ex messageText
 	].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openBrowserOnCurrentSessionDo: oneArgBlock [
+	| session browser |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	[
+		browser := GbsBrowser openOn: session.
+		browser ifNotNil: [ oneArgBlock cull: browser ].
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open GemStone browser: ', ex messageText
+	].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> browseAllClassesOnCurrentSession [
+	^ self openBrowserOnCurrentSession
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> browseClassOnCurrentSession [
+	self openBrowserOnCurrentSessionDo: [ :browser |
+		(browser respondsTo: #findClass) ifTrue: [ browser findClass ] ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> browseImplementorsOnCurrentSession [
+	self openBrowserOnCurrentSessionDo: [ :browser |
+		(browser respondsTo: #queryImplementors) ifTrue: [ browser queryImplementors ] ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> browseMethodsWithSubstringOnCurrentSession [
+	self openBrowserOnCurrentSessionDo: [ :browser |
+		(browser respondsTo: #queryMethodsWithString) ifTrue: [ browser queryMethodsWithString ] ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> browseNamespaceOnCurrentSession [
+	self openBrowserOnCurrentSessionDo: [ :browser |
+		(browser respondsTo: #findDictionary) ifTrue: [ browser findDictionary ] ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> browseReferencesOnCurrentSession [
+	self openBrowserOnCurrentSessionDo: [ :browser |
+		(browser respondsTo: #queryReferences) ifTrue: [ browser queryReferences ] ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> browseSendersOnCurrentSession [
+	self openBrowserOnCurrentSessionDo: [ :browser |
+		(browser respondsTo: #querySenders) ifTrue: [ browser querySenders ] ].
 ]
 
 { #category : 'menus' }
@@ -539,9 +605,13 @@ GbsClassicLauncher >> makeCurrent [
 { #category : 'menus' }
 GbsClassicLauncher >> menuBrowse [
     ^ self newMenu
-        addItem: [ :item | item name: 'System'; action: [ UIManager default defer: [ self openSystemBrowser ] ] ];
+        addItem: [ :item | item name: 'All Classes'; action: [ UIManager default defer: [ self openSystemBrowser ] ] ];
         addItem: [ :item | item name: 'Class...'; action: [ UIManager default defer: [ self openClassBrowser ] ] ];
-        addItem: [ :item | item name: 'Symbol Dictionary...'; action: [ UIManager default defer: [ self openSymbolDictionaryBrowser ] ] ];
+        addItem: [ :item | item name: 'Namespace...'; action: [ UIManager default defer: [ self openSymbolDictionaryBrowser ] ] ];
+        addItem: [ :item | item name: 'Senders of...'; action: [ UIManager default defer: [ self browseSenders ] ] ];
+        addItem: [ :item | item name: 'Implementors of...'; action: [ UIManager default defer: [ self browseImplementors ] ] ];
+        addItem: [ :item | item name: 'References to...'; action: [ UIManager default defer: [ self browseReferences ] ] ];
+        addItem: [ :item | item name: 'Methods with substring...'; action: [ UIManager default defer: [ self browseMethodsWithSubstring ] ] ];
         yourself.
 ]
 
@@ -615,7 +685,21 @@ GbsClassicLauncher >> openBrowserOn: aSession dictionary: aDictionaryName [
 
 { #category : 'actions' }
 GbsClassicLauncher >> openClassBrowser [
-	^ self openSystemBrowser
+	| session className browser |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false
+	].
+	className := UIManager default request: 'Class name:' initialAnswer: ''.
+	(className isNil or: [ className trimBoth isEmpty ]) ifTrue: [ ^ false ].
+	GbsSessionParameters currentSession: session.
+	browser := self openBrowserOn: session dictionary: nil.
+	browser ifFalse: [ ^ false ].
+	^ [ browser
+		selectClassNamed: className trimBoth
+		classSide: false
+		method: nil ] on: Error do: [ false ]
 ]
 
 { #category : 'actions' }
@@ -643,6 +727,54 @@ GbsClassicLauncher >> openSystemBrowser [
 	GbsSessionParameters currentSession: session.
 	self openBrowserOn: session dictionary: nil.
 	^ true
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> browseImplementors [
+	| browser |
+	browser := self openBrowserForQuery.
+	browser ifNil: [ ^ false ].
+	^ [ browser queryImplementors ] on: Error do: [ false ]
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> browseMethodsWithSubstring [
+	| browser |
+	browser := self openBrowserForQuery.
+	browser ifNil: [ ^ false ].
+	^ [ browser queryMethodsWithString ] on: Error do: [ false ]
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> browseReferences [
+	| browser |
+	browser := self openBrowserForQuery.
+	browser ifNil: [ ^ false ].
+	^ [ browser queryReferences ] on: Error do: [ false ]
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> browseSenders [
+	| browser |
+	browser := self openBrowserForQuery.
+	browser ifNil: [ ^ false ].
+	^ [ browser querySenders ] on: Error do: [ false ]
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> openBrowserForQuery [
+	| session browser |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ nil
+	].
+	GbsSessionParameters currentSession: session.
+	browser := [ self browserClass openOn: session ] on: Error do: [ :ex |
+		self inform: 'Could not open browser: ', ex messageText.
+		nil
+	].
+	^ browser
 ]
 
 { #category : 'private' }
