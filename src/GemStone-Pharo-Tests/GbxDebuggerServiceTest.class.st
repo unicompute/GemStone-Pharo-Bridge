@@ -522,6 +522,76 @@ GbxDebuggerServiceTest >> testStepOverUsesServerStepOverForExecutedCodeFrame [
 ]
 
 { #category : 'tests' }
+GbxDebuggerServiceTest >> testRunToStepPointRejectsInvalidStepPoint [
+	| scripts |
+	scripts := OrderedCollection new.
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			scripts add: script.
+			'true' ].
+
+	self deny: (service runToStepPoint: nil).
+	self deny: (service runToStepPoint: 0).
+	self deny: (service runToStepPoint: -1).
+	self assert: scripts isEmpty
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testJumpToStepPointRejectsInvalidStepPoint [
+	| scripts |
+	scripts := OrderedCollection new.
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			scripts add: script.
+			'true' ].
+
+	self deny: (service jumpToStepPoint: nil).
+	self deny: (service jumpToStepPoint: 0).
+	self deny: (service jumpToStepPoint: -1).
+	self assert: scripts isEmpty
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testPauseUsesSessionSendInterruptWhenAvailable [
+	| calls |
+	calls := 0.
+	session stubs
+		at: #sendInterrupt
+		put: [ calls := calls + 1. true ].
+
+	self assert: service pause.
+	self assert: calls equals: 1
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testRunWithBreakAgainSetsBreakpointAndResumes [
+	| scripts didRun |
+	scripts := OrderedCollection new.
+	service processOop: 111.
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			scripts add: script.
+			(script includesSubstring: 'resume')
+				ifTrue: [ 'true' ]
+				ifFalse: [ '' ] ].
+
+	didRun := service runWithBreakAgain.
+
+	self assert: didRun.
+	self assert: GbxFakeBrowserForService setBreakCalls equals: 1.
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'resume' ])
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testCanReturnFromFrameIsFalseForServerContext [
+	self deny: service canReturnFromFrame.
+	self deny: service returnFromFrame
+]
+
+{ #category : 'tests' }
 GbxDebuggerServiceTest >> testRestartUsesTrimStackToLevelCommand [
 	"Kept for selector stability in long-lived images."
 	self assert: true

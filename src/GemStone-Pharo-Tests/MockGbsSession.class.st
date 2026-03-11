@@ -92,6 +92,30 @@ MockGbsSession >> gciPollForSignal [
 	^ self stubs at: #gciPollForSignal ifAbsent: [ 0 ]
 ]
 
+{ #category : 'accessing' }
+MockGbsSession >> sendInterrupt [
+	| block |
+	block := self stubs at: #sendInterrupt ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block value ].
+	^ true
+]
+
+{ #category : 'accessing' }
+MockGbsSession >> interrupt [
+	| block |
+	block := self stubs at: #interrupt ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block value ].
+	^ true
+]
+
+{ #category : 'accessing' }
+MockGbsSession >> signalInterrupt [
+	| block |
+	block := self stubs at: #signalInterrupt ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block value ].
+	^ true
+]
+
 { #category : 'execution' }
 MockGbsSession >> serverInterface [
 	"Return self so this mock can also intercept serverInterface calls!"

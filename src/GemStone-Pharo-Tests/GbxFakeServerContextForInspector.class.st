@@ -55,3 +55,13 @@ GbxFakeServerContextForInspector >> processOop [
 GbxFakeServerContextForInspector >> processOop: anInteger [
 	processOop := anInteger
 ]
+
+{ #category : 'accessing' }
+GbxFakeServerContextForInspector >> receiverClassOrUnknown [
+	^ 'DemoReceiver'
+]
+
+{ #category : 'accessing' }
+GbxFakeServerContextForInspector >> selfOop [
+	^ 12345
+]

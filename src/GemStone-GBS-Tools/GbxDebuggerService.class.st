@@ -201,6 +201,26 @@ GbxDebuggerService >> canResume [
 ]
 
 { #category : 'testing' }
+GbxDebuggerService >> canRunWithBreakAgain [
+	^ self canResume and: [ self canIssueContextCommand ]
+]
+
+{ #category : 'testing' }
+GbxDebuggerService >> canPause [
+	^ self canResume
+]
+
+{ #category : 'testing' }
+GbxDebuggerService >> canRunToStepPoint [
+	^ self canIssueContextCommand
+]
+
+{ #category : 'testing' }
+GbxDebuggerService >> canJumpToStepPoint [
+	^ self canIssueContextCommand
+]
+
+{ #category : 'testing' }
 GbxDebuggerService >> canIssueContextCommand [
 	^ currentContext isNotNil and: [ self isTerminated not ]
 ]
@@ -223,6 +243,14 @@ GbxDebuggerService >> canStepOver [
 { #category : 'testing' }
 GbxDebuggerService >> canStepReturn [
 	^ self canIssueContextCommand
+]
+
+{ #category : 'testing' }
+GbxDebuggerService >> canReturnFromFrame [
+	currentContext ifNil: [ ^ false ].
+	(currentContext respondsTo: #gbxIsServerContext)
+		ifTrue: [ currentContext gbxIsServerContext ifTrue: [ ^ false ] ].
+	^ self canStepReturn
 ]
 
 { #category : 'testing' }
@@ -815,6 +843,14 @@ GbxDebuggerService >> resume [
 	^ false
 ]
 
+{ #category : 'process control' }
+GbxDebuggerService >> runWithBreakAgain [
+	"VW-style behavior: ensure the current source step has a breakpoint, then resume."
+	self canRunWithBreakAgain ifFalse: [ ^ false ].
+	self setBreakPointIn: nil.
+	^ self resume
+]
+
 { #category : 'actions' }
 GbxDebuggerService >> basicReenterServerContext [
 	"Executed in a debugger service process.
@@ -1136,8 +1172,11 @@ GbxDebuggerService >> updatePrecomputedContextList [
 
 { #category : 'private' }
 GbxDebuggerService >> runDebugProcessCommand: commandName recompute: shouldRecompute [
-	| result script |
+	| result script wasServerContext |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
+	wasServerContext := (currentContext notNil
+		and: [ (currentContext respondsTo: #gbxIsServerContext)
+		and: [ currentContext gbxIsServerContext ] ]).
 	script := '[
 		| obj proc |
 		obj := Object _objectForOop: ', processOop asString, '.
@@ -1161,15 +1200,22 @@ GbxDebuggerService >> runDebugProcessCommand: commandName recompute: shouldRecom
 	] value'.
 	result := self executeDebugScript: script.
 	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
-	shouldRecompute ifTrue: [ self recomputeContextList ].
+	shouldRecompute ifTrue: [
+		wasServerContext
+			ifTrue: [ self selectTopServerContext ]
+			ifFalse: [ self recomputeContextList ]
+	].
 	^ true
 ]
 
 { #category : 'private' }
 GbxDebuggerService >> runDebugProcessCommand: commandName withInteger: anInteger recompute: shouldRecompute [
-	| result script |
+	| result script wasServerContext |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
 	anInteger ifNil: [ ^ false ].
+	wasServerContext := (currentContext notNil
+		and: [ (currentContext respondsTo: #gbxIsServerContext)
+		and: [ currentContext gbxIsServerContext ] ]).
 	script := '[
 		| obj proc |
 		obj := Object _objectForOop: ', processOop asString, '.
@@ -1193,7 +1239,11 @@ GbxDebuggerService >> runDebugProcessCommand: commandName withInteger: anInteger
 	] value'.
 	result := self executeDebugScript: script.
 	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
-	shouldRecompute ifTrue: [ self recomputeContextList ].
+	shouldRecompute ifTrue: [
+		wasServerContext
+			ifTrue: [ self selectTopServerContext ]
+			ifFalse: [ self recomputeContextList ]
+	].
 	^ true
 ]
 
@@ -1364,18 +1414,33 @@ GbxDebuggerService >> stepReturn [
 ]
 
 { #category : 'process control' }
+GbxDebuggerService >> returnFromFrame [
+	self canReturnFromFrame ifFalse: [ ^ false ].
+	^ self stepReturn
+]
+
+{ #category : 'process control' }
 GbxDebuggerService >> pause [
 	"Best effort: interrupt the active GemStone session."
 	self isSessionUsable ifFalse: [ ^ false ].
 	^ [ 
 		(session respondsTo: #sendInterrupt)
 			ifTrue: [ session sendInterrupt. true ]
-			ifFalse: [ false ]
+			ifFalse: [
+				(session respondsTo: #interrupt)
+					ifTrue: [ session interrupt. true ]
+					ifFalse: [
+						(session respondsTo: #signalInterrupt)
+							ifTrue: [ session signalInterrupt. true ]
+							ifFalse: [ false ]
+					]
+			]
 	] on: Error do: [ false ]
 ]
 
 { #category : 'process control' }
 GbxDebuggerService >> runToStepPoint: aStepPoint [
+	((aStepPoint isNumber and: [ aStepPoint > 0 ]) not) ifTrue: [ ^ false ].
 	(self runDebugProcessCommand: 'runToStepPoint' withInteger: aStepPoint recompute: true)
 		ifTrue: [ ^ true ].
 	(self runDebugProcessCommand: 'runTo' withInteger: aStepPoint recompute: true)
@@ -1385,6 +1450,7 @@ GbxDebuggerService >> runToStepPoint: aStepPoint [
 
 { #category : 'process control' }
 GbxDebuggerService >> jumpToStepPoint: aStepPoint [
+	((aStepPoint isNumber and: [ aStepPoint > 0 ]) not) ifTrue: [ ^ false ].
 	(self runDebugProcessCommand: 'jumpToStepPoint' withInteger: aStepPoint recompute: true)
 		ifTrue: [ ^ true ].
 	(self runDebugProcessCommand: 'jumpTo' withInteger: aStepPoint recompute: true)
@@ -1422,7 +1488,7 @@ GbxDebuggerService >> serverStepOverFrameLevel: levelValue [
 	] value'.
 	result := self executeDebugScript: script.
 	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
-	self recomputeContextList.
+	self selectTopServerContext.
 	^ true
 ]
 

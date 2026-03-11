@@ -70,3 +70,17 @@ GbxContextInspectorTest >> testStackInspectorStackStringAtFormatsNameAndValue [
 	line := stackInspector stackStringAt: 1.
 	self assert: (line includesSubstring: 'a:')
 ]
+
+{ #category : 'tests' }
+GbxContextInspectorTest >> testReceiverInspectorExposesReceiverFields [
+	| receiverInspectorClass receiverInspector |
+	receiverInspectorClass := Smalltalk at: #GbxReceiverInspector ifAbsent: [ self fail: 'GbxReceiverInspector missing' ].
+	receiverInspector := receiverInspectorClass new.
+	receiverInspector
+		service: service;
+		object: context.
+	self assert: (receiverInspector fieldList includes: 'self').
+	self assert: (receiverInspector fieldList includes: 'self oop').
+	self assert: (receiverInspector fieldValueAtName: 'self') equals: 'DemoReceiver'.
+	self assert: (receiverInspector fieldValueAtName: 'self oop') equals: '12345'
+]

@@ -301,6 +301,13 @@ GbsRemoteDebugger >> canStepReturn [
 ]
 
 { #category : 'private' }
+GbsRemoteDebugger >> canReturnFromFrameExecution [
+	^ self safeServiceCall: [ (service respondsTo: #canReturnFromFrame)
+		ifTrue: [ service canReturnFromFrame ]
+		ifFalse: [ self canStepReturn ] ] default: false
+]
+
+{ #category : 'private' }
 GbsRemoteDebugger >> canRestartExecution [
 	^ self canStepInto
 ]
@@ -313,6 +320,13 @@ GbsRemoteDebugger >> canResumeExecution [
 ]
 
 { #category : 'private' }
+GbsRemoteDebugger >> canRunWithBreakAgainExecution [
+	^ self safeServiceCall: [ (service respondsTo: #canRunWithBreakAgain)
+		ifTrue: [ service canRunWithBreakAgain ]
+		ifFalse: [ self canResumeExecution ] ] default: false
+]
+
+{ #category : 'private' }
 GbsRemoteDebugger >> canTerminateExecution [
 	^ self safeServiceCall: [ (service respondsTo: #canTerminate)
 		ifTrue: [ service canTerminate ]
@@ -321,19 +335,25 @@ GbsRemoteDebugger >> canTerminateExecution [
 
 { #category : 'private' }
 GbsRemoteDebugger >> canPauseExecution [
-	^ self safeServiceCall: [ (service respondsTo: #canResume)
-		ifTrue: [ service canResume ]
+	^ self safeServiceCall: [ (service respondsTo: #canPause)
+		ifTrue: [ service canPause ]
 		ifFalse: [ true ] ] default: false
 ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> canRunToCaret [
-	^ self canStepInto and: [ self selectedStepPointFromCaret notNil ]
+	^ (self safeServiceCall: [ (service respondsTo: #canRunToStepPoint)
+		ifTrue: [ service canRunToStepPoint ]
+		ifFalse: [ self canStepInto ] ] default: false)
+		and: [ self selectedStepPointFromCaret notNil ]
 ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> canJumpToCaret [
-	^ self canStepInto and: [ self selectedStepPointFromCaret notNil ]
+	^ (self safeServiceCall: [ (service respondsTo: #canJumpToStepPoint)
+		ifTrue: [ service canJumpToStepPoint ]
+		ifFalse: [ self canStepInto ] ] default: false)
+		and: [ self selectedStepPointFromCaret notNil ]
 ]
 
 { #category : 'private' }
@@ -376,6 +396,35 @@ GbsRemoteDebugger >> clearSourceHighlight [
 			to: textSize
 			inTextPresenter: sourceText
 	] on: Error do: [ ].
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> applyBreakpointEmphasisFor: aContext [
+	| intervals raw textAttr start stop textColorClass |
+	aContext ifNil: [ ^ self ].
+	sourceText ifNil: [ ^ self ].
+	(sourceText respondsTo: #text:) ifFalse: [ ^ self ].
+	raw := [ sourceText text asString ] on: Error do: [ '' ].
+	raw isEmpty ifTrue: [ ^ self ].
+	intervals := self safeServiceCall: [ service breakpointIntervalsInCurrentMethod ] default: #().
+	(intervals isCollection and: [ intervals isEmpty not ]) ifFalse: [ ^ self ].
+	textAttr := raw asText.
+	textColorClass := Smalltalk at: #TextColor ifAbsent: [ nil ].
+	intervals do: [ :interval |
+		(interval respondsTo: #first) ifTrue: [
+			start := interval first.
+			stop := interval last ifNil: [ start ].
+			(start isNumber and: [ stop isNumber and: [ start > 0 and: [ start <= raw size ] ] ]) ifTrue: [
+				stop := stop min: raw size.
+				[ textAttr addAttribute: TextEmphasis underlined from: start to: stop ] on: Error do: [ ].
+				textColorClass ifNotNil: [
+					[ textAttr addAttribute: (textColorClass color: Color magenta) from: start to: stop ]
+						on: Error do: [ ]
+				].
+			]
+		]
+	].
+	[ sourceText text: textAttr ] on: Error do: [ ].
 ]
 
 { #category : 'private' }
@@ -448,6 +497,7 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 		"Try to get from cached sourceString"
 		context sourceString ifNil: [ '' ]
 	]).
+	self applyBreakpointEmphasisFor: context.
 	self applySourceMapHighlightFor: context.
 	self syncBreakpointMarker.
 
@@ -1094,6 +1144,7 @@ GbsRemoteDebugger >> inspectProcess [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> inspectReceiver [
+	(self openInspectorClassNamed: #GbxReceiverInspector) ifTrue: [ ^ true ].
 	^ self safeServiceCall: [ service inspectCurrentReceiver ] default: false
 ]
 
@@ -1185,10 +1236,10 @@ GbsRemoteDebugger >> refreshUiState [
 	self updateButton: restartButton enabled: self canRestartExecution.
 	self updateButton: resumeButton enabled: self canResumeExecution.
 	self updateButton: runUntilReturnButton enabled: self canStepReturn.
-	self updateButton: runWithBreakAgainButton enabled: self canResumeExecution.
+	self updateButton: runWithBreakAgainButton enabled: self canRunWithBreakAgainExecution.
 	self updateButton: runToCaretButton enabled: self canRunToCaret.
 	self updateButton: jumpToCaretButton enabled: self canJumpToCaret.
-	self updateButton: returnButton enabled: self canStepReturn.
+	self updateButton: returnButton enabled: self canReturnFromFrameExecution.
 	self updateButton: pauseButton enabled: self canPauseExecution.
 	self updateButton: terminateButton enabled: self canTerminateExecution.
 	self updateButton: inspectReceiverButton enabled: self canInspectReceiver.
@@ -1629,9 +1680,14 @@ GbsRemoteDebugger >> runUntilReturn [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> runWithBreakAgain [
-	self safeServiceCall: [ service resume ] default: false.
-	self fetchStackFrames.
-	^ true
+	| didRun |
+	didRun := self safeServiceCall: [
+		(service respondsTo: #runWithBreakAgain)
+			ifTrue: [ service runWithBreakAgain ]
+			ifFalse: [ service resume ]
+	] default: false.
+	didRun ifTrue: [ self fetchStackFrames ].
+	^ didRun
 ]
 
 { #category : 'private' }
@@ -1734,7 +1790,7 @@ GbsRemoteDebugger >> executeMenu [
 			group addItem: [ :item | item name: 'Restart'; action: [ self restart ] ].
 			group addItem: [ :item | item name: 'Run'; action: [ self resume ] ].
 			group addItem: [ :item | item name: 'Run until Return'; action: [ self stepReturn ] ].
-			group addItem: [ :item | item name: 'Run with Break Again'; action: [ self resume ] ].
+			group addItem: [ :item | item name: 'Run with Break Again'; action: [ self runWithBreakAgain ] ].
 			group addItem: [ :item | item name: 'Run to Caret'; action: [ self runToCaret ] ] ];
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Jump to Caret'; action: [ self jumpToCaret ] ].
@@ -1749,19 +1805,94 @@ GbsRemoteDebugger >> methodMenu [
 	^ self newMenu
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Browse'; action: [ self browseSelectedMethod ] ].
-			group addItem: [ :item | item name: 'GS-Senders'; action: [ self gsBrowseAllReferences ] ].
-			group addItem: [ :item | item name: 'GS-Implementors'; action: [ self gsBrowseAllImplementors ] ].
-			group addItem: [ :item | item name: 'GS-Hierarchy Senders'; action: [ self gsBrowseAllHierarchyReferences ] ].
-			group addItem: [ :item | item name: 'GS-Hierarchy Implementors'; action: [ self gsBrowseAllHierarchyImplementors ] ] ];
+			group addItem: [ :item | item name: 'GS-Senders'; subMenu: self gsSendersQuerySubMenu ].
+			group addItem: [ :item | item name: 'GS-Implementors'; subMenu: self gsImplementorsQuerySubMenu ].
+			group addItem: [ :item | item name: 'GS-Hierarchy Senders'; subMenu: self gsHierarchySendersQuerySubMenu ].
+			group addItem: [ :item | item name: 'GS-Hierarchy Implementors'; subMenu: self gsHierarchyImplementorsQuerySubMenu ] ];
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Senders'; action: [ self browseLocalSenders ] ].
-			group addItem: [ :item | item name: 'Implementors'; action: [ self browseLocalImplementors ] ].
-			group addItem: [ :item | item name: 'Hierarchy Senders'; action: [ self browseLocalHierarchySenders ] ].
-			group addItem: [ :item | item name: 'Hierarchy Implementors'; action: [ self browseLocalHierarchyImplementors ] ].
+			group addItem: [ :item | item name: 'Senders'; subMenu: self localSendersQuerySubMenu ].
+			group addItem: [ :item | item name: 'Implementors'; subMenu: self localImplementorsQuerySubMenu ].
+			group addItem: [ :item | item name: 'Hierarchy Senders'; subMenu: self localHierarchySendersQuerySubMenu ].
+			group addItem: [ :item | item name: 'Hierarchy Implementors'; subMenu: self localHierarchyImplementorsQuerySubMenu ].
 			group addItem: [ :item | item name: 'Show Containing Package...'; action: [ self showContainingPackage ] ] ];
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Recompile with Full Blocks'; action: [ self acceptSourceEdits ] ] ];
 		yourself
+]
+
+{ #category : 'menus' }
+GbsRemoteDebugger >> gsSendersQuerySubMenu [
+	^ self selectorQuerySubMenuUsing: [ :sel | self gsBrowseAllReferencesFor: sel ]
+]
+
+{ #category : 'menus' }
+GbsRemoteDebugger >> gsImplementorsQuerySubMenu [
+	^ self selectorQuerySubMenuUsing: [ :sel | self gsBrowseAllImplementorsFor: sel ]
+]
+
+{ #category : 'menus' }
+GbsRemoteDebugger >> gsHierarchySendersQuerySubMenu [
+	^ self selectorQuerySubMenuUsing: [ :sel | self gsBrowseAllHierarchyReferencesFor: sel ]
+]
+
+{ #category : 'menus' }
+GbsRemoteDebugger >> gsHierarchyImplementorsQuerySubMenu [
+	^ self selectorQuerySubMenuUsing: [ :sel | self gsBrowseAllHierarchyImplementorsFor: sel ]
+]
+
+{ #category : 'menus' }
+GbsRemoteDebugger >> localSendersQuerySubMenu [
+	^ self selectorQuerySubMenuUsing: [ :sel | self browseLocalSendersFor: sel ]
+]
+
+{ #category : 'menus' }
+GbsRemoteDebugger >> localImplementorsQuerySubMenu [
+	^ self selectorQuerySubMenuUsing: [ :sel | self browseLocalImplementorsFor: sel ]
+]
+
+{ #category : 'menus' }
+GbsRemoteDebugger >> localHierarchySendersQuerySubMenu [
+	^ self selectorQuerySubMenuUsing: [ :sel | self browseLocalHierarchySendersFor: sel ]
+]
+
+{ #category : 'menus' }
+GbsRemoteDebugger >> localHierarchyImplementorsQuerySubMenu [
+	^ self selectorQuerySubMenuUsing: [ :sel | self browseLocalHierarchyImplementorsFor: sel ]
+]
+
+{ #category : 'menus' }
+GbsRemoteDebugger >> selectorQuerySubMenuUsing: aBlock [
+	| selectors menu |
+	selectors := self selectorCandidatesForQueryMenus.
+	menu := self newMenu.
+	selectors isEmpty ifTrue: [
+		menu addItem: [ :item | item name: '<none>'; action: [ false ] ].
+		^ menu
+	].
+	selectors do: [ :sel |
+		menu addItem: [ :item |
+			item name: sel asString.
+			item action: [ aBlock value: sel ] ] ].
+	^ menu
+]
+
+{ #category : 'menus' }
+GbsRemoteDebugger >> selectorCandidatesForQueryMenus [
+	| source tokens selectors current |
+	selectors := OrderedCollection new.
+	current := self selectedServerSelector.
+	current ifNotNil: [ selectors add: current ].
+	source := self selectedSourceOrAll ifNil: [ '' ].
+	tokens := source findTokens: ' [](){}|.,;''"!?+-*/<>=\t\r\n'.
+	tokens do: [ :tok |
+		| s |
+		s := tok asString trimBoth.
+		(s isEmpty or: [ s first isDigit ]) ifFalse: [
+			(s allSatisfy: [ :ch | ch isAlphaNumeric or: [ ch = $_ or: [ ch = $: ] ] ])
+				ifTrue: [ [ selectors add: s asSymbol ] on: Error do: [ ] ]
+		]
+	].
+	^ selectors asSet asArray asSortedCollection
 ]
 
 { #category : 'menus' }
@@ -1905,8 +2036,18 @@ GbsRemoteDebugger >> gsBrowseAllHierarchyImplementors [
 ]
 
 { #category : 'private' }
+GbsRemoteDebugger >> gsBrowseAllHierarchyImplementorsFor: aSelector [
+	^ self gsBrowseQueryFor: aSelector hierarchyOnly: true senders: false
+]
+
+{ #category : 'private' }
 GbsRemoteDebugger >> gsBrowseAllHierarchyReferences [
 	^ self gsBrowseQueryFor: self selectedServerSelector hierarchyOnly: true senders: true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> gsBrowseAllHierarchyReferencesFor: aSelector [
+	^ self gsBrowseQueryFor: aSelector hierarchyOnly: true senders: true
 ]
 
 { #category : 'private' }
@@ -1915,8 +2056,18 @@ GbsRemoteDebugger >> gsBrowseAllImplementors [
 ]
 
 { #category : 'private' }
+GbsRemoteDebugger >> gsBrowseAllImplementorsFor: aSelector [
+	^ self gsBrowseQueryFor: aSelector hierarchyOnly: false senders: false
+]
+
+{ #category : 'private' }
 GbsRemoteDebugger >> gsBrowseAllReferences [
 	^ self gsBrowseQueryFor: self selectedServerSelector hierarchyOnly: false senders: true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> gsBrowseAllReferencesFor: aSelector [
+	^ self gsBrowseQueryFor: aSelector hierarchyOnly: false senders: true
 ]
 
 { #category : 'private' }
@@ -2065,12 +2216,28 @@ GbsRemoteDebugger >> browseLocalImplementors [
 ]
 
 { #category : 'private' }
+GbsRemoteDebugger >> browseLocalImplementorsFor: aSelector [
+	aSelector ifNil: [ ^ false ].
+	(SystemNavigation default respondsTo: #browseAllImplementorsOf:)
+		ifTrue: [ SystemNavigation default browseAllImplementorsOf: aSelector. ^ true ].
+	^ false
+]
+
+{ #category : 'private' }
 GbsRemoteDebugger >> browseLocalSenders [
 	| selector |
 	selector := self selectedServerSelector.
 	selector ifNil: [ ^ false ].
 	(SystemNavigation default respondsTo: #browseAllSendersOf:)
 		ifTrue: [ SystemNavigation default browseAllSendersOf: selector. ^ true ].
+	^ false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> browseLocalSendersFor: aSelector [
+	aSelector ifNil: [ ^ false ].
+	(SystemNavigation default respondsTo: #browseAllSendersOf:)
+		ifTrue: [ SystemNavigation default browseAllSendersOf: aSelector. ^ true ].
 	^ false
 ]
 
@@ -2093,6 +2260,23 @@ GbsRemoteDebugger >> browseLocalHierarchyImplementors [
 ]
 
 { #category : 'private' }
+GbsRemoteDebugger >> browseLocalHierarchyImplementorsFor: aSelector [
+	| className behavior methods |
+	className := self selectedServerClassName.
+	(aSelector isNil or: [ className isNil ]) ifTrue: [ ^ false ].
+	behavior := self localBehaviorFromServerClassName: className.
+	behavior ifNil: [ ^ false ].
+	methods := (behavior withAllSuperclasses , behavior withAllSubclasses)
+		collect: [ :cls | cls compiledMethodAt: aSelector ifAbsent: [ nil ] ]
+		thenReject: #isNil.
+	methods isEmpty ifTrue: [ ^ false ].
+	methods size = 1
+		ifTrue: [ methods first browse ]
+		ifFalse: [ methods inspect ].
+	^ true
+]
+
+{ #category : 'private' }
 GbsRemoteDebugger >> browseLocalHierarchySenders [
 	| selector className behavior methods |
 	selector := self selectedServerSelector.
@@ -2103,6 +2287,25 @@ GbsRemoteDebugger >> browseLocalHierarchySenders [
 	methods := OrderedCollection new.
 	(behavior withAllSuperclasses , behavior withAllSubclasses) do: [ :cls |
 		methods addAll: (cls whichSelectorsReferTo: selector) collect: [ :sel |
+			cls compiledMethodAt: sel ifAbsent: [ nil ] ] ].
+	methods := methods thenReject: #isNil.
+	methods isEmpty ifTrue: [ ^ false ].
+	methods size = 1
+		ifTrue: [ methods first browse ]
+		ifFalse: [ methods inspect ].
+	^ true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> browseLocalHierarchySendersFor: aSelector [
+	| className behavior methods |
+	className := self selectedServerClassName.
+	(aSelector isNil or: [ className isNil ]) ifTrue: [ ^ false ].
+	behavior := self localBehaviorFromServerClassName: className.
+	behavior ifNil: [ ^ false ].
+	methods := OrderedCollection new.
+	(behavior withAllSuperclasses , behavior withAllSubclasses) do: [ :cls |
+		methods addAll: (cls whichSelectorsReferTo: aSelector) collect: [ :sel |
 			cls compiledMethodAt: sel ifAbsent: [ nil ] ] ].
 	methods := methods thenReject: #isNil.
 	methods isEmpty ifTrue: [ ^ false ].
@@ -2172,8 +2375,22 @@ GbsRemoteDebugger >> localPrintIt [
 GbsRemoteDebugger >> pauseProcess [
 	| didPause |
 	didPause := self safeServiceCall: [ service pause ] default: false.
-	didPause ifTrue: [ self fetchStackFrames ].
+	didPause ifTrue: [
+		self fetchStackFrames.
+		self normalizePauseLandingSelection.
+	].
 	^ didPause
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> normalizePauseLandingSelection [
+	"Pause should land on the current top server frame deterministically."
+	(contextList isCollection and: [ contextList isEmpty not ]) ifFalse: [ ^ self ].
+	stackList ifNotNil: [
+		(stackList respondsTo: #selectIndex:)
+			ifTrue: [ stackList selectIndex: 1 ].
+	].
+	self contextSelected: contextList first.
 ]
 
 { #category : 'private' }
@@ -2309,6 +2526,12 @@ GbsRemoteDebugger >> restartUsingDirectTrimFromExecutedFrame [
 
 { #category : 'private' }
 GbsRemoteDebugger >> returnFromFrame [
+	(service notNil and: [ service respondsTo: #returnFromFrame ]) ifTrue: [
+		| didReturn |
+		didReturn := self safeServiceCall: [ service returnFromFrame ] default: false.
+		didReturn ifTrue: [ self fetchStackFrames ].
+		^ didReturn
+	].
 	^ self stepReturn
 ]
 

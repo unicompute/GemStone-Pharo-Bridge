@@ -353,6 +353,45 @@ GbsRemoteDebuggerPresenterTest >> testPauseProcessDelegatesToService [
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testNormalizePauseLandingSelectionSelectsTopFrame [
+	| top lower fakeList fakeText |
+	top := GbxFakeContextForRemoteDebugger new
+		methodClass: 'AbstractException';
+		selector: #signal;
+		sourceString: 'top source';
+		processOop: 222;
+		level: 1;
+		tempNamesAndValues: Dictionary new;
+		yourself.
+	lower := GbxFakeContextForRemoteDebugger new
+		methodClass: 'SmallInteger';
+		selector: #/;
+		sourceString: 'lower source';
+		processOop: 222;
+		level: 2;
+		tempNamesAndValues: Dictionary new;
+		yourself.
+	fakeList := GbxFakeListPresenterForRemoteDebugger new.
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: 'placeholder'.
+
+	debugger instVarNamed: 'contextList' put: { top. lower }.
+	debugger instVarNamed: 'stackList' put: fakeList.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+
+	debugger normalizePauseLandingSelection.
+
+	self assert: fakeList selectedIndex equals: 1.
+	self assert: service currentContext == top
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testRunWithBreakAgainDelegatesToServiceCommand [
+	self assert: debugger runWithBreakAgain.
+	self assert: service runWithBreakAgainCalls equals: 1
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testRunToCaretUsesSelectedStepPoint [
 	| fakeText |
 	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
@@ -378,4 +417,10 @@ GbsRemoteDebuggerPresenterTest >> testJumpToCaretUsesSelectedStepPoint [
 	self assert: debugger jumpToCaret.
 	self assert: service jumpToStepPointCalls equals: 1.
 	self assert: service lastStepPoint equals: 4
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testReturnFromFrameUsesServiceReturnWhenAvailable [
+	self assert: debugger returnFromFrame.
+	self assert: service returnFromFrameCalls equals: 1
 ]

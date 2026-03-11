@@ -18,6 +18,9 @@ Class {
 		'toggleGlueHidingCalls',
 		'restartCalls',
 		'pauseCalls',
+		'resumeCalls',
+		'runWithBreakAgainCalls',
+		'returnFromFrameCalls',
 		'runToStepPointCalls',
 		'jumpToStepPointCalls',
 		'lastStepPoint',
@@ -186,6 +189,24 @@ GbxFakeServiceForRemoteDebugger >> pause [
 ]
 
 { #category : 'process control' }
+GbxFakeServiceForRemoteDebugger >> resume [
+	resumeCalls := self resumeCalls + 1.
+	^ true
+]
+
+{ #category : 'process control' }
+GbxFakeServiceForRemoteDebugger >> runWithBreakAgain [
+	runWithBreakAgainCalls := self runWithBreakAgainCalls + 1.
+	^ true
+]
+
+{ #category : 'process control' }
+GbxFakeServiceForRemoteDebugger >> returnFromFrame [
+	returnFromFrameCalls := self returnFromFrameCalls + 1.
+	^ true
+]
+
+{ #category : 'process control' }
 GbxFakeServiceForRemoteDebugger >> runToStepPoint: aStepPoint [
 	runToStepPointCalls := self runToStepPointCalls + 1.
 	lastStepPoint := aStepPoint.
@@ -234,6 +255,21 @@ GbxFakeServiceForRemoteDebugger >> restartCalls [
 { #category : 'process control' }
 GbxFakeServiceForRemoteDebugger >> pauseCalls [
 	^ pauseCalls ifNil: [ 0 ]
+]
+
+{ #category : 'process control' }
+GbxFakeServiceForRemoteDebugger >> resumeCalls [
+	^ resumeCalls ifNil: [ 0 ]
+]
+
+{ #category : 'process control' }
+GbxFakeServiceForRemoteDebugger >> runWithBreakAgainCalls [
+	^ runWithBreakAgainCalls ifNil: [ 0 ]
+]
+
+{ #category : 'process control' }
+GbxFakeServiceForRemoteDebugger >> returnFromFrameCalls [
+	^ returnFromFrameCalls ifNil: [ 0 ]
 ]
 
 { #category : 'process control' }
@@ -308,6 +344,21 @@ GbxFakeServiceForRemoteDebugger >> canRemoveAllBreakPoints [
 
 { #category : 'breakpoint support' }
 GbxFakeServiceForRemoteDebugger >> canToggleBreakPoint [
+	^ true
+]
+
+{ #category : 'testing' }
+GbxFakeServiceForRemoteDebugger >> canPause [
+	^ true
+]
+
+{ #category : 'testing' }
+GbxFakeServiceForRemoteDebugger >> canRunToStepPoint [
+	^ true
+]
+
+{ #category : 'testing' }
+GbxFakeServiceForRemoteDebugger >> canJumpToStepPoint [
 	^ true
 ]
 
