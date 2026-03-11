@@ -129,10 +129,10 @@ GbsSettingsPresenter >> connectPresenters [
 
 { #category : 'layout' }
 GbsSettingsPresenter >> defaultLayout [
-	| libraryRow leftCol rightCol buttonRow |
+	| libraryRow leftCol rightCol buttonRow columnsRow |
 	libraryRow := SpBoxLayout newLeftToRight
 		add: (self newLabel label: 'libraryName*') expand: false;
-		add: libraryField expand: false;
+		add: libraryField;
 		add: browseButton expand: false;
 		spacing: 6;
 		yourself.
@@ -177,18 +177,20 @@ GbsSettingsPresenter >> defaultLayout [
 		add: (self yesNoRowLabel: 'verbose' yes: verboseYes no: verboseNo) expand: false;
 		spacing: 4;
 		yourself.
+	columnsRow := SpBoxLayout newLeftToRight
+		add: leftCol;
+		add: rightCol;
+		spacing: 16;
+		yourself.
 	buttonRow := SpBoxLayout newLeftToRight
-		add: saveButton;
-		add: cancelButton;
+		add: (self newLabel label: '');
+		add: saveButton expand: false;
+		add: cancelButton expand: false;
 		spacing: 8;
 		yourself.
 	^ SpBoxLayout newTopToBottom
 		add: libraryRow expand: false;
-		add: (SpBoxLayout newLeftToRight
-			add: leftCol;
-			add: rightCol;
-			spacing: 16;
-			yourself);
+		add: columnsRow;
 		add: buttonRow expand: false;
 		spacing: 6;
 		yourself
@@ -213,7 +215,7 @@ GbsSettingsPresenter >> yesNoRowLabel: labelString yes: yesButton no: noButton [
 GbsSettingsPresenter >> textRowLabel: labelString field: aField [
 	^ SpBoxLayout newLeftToRight
 		add: (self newLabel label: labelString) expand: false;
-		add: aField expand: false;
+		add: aField;
 		spacing: 6;
 		yourself
 ]
