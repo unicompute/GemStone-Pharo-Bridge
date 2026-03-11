@@ -4,7 +4,12 @@ Class {
 	#instVars : [
 		'userList',
 		'session',
-		'groupList'
+		'groupList',
+		'userNameField',
+		'createUserButton',
+		'showUserInfoButton',
+		'deleteUserButton',
+		'closeButton'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -25,40 +30,60 @@ GbsUserListPresenter class >> openOn: aSession [
 
 { #category : 'layout' }
 GbsUserListPresenter >> connectPresenters [
-	"1. Keep your existing selection logic"
 	userList whenSelectionChangedDo: [ :selection |
 		selection selectedItem
-			ifNotNil: [ :userName | self fetchGroupsFor: userName ]
-			ifNil: [ groupList items: #(  ) ]
+			ifNotNil: [ :userName | self fetchGroupsFor: userName. self updateActionButtons ]
+			ifNil: [ groupList items: #(  ). userNameField text: ''. self updateActionButtons ]
 	].
-	
-	"2. Automatically grab the active session if it hasn't been injected"
+
+	createUserButton action: [ self openCreateUserDialog ].
+	showUserInfoButton action: [ self showSelectedUserInfo ].
+	deleteUserButton action: [ self deleteSelectedUser ].
+	closeButton action: [ self closeWindow ].
+
 	session ifNil: [ session := GbsSessionParameters currentSession ].
 	(self isSessionUsable not) ifTrue: [
 		userList items: #( ).
 		groupList items: #( ).
+		userNameField text: ''.
+		self updateActionButtons.
 		^ self
 	].
-	
-	"3. Force the lists to populate right before the window appears!"
+
 	self refreshUserList.
+	self updateActionButtons.
 ]
 
 { #category : 'layout' }
 GbsUserListPresenter >> defaultLayout [
-
-  ^ SpBoxLayout newLeftToRight
-      add: userList;
-      add: groupList;
-      yourself
+	| topLists userRow buttonsRow |
+	topLists := SpBoxLayout newLeftToRight
+		add: userList;
+		add: groupList;
+		yourself.
+	userRow := SpBoxLayout newLeftToRight
+		add: (self newLabel label: 'User') expand: false;
+		add: userNameField;
+		yourself.
+	buttonsRow := SpBoxLayout newLeftToRight
+		add: createUserButton;
+		add: showUserInfoButton;
+		add: deleteUserButton;
+		add: closeButton;
+		spacing: 8;
+		yourself.
+	^ SpBoxLayout newTopToBottom
+		add: topLists;
+		add: userRow expand: false;
+		add: buttonsRow expand: false;
+		yourself
 ]
 
 { #category : 'layout' }
 GbsUserListPresenter >> fetchGroupsFor: userName [
 	| script rawString groupNames |
 	(self isSessionUsable not) ifTrue: [ ^ self ].
-	
-	"1. Use 'g name' because GemStone groups are UserProfileGroup objects!"
+
 	script := '
 	| users user strm |
 	strm := WriteStream on: String new.
@@ -73,13 +98,13 @@ GbsUserListPresenter >> fetchGroupsFor: userName [
 	
 	"2. Fetch and unpack"
 	rawString := [ session evaluate: script ] on: Error do: [ '' ].
-	
-	"3. Safely parse"
+
 	(rawString isString and: [ rawString isNotEmpty ]) 
 		ifTrue: [ groupNames := (rawString splitOn: ',') reject: #isEmpty ]
 		ifFalse: [ groupNames := #() ].
-		
-	groupList items: groupNames asSortedCollection asArray
+
+	groupList items: groupNames asSortedCollection asArray.
+	userNameField text: userName asString
 ]
 
 { #category : 'private' }
@@ -98,22 +123,39 @@ GbsUserListPresenter >> initialExtent [
 
 { #category : 'accessing' }
 GbsUserListPresenter >> initializePresenters [
-
 	userList := self newList.
 	userList headerTitle: 'Users'.
-	userList display: [ :each | each asString ]. "Force Spec2 to render the text"
+	userList display: [ :each | each asString ].
 
 	groupList := self newList.
 	groupList headerTitle: 'Groups'.
 	groupList display: [ :each | each asString ].
+
+	userNameField := self newTextInput.
+	userNameField beNotEditable.
+
+	createUserButton := self newButton
+		label: 'Create User...';
+		icon: (self iconNamed: #add);
+		yourself.
+	showUserInfoButton := self newButton
+		label: 'Show User Info';
+		yourself.
+	deleteUserButton := self newButton
+		label: 'Delete User...';
+		icon: (self iconNamed: #delete);
+		yourself.
+	closeButton := self newButton
+		label: 'Close';
+		icon: (self iconNamed: #smallCancel);
+		yourself
 ]
 
 { #category : 'accessing - deprecated' }
 GbsUserListPresenter >> initializeWindow: aWindowPresenter [
-
-  aWindowPresenter
-    title: 'GemStone Database Users';
-    initialExtent: 400 @ 500
+	aWindowPresenter
+		title: 'GemStone User List';
+		initialExtent: 520 @ 520
 ]
 
 { #category : 'accessing' }
@@ -136,8 +178,11 @@ GbsUserListPresenter >> refreshUserList [
 	(rawString isString and: [ rawString isNotEmpty ]) 
 		ifTrue: [ userNames := (rawString splitOn: ',') reject: #isEmpty ]
 		ifFalse: [ userNames := #() ].
-		
-	userList items: userNames asSortedCollection asArray
+
+	userList items: userNames asSortedCollection asArray.
+	groupList items: #( ).
+	userNameField text: ''.
+	self updateActionButtons
 ]
 
 { #category : 'accessing' }
@@ -146,11 +191,97 @@ GbsUserListPresenter >> session: aGbsSession [
     self isSessionUsable ifFalse: [
 		userList ifNotNil: [ userList items: #( ) ].
 		groupList ifNotNil: [ groupList items: #( ) ].
+		userNameField ifNotNil: [ userNameField text: '' ].
+		self updateActionButtons.
 	]
 ]
 
 { #category : 'accessing - deprecated' }
 GbsUserListPresenter >> title [
+	^ 'GemStone User List'
+]
 
-  ^ 'GemStone Database Users'
+{ #category : 'actions' }
+GbsUserListPresenter >> closeWindow [
+	self window
+		ifNotNil: [ self window close ]
+		ifNil: [ self delete ]
+]
+
+{ #category : 'actions' }
+GbsUserListPresenter >> deleteSelectedUser [
+	| userName confirmed script |
+	userName := self selectedUserName.
+	userName ifNil: [ ^ self ].
+	confirmed := UIManager default
+		confirm: 'Delete user "', userName, '"?'
+		label: 'Delete GemStone User'.
+	confirmed ifFalse: [ ^ self ].
+	script := '
+	| users user |
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNil: [ self error: ''AllUsers not found'' ].
+	user := users detect: [ :u | u userId asString = ''', userName, ''' ] ifNone: [ nil ].
+	user ifNil: [ self error: ''User not found'' ].
+	(users respondsTo: #remove:)
+		ifTrue: [ users remove: user ]
+		ifFalse: [
+			(users respondsTo: #removeUser:)
+				ifTrue: [ users removeUser: user ]
+				ifFalse: [ self error: ''Cannot remove user with available API'' ] ].
+	true'.
+	[
+		session execute: script.
+		self refreshUserList.
+		UIManager default inform: 'Deleted user ', userName, '.'
+	] on: Error do: [ :ex |
+		self inform: 'Delete user failed: ', ex messageText
+	]
+]
+
+{ #category : 'actions' }
+GbsUserListPresenter >> openCreateUserDialog [
+	(self isSessionUsable not) ifTrue: [ ^ self ].
+	GbsCreateUserPresenter
+		openOn: session
+		onCreated: [ self refreshUserList ]
+]
+
+{ #category : 'private' }
+GbsUserListPresenter >> selectedUserName [
+	^ userList selection selectedItem ifNotNil: [ :name | name asString ]
+]
+
+{ #category : 'actions' }
+GbsUserListPresenter >> showSelectedUserInfo [
+	| userName script info |
+	userName := self selectedUserName.
+	userName ifNil: [ ^ self ].
+	script := '
+	| users user strm |
+	strm := WriteStream on: String new.
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNotNil: [
+		user := users detect: [ :u | u userId asString = ''', userName, ''' ] ifNone: [ nil ].
+		user ifNotNil: [
+			strm
+				nextPutAll: ''User: ''; nextPutAll: user userId asString; cr;
+				nextPutAll: ''Class: ''; nextPutAll: user class name asString; cr.
+			(user respondsTo: #groups) ifTrue: [
+				strm nextPutAll: ''Groups: ''.
+				user groups
+					do: [ :g | strm nextPutAll: g name asString ]
+					separatedBy: [ strm nextPutAll: '', '' ].
+				strm cr ] ] ].
+	strm contents'.
+	info := [ session evaluate: script ] on: Error do: [ :ex | 'Could not fetch user info: ', ex messageText ].
+	UIManager default inform: (info ifNil: [ 'No information available.' ] ifNotNil: [ info asString ])
+]
+
+{ #category : 'private' }
+GbsUserListPresenter >> updateActionButtons [
+	| hasSelection |
+	hasSelection := self selectedUserName notNil.
+	showUserInfoButton ifNotNil: [ hasSelection ifTrue: [ showUserInfoButton enable ] ifFalse: [ showUserInfoButton disable ] ].
+	deleteUserButton ifNotNil: [ hasSelection ifTrue: [ deleteUserButton enable ] ifFalse: [ deleteUserButton disable ] ]
 ]

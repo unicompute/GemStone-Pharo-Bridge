@@ -221,30 +221,26 @@ GbsClassicLauncher class >> openUsersOnCurrentSession [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openNamespacesOnCurrentSession [
-	| session klass |
+	| session |
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
-	klass := Smalltalk at: #GbxDbaSymbolListBrowser ifAbsent: [ nil ].
-	(klass notNil and: [ klass respondsTo: #openOn: ]) ifTrue: [
-		^ [ klass openOn: session ]
-			on: Error
-			do: [ :ex | UIManager default inform: 'Could not open namespaces tool: ', ex messageText ].
+	[
+		GbsNamespacesPresenter openOn: session
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open namespaces tool: ', ex messageText
 	].
-	UIManager default inform: 'Namespaces tool is not available in this image yet.'.
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openSecurityPoliciesOnCurrentSession [
-	| session klass |
+	| session |
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
-	klass := Smalltalk at: #GbxDbaUserPrivilegesBrowser ifAbsent: [ nil ].
-	(klass notNil and: [ klass respondsTo: #openOn: ]) ifTrue: [
-		^ [ klass openOn: session ]
-			on: Error
-			do: [ :ex | UIManager default inform: 'Could not open security policies tool: ', ex messageText ].
+	[
+		GbsSecurityPoliciesPresenter openOn: session
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open security policies tool: ', ex messageText
 	].
-	UIManager default inform: 'Security Policies tool is not available in this image yet.'.
 ]
 
 { #category : 'menus' }
