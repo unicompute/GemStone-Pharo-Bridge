@@ -132,9 +132,9 @@ GbsSettingsPresenter >> defaultLayout [
 	| libraryRow leftCol rightCol buttonRow |
 	libraryRow := SpBoxLayout newLeftToRight
 		add: (self newLabel label: 'libraryName*') expand: false;
-		add: libraryField;
+		add: libraryField expand: false;
 		add: browseButton expand: false;
-		spacing: 8;
+		spacing: 6;
 		yourself.
 	leftCol := SpBoxLayout newTopToBottom
 		add: (self sectionTitle: 'CacheTuning') expand: false;
@@ -184,9 +184,13 @@ GbsSettingsPresenter >> defaultLayout [
 		yourself.
 	^ SpBoxLayout newTopToBottom
 		add: libraryRow expand: false;
-		add: (SpBoxLayout newLeftToRight add: leftCol; add: rightCol; spacing: 16; yourself);
+		add: (SpBoxLayout newLeftToRight
+			add: leftCol;
+			add: rightCol;
+			spacing: 16;
+			yourself);
 		add: buttonRow expand: false;
-		spacing: 8;
+		spacing: 6;
 		yourself
 ]
 
@@ -209,8 +213,8 @@ GbsSettingsPresenter >> yesNoRowLabel: labelString yes: yesButton no: noButton [
 GbsSettingsPresenter >> textRowLabel: labelString field: aField [
 	^ SpBoxLayout newLeftToRight
 		add: (self newLabel label: labelString) expand: false;
-		add: aField;
-		spacing: 8;
+		add: aField expand: false;
+		spacing: 6;
 		yourself
 ]
 
@@ -218,7 +222,7 @@ GbsSettingsPresenter >> textRowLabel: labelString field: aField [
 GbsSettingsPresenter >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GemBuilder Settings';
-		initialExtent: 980 @ 700
+		initialExtent: 860 @ 660
 ]
 
 { #category : 'actions' }
@@ -232,12 +236,12 @@ GbsSettingsPresenter >> chooseLibraryPath [
 GbsSettingsPresenter >> loadFromConfiguration [
 	configuration := configuration ifNil: [ GbsConfiguration current ].
 	libraryField text: (self stringValueAt: #libraryName default: '').
-	initialCacheSizeField text: (self stringValueAt: #clientMapCapacity default: 5003).
+	initialCacheSizeField text: (self formattedIntegerValueAt: #clientMapCapacity default: 5003).
 	initialDirtyPoolField text: (self stringValueAt: #initialDirtyPoolSize default: 157).
 	haltOnErrorField text: (self stringValueAt: #faultLevelLnk default: -1).
 	faultLevelRpcField text: (self stringValueAt: #faultLevelRpc default: 4).
 	delayInterruptField text: (self stringValueAt: #socketWaitTimeout default: 10).
-	traversalBufferField text: (self stringValueAt: #traversalBufferSize default: 250000).
+	traversalBufferField text: (self formattedIntegerValueAt: #traversalBufferSize default: 250000).
 	eventPollingField text: (self stringValueAt: #eventPollingFrequency default: 300).
 	eventPriorityField text: (self stringValueAt: #eventPriority default: 3).
 	self selectDrop: blockReplicationPolicyDrop value: (self stringValueAt: #blockReplicationPolicy default: 'replicate').
@@ -275,7 +279,17 @@ GbsSettingsPresenter >> stringValueAt: ivarName default: defaultValue [
 	| value |
 	configuration ifNil: [ ^ defaultValue asString ].
 	value := configuration valueAt: ivarName ifAbsent: defaultValue.
+	value ifNil: [ ^ defaultValue asString ].
 	^ value asString
+]
+
+{ #category : 'private' }
+GbsSettingsPresenter >> formattedIntegerValueAt: ivarName default: defaultInteger [
+	| raw integerValue |
+	raw := configuration ifNil: [ defaultInteger ] ifNotNil: [ configuration valueAt: ivarName ifAbsent: defaultInteger ].
+	raw ifNil: [ raw := defaultInteger ].
+	integerValue := [ raw asInteger ] on: Error do: [ defaultInteger ].
+	^ integerValue asStringWithCommas
 ]
 
 { #category : 'private' }
@@ -348,7 +362,9 @@ GbsSettingsPresenter >> saveSettings [
 
 { #category : 'private' }
 GbsSettingsPresenter >> integerFromField: aField default: anInteger [
-	^ [ aField text asString asInteger ] on: Error do: [ anInteger ]
+	| raw |
+	raw := aField text asString copyWithout: $,.
+	^ [ raw asInteger ] on: Error do: [ anInteger ]
 ]
 
 { #category : 'actions' }

@@ -57,6 +57,26 @@ GbsConfiguration class >> current: aConfiguration [
 	Smalltalk globals at: #GbsCurrentConfiguration put: aConfiguration
 ]
 
+{ #category : 'actions' }
+GbsConfiguration class >> generateClassConnectors [
+	| cfg |
+	cfg := self current.
+	cfg valueAt: #generateClassConnectors put: true.
+	(Smalltalk at: #GbsSessionManager ifAbsent: [ nil ])
+		ifNotNil: [ :mgr |
+			(mgr respondsTo: #initializeFastConnectors)
+				ifTrue: [ mgr initializeFastConnectors ] ].
+	^ true
+]
+
+{ #category : 'actions' }
+GbsConfiguration class >> removeInvalidConnectors [
+	| cfg |
+	cfg := self current.
+	cfg valueAt: #removeInvalidConnectors put: true.
+	^ true
+]
+
 { #category : 'initialization' }
 GbsConfiguration >> initializeDefaults [
 	libraryName ifNil: [ libraryName := '' ].

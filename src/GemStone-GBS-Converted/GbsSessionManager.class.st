@@ -87,6 +87,16 @@ GbsSessionManager class >> initializeFastConnectors [
 ]
 
 { #category : 'accessing' }
+GbsSessionManager class >> fastConnectorRegistry [
+	^ Smalltalk globals at: #GbsFastConnectorRegistry ifAbsent: [ Dictionary new ]
+]
+
+{ #category : 'accessing' }
+GbsSessionManager class >> fastConnectorRegistry: aDictionary [
+	Smalltalk globals at: #GbsFastConnectorRegistry put: aDictionary
+]
+
+{ #category : 'accessing' }
 GbsSessionManager >> fastConnectorRegistry [
     ^ fastConnectorRegistry
 ]
