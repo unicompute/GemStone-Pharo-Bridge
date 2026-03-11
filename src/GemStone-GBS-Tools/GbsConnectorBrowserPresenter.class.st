@@ -71,7 +71,7 @@ GbsConnectorBrowserPresenter >> connectPresenters [
 
 { #category : 'layout' }
 GbsConnectorBrowserPresenter >> defaultLayout [
-	| optionsLeft optionsCenter optionsRight optionsRow |
+	| optionsLeft optionsCenter optionsRight optionsRow topAndMiddle |
 	optionsLeft := SpBoxLayout newTopToBottom
 		add: verificationCheck expand: false;
 		add: removeInvalidCheck expand: false;
@@ -97,13 +97,17 @@ GbsConnectorBrowserPresenter >> defaultLayout [
 		add: optionsRight;
 		spacing: 24;
 		yourself.
+	topAndMiddle := SpPanedLayout newVertical
+		add: groupList;
+		add: connectorTable;
+		positionOfSlider: 18 percent;
+		yourself.
 
 	^ SpBoxLayout newTopToBottom
 		add: mainMenu expand: false;
-		add: groupList expand: false;
-		add: connectorTable;
+		add: topAndMiddle;
 		add: optionsRow expand: false;
-		spacing: 8;
+		spacing: 6;
 		yourself
 ]
 
@@ -111,7 +115,7 @@ GbsConnectorBrowserPresenter >> defaultLayout [
 GbsConnectorBrowserPresenter >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'Connector Browser';
-		initialExtent: 760 @ 560
+		initialExtent: 640 @ 560
 ]
 
 { #category : 'menus' }
@@ -160,11 +164,7 @@ GbsConnectorBrowserPresenter >> refreshGroups [
 	groups := OrderedCollection new.
 	groups add: 'Global connectors'.
 	groups add: self sessionGroupLabel.
-	groupList items: groups asArray.
-	(groupList selection selectedItem isNil and: [ groups isNotEmpty ]) ifTrue: [
-		(groupList respondsTo: #selectIndex:)
-			ifTrue: [ groupList selectIndex: 1 ]
-			ifFalse: [ (groupList respondsTo: #selectItem:) ifTrue: [ groupList selectItem: groups first ] ] ]
+	groupList items: groups asArray
 ]
 
 { #category : 'actions' }
