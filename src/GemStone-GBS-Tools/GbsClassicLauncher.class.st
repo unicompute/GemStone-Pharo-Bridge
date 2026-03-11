@@ -166,18 +166,45 @@ GbsClassicLauncher class >> generateClassConnectors [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> gsFileInOnCurrentSession [
-	| session path source |
+	| session ref source |
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
-	path := UIManager default request: 'Path to .st file to evaluate on GemStone:' initialAnswer: ''.
-	(path isNil or: [ path isEmpty ]) ifTrue: [ ^ self ].
+	ref := self selectFileInReference.
+	ref ifNil: [ ^ self ].
 	[
-		source := (FileSystem disk readOnlyFileNamed: path) contents.
+		source := ref contents.
 		session execute: source.
 		UIManager default inform: 'GS File in completed.'
 	] on: Error do: [ :ex |
 		UIManager default inform: 'GS File in failed: ', ex messageText
 	].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> selectFileInReference [
+	| presenter selected path |
+	presenter := Smalltalk at: #StOpenFilePresenter ifAbsent: [ nil ].
+	presenter ifNotNil: [
+		selected := [
+			| dlg result |
+			dlg := presenter new.
+			(dlg respondsTo: #title:) ifTrue: [ dlg title: 'Select GemStone file in script' ].
+			(dlg respondsTo: #extensions:named:)
+				ifTrue: [ dlg extensions: #( 'st' ) named: 'Smalltalk source (*.st)' ].
+			result := dlg openModal.
+			result
+		] on: Error do: [ nil ].
+		selected ifNotNil: [
+			(selected isCollection and: [ selected isEmpty not ])
+				ifTrue: [ ^ selected first asFileReference ].
+			(selected respondsTo: #asFileReference)
+				ifTrue: [ ^ selected asFileReference ] ] ].
+
+	path := UIManager default
+		request: 'Path to .st file to evaluate on GemStone:'
+		initialAnswer: ''.
+	(path isNil or: [ path isEmpty ]) ifTrue: [ ^ nil ].
+	^ path asFileReference
 ]
 
 { #category : 'menus' }

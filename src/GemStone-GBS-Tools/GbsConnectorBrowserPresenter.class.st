@@ -5,6 +5,7 @@ Class {
 		'session',
 		'mainMenu',
 		'groupList',
+		'groupItems',
 		'connectorTable',
 		'verificationCheck',
 		'removeInvalidCheck',
@@ -66,13 +67,12 @@ GbsConnectorBrowserPresenter >> connectPresenters [
 	removeInvalidCheck state: true.
 	noneRadio state: true.
 
-	self refreshAll.
-	self selectDefaultGroupAndRefresh
+	self refreshAll
 ]
 
 { #category : 'layout' }
 GbsConnectorBrowserPresenter >> defaultLayout [
-	| optionsLeft optionsCenter optionsRight optionsRow topAndMiddle |
+	| optionsLeft optionsCenter optionsRight optionsRow topSection |
 	optionsLeft := SpBoxLayout newTopToBottom
 		add: verificationCheck expand: false;
 		add: removeInvalidCheck expand: false;
@@ -98,17 +98,17 @@ GbsConnectorBrowserPresenter >> defaultLayout [
 		add: optionsRight;
 		spacing: 24;
 		yourself.
-	topAndMiddle := SpPanedLayout newVertical
+	topSection := SpBoxLayout newTopToBottom
 		add: groupList;
 		add: connectorTable;
-		positionOfSlider: 18 percent;
+		spacing: 4;
 		yourself.
 
 	^ SpBoxLayout newTopToBottom
+		spacing: 2;
 		add: mainMenu expand: false;
-		add: topAndMiddle;
+		add: topSection;
 		add: optionsRow expand: false;
-		spacing: 6;
 		yourself
 ]
 
@@ -157,27 +157,22 @@ GbsConnectorBrowserPresenter >> menuConnector [
 { #category : 'actions' }
 GbsConnectorBrowserPresenter >> refreshAll [
 	self refreshGroups.
-	self refreshConnectorsForGroup: groupList selection selectedItem
+	(groupItems isEmpty)
+		ifTrue: [ connectorTable items: #() ]
+		ifFalse: [
+			(groupList respondsTo: #selectIndex:)
+				ifTrue: [ groupList selectIndex: 1 ]
+				ifFalse: [ (groupList respondsTo: #selectItem:) ifTrue: [ groupList selectItem: groupItems first ] ].
+			self refreshConnectorsForGroup: groupItems first ]
 ]
 
 { #category : 'actions' }
 GbsConnectorBrowserPresenter >> refreshGroups [
-	| groups |
-	groups := OrderedCollection new.
-	groups add: 'Global connectors'.
-	groups add: self sessionGroupLabel.
-	groupList items: groups asArray
-]
-
-{ #category : 'actions' }
-GbsConnectorBrowserPresenter >> selectDefaultGroupAndRefresh [
-	| items |
-	items := groupList items ifNil: [ #() ].
-	items isEmpty ifTrue: [ ^ self ].
-	(groupList respondsTo: #selectIndex:)
-		ifTrue: [ groupList selectIndex: 1 ]
-		ifFalse: [ (groupList respondsTo: #selectItem:) ifTrue: [ groupList selectItem: items first ] ].
-	self refreshConnectorsForGroup: (items first)
+	groupItems := {
+		'Global connectors'.
+		self sessionGroupLabel
+	}.
+	groupList items: groupItems
 ]
 
 { #category : 'actions' }
