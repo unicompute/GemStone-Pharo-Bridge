@@ -198,8 +198,8 @@ GbsCreateUserPresenter >> defaultLayout [
 
 	^ SpBoxLayout newTopToBottom
 		add: mainMenu expand: false;
-		add: credentialsPane height: 106;
-		add: sideAndAuthPane height: 210;
+		add: credentialsPane height: 94;
+		add: sideAndAuthPane height: 186;
 		add: groupsPane;
 		add: groupsButtons expand: false;
 		add: actionRow expand: false;
