@@ -321,7 +321,7 @@ GbsUserListPresenter >> openUserInfoFallbackText: infoTextValue forUser: userNam
 
 { #category : 'private' }
 GbsUserListPresenter >> userInfoTextFor: userName [
-	| script info |
+	| script info creator map enabled privilegeText |
 	script := '
 	| users user strm |
 	strm := WriteStream on: String new.
@@ -353,7 +353,18 @@ GbsUserListPresenter >> userInfoTextFor: userName [
 				strm cr ] ] ].
 	strm contents'.
 	info := [ session evaluate: script ] on: Error do: [ :ex | 'Could not fetch user info: ', ex messageText ].
-	^ info ifNil: [ 'No information available.' ] ifNotNil: [ info asString ]
+	creator := GbsCreateUserPresenter new.
+	creator session: session.
+	map := [ creator fetchPrivilegesForUser: userName ] on: Error do: [ Dictionary new ].
+	enabled := ((map associations
+		select: [ :assoc | assoc value == true ])
+		collect: [ :assoc | assoc key asString ]) asSortedCollection.
+	privilegeText := enabled isEmpty
+		ifTrue: [ 'Privileges: <none>' ]
+		ifFalse: [
+			'Privileges: ', (String streamContents: [ :s |
+				enabled do: [ :each | s nextPutAll: each ] separatedBy: [ s nextPutAll: ', ' ] ]) ].
+	^ (info ifNil: [ 'No information available.' ] ifNotNil: [ info asString ]), String cr, privilegeText
 ]
 
 { #category : 'private' }

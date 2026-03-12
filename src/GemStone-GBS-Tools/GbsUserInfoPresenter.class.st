@@ -29,6 +29,7 @@ GbsUserInfoPresenter class >> openForUser: aUserName text: aString session: aSes
 		infoText: aString;
 		session: aSession;
 		open.
+	(presenter respondsTo: #refreshInfoText) ifTrue: [ presenter refreshInfoText ].
 	^ presenter
 ]
 
@@ -221,7 +222,25 @@ GbsUserInfoPresenter >> refreshInfoText [
 	strm contents'.
 	raw := [ session evaluate: script ] on: Error do: [ infoText ].
 	infoText := raw ifNil: [ infoText ] ifNotNil: [ raw asString ].
+	infoText := infoText, self privilegeSummaryText.
 	self updateInfoDisplay
+]
+
+{ #category : 'private' }
+GbsUserInfoPresenter >> privilegeSummaryText [
+	| creator map enabled |
+	session ifNil: [ ^ '' ].
+	creator := GbsCreateUserPresenter new.
+	creator session: session.
+	map := [ creator fetchPrivilegesForUser: userName ] on: Error do: [ Dictionary new ].
+	enabled := ((map associations
+		select: [ :assoc | assoc value == true ])
+		collect: [ :assoc | assoc key asString ]) asSortedCollection.
+	enabled isEmpty ifTrue: [ ^ String cr, 'Privileges: <none>' ].
+	^ String cr, 'Privileges: ', (String streamContents: [ :s |
+		enabled
+			do: [ :each | s nextPutAll: each ]
+			separatedBy: [ s nextPutAll: ', ' ] ])
 ]
 
 { #category : 'private' }

@@ -71,6 +71,7 @@ GbsConnectorBrowserPresenter >> connectPresenters [
 
 	self loadOptionsFromConfiguration.
 	self wireOptionChangeNotifications.
+	self wireRadioSelectionHandlers.
 
 	self refreshAll
 ]
@@ -472,6 +473,26 @@ GbsConnectorBrowserPresenter >> wireChangeNotificationOn: aPresenter [
 GbsConnectorBrowserPresenter >> optionSelectionChanged [
 	self saveOptionsToConfiguration.
 	self refreshConnectorsForCurrentGroup
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> wireRadioSelectionHandlers [
+	self wireRadio: connectedRadio selectBlock: [ self applyConnectionState: 'connected'. self optionSelectionChanged ].
+	self wireRadio: disconnectedRadio selectBlock: [ self applyConnectionState: 'disconnected'. self optionSelectionChanged ].
+	self wireRadio: updateStRadio selectBlock: [ self applyPostConnectAction: 'updateST'. self optionSelectionChanged ].
+	self wireRadio: updateGsRadio selectBlock: [ self applyPostConnectAction: 'updateGS'. self optionSelectionChanged ].
+	self wireRadio: forwarderRadio selectBlock: [ self applyPostConnectAction: 'forwarder'. self optionSelectionChanged ].
+	self wireRadio: clientForwarderRadio selectBlock: [ self applyPostConnectAction: 'clientForwarder'. self optionSelectionChanged ].
+	self wireRadio: noneRadio selectBlock: [ self applyPostConnectAction: 'none'. self optionSelectionChanged ]
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> wireRadio: aRadioPresenter selectBlock: aBlock [
+	aRadioPresenter ifNil: [ ^ self ].
+	(aRadioPresenter respondsTo: #whenActivatedDo:)
+		ifTrue: [ aRadioPresenter whenActivatedDo: aBlock ].
+	(aRadioPresenter respondsTo: #whenChangedDo:)
+		ifTrue: [ aRadioPresenter whenChangedDo: [ aRadioPresenter state == true ifTrue: [ aBlock value ] ] ]
 ]
 
 { #category : 'private' }

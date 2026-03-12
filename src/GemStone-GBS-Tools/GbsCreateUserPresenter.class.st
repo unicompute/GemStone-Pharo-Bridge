@@ -125,14 +125,12 @@ GbsCreateUserPresenter >> connectPresenters [
 
 { #category : 'layout' }
 GbsCreateUserPresenter >> defaultLayout [
-	| headerRow authPane sideButtons groupsPane groupsButtons groupLists newGroupRow actionRow |
-	headerRow := SpGridLayout new
-		add: 'User ID' atPoint: 1 @ 1;
-		add: userField atPoint: 2 @ 1;
-		add: 'Password' atPoint: 1 @ 2;
-		add: passwordField atPoint: 2 @ 2;
-		add: 'Confirm Password' atPoint: 1 @ 3;
-		add: confirmPasswordField atPoint: 2 @ 3;
+	| credentialsPane authPane sideButtons groupsPane groupsButtons groupLists newGroupRow actionRow |
+	credentialsPane := SpBoxLayout newTopToBottom
+		add: (self textRowLabel: 'User ID' field: userField) expand: false;
+		add: (self textRowLabel: 'Password' field: passwordField) expand: false;
+		add: (self textRowLabel: 'Confirm Password' field: confirmPasswordField) expand: false;
+		spacing: 4;
 		yourself.
 
 	authPane := SpBoxLayout newTopToBottom
@@ -190,7 +188,7 @@ GbsCreateUserPresenter >> defaultLayout [
 
 	^ SpBoxLayout newTopToBottom
 		add: mainMenu expand: false;
-		add: headerRow expand: false;
+		add: credentialsPane expand: false;
 		add: (SpBoxLayout newLeftToRight add: sideButtons; add: authPane; spacing: 12; yourself) expand: true;
 		add: groupsPane;
 		add: groupsButtons expand: false;
