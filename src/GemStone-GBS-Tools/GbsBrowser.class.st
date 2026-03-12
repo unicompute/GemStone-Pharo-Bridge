@@ -354,7 +354,11 @@ GbsBrowser >> selectClassNamed: aClassName classSide: classSideBoolean method: a
 			ifTrue: [ classesList items ]
 			ifFalse: [ #( ) ] ].
 	(clsItems includes: className) ifFalse: [ ^ false ].
-	(classesList respondsTo: #selectItem:) ifTrue: [ classesList selectItem: className ].
+	(classesList respondsTo: #selectItem:scrollToSelection:)
+		ifTrue: [ classesList selectItem: className scrollToSelection: true ]
+		ifFalse: [
+			(classesList respondsTo: #selectItem:)
+				ifTrue: [ classesList selectItem: className ] ].
 	self ensureClassVisibleNamed: className inItems: clsItems.
 	self focusClasses.
 	self classSelected: className.
@@ -372,16 +376,18 @@ GbsBrowser >> ensureClassVisibleNamed: className inItems: classItems [
 	| index |
 	index := classItems indexOf: className ifAbsent: [ 0 ].
 	index > 0 ifTrue: [
+		(classesList respondsTo: #scrollToIndex:)
+			ifTrue: [ [ classesList scrollToIndex: index ] on: Error do: [ ] ].
 		(classesList respondsTo: #selectIndex:)
 			ifTrue: [ [ classesList selectIndex: index ] on: Error do: [ ] ] ].
-	(classesList respondsTo: #scrollSelectionIntoView)
-		ifTrue: [ [ classesList scrollSelectionIntoView ] on: Error do: [ ] ].
 	(classesList respondsTo: #withAdapterDo:)
 		ifTrue: [
 			[ classesList withAdapterDo: [ :adapter |
 				| widget |
 				widget := [ adapter widget ] on: Error do: [ nil ].
 				widget ifNotNil: [
+					(widget respondsTo: #scrollToIndex:)
+						ifTrue: [ widget scrollToIndex: index ].
 					(widget respondsTo: #scrollSelectionIntoView)
 						ifTrue: [ widget scrollSelectionIntoView ] ] ] ]
 				on: Error
