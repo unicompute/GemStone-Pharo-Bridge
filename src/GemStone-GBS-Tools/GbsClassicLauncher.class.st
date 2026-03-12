@@ -404,7 +404,7 @@ GbsClassicLauncher class >> browseNamespaceOnCurrentSession [
 { #category : 'menus' }
 GbsClassicLauncher class >> browseReferencesOnCurrentSession [
 	| query |
-	query := UIManager default request: 'References to selector:' initialAnswer: ''.
+	query := UIManager default request: 'References to class or variable name:' initialAnswer: ''.
 	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
 	self openBrowserOnCurrentSessionDo: [ :browser |
 		(browser respondsTo: #queryMethodsForSelector:mode:)
@@ -928,7 +928,7 @@ GbsClassicLauncher >> browseMethodsWithSubstring [
 { #category : 'actions' }
 GbsClassicLauncher >> browseReferences [
 	| browser query |
-	query := UIManager default request: 'References to selector:' initialAnswer: ''.
+	query := UIManager default request: 'References to class or variable name:' initialAnswer: ''.
 	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ false ].
 	browser := self openBrowserForQuery.
 	browser ifNil: [ ^ false ].

@@ -743,7 +743,7 @@ GbsBrowser >> querySenders [
 
 { #category : 'actions' }
 GbsBrowser >> queryReferences [
-	^ self queryMethodsForSelectorPrompt: 'References to selector:' mode: 'references'
+	^ self queryMethodsForSelectorPrompt: 'References to class or variable name:' mode: 'references'
 ]
 
 { #category : 'private' }
@@ -841,19 +841,28 @@ GbsBrowser >> dictionaryNameContainingClassNamed: className [
 
 { #category : 'private' }
 GbsBrowser >> queryServerMethodsForSelector: selectorName mode: modeString [
-	| escapedSelector selectedClassName escapedClass script raw selectorExpr classFilterExpr |
+	| escapedSelector selectedClassName escapedClass escapedToken script raw selectorExpr classFilterExpr |
 	escapedSelector := selectorName copyReplaceAll: '''' with: ''''''.
+	escapedToken := escapedSelector.
 	selectedClassName := self selectedClassName ifNil: [ '' ].
 	escapedClass := selectedClassName copyReplaceAll: '''' with: ''''''.
 	selectorExpr := (modeString = 'implementors' or: [ modeString = 'hierarchyImplementors' ])
 		ifTrue: [ 'sels := (cls includesSelector: sel) ifTrue: [ Array with: sel ] ifFalse: [ #() ]' ]
-		ifFalse: [ 'sels := [ cls whichSelectorsReferTo: sel ] on: Error do: [ #() ]' ].
+		ifFalse: [
+			'sels := OrderedCollection new.
+			[ cls selectors do: [ :candidate |
+				| src |
+				src := [ (cls compiledMethodAt: candidate) sourceString ] on: Error do: [ '''' ].
+				(src notNil and: [ src asString includesSubstring: token ]) ifTrue: [ sels add: candidate ] ] ]
+				on: Error
+				do: [ ]' ].
 	classFilterExpr := (modeString = 'hierarchySenders' or: [ modeString = 'hierarchyImplementors' ])
 		ifTrue: [ '((rootClass notNil) and: [ ((cls withAllSuperclasses includes: rootClass) or: [ rootClass withAllSuperclasses includes: cls ]) not ]) ifTrue: [ sels := #() ]' ]
 		ifFalse: [ '' ].
 	script := '[
-		| sel classes stream rootClass |
+		| sel token classes stream rootClass |
 		sel := #''', escapedSelector, '''.
+		token := ''', escapedToken, '''.
 		stream := WriteStream on: String new.
 		classes := IdentitySet new.
 		rootClass := ', (selectedClassName isEmpty
