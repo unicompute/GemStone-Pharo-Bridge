@@ -885,10 +885,15 @@ GbsClassicLauncher >> openSystemBrowser [
 
 { #category : 'actions' }
 GbsClassicLauncher >> browseImplementors [
-	| browser |
+	| browser query |
+	query := UIManager default request: 'Implementors of selector:' initialAnswer: ''.
+	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ false ].
 	browser := self openBrowserForQuery.
 	browser ifNil: [ ^ false ].
-	^ [ browser queryImplementors ] on: Error do: [ false ]
+	^ [ 
+		(browser respondsTo: #queryMethodsForSelector:mode:)
+			ifTrue: [ browser queryMethodsForSelector: query mode: 'implementors' ]
+			ifFalse: [ browser queryImplementors ] ] on: Error do: [ false ]
 ]
 
 { #category : 'actions' }
@@ -901,18 +906,28 @@ GbsClassicLauncher >> browseMethodsWithSubstring [
 
 { #category : 'actions' }
 GbsClassicLauncher >> browseReferences [
-	| browser |
+	| browser query |
+	query := UIManager default request: 'References to selector:' initialAnswer: ''.
+	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ false ].
 	browser := self openBrowserForQuery.
 	browser ifNil: [ ^ false ].
-	^ [ browser queryReferences ] on: Error do: [ false ]
+	^ [ 
+		(browser respondsTo: #queryMethodsForSelector:mode:)
+			ifTrue: [ browser queryMethodsForSelector: query mode: 'references' ]
+			ifFalse: [ browser queryReferences ] ] on: Error do: [ false ]
 ]
 
 { #category : 'actions' }
 GbsClassicLauncher >> browseSenders [
-	| browser |
+	| browser query |
+	query := UIManager default request: 'Senders of selector:' initialAnswer: ''.
+	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ false ].
 	browser := self openBrowserForQuery.
 	browser ifNil: [ ^ false ].
-	^ [ browser querySenders ] on: Error do: [ false ]
+	^ [ 
+		(browser respondsTo: #queryMethodsForSelector:mode:)
+			ifTrue: [ browser queryMethodsForSelector: query mode: 'senders' ]
+			ifFalse: [ browser querySenders ] ] on: Error do: [ false ]
 ]
 
 { #category : 'private' }

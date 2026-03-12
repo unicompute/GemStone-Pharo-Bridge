@@ -751,9 +751,15 @@ GbsBrowser >> queryMethodsForSelectorPrompt: prompt mode: modeString [
 	| selectorName references |
 	selectorName := self uiRequest: prompt initialAnswer: ''.
 	(selectorName isNil or: [ selectorName isEmpty ]) ifTrue: [ ^ false ].
-	selectorName := self normalizeSelectorQuery: selectorName.
-	selectorName isEmpty ifTrue: [ ^ false ].
-	references := self queryServerMethodsForSelector: selectorName trimBoth mode: modeString.
+	^ self queryMethodsForSelector: selectorName mode: modeString
+]
+
+{ #category : 'actions' }
+GbsBrowser >> queryMethodsForSelector: selectorName mode: modeString [
+	| normalized references |
+	normalized := self normalizeSelectorQuery: selectorName.
+	normalized isEmpty ifTrue: [ ^ false ].
+	references := self queryServerMethodsForSelector: normalized trimBoth mode: modeString.
 	references isEmpty ifTrue: [ ^ self informNotImplemented: 'No matches found.' ].
 	^ self openQueryResults: references
 ]
