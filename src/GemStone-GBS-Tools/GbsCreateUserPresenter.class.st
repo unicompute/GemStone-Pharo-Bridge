@@ -152,7 +152,7 @@ GbsCreateUserPresenter >> defaultLayout [
 
 	sideAndAuthPane := SpBoxLayout newLeftToRight
 		add: sideButtons expand: false;
-		add: authPane expand: false;
+		add: authPane;
 		spacing: 14;
 		yourself.
 
@@ -198,11 +198,11 @@ GbsCreateUserPresenter >> defaultLayout [
 
 	^ SpBoxLayout newTopToBottom
 		add: mainMenu expand: false;
-		add: (self centeredPane: credentialsPane) expand: false;
-		add: (self centeredPane: sideAndAuthPane) expand: false;
-		add: (self centeredPane: groupsPane) expand: true;
-		add: (self centeredPane: groupsButtons) expand: false;
-		add: (self centeredPane: actionRow) expand: false;
+		add: credentialsPane expand: false;
+		add: sideAndAuthPane expand: false;
+		add: groupsPane;
+		add: groupsButtons expand: false;
+		add: actionRow expand: false;
 		spacing: 10;
 		yourself
 ]
@@ -216,20 +216,11 @@ GbsCreateUserPresenter >> textRowLabel: labelString field: aField [
 		yourself
 ]
 
-{ #category : 'layout' }
-GbsCreateUserPresenter >> centeredPane: aPaneLayout [
-	^ SpBoxLayout newLeftToRight
-		add: (self newLabel label: '') expand: true;
-		add: aPaneLayout expand: false;
-		add: (self newLabel label: '') expand: true;
-		yourself
-]
-
 { #category : 'initialization' }
 GbsCreateUserPresenter >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GemStone User';
-		initialExtent: 760 @ 700
+		initialExtent: 960 @ 760
 ]
 
 { #category : 'actions' }
