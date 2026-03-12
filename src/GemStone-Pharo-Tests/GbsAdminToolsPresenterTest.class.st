@@ -576,7 +576,7 @@ GbsAdminToolsPresenterTest >> testConnectorBrowserAppliesDifferentSavedStatePerC
 	fwd state: false.
 	cfwd state: false.
 	none state: false.
-	connectorBrowserPresenter saveSettingsFromOptionStateForSelectedConnector.
+	connectorBrowserPresenter saveSettingsFromOptionStateForSelectedConnectors.
 
 	fakeTable selectedItem: rowB.
 	connected state: true.
@@ -586,7 +586,7 @@ GbsAdminToolsPresenterTest >> testConnectorBrowserAppliesDifferentSavedStatePerC
 	fwd state: false.
 	cfwd state: false.
 	none state: true.
-	connectorBrowserPresenter saveSettingsFromOptionStateForSelectedConnector.
+	connectorBrowserPresenter saveSettingsFromOptionStateForSelectedConnectors.
 
 	connectorBrowserPresenter applySettingsForConnectorRow: rowA.
 	self deny: connected state.

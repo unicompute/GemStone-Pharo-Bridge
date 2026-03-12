@@ -3,10 +3,11 @@ Class {
 	#superclass : 'TestCase',
 	#instVars : [
 		'previousFastRegistry',
-		'previousConnectionRegistry',
-		'previousInvalidActionRegistry',
-		'previousConnectorObjectRegistry',
-		'previousConnectorClassMappingRegistry'
+	'previousConnectionRegistry',
+	'previousInvalidActionRegistry',
+	'previousPostConnectActionRegistry',
+	'previousConnectorObjectRegistry',
+	'previousConnectorClassMappingRegistry'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -18,6 +19,7 @@ GbsSessionManagerTest >> setUp [
 	previousFastRegistry := GbsSessionManager fastConnectorRegistry copy.
 	previousConnectionRegistry := (Smalltalk globals at: #GbsConnectorConnectionRegistry ifAbsent: [ Dictionary new ]) copy.
 	previousInvalidActionRegistry := (Smalltalk globals at: #GbsConnectorInvalidActionRegistry ifAbsent: [ Dictionary new ]) copy.
+	previousPostConnectActionRegistry := (Smalltalk globals at: #GbsConnectorPostConnectActionRegistry ifAbsent: [ Dictionary new ]) copy.
 	previousConnectorObjectRegistry := (Smalltalk globals at: #GbsConnectorObjectRegistry ifAbsent: [ Dictionary new ]) copy.
 	previousConnectorClassMappingRegistry := (Smalltalk globals at: #GbsConnectorClassMappingRegistry ifAbsent: [ Dictionary new ]) copy
 ]
@@ -27,6 +29,7 @@ GbsSessionManagerTest >> tearDown [
 	GbsSessionManager fastConnectorRegistry: previousFastRegistry.
 	Smalltalk globals at: #GbsConnectorConnectionRegistry put: previousConnectionRegistry.
 	Smalltalk globals at: #GbsConnectorInvalidActionRegistry put: previousInvalidActionRegistry.
+	Smalltalk globals at: #GbsConnectorPostConnectActionRegistry put: previousPostConnectActionRegistry.
 	Smalltalk globals at: #GbsConnectorObjectRegistry put: previousConnectorObjectRegistry.
 	Smalltalk globals at: #GbsConnectorClassMappingRegistry put: previousConnectorClassMappingRegistry.
 	super tearDown
@@ -238,6 +241,25 @@ GbsSessionManagerTest >> testSetInvalidPostConnectActionsUpdatesWrapper [
 		server: 'ByteArray'.
 	self assert: (wrapper invalidPostConnectActions includes: 'updategs').
 	self assert: (wrapper invalidPostConnectActions includes: 'forwarder')
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testSetPostConnectActionPersistsAndSurvivesConnectorRebuild [
+	| wrapper |
+	GbsSessionManager
+		setPostConnectAction: 'forwarder'
+		forConnectorClient: 'ByteArray'
+		server: 'ByteArray'.
+
+	self
+		assert: (GbsSessionManager
+			postConnectActionForConnectorClient: 'ByteArray'
+			server: 'ByteArray')
+		equals: 'forwarder'.
+
+	GbsSessionManager rebuildConnectorObjectRegistry.
+	wrapper := GbsSessionManager connectorObjectForClient: 'ByteArray' server: 'ByteArray'.
+	self assert: wrapper postConnectAction equals: 'forwarder'
 ]
 
 { #category : 'tests' }

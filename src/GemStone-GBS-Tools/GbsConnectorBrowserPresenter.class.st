@@ -788,7 +788,7 @@ GbsConnectorBrowserPresenter >> applySettingsForSelectedConnector [
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> applySettingsForConnectorRow: aRow [
-	| key map rowSettings |
+	| key map rowSettings persistedAction |
 	key := self connectorSettingKeyForRow: aRow.
 	key ifNil: [
 		self applyConnectionState: self defaultConnectionState.
@@ -798,9 +798,15 @@ GbsConnectorBrowserPresenter >> applySettingsForConnectorRow: aRow [
 	self applyConnectionStateForConnectorRow: aRow.
 	map := self connectorSettingsMap.
 	rowSettings := map at: key ifAbsent: [ nil ].
-	self applyPostConnectAction: ((rowSettings isDictionary)
-		ifTrue: [ rowSettings at: #postConnectAction ifAbsent: [ self defaultPostConnectAction ] ]
-		ifFalse: [ self defaultPostConnectAction ]).
+	persistedAction := self
+		managerPerform: #postConnectActionForConnectorClient:server:
+		withArguments: { (self rowClientName: aRow) asString. (self rowServerName: aRow) asString }
+		ifUnavailable: [ nil ].
+	(persistedAction isNil or: [ persistedAction asString trimBoth isEmpty ]) ifTrue: [
+		persistedAction := (rowSettings isDictionary)
+			ifTrue: [ rowSettings at: #postConnectAction ifAbsent: [ self defaultPostConnectAction ] ]
+			ifFalse: [ self defaultPostConnectAction ] ].
+	self applyPostConnectAction: persistedAction.
 	self updatePostConnectActionEnablementForRow: aRow
 ]
 
@@ -821,6 +827,12 @@ GbsConnectorBrowserPresenter >> saveSettingsFromOptionStateForSelectedConnectors
 ]
 
 { #category : 'private' }
+GbsConnectorBrowserPresenter >> saveSettingsFromOptionStateForSelectedConnector [
+	"Backward-compatible delegate"
+	^ self saveSettingsFromOptionStateForSelectedConnectors
+]
+
+{ #category : 'private' }
 GbsConnectorBrowserPresenter >> postConnectActionChangedTo: actionString [
 	self applyPostConnectAction: actionString.
 	self applyPostConnectActionToSelectedConnectors: actionString.
@@ -835,6 +847,10 @@ GbsConnectorBrowserPresenter >> applyPostConnectActionToSelectedConnectors: acti
 		| clientName serverName connectorObject |
 		clientName := self rowClientName: row.
 		serverName := self rowServerName: row.
+		self
+			managerPerform: #setPostConnectAction:forConnectorClient:server:
+			withArguments: { actionString. clientName asString. serverName asString }
+			ifUnavailable: [ nil ].
 		connectorObject := self
 			managerPerform: #connectorObjectForClient:server:
 			withArguments: { clientName asString. serverName asString }

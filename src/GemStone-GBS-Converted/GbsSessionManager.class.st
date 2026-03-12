@@ -169,6 +169,7 @@ GbsSessionManager class >> removeConnectorClient: clientClassName server: server
 		registry removeKey: c ifAbsent: [ ].
 		registry removeKey: s ifAbsent: [ ] ].
 	self fastConnectorRegistry: registry.
+	self clearPostConnectActionForConnectorClient: c server: s.
 	self removeConnectorObjectForClient: c server: s
 ]
 
@@ -249,6 +250,44 @@ GbsSessionManager class >> setInvalidPostConnectActions: aCollection forConnecto
 	wrapper := self connectorObjectForClient: clientClassName server: serverClassName.
 	(wrapper notNil and: [ wrapper respondsTo: #invalidPostConnectActions: ])
 		ifTrue: [ wrapper invalidPostConnectActions: values ]
+]
+
+{ #category : 'connector state' }
+GbsSessionManager class >> postConnectActionRegistry [
+	^ Smalltalk globals
+		at: #GbsConnectorPostConnectActionRegistry
+		ifAbsentPut: [ Dictionary new ]
+]
+
+{ #category : 'connector state' }
+GbsSessionManager class >> postConnectActionForConnectorClient: clientClassName server: serverClassName [
+	| key registry |
+	key := self connectorObjectKeyForClient: clientClassName server: serverClassName.
+	registry := self postConnectActionRegistry.
+	^ registry at: key ifAbsent: [ 'none' ]
+]
+
+{ #category : 'connector state' }
+GbsSessionManager class >> setPostConnectAction: actionString forConnectorClient: clientClassName server: serverClassName [
+	| key registry normalized wrapper |
+	key := self connectorObjectKeyForClient: clientClassName server: serverClassName.
+	normalized := actionString ifNil: [ 'none' ] ifNotNil: [ actionString asString ].
+	registry := self postConnectActionRegistry copy.
+	registry at: key put: normalized.
+	Smalltalk globals at: #GbsConnectorPostConnectActionRegistry put: registry.
+	wrapper := self connectorObjectForClient: clientClassName server: serverClassName.
+	(wrapper notNil and: [ wrapper respondsTo: #postConnectAction: ])
+		ifTrue: [ wrapper postConnectAction: normalized ].
+	^ normalized
+]
+
+{ #category : 'connector state' }
+GbsSessionManager class >> clearPostConnectActionForConnectorClient: clientClassName server: serverClassName [
+	| key registry |
+	key := self connectorObjectKeyForClient: clientClassName server: serverClassName.
+	registry := self postConnectActionRegistry copy.
+	registry removeKey: key ifAbsent: [ ].
+	Smalltalk globals at: #GbsConnectorPostConnectActionRegistry put: registry
 ]
 
 { #category : 'connector state' }
@@ -410,6 +449,10 @@ GbsSessionManager class >> ensureConnectorObjectForClient: clientClassName serve
 		(connector respondsTo: #gsName:) ifTrue: [ connector gsName: serverClassName ].
 		(connector respondsTo: #connectorClientName:) ifTrue: [ connector connectorClientName: clientClassName ].
 		(connector respondsTo: #connectorServerName:) ifTrue: [ connector connectorServerName: serverClassName ].
+		(connector respondsTo: #postConnectAction:) ifTrue: [
+			connector postConnectAction: (self
+				postConnectActionForConnectorClient: clientClassName
+				server: serverClassName) ].
 		registry at: key put: connector.
 		Smalltalk globals at: #GbsConnectorObjectRegistry put: registry ].
 	^ connector
@@ -442,6 +485,10 @@ GbsSessionManager class >> rebuildConnectorObjectRegistry [
 		(connector respondsTo: #gsName:) ifTrue: [ connector gsName: serverName ].
 		(connector respondsTo: #connectorClientName:) ifTrue: [ connector connectorClientName: clientName ].
 		(connector respondsTo: #connectorServerName:) ifTrue: [ connector connectorServerName: serverName ].
+		(connector respondsTo: #postConnectAction:) ifTrue: [
+			connector postConnectAction: (self
+				postConnectActionForConnectorClient: clientName
+				server: serverName) ].
 		registry at: key put: connector ].
 	Smalltalk globals at: #GbsConnectorObjectRegistry put: registry
 ]
