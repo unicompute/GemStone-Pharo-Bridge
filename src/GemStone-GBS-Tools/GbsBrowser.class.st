@@ -325,32 +325,44 @@ GbsBrowser >> protocolSelected: protocolName [
 { #category : 'actions' }
 GbsBrowser >> selectDictionaryNamed: aDictionaryName [
 	| dicts |
-	(aDictionaryName isString and: [ aDictionaryName isEmpty not ]) ifFalse: [ ^ self ].
+	(aDictionaryName isString and: [ aDictionaryName isEmpty not ]) ifFalse: [ ^ false ].
 	dicts := (dictionariesList respondsTo: #items)
 		ifTrue: [ dictionariesList items ]
 		ifFalse: [ #( ) ].
 	(dicts includes: aDictionaryName) ifTrue: [
 		(dictionariesList respondsTo: #selectItem:) ifTrue: [ dictionariesList selectItem: aDictionaryName ].
-		self dictionarySelected: aDictionaryName
-	]
+		self dictionarySelected: aDictionaryName.
+		^ true
+	].
+	^ false
 ]
 
 { #category : 'actions' }
 GbsBrowser >> selectClassNamed: aClassName classSide: classSideBoolean method: aSelectorString [
-	| clsItems chosenProtocol |
-	(aClassName isString and: [ aClassName isEmpty not ]) ifFalse: [ ^ self ].
+	| clsItems chosenProtocol className dictName |
+	(aClassName isString and: [ aClassName isEmpty not ]) ifFalse: [ ^ false ].
+	className := aClassName trimBoth.
 	(metaCheckbox respondsTo: #state:) ifTrue: [ metaCheckbox state: classSideBoolean ].
 	clsItems := (classesList respondsTo: #items)
 		ifTrue: [ classesList items ]
 		ifFalse: [ #( ) ].
-	(clsItems includes: aClassName) ifFalse: [ ^ self ].
-	(classesList respondsTo: #selectItem:) ifTrue: [ classesList selectItem: aClassName ].
-	self classSelected: aClassName.
+	(clsItems includes: className) ifFalse: [
+		dictName := self dictionaryNameContainingClassNamed: className.
+		(dictName isString and: [ dictName isEmpty not ])
+			ifTrue: [ self selectDictionaryNamed: dictName ].
+		clsItems := (classesList respondsTo: #items)
+			ifTrue: [ classesList items ]
+			ifFalse: [ #( ) ] ].
+	(clsItems includes: className) ifFalse: [ ^ false ].
+	(classesList respondsTo: #selectItem:) ifTrue: [ classesList selectItem: className ].
+	self classSelected: className.
 	chosenProtocol := '-- all --'.
 	(protocolsList respondsTo: #selectItem:) ifTrue: [ protocolsList selectItem: chosenProtocol ].
 	self protocolSelected: chosenProtocol.
-	(methodsList respondsTo: #selectItem:) ifTrue: [ methodsList selectItem: aSelectorString ].
-	self methodSelected: aSelectorString
+	(aSelectorString isString and: [ aSelectorString isEmpty not ]) ifTrue: [
+		(methodsList respondsTo: #selectItem:) ifTrue: [ methodsList selectItem: aSelectorString ].
+		self methodSelected: aSelectorString ].
+	^ true
 ]
 
 { #category : 'private' }
@@ -584,7 +596,9 @@ GbsBrowser >> findClass [
 	| name |
 	name := UIManager default request: 'Class name:' initialAnswer: ''.
 	(name isNil or: [ name isEmpty ]) ifTrue: [ ^ false ].
-	^ self selectClassNamed: name trimBoth classSide: false method: nil
+	^ (self selectClassNamed: name trimBoth classSide: false method: nil)
+		ifTrue: [ self browseClass ]
+		ifFalse: [ false ]
 ]
 
 { #category : 'actions' }
@@ -706,9 +720,42 @@ GbsBrowser >> queryMethodsForSelectorPrompt: prompt mode: modeString [
 	| selectorName references |
 	selectorName := self uiRequest: prompt initialAnswer: ''.
 	(selectorName isNil or: [ selectorName isEmpty ]) ifTrue: [ ^ false ].
+	selectorName := self normalizeSelectorQuery: selectorName.
+	selectorName isEmpty ifTrue: [ ^ false ].
 	references := self queryServerMethodsForSelector: selectorName trimBoth mode: modeString.
 	references isEmpty ifTrue: [ ^ self informNotImplemented: 'No matches found.' ].
 	^ self openQueryResults: references
+]
+
+{ #category : 'private' }
+GbsBrowser >> normalizeSelectorQuery: rawInput [
+	| text idx |
+	text := rawInput asString trimBoth.
+	(text includesSubstring: '>>') ifTrue: [
+		idx := text findString: '>>' startingAt: 1.
+		text := (text copyFrom: idx + 2 to: text size) trimBoth ].
+	(text beginsWith: '#') ifTrue: [ text := (text allButFirst) trimBoth ].
+	((text beginsWith: '''') and: [ text endsWith: '''' ]) ifTrue: [
+		text := (text copyFrom: 2 to: text size - 1) trimBoth ].
+	^ text
+]
+
+{ #category : 'private' }
+GbsBrowser >> dictionaryNameContainingClassNamed: className [
+	| escapedName script raw |
+	escapedName := className copyReplaceAll: '''' with: ''''''.
+	script := '[
+		| found |
+		found := nil.
+		System myUserProfile symbolList do: [ :dict |
+			(found isNil and: [ dict includesKey: #', escapedName, ' ]) ifTrue: [
+				| value |
+				value := dict at: #', escapedName, '.
+				(value isBehavior) ifTrue: [ found := dict name asString ] ] ].
+		found ifNil: [ '''' ] ifNotNil: [ found ]
+	] value'.
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	^ raw ifNil: [ '' ] ifNotNil: [ raw asString trimBoth ]
 ]
 
 { #category : 'private' }
