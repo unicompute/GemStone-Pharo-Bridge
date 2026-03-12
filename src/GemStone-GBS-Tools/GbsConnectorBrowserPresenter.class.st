@@ -160,7 +160,7 @@ GbsConnectorBrowserPresenter >> defaultLayout [
 GbsConnectorBrowserPresenter >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'Connector Browser';
-		initialExtent: 640 @ 560
+		initialExtent: 640 @ 620
 ]
 
 { #category : 'menus' }
@@ -255,8 +255,15 @@ GbsConnectorBrowserPresenter >> connectorRowsForGroup: aGroupLabel [
 	| list |
 	list := self fastConnectorPairs.
 	list := self filteredConnectorPairs: list forGroupLabel: aGroupLabel.
-	^ list collect: [ :pair |
-		{ 'Fast'. (pair at: 1 ifAbsent: [ '' ]) asString. (pair at: 2 ifAbsent: [ '' ]) asString } ]
+	^ (list collect: [ :pair |
+		{ 'Fast'. (pair at: 1 ifAbsent: [ '' ]) asString. (pair at: 2 ifAbsent: [ '' ]) asString } ])
+		asSortedCollection: [ :a :b |
+			| aClient bClient |
+			aClient := (a at: 2 ifAbsent: [ '' ]) asLowercase.
+			bClient := (b at: 2 ifAbsent: [ '' ]) asLowercase.
+			aClient = bClient
+				ifTrue: [ (a at: 3 ifAbsent: [ '' ]) asLowercase <= (b at: 3 ifAbsent: [ '' ]) asLowercase ]
+				ifFalse: [ aClient <= bClient ] ]
 ]
 
 { #category : 'private' }
@@ -456,7 +463,7 @@ GbsConnectorBrowserPresenter >> loadOptionsFromConfiguration [
 	verificationCheck state: (self asBooleanResult: (cfg valueAt: #connectVerification ifAbsent: true) default: true).
 	removeInvalidCheck state: (self asBooleanResult: (cfg valueAt: #removeInvalidConnectors ifAbsent: true) default: true).
 	self applyConnectionState: (cfg valueAt: #connectorConnectionState ifAbsent: 'connected').
-	self applyPostConnectAction: (cfg valueAt: #postConnectAction ifAbsent: 'none').
+	self applyPostConnectAction: (cfg valueAt: #postConnectAction ifAbsent: [ cfg valueAt: #postConnectAction put: 'none'. 'none' ]).
 	self applySettingsForSelectedConnector
 ]
 
