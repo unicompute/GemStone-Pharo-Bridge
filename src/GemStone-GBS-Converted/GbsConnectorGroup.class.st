@@ -119,11 +119,13 @@ GbsConnectorGroup >> removeGlobalConnector: aConnector [
 { #category : 'private' }
 GbsConnectorGroup >> sessionParameters [
 	| params current |
+	((session respondsTo: #username) and: [ session respondsTo: #gemStoneName ]) ifTrue: [ ^ session ].
 	params := (session respondsTo: #parameters)
 		ifTrue: [ [ session parameters ] on: Error do: [ nil ] ]
 		ifFalse: [ nil ].
 	params ifNotNil: [ ^ params ].
 	current := GbsSessionParameters currentSession.
+	((current respondsTo: #username) and: [ current respondsTo: #gemStoneName ]) ifTrue: [ ^ current ].
 	(current respondsTo: #parameters) ifFalse: [ ^ nil ].
 	^ [ current parameters ] on: Error do: [ nil ]
 ]
