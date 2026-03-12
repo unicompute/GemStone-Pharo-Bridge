@@ -138,15 +138,15 @@ GbsCreateUserPresenter >> defaultLayout [
 		add: gemStoneAuthRadio expand: false;
 		add: unixAuthRadio expand: false;
 		add: ldapAuthRadio expand: false;
-		add: (self textRowLabel: 'Base DN' field: baseDnField) expand: false;
-		add: (self textRowLabel: 'Filter DN' field: filterDnField) expand: false;
+		add: (self textRowLabel: 'Base DN' field: baseDnField fieldWidth: self authFieldWidth) expand: false;
+		add: (self textRowLabel: 'Filter DN' field: filterDnField fieldWidth: self authFieldWidth) expand: false;
 		spacing: 6;
 		yourself.
 
 	sideButtons := SpBoxLayout newTopToBottom
-		add: privilegesButton expand: false;
-		add: symbolListButton expand: false;
-		add: securityPoliciesButton expand: false;
+		add: privilegesButton width: self sideButtonWidth;
+		add: symbolListButton width: self sideButtonWidth;
+		add: securityPoliciesButton width: self sideButtonWidth;
 		spacing: 10;
 		yourself.
 
@@ -158,16 +158,16 @@ GbsCreateUserPresenter >> defaultLayout [
 
 	transferButtons := SpBoxLayout newTopToBottom
 		add: (self newLabel label: '') expand: true;
-		add: addGroupButton expand: false;
-		add: removeGroupButton expand: false;
+		add: addGroupButton width: self transferButtonWidth;
+		add: removeGroupButton width: self transferButtonWidth;
 		add: (self newLabel label: '') expand: true;
 		spacing: 10;
 		yourself.
 
 	groupLists := SpBoxLayout newLeftToRight
-		add: memberGroupsList;
+		add: memberGroupsList width: self groupListWidth;
 		add: transferButtons expand: false;
-		add: availableGroupsList;
+		add: availableGroupsList width: self groupListWidth;
 		spacing: 10;
 		yourself.
 
@@ -178,9 +178,9 @@ GbsCreateUserPresenter >> defaultLayout [
 		yourself.
 
 	newGroupRow := SpBoxLayout newLeftToRight
-		add: (self newLabel label: 'Name') expand: false;
-		add: newGroupField;
-		add: createGroupButton expand: false;
+		add: (self newLabel label: 'Name') width: self rowLabelWidth;
+		add: newGroupField width: self newGroupFieldWidth;
+		add: createGroupButton width: self createButtonWidth;
 		spacing: 8;
 		yourself.
 	groupsButtons := SpBoxLayout newTopToBottom
@@ -190,9 +190,9 @@ GbsCreateUserPresenter >> defaultLayout [
 		yourself.
 
 	actionRow := SpBoxLayout newLeftToRight
-		add: saveButton;
-		add: saveAndCommitButton;
-		add: closeButton;
+		add: saveButton width: self actionButtonWidth;
+		add: saveAndCommitButton width: self actionButtonWidth;
+		add: closeButton width: self actionButtonWidth;
 		spacing: 10;
 		yourself.
 
@@ -209,11 +209,61 @@ GbsCreateUserPresenter >> defaultLayout [
 
 { #category : 'layout' }
 GbsCreateUserPresenter >> textRowLabel: labelString field: aField [
+	^ self textRowLabel: labelString field: aField fieldWidth: self textFieldWidth
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> textRowLabel: labelString field: aField fieldWidth: widthValue [
 	^ SpBoxLayout newLeftToRight
-		add: (self newLabel label: labelString) expand: false;
-		add: aField;
+		add: (self newLabel label: labelString) width: self rowLabelWidth;
+		add: aField width: widthValue;
 		spacing: 6;
 		yourself
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> rowLabelWidth [
+	^ 130
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> textFieldWidth [
+	^ 640
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> sideButtonWidth [
+	^ 280
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> groupListWidth [
+	^ 380
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> transferButtonWidth [
+	^ 90
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> newGroupFieldWidth [
+	^ 640
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> createButtonWidth [
+	^ 120
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> actionButtonWidth [
+	^ 180
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> authFieldWidth [
+	^ 250
 ]
 
 { #category : 'initialization' }
