@@ -582,7 +582,7 @@ GbsConnectorBrowserPresenter >> setSelectedConnectorClassMapping [
 	clientName := self rowClientName: row.
 	serverName := self rowServerName: row.
 	mgr := self managerClass.
-	(mgr isNil or: [ mgr respondsTo: #setConnectorClass:forClient:server: not ]) ifTrue: [
+	(mgr isNil or: [ (mgr respondsTo: #setConnectorClass:forClient:server:) not ]) ifTrue: [
 		^ self inform: 'Connector class mapping is not available in this image.' ].
 	choices := (mgr respondsTo: #connectorClassChoices)
 		ifTrue: [ mgr connectorClassChoices ]
@@ -609,7 +609,7 @@ GbsConnectorBrowserPresenter >> clearSelectedConnectorClassMapping [
 	clientName := self rowClientName: row.
 	serverName := self rowServerName: row.
 	mgr := self managerClass.
-	(mgr isNil or: [ mgr respondsTo: #clearConnectorClassForClient:server: not ]) ifTrue: [
+	(mgr isNil or: [ (mgr respondsTo: #clearConnectorClassForClient:server:) not ]) ifTrue: [
 		^ self inform: 'Connector class mapping is not available in this image.' ].
 	[
 		mgr clearConnectorClassForClient: clientName server: serverName.
@@ -624,8 +624,8 @@ GbsConnectorBrowserPresenter >> inspectSelectedClientConnector [
 	row := connectorTable selection selectedItem.
 	row ifNil: [ ^ self inform: 'Select a connector first.' ].
 	(self rowClientName: row) isEmpty
+		ifTrue: [ UIManager default inform: 'Client connector not available for selection.' ]
 		ifFalse: [ self inspectClassNamed: (self rowClientName: row) asString fallbackLabel: 'Client connector' ]
-		ifFalse: [ UIManager default inform: 'Client connector not available for selection.' ]
 ]
 
 { #category : 'actions' }
@@ -634,8 +634,8 @@ GbsConnectorBrowserPresenter >> inspectSelectedServerConnector [
 	row := connectorTable selection selectedItem.
 	row ifNil: [ ^ self inform: 'Select a connector first.' ].
 	(self rowServerName: row) isEmpty
+		ifTrue: [ UIManager default inform: 'Server connector not available for selection.' ]
 		ifFalse: [ self inspectClassNamed: (self rowServerName: row) asString fallbackLabel: 'Server connector' ]
-		ifFalse: [ UIManager default inform: 'Server connector not available for selection.' ]
 ]
 
 { #category : 'private' }
