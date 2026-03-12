@@ -1148,23 +1148,29 @@ GbsConnectorBrowserPresenter >> isGlobalGroupSelected [
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> rowType: aRow [
+	aRow ifNil: [ ^ '' ].
 	(aRow respondsTo: #type) ifTrue: [ ^ aRow type ].
 	(aRow respondsTo: #connectorType) ifTrue: [ ^ aRow connectorType ].
-	^ aRow at: 1 ifAbsent: [ '' ]
+	(aRow respondsTo: #at:ifAbsent:) ifTrue: [ ^ aRow at: 1 ifAbsent: [ '' ] ].
+	^ self connectorTypeStringFor: aRow
 ]
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> rowClientName: aRow [
+	aRow ifNil: [ ^ '' ].
 	(aRow respondsTo: #clientName) ifTrue: [ ^ aRow clientName ].
 	(aRow respondsTo: #connectorClient) ifTrue: [ ^ aRow connectorClient ].
-	^ aRow at: 2 ifAbsent: [ '' ]
+	(aRow respondsTo: #at:ifAbsent:) ifTrue: [ ^ aRow at: 2 ifAbsent: [ '' ] ].
+	^ self connectorClientNameFor: aRow
 ]
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> rowServerName: aRow [
+	aRow ifNil: [ ^ '' ].
 	(aRow respondsTo: #serverName) ifTrue: [ ^ aRow serverName ].
 	(aRow respondsTo: #connectorServer) ifTrue: [ ^ aRow connectorServer ].
-	^ aRow at: 3 ifAbsent: [ '' ]
+	(aRow respondsTo: #at:ifAbsent:) ifTrue: [ ^ aRow at: 3 ifAbsent: [ '' ] ].
+	^ self connectorServerNameFor: aRow
 ]
 
 { #category : 'private' }
