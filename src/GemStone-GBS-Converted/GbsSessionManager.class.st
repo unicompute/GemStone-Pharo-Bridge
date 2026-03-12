@@ -70,7 +70,13 @@ GbsSessionManager class >> globalConnectorGroup [
 
 { #category : 'connector groups' }
 GbsSessionManager class >> knownParameters [
-	^ GbsSessionParameters allSessions collect: [ :each |
+	| sessions current |
+	sessions := GbsSessionParameters allSessions asArray.
+	sessions := sessions select: [ :each | each notNil ].
+	sessions isEmpty ifTrue: [
+		current := GbsSessionParameters currentSession.
+		current ifNotNil: [ sessions := { current } ] ].
+	^ sessions collect: [ :each |
 		GbsConnectorGroup session: each managerClass: self ]
 ]
 

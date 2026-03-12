@@ -118,8 +118,14 @@ GbsConnectorGroup >> removeGlobalConnector: aConnector [
 
 { #category : 'private' }
 GbsConnectorGroup >> sessionParameters [
-	(session respondsTo: #parameters) ifFalse: [ ^ nil ].
-	^ [ session parameters ] on: Error do: [ nil ]
+	| params current |
+	params := (session respondsTo: #parameters)
+		ifTrue: [ [ session parameters ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	params ifNotNil: [ ^ params ].
+	current := GbsSessionParameters currentSession.
+	(current respondsTo: #parameters) ifFalse: [ ^ nil ].
+	^ [ current parameters ] on: Error do: [ nil ]
 ]
 
 { #category : 'private' }
