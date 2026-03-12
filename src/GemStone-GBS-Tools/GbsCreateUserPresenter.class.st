@@ -198,11 +198,11 @@ GbsCreateUserPresenter >> defaultLayout [
 
 	^ SpBoxLayout newTopToBottom
 		add: mainMenu expand: false;
-		add: credentialsPane height: 94;
-		add: sideAndAuthPane height: 186;
-		add: groupsPane;
-		add: groupsButtons expand: false;
-		add: actionRow expand: false;
+		add: (self centeredPane: credentialsPane width: self contentWidth) height: 94;
+		add: (self centeredPane: sideAndAuthPane width: self contentWidth) height: 205;
+		add: (self centeredPane: groupsPane width: self contentWidth);
+		add: (self centeredPane: groupsButtons width: self contentWidth) expand: false;
+		add: (self centeredPane: actionRow width: self contentWidth) expand: false;
 		spacing: 10;
 		yourself
 ]
@@ -264,6 +264,20 @@ GbsCreateUserPresenter >> actionButtonWidth [
 { #category : 'layout' }
 GbsCreateUserPresenter >> authFieldWidth [
 	^ 250
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> contentWidth [
+	^ 900
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> centeredPane: aPaneLayout width: aWidth [
+	^ SpBoxLayout newLeftToRight
+		add: (self newLabel label: '') expand: true;
+		add: aPaneLayout width: aWidth;
+		add: (self newLabel label: '') expand: true;
+		yourself
 ]
 
 { #category : 'initialization' }
