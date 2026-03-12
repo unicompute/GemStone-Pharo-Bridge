@@ -220,10 +220,18 @@ GbsConnectorBrowserPresenter >> refreshGroups [
 
 { #category : 'actions' }
 GbsConnectorBrowserPresenter >> refreshConnectorsForGroup: aGroupLabel [
-	| rows |
+	| rows previousSelection |
 	aGroupLabel ifNil: [ connectorTable items: #(). ^ self ].
+	previousSelection := [ connectorTable selection selectedItem ] on: Error do: [ nil ].
 	rows := self connectorRowsForGroup: aGroupLabel.
-	connectorTable items: rows
+	connectorTable items: rows.
+	(previousSelection notNil and: [ rows anySatisfy: [ :each | each = previousSelection ] ])
+		ifTrue: [
+			(connectorTable respondsTo: #selectItem:)
+				ifTrue: [ connectorTable selectItem: previousSelection ]
+				ifFalse: [
+					(connectorTable respondsTo: #selection)
+						ifTrue: [ [ connectorTable selection selectItem: previousSelection ] on: Error do: [ ] ] ] ]
 ]
 
 { #category : 'private' }
