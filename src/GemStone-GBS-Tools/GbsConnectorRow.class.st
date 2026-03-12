@@ -59,3 +59,19 @@ GbsConnectorRow >> printOn: aStream [
 		nextPutAll: self serverName;
 		nextPut: $)
 ]
+
+{ #category : 'comparing' }
+GbsConnectorRow >> = anObject [
+	self == anObject ifTrue: [ ^ true ].
+	(anObject isKindOf: self class) ifFalse: [ ^ false ].
+	^ self type = anObject type
+		and: [ self clientName = anObject clientName
+		and: [ self serverName = anObject serverName ] ]
+]
+
+{ #category : 'comparing' }
+GbsConnectorRow >> hash [
+	^ self type hash
+		bitXor: self clientName hash
+		bitXor: self serverName hash
+]
