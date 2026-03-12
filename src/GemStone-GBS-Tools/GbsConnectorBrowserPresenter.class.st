@@ -201,8 +201,7 @@ GbsConnectorBrowserPresenter >> menuFile [
 GbsConnectorBrowserPresenter >> menuGroup [
 	^ self newMenu
 		addItem: [ :item |
-			item name: 'Initialize'; action: [ self initializeFastConnectors ].
-			(item respondsTo: #enabled:) ifTrue: [ item enabled: self isGlobalGroupSelected ] ];
+			item name: 'Initialize'; action: [ self initializeFastConnectors ] ];
 		yourself
 ]
 
@@ -210,23 +209,17 @@ GbsConnectorBrowserPresenter >> menuGroup [
 GbsConnectorBrowserPresenter >> menuConnector [
 	^ self newMenu
 		addItem: [ :item |
-			item name: 'Inspect Client'; action: [ self inspectSelectedClientConnector ].
-			(item respondsTo: #enabled:) ifTrue: [ item enabled: self hasSingleSelectedConnector ] ];
+			item name: 'Inspect Client'; action: [ self inspectSelectedClientConnector ] ];
 		addItem: [ :item |
-			item name: 'Inspect Server'; action: [ self inspectSelectedServerConnector ].
-			(item respondsTo: #enabled:) ifTrue: [ item enabled: self hasSingleSelectedConnector ] ];
+			item name: 'Inspect Server'; action: [ self inspectSelectedServerConnector ] ];
 		addItem: [ :item |
-			item name: 'Add...'; action: [ self createAndAddConnector ].
-			(item respondsTo: #enabled:) ifTrue: [ item enabled: self hasSelectedGroup ] ];
+			item name: 'Add...'; action: [ self createAndAddConnector ] ];
 		addItem: [ :item |
-			item name: 'Remove...'; action: [ self removeConnector ].
-			(item respondsTo: #enabled:) ifTrue: [ item enabled: self hasSelectedConnectors ] ];
+			item name: 'Remove...'; action: [ self removeConnector ] ];
 		addItem: [ :item |
-			item name: 'Set Connector Class...'; action: [ self setSelectedConnectorClassMapping ].
-			(item respondsTo: #enabled:) ifTrue: [ item enabled: self hasSingleSelectedConnector ] ];
+			item name: 'Set Connector Class...'; action: [ self setSelectedConnectorClassMapping ] ];
 		addItem: [ :item |
-			item name: 'Clear Connector Class Override'; action: [ self clearSelectedConnectorClassMapping ].
-			(item respondsTo: #enabled:) ifTrue: [ item enabled: self hasSingleSelectedConnector ] ];
+			item name: 'Clear Connector Class Override'; action: [ self clearSelectedConnectorClassMapping ] ];
 		yourself
 ]
 

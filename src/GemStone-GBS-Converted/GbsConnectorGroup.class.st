@@ -68,6 +68,8 @@ GbsConnectorGroup >> connectorGroupDescription [
 { #category : 'accessing' }
 GbsConnectorGroup >> connectorList [
 	managerClass ifNil: [ ^ #() ].
+	(managerClass respondsTo: #connectorObjectsForGroup:)
+		ifTrue: [ ^ managerClass connectorObjectsForGroup: self ].
 	(managerClass respondsTo: #connectorObjects)
 		ifTrue: [ ^ managerClass connectorObjects ].
 	^ #()
@@ -93,8 +95,16 @@ GbsConnectorGroup >> addConnector: aConnector [
 	serverName := (aConnector respondsTo: #gsDescription)
 		ifTrue: [ aConnector gsDescription ]
 		ifFalse: [ '' ].
-	(managerClass respondsTo: #addConnectorClient:server:)
-		ifTrue: [ managerClass addConnectorClient: clientName server: serverName ]
+	self isGlobalGroup
+		ifTrue: [
+			(managerClass respondsTo: #addConnectorClient:server:)
+				ifTrue: [ managerClass addConnectorClient: clientName server: serverName ] ]
+		ifFalse: [
+			(managerClass respondsTo: #addConnectorClient:server:forSession:)
+				ifTrue: [ managerClass addConnectorClient: clientName server: serverName forSession: session ]
+				ifFalse: [
+					(managerClass respondsTo: #addConnectorClient:server:)
+						ifTrue: [ managerClass addConnectorClient: clientName server: serverName ] ] ]
 ]
 
 { #category : 'actions' }
@@ -107,8 +117,16 @@ GbsConnectorGroup >> removeConnector: aConnector [
 	serverName := (aConnector respondsTo: #gsDescription)
 		ifTrue: [ aConnector gsDescription ]
 		ifFalse: [ '' ].
-	(managerClass respondsTo: #removeConnectorClient:server:)
-		ifTrue: [ managerClass removeConnectorClient: clientName server: serverName ]
+	self isGlobalGroup
+		ifTrue: [
+			(managerClass respondsTo: #removeConnectorClient:server:)
+				ifTrue: [ managerClass removeConnectorClient: clientName server: serverName ] ]
+		ifFalse: [
+			(managerClass respondsTo: #removeConnectorClient:server:forSession:)
+				ifTrue: [ managerClass removeConnectorClient: clientName server: serverName forSession: session ]
+				ifFalse: [
+					(managerClass respondsTo: #removeConnectorClient:server:)
+						ifTrue: [ managerClass removeConnectorClient: clientName server: serverName ] ] ]
 ]
 
 { #category : 'actions' }

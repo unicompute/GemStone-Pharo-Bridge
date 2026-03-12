@@ -82,10 +82,24 @@ GbsSessionManager class >> knownParameters [
 
 { #category : 'connector groups' }
 GbsSessionManager class >> connectorObjects [
-	| registry |
-	registry := self connectorObjectRegistry.
-	registry isEmpty ifTrue: [ self rebuildConnectorObjectRegistry. registry := self connectorObjectRegistry ].
-	^ registry values asArray
+	^ self connectorPairs collect: [ :pair |
+		self
+			ensureConnectorObjectForClient: (pair at: 1 ifAbsent: [ '' ])
+			server: (pair at: 2 ifAbsent: [ '' ]) ]
+]
+
+{ #category : 'connector groups' }
+GbsSessionManager class >> connectorObjectsForGroup: aConnectorGroup [
+	| pairs |
+	aConnectorGroup ifNil: [ ^ #() ].
+	(aConnectorGroup respondsTo: #isGlobalGroup) ifTrue: [
+		(aConnectorGroup isGlobalGroup)
+			ifTrue: [ ^ self connectorObjects ] ].
+	pairs := self connectorPairsForGroup: aConnectorGroup.
+	^ pairs collect: [ :pair |
+		self
+			ensureConnectorObjectForClient: (pair at: 1 ifAbsent: [ '' ])
+			server: (pair at: 2 ifAbsent: [ '' ]) ]
 ]
 
 { #category : 'initialization' }
@@ -179,6 +193,36 @@ GbsSessionManager class >> removeConnectorClient: clientClassName server: server
 	self removeConnectorObjectForClient: c server: s
 ]
 
+{ #category : 'actions' }
+GbsSessionManager class >> addConnectorClient: clientClassName server: serverClassName forSession: aSession [
+	| c s registry sessionKey |
+	c := clientClassName ifNil: [ '' ] ifNotNil: [ clientClassName asString ].
+	s := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+	(c isEmpty or: [ s isEmpty ]) ifTrue: [ ^ self ].
+	sessionKey := self sessionKeyForSessionObject: aSession.
+	registry := self sessionConnectorRegistry copy.
+	(registry at: sessionKey ifAbsentPut: [ Dictionary new ]) at: c put: s.
+	(registry at: sessionKey ifAbsentPut: [ Dictionary new ]) at: s put: c.
+	Smalltalk globals at: #GbsSessionConnectorRegistry put: registry.
+	self ensureConnectorObjectForClient: c server: s
+]
+
+{ #category : 'actions' }
+GbsSessionManager class >> removeConnectorClient: clientClassName server: serverClassName forSession: aSession [
+	| c s registry sessionKey sessionRegistry |
+	c := clientClassName ifNil: [ '' ] ifNotNil: [ clientClassName asString ].
+	s := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+	sessionKey := self sessionKeyForSessionObject: aSession.
+	registry := self sessionConnectorRegistry copy.
+	sessionRegistry := (registry at: sessionKey ifAbsent: [ Dictionary new ]) copy.
+	sessionRegistry removeKey: c ifAbsent: [ ].
+	sessionRegistry removeKey: s ifAbsent: [ ].
+	registry at: sessionKey put: sessionRegistry.
+	Smalltalk globals at: #GbsSessionConnectorRegistry put: registry.
+	self clearPostConnectActionForConnectorClient: c server: s.
+	self removeConnectorObjectForClient: c server: s
+]
+
 { #category : 'accessing' }
 GbsSessionManager class >> fastConnectorRegistry [
 	^ Smalltalk globals at: #GbsFastConnectorRegistry ifAbsent: [ Dictionary new ]
@@ -187,6 +231,11 @@ GbsSessionManager class >> fastConnectorRegistry [
 { #category : 'accessing' }
 GbsSessionManager class >> fastConnectorRegistry: aDictionary [
 	Smalltalk globals at: #GbsFastConnectorRegistry put: aDictionary
+]
+
+{ #category : 'accessing' }
+GbsSessionManager class >> sessionConnectorRegistry [
+	^ Smalltalk globals at: #GbsSessionConnectorRegistry ifAbsent: [ Dictionary new ]
 ]
 
 { #category : 'connector state' }
@@ -424,6 +473,57 @@ GbsSessionManager class >> loggedInSessions [
 	current := GbsSessionParameters currentSession.
 	current ifNil: [ ^ #() ].
 	^ { current }
+]
+
+{ #category : 'connector groups' }
+GbsSessionManager class >> connectorPairsForGroup: aConnectorGroup [
+	| sessionObject |
+	aConnectorGroup ifNil: [ ^ #() ].
+	(aConnectorGroup respondsTo: #isGlobalGroup)
+		ifTrue: [ aConnectorGroup isGlobalGroup ifTrue: [ ^ self connectorPairs ] ].
+	sessionObject := (aConnectorGroup respondsTo: #session)
+		ifTrue: [ aConnectorGroup session ]
+		ifFalse: [ nil ].
+	^ self connectorPairsForSession: sessionObject
+]
+
+{ #category : 'connector groups' }
+GbsSessionManager class >> connectorPairsForSession: aSession [
+	| sessionKey registry pairs seen |
+	sessionKey := self sessionKeyForSessionObject: aSession.
+	registry := self sessionConnectorRegistry at: sessionKey ifAbsent: [ Dictionary new ].
+	pairs := OrderedCollection new.
+	seen := Set new.
+	registry keysAndValuesDo: [ :clientName :serverName |
+		| clientClass pairKey |
+		clientClass := Smalltalk globals at: clientName asSymbol ifAbsent: [ nil ].
+		clientClass ifNotNil: [
+			pairKey := clientName asString, '->', serverName asString.
+			(seen includes: pairKey) ifFalse: [
+				pairs add: { clientName asString. serverName asString }.
+				seen add: pairKey ] ] ].
+	^ pairs asArray
+]
+
+{ #category : 'connector groups' }
+GbsSessionManager class >> sessionKeyForSessionObject: aSession [
+	| params user stone |
+	aSession ifNil: [ ^ 'default' ].
+	((aSession respondsTo: #username) and: [ aSession respondsTo: #gemStoneName ]) ifTrue: [
+		user := [ aSession username ] on: Error do: [ nil ].
+		stone := [ aSession gemStoneName ] on: Error do: [ nil ].
+		^ (user ifNil: [ 'unknown-user' ] ifNotNil: [ user asString ]),
+			'@',
+			(stone ifNil: [ 'unknown-stone' ] ifNotNil: [ stone asString ]) ].
+	params := (aSession respondsTo: #parameters)
+		ifTrue: [ [ aSession parameters ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	params ifNil: [ ^ 'default' ].
+	user := [ params username ] on: Error do: [ nil ].
+	stone := [ params gemStoneName ] on: Error do: [ nil ].
+	^ (user ifNil: [ 'unknown-user' ] ifNotNil: [ user asString ]),
+		'@',
+		(stone ifNil: [ 'unknown-stone' ] ifNotNil: [ stone asString ])
 ]
 
 { #category : 'connector state' }

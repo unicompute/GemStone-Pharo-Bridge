@@ -6,6 +6,7 @@ Class {
 	'previousConnectionRegistry',
 	'previousInvalidActionRegistry',
 	'previousPostConnectActionRegistry',
+	'previousSessionConnectorRegistry',
 	'previousConnectorObjectRegistry',
 	'previousConnectorClassMappingRegistry'
 	],
@@ -20,6 +21,7 @@ GbsSessionManagerTest >> setUp [
 	previousConnectionRegistry := (Smalltalk globals at: #GbsConnectorConnectionRegistry ifAbsent: [ Dictionary new ]) copy.
 	previousInvalidActionRegistry := (Smalltalk globals at: #GbsConnectorInvalidActionRegistry ifAbsent: [ Dictionary new ]) copy.
 	previousPostConnectActionRegistry := (Smalltalk globals at: #GbsConnectorPostConnectActionRegistry ifAbsent: [ Dictionary new ]) copy.
+	previousSessionConnectorRegistry := (Smalltalk globals at: #GbsSessionConnectorRegistry ifAbsent: [ Dictionary new ]) copy.
 	previousConnectorObjectRegistry := (Smalltalk globals at: #GbsConnectorObjectRegistry ifAbsent: [ Dictionary new ]) copy.
 	previousConnectorClassMappingRegistry := (Smalltalk globals at: #GbsConnectorClassMappingRegistry ifAbsent: [ Dictionary new ]) copy
 ]
@@ -30,6 +32,7 @@ GbsSessionManagerTest >> tearDown [
 	Smalltalk globals at: #GbsConnectorConnectionRegistry put: previousConnectionRegistry.
 	Smalltalk globals at: #GbsConnectorInvalidActionRegistry put: previousInvalidActionRegistry.
 	Smalltalk globals at: #GbsConnectorPostConnectActionRegistry put: previousPostConnectActionRegistry.
+	Smalltalk globals at: #GbsSessionConnectorRegistry put: previousSessionConnectorRegistry.
 	Smalltalk globals at: #GbsConnectorObjectRegistry put: previousConnectorObjectRegistry.
 	Smalltalk globals at: #GbsConnectorClassMappingRegistry put: previousConnectorClassMappingRegistry.
 	super tearDown
@@ -260,6 +263,38 @@ GbsSessionManagerTest >> testSetPostConnectActionPersistsAndSurvivesConnectorReb
 	GbsSessionManager rebuildConnectorObjectRegistry.
 	wrapper := GbsSessionManager connectorObjectForClient: 'ByteArray' server: 'ByteArray'.
 	self assert: wrapper postConnectAction equals: 'forwarder'
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testSessionConnectorPairsAreScopedPerSession [
+	| s1 s2 p1 p2 pairs1 pairs2 |
+	p1 := GbsSessionParameters new.
+	p1 username: 'DataCurator'.
+	p1 gemStoneName: 'gs64stone'.
+	s1 := MockGbsSession new.
+	s1 parameters: p1.
+
+	p2 := GbsSessionParameters new.
+	p2 username: 'GcUser'.
+	p2 gemStoneName: 'gs64stone'.
+	s2 := MockGbsSession new.
+	s2 parameters: p2.
+
+	GbsSessionManager addConnectorClient: 'Character' server: 'Character' forSession: s1.
+	GbsSessionManager addConnectorClient: 'Date' server: 'Date' forSession: s2.
+
+	pairs1 := GbsSessionManager connectorPairsForSession: s1.
+	pairs2 := GbsSessionManager connectorPairsForSession: s2.
+
+	self assert: (pairs1 anySatisfy: [ :pair |
+		(pair at: 1 ifAbsent: [ '' ]) = 'Character'
+			and: [ (pair at: 2 ifAbsent: [ '' ]) = 'Character' ] ]).
+	self deny: (pairs1 anySatisfy: [ :pair |
+		(pair at: 1 ifAbsent: [ '' ]) = 'Date'
+			and: [ (pair at: 2 ifAbsent: [ '' ]) = 'Date' ] ]).
+	self assert: (pairs2 anySatisfy: [ :pair |
+		(pair at: 1 ifAbsent: [ '' ]) = 'Date'
+			and: [ (pair at: 2 ifAbsent: [ '' ]) = 'Date' ] ])
 ]
 
 { #category : 'tests' }
