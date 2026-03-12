@@ -156,13 +156,14 @@ GbsSessionManager class >> connectorPairs [
 	pairs := OrderedCollection new.
 	seen := Set new.
 	registry keysAndValuesDo: [ :clientName :serverName |
-		| clientClass pairKey |
-		clientClass := Smalltalk globals at: clientName asSymbol ifAbsent: [ nil ].
-		clientClass ifNotNil: [
-			pairKey := clientName asString, '->', serverName asString.
-			(seen includes: pairKey) ifFalse: [
-				pairs add: { clientName asString. serverName asString }.
-				seen add: pairKey ] ] ].
+		| c s pairKey inverseKey |
+		c := clientName asString.
+		s := serverName asString.
+		pairKey := c, '->', s.
+		inverseKey := s, '->', c.
+		((seen includes: pairKey) or: [ seen includes: inverseKey ]) ifFalse: [
+			pairs add: { c. s }.
+			seen add: pairKey ] ].
 	^ pairs asArray
 ]
 
@@ -495,13 +496,14 @@ GbsSessionManager class >> connectorPairsForSession: aSession [
 	pairs := OrderedCollection new.
 	seen := Set new.
 	registry keysAndValuesDo: [ :clientName :serverName |
-		| clientClass pairKey |
-		clientClass := Smalltalk globals at: clientName asSymbol ifAbsent: [ nil ].
-		clientClass ifNotNil: [
-			pairKey := clientName asString, '->', serverName asString.
-			(seen includes: pairKey) ifFalse: [
-				pairs add: { clientName asString. serverName asString }.
-				seen add: pairKey ] ] ].
+		| c s pairKey inverseKey |
+		c := clientName asString.
+		s := serverName asString.
+		pairKey := c, '->', s.
+		inverseKey := s, '->', c.
+		((seen includes: pairKey) or: [ seen includes: inverseKey ]) ifFalse: [
+			pairs add: { c. s }.
+			seen add: pairKey ] ].
 	^ pairs asArray
 ]
 

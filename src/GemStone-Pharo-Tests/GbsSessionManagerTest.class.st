@@ -298,6 +298,23 @@ GbsSessionManagerTest >> testSessionConnectorPairsAreScopedPerSession [
 ]
 
 { #category : 'tests' }
+GbsSessionManagerTest >> testSessionConnectorPairsKeepUnknownClassNames [
+	| s1 p1 pairs |
+	p1 := GbsSessionParameters new.
+	p1 username: 'DataCurator'.
+	p1 gemStoneName: 'gs64stone'.
+	s1 := MockGbsSession new.
+	s1 parameters: p1.
+
+	GbsSessionManager addConnectorClient: 'ABC' server: 'XyzServer' forSession: s1.
+	pairs := GbsSessionManager connectorPairsForSession: s1.
+
+	self assert: (pairs anySatisfy: [ :pair |
+		(pair at: 1 ifAbsent: [ '' ]) = 'ABC'
+			and: [ (pair at: 2 ifAbsent: [ '' ]) = 'XyzServer' ] ])
+]
+
+{ #category : 'tests' }
 GbsSessionManagerTest >> testConnectorClassForFastPairDefaultsToFastConnector [
 	self
 		assert: (GbsSessionManager connectorClassForClient: 'ByteArray' server: 'ByteArray')
