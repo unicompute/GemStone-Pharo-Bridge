@@ -121,9 +121,9 @@ GbsConnectorWrapper >> invalidPostConnectActions: aCollection [
 
 { #category : 'actions' }
 GbsConnectorWrapper >> connectInSession: aSession ifFail: oneArgBlock [
+	| key |
 	(connector notNil and: [ connector respondsTo: #connectInSession:ifFail: ]) ifTrue: [
 		^ connector connectInSession: aSession ifFail: oneArgBlock ].
-	| key |
 	key := self sessionKeyFor: aSession.
 	connectionStateBySession at: key put: true.
 	^ true
@@ -131,9 +131,9 @@ GbsConnectorWrapper >> connectInSession: aSession ifFail: oneArgBlock [
 
 { #category : 'actions' }
 GbsConnectorWrapper >> disconnectInSession: aSession [
+	| key |
 	(connector notNil and: [ connector respondsTo: #disconnectInSession: ]) ifTrue: [
 		^ connector disconnectInSession: aSession ].
-	| key |
 	key := self sessionKeyFor: aSession.
 	connectionStateBySession at: key put: false.
 	^ true
@@ -141,27 +141,27 @@ GbsConnectorWrapper >> disconnectInSession: aSession [
 
 { #category : 'testing' }
 GbsConnectorWrapper >> isConnectedInSession: aSession [
+	| key |
 	(connector notNil and: [ connector respondsTo: #isConnectedInSession: ]) ifTrue: [
 		^ connector isConnectedInSession: aSession ].
-	| key |
 	key := self sessionKeyFor: aSession.
 	^ connectionStateBySession at: key ifAbsent: [ true ]
 ]
 
 { #category : 'testing' }
 GbsConnectorWrapper >> isConnectedForSessionKey: sessionKey [
+	| key |
 	(connector notNil and: [ connector respondsTo: #isConnectedForSessionKey: ]) ifTrue: [
 		^ connector isConnectedForSessionKey: sessionKey ].
-	| key |
 	key := sessionKey ifNil: [ 'default' ] ifNotNil: [ sessionKey asString ].
 	^ connectionStateBySession at: key ifAbsent: [ true ]
 ]
 
 { #category : 'actions' }
 GbsConnectorWrapper >> setConnected: aBoolean forSessionKey: sessionKey [
+	| key |
 	(connector notNil and: [ connector respondsTo: #setConnected:forSessionKey: ]) ifTrue: [
 		^ connector setConnected: aBoolean forSessionKey: sessionKey ].
-	| key |
 	key := sessionKey ifNil: [ 'default' ] ifNotNil: [ sessionKey asString ].
 	connectionStateBySession at: key put: (aBoolean == true).
 	^ aBoolean == true
