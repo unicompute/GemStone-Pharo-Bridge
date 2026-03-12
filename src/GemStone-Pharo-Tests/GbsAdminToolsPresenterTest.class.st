@@ -669,6 +669,271 @@ GbsAdminToolsPresenterTest >> testConnectorBrowserSelectedConnectorRowsUsesMulti
 ]
 
 { #category : 'tests' }
+GbsAdminToolsPresenterTest >> testConnectorBrowserCanInitializeSelectedGroupOnlyForGlobal [
+	| fakeGroupList globalGroup sessionGroup |
+	fakeGroupList := GbxFakeListPresenterForBrowser new.
+	globalGroup := GbsConnectorGroup globalOnManagerClass: GbsSessionManager.
+	sessionGroup := GbsConnectorGroup session: (MockGbsSession new) managerClass: GbsSessionManager.
+	connectorBrowserPresenter instVarNamed: 'groupList' put: fakeGroupList.
+
+	fakeGroupList selectedItem: globalGroup.
+	self assert: connectorBrowserPresenter canInitializeSelectedGroup.
+
+	fakeGroupList selectedItem: sessionGroup.
+	self deny: connectorBrowserPresenter canInitializeSelectedGroup
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testConnectorBrowserUpdateControlsDisablesWhenMultiSelected [
+	| fakeTable connected disconnected updateSt updateGs forwarder clientForwarder none rowA rowB |
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	rowA := #('Fast' 'ByteArray' 'ByteArray').
+	rowB := #('Fast' 'String' 'String').
+	fakeTable selectedItems: { rowA. rowB }.
+	fakeTable selectedItem: rowA.
+	connected := GbxFakeTogglePresenter new.
+	disconnected := GbxFakeTogglePresenter new.
+	updateSt := GbxFakeTogglePresenter new.
+	updateGs := GbxFakeTogglePresenter new.
+	forwarder := GbxFakeTogglePresenter new.
+	clientForwarder := GbxFakeTogglePresenter new.
+	none := GbxFakeTogglePresenter new.
+
+	connectorBrowserPresenter instVarNamed: 'connectorTable' put: fakeTable.
+	connectorBrowserPresenter instVarNamed: 'connectedRadio' put: connected.
+	connectorBrowserPresenter instVarNamed: 'disconnectedRadio' put: disconnected.
+	connectorBrowserPresenter instVarNamed: 'updateStRadio' put: updateSt.
+	connectorBrowserPresenter instVarNamed: 'updateGsRadio' put: updateGs.
+	connectorBrowserPresenter instVarNamed: 'forwarderRadio' put: forwarder.
+	connectorBrowserPresenter instVarNamed: 'clientForwarderRadio' put: clientForwarder.
+	connectorBrowserPresenter instVarNamed: 'noneRadio' put: none.
+
+	connectorBrowserPresenter updateConnectorControlsFromSelection.
+
+	self deny: connected enabled.
+	self deny: disconnected enabled.
+	self deny: updateSt enabled.
+	self deny: updateGs enabled.
+	self deny: forwarder enabled.
+	self deny: clientForwarder enabled.
+	self deny: none enabled.
+	self deny: connected state.
+	self deny: disconnected state
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testConnectorBrowserUpdateControlsEnablesForSingleSelection [
+	| fakeTable connected disconnected updateSt updateGs forwarder clientForwarder none row |
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	row := #('Fast' 'ByteArray' 'ByteArray').
+	fakeTable selectedItems: { row }.
+	fakeTable selectedItem: row.
+	connected := GbxFakeTogglePresenter new.
+	disconnected := GbxFakeTogglePresenter new.
+	updateSt := GbxFakeTogglePresenter new.
+	updateGs := GbxFakeTogglePresenter new.
+	forwarder := GbxFakeTogglePresenter new.
+	clientForwarder := GbxFakeTogglePresenter new.
+	none := GbxFakeTogglePresenter new.
+
+	connectorBrowserPresenter instVarNamed: 'session' put: (MockGbsSession new).
+	connectorBrowserPresenter instVarNamed: 'connectorTable' put: fakeTable.
+	connectorBrowserPresenter instVarNamed: 'connectedRadio' put: connected.
+	connectorBrowserPresenter instVarNamed: 'disconnectedRadio' put: disconnected.
+	connectorBrowserPresenter instVarNamed: 'updateStRadio' put: updateSt.
+	connectorBrowserPresenter instVarNamed: 'updateGsRadio' put: updateGs.
+	connectorBrowserPresenter instVarNamed: 'forwarderRadio' put: forwarder.
+	connectorBrowserPresenter instVarNamed: 'clientForwarderRadio' put: clientForwarder.
+	connectorBrowserPresenter instVarNamed: 'noneRadio' put: none.
+
+	connectorBrowserPresenter updateConnectorControlsFromSelection.
+
+	self assert: connected enabled.
+	self assert: disconnected enabled.
+	self assert: updateSt enabled.
+	self assert: updateGs enabled.
+	self assert: forwarder enabled.
+	self assert: clientForwarder enabled.
+	self assert: none enabled
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testConnectorBrowserCapabilityPredicatesTrackSelectionCount [
+	| fakeTable rowA rowB |
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	rowA := #('Fast' 'ByteArray' 'ByteArray').
+	rowB := #('Fast' 'String' 'String').
+	connectorBrowserPresenter instVarNamed: 'connectorTable' put: fakeTable.
+
+	fakeTable selectedItems: #().
+	fakeTable selectedItem: nil.
+	self deny: connectorBrowserPresenter canInspectSelectedConnector.
+	self deny: connectorBrowserPresenter canRemoveSelectedConnectors.
+	self deny: connectorBrowserPresenter canSetConnectorClassMapping.
+
+	fakeTable selectedItems: { rowA }.
+	fakeTable selectedItem: rowA.
+	self assert: connectorBrowserPresenter canInspectSelectedConnector.
+	self assert: connectorBrowserPresenter canRemoveSelectedConnectors.
+	self assert: connectorBrowserPresenter canSetConnectorClassMapping.
+
+	fakeTable selectedItems: { rowA. rowB }.
+	fakeTable selectedItem: rowA.
+	self deny: connectorBrowserPresenter canInspectSelectedConnector.
+	self assert: connectorBrowserPresenter canRemoveSelectedConnectors.
+	self deny: connectorBrowserPresenter canSetConnectorClassMapping
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testConnectorBrowserCanAddRequiresSelectedGroup [
+	| fakeGroupList |
+	fakeGroupList := GbxFakeListPresenterForBrowser new.
+	connectorBrowserPresenter instVarNamed: 'groupList' put: fakeGroupList.
+
+	fakeGroupList selectedItem: nil.
+	self deny: connectorBrowserPresenter canAddConnector.
+
+	fakeGroupList selectedItem: (GbsConnectorGroup globalOnManagerClass: GbsSessionManager).
+	self assert: connectorBrowserPresenter canAddConnector
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testConnectorBrowserAddRemoveAreReflectedInConnectorPaneAfterRefresh [
+	| globalGroup fakeTable clientName serverName |
+	Smalltalk globals at: #GbsFastConnectorRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsConnectorObjectRegistry put: Dictionary new.
+	globalGroup := GbsSessionManager globalConnectorGroup.
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	connectorBrowserPresenter instVarNamed: 'connectorTable' put: fakeTable.
+	clientName := 'ABCConnectorTest'.
+	serverName := 'DEFConnectorTest'.
+
+	connectorBrowserPresenter refreshConnectorsForGroup: globalGroup.
+	self deny: (fakeTable items anySatisfy: [ :row |
+		(connectorBrowserPresenter rowClientName: row) = clientName
+			and: [ (connectorBrowserPresenter rowServerName: row) = serverName ] ]).
+
+	GbsSessionManager addConnectorClient: clientName server: serverName.
+	connectorBrowserPresenter refreshConnectorsForGroup: globalGroup.
+	self assert: (fakeTable items anySatisfy: [ :row |
+		(connectorBrowserPresenter rowClientName: row) = clientName
+			and: [ (connectorBrowserPresenter rowServerName: row) = serverName ] ]).
+
+	GbsSessionManager removeConnectorClient: clientName server: serverName.
+	connectorBrowserPresenter refreshConnectorsForGroup: globalGroup.
+	self deny: (fakeTable items anySatisfy: [ :row |
+		(connectorBrowserPresenter rowClientName: row) = clientName
+			and: [ (connectorBrowserPresenter rowServerName: row) = serverName ] ])
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testConnectorBrowserPostConnectActionPersistsAcrossUpdate [
+	| cfg globalGroup fakeGroupList fakeTable connected disconnected updateSt updateGs forwarder clientForwarder none verification selectedRow |
+	cfg := GbsConfiguration new.
+	GbsConfiguration current: cfg.
+	Smalltalk globals at: #GbsFastConnectorRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsConnectorObjectRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsConnectorPostConnectActionRegistry put: Dictionary new.
+	GbsSessionManager addConnectorClient: 'PersistClient' server: 'PersistServer'.
+	globalGroup := GbsSessionManager globalConnectorGroup.
+	fakeGroupList := GbxFakeListPresenterForBrowser new.
+	fakeGroupList selectedItem: globalGroup.
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	connected := GbxFakeTogglePresenter new.
+	disconnected := GbxFakeTogglePresenter new.
+	updateSt := GbxFakeTogglePresenter new.
+	updateGs := GbxFakeTogglePresenter new.
+	forwarder := GbxFakeTogglePresenter new.
+	clientForwarder := GbxFakeTogglePresenter new.
+	none := GbxFakeTogglePresenter new.
+	verification := GbxFakeTogglePresenter new.
+	verification state: true.
+
+	connectorBrowserPresenter instVarNamed: 'groupList' put: fakeGroupList.
+	connectorBrowserPresenter instVarNamed: 'groupItems' put: { globalGroup }.
+	connectorBrowserPresenter instVarNamed: 'connectorTable' put: fakeTable.
+	connectorBrowserPresenter instVarNamed: 'connectedRadio' put: connected.
+	connectorBrowserPresenter instVarNamed: 'disconnectedRadio' put: disconnected.
+	connectorBrowserPresenter instVarNamed: 'updateStRadio' put: updateSt.
+	connectorBrowserPresenter instVarNamed: 'updateGsRadio' put: updateGs.
+	connectorBrowserPresenter instVarNamed: 'forwarderRadio' put: forwarder.
+	connectorBrowserPresenter instVarNamed: 'clientForwarderRadio' put: clientForwarder.
+	connectorBrowserPresenter instVarNamed: 'noneRadio' put: none.
+	connectorBrowserPresenter instVarNamed: 'verificationCheck' put: verification.
+
+	connectorBrowserPresenter refreshConnectorsForGroup: globalGroup.
+	selectedRow := fakeTable items
+		detect: [ :row | (connectorBrowserPresenter rowClientName: row) = 'PersistClient' ]
+		ifNone: [ nil ].
+	self assert: selectedRow notNil.
+	fakeTable selectedItem: selectedRow.
+	connectorBrowserPresenter postConnectActionChangedTo: 'forwarder'.
+	self assert: forwarder state.
+
+	connectorBrowserPresenter update.
+	selectedRow := fakeTable items
+		detect: [ :row | (connectorBrowserPresenter rowClientName: row) = 'PersistClient' ]
+		ifNone: [ nil ].
+	self assert: selectedRow notNil.
+	fakeTable selectedItem: selectedRow.
+	connectorBrowserPresenter applySettingsForConnectorRow: selectedRow.
+	self assert: forwarder state.
+	self deny: none state
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testConnectorBrowserPostConnectActionPersistsAcrossReopen [
+	| connectorObject presenter2 updateSt1 updateGs1 forwarder1 clientForwarder1 none1 connected1 disconnected1 updateSt2 updateGs2 forwarder2 clientForwarder2 none2 connected2 disconnected2 |
+	Smalltalk globals at: #GbsFastConnectorRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsConnectorObjectRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsConnectorPostConnectActionRegistry put: Dictionary new.
+	GbsSessionManager addConnectorClient: 'ReopenClient' server: 'ReopenServer'.
+	GbsSessionManager
+		setPostConnectAction: 'clientForwarder'
+		forConnectorClient: 'ReopenClient'
+		server: 'ReopenServer'.
+	connectorObject := GbsSessionManager
+		connectorObjectForClient: 'ReopenClient'
+		server: 'ReopenServer'.
+
+	updateSt1 := GbxFakeTogglePresenter new.
+	updateGs1 := GbxFakeTogglePresenter new.
+	forwarder1 := GbxFakeTogglePresenter new.
+	clientForwarder1 := GbxFakeTogglePresenter new.
+	none1 := GbxFakeTogglePresenter new.
+	connected1 := GbxFakeTogglePresenter new.
+	disconnected1 := GbxFakeTogglePresenter new.
+	connectorBrowserPresenter instVarNamed: 'connectedRadio' put: connected1.
+	connectorBrowserPresenter instVarNamed: 'disconnectedRadio' put: disconnected1.
+	connectorBrowserPresenter instVarNamed: 'updateStRadio' put: updateSt1.
+	connectorBrowserPresenter instVarNamed: 'updateGsRadio' put: updateGs1.
+	connectorBrowserPresenter instVarNamed: 'forwarderRadio' put: forwarder1.
+	connectorBrowserPresenter instVarNamed: 'clientForwarderRadio' put: clientForwarder1.
+	connectorBrowserPresenter instVarNamed: 'noneRadio' put: none1.
+	connectorBrowserPresenter applySettingsForConnectorRow: connectorObject.
+	self assert: clientForwarder1 state.
+
+	presenter2 := GbsConnectorBrowserPresenter new.
+	updateSt2 := GbxFakeTogglePresenter new.
+	updateGs2 := GbxFakeTogglePresenter new.
+	forwarder2 := GbxFakeTogglePresenter new.
+	clientForwarder2 := GbxFakeTogglePresenter new.
+	none2 := GbxFakeTogglePresenter new.
+	connected2 := GbxFakeTogglePresenter new.
+	disconnected2 := GbxFakeTogglePresenter new.
+	presenter2 instVarNamed: 'connectedRadio' put: connected2.
+	presenter2 instVarNamed: 'disconnectedRadio' put: disconnected2.
+	presenter2 instVarNamed: 'updateStRadio' put: updateSt2.
+	presenter2 instVarNamed: 'updateGsRadio' put: updateGs2.
+	presenter2 instVarNamed: 'forwarderRadio' put: forwarder2.
+	presenter2 instVarNamed: 'clientForwarderRadio' put: clientForwarder2.
+	presenter2 instVarNamed: 'noneRadio' put: none2.
+	presenter2 applySettingsForConnectorRow: connectorObject.
+	self assert: clientForwarder2 state.
+	self deny: none2 state
+]
+
+{ #category : 'tests' }
 GbsAdminToolsPresenterTest >> testConnectorBrowserInvalidPostActionsDisableButtonsAndCoerceSelection [
 	| cfg connected disconnected updateSt updateGs fwd cfwd none row settings |
 	cfg := GbsConfiguration new.

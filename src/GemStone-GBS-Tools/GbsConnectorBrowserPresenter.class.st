@@ -201,7 +201,8 @@ GbsConnectorBrowserPresenter >> menuFile [
 GbsConnectorBrowserPresenter >> menuGroup [
 	^ self newMenu
 		addItem: [ :item |
-			item name: 'Initialize'; action: [ self initializeFastConnectors ] ];
+			item name: 'Initialize'; action: [ self initializeGlobalConnectors ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canInitializeSelectedGroup ] ];
 		yourself
 ]
 
@@ -209,17 +210,23 @@ GbsConnectorBrowserPresenter >> menuGroup [
 GbsConnectorBrowserPresenter >> menuConnector [
 	^ self newMenu
 		addItem: [ :item |
-			item name: 'Inspect Client'; action: [ self inspectSelectedClientConnector ] ];
+			item name: 'Inspect Client'; action: [ self inspectSelectedClientConnector ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canInspectSelectedConnector ] ];
 		addItem: [ :item |
-			item name: 'Inspect Server'; action: [ self inspectSelectedServerConnector ] ];
+			item name: 'Inspect Server'; action: [ self inspectSelectedServerConnector ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canInspectSelectedConnector ] ];
 		addItem: [ :item |
-			item name: 'Add...'; action: [ self createAndAddConnector ] ];
+			item name: 'Add...'; action: [ self createAndAddConnector ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canAddConnector ] ];
 		addItem: [ :item |
-			item name: 'Remove...'; action: [ self removeConnector ] ];
+			item name: 'Remove...'; action: [ self removeConnector ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canRemoveSelectedConnectors ] ];
 		addItem: [ :item |
-			item name: 'Set Connector Class...'; action: [ self setSelectedConnectorClassMapping ] ];
+			item name: 'Set Connector Class...'; action: [ self setSelectedConnectorClassMapping ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canSetConnectorClassMapping ] ];
 		addItem: [ :item |
-			item name: 'Clear Connector Class Override'; action: [ self clearSelectedConnectorClassMapping ] ];
+			item name: 'Clear Connector Class Override'; action: [ self clearSelectedConnectorClassMapping ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canSetConnectorClassMapping ] ];
 		yourself
 ]
 
@@ -240,8 +247,14 @@ GbsConnectorBrowserPresenter >> refreshAll [
 
 { #category : 'actions' }
 GbsConnectorBrowserPresenter >> update [
+	| previousGroupLabel previousConnectorKey |
+	previousGroupLabel := [ self groupDisplayStringFor: groupList selection selectedItem ] on: Error do: [ nil ].
+	previousConnectorKey := self connectorSettingKeyForRow: self currentSelectedConnectorRow.
 	self updateGroupList.
-	self updateConnectorList
+	previousGroupLabel ifNotNil: [ self selectGroupWithDisplayString: previousGroupLabel ].
+	self updateConnectorList.
+	previousConnectorKey ifNotNil: [ self selectConnectorWithSettingKey: previousConnectorKey ].
+	self updateConnectorControlsFromSelection
 ]
 
 { #category : 'actions' }
@@ -312,29 +325,22 @@ GbsConnectorBrowserPresenter >> refreshConnectorsForGroup: aGroupLabel [
 						(connectorTable respondsTo: #selection)
 							ifTrue: [ [ connectorTable selection selectItem: rows first ] on: Error do: [ ] ] ] ] ].
 	selectedRow := self currentSelectedConnectorRow.
-	selectedRow ifNil: [
-		self applyConnectionState: self defaultConnectionState.
-		self applyPostConnectAction: self defaultPostConnectAction.
-		^ self ].
-	self applySettingsForConnectorRow: selectedRow
+	selectedRow ifNil: [ ^ self updateConnectorControlsFromSelection ].
+	self updateConnectorControlsFromSelection
 ]
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> connectorRowsForGroup: aGroupLabel [
 	| connectors |
 	connectors := self connectorObjectsForGroup: aGroupLabel.
-	^ (connectors collect: [ :connector |
-		GbsConnectorRow
-			type: (self connectorTypeStringFor: connector)
-			client: (self connectorClientNameFor: connector)
-			server: (self connectorServerNameFor: connector) ])
-		asSortedCollection: [ :a :b |
+	^ (connectors asArray
+		sort: [ :a :b |
 			| aClient bClient |
-			aClient := (self rowClientName: a) asLowercase.
-			bClient := (self rowClientName: b) asLowercase.
+			aClient := (self connectorClientNameFor: a) asLowercase.
+			bClient := (self connectorClientNameFor: b) asLowercase.
 			aClient = bClient
-				ifTrue: [ (self rowServerName: a) asLowercase <= (self rowServerName: b) asLowercase ]
-				ifFalse: [ aClient <= bClient ] ]
+				ifTrue: [ (self connectorServerNameFor: a) asLowercase <= (self connectorServerNameFor: b) asLowercase ]
+				ifFalse: [ aClient <= bClient ] ])
 ]
 
 { #category : 'private' }
@@ -401,6 +407,8 @@ GbsConnectorBrowserPresenter >> connectorObjectsForGroup: aGroup [
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> connectorTypeStringFor: aConnector [
+	(aConnector respondsTo: #connectorType) ifTrue: [
+		^ [ aConnector connectorType asString ] on: Error do: [ aConnector class name asString ] ].
 	(aConnector respondsTo: #type) ifTrue: [
 		^ [ aConnector type asString ] on: Error do: [ aConnector class name asString ] ].
 	^ aConnector class name asString
@@ -408,6 +416,8 @@ GbsConnectorBrowserPresenter >> connectorTypeStringFor: aConnector [
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> connectorClientNameFor: aConnector [
+	(aConnector respondsTo: #connectorClient) ifTrue: [
+		^ [ aConnector connectorClient asString ] on: Error do: [ '' ] ].
 	(aConnector respondsTo: #stDescription) ifTrue: [
 		^ [ aConnector stDescription asString ] on: Error do: [ '' ] ].
 	(aConnector respondsTo: #connectorClientName) ifTrue: [
@@ -417,6 +427,8 @@ GbsConnectorBrowserPresenter >> connectorClientNameFor: aConnector [
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> connectorServerNameFor: aConnector [
+	(aConnector respondsTo: #connectorServer) ifTrue: [
+		^ [ aConnector connectorServer asString ] on: Error do: [ '' ] ].
 	(aConnector respondsTo: #gsDescription) ifTrue: [
 		^ [ aConnector gsDescription asString ] on: Error do: [ '' ] ].
 	(aConnector respondsTo: #connectorServerName) ifTrue: [
@@ -448,6 +460,22 @@ GbsConnectorBrowserPresenter >> initializeFastConnectors [
 			^ self inform: 'Initialize fast connectors is not available in this image.' ]
 	] on: Error do: [ :ex |
 		^ self inform: 'Initialize fast connectors failed: ', ex messageText ].
+	self refreshAll
+]
+
+{ #category : 'actions' }
+GbsConnectorBrowserPresenter >> initializeGlobalConnectors [
+	(self isGlobalGroupSelected not)
+		ifTrue: [ ^ self inform: 'Initialize is only available for Global connectors.' ].
+	(UIManager default
+		confirm: 'This will remove all but kernel connectors. Continue?'
+		label: 'Initialize Global Connectors') ifFalse: [ ^ self ].
+	[
+		self managerPerform: #initializeGlobalConnectors ifUnavailable: [
+			self managerPerform: #initializeFastConnectors ifUnavailable: [
+				^ self inform: 'Initialize global connectors is not available in this image.' ] ]
+	] on: Error do: [ :ex |
+		^ self inform: 'Initialize global connectors failed: ', ex messageText ].
 	self refreshAll
 ]
 
@@ -620,9 +648,13 @@ GbsConnectorBrowserPresenter >> clearSelectedConnectorClassMapping [
 
 { #category : 'actions' }
 GbsConnectorBrowserPresenter >> inspectSelectedClientConnector [
-	| row |
+	| row connectorObject resolved |
 	row := connectorTable selection selectedItem.
 	row ifNil: [ ^ self inform: 'Select a connector first.' ].
+	connectorObject := self connectorObjectForRow: row.
+	(connectorObject notNil and: [ connectorObject respondsTo: #resolveSTObjIfFail: ]) ifTrue: [
+		resolved := connectorObject resolveSTObjIfFail: [ nil ].
+		resolved ifNotNil: [ ^ self inspectResolvedSTObject: resolved connector: connectorObject ] ].
 	(self rowClientName: row) isEmpty
 		ifTrue: [ UIManager default inform: 'Client connector not available for selection.' ]
 		ifFalse: [ self inspectClassNamed: (self rowClientName: row) asString fallbackLabel: 'Client connector' ]
@@ -630,12 +662,56 @@ GbsConnectorBrowserPresenter >> inspectSelectedClientConnector [
 
 { #category : 'actions' }
 GbsConnectorBrowserPresenter >> inspectSelectedServerConnector [
-	| row |
+	| row connectorObject selectedSession resolved |
 	row := connectorTable selection selectedItem.
 	row ifNil: [ ^ self inform: 'Select a connector first.' ].
+	connectorObject := self connectorObjectForRow: row.
+	selectedSession := self chooseConnectorSessionIfFail: [ ^ self ].
+	(selectedSession respondsTo: #isLoggedIn)
+		ifTrue: [ (selectedSession isLoggedIn == true) ifFalse: [ ^ self inform: 'GemStone session not logged in' ] ].
+	(connectorObject notNil and: [ connectorObject respondsTo: #resolveGSObjInSession:ifFail: ]) ifTrue: [
+		resolved := connectorObject
+			resolveGSObjInSession: selectedSession
+			ifFail: [ nil ].
+		resolved ifNotNil: [ ^ self inspectResolvedGSObject: resolved connector: connectorObject ] ].
 	(self rowServerName: row) isEmpty
 		ifTrue: [ UIManager default inform: 'Server connector not available for selection.' ]
 		ifFalse: [ self inspectClassNamed: (self rowServerName: row) asString fallbackLabel: 'Server connector' ]
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> connectorObjectForRow: aRow [
+	| clientName serverName |
+	aRow ifNil: [ ^ nil ].
+	(aRow respondsTo: #resolveSTObjIfFail:) ifTrue: [ ^ aRow ].
+	(aRow respondsTo: #connector) ifTrue: [ ^ aRow connector ].
+	clientName := self rowClientName: aRow.
+	serverName := self rowServerName: aRow.
+	^ self
+		managerPerform: #connectorObjectForClient:server:
+		withArguments: { clientName asString. serverName asString }
+		ifUnavailable: [ nil ]
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> inspectResolvedSTObject: resolvedObject connector: connectorObject [
+	| obj |
+	obj := resolvedObject.
+	(connectorObject notNil and: [ connectorObject respondsTo: #connectsAssociation ]) ifTrue: [
+		(connectorObject connectsAssociation and: [ obj respondsTo: #value ]) ifTrue: [ obj := obj value ] ].
+	^ obj inspect
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> inspectResolvedGSObject: resolvedObject connector: connectorObject [
+	| obj |
+	obj := resolvedObject.
+	(connectorObject notNil and: [ connectorObject respondsTo: #connectsAssociation ]) ifTrue: [
+		connectorObject connectsAssociation ifTrue: [
+			(obj respondsTo: #remotePerform:)
+				ifTrue: [ obj := obj remotePerform: #value ]
+				ifFalse: [ (obj respondsTo: #value) ifTrue: [ obj := obj value ] ] ] ].
+	^ obj inspect
 ]
 
 { #category : 'private' }
@@ -762,7 +838,7 @@ GbsConnectorBrowserPresenter >> refreshConnectorsForCurrentGroup [
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> connectorSelectionChanged: selectedRow [
-	self applySettingsForConnectorRow: (selectedRow ifNil: [ self currentSelectedConnectorRow ])
+	self updateConnectorControlsFromSelection
 ]
 
 { #category : 'private' }
@@ -815,7 +891,7 @@ GbsConnectorBrowserPresenter >> applySettingsForSelectedConnector [
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> applySettingsForConnectorRow: aRow [
-	| key map rowSettings persistedAction |
+	| key map rowSettings persistedAction connectorObject |
 	key := self connectorSettingKeyForRow: aRow.
 	key ifNil: [
 		self applyConnectionState: self defaultConnectionState.
@@ -823,12 +899,17 @@ GbsConnectorBrowserPresenter >> applySettingsForConnectorRow: aRow [
 		self setAllPostConnectActionOptionsEnabled: true.
 		^ self ].
 	self applyConnectionStateForConnectorRow: aRow.
+	connectorObject := self connectorObjectForRow: aRow.
 	map := self connectorSettingsMap.
 	rowSettings := map at: key ifAbsent: [ nil ].
-	persistedAction := self
-		managerPerform: #postConnectActionForConnectorClient:server:
-		withArguments: { (self rowClientName: aRow) asString. (self rowServerName: aRow) asString }
-		ifUnavailable: [ nil ].
+	persistedAction := (connectorObject notNil and: [ connectorObject respondsTo: #postConnectAction ])
+		ifTrue: [ [ connectorObject postConnectAction ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	(persistedAction isNil or: [ persistedAction asString trimBoth isEmpty ]) ifTrue: [
+		persistedAction := self
+			managerPerform: #postConnectActionForConnectorClient:server:
+			withArguments: { (self rowClientName: aRow) asString. (self rowServerName: aRow) asString }
+			ifUnavailable: [ nil ] ].
 	(persistedAction isNil or: [ persistedAction asString trimBoth isEmpty ]) ifTrue: [
 		persistedAction := (rowSettings isDictionary)
 			ifTrue: [ rowSettings at: #postConnectAction ifAbsent: [ self defaultPostConnectAction ] ]
@@ -878,10 +959,7 @@ GbsConnectorBrowserPresenter >> applyPostConnectActionToSelectedConnectors: acti
 			managerPerform: #setPostConnectAction:forConnectorClient:server:
 			withArguments: { actionString. clientName asString. serverName asString }
 			ifUnavailable: [ nil ].
-		connectorObject := self
-			managerPerform: #connectorObjectForClient:server:
-			withArguments: { clientName asString. serverName asString }
-			ifUnavailable: [ nil ].
+		connectorObject := self connectorObjectForRow: row.
 		(connectorObject notNil and: [ connectorObject respondsTo: #postConnectAction: ]) ifTrue: [
 			[ connectorObject postConnectAction: actionString ] on: Error do: [ ] ] ]
 ]
@@ -902,9 +980,15 @@ GbsConnectorBrowserPresenter >> connectorDisconnectSelected [
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> applyConnectionStateForConnectorRow: aRow [
-	| clientName serverName connectedValue |
+	| clientName serverName connectedValue connectorObject selectedSession |
 	clientName := self rowClientName: aRow.
 	serverName := self rowServerName: aRow.
+	connectorObject := self connectorObjectForRow: aRow.
+	selectedSession := self selectedConnectorSession.
+	(connectorObject notNil and: [ connectorObject respondsTo: #isConnectedInSession: ]) ifTrue: [
+		connectedValue := [ connectorObject isConnectedInSession: selectedSession ] on: Error do: [ nil ].
+		connectedValue ifNotNil: [
+			^ self applyConnectionState: (connectedValue == true ifTrue: [ 'connected' ] ifFalse: [ 'disconnected' ]) ] ].
 	connectedValue := self
 		managerPerform: #isConnectorClient:server:connectedInSession:
 		withArguments: { clientName asString. serverName asString. self selectedConnectorSessionKey }
@@ -923,10 +1007,7 @@ GbsConnectorBrowserPresenter >> setConnectionStateForSelectedConnector: stateStr
 	serverName := self rowServerName: row.
 	connectedBoolean := stateString asLowercase = 'connected'.
 	selectedSession := self chooseConnectorSessionIfFail: [ ^ self ].
-	connectorObject := self
-		managerPerform: #connectorObjectForClient:server:
-		withArguments: { clientName asString. serverName asString }
-		ifUnavailable: [ nil ].
+	connectorObject := self connectorObjectForRow: row.
 	connectorObject ifNotNil: [
 		connectedBoolean
 			ifTrue: [
@@ -1029,6 +1110,34 @@ GbsConnectorBrowserPresenter >> hasSingleSelectedConnector [
 ]
 
 { #category : 'private' }
+GbsConnectorBrowserPresenter >> canInitializeSelectedGroup [
+	^ self isGlobalGroupSelected
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> canInspectSelectedConnector [
+	^ self hasSingleSelectedConnector
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> canAddConnector [
+	^ self hasSelectedGroup
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> canRemoveSelectedConnectors [
+	^ self hasSelectedConnectors
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> canSetConnectorClassMapping [
+	^ self hasSingleSelectedConnector
+		and: [ (self managerClass notNil)
+		and: [ (self managerClass respondsTo: #setConnectorClass:forClient:server:)
+		and: [ self managerClass respondsTo: #clearConnectorClassForClient:server: ] ] ]
+]
+
+{ #category : 'private' }
 GbsConnectorBrowserPresenter >> isGlobalGroupSelected [
 	| selected |
 	selected := [ groupList selection selectedItem ] on: Error do: [ nil ].
@@ -1040,25 +1149,70 @@ GbsConnectorBrowserPresenter >> isGlobalGroupSelected [
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> rowType: aRow [
 	(aRow respondsTo: #type) ifTrue: [ ^ aRow type ].
+	(aRow respondsTo: #connectorType) ifTrue: [ ^ aRow connectorType ].
 	^ aRow at: 1 ifAbsent: [ '' ]
 ]
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> rowClientName: aRow [
 	(aRow respondsTo: #clientName) ifTrue: [ ^ aRow clientName ].
+	(aRow respondsTo: #connectorClient) ifTrue: [ ^ aRow connectorClient ].
 	^ aRow at: 2 ifAbsent: [ '' ]
 ]
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> rowServerName: aRow [
 	(aRow respondsTo: #serverName) ifTrue: [ ^ aRow serverName ].
+	(aRow respondsTo: #connectorServer) ifTrue: [ ^ aRow connectorServer ].
 	^ aRow at: 3 ifAbsent: [ '' ]
 ]
 
 { #category : 'private' }
+GbsConnectorBrowserPresenter >> updateConnectorControlsFromSelection [
+	| selected single hasSession selectedRow |
+	selected := self selectedConnectorRows.
+	single := selected size = 1.
+	hasSession := self appropriateSessions isEmpty not.
+	self setConnectionControlsEnabled: (single and: [ hasSession ]).
+	self setAllPostConnectActionOptionsEnabled: single.
+	single ifFalse: [
+		self clearConnectionStateSelection.
+		self clearPostConnectActionSelection.
+		^ self ].
+	selectedRow := selected first.
+	self applySettingsForConnectorRow: selectedRow
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> setConnectionControlsEnabled: aBoolean [
+	(connectedRadio respondsTo: #enabled:) ifTrue: [ connectedRadio enabled: aBoolean ].
+	(disconnectedRadio respondsTo: #enabled:) ifTrue: [ disconnectedRadio enabled: aBoolean ]
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> clearConnectionStateSelection [
+	connectedRadio state: false.
+	disconnectedRadio state: false
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> clearPostConnectActionSelection [
+	updateStRadio state: false.
+	updateGsRadio state: false.
+	forwarderRadio state: false.
+	clientForwarderRadio state: false.
+	noneRadio state: false
+]
+
+{ #category : 'private' }
 GbsConnectorBrowserPresenter >> invalidPostConnectActionsForRow: aRow [
-	| clientName serverName raw |
+	| clientName serverName raw connectorObject |
 	aRow ifNil: [ ^ #() ].
+	connectorObject := self connectorObjectForRow: aRow.
+	(connectorObject notNil and: [ connectorObject respondsTo: #invalidPostConnectActions ]) ifTrue: [
+		raw := [ connectorObject invalidPostConnectActions ] on: Error do: [ #() ].
+		(raw isCollection and: [ raw isString not ]) ifTrue: [
+			^ raw collect: [ :each | each asString asLowercase ] ] ].
 	clientName := self rowClientName: aRow.
 	serverName := self rowServerName: aRow.
 	raw := self
@@ -1156,4 +1310,36 @@ GbsConnectorBrowserPresenter >> selectedItemFromSelectionEvent: selectionEvent [
 	(selectionEvent respondsTo: #selectedItem)
 		ifTrue: [ ^ selectionEvent selectedItem ].
 	^ selectionEvent
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> selectGroupWithDisplayString: aString [
+	| match |
+	aString ifNil: [ ^ self ].
+	match := groupItems
+		detect: [ :each | (self groupDisplayStringFor: each) = aString ]
+		ifNone: [ nil ].
+	match ifNil: [ ^ self ].
+	(groupList respondsTo: #selectItem:)
+		ifTrue: [ ^ groupList selectItem: match ].
+	(groupList respondsTo: #selectedItem:)
+		ifTrue: [ ^ groupList selectedItem: match ].
+	(groupList respondsTo: #selection)
+		ifTrue: [ [ groupList selection selectItem: match ] on: Error do: [ ] ]
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> selectConnectorWithSettingKey: aKeyString [
+	| match |
+	aKeyString ifNil: [ ^ self ].
+	match := (connectorTable items ifNil: [ #() ])
+		detect: [ :each | (self connectorSettingKeyForRow: each) = aKeyString ]
+		ifNone: [ nil ].
+	match ifNil: [ ^ self ].
+	(connectorTable respondsTo: #selectItem:)
+		ifTrue: [ ^ connectorTable selectItem: match ].
+	(connectorTable respondsTo: #selectedItem:)
+		ifTrue: [ ^ connectorTable selectedItem: match ].
+	(connectorTable respondsTo: #selection)
+		ifTrue: [ [ connectorTable selection selectItem: match ] on: Error do: [ ] ]
 ]

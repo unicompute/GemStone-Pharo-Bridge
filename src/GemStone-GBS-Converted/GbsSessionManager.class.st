@@ -122,8 +122,14 @@ GbsSessionManager class >> initializeFastConnectors [
     ].
 
     "Store this in your session manager's class instance variable"
-    self fastConnectorRegistry: registry.
+	self fastConnectorRegistry: registry.
 	self rebuildConnectorObjectRegistry
+]
+
+{ #category : 'actions' }
+GbsSessionManager class >> initializeGlobalConnectors [
+	"VAST parity entrypoint for connector window Group->Initialize"
+	^ self initializeFastConnectors
 ]
 
 { #category : 'actions' }

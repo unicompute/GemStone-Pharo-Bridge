@@ -125,12 +125,12 @@ GbsCreateUserPresenter >> connectPresenters [
 
 { #category : 'layout' }
 GbsCreateUserPresenter >> defaultLayout [
-	| credentialsPane authPane sideButtons groupsPane groupsButtons groupLists newGroupRow actionRow |
+	| credentialsPane authPane sideButtons sideAndAuthPane transferButtons groupLists groupsPane groupsButtons newGroupRow actionRow |
 	credentialsPane := SpBoxLayout newTopToBottom
 		add: (self textRowLabel: 'User ID' field: userField) expand: false;
 		add: (self textRowLabel: 'Password' field: passwordField) expand: false;
 		add: (self textRowLabel: 'Confirm Password' field: confirmPasswordField) expand: false;
-		spacing: 4;
+		spacing: 6;
 		yourself.
 
 	authPane := SpBoxLayout newTopToBottom
@@ -140,25 +140,35 @@ GbsCreateUserPresenter >> defaultLayout [
 		add: ldapAuthRadio expand: false;
 		add: (self textRowLabel: 'Base DN' field: baseDnField) expand: false;
 		add: (self textRowLabel: 'Filter DN' field: filterDnField) expand: false;
-		spacing: 4;
+		spacing: 6;
 		yourself.
 
 	sideButtons := SpBoxLayout newTopToBottom
 		add: privilegesButton expand: false;
 		add: symbolListButton expand: false;
 		add: securityPoliciesButton expand: false;
-		spacing: 8;
+		spacing: 10;
+		yourself.
+
+	sideAndAuthPane := SpBoxLayout newLeftToRight
+		add: sideButtons expand: false;
+		add: authPane;
+		spacing: 14;
+		yourself.
+
+	transferButtons := SpBoxLayout newTopToBottom
+		add: (self newLabel label: '') expand: true;
+		add: addGroupButton expand: false;
+		add: removeGroupButton expand: false;
+		add: (self newLabel label: '') expand: true;
+		spacing: 10;
 		yourself.
 
 	groupLists := SpBoxLayout newLeftToRight
 		add: memberGroupsList;
-		add: (SpBoxLayout newTopToBottom
-			add: addGroupButton expand: false;
-			add: removeGroupButton expand: false;
-			spacing: 8;
-			yourself) expand: false;
+		add: transferButtons expand: false;
 		add: availableGroupsList;
-		spacing: 8;
+		spacing: 10;
 		yourself.
 
 	groupsPane := SpBoxLayout newTopToBottom
@@ -176,24 +186,24 @@ GbsCreateUserPresenter >> defaultLayout [
 	groupsButtons := SpBoxLayout newTopToBottom
 		add: (self newLabel label: 'New Group') expand: false;
 		add: newGroupRow expand: false;
-		spacing: 4;
+		spacing: 6;
 		yourself.
 
 	actionRow := SpBoxLayout newLeftToRight
 		add: saveButton;
 		add: saveAndCommitButton;
 		add: closeButton;
-		spacing: 8;
+		spacing: 10;
 		yourself.
 
 	^ SpBoxLayout newTopToBottom
 		add: mainMenu expand: false;
 		add: credentialsPane expand: false;
-		add: (SpBoxLayout newLeftToRight add: sideButtons; add: authPane; spacing: 12; yourself) expand: true;
+		add: sideAndAuthPane expand: false;
 		add: groupsPane;
 		add: groupsButtons expand: false;
 		add: actionRow expand: false;
-		spacing: 8;
+		spacing: 10;
 		yourself
 ]
 
@@ -210,7 +220,7 @@ GbsCreateUserPresenter >> textRowLabel: labelString field: aField [
 GbsCreateUserPresenter >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GemStone User';
-		initialExtent: 780 @ 620
+		initialExtent: 960 @ 760
 ]
 
 { #category : 'actions' }

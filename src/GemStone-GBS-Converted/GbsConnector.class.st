@@ -131,3 +131,29 @@ GbsConnector >> connectorServerName: aString [
 		at: #connectorServerName
 		put: (aString ifNil: [ '' ] ifNotNil: [ aString asString ])
 ]
+
+{ #category : 'testing' }
+GbsConnector >> connectsAssociation [
+	^ false
+]
+
+{ #category : 'resolving' }
+GbsConnector >> resolveSTObjIfFail: failBlock [
+	| clientName obj |
+	clientName := self connectorClientName.
+	clientName ifNil: [ ^ failBlock value ].
+	obj := Smalltalk globals at: clientName asString asSymbol ifAbsent: [ nil ].
+	obj ifNil: [ ^ failBlock value ].
+	^ obj
+]
+
+{ #category : 'resolving' }
+GbsConnector >> resolveGSObjInSession: aSession ifFail: failBlock [
+	| serverName result |
+	aSession ifNil: [ ^ failBlock value ].
+	serverName := self connectorServerName.
+	(serverName isNil or: [ serverName asString trimBoth isEmpty ]) ifTrue: [ ^ failBlock value ].
+	[ result := aSession evaluate: serverName asString ] on: Error do: [ :ex | ^ failBlock value ].
+	result ifNil: [ ^ failBlock value ].
+	^ result
+]
