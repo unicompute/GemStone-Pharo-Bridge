@@ -339,7 +339,7 @@ GbsBrowser >> selectDictionaryNamed: aDictionaryName [
 
 { #category : 'actions' }
 GbsBrowser >> selectClassNamed: aClassName classSide: classSideBoolean method: aSelectorString [
-	| clsItems chosenProtocol className dictName reordered |
+	| clsItems chosenProtocol className dictName |
 	(aClassName isString and: [ aClassName isEmpty not ]) ifFalse: [ ^ false ].
 	className := aClassName trimBoth.
 	(metaCheckbox respondsTo: #state:) ifTrue: [ metaCheckbox state: classSideBoolean ].
@@ -354,11 +354,8 @@ GbsBrowser >> selectClassNamed: aClassName classSide: classSideBoolean method: a
 			ifTrue: [ classesList items ]
 			ifFalse: [ #( ) ] ].
 	(clsItems includes: className) ifFalse: [ ^ false ].
-	reordered := clsItems asOrderedCollection.
-	reordered remove: className ifAbsent: [ ].
-	reordered addFirst: className.
-	(classesList respondsTo: #items:) ifTrue: [ classesList items: reordered asArray ].
 	(classesList respondsTo: #selectItem:) ifTrue: [ classesList selectItem: className ].
+	self ensureClassVisibleNamed: className inItems: clsItems.
 	self classSelected: className.
 	chosenProtocol := '-- all --'.
 	(protocolsList respondsTo: #selectItem:) ifTrue: [ protocolsList selectItem: chosenProtocol ].
@@ -367,6 +364,27 @@ GbsBrowser >> selectClassNamed: aClassName classSide: classSideBoolean method: a
 		(methodsList respondsTo: #selectItem:) ifTrue: [ methodsList selectItem: aSelectorString ].
 		self methodSelected: aSelectorString ].
 	^ true
+]
+
+{ #category : 'private' }
+GbsBrowser >> ensureClassVisibleNamed: className inItems: classItems [
+	| index |
+	index := classItems indexOf: className ifAbsent: [ 0 ].
+	index > 0 ifTrue: [
+		(classesList respondsTo: #selectIndex:)
+			ifTrue: [ [ classesList selectIndex: index ] on: Error do: [ ] ] ].
+	(classesList respondsTo: #scrollSelectionIntoView)
+		ifTrue: [ [ classesList scrollSelectionIntoView ] on: Error do: [ ] ].
+	(classesList respondsTo: #withAdapterDo:)
+		ifTrue: [
+			[ classesList withAdapterDo: [ :adapter |
+				| widget |
+				widget := [ adapter widget ] on: Error do: [ nil ].
+				widget ifNotNil: [
+					(widget respondsTo: #scrollSelectionIntoView)
+						ifTrue: [ widget scrollSelectionIntoView ] ] ] ]
+				on: Error
+				do: [ ] ].
 ]
 
 { #category : 'private' }
