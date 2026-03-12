@@ -130,7 +130,8 @@ GbsCreateUserPresenter >> defaultLayout [
 		add: (self textRowLabel: 'User ID' field: userField) expand: false;
 		add: (self textRowLabel: 'Password' field: passwordField) expand: false;
 		add: (self textRowLabel: 'Confirm Password' field: confirmPasswordField) expand: false;
-		spacing: 4;
+		add: (self newLabel label: '') expand: false;
+		spacing: 10;
 		yourself.
 
 	authPane := SpBoxLayout newTopToBottom
@@ -140,7 +141,7 @@ GbsCreateUserPresenter >> defaultLayout [
 		add: ldapAuthRadio expand: false;
 		add: (self textRowLabel: 'Base DN' field: baseDnField fieldWidth: self authFieldWidth) expand: false;
 		add: (self textRowLabel: 'Filter DN' field: filterDnField fieldWidth: self authFieldWidth) expand: false;
-		spacing: 4;
+		spacing: 6;
 		yourself.
 
 	sideButtons := SpBoxLayout newTopToBottom
@@ -198,13 +199,23 @@ GbsCreateUserPresenter >> defaultLayout [
 
 	^ SpBoxLayout newTopToBottom
 		add: mainMenu expand: false;
-		add: (self centeredPane: credentialsPane width: self contentWidth) expand: false;
-		add: (self centeredPane: sideAndAuthPane width: self contentWidth) expand: false;
+		add: (self centeredPane: credentialsPane width: self contentWidth) height: self credentialsPaneHeight;
+		add: (self centeredPane: sideAndAuthPane width: self contentWidth) height: self sideAndAuthHeight;
 		add: (self centeredPane: groupsPane width: self contentWidth);
 		add: (self centeredPane: groupsButtons width: self contentWidth) expand: false;
 		add: (self centeredPane: actionRow width: self contentWidth) expand: false;
 		spacing: 6;
 		yourself
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> credentialsPaneHeight [
+	^ 145
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> sideAndAuthHeight [
+	^ 220
 ]
 
 { #category : 'layout' }
@@ -263,7 +274,7 @@ GbsCreateUserPresenter >> actionButtonWidth [
 
 { #category : 'layout' }
 GbsCreateUserPresenter >> authFieldWidth [
-	^ 280
+	^ 300
 ]
 
 { #category : 'layout' }
@@ -284,7 +295,7 @@ GbsCreateUserPresenter >> centeredPane: aPaneLayout width: aWidth [
 GbsCreateUserPresenter >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GemStone User';
-		initialExtent: 860 @ 760
+		initialExtent: 920 @ 860
 ]
 
 { #category : 'actions' }

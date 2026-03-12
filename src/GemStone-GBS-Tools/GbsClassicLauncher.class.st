@@ -843,10 +843,15 @@ GbsClassicLauncher >> openClassBrowser [
 	GbsSessionParameters currentSession: session.
 	browser := self openBrowserOn: session dictionary: nil.
 	browser ifFalse: [ ^ false ].
-	^ [ browser
+	^ [ (browser
 		selectClassNamed: className trimBoth
 		classSide: false
-		method: nil ] on: Error do: [ false ]
+		method: nil)
+		ifTrue: [
+			(browser respondsTo: #browseClass)
+				ifTrue: [ browser browseClass ].
+			true ]
+		ifFalse: [ false ] ] on: Error do: [ false ]
 ]
 
 { #category : 'actions' }

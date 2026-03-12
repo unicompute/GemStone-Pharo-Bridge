@@ -594,7 +594,27 @@ GbsBrowser >> browseDictionary [
 
 { #category : 'actions' }
 GbsBrowser >> browseClass [
-	^ self selectedClassName notNil
+	| className requested metaString script source |
+	className := self selectedClassName.
+	className ifNil: [
+		requested := UIManager default request: 'Class name:' initialAnswer: ''.
+		(requested isNil or: [ requested trimBoth isEmpty ]) ifTrue: [ ^ false ].
+		(self selectClassNamed: requested trimBoth classSide: (metaCheckbox state == true) method: nil)
+			ifFalse: [ ^ false ].
+		className := self selectedClassName ifNil: [ requested trimBoth ] ].
+
+	metaString := (metaCheckbox state == true) ifTrue: [ ' class' ] ifFalse: [ '' ].
+	script := '[
+		| cls |
+		cls := (System myUserProfile symbolList objectNamed: #', className, ')', metaString, '.
+		cls ifNil: [ ^ '''' ].
+		(cls respondsTo: #definition)
+			ifTrue: [ cls definition asString ]
+			ifFalse: [ cls printString ]
+	] value'.
+	source := session executeAndFetch: script.
+	sourceText text: (source ifNil: [ '' ] ifNotNil: [ source asString ]).
+	^ true
 ]
 
 { #category : 'actions' }
