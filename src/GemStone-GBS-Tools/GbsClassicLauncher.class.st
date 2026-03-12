@@ -850,6 +850,8 @@ GbsClassicLauncher >> openClassBrowser [
 		ifTrue: [
 			(browser respondsTo: #browseClass)
 				ifTrue: [ browser browseClass ].
+			(browser respondsTo: #focusClasses)
+				ifTrue: [ UIManager default defer: [ browser focusClasses ] ].
 			true ]
 		ifFalse: [ false ] ] on: Error do: [ false ]
 ]

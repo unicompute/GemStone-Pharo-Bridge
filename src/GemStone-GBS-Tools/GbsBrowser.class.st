@@ -597,7 +597,9 @@ GbsBrowser >> findClass [
 	name := UIManager default request: 'Class name:' initialAnswer: ''.
 	(name isNil or: [ name isEmpty ]) ifTrue: [ ^ false ].
 	^ (self selectClassNamed: name trimBoth classSide: false method: nil)
-		ifTrue: [ self browseClass ]
+		ifTrue: [
+			self focusClasses.
+			self browseClass ]
 		ifFalse: [ false ]
 ]
 
@@ -1097,6 +1099,12 @@ GbsBrowser >> removeMethod [
 GbsBrowser >> focusSource [
 	(sourceText respondsTo: #takeKeyboardFocus)
 		ifTrue: [ sourceText takeKeyboardFocus ].
+]
+
+{ #category : 'private' }
+GbsBrowser >> focusClasses [
+	(classesList respondsTo: #takeKeyboardFocus)
+		ifTrue: [ [ classesList takeKeyboardFocus ] on: Error do: [ ] ].
 ]
 
 { #category : 'private' }
