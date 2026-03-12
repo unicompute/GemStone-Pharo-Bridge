@@ -198,8 +198,8 @@ GbsCreateUserPresenter >> defaultLayout [
 
 	^ SpBoxLayout newTopToBottom
 		add: mainMenu expand: false;
-		add: credentialsPane expand: false;
-		add: sideAndAuthPane expand: false;
+		add: credentialsPane height: 106;
+		add: sideAndAuthPane height: 210;
 		add: groupsPane;
 		add: groupsButtons expand: false;
 		add: actionRow expand: false;
@@ -270,7 +270,7 @@ GbsCreateUserPresenter >> authFieldWidth [
 GbsCreateUserPresenter >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GemStone User';
-		initialExtent: 960 @ 760
+		initialExtent: 980 @ 820
 ]
 
 { #category : 'actions' }
