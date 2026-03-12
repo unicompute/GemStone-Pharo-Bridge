@@ -473,6 +473,106 @@ GbsAdminToolsPresenterTest >> testConnectorBrowserOptionSelectionChangedSavesAnd
 ]
 
 { #category : 'tests' }
+GbsAdminToolsPresenterTest >> testConnectorBrowserApplySettingsForRowUsesRowDefaultsNotGlobalState [
+	| cfg connected disconnected updateSt updateGs fwd cfwd none |
+	cfg := GbsConfiguration new.
+	cfg valueAt: #connectorConnectionState put: 'disconnected'.
+	cfg valueAt: #postConnectAction put: 'forwarder'.
+	GbsConfiguration current: cfg.
+
+	connected := GbxFakeTogglePresenter new.
+	disconnected := GbxFakeTogglePresenter new.
+	updateSt := GbxFakeTogglePresenter new.
+	updateGs := GbxFakeTogglePresenter new.
+	fwd := GbxFakeTogglePresenter new.
+	cfwd := GbxFakeTogglePresenter new.
+	none := GbxFakeTogglePresenter new.
+
+	connectorBrowserPresenter instVarNamed: 'connectedRadio' put: connected.
+	connectorBrowserPresenter instVarNamed: 'disconnectedRadio' put: disconnected.
+	connectorBrowserPresenter instVarNamed: 'updateStRadio' put: updateSt.
+	connectorBrowserPresenter instVarNamed: 'updateGsRadio' put: updateGs.
+	connectorBrowserPresenter instVarNamed: 'forwarderRadio' put: fwd.
+	connectorBrowserPresenter instVarNamed: 'clientForwarderRadio' put: cfwd.
+	connectorBrowserPresenter instVarNamed: 'noneRadio' put: none.
+
+	connectorBrowserPresenter applySettingsForConnectorRow: #('Fast' 'ByteArray' 'ByteArray').
+
+	self assert: connected state.
+	self deny: disconnected state.
+	self deny: updateSt state.
+	self deny: updateGs state.
+	self deny: fwd state.
+	self deny: cfwd state.
+	self assert: none state
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testConnectorBrowserAppliesDifferentSavedStatePerConnectorRow [
+	| cfg connected disconnected updateSt updateGs fwd cfwd none fakeTable rowA rowB |
+	cfg := GbsConfiguration new.
+	GbsConfiguration current: cfg.
+
+	connected := GbxFakeTogglePresenter new.
+	disconnected := GbxFakeTogglePresenter new.
+	updateSt := GbxFakeTogglePresenter new.
+	updateGs := GbxFakeTogglePresenter new.
+	fwd := GbxFakeTogglePresenter new.
+	cfwd := GbxFakeTogglePresenter new.
+	none := GbxFakeTogglePresenter new.
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	rowA := #('Fast' 'ByteArray' 'ByteArray').
+	rowB := #('Fast' 'String' 'String').
+
+	connectorBrowserPresenter instVarNamed: 'connectedRadio' put: connected.
+	connectorBrowserPresenter instVarNamed: 'disconnectedRadio' put: disconnected.
+	connectorBrowserPresenter instVarNamed: 'updateStRadio' put: updateSt.
+	connectorBrowserPresenter instVarNamed: 'updateGsRadio' put: updateGs.
+	connectorBrowserPresenter instVarNamed: 'forwarderRadio' put: fwd.
+	connectorBrowserPresenter instVarNamed: 'clientForwarderRadio' put: cfwd.
+	connectorBrowserPresenter instVarNamed: 'noneRadio' put: none.
+	connectorBrowserPresenter instVarNamed: 'connectorTable' put: fakeTable.
+
+	fakeTable selectedItem: rowA.
+	connected state: false.
+	disconnected state: true.
+	updateSt state: false.
+	updateGs state: true.
+	fwd state: false.
+	cfwd state: false.
+	none state: false.
+	connectorBrowserPresenter saveSettingsFromOptionStateForSelectedConnector.
+
+	fakeTable selectedItem: rowB.
+	connected state: true.
+	disconnected state: false.
+	updateSt state: false.
+	updateGs state: false.
+	fwd state: false.
+	cfwd state: false.
+	none state: true.
+	connectorBrowserPresenter saveSettingsFromOptionStateForSelectedConnector.
+
+	connectorBrowserPresenter applySettingsForConnectorRow: rowA.
+	self deny: connected state.
+	self assert: disconnected state.
+	self deny: updateSt state.
+	self assert: updateGs state.
+	self deny: fwd state.
+	self deny: cfwd state.
+	self deny: none state.
+
+	connectorBrowserPresenter applySettingsForConnectorRow: rowB.
+	self assert: connected state.
+	self deny: disconnected state.
+	self deny: updateSt state.
+	self deny: updateGs state.
+	self deny: fwd state.
+	self deny: cfwd state.
+	self assert: none state
+]
+
+{ #category : 'tests' }
 GbsAdminToolsPresenterTest >> testUserInfoFetchGroupsForUserParsesCsv [
 	| mockSession groups |
 	userInfoPresenter ifNil: [ self skip: 'GbsUserInfoPresenter not loaded' ].
