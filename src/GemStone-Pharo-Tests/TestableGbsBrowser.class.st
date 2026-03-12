@@ -92,6 +92,11 @@ TestableGbsBrowser >> queryServerMethodsForSelector: selectorName mode: modeStri
 ]
 
 { #category : 'private' }
+TestableGbsBrowser >> queryMatchingSelectorsForPattern: patternString [
+	^ { patternString }
+]
+
+{ #category : 'private' }
 TestableGbsBrowser >> openMethodReference: referenceString [
 	lastOpenedReference := referenceString.
 	^ true

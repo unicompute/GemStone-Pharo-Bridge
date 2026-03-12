@@ -756,10 +756,12 @@ GbsBrowser >> queryMethodsForSelectorPrompt: prompt mode: modeString [
 
 { #category : 'actions' }
 GbsBrowser >> queryMethodsForSelector: selectorName mode: modeString [
-	| normalized references |
+	| normalized resolvedSelector references |
 	normalized := self normalizeSelectorQuery: selectorName.
 	normalized isEmpty ifTrue: [ ^ false ].
-	references := self queryServerMethodsForSelector: normalized trimBoth mode: modeString.
+	resolvedSelector := self resolveSelectorForQueryInput: normalized.
+	resolvedSelector isNil ifTrue: [ ^ false ].
+	references := self queryServerMethodsForSelector: resolvedSelector trimBoth mode: modeString.
 	references isEmpty ifTrue: [ ^ self informNotImplemented: 'No matches found.' ].
 	^ self openQueryResults: references
 ]
@@ -775,6 +777,48 @@ GbsBrowser >> normalizeSelectorQuery: rawInput [
 	((text beginsWith: '''') and: [ text endsWith: '''' ]) ifTrue: [
 		text := (text copyFrom: 2 to: text size - 1) trimBoth ].
 	^ text
+]
+
+{ #category : 'private' }
+GbsBrowser >> resolveSelectorForQueryInput: rawInput [
+	| matches exactMatch idx |
+	matches := self queryMatchingSelectorsForPattern: rawInput.
+	matches isEmpty ifTrue: [ ^ rawInput ].
+	exactMatch := matches
+		detect: [ :each | each asString = rawInput ]
+		ifNone: [ nil ].
+	exactMatch ifNotNil: [ ^ exactMatch asString ].
+	matches size = 1 ifTrue: [ ^ matches first asString ].
+	idx := self
+		uiChooseFrom: (matches collect: [ :each | each asString ])
+		title: 'Pick one matching selector'.
+	idx = 0 ifTrue: [ ^ nil ].
+	^ (matches at: idx) asString
+]
+
+{ #category : 'private' }
+GbsBrowser >> queryMatchingSelectorsForPattern: rawPattern [
+	| pattern escaped script raw |
+	pattern := rawPattern asString trimBoth.
+	pattern isEmpty ifTrue: [ ^ #() ].
+	escaped := (pattern copyWithout: $*) copyReplaceAll: '''' with: ''''''.
+	script := '[
+		| token all stream |
+		token := ''', escaped, '''.
+		all := Set new.
+		System myUserProfile symbolList do: [ :dict |
+			dict keysAndValuesDo: [ :k :v |
+				(v isBehavior) ifTrue: [
+					[ v selectors do: [ :sel | all add: sel asString ] ] on: Error do: [ ] ] ] ].
+		stream := WriteStream on: String new.
+		(all asArray select: [ :sel |
+			(sel = token) or: [ sel includesSubstring: token ] ]) asSortedCollection
+			do: [ :sel | stream nextPutAll: sel; lf ].
+		stream contents
+	] value'.
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	raw isNil ifTrue: [ ^ #() ].
+	^ ((raw asString splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asArray
 ]
 
 { #category : 'private' }
