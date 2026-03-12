@@ -66,7 +66,16 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                                 action: [ self generateClassConnectors ].
                             (aBuilder item: #RemoveInvalidConnectors)
                                 label: 'Remove Invalid Connectors';
-                                action: [ self removeInvalidConnectors ] ] ].
+                                action: [ self removeInvalidConnectors ].
+                            (aBuilder item: #ConnectorClassMapping)
+                                label: 'Connector Class Mapping...';
+                                action: [ self editConnectorClassMappingOnCurrentSession ].
+                            (aBuilder item: #ShowConnectorClassMappings)
+                                label: 'Show Connector Class Mappings...';
+                                action: [ self showConnectorClassMappingsOnCurrentSession ].
+                            (aBuilder item: #ClearAllConnectorClassMappings)
+                                label: 'Clear All Connector Class Overrides';
+                                action: [ self clearAllConnectorClassMappingsOnCurrentSession ] ] ].
 
             (aBuilder item: #GbsBrowse)
                 label: 'Browse';
@@ -262,6 +271,73 @@ GbsClassicLauncher class >> openConnectorBrowserOnCurrentSession [
 		on: Error
 		do: [ :ex |
 			UIManager default inform: 'Could not open connector browser: ', ex messageText ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> editConnectorClassMappingOnCurrentSession [
+	| session mgr pairs pairLabels pairIndex pair clientName serverName choices labels classIndex selectedClass |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
+	(mgr isNil or: [ mgr respondsTo: #connectorPairs not ]) ifTrue: [
+		^ UIManager default inform: 'Connector class mapping is not available in this image.' ].
+	pairs := [ mgr connectorPairs ] on: Error do: [ #() ].
+	pairs isEmpty ifTrue: [ ^ UIManager default inform: 'No connectors available.' ].
+	pairLabels := pairs collect: [ :each |
+		| c s |
+		c := each at: 1 ifAbsent: [ '' ].
+		s := each at: 2 ifAbsent: [ '' ].
+		c asString, ' -> ', s asString ].
+	pairIndex := UIManager default chooseFrom: pairLabels title: 'Select Connector Pair'.
+	pairIndex = 0 ifTrue: [ ^ self ].
+	pair := pairs at: pairIndex ifAbsent: [ ^ self ].
+	clientName := pair at: 1 ifAbsent: [ ^ self ].
+	serverName := pair at: 2 ifAbsent: [ ^ self ].
+	choices := (mgr respondsTo: #connectorClassChoices)
+		ifTrue: [ mgr connectorClassChoices ]
+		ifFalse: [ { GbsFastConnector. GbsNameConnector. GbsClassConnector. GbsClassVarConnector. GbsClassInstVarConnector } ].
+	labels := choices collect: [ :each | each name asString ].
+	classIndex := UIManager default chooseFrom: labels title: 'Connector Class for ', clientName asString, ' -> ', serverName asString.
+	classIndex = 0 ifTrue: [ ^ self ].
+	selectedClass := choices at: classIndex ifAbsent: [ ^ self ].
+	[
+		mgr
+			setConnectorClass: selectedClass
+			forClient: clientName
+			server: serverName.
+		UIManager default inform: 'Connector class mapping saved.'.
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Failed to save connector class mapping: ', ex messageText ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> showConnectorClassMappingsOnCurrentSession [
+	| session mgr text |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
+	(mgr isNil or: [ mgr respondsTo: #connectorClassMappingReportText not ]) ifTrue: [
+		^ UIManager default inform: 'Connector class mapping report is not available in this image.' ].
+	text := [ mgr connectorClassMappingReportText ] on: Error do: [ :ex | 'Failed to build connector class mapping report: ', ex messageText ].
+	UIManager default edit: text label: 'Connector Class Mappings'
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> clearAllConnectorClassMappingsOnCurrentSession [
+	| session mgr |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
+	(mgr isNil or: [ mgr respondsTo: #clearAllConnectorClassMappings not ]) ifTrue: [
+		^ UIManager default inform: 'Clear all connector class overrides is not available in this image.' ].
+	(UIManager default
+		confirm: 'Clear all connector class overrides and revert to default class resolution?'
+		label: 'Clear Connector Class Overrides') ifFalse: [ ^ self ].
+	[
+		mgr clearAllConnectorClassMappings.
+		UIManager default inform: 'Cleared all connector class overrides.'
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Failed to clear connector class overrides: ', ex messageText ]
 ]
 
 { #category : 'menus' }

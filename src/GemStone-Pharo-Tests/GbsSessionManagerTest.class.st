@@ -2,7 +2,11 @@ Class {
 	#name : 'GbsSessionManagerTest',
 	#superclass : 'TestCase',
 	#instVars : [
-		'previousFastRegistry'
+		'previousFastRegistry',
+		'previousConnectionRegistry',
+		'previousInvalidActionRegistry',
+		'previousConnectorObjectRegistry',
+		'previousConnectorClassMappingRegistry'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -11,12 +15,20 @@ Class {
 { #category : 'running' }
 GbsSessionManagerTest >> setUp [
 	super setUp.
-	previousFastRegistry := GbsSessionManager fastConnectorRegistry copy
+	previousFastRegistry := GbsSessionManager fastConnectorRegistry copy.
+	previousConnectionRegistry := (Smalltalk globals at: #GbsConnectorConnectionRegistry ifAbsent: [ Dictionary new ]) copy.
+	previousInvalidActionRegistry := (Smalltalk globals at: #GbsConnectorInvalidActionRegistry ifAbsent: [ Dictionary new ]) copy.
+	previousConnectorObjectRegistry := (Smalltalk globals at: #GbsConnectorObjectRegistry ifAbsent: [ Dictionary new ]) copy.
+	previousConnectorClassMappingRegistry := (Smalltalk globals at: #GbsConnectorClassMappingRegistry ifAbsent: [ Dictionary new ]) copy
 ]
 
 { #category : 'running' }
 GbsSessionManagerTest >> tearDown [
 	GbsSessionManager fastConnectorRegistry: previousFastRegistry.
+	Smalltalk globals at: #GbsConnectorConnectionRegistry put: previousConnectionRegistry.
+	Smalltalk globals at: #GbsConnectorInvalidActionRegistry put: previousInvalidActionRegistry.
+	Smalltalk globals at: #GbsConnectorObjectRegistry put: previousConnectorObjectRegistry.
+	Smalltalk globals at: #GbsConnectorClassMappingRegistry put: previousConnectorClassMappingRegistry.
 	super tearDown
 ]
 
@@ -160,4 +172,94 @@ GbsSessionManagerTest >> testClassSideInitializeFastConnectorsPopulatesRegistry 
 	self assert: registry notNil.
 	self assert: (registry isKindOf: Dictionary).
 	self assert: (registry at: 'ByteString' ifAbsent: [ nil ]) equals: 'String'
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testConnectorConnectionStateDefaultsToConnected [
+	self assert: (GbsSessionManager
+		isConnectorClient: 'ByteArray'
+		server: 'ByteArray'
+		connectedInSession: 'DataCurator@gs64stone')
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testConnectorConnectionStateCanBeUpdatedPerSessionAndConnector [
+	GbsSessionManager
+		setConnectorClient: 'ByteArray'
+		server: 'ByteArray'
+		connected: false
+		inSession: 'DataCurator@gs64stone'.
+
+	self deny: (GbsSessionManager
+		isConnectorClient: 'ByteArray'
+		server: 'ByteArray'
+		connectedInSession: 'DataCurator@gs64stone').
+	self assert: (GbsSessionManager
+		isConnectorClient: 'ByteArray'
+		server: 'ByteArray'
+		connectedInSession: 'OtherUser@gs64stone')
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testInvalidPostConnectActionsPerConnectorRoundTrip [
+	| invalid |
+	GbsSessionManager
+		setInvalidPostConnectActions: #('updateGS' 'forwarder')
+		forConnectorClient: 'ByteArray'
+		server: 'ByteArray'.
+
+	invalid := GbsSessionManager
+		invalidPostConnectActionsForConnectorClient: 'ByteArray'
+		server: 'ByteArray'.
+	self assert: (invalid includes: 'updategs').
+	self assert: (invalid includes: 'forwarder').
+	self deny: (invalid includes: 'none')
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testConnectorObjectForClientServerReturnsWrapper [
+	| connector |
+	connector := GbsSessionManager connectorObjectForClient: 'ByteArray' server: 'ByteArray'.
+	self assert: connector notNil.
+	self assert: (connector isKindOf: GbsConnector).
+	self assert: (connector respondsTo: #stDescription).
+	self assert: (connector respondsTo: #gsDescription).
+	self assert: connector stDescription equals: 'ByteArray'.
+	self assert: connector gsDescription equals: 'ByteArray'
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testSetInvalidPostConnectActionsUpdatesWrapper [
+	| wrapper |
+	wrapper := GbsSessionManager connectorObjectForClient: 'ByteArray' server: 'ByteArray'.
+	GbsSessionManager
+		setInvalidPostConnectActions: #('updateGS' 'forwarder')
+		forConnectorClient: 'ByteArray'
+		server: 'ByteArray'.
+	self assert: (wrapper invalidPostConnectActions includes: 'updategs').
+	self assert: (wrapper invalidPostConnectActions includes: 'forwarder')
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testConnectorClassForFastPairDefaultsToFastConnector [
+	self
+		assert: (GbsSessionManager connectorClassForClient: 'ByteArray' server: 'ByteArray')
+		equals: GbsFastConnector
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testConnectorClassOverridePerPair [
+	GbsSessionManager
+		setConnectorClass: GbsNameConnector
+		forClient: 'ByteArray'
+		server: 'ByteArray'.
+
+	self
+		assert: (GbsSessionManager connectorClassForClient: 'ByteArray' server: 'ByteArray')
+		equals: GbsNameConnector.
+
+	GbsSessionManager clearConnectorClassForClient: 'ByteArray' server: 'ByteArray'.
+	self
+		assert: (GbsSessionManager connectorClassForClient: 'ByteArray' server: 'ByteArray')
+		equals: GbsFastConnector
 ]
