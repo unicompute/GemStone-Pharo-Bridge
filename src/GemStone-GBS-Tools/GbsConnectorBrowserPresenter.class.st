@@ -176,7 +176,7 @@ GbsConnectorBrowserPresenter >> defaultLayout [
 GbsConnectorBrowserPresenter >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'Connector Browser';
-		initialExtent: 700 @ 620
+		initialExtent: 980 @ 700
 ]
 
 { #category : 'menus' }
@@ -681,7 +681,7 @@ GbsConnectorBrowserPresenter >> saveOptionsToConfiguration [
 		valueAt: #removeInvalidConnectors put: (removeInvalidCheck state == true);
 		valueAt: #connectorConnectionState put: self selectedConnectionState;
 		valueAt: #postConnectAction put: self selectedPostConnectAction.
-	self saveSettingsFromOptionStateForSelectedConnector
+	self saveSettingsFromOptionStateForSelectedConnectors
 ]
 
 { #category : 'private' }
@@ -710,11 +710,11 @@ GbsConnectorBrowserPresenter >> optionSelectionChanged [
 GbsConnectorBrowserPresenter >> wireRadioSelectionHandlers [
 	self wireRadio: connectedRadio selectBlock: [ self connectorConnectSelected ].
 	self wireRadio: disconnectedRadio selectBlock: [ self connectorDisconnectSelected ].
-	self wireRadio: updateStRadio selectBlock: [ self applyPostConnectAction: 'updateST'. self optionSelectionChanged ].
-	self wireRadio: updateGsRadio selectBlock: [ self applyPostConnectAction: 'updateGS'. self optionSelectionChanged ].
-	self wireRadio: forwarderRadio selectBlock: [ self applyPostConnectAction: 'forwarder'. self optionSelectionChanged ].
-	self wireRadio: clientForwarderRadio selectBlock: [ self applyPostConnectAction: 'clientForwarder'. self optionSelectionChanged ].
-	self wireRadio: noneRadio selectBlock: [ self applyPostConnectAction: 'none'. self optionSelectionChanged ]
+	self wireRadio: updateStRadio selectBlock: [ self postConnectActionChangedTo: 'updateST' ].
+	self wireRadio: updateGsRadio selectBlock: [ self postConnectActionChangedTo: 'updateGS' ].
+	self wireRadio: forwarderRadio selectBlock: [ self postConnectActionChangedTo: 'forwarder' ].
+	self wireRadio: clientForwarderRadio selectBlock: [ self postConnectActionChangedTo: 'clientForwarder' ].
+	self wireRadio: noneRadio selectBlock: [ self postConnectActionChangedTo: 'none' ]
 ]
 
 { #category : 'private' }
@@ -805,17 +805,42 @@ GbsConnectorBrowserPresenter >> applySettingsForConnectorRow: aRow [
 ]
 
 { #category : 'private' }
-GbsConnectorBrowserPresenter >> saveSettingsFromOptionStateForSelectedConnector [
-	| row key map entry |
-	row := self currentSelectedConnectorRow.
-	key := self connectorSettingKeyForRow: row.
-	key ifNil: [ ^ self ].
+GbsConnectorBrowserPresenter >> saveSettingsFromOptionStateForSelectedConnectors [
+	| rows map entry |
+	rows := self selectedConnectorRows.
+	rows isEmpty ifTrue: [ ^ self ].
 	map := self connectorSettingsMap copy.
 	entry := Dictionary new
 		at: #postConnectAction put: self selectedPostConnectAction;
 		yourself.
-	map at: key put: entry.
+	rows do: [ :row |
+		| key |
+		key := self connectorSettingKeyForRow: row.
+		key ifNotNil: [ map at: key put: entry copy ] ].
 	self saveConnectorSettingsMap: map
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> postConnectActionChangedTo: actionString [
+	self applyPostConnectAction: actionString.
+	self applyPostConnectActionToSelectedConnectors: actionString.
+	self saveOptionsToConfiguration
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> applyPostConnectActionToSelectedConnectors: actionString [
+	| rows |
+	rows := self selectedConnectorRows.
+	rows do: [ :row |
+		| clientName serverName connectorObject |
+		clientName := self rowClientName: row.
+		serverName := self rowServerName: row.
+		connectorObject := self
+			managerPerform: #connectorObjectForClient:server:
+			withArguments: { clientName asString. serverName asString }
+			ifUnavailable: [ nil ].
+		(connectorObject notNil and: [ connectorObject respondsTo: #postConnectAction: ]) ifTrue: [
+			[ connectorObject postConnectAction: actionString ] on: Error do: [ ] ] ]
 ]
 
 { #category : 'private' }
@@ -1025,7 +1050,7 @@ GbsConnectorBrowserPresenter >> updatePostConnectActionEnablementForRow: aRow [
 			detect: [ :each | (invalid includes: each asLowercase) not ]
 			ifNone: [ 'none' ].
 		self applyPostConnectAction: validFallback.
-		self saveSettingsFromOptionStateForSelectedConnector ]
+		self saveSettingsFromOptionStateForSelectedConnectors ]
 ]
 
 { #category : 'private' }
