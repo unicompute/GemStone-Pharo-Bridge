@@ -339,7 +339,7 @@ GbsBrowser >> selectDictionaryNamed: aDictionaryName [
 
 { #category : 'actions' }
 GbsBrowser >> selectClassNamed: aClassName classSide: classSideBoolean method: aSelectorString [
-	| clsItems chosenProtocol className dictName |
+	| clsItems chosenProtocol className dictName reordered |
 	(aClassName isString and: [ aClassName isEmpty not ]) ifFalse: [ ^ false ].
 	className := aClassName trimBoth.
 	(metaCheckbox respondsTo: #state:) ifTrue: [ metaCheckbox state: classSideBoolean ].
@@ -354,8 +354,13 @@ GbsBrowser >> selectClassNamed: aClassName classSide: classSideBoolean method: a
 			ifTrue: [ classesList items ]
 			ifFalse: [ #( ) ] ].
 	(clsItems includes: className) ifFalse: [ ^ false ].
+	reordered := clsItems asOrderedCollection.
+	reordered remove: className ifAbsent: [ ].
+	reordered addFirst: className.
+	(classesList respondsTo: #items:) ifTrue: [ classesList items: reordered asArray ].
 	(classesList respondsTo: #selectItem:) ifTrue: [ classesList selectItem: className ].
-	self ensureClassVisibleNamed: className inItems: clsItems.
+	self ensureClassVisibleNamed: className inItems: reordered asArray.
+	self focusClasses.
 	self classSelected: className.
 	chosenProtocol := '-- all --'.
 	(protocolsList respondsTo: #selectItem:) ifTrue: [ protocolsList selectItem: chosenProtocol ].
