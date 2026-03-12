@@ -378,8 +378,15 @@ GbsClassicLauncher class >> browseClassOnCurrentSession [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> browseImplementorsOnCurrentSession [
+	| query |
+	query := UIManager default request: 'Implementors of selector:' initialAnswer: ''.
+	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
 	self openBrowserOnCurrentSessionDo: [ :browser |
-		(browser respondsTo: #queryImplementors) ifTrue: [ browser queryImplementors ] ].
+		(browser respondsTo: #queryMethodsForSelector:mode:)
+			ifTrue: [ browser queryMethodsForSelector: query mode: 'implementors' ]
+			ifFalse: [
+				(browser respondsTo: #queryImplementors)
+					ifTrue: [ browser queryImplementors ] ] ].
 ]
 
 { #category : 'menus' }
@@ -396,14 +403,28 @@ GbsClassicLauncher class >> browseNamespaceOnCurrentSession [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> browseReferencesOnCurrentSession [
+	| query |
+	query := UIManager default request: 'References to selector:' initialAnswer: ''.
+	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
 	self openBrowserOnCurrentSessionDo: [ :browser |
-		(browser respondsTo: #queryReferences) ifTrue: [ browser queryReferences ] ].
+		(browser respondsTo: #queryMethodsForSelector:mode:)
+			ifTrue: [ browser queryMethodsForSelector: query mode: 'references' ]
+			ifFalse: [
+				(browser respondsTo: #queryReferences)
+					ifTrue: [ browser queryReferences ] ] ].
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> browseSendersOnCurrentSession [
+	| query |
+	query := UIManager default request: 'Senders of selector:' initialAnswer: ''.
+	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
 	self openBrowserOnCurrentSessionDo: [ :browser |
-		(browser respondsTo: #querySenders) ifTrue: [ browser querySenders ] ].
+		(browser respondsTo: #queryMethodsForSelector:mode:)
+			ifTrue: [ browser queryMethodsForSelector: query mode: 'senders' ]
+			ifFalse: [
+				(browser respondsTo: #querySenders)
+					ifTrue: [ browser querySenders ] ] ].
 ]
 
 { #category : 'menus' }
