@@ -130,7 +130,7 @@ GbsCreateUserPresenter >> defaultLayout [
 		add: (self textRowLabel: 'User ID' field: userField) expand: false;
 		add: (self textRowLabel: 'Password' field: passwordField) expand: false;
 		add: (self textRowLabel: 'Confirm Password' field: confirmPasswordField) expand: false;
-		spacing: 6;
+		spacing: 4;
 		yourself.
 
 	authPane := SpBoxLayout newTopToBottom
@@ -140,7 +140,7 @@ GbsCreateUserPresenter >> defaultLayout [
 		add: ldapAuthRadio expand: false;
 		add: (self textRowLabel: 'Base DN' field: baseDnField fieldWidth: self authFieldWidth) expand: false;
 		add: (self textRowLabel: 'Filter DN' field: filterDnField fieldWidth: self authFieldWidth) expand: false;
-		spacing: 6;
+		spacing: 4;
 		yourself.
 
 	sideButtons := SpBoxLayout newTopToBottom
@@ -153,7 +153,7 @@ GbsCreateUserPresenter >> defaultLayout [
 	sideAndAuthPane := SpBoxLayout newLeftToRight
 		add: sideButtons expand: false;
 		add: authPane;
-		spacing: 14;
+		spacing: 10;
 		yourself.
 
 	transferButtons := SpBoxLayout newTopToBottom
@@ -168,7 +168,7 @@ GbsCreateUserPresenter >> defaultLayout [
 		add: memberGroupsList width: self groupListWidth;
 		add: transferButtons expand: false;
 		add: availableGroupsList width: self groupListWidth;
-		spacing: 10;
+		spacing: 8;
 		yourself.
 
 	groupsPane := SpBoxLayout newTopToBottom
@@ -198,12 +198,12 @@ GbsCreateUserPresenter >> defaultLayout [
 
 	^ SpBoxLayout newTopToBottom
 		add: mainMenu expand: false;
-		add: (self centeredPane: credentialsPane width: self contentWidth) height: 94;
-		add: (self centeredPane: sideAndAuthPane width: self contentWidth) height: 205;
+		add: (self centeredPane: credentialsPane width: self contentWidth) expand: false;
+		add: (self centeredPane: sideAndAuthPane width: self contentWidth) expand: false;
 		add: (self centeredPane: groupsPane width: self contentWidth);
 		add: (self centeredPane: groupsButtons width: self contentWidth) expand: false;
 		add: (self centeredPane: actionRow width: self contentWidth) expand: false;
-		spacing: 10;
+		spacing: 6;
 		yourself
 ]
 
@@ -223,22 +223,22 @@ GbsCreateUserPresenter >> textRowLabel: labelString field: aField fieldWidth: wi
 
 { #category : 'layout' }
 GbsCreateUserPresenter >> rowLabelWidth [
-	^ 130
+	^ 150
 ]
 
 { #category : 'layout' }
 GbsCreateUserPresenter >> textFieldWidth [
-	^ 640
+	^ 520
 ]
 
 { #category : 'layout' }
 GbsCreateUserPresenter >> sideButtonWidth [
-	^ 280
+	^ 250
 ]
 
 { #category : 'layout' }
 GbsCreateUserPresenter >> groupListWidth [
-	^ 380
+	^ 300
 ]
 
 { #category : 'layout' }
@@ -248,7 +248,7 @@ GbsCreateUserPresenter >> transferButtonWidth [
 
 { #category : 'layout' }
 GbsCreateUserPresenter >> newGroupFieldWidth [
-	^ 640
+	^ 440
 ]
 
 { #category : 'layout' }
@@ -263,12 +263,12 @@ GbsCreateUserPresenter >> actionButtonWidth [
 
 { #category : 'layout' }
 GbsCreateUserPresenter >> authFieldWidth [
-	^ 250
+	^ 280
 ]
 
 { #category : 'layout' }
 GbsCreateUserPresenter >> contentWidth [
-	^ 900
+	^ 800
 ]
 
 { #category : 'layout' }
@@ -284,7 +284,7 @@ GbsCreateUserPresenter >> centeredPane: aPaneLayout width: aWidth [
 GbsCreateUserPresenter >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GemStone User';
-		initialExtent: 980 @ 820
+		initialExtent: 860 @ 760
 ]
 
 { #category : 'actions' }
@@ -495,6 +495,15 @@ GbsCreateUserPresenter >> scriptToSaveUser: userName password: password groups: 
 		((privilegeMap at: #DataCurator ifAbsent: [ false ]) == false)
 			ifTrue: [ removeGroup value: ''DataCuratorGroup'' ].
 		true'
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> scriptToCreateUser: userName password: password [
+	^ self
+		scriptToSaveUser: userName
+		password: password
+		groups: #()
+		privileges: self defaultPrivilegesDictionary
 ]
 
 { #category : 'private' }

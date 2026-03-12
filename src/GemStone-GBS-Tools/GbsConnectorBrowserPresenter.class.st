@@ -302,14 +302,21 @@ GbsConnectorBrowserPresenter >> refreshGroups [
 
 { #category : 'actions' }
 GbsConnectorBrowserPresenter >> refreshConnectorsForGroup: aGroupLabel [
-	| rows previousSelection selectedRow matchingSelection |
+	| rows previousSelection previousKey selectedRow matchingSelection |
 	aGroupLabel ifNil: [ connectorTable items: #(). ^ self ].
 	previousSelection := [ connectorTable selection selectedItem ] on: Error do: [ nil ].
+	previousKey := self connectorSettingKeyForRow: previousSelection.
 	rows := self connectorRowsForGroup: aGroupLabel.
 	connectorTable items: rows.
-	matchingSelection := (previousSelection notNil and: [ rows isEmpty not ])
-		ifTrue: [ rows detect: [ :each | each = previousSelection ] ifNone: [ nil ] ]
-		ifFalse: [ nil ].
+	matchingSelection := previousKey
+		ifNil: [
+			(previousSelection notNil and: [ rows isEmpty not ])
+				ifTrue: [ rows detect: [ :each | each = previousSelection ] ifNone: [ nil ] ]
+				ifFalse: [ nil ] ]
+		ifNotNil: [
+			rows
+				detect: [ :each | (self connectorSettingKeyForRow: each) = previousKey ]
+				ifNone: [ nil ] ].
 	(matchingSelection notNil)
 		ifTrue: [
 			(connectorTable respondsTo: #selectItem:)
@@ -331,7 +338,10 @@ GbsConnectorBrowserPresenter >> refreshConnectorsForGroup: aGroupLabel [
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> connectorRowsForGroup: aGroupLabel [
-	| connectors |
+	| connectors label |
+	label := self groupDisplayStringFor: aGroupLabel.
+	((label beginsWith: 'Session connectors') and: [ self selectedConnectionState = 'disconnected' ])
+		ifTrue: [ ^ #() ].
 	connectors := self connectorObjectsForGroup: aGroupLabel.
 	^ (connectors asArray
 		sort: [ :a :b |
@@ -766,13 +776,16 @@ GbsConnectorBrowserPresenter >> configuration [
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> loadOptionsFromConfiguration [
-	| cfg |
+	| cfg rawPostAction |
 	cfg := self configuration.
 	verificationCheck state: (self asBooleanResult: (cfg valueAt: #connectVerification ifAbsent: true) default: true).
 	removeInvalidCheck state: (self asBooleanResult: (cfg valueAt: #removeInvalidConnectors ifAbsent: true) default: true).
 	self applyConnectionState: (cfg valueAt: #connectorConnectionState ifAbsent: 'connected').
-	self applyPostConnectAction: (cfg valueAt: #postConnectAction ifAbsent: [ cfg valueAt: #postConnectAction put: 'none'. 'none' ]).
-	self applySettingsForSelectedConnector
+	rawPostAction := cfg valueAt: #postConnectAction ifAbsent: [ nil ].
+	(rawPostAction isNil or: [ rawPostAction asString trimBoth isEmpty ]) ifTrue: [
+		rawPostAction := 'none'.
+		cfg valueAt: #postConnectAction put: rawPostAction ].
+	self applyPostConnectAction: rawPostAction
 ]
 
 { #category : 'private' }
@@ -805,8 +818,12 @@ GbsConnectorBrowserPresenter >> wireChangeNotificationOn: aPresenter [
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> optionSelectionChanged [
+	| selectedKey |
+	selectedKey := self connectorSettingKeyForRow: self currentSelectedConnectorRow.
 	self saveOptionsToConfiguration.
-	self refreshConnectorsForCurrentGroup
+	self refreshConnectorsForCurrentGroup.
+	selectedKey ifNotNil: [ self selectConnectorWithSettingKey: selectedKey ].
+	self updateConnectorControlsFromSelection
 ]
 
 { #category : 'private' }
@@ -902,18 +919,20 @@ GbsConnectorBrowserPresenter >> applySettingsForConnectorRow: aRow [
 	connectorObject := self connectorObjectForRow: aRow.
 	map := self connectorSettingsMap.
 	rowSettings := map at: key ifAbsent: [ nil ].
-	persistedAction := (connectorObject notNil and: [ connectorObject respondsTo: #postConnectAction ])
-		ifTrue: [ [ connectorObject postConnectAction ] on: Error do: [ nil ] ]
+	persistedAction := (rowSettings isDictionary)
+		ifTrue: [ rowSettings at: #postConnectAction ifAbsent: [ nil ] ]
 		ifFalse: [ nil ].
+	(persistedAction isNil or: [ persistedAction asString trimBoth isEmpty ]) ifTrue: [
+		persistedAction := (connectorObject notNil and: [ connectorObject respondsTo: #postConnectAction ])
+			ifTrue: [ [ connectorObject postConnectAction ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ] ].
 	(persistedAction isNil or: [ persistedAction asString trimBoth isEmpty ]) ifTrue: [
 		persistedAction := self
 			managerPerform: #postConnectActionForConnectorClient:server:
 			withArguments: { (self rowClientName: aRow) asString. (self rowServerName: aRow) asString }
 			ifUnavailable: [ nil ] ].
 	(persistedAction isNil or: [ persistedAction asString trimBoth isEmpty ]) ifTrue: [
-		persistedAction := (rowSettings isDictionary)
-			ifTrue: [ rowSettings at: #postConnectAction ifAbsent: [ self defaultPostConnectAction ] ]
-			ifFalse: [ self defaultPostConnectAction ] ].
+		persistedAction := self defaultPostConnectAction ].
 	self applyPostConnectAction: persistedAction.
 	self updatePostConnectActionEnablementForRow: aRow
 ]
@@ -925,6 +944,7 @@ GbsConnectorBrowserPresenter >> saveSettingsFromOptionStateForSelectedConnectors
 	rows isEmpty ifTrue: [ ^ self ].
 	map := self connectorSettingsMap copy.
 	entry := Dictionary new
+		at: #connectionState put: self selectedConnectionState;
 		at: #postConnectAction put: self selectedPostConnectAction;
 		yourself.
 	rows do: [ :row |
@@ -966,23 +986,38 @@ GbsConnectorBrowserPresenter >> applyPostConnectActionToSelectedConnectors: acti
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> connectorConnectSelected [
+	| selectedKey |
+	selectedKey := self connectorSettingKeyForRow: self currentSelectedConnectorRow.
 	self setConnectionStateForSelectedConnector: 'connected'.
 	self applyConnectionState: 'connected'.
-	self optionSelectionChanged
+	self saveOptionsToConfiguration.
+	self refreshConnectorsForCurrentGroup.
+	selectedKey ifNotNil: [ self selectConnectorWithSettingKey: selectedKey ].
+	self updateConnectorControlsFromSelection
 ]
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> connectorDisconnectSelected [
+	| selectedKey |
+	selectedKey := self connectorSettingKeyForRow: self currentSelectedConnectorRow.
 	self setConnectionStateForSelectedConnector: 'disconnected'.
 	self applyConnectionState: 'disconnected'.
-	self optionSelectionChanged
+	self saveOptionsToConfiguration.
+	self refreshConnectorsForCurrentGroup.
+	selectedKey ifNotNil: [ self selectConnectorWithSettingKey: selectedKey ].
+	self updateConnectorControlsFromSelection
 ]
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> applyConnectionStateForConnectorRow: aRow [
-	| clientName serverName connectedValue connectorObject selectedSession |
+	| clientName serverName connectedValue connectorObject selectedSession key map rowSettings |
 	clientName := self rowClientName: aRow.
 	serverName := self rowServerName: aRow.
+	key := self connectorSettingKeyForRow: aRow.
+	map := self connectorSettingsMap.
+	rowSettings := key ifNil: [ nil ] ifNotNil: [ map at: key ifAbsent: [ nil ] ].
+	(rowSettings isDictionary and: [ rowSettings includesKey: #connectionState ]) ifTrue: [
+		^ self applyConnectionState: (rowSettings at: #connectionState ifAbsent: [ self defaultConnectionState ]) ].
 	connectorObject := self connectorObjectForRow: aRow.
 	selectedSession := self selectedConnectorSession.
 	(connectorObject notNil and: [ connectorObject respondsTo: #isConnectedInSession: ]) ifTrue: [

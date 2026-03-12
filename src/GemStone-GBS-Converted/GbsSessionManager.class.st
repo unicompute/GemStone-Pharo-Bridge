@@ -162,13 +162,14 @@ GbsSessionManager class >> connectorPairs [
 	pairs := OrderedCollection new.
 	seen := Set new.
 	registry keysAndValuesDo: [ :clientName :serverName |
-		| c s pairKey inverseKey |
+		| c s first second pairKey |
 		c := clientName asString.
 		s := serverName asString.
-		pairKey := c, '->', s.
-		inverseKey := s, '->', c.
-		((seen includes: pairKey) or: [ seen includes: inverseKey ]) ifFalse: [
-			pairs add: { c. s }.
+		first := c <= s ifTrue: [ c ] ifFalse: [ s ].
+		second := c <= s ifTrue: [ s ] ifFalse: [ c ].
+		pairKey := first, '->', second.
+		(seen includes: pairKey) ifFalse: [
+			pairs add: { first. second }.
 			seen add: pairKey ] ].
 	^ pairs asArray
 ]

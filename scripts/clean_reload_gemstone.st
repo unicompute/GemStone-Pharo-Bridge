@@ -62,10 +62,21 @@
   #(
     '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbxDebuggerService.class.st'
     '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsRemoteDebugger.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsConnectorBrowserPresenter.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsCreateUserPresenter.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsSecurityPoliciesPresenter.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsSymbolListBrowserPresenter.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsUserInfoPresenter.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsNamespacesPresenter.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Converted/GbsConfiguration.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Converted/GbsConnectorGroup.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Converted/GbsSessionManager.class.st'
     '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/GbxFakeGbsErrorForService.class.st'
     '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/GbxFakeActivationForService.class.st'
     '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/GbxFakeContextListPolicyForService.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/GbsTestableUserListPresenter.class.st'
     '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/GbxDebuggerServiceTest.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/GbsAdminToolsPresenterTest.class.st'
   ) do: [ :pathString |
     | file defs |
     file := pathString asFileReference.

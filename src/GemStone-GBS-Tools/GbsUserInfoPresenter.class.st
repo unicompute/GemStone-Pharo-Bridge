@@ -9,7 +9,9 @@ Class {
 		'mainMenu',
 		'textPresenter',
 		'closeButton',
-		'privilegesButton'
+		'privilegesButton',
+		'symbolListButton',
+		'securityPoliciesButton'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -42,7 +44,8 @@ GbsUserInfoPresenter >> initialize [
 
 { #category : 'accessing' }
 GbsUserInfoPresenter >> userName: aString [
-	userName := aString ifNil: [ '' ] ifNotNil: [ aString asString ]
+	userName := aString ifNil: [ '' ] ifNotNil: [ aString asString ].
+	self updateActionButtons
 ]
 
 { #category : 'accessing' }
@@ -52,7 +55,8 @@ GbsUserInfoPresenter >> infoText: aString [
 
 { #category : 'accessing' }
 GbsUserInfoPresenter >> session: aSession [
-	session := aSession
+	session := aSession.
+	self updateActionButtons
 ]
 
 { #category : 'accessing' }
@@ -69,28 +73,45 @@ GbsUserInfoPresenter >> initializePresenters [
 		label: 'Privileges...';
 		action: [ self editPrivileges ];
 		yourself.
+	symbolListButton := self newButton
+		label: 'Symbol List...';
+		action: [ self editSymbolList ];
+		yourself.
+	securityPoliciesButton := self newButton
+		label: 'Object Security Policies ...';
+		action: [ self editSecurityPolicies ];
+		yourself.
 	closeButton := self newButton
 		label: 'Close';
 		icon: (self iconNamed: #smallCancel);
 		action: [ self closeWindow ];
-		yourself
+		yourself.
+	self updateActionButtons
 ]
 
 { #category : 'initialization' }
 GbsUserInfoPresenter >> connectPresenters [
+	(textPresenter respondsTo: #contextMenu:) ifTrue: [
+		textPresenter contextMenu: [ self menuUserPopup ] ].
+	self updateActionButtons.
 	self updateInfoDisplay
 ]
 
 { #category : 'layout' }
 GbsUserInfoPresenter >> defaultLayout [
+	| buttonsRow |
+	buttonsRow := SpBoxLayout newLeftToRight
+		add: (self newLabel label: '');
+		add: privilegesButton expand: false;
+		add: symbolListButton expand: false;
+		add: securityPoliciesButton expand: false;
+		add: closeButton expand: false;
+		spacing: 8;
+		yourself.
 	^ SpBoxLayout newTopToBottom
 		add: mainMenu expand: false;
 		add: textPresenter;
-		add: (SpBoxLayout newLeftToRight
-			add: (self newLabel label: '');
-			add: privilegesButton expand: false;
-			add: closeButton expand: false;
-			yourself) expand: false;
+		add: buttonsRow expand: false;
 		spacing: 8;
 		yourself
 ]
@@ -98,8 +119,8 @@ GbsUserInfoPresenter >> defaultLayout [
 { #category : 'initialization' }
 GbsUserInfoPresenter >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
-		title: 'GemStone User Info - ', userName;
-		initialExtent: 620 @ 420
+		title: 'GemStone User - ', userName;
+		initialExtent: 760 @ 520
 ]
 
 { #category : 'menus' }
@@ -131,8 +152,42 @@ GbsUserInfoPresenter >> menuHelp [
 { #category : 'menus' }
 GbsUserInfoPresenter >> menuUser [
 	^ self newMenu
-		addItem: [ :item | item name: 'Privileges...'; action: [ self editPrivileges ] ];
-		addItem: [ :item | item name: 'Refresh'; action: [ self refreshInfoText ] ];
+		addItem: [ :item |
+			item name: 'Privileges...'; action: [ self editPrivileges ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnUserInfo ] ];
+		addItem: [ :item |
+			item name: 'Symbol List...'; action: [ self editSymbolList ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnUserInfo ] ];
+		addItem: [ :item |
+			item name: 'Object Security Policies...'; action: [ self editSecurityPolicies ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnUserInfo ] ];
+		addItem: [ :item |
+			item name: 'Refresh'; action: [ self refreshInfoText ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnUserInfo ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsUserInfoPresenter >> menuUserPopup [
+	^ self newMenu
+		addItem: [ :item |
+			item name: 'Copy Selected Line'; action: [ self copySelectedInfoLine ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self hasSelectedInfoLine ] ];
+		addItem: [ :item |
+			item name: 'Inspect Selected Line'; action: [ self inspectSelectedInfoLine ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self hasSelectedInfoLine ] ];
+		addItem: [ :item |
+			item name: 'Refresh'; action: [ self refreshInfoText ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnUserInfo ] ];
+		addItem: [ :item |
+			item name: 'Privileges...'; action: [ self editPrivileges ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnUserInfo ] ];
+		addItem: [ :item |
+			item name: 'Symbol List...'; action: [ self editSymbolList ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnUserInfo ] ];
+		addItem: [ :item |
+			item name: 'Object Security Policies...'; action: [ self editSecurityPolicies ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnUserInfo ] ];
 		yourself
 ]
 
@@ -159,6 +214,26 @@ GbsUserInfoPresenter >> editPrivileges [
 				self refreshInfoText ]
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Could not open privileges window: ', ex messageText ]
+]
+
+{ #category : 'actions' }
+GbsUserInfoPresenter >> editSymbolList [
+	session ifNil: [ ^ self ].
+	[
+		GbsSymbolListBrowserPresenter
+			openOn: session
+			userName: userName
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open Symbol List Browser: ', ex messageText ]
+]
+
+{ #category : 'actions' }
+GbsUserInfoPresenter >> editSecurityPolicies [
+	session ifNil: [ ^ self ].
+	[
+		GbsSecurityPoliciesPresenter openOn: session
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open security policies window: ', ex messageText ]
 ]
 
 { #category : 'private' }
@@ -258,6 +333,59 @@ GbsUserInfoPresenter >> updateInfoDisplay [
 		ifTrue: [ textPresenter text: (infoText ifNil: [ '' ] ifNotNil: [ infoText asString ]) ].
 	(textPresenter respondsTo: #items:)
 		ifTrue: [ textPresenter items: self displayLinesFromInfoText ]
+]
+
+{ #category : 'private' }
+GbsUserInfoPresenter >> canOperateOnUserInfo [
+	^ (session notNil) and: [ userName isString and: [ userName isNotEmpty ] ]
+]
+
+{ #category : 'private' }
+GbsUserInfoPresenter >> selectedInfoLine [
+	| selected |
+	textPresenter ifNil: [ ^ nil ].
+	(textPresenter respondsTo: #selection)
+		ifTrue: [
+			selected := [ textPresenter selection selectedItem ] on: Error do: [ nil ].
+			selected ifNotNil: [ ^ selected asString ] ].
+	(textPresenter respondsTo: #selectedItem)
+		ifTrue: [
+			selected := [ textPresenter selectedItem ] on: Error do: [ nil ].
+			selected ifNotNil: [ ^ selected asString ] ].
+	^ nil
+]
+
+{ #category : 'private' }
+GbsUserInfoPresenter >> hasSelectedInfoLine [
+	| line |
+	line := self selectedInfoLine.
+	^ line isString and: [ line isNotEmpty ]
+]
+
+{ #category : 'actions' }
+GbsUserInfoPresenter >> copySelectedInfoLine [
+	| line |
+	line := self selectedInfoLine.
+	line ifNil: [ ^ self ].
+	Clipboard clipboardText: line
+]
+
+{ #category : 'actions' }
+GbsUserInfoPresenter >> inspectSelectedInfoLine [
+	| line |
+	line := self selectedInfoLine.
+	line ifNil: [ ^ self ].
+	UIManager default inform: line
+]
+
+{ #category : 'private' }
+GbsUserInfoPresenter >> updateActionButtons [
+	| enabled |
+	enabled := self canOperateOnUserInfo.
+	{ privilegesButton. symbolListButton. securityPoliciesButton } do: [ :button |
+		button ifNotNil: [
+			(button respondsTo: #enabled:)
+				ifTrue: [ button enabled: enabled ] ] ]
 ]
 
 { #category : 'actions' }

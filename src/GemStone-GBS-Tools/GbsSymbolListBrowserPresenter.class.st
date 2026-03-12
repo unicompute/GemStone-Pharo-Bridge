@@ -62,6 +62,10 @@ GbsSymbolListBrowserPresenter >> connectPresenters [
 		| key |
 		key := selection selectedItem.
 		key ifNotNil: [ self showEntryForKey: key ] ].
+	(dictionariesList respondsTo: #contextMenu:) ifTrue: [
+		dictionariesList contextMenu: [ self menuDictionaryPopup ] ].
+	(entriesList respondsTo: #contextMenu:) ifTrue: [
+		entriesList contextMenu: [ self menuEntryPopup ] ].
 	self refreshUsers
 ]
 
@@ -124,22 +128,50 @@ GbsSymbolListBrowserPresenter >> menuFile [
 { #category : 'menus' }
 GbsSymbolListBrowserPresenter >> menuDictionary [
 	^ self newMenu
-		addItem: [ :item | item name: 'Refresh Dictionaries'; action: [ self refreshDictionariesFor: userDropList selectedItem ] ];
-		addItem: [ :item | item name: 'Add...'; action: [ self addDictionary ] ];
-		addItem: [ :item | item name: 'Rename As...'; action: [ self renameDictionary ] ];
-		addItem: [ :item | item name: 'Remove...'; action: [ self removeDictionary ] ];
-		addItem: [ :item | item name: 'Inspect'; action: [ self inspectDictionary ] ];
+		addItem: [ :item |
+			item name: 'Refresh Dictionaries'; action: [ self refreshDictionariesFor: userDropList selectedItem ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedUser ] ];
+		addItem: [ :item |
+			item name: 'Add...'; action: [ self addDictionary ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedUser ] ];
+		addItem: [ :item |
+			item name: 'Rename As...'; action: [ self renameDictionary ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedDictionary ] ];
+		addItem: [ :item |
+			item name: 'Remove...'; action: [ self removeDictionary ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedDictionary ] ];
+		addItem: [ :item |
+			item name: 'Inspect'; action: [ self inspectDictionary ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedDictionary ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsSymbolListBrowserPresenter >> menuEntry [
 	^ self newMenu
-		addItem: [ :item | item name: 'Add...'; action: [ self addEntry ] ];
-		addItem: [ :item | item name: 'Rename As...'; action: [ self renameEntry ] ];
-		addItem: [ :item | item name: 'Remove...'; action: [ self removeEntry ] ];
-		addItem: [ :item | item name: 'Inspect Entry'; action: [ self inspectSelectedEntry ] ];
+		addItem: [ :item |
+			item name: 'Add...'; action: [ self addEntry ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedDictionary ] ];
+		addItem: [ :item |
+			item name: 'Rename As...'; action: [ self renameEntry ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedEntry ] ];
+		addItem: [ :item |
+			item name: 'Remove...'; action: [ self removeEntry ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedEntry ] ];
+		addItem: [ :item |
+			item name: 'Inspect Entry'; action: [ self inspectSelectedEntry ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedEntry ] ];
 		yourself
+]
+
+{ #category : 'menus' }
+GbsSymbolListBrowserPresenter >> menuDictionaryPopup [
+	^ self menuDictionary
+]
+
+{ #category : 'menus' }
+GbsSymbolListBrowserPresenter >> menuEntryPopup [
+	^ self menuEntry
 ]
 
 { #category : 'menus' }
@@ -179,7 +211,8 @@ GbsSymbolListBrowserPresenter >> addDictionary [
 	script := self addDictionaryScriptForUser: userName dictionary: dictName trimBoth.
 	[
 		session execute: script.
-		self refreshDictionariesFor: userName
+		self refreshDictionariesFor: userName preservingSelection: dictName trimBoth.
+		self refreshEntriesForDictionary: dictName trimBoth preservingSelection: nil
 	] on: Error do: [ :ex | UIManager default inform: 'Add dictionary failed: ', ex messageText ].
 ]
 
@@ -197,7 +230,8 @@ GbsSymbolListBrowserPresenter >> renameDictionary [
 		newName: newName trimBoth.
 	[
 		session execute: script.
-		self refreshDictionariesFor: userName
+		self refreshDictionariesFor: userName preservingSelection: newName trimBoth.
+		self refreshEntriesForDictionary: newName trimBoth preservingSelection: nil
 	] on: Error do: [ :ex | UIManager default inform: 'Rename dictionary failed: ', ex messageText ].
 ]
 
@@ -240,7 +274,7 @@ GbsSymbolListBrowserPresenter >> addEntry [
 		valueExpression: valueExpr.
 	[
 		session execute: script.
-		self refreshEntriesForDictionary: dictName
+		self refreshEntriesForDictionary: dictName preservingSelection: keyName trimBoth
 	] on: Error do: [ :ex | UIManager default inform: 'Add entry failed: ', ex messageText ].
 ]
 
@@ -260,7 +294,7 @@ GbsSymbolListBrowserPresenter >> renameEntry [
 		newKeyName: newKey trimBoth.
 	[
 		session execute: script.
-		self refreshEntriesForDictionary: dictName
+		self refreshEntriesForDictionary: dictName preservingSelection: newKey trimBoth
 	] on: Error do: [ :ex | UIManager default inform: 'Rename entry failed: ', ex messageText ].
 ]
 
@@ -304,13 +338,15 @@ GbsSymbolListBrowserPresenter >> refreshUsers [
 
 { #category : 'actions' }
 GbsSymbolListBrowserPresenter >> refreshDictionariesFor: userName [
-	| raw dicts |
+	| previousDict raw dicts |
+	previousDict := self selectedDictionaryName.
 	userName ifNil: [ dictionariesList items: #(). ^ self ].
 	raw := [ session evaluate: (self dictionariesScriptForUser: userName asString) ] on: Error do: [ '' ].
 	dicts := (raw isString and: [ raw isNotEmpty ])
 		ifTrue: [ (raw splitOn: Character tab) reject: [ :each | each isEmpty ] ]
 		ifFalse: [ #() ].
 	dictionariesList items: dicts asArray.
+	self selectDictionaryName: previousDict ifMissingSelectFirst: true.
 	entriesList items: #().
 	entryValuesByKey := Dictionary new.
 	selectionField text: ''.
@@ -318,8 +354,15 @@ GbsSymbolListBrowserPresenter >> refreshDictionariesFor: userName [
 ]
 
 { #category : 'actions' }
+GbsSymbolListBrowserPresenter >> refreshDictionariesFor: userName preservingSelection: dictionaryName [
+	self refreshDictionariesFor: userName.
+	self selectDictionaryName: dictionaryName ifMissingSelectFirst: true
+]
+
+{ #category : 'actions' }
 GbsSymbolListBrowserPresenter >> refreshEntriesForDictionary: dictName [
-	| raw lines keys userName |
+	| previousKey raw lines keys userName |
+	previousKey := self selectedEntryName.
 	dictName ifNil: [ ^ self ].
 	userName := self selectedUserName.
 	userName ifNil: [ ^ self ].
@@ -339,8 +382,53 @@ GbsSymbolListBrowserPresenter >> refreshEntriesForDictionary: dictName [
 			keys add: key.
 			entryValuesByKey at: key put: value ] ].
 	entriesList items: keys asArray.
+	self selectEntryName: previousKey ifMissingSelectFirst: true.
 	selectionField text: ''.
 	(valueText respondsTo: #text:) ifTrue: [ valueText text: '' ]
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> refreshEntriesForDictionary: dictName preservingSelection: entryName [
+	self refreshEntriesForDictionary: dictName.
+	self selectEntryName: entryName ifMissingSelectFirst: true.
+	entryName ifNotNil: [
+		(entryValuesByKey includesKey: entryName) ifTrue: [ self showEntryForKey: entryName ] ]
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> selectDictionaryName: dictName ifMissingSelectFirst: selectFirstBoolean [
+	| items candidate |
+	items := dictionariesList items ifNil: [ #() ].
+	items isEmpty ifTrue: [ ^ self ].
+	candidate := (dictName isString and: [ dictName isNotEmpty ])
+		ifTrue: [ items detect: [ :each | each asString = dictName ] ifNone: [ nil ] ]
+		ifFalse: [ nil ].
+	candidate ifNil: [
+		selectFirstBoolean ifFalse: [ ^ self ].
+		candidate := items first ].
+	(dictionariesList respondsTo: #selectItem:)
+		ifTrue: [ dictionariesList selectItem: candidate ]
+		ifFalse: [
+			(dictionariesList respondsTo: #selectedItem:)
+				ifTrue: [ dictionariesList selectedItem: candidate ] ]
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> selectEntryName: entryName ifMissingSelectFirst: selectFirstBoolean [
+	| items candidate |
+	items := entriesList items ifNil: [ #() ].
+	items isEmpty ifTrue: [ ^ self ].
+	candidate := (entryName isString and: [ entryName isNotEmpty ])
+		ifTrue: [ items detect: [ :each | each asString = entryName ] ifNone: [ nil ] ]
+		ifFalse: [ nil ].
+	candidate ifNil: [
+		selectFirstBoolean ifFalse: [ ^ self ].
+		candidate := items first ].
+	(entriesList respondsTo: #selectItem:)
+		ifTrue: [ entriesList selectItem: candidate ]
+		ifFalse: [
+			(entriesList respondsTo: #selectedItem:)
+				ifTrue: [ entriesList selectedItem: candidate ] ]
 ]
 
 { #category : 'private' }
@@ -383,6 +471,27 @@ GbsSymbolListBrowserPresenter >> selectedEntryName [
 			selected := [ entriesList selectedItem ] on: Error do: [ nil ].
 			selected ifNotNil: [ ^ selected asString ] ].
 	^ nil
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> canOperateOnSelectedUser [
+	| userName |
+	userName := self selectedUserName.
+	^ userName isString and: [ userName isNotEmpty ]
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> canOperateOnSelectedDictionary [
+	| dictName |
+	dictName := self selectedDictionaryName.
+	^ self canOperateOnSelectedUser and: [ dictName isString and: [ dictName isNotEmpty ] ]
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> canOperateOnSelectedEntry [
+	| entryName |
+	entryName := self selectedEntryName.
+	^ self canOperateOnSelectedDictionary and: [ entryName isString and: [ entryName isNotEmpty ] ]
 ]
 
 { #category : 'actions' }

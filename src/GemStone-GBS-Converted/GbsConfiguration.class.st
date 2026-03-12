@@ -16,6 +16,8 @@ Class {
 		'confirm',
 		'connectVerification',
 		'connectorNilling',
+		'connectorConnectionState',
+		'connectorRowSettings',
 		'defaultFaultPolicy',
 		'deprecationWarnings',
 		'eventPollingFrequency',
@@ -93,6 +95,8 @@ GbsConfiguration >> initializeDefaults [
 	connectorNilling ifNil: [ connectorNilling := true ].
 	connectVerification ifNil: [ connectVerification := true ].
 	removeInvalidConnectors ifNil: [ removeInvalidConnectors := true ].
+	connectorConnectionState ifNil: [ connectorConnectionState := 'connected' ].
+	connectorRowSettings ifNil: [ connectorRowSettings := Dictionary new ].
 	generateClassConnectors ifNil: [ generateClassConnectors := true ].
 	generateClientClasses ifNil: [ generateClientClasses := true ].
 	generateServerClasses ifNil: [ generateServerClasses := true ].

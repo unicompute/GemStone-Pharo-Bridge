@@ -82,6 +82,10 @@ GbsNamespacesPresenter >> parseRows: rawString [
 { #category : 'actions' }
 GbsNamespacesPresenter >> refreshNamespaces [
 	| raw rows |
+	(self isSessionUsable not) ifTrue: [
+		namespacesTable items: #().
+		^ self
+	].
 	raw := [ session evaluate: self namespacesScript ] on: Error do: [ :ex | self inform: 'Fetch namespaces failed: ', ex messageText. '' ].
 	rows := self parseRows: raw.
 	namespacesTable items: rows
@@ -113,6 +117,14 @@ GbsNamespacesPresenter >> namespacesScript [
 { #category : 'private' }
 GbsNamespacesPresenter >> session: aSession [
 	session := aSession
+]
+
+{ #category : 'private' }
+GbsNamespacesPresenter >> isSessionUsable [
+	session ifNil: [ ^ false ].
+	(session respondsTo: #isLoggedIn)
+		ifTrue: [ ^ [ session isLoggedIn == true ] on: Error do: [ false ] ].
+	^ true
 ]
 
 { #category : 'private' }

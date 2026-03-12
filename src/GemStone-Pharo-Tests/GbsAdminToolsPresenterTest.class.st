@@ -8,7 +8,8 @@ Class {
 	'securityPoliciesPresenter',
 	'userListPresenter',
 	'userInfoPresenter',
-	'previousConfiguration'
+	'previousConfiguration',
+	'previousCurrentSession'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -16,13 +17,20 @@ Class {
 
 { #category : 'running' }
 GbsAdminToolsPresenterTest >> setUp [
+	| savedCurrent |
 	super setUp.
 	previousConfiguration := GbsConfiguration current.
+	previousCurrentSession := GbsSessionParameters currentSession.
 	createUserPresenter := GbsCreateUserPresenter new.
 	connectorBrowserPresenter := GbsConnectorBrowserPresenter new.
 	namespacesPresenter := GbsNamespacesPresenter new.
 	securityPoliciesPresenter := GbsSecurityPoliciesPresenter new.
-	userListPresenter := GbsUserListPresenter new.
+	savedCurrent := GbsSessionParameters currentSession.
+	GbsSessionParameters currentSession: nil.
+	[
+		userListPresenter := GbsUserListPresenter new.
+	] ensure: [
+		GbsSessionParameters currentSession: savedCurrent ].
 	userInfoPresenter := (Smalltalk at: #GbsUserInfoPresenter ifAbsent: [ nil ])
 		ifNotNil: [ :klass | klass new ]
 		ifNil: [ nil ]
@@ -30,6 +38,7 @@ GbsAdminToolsPresenterTest >> setUp [
 
 { #category : 'running' }
 GbsAdminToolsPresenterTest >> tearDown [
+	GbsSessionParameters currentSession: previousCurrentSession.
 	previousConfiguration ifNotNil: [ GbsConfiguration current: previousConfiguration ].
 	super tearDown
 ]
@@ -297,6 +306,109 @@ GbsAdminToolsPresenterTest >> testSecurityPoliciesSetPolicyTrackReadsScriptWrite
 	self assert: (script includesSubstring: '''Policy''''A''').
 	self assert: (script includesSubstring: 'trackReads: true').
 	self assert: (script includesSubstring: 'isTrackingReads:')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSecurityPoliciesCapabilityPredicatesTrackSelectionState [
+	| fakePolicies fakeGroups fakeMembers |
+	fakePolicies := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeGroups := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeMembers := GbxFakeListPresenterForBrowser new.
+
+	securityPoliciesPresenter instVarNamed: 'policiesTable' put: fakePolicies.
+	securityPoliciesPresenter instVarNamed: 'groupsTable' put: fakeGroups.
+	securityPoliciesPresenter instVarNamed: 'membersList' put: fakeMembers.
+
+	self deny: securityPoliciesPresenter canOperateOnSelectedPolicy.
+	self deny: securityPoliciesPresenter canOperateOnSelectedGroup.
+	self deny: securityPoliciesPresenter canOperateOnSelectedMember.
+
+	fakePolicies items: { #('Current' 'Default' 'PolicyA') }.
+	fakePolicies selectedItem: fakePolicies items first.
+	self assert: securityPoliciesPresenter canOperateOnSelectedPolicy.
+	self deny: securityPoliciesPresenter canOperateOnSelectedGroup.
+
+	fakeGroups items: { #('DataCuratorGroup' 'write') }.
+	fakeGroups selectedItem: fakeGroups items first.
+	self assert: securityPoliciesPresenter canOperateOnSelectedGroup.
+	self deny: securityPoliciesPresenter canOperateOnSelectedMember.
+
+	fakeMembers items: #('DataCurator').
+	fakeMembers selectedItem: 'DataCurator'.
+	self assert: securityPoliciesPresenter canOperateOnSelectedMember
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSecurityPoliciesRefreshAllPreservesSelectedPolicyWhenStillPresent [
+	| mockSession fakePolicies fakeGroups fakeMembers |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #evaluate put: [ :script |
+		(script includesSubstring: 'allPolicies do:')
+			ifTrue: [
+				^ 'Current', Character tab asString, 'Default', Character tab asString, 'PolicyA', Character tab asString, 'OwnerA', Character tab asString, 'write', Character tab asString, 'read', Character tab asString, '1', Character tab asString, 'No', String lf,
+					'', Character tab asString, '', Character tab asString, 'PolicyB', Character tab asString, 'OwnerB', Character tab asString, 'read', Character tab asString, 'read', Character tab asString, '2', Character tab asString, 'Yes' ].
+		(script includesSubstring: '= ''PolicyA''')
+			ifTrue: [ ^ 'GroupA', Character tab asString, 'write' ].
+		(script includesSubstring: '= ''PolicyB''')
+			ifTrue: [ ^ 'GroupB', Character tab asString, 'read' ].
+		(script includesSubstring: 'GroupA')
+			ifTrue: [ ^ 'UserA' ].
+		(script includesSubstring: 'GroupB')
+			ifTrue: [ ^ 'UserB' ].
+		^ '' ].
+
+	fakePolicies := GbxFakeTablePresenterForRemoteDebugger new.
+	fakePolicies items: { #('Current' 'Default' 'PolicyA'). #('' '' 'PolicyB') }.
+	fakePolicies selectedItem: fakePolicies items second.
+	fakeGroups := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeMembers := GbxFakeListPresenterForBrowser new.
+
+	securityPoliciesPresenter instVarNamed: 'session' put: mockSession.
+	securityPoliciesPresenter instVarNamed: 'policiesTable' put: fakePolicies.
+	securityPoliciesPresenter instVarNamed: 'groupsTable' put: fakeGroups.
+	securityPoliciesPresenter instVarNamed: 'membersList' put: fakeMembers.
+
+	securityPoliciesPresenter refreshAll.
+
+	self assert: (fakePolicies selectedItem at: 3) equals: 'PolicyB'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSecurityPoliciesRefreshGroupsAndMembersPreservesSelections [
+	| mockSession fakePolicies fakeGroups fakeMembers |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #evaluate put: [ :script |
+		(script includesSubstring: '= ''PolicyA''')
+			ifTrue: [
+				(script includesSubstring: 'GroupA')
+					ifTrue: [ ^ 'User1', String lf, 'User2' ].
+				(script includesSubstring: 'GroupB')
+					ifTrue: [ ^ 'UserB1', String lf, 'UserB2' ].
+				^ 'GroupA', Character tab asString, 'write', String lf,
+					'GroupB', Character tab asString, 'read' ].
+		^ '' ].
+
+	fakePolicies := GbxFakeTablePresenterForRemoteDebugger new.
+	fakePolicies items: { #('Current' 'Default' 'PolicyA') }.
+	fakePolicies selectedItem: fakePolicies items first.
+	fakeGroups := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeGroups items: { #('GroupA' 'write'). #('GroupB' 'read') }.
+	fakeGroups selectedItem: fakeGroups items second.
+	fakeMembers := GbxFakeListPresenterForBrowser new.
+	fakeMembers items: #('UserB1' 'UserB2').
+	fakeMembers selectedItem: 'UserB2'.
+
+	securityPoliciesPresenter instVarNamed: 'session' put: mockSession.
+	securityPoliciesPresenter instVarNamed: 'policiesTable' put: fakePolicies.
+	securityPoliciesPresenter instVarNamed: 'groupsTable' put: fakeGroups.
+	securityPoliciesPresenter instVarNamed: 'membersList' put: fakeMembers.
+
+	securityPoliciesPresenter refreshGroupsAndMembersForPolicyName: 'PolicyA'.
+
+	self assert: (fakeGroups selectedItem at: 1) equals: 'GroupB'.
+	self assert: fakeMembers selectedItem equals: 'UserB2'
 ]
 
 { #category : 'tests' }
@@ -1060,6 +1172,186 @@ GbsAdminToolsPresenterTest >> testUserInfoInfoTextSetterNormalizesNilToEmptyStri
 ]
 
 { #category : 'tests' }
+GbsAdminToolsPresenterTest >> testUserInfoCanOperateOnUserInfoRequiresSessionAndUserName [
+	| presenter mockSession |
+	presenter := (Smalltalk at: #GbsUserInfoPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsUserInfoPresenter not loaded' ].
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+
+	self deny: presenter canOperateOnUserInfo.
+	presenter session: mockSession.
+	self deny: presenter canOperateOnUserInfo.
+	presenter userName: 'DataCurator'.
+	self assert: presenter canOperateOnUserInfo
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testUserInfoUpdateActionButtonsReflectsCapability [
+	| presenter p s o mockSession |
+	presenter := (Smalltalk at: #GbsUserInfoPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsUserInfoPresenter not loaded' ].
+	p := GbxFakeTogglePresenter new.
+	s := GbxFakeTogglePresenter new.
+	o := GbxFakeTogglePresenter new.
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+
+	presenter instVarNamed: 'privilegesButton' put: p.
+	presenter instVarNamed: 'symbolListButton' put: s.
+	presenter instVarNamed: 'securityPoliciesButton' put: o.
+
+	presenter userName: ''.
+	presenter session: nil.
+	presenter updateActionButtons.
+	self deny: p enabled.
+	self deny: s enabled.
+	self deny: o enabled.
+
+	presenter session: mockSession.
+	presenter userName: 'DataCurator'.
+	presenter updateActionButtons.
+	self assert: p enabled.
+	self assert: s enabled.
+	self assert: o enabled
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSymbolListCapabilityPredicatesTrackSelectionState [
+	| presenter fakeUsers fakeDicts fakeEntries |
+	presenter := (Smalltalk at: #GbsSymbolListBrowserPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].
+	fakeUsers := GbxFakeListPresenterForBrowser new.
+	fakeDicts := GbxFakeListPresenterForBrowser new.
+	fakeEntries := GbxFakeListPresenterForBrowser new.
+
+	presenter instVarNamed: 'userDropList' put: fakeUsers.
+	presenter instVarNamed: 'dictionariesList' put: fakeDicts.
+	presenter instVarNamed: 'entriesList' put: fakeEntries.
+
+	self deny: presenter canOperateOnSelectedUser.
+	self deny: presenter canOperateOnSelectedDictionary.
+	self deny: presenter canOperateOnSelectedEntry.
+
+	fakeUsers selectedItem: 'DataCurator'.
+	self assert: presenter canOperateOnSelectedUser.
+	self deny: presenter canOperateOnSelectedDictionary.
+
+	fakeDicts selectedItem: 'UserGlobals'.
+	self assert: presenter canOperateOnSelectedDictionary.
+	self deny: presenter canOperateOnSelectedEntry.
+
+	fakeEntries selectedItem: 'MyKey'.
+	self assert: presenter canOperateOnSelectedEntry
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSymbolListRefreshDictionariesPreservesSelectedDictionary [
+	| presenter mockSession fakeUsers fakeDicts fakeEntries fakeSelection fakeValue |
+	presenter := (Smalltalk at: #GbsSymbolListBrowserPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #evaluate put: [ :script |
+		(script includesSubstring: 'symbolList')
+			ifTrue: [ ^ 'UserGlobals', Character tab asString, 'Globals', Character tab asString, 'Published' ].
+		'' ].
+	fakeUsers := GbxFakeListPresenterForBrowser new.
+	fakeUsers selectedItem: 'DataCurator'.
+	fakeDicts := GbxFakeListPresenterForBrowser new.
+	fakeDicts selectedItem: 'Globals'.
+	fakeEntries := GbxFakeListPresenterForBrowser new.
+	fakeSelection := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeValue := GbxFakeTextPresenterForRemoteDebugger new.
+
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'userDropList' put: fakeUsers.
+	presenter instVarNamed: 'dictionariesList' put: fakeDicts.
+	presenter instVarNamed: 'entriesList' put: fakeEntries.
+	presenter instVarNamed: 'selectionField' put: fakeSelection.
+	presenter instVarNamed: 'valueText' put: fakeValue.
+
+	presenter refreshDictionariesFor: 'DataCurator'.
+
+	self assert: fakeDicts selectedItem equals: 'Globals'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSymbolListRefreshEntriesPreservesSelectedEntry [
+	| presenter mockSession fakeUsers fakeDicts fakeEntries fakeSelection fakeValue |
+	presenter := (Smalltalk at: #GbsSymbolListBrowserPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #evaluate put: [ :script |
+		(script includesSubstring: 'keys asSortedCollection')
+			ifTrue: [ ^ 'KeyA', Character tab asString, '1', String lf, 'KeyB', Character tab asString, '2' ].
+		'' ].
+	fakeUsers := GbxFakeListPresenterForBrowser new.
+	fakeUsers selectedItem: 'DataCurator'.
+	fakeDicts := GbxFakeListPresenterForBrowser new.
+	fakeDicts selectedItem: 'UserGlobals'.
+	fakeEntries := GbxFakeListPresenterForBrowser new.
+	fakeEntries selectedItem: 'KeyB'.
+	fakeSelection := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeValue := GbxFakeTextPresenterForRemoteDebugger new.
+
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'userDropList' put: fakeUsers.
+	presenter instVarNamed: 'dictionariesList' put: fakeDicts.
+	presenter instVarNamed: 'entriesList' put: fakeEntries.
+	presenter instVarNamed: 'selectionField' put: fakeSelection.
+	presenter instVarNamed: 'valueText' put: fakeValue.
+
+	presenter refreshEntriesForDictionary: 'UserGlobals'.
+
+	self assert: fakeEntries selectedItem equals: 'KeyB'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testUserInfoSelectedInfoLinePredicatesTrackSelection [
+	| presenter fakeList |
+	presenter := (Smalltalk at: #GbsUserInfoPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsUserInfoPresenter not loaded' ].
+	fakeList := GbxFakeListPresenterForBrowser new.
+	fakeList items: #('User: DataCurator' 'Class: UserProfile').
+	presenter instVarNamed: 'textPresenter' put: fakeList.
+
+	self deny: presenter hasSelectedInfoLine.
+	fakeList selectedItem: 'Class: UserProfile'.
+	self assert: presenter hasSelectedInfoLine.
+	self assert: presenter selectedInfoLine equals: 'Class: UserProfile'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSecurityPoliciesCapabilityTransitionsClearDependentSelections [
+	| fakePolicies fakeGroups fakeMembers |
+	fakePolicies := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeGroups := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeMembers := GbxFakeListPresenterForBrowser new.
+
+	securityPoliciesPresenter instVarNamed: 'policiesTable' put: fakePolicies.
+	securityPoliciesPresenter instVarNamed: 'groupsTable' put: fakeGroups.
+	securityPoliciesPresenter instVarNamed: 'membersList' put: fakeMembers.
+
+	fakePolicies items: { #('Current' 'Default' 'PolicyA') }.
+	fakePolicies selectedItem: fakePolicies items first.
+	fakeGroups items: { #('GroupA' 'read') }.
+	fakeGroups selectedItem: fakeGroups items first.
+	fakeMembers items: #('DataCurator').
+	fakeMembers selectedItem: 'DataCurator'.
+
+	self assert: securityPoliciesPresenter canOperateOnSelectedMember.
+	fakeGroups selectedItem: nil.
+	self deny: securityPoliciesPresenter canOperateOnSelectedGroup.
+	self deny: securityPoliciesPresenter canOperateOnSelectedMember
+]
+
+{ #category : 'tests' }
 GbsAdminToolsPresenterTest >> testUserListFetchGroupsParsesCsvAndSetsUserField [
 	| mockSession fakeGroupsList fakeTextField |
 	mockSession := MockGbsSession new.
@@ -1100,4 +1392,240 @@ GbsAdminToolsPresenterTest >> testUserListRefreshPopulatesUsersAndClearsGroups [
 	self assert: fakeUserList items size equals: 3.
 	self assert: fakeGroupsList items isEmpty.
 	self assert: fakeTextField text equals: ''
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testCreateUserAuthFieldVisibilityFollowsLdapSelection [
+	| gem unix ldap base filter |
+	gem := GbxFakeTogglePresenter new.
+	unix := GbxFakeTogglePresenter new.
+	ldap := GbxFakeTogglePresenter new.
+	base := GbxFakeTogglePresenter new.
+	filter := GbxFakeTogglePresenter new.
+
+	createUserPresenter instVarNamed: 'gemStoneAuthRadio' put: gem.
+	createUserPresenter instVarNamed: 'unixAuthRadio' put: unix.
+	createUserPresenter instVarNamed: 'ldapAuthRadio' put: ldap.
+	createUserPresenter instVarNamed: 'baseDnField' put: base.
+	createUserPresenter instVarNamed: 'filterDnField' put: filter.
+
+	ldap state: false.
+	createUserPresenter updateAuthFieldVisibility.
+	self deny: base enabled.
+	self deny: filter enabled.
+
+	ldap state: true.
+	createUserPresenter updateAuthFieldVisibility.
+	self assert: base enabled.
+	self assert: filter enabled
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testUserListShowSelectedUserInfoUsesWindowPathWhenAvailable [
+	| presenter mockSession |
+	presenter := GbsTestableUserListPresenter new.
+	mockSession := MockGbsSession new.
+	presenter
+		session: mockSession;
+		forcedSelectedUser: 'DataCurator';
+		fixedInfoText: 'User: DataCurator';
+		openWindowResult: true;
+		fallbackResult: true.
+
+	presenter showSelectedUserInfo.
+
+	self assert: presenter didOpenWindow.
+	self deny: presenter didFallback.
+	self assert: presenter openedUser equals: 'DataCurator'.
+	self assert: presenter openedText equals: 'User: DataCurator'.
+	self assert: presenter openedSession == mockSession
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testUserListShowSelectedUserInfoFallsBackWhenWindowUnavailable [
+	| presenter |
+	presenter := GbsTestableUserListPresenter new.
+	presenter
+		forcedSelectedUser: 'DataCurator';
+		fixedInfoText: 'User: DataCurator';
+		openWindowResult: false;
+		fallbackResult: true.
+
+	presenter showSelectedUserInfo.
+
+	self assert: presenter didOpenWindow.
+	self assert: presenter didFallback
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testUserInfoRefreshInfoTextIncludesPrivilegesSummary [
+	| mockSession fakeText |
+	userInfoPresenter ifNil: [ self skip: 'GbsUserInfoPresenter not loaded' ].
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #evaluate put: [ :script |
+		(script includesSubstring: 'privilegeNames do:')
+			ifTrue: [ ^ 'SystemControl', Character tab asString, 'true' ].
+		'User: DataCurator', String lf, 'Class: UserProfile' ].
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+
+	userInfoPresenter session: mockSession.
+	userInfoPresenter userName: 'DataCurator'.
+	userInfoPresenter infoText: ''.
+	userInfoPresenter instVarNamed: 'textPresenter' put: fakeText.
+
+	userInfoPresenter refreshInfoText.
+
+	self assert: (fakeText text includesSubstring: 'Privileges: SystemControl')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testUserInfoAdditionalActionsDoNotRaiseWhenSessionPresent [
+	| mockSession |
+	userInfoPresenter ifNil: [ self skip: 'GbsUserInfoPresenter not loaded' ].
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	userInfoPresenter
+		session: mockSession;
+		userName: 'DataCurator'.
+
+	self shouldnt: [ userInfoPresenter editSymbolList ] raise: Error.
+	self shouldnt: [ userInfoPresenter editSecurityPolicies ] raise: Error
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testConnectorGroupDescriptionUsesIvarBackedSessionParameters [
+	| sessionObj params group description |
+	sessionObj := GbsSession new.
+	params := GbsSessionParameters new.
+	params
+		username: 'DataCurator';
+		gemStoneName: 'gs64stone'.
+	sessionObj instVarNamed: 'parameters' put: params.
+	group := GbsConnectorGroup session: sessionObj managerClass: GbsSessionManager.
+
+	description := group connectorGroupDescription.
+	self assert: (description includesSubstring: 'DataCurator').
+	self assert: (description includesSubstring: 'gs64stone')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testConnectorBrowserOptionSelectionChangedPreservesSelectedConnector [
+	| cfg globalGroup fakeGroupList fakeTable verify remove connected disconnected updateSt updateGs forwarder clientForwarder none selectedRow |
+	cfg := GbsConfiguration new.
+	GbsConfiguration current: cfg.
+	Smalltalk globals at: #GbsFastConnectorRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsConnectorObjectRegistry put: Dictionary new.
+
+	GbsSessionManager addConnectorClient: 'BClient' server: 'BServer'.
+	GbsSessionManager addConnectorClient: 'AClient' server: 'AServer'.
+	globalGroup := GbsSessionManager globalConnectorGroup.
+	fakeGroupList := GbxFakeListPresenterForBrowser new.
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	verify := GbxFakeTogglePresenter new.
+	remove := GbxFakeTogglePresenter new.
+	connected := GbxFakeTogglePresenter new.
+	disconnected := GbxFakeTogglePresenter new.
+	updateSt := GbxFakeTogglePresenter new.
+	updateGs := GbxFakeTogglePresenter new.
+	forwarder := GbxFakeTogglePresenter new.
+	clientForwarder := GbxFakeTogglePresenter new.
+	none := GbxFakeTogglePresenter new.
+	verify state: true.
+
+	fakeGroupList selectedItem: globalGroup.
+	connectorBrowserPresenter instVarNamed: 'groupList' put: fakeGroupList.
+	connectorBrowserPresenter instVarNamed: 'groupItems' put: { globalGroup }.
+	connectorBrowserPresenter instVarNamed: 'connectorTable' put: fakeTable.
+	connectorBrowserPresenter instVarNamed: 'verificationCheck' put: verify.
+	connectorBrowserPresenter instVarNamed: 'removeInvalidCheck' put: remove.
+	connectorBrowserPresenter instVarNamed: 'connectedRadio' put: connected.
+	connectorBrowserPresenter instVarNamed: 'disconnectedRadio' put: disconnected.
+	connectorBrowserPresenter instVarNamed: 'updateStRadio' put: updateSt.
+	connectorBrowserPresenter instVarNamed: 'updateGsRadio' put: updateGs.
+	connectorBrowserPresenter instVarNamed: 'forwarderRadio' put: forwarder.
+	connectorBrowserPresenter instVarNamed: 'clientForwarderRadio' put: clientForwarder.
+	connectorBrowserPresenter instVarNamed: 'noneRadio' put: none.
+
+	connectorBrowserPresenter refreshConnectorsForGroup: globalGroup.
+	selectedRow := fakeTable items
+		detect: [ :row | (connectorBrowserPresenter rowClientName: row) = 'BClient' ]
+		ifNone: [ nil ].
+	self assert: selectedRow notNil.
+	fakeTable selectedItem: selectedRow.
+
+	connectorBrowserPresenter optionSelectionChanged.
+
+	self assert: (connectorBrowserPresenter rowClientName: fakeTable selectedItem) equals: 'BClient'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testConnectorBrowserConnectDisconnectPreserveSelectionAndReflectState [
+	| previousCurrent mockSession params cfg globalGroup fakeGroupList fakeTable verify remove connected disconnected updateSt updateGs forwarder clientForwarder none selectedRow |
+	previousCurrent := GbsSessionParameters currentSession.
+	[
+		mockSession := MockGbsSession new.
+		(mockSession respondsTo: #isLoggedIn:) ifTrue: [ mockSession isLoggedIn: true ].
+		params := GbsSessionParameters new.
+		params
+			username: 'DataCurator';
+			gemStoneName: 'gs64stone'.
+		mockSession instVarNamed: 'parameters' put: params.
+		GbsSessionParameters currentSession: mockSession.
+
+		cfg := GbsConfiguration new.
+		GbsConfiguration current: cfg.
+		Smalltalk globals at: #GbsFastConnectorRegistry put: Dictionary new.
+		Smalltalk globals at: #GbsConnectorObjectRegistry put: Dictionary new.
+		Smalltalk globals at: #GbsConnectorConnectionRegistry put: Dictionary new.
+
+		GbsSessionManager addConnectorClient: 'BClient' server: 'BServer'.
+		GbsSessionManager addConnectorClient: 'AClient' server: 'AServer'.
+		globalGroup := GbsSessionManager globalConnectorGroup.
+		fakeGroupList := GbxFakeListPresenterForBrowser new.
+		fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+		verify := GbxFakeTogglePresenter new.
+		remove := GbxFakeTogglePresenter new.
+		connected := GbxFakeTogglePresenter new.
+		disconnected := GbxFakeTogglePresenter new.
+		updateSt := GbxFakeTogglePresenter new.
+		updateGs := GbxFakeTogglePresenter new.
+		forwarder := GbxFakeTogglePresenter new.
+		clientForwarder := GbxFakeTogglePresenter new.
+		none := GbxFakeTogglePresenter new.
+		verify state: true.
+
+		fakeGroupList selectedItem: globalGroup.
+		connectorBrowserPresenter instVarNamed: 'session' put: mockSession.
+		connectorBrowserPresenter instVarNamed: 'groupList' put: fakeGroupList.
+		connectorBrowserPresenter instVarNamed: 'groupItems' put: { globalGroup }.
+		connectorBrowserPresenter instVarNamed: 'connectorTable' put: fakeTable.
+		connectorBrowserPresenter instVarNamed: 'verificationCheck' put: verify.
+		connectorBrowserPresenter instVarNamed: 'removeInvalidCheck' put: remove.
+		connectorBrowserPresenter instVarNamed: 'connectedRadio' put: connected.
+		connectorBrowserPresenter instVarNamed: 'disconnectedRadio' put: disconnected.
+		connectorBrowserPresenter instVarNamed: 'updateStRadio' put: updateSt.
+		connectorBrowserPresenter instVarNamed: 'updateGsRadio' put: updateGs.
+		connectorBrowserPresenter instVarNamed: 'forwarderRadio' put: forwarder.
+		connectorBrowserPresenter instVarNamed: 'clientForwarderRadio' put: clientForwarder.
+		connectorBrowserPresenter instVarNamed: 'noneRadio' put: none.
+
+		connectorBrowserPresenter refreshConnectorsForGroup: globalGroup.
+		selectedRow := fakeTable items
+			detect: [ :row | (connectorBrowserPresenter rowClientName: row) = 'BClient' ]
+			ifNone: [ nil ].
+		self assert: selectedRow notNil.
+		fakeTable selectedItem: selectedRow.
+
+		connectorBrowserPresenter connectorDisconnectSelected.
+		self assert: (connectorBrowserPresenter rowClientName: fakeTable selectedItem) equals: 'BClient'.
+		self assert: disconnected state.
+		self deny: connected state.
+
+		connectorBrowserPresenter connectorConnectSelected.
+		self assert: (connectorBrowserPresenter rowClientName: fakeTable selectedItem) equals: 'BClient'.
+		self assert: connected state.
+		self deny: disconnected state.
+	] ensure: [
+		GbsSessionParameters currentSession: previousCurrent
+	]
 ]

@@ -296,15 +296,31 @@ GbsUserListPresenter >> selectedUserName [
 
 { #category : 'actions' }
 GbsUserListPresenter >> showSelectedUserInfo [
-	| userName info |
+	| userName info opened |
 	userName := self selectedUserName.
 	userName ifNil: [ ^ self ].
 	info := self userInfoTextFor: userName.
-	[ GbsUserInfoPresenter openForUser: userName text: info session: session ]
-		on: Error
-		do: [ :ex |
-			(self openUserInfoFallbackText: info forUser: userName)
-				ifFalse: [ UIManager default inform: 'Could not open user info window: ', ex messageText ] ]
+	opened := self openUserInfoWindowFor: userName text: info session: session.
+	opened ifFalse: [
+		(self openUserInfoFallbackText: info forUser: userName)
+			ifFalse: [ UIManager default inform: 'Could not open user info window.' ] ]
+]
+
+{ #category : 'private' }
+GbsUserListPresenter >> userInfoPresenterClass [
+	^ Smalltalk at: #GbsUserInfoPresenter ifAbsent: [ nil ]
+]
+
+{ #category : 'private' }
+GbsUserListPresenter >> openUserInfoWindowFor: userName text: infoTextValue session: aSession [
+	| klass |
+	klass := self userInfoPresenterClass.
+	klass ifNil: [ ^ false ].
+	(klass respondsTo: #openForUser:text:session:) ifFalse: [ ^ false ].
+	^ [
+		klass openForUser: userName text: infoTextValue session: aSession.
+		true
+	] on: Error do: [ false ]
 ]
 
 { #category : 'private' }

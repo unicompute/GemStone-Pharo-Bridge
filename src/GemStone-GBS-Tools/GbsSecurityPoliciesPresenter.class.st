@@ -42,6 +42,12 @@ GbsSecurityPoliciesPresenter >> connectPresenters [
 		policiesTable whenActivatedDo: [ :selection |
 			selection selectedItem
 				ifNotNil: [ :row | self refreshGroupsAndMembersForPolicyName: (row at: 3 ifAbsent: [ '' ]) ] ] ].
+	(policiesTable respondsTo: #contextMenu:) ifTrue: [
+		policiesTable contextMenu: [ self menuPolicyPopup ] ].
+	(groupsTable respondsTo: #contextMenu:) ifTrue: [
+		groupsTable contextMenu: [ self menuGroupPopup ] ].
+	(membersList respondsTo: #contextMenu:) ifTrue: [
+		membersList contextMenu: [ self menuMemberPopup ] ].
 	self refreshAll
 ]
 
@@ -120,45 +126,96 @@ GbsSecurityPoliciesPresenter >> menuFile [
 GbsSecurityPoliciesPresenter >> menuSecurityPolicy [
 	^ self newMenu
 		addItem: [ :item | item name: 'Refresh'; action: [ self refreshAll ] ];
-		addItem: [ :item | item name: 'Set Current'; action: [ self setSelectedPolicyCurrent ] ];
-		addItem: [ :item | item name: 'Set Default'; action: [ self setSelectedPolicyDefault ] ];
-		addItem: [ :item | item name: 'Edit Owner Access...'; action: [ self editSelectedPolicyOwnerAccess ] ];
-		addItem: [ :item | item name: 'Edit World Access...'; action: [ self editSelectedPolicyWorldAccess ] ];
-		addItem: [ :item | item name: 'Toggle Track Reads'; action: [ self toggleSelectedPolicyTrackReads ] ];
-		addItem: [ :item | item name: 'Inspect Selected'; action: [ self inspectSelectedPolicy ] ];
+		addItem: [ :item |
+			item name: 'Set Current'; action: [ self setSelectedPolicyCurrent ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedPolicy ] ];
+		addItem: [ :item |
+			item name: 'Set Default'; action: [ self setSelectedPolicyDefault ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedPolicy ] ];
+		addItem: [ :item |
+			item name: 'Edit Owner Access...'; action: [ self editSelectedPolicyOwnerAccess ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedPolicy ] ];
+		addItem: [ :item |
+			item name: 'Edit World Access...'; action: [ self editSelectedPolicyWorldAccess ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedPolicy ] ];
+		addItem: [ :item |
+			item name: 'Toggle Track Reads'; action: [ self toggleSelectedPolicyTrackReads ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedPolicy ] ];
+		addItem: [ :item |
+			item name: 'Inspect Selected'; action: [ self inspectSelectedPolicy ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedPolicy ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsSecurityPoliciesPresenter >> menuGroup [
 	^ self newMenu
-		addItem: [ :item | item name: 'Refresh Groups'; action: [ self refreshSelectedPolicyGroups ] ];
-		addItem: [ :item | item name: 'Add Group...'; action: [ self addGroupToSelectedPolicy ] ];
-		addItem: [ :item | item name: 'Remove Selected Group'; action: [ self removeSelectedGroupFromPolicy ] ];
-		addItem: [ :item | item name: 'Inspect Selected Group'; action: [ self inspectSelectedGroup ] ];
-		addItem: [ :item | item name: 'Edit Group Access...'; action: [ self editSelectedGroupAccess ] ];
+		addItem: [ :item |
+			item name: 'Refresh Groups'; action: [ self refreshSelectedPolicyGroups ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedPolicy ] ];
+		addItem: [ :item |
+			item name: 'Add Group...'; action: [ self addGroupToSelectedPolicy ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedPolicy ] ];
+		addItem: [ :item |
+			item name: 'Remove Selected Group'; action: [ self removeSelectedGroupFromPolicy ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedGroup ] ];
+		addItem: [ :item |
+			item name: 'Inspect Selected Group'; action: [ self inspectSelectedGroup ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedGroup ] ];
+		addItem: [ :item |
+			item name: 'Edit Group Access...'; action: [ self editSelectedGroupAccess ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedGroup ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsSecurityPoliciesPresenter >> menuMember [
 	^ self newMenu
-		addItem: [ :item | item name: 'Refresh Members'; action: [ self refreshSelectedPolicyMembers ] ];
-		addItem: [ :item | item name: 'Add Member...'; action: [ self addMemberToSelectedGroup ] ];
-		addItem: [ :item | item name: 'Remove Selected Member'; action: [ self removeSelectedMemberFromGroup ] ];
-		addItem: [ :item | item name: 'Inspect Selected Member'; action: [ self inspectSelectedMember ] ];
+		addItem: [ :item |
+			item name: 'Refresh Members'; action: [ self refreshSelectedPolicyMembers ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedGroup ] ];
+		addItem: [ :item |
+			item name: 'Add Member...'; action: [ self addMemberToSelectedGroup ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedGroup ] ];
+		addItem: [ :item |
+			item name: 'Remove Selected Member'; action: [ self removeSelectedMemberFromGroup ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedMember ] ];
+		addItem: [ :item |
+			item name: 'Inspect Selected Member'; action: [ self inspectSelectedMember ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedMember ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsSecurityPoliciesPresenter >> menuReport [
 	^ self newMenu
-		addItem: [ :item | item name: 'Copy Policy Report'; action: [ self copyPolicyReport ] ];
-		addItem: [ :item | item name: 'Copy Group Report'; action: [ self copyGroupReport ] ];
-		addItem: [ :item | item name: 'Copy Member Report'; action: [ self copyMemberReport ] ];
+		addItem: [ :item |
+			item name: 'Copy Policy Report'; action: [ self copyPolicyReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedPolicy ] ];
+		addItem: [ :item |
+			item name: 'Copy Group Report'; action: [ self copyGroupReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedGroup ] ];
+		addItem: [ :item |
+			item name: 'Copy Member Report'; action: [ self copyMemberReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedMember ] ];
 		addItem: [ :item | item name: 'Copy Full Report'; action: [ self copyFullReport ] ];
 		addItem: [ :item | item name: 'Show Full Report'; action: [ self showFullReport ] ];
 		yourself
+]
+
+{ #category : 'menus' }
+GbsSecurityPoliciesPresenter >> menuPolicyPopup [
+	^ self menuSecurityPolicy
+]
+
+{ #category : 'menus' }
+GbsSecurityPoliciesPresenter >> menuGroupPopup [
+	^ self menuGroup
+]
+
+{ #category : 'menus' }
+GbsSecurityPoliciesPresenter >> menuMemberPopup [
+	^ self menuMember
 ]
 
 { #category : 'menus' }
@@ -344,6 +401,27 @@ GbsSecurityPoliciesPresenter >> selectedMemberName [
 	(membersList respondsTo: #selection) ifFalse: [ ^ nil ].
 	sel := [ membersList selection selectedItem ] on: Error do: [ nil ].
 	^ sel ifNotNil: [ sel asString ]
+]
+
+{ #category : 'private' }
+GbsSecurityPoliciesPresenter >> canOperateOnSelectedPolicy [
+	| policyName |
+	policyName := self selectedPolicyName.
+	^ policyName isString and: [ policyName isNotEmpty ]
+]
+
+{ #category : 'private' }
+GbsSecurityPoliciesPresenter >> canOperateOnSelectedGroup [
+	| groupName |
+	groupName := self selectedGroupName.
+	^ self canOperateOnSelectedPolicy and: [ groupName isString and: [ groupName isNotEmpty ] ]
+]
+
+{ #category : 'private' }
+GbsSecurityPoliciesPresenter >> canOperateOnSelectedMember [
+	| memberName |
+	memberName := self selectedMemberName.
+	^ self canOperateOnSelectedGroup and: [ memberName isString and: [ memberName isNotEmpty ] ]
 ]
 
 { #category : 'actions' }
@@ -566,25 +644,45 @@ GbsSecurityPoliciesPresenter >> parseRows: rawString expectedColumns: expectedCo
 
 { #category : 'actions' }
 GbsSecurityPoliciesPresenter >> refreshAll [
-	| raw policies |
+	| raw policies previousPolicyName selected |
+	(self isSessionUsable not) ifTrue: [
+		policiesTable items: #().
+		groupsTable items: #().
+		membersList items: #().
+		^ self
+	].
+	previousPolicyName := self selectedPolicyName.
 	raw := [ session evaluate: self securityPoliciesScript ] on: Error do: [ :ex | self inform: 'Fetch security policies failed: ', ex messageText. '' ].
 	policies := self parseRows: raw expectedColumns: 8.
 	policiesTable items: policies.
 	groupsTable items: #().
 	membersList items: #().
 	(policies isEmpty not) ifTrue: [
-		(policiesTable respondsTo: #selectIndex:)
-			ifTrue: [ policiesTable selectIndex: 1 ]
+		selected := previousPolicyName
+			ifNil: [ nil ]
+			ifNotNil: [
+				policies
+					detect: [ :row | (row at: 3 ifAbsent: [ '' ]) = previousPolicyName ]
+					ifNone: [ nil ] ].
+		selected ifNil: [ selected := policies first ].
+		(policiesTable respondsTo: #selectItem:)
+			ifTrue: [ policiesTable selectItem: selected ]
 			ifFalse: [
-				(policiesTable respondsTo: #selectItem:)
-					ifTrue: [ policiesTable selectItem: policies first ] ].
-		self refreshGroupsAndMembersForPolicyName: (policies first at: 3 ifAbsent: [ '' ])
+				(policiesTable respondsTo: #selectIndex:)
+					ifTrue: [ policiesTable selectIndex: (policies indexOf: selected ifAbsent: [ 1 ]) ] ].
+		self refreshGroupsAndMembersForPolicyName: (selected at: 3 ifAbsent: [ '' ])
 	]
 ]
 
 { #category : 'actions' }
 GbsSecurityPoliciesPresenter >> refreshGroupsAndMembersForPolicyName: policyName [
-	| rawGroup groups |
+	| rawGroup groups previousGroupName selectedGroup |
+	self isSessionUsable ifFalse: [
+		groupsTable items: #().
+		membersList items: #().
+		^ self
+	].
+	previousGroupName := self selectedGroupName.
 	(policyName isString and: [ policyName isEmpty ]) ifTrue: [ 
 		groupsTable items: #().
 		membersList items: #().
@@ -594,21 +692,41 @@ GbsSecurityPoliciesPresenter >> refreshGroupsAndMembersForPolicyName: policyName
 	groupsTable items: groups.
 	membersList items: #().
 	groups isEmpty ifFalse: [
-		(groupsTable respondsTo: #selectIndex:)
-			ifTrue: [ groupsTable selectIndex: 1 ]
-			ifFalse: [ (groupsTable respondsTo: #selectItem:) ifTrue: [ groupsTable selectItem: groups first ] ].
-		self refreshMembersForPolicyName: policyName groupName: (groups first at: 1 ifAbsent: [ '' ]) ]
+		selectedGroup := previousGroupName
+			ifNil: [ nil ]
+			ifNotNil: [
+				groups
+					detect: [ :row | (row at: 1 ifAbsent: [ '' ]) = previousGroupName ]
+					ifNone: [ nil ] ].
+		selectedGroup ifNil: [ selectedGroup := groups first ].
+		(groupsTable respondsTo: #selectItem:)
+			ifTrue: [ groupsTable selectItem: selectedGroup ]
+			ifFalse: [
+				(groupsTable respondsTo: #selectIndex:)
+					ifTrue: [ groupsTable selectIndex: (groups indexOf: selectedGroup ifAbsent: [ 1 ]) ] ].
+		self refreshMembersForPolicyName: policyName groupName: (selectedGroup at: 1 ifAbsent: [ '' ]) ]
 ]
 
 { #category : 'actions' }
 GbsSecurityPoliciesPresenter >> refreshMembersForPolicyName: policyName groupName: groupName [
-	| rawMembers |
+	| rawMembers members previousMemberName selectedMember |
+	self isSessionUsable ifFalse: [
+		membersList items: #().
+		^ self
+	].
+	previousMemberName := self selectedMemberName.
 	((policyName isNil or: [ policyName isEmpty ]) or: [ groupName isNil or: [ groupName isEmpty ] ])
 		ifTrue: [ membersList items: #(). ^ self ].
 	rawMembers := [ session evaluate: (self membersScriptForPolicyName: policyName groupName: groupName) ]
 		on: Error
 		do: [ '' ].
-	membersList items: (rawMembers isString ifTrue: [ rawMembers lines ] ifFalse: [ #() ])
+	members := (rawMembers isString ifTrue: [ rawMembers lines ] ifFalse: [ #() ]).
+	membersList items: members.
+	((membersList respondsTo: #selectedItem:) and: [ members isEmpty not ]) ifTrue: [
+		selectedMember := previousMemberName
+			ifNil: [ nil ]
+			ifNotNil: [ members detect: [ :each | each asString = previousMemberName ] ifNone: [ nil ] ].
+		membersList selectedItem: (selectedMember ifNil: [ members first ] ifNotNil: [ selectedMember ]) ]
 ]
 
 { #category : 'private' }
@@ -1086,6 +1204,14 @@ GbsSecurityPoliciesPresenter >> inspectRemoteObjectUsingScript: scriptString mis
 { #category : 'private' }
 GbsSecurityPoliciesPresenter >> session: aSession [
 	session := aSession
+]
+
+{ #category : 'private' }
+GbsSecurityPoliciesPresenter >> isSessionUsable [
+	session ifNil: [ ^ false ].
+	(session respondsTo: #isLoggedIn)
+		ifTrue: [ ^ [ session isLoggedIn == true ] on: Error do: [ false ] ].
+	^ true
 ]
 
 { #category : 'private' }
