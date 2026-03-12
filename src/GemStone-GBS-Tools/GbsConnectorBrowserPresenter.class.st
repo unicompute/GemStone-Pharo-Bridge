@@ -192,7 +192,7 @@ GbsConnectorBrowserPresenter >> buildMenuBar [
 { #category : 'menus' }
 GbsConnectorBrowserPresenter >> menuFile [
 	^ self newMenu
-		addItem: [ :item | item name: 'Update'; action: [ self refreshAll ] ];
+		addItem: [ :item | item name: 'Update'; action: [ self update ] ];
 		addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ];
 		yourself
 ]
@@ -242,16 +242,47 @@ GbsConnectorBrowserPresenter >> menuConnectorPopup [
 
 { #category : 'actions' }
 GbsConnectorBrowserPresenter >> refreshAll [
+	self update
+]
+
+{ #category : 'actions' }
+GbsConnectorBrowserPresenter >> update [
+	self updateGroupList.
+	self updateConnectorList
+]
+
+{ #category : 'actions' }
+GbsConnectorBrowserPresenter >> updateGroupList [
+	| previousSelection previousLabel newSelection |
+	previousSelection := [ groupList selection selectedItem ] on: Error do: [ nil ].
+	previousLabel := previousSelection
+		ifNil: [ nil ]
+		ifNotNil: [ self groupDisplayStringFor: previousSelection ].
 	self refreshGroups.
-	(groupItems isEmpty)
-		ifTrue: [ connectorTable items: #() ]
-		ifFalse: [
-			(groupList respondsTo: #selectIndex:)
-				ifTrue: [ groupList selectIndex: 1 ]
-				ifFalse: [ (groupList respondsTo: #selectItem:) ifTrue: [ groupList selectItem: groupItems first ] ].
-			(self fastConnectorPairs isEmpty and: [ verificationCheck state = true ])
-				ifTrue: [ [ self managerPerform: #initializeFastConnectors ifUnavailable: [ nil ] ] on: Error do: [ ] ].
-			self refreshConnectorsForGroup: groupItems first ]
+	newSelection := (previousLabel notNil and: [ groupItems isEmpty not ])
+		ifTrue: [
+			groupItems
+				detect: [ :each | (self groupDisplayStringFor: each) = previousLabel ]
+				ifNone: [ nil ] ]
+		ifFalse: [ groupItems ifEmpty: [ nil ] ifNotEmpty: [ groupItems first ] ].
+	newSelection ifNotNil: [
+		(groupList respondsTo: #selectItem:)
+			ifTrue: [ groupList selectItem: newSelection ]
+			ifFalse: [
+				(groupList respondsTo: #selection)
+					ifTrue: [ [ groupList selection selectItem: newSelection ] on: Error do: [ ] ] ] ]
+]
+
+{ #category : 'actions' }
+GbsConnectorBrowserPresenter >> updateConnectorList [
+	| selectedGroup |
+	selectedGroup := [ groupList selection selectedItem ] on: Error do: [ nil ].
+	selectedGroup ifNil: [ selectedGroup := groupItems ifEmpty: [ nil ] ifNotEmpty: [ groupItems first ] ].
+	(self fastConnectorPairs isEmpty and: [ verificationCheck state = true ])
+		ifTrue: [ [ self managerPerform: #initializeFastConnectors ifUnavailable: [ nil ] ] on: Error do: [ ] ].
+	selectedGroup
+		ifNil: [ connectorTable items: #() ]
+		ifNotNil: [ self refreshConnectorsForGroup: selectedGroup ]
 ]
 
 { #category : 'actions' }
