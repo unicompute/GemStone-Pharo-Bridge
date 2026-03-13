@@ -1555,6 +1555,8 @@ GbsRemoteDebugger >> stackData: anArray [
 GbsRemoteDebugger >> stepInto [
 	| didStep |
 	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
+		"CRITICAL: Reset server PC to step 1 before stepping from restarted frame"
+		self resetServerPCToStepOneIfNeeded.
 		didStep := self directStepOverExecutedFrame: true.
 		didStep ifTrue: [ self fetchStackFrames ].
 		^ didStep
@@ -1578,6 +1580,8 @@ GbsRemoteDebugger >> step [
 GbsRemoteDebugger >> stepOver [
 	| didStep |
 	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
+		"CRITICAL: Reset server PC to step 1 before stepping from restarted frame"
+		self resetServerPCToStepOneIfNeeded.
 		didStep := self directStepOverExecutedFrame: false.
 		didStep ifTrue: [ self fetchStackFrames ].
 		^ didStep
@@ -1593,6 +1597,23 @@ GbsRemoteDebugger >> stepOver [
 	].
 	didStep ifTrue: [ self fetchStackFrames ].
 	^ didStep
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> resetServerPCToStepOneIfNeeded [
+	"Reset server PC to step 1 if we're in an executed code frame.
+	This ensures stepping starts from the beginning of the method.
+	Always force server jump on executed code frames to ensure correct stepping."
+	| context |
+	contextList ifNil: [ ^ false ].
+	contextList ifEmpty: [ ^ false ].
+	
+	context := contextList at: 1.
+	((context respondsTo: #isExecutedCodeFrame) and: [ context isExecutedCodeFrame ]) ifFalse: [ ^ false ].
+	
+	"Always force server to jump to step 1 for executed code frames.
+	The server may have old step point even if local context shows step=1."
+	^ self safeServiceCall: [ service jumpToStepPoint: 1 ] default: false
 ]
 
 { #category : 'private' }
@@ -2529,8 +2550,25 @@ GbsRemoteDebugger >> restart [
 	didRestart ifTrue: [
 		self fetchStackFrames.
 		self normalizeRestartSelectionAndPosition.
+		"Ensure server PC is at step 1 after restart"
+		self ensureServerPCToStepOneAfterRestart.
 	].
 	^ didRestart
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> ensureServerPCToStepOneAfterRestart [
+	"After restart, ensure server PC is at step 1.
+	Called before stepping to ensure correct behavior."
+	| context |
+	contextList ifNil: [ ^ self ].
+	contextList ifEmpty: [ ^ self ].
+	
+	context := contextList at: 1.
+	((context respondsTo: #isExecutedCodeFrame) and: [ context isExecutedCodeFrame ]) ifFalse: [ ^ self ].
+	
+	"Force server to jump to step 1"
+	self safeServiceCall: [ service jumpToStepPoint: 1 ] default: false
 ]
 
 { #category : 'private' }
