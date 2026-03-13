@@ -1348,6 +1348,8 @@ GbxDebuggerService >> restart [
 		].
 		self ensureRestartAtStepOne.
 		self selectRestartTargetContext.
+		self synchronizeServerProgramCounterAfterRestart.
+		self selectRestartTargetContext.
 		(self isExecutedCodeAtStepOne) ifFalse: [
 			"Final deterministic guard: force server PC and UI context to method start."
 			self resetServerPCToStepOne.
@@ -1358,6 +1360,42 @@ GbxDebuggerService >> restart [
 	self logRestartText: 'restart/result=', didRestart asString.
 	self logRestartState: 'restart/end' context: self currentContext.
 	^ didRestart
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> synchronizeServerProgramCounterAfterRestart [
+	"After restart, force server-side process PC to align with displayed restart frame."
+	| level script result |
+	(self isCurrentExecutedCodeFrame) ifFalse: [ ^ false ].
+	level := self currentContextLevel.
+	(level isNumber and: [ level > 0 ]) ifFalse: [ level := 1 ].
+	script := '[
+		| obj proc |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
+		[ proc _trimStackToLevel: ', level asString, ' ] on: Error do: [ ^ ''false'' ].
+		''true''
+	] value'.
+	result := self executeDebugScript: script.
+	(self asBooleanResult: result default: false) ifTrue: [
+		self selectTopServerContext.
+		^ true
+	].
+	^ false
 ]
 
 { #category : 'private' }
@@ -1821,8 +1859,9 @@ GbxDebuggerService >> normalizeExecutedCodeSingleStepFrom: previousStepPoint [
 
 { #category : 'private' }
 GbxDebuggerService >> effectiveServerStepLevel [
-	| level resolved |
+	| level resolved step |
 	level := self currentContextLevel.
+	(self isCurrentExecutedCodeFrame and: [ (step := self currentStepPoint) = 1 ]) ifTrue: [ ^ 1 ].
 	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
 	(self isCurrentExecutedCodeFrame not) ifTrue: [ ^ level ].
 	resolved := self restartLevelFromServerStack.
