@@ -1156,8 +1156,14 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	especially important for repeated Restart actions.
 	
 	Note: _trimStackToLevel: (called in cutbackGsTo:) already resets the stack
-	to step=1. This method is kept for compatibility but the trim handles the reset."
-	| didReset |
+	to step=1. This method ensures the server PC is also reset by re-trimming
+	at the executed code frame level."
+	| didReset script result level |
+	
+	"Get the executed code frame level"
+	level := self restartLevelFromServerStack.
+	level ifNil: [ level := 1 ].
+	
 	"Try jumpToStepPoint: first (may work on some GemStone versions)"
 	didReset := self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true.
 	self logRestartText: 'resetServerPCToStepOne jumpToStepPoint:1 -> ', didReset asString.
@@ -1168,10 +1174,33 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	self logRestartText: 'resetServerPCToStepOne runToStepPoint:1 -> ', didReset asString.
 	didReset ifTrue: [ ^ true ].
 	
-	"_trimStackToLevel: already reset the stack to step=1, so return true.
-	The server stack is the source of truth after trim."
-	self logRestartText: 'resetServerPCToStepOne using _trimStackToLevel result (step=1 already set)'.
-	^ true
+	"_trimStackToLevel: already reset the stack, but re-trim to ensure PC is reset"
+	script := '[
+		| obj proc |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
+		[ proc _trimStackToLevel: ', level asString, ' ] on: Error do: [ nil ].
+		''true''
+	] value'.
+	
+	result := self executeDebugScript: script.
+	didReset := self asBooleanResult: result default: false.
+	self logRestartText: 'resetServerPCToStepOne _trimStackToLevel:', level asString, ' -> ', didReset asString.
+	^ didReset
 ]
 
 { #category : 'actions' }

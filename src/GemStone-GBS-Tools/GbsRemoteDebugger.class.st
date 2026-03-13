@@ -1669,13 +1669,18 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 	"Force the server process to jump to step point 1.
 	This is critical for correct stepping after restart.
 	
-	Note: _trimStackToLevel: already resets to step=1, so this is a backup mechanism.
-	Returns true if step=1 is confirmed (either by jump or by trim)."
-	| script raw |
+	The _trimStackToLevel: method resets the stack, but we also need to ensure
+	the server's internal PC is reset. We do this by calling _trimStackToLevel: 
+	again at the executed code frame level to force a PC reset."
+	| script raw level |
 	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
+	
+	"Get the executed code frame level from server"
+	level := self resolveExecutedFrameLevelFromServer.
+	level ifNil: [ level := 1 ].
 
 	script := '[
-		| obj proc hasMethod |
+		| obj proc restartLevel stackReport fullEntry quick |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ false ].
 		proc := obj.
@@ -1693,14 +1698,29 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 		].
 		proc isNil ifTrue: [ ^ false ].
 		
+		restartLevel := ', level asString, '.
+		
+		"Check current step point at the executed code frame level"
+		quick := 0.
+		stackReport := [ proc _gsiStackReportFromLevel: restartLevel toLevel: restartLevel ] on: Error do: [ nil ].
+		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
+			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+			fullEntry ifNotNil: [
+				quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ]
+			]
+		].
+		
+		"If already at step 1, nothing to do"
+		quick <= 1 ifTrue: [ ^ true ].
+		
 		"Try jumpToStepPoint: if available (may not exist on all GemStone versions)"
-		hasMethod := (proc respondsTo: #jumpToStepPoint:).
-		hasMethod ifTrue: [
-			[ proc jumpToStepPoint: 1 ] on: Error do: [ ^ false ].
+		(proc respondsTo: #jumpToStepPoint:) ifTrue: [
+			[ proc jumpToStepPoint: 1 ] on: Error do: [ ].
 			^ true
 		].
 		
-		"jumpToStepPoint: not available - _trimStackToLevel: already set step=1, so return true"
+		"jumpToStepPoint: not available. Re-trim to force PC reset."
+		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ].
 		true
 	] value'.
 
