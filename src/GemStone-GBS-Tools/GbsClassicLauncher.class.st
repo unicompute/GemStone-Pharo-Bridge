@@ -914,7 +914,11 @@ GbsClassicLauncher >> browseImplementors [
 	^ [ 
 		(browser respondsTo: #queryMethodsForSelector:mode:)
 			ifTrue: [ browser queryMethodsForSelector: query mode: 'implementors' ]
-			ifFalse: [ browser queryImplementors ] ] on: Error do: [ false ]
+			ifFalse: [ browser queryImplementors ] ]
+		on: Error
+		do: [ :ex |
+			self inform: 'Browse implementors failed: ', ex messageText.
+			false ]
 ]
 
 { #category : 'actions' }
@@ -922,7 +926,11 @@ GbsClassicLauncher >> browseMethodsWithSubstring [
 	| browser |
 	browser := self openBrowserForQuery.
 	browser ifNil: [ ^ false ].
-	^ [ browser queryMethodsWithString ] on: Error do: [ false ]
+	^ [ browser queryMethodsWithString ]
+		on: Error
+		do: [ :ex |
+			self inform: 'Browse methods-with-substring failed: ', ex messageText.
+			false ]
 ]
 
 { #category : 'actions' }
@@ -935,7 +943,11 @@ GbsClassicLauncher >> browseReferences [
 	^ [ 
 		(browser respondsTo: #queryMethodsForSelector:mode:)
 			ifTrue: [ browser queryMethodsForSelector: query mode: 'references' ]
-			ifFalse: [ browser queryReferences ] ] on: Error do: [ false ]
+			ifFalse: [ browser queryReferences ] ]
+		on: Error
+		do: [ :ex |
+			self inform: 'Browse references failed: ', ex messageText.
+			false ]
 ]
 
 { #category : 'actions' }
@@ -948,7 +960,11 @@ GbsClassicLauncher >> browseSenders [
 	^ [ 
 		(browser respondsTo: #queryMethodsForSelector:mode:)
 			ifTrue: [ browser queryMethodsForSelector: query mode: 'senders' ]
-			ifFalse: [ browser querySenders ] ] on: Error do: [ false ]
+			ifFalse: [ browser querySenders ] ]
+		on: Error
+		do: [ :ex |
+			self inform: 'Browse senders failed: ', ex messageText.
+			false ]
 ]
 
 { #category : 'private' }
