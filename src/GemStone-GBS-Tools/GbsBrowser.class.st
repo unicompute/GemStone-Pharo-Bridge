@@ -843,6 +843,19 @@ GbsBrowser >> dictionaryNameContainingClassNamed: className [
 
 { #category : 'private' }
 GbsBrowser >> queryServerMethodsForSelector: selectorName mode: modeString [
+	((#('implementors' 'senders' 'references') includes: modeString)
+		and: [ Smalltalk includesKey: #GbsClassicLauncher ]) ifTrue: [
+		^ [ GbsClassicLauncher
+			queryOrganizerMethodsFor: selectorName asString trimBoth
+			mode: modeString
+			inSession: session ]
+			on: Error
+			do: [ :ex | self queryServerMethodsByScanningForSelector: selectorName mode: modeString ] ].
+	^ self queryServerMethodsByScanningForSelector: selectorName mode: modeString
+]
+
+{ #category : 'private' }
+GbsBrowser >> queryServerMethodsByScanningForSelector: selectorName mode: modeString [
 	| escapedSelector selectedClassName escapedClass escapedToken script raw selectorExpr classFilterExpr |
 	escapedSelector := selectorName copyReplaceAll: '''' with: ''''''.
 	escapedToken := escapedSelector.
