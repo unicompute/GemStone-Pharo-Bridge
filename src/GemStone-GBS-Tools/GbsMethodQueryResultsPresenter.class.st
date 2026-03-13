@@ -8,7 +8,9 @@ Class {
 		'windowTitle',
 		'mainMenu',
 		'methodsList',
-		'sourceText'
+		'sourceText',
+		'countStatus',
+		'selectionStatus'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -53,6 +55,8 @@ GbsMethodQueryResultsPresenter >> initializePresenters [
 	methodsList display: [ :each | each ifNil: [ '' ] ifNotNil: [ each asString ] ].
 	sourceText := self newText.
 	(sourceText respondsTo: #beNotEditable) ifTrue: [ sourceText beNotEditable ].
+	countStatus := self newLabel label: ''.
+	selectionStatus := self newLabel label: ''
 ]
 
 { #category : 'initialization' }
@@ -80,6 +84,12 @@ GbsMethodQueryResultsPresenter >> defaultLayout [
 			add: methodsList;
 			add: sourceText;
 			yourself));
+		add: (SpBoxLayout newLeftToRight
+			add: countStatus;
+			add: selectionStatus;
+			spacing: 16;
+			yourself)
+			expand: false;
 		yourself
 ]
 
@@ -96,10 +106,12 @@ GbsMethodQueryResultsPresenter >> showSourceForReference: referenceString [
 	| parsed className selector classLookup script source |
 	referenceString ifNil: [
 		sourceText text: ''.
+		self updateStatusForReference: nil.
 		^ self ].
 	parsed := self parseReference: referenceString asString.
 	parsed ifNil: [
 		sourceText text: ''.
+		self updateStatusForReference: referenceString.
 		^ self ].
 	className := parsed first.
 	selector := parsed second.
@@ -114,7 +126,8 @@ GbsMethodQueryResultsPresenter >> showSourceForReference: referenceString [
 		meth ifNil: [ '''' ] ifNotNil: [ meth sourceString ]
 	] value'.
 	source := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
-	sourceText text: (source ifNil: [ '' ] ifNotNil: [ source asString ])
+	sourceText text: (source ifNil: [ '' ] ifNotNil: [ source asString ]).
+	self updateStatusForReference: referenceString
 ]
 
 { #category : 'private' }
@@ -158,6 +171,10 @@ GbsMethodQueryResultsPresenter >> menuFind [
 GbsMethodQueryResultsPresenter >> menuMethod [
 	^ self newMenu
 		addItem: [ :item | item name: 'Browse'; action: [ self browseSelectedReference ] ];
+		addItem: [ :item | item name: 'Senders'; action: [ self browseSendersOfSelected ] ];
+		addItem: [ :item | item name: 'Implementors'; action: [ self browseImplementorsOfSelected ] ];
+		addItem: [ :item | item name: 'Hierarchy Senders'; action: [ self browseHierarchySendersOfSelected ] ];
+		addItem: [ :item | item name: 'Hierarchy Implementors'; action: [ self browseHierarchyImplementorsOfSelected ] ];
 		yourself
 ]
 
@@ -173,7 +190,7 @@ GbsMethodQueryResultsPresenter >> menuSession [
 { #category : 'menus' }
 GbsMethodQueryResultsPresenter >> menuWindow [
 	^ self newMenu
-		addItem: [ :item | item name: 'Refresh'; action: [ self clearFilter ] ];
+		addItem: [ :item | item name: 'Refresh'; action: [ self refreshSelectedSource ] ];
 		addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ];
 		yourself
 ]
@@ -198,10 +215,7 @@ GbsMethodQueryResultsPresenter >> filterContains [
 	(token isNil or: [ token trimBoth isEmpty ]) ifTrue: [ ^ self ].
 	filtered := allReferences select: [ :each | each asString includesSubstring: token trimBoth ].
 	references := filtered asArray.
-	methodsList items: references.
-	references ifNotEmpty: [
-		(methodsList respondsTo: #selectIndex:) ifTrue: [ methodsList selectIndex: 1 ].
-		self showSourceForReference: references first ].
+	self reloadReferencesIntoList
 ]
 
 { #category : 'actions' }
@@ -222,17 +236,66 @@ GbsMethodQueryResultsPresenter >> reloadReferencesIntoList [
 				(methodsList respondsTo: #selectItem:)
 					ifTrue: [ methodsList selectItem: references first ] ].
 		self showSourceForReference: references first ]
+	ifFalse: [
+		sourceText ifNotNil: [ sourceText text: '' ].
+		self updateStatusForReference: nil ].
+	self updateCountStatus
 ]
 
 { #category : 'actions' }
 GbsMethodQueryResultsPresenter >> browseSelectedReference [
 	| ref worker |
-	ref := methodsList selection selectedItem.
+	ref := self selectedReference.
 	ref ifNil: [ ^ self ].
 	worker := GbsBrowser new.
 	worker session: session.
 	(worker openMethodReference: ref asString)
 		ifFalse: [ UIManager default inform: 'Could not browse selected method.' ]
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> browseSendersOfSelected [
+	^ self openQueryForSelectedSelectorMode: 'senders' titlePrefix: 'Senders of '
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> browseImplementorsOfSelected [
+	^ self openQueryForSelectedSelectorMode: 'implementors' titlePrefix: 'Implementors of '
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> browseHierarchySendersOfSelected [
+	^ self openQueryForSelectedSelectorMode: 'hierarchySenders' titlePrefix: 'Hierarchy Senders of '
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> browseHierarchyImplementorsOfSelected [
+	^ self openQueryForSelectedSelectorMode: 'hierarchyImplementors' titlePrefix: 'Hierarchy Implementors of '
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> openQueryForSelectedSelectorMode: modeString titlePrefix: prefixString [
+	| ref parsed selector worker queryRefs title |
+	ref := self selectedReference.
+	ref ifNil: [ ^ self ].
+	parsed := self parseReference: ref asString.
+	parsed ifNil: [ ^ self ].
+	selector := parsed second.
+	worker := GbsBrowser new.
+	worker session: session.
+	queryRefs := [ worker queryServerMethodsForSelector: selector mode: modeString ] on: Error do: [ #() ].
+	queryRefs isEmpty ifTrue: [ ^ UIManager default inform: 'No matches found.' ].
+	title := self queryResultsTitleForSelector: selector modePrefix: prefixString count: queryRefs size.
+	^ self class openOn: session references: queryRefs title: title
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> queryResultsTitleForSelector: selector modePrefix: prefixString count: aCount [
+	| sessionPart |
+	sessionPart := (session respondsTo: #sessionId)
+		ifTrue: [ 'Session ', session sessionId asString, ' ' ]
+		ifFalse: [ '' ].
+	^ sessionPart, prefixString, selector asString, ' (', aCount asString, ')'
 ]
 
 { #category : 'actions' }
@@ -262,6 +325,24 @@ GbsMethodQueryResultsPresenter >> beginSessionTransaction [
 GbsMethodQueryResultsPresenter >> closeWindow [
 	(self respondsTo: #window)
 		ifTrue: [ self window ifNotNil: [ :w | w close ] ]
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> refreshSelectedSource [
+	| ref |
+	ref := self selectedReference.
+	ref ifNil: [ ^ self ].
+	self showSourceForReference: ref
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> selectedReference [
+	| selection |
+	methodsList ifNil: [ ^ nil ].
+	selection := methodsList selection.
+	(selection notNil and: [ selection respondsTo: #selectedItem ])
+		ifTrue: [ ^ selection selectedItem ].
+	^ nil
 ]
 
 { #category : 'private' }
@@ -305,4 +386,26 @@ GbsMethodQueryResultsPresenter >> normalizeReferences: aCollection [
 		^ normalized ].
 	normalized := normalized asSet asArray asSortedCollection asArray.
 	^ normalized
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> updateCountStatus [
+	countStatus ifNil: [ ^ self ].
+	countStatus label: 'Methods: ', (references ifNil: [ 0 ] ifNotNil: [ references size ]) asString
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> updateStatusForReference: referenceString [
+	| parsed className selector |
+	selectionStatus ifNil: [ ^ self ].
+	referenceString ifNil: [
+		selectionStatus label: 'Selection: <none>'.
+		^ self ].
+	parsed := self parseReference: referenceString asString.
+	parsed ifNil: [
+		selectionStatus label: 'Selection: ', referenceString asString.
+		^ self ].
+	className := parsed first.
+	selector := parsed second.
+	selectionStatus label: 'Method: #', selector, '    Class: ', className
 ]

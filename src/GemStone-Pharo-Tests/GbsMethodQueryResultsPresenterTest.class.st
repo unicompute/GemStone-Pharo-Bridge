@@ -73,3 +73,33 @@ GbsMethodQueryResultsPresenterTest >> testClassicLauncherQueryOrganizerParsesRow
 	self assert: (results includes: 'Object>>size').
 	self assert: (results includes: 'Behavior>>new')
 ]
+
+{ #category : 'tests' }
+GbsMethodQueryResultsPresenterTest >> testQueryResultsTitleIncludesSessionAndCount [
+	| presenter session title |
+	presenter := GbsMethodQueryResultsPresenter new.
+	session := GbsSession new.
+	session sessionId: 7.
+	presenter session: session.
+
+	title := presenter
+		queryResultsTitleForSelector: 'size'
+		modePrefix: 'Implementors of '
+		count: 71.
+
+	self assert: title equals: 'Session 7 Implementors of size (71)'
+]
+
+{ #category : 'tests' }
+GbsMethodQueryResultsPresenterTest >> testQueryResultsTitleWithoutSessionId [
+	| presenter title |
+	presenter := GbsMethodQueryResultsPresenter new.
+	presenter session: Object new.
+
+	title := presenter
+		queryResultsTitleForSelector: 'size'
+		modePrefix: 'Senders of '
+		count: 3.
+
+	self assert: title equals: 'Senders of size (3)'
+]
