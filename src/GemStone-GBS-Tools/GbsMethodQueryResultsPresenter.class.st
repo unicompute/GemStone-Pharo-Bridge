@@ -48,8 +48,10 @@ GbsMethodQueryResultsPresenter >> initializePresenters [
 	references ifNil: [ references := #() ].
 	allReferences ifNil: [ allReferences := references copy ].
 	mainMenu := self buildMenuBar.
-	methodsList := self newList.
-	methodsList display: [ :each | each ifNil: [ '' ] ifNotNil: [ each asString ] ].
+	methodsList := self newTable.
+	methodsList addColumn: (SpStringTableColumn
+		title: 'Method'
+		evaluated: [ :each | each ifNil: [ '' ] ifNotNil: [ each asString ] ]).
 	sourceText := self newText.
 	(sourceText respondsTo: #beNotEditable) ifTrue: [ sourceText beNotEditable ].
 ]
