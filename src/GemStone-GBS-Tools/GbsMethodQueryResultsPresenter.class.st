@@ -4,7 +4,9 @@ Class {
 	#instVars : [
 		'session',
 		'references',
+		'allReferences',
 		'windowTitle',
+		'mainMenu',
 		'methodsList',
 		'sourceText'
 	],
@@ -31,7 +33,8 @@ GbsMethodQueryResultsPresenter >> session: aSession [
 
 { #category : 'accessing' }
 GbsMethodQueryResultsPresenter >> references: aCollection [
-	references := (aCollection ifNil: [ #() ] ifNotNil: [ aCollection asArray ])
+	references := (aCollection ifNil: [ #() ] ifNotNil: [ aCollection asArray ]).
+	allReferences := references copy
 ]
 
 { #category : 'accessing' }
@@ -42,6 +45,8 @@ GbsMethodQueryResultsPresenter >> windowTitle: aString [
 { #category : 'initialization' }
 GbsMethodQueryResultsPresenter >> initializePresenters [
 	references ifNil: [ references := #() ].
+	allReferences ifNil: [ allReferences := references copy ].
+	mainMenu := self buildMenuBar.
 	methodsList := self newList.
 	methodsList display: [ :each | each asString ].
 	sourceText := self newText.
@@ -65,10 +70,13 @@ GbsMethodQueryResultsPresenter >> connectPresenters [
 
 { #category : 'layout' }
 GbsMethodQueryResultsPresenter >> defaultLayout [
-	^ SpPanedLayout newTopToBottom
-		positionOfSlider: 45 percent;
-		add: methodsList;
-		add: sourceText;
+	^ SpBoxLayout newTopToBottom
+		add: mainMenu expand: false;
+		add: ((SpPanedLayout newTopToBottom
+			positionOfSlider: 45 percent;
+			add: methodsList;
+			add: sourceText;
+			yourself));
 		yourself
 ]
 
@@ -119,4 +127,124 @@ GbsMethodQueryResultsPresenter >> parseReference: referenceString [
 		ifFalse: [ classPart ].
 	className isEmpty ifTrue: [ ^ nil ].
 	^ { className. selectorPart. classSide }
+]
+
+{ #category : 'menus' }
+GbsMethodQueryResultsPresenter >> buildMenuBar [
+	^ self newMenuBar
+		addGroup: [ :group |
+			group
+				addItem: [ :item | item name: 'Find'; subMenu: self menuFind ];
+				addItem: [ :item | item name: 'Method'; subMenu: self menuMethod ];
+				addItem: [ :item | item name: 'Session'; subMenu: self menuSession ];
+				addItem: [ :item | item name: 'Window'; subMenu: self menuWindow ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsMethodQueryResultsPresenter >> menuFind [
+	^ self newMenu
+		addItem: [ :item | item name: 'Find Selector...'; action: [ self findSelector ] ];
+		addItem: [ :item | item name: 'Filter Contains...'; action: [ self filterContains ] ];
+		addItem: [ :item | item name: 'Clear Filter'; action: [ self clearFilter ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsMethodQueryResultsPresenter >> menuMethod [
+	^ self newMenu
+		addItem: [ :item | item name: 'Browse'; action: [ self browseSelectedReference ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsMethodQueryResultsPresenter >> menuSession [
+	^ self newMenu
+		addItem: [ :item | item name: 'Commit Transaction'; action: [ self commitSession ] ];
+		addItem: [ :item | item name: 'Abort Transaction'; action: [ self abortSession ] ];
+		addItem: [ :item | item name: 'Begin Transaction'; action: [ self beginSessionTransaction ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsMethodQueryResultsPresenter >> menuWindow [
+	^ self newMenu
+		addItem: [ :item | item name: 'Refresh'; action: [ self clearFilter ] ];
+		addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ];
+		yourself
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> findSelector [
+	| token idx items |
+	token := UIManager default request: 'Find selector:' initialAnswer: ''.
+	(token isNil or: [ token trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	items := references ifNil: [ #() ].
+	idx := (1 to: items size)
+		detect: [ :i | (items at: i) asString includesSubstring: token trimBoth ]
+		ifNone: [ 0 ].
+	idx = 0 ifTrue: [ ^ UIManager default inform: 'No match found.' ].
+	(methodsList respondsTo: #selectIndex:) ifTrue: [ methodsList selectIndex: idx ].
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> filterContains [
+	| token filtered |
+	token := UIManager default request: 'Filter methods containing:' initialAnswer: ''.
+	(token isNil or: [ token trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	filtered := allReferences select: [ :each | each asString includesSubstring: token trimBoth ].
+	references := filtered asArray.
+	methodsList items: references.
+	references ifNotEmpty: [
+		(methodsList respondsTo: #selectIndex:) ifTrue: [ methodsList selectIndex: 1 ].
+		self showSourceForReference: references first ].
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> clearFilter [
+	references := allReferences copy.
+	methodsList items: references.
+	references ifNotEmpty: [
+		(methodsList respondsTo: #selectIndex:) ifTrue: [ methodsList selectIndex: 1 ].
+		self showSourceForReference: references first ]
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> browseSelectedReference [
+	| ref worker |
+	ref := methodsList selection selectedItem.
+	ref ifNil: [ ^ self ].
+	worker := GbsBrowser new.
+	worker session: session.
+	(worker openMethodReference: ref asString)
+		ifFalse: [ UIManager default inform: 'Could not browse selected method.' ]
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> commitSession [
+	(session respondsTo: #commitTransaction)
+		ifTrue: [ ^ session commitTransaction ].
+	^ false
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> abortSession [
+	(session respondsTo: #abort)
+		ifTrue: [ session abort. ^ true ].
+	^ false
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> beginSessionTransaction [
+	(session respondsTo: #beginTransaction)
+		ifTrue: [ ^ session beginTransaction ].
+	(session respondsTo: #begin)
+		ifTrue: [ ^ session begin ].
+	^ false
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> closeWindow [
+	(self respondsTo: #window)
+		ifTrue: [ self window ifNotNil: [ :w | w close ] ]
 ]

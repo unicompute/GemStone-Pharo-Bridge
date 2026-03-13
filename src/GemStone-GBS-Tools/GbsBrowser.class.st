@@ -881,6 +881,7 @@ GbsBrowser >> queryServerMethodsForSelector: selectorName mode: modeString [
 		stream contents
 	] value'.
 	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	raw := raw ifNil: [ '' ] ifNotNil: [ raw asString ].
 	^ ((raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asSortedCollection asArray
 ]
 
@@ -922,6 +923,7 @@ GbsBrowser >> queryMethodsWithString [
 		stream contents
 	] value'.
 	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	raw := raw ifNil: [ '' ] ifNotNil: [ raw asString ].
 	matches := (raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty.
 	matches isEmpty ifTrue: [ ^ self informNotImplemented: 'No methods matched.' ].
 	selected := matches asSortedCollection asArray.
