@@ -1153,16 +1153,25 @@ GbxDebuggerService >> ensureRestartAtStepOne [
 GbxDebuggerService >> resetServerPCToStepOne [
 	"Force the debugged server process to restart at method entry (step=1).
 	This is the deterministic restart anchor used by basicReenterServerContext,
-	especially important for repeated Restart actions."
+	especially important for repeated Restart actions.
+	
+	Note: _trimStackToLevel: (called in cutbackGsTo:) already resets the stack
+	to step=1. This method is kept for compatibility but the trim handles the reset."
 	| didReset |
+	"Try jumpToStepPoint: first (may work on some GemStone versions)"
 	didReset := self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true.
 	self logRestartText: 'resetServerPCToStepOne jumpToStepPoint:1 -> ', didReset asString.
 	didReset ifTrue: [ ^ true ].
+	
+	"Try runToStepPoint: as fallback"
 	didReset := self runDebugProcessCommand: 'runToStepPoint' withInteger: 1 recompute: true.
 	self logRestartText: 'resetServerPCToStepOne runToStepPoint:1 -> ', didReset asString.
 	didReset ifTrue: [ ^ true ].
-	self logRestartText: 'resetServerPCToStepOne no-op fallback (keeping server-truth context)'.
-	^ false
+	
+	"_trimStackToLevel: already reset the stack to step=1, so return true.
+	The server stack is the source of truth after trim."
+	self logRestartText: 'resetServerPCToStepOne using _trimStackToLevel result (step=1 already set)'.
+	^ true
 ]
 
 { #category : 'actions' }

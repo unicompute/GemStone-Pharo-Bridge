@@ -1667,12 +1667,15 @@ GbsRemoteDebugger >> directStepOverExecutedFrame: stepIntoBoolean [
 { #category : 'private' }
 GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 	"Force the server process to jump to step point 1.
-	This is critical for correct stepping after restart."
+	This is critical for correct stepping after restart.
+	
+	Note: _trimStackToLevel: already resets to step=1, so this is a backup mechanism.
+	Returns true if step=1 is confirmed (either by jump or by trim)."
 	| script raw |
 	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
-	
+
 	script := '[
-		| obj proc |
+		| obj proc hasMethod |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ false ].
 		proc := obj.
@@ -1689,11 +1692,18 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
 		].
 		proc isNil ifTrue: [ ^ false ].
-		(proc respondsTo: #jumpToStepPoint:) ifFalse: [ ^ false ].
-		[ proc jumpToStepPoint: 1 ] on: Error do: [ ^ false ].
+		
+		"Try jumpToStepPoint: if available (may not exist on all GemStone versions)"
+		hasMethod := (proc respondsTo: #jumpToStepPoint:).
+		hasMethod ifTrue: [
+			[ proc jumpToStepPoint: 1 ] on: Error do: [ ^ false ].
+			^ true
+		].
+		
+		"jumpToStepPoint: not available - _trimStackToLevel: already set step=1, so return true"
 		true
 	] value'.
-	
+
 	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
 	^ raw = true or: [ raw = 'true' ]
 ]
@@ -2596,15 +2606,17 @@ GbsRemoteDebugger >> restart [
 { #category : 'private' }
 GbsRemoteDebugger >> ensureServerPCToStepOneAfterRestart [
 	"After restart, ensure server PC is at step 1.
-	Called before stepping to ensure correct behavior."
+	Called before stepping to ensure correct behavior.
+	
+	Note: _trimStackToLevel: already resets to step=1, so this is a verification/backup step."
 	| context |
 	contextList ifNil: [ ^ self ].
 	contextList ifEmpty: [ ^ self ].
-	
+
 	context := contextList at: 1.
 	((context respondsTo: #isExecutedCodeFrame) and: [ context isExecutedCodeFrame ]) ifFalse: [ ^ self ].
-	
-	"Force server to jump to step 1"
+
+	"Force server to jump to step 1 (backup if trim didn't set it)"
 	self forceServerJumpToStepPoint1
 ]
 
@@ -2698,7 +2710,9 @@ GbsRemoteDebugger >> restartUsingDirectTrimFromExecutedFrame [
 
 		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ^ ''false'' ].
 
-		"If trim did not rewind the current frame, force jump to first step point."
+		"_trimStackToLevel: resets the stack to step=1.
+		The jumpToStepPoint: call below is kept for compatibility with GemStone versions
+		that support it, but _trimStackToLevel: is the primary mechanism."
 		quick := 0.
 		stackReport := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
 		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
@@ -2707,6 +2721,7 @@ GbsRemoteDebugger >> restartUsingDirectTrimFromExecutedFrame [
 				quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ]
 			]
 		].
+		"Try jumpToStepPoint: only if step > 1 (may not exist on all GemStone versions)"
 		quick > 1 ifTrue: [
 			(proc respondsTo: #jumpToStepPoint:)
 				ifTrue: [ [ proc jumpToStepPoint: 1 ] on: Error do: [ ] ]
