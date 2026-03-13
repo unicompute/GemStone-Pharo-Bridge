@@ -511,15 +511,13 @@ GbsClassicLauncher class >> loadTonelFile: pathString withReader: readerClass [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> performBrowseQueryWithPrompt: promptString mode: modeString titlePrefix: titlePrefixString [
-	| session query worker references presenterClass sessionPart title |
+	| session query references presenterClass sessionPart title |
 	self ensureQueryWindowSupportLoaded.
 	query := UIManager default request: promptString initialAnswer: ''.
 	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
-	worker := GbsBrowser new.
-	worker session: session.
-	references := [ worker queryServerMethodsForSelector: query trimBoth mode: modeString ]
+	references := [ self queryOrganizerMethodsFor: query trimBoth mode: modeString inSession: session ]
 		on: Error
 		do: [ :ex |
 			UIManager default inform: 'Browse query failed: ', ex messageText.
@@ -538,6 +536,43 @@ GbsClassicLauncher class >> performBrowseQueryWithPrompt: promptString mode: mod
 	[ presenterClass openOn: session references: references title: title ]
 		on: Error
 		do: [ :ex | UIManager default inform: 'Could not open query results window: ', ex messageText ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> queryOrganizerMethodsFor: tokenString mode: modeString inSession: aSession [
+	| escapedToken escapedMode script raw |
+	escapedToken := tokenString copyReplaceAll: '''' with: ''''''.
+	escapedMode := modeString copyReplaceAll: '''' with: ''''''.
+	script := '[
+		| token mode org methods searchResults stream |
+		token := ''', escapedToken, '''.
+		mode := ''', escapedMode, '''.
+		org := ClassOrganizer new.
+		methods := #().
+		mode = ''implementors'' ifTrue: [
+			methods := [ org implementorsOf: token asSymbol ] on: Error do: [ #() ] ].
+		mode = ''senders'' ifTrue: [
+			searchResults := [ org sendersOf: token asString ] on: Error do: [ #() ].
+			methods := (searchResults isArray and: [ searchResults isEmpty not ])
+				ifTrue: [ searchResults first ]
+				ifFalse: [ searchResults ] ].
+		mode = ''references'' ifTrue: [
+			searchResults := [ org referencesTo: token asSymbol ] on: Error do: [ #() ].
+			methods := (searchResults isArray and: [ searchResults isEmpty not ])
+				ifTrue: [ searchResults first ]
+				ifFalse: [ searchResults ] ].
+		stream := WriteStream on: String new.
+		(methods ifNil: [ #() ]) do: [ :m |
+			| cls sel |
+			cls := [ m inClass name asString ] on: Error do: [ '''' ].
+			sel := [ m selector asString ] on: Error do: [ '''' ].
+			(cls isEmpty or: [ sel isEmpty ]) ifFalse: [
+				stream nextPutAll: cls; nextPutAll: ''>>''; nextPutAll: sel; lf ] ].
+		stream contents
+	] value'.
+	raw := [ aSession executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	raw := raw ifNil: [ '' ] ifNotNil: [ raw asString ].
+	^ ((raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asSet asArray asSortedCollection asArray
 ]
 
 { #category : 'menus' }
