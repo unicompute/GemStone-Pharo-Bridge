@@ -520,16 +520,6 @@ GbsClassicLauncher class >> performBrowseQueryWithPrompt: promptString mode: mod
 		do: [ :ex |
 			UIManager default inform: 'Browse query failed: ', ex messageText.
 			#() ].
-	Transcript
-		show: 'GbsClassicLauncher query mode=';
-		show: modeString;
-		show: ' token=';
-		show: query trimBoth;
-		show: ' resultsCount=';
-		show: references size asString;
-		show: ' first=';
-		show: (references ifEmpty: [ '<empty>' ] ifNotEmpty: [ references first asString ]);
-		cr.
 	references isEmpty ifTrue: [
 		UIManager default inform: 'No matches found.'.
 		^ self ].

@@ -17,12 +17,6 @@ Class {
 { #category : 'instance creation' }
 GbsMethodQueryResultsPresenter class >> openOn: aSession references: aCollection title: aString [
 	| presenter |
-	Transcript
-		show: 'GbsMethodQueryResultsPresenter open title=';
-		show: (aString ifNil: [ '<nil>' ] ifNotNil: [ aString asString ]);
-		show: ' incomingCount=';
-		show: (aCollection ifNil: [ 0 ] ifNotNil: [ aCollection size ]) asString;
-		cr.
 	presenter := self new.
 	presenter
 		session: aSession;
@@ -83,12 +77,6 @@ GbsMethodQueryResultsPresenter >> connectPresenters [
 					ifFalse: [ nil ] ].
 		self showSourceForReference: selected ].
 	methodsList items: references.
-	Transcript
-		show: 'GbsMethodQueryResultsPresenter connect referencesCount=';
-		show: references size asString;
-		show: ' first=';
-		show: (references ifEmpty: [ '<empty>' ] ifNotEmpty: [ references first asString ]);
-		cr.
 	(references notNil and: [ references isEmpty not ]) ifTrue: [
 		(methodsList respondsTo: #selectIndex:)
 			ifTrue: [ methodsList selectIndex: 1 ]
@@ -317,9 +305,7 @@ GbsMethodQueryResultsPresenter >> normalizeReferences: aCollection [
 		normalized := (rawItems
 			collect: [ :ea | (ea ifNil: [ '' ] ifNotNil: [ ea asString ]) trimBoth ]
 			thenReject: [ :line | line isEmpty ]) asArray.
-		Transcript show: 'GbsMethodQueryResultsPresenter normalize fallbackCount='; show: normalized size asString; cr.
 		^ normalized ].
 	normalized := normalized asSet asArray asSortedCollection asArray.
-	Transcript show: 'GbsMethodQueryResultsPresenter normalize parsedCount='; show: normalized size asString; cr.
 	^ normalized
 ]
