@@ -378,15 +378,21 @@ GbsClassicLauncher class >> browseClassOnCurrentSession [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> browseImplementorsOnCurrentSession [
-	| query |
+	| query browser session |
 	query := UIManager default request: 'Implementors of selector:' initialAnswer: ''.
 	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
-	self openBrowserOnCurrentSessionDo: [ :browser |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	browser := GbsBrowser new.
+	browser session: session.
+	[
 		(browser respondsTo: #queryMethodsForSelector:mode:)
 			ifTrue: [ browser queryMethodsForSelector: query mode: 'implementors' ]
 			ifFalse: [
 				(browser respondsTo: #queryImplementors)
-					ifTrue: [ browser queryImplementors ] ] ].
+					ifTrue: [ browser queryImplementors ] ] ]
+		on: Error
+		do: [ :ex | UIManager default inform: 'Browse implementors failed: ', ex messageText ].
 ]
 
 { #category : 'menus' }
@@ -403,28 +409,40 @@ GbsClassicLauncher class >> browseNamespaceOnCurrentSession [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> browseReferencesOnCurrentSession [
-	| query |
+	| query browser session |
 	query := UIManager default request: 'References to class or variable name:' initialAnswer: ''.
 	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
-	self openBrowserOnCurrentSessionDo: [ :browser |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	browser := GbsBrowser new.
+	browser session: session.
+	[
 		(browser respondsTo: #queryMethodsForSelector:mode:)
 			ifTrue: [ browser queryMethodsForSelector: query mode: 'references' ]
 			ifFalse: [
 				(browser respondsTo: #queryReferences)
-					ifTrue: [ browser queryReferences ] ] ].
+					ifTrue: [ browser queryReferences ] ] ]
+		on: Error
+		do: [ :ex | UIManager default inform: 'Browse references failed: ', ex messageText ].
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> browseSendersOnCurrentSession [
-	| query |
+	| query browser session |
 	query := UIManager default request: 'Senders of selector:' initialAnswer: ''.
 	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
-	self openBrowserOnCurrentSessionDo: [ :browser |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	browser := GbsBrowser new.
+	browser session: session.
+	[
 		(browser respondsTo: #queryMethodsForSelector:mode:)
 			ifTrue: [ browser queryMethodsForSelector: query mode: 'senders' ]
 			ifFalse: [
 				(browser respondsTo: #querySenders)
-					ifTrue: [ browser querySenders ] ] ].
+					ifTrue: [ browser querySenders ] ] ]
+		on: Error
+		do: [ :ex | UIManager default inform: 'Browse senders failed: ', ex messageText ].
 ]
 
 { #category : 'menus' }
