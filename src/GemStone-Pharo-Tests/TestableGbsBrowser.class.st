@@ -11,7 +11,9 @@ Class {
 		'queryResultsByMode',
 		'lastOpenedReference',
 		'lastQueriedSelector',
-		'lastQueriedMode'
+		'lastQueriedMode',
+		'lastQueriedRootClass',
+		'lastQueriedHierarchyScope'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -86,8 +88,20 @@ TestableGbsBrowser >> uiChooseFrom: choices title: titleString [
 
 { #category : 'private' }
 TestableGbsBrowser >> queryServerMethodsForSelector: selectorName mode: modeString [
+	^ self queryServerMethodsForSelector: selectorName mode: modeString rootClassName: nil hierarchyScope: 'full'
+]
+
+{ #category : 'private' }
+TestableGbsBrowser >> queryServerMethodsForSelector: selectorName mode: modeString rootClassName: rootClassName [
+	^ self queryServerMethodsForSelector: selectorName mode: modeString rootClassName: rootClassName hierarchyScope: 'full'
+]
+
+{ #category : 'private' }
+TestableGbsBrowser >> queryServerMethodsForSelector: selectorName mode: modeString rootClassName: rootClassName hierarchyScope: scopeString [
 	lastQueriedSelector := selectorName.
 	lastQueriedMode := modeString.
+	lastQueriedRootClass := rootClassName.
+	lastQueriedHierarchyScope := scopeString.
 	^ queryResultsByMode at: modeString ifAbsent: [ #() ]
 ]
 
@@ -140,4 +154,14 @@ TestableGbsBrowser >> lastQueriedSelector [
 { #category : 'accessing' }
 TestableGbsBrowser >> lastQueriedMode [
 	^ lastQueriedMode
+]
+
+{ #category : 'accessing' }
+TestableGbsBrowser >> lastQueriedRootClass [
+	^ lastQueriedRootClass
+]
+
+{ #category : 'accessing' }
+TestableGbsBrowser >> lastQueriedHierarchyScope [
+	^ lastQueriedHierarchyScope
 ]

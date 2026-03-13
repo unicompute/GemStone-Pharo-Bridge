@@ -516,14 +516,34 @@ GbsBrowser >> menuMethod [
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Browse Senders'; action: [ self deferAction: [ self querySenders ] ] ].
 			group addItem: [ :item | item name: 'Browse Implementors'; action: [ self deferAction: [ self queryImplementors ] ] ].
-			group addItem: [ :item | item name: 'Browse Hierarchy Senders'; action: [ self deferAction: [ self queryHierarchySenders ] ] ].
-			group addItem: [ :item | item name: 'Browse Hierarchy Implementors'; action: [ self deferAction: [ self queryHierarchyImplementors ] ] ] ];
+			group addItem: [ :item | item name: 'Browse Hierarchy Senders'; subMenu: self menuHierarchySenders ].
+			group addItem: [ :item | item name: 'Browse Hierarchy Implementors'; subMenu: self menuHierarchyImplementors ] ];
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Move To ...'; action: [ self deferAction: [ self moveMethodToCategory ] ] ].
 			group addItem: [ :item | item name: 'Remove...'; action: [ self deferAction: [ self removeMethod ] ] ] ];
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Compile Client Method'; action: [ self deferAction: [ self acceptText: sourceText text asString ] ] ].
 			group addItem: [ :item | item name: 'Inspect'; action: [ self deferAction: [ self inspectMethod ] ] ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsBrowser >> menuHierarchySenders [
+	^ self newMenu
+		addItem: [ :item | item name: 'In Full Hierarchy'; action: [ self deferAction: [ self queryHierarchySenders ] ] ];
+		addItem: [ :item | item name: 'In Superclasses'; action: [ self deferAction: [ self queryHierarchySendersInScope: 'super' ] ] ];
+		addItem: [ :item | item name: 'In This Class'; action: [ self deferAction: [ self queryHierarchySendersInScope: 'this' ] ] ];
+		addItem: [ :item | item name: 'In Subclasses'; action: [ self deferAction: [ self queryHierarchySendersInScope: 'sub' ] ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsBrowser >> menuHierarchyImplementors [
+	^ self newMenu
+		addItem: [ :item | item name: 'In Full Hierarchy'; action: [ self deferAction: [ self queryHierarchyImplementors ] ] ];
+		addItem: [ :item | item name: 'In Superclasses'; action: [ self deferAction: [ self queryHierarchyImplementorsInScope: 'super' ] ] ];
+		addItem: [ :item | item name: 'In This Class'; action: [ self deferAction: [ self queryHierarchyImplementorsInScope: 'this' ] ] ];
+		addItem: [ :item | item name: 'In Subclasses'; action: [ self deferAction: [ self queryHierarchyImplementorsInScope: 'sub' ] ] ];
 		yourself
 ]
 
@@ -749,13 +769,25 @@ GbsBrowser >> queryReferences [
 { #category : 'actions' }
 GbsBrowser >> queryHierarchySenders [
 	(self ensureHierarchyQueryClassSelected) ifFalse: [ ^ false ].
-	^ self queryMethodsForSelectorPrompt: 'Hierarchy senders of selector:' mode: 'hierarchySenders'
+	^ self queryMethodsForSelectorPrompt: 'Hierarchy senders of selector:' mode: 'hierarchySenders' hierarchyScope: 'full'
 ]
 
 { #category : 'actions' }
 GbsBrowser >> queryHierarchyImplementors [
 	(self ensureHierarchyQueryClassSelected) ifFalse: [ ^ false ].
-	^ self queryMethodsForSelectorPrompt: 'Hierarchy implementors of selector:' mode: 'hierarchyImplementors'
+	^ self queryMethodsForSelectorPrompt: 'Hierarchy implementors of selector:' mode: 'hierarchyImplementors' hierarchyScope: 'full'
+]
+
+{ #category : 'actions' }
+GbsBrowser >> queryHierarchySendersInScope: scopeString [
+	(self ensureHierarchyQueryClassSelected) ifFalse: [ ^ false ].
+	^ self queryMethodsForSelectorPrompt: 'Hierarchy senders of selector:' mode: 'hierarchySenders' hierarchyScope: scopeString
+]
+
+{ #category : 'actions' }
+GbsBrowser >> queryHierarchyImplementorsInScope: scopeString [
+	(self ensureHierarchyQueryClassSelected) ifFalse: [ ^ false ].
+	^ self queryMethodsForSelectorPrompt: 'Hierarchy implementors of selector:' mode: 'hierarchyImplementors' hierarchyScope: scopeString
 ]
 
 { #category : 'private' }
@@ -767,23 +799,37 @@ GbsBrowser >> ensureHierarchyQueryClassSelected [
 
 { #category : 'private' }
 GbsBrowser >> queryMethodsForSelectorPrompt: prompt mode: modeString [
+	^ self queryMethodsForSelectorPrompt: prompt mode: modeString hierarchyScope: 'full'
+]
+
+{ #category : 'private' }
+GbsBrowser >> queryMethodsForSelectorPrompt: prompt mode: modeString hierarchyScope: scopeString [
 	| selectorName references selected |
 	selected := self selectedMethodSelector.
 	selectorName := selected
 		ifNil: [ self uiRequest: prompt initialAnswer: '' ]
 		ifNotNil: [ selected asString ].
 	(selectorName isNil or: [ selectorName isEmpty ]) ifTrue: [ ^ false ].
-	^ self queryMethodsForSelector: selectorName mode: modeString
+	^ self queryMethodsForSelector: selectorName mode: modeString hierarchyScope: scopeString
 ]
 
 { #category : 'actions' }
 GbsBrowser >> queryMethodsForSelector: selectorName mode: modeString [
+	^ self queryMethodsForSelector: selectorName mode: modeString hierarchyScope: 'full'
+]
+
+{ #category : 'actions' }
+GbsBrowser >> queryMethodsForSelector: selectorName mode: modeString hierarchyScope: scopeString [
 	| normalized resolvedSelector references |
 	normalized := self normalizeSelectorQuery: selectorName.
 	normalized isEmpty ifTrue: [ ^ false ].
 	resolvedSelector := self resolveSelectorForQueryInput: normalized.
 	resolvedSelector isNil ifTrue: [ ^ false ].
-	references := self queryServerMethodsForSelector: resolvedSelector trimBoth mode: modeString.
+	references := self
+		queryServerMethodsForSelector: resolvedSelector trimBoth
+		mode: modeString
+		rootClassName: nil
+		hierarchyScope: scopeString.
 	references isEmpty ifTrue: [ ^ self informNotImplemented: 'No matches found.' ].
 	^ self
 		openQueryResults: references
@@ -865,6 +911,16 @@ GbsBrowser >> dictionaryNameContainingClassNamed: className [
 
 { #category : 'private' }
 GbsBrowser >> queryServerMethodsForSelector: selectorName mode: modeString [
+	^ self queryServerMethodsForSelector: selectorName mode: modeString rootClassName: nil hierarchyScope: 'full'
+]
+
+{ #category : 'private' }
+GbsBrowser >> queryServerMethodsForSelector: selectorName mode: modeString rootClassName: rootClassName [
+	^ self queryServerMethodsForSelector: selectorName mode: modeString rootClassName: rootClassName hierarchyScope: 'full'
+]
+
+{ #category : 'private' }
+GbsBrowser >> queryServerMethodsForSelector: selectorName mode: modeString rootClassName: rootClassName hierarchyScope: scopeString [
 	((#('implementors' 'senders' 'references') includes: modeString)
 		and: [ Smalltalk includesKey: #GbsClassicLauncher ]) ifTrue: [
 		^ [ GbsClassicLauncher
@@ -872,17 +928,28 @@ GbsBrowser >> queryServerMethodsForSelector: selectorName mode: modeString [
 			mode: modeString
 			inSession: session ]
 			on: Error
-			do: [ :ex | self queryServerMethodsByScanningForSelector: selectorName mode: modeString ] ].
-	^ self queryServerMethodsByScanningForSelector: selectorName mode: modeString
+			do: [ :ex | self queryServerMethodsByScanningForSelector: selectorName mode: modeString rootClassName: rootClassName hierarchyScope: scopeString ] ].
+	^ self queryServerMethodsByScanningForSelector: selectorName mode: modeString rootClassName: rootClassName hierarchyScope: scopeString
 ]
 
 { #category : 'private' }
 GbsBrowser >> queryServerMethodsByScanningForSelector: selectorName mode: modeString [
-	| escapedSelector selectedClassName escapedClass escapedToken script raw selectorExpr classFilterExpr |
+	^ self queryServerMethodsByScanningForSelector: selectorName mode: modeString rootClassName: nil hierarchyScope: 'full'
+]
+
+{ #category : 'private' }
+GbsBrowser >> queryServerMethodsByScanningForSelector: selectorName mode: modeString rootClassName: rootClassName [
+	^ self queryServerMethodsByScanningForSelector: selectorName mode: modeString rootClassName: rootClassName hierarchyScope: 'full'
+]
+
+{ #category : 'private' }
+GbsBrowser >> queryServerMethodsByScanningForSelector: selectorName mode: modeString rootClassName: rootClassName hierarchyScope: scopeString [
+	| escapedSelector selectedClassName escapedClass escapedToken escapedScope script raw selectorExpr classFilterExpr |
 	escapedSelector := selectorName copyReplaceAll: '''' with: ''''''.
 	escapedToken := escapedSelector.
-	selectedClassName := self selectedClassName ifNil: [ '' ].
+	selectedClassName := rootClassName ifNil: [ self selectedClassName ifNil: [ '' ] ].
 	escapedClass := selectedClassName copyReplaceAll: '''' with: ''''''.
+	escapedScope := (scopeString ifNil: [ 'full' ] ifNotNil: [ scopeString asString ]) copyReplaceAll: '''' with: ''''''.
 	selectorExpr := (modeString = 'implementors' or: [ modeString = 'hierarchyImplementors' ])
 		ifTrue: [ 'sels := (cls includesSelector: sel) ifTrue: [ Array with: sel ] ifFalse: [ #() ]' ]
 		ifFalse: [
@@ -894,12 +961,25 @@ GbsBrowser >> queryServerMethodsByScanningForSelector: selectorName mode: modeSt
 				on: Error
 				do: [ ]' ].
 	classFilterExpr := (modeString = 'hierarchySenders' or: [ modeString = 'hierarchyImplementors' ])
-		ifTrue: [ '((rootClass notNil) and: [ ((cls withAllSuperclasses includes: rootClass) or: [ rootClass withAllSuperclasses includes: cls ]) not ]) ifTrue: [ sels := #() ]' ]
+		ifTrue: [ '
+			(rootClass notNil) ifTrue: [
+				| withinHierarchy isSuper isThis isSub |
+				withinHierarchy := (cls withAllSuperclasses includes: rootClass)
+					or: [ rootClass withAllSuperclasses includes: cls ].
+				isSuper := (cls ~~ rootClass) and: [ rootClass withAllSuperclasses includes: cls ].
+				isThis := cls == rootClass.
+				isSub := (cls ~~ rootClass) and: [ cls withAllSuperclasses includes: rootClass ].
+				withinHierarchy ifFalse: [ sels := #() ].
+				withinHierarchy ifTrue: [
+					(scope = ''super'' and: [ isSuper not ]) ifTrue: [ sels := #() ].
+					(scope = ''this'' and: [ isThis not ]) ifTrue: [ sels := #() ].
+					(scope = ''sub'' and: [ isSub not ]) ifTrue: [ sels := #() ] ] ]' ]
 		ifFalse: [ '' ].
 	script := '[
-		| sel token classes stream rootClass |
+		| sel token classes stream rootClass scope |
 		sel := #''', escapedSelector, '''.
 		token := ''', escapedToken, '''.
+		scope := ''', escapedScope, '''.
 		stream := WriteStream on: String new.
 		classes := IdentitySet new.
 		rootClass := ', (selectedClassName isEmpty

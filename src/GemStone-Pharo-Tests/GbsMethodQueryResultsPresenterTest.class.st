@@ -103,3 +103,51 @@ GbsMethodQueryResultsPresenterTest >> testQueryResultsTitleWithoutSessionId [
 
 	self assert: title equals: 'Senders of size (3)'
 ]
+
+{ #category : 'tests' }
+GbsMethodQueryResultsPresenterTest >> testBrowseHierarchySendersUsesFullScope [
+	| presenter |
+	presenter := TestableGbsMethodQueryResultsPresenter new.
+	presenter selectedReference: 'Object>>size'.
+
+	self assert: presenter browseHierarchySendersOfSelected.
+	self assert: presenter lastMode equals: 'hierarchySenders'.
+	self assert: presenter lastPrefix equals: 'Hierarchy Senders of '.
+	self assert: presenter lastScope equals: 'full'
+]
+
+{ #category : 'tests' }
+GbsMethodQueryResultsPresenterTest >> testBrowseHierarchySendersUsesExplicitScope [
+	| presenter |
+	presenter := TestableGbsMethodQueryResultsPresenter new.
+	presenter selectedReference: 'Object>>size'.
+
+	self assert: (presenter browseHierarchySendersOfSelectedInScope: 'sub').
+	self assert: presenter lastMode equals: 'hierarchySenders'.
+	self assert: presenter lastPrefix equals: 'Hierarchy Senders of '.
+	self assert: presenter lastScope equals: 'sub'
+]
+
+{ #category : 'tests' }
+GbsMethodQueryResultsPresenterTest >> testBrowseHierarchyImplementorsUsesFullScope [
+	| presenter |
+	presenter := TestableGbsMethodQueryResultsPresenter new.
+	presenter selectedReference: 'Object>>size'.
+
+	self assert: presenter browseHierarchyImplementorsOfSelected.
+	self assert: presenter lastMode equals: 'hierarchyImplementors'.
+	self assert: presenter lastPrefix equals: 'Hierarchy Implementors of '.
+	self assert: presenter lastScope equals: 'full'
+]
+
+{ #category : 'tests' }
+GbsMethodQueryResultsPresenterTest >> testBrowseHierarchyImplementorsUsesExplicitScope [
+	| presenter |
+	presenter := TestableGbsMethodQueryResultsPresenter new.
+	presenter selectedReference: 'Object>>size'.
+
+	self assert: (presenter browseHierarchyImplementorsOfSelectedInScope: 'super').
+	self assert: presenter lastMode equals: 'hierarchyImplementors'.
+	self assert: presenter lastPrefix equals: 'Hierarchy Implementors of '.
+	self assert: presenter lastScope equals: 'super'
+]

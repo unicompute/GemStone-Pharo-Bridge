@@ -173,8 +173,28 @@ GbsMethodQueryResultsPresenter >> menuMethod [
 		addItem: [ :item | item name: 'Browse'; action: [ self browseSelectedReference ] ];
 		addItem: [ :item | item name: 'Senders'; action: [ self browseSendersOfSelected ] ];
 		addItem: [ :item | item name: 'Implementors'; action: [ self browseImplementorsOfSelected ] ];
-		addItem: [ :item | item name: 'Hierarchy Senders'; action: [ self browseHierarchySendersOfSelected ] ];
-		addItem: [ :item | item name: 'Hierarchy Implementors'; action: [ self browseHierarchyImplementorsOfSelected ] ];
+		addItem: [ :item | item name: 'Hierarchy Senders'; subMenu: self menuHierarchySenders ];
+		addItem: [ :item | item name: 'Hierarchy Implementors'; subMenu: self menuHierarchyImplementors ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsMethodQueryResultsPresenter >> menuHierarchySenders [
+	^ self newMenu
+		addItem: [ :item | item name: 'In Full Hierarchy'; action: [ self browseHierarchySendersOfSelected ] ];
+		addItem: [ :item | item name: 'In Superclasses'; action: [ self browseHierarchySendersOfSelectedInScope: 'super' ] ];
+		addItem: [ :item | item name: 'In This Class'; action: [ self browseHierarchySendersOfSelectedInScope: 'this' ] ];
+		addItem: [ :item | item name: 'In Subclasses'; action: [ self browseHierarchySendersOfSelectedInScope: 'sub' ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsMethodQueryResultsPresenter >> menuHierarchyImplementors [
+	^ self newMenu
+		addItem: [ :item | item name: 'In Full Hierarchy'; action: [ self browseHierarchyImplementorsOfSelected ] ];
+		addItem: [ :item | item name: 'In Superclasses'; action: [ self browseHierarchyImplementorsOfSelectedInScope: 'super' ] ];
+		addItem: [ :item | item name: 'In This Class'; action: [ self browseHierarchyImplementorsOfSelectedInScope: 'this' ] ];
+		addItem: [ :item | item name: 'In Subclasses'; action: [ self browseHierarchyImplementorsOfSelectedInScope: 'sub' ] ];
 		yourself
 ]
 
@@ -265,25 +285,46 @@ GbsMethodQueryResultsPresenter >> browseImplementorsOfSelected [
 
 { #category : 'actions' }
 GbsMethodQueryResultsPresenter >> browseHierarchySendersOfSelected [
-	^ self openQueryForSelectedSelectorMode: 'hierarchySenders' titlePrefix: 'Hierarchy Senders of '
+	^ self openQueryForSelectedSelectorMode: 'hierarchySenders' titlePrefix: 'Hierarchy Senders of ' hierarchyScope: 'full'
 ]
 
 { #category : 'actions' }
 GbsMethodQueryResultsPresenter >> browseHierarchyImplementorsOfSelected [
-	^ self openQueryForSelectedSelectorMode: 'hierarchyImplementors' titlePrefix: 'Hierarchy Implementors of '
+	^ self openQueryForSelectedSelectorMode: 'hierarchyImplementors' titlePrefix: 'Hierarchy Implementors of ' hierarchyScope: 'full'
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> browseHierarchySendersOfSelectedInScope: scopeString [
+	^ self openQueryForSelectedSelectorMode: 'hierarchySenders' titlePrefix: 'Hierarchy Senders of ' hierarchyScope: scopeString
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> browseHierarchyImplementorsOfSelectedInScope: scopeString [
+	^ self openQueryForSelectedSelectorMode: 'hierarchyImplementors' titlePrefix: 'Hierarchy Implementors of ' hierarchyScope: scopeString
 ]
 
 { #category : 'private' }
 GbsMethodQueryResultsPresenter >> openQueryForSelectedSelectorMode: modeString titlePrefix: prefixString [
-	| ref parsed selector worker queryRefs title |
+	^ self openQueryForSelectedSelectorMode: modeString titlePrefix: prefixString hierarchyScope: 'full'
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> openQueryForSelectedSelectorMode: modeString titlePrefix: prefixString hierarchyScope: scopeString [
+	| ref parsed selector worker queryRefs title rootClassName |
 	ref := self selectedReference.
 	ref ifNil: [ ^ self ].
 	parsed := self parseReference: ref asString.
 	parsed ifNil: [ ^ self ].
+	rootClassName := parsed first.
 	selector := parsed second.
 	worker := GbsBrowser new.
 	worker session: session.
-	queryRefs := [ worker queryServerMethodsForSelector: selector mode: modeString ] on: Error do: [ #() ].
+	queryRefs := [
+		(modeString = 'hierarchySenders' or: [ modeString = 'hierarchyImplementors' ])
+			ifTrue: [ worker queryServerMethodsForSelector: selector mode: modeString rootClassName: rootClassName hierarchyScope: scopeString ]
+			ifFalse: [ worker queryServerMethodsForSelector: selector mode: modeString ] ]
+		on: Error
+		do: [ #() ].
 	queryRefs isEmpty ifTrue: [ ^ UIManager default inform: 'No matches found.' ].
 	title := self queryResultsTitleForSelector: selector modePrefix: prefixString count: queryRefs size.
 	^ self class openOn: session references: queryRefs title: title

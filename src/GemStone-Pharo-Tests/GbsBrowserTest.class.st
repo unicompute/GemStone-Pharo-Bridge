@@ -185,6 +185,31 @@ GbsBrowserTest >> testQueryHierarchyRequiresSelectedClass [
 ]
 
 { #category : 'tests' }
+GbsBrowserTest >> testQueryServerMethodsWithExplicitRootClass [
+	| browser |
+	browser := TestableGbsBrowser new.
+	browser queryResults: #('Object>>size') forMode: 'hierarchyImplementors'.
+
+	self assert: (browser queryServerMethodsForSelector: 'size' mode: 'hierarchyImplementors' rootClassName: 'Object') size equals: 1.
+	self assert: browser lastQueriedRootClass equals: 'Object'
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testQueryHierarchyImplementorsInSuperScope [
+	| browser classes |
+	browser := TestableGbsBrowser new.
+	classes := GbxFakeListPresenterForBrowser new.
+	classes selectedItem: 'Object'.
+	browser instVarNamed: 'classesList' put: classes.
+	browser enqueueRequestAnswer: 'size'.
+	browser queryResults: #('Object>>size') forMode: 'hierarchyImplementors'.
+
+	self assert: (browser queryHierarchyImplementorsInScope: 'super').
+	self assert: browser lastQueriedMode equals: 'hierarchyImplementors'.
+	self assert: browser lastQueriedHierarchyScope equals: 'super'
+]
+
+{ #category : 'tests' }
 GbsBrowserTest >> testOpenQueryResultsChoosesFromMultipleReferences [
 	| browser |
 	browser := TestableGbsBrowser new.
