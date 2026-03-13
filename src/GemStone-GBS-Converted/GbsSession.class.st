@@ -440,7 +440,7 @@ GbsSession >> gciAbort [
 
   "Calls the C-library to abort the transaction. Returns 1 on success."
 
-  ^ self ffiCall: #( int32 GciAbort #(  ) ) module: GbsLibrary
+  ^ self serverInterface apiGciAbortCurrent
 ]
 
 { #category : 'as yet unclassified' }
@@ -449,23 +449,23 @@ GbsSession >> gciCommit [
 
   "Calls the C-library to commit the transaction. Returns 1 on success."
 
-  ^ self ffiCall: #( int32 GciCommit #(  ) ) module: GbsLibrary
+  ^ self serverInterface apiGciCommit
 ]
 
 { #category : 'ffi' }
 GbsSession >> gciExecute: string context: ctx env: env [
     "String correctly maps to const char*, and we stay on the main thread"
-    ^ self ffiCall: #(uint64 GciExecuteStr_(String string, uint64 ctx, ushort env)) options: #( + optNonThreaded )
+    ^ self serverInterface apiGciExecuteStr: string context: ctx env: env
 ]
 
 { #category : 'as yet unclassified' }
 GbsSession >> gciLogout [
-	^ self ffiCall: #( int32 GciLogout () ) module: GbsLibrary
+	^ self serverInterface apiGciLogout
 ]
 
 { #category : 'as yet unclassified' }
 GbsSession >> gciPollForSignal [
-	^ self ffiCall: #( int32 GciPollForSignal () ) module: GbsLibrary
+	^ self serverInterface apiGciPollForSignal
 ]
 
 { #category : 'error handling' }
