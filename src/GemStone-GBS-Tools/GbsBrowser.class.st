@@ -514,10 +514,10 @@ GbsBrowser >> menuMethod [
 			group addItem: [ :item | item name: 'Browse'; action: [ self deferAction: [ self browseMethod ] ] ].
 			group addItem: [ :item | item name: 'Browse Hierarchy'; action: [ self deferAction: [ self browseHierarchy ] ] ] ];
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Browse Senders'; subMenu: (self selectorSubMenuDo: [ :sel | self browseSendersOf: sel ]) ].
-			group addItem: [ :item | item name: 'Browse Implementors'; subMenu: (self selectorSubMenuDo: [ :sel | self browseImplementorsOf: sel ]) ].
-			group addItem: [ :item | item name: 'Browse Hierarchy Senders'; subMenu: (self selectorSubMenuDo: [ :sel | self browseHierarchySendersOf: sel ]) ].
-			group addItem: [ :item | item name: 'Browse Hierarchy Implementors'; subMenu: (self selectorSubMenuDo: [ :sel | self browseHierarchyImplementorsOf: sel ]) ] ];
+			group addItem: [ :item | item name: 'Browse Senders'; action: [ self deferAction: [ self querySenders ] ] ].
+			group addItem: [ :item | item name: 'Browse Implementors'; action: [ self deferAction: [ self queryImplementors ] ] ].
+			group addItem: [ :item | item name: 'Browse Hierarchy Senders'; action: [ self deferAction: [ self queryHierarchySenders ] ] ].
+			group addItem: [ :item | item name: 'Browse Hierarchy Implementors'; action: [ self deferAction: [ self queryHierarchyImplementors ] ] ] ];
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Move To ...'; action: [ self deferAction: [ self moveMethodToCategory ] ] ].
 			group addItem: [ :item | item name: 'Remove...'; action: [ self deferAction: [ self removeMethod ] ] ] ];
@@ -746,10 +746,23 @@ GbsBrowser >> queryReferences [
 	^ self queryMethodsForSelectorPrompt: 'References to class or variable name:' mode: 'references'
 ]
 
+{ #category : 'actions' }
+GbsBrowser >> queryHierarchySenders [
+	^ self queryMethodsForSelectorPrompt: 'Hierarchy senders of selector:' mode: 'hierarchySenders'
+]
+
+{ #category : 'actions' }
+GbsBrowser >> queryHierarchyImplementors [
+	^ self queryMethodsForSelectorPrompt: 'Hierarchy implementors of selector:' mode: 'hierarchyImplementors'
+]
+
 { #category : 'private' }
 GbsBrowser >> queryMethodsForSelectorPrompt: prompt mode: modeString [
-	| selectorName references |
-	selectorName := self uiRequest: prompt initialAnswer: ''.
+	| selectorName references selected |
+	selected := self selectedMethodSelector.
+	selectorName := selected
+		ifNil: [ self uiRequest: prompt initialAnswer: '' ]
+		ifNotNil: [ selected asString ].
 	(selectorName isNil or: [ selectorName isEmpty ]) ifTrue: [ ^ false ].
 	^ self queryMethodsForSelector: selectorName mode: modeString
 ]
