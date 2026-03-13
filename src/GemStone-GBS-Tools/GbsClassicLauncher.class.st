@@ -34,6 +34,14 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
             (aBuilder item: #GbsSessions)
                 label: 'Sessions';
                 with: [
+                    (aBuilder item: #SessionBrowser)
+                        label: 'Session Browser';
+                        action: [ GbsSessionBrowserPresenter new open ];
+                        icon: (self iconNamed: #glamorousBrowse).
+                    (aBuilder item: #SimpleLauncher)
+                        label: 'Simple Launcher';
+                        action: [ GbsLauncher new open ];
+                        icon: (self iconNamed: #glamorousPlay).
                     (aBuilder item: #LogoutCurrentSession)
                         label: 'Logout Current Session';
                         action: [ self logoutCurrentSession ] ].
