@@ -7,6 +7,14 @@ Class {
 		'allReferences',
 		'windowTitle',
 		'mainMenu',
+		'actionBar',
+		'btnBrowse',
+		'btnSenders',
+		'btnImplementors',
+		'btnHierarchySenders',
+		'btnHierarchyImplementors',
+		'btnFileOut',
+		'btnRefresh',
 		'methodsList',
 		'sourceText',
 		'countStatus',
@@ -51,6 +59,42 @@ GbsMethodQueryResultsPresenter >> initializePresenters [
 	references ifNil: [ references := #() ].
 	allReferences ifNil: [ allReferences := references copy ].
 	mainMenu := self buildMenuBar.
+	btnBrowse := self newButton
+		label: 'Browse';
+		icon: (self iconNamed: #glamorousBrowse);
+		action: [ self browseSelectedReference ];
+		yourself.
+	btnHierarchySenders := self newButton
+		label: 'Hierarchy Senders';
+		icon: (self iconNamed: #smallForward);
+		action: [ self browseHierarchySendersOfSelected ];
+		yourself.
+	btnHierarchyImplementors := self newButton
+		label: 'Hierarchy Implementors';
+		icon: (self iconNamed: #smallInspectIt);
+		action: [ self browseHierarchyImplementorsOfSelected ];
+		yourself.
+	btnSenders := self newButton
+		label: 'Senders';
+		icon: (self iconNamed: #smallForward);
+		action: [ self browseSendersOfSelected ];
+		yourself.
+	btnImplementors := self newButton
+		label: 'Implementors';
+		icon: (self iconNamed: #smallInspectIt);
+		action: [ self browseImplementorsOfSelected ];
+		yourself.
+	btnFileOut := self newButton
+		label: 'File Out As...';
+		icon: (self iconNamed: #smallSave);
+		action: [ self fileOutSelectedReferenceAs ];
+		yourself.
+	btnRefresh := self newButton
+		label: 'Refresh';
+		icon: (self iconNamed: #smallUpdate);
+		action: [ self refreshSelectedSource ];
+		yourself.
+	actionBar := self buildActionBar.
 	methodsList := self newList.
 	methodsList display: [ :each | each ifNil: [ '' ] ifNotNil: [ each asString ] ].
 	sourceText := self newText.
@@ -79,6 +123,7 @@ GbsMethodQueryResultsPresenter >> connectPresenters [
 GbsMethodQueryResultsPresenter >> defaultLayout [
 	^ SpBoxLayout newTopToBottom
 		add: mainMenu expand: false;
+		add: actionBar expand: false;
 		add: ((SpPanedLayout newTopToBottom
 			positionOfSlider: 45 percent;
 			add: methodsList;
@@ -90,6 +135,20 @@ GbsMethodQueryResultsPresenter >> defaultLayout [
 			spacing: 16;
 			yourself)
 			expand: false;
+		yourself
+]
+
+{ #category : 'layout' }
+GbsMethodQueryResultsPresenter >> buildActionBar [
+	^ SpBoxLayout newLeftToRight
+		spacing: 6;
+		add: btnBrowse expand: false;
+		add: btnHierarchySenders expand: false;
+		add: btnHierarchyImplementors expand: false;
+		add: btnSenders expand: false;
+		add: btnImplementors expand: false;
+		add: btnFileOut expand: false;
+		add: btnRefresh expand: false;
 		yourself
 ]
 
@@ -161,20 +220,27 @@ GbsMethodQueryResultsPresenter >> buildMenuBar [
 { #category : 'menus' }
 GbsMethodQueryResultsPresenter >> menuFind [
 	^ self newMenu
-		addItem: [ :item | item name: 'Find Selector...'; action: [ self findSelector ] ];
-		addItem: [ :item | item name: 'Filter Contains...'; action: [ self filterContains ] ];
-		addItem: [ :item | item name: 'Clear Filter'; action: [ self clearFilter ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Find Selector...'; action: [ self findSelector ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Filter Contains...'; action: [ self filterContains ] ].
+			group addItem: [ :item | item name: 'Clear Filter'; action: [ self clearFilter ] ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsMethodQueryResultsPresenter >> menuMethod [
 	^ self newMenu
-		addItem: [ :item | item name: 'Browse'; action: [ self browseSelectedReference ] ];
-		addItem: [ :item | item name: 'Senders'; action: [ self browseSendersOfSelected ] ];
-		addItem: [ :item | item name: 'Implementors'; action: [ self browseImplementorsOfSelected ] ];
-		addItem: [ :item | item name: 'Hierarchy Senders'; subMenu: self menuHierarchySenders ];
-		addItem: [ :item | item name: 'Hierarchy Implementors'; subMenu: self menuHierarchyImplementors ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Browse'; action: [ self browseSelectedReference ] ].
+			group addItem: [ :item | item name: 'Browse Hierarchy'; action: [ self browseHierarchyImplementorsOfSelected ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Senders'; action: [ self browseSendersOfSelected ] ].
+			group addItem: [ :item | item name: 'Implementors'; action: [ self browseImplementorsOfSelected ] ].
+			group addItem: [ :item | item name: 'Hierarchy Senders'; subMenu: self menuHierarchySenders ].
+			group addItem: [ :item | item name: 'Hierarchy Implementors'; subMenu: self menuHierarchyImplementors ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'File Out As...'; action: [ self fileOutSelectedReferenceAs ] ] ];
 		yourself
 ]
 
@@ -201,17 +267,20 @@ GbsMethodQueryResultsPresenter >> menuHierarchyImplementors [
 { #category : 'menus' }
 GbsMethodQueryResultsPresenter >> menuSession [
 	^ self newMenu
-		addItem: [ :item | item name: 'Commit Transaction'; action: [ self commitSession ] ];
-		addItem: [ :item | item name: 'Abort Transaction'; action: [ self abortSession ] ];
-		addItem: [ :item | item name: 'Begin Transaction'; action: [ self beginSessionTransaction ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Commit Transaction'; action: [ self commitSession ] ].
+			group addItem: [ :item | item name: 'Abort Transaction'; action: [ self abortSession ] ].
+			group addItem: [ :item | item name: 'Begin Transaction'; action: [ self beginSessionTransaction ] ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsMethodQueryResultsPresenter >> menuWindow [
 	^ self newMenu
-		addItem: [ :item | item name: 'Refresh'; action: [ self refreshSelectedSource ] ];
-		addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Refresh'; action: [ self refreshSelectedSource ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ] ];
 		yourself
 ]
 
@@ -376,6 +445,23 @@ GbsMethodQueryResultsPresenter >> refreshSelectedSource [
 	self showSourceForReference: ref
 ]
 
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> fileOutSelectedReferenceAs [
+	| ref parsed className selector source defaultPath path |
+	ref := self selectedReference.
+	ref ifNil: [ ^ UIManager default inform: 'Select a method first.' ].
+	parsed := self parseReference: ref asString.
+	parsed ifNil: [ ^ UIManager default inform: 'Could not parse selected method reference.' ].
+	className := parsed first.
+	selector := parsed second.
+	source := sourceText ifNil: [ '' ] ifNotNil: [ sourceText text asString ].
+	source isEmpty ifTrue: [ ^ UIManager default inform: 'No source to file out.' ].
+	defaultPath := self defaultExportPathFor: className, '-', selector, '.st'.
+	path := self requestExportPath: defaultPath.
+	path ifNil: [ ^ self ].
+	self writeExport: source toPath: path.
+]
+
 { #category : 'private' }
 GbsMethodQueryResultsPresenter >> selectedReference [
 	| selection |
@@ -384,6 +470,29 @@ GbsMethodQueryResultsPresenter >> selectedReference [
 	(selection notNil and: [ selection respondsTo: #selectedItem ])
 		ifTrue: [ ^ selection selectedItem ].
 	^ nil
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> requestExportPath: defaultPath [
+	| answer |
+	answer := UIManager default request: 'Export file path:' initialAnswer: defaultPath.
+	(answer isNil or: [ answer isEmpty ]) ifTrue: [ ^ nil ].
+	^ answer
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> defaultExportPathFor: fileName [
+	^ (FileSystem workingDirectory / fileName) fullName
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> writeExport: text toPath: pathString [
+	| ref |
+	ref := pathString asFileReference.
+	[ ref ensureDelete. ref writeStreamDo: [ :str | str nextPutAll: text ] ]
+		on: Error
+		do: [ :ex | ^ UIManager default inform: 'File out failed: ', ex messageText ].
+	UIManager default inform: 'Wrote ', pathString.
 ]
 
 { #category : 'private' }

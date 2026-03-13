@@ -1631,14 +1631,13 @@ GbsBrowser >> openQueryResults: references [
 GbsBrowser >> openQueryResults: references title: titleString [
 	| presenterClass |
 	references isEmpty ifTrue: [ ^ false ].
-	presenterClass := Smalltalk
-		at: #GbsMethodQueryResultsPresenter
-		ifAbsent: [ self ensureMethodQueryResultsPresenterLoaded ].
+	presenterClass := Smalltalk at: #GbsMethodQueryResultsPresenter ifAbsent: [ nil ].
+	presenterClass ifNil: [
+		self inform: 'Could not open query results window: GbsMethodQueryResultsPresenter is not loaded.'.
+		^ false ].
 	^ [ 
-		presenterClass ifNotNil: [
-			presenterClass openOn: session references: references title: titleString.
-			^ true ].
-		false ]
+		presenterClass openOn: session references: references title: titleString.
+		^ true ]
 		on: Error
 		do: [ :ex |
 			"Fallback to the older selection behavior if presenter cannot be opened."
@@ -1647,20 +1646,6 @@ GbsBrowser >> openQueryResults: references title: titleString [
 			selected := self uiChooseFrom: references title: titleString.
 			selected = 0 ifTrue: [ ^ false ].
 			self openMethodReference: (references at: selected) ]
-]
-
-{ #category : 'private' }
-GbsBrowser >> ensureMethodQueryResultsPresenterLoaded [
-	| tonelClass readerClass file defs |
-	tonelClass := Smalltalk at: #TonelReader ifAbsent: [ ^ nil ].
-	readerClass := tonelClass.
-	file := '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsMethodQueryResultsPresenter.class.st' asFileReference.
-	file exists ifFalse: [ ^ nil ].
-	[
-		defs := readerClass new parseTonelFile: file.
-		defs do: [ :def | def load ].
-	] on: Error do: [ :ex | ^ nil ].
-	^ Smalltalk at: #GbsMethodQueryResultsPresenter ifAbsent: [ nil ]
 ]
 
 { #category : 'private' }

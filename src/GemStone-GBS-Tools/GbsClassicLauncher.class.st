@@ -167,27 +167,15 @@ GbsClassicLauncher class >> currentSessionOrInform [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> generateClassConnectors [
-	| cfg mgr didWork |
-	didWork := false.
-	cfg := Smalltalk at: #GbsConfiguration ifAbsent: [ nil ].
-	(cfg notNil and: [ cfg respondsTo: #generateClassConnectors ]) ifTrue: [
-		[ cfg generateClassConnectors.
-		  didWork := true ]
-			on: Error
-			do: [ :ex | UIManager default inform: 'Generate connectors failed: ', ex messageText. ^ self ] ].
+	| mgr |
 	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
+	(mgr isNil or: [ mgr respondsTo: #generateClassConnectors not ]) ifTrue: [
+		^ UIManager default inform: 'Connector manager unavailable.' ].
 	[
-		self
-			connectorManagerPerform: #generateClassConnectors
-			withArguments: #()
-			ifUnavailable: [ nil ].
-		didWork := didWork or: [ mgr notNil ].
+		mgr generateClassConnectors.
+		UIManager default inform: 'Generated class connectors.'
 	] on: Error do: [ :ex |
-		UIManager default inform: 'Generate connectors failed: ', ex messageText.
-		^ self ].
-	didWork
-		ifTrue: [ UIManager default inform: 'Generated class connectors.' ]
-		ifFalse: [ UIManager default inform: 'Generate class connectors is not available in this image.' ].
+		UIManager default inform: 'Generate connectors failed: ', ex messageText ].
 ]
 
 { #category : 'menus' }
@@ -235,11 +223,12 @@ GbsClassicLauncher class >> selectFileInReference [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> initializeFastConnectors [
+	| mgr |
+	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
+	(mgr isNil or: [ mgr respondsTo: #initializeFastConnectors not ]) ifTrue: [
+		^ UIManager default inform: 'Connector manager unavailable.' ].
 	[
-		self
-			connectorManagerPerform: #initializeFastConnectors
-			withArguments: #()
-			ifUnavailable: [ ^ UIManager default inform: 'Fast connectors initialization is not available in this image.' ].
+		mgr initializeFastConnectors.
 		UIManager default inform: 'Fast connectors initialized.'
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Initialize connectors failed: ', ex messageText ].
@@ -288,7 +277,7 @@ GbsClassicLauncher class >> editConnectorClassMappingOnCurrentSession [
 	session ifNil: [ ^ self ].
 	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
 	(mgr isNil or: [ mgr respondsTo: #connectorPairs not ]) ifTrue: [
-		^ UIManager default inform: 'Connector class mapping is not available in this image.' ].
+		^ UIManager default inform: 'Connector manager unavailable.' ].
 	pairs := [ mgr connectorPairs ] on: Error do: [ #() ].
 	pairs isEmpty ifTrue: [ ^ UIManager default inform: 'No connectors available.' ].
 	pairLabels := pairs collect: [ :each |
@@ -324,11 +313,10 @@ GbsClassicLauncher class >> showConnectorClassMappingsOnCurrentSession [
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
 	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
+	(mgr isNil or: [ mgr respondsTo: #connectorClassMappingReportText not ]) ifTrue: [
+		^ UIManager default inform: 'Connector manager unavailable.' ].
 	text := [
-		self
-			connectorManagerPerform: #connectorClassMappingReportText
-			withArguments: #()
-			ifUnavailable: [ ^ UIManager default inform: 'Connector class mapping report is not available in this image.' ] ]
+		mgr connectorClassMappingReportText ]
 		on: Error
 		do: [ :ex | 'Failed to build connector class mapping report: ', ex messageText ].
 	UIManager default edit: text label: 'Connector Class Mappings'
@@ -340,14 +328,13 @@ GbsClassicLauncher class >> clearAllConnectorClassMappingsOnCurrentSession [
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
 	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
+	(mgr isNil or: [ mgr respondsTo: #clearAllConnectorClassMappings not ]) ifTrue: [
+		^ UIManager default inform: 'Connector manager unavailable.' ].
 	(UIManager default
 		confirm: 'Clear all connector class overrides and revert to default class resolution?'
 		label: 'Clear Connector Class Overrides') ifFalse: [ ^ self ].
 	[
-		self
-			connectorManagerPerform: #clearAllConnectorClassMappings
-			withArguments: #()
-			ifUnavailable: [ ^ UIManager default inform: 'Clear all connector class overrides is not available in this image.' ].
+		mgr clearAllConnectorClassMappings.
 		UIManager default inform: 'Cleared all connector class overrides.'
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Failed to clear connector class overrides: ', ex messageText ]
@@ -416,7 +403,6 @@ GbsClassicLauncher class >> browseHierarchyImplementorsOnCurrentSession [
 { #category : 'menus' }
 GbsClassicLauncher class >> browseMethodsWithSubstringOnCurrentSession [
 	| session pattern worker references presenterClass sessionPart title script raw |
-	self ensureQueryWindowSupportLoaded.
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
 	pattern := UIManager default request: 'Methods with source substring:' initialAnswer: ''.
@@ -518,28 +504,8 @@ GbsClassicLauncher class >> openSecurityPoliciesOnCurrentSession [
 ]
 
 { #category : 'menus' }
-GbsClassicLauncher class >> ensureQueryWindowSupportLoaded [
-	| readerClass |
-	readerClass := Smalltalk at: #TonelReader ifAbsent: [ ^ self ].
-	self loadTonelFile: '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsBrowser.class.st' withReader: readerClass.
-	self loadTonelFile: '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsMethodQueryResultsPresenter.class.st' withReader: readerClass.
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> loadTonelFile: pathString withReader: readerClass [
-	| file defs |
-	file := pathString asFileReference.
-	file exists ifFalse: [ ^ self ].
-	[
-		defs := readerClass new parseTonelFile: file.
-		defs do: [ :def | def load ].
-	] on: Error do: [ :ex | ].
-]
-
-{ #category : 'menus' }
 GbsClassicLauncher class >> performBrowseQueryWithPrompt: promptString mode: modeString titlePrefix: titlePrefixString [
 	| session query references presenterClass sessionPart title |
-	self ensureQueryWindowSupportLoaded.
 	query := UIManager default request: promptString initialAnswer: ''.
 	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
 	session := self currentSessionOrInform.
@@ -568,7 +534,6 @@ GbsClassicLauncher class >> performBrowseQueryWithPrompt: promptString mode: mod
 { #category : 'menus' }
 GbsClassicLauncher class >> performBrowseHierarchyQueryWithPrompt: promptString mode: modeString titlePrefix: titlePrefixString [
 	| session className query scope references sessionPart scopeLabel title |
-	self ensureQueryWindowSupportLoaded.
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
 	className := self uiRequest: 'Root class for hierarchy query:' initialAnswer: ''.
@@ -697,41 +662,15 @@ GbsClassicLauncher class >> openSettings [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> removeInvalidConnectors [
-	| cfg mgr didWork |
-	didWork := false.
-	cfg := Smalltalk at: #GbsConfiguration ifAbsent: [ nil ].
-	(cfg notNil and: [ cfg respondsTo: #removeInvalidConnectors ]) ifTrue: [
-		[ cfg removeInvalidConnectors.
-		  didWork := true ]
-			on: Error
-			do: [ :ex | UIManager default inform: 'Remove invalid connectors failed: ', ex messageText. ^ self ] ].
+	| mgr |
 	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
+	(mgr isNil or: [ mgr respondsTo: #removeInvalidConnectors not ]) ifTrue: [
+		^ UIManager default inform: 'Connector manager unavailable.' ].
 	[
-		self
-			connectorManagerPerform: #removeInvalidConnectors
-			withArguments: #()
-			ifUnavailable: [ nil ].
-		didWork := didWork or: [ mgr notNil ].
+		mgr removeInvalidConnectors.
+		UIManager default inform: 'Removed invalid connectors.'
 	] on: Error do: [ :ex |
-		UIManager default inform: 'Remove invalid connectors failed: ', ex messageText.
-		^ self ].
-	didWork
-		ifTrue: [ UIManager default inform: 'Removed invalid connectors.' ]
-		ifFalse: [ UIManager default inform: 'Remove invalid connectors is not available in this image.' ].
-]
-
-{ #category : 'private' }
-GbsClassicLauncher class >> connectorManagerPerform: aSelector withArguments: args ifUnavailable: unavailableBlock [
-	| mgr current |
-	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
-	(mgr notNil and: [ mgr respondsTo: aSelector ]) ifTrue: [
-		^ mgr perform: aSelector withArguments: args ].
-	current := (mgr notNil and: [ mgr respondsTo: #current ])
-		ifTrue: [ [ mgr current ] on: Error do: [ nil ] ]
-		ifFalse: [ nil ].
-	(current notNil and: [ current respondsTo: aSelector ]) ifTrue: [
-		^ current perform: aSelector withArguments: args ].
-	^ unavailableBlock value
+		UIManager default inform: 'Remove invalid connectors failed: ', ex messageText ].
 ]
 
 { #category : 'private' }

@@ -465,9 +465,9 @@ GbsConnectorBrowserPresenter >> sessionParameters [
 
 { #category : 'actions' }
 GbsConnectorBrowserPresenter >> initializeFastConnectors [
+	self managerClass ifNil: [ ^ self inform: 'Connector manager unavailable.' ].
 	[
-		self managerPerform: #initializeFastConnectors ifUnavailable: [
-			^ self inform: 'Initialize fast connectors is not available in this image.' ]
+		self managerPerform: #initializeFastConnectors ifUnavailable: [ nil ]
 	] on: Error do: [ :ex |
 		^ self inform: 'Initialize fast connectors failed: ', ex messageText ].
 	self refreshAll
@@ -475,6 +475,7 @@ GbsConnectorBrowserPresenter >> initializeFastConnectors [
 
 { #category : 'actions' }
 GbsConnectorBrowserPresenter >> initializeGlobalConnectors [
+	self managerClass ifNil: [ ^ self inform: 'Connector manager unavailable.' ].
 	(self isGlobalGroupSelected not)
 		ifTrue: [ ^ self inform: 'Initialize is only available for Global connectors.' ].
 	(UIManager default
@@ -482,8 +483,7 @@ GbsConnectorBrowserPresenter >> initializeGlobalConnectors [
 		label: 'Initialize Global Connectors') ifFalse: [ ^ self ].
 	[
 		self managerPerform: #initializeGlobalConnectors ifUnavailable: [
-			self managerPerform: #initializeFastConnectors ifUnavailable: [
-				^ self inform: 'Initialize global connectors is not available in this image.' ] ]
+			self managerPerform: #initializeFastConnectors ifUnavailable: [ nil ] ]
 	] on: Error do: [ :ex |
 		^ self inform: 'Initialize global connectors failed: ', ex messageText ].
 	self refreshAll
@@ -528,6 +528,7 @@ GbsConnectorBrowserPresenter >> addConnector [
 { #category : 'actions' }
 GbsConnectorBrowserPresenter >> createAndAddConnector [
 	| connectorClass clientName serverName connector selectedGroup |
+	self managerClass ifNil: [ ^ self inform: 'Connector manager unavailable.' ].
 	selectedGroup := [ groupList selection selectedItem ] on: Error do: [ nil ].
 	selectedGroup ifNil: [ ^ self inform: 'You must first select a connector group.' ].
 	connectorClass := self chooseConnectorClassForAdd.
@@ -547,7 +548,7 @@ GbsConnectorBrowserPresenter >> createAndAddConnector [
 				self
 					managerPerform: #addConnectorClient:server:
 					withArguments: { clientName trimBoth. serverName trimBoth }
-					ifUnavailable: [ ^ self inform: 'Add connector is not available in this image.' ] ].
+					ifUnavailable: [ nil ] ].
 	] on: Error do: [ :ex | ^ self inform: 'Add connector failed: ', ex messageText ].
 	self refreshConnectorsForCurrentGroup
 ]
@@ -583,6 +584,7 @@ GbsConnectorBrowserPresenter >> instantiateConnectorClass: connectorClass client
 { #category : 'actions' }
 GbsConnectorBrowserPresenter >> removeConnector [
 	| rows selectedGroup |
+	self managerClass ifNil: [ ^ self inform: 'Connector manager unavailable.' ].
 	rows := self selectedConnectorRows.
 	rows isEmpty ifTrue: [ ^ self inform: 'Select connector(s) first.' ].
 	(UIManager default
@@ -607,7 +609,7 @@ GbsConnectorBrowserPresenter >> removeConnector [
 							self
 								managerPerform: #removeConnectorClient:server:
 								withArguments: { clientName asString. serverName asString }
-								ifUnavailable: [ ^ self inform: 'Remove connector is not available in this image.' ] ] ] ].
+								ifUnavailable: [ nil ] ] ] ].
 	] on: Error do: [ :ex | ^ self inform: 'Remove connector failed: ', ex messageText ].
 	self refreshConnectorsForCurrentGroup
 ]
@@ -620,8 +622,7 @@ GbsConnectorBrowserPresenter >> setSelectedConnectorClassMapping [
 	clientName := self rowClientName: row.
 	serverName := self rowServerName: row.
 	mgr := self managerClass.
-	(mgr isNil or: [ (mgr respondsTo: #setConnectorClass:forClient:server:) not ]) ifTrue: [
-		^ self inform: 'Connector class mapping is not available in this image.' ].
+	(mgr isNil or: [ (mgr respondsTo: #setConnectorClass:forClient:server:) not ]) ifTrue: [ ^ self inform: 'Connector manager unavailable.' ].
 	choices := (mgr respondsTo: #connectorClassChoices)
 		ifTrue: [ mgr connectorClassChoices ]
 		ifFalse: [ { GbsFastConnector. GbsNameConnector. GbsClassConnector. GbsClassVarConnector. GbsClassInstVarConnector } ].
@@ -647,8 +648,7 @@ GbsConnectorBrowserPresenter >> clearSelectedConnectorClassMapping [
 	clientName := self rowClientName: row.
 	serverName := self rowServerName: row.
 	mgr := self managerClass.
-	(mgr isNil or: [ (mgr respondsTo: #clearConnectorClassForClient:server:) not ]) ifTrue: [
-		^ self inform: 'Connector class mapping is not available in this image.' ].
+	(mgr isNil or: [ (mgr respondsTo: #clearConnectorClassForClient:server:) not ]) ifTrue: [ ^ self inform: 'Connector manager unavailable.' ].
 	[
 		mgr clearConnectorClassForClient: clientName server: serverName.
 		self refreshConnectorsForCurrentGroup.
