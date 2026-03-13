@@ -1453,13 +1453,27 @@ GbsBrowser >> selectorSubMenuDo: oneArgBlock [
 	| selectors submenu |
 	submenu := self newMenu.
 	selectors := self methodSelectorsForSubmenu.
-	selectors isEmpty ifTrue: [ ^ submenu ].
+	selectors isEmpty ifTrue: [
+		submenu addItem: [ :item |
+			item
+				name: '...';
+				action: [ self deferAction: [ self promptSelectorAndDo: oneArgBlock ] ] ].
+		^ submenu ].
 	selectors do: [ :sel |
 		submenu addItem: [ :item |
 			item
 				name: sel asString;
 				action: [ self deferAction: [ oneArgBlock value: sel ] ] ] ].
 	^ submenu
+]
+
+{ #category : 'private' }
+GbsBrowser >> promptSelectorAndDo: oneArgBlock [
+	| raw selector |
+	raw := UIManager default request: 'Selector:' initialAnswer: ''.
+	(raw isNil or: [ raw trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	selector := raw trimBoth asSymbol.
+	^ oneArgBlock value: selector
 ]
 
 { #category : 'private' }
