@@ -33,7 +33,7 @@ GbsMethodQueryResultsPresenter >> session: aSession [
 
 { #category : 'accessing' }
 GbsMethodQueryResultsPresenter >> references: aCollection [
-	references := (aCollection ifNil: [ #() ] ifNotNil: [ aCollection asArray ]).
+	references := self normalizeReferences: aCollection.
 	allReferences := references copy
 ]
 
@@ -247,4 +247,37 @@ GbsMethodQueryResultsPresenter >> beginSessionTransaction [
 GbsMethodQueryResultsPresenter >> closeWindow [
 	(self respondsTo: #window)
 		ifTrue: [ self window ifNotNil: [ :w | w close ] ]
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> normalizeReferences: aCollection [
+	| rawItems normalized |
+	rawItems := aCollection ifNil: [ #() ] ifNotNil: [
+		(aCollection isString or: [ aCollection isSymbol ])
+			ifTrue: [ aCollection asString splitOn: Character lf ]
+			ifFalse: [ aCollection asArray ] ].
+	normalized := OrderedCollection new.
+	rawItems do: [ :each |
+		| s tabs className selectorName firstNumeric classIndex selectorIndex |
+		s := each ifNil: [ '' ] ifNotNil: [ each asString ].
+		s := s copyReplaceAll: String cr with: ''.
+		s := s trimBoth.
+		s isEmpty ifTrue: [ ] ifFalse: [
+			(s includesSubstring: '>>')
+				ifTrue: [ normalized add: s ]
+				ifFalse: [
+					tabs := (s splitOn: Character tab) collect: #trimBoth thenReject: #isEmpty.
+					(tabs size >= 2)
+						ifTrue: [
+							firstNumeric := tabs first notEmpty
+								and: [ tabs first allSatisfy: [ :ch | ch isDigit ] ].
+							classIndex := firstNumeric ifTrue: [ 2 ] ifFalse: [ 1 ].
+							selectorIndex := classIndex + 1.
+							className := tabs at: classIndex ifAbsent: [ '' ].
+							selectorName := tabs at: selectorIndex ifAbsent: [ '' ].
+							(className isEmpty or: [ selectorName isEmpty ])
+								ifTrue: [ normalized add: s ]
+								ifFalse: [ normalized add: className, '>>', selectorName ] ]
+						ifFalse: [ normalized add: s ] ] ] ].
+	^ (normalized collect: #asString thenReject: [ :line | line trimBoth isEmpty ]) asSet asArray asSortedCollection asArray
 ]
