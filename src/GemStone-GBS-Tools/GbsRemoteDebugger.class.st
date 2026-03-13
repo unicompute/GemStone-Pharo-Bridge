@@ -1183,6 +1183,38 @@ GbsRemoteDebugger >> isLikelyUserFrame: aContext [
 	^ true
 ]
 
+{ #category : 'private' }
+GbsRemoteDebugger >> isExecutedCodeFrame: aContext [
+	"Check if this is the executed code frame (nil class, unboundMethod selector)"
+	| className selectorName |
+	aContext ifNil: [ ^ false ].
+	className := [ aContext methodClassOrUnknown ] on: Error do: [ '<unknown>' ].
+	selectorName := [ aContext selectorOrUnknown asString ] on: Error do: [ '<unknown>' ].
+	^ (className = 'nil' or: [ className = '<unknown>' ])
+		and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> preferredInitialContextIndex [
+	| index |
+	contextList ifNil: [ ^ 1 ].
+	contextList isEmpty ifTrue: [ ^ 1 ].
+
+	"CRITICAL FIX: If the first context is the executed code frame, always select it.
+	This ensures we show the correct step point after restart."
+	(contextList first respondsTo: #isExecutedCodeFrame) ifTrue: [
+		(contextList first isExecutedCodeFrame) ifTrue: [ ^ 1 ]
+	].
+	(contextList first respondsTo: #isExecutedCodeAtStepOne) ifTrue: [
+		(contextList first isExecutedCodeAtStepOne) ifTrue: [ ^ 1 ]
+	].
+
+	index := contextList
+		findFirst: [ :ctx | self isLikelyUserFrame: ctx ].
+	index = 0 ifTrue: [ ^ 1 ].
+	^ index
+]
+
 { #category : 'accessing' }
 GbsRemoteDebugger >> label: aString [
 	errorMessageLabel ifNotNil: [ errorMessageLabel label: aString ]
