@@ -34,14 +34,6 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
             (aBuilder item: #GbsSessions)
                 label: 'Sessions';
                 with: [
-                    (aBuilder item: #SessionBrowser)
-                        label: 'Session Browser';
-                        action: [ GbsSessionBrowserPresenter new open ];
-                        icon: (self iconNamed: #glamorousBrowse).
-                    (aBuilder item: #SimpleLauncher)
-                        label: 'Simple Launcher';
-                        action: [ GbsLauncher new open ];
-                        icon: (self iconNamed: #glamorousPlay).
                     (aBuilder item: #LogoutCurrentSession)
                         label: 'Logout Current Session';
                         action: [ self logoutCurrentSession ] ].
@@ -236,16 +228,48 @@ GbsClassicLauncher class >> initializeFastConnectors [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> logoutCurrentSession [
-	| session |
+	| session params sessionId loggedOut |
 	session := GbsSessionParameters currentSession.
-	session ifNil: [ ^ UIManager default inform: 'No current GemStone session.' ].
-	[
-		session logout.
-		GbsSessionParameters currentSession: nil.
-		UIManager default inform: 'Logged out current session.'
-	] on: Error do: [ :ex |
-		UIManager default inform: 'Logout failed: ', ex messageText
-	].
+	params := nil.
+	sessionId := (session notNil and: [ session respondsTo: #sessionId ])
+		ifTrue: [ [ session sessionId ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+
+	params := GbsSessionParameters allSessions
+		detect: [ :each |
+			(each respondsTo: #isConnected) and: [ each isConnected = true ] and: [
+				sessionId isNil
+					ifTrue: [ true ]
+					ifFalse: [ (each respondsTo: #sessionId) and: [ each sessionId = sessionId ] ] ] ]
+		ifNone: [ nil ].
+
+	(session isNil and: [ params isNil ]) ifTrue: [
+		^ UIManager default inform: 'No current GemStone session.' ].
+
+	loggedOut := false.
+	params ifNotNil: [
+		[ params logout. loggedOut := true ] on: Error do: [ :ex | ] ].
+	(loggedOut not and: [ session notNil and: [ session respondsTo: #logout ] ]) ifTrue: [
+		[ session logout. loggedOut := true ] on: Error do: [ :ex | ] ].
+	(loggedOut not) ifTrue: [
+		[ GbsServerInterface uniqueInstance apiGciLogout. loggedOut := true ]
+			on: Error
+			do: [ :ex | ] ].
+
+	params ifNotNil: [
+		(params respondsTo: #sessionId:) ifTrue: [ params sessionId: nil ].
+		GbsSessionParameters unregisterSession: params ].
+	GbsSessionParameters currentSession: nil.
+
+	UIManager default defer: [
+		GbsSessionBrowserPresenter allInstancesDo: [ :presenter |
+			(presenter respondsTo: #refreshAll) ifTrue: [ presenter refreshAll ] ].
+		GbsLauncher allInstancesDo: [ :launcher | launcher updateUIState ].
+		GbsClassicLauncher allInstancesDo: [ :launcher | launcher refreshAll ] ].
+
+	UIManager default inform: (loggedOut
+		ifTrue: [ 'Logged out current session.' ]
+		ifFalse: [ 'Session state cleared.' ]).
 ]
 
 { #category : 'menus' }
