@@ -378,22 +378,10 @@ GbsClassicLauncher class >> browseClassOnCurrentSession [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> browseImplementorsOnCurrentSession [
-	| query browser session |
-	self ensureQueryWindowSupportLoaded.
-	query := UIManager default request: 'Implementors of selector:' initialAnswer: ''.
-	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	browser := GbsBrowser new.
-	browser session: session.
-	[
-		(browser respondsTo: #queryMethodsForSelector:mode:)
-			ifTrue: [ browser queryMethodsForSelector: query mode: 'implementors' ]
-			ifFalse: [
-				(browser respondsTo: #queryImplementors)
-					ifTrue: [ browser queryImplementors ] ] ]
-		on: Error
-		do: [ :ex | UIManager default inform: 'Browse implementors failed: ', ex messageText ].
+	self
+		performBrowseQueryWithPrompt: 'Implementors of selector:'
+		mode: 'implementors'
+		titlePrefix: 'Implementors of '
 ]
 
 { #category : 'menus' }
@@ -410,42 +398,18 @@ GbsClassicLauncher class >> browseNamespaceOnCurrentSession [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> browseReferencesOnCurrentSession [
-	| query browser session |
-	self ensureQueryWindowSupportLoaded.
-	query := UIManager default request: 'References to class or variable name:' initialAnswer: ''.
-	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	browser := GbsBrowser new.
-	browser session: session.
-	[
-		(browser respondsTo: #queryMethodsForSelector:mode:)
-			ifTrue: [ browser queryMethodsForSelector: query mode: 'references' ]
-			ifFalse: [
-				(browser respondsTo: #queryReferences)
-					ifTrue: [ browser queryReferences ] ] ]
-		on: Error
-		do: [ :ex | UIManager default inform: 'Browse references failed: ', ex messageText ].
+	self
+		performBrowseQueryWithPrompt: 'References to class or variable name:'
+		mode: 'references'
+		titlePrefix: 'References to '
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> browseSendersOnCurrentSession [
-	| query browser session |
-	self ensureQueryWindowSupportLoaded.
-	query := UIManager default request: 'Senders of selector:' initialAnswer: ''.
-	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	browser := GbsBrowser new.
-	browser session: session.
-	[
-		(browser respondsTo: #queryMethodsForSelector:mode:)
-			ifTrue: [ browser queryMethodsForSelector: query mode: 'senders' ]
-			ifFalse: [
-				(browser respondsTo: #querySenders)
-					ifTrue: [ browser querySenders ] ] ]
-		on: Error
-		do: [ :ex | UIManager default inform: 'Browse senders failed: ', ex messageText ].
+	self
+		performBrowseQueryWithPrompt: 'Senders of selector:'
+		mode: 'senders'
+		titlePrefix: 'Senders of '
 ]
 
 { #category : 'menus' }
@@ -503,6 +467,37 @@ GbsClassicLauncher class >> loadTonelFile: pathString withReader: readerClass [
 		defs := readerClass new parseTonelFile: file.
 		defs do: [ :def | def load ].
 	] on: Error do: [ :ex | ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> performBrowseQueryWithPrompt: promptString mode: modeString titlePrefix: titlePrefixString [
+	| session query worker references presenterClass sessionPart title |
+	self ensureQueryWindowSupportLoaded.
+	query := UIManager default request: promptString initialAnswer: ''.
+	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	worker := GbsBrowser new.
+	worker session: session.
+	references := [ worker queryServerMethodsForSelector: query trimBoth mode: modeString ]
+		on: Error
+		do: [ :ex |
+			UIManager default inform: 'Browse query failed: ', ex messageText.
+			#() ].
+	references isEmpty ifTrue: [
+		UIManager default inform: 'No matches found.'.
+		^ self ].
+	presenterClass := Smalltalk at: #GbsMethodQueryResultsPresenter ifAbsent: [ nil ].
+	presenterClass ifNil: [
+		UIManager default inform: 'Could not open query results window: GbsMethodQueryResultsPresenter is not loaded.'.
+		^ self ].
+	sessionPart := (session respondsTo: #sessionId)
+		ifTrue: [ 'Session ', session sessionId asString, ' ' ]
+		ifFalse: [ '' ].
+	title := sessionPart, titlePrefixString, query trimBoth, ' (', references size asString, ')'.
+	[ presenterClass openOn: session references: references title: title ]
+		on: Error
+		do: [ :ex | UIManager default inform: 'Could not open query results window: ', ex messageText ].
 ]
 
 { #category : 'menus' }
