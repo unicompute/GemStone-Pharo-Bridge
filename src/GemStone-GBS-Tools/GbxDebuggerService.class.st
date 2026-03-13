@@ -980,7 +980,6 @@ GbxDebuggerService >> gbxMethodChanged: newSource [
 				"Simulate a return value on top client glue context so we don't underflow the stack"
 				self topContext ifNotNil: [ :top | top push: nil ].
 				sourceMap := newContext visibleSourceMap.
-				processHandle ifNotNil: [ :ph | ph interrupted: true ].
 				self selectTopServerContext.
 				self scheduleContextListUpdate
 			]
@@ -1283,22 +1282,10 @@ GbxDebuggerService >> firstServerContextAbove: clientContext [
 
 { #category : 'process control' }
 GbxDebuggerService >> restart [
-	"Restart deterministically on the executed-code target when available,
-	then enforce step-point 1."
-	| target didRestart homeLevel |
-	homeLevel := self restartLevelFromServerStack.
-	(homeLevel isNumber and: [ homeLevel > 0 ]) ifTrue: [
-		didRestart := self
-			runDebugProcessCommand: '_trimStackToLevel'
-			withInteger: homeLevel
-			recompute: true.
-		didRestart ifTrue: [
-			self selectRestartTargetContext.
-			self ensureRestartAtStepOne.
-			self selectRestartTargetContext.
-			^ true
-		]
-	].
+	"Use a single deterministic server reenter path.
+	The trimStack fast-path can leave stale step offsets and cause
+	second-restart step jumps (1 -> 4)."
+	| target didRestart |
 	target := self restartTargetContext.
 	target ifNotNil: [ self selectContext: target ].
 	didRestart := self basicReenterServerContext.
@@ -1791,7 +1778,7 @@ GbxDebuggerService >> requestServerSingleStep [
 GbxDebuggerService >> basicSendIntoServer [
 	"Send when the next send will take us from client to server.
 	Requests single step and handles GbsError for rtErrStep."
-	| gbsErr |
+	| gbsErr initial |
 	self requestServerSingleStep.
 	
 	[ self privateStep ]
@@ -1809,12 +1796,10 @@ GbxDebuggerService >> basicSendIntoServer [
 	gbsErr ifNotNil: [
 		"Server method didn't stop for single step (simple method).
 		Put new contexts on stack and update selection."
-		processHandle ifNotNil: [ :ph |
-			ph interrupted: false.
-			(gbsErr respondsTo: #initialContext) ifTrue: [
-				ph topContext: gbsErr initialContext
-			]
-		].
+		initial := (gbsErr respondsTo: #initialContext)
+			ifTrue: [ [ gbsErr initialContext ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		initial ifNotNil: [ currentContext := initial ].
 		self selectTopServerContext
 	]
 ]
