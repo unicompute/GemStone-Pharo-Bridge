@@ -1102,14 +1102,9 @@ GbxDebuggerService >> basicReenterServerContext [
 			This ensures the server reports the correct step point."
 			self resetServerPCToStepOne.
 
-			"Level numbers may have changed; recompute and select top server context."
+			"Level numbers may have changed; recompute and select server-truth context."
 			self selectTopServerContext.
-
-			"After restart, mark the NEW current context as an executed code frame with step=1.
-			This is critical: selectTopServerContext fetches fresh context from server,
-			so we must mark it AFTER to ensure step=1 is set. This fixes the bug where
-			second restart does not reset Frame Step to 1."
-			self markCurrentContextAsRestarted.
+			self selectRestartTargetContext.
 
 			"Force another refresh to ensure the display shows step=1"
 			self notifyContextChanged
@@ -1357,7 +1352,6 @@ GbxDebuggerService >> restart [
 			"Final deterministic guard: force server PC and UI context to method start."
 			self resetServerPCToStepOne.
 			self selectTopServerContext.
-			self markCurrentContextAsRestarted.
 			self selectRestartTargetContext
 		]
 	].
