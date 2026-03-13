@@ -61,37 +61,37 @@ GbsMethodQueryResultsPresenter >> initializePresenters [
 	mainMenu := self buildMenuBar.
 	btnBrowse := self newButton
 		label: 'Browse';
-		icon: (self iconNamed: #glamorousBrowse);
+		icon: (self iconForBrowseAction);
 		action: [ self browseSelectedReference ];
 		yourself.
 	btnHierarchySenders := self newButton
 		label: 'Hierarchy Senders';
-		icon: (self iconNamed: #smallForward);
+		icon: (self iconForHierarchySendersAction);
 		action: [ self browseHierarchySendersOfSelected ];
 		yourself.
 	btnHierarchyImplementors := self newButton
 		label: 'Hierarchy Implementors';
-		icon: (self iconNamed: #smallInspectIt);
+		icon: (self iconForHierarchyImplementorsAction);
 		action: [ self browseHierarchyImplementorsOfSelected ];
 		yourself.
 	btnSenders := self newButton
 		label: 'Senders';
-		icon: (self iconNamed: #smallForward);
+		icon: (self iconForSendersAction);
 		action: [ self browseSendersOfSelected ];
 		yourself.
 	btnImplementors := self newButton
 		label: 'Implementors';
-		icon: (self iconNamed: #smallInspectIt);
+		icon: (self iconForImplementorsAction);
 		action: [ self browseImplementorsOfSelected ];
 		yourself.
 	btnFileOut := self newButton
 		label: 'File Out As...';
-		icon: (self iconNamed: #smallSave);
+		icon: (self iconForFileOutAction);
 		action: [ self fileOutSelectedReferenceAs ];
 		yourself.
 	btnRefresh := self newButton
 		label: 'Refresh';
-		icon: (self iconNamed: #smallUpdate);
+		icon: (self iconForRefreshAction);
 		action: [ self refreshSelectedSource ];
 		yourself.
 	actionBar := self buildActionBar.
@@ -221,10 +221,21 @@ GbsMethodQueryResultsPresenter >> buildMenuBar [
 GbsMethodQueryResultsPresenter >> menuFind [
 	^ self newMenu
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Find Selector...'; action: [ self findSelector ] ] ];
+			group addItem: [ :item |
+				item
+					name: 'Find Selector...';
+					icon: self iconForFindAction;
+					action: [ self findSelector ] ] ];
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Filter Contains...'; action: [ self filterContains ] ].
-			group addItem: [ :item | item name: 'Clear Filter'; action: [ self clearFilter ] ] ];
+			group addItem: [ :item |
+				item
+					name: 'Filter Contains...';
+					icon: self iconForFindAction;
+					action: [ self filterContains ] ].
+			group addItem: [ :item |
+				item
+					name: 'Clear Filter';
+					action: [ self clearFilter ] ] ];
 		yourself
 ]
 
@@ -232,15 +243,35 @@ GbsMethodQueryResultsPresenter >> menuFind [
 GbsMethodQueryResultsPresenter >> menuMethod [
 	^ self newMenu
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Browse'; action: [ self browseSelectedReference ] ].
-			group addItem: [ :item | item name: 'Browse Hierarchy'; action: [ self browseHierarchyImplementorsOfSelected ] ] ];
+			group addItem: [ :item |
+				item
+					name: 'Browse';
+					icon: self iconForBrowseAction;
+					action: [ self browseSelectedReference ] ].
+			group addItem: [ :item |
+				item
+					name: 'Browse Hierarchy';
+					icon: self iconForHierarchyImplementorsAction;
+					action: [ self browseHierarchyImplementorsOfSelected ] ] ];
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Senders'; action: [ self browseSendersOfSelected ] ].
-			group addItem: [ :item | item name: 'Implementors'; action: [ self browseImplementorsOfSelected ] ].
+			group addItem: [ :item |
+				item
+					name: 'Senders';
+					icon: self iconForSendersAction;
+					action: [ self browseSendersOfSelected ] ].
+			group addItem: [ :item |
+				item
+					name: 'Implementors';
+					icon: self iconForImplementorsAction;
+					action: [ self browseImplementorsOfSelected ] ].
 			group addItem: [ :item | item name: 'Hierarchy Senders'; subMenu: self menuHierarchySenders ].
 			group addItem: [ :item | item name: 'Hierarchy Implementors'; subMenu: self menuHierarchyImplementors ] ];
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'File Out As...'; action: [ self fileOutSelectedReferenceAs ] ] ];
+			group addItem: [ :item |
+				item
+					name: 'File Out As...';
+					icon: self iconForFileOutAction;
+					action: [ self fileOutSelectedReferenceAs ] ] ];
 		yourself
 ]
 
@@ -278,10 +309,54 @@ GbsMethodQueryResultsPresenter >> menuSession [
 GbsMethodQueryResultsPresenter >> menuWindow [
 	^ self newMenu
 		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Refresh'; action: [ self refreshSelectedSource ] ] ];
+			group addItem: [ :item |
+				item
+					name: 'Refresh';
+					icon: self iconForRefreshAction;
+					action: [ self refreshSelectedSource ] ] ];
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ] ];
 		yourself
+]
+
+{ #category : 'icons' }
+GbsMethodQueryResultsPresenter >> iconForBrowseAction [
+	^ self iconNamed: #smallSystemBrowser
+]
+
+{ #category : 'icons' }
+GbsMethodQueryResultsPresenter >> iconForFindAction [
+	^ self iconNamed: #smallFind
+]
+
+{ #category : 'icons' }
+GbsMethodQueryResultsPresenter >> iconForSendersAction [
+	^ self iconNamed: #smallForward
+]
+
+{ #category : 'icons' }
+GbsMethodQueryResultsPresenter >> iconForImplementorsAction [
+	^ self iconNamed: #smallInspectIt
+]
+
+{ #category : 'icons' }
+GbsMethodQueryResultsPresenter >> iconForHierarchySendersAction [
+	^ self iconNamed: #glamorousGoTop
+]
+
+{ #category : 'icons' }
+GbsMethodQueryResultsPresenter >> iconForHierarchyImplementorsAction [
+	^ self iconNamed: #glamorousUp
+]
+
+{ #category : 'icons' }
+GbsMethodQueryResultsPresenter >> iconForFileOutAction [
+	^ self iconNamed: #smallSave
+]
+
+{ #category : 'icons' }
+GbsMethodQueryResultsPresenter >> iconForRefreshAction [
+	^ self iconNamed: #smallUpdate
 ]
 
 { #category : 'actions' }
