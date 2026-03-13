@@ -36,16 +36,7 @@ GbsMethodQueryResultsPresenter >> references: aCollection [
 	references := (self normalizeReferences: aCollection)
 		collect: [ :each | each ifNil: [ '' ] ifNotNil: [ each asString ] ].
 	allReferences := references copy.
-	"Spec lifecycle can call this after connectPresenters; refresh list immediately if present."
-	methodsList ifNotNil: [
-		(methodsList respondsTo: #items:) ifTrue: [ methodsList items: references ].
-		references ifNotEmpty: [
-			(methodsList respondsTo: #selectIndex:)
-				ifTrue: [ methodsList selectIndex: 1 ]
-				ifFalse: [
-					(methodsList respondsTo: #selectItem:)
-						ifTrue: [ methodsList selectItem: references first ] ].
-			self showSourceForReference: references first ] ]
+	self reloadReferencesIntoList
 ]
 
 { #category : 'accessing' }
@@ -59,6 +50,7 @@ GbsMethodQueryResultsPresenter >> initializePresenters [
 	allReferences ifNil: [ allReferences := references copy ].
 	mainMenu := self buildMenuBar.
 	methodsList := self newList.
+	methodsList display: [ :each | each ifNil: [ '' ] ifNotNil: [ each asString ] ].
 	sourceText := self newText.
 	(sourceText respondsTo: #beNotEditable) ifTrue: [ sourceText beNotEditable ].
 ]
@@ -76,14 +68,7 @@ GbsMethodQueryResultsPresenter >> connectPresenters [
 					ifTrue: [ listSelection selectedItem ]
 					ifFalse: [ nil ] ].
 		self showSourceForReference: selected ].
-	methodsList items: references.
-	(references notNil and: [ references isEmpty not ]) ifTrue: [
-		(methodsList respondsTo: #selectIndex:)
-			ifTrue: [ methodsList selectIndex: 1 ]
-			ifFalse: [
-				(methodsList respondsTo: #selectItem:)
-					ifTrue: [ methodsList selectItem: references first ] ].
-		self showSourceForReference: references first ]
+	self reloadReferencesIntoList
 ]
 
 { #category : 'layout' }
@@ -102,7 +87,8 @@ GbsMethodQueryResultsPresenter >> defaultLayout [
 GbsMethodQueryResultsPresenter >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: (windowTitle ifNil: [ 'Method Query Results' ] ifNotNil: [ windowTitle ]);
-		initialExtent: 980 @ 720
+		initialExtent: 980 @ 720.
+	self reloadReferencesIntoList
 ]
 
 { #category : 'private' }
@@ -221,9 +207,20 @@ GbsMethodQueryResultsPresenter >> filterContains [
 { #category : 'actions' }
 GbsMethodQueryResultsPresenter >> clearFilter [
 	references := allReferences copy.
-	methodsList items: references.
-	references ifNotEmpty: [
-		(methodsList respondsTo: #selectIndex:) ifTrue: [ methodsList selectIndex: 1 ].
+	self reloadReferencesIntoList
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> reloadReferencesIntoList [
+	methodsList ifNil: [ ^ self ].
+	(methodsList respondsTo: #items:)
+		ifTrue: [ methodsList items: (references ifNil: [ #() ] ifNotNil: [ references asArray ]) ].
+	(references notNil and: [ references isEmpty not ]) ifTrue: [
+		(methodsList respondsTo: #selectIndex:)
+			ifTrue: [ methodsList selectIndex: 1 ]
+			ifFalse: [
+				(methodsList respondsTo: #selectItem:)
+					ifTrue: [ methodsList selectItem: references first ] ].
 		self showSourceForReference: references first ]
 ]
 

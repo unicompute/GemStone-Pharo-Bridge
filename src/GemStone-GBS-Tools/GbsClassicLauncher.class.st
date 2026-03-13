@@ -170,11 +170,15 @@ GbsClassicLauncher class >> generateClassConnectors [
 			on: Error
 			do: [ :ex | UIManager default inform: 'Generate connectors failed: ', ex messageText. ^ self ] ].
 	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
-	(mgr notNil and: [ mgr respondsTo: #generateClassConnectors ]) ifTrue: [
-		[ mgr generateClassConnectors.
-		  didWork := true ]
-			on: Error
-			do: [ :ex | UIManager default inform: 'Generate connectors failed: ', ex messageText. ^ self ] ].
+	[
+		self
+			connectorManagerPerform: #generateClassConnectors
+			withArguments: #()
+			ifUnavailable: [ nil ].
+		didWork := didWork or: [ mgr notNil ].
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Generate connectors failed: ', ex messageText.
+		^ self ].
 	didWork
 		ifTrue: [ UIManager default inform: 'Generated class connectors.' ]
 		ifFalse: [ UIManager default inform: 'Generate class connectors is not available in this image.' ].
@@ -225,16 +229,14 @@ GbsClassicLauncher class >> selectFileInReference [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> initializeFastConnectors [
-	| mgr |
-	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
-	(mgr notNil and: [ mgr respondsTo: #initializeFastConnectors ]) ifTrue: [
-		[ mgr initializeFastConnectors.
-		  UIManager default inform: 'Fast connectors initialized.' ]
-			on: Error
-			do: [ :ex | UIManager default inform: 'Initialize connectors failed: ', ex messageText ].
-		^ self
-	].
-	UIManager default inform: 'Fast connectors initialization is not available in this image.'.
+	[
+		self
+			connectorManagerPerform: #initializeFastConnectors
+			withArguments: #()
+			ifUnavailable: [ ^ UIManager default inform: 'Fast connectors initialization is not available in this image.' ].
+		UIManager default inform: 'Fast connectors initialized.'
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Initialize connectors failed: ', ex messageText ].
 ]
 
 { #category : 'menus' }
@@ -316,9 +318,13 @@ GbsClassicLauncher class >> showConnectorClassMappingsOnCurrentSession [
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
 	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
-	(mgr isNil or: [ mgr respondsTo: #connectorClassMappingReportText not ]) ifTrue: [
-		^ UIManager default inform: 'Connector class mapping report is not available in this image.' ].
-	text := [ mgr connectorClassMappingReportText ] on: Error do: [ :ex | 'Failed to build connector class mapping report: ', ex messageText ].
+	text := [
+		self
+			connectorManagerPerform: #connectorClassMappingReportText
+			withArguments: #()
+			ifUnavailable: [ ^ UIManager default inform: 'Connector class mapping report is not available in this image.' ] ]
+		on: Error
+		do: [ :ex | 'Failed to build connector class mapping report: ', ex messageText ].
 	UIManager default edit: text label: 'Connector Class Mappings'
 ]
 
@@ -328,13 +334,14 @@ GbsClassicLauncher class >> clearAllConnectorClassMappingsOnCurrentSession [
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
 	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
-	(mgr isNil or: [ mgr respondsTo: #clearAllConnectorClassMappings not ]) ifTrue: [
-		^ UIManager default inform: 'Clear all connector class overrides is not available in this image.' ].
 	(UIManager default
 		confirm: 'Clear all connector class overrides and revert to default class resolution?'
 		label: 'Clear Connector Class Overrides') ifFalse: [ ^ self ].
 	[
-		mgr clearAllConnectorClassMappings.
+		self
+			connectorManagerPerform: #clearAllConnectorClassMappings
+			withArguments: #()
+			ifUnavailable: [ ^ UIManager default inform: 'Clear all connector class overrides is not available in this image.' ].
 		UIManager default inform: 'Cleared all connector class overrides.'
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Failed to clear connector class overrides: ', ex messageText ]
@@ -591,14 +598,32 @@ GbsClassicLauncher class >> removeInvalidConnectors [
 			on: Error
 			do: [ :ex | UIManager default inform: 'Remove invalid connectors failed: ', ex messageText. ^ self ] ].
 	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
-	(mgr notNil and: [ mgr respondsTo: #removeInvalidConnectors ]) ifTrue: [
-		[ mgr removeInvalidConnectors.
-		  didWork := true ]
-			on: Error
-			do: [ :ex | UIManager default inform: 'Remove invalid connectors failed: ', ex messageText. ^ self ] ].
+	[
+		self
+			connectorManagerPerform: #removeInvalidConnectors
+			withArguments: #()
+			ifUnavailable: [ nil ].
+		didWork := didWork or: [ mgr notNil ].
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Remove invalid connectors failed: ', ex messageText.
+		^ self ].
 	didWork
 		ifTrue: [ UIManager default inform: 'Removed invalid connectors.' ]
 		ifFalse: [ UIManager default inform: 'Remove invalid connectors is not available in this image.' ].
+]
+
+{ #category : 'private' }
+GbsClassicLauncher class >> connectorManagerPerform: aSelector withArguments: args ifUnavailable: unavailableBlock [
+	| mgr current |
+	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
+	(mgr notNil and: [ mgr respondsTo: aSelector ]) ifTrue: [
+		^ mgr perform: aSelector withArguments: args ].
+	current := (mgr notNil and: [ mgr respondsTo: #current ])
+		ifTrue: [ [ mgr current ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	(current notNil and: [ current respondsTo: aSelector ]) ifTrue: [
+		^ current perform: aSelector withArguments: args ].
+	^ unavailableBlock value
 ]
 
 { #category : 'private' }
@@ -1016,19 +1041,20 @@ GbsClassicLauncher >> openSystemBrowser [
 
 { #category : 'actions' }
 GbsClassicLauncher >> browseImplementors [
-	| browser query |
-	query := UIManager default request: 'Implementors of selector:' initialAnswer: ''.
-	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ false ].
-	browser := self openBrowserForQuery.
-	browser ifNil: [ ^ false ].
-	^ [ 
-		(browser respondsTo: #queryMethodsForSelector:mode:)
-			ifTrue: [ browser queryMethodsForSelector: query mode: 'implementors' ]
-			ifFalse: [ browser queryImplementors ] ]
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	^ [
+		self class
+			performBrowseQueryWithPrompt: 'Implementors of selector:'
+			mode: 'implementors'
+			titlePrefix: 'Implementors of '.
+		true ]
 		on: Error
-		do: [ :ex |
-			self inform: 'Browse implementors failed: ', ex messageText.
-			false ]
+		do: [ :ex | self inform: 'Browse implementors failed: ', ex messageText. false ]
 ]
 
 { #category : 'actions' }
@@ -1045,36 +1071,38 @@ GbsClassicLauncher >> browseMethodsWithSubstring [
 
 { #category : 'actions' }
 GbsClassicLauncher >> browseReferences [
-	| browser query |
-	query := UIManager default request: 'References to class or variable name:' initialAnswer: ''.
-	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ false ].
-	browser := self openBrowserForQuery.
-	browser ifNil: [ ^ false ].
-	^ [ 
-		(browser respondsTo: #queryMethodsForSelector:mode:)
-			ifTrue: [ browser queryMethodsForSelector: query mode: 'references' ]
-			ifFalse: [ browser queryReferences ] ]
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	^ [
+		self class
+			performBrowseQueryWithPrompt: 'References to class or variable name:'
+			mode: 'references'
+			titlePrefix: 'References to '.
+		true ]
 		on: Error
-		do: [ :ex |
-			self inform: 'Browse references failed: ', ex messageText.
-			false ]
+		do: [ :ex | self inform: 'Browse references failed: ', ex messageText. false ]
 ]
 
 { #category : 'actions' }
 GbsClassicLauncher >> browseSenders [
-	| browser query |
-	query := UIManager default request: 'Senders of selector:' initialAnswer: ''.
-	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ false ].
-	browser := self openBrowserForQuery.
-	browser ifNil: [ ^ false ].
-	^ [ 
-		(browser respondsTo: #queryMethodsForSelector:mode:)
-			ifTrue: [ browser queryMethodsForSelector: query mode: 'senders' ]
-			ifFalse: [ browser querySenders ] ]
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	^ [
+		self class
+			performBrowseQueryWithPrompt: 'Senders of selector:'
+			mode: 'senders'
+			titlePrefix: 'Senders of '.
+		true ]
 		on: Error
-		do: [ :ex |
-			self inform: 'Browse senders failed: ', ex messageText.
-			false ]
+		do: [ :ex | self inform: 'Browse senders failed: ', ex messageText. false ]
 ]
 
 { #category : 'private' }

@@ -156,20 +156,17 @@ GbsSessionManager class >> removeInvalidConnectors [
 GbsSessionManager class >> connectorPairs [
 	| registry pairs seen |
 	registry := self fastConnectorRegistry.
-	(registry isNil or: [ registry isEmpty ]) ifTrue: [
-		self initializeFastConnectors.
-		registry := self fastConnectorRegistry ].
+	(registry isNil or: [ registry isEmpty ]) ifTrue: [ ^ #() ].
 	pairs := OrderedCollection new.
 	seen := Set new.
 	registry keysAndValuesDo: [ :clientName :serverName |
-		| c s first second pairKey |
+		| c s canonical pairKey |
 		c := clientName asString.
 		s := serverName asString.
-		first := c <= s ifTrue: [ c ] ifFalse: [ s ].
-		second := c <= s ifTrue: [ s ] ifFalse: [ c ].
-		pairKey := first, '->', second.
+		canonical := { c. s } asSortedCollection asArray.
+		pairKey := canonical first, '->', canonical second.
 		(seen includes: pairKey) ifFalse: [
-			pairs add: { first. second }.
+			pairs add: canonical.
 			seen add: pairKey ] ].
 	^ pairs asArray
 ]
@@ -527,6 +524,9 @@ GbsSessionManager class >> sessionKeyForSessionObject: aSession [
 	params := (aSession respondsTo: #parameters)
 		ifTrue: [ [ aSession parameters ] on: Error do: [ nil ] ]
 		ifFalse: [ nil ].
+	params ifNil: [
+		(aSession respondsTo: #instVarNamed:)
+			ifTrue: [ params := [ aSession instVarNamed: 'parameters' ] on: Error do: [ nil ] ] ].
 	params ifNil: [ ^ 'default' ].
 	user := [ params username ] on: Error do: [ nil ].
 	stone := [ params gemStoneName ] on: Error do: [ nil ].
@@ -645,4 +645,118 @@ GbsSessionManager >> initializeFastConnectors [
     ].
 
     self fastConnectorRegistry: registry.
+]
+
+{ #category : 'connector groups' }
+GbsSessionManager >> globalConnectorGroup [
+	^ self class globalConnectorGroup
+]
+
+{ #category : 'connector groups' }
+GbsSessionManager >> knownParameters [
+	^ self class knownParameters
+]
+
+{ #category : 'accessing' }
+GbsSessionManager >> connectorPairs [
+	^ self class connectorPairs
+]
+
+{ #category : 'connector groups' }
+GbsSessionManager >> connectorPairsForGroup: aConnectorGroup [
+	^ self class connectorPairsForGroup: aConnectorGroup
+]
+
+{ #category : 'actions' }
+GbsSessionManager >> initializeGlobalConnectors [
+	^ self class initializeGlobalConnectors
+]
+
+{ #category : 'actions' }
+GbsSessionManager >> generateClassConnectors [
+	^ self class generateClassConnectors
+]
+
+{ #category : 'actions' }
+GbsSessionManager >> removeInvalidConnectors [
+	^ self class removeInvalidConnectors
+]
+
+{ #category : 'actions' }
+GbsSessionManager >> addConnectorClient: clientClassName server: serverClassName [
+	^ self class addConnectorClient: clientClassName server: serverClassName
+]
+
+{ #category : 'actions' }
+GbsSessionManager >> removeConnectorClient: clientClassName server: serverClassName [
+	^ self class removeConnectorClient: clientClassName server: serverClassName
+]
+
+{ #category : 'connector state' }
+GbsSessionManager >> connectorObjectForClient: clientClassName server: serverClassName [
+	^ self class connectorObjectForClient: clientClassName server: serverClassName
+]
+
+{ #category : 'connector state' }
+GbsSessionManager >> connectorClassChoices [
+	^ self class connectorClassChoices
+]
+
+{ #category : 'connector state' }
+GbsSessionManager >> setConnectorClass: connectorClassOrName forClient: clientClassName server: serverClassName [
+	^ self class
+		setConnectorClass: connectorClassOrName
+		forClient: clientClassName
+		server: serverClassName
+]
+
+{ #category : 'connector state' }
+GbsSessionManager >> clearConnectorClassForClient: clientClassName server: serverClassName [
+	^ self class
+		clearConnectorClassForClient: clientClassName
+		server: serverClassName
+]
+
+{ #category : 'connector state' }
+GbsSessionManager >> postConnectActionForConnectorClient: clientClassName server: serverClassName [
+	^ self class
+		postConnectActionForConnectorClient: clientClassName
+		server: serverClassName
+]
+
+{ #category : 'connector state' }
+GbsSessionManager >> setPostConnectAction: actionString forConnectorClient: clientClassName server: serverClassName [
+	^ self class
+		setPostConnectAction: actionString
+		forConnectorClient: clientClassName
+		server: serverClassName
+]
+
+{ #category : 'connector state' }
+GbsSessionManager >> invalidPostConnectActionsForConnectorClient: clientClassName server: serverClassName [
+	^ self class
+		invalidPostConnectActionsForConnectorClient: clientClassName
+		server: serverClassName
+]
+
+{ #category : 'connector state' }
+GbsSessionManager >> isConnectorClient: clientClassName server: serverClassName connectedInSession: sessionKey [
+	^ self class
+		isConnectorClient: clientClassName
+		server: serverClassName
+		connectedInSession: sessionKey
+]
+
+{ #category : 'connector state' }
+GbsSessionManager >> setConnectorClient: clientClassName server: serverClassName connected: aBoolean inSession: sessionKey [
+	^ self class
+		setConnectorClient: clientClassName
+		server: serverClassName
+		connected: aBoolean
+		inSession: sessionKey
+]
+
+{ #category : 'accessing' }
+GbsSessionManager >> loggedInSessions [
+	^ self class loggedInSessions
 ]

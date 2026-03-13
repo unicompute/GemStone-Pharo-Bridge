@@ -182,6 +182,8 @@ GbsSessionManagerTest >> testClassSideInitializeFastConnectorsPopulatesRegistry 
 
 { #category : 'tests' }
 GbsSessionManagerTest >> testConnectorConnectionStateDefaultsToConnected [
+	Smalltalk globals at: #GbsConnectorConnectionRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsConnectorObjectRegistry put: Dictionary new.
 	self assert: (GbsSessionManager
 		isConnectorClient: 'ByteArray'
 		server: 'ByteArray'
@@ -287,14 +289,11 @@ GbsSessionManagerTest >> testSessionConnectorPairsAreScopedPerSession [
 	pairs2 := GbsSessionManager connectorPairsForSession: s2.
 
 	self assert: (pairs1 anySatisfy: [ :pair |
-		(pair at: 1 ifAbsent: [ '' ]) = 'Character'
-			and: [ (pair at: 2 ifAbsent: [ '' ]) = 'Character' ] ]).
+		{ (pair at: 1 ifAbsent: [ '' ]). (pair at: 2 ifAbsent: [ '' ]) } asSet = #('Character') asSet ]).
 	self deny: (pairs1 anySatisfy: [ :pair |
-		(pair at: 1 ifAbsent: [ '' ]) = 'Date'
-			and: [ (pair at: 2 ifAbsent: [ '' ]) = 'Date' ] ]).
+		{ (pair at: 1 ifAbsent: [ '' ]). (pair at: 2 ifAbsent: [ '' ]) } asSet = #('Date') asSet ]).
 	self assert: (pairs2 anySatisfy: [ :pair |
-		(pair at: 1 ifAbsent: [ '' ]) = 'Date'
-			and: [ (pair at: 2 ifAbsent: [ '' ]) = 'Date' ] ])
+		{ (pair at: 1 ifAbsent: [ '' ]). (pair at: 2 ifAbsent: [ '' ]) } asSet = #('Date') asSet ])
 ]
 
 { #category : 'tests' }
@@ -310,8 +309,9 @@ GbsSessionManagerTest >> testSessionConnectorPairsKeepUnknownClassNames [
 	pairs := GbsSessionManager connectorPairsForSession: s1.
 
 	self assert: (pairs anySatisfy: [ :pair |
-		(pair at: 1 ifAbsent: [ '' ]) = 'ABC'
-			and: [ (pair at: 2 ifAbsent: [ '' ]) = 'XyzServer' ] ])
+		| names |
+		names := { (pair at: 1 ifAbsent: [ '' ]). (pair at: 2 ifAbsent: [ '' ]) } asSet.
+		names = #('ABC' 'XyzServer') asSet ])
 ]
 
 { #category : 'tests' }
@@ -336,4 +336,32 @@ GbsSessionManagerTest >> testConnectorClassOverridePerPair [
 	self
 		assert: (GbsSessionManager connectorClassForClient: 'ByteArray' server: 'ByteArray')
 		equals: GbsFastConnector
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testInstanceConnectorDelegatesToClassSideForPairs [
+	| manager |
+	manager := GbsSessionManager new.
+	GbsSessionManager fastConnectorRegistry: Dictionary new.
+	manager addConnectorClient: 'ABC' server: 'XyzServer'.
+
+	self assert: (manager connectorPairs anySatisfy: [ :pair |
+		(pair at: 1 ifAbsent: [ '' ]) = 'ABC'
+			and: [ (pair at: 2 ifAbsent: [ '' ]) = 'XyzServer' ] ])
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testInstanceConnectorDelegatesConnectionState [
+	| manager |
+	manager := GbsSessionManager new.
+	manager
+		setConnectorClient: 'ByteArray'
+		server: 'ByteArray'
+		connected: false
+		inSession: 'DataCurator@gs64stone'.
+
+	self deny: (manager
+		isConnectorClient: 'ByteArray'
+		server: 'ByteArray'
+		connectedInSession: 'DataCurator@gs64stone')
 ]
