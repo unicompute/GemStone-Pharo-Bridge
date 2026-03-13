@@ -1132,11 +1132,7 @@ GbxDebuggerService >> markCurrentContextAsRestarted [
 	(target respondsTo: #markAsExecutedCodeFrame) ifTrue: [
 		target markAsExecutedCodeFrame
 	].
-	
-	"Force step point to 1 explicitly, even if server reported differently"
-	target instVarNamed: #quickStepPoint put: 1.
-	target instVarNamed: #ipOffset put: 1.
-	
+
 	"Update the source map to reflect the new step point"
 	self updateSourceMapFromCurrentContext
 ]
@@ -1165,9 +1161,7 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	didReset := self runDebugProcessCommand: 'runToStepPoint' withInteger: 1 recompute: true.
 	self logRestartText: 'resetServerPCToStepOne runToStepPoint:1 -> ', didReset asString.
 	didReset ifTrue: [ ^ true ].
-	"Fallback to local context normalization if server command is unavailable."
-	self forceRestartPositionToMethodStart.
-	self logRestartText: 'resetServerPCToStepOne fallback forceRestartPositionToMethodStart'.
+	self logRestartText: 'resetServerPCToStepOne no-op fallback (keeping server-truth context)'.
 	^ false
 ]
 
