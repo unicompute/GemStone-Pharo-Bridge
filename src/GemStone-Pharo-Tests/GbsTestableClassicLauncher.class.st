@@ -9,9 +9,105 @@ Class {
 		'lastOpenedDictionary',
 		'openBrowserCalls'
 	],
+	#classVars : [
+		'ChooseAnswers',
+		'LastHierarchyMode',
+		'LastHierarchyQuery',
+		'LastHierarchyRootClass',
+		'LastHierarchyScope',
+		'LastOpenedReferences',
+		'LastOpenedTitle',
+		'RequestAnswers'
+	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
 }
+
+{ #category : 'testing' }
+GbsTestableClassicLauncher class >> resetClassHarness [
+	RequestAnswers := OrderedCollection new.
+	ChooseAnswers := OrderedCollection new.
+	LastHierarchyQuery := nil.
+	LastHierarchyMode := nil.
+	LastHierarchyRootClass := nil.
+	LastHierarchyScope := nil.
+	LastOpenedReferences := nil.
+	LastOpenedTitle := nil
+]
+
+{ #category : 'testing' }
+GbsTestableClassicLauncher class >> enqueueRequestAnswer: aStringOrNil [
+	RequestAnswers ifNil: [ self resetClassHarness ].
+	RequestAnswers add: aStringOrNil
+]
+
+{ #category : 'testing' }
+GbsTestableClassicLauncher class >> enqueueChooseAnswer: anInteger [
+	ChooseAnswers ifNil: [ self resetClassHarness ].
+	ChooseAnswers add: anInteger
+]
+
+{ #category : 'menus' }
+GbsTestableClassicLauncher class >> uiRequest: promptString initialAnswer: defaultString [
+	RequestAnswers ifNil: [ self resetClassHarness ].
+	^ RequestAnswers
+		ifEmpty: [ defaultString ]
+		ifNotEmpty: [ RequestAnswers removeFirst ]
+]
+
+{ #category : 'menus' }
+GbsTestableClassicLauncher class >> uiChooseFrom: labels title: titleString [
+	ChooseAnswers ifNil: [ self resetClassHarness ].
+	^ ChooseAnswers
+		ifEmpty: [ 0 ]
+		ifNotEmpty: [ ChooseAnswers removeFirst ]
+]
+
+{ #category : 'menus' }
+GbsTestableClassicLauncher class >> hierarchyQueryReferencesFor: tokenString mode: modeString inSession: aSession rootClassName: rootClassName scope: scopeString [
+	LastHierarchyQuery := tokenString.
+	LastHierarchyMode := modeString.
+	LastHierarchyRootClass := rootClassName.
+	LastHierarchyScope := scopeString.
+	^ #('Object>>size')
+]
+
+{ #category : 'menus' }
+GbsTestableClassicLauncher class >> openQueryResultsPresenterOn: session references: references title: titleString [
+	LastOpenedReferences := references.
+	LastOpenedTitle := titleString.
+	^ true
+]
+
+{ #category : 'accessing' }
+GbsTestableClassicLauncher class >> lastHierarchyQuery [
+	^ LastHierarchyQuery
+]
+
+{ #category : 'accessing' }
+GbsTestableClassicLauncher class >> lastHierarchyMode [
+	^ LastHierarchyMode
+]
+
+{ #category : 'accessing' }
+GbsTestableClassicLauncher class >> lastHierarchyRootClass [
+	^ LastHierarchyRootClass
+]
+
+{ #category : 'accessing' }
+GbsTestableClassicLauncher class >> lastHierarchyScope [
+	^ LastHierarchyScope
+]
+
+{ #category : 'accessing' }
+GbsTestableClassicLauncher class >> lastOpenedReferences [
+	^ LastOpenedReferences
+]
+
+{ #category : 'accessing' }
+GbsTestableClassicLauncher class >> lastOpenedTitle [
+	^ LastOpenedTitle
+]
 
 { #category : 'private' }
 GbsTestableClassicLauncher >> sessionForBrowsing [

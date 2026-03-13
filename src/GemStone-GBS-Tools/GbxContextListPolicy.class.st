@@ -552,6 +552,12 @@ GbxContextListPolicy >> topServerContext [
 	^ list ifEmpty: [ nil ] ifNotEmpty: [ list first ]
 ]
 
+{ #category : 'testing' }
+GbxContextListPolicy >> isFullStack [
+	"Check if displaying full stack (glue shown)"
+	^ glueIsHidden not
+]
+
 { #category : 'context list' }
 GbxContextListPolicy >> updateContextList [
 	"Update the context list and notify the debugger"

@@ -95,6 +95,12 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                     (aBuilder item: #BrowseImplementors)
                         label: 'Implementors of...';
                         action: [ self browseImplementorsOnCurrentSession ].
+                    (aBuilder item: #BrowseHierarchySenders)
+                        label: 'Hierarchy Senders of...';
+                        action: [ self browseHierarchySendersOnCurrentSession ].
+                    (aBuilder item: #BrowseHierarchyImplementors)
+                        label: 'Hierarchy Implementors of...';
+                        action: [ self browseHierarchyImplementorsOnCurrentSession ].
                     (aBuilder item: #BrowseReferences)
                         label: 'References to...';
                         action: [ self browseReferencesOnCurrentSession ].
@@ -392,6 +398,22 @@ GbsClassicLauncher class >> browseImplementorsOnCurrentSession [
 ]
 
 { #category : 'menus' }
+GbsClassicLauncher class >> browseHierarchySendersOnCurrentSession [
+	self
+		performBrowseHierarchyQueryWithPrompt: 'Hierarchy senders of selector:'
+		mode: 'hierarchySenders'
+		titlePrefix: 'Hierarchy Senders of '
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> browseHierarchyImplementorsOnCurrentSession [
+	self
+		performBrowseHierarchyQueryWithPrompt: 'Hierarchy implementors of selector:'
+		mode: 'hierarchyImplementors'
+		titlePrefix: 'Hierarchy Implementors of '
+]
+
+{ #category : 'menus' }
 GbsClassicLauncher class >> browseMethodsWithSubstringOnCurrentSession [
 	| session pattern worker references presenterClass sessionPart title script raw |
 	self ensureQueryWindowSupportLoaded.
@@ -541,6 +563,92 @@ GbsClassicLauncher class >> performBrowseQueryWithPrompt: promptString mode: mod
 	[ presenterClass openOn: session references: references title: title ]
 		on: Error
 		do: [ :ex | UIManager default inform: 'Could not open query results window: ', ex messageText ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> performBrowseHierarchyQueryWithPrompt: promptString mode: modeString titlePrefix: titlePrefixString [
+	| session className query scope references sessionPart scopeLabel title |
+	self ensureQueryWindowSupportLoaded.
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	className := self uiRequest: 'Root class for hierarchy query:' initialAnswer: ''.
+	(className isNil or: [ className trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	query := self uiRequest: promptString initialAnswer: ''.
+	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	scope := self selectHierarchyBrowseScope.
+	scope ifNil: [ ^ self ].
+	references := [
+		self
+			hierarchyQueryReferencesFor: query trimBoth
+			mode: modeString
+			inSession: session
+			rootClassName: className trimBoth
+			scope: scope ]
+		on: Error
+		do: [ :ex |
+			UIManager default inform: 'Browse hierarchy query failed: ', ex messageText.
+			#() ].
+	references isEmpty ifTrue: [
+		UIManager default inform: 'No matches found.'.
+		^ self ].
+	sessionPart := (session respondsTo: #sessionId)
+		ifTrue: [ 'Session ', session sessionId asString, ' ' ]
+		ifFalse: [ '' ].
+	scopeLabel := scope = 'super'
+		ifTrue: [ ' (superclasses)' ]
+		ifFalse: [ scope = 'this'
+			ifTrue: [ ' (this class)' ]
+			ifFalse: [ scope = 'sub'
+				ifTrue: [ ' (subclasses)' ]
+				ifFalse: [ '' ] ] ].
+	title := sessionPart, titlePrefixString, query trimBoth, scopeLabel, ' (', references size asString, ')'.
+	[ self openQueryResultsPresenterOn: session references: references title: title ]
+		on: Error
+		do: [ :ex | UIManager default inform: 'Could not open query results window: ', ex messageText ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> selectHierarchyBrowseScope [
+	| labels idx |
+	labels := #('Full Hierarchy' 'Superclasses' 'This Class' 'Subclasses').
+	idx := self uiChooseFrom: labels title: 'Hierarchy Scope'.
+	idx = 0 ifTrue: [ ^ nil ].
+	idx = 2 ifTrue: [ ^ 'super' ].
+	idx = 3 ifTrue: [ ^ 'this' ].
+	idx = 4 ifTrue: [ ^ 'sub' ].
+	^ 'full'
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> hierarchyQueryReferencesFor: tokenString mode: modeString inSession: aSession rootClassName: rootClassName scope: scopeString [
+	| worker |
+	worker := GbsBrowser new.
+	worker session: aSession.
+	^ worker
+		queryServerMethodsForSelector: tokenString
+		mode: modeString
+		rootClassName: rootClassName
+		hierarchyScope: scopeString
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openQueryResultsPresenterOn: session references: references title: titleString [
+	| presenterClass |
+	presenterClass := Smalltalk at: #GbsMethodQueryResultsPresenter ifAbsent: [ nil ].
+	presenterClass ifNil: [
+		UIManager default inform: 'Could not open query results window: GbsMethodQueryResultsPresenter is not loaded.'.
+		^ self ].
+	^ presenterClass openOn: session references: references title: titleString
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> uiRequest: promptString initialAnswer: defaultString [
+	^ UIManager default request: promptString initialAnswer: defaultString
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> uiChooseFrom: labels title: titleString [
+	^ UIManager default chooseFrom: labels title: titleString
 ]
 
 { #category : 'menus' }
@@ -913,6 +1021,8 @@ GbsClassicLauncher >> menuBrowse [
         addItem: [ :item | item name: 'Namespace...'; action: [ UIManager default defer: [ self openSymbolDictionaryBrowser ] ] ];
         addItem: [ :item | item name: 'Senders of...'; action: [ UIManager default defer: [ self browseSenders ] ] ];
         addItem: [ :item | item name: 'Implementors of...'; action: [ UIManager default defer: [ self browseImplementors ] ] ];
+        addItem: [ :item | item name: 'Hierarchy Senders of...'; action: [ UIManager default defer: [ self browseHierarchySenders ] ] ];
+        addItem: [ :item | item name: 'Hierarchy Implementors of...'; action: [ UIManager default defer: [ self browseHierarchyImplementors ] ] ];
         addItem: [ :item | item name: 'References to...'; action: [ UIManager default defer: [ self browseReferences ] ] ];
         addItem: [ :item | item name: 'Methods with substring...'; action: [ UIManager default defer: [ self browseMethodsWithSubstring ] ] ];
         yourself.
@@ -1055,6 +1165,42 @@ GbsClassicLauncher >> browseImplementors [
 		true ]
 		on: Error
 		do: [ :ex | self inform: 'Browse implementors failed: ', ex messageText. false ]
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> browseHierarchySenders [
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	^ [
+		self class
+			performBrowseHierarchyQueryWithPrompt: 'Hierarchy senders of selector:'
+			mode: 'hierarchySenders'
+			titlePrefix: 'Hierarchy Senders of '.
+		true ]
+		on: Error
+		do: [ :ex | self inform: 'Browse hierarchy senders failed: ', ex messageText. false ]
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> browseHierarchyImplementors [
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	^ [
+		self class
+			performBrowseHierarchyQueryWithPrompt: 'Hierarchy implementors of selector:'
+			mode: 'hierarchyImplementors'
+			titlePrefix: 'Hierarchy Implementors of '.
+		true ]
+		on: Error
+		do: [ :ex | self inform: 'Browse hierarchy implementors failed: ', ex messageText. false ]
 ]
 
 { #category : 'actions' }
