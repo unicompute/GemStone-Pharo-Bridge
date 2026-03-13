@@ -1329,29 +1329,14 @@ GbxDebuggerService >> isExecutedCodeAtStepOne [
 
 { #category : 'private' }
 GbxDebuggerService >> logRestartState: labelString context: aContext [
-	| step level frame |
-	step := (aContext notNil and: [ aContext respondsTo: #quickStepPoint ])
-		ifTrue: [ [ aContext quickStepPoint ] on: Error do: [ nil ] ]
-		ifFalse: [ nil ].
-	level := (aContext notNil and: [ aContext respondsTo: #level ])
-		ifTrue: [ [ aContext level ] on: Error do: [ nil ] ]
-		ifFalse: [ nil ].
-	frame := aContext
-		ifNil: [ '<nil>' ]
-		ifNotNil: [ [ aContext printString ] on: Error do: [ '<print error>' ] ].
-	self
-		logRestartText:
-			(labelString, ' frame=', frame,
-				' level=', (level ifNil: [ 'nil' ] ifNotNil: [ level asString ]),
-				' step=', (step ifNil: [ 'nil' ] ifNotNil: [ step asString ]))
+	"Restart diagnostics hook. Keep as no-op by default."
+	^ self
 ]
 
 { #category : 'private' }
 GbxDebuggerService >> logRestartText: aString [
-	Transcript
-		show: 'GbxDebuggerService ';
-		show: aString;
-		cr
+	"Restart diagnostics hook. Keep as no-op by default."
+	^ self
 ]
 
 { #category : 'private' }
