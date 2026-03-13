@@ -1212,8 +1212,11 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	gsContext on the stack of its GSProcess. Also discards 
 	any partial execution in gsContext, resetting it to the 
 	beginning."
-	| lvl script result |
+	| lvl resolvedHomeLevel script result |
 	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ 1 ].
+	resolvedHomeLevel := self restartLevelFromServerStack.
+	(resolvedHomeLevel isNumber and: [ resolvedHomeLevel > 0 ])
+		ifTrue: [ lvl := resolvedHomeLevel ].
 	
 	script := '[
 		| obj proc |
@@ -1237,6 +1240,7 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	] value'.
 
 	result := self executeDebugScript: script.
+	self logRestartText: 'cutbackGsTo level=', lvl asString, ' result=', result printString.
 	^ self asBooleanResult: result default: false
 ]
 
@@ -1301,9 +1305,16 @@ GbxDebuggerService >> firstServerContextAbove: clientContext [
 GbxDebuggerService >> restart [
 	"Restart the current context using the coordinated reenter operation.
 	Fixes bug where second restart does not reset Frame Step to 1."
-	| didRestart |
+	| didRestart target |
 	self logRestartState: 'restart/start' context: self currentContext.
+	target := self restartTargetContext.
+	target ifNotNil: [ self selectContext: target ].
 	didRestart := self basicReenterServerContext.
+	didRestart ifTrue: [
+		self selectRestartTargetContext.
+		self ensureRestartAtStepOne.
+		self selectRestartTargetContext
+	].
 	self logRestartText: 'restart/result=', didRestart asString.
 	self logRestartState: 'restart/end' context: self currentContext.
 	^ didRestart
