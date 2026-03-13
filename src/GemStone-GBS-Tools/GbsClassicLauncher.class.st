@@ -379,6 +379,7 @@ GbsClassicLauncher class >> browseClassOnCurrentSession [
 { #category : 'menus' }
 GbsClassicLauncher class >> browseImplementorsOnCurrentSession [
 	| query browser session |
+	self ensureQueryWindowSupportLoaded.
 	query := UIManager default request: 'Implementors of selector:' initialAnswer: ''.
 	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
 	session := self currentSessionOrInform.
@@ -410,6 +411,7 @@ GbsClassicLauncher class >> browseNamespaceOnCurrentSession [
 { #category : 'menus' }
 GbsClassicLauncher class >> browseReferencesOnCurrentSession [
 	| query browser session |
+	self ensureQueryWindowSupportLoaded.
 	query := UIManager default request: 'References to class or variable name:' initialAnswer: ''.
 	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
 	session := self currentSessionOrInform.
@@ -429,6 +431,7 @@ GbsClassicLauncher class >> browseReferencesOnCurrentSession [
 { #category : 'menus' }
 GbsClassicLauncher class >> browseSendersOnCurrentSession [
 	| query browser session |
+	self ensureQueryWindowSupportLoaded.
 	query := UIManager default request: 'Senders of selector:' initialAnswer: ''.
 	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
 	session := self currentSessionOrInform.
@@ -479,6 +482,27 @@ GbsClassicLauncher class >> openSecurityPoliciesOnCurrentSession [
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Could not open security policies tool: ', ex messageText
 	].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> ensureQueryWindowSupportLoaded [
+	| readerClass |
+	((Smalltalk includesKey: #GbsMethodQueryResultsPresenter)
+		and: [ (Smalltalk includesKey: #GbsBrowser) ]) ifTrue: [ ^ self ].
+	readerClass := Smalltalk at: #TonelReader ifAbsent: [ ^ self ].
+	self loadTonelFile: '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsBrowser.class.st' withReader: readerClass.
+	self loadTonelFile: '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsMethodQueryResultsPresenter.class.st' withReader: readerClass.
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> loadTonelFile: pathString withReader: readerClass [
+	| file defs |
+	file := pathString asFileReference.
+	file exists ifFalse: [ ^ self ].
+	[
+		defs := readerClass new parseTonelFile: file.
+		defs do: [ :def | def load ].
+	] on: Error do: [ :ex | ].
 ]
 
 { #category : 'menus' }
