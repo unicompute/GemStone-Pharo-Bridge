@@ -763,7 +763,9 @@ GbsBrowser >> queryMethodsForSelector: selectorName mode: modeString [
 	resolvedSelector isNil ifTrue: [ ^ false ].
 	references := self queryServerMethodsForSelector: resolvedSelector trimBoth mode: modeString.
 	references isEmpty ifTrue: [ ^ self informNotImplemented: 'No matches found.' ].
-	^ self openQueryResults: references
+	^ self
+		openQueryResults: references
+		title: (self queryResultsTitleForSelector: resolvedSelector mode: modeString count: references size)
 ]
 
 { #category : 'private' }
@@ -1463,32 +1465,67 @@ GbsBrowser >> methodSelectorsForSubmenu [
 
 { #category : 'actions' }
 GbsBrowser >> browseSendersOf: aSelector [
-	^ self openQueryResults: (self queryServerMethodsForSelector: aSelector asString mode: 'senders')
+	| refs |
+	refs := self queryServerMethodsForSelector: aSelector asString mode: 'senders'.
+	^ self openQueryResults: refs title: (self queryResultsTitleForSelector: aSelector asString mode: 'senders' count: refs size)
 ]
 
 { #category : 'actions' }
 GbsBrowser >> browseImplementorsOf: aSelector [
-	^ self openQueryResults: (self queryServerMethodsForSelector: aSelector asString mode: 'implementors')
+	| refs |
+	refs := self queryServerMethodsForSelector: aSelector asString mode: 'implementors'.
+	^ self openQueryResults: refs title: (self queryResultsTitleForSelector: aSelector asString mode: 'implementors' count: refs size)
 ]
 
 { #category : 'actions' }
 GbsBrowser >> browseHierarchySendersOf: aSelector [
-	^ self openQueryResults: (self queryServerMethodsForSelector: aSelector asString mode: 'hierarchySenders')
+	| refs |
+	refs := self queryServerMethodsForSelector: aSelector asString mode: 'hierarchySenders'.
+	^ self openQueryResults: refs title: (self queryResultsTitleForSelector: aSelector asString mode: 'hierarchySenders' count: refs size)
 ]
 
 { #category : 'actions' }
 GbsBrowser >> browseHierarchyImplementorsOf: aSelector [
-	^ self openQueryResults: (self queryServerMethodsForSelector: aSelector asString mode: 'hierarchyImplementors')
+	| refs |
+	refs := self queryServerMethodsForSelector: aSelector asString mode: 'hierarchyImplementors'.
+	^ self openQueryResults: refs title: (self queryResultsTitleForSelector: aSelector asString mode: 'hierarchyImplementors' count: refs size)
 ]
 
 { #category : 'private' }
 GbsBrowser >> openQueryResults: references [
-	| selected |
+	^ self openQueryResults: references title: 'Method matches'
+]
+
+{ #category : 'private' }
+GbsBrowser >> openQueryResults: references title: titleString [
 	references isEmpty ifTrue: [ ^ false ].
-	references size = 1 ifTrue: [ ^ self openMethodReference: references first ].
-	selected := self uiChooseFrom: references title: 'Matches'.
-	selected = 0 ifTrue: [ ^ false ].
-	^ self openMethodReference: (references at: selected)
+	^ [ GbsMethodQueryResultsPresenter openOn: session references: references title: titleString. true ]
+		on: Error
+		do: [ :ex |
+			"Fallback to the older selection behavior if presenter cannot be opened."
+			| selected |
+			references size = 1 ifTrue: [ ^ self openMethodReference: references first ].
+			selected := self uiChooseFrom: references title: titleString.
+			selected = 0 ifTrue: [ ^ false ].
+			self openMethodReference: (references at: selected) ]
+]
+
+{ #category : 'private' }
+GbsBrowser >> queryResultsTitleForSelector: selectorString mode: modeString count: aCount [
+	| sessionPart modePart |
+	sessionPart := (session respondsTo: #sessionId)
+		ifTrue: [ 'Session ', session sessionId asString, ' ' ]
+		ifFalse: [ '' ].
+	modePart := modeString = 'implementors'
+		ifTrue: [ 'Implementors of ' ]
+		ifFalse: [
+			modeString = 'senders'
+				ifTrue: [ 'Senders of ' ]
+				ifFalse: [
+					modeString = 'references'
+						ifTrue: [ 'References to ' ]
+						ifFalse: [ 'Matches for ' ] ] ].
+	^ sessionPart, modePart, selectorString asString, ' (', aCount asString, ')'
 ]
 
 { #category : 'private' }

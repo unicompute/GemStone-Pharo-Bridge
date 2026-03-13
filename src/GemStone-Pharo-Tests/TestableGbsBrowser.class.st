@@ -102,6 +102,16 @@ TestableGbsBrowser >> openMethodReference: referenceString [
 	^ true
 ]
 
+{ #category : 'private' }
+TestableGbsBrowser >> openQueryResults: references title: titleString [
+	| selected |
+	references isEmpty ifTrue: [ ^ false ].
+	references size = 1 ifTrue: [ ^ self openMethodReference: references first ].
+	selected := self uiChooseFrom: references title: titleString.
+	selected = 0 ifTrue: [ ^ false ].
+	^ self openMethodReference: (references at: selected)
+]
+
 { #category : 'accessing' }
 TestableGbsBrowser >> lastInfoMessage [
 	^ lastInfoMessage
