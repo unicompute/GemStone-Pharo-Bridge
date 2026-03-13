@@ -258,13 +258,16 @@ GbsMethodQueryResultsPresenter >> normalizeReferences: aCollection [
 			ifFalse: [ aCollection asArray ] ].
 	normalized := OrderedCollection new.
 	rawItems do: [ :each |
-		| s tabs className selectorName firstNumeric classIndex selectorIndex |
+		| s tabs className selectorName firstNumeric classIndex selectorIndex parsed |
 		s := each ifNil: [ '' ] ifNotNil: [ each asString ].
 		s := s copyReplaceAll: String cr with: ''.
+		s := s collect: [ :ch | ch isSeparator ifTrue: [ Character space ] ifFalse: [ ch ] ] as: String.
 		s := s trimBoth.
 		s isEmpty ifTrue: [ ] ifFalse: [
 			(s includesSubstring: '>>')
-				ifTrue: [ normalized add: s ]
+				ifTrue: [
+					parsed := self parseReference: s.
+					parsed ifNotNil: [ normalized add: parsed first, '>>', parsed second ] ]
 				ifFalse: [
 					tabs := (s splitOn: Character tab) collect: #trimBoth thenReject: #isEmpty.
 					(tabs size >= 2)
@@ -276,8 +279,14 @@ GbsMethodQueryResultsPresenter >> normalizeReferences: aCollection [
 							className := tabs at: classIndex ifAbsent: [ '' ].
 							selectorName := tabs at: selectorIndex ifAbsent: [ '' ].
 							(className isEmpty or: [ selectorName isEmpty ])
-								ifTrue: [ normalized add: s ]
-								ifFalse: [ normalized add: className, '>>', selectorName ] ]
-						ifFalse: [ normalized add: s ] ] ] ].
-	^ (normalized collect: #asString thenReject: [ :line | line trimBoth isEmpty ]) asSet asArray asSortedCollection asArray
+								ifFalse: [
+									parsed := self parseReference: className, '>>', selectorName.
+									parsed ifNotNil: [ normalized add: parsed first, '>>', parsed second ] ] ]
+						ifFalse: [ ] ] ] ].
+	normalized isEmpty ifTrue: [
+		"Fallback so pane is never blank when upstream sends unexpected rows."
+		^ (rawItems
+			collect: [ :ea | (ea ifNil: [ '' ] ifNotNil: [ ea asString ]) trimBoth ]
+			thenReject: [ :line | line isEmpty ]) asArray ].
+	^ normalized asSet asArray asSortedCollection asArray
 ]
