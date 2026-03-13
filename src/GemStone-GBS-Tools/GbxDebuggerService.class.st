@@ -1823,13 +1823,10 @@ GbxDebuggerService >> normalizeExecutedCodeSingleStepFrom: previousStepPoint [
 GbxDebuggerService >> effectiveServerStepLevel [
 	| level resolved |
 	level := self currentContextLevel.
-	(self isCurrentExecutedCodeFrame not)
-		ifTrue: [ ^ level ].
+	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
+	(self isCurrentExecutedCodeFrame not) ifTrue: [ ^ level ].
 	resolved := self restartLevelFromServerStack.
-	(resolved isNumber and: [ resolved > 0 ]) ifTrue: [
-		self logRestartText: 'effectiveServerStepLevel resolved=', resolved asString, ' current=', (level ifNil: [ 'nil' ] ifNotNil: [ level asString ]).
-		^ resolved
-	].
+	(resolved isNumber and: [ resolved > 0 ]) ifTrue: [ ^ resolved ].
 	^ level
 ]
 
