@@ -2784,7 +2784,7 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 			selectorName := [ ctx selectorOrUnknown asString ] on: Error do: [ '' ].
 			(className = 'nil' or: [ className = '<unknown>' ])
 				and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ] ].
-	
+
 	index = 0 ifTrue: [ index := 1 ].
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
 	context := contextList at: index.
@@ -2798,9 +2798,19 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 
 	(stackList respondsTo: #selectIndex:)
 		ifTrue: [ stackList selectIndex: index ].
-	
+
 	self contextSelected: context.
 	self moveSourceCursorToStart.
+	
+	"Fix for second restart bug: Ensure step point is reset to 1.
+	The context from server may have old step point, so force it to 1."
+	(context respondsTo: #markAsExecutedCodeFrame) ifTrue: [
+		"Only mark if not already marked (step=1)"
+		((context respondsTo: #quickStepPoint) and: [ context quickStepPoint > 1 ]) ifTrue: [
+			context markAsExecutedCodeFrame.
+			self applySourceMapHighlightFor: context
+		]
+	]
 ]
 
 { #category : 'private' }

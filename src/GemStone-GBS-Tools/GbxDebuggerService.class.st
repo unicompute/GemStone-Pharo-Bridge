@@ -1105,12 +1105,39 @@ GbxDebuggerService >> basicReenterServerContext [
 			"Level numbers may have changed; recompute and select top server context."
 			self selectTopServerContext.
 			
-			"After restart, mark the context as an executed code frame with step=1.
-			This ensures the display shows 'GS: Executed code @1'."
-			self markCurrentContextAsRestarted
+			"After restart, mark the NEW current context as an executed code frame with step=1.
+			This is critical: selectTopServerContext fetches fresh context from server,
+			so we must mark it AFTER to ensure step=1 is set. This fixes the bug where
+			second restart does not reset Frame Step to 1."
+			self markCurrentContextAsRestarted.
+			
+			"Force another refresh to ensure the display shows step=1"
+			self notifyContextChanged
 		]) ifFalse: [ ^ false ].
 
 	^ true
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> markCurrentContextAsRestarted [
+	"Mark the current context as restarted (step=1, at method entry).
+	This ensures the display shows 'GS: Executed code @1' and stepping starts correctly."
+	| target |
+	target := self currentContext.
+	target ifNil: [ target := self restartTargetContext ].
+	target ifNil: [ ^ self ].
+
+	"Mark as executed code frame - this sets class/selector to unknown and step to 1"
+	(target respondsTo: #markAsExecutedCodeFrame) ifTrue: [
+		target markAsExecutedCodeFrame
+	].
+	
+	"Force step point to 1 explicitly, even if server reported differently"
+	target instVarNamed: #quickStepPoint put: 1.
+	target instVarNamed: #ipOffset put: 1.
+	
+	"Update the source map to reflect the new step point"
+	self updateSourceMapFromCurrentContext
 ]
 
 { #category : 'private' }
