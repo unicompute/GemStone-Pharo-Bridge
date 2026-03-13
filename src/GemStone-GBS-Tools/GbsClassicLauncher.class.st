@@ -386,8 +386,48 @@ GbsClassicLauncher class >> browseImplementorsOnCurrentSession [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> browseMethodsWithSubstringOnCurrentSession [
-	self openBrowserOnCurrentSessionDo: [ :browser |
-		(browser respondsTo: #queryMethodsWithString) ifTrue: [ browser queryMethodsWithString ] ].
+	| session pattern worker references presenterClass sessionPart title script raw |
+	self ensureQueryWindowSupportLoaded.
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	pattern := UIManager default request: 'Methods with source substring:' initialAnswer: ''.
+	(pattern isNil or: [ pattern trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	worker := GbsBrowser new.
+	worker session: session.
+	script := '[
+		| classes stream p |
+		p := ''', (pattern trimBoth copyReplaceAll: '''' with: ''''''), '''.
+		stream := WriteStream on: String new.
+		classes := IdentitySet new.
+		System myUserProfile symbolList do: [ :dict |
+			dict keysAndValuesDo: [ :k :v | (v isBehavior) ifTrue: [ classes add: v ] ] ].
+		classes asArray do: [ :cls |
+			cls selectors do: [ :sel |
+				| src |
+				src := [ (cls compiledMethodAt: sel) sourceString ] on: Error do: [ '''' ].
+				(src includesSubstring: p) ifTrue: [
+					stream nextPutAll: cls name asString; nextPutAll: ''>>''; nextPutAll: sel asString; lf
+				]
+			]
+		].
+		stream contents
+	] value'.
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ :ex |
+		UIManager default inform: 'Browse methods-with-substring failed: ', ex messageText.
+		'' ].
+	references := ((raw asString splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asSortedCollection asArray.
+	references isEmpty ifTrue: [ UIManager default inform: 'No matches found.'. ^ self ].
+	presenterClass := Smalltalk at: #GbsMethodQueryResultsPresenter ifAbsent: [ nil ].
+	presenterClass ifNil: [
+		UIManager default inform: 'Could not open query results window: GbsMethodQueryResultsPresenter is not loaded.'.
+		^ self ].
+	sessionPart := (session respondsTo: #sessionId)
+		ifTrue: [ 'Session ', session sessionId asString, ' ' ]
+		ifFalse: [ '' ].
+	title := sessionPart, 'Methods with substring ', pattern trimBoth, ' (', references size asString, ')'.
+	[ presenterClass openOn: session references: references title: title ]
+		on: Error
+		do: [ :ex | UIManager default inform: 'Could not open query results window: ', ex messageText ].
 ]
 
 { #category : 'menus' }

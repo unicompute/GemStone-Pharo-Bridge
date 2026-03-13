@@ -41,6 +41,7 @@ GbsMethodQueryResultsPresenter >> windowTitle: aString [
 
 { #category : 'initialization' }
 GbsMethodQueryResultsPresenter >> initializePresenters [
+	references ifNil: [ references := #() ].
 	methodsList := self newList.
 	methodsList display: [ :each | each asString ].
 	sourceText := self newText.
@@ -49,10 +50,11 @@ GbsMethodQueryResultsPresenter >> initializePresenters [
 
 { #category : 'initialization' }
 GbsMethodQueryResultsPresenter >> connectPresenters [
+	references ifNil: [ references := #() ].
 	methodsList whenSelectionChangedDo: [ :selection |
 		self showSourceForReference: selection selectedItem ].
 	methodsList items: references.
-	references ifNotEmpty: [
+	(references notNil and: [ references isEmpty not ]) ifTrue: [
 		(methodsList respondsTo: #selectIndex:)
 			ifTrue: [ methodsList selectIndex: 1 ]
 			ifFalse: [
