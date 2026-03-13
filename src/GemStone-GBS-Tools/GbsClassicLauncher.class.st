@@ -491,8 +491,6 @@ GbsClassicLauncher class >> openSecurityPoliciesOnCurrentSession [
 { #category : 'menus' }
 GbsClassicLauncher class >> ensureQueryWindowSupportLoaded [
 	| readerClass |
-	((Smalltalk includesKey: #GbsMethodQueryResultsPresenter)
-		and: [ (Smalltalk includesKey: #GbsBrowser) ]) ifTrue: [ ^ self ].
 	readerClass := Smalltalk at: #TonelReader ifAbsent: [ ^ self ].
 	self loadTonelFile: '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsBrowser.class.st' withReader: readerClass.
 	self loadTonelFile: '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsMethodQueryResultsPresenter.class.st' withReader: readerClass.

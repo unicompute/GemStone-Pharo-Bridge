@@ -33,7 +33,8 @@ GbsMethodQueryResultsPresenter >> session: aSession [
 
 { #category : 'accessing' }
 GbsMethodQueryResultsPresenter >> references: aCollection [
-	references := self normalizeReferences: aCollection.
+	references := (self normalizeReferences: aCollection)
+		collect: [ :each | each ifNil: [ '' ] ifNotNil: [ each asString ] ].
 	allReferences := references copy
 ]
 
@@ -48,7 +49,7 @@ GbsMethodQueryResultsPresenter >> initializePresenters [
 	allReferences ifNil: [ allReferences := references copy ].
 	mainMenu := self buildMenuBar.
 	methodsList := self newList.
-	methodsList display: [ :each | each asString ].
+	methodsList display: [ :each | each ifNil: [ '' ] ifNotNil: [ each asString ] ].
 	sourceText := self newText.
 	(sourceText respondsTo: #beNotEditable) ifTrue: [ sourceText beNotEditable ].
 ]
@@ -57,7 +58,15 @@ GbsMethodQueryResultsPresenter >> initializePresenters [
 GbsMethodQueryResultsPresenter >> connectPresenters [
 	references ifNil: [ references := #() ].
 	methodsList whenSelectionChangedDo: [ :selection |
-		self showSourceForReference: selection selectedItem ].
+		| selected listSelection |
+		selected := (selection respondsTo: #selectedItem)
+			ifTrue: [ selection selectedItem ]
+			ifFalse: [
+				listSelection := methodsList selection.
+				(listSelection notNil and: [ listSelection respondsTo: #selectedItem ])
+					ifTrue: [ listSelection selectedItem ]
+					ifFalse: [ nil ] ].
+		self showSourceForReference: selected ].
 	methodsList items: references.
 	(references notNil and: [ references isEmpty not ]) ifTrue: [
 		(methodsList respondsTo: #selectIndex:)
@@ -258,18 +267,18 @@ GbsMethodQueryResultsPresenter >> normalizeReferences: aCollection [
 			ifFalse: [ aCollection asArray ] ].
 	normalized := OrderedCollection new.
 	rawItems do: [ :each |
-		| s tabs className selectorName firstNumeric classIndex selectorIndex parsed |
+		| s lines tabs className selectorName firstNumeric classIndex selectorIndex parsed |
 		s := each ifNil: [ '' ] ifNotNil: [ each asString ].
-		s := s copyReplaceAll: String cr with: ''.
-		s := s collect: [ :ch | ch isSeparator ifTrue: [ Character space ] ifFalse: [ ch ] ] as: String.
-		s := s trimBoth.
-		s isEmpty ifTrue: [ ] ifFalse: [
-			(s includesSubstring: '>>')
+		s := s copyReplaceAll: String crlf with: String lf.
+		s := s copyReplaceAll: String cr with: String lf.
+		lines := (s splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty.
+		lines do: [ :line |
+			(line includesSubstring: '>>')
 				ifTrue: [
-					parsed := self parseReference: s.
+					parsed := self parseReference: line.
 					parsed ifNotNil: [ normalized add: parsed first, '>>', parsed second ] ]
 				ifFalse: [
-					tabs := (s splitOn: Character tab) collect: #trimBoth thenReject: #isEmpty.
+					tabs := (line splitOn: Character tab) collect: #trimBoth thenReject: #isEmpty.
 					(tabs size >= 2)
 						ifTrue: [
 							firstNumeric := tabs first notEmpty
@@ -281,8 +290,7 @@ GbsMethodQueryResultsPresenter >> normalizeReferences: aCollection [
 							(className isEmpty or: [ selectorName isEmpty ])
 								ifFalse: [
 									parsed := self parseReference: className, '>>', selectorName.
-									parsed ifNotNil: [ normalized add: parsed first, '>>', parsed second ] ] ]
-						ifFalse: [ ] ] ] ].
+									parsed ifNotNil: [ normalized add: parsed first, '>>', parsed second ] ] ] ] ] ].
 	normalized isEmpty ifTrue: [
 		"Fallback so pane is never blank when upstream sends unexpected rows."
 		^ (rawItems
