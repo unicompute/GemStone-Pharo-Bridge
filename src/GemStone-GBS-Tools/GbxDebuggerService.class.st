@@ -1221,18 +1221,20 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	script := '[
 		| obj proc |
 		obj := Object _objectForOop: ', processOop asString, '.
-		proc := nil.
-		(obj isNil or: [ obj = 20 ]) ifTrue: [ proc := GciSession current process ].
-		proc isNil ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [ proc := obj serverProcess ].
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
 		].
-		proc isNil ifTrue: [
-			(obj respondsTo: #gbxResult) ifTrue: [ 
-				| res | res := [ obj gbxResult ] on: Error do: [ nil ].
-				(res notNil and: [ res respondsTo: #serverProcess ]) ifTrue: [ proc := res serverProcess ]
-			].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
 		].
-		proc isNil ifTrue: [ proc := obj ].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
 		
 		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
 		[ proc _trimStackToLevel: ', lvl asString, ' ] on: Error do: [ ^ ''false'' ].
