@@ -804,6 +804,80 @@ GbxDebuggerServiceTest >> testRestartTwiceKeepsExecutedCodeContextSelected [
 ]
 
 { #category : 'tests' }
+GbxDebuggerServiceTest >> testRestartTwiceKeepsTopFrameAtLineOne [
+	| oldContext nonExecuted restartedExecuted fakePolicy |
+	oldContext := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 5
+		sourceOffsets: #(1 6 7 8 9)
+		source: '| a b |', String lf, 'a := 10.', String lf, 'b := 0.', String lf, 'a / b'.
+	nonExecuted := self
+		makeActivationMethodClass: 'SmallInteger'
+		selector: #/
+		stepPoint: 5
+		sourceOffsets: #(1 6 7 8 9)
+		source: '| a b |', String lf, 'a := 10.', String lf, 'b := 0.', String lf, 'a / b'.
+	restartedExecuted := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 1
+		sourceOffsets: #(1 6 7 8 9)
+		source: '| a b |', String lf, 'a := 10.', String lf, 'b := 0.', String lf, 'a / b'.
+
+	service currentContext: oldContext.
+	service processOop: 111.
+	fakePolicy := GbxFakeContextListPolicyForService new.
+	fakePolicy contextList: { nonExecuted. restartedExecuted }.
+	service instVarNamed: 'contextStackPolicy' put: fakePolicy.
+
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			(script includesSubstring: '_trimStackToLevel:')
+				ifTrue: [ 'true' ]
+				ifFalse: [ 'true' ] ].
+
+	self assert: service restart.
+	self assert: service currentContext printString equals: 'GS: Executed code @1 line 1'.
+	self assert: service restart.
+	self assert: service currentContext printString equals: 'GS: Executed code @1 line 1'
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testRestartEmitsStepOneCommands [
+	| oldContext restartedExecuted fakePolicy scripts |
+	scripts := OrderedCollection new.
+	oldContext := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 4
+		sourceOffsets: #(1 6 7 8)
+		source: '1+1.', String lf, String lf, '1/0'.
+	restartedExecuted := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 1
+		sourceOffsets: #(1 6 7 8)
+		source: '1+1.', String lf, String lf, '1/0'.
+	service currentContext: oldContext.
+	service processOop: 111.
+	fakePolicy := GbxFakeContextListPolicyForService new.
+	fakePolicy contextList: { restartedExecuted }.
+	service instVarNamed: 'contextStackPolicy' put: fakePolicy.
+
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			scripts add: script.
+			'true' ].
+
+	self assert: service restart.
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: '_trimStackToLevel:' ]).
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'jumpToStepPoint' and: [ each includesSubstring: 'with: 1' ] ])
+]
+
+{ #category : 'tests' }
 GbxDebuggerServiceTest >> testCutbackToGsProcessOfTerminatesProcessAndClearsErrorSession [
 	| gsContext fakeError |
 	gsContext := GbxFakeActivationForService new.

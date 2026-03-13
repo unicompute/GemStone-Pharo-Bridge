@@ -1100,16 +1100,16 @@ GbxDebuggerService >> basicReenterServerContext [
 			"First, reset the server-side PC to step 1 BEFORE fetching the context list.
 			This ensures the server reports the correct step point."
 			self resetServerPCToStepOne.
-			
+
 			"Level numbers may have changed; recompute and select top server context."
 			self selectTopServerContext.
-			
+
 			"After restart, mark the NEW current context as an executed code frame with step=1.
 			This is critical: selectTopServerContext fetches fresh context from server,
 			so we must mark it AFTER to ensure step=1 is set. This fixes the bug where
 			second restart does not reset Frame Step to 1."
 			self markCurrentContextAsRestarted.
-			
+
 			"Force another refresh to ensure the display shows step=1"
 			self notifyContextChanged
 		]) ifFalse: [ ^ false ].
@@ -1155,10 +1155,11 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	"Force the debugged server process to restart at method entry (step=1).
 	This is the deterministic restart anchor used by basicReenterServerContext,
 	especially important for repeated Restart actions."
-	(self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true)
-		ifTrue: [ ^ true ].
-	(self runDebugProcessCommand: 'runToStepPoint' withInteger: 1 recompute: true)
-		ifTrue: [ ^ true ].
+	| didReset |
+	didReset := self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true.
+	didReset ifTrue: [ ^ true ].
+	didReset := self runDebugProcessCommand: 'runToStepPoint' withInteger: 1 recompute: true.
+	didReset ifTrue: [ ^ true ].
 	"Fallback to local context normalization if server command is unavailable."
 	self forceRestartPositionToMethodStart.
 	^ false
@@ -1292,19 +1293,9 @@ GbxDebuggerService >> firstServerContextAbove: clientContext [
 
 { #category : 'process control' }
 GbxDebuggerService >> restart [
-	"Use a single deterministic server reenter path.
-	The trimStack fast-path can leave stale step offsets and cause
-	second-restart step jumps (1 -> 4)."
-	| target didRestart |
-	target := self restartTargetContext.
-	target ifNotNil: [ self selectContext: target ].
-	didRestart := self basicReenterServerContext.
-	didRestart ifTrue: [
-		self selectRestartTargetContext.
-		self ensureRestartAtStepOne.
-		self selectRestartTargetContext
-	].
-	^ didRestart
+	"Restart the current context using the coordinated reenter operation.
+	Fixes bug where second restart does not reset Frame Step to 1."
+	^ self basicReenterServerContext
 ]
 
 { #category : 'private' }

@@ -2789,6 +2789,13 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
 	context := contextList at: index.
 
+	"CRITICAL FIX for second restart bug: Mark context as restarted BEFORE updating UI.
+	This ensures step=1 is set before the display reads the step point value.
+	The server may report old step point, so we force it to 1 locally."
+	(context respondsTo: #markAsExecutedCodeFrame) ifTrue: [
+		context markAsExecutedCodeFrame
+	].
+
 	service ifNotNil: [
 		(service respondsTo: #currentContext:)
 			ifTrue: [ service currentContext: context ].
@@ -2799,18 +2806,12 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	(stackList respondsTo: #selectIndex:)
 		ifTrue: [ stackList selectIndex: index ].
 
+	"Now update UI - context now has step=1"
 	self contextSelected: context.
 	self moveSourceCursorToStart.
 	
-	"Fix for second restart bug: Ensure step point is reset to 1.
-	The context from server may have old step point, so force it to 1."
-	(context respondsTo: #markAsExecutedCodeFrame) ifTrue: [
-		"Only mark if not already marked (step=1)"
-		((context respondsTo: #quickStepPoint) and: [ context quickStepPoint > 1 ]) ifTrue: [
-			context markAsExecutedCodeFrame.
-			self applySourceMapHighlightFor: context
-		]
-	]
+	"Force UI refresh to ensure Step=1 is displayed"
+	self refreshUiState
 ]
 
 { #category : 'private' }
