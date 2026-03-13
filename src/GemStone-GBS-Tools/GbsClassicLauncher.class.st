@@ -245,7 +245,7 @@ GbsClassicLauncher class >> logoutCurrentSession [
 
 	params := GbsSessionParameters allSessions
 		detect: [ :each |
-			(each respondsTo: #isConnected) and: [ each isConnected = true ] and: [
+			((each respondsTo: #isConnected) and: [ each isConnected = true ]) and: [
 				sessionId isNil
 					ifTrue: [ true ]
 					ifFalse: [ (each respondsTo: #sessionId) and: [ each sessionId = sessionId ] ] ] ]
