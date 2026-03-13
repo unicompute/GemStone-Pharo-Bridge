@@ -1602,8 +1602,7 @@ GbsRemoteDebugger >> stepOver [
 { #category : 'private' }
 GbsRemoteDebugger >> resetServerPCToStepOneIfNeeded [
 	"Reset server PC to step 1 if we're in an executed code frame.
-	This ensures stepping starts from the beginning of the method.
-	Always force server jump on executed code frames to ensure correct stepping."
+	This ensures stepping starts from the beginning of the method."
 	| context |
 	contextList ifNil: [ ^ false ].
 	contextList ifEmpty: [ ^ false ].
@@ -1611,9 +1610,8 @@ GbsRemoteDebugger >> resetServerPCToStepOneIfNeeded [
 	context := contextList at: 1.
 	((context respondsTo: #isExecutedCodeFrame) and: [ context isExecutedCodeFrame ]) ifFalse: [ ^ false ].
 	
-	"Always force server to jump to step 1 for executed code frames.
-	The server may have old step point even if local context shows step=1."
-	^ self safeServiceCall: [ service jumpToStepPoint: 1 ] default: false
+	"Force server to jump to step 1"
+	^ self forceServerJumpToStepPoint1
 ]
 
 { #category : 'private' }
@@ -1624,6 +1622,11 @@ GbsRemoteDebugger >> directStepOverExecutedFrame: stepIntoBoolean [
 
 	level := self currentSelectedFrameLevel.
 	(level isNumber and: [ level > 0 ]) ifFalse: [ level := 1 ].
+	
+	"CRITICAL FIX: Force server PC to step 1 BEFORE stepping from executed code frame.
+	The server may have old step point even after restart."
+	self forceServerJumpToStepPoint1.
+	
 	effectiveLevel := self resolveExecutedFrameLevelFromServer.
 	(effectiveLevel isNumber and: [ effectiveLevel > 0 ]) ifTrue: [ level := effectiveLevel ].
 	stepIntoBoolean ifTrue: [ level := level bitOr: 16r100000000 ].
@@ -1659,6 +1662,40 @@ GbsRemoteDebugger >> directStepOverExecutedFrame: stepIntoBoolean [
 		ifTrue: [ raw asString asLowercase ]
 		ifFalse: [ '' ].
 	^ value = 'true' or: [ value = '1' or: [ value = 'ok' ] ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
+	"Force the server process to jump to step point 1.
+	This is critical for correct stepping after restart."
+	| script raw |
+	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
+	
+	script := '[
+		| obj proc |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ false ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		proc isNil ifTrue: [ ^ false ].
+		(proc respondsTo: #jumpToStepPoint:) ifFalse: [ ^ false ].
+		[ proc jumpToStepPoint: 1 ] on: Error do: [ ^ false ].
+		true
+	] value'.
+	
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	^ raw = true or: [ raw = 'true' ]
 ]
 
 { #category : 'private' }
@@ -2568,7 +2605,7 @@ GbsRemoteDebugger >> ensureServerPCToStepOneAfterRestart [
 	((context respondsTo: #isExecutedCodeFrame) and: [ context isExecutedCodeFrame ]) ifFalse: [ ^ self ].
 	
 	"Force server to jump to step 1"
-	self safeServiceCall: [ service jumpToStepPoint: 1 ] default: false
+	self forceServerJumpToStepPoint1
 ]
 
 { #category : 'private' }
