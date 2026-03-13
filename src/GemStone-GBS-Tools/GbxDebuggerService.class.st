@@ -1150,6 +1150,20 @@ GbxDebuggerService >> ensureRestartAtStepOne [
 	self selectTopServerContext
 ]
 
+{ #category : 'private' }
+GbxDebuggerService >> resetServerPCToStepOne [
+	"Force the debugged server process to restart at method entry (step=1).
+	This is the deterministic restart anchor used by basicReenterServerContext,
+	especially important for repeated Restart actions."
+	(self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true)
+		ifTrue: [ ^ true ].
+	(self runDebugProcessCommand: 'runToStepPoint' withInteger: 1 recompute: true)
+		ifTrue: [ ^ true ].
+	"Fallback to local context normalization if server command is unavailable."
+	self forceRestartPositionToMethodStart.
+	^ false
+]
+
 { #category : 'actions' }
 GbxDebuggerService >> cutbackTo: aContext finishWith: aBlock [
 	"Discard any partially-completed execution above aContext on the logical
