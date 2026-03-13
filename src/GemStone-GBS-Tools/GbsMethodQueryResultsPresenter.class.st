@@ -41,7 +41,17 @@ GbsMethodQueryResultsPresenter >> session: aSession [
 GbsMethodQueryResultsPresenter >> references: aCollection [
 	references := (self normalizeReferences: aCollection)
 		collect: [ :each | each ifNil: [ '' ] ifNotNil: [ each asString ] ].
-	allReferences := references copy
+	allReferences := references copy.
+	"Spec lifecycle can call this after connectPresenters; refresh list immediately if present."
+	methodsList ifNotNil: [
+		(methodsList respondsTo: #items:) ifTrue: [ methodsList items: references ].
+		references ifNotEmpty: [
+			(methodsList respondsTo: #selectIndex:)
+				ifTrue: [ methodsList selectIndex: 1 ]
+				ifFalse: [
+					(methodsList respondsTo: #selectItem:)
+						ifTrue: [ methodsList selectItem: references first ] ].
+			self showSourceForReference: references first ] ]
 ]
 
 { #category : 'accessing' }
