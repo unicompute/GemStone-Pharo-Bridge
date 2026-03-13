@@ -959,6 +959,54 @@ GbxDebuggerServiceTest >> testStepOverNormalizesExecutedCodeJumpBackToNextStep [
 ]
 
 { #category : 'tests' }
+GbxDebuggerServiceTest >> testRestartSecondCycleStepsFromOneToTwo [
+	| executed fakePolicy |
+	executed := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 4
+		sourceOffsets: #(1 6 7 8)
+		source: '1+1.', String lf, String lf, '1/0'.
+	service currentContext: executed.
+	service processOop: 111.
+	fakePolicy := GbxFakeContextListPolicyForService new.
+	fakePolicy contextList: { executed }.
+	service instVarNamed: 'contextStackPolicy' put: fakePolicy.
+
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			(script includesSubstring: '_trimStackToLevel:') ifTrue: [
+				executed quickStepPoint: 1.
+				^ 'true'
+			].
+			(script includesSubstring: 'jumpToStepPoint') ifTrue: [
+				executed quickStepPoint: 1.
+				^ 'true'
+			].
+			(script includesSubstring: 'runToStepPoint') ifTrue: [
+				executed quickStepPoint: 1.
+				^ 'true'
+			].
+			(script includesSubstring: '_stepOverInFrame:') ifTrue: [
+				executed quickStepPoint: ((executed quickStepPoint ifNil: [ 0 ]) + 1).
+				^ 'true'
+			].
+			'' ].
+
+	self assert: service restart.
+	self assert: service currentStepPoint equals: 1.
+	self assert: service stepOver.
+	self assert: service currentStepPoint equals: 2.
+	self assert: service stepOver.
+	self assert: service currentStepPoint equals: 3.
+	self assert: service restart.
+	self assert: service currentStepPoint equals: 1.
+	self assert: service stepOver.
+	self assert: service currentStepPoint equals: 2
+]
+
+{ #category : 'tests' }
 GbxDebuggerServiceTest >> testCutbackToGsProcessOfTerminatesProcessAndClearsErrorSession [
 	| gsContext fakeError |
 	gsContext := GbxFakeActivationForService new.

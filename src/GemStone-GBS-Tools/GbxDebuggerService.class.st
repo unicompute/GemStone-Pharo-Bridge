@@ -1352,7 +1352,14 @@ GbxDebuggerService >> restart [
 			didRestart ifTrue: [ self selectRestartTargetContext ].
 		].
 		self ensureRestartAtStepOne.
-		self selectRestartTargetContext
+		self selectRestartTargetContext.
+		(self isExecutedCodeAtStepOne) ifFalse: [
+			"Final deterministic guard: force server PC and UI context to method start."
+			self resetServerPCToStepOne.
+			self selectTopServerContext.
+			self markCurrentContextAsRestarted.
+			self selectRestartTargetContext
+		]
 	].
 	self logRestartText: 'restart/result=', didRestart asString.
 	self logRestartState: 'restart/end' context: self currentContext.
