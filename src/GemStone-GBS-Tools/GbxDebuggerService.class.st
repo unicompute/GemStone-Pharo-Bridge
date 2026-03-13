@@ -1094,6 +1094,7 @@ GbxDebuggerService >> basicReenterServerContext [
 	| theContext |
 	theContext := currentContext.
 	theContext ifNil: [ ^ false ].
+	self logRestartState: 'basicReenter/start' context: theContext.
 
 	(self cutbackTo: theContext
 		finishWith: [
@@ -1113,6 +1114,7 @@ GbxDebuggerService >> basicReenterServerContext [
 			"Force another refresh to ensure the display shows step=1"
 			self notifyContextChanged
 		]) ifFalse: [ ^ false ].
+	self logRestartState: 'basicReenter/done' context: self currentContext.
 
 	^ true
 ]
@@ -1144,6 +1146,7 @@ GbxDebuggerService >> ensureRestartAtStepOne [
 	| step |
 	(self isCurrentExecutedCodeFrame) ifFalse: [ ^ self ].
 	step := self currentStepPoint ifNil: [ 1 ].
+	self logRestartText: 'ensureRestartAtStepOne step=', step asString.
 	step > 1 ifFalse: [ ^ self ].
 	(self jumpToStepPoint: 1)
 		ifFalse: [ self runToStepPoint: 1 ].
@@ -1157,11 +1160,14 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	especially important for repeated Restart actions."
 	| didReset |
 	didReset := self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true.
+	self logRestartText: 'resetServerPCToStepOne jumpToStepPoint:1 -> ', didReset asString.
 	didReset ifTrue: [ ^ true ].
 	didReset := self runDebugProcessCommand: 'runToStepPoint' withInteger: 1 recompute: true.
+	self logRestartText: 'resetServerPCToStepOne runToStepPoint:1 -> ', didReset asString.
 	didReset ifTrue: [ ^ true ].
 	"Fallback to local context normalization if server command is unavailable."
 	self forceRestartPositionToMethodStart.
+	self logRestartText: 'resetServerPCToStepOne fallback forceRestartPositionToMethodStart'.
 	^ false
 ]
 
@@ -1295,7 +1301,39 @@ GbxDebuggerService >> firstServerContextAbove: clientContext [
 GbxDebuggerService >> restart [
 	"Restart the current context using the coordinated reenter operation.
 	Fixes bug where second restart does not reset Frame Step to 1."
-	^ self basicReenterServerContext
+	| didRestart |
+	self logRestartState: 'restart/start' context: self currentContext.
+	didRestart := self basicReenterServerContext.
+	self logRestartText: 'restart/result=', didRestart asString.
+	self logRestartState: 'restart/end' context: self currentContext.
+	^ didRestart
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> logRestartState: labelString context: aContext [
+	| step level frame |
+	step := (aContext notNil and: [ aContext respondsTo: #quickStepPoint ])
+		ifTrue: [ [ aContext quickStepPoint ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	level := (aContext notNil and: [ aContext respondsTo: #level ])
+		ifTrue: [ [ aContext level ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	frame := aContext
+		ifNil: [ '<nil>' ]
+		ifNotNil: [ [ aContext printString ] on: Error do: [ '<print error>' ] ].
+	self
+		logRestartText:
+			(labelString, ' frame=', frame,
+				' level=', (level ifNil: [ 'nil' ] ifNotNil: [ level asString ]),
+				' step=', (step ifNil: [ 'nil' ] ifNotNil: [ step asString ]))
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> logRestartText: aString [
+	Transcript
+		show: 'GbxDebuggerService ';
+		show: aString;
+		cr
 ]
 
 { #category : 'private' }
