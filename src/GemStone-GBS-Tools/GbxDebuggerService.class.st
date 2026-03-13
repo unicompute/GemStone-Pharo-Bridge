@@ -1757,22 +1757,42 @@ GbxDebuggerService >> sourceOffsetForBreakPoint: aBreakPoint [
 GbxDebuggerService >> stepInto [
 	"VW parity: step-into on server contexts is implemented by _stepOverInFrame:
 	with the step-through flag in the high bit of level."
-	| level |
+	| level before |
+	before := self currentStepPoint.
 	level := self effectiveServerStepLevel.
 	level ifNil: [ level := 1 ].
 	(self serverStepOverFrameLevel: (level bitOr: 16r100000000))
-		ifTrue: [ ^ true ].
+		ifTrue: [ ^ self normalizeExecutedCodeSingleStepFrom: before ].
 	^ false
 ]
 
 { #category : 'stepping' }
 GbxDebuggerService >> stepOver [
-	| level |
+	| level before |
+	before := self currentStepPoint.
 	level := self effectiveServerStepLevel.
 	level ifNil: [ level := 1 ].
 	(self serverStepOverFrameLevel: level)
-		ifTrue: [ ^ true ].
+		ifTrue: [ ^ self normalizeExecutedCodeSingleStepFrom: before ].
 	^ false
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> normalizeExecutedCodeSingleStepFrom: previousStepPoint [
+	| currentStep target |
+	(previousStepPoint isNumber and: [ previousStepPoint > 0 ]) ifFalse: [ ^ true ].
+	self isCurrentExecutedCodeFrame ifFalse: [ ^ true ].
+	currentStep := self currentStepPoint.
+	target := previousStepPoint + 1.
+	currentStep = target ifTrue: [ ^ true ].
+	self
+		logRestartText:
+			'normalize single-step previous=', previousStepPoint asString,
+			' current=', (currentStep ifNil: [ 'nil' ] ifNotNil: [ currentStep asString ]),
+			' target=', target asString.
+	(self jumpToStepPoint: target) ifTrue: [ ^ true ].
+	(self runToStepPoint: target) ifTrue: [ ^ true ].
+	^ true
 ]
 
 { #category : 'private' }

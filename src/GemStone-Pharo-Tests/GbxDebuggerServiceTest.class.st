@@ -880,6 +880,85 @@ GbxDebuggerServiceTest >> testRestartEmitsStepOneCommands [
 ]
 
 { #category : 'tests' }
+GbxDebuggerServiceTest >> testSecondRestartThenStepOverAdvancesFromOneToTwo [
+	| oldContext restartedExecuted fakePolicy |
+	oldContext := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 4
+		sourceOffsets: #(1 6 7 8)
+		source: '1+1.', String lf, String lf, '1/0'.
+	restartedExecuted := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 1
+		sourceOffsets: #(1 6 7 8)
+		source: '1+1.', String lf, String lf, '1/0'.
+
+	service currentContext: oldContext.
+	service processOop: 111.
+	fakePolicy := GbxFakeContextListPolicyForService new.
+	fakePolicy contextList: { restartedExecuted }.
+	service instVarNamed: 'contextStackPolicy' put: fakePolicy.
+
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			(script includesSubstring: '_trimStackToLevel:') ifTrue: [ ^ 'true' ].
+			(script includesSubstring: 'jumpToStepPoint') ifTrue: [ ^ 'true' ].
+			(script includesSubstring: '_stepOverInFrame:') ifTrue: [
+				restartedExecuted quickStepPoint: 2.
+				^ 'true'
+			].
+			'' ].
+
+	self assert: service restart.
+	self assert: service currentStepPoint equals: 1.
+	self assert: service restart.
+	self assert: service currentStepPoint equals: 1.
+	self assert: service stepOver.
+	self assert: service currentStepPoint equals: 2.
+	self assert: service currentContext printString equals: 'GS: Executed code @2 line 2'
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testStepOverNormalizesExecutedCodeJumpBackToNextStep [
+	| executed fakePolicy |
+	executed := self
+		makeActivationMethodClass: nil
+		selector: nil
+		stepPoint: 1
+		sourceOffsets: #(1 6 7 8)
+		source: '1+1.', String lf, String lf, '1/0'.
+	service currentContext: executed.
+	service processOop: 111.
+	fakePolicy := GbxFakeContextListPolicyForService new.
+	fakePolicy contextList: { executed }.
+	service instVarNamed: 'contextStackPolicy' put: fakePolicy.
+
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			(script includesSubstring: '_stepOverInFrame:') ifTrue: [
+				executed quickStepPoint: 4.
+				^ 'true'
+			].
+			(script includesSubstring: 'jumpToStepPoint') ifTrue: [
+				executed quickStepPoint: 2.
+				^ 'true'
+			].
+			(script includesSubstring: 'runToStepPoint') ifTrue: [
+				executed quickStepPoint: 2.
+				^ 'true'
+			].
+			'' ].
+
+	self assert: service stepOver.
+	self assert: service currentStepPoint equals: 2.
+	self assert: service currentContext printString equals: 'GS: Executed code @2 line 2'
+]
+
+{ #category : 'tests' }
 GbxDebuggerServiceTest >> testCutbackToGsProcessOfTerminatesProcessAndClearsErrorSession [
 	| gsContext fakeError |
 	gsContext := GbxFakeActivationForService new.
