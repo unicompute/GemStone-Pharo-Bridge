@@ -1308,12 +1308,23 @@ GbxDebuggerService >> restart [
 	didRestart := self basicReenterServerContext.
 	didRestart ifTrue: [
 		self selectRestartTargetContext.
+		(self isExecutedCodeAtStepOne) ifFalse: [
+			self logRestartText: 'restart auto-retry: first reenter did not reach step 1'.
+			didRestart := self basicReenterServerContext.
+			didRestart ifTrue: [ self selectRestartTargetContext ].
+		].
 		self ensureRestartAtStepOne.
 		self selectRestartTargetContext
 	].
 	self logRestartText: 'restart/result=', didRestart asString.
 	self logRestartState: 'restart/end' context: self currentContext.
 	^ didRestart
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> isExecutedCodeAtStepOne [
+	^ self isCurrentExecutedCodeFrame
+		and: [ (self currentStepPoint ifNil: [ 0 ]) = 1 ]
 ]
 
 { #category : 'private' }
