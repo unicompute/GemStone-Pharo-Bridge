@@ -145,6 +145,46 @@ GbsBrowserTest >> testQueryImplementorsUsesPromptAndOpensSingleResult [
 ]
 
 { #category : 'tests' }
+GbsBrowserTest >> testQueryHierarchySendersUsesHierarchyMode [
+	| browser classes |
+	browser := TestableGbsBrowser new.
+	classes := GbxFakeListPresenterForBrowser new.
+	classes selectedItem: 'Object'.
+	browser instVarNamed: 'classesList' put: classes.
+	browser enqueueRequestAnswer: 'size'.
+	browser queryResults: #('Object>>size') forMode: 'hierarchySenders'.
+
+	self assert: browser queryHierarchySenders.
+	self assert: browser lastQueriedSelector equals: 'size'.
+	self assert: browser lastQueriedMode equals: 'hierarchySenders'
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testQueryHierarchyImplementorsUsesHierarchyMode [
+	| browser classes |
+	browser := TestableGbsBrowser new.
+	classes := GbxFakeListPresenterForBrowser new.
+	classes selectedItem: 'Object'.
+	browser instVarNamed: 'classesList' put: classes.
+	browser enqueueRequestAnswer: 'size'.
+	browser queryResults: #('Object>>size') forMode: 'hierarchyImplementors'.
+
+	self assert: browser queryHierarchyImplementors.
+	self assert: browser lastQueriedSelector equals: 'size'.
+	self assert: browser lastQueriedMode equals: 'hierarchyImplementors'
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testQueryHierarchyRequiresSelectedClass [
+	| browser |
+	browser := TestableGbsBrowser new.
+	browser enqueueRequestAnswer: 'size'.
+
+	self deny: browser queryHierarchySenders.
+	self assert: browser lastInfoMessage equals: 'Select a class first for hierarchy queries.'
+]
+
+{ #category : 'tests' }
 GbsBrowserTest >> testOpenQueryResultsChoosesFromMultipleReferences [
 	| browser |
 	browser := TestableGbsBrowser new.

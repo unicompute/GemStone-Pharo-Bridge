@@ -748,12 +748,21 @@ GbsBrowser >> queryReferences [
 
 { #category : 'actions' }
 GbsBrowser >> queryHierarchySenders [
+	(self ensureHierarchyQueryClassSelected) ifFalse: [ ^ false ].
 	^ self queryMethodsForSelectorPrompt: 'Hierarchy senders of selector:' mode: 'hierarchySenders'
 ]
 
 { #category : 'actions' }
 GbsBrowser >> queryHierarchyImplementors [
+	(self ensureHierarchyQueryClassSelected) ifFalse: [ ^ false ].
 	^ self queryMethodsForSelectorPrompt: 'Hierarchy implementors of selector:' mode: 'hierarchyImplementors'
+]
+
+{ #category : 'private' }
+GbsBrowser >> ensureHierarchyQueryClassSelected [
+	self selectedClassName ifNotNil: [ :name | name isEmpty ifFalse: [ ^ true ] ].
+	self inform: 'Select a class first for hierarchy queries.'.
+	^ false
 ]
 
 { #category : 'private' }
