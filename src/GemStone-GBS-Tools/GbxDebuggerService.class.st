@@ -1205,12 +1205,8 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	gsContext on the stack of its GSProcess. Also discards 
 	any partial execution in gsContext, resetting it to the 
 	beginning."
-	| lvl computed script result |
+	| lvl script result |
 	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ 1 ].
-	((gsContext respondsTo: #isExecutedCodeFrame) and: [ gsContext isExecutedCodeFrame ]) ifTrue: [
-		computed := self restartLevelFromServerStack.
-		(computed isNumber and: [ computed > 0 ]) ifTrue: [ lvl := computed ].
-	].
 	
 	script := '[
 		| obj proc |
@@ -1734,11 +1730,8 @@ GbxDebuggerService >> stepOver [
 
 { #category : 'private' }
 GbxDebuggerService >> effectiveServerStepLevel [
-	| level resolved |
+	| level |
 	level := self currentContextLevel.
-	(self isCurrentExecutedCodeFrame not) ifTrue: [ ^ level ].
-	resolved := self restartLevelFromServerStack.
-	(resolved isNumber and: [ resolved > 0 ]) ifTrue: [ ^ resolved ].
 	^ level
 ]
 
