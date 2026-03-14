@@ -60,7 +60,10 @@ GbsSessionParameters class >> currentSession [
 
 { #category : 'accessing' }
 GbsSessionParameters class >> currentSession: aSession [
-	CurrentSession := aSession
+	CurrentSession := aSession.
+	(Smalltalk globals at: #GBSM ifAbsent: [ nil ]) ifNotNil: [ :gbsm |
+		(gbsm respondsTo: #currentSession:)
+			ifTrue: [ gbsm currentSession: aSession ] ]
 ]
 
 { #category : 'polling' }
@@ -328,18 +331,18 @@ GbsSessionParameters >> login [
 	    sessionId := result.
 
 	    "Create the active session wrapper and mark it logged in"
-	    CurrentSession := GbsSession new
+	    self class currentSession: (GbsSession new
 	                        sessionId: result;
 	                        sessionOop: result;
 	                        isLoggedIn: true;
 	                        parameters: self;
-	                        yourself.
+	                        yourself).
                         
     "Register so it appears in the bottom list"
     self class registerSession: self.
     self inform: 'Login Successful'.
     
-    ^ CurrentSession
+    ^ self class currentSession
 ]
 
 { #category : 'connection' }
@@ -356,7 +359,7 @@ GbsSessionParameters >> logout [
 
         "2. Clear Local State"
         sessionId := nil.
-        CurrentSession := nil.
+        self class currentSession: nil.
         
         "3. Unregister from the Active List"
         self class unregisterSession: self.

@@ -91,6 +91,7 @@ GbsUserListPresenter >> buildMenuBar [
 			group
 				addItem: [ :item | item name: 'File'; subMenu: self menuFile ];
 				addItem: [ :item | item name: 'User'; subMenu: self menuUser ];
+				addItem: [ :item | item name: 'Report'; subMenu: self menuReport ];
 				addItem: [ :item | item name: 'Help'; subMenu: self menuHelp ] ];
 		yourself
 ]
@@ -116,6 +117,15 @@ GbsUserListPresenter >> menuUser [
 GbsUserListPresenter >> menuHelp [
 	^ self newMenu
 		addItem: [ :item | item name: 'About GemStone User List'; action: [ UIManager default inform: 'GemStone User List' ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsUserListPresenter >> menuReport [
+	^ self newMenu
+		addItem: [ :item | item name: 'Copy User Report'; action: [ Clipboard clipboardText: self userReportText ] ];
+		addItem: [ :item | item name: 'Copy Group Report'; action: [ Clipboard clipboardText: self groupReportText ] ];
+		addItem: [ :item | item name: 'Show Full Report'; action: [ UIManager default edit: self fullReportText label: 'GemStone User Report' ] ];
 		yourself
 ]
 
@@ -389,4 +399,32 @@ GbsUserListPresenter >> updateActionButtons [
 	hasSelection := self selectedUserName notNil.
 	showUserInfoButton ifNotNil: [ hasSelection ifTrue: [ showUserInfoButton enable ] ifFalse: [ showUserInfoButton disable ] ].
 	deleteUserButton ifNotNil: [ hasSelection ifTrue: [ deleteUserButton enable ] ifFalse: [ deleteUserButton disable ] ]
+]
+
+{ #category : 'private' }
+GbsUserListPresenter >> userReportText [
+	| users selected |
+	users := userList ifNil: [ #() ] ifNotNil: [ userList items ifNil: [ #() ] ].
+	selected := self selectedUserName.
+	(selected notNil and: [ selected isEmpty not ]) ifTrue: [ users := { selected } ].
+	^ String streamContents: [ :stream |
+		stream nextPutAll: '=== Users ==='; cr.
+		users do: [ :each | stream nextPutAll: each asString; cr ] ]
+]
+
+{ #category : 'private' }
+GbsUserListPresenter >> groupReportText [
+	| groups selected |
+	groups := groupList ifNil: [ #() ] ifNotNil: [ groupList items ifNil: [ #() ] ].
+	selected := self selectedUserName.
+	^ String streamContents: [ :stream |
+		stream nextPutAll: '=== Groups ==='; cr.
+		selected ifNotNil: [
+			stream nextPutAll: 'User: '; nextPutAll: selected asString; cr ].
+		groups do: [ :each | stream nextPutAll: each asString; cr ] ]
+]
+
+{ #category : 'private' }
+GbsUserListPresenter >> fullReportText [
+	^ self userReportText, String cr, self groupReportText
 ]

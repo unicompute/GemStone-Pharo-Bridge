@@ -88,8 +88,18 @@ GbsConnector >> connectorStateDictionary [
 GbsConnector >> sessionKeyFor: aSession [
 	| params user stone |
 	aSession ifNil: [ ^ 'default' ].
-	(aSession respondsTo: #parameters) ifFalse: [ ^ 'default' ].
-	params := [ aSession parameters ] on: Error do: [ nil ].
+	((aSession respondsTo: #username) and: [ aSession respondsTo: #gemStoneName ]) ifTrue: [
+		user := [ aSession username ] on: Error do: [ nil ].
+		stone := [ aSession gemStoneName ] on: Error do: [ nil ].
+		^ (user ifNil: [ 'unknown-user' ] ifNotNil: [ user asString ]),
+			'@',
+			(stone ifNil: [ 'unknown-stone' ] ifNotNil: [ stone asString ]) ].
+	params := (aSession respondsTo: #parameters)
+		ifTrue: [ [ aSession parameters ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	params ifNil: [
+		(aSession respondsTo: #instVarNamed:)
+			ifTrue: [ params := [ aSession instVarNamed: 'parameters' ] on: Error do: [ nil ] ] ].
 	params ifNil: [ ^ 'default' ].
 	user := [ params username ] on: Error do: [ nil ].
 	stone := [ params gemStoneName ] on: Error do: [ nil ].

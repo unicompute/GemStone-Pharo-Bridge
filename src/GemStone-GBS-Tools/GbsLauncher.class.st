@@ -41,10 +41,8 @@ GbsLauncher >> connectPresenters [
 { #category : 'actions' }
 GbsLauncher >> openSystemBrowser [
 	| session |
-	session := GbsSessionParameters currentSession.
-	(self isSessionUsableForBrowsing: session) ifFalse: [
-		^ self inform: 'No connected GemStone session. Please login first.'
-	].
+	session := GbsAdminSessionSupport currentUsableSessionOrInform.
+	session ifNil: [ ^ self ].
 	[
 		GbsBrowser openOn: session
 	] on: Error do: [ :ex |
@@ -55,10 +53,8 @@ GbsLauncher >> openSystemBrowser [
 { #category : 'actions' }
 GbsLauncher >> openUsers [
 	| session |
-	session := GbsSessionParameters currentSession.
-	(self isSessionUsableForBrowsing: session) ifFalse: [
-		^ self inform: 'No connected GemStone session. Please login first.'
-	].
+	session := GbsAdminSessionSupport currentUsableSessionOrInform.
+	session ifNil: [ ^ self ].
 	[
 		GbsUserListPresenter openOn: session
 	] on: Error do: [ :ex |

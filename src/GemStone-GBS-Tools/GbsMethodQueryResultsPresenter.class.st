@@ -100,7 +100,8 @@ GbsMethodQueryResultsPresenter >> initializePresenters [
 	sourceText := self newText.
 	(sourceText respondsTo: #beNotEditable) ifTrue: [ sourceText beNotEditable ].
 	countStatus := self newLabel label: ''.
-	selectionStatus := self newLabel label: ''
+	selectionStatus := self newLabel label: ''.
+	self updateActionEnablement
 ]
 
 { #category : 'initialization' }
@@ -116,6 +117,16 @@ GbsMethodQueryResultsPresenter >> connectPresenters [
 					ifTrue: [ listSelection selectedItem ]
 					ifFalse: [ nil ] ].
 		self showSourceForReference: selected ].
+	(methodsList respondsTo: #whenActivatedDo:) ifTrue: [
+		methodsList whenActivatedDo: [ :selection |
+			(self selectedReferenceFromEvent: selection)
+				ifNotNil: [ self browseSelectedReference ] ] ].
+	(methodsList respondsTo: #whenSubmitDo:) ifTrue: [
+		methodsList whenSubmitDo: [ :selection |
+			(self selectedReferenceFromEvent: selection)
+				ifNotNil: [ self browseSelectedReference ] ] ].
+	(methodsList respondsTo: #contextMenu:) ifTrue: [
+		methodsList contextMenu: [ self menuMethodPopup ] ].
 	self reloadReferencesIntoList
 ]
 
@@ -247,23 +258,27 @@ GbsMethodQueryResultsPresenter >> menuMethod [
 				item
 					name: 'Browse';
 					icon: self iconForBrowseAction;
-					action: [ self browseSelectedReference ] ].
+					action: [ self browseSelectedReference ].
+				(item respondsTo: #enabled:) ifTrue: [ item enabled: self canRunMethodScopedActions ] ].
 			group addItem: [ :item |
 				item
 					name: 'Browse Hierarchy';
 					icon: self iconForHierarchyImplementorsAction;
-					action: [ self browseHierarchyImplementorsOfSelected ] ] ];
+					action: [ self browseHierarchyImplementorsOfSelected ].
+				(item respondsTo: #enabled:) ifTrue: [ item enabled: self canRunMethodScopedActions ] ] ];
 		addGroup: [ :group |
 			group addItem: [ :item |
 				item
 					name: 'Senders';
 					icon: self iconForSendersAction;
-					action: [ self browseSendersOfSelected ] ].
+					action: [ self browseSendersOfSelected ].
+				(item respondsTo: #enabled:) ifTrue: [ item enabled: self canRunMethodScopedActions ] ].
 			group addItem: [ :item |
 				item
 					name: 'Implementors';
 					icon: self iconForImplementorsAction;
-					action: [ self browseImplementorsOfSelected ] ].
+					action: [ self browseImplementorsOfSelected ].
+				(item respondsTo: #enabled:) ifTrue: [ item enabled: self canRunMethodScopedActions ] ].
 			group addItem: [ :item | item name: 'Hierarchy Senders'; subMenu: self menuHierarchySenders ].
 			group addItem: [ :item | item name: 'Hierarchy Implementors'; subMenu: self menuHierarchyImplementors ] ];
 		addGroup: [ :group |
@@ -271,27 +286,44 @@ GbsMethodQueryResultsPresenter >> menuMethod [
 				item
 					name: 'File Out As...';
 					icon: self iconForFileOutAction;
-					action: [ self fileOutSelectedReferenceAs ] ] ];
+					action: [ self fileOutSelectedReferenceAs ].
+				(item respondsTo: #enabled:) ifTrue: [ item enabled: self canFileOutSelectedReference ] ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsMethodQueryResultsPresenter >> menuHierarchySenders [
 	^ self newMenu
-		addItem: [ :item | item name: 'In Full Hierarchy'; action: [ self browseHierarchySendersOfSelected ] ];
-		addItem: [ :item | item name: 'In Superclasses'; action: [ self browseHierarchySendersOfSelectedInScope: 'super' ] ];
-		addItem: [ :item | item name: 'In This Class'; action: [ self browseHierarchySendersOfSelectedInScope: 'this' ] ];
-		addItem: [ :item | item name: 'In Subclasses'; action: [ self browseHierarchySendersOfSelectedInScope: 'sub' ] ];
+		addItem: [ :item |
+			item name: 'In Full Hierarchy'; action: [ self browseHierarchySendersOfSelected ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canRunMethodScopedActions ] ];
+		addItem: [ :item |
+			item name: 'In Superclasses'; action: [ self browseHierarchySendersOfSelectedInScope: 'super' ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canRunMethodScopedActions ] ];
+		addItem: [ :item |
+			item name: 'In This Class'; action: [ self browseHierarchySendersOfSelectedInScope: 'this' ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canRunMethodScopedActions ] ];
+		addItem: [ :item |
+			item name: 'In Subclasses'; action: [ self browseHierarchySendersOfSelectedInScope: 'sub' ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canRunMethodScopedActions ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsMethodQueryResultsPresenter >> menuHierarchyImplementors [
 	^ self newMenu
-		addItem: [ :item | item name: 'In Full Hierarchy'; action: [ self browseHierarchyImplementorsOfSelected ] ];
-		addItem: [ :item | item name: 'In Superclasses'; action: [ self browseHierarchyImplementorsOfSelectedInScope: 'super' ] ];
-		addItem: [ :item | item name: 'In This Class'; action: [ self browseHierarchyImplementorsOfSelectedInScope: 'this' ] ];
-		addItem: [ :item | item name: 'In Subclasses'; action: [ self browseHierarchyImplementorsOfSelectedInScope: 'sub' ] ];
+		addItem: [ :item |
+			item name: 'In Full Hierarchy'; action: [ self browseHierarchyImplementorsOfSelected ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canRunMethodScopedActions ] ];
+		addItem: [ :item |
+			item name: 'In Superclasses'; action: [ self browseHierarchyImplementorsOfSelectedInScope: 'super' ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canRunMethodScopedActions ] ];
+		addItem: [ :item |
+			item name: 'In This Class'; action: [ self browseHierarchyImplementorsOfSelectedInScope: 'this' ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canRunMethodScopedActions ] ];
+		addItem: [ :item |
+			item name: 'In Subclasses'; action: [ self browseHierarchyImplementorsOfSelectedInScope: 'sub' ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canRunMethodScopedActions ] ];
 		yourself
 ]
 
@@ -313,9 +345,42 @@ GbsMethodQueryResultsPresenter >> menuWindow [
 				item
 					name: 'Refresh';
 					icon: self iconForRefreshAction;
-					action: [ self refreshSelectedSource ] ] ];
+					action: [ self refreshSelectedSource ].
+				(item respondsTo: #enabled:) ifTrue: [ item enabled: self canRunMethodScopedActions ] ] ];
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsMethodQueryResultsPresenter >> menuMethodPopup [
+	^ self newMenu
+		addItem: [ :item |
+			item
+				name: 'Browse';
+				icon: self iconForBrowseAction;
+				action: [ self browseSelectedReference ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canRunMethodScopedActions ] ] ;
+		addItem: [ :item |
+			item
+				name: 'Senders';
+				icon: self iconForSendersAction;
+				action: [ self browseSendersOfSelected ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canRunMethodScopedActions ] ] ;
+		addItem: [ :item |
+			item
+				name: 'Implementors';
+				icon: self iconForImplementorsAction;
+				action: [ self browseImplementorsOfSelected ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canRunMethodScopedActions ] ] ;
+		addItem: [ :item | item name: 'Hierarchy Senders'; subMenu: self menuHierarchySenders ] ;
+		addItem: [ :item | item name: 'Hierarchy Implementors'; subMenu: self menuHierarchyImplementors ] ;
+		addItem: [ :item |
+			item
+				name: 'File Out As...';
+				icon: self iconForFileOutAction;
+				action: [ self fileOutSelectedReferenceAs ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canFileOutSelectedReference ] ] ;
 		yourself
 ]
 
@@ -404,6 +469,45 @@ GbsMethodQueryResultsPresenter >> reloadReferencesIntoList [
 		sourceText ifNotNil: [ sourceText text: '' ].
 		self updateStatusForReference: nil ].
 	self updateCountStatus
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> canRunMethodScopedActions [
+	| ref |
+	ref := self selectedReference.
+	^ ref notNil and: [ (ref asString trimBoth isEmpty) not ]
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> canFileOutSelectedReference [
+	^ self canRunMethodScopedActions and: [ (self currentSourceText trimBoth isEmpty) not ]
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> currentSourceText [
+	sourceText ifNil: [ ^ '' ].
+	(sourceText respondsTo: #text)
+		ifTrue: [ ^ sourceText text ifNil: [ '' ] ifNotNil: [ :t | t asString ] ].
+	^ ''
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> updateActionEnablement [
+	| canAct canFile |
+	canAct := self canRunMethodScopedActions.
+	canFile := self canFileOutSelectedReference.
+	{
+		btnBrowse.
+		btnSenders.
+		btnImplementors.
+		btnHierarchySenders.
+		btnHierarchyImplementors.
+		btnRefresh.
+	} do: [ :button |
+		(button notNil and: [ button respondsTo: #enabled: ])
+			ifTrue: [ button enabled: canAct ] ].
+	(btnFileOut notNil and: [ btnFileOut respondsTo: #enabled: ])
+		ifTrue: [ btnFileOut enabled: canFile ]
 ]
 
 { #category : 'actions' }
@@ -548,6 +652,15 @@ GbsMethodQueryResultsPresenter >> selectedReference [
 ]
 
 { #category : 'private' }
+GbsMethodQueryResultsPresenter >> selectedReferenceFromEvent: selectionEvent [
+	selectionEvent ifNotNil: [
+		(selectionEvent respondsTo: #selectedItem)
+			ifTrue: [
+				selectionEvent selectedItem ifNotNil: [ :selected | ^ selected ] ] ].
+	^ self selectedReference
+]
+
+{ #category : 'private' }
 GbsMethodQueryResultsPresenter >> requestExportPath: defaultPath [
 	| answer |
 	answer := UIManager default request: 'Export file path:' initialAnswer: defaultPath.
@@ -625,12 +738,15 @@ GbsMethodQueryResultsPresenter >> updateStatusForReference: referenceString [
 	selectionStatus ifNil: [ ^ self ].
 	referenceString ifNil: [
 		selectionStatus label: 'Selection: <none>'.
+		self updateActionEnablement.
 		^ self ].
 	parsed := self parseReference: referenceString asString.
 	parsed ifNil: [
 		selectionStatus label: 'Selection: ', referenceString asString.
+		self updateActionEnablement.
 		^ self ].
 	className := parsed first.
 	selector := parsed second.
-	selectionStatus label: 'Method: #', selector, '    Class: ', className
+	selectionStatus label: 'Method: #', selector, '    Class: ', className.
+	self updateActionEnablement
 ]

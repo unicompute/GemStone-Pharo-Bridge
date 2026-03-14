@@ -203,6 +203,9 @@ GbsConnectorBrowserPresenter >> menuGroup [
 		addItem: [ :item |
 			item name: 'Initialize'; action: [ self initializeGlobalConnectors ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canInitializeSelectedGroup ] ];
+		addItem: [ :item | item name: 'Initialize Fast Connectors'; action: [ self initializeFastConnectors ] ];
+		addItem: [ :item | item name: 'Generate Class Connectors'; action: [ self generateClassConnectors ] ];
+		addItem: [ :item | item name: 'Remove Invalid Connectors'; action: [ self removeInvalidConnectors ] ];
 		yourself
 ]
 
@@ -376,9 +379,29 @@ GbsConnectorBrowserPresenter >> fastConnectorPairs [
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> sessionGroupLabel [
 	| user stone |
-	user := self parameterValueNamed: #username default: 'unknown-user'.
-	stone := self parameterValueNamed: #gemStoneName default: 'unknown-stone'.
+	user := self sessionUserName.
+	stone := self sessionStoneName.
 	^ 'Session connectors - ''', user, ''' on ''', stone, ''''
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> sessionUserName [
+	| value |
+	value := self parameterValueNamed: #username default: nil.
+	(value isNil or: [ value trimBoth isEmpty ]) ifFalse: [ ^ value ].
+	(session notNil and: [ session respondsTo: #username ]) ifTrue: [
+		^ [ (session username ifNil: [ 'unknown-user' ]) asString ] on: Error do: [ 'unknown-user' ] ].
+	^ 'unknown-user'
+]
+
+{ #category : 'private' }
+GbsConnectorBrowserPresenter >> sessionStoneName [
+	| value |
+	value := self parameterValueNamed: #gemStoneName default: nil.
+	(value isNil or: [ value trimBoth isEmpty ]) ifFalse: [ ^ value ].
+	(session notNil and: [ session respondsTo: #gemStoneName ]) ifTrue: [
+		^ [ (session gemStoneName ifNil: [ 'unknown-stone' ]) asString ] on: Error do: [ 'unknown-stone' ] ].
+	^ 'unknown-stone'
 ]
 
 { #category : 'private' }
@@ -758,7 +781,8 @@ GbsConnectorBrowserPresenter >> inspectClassNamed: aString fallbackLabel: labelS
 
 { #category : 'accessing' }
 GbsConnectorBrowserPresenter >> session: aSession [
-	session := aSession
+	session := aSession.
+	connectorActionSession := nil
 ]
 
 { #category : 'actions' }
@@ -1115,6 +1139,7 @@ GbsConnectorBrowserPresenter >> appropriateSessions [
 	(selectedGroup respondsTo: #session) ifTrue: [
 		groupSession := selectedGroup session.
 		groupSession ifNotNil: [ ^ { groupSession } ] ].
+	session ifNotNil: [ ^ { session } ].
 	sessionsFromManager := self
 		managerPerform: #loggedInSessions
 		ifUnavailable: [ #() ].

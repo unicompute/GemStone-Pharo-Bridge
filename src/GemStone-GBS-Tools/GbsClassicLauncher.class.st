@@ -156,13 +156,7 @@ GbsClassicLauncher class >> aboutGemBuilder [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> currentSessionOrInform [
-	| session |
-	session := GbsSessionParameters currentSession.
-	(session isNil or: [ (session respondsTo: #isLoggedIn) and: [ session isLoggedIn ~= true ] ]) ifTrue: [
-		UIManager default inform: 'No connected GemStone session. Please login first.'.
-		^ nil
-	].
-	^ session
+	^ GbsAdminSessionSupport currentUsableSessionOrInform
 ]
 
 { #category : 'menus' }

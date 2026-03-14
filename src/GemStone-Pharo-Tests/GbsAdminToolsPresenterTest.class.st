@@ -9,7 +9,15 @@ Class {
 	'userListPresenter',
 	'userInfoPresenter',
 	'previousConfiguration',
-	'previousCurrentSession'
+	'previousCurrentSession',
+	'previousFastConnectorRegistry',
+	'previousConnectorObjectRegistry',
+	'previousConnectorConnectionRegistry',
+	'previousConnectorPostConnectActionRegistry',
+	'previousConnectorClassMappingRegistry',
+	'previousConnectorInvalidActionRegistry',
+	'previousSessionConnectorRegistry',
+	'previousConnectorRowSettings'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -21,6 +29,23 @@ GbsAdminToolsPresenterTest >> setUp [
 	super setUp.
 	previousConfiguration := GbsConfiguration current.
 	previousCurrentSession := GbsSessionParameters currentSession.
+	previousFastConnectorRegistry := Smalltalk globals at: #GbsFastConnectorRegistry ifAbsent: [ nil ].
+	previousConnectorObjectRegistry := Smalltalk globals at: #GbsConnectorObjectRegistry ifAbsent: [ nil ].
+	previousConnectorConnectionRegistry := Smalltalk globals at: #GbsConnectorConnectionRegistry ifAbsent: [ nil ].
+	previousConnectorPostConnectActionRegistry := Smalltalk globals at: #GbsConnectorPostConnectActionRegistry ifAbsent: [ nil ].
+	previousConnectorClassMappingRegistry := Smalltalk globals at: #GbsConnectorClassMappingRegistry ifAbsent: [ nil ].
+	previousConnectorInvalidActionRegistry := Smalltalk globals at: #GbsConnectorInvalidActionRegistry ifAbsent: [ nil ].
+	previousSessionConnectorRegistry := Smalltalk globals at: #GbsSessionConnectorRegistry ifAbsent: [ nil ].
+	previousConnectorRowSettings := (previousConfiguration isNil or: [ (previousConfiguration respondsTo: #valueAt:ifAbsent:) not ])
+		ifTrue: [ nil ]
+		ifFalse: [ previousConfiguration valueAt: #connectorRowSettings ifAbsent: [ nil ] ].
+	Smalltalk globals at: #GbsFastConnectorRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsConnectorObjectRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsConnectorConnectionRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsConnectorPostConnectActionRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsConnectorClassMappingRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsConnectorInvalidActionRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsSessionConnectorRegistry put: Dictionary new.
 	createUserPresenter := GbsCreateUserPresenter new.
 	connectorBrowserPresenter := GbsConnectorBrowserPresenter new.
 	namespacesPresenter := GbsNamespacesPresenter new.
@@ -38,6 +63,29 @@ GbsAdminToolsPresenterTest >> setUp [
 
 { #category : 'running' }
 GbsAdminToolsPresenterTest >> tearDown [
+	previousFastConnectorRegistry isNil
+		ifTrue: [ Smalltalk globals removeKey: #GbsFastConnectorRegistry ifAbsent: [ ] ]
+		ifFalse: [ Smalltalk globals at: #GbsFastConnectorRegistry put: previousFastConnectorRegistry ].
+	previousConnectorObjectRegistry isNil
+		ifTrue: [ Smalltalk globals removeKey: #GbsConnectorObjectRegistry ifAbsent: [ ] ]
+		ifFalse: [ Smalltalk globals at: #GbsConnectorObjectRegistry put: previousConnectorObjectRegistry ].
+	previousConnectorConnectionRegistry isNil
+		ifTrue: [ Smalltalk globals removeKey: #GbsConnectorConnectionRegistry ifAbsent: [ ] ]
+		ifFalse: [ Smalltalk globals at: #GbsConnectorConnectionRegistry put: previousConnectorConnectionRegistry ].
+	previousConnectorPostConnectActionRegistry isNil
+		ifTrue: [ Smalltalk globals removeKey: #GbsConnectorPostConnectActionRegistry ifAbsent: [ ] ]
+		ifFalse: [ Smalltalk globals at: #GbsConnectorPostConnectActionRegistry put: previousConnectorPostConnectActionRegistry ].
+	previousConnectorClassMappingRegistry isNil
+		ifTrue: [ Smalltalk globals removeKey: #GbsConnectorClassMappingRegistry ifAbsent: [ ] ]
+		ifFalse: [ Smalltalk globals at: #GbsConnectorClassMappingRegistry put: previousConnectorClassMappingRegistry ].
+	previousConnectorInvalidActionRegistry isNil
+		ifTrue: [ Smalltalk globals removeKey: #GbsConnectorInvalidActionRegistry ifAbsent: [ ] ]
+		ifFalse: [ Smalltalk globals at: #GbsConnectorInvalidActionRegistry put: previousConnectorInvalidActionRegistry ].
+	previousSessionConnectorRegistry isNil
+		ifTrue: [ Smalltalk globals removeKey: #GbsSessionConnectorRegistry ifAbsent: [ ] ]
+		ifFalse: [ Smalltalk globals at: #GbsSessionConnectorRegistry put: previousSessionConnectorRegistry ].
+	(previousConfiguration notNil and: [ previousConfiguration respondsTo: #valueAt:put: ])
+		ifTrue: [ previousConfiguration valueAt: #connectorRowSettings put: previousConnectorRowSettings ].
 	GbsSessionParameters currentSession: previousCurrentSession.
 	previousConfiguration ifNotNil: [ GbsConfiguration current: previousConfiguration ].
 	super tearDown
@@ -721,7 +769,7 @@ GbsAdminToolsPresenterTest >> testConnectorBrowserAppliesDifferentSavedStatePerC
 
 { #category : 'tests' }
 GbsAdminToolsPresenterTest >> testConnectorBrowserConnectDisconnectUpdatesSessionManagerState [
-	| cfg connected disconnected row |
+	| cfg connected disconnected row sessionKey registryKey registry |
 	cfg := GbsConfiguration new.
 	GbsConfiguration current: cfg.
 	Smalltalk globals at: #GbsConnectorConnectionRegistry put: Dictionary new.
@@ -735,18 +783,19 @@ GbsAdminToolsPresenterTest >> testConnectorBrowserConnectDisconnectUpdatesSessio
 	connectorBrowserPresenter instVarNamed: 'connectorTable' put: (GbxFakeTablePresenterForRemoteDebugger new).
 	(connectorBrowserPresenter instVarNamed: 'connectorTable') selectedItem: row.
 	connectorBrowserPresenter instVarNamed: 'session' put: (MockGbsSession new).
+	sessionKey := connectorBrowserPresenter selectedConnectorSessionKey.
+	registryKey := GbsSessionManager
+		connectorConnectionKeyForClient: 'ByteArray'
+		server: 'ByteArray'
+		session: sessionKey.
 
 	connectorBrowserPresenter connectorDisconnectSelected.
-	self deny: (GbsSessionManager
-		isConnectorClient: 'ByteArray'
-		server: 'ByteArray'
-		connectedInSession: 'unknown-user@unknown-stone').
+	registry := Smalltalk globals at: #GbsConnectorConnectionRegistry ifAbsent: [ Dictionary new ].
+	self assert: (registry at: registryKey ifAbsent: [ nil ]) equals: false.
 
 	connectorBrowserPresenter connectorConnectSelected.
-	self assert: (GbsSessionManager
-		isConnectorClient: 'ByteArray'
-		server: 'ByteArray'
-		connectedInSession: 'unknown-user@unknown-stone')
+	registry := Smalltalk globals at: #GbsConnectorConnectionRegistry ifAbsent: [ Dictionary new ].
+	self assert: (registry at: registryKey ifAbsent: [ nil ]) equals: true
 ]
 
 { #category : 'tests' }
@@ -1628,4 +1677,34 @@ GbsAdminToolsPresenterTest >> testConnectorBrowserConnectDisconnectPreserveSelec
 	] ensure: [
 		GbsSessionParameters currentSession: previousCurrent
 	]
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testUserListFullReportTextIncludesUsersAndGroups [
+	| fakeUsers fakeGroups report |
+	fakeUsers := GbxFakeListPresenterForBrowser new.
+	fakeUsers items: #('DataCurator' 'GcUser').
+	fakeUsers selectedItem: 'DataCurator'.
+	fakeGroups := GbxFakeListPresenterForBrowser new.
+	fakeGroups items: #('DataCuratorGroup' 'Publishers').
+
+	userListPresenter instVarNamed: 'userList' put: fakeUsers.
+	userListPresenter instVarNamed: 'groupList' put: fakeGroups.
+
+	report := userListPresenter fullReportText.
+	self assert: (report includesSubstring: '=== Users ===').
+	self assert: (report includesSubstring: 'DataCurator').
+	self assert: (report includesSubstring: '=== Groups ===').
+	self assert: (report includesSubstring: 'DataCuratorGroup')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testAdminSessionSupportCurrentUsableSessionReturnsNilWhenNotLoggedIn [
+	| session saved |
+	saved := GbsSessionParameters currentSession.
+	session := GbsSession new.
+	session sessionId: nil.
+	GbsSessionParameters currentSession: session.
+	self assert: GbsAdminSessionSupport currentUsableSession isNil.
+	GbsSessionParameters currentSession: saved
 ]

@@ -151,3 +151,26 @@ GbsMethodQueryResultsPresenterTest >> testBrowseHierarchyImplementorsUsesExplici
 	self assert: presenter lastPrefix equals: 'Hierarchy Implementors of '.
 	self assert: presenter lastScope equals: 'super'
 ]
+
+{ #category : 'tests' }
+GbsMethodQueryResultsPresenterTest >> testCanRunMethodScopedActionsRequiresSelection [
+	| presenter |
+	presenter := TestableGbsMethodQueryResultsPresenter new.
+	presenter selectedReference: nil.
+	self deny: presenter canRunMethodScopedActions.
+	presenter selectedReference: 'Object>>size'.
+	self assert: presenter canRunMethodScopedActions
+]
+
+{ #category : 'tests' }
+GbsMethodQueryResultsPresenterTest >> testCanFileOutSelectedReferenceRequiresSourceText [
+	| presenter fakeText |
+	presenter := TestableGbsMethodQueryResultsPresenter new.
+	presenter selectedReference: 'Object>>size'.
+	fakeText := GbxFakeTextPresenterForBrowser new.
+	fakeText text: ''.
+	presenter instVarNamed: 'sourceText' put: fakeText.
+	self deny: presenter canFileOutSelectedReference.
+	fakeText text: 'size ^ 1'.
+	self assert: presenter canFileOutSelectedReference
+]
