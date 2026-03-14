@@ -270,6 +270,10 @@ GbsClassicLauncher class >> logoutCurrentSession [
 				(each respondsTo: #sessionId)
 					and: [ [ each sessionId ] on: Error do: [ nil ] = sessionId ] ]
 	].
+	GbsSessionParameters allSessions
+		removeAllSuchThat: [ :each |
+			(each respondsTo: #isConnected)
+				and: [ [ each isConnected ] on: Error do: [ false ] = false ] ].
 	GbsSessionParameters currentSession: nil.
 
 	UIManager default defer: [
@@ -943,6 +947,10 @@ GbsClassicLauncher >> doLogout [
 				(each respondsTo: #sessionId)
 					and: [ [ each sessionId ] on: Error do: [ nil ] = sessionId ] ]
 	].
+	GbsSessionParameters allSessions
+		removeAllSuchThat: [ :each |
+			(each respondsTo: #isConnected)
+				and: [ [ each isConnected ] on: Error do: [ false ] = false ] ].
 
 	"Sync all open launchers."
 	UIManager default defer: [
