@@ -84,15 +84,17 @@ GbsLauncher >> defaultLayout [
 { #category : 'actions' }
 GbsLauncher >> doAbort [
 	| activeSession |
-	activeSession := GbsSessionParameters allSessions detect: [ :each | each name = 'Simple Launcher Session' ] ifNone: [ ^ self ].
-	activeSession abort.
+	activeSession := self activeSessionParameters.
+	activeSession ifNil: [ ^ self ].
+	activeSession abortTransaction.
 	self inform: 'GemStone: Global Transaction Aborted.'.
 ]
 
 { #category : 'actions' }
 GbsLauncher >> doCommit [
 	| activeSession |
-	activeSession := GbsSessionParameters allSessions detect: [ :each | each name = 'Simple Launcher Session' ] ifNone: [ ^ self ].
+	activeSession := self activeSessionParameters.
+	activeSession ifNil: [ ^ self ].
 	activeSession commitTransaction
 		ifTrue: [ self inform: 'GemStone: Global Commit Successful!' ]
 		ifFalse: [ self inform: 'GemStone: Global Commit Failed (Conflict)!' ].
@@ -104,13 +106,9 @@ GbsLauncher >> doLogin [
     statusLabel label: 'Status: Connecting...'.
     [
         GbsServerInterface uniqueInstance libraryPath: inputLibPath text.
-        
-        "THE FIX: Remove any stale Simple Launcher Sessions first to prevent duplicates"
-        GbsSessionParameters allSessions 
-            removeAllSuchThat: [ :each | each name = 'Simple Launcher Session' ].
-        
+
         session := GbsSessionParameters new
-            name: 'Simple Launcher Session';
+            name: ('{1}@{2}' format: { inputUser text. inputStone text });
             gemStoneName: inputStone text;
             username: inputUser text;
             password: inputPass text;
@@ -118,10 +116,7 @@ GbsLauncher >> doLogin [
                     
         GbsSessionParameters currentSession: session.
         
-        UIManager default defer: [
-            GbsLauncher allInstancesDo: [ :each | each updateUIState ].
-            GbsClassicLauncher allInstancesDo: [ :each | each refreshAll ].
-        ].
+        self refreshAllLaunchers.
         
         self inform: 'Connected Successfully!'.
             
@@ -134,21 +129,27 @@ GbsLauncher >> doLogin [
 { #category : 'actions' }
 GbsLauncher >> doLogout [
     [
-        | sessionToLogout |
-        
-        sessionToLogout := GbsSessionParameters allSessions 
-            detect: [ :each | each name = 'Simple Launcher Session' ] 
-            ifNone: [ GbsSessionParameters currentSession ].
-            
-        sessionToLogout ifNotNil: [ :s | s logout ].
-        
-        GbsSessionParameters currentSession: nil.
-        
-        "Sync ALL open Simple Launchers and Classic Launchers safely"
-        UIManager default defer: [
-            GbsLauncher allInstancesDo: [ :launcher | launcher updateUIState ].
-            GbsClassicLauncher allInstancesDo: [ :launcher | launcher refreshAll ].
-        ].
+        | sessionParam currentSession |
+        sessionParam := self activeSessionParameters.
+        currentSession := GbsSessionParameters currentSession.
+
+        sessionParam
+            ifNotNil: [ sessionParam logout ]
+            ifNil: [
+                (currentSession notNil and: [ currentSession respondsTo: #logout ])
+                    ifTrue: [ currentSession logout ] ].
+
+        GbsSessionParameters allSessions
+            removeAllSuchThat: [ :each |
+                (each respondsTo: #isConnected)
+                    and: [ ([ each isConnected ] on: Error do: [ false ]) = false ] ].
+
+        ((GbsSessionParameters currentSession notNil)
+            and: [ (GbsSessionParameters currentSession respondsTo: #isLoggedIn)
+            and: [ ([ GbsSessionParameters currentSession isLoggedIn ] on: Error do: [ false ]) = false ] ])
+            ifTrue: [ GbsSessionParameters currentSession: nil ].
+
+        self refreshAllLaunchers.
         
     ] on: Error do: [ :ex | self inform: 'Error logging out: ', ex messageText ].
 ]
@@ -226,7 +227,7 @@ GbsLauncher >> updatePollingLabel [
 { #category : 'updating' }
 GbsLauncher >> updateUIState [
 	| activeSession |
-	activeSession := GbsSessionParameters allSessions detect: [ :each | each name = 'Simple Launcher Session' ] ifNone: [ nil ].
+	activeSession := self activeSessionParameters.
 	self updatePollingLabel.
 
 	activeSession ifNotNil: [
@@ -254,6 +255,42 @@ GbsLauncher >> updateUIState [
 		btnWorkspace disable. btnBrowser disable. btnTranscript disable.
 		btnUsers ifNotNil: [ btnUsers disable ].
 	].
+]
+
+{ #category : 'private' }
+GbsLauncher >> activeSessionParameters [
+	| current currentSessionId |
+	current := GbsSessionParameters currentSession.
+	currentSessionId := (current notNil and: [ current respondsTo: #sessionId ])
+		ifTrue: [ [ current sessionId ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+
+	(currentSessionId notNil) ifTrue: [
+		^ GbsSessionParameters allSessions
+			detect: [ :each |
+				(each respondsTo: #isConnected)
+					and: [ ([ each isConnected ] on: Error do: [ false ])
+					and: [ (each respondsTo: #sessionId)
+					and: [ ([ each sessionId ] on: Error do: [ nil ]) = currentSessionId ] ] ] ]
+			ifNone: [ self firstConnectedSessionParameters ] ].
+
+	^ self firstConnectedSessionParameters
+]
+
+{ #category : 'private' }
+GbsLauncher >> firstConnectedSessionParameters [
+	^ GbsSessionParameters allSessions
+		detect: [ :each |
+			(each respondsTo: #isConnected)
+				and: [ [ each isConnected ] on: Error do: [ false ] ] ]
+		ifNone: [ nil ]
+]
+
+{ #category : 'private' }
+GbsLauncher >> refreshAllLaunchers [
+	UIManager default defer: [
+		GbsLauncher allInstancesDo: [ :each | each updateUIState ].
+		GbsClassicLauncher allInstancesDo: [ :each | each refreshAll ] ]
 ]
 
 { #category : 'private' }

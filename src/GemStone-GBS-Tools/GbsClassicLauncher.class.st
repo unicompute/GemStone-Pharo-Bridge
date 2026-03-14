@@ -904,6 +904,9 @@ GbsClassicLauncher >> doLoginRpc [
                 params isConnected 
                     ifTrue: [ 
                         GbsSessionParameters currentSession: session.
+                        UIManager default defer: [
+                        	GbsLauncher allInstancesDo: [ :launcher | launcher updateUIState ].
+                        	GbsClassicLauncher allInstancesDo: [ :launcher | launcher refreshAll ] ].
                         self inform: 'Login Successful: ', params name 
                     ].
                 
