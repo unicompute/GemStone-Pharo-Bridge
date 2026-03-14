@@ -1035,57 +1035,75 @@ GbsRemoteDebugger >> initializePresenters [
 
 	stepOverButton := self newButton 
 		label: 'Step Over'; 
+		icon: (self iconNamedSafe: #smallForward);
 		action: [ self stepOver ].
 	stepIntoButton := self newButton 
 		label: 'Step Into'; 
+		icon: (self iconNamedSafe: #smallDoIt);
 		action: [ self stepInto ].
 	stepButton := self newButton
 		label: 'Step';
+		icon: (self iconNamedSafe: #smallForward);
 		action: [ self step ].
 	stepReturnButton := self newButton 
 		label: 'Step Return';
+		icon: (self iconNamedSafe: #smallBack);
 		action: [ self stepReturn ].
 	restartButton := self newButton
 		label: 'Restart';
+		icon: (self iconNamedSafe: #smallUpdate);
 		action: [ self restart ].
 	resumeButton := self newButton 
 		label: 'Run';
+		icon: (self iconNamedSafe: #glamorousGo);
 		action: [ self resume ].
 	runUntilReturnButton := self newButton
 		label: 'Run until Return';
+		icon: (self iconNamedSafe: #smallForward);
 		action: [ self runUntilReturn ].
 	runWithBreakAgainButton := self newButton
 		label: 'Run with Break Again';
+		icon: (self iconNamedSafe: #smallBreakpoint);
 		action: [ self runWithBreakAgain ].
 	runToCaretButton := self newButton
 		label: 'Run to Caret';
+		icon: (self iconNamedSafe: #smallForward);
 		action: [ self runToCaret ].
 	jumpToCaretButton := self newButton
 		label: 'Jump to Caret';
+		icon: (self iconNamedSafe: #smallRight);
 		action: [ self jumpToCaret ].
 	returnButton := self newButton
 		label: 'Return...';
+		icon: (self iconNamedSafe: #smallBack);
 		action: [ self returnFromFrame ].
 	pauseButton := self newButton
 		label: 'Pause';
+		icon: (self iconNamedSafe: #smallCancel);
 		action: [ self pauseProcess ].
 	terminateButton := self newButton 
 		label: 'Terminate'; 
+		icon: (self iconNamedSafe: #smallDelete);
 		action: [ self terminate ].
 	inspectReceiverButton := self newButton
 		label: 'Inspect Receiver';
+		icon: (self iconNamedSafe: #smallInspectIt);
 		action: [ self inspectReceiver ].
 	inspectProcessButton := self newButton
 		label: 'Inspect Process';
+		icon: (self iconNamedSafe: #smallInspectIt);
 		action: [ self inspectProcess ].
 	inspectFrameButton := self newButton
 		label: 'Inspect Context';
+		icon: (self iconNamedSafe: #smallInspectIt);
 		action: [ self inspectFrame ].
 	inspectStackButton := self newButton
 		label: 'Inspect Stack';
+		icon: (self iconNamedSafe: #smallInspectIt);
 		action: [ self inspectStack ].
 	inspectVariableButton := self newButton
 		label: 'Inspect Variable';
+		icon: (self iconNamedSafe: #smallInspectIt);
 		action: [ self inspectVariable ].
 
 	stackList := self newList.
@@ -2923,13 +2941,22 @@ GbsRemoteDebugger >> reinforceSourceCaretVisibility [
 
 { #category : 'private' }
 GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
-	| index context |
+	| index context fallbackIndex |
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
 
 	"Find server-reported executed-code frame"
 	index := contextList findFirst: [ :ctx | self isExecutedCodeFrame: ctx ].
 
-	index = 0 ifTrue: [ index := 1 ].
+	index = 0 ifTrue: [
+		"Fallback when executed markers are not yet materialized:
+		select the lowest non-glue frame."
+		fallbackIndex := contextList size + 1.
+		contextList reverseDo: [ :ctx |
+			fallbackIndex := fallbackIndex - 1.
+			((index = 0) and: [ self isLikelyUserFrame: ctx ]) ifTrue: [ index := fallbackIndex ].
+		].
+		index = 0 ifTrue: [ index := 1 ]
+	].
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
 	context := contextList at: index.
 
@@ -2956,6 +2983,11 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	
 	"Force UI refresh to ensure Step=1 is displayed"
 	self refreshUiState
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> iconNamedSafe: aSymbol [
+	^ [ self iconNamed: aSymbol ] on: Error do: [ nil ]
 ]
 
 { #category : 'private' }

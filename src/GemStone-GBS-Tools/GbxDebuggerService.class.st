@@ -1513,11 +1513,11 @@ GbxDebuggerService >> forceRestartPositionToMethodStart [
 
 { #category : 'private' }
 GbxDebuggerService >> restartTargetContext [
-	| contexts |
+	| contexts detected |
 	contexts := self contextList.
 	(contexts isCollection and: [ contexts respondsTo: #isEmpty ]) ifFalse: [ ^ nil ].
 	contexts ifEmpty: [ ^ nil ].
-	^ contexts
+	detected := contexts
 		detect: [ :ctx |
 			| className selectorName |
 			className := [ ctx methodClassOrUnknown asString ] on: Error do: [ '' ].
@@ -1530,7 +1530,27 @@ GbxDebuggerService >> restartTargetContext [
 						or: [ selectorName = 'unboundMethod'
 						or: [ selectorName = '<unknown>'
 						or: [ selectorName isEmpty ] ] ] ] ]
-		ifNone: [ contexts first ]
+		ifNone: [ nil ].
+	detected ifNotNil: [ ^ detected ].
+
+	"Fallback for stacks where executed frame marker is not materialized yet.
+	Pick the lowest non-glue frame (closest to method entry / do-it body)."
+	detected := contexts reverse
+		detect: [ :ctx |
+			| className selectorName |
+			className := [ ctx methodClassOrUnknown asString ] on: Error do: [ '' ].
+			selectorName := [ ctx selectorOrUnknown asString ] on: Error do: [ '' ].
+			(className includesSubstring: 'GsNMethod')
+				ifTrue: [ false ]
+				ifFalse: [
+					(selectorName beginsWith: '_')
+						ifTrue: [ false ]
+						ifFalse: [ true ]
+				] ]
+		ifNone: [ nil ].
+	detected ifNotNil: [ ^ detected ].
+
+	^ contexts first
 ]
 
 { #category : 'private' }
