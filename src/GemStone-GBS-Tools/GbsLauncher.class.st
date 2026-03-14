@@ -115,6 +115,7 @@ GbsLauncher >> doLogin [
             login.
                     
         GbsSessionParameters currentSession: session.
+        self ensureCurrentSessionVisibleInAllSessions.
         
         self refreshAllLaunchers.
         
@@ -129,15 +130,23 @@ GbsLauncher >> doLogin [
 { #category : 'actions' }
 GbsLauncher >> doLogout [
     [
-        | sessionParam currentSession |
+        | sessionParam currentSession logoutSessionId |
         sessionParam := self activeSessionParameters.
         currentSession := GbsSessionParameters currentSession.
+        logoutSessionId := self sessionIdFrom: sessionParam.
+        logoutSessionId ifNil: [ logoutSessionId := self sessionIdFrom: currentSession ].
 
         sessionParam
             ifNotNil: [ sessionParam logout ]
             ifNil: [
                 (currentSession notNil and: [ currentSession respondsTo: #logout ])
                     ifTrue: [ currentSession logout ] ].
+
+        logoutSessionId ifNotNil: [
+            GbsSessionParameters allSessions
+                removeAllSuchThat: [ :each |
+                    (each respondsTo: #sessionId)
+                        and: [ ([ each sessionId ] on: Error do: [ nil ]) = logoutSessionId ] ] ].
 
         GbsSessionParameters allSessions
             removeAllSuchThat: [ :each |
@@ -278,6 +287,29 @@ GbsLauncher >> activeSessionParameters [
 ]
 
 { #category : 'private' }
+GbsLauncher >> ensureCurrentSessionVisibleInAllSessions [
+	| current currentSessionId existing |
+	current := GbsSessionParameters currentSession.
+	currentSessionId := self sessionIdFrom: current.
+	currentSessionId ifNil: [ ^ self ].
+
+	existing := GbsSessionParameters allSessions
+		detect: [ :each |
+			(each respondsTo: #sessionId)
+				and: [ ([ each sessionId ] on: Error do: [ nil ]) = currentSessionId ] ]
+		ifNone: [ nil ].
+	existing ifNotNil: [ ^ self ].
+
+	existing := GbsSessionParameters new
+		name: ('{1}@{2}' format: { inputUser text. inputStone text });
+		gemStoneName: inputStone text;
+		username: inputUser text;
+		yourself.
+	existing instVarNamed: 'sessionId' put: currentSessionId.
+	GbsSessionParameters registerSession: existing
+]
+
+{ #category : 'private' }
 GbsLauncher >> firstConnectedSessionParameters [
 	^ GbsSessionParameters allSessions
 		detect: [ :each |
@@ -290,7 +322,17 @@ GbsLauncher >> firstConnectedSessionParameters [
 GbsLauncher >> refreshAllLaunchers [
 	UIManager default defer: [
 		GbsLauncher allInstancesDo: [ :each | each updateUIState ].
+		GbsSessionBrowserPresenter allInstancesDo: [ :presenter |
+			(presenter respondsTo: #refreshAll) ifTrue: [ presenter refreshAll ] ].
 		GbsClassicLauncher allInstancesDo: [ :each | each refreshAll ] ]
+]
+
+{ #category : 'private' }
+GbsLauncher >> sessionIdFrom: anObject [
+	anObject ifNil: [ ^ nil ].
+	(anObject respondsTo: #sessionId)
+		ifTrue: [ ^ [ anObject sessionId ] on: Error do: [ nil ] ].
+	^ nil
 ]
 
 { #category : 'private' }
