@@ -268,12 +268,12 @@ GbsClassicLauncher class >> logoutCurrentSession [
 		GbsSessionParameters allSessions
 			removeAllSuchThat: [ :each |
 				(each respondsTo: #sessionId)
-					and: [ [ each sessionId ] on: Error do: [ nil ] = sessionId ] ]
+					and: [ (([ each sessionId ] on: Error do: [ nil ]) = sessionId) ] ]
 	].
 	GbsSessionParameters allSessions
 		removeAllSuchThat: [ :each |
 			(each respondsTo: #isConnected)
-				and: [ [ each isConnected ] on: Error do: [ false ] = false ] ].
+				and: [ (([ each isConnected ] on: Error do: [ false ]) = false) ] ].
 	GbsSessionParameters currentSession: nil.
 
 	UIManager default defer: [
@@ -934,7 +934,7 @@ GbsClassicLauncher >> doLogout [
 			(each == session) or: [
 				sessionId notNil
 					and: [ (each respondsTo: #sessionId)
-					and: [ [ each sessionId ] on: Error do: [ nil ] = sessionId ] ] ] ]
+					and: [ (([ each sessionId ] on: Error do: [ nil ]) = sessionId) ] ] ] ]
 		ifNone: [ nil ] ].
 	matchingRecord ifNotNil: [
 		(matchingRecord respondsTo: #sessionId:) ifTrue: [ matchingRecord sessionId: nil ].
@@ -945,12 +945,12 @@ GbsClassicLauncher >> doLogout [
 		GbsSessionParameters allSessions
 			removeAllSuchThat: [ :each |
 				(each respondsTo: #sessionId)
-					and: [ [ each sessionId ] on: Error do: [ nil ] = sessionId ] ]
+					and: [ (([ each sessionId ] on: Error do: [ nil ]) = sessionId) ] ]
 	].
 	GbsSessionParameters allSessions
 		removeAllSuchThat: [ :each |
 			(each respondsTo: #isConnected)
-				and: [ [ each isConnected ] on: Error do: [ false ] = false ] ].
+				and: [ (([ each isConnected ] on: Error do: [ false ]) = false) ] ].
 
 	"Sync all open launchers."
 	UIManager default defer: [
@@ -972,7 +972,7 @@ GbsClassicLauncher >> parameterRecordForLoggedOutSession: session sessionId: ses
 		record := GbsSessionParameters allSessions
 			detect: [ :each |
 				(each respondsTo: #sessionId)
-					and: [ [ each sessionId ] on: Error do: [ nil ] = sessionId ] ]
+					and: [ (([ each sessionId ] on: Error do: [ nil ]) = sessionId) ] ]
 			ifNone: [ nil ] ].
 	^ record
 ]
