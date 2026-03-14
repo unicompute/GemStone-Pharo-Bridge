@@ -1052,8 +1052,7 @@ GbsRemoteDebugger >> initializePresenters [
 	restartButton := self newButton
 		label: 'Restart';
 		icon: (self iconNamedSafe: #smallUpdate);
-		action: [ self restart.
-			self restart ].
+		action: [ self restartWithDeferredSecondPass ].
 	resumeButton := self newButton 
 		label: 'Run';
 		icon: (self iconNamedSafe: #glamorousGo);
@@ -2680,6 +2679,21 @@ GbsRemoteDebugger >> restart [
 		self ensureServerPCToStepOneAfterRestart.
 	].
 	^ didRestart
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartWithDeferredSecondPass [
+	| worldStateClass |
+	self restart.
+	worldStateClass := Smalltalk at: #WorldState ifAbsent: [ nil ].
+	(worldStateClass notNil and: [ worldStateClass respondsTo: #addDeferredUIMessage: ])
+		ifTrue: [
+			[ worldStateClass addDeferredUIMessage: [ self restart ] ]
+				on: Error
+				do: [ self restart ].
+			^ self
+		].
+	self restart
 ]
 
 { #category : 'private' }
