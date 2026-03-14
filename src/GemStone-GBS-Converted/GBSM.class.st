@@ -10,12 +10,15 @@ Class {
 
 { #category : 'accessing' }
 GBSM class >> currentSession [
-    ^ CurrentSession
+    CurrentSession ifNotNil: [ ^ CurrentSession ].
+    ^ GbsSessionParameters currentSession
 ]
 
 { #category : 'accessing' }
 GBSM class >> currentSession: aSession [
-    CurrentSession := aSession
+    CurrentSession := aSession.
+    (GbsSessionParameters currentSession == aSession)
+        ifFalse: [ GbsSessionParameters currentSession: aSession ]
 ]
 
 { #category : 'cleanup' }
