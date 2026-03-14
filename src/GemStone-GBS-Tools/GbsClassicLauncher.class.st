@@ -1313,13 +1313,18 @@ GbsClassicLauncher >> openWorkspaceFor: aSession [
 
 { #category : 'actions' }
 GbsClassicLauncher >> refreshAll [
+	| activeSessions |
     "Use asArray so Spec2 sees a NEW collection and forces a visual refresh"
     parametersList items: GbsSessionParameters allParameters asArray.
-    sessionList items: GbsSessionParameters allSessions asArray.
+	activeSessions := GbsSessionParameters allSessions
+		select: [ :each |
+			(each respondsTo: #isConnected)
+				and: [ [ each isConnected ] on: Error do: [ false ] ] ].
+    sessionList items: activeSessions asArray.
     
     "Safely re-select the current session if it still exists"
     GbsSessionParameters currentSession ifNotNil: [ :current |
-        (GbsSessionParameters allSessions includes: current) ifTrue: [ 
+        (activeSessions includes: current) ifTrue: [ 
             sessionList selectItem: current 
         ]
     ].
@@ -1329,9 +1334,15 @@ GbsClassicLauncher >> refreshAll [
 
 { #category : 'actions' }
 GbsClassicLauncher >> refreshSessionList [
-    sessionList items: GbsSessionParameters allSessions.
+	| activeSessions |
+	activeSessions := GbsSessionParameters allSessions
+		select: [ :each |
+			(each respondsTo: #isConnected)
+				and: [ [ each isConnected ] on: Error do: [ false ] ] ].
+    sessionList items: activeSessions.
     parametersList items: GbsSessionParameters allParameters. "Assuming this collection exists"
-    GbsSessionParameters currentSession ifNotNil: [ :s | sessionList selectItem: s ].
+    GbsSessionParameters currentSession ifNotNil: [ :s |
+		(activeSessions includes: s) ifTrue: [ sessionList selectItem: s ] ].
 ]
 
 { #category : 'private' }
