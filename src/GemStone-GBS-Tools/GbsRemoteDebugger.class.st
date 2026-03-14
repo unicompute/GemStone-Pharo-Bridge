@@ -1052,7 +1052,7 @@ GbsRemoteDebugger >> initializePresenters [
 	restartButton := self newButton
 		label: 'Restart';
 		icon: (self iconNamedSafe: #smallUpdate);
-		action: [ self restartWithSimulatedSecondClick ].
+		action: [ self restartThenDoubleReset ].
 	resumeButton := self newButton 
 		label: 'Run';
 		icon: (self iconNamedSafe: #glamorousGo);
@@ -2771,6 +2771,33 @@ GbsRemoteDebugger >> restartWithSimulatedSecondClick [
 		self ensureServerPCToStepOneAfterRestart
 	].
 	^ firstPass or: [ secondPass ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartThenDoubleReset [
+	| didRestart |
+	didRestart := self restart.
+	didRestart ifFalse: [ ^ false ].
+
+	self fetchStackFrames.
+	self normalizeRestartSelectionAndPosition.
+
+	"First Reset"
+	self safeServiceCall: [
+		(service respondsTo: #resetServerPCToStepOne)
+			ifTrue: [ service resetServerPCToStepOne ]
+	] default: nil.
+
+	"Second Reset (as requested)"
+	self safeServiceCall: [
+		(service respondsTo: #resetServerPCToStepOne)
+			ifTrue: [ service resetServerPCToStepOne ]
+	] default: nil.
+
+	self fetchStackFrames.
+	self normalizeRestartSelectionAndPosition.
+	self ensureServerPCToStepOneAfterRestart.
+	^ true
 ]
 
 { #category : 'private' }
