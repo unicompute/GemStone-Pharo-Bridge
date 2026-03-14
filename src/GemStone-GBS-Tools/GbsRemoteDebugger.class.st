@@ -1052,7 +1052,7 @@ GbsRemoteDebugger >> initializePresenters [
 	restartButton := self newButton
 		label: 'Restart';
 		icon: (self iconNamedSafe: #smallUpdate);
-		action: [ self restartWithRetry ].
+		action: [ self restartWithSimulatedSecondClick ].
 	resumeButton := self newButton 
 		label: 'Run';
 		icon: (self iconNamedSafe: #glamorousGo);
@@ -2737,6 +2737,35 @@ GbsRemoteDebugger >> isTopExecutedCodeAtStepOne [
 		ifTrue: [ [ top quickStepPoint asInteger ] on: Error do: [ 0 ] ]
 		ifFalse: [ 0 ].
 	^ step = 1
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartWithSimulatedSecondClick [
+	| firstPass secondPass |
+	firstPass := self restart.
+	firstPass ifFalse: [ ^ false ].
+
+	"Mirror what user does before second click: refreshed stack + selected restart frame."
+	self fetchStackFrames.
+	self normalizeRestartSelectionAndPosition.
+	self safeServiceCall: [
+		(service respondsTo: #selectRestartTargetContext)
+			ifTrue: [ service selectRestartTargetContext ]
+	] default: nil.
+	self safeServiceCall: [
+		(service respondsTo: #resetServerPCToStepOne)
+			ifTrue: [ service resetServerPCToStepOne ]
+	] default: nil.
+
+	"Second click simulation"
+	secondPass := self safeServiceCall: [ service restart ] default: false.
+	secondPass ifFalse: [ secondPass := self restart ].
+	secondPass ifTrue: [
+		self fetchStackFrames.
+		self normalizeRestartSelectionAndPosition.
+		self ensureServerPCToStepOneAfterRestart
+	].
+	^ firstPass or: [ secondPass ]
 ]
 
 { #category : 'private' }
