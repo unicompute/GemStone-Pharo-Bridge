@@ -584,7 +584,9 @@ GbsSession >> marshalArgumentToScript: anObject [
 ]
 
 { #category : 'accessing' }
-GbsSession >> parameters: p [ parameters := p. GbsSessionParameters classPool at: #CurrentSession put: self
+GbsSession >> parameters: p [
+	parameters := p.
+	GbsSessionParameters currentSession: self
 ]
 
 { #category : 'evaluating' }
