@@ -1052,13 +1052,7 @@ GbsRemoteDebugger >> initializePresenters [
 	restartButton := self newButton
 		label: 'Restart';
 		icon: (self iconNamedSafe: #smallUpdate);
-		action: [
-			self restart.
-			[
-				(Delay forMilliseconds: 20) wait.
-				self restart
-			] forkAt: Processor userBackgroundPriority
-		].
+		action: [ self restartWithConfirmedExecutedFrameSecondPass ].
 	resumeButton := self newButton 
 		label: 'Run';
 		icon: (self iconNamedSafe: #glamorousGo);
@@ -2743,6 +2737,41 @@ GbsRemoteDebugger >> isTopExecutedCodeAtStepOne [
 		ifTrue: [ [ top quickStepPoint asInteger ] on: Error do: [ 0 ] ]
 		ifFalse: [ 0 ].
 	^ step = 1
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
+	| firstPass attempts ready |
+	firstPass := self restart.
+	firstPass ifFalse: [ ^ false ].
+
+	attempts := 0.
+	ready := false.
+	[
+		(attempts < 30) and: [ ready not ]
+	] whileTrue: [
+		self fetchStackFrames.
+		self normalizeRestartSelectionAndPosition.
+		ready := self isExecutedCodeSelectionConfirmed.
+		ready ifFalse: [ (Delay forMilliseconds: 25) wait ].
+		attempts := attempts + 1
+	].
+
+	ready ifTrue: [ self restart ].
+	^ firstPass
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> isExecutedCodeSelectionConfirmed [
+	| index selected |
+	(contextList isCollection and: [ contextList isEmpty not ]) ifFalse: [ ^ false ].
+	index := (stackList notNil and: [ stackList respondsTo: #selectedIndex ])
+		ifTrue: [ [ stackList selectedIndex ] on: Error do: [ 0 ] ]
+		ifFalse: [ 0 ].
+	(index isInteger and: [ index > 0 and: [ index <= contextList size ] ])
+		ifTrue: [ selected := contextList at: index ]
+		ifFalse: [ selected := contextList first ].
+	^ self isExecutedCodeFrame: selected
 ]
 
 { #category : 'private' }
