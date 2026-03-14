@@ -1052,7 +1052,8 @@ GbsRemoteDebugger >> initializePresenters [
 	restartButton := self newButton
 		label: 'Restart';
 		icon: (self iconNamedSafe: #smallUpdate);
-		action: [ self restart ].
+		action: [ self restart.
+			self restart ].
 	resumeButton := self newButton 
 		label: 'Run';
 		icon: (self iconNamedSafe: #glamorousGo);
@@ -2673,10 +2674,6 @@ GbsRemoteDebugger >> restart [
 	didRestart := self safeServiceCall: [ service restart ] default: false.
 	didRestart ifFalse: [ didRestart := self restartUsingDirectTrimFromExecutedFrame ].
 	didRestart ifTrue: [
-		"Field-proven workaround: run restart a second time to ensure
-		server-side reenter state is fully reset on all stacks."
-		self safeServiceCall: [ service restart ] default: false.
-
 		self fetchStackFrames.
 		self normalizeRestartSelectionAndPosition.
 		"Ensure server PC is at step 1 after restart"
