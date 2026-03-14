@@ -1054,9 +1054,10 @@ GbsRemoteDebugger >> initializePresenters [
 		icon: (self iconNamedSafe: #smallUpdate);
 		action: [
 			self restart.
-			self fetchStackFrames.
-			self normalizeRestartSelectionAndPosition.
-			self restart
+			[
+				(Delay forMilliseconds: 20) wait.
+				self restart
+			] forkAt: Processor userBackgroundPriority
 		].
 	resumeButton := self newButton 
 		label: 'Run';
