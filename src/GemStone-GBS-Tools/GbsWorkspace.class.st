@@ -49,7 +49,7 @@ GbsWorkspace >> doIt [
 	code := self selectedCodeOrAll copyReplaceAll: String cr with: String lf.
 	code ifEmpty: [ ^ self ].
 
-	activeSession := GbsSessionParameters currentSession.
+	activeSession := self activeSessionForRemoteExecution.
 	activeSession ifNil: [ ^ self inform: 'No Session - please login to GemStone first' ].
 
 	[
@@ -99,6 +99,48 @@ GbsWorkspace >> doIt [
 				self inform: 'GemStone Error: ', ex messageText
 			]
 	].
+]
+
+{ #category : 'private' }
+GbsWorkspace >> activeSessionForRemoteExecution [
+	| current connectedParam |
+	current := GbsSessionParameters currentSession.
+	(self isUsableGemStoneSession: current) ifTrue: [ ^ current ].
+
+	(current notNil and: [ current class name = #GbsSessionParameters ]) ifTrue: [
+		(current respondsTo: #isConnected) ifTrue: [
+			(current isConnected = true) ifTrue: [ ^ self sessionWrapperFromParameters: current ] ] ].
+
+	connectedParam := GbsSessionParameters allSessions
+		detect: [ :each |
+			each class name = #GbsSessionParameters
+				and: [ (each respondsTo: #isConnected) and: [ each isConnected = true ] ] ]
+		ifNone: [ nil ].
+	connectedParam ifNotNil: [ ^ self sessionWrapperFromParameters: connectedParam ].
+	^ nil
+]
+
+{ #category : 'private' }
+GbsWorkspace >> sessionWrapperFromParameters: aSessionParameters [
+	| wrapped |
+	wrapped := GbsSession new.
+	(aSessionParameters respondsTo: #sessionId) ifTrue: [
+		wrapped sessionId: aSessionParameters sessionId.
+		wrapped sessionOop: aSessionParameters sessionId ].
+	wrapped
+		isLoggedIn: true;
+		parameters: aSessionParameters.
+	GbsSessionParameters currentSession: wrapped.
+	^ wrapped
+]
+
+{ #category : 'private' }
+GbsWorkspace >> isUsableGemStoneSession: anObject [
+	anObject ifNil: [ ^ false ].
+	(anObject respondsTo: #execute:) ifFalse: [ ^ false ].
+	(anObject respondsTo: #isLoggedIn)
+		ifTrue: [ ^ [ anObject isLoggedIn = true ] on: Error do: [ false ] ].
+	^ true
 ]
 
 { #category : 'actions' }
