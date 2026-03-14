@@ -1092,8 +1092,12 @@ GbxDebuggerService >> basicReenterServerContext [
 	as if it had just been entered. Discard any execution since the context
 	was entered."
 	| theContext |
-	theContext := currentContext.
+	"Always prefer the executed-code restart target over the currently selected
+	frame so a single Restart click is deterministic."
+	theContext := self restartTargetContext.
+	theContext ifNil: [ theContext := currentContext ].
 	theContext ifNil: [ ^ false ].
+	self selectContext: theContext.
 	self logRestartState: 'basicReenter/start' context: theContext.
 
 	(self cutbackTo: theContext
@@ -1518,8 +1522,14 @@ GbxDebuggerService >> restartTargetContext [
 			| className selectorName |
 			className := [ ctx methodClassOrUnknown asString ] on: Error do: [ '' ].
 			selectorName := [ ctx selectorOrUnknown asString ] on: Error do: [ '' ].
-			(className = 'nil' or: [ className = '<unknown>' ])
-				and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ] ]
+			(className = 'nil'
+				or: [ className = '<unknown>'
+				or: [ className isEmpty ] ])
+				and: [
+					selectorName = 'nil'
+						or: [ selectorName = 'unboundMethod'
+						or: [ selectorName = '<unknown>'
+						or: [ selectorName isEmpty ] ] ] ] ]
 		ifNone: [ contexts first ]
 ]
 
