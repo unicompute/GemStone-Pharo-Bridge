@@ -1053,6 +1053,7 @@ GbsRemoteDebugger >> initializePresenters [
 		label: 'Restart';
 		icon: (self iconNamedSafe: #smallUpdate);
 		action: [ self restart.
+			(Delay forMilliseconds: 120) wait.
 			self restart ].
 	resumeButton := self newButton 
 		label: 'Run';
