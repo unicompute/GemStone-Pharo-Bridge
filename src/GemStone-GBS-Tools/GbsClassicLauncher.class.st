@@ -236,14 +236,17 @@ GbsClassicLauncher class >> logoutCurrentSession [
 	sessionId := (session notNil and: [ session respondsTo: #sessionId ])
 		ifTrue: [ [ session sessionId ] on: Error do: [ nil ] ]
 		ifFalse: [ nil ].
+	(params isNil and: [ session notNil and: [ session respondsTo: #parameters ] ]) ifTrue: [
+		params := [ session parameters ] on: Error do: [ nil ] ].
 
-	params := GbsSessionParameters allSessions
-		detect: [ :each |
-			((each respondsTo: #isConnected) and: [ each isConnected = true ]) and: [
-				sessionId isNil
-					ifTrue: [ true ]
-					ifFalse: [ (each respondsTo: #sessionId) and: [ each sessionId = sessionId ] ] ] ]
-		ifNone: [ nil ].
+	params ifNil: [
+		params := GbsSessionParameters allSessions
+			detect: [ :each |
+				((each respondsTo: #isConnected) and: [ each isConnected = true ]) and: [
+					sessionId isNil
+						ifTrue: [ true ]
+						ifFalse: [ (each respondsTo: #sessionId) and: [ each sessionId = sessionId ] ] ] ]
+			ifNone: [ nil ] ].
 
 	(session isNil and: [ params isNil ]) ifTrue: [
 		^ UIManager default inform: 'No current GemStone session.' ].
@@ -261,6 +264,12 @@ GbsClassicLauncher class >> logoutCurrentSession [
 	params ifNotNil: [
 		(params respondsTo: #sessionId:) ifTrue: [ params sessionId: nil ].
 		GbsSessionParameters unregisterSession: params ].
+	sessionId ifNotNil: [
+		GbsSessionParameters allSessions
+			removeAllSuchThat: [ :each |
+				(each respondsTo: #sessionId)
+					and: [ [ each sessionId ] on: Error do: [ nil ] = sessionId ] ]
+	].
 	GbsSessionParameters currentSession: nil.
 
 	UIManager default defer: [
@@ -893,12 +902,13 @@ GbsClassicLauncher >> doLoginRpc [
 
 { #category : 'actions' }
 GbsClassicLauncher >> doLogout [
-	| session sessionId matchingRecord |
+	| session sessionId matchingRecord parameterRecord |
 	session := self selectedSessionForLogout.
 	session ifNil: [ ^ self inform: 'Please select a session from the list.' ].
 	sessionId := (session respondsTo: #sessionId)
 		ifTrue: [ [ session sessionId ] on: Error do: [ nil ] ]
 		ifFalse: [ nil ].
+	parameterRecord := self parameterRecordForLoggedOutSession: session sessionId: sessionId.
 
 	"Unselect first to prevent SubscriptOutOfBounds in Spec2"
 	(sessionList respondsTo: #unselectAll) ifTrue: [ sessionList unselectAll ].
@@ -914,14 +924,25 @@ GbsClassicLauncher >> doLogout [
 		ifTrue: [ GbsSessionParameters currentSession: nil ].
 
 	"Remove logged out record from the session browser list (second pane)"
-	matchingRecord := GbsSessionParameters allSessions
+	matchingRecord := parameterRecord ifNil: [
+		GbsSessionParameters allSessions
 		detect: [ :each |
 			(each == session) or: [
 				sessionId notNil
 					and: [ (each respondsTo: #sessionId)
 					and: [ [ each sessionId ] on: Error do: [ nil ] = sessionId ] ] ] ]
-		ifNone: [ nil ].
-	matchingRecord ifNotNil: [ GbsSessionParameters unregisterSession: matchingRecord ].
+		ifNone: [ nil ] ].
+	matchingRecord ifNotNil: [
+		(matchingRecord respondsTo: #sessionId:) ifTrue: [ matchingRecord sessionId: nil ].
+		GbsSessionParameters unregisterSession: matchingRecord
+	].
+	"Safety net: if we still have stale rows by session id, clear them."
+	sessionId ifNotNil: [
+		GbsSessionParameters allSessions
+			removeAllSuchThat: [ :each |
+				(each respondsTo: #sessionId)
+					and: [ [ each sessionId ] on: Error do: [ nil ] = sessionId ] ]
+	].
 
 	"Sync all open launchers."
 	UIManager default defer: [
@@ -929,6 +950,23 @@ GbsClassicLauncher >> doLogout [
 		GbsClassicLauncher allInstancesDo: [ :launcher | launcher refreshAll ].
 	].
 	^ true
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> parameterRecordForLoggedOutSession: session sessionId: sessionId [
+	| record |
+	record := nil.
+	(session respondsTo: #parameters) ifTrue: [
+		record := [ session parameters ] on: Error do: [ nil ] ].
+	(record isNil and: [ session class name = #GbsSessionParameters ]) ifTrue: [
+		record := session ].
+	(record isNil and: [ sessionId notNil ]) ifTrue: [
+		record := GbsSessionParameters allSessions
+			detect: [ :each |
+				(each respondsTo: #sessionId)
+					and: [ [ each sessionId ] on: Error do: [ nil ] = sessionId ] ]
+			ifNone: [ nil ] ].
+	^ record
 ]
 
 { #category : 'initialization' }
