@@ -1052,7 +1052,7 @@ GbsRemoteDebugger >> initializePresenters [
 	restartButton := self newButton
 		label: 'Restart';
 		icon: (self iconNamedSafe: #smallUpdate);
-		action: [ self restartWithDeferredSecondPass ].
+		action: [ self restartWithRetry ].
 	resumeButton := self newButton 
 		label: 'Run';
 		icon: (self iconNamedSafe: #glamorousGo);
@@ -2708,6 +2708,35 @@ GbsRemoteDebugger >> restartWithDeferredSecondPass [
 				self restart
 			].
 	] forkAt: Processor userBackgroundPriority
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartWithRetry [
+	| attempts didRestart |
+	attempts := 0.
+	didRestart := false.
+	[
+		attempts := attempts + 1.
+		didRestart := self restart.
+		self fetchStackFrames.
+		self normalizeRestartSelectionAndPosition.
+		(self isTopExecutedCodeAtStepOne or: [ attempts >= 4 ])
+	] whileFalse: [
+		(Delay forMilliseconds: 180) wait
+	].
+	^ didRestart
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> isTopExecutedCodeAtStepOne [
+	| top step |
+	(contextList isCollection and: [ contextList isEmpty not ]) ifFalse: [ ^ false ].
+	top := contextList first.
+	(self isExecutedCodeFrame: top) ifFalse: [ ^ false ].
+	step := (top respondsTo: #quickStepPoint)
+		ifTrue: [ [ top quickStepPoint asInteger ] on: Error do: [ 0 ] ]
+		ifFalse: [ 0 ].
+	^ step = 1
 ]
 
 { #category : 'private' }
