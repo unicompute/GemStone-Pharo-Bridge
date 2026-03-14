@@ -87,16 +87,16 @@ GbsWorkspace >> doIt [
 GbsWorkspace >> bestDebugProcessOopFromError: anError session: aSession [
 	| candidates usable |
 	candidates := OrderedCollection new.
-	(self normalizedDebugProcessCandidate: (anError respondsTo: #serverProcessOop
+	(self normalizedDebugProcessCandidate: ((anError respondsTo: #serverProcessOop)
 		ifTrue: [ anError serverProcessOop ]
 		ifFalse: [ nil ]))
 		ifNotNil: [ :oop | candidates add: oop ].
-	(self normalizedDebugProcessCandidate: (anError respondsTo: #tag
+	(self normalizedDebugProcessCandidate: ((anError respondsTo: #tag)
 		ifTrue: [ anError tag ]
 		ifFalse: [ nil ]))
 		ifNotNil: [ :oop |
 			(candidates includes: oop) ifFalse: [ candidates add: oop ] ].
-	(self normalizedDebugProcessCandidate: (anError respondsTo: #exceptionOop
+	(self normalizedDebugProcessCandidate: ((anError respondsTo: #exceptionOop)
 		ifTrue: [ anError exceptionOop ]
 		ifFalse: [ nil ]))
 		ifNotNil: [ :oop |
