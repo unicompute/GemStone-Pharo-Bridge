@@ -1053,12 +1053,10 @@ GbsRemoteDebugger >> initializePresenters [
 		label: 'Restart';
 		icon: (self iconNamedSafe: #smallUpdate);
 		action: [
-			| worldStateClass |
 			self restart.
-			worldStateClass := Smalltalk at: #WorldState ifAbsent: [ nil ].
-			(worldStateClass notNil and: [ worldStateClass respondsTo: #addDeferredUIMessage: ])
-				ifTrue: [ worldStateClass addDeferredUIMessage: [ self restart ] ]
-				ifFalse: [ self restart ]
+			self fetchStackFrames.
+			self normalizeRestartSelectionAndPosition.
+			self restart
 		].
 	resumeButton := self newButton 
 		label: 'Run';
