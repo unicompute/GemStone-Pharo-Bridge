@@ -2686,15 +2686,27 @@ GbsRemoteDebugger >> restartWithDeferredSecondPass [
 	| worldStateClass |
 	self restart.
 	[
-		(Delay forMilliseconds: 120) wait.
+		(Delay forMilliseconds: 300) wait.
 		worldStateClass := Smalltalk at: #WorldState ifAbsent: [ nil ].
 		(worldStateClass notNil and: [ worldStateClass respondsTo: #addDeferredUIMessage: ])
 			ifTrue: [
-				[ worldStateClass addDeferredUIMessage: [ self restart ] ]
+				[ worldStateClass addDeferredUIMessage: [
+					self fetchStackFrames.
+					self normalizeRestartSelectionAndPosition.
+					self restart
+				] ]
 					on: Error
-					do: [ self restart ].
+					do: [
+						self fetchStackFrames.
+						self normalizeRestartSelectionAndPosition.
+						self restart
+					].
 			]
-			ifFalse: [ self restart ].
+			ifFalse: [
+				self fetchStackFrames.
+				self normalizeRestartSelectionAndPosition.
+				self restart
+			].
 	] forkAt: Processor userBackgroundPriority
 ]
 
