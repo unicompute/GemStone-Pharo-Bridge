@@ -2756,6 +2756,11 @@ GbsRemoteDebugger >> restartWithSimulatedSecondClick [
 		(service respondsTo: #resetServerPCToStepOne)
 			ifTrue: [ service resetServerPCToStepOne ]
 	] default: nil.
+	"Second click on Reset (explicit repeat as requested)"
+	self safeServiceCall: [
+		(service respondsTo: #resetServerPCToStepOne)
+			ifTrue: [ service resetServerPCToStepOne ]
+	] default: nil.
 
 	"Second click simulation"
 	secondPass := self safeServiceCall: [ service restart ] default: false.
