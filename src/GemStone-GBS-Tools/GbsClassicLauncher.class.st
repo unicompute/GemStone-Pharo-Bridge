@@ -274,6 +274,7 @@ GbsClassicLauncher class >> logoutCurrentSession [
 		removeAllSuchThat: [ :each |
 			(each respondsTo: #isConnected)
 				and: [ (([ each isConnected ] on: Error do: [ false ]) = false) ] ].
+	self compactActiveSessionsCollection.
 	GbsSessionParameters currentSession: nil.
 
 	UIManager default defer: [
@@ -285,6 +286,16 @@ GbsClassicLauncher class >> logoutCurrentSession [
 	UIManager default inform: (loggedOut
 		ifTrue: [ 'Logged out current session.' ]
 		ifFalse: [ 'Session state cleared.' ]).
+]
+
+{ #category : 'private' }
+GbsClassicLauncher class >> compactActiveSessionsCollection [
+	| connected |
+	connected := GbsSessionParameters allSessions select: [ :each |
+		(each respondsTo: #isConnected)
+			and: [ [ each isConnected ] on: Error do: [ false ] ] ].
+	GbsSessionParameters allSessions removeAll.
+	GbsSessionParameters allSessions addAll: connected.
 ]
 
 { #category : 'menus' }
@@ -951,6 +962,8 @@ GbsClassicLauncher >> doLogout [
 		removeAllSuchThat: [ :each |
 			(each respondsTo: #isConnected)
 				and: [ (([ each isConnected ] on: Error do: [ false ]) = false) ] ].
+	self class compactActiveSessionsCollection.
+	self refreshSessionList.
 
 	"Sync all open launchers."
 	UIManager default defer: [
