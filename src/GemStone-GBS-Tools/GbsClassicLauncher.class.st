@@ -893,9 +893,12 @@ GbsClassicLauncher >> doLoginRpc [
 
 { #category : 'actions' }
 GbsClassicLauncher >> doLogout [
-	| session |
+	| session sessionId matchingRecord |
 	session := self selectedSessionForLogout.
 	session ifNil: [ ^ self inform: 'Please select a session from the list.' ].
+	sessionId := (session respondsTo: #sessionId)
+		ifTrue: [ [ session sessionId ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
 
 	"Unselect first to prevent SubscriptOutOfBounds in Spec2"
 	(sessionList respondsTo: #unselectAll) ifTrue: [ sessionList unselectAll ].
@@ -909,6 +912,16 @@ GbsClassicLauncher >> doLogout [
 	((GbsSessionParameters currentSession == session)
 		or: [ (session respondsTo: #name) and: [ session name = 'Simple Launcher Session' ] ])
 		ifTrue: [ GbsSessionParameters currentSession: nil ].
+
+	"Remove logged out record from the session browser list (second pane)"
+	matchingRecord := GbsSessionParameters allSessions
+		detect: [ :each |
+			(each == session) or: [
+				sessionId notNil
+					and: [ (each respondsTo: #sessionId)
+					and: [ [ each sessionId ] on: Error do: [ nil ] = sessionId ] ] ] ]
+		ifNone: [ nil ].
+	matchingRecord ifNotNil: [ GbsSessionParameters unregisterSession: matchingRecord ].
 
 	"Sync all open launchers."
 	UIManager default defer: [

@@ -2,7 +2,8 @@ Class {
 	#name : 'GbsWorkspaceTest',
 	#superclass : 'TestCase',
 	#instVars : [
-		'previousSession'
+		'previousSession',
+		'previousSessions'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -11,12 +12,16 @@ Class {
 { #category : 'running' }
 GbsWorkspaceTest >> setUp [
 	super setUp.
-	previousSession := GbsSessionParameters currentSession
+	previousSession := GbsSessionParameters currentSession.
+	previousSessions := GbsSessionParameters allSessions copy.
+	GbsSessionParameters allSessions removeAll
 ]
 
 { #category : 'running' }
 GbsWorkspaceTest >> tearDown [
 	GbsSessionParameters currentSession: previousSession.
+	GbsSessionParameters allSessions removeAll.
+	GbsSessionParameters allSessions addAll: previousSessions.
 	super tearDown
 ]
 
@@ -25,6 +30,7 @@ GbsWorkspaceTest >> testDoItHandlesGemStoneError [
 	| workspace mockSession |
 	workspace := TestableGbsWorkspace new.
 	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
 	
 	"1. Give the workspace code so it doesn't exit early"
 	workspace textEditor text: '1 / 0'.
@@ -50,11 +56,39 @@ GbsWorkspaceTest >> testDoItHandlesGemStoneError [
 ]
 
 { #category : 'tests' }
+GbsWorkspaceTest >> testBestDebugProcessOopPrefersCandidateWithStack [
+	| workspace mockSession err resolved |
+	workspace := TestableGbsWorkspace new.
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	err := GbsError new
+		messageText: 'boom';
+		tag: 333;
+		serverProcessOop: 222;
+		exceptionOop: 444;
+		yourself.
+
+	mockSession stubs
+		at: #executeAndFetchContext
+		put: [ :script :context |
+			(script includesSubstring: 'Object _objectForOop: 333')
+				ifTrue: [ 'true' ]
+				ifFalse: [ 'false' ] ].
+
+	resolved := workspace
+		bestDebugProcessOopFromError: err
+		session: mockSession.
+
+	self assert: resolved equals: 333.
+]
+
+{ #category : 'tests' }
 GbsWorkspaceTest >> testDoItPrefersServerProcessOopOverTag [
 	| workspace mockSession |
 
 	workspace := TestableGbsWorkspace new.
 	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
 	workspace textEditor text: '1 / 0'.
 
 	mockSession stubs
@@ -76,10 +110,42 @@ GbsWorkspaceTest >> testDoItPrefersServerProcessOopOverTag [
 ]
 
 { #category : 'tests' }
+GbsWorkspaceTest >> testDoItUsesResolvedProcessCandidateWithStack [
+	| workspace mockSession |
+	workspace := TestableGbsWorkspace new.
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	workspace textEditor text: '1 / 0'.
+
+	mockSession stubs
+		at: #execute
+		put: [ :script |
+			(GbsError new
+				messageText: 'boom';
+				tag: 333;
+				serverProcessOop: 222;
+				exceptionOop: 444;
+				yourself) signal ].
+	mockSession stubs
+		at: #executeAndFetchContext
+		put: [ :script :context |
+			(script includesSubstring: 'Object _objectForOop: 333')
+				ifTrue: [ 'true' ]
+				ifFalse: [ 'false' ] ].
+	GbsSessionParameters currentSession: mockSession.
+
+	workspace doIt.
+
+	self assert: workspace debuggerOpened.
+	self assert: workspace lastOpenedProcessOop equals: 333.
+]
+
+{ #category : 'tests' }
 GbsWorkspaceTest >> testDoItOpensDebuggerWithServerProcessOopWhenProbeIsFalse [
 	| workspace mockSession |
 	workspace := TestableGbsWorkspace new.
 	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
 	workspace textEditor text: '1 / 0'.
 
 	mockSession stubs
@@ -108,6 +174,7 @@ GbsWorkspaceTest >> testDoItDoesNotProbeOrOpenDebuggerForLocalError [
 	| workspace mockSession |
 	workspace := TestableGbsWorkspace new.
 	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
 
 	workspace textEditor text: '1 / 0'.
 

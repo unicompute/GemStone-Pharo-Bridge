@@ -69,31 +69,18 @@ GbsPlaygroundActions class >> gsEvaluateIn: aPlaygroundPresenter debugOnError: d
 		GbsRemoteTranscript drainSessionLogsToWindowsAndLocal: activeSession.
 		^ result
 	] on: GbsError do: [ :ex |
-		serverCandidate := (ex respondsTo: #serverProcessOop)
-			ifTrue: [ ex serverProcessOop ]
-			ifFalse: [ nil ].
-		processOop := serverCandidate.
-		(processOop isNil or: [ processOop = 0 or: [ processOop = 20 ] ]) ifTrue: [
-			processOop := (ex respondsTo: #tag)
-				ifTrue: [ ex tag ]
-				ifFalse: [ 20 ]
-		].
-		(processOop isNumber not) ifTrue: [ processOop := 20 ].
-		(processOop isNil or: [ processOop = 0 or: [ processOop = 20 ] ]) ifTrue: [
-			processOop := (ex respondsTo: #exceptionOop)
-				ifTrue: [ ex exceptionOop ]
-				ifFalse: [ 20 ]
-		].
-		(processOop isNumber not) ifTrue: [ processOop := 20 ].
-		processOop := processOop ifNil: [ 20 ].
-		processOop := (processOop = 0) ifTrue: [ 20 ] ifFalse: [ processOop ].
-
 		exceptionCandidate := (ex respondsTo: #exceptionOop)
 			ifTrue: [ ex exceptionOop ]
 			ifFalse: [ nil ].
+		serverCandidate := (ex respondsTo: #serverProcessOop)
+			ifTrue: [ ex serverProcessOop ]
+			ifFalse: [ nil ].
 		hasRemoteMetadata := ((serverCandidate isNumber and: [ serverCandidate > 20 ])
 			or: [ exceptionCandidate isNumber and: [ exceptionCandidate > 20 ] ]).
-		currentUsable := hasRemoteMetadata.
+		processOop := 20.
+		hasRemoteMetadata ifTrue: [
+			processOop := self bestDebugProcessOopFromError: ex session: activeSession ].
+		currentUsable := processOop isNumber and: [ processOop > 20 ].
 		exceptionUsable := false.
 		(currentUsable not and: [ exceptionCandidate isNumber and: [ exceptionCandidate > 20 ] ]) ifTrue: [
 			processOop := exceptionCandidate.
@@ -110,6 +97,68 @@ GbsPlaygroundActions class >> gsEvaluateIn: aPlaygroundPresenter debugOnError: d
 				UIManager default inform: 'GemStone Error: ', ex messageText
 			].
 	]
+]
+
+{ #category : 'helpers' }
+GbsPlaygroundActions class >> bestDebugProcessOopFromError: anError session: aSession [
+	| candidates usable |
+	candidates := OrderedCollection new.
+	(self normalizedDebugProcessCandidate: (anError respondsTo: #serverProcessOop
+		ifTrue: [ anError serverProcessOop ]
+		ifFalse: [ nil ]))
+		ifNotNil: [ :oop | candidates add: oop ].
+	(self normalizedDebugProcessCandidate: (anError respondsTo: #tag
+		ifTrue: [ anError tag ]
+		ifFalse: [ nil ]))
+		ifNotNil: [ :oop |
+			(candidates includes: oop) ifFalse: [ candidates add: oop ] ].
+	(self normalizedDebugProcessCandidate: (anError respondsTo: #exceptionOop
+		ifTrue: [ anError exceptionOop ]
+		ifFalse: [ nil ]))
+		ifNotNil: [ :oop |
+			(candidates includes: oop) ifFalse: [ candidates add: oop ] ].
+	usable := candidates
+		detect: [ :each | self debugProcessCandidate: each hasStackIn: aSession ]
+		ifNone: [ nil ].
+	^ usable ifNil: [ candidates ifEmpty: [ 20 ] ifNotEmpty: [ candidates first ] ]
+]
+
+{ #category : 'helpers' }
+GbsPlaygroundActions class >> normalizedDebugProcessCandidate: anObject [
+	| oop |
+	anObject ifNil: [ ^ nil ].
+	oop := (anObject isNumber
+		ifTrue: [ anObject ]
+		ifFalse: [ [ anObject asString asInteger ] on: Error do: [ nil ] ]).
+	(oop isNumber and: [ oop > 20 ]) ifFalse: [ ^ nil ].
+	^ oop
+]
+
+{ #category : 'helpers' }
+GbsPlaygroundActions class >> debugProcessCandidate: processCandidate hasStackIn: aSession [
+	| script raw |
+	(aSession isNil or: [ processCandidate isNil ]) ifTrue: [ ^ false ].
+	script := '[
+		| obj proc report |
+		obj := Object _objectForOop: ', processCandidate asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := ((obj respondsTo: #_gsiStackReportFromLevel:toLevel:)
+			ifTrue: [ obj ]
+			ifFalse: [
+				(obj respondsTo: #serverProcess)
+					ifTrue: [ [ obj serverProcess ] on: Error do: [ nil ] ]
+					ifFalse: [ nil ] ]).
+		proc ifNil: [ ^ ''false'' ].
+		(proc respondsTo: #_gsiStackReportFromLevel:toLevel:) ifFalse: [ ^ ''false'' ].
+		report := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
+		((report notNil) and: [ (report respondsTo: #size) and: [ report size >= 2 ] ])
+			ifTrue: [ ''true'' ]
+			ifFalse: [ ''false'' ]
+	] value'.
+	raw := [ aSession executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	raw ifNil: [ ^ false ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	^ raw asString asLowercase = 'true'
 ]
 
 { #category : 'actions' }
