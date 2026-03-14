@@ -1188,26 +1188,30 @@ GbsRemoteDebugger >> isExecutedCodeFrame: aContext [
 	"Check if this is the executed code frame (nil class, unboundMethod selector)"
 	| className selectorName |
 	aContext ifNil: [ ^ false ].
-	className := [ aContext methodClassOrUnknown ] on: Error do: [ '<unknown>' ].
+	(aContext respondsTo: #isExecutedCodeFrame) ifTrue: [
+		([ aContext isExecutedCodeFrame ] on: Error do: [ false ]) ifTrue: [ ^ true ]
+	].
+	className := [ aContext methodClassOrUnknown asString ] on: Error do: [ '<unknown>' ].
 	selectorName := [ aContext selectorOrUnknown asString ] on: Error do: [ '<unknown>' ].
-	^ (className = 'nil' or: [ className = '<unknown>' ])
-		and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ]
+	^ (className = 'nil'
+		or: [ className = '<unknown>'
+		or: [ className isEmpty ] ])
+		and: [
+			selectorName = 'nil'
+				or: [ selectorName = 'unboundMethod'
+				or: [ selectorName = '<unknown>'
+				or: [ selectorName isEmpty ] ] ] ]
 ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> preferredInitialContextIndex [
-	| index |
+	| index executedIndex |
 	contextList ifNil: [ ^ 1 ].
 	contextList isEmpty ifTrue: [ ^ 1 ].
 
-	"CRITICAL FIX: If the first context is the executed code frame, always select it.
-	This ensures we show the correct step point after restart."
-	(contextList first respondsTo: #isExecutedCodeFrame) ifTrue: [
-		(contextList first isExecutedCodeFrame) ifTrue: [ ^ 1 ]
-	].
-	(contextList first respondsTo: #isExecutedCodeAtStepOne) ifTrue: [
-		(contextList first isExecutedCodeAtStepOne) ifTrue: [ ^ 1 ]
-	].
+	"Restart determinism: always prefer the executed-code frame, wherever it is."
+	executedIndex := contextList findFirst: [ :ctx | self isExecutedCodeFrame: ctx ].
+	executedIndex > 0 ifTrue: [ ^ executedIndex ].
 
 	index := contextList
 		findFirst: [ :ctx | self isLikelyUserFrame: ctx ].
@@ -1238,9 +1242,13 @@ GbsRemoteDebugger >> setInitialSourceCode: aString [
 
 { #category : 'private' }
 GbsRemoteDebugger >> preferredInitialContextIndex [
-	| index |
+	| index executedIndex |
 	contextList ifNil: [ ^ 1 ].
 	contextList isEmpty ifTrue: [ ^ 1 ].
+
+	"Restart determinism: always prefer the executed-code frame, wherever it is."
+	executedIndex := contextList findFirst: [ :ctx | self isExecutedCodeFrame: ctx ].
+	executedIndex > 0 ifTrue: [ ^ executedIndex ].
 
 	index := contextList
 		findFirst: [ :ctx | self isLikelyUserFrame: ctx ].
@@ -2919,13 +2927,7 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
 
 	"Find server-reported executed-code frame"
-	index := contextList
-		findFirst: [ :ctx |
-			| className selectorName |
-			className := [ ctx methodClassOrUnknown asString ] on: Error do: [ '' ].
-			selectorName := [ ctx selectorOrUnknown asString ] on: Error do: [ '' ].
-			(className = 'nil' or: [ className = '<unknown>' ])
-				and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ] ].
+	index := contextList findFirst: [ :ctx | self isExecutedCodeFrame: ctx ].
 
 	index = 0 ifTrue: [ index := 1 ].
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
