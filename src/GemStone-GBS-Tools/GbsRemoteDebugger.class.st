@@ -2723,6 +2723,7 @@ GbsRemoteDebugger >> normalizePauseLandingSelection [
 { #category : 'private' }
 GbsRemoteDebugger >> restart [
 	| didRestart |
+	Transcript show: '[UI restart] restart begin processOop='; show: processOop asString; cr.
 	didRestart := self safeServiceCall: [ service restart ] default: false.
 	didRestart ifFalse: [ didRestart := self restartUsingDirectTrimFromExecutedFrame ].
 	didRestart ifTrue: [
@@ -2731,6 +2732,7 @@ GbsRemoteDebugger >> restart [
 		"Ensure server PC is at step 1 after restart"
 		self ensureServerPCToStepOneAfterRestart.
 	].
+	Transcript show: '[UI restart] restart end didRestart='; show: didRestart asString; cr.
 	^ didRestart
 ]
 
@@ -2805,11 +2807,21 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 
 	stabilized := self isExecutedCodeSelectionConfirmed
 		and: [ self restartNeedsServerRewind not ].
+	Transcript
+		show: '[UI restart] post-restart stabilized=';
+		show: stabilized asString;
+		show: ' needsRewind=';
+		show: self restartNeedsServerRewind asString;
+		cr.
 	stabilized ifTrue: [ ^ true ].
 
 	self ensureServerPCToStepOneAfterRestart.
 	self fetchStackFrames.
 	self normalizeRestartSelectionAndPosition.
+	Transcript
+		show: '[UI restart] after local correction needsRewind=';
+		show: self restartNeedsServerRewind asString;
+		cr.
 	^ self isExecutedCodeSelectionConfirmed
 		and: [ self restartNeedsServerRewind not ]
 ]
@@ -3303,6 +3315,20 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	].
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
 	context := contextList at: index.
+	Transcript
+		show: '[UI restart] normalize select index=';
+		show: index asString;
+		show: ' level=';
+		show: ((context respondsTo: #level)
+			ifTrue: [ [ context level ] on: Error do: [ 0 ] ]
+			ifFalse: [ 0 ]) asString;
+		show: ' class=';
+		show: ([ context methodClassOrUnknown asString ] on: Error do: [ '<err>' ]);
+		show: ' selector=';
+		show: ([ context selectorOrUnknown asString ] on: Error do: [ '<err>' ]);
+		show: ' serverLevel=';
+		show: (serverLevel ifNil: [ 'nil' ] ifNotNil: [ serverLevel asString ]);
+		cr.
 
 	"Do not rewrite class/selector on arbitrary frames.
 	If this is already executed code, normalize only its step point display."

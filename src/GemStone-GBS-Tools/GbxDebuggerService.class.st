@@ -1424,13 +1424,32 @@ GbxDebuggerService >> isExecutedCodeAtStepOne [
 
 { #category : 'private' }
 GbxDebuggerService >> logRestartState: labelString context: aContext [
-	"Restart diagnostics hook. Keep as no-op by default."
+	| level className selectorName step serverLevel |
+	level := (aContext notNil and: [ aContext respondsTo: #level ])
+		ifTrue: [ [ aContext level ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	className := (aContext notNil and: [ aContext respondsTo: #methodClassOrUnknown ])
+		ifTrue: [ [ aContext methodClassOrUnknown asString ] on: Error do: [ '<err>' ] ]
+		ifFalse: [ '<nil>' ].
+	selectorName := (aContext notNil and: [ aContext respondsTo: #selectorOrUnknown ])
+		ifTrue: [ [ aContext selectorOrUnknown asString ] on: Error do: [ '<err>' ] ]
+		ifFalse: [ '<nil>' ].
+	step := [ self currentStepPoint ] on: Error do: [ nil ].
+	serverLevel := [ self restartLevelFromServerStack ] on: Error do: [ nil ].
+	Transcript
+		show: '[GBS restart] '; show: labelString asString;
+		show: ' level='; show: (level ifNil: [ 'nil' ] ifNotNil: [ level asString ]);
+		show: ' class='; show: className;
+		show: ' selector='; show: selectorName;
+		show: ' step='; show: (step ifNil: [ 'nil' ] ifNotNil: [ step asString ]);
+		show: ' serverLevel='; show: (serverLevel ifNil: [ 'nil' ] ifNotNil: [ serverLevel asString ]);
+		cr.
 	^ self
 ]
 
 { #category : 'private' }
 GbxDebuggerService >> logRestartText: aString [
-	"Restart diagnostics hook. Keep as no-op by default."
+	Transcript show: '[GBS restart] '; show: aString asString; cr.
 	^ self
 ]
 
