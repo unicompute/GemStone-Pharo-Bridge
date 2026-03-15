@@ -1651,7 +1651,7 @@ GbsRemoteDebugger >> stackData: anArray [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> stepInto [
-	| didStep |
+	| didStep serverStep |
 	Transcript
 		show: '[UI stepInto] begin selectedLevel=';
 		show: self currentSelectedFrameLevel asString;
@@ -1661,6 +1661,16 @@ GbsRemoteDebugger >> stepInto [
 		show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
 		cr.
 	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
+		serverStep := self serverExecutedFrameStepPoint.
+		((serverStep isNil) or: [ serverStep <= 0 ]) ifTrue: [
+			self fetchStackFrames.
+			self normalizeRestartSelectionAndPosition.
+			serverStep := self serverExecutedFrameStepPoint.
+			((serverStep isNil) or: [ serverStep <= 0 ]) ifTrue: [
+				Transcript show: '[UI stepInto] abort: server step unresolved after failed/partial restart'; cr.
+				^ false
+			]
+		].
 		((restartGuardActive = true) and: [ self restartNeedsServerRewind ]) ifTrue: [
 			Transcript show: '[UI stepInto] blocked: restart rewind pending, forcing rewind'; cr.
 			self safeServiceCall: [
@@ -1716,7 +1726,7 @@ GbsRemoteDebugger >> step [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> stepOver [
-	| didStep |
+	| didStep serverStep |
 	Transcript
 		show: '[UI stepOver] begin selectedLevel=';
 		show: self currentSelectedFrameLevel asString;
@@ -1726,6 +1736,16 @@ GbsRemoteDebugger >> stepOver [
 		show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
 		cr.
 	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
+		serverStep := self serverExecutedFrameStepPoint.
+		((serverStep isNil) or: [ serverStep <= 0 ]) ifTrue: [
+			self fetchStackFrames.
+			self normalizeRestartSelectionAndPosition.
+			serverStep := self serverExecutedFrameStepPoint.
+			((serverStep isNil) or: [ serverStep <= 0 ]) ifTrue: [
+				Transcript show: '[UI stepOver] abort: server step unresolved after failed/partial restart'; cr.
+				^ false
+			]
+		].
 		((restartGuardActive = true) and: [ self restartNeedsServerRewind ]) ifTrue: [
 			Transcript show: '[UI stepOver] blocked: restart rewind pending, forcing rewind'; cr.
 			self safeServiceCall: [
@@ -2870,6 +2890,9 @@ GbsRemoteDebugger >> restart [
 	didRestart := self safeServiceCall: [ service restart ] default: false.
 	didRestart ifFalse: [
 		Transcript show: '[UI restart] restart aborted: service restart failed'; cr.
+		restartGuardActive := false.
+		restartPinnedContext := nil.
+		self fetchStackFrames.
 		^ false
 	].
 	didRestart ifTrue: [
