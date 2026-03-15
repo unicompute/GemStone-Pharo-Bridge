@@ -4,7 +4,9 @@ Class {
 	#instVars : [
 		'service',
 		'object',
-		'properties'
+		'properties',
+		'contextOop',
+		'activation'
 	],
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'

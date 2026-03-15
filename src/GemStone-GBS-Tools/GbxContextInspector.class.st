@@ -3,7 +3,10 @@ Class {
 	#superclass : 'GbsInspector',
 	#instVars : [
 		'contextOop',
-		'activation'
+		'activation',
+		'service',
+		'object',
+		'properties'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'

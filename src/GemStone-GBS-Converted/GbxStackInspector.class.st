@@ -2,7 +2,9 @@ Class {
 	#name : 'GbxStackInspector',
 	#superclass : 'GbxContextInspector',
 	#instVars : [
-		'selectedFieldName'
+		'selectedFieldName',
+		'processOop',
+		'stackList'
 	],
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'

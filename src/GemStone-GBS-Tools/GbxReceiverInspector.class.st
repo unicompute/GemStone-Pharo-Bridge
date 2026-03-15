@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxReceiverInspector',
-	#superclass : 'GbsInspector',
+	#superclass : 'GbxContextInspector',
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }

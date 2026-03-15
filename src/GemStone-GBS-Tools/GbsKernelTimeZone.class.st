@@ -75,14 +75,12 @@ GbsKernelTimeZone >> initialize [
 { #category : 'initialization' }
 GbsKernelTimeZone >> initializeFromSystem [
 	"Initialize from system time zone"
-	| zone |
+	| now |
 	
-	zone := Timezone current.
-	zone ifNotNil: [
-		name := zone name.
-		offset := zone offset.
-		daylightSavings := zone isDaylightSavings.
-	].
+	now := DateAndTime now.
+	name := 'Local'.
+	offset := now offset asDuration asSeconds.
+	daylightSavings := false.
 ]
 
 { #category : 'accessing' }

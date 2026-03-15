@@ -57,7 +57,6 @@ GbxTrippy >> buildToolbar [
 		add: forwardButton width: 80;
 		add: upButton width: 60;
 		add: refreshButton width: 80;
-		add: SpSpacer new;
 		add: inspectButton width: 80;
 		add: doItButton width: 80;
 		yourself

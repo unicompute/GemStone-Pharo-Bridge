@@ -13,7 +13,16 @@ Class {
 		'cacheStatsGroup',
 		'sessionStatsGroup',
 		'gcStatsGroup',
-		'memoryStatsGroup'
+		'memoryStatsGroup',
+		'cache',
+		'process',
+		'state',
+		'stateChangeProtect',
+		'nextResumption',
+		'delay',
+		'archiver',
+		'sampleInterval',
+		'cacheSampleIntervalMultiplier'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -52,7 +61,6 @@ GbxStatMonitor >> buildToolbar [
 	^ SpBoxLayout newHorizontal
 		spacing: 3;
 		add: refreshButton width: 100;
-		add: SpSpacer new;
 		yourself
 ]
 
@@ -61,8 +69,7 @@ GbxStatMonitor >> buildStatsGroups [
 	| groupsLayout |
 	
 	groupsLayout := SpBoxLayout newHorizontal
-		spacing: 10;
-		padding: (SpPadding left: 5 top: 5 right: 5 bottom: 5).
+		spacing: 10.
 	
 	"Cache Stats"
 	cacheStatsGroup := self buildStatGroup: 'Cache Statistics' specs: {
@@ -110,8 +117,7 @@ GbxStatMonitor >> buildStatGroup: title specs: statSpecs [
 	| groupLayout statLabels |
 	
 	groupLayout := SpBoxLayout newVertical
-		spacing: 3;
-		padding: (SpPadding left: 10 top: 10 right: 10 bottom: 10).
+		spacing: 3.
 	
 	"Title"
 	groupLayout add: (self newLabel label: title; emphasis: #bold; yourself) height: 25.
@@ -133,7 +139,6 @@ GbxStatMonitor >> buildStatGroup: title specs: statSpecs [
 GbxStatMonitor >> buildRefreshControls [
 	^ SpBoxLayout newHorizontal
 		spacing: 10;
-		add: SpSpacer new;
 		add: autoRefreshCheckbox;
 		add: refreshButton;
 		yourself

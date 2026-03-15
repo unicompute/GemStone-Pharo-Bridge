@@ -1,9 +1,10 @@
 Class {
 	#name : 'GbxStackInspector',
-	#superclass : 'GbsInspector',
+	#superclass : 'GbxContextInspector',
 	#instVars : [
 		'processOop',
-		'stackList'
+		'stackList',
+		'selectedFieldName'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'

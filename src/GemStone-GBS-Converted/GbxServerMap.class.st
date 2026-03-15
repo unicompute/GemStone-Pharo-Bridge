@@ -3,7 +3,10 @@ Class {
 	#superclass : 'GbxOopKeyedDictionary',
 	#type : 'variable',
 	#instVars : [
-		'isWeak'
+		'isWeak',
+		'nodes',
+		'segments',
+		'rootNode'
 	],
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'

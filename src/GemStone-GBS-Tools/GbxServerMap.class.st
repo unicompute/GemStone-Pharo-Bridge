@@ -5,7 +5,8 @@ Class {
 		'session',
 		'nodes',
 		'segments',
-		'rootNode'
+		'rootNode',
+		'isWeak'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'

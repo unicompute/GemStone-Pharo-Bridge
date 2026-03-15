@@ -6,7 +6,8 @@ Class {
 		'segmentName',
 		'bucketCount',
 		'occupancy',
-		'nodes'
+		'nodes',
+		'needFinalization'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'

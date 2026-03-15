@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'eventQueue',
 		'waitForEvents',
-		'timeout'
+		'timeout',
+		'signalSocket'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
