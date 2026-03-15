@@ -2763,8 +2763,18 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restartTwiceOnClick [
-	| firstPass secondPass |
+	| firstPass secondPass attempts |
 	firstPass := self restart.
+	"Poll debugger stack before second restart, so server/client state is synchronized."
+	attempts := 0.
+	[
+		self fetchStackFrames.
+		self normalizeRestartSelectionAndPosition.
+		((contextList isCollection and: [ contextList isEmpty not ]) or: [ attempts >= 10 ])
+	] whileFalse: [
+		attempts := attempts + 1.
+		(Delay forMilliseconds: 20) wait
+	].
 	secondPass := self restart.
 	^ firstPass or: [ secondPass ]
 ]
