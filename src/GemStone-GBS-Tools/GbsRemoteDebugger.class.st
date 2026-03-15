@@ -837,7 +837,7 @@ GbsRemoteDebugger >> fetchFullSourceFor: aContext [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> fetchStackFrames [
-	| contexts |
+	| contexts serviceCurrent serviceCurrentBeforeRecompute hasNonGlue |
 
 	"Check if we have captured stack data"
 	stackData ifNotNil: [
@@ -846,11 +846,29 @@ GbsRemoteDebugger >> fetchStackFrames [
 
 	contexts := #( ).
 	service ifNotNil: [
+		serviceCurrentBeforeRecompute := (service respondsTo: #currentContext)
+			ifTrue: [ self safeServiceCall: [ service currentContext ] default: nil ]
+			ifFalse: [ nil ].
 		[
 			(service respondsTo: #recomputeContextList)
 				ifTrue: [ service recomputeContextList ].
 			contexts := service contextList
 		] on: Error do: [ contexts := #( ) ]
+	].
+
+	"Live restart edge case: service can temporarily report glue-only stack
+	while still holding a valid non-glue currentContext."
+	serviceCurrent := (service notNil and: [ service respondsTo: #currentContext ])
+		ifTrue: [ self safeServiceCall: [ service currentContext ] default: nil ]
+		ifFalse: [ nil ].
+	hasNonGlue := contexts anySatisfy: [ :ctx | (self isRestartGlueFrame: ctx) not ].
+	((contexts isEmpty not)
+		and: [ hasNonGlue not
+		and: [ ((serviceCurrentBeforeRecompute notNil
+			and: [ (self isRestartGlueFrame: serviceCurrentBeforeRecompute) not ])
+			or: [ serviceCurrent notNil
+			and: [ (self isRestartGlueFrame: serviceCurrent) not ] ]) ] ]) ifTrue: [
+		contexts := { (serviceCurrentBeforeRecompute ifNil: [ serviceCurrent ]) }, contexts.
 	].
 
 	contexts ifEmpty: [
