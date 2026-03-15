@@ -27,7 +27,7 @@ GbsKernelTimeZone class >> named: aString [
 ]
 
 { #category : 'conversion' }
-GbsKernelTimeZone >> convertGemStoneTime: gsTime toLocal [
+GbsKernelTimeZone >> convertGemStoneTime: gsTime toLocal: ignoredFlag [
 	"Convert GemStone internal time to local DateAndTime"
 	| epoch seconds localTime |
 	
@@ -46,7 +46,7 @@ GbsKernelTimeZone >> convertGemStoneTime: gsTime toLocal [
 ]
 
 { #category : 'conversion' }
-GbsKernelTimeZone >> convertLocalTime: localTime toGemStone [
+GbsKernelTimeZone >> convertLocalTime: localTime toGemStone: ignoredFlag [
 	"Convert local DateAndTime to GemStone internal time"
 	| epoch seconds gsTime |
 	
