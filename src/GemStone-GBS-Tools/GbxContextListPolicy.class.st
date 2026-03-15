@@ -153,17 +153,35 @@ GbxContextListPolicy >> fetchServerContexts [
 			(obj respondsTo: #gbxResult)
 				ifTrue: [ gbsError := [ obj gbxResult ] on: Error do: [ nil ] ]
 		].
-		gbsError notNil ifTrue: [
-			gsProcess := [ gbsError serverProcess ] on: Error do: [ nil ]
-		].
-		gsProcess isNil ifTrue: [
-			(obj respondsTo: #_gsiStackReportFromLevel:toLevel:)
-				ifTrue: [ gsProcess := obj ]
-		].
-		gsProcess isNil ifTrue: [
-			(obj respondsTo: #process)
-				ifTrue: [ gsProcess := [ obj process ] on: Error do: [ nil ] ]
-		].
+			gbsError notNil ifTrue: [
+				gsProcess := [ gbsError serverProcess ] on: Error do: [ nil ]
+			].
+			gsProcess isNil ifTrue: [
+				(gbsError notNil and: [ gbsError respondsTo: #serverProcessOop ]) ifTrue: [
+					| procOop |
+					procOop := [ gbsError serverProcessOop ] on: Error do: [ nil ].
+					(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
+						gsProcess := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
+					]
+				]
+			].
+			gsProcess isNil ifTrue: [
+				(obj respondsTo: #_gsiStackReportFromLevel:toLevel:)
+					ifTrue: [ gsProcess := obj ]
+			].
+			gsProcess isNil ifTrue: [
+				(obj respondsTo: #serverProcessOop) ifTrue: [
+					| procOop |
+					procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
+					(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
+						gsProcess := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
+					]
+				]
+			].
+			gsProcess isNil ifTrue: [
+				(obj respondsTo: #process)
+					ifTrue: [ gsProcess := [ obj process ] on: Error do: [ nil ] ]
+			].
 		(gsProcess isNil and: [ obj respondsTo: #topContext ]) ifTrue: [
 			ctx := [ obj topContext ] on: Error do: [ nil ].
 			(ctx notNil and: [ ctx respondsTo: #process ])
@@ -552,21 +570,56 @@ GbxContextListPolicy >> matchingServerCallMarkerForServerContext: gsContext [
 
 { #category : 'private' }
 GbxContextListPolicy >> processIdentityForContext: aContext [
+	| identity |
 	aContext ifNil: [ ^ nil ].
-	(aContext respondsTo: #processOop) ifTrue: [ ^ aContext processOop ].
-	(aContext respondsTo: #process) ifTrue: [ ^ aContext process ].
-	^ nil
+	(aContext respondsTo: #processOop)
+		ifTrue: [
+			identity := [ aContext processOop ] on: Error do: [ nil ].
+			identity ifNotNil: [ ^ self normalizeProcessIdentity: identity ]
+		].
+	(aContext respondsTo: #process)
+		ifTrue: [
+			identity := [ aContext process ] on: Error do: [ nil ].
+			identity ifNotNil: [ ^ self normalizeProcessIdentity: identity ]
+		].
+	^ self normalizeProcessIdentity: aContext
 ]
 
 { #category : 'private' }
 GbxContextListPolicy >> processIdentityForErrorLike: anObject [
+	| identity |
 	anObject ifNil: [ ^ nil ].
 	(anObject respondsTo: #gbxIsGSError)
 		ifTrue: [ anObject gbxIsGSError ifFalse: [ ^ nil ] ]
-		ifFalse: [ ^ nil ].
-	(anObject respondsTo: #serverProcessOop) ifTrue: [ ^ anObject serverProcessOop ].
-	(anObject respondsTo: #serverProcess) ifTrue: [ ^ anObject serverProcess ].
-	^ nil
+		ifFalse: [ ].
+	(anObject respondsTo: #serverProcessOop)
+		ifTrue: [
+			identity := [ anObject serverProcessOop ] on: Error do: [ nil ].
+			identity ifNotNil: [ ^ self normalizeProcessIdentity: identity ]
+		].
+	(anObject respondsTo: #serverProcess)
+		ifTrue: [
+			identity := [ anObject serverProcess ] on: Error do: [ nil ].
+			identity ifNotNil: [ ^ self normalizeProcessIdentity: identity ]
+		].
+	(anObject respondsTo: #process)
+		ifTrue: [
+			identity := [ anObject process ] on: Error do: [ nil ].
+			identity ifNotNil: [ ^ self normalizeProcessIdentity: identity ]
+		].
+	^ self normalizeProcessIdentity: anObject
+]
+
+{ #category : 'private' }
+GbxContextListPolicy >> normalizeProcessIdentity: anObject [
+	| oop |
+	anObject ifNil: [ ^ nil ].
+	anObject isNumber ifTrue: [ ^ anObject ].
+	oop := [ anObject asOop ] on: Error do: [ nil ].
+	oop ifNotNil: [ ^ oop ].
+	oop := [ anObject oopValue ] on: Error do: [ nil ].
+	oop ifNotNil: [ ^ oop ].
+	^ anObject
 ]
 
 { #category : 'context list' }

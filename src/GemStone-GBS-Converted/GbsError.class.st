@@ -45,3 +45,30 @@ GbsError >> exceptionOop: anObject [
 
 	exceptionOop := anObject
 ]
+
+{ #category : 'testing' }
+GbsError >> gbxIsGSError [
+
+	^ true
+]
+
+{ #category : 'accessing' }
+GbsError >> gbxGsDebuggerSession [
+
+	^ self session
+]
+
+{ #category : 'accessing' }
+GbsError >> serverProcess [
+
+	^ serverProcessOop
+]
+
+{ #category : 'accessing' }
+GbsError >> session [
+
+	(gemStoneExceptionProxy notNil and: [ gemStoneExceptionProxy respondsTo: #session ]) ifTrue: [
+		^ [ gemStoneExceptionProxy session ] on: Error do: [ nil ]
+	].
+	^ nil
+]

@@ -606,12 +606,21 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 		ctx := nil.
 		proc := nil.
 		(obj respondsTo: #sender) ifTrue: [ ctx := obj ].
-		(ctx isNil and: [ obj respondsTo: #topContext ])
-			ifTrue: [ ctx := [ obj topContext ] on: Error do: [ nil ] ].
-		(ctx isNil and: [ obj respondsTo: #process ])
-			ifTrue: [ proc := [ obj process ] on: Error do: [ nil ] ].
-		(proc isNil and: [ obj respondsTo: #_gsiStackReportFromLevel:toLevel: ])
-			ifTrue: [ proc := obj ].
+			(ctx isNil and: [ obj respondsTo: #topContext ])
+				ifTrue: [ ctx := [ obj topContext ] on: Error do: [ nil ] ].
+			(ctx isNil and: [ obj respondsTo: #process ])
+				ifTrue: [ proc := [ obj process ] on: Error do: [ nil ] ].
+			(proc isNil and: [ obj respondsTo: #serverProcess ])
+				ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+			(proc isNil and: [ obj respondsTo: #serverProcessOop ]) ifTrue: [
+				| procOop |
+				procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
+				(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
+					proc := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
+				]
+			].
+			(proc isNil and: [ obj respondsTo: #_gsiStackReportFromLevel:toLevel: ])
+				ifTrue: [ proc := obj ].
 		(ctx isNil and: [ proc notNil and: [ proc respondsTo: #topContext ] ])
 			ifTrue: [ ctx := [ proc topContext ] on: Error do: [ nil ] ].
 
@@ -904,14 +913,22 @@ GbsRemoteDebugger >> resolveDebugProcessOopFromCurrentProcessOop [
 
 		(hasStack value: obj) ifTrue: [ ^ (Reflection oopOf: obj) asString ].
 
-		candidate := (obj respondsTo: #serverProcess)
-			ifTrue: [ [ obj serverProcess ] on: Error do: [ nil ] ]
-			ifFalse: [ nil ].
-		(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+			candidate := (obj respondsTo: #serverProcess)
+				ifTrue: [ [ obj serverProcess ] on: Error do: [ nil ] ]
+				ifFalse: [ nil ].
+			(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
 
-		candidate := (obj respondsTo: #process)
-			ifTrue: [ [ obj process ] on: Error do: [ nil ] ]
-			ifFalse: [ nil ].
+			candidate := (obj respondsTo: #serverProcessOop)
+				ifTrue: [ [ obj serverProcessOop ] on: Error do: [ nil ] ]
+				ifFalse: [ nil ].
+			(candidate isNumber and: [ candidate > 20 ]) ifTrue: [
+				candidate := [ Object _objectForOop: candidate ] on: Error do: [ nil ].
+				(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+			].
+
+			candidate := (obj respondsTo: #process)
+				ifTrue: [ [ obj process ] on: Error do: [ nil ] ]
+				ifFalse: [ nil ].
 		(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
 
 		top := (obj respondsTo: #topContext)
