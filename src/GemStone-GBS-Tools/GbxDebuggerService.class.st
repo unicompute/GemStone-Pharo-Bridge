@@ -1677,7 +1677,20 @@ GbxDebuggerService >> restartTargetContext [
 		ifNone: [ nil ].
 	detected ifNotNil: [ ^ detected ].
 
-	^ contexts first
+	^ contexts
+		detect: [ :ctx | (self isRestartGlueContext: ctx) not ]
+		ifNone: [ contexts first ]
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> isRestartGlueContext: aContext [
+	| className selectorName |
+	aContext ifNil: [ ^ true ].
+	className := [ aContext methodClassOrUnknown asString ] on: Error do: [ '' ].
+	selectorName := [ aContext selectorOrUnknown asString ] on: Error do: [ '' ].
+	(className includesSubstring: 'GsNMethod') ifTrue: [ ^ true ].
+	(selectorName beginsWith: '_') ifTrue: [ ^ true ].
+	^ false
 ]
 
 { #category : 'private' }
@@ -1692,7 +1705,8 @@ GbxDebuggerService >> selectRestartTargetContext [
 				(ctx respondsTo: #level)
 					and: [ ctxLevel = serverLevel ] ]
 			ifNone: [ nil ].
-		target ifNotNil: [ ^ self selectContext: target ]
+		(target notNil and: [ (self isRestartGlueContext: target) not ])
+			ifTrue: [ ^ self selectContext: target ]
 	].
 	target := self restartTargetContext.
 	target ifNil: [ ^ self ].

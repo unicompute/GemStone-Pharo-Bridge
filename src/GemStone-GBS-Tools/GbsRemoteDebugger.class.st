@@ -3387,10 +3387,12 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	| index context fallbackIndex current serverLevel |
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
 
+	"Prefer an explicit executed-code frame marker when present."
+	index := contextList findFirst: [ :ctx | self isExecutedCodeFrame: ctx ].
+
 	"Prefer server-truth executed frame level when available."
-	index := 0.
 	serverLevel := self resolveExecutedFrameLevelFromServer.
-	(serverLevel isNumber and: [ serverLevel > 0 ]) ifTrue: [
+	(index = 0 and: [ serverLevel isNumber and: [ serverLevel > 0 ] ]) ifTrue: [
 		index := contextList
 			findFirst: [ :ctx |
 				| ctxLevel |
@@ -3399,7 +3401,7 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 					and: [ ctxLevel = serverLevel ] ]
 	].
 
-	"Prefer an explicit service-selected target when it is still present."
+	"Only use service-selected target when it is a plausible restart frame."
 	index = 0 ifTrue: [
 		current := service
 			ifNotNil: [
@@ -3408,13 +3410,10 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 					ifFalse: [ nil ] ]
 			ifNil: [ nil ].
 		current ifNotNil: [
-			index := contextList findFirst: [ :ctx | ctx == current ]
+			((self isExecutedCodeFrame: current) or: [ self isLikelyUserFrame: current ]) ifTrue: [
+				index := contextList findFirst: [ :ctx | ctx == current ]
+			]
 		]
-	].
-
-	"Find server-reported executed-code frame"
-	index = 0 ifTrue: [
-		index := contextList findFirst: [ :ctx | self isExecutedCodeFrame: ctx ]
 	].
 
 	index = 0 ifTrue: [
