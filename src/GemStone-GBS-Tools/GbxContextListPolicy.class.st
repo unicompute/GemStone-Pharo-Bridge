@@ -107,7 +107,13 @@ GbxContextListPolicy >> computeContextList [
 	].
 	
 	glueIsHidden 
-		ifTrue: [ contextList := self filterOutGlue: allContexts ]
+		ifTrue: [
+			| filtered |
+			filtered := self filterOutGlue: allContexts.
+			contextList := filtered isEmpty
+				ifTrue: [ allContexts asArray ]
+				ifFalse: [ filtered ]
+		]
 		ifFalse: [ contextList := allContexts ].
 	
 	^ contextList
@@ -347,19 +353,31 @@ GbxContextListPolicy >> fetchServerContexts [
 				(activation respondsTo: #session:)
 					ifTrue: [ activation session: debugger session ]
 					ifFalse: [ activation instVarNamed: 'session' put: debugger session ].
-				activation
-					level: ([ parts first asInteger ] on: Error do: [ 1 ]);
-					initializeFromClass: (parts at: 2)
-						selector: selectorSymbol
-						source: ((((parts at: 4)
+				[ activation level: ([ parts first asInteger ] on: Error do: [ 1 ]) ] on: Error do: [ ].
+				(activation respondsTo: #initializeFromClass:selector:source:contextOop:)
+					ifTrue: [
+						[ activation
+							initializeFromClass: (parts at: 2)
+							selector: selectorSymbol
+							source: ((((parts at: 4)
+								copyReplaceAll: '<TAB>' with: Character tab asString)
+								copyReplaceAll: '<CR>' with: String cr)
+								copyReplaceAll: '<LF>' with: String lf)
+							contextOop: ctxOop ] on: Error do: [ ]
+					]
+					ifFalse: [
+						[ activation methodClass: (parts at: 2) ] on: Error do: [ ].
+						[ activation selector: selectorSymbol ] on: Error do: [ ].
+						[ activation sourceString: ((((parts at: 4)
 							copyReplaceAll: '<TAB>' with: Character tab asString)
 							copyReplaceAll: '<CR>' with: String cr)
-							copyReplaceAll: '<LF>' with: String lf)
-						contextOop: ctxOop;
-					quickStepPoint: quickStepValue;
-					sourceOffsets: offsetsValue;
-					ipOffset: lineNumberValue;
-					yourself
+							copyReplaceAll: '<LF>' with: String lf) ] on: Error do: [ ].
+						[ activation processOop: ctxOop ] on: Error do: [ ]
+					].
+				[ activation quickStepPoint: quickStepValue ] on: Error do: [ ].
+				[ activation sourceOffsets: offsetsValue ] on: Error do: [ ].
+				[ activation ipOffset: lineNumberValue ] on: Error do: [ ].
+				activation
 			]
 		] thenSelect: #isNotNil.
 	

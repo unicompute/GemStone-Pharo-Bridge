@@ -713,9 +713,9 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 		^ #( )
 	].
 
-	contexts := (rawData splitOn: Character lf)
-		collect: [ :line |
-			| parts levelValue classValue selectorValue methodValue quickStepValue offsetsTokens offsetsValue lineNumberValue |
+		contexts := (rawData splitOn: Character lf)
+			collect: [ :line |
+				| parts levelValue classValue selectorValue methodValue quickStepValue offsetsTokens offsetsValue lineNumberValue activation |
 			line isEmpty ifTrue: [ nil ] ifFalse: [
 				parts := line splitOn: Character tab.
 				parts size >= 3 ifTrue: [
@@ -741,23 +741,20 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 								ifFalse: [ [ cleaned asInteger ] on: Error do: [ nil ] ]
 						]
 					].
-					[ | activation |
 					activation := GbxActivation new.
 					(activation respondsTo: #session:)
 						ifTrue: [ activation session: session ]
 						ifFalse: [ activation instVarNamed: 'session' put: session ].
+					[ activation processOop: processOop ] on: Error do: [ ].
+					[ activation level: levelValue ] on: Error do: [ ].
+					[ activation methodClass: classValue ] on: Error do: [ ].
+					[ activation selector: ([ selectorValue asSymbol ] on: Error do: [ #unknown ]) ] on: Error do: [ ].
+					[ activation gsMethodId: methodValue ] on: Error do: [ ].
+					[ activation quickStepPoint: quickStepValue ] on: Error do: [ ].
+					[ activation sourceOffsets: offsetsValue ] on: Error do: [ ].
+					[ activation sourceString: '' ] on: Error do: [ ].
+					[ activation ipOffset: lineNumberValue ] on: Error do: [ ].
 					activation
-						processOop: processOop;
-						level: levelValue;
-						methodClass: classValue;
-						selector: ([ selectorValue asSymbol ] on: Error do: [ #unknown ]);
-						gsMethodId: methodValue;
-						quickStepPoint: quickStepValue;
-						sourceOffsets: offsetsValue;
-						sourceString: '';
-						ipOffset: lineNumberValue;
-						yourself
-					] on: Error do: [ nil ]
 				]
 			]
 		] thenSelect: #isNotNil.
