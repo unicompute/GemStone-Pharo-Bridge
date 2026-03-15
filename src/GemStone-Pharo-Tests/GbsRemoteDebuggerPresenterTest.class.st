@@ -335,13 +335,15 @@ GbsRemoteDebuggerPresenterTest >> testRestartPromotesExecutedCodeFrameToTopAndSe
 
 { #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testEnsureServerPCToStepOneAfterRestartUsesExecutedFrameEvenWhenNotTop [
-	| mockSession firstContext executedContext scriptCalls fakeList fakeText |
+	| mockSession firstContext executedContext scriptCalls capturedScript fakeList fakeText |
 	mockSession := MockGbsSession new.
 	scriptCalls := 0.
+	capturedScript := ''.
 	mockSession stubs
 		at: #executeAndFetchContext
 		put: [ :script :context |
 			scriptCalls := scriptCalls + 1.
+			capturedScript := script.
 			'true' ].
 
 	firstContext := GbxFakeContextForRemoteDebugger new
@@ -373,7 +375,8 @@ GbsRemoteDebuggerPresenterTest >> testEnsureServerPCToStepOneAfterRestartUsesExe
 
 	debugger ensureServerPCToStepOneAfterRestart.
 
-	self assert: scriptCalls > 0
+	self assert: scriptCalls > 0.
+	self assert: (capturedScript includesSubstring: 'serverProcessOop')
 ]
 
 { #category : 'tests' }

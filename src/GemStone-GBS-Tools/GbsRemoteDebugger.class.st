@@ -1706,17 +1706,23 @@ GbsRemoteDebugger >> directStepOverExecutedFrame: stepIntoBoolean [
 	(effectiveLevel isNumber and: [ effectiveLevel > 0 ]) ifTrue: [ level := effectiveLevel ].
 	stepIntoBoolean ifTrue: [ level := level bitOr: 16r100000000 ].
 
-	script := '[
-		| obj proc stepLevel ok |
-		obj := Object _objectForOop: ', processOop asString, '.
-		obj isNil ifTrue: [ ^ ''false'' ].
-		proc := obj.
-		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ]
-		].
+		script := '[
+			| obj proc procOop stepLevel ok |
+			obj := Object _objectForOop: ', processOop asString, '.
+			obj isNil ifTrue: [ ^ ''false'' ].
+			proc := obj.
+			((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+				(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+			].
+			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #serverProcessOop ]) ifTrue: [
+				procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
+				(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
+					proc := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
+				]
+			].
+			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+				proc := [ obj process ] on: Error do: [ nil ]
+			].
 		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
 			| top |
 			top := [ obj topContext ] on: Error do: [ nil ].
@@ -1754,17 +1760,23 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 	level := self resolveExecutedFrameLevelFromServer.
 	level ifNil: [ level := 1 ].
 
-	script := '[
-		| obj proc restartLevel stackReport fullEntry quick |
-		obj := Object _objectForOop: ', processOop asString, '.
-		obj isNil ifTrue: [ ^ false ].
-		proc := obj.
-		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ]
-		].
+		script := '[
+			| obj proc procOop restartLevel stackReport fullEntry quick |
+			obj := Object _objectForOop: ', processOop asString, '.
+			obj isNil ifTrue: [ ^ false ].
+			proc := obj.
+			((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+				(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+			].
+			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #serverProcessOop ]) ifTrue: [
+				procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
+				(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
+					proc := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
+				]
+			].
+			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+				proc := [ obj process ] on: Error do: [ nil ]
+			].
 		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
 			| top |
 			top := [ obj topContext ] on: Error do: [ nil ].
@@ -1799,8 +1811,14 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 		true
 	] value'.
 
-	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
-	^ raw = true or: [ raw = 'true' ]
+		raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+		raw ifNil: [ ^ false ].
+		(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+		^ (raw = true)
+			or: [
+				(raw respondsTo: #asString)
+					and: [ (#('true' '1' 'ok') includes: raw asString asLowercase) ]
+			]
 ]
 
 { #category : 'private' }
@@ -1809,17 +1827,23 @@ GbsRemoteDebugger >> resolveExecutedFrameLevelFromServer [
 	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ nil ].
 	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ nil ].
 
-	script := '[
-		| obj proc stream maxDepth level stackReport fullEntry methodOrNil className selectorName |
-		obj := Object _objectForOop: ', processOop asString, '.
-		obj isNil ifTrue: [ ^ '''' ].
-		proc := obj.
-		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ]
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ]
-		].
+		script := '[
+			| obj proc procOop stream maxDepth level stackReport fullEntry methodOrNil className selectorName |
+			obj := Object _objectForOop: ', processOop asString, '.
+			obj isNil ifTrue: [ ^ '''' ].
+			proc := obj.
+			((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+				(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ]
+			].
+			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #serverProcessOop ]) ifTrue: [
+				procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
+				(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
+					proc := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
+				]
+			].
+			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+				proc := [ obj process ] on: Error do: [ nil ]
+			].
 		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
 			| top |
 			top := [ obj topContext ] on: Error do: [ nil ].
@@ -2912,17 +2936,23 @@ GbsRemoteDebugger >> restartUsingDirectTrimFromExecutedFrame [
 	targetLevel := self currentSelectedFrameLevel.
 	((targetLevel isNumber and: [ targetLevel > 0 ]) not) ifTrue: [ targetLevel := 1 ].
 
-	script := '[
-		| obj proc restartLevel stackReport fullEntry quick level maxDepth methodOrNil className selectorName |
-		obj := Object _objectForOop: ', processOop asString, '.
-		obj isNil ifTrue: [ ^ ''false'' ].
-		proc := obj.
-		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ]
-		].
+		script := '[
+			| obj proc procOop restartLevel stackReport fullEntry quick level maxDepth methodOrNil className selectorName |
+			obj := Object _objectForOop: ', processOop asString, '.
+			obj isNil ifTrue: [ ^ ''false'' ].
+			proc := obj.
+			((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+				(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+			].
+			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #serverProcessOop ]) ifTrue: [
+				procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
+				(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
+					proc := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
+				]
+			].
+			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+				proc := [ obj process ] on: Error do: [ nil ]
+			].
 		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
 			| top |
 			top := [ obj topContext ] on: Error do: [ nil ].
