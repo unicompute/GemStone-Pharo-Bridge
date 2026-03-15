@@ -1019,12 +1019,13 @@ GbxDebuggerService >> recomputeContextList [
 	"Recompute the context list after a step operation.
 	Always rebind currentContext to the freshly-computed list entry, even when
 	an equal/stale context object is still considered present."
-	| contexts refreshed |
+	| contexts refreshed previousContext fallbackNonGlue |
 	contextStackPolicy ifNil: [
 		self updateSourceMapFromCurrentContext.
 		self notifyContextChanged.
 		^ self
 	].
+	previousContext := currentContext.
 	contextStackPolicy computeContextList.
 	contexts := contextStackPolicy contextList.
 	
@@ -1037,7 +1038,19 @@ GbxDebuggerService >> recomputeContextList [
 				detect: [ :each | (each == currentContext) or: [ each = currentContext ] ]
 				ifNone: [ nil ].
 			refreshed
-				ifNil: [ contexts ifNotEmpty: [ :list | currentContext := list first ] ]
+				ifNil: [
+					fallbackNonGlue := contexts
+						detect: [ :each | (self isRestartGlueContext: each) not ]
+						ifNone: [ nil ].
+					fallbackNonGlue ifNotNil: [
+						currentContext := fallbackNonGlue
+					] ifNil: [
+						"Preserve prior non-glue context instead of collapsing to _gsReturnToC."
+						(previousContext notNil and: [ (self isRestartGlueContext: previousContext) not ])
+							ifTrue: [ currentContext := previousContext ]
+							ifFalse: [ contexts ifNotEmpty: [ :list | currentContext := list first ] ]
+					]
+				]
 				ifNotNil: [ currentContext := refreshed ]
 		].
 	self updateSourceMapFromCurrentContext.
