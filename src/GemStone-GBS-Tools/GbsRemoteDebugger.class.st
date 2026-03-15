@@ -2868,7 +2868,10 @@ GbsRemoteDebugger >> restart [
 	| didRestart |
 	Transcript show: '[UI restart] restart begin processOop='; show: processOop asString; cr.
 	didRestart := self safeServiceCall: [ service restart ] default: false.
-	didRestart ifFalse: [ didRestart := self restartUsingDirectTrimFromExecutedFrame ].
+	didRestart ifFalse: [
+		Transcript show: '[UI restart] restart aborted: service restart failed'; cr.
+		^ false
+	].
 	didRestart ifTrue: [
 		self fetchStackFrames.
 		self normalizeRestartSelectionAndPosition.
