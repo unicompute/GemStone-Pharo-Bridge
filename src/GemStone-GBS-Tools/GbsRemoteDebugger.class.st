@@ -45,7 +45,8 @@ Class {
 		'inspectVariableButton',
 		'errorMessageLabel',
 		'glueIsHidden',
-		'stackData'
+		'stackData',
+		'restartGuardActive'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -1638,7 +1639,7 @@ GbsRemoteDebugger >> stepInto [
 		show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
 		cr.
 	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
-		(self restartNeedsServerRewind) ifTrue: [
+		((restartGuardActive = true) and: [ self restartNeedsServerRewind ]) ifTrue: [
 			Transcript show: '[UI stepInto] blocked: restart rewind pending, forcing rewind'; cr.
 			self safeServiceCall: [
 				(service respondsTo: #resetServerPCToStepOne)
@@ -1655,7 +1656,10 @@ GbsRemoteDebugger >> stepInto [
 		"CRITICAL: Reset server PC to step 1 before stepping from restarted frame"
 		self resetServerPCToStepOneIfNeeded.
 		didStep := self directStepOverExecutedFrame: true.
-		didStep ifTrue: [ self fetchStackFrames ].
+		didStep ifTrue: [
+			self fetchStackFrames.
+			restartGuardActive := false
+		].
 		Transcript
 			show: '[UI stepInto] end direct didStep=';
 			show: didStep asString;
@@ -1671,6 +1675,7 @@ GbsRemoteDebugger >> stepInto [
 			fallbackSelector: nil
 	].
 	didStep ifTrue: [ self fetchStackFrames ].
+	didStep ifTrue: [ restartGuardActive := false ].
 	Transcript
 		show: '[UI stepInto] end didStep=';
 		show: didStep asString;
@@ -1697,7 +1702,7 @@ GbsRemoteDebugger >> stepOver [
 		show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
 		cr.
 	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
-		(self restartNeedsServerRewind) ifTrue: [
+		((restartGuardActive = true) and: [ self restartNeedsServerRewind ]) ifTrue: [
 			Transcript show: '[UI stepOver] blocked: restart rewind pending, forcing rewind'; cr.
 			self safeServiceCall: [
 				(service respondsTo: #resetServerPCToStepOne)
@@ -1714,7 +1719,10 @@ GbsRemoteDebugger >> stepOver [
 		"CRITICAL: Reset server PC to step 1 before stepping from restarted frame"
 		self resetServerPCToStepOneIfNeeded.
 		didStep := self directStepOverExecutedFrame: false.
-		didStep ifTrue: [ self fetchStackFrames ].
+		didStep ifTrue: [
+			self fetchStackFrames.
+			restartGuardActive := false
+		].
 		Transcript
 			show: '[UI stepOver] end direct didStep=';
 			show: didStep asString;
@@ -1733,6 +1741,7 @@ GbsRemoteDebugger >> stepOver [
 			]
 	].
 	didStep ifTrue: [ self fetchStackFrames ].
+	didStep ifTrue: [ restartGuardActive := false ].
 	Transcript
 		show: '[UI stepOver] end didStep=';
 		show: didStep asString;
@@ -2902,6 +2911,7 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 	| didRestart stabilized |
 	didRestart := self restart.
 	didRestart ifFalse: [ ^ false ].
+	restartGuardActive := true.
 
 	self fetchStackFrames.
 	self normalizeRestartSelectionAndPosition.
