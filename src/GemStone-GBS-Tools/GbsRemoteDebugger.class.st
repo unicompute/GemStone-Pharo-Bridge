@@ -838,7 +838,7 @@ GbsRemoteDebugger >> fetchFullSourceFor: aContext [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> fetchStackFrames [
-	| contexts serviceCurrent serviceCurrentBeforeRecompute hasNonGlue |
+	| contexts serviceCurrent serviceCurrentBeforeRecompute hasNonGlue skipServiceRecompute |
 
 	"Check if we have captured stack data"
 	stackData ifNotNil: [
@@ -850,8 +850,11 @@ GbsRemoteDebugger >> fetchStackFrames [
 		serviceCurrentBeforeRecompute := (service respondsTo: #currentContext)
 			ifTrue: [ self safeServiceCall: [ service currentContext ] default: nil ]
 			ifFalse: [ nil ].
+		skipServiceRecompute := (restartGuardActive = true)
+			and: [ serviceCurrentBeforeRecompute notNil
+			and: [ (self isRestartGlueFrame: serviceCurrentBeforeRecompute) not ] ].
 		[
-			(service respondsTo: #recomputeContextList)
+			((service respondsTo: #recomputeContextList) and: [ skipServiceRecompute not ])
 				ifTrue: [ service recomputeContextList ].
 			contexts := service contextList
 		] on: Error do: [ contexts := #( ) ]
@@ -2938,15 +2941,26 @@ GbsRemoteDebugger >> isTopExecutedCodeAtStepOne [
 GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 	"Single-click restart should be idempotent.
 	Let the service own restart/reset; only apply one local correction pass if needed."
-	| didRestart stabilized |
-	didRestart := self restart.
-	didRestart ifFalse: [ ^ false ].
-	restartGuardActive := true.
-	restartPinnedContext := nil.
+	| didRestart stabilized preRestartContext |
+	preRestartContext := nil.
 	service ifNotNil: [
-		restartPinnedContext := self safeServiceCall: [ service currentContext ] default: nil.
-		(self isRestartGlueFrame: restartPinnedContext) ifTrue: [ restartPinnedContext := nil ]
+		preRestartContext := self safeServiceCall: [ service currentContext ] default: nil
 	].
+	((preRestartContext isNil or: [ self isRestartGlueFrame: preRestartContext ])
+		and: [ contextList isCollection and: [ contextList isEmpty not ] ]) ifTrue: [
+		preRestartContext := contextList
+			detect: [ :ctx | self isExecutedCodeFrame: ctx ]
+			ifNone: [ contextList first ]
+	].
+	(self isRestartGlueFrame: preRestartContext) ifTrue: [ preRestartContext := nil ].
+	restartPinnedContext := preRestartContext.
+
+	didRestart := self restart.
+	didRestart ifFalse: [
+		restartPinnedContext := nil.
+		^ false
+	].
+	restartGuardActive := true.
 
 	self fetchStackFrames.
 	self normalizeRestartSelectionAndPosition.
