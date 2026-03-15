@@ -2794,38 +2794,22 @@ GbsRemoteDebugger >> isTopExecutedCodeAtStepOne [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
-	"Bounded one-click restart:
-	perform one restart, then local/server step-point correction without re-entering restart loops."
-	| didRestart stabilized recovered |
+	"Single-click restart should be idempotent.
+	Let the service own restart/reset; only apply one local correction pass if needed."
+	| didRestart stabilized |
 	didRestart := self restart.
 	didRestart ifFalse: [ ^ false ].
 
 	self fetchStackFrames.
 	self normalizeRestartSelectionAndPosition.
-	self safeServiceCall: [
-		(service respondsTo: #selectRestartTargetContext)
-			ifTrue: [ service selectRestartTargetContext ]
-	] default: nil.
-	self safeServiceCall: [
-		(service respondsTo: #resetServerPCToStepOne)
-			ifTrue: [ service resetServerPCToStepOne ]
-	] default: nil.
-	self safeServiceCall: [
-		(service respondsTo: #resetServerPCToStepOne)
-			ifTrue: [ service resetServerPCToStepOne ]
-	] default: nil.
-	self ensureServerPCToStepOneAfterRestart.
 
 	stabilized := self isExecutedCodeSelectionConfirmed
 		and: [ self restartNeedsServerRewind not ].
 	stabilized ifTrue: [ ^ true ].
 
-	recovered := self restartUsingDirectTrimFromExecutedFrame.
-	recovered ifTrue: [
-		self fetchStackFrames.
-		self normalizeRestartSelectionAndPosition.
-		self ensureServerPCToStepOneAfterRestart.
-	].
+	self ensureServerPCToStepOneAfterRestart.
+	self fetchStackFrames.
+	self normalizeRestartSelectionAndPosition.
 	^ self isExecutedCodeSelectionConfirmed
 		and: [ self restartNeedsServerRewind not ]
 ]
