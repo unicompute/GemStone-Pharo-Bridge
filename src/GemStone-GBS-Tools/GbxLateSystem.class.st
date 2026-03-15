@@ -30,14 +30,13 @@ GbxLateSystem class >> uniqueInstance [
 { #category : 'finalization' }
 GbxLateSystem >> finalizeProxy: aProxy [
 	"Finalize a proxy when it's garbage collected"
+	| oop session |
 	
 	isFinalizationEnabled ifFalse: [ ^ self ].
 	
 	aProxy ifNil: [ ^ self ].
 	
 	"Get the OOP before the proxy is fully finalized"
-	| oop session |
-	
 	oop := aProxy oop.
 	session := aProxy session.
 	
