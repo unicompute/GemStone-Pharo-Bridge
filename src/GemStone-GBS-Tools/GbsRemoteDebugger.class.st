@@ -2783,8 +2783,24 @@ GbsRemoteDebugger >> isTopExecutedCodeAtStepOne [
 { #category : 'private' }
 GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 	"One-click deterministic restart:
-	perform the same two-phase flow users previously needed via two manual clicks."
-	^ self restartWithSimulatedSecondClick
+	repeat the two-phase restart until executed frame is truly at step 1."
+	| attempts didRestart stable |
+	attempts := 0.
+	didRestart := false.
+	stable := false.
+	[
+		(attempts < 3) and: [ stable not ]
+	] whileTrue: [
+		didRestart := self restartWithSimulatedSecondClick or: [ didRestart ].
+		self fetchStackFrames.
+		self normalizeRestartSelectionAndPosition.
+		self ensureServerPCToStepOneAfterRestart.
+		stable := self isExecutedCodeSelectionConfirmed
+			and: [ self restartNeedsServerRewind not ].
+		stable ifFalse: [ (Delay forMilliseconds: 120) wait ].
+		attempts := attempts + 1
+	].
+	^ didRestart and: [ stable ]
 ]
 
 { #category : 'private' }
