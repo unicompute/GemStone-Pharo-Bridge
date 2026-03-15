@@ -134,10 +134,10 @@ GbxTrippy >> inspectOop: anOop [
 { #category : 'navigation' }
 GbxTrippy >> navigateTo: item [
 	"Navigate to a selected item"
+	| oop |
 	
 	item ifNil: [ ^ self ].
 	
-	| oop |
 	oop := item at: 4. "OOP is 4th element"
 	oop ifNil: [ ^ self ].
 	
