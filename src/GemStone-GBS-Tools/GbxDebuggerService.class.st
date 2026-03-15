@@ -1459,7 +1459,7 @@ GbxDebuggerService >> firstServerContextAbove: clientContext [
 GbxDebuggerService >> restart [
 	"Restart the current context using the coordinated reenter operation.
 	Fixes bug where second restart does not reset Frame Step to 1."
-	| didRestart target |
+	| didRestart target serverLevel |
 	self logRestartState: 'restart/start' context: self currentContext.
 	self recomputeContextList.
 	(restartHomeResetPasses isInteger and: [ restartHomeResetPasses > 0 ]) ifFalse: [
@@ -1481,6 +1481,23 @@ GbxDebuggerService >> restart [
 		self resetServerPCToStepOne.
 		self recomputeContextList.
 		self selectRestartTargetContext.
+		serverLevel := self restartLevelFromServerStack.
+		serverLevel ifNil: [
+			self logRestartText: 'restart warning: server level unresolved; attempting process rebind'.
+			(self rebindDebugProcessAfterRestartIfNeeded)
+				ifTrue: [
+					self recomputeContextList.
+					self selectRestartTargetContext.
+					self resetServerPCToStepOne.
+					self recomputeContextList.
+					self selectRestartTargetContext.
+					serverLevel := self restartLevelFromServerStack
+				]
+		].
+		serverLevel ifNil: [
+			self logRestartText: 'restart error: server level unresolved after rebind; restart failed'.
+			didRestart := false
+		].
 		(self isExecutedCodeAtStepOne) ifFalse: [
 			self logRestartText: 'restart warning: step one not confirmed after reset'
 		]
@@ -1488,6 +1505,65 @@ GbxDebuggerService >> restart [
 	self logRestartText: 'restart/result=', didRestart asString.
 	self logRestartState: 'restart/end' context: self currentContext.
 	^ didRestart
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> rebindDebugProcessAfterRestartIfNeeded [
+	| resolved raw |
+	self canExecuteOnDebugProcess ifFalse: [ ^ false ].
+	raw := self executeDebugScript: '[
+		| obj candidate top hasStack |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''0'' ].
+
+		hasStack := [ :proc |
+			| report |
+			(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ false ] ifFalse: [
+				report := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
+				(report notNil and: [ (report respondsTo: #size) and: [ report size >= 2 ] ])
+			]
+		].
+
+		(hasStack value: obj) ifTrue: [ ^ (Reflection oopOf: obj) asString ].
+
+		candidate := (obj respondsTo: #serverProcess)
+			ifTrue: [ [ obj serverProcess ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+
+		candidate := (obj respondsTo: #serverProcessOop)
+			ifTrue: [ [ obj serverProcessOop ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		(candidate isNumber and: [ candidate > 20 ]) ifTrue: [
+			candidate := [ Object _objectForOop: candidate ] on: Error do: [ nil ].
+			(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+		].
+
+		candidate := (obj respondsTo: #process)
+			ifTrue: [ [ obj process ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+
+		top := (obj respondsTo: #topContext)
+			ifTrue: [ [ obj topContext ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		top ifNotNil: [
+			candidate := (top respondsTo: #process)
+				ifTrue: [ [ top process ] on: Error do: [ nil ] ]
+				ifFalse: [ nil ].
+			(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+			(hasStack value: top) ifTrue: [ ^ (Reflection oopOf: top) asString ].
+		].
+		''0''
+	] value'.
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	resolved := [ raw asString asInteger ] on: Error do: [ nil ].
+	((resolved isNumber and: [ resolved > 20 ]) and: [ resolved ~= processOop ]) ifTrue: [
+		self logRestartText: 'restart rebind processOop ', processOop asString, ' -> ', resolved asString.
+		self processOop: resolved.
+		^ true
+	].
+	^ false
 ]
 
 { #category : 'private' }
