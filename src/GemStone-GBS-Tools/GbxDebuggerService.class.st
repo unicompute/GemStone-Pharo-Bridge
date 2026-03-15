@@ -1173,33 +1173,74 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	self logRestartText: 'resetServerPCToStepOne runToStepPoint:1 -> ', didReset asString.
 	didReset ifTrue: [ ^ true ].
 	
-	"_trimStackToLevel: already reset the stack, but re-trim to ensure PC is reset"
-		script := '[
-			| obj proc procOop |
-			obj := Object _objectForOop: ', processOop asString, '.
-			obj isNil ifTrue: [ ^ ''false'' ].
-			proc := obj.
-			((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-				(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-			].
-			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #serverProcessOop ]) ifTrue: [
-				procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
-				(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
-					proc := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
-				]
-			].
-			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-				proc := [ obj process ] on: Error do: [ nil ]
-			].
+	"Fallback sequence for GemStone versions where jump/run selectors are absent on process:
+	1) try context-level jump/run if available
+	2) re-trim stack
+	3) verify quick step point is now <= 1"
+	script := '[
+		| obj proc procOop ctx top i stackReport fullEntry quick |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #serverProcessOop ]) ifTrue: [
+			procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
+			(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
+				proc := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
+			]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
 		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
-			| top |
 			top := [ obj topContext ] on: Error do: [ nil ].
 			(top notNil and: [ top respondsTo: #process ])
 				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
 		].
-		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
-		[ proc _trimStackToLevel: ', level asString, ' ] on: Error do: [ nil ].
-		''true''
+		(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ ^ ''false'' ].
+
+		quick := 0.
+		stackReport := [ proc _gsiStackReportFromLevel: ', level asString, ' toLevel: ', level asString, ' ] on: Error do: [ nil ].
+		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
+			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
+		].
+
+		quick > 1 ifTrue: [
+			top := [ proc topContext ] on: Error do: [ nil ].
+			ctx := top.
+			i := 1.
+			[ i < ', level asString, ' and: [ ctx notNil ] ] whileTrue: [
+				ctx := [ ctx sender ] on: Error do: [ nil ].
+				i := i + 1
+			].
+			(ctx notNil and: [ ctx respondsTo: #jumpToStepPoint: ]) ifTrue: [
+				[ ctx jumpToStepPoint: 1 ] on: Error do: [ ]
+			].
+			(stackReport := [ proc _gsiStackReportFromLevel: ', level asString, ' toLevel: ', level asString, ' ] on: Error do: [ nil ]) ifNotNil: [
+				((stackReport respondsTo: #size) and: [ stackReport size >= 2 ]) ifTrue: [
+					fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+					fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ quick ] ]
+				]
+			].
+			(quick > 1 and: [ ctx notNil and: [ ctx respondsTo: #runToStepPoint: ] ]) ifTrue: [
+				[ ctx runToStepPoint: 1 ] on: Error do: [ ]
+			].
+		].
+
+		(quick > 1 and: [ proc respondsTo: #_trimStackToLevel: ]) ifTrue: [
+			[ proc _trimStackToLevel: ', level asString, ' ] on: Error do: [ ]
+		].
+
+		quick := 0.
+		stackReport := [ proc _gsiStackReportFromLevel: ', level asString, ' toLevel: ', level asString, ' ] on: Error do: [ nil ].
+		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
+			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
+		].
+		quick <= 1 ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]
 	] value'.
 	
 	result := self executeDebugScript: script.
