@@ -1055,7 +1055,7 @@ GbsRemoteDebugger >> initializePresenters [
 	restartButton := self newButton
 		label: 'Restart';
 		icon: (self iconNamedSafe: #smallUpdate);
-		action: [ self restart ].
+		action: [ self restartWithConfirmedExecutedFrameSecondPass ].
 	resumeButton := self newButton 
 		label: 'Run';
 		icon: (self iconNamedSafe: #glamorousGo);
@@ -2749,8 +2749,8 @@ GbsRemoteDebugger >> isTopExecutedCodeAtStepOne [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
-	| firstPass secondPass attempts ready |
-	firstPass := self restartSinglePass.
+	| firstPass attempts ready |
+	firstPass := self restart.
 	firstPass ifFalse: [ ^ false ].
 
 	attempts := 0.
@@ -2760,14 +2760,13 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 	] whileTrue: [
 		self fetchStackFrames.
 		self normalizeRestartSelectionAndPosition.
-		ready := (self isExecutedCodeSelectionConfirmed and: [ self isTopExecutedCodeAtStepOne ]).
+		ready := self isExecutedCodeSelectionConfirmed.
 		ready ifFalse: [ (Delay forMilliseconds: 25) wait ].
 		attempts := attempts + 1
 	].
 
-	"Critical: always run the second restart after polling for settled restart state."
-	secondPass := self restartSinglePass.
-	^ firstPass or: [ secondPass ]
+	ready ifTrue: [ self restart ].
+	^ firstPass
 ]
 
 { #category : 'private' }
