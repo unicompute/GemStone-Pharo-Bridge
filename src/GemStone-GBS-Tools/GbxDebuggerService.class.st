@@ -1095,7 +1095,8 @@ GbxDebuggerService >> basicReenterServerContext [
 	| theContext |
 	"Always prefer the executed-code restart target over the currently selected
 	frame so a single Restart click is deterministic."
-	theContext := self restartTargetContext.
+	theContext := self restartHomeContextForCutback.
+	theContext ifNil: [ theContext := self restartTargetContext ].
 	theContext ifNil: [ theContext := currentContext ].
 	theContext ifNil: [ ^ false ].
 	self selectContext: theContext.
@@ -1117,6 +1118,21 @@ GbxDebuggerService >> basicReenterServerContext [
 	self logRestartState: 'basicReenter/done' context: self currentContext.
 
 	^ true
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> restartHomeContextForCutback [
+	| level contexts |
+	level := restartHomeResetPasses.
+	(level isNumber and: [ level > 0 ]) ifFalse: [ ^ nil ].
+	contexts := self contextList.
+	(contexts isCollection and: [ contexts isEmpty not ]) ifFalse: [ ^ nil ].
+	^ contexts
+		detect: [ :ctx |
+			| ctxLevel |
+			ctxLevel := [ ctx level ] on: Error do: [ nil ].
+			(ctx respondsTo: #level) and: [ ctxLevel = level ] ]
+		ifNone: [ nil ]
 ]
 
 { #category : 'private' }
