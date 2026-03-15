@@ -1629,11 +1629,25 @@ GbsRemoteDebugger >> stackData: anArray [
 { #category : 'actions' }
 GbsRemoteDebugger >> stepInto [
 	| didStep |
+	Transcript
+		show: '[UI stepInto] begin selectedLevel=';
+		show: self currentSelectedFrameLevel asString;
+		show: ' selectedExecuted=';
+		show: self currentSelectedContextIsExecutedCodeFrame asString;
+		show: ' serverStep=';
+		show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
+		cr.
 	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
 		"CRITICAL: Reset server PC to step 1 before stepping from restarted frame"
 		self resetServerPCToStepOneIfNeeded.
 		didStep := self directStepOverExecutedFrame: true.
 		didStep ifTrue: [ self fetchStackFrames ].
+		Transcript
+			show: '[UI stepInto] end direct didStep=';
+			show: didStep asString;
+			show: ' serverStep=';
+			show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
+			cr.
 		^ didStep
 	].
 	didStep := self safeServiceCall: [ service stepInto ] default: false.
@@ -1643,6 +1657,12 @@ GbsRemoteDebugger >> stepInto [
 			fallbackSelector: nil
 	].
 	didStep ifTrue: [ self fetchStackFrames ].
+	Transcript
+		show: '[UI stepInto] end didStep=';
+		show: didStep asString;
+		show: ' serverStep=';
+		show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
+		cr.
 	^ didStep
 ]
 
@@ -1654,11 +1674,25 @@ GbsRemoteDebugger >> step [
 { #category : 'actions' }
 GbsRemoteDebugger >> stepOver [
 	| didStep |
+	Transcript
+		show: '[UI stepOver] begin selectedLevel=';
+		show: self currentSelectedFrameLevel asString;
+		show: ' selectedExecuted=';
+		show: self currentSelectedContextIsExecutedCodeFrame asString;
+		show: ' serverStep=';
+		show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
+		cr.
 	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
 		"CRITICAL: Reset server PC to step 1 before stepping from restarted frame"
 		self resetServerPCToStepOneIfNeeded.
 		didStep := self directStepOverExecutedFrame: false.
 		didStep ifTrue: [ self fetchStackFrames ].
+		Transcript
+			show: '[UI stepOver] end direct didStep=';
+			show: didStep asString;
+			show: ' serverStep=';
+			show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
+			cr.
 		^ didStep
 	].
 	didStep := self safeServiceCall: [ service stepOver ] default: false.
@@ -1671,6 +1705,12 @@ GbsRemoteDebugger >> stepOver [
 			]
 	].
 	didStep ifTrue: [ self fetchStackFrames ].
+	Transcript
+		show: '[UI stepOver] end didStep=';
+		show: didStep asString;
+		show: ' serverStep=';
+		show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
+		cr.
 	^ didStep
 ]
 
