@@ -687,17 +687,11 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 	] value'.
 
 	[
-		rawData := (session respondsTo: #executeAndFetch:context:)
-			ifTrue: [ session executeAndFetch: script context: 20 ]
-			ifFalse: [ session evaluate: script ].
+		rawData := session evaluate: script.
 		(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
 		rawData ifNil: [ rawData := '' ].
 	] on: Error do: [ :ex |
-		[
-			rawData := session evaluate: script.
-			(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
-			rawData ifNil: [ rawData := '' ].
-		] on: Error do: [ ^ #( ) ].
+		^ #( )
 	].
 
 	rawData ifNil: [
@@ -713,9 +707,9 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 		^ #( )
 	].
 
-		contexts := (rawData splitOn: Character lf)
-			collect: [ :line |
-				| parts levelValue classValue selectorValue methodValue quickStepValue offsetsTokens offsetsValue lineNumberValue activation |
+	contexts := (rawData splitOn: Character lf)
+		collect: [ :line |
+			| parts levelValue classValue selectorValue methodValue quickStepValue offsetsTokens offsetsValue lineNumberValue |
 			line isEmpty ifTrue: [ nil ] ifFalse: [
 				parts := line splitOn: Character tab.
 				parts size >= 3 ifTrue: [
@@ -741,20 +735,23 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 								ifFalse: [ [ cleaned asInteger ] on: Error do: [ nil ] ]
 						]
 					].
+					[ | activation |
 					activation := GbxActivation new.
 					(activation respondsTo: #session:)
 						ifTrue: [ activation session: session ]
 						ifFalse: [ activation instVarNamed: 'session' put: session ].
-					[ activation processOop: processOop ] on: Error do: [ ].
-					[ activation level: levelValue ] on: Error do: [ ].
-					[ activation methodClass: classValue ] on: Error do: [ ].
-					[ activation selector: ([ selectorValue asSymbol ] on: Error do: [ #unknown ]) ] on: Error do: [ ].
-					[ activation gsMethodId: methodValue ] on: Error do: [ ].
-					[ activation quickStepPoint: quickStepValue ] on: Error do: [ ].
-					[ activation sourceOffsets: offsetsValue ] on: Error do: [ ].
-					[ activation sourceString: '' ] on: Error do: [ ].
-					[ activation ipOffset: lineNumberValue ] on: Error do: [ ].
 					activation
+						processOop: processOop;
+						level: levelValue;
+						methodClass: classValue;
+						selector: ([ selectorValue asSymbol ] on: Error do: [ #unknown ]);
+						gsMethodId: methodValue;
+						quickStepPoint: quickStepValue;
+						sourceOffsets: offsetsValue;
+						sourceString: '';
+						ipOffset: lineNumberValue;
+						yourself
+					] on: Error do: [ nil ]
 				]
 			]
 		] thenSelect: #isNotNil.
@@ -2064,7 +2061,7 @@ GbsRemoteDebugger >> executeMenu [
 			group addItem: [ :item | item name: 'Step Into'; action: [ self stepInto ] ].
 			group addItem: [ :item | item name: 'Step'; action: [ self stepInto ] ].
 			group addItem: [ :item | item name: 'Step Over'; action: [ self stepOver ] ].
-			group addItem: [ :item | item name: 'Restart'; action: [ self restartWithConfirmedExecutedFrameSecondPass ] ].
+			group addItem: [ :item | item name: 'Restart'; action: [ self restart ] ].
 			group addItem: [ :item | item name: 'Run'; action: [ self resume ] ].
 			group addItem: [ :item | item name: 'Run until Return'; action: [ self stepReturn ] ].
 			group addItem: [ :item | item name: 'Run with Break Again'; action: [ self runWithBreakAgain ] ].
@@ -2672,11 +2669,6 @@ GbsRemoteDebugger >> normalizePauseLandingSelection [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restart [
-	^ self restartSinglePass
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> restartSinglePass [
 	| didRestart |
 	didRestart := self safeServiceCall: [ service restart ] default: false.
 	didRestart ifFalse: [ didRestart := self restartUsingDirectTrimFromExecutedFrame ].
@@ -2767,58 +2759,6 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 
 	ready ifTrue: [ self restart ].
 	^ firstPass
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> restartWithUserLikeSecondClick [
-	"Mirror the known-working manual behavior:
-	1) Restart once.
-	2) Wait until context/stack settles to executed code frame.
-	3) Restart again."
-	| firstPass |
-	firstPass := self restartSinglePass.
-	firstPass ifFalse: [ ^ false ].
-
-	[
-		| attempts switched worldStateClass |
-		attempts := 0.
-		switched := false.
-		[
-			(attempts < 60) and: [ switched not ]
-		] whileTrue: [
-			(Delay forMilliseconds: 25) wait.
-			switched := self safeServiceCall: [
-				| ctx step |
-				ctx := service currentContext.
-				ctx ifNil: [ false ] ifNotNil: [
-					step := (ctx respondsTo: #quickStepPoint)
-						ifTrue: [ [ ctx quickStepPoint asInteger ] on: Error do: [ 0 ] ]
-						ifFalse: [ 0 ].
-					(self isExecutedCodeFrame: ctx) and: [ step = 1 ]
-				]
-			] default: false.
-			attempts := attempts + 1
-		].
-
-		worldStateClass := Smalltalk at: #WorldState ifAbsent: [ nil ].
-		(worldStateClass notNil and: [ worldStateClass respondsTo: #addDeferredUIMessage: ])
-			ifTrue: [
-				worldStateClass addDeferredUIMessage: [
-					self restartSinglePass
-				]
-			]
-			ifFalse: [
-				self restartSinglePass
-			].
-	] forkAt: Processor userBackgroundPriority.
-
-	^ true
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> restartTwiceOnClick [
-	"Compatibility wrapper kept for callers that might still send this selector."
-	^ self restartWithConfirmedExecutedFrameSecondPass
 ]
 
 { #category : 'private' }
