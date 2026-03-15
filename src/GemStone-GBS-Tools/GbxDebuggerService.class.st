@@ -858,7 +858,8 @@ GbxDebuggerService >> processOop [
 
 { #category : 'accessing' }
 GbxDebuggerService >> processOop: anOop [
-	processOop := anOop
+	processOop := anOop.
+	restartHomeResetPasses := 0
 ]
 
 { #category : 'variables' }
@@ -1162,6 +1163,9 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	"Get the executed code frame level"
 	level := self restartLevelFromServerStack.
 	level ifNil: [ level := 1 ].
+	((level = 1)
+		and: [ restartHomeResetPasses isInteger and: [ restartHomeResetPasses > 1 ] ])
+		ifTrue: [ level := restartHomeResetPasses ].
 	
 	"Try jumpToStepPoint: first (may work on some GemStone versions)"
 	didReset := self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true.
@@ -1295,6 +1299,9 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	resolvedHomeLevel := self restartLevelFromServerStack.
 	(resolvedHomeLevel isNumber and: [ resolvedHomeLevel > 0 ])
 		ifTrue: [ lvl := resolvedHomeLevel ].
+	((lvl = 1)
+		and: [ restartHomeResetPasses isInteger and: [ restartHomeResetPasses > 1 ] ])
+		ifTrue: [ lvl := restartHomeResetPasses ].
 	
 		script := '[
 			| obj proc procOop |
@@ -1394,6 +1401,13 @@ GbxDebuggerService >> restart [
 	| didRestart target |
 	self logRestartState: 'restart/start' context: self currentContext.
 	self recomputeContextList.
+	(restartHomeResetPasses isInteger and: [ restartHomeResetPasses > 0 ]) ifFalse: [
+		| initialLevel |
+		initialLevel := self restartLevelFromServerStack.
+		(initialLevel isNumber and: [ initialLevel > 0 ])
+			ifTrue: [ restartHomeResetPasses := initialLevel ].
+		self logRestartText: 'restart homeLevel=', restartHomeResetPasses asString
+	].
 	target := self restartTargetContext.
 	target ifNotNil: [ self selectContext: target ].
 	didRestart := self basicReenterServerContext.
@@ -1484,6 +1498,7 @@ GbxDebuggerService >> logRestartState: labelString context: aContext [
 		show: ' selector='; show: selectorName;
 		show: ' step='; show: (step ifNil: [ 'nil' ] ifNotNil: [ step asString ]);
 		show: ' serverLevel='; show: (serverLevel ifNil: [ 'nil' ] ifNotNil: [ serverLevel asString ]);
+		show: ' homeLevel='; show: (restartHomeResetPasses ifNil: [ 'nil' ] ifNotNil: [ restartHomeResetPasses asString ]);
 		cr.
 	^ self
 ]
