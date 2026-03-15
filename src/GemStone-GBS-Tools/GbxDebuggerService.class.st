@@ -1107,8 +1107,8 @@ GbxDebuggerService >> basicReenterServerContext [
 			This ensures the server reports the correct step point."
 			self resetServerPCToStepOne.
 
-			"Level numbers may have changed; recompute and select server-truth context."
-			self selectTopServerContext.
+			"Level numbers may have changed; recompute contexts."
+			self recomputeContextList.
 			self selectRestartTargetContext.
 
 			"Force another refresh to ensure the display shows step=1"
@@ -1446,11 +1446,11 @@ GbxDebuggerService >> restart [
 	didRestart ifTrue: [
 		self selectRestartTargetContext.
 		self resetServerPCToStepOne.
-		self selectTopServerContext.
+		self recomputeContextList.
 		self selectRestartTargetContext.
 		"Second internal reset pass mirrors the manual second click needed in live sessions."
 		self resetServerPCToStepOne.
-		self selectTopServerContext.
+		self recomputeContextList.
 		self selectRestartTargetContext.
 		(self isExecutedCodeAtStepOne) ifFalse: [
 			self logRestartText: 'restart warning: step one not confirmed after reset'
