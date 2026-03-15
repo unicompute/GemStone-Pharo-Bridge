@@ -2794,25 +2794,40 @@ GbsRemoteDebugger >> isTopExecutedCodeAtStepOne [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
-	"One-click deterministic restart:
-	repeat the two-phase restart until executed frame is truly at step 1."
-	| attempts didRestart stable |
-	attempts := 0.
-	didRestart := false.
-	stable := false.
-	[
-		(attempts < 3) and: [ stable not ]
-	] whileTrue: [
-		didRestart := self restartWithSimulatedSecondClick or: [ didRestart ].
+	"Bounded one-click restart:
+	perform one restart, then local/server step-point correction without re-entering restart loops."
+	| didRestart stabilized recovered |
+	didRestart := self restart.
+	didRestart ifFalse: [ ^ false ].
+
+	self fetchStackFrames.
+	self normalizeRestartSelectionAndPosition.
+	self safeServiceCall: [
+		(service respondsTo: #selectRestartTargetContext)
+			ifTrue: [ service selectRestartTargetContext ]
+	] default: nil.
+	self safeServiceCall: [
+		(service respondsTo: #resetServerPCToStepOne)
+			ifTrue: [ service resetServerPCToStepOne ]
+	] default: nil.
+	self safeServiceCall: [
+		(service respondsTo: #resetServerPCToStepOne)
+			ifTrue: [ service resetServerPCToStepOne ]
+	] default: nil.
+	self ensureServerPCToStepOneAfterRestart.
+
+	stabilized := self isExecutedCodeSelectionConfirmed
+		and: [ self restartNeedsServerRewind not ].
+	stabilized ifTrue: [ ^ true ].
+
+	recovered := self restartUsingDirectTrimFromExecutedFrame.
+	recovered ifTrue: [
 		self fetchStackFrames.
 		self normalizeRestartSelectionAndPosition.
 		self ensureServerPCToStepOneAfterRestart.
-		stable := self isExecutedCodeSelectionConfirmed
-			and: [ self restartNeedsServerRewind not ].
-		stable ifFalse: [ (Delay forMilliseconds: 120) wait ].
-		attempts := attempts + 1
 	].
-	^ didRestart and: [ stable ]
+	^ self isExecutedCodeSelectionConfirmed
+		and: [ self restartNeedsServerRewind not ]
 ]
 
 { #category : 'private' }

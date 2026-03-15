@@ -297,6 +297,37 @@ GbsRemoteDebuggerPresenterTest >> testRestartDelegatesToService [
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testRestartWithConfirmedExecutedFrameSecondPassDoesSingleRestartCycle [
+	| firstContext executedContext fakeList fakeText |
+	firstContext := GbxFakeContextForRemoteDebugger new
+		methodClass: 'SmallInteger';
+		selector: #/;
+		sourceString: 'a / b';
+		processOop: 222;
+		level: 1;
+		tempNamesAndValues: Dictionary new;
+		yourself.
+	executedContext := GbxFakeContextForRemoteDebugger new
+		methodClass: 'nil';
+		selector: #nil;
+		sourceString: '| a b |', String lf, 'a := 10.', String lf, 'b := 0.', String lf, 'a / b';
+		processOop: 222;
+		level: 8;
+		tempNamesAndValues: Dictionary new;
+		yourself.
+
+	service contextList: { firstContext. executedContext }.
+	fakeList := GbxFakeListPresenterForRemoteDebugger new.
+	debugger instVarNamed: 'stackList' put: fakeList.
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: 'placeholder'.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+
+	self assert: debugger restartWithConfirmedExecutedFrameSecondPass.
+	self assert: service restartCalls equals: 1
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testRestartPromotesExecutedCodeFrameToTopAndSelectsSourceStart [
 	| firstContext executedContext fakeList fakeText |
 	firstContext := GbxFakeContextForRemoteDebugger new
