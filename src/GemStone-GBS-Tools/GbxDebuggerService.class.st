@@ -858,8 +858,7 @@ GbxDebuggerService >> processOop [
 
 { #category : 'accessing' }
 GbxDebuggerService >> processOop: anOop [
-	processOop := anOop.
-	restartHomeResetPasses := 0
+	processOop := anOop
 ]
 
 { #category : 'variables' }
@@ -1019,13 +1018,12 @@ GbxDebuggerService >> recomputeContextList [
 	"Recompute the context list after a step operation.
 	Always rebind currentContext to the freshly-computed list entry, even when
 	an equal/stale context object is still considered present."
-	| contexts refreshed previousContext fallbackNonGlue |
+	| contexts refreshed |
 	contextStackPolicy ifNil: [
 		self updateSourceMapFromCurrentContext.
 		self notifyContextChanged.
 		^ self
 	].
-	previousContext := currentContext.
 	contextStackPolicy computeContextList.
 	contexts := contextStackPolicy contextList.
 	
@@ -1038,19 +1036,7 @@ GbxDebuggerService >> recomputeContextList [
 				detect: [ :each | (each == currentContext) or: [ each = currentContext ] ]
 				ifNone: [ nil ].
 			refreshed
-				ifNil: [
-					fallbackNonGlue := contexts
-						detect: [ :each | (self isRestartGlueContext: each) not ]
-						ifNone: [ nil ].
-					fallbackNonGlue ifNotNil: [
-						currentContext := fallbackNonGlue
-					] ifNil: [
-						"Preserve prior non-glue context instead of collapsing to _gsReturnToC."
-						(previousContext notNil and: [ (self isRestartGlueContext: previousContext) not ])
-							ifTrue: [ currentContext := previousContext ]
-							ifFalse: [ contexts ifNotEmpty: [ :list | currentContext := list first ] ]
-					]
-				]
+				ifNil: [ contexts ifNotEmpty: [ :list | currentContext := list first ] ]
 				ifNotNil: [ currentContext := refreshed ]
 		].
 	self updateSourceMapFromCurrentContext.
@@ -1108,8 +1094,7 @@ GbxDebuggerService >> basicReenterServerContext [
 	| theContext |
 	"Always prefer the executed-code restart target over the currently selected
 	frame so a single Restart click is deterministic."
-	theContext := self restartHomeContextForCutback.
-	theContext ifNil: [ theContext := self restartTargetContext ].
+	theContext := self restartTargetContext.
 	theContext ifNil: [ theContext := currentContext ].
 	theContext ifNil: [ ^ false ].
 	self selectContext: theContext.
@@ -1121,8 +1106,8 @@ GbxDebuggerService >> basicReenterServerContext [
 			This ensures the server reports the correct step point."
 			self resetServerPCToStepOne.
 
-			"Level numbers may have changed; recompute contexts."
-			self recomputeContextList.
+			"Level numbers may have changed; recompute and select server-truth context."
+			self selectTopServerContext.
 			self selectRestartTargetContext.
 
 			"Force another refresh to ensure the display shows step=1"
@@ -1131,21 +1116,6 @@ GbxDebuggerService >> basicReenterServerContext [
 	self logRestartState: 'basicReenter/done' context: self currentContext.
 
 	^ true
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> restartHomeContextForCutback [
-	| level contexts |
-	level := restartHomeResetPasses.
-	(level isNumber and: [ level > 0 ]) ifFalse: [ ^ nil ].
-	contexts := self contextList.
-	(contexts isCollection and: [ contexts isEmpty not ]) ifFalse: [ ^ nil ].
-	^ contexts
-		detect: [ :ctx |
-			| ctxLevel |
-			ctxLevel := [ ctx level ] on: Error do: [ nil ].
-			(ctx respondsTo: #level) and: [ ctxLevel = level ] ]
-		ifNone: [ nil ]
 ]
 
 { #category : 'private' }
@@ -1190,7 +1160,7 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	| didReset script result level |
 	
 	"Get the executed code frame level"
-	level := self restartHomeLevelForReset.
+	level := self restartLevelFromServerStack.
 	level ifNil: [ level := 1 ].
 	
 	"Try jumpToStepPoint: first (may work on some GemStone versions)"
@@ -1203,108 +1173,33 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	self logRestartText: 'resetServerPCToStepOne runToStepPoint:1 -> ', didReset asString.
 	didReset ifTrue: [ ^ true ].
 	
-	"Fallback sequence for GemStone versions where jump/run selectors are absent on process:
-	1) try context-level jump/run if available
-	2) re-trim stack
-	3) verify quick step point is now <= 1"
+	"_trimStackToLevel: already reset the stack, but re-trim to ensure PC is reset"
 	script := '[
-		| obj proc procOop ctx top i stackReport fullEntry quick maxDepth restartLevel |
+		| obj proc |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
 		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
 			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
 		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #serverProcessOop ]) ifTrue: [
-			procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
-			(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
-				proc := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
-			]
-		].
 		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
 			proc := [ obj process ] on: Error do: [ nil ]
 		].
 		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
 			top := [ obj topContext ] on: Error do: [ nil ].
 			(top notNil and: [ top respondsTo: #process ])
 				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
 		].
-		(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ ^ ''false'' ].
-		maxDepth := 0.
-		i := 1.
-		[ i <= 512 ] whileTrue: [
-			stackReport := [ proc _gsiStackReportFromLevel: i toLevel: i ] on: Error do: [ nil ].
-			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
-				ifTrue: [ maxDepth := i. i := i + 1 ]
-				ifFalse: [ i := 513 ]
-		].
-		maxDepth <= 0 ifTrue: [ ^ ''false'' ].
-		restartLevel := ', level asString, '.
-		restartLevel > maxDepth ifTrue: [ restartLevel := maxDepth ].
-		restartLevel <= 0 ifTrue: [ restartLevel := 1 ].
-
-		quick := 0.
-		stackReport := [ proc _gsiStackReportFromLevel: restartLevel toLevel: restartLevel ] on: Error do: [ nil ].
-		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
-			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
-			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
-		].
-
-		quick > 1 ifTrue: [
-			top := [ proc topContext ] on: Error do: [ nil ].
-			ctx := top.
-			i := 1.
-			[ i < restartLevel and: [ ctx notNil ] ] whileTrue: [
-				ctx := [ ctx sender ] on: Error do: [ nil ].
-				i := i + 1
-			].
-			(ctx notNil and: [ ctx respondsTo: #jumpToStepPoint: ]) ifTrue: [
-				[ ctx jumpToStepPoint: 1 ] on: Error do: [ ]
-			].
-			(stackReport := [ proc _gsiStackReportFromLevel: restartLevel toLevel: restartLevel ] on: Error do: [ nil ]) ifNotNil: [
-				((stackReport respondsTo: #size) and: [ stackReport size >= 2 ]) ifTrue: [
-					fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
-					fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ quick ] ]
-				]
-			].
-			(quick > 1 and: [ ctx notNil and: [ ctx respondsTo: #runToStepPoint: ] ]) ifTrue: [
-				[ ctx runToStepPoint: 1 ] on: Error do: [ ]
-			].
-		].
-
-		(quick > 1 and: [ proc respondsTo: #_trimStackToLevel: ]) ifTrue: [
-			[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ]
-		].
-
-		quick := 0.
-		stackReport := [ proc _gsiStackReportFromLevel: restartLevel toLevel: restartLevel ] on: Error do: [ nil ].
-		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
-			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
-			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
-		].
-		quick <= 1 ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]
+		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
+		[ proc _trimStackToLevel: ', level asString, ' ] on: Error do: [ nil ].
+		''true''
 	] value'.
 	
 	result := self executeDebugScript: script.
 	didReset := self asBooleanResult: result default: false.
 	self logRestartText: 'resetServerPCToStepOne _trimStackToLevel:', level asString, ' -> ', didReset asString.
 	^ didReset
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> restartHomeLevelForReset [
-	"Use the level captured at restart begin. Falling back to live server level
-	can collapse to level 1 after first step and breaks repeated restart."
-	| level |
-	level := restartHomeResetPasses.
-	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
-	level := self restartLevelFromServerStack.
-	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
-	level := (currentContext respondsTo: #level)
-		ifTrue: [ currentContext level ]
-		ifFalse: [ nil ].
-	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
-	^ 1
 ]
 
 { #category : 'actions' }
@@ -1348,27 +1243,23 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	gsContext on the stack of its GSProcess. Also discards 
 	any partial execution in gsContext, resetting it to the 
 	beginning."
-	| lvl script result |
+	| lvl resolvedHomeLevel script result |
 	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ 1 ].
-	lvl := self restartHomeLevelForReset.
+	resolvedHomeLevel := self restartLevelFromServerStack.
+	(resolvedHomeLevel isNumber and: [ resolvedHomeLevel > 0 ])
+		ifTrue: [ lvl := resolvedHomeLevel ].
 	
-		script := '[
-			| obj proc procOop maxDepth i effectiveLevel stackReport |
-			obj := Object _objectForOop: ', processOop asString, '.
-			obj isNil ifTrue: [ ^ ''false'' ].
-			proc := obj.
-			((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-				(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-			].
-			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #serverProcessOop ]) ifTrue: [
-				procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
-				(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
-					proc := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
-				]
-			].
-			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-				proc := [ obj process ] on: Error do: [ nil ]
-			].
+	script := '[
+		| obj proc |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
 		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
 			| top |
 			top := [ obj topContext ] on: Error do: [ nil ].
@@ -1377,19 +1268,7 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 		].
 		
 		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
-		maxDepth := 0.
-		i := 1.
-		[ i <= 512 ] whileTrue: [
-			stackReport := [ proc _gsiStackReportFromLevel: i toLevel: i ] on: Error do: [ nil ].
-			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
-				ifTrue: [ maxDepth := i. i := i + 1 ]
-				ifFalse: [ i := 513 ]
-		].
-		maxDepth <= 0 ifTrue: [ ^ ''false'' ].
-		effectiveLevel := ', lvl asString, '.
-		effectiveLevel > maxDepth ifTrue: [ effectiveLevel := maxDepth ].
-		effectiveLevel <= 0 ifTrue: [ effectiveLevel := 1 ].
-		[ proc _trimStackToLevel: effectiveLevel ] on: Error do: [ ^ ''false'' ].
+		[ proc _trimStackToLevel: ', lvl asString, ' ] on: Error do: [ ^ ''false'' ].
 		''true''
 	] value'.
 
@@ -1459,117 +1338,32 @@ GbxDebuggerService >> firstServerContextAbove: clientContext [
 GbxDebuggerService >> restart [
 	"Restart the current context using the coordinated reenter operation.
 	Fixes bug where second restart does not reset Frame Step to 1."
-	| didRestart target serverLevel |
+	| didRestart target |
 	self logRestartState: 'restart/start' context: self currentContext.
-	self recomputeContextList.
-	(restartHomeResetPasses isInteger and: [ restartHomeResetPasses > 0 ]) ifFalse: [
-		| initialLevel |
-		initialLevel := self restartLevelFromServerStack.
-		(initialLevel isNumber and: [ initialLevel > 0 ])
-			ifTrue: [ restartHomeResetPasses := initialLevel ].
-		self logRestartText: 'restart homeLevel=', restartHomeResetPasses asString
-	].
 	target := self restartTargetContext.
 	target ifNotNil: [ self selectContext: target ].
 	didRestart := self basicReenterServerContext.
 	didRestart ifTrue: [
 		self selectRestartTargetContext.
-		self resetServerPCToStepOne.
-		self recomputeContextList.
-		self selectRestartTargetContext.
-		"Second internal reset pass mirrors the manual second click needed in live sessions."
-		self resetServerPCToStepOne.
-		self recomputeContextList.
-		self selectRestartTargetContext.
-		serverLevel := self restartLevelFromServerStack.
-		serverLevel ifNil: [
-			self logRestartText: 'restart warning: server level unresolved; attempting process rebind'.
-			(self rebindDebugProcessAfterRestartIfNeeded)
-				ifTrue: [
-					self recomputeContextList.
-					self selectRestartTargetContext.
-					self resetServerPCToStepOne.
-					self recomputeContextList.
-					self selectRestartTargetContext.
-					serverLevel := self restartLevelFromServerStack
-				]
-		].
-		serverLevel ifNil: [
-			(self isRestartGlueContext: self currentContext)
-				ifTrue: [
-					self logRestartText: 'restart error: server level unresolved after rebind; restart failed'.
-					didRestart := false
-				]
-				ifFalse: [
-					self logRestartText: 'restart warning: server level unresolved but current context is non-glue; continuing'
-				]
-		].
 		(self isExecutedCodeAtStepOne) ifFalse: [
-			self logRestartText: 'restart warning: step one not confirmed after reset'
+			self logRestartText: 'restart auto-retry: first reenter did not reach step 1'.
+			didRestart := self basicReenterServerContext.
+			didRestart ifTrue: [ self selectRestartTargetContext ].
+		].
+		self ensureRestartAtStepOne.
+		self selectRestartTargetContext.
+		self synchronizeServerProgramCounterAfterRestart.
+		self selectRestartTargetContext.
+		(self isExecutedCodeAtStepOne) ifFalse: [
+			"Final deterministic guard: force server PC and UI context to method start."
+			self resetServerPCToStepOne.
+			self selectTopServerContext.
+			self selectRestartTargetContext
 		]
 	].
 	self logRestartText: 'restart/result=', didRestart asString.
 	self logRestartState: 'restart/end' context: self currentContext.
 	^ didRestart
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> rebindDebugProcessAfterRestartIfNeeded [
-	| resolved raw |
-	self canExecuteOnDebugProcess ifFalse: [ ^ false ].
-	raw := self executeDebugScript: '[
-		| obj candidate top hasStack |
-		obj := Object _objectForOop: ', processOop asString, '.
-		obj isNil ifTrue: [ ^ ''0'' ].
-
-		hasStack := [ :proc |
-			| report |
-			(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ false ] ifFalse: [
-				report := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
-				(report notNil and: [ (report respondsTo: #size) and: [ report size >= 2 ] ])
-			]
-		].
-
-		(hasStack value: obj) ifTrue: [ ^ (Reflection oopOf: obj) asString ].
-
-		candidate := (obj respondsTo: #serverProcess)
-			ifTrue: [ [ obj serverProcess ] on: Error do: [ nil ] ]
-			ifFalse: [ nil ].
-		(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
-
-		candidate := (obj respondsTo: #serverProcessOop)
-			ifTrue: [ [ obj serverProcessOop ] on: Error do: [ nil ] ]
-			ifFalse: [ nil ].
-		(candidate isNumber and: [ candidate > 20 ]) ifTrue: [
-			candidate := [ Object _objectForOop: candidate ] on: Error do: [ nil ].
-			(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
-		].
-
-		candidate := (obj respondsTo: #process)
-			ifTrue: [ [ obj process ] on: Error do: [ nil ] ]
-			ifFalse: [ nil ].
-		(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
-
-		top := (obj respondsTo: #topContext)
-			ifTrue: [ [ obj topContext ] on: Error do: [ nil ] ]
-			ifFalse: [ nil ].
-		top ifNotNil: [
-			candidate := (top respondsTo: #process)
-				ifTrue: [ [ top process ] on: Error do: [ nil ] ]
-				ifFalse: [ nil ].
-			(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
-			(hasStack value: top) ifTrue: [ ^ (Reflection oopOf: top) asString ].
-		].
-		''0''
-	] value'.
-	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
-	resolved := [ raw asString asInteger ] on: Error do: [ nil ].
-	((resolved isNumber and: [ resolved > 20 ]) and: [ resolved ~= processOop ]) ifTrue: [
-		self logRestartText: 'restart rebind processOop ', processOop asString, ' -> ', resolved asString.
-		self processOop: resolved.
-		^ true
-	].
-	^ false
 ]
 
 { #category : 'private' }
@@ -1579,23 +1373,17 @@ GbxDebuggerService >> synchronizeServerProgramCounterAfterRestart [
 	(self isCurrentExecutedCodeFrame) ifFalse: [ ^ false ].
 	level := self currentContextLevel.
 	(level isNumber and: [ level > 0 ]) ifFalse: [ level := 1 ].
-		script := '[
-			| obj proc procOop |
-			obj := Object _objectForOop: ', processOop asString, '.
-			obj isNil ifTrue: [ ^ ''false'' ].
-			proc := obj.
-			((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-				(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-			].
-			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #serverProcessOop ]) ifTrue: [
-				procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
-				(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
-					proc := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
-				]
-			].
-			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-				proc := [ obj process ] on: Error do: [ nil ]
-			].
+	script := '[
+		| obj proc |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
 		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
 			| top |
 			top := [ obj topContext ] on: Error do: [ nil ].
@@ -1622,33 +1410,13 @@ GbxDebuggerService >> isExecutedCodeAtStepOne [
 
 { #category : 'private' }
 GbxDebuggerService >> logRestartState: labelString context: aContext [
-	| level className selectorName step serverLevel |
-	level := (aContext notNil and: [ aContext respondsTo: #level ])
-		ifTrue: [ [ aContext level ] on: Error do: [ nil ] ]
-		ifFalse: [ nil ].
-	className := (aContext notNil and: [ aContext respondsTo: #methodClassOrUnknown ])
-		ifTrue: [ [ aContext methodClassOrUnknown asString ] on: Error do: [ '<err>' ] ]
-		ifFalse: [ '<nil>' ].
-	selectorName := (aContext notNil and: [ aContext respondsTo: #selectorOrUnknown ])
-		ifTrue: [ [ aContext selectorOrUnknown asString ] on: Error do: [ '<err>' ] ]
-		ifFalse: [ '<nil>' ].
-	step := [ self currentStepPoint ] on: Error do: [ nil ].
-	serverLevel := [ self restartLevelFromServerStack ] on: Error do: [ nil ].
-	Transcript
-		show: '[GBS restart] '; show: labelString asString;
-		show: ' level='; show: (level ifNil: [ 'nil' ] ifNotNil: [ level asString ]);
-		show: ' class='; show: className;
-		show: ' selector='; show: selectorName;
-		show: ' step='; show: (step ifNil: [ 'nil' ] ifNotNil: [ step asString ]);
-		show: ' serverLevel='; show: (serverLevel ifNil: [ 'nil' ] ifNotNil: [ serverLevel asString ]);
-		show: ' homeLevel='; show: (restartHomeResetPasses ifNil: [ 'nil' ] ifNotNil: [ restartHomeResetPasses asString ]);
-		cr.
+	"Restart diagnostics hook. Keep as no-op by default."
 	^ self
 ]
 
 { #category : 'private' }
 GbxDebuggerService >> logRestartText: aString [
-	Transcript show: '[GBS restart] '; show: aString asString; cr.
+	"Restart diagnostics hook. Keep as no-op by default."
 	^ self
 ]
 
@@ -1656,25 +1424,19 @@ GbxDebuggerService >> logRestartText: aString [
 GbxDebuggerService >> restartLevelFromServerStack [
 	| raw lines |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ nil ].
-		raw := self executeDebugScript: '[
-			| obj proc procOop stream maxDepth level stackReport fullEntry methodOrNil className selectorName source quick offsets line offset |
-			obj := Object _objectForOop: ', processOop asString, '.
-			obj isNil ifTrue: [ ^ '''' ].
-			proc := obj.
-			((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-				(obj respondsTo: #serverProcess) ifTrue: [
-					proc := [ obj serverProcess ] on: Error do: [ nil ]
-				]
-			].
-			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #serverProcessOop ]) ifTrue: [
-				procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
-				(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
-					proc := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
-				]
-			].
-			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-				proc := [ obj process ] on: Error do: [ nil ]
-			].
+	raw := self executeDebugScript: '[
+		| obj proc stream maxDepth level stackReport fullEntry methodOrNil className selectorName source quick offsets line offset |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ '''' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [
+				proc := [ obj serverProcess ] on: Error do: [ nil ]
+			]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
 		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
 			| top |
 			top := [ obj topContext ] on: Error do: [ nil ].
@@ -1788,37 +1550,12 @@ GbxDebuggerService >> restartTargetContext [
 		ifNone: [ nil ].
 	detected ifNotNil: [ ^ detected ].
 
-	^ contexts
-		detect: [ :ctx | (self isRestartGlueContext: ctx) not ]
-		ifNone: [ contexts first ]
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> isRestartGlueContext: aContext [
-	| className selectorName |
-	aContext ifNil: [ ^ true ].
-	className := [ aContext methodClassOrUnknown asString ] on: Error do: [ '' ].
-	selectorName := [ aContext selectorOrUnknown asString ] on: Error do: [ '' ].
-	(className includesSubstring: 'GsNMethod') ifTrue: [ ^ true ].
-	(selectorName beginsWith: '_') ifTrue: [ ^ true ].
-	^ false
+	^ contexts first
 ]
 
 { #category : 'private' }
 GbxDebuggerService >> selectRestartTargetContext [
-	| target serverLevel |
-	serverLevel := self restartLevelFromServerStack.
-	(serverLevel isNumber and: [ serverLevel > 0 ]) ifTrue: [
-		target := self contextList
-			detect: [ :ctx |
-				| ctxLevel |
-				ctxLevel := [ ctx level ] on: Error do: [ nil ].
-				(ctx respondsTo: #level)
-					and: [ ctxLevel = serverLevel ] ]
-			ifNone: [ nil ].
-		(target notNil and: [ (self isRestartGlueContext: target) not ])
-			ifTrue: [ ^ self selectContext: target ]
-	].
+	| target |
 	target := self restartTargetContext.
 	target ifNil: [ ^ self ].
 	self selectContext: target
@@ -1828,46 +1565,19 @@ GbxDebuggerService >> selectRestartTargetContext [
 GbxDebuggerService >> selectTopServerContext [
 	"The stack has changed. Recompute and select the top GemStone context.
 	Then refresh the displayed list without a second recompute."
-	| topServer contexts |
+	| topServer |
 	contextStackPolicy ifNil: [ ^ self ].
 	contextStackPolicy computeContextList.
-	contexts := contextStackPolicy contextList.
-
-	"Primary: explicit restart target, but never glue."
 	topServer := self restartTargetContext.
-	(topServer notNil and: [ self isRestartGlueContext: topServer ])
-		ifTrue: [ topServer := nil ].
-
-	"Keep existing non-glue selection if still present."
-	topServer ifNil: [
-		(currentContext notNil and: [ (self isRestartGlueContext: currentContext) not ]) ifTrue: [
-			topServer := contexts
-				detect: [ :ctx | ctx == currentContext ]
-				ifNone: [ nil ]
-		]
-	].
-
-	"Policy fallback, still filtered."
 	topServer ifNil: [
 		topServer := (contextStackPolicy respondsTo: #topServerContext)
 			ifTrue: [ contextStackPolicy topServerContext ]
 			ifFalse: [ nil ]
 	].
-	(topServer notNil and: [ self isRestartGlueContext: topServer ])
-		ifTrue: [ topServer := nil ].
-
-	"Last sane fallback: first non-glue context."
 	topServer ifNil: [
-		topServer := contexts
-			detect: [ :ctx | (self isRestartGlueContext: ctx) not ]
-			ifNone: [ nil ]
-	].
-
-	"Absolute fallback when only glue remains."
-	topServer ifNil: [
-		topServer := contexts
+		topServer := contextStackPolicy contextList
 			ifEmpty: [ nil ]
-			ifNotEmpty: [ :all | all first ]
+			ifNotEmpty: [ :contexts | contexts first ]
 	].
 	topServer ifNotNil: [ self selectContext: topServer ].
 	self schedulePrecomputedContextListUpdate
@@ -2143,21 +1853,8 @@ GbxDebuggerService >> stepInto [
 	before := self currentStepPoint.
 	level := self effectiveServerStepLevel.
 	level ifNil: [ level := 1 ].
-	self
-		logRestartText:
-			'stepInto begin level=', level asString,
-			' before=', (before ifNil: [ 'nil' ] ifNotNil: [ before asString ]).
 	(self serverStepOverFrameLevel: (level bitOr: 16r100000000))
-		ifTrue: [
-			| ok |
-			ok := self normalizeExecutedCodeSingleStepFrom: before.
-			self
-				logRestartText:
-					'stepInto end ok=', ok asString,
-					' after=', ((self currentStepPoint ifNil: [ 'nil' ]) asString).
-			^ ok
-		].
-	self logRestartText: 'stepInto end ok=false'.
+		ifTrue: [ ^ self normalizeExecutedCodeSingleStepFrom: before ].
 	^ false
 ]
 
@@ -2167,21 +1864,8 @@ GbxDebuggerService >> stepOver [
 	before := self currentStepPoint.
 	level := self effectiveServerStepLevel.
 	level ifNil: [ level := 1 ].
-	self
-		logRestartText:
-			'stepOver begin level=', level asString,
-			' before=', (before ifNil: [ 'nil' ] ifNotNil: [ before asString ]).
 	(self serverStepOverFrameLevel: level)
-		ifTrue: [
-			| ok |
-			ok := self normalizeExecutedCodeSingleStepFrom: before.
-			self
-				logRestartText:
-					'stepOver end ok=', ok asString,
-					' after=', ((self currentStepPoint ifNil: [ 'nil' ]) asString).
-			^ ok
-		].
-	self logRestartText: 'stepOver end ok=false'.
+		ifTrue: [ ^ self normalizeExecutedCodeSingleStepFrom: before ].
 	^ false
 ]
 
@@ -2192,12 +1876,12 @@ GbxDebuggerService >> normalizeExecutedCodeSingleStepFrom: previousStepPoint [
 	self isCurrentExecutedCodeFrame ifFalse: [ ^ true ].
 	currentStep := self currentStepPoint.
 	target := previousStepPoint + 1.
+	currentStep = target ifTrue: [ ^ true ].
 	self
 		logRestartText:
 			'normalize single-step previous=', previousStepPoint asString,
 			' current=', (currentStep ifNil: [ 'nil' ] ifNotNil: [ currentStep asString ]),
 			' target=', target asString.
-	currentStep = target ifTrue: [ ^ true ].
 	(self jumpToStepPoint: target) ifTrue: [ ^ true ].
 	(self runToStepPoint: target) ifTrue: [ ^ true ].
 	^ true
@@ -2530,7 +2214,6 @@ GbxDebuggerService >> serverStepOverFrameLevel: levelValue [
 	| result script |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
 	levelValue ifNil: [ ^ false ].
-	self logRestartText: 'serverStepOverFrameLevel level=', levelValue asString.
 	script := '[
 		| obj proc stepLevel ok |
 		obj := Object _objectForOop: ', processOop asString, '.
@@ -2555,7 +2238,6 @@ GbxDebuggerService >> serverStepOverFrameLevel: levelValue [
 		''true''
 	] value'.
 	result := self executeDebugScript: script.
-	self logRestartText: 'serverStepOverFrameLevel rawResult=', result printString.
 	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
 	self selectTopServerContext.
 	^ true
