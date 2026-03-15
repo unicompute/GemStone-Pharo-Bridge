@@ -1360,6 +1360,10 @@ GbxDebuggerService >> restart [
 		self resetServerPCToStepOne.
 		self selectTopServerContext.
 		self selectRestartTargetContext.
+		"Second internal reset pass mirrors the manual second click needed in live sessions."
+		self resetServerPCToStepOne.
+		self selectTopServerContext.
+		self selectRestartTargetContext.
 		(self isExecutedCodeAtStepOne) ifFalse: [
 			self logRestartText: 'restart warning: step one not confirmed after reset'
 		]

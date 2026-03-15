@@ -3274,19 +3274,30 @@ GbsRemoteDebugger >> reinforceSourceCaretVisibility [
 
 { #category : 'private' }
 GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
-	| index context fallbackIndex current |
+	| index context fallbackIndex current serverLevel |
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
 
-	"Prefer an explicit service-selected target when it is still present."
+	"Prefer server-truth executed frame level when available."
 	index := 0.
-	current := service
-		ifNotNil: [
-			(service respondsTo: #currentContext)
-				ifTrue: [ self safeServiceCall: [ service currentContext ] default: nil ]
-				ifFalse: [ nil ] ]
-		ifNil: [ nil ].
-	current ifNotNil: [
-		index := contextList findFirst: [ :ctx | ctx == current ]
+	serverLevel := self resolveExecutedFrameLevelFromServer.
+	(serverLevel isNumber and: [ serverLevel > 0 ]) ifTrue: [
+		index := contextList
+			findFirst: [ :ctx |
+				(ctx respondsTo: #level)
+					and: [ [ ctx level ] on: Error do: [ nil ] = serverLevel ] ]
+	].
+
+	"Prefer an explicit service-selected target when it is still present."
+	index = 0 ifTrue: [
+		current := service
+			ifNotNil: [
+				(service respondsTo: #currentContext)
+					ifTrue: [ self safeServiceCall: [ service currentContext ] default: nil ]
+					ifFalse: [ nil ] ]
+			ifNil: [ nil ].
+		current ifNotNil: [
+			index := contextList findFirst: [ :ctx | ctx == current ]
+		]
 	].
 
 	"Find server-reported executed-code frame"
@@ -3307,11 +3318,11 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
 	context := contextList at: index.
 
-	"CRITICAL FIX for second restart bug: Mark context as restarted BEFORE updating UI.
-	This ensures step=1 is set before the display reads the step point value.
-	The server may report old step point, so we force it to 1 locally."
-	(context respondsTo: #markAsExecutedCodeFrame) ifTrue: [
-		context markAsExecutedCodeFrame
+	"Do not rewrite class/selector on arbitrary frames.
+	If this is already executed code, normalize only its step point display."
+	(self isExecutedCodeFrame: context) ifTrue: [
+		(context respondsTo: #quickStepPoint:)
+			ifTrue: [ context quickStepPoint: 1 ]
 	].
 
 	service ifNotNil: [

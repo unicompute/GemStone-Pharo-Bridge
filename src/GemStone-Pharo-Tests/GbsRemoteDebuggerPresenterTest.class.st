@@ -365,6 +365,30 @@ GbsRemoteDebuggerPresenterTest >> testRestartPromotesExecutedCodeFrameToTopAndSe
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testNormalizeRestartSelectionDoesNotRewriteNonExecutedFrameAsExecutedCode [
+	| nonExecuted fakeList fakeText |
+	nonExecuted := GbxFakeContextForRemoteDebugger new
+		methodClass: 'SmallInteger';
+		selector: #/;
+		sourceString: 'a / b';
+		processOop: 222;
+		level: 1;
+		tempNamesAndValues: Dictionary new;
+		yourself.
+	debugger instVarNamed: 'contextList' put: { nonExecuted }.
+	fakeList := GbxFakeListPresenterForRemoteDebugger new.
+	debugger instVarNamed: 'stackList' put: fakeList.
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: 'placeholder'.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+
+	debugger normalizeRestartSelectionAndPosition.
+
+	self assert: nonExecuted methodClassOrUnknown equals: 'SmallInteger'.
+	self assert: nonExecuted selectorOrUnknown equals: #/
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testEnsureServerPCToStepOneAfterRestartUsesExecutedFrameEvenWhenNotTop [
 	| mockSession firstContext executedContext scriptCalls capturedScript fakeList fakeText |
 	mockSession := MockGbsSession new.
