@@ -1163,10 +1163,6 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	"Get the executed code frame level"
 	level := self restartLevelFromServerStack.
 	level ifNil: [ level := 1 ].
-	((level = 1)
-		and: [ (self isCurrentExecutedCodeFrame not)
-		and: [ restartHomeResetPasses isInteger and: [ restartHomeResetPasses > 1 ] ] ])
-		ifTrue: [ level := restartHomeResetPasses ].
 	
 	"Try jumpToStepPoint: first (may work on some GemStone versions)"
 	didReset := self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true.
@@ -1312,10 +1308,6 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	resolvedHomeLevel := self restartLevelFromServerStack.
 	(resolvedHomeLevel isNumber and: [ resolvedHomeLevel > 0 ])
 		ifTrue: [ lvl := resolvedHomeLevel ].
-	((lvl = 1)
-		and: [ (self isCurrentExecutedCodeFrame not)
-		and: [ restartHomeResetPasses isInteger and: [ restartHomeResetPasses > 1 ] ] ])
-		ifTrue: [ lvl := restartHomeResetPasses ].
 	
 		script := '[
 			| obj proc procOop maxDepth i effectiveLevel stackReport |
