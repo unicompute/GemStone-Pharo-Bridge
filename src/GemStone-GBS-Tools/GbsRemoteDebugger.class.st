@@ -1052,7 +1052,7 @@ GbsRemoteDebugger >> initializePresenters [
 	restartButton := self newButton
 		label: 'Restart';
 		icon: (self iconNamedSafe: #smallUpdate);
-		action: [ self restartTwiceOnClick ].
+		action: [ self restartWithConfirmedExecutedFrameSecondPass ].
 	resumeButton := self newButton 
 		label: 'Run';
 		icon: (self iconNamedSafe: #glamorousGo);
@@ -2061,7 +2061,7 @@ GbsRemoteDebugger >> executeMenu [
 			group addItem: [ :item | item name: 'Step Into'; action: [ self stepInto ] ].
 			group addItem: [ :item | item name: 'Step'; action: [ self stepInto ] ].
 			group addItem: [ :item | item name: 'Step Over'; action: [ self stepOver ] ].
-			group addItem: [ :item | item name: 'Restart'; action: [ self restartTwiceOnClick ] ].
+			group addItem: [ :item | item name: 'Restart'; action: [ self restartWithConfirmedExecutedFrameSecondPass ] ].
 			group addItem: [ :item | item name: 'Run'; action: [ self resume ] ].
 			group addItem: [ :item | item name: 'Run until Return'; action: [ self stepReturn ] ].
 			group addItem: [ :item | item name: 'Run with Break Again'; action: [ self runWithBreakAgain ] ].
@@ -2763,20 +2763,8 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restartTwiceOnClick [
-	| firstPass secondPass attempts |
-	firstPass := self restart.
-	"Poll debugger stack before second restart, so server/client state is synchronized."
-	attempts := 0.
-	[
-		self fetchStackFrames.
-		self normalizeRestartSelectionAndPosition.
-		((contextList isCollection and: [ contextList isEmpty not ]) or: [ attempts >= 10 ])
-	] whileFalse: [
-		attempts := attempts + 1.
-		(Delay forMilliseconds: 20) wait
-	].
-	secondPass := self restart.
-	^ firstPass or: [ secondPass ]
+	"Compatibility wrapper kept for callers that might still send this selector."
+	^ self restartWithConfirmedExecutedFrameSecondPass
 ]
 
 { #category : 'private' }

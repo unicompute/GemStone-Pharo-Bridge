@@ -1,6 +1,7 @@
 Class {
 	#name : 'GbxOopKeyedDictionary',
 	#superclass : 'Object',
+	#type : 'variable',
 	#instVars : [
 		'numNodeSlots',
 		'notCachedToken',
