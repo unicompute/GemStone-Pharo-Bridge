@@ -2747,7 +2747,7 @@ GbsRemoteDebugger >> isTopExecutedCodeAtStepOne [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
-	| firstPass attempts ready |
+	| firstPass secondPass attempts ready |
 	firstPass := self restart.
 	firstPass ifFalse: [ ^ false ].
 
@@ -2763,8 +2763,10 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 		attempts := attempts + 1
 	].
 
-	ready ifTrue: [ self restart ].
-	^ firstPass
+	"Critical: always run the second restart after polling.
+	The explicit second pass is what reliably resets server-side step PC to 1."
+	secondPass := self restart.
+	^ firstPass or: [ secondPass ]
 ]
 
 { #category : 'private' }

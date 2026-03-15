@@ -71,6 +71,151 @@ GbsServerInterface >> apiGciEncrypt: aString into: aBuffer [
 GbsServerInterface >> apiGciEncrypt: s into: b size: z [ ^ self ffiCall: #(void* GciEncrypt(String s, void* b, void* z)) module: libraryPath
 ]
 
+{ #category : 'api - session' }
+GbsServerInterface >> apiGciBegin [
+	"Begin a new transaction"
+	^ self ffiCall: #(void GciBegin()) module: libraryPath options: #( + optNonThreaded )
+]
+
+{ #category : 'api - session' }
+GbsServerInterface >> apiGciBegin: aSessionId [
+	"Begin a new transaction for a session"
+	^ self ffiCall: #(void GciBegin(uint64 aSessionId)) module: libraryPath
+]
+
+{ #category : 'api - session' }
+GbsServerInterface >> apiGciLoginEx: user password: pass flags: flags context: ctx [
+	"Extended login with flags and context"
+	^ self ffiCall: #(uint64 GciLoginEx(void* user, void* pass, int flags, void* ctx)) module: libraryPath
+]
+
+{ #category : 'api - session' }
+GbsServerInterface >> apiGciLogout: aSessionId [
+	"Logout from a session"
+	^ self ffiCall: #(int GciLogout(int sessionId)) module: libraryPath
+]
+
+{ #category : 'api - session' }
+GbsServerInterface >> apiGciSetNet: stone host: host net: net service: service [
+	"Set network connection parameters"
+	^ self ffiCall: #(void GciSetNet(void* stone, void* host, void* net, void* service)) module: libraryPath
+]
+
+{ #category : 'api - signals' }
+GbsServerInterface >> apiGciPollForSignal [
+	"Poll for asynchronous signals"
+	^ self ffiCall: #(int GciPollForSignal()) module: libraryPath options: #( + optNonThreaded )
+]
+
+{ #category : 'api - signals' }
+GbsServerInterface >> apiGciSoftBreak [
+	"Send a soft break to interrupt execution"
+	^ self ffiCall: #(void GciSoftBreak()) module: libraryPath options: #( + optNonThreaded )
+]
+
+{ #category : 'api - signals' }
+GbsServerInterface >> apiGciHardBreak [
+	"Send a hard break to halt execution"
+	^ self ffiCall: #(void GciHardBreak()) module: libraryPath options: #( + optNonThreaded )
+]
+
+{ #category : 'api - objects' }
+GbsServerInterface >> apiGciFetchClass: anOop [
+	"Fetch the class of an object"
+	^ self ffiCall: #(uint64 GciFetchClass_(uint64 anOop)) module: libraryPath
+]
+
+{ #category : 'api - objects' }
+GbsServerInterface >> apiGciFetchSize: anOop [
+	"Fetch the size of an object"
+	^ self ffiCall: #(int64 GciFetchSize_(uint64 anOop)) module: libraryPath
+]
+
+{ #category : 'api - objects' }
+GbsServerInterface >> apiGciFetchBytes: anOop startIndex: start buffer: buffer maxSize: max [
+	"Fetch bytes from a byte object"
+	^ self ffiCall: #(int64 GciFetchBytes_(int64 anOop, int64 start, void* buffer, int64 max)) module: libraryPath
+]
+
+{ #category : 'api - objects' }
+GbsServerInterface >> apiGciFetchOops: anOop startIndex: start buffer: buffer numOops: num [
+	"Fetch OOPs from a pointer object"
+	^ self ffiCall: #(int64 GciFetchOops(int64 anOop, int64 start, void* buffer, int64 num)) module: libraryPath
+]
+
+{ #category : 'api - objects' }
+GbsServerInterface >> apiGciStoreBytes: anOop startIndex: start bytes: bytes numBytes: num [
+	"Store bytes to a byte object"
+	^ self ffiCall: #(void GciStoreBytes(int64 anOop, int64 start, void* bytes, int64 num)) module: libraryPath
+]
+
+{ #category : 'api - objects' }
+GbsServerInterface >> apiGciStoreOops: anOop startIndex: start oops: oops numOops: num [
+	"Store OOPs to a pointer object"
+	^ self ffiCall: #(void GciStoreOops(int64 anOop, int64 start, void* oops, int64 num)) module: libraryPath
+]
+
+{ #category : 'api - objects' }
+GbsServerInterface >> apiGciNewOop [
+	"Create a new OOP"
+	^ self ffiCall: #(uint64 GciNewOop()) module: libraryPath
+]
+
+{ #category : 'api - objects' }
+GbsServerInterface >> apiGciNewOops: count [
+	"Create multiple new OOPs"
+	^ self ffiCall: #(uint64 GciNewOops(int count)) module: libraryPath
+]
+
+{ #category : 'api - execution' }
+GbsServerInterface >> apiGciExecuteStr: source context: ctx env: env [
+	"Execute a Smalltalk string"
+	^ self ffiCall: #(uint64 GciExecuteStr_(String source, uint64 ctx, ushort env)) module: libraryPath options: #( + optNonThreaded )
+]
+
+{ #category : 'api - execution' }
+GbsServerInterface >> apiGciPerform: receiver selector: selector [
+	"Perform a message send"
+	^ self ffiCall: #(uint64 GciPerform(uint64 receiver, void* selector)) module: libraryPath
+]
+
+{ #category : 'api - execution' }
+GbsServerInterface >> apiGciContinue: context [
+	"Continue execution after an error"
+	^ self ffiCall: #(uint64 GciContinue(uint64 context)) module: libraryPath
+]
+
+{ #category : 'api - execution' }
+GbsServerInterface >> apiGciClearStack: context [
+	"Clear the stack after a fatal error"
+	^ self ffiCall: #(void GciClearStack(uint64 context)) module: libraryPath
+]
+
+{ #category : 'api - objects' }
+GbsServerInterface >> apiGciReleaseOop: anOop [
+	"Release an OOP (decrement reference count)"
+	^ self ffiCall: #(void GciReleaseOop(uint64 anOop)) module: libraryPath
+]
+
+{ #category : 'api - objects' }
+GbsServerInterface >> apiGciReleaseOops: oopArray [
+	"Release multiple OOPs"
+	^ self ffiCall: #(void GciReleaseOops(void* oopArray, int count)) module: libraryPath
+]
+
+{ #category : 'api - objects' }
+GbsServerInterface >> apiGciSaveObjs: oopArray [
+	"Save objects to the repository"
+	^ self ffiCall: #(void GciSaveObjs(void* oopArray, int count)) module: libraryPath
+]
+
+{ #category : 'api - objects' }
+GbsServerInterface >> apiGciAlteredObjs: buffer count: countRef [
+	"Get altered (dirty) objects"
+	^ self ffiCall: #(int GciAlteredObjs(void* buffer, int* countRef)) module: libraryPath
+]
+
+
 { #category : 'api' }
 GbsServerInterface >> apiGciErr: aBuffer [
     ^ self 
