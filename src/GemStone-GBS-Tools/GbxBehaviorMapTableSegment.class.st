@@ -83,7 +83,7 @@ GbxBehaviorMapTableSegment >> percentFull [
 { #category : 'accessing' }
 GbxBehaviorMapTableSegment >> printString [
 	^ 'BehaviorMapSegment ', segmentIndex asString,
-	  ' (', percentFull asString, '% full)'
+	  ' (', self percentFull asString, '% full)'
 ]
 
 { #category : 'accessing' }
