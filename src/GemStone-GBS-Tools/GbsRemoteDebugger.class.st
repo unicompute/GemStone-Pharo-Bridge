@@ -839,13 +839,14 @@ GbsRemoteDebugger >> fetchFullSourceFor: aContext [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> fetchStackFrames [
-	| contexts serviceCurrent serviceCurrentBeforeRecompute hasNonGlue skipServiceRecompute |
+	| contexts serviceCurrent serviceCurrentBeforeRecompute hasNonGlue skipServiceRecompute previousContextList |
 
 	"Check if we have captured stack data"
 	stackData ifNotNil: [
 		^ self fetchStackFramesFromData
 	].
 
+	previousContextList := contextList.
 	contexts := #( ).
 	service ifNotNil: [
 		serviceCurrentBeforeRecompute := (service respondsTo: #currentContext)
@@ -892,6 +893,18 @@ GbsRemoteDebugger >> fetchStackFrames [
 
 	contextList := contexts ifNil: [ #( ) ].
 	contextList ifEmpty: [
+		(previousContextList isCollection and: [ previousContextList isEmpty not ]) ifTrue: [
+			Transcript show: '[UI restart] preserving previous stack after empty fetch'; cr.
+			contextList := previousContextList.
+			stackList items: (contextList collect: [ :ctx | ctx printString ]).
+			stackList ifNotNil: [
+				(stackList respondsTo: #selectIndex:)
+					ifTrue: [ stackList selectIndex: 1 ].
+			].
+			self contextSelected: contextList first.
+			self refreshUiState.
+			^ self
+		].
 		stackList items: #('No stack frames available - error occurred in GemStone').
 		self setSourceText: ''.
 		self clearSourceHighlight.
@@ -2917,7 +2930,6 @@ GbsRemoteDebugger >> restart [
 			restartGuardActive := false.
 			restartFailedState := true.
 			restartPinnedContext := nil.
-			self fetchStackFrames.
 			^ false
 		].
 		"Fallback succeeded; continue with normal post-restart normalization."
