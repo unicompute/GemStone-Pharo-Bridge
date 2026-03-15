@@ -1495,8 +1495,14 @@ GbxDebuggerService >> restart [
 				]
 		].
 		serverLevel ifNil: [
-			self logRestartText: 'restart error: server level unresolved after rebind; restart failed'.
-			didRestart := false
+			(self isRestartGlueContext: self currentContext)
+				ifTrue: [
+					self logRestartText: 'restart error: server level unresolved after rebind; restart failed'.
+					didRestart := false
+				]
+				ifFalse: [
+					self logRestartText: 'restart warning: server level unresolved but current context is non-glue; continuing'
+				]
 		].
 		(self isExecutedCodeAtStepOne) ifFalse: [
 			self logRestartText: 'restart warning: step one not confirmed after reset'

@@ -47,7 +47,8 @@ Class {
 		'glueIsHidden',
 		'stackData',
 		'restartGuardActive',
-		'restartPinnedContext'
+		'restartPinnedContext',
+		'restartFailedState'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -1660,6 +1661,16 @@ GbsRemoteDebugger >> stepInto [
 		show: ' serverStep=';
 		show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
 		cr.
+	(restartFailedState = true) ifTrue: [
+		self fetchStackFrames.
+		self normalizeRestartSelectionAndPosition.
+		serverStep := self serverExecutedFrameStepPoint.
+		((serverStep isNil) or: [ serverStep <= 0 ]) ifTrue: [
+			Transcript show: '[UI stepInto] abort: restart previously failed; server step unresolved'; cr.
+			^ false
+		].
+		restartFailedState := false
+	].
 	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
 		serverStep := self serverExecutedFrameStepPoint.
 		((serverStep isNil) or: [ serverStep <= 0 ]) ifTrue: [
@@ -1735,6 +1746,16 @@ GbsRemoteDebugger >> stepOver [
 		show: ' serverStep=';
 		show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
 		cr.
+	(restartFailedState = true) ifTrue: [
+		self fetchStackFrames.
+		self normalizeRestartSelectionAndPosition.
+		serverStep := self serverExecutedFrameStepPoint.
+		((serverStep isNil) or: [ serverStep <= 0 ]) ifTrue: [
+			Transcript show: '[UI stepOver] abort: restart previously failed; server step unresolved'; cr.
+			^ false
+		].
+		restartFailedState := false
+	].
 	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
 		serverStep := self serverExecutedFrameStepPoint.
 		((serverStep isNil) or: [ serverStep <= 0 ]) ifTrue: [
@@ -2891,10 +2912,12 @@ GbsRemoteDebugger >> restart [
 	didRestart ifFalse: [
 		Transcript show: '[UI restart] restart aborted: service restart failed'; cr.
 		restartGuardActive := false.
+		restartFailedState := true.
 		restartPinnedContext := nil.
 		self fetchStackFrames.
 		^ false
 	].
+	restartFailedState := false.
 	didRestart ifTrue: [
 		self fetchStackFrames.
 		self normalizeRestartSelectionAndPosition.
