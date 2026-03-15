@@ -1164,7 +1164,8 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	level := self restartLevelFromServerStack.
 	level ifNil: [ level := 1 ].
 	((level = 1)
-		and: [ restartHomeResetPasses isInteger and: [ restartHomeResetPasses > 1 ] ])
+		and: [ (self isCurrentExecutedCodeFrame not)
+		and: [ restartHomeResetPasses isInteger and: [ restartHomeResetPasses > 1 ] ] ])
 		ifTrue: [ level := restartHomeResetPasses ].
 	
 	"Try jumpToStepPoint: first (may work on some GemStone versions)"
@@ -1312,7 +1313,8 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	(resolvedHomeLevel isNumber and: [ resolvedHomeLevel > 0 ])
 		ifTrue: [ lvl := resolvedHomeLevel ].
 	((lvl = 1)
-		and: [ restartHomeResetPasses isInteger and: [ restartHomeResetPasses > 1 ] ])
+		and: [ (self isCurrentExecutedCodeFrame not)
+		and: [ restartHomeResetPasses isInteger and: [ restartHomeResetPasses > 1 ] ] ])
 		ifTrue: [ lvl := restartHomeResetPasses ].
 	
 		script := '[
