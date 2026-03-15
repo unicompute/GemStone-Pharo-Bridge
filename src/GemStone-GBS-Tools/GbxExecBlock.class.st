@@ -2,6 +2,7 @@ Class {
 	#name : 'GbxExecBlock',
 	#superclass : 'Object',
 	#instVars : [
+		'method',
 		'session',
 		'blockOop',
 		'numArgs'

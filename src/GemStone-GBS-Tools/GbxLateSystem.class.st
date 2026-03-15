@@ -1,7 +1,7 @@
 Class {
 	#name : 'GbxLateSystem',
 	#superclass : 'Object',
-	#classInstVars : [
+	#classVars : [
 		'UniqueInstance',
 		'finalizationQueue',
 		'isFinalizationEnabled'
