@@ -117,6 +117,7 @@ GbsConfiguration >> initializeDefaults [
 	eventPriority ifNil: [ eventPriority := 3 ].
 	confirm ifNil: [ confirm := true ].
 	verbose ifNil: [ verbose := true ].
+	serverMapLeafCapacity ifNil: [ serverMapLeafCapacity := 1024 ].
 	postConnectAction ifNil: [ postConnectAction := 'none' ]
 ]
 

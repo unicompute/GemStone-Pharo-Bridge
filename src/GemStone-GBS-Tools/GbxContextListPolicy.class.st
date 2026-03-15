@@ -304,7 +304,14 @@ GbxContextListPolicy >> fetchServerContexts [
 		stream contents
 	] value'.
 	
-	rawData := [ debugger session evaluate: script ] on: Error do: [ nil ].
+	rawData := [
+		(debugger session respondsTo: #executeAndFetch:context:)
+			ifTrue: [ debugger session executeAndFetch: script context: 20 ]
+			ifFalse: [ debugger session evaluate: script ]
+	] on: Error do: [ nil ].
+	rawData ifNil: [
+		rawData := [ debugger session evaluate: script ] on: Error do: [ nil ]
+	].
 	(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
 	rawData ifNil: [ rawData := '' ].
 	rawData = false ifTrue: [ rawData := '' ].

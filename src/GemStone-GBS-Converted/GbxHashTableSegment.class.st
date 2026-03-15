@@ -1,6 +1,7 @@
 Class {
 	#name : 'GbxHashTableSegment',
 	#superclass : 'Object',
+	#type : 'variable',
 	#instVars : [
 		'upperBytes',
 		'parent',

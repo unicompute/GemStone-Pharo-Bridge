@@ -687,11 +687,17 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 	] value'.
 
 	[
-		rawData := session evaluate: script.
+		rawData := (session respondsTo: #executeAndFetch:context:)
+			ifTrue: [ session executeAndFetch: script context: 20 ]
+			ifFalse: [ session evaluate: script ].
 		(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
 		rawData ifNil: [ rawData := '' ].
 	] on: Error do: [ :ex |
-		^ #( )
+		[
+			rawData := session evaluate: script.
+			(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
+			rawData ifNil: [ rawData := '' ].
+		] on: Error do: [ ^ #( ) ].
 	].
 
 	rawData ifNil: [
