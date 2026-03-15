@@ -1579,8 +1579,10 @@ GbxDebuggerService >> selectRestartTargetContext [
 	(serverLevel isNumber and: [ serverLevel > 0 ]) ifTrue: [
 		target := self contextList
 			detect: [ :ctx |
+				| ctxLevel |
+				ctxLevel := [ ctx level ] on: Error do: [ nil ].
 				(ctx respondsTo: #level)
-					and: [ [ ctx level ] on: Error do: [ nil ] = serverLevel ] ]
+					and: [ ctxLevel = serverLevel ] ]
 			ifNone: [ nil ].
 		target ifNotNil: [ ^ self selectContext: target ]
 	].

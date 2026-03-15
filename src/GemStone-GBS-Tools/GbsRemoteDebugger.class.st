@@ -3283,8 +3283,10 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	(serverLevel isNumber and: [ serverLevel > 0 ]) ifTrue: [
 		index := contextList
 			findFirst: [ :ctx |
+				| ctxLevel |
+				ctxLevel := [ ctx level ] on: Error do: [ nil ].
 				(ctx respondsTo: #level)
-					and: [ [ ctx level ] on: Error do: [ nil ] = serverLevel ] ]
+					and: [ ctxLevel = serverLevel ] ]
 	].
 
 	"Prefer an explicit service-selected target when it is still present."
