@@ -1638,6 +1638,20 @@ GbsRemoteDebugger >> stepInto [
 		show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
 		cr.
 	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
+		(self restartNeedsServerRewind) ifTrue: [
+			Transcript show: '[UI stepInto] blocked: restart rewind pending, forcing rewind'; cr.
+			self safeServiceCall: [
+				(service respondsTo: #resetServerPCToStepOne)
+					ifTrue: [ service resetServerPCToStepOne ]
+			] default: nil.
+			self ensureServerPCToStepOneAfterRestart.
+			self fetchStackFrames.
+			self normalizeRestartSelectionAndPosition.
+			(self restartNeedsServerRewind) ifTrue: [
+				Transcript show: '[UI stepInto] abort: server still not rewound'; cr.
+				^ false
+			]
+		].
 		"CRITICAL: Reset server PC to step 1 before stepping from restarted frame"
 		self resetServerPCToStepOneIfNeeded.
 		didStep := self directStepOverExecutedFrame: true.
@@ -1683,6 +1697,20 @@ GbsRemoteDebugger >> stepOver [
 		show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
 		cr.
 	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
+		(self restartNeedsServerRewind) ifTrue: [
+			Transcript show: '[UI stepOver] blocked: restart rewind pending, forcing rewind'; cr.
+			self safeServiceCall: [
+				(service respondsTo: #resetServerPCToStepOne)
+					ifTrue: [ service resetServerPCToStepOne ]
+			] default: nil.
+			self ensureServerPCToStepOneAfterRestart.
+			self fetchStackFrames.
+			self normalizeRestartSelectionAndPosition.
+			(self restartNeedsServerRewind) ifTrue: [
+				Transcript show: '[UI stepOver] abort: server still not rewound'; cr.
+				^ false
+			]
+		].
 		"CRITICAL: Reset server PC to step 1 before stepping from restarted frame"
 		self resetServerPCToStepOneIfNeeded.
 		didStep := self directStepOverExecutedFrame: false.
