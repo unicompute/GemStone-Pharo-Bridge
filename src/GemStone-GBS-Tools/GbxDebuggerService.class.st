@@ -1717,19 +1717,46 @@ GbxDebuggerService >> selectRestartTargetContext [
 GbxDebuggerService >> selectTopServerContext [
 	"The stack has changed. Recompute and select the top GemStone context.
 	Then refresh the displayed list without a second recompute."
-	| topServer |
+	| topServer contexts |
 	contextStackPolicy ifNil: [ ^ self ].
 	contextStackPolicy computeContextList.
+	contexts := contextStackPolicy contextList.
+
+	"Primary: explicit restart target, but never glue."
 	topServer := self restartTargetContext.
+	(topServer notNil and: [ self isRestartGlueContext: topServer ])
+		ifTrue: [ topServer := nil ].
+
+	"Keep existing non-glue selection if still present."
+	topServer ifNil: [
+		(currentContext notNil and: [ (self isRestartGlueContext: currentContext) not ]) ifTrue: [
+			topServer := contexts
+				detect: [ :ctx | ctx == currentContext ]
+				ifNone: [ nil ]
+		]
+	].
+
+	"Policy fallback, still filtered."
 	topServer ifNil: [
 		topServer := (contextStackPolicy respondsTo: #topServerContext)
 			ifTrue: [ contextStackPolicy topServerContext ]
 			ifFalse: [ nil ]
 	].
+	(topServer notNil and: [ self isRestartGlueContext: topServer ])
+		ifTrue: [ topServer := nil ].
+
+	"Last sane fallback: first non-glue context."
 	topServer ifNil: [
-		topServer := contextStackPolicy contextList
+		topServer := contexts
+			detect: [ :ctx | (self isRestartGlueContext: ctx) not ]
+			ifNone: [ nil ]
+	].
+
+	"Absolute fallback when only glue remains."
+	topServer ifNil: [
+		topServer := contexts
 			ifEmpty: [ nil ]
-			ifNotEmpty: [ :contexts | contexts first ]
+			ifNotEmpty: [ :all | all first ]
 	].
 	topServer ifNotNil: [ self selectContext: topServer ].
 	self schedulePrecomputedContextListUpdate
