@@ -1,6 +1,7 @@
-| packageNames organizer checks classNamesToForceRemove |
+| packageNames organizer checks classNamesToForceRemove mustHaveChecks |
 [
-  organizer := (Smalltalk at: #RPackageOrganizer ifAbsent: [ nil ]).
+  organizer := (Smalltalk at: #PackageOrganizer ifAbsent: [ nil ]).
+  organizer ifNil: [ organizer := (Smalltalk at: #RPackageOrganizer ifAbsent: [ nil ]) ].
   classNamesToForceRemove := OrderedCollection new.
   packageNames := #(
     'GemStone-Pharo-Tests'
@@ -11,7 +12,7 @@
   organizer ifNotNil: [
     packageNames do: [ :pkgName |
       | pkg |
-      pkg := [ organizer default packageNamed: pkgName ] on: Error do: [ nil ].
+      pkg := [ organizer default packageNamed: pkgName ifAbsent: [ nil ] ] on: Error do: [ nil ].
       pkg ifNotNil: [
         [ pkg definedClasses do: [ :eachClass |
             classNamesToForceRemove add: eachClass name ] ]
@@ -60,7 +61,10 @@
   "Force-apply key Tonel definitions to avoid stale cached method bodies
   in long-lived images (observed for GbxDebuggerService)."
   #(
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsLauncher.class.st'
     '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsClassicLauncher.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbxConfigurationTool.class.st'
+    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbxNewConfigurationTool.class.st'
     '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsBrowser.class.st'
     '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsMethodQueryResultsPresenter.class.st'
     '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbxDebuggerService.class.st'
@@ -138,6 +142,35 @@
             cr
         ].
     ].
+  ].
+
+  mustHaveChecks := {
+    { #GbsLauncher. #activeSessionParameters }.
+    { #GbxConfigurationTool. #openInShellView }.
+    { #GbxNewConfigurationTool. #openInShellView }
+  }.
+
+  mustHaveChecks do: [ :pair |
+    | cls sel |
+    cls := Smalltalk at: pair first ifAbsent: [ nil ].
+    sel := pair second.
+    (cls isNil or: [ (cls includesSelector: sel) not ])
+      ifTrue: [
+        Transcript
+          show: 'CHECK_FAIL missing selector ';
+          show: pair first asString;
+          show: '>>#';
+          show: sel asString;
+          cr
+      ]
+      ifFalse: [
+        Transcript
+          show: 'CHECK_OK ';
+          show: pair first asString;
+          show: '>>#';
+          show: sel asString;
+          cr
+      ].
   ].
 
   Transcript show: 'CLEAN_RELOAD_DONE'; cr.

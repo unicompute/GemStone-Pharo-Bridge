@@ -4,7 +4,7 @@ I map to a longlong type.
 "
 Class {
 	#name : 'FFIInt64',
-	#superclass : 'FFIExternalType',
+	#superclass : 'FFIUInt64',
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'
 }

@@ -84,6 +84,16 @@ GbsSessionParameters class >> pollingEnabled: aBoolean [
 
 { #category : 'registry' }
 GbsSessionParameters class >> registerSession: aSession [
+	| sid |
+	aSession ifNil: [ ^ self ].
+	sid := (aSession respondsTo: #sessionId)
+		ifTrue: [ [ aSession sessionId ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	(sid notNil) ifTrue: [
+		self allSessions
+			removeAllSuchThat: [ :each |
+				(each respondsTo: #sessionId)
+					and: [ ([ each sessionId ] on: Error do: [ nil ]) = sid ] ] ].
 	self allSessions add: aSession
 ]
 
@@ -102,7 +112,16 @@ GbsSessionParameters class >> togglePolling [
 
 { #category : 'registry' }
 GbsSessionParameters class >> unregisterSession: aSession [
-    self allSessions remove: aSession ifAbsent: [ ]
+    | sid |
+	self allSessions remove: aSession ifAbsent: [ ].
+	sid := (aSession respondsTo: #sessionId)
+		ifTrue: [ [ aSession sessionId ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	sid ifNotNil: [
+		self allSessions
+			removeAllSuchThat: [ :each |
+				(each respondsTo: #sessionId)
+					and: [ ([ each sessionId ] on: Error do: [ nil ]) = sid ] ] ]
 ]
 
 { #category : 'transactions' }

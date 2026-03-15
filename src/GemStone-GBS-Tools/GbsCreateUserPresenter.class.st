@@ -34,7 +34,13 @@ Class {
 { #category : 'instance creation' }
 GbsCreateUserPresenter class >> openOn: aSession onCreated: aBlock [
 	| presenter |
-	aSession ifNil: [ ^ self ].
+	aSession ifNil: [ ^ self inform: 'No connected GemStone session. Please login first.' ].
+	((aSession respondsTo: #isLoggedIn)
+		and: [ ([ aSession isLoggedIn == true ] on: Error do: [ false ]) not ])
+		ifTrue: [ ^ self inform: 'No connected GemStone session. Please login first.' ].
+	((aSession respondsTo: #isConnected)
+		and: [ ([ aSession isConnected == true ] on: Error do: [ false ]) not ])
+		ifTrue: [ ^ self inform: 'No connected GemStone session. Please login first.' ].
 	presenter := self new.
 	presenter
 		session: aSession;
@@ -309,6 +315,7 @@ GbsCreateUserPresenter >> refreshGroups [
 { #category : 'private' }
 GbsCreateUserPresenter >> fetchAllGroups [
 	| raw |
+	self isSessionUsable ifFalse: [ ^ #() ].
 	raw := [ session evaluate: self groupsScript ] on: Error do: [ '' ].
 	(raw isString and: [ raw isNotEmpty ]) ifFalse: [ ^ #() ].
 	^ ((raw splitOn: Character tab) reject: [ :each | each isEmpty ]) asSortedCollection asArray
@@ -684,13 +691,23 @@ GbsCreateUserPresenter >> editSymbolList [
 
 { #category : 'actions' }
 GbsCreateUserPresenter >> editSecurityPolicies [
-	session ifNil: [ ^ self ].
+	self isSessionUsable ifFalse: [ ^ self ].
 	[ GbsSecurityPoliciesPresenter openOn: session ] on: Error do: [ :ex | self inform: ex messageText ]
 ]
 
 { #category : 'private' }
 GbsCreateUserPresenter >> session: aSession [
 	session := aSession
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> isSessionUsable [
+	session ifNil: [ ^ false ].
+	(session respondsTo: #isConnected)
+		ifTrue: [ ^ [ session isConnected == true ] on: Error do: [ false ] ].
+	(session respondsTo: #isLoggedIn)
+		ifTrue: [ ^ [ session isLoggedIn == true ] on: Error do: [ false ] ].
+	^ true
 ]
 
 { #category : 'private' }

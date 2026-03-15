@@ -589,6 +589,25 @@ GbsSession >> parameters: p [
 	GbsSessionParameters currentSession: self
 ]
 
+{ #category : 'accessing' }
+GbsSession >> parameters [
+	^ parameters
+]
+
+{ #category : 'accessing' }
+GbsSession >> username [
+	(parameters notNil and: [ parameters respondsTo: #username ])
+		ifTrue: [ ^ [ parameters username ] on: Error do: [ nil ] ].
+	^ nil
+]
+
+{ #category : 'accessing' }
+GbsSession >> gemStoneName [
+	(parameters notNil and: [ parameters respondsTo: #gemStoneName ])
+		ifTrue: [ ^ [ parameters gemStoneName ] on: Error do: [ nil ] ].
+	^ nil
+]
+
 { #category : 'evaluating' }
 GbsSession >> resultFor: anOop [
   "Identify special GemStone OOP tags (GS64 3.7 Guide, Chapter 5)"

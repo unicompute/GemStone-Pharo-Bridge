@@ -4,6 +4,7 @@ Class {
 	#instVars : [
 		'session',
 		'connectorActionSession',
+		'lastSelectedConnectorKey',
 		'mainMenu',
 		'groupList',
 		'groupItems',
@@ -36,6 +37,7 @@ GbsConnectorBrowserPresenter class >> openOn: aSession [
 { #category : 'initialization' }
 GbsConnectorBrowserPresenter >> initializePresenters [
 	mainMenu := self buildMenuBar.
+	lastSelectedConnectorKey := nil.
 
 	groupList := self newList.
 	groupList display: [ :each | self groupDisplayStringFor: each ].
@@ -386,21 +388,27 @@ GbsConnectorBrowserPresenter >> sessionGroupLabel [
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> sessionUserName [
-	| value |
+	| value current |
 	value := self parameterValueNamed: #username default: nil.
 	(value isNil or: [ value trimBoth isEmpty ]) ifFalse: [ ^ value ].
 	(session notNil and: [ session respondsTo: #username ]) ifTrue: [
 		^ [ (session username ifNil: [ 'unknown-user' ]) asString ] on: Error do: [ 'unknown-user' ] ].
+	current := GbsSessionParameters currentSession.
+	(current notNil and: [ current respondsTo: #username ]) ifTrue: [
+		^ [ (current username ifNil: [ 'unknown-user' ]) asString ] on: Error do: [ 'unknown-user' ] ].
 	^ 'unknown-user'
 ]
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> sessionStoneName [
-	| value |
+	| value current |
 	value := self parameterValueNamed: #gemStoneName default: nil.
 	(value isNil or: [ value trimBoth isEmpty ]) ifFalse: [ ^ value ].
 	(session notNil and: [ session respondsTo: #gemStoneName ]) ifTrue: [
 		^ [ (session gemStoneName ifNil: [ 'unknown-stone' ]) asString ] on: Error do: [ 'unknown-stone' ] ].
+	current := GbsSessionParameters currentSession.
+	(current notNil and: [ current respondsTo: #gemStoneName ]) ifTrue: [
+		^ [ (current gemStoneName ifNil: [ 'unknown-stone' ]) asString ] on: Error do: [ 'unknown-stone' ] ].
 	^ 'unknown-stone'
 ]
 
@@ -482,6 +490,8 @@ GbsConnectorBrowserPresenter >> parameterValueNamed: selector default: defaultSt
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> sessionParameters [
+	(session respondsTo: #parameters)
+		ifTrue: [ ^ [ session parameters ] on: Error do: [ nil ] ].
 	(session respondsTo: #instVarNamed:) ifFalse: [ ^ nil ].
 	^ [ session instVarNamed: 'parameters' ] on: Error do: [ nil ]
 ]
@@ -782,7 +792,8 @@ GbsConnectorBrowserPresenter >> inspectClassNamed: aString fallbackLabel: labelS
 { #category : 'accessing' }
 GbsConnectorBrowserPresenter >> session: aSession [
 	session := aSession.
-	connectorActionSession := nil
+	connectorActionSession := nil.
+	lastSelectedConnectorKey := nil
 ]
 
 { #category : 'actions' }
@@ -879,12 +890,19 @@ GbsConnectorBrowserPresenter >> refreshConnectorsForCurrentGroup [
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> connectorSelectionChanged: selectedRow [
+	lastSelectedConnectorKey := self connectorSettingKeyForRow: selectedRow.
 	self updateConnectorControlsFromSelection
 ]
 
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> currentSelectedConnectorRow [
-	^ [ connectorTable selection selectedItem ] on: Error do: [ nil ]
+	| selected |
+	selected := [ connectorTable selection selectedItem ] on: Error do: [ nil ].
+	selected ifNotNil: [ ^ selected ].
+	lastSelectedConnectorKey ifNil: [ ^ nil ].
+	^ (connectorTable items ifNil: [ #() ])
+		detect: [ :each | (self connectorSettingKeyForRow: each) = lastSelectedConnectorKey ]
+		ifNone: [ nil ]
 ]
 
 { #category : 'private' }
@@ -898,7 +916,9 @@ GbsConnectorBrowserPresenter >> selectedConnectorRows [
 	(selection respondsTo: #selectedItem) ifTrue: [
 		selected := [ selection selectedItem ] on: Error do: [ nil ].
 		selected ifNotNil: [ ^ { selected } ] ].
-	^ #()
+	selected := self currentSelectedConnectorRow.
+	selected ifNil: [ ^ #() ].
+	^ { selected }
 ]
 
 { #category : 'private' }
@@ -1407,5 +1427,6 @@ GbsConnectorBrowserPresenter >> selectConnectorWithSettingKey: aKeyString [
 	(connectorTable respondsTo: #selectedItem:)
 		ifTrue: [ ^ connectorTable selectedItem: match ].
 	(connectorTable respondsTo: #selection)
-		ifTrue: [ [ connectorTable selection selectItem: match ] on: Error do: [ ] ]
+		ifTrue: [ [ connectorTable selection selectItem: match ] on: Error do: [ ] ].
+	lastSelectedConnectorKey := aKeyString
 ]

@@ -174,3 +174,13 @@ GbsMethodQueryResultsPresenterTest >> testCanFileOutSelectedReferenceRequiresSou
 	fakeText text: 'size ^ 1'.
 	self assert: presenter canFileOutSelectedReference
 ]
+
+{ #category : 'tests' }
+GbsMethodQueryResultsPresenterTest >> testParseReferenceStripsCategoryAndHashSelector [
+	| presenter parsed |
+	presenter := GbsMethodQueryResultsPresenter new.
+	parsed := presenter parseReference: 'Object>>#size {Accessing}'.
+	self assert: parsed notNil.
+	self assert: parsed first equals: 'Object'.
+	self assert: parsed second equals: 'size'
+]

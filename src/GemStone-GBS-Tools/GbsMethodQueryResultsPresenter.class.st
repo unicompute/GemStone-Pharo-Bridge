@@ -202,12 +202,21 @@ GbsMethodQueryResultsPresenter >> showSourceForReference: referenceString [
 
 { #category : 'private' }
 GbsMethodQueryResultsPresenter >> parseReference: referenceString [
-	| split classPart selectorPart classSide className |
+	| split classPart selectorPart classSide className selectorToken |
 	(referenceString includesSubstring: '>>') ifFalse: [ ^ nil ].
 	split := referenceString findString: '>>' startingAt: 1.
 	classPart := (referenceString copyFrom: 1 to: split - 1) trimBoth.
 	selectorPart := (referenceString copyFrom: split + 2 to: referenceString size) trimBoth.
 	selectorPart isEmpty ifTrue: [ ^ nil ].
+	(selectorPart beginsWith: '#') ifTrue: [ selectorPart := selectorPart allButFirst trimBoth ].
+	(selectorPart includesSubstring: '{')
+		ifTrue: [ selectorPart := (selectorPart copyUpTo: ${) trimBoth ].
+	(selectorPart includesSubstring: ' ')
+		ifTrue: [
+			| parts |
+			parts := selectorPart substrings.
+			selectorToken := parts isEmpty ifTrue: [ '' ] ifFalse: [ parts first ].
+			selectorPart := selectorToken ifNil: [ '' ] ifNotNil: [ selectorToken trimBoth ] ].
 	classSide := classPart endsWith: ' class'.
 	className := classSide
 		ifTrue: [ classPart copyFrom: 1 to: classPart size - 6 ]
