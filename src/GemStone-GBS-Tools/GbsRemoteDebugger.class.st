@@ -1756,9 +1756,12 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 	| script raw level |
 	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
 	
-	"Get the executed code frame level from server"
+	"Get the executed code frame level from server. If unavailable, use selected frame level."
 	level := self resolveExecutedFrameLevelFromServer.
-	level ifNil: [ level := 1 ].
+	((level isNumber and: [ level > 0 ]) not) ifTrue: [
+		level := self currentSelectedFrameLevel
+	].
+	((level isNumber and: [ level > 0 ]) not) ifTrue: [ level := 1 ].
 
 		script := '[
 			| obj proc procOop restartLevel stackReport fullEntry quick |
@@ -1797,19 +1800,28 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 			]
 		].
 		
-		"If already at step 1, nothing to do"
-		quick <= 1 ifTrue: [ ^ true ].
-		
-		"Try jumpToStepPoint: if available (may not exist on all GemStone versions)"
-		(proc respondsTo: #jumpToStepPoint:) ifTrue: [
-			[ proc jumpToStepPoint: 1 ] on: Error do: [ ].
-			^ true
-		].
-		
-		"jumpToStepPoint: not available. Re-trim to force PC reset."
-		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ].
-		true
-	] value'.
+			"If already at step 1, nothing to do"
+			quick <= 1 ifTrue: [ ^ true ].
+			
+			"Try jumpToStepPoint: if available (may not exist on all GemStone versions)"
+			(proc respondsTo: #jumpToStepPoint:) ifTrue: [
+				[ proc jumpToStepPoint: 1 ] on: Error do: [ ]
+			] ifFalse: [
+				"jumpToStepPoint: not available. Re-trim to force PC reset."
+				[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ]
+			].
+
+			"Verify step really is 1 after reset attempt."
+			quick := 0.
+			stackReport := [ proc _gsiStackReportFromLevel: restartLevel toLevel: restartLevel ] on: Error do: [ nil ].
+			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
+				fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+				fullEntry ifNotNil: [
+					quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ]
+				]
+			].
+			quick <= 1
+		] value'.
 
 		raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
 		raw ifNil: [ ^ false ].
@@ -2102,7 +2114,7 @@ GbsRemoteDebugger >> executeMenu [
 			group addItem: [ :item | item name: 'Step Into'; action: [ self stepInto ] ].
 			group addItem: [ :item | item name: 'Step'; action: [ self stepInto ] ].
 			group addItem: [ :item | item name: 'Step Over'; action: [ self stepOver ] ].
-			group addItem: [ :item | item name: 'Restart'; action: [ self restart ] ].
+			group addItem: [ :item | item name: 'Restart'; action: [ self restartWithConfirmedExecutedFrameSecondPass ] ].
 			group addItem: [ :item | item name: 'Run'; action: [ self resume ] ].
 			group addItem: [ :item | item name: 'Run until Return'; action: [ self stepReturn ] ].
 			group addItem: [ :item | item name: 'Run with Break Again'; action: [ self runWithBreakAgain ] ].
@@ -2929,7 +2941,10 @@ GbsRemoteDebugger >> ensureServerPCToStepOneAfterRestart [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restartNeedsServerRewind [
-	| executed step |
+	| serverStep executed localStep |
+	serverStep := self serverExecutedFrameStepPoint.
+	(serverStep isNumber and: [ serverStep > 0 ]) ifTrue: [ ^ serverStep > 1 ].
+
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ false ].
 	executed := contextList
 		detect: [ :ctx |
@@ -2937,10 +2952,78 @@ GbsRemoteDebugger >> restartNeedsServerRewind [
 				and: [ ctx isExecutedCodeFrame ] ]
 		ifNone: [ nil ].
 	executed ifNil: [ ^ false ].
-	step := (executed respondsTo: #quickStepPoint)
+	localStep := (executed respondsTo: #quickStepPoint)
 		ifTrue: [ [ executed quickStepPoint asInteger ] on: Error do: [ 0 ] ]
 		ifFalse: [ 0 ].
-	^ step > 1
+	^ localStep > 1
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> serverExecutedFrameStepPoint [
+	| script raw parsed |
+	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ nil ].
+	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ nil ].
+
+	script := '[
+		| obj proc procOop maxDepth level stackReport fullEntry methodOrNil className selectorName quick |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''0'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #serverProcessOop ]) ifTrue: [
+			procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
+			(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
+				proc := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
+			]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ ^ ''0'' ].
+
+		maxDepth := 200.
+		level := 1.
+		[ level <= maxDepth ] whileTrue: [
+			stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
+			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
+				ifFalse: [ level := maxDepth + 1 ]
+				ifTrue: [
+					fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+					fullEntry isNil
+						ifTrue: [ level := maxDepth + 1 ]
+						ifFalse: [
+							methodOrNil := ((fullEntry respondsTo: #at:) and: [ fullEntry size >= 1 ])
+								ifTrue: [ [ fullEntry at: 1 ] on: Error do: [ nil ] ]
+								ifFalse: [ nil ].
+							className := [ methodOrNil inClass name asString ] on: Error do: [ ''nil'' ].
+							selectorName := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ]
+								on: Error do: [ ''nil'' ].
+							((className = ''nil'' or: [ className = ''<unknown>'' ])
+								and: [ selectorName = ''nil'' or: [ selectorName = ''unboundMethod'' ] ])
+								ifTrue: [
+									quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ].
+									^ quick asString
+								]
+								ifFalse: [ level := level + 1 ]
+						]
+				]
+		].
+		''0''
+	] value'.
+
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	raw ifNil: [ ^ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	parsed := [ raw asString asInteger ] on: Error do: [ nil ].
+	^ parsed
 ]
 
 { #category : 'private' }
@@ -3176,11 +3259,25 @@ GbsRemoteDebugger >> reinforceSourceCaretVisibility [
 
 { #category : 'private' }
 GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
-	| index context fallbackIndex |
+	| index context fallbackIndex current |
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
 
+	"Prefer an explicit service-selected target when it is still present."
+	index := 0.
+	current := service
+		ifNotNil: [
+			(service respondsTo: #currentContext)
+				ifTrue: [ self safeServiceCall: [ service currentContext ] default: nil ]
+				ifFalse: [ nil ] ]
+		ifNil: [ nil ].
+	current ifNotNil: [
+		index := contextList findFirst: [ :ctx | ctx == current ]
+	].
+
 	"Find server-reported executed-code frame"
-	index := contextList findFirst: [ :ctx | self isExecutedCodeFrame: ctx ].
+	index = 0 ifTrue: [
+		index := contextList findFirst: [ :ctx | self isExecutedCodeFrame: ctx ]
+	].
 
 	index = 0 ifTrue: [
 		"Fallback when executed markers are not yet materialized:
