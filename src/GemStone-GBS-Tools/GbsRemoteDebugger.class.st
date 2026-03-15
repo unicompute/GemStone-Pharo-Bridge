@@ -2910,12 +2910,18 @@ GbsRemoteDebugger >> restart [
 	Transcript show: '[UI restart] restart begin processOop='; show: processOop asString; cr.
 	didRestart := self safeServiceCall: [ service restart ] default: false.
 	didRestart ifFalse: [
-		Transcript show: '[UI restart] restart aborted: service restart failed'; cr.
-		restartGuardActive := false.
-		restartFailedState := true.
-		restartPinnedContext := nil.
-		self fetchStackFrames.
-		^ false
+		Transcript show: '[UI restart] service restart failed; attempting direct trim fallback'; cr.
+		didRestart := self restartUsingDirectTrimFromExecutedFrame.
+		didRestart ifFalse: [
+			Transcript show: '[UI restart] restart aborted: service restart failed'; cr.
+			restartGuardActive := false.
+			restartFailedState := true.
+			restartPinnedContext := nil.
+			self fetchStackFrames.
+			^ false
+		].
+		"Fallback succeeded; continue with normal post-restart normalization."
+		Transcript show: '[UI restart] fallback direct trim succeeded'; cr
 	].
 	restartFailedState := false.
 	didRestart ifTrue: [
