@@ -2802,7 +2802,7 @@ GbsRemoteDebugger >> isExecutedCodeSelectionConfirmed [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restartWithSimulatedSecondClick [
-	| firstPass secondPass |
+	| firstPass secondPass attempts stabilized extraPass |
 	firstPass := self restart.
 	firstPass ifFalse: [ ^ false ].
 
@@ -2831,7 +2831,36 @@ GbsRemoteDebugger >> restartWithSimulatedSecondClick [
 		self normalizeRestartSelectionAndPosition.
 		self ensureServerPCToStepOneAfterRestart
 	].
-	^ firstPass or: [ secondPass ]
+
+	"Deterministic one-click guarantee:
+	auto-repeat restart/reset internally until executed frame is confirmed at step 1."
+	attempts := 0.
+	stabilized := false.
+	[
+		(attempts < 4) and: [ stabilized not ]
+	] whileTrue: [
+		self fetchStackFrames.
+		self normalizeRestartSelectionAndPosition.
+		self ensureServerPCToStepOneAfterRestart.
+		stabilized := self isExecutedCodeSelectionConfirmed
+			and: [ self restartNeedsServerRewind not ].
+		stabilized ifFalse: [
+			self safeServiceCall: [
+				(service respondsTo: #selectRestartTargetContext)
+					ifTrue: [ service selectRestartTargetContext ]
+			] default: nil.
+			self safeServiceCall: [
+				(service respondsTo: #resetServerPCToStepOne)
+					ifTrue: [ service resetServerPCToStepOne ]
+			] default: nil.
+			extraPass := self safeServiceCall: [ service restart ] default: false.
+			extraPass ifFalse: [ extraPass := self restartUsingDirectTrimFromExecutedFrame ].
+			(Delay forMilliseconds: 60) wait.
+		].
+		attempts := attempts + 1
+	].
+
+	^ firstPass or: [ secondPass or: [ stabilized ] ]
 ]
 
 { #category : 'private' }
