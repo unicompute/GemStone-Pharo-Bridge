@@ -1055,7 +1055,7 @@ GbsRemoteDebugger >> initializePresenters [
 	restartButton := self newButton
 		label: 'Restart';
 		icon: (self iconNamedSafe: #smallUpdate);
-		action: [ self restartWithUserLikeSecondClick ].
+		action: [ self restart ].
 	resumeButton := self newButton 
 		label: 'Run';
 		icon: (self iconNamedSafe: #glamorousGo);
