@@ -1653,8 +1653,6 @@ GbsRemoteDebugger >> stepInto [
 				^ false
 			]
 		].
-		"CRITICAL: Reset server PC to step 1 before stepping from restarted frame"
-		self resetServerPCToStepOneIfNeeded.
 		didStep := self directStepOverExecutedFrame: true.
 		didStep ifTrue: [
 			self fetchStackFrames.
@@ -1716,8 +1714,6 @@ GbsRemoteDebugger >> stepOver [
 				^ false
 			]
 		].
-		"CRITICAL: Reset server PC to step 1 before stepping from restarted frame"
-		self resetServerPCToStepOneIfNeeded.
 		didStep := self directStepOverExecutedFrame: false.
 		didStep ifTrue: [
 			self fetchStackFrames.
@@ -1783,33 +1779,36 @@ GbsRemoteDebugger >> directStepOverExecutedFrame: stepIntoBoolean [
 	level := self currentSelectedFrameLevel.
 	(level isNumber and: [ level > 0 ]) ifFalse: [ level := 1 ].
 	
-	"CRITICAL FIX: Force server PC to step 1 BEFORE stepping from executed code frame.
-	The server may have old step point even after restart."
 	beforeStep := self serverExecutedFrameStepPoint.
-	didReset := self forceServerJumpToStepPoint1.
-	afterReset := self serverExecutedFrameStepPoint.
-	Transcript
-		show: '[UI directStep] preStep=';
-		show: (beforeStep ifNil: [ 'nil' ] ifNotNil: [ beforeStep asString ]);
-		show: ' didReset=';
-		show: didReset asString;
-		show: ' postResetStep=';
-		show: (afterReset ifNil: [ 'nil' ] ifNotNil: [ afterReset asString ]);
-		cr.
-	((afterReset isNumber and: [ afterReset > 1 ]) and: [ service notNil ]) ifTrue: [
-		self safeServiceCall: [
-			(service respondsTo: #resetServerPCToStepOne)
-				ifTrue: [ service resetServerPCToStepOne ]
-		] default: nil.
+	didReset := false.
+	afterReset := beforeStep.
+	(restartGuardActive = true) ifTrue: [
+		"Only enforce rewind-to-1 immediately after restart."
+		didReset := self forceServerJumpToStepPoint1.
 		afterReset := self serverExecutedFrameStepPoint.
 		Transcript
-			show: '[UI directStep] postServiceResetStep=';
+			show: '[UI directStep] preStep=';
+			show: (beforeStep ifNil: [ 'nil' ] ifNotNil: [ beforeStep asString ]);
+			show: ' didReset=';
+			show: didReset asString;
+			show: ' postResetStep=';
 			show: (afterReset ifNil: [ 'nil' ] ifNotNil: [ afterReset asString ]);
 			cr.
-	].
-	(afterReset isNumber and: [ afterReset > 1 ]) ifTrue: [
-		Transcript show: '[UI directStep] abort step; server step not rewound'; cr.
-		^ false
+		((afterReset isNumber and: [ afterReset > 1 ]) and: [ service notNil ]) ifTrue: [
+			self safeServiceCall: [
+				(service respondsTo: #resetServerPCToStepOne)
+					ifTrue: [ service resetServerPCToStepOne ]
+			] default: nil.
+			afterReset := self serverExecutedFrameStepPoint.
+			Transcript
+				show: '[UI directStep] postServiceResetStep=';
+				show: (afterReset ifNil: [ 'nil' ] ifNotNil: [ afterReset asString ]);
+				cr.
+		].
+		(afterReset isNumber and: [ afterReset > 1 ]) ifTrue: [
+			Transcript show: '[UI directStep] abort step; server step not rewound'; cr.
+			^ false
+		]
 	].
 	
 	effectiveLevel := self resolveExecutedFrameLevelFromServer.
