@@ -1357,20 +1357,11 @@ GbxDebuggerService >> restart [
 	didRestart := self basicReenterServerContext.
 	didRestart ifTrue: [
 		self selectRestartTargetContext.
-		(self isExecutedCodeAtStepOne) ifFalse: [
-			self logRestartText: 'restart auto-retry: first reenter did not reach step 1'.
-			didRestart := self basicReenterServerContext.
-			didRestart ifTrue: [ self selectRestartTargetContext ].
-		].
-		self ensureRestartAtStepOne.
-		self selectRestartTargetContext.
-		self synchronizeServerProgramCounterAfterRestart.
+		self resetServerPCToStepOne.
+		self selectTopServerContext.
 		self selectRestartTargetContext.
 		(self isExecutedCodeAtStepOne) ifFalse: [
-			"Final deterministic guard: force server PC and UI context to method start."
-			self resetServerPCToStepOne.
-			self selectTopServerContext.
-			self selectRestartTargetContext
+			self logRestartText: 'restart warning: step one not confirmed after reset'
 		]
 	].
 	self logRestartText: 'restart/result=', didRestart asString.
@@ -1579,7 +1570,16 @@ GbxDebuggerService >> restartTargetContext [
 
 { #category : 'private' }
 GbxDebuggerService >> selectRestartTargetContext [
-	| target |
+	| target serverLevel |
+	serverLevel := self restartLevelFromServerStack.
+	(serverLevel isNumber and: [ serverLevel > 0 ]) ifTrue: [
+		target := self contextList
+			detect: [ :ctx |
+				(ctx respondsTo: #level)
+					and: [ [ ctx level ] on: Error do: [ nil ] = serverLevel ] ]
+			ifNone: [ nil ].
+		target ifNotNil: [ ^ self selectContext: target ]
+	].
 	target := self restartTargetContext.
 	target ifNil: [ ^ self ].
 	self selectContext: target
