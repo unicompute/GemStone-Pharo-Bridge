@@ -334,6 +334,49 @@ GbsRemoteDebuggerPresenterTest >> testRestartPromotesExecutedCodeFrameToTopAndSe
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testEnsureServerPCToStepOneAfterRestartUsesExecutedFrameEvenWhenNotTop [
+	| mockSession firstContext executedContext scriptCalls fakeList fakeText |
+	mockSession := MockGbsSession new.
+	scriptCalls := 0.
+	mockSession stubs
+		at: #executeAndFetchContext
+		put: [ :script :context |
+			scriptCalls := scriptCalls + 1.
+			'true' ].
+
+	firstContext := GbxFakeContextForRemoteDebugger new
+		methodClass: 'SmallInteger';
+		selector: #/;
+		sourceString: 'a / b';
+		processOop: 222;
+		level: 1;
+		tempNamesAndValues: Dictionary new;
+		yourself.
+	executedContext := GbxFakeContextForRemoteDebugger new
+		methodClass: 'nil';
+		selector: #nil;
+		sourceString: '| a b |', String lf, 'a := 10.', String lf, 'b := 0.', String lf, 'a / b';
+		processOop: 222;
+		level: 8;
+		tempNamesAndValues: Dictionary new;
+		yourself.
+
+	fakeList := GbxFakeListPresenterForRemoteDebugger new.
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: 'placeholder'.
+
+	debugger session: mockSession.
+	debugger processOop: 222.
+	debugger instVarNamed: 'contextList' put: { firstContext. executedContext }.
+	debugger instVarNamed: 'stackList' put: fakeList.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+
+	debugger ensureServerPCToStepOneAfterRestart.
+
+	self assert: scriptCalls > 0
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testMoveSourceCursorToStartSelectsFirstCharacter [
 	| fakeText |
 	fakeText := GbxFakeTextPresenterForRemoteDebugger new.

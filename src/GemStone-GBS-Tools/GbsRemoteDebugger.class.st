@@ -2862,11 +2862,15 @@ GbsRemoteDebugger >> ensureServerPCToStepOneAfterRestart [
 	contextList ifNil: [ ^ self ].
 	contextList ifEmpty: [ ^ self ].
 
-	context := contextList at: 1.
-	((context respondsTo: #isExecutedCodeFrame) and: [ context isExecutedCodeFrame ]) ifFalse: [ ^ self ].
+	context := contextList
+		detect: [ :ctx | self isExecutedCodeFrame: ctx ]
+		ifNone: [ nil ].
+	context ifNil: [ ^ self ].
 
 	"Force server to jump to step 1 (backup if trim didn't set it)"
-	self forceServerJumpToStepPoint1
+	self forceServerJumpToStepPoint1.
+	self fetchStackFrames.
+	self normalizeRestartSelectionAndPosition
 ]
 
 { #category : 'private' }
