@@ -1182,7 +1182,7 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	2) re-trim stack
 	3) verify quick step point is now <= 1"
 	script := '[
-		| obj proc procOop ctx top i stackReport fullEntry quick |
+		| obj proc procOop ctx top i stackReport fullEntry quick maxDepth restartLevel |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
@@ -1204,9 +1204,21 @@ GbxDebuggerService >> resetServerPCToStepOne [
 				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
 		].
 		(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ ^ ''false'' ].
+		maxDepth := 0.
+		i := 1.
+		[ i <= 512 ] whileTrue: [
+			stackReport := [ proc _gsiStackReportFromLevel: i toLevel: i ] on: Error do: [ nil ].
+			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
+				ifTrue: [ maxDepth := i. i := i + 1 ]
+				ifFalse: [ i := 513 ]
+		].
+		maxDepth <= 0 ifTrue: [ ^ ''false'' ].
+		restartLevel := ', level asString, '.
+		restartLevel > maxDepth ifTrue: [ restartLevel := maxDepth ].
+		restartLevel <= 0 ifTrue: [ restartLevel := 1 ].
 
 		quick := 0.
-		stackReport := [ proc _gsiStackReportFromLevel: ', level asString, ' toLevel: ', level asString, ' ] on: Error do: [ nil ].
+		stackReport := [ proc _gsiStackReportFromLevel: restartLevel toLevel: restartLevel ] on: Error do: [ nil ].
 		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
 			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
 			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
@@ -1216,14 +1228,14 @@ GbxDebuggerService >> resetServerPCToStepOne [
 			top := [ proc topContext ] on: Error do: [ nil ].
 			ctx := top.
 			i := 1.
-			[ i < ', level asString, ' and: [ ctx notNil ] ] whileTrue: [
+			[ i < restartLevel and: [ ctx notNil ] ] whileTrue: [
 				ctx := [ ctx sender ] on: Error do: [ nil ].
 				i := i + 1
 			].
 			(ctx notNil and: [ ctx respondsTo: #jumpToStepPoint: ]) ifTrue: [
 				[ ctx jumpToStepPoint: 1 ] on: Error do: [ ]
 			].
-			(stackReport := [ proc _gsiStackReportFromLevel: ', level asString, ' toLevel: ', level asString, ' ] on: Error do: [ nil ]) ifNotNil: [
+			(stackReport := [ proc _gsiStackReportFromLevel: restartLevel toLevel: restartLevel ] on: Error do: [ nil ]) ifNotNil: [
 				((stackReport respondsTo: #size) and: [ stackReport size >= 2 ]) ifTrue: [
 					fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
 					fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ quick ] ]
@@ -1235,11 +1247,11 @@ GbxDebuggerService >> resetServerPCToStepOne [
 		].
 
 		(quick > 1 and: [ proc respondsTo: #_trimStackToLevel: ]) ifTrue: [
-			[ proc _trimStackToLevel: ', level asString, ' ] on: Error do: [ ]
+			[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ]
 		].
 
 		quick := 0.
-		stackReport := [ proc _gsiStackReportFromLevel: ', level asString, ' toLevel: ', level asString, ' ] on: Error do: [ nil ].
+		stackReport := [ proc _gsiStackReportFromLevel: restartLevel toLevel: restartLevel ] on: Error do: [ nil ].
 		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
 			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
 			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
@@ -1304,7 +1316,7 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 		ifTrue: [ lvl := restartHomeResetPasses ].
 	
 		script := '[
-			| obj proc procOop |
+			| obj proc procOop maxDepth i effectiveLevel stackReport |
 			obj := Object _objectForOop: ', processOop asString, '.
 			obj isNil ifTrue: [ ^ ''false'' ].
 			proc := obj.
@@ -1328,7 +1340,19 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 		].
 		
 		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
-		[ proc _trimStackToLevel: ', lvl asString, ' ] on: Error do: [ ^ ''false'' ].
+		maxDepth := 0.
+		i := 1.
+		[ i <= 512 ] whileTrue: [
+			stackReport := [ proc _gsiStackReportFromLevel: i toLevel: i ] on: Error do: [ nil ].
+			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
+				ifTrue: [ maxDepth := i. i := i + 1 ]
+				ifFalse: [ i := 513 ]
+		].
+		maxDepth <= 0 ifTrue: [ ^ ''false'' ].
+		effectiveLevel := ', lvl asString, '.
+		effectiveLevel > maxDepth ifTrue: [ effectiveLevel := maxDepth ].
+		effectiveLevel <= 0 ifTrue: [ effectiveLevel := 1 ].
+		[ proc _trimStackToLevel: effectiveLevel ] on: Error do: [ ^ ''false'' ].
 		''true''
 	] value'.
 
