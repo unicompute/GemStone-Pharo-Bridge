@@ -1649,8 +1649,8 @@ GbsRemoteDebugger >> stepInto [
 			self fetchStackFrames.
 			self normalizeRestartSelectionAndPosition.
 			(self restartNeedsServerRewind) ifTrue: [
-				Transcript show: '[UI stepInto] abort: server still not rewound'; cr.
-				^ false
+				Transcript show: '[UI stepInto] warning: server still not rewound; clearing restart guard'; cr.
+				restartGuardActive := false
 			]
 		].
 		didStep := self directStepOverExecutedFrame: true.
@@ -1710,8 +1710,8 @@ GbsRemoteDebugger >> stepOver [
 			self fetchStackFrames.
 			self normalizeRestartSelectionAndPosition.
 			(self restartNeedsServerRewind) ifTrue: [
-				Transcript show: '[UI stepOver] abort: server still not rewound'; cr.
-				^ false
+				Transcript show: '[UI stepOver] warning: server still not rewound; clearing restart guard'; cr.
+				restartGuardActive := false
 			]
 		].
 		didStep := self directStepOverExecutedFrame: false.
@@ -1752,6 +1752,10 @@ GbsRemoteDebugger >> resetServerPCToStepOneIfNeeded [
 	"Reset server PC to step 1 if we're in an executed code frame.
 	This ensures stepping starts from the beginning of the method."
 	| context didReset stepAfter |
+	(restartGuardActive = true) ifFalse: [
+		Transcript show: '[UI step reset] skipped (restartGuardActive=false)'; cr.
+		^ false
+	].
 	contextList ifNil: [ ^ false ].
 	contextList ifEmpty: [ ^ false ].
 	
@@ -1806,8 +1810,8 @@ GbsRemoteDebugger >> directStepOverExecutedFrame: stepIntoBoolean [
 				cr.
 		].
 		(afterReset isNumber and: [ afterReset > 1 ]) ifTrue: [
-			Transcript show: '[UI directStep] abort step; server step not rewound'; cr.
-			^ false
+			Transcript show: '[UI directStep] warning: server step not rewound; clearing restart guard'; cr.
+			restartGuardActive := false
 		]
 	].
 	

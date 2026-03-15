@@ -1161,7 +1161,7 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	| didReset script result level |
 	
 	"Get the executed code frame level"
-	level := self restartLevelFromServerStack.
+	level := self restartHomeLevelForReset.
 	level ifNil: [ level := 1 ].
 	
 	"Try jumpToStepPoint: first (may work on some GemStone versions)"
@@ -1262,6 +1262,22 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	^ didReset
 ]
 
+{ #category : 'private' }
+GbxDebuggerService >> restartHomeLevelForReset [
+	"Use the level captured at restart begin. Falling back to live server level
+	can collapse to level 1 after first step and breaks repeated restart."
+	| level |
+	level := restartHomeResetPasses.
+	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
+	level := self restartLevelFromServerStack.
+	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
+	level := (currentContext respondsTo: #level)
+		ifTrue: [ currentContext level ]
+		ifFalse: [ nil ].
+	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
+	^ 1
+]
+
 { #category : 'actions' }
 GbxDebuggerService >> cutbackTo: aContext finishWith: aBlock [
 	"Discard any partially-completed execution above aContext on the logical
@@ -1303,11 +1319,9 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	gsContext on the stack of its GSProcess. Also discards 
 	any partial execution in gsContext, resetting it to the 
 	beginning."
-	| lvl resolvedHomeLevel script result |
+	| lvl script result |
 	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ 1 ].
-	resolvedHomeLevel := self restartLevelFromServerStack.
-	(resolvedHomeLevel isNumber and: [ resolvedHomeLevel > 0 ])
-		ifTrue: [ lvl := resolvedHomeLevel ].
+	lvl := self restartHomeLevelForReset.
 	
 		script := '[
 			| obj proc procOop maxDepth i effectiveLevel stackReport |
