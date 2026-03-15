@@ -89,7 +89,7 @@ GbxBasicCache >> evictOldest [
 	"Evict oldest entry (simple LRU)"
 	| oldestOop oldestProxy |
 	
-	oopToProxy isEmpty ifTrue: [ ^ ].
+	oopToProxy isEmpty ifTrue: [ ^ self ].
 	
 	"Get first entry (oldest in dictionary)"
 	oldestOop := oopToProxy keys first.
