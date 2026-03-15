@@ -2672,6 +2672,11 @@ GbsRemoteDebugger >> normalizePauseLandingSelection [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restart [
+	^ self restartSinglePass
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartSinglePass [
 	| didRestart |
 	didRestart := self safeServiceCall: [ service restart ] default: false.
 	didRestart ifFalse: [ didRestart := self restartUsingDirectTrimFromExecutedFrame ].
@@ -2745,7 +2750,7 @@ GbsRemoteDebugger >> isTopExecutedCodeAtStepOne [
 { #category : 'private' }
 GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 	| firstPass secondPass attempts ready |
-	firstPass := self restart.
+	firstPass := self restartSinglePass.
 	firstPass ifFalse: [ ^ false ].
 
 	attempts := 0.
@@ -2755,14 +2760,13 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 	] whileTrue: [
 		self fetchStackFrames.
 		self normalizeRestartSelectionAndPosition.
-		ready := self isExecutedCodeSelectionConfirmed.
+		ready := (self isExecutedCodeSelectionConfirmed and: [ self isTopExecutedCodeAtStepOne ]).
 		ready ifFalse: [ (Delay forMilliseconds: 25) wait ].
 		attempts := attempts + 1
 	].
 
-	"Critical: always run the second restart after polling.
-	The explicit second pass is what reliably resets server-side step PC to 1."
-	secondPass := self restart.
+	"Critical: always run the second restart after polling for settled restart state."
+	secondPass := self restartSinglePass.
 	^ firstPass or: [ secondPass ]
 ]
 
