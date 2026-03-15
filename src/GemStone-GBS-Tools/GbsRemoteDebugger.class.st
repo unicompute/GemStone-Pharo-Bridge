@@ -46,7 +46,8 @@ Class {
 		'errorMessageLabel',
 		'glueIsHidden',
 		'stackData',
-		'restartGuardActive'
+		'restartGuardActive',
+		'restartPinnedContext'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -1674,7 +1675,8 @@ GbsRemoteDebugger >> stepInto [
 		didStep := self directStepOverExecutedFrame: true.
 		didStep ifTrue: [
 			self fetchStackFrames.
-			restartGuardActive := false
+			restartGuardActive := false.
+			restartPinnedContext := nil
 		].
 		Transcript
 			show: '[UI stepInto] end direct didStep=';
@@ -1691,7 +1693,10 @@ GbsRemoteDebugger >> stepInto [
 			fallbackSelector: nil
 	].
 	didStep ifTrue: [ self fetchStackFrames ].
-	didStep ifTrue: [ restartGuardActive := false ].
+	didStep ifTrue: [
+		restartGuardActive := false.
+		restartPinnedContext := nil
+	].
 	Transcript
 		show: '[UI stepInto] end didStep=';
 		show: didStep asString;
@@ -1735,7 +1740,8 @@ GbsRemoteDebugger >> stepOver [
 		didStep := self directStepOverExecutedFrame: false.
 		didStep ifTrue: [
 			self fetchStackFrames.
-			restartGuardActive := false
+			restartGuardActive := false.
+			restartPinnedContext := nil
 		].
 		Transcript
 			show: '[UI stepOver] end direct didStep=';
@@ -1755,7 +1761,10 @@ GbsRemoteDebugger >> stepOver [
 			]
 	].
 	didStep ifTrue: [ self fetchStackFrames ].
-	didStep ifTrue: [ restartGuardActive := false ].
+	didStep ifTrue: [
+		restartGuardActive := false.
+		restartPinnedContext := nil
+	].
 	Transcript
 		show: '[UI stepOver] end didStep=';
 		show: didStep asString;
@@ -2933,6 +2942,11 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 	didRestart := self restart.
 	didRestart ifFalse: [ ^ false ].
 	restartGuardActive := true.
+	restartPinnedContext := nil.
+	service ifNotNil: [
+		restartPinnedContext := self safeServiceCall: [ service currentContext ] default: nil.
+		(self isRestartGlueFrame: restartPinnedContext) ifTrue: [ restartPinnedContext := nil ]
+	].
 
 	self fetchStackFrames.
 	self normalizeRestartSelectionAndPosition.
@@ -2945,7 +2959,10 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 		show: ' needsRewind=';
 		show: self restartNeedsServerRewind asString;
 		cr.
-	stabilized ifTrue: [ ^ true ].
+	stabilized ifTrue: [
+		restartPinnedContext := nil.
+		^ true
+	].
 
 	self ensureServerPCToStepOneAfterRestart.
 	self fetchStackFrames.
@@ -2954,8 +2971,10 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 		show: '[UI restart] after local correction needsRewind=';
 		show: self restartNeedsServerRewind asString;
 		cr.
-	^ self isExecutedCodeSelectionConfirmed
-		and: [ self restartNeedsServerRewind not ]
+	stabilized := self isExecutedCodeSelectionConfirmed
+		and: [ self restartNeedsServerRewind not ].
+	stabilized ifTrue: [ restartPinnedContext := nil ].
+	^ stabilized
 ]
 
 { #category : 'private' }
@@ -3465,6 +3484,18 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 		index = 0 ifTrue: [
 			index := contextList findFirst: [ :ctx | self isLikelyUserFrame: ctx ]
 		].
+		index = 0 ifTrue: [ index := 1 ].
+		context := contextList at: index
+	].
+
+	((self isRestartGlueFrame: context)
+		and: [ restartPinnedContext notNil
+		and: [ (self isRestartGlueFrame: restartPinnedContext) not ] ]) ifTrue: [
+		Transcript show: '[UI restart] normalize pinning preserved non-glue restart context'; cr.
+		(contextList includes: restartPinnedContext) ifFalse: [
+			contextList := { restartPinnedContext }, contextList
+		].
+		index := contextList findFirst: [ :ctx | ctx == restartPinnedContext ].
 		index = 0 ifTrue: [ index := 1 ].
 		context := contextList at: index
 	].
