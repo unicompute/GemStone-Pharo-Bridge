@@ -1055,7 +1055,7 @@ GbsRemoteDebugger >> initializePresenters [
 	restartButton := self newButton
 		label: 'Restart';
 		icon: (self iconNamedSafe: #smallUpdate);
-		action: [ self restartWithConfirmedExecutedFrameSecondPass ].
+		action: [ self restartWithUserLikeSecondClick ].
 	resumeButton := self newButton 
 		label: 'Run';
 		icon: (self iconNamedSafe: #glamorousGo);
@@ -2768,6 +2768,52 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 	"Critical: always run the second restart after polling for settled restart state."
 	secondPass := self restartSinglePass.
 	^ firstPass or: [ secondPass ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartWithUserLikeSecondClick [
+	"Mirror the known-working manual behavior:
+	1) Restart once.
+	2) Wait until context/stack settles to executed code frame.
+	3) Restart again."
+	| firstPass |
+	firstPass := self restartSinglePass.
+	firstPass ifFalse: [ ^ false ].
+
+	[
+		| attempts switched worldStateClass |
+		attempts := 0.
+		switched := false.
+		[
+			(attempts < 60) and: [ switched not ]
+		] whileTrue: [
+			(Delay forMilliseconds: 25) wait.
+			switched := self safeServiceCall: [
+				| ctx step |
+				ctx := service currentContext.
+				ctx ifNil: [ false ] ifNotNil: [
+					step := (ctx respondsTo: #quickStepPoint)
+						ifTrue: [ [ ctx quickStepPoint asInteger ] on: Error do: [ 0 ] ]
+						ifFalse: [ 0 ].
+					(self isExecutedCodeFrame: ctx) and: [ step = 1 ]
+				]
+			] default: false.
+			attempts := attempts + 1
+		].
+
+		worldStateClass := Smalltalk at: #WorldState ifAbsent: [ nil ].
+		(worldStateClass notNil and: [ worldStateClass respondsTo: #addDeferredUIMessage: ])
+			ifTrue: [
+				worldStateClass addDeferredUIMessage: [
+					self restartSinglePass
+				]
+			]
+			ifFalse: [
+				self restartSinglePass
+			].
+	] forkAt: Processor userBackgroundPriority.
+
+	^ true
 ]
 
 { #category : 'private' }
