@@ -1052,7 +1052,7 @@ GbsRemoteDebugger >> initializePresenters [
 	restartButton := self newButton
 		label: 'Restart';
 		icon: (self iconNamedSafe: #smallUpdate);
-		action: [ self restartWithConfirmedExecutedFrameSecondPass ].
+		action: [ self restartTwiceOnClick ].
 	resumeButton := self newButton 
 		label: 'Run';
 		icon: (self iconNamedSafe: #glamorousGo);
@@ -2061,7 +2061,7 @@ GbsRemoteDebugger >> executeMenu [
 			group addItem: [ :item | item name: 'Step Into'; action: [ self stepInto ] ].
 			group addItem: [ :item | item name: 'Step'; action: [ self stepInto ] ].
 			group addItem: [ :item | item name: 'Step Over'; action: [ self stepOver ] ].
-			group addItem: [ :item | item name: 'Restart'; action: [ self restart ] ].
+			group addItem: [ :item | item name: 'Restart'; action: [ self restartTwiceOnClick ] ].
 			group addItem: [ :item | item name: 'Run'; action: [ self resume ] ].
 			group addItem: [ :item | item name: 'Run until Return'; action: [ self stepReturn ] ].
 			group addItem: [ :item | item name: 'Run with Break Again'; action: [ self runWithBreakAgain ] ].
@@ -2759,6 +2759,14 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 
 	ready ifTrue: [ self restart ].
 	^ firstPass
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartTwiceOnClick [
+	| firstPass secondPass |
+	firstPass := self restart.
+	secondPass := self restart.
+	^ firstPass or: [ secondPass ]
 ]
 
 { #category : 'private' }
