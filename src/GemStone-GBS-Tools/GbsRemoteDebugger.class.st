@@ -3384,8 +3384,9 @@ GbsRemoteDebugger >> reinforceSourceCaretVisibility [
 
 { #category : 'private' }
 GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
-	| index context fallbackIndex current serverLevel |
+	| index context fallbackIndex current serverLevel attemptedGlueRecovery |
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
+	attemptedGlueRecovery := false.
 
 	"Prefer an explicit executed-code frame marker when present."
 	index := contextList findFirst: [ :ctx | self isExecutedCodeFrame: ctx ].
@@ -3428,6 +3429,28 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	].
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
 	context := contextList at: index.
+
+	"Live failure mode: restart can transiently land on glue (_gsReturnToC).
+	Try one explicit service-side reselect + refetch before accepting glue."
+	((self isRestartGlueFrame: context) and: [ attemptedGlueRecovery not ]) ifTrue: [
+		attemptedGlueRecovery := true.
+		Transcript show: '[UI restart] normalize detected glue frame; forcing restart-target reselection'; cr.
+		self safeServiceCall: [
+			(service respondsTo: #recomputeContextList)
+				ifTrue: [ service recomputeContextList ].
+			(service respondsTo: #selectRestartTargetContext)
+				ifTrue: [ service selectRestartTargetContext ]
+		] default: nil.
+		self fetchStackFrames.
+		(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
+		index := contextList findFirst: [ :ctx | self isExecutedCodeFrame: ctx ].
+		index = 0 ifTrue: [
+			index := contextList findFirst: [ :ctx | self isLikelyUserFrame: ctx ]
+		].
+		index = 0 ifTrue: [ index := 1 ].
+		context := contextList at: index
+	].
+
 	Transcript
 		show: '[UI restart] normalize select index=';
 		show: index asString;
@@ -3466,6 +3489,17 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	
 	"Force UI refresh to ensure Step=1 is displayed"
 	self refreshUiState
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> isRestartGlueFrame: aContext [
+	| className selectorName |
+	aContext ifNil: [ ^ false ].
+	className := [ aContext methodClassOrUnknown asString ] on: Error do: [ '' ].
+	selectorName := [ aContext selectorOrUnknown asString ] on: Error do: [ '' ].
+	(className includesSubstring: 'GsNMethod') ifTrue: [ ^ true ].
+	(selectorName beginsWith: '_') ifTrue: [ ^ true ].
+	^ false
 ]
 
 { #category : 'private' }
