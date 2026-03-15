@@ -4,7 +4,6 @@ Class {
 	#instVars : [
 		'session',
 		'cache',
-		'buffer',
 		'bufferSize',
 		'objectsStored',
 		'dirtyObjects',

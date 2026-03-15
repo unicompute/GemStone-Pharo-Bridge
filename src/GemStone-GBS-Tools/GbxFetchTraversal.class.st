@@ -6,7 +6,6 @@ Class {
 		'cache',
 		'clampSpec',
 		'level',
-		'buffer',
 		'bufferSize',
 		'objectsFetched',
 		'swizzleBlock'
