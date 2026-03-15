@@ -1352,6 +1352,7 @@ GbxDebuggerService >> restart [
 	Fixes bug where second restart does not reset Frame Step to 1."
 	| didRestart target |
 	self logRestartState: 'restart/start' context: self currentContext.
+	self recomputeContextList.
 	target := self restartTargetContext.
 	target ifNotNil: [ self selectContext: target ].
 	didRestart := self basicReenterServerContext.
