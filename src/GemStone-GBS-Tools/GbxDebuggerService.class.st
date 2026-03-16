@@ -1363,8 +1363,8 @@ GbxDebuggerService >> restartServerStackSummary [
 						cls := [ (fullEntry at: 3) ifNil: [ ''nil'' ] ifNotNil: [ :c | c asString ] ] on: Error do: [ ''nil'' ].
 						sel := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ] on: Error do: [ ''nil'' ].
 						q := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ].
-						stream nextPutAll: i asString; nextPutAll: ':'; nextPutAll: cls; nextPutAll: '>>'; nextPutAll: sel; nextPutAll: '@'; nextPutAll: q asString.
-						i < 4 ifTrue: [ stream nextPutAll: ' | ' ].
+						stream nextPutAll: i asString; nextPutAll: '':''; nextPutAll: cls; nextPutAll: ''>>''; nextPutAll: sel; nextPutAll: ''@''; nextPutAll: q asString.
+						i < 4 ifTrue: [ stream nextPutAll: '' | '' ].
 						i := i + 1
 					]
 				]
