@@ -1106,7 +1106,7 @@ GbsRemoteDebugger >> initializePresenters [
 	restartButton := self newButton
 		label: 'Restart';
 		icon: (self iconNamedSafe: #smallUpdate);
-		action: [ self restartWithConfirmedExecutedFrameSecondPass ].
+		action: [ self restart ].
 	resumeButton := self newButton 
 		label: 'Run';
 		icon: (self iconNamedSafe: #glamorousGo);
@@ -2185,7 +2185,7 @@ GbsRemoteDebugger >> executeMenu [
 			group addItem: [ :item | item name: 'Step Into'; action: [ self stepInto ] ].
 			group addItem: [ :item | item name: 'Step'; action: [ self stepInto ] ].
 			group addItem: [ :item | item name: 'Step Over'; action: [ self stepOver ] ].
-			group addItem: [ :item | item name: 'Restart'; action: [ self restartWithConfirmedExecutedFrameSecondPass ] ].
+			group addItem: [ :item | item name: 'Restart'; action: [ self restart ] ].
 			group addItem: [ :item | item name: 'Run'; action: [ self resume ] ].
 			group addItem: [ :item | item name: 'Run until Return'; action: [ self stepReturn ] ].
 			group addItem: [ :item | item name: 'Run with Break Again'; action: [ self runWithBreakAgain ] ].
@@ -2897,61 +2897,7 @@ GbsRemoteDebugger >> isTopExecutedCodeAtStepOne [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
-	"Single-click restart should be idempotent.
-	Let the service own restart/reset and complete first-pass stabilization.
-	If stabilization fails, require a manual second click."
-	| didRestart stabilized preRestartContext |
-	preRestartContext := nil.
-	service ifNotNil: [
-		preRestartContext := self safeServiceCall: [ service currentContext ] default: nil
-	].
-	((preRestartContext isNil or: [ self isRestartGlueFrame: preRestartContext ])
-		and: [ contextList isCollection and: [ contextList isEmpty not ] ]) ifTrue: [
-		preRestartContext := contextList
-			detect: [ :ctx | self isExecutedCodeFrame: ctx ]
-			ifNone: [ contextList first ]
-	].
-	(self isRestartGlueFrame: preRestartContext) ifTrue: [ preRestartContext := nil ].
-	restartPinnedContext := preRestartContext.
-
-	didRestart := self restart.
-	didRestart ifFalse: [
-		restartPinnedContext := nil.
-		^ false
-	].
-	restartGuardActive := true.
-
-	self fetchStackFrames.
-	self normalizeRestartSelectionAndPosition.
-	self enforceServerStepPointOneAfterRestart.
-
-	stabilized := self isExecutedCodeSelectionConfirmed
-		and: [ self restartNeedsServerRewind not ].
-	Transcript
-		show: '[UI restart] post-restart stabilized=';
-		show: stabilized asString;
-		show: ' needsRewind=';
-		show: self restartNeedsServerRewind asString;
-		cr.
-	stabilized ifTrue: [
-		restartPinnedContext := nil.
-		^ true
-	].
-
-	Transcript show: '[UI restart] completing first restart state before second pass'; cr.
-	stabilized := self completeRestartStateBeforeSecondPass.
-	Transcript
-		show: '[UI restart] pre-second-pass stabilized=';
-		show: stabilized asString;
-		show: ' needsRewind=';
-		show: self restartNeedsServerRewind asString;
-		cr.
-	stabilized
-		ifTrue: [ restartPinnedContext := nil ]
-		ifFalse: [
-			Transcript show: '[UI restart] manual second restart required'; cr
-		].
-	^ stabilized
+	^ self restart
 ]
 
 { #category : 'private' }
