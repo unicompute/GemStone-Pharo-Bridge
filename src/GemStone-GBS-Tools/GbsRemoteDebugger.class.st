@@ -3021,8 +3021,8 @@ GbsRemoteDebugger >> isTopExecutedCodeAtStepOne [
 { #category : 'private' }
 GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 	"Single-click restart should be idempotent.
-	Let the service own restart/reset; perform an internal second restart pass
-	when needed, then apply one local correction pass."
+	Let the service own restart/reset and complete first-pass stabilization.
+	If stabilization fails, require a manual second click."
 	| didRestart stabilized preRestartContext |
 	preRestartContext := nil.
 	service ifNotNil: [
@@ -3069,44 +3069,11 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 		show: ' needsRewind=';
 		show: self restartNeedsServerRewind asString;
 		cr.
-	stabilized ifTrue: [
-		restartPinnedContext := nil.
-		^ true
-	].
-
-	Transcript show: '[UI restart] internal second restart pass'; cr.
-	didRestart := self restart.
-	didRestart ifFalse: [
-		restartPinnedContext := nil.
-		^ false
-	].
-	self fetchStackFrames.
-	self normalizeRestartSelectionAndPosition.
-	self enforceServerStepPointOneAfterRestart.
-	stabilized := self isExecutedCodeSelectionConfirmed
-		and: [ self restartNeedsServerRewind not ].
-	Transcript
-		show: '[UI restart] post-second-pass stabilized=';
-		show: stabilized asString;
-		show: ' needsRewind=';
-		show: self restartNeedsServerRewind asString;
-		cr.
-	stabilized ifTrue: [
-		restartPinnedContext := nil.
-		^ true
-	].
-
-	self ensureServerPCToStepOneAfterRestart.
-	self fetchStackFrames.
-	self normalizeRestartSelectionAndPosition.
-	self enforceServerStepPointOneAfterRestart.
-	Transcript
-		show: '[UI restart] after local correction needsRewind=';
-		show: self restartNeedsServerRewind asString;
-		cr.
-	stabilized := self isExecutedCodeSelectionConfirmed
-		and: [ self restartNeedsServerRewind not ].
-	stabilized ifTrue: [ restartPinnedContext := nil ].
+	stabilized
+		ifTrue: [ restartPinnedContext := nil ]
+		ifFalse: [
+			Transcript show: '[UI restart] manual second restart required'; cr
+		].
 	^ stabilized
 ]
 
