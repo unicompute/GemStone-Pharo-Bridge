@@ -1447,6 +1447,9 @@ GbxDebuggerService >> firstServerContextAbove: clientContext [
 
 { #category : 'process control' }
 GbxDebuggerService >> restart [
+	| target |
+	target := self restartTargetContext.
+	target ifNotNil: [ self selectContext: target ].
 	^ self basicReenterServerContext
 ]
 
