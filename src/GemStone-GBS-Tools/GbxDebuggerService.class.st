@@ -1323,6 +1323,58 @@ GbxDebuggerService >> restartStepDiagnosticForLevel: level [
 	^ raw ifNil: [ 'diag=nil' ]
 ]
 
+{ #category : 'private' }
+GbxDebuggerService >> restartServerStackSummary [
+	| raw |
+	(self canExecuteOnDebugProcess) ifFalse: [ ^ 'stack=no-process' ].
+	raw := self executeDebugScript: '[
+		| obj proc procOop stream i stackReport fullEntry cls sel q |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''stack=objNil'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #serverProcessOop ]) ifTrue: [
+			procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
+			(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
+				proc := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
+			]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc respondsTo: #_gsiStackReportFromLevel:toLevel:) ifFalse: [ ^ ''stack=noStack'' ].
+		stream := WriteStream on: String new.
+		i := 1.
+		[ i <= 4 ] whileTrue: [
+			stackReport := [ proc _gsiStackReportFromLevel: i toLevel: i ] on: Error do: [ nil ].
+			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
+				ifFalse: [ i := 5 ]
+				ifTrue: [
+					fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+					fullEntry ifNil: [ i := 5 ] ifNotNil: [
+						cls := [ (fullEntry at: 3) ifNil: [ ''nil'' ] ifNotNil: [ :c | c asString ] ] on: Error do: [ ''nil'' ].
+						sel := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ] on: Error do: [ ''nil'' ].
+						q := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ].
+						stream nextPutAll: i asString; nextPutAll: ':'; nextPutAll: cls; nextPutAll: '>>'; nextPutAll: sel; nextPutAll: '@'; nextPutAll: q asString.
+						i < 4 ifTrue: [ stream nextPutAll: ' | ' ].
+						i := i + 1
+					]
+				]
+		].
+		stream contents
+	] value'.
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	^ raw ifNil: [ 'stack=nil' ]
+]
+
 { #category : 'actions' }
 GbxDebuggerService >> cutbackTo: aContext finishWith: aBlock [
 	"Discard any partially-completed execution above aContext on the logical
@@ -1491,6 +1543,16 @@ GbxDebuggerService >> restart [
 			self resetServerPCToStepOne.
 			self selectTopServerContext.
 			self selectRestartTargetContext
+		]
+	].
+	didRestart ifTrue: [
+		| resolvedLevel current |
+		resolvedLevel := self restartLevelFromServerStack.
+		current := self currentContext.
+		self logRestartText: 'restart stack ', (self restartServerStackSummary).
+		(resolvedLevel isNil and: [ self isRestartGlueContext: current ]) ifTrue: [
+			self logRestartText: 'restart validation failed: unresolved server level + glue context'.
+			didRestart := false
 		]
 	].
 	self logRestartText: 'restart/result=', didRestart asString.
