@@ -1163,15 +1163,19 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	"Force the debugged server process to restart at method entry (step=1).
 
 	FIX: Use the executed code frame level for reset (like test_restart_pharo_style.cpp).
-	This finds the 'nil nil' frame where _trimStackToLevel: will reset PC to step 1."
+	This finds the 'nil nil' frame where _trimStackToLevel: will reset PC to step 1.
+	
+	CRITICAL: After _trimStackToLevel:, we must call jumpToStepPoint:1 on the TOP context
+	(level 1), not the executed frame level. This is because _trimStackToLevel: resets the
+	stack but doesn't reset the PC of the top context."
 	| didReset script result executedFrameLevel beforeDiag afterDiag maxDepthDiag |
 
 	"Find the executed code frame level (the 'nil nil' frame in stack report).
-	This is the level where _trimStackToLevel: resets PC to step=1."
+	This is the level where _trimStackToLevel: resets the stack."
 	executedFrameLevel := self findExecutedCodeFrameLevelInline.
-	executedFrameLevel ifNil: [ 
+	executedFrameLevel ifNil: [
 		self logRestartText: 'resetServerPCToStepOne: findExecutedCodeFrameLevelInline returned nil, using level 1'.
-		executedFrameLevel := 1 
+		executedFrameLevel := 1
 	].
 
 	beforeDiag := self restartStepDiagnosticForLevel: executedFrameLevel.
@@ -1189,9 +1193,9 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	didReset ifTrue: [ ^ true ].
 
 	"Reset PC at the executed frame level.
-	This ensures we reset at the level where GemStone sets step=1 after trim."
+	CRITICAL: After trim, call jumpToStepPoint:1 on the TOP context (level 1)."
 	script := '[
-		| obj proc quick stackReport fullEntry effectiveLevel top ctx i maxDepth |
+		| obj proc quick stackReport fullEntry effectiveLevel top ctx i maxDepth didTrim |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
@@ -1219,11 +1223,12 @@ GbxDebuggerService >> resetServerPCToStepOne [
 				ifFalse: [ i := 513 ]
 		].
 		maxDepth <= 0 ifTrue: [ ^ ''false'' ].
-		effectiveLevel > maxDepth ifTrue: [ 
-			effectiveLevel := maxDepth 
+		effectiveLevel > maxDepth ifTrue: [
+			effectiveLevel := maxDepth
 		].
 		effectiveLevel <= 0 ifTrue: [ effectiveLevel := 1 ].
 
+		"Check current step before trim"
 		quick := 0.
 		stackReport := [ proc _gsiStackReportFromLevel: effectiveLevel toLevel: effectiveLevel ] on: Error do: [ nil ].
 		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
@@ -1232,16 +1237,24 @@ GbxDebuggerService >> resetServerPCToStepOne [
 		].
 		quick <= 1 ifTrue: [ ^ ''true'' ].
 
+		"Trim the stack to the executed frame level"
+		didTrim := false.
+		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
+			[ proc _trimStackToLevel: effectiveLevel ] on: Error do: [ ].
+			didTrim := true
+		].
+		didTrim ifFalse: [ ^ ''false'' ].
+
+		"CRITICAL: After trim, get the NEW top context and reset its PC to step 1"
 		top := [ proc topContext ] on: Error do: [ nil ].
-		(effectiveLevel = 1 and: [ top notNil ]) ifTrue: [
-			(top respondsTo: #jumpToStepPoint:) ifTrue: [
-				[ top jumpToStepPoint: 1 ] on: Error do: [ ]
-			].
-			(top respondsTo: #runToStepPoint:) ifTrue: [
-				[ top runToStepPoint: 1 ] on: Error do: [ ]
-			]
+		(top notNil and: [ top respondsTo: #jumpToStepPoint: ]) ifTrue: [
+			[ top jumpToStepPoint: 1 ] on: Error do: [ ]
+		].
+		(top notNil and: [ top respondsTo: #runToStepPoint: ]) ifTrue: [
+			[ top runToStepPoint: 1 ] on: Error do: [ ]
 		].
 
+		"Also try on level 1 context via sender chain"
 		ctx := top.
 		i := 1.
 		[ i < effectiveLevel and: [ ctx notNil ] ] whileTrue: [
@@ -1255,11 +1268,9 @@ GbxDebuggerService >> resetServerPCToStepOne [
 			[ ctx runToStepPoint: 1 ] on: Error do: [ ]
 		].
 
-		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
-			[ proc _trimStackToLevel: effectiveLevel ] on: Error do: [ ]
-		].
-
-		stackReport := [ proc _gsiStackReportFromLevel: effectiveLevel toLevel: effectiveLevel ] on: Error do: [ nil ].
+		"Verify the step was reset by checking level 1"
+		quick := 0.
+		stackReport := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
 		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
 			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
 			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
