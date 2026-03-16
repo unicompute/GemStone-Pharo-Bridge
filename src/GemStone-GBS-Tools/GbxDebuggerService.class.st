@@ -1165,9 +1165,11 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	self logRestartText: 'resetServerPCToStepOne runToStepPoint:1 -> ', didReset asString.
 	didReset ifTrue: [ ^ true ].
 
-	"Top-frame restart needs an explicit PC jump before trim; plain trim is not enough."
+	"Top-frame restart needs an explicit PC jump before trim; plain trim is not enough.
+	Clamp the working level to the actual live stack depth; after restart the
+	original home level can be deeper than the reconstructed stack."
 	script := '[
-		| obj proc quick stackReport fullEntry effectiveLevel top ctx i |
+		| obj proc quick stackReport fullEntry effectiveLevel top ctx i maxDepth |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
@@ -1186,6 +1188,17 @@ GbxDebuggerService >> resetServerPCToStepOne [
 		(proc respondsTo: #_gsiStackReportFromLevel:toLevel:) ifFalse: [ ^ ''false'' ].
 
 		effectiveLevel := ', homeLevel asString, '.
+		maxDepth := 0.
+		i := 1.
+		[ i <= 512 ] whileTrue: [
+			stackReport := [ proc _gsiStackReportFromLevel: i toLevel: i ] on: Error do: [ nil ].
+			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
+				ifTrue: [ maxDepth := i. i := i + 1 ]
+				ifFalse: [ i := 513 ]
+		].
+		maxDepth <= 0 ifTrue: [ ^ ''false'' ].
+		effectiveLevel > maxDepth ifTrue: [ effectiveLevel := maxDepth ].
+		effectiveLevel <= 0 ifTrue: [ effectiveLevel := 1 ].
 
 		quick := 0.
 		stackReport := [ proc _gsiStackReportFromLevel: effectiveLevel toLevel: effectiveLevel ] on: Error do: [ nil ].
