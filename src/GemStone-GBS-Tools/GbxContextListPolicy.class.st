@@ -365,8 +365,9 @@ GbxContextListPolicy >> fetchServerContexts [
 		]
 	].
 	"Filter out DEBUG lines before processing contexts"
-	contexts := (rawData splitOn: Character lf)
-		select: [ :line | (line beginsWith: 'DEBUG:') not ] thenCollect: [ :line |
+	contexts := ((rawData splitOn: Character lf)
+		select: [ :line | (line beginsWith: 'DEBUG:') not ])
+		collect: [ :line |
 			| parts |
 			parts := line splitOn: Character tab.
 			parts size >= 5 ifTrue: [
