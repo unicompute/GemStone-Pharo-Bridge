@@ -3007,7 +3007,8 @@ GbsRemoteDebugger >> isTopExecutedCodeAtStepOne [
 { #category : 'private' }
 GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 	"Single-click restart should be idempotent.
-	Let the service own restart/reset; only apply one local correction pass if needed."
+	Let the service own restart/reset; perform an internal second restart pass
+	when needed, then apply one local correction pass."
 	| didRestart stabilized preRestartContext |
 	preRestartContext := nil.
 	service ifNotNil: [
@@ -3036,6 +3037,27 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 		and: [ self restartNeedsServerRewind not ].
 	Transcript
 		show: '[UI restart] post-restart stabilized=';
+		show: stabilized asString;
+		show: ' needsRewind=';
+		show: self restartNeedsServerRewind asString;
+		cr.
+	stabilized ifTrue: [
+		restartPinnedContext := nil.
+		^ true
+	].
+
+	Transcript show: '[UI restart] internal second restart pass'; cr.
+	didRestart := self restart.
+	didRestart ifFalse: [
+		restartPinnedContext := nil.
+		^ false
+	].
+	self fetchStackFrames.
+	self normalizeRestartSelectionAndPosition.
+	stabilized := self isExecutedCodeSelectionConfirmed
+		and: [ self restartNeedsServerRewind not ].
+	Transcript
+		show: '[UI restart] post-second-pass stabilized=';
 		show: stabilized asString;
 		show: ' needsRewind=';
 		show: self restartNeedsServerRewind asString;
