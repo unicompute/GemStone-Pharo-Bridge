@@ -1180,7 +1180,7 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	
 	"_trimStackToLevel: already reset the stack, but re-trim to ensure PC is reset"
 	script := '[
-		| obj proc top ctx i quick stackReport fullEntry maxDepth effectiveLevel candidateLevel candidateQuick candidateClass candidateSel |
+		| obj proc top ctx i quick stackReport fullEntry maxDepth effectiveLevel |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
@@ -1219,48 +1219,31 @@ GbxDebuggerService >> resetServerPCToStepOne [
 		].
 		quick <= 1 ifTrue: [ ^ ''true'' ].
 
-		"Try resetting at effectiveLevel first, then one sender above if present."
-		{ effectiveLevel. (effectiveLevel + 1 min: maxDepth) } do: [ :lvl |
-			candidateLevel := lvl.
-			candidateQuick := 0.
-			candidateClass := ''nil''.
-			candidateSel := ''nil''.
-			stackReport := [ proc _gsiStackReportFromLevel: candidateLevel toLevel: candidateLevel ] on: Error do: [ nil ].
-			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
-				fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
-				fullEntry ifNotNil: [
-					candidateQuick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ].
-					candidateClass := [ (fullEntry at: 3) ifNil: [ ''nil'' ] ifNotNil: [ :c | c asString ] ] on: Error do: [ ''nil'' ].
-					candidateSel := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ] on: Error do: [ ''nil'' ].
-				]
-			].
-
-			top := [ proc topContext ] on: Error do: [ nil ].
-			ctx := top.
-			i := 1.
-			[ i < candidateLevel and: [ ctx notNil ] ] whileTrue: [
-				ctx := [ ctx sender ] on: Error do: [ nil ].
-				i := i + 1
-			].
-			(ctx notNil and: [ ctx respondsTo: #jumpToStepPoint: ]) ifTrue: [
-				[ ctx jumpToStepPoint: 1 ] on: Error do: [ ]
-			].
-			(ctx notNil and: [ ctx respondsTo: #runToStepPoint: ]) ifTrue: [
-				[ ctx runToStepPoint: 1 ] on: Error do: [ ]
-			].
-			(proc respondsTo: #_trimStackToLevel:) ifTrue: [
-				[ proc _trimStackToLevel: candidateLevel ] on: Error do: [ ]
-			].
-
-			quick := 0.
-			stackReport := [ proc _gsiStackReportFromLevel: effectiveLevel toLevel: effectiveLevel ] on: Error do: [ nil ].
-			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
-				fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
-				fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
-			].
-			quick <= 1 ifTrue: [ ^ ''true'' ].
+		"Primary reset path: target the frame context at effectiveLevel."
+		top := [ proc topContext ] on: Error do: [ nil ].
+		ctx := top.
+		i := 1.
+		[ i < effectiveLevel and: [ ctx notNil ] ] whileTrue: [
+			ctx := [ ctx sender ] on: Error do: [ nil ].
+			i := i + 1
 		].
-		''false''
+		(ctx notNil and: [ ctx respondsTo: #jumpToStepPoint: ]) ifTrue: [
+			[ ctx jumpToStepPoint: 1 ] on: Error do: [ ]
+		].
+		(ctx notNil and: [ ctx respondsTo: #runToStepPoint: ]) ifTrue: [
+			[ ctx runToStepPoint: 1 ] on: Error do: [ ]
+		].
+		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
+			[ proc _trimStackToLevel: effectiveLevel ] on: Error do: [ ]
+		].
+
+		quick := 0.
+		stackReport := [ proc _gsiStackReportFromLevel: effectiveLevel toLevel: effectiveLevel ] on: Error do: [ nil ].
+		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
+			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
+		].
+		(quick <= 1) ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]
 	] value'.
 	
 	result := self executeDebugScript: script.
@@ -1416,11 +1399,12 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	gsContext on the stack of its GSProcess. Also discards 
 	any partial execution in gsContext, resetting it to the 
 	beginning."
-	| lvl resolvedHomeLevel script result |
-	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ 1 ].
-	resolvedHomeLevel := self restartHomeLevelForReset.
-	(resolvedHomeLevel isNumber and: [ resolvedHomeLevel > 0 ])
-		ifTrue: [ lvl := resolvedHomeLevel ].
+	| lvl script result |
+	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ nil ].
+	((lvl isInteger and: [ lvl > 0 ]) not) ifTrue: [
+		lvl := self restartLevelFromServerStack
+	].
+	((lvl isInteger and: [ lvl > 0 ]) not) ifTrue: [ lvl := 1 ].
 	
 	script := '[
 		| obj proc |
@@ -1511,7 +1495,7 @@ GbxDebuggerService >> firstServerContextAbove: clientContext [
 GbxDebuggerService >> restart [
 	"Restart the current context using the coordinated reenter operation.
 	Fixes bug where second restart does not reset Frame Step to 1."
-	| didRestart target |
+	| didRestart target stackSummary |
 	self logRestartState: 'restart/start' context: self currentContext.
 	(restartHomeResetPasses isInteger and: [ restartHomeResetPasses > 0 ]) ifFalse: [
 		| captured |
@@ -1549,9 +1533,16 @@ GbxDebuggerService >> restart [
 		| resolvedLevel current |
 		resolvedLevel := self restartLevelFromServerStack.
 		current := self currentContext.
-		self logRestartText: 'restart stack ', (self restartServerStackSummary).
+		stackSummary := self restartServerStackSummary.
+		self logRestartText: 'restart stack ', stackSummary.
 		(resolvedLevel isNil and: [ self isRestartGlueContext: current ]) ifTrue: [
 			self logRestartText: 'restart validation failed: unresolved server level + glue context'.
+			didRestart := false
+		].
+		((stackSummary isString)
+			and: [ (stackSummary includesSubstring: 'GsNMethod>>_gsReturnToC')
+			and: [ (stackSummary includesSubstring: '2:') not ] ]) ifTrue: [
+			self logRestartText: 'restart validation failed: glue-only server stack'.
 			didRestart := false
 		]
 	].

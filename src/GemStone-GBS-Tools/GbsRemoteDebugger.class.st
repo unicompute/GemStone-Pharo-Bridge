@@ -2933,11 +2933,25 @@ GbsRemoteDebugger >> normalizePauseLandingSelection [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restart [
-	| didRestart |
+	| didRestart serverStep stackSummary |
 	Transcript show: '[UI restart] restart begin processOop='; show: processOop asString; cr.
 	self logRestartContextSnapshot: 'before restart'.
 	didRestart := self safeServiceCall: [ service restart ] default: false.
 	didRestart ifFalse: [
+		stackSummary := self safeServiceCall: [
+			(service respondsTo: #restartServerStackSummary)
+				ifTrue: [ service restartServerStackSummary ]
+				ifFalse: [ nil ]
+		] default: nil.
+		((stackSummary isString)
+			and: [ (stackSummary includesSubstring: 'GsNMethod>>_gsReturnToC')
+			and: [ (stackSummary includesSubstring: '2:') not ] ]) ifTrue: [
+			Transcript show: '[UI restart] restart aborted: service reports glue-only stack'; cr.
+			restartGuardActive := false.
+			restartFailedState := true.
+			restartPinnedContext := nil.
+			^ false
+		].
 		Transcript show: '[UI restart] service restart failed; attempting direct trim fallback'; cr.
 		didRestart := self restartUsingDirectTrimFromExecutedFrame.
 		didRestart ifFalse: [
@@ -2959,6 +2973,13 @@ GbsRemoteDebugger >> restart [
 		"Ensure server PC is at step 1 after restart"
 		self ensureServerPCToStepOneAfterRestart.
 		self logRestartContextSnapshot: 'after ensure step1'.
+		serverStep := self serverExecutedFrameStepPoint.
+		(serverStep isNil or: [ serverStep <= 0 ]) ifTrue: [
+			Transcript show: '[UI restart] restart validation failed: unresolved server step'; cr.
+			didRestart := false.
+			restartFailedState := true.
+			restartPinnedContext := nil
+		]
 	].
 	Transcript show: '[UI restart] restart end didRestart='; show: didRestart asString; cr.
 	^ didRestart
@@ -3735,6 +3756,14 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	((self isRestartGlueFrame: context)
 		and: [ restartPinnedContext notNil
 		and: [ (self isRestartGlueFrame: restartPinnedContext) not ] ]) ifTrue: [
+		serverStep := self serverExecutedFrameStepPoint.
+		((serverLevel isNumber and: [ serverLevel > 0 ])
+			or: [ serverStep isNumber and: [ serverStep > 0 ] ])
+			ifFalse: [
+				Transcript show: '[UI restart] normalize dropping stale pinned context (server unresolved)'; cr.
+				restartPinnedContext := nil
+			].
+		restartPinnedContext ifNotNil: [
 		Transcript show: '[UI restart] normalize pinning preserved non-glue restart context'; cr.
 		(contextList includes: restartPinnedContext) ifFalse: [
 			contextList := { restartPinnedContext }, contextList
@@ -3742,6 +3771,7 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 		index := contextList findFirst: [ :ctx | ctx == restartPinnedContext ].
 		index = 0 ifTrue: [ index := 1 ].
 		context := contextList at: index
+		]
 	].
 
 	Transcript
