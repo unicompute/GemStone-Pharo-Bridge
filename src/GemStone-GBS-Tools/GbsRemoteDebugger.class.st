@@ -3665,7 +3665,7 @@ GbsRemoteDebugger >> reinforceSourceCaretVisibility [
 
 { #category : 'private' }
 GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
-	| index context fallbackIndex current serverLevel attemptedGlueRecovery |
+	| index context fallbackIndex current serverLevel serverStep attemptedGlueRecovery |
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
 	attemptedGlueRecovery := false.
 
@@ -3759,11 +3759,14 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 		show: (serverLevel ifNil: [ 'nil' ] ifNotNil: [ serverLevel asString ]);
 		cr.
 
-	"Do not rewrite class/selector on arbitrary frames.
-	If this is already executed code, normalize only its step point display."
+	"Do not force local quickStepPoint to 1; mirror server step when available."
+	serverStep := self serverExecutedFrameStepPoint.
 	(self isExecutedCodeFrame: context) ifTrue: [
 		(context respondsTo: #quickStepPoint:)
-			ifTrue: [ context quickStepPoint: 1 ]
+			ifTrue: [
+				(serverStep isNumber and: [ serverStep > 0 ])
+					ifTrue: [ context quickStepPoint: serverStep ]
+			]
 	].
 
 	service ifNotNil: [
