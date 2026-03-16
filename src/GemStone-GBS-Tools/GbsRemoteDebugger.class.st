@@ -1666,6 +1666,12 @@ GbsRemoteDebugger >> stackData: anArray [
 { #category : 'actions' }
 GbsRemoteDebugger >> stepInto [
 	| didStep |
+	Transcript
+		show: '[UI stepInto] selectedLevel=';
+		show: self currentSelectedFrameLevel asString;
+		show: ' selectedExecuted=';
+		show: self currentSelectedContextIsExecutedCodeFrame asString;
+		cr.
 	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
 		didStep := self directStepOverExecutedFrame: true.
 		didStep ifTrue: [
@@ -1697,6 +1703,12 @@ GbsRemoteDebugger >> step [
 { #category : 'actions' }
 GbsRemoteDebugger >> stepOver [
 	| didStep |
+	Transcript
+		show: '[UI stepOver] selectedLevel=';
+		show: self currentSelectedFrameLevel asString;
+		show: ' selectedExecuted=';
+		show: self currentSelectedContextIsExecutedCodeFrame asString;
+		cr.
 	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
 		didStep := self directStepOverExecutedFrame: false.
 		didStep ifTrue: [
