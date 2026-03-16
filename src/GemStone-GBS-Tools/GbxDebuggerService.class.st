@@ -1142,18 +1142,22 @@ GbxDebuggerService >> ensureRestartAtStepOne [
 { #category : 'private' }
 GbxDebuggerService >> resetServerPCToStepOne [
 	"Force the debugged server process to restart at method entry (step=1).
-	
-	CRITICAL FIX: Use home level (original error level) for reset,
-	not the current executed frame level. This ensures restart works
-	even after stepping has moved the executed frame to level 1."
-	| didReset script result homeLevel beforeDiag afterDiag |
 
-	"Use home level (original error level) for trim"
-	homeLevel := self restartHomeLevelForReset.
-	homeLevel ifNil: [ homeLevel := 1 ].
-	
-	beforeDiag := self restartStepDiagnosticForLevel: homeLevel.
-	self logRestartText: 'resetServerPCToStepOne homeLevel=', homeLevel asString, ' before ', beforeDiag.
+	FIX: Use the current context level for reset, not the home level.
+	After cutbackGsTo: trims the stack, we must reset the PC at the
+	trimmed level (typically level 1), not the original error level."
+	| didReset script result targetLevel currentLevel beforeDiag afterDiag maxDepthDiag |
+
+	"Use current context level for trim - this is the level we actually restarted to"
+	currentLevel := self currentContextLevel.
+	targetLevel := currentLevel.
+	(targetLevel isNil or: [ targetLevel <= 0 ]) ifTrue: [
+		targetLevel := 1
+	].
+
+	beforeDiag := self restartStepDiagnosticForLevel: targetLevel.
+	maxDepthDiag := self restartStepDiagnosticForLevel: 1.
+	self logRestartText: 'resetServerPCToStepOne targetLevel=', targetLevel asString, ' currentLevel=', (currentLevel ifNil: [ 'nil' ] ifNotNil: [ currentLevel asString ]), ' before ', beforeDiag, ' maxDepth ', maxDepthDiag.
 
 	"Try jumpToStepPoint: first (may work on some GemStone versions)"
 	didReset := self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true.
@@ -1165,9 +1169,8 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	self logRestartText: 'resetServerPCToStepOne runToStepPoint:1 -> ', didReset asString.
 	didReset ifTrue: [ ^ true ].
 
-	"Top-frame restart needs an explicit PC jump before trim; plain trim is not enough.
-	Clamp the working level to the actual live stack depth; after restart the
-	original home level can be deeper than the reconstructed stack."
+	"Reset PC at the target level (current context level after cutback).
+	This ensures we reset at the actual stack depth, not a stale home level."
 	script := '[
 		| obj proc quick stackReport fullEntry effectiveLevel top ctx i maxDepth |
 		obj := Object _objectForOop: ', processOop asString, '.
@@ -1187,7 +1190,7 @@ GbxDebuggerService >> resetServerPCToStepOne [
 		].
 		(proc respondsTo: #_gsiStackReportFromLevel:toLevel:) ifFalse: [ ^ ''false'' ].
 
-		effectiveLevel := ', homeLevel asString, '.
+		effectiveLevel := ', targetLevel asString, '.
 		maxDepth := 0.
 		i := 1.
 		[ i <= 512 ] whileTrue: [
@@ -1245,8 +1248,8 @@ GbxDebuggerService >> resetServerPCToStepOne [
 
 	result := self executeDebugScript: script.
 	didReset := self asBooleanResult: result default: false.
-	self logRestartText: 'resetServerPCToStepOne resetAtLevel:', homeLevel asString, ' -> ', didReset asString, ' raw=', result printString.
-	afterDiag := self restartStepDiagnosticForLevel: homeLevel.
+	self logRestartText: 'resetServerPCToStepOne resetAtLevel:', targetLevel asString, ' -> ', didReset asString, ' raw=', result printString.
+	afterDiag := self restartStepDiagnosticForLevel: targetLevel.
 	self logRestartText: 'resetServerPCToStepOne after ', afterDiag.
 	^ didReset
 ]
