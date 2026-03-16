@@ -151,10 +151,11 @@ GbxContextListPolicy >> fetchServerContexts [
 	].
 	
 	script := '[
-		| obj gbsError gsProcess ctx stream maxDepth level frame stackReport fullEntry methodOrNil className selectorName source ctxOop quickStep offsets offsetsText lineNumber offset |
+		| obj gbsError gsProcess ctx stream maxDepth level frame stackReport fullEntry methodOrNil className selectorName source ctxOop quickStep offsets offsetsText lineNumber offset procOop |
 		obj := Object _objectForOop: ', processOop asString, '.
-		obj isNil ifTrue: [ ^ '''' ].
 		stream := WriteStream on: String new.
+		stream nextPutAll: ''DEBUG: obj='', (obj ifNil: [ ''nil'' ] ifNotNil: [ obj class name ]); cr.
+		obj isNil ifTrue: [ ^ stream contents ].
 		gbsError := nil.
 		gsProcess := nil.
 		ctx := nil.
@@ -164,13 +165,15 @@ GbxContextListPolicy >> fetchServerContexts [
 			(obj respondsTo: #gbxResult)
 				ifTrue: [ gbsError := [ obj gbxResult ] on: Error do: [ nil ] ]
 		].
+		stream nextPutAll: ''DEBUG: gbsError='', (gbsError ifNil: [ ''nil'' ] ifNotNil: [ gbsError class name ]); cr.
 			gbsError notNil ifTrue: [
 				gsProcess := [ gbsError serverProcess ] on: Error do: [ nil ]
 			].
+			stream nextPutAll: ''DEBUG: gsProcess after gbsError='', (gsProcess ifNil: [ ''nil'' ] ifNotNil: [ gsProcess class name ]); cr.
 			gsProcess isNil ifTrue: [
 				(gbsError notNil and: [ gbsError respondsTo: #serverProcessOop ]) ifTrue: [
-					| procOop |
 					procOop := [ gbsError serverProcessOop ] on: Error do: [ nil ].
+					stream nextPutAll: ''DEBUG: procOop from gbsError='', procOop asString; cr.
 					(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
 						gsProcess := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
 					]
@@ -180,10 +183,11 @@ GbxContextListPolicy >> fetchServerContexts [
 				(obj respondsTo: #_gsiStackReportFromLevel:toLevel:)
 					ifTrue: [ gsProcess := obj ]
 			].
+			stream nextPutAll: ''DEBUG: gsProcess after _gsiStackReport='', (gsProcess ifNil: [ ''nil'' ] ifNotNil: [ gsProcess class name ]); cr.
 			gsProcess isNil ifTrue: [
 				(obj respondsTo: #serverProcessOop) ifTrue: [
-					| procOop |
 					procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
+					stream nextPutAll: ''DEBUG: procOop from obj='', procOop asString; cr.
 					(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
 						gsProcess := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
 					]
@@ -198,6 +202,8 @@ GbxContextListPolicy >> fetchServerContexts [
 			(ctx notNil and: [ ctx respondsTo: #process ])
 				ifTrue: [ gsProcess := [ ctx process ] on: Error do: [ nil ] ]
 		].
+		stream nextPutAll: ''DEBUG: final gsProcess='', (gsProcess ifNil: [ ''nil'' ] ifNotNil: [ gsProcess class name ]); cr.
+		stream nextPutAll: ''DEBUG: gsProcess respondsTo _gsiStackReport='', (gsProcess ifNil: [ ''nil'' ] ifNotNil: [ (gsProcess respondsTo: #_gsiStackReportFromLevel:toLevel:) asString ]); cr.
 
 		((gsProcess notNil) and: [
 			(gsProcess respondsTo: #_gsiStackReportFromLevel:toLevel:)
@@ -338,7 +344,7 @@ GbxContextListPolicy >> fetchServerContexts [
 		].
 		stream contents
 	] value'.
-	
+
 	rawData := [
 		(debugger session respondsTo: #executeAndFetch:context:)
 			ifTrue: [ debugger session executeAndFetch: script context: 20 ]
@@ -352,8 +358,15 @@ GbxContextListPolicy >> fetchServerContexts [
 	rawData = false ifTrue: [ rawData := '' ].
 	rawData = 'nil' ifTrue: [ rawData := '' ].
 	(rawData respondsTo: #splitOn) ifFalse: [ rawData := '' ].
-	contexts := (rawData splitOn: Character lf) 
-		collect: [ :line | 
+	"Log DEBUG lines from script"
+	(rawData splitOn: Character lf) do: [ :line |
+		(line beginsWith: 'DEBUG:') ifTrue: [
+			debugger logRestartText: line
+		]
+	].
+	"Filter out DEBUG lines before processing contexts"
+	contexts := (rawData splitOn: Character lf)
+		select: [ :line | (line beginsWith: 'DEBUG:') not ] thenCollect: [ :line |
 			| parts |
 			parts := line splitOn: Character tab.
 			parts size >= 5 ifTrue: [
