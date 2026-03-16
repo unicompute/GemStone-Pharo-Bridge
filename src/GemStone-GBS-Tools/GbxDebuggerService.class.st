@@ -1201,7 +1201,6 @@ GbxDebuggerService >> resetServerPCToStepOne [
 		].
 		maxDepth <= 0 ifTrue: [ ^ ''false'' ].
 		effectiveLevel > maxDepth ifTrue: [ 
-			self logRestartText: 'resetServerPCToStepOne: clamping level from ', effectiveLevel asString, ' to maxDepth ', maxDepth asString.
 			effectiveLevel := maxDepth 
 		].
 		effectiveLevel <= 0 ifTrue: [ effectiveLevel := 1 ].
