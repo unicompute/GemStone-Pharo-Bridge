@@ -1180,7 +1180,7 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	
 	"_trimStackToLevel: already reset the stack, but re-trim to ensure PC is reset"
 	script := '[
-		| obj proc top ctx i quick stackReport fullEntry maxDepth effectiveLevel |
+		| obj proc top ctx i quick stackReport fullEntry maxDepth effectiveLevel didJump |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
@@ -1219,8 +1219,21 @@ GbxDebuggerService >> resetServerPCToStepOne [
 		].
 		quick <= 1 ifTrue: [ ^ ''true'' ].
 
-		"Primary reset path: target the frame context at effectiveLevel."
+		"CRITICAL FIX: When effectiveLevel=1 (executed frame at top), must jump on topContext BEFORE trim."
 		top := [ proc topContext ] on: Error do: [ nil ].
+		(effectiveLevel = 1 and: [ top notNil ]) ifTrue: [
+			"Force jump on topContext first"
+			(top respondsTo: #jumpToStepPoint:) ifTrue: [
+				[ top jumpToStepPoint: 1 ] on: Error do: [ ].
+				didJump := true.
+			].
+			(didJump isNil and: [ top respondsTo: #runToStepPoint: ]) ifTrue: [
+				[ top runToStepPoint: 1 ] on: Error do: [ ].
+				didJump := true.
+			].
+		].
+
+		"Primary reset path: target the frame context at effectiveLevel."
 		ctx := top.
 		i := 1.
 		[ i < effectiveLevel and: [ ctx notNil ] ] whileTrue: [
