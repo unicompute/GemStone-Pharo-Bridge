@@ -1091,9 +1091,7 @@ GbxDebuggerService >> basicReenterServerContext [
 	"Executed in a debugger service process.
 	A server context is selected. Reset to the initial state of that context,
 	as if it had just been entered. Discard any execution since the context
-	was entered.
-	
-	VisualWorks implementation - just cutback and selectTopServerContext."
+	was entered."
 	| theContext |
 	theContext := currentContext.
 	theContext ifNil: [ ^ false ].
@@ -1144,35 +1142,32 @@ GbxDebuggerService >> ensureRestartAtStepOne [
 { #category : 'private' }
 GbxDebuggerService >> resetServerPCToStepOne [
 	"Force the debugged server process to restart at method entry (step=1).
-	This is the deterministic restart anchor used by basicReenterServerContext,
-	especially important for repeated Restart actions.
 	
-	Note: _trimStackToLevel: (called in cutbackGsTo:) already resets the stack
-	to step=1. This method ensures the server PC is also reset by re-trimming
-	at the executed code frame level."
-	| didReset script result level homeLevel beforeDiag afterDiag |
-	
-	"Step reset must target executed frame level, not restart home level."
-	level := self restartLevelFromServerStack.
-	level ifNil: [ level := 1 ].
+	CRITICAL FIX: Use home level (original error level) for reset,
+	not the current executed frame level. This ensures restart works
+	even after stepping has moved the executed frame to level 1."
+	| didReset script result homeLevel beforeDiag afterDiag |
+
+	"Use home level (original error level) for trim"
 	homeLevel := self restartHomeLevelForReset.
-	self logRestartText: 'resetServerPCToStepOne levels stepLevel=', level asString, ' homeLevel=', (homeLevel ifNil: [ 'nil' ] ifNotNil: [ homeLevel asString ]).
-	beforeDiag := self restartStepDiagnosticForLevel: level.
-	self logRestartText: 'resetServerPCToStepOne before ', beforeDiag.
+	homeLevel ifNil: [ homeLevel := 1 ].
 	
+	beforeDiag := self restartStepDiagnosticForLevel: homeLevel.
+	self logRestartText: 'resetServerPCToStepOne homeLevel=', homeLevel asString, ' before ', beforeDiag.
+
 	"Try jumpToStepPoint: first (may work on some GemStone versions)"
 	didReset := self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true.
 	self logRestartText: 'resetServerPCToStepOne jumpToStepPoint:1 -> ', didReset asString.
 	didReset ifTrue: [ ^ true ].
-	
+
 	"Try runToStepPoint: as fallback"
 	didReset := self runDebugProcessCommand: 'runToStepPoint' withInteger: 1 recompute: true.
 	self logRestartText: 'resetServerPCToStepOne runToStepPoint:1 -> ', didReset asString.
 	didReset ifTrue: [ ^ true ].
-	
-	"_trimStackToLevel: already reset the stack, but re-trim to ensure PC is reset"
+
+	"_trimStackToLevel: at home level to reset PC"
 	script := '[
-		| obj proc top ctx i quick stackReport fullEntry maxDepth effectiveLevel didJump |
+		| obj proc quick stackReport fullEntry effectiveLevel |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
@@ -1190,54 +1185,8 @@ GbxDebuggerService >> resetServerPCToStepOne [
 		].
 		(proc respondsTo: #_gsiStackReportFromLevel:toLevel:) ifFalse: [ ^ ''false'' ].
 
-		maxDepth := 0.
-		i := 1.
-		[ i <= 512 ] whileTrue: [
-			stackReport := [ proc _gsiStackReportFromLevel: i toLevel: i ] on: Error do: [ nil ].
-			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
-				ifTrue: [ maxDepth := i. i := i + 1 ]
-				ifFalse: [ i := 513 ]
-		].
-		maxDepth <= 0 ifTrue: [ ^ ''false'' ].
-		effectiveLevel := ', level asString, '.
-		effectiveLevel > maxDepth ifTrue: [ effectiveLevel := maxDepth ].
-		effectiveLevel <= 0 ifTrue: [ effectiveLevel := 1 ].
+		effectiveLevel := ', homeLevel asString, '.
 
-		quick := 0.
-		stackReport := [ proc _gsiStackReportFromLevel: effectiveLevel toLevel: effectiveLevel ] on: Error do: [ nil ].
-		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
-			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
-			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
-		].
-		quick <= 1 ifTrue: [ ^ ''true'' ].
-
-		"CRITICAL FIX: When effectiveLevel=1 (executed frame at top), must jump on topContext BEFORE trim."
-		top := [ proc topContext ] on: Error do: [ nil ].
-		(effectiveLevel = 1 and: [ top notNil ]) ifTrue: [
-			"Force jump on topContext first"
-			(top respondsTo: #jumpToStepPoint:) ifTrue: [
-				[ top jumpToStepPoint: 1 ] on: Error do: [ ].
-				didJump := true.
-			].
-			(didJump isNil and: [ top respondsTo: #runToStepPoint: ]) ifTrue: [
-				[ top runToStepPoint: 1 ] on: Error do: [ ].
-				didJump := true.
-			].
-		].
-
-		"Primary reset path: target the frame context at effectiveLevel."
-		ctx := top.
-		i := 1.
-		[ i < effectiveLevel and: [ ctx notNil ] ] whileTrue: [
-			ctx := [ ctx sender ] on: Error do: [ nil ].
-			i := i + 1
-		].
-		(ctx notNil and: [ ctx respondsTo: #jumpToStepPoint: ]) ifTrue: [
-			[ ctx jumpToStepPoint: 1 ] on: Error do: [ ]
-		].
-		(ctx notNil and: [ ctx respondsTo: #runToStepPoint: ]) ifTrue: [
-			[ ctx runToStepPoint: 1 ] on: Error do: [ ]
-		].
 		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
 			[ proc _trimStackToLevel: effectiveLevel ] on: Error do: [ ]
 		].
@@ -1250,11 +1199,11 @@ GbxDebuggerService >> resetServerPCToStepOne [
 		].
 		(quick <= 1) ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]
 	] value'.
-	
+
 	result := self executeDebugScript: script.
 	didReset := self asBooleanResult: result default: false.
-	self logRestartText: 'resetServerPCToStepOne resetAtLevel:', level asString, ' -> ', didReset asString, ' raw=', result printString.
-	afterDiag := self restartStepDiagnosticForLevel: level.
+	self logRestartText: 'resetServerPCToStepOne resetAtLevel:', homeLevel asString, ' -> ', didReset asString, ' raw=', result printString.
+	afterDiag := self restartStepDiagnosticForLevel: homeLevel.
 	self logRestartText: 'resetServerPCToStepOne after ', afterDiag.
 	^ didReset
 ]
@@ -1410,7 +1359,7 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 		lvl := self restartLevelFromServerStack
 	].
 	((lvl isInteger and: [ lvl > 0 ]) not) ifTrue: [ lvl := 1 ].
-	
+
 	script := '[
 		| obj proc |
 		obj := Object _objectForOop: ', processOop asString, '.
@@ -1428,7 +1377,7 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 			(top notNil and: [ top respondsTo: #process ])
 				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
 		].
-		
+
 		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
 		[ proc _trimStackToLevel: ', lvl asString, ' ] on: Error do: [ ^ ''false'' ].
 		''true''
@@ -1498,62 +1447,7 @@ GbxDebuggerService >> firstServerContextAbove: clientContext [
 
 { #category : 'process control' }
 GbxDebuggerService >> restart [
-	"Restart the current context using the coordinated reenter operation.
-	Fixes bug where second restart does not reset Frame Step to 1."
-	| didRestart target stackSummary |
-	self logRestartState: 'restart/start' context: self currentContext.
-	(restartHomeResetPasses isInteger and: [ restartHomeResetPasses > 0 ]) ifFalse: [
-		| captured |
-		captured := self restartLevelFromServerStack.
-		((captured isInteger and: [ captured > 0 ]) not) ifTrue: [
-			captured := (self currentContext respondsTo: #level)
-				ifTrue: [ [ self currentContext level ] on: Error do: [ nil ] ]
-				ifFalse: [ nil ]
-		].
-		(captured isInteger and: [ captured > 0 ])
-			ifTrue: [ restartHomeResetPasses := captured ].
-	].
-	target := self restartTargetContext.
-	target ifNotNil: [ self selectContext: target ].
-	didRestart := self basicReenterServerContext.
-	didRestart ifTrue: [
-		self selectRestartTargetContext.
-		(self isExecutedCodeAtStepOne) ifFalse: [
-			self logRestartText: 'restart auto-retry: first reenter did not reach step 1'.
-			didRestart := self basicReenterServerContext.
-			didRestart ifTrue: [ self selectRestartTargetContext ].
-		].
-		self ensureRestartAtStepOne.
-		self selectRestartTargetContext.
-		self synchronizeServerProgramCounterAfterRestart.
-		self selectRestartTargetContext.
-		(self isExecutedCodeAtStepOne) ifFalse: [
-			"Final deterministic guard: force server PC and UI context to method start."
-			self resetServerPCToStepOne.
-			self selectTopServerContext.
-			self selectRestartTargetContext
-		]
-	].
-	didRestart ifTrue: [
-		| resolvedLevel current |
-		resolvedLevel := self restartLevelFromServerStack.
-		current := self currentContext.
-		stackSummary := self restartServerStackSummary.
-		self logRestartText: 'restart stack ', stackSummary.
-		(resolvedLevel isNil and: [ self isRestartGlueContext: current ]) ifTrue: [
-			self logRestartText: 'restart validation failed: unresolved server level + glue context'.
-			didRestart := false
-		].
-		((stackSummary isString)
-			and: [ (stackSummary includesSubstring: 'GsNMethod>>_gsReturnToC')
-			and: [ (stackSummary includesSubstring: '2:') not ] ]) ifTrue: [
-			self logRestartText: 'restart validation failed: glue-only server stack'.
-			didRestart := false
-		]
-	].
-	self logRestartText: 'restart/result=', didRestart asString.
-	self logRestartState: 'restart/end' context: self currentContext.
-	^ didRestart
+	^ self basicReenterServerContext
 ]
 
 { #category : 'private' }

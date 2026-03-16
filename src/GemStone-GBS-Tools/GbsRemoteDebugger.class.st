@@ -1665,62 +1665,14 @@ GbsRemoteDebugger >> stackData: anArray [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> stepInto [
-	| didStep serverStep |
-	Transcript
-		show: '[UI stepInto] begin selectedLevel=';
-		show: self currentSelectedFrameLevel asString;
-		show: ' selectedExecuted=';
-		show: self currentSelectedContextIsExecutedCodeFrame asString;
-		show: ' serverStep=';
-		show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
-		cr.
-	(restartFailedState = true) ifTrue: [
-		self fetchStackFrames.
-		self normalizeRestartSelectionAndPosition.
-		serverStep := self serverExecutedFrameStepPoint.
-		((serverStep isNil) or: [ serverStep <= 0 ]) ifTrue: [
-			Transcript show: '[UI stepInto] abort: restart previously failed; server step unresolved'; cr.
-			^ false
-		].
-		restartFailedState := false
-	].
+	| didStep |
 	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
-		serverStep := self serverExecutedFrameStepPoint.
-		((serverStep isNil) or: [ serverStep <= 0 ]) ifTrue: [
-			self fetchStackFrames.
-			self normalizeRestartSelectionAndPosition.
-			serverStep := self serverExecutedFrameStepPoint.
-			((serverStep isNil) or: [ serverStep <= 0 ]) ifTrue: [
-				Transcript show: '[UI stepInto] abort: server step unresolved after failed/partial restart'; cr.
-				^ false
-			]
-		].
-		((restartGuardActive = true) and: [ self restartNeedsServerRewind ]) ifTrue: [
-			Transcript show: '[UI stepInto] blocked: restart rewind pending, forcing rewind'; cr.
-			self safeServiceCall: [
-				(service respondsTo: #resetServerPCToStepOne)
-					ifTrue: [ service resetServerPCToStepOne ]
-			] default: nil.
-			self ensureServerPCToStepOneAfterRestart.
-			self fetchStackFrames.
-			self normalizeRestartSelectionAndPosition.
-			(self restartNeedsServerRewind) ifTrue: [
-				Transcript show: '[UI stepInto] abort: server still not rewound'; cr.
-				^ false
-			]
-		].
 		didStep := self directStepOverExecutedFrame: true.
 		didStep ifTrue: [
 			self fetchStackFrames.
 			restartGuardActive := false.
 			restartPinnedContext := nil
 		].
-		Transcript
-			show: '[UI stepInto] end direct didStep=';
-			show: didStep asString;
-			show: ' serverStep=';
-			show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
-			cr.
 		^ didStep
 	].
 	didStep := self safeServiceCall: [ service stepInto ] default: false.
@@ -1734,12 +1686,6 @@ GbsRemoteDebugger >> stepInto [
 		restartGuardActive := false.
 		restartPinnedContext := nil
 	].
-	Transcript
-		show: '[UI stepInto] end didStep=';
-		show: didStep asString;
-		show: ' serverStep=';
-		show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
-		cr.
 	^ didStep
 ]
 
@@ -1750,62 +1696,14 @@ GbsRemoteDebugger >> step [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> stepOver [
-	| didStep serverStep |
-	Transcript
-		show: '[UI stepOver] begin selectedLevel=';
-		show: self currentSelectedFrameLevel asString;
-		show: ' selectedExecuted=';
-		show: self currentSelectedContextIsExecutedCodeFrame asString;
-		show: ' serverStep=';
-		show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
-		cr.
-	(restartFailedState = true) ifTrue: [
-		self fetchStackFrames.
-		self normalizeRestartSelectionAndPosition.
-		serverStep := self serverExecutedFrameStepPoint.
-		((serverStep isNil) or: [ serverStep <= 0 ]) ifTrue: [
-			Transcript show: '[UI stepOver] abort: restart previously failed; server step unresolved'; cr.
-			^ false
-		].
-		restartFailedState := false
-	].
+	| didStep |
 	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
-		serverStep := self serverExecutedFrameStepPoint.
-		((serverStep isNil) or: [ serverStep <= 0 ]) ifTrue: [
-			self fetchStackFrames.
-			self normalizeRestartSelectionAndPosition.
-			serverStep := self serverExecutedFrameStepPoint.
-			((serverStep isNil) or: [ serverStep <= 0 ]) ifTrue: [
-				Transcript show: '[UI stepOver] abort: server step unresolved after failed/partial restart'; cr.
-				^ false
-			]
-		].
-		((restartGuardActive = true) and: [ self restartNeedsServerRewind ]) ifTrue: [
-			Transcript show: '[UI stepOver] blocked: restart rewind pending, forcing rewind'; cr.
-			self safeServiceCall: [
-				(service respondsTo: #resetServerPCToStepOne)
-					ifTrue: [ service resetServerPCToStepOne ]
-			] default: nil.
-			self ensureServerPCToStepOneAfterRestart.
-			self fetchStackFrames.
-			self normalizeRestartSelectionAndPosition.
-			(self restartNeedsServerRewind) ifTrue: [
-				Transcript show: '[UI stepOver] abort: server still not rewound'; cr.
-				^ false
-			]
-		].
 		didStep := self directStepOverExecutedFrame: false.
 		didStep ifTrue: [
 			self fetchStackFrames.
 			restartGuardActive := false.
 			restartPinnedContext := nil
 		].
-		Transcript
-			show: '[UI stepOver] end direct didStep=';
-			show: didStep asString;
-			show: ' serverStep=';
-			show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
-			cr.
 		^ didStep
 	].
 	didStep := self safeServiceCall: [ service stepOver ] default: false.
@@ -1822,12 +1720,6 @@ GbsRemoteDebugger >> stepOver [
 		restartGuardActive := false.
 		restartPinnedContext := nil
 	].
-	Transcript
-		show: '[UI stepOver] end didStep=';
-		show: didStep asString;
-		show: ' serverStep=';
-		show: ((self serverExecutedFrameStepPoint ifNil: [ 0 ]) asString);
-		cr.
 	^ didStep
 ]
 
@@ -1860,44 +1752,12 @@ GbsRemoteDebugger >> resetServerPCToStepOneIfNeeded [
 
 { #category : 'private' }
 GbsRemoteDebugger >> directStepOverExecutedFrame: stepIntoBoolean [
-	| level effectiveLevel raw value script beforeStep didReset afterReset |
+	| level effectiveLevel raw value script |
 	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
 	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ false ].
 
 	level := self currentSelectedFrameLevel.
 	(level isNumber and: [ level > 0 ]) ifFalse: [ level := 1 ].
-	
-	beforeStep := self serverExecutedFrameStepPoint.
-	didReset := false.
-	afterReset := beforeStep.
-	(restartGuardActive = true) ifTrue: [
-		"Only enforce rewind-to-1 immediately after restart."
-		didReset := self forceServerJumpToStepPoint1.
-		afterReset := self serverExecutedFrameStepPoint.
-		Transcript
-			show: '[UI directStep] preStep=';
-			show: (beforeStep ifNil: [ 'nil' ] ifNotNil: [ beforeStep asString ]);
-			show: ' didReset=';
-			show: didReset asString;
-			show: ' postResetStep=';
-			show: (afterReset ifNil: [ 'nil' ] ifNotNil: [ afterReset asString ]);
-			cr.
-		((afterReset isNumber and: [ afterReset > 1 ]) and: [ service notNil ]) ifTrue: [
-			self safeServiceCall: [
-				(service respondsTo: #resetServerPCToStepOne)
-					ifTrue: [ service resetServerPCToStepOne ]
-			] default: nil.
-			afterReset := self serverExecutedFrameStepPoint.
-			Transcript
-				show: '[UI directStep] postServiceResetStep=';
-				show: (afterReset ifNil: [ 'nil' ] ifNotNil: [ afterReset asString ]);
-				cr.
-		].
-		(afterReset isNumber and: [ afterReset > 1 ]) ifTrue: [
-			Transcript show: '[UI directStep] abort step; server step not rewound'; cr.
-			^ false
-		]
-	].
 	
 	effectiveLevel := self resolveExecutedFrameLevelFromServer.
 	(effectiveLevel isNumber and: [ effectiveLevel > 0 ]) ifTrue: [ level := effectiveLevel ].
@@ -2933,55 +2793,15 @@ GbsRemoteDebugger >> normalizePauseLandingSelection [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restart [
-	| didRestart serverStep stackSummary |
-	Transcript show: '[UI restart] restart begin processOop='; show: processOop asString; cr.
-	self logRestartContextSnapshot: 'before restart'.
+	| didRestart |
 	didRestart := self safeServiceCall: [ service restart ] default: false.
-	didRestart ifFalse: [
-		stackSummary := self safeServiceCall: [
-			(service respondsTo: #restartServerStackSummary)
-				ifTrue: [ service restartServerStackSummary ]
-				ifFalse: [ nil ]
-		] default: nil.
-		((stackSummary isString)
-			and: [ (stackSummary includesSubstring: 'GsNMethod>>_gsReturnToC')
-			and: [ (stackSummary includesSubstring: '2:') not ] ]) ifTrue: [
-			Transcript show: '[UI restart] restart aborted: service reports glue-only stack'; cr.
-			restartGuardActive := false.
-			restartFailedState := true.
-			restartPinnedContext := nil.
-			^ false
-		].
-		Transcript show: '[UI restart] service restart failed; attempting direct trim fallback'; cr.
-		didRestart := self restartUsingDirectTrimFromExecutedFrame.
-		didRestart ifFalse: [
-			Transcript show: '[UI restart] restart aborted: service restart failed'; cr.
-			restartGuardActive := false.
-			restartFailedState := true.
-			restartPinnedContext := nil.
-			^ false
-		].
-		"Fallback succeeded; continue with normal post-restart normalization."
-		Transcript show: '[UI restart] fallback direct trim succeeded'; cr
-	].
-	restartFailedState := false.
 	didRestart ifTrue: [
 		self fetchStackFrames.
-		self logRestartContextSnapshot: 'after fetch'.
 		self normalizeRestartSelectionAndPosition.
-		self logRestartContextSnapshot: 'after normalize'.
-		"Ensure server PC is at step 1 after restart"
-		self ensureServerPCToStepOneAfterRestart.
-		self logRestartContextSnapshot: 'after ensure step1'.
-		serverStep := self serverExecutedFrameStepPoint.
-		(serverStep isNil or: [ serverStep <= 0 ]) ifTrue: [
-			Transcript show: '[UI restart] restart validation failed: unresolved server step'; cr.
-			didRestart := false.
-			restartFailedState := true.
-			restartPinnedContext := nil
-		]
+		restartFailedState := false.
+		restartGuardActive := false.
+		restartPinnedContext := nil
 	].
-	Transcript show: '[UI restart] restart end didRestart='; show: didRestart asString; cr.
 	^ didRestart
 ]
 
@@ -3347,23 +3167,7 @@ GbsRemoteDebugger >> restartThenDoubleReset [
 
 { #category : 'private' }
 GbsRemoteDebugger >> ensureServerPCToStepOneAfterRestart [
-	"After restart, ensure server PC is at step 1.
-	Called before stepping to ensure correct behavior.
-	
-	Note: _trimStackToLevel: already resets to step=1, so this is a verification/backup step."
-	| context |
-	contextList ifNil: [ ^ self ].
-	contextList ifEmpty: [ ^ self ].
-
-	context := contextList
-		detect: [ :ctx | self isExecutedCodeFrame: ctx ]
-		ifNone: [ nil ].
-	context ifNil: [ ^ self ].
-
-	"Force server to jump to step 1 (backup if trim didn't set it)"
-	self forceServerJumpToStepPoint1.
-	self fetchStackFrames.
-	self normalizeRestartSelectionAndPosition
+	^ self
 ]
 
 { #category : 'private' }
