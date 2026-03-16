@@ -2023,6 +2023,11 @@ GbxDebuggerService >> stepInto [
 	before := self currentStepPoint.
 	level := self effectiveServerStepLevel.
 	level ifNil: [ level := 1 ].
+	self
+		logRestartText:
+			'stepInto before=', (before ifNil: [ 'nil' ] ifNotNil: [ before asString ]),
+			' level=', level asString,
+			' currentLevel=', (self currentContextLevel ifNil: [ 'nil' ] ifNotNil: [ :v | v asString ]).
 	(self serverStepOverFrameLevel: (level bitOr: 16r100000000))
 		ifTrue: [ ^ self normalizeExecutedCodeSingleStepFrom: before ].
 	^ false
@@ -2034,6 +2039,11 @@ GbxDebuggerService >> stepOver [
 	before := self currentStepPoint.
 	level := self effectiveServerStepLevel.
 	level ifNil: [ level := 1 ].
+	self
+		logRestartText:
+			'stepOver before=', (before ifNil: [ 'nil' ] ifNotNil: [ before asString ]),
+			' level=', level asString,
+			' currentLevel=', (self currentContextLevel ifNil: [ 'nil' ] ifNotNil: [ :v | v asString ]).
 	(self serverStepOverFrameLevel: level)
 		ifTrue: [ ^ self normalizeExecutedCodeSingleStepFrom: before ].
 	^ false
@@ -2061,11 +2071,24 @@ GbxDebuggerService >> normalizeExecutedCodeSingleStepFrom: previousStepPoint [
 GbxDebuggerService >> effectiveServerStepLevel [
 	| level resolved step |
 	level := self currentContextLevel.
-	(self isCurrentExecutedCodeFrame and: [ (step := self currentStepPoint) = 1 ]) ifTrue: [ ^ 1 ].
-	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
-	(self isCurrentExecutedCodeFrame not) ifTrue: [ ^ level ].
+	(self isCurrentExecutedCodeFrame and: [ (step := self currentStepPoint) = 1 ]) ifTrue: [
+		self logRestartText: 'effectiveServerStepLevel executed step=1 -> 1'.
+		^ 1
+	].
+	(level isNumber and: [ level > 0 ]) ifTrue: [
+		self logRestartText: 'effectiveServerStepLevel using currentLevel=', level asString.
+		^ level
+	].
+	(self isCurrentExecutedCodeFrame not) ifTrue: [
+		self logRestartText: 'effectiveServerStepLevel non-executed currentLevel=', (level ifNil: [ 'nil' ] ifNotNil: [ level asString ]).
+		^ level
+	].
 	resolved := self restartLevelFromServerStack.
-	(resolved isNumber and: [ resolved > 0 ]) ifTrue: [ ^ resolved ].
+	(resolved isNumber and: [ resolved > 0 ]) ifTrue: [
+		self logRestartText: 'effectiveServerStepLevel resolved serverLevel=', resolved asString.
+		^ resolved
+	].
+	self logRestartText: 'effectiveServerStepLevel fallback currentLevel=', (level ifNil: [ 'nil' ] ifNotNil: [ level asString ]).
 	^ level
 ]
 
@@ -2384,6 +2407,7 @@ GbxDebuggerService >> serverStepOverFrameLevel: levelValue [
 	| result script |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
 	levelValue ifNil: [ ^ false ].
+	self logRestartText: 'serverStepOverFrameLevel request=', levelValue asString.
 	script := '[
 		| obj proc stepLevel ok |
 		obj := Object _objectForOop: ', processOop asString, '.
@@ -2410,6 +2434,12 @@ GbxDebuggerService >> serverStepOverFrameLevel: levelValue [
 	result := self executeDebugScript: script.
 	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
 	self selectTopServerContext.
+	self
+		logRestartText:
+			'serverStepOverFrameLevel selectedLevel=',
+			(self currentContextLevel ifNil: [ 'nil' ] ifNotNil: [ :v | v asString ]),
+			' serverLevel=',
+			(self restartLevelFromServerStack ifNil: [ 'nil' ] ifNotNil: [ :v | v asString ]).
 	^ true
 ]
 
