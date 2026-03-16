@@ -3032,6 +3032,7 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 
 	self fetchStackFrames.
 	self normalizeRestartSelectionAndPosition.
+	self enforceServerStepPointOneAfterRestart.
 
 	stabilized := self isExecutedCodeSelectionConfirmed
 		and: [ self restartNeedsServerRewind not ].
@@ -3068,6 +3069,7 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 	].
 	self fetchStackFrames.
 	self normalizeRestartSelectionAndPosition.
+	self enforceServerStepPointOneAfterRestart.
 	stabilized := self isExecutedCodeSelectionConfirmed
 		and: [ self restartNeedsServerRewind not ].
 	Transcript
@@ -3084,6 +3086,7 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 	self ensureServerPCToStepOneAfterRestart.
 	self fetchStackFrames.
 	self normalizeRestartSelectionAndPosition.
+	self enforceServerStepPointOneAfterRestart.
 	Transcript
 		show: '[UI restart] after local correction needsRewind=';
 		show: self restartNeedsServerRewind asString;
@@ -3092,6 +3095,46 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 		and: [ self restartNeedsServerRewind not ].
 	stabilized ifTrue: [ restartPinnedContext := nil ].
 	^ stabilized
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> enforceServerStepPointOneAfterRestart [
+	| attempts step |
+	attempts := 0.
+	[
+		attempts < 4
+	] whileTrue: [
+		step := self serverExecutedFrameStepPoint.
+		(step isNumber and: [ step > 0 and: [ step <= 1 ] ]) ifTrue: [
+			Transcript
+				show: '[UI restart] enforce step one attempts=';
+				show: attempts asString;
+				show: ' step=';
+				show: step asString;
+				cr.
+			^ true
+		].
+
+		self safeServiceCall: [
+			(service respondsTo: #selectRestartTargetContext)
+				ifTrue: [ service selectRestartTargetContext ].
+			(service respondsTo: #resetServerPCToStepOne)
+				ifTrue: [ service resetServerPCToStepOne ]
+		] default: nil.
+		self forceServerJumpToStepPoint1.
+		self fetchStackFrames.
+		self normalizeRestartSelectionAndPosition.
+		(Delay forMilliseconds: 70) wait.
+		attempts := attempts + 1
+	].
+	step := self serverExecutedFrameStepPoint.
+	Transcript
+		show: '[UI restart] enforce step one exhausted attempts=';
+		show: attempts asString;
+		show: ' step=';
+		show: (step ifNil: [ 'nil' ] ifNotNil: [ step asString ]);
+		cr.
+	^ false
 ]
 
 { #category : 'private' }
