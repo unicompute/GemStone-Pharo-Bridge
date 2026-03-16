@@ -3539,13 +3539,15 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 		show: (serverLevel ifNil: [ 'nil' ] ifNotNil: [ serverLevel asString ]);
 		cr.
 
-	"Do not force local quickStepPoint to 1; mirror server step when available."
+	"Mirror server step when available; otherwise fall back to restart step 1
+	so the client model does not keep showing a stale pre-restart step."
 	serverStep := self serverExecutedFrameStepPoint.
 	(self isExecutedCodeFrame: context) ifTrue: [
 		(context respondsTo: #quickStepPoint:)
 			ifTrue: [
 				(serverStep isNumber and: [ serverStep > 0 ])
 					ifTrue: [ context quickStepPoint: serverStep ]
+					ifFalse: [ context quickStepPoint: 1 ]
 			]
 	].
 

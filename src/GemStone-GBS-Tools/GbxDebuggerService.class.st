@@ -1447,10 +1447,12 @@ GbxDebuggerService >> firstServerContextAbove: clientContext [
 
 { #category : 'process control' }
 GbxDebuggerService >> restart [
-	| target |
+	| target didRestart |
 	target := self restartTargetContext.
 	target ifNotNil: [ self selectContext: target ].
-	^ self basicReenterServerContext
+	didRestart := self basicReenterServerContext.
+	didRestart ifTrue: [ self markCurrentContextAsRestarted ].
+	^ didRestart
 ]
 
 { #category : 'private' }
