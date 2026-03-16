@@ -2935,6 +2935,7 @@ GbsRemoteDebugger >> normalizePauseLandingSelection [
 GbsRemoteDebugger >> restart [
 	| didRestart |
 	Transcript show: '[UI restart] restart begin processOop='; show: processOop asString; cr.
+	self logRestartContextSnapshot: 'before restart'.
 	didRestart := self safeServiceCall: [ service restart ] default: false.
 	didRestart ifFalse: [
 		Transcript show: '[UI restart] service restart failed; attempting direct trim fallback'; cr.
@@ -2952,12 +2953,47 @@ GbsRemoteDebugger >> restart [
 	restartFailedState := false.
 	didRestart ifTrue: [
 		self fetchStackFrames.
+		self logRestartContextSnapshot: 'after fetch'.
 		self normalizeRestartSelectionAndPosition.
+		self logRestartContextSnapshot: 'after normalize'.
 		"Ensure server PC is at step 1 after restart"
 		self ensureServerPCToStepOneAfterRestart.
+		self logRestartContextSnapshot: 'after ensure step1'.
 	].
 	Transcript show: '[UI restart] restart end didRestart='; show: didRestart asString; cr.
 	^ didRestart
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> logRestartContextSnapshot: labelString [
+	| rows serverStep |
+	rows := OrderedCollection new.
+	(contextList isCollection and: [ contextList isEmpty not ]) ifTrue: [
+		1 to: (contextList size min: 6) do: [ :i |
+			| ctx lvl cls sel qstep glue exec |
+			ctx := contextList at: i.
+			lvl := [ ctx level ] on: Error do: [ nil ].
+			cls := [ ctx methodClassOrUnknown asString ] on: Error do: [ '<err>' ].
+			sel := [ ctx selectorOrUnknown asString ] on: Error do: [ '<err>' ].
+			qstep := [ ctx quickStepPoint ] on: Error do: [ nil ].
+			glue := self isRestartGlueFrame: ctx.
+			exec := self isExecutedCodeFrame: ctx.
+			rows add:
+				(i asString, ':L', (lvl ifNil: [ 'nil' ] ifNotNil: [ lvl asString ]),
+					' C=', cls, ' S=', sel,
+					' Q=', (qstep ifNil: [ 'nil' ] ifNotNil: [ qstep asString ]),
+					' glue=', glue asString,
+					' exec=', exec asString)
+		]
+	].
+	serverStep := self serverExecutedFrameStepPoint.
+	Transcript
+		show: '[UI restart] snapshot '; show: labelString asString;
+		show: ' selectedLevel='; show: self currentSelectedFrameLevel asString;
+		show: ' selectedExecuted='; show: self currentSelectedContextIsExecutedCodeFrame asString;
+		show: ' serverStep='; show: (serverStep ifNil: [ 'nil' ] ifNotNil: [ serverStep asString ]);
+		show: ' rows='; show: (rows isEmpty ifTrue: [ '<none>' ] ifFalse: [ String crlf join: rows ]);
+		cr.
 ]
 
 { #category : 'private' }
