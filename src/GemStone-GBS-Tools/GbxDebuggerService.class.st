@@ -1383,8 +1383,13 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	gsContext on the stack of its GSProcess. Also discards 
 	any partial execution in gsContext, resetting it to the 
 	beginning."
-	| lvl script result |
+	| lvl homeLevel script result |
 	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ nil ].
+	homeLevel := self restartHomeLevelForReset.
+	((homeLevel isInteger and: [ homeLevel > 1 ])
+		and: [ (lvl isInteger and: [ homeLevel > lvl ]) or: [ lvl isNil ] ]) ifTrue: [
+		lvl := homeLevel
+	].
 	((lvl isInteger and: [ lvl > 0 ]) not) ifTrue: [
 		lvl := self restartLevelFromServerStack
 	].
@@ -1477,7 +1482,16 @@ GbxDebuggerService >> firstServerContextAbove: clientContext [
 
 { #category : 'process control' }
 GbxDebuggerService >> restart [
-	| target didRestart |
+	| target didRestart captured |
+	(restartHomeResetPasses isInteger and: [ restartHomeResetPasses > 1 ]) ifFalse: [
+		captured := self restartLevelFromServerStack.
+		((captured isInteger and: [ captured > 1 ]) not) ifTrue: [
+			captured := self currentContextLevel
+		].
+		(captured isInteger and: [ captured > 1 ]) ifTrue: [
+			restartHomeResetPasses := captured
+		]
+	].
 	target := self restartTargetContext.
 	target ifNotNil: [ self selectContext: target ].
 	didRestart := self basicReenterServerContext.
