@@ -90,32 +90,38 @@ GbxContextListPolicy >> computeContextList [
 	"Compute the logical context list from GemStone plus any client contexts
 	above the top server context (VW mixed-stack parity)."
 	| allContexts serverContexts topServerContext firstClientContext marker |
-
+	debugger logRestartText: 'computeContextList START'.
 	serverContexts := self fetchServerContexts.
+	debugger logRestartText: 'computeContextList fetchServerContexts returned ' , serverContexts size asString.
 	allContexts := OrderedCollection new.
 	allContexts addAll: serverContexts.
 
 	topServerContext := serverContexts ifEmpty: [ nil ] ifNotEmpty: [ serverContexts first ].
+	debugger logRestartText: 'computeContextList topServerContext=' , (topServerContext ifNil: [ 'nil' ] ifNotNil: [ topServerContext class name ]).
 	topServerContext ifNotNil: [
 		firstClientContext := self firstClientContextAbove: topServerContext.
+		debugger logRestartText: 'computeContextList firstClientContext=' , (firstClientContext ifNil: [ 'nil' ] ifNotNil: [ firstClientContext class name ]).
 		firstClientContext ifNotNil: [
 			marker := self matchingServerCallMarkerForServerContext: topServerContext.
+			debugger logRestartText: 'computeContextList marker=' , (marker ifNil: [ 'nil' ] ifNotNil: [ marker class name ]).
 			allContexts addAll: (self
 				clientContextsStartingAt: firstClientContext
 				upToContextExclusive: marker)
 		]
 	].
-	
-	glueIsHidden 
+
+	glueIsHidden
 		ifTrue: [
 			| filtered |
 			filtered := self filterOutGlue: allContexts.
+			debugger logRestartText: 'computeContextList filtered count=' , filtered size asString.
 			contextList := filtered isEmpty
 				ifTrue: [ allContexts asArray ]
 				ifFalse: [ filtered ]
 		]
 		ifFalse: [ contextList := allContexts ].
-	
+
+	debugger logRestartText: 'computeContextList END contextList size=' , contextList size asString.
 	^ contextList
 ]
 
@@ -135,9 +141,14 @@ GbxContextListPolicy >> fetchServerContexts [
 	"Fetch server activations using the VW flow:
 	serverCall/error oop -> gbsError -> serverProcess -> stack report."
 	| processOop script rawData contexts |
-	
+	debugger logRestartText: 'fetchServerContexts START'.
+
 	processOop := debugger processOop.
-	(processOop isNil or: [ processOop = 20 ]) ifTrue: [ ^ #( ) ].
+	debugger logRestartText: 'fetchServerContexts processOop=' , (processOop ifNil: [ 'nil' ] ifNotNil: [ processOop asString ]).
+	(processOop isNil or: [ processOop = 20 ]) ifTrue: [ 
+		debugger logRestartText: 'fetchServerContexts processOop is nil or 20, returning empty'.
+		^ #( ) 
+	].
 	
 	script := '[
 		| obj gbsError gsProcess ctx stream maxDepth level frame stackReport fullEntry methodOrNil className selectorName source ctxOop quickStep offsets offsetsText lineNumber offset |
@@ -398,7 +409,8 @@ GbxContextListPolicy >> fetchServerContexts [
 				activation
 			]
 		] thenSelect: #isNotNil.
-	
+
+	debugger logRestartText: 'fetchServerContexts END contexts count=' , contexts size asString.
 	^ contexts
 ]
 

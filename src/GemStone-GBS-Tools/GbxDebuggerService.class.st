@@ -1020,26 +1020,45 @@ GbxDebuggerService >> recomputeContextList [
 	Always rebind currentContext to the freshly-computed list entry, even when
 	an equal/stale context object is still considered present."
 	| contexts refreshed |
+	self logRestartText: 'recomputeContextList START policy=' , (contextStackPolicy ifNil: [ 'nil' ] ifNotNil: [ contextStackPolicy class name ]).
 	contextStackPolicy ifNil: [
+		self logRestartText: 'recomputeContextList policy is nil'.
 		self updateSourceMapFromCurrentContext.
 		self notifyContextChanged.
 		^ self
 	].
 	contextStackPolicy computeContextList.
 	contexts := contextStackPolicy contextList.
-	
+	self logRestartText: 'recomputeContextList computed contexts count=' , contexts size asString.
+
 	currentContext isNil
 		ifTrue: [
-			contexts ifNotEmpty: [ :list | currentContext := list first ]
+			contexts ifNotEmpty: [ :list | 
+				self logRestartText: 'recomputeContextList setting currentContext to first of ' , list size asString.
+				currentContext := list first 
+			] ifEmpty: [
+				self logRestartText: 'recomputeContextList contexts empty, currentContext remains nil'
+			]
 		]
 		ifFalse: [
 			refreshed := contexts
 				detect: [ :each | (each == currentContext) or: [ each = currentContext ] ]
 				ifNone: [ nil ].
 			refreshed
-				ifNil: [ contexts ifNotEmpty: [ :list | currentContext := list first ] ]
-				ifNotNil: [ currentContext := refreshed ]
+				ifNil: [ 
+					contexts ifNotEmpty: [ :list | 
+						self logRestartText: 'recomputeContextList currentContext not found, using first of ' , list size asString.
+						currentContext := list first 
+					] ifEmpty: [
+						self logRestartText: 'recomputeContextList currentContext not found and contexts empty'
+					]
+				]
+				ifNotNil: [ 
+					self logRestartText: 'recomputeContextList currentContext refreshed'.
+					currentContext := refreshed 
+				]
 		].
+	self logRestartText: 'recomputeContextList END currentContext=' , (currentContext ifNil: [ 'nil' ] ifNotNil: [ currentContext class name ]).
 	self updateSourceMapFromCurrentContext.
 	self notifyContextChanged.
 ]
