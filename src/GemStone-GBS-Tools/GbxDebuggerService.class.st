@@ -1091,31 +1091,23 @@ GbxDebuggerService >> basicReenterServerContext [
 	"Executed in a debugger service process.
 	A server context is selected. Reset to the initial state of that context,
 	as if it had just been entered. Discard any execution since the context
-	was entered."
+	was entered.
+	
+	VisualWorks implementation - just cutback and selectTopServerContext."
 	| theContext |
-	"Always prefer the executed-code restart target over the currently selected
-	frame so a single Restart click is deterministic."
-	theContext := self restartTargetContext.
-	theContext ifNil: [ theContext := currentContext ].
+	theContext := currentContext.
 	theContext ifNil: [ ^ false ].
-	self selectContext: theContext.
-	self logRestartState: 'basicReenter/start' context: theContext.
-
+	
 	(self cutbackTo: theContext
 		finishWith: [
-			"First, reset the server-side PC to step 1 BEFORE fetching the context list.
-			This ensures the server reports the correct step point."
-			self resetServerPCToStepOne.
-
-			"Level numbers may have changed; recompute and select server-truth context."
-			self selectTopServerContext.
-			self selectRestartTargetContext.
-
-			"Force another refresh to ensure the display shows step=1"
-			self notifyContextChanged
+			"Level numbers may have changed, and client contexts 
+			above me may have been removed. In either case, must 
+			recompute context, and if level numbers have changed 
+			the GbxActivation will be a new instance, so I must 
+			immediately compute new stack and reset the selection."
+			self selectTopServerContext
 		]) ifFalse: [ ^ false ].
-	self logRestartState: 'basicReenter/done' context: self currentContext.
-
+	
 	^ true
 ]
 
