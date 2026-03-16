@@ -3046,6 +3046,20 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 		^ true
 	].
 
+	self waitForRestartStackCompositionBeforeSecondPass.
+	stabilized := self isExecutedCodeSelectionConfirmed
+		and: [ self restartNeedsServerRewind not ].
+	Transcript
+		show: '[UI restart] pre-second-pass stabilized=';
+		show: stabilized asString;
+		show: ' needsRewind=';
+		show: self restartNeedsServerRewind asString;
+		cr.
+	stabilized ifTrue: [
+		restartPinnedContext := nil.
+		^ true
+	].
+
 	Transcript show: '[UI restart] internal second restart pass'; cr.
 	didRestart := self restart.
 	didRestart ifFalse: [
@@ -3078,6 +3092,40 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 		and: [ self restartNeedsServerRewind not ].
 	stabilized ifTrue: [ restartPinnedContext := nil ].
 	^ stabilized
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> waitForRestartStackCompositionBeforeSecondPass [
+	| attempts composed |
+	attempts := 0.
+	composed := false.
+	[
+		(attempts < 10) and: [ composed not ]
+	] whileTrue: [
+		self fetchStackFrames.
+		self normalizeRestartSelectionAndPosition.
+		composed := self isRestartStackComposedForSecondPass.
+		composed ifFalse: [ (Delay forMilliseconds: 80) wait ].
+		attempts := attempts + 1
+	].
+	Transcript
+		show: '[UI restart] stack compose wait attempts=';
+		show: attempts asString;
+		show: ' composed=';
+		show: composed asString;
+		cr.
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> isRestartStackComposedForSecondPass [
+	| hasExecuted hasUser serverLevel |
+	(contextList isCollection and: [ contextList isEmpty not ]) ifFalse: [ ^ false ].
+	hasExecuted := contextList anySatisfy: [ :ctx | self isExecutedCodeFrame: ctx ].
+	hasUser := contextList anySatisfy: [ :ctx | self isLikelyUserFrame: ctx ].
+	serverLevel := self resolveExecutedFrameLevelFromServer.
+	^ hasExecuted
+		and: [ hasUser
+		and: [ serverLevel isNumber and: [ serverLevel > 0 ] ] ]
 ]
 
 { #category : 'private' }
