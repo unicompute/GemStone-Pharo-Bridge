@@ -1512,7 +1512,6 @@ GbxDebuggerService >> restart [
 		(self currentContextLevel = 1) ifTrue: [
 			self resetServerPCToStepOne
 		].
-		self forceRestartPositionToMethodStart.
 		self markCurrentContextAsRestarted
 	].
 	^ didRestart
