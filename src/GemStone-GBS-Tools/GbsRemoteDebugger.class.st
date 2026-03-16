@@ -1960,8 +1960,8 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 	].
 	((level isNumber and: [ level > 0 ]) not) ifTrue: [ level := 1 ].
 
-		script := '[
-			| obj proc procOop restartLevel stackReport fullEntry quick |
+	script := '[
+			| obj proc procOop restartLevel stackReport fullEntry quick top ctx i |
 			obj := Object _objectForOop: ', processOop asString, '.
 			obj isNil ifTrue: [ ^ false ].
 			proc := obj.
@@ -2000,11 +2000,25 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 			"If already at step 1, nothing to do"
 			quick <= 1 ifTrue: [ ^ true ].
 			
-			"Try jumpToStepPoint: if available (may not exist on all GemStone versions)"
+			"Primary: reset the actual frame context at restartLevel."
+			top := [ proc topContext ] on: Error do: [ nil ].
+			ctx := top.
+			i := 1.
+			[ i < restartLevel and: [ ctx notNil ] ] whileTrue: [
+				ctx := [ ctx sender ] on: Error do: [ nil ].
+				i := i + 1
+			].
+			(ctx notNil and: [ ctx respondsTo: #jumpToStepPoint: ]) ifTrue: [
+				[ ctx jumpToStepPoint: 1 ] on: Error do: [ ]
+			].
+			(ctx notNil and: [ ctx respondsTo: #runToStepPoint: ]) ifTrue: [
+				[ ctx runToStepPoint: 1 ] on: Error do: [ ]
+			].
+			"Fallback: process-level jump/trim."
 			(proc respondsTo: #jumpToStepPoint:) ifTrue: [
 				[ proc jumpToStepPoint: 1 ] on: Error do: [ ]
-			] ifFalse: [
-				"jumpToStepPoint: not available. Re-trim to force PC reset."
+			].
+			(proc respondsTo: #_trimStackToLevel:) ifTrue: [
 				[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ]
 			].
 
