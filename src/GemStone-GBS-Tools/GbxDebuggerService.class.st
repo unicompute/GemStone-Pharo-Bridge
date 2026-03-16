@@ -1343,7 +1343,10 @@ GbxDebuggerService >> restart [
 	self logRestartState: 'restart/start' context: self currentContext.
 	(restartHomeResetPasses isInteger and: [ restartHomeResetPasses > 0 ]) ifFalse: [
 		| captured |
-		captured := self restartLevelFromServerStack.
+		captured := self restartHomeLevelFromServerStack.
+		((captured isInteger and: [ captured > 0 ]) not) ifTrue: [
+			captured := self restartLevelFromServerStack.
+		].
 		((captured isInteger and: [ captured > 0 ]) not) ifTrue: [
 			captured := (self currentContext respondsTo: #level)
 				ifTrue: [ [ self currentContext level ] on: Error do: [ nil ] ]
@@ -1383,6 +1386,8 @@ GbxDebuggerService >> restartHomeLevelForReset [
 	| level |
 	level := restartHomeResetPasses.
 	(level isInteger and: [ level > 0 ]) ifTrue: [ ^ level ].
+	level := self restartHomeLevelFromServerStack.
+	(level isInteger and: [ level > 0 ]) ifTrue: [ ^ level ].
 	level := self restartLevelFromServerStack.
 	(level isInteger and: [ level > 0 ]) ifTrue: [ ^ level ].
 	level := (self currentContext respondsTo: #level)
@@ -1390,6 +1395,51 @@ GbxDebuggerService >> restartHomeLevelForReset [
 		ifFalse: [ nil ].
 	(level isInteger and: [ level > 0 ]) ifTrue: [ ^ level ].
 	^ 1
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> restartHomeLevelFromServerStack [
+	| raw parsed |
+	(self canExecuteOnDebugProcess) ifFalse: [ ^ nil ].
+	raw := self executeDebugScript: '[
+		| obj proc procOop level maxDepth stackReport |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''0'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #serverProcessOop ]) ifTrue: [
+			procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
+			(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
+				proc := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
+			]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ ^ ''0'' ].
+		maxDepth := 0.
+		level := 1.
+		[ level <= 512 ] whileTrue: [
+			stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
+			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
+				ifTrue: [ maxDepth := level. level := level + 1 ]
+				ifFalse: [ level := 513 ]
+		].
+		maxDepth asString
+	] value'.
+	raw ifNil: [ ^ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	parsed := [ raw asString asInteger ] on: Error do: [ nil ].
+	(parsed isInteger and: [ parsed > 0 ]) ifTrue: [ ^ parsed ].
+	^ nil
 ]
 
 { #category : 'private' }
