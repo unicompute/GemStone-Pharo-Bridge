@@ -1165,9 +1165,9 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	self logRestartText: 'resetServerPCToStepOne runToStepPoint:1 -> ', didReset asString.
 	didReset ifTrue: [ ^ true ].
 
-	"_trimStackToLevel: at home level to reset PC"
+	"Top-frame restart needs an explicit PC jump before trim; plain trim is not enough."
 	script := '[
-		| obj proc quick stackReport fullEntry effectiveLevel |
+		| obj proc quick stackReport fullEntry effectiveLevel top ctx i |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
@@ -1187,11 +1187,41 @@ GbxDebuggerService >> resetServerPCToStepOne [
 
 		effectiveLevel := ', homeLevel asString, '.
 
+		quick := 0.
+		stackReport := [ proc _gsiStackReportFromLevel: effectiveLevel toLevel: effectiveLevel ] on: Error do: [ nil ].
+		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
+			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
+		].
+		quick <= 1 ifTrue: [ ^ ''true'' ].
+
+		top := [ proc topContext ] on: Error do: [ nil ].
+		(effectiveLevel = 1 and: [ top notNil ]) ifTrue: [
+			(top respondsTo: #jumpToStepPoint:) ifTrue: [
+				[ top jumpToStepPoint: 1 ] on: Error do: [ ]
+			].
+			(top respondsTo: #runToStepPoint:) ifTrue: [
+				[ top runToStepPoint: 1 ] on: Error do: [ ]
+			]
+		].
+
+		ctx := top.
+		i := 1.
+		[ i < effectiveLevel and: [ ctx notNil ] ] whileTrue: [
+			ctx := [ ctx sender ] on: Error do: [ nil ].
+			i := i + 1
+		].
+		(ctx notNil and: [ ctx respondsTo: #jumpToStepPoint: ]) ifTrue: [
+			[ ctx jumpToStepPoint: 1 ] on: Error do: [ ]
+		].
+		(ctx notNil and: [ ctx respondsTo: #runToStepPoint: ]) ifTrue: [
+			[ ctx runToStepPoint: 1 ] on: Error do: [ ]
+		].
+
 		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
 			[ proc _trimStackToLevel: effectiveLevel ] on: Error do: [ ]
 		].
 
-		quick := 0.
 		stackReport := [ proc _gsiStackReportFromLevel: effectiveLevel toLevel: effectiveLevel ] on: Error do: [ nil ].
 		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
 			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
@@ -1453,8 +1483,7 @@ GbxDebuggerService >> restart [
 	didRestart := self basicReenterServerContext.
 	didRestart ifTrue: [
 		self markCurrentContextAsRestarted.
-		((self currentContextLevel = 1)
-			and: [ (self currentStepPoint ifNil: [ 1 ]) > 1 ]) ifTrue: [
+		(self currentContextLevel = 1) ifTrue: [
 			self resetServerPCToStepOne.
 			self selectTopServerContext.
 			self markCurrentContextAsRestarted
