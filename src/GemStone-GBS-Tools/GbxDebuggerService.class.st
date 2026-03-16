@@ -858,7 +858,8 @@ GbxDebuggerService >> processOop [
 
 { #category : 'accessing' }
 GbxDebuggerService >> processOop: anOop [
-	processOop := anOop
+	processOop := anOop.
+	restartHomeResetPasses := 0
 ]
 
 { #category : 'variables' }
@@ -1160,7 +1161,7 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	| didReset script result level |
 	
 	"Get the executed code frame level"
-	level := self restartLevelFromServerStack.
+	level := self restartHomeLevelForReset.
 	level ifNil: [ level := 1 ].
 	
 	"Try jumpToStepPoint: first (may work on some GemStone versions)"
@@ -1245,7 +1246,7 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	beginning."
 	| lvl resolvedHomeLevel script result |
 	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ 1 ].
-	resolvedHomeLevel := self restartLevelFromServerStack.
+	resolvedHomeLevel := self restartHomeLevelForReset.
 	(resolvedHomeLevel isNumber and: [ resolvedHomeLevel > 0 ])
 		ifTrue: [ lvl := resolvedHomeLevel ].
 	
@@ -1340,6 +1341,17 @@ GbxDebuggerService >> restart [
 	Fixes bug where second restart does not reset Frame Step to 1."
 	| didRestart target |
 	self logRestartState: 'restart/start' context: self currentContext.
+	(restartHomeResetPasses isInteger and: [ restartHomeResetPasses > 0 ]) ifFalse: [
+		| captured |
+		captured := self restartLevelFromServerStack.
+		((captured isInteger and: [ captured > 0 ]) not) ifTrue: [
+			captured := (self currentContext respondsTo: #level)
+				ifTrue: [ [ self currentContext level ] on: Error do: [ nil ] ]
+				ifFalse: [ nil ]
+		].
+		(captured isInteger and: [ captured > 0 ])
+			ifTrue: [ restartHomeResetPasses := captured ].
+	].
 	target := self restartTargetContext.
 	target ifNotNil: [ self selectContext: target ].
 	didRestart := self basicReenterServerContext.
@@ -1364,6 +1376,20 @@ GbxDebuggerService >> restart [
 	self logRestartText: 'restart/result=', didRestart asString.
 	self logRestartState: 'restart/end' context: self currentContext.
 	^ didRestart
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> restartHomeLevelForReset [
+	| level |
+	level := restartHomeResetPasses.
+	(level isInteger and: [ level > 0 ]) ifTrue: [ ^ level ].
+	level := self restartLevelFromServerStack.
+	(level isInteger and: [ level > 0 ]) ifTrue: [ ^ level ].
+	level := (self currentContext respondsTo: #level)
+		ifTrue: [ [ self currentContext level ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	(level isInteger and: [ level > 0 ]) ifTrue: [ ^ level ].
+	^ 1
 ]
 
 { #category : 'private' }
