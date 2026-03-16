@@ -1150,11 +1150,14 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	"Find the executed code frame level (the 'nil nil' frame in stack report).
 	This is the level where _trimStackToLevel: resets PC to step=1."
 	executedFrameLevel := self findExecutedCodeFrameLevelInline.
-	executedFrameLevel ifNil: [ executedFrameLevel := 1 ].
+	executedFrameLevel ifNil: [ 
+		self logRestartText: 'resetServerPCToStepOne: findExecutedCodeFrameLevelInline returned nil, using level 1'.
+		executedFrameLevel := 1 
+	].
 
 	beforeDiag := self restartStepDiagnosticForLevel: executedFrameLevel.
 	maxDepthDiag := self restartStepDiagnosticForLevel: 1.
-	self logRestartText: 'resetServerPCToStepOne executedFrameLevel=', executedFrameLevel asString, ' before ', beforeDiag, ' maxDepth ', maxDepthDiag.
+	self logRestartText: 'resetServerPCToStepOne executedFrameLevel=' , executedFrameLevel asString , ' before ' , beforeDiag , ' maxDepth ' , maxDepthDiag.
 
 	"Try jumpToStepPoint: first (may work on some GemStone versions)"
 	didReset := self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true.
@@ -1197,7 +1200,10 @@ GbxDebuggerService >> resetServerPCToStepOne [
 				ifFalse: [ i := 513 ]
 		].
 		maxDepth <= 0 ifTrue: [ ^ ''false'' ].
-		effectiveLevel > maxDepth ifTrue: [ effectiveLevel := maxDepth ].
+		effectiveLevel > maxDepth ifTrue: [ 
+			self logRestartText: 'resetServerPCToStepOne: clamping level from ', effectiveLevel asString, ' to maxDepth ', maxDepth asString.
+			effectiveLevel := maxDepth 
+		].
 		effectiveLevel <= 0 ifTrue: [ effectiveLevel := 1 ].
 
 		quick := 0.
@@ -1399,16 +1405,25 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	
 	FIX: Use the executed code frame level (like test_restart_pharo_style.cpp).
 	This finds the 'nil nil' frame where _trimStackToLevel: resets PC to step 1."
-	| lvl script result |
+	| lvl script result gsContextLevel foundLevel |
 	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ nil ].
+	gsContextLevel := lvl.
+	self logRestartText: 'cutbackGsTo: gsContext level=', (gsContextLevel ifNil: [ 'nil' ] ifNotNil: [ gsContextLevel asString ]).
 	((lvl isInteger and: [ lvl > 0 ]) not) ifTrue: [
 		"Fall back to finding executed code frame level from server stack"
-		lvl := self executedCodeFrameLevelFromServerStack.
+		foundLevel := self executedCodeFrameLevelFromServerStack.
+		self logRestartText: 'cutbackGsTo: executedCodeFrameLevelFromServerStack=', (foundLevel ifNil: [ 'nil' ] ifNotNil: [ foundLevel asString ]).
+		lvl := foundLevel.
 	].
 	((lvl isInteger and: [ lvl > 0 ]) not) ifTrue: [
-		lvl := self restartLevelFromServerStack
+		lvl := self restartLevelFromServerStack.
+		self logRestartText: 'cutbackGsTo: restartLevelFromServerStack=', (lvl ifNil: [ 'nil' ] ifNotNil: [ lvl asString ]).
 	].
-	((lvl isInteger and: [ lvl > 0 ]) not) ifTrue: [ lvl := 1 ].
+	((lvl isInteger and: [ lvl > 0 ]) not) ifTrue: [ 
+		self logRestartText: 'cutbackGsTo: falling back to level 1'.
+		lvl := 1 
+	].
+	self logRestartText: 'cutbackGsTo: final trim level=', lvl asString.
 
 	script := '[
 		| obj proc |
@@ -1487,8 +1502,11 @@ GbxDebuggerService >> findExecutedCodeFrameLevelInline [
 	"Find the level of the executed code frame (nil class/unboundMethod).
 	This is the level where _trimStackToLevel: will reset PC to step 1.
 	Follows the approach in test_restart_pharo_style.cpp."
-	| script lines |
-	(self canExecuteOnDebugProcess) ifFalse: [ ^ nil ].
+	| script lines foundLevel |
+	(self canExecuteOnDebugProcess) ifFalse: [ 
+		self logRestartText: 'findExecutedCodeFrameLevelInline: no debug process'.
+		^ nil 
+	].
 	script := '[
 		| obj proc level stackReport fullEntry methodOrNil className selectorName stream |
 		obj := Object _objectForOop: ', processOop asString, '.
@@ -1517,13 +1535,21 @@ GbxDebuggerService >> findExecutedCodeFrameLevelInline [
 				level := level + 1 ] ].
 		stream contents ] value'.
 	lines := (self executeDebugScript: script) lines.
+	foundLevel := nil.
 	lines do: [ :line | | parts |
 		parts := line substrings: Character tab.
 		(parts size >= 3 and: [ 
 			((parts at: 2) = 'nil' or: [ (parts at: 2) = '<unknown>' ]) and:
 			((parts at: 3) = 'nil' or: [ (parts at: 3) = 'unboundMethod' ]) ]) ifTrue: [
-			^ (parts at: 1) asInteger ] ].
-	^ nil
+			foundLevel := (parts at: 1) asInteger
+		]
+	].
+	foundLevel ifNil: [
+		self logRestartText: 'findExecutedCodeFrameLevelInline: NOT FOUND (stack: ', (lines first: (lines size min: 5)) printString, '...)'
+	] ifNotNil: [
+		self logRestartText: 'findExecutedCodeFrameLevelInline: FOUND level=', foundLevel asString
+	].
+	^ foundLevel
 ]
 
 { #category : 'actions' }

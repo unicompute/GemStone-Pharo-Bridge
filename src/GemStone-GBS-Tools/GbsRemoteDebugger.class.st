@@ -839,10 +839,20 @@ GbsRemoteDebugger >> fetchFullSourceFor: aContext [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> fetchStackFrames [
-	| contexts serviceCurrent serviceCurrentBeforeRecompute hasNonGlue skipServiceRecompute previousContextList |
+	| contexts serviceCurrent serviceCurrentBeforeRecompute hasNonGlue skipServiceRecompute previousContextList serverStep |
+
+	"Log pre-fetch state"
+	serverStep := self serverExecutedFrameStepPoint.
+	Transcript
+		show: '[UI fetchStackFrames] PRE-fetch serverStep=';
+		show: (serverStep ifNil: [ 'nil' ] ifNotNil: [ :v | v asString ]);
+		show: ' contextCount=';
+		show: (contextList ifNil: [ 0 ] ifNotNil: [ :c | c size ]) asString;
+		cr.
 
 	"Check if we have captured stack data"
 	stackData ifNotNil: [
+		Transcript show: '[UI fetchStackFrames] using stackData'; cr.
 		^ self fetchStackFramesFromData
 	].
 
@@ -857,10 +867,24 @@ GbsRemoteDebugger >> fetchStackFrames [
 			and: [ (self isRestartGlueFrame: serviceCurrentBeforeRecompute) not ] ].
 		[
 			((service respondsTo: #recomputeContextList) and: [ skipServiceRecompute not ])
-				ifTrue: [ service recomputeContextList ].
+				ifTrue: [ 
+					Transcript show: '[UI fetchStackFrames] calling recomputeContextList'; cr.
+					service recomputeContextList 
+				].
 			contexts := service contextList
-		] on: Error do: [ contexts := #( ) ]
+		] on: Error do: [ 
+			Transcript show: '[UI fetchStackFrames] service contextList error'; cr.
+			contexts := #( ) 
+		]
 	].
+
+	"Log post-service-fetch state"
+	Transcript
+		show: '[UI fetchStackFrames] POST-service-fetch contextCount=';
+		show: contexts size asString;
+		show: ' hasNonGlue=';
+		show: (contexts anySatisfy: [ :ctx | (self isRestartGlueFrame: ctx) not ]) asString;
+		cr.
 
 	"Live restart edge case: service can temporarily report glue-only stack
 	while still holding a valid non-glue currentContext."
@@ -2821,11 +2845,40 @@ GbsRemoteDebugger >> normalizePauseLandingSelection [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restart [
-	| didRestart |
+	| didRestart beforeStep afterStep |
+	"Log pre-restart state"
+	beforeStep := self serverExecutedFrameStepPoint.
+	Transcript
+		show: '[UI restart] PRE-restart serverStep=';
+		show: (beforeStep ifNil: [ 'nil' ] ifNotNil: [ :v | v asString ]);
+		show: ' selectedLevel=';
+		show: self currentSelectedFrameLevel asString;
+		show: ' selectedExecuted=';
+		show: self currentSelectedContextIsExecutedCodeFrame asString;
+		cr.
+	
 	didRestart := self safeServiceCall: [ service restart ] default: false.
+	
+	"Log post-restart state before fetch"
+	afterStep := self serverExecutedFrameStepPoint.
+	Transcript
+		show: '[UI restart] POST-restart (before fetch) serverStep=';
+		show: (afterStep ifNil: [ 'nil' ] ifNotNil: [ :v | v asString ]);
+		cr.
+	
 	didRestart ifTrue: [
 		self fetchStackFrames.
 		self normalizeRestartSelectionAndPosition.
+		"Log post-fetch state"
+		afterStep := self serverExecutedFrameStepPoint.
+		Transcript
+			show: '[UI restart] POST-fetch serverStep=';
+			show: (afterStep ifNil: [ 'nil' ] ifNotNil: [ :v | v asString ]);
+			show: ' selectedLevel=';
+			show: self currentSelectedFrameLevel asString;
+			show: ' selectedExecuted=';
+			show: self currentSelectedContextIsExecutedCodeFrame asString;
+			cr.
 		restartFailedState := false.
 		restartGuardActive := false.
 		restartPinnedContext := nil
