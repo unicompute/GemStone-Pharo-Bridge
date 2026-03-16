@@ -1392,16 +1392,18 @@ GbxDebuggerService >> cutbackToGsContext: gsContext finishWith: finishBlockArg [
 { #category : 'actions' }
 GbxDebuggerService >> cutbackGsTo: gsContext [
 	"gsContext must be a GemStone server context.
-	Discard any partially-completed server execution above 
-	gsContext on the stack of its GSProcess. Also discards 
-	any partial execution in gsContext, resetting it to the 
+	Discard any partially-completed server execution above
+	gsContext on the stack of its GSProcess. Also discards
+	any partial execution in gsContext, resetting it to the
 	beginning."
 	| lvl homeLevel script result |
 	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ nil ].
-	homeLevel := self restartHomeLevelForReset.
-	((homeLevel isInteger and: [ homeLevel > 1 ])
-		and: [ (lvl isInteger and: [ homeLevel > lvl ]) or: [ lvl isNil ] ]) ifTrue: [
-		lvl := homeLevel
+	((lvl isInteger and: [ lvl > 0 ]) not) ifTrue: [
+		"Fall back to homeLevel only if gsContext level is not available"
+		homeLevel := self restartHomeLevelForReset.
+		(homeLevel isInteger and: [ homeLevel > 0 ]) ifTrue: [
+			lvl := homeLevel
+		]
 	].
 	((lvl isInteger and: [ lvl > 0 ]) not) ifTrue: [
 		lvl := self restartLevelFromServerStack
