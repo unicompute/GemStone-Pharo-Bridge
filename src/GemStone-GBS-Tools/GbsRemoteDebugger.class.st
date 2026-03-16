@@ -1774,6 +1774,14 @@ GbsRemoteDebugger >> directStepOverExecutedFrame: stepIntoBoolean [
 	effectiveLevel := self resolveExecutedFrameLevelFromServer.
 	(effectiveLevel isNumber and: [ effectiveLevel > 0 ]) ifTrue: [ level := effectiveLevel ].
 	stepIntoBoolean ifTrue: [ level := level bitOr: 16r100000000 ].
+	Transcript
+		show: '[UI directStep] mode=';
+		show: (stepIntoBoolean ifTrue: [ 'into' ] ifFalse: [ 'over' ]);
+		show: ' requestLevel=';
+		show: level asString;
+		show: ' serverLevel=';
+		show: (effectiveLevel ifNil: [ 'nil' ] ifNotNil: [ effectiveLevel asString ]);
+		cr.
 
 		script := '[
 			| obj proc procOop stepLevel ok |
@@ -1811,6 +1819,14 @@ GbsRemoteDebugger >> directStepOverExecutedFrame: stepIntoBoolean [
 	value := (raw respondsTo: #asString)
 		ifTrue: [ raw asString asLowercase ]
 		ifFalse: [ '' ].
+	Transcript
+		show: '[UI directStep] result=';
+		show: value;
+		show: ' postServerLevel=';
+		show: ((self resolveExecutedFrameLevelFromServer) ifNil: [ 'nil' ] ifNotNil: [ :v | v asString ]);
+		show: ' postServerStep=';
+		show: ((self serverExecutedFrameStepPoint) ifNil: [ 'nil' ] ifNotNil: [ :v | v asString ]);
+		cr.
 	^ value = 'true' or: [ value = '1' or: [ value = 'ok' ] ]
 ]
 
