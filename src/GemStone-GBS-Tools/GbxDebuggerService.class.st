@@ -1180,7 +1180,7 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	
 	"_trimStackToLevel: already reset the stack, but re-trim to ensure PC is reset"
 	script := '[
-		| obj proc top ctx i quick stackReport fullEntry maxDepth effectiveLevel |
+		| obj proc top ctx i quick stackReport fullEntry maxDepth effectiveLevel candidateLevel candidateQuick candidateClass candidateSel |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
@@ -1219,33 +1219,48 @@ GbxDebuggerService >> resetServerPCToStepOne [
 		].
 		quick <= 1 ifTrue: [ ^ ''true'' ].
 
-		"Primary reset path: target the frame context at effectiveLevel."
-		top := [ proc topContext ] on: Error do: [ nil ].
-		ctx := top.
-		i := 1.
-		[ i < effectiveLevel and: [ ctx notNil ] ] whileTrue: [
-			ctx := [ ctx sender ] on: Error do: [ nil ].
-			i := i + 1
-		].
-		(ctx notNil and: [ ctx respondsTo: #jumpToStepPoint: ]) ifTrue: [
-			[ ctx jumpToStepPoint: 1 ] on: Error do: [ ]
-		].
-		(ctx notNil and: [ ctx respondsTo: #runToStepPoint: ]) ifTrue: [
-			[ ctx runToStepPoint: 1 ] on: Error do: [ ]
-		].
+		"Try resetting at effectiveLevel first, then one sender above if present."
+		{ effectiveLevel. (effectiveLevel + 1 min: maxDepth) } do: [ :lvl |
+			candidateLevel := lvl.
+			candidateQuick := 0.
+			candidateClass := ''nil''.
+			candidateSel := ''nil''.
+			stackReport := [ proc _gsiStackReportFromLevel: candidateLevel toLevel: candidateLevel ] on: Error do: [ nil ].
+			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
+				fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+				fullEntry ifNotNil: [
+					candidateQuick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ].
+					candidateClass := [ (fullEntry at: 3) ifNil: [ ''nil'' ] ifNotNil: [ :c | c asString ] ] on: Error do: [ ''nil'' ].
+					candidateSel := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ] on: Error do: [ ''nil'' ].
+				]
+			].
 
-		"Fallback: trim at executed-frame level."
-		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
-			[ proc _trimStackToLevel: effectiveLevel ] on: Error do: [ ]
-		].
+			top := [ proc topContext ] on: Error do: [ nil ].
+			ctx := top.
+			i := 1.
+			[ i < candidateLevel and: [ ctx notNil ] ] whileTrue: [
+				ctx := [ ctx sender ] on: Error do: [ nil ].
+				i := i + 1
+			].
+			(ctx notNil and: [ ctx respondsTo: #jumpToStepPoint: ]) ifTrue: [
+				[ ctx jumpToStepPoint: 1 ] on: Error do: [ ]
+			].
+			(ctx notNil and: [ ctx respondsTo: #runToStepPoint: ]) ifTrue: [
+				[ ctx runToStepPoint: 1 ] on: Error do: [ ]
+			].
+			(proc respondsTo: #_trimStackToLevel:) ifTrue: [
+				[ proc _trimStackToLevel: candidateLevel ] on: Error do: [ ]
+			].
 
-		quick := 0.
-		stackReport := [ proc _gsiStackReportFromLevel: effectiveLevel toLevel: effectiveLevel ] on: Error do: [ nil ].
-		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
-			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
-			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
+			quick := 0.
+			stackReport := [ proc _gsiStackReportFromLevel: effectiveLevel toLevel: effectiveLevel ] on: Error do: [ nil ].
+			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
+				fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+				fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
+			].
+			quick <= 1 ifTrue: [ ^ ''true'' ].
 		].
-		(quick <= 1) ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]
+		''false''
 	] value'.
 	
 	result := self executeDebugScript: script.
