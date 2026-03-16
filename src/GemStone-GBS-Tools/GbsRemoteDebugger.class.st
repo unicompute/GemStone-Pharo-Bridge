@@ -1764,7 +1764,7 @@ GbsRemoteDebugger >> resetServerPCToStepOneIfNeeded [
 
 { #category : 'private' }
 GbsRemoteDebugger >> directStepOverExecutedFrame: stepIntoBoolean [
-	| level effectiveLevel preservedLevel raw value script |
+	| level effectiveLevel raw value script |
 	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
 	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ false ].
 
@@ -1773,10 +1773,6 @@ GbsRemoteDebugger >> directStepOverExecutedFrame: stepIntoBoolean [
 	
 	effectiveLevel := self resolveExecutedFrameLevelFromServer.
 	(effectiveLevel isNumber and: [ effectiveLevel > 0 ]) ifTrue: [ level := effectiveLevel ].
-	(level = 1 and: [ service notNil ]) ifTrue: [
-		preservedLevel := self safeServiceCall: [ service restartHomeLevelForReset ] default: nil.
-		(preservedLevel isNumber and: [ preservedLevel > 1 ]) ifTrue: [ level := preservedLevel ]
-	].
 	stepIntoBoolean ifTrue: [ level := level bitOr: 16r100000000 ].
 	Transcript
 		show: '[UI directStep] mode=';
