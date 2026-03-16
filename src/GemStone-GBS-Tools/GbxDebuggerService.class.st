@@ -1788,11 +1788,11 @@ GbxDebuggerService >> selectTopServerContext [
 	| topServer |
 	contextStackPolicy ifNil: [ ^ self ].
 	contextStackPolicy computeContextList.
-	topServer := self restartTargetContext.
+	topServer := (contextStackPolicy respondsTo: #topServerContext)
+		ifTrue: [ contextStackPolicy topServerContext ]
+		ifFalse: [ nil ].
 	topServer ifNil: [
-		topServer := (contextStackPolicy respondsTo: #topServerContext)
-			ifTrue: [ contextStackPolicy topServerContext ]
-			ifFalse: [ nil ]
+		topServer := self restartTargetContext
 	].
 	topServer ifNil: [
 		topServer := contextStackPolicy contextList
