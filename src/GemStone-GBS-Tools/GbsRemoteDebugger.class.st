@@ -3047,9 +3047,8 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 		^ true
 	].
 
-	self waitForRestartStackCompositionBeforeSecondPass.
-	stabilized := self isExecutedCodeSelectionConfirmed
-		and: [ self restartNeedsServerRewind not ].
+	Transcript show: '[UI restart] completing first restart state before second pass'; cr.
+	stabilized := self completeRestartStateBeforeSecondPass.
 	Transcript
 		show: '[UI restart] pre-second-pass stabilized=';
 		show: stabilized asString;
@@ -3124,7 +3123,6 @@ GbsRemoteDebugger >> enforceServerStepPointOneAfterRestart [
 		self forceServerJumpToStepPoint1.
 		self fetchStackFrames.
 		self normalizeRestartSelectionAndPosition.
-		(Delay forMilliseconds: 70) wait.
 		attempts := attempts + 1
 	].
 	step := self serverExecutedFrameStepPoint.
@@ -3135,6 +3133,41 @@ GbsRemoteDebugger >> enforceServerStepPointOneAfterRestart [
 		show: (step ifNil: [ 'nil' ] ifNotNil: [ step asString ]);
 		cr.
 	^ false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> completeRestartStateBeforeSecondPass [
+	| attempts stabilized |
+	attempts := 0.
+	stabilized := false.
+	[
+		(attempts < 4) and: [ stabilized not ]
+	] whileTrue: [
+		self fetchStackFrames.
+		self normalizeRestartSelectionAndPosition.
+		self safeServiceCall: [
+			(service respondsTo: #selectRestartTargetContext)
+				ifTrue: [ service selectRestartTargetContext ].
+			(service respondsTo: #resetServerPCToStepOne)
+				ifTrue: [ service resetServerPCToStepOne ]
+		] default: nil.
+		self forceServerJumpToStepPoint1.
+		self fetchStackFrames.
+		self normalizeRestartSelectionAndPosition.
+		self enforceServerStepPointOneAfterRestart.
+		stabilized := self isExecutedCodeSelectionConfirmed
+			and: [ self restartNeedsServerRewind not ].
+		attempts := attempts + 1
+	].
+	Transcript
+		show: '[UI restart] complete-first-pass attempts=';
+		show: attempts asString;
+		show: ' stabilized=';
+		show: stabilized asString;
+		show: ' needsRewind=';
+		show: self restartNeedsServerRewind asString;
+		cr.
+	^ stabilized
 ]
 
 { #category : 'private' }
