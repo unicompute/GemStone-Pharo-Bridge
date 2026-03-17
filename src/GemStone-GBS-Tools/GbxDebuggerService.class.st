@@ -858,6 +858,7 @@ GbxDebuggerService >> processOop [
 
 { #category : 'accessing' }
 GbxDebuggerService >> processOop: anOop [
+	processOop = anOop ifTrue: [ ^ processOop := anOop ].
 	processOop := anOop.
 	restartHomeResetPasses := 0
 ]
