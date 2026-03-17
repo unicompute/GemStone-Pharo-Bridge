@@ -1162,25 +1162,18 @@ GbxDebuggerService >> ensureRestartAtStepOne [
 GbxDebuggerService >> resetServerPCToStepOne [
 	"Force the debugged server process to restart at method entry (step=1).
 
-	FIX: Use the executed code frame level for reset (like test_restart_pharo_style.cpp).
-	This finds the 'nil nil' frame where _trimStackToLevel: will reset PC to step 1.
-	
-	CRITICAL: After _trimStackToLevel:, we must call jumpToStepPoint:1 on the TOP context
-	(level 1), not the executed frame level. This is because _trimStackToLevel: resets the
-	stack but doesn't reset the PC of the top context."
-	| didReset script result executedFrameLevel beforeDiag afterDiag maxDepthDiag |
+	Note: This uses _trimStackToLevel: which resets the stack but may not
+	reset the PC after stepping. This is a known GemStone limitation."
+	| didReset script result targetLevel beforeDiag afterDiag |
 
-	"Find the executed code frame level (the 'nil nil' frame in stack report).
-	This is the level where _trimStackToLevel: resets the stack."
-	executedFrameLevel := self findExecutedCodeFrameLevelInline.
-	executedFrameLevel ifNil: [
-		self logRestartText: 'resetServerPCToStepOne: findExecutedCodeFrameLevelInline returned nil, using level 1'.
-		executedFrameLevel := 1
+	"Use current context level for trim"
+	targetLevel := self currentContextLevel.
+	(targetLevel isNil or: [ targetLevel <= 0 ]) ifTrue: [
+		targetLevel := 1
 	].
 
-	beforeDiag := self restartStepDiagnosticForLevel: executedFrameLevel.
-	maxDepthDiag := self restartStepDiagnosticForLevel: 1.
-	self logRestartText: 'resetServerPCToStepOne executedFrameLevel=' , executedFrameLevel asString , ' before ' , beforeDiag , ' maxDepth ' , maxDepthDiag.
+	beforeDiag := self restartStepDiagnosticForLevel: targetLevel.
+	self logRestartText: 'resetServerPCToStepOne targetLevel=', targetLevel asString, ' before ', beforeDiag.
 
 	"Try jumpToStepPoint: first (may work on some GemStone versions)"
 	didReset := self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true.
@@ -1192,10 +1185,9 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	self logRestartText: 'resetServerPCToStepOne runToStepPoint:1 -> ', didReset asString.
 	didReset ifTrue: [ ^ true ].
 
-	"Reset PC at the executed frame level.
-	CRITICAL: After trim, call jumpToStepPoint:1 on the TOP context (level 1)."
+	"Trim stack to target level"
 	script := '[
-		| obj proc quick stackReport fullEntry effectiveLevel top ctx i maxDepth didTrim |
+		| obj proc |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
@@ -1205,83 +1197,15 @@ GbxDebuggerService >> resetServerPCToStepOne [
 		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
 			proc := [ obj process ] on: Error do: [ nil ]
 		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
-			| top |
-			top := [ obj topContext ] on: Error do: [ nil ].
-			(top notNil and: [ top respondsTo: #process ])
-				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
-		].
-		(proc respondsTo: #_gsiStackReportFromLevel:toLevel:) ifFalse: [ ^ ''false'' ].
-
-		effectiveLevel := ', executedFrameLevel asString, '.
-		maxDepth := 0.
-		i := 1.
-		[ i <= 512 ] whileTrue: [
-			stackReport := [ proc _gsiStackReportFromLevel: i toLevel: i ] on: Error do: [ nil ].
-			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
-				ifTrue: [ maxDepth := i. i := i + 1 ]
-				ifFalse: [ i := 513 ]
-		].
-		maxDepth <= 0 ifTrue: [ ^ ''false'' ].
-		effectiveLevel > maxDepth ifTrue: [
-			effectiveLevel := maxDepth
-		].
-		effectiveLevel <= 0 ifTrue: [ effectiveLevel := 1 ].
-
-		"Check current step before trim"
-		quick := 0.
-		stackReport := [ proc _gsiStackReportFromLevel: effectiveLevel toLevel: effectiveLevel ] on: Error do: [ nil ].
-		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
-			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
-			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
-		].
-		quick <= 1 ifTrue: [ ^ ''true'' ].
-
-		"Trim the stack to the executed frame level"
-		didTrim := false.
-		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
-			[ proc _trimStackToLevel: effectiveLevel ] on: Error do: [ ].
-			didTrim := true
-		].
-		didTrim ifFalse: [ ^ ''false'' ].
-
-		"CRITICAL: After trim, get the NEW top context and reset its PC to step 1"
-		top := [ proc topContext ] on: Error do: [ nil ].
-		(top notNil and: [ top respondsTo: #jumpToStepPoint: ]) ifTrue: [
-			[ top jumpToStepPoint: 1 ] on: Error do: [ ]
-		].
-		(top notNil and: [ top respondsTo: #runToStepPoint: ]) ifTrue: [
-			[ top runToStepPoint: 1 ] on: Error do: [ ]
-		].
-
-		"Also try on level 1 context via sender chain"
-		ctx := top.
-		i := 1.
-		[ i < effectiveLevel and: [ ctx notNil ] ] whileTrue: [
-			ctx := [ ctx sender ] on: Error do: [ nil ].
-			i := i + 1
-		].
-		(ctx notNil and: [ ctx respondsTo: #jumpToStepPoint: ]) ifTrue: [
-			[ ctx jumpToStepPoint: 1 ] on: Error do: [ ]
-		].
-		(ctx notNil and: [ ctx respondsTo: #runToStepPoint: ]) ifTrue: [
-			[ ctx runToStepPoint: 1 ] on: Error do: [ ]
-		].
-
-		"Verify the step was reset by checking level 1"
-		quick := 0.
-		stackReport := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
-		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
-			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
-			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
-		].
-		(quick <= 1) ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]
+		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
+		[ proc _trimStackToLevel: ', targetLevel asString, ' ] on: Error do: [ ^ ''false'' ].
+		''true''
 	] value'.
 
 	result := self executeDebugScript: script.
 	didReset := self asBooleanResult: result default: false.
-	self logRestartText: 'resetServerPCToStepOne resetAtLevel:', executedFrameLevel asString, ' -> ', didReset asString, ' raw=', result printString.
-	afterDiag := self restartStepDiagnosticForLevel: executedFrameLevel.
+	self logRestartText: 'resetServerPCToStepOne resetAtLevel:', targetLevel asString, ' -> ', didReset asString, ' raw=', result printString.
+	afterDiag := self restartStepDiagnosticForLevel: targetLevel.
 	self logRestartText: 'resetServerPCToStepOne after ', afterDiag.
 	^ didReset
 ]
@@ -1432,27 +1356,14 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	any partial execution in gsContext, resetting it to the
 	beginning.
 	
-	FIX: Use the executed code frame level (like test_restart_pharo_style.cpp).
-	This finds the 'nil nil' frame where _trimStackToLevel: resets PC to step 1."
-	| lvl script result gsContextLevel foundLevel |
+	Note: This uses _trimStackToLevel: which resets the stack but may not
+	reset the PC after stepping. This matches VisualWorks behavior."
+	| lvl script result |
 	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ nil ].
-	gsContextLevel := lvl.
-	self logRestartText: 'cutbackGsTo: gsContext level=', (gsContextLevel ifNil: [ 'nil' ] ifNotNil: [ gsContextLevel asString ]).
-	foundLevel := self executedCodeFrameLevelFromServerStack.
-	self logRestartText: 'cutbackGsTo: executedCodeFrameLevelFromServerStack=', (foundLevel ifNil: [ 'nil' ] ifNotNil: [ foundLevel asString ]).
-	((foundLevel isInteger and: [ foundLevel > 0 ])
-		and: [ (lvl isInteger and: [ lvl > 0 ]) not or: [ foundLevel > lvl ] ]) ifTrue: [
-		lvl := foundLevel
-	].
 	((lvl isInteger and: [ lvl > 0 ]) not) ifTrue: [
-		lvl := self restartLevelFromServerStack.
-		self logRestartText: 'cutbackGsTo: restartLevelFromServerStack=', (lvl ifNil: [ 'nil' ] ifNotNil: [ lvl asString ]).
+		lvl := 1
 	].
-	((lvl isInteger and: [ lvl > 0 ]) not) ifTrue: [ 
-		self logRestartText: 'cutbackGsTo: falling back to level 1'.
-		lvl := 1 
-	].
-	self logRestartText: 'cutbackGsTo: final trim level=', lvl asString.
+	self logRestartText: 'cutbackGsTo: level=', lvl asString.
 
 	script := '[
 		| obj proc |
@@ -1465,13 +1376,6 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
 			proc := [ obj process ] on: Error do: [ nil ]
 		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
-			| top |
-			top := [ obj topContext ] on: Error do: [ nil ].
-			(top notNil and: [ top respondsTo: #process ])
-				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
-		].
-
 		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
 		[ proc _trimStackToLevel: ', lvl asString, ' ] on: Error do: [ ^ ''false'' ].
 		''true''
@@ -1481,107 +1385,6 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	self logRestartText: 'cutbackGsTo level=', lvl asString, ' result=', result printString.
 	^ self asBooleanResult: result default: false
 ]
-
-{ #category : 'private' }
-GbxDebuggerService >> executedCodeFrameLevelFromServerStack [
-	"Find the level of the executed code frame (nil class/unboundMethod).
-	This is the level where _trimStackToLevel: will reset PC to step 1.
-	Follows the approach in test_restart_pharo_style.cpp."
-	| script lines |
-	(self canExecuteOnDebugProcess) ifFalse: [ ^ nil ].
-	script := '[
-		| obj proc level stackReport fullEntry methodOrNil className selectorName stream |
-		obj := Object _objectForOop: ', processOop asString, '.
-		proc := obj.
-		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ]
-		].
-		proc isNil ifTrue: [ ^ '''' ].
-		stream := WriteStream on: String new.
-		level := 1.
-		[ level <= 50 ] whileTrue: [
-			fullEntry := nil.
-			stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
-			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
-				ifTrue: [ fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ] ].
-			fullEntry isNil ifTrue: [ level := 51 ] ifFalse: [
-				methodOrNil := ((fullEntry respondsTo: #at:) and: [ fullEntry size >= 1 ])
-					ifTrue: [ [ fullEntry at: 1 ] on: Error do: [ nil ] ]
-					ifFalse: [ nil ].
-				className := [ methodOrNil inClass name asString ] on: Error do: [ ''nil'' ].
-				selectorName := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ] on: Error do: [ ''nil'' ].
-				stream nextPutAll: level asString; tab; nextPutAll: className; tab; nextPutAll: selectorName; lf.
-				level := level + 1 ] ].
-		stream contents ] value'.
-	lines := (self executeDebugScript: script) lines.
-	lines do: [ :line | | parts |
-		parts := line substrings: Character tab.
-		(parts size >= 3 and: [ 
-			((parts at: 2) = 'nil' or: [ (parts at: 2) = '<unknown>' ]) and:
-			((parts at: 3) = 'nil' or: [ (parts at: 3) = 'unboundMethod' ]) ]) ifTrue: [
-			^ (parts at: 1) asInteger ] ].
-	^ nil
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> findExecutedCodeFrameLevelInline [
-	"Find the level of the executed code frame (nil class/unboundMethod).
-	This is the level where _trimStackToLevel: will reset PC to step 1.
-	Follows the approach in test_restart_pharo_style.cpp."
-	| script lines foundLevel |
-	(self canExecuteOnDebugProcess) ifFalse: [ 
-		self logRestartText: 'findExecutedCodeFrameLevelInline: no debug process'.
-		^ nil 
-	].
-	script := '[
-		| obj proc level stackReport fullEntry methodOrNil className selectorName stream |
-		obj := Object _objectForOop: ', processOop asString, '.
-		proc := obj.
-		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ]
-		].
-		proc isNil ifTrue: [ ^ '''' ].
-		stream := WriteStream on: String new.
-		level := 1.
-		[ level <= 50 ] whileTrue: [
-			fullEntry := nil.
-			stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
-			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
-				ifTrue: [ fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ] ].
-			fullEntry isNil ifTrue: [ level := 51 ] ifFalse: [
-				methodOrNil := ((fullEntry respondsTo: #at:) and: [ fullEntry size >= 1 ])
-					ifTrue: [ [ fullEntry at: 1 ] on: Error do: [ nil ] ]
-					ifFalse: [ nil ].
-				className := [ methodOrNil inClass name asString ] on: Error do: [ ''nil'' ].
-				selectorName := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ] on: Error do: [ ''nil'' ].
-				stream nextPutAll: level asString; tab; nextPutAll: className; tab; nextPutAll: selectorName; lf.
-				level := level + 1 ] ].
-		stream contents ] value'.
-	lines := (self executeDebugScript: script) lines.
-	foundLevel := nil.
-	lines do: [ :line | | parts |
-		parts := line substrings: Character tab.
-		(parts size >= 3 and: [ 
-			((parts at: 2) = 'nil' or: [ (parts at: 2) = '<unknown>' ]) and:
-			((parts at: 3) = 'nil' or: [ (parts at: 3) = 'unboundMethod' ]) ]) ifTrue: [
-			foundLevel := (parts at: 1) asInteger
-		]
-	].
-	foundLevel ifNil: [
-		self logRestartText: 'findExecutedCodeFrameLevelInline: NOT FOUND (stack: ', (lines first: (lines size min: 5)) printString, '...)'
-	] ifNotNil: [
-		self logRestartText: 'findExecutedCodeFrameLevelInline: FOUND level=', foundLevel asString
-	].
-	^ foundLevel
-]
-
-{ #category : 'actions' }
 GbxDebuggerService >> cutbackClientContextsAbove: gsContext [
 	"gsContext must be a GemStone server context.
 	Discard any partially-completed client execution above gsContext."
