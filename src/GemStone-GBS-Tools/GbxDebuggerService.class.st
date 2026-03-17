@@ -1192,7 +1192,7 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	"Reset PC at the target level (current context level after cutback).
 	This ensures we reset at the actual stack depth, not a stale home level."
 	script := '[
-		| obj proc quick stackReport fullEntry effectiveLevel top ctx i maxDepth |
+		| obj proc stackReport fullEntry quick top ctx i maxDepth targetLevel |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
@@ -1203,62 +1203,32 @@ GbxDebuggerService >> resetServerPCToStepOne [
 			proc := [ obj process ] on: Error do: [ nil ]
 		].
 		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
-			| top |
-			top := [ obj topContext ] on: Error do: [ nil ].
-			(top notNil and: [ top respondsTo: #process ])
-				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+			| t |
+			t := [ obj topContext ] on: Error do: [ nil ].
+			(t notNil and: [ t respondsTo: #process ])
+				ifTrue: [ proc := [ t process ] on: Error do: [ nil ] ]
 		].
 		(proc respondsTo: #_gsiStackReportFromLevel:toLevel:) ifFalse: [ ^ ''false'' ].
 
-		effectiveLevel := ', targetLevel asString, '.
-		maxDepth := 0.
-		i := 1.
-		[ i <= 512 ] whileTrue: [
-			stackReport := [ proc _gsiStackReportFromLevel: i toLevel: i ] on: Error do: [ nil ].
-			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
-				ifTrue: [ maxDepth := i. i := i + 1 ]
-				ifFalse: [ i := 513 ]
-		].
-		maxDepth <= 0 ifTrue: [ ^ ''false'' ].
-		effectiveLevel > maxDepth ifTrue: [ effectiveLevel := maxDepth ].
-		effectiveLevel <= 0 ifTrue: [ effectiveLevel := 1 ].
-
-		quick := 0.
-		stackReport := [ proc _gsiStackReportFromLevel: effectiveLevel toLevel: effectiveLevel ] on: Error do: [ nil ].
-		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
-			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
-			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
-		].
-		quick <= 1 ifTrue: [ ^ ''true'' ].
-
-		top := [ proc topContext ] on: Error do: [ nil ].
-		(effectiveLevel = 1 and: [ top notNil ]) ifTrue: [
-			(top respondsTo: #jumpToStepPoint:) ifTrue: [
-				[ top jumpToStepPoint: 1 ] on: Error do: [ ]
-			].
-			(top respondsTo: #runToStepPoint:) ifTrue: [
-				[ top runToStepPoint: 1 ] on: Error do: [ ]
-			]
-		].
-
-		ctx := top.
-		i := 1.
-		[ i < effectiveLevel and: [ ctx notNil ] ] whileTrue: [
-			ctx := [ ctx sender ] on: Error do: [ nil ].
-			i := i + 1
-		].
-		(ctx notNil and: [ ctx respondsTo: #jumpToStepPoint: ]) ifTrue: [
-			[ ctx jumpToStepPoint: 1 ] on: Error do: [ ]
-		].
-		(ctx notNil and: [ ctx respondsTo: [ :sym | sym = #runToStepPoint: ] ifError: [ false ] ]) ifTrue: [
-			[ ctx runToStepPoint: 1 ] on: Error do: [ ]
-		].
-
+		targetLevel := ', targetLevel asString, '.
+		
+		"1. Force trim stack to the target level first. 
+		This makes our target frame the top frame."
 		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
-			[ proc _trimStackToLevel: effectiveLevel ] on: Error do: [ ]
+			[ proc _trimStackToLevel: targetLevel ] on: Error do: [ ]
 		].
 
-		stackReport := [ proc _gsiStackReportFromLevel: effectiveLevel toLevel: effectiveLevel ] on: Error do: [ nil ].
+		"2. Force PC reset on the NEW top frame (level 1)."
+		top := [ proc topContext ] on: Error do: [ nil ].
+		top ifNotNil: [
+			(top respondsTo: #jumpToStepPoint:) ifTrue: [ [ top jumpToStepPoint: 1 ] on: Error do: [ ] ].
+			(top respondsTo: #runToStepPoint:) ifTrue: [ [ top runToStepPoint: 1 ] on: Error do: [ ] ].
+			(top respondsTo: #_stepPoint:) ifTrue: [ [ top _stepPoint: 1 ] on: Error do: [ ] ].
+		].
+
+		"3. Verification"
+		quick := 0.
+		stackReport := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
 		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
 			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
 			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]

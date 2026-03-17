@@ -1774,12 +1774,14 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 		quick <= 1 ifTrue: [ ^ true ].
 		
 		"Try jumpToStepPoint: if available (may not exist on all GemStone versions)"
-		(proc respondsTo: #jumpToStepPoint:) ifTrue: [
-			[ proc jumpToStepPoint: 1 ] on: Error do: [ ].
-			^ true
+		top := [ proc topContext ] on: Error do: [ nil ].
+		top ifNotNil: [
+			(top respondsTo: #jumpToStepPoint:) ifTrue: [ [ top jumpToStepPoint: 1 ] on: Error do: [ ] ].
+			(top respondsTo: #runToStepPoint:) ifTrue: [ [ top runToStepPoint: 1 ] on: Error do: [ ] ].
+			(top respondsTo: #_stepPoint:) ifTrue: [ [ top _stepPoint: 1 ] on: Error do: [ ] ].
 		].
 		
-		"jumpToStepPoint: not available. Re-trim to force PC reset."
+		"jumpToStepPoint: not available or failed. Re-trim to force PC reset."
 		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ].
 		true
 	] value'.
@@ -3032,14 +3034,12 @@ GbsRemoteDebugger >> trimServerStackToLevel: aLevel [
 				quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ]
 			]
 		].
-		"Try jumpToStepPoint: only if step > 1 (may not exist on all GemStone versions)"
-		quick > 1 ifTrue: [
-			(proc respondsTo: #jumpToStepPoint:)
-				ifTrue: [ [ proc jumpToStepPoint: 1 ] on: Error do: [ ] ]
-				ifFalse: [
-					(proc respondsTo: #jumpTo:)
-						ifTrue: [ [ proc jumpTo: 1 ] on: Error do: [ ] ]
-				]
+		"Try jumpToStepPoint: or fallback on the NEW top frame (level 1)."
+		top := [ proc topContext ] on: Error do: [ nil ].
+		top ifNotNil: [
+			(top respondsTo: #jumpToStepPoint:) ifTrue: [ [ top jumpToStepPoint: 1 ] on: Error do: [ ] ].
+			(top respondsTo: #runToStepPoint:) ifTrue: [ [ top runToStepPoint: 1 ] on: Error do: [ ] ].
+			(top respondsTo: #_stepPoint:) ifTrue: [ [ top _stepPoint: 1 ] on: Error do: [ ] ].
 		].
 		''true''
 	] value'.
