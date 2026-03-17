@@ -1438,11 +1438,11 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ nil ].
 	gsContextLevel := lvl.
 	self logRestartText: 'cutbackGsTo: gsContext level=', (gsContextLevel ifNil: [ 'nil' ] ifNotNil: [ gsContextLevel asString ]).
-	((lvl isInteger and: [ lvl > 0 ]) not) ifTrue: [
-		"Fall back to finding executed code frame level from server stack"
-		foundLevel := self executedCodeFrameLevelFromServerStack.
-		self logRestartText: 'cutbackGsTo: executedCodeFrameLevelFromServerStack=', (foundLevel ifNil: [ 'nil' ] ifNotNil: [ foundLevel asString ]).
-		lvl := foundLevel.
+	foundLevel := self executedCodeFrameLevelFromServerStack.
+	self logRestartText: 'cutbackGsTo: executedCodeFrameLevelFromServerStack=', (foundLevel ifNil: [ 'nil' ] ifNotNil: [ foundLevel asString ]).
+	((foundLevel isInteger and: [ foundLevel > 0 ])
+		and: [ (lvl isInteger and: [ lvl > 0 ]) not or: [ foundLevel > lvl ] ]) ifTrue: [
+		lvl := foundLevel
 	].
 	((lvl isInteger and: [ lvl > 0 ]) not) ifTrue: [
 		lvl := self restartLevelFromServerStack.
