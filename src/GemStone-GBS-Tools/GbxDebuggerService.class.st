@@ -1652,8 +1652,11 @@ GbxDebuggerService >> restart [
 	].
 	target := self restartTargetContext.
 	target ifNotNil: [ self selectContext: target ].
-	didRestart := self basicReenterServerContext.
+	target ifNil: [ target := currentContext ].
+	target ifNil: [ ^ false ].
+	didRestart := self cutbackGsTo: target.
 	didRestart ifTrue: [
+		self currentContext: target.
 		(self currentContextLevel = 1) ifTrue: [
 			self resetServerPCToStepOne
 		].
