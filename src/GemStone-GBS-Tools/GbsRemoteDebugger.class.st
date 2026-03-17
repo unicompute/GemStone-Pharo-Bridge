@@ -766,7 +766,8 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 					] on: Error do: [ nil ]
 				]
 			]
-		] thenSelect: #isNotNil.
+		].
+	contexts := contexts select: #isNotNil.
 
 	^ contexts
 ]
@@ -1026,7 +1027,8 @@ GbsRemoteDebugger >> fetchStackFramesFromData [
 	| contexts index |
 	
 	index := 0.
-	contexts := stackData splitOn: $^ thenCollect: [ :frameStr |
+	contexts := (stackData splitOn: $^)
+		collect: [ :frameStr |
 		| parts activation |
 		parts := frameStr splitOn: $|.
 		parts size >= 3 ifTrue: [
@@ -1043,7 +1045,8 @@ GbsRemoteDebugger >> fetchStackFramesFromData [
 				sourceString: (parts at: 3);
 				yourself
 		]
-	] thenSelect: #isNotNil.
+	].
+	contexts := contexts select: #isNotNil.
 	
 	contextList := contexts.
 	stackList items: (contexts collect: [ :ctx | ctx printString ]).
