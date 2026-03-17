@@ -1526,10 +1526,15 @@ GbxDebuggerService >> restart [
 	didRestart := self cutbackGsTo: target.
 	didRestart ifFalse: [ ^ false ].
 	self selectTopServerContext.
-	((self currentStepPoint ifNil: [ 0 ]) > 1) ifTrue: [
+	
+	"Force reset to step 1 if we are in an executed code frame (restart target) 
+	or if the step point is > 1. This ensures a second restart correctly 
+	resets the server-side PC even if the client already thinks it is at step 1."
+	(self isCurrentExecutedCodeFrame or: [ (self currentStepPoint ifNil: [ 0 ]) > 1 ]) ifTrue: [
 		self resetServerPCToStepOne.
 		self selectTopServerContext
 	].
+	
 	self markCurrentContextAsRestarted.
 	^ didRestart
 ]
