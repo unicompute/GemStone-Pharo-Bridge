@@ -186,7 +186,8 @@ GbxContextListPolicy >> fetchServerContexts [
 	1 to: maxDepth do: [ :level |
 		| activation |
 		activation := GbxActivation processOop: resolvedProcessOop level: level session: debugger session.
-		activation gsMethodId ifNil: [
+		"Level 1 is the executed code frame (GS: Executed code) which may not have gsMethodId"
+		(level > 1 and: [ activation gsMethodId ifNil: [ true ] ifNotNil: [ false ] ]) ifTrue: [
 			debugger logRestartText: 'fetchServerContexts stopping at invalid level=' , level asString.
 			^ contexts asArray
 		].
