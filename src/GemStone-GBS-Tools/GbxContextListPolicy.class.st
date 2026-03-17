@@ -357,63 +357,70 @@ GbxContextListPolicy >> fetchServerContexts [
 	].
 	(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
 	debugger logRestartText: 'fetchServerContexts: rawData length=' , rawData size asString.
+	"Log first 200 chars of rawData for debugging"
+	debugger logRestartText: 'fetchServerContexts: rawData first200=[' , (rawData copyFrom: 1 to: (rawData size min: 200)) , ']'.
 	"Parse context lines from script output"
 	contexts := (rawData splitOn: Character lf)
 		collect: [ :line |
 			| parts |
 			(line isEmpty or: [ line beginsWith: 'DEBUG:' ]) ifTrue: [ ^ nil ].
 			parts := line splitOn: Character tab.
-			parts size >= 5 ifTrue: [
-				| activation selectorSymbol ctxOop quickStepValue offsetsTokens offsetsValue lineNumberValue |
-				selectorSymbol := [ (parts at: 3) asSymbol ] on: Error do: [ #unboundMethod ].
-				ctxOop := [ (parts at: 5) asInteger ] on: Error do: [ processOop ].
-				quickStepValue := (parts size >= 6
-					ifTrue: [ [ (parts at: 6) asInteger ] on: Error do: [ 0 ] ]
-					ifFalse: [ 0 ]).
-				offsetsTokens := (parts size >= 7
-					ifTrue: [ (parts at: 7) splitOn: $, ]
-					ifFalse: [ #() ]).
-				lineNumberValue := (parts size >= 8
-					ifTrue: [ [ (parts at: 8) asInteger ] on: Error do: [ 0 ] ]
-					ifFalse: [ 0 ]).
-				offsetsValue := offsetsTokens collect: [ :token |
-					| cleaned |
-					cleaned := token withBlanksTrimmed.
-					cleaned isEmpty ifTrue: [ nil ] ifFalse: [
-						cleaned = 'nil'
-							ifTrue: [ nil ]
-							ifFalse: [ [ cleaned asInteger ] on: Error do: [ nil ] ]
-					]
-				].
-				activation := GbxActivation new.
-				(activation respondsTo: #session:)
-					ifTrue: [ activation session: debugger session ]
-					ifFalse: [ activation instVarNamed: 'session' put: debugger session ].
-				[ activation level: ([ parts first asInteger ] on: Error do: [ 1 ]) ] on: Error do: [ ].
-				(activation respondsTo: #initializeFromClass:selector:source:contextOop:)
-					ifTrue: [
-						[ activation
-							initializeFromClass: (parts at: 2)
-							selector: selectorSymbol
-							source: ((((parts at: 4)
+			[
+				parts size >= 5 ifTrue: [
+					| activation selectorSymbol ctxOop quickStepValue offsetsTokens offsetsValue lineNumberValue |
+					selectorSymbol := [ (parts at: 3) asSymbol ] on: Error do: [ #unboundMethod ].
+					ctxOop := [ (parts at: 5) asInteger ] on: Error do: [ processOop ].
+					quickStepValue := (parts size >= 6
+						ifTrue: [ [ (parts at: 6) asInteger ] on: Error do: [ 0 ] ]
+						ifFalse: [ 0 ]).
+					offsetsTokens := (parts size >= 7
+						ifTrue: [ (parts at: 7) splitOn: $, ]
+						ifFalse: [ #() ]).
+					lineNumberValue := (parts size >= 8
+						ifTrue: [ [ (parts at: 8) asInteger ] on: Error do: [ 0 ] ]
+						ifFalse: [ 0 ]).
+					offsetsValue := offsetsTokens collect: [ :token |
+						| cleaned |
+						cleaned := token withBlanksTrimmed.
+						cleaned isEmpty ifTrue: [ nil ] ifFalse: [
+							cleaned = 'nil'
+								ifTrue: [ nil ]
+								ifFalse: [ [ cleaned asInteger ] on: Error do: [ nil ] ]
+						]
+					].
+					activation := GbxActivation new.
+					(activation respondsTo: #session:)
+						ifTrue: [ activation session: debugger session ]
+						ifFalse: [ activation instVarNamed: 'session' put: debugger session ].
+					[ activation level: ([ parts first asInteger ] on: Error do: [ 1 ]) ] on: Error do: [ ].
+					(activation respondsTo: #initializeFromClass:selector:source:contextOop:)
+						ifTrue: [
+							[ activation
+								initializeFromClass: (parts at: 2)
+								selector: selectorSymbol
+								source: ((((parts at: 4)
+									copyReplaceAll: '<TAB>' with: Character tab asString)
+									copyReplaceAll: '<CR>' with: String cr)
+									copyReplaceAll: '<LF>' with: String lf)
+								contextOop: ctxOop ] on: Error do: [ ]
+						]
+						ifFalse: [
+							[ activation methodClass: (parts at: 2) ] on: Error do: [ ].
+							[ activation selector: selectorSymbol ] on: Error do: [ ].
+							[ activation sourceString: ((((parts at: 4)
 								copyReplaceAll: '<TAB>' with: Character tab asString)
 								copyReplaceAll: '<CR>' with: String cr)
-								copyReplaceAll: '<LF>' with: String lf)
-							contextOop: ctxOop ] on: Error do: [ ]
-					]
-					ifFalse: [
-						[ activation methodClass: (parts at: 2) ] on: Error do: [ ].
-						[ activation selector: selectorSymbol ] on: Error do: [ ].
-						[ activation sourceString: ((((parts at: 4)
-							copyReplaceAll: '<TAB>' with: Character tab asString)
-							copyReplaceAll: '<CR>' with: String cr)
-							copyReplaceAll: '<LF>' with: String lf) ] on: Error do: [ ].
-						[ activation processOop: ctxOop ] on: Error do: [ ]
-					].
-				[ activation quickStepPoint: quickStepValue ] on: Error do: [ ].
-				[ activation sourceOffsets: offsetsValue ] on: Error do: [ ].
-				[ activation ipOffset: lineNumberValue ] on: Error do: [ ].
-				activation
+								copyReplaceAll: '<LF>' with: String lf) ] on: Error do: [ ].
+							[ activation processOop: ctxOop ] on: Error do: [ ]
+						].
+					[ activation quickStepPoint: quickStepValue ] on: Error do: [ ].
+					[ activation sourceOffsets: offsetsValue ] on: Error do: [ ].
+					[ activation ipOffset: lineNumberValue ] on: Error do: [ ].
+					activation
+				]
+			] on: Error do: [ 
+				debugger logRestartText: 'fetchServerContexts: ERROR parsing line: ' , (line copyFrom: 1 to: (line size min: 100)).
+				nil
 			]
 		] thenSelect: #isNotNil.
 
