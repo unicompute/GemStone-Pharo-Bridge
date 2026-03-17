@@ -143,6 +143,72 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                         label: 'System Workspace';
                         action: [ GbsWorkspace new open ] ].
 
+            (aBuilder item: #GbsUtilities)
+                label: 'Utilities';
+                with: [
+                    (aBuilder item: #ReconnectAllWindows)
+                        label: 'Reconnect All Windows';
+                        action: [ self reconnectAllWindows ].
+                    (aBuilder item: #RefreshAllWindows)
+                        label: 'Refresh All Windows';
+                        action: [ self refreshAllWindows ].
+                    (aBuilder item: #UtilitiesSeparator)
+                        label: '-'.
+                    (aBuilder item: #OpenGbxEnvyTools)
+                        label: 'Envy Tools';
+                        action: [ self openGbxEnvyTools ].
+                    (aBuilder item: #OpenGbxBehaviorServerClassCache)
+                        label: 'Server Class Cache';
+                        action: [ self openGbxBehaviorServerClassCache ].
+                    (aBuilder item: #OpenGbxClampManager)
+                        label: 'Clamp Manager';
+                        action: [ self openGbxClampManager ].
+                    (aBuilder item: #OpenGbxFileLogger)
+                        label: 'File Logger';
+                        action: [ self openGbxFileLogger ].
+                    (aBuilder item: #OpenGbxMemoryLogger)
+                        label: 'Memory Logger';
+                        action: [ self openGbxMemoryLogger ].
+                    (aBuilder item: #OpenGbxNewConfigurationTool)
+                        label: 'Configuration Tool';
+                        action: [ self openGbxNewConfigurationTool ].
+                    (aBuilder item: #OpenGbxReplicatorManager)
+                        label: 'Replicator Manager';
+                        action: [ self openGbxReplicatorManager ].
+                    (aBuilder item: #OpenGbxSegmentHolder)
+                        label: 'Segment Holder';
+                        action: [ self openGbxSegmentHolder ].
+                    (aBuilder item: #OpenGbxSegmentTool)
+                        label: 'Segment Tool';
+                        action: [ self openGbxSegmentTool ].
+                    (aBuilder item: #OpenGbxSegmentToolBrain)
+                        label: 'Segment Tool Brain';
+                        action: [ self openGbxSegmentToolBrain ].
+                    (aBuilder item: #OpenGbxServerMap)
+                        label: 'Server Map';
+                        action: [ self openGbxServerMap ].
+                    (aBuilder item: #OpenGbxStatMonitor)
+                        label: 'Stat Monitor';
+                        action: [ self openGbxStatMonitor ].
+                    (aBuilder item: #OpenGbxStatResource)
+                        label: 'Stat Resource';
+                        action: [ self openGbxStatResource ].
+                    (aBuilder item: #OpenGbxGcStatResource)
+                        label: 'GC Stat Resource';
+                        action: [ self openGbxGcStatResource ].
+                    (aBuilder item: #OpenGbxObjectMemoryStat)
+                        label: 'Object Memory Stat';
+                        action: [ self openGbxObjectMemoryStat ].
+                    (aBuilder item: #OpenGbxSessionStatResource)
+                        label: 'Session Stat Resource';
+                        action: [ self openGbxSessionStatResource ].
+                    (aBuilder item: #OpenGbxStoreTraversal)
+                        label: 'Store Traversal';
+                        action: [ self openGbxStoreTraversal ].
+                    (aBuilder item: #OpenGbxTrippy)
+                        label: 'Trippy';
+                        action: [ self openGbxTrippy ] ].
+
             (aBuilder item: #AboutGemBuilder)
                 label: 'About GemBuilder...';
                 action: [ self aboutGemBuilder ].
@@ -388,6 +454,225 @@ GbsClassicLauncher class >> clearAllConnectorClassMappingsOnCurrentSession [
 		UIManager default inform: 'Cleared all connector class overrides.'
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Failed to clear connector class overrides: ', ex messageText ]
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> reconnectAllWindows [
+	"Reconnect all GemStone windows that have lost their session connection."
+	| count |
+	count := 0.
+	[
+		"Reconnect GbsSessionBrowser presenters"
+		GbsSessionBrowserPresenter allInstancesDo: [ :presenter |
+			(presenter respondsTo: #session) ifTrue: [
+				| session |
+				session := presenter session.
+				(session isNil or: [ 
+					(session respondsTo: #isConnected) and: [ [ session isConnected ] on: Error do: [ false ] ] not ]
+				]) ifTrue: [
+					[ presenter refreshAll ] on: Error do: [ ].
+					count := count + 1
+				]
+			]
+		].
+		"Reconnect GbsWorkspace presenters"
+		GbsWorkspace allInstancesDo: [ :workspace |
+			(workspace respondsTo: #session) ifTrue: [
+				| session |
+				session := workspace session.
+				(session isNil or: [ 
+					(session respondsTo: #isConnected) and: [ [ session isConnected ] on: Error do: [ false ] ] not ]
+				]) ifTrue: [
+					[ workspace refreshUI ] on: Error do: [ ].
+					count := count + 1
+				]
+			]
+		].
+		"Reconnect GbsConnectorBrowserPresenter presenters"
+		GbsConnectorBrowserPresenter allInstancesDo: [ :presenter |
+			(presenter respondsTo: #session) ifTrue: [
+				| session |
+				session := presenter session.
+				(session isNil or: [ 
+					(session respondsTo: #isConnected) and: [ [ session isConnected ] on: Error do: [ false ] ] not ]
+				]) ifTrue: [
+					[ presenter refreshAll ] on: Error do: [ ].
+					count := count + 1
+				]
+			]
+		].
+		"Update launchers"
+		GbsLauncher allInstancesDo: [ :launcher |
+			[ launcher updateUIState ] on: Error do: [ ].
+			count := count + 1
+		].
+		GbsClassicLauncher allInstancesDo: [ :launcher |
+			[ launcher refreshAll ] on: Error do: [ ].
+			count := count + 1
+		].
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Reconnect error: ', ex messageText
+	].
+	count > 0
+		ifTrue: [ UIManager default inform: 'Reconnected ', count asString, ' window(s).' ]
+		ifFalse: [ UIManager default inform: 'All windows are already connected.' ]
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> refreshAllWindows [
+	"Refresh all GemStone windows to update their content."
+	| count |
+	count := 0.
+	[
+		"Refresh GbsSessionBrowser presenters"
+		GbsSessionBrowserPresenter allInstancesDo: [ :presenter |
+			(presenter respondsTo: #refreshAll) ifTrue: [
+				[ presenter refreshAll ] on: Error do: [ ].
+				count := count + 1
+			]
+		].
+		"Refresh GbsWorkspace presenters"
+		GbsWorkspace allInstancesDo: [ :workspace |
+			(workspace respondsTo: #refreshUI) ifTrue: [
+				[ workspace refreshUI ] on: Error do: [ ].
+				count := count + 1
+			]
+		].
+		"Refresh GbsConnectorBrowserPresenter presenters"
+		GbsConnectorBrowserPresenter allInstancesDo: [ :presenter |
+			(presenter respondsTo: #refreshAll) ifTrue: [
+				[ presenter refreshAll ] on: Error do: [ ].
+				count := count + 1
+			]
+		].
+		"Update launchers"
+		GbsLauncher allInstancesDo: [ :launcher |
+			[ launcher updateUIState ] on: Error do: [ ].
+			count := count + 1
+		].
+		GbsClassicLauncher allInstancesDo: [ :launcher |
+			[ launcher refreshAll ] on: Error do: [ ].
+			count := count + 1
+		].
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Refresh error: ', ex messageText
+	].
+	count > 0
+		ifTrue: [ UIManager default inform: 'Refreshed ', count asString, ' window(s).' ]
+		ifFalse: [ UIManager default inform: 'No windows to refresh.' ]
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxUtility: utilityClassName [
+	"Open a GemStone utility by class name."
+	| session utilityClass utility |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	utilityClass := Smalltalk at: utilityClassName asSymbol ifAbsent: [ nil ].
+	utilityClass ifNil: [
+		^ UIManager default inform: 'Utility class ', utilityClassName, ' not found.'
+	].
+	[
+		utility := utilityClass new.
+		(utility respondsTo: #session:) ifTrue: [ utility session: session ].
+		(utility respondsTo: #open) ifTrue: [ utility open ]
+			ifFalse: [
+				(utility respondsTo: #openOn:) ifTrue: [ utility openOn: session ]
+					ifFalse: [ UIManager default inform: 'Utility ', utilityClassName, ' does not support opening.' ]
+			]
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Failed to open ', utilityClassName, ': ', ex messageText
+	]
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxEnvyTools [
+	self openGbxUtility: #GbxEnvyTools
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxBehaviorServerClassCache [
+	self openGbxUtility: #GbxBehaviorServerClassCache
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxClampManager [
+	self openGbxUtility: #GbxClampManager
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxFileLogger [
+	self openGbxUtility: #GbxFileLogger
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxMemoryLogger [
+	self openGbxUtility: #GbxMemoryLogger
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxNewConfigurationTool [
+	self openGbxUtility: #GbxNewConfigurationTool
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxReplicatorManager [
+	self openGbxUtility: #GbxReplicatorManager
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxSegmentHolder [
+	self openGbxUtility: #GbxSegmentHolder
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxSegmentTool [
+	self openGbxUtility: #GbxSegmentTool
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxSegmentToolBrain [
+	self openGbxUtility: #GbxSegmentToolBrain
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxServerMap [
+	self openGbxUtility: #GbxServerMap
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxStatMonitor [
+	self openGbxUtility: #GbxStatMonitor
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxStatResource [
+	self openGbxUtility: #GbxStatResource
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxGcStatResource [
+	self openGbxUtility: #GbxGcStatResource
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxObjectMemoryStat [
+	self openGbxUtility: #GbxObjectMemoryStat
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxSessionStatResource [
+	self openGbxUtility: #GbxSessionStatResource
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxStoreTraversal [
+	self openGbxUtility: #GbxStoreTraversal
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxTrippy [
+	self openGbxUtility: #GbxTrippy
 ]
 
 { #category : 'menus' }
