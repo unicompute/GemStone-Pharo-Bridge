@@ -359,13 +359,13 @@ GbxContextListPolicy >> fetchServerContexts [
 	debugger logRestartText: 'fetchServerContexts: rawData length=' , rawData size asString.
 	"Log first 200 chars of rawData for debugging"
 	debugger logRestartText: 'fetchServerContexts: rawData first200=[' , (rawData copyFrom: 1 to: (rawData size min: 200)) , ']'.
-	"Parse context lines from script output"
+	"Parse context lines from script output, filtering DEBUG and empty lines"
 	contexts := (rawData splitOn: Character lf)
-		collect: [ :line |
+		select: [ :line | line isNotEmpty and: [ (line beginsWith: 'DEBUG:') not ] ]
+		thenCollect: [ :line |
 			| parts |
-			(line isEmpty or: [ line beginsWith: 'DEBUG:' ]) ifTrue: [ ^ nil ].
-			parts := line splitOn: Character tab.
 			[
+				parts := line splitOn: Character tab.
 				parts size >= 5 ifTrue: [
 					| activation selectorSymbol ctxOop quickStepValue offsetsTokens offsetsValue lineNumberValue |
 					selectorSymbol := [ (parts at: 3) asSymbol ] on: Error do: [ #unboundMethod ].
