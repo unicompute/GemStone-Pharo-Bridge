@@ -2870,8 +2870,7 @@ GbsRemoteDebugger >> restart [
 		cr.
 	
 	didRestart ifTrue: [
-		self fetchStackFrames.
-		self normalizeRestartSelectionAndPosition.
+		self settleAfterRestart.
 		"Log post-fetch state"
 		afterStep := self serverExecutedFrameStepPoint.
 		Transcript
@@ -2887,6 +2886,41 @@ GbsRemoteDebugger >> restart [
 		restartPinnedContext := nil
 	].
 	^ didRestart
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> settleAfterRestart [
+	| attempts settled |
+	attempts := 0.
+	settled := false.
+	[
+		attempts := attempts + 1.
+		self fetchStackFrames.
+		self normalizeRestartSelectionAndPosition.
+		settled := self restartStackLooksSettled.
+		(settled not and: [ attempts < 6 ]) ifTrue: [
+			(Delay forMilliseconds: 75) wait
+		].
+		settled not and: [ attempts < 6 ]
+	] whileTrue.
+	Transcript
+		show: '[UI restart] settle attempts=';
+		show: attempts asString;
+		show: ' settled=';
+		show: settled asString;
+		cr.
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartStackLooksSettled [
+	| selected serverLevel serverStep |
+	selected := self safeServiceCall: [ service currentContext ] default: nil.
+	serverLevel := self currentSelectedFrameLevel.
+	serverStep := self serverExecutedFrameStepPoint.
+	(selected isNil and: [ contextList isCollection and: [ contextList isEmpty ] ]) ifTrue: [ ^ false ].
+	(self currentSelectedContextIsExecutedCodeFrame and: [ serverLevel = 1 ]) ifFalse: [ ^ false ].
+	serverStep ifNil: [ ^ false ].
+	^ true
 ]
 
 { #category : 'private' }
