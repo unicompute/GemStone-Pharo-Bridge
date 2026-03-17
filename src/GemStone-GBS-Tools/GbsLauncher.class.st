@@ -24,15 +24,24 @@ Class {
 
 { #category : 'initialization' }
 GbsLauncher >> connectPresenters [
+	| workspaceClass transcriptClass |
+	workspaceClass := Smalltalk at: #GbsWorkspace ifAbsent: [ nil ].
+	transcriptClass := Smalltalk at: #GbsRemoteTranscript ifAbsent: [ nil ].
 	btnLogin action: [ self doLogin ].
 	btnLogout action: [ self doLogout ].
 	btnCommit action: [ self doCommit ].
 	btnAbort action: [ self doAbort ].
-	btnWorkspace action: [ GbsWorkspace new open ].
+	btnWorkspace action: [
+		workspaceClass
+			ifNil: [ self inform: 'Workspace presenter unavailable.' ]
+			ifNotNil: [ workspaceClass new open ] ].
 	btnBrowser action: [ UIManager default defer: [ self openSystemBrowser ] ].
 	
 	"Wire the Transcript button to open our custom VW-ported window!"
-	btnTranscript action: [ GbsRemoteTranscript new open ].
+	btnTranscript action: [
+		transcriptClass
+			ifNil: [ self inform: 'Remote transcript unavailable.' ]
+			ifNotNil: [ transcriptClass new open ] ].
 	
 	btnUsers action: [ UIManager default defer: [ self openUsers ] ].
 	btnPolling action: [ self togglePollingPreference ].

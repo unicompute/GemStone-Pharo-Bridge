@@ -4,6 +4,71 @@
 	Smalltalk at: #Unicode16 put: WideString.
 	Smalltalk at: #Unicode32 put: WideString.
 
+	(Smalltalk at: #CannotReturn ifAbsent: [ nil ]) ifNotNil: [ :existing |
+		((existing allInstVarNames includes: 'result') not)
+			ifTrue: [ existing removeFromSystem ] ].
+
+	(Smalltalk at: #GbsServerInterface ifAbsent: [ nil ]) ifNotNil: [ :existing |
+		(((existing allInstVarNames includes: 'libraryPath') not)
+			or: [ (existing class allInstVarNames includes: 'UniqueInstance') not ])
+			ifTrue: [ existing removeFromSystem ] ].
+
+	(Smalltalk at: #GbsSession ifAbsent: [ nil ]) ifNotNil: [ :existing |
+		((((existing allInstVarNames includes: 'serverInterface') not)
+			or: [ (existing allInstVarNames includes: 'sessionId') not ]))
+			ifTrue: [ existing removeFromSystem ] ].
+
+	(Smalltalk at: #GbxServerInterface ifAbsent: [ nil ]) ifNotNil: [ :existing |
+		((existing allInstVarNames includes: 'callSequencer') not)
+			ifTrue: [ existing removeFromSystem ] ].
+
+	(Smalltalk includesKey: #CannotReturn) ifFalse: [
+		Smalltalk classInstaller make: [ :builder |
+			builder
+				superclass: Error;
+				name: #CannotReturn;
+				slots: #(result);
+				sharedVariables: #();
+				package: 'GemStone-GBS-Converted' ] ].
+
+	(Smalltalk includesKey: #GbsServerInterface) ifFalse: [
+		Smalltalk classInstaller make: [ :builder |
+			builder
+				superclass: Object;
+				name: #GbsServerInterface;
+				slots: #(libraryPath);
+				classSlots: #(UniqueInstance);
+				sharedVariables: #();
+				package: 'GemStone-GBS-Converted' ] ].
+
+	(Smalltalk includesKey: #GbsSession) ifFalse: [
+		Smalltalk classInstaller make: [ :builder |
+			builder
+				superclass: Object;
+				name: #GbsSession;
+				slots: #(serverInterface sessionId);
+				sharedVariables: #();
+				package: 'GemStone-GBS-Converted' ] ].
+
+	#(GbsWorkspace GbsRemoteTranscript GbsSessionParametersEditor GbsX509ParametersEditor GbsLauncher) do: [ :className |
+		(Smalltalk includesKey: className) ifFalse: [
+			Smalltalk classInstaller make: [ :builder |
+				builder
+					superclass: SpPresenter;
+					name: className;
+					slots: #();
+					sharedVariables: #();
+					package: 'GemStone-GBS-Tools' ] ] ].
+
+	(Smalltalk includesKey: #GbxServerInterface) ifFalse: [
+		Smalltalk classInstaller make: [ :builder |
+			builder
+				superclass: Object;
+				name: #GbxServerInterface;
+				slots: #(alteredOopBuffer byteFetchBuffer callSequencer clampedTravArgsBuffer dirtyOopBuffer eventDetector gcedOopBuffer longHolderBuffer longHolderBuffer2 needMoreTraversal oopFetchBuffer oopsNoLongerReplicatedBuffer singleStepIsRequested storeTravDoArgsBuffer noLongerReplicatedOops thisSession traversalBufferManager);
+				sharedVariables: #();
+				package: 'GemStone-GBS-Converted' ] ].
+
 	{
 		#(#ContextEmergencyError #Error 'Kernel-Exceptions').
 		#(#GbxAbstractException #Object 'GemStone-GBS-Converted').
@@ -74,7 +139,18 @@
 		#(#GbsSessionManager #Object 'GemStone-GBS-Converted').
 		#(#GbxApplicationModel #Object 'GemStone-GBS-Converted').
 		#(#GbxBrain #Object 'GemStone-GBS-Converted').
+		#(#GbxAdminToolsBrain #GbxBrain 'GemStone-GBS-Converted').
+		#(#GbxDbaToolsSupport #GbxApplicationModel 'GemStone-GBS-Converted').
+		#(#GbxDbaBrain #GbxAdminToolsBrain 'GemStone-GBS-Converted').
+		#(#GbxDbaUserBrain #GbxDbaBrain 'GemStone-GBS-Converted').
+		#(#GbxConnectorBrowser #GbxDbaToolsSupport 'GemStone-GBS-Converted').
+		#(#GbxDbaUserBrowser #GbxDbaToolsSupport 'GemStone-GBS-Converted').
 		#(#GbxDelegate #Object 'GemStone-GBS-Converted').
+		#(#CstMessageDispatcher #Object 'GemStone-GBS-Converted').
+		#(#CstMessageHandler #Object 'GemStone-GBS-Converted').
+		#(#CstMessageHandlerVa #CstMessageHandler 'GemStone-GBS-Converted').
+		#(#CstMessageHandlerVw #CstMessageHandler 'GemStone-GBS-Converted').
+		#(#GbxMessageDispatcher #CstMessageDispatcher 'GemStone-GBS-Converted').
 		#(#GbxAbstractProxy #Object 'GemStone-GBS-Converted').
 		#(#GbsForwarder #GbxAbstractProxy 'GemStone-GBS-Converted').
 		#(#GbxObjectStub #GbxAbstractProxy 'GemStone-GBS-Converted').
@@ -82,6 +158,32 @@
 		#(#GbxPointerStub #GbxObjectStub 'GemStone-GBS-Converted').
 		#(#GbxUnknownStub #GbxObjectStub 'GemStone-GBS-Converted').
 		#(#GbxUnauthorizedObjectStub #GbxObjectStub 'GemStone-GBS-Converted').
+		#(#GbxInspector #Object 'GemStone-GBS-Converted').
+		#(#GbxBasicInspector #Object 'GemStone-GBS-Converted').
+		#(#GbxArrayInspector #Object 'GemStone-GBS-Converted').
+		#(#GbxSetInspector #Object 'GemStone-GBS-Converted').
+		#(#GbxDelegateInspector #GbxBasicInspector 'GemStone-GBS-Converted').
+		#(#GbxIdentityBagInspector #GbxArrayInspector 'GemStone-GBS-Converted').
+		#(#GbxTrippyDictionaryInspector #Object 'GemStone-GBS-Converted').
+		#(#GbxClientBasicProxyInspector #Object 'GemStone-GBS-Converted').
+		#(#GbxTextEditorInspector #Object 'GemStone-GBS-Converted').
+		#(#GbxGsMethodDictionary #IdentityDictionary 'GemStone-GBS-Converted').
+		#(#GbxFastIdentityKeyValueDictionary #GbxGsMethodDictionary 'GemStone-GBS-Converted').
+		#(#GbxTraversal #Object 'GemStone-GBS-Converted').
+		#(#GbxFetchTraversal #GbxTraversal 'GemStone-GBS-Converted').
+		#(#GbxStoreTraversal #GbxTraversal 'GemStone-GBS-Converted').
+		#(#GbxTraversalBuffer #Object 'GemStone-GBS-Converted').
+		#(#GbxTraversalBuffer64 #GbxTraversalBuffer 'GemStone-GBS-Converted').
+		#(#GbxLogger #Object 'GemStone-GBS-Converted').
+		#(#GbxFileLogger #GbxLogger 'GemStone-GBS-Converted').
+		#(#GbxMemoryLogger #GbxLogger 'GemStone-GBS-Converted').
+		#(#GbxUnorderedCollectionReplicator #GbxObjectReplicator 'GemStone-GBS-Converted').
+		#(#GbxStructure #Object 'GemStone-GBS-Converted').
+		#(#GbxStructureSync #Object 'GemStone-GBS-Converted').
+		#(#GbxLongHolderType #GbxStructure 'GemStone-GBS-Converted').
+		#(#GbxGciStoreTravDoArgsSType #GbxStructure 'GemStone-GBS-Converted').
+		#(#GbxGciClampedTravArgsSType #GbxStructure 'GemStone-GBS-Converted').
+		#(#GbxX509LoginArg #GbxStructure 'GemStone-GBS-Converted').
 		#(#LargeGrainMemoryPolicy #Object 'GemStone-GBS-Converted').
 		#(#KeyValueDictionary #Dictionary 'GemStone-GBS-Converted').
 		#(#AlphaBlendedIcons #Object 'GemStone-GBS-Converted').

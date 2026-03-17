@@ -97,8 +97,10 @@ GbsSessionParametersEditor >> onAccept: aBlock [
 
 { #category : 'actions' }
 GbsSessionParametersEditor >> openX509Settings [
-	| editor dialog |
-	editor := GbsX509ParametersEditor new.
+	| editorClass editor dialog |
+	editorClass := Smalltalk at: #GbsX509ParametersEditor ifAbsent: [ nil ].
+	editorClass ifNil: [ ^ self inform: 'X509 editor unavailable.' ].
+	editor := editorClass new.
 	editor setModel: model.
 	
 	dialog := editor asModalWindow.

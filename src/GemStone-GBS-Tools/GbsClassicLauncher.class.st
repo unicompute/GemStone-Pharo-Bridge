@@ -25,6 +25,9 @@ Class {
 
 { #category : 'menus' }
 GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
+	| launcherClass workspaceClass |
+	launcherClass := Smalltalk at: #GbsLauncher ifAbsent: [ nil ].
+	workspaceClass := Smalltalk at: #GbsWorkspace ifAbsent: [ nil ].
     <worldMenu>
     (aBuilder item: #GemStone)
         order: 79.9;
@@ -40,7 +43,10 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                         icon: (self iconNamed: #glamorousBrowse).
                     (aBuilder item: #SimpleLauncher)
                         label: 'Simple Launcher';
-                        action: [ GbsLauncher new open ];
+                        action: [
+							launcherClass
+								ifNil: [ UIManager default inform: 'Launcher unavailable.' ]
+								ifNotNil: [ launcherClass new open ] ];
                         icon: (self iconNamed: #glamorousPlay).
                     (aBuilder item: #LogoutCurrentSession)
                         label: 'Logout Current Session';
@@ -126,10 +132,16 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                 with: [
                     (aBuilder item: #NewGSWorkspace)
                         label: 'New GS Workspace';
-                        action: [ GbsWorkspace new open ].
+                        action: [
+							workspaceClass
+								ifNil: [ UIManager default inform: 'Workspace presenter unavailable.' ]
+								ifNotNil: [ workspaceClass new open ] ].
                     (aBuilder item: #OpenGSWorkspace)
                         label: 'Open GS Workspace...';
-                        action: [ GbsWorkspace new open ].
+                        action: [
+							workspaceClass
+								ifNil: [ UIManager default inform: 'Workspace presenter unavailable.' ]
+								ifNotNil: [ workspaceClass new open ] ].
                     (aBuilder item: #GSFileIn)
                         label: 'GS File in...';
                         action: [ self gsFileInOnCurrentSession ].
@@ -141,7 +153,10 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                         action: [ self openBreakpointsBrowser ].
                     (aBuilder item: #GSSystemWorkspace)
                         label: 'System Workspace';
-                        action: [ GbsWorkspace new open ] ].
+                        action: [
+							workspaceClass
+								ifNil: [ UIManager default inform: 'Workspace presenter unavailable.' ]
+								ifNotNil: [ workspaceClass new open ] ] ].
 
             (aBuilder item: #GbsUtilities)
                 label: 'Utilities';
@@ -1096,9 +1111,11 @@ GbsClassicLauncher >> doAbort [
 
 { #category : 'actions' }
 GbsClassicLauncher >> doAddParameter [
-	| newParam editor window |
+	| newParam editor window editorClass |
 	newParam := GbsSessionParameters new.
-	editor := GbsSessionParametersEditor new.
+	editorClass := Smalltalk at: #GbsSessionParametersEditor ifAbsent: [ nil ].
+	editorClass ifNil: [ ^ self inform: 'Session parameters editor unavailable.' ].
+	editor := editorClass new.
 	editor setModel: newParam.
 	
 	"Pass the save action to the editor"
@@ -1159,8 +1176,10 @@ GbsClassicLauncher >> doDeleteParameter [
 { #category : 'actions' }
 GbsClassicLauncher >> doEditParameter [
 	parametersList selection selectedItem ifNotNil: [ :param |
-		| editor window |
-		editor := GbsSessionParametersEditor new.
+		| editor window editorClass |
+		editorClass := Smalltalk at: #GbsSessionParametersEditor ifAbsent: [ nil ].
+		editorClass ifNil: [ ^ self inform: 'Session parameters editor unavailable.' ].
+		editor := editorClass new.
 		editor setModel: param.
 		
 		editor onAccept: [ 
@@ -1374,16 +1393,23 @@ GbsClassicLauncher >> menuSession [
 
 { #category : 'menus' }
 GbsClassicLauncher >> menuTools [
+	| workspaceClass transcriptClass |
+	workspaceClass := Smalltalk at: #GbsWorkspace ifAbsent: [ nil ].
+	transcriptClass := Smalltalk at: #GbsRemoteTranscript ifAbsent: [ nil ].
     ^ self newMenu
         addItem: [ :item | 
             item name: 'Workspace'; 
-            action: [ GbsWorkspace new open ] ];
+            action: [
+				workspaceClass
+					ifNil: [ self inform: 'Workspace presenter unavailable.' ]
+					ifNotNil: [ workspaceClass new open ] ] ];
 
         addItem: [ :item | 
             item name: 'Transcript'; 
             action: [ 
                 | transcriptPresenter |
-                transcriptPresenter := GbsRemoteTranscript new.
+                transcriptClass ifNil: [ ^ self inform: 'Remote transcript unavailable.' ].
+                transcriptPresenter := transcriptClass new.
                 transcriptPresenter open.
                 transcriptPresenter startPolling.
             ] ];
@@ -1602,14 +1628,17 @@ GbsClassicLauncher >> isSessionUsableForBrowsing: aSession [
 
 { #category : 'actions' }
 GbsClassicLauncher >> openWorkspaceFor: aSession [
+	| workspaceClass |
     aSession ifNil: [ ^ self ].
+	workspaceClass := Smalltalk at: #GbsWorkspace ifAbsent: [ nil ].
+	workspaceClass ifNil: [ ^ self inform: 'Workspace presenter unavailable.' ].
     
     "1. Ensure this session is the active one globally before opening tools"
     GbsSessionParameters currentSession: aSession.
     self refreshAll.
     
     "2. Open the Workspace"
-    GbsWorkspace new open.
+    workspaceClass new open.
 ]
 
 { #category : 'actions' }

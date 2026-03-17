@@ -11,7 +11,8 @@ BaselineOfGemStonePharo >> baseline: spec [
 	spec for: #common do: [ 
 		
 		"1. Define the Packages and their Dependencies"
-		spec package: 'GemStone-GBS-Converted'.
+		spec package: 'GemStone-GBS-Converted'
+			with: [ spec preLoadDoIt: #preloadConvertedBootstrap ].
 		
 		spec package: 'GemStone-GBS-Tools' 
 			with: [ spec requires: #('GemStone-GBS-Converted') ].
@@ -24,6 +25,13 @@ BaselineOfGemStonePharo >> baseline: spec [
 			group: 'Core' with: #('GemStone-GBS-Converted');
 			group: 'Tools' with: #('GemStone-GBS-Converted' 'GemStone-GBS-Tools');
 			group: 'Tests' with: #('GemStone-Pharo-Tests');
-			group: 'default' with: #('Tools' 'Tests').
+			group: 'default' with: #('Tools');
+			group: 'full' with: #('Tools' 'Tests').
 	]
+]
+
+{ #category : 'baselines' }
+BaselineOfGemStonePharo >> preloadConvertedBootstrap [
+	('/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/prebootstrap_pharo13.st' asFileReference)
+		fileIn
 ]
