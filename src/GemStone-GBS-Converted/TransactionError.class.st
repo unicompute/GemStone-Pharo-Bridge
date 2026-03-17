@@ -1,6 +1,8 @@
 Class {
-	#name : 'TransactionError',
-	#superclass : 'Error',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'TransactionError',
+	#superclass : #'Error',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

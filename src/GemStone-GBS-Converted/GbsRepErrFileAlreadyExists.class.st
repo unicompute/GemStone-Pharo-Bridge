@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRepErrFileAlreadyExists',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRepErrFileAlreadyExists',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRepErrFileAlreadyExists class >> gemStoneErrorNumber6430 ^2126
+

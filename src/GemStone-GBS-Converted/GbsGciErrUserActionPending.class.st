@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsGciErrUserActionPending',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsGciErrUserActionPending',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsGciErrUserActionPending class >> gemStoneErrorNumber6430 ^2264
+

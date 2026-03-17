@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrCommitDbInRestore',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrCommitDbInRestore',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrCommitDbInRestore class >> gemStoneErrorNumber6430 ^2248
+

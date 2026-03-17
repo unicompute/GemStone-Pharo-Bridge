@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsLockErrAllSymbols',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsLockErrAllSymbols',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsLockErrAllSymbols class >> gemStoneErrorNumber6430 ^2331
+

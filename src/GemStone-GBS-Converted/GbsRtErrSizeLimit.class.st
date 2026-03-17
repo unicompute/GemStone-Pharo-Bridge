@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrSizeLimit',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrSizeLimit',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrSizeLimit class >> gemStoneErrorNumber6430 ^2284
+

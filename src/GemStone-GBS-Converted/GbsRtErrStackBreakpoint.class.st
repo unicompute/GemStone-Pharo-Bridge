@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrStackBreakpoint',
-	#superclass : 'GbsContextEmergencyError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrStackBreakpoint',
+	#superclass : #'GbxAbstractContextEmergencyError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrStackBreakpoint class >> gemStoneErrorNumber6430 ^6006
+

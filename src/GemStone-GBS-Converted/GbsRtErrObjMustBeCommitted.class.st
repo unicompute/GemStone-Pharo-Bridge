@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrObjMustBeCommitted',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrObjMustBeCommitted',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrObjMustBeCommitted class >> gemStoneErrorNumber6430 ^2405
+

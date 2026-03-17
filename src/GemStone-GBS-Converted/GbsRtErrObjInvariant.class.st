@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrObjInvariant',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrObjInvariant',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrObjInvariant class >> gemStoneErrorNumber6430 ^2275
+

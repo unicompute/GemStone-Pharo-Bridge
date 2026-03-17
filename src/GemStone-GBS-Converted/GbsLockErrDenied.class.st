@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsLockErrDenied',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsLockErrDenied',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsLockErrDenied class >> gemStoneErrorNumber6430 ^2075
+

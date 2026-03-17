@@ -1,6 +1,8 @@
 Class {
-	#name : 'GbsMaxStreamSizeNotification',
-	#superclass : 'Notification',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsMaxStreamSizeNotification',
+	#superclass : #'Notification',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

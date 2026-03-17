@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsClassErrRemoveInherIv',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsClassErrRemoveInherIv',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsClassErrRemoveInherIv class >> gemStoneErrorNumber6430 ^2278
+

@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrGcCommitFailure',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrGcCommitFailure',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrGcCommitFailure class >> gemStoneErrorNumber6430 ^2390
+

@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsStDBErrExpectedRightBracket',
-	#superclass : 'GbsCompilerError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsStDBErrExpectedRightBracket',
+	#superclass : #'GbsCompilerError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsStDBErrExpectedRightBracket class >> gemStoneErrorNumber6430 ^1035
+

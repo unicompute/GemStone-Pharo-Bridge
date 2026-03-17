@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsLockErrTimeout',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsLockErrTimeout',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsLockErrTimeout class >> gemStoneErrorNumber6430 ^2419
+

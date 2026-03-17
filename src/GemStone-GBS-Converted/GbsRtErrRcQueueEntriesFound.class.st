@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrRcQueueEntriesFound',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrRcQueueEntriesFound',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrRcQueueEntriesFound class >> gemStoneErrorNumber6430 ^2144
+

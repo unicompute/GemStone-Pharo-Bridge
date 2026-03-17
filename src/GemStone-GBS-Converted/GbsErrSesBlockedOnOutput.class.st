@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsErrSesBlockedOnOutput',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsErrSesBlockedOnOutput',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsErrSesBlockedOnOutput class >> gemStoneErrorNumber6430 ^2254
+

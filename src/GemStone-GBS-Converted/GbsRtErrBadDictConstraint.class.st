@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrBadDictConstraint',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrBadDictConstraint',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrBadDictConstraint class >> gemStoneErrorNumber6430 ^2072
+

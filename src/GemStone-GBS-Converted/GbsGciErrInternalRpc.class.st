@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsGciErrInternalRpc',
-	#superclass : 'GbsFatalError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsGciErrInternalRpc',
+	#superclass : #'GbsFatalError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsGciErrInternalRpc class >> gemStoneErrorNumber6430 ^4102
+

@@ -1,6 +1,8 @@
 Class {
-	#name : 'UserDefinedError',
-	#superclass : 'Error',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'UserDefinedError',
+	#superclass : #'Error',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

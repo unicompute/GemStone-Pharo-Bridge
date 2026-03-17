@@ -1,6 +1,8 @@
 Class {
-	#name : 'SignalBufferFull',
-	#superclass : 'Error',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'SignalBufferFull',
+	#superclass : #'Error',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

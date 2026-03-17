@@ -1,81 +1,109 @@
 Class {
-	#name : 'GbxKeyedElement',
-	#superclass : 'Object',
-	#instVars : [
-		'key',
-		'value',
-		'isFaulted'
-	],
-	#category : 'GemStone-GBS-Tools',
-	#package : 'GemStone-GBS-Tools'
+	#name : #'GbxKeyedElement',
+	#superclass : #'KeyedElement',
+	#instVars : [ #'keyDelegate' #'keyName' #'valueDelegate' #'valueName' #'partName' ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Tools'
 }
 
-{ #category : 'instance creation' }
-GbxKeyedElement class >> key: aKey value: aValue [
-	^ self new
-		key: aKey;
-		value: aValue;
+{ #category : #'comparing' }
+GbxKeyedElement >> sameTypeEquals: aPart 
+	^key == aPart key
+
+{ #category : #'comparing' }
+GbxKeyedElement >> = anObject
+	
+	self gbxFixMe.	"remove this method when vw75 is no longer supported. Needed for backwards compatibility 
+	fix for bug 36144."
+	^self class == anObject class and: [self sameTypeEquals: anObject]
+
+{ #category : #'accessing' }
+GbxKeyedElement >> valueName: anObject
+	valueName := anObject
+
+{ #category : #'accessing' }
+GbxKeyedElement >> basicValueDelegate
+	"make sure we have wrapped the valueDelegate to ensure consistency,
+	then get the underlying delegate. #value does the wrapping"
+
+	^self value delegate
+
+{ #category : #'accessing' }
+GbxKeyedElement >> keyDelegate
+	^keyDelegate
+
+{ #category : #'accessing' }
+GbxKeyedElement >> text
+	valueName isNil 
+		ifTrue: 
+			[valueName := object session evaluate: 'self printString'
+						context: valueDelegate].
+	^valueName
+
+{ #category : #'accessing' }
+GbxKeyedElement >> partName
+	"used in the part's display string. cache this if its hit a lot"
+	
+	partName isNil
+		ifTrue:
+			[partName := keyDelegate session unsynchronizedEvaluate:
+					' self printString' context: keyDelegate].
+	^partName
+
+{ #category : #'accessing' }
+GbxKeyedElement >> keyDelegate: anObject
+	keyDelegate := anObject
+
+{ #category : #'accessing' }
+GbxKeyedElement >> displayString
+	^keyName
+
+{ #category : #'accessing' }
+GbxKeyedElement >> keyName: anObject
+	keyName := anObject
+
+{ #category : #'accessing' }
+GbxKeyedElement >> valueDelegate
+	^valueDelegate
+
+{ #category : #'accessing' }
+GbxKeyedElement >> key
+	^keyDelegate
+
+{ #category : #'accessing' }
+GbxKeyedElement >> value: anObject 
+	valueDelegate := object 
+				remotePerform: #at:put:
+				with: keyDelegate
+				with: anObject asGSObject.
+	valueName := object session evaluate: 'self printString'
+				context: valueDelegate.
+	^valueDelegate
+
+{ #category : #'accessing' }
+GbxKeyedElement >> valueDelegate: anObject
+	valueDelegate := anObject
+
+{ #category : #'accessing' }
+GbxKeyedElement >> value
+
+	^valueDelegate gbxIsWrapped
+		ifTrue: [valueDelegate]
+		ifFalse: [valueDelegate := Tools.Trippy.Inspector wrappedOrNot: valueDelegate]
+
+{ #category : #'accessing' }
+GbxKeyedElement >> refresh
+	valueDelegate := object remotePerform: #at: with: keyDelegate.
+	valueName := object session evaluate: 'self printString'
+				context: valueDelegate
+
+{ #category : #'instance creation' }
+GbxKeyedElement class >> of: object key: key keyName: keyName value: value valueName: valueName 
+	^(self new)
+		object: object;
+		keyDelegate: key;
+		keyName: keyName;
+		valueDelegate: value;
+		valueName: valueName;
 		yourself
-]
 
-{ #category : 'comparing' }
-GbxKeyedElement >> = anObject [
-	^ (anObject isKindOf: GbxKeyedElement)
-		and: [ key = anObject key ]
-]
-
-{ #category : 'accessing' }
-GbxKeyedElement >> asAssociation [
-	^ key -> value
-]
-
-{ #category : 'accessing' }
-GbxKeyedElement >> faultIn [
-	"Fault in the value if needed"
-	^ value
-]
-
-{ #category : 'testing' }
-GbxKeyedElement >> hasKey: aKey [
-	^ key = aKey
-]
-
-{ #category : 'accessing' }
-GbxKeyedElement >> hash [
-	^ key hash
-]
-
-{ #category : 'testing' }
-GbxKeyedElement >> isFaulted [
-	^ isFaulted ifNil: [ false ]
-]
-
-{ #category : 'testing' }
-GbxKeyedElement >> isFaulted: aBoolean [
-	isFaulted := aBoolean
-]
-
-{ #category : 'accessing' }
-GbxKeyedElement >> key [
-	^ key
-]
-
-{ #category : 'accessing' }
-GbxKeyedElement >> key: aKey [
-	key := aKey
-]
-
-{ #category : 'accessing' }
-GbxKeyedElement >> printString [
-	^ key asString, ' -> ', (value ifNil: [ '<nil>' ] ifNotNil: [ value printString ])
-]
-
-{ #category : 'accessing' }
-GbxKeyedElement >> value [
-	^ self faultIn
-]
-
-{ #category : 'accessing' }
-GbxKeyedElement >> value: anObject [
-	value := anObject
-]

@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsStDBErrBlocksTooDeep',
-	#superclass : 'GbsCompilerError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsStDBErrBlocksTooDeep',
+	#superclass : #'GbsCompilerError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsStDBErrBlocksTooDeep class >> gemStoneErrorNumber6430 ^1033
+

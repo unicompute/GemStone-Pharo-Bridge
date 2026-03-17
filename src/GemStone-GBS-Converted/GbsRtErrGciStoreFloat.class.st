@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrGciStoreFloat',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrGciStoreFloat',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrGciStoreFloat class >> gemStoneErrorNumber6430 ^2245
+

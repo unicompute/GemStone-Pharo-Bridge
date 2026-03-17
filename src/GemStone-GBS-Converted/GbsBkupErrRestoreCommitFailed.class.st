@@ -1,6 +1,8 @@
 Class {
-	#name : 'GbsBkupErrRestoreCommitFailed',
-	#superclass : 'GbsAbortingError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsBkupErrRestoreCommitFailed',
+	#superclass : #'GbsAbortingError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

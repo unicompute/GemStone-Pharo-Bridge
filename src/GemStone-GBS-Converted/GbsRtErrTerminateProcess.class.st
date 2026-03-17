@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrTerminateProcess',
-	#superclass : 'GbsEventError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrTerminateProcess',
+	#superclass : #'GbsEventError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrTerminateProcess class >> gemStoneErrorNumber6430 ^6018
+

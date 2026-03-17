@@ -1,88 +1,97 @@
 Class {
-	#name : 'GbxSymbolListDictionaryHolder',
-	#superclass : 'GbxDictionaryHolder',
-	#instVars : [
-		'symbolListIndex'
-	],
-	#category : 'GemStone-GBS-Tools',
-	#package : 'GemStone-GBS-Tools'
+	#name : #'GbxSymbolListDictionaryHolder',
+	#superclass : #'Object',
+	#instVars : [ #'dictName' #'remoteSymbolListDictionary' ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Tools'
 }
 
-{ #category : 'instance creation' }
-GbxSymbolListDictionaryHolder class >> on: aSymbolListDictionary [
-	"Create a holder for a GemStone symbol list dictionary"
-	^ self new
-		proxy: aSymbolListDictionary;
-		yourself
-]
+{ #category : #'comparing' }
+GbxSymbolListDictionaryHolder >> = aGSSymbolListDictionaryHolder
 
-{ #category : 'instance creation' }
-GbxSymbolListDictionaryHolder class >> on: aSymbolListDictionaryForwarder [
-	"Create a holder for a GemStone symbol list dictionary forwarder"
-	^ self new
-		proxy: aSymbolListDictionaryForwarder;
-		yourself
-]
+	" Answer true if I am equivalent to aGSSymbolListDictionaryHolder. "
 
-{ #category : 'accessing' }
-GbxSymbolListDictionaryHolder >> fetchEntries [
-	"Fetch symbol list dictionary entries from GemStone"
-	| script result |
+	^ self class == aGSSymbolListDictionaryHolder class
+		and: [self dictName = aGSSymbolListDictionaryHolder dictName]
+
+{ #category : #'comparing' }
+GbxSymbolListDictionaryHolder >> hash
+
+	^self class hash + self dictName hash
+
+{ #category : #'accessing' }
+GbxSymbolListDictionaryHolder >> includesKey: aSymbol
+
+	" Answer true if my keys include aSymbol. "
+
+	^ self remoteSymbolListDictionary includesKey: aSymbol asSymbol
+
+{ #category : #'accessing' }
+GbxSymbolListDictionaryHolder >> displayString
+
+	" Answer a representation of the receiver for use in a Label, primarily for use in SequenceViews. "
+
+	| name |
+
+	name := self dictName.
+	^ name notNil
+		ifTrue: [name asString]
+		ifFalse: ['<<< no name >>>']
+
+{ #category : #'accessing' }
+GbxSymbolListDictionaryHolder >> remoteSymbolListDictionary
+
+	" Answer the value of remoteSymbolListDictionary, a forwarder to a SymbolListDictionary on GemStone. "
+
+	^ remoteSymbolListDictionary
+
+{ #category : #'accessing' }
+GbxSymbolListDictionaryHolder >> dictName
+
+	" Answer the value of dictName, a symbol that names my dictionary on GemStone. "
+
+	^ dictName
+
+{ #category : #'accessing' }
+GbxSymbolListDictionaryHolder >> keyNames
+
+	" Answer a sorted list of my keys, as local objects. "
+
+	^ self remoteSymbolListDictionary keys asSortedCollection asArray
+
+{ #category : #'initialization' }
+GbxSymbolListDictionaryHolder >> on: aSymbolListDictionaryForwarder
 	
-	(session isNil or: [ proxy isNil ]) ifTrue: [ ^ #() ].
-	
-	script := '[
-		| dict stream |
-		dict := Object _objectForOop: ', proxy oop asString, '.
-		stream := WriteStream on: String new.
-		dict keysAndValuesDo: [ :k :v |
-			stream
-				nextPutAll: k asString; nextPutAll: ''::::'';
-				nextPutAll: v class name; nextPutAll: ''::::'';
-				nextPutAll: (Reflection oopOf: v) asString; lf.
-		].
-		stream contents
-	] value'.
-	
-	result := session executeAndFetch: script.
-	entries := self parseEntries: result.
-]
+	[self dictName: aSymbolListDictionaryForwarder name]
+		on: GemStone.Gbs.GbsAuthErrSegRead
+		do: [:ex | self dictName: 'restricted object'].
+	self remoteSymbolListDictionary: aSymbolListDictionaryForwarder.
+	^self
 
-{ #category : 'accessing' }
-GbxSymbolListDictionaryHolder >> parseEntries: aString [
-	"Parse entries string into array of { key . className . OOP }"
-	| items lines parts |
-	
-	items := OrderedCollection new.
-	aString ifNil: [ ^ #() ].
-	
-	lines := aString splitOn: Character lf.
-	lines do: [ :line |
-		line isNotEmpty ifTrue: [
-			parts := line splitOn: '::::'.
-			parts size >= 3 ifTrue: [
-				items add: { 
-					parts first.  "symbol name"
-					parts second. "class name"
-					(parts third asInteger > 20) ifTrue: [ parts third asInteger ] ifFalse: [ nil ]
-				}
-			]
-		]
-	].
-	^ items asArray
-]
+{ #category : #'printing' }
+GbxSymbolListDictionaryHolder >> printOn: aStream
 
-{ #category : 'accessing' }
-GbxSymbolListDictionaryHolder >> printString [
-	^ 'SymbolList Dictionary: ', (name ifNil: [ '<unknown>' ])
-]
+	" Append to aStream an identification of the receiver.
+	  NOTE:  This implementation is required for dictionary lists to work correctly in VS and VA. "
 
-{ #category : 'accessing' }
-GbxSymbolListDictionaryHolder >> symbolListIndex [
-	^ symbolListIndex
-]
+	aStream nextPutAll: self displayString.
 
-{ #category : 'accessing' }
-GbxSymbolListDictionaryHolder >> symbolListIndex: anInteger [
-	symbolListIndex := anInteger
-]
+{ #category : #'private' }
+GbxSymbolListDictionaryHolder >> dictName: aSymbol
+
+	" Set the value of dictName, a symbol that names my dictionary on GemStone. "
+
+	dictName := aSymbol.
+
+{ #category : #'private' }
+GbxSymbolListDictionaryHolder >> remoteSymbolListDictionary: aSymbolAssociationForwarder
+
+	" Set the value of remoteSymbolListDictionary, a forwarder to a SymbolListDictionary on GemStone. "
+
+	remoteSymbolListDictionary := aSymbolAssociationForwarder.
+
+{ #category : #'instance creation' }
+GbxSymbolListDictionaryHolder class >> on: aSymbolListDictionaryForwarder
+
+	^self new on: aSymbolListDictionaryForwarder
+

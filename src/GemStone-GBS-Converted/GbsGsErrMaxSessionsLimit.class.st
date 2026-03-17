@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsGsErrMaxSessionsLimit',
-	#superclass : 'GbsFatalError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsGsErrMaxSessionsLimit',
+	#superclass : #'GbsFatalError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsGsErrMaxSessionsLimit class >> gemStoneErrorNumber6430 ^4039
+

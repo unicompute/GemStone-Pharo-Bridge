@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrUncontinuable',
-	#superclass : 'GbsEventError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrUncontinuable',
+	#superclass : #'GbsEventError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrUncontinuable class >> gemStoneErrorNumber6430 ^6011
+

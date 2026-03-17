@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsAuthErrProcessSwitch',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsAuthErrProcessSwitch',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsAuthErrProcessSwitch class >> gemStoneErrorNumber6430 ^2421
+

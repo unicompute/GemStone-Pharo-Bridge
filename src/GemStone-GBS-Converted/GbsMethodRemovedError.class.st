@@ -1,6 +1,8 @@
 Class {
-	#name : 'GbsMethodRemovedError',
-	#superclass : 'GbsInterfaceError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsMethodRemovedError',
+	#superclass : #'GbsInterfaceError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

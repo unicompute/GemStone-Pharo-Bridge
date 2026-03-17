@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrSignalException',
-	#superclass : 'GbsEventError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrSignalException',
+	#superclass : #'GbsEventError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrSignalException class >> gemStoneErrorNumber6430 ^6016
+

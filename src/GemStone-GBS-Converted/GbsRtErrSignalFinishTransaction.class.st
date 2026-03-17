@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrSignalFinishTransaction',
-	#superclass : 'GbsEventError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrSignalFinishTransaction',
+	#superclass : #'GbsEventError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrSignalFinishTransaction class >> gemStoneErrorNumber6430 ^6012
+

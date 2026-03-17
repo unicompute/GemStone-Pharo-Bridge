@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsStDBErrUnexpectedColon',
-	#superclass : 'GbsCompilerError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsStDBErrUnexpectedColon',
+	#superclass : #'GbsCompilerError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsStDBErrUnexpectedColon class >> gemStoneErrorNumber6430 ^1007
+

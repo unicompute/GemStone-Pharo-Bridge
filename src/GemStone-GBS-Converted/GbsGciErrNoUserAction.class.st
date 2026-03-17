@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsGciErrNoUserAction',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsGciErrNoUserAction',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsGciErrNoUserAction class >> gemStoneErrorNumber6430 ^2358
+

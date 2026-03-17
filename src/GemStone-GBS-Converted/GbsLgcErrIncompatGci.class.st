@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsLgcErrIncompatGci',
-	#superclass : 'GbsFatalError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsLgcErrIncompatGci',
+	#superclass : #'GbsFatalError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsLgcErrIncompatGci class >> gemStoneErrorNumber6430 ^4040
+

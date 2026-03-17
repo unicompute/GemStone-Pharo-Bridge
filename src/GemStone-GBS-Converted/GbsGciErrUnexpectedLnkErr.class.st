@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsGciErrUnexpectedLnkErr',
-	#superclass : 'GbsFatalError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsGciErrUnexpectedLnkErr',
+	#superclass : #'GbsFatalError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsGciErrUnexpectedLnkErr class >> gemStoneErrorNumber6430 ^4101
+

@@ -1,6 +1,8 @@
 Class {
-	#name : 'GbxServices',
-	#superclass : 'Object',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbxServices',
+	#superclass : #'Object',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

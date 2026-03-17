@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrTimeToRestoreToArg',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrTimeToRestoreToArg',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrTimeToRestoreToArg class >> gemStoneErrorNumber6430 ^2330
+

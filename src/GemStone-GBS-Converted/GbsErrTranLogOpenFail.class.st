@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsErrTranLogOpenFail',
-	#superclass : 'GbsFatalError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsErrTranLogOpenFail',
+	#superclass : #'GbsFatalError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsErrTranLogOpenFail class >> gemStoneErrorNumber6430 ^4032
+

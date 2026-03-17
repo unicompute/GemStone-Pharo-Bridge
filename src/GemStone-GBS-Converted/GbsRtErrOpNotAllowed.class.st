@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrOpNotAllowed',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrOpNotAllowed',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrOpNotAllowed class >> gemStoneErrorNumber6430 ^2427
+

@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsStDBMissingProtectedToken',
-	#superclass : 'GbsCompilerError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsStDBMissingProtectedToken',
+	#superclass : #'GbsCompilerError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsStDBMissingProtectedToken class >> gemStoneErrorNumber6430 ^1060
+

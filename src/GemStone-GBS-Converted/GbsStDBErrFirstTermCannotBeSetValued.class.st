@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsStDBErrFirstTermCannotBeSetValued',
-	#superclass : 'GbsCompilerError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsStDBErrFirstTermCannotBeSetValued',
+	#superclass : #'GbsCompilerError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsStDBErrFirstTermCannotBeSetValued class >> gemStoneErrorNumber6430 ^1058
+

@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsObjErrNotLong',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsObjErrNotLong',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsObjErrNotLong class >> gemStoneErrorNumber6430 ^2163
+

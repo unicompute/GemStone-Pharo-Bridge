@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsGsErrGemFatalShutdown',
-	#superclass : 'GbsFatalError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsGsErrGemFatalShutdown',
+	#superclass : #'GbsFatalError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsGsErrGemFatalShutdown class >> gemStoneErrorNumber6430 ^4061
+

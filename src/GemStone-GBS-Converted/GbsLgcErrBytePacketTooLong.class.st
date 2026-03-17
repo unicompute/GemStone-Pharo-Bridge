@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsLgcErrBytePacketTooLong',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsLgcErrBytePacketTooLong',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsLgcErrBytePacketTooLong class >> gemStoneErrorNumber6430 ^2227
+

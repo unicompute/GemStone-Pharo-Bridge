@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsAssocErrPathTooLong',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsAssocErrPathTooLong',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsAssocErrPathTooLong class >> gemStoneErrorNumber6430 ^2175
+

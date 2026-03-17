@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrRcUpdateDisallowed',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrRcUpdateDisallowed',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrRcUpdateDisallowed class >> gemStoneErrorNumber6430 ^2500
+

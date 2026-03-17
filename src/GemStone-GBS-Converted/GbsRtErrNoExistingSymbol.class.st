@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrNoExistingSymbol',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrNoExistingSymbol',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrNoExistingSymbol class >> gemStoneErrorNumber6430 ^2404
+

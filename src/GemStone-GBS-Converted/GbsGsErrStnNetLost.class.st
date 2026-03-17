@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsGsErrStnNetLost',
-	#superclass : 'GbsFatalError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsGsErrStnNetLost',
+	#superclass : #'GbsFatalError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsGsErrStnNetLost class >> gemStoneErrorNumber6430 ^4035
+

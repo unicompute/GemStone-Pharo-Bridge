@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsBkupErrOpenFailed',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsBkupErrOpenFailed',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsBkupErrOpenFailed class >> gemStoneErrorNumber6430 ^2303
+

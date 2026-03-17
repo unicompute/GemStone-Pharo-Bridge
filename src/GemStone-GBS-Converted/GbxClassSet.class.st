@@ -1,7 +1,20 @@
 Class {
-	#name : 'GbxClassSet',
-	#superclass : 'IdentitySet',
-	#type : 'variable',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbxClassSet',
+	#superclass : #'IdentitySet',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'adding' }
+GbxClassSet >> add: aClass
+
+	super add: aClass.
+	self markDirty
+
+{ #category : #'accessing' }
+GbxClassSet >> removeIfPresent: aClass
+
+	self remove: aClass ifAbsent: [^nil].
+	self markDirty
+

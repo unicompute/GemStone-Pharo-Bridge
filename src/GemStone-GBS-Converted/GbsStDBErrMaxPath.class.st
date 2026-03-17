@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsStDBErrMaxPath',
-	#superclass : 'GbsCompilerError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsStDBErrMaxPath',
+	#superclass : #'GbsCompilerError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsStDBErrMaxPath class >> gemStoneErrorNumber6430 ^1002
+

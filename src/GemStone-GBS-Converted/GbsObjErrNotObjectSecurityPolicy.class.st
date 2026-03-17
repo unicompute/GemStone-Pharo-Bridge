@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsObjErrNotObjectSecurityPolicy',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsObjErrNotObjectSecurityPolicy',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsObjErrNotObjectSecurityPolicy class >> gemStoneErrorNumber6430 ^2011
+

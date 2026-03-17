@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrNativeCodeGen',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrNativeCodeGen',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrNativeCodeGen class >> gemStoneErrorNumber6430 ^2481
+

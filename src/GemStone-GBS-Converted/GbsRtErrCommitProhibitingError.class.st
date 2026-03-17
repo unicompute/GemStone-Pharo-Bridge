@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrCommitProhibitingError',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrCommitProhibitingError',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrCommitProhibitingError class >> gemStoneErrorNumber6430 ^2328
+

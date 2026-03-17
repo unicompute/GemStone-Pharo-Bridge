@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsLockErrObjHasChanged',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsLockErrObjHasChanged',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsLockErrObjHasChanged class >> gemStoneErrorNumber6430 ^2074
+

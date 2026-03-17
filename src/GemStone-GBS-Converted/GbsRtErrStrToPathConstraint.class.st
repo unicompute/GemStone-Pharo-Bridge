@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrStrToPathConstraint',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrStrToPathConstraint',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrStrToPathConstraint class >> gemStoneErrorNumber6430 ^2223
+

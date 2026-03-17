@@ -1,9 +1,13 @@
 Class {
-	#name : 'LookupError',
-	#superclass : 'ImproperOperation',
-	#instVars : [
-		'key'
-	],
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'LookupError',
+	#superclass : #'ImproperOperation',
+	#instVars : [ #'key' ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'accessing' }
+LookupError >> key
+
+	^key
+

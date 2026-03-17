@@ -1,6 +1,8 @@
 Class {
-	#name : 'GbsConnectorError',
-	#superclass : 'GbsInterfaceError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsConnectorError',
+	#superclass : #'GbsInterfaceError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

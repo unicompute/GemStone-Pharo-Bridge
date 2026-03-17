@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsStDBErrBadChrInRadixNum',
-	#superclass : 'GbsCompilerError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsStDBErrBadChrInRadixNum',
+	#superclass : #'GbsCompilerError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsStDBErrBadChrInRadixNum class >> gemStoneErrorNumber6430 ^1012
+

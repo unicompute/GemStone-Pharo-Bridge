@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsErrArgTooLarge',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsErrArgTooLarge',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsErrArgTooLarge class >> gemStoneErrorNumber6430 ^2168
+

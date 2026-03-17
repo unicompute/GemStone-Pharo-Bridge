@@ -1,6 +1,8 @@
 Class {
-	#name : 'GbsPrintTimeoutError',
-	#superclass : 'GbsInterfaceError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsPrintTimeoutError',
+	#superclass : #'GbsInterfaceError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

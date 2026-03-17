@@ -1,6 +1,8 @@
 Class {
-	#name : 'GbxInteractionState',
-	#superclass : 'Object',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbxInteractionState',
+	#superclass : #'Object',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

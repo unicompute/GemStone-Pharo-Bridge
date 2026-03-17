@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrComExpressionDepth',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrComExpressionDepth',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrComExpressionDepth class >> gemStoneErrorNumber6430 ^1073
+

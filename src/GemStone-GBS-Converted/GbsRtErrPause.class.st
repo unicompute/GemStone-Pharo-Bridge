@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrPause',
-	#superclass : 'GbsControlInterrupt',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrPause',
+	#superclass : #'GbxAbstractControlInterrupt',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrPause class >> gemStoneErrorNumber6430 ^6001
+

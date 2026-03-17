@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsGsErrCopyProtection',
-	#superclass : 'GbsFatalError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsGsErrCopyProtection',
+	#superclass : #'GbsFatalError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsGsErrCopyProtection class >> gemStoneErrorNumber6430 ^4036
+

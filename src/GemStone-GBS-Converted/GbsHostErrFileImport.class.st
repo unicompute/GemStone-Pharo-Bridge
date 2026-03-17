@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsHostErrFileImport',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsHostErrFileImport',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsHostErrFileImport class >> gemStoneErrorNumber6430 ^2198
+

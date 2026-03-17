@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsAssocErrNoElementsDetected',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsAssocErrNoElementsDetected',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsAssocErrNoElementsDetected class >> gemStoneErrorNumber6430 ^2096
+

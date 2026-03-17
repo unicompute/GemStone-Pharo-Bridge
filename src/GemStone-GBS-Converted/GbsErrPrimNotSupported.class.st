@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsErrPrimNotSupported',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsErrPrimNotSupported',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsErrPrimNotSupported class >> gemStoneErrorNumber6430 ^2255
+

@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrRollbackDlFail',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrRollbackDlFail',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrRollbackDlFail class >> gemStoneErrorNumber6430 ^2425
+

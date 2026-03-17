@@ -1,6 +1,8 @@
 Class {
-	#name : 'ObjectsCommittedNotification',
-	#superclass : 'Notification',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'ObjectsCommittedNotification',
+	#superclass : #'Notification',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

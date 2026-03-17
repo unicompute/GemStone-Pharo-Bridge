@@ -1,6 +1,8 @@
 Class {
-	#name : 'RepositoryError',
-	#superclass : 'Error',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'RepositoryError',
+	#superclass : #'Error',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

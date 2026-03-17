@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsStDBnoRuby',
-	#superclass : 'GbsCompilerError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsStDBnoRuby',
+	#superclass : #'GbsCompilerError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsStDBnoRuby class >> gemStoneErrorNumber6430 ^1079
+

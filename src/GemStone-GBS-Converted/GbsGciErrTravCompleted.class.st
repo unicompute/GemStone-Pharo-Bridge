@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsGciErrTravCompleted',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsGciErrTravCompleted',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsGciErrTravCompleted class >> gemStoneErrorNumber6430 ^2216
+

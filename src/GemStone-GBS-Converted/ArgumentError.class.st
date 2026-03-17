@@ -1,6 +1,8 @@
 Class {
-	#name : 'ArgumentError',
-	#superclass : 'ImproperOperation',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'ArgumentError',
+	#superclass : #'ImproperOperation',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

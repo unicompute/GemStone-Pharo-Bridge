@@ -1,7 +1,8 @@
 Class {
-	#name : 'GbxFastIdentityKeyValueDictionary',
-	#superclass : 'GbxGsMethodDictionary',
-	#type : 'variable',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbxFastIdentityKeyValueDictionary',
+	#superclass : #'GbxGsMethodDictionary',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

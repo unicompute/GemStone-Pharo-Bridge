@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsSegErrCantMoveObj',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsSegErrCantMoveObj',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsSegErrCantMoveObj class >> gemStoneErrorNumber6430 ^2068
+

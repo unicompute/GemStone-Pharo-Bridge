@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrContinueTransFail',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrContinueTransFail',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrContinueTransFail class >> gemStoneErrorNumber6430 ^2409
+

@@ -1,6 +1,14 @@
 Class {
-	#name : 'GbxFloatReplicator',
-	#superclass : 'GbxByteObjectReplicator',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbxFloatReplicator',
+	#superclass : #'GbxByteObjectReplicator',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'private' }
+GbxFloatReplicator >> setImmutabilityOf: aClientObject
+	"Numbers are always immutable."
+
+	self setMagnitudeImmutabilityOf: aClientObject
+

@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsStDBErrMaxArgs',
-	#superclass : 'GbsCompilerError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsStDBErrMaxArgs',
+	#superclass : #'GbsCompilerError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsStDBErrMaxArgs class >> gemStoneErrorNumber6430 ^1056
+

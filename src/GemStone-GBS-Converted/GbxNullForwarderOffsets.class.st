@@ -1,6 +1,13 @@
 Class {
-	#name : 'GbxNullForwarderOffsets',
-	#superclass : 'Object',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbxNullForwarderOffsets',
+	#superclass : #'Object',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'accessing' }
+GbxNullForwarderOffsets class >> at: index
+
+	^false
+

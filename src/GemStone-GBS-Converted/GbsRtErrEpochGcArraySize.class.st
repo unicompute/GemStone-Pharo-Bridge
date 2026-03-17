@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrEpochGcArraySize',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrEpochGcArraySize',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrEpochGcArraySize class >> gemStoneErrorNumber6430 ^2206
+

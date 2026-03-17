@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrWeakDictNeedsInit',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrWeakDictNeedsInit',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrWeakDictNeedsInit class >> gemStoneErrorNumber6430 ^2401
+

@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrCantPerform',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrCantPerform',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrCantPerform class >> gemStoneErrorNumber6430 ^2013
+

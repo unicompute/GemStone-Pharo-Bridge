@@ -1,6 +1,8 @@
 Class {
-	#name : 'InterSessionSignal',
-	#superclass : 'Notification',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'InterSessionSignal',
+	#superclass : #'Notification',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

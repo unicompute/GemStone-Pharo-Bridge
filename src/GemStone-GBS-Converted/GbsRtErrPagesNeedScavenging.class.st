@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrPagesNeedScavenging',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrPagesNeedScavenging',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrPagesNeedScavenging class >> gemStoneErrorNumber6430 ^2041
+

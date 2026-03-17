@@ -1,6 +1,8 @@
 Class {
-	#name : 'GbxExecBlock1',
-	#superclass : 'GbxExecBlock',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbxExecBlock1',
+	#superclass : #'GbxExecBlock',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsGciErrTravBuffTooSmall',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsGciErrTravBuffTooSmall',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsGciErrTravBuffTooSmall class >> gemStoneErrorNumber6430 ^2217
+

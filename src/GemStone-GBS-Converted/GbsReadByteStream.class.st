@@ -1,6 +1,8 @@
 Class {
-	#name : 'GbsReadByteStream',
-	#superclass : 'ReadStream',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsReadByteStream',
+	#superclass : #'ReadStream',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

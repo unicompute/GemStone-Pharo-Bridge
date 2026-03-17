@@ -1,456 +1,330 @@
 Class {
-	#name : 'GbsSessionParameters',
-	#superclass : 'Object',
-	#instVars : [
-		'name',
-		'gemStoneName',
-		'username',
-		'password',
-		'gsRemember',
-		'hostUsername',
-		'hostPassword',
-		'gemService',
-		'hostRemember',
-		'netObject',
-		'isX509',
-		'displayUsername',
-		'caCert',
-		'cert',
-		'privateKey',
-		'netldiHostOrIp',
-		'netldiNameOrPort',
-		'dirArg',
-		'extraGemArgs',
-		'logArg',
-		'sessionId'
-	],
-	#classVars : [
-		'AllParameters',
-		'CurrentSession',
-		'PollingEnabled',
-		'Sessions'
-	],
-	#classInstVars : [
-		'allParameters',
-		'sessions'
-	],
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsSessionParameters',
+	#superclass : #'GbxSessionSpecification',
+	#instVars : [ #'gemStoneName' #'hostUsername' #'hostPassword' #'gemService' #'rememberPassword' #'rememberHostPassword' ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
 
-{ #category : 'registry' }
-GbsSessionParameters class >> addParameter: aParam [
-	self allParameters add: aParam
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters class >> allParameters [
-	^ AllParameters ifNil: [ AllParameters := OrderedCollection new ]
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters class >> allSessions [
-	^ Sessions ifNil: [ Sessions := OrderedCollection new ]
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters class >> currentSession [
-	^ CurrentSession
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters class >> currentSession: aSession [
-	CurrentSession := aSession.
-	(Smalltalk globals at: #GBSM ifAbsent: [ nil ]) ifNotNil: [ :gbsm |
-		(gbsm respondsTo: #currentSession:)
-			ifTrue: [ gbsm currentSession: aSession ] ]
-]
-
-{ #category : 'polling' }
-GbsSessionParameters class >> pollingEnabled [
-    "Persisted in the image as a global. Defaults to true."
-    ^ (Smalltalk globals at: #GbsPollingEnabled ifAbsent: [ true ])
-
-
-]
-
-{ #category : 'polling' }
-GbsSessionParameters class >> pollingEnabled: aBoolean [ 
-    Smalltalk globals at: #GbsPollingEnabled put: aBoolean.
-    ^ aBoolean
-
-
-]
-
-{ #category : 'registry' }
-GbsSessionParameters class >> registerSession: aSession [
-	| sid |
-	aSession ifNil: [ ^ self ].
-	sid := (aSession respondsTo: #sessionId)
-		ifTrue: [ [ aSession sessionId ] on: Error do: [ nil ] ]
-		ifFalse: [ nil ].
-	(sid notNil) ifTrue: [
-		self allSessions
-			removeAllSuchThat: [ :each |
-				(each respondsTo: #sessionId)
-					and: [ ([ each sessionId ] on: Error do: [ nil ]) = sid ] ] ].
-	self allSessions add: aSession
-]
-
-{ #category : 'registry' }
-GbsSessionParameters class >> removeParameter: aParam [
-	self allParameters remove: aParam ifAbsent: [ ]
-]
-
-{ #category : 'polling' }
-GbsSessionParameters class >> togglePolling [ 
-    ^ self pollingEnabled: self pollingEnabled not
-
-
-
-]
-
-{ #category : 'registry' }
-GbsSessionParameters class >> unregisterSession: aSession [
-    | sid |
-	self allSessions remove: aSession ifAbsent: [ ].
-	sid := (aSession respondsTo: #sessionId)
-		ifTrue: [ [ aSession sessionId ] on: Error do: [ nil ] ]
-		ifFalse: [ nil ].
-	sid ifNotNil: [
-		self allSessions
-			removeAllSuchThat: [ :each |
-				(each respondsTo: #sessionId)
-					and: [ ([ each sessionId ] on: Error do: [ nil ]) = sid ] ] ]
-]
-
-{ #category : 'transactions' }
-GbsSessionParameters >> abortTransaction [
-    self isConnected ifTrue: [ 
-        GbsServerInterface uniqueInstance abort: sessionId 
-    ].
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> caCert [ ^ caCert
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> caCert: aValue [ caCert := aValue
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> cert [ ^ cert
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> cert: aValue [ cert := aValue
-]
-
-{ #category : 'transactions' }
-GbsSessionParameters >> commitTransaction [
-    self isConnected ifTrue: [ 
-        GbsServerInterface uniqueInstance commit: sessionId 
-    ].
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> dirArg [ ^ dirArg
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> dirArg: aValue [ dirArg := aValue
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> displayUsername [ ^ displayUsername
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> displayUsername: aValue [ displayUsername := aValue
-]
-
-{ #category : 'execution' }
-GbsSessionParameters >> evaluate: aString [
-    self isConnected ifFalse: [ ^ self error: 'Not Connected' ].
-    
-    ^ GbsServerInterface uniqueInstance 
-        execute: aString 
-        inSession: sessionId.
-]
-
-{ #category : 'evaluating' }
-GbsSessionParameters >> evaluateAndFetchString: aString [
-    "Ask the server interface to execute the code and fetch the resulting string"
-    ^ GbsServerInterface uniqueInstance 
-        executeAndPrint: aString 
-        inSession: self sessionId.
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> extraGemArgs [ ^ extraGemArgs
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> extraGemArgs: aValue [ extraGemArgs := aValue
-]
-
-{ #category : 'evaluating' }
-GbsSessionParameters >> fetchTranscriptLogs [
-    "Ask the server interface to fetch the active Transcript logs"
-    ^ GbsServerInterface uniqueInstance 
-        executeAndPrint: 'Transcript fetchAndClear' 
-        inSession: self sessionId.
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> gemService [ ^ gemService
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> gemService: aValue [ gemService := aValue
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> gemStoneName [ ^ gemStoneName
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> gemStoneName: aValue [ gemStoneName := aValue
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> gsRemember [ ^ gsRemember
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> gsRemember: aValue [ gsRemember := aValue
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> hostPassword [ ^ hostPassword
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> hostPassword: aValue [ hostPassword := aValue
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> hostRemember [ ^ hostRemember
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> hostRemember: aValue [ hostRemember := aValue
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> hostUsername [ ^ hostUsername
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> hostUsername: aValue [ hostUsername := aValue
-]
-
-{ #category : 'initialization' }
-GbsSessionParameters >> initialize [
-	super initialize.
-	name := 'New Config'.
-	gemStoneName := 'gs64stone'.
-	gemService := 'gemnetobject'.
-	gsRemember := false.
-	hostRemember := false.
-	isX509 := false.
-]
-
-{ #category : 'testing' }
-GbsSessionParameters >> isConnected [
-    "It is connected if we have a valid session ID number"
-    ^ sessionId notNil and: [ sessionId > 0 ]
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> isX509 [ ^ isX509
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> isX509: aValue [ isX509 := aValue
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> logArg [ ^ logArg
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> logArg: aValue [ logArg := aValue
-]
-
-{ #category : 'connection' }
-GbsSessionParameters >> login [
-    | interface outBuf stonePtr userPtr servicePtr emptyPtr result serviceString |
-    
-    "UI State Check"
-    self isConnected ifTrue: [ ^ self inform: 'Already Connected' ].
-
-    interface := GbsServerInterface uniqueInstance.
-    interface apiGciInit.
-
-    "1. DYNAMIC SERVICE: Use the value from the text field (default to gemnetobject)"
-    serviceString := (self gemService isNil or: [ self gemService isEmpty ])
-        ifTrue: [ 'gemnetobject' ]
-        ifFalse: [ self gemService ].
-
-    "2. ALLOCATE (Your Manual FFI Code)"
-    outBuf := ExternalAddress allocate: 1024.
-    stonePtr := ExternalAddress allocate: gemStoneName size + 1.
-    userPtr := ExternalAddress allocate: username size + 1.
-    servicePtr := ExternalAddress allocate: serviceString size + 1. "Allocating based on variable"
-    emptyPtr := ExternalAddress allocate: 1.
-
-    [
-        "3. COPY STRINGS (Your Manual Loop Logic)"
-        1 to: gemStoneName size do: [ :i | stonePtr byteAt: i put: ( gemStoneName at: i ) asInteger ].
-        stonePtr byteAt: gemStoneName size + 1 put: 0.
-
-        1 to: username size do: [ :i | userPtr byteAt: i put: ( username at: i ) asInteger ].
-        userPtr byteAt: username size + 1 put: 0.
-
-        "Use the serviceString instead of the hardcoded array"
-        1 to: serviceString size do: [ :i | servicePtr byteAt: i put: ( serviceString at: i ) asInteger ].
-        servicePtr byteAt: serviceString size + 1 put: 0.
-
-        emptyPtr byteAt: 1 put: 0.
-
-        "4. ENCRYPT & LOGIN (Your Logic)"
-        interface apiGciEncrypt: password into: outBuf size: 1024.
-        interface
-            apiGciSetNet: stonePtr
-            host: emptyPtr
-            net: emptyPtr
-            service: servicePtr.
-
-        result := interface
-                    apiGciLoginEx: userPtr
-                    password: outBuf
-                    flags: 3
-                    context: 0.
-
-        result = 1 ifFalse: [
-            interface checkError.
-            self error: 'Login Failed'
-        ]
-    ] ensure: [
-        outBuf free.
-        stonePtr free.
-        userPtr free.
-        servicePtr free.
-        emptyPtr free
-    ].
-
-	    "5. UI STATE UPDATES (Crucial for Launcher)"
-	    sessionId := result.
-
-	    "Create the active session wrapper and mark it logged in"
-	    self class currentSession: (GbsSession new
-	                        sessionId: result;
-	                        sessionOop: result;
-	                        isLoggedIn: true;
-	                        parameters: self;
-	                        yourself).
-                        
-    "Register so it appears in the bottom list"
-    self class registerSession: self.
-    self inform: 'Login Successful'.
-    
-    ^ self class currentSession
-]
-
-{ #category : 'connection' }
-GbsSessionParameters >> logout [
-    self isConnected ifTrue: [
-        
-        "1. Call the FFI Logout (Try standard 0-arg first)"
-        [
-            GbsServerInterface uniqueInstance apiGciLogout.
-        ] on: MessageNotUnderstood do: [
-             "Fallback: If it expects a session ID (rare in this specific binding)"
-             GbsServerInterface uniqueInstance perform: #apiGciLogout: with: sessionId.
-        ].
-
-        "2. Clear Local State"
-        sessionId := nil.
-        self class currentSession: nil.
-        
-        "3. Unregister from the Active List"
-        self class unregisterSession: self.
-        
-        self inform: 'Logged Out'.
-    ].
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> name [ ^ name
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> name: aValue [ name := aValue
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> netObject [ ^ netObject
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> netObject: aValue [ netObject := aValue
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> netldiHostOrIp [ ^ netldiHostOrIp
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> netldiHostOrIp: aValue [ netldiHostOrIp := aValue
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> netldiNameOrPort [ ^ netldiNameOrPort
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> netldiNameOrPort: aValue [ netldiNameOrPort := aValue
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> password [ ^ password
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> password: aValue [ password := aValue
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> privateKey [ ^ privateKey
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> privateKey: aValue [ privateKey := aValue
-]
-
-{ #category : 'transactions' }
-GbsSessionParameters >> sendInterrupt [
-    self isConnected ifTrue: [ 
-        GbsServerInterface uniqueInstance break: sessionId 
-    ].
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> sessionId [
-    ^ sessionId
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> username [ ^ username
-]
-
-{ #category : 'accessing' }
-GbsSessionParameters >> username: aValue [ username := aValue
-]
+{ #category : #'comparing' }
+GbsSessionParameters >> = aGbsSessionParameters
+
+	^(aGbsSessionParameters isKindOf: self class)
+		and: [self gemStoneName = aGbsSessionParameters gemStoneName
+		and: [self gemService = aGbsSessionParameters gemService
+		and: [self username = aGbsSessionParameters username
+		and: [self connectors = aGbsSessionParameters connectors]]]]
+
+{ #category : #'comparing' }
+GbsSessionParameters >> hash
+
+	^self gemStoneName hash
+	+ self gemService hash
+	+ self username hash
+	+ self connectors hash
+
+{ #category : #'accessing' }
+GbsSessionParameters >> hostUsername
+
+	^hostUsername
+
+{ #category : #'accessing' }
+GbsSessionParameters >> hostUsername: aHostUsername
+
+	hostUsername := aHostUsername
+
+{ #category : #'accessing' }
+GbsSessionParameters >> rememberHostPassword
+	^rememberHostPassword
+
+{ #category : #'accessing' }
+GbsSessionParameters >> rememberHostPassword: aBoolean
+
+	"If aBoolean is true, this instance will remember the host password from login to login.  If false, the password will not be stored, but will be prompted for at each login."
+
+	rememberHostPassword := aBoolean
+
+{ #category : #'accessing' }
+GbsSessionParameters >> rememberPassword
+	^rememberPassword
+
+{ #category : #'accessing' }
+GbsSessionParameters >> gemService
+
+	^gemService
+
+{ #category : #'accessing' }
+GbsSessionParameters >> gemService: aGemService
+
+	gemService := aGemService
+
+{ #category : #'accessing' }
+GbsSessionParameters >> rememberPassword: aBoolean
+
+	"If aBoolean is true, this instance will remember the GemStone password from login to login.  If false, the password will not be stored, but will be prompted for at each login."
+
+	rememberPassword := aBoolean
+
+{ #category : #'accessing' }
+GbsSessionParameters >> gemServiceHost
+	"Exception handling included to protect against pathological
+	 cases like creating the instance using #basicNew or assigning
+	 something other than a String to the #gemService instance variable."
+
+	| sourceStream resultStream |
+	[(self gemService includes: $@) ifFalse: [^''].
+	sourceStream := self gemService readStream.
+	resultStream := String new writeStream.
+	sourceStream through: $@.
+	
+	[sourceStream atEnd
+		or: [(sourceStream peekFor: $.)
+		or: [(sourceStream peekFor: $#)
+		or: [sourceStream peekFor: $!]]]]
+			whileFalse: [resultStream nextPut: sourceStream next].
+	^resultStream contents]
+		on: Error
+		do: [:ex | ^''].
+
+{ #category : #'accessing' }
+GbsSessionParameters >> gemStoneName
+
+	^gemStoneName
+
+{ #category : #'accessing' }
+GbsSessionParameters >> gemStoneName: aGemStoneName
+	gemStoneName := aGemStoneName
+
+{ #category : #'accessing' }
+GbsSessionParameters >> hostPassword
+
+	^hostPassword
+
+{ #category : #'accessing' }
+GbsSessionParameters >> hostPassword: aHostPassword
+
+	hostPassword := aHostPassword
+
+{ #category : #'printing' }
+GbsSessionParameters >> printOn: aStream
+
+	| hostname |
+	username isEmpty
+		ifTrue: [ '(no username)' printOn: aStream ]
+		ifFalse: [ username printOn: aStream ].
+	aStream nextPutAll: ' on '.
+	gemStoneName isEmpty
+		ifTrue: [ '(no stonename)' printOn: aStream ]
+		ifFalse: [ gemStoneName printOn: aStream ].
+	(hostname := self gemServiceHost) isEmpty
+		ifFalse: [aStream nextPutAll: ' @ '; print: hostname].
+
+{ #category : #'session management' }
+GbsSessionParameters >> loginRpc
+
+	"Log into GemStone with the receiver parameters, spawning an rpc
+	 gem session.  The parameters required for an rpc login (gemStoneName,
+	 username, password, hostUsername, hostPassword, gemService) should
+	 be valid for this method to succeed.  If password or hostPassword are not
+	 'remebered', they will be prompted for.  For a fill-in-the-blank form, call
+	 editLoginData."
+	"Returns a new GbsSession on successful login, nil otherwise"
+
+	^self
+		loginLinked: false
+		onPasswordExpirationWarning: [ :aGSError |
+			self gbsMessenger warn: aGSError messageText ]
+
+{ #category : #'session management' }
+GbsSessionParameters >> login
+	"If a linked session is possible, do a linked login.  Otherwise, do an rpc."
+
+	"Must hold loginProtect throughout to prevent another thread from 'stealing' the linked session
+	after we've determined it's available."
+
+	^GBSM loginCritical: 
+			[GBSM isLinkedLoginAvailable 
+				ifTrue: [self loginLnk]
+				ifFalse: [self loginRpc]]
+
+{ #category : #'session management' }
+GbsSessionParameters >> loginLinked: aBoolean onPasswordExpirationWarning: aOneArgBlock
+	"Log in to GemStone with the receiver's login parameters.  Login linked if aBoolean
+	 is true, rpc if aBoolean is false.  If rtPasswordExpirationWarning occurs, aOneArgBlock
+	 is evaluated with the GbsError as the argument."
+	"Must acquire loginProtect before logging in so we don't 'steal' the linked session 
+	from another thread that's in the midst of running #login."
+
+	^
+	[GBSM
+		loginCritical: [self sessionClass loginLinked: aBoolean withParameters: self]]
+			on: (GbsError exceptionClassFor: #rtErrWarningPasswordExpire)
+			do: 
+				[:ex |
+				aOneArgBlock value: ex originator.
+				ex resume]
+
+{ #category : #'session management' }
+GbsSessionParameters >> loginLnk
+
+	"Log into GemStone with the receiver parameters, using a gem session
+	 linked with this Smalltalk virtual machine (only possible if 'GBSM isLinkedLoginAvailable'
+	 is true).  The parameters required for a linked login (gemStoneName, username,
+	 password) should be valid for this method to succeed.  If password is not
+	 'remebered', it will be prompted for.  For a fill-in-the-blank form, call
+	 editLoginData."
+	"Returns a new GbsSession on successful login, nil otherwise"
+
+	^self
+		loginLinked: true
+		onPasswordExpirationWarning: [ :aGSError |
+			self gbsMessenger warn: aGSError messageText ]
+
+{ #category : #'private' }
+GbsSessionParameters >> checkPasswords
+	"Private"
+
+	rememberPassword ifFalse: [ password := '' ].
+	rememberHostPassword ifFalse: [ hostPassword := '' ]
+
+{ #category : #'private' }
+GbsSessionParameters >> passwordsLinked: linked ifCancel: cancelBlock
+
+	"Private.  Return password and hostPassword in a two-element array.  If password or hostPassword are not remembered, this method will prompt for them.  If linked, hostPassword will not be prompted for.  If the user cancels during prompting, the value of cancelBlock will be returned"
+
+	| promptPwd promptHostPwd result |
+	promptPwd := rememberPassword not & password isEmpty.
+	promptHostPwd :=
+		linked not "Hostpassword only needed for rpc login"
+		& rememberHostPassword not "Only need to prompt if they aren't remembered"
+		& hostUsername isEmpty not "Only need hostpass if hostuser is set.  Might use kerberose or .netrc instead."
+		& hostPassword isEmpty. "Maybe it was already supplied"
+	(promptPwd | promptHostPwd) ifFalse: [
+		^Array with: password with: hostPassword ].
+
+	"Need to do some prompting"
+	(self gbxResolve: #GbxSessionParametersDialog) notNil
+		ifTrue: [(self openDialogForGSPassword: promptPwd forHostPassword: promptHostPwd) ifFalse: [^cancelBlock value]]
+		ifFalse: [self gbsMessenger warn: 'No user interface tools exist to prompt for passwords'].
+	result := Array with: self password with: self hostPassword.
+
+	self checkPasswords.
+
+	^result
+
+{ #category : #'defaults' }
+GbsSessionParameters class >> defaultGemServiceName
+	^'gemnetobject'
+
+{ #category : #'defaults' }
+GbsSessionParameters class >> registerNewParameters: aBoolean
+
+	"If set to true, new instances are automatically registered with the session manager,
+	 via GBSM addParameters: theNewInstance"
+	"GbsSessionParameters registerNewParameters: true"
+	"GbsSessionParameters registerNewParameters: false"
+
+	RegisterNewParameters := aBoolean
+
+{ #category : #'defaults' }
+GbsSessionParameters class >> defaultStoneName
+
+	^'gs64stone'
+
+{ #category : #'defaults' }
+GbsSessionParameters class >> registerNewParameters
+
+	"If set to true, new instances are automatically registered with the session manager,
+	 via GBSM addParameters: theNewInstance"
+
+	RegisterNewParameters isNil ifTrue: [ RegisterNewParameters := false ].
+	^RegisterNewParameters
+
+{ #category : #'instance creation' }
+GbsSessionParameters class >> newWithGemStoneName: aGemStoneName
+username: aUsername
+password: aPassword
+hostUsername: aHostUsername
+hostPassword: aHostPassword
+gemService: aGemServiceName
+
+	^ self
+		newWithGemStoneName: aGemStoneName
+		username: aUsername
+		password: aPassword
+		rememberPassword: false
+		hostUsername: aHostUsername
+		hostPassword: aHostPassword
+		rememberHostPassword: false
+		gemService: aGemServiceName
+
+{ #category : #'instance creation' }
+GbsSessionParameters class >> new
+
+	"Returns an instance of this class with default login parameters"
+	"GbsSessionParameters new"
+
+	^self
+		newWithGemStoneName: self defaultStoneName
+		username: ''
+		password: ''
+
+{ #category : #'instance creation' }
+GbsSessionParameters class >> newWithGemStoneName: aGemStoneName
+username: aUsername
+password: aPassword
+rememberPassword: aRememberPasswordBoolean
+hostUsername: aHostUsername
+hostPassword: aHostPassword
+rememberHostPassword: aRememberHostPasswordBoolean
+gemService: aGemServiceName
+
+	^self
+		newWithGemStoneName: aGemStoneName
+		username: aUsername
+		password: aPassword
+		rememberPassword: aRememberPasswordBoolean
+		hostUsername: aHostUsername
+		hostPassword: aHostPassword
+		rememberHostPassword: aRememberHostPasswordBoolean
+		gemService: aGemServiceName
+		addToKnownParameters: self registerNewParameters
+
+{ #category : #'instance creation' }
+GbsSessionParameters class >> newWithGemStoneName: aGemStoneName
+username: aUsername
+password: aPassword
+rememberPassword: aRememberPasswordBoolean
+hostUsername: aHostUsername
+hostPassword: aHostPassword
+rememberHostPassword: aRememberHostPasswordBoolean
+gemService: aGemServiceName
+addToKnownParameters: addToKnown
+
+	| inst |
+
+	inst := super new.
+	inst
+		gemStoneName: aGemStoneName;
+		username: aUsername;
+		password: aPassword;
+		rememberPassword: aRememberPasswordBoolean;
+		hostUsername: aHostUsername;
+		hostPassword: aHostPassword;
+		rememberHostPassword: aRememberHostPasswordBoolean;
+		gemService: aGemServiceName;
+		initialize.
+	addToKnown ifTrue: [ GBSM addParameters: inst ].
+	^inst
+
+{ #category : #'instance creation' }
+GbsSessionParameters class >> newWithGemStoneName: aGemStoneName username: aUsername password: aPassword
+
+	^self
+		newWithGemStoneName: aGemStoneName
+		username: aUsername
+		password: aPassword
+		hostUsername: ''
+		hostPassword: ''
+		gemService: self defaultGemServiceName
+

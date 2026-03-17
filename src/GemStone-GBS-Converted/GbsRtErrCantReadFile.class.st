@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrCantReadFile',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrCantReadFile',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrCantReadFile class >> gemStoneErrorNumber6430 ^2388
+

@@ -1,6 +1,14 @@
 Class {
-	#name : 'GbxPointerMagnitudeReplicator',
-	#superclass : 'GbxPointerObjectReplicator',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbxPointerMagnitudeReplicator',
+	#superclass : #'GbxPointerObjectReplicator',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'private' }
+GbxPointerMagnitudeReplicator >> setImmutabilityOf: aClientObject
+	"Magnitudes are always immutable."
+
+	self setMagnitudeImmutabilityOf: aClientObject
+

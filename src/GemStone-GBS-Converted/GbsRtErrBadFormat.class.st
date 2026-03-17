@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrBadFormat',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrBadFormat',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrBadFormat class >> gemStoneErrorNumber6430 ^2185
+

@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsHostErrCantSpawn',
-	#superclass : 'GbsFatalError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsHostErrCantSpawn',
+	#superclass : #'GbsFatalError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsHostErrCantSpawn class >> gemStoneErrorNumber6430 ^4042
+

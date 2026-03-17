@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrInvalidUnixUserId',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrInvalidUnixUserId',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrInvalidUnixUserId class >> gemStoneErrorNumber6430 ^2602
+

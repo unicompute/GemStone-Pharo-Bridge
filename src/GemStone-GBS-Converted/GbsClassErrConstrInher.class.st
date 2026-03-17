@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsClassErrConstrInher',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsClassErrConstrInher',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsClassErrConstrInher class >> gemStoneErrorNumber6430 ^2131
+

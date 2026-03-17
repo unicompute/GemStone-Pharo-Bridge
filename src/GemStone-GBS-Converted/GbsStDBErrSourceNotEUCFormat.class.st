@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsStDBErrSourceNotEUCFormat',
-	#superclass : 'GbsCompilerError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsStDBErrSourceNotEUCFormat',
+	#superclass : #'GbsCompilerError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsStDBErrSourceNotEUCFormat class >> gemStoneErrorNumber6430 ^1054
+

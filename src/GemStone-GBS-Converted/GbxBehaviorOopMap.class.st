@@ -1,11 +1,13 @@
 Class {
-	#name : 'GbxBehaviorOopMap',
-	#superclass : 'GbxOopKeyedDictionary',
-	#type : 'variable',
-	#instVars : [
-		'oopMap',
-		'nodeCount'
-	],
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbxBehaviorOopMap',
+	#superclass : #'GbxOopKeyedDictionary',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'private' }
+GbxBehaviorOopMap >> nodeClass
+
+	^GbxBehaviorOopMapNode
+

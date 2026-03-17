@@ -1,6 +1,8 @@
 Class {
-	#name : 'FloatingPointError',
-	#superclass : 'OutOfRange',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'FloatingPointError',
+	#superclass : #'OutOfRange',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

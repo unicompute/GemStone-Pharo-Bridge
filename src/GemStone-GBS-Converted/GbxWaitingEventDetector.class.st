@@ -1,12 +1,8 @@
 Class {
-	#name : 'GbxWaitingEventDetector',
-	#superclass : 'GbxEventDetector',
-	#instVars : [
-		'signalSocket',
-		'eventQueue',
-		'waitForEvents',
-		'timeout'
-	],
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbxWaitingEventDetector',
+	#superclass : #'GbxEventDetector',
+	#instVars : [ #'signalSocket' ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

@@ -1,6 +1,8 @@
 Class {
-	#name : 'GbsUncategorizedError',
-	#superclass : 'GbsGemStoneError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsUncategorizedError',
+	#superclass : #'GbsGemStoneError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

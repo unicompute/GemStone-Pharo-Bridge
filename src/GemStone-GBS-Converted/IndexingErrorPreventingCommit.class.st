@@ -1,6 +1,8 @@
 Class {
-	#name : 'IndexingErrorPreventingCommit',
-	#superclass : 'Error',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'IndexingErrorPreventingCommit',
+	#superclass : #'Error',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+

@@ -1,112 +1,138 @@
 Class {
-	#name : 'GbxBehaviorServerClassCache',
-	#superclass : 'GbxBehaviorServerCache',
-	#instVars : [
-		'classMap',
-		'maxSize',
-		'evictionCount'
-	],
-	#category : 'GemStone-GBS-Tools',
-	#package : 'GemStone-GBS-Tools'
+	#name : #'GbxBehaviorServerClassCache',
+	#superclass : #'Object',
+	#instVars : [ #'className' #'classMethodCache' #'instanceMethodCache' #'serverCache' #'classDelegate' ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Tools'
 }
 
-{ #category : 'instance creation' }
-GbxBehaviorServerClassCache class >> on: aSession [
-	^ self new
-		session: aSession;
-		yourself
-]
+{ #category : #'accessing' }
+GbxBehaviorServerClassCache >> serverCache: anObject
+	serverCache := anObject
 
-{ #category : 'instance creation' }
-GbxBehaviorServerClassCache class >> on: aSession maxSize: anInteger [
-	^ self new
-		session: aSession;
-		maxSize: anInteger;
-		yourself
-]
+{ #category : #'accessing' }
+GbxBehaviorServerClassCache >> instanceMethodCache
+	"lazily cache the instance category names and selectors from the server"
 
-{ #category : 'accessing' }
-GbxBehaviorServerClassCache >> at: anOop ifAbsent: aBlock [
-	"Get cached class for an OOP with LRU eviction"
-	| behavior |
-	
-	behavior := classMap at: anOop ifAbsent: nil.
-	behavior ifNotNil: [
-		hitCount := hitCount + 1.
-		"Move to end for LRU"
-		classMap removeKey: anOop.
-		classMap at: anOop put: behavior.
-		^ behavior
-	].
-	
-	missCount := missCount + 1.
-	behavior := aBlock value.
-	
-	"Add to cache with eviction if needed"
-	self addClass: behavior forOop: anOop.
-	^ behavior
-]
+	instanceMethodCache isNil 
+		ifTrue: 
+			[instanceMethodCache := serverCache session 
+						evaluate: ' | gbxDict | 
+		gbxDict := Dictionary new. 
+		self categoryNames do:[:cat |
+			gbxDict at: cat put: (self selectorsIn: cat)].
+		gbxDict'
+						context: classDelegate].
+	^instanceMethodCache
 
-{ #category : 'accessing' }
-GbxBehaviorServerClassCache >> addClass: aBehavior forOop: anOop [
-	"Add a class to cache with eviction"
-	
-	classMap size >= maxSize ifTrue: [
-		"Evict oldest (first) entry"
-		classMap isEmpty ifFalse: [
-			classMap removeKey: classMap keys first.
-			evictionCount := evictionCount + 1.
-		].
-	].
-	
-	classMap at: anOop put: aBehavior.
-]
+{ #category : #'accessing' }
+GbxBehaviorServerClassCache >> className
+	^className
 
-{ #category : 'accessing' }
-GbxBehaviorServerClassCache >> classMap [
-	^ classMap ifNil: [ classMap := Dictionary new ]
-]
+{ #category : #'accessing' }
+GbxBehaviorServerClassCache >> classMethodCache
+	"lazily cache the class category names and selectors from the server"
 
-{ #category : 'accessing' }
-GbxBehaviorServerClassCache >> clear [
-	"Clear the cache"
-	classMap := Dictionary new.
-	hitCount := 0.
-	missCount := 0.
-	evictionCount := 0.
-]
+	classMethodCache isNil
+		ifTrue: 
+			[classMethodCache := serverCache session
+						unsynchronizedEvaluate: ' | gbxDict | 
+		gbxDict := Dictionary new. 
+		self categoryNames do:[:cat |
+			gbxDict at: cat put: (self selectorsIn: cat)].
+		gbxDict'
+						context: classDelegate remoteClass].
+	^classMethodCache
 
-{ #category : 'accessing' }
-GbxBehaviorServerClassCache >> evictionCount [
-	^ evictionCount ifNil: [ 0 ]
-]
+{ #category : #'accessing' }
+GbxBehaviorServerClassCache >> classDelegate: anObject
+	classDelegate := anObject
 
-{ #category : 'initialization' }
-GbxBehaviorServerClassCache >> initialize [
-	super initialize.
-	classMap := Dictionary new.
-	maxSize := 1000.
-	evictionCount := 0.
-]
+{ #category : #'accessing' }
+GbxBehaviorServerClassCache >> className: aString
+	className := aString
 
-{ #category : 'accessing' }
-GbxBehaviorServerClassCache >> maxSize [
-	^ maxSize
-]
+{ #category : #'accessing' }
+GbxBehaviorServerClassCache >> currentBehavior
+	^serverCache isAtInstanceSide 
+		ifTrue: [self instanceMethodCache]
+		ifFalse: [self classMethodCache]
 
-{ #category : 'accessing' }
-GbxBehaviorServerClassCache >> maxSize: anInteger [
-	maxSize := anInteger
-]
+{ #category : #'protocols' }
+GbxBehaviorServerClassCache >> classProtocols
+	^self classMethodCache keys
 
-{ #category : 'accessing' }
-GbxBehaviorServerClassCache >> printString [
-	^ 'ClassCache (size: ', classMap size asString, '/', maxSize asString,
-	  ', hits: ', hitCount asString, ', misses: ', missCount asString,
-	  ', evictions: ', evictionCount asString, ')'
-]
+{ #category : #'protocols' }
+GbxBehaviorServerClassCache >> instanceProtocols
+	^self instanceMethodCache keys
 
-{ #category : 'accessing' }
-GbxBehaviorServerClassCache >> size [
-	^ classMap size
-]
+{ #category : #'protocols' }
+GbxBehaviorServerClassCache >> protocolForSelector: aSelectorDisplay 
+	^serverCache isAtInstanceSide 
+		ifTrue: [self instanceProtocolForSelector: aSelectorDisplay selector]
+		ifFalse: [self classProtocolForSelector: aSelectorDisplay selector]
+
+{ #category : #'protocols' }
+GbxBehaviorServerClassCache >> instanceProtocolForSelector: aSelector 
+	instanceMethodCache keysAndValuesDo: 
+			[:categoryName :selectorArray | 
+			selectorArray do: [:sel | sel = aSelector ifTrue: [^categoryName]]]
+
+{ #category : #'protocols' }
+GbxBehaviorServerClassCache >> classProtocolForSelector: aSelector 
+	classMethodCache keysAndValuesDo: 
+			[:categoryName :selectorArray | 
+			selectorArray do: [:sel | sel = aSelector ifTrue: [^categoryName]]]
+
+{ #category : #'methods' }
+GbxBehaviorServerClassCache >> instanceSelectors
+	| instanceSelectors |
+	instanceSelectors := SortedCollection new.
+	self instanceMethodCache 
+		keysAndValuesDo: [:protocolName :selectors | instanceSelectors addAll: selectors].
+	^instanceSelectors
+
+{ #category : #'methods' }
+GbxBehaviorServerClassCache >> classSelectors
+	| classSelectors |
+	classSelectors := SortedCollection new.
+	self classMethodCache 
+		keysAndValuesDo: [:protocolName :selectors | classSelectors addAll: selectors].
+	^classSelectors
+
+{ #category : #'methods' }
+GbxBehaviorServerClassCache >> classMethodTextsFor: selectors 
+	^serverCache session 
+		evaluate: '
+		| gbxSourceCodes |
+		gbxSourceCodes := Array new.
+		self do:[:selector | 
+		gbxSourceCodes add: (' 
+				, classDelegate remoteClassName 
+					, '  sourceCodeAt: selector)].
+		gbxSourceCodes'
+		context: selectors asGSObject
+
+{ #category : #'methods' }
+GbxBehaviorServerClassCache >> instanceMethodTextsFor: selectors 
+	^serverCache session 
+		evaluate: '
+		| gbxSourceCodes |
+		gbxSourceCodes := Array new.
+		self do:[:selector | 
+		gbxSourceCodes add: (' 
+				, className asString , '  sourceCodeAt: selector)].
+		gbxSourceCodes'
+		context: selectors asGSObject
+
+{ #category : #'instance creation' }
+GbxBehaviorServerClassCache class >> on: aSymbol forServerCache: aGbxBehaviorServerCache 
+	| inst |
+	inst := self new.
+	inst className: aSymbol.
+	inst classDelegate: (aSymbol == aGbxBehaviorServerCache theClassName 
+				ifTrue: [aGbxBehaviorServerCache inspector theClass]
+				ifFalse: [aGbxBehaviorServerCache session unsynchronizedExecute: aSymbol asString]).
+	inst serverCache: aGbxBehaviorServerCache.
+	^inst
+

@@ -1,149 +1,103 @@
 Class {
-	#name : 'GbxGroupHolder',
-	#superclass : 'Object',
-	#instVars : [
-		'name',
-		'proxy',
-		'session',
-		'members',
-		'privileges'
-	],
-	#category : 'GemStone-GBS-Tools',
-	#package : 'GemStone-GBS-Tools'
+	#name : #'GbxGroupHolder',
+	#superclass : #'Object',
+	#instVars : [ #'group' #'members' ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Tools'
 }
 
-{ #category : 'instance creation' }
-GbxGroupHolder class >> newWithGrp: groupName [
-	"Create a holder for a GemStone group by name"
-	^ self new
-		name: groupName;
-		yourself
-]
+{ #category : #'comparing' }
+GbxGroupHolder >> <= aHolder
 
-{ #category : 'instance creation' }
-GbxGroupHolder class >> newWithGrp: groupName users: userCollection [
-	"Create a holder for a GemStone group with members"
-	^ self new
-		name: groupName;
-		members: userCollection;
-		yourself
-]
+   "Comparison operator used for sorting group holder collections."
 
-{ #category : 'instance creation' }
-GbxGroupHolder class >> on: aGroupProxy [
-	"Create a holder for a GemStone group proxy"
-	^ self new
-		proxy: aGroupProxy;
-		yourself
-]
+   ^(self group <= aHolder group)
 
-{ #category : 'comparing' }
-GbxGroupHolder >> = anObject [
-	^ (anObject isKindOf: GbxGroupHolder)
-		and: [ name = anObject name ]
-]
+{ #category : #'accessing' }
+GbxGroupHolder >> members
 
-{ #category : 'accessing' }
-GbxGroupHolder >> asString [
-	^ name ifNil: [ '<unknown group>' ]
-]
+   "Return the value of the 'members' instance variable."
 
-{ #category : 'accessing' }
-GbxGroupHolder >> fetchMembers [
-	"Fetch group members from GemStone"
-	| script result |
-	
-	(session isNil or: [ proxy isNil ]) ifTrue: [ ^ #() ].
-	
-	script := '[
-		| grp |
-		grp := Object _objectForOop: ', proxy oop asString, '.
-		grp members collect: [ :m | m userId ]
-	] value'.
-	
-	result := session executeAndFetch: script.
-	members := result.
-]
+   (members isNil) ifTrue: [
+	  members := SortedCollection new.
+	  ].
+   ^members
 
-{ #category : 'accessing' }
-GbxGroupHolder >> fetchPrivileges [
-	"Fetch group privileges from GemStone"
-	| script result |
-	
-	(session isNil or: [ proxy isNil ]) ifTrue: [ ^ #() ].
-	
-	script := '[
-		| grp |
-		grp := Object _objectForOop: ', proxy oop asString, '.
-		grp privileges
-	] value'.
-	
-	result := session executeAndFetch: script.
-	privileges := result.
-]
+{ #category : #'accessing' }
+GbxGroupHolder >> group
 
-{ #category : 'accessing' }
-GbxGroupHolder >> hash [
-	^ name hash
-]
+   "Return the value of the 'group' instance variable."
 
-{ #category : 'accessing' }
-GbxGroupHolder >> members [
-	^ members ifNil: [ 
-		self fetchMembers.
-		members 
-	]
-]
+   ^group
 
-{ #category : 'accessing' }
-GbxGroupHolder >> members: aCollection [
-	members := aCollection
-]
+{ #category : #'updating' }
+GbxGroupHolder >> group: aGroupNameString
 
-{ #category : 'accessing' }
-GbxGroupHolder >> name [
-	^ name
-]
+	"Set the value of the 'group' instance variable.
+	NOTE:  Starting in 5.0, group names are strings, not symbols."
 
-{ #category : 'accessing' }
-GbxGroupHolder >> name: aString [
-	name := aString
-]
+	group := aGroupNameString isNil
+		ifTrue: [ aGroupNameString ]
+		ifFalse: [ aGroupNameString asString ].
 
-{ #category : 'accessing' }
-GbxGroupHolder >> printString [
-	^ 'Group: ', name
-]
+{ #category : #'updating' }
+GbxGroupHolder >> members: mbrs
 
-{ #category : 'accessing' }
-GbxGroupHolder >> privileges [
-	^ privileges ifNil: [ 
-		self fetchPrivileges.
-		privileges 
-	]
-]
+   "Set the value of the 'members' instance variable."
 
-{ #category : 'accessing' }
-GbxGroupHolder >> privileges: aCollection [
-	privileges := aCollection
-]
+   members := mbrs.
 
-{ #category : 'accessing' }
-GbxGroupHolder >> proxy [
-	^ proxy
-]
+{ #category : #'private' }
+GbxGroupHolder >> getMembers: users
+	"Gets the group holder's group members and assigns a list of them to
+   members. The group members are taken from the given users list"
 
-{ #category : 'accessing' }
-GbxGroupHolder >> proxy: aProxy [
-	proxy := aProxy
-]
+	members := (users select: [:userHldr | self shouldAddGroupFor: userHldr])
+				asSortedCollection
 
-{ #category : 'accessing' }
-GbxGroupHolder >> session [
-	^ session
-]
+{ #category : #'private' }
+GbxGroupHolder >> shouldAddGroupFor: userHldr
 
-{ #category : 'accessing' }
-GbxGroupHolder >> session: aSession [
-	session := aSession
-]
+	^group gbxDelegate session
+		evaluateBlock: '[:user :group |user groups isNil 
+	ifTrue:[false] 
+	ifFalse:[(user groups detect:[:userProfileGroup | userProfileGroup groupName asString = group ] ifNone:[]) notNil]]'
+		withArguments: (Array with: userHldr remoteUserProfile with: group)
+		context: nil
+
+{ #category : #'instance creation' }
+GbxGroupHolder class >> newWithGrp: aGroupNameString
+
+   "Create a group holder from a new group, i.e. a group which does not
+	have any members yet. The group holder contains the group and the
+	userProfile members belonging to the group."
+
+   | inst |
+
+   inst := super new.
+   inst group: aGroupNameString.
+   ^inst
+
+{ #category : #'instance creation' }
+GbxGroupHolder class >> new
+
+   "Disallow #new operator, use #newWithGrp: or #newWithGrp:users:
+   instead."
+
+   self shouldNotImplement.
+
+{ #category : #'instance creation' }
+GbxGroupHolder class >> newWithGrp: aGroupNameString
+users: users
+
+   "Create a group holder from an existing group which could already have
+	members. The group holder contains the group and the userProfile
+	members belonging to the group."
+
+   | inst |
+
+   inst := super new.
+   inst group: aGroupNameString.
+   inst getMembers: users.
+   ^inst
+

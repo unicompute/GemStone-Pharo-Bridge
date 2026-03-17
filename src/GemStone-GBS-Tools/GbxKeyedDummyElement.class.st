@@ -1,28 +1,15 @@
 Class {
-	#name : 'GbxKeyedDummyElement',
-	#superclass : 'GbxKeyedElement',
-	#category : 'GemStone-GBS-Tools',
-	#package : 'GemStone-GBS-Tools'
+	#name : #'GbxKeyedDummyElement',
+	#superclass : #'GbxKeyIndexElement',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Tools'
 }
 
-{ #category : 'instance creation' }
-GbxKeyedDummyElement class >> key: aKey [
-	^ self new
-		key: aKey;
-		yourself
-]
+{ #category : #'accessing' }
+GbxKeyedDummyElement >> key
+	^nil
 
-{ #category : 'testing' }
-GbxKeyedDummyElement >> isDummy [
-	^ true
-]
+{ #category : #'accessing' }
+GbxKeyedDummyElement >> value: anObject
 
-{ #category : 'accessing' }
-GbxKeyedDummyElement >> printString [
-	^ key asString, ' -> <dummy>'
-]
-
-{ #category : 'accessing' }
-GbxKeyedDummyElement >> value [
-	^ nil
-]

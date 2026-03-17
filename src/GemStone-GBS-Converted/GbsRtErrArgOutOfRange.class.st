@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrArgOutOfRange',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrArgOutOfRange',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrArgOutOfRange class >> gemStoneErrorNumber6430 ^2061
+

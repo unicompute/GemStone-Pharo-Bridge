@@ -1,6 +1,11 @@
 Class {
-	#name : 'GbsRtErrPrincipalAlreadyExists',
-	#superclass : 'GbsInterpreterError',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#name : #'GbsRtErrPrincipalAlreadyExists',
+	#superclass : #'GbsInterpreterError',
+	#instVars : [  ],
+	#classVars : [  ],
+	#category : #'GemStone-GBS-Converted'
 }
+
+{ #category : #'constants' }
+GbsRtErrPrincipalAlreadyExists class >> gemStoneErrorNumber6430 ^2609
+
