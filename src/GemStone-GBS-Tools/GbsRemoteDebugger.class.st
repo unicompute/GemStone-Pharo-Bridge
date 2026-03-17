@@ -2901,7 +2901,9 @@ GbsRemoteDebugger >> restart [
 
 { #category : 'private' }
 GbsRemoteDebugger >> resolveRestartLevelForUI [
-	| level preserved step |
+	| level preserved step selectedLevel |
+	selectedLevel := self currentSelectedFrameLevel.
+	
 	preserved := self
 		safeServiceCall: [
 			(service respondsTo: #restartHomeLevelForReset)
@@ -2912,6 +2914,19 @@ GbsRemoteDebugger >> resolveRestartLevelForUI [
 	level := self resolveExecutedFrameLevelFromServer.
 	step := self serverExecutedFrameStepPoint.
 
+	"If the user explicitly selected a frame that is an executed code frame, try to use it"
+	((selectedLevel isNumber and: [ selectedLevel > 0 ]) and: [ self contextList notNil ]) ifTrue: [
+		| selectedContext index |
+		index := (self stackList notNil and: [ self stackList respondsTo: #selectedIndex ])
+			ifTrue: [ self stackList selectedIndex ifNil: [ 1 ] ]
+			ifFalse: [ 1 ].
+		(index isNumber and: [ index > 0 and: [ index <= self contextList size ] ]) ifTrue: [
+			selectedContext := self contextList at: index.
+			(selectedContext notNil and: [ self isExecutedCodeFrame: selectedContext ])
+				ifTrue: [ ^ selectedLevel ]
+		]
+	].
+
 	((preserved isNumber and: [ preserved > 1 ])
 		and: [
 			(level isNil)
@@ -2921,8 +2936,7 @@ GbsRemoteDebugger >> resolveRestartLevelForUI [
 
 	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
 
-	level := self currentSelectedFrameLevel.
-	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
+	(selectedLevel isNumber and: [ selectedLevel > 0 ]) ifTrue: [ ^ selectedLevel ].
 
 	^ 1
 ]
