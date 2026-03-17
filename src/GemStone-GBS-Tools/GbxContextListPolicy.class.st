@@ -342,7 +342,6 @@ GbxContextListPolicy >> fetchServerContexts [
 				level := level + 1
 			]
 		].
-		stream nextPutAll: ''DEBUG: fetchServerContexts total contexts='', stream position asString; cr.
 		stream contents
 	] value'.
 
@@ -350,21 +349,19 @@ GbxContextListPolicy >> fetchServerContexts [
 		debugger session evaluate: script
 	] on: Error do: [ :ex |
 		debugger logRestartText: 'fetchServerContexts: ERROR: ' , ex messageText.
-		nil
+		''
 	].
-	rawData ifNil: [ rawData := '' ].
+	rawData ifNil: [ 
+		debugger logRestartText: 'fetchServerContexts: rawData is nil'.
+		rawData := '' 
+	].
 	(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
-	"Log DEBUG lines from script"
-	(rawData splitOn: Character lf) do: [ :line |
-		(line beginsWith: 'DEBUG:') ifTrue: [
-			debugger logRestartText: line
-		]
-	].
-	"Filter out DEBUG lines before processing contexts"
-	contexts := ((rawData splitOn: Character lf)
-		select: [ :line | (line beginsWith: 'DEBUG:') not ])
+	debugger logRestartText: 'fetchServerContexts: rawData length=' , rawData size asString.
+	"Parse context lines from script output"
+	contexts := (rawData splitOn: Character lf)
 		collect: [ :line |
 			| parts |
+			(line isEmpty or: [ line beginsWith: 'DEBUG:' ]) ifTrue: [ ^ nil ].
 			parts := line splitOn: Character tab.
 			parts size >= 5 ifTrue: [
 				| activation selectorSymbol ctxOop quickStepValue offsetsTokens offsetsValue lineNumberValue |

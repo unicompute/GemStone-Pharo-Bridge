@@ -1385,6 +1385,8 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	self logRestartText: 'cutbackGsTo level=', lvl asString, ' result=', result printString.
 	^ self asBooleanResult: result default: false
 ]
+
+{ #category : 'actions' }
 GbxDebuggerService >> cutbackClientContextsAbove: gsContext [
 	"gsContext must be a GemStone server context.
 	Discard any partially-completed client execution above gsContext."
