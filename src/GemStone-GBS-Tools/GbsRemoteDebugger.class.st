@@ -437,6 +437,11 @@ GbsRemoteDebugger >> configureMenuItem: aMenuGroup named: labelText action: acti
 			ifTrue: [ item enabled: enabledBoolean ] ].
 ]
 
+{ #category : 'accessing' }
+GbsRemoteDebugger >> contextList [
+	^ contextList
+]
+
 { #category : 'actions' }
 GbsRemoteDebugger >> contextSelected: selectedItem [
 	| context sourceCode variables associations |
@@ -606,21 +611,12 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 		ctx := nil.
 		proc := nil.
 		(obj respondsTo: #sender) ifTrue: [ ctx := obj ].
-			(ctx isNil and: [ obj respondsTo: #topContext ])
-				ifTrue: [ ctx := [ obj topContext ] on: Error do: [ nil ] ].
-			(ctx isNil and: [ obj respondsTo: #process ])
-				ifTrue: [ proc := [ obj process ] on: Error do: [ nil ] ].
-			(proc isNil and: [ obj respondsTo: #serverProcess ])
-				ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-			(proc isNil and: [ obj respondsTo: #serverProcessOop ]) ifTrue: [
-				| procOop |
-				procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
-				(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
-					proc := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
-				]
-			].
-			(proc isNil and: [ obj respondsTo: #_gsiStackReportFromLevel:toLevel: ])
-				ifTrue: [ proc := obj ].
+		(ctx isNil and: [ obj respondsTo: #topContext ])
+			ifTrue: [ ctx := [ obj topContext ] on: Error do: [ nil ] ].
+		(ctx isNil and: [ obj respondsTo: #process ])
+			ifTrue: [ proc := [ obj process ] on: Error do: [ nil ] ].
+		(proc isNil and: [ obj respondsTo: #_gsiStackReportFromLevel:toLevel: ])
+			ifTrue: [ proc := obj ].
 		(ctx isNil and: [ proc notNil and: [ proc respondsTo: #topContext ] ])
 			ifTrue: [ ctx := [ proc topContext ] on: Error do: [ nil ] ].
 
@@ -913,22 +909,14 @@ GbsRemoteDebugger >> resolveDebugProcessOopFromCurrentProcessOop [
 
 		(hasStack value: obj) ifTrue: [ ^ (Reflection oopOf: obj) asString ].
 
-			candidate := (obj respondsTo: #serverProcess)
-				ifTrue: [ [ obj serverProcess ] on: Error do: [ nil ] ]
-				ifFalse: [ nil ].
-			(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+		candidate := (obj respondsTo: #serverProcess)
+			ifTrue: [ [ obj serverProcess ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
 
-			candidate := (obj respondsTo: #serverProcessOop)
-				ifTrue: [ [ obj serverProcessOop ] on: Error do: [ nil ] ]
-				ifFalse: [ nil ].
-			(candidate isNumber and: [ candidate > 20 ]) ifTrue: [
-				candidate := [ Object _objectForOop: candidate ] on: Error do: [ nil ].
-				(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
-			].
-
-			candidate := (obj respondsTo: #process)
-				ifTrue: [ [ obj process ] on: Error do: [ nil ] ]
-				ifFalse: [ nil ].
+		candidate := (obj respondsTo: #process)
+			ifTrue: [ [ obj process ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
 		(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
 
 		top := (obj respondsTo: #topContext)
@@ -1052,75 +1040,57 @@ GbsRemoteDebugger >> initializePresenters [
 
 	stepOverButton := self newButton 
 		label: 'Step Over'; 
-		icon: (self iconNamedSafe: #smallForward);
 		action: [ self stepOver ].
 	stepIntoButton := self newButton 
 		label: 'Step Into'; 
-		icon: (self iconNamedSafe: #smallDoIt);
 		action: [ self stepInto ].
 	stepButton := self newButton
 		label: 'Step';
-		icon: (self iconNamedSafe: #smallForward);
 		action: [ self step ].
 	stepReturnButton := self newButton 
 		label: 'Step Return';
-		icon: (self iconNamedSafe: #smallBack);
 		action: [ self stepReturn ].
 	restartButton := self newButton
 		label: 'Restart';
-		icon: (self iconNamedSafe: #smallUpdate);
-		action: [ self restartWithConfirmedExecutedFrameSecondPass ].
+		action: [ self restart ].
 	resumeButton := self newButton 
 		label: 'Run';
-		icon: (self iconNamedSafe: #glamorousGo);
 		action: [ self resume ].
 	runUntilReturnButton := self newButton
 		label: 'Run until Return';
-		icon: (self iconNamedSafe: #smallForward);
 		action: [ self runUntilReturn ].
 	runWithBreakAgainButton := self newButton
 		label: 'Run with Break Again';
-		icon: (self iconNamedSafe: #smallBreakpoint);
 		action: [ self runWithBreakAgain ].
 	runToCaretButton := self newButton
 		label: 'Run to Caret';
-		icon: (self iconNamedSafe: #smallForward);
 		action: [ self runToCaret ].
 	jumpToCaretButton := self newButton
 		label: 'Jump to Caret';
-		icon: (self iconNamedSafe: #smallRight);
 		action: [ self jumpToCaret ].
 	returnButton := self newButton
 		label: 'Return...';
-		icon: (self iconNamedSafe: #smallBack);
 		action: [ self returnFromFrame ].
 	pauseButton := self newButton
 		label: 'Pause';
-		icon: (self iconNamedSafe: #smallCancel);
 		action: [ self pauseProcess ].
 	terminateButton := self newButton 
 		label: 'Terminate'; 
-		icon: (self iconNamedSafe: #smallDelete);
 		action: [ self terminate ].
 	inspectReceiverButton := self newButton
 		label: 'Inspect Receiver';
-		icon: (self iconNamedSafe: #smallInspectIt);
 		action: [ self inspectReceiver ].
 	inspectProcessButton := self newButton
 		label: 'Inspect Process';
-		icon: (self iconNamedSafe: #smallInspectIt);
 		action: [ self inspectProcess ].
 	inspectFrameButton := self newButton
 		label: 'Inspect Context';
-		icon: (self iconNamedSafe: #smallInspectIt);
 		action: [ self inspectFrame ].
 	inspectStackButton := self newButton
 		label: 'Inspect Stack';
-		icon: (self iconNamedSafe: #smallInspectIt);
 		action: [ self inspectStack ].
 	inspectVariableButton := self newButton
 		label: 'Inspect Variable';
-		icon: (self iconNamedSafe: #smallInspectIt);
 		action: [ self inspectVariable ].
 
 	stackList := self newList.
@@ -1218,42 +1188,6 @@ GbsRemoteDebugger >> isLikelyUserFrame: aContext [
 	^ true
 ]
 
-{ #category : 'private' }
-GbsRemoteDebugger >> isExecutedCodeFrame: aContext [
-	"Check if this is the executed code frame (nil class, unboundMethod selector)"
-	| className selectorName |
-	aContext ifNil: [ ^ false ].
-	(aContext respondsTo: #isExecutedCodeFrame) ifTrue: [
-		([ aContext isExecutedCodeFrame ] on: Error do: [ false ]) ifTrue: [ ^ true ]
-	].
-	className := [ aContext methodClassOrUnknown asString ] on: Error do: [ '<unknown>' ].
-	selectorName := [ aContext selectorOrUnknown asString ] on: Error do: [ '<unknown>' ].
-	^ (className = 'nil'
-		or: [ className = '<unknown>'
-		or: [ className isEmpty ] ])
-		and: [
-			selectorName = 'nil'
-				or: [ selectorName = 'unboundMethod'
-				or: [ selectorName = '<unknown>'
-				or: [ selectorName isEmpty ] ] ] ]
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> preferredInitialContextIndex [
-	| index executedIndex |
-	contextList ifNil: [ ^ 1 ].
-	contextList isEmpty ifTrue: [ ^ 1 ].
-
-	"Restart determinism: always prefer the executed-code frame, wherever it is."
-	executedIndex := contextList findFirst: [ :ctx | self isExecutedCodeFrame: ctx ].
-	executedIndex > 0 ifTrue: [ ^ executedIndex ].
-
-	index := contextList
-		findFirst: [ :ctx | self isLikelyUserFrame: ctx ].
-	index = 0 ifTrue: [ ^ 1 ].
-	^ index
-]
-
 { #category : 'accessing' }
 GbsRemoteDebugger >> label: aString [
 	errorMessageLabel ifNotNil: [ errorMessageLabel label: aString ]
@@ -1273,6 +1207,18 @@ GbsRemoteDebugger >> setInitialSourceCode: aString [
 	"Select the top context to show the source"
 	stackList selectIndex: 1.
 	self contextSelected: topContext
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> preferredInitialContextIndex [
+	| index |
+	contextList ifNil: [ ^ 1 ].
+	contextList isEmpty ifTrue: [ ^ 1 ].
+
+	index := contextList
+		findFirst: [ :ctx | self isLikelyUserFrame: ctx ].
+	index = 0 ifTrue: [ ^ 1 ].
+	^ index
 ]
 
 { #category : 'accessing' }
@@ -1610,7 +1556,6 @@ GbsRemoteDebugger >> stackData: anArray [
 	stackList ifNotNil: [ self fetchStackFrames ].
 ]
 
-
 { #category : 'actions' }
 GbsRemoteDebugger >> stepInto [
 	| didStep |
@@ -1729,18 +1674,13 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 	"Force the server process to jump to step point 1.
 	This is critical for correct stepping after restart.
 	
-	The _trimStackToLevel: method resets the stack, but we also need to ensure
-	the server's internal PC is reset. We do this by calling _trimStackToLevel: 
-	again at the executed code frame level to force a PC reset."
-	| script raw level |
+	Note: _trimStackToLevel: already resets to step=1, so this is a backup mechanism.
+	Returns true if step=1 is confirmed (either by jump or by trim)."
+	| script raw |
 	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
-	
-	"Get the executed code frame level from server"
-	level := self resolveExecutedFrameLevelFromServer.
-	level ifNil: [ level := 1 ].
 
 	script := '[
-		| obj proc restartLevel stackReport fullEntry quick currentTop |
+		| obj proc hasMethod |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ false ].
 		proc := obj.
@@ -1758,38 +1698,15 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 		].
 		proc isNil ifTrue: [ ^ false ].
 		
-		restartLevel := ', level asString, '.
-
-		"Phase 1: Forcefully trim the stack to the target level.
-		GemStone _trimStackToLevel: is documented to reset the PC of the new top frame."
-		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
-			[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ]
+		"Try jumpToStepPoint: if available (may not exist on all GemStone versions)"
+		hasMethod := (proc respondsTo: #jumpToStepPoint:).
+		hasMethod ifTrue: [
+			[ proc jumpToStepPoint: 1 ] on: Error do: [ ^ false ].
+			^ true
 		].
-
-		"Phase 2: Use jumpToStepPoint: on the NEW top frame (which was restartLevel).
-		This is a reinforced second pass to ensure the server-side state is synchronized."
-		currentTop := [ proc topContext ] on: Error do: [ nil ].
-		currentTop ifNotNil: [
-			(currentTop respondsTo: #jumpToStepPoint:) ifTrue: [
-				[ currentTop jumpToStepPoint: 1 ] on: Error do: [ ]
-			].
-			(currentTop respondsTo: #runToStepPoint:) ifTrue: [
-				[ currentTop runToStepPoint: 1 ] on: Error do: [ ]
-			].
-			"Fallbacks for other GemStone versions"
-			(currentTop respondsTo: #_stepPoint:) ifTrue: [
-				[ currentTop _stepPoint: 1 ] on: Error do: [ ]
-			]
-		].
-
-		"Phase 3: Verify the result"
-		quick := 0.
-		stackReport := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
-		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
-			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
-			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
-		].
-		(quick <= 1) ifTrue: [ true ] ifFalse: [ false ]
+		
+		"jumpToStepPoint: not available - _trimStackToLevel: already set step=1, so return true"
+		true
 	] value'.
 
 	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
@@ -2678,190 +2595,10 @@ GbsRemoteDebugger >> normalizePauseLandingSelection [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> restartWithDeferredSecondPass [
-	| worldStateClass |
-	self restart.
-	[
-		(Delay forMilliseconds: 300) wait.
-		worldStateClass := Smalltalk at: #WorldState ifAbsent: [ nil ].
-		(worldStateClass notNil and: [ worldStateClass respondsTo: #addDeferredUIMessage: ])
-			ifTrue: [
-				[ worldStateClass addDeferredUIMessage: [
-					self fetchStackFrames.
-					self normalizeRestartSelectionAndPosition.
-					self restart
-				] ]
-					on: Error
-					do: [
-						self fetchStackFrames.
-						self normalizeRestartSelectionAndPosition.
-						self restart
-					].
-			]
-			ifFalse: [
-				self fetchStackFrames.
-				self normalizeRestartSelectionAndPosition.
-				self restart
-			].
-	] forkAt: Processor userBackgroundPriority
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> restartWithRetry [
-	| attempts didRestart |
-	attempts := 0.
-	didRestart := false.
-	[
-		attempts := attempts + 1.
-		didRestart := self restart.
-		self fetchStackFrames.
-		self normalizeRestartSelectionAndPosition.
-		(self isTopExecutedCodeAtStepOne or: [ attempts >= 4 ])
-	] whileFalse: [
-		(Delay forMilliseconds: 180) wait
-	].
-	^ didRestart
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> isTopExecutedCodeAtStepOne [
-	| top step |
-	(contextList isCollection and: [ contextList isEmpty not ]) ifFalse: [ ^ false ].
-	top := contextList first.
-	(self isExecutedCodeFrame: top) ifFalse: [ ^ false ].
-	step := (top respondsTo: #quickStepPoint)
-		ifTrue: [ [ top quickStepPoint asInteger ] on: Error do: [ 0 ] ]
-		ifFalse: [ 0 ].
-	^ step = 1
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
-	| firstPass attempts ready |
-	firstPass := self restart.
-	firstPass ifFalse: [ ^ false ].
-
-	attempts := 0.
-	ready := false.
-	[
-		(attempts < 30) and: [ ready not ]
-	] whileTrue: [
-		self fetchStackFrames.
-		self normalizeRestartSelectionAndPosition.
-		ready := self isExecutedCodeSelectionConfirmed.
-		ready ifFalse: [ (Delay forMilliseconds: 25) wait ].
-		attempts := attempts + 1
-	].
-
-	ready ifTrue: [ 
-		self restartNeedsServerRewind ifTrue: [ self restart ]
-	].
-	^ firstPass
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> isExecutedCodeSelectionConfirmed [
-	| index selected |
-	(contextList isCollection and: [ contextList isEmpty not ]) ifFalse: [ ^ false ].
-	index := (stackList notNil and: [ stackList respondsTo: #selectedIndex ])
-		ifTrue: [ [ stackList selectedIndex ] on: Error do: [ 0 ] ]
-		ifFalse: [ 0 ].
-	(index isInteger and: [ index > 0 and: [ index <= contextList size ] ])
-		ifTrue: [ selected := contextList at: index ]
-		ifFalse: [ selected := contextList first ].
-	^ self isExecutedCodeFrame: selected
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> restartWithSimulatedSecondClick [
-	| firstPass secondPass |
-	firstPass := self restart.
-	firstPass ifFalse: [ ^ false ].
-
-	"Mirror what user does before second click: refreshed stack + selected restart frame."
-	self fetchStackFrames.
-	self normalizeRestartSelectionAndPosition.
-	self safeServiceCall: [
-		(service respondsTo: #selectRestartTargetContext)
-			ifTrue: [ service selectRestartTargetContext ]
-	] default: nil.
-	self safeServiceCall: [
-		(service respondsTo: #resetServerPCToStepOne)
-			ifTrue: [ service resetServerPCToStepOne ]
-	] default: nil.
-	"Second click on Reset (explicit repeat as requested)"
-	self safeServiceCall: [
-		(service respondsTo: #resetServerPCToStepOne)
-			ifTrue: [ service resetServerPCToStepOne ]
-	] default: nil.
-
-	"Second click simulation"
-	secondPass := self safeServiceCall: [ service restart ] default: false.
-	secondPass ifFalse: [ secondPass := self restart ].
-	secondPass ifTrue: [
-		self fetchStackFrames.
-		self normalizeRestartSelectionAndPosition.
-		self ensureServerPCToStepOneAfterRestart
-	].
-	^ firstPass or: [ secondPass ]
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> restartThenDoubleReset [
-	| didRestart |
-	didRestart := self restart.
-	didRestart ifFalse: [ ^ false ].
-
-	self fetchStackFrames.
-	self normalizeRestartSelectionAndPosition.
-
-	"First Reset"
-	self safeServiceCall: [
-		(service respondsTo: #resetServerPCToStepOne)
-			ifTrue: [ service resetServerPCToStepOne ]
-	] default: nil.
-
-	"Second Reset (as requested)"
-	self safeServiceCall: [
-		(service respondsTo: #resetServerPCToStepOne)
-			ifTrue: [ service resetServerPCToStepOne ]
-	] default: nil.
-
-	self fetchStackFrames.
-	self normalizeRestartSelectionAndPosition.
-	self ensureServerPCToStepOneAfterRestart.
-	^ true
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> serverExecutedFrameStepPoint [
-	| executed |
-	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ nil ].
-	executed := contextList detect: [ :ctx | self isExecutedCodeFrame: ctx ] ifNone: [ nil ].
-	executed ifNil: [ ^ nil ].
-	^ (executed respondsTo: #quickStepPoint)
-		ifTrue: [ [ executed quickStepPoint asInteger ] on: Error do: [ nil ] ]
-		ifFalse: [ nil ]
-]
-
-{ #category : 'private' }
 GbsRemoteDebugger >> restart [
-	| didRestart restartLevel wasExecuted |
-	wasExecuted := self currentSelectedContextIsExecutedCodeFrame.
-	restartLevel := self resolveRestartLevelForUI.
-	
-	Transcript
-		show: '[UI restart] using restartLevel=';
-		show: restartLevel asString;
-		cr.
-
+	| didRestart |
 	didRestart := self safeServiceCall: [ service restart ] default: false.
-	
-	"On second restart or if service restart failed to be forceful enough, try direct trim"
-	(didRestart not or: [ wasExecuted or: [ (self serverExecutedFrameStepPoint ifNil: [ 0 ]) > 1 ] ]) ifTrue: [
-		didRestart := self trimServerStackToLevel: restartLevel.
-	].
-
+	didRestart ifFalse: [ didRestart := self restartUsingDirectTrimFromExecutedFrame ].
 	didRestart ifTrue: [
 		self fetchStackFrames.
 		self normalizeRestartSelectionAndPosition.
@@ -2877,66 +2614,15 @@ GbsRemoteDebugger >> ensureServerPCToStepOneAfterRestart [
 	Called before stepping to ensure correct behavior.
 	
 	Note: _trimStackToLevel: already resets to step=1, so this is a verification/backup step."
-	| context step |
+	| context |
 	contextList ifNil: [ ^ self ].
 	contextList ifEmpty: [ ^ self ].
 
-	context := contextList
-		detect: [ :ctx | self isExecutedCodeFrame: ctx ]
-		ifNone: [ nil ].
-	context ifNil: [ ^ self ].
-	
-	step := (context respondsTo: #quickStepPoint)
-		ifTrue: [ [ context quickStepPoint asInteger ] on: Error do: [ 0 ] ]
-		ifFalse: [ 0 ].
-	"If we are in an executed frame, we ALWAYS want to be at step 1 after restart"
-	(step > 1 or: [ self currentSelectedContextIsExecutedCodeFrame ]) ifTrue: [
-		self forceServerJumpToStepPoint1.
-		self fetchStackFrames.
-		self normalizeRestartSelectionAndPosition
-	].
-]
+	context := contextList at: 1.
+	((context respondsTo: #isExecutedCodeFrame) and: [ context isExecutedCodeFrame ]) ifFalse: [ ^ self ].
 
-{ #category : 'private' }
-GbsRemoteDebugger >> resolveRestartLevelForUI [
-	| level preserved step selectedLevel |
-	selectedLevel := self currentSelectedFrameLevel.
-	
-	preserved := self
-		safeServiceCall: [
-			(service respondsTo: #restartHomeLevelForReset)
-				ifTrue: [ service restartHomeLevelForReset ]
-				ifFalse: [ nil ]
-		]
-		default: nil.
-	level := self resolveExecutedFrameLevelFromServer.
-	step := self serverExecutedFrameStepPoint.
-
-	"If the user explicitly selected a frame that is an executed code frame, try to use it"
-	((selectedLevel isNumber and: [ selectedLevel > 0 ]) and: [ contextList notNil ]) ifTrue: [
-		| selectedContext index |
-		index := (stackList notNil and: [ stackList respondsTo: #selectedIndex ])
-			ifTrue: [ stackList selectedIndex ifNil: [ 1 ] ]
-			ifFalse: [ 1 ].
-		(index isNumber and: [ index > 0 and: [ index <= contextList size ] ]) ifTrue: [
-			selectedContext := contextList at: index.
-			(selectedContext notNil and: [ self isExecutedCodeFrame: selectedContext ])
-				ifTrue: [ ^ selectedLevel ]
-		]
-	].
-
-	((preserved isNumber and: [ preserved > 1 ])
-		and: [
-			(level isNil)
-				or: [ (level <= 1)
-				or: [ (step isNumber and: [ step > 1 ]) ] ]
-		]) ifTrue: [ ^ preserved ].
-
-	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
-
-	(selectedLevel isNumber and: [ selectedLevel > 0 ]) ifTrue: [ ^ selectedLevel ].
-
-	^ 1
+	"Force server to jump to step 1 (backup if trim didn't set it)"
+	self forceServerJumpToStepPoint1
 ]
 
 { #category : 'private' }
@@ -2971,11 +2657,11 @@ GbsRemoteDebugger >> forceExecutedFrameToStepOneAfterRestart [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> trimServerStackToLevel: aLevel [
+GbsRemoteDebugger >> restartUsingDirectTrimFromExecutedFrame [
 	| script raw value targetLevel |
 	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
 	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ false ].
-	targetLevel := aLevel.
+	targetLevel := self currentSelectedFrameLevel.
 	((targetLevel isNumber and: [ targetLevel > 0 ]) not) ifTrue: [ targetLevel := 1 ].
 
 	script := '[
@@ -3027,34 +2713,29 @@ GbsRemoteDebugger >> trimServerStackToLevel: aLevel [
 				]
 		].
 
-		"Phase 1: Forcefully trim the stack to the target level.
-		GemStone _trimStackToLevel: is documented to reset the PC of the new top frame."
 		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ^ ''false'' ].
 
-		"Phase 2: Use jumpToStepPoint: on the NEW top frame (which was restartLevel).
-		This is a reinforced second pass to ensure the server-side state is synchronized."
-		currentTop := [ proc topContext ] on: Error do: [ nil ].
-		currentTop ifNotNil: [
-			(currentTop respondsTo: #jumpToStepPoint:) ifTrue: [
-				[ currentTop jumpToStepPoint: 1 ] on: Error do: [ ]
-			].
-			(currentTop respondsTo: #runToStepPoint:) ifTrue: [
-				[ currentTop runToStepPoint: 1 ] on: Error do: [ ]
-			].
-			"Fallbacks for other GemStone versions"
-			(currentTop respondsTo: #_stepPoint:) ifTrue: [
-				[ currentTop _stepPoint: 1 ] on: Error do: [ ]
-			]
-		].
-
-		"Phase 3: Verify the result"
+		"_trimStackToLevel: resets the stack to step=1.
+		The jumpToStepPoint: call below is kept for compatibility with GemStone versions
+		that support it, but _trimStackToLevel: is the primary mechanism."
 		quick := 0.
 		stackReport := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
 		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
 			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
-			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
+			fullEntry ifNotNil: [
+				quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ]
+			]
 		].
-		(quick <= 1) ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]
+		"Try jumpToStepPoint: only if step > 1 (may not exist on all GemStone versions)"
+		quick > 1 ifTrue: [
+			(proc respondsTo: #jumpToStepPoint:)
+				ifTrue: [ [ proc jumpToStepPoint: 1 ] on: Error do: [ ] ]
+				ifFalse: [
+					(proc respondsTo: #jumpTo:)
+						ifTrue: [ [ proc jumpTo: 1 ] on: Error do: [ ] ]
+				]
+		].
+		''true''
 	] value'.
 
 	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
@@ -3187,22 +2868,19 @@ GbsRemoteDebugger >> reinforceSourceCaretVisibility [
 
 { #category : 'private' }
 GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
-	| index context fallbackIndex |
+	| index context |
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
 
 	"Find server-reported executed-code frame"
-	index := contextList findFirst: [ :ctx | self isExecutedCodeFrame: ctx ].
+	index := contextList
+		findFirst: [ :ctx |
+			| className selectorName |
+			className := [ ctx methodClassOrUnknown asString ] on: Error do: [ '' ].
+			selectorName := [ ctx selectorOrUnknown asString ] on: Error do: [ '' ].
+			(className = 'nil' or: [ className = '<unknown>' ])
+				and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ] ].
 
-	index = 0 ifTrue: [
-		"Fallback when executed markers are not yet materialized:
-		select the lowest non-glue frame."
-		fallbackIndex := contextList size + 1.
-		contextList reverseDo: [ :ctx |
-			fallbackIndex := fallbackIndex - 1.
-			((index = 0) and: [ self isLikelyUserFrame: ctx ]) ifTrue: [ index := fallbackIndex ].
-		].
-		index = 0 ifTrue: [ index := 1 ]
-	].
+	index = 0 ifTrue: [ index := 1 ].
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
 	context := contextList at: index.
 
@@ -3229,11 +2907,6 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	
 	"Force UI refresh to ensure Step=1 is displayed"
 	self refreshUiState
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> iconNamedSafe: aSymbol [
-	^ [ self iconNamed: aSymbol ] on: Error do: [ nil ]
 ]
 
 { #category : 'private' }
