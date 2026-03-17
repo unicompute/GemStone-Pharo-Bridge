@@ -1,12 +1,16 @@
 Class {
-	#name : #'GbxStatResource',
-	#superclass : #'Object',
-	#instVars : [ #'instanceId' #'stats' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxStatResource',
+	#superclass : 'Object',
+	#instVars : [
+		'instanceId',
+		'stats'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxStatResource >> printOn: aStream
 
 	aStream
@@ -22,36 +26,36 @@ GbxStatResource >> printOn: aStream
 				nextPutAll: ': '.
 			([self perform: selector] on: Error do: [:ex | 'got exception: ' , ex description]) printOn: aStream]
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxStatResource >> closedArchive
 
 	stats do: [ :stat | stat closedArchive ]
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxStatResource >> instanceId: anInteger 
 	instanceId := anInteger
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxStatResource >> instanceDescription
 
 	^self subclassResponsibility
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxStatResource >> instanceId
 	^instanceId
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxStatResource >> writeSampleTo: statArchive 
 	"Iterate over each stat to write to archive file"
 	stats do: [ :stat | stat writeSampleTo: statArchive ]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxStatResource >> initializeStatistics
 
 	"Subclasses should reimplement this method and call super initializeStatistics first"
 	stats := OrderedCollection new
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxStatResource >> newGbxStatFor: statName value: initialValue
 
 	"Return a new GbxStat for the given stat name"
@@ -62,38 +66,38 @@ GbxStatResource >> newGbxStatFor: statName value: initialValue
 	stats add: stat.
 	^stat
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxStatResource class >> statDescriptors
 	"An OrderedCollection of GbxStatDescriptor instances describing the stats held by
 	 an instance of this stat resource class."
 	^statDescriptors
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxStatResource class >> resourceTypeName
 	^self subclassResponsibility
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxStatResource class >> resourceTypeDescription
 	^self subclassResponsibility
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxStatResource class >> resourceTypeId
 	^self subclassResponsibility
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxStatResource class >> writeDescriptorInformationOn: statArchiver 
 	statDescriptors do: [:desc | desc writeToArchiver: statArchiver]
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxStatResource class >> numberOfDescriptors
 	^statDescriptors size
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxStatResource class >> new
 
 	^super new initializeStatistics
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxStatResource class >> addStatDescriptor: aGbxStatDescriptor
 
 	statDescriptors add: aGbxStatDescriptor.

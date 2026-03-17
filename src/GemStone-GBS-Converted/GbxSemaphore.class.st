@@ -1,12 +1,15 @@
 Class {
-	#name : #'GbxSemaphore',
-	#superclass : #'Semaphore',
-	#instVars : [ #'lockingProcess' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxSemaphore',
+	#superclass : 'Semaphore',
+	#instVars : [
+		'lockingProcess'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private GBS' }
+{ #category : 'private GBS' }
 GbxSemaphore >> critical: mutuallyExcludedBlock waitingUpTo: milliseconds ifTimeout: altBlock
 	"Answer the result of evaluating criticalBlock while allowing
 	 the receiver to synchronize processing with other processes; however,
@@ -48,7 +51,7 @@ GbxSemaphore >> critical: mutuallyExcludedBlock waitingUpTo: milliseconds ifTime
 						ifCurtailed: [activeProcess priority: oldPriority]].
 	^acquired ifTrue: [result] ifFalse: [altBlock value]
 
-{ #category : #'private GBS' }
+{ #category : 'private GBS' }
 GbxSemaphore >> critical: mutuallyExcludedBlock unlessBlocked: altBlock
 	"Answer the result of evaluating criticalBlock while allowing
 	 the receiver to synchronize processing with other processes; however,
@@ -80,7 +83,7 @@ GbxSemaphore >> critical: mutuallyExcludedBlock unlessBlocked: altBlock
 			ifCurtailed: [activeProcess priority: oldPriority].
 	^result
 
-{ #category : #'private GBS' }
+{ #category : 'private GBS' }
 GbxSemaphore >> isActiveProcessInCriticalRegion
 
 	"Return true if the active process is the one in this recursion lock's
@@ -88,7 +91,7 @@ GbxSemaphore >> isActiveProcessInCriticalRegion
 
 	^lockingProcess == Processor activeProcess
 
-{ #category : #'mutual exclusion' }
+{ #category : 'mutual exclusion' }
 GbxSemaphore >> critical: mutuallyExcludedBlock
 	"Answer the result of evaluating criticalBlock while allowing
 	 the receiver to synchronize processing with other processes.
@@ -105,7 +108,7 @@ GbxSemaphore >> critical: mutuallyExcludedBlock
 			[lockingProcess := nil.
 			self signal]
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxSemaphore >> printOn: aStream
 
 	super printOn: aStream.
@@ -113,7 +116,7 @@ GbxSemaphore >> printOn: aStream
 	lockingProcess printOn: aStream.
 	aStream nextPut: $).
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxSemaphore >> semaphoreSummaryOn: aStream
 
 	| size |

@@ -1,8 +1,10 @@
 Class {
-	#name : #'WriteStreamPortable',
-	#superclass : #'PositionableStreamPortable',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'WriteStreamPortable',
+	#superclass : 'PositionableStreamPortable',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

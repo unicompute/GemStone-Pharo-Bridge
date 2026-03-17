@@ -1,8 +1,10 @@
 Class {
-	#name : #'IdentityBag',
-	#superclass : #'Bag',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'IdentityBag',
+	#superclass : 'Bag',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

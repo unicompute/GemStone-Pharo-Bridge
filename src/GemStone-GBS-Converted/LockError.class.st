@@ -1,12 +1,15 @@
 Class {
-	#name : #'LockError',
-	#superclass : #'Error',
-	#instVars : [ #'object' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'LockError',
+	#superclass : 'Error',
+	#instVars : [
+		'object'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 LockError >> object
 
 	^object

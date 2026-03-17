@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbsSynchronizationError',
-	#superclass : #'GbsInterfaceError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsSynchronizationError',
+	#superclass : 'GbsInterfaceError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'compatibility - raising' }
+{ #category : 'compatibility - raising' }
 GbsSynchronizationError class >> raiseWith: aGbsSession
 
 	^self raiseWith: aGbsSession

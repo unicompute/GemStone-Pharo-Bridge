@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrSemaphore',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrSemaphore',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrSemaphore class >> gemStoneErrorNumber6430 ^2177
 

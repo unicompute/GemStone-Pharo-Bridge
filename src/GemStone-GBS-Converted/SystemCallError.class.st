@@ -1,12 +1,15 @@
 Class {
-	#name : #'SystemCallError',
-	#superclass : #'ExternalError',
-	#instVars : [ #'errno' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'SystemCallError',
+	#superclass : 'ExternalError',
+	#instVars : [
+		'errno'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 SystemCallError >> errno
 
 	^errno

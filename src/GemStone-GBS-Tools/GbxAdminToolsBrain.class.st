@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxAdminToolsBrain',
-	#superclass : #'GbxBrain',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxAdminToolsBrain',
+	#superclass : 'GbxBrain',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxAdminToolsBrain >> addSessionInfoTo: aStream
 	" Add some info about the session for this tool to aStream. "
 

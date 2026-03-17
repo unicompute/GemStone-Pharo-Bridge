@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsStDBErrPrimNotAllowed',
-	#superclass : #'GbsCompilerError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsStDBErrPrimNotAllowed',
+	#superclass : 'GbsCompilerError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsStDBErrPrimNotAllowed class >> gemStoneErrorNumber6430 ^1041
 

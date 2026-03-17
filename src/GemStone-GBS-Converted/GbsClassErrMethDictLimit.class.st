@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsClassErrMethDictLimit',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsClassErrMethDictLimit',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsClassErrMethDictLimit class >> gemStoneErrorNumber6430 ^2180
 

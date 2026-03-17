@@ -1,16 +1,18 @@
 Class {
-	#name : #'GbxTrippyDictionaryInspector',
-	#superclass : #'DictionaryInspector',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxTrippyDictionaryInspector',
+	#superclass : 'DictionaryInspector',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'building collections' }
+{ #category : 'building collections' }
 GbxTrippyDictionaryInspector >> gbxCacheInterval: anInterval 
 	object cacheDictionaryInterval: anInterval
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxTrippyDictionaryInspector >> selections
 	"override the super implementation so we can create our own derived attributes with a cached printString"
 
@@ -29,13 +31,13 @@ GbxTrippyDictionaryInspector >> selections
 						value: each key
 						printString: each displayString]]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxTrippyDictionaryInspector >> gbxDriverPartAt: anIndex 
 	^object cache isSorted 
 		ifTrue: [super gbxDriverPartAt: anIndex]
 		ifFalse: [GbxKeyedDummyElement new key: anIndex]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxTrippyDictionaryInspector >> selection
 	"override the super implementation so we can create our own derived attribute with a cached printString"
 
@@ -54,13 +56,13 @@ GbxTrippyDictionaryInspector >> selection
 				value: selection key
 				printString: selection displayString]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxTrippyDictionaryInspector >> initialize: anObject
 	
 	super initialize: anObject.
 	self session: anObject delegate noCheckSession
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxTrippyDictionaryInspector >> removeSelected
 	"GBS: make sure we refresh the collection afterwards"
 
@@ -69,7 +71,7 @@ GbxTrippyDictionaryInspector >> removeSelected
 		do: [:each | object delegate remotePerform: #removeKey: with: each keyDelegate].
 	self refresh
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxTrippyDictionaryInspector >> add
 	| newKey del |
 	self gbxFixMe.	"gemstone undo's not supported yet"
@@ -82,7 +84,7 @@ GbxTrippyDictionaryInspector >> add
 		with: del session oopNil.
 	self refresh
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxTrippyDictionaryInspector >> pickSingleObjectIn: partCollection ifCancelled: aBlock
 	"return the delegate, not the value (which is a wrapper)"
 	
@@ -138,13 +140,13 @@ GbxTrippyDictionaryInspector >> pickSingleObjectIn: partCollection ifCancelled: 
 		lines: 8
 		cancel: aBlock
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxTrippyDictionaryInspector >> createInsertionUndo: partCollection before: anIndex 
 	"undos not implemented in GemStone inspectors yet"
 
 	self gbxFixMe
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxTrippyDictionaryInspector >> refresh
 	"Dictionary inspectors in GemStone want to use basic super super behavior"
 
@@ -155,7 +157,7 @@ GbxTrippyDictionaryInspector >> refresh
 	driver refresh.
 	self selectAll: originalSelections
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxTrippyDictionaryInspector >> requestNewKey
 	"Answer a new key to add to the dictionary.  nil is
 	a 'no answer' value since it is not a valid dictionary key.
@@ -168,15 +170,15 @@ GbxTrippyDictionaryInspector >> requestNewKey
 	expression isEmpty ifTrue: [^nil].
 	^object session evaluate: expression context: object delegate
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxTrippyDictionaryInspector class >> testing
 	^true
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxTrippyDictionaryInspector class >> gbxIsGbsInspector
 	^true
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxTrippyDictionaryInspector class >> tabLabel
 
 	^self gbxTabLabel: 'GS Elements'

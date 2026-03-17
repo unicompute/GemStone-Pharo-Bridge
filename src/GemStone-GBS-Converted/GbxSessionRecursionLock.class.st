@@ -1,12 +1,15 @@
 Class {
-	#name : #'GbxSessionRecursionLock',
-	#superclass : #'GbxRecursionLock',
-	#instVars : [ #'eventDetectorThread' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxSessionRecursionLock',
+	#superclass : 'GbxRecursionLock',
+	#instVars : [
+		'eventDetectorThread'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private GBS' }
+{ #category : 'private GBS' }
 GbxSessionRecursionLock >> critical: mutuallyExcludedBlock unlessBlocked: altBlock
 	"if the event detector thread has the session semaphore, 
 	we will wait up to one second as it is probably doing a GciPollForSignal
@@ -17,16 +20,16 @@ GbxSessionRecursionLock >> critical: mutuallyExcludedBlock unlessBlocked: altBlo
 			[self critical: mutuallyExcludedBlock waitingUpTo: 1000 ifTimeout: altBlock]
 		ifFalse: [super critical: mutuallyExcludedBlock unlessBlocked: altBlock]
 
-{ #category : #'private GBS' }
+{ #category : 'private GBS' }
 GbxSessionRecursionLock >> isPolling
 
 	^lockingProcess == eventDetectorThread
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSessionRecursionLock >> eventDetectorThread: anObject
 	eventDetectorThread := anObject
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxSessionRecursionLock >> semaphoreSummaryOn: aStream
 
 	super semaphoreSummaryOn: aStream.

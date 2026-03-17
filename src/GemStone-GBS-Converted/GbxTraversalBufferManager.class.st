@@ -1,27 +1,32 @@
 Class {
-	#name : #'GbxTraversalBufferManager',
-	#superclass : #'Object',
-	#instVars : [ #'traversalBuffers' #'traversalBufferClass' #'session' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxTraversalBufferManager',
+	#superclass : 'Object',
+	#instVars : [
+		'traversalBuffers',
+		'traversalBufferClass',
+		'session'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxTraversalBufferManager >> initialize
 
 	traversalBuffers := OrderedCollection new.
 	traversalBufferClass := session traversalBufferClass
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxTraversalBufferManager >> session: aGbsSession
 
 	session := aGbsSession
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxTraversalBufferManager >> traversalBufferClass: anObject
 	traversalBufferClass := anObject
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxTraversalBufferManager >> traversalBufferOfSize: aSize
 	"Return an unlocked traversal buffer of at least size <aSize>.  If none are currently
 	available, create a new one and add it to the list of available buffers.
@@ -51,7 +56,7 @@ GbxTraversalBufferManager >> traversalBufferOfSize: aSize
 				with: traversalBuffers size].
 	^aBuffer
 
-{ #category : #'buffers' }
+{ #category : 'buffers' }
 GbxTraversalBufferManager >> allocateBufferFor: anOwner size: size 
 	"Return a locked traversal buffer that internally knows who is using it.
 
@@ -62,7 +67,7 @@ GbxTraversalBufferManager >> allocateBufferFor: anOwner size: size
 	buffer lockFor: anOwner.
 	^buffer
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxTraversalBufferManager class >> forSession: session
 
 	^(self new)

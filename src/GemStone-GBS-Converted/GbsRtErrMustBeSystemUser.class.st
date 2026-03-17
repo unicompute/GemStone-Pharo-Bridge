@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrMustBeSystemUser',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrMustBeSystemUser',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrMustBeSystemUser class >> gemStoneErrorNumber6430 ^2213
 

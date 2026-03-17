@@ -1,26 +1,30 @@
 Class {
-	#name : #'GbxClassReplicator',
-	#superclass : #'GbxReplicator',
-	#instVars : [ #'serverMetaclass' #'clientMetaclass' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxClassReplicator',
+	#superclass : 'GbxReplicator',
+	#instVars : [
+		'serverMetaclass',
+		'clientMetaclass'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClassReplicator >> clientClass
 
 	^clientMetaclass
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClassReplicator >> serverMetaclass
 
 	^serverMetaclass
 
-{ #category : #'per-object replication' }
+{ #category : 'per-object replication' }
 GbxClassReplicator >> forReplication: replication replicateFromDeferredReport: report
 	"The fact that I have been asked to replicate this report indicates that the class has already been mapped. So there's nothing left for me to do."
 
-{ #category : #'per-object replication' }
+{ #category : 'per-object replication' }
 GbxClassReplicator >> forReplication: replication replicateFromReport: report
 	"The fact that I have been asked to replicate this report indicates that the class has already been mapped. So there's nothing left for me to do."
 	"We should never get a non-deferred report for a class in single-trip, since an already-mapped class will be identity clamped.
@@ -28,12 +32,12 @@ GbxClassReplicator >> forReplication: replication replicateFromReport: report
 
 	[false] gbxAssert
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxClassReplicator >> isSkew
 
 	^false
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxClassReplicator >> printOn: aStream
 
 	| name |
@@ -43,7 +47,7 @@ GbxClassReplicator >> printOn: aStream
 		nextPutAll: ' for ';
 		nextPutAll: name
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxClassReplicator >> initializeForClientClass: aClientClass serverClass: classDelegate manager: aManager
 
 	clientMetaclass := aClientClass.
@@ -51,7 +55,7 @@ GbxClassReplicator >> initializeForClientClass: aClientClass serverClass: classD
 	manager := aManager.
 	session := aManager session
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxClassReplicator class >> forClientClass: clientClass serverClass: classDelegate manager: manager
 
 	^self new

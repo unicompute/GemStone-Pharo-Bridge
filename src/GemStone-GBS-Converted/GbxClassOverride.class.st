@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxClassOverride',
-	#superclass : #'GbxOverridesWithEdits',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxClassOverride',
+	#superclass : 'GbxOverridesWithEdits',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'applying' }
+{ #category : 'applying' }
 GbxClassOverride >> apply
 
 	| basePackage originalInstVarNameString messageSend |
@@ -37,7 +39,7 @@ GbxClassOverride >> apply
 				on: RedefinitionNotification
 				do: [:ex | ex installOverrideIfNecessary]]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxClassOverride >> initializeFromOverriddenClass: overriddenClass forParent: anOverrideSet
 
 	parent := anOverrideSet.
@@ -46,7 +48,7 @@ GbxClassOverride >> initializeFromOverriddenClass: overriddenClass forParent: an
 		setCrcFrom: overriddenClass;
 		setEditsFrom: overriddenClass
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxClassOverride >> printOn: aStream
 
 	aStream
@@ -55,7 +57,7 @@ GbxClassOverride >> printOn: aStream
 		print: self behavior;
 		nextPutAll: ')'
 
-{ #category : #'storing' }
+{ #category : 'storing' }
 GbxClassOverride >> storeOn: aStream
 
 	aStream
@@ -67,28 +69,28 @@ GbxClassOverride >> storeOn: aStream
 		nextPutAll: ' edits: '.
 	self storeArray: edits on: aStream.
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassOverride >> instVarStringOf: aMessageSend put: replacementString
 
 	| index |
 	index := self instVarArgumentIndexIn: aMessageSend.
 	^aMessageSend arguments at: index put: replacementString
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassOverride >> instVarStringOf: aMessageSend
 
 	| index |
 	index := self instVarArgumentIndexIn: aMessageSend.
 	^aMessageSend arguments at: index
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassOverride >> setEditsFrom: overriddenClass
 
 	self
 		setEditsFromOriginal: (self originalInstVarNameStringFrom: overriddenClass)
 		toOverride: (self overridingInstVarNameStringFrom: overriddenClass)
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassOverride >> instVarArgumentIndexIn: aMessageSend
 
 	| index |
@@ -98,22 +100,22 @@ GbxClassOverride >> instVarArgumentIndexIn: aMessageSend
 		ifFalse: [self error: 'Keyword "instanceVariableNames" not found'].
 	^index
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassOverride >> overridingInstVarNameStringFrom: overriddenClass
 
 	^self instVarStringOf: overriddenClass object definitionMessage
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassOverride >> setCrcFrom: overriddenClass
 
 	self setCrcFromOriginal: (self originalInstVarNameStringFrom: overriddenClass)
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassOverride >> originalInstVarNameStringFrom: overriddenClass
 
 	^self instVarStringOf: overriddenClass definitionMessage
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxClassOverride class >> behavior: aBehavior  crc: anInteger edits: editsArray
 
 	^(self new)
@@ -122,7 +124,7 @@ GbxClassOverride class >> behavior: aBehavior  crc: anInteger edits: editsArray
 		edits: editsArray;
 		yourself
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxClassOverride class >> fromOverriddenClass: overriddenClass forParent: anOverrideSet
 
 	^(self new)

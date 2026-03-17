@@ -1,12 +1,16 @@
 Class {
-	#name : #'GbxLargeIdentityDictionaryBucket',
-	#superclass : #'GbxLargeIdentityKeyedCollection',
-	#instVars : [ #'tableOffset' #'checkNecessity' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxLargeIdentityDictionaryBucket',
+	#superclass : 'GbxLargeIdentityKeyedCollection',
+	#instVars : [
+		'tableOffset',
+		'checkNecessity'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxLargeIdentityDictionaryBucket >> accessProtector
 	"Answer the semaphore that controls access to the
 	 receiver. A bucket uses the semaphore of the bucket owner."
@@ -16,7 +20,7 @@ GbxLargeIdentityDictionaryBucket >> accessProtector
 		ifTrue: [nil]
 		ifFalse: [myOwner accessProtector].
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxLargeIdentityDictionaryBucket >> removeFirstPair
 	"Returns an association containing the last remaining key/value pair, or nil if I have
 	 no elements. This is executed as part of bucket removal.
@@ -36,21 +40,21 @@ GbxLargeIdentityDictionaryBucket >> removeFirstPair
 					^Association key: aKey value: aValue]].
 	^nil
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxLargeIdentityDictionaryBucket >> tableOffset
 	"Answer the index position that the receiver can be found
 	 within the dictionary for the bucket."
 
 	^tableOffset
 
-{ #category : #'key comparing' }
+{ #category : 'key comparing' }
 GbxLargeIdentityDictionaryBucket >> compare: anObject with: anotherObject
 
 	"Key comparison is based on equality"
 
 	^anObject == anotherObject
 
-{ #category : #'initialization' }
+{ #category : 'initialization' }
 GbxLargeIdentityDictionaryBucket >> initializeSize: initialSize owner: aWeakDictionary atOffset: offset
 
 	"Initialize myself with enough growing room to hold numOfKeyValuePairs"
@@ -59,7 +63,7 @@ GbxLargeIdentityDictionaryBucket >> initializeSize: initialSize owner: aWeakDict
 	tableOffset := offset.
 	self initializeTableSize: initialSize.
 
-{ #category : #'initialization' }
+{ #category : 'initialization' }
 GbxLargeIdentityDictionaryBucket >> basicRebuildTable: newSize mustRehash: rehashingBool 
 	"Rebuilds the hash table by saving the current state, initializing and
 	 changing the size of the table, and adding the key value pairs saved
@@ -82,7 +86,7 @@ GbxLargeIdentityDictionaryBucket >> basicRebuildTable: newSize mustRehash: rehas
 				to: oldSize
 				with: oldValues]
 
-{ #category : #'initialization' }
+{ #category : 'initialization' }
 GbxLargeIdentityDictionaryBucket >> initializeTableSize: newTableSize
 	"Initialize for capability of storing size key/value pairs"
 
@@ -92,14 +96,14 @@ GbxLargeIdentityDictionaryBucket >> initializeTableSize: newTableSize
 	super initializeTableSize: newTableSize.
 	owner changeBucketSlotGrowthBy: tableSize - oldSize.
 
-{ #category : #'initialization' }
+{ #category : 'initialization' }
 GbxLargeIdentityDictionaryBucket >> rehash
 	"It is very likely that an item's new hash value wouldn't include it
 	 in the bucket, so we need to rehash the bucket through the owner."
 
 	owner rehash
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxLargeIdentityDictionaryBucket >> isNecessary
 	"Answer boolean whether the bucket is necessary, but don't
 	 do anything if it isn't necessary. This is useful for gathering
@@ -114,7 +118,7 @@ GbxLargeIdentityDictionaryBucket >> isNecessary
 	"sat = 1"
 	^nil ~~ (owner keyAt: tableOffset) and: [nil ~~ (owner valueAt: tableOffset)]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxLargeIdentityDictionaryBucket >> writeCritical: aBlock
 	"We remember the owner in case it is nilled by another process
 	 between #isNil and #writeCritical:."
@@ -124,12 +128,12 @@ GbxLargeIdentityDictionaryBucket >> writeCritical: aBlock
 		ifTrue: [ aBlock value ]
 		ifFalse: [ ownerWas writeCritical: aBlock ]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxLargeIdentityDictionaryBucket >> checkNecessity: aBool
 
 	checkNecessity := aBool.
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxLargeIdentityDictionaryBucket >> auditHashing
 	"Private. Items are added to the caches at certain index positions based on
 	 a computed value. If the computed value for an object changes over time
@@ -158,7 +162,7 @@ GbxLargeIdentityDictionaryBucket >> auditHashing
 	].
 	^failure
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxLargeIdentityDictionaryBucket >> checkNecessity
 	"Sender must hold my owner's accessProtect"
 
@@ -167,7 +171,7 @@ GbxLargeIdentityDictionaryBucket >> checkNecessity
 	owner isNil ifTrue: [^self].
 	owner removeUnnecessaryBucket: self
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxLargeIdentityDictionaryBucket >> basicAt: aKey replacement: newValue 
 	"Private. This does a low-level unprotected replacement of a
 	 value. Use with care. Ignore replacement if key doesn't
@@ -179,27 +183,27 @@ GbxLargeIdentityDictionaryBucket >> basicAt: aKey replacement: newValue
 	(index := self indexOf: aKey) == nil 
 		ifFalse: [values at: index put: newValue]
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxLargeIdentityDictionaryBucket >> hasWeakValues
 
 	^owner hasWeakValues
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxLargeIdentityDictionaryBucket >> valueClass
 
 	^owner valueClass
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxLargeIdentityDictionaryBucket >> keyClass
 
 	^owner keyClass
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxLargeIdentityDictionaryBucket >> hasWeakKeys
 
 	^owner hasWeakKeys
 
-{ #category : #'removing' }
+{ #category : 'removing' }
 GbxLargeIdentityDictionaryBucket >> removedKey: keyOrNil value: valueOrNil
 	"Inform GemStone that there is no longer a reference to anOop in the GSI cache.
 	 Great care must be taken here to avoid a nil owner because this is sent
@@ -210,7 +214,7 @@ GbxLargeIdentityDictionaryBucket >> removedKey: keyOrNil value: valueOrNil
 	nil == (ownerWas := owner)
 		ifFalse: [ownerWas removedKey: keyOrNil value: valueOrNil from: self].
 
-{ #category : #'removing' }
+{ #category : 'removing' }
 GbxLargeIdentityDictionaryBucket >> primRemoveKeySafelyAt: index 
 	
 	[keys at: index put: nil.
@@ -218,7 +222,7 @@ GbxLargeIdentityDictionaryBucket >> primRemoveKeySafelyAt: index
 	owner isNil ifFalse: [owner decrementNumElements]] 
 			valueUnpreemptively
 
-{ #category : #'removing' }
+{ #category : 'removing' }
 GbxLargeIdentityDictionaryBucket >> basicClearForSession: aSession 
 	"Private. Sender must hold my accessProtect. 
 	Remove all entries with values that are delegates in aGSSession.  If a
@@ -232,7 +236,7 @@ GbxLargeIdentityDictionaryBucket >> basicClearForSession: aSession
 	checkNecessity := observed < 2.
 	^observed
 
-{ #category : #'removing' }
+{ #category : 'removing' }
 GbxLargeIdentityDictionaryBucket >> removeKey: aKey otherwise: otherwiseObject 
 	"Removes the key/value pair with key aKey from the receiver and returns the value
 	 If no key/value pair is present with key aKey, return otherwiseObject.
@@ -247,13 +251,13 @@ GbxLargeIdentityDictionaryBucket >> removeKey: aKey otherwise: otherwiseObject
 	owner checkReduceBuckets.
 	^aValue
 
-{ #category : #'finalization' }
+{ #category : 'finalization' }
 GbxLargeIdentityDictionaryBucket >> weakness
 	"Answer either nil,  #KEYS, or #VALUES."
 
 	^owner weakness
 
-{ #category : #'adding' }
+{ #category : 'adding' }
 GbxLargeIdentityDictionaryBucket >> at: aKey put: aValue 
 	"Stores the aKey/aValue pair in the receiver.  Returns the number of elements
 	 actually added to the 'size' of the receiver, 0 or 1.  If the key already exists, the
@@ -279,7 +283,7 @@ GbxLargeIdentityDictionaryBucket >> at: aKey put: aValue
 		value: replacement.
 	^0
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxLargeIdentityDictionaryBucket class >> new: numberOfKeyValuePairs owner: aCacheDictionary atOffset: offset
 
 	"Return a new instance with enough growing room for numberOfKeyValuePairs"

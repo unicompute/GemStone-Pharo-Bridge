@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxSingleTripServerInteraction',
-	#superclass : #'GbxServerInteraction',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxSingleTripServerInteraction',
+	#superclass : 'GbxServerInteraction',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private - executing' }
+{ #category : 'private - executing' }
 GbxSingleTripServerInteraction >> replicateAlteredObjectsAfterError
 	"Used after an error interrupted execution. Note that an 'error' includes things like 
 	client forwarder sends and breakpoints.
@@ -35,7 +37,7 @@ GbxSingleTripServerInteraction >> replicateAlteredObjectsAfterError
 	session termination, or server out of memory."
 	^result gbxIsGSError ifTrue: [result] ifFalse: [resultDelegateOrError]
 
-{ #category : #'private - executing' }
+{ #category : 'private - executing' }
 GbxSingleTripServerInteraction >> replicateResult
 	"In single-trip, the traversal contains all altered objects, and the traversal of the result if it was specified earlier.
 	Answer the given delegate unless an error occurs during replication. In that case, answer
@@ -45,7 +47,7 @@ GbxSingleTripServerInteraction >> replicateResult
 	error := replication replicateFromTraversal: fetchTraversal.
 	^error == nil ifTrue: [resultDelegateOrError] ifFalse: [error]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSingleTripServerInteraction >> shouldExportResults
 	"Only export the result if we're replicating the result. Otherwise, result oops end 
 	up in the export set when they should be only in the referenced set to keep them alive."

@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxRBScanner',
-	#superclass : #'RBScanner',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxRBScanner',
+	#superclass : 'RBScanner',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxRBScanner class >> classificationTable
 
 	| ct |

@@ -1,8 +1,10 @@
 Class {
-	#name : #'SelectBlock',
-	#superclass : #'GbsServerClass',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'SelectBlock',
+	#superclass : 'GbsServerClass',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

@@ -1,22 +1,24 @@
 Class {
-	#name : #'GbxTextEditorInspector',
-	#superclass : #'TextEditorInspector',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxTextEditorInspector',
+	#superclass : 'TextEditorInspector',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxTextEditorInspector >> documentHolder
 	"vw8x support"
 
 	^textHolder
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxTextEditorInspector >> refresh
 	self textHolder value: object refreshText
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxTextEditorInspector >> textAccepted: aController
 
 	| newDelegate |
@@ -38,17 +40,17 @@ GbxTextEditorInspector >> textAccepted: aController
 			[self container navigator updateShellsInspectedObject	"get default container"]
 		ifFalse: [container updateShellsInspectedObject]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxTextEditorInspector >> initialize: anObject
 	
 	self session: anObject delegate noCheckSession.
 	super initialize: anObject
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxTextEditorInspector class >> gbxIsGbsInspector
 	^true
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxTextEditorInspector class >> tabLabel
 
 	^self gbxTabLabel: 'GS Text'

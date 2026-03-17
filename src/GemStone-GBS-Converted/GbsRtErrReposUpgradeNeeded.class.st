@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrReposUpgradeNeeded',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrReposUpgradeNeeded',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrReposUpgradeNeeded class >> gemStoneErrorNumber6430 ^2486
 

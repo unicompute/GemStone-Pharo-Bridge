@@ -1,8 +1,10 @@
 Class {
-	#name : #'GsfStub',
-	#superclass : #'GbsServerClass',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GsfStub',
+	#superclass : 'GbsServerClass',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

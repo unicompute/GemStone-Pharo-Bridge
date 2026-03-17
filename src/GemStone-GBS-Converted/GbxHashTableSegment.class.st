@@ -1,20 +1,25 @@
 Class {
-	#name : #'GbxHashTableSegment',
-	#superclass : #'Object',
-	#instVars : [ #'upperBytes' #'parent' #'parentIndex' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxHashTableSegment',
+	#superclass : 'Object',
+	#instVars : [
+		'upperBytes',
+		'parent',
+		'parentIndex'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private-auditing' }
+{ #category : 'private-auditing' }
 GbxHashTableSegment >> auditParentage: expectedParent index: expectedParentIndex upperBytes: expectedUpperBytes into: results
 	"Not all subclasses need to implement this, so it cannot be a subclass responsibility."
 
-{ #category : #'private-auditing' }
+{ #category : 'private-auditing' }
 GbxHashTableSegment >> auditElementsInto: results session: aSession
 	"Not all subclasses need to implement this, so it cannot be a subclass responsibility."
 
-{ #category : #'private-auditing' }
+{ #category : 'private-auditing' }
 GbxHashTableSegment >> auditNilElementClient: client delegate: del into: results
 	"Things checked here:
 	* each unused element should have a nil delegate and a nil clientObj"
@@ -32,7 +37,7 @@ GbxHashTableSegment >> auditNilElementClient: client delegate: del into: results
 		actual: del
 		expected: 'nil'
 
-{ #category : #'auditing' }
+{ #category : 'auditing' }
 GbxHashTableSegment >> auditInto: results parent: expectedParent parentIndex: expectedParentIndex upperBytes: expectedUpperBytes session: aSession
 	"Statistics gathered at this level:
 	* Number of used elements (those with non-nil key).
@@ -55,24 +60,24 @@ GbxHashTableSegment >> auditInto: results parent: expectedParent parentIndex: ex
 	* each unused element should have a nil delegate and a nil clientObj"
 	self auditElementsInto: results session: aSession
 
-{ #category : #'private-accessing' }
+{ #category : 'private-accessing' }
 GbxHashTableSegment >> upperBytes: anObject
 	upperBytes := anObject
 
-{ #category : #'private-accessing' }
+{ #category : 'private-accessing' }
 GbxHashTableSegment >> parent: anObject
 	parent := anObject
 
-{ #category : #'private-accessing' }
+{ #category : 'private-accessing' }
 GbxHashTableSegment >> parentIndex: anObject
 	parentIndex := anObject
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxHashTableSegment class >> instanceBasicSize
 
 	self subclassResponsibility
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxHashTableSegment class >> parent: node index: parentIndex upperBytes: upperBytes
 
 	| inst |

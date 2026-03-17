@@ -1,12 +1,19 @@
 Class {
-	#name : #'GbxClipboardObj',
-	#superclass : #'Object',
-	#instVars : [ #'obj' #'context' #'type' #'session' #'descr' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxClipboardObj',
+	#superclass : 'Object',
+	#instVars : [
+		'obj',
+		'context',
+		'type',
+		'session',
+		'descr'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxClipboardObj >> obj: anObj session: aSession context: aContext
 
    "Set the instance variables for the clipboard object."
@@ -18,7 +25,7 @@ GbxClipboardObj >> obj: anObj session: aSession context: aContext
    self setObjDescr.
    self pasteToClipboard.
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxClipboardObj >> obj: anObj session: aSession context: aContext descr: aDescr
 
    "Set the instance variables for the clipboard object."
@@ -30,7 +37,7 @@ GbxClipboardObj >> obj: anObj session: aSession context: aContext descr: aDescr
    self setObjType.
    self pasteToClipboard.
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClipboardObj >> getForSession: aSession context: aContext
 
    "This function is used for the less intelligent version of the clipboard. If the context and session for
@@ -42,42 +49,42 @@ GbxClipboardObj >> getForSession: aSession context: aContext
 		context: aContext
 		quietly: false
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClipboardObj >> descr
 
    "Return the value of the 'descr' instance variable."
 
    ^descr
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClipboardObj >> session
 
    "Return the value of the 'session' instance variable."
 
    ^session
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClipboardObj >> obj
 
    "Return the value of the 'obj' instance variable."
 
    ^obj
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClipboardObj >> context
 
    "Return the value of the 'context' instance variable."
 
    ^context
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClipboardObj >> type
 
    "Return the value of the 'type' instance variable."
 
    ^type
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClipboardObj >> getForSession: aSession
 context: aContext
 quietly: aQuietlyBoolean
@@ -103,7 +110,7 @@ quietly: aQuietlyBoolean
 	   ].
    ^nil
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxClipboardObj >> isValidType: aType
 
   "Return true if the clipboard object can be converted to type aType and if aType
@@ -126,7 +133,7 @@ GbxClipboardObj >> isValidType: aType
 
   ^true
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxClipboardObj >> verifyObjInSession: aSession 
 	"Verify that the session in which the clipboard object resides is on the same repository
 	as aSession and if so return the identical GemStone object it corresponds to in session
@@ -152,7 +159,7 @@ GbxClipboardObj >> verifyObjInSession: aSession
 		warn: 'NOTE:  The clipboard object may not be identical in the two sessions!'.
 	^tempGSObj
 
-{ #category : #'clipboard' }
+{ #category : 'clipboard' }
 GbxClipboardObj >> removeFromClipboard
 
    "Remove the object from the clipboard."
@@ -167,7 +174,7 @@ GbxClipboardObj >> removeFromClipboard
    self notifySessions.
   ^GSClipboard
 
-{ #category : #'clipboard' }
+{ #category : 'clipboard' }
 GbxClipboardObj >> pasteToClipboard
 
    "Add the object to the top of our clipboard while removing any excess (>5) objects from
@@ -189,7 +196,7 @@ GbxClipboardObj >> pasteToClipboard
    self notifySessions.
    ^GSClipboard
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClipboardObj >> notifySessions
 	" I warn all of the current sessions that the clipboard has changed in some way. "
 
@@ -197,7 +204,7 @@ GbxClipboardObj >> notifySessions
 		[: aGSSession |
 		aGSSession changed: #clipboardChange.].
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClipboardObj >> setObjType
 	"Determine the clipboard object's type."
 
@@ -206,14 +213,14 @@ GbxClipboardObj >> setObjType
 	(obj gbxDelegate forSession: session) notNil ifTrue: [^type := #replicate].
 	^type := #smalltalk
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClipboardObj >> setObjDescr
 
    "Determine the clipboard object's description from the object's context and type."
 
    descr := 'The object ''', context, ' (#',type,')'''.
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClipboardObj >> clear
 
   "Clear all instance variables."
@@ -224,7 +231,7 @@ GbxClipboardObj >> clear
   descr := nil.
   context := nil.
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClipboardObj class >> getObjectForSession: aSession
 
 	" This method is used for the least intelligent version of the clipboard.
@@ -234,7 +241,7 @@ GbxClipboardObj class >> getObjectForSession: aSession
 		getObjectForSession: aSession
 		context: nil
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClipboardObj class >> getObjectForSession: aSession context: aContext
 
   "This method is used for the less intelligent version of the clipboard. It returns the clipboard object
@@ -245,7 +252,7 @@ GbxClipboardObj class >> getObjectForSession: aSession context: aContext
 		context: aContext
 		quietly: false
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClipboardObj class >> firstClipboardSession
 	" Answer the session of the first clipboard object.  Answer nil if none exists. "
 
@@ -253,7 +260,7 @@ GbxClipboardObj class >> firstClipboardSession
 		ifTrue: [ nil ]
 		ifFalse: [ GSClipboard first session ]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClipboardObj class >> getClipboardForSession: aSession context: aContext
 
   "This method is used for the less intelligent version of the clipboard. It returns the clipboard object
@@ -270,7 +277,7 @@ GbxClipboardObj class >> getClipboardForSession: aSession context: aContext
 	].
 	^nil
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClipboardObj class >> getObjectForSession: aSession
 context: aContext
 quietly: aQuietlyBoolean
@@ -288,21 +295,21 @@ quietly: aQuietlyBoolean
 	   ].
    ^nil
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxClipboardObj class >> notEmpty
 
 	" Answer true if I have at least one clipboard object in my clipboard. "
 
 	^self isEmpty not
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxClipboardObj class >> isEmpty
 
 	" Answer true if I have at least one clipboard object in my clipboard. "
 
 	^ GSClipboard isNil or: [GSClipboard isEmpty]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxClipboardObj class >> new
 
    "Disallow #new operator, use #newForObj:session:context: or #newForObj:session:context:type:
@@ -310,7 +317,7 @@ GbxClipboardObj class >> new
 
    self shouldNotImplement.
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxClipboardObj class >> newForObj: anObj session: aSession context: aContext
 
    "Add the given object to the clipboard indicating its given session and context."
@@ -321,7 +328,7 @@ GbxClipboardObj class >> newForObj: anObj session: aSession context: aContext
    inst obj: anObj session: aSession context: aContext.
    ^inst
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxClipboardObj class >> newForObj: anObj session: aSession context: aContext descr: aDescr
 
    "Add the given object to the clipboard indicating its given session, context, and type."
@@ -332,7 +339,7 @@ GbxClipboardObj class >> newForObj: anObj session: aSession context: aContext de
    inst obj: anObj session: aSession context: aContext descr: aDescr.
    ^inst
 
-{ #category : #'clipboard' }
+{ #category : 'clipboard' }
 GbxClipboardObj class >> clear
 
    "Clear the clipboard."

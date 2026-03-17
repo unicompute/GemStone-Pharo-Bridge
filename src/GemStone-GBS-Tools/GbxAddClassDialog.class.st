@@ -1,12 +1,20 @@
 Class {
-	#name : #'GbxAddClassDialog',
-	#superclass : #'GbxApplicationModel',
-	#instVars : [ #'newClassName' #'superClassName' #'newInstVars' #'newClassVars' #'dictionary' #'modifiable' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxAddClassDialog',
+	#superclass : 'GbxApplicationModel',
+	#instVars : [
+		'newClassName',
+		'superClassName',
+		'newInstVars',
+		'newClassVars',
+		'dictionary',
+		'modifiable'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'initialize - release' }
+{ #category : 'initialize - release' }
 GbxAddClassDialog >> setupEventHandlingUsing: bldr
 
 	| superWidget newWidget |
@@ -19,7 +27,7 @@ GbxAddClassDialog >> setupEventHandlingUsing: bldr
 	newWidget when: #clicked do: [self resetColor: newWidget for: newClassName].
 	newWidget when: #tabbed do: [self resetColor: newWidget for: newClassName]
 
-{ #category : #'initialize - release' }
+{ #category : 'initialize - release' }
 GbxAddClassDialog >> initialize
 
 	newClassName := ValueHolder with: String new.
@@ -28,73 +36,73 @@ GbxAddClassDialog >> initialize
 	newClassVars := ValueHolder with: String new.
 	modifiable := false asValue
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAddClassDialog >> dictionary
 
 	^dictionary
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAddClassDialog >> modifiable
 
 	^modifiable
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAddClassDialog >> modifiable: anObject
 
 	modifiable := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAddClassDialog >> titleString
 	"Unused since this is only used as a dialog"
 
 	^'Add Server Class'
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAddClassDialog >> newClassName
 
 	^newClassName
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAddClassDialog >> newClassName: anObject
 
 	newClassName := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAddClassDialog >> newClassVars
 
 	^newClassVars
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAddClassDialog >> newClassVars: anObject
 
 	newClassVars := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAddClassDialog >> newInstVars
 
 	^newInstVars
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAddClassDialog >> dictionary: anObject
 
 	dictionary := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAddClassDialog >> newInstVars: anObject
 
 	newInstVars := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAddClassDialog >> superClassName
 
 	^superClassName
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAddClassDialog >> superClassName: anObject
 
 	superClassName := anObject
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxAddClassDialog >> subclassCreation64BitServer
 
 	^self session
@@ -116,7 +124,7 @@ GbxAddClassDialog >> subclassCreation64BitServer
 					, self modifiableString
 		context: dictionary
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxAddClassDialog >> acceptClass
 
 	[self subclassCreation64BitServer]
@@ -127,39 +135,39 @@ GbxAddClassDialog >> acceptClass
 			self closeRequest.
 			^nil]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxAddClassDialog >> blankClassWarning
 
 	^(Text fromString: 'Cannot be blank')
 		emphasizeAllWith: (Array with: #color -> ColorValue red)
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxAddClassDialog >> verifySuperclass
 
 	^self session
 		evaluate: '(GsCurrentSession currentSession resolveSymbol: self asSymbol) notNil'
 		context: superClassName value asString
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxAddClassDialog >> resolveDictionaryNamed: dictionaryName
 	
 	^session
 		execute: '(System myUserProfile symbolList resolveSymbol: '
 				, dictionaryName printString , ') value'
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxAddClassDialog >> resetColor: widget for: model
 
 	model value: (widget displayContents text
 				emphasizeAllWith: (Array with: #color -> ColorValue black)).
 	widget invalidateNow
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxAddClassDialog >> modifiableString
 
 	^modifiable value ifTrue: ['#(#modifiable)'] ifFalse: ['#()']
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxAddClassDialog >> invalidSuperclassWarning
 
 	| token text |
@@ -174,7 +182,7 @@ GbxAddClassDialog >> invalidSuperclassWarning
 	^superClassName value asText
 		, (token asText emphasizeAllWith: (Array with: #color -> ColorValue red))
 
-{ #category : #'interface specs' }
+{ #category : 'interface specs' }
 GbxAddClassDialog class >> windowSpec
 	"Tools.UIPainter new openOnClass: self andSelector: #windowSpec"
 
@@ -240,13 +248,13 @@ GbxAddClassDialog class >> windowSpec
 					#model: #modifiable 
 					#label: 'Modifiable' ) ) ) )
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAddClassDialog class >> brainClass
 	"This dialog is brainless."
 	
 	^self shouldNotImplement
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxAddClassDialog class >> on: aSession dictionary: aDelegate superClass: superclassName className: className
 
 	| inst result dialog |

@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxMetaclassReplicator',
-	#superclass : #'GbxUnmappedClassReplicator',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxMetaclassReplicator',
+	#superclass : 'GbxUnmappedClassReplicator',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxMetaclassReplicator >> replicateMetaclassAsForwarder
 	"And answer the forwarder."
 	"Sender must hold session's protect and cache semaphore."
@@ -16,12 +18,12 @@ GbxMetaclassReplicator >> replicateMetaclassAsForwarder
 	session unprotectedConnectNewClient: forwarder toServer: metaclassDelegate.
 	^forwarder
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxMetaclassReplicator >> getClassAndMetaclassInformation
 
 	self getClassAndMetaclassInformationForBehavior: report objId
 
-{ #category : #'per-object replication' }
+{ #category : 'per-object replication' }
 GbxMetaclassReplicator >> forReplication: replication replicateFromDeferredReport: aReport
 	"This report is a full report for an as yet unmapped metaclass. We're now at a point where we can map it
 	and the class that is its instance. This will have the side effect of identity clamping both the class
@@ -53,7 +55,7 @@ GbxMetaclassReplicator >> forReplication: replication replicateFromDeferredRepor
 			"In, for instance, a skew case, the mapping cannot be made to a client class, so we fall back to a forwarder."
 			theClientClass zzzisForwarder ifTrue: [self replicateMetaclassAsForwarder]]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxMetaclassReplicator class >> forClientClass: clientBehavior serverClass: behaviorDelegate manager: manager
 
 	clientBehavior == Metaclass

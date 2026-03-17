@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxL8Delegate',
-	#superclass : #'Gbx8Delegate',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxL8Delegate',
+	#superclass : 'Gbx8Delegate',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private - oop access' }
+{ #category : 'private - oop access' }
 GbxL8Delegate >> oopNumberHighBytes
 	"Returns the SmallInteger representation of the 1 or 2 most significant bytes
 	 of the oop number (all but the lower three).  For 4 byte oops this is byte 1 (the most 
@@ -15,7 +17,7 @@ GbxL8Delegate >> oopNumberHighBytes
 
 	^(self basicAt: 10) * 16r100 + (self basicAt: 9)
 
-{ #category : #'oop access' }
+{ #category : 'oop access' }
 GbxL8Delegate >> oopByteAt: byteOffset 
 	"Return the byte of the oop at the given byteOffset, starting from the 
 	 high order byte.  For example, (aDelegate oopAt: 1) returns the most 
@@ -23,7 +25,7 @@ GbxL8Delegate >> oopByteAt: byteOffset
 
 	^self basicAt: 13 - byteOffset
 
-{ #category : #'oop access' }
+{ #category : 'oop access' }
 GbxL8Delegate >> oopNumberAt: byteOffset 
 	"Return the byte of the oop at the given byteOffset, starting from the 
 	 first used high order byte.  For 4 byte oops, this is identical to oopAt:.
@@ -32,7 +34,7 @@ GbxL8Delegate >> oopNumberAt: byteOffset
 
 	^self basicAt: 11 - byteOffset
 
-{ #category : #'oop access' }
+{ #category : 'oop access' }
 GbxL8Delegate >> oopNumberLower3
 	"Returns the SmallInteger representation of the 3 least significant bytes
 	 of the oop number.  For 4 byte oops this is bytes 2-4 (all but the most 
@@ -43,7 +45,7 @@ GbxL8Delegate >> oopNumberLower3
 	^(self basicAt: 8) * 16r10000 + ((self basicAt: 7) * 16r100)
 		+ (self basicAt: 6)
 
-{ #category : #'oop access' }
+{ #category : 'oop access' }
 GbxL8Delegate >> oopByteAt: byteOffset put: byteValue 
 	"Set the byte of the oop at the given byteOffset, starting from the 
 	 high order byte.  For example, (aDelegate oopAt: 1 put: 42) sets the most 
@@ -51,7 +53,7 @@ GbxL8Delegate >> oopByteAt: byteOffset put: byteValue
 
 	^self basicAt: 13 - byteOffset put: byteValue
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbxL8Delegate class >> bytesPerOop
 	^8
 

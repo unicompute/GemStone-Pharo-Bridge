@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrNewStackLimit',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrNewStackLimit',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrNewStackLimit class >> gemStoneErrorNumber6430 ^2088
 

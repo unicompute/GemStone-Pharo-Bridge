@@ -1,39 +1,48 @@
 Class {
-	#name : #'GbxStatDescriptor',
-	#superclass : #'Object',
-	#instVars : [ #'type' #'id' #'name' #'description' #'isCounter' #'isLargerBetter' #'unit' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxStatDescriptor',
+	#superclass : 'Object',
+	#instVars : [
+		'type',
+		'id',
+		'name',
+		'description',
+		'isCounter',
+		'isLargerBetter',
+		'unit'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxStatDescriptor >> isByte
 
 	^type == GemStone.Gbs.GbxStatArchiver.TypeByte8
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxStatDescriptor >> id
 	"The id of this descriptor in its stat resource"
 	^id
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxStatDescriptor >> isShort
 
 	^type == GemStone.Gbs.GbxStatArchiver.TypeShort16
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxStatDescriptor >> name
 
 	^name
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxStatDescriptor >> printOn: aStream 
 	super printOn: aStream.
 	aStream
 		nextPutAll: ': ';
 		print: name
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxStatDescriptor >> writeToArchiver: statArchiver 
 	statArchiver writeString: name.
 	"Data type code"
@@ -47,7 +56,7 @@ GbxStatDescriptor >> writeToArchiver: statArchiver
 	"Description"
 	statArchiver writeString: description
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxStatDescriptor >> name: nameString description: descriptionString type: typeInt isCounter: isCounterBool isLargerBetter: isLargerBetterBool unit: unitString
 	name := nameString.
 	description := descriptionString.
@@ -56,7 +65,7 @@ GbxStatDescriptor >> name: nameString description: descriptionString type: typeI
 	isLargerBetter := isLargerBetterBool.
 	unit := unitString
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxStatDescriptor >> setId: anInt 
 	"Set id to a zero-based offset into a stat resource's descriptor collection"
 
@@ -64,7 +73,7 @@ GbxStatDescriptor >> setId: anInt
 		failure: 'GbxStatDescriptor>>setId initialized twice'.
 	id := anInt
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxStatDescriptor class >> name: nameString description: descriptionString type: typeInt isCounter: isCounterBool isLargerBetter: isLargerBetterBool unit: unitString
 	^super new 
 		name: nameString

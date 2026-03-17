@@ -1,12 +1,52 @@
 Class {
-	#name : #'GbsConfiguration',
-	#superclass : #'Object',
-	#instVars : [ #'alwaysUseGemCursor' #'assertionChecks' #'autoMarkDirty' #'backupPolling' #'blockReplicationEnabled' #'blockReplicationPolicy' #'blockingProtocolRpc' #'bulkLoad' #'clampByCallback' #'clientMapCapacity' #'clientMapFinalizerPriority' #'confirm' #'connectVerification' #'connectorNilling' #'defaultFaultPolicy' #'deprecationWarnings' #'eventPollingFrequency' #'eventPriority' #'faultLevelLnk' #'faultLevelRpc' #'forwarderDebugging' #'freeSlotsOnStubbing' #'fullCompression' #'gcedObjBufferSize' #'generateClassConnectors' #'generateClientClasses' #'generateServerClasses' #'initialDirtyPoolSize' #'libraryName' #'removeInvalidConnectors' #'replicateExceptions' #'serverMapLeafCapacity' #'stubDebugging' #'traversalBufferSize' #'useGbsMemoryPolicy' #'useDiagnosticSpecialConverter' #'verbose' #'socketWaitTimeout' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsConfiguration',
+	#superclass : 'Object',
+	#instVars : [
+		'alwaysUseGemCursor',
+		'assertionChecks',
+		'autoMarkDirty',
+		'backupPolling',
+		'blockReplicationEnabled',
+		'blockReplicationPolicy',
+		'blockingProtocolRpc',
+		'bulkLoad',
+		'clampByCallback',
+		'clientMapCapacity',
+		'clientMapFinalizerPriority',
+		'confirm',
+		'connectVerification',
+		'connectorNilling',
+		'defaultFaultPolicy',
+		'deprecationWarnings',
+		'eventPollingFrequency',
+		'eventPriority',
+		'faultLevelLnk',
+		'faultLevelRpc',
+		'forwarderDebugging',
+		'freeSlotsOnStubbing',
+		'fullCompression',
+		'gcedObjBufferSize',
+		'generateClassConnectors',
+		'generateClientClasses',
+		'generateServerClasses',
+		'initialDirtyPoolSize',
+		'libraryName',
+		'removeInvalidConnectors',
+		'replicateExceptions',
+		'serverMapLeafCapacity',
+		'stubDebugging',
+		'traversalBufferSize',
+		'useGbsMemoryPolicy',
+		'useDiagnosticSpecialConverter',
+		'verbose',
+		'socketWaitTimeout'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbsConfiguration >> hash
 	| hash |
 	hash := 0.
@@ -14,7 +54,7 @@ GbsConfiguration >> hash
 		do: [:param | hash := hash + (self perform: param) hash].
 	^hash
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbsConfiguration >> = aGbsConfiguration 
 	(aGbsConfiguration isKindOf: GbsConfiguration) ifFalse: [^false].
 	self class parameters do: 
@@ -23,7 +63,7 @@ GbsConfiguration >> = aGbsConfiguration
 				ifFalse: [^false]].
 	^true
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> eventPriority: anInteger 
 	"Set the Smalltalk process priority level for GemStone-initiated events.
 	The default priority (Processor userSchedulingPriority) is the safest in that a GemStone event such as 'lost OT root' will not interrupt an application process that might be in the middle of accessing the GBS caches.  Such an interruption might corrupt the caches.  This priority level has the adverse side effect that an event will not be processed unless the application process is idle or does a Processor yield.
@@ -31,7 +71,7 @@ GbsConfiguration >> eventPriority: anInteger
 
 	eventPriority := anInteger
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> alwaysUseGemCursor: aBoolean 
 	"If aBoolean is true, the gem cursor will be displayed during server operations. 
 	If false, the cursor will not be modified. Defaults to true, but some applications
@@ -40,78 +80,78 @@ GbsConfiguration >> alwaysUseGemCursor: aBoolean
 
 	alwaysUseGemCursor := aBoolean
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> generateServerClasses
 	"Return a Boolean indicating whether GemStone class generation is enabled"
 
 	^generateServerClasses
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> connectorNilling
 	^connectorNilling
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> generateClassConnectors: aBool 
 	"If aBool is set to true, then whenever a Smalltalk or GemStone class is generated, or a same-name class mapping is automatically established, a session-based connector will be created for the class mapping."
 
 	generateClassConnectors := aBool
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> useGbsMemoryPolicy
 	^useGbsMemoryPolicy
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> eventPollingFrequency: anInteger 
 	"Set the event polling frequency (in milliseconds)"
 
 	eventPollingFrequency := anInteger
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> traversalBufferSize: anInteger 
 	"The traversalBufferSize must be a multiple of 8. It must also not be smaller than the MinTraversalBufferSize (2048)"
 	traversalBufferSize := (anInteger roundTo: 8) max: MinTraversalBufferSize
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> blockingProtocolRpc
 	^blockingProtocolRpc
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> freeSlotsOnStubbing
 	^freeSlotsOnStubbing
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> setValueOf: aParameterName to: aValue 
 	"Set the current value of the parameter, and answer the value."
 
 	self perform: (aParameterName , ':') asSymbol with: aValue.
 	^aValue
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> clientMapFinalizerPriority
 	^clientMapFinalizerPriority
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> removeInvalidConnectors
 	^removeInvalidConnectors
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> autoMarkDirty: anObject
 	autoMarkDirty := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> faultLevelLnk: anInteger
 	faultLevelLnk := anInteger
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> libraryName: anObject
 	libraryName := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> backupPolling: aBoolean
 
 	backupPolling := aBoolean
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> generateGSClasses: aBoolean 
 	"Enable or disable GemStone class generation"
 
@@ -119,7 +159,7 @@ GbsConfiguration >> generateGSClasses: aBoolean
 		deprecated: 'GbsConfiguration>>generateGSClasses: deprecated August, 2005. Use GbsConfiguration>>generateServerClasses: instead'.
 	generateServerClasses := aBoolean
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> confirm: aBoolean 
 	"If <aBoolean> is true, then GBS will prompt for confirmation."
 
@@ -130,25 +170,25 @@ GbsConfiguration >> confirm: aBoolean
 	confirm := aBoolean.
 	^was
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> defaultFaultPolicy
 	^defaultFaultPolicy
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> gcedObjBufferSize: anObject
 	gcedObjBufferSize := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> valueOf: aParameterName 
 	"Answer the current value of the parameter."
 
 	^self perform: aParameterName asSymbol
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> fullCompression
 	^fullCompression
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> verbose: aBoolean 
 	"If aBoolean is true, GemBuilder will put a message on the system transcript when special events occur
 	 (logout/login/commit/abort)."
@@ -160,28 +200,28 @@ GbsConfiguration >> verbose: aBoolean
 	verbose := aBoolean == true.
 	^was
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> bulkLoad
 	^bulkLoad
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> deprecationWarnings
 	^deprecationWarnings
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> socketWaitTimeout: anObject
 
 	socketWaitTimeout := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> blockReplicationEnabled: anObject
 	blockReplicationEnabled := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> faultLevelRpc: anInteger
 	faultLevelRpc := anInteger
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> stubDebugging
 	"When this value is true, stubs respond to some basic messages locally - such as printOn:, instVarAt:,
 	 and class (returns GbxObjectStub) to support debugging.  When it's false, these messages cause
@@ -189,18 +229,18 @@ GbsConfiguration >> stubDebugging
 
 	^stubDebugging
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> replicateExceptions: anObject
 
 	replicateExceptions := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> connectVerification: aBoolean 
 	"If set to true, connectors will verify that they are not redefining an object connection, and class connectors will verify that the class structures match."
 
 	connectVerification := aBoolean
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> generateSTClasses: aBool 
 	"Enable or disable Smalltalk class generation"
 
@@ -208,59 +248,59 @@ GbsConfiguration >> generateSTClasses: aBool
 		deprecated: 'GbsConfiguration>>generateSTClasses: deprecated August, 2005. Use GbsConfiguration>>generateClientClasses: instead'.
 	generateClientClasses := aBool
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> assertionChecks
 	^assertionChecks
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> eventPriority
 	"Return the Smalltalk process priority level for GemStone-initiated events"
 
 	^eventPriority
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> defaultFor: aParameterName
 
 	"answer the default value for the parameter."
 	^ self class defaultFor: aParameterName
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> clampByCallback: aBoolean
 
 	clampByCallback := aBoolean
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> generateClientClasses: aBool 
 	"Enable or disable Smalltalk class generation"
 
 	generateClientClasses := aBool
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> alwaysUseGemCursor
 	^alwaysUseGemCursor
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> generateClassConnectors
 	"If true, then whenever a Smalltalk or GemStone class is generated, or a same-name class mapping is automatically established, a session-based connector will be created for the class mapping."
 
 	^generateClassConnectors
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> confirm
 	^confirm
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> eventPollingFrequency
 	"Return the current event polling frequency (in milliseconds)"
 
 	^eventPollingFrequency
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> useDiagnosticSpecialConverter: aBoolean
 
 	useDiagnosticSpecialConverter := aBoolean
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> forwarderDebugging: aBool 
 	"Turn debugging support on or off.  When debugging is on (aBool = true), some
 	 messages to forwarders, e.g., printOn:, instVarAt:, and class (returns
@@ -276,52 +316,52 @@ GbsConfiguration >> forwarderDebugging: aBool
 	forwarderDebugging := aBool == true.
 	^was
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> traversalBufferSize
 	^traversalBufferSize
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> blockReplicationPolicy: anObject
 	blockReplicationPolicy := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> clientMapCapacity: anObject
 	clientMapCapacity := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> serverMapLeafCapacity: anInteger 
 	serverMapLeafCapacity := anInteger
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> faultLevelLnk
 	^faultLevelLnk
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> initialDirtyPoolSize: anObject
 	initialDirtyPoolSize := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> parameters
 
 	"answer the list of all parameters for the class"
 	^ self class parameters
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> backupPolling
 
 	^backupPolling
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> generateServerClasses: aBoolean 
 	"Enable or disable GemStone class generation"
 
 	generateServerClasses := aBoolean
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> connectorNilling: anObject
 	connectorNilling := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> generateGSClasses
 	"Return a Boolean indicating whether GemStone class generation is enabled"
 
@@ -329,21 +369,21 @@ GbsConfiguration >> generateGSClasses
 		deprecated: 'GbsConfiguration>>generateGSClasses deprecated August, 2005. Use GbsConfiguration>>generateServerClasses instead'.
 	^generateServerClasses
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> gcedObjBufferSize
 	^gcedObjBufferSize
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> useGbsMemoryPolicy: aBoolean
 
 	useGbsMemoryPolicy := aBoolean.
 	GBSM checkMemoryPolicy	"I may not be GbsConfiguration current, so just tell GBSM to 'check'"
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> freeSlotsOnStubbing: anObject
 	freeSlotsOnStubbing := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> verbose
 	"If true, GemBuilder will put a message on the system transcript when special events occur 
 	(logout/login/commit/abort)."
@@ -352,50 +392,50 @@ GbsConfiguration >> verbose
 
 	^verbose
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> blockingProtocolRpc: anObject
 	blockingProtocolRpc := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> clientMapFinalizerPriority: anInteger
 	clientMapFinalizerPriority := anInteger
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> socketWaitTimeout
 
 	^socketWaitTimeout
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> connectVerification
 	"If true, connectors will verify that they are not redefining an object connection, and class connectors will verify that the class structures match."
 
 	^connectVerification
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> faultLevelRpc
 	^faultLevelRpc
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> removeInvalidConnectors: aBoolean 
 	"If true, connectors which fail to resolve at login time will automatically be removed from the connector collections.  If false, and if Verbose is true, the user is prompted for their removal.  Otherwise, connector failure raises a signal."
 
 	removeInvalidConnectors := aBoolean
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> blockReplicationEnabled
 	^blockReplicationEnabled
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> clampByCallback
 
 	^clampByCallback
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> replicateExceptions
 
 	^replicateExceptions
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> defaultFaultPolicy: faultPolicy 
 	"An object's faultPolicy is either #lazy or #immediate.  If #lazy, when changes to the GemStone
 	 counterpart of a client object are discovered, the client object is turned into a stub and will
@@ -408,7 +448,7 @@ GbsConfiguration >> defaultFaultPolicy: faultPolicy
 		ifFalse: [self gbsMessenger error: 'Fault policy must be #lazy or #immediate'].
 	defaultFaultPolicy := faultPolicy
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> generateSTClasses
 	"Return a Boolean indicating whether Smalltalk class generation is enabled"
 
@@ -416,32 +456,32 @@ GbsConfiguration >> generateSTClasses
 		deprecated: 'GbsConfiguration>>generateSTClasses deprecated August, 2005. Use GbsConfiguration>>generateClientClasses instead'.
 	^generateClientClasses
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> generateClientClasses
 	"Return a Boolean indicating whether Smalltalk class generation is enabled"
 
 	^generateClientClasses
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> bulkLoad: anObject
 	bulkLoad := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> fullCompression: anObject
 	fullCompression := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> useDiagnosticSpecialConverter
 	"If we are running under an asserting VM, we must use the Diagnostic Special Converter.
 	 It is optional, but not recommended, when running under a non-asserting VM."
 
 	^useDiagnosticSpecialConverter or: [self isRunningUnderAssertingVM]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> deprecationWarnings: anObject
 	deprecationWarnings := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> stubDebugging: aBool 
 	"Turn debugging support on or off.  When debugging is on,  instance methods will allow the Smalltalk debugger to operate among stubs without causing them to fault in the GemStone object."
 
@@ -454,11 +494,11 @@ GbsConfiguration >> stubDebugging: aBool
 	stubDebugging := aBool == true.
 	^was
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> blockReplicationPolicy
 	^blockReplicationPolicy
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> forwarderDebugging
 	"Answer whether forwarder debugging support is on or off.  When debugging is on
 	 (ForwarderDebugging = true), some messages to forwarders, e.g., printOn:,
@@ -470,23 +510,23 @@ GbsConfiguration >> forwarderDebugging
 
 	^forwarderDebugging == true
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> libraryName
 	^libraryName
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> serverMapLeafCapacity
 	^serverMapLeafCapacity
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> clientMapCapacity
 	^clientMapCapacity
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> initialDirtyPoolSize
 	^initialDirtyPoolSize
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration >> assertionChecks: aBoolean 
 	"GbsConfiguration current assertionChecks: false"
 
@@ -497,14 +537,14 @@ GbsConfiguration >> assertionChecks: aBoolean
 	assertionChecks := aBoolean.
 	^was
 
-{ #category : #'analyzing' }
+{ #category : 'analyzing' }
 GbsConfiguration >> diffsFromDefault
 	"Return a collection of symbols describing the parameters described by the receiver which differ from a default configuration"
 
 	^self class parameters 
 		select: [:param | (self perform: param) ~= (Defaults perform: param)]
 
-{ #category : #'applying' }
+{ #category : 'applying' }
 GbsConfiguration >> applyAndReloginWhile: aBlock
 
 	"If the current configuration isn't equal to the receiver, this method logs out all logged in sessions after applying the configuration, logs in one session, and does the same after restoring the configuration."
@@ -534,7 +574,7 @@ GbsConfiguration >> applyAndReloginWhile: aBlock
 		].
 	].
 
-{ #category : #'applying' }
+{ #category : 'applying' }
 GbsConfiguration >> applyWhile: aBlock
 
 	| current |
@@ -548,7 +588,7 @@ GbsConfiguration >> applyWhile: aBlock
 		current apply
 	]
 
-{ #category : #'applying' }
+{ #category : 'applying' }
 GbsConfiguration >> apply
 	" Configure the GBS as described by the receiver.
 	NOTE:  Other windows may be interested in this change.  For example, if session
@@ -559,14 +599,14 @@ GbsConfiguration >> apply
 	Current := self.
 	GBSM changed: #newConfigParamsInstalled
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsConfiguration >> shouldUseBackupPolling
 
 	"Default to false only on Windows, since OOB socket byte detection is less reliable on Unix."
 
 	^self class isPlatformWindows not
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbsConfiguration >> initialize
 	"When you change this method, you must also make sure the following are consistent:
 		VisualworksSettings class >settings-gemstone>(whatever)
@@ -614,13 +654,13 @@ GbsConfiguration >> initialize
 	useDiagnosticSpecialConverter := self isRunningUnderAssertingVM.
 	verbose := true	"Write significant events to transcript"
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbsConfiguration >> storeOn: aStream 
 	"For a more portable 'fileout' from the timings browser"
 
 	self printOn: aStream
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbsConfiguration >> printOn: aStream 
 	"Describe the receiver in terms of its differences from a default configuration"
 
@@ -646,7 +686,7 @@ GbsConfiguration >> printOn: aStream
 				nextPutAll: 'yourself'].
 	aStream nextPut: $)
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration class >> gbsBuildTime
 	"Answer the date and time of the GemBuilder build."
 
@@ -659,7 +699,7 @@ GbsConfiguration class >> gbsBuildTime
 				minutes: 56
 				seconds: 8)
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration class >> sharedLibraryFilename
 
 	| config |
@@ -667,14 +707,14 @@ GbsConfiguration class >> sharedLibraryFilename
 	config libraryName isEmpty ifTrue: [config setDefaultLibraryName].
 	^config libraryName
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration class >> gbsBuildName
 	"Answer the GemBuilder build name
 	 in the form '<releaseName> <buildNumber>'."
 
 	^'8.8.1'
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration class >> sharedLibraryExtension
 	"Answer two-or-three-character extension for shared library name appropriate for the current platform."
 	"	GbsConfiguration sharedLibraryExtension.	"
@@ -685,14 +725,14 @@ GbsConfiguration class >> sharedLibraryExtension
 	osType = #unix ifTrue: [^'so'].
 	^osType	"Unknown"
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration class >> gemCursor
 	"Answer the cursor that will be shown while waiting for a
 	 response from the server, or nil if in a headless image."
 
 	^GScursor
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration class >> gciProductName
 	"Converts the code returned by GciProduct() to a more readable name"
 
@@ -709,7 +749,7 @@ GbsConfiguration class >> gciProductName
 						ifFalse: [1]].
 	^nameArray at: prodCode
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration class >> gbsServicesVersion
 	"Answer a gbsBuildName that supports this version.
 	Most likely will be the gbsBuildName, but could be a 
@@ -717,7 +757,7 @@ GbsConfiguration class >> gbsServicesVersion
 
 	^self gbsBuildName
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConfiguration class >> sharedLibraryVersion
 	"	GbsConfiguration sharedLibraryVersion.	"
 
@@ -728,7 +768,7 @@ GbsConfiguration class >> sharedLibraryVersion
 	minorVersion := verString at: dotPos + 1.
 	^String with: majorVersion with: minorVersion
 
-{ #category : #'deprecation' }
+{ #category : 'deprecation' }
 GbsConfiguration class >> deprecated: message
 	"If deprecation warnings are enabled, alert the user that they are 
 	using a feature that GemStone intends to remove. The given String message 
@@ -742,7 +782,7 @@ GbsConfiguration class >> deprecated: message
 						, message
 							, ' This feature may be removed from a future GBS version, though we generally wait at least a year from the date of deprecation.']
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 GbsConfiguration class >> postLoad: aParcel
 	"During parcel load, by default #initialize will be sent. We can't do that here,
 	because some of the code needed to run #initialize is in other parcels. Wait until
@@ -750,7 +790,7 @@ GbsConfiguration class >> postLoad: aParcel
 
 	"Do nothing."
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 GbsConfiguration class >> initialize
 	"Initialize the default configuration values."
 
@@ -759,43 +799,43 @@ GbsConfiguration class >> initialize
 	Defaults := GbsConfiguration new.
 	Current := GbsConfiguration new
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsConfiguration class >> isVisualAgeImage
 	" Answer true if we are running a VisualAge image. "
 
 	^#VisualAge == self stType
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsConfiguration class >> isPlatformWindows
 	"GBS private. 
 	Answer true if we are running on Windows."
 
 	^self osType == #win
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsConfiguration class >> isVisualWorksImage
 	" Answer true if we are running a VisualWorks image. "
 
 	^ #VisualWorks == self stType
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsConfiguration class >> visualWorks: vwBlock visualAge: vaBlock
 
 	self isVisualWorksImage ifTrue: [^vwBlock value].
 	self isVisualAgeImage ifTrue: [^vaBlock value].
 	self error: 'System is neither VisualWorks nor VisualAge'
 
-{ #category : #'utilities' }
+{ #category : 'utilities' }
 GbsConfiguration class >> gciVersionString
 	| ver |
 	ver := GbxGciCallSequencer gciVersion.
 	^ver copyFrom: 5 to: ver size
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsConfiguration class >> new
 	^super new initialize
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsConfiguration class >> current
 	"Returns an instance of GbsConfiguration describing the current GBS configuration"
 
@@ -803,7 +843,7 @@ GbsConfiguration class >> current
 
 	^Current
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsConfiguration class >> default
 	"Returns an instance of GbsConfiguration describing the default GBS configuration"
 
@@ -811,14 +851,14 @@ GbsConfiguration class >> default
 
 	^self new
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsConfiguration class >> defaultFor: aParameterName 
 	"answer the default value of aParameterName"
 
 	aParameterName isNil ifTrue: [^nil].
 	^Defaults perform: aParameterName asSymbol
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsConfiguration class >> version
 	"Return version information."
 
@@ -832,7 +872,7 @@ GbsConfiguration class >> version
 		at: 5 put: GbxServerVersion current printString;
 		yourself
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsConfiguration class >> gbsCopyright
 	"	self gbsCopyright.	"
 
@@ -842,7 +882,7 @@ GbsConfiguration class >> gbsCopyright
 		with: self gbsBuildTime first
 		with: self gbsBuildTime first year
 
-{ #category : #'stack dumping' }
+{ #category : 'stack dumping' }
 GbsConfiguration class >> dumpAllProcessStacks
 	"As of June 2006 we prefer you use the new GbsStackDumper. 
 	This method is left for backward compatibility."

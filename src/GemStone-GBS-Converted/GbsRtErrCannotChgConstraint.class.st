@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrCannotChgConstraint',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrCannotChgConstraint',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrCannotChgConstraint class >> gemStoneErrorNumber6430 ^2062
 

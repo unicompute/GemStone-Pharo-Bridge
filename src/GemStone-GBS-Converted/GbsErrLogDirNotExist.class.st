@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsErrLogDirNotExist',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsErrLogDirNotExist',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsErrLogDirNotExist class >> gemStoneErrorNumber6430 ^2348
 

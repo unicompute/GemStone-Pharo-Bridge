@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsNumErrArgNotRoundingMode',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsNumErrArgNotRoundingMode',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsNumErrArgNotRoundingMode class >> gemStoneErrorNumber6430 ^2067
 

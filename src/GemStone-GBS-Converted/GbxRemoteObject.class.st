@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxRemoteObject',
-	#superclass : #'Object',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxRemoteObject',
+	#superclass : 'Object',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxRemoteObject >> validateSessionForProxy: aProxy 
 	"Private.  Raise an error if there are any obvious problems with
 	 the proxy for the receiver delegate.
@@ -17,13 +19,13 @@ GbxRemoteObject >> validateSessionForProxy: aProxy
 		with: aProxy gbxBasicClass.
 	^nil
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxRemoteObject >> forAnySingleSession
 
 	"Private.  The receiver satisfies this request.  Compare with GbxObjectList>>forAnyOrCurrentSessionForObject:."
 	^self
 
-{ #category : #'dirty management' }
+{ #category : 'dirty management' }
 GbxRemoteObject >> gbxDelegate
 	"Private.  Answer nil or a client-object, found cached for any
 	 session, representing a remote-object that is the logical

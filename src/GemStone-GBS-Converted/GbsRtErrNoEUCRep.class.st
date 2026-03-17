@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrNoEUCRep',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrNoEUCRep',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrNoEUCRep class >> gemStoneErrorNumber6430 ^2285
 

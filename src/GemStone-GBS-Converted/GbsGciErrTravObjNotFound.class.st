@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsGciErrTravObjNotFound',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsGciErrTravObjNotFound',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsGciErrTravObjNotFound class >> gemStoneErrorNumber6430 ^2215
 

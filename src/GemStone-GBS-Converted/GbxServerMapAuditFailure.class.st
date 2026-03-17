@@ -1,46 +1,50 @@
 Class {
-	#name : #'GbxServerMapAuditFailure',
-	#superclass : #'Object',
-	#instVars : [ #'description' #'node' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxServerMapAuditFailure',
+	#superclass : 'Object',
+	#instVars : [
+		'description',
+		'node'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerMapAuditFailure >> description: anObject
 	description := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerMapAuditFailure >> node
 	^node
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerMapAuditFailure >> description
 	^description
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerMapAuditFailure >> node: anObject
 	node := anObject
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxServerMapAuditFailure >> printDescriptionOn: aStream
 
 	aStream nextPutAll: ': ' , description
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxServerMapAuditFailure >> printOn: aStream
 
 	super printOn: aStream.
 	self printDescriptionOn: aStream
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxServerMapAuditFailure class >> node: nodeOrLeaf description: descriptiveString
 
 	^(self new)
 		node: nodeOrLeaf;
 		description: descriptiveString
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxServerMapAuditFailure class >> description: descriptiveString
 
 	^self new description: descriptiveString

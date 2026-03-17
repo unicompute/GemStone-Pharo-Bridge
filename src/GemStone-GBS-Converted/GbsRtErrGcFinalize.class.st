@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrGcFinalize',
-	#superclass : #'GbsEventError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrGcFinalize',
+	#superclass : 'GbsEventError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrGcFinalize class >> gemStoneErrorNumber6430 ^6017
 

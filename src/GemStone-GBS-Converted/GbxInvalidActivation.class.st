@@ -1,41 +1,44 @@
 Class {
-	#name : #'GbxInvalidActivation',
-	#superclass : #'GbxActivation',
-	#instVars : [ #'error' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxInvalidActivation',
+	#superclass : 'GbxActivation',
+	#instVars : [
+		'error'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxInvalidActivation >> gbxIsInStackOf: topContext
 	"Answer true if I am part of the combined stack identified by topContext."
 	
 	^true
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxInvalidActivation >> isValid
 	
 	^false
 
-{ #category : #'accessing temps' }
+{ #category : 'accessing temps' }
 GbxInvalidActivation >> stackP
 	^0
 
-{ #category : #'error handling' }
+{ #category : 'error handling' }
 GbxInvalidActivation >> error: anObject
 	error := anObject
 
-{ #category : #'error handling' }
+{ #category : 'error handling' }
 GbxInvalidActivation >> error
 	^error
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxInvalidActivation >> forProcess: aGsProcess
 	
 	process := aGsProcess.
 	session := aGsProcess noCheckSession
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxInvalidActivation >> methodString
 	
 	^'serverContextsUnavailable
@@ -45,16 +48,16 @@ GbxInvalidActivation >> methodString
 
 	You may inspect the context for more information "' copy
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxInvalidActivation >> reset
 	"do nothing"
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxInvalidActivation >> isGsGlue
 	
 	^false
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxInvalidActivation >> resetFrom: aGSArray extract: anExtractArray andDelegates: anObject
 
 	deferredInfo := Array new: aGSArray size.
@@ -63,11 +66,11 @@ GbxInvalidActivation >> resetFrom: aGSArray extract: anExtractArray andDelegates
 	gsMethod := self class methodDictionary at: #serverContextsUnavailable.
 	gsMethodId := 'Invalid Server Context'.
 
-{ #category : #'accessing method' }
+{ #category : 'accessing method' }
 GbxInvalidActivation >> mclass
 	^Object
 
-{ #category : #'accessing method' }
+{ #category : 'accessing method' }
 GbxInvalidActivation >> serverContextsUnavailable
 	"this text is displayed when a server context could not be retrieved.
 	This can happen, for example, if an error was encountered during 
@@ -75,7 +78,7 @@ GbxInvalidActivation >> serverContextsUnavailable
 
 	You may inspect the context for more information "
 
-{ #category : #'accessing method' }
+{ #category : 'accessing method' }
 GbxInvalidActivation >> sourceString
 	
 	| ws |
@@ -100,7 +103,7 @@ GbxInvalidActivation >> sourceString
 			ws nextPutAll: error messageText].
 	^ws contents
 
-{ #category : #'debugger support' }
+{ #category : 'debugger support' }
 GbxInvalidActivation >> gbsError
 	"Answer the gbsError that caused my GsProcess to suspend."
 
@@ -108,23 +111,23 @@ GbxInvalidActivation >> gbsError
 
 	^nil
 
-{ #category : #'accessing context' }
+{ #category : 'accessing context' }
 GbxInvalidActivation >> homeReceiver
 	"in a stack dump, the user will at least see the reason for the invalid context"
 	
 	^error
 
-{ #category : #'accessing context' }
+{ #category : 'accessing context' }
 GbxInvalidActivation >> level
 	^1
 
-{ #category : #'accessing context' }
+{ #category : 'accessing context' }
 GbxInvalidActivation >> stepPoint
 	"don't care"
 	
 	^0
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxInvalidActivation >> initialize
 
 	self
@@ -132,7 +135,7 @@ GbxInvalidActivation >> initialize
 		extract: nil
 		andDelegates: nil.
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxInvalidActivation >> printOn: aStream
 
 	aStream
@@ -142,7 +145,7 @@ GbxInvalidActivation >> printOn: aStream
 		nextPutAll: error printString;
 		nextPutAll: ' )'
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxInvalidActivation class >> new
 	^super new initialize
 

@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxDynamicInstVarAttribute',
-	#superclass : #'GbxDerivedAttribute',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxDynamicInstVarAttribute',
+	#superclass : 'GbxDerivedAttribute',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDynamicInstVarAttribute >> value: delegate
 
 	value := self object delegate session
@@ -17,18 +19,18 @@ GbxDynamicInstVarAttribute >> value: delegate
 						with: delegate)
 				context: nil
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxDynamicInstVarAttribute >> isReadOnly
 
 	^false
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxDynamicInstVarAttribute >> initialize: aString value: anObject printString: aString2 object: theObject
 
 	self initialize: aString value: anObject printString: aString2.
 	object := theObject
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxDynamicInstVarAttribute class >> label: aString value: anObject printString: aString2 object: object
 
 	^self new initialize: aString value: anObject printString: aString2 object: object

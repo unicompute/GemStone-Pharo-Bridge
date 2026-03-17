@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsLgcErrInconsistentObjKind',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsLgcErrInconsistentObjKind',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsLgcErrInconsistentObjKind class >> gemStoneErrorNumber6430 ^2240
 

@@ -1,20 +1,22 @@
 Class {
-	#name : #'GbxInspectionWrapperNoSession',
-	#superclass : #'GbxInspectionWrapper',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxInspectionWrapperNoSession',
+	#superclass : 'GbxInspectionWrapper',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperNoSession >> doItReceiver
 	^localObject
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxInspectionWrapperNoSession >> basicPrintOn: aStream 
 	localObject basicPrintOn: aStream
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxInspectionWrapperNoSession >> inspectorClasses
 	| oc |
 	^(localObject zzzisStub or: [localObject zzzisForwarder]) 
@@ -24,11 +26,11 @@ GbxInspectionWrapperNoSession >> inspectorClasses
 			oc]
 		ifFalse: [super inspectorClasses]
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxInspectionWrapperNoSession >> inspectableObjectFor: aClass 
 	^localObject
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxInspectionWrapperNoSession >> fetchInitialInfo
 	"Nothing to fetch -- no session "
 

@@ -1,19 +1,21 @@
 Class {
-	#name : #'GbxGciSingleTripInterface',
-	#superclass : #'GbxServerInterface',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxGciSingleTripInterface',
+	#superclass : 'GbxServerInterface',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxGciSingleTripInterface >> isSingleTrip
 	"Answer false if using the legacy multi-trip interface; 
 	true if using the single-trip (GciStoreTravDoTravRefs) interface introduced in GS64 2.2.5.x"
 	
 	^true
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxGciSingleTripInterface >> clampedTravArgsForServerInteraction: serverInteraction
 
 	| ctArgs |
@@ -21,7 +23,7 @@ GbxGciSingleTripInterface >> clampedTravArgsForServerInteraction: serverInteract
 	ctArgs level: serverInteraction replicationLevel.
 	^ctArgs
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxGciSingleTripInterface >> storeTravDoArgsForEvaluation: evaluation 
 	"Answer an initialized struct.
 	Allocates C memory for the selector; sender must free when done."
@@ -35,7 +37,7 @@ GbxGciSingleTripInterface >> storeTravDoArgsForEvaluation: evaluation
 		execBlockNumArgs: args size.
 	^storeTravDoArgs
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxGciSingleTripInterface >> continueAfter: error forInteraction: serverInteraction 
 	"Perform the specified server interaction. Answer a delegate representing the server object
 	returned from the server, or a GbsError.
@@ -52,7 +54,7 @@ GbxGciSingleTripInterface >> continueAfter: error forInteraction: serverInteract
 		withStoreTravDoArgs: storeTravDoArgs
 		clampedTravArgs: clampedTravArgs
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxGciSingleTripInterface >> storeTravDoArgsForContinuationOf: serverInteraction afterError: error
 	"Allocates C memory for the selector; sender must free when done.
 	error is a GbsError"
@@ -69,7 +71,7 @@ GbxGciSingleTripInterface >> storeTravDoArgsForContinuationOf: serverInteraction
 		replaceTopOfStackWith: error gsReturnVal oopValue.
 	^storeTravDoArgs
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxGciSingleTripInterface >> storeTravDoArgsForTraversal: serverTraversal
 
 	| storeTravDoArgs |
@@ -85,7 +87,7 @@ GbxGciSingleTripInterface >> storeTravDoArgsForTraversal: serverTraversal
 		storeTravFlags: (self storeTravFlagsForInteraction: serverTraversal).
 	^storeTravDoArgs
 
-{ #category : #'retrievalFlags' }
+{ #category : 'retrievalFlags' }
 GbxGciSingleTripInterface >> retrievalFlagsForServerInteraction: serverInteraction
 
 	| retrievalFlags |
@@ -98,7 +100,7 @@ GbxGciSingleTripInterface >> retrievalFlagsForServerInteraction: serverInteracti
 	retrievalFlags := retrievalFlags + 16r100.	"GCI_TRAV_REFS_EXCLUDE_EXPORTED_RESULT_OBJ"
 	^retrievalFlags
 
-{ #category : #'retrievalFlags' }
+{ #category : 'retrievalFlags' }
 GbxGciSingleTripInterface >> excludeResultObjFlag
 	"Used for #execute:, #remotePerform:, and any other place where we do not 
 	want traversed results, even though we're in single-trip. The relevant flag is 
@@ -106,7 +108,7 @@ GbxGciSingleTripInterface >> excludeResultObjFlag
 
 	^16r80
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxGciSingleTripInterface >> loginFlags
 	"Refer to the superclass implementation for the complete list of flags."
 
@@ -118,7 +120,7 @@ GbxGciSingleTripInterface >> loginFlags
 		ifFalse: [loginFlags := loginFlags + 16].
 	^loginFlags
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxGciSingleTripInterface >> x509ArgsForParameters: parameters
 
 	| args |
@@ -136,7 +138,7 @@ GbxGciSingleTripInterface >> x509ArgsForParameters: parameters
 		loginFlags: self loginFlags.
 	^args
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxGciSingleTripInterface >> x509LoginFor: parameters
 	"Private. Make the GciX509Login() call. 
 	This must be done in the proper context.
@@ -148,7 +150,7 @@ GbxGciSingleTripInterface >> x509LoginFor: parameters
 			[self gbsMessenger statusTag: #GciX509Login message: ''.
 			callSequencer primInterface gciX509Login: args asAddress]
 
-{ #category : #'GbsSessionManager interface' }
+{ #category : 'GbsSessionManager interface' }
 GbxGciSingleTripInterface >> gbsImageStartup
 	"Discard defunct C pointers"
 
@@ -156,21 +158,21 @@ GbxGciSingleTripInterface >> gbsImageStartup
 	gcedOopBuffer := nil.
 	oopsNoLongerReplicatedBuffer := nil
 
-{ #category : #'private - old single round trip' }
+{ #category : 'private - old single round trip' }
 GbxGciSingleTripInterface >> execute: aStringOrSymbol class: aGSObject context: aGSObject2 symbolList: aGSObject3 numDirtyOops: anInteger2 numAlteredPairs: anInteger3 travBuffer: aGSTraversalBuffer withClamps: clampSpec toLevel: level retrieveFlags: retrieveFlags clampedTravBuffer: aClampedTravBuffer 
 	^self gbsMessenger 
 		error: 'Old style single round trip is not permitted with true single round trip'
 
-{ #category : #'private - old single round trip' }
+{ #category : 'private - old single round trip' }
 GbxGciSingleTripInterface >> receiver: aGSObject selector: aStringOrSymbol args: arrayOfGSObjects numDirtyOops: anInteger2 numAlteredPairs: anInteger3 travBuffer: aGSTraversalBuffer withClamps: clampSpec toLevel: level retrieveFlags: retrieveFlags clampedTravBuffer: aClampedTravBuffer 
 	^self gbsMessenger 
 		error: 'Old style single round trip is not permitted with true single round trip'
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxGciSingleTripInterface >> newMessageSend
 	^GbxSingleTripServerMessageSend interface: thisSession serverInterface
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxGciSingleTripInterface >> executableBlockClassDelegate
 	"Answer a delegate for the class used for executable blocks. This is ExecutableBlock in GS64 v2.x
 	and ExecBlock GS64 3.0, so this special mechanism is required. At this point, only the prim interface is of a different
@@ -178,7 +180,7 @@ GbxGciSingleTripInterface >> executableBlockClassDelegate
 
 	^callSequencer primInterface executableBlockClassOop asGSObjectInSession: thisSession
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxGciSingleTripInterface >> roundTripForInteraction: serverInteraction withStoreTravDoArgs: storeTravDoArgs clampedTravArgs: clampedTravArgs
 	"Send the specified message to the server. Answer a delegate representing the server object
 	returned from the server execution, or a GbsError.
@@ -201,15 +203,15 @@ GbxGciSingleTripInterface >> roundTripForInteraction: serverInteraction withStor
 	resultOop := clampedTravArgs resultOop.
 	^GbxDelegate oopValue: resultOop session: thisSession
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxGciSingleTripInterface >> saveFetchedOops: delegates
 	"In single-trip, fetched oops are automatically in the referenced set, so no action needed here"
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxGciSingleTripInterface >> newServerTraversal
 	^GbxSingleTripServerTraversal interface: thisSession serverInterface
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxGciSingleTripInterface >> addToNoLongerReplicated: aDelegate
 	"This oop may be in the server's pure export set because the server sent a full report for it.
 	If we do not replicate the object, or turn the replicate into a stub or forwarder, we must 
@@ -222,7 +224,7 @@ GbxGciSingleTripInterface >> addToNoLongerReplicated: aDelegate
 		and: [aDelegate isSpecial not and: [aDelegate ~= OIllegal]])
 			ifTrue: [noLongerReplicatedOops add: aDelegate]
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxGciSingleTripInterface >> newServerEvaluation
 	^GbxSingleTripServerEvaluation interface: thisSession serverInterface
 

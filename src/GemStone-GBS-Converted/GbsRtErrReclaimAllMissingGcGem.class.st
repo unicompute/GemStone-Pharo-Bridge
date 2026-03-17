@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrReclaimAllMissingGcGem',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrReclaimAllMissingGcGem',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrReclaimAllMissingGcGem class >> gemStoneErrorNumber6430 ^2395
 

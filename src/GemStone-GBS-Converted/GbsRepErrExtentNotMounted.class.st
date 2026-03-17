@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRepErrExtentNotMounted',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRepErrExtentNotMounted',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRepErrExtentNotMounted class >> gemStoneErrorNumber6430 ^2040
 

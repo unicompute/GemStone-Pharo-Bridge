@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrSoftBreak',
-	#superclass : #'GbxAbstractControlInterrupt',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrSoftBreak',
+	#superclass : 'GbxAbstractControlInterrupt',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrSoftBreak class >> gemStoneErrorNumber6430 ^6003
 

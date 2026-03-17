@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrInstvarAddToBytes',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrInstvarAddToBytes',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrInstvarAddToBytes class >> gemStoneErrorNumber6430 ^2269
 

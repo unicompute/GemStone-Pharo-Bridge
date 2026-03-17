@@ -1,18 +1,20 @@
 Class {
-	#name : #'GbxClassSet',
-	#superclass : #'IdentitySet',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxClassSet',
+	#superclass : 'IdentitySet',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'adding' }
+{ #category : 'adding' }
 GbxClassSet >> add: aClass
 
 	super add: aClass.
 	self markDirty
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClassSet >> removeIfPresent: aClass
 
 	self remove: aClass ifAbsent: [^nil].

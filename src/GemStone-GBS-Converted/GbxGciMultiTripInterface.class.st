@@ -1,33 +1,35 @@
 Class {
-	#name : #'GbxGciMultiTripInterface',
-	#superclass : #'GbxServerInterface',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxGciMultiTripInterface',
+	#superclass : 'GbxServerInterface',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'buffers' }
+{ #category : 'buffers' }
 GbxGciMultiTripInterface >> dirtyOopBuffer
 	
 	dirtyOopBuffer isNil
 		ifTrue: [dirtyOopBuffer := thisSession oopArrayClass size: 2000].
 	^dirtyOopBuffer
 
-{ #category : #'buffers' }
+{ #category : 'buffers' }
 GbxGciMultiTripInterface >> alteredOopBuffer
 	
 	alteredOopBuffer isNil
 		ifTrue: [alteredOopBuffer := thisSession oopArrayClass size: 4000].
 	^alteredOopBuffer
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxGciMultiTripInterface >> isSingleTrip
 	"Answer false if using the legacy multi-trip interface; 
 	true if using the single-trip (GciStoreTravDoTravRefs) interface introduced in GS64 2.2.5.x"
 	
 	^false
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxGciMultiTripInterface >> loginFlags
 	"Refer to the superclass implementation for the complete list of flags."
 
@@ -35,7 +37,7 @@ GbxGciMultiTripInterface >> loginFlags
 		ifTrue: [4]
 		ifFalse: [0]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxGciMultiTripInterface >> releaseOops: oopArray
 	"Sender must hold my session's sessionProtect"
 	
@@ -45,7 +47,7 @@ GbxGciMultiTripInterface >> releaseOops: oopArray
 				gciReleaseOops: oopArray asAddress
 				with: oopArray size]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxGciMultiTripInterface >> roundTripForInteraction: serverInteraction withStoreTravDoArgs: storeTravDoArgs clampedTravArgs: clampedTravArgs
 	"Send the specified message to the server. Answer a delegate representing the server object
 	returned from the server execution, or a GbsError.
@@ -70,13 +72,13 @@ GbxGciMultiTripInterface >> roundTripForInteraction: serverInteraction withStore
 			callResult resultOrError]
 		ifTrue: [serverInteraction defaultResult]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxGciMultiTripInterface >> x509LoginFor: parameters
 
 	self gbsMessenger
 		error: 'x509 login is not supported with this GemStone server version.'
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxGciMultiTripInterface >> resultObjectFromPrimResult: callResult
 
 	| result |
@@ -88,7 +90,7 @@ GbxGciMultiTripInterface >> resultObjectFromPrimResult: callResult
 			[result resultOop: (GbxDelegate oopValue: callResult session: thisSession)].
 	^result
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxGciMultiTripInterface >> traverseDelegates: delegates forInteraction: serverInteraction level: anInteger
 	
 	| clampedTravArgs result completed |
@@ -115,7 +117,7 @@ GbxGciMultiTripInterface >> traverseDelegates: delegates forInteraction: serverI
 	completed ifFalse: [self needMoreTraversal].
 	serverInteraction fetchTraversal traversalCompleted: completed
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxGciMultiTripInterface >> storeTravDoArgsForEvaluation: evaluation
 	"Answer an initialized struct."
 
@@ -129,7 +131,7 @@ GbxGciMultiTripInterface >> storeTravDoArgsForEvaluation: evaluation
 		alteredNumPairs: self alteredOopBuffer "bufferSize" numOops // 2.
 	^storeTravDoArgs
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxGciMultiTripInterface >> storeTravDoArgsForMessageSend: messageSend 
 	"Allocates C memory for the selector; sender must free when done."
 
@@ -142,7 +144,7 @@ GbxGciMultiTripInterface >> storeTravDoArgsForMessageSend: messageSend
 		alteredNumPairs: self alteredOopBuffer numOops // 2.
 	^storeTravDoArgs
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxGciMultiTripInterface >> continueAfter: error forInteraction: serverInteraction
 	"Perform the specified server interaction. Answer a delegate representing the server object
 	returned from the server, or a GbsError."
@@ -178,7 +180,7 @@ GbxGciMultiTripInterface >> continueAfter: error forInteraction: serverInteracti
 				level: 1].
 	^result resultOrError
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxGciMultiTripInterface >> storeTravDoArgsForTraversal: serverTraversal
 	"In multi-trip, a traversal does a StoreTravDo that just returns self,
 	for the sole purpose of flushing objects to the server and fitting in with the other code."
@@ -204,7 +206,7 @@ GbxGciMultiTripInterface >> storeTravDoArgsForTraversal: serverTraversal
 		storeTravFlags: (self storeTravFlagsForInteraction: serverTraversal).	"doFlags of 2: Disable async events, disable debug, no single step"
 	^storeTravDoArgs
 
-{ #category : #'support' }
+{ #category : 'support' }
 GbxGciMultiTripInterface >> storeTravDoWithArgs: storeTravDoArgs
 	"Execute a GciStoreTravDo, using the given 
 	GbxGciStoreTravDoArgsSType as an argument.
@@ -227,7 +229,7 @@ GbxGciMultiTripInterface >> storeTravDoWithArgs: storeTravDoArgs
 						forSession: thisSession).
 	^result
 
-{ #category : #'GbxStoreTravDoResult interface' }
+{ #category : 'GbxStoreTravDoResult interface' }
 GbxGciMultiTripInterface >> fetchAlteredObjectsInto: aResult
 
 	| result numDirtyOopsPtr numAlteredPairsPtr |
@@ -259,23 +261,23 @@ GbxGciMultiTripInterface >> fetchAlteredObjectsInto: aResult
 							forSession: thisSession);
 				alteredCompleted: result]
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxGciMultiTripInterface >> newServerEvaluation
 	^GbxMultiTripServerEvaluation interface: thisSession serverInterface
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxGciMultiTripInterface >> newServerTraversal
 	^GbxMultiTripServerTraversal interface: thisSession serverInterface
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxGciMultiTripInterface >> newMessageSend
 	^GbxMultiTripServerMessageSend interface: thisSession serverInterface
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxGciMultiTripInterface >> addToNoLongerReplicated: aDelegate
 	"do nothing, only used in single trip"
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxGciMultiTripInterface >> saveFetchedOops: delegates
 	"In multi-trip, objects are fetched with no subleaf headers, so they are not in the export set."
 	"Need to send the session's version of this method so that we grab the sessionProtect first."

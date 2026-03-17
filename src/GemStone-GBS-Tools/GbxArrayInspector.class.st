@@ -1,24 +1,26 @@
 Class {
-	#name : #'GbxArrayInspector',
-	#superclass : #'ArrayInspector',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxArrayInspector',
+	#superclass : 'ArrayInspector',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxArrayInspector >> privateRemoveAtIndices: anIntegerCollection 
 	"GBS: remove in reverse order so as not to disturb the indexing"
 
 	anIntegerCollection asSortedCollection 
 		reverseDo: [:anIndex | object delegate remotePerform: #removeAtIndex: with: anIndex asGSObject]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxArrayInspector >> rememberUndo: ignored
 
 	"GemStone undo not supported"
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxArrayInspector >> privateMoveAllAtIndices: aCollection beforeIndex: anIndex
 	"Reposition elements at indices listed in aCollection so that they are all 
 	located at indices {anIndex, anIndex+1, ...}. The size of the resulting collection 
@@ -42,14 +44,14 @@ GbxArrayInspector >> privateMoveAllAtIndices: aCollection beforeIndex: anIndex
 		with: insertionPoint asGSObject.
 	^insertionPoint to: insertionPoint + aCollection size - 1
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxArrayInspector >> refresh
 	"refresh the remote array values, then refresh the gui"
 
 	object refreshArray.
 	super refresh
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxArrayInspector >> pickSingleObjectIn: partCollection ifCancelled: aBlock
 	"return the delegate, not the value (which is a wrapper)"
 
@@ -85,18 +87,18 @@ GbxArrayInspector >> pickSingleObjectIn: partCollection ifCancelled: aBlock
 		lines: 8
 		cancel: aBlock
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxArrayInspector >> selectIndices: indexCollection 
 	| selections |
 	selections := indexCollection 
 				collect: [:idx | self fieldListHolder list at: idx].
 	self selectAll: selections
 
-{ #category : #'decomposing' }
+{ #category : 'decomposing' }
 GbxArrayInspector >> partCount
 	^object cachedElements size
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxArrayInspector >> add
 
 	| expression newValue |
@@ -115,22 +117,22 @@ GbxArrayInspector >> add
 		refresh;
 		select: (self partAt: (object delegate performOnGsServer: #size))
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxArrayInspector >> gbxCacheInterval: anInterval 
 	object cacheArrayInterval: anInterval
 
-{ #category : #'actions-drag/drop' }
+{ #category : 'actions-drag/drop' }
 GbxArrayInspector >> drop: partCollection at: aPart 
 	aPart 
 		value: (self pickSingleObjectIn: partCollection ifCancelled: [^self]).
 	self refresh.
 	self select: aPart
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxArrayInspector >> partAt: anInteger 
 	^object cachedElements at: anInteger
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxArrayInspector >> initialize: anObject
 	
 	undoHistory := OrderedCollection new.
@@ -139,11 +141,11 @@ GbxArrayInspector >> initialize: anObject
 	super refresh.
 	self session: anObject delegate noCheckSession.
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxArrayInspector class >> gbxIsGbsInspector
 	^true
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxArrayInspector class >> tabLabel
 
 	^self gbxTabLabel: 'GS Elements'

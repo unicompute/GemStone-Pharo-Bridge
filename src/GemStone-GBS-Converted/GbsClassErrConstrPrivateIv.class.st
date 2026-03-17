@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsClassErrConstrPrivateIv',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsClassErrConstrPrivateIv',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsClassErrConstrPrivateIv class >> gemStoneErrorNumber6430 ^2150
 

@@ -1,12 +1,20 @@
 Class {
-	#name : #'GbsSessionParameters',
-	#superclass : #'GbxSessionSpecification',
-	#instVars : [ #'gemStoneName' #'hostUsername' #'hostPassword' #'gemService' #'rememberPassword' #'rememberHostPassword' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsSessionParameters',
+	#superclass : 'GbxSessionSpecification',
+	#instVars : [
+		'gemStoneName',
+		'hostUsername',
+		'hostPassword',
+		'gemService',
+		'rememberPassword',
+		'rememberHostPassword'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbsSessionParameters >> = aGbsSessionParameters
 
 	^(aGbsSessionParameters isKindOf: self class)
@@ -15,7 +23,7 @@ GbsSessionParameters >> = aGbsSessionParameters
 		and: [self username = aGbsSessionParameters username
 		and: [self connectors = aGbsSessionParameters connectors]]]]
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbsSessionParameters >> hash
 
 	^self gemStoneName hash
@@ -23,49 +31,49 @@ GbsSessionParameters >> hash
 	+ self username hash
 	+ self connectors hash
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsSessionParameters >> hostUsername
 
 	^hostUsername
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsSessionParameters >> hostUsername: aHostUsername
 
 	hostUsername := aHostUsername
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsSessionParameters >> rememberHostPassword
 	^rememberHostPassword
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsSessionParameters >> rememberHostPassword: aBoolean
 
 	"If aBoolean is true, this instance will remember the host password from login to login.  If false, the password will not be stored, but will be prompted for at each login."
 
 	rememberHostPassword := aBoolean
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsSessionParameters >> rememberPassword
 	^rememberPassword
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsSessionParameters >> gemService
 
 	^gemService
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsSessionParameters >> gemService: aGemService
 
 	gemService := aGemService
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsSessionParameters >> rememberPassword: aBoolean
 
 	"If aBoolean is true, this instance will remember the GemStone password from login to login.  If false, the password will not be stored, but will be prompted for at each login."
 
 	rememberPassword := aBoolean
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsSessionParameters >> gemServiceHost
 	"Exception handling included to protect against pathological
 	 cases like creating the instance using #basicNew or assigning
@@ -86,26 +94,26 @@ GbsSessionParameters >> gemServiceHost
 		on: Error
 		do: [:ex | ^''].
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsSessionParameters >> gemStoneName
 
 	^gemStoneName
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsSessionParameters >> gemStoneName: aGemStoneName
 	gemStoneName := aGemStoneName
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsSessionParameters >> hostPassword
 
 	^hostPassword
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsSessionParameters >> hostPassword: aHostPassword
 
 	hostPassword := aHostPassword
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbsSessionParameters >> printOn: aStream
 
 	| hostname |
@@ -119,7 +127,7 @@ GbsSessionParameters >> printOn: aStream
 	(hostname := self gemServiceHost) isEmpty
 		ifFalse: [aStream nextPutAll: ' @ '; print: hostname].
 
-{ #category : #'session management' }
+{ #category : 'session management' }
 GbsSessionParameters >> loginRpc
 
 	"Log into GemStone with the receiver parameters, spawning an rpc
@@ -135,7 +143,7 @@ GbsSessionParameters >> loginRpc
 		onPasswordExpirationWarning: [ :aGSError |
 			self gbsMessenger warn: aGSError messageText ]
 
-{ #category : #'session management' }
+{ #category : 'session management' }
 GbsSessionParameters >> login
 	"If a linked session is possible, do a linked login.  Otherwise, do an rpc."
 
@@ -147,7 +155,7 @@ GbsSessionParameters >> login
 				ifTrue: [self loginLnk]
 				ifFalse: [self loginRpc]]
 
-{ #category : #'session management' }
+{ #category : 'session management' }
 GbsSessionParameters >> loginLinked: aBoolean onPasswordExpirationWarning: aOneArgBlock
 	"Log in to GemStone with the receiver's login parameters.  Login linked if aBoolean
 	 is true, rpc if aBoolean is false.  If rtPasswordExpirationWarning occurs, aOneArgBlock
@@ -164,7 +172,7 @@ GbsSessionParameters >> loginLinked: aBoolean onPasswordExpirationWarning: aOneA
 				aOneArgBlock value: ex originator.
 				ex resume]
 
-{ #category : #'session management' }
+{ #category : 'session management' }
 GbsSessionParameters >> loginLnk
 
 	"Log into GemStone with the receiver parameters, using a gem session
@@ -180,14 +188,14 @@ GbsSessionParameters >> loginLnk
 		onPasswordExpirationWarning: [ :aGSError |
 			self gbsMessenger warn: aGSError messageText ]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsSessionParameters >> checkPasswords
 	"Private"
 
 	rememberPassword ifFalse: [ password := '' ].
 	rememberHostPassword ifFalse: [ hostPassword := '' ]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsSessionParameters >> passwordsLinked: linked ifCancel: cancelBlock
 
 	"Private.  Return password and hostPassword in a two-element array.  If password or hostPassword are not remembered, this method will prompt for them.  If linked, hostPassword will not be prompted for.  If the user cancels during prompting, the value of cancelBlock will be returned"
@@ -212,11 +220,11 @@ GbsSessionParameters >> passwordsLinked: linked ifCancel: cancelBlock
 
 	^result
 
-{ #category : #'defaults' }
+{ #category : 'defaults' }
 GbsSessionParameters class >> defaultGemServiceName
 	^'gemnetobject'
 
-{ #category : #'defaults' }
+{ #category : 'defaults' }
 GbsSessionParameters class >> registerNewParameters: aBoolean
 
 	"If set to true, new instances are automatically registered with the session manager,
@@ -226,12 +234,12 @@ GbsSessionParameters class >> registerNewParameters: aBoolean
 
 	RegisterNewParameters := aBoolean
 
-{ #category : #'defaults' }
+{ #category : 'defaults' }
 GbsSessionParameters class >> defaultStoneName
 
 	^'gs64stone'
 
-{ #category : #'defaults' }
+{ #category : 'defaults' }
 GbsSessionParameters class >> registerNewParameters
 
 	"If set to true, new instances are automatically registered with the session manager,
@@ -240,7 +248,7 @@ GbsSessionParameters class >> registerNewParameters
 	RegisterNewParameters isNil ifTrue: [ RegisterNewParameters := false ].
 	^RegisterNewParameters
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsSessionParameters class >> newWithGemStoneName: aGemStoneName
 username: aUsername
 password: aPassword
@@ -258,7 +266,7 @@ gemService: aGemServiceName
 		rememberHostPassword: false
 		gemService: aGemServiceName
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsSessionParameters class >> new
 
 	"Returns an instance of this class with default login parameters"
@@ -269,7 +277,7 @@ GbsSessionParameters class >> new
 		username: ''
 		password: ''
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsSessionParameters class >> newWithGemStoneName: aGemStoneName
 username: aUsername
 password: aPassword
@@ -290,7 +298,7 @@ gemService: aGemServiceName
 		gemService: aGemServiceName
 		addToKnownParameters: self registerNewParameters
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsSessionParameters class >> newWithGemStoneName: aGemStoneName
 username: aUsername
 password: aPassword
@@ -317,7 +325,7 @@ addToKnownParameters: addToKnown
 	addToKnown ifTrue: [ GBSM addParameters: inst ].
 	^inst
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsSessionParameters class >> newWithGemStoneName: aGemStoneName username: aUsername password: aPassword
 
 	^self

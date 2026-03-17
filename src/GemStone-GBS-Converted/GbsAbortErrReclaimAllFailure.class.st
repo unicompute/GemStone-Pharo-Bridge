@@ -1,8 +1,10 @@
 Class {
-	#name : #'GbsAbortErrReclaimAllFailure',
-	#superclass : #'GbsAbortingError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsAbortErrReclaimAllFailure',
+	#superclass : 'GbsAbortingError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

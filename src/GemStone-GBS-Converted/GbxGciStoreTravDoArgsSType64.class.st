@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxGciStoreTravDoArgsSType64',
-	#superclass : #'GbxGciStoreTravDoArgsSType',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxGciStoreTravDoArgsSType64',
+	#superclass : 'GbxGciStoreTravDoArgsSType',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private - printing' }
+{ #category : 'private - printing' }
 GbxGciStoreTravDoArgsSType64 >> printStructEndOn: aStream indent: indent 
 	aStream nextPutAll: 'alteredTheOops = '.
 	self alteredTheOops printOn: aStream.
@@ -24,7 +26,7 @@ GbxGciStoreTravDoArgsSType64 >> printStructEndOn: aStream indent: indent
 	self execBlockNumArgs printOn: aStream.
 	aStream crtab: indent
 
-{ #category : #'private - printing' }
+{ #category : 'private - printing' }
 GbxGciStoreTravDoArgsSType64 >> printCArgsOn: aStream indent: indent 
 	aStream nextPutAll: 'process = '.
 	self process printOn: aStream.
@@ -33,7 +35,7 @@ GbxGciStoreTravDoArgsSType64 >> printCArgsOn: aStream indent: indent
 	self replaceTopOfStackWith printOn: aStream.
 	aStream crtab: indent
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxGciStoreTravDoArgsSType64 >> initialize
 	"Set things appropriately for initial allocation."
 

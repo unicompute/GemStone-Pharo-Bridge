@@ -1,30 +1,43 @@
 Class {
-	#name : #'GbxInspectionWrapperWithSession',
-	#superclass : #'GbxInspectionWrapper',
-	#instVars : [ #'objectText' #'delegate' #'remoteClassName' #'remoteClass' #'objectIsClass' #'maxElements' #'objectSize' #'cache' #'basicCache' #'session' #'cachedInspectorClasses' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxInspectionWrapperWithSession',
+	#superclass : 'GbxInspectionWrapper',
+	#instVars : [
+		'objectText',
+		'delegate',
+		'remoteClassName',
+		'remoteClass',
+		'objectIsClass',
+		'maxElements',
+		'objectSize',
+		'cache',
+		'basicCache',
+		'session',
+		'cachedInspectorClasses'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'GemStone extensions' }
+{ #category : 'GemStone extensions' }
 GbxInspectionWrapperWithSession >> gbxIsWrapped
 	^true
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> basicCache: anObject
 	basicCache := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> currentObjectSize
 	"how many objects have we brought across the wire"
 
 	^self objectSize min: maxElements
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> session
 	^session
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> delegateInspectorExtraAttributes
 	"the blocks are so that the derived attributes can update themselves with every entry into the field"
 
@@ -96,19 +109,19 @@ GbxInspectionWrapperWithSession >> delegateInspectorExtraAttributes
 				textBlock: [self debugPrintBasicIn: aSession cachedClient: cachedClient]).
 	^derivedAttributes
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> size
 	^self currentObjectSize
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> gbxDoItReceiver
 	^delegate
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> delegate
 	^delegate
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> basicSize
 	"used to make sure the basic tab consistently shows the number
 	of indexed variables reported by _basicSize"
@@ -125,19 +138,19 @@ GbxInspectionWrapperWithSession >> basicSize
 				do: [:ex | 0]].
 	^objectSize
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> remoteClass
 	^remoteClass
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> objectIsClass: anObject
 	objectIsClass := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> session: anObject
 	session := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> objectSize
 	"how many objects are available"
 	"if we can't get the semaphore, assume no elements as its the only safe thing to do"
@@ -154,25 +167,25 @@ GbxInspectionWrapperWithSession >> objectSize
 				do: [:ex | 0]].
 	^objectSize
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> objectText
 
 	^objectText
 		ifNil: [objectText := self session evaluate: 'self asQuadByteString' context: delegate]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> remoteClassName
 	^remoteClassName
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> delegate: anObject
 	delegate := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> remoteClass: anObject
 	remoteClass := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> doItReceiver
 	"This answer isn't correct, but it's expedient.
 	You get into trouble if you return an actual proxy here.
@@ -180,22 +193,22 @@ GbxInspectionWrapperWithSession >> doItReceiver
 	
 	^delegate
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> remoteClassName: anObject
 	remoteClassName := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapperWithSession >> resetObjectSize
 	objectSize := nil.
 	self cache actualSize: nil.
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxInspectionWrapperWithSession >> isSorted
 	"assuming we're a collection, is our collection sorted?"
 
 	^cache isSorted
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxInspectionWrapperWithSession >> isUncached
 	"are we cached in the gs cache?"
 
@@ -207,7 +220,7 @@ GbxInspectionWrapperWithSession >> isUncached
 				unlessBlocked: [^false].
 	^(cachedProxy == localObject) not
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxInspectionWrapperWithSession >> objectIsClass
 	"if we encounter a problem getting the value, just return false"
 	
@@ -227,16 +240,16 @@ GbxInspectionWrapperWithSession >> objectIsClass
 						do: [:ex | ^false]]].
 	^objectIsClass
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxInspectionWrapperWithSession >> isUnretrievable
 
 	^remoteClassName isNil
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> critical: criticalBlock unlessBlocked: blockedBlock 
 	^session critical: criticalBlock unlessBlocked: blockedBlock
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> gbxInspectorClasses
 
 	| superClassInfo |
@@ -256,14 +269,14 @@ GbxInspectionWrapperWithSession >> gbxInspectorClasses
 	"Does not inherit from Object, use a basic inspector."
 	^Array with: GbxBasicInspector
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> debugPrintClientBlocked
 	| ws |
 	ws := String new writeStream.
 	delegate debugPrintBasicClientBlockedOn: ws.
 	^ws contents
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> delegatePrintString
 
 	| ws |
@@ -271,7 +284,7 @@ GbxInspectionWrapperWithSession >> delegatePrintString
 	delegate gbxDebugPrintOn: ws.
 	^ws contents
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> debugPrintBasicIn: aSession cachedClient: client 
 	| ws |
 	ws := String new writeStream.
@@ -281,14 +294,14 @@ GbxInspectionWrapperWithSession >> debugPrintBasicIn: aSession cachedClient: cli
 		on: ws.
 	^ws contents
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> debugPrintIsSpecial
 	| ws |
 	ws := String new writeStream.
 	delegate debugPrintBasicIsSpecialOn: ws.
 	^ws contents
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> debugPrintIsDefunct
 	| ws |
 	ws := String new writeStream.
@@ -296,7 +309,7 @@ GbxInspectionWrapperWithSession >> debugPrintIsDefunct
 		unlessBlocked: [ws nextPutAll: 'Unretrievable GemStone object'].
 	^ws contents
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> debugPrintFlags
 
 	| ws |
@@ -308,11 +321,11 @@ GbxInspectionWrapperWithSession >> debugPrintFlags
 	delegate debugPrintIsIdentityClampedOn: ws.
 	^ws contents
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> gbxOldInspect
 	^delegate gbxOldInspect
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> debugPrintExportInfoLoggedIn: loggedIn in: aSession cachedClient: client 
 	| ws |
 	ws := String new writeStream.
@@ -325,7 +338,7 @@ GbxInspectionWrapperWithSession >> debugPrintExportInfoLoggedIn: loggedIn in: aS
 		unlessBlocked: [ws nextPutAll: 'Unretrievable GemStone object'].
 	^ws contents
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxInspectionWrapperWithSession >> fetchInitialInfoUsingReflection
 	"Get the object's class, class name, and whether the object is a (non-meta) class, without sending the object any messages. This way will work even if the object being inspected is a proxy that lies when sent #class, such as a ClientForwarder"
 
@@ -340,11 +353,11 @@ GbxInspectionWrapperWithSession >> fetchInitialInfoUsingReflection
 		gbxArray]'
 		with: delegate
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxInspectionWrapperWithSession >> initialize
 	maxElements := 200
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxInspectionWrapperWithSession >> fetchInitialInfo
 	"initial information that can be learned about the remote object should be done here
 	 to minimize round trips and handle elegantly the blocked semaphore case
@@ -374,7 +387,7 @@ GbxInspectionWrapperWithSession >> fetchInitialInfo
 				self objectIsClass: false].
 	^#succeeded
 
-{ #category : #'user interface' }
+{ #category : 'user interface' }
 GbxInspectionWrapperWithSession >> gbxInspectorClassesDictionaryByName
 
 	^(Dictionary new)
@@ -382,7 +395,7 @@ GbxInspectionWrapperWithSession >> gbxInspectorClassesDictionaryByName
 			put: (Array with: GbxTrippyDictionaryInspector with: GbxBasicInspector);
 		yourself
 
-{ #category : #'user interface' }
+{ #category : 'user interface' }
 GbxInspectionWrapperWithSession >> inspect
 	"added to support old inspectors"
 
@@ -390,7 +403,7 @@ GbxInspectionWrapperWithSession >> inspect
 		ifTrue: [delegate inspect]
 		ifFalse: [super inspect]
 
-{ #category : #'user interface' }
+{ #category : 'user interface' }
 GbxInspectionWrapperWithSession >> gbxInspectorClassesDictionary
 	^(Dictionary new)
 		at: OCharacterCollection
@@ -411,7 +424,7 @@ GbxInspectionWrapperWithSession >> gbxInspectorClassesDictionary
 		at: Onil put: Array new;
 		yourself
 
-{ #category : #'user interface' }
+{ #category : 'user interface' }
 GbxInspectionWrapperWithSession >> inspectorCollaborators
 
 	| oc proceed |
@@ -437,12 +450,12 @@ GbxInspectionWrapperWithSession >> inspectorCollaborators
 								ifFalse: [Tools.Trippy.InspectorShell gbxCancelToken]])].
 	^oc
 
-{ #category : #'user interface' }
+{ #category : 'user interface' }
 GbxInspectionWrapperWithSession >> browse
 
 	delegate browseHierarchy
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxInspectionWrapperWithSession >> refreshSet
 	"hand off to the cache for retrieval"
 
@@ -451,7 +464,7 @@ GbxInspectionWrapperWithSession >> refreshSet
 	self cache refreshSet.
 	^self cache elements
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxInspectionWrapperWithSession >> refreshIdentityBag
 	"force a full refresh of the bag. hand off to the cache for retrieval"
 
@@ -460,13 +473,13 @@ GbxInspectionWrapperWithSession >> refreshIdentityBag
 	self cache refreshIdentityBag.
 	^self cache elements
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxInspectionWrapperWithSession >> refreshText
 	self resetObjectSize.
 	objectText := nil.
 	^self objectText
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxInspectionWrapperWithSession >> refreshDictionary
 	"hand off to the cache for retrieval"
 
@@ -475,7 +488,7 @@ GbxInspectionWrapperWithSession >> refreshDictionary
 	self cache refreshDictionary.
 	^self cache elements
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxInspectionWrapperWithSession >> refreshBasicSet
 	"hand off to the cache for retrieval"
 
@@ -484,7 +497,7 @@ GbxInspectionWrapperWithSession >> refreshBasicSet
 	self basicCache refreshSet.
 	^self basicCache elements
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxInspectionWrapperWithSession >> refreshArray
 	"hand off to the cache for retrieval"
 
@@ -493,7 +506,7 @@ GbxInspectionWrapperWithSession >> refreshArray
 	self cache refreshArray.
 	^self cache elements
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxInspectionWrapperWithSession >> refreshBasicArray
 	"hand off to the cache for retrieval"
 
@@ -502,21 +515,21 @@ GbxInspectionWrapperWithSession >> refreshBasicArray
 	self basicCache refreshArray.
 	^self basicCache elements
 
-{ #category : #'collections' }
+{ #category : 'collections' }
 GbxInspectionWrapperWithSession >> cacheDictionaryInterval: anInterval 
 	"cache objects in collection in this interval"
 
 	self cache cacheDictionaryInterval: anInterval
 
-{ #category : #'collections' }
+{ #category : 'collections' }
 GbxInspectionWrapperWithSession >> cachedElements
 	^self cache elements
 
-{ #category : #'collections' }
+{ #category : 'collections' }
 GbxInspectionWrapperWithSession >> cacheArrayInterval: anInterval 
 	self cache cacheArrayInterval: anInterval
 
-{ #category : #'collections' }
+{ #category : 'collections' }
 GbxInspectionWrapperWithSession >> basicNamedVariablesProtectedBy: protected
 
 	| instVarNames nameObjArray values valuePrintStrings result |
@@ -537,32 +550,32 @@ GbxInspectionWrapperWithSession >> basicNamedVariablesProtectedBy: protected
 						index: idx)].
 	^result
 
-{ #category : #'collections' }
+{ #category : 'collections' }
 GbxInspectionWrapperWithSession >> cache
 	cache isNil ifTrue: [cache := GbxCollectionCache on: delegate].
 	^cache
 
-{ #category : #'collections' }
+{ #category : 'collections' }
 GbxInspectionWrapperWithSession >> cachedRanges
 	"pass the request for cached indices off to the GbxCollectionCache"
 
 	^self cache cachedRanges
 
-{ #category : #'collections' }
+{ #category : 'collections' }
 GbxInspectionWrapperWithSession >> basicCache
 	^basicCache
 
-{ #category : #'collections' }
+{ #category : 'collections' }
 GbxInspectionWrapperWithSession >> cacheSetInterval: anInterval 
 	"cache objects in collection in this interval"
 
 	self cache cacheSetInterval: anInterval
 
-{ #category : #'collections' }
+{ #category : 'collections' }
 GbxInspectionWrapperWithSession >> cacheIdentityBagInterval: anInterval 
 	self cache cacheIdentityBagInterval: anInterval
 
-{ #category : #'collections' }
+{ #category : 'collections' }
 GbxInspectionWrapperWithSession >> variablesSourceString
 
 	^' [:gbxOuterObject | | gbxValues gbxNames gbxValuePrintStrings gbxOuterClass |
@@ -581,13 +594,13 @@ GbxInspectionWrapperWithSession >> variablesSourceString
 	Array with: gbxNames with: gbxValues with: gbxValuePrintStrings]
 '
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxInspectionWrapperWithSession >> uncachedPrintString
 	"determine if we are looking at an uncached proxy (probably a forwarder)"
 
 	^self isUncached ifFalse: [String new] ifTrue: ['Uncached ']
 
-{ #category : #'utility' }
+{ #category : 'utility' }
 GbxInspectionWrapperWithSession class >> enhancedRemotePrintString
 	"if the object we want to printString can have some useful info attached, do it here. For convenience, we grab the hex value of chars from the server.
 	Expected preface: Declare gbxObject, gbxClass, gbxWriteStream. Set gbxObject to the object you want the print string of.
@@ -619,7 +632,7 @@ gbxFallbackString := gbxClass asString describeClassName.
 			nextPutAll: (gbxObject asInteger printStringRadix: 16 showRadix: true);
 			nextPut: $"].'
 
-{ #category : #'private-events' }
+{ #category : 'private-events' }
 GbxInspectionWrapperWithSession class >> constructEventsTriggered
 	^(super constructEventsTriggered)
 		add: #objectChanged;

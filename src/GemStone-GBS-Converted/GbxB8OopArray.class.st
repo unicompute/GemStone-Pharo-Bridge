@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxB8OopArray',
-	#superclass : #'GbxOopArray64',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxB8OopArray',
+	#superclass : 'GbxOopArray64',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'putting' }
+{ #category : 'putting' }
 GbxB8OopArray >> addUpper: upperBytes lower3: lower3
 	"Given a pair of SmallIntegers, one that represent the lower three bytes of the oop number and 
 	one that represents the upper two bytes, adds an 8-byte POM oop to the buffer.
@@ -31,7 +33,7 @@ GbxB8OopArray >> addUpper: upperBytes lower3: lower3
 		put: l0 * 16r100 + 1.
 	numOops := numOops + 1
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxB8OopArray >> bufferOopClass
 	
 	^GbxB8BufferOop

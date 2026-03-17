@@ -1,8 +1,10 @@
 Class {
-	#name : #'SocketError',
-	#superclass : #'IOError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'SocketError',
+	#superclass : 'IOError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

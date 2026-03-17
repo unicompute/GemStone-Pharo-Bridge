@@ -1,12 +1,15 @@
 Class {
-	#name : #'GbxServerMap',
-	#superclass : #'GbxOopKeyedDictionary',
-	#instVars : [ #'isWeak' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxServerMap',
+	#superclass : 'GbxOopKeyedDictionary',
+	#instVars : [
+		'isWeak'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'replication support' }
+{ #category : 'replication support' }
 GbxServerMap >> beStrongAndFinalizeIntoNoLongerReplicatedBuffer: noLongerReplicatedBuffer gcedBuffer: gcedBuffer
 	"1. Change all of my references to delegates and to client objects to strong references. 
 	2. Scan all node table segments that need finalization, and add appropriate oops into the given buffers.
@@ -28,7 +31,7 @@ GbxServerMap >> beStrongAndFinalizeIntoNoLongerReplicatedBuffer: noLongerReplica
 				beStrongAndFinalizeIntoNoLongerReplicatedBuffer: noLongerReplicatedBuffer
 				gcedBuffer: gcedBuffer]
 
-{ #category : #'replication support' }
+{ #category : 'replication support' }
 GbxServerMap >> beWeak
 	"Change all of my references to delegates and to client objects to weak references."
 	"The sender must hold my session's sessionProtect"
@@ -41,7 +44,7 @@ GbxServerMap >> beWeak
 	self nodesDo: [:node | node beWeak].
 	isWeak := true
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerMap >> isWeak: aBoolean
 	"Used only when growing.
 	Should not be used when the map can have any nodes, since it does not propagate the weakness to the nodes."
@@ -53,7 +56,7 @@ GbxServerMap >> isWeak: aBoolean
 			gbxAssert.
 	isWeak := aBoolean
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerMap >> delegateForOop: oop
 	" Answer the canonical delegate for he oop. If the given oop is a delegate, and there is no 
 	canonical delegate for the oop, it becomes the canonical delegate for the oop."
@@ -72,12 +75,12 @@ GbxServerMap >> delegateForOop: oop
 	node == nil ifTrue: [node := self createNodeAt: index].
 	^node delegateForOop: oop
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxServerMap >> isWeak
 
 	^isWeak
 
-{ #category : #'enumeration' }
+{ #category : 'enumeration' }
 GbxServerMap >> delegatesAndClientObjsDo: aBlock
 	"For each entry I hold, evaluate the given two-argument block with arguments of the delegate and the client object.
 	The delegate will not be nil, but the client object may be nil."
@@ -86,12 +89,12 @@ GbxServerMap >> delegatesAndClientObjsDo: aBlock
 	self check.
 	self nodesDo: [:node | node delegatesAndClientObjsDo: aBlock]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerMap >> nodeClass
 
 	^GbxServerMapNode
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerMap >> copyEmptyWithCapacity: newSize
 	"Used when growing"
 
@@ -100,7 +103,7 @@ GbxServerMap >> copyEmptyWithCapacity: newSize
 	newSelf isWeak: isWeak.
 	^newSelf
 
-{ #category : #'removing' }
+{ #category : 'removing' }
 GbxServerMap >> pretendClientIsCollected: aDelegate
 	"Nil out the client slot corresponding to aDelegate, and add the object to the noLongerReplicated oops,
 	which together simulate the client object being GCed."
@@ -113,7 +116,7 @@ GbxServerMap >> pretendClientIsCollected: aDelegate
 	node pretendClientIsCollected: aDelegate.
 	session addToNoLongerReplicated: aDelegate
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxServerMap >> initialize
 
 	super initialize.

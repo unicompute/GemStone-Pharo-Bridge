@@ -1,8 +1,10 @@
 Class {
-	#name : #'GsFile',
-	#superclass : #'GbsServerClass',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GsFile',
+	#superclass : 'GbsServerClass',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

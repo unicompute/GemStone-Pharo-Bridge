@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRepErrFileNameTooBig',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRepErrFileNameTooBig',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRepErrFileNameTooBig class >> gemStoneErrorNumber6430 ^2176
 

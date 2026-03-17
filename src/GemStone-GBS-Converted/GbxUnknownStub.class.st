@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxUnknownStub',
-	#superclass : #'GbxObjectStub',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxUnknownStub',
+	#superclass : 'GbxObjectStub',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'faulting' }
+{ #category : 'faulting' }
 GbxUnknownStub >> faultToLevel: levelOrNil session: session delegate: delegate
 	"Lazy faulting support.  Cause this stub to fault in from the repository to the specified level.
 	If this unknown stub was created because of delayed finalization of the ServerMap, it might or might not be in the server's export set,

@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsStDBPrimitiveInPragma',
-	#superclass : #'GbsCompilerError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsStDBPrimitiveInPragma',
+	#superclass : 'GbsCompilerError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsStDBPrimitiveInPragma class >> gemStoneErrorNumber6430 ^1064
 

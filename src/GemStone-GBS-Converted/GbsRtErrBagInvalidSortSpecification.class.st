@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrBagInvalidSortSpecification',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrBagInvalidSortSpecification',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrBagInvalidSortSpecification class >> gemStoneErrorNumber6430 ^2315
 

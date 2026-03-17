@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsStDBErrEofInComment',
-	#superclass : #'GbsCompilerError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsStDBErrEofInComment',
+	#superclass : 'GbsCompilerError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsStDBErrEofInComment class >> gemStoneErrorNumber6430 ^1005
 

@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrRemoveSpecialUser',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrRemoveSpecialUser',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrRemoveSpecialUser class >> gemStoneErrorNumber6430 ^2379
 

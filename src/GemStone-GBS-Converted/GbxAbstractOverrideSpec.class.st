@@ -1,18 +1,20 @@
 Class {
-	#name : #'GbxAbstractOverrideSpec',
-	#superclass : #'Object',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxAbstractOverrideSpec',
+	#superclass : 'Object',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAbstractOverrideSpec class >> spec
 	"Answer the result of evaluating the spec* method which is closest to the current VisualWorks version, but not newer."
 
 	^self perform: self specMethodSelector
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAbstractOverrideSpec class >> specMethodPragma
 
 	| vwVersion versionPragmas |
@@ -22,36 +24,36 @@ GbxAbstractOverrideSpec class >> specMethodPragma
 		detect: [:each | vwVersion >= each arguments first]
 		ifNone: [self error: 'No available override spec for VisualWorks version ', vwVersion printString]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAbstractOverrideSpec class >> versionPragmas
 
 	^(Pragma allNamed: #version: in: self class)
 		asSortedCollection: [:a :b | a arguments first > b arguments first]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAbstractOverrideSpec class >> sourceStringFor: aSelector
 	"Caution: This is not a general purpose method.
 	 Override Spec classes only use class-side behavior."
 
 	^(self class sourceCodeAt: aSelector) asString
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAbstractOverrideSpec class >> specsPackage
 
 	^self package
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAbstractOverrideSpec class >> overridesPackageName
 	"Answer the name of the packing in which the overrides will be installed from the spec."
 
 	^self subclassResponsibility
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAbstractOverrideSpec class >> specMethodVersion
 
 	^self specMethodPragma arguments first
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAbstractOverrideSpec class >> overridesPackage
 	"Answer the name of the packing in which the overrides will be installed from the spec."
 
@@ -59,18 +61,18 @@ GbxAbstractOverrideSpec class >> overridesPackage
 		resolvePackageName: self overridesPackageName
 		ifFail: [^nil]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAbstractOverrideSpec class >> specMethodSource
 	"Answer the source code for the spec* method which is closest to the current VisualWorks version, but not newer."
 
 	^self sourceStringFor: self specMethodSelector
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxAbstractOverrideSpec class >> specMethodSelector
 
 	^self specMethodPragma selector
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxAbstractOverrideSpec class >> differencesBetweenInstalledOverridesAndSpec
 	"Answer a Dictionary identifying the spec attribute differences between a
 	 spec derived from the installed overrides and the version specific spec."
@@ -85,7 +87,7 @@ GbxAbstractOverrideSpec class >> differencesBetweenInstalledOverridesAndSpec
 				yourself].
 	^installedOverridesSpec differencesFrom: self spec
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxAbstractOverrideSpec class >> areInstalledOverridesUnsaved
 	"If the installed overrides have been cleared out, there is nothing to save.
 	 If they match what has been saved, nothing more need be done.
@@ -98,7 +100,7 @@ GbxAbstractOverrideSpec class >> areInstalledOverridesUnsaved
 	^installedOverridesSpec hasEffect
 		and: [self specContentDiffersFromInstalledSpec: installedOverridesSpec]
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxAbstractOverrideSpec class >> specContentDiffersFromInstalledSpec: installedOverridesSpec
 
 	| definedSpec |
@@ -111,7 +113,7 @@ GbxAbstractOverrideSpec class >> specContentDiffersFromInstalledSpec: installedO
 						ex pass].
 	^installedOverridesSpec contentDiffersFrom: definedSpec
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxAbstractOverrideSpec class >> canInstalledOverridesBeSafelyRemoved
 	"If the installed overrides have not been cleared out, they can be if they match the spec.
 	 We sometimes find some packages have overrides installed with others empty.
@@ -122,7 +124,7 @@ GbxAbstractOverrideSpec class >> canInstalledOverridesBeSafelyRemoved
 	^installedOverridesSpec hasNoEffect
 		or: [(self specContentDiffersFromInstalledSpec: installedOverridesSpec) not]
 
-{ #category : #'installing' }
+{ #category : 'installing' }
 GbxAbstractOverrideSpec class >> undeclaredNamesArisingFrom: aBlock
 
 	| existingUndeclaredNames newlyUndeclaredNames undeclaredNames |
@@ -138,7 +140,7 @@ GbxAbstractOverrideSpec class >> undeclaredNamesArisingFrom: aBlock
 					]].
 	^newlyUndeclaredNames
 
-{ #category : #'installing' }
+{ #category : 'installing' }
 GbxAbstractOverrideSpec class >> apply
 	"Apply the version appropriate spec only if my override package is empty, so it only happens once."
 
@@ -162,7 +164,7 @@ GbxAbstractOverrideSpec class >> apply
 			do: [:each | Transcript nextPutAll: each]
 			separatedBy: [Transcript nextPutAll: ', ']]
 
-{ #category : #'installing' }
+{ #category : 'installing' }
 GbxAbstractOverrideSpec class >> undeclaredNames
 	"Voodoo lies here. It seemed #purgedUnusedBindings and #globalGarbageCollect were insufficient.
 	 Adding #yield in the hope that it helps."
@@ -174,7 +176,7 @@ GbxAbstractOverrideSpec class >> undeclaredNames
 	Processor yield.
 	^Undeclared keys
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxAbstractOverrideSpec class >> versionPragma
 	"Define the pragma used to specify the VisualWorks version that a given spec* method first applies to."
 	<pragmas: #class>

@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsObjErrBadClusterBucket',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsObjErrBadClusterBucket',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsObjErrBadClusterBucket class >> gemStoneErrorNumber6430 ^2205
 

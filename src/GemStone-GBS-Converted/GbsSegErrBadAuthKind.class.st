@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsSegErrBadAuthKind',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsSegErrBadAuthKind',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsSegErrBadAuthKind class >> gemStoneErrorNumber6430 ^2057
 

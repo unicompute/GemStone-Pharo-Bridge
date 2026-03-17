@@ -1,17 +1,19 @@
 Class {
-	#name : #'GbxMultiByteStringReplicator',
-	#superclass : #'GbxByteObjectReplicator',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxMultiByteStringReplicator',
+	#superclass : 'GbxByteObjectReplicator',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxMultiByteStringReplicator >> copyBytesFromReportToClientObject
 
 	clientObject gbxCopyBytesFromReport: currentReport
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxMultiByteStringReplicator >> copyInto: report from: anObject numBytes: numBytes startingAt: firstOffset
 
 	| bytesSource |

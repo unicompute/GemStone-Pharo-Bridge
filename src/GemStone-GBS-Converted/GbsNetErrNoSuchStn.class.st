@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsNetErrNoSuchStn',
-	#superclass : #'GbsFatalError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsNetErrNoSuchStn',
+	#superclass : 'GbsFatalError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsNetErrNoSuchStn class >> gemStoneErrorNumber6430 ^4065
 

@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxBasicCache',
-	#superclass : #'GbxCollectionCache',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxBasicCache',
+	#superclass : 'GbxCollectionCache',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'building collections' }
+{ #category : 'building collections' }
 GbxBasicCache >> cacheArrayInterval: anInterval
 	"grab using basicAt: rather than using one of the superclass methods"
 
@@ -61,7 +63,7 @@ GbxBasicCache >> cacheArrayInterval: anInterval
 				do: [:idx | elements at: idx put: (newElements at: idx - delta)].
 			cachedRanges add: anInterval]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBasicCache >> actualSize
 	"Answer the number of indexed instance variables in
 	 the server personality of the inspected object.

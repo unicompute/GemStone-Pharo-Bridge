@@ -1,18 +1,20 @@
 Class {
-	#name : #'GbxOopArray64',
-	#superclass : #'GbxOopArray',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxOopArray64',
+	#superclass : 'GbxOopArray',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOopArray64 >> bufferSize
 	"Return the size of the allocated buffer in oops, assuming it's all mine, i.e. that I was created with size:."
 	
 	^buffer basicSize bitShift: -3
 
-{ #category : #'random-access putting' }
+{ #category : 'random-access putting' }
 GbxOopArray64 >> oopAt: idx putDelegate: aDelegate
 	"Put the oop value of aDelegate at 1-based index <idx>. 
 
@@ -26,7 +28,7 @@ GbxOopArray64 >> oopAt: idx putDelegate: aDelegate
 		with: aDelegate
 		startingAt: 5
 
-{ #category : #'random-access putting' }
+{ #category : 'random-access putting' }
 GbxOopArray64 >> oopAt: idx put: anInteger
 	"Put the oop value <anInteger> at index <idx>.  This method takes care of platform specific access
 	and conversion from 1-based Smalltalk indexes to 0-base C indexes.
@@ -37,7 +39,7 @@ GbxOopArray64 >> oopAt: idx put: anInteger
 		unsignedLongLongAt: offset + ((idx - 1) * 8)
 		put: anInteger
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxOopArray64 >> printValueAt: idx on: aStream
 	"Return the oop value from 1-based index <idx>. "
 	
@@ -46,7 +48,7 @@ GbxOopArray64 >> printValueAt: idx on: aStream
 			16.
 	aStream space
 
-{ #category : #'adding' }
+{ #category : 'adding' }
 GbxOopArray64 >> addFromDelegate: delegate
 	"Given a delegate of the same endianness as the oop buffer, adds an 8-byte POM oop to the buffer."
 	
@@ -60,7 +62,7 @@ GbxOopArray64 >> addFromDelegate: delegate
 		startingAt: 5.
 	numOops := numOops + 1
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbxOopArray64 >> bytesPerOop
 	
 	^8

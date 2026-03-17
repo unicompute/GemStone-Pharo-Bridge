@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsHostErrFileDelete',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsHostErrFileDelete',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsHostErrFileDelete class >> gemStoneErrorNumber6430 ^2200
 

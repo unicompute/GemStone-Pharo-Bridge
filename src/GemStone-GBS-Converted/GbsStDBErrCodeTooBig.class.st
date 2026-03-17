@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsStDBErrCodeTooBig',
-	#superclass : #'GbsCompilerError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsStDBErrCodeTooBig',
+	#superclass : 'GbsCompilerError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsStDBErrCodeTooBig class >> gemStoneErrorNumber6430 ^1038
 

@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxDeferredElementsReplicator',
-	#superclass : #'GbxPointerObjectReplicator',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxDeferredElementsReplicator',
+	#superclass : 'GbxPointerObjectReplicator',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxDeferredElementsReplicator >> assignIndexedInstvars
 	"Because we're assigning into a hashed collection, we will usually send #hash to the elements.
 	If any of the elements are stubs (or contain stubs and send #hash to them...) and the stubs are for
@@ -45,13 +47,13 @@ GbxDeferredElementsReplicator >> assignIndexedInstvars
 	namedBuffer := savedNamedBuffer.
 	indexedBuffer := savedIndexedBuffer
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxDeferredElementsReplicator >> clientSizeIsCorrect
 	"My client class is variable size, so the client object's size is always correct."
 
 	^true
 
-{ #category : #'per-object replication' }
+{ #category : 'per-object replication' }
 GbxDeferredElementsReplicator >> forReplication: aReplication replicateFromDeferredReport: report
 	"Sender must hold my session's sessionProtect and the ClientMap's writeProtect semaphores."
 
@@ -69,7 +71,7 @@ GbxDeferredElementsReplicator >> forReplication: aReplication replicateFromDefer
 				error: 'Deferred assignments remain following deferred elements assignment.'].
 	report isLastReportForObject ifTrue: [self initializeForNewObject]
 
-{ #category : #'private per-object replication' }
+{ #category : 'private per-object replication' }
 GbxDeferredElementsReplicator >> replicateFromReport
 	"Hashed collections must wait until all of their contents are present to be filled in, 
 	so defer that until after the deferred class mapping is done, and deferred assignments are done.
@@ -94,7 +96,7 @@ GbxDeferredElementsReplicator >> replicateFromReport
 			clientObject preFaultWithReport: currentReport inSession: session].
 	replication addDeferredElementsReport: currentReport copyWithPrivateBuffer
 
-{ #category : #'private per-object replication' }
+{ #category : 'private per-object replication' }
 GbxDeferredElementsReplicator >> replicateFromDeferredReport
 	"Fill in the object, which may have been previously created.
 	We know we have a full report, since we don't defer header-only reports.

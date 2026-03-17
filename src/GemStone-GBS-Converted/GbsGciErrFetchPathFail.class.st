@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsGciErrFetchPathFail',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsGciErrFetchPathFail',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsGciErrFetchPathFail class >> gemStoneErrorNumber6430 ^2221
 

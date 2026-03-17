@@ -1,23 +1,31 @@
 Class {
-	#name : #'GbxClampManager',
-	#superclass : #'Object',
-	#instVars : [ #'classClamps' #'defaultReplicationScheme' #'identityClamps' #'manager' #'replicationSchemes' #'threadSpecificSchemes' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxClampManager',
+	#superclass : 'Object',
+	#instVars : [
+		'classClamps',
+		'defaultReplicationScheme',
+		'identityClamps',
+		'manager',
+		'replicationSchemes',
+		'threadSpecificSchemes'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'finalizing' }
+{ #category : 'finalizing' }
 GbxClampManager >> endingInteraction
 	"Sender must hold my session's protect"
 
 	identityClamps beWeak
 
-{ #category : #'finalizing' }
+{ #category : 'finalizing' }
 GbxClampManager >> startingInteraction
 
 	identityClamps beStrongAndFinalized
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampManager >> changedSelector: aSelector forReplicator: replicator
 	"A method with the given selector has been added, removed, or changed in the client metaclass for the given replicator.
 	If the selector is the selector of a replication scheme, we need to update the instVarLevels for that scheme."
@@ -34,14 +42,14 @@ GbxClampManager >> changedSelector: aSelector forReplicator: replicator
 			self session
 				sessionCritical: [replicator updateInstVarLevelsOfScheme: scheme]]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampManager >> updateClassClampForReplicators: replicators
 	"Sender must hold my session's protect"
 
 	replicators
 		do: [:replicator | self updateClassClampForReplicator: replicator]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampManager >> usingReplicationSpecSet: setSymbol do: aBlock
 	"Evaluate the given nilary block using the given replication spec set name. 
 	This does not affect the session's default replication spec set. The given replication spec set is used only in this Smalltalk Process
@@ -66,7 +74,7 @@ GbxClampManager >> usingReplicationSpecSet: setSymbol do: aBlock
 						has logged out during evaluating the block."]].
 	^result
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampManager >> currentReplicationScheme
 	"Answer the replication scheme currently in use by the current thread.
 	If the thread doesn't have a special one, then the default one for the session.
@@ -77,26 +85,26 @@ GbxClampManager >> currentReplicationScheme
 	scheme := threadSpecificSchemes value.
 	^scheme ifNil: [self defaultReplicationScheme]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampManager >> defaultReplicationSpecSet
 	"Answer the session-wide default replication spec set, which may be overridden on a thread-specific basis."
 	"Sender must hold my session's protect."
 
 	^self defaultReplicationScheme selector
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampManager >> defaultReplicationSpecSet: aSymbol
 	"Set the session-wide default replication spec set, which may be overridden on a thread-specific basis."
 	"Sender must hold my session's protect."
 
 	defaultReplicationScheme := self replicationSchemeForSet: aSymbol
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampManager >> identityClamps
 
 	^identityClamps
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampManager >> invalidateSchemeWithSelector: aSelector
 	"If I have a scheme identified by aSelector, and it's valid, invalidate it and answer true.
 	Otherwise, answer false."
@@ -113,7 +121,7 @@ GbxClampManager >> invalidateSchemeWithSelector: aSelector
 								error: 'GBS fatal error. Has someone removed Object class >> replicationSpec?']].
 	^scheme invalidate
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampManager >> removeClampsForReplicator: replicator
 	"Do a full update of the clamps for the given replicators, as if they're new (which they probably are)."
 	"Sender must hold my session's protect semaphore."
@@ -125,7 +133,7 @@ GbxClampManager >> removeClampsForReplicator: replicator
 	replicationSchemes
 		do: [:scheme | scheme removeInstVarLevelsForClass: clientClass]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampManager >> removeIdentityClampForClient: aClientObject withDelegate: aDelegate
 	"Private.  Remove <anObject> from the list of 'id' clamps in the clamp specification.
 	If not present, ignore."
@@ -134,7 +142,7 @@ GbxClampManager >> removeIdentityClampForClient: aClientObject withDelegate: aDe
 	identityClamps removeIfPresent: aClientObject.
 	^aClientObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampManager >> replicationSchemeForSet: setSelector
 	"Sender must hold my session's protect semaphore."
 
@@ -144,19 +152,19 @@ GbxClampManager >> replicationSchemeForSet: setSelector
 			[replicationSchemes at: setSelector
 				ifAbsent: [self createAndInstallReplicationSchemeFor: setSelector]]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampManager >> manager: aReplicatorManager
 
 	manager := aReplicatorManager
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampManager >> addIdentityClampForClient: aClientObject withDelegate: aDelegate
 	"Private.  Add the object to the list of 'id' clamps in all of my clamp specifications."
 
 	identityClamps add: aClientObject.
 	aDelegate setIdentityClampedBit
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampManager >> changedClampByCallback
 	"The session's Clamp by Callback configuration has changed.
 	 Update all Clamp Specifications to reflect this."
@@ -168,7 +176,7 @@ GbxClampManager >> changedClampByCallback
 			[:scheme |
 			scheme updateForClampingByCallback: clampByCallback inSession: self session]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampManager >> updateClampsForReplicators: replicators
 	"Do a full update of the clamps for the given replicators, as if they're new (which they probably are)."
 	"Sender must hold my session's protect semaphore."
@@ -179,7 +187,7 @@ GbxClampManager >> updateClampsForReplicators: replicators
 			replicators
 				do: [:replicator | replicator updateInstVarLevelsOfScheme: scheme]]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampManager >> updateClassClampForReplicator: replicator
 	"Sender must hold my session's protect"
 
@@ -191,7 +199,7 @@ GbxClampManager >> updateClassClampForReplicator: replicator
 				ifTrue: [classClamps add: clientClass]
 				ifFalse: [classClamps removeIfPresent: clientClass]]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxClampManager >> initialize
 
 	classClamps := GbxClassSet new: 500.
@@ -199,13 +207,13 @@ GbxClampManager >> initialize
 	replicationSchemes := GbxConcurrentReadIdentityDictionary new: 1.
 	threadSpecificSchemes := GbxThreadStateDictionary new
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxClampManager >> release
 	"The session is logging out. Eliminate any dependency on it being logged in."
 
 	identityClamps release
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClampManager >> createReplicationSchemeFor: replicationSet
 	"Private"
 	"Sender must hold session's protect"
@@ -217,7 +225,7 @@ GbxClampManager >> createReplicationSchemeFor: replicationSet
 		clampByCallback: self shouldClampByCallback
 		inSession: self session
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClampManager >> createAndInstallReplicationSchemeFor: setSelector
 	"Sender must hold my session's protect"
 
@@ -239,12 +247,12 @@ GbxClampManager >> createAndInstallReplicationSchemeFor: setSelector
 		with: scheme.
 	^scheme
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClampManager >> session
 
 	^manager session
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClampManager >> validateSpecSet: aSymbol
 	"Signal an error if aSymbol is not suitable as a replicationSpecSet selector."
 
@@ -259,12 +267,12 @@ GbxClampManager >> validateSpecSet: aSymbol
 				error: 'In order to use #%1 as a replicationSpecSet, you must provide a default implementation in Object class'
 				with: aSymbol]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClampManager >> shouldClampByCallback
 
 	^self session clampByCallback
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClampManager >> defaultReplicationScheme
 	"Answer the session-wide default replication scheme, which may be overridden on a thread-specific basis."
 	"Sender must hold my session's protect."
@@ -274,7 +282,7 @@ GbxClampManager >> defaultReplicationScheme
 			[self defaultReplicationSpecSet: #replicationSpec.
 			defaultReplicationScheme]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxClampManager class >> forManager: aReplicatorManager
 
 	^self new initialize manager: aReplicatorManager

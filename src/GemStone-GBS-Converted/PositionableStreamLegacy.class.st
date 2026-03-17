@@ -1,8 +1,10 @@
 Class {
-	#name : #'PositionableStreamLegacy',
-	#superclass : #'GbsServerClass',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'PositionableStreamLegacy',
+	#superclass : 'GbsServerClass',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

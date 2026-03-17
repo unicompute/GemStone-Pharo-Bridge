@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxFloatReplicator',
-	#superclass : #'GbxByteObjectReplicator',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxFloatReplicator',
+	#superclass : 'GbxByteObjectReplicator',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxFloatReplicator >> setImmutabilityOf: aClientObject
 	"Numbers are always immutable."
 

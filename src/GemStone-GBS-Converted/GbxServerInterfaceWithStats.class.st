@@ -1,12 +1,16 @@
 Class {
-	#name : #'GbxServerInterfaceWithStats',
-	#superclass : #'Object',
-	#instVars : [ #'statResource' #'serverInterface' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxServerInterfaceWithStats',
+	#superclass : 'Object',
+	#instVars : [
+		'statResource',
+		'serverInterface'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxServerInterfaceWithStats >> statResource: aStatResource 
 	"If aStatResource is nil, return a non-wrapped GbxCInterface.  Otherwise, 
 	 return the receiever, a GbxCInterfaceWithStats-wrapped cinterface."
@@ -17,13 +21,13 @@ GbxServerInterfaceWithStats >> statResource: aStatResource
 			serverInterface]
 		ifFalse: [^self]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxServerInterfaceWithStats >> serverInterface: interface statResource: resource
 
 	serverInterface := interface.
 	statResource := resource
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> remoteClassFor: remoteClassFor 
 	| start result |
 	start := self startCallToGem.
@@ -31,7 +35,7 @@ GbxServerInterfaceWithStats >> remoteClassFor: remoteClassFor
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> for: for fetch: fetch OOPsAt: OOPsAt 
 	| start result |
 	start := self startCallToGem.
@@ -42,7 +46,7 @@ GbxServerInterfaceWithStats >> for: for fetch: fetch OOPsAt: OOPsAt
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> saveObjects: delegates 
 	| start result |
 	start := self startCallToGem.
@@ -50,7 +54,7 @@ GbxServerInterfaceWithStats >> saveObjects: delegates
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> compileInstMethod: compileInstMethod forClass: forClass inMethodCategory: inMethodCategory symbolList: symbolList 
 	| start result |
 	self gbxFixMe.	"Remove this method."
@@ -63,7 +67,7 @@ GbxServerInterfaceWithStats >> compileInstMethod: compileInstMethod forClass: fo
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> remoteVaryingSizeFor: remoteVaryingSizeFor 
 	| start result |
 	start := self startCallToGem.
@@ -71,11 +75,11 @@ GbxServerInterfaceWithStats >> remoteVaryingSizeFor: remoteVaryingSizeFor
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> for: for fetchByteAt: fetchByteAt 
 	^self callToGem: [ serverInterface for: for fetchByteAt: fetchByteAt ]
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> for: for createObjectClass: createObjectClass values: values clusterBucket: clusterBucket permanent: permanent 
 	| start result |
 	start := self startCallToGem.
@@ -83,11 +87,11 @@ GbxServerInterfaceWithStats >> for: for createObjectClass: createObjectClass val
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> for: for fetchVaryingOOPAt: fetchVaryingOOPAt 
 	^self callToGem: [ serverInterface for: for fetchVaryingOOPAt: fetchVaryingOOPAt ]
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> getFreeOops: getFreeOops 
 	| start result |
 	start := self startCallToGem.
@@ -95,7 +99,7 @@ GbxServerInterfaceWithStats >> getFreeOops: getFreeOops
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> for: for storeOOPs: storeOOPs at: at 
 	| start result |
 	start := self startCallToGem.
@@ -106,7 +110,7 @@ GbxServerInterfaceWithStats >> for: for storeOOPs: storeOOPs at: at
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> fetchImplementationFor: fetchImplementationFor 
 	| start result |
 	start := self startCallToGem.
@@ -114,7 +118,7 @@ GbxServerInterfaceWithStats >> fetchImplementationFor: fetchImplementationFor
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> remoteSizeFor: remoteSizeFor 
 	| start result |
 	start := self startCallToGem.
@@ -122,7 +126,7 @@ GbxServerInterfaceWithStats >> remoteSizeFor: remoteSizeFor
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> loginLinked: loginLinked passwords: passwords errorHolder: errorHolder 
 	| start result |
 	start := self startCallToGem.
@@ -130,7 +134,7 @@ GbxServerInterfaceWithStats >> loginLinked: loginLinked passwords: passwords err
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> for: for fetch: fetch varyingOOPsAt: varyingOOPsAt 
 	| start result |
 	start := self startCallToGem.
@@ -138,11 +142,11 @@ GbxServerInterfaceWithStats >> for: for fetch: fetch varyingOOPsAt: varyingOOPsA
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> softBreak
 	^self callToGem: [ serverInterface softBreak ]
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> existsFor: existsFor 
 	| start result |
 	start := self startCallToGem.
@@ -150,7 +154,7 @@ GbxServerInterfaceWithStats >> existsFor: existsFor
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> storeTraversalBuffer: travBuffer flags: flags 
 	| start result |
 	self updateStatsForStoreTravBuffer: travBuffer.
@@ -159,7 +163,7 @@ GbxServerInterfaceWithStats >> storeTraversalBuffer: travBuffer flags: flags
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> for: for fetchObjInfoStartingAt: fetchObjInfoStartingAt maxBytes: maxBytes convertSpecials: convertSpecials retrievalFlags: retrievalFlags 
 	| start result |
 	start := self startCallToGem.
@@ -167,7 +171,7 @@ GbxServerInterfaceWithStats >> for: for fetchObjInfoStartingAt: fetchObjInfoStar
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> dirtyObjectsInit
 	| start result |
 	start := self startCallToGem.
@@ -175,7 +179,7 @@ GbxServerInterfaceWithStats >> dirtyObjectsInit
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> for: for storeNamedOOPs: storeNamedOOPs at: at 
 	| start result |
 	start := self startCallToGem.
@@ -186,7 +190,7 @@ GbxServerInterfaceWithStats >> for: for storeNamedOOPs: storeNamedOOPs at: at
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> pollForSignalFor: pollForSignalFor deferFatalErrors: deferFatalErrors 
 	| start result |
 	start := self startCallToGem.
@@ -194,7 +198,7 @@ GbxServerInterfaceWithStats >> pollForSignalFor: pollForSignalFor deferFatalErro
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> compileClassMethod: compileClassMethod forClass: forClass inMethodCategory: inMethodCategory symbolList: symbolList 
 	| start result |
 	start := self startCallToGem.
@@ -206,7 +210,7 @@ GbxServerInterfaceWithStats >> compileClassMethod: compileClassMethod forClass: 
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> for: for unsynchronizedRemotePerform: privateRemotePerform withArgs: withArgs 
 	| start result |
 	start := self startCallToGem.
@@ -214,7 +218,7 @@ GbxServerInterfaceWithStats >> for: for unsynchronizedRemotePerform: privateRemo
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> traverseDelegates: delegates forInteraction: serverInteraction level: anInteger
 	
 	| result |
@@ -227,7 +231,7 @@ GbxServerInterfaceWithStats >> traverseDelegates: delegates forInteraction: serv
 				incBytesTraversed: serverInteraction fetchTraversal buffer usedBytes].
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> moreTraversalInTraversal: traversal 
 	| traversalComplete start |
 	start := self startCallToGem.
@@ -239,7 +243,7 @@ GbxServerInterfaceWithStats >> moreTraversalInTraversal: traversal
 		wasError: traversalComplete gbxIsGSError.
 	^traversalComplete
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> for: for fetch: fetch bytesAt: bytesAt 
 	| start result |
 	start := self startCallToGem.
@@ -247,7 +251,7 @@ GbxServerInterfaceWithStats >> for: for fetch: fetch bytesAt: bytesAt
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> logout
 	| start result |
 	start := self startCallToGem.
@@ -255,7 +259,7 @@ GbxServerInterfaceWithStats >> logout
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> for: for fetchOOPAt: fetchOOPAt 
 	| start result |
 	start := self startCallToGem.
@@ -263,15 +267,15 @@ GbxServerInterfaceWithStats >> for: for fetchOOPAt: fetchOOPAt
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> checkAuth: arrayOfGSObjects 
 	^self callToGem: [serverInterface checkAuth: arrayOfGSObjects]
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> for: for storeIdxOOPs: storeIdxOOPs at: at 
 	^self callToGem: [ serverInterface for: for storeIdxOOPs: storeIdxOOPs at: at ]
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> performInteraction: serverInteraction
 	"fetched bytes collected are only for single round trip because the fetchTraversal buffer hasn't
 	yet been filled in multi-trip
@@ -296,7 +300,7 @@ GbxServerInterfaceWithStats >> performInteraction: serverInteraction
 						incBytesTraversed: serverInteraction fetchTraversal buffer usedBytes]].
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> for: for indexOfInstVarNamed: indexOfInstVarNamed 
 	| start result |
 	start := self startCallToGem.
@@ -304,15 +308,15 @@ GbxServerInterfaceWithStats >> for: for indexOfInstVarNamed: indexOfInstVarNamed
 	self endCallToGem: start.
 	^result
 
-{ #category : #'delegating and updating stats' }
+{ #category : 'delegating and updating stats' }
 GbxServerInterfaceWithStats >> hardBreak
 	^self callToGem: [ serverInterface hardBreak ]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerInterfaceWithStats >> statResource
 	^statResource
 
-{ #category : #'support' }
+{ #category : 'support' }
 GbxServerInterfaceWithStats >> startCallToGem
 	"Increment gciCallsToGem, and return the current  time to
 	 be passed to the subsequent call to endCallToGem:."
@@ -320,7 +324,7 @@ GbxServerInterfaceWithStats >> startCallToGem
 	statResource incGciCallsToGem.
 	^Time gbxClock
 
-{ #category : #'support' }
+{ #category : 'support' }
 GbxServerInterfaceWithStats >> callToGem: callBlock 
 	| result start |
 	start := self startCallToGem.
@@ -328,7 +332,7 @@ GbxServerInterfaceWithStats >> callToGem: callBlock
 	self endCallToGem: start.
 	^result
 
-{ #category : #'support' }
+{ #category : 'support' }
 GbxServerInterfaceWithStats >> updateStatsForStoreTravBuffer: aGbxTraversalBuffer 
 	| bytesInBuffer |
 	bytesInBuffer := aGbxTraversalBuffer usedBytes.
@@ -338,187 +342,187 @@ GbxServerInterfaceWithStats >> updateStatsForStoreTravBuffer: aGbxTraversalBuffe
 			[statResource incStoreTraversals.
 			statResource incBytesSentByStoreTraversal: bytesInBuffer]
 
-{ #category : #'support' }
+{ #category : 'support' }
 GbxServerInterfaceWithStats >> updateTravStatsStartMicroseconds: start travBuffer: buffer wasError: wasError 
 	statResource incTraverseCalls.
 	statResource incTraverseCallTime: Time gbxClock - start.
 	wasError ifFalse: [statResource incBytesTraversed: buffer usedBytes]
 
-{ #category : #'support' }
+{ #category : 'support' }
 GbxServerInterfaceWithStats >> endCallToGem: startTime 
 	"Calculate the elapsed time given the startTime , and
 	 increment the gciCallsToGemTime stat"
 
 	statResource incGciCallsToGemTime: Time gbxClock - startTime
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> storeTravDoArgsForMessageSend: messageSend 
 	^serverInterface storeTravDoArgsForMessageSend: messageSend
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> startEventDetection
 	^serverInterface startEventDetection
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> continueAfter: error
 	
 	^serverInterface continueAfter: error
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> loginX509: parameters errorHolder: errorHolder
 
 	^serverInterface loginX509: parameters errorHolder: errorHolder
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> allocateTraversalBufferFor: aServerInteraction
 	
 	^serverInterface allocateTraversalBufferFor: aServerInteraction
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> isBlocking
 	^serverInterface isBlocking
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> gciGemTrace: anInt
 	^serverInterface gciGemTrace: anInt
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> continueAfter: error forInteraction: serverInteraction
 	"Sender must hold my session's accessProtect."
 
 	^serverInterface continueAfter: error forInteraction: serverInteraction
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> newServerEvaluation
 	^serverInterface newServerEvaluation
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> makeCacheStrongAndFinalizeIntoBuffers
 
 	^serverInterface makeCacheStrongAndFinalizeIntoBuffers
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> shutdownSocket: aSocket withHandle: handle 
 	^serverInterface shutdownSocket: aSocket withHandle: handle
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> clampedTravArgsForServerInteraction: serverInteraction
 	
 	^serverInterface clampedTravArgsForServerInteraction: serverInteraction
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> storeTravDoArgsBuffer
 	^serverInterface storeTravDoArgsBuffer
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> storeTravDoArgsForEvaluation: anInteraction 
 	^serverInterface storeTravDoArgsForEvaluation: anInteraction
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> saveFetchedOops: delegates
 
 	^serverInterface saveFetchedOops: delegates
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> storeTravDoArgsForTraversal: serverTraversal
 	
 	^serverInterface storeTravDoArgsForTraversal: serverTraversal
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> session
 	^serverInterface session
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> getSignalHandle
 	^serverInterface getSignalHandle
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> asLocalSmallIntegerFor: asLocalSmallIntegerFor 
 	^serverInterface asLocalSmallIntegerFor: asLocalSmallIntegerFor
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> newMessageSend
 	^serverInterface newMessageSend
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> gbsImageStartup
 	^serverInterface gbsImageStartup
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> stepAfter: error forInteraction: serverInteraction
 	"Sender must hold my session's accessProtect."
 
 	^serverInterface stepAfter: error forInteraction: serverInteraction
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> isLoggedIn
 	^serverInterface isLoggedIn
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> sessionIsRemote
 	"sender must hold session's sessionProtect"
 
 	^serverInterface sessionIsRemote
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> gbxDebugPrintString
 	^serverInterface gbxDebugPrintString
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> clampedTravArgsBuffer
 	^serverInterface clampedTravArgsBuffer
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> loginFlags
 	^serverInterface loginFlags
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> stopNbWaitSocket
 	^serverInterface stopNbWaitSocket
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> requestSingleStep
 	^serverInterface requestSingleStep
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> isSingleTrip
 	"Answer false if using the legacy multi-trip interface; 
 	true if using the single-trip (GciStoreTravDoTravRefs) interface introduced in GS64 2.2.5.x"
 	
 	^serverInterface isSingleTrip
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> stopEventDetection
 	^serverInterface stopEventDetection
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> callSequencer
 	^serverInterface callSequencer
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> executableBlockClassDelegate
 	
 	^serverInterface executableBlockClassDelegate
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> newServerTraversal
 	^serverInterface newServerTraversal
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> addToNoLongerReplicated: aDelegate
 	"Sender must hold my session's sessionProtect."
 
 	^serverInterface addToNoLongerReplicated: aDelegate
 
-{ #category : #'delegating' }
+{ #category : 'delegating' }
 GbxServerInterfaceWithStats >> storeTravFlags
 	^serverInterface storeTravFlags
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerInterfaceWithStats class >> gciCallProtect
 	^GbxGciCallSequencer gciCallProtect
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxServerInterfaceWithStats class >> serverInterface: interface statResource: resource
 
 	^self new serverInterface: interface statResource: resource

@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxPollingEventDetector',
-	#superclass : #'GbxEventDetector',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxPollingEventDetector',
+	#superclass : 'GbxEventDetector',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'public' }
+{ #category : 'public' }
 GbxPollingEventDetector >> newRunningProcess
 	"Create a Smalltalk process to poll for GemStone asynchronous events.
 	The polling frequency (in milliseconds) can be modified by sending

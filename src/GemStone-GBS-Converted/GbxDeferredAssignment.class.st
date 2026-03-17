@@ -1,28 +1,33 @@
 Class {
-	#name : #'GbxDeferredAssignment',
-	#superclass : #'Object',
-	#instVars : [ #'clientOffset' #'delegate' #'buffer' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxDeferredAssignment',
+	#superclass : 'Object',
+	#instVars : [
+		'clientOffset',
+		'delegate',
+		'buffer'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDeferredAssignment >> delegate: aDelegate
 	delegate := aDelegate
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDeferredAssignment >> buffer: anObject
 	buffer := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDeferredAssignment >> clientOffset: anObject
 	clientOffset := anObject
 
-{ #category : #'resolving' }
+{ #category : 'resolving' }
 GbxDeferredAssignment >> assignValue: val 
 	^self subclassResponsibility
 
-{ #category : #'resolving' }
+{ #category : 'resolving' }
 GbxDeferredAssignment >> resolveIn: sess
 	"Sender must hold the session's sessionProtect"
 
@@ -36,7 +41,7 @@ GbxDeferredAssignment >> resolveIn: sess
 			sess privateConnectNewClient: val toServer: delegate].
 	self assignValue: val
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxDeferredAssignment class >> offset: clientOffset delegate: aDelegate buffer: aBuffer 
 	^(self new)
 		clientOffset: clientOffset;

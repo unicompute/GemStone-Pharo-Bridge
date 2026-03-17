@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsAbortErrCommitsSuspended',
-	#superclass : #'GbsAbortingError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsAbortErrCommitsSuspended',
+	#superclass : 'GbsAbortingError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsAbortErrCommitsSuspended class >> gemStoneErrorNumber6430 ^3002
 

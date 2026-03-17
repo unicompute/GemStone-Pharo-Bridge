@@ -1,12 +1,17 @@
 Class {
-	#name : #'GbxDirtySetStack',
-	#superclass : #'Object',
-	#instVars : [ #'session' #'stack' #'top' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxDirtySetStack',
+	#superclass : 'Object',
+	#instVars : [
+		'session',
+		'stack',
+		'top'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDirtySetStack >> popTo: aQueue
 	"Pop 0 or 1 item, until aQueue is the top. Signal error if aQueue cannot be the top after 0 or 1 pop"
 
@@ -19,19 +24,19 @@ GbxDirtySetStack >> popTo: aQueue
 				ifFalse: 
 					[self gbsMessenger error: 'Internal error. Specified queue not found.']]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDirtySetStack >> addObject: anObject
 	"Add the given object to the top queue"
 
 	self top add: anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDirtySetStack >> top
 	"Answer the set on the top of the stack."
 
 	^stack at: top
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDirtySetStack >> pop
 	"Pop and answer a queue from the stack. That queue *should* be empty."
 
@@ -42,7 +47,7 @@ GbxDirtySetStack >> pop
 	[self assertAllCleanIn: result] gbxAssert.
 	^result
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDirtySetStack >> size
 	"Used only for statistic gathering. Answer the total size of all queues."
 
@@ -51,7 +56,7 @@ GbxDirtySetStack >> size
 	1 to: top do: [:i | total := total + (stack at: i) size].
 	^total
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDirtySetStack >> emptyInto: resultCollection
 
 	1 to: top
@@ -62,13 +67,13 @@ GbxDirtySetStack >> emptyInto: resultCollection
 			set emptyInto: resultCollection forSession: session].
 	self initialize
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDirtySetStack >> grow
 	"Nesting of dirty sets is strictly bounded. The default limit of 5 should be enough for all known situations."
 
 	self gbsMessenger error: 'Maximum stack depth exceeded.'
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDirtySetStack >> push
 	"Push an empty set to the stack."
 
@@ -77,7 +82,7 @@ GbxDirtySetStack >> push
 	stack at: top
 		put: (GbxDirtySet new: session configuration initialDirtyPoolSize)
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxDirtySetStack >> isEmpty
 	"Note that this will answer true even if non-top queues are not empty.
 	This is not intuitive.
@@ -85,7 +90,7 @@ GbxDirtySetStack >> isEmpty
 
 	^self top isEmpty
 
-{ #category : #'asserting' }
+{ #category : 'asserting' }
 GbxDirtySetStack >> assertAllCleanIn: aDirtySet
 	"Report assertion failure if I contain any objects with dirty delegates.
 	This clears the set's contents, and is intended to be used after the 
@@ -99,19 +104,19 @@ GbxDirtySetStack >> assertAllCleanIn: aDirtySet
 					^false]].
 	^true
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxDirtySetStack >> session: aGbsSession
 
 	session := aGbsSession
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxDirtySetStack >> initialize
 
 	stack := Array new: 5.
 	top := 0.
 	self push
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxDirtySetStack class >> newForSession: aGbsSession
 
 	^(self new)

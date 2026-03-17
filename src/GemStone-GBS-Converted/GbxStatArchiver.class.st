@@ -1,17 +1,24 @@
 Class {
-	#name : #'GbxStatArchiver',
-	#superclass : #'Object',
-	#instVars : [ #'stream' #'resources' #'sampleMs' #'nextInstanceId' #'writeProtect' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxStatArchiver',
+	#superclass : 'Object',
+	#instVars : [
+		'stream',
+		'resources',
+		'sampleMs',
+		'nextInstanceId',
+		'writeProtect'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxStatArchiver >> createStreamOn: aFile
 
 	^(aFile withEncoding: #binary) writeStream
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxStatArchiver >> initializeWithFile: aFile
 
 	writeProtect := Semaphore forMutualExclusion.
@@ -33,7 +40,7 @@ GbxStatArchiver >> initializeWithFile: aFile
 					self basicAddStatResource: s statResource
 						instanceDescription: s statResource instanceDescription]]
 
-{ #category : #'public api' }
+{ #category : 'public api' }
 GbxStatArchiver >> addStatResource: statResource 
 	"To avoid possible deadlock (bug 33133), get the description before entering writeProtect"
 
@@ -42,7 +49,7 @@ GbxStatArchiver >> addStatResource: statResource
 	writeProtect critical: 
 			[self basicAddStatResource: statResource instanceDescription: description]
 
-{ #category : #'public api' }
+{ #category : 'public api' }
 GbxStatArchiver >> removeStatResource: statResource 
 	| result |
 	writeProtect critical: 
@@ -50,27 +57,27 @@ GbxStatArchiver >> removeStatResource: statResource
 			self writeResourceDeleted: statResource].
 	^result
 
-{ #category : #'public api' }
+{ #category : 'public api' }
 GbxStatArchiver >> writeSampleHeaderAndSample
 	writeProtect critical: 
 			[self
 				writeSampleHeader;
 				writeSample]
 
-{ #category : #'public api' }
+{ #category : 'public api' }
 GbxStatArchiver >> close
 	writeProtect critical: 
 			[stream close.
 			resources do: [:resource | resource closedArchive]]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxStatArchiver >> writeShort: short
 
 	"Write the given 16 bit short (as specified in GFS_File_Format.doc"
 
 	stream nextWordPut: short
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxStatArchiver >> writeByte: byte 
 	"Write the given 8 bit byte (as specified in GFS_File_Format.doc)"
 
@@ -79,7 +86,7 @@ GbxStatArchiver >> writeByte: byte
 	byte < 0 ifTrue: [ toWrite := 256 + byte ].
 	stream nextPut: toWrite
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxStatArchiver >> writeCompressedNumber: num
 
 	| buffer idx v |
@@ -123,7 +130,7 @@ GbxStatArchiver >> writeCompressedNumber: num
 		by: -1
 		do: [:i | self writeByte: (buffer at: i)]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxStatArchiver >> writeString: string 
 	"Write the given string (as specified in GFS_File_Format.doc"
 
@@ -139,14 +146,14 @@ GbxStatArchiver >> writeString: string
 	stream nextPut: length \\ 256.
 	string do: [:char | stream nextPut: char asInteger]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxStatArchiver >> writeInt: int
 
 	"Write the given 32 bit int (as specified in GFS_File_Format.doc"
 
 	stream nextLongPut: int
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxStatArchiver >> writeHeader
 	| currentEpochMs dir |
 	currentEpochMs := Time millisecondClockValue - JavaEpochStart.
@@ -180,25 +187,25 @@ GbxStatArchiver >> writeHeader
 	self writeString: SocketAccessor getHostname.
 	stream flush
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxStatArchiver >> writeLong: long
 	"Write the given 64 bit long (as specified in GFS_File_Format.doc)"
 
 	stream nextNumber: 8 "bytes" put: long
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxStatArchiver >> writeProlog
 	self
 		writeHeader;
 		writeResourceTypesAndDescriptors
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxStatArchiver >> writeResourceDeleted: statResource 
 	GbxStatMonitor instance handlingErrorsDo: 
 			[self writeByte: DeleteToken.
 			self writeInt: statResource instanceId]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxStatArchiver >> writeResourceInstanceInformationFor: statResource instanceDescription: instanceDescription
 	"Instance create token"
 	"Note: instanceDescription is passed as an argument, instead of this method sedning statResource instanceDescription, to fix a deadlock (bug 33133).  The archiver's writeProtect is held at this point in time, and a session stat resource needs to grab the stObjectCache's semaphore, which can deadlock - so the fix chosen is to send instanceDescription *before* entering the archiver's writeProtect semaphore."
@@ -213,7 +220,7 @@ GbxStatArchiver >> writeResourceInstanceInformationFor: statResource instanceDes
 	"Type ID"
 	self writeInt: statResource class resourceTypeId
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxStatArchiver >> writeResourceTypesAndDescriptors
 	"Type information"
 
@@ -237,7 +244,7 @@ GbxStatArchiver >> writeResourceTypesAndDescriptors
 			self writeShort: resourceType numberOfDescriptors.
 			resourceType writeDescriptorInformationOn: self]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxStatArchiver >> basicAddStatResource: statResource  instanceDescription: instanceDescription
 	"This should only be called by methods in this class - it doesn't use writeProtect"
 
@@ -248,7 +255,7 @@ GbxStatArchiver >> basicAddStatResource: statResource  instanceDescription: inst
 	self writeResourceInstanceInformationFor: statResource instanceDescription: instanceDescription.
 	resources add: statResource
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxStatArchiver >> writeSample
 	"Make sure to call writeSampleHeader before this"
 
@@ -275,7 +282,7 @@ GbxStatArchiver >> writeSample
 	self writeByte: IllegalValueToken.
 	stream flush
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxStatArchiver >> writeSampleHeader
 
 	"Sample token - marks the start of a sample"
@@ -292,19 +299,19 @@ GbxStatArchiver >> writeSampleHeader
 			self writeShort: IntTimestampToken.
 			self writeInt: delta ].
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxStatArchiver >> writeBoolean: aBoolean
 
 	aBoolean
 		ifTrue: [ self writeByte: 1 ]
 		ifFalse: [ self writeByte: 0 ]
 
-{ #category : #'defaults' }
+{ #category : 'defaults' }
 GbxStatArchiver class >> defaultStatFileName
 
 	^'GBSStatArchive-' , GbsStackDumper timestampForFilename , '.gfs'
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxStatArchiver class >> newNamed: filename
 	"Return a new GbxStatArchive instance on a new stat archive file 
 	 named filename.  Raise an exception if a file already exists by 
@@ -317,7 +324,7 @@ GbxStatArchiver class >> newNamed: filename
 
 	^self basicNew initializeWithFile: file
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxStatArchiver class >> named: filename
 	"Return a new GbxStatArchive instance on a new or existing stat 
 	 archive file named filename.  If it's an existing file, statistics will
@@ -325,14 +332,14 @@ GbxStatArchiver class >> named: filename
 
 	^self gbsMessenger error: 'Not yet implemented'
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxStatArchiver class >> new
 	"Return a new GbxStatArchive instance on a new stat archive file 
 	 named GBSStatArchive-YYYY-MM-DD-HH.MM.SS.SSS.gfs"
 
 	^self newNamed: self defaultStatFileName
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxStatArchiver class >> initialize
 	"GbxStatArchiver initialize"
 

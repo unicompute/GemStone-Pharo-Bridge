@@ -1,69 +1,72 @@
 Class {
-	#name : #'GbxServerVersion',
-	#superclass : #'GbxVersionNumber',
-	#instVars : [ #'productCode' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxServerVersion',
+	#superclass : 'GbxVersionNumber',
+	#instVars : [
+		'productCode'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxServerVersion >> atLeast64v35
 
 	^self isGemStone64 and: [self >= '3.5']
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxServerVersion >> isGemStone64
 	^productCode == 3
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxServerVersion >> atLeast64v32
 
 	^self isGemStone64 and: [self >= '3.2']
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxServerVersion >> is64v350
 
 	^self isGemStone64 and: [self = '3.5.0']
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxServerVersion >> atLeast64v372
 
 	^self isGemStone64 and: [self >= '3.7.2']
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxServerVersion >> atLeast64v37
 
 	^self isGemStone64 and: [self >= '3.7']
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxServerVersion >> supportsImmediateTimes
 	"Support for SmallDate, SmallTime, SmallDateAndTime, and SmallScaledDecimal
 	was added in GS64 3.6.0. Use this test method for all of these."
 
 	^self atLeast64v36
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxServerVersion >> atLeast64v36
 
 	^self isGemStone64 and: [self >= '3.6']
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxServerVersion >> isUnknown
 	"Answer true if the server version cannot be determined."
 
 	^false
 
-{ #category : #'limits' }
+{ #category : 'limits' }
 GbxServerVersion >> largestOop
 
 	^self largestOop64Bit
 
-{ #category : #'limits' }
+{ #category : 'limits' }
 GbxServerVersion >> largestOop64Bit
 
 	^2 ** 40 - 1
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxServerVersion >> printOn: aStream 
 	productCode isNil 
 		ifTrue: [aStream nextPutAll: 'Unknown server product ']
@@ -73,21 +76,21 @@ GbxServerVersion >> printOn: aStream
 						at: productCode)].
 	super printOn: aStream
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerVersion >> productCode: anInteger 
 	productCode := anInteger
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 GbxServerVersion class >> initialize
 	"Current server version must be reset to nil on image startup."
 
 	Current := nil
 
-{ #category : #'private - instance creation' }
+{ #category : 'private - instance creation' }
 GbxServerVersion class >> unknown
 	^GbxUnknownServerVersion new
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxServerVersion class >> initializeCurrentFromProductCode: anInteger version: aString
 	"Product code 0 and nil version string mean we don't have the library loaded,
 	 so answer an UnknownServerVersion.
@@ -102,7 +105,7 @@ GbxServerVersion class >> initializeCurrentFromProductCode: anInteger version: a
 	Current := (self versionString: versionString) productCode: productCode.
 	^Current
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxServerVersion class >> debugCurrent
 	"GbxServerVersion debugCurrent"
 	"For debug use, avoid initializing GBSM's C interface.
@@ -115,7 +118,7 @@ GbxServerVersion class >> debugCurrent
 				version: GbxGciCallSequencer noLoadGciVersion].
 	^Current
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxServerVersion class >> current
 	"GbxServerVersion current"
 	"May load the library if it's not loaded."

@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxGciErrSType',
-	#superclass : #'GbxStructure',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxGciErrSType',
+	#superclass : 'GbxStructure',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxGciErrSType >> asGbsErrorForSession: aGbsSession
 	"Return a new instance of GbsError initialized from the contents of this struct.
 	If this is the first fatal error for aGbsSession, record it as the cause of death.
@@ -39,7 +41,7 @@ GbxGciErrSType >> asGbsErrorForSession: aGbsSession
 	((fatal and: [preexistingCauseOfDeath isNil]) and: [haveSession]) ifTrue: [aGbsSession causeOfDeath: newError].
 	^newError
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxGciErrSType >> argDelegatesForSession: aGSSession
 	
 	| argCount oopArray |
@@ -49,7 +51,7 @@ GbxGciErrSType >> argDelegatesForSession: aGSSession
 		offset: self argsOffset.
 	^oopArray asDelegateArrayOfSize: argCount forSession: aGSSession
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxGciErrSType >> argsOffset
 
 	self subclassResponsibility

@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxOverrideSpec',
-	#superclass : #'Object',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxOverrideSpec',
+	#superclass : 'Object',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'storing' }
+{ #category : 'storing' }
 GbxOverrideSpec >> storeOverrides: someOverrides withKeyword: aKeyword on: aStream
 
 	aStream space.
@@ -14,7 +16,7 @@ GbxOverrideSpec >> storeOverrides: someOverrides withKeyword: aKeyword on: aStre
 	aStream space.
 	self storeSortedArray: someOverrides on: aStream
 
-{ #category : #'storing' }
+{ #category : 'storing' }
 GbxOverrideSpec >> storeArray: anArray on: aStream
 
 	aStream nextPutAll: '{ '.
@@ -23,7 +25,7 @@ GbxOverrideSpec >> storeArray: anArray on: aStream
 		separatedBy: [aStream nextPutAll: '. '].
 	aStream nextPutAll: ' }'
 
-{ #category : #'storing' }
+{ #category : 'storing' }
 GbxOverrideSpec >> storeSortedArray: anArray on: aStream
 
 	self storeArray: (anArray

@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrTimeoutInterrupt',
-	#superclass : #'GbsEventError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrTimeoutInterrupt',
+	#superclass : 'GbsEventError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrTimeoutInterrupt class >> gemStoneErrorNumber6430 ^6015
 

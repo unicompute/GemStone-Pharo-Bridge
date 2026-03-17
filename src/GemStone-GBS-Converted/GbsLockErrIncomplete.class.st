@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsLockErrIncomplete',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsLockErrIncomplete',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsLockErrIncomplete class >> gemStoneErrorNumber6430 ^2073
 

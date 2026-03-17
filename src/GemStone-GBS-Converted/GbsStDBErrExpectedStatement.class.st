@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsStDBErrExpectedStatement',
-	#superclass : #'GbsCompilerError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsStDBErrExpectedStatement',
+	#superclass : 'GbsCompilerError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsStDBErrExpectedStatement class >> gemStoneErrorNumber6430 ^1019
 

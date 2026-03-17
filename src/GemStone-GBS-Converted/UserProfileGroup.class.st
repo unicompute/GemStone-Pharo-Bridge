@@ -1,8 +1,10 @@
 Class {
-	#name : #'UserProfileGroup',
-	#superclass : #'GbsServerClass',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'UserProfileGroup',
+	#superclass : 'GbsServerClass',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

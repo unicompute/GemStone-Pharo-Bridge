@@ -1,12 +1,17 @@
 Class {
-	#name : #'GbxFreeOopStream',
-	#superclass : #'Object',
-	#instVars : [ #'session' #'cache' #'position' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxFreeOopStream',
+	#superclass : 'Object',
+	#instVars : [
+		'session',
+		'cache',
+		'position'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxFreeOopStream >> nextFreeOop
 	"Answer a delegate for a free oop. Fetch more from the server if necessary."
 
@@ -21,22 +26,22 @@ GbxFreeOopStream >> nextFreeOop
 	position := position + 1.
 	^freeOop
 
-{ #category : #'private-accessing' }
+{ #category : 'private-accessing' }
 GbxFreeOopStream >> session: aSession 
 	session := aSession
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxFreeOopStream >> initialize
 	"Set position to just past the end of the initial cache, so the first #next will have to fetch oops."
 
 	cache := #().
 	position := 1
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxFreeOopStream class >> for: aSession 
 	^self new session: aSession
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxFreeOopStream class >> new
 	^super new initialize
 

@@ -1,16 +1,18 @@
 Class {
-	#name : #'Gbx8Delegate',
-	#superclass : #'GbxDelegate',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'Gbx8Delegate',
+	#superclass : 'GbxDelegate',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 Gbx8Delegate >> isEightByte
 	^true
 
-{ #category : #'public - object management' }
+{ #category : 'public - object management' }
 Gbx8Delegate >> createObjectClass: oClass values: values clusterBucket: clusterBucket permanent: aBool
 	"Creates a new object using a GemStone object identifier previously obtained from getFreeOop(s:).  See comment for GbsSession>>getFreeOops: for a further discussion of semantics of such identifiers.
 
@@ -35,7 +37,7 @@ Gbx8Delegate >> createObjectClass: oClass values: values clusterBucket: clusterB
 	self gbsMessenger error:
 			'GbxDelegate>>#createObjectClass:values:clusterBucket:permanent: not supported for this type of server'
 
-{ #category : #'public - object management' }
+{ #category : 'public - object management' }
 Gbx8Delegate >> createObjectClass: oClass values: values
 	"Creates a new object using a GemStone object identifier previously obtained from getFreeOop(s:).  
 	Uses the default clusterBucket, and creates the object in temporary space.  See comment in 
@@ -44,7 +46,7 @@ Gbx8Delegate >> createObjectClass: oClass values: values
 	self gbsMessenger error:
 			'GbxDelegate>>#createObjectClass:values: not supported for this type of server'
 
-{ #category : #'GBS private - binary access' }
+{ #category : 'GBS private - binary access' }
 Gbx8Delegate >> oopSecondUnsignedLongPut: aSmallInteger
 	"Used only in 64-bit VW. Replace bytes 9-12 of myself (which is the low-order half of the 
 	oop in a B8Delegate, the high-order half of the oop in an L8Delegate) with the given SmallInteger.
@@ -52,7 +54,7 @@ Gbx8Delegate >> oopSecondUnsignedLongPut: aSmallInteger
 
 	self primUnsignedLongAt: 9 put: aSmallInteger
 
-{ #category : #'GBS private - binary access' }
+{ #category : 'GBS private - binary access' }
 Gbx8Delegate >> oopSecondUnsignedLong
 	"Used only in 64-bit VW. Answer a SmallInteger representing bytes 9 - 12 of myself 
 	(which is the low-order half of the oop in a B8Delegate, the high-order half of the 
@@ -61,7 +63,7 @@ Gbx8Delegate >> oopSecondUnsignedLong
 
 	^self primUnsignedLongAt: 9
 
-{ #category : #'GBS private - binary access' }
+{ #category : 'GBS private - binary access' }
 Gbx8Delegate >> copyOopTo: delegate
 	"Copy my oop bytes to the given delegate.  The number
 	 of bytes in the oop of the receiver must match the number of bytes in delegate.
@@ -77,7 +79,7 @@ Gbx8Delegate >> copyOopTo: delegate
 
 	delegate gbxReplaceBytesFrom: 5 to: 12 with: self startingAt: 5
 
-{ #category : #'GBS private - binary access' }
+{ #category : 'GBS private - binary access' }
 Gbx8Delegate >> oopFirstUnsignedLongPut: aSmallInteger
 	"Used only in 64-bit VW. Replace bytes 5 - 8 of myself (which is the high-order half of the 
 	oop in a B8Delegate, the low-order half of the oop in an L8Delegate) with the given SmallInteger.
@@ -85,7 +87,7 @@ Gbx8Delegate >> oopFirstUnsignedLongPut: aSmallInteger
 
 	self primUnsignedLongAt: 5 put: aSmallInteger
 
-{ #category : #'GBS private - binary access' }
+{ #category : 'GBS private - binary access' }
 Gbx8Delegate >> oopFirstUnsignedLong
 	"Used only in 64-bit VW. Answer a SmallInteger representing bytes 5 - 8 of myself 
 	(which is the high-order half of the oop in a B8Delegate, the low-order half of the 
@@ -94,19 +96,19 @@ Gbx8Delegate >> oopFirstUnsignedLong
 
 	^self primUnsignedLongAt: 5
 
-{ #category : #'GBS private - binary access' }
+{ #category : 'GBS private - binary access' }
 Gbx8Delegate >> primUnsignedLongAt: index put: aSmallInteger
 	<primitive: 545>
 
 	^self primitiveFailed
 
-{ #category : #'GBS private - binary access' }
+{ #category : 'GBS private - binary access' }
 Gbx8Delegate >> primUnsignedLongAt: index
 	<primitive: 544>
 
 	^self primitiveFailed
 
-{ #category : #'private - testing' }
+{ #category : 'private - testing' }
 Gbx8Delegate >> serverCanAcceptClassChanges
 	"The 64-bit 3.2 (and later) server can change the class of a server object through store traversal."
 	"Eight-byte delegates are from a 64-bit server. GBS no longer supports any 64-bit server older than

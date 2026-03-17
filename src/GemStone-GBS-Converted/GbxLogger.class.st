@@ -1,22 +1,25 @@
 Class {
-	#name : #'GbxLogger',
-	#superclass : #'Object',
-	#instVars : [ #'filename' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxLogger',
+	#superclass : 'Object',
+	#instVars : [
+		'filename'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxLogger >> filename
 
 	^filename
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxLogger >> initializeWithFileName: aString
 
 	filename := aString
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxLogger class >> usingFileNamed: aString
 
 	^(self new)

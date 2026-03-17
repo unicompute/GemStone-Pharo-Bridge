@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsClampErrNoSuchInstvar',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsClampErrNoSuchInstvar',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsClampErrNoSuchInstvar class >> gemStoneErrorNumber6430 ^2046
 

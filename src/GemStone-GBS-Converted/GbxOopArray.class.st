@@ -1,12 +1,18 @@
 Class {
-	#name : #'GbxOopArray',
-	#superclass : #'Object',
-	#instVars : [ #'buffer' #'offset' #'bufferOop' #'numOops' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxOopArray',
+	#superclass : 'Object',
+	#instVars : [
+		'buffer',
+		'offset',
+		'bufferOop',
+		'numOops'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'getting' }
+{ #category : 'getting' }
 GbxOopArray >> asDelegateArrayOfSize: size forSession: aSession
 	"Return an array of Delegates from the oops in the receiver."
 	
@@ -23,49 +29,49 @@ GbxOopArray >> asDelegateArrayOfSize: size forSession: aSession
 			slider increment].
 	^delegates
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOopArray >> at: anIndex
 	
 	^self oopAt: anIndex
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOopArray >> bufferOop
 	
 	bufferOop == nil
 		ifTrue: [bufferOop := self bufferOopClass fromBuffer: buffer offset: offset].
 	^bufferOop
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOopArray >> buffer: anUninterpretedBytes offset: byteOffset
 	
 	buffer := anUninterpretedBytes.
 	offset := byteOffset.
 	numOops := 0
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOopArray >> bufferSize
 	
 	^self subclassResponsibility
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOopArray >> setOffsetTo: aByteOffset
 	"aByteOffset is a nonnegative SmallInteger. Resets my heap oop to the beginning of the buffer."
 	
 	offset := aByteOffset.
 	self bufferOop setOffsetTo: aByteOffset
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOopArray >> setBufferTo: anUninterpretedBytes
 	
 	buffer := anUninterpretedBytes.
 	self bufferOop setBufferTo: anUninterpretedBytes.
 	self setOffsetTo: 1
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOopArray >> size
 	^numOops
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOopArray >> oopAt: oopIndex
 	"Answer a GbxBufferOop pointing at an oop in my buffer. oopIndex is in oops, not bytes, and is 1-based.
 	Note that this is not a new oop, but is my captive oop, so it may be re-addressed later. Don't hang on to it
@@ -74,11 +80,11 @@ GbxOopArray >> oopAt: oopIndex
 	self bufferOop setOffsetTo: offset + ((oopIndex - 1) * self bytesPerOop).
 	^bufferOop
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOopArray >> numOops
 	^numOops
 
-{ #category : #'putting' }
+{ #category : 'putting' }
 GbxOopArray >> addOopFromDelegate: del
 	"Add the given oop to my end.
 	Del must be of my size and endianness."
@@ -88,18 +94,18 @@ GbxOopArray >> addOopFromDelegate: del
 		increment.
 	numOops := numOops + 1
 
-{ #category : #'putting' }
+{ #category : 'putting' }
 GbxOopArray >> setIndexTo: index
 	"Further oops added with #addOopFromDelegate: will start at this 0-based oop index"
 	
 	self bufferOop setOffsetTo: offset + (index * self bytesPerOop)
 
-{ #category : #'putting' }
+{ #category : 'putting' }
 GbxOopArray >> addUpper: upperBytes lower3: lower3
 	
 	^self subclassResponsibility
 
-{ #category : #'putting' }
+{ #category : 'putting' }
 GbxOopArray >> initializeFromDelegates: delegates
 	"Make sure the buffer has sufficient room for the number of delegates and then
 	store their oop values in the buffer.
@@ -109,26 +115,26 @@ GbxOopArray >> initializeFromDelegates: delegates
 	self bufferOop setOffsetTo: 1.
 	delegates do: [:each | self addOopFromDelegate: each]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxOopArray >> isBigEndian
 	
 	^UninterpretedBytes isBigEndian
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxOopArray >> grow
 	self allocateDataSize: self bufferSize * 2
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxOopArray >> bufferOopClass
 	
 	self subclassResponsibility
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxOopArray >> isEmpty
 	
 	^numOops == 0
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxOopArray >> allocateDataSize: newPhysicalSizeInOops
 	"Allocate a buffer of the given size and set it as my buffer.
 	If I already have a buffer, then this is a grow situation and I need to copy my 
@@ -150,20 +156,20 @@ GbxOopArray >> allocateDataSize: newPhysicalSizeInOops
 	offset := 1.
 	bufferOop := nil
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxOopArray >> ensureSizeIsAtLeast: aSize
 	"Guarantee the data buffer is at least <aSize> in size"
 	"This assumes that the buffer is all mine, which means that I was created with size:"
 	
 	self bufferSize < aSize ifTrue: [self allocateDataSize: aSize]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxOopArray >> clear
 	"Sets logicalSize to zero, effectively discarding all oops previously contained."
 	
 	numOops := 0
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxOopArray >> printOn: aStream numOops: howMany
 	"Print self as an array of oop values on <aStream>."
 	
@@ -181,7 +187,7 @@ GbxOopArray >> printOn: aStream numOops: howMany
 			printSize = maxPrint ifTrue: [aStream nextPutAll: ' ... ']].
 	aStream nextPut: $)
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxOopArray >> printOn: aStream
 	"Print self as an array of oop values on <aStream>."
 	
@@ -189,18 +195,18 @@ GbxOopArray >> printOn: aStream
 		printOn: aStream
 		numOops: self numOops
 
-{ #category : #'converting' }
+{ #category : 'converting' }
 GbxOopArray >> asAddress
 	"Return the buffer, which is allocated in Fixed Space, and therefore suitable for passing to C"
 	
 	^buffer
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbxOopArray >> bytesPerOop
 	
 	^self subclassResponsibility
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxOopArray class >> size: aSize
 	"Return a new instance that points to a newly allocated buffer of size <aSize>. in oops"
 	
@@ -210,7 +216,7 @@ GbxOopArray class >> size: aSize
 	inst buffer: buffer offset: 1.
 	^inst
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxOopArray class >> buffer: anUninterpretedBytes offset: byteOffset
 	
 	| inst |

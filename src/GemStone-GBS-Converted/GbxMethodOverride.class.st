@@ -1,12 +1,15 @@
 Class {
-	#name : #'GbxMethodOverride',
-	#superclass : #'GbxOverridesWithEdits',
-	#instVars : [ #'selector' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxMethodOverride',
+	#superclass : 'GbxOverridesWithEdits',
+	#instVars : [
+		'selector'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'storing' }
+{ #category : 'storing' }
 GbxMethodOverride >> storeOn: aStream
 
 	aStream
@@ -20,57 +23,57 @@ GbxMethodOverride >> storeOn: aStream
 		nextPutAll: ' edits: '.
 	self storeArray: edits on: aStream.
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbxMethodOverride >> hash
 
 	^super hash
 		+ self selector hash
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbxMethodOverride >> = anotherOverride
 
 	^super = anotherOverride
 		and: [self selector = anotherOverride selector]
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbxMethodOverride >> equalOtherThanEditsTo: anotherOverride
 
 	^(super equalOtherThanEditsTo: anotherOverride)
 		and: [self selector = anotherOverride selector]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxMethodOverride >> selector
 
 	^selector
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxMethodOverride >> selector: anObject
 
 	selector := anObject
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxMethodOverride >> setCrcFrom: overriddenMethod
 
 	self setCrcFromOriginal: (self originalSourceFrom: overriddenMethod)
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxMethodOverride >> originalSourceFrom: overriddenMethod
 
 	^overriddenMethod definitionObject getSource asString
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxMethodOverride >> overridingSourceFrom: overriddenMethod
 
 	^overriddenMethod object getSource asString
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxMethodOverride >> setEditsFrom: overriddenMethod
 
 	self
 		setEditsFromOriginal: (self originalSourceFrom: overriddenMethod)
 		toOverride: (self overridingSourceFrom: overriddenMethod)
 
-{ #category : #'applying' }
+{ #category : 'applying' }
 GbxMethodOverride >> apply
 
 	| methodDef method basePackage sourceString override vwVersion |
@@ -119,7 +122,7 @@ GbxMethodOverride >> apply
 								, ' failed to compile']].
 	vwVersion < '9.3' ifTrue: [override install].	"The override needs to be installed *after* compiling the overriding method prior to 9.3"
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxMethodOverride >> initializeFromOverriddenMethod: overriddenMethod forParent: anOverrideSet
 
 	parent := anOverrideSet.
@@ -129,7 +132,7 @@ GbxMethodOverride >> initializeFromOverriddenMethod: overriddenMethod forParent:
 		setCrcFrom: overriddenMethod;
 		setEditsFrom: overriddenMethod
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxMethodOverride >> printOn: aStream
 
 	aStream
@@ -140,14 +143,14 @@ GbxMethodOverride >> printOn: aStream
 		nextPutAll: (self selector ifNil: ['']);
 		nextPutAll: ')'
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxMethodOverride class >> fromOverriddenMethod: overriddenMethod forParent: anOverrideSet
 
 	^(self new)
 		initializeFromOverriddenMethod: overriddenMethod forParent: anOverrideSet;
 		yourself
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxMethodOverride class >> behavior: behaviorOfMethod selector: selectorSymbol crc: anInteger edits: editsSequence
 
 	^(self new)

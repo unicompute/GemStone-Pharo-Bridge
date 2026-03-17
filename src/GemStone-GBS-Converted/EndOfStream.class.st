@@ -1,8 +1,10 @@
 Class {
-	#name : #'EndOfStream',
-	#superclass : #'Error',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'EndOfStream',
+	#superclass : 'Error',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

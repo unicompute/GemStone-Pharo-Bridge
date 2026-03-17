@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrExceptionAlreadyInstalled',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrExceptionAlreadyInstalled',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrExceptionAlreadyInstalled class >> gemStoneErrorNumber6430 ^2480
 

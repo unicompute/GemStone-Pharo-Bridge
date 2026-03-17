@@ -1,19 +1,24 @@
 Class {
-	#name : #'GbxDbaUserPrivilegesBrain',
-	#superclass : #'GbxDbaBrain',
-	#instVars : [ #'privileges' #'userBrowser' #'validPrivileges' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxDbaUserPrivilegesBrain',
+	#superclass : 'GbxDbaBrain',
+	#instVars : [
+		'privileges',
+		'userBrowser',
+		'validPrivileges'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxDbaUserPrivilegesBrain >> userBrowser: aGSDbaUserBrowser
 
 	" Set the value of userBrowser, the GSDbaUserBrowser from which I was spawned. "
 
 	userBrowser := aGSDbaUserBrowser.
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaUserPrivilegesBrain >> privilegeValueFor: aPrivilegeSymbol
 	" Answer true if this user has the privilege specified by aPrivilegeSymbol.
 	  NOTE:  As an aside, we also make sure that aPrivilegeSymbol is valid. "
@@ -22,7 +27,7 @@ GbxDbaUserPrivilegesBrain >> privilegeValueFor: aPrivilegeSymbol
 		[^ self error: 'bad privilege symbol' ].
 	^ self privileges includes: aPrivilegeSymbol
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaUserPrivilegesBrain >> privileges
 	" Answer the value of privileges, a list of symbols desribing the privileges of my user. "
 
@@ -30,13 +35,13 @@ GbxDbaUserPrivilegesBrain >> privileges
 		[privileges := self userBrowser user privileges.].
 	^ privileges
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaUserPrivilegesBrain >> checkBoxValueSymbols
 	" Answer a list of symbols used to obtain values for check box parts."
 
 	^self session evaluate: 'PrivilegeNames' context: OUserProfile
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaUserPrivilegesBrain >> validPrivileges
 	" Answer the value of validPrivileges, a list of all valid symbols desribing the privileges. "
 
@@ -47,7 +52,7 @@ GbxDbaUserPrivilegesBrain >> validPrivileges
 			[: aSymb | #ReservedForFutureUse == aSymb].].
 	^ validPrivileges
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaUserPrivilegesBrain >> session
 	" Answer the value of userBrowser's session, which is the GSSession that I must user.
 	  NOTE:  During initialization, I will not have a userBrowser yet. "
@@ -56,19 +61,19 @@ GbxDbaUserPrivilegesBrain >> session
 		ifTrue: [super session]
 		ifFalse: [self userBrowser session]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaUserPrivilegesBrain >> userBrowser
 	" Answer the value of userBrowser, the GSDbaUserBrowser from which I was spawned. "
 
 	^ userBrowser
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserPrivilegesBrain >> accept
 	" Save any changes that the user has made to these privileges. "
 
 	self ok.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserPrivilegesBrain >> ok
 	" Save any changes that the user has made to these privileges. "
 
@@ -83,7 +88,7 @@ GbxDbaUserPrivilegesBrain >> ok
 	self hasChanges: false.
 	self windowInterface closeRequest
 
-{ #category : #'changing' }
+{ #category : 'changing' }
 GbxDbaUserPrivilegesBrain >> markHasChanges
 	" The user has clicked one of my radio buttons. "
 

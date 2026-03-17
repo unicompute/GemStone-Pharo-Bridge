@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsStDBbadAtRuby',
-	#superclass : #'GbsCompilerError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsStDBbadAtRuby',
+	#superclass : 'GbsCompilerError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsStDBbadAtRuby class >> gemStoneErrorNumber6430 ^1077
 

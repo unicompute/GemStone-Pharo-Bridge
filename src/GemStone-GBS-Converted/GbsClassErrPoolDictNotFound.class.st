@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsClassErrPoolDictNotFound',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsClassErrPoolDictNotFound',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsClassErrPoolDictNotFound class >> gemStoneErrorNumber6430 ^2045
 

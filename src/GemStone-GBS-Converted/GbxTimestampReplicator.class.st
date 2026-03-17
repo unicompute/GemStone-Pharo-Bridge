@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxTimestampReplicator',
-	#superclass : #'GbxPointerObjectReplicator',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxTimestampReplicator',
+	#superclass : 'GbxPointerObjectReplicator',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private support' }
+{ #category : 'private support' }
 GbxTimestampReplicator >> clientTimeZone
 
 	| timeZone |
@@ -15,7 +17,7 @@ GbxTimestampReplicator >> clientTimeZone
 				ifFalse: [session clientTimeZone].
 	^timeZone
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxTimestampReplicator >> namedInstvarsOf: anObject inServerOrderDo: aBlock
 	"anObject is a client object, an instance of the class that I replicate.
 	For each instvar (named or indexed) that is mapped to the server,

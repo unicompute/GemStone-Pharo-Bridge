@@ -1,31 +1,34 @@
 Class {
-	#name : #'GbxMappingList',
-	#superclass : #'Object',
-	#instVars : [ #'coll' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxMappingList',
+	#superclass : 'Object',
+	#instVars : [
+		'coll'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'enumerating' }
+{ #category : 'enumerating' }
 GbxMappingList >> delegatesAndClientObjsDo: block
 
 	1 to: coll size
 		by: 2
 		do: [:i | block value: (coll at: i) value: (coll at: i + 1)]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxMappingList >> addDelegate: del clientObj: clientObj
 
 	coll
 		add: del;
 		add: clientObj
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxMappingList >> initialize
 
 	coll := OrderedCollection new
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxMappingList class >> new
 
 	^self basicNew initialize

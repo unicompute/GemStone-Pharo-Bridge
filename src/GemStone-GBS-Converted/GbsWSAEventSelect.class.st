@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbsWSAEventSelect',
-	#superclass : #'GbsInterfaceError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsWSAEventSelect',
+	#superclass : 'GbsInterfaceError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsWSAEventSelect >> mayResume
 	^true
 

@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrIllegalPasswordExpiration',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrIllegalPasswordExpiration',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrIllegalPasswordExpiration class >> gemStoneErrorNumber6430 ^2606
 

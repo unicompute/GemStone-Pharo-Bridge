@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsObjClassNotOopOrNscKind',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsObjClassNotOopOrNscKind',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsObjClassNotOopOrNscKind class >> gemStoneErrorNumber6430 ^2137
 

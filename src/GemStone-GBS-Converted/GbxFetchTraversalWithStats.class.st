@@ -1,22 +1,25 @@
 Class {
-	#name : #'GbxFetchTraversalWithStats',
-	#superclass : #'GbxFetchTraversal',
-	#instVars : [ #'statResource' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxFetchTraversalWithStats',
+	#superclass : 'GbxFetchTraversal',
+	#instVars : [
+		'statResource'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxFetchTraversalWithStats >> statResource
 
 	^statResource
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxFetchTraversalWithStats >> statResource: aSessionStatResource
 	
 	statResource := aSessionStatResource
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxFetchTraversalWithStats class >> for: aServerInteraction statResource: aStatResource
 	
 	^(super for: aServerInteraction) statResource: aStatResource

@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxDelegate',
-	#superclass : #'Object',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxDelegate',
+	#superclass : 'Object',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'public - implicit replication' }
+{ #category : 'public - implicit replication' }
 GbxDelegate >> asLocalObjectToLevel: level replicationSpecSet: repSpecSet
 	"This method returns a client object corresponding with the server object
 	 represented by the receiver.  If we already have a replicate, answer that without 
@@ -23,20 +25,20 @@ GbxDelegate >> asLocalObjectToLevel: level replicationSpecSet: repSpecSet
 		replicationScheme: (sess
 				sessionCritical: [sess replicationSchemeForSet: repSpecSet])
 
-{ #category : #'public - implicit replication' }
+{ #category : 'public - implicit replication' }
 GbxDelegate >> asGSObjectInSession: aGSSession 
 	(self isForSession: aGSSession) ifTrue: [^self].
 	self checkSession.
 	aGSSession checkSession.
 	self gbsMessenger error: 'Attempt to use a delegate from another session.'
 
-{ #category : #'public - implicit replication' }
+{ #category : 'public - implicit replication' }
 GbxDelegate >> asGSObject
 	"I'm already a GSObject"
 
 	^self
 
-{ #category : #'public - implicit replication' }
+{ #category : 'public - implicit replication' }
 GbxDelegate >> asLocalObjectToLevel: level
 	"This method returns a Smalltalk object corresponding with the GemStone object
 	 represented by the receiver.  The level argument indicates how many levels of
@@ -45,7 +47,7 @@ GbxDelegate >> asLocalObjectToLevel: level
 	^self asLocalObjectToLevel: level
 		replicationScheme: self session currentReplicationScheme
 
-{ #category : #'public - implicit replication' }
+{ #category : 'public - implicit replication' }
 GbxDelegate >> asLocalObjectCopy
 	"This method returns a Smalltalk object replicate of the GemStone object represented by the receiver.  The objects resulting from the replication are not resolved from or added to the transparency caches - they are a 'local deep copy'"
 	
@@ -54,26 +56,26 @@ GbxDelegate >> asLocalObjectCopy
 	^(self asLocalObjectToLevel: 0 replicationSpecSet: #transitiveClosureSpec)
 		gbxDeepCopy
 
-{ #category : #'public - implicit replication' }
+{ #category : 'public - implicit replication' }
 GbxDelegate >> traverseToLevel: level replicationSpecSet: repSpecSet
 
 	^self traverseToLevel: level
 		replicationScheme: (self session replicationSchemeForSet: repSpecSet)
 
-{ #category : #'public - implicit replication' }
+{ #category : 'public - implicit replication' }
 GbxDelegate >> asGSObjectCopyInSession: aGSSession 
 	GbsConfiguration 
 		deprecated: 'Copy replication deprecated March, 2006. Use normal replication instead'.
 	(self isForSession: aGSSession) ifTrue: [^self].
 	self gbsMessenger error: 'Attempt to access a proxy from another session'
 
-{ #category : #'public - implicit replication' }
+{ #category : 'public - implicit replication' }
 GbxDelegate >> gbxCanBeStubbed
 	"Private.  GBS.  Stubbing a delegate doesn't make much sense in any context. Raises an error."
 
 	^false
 
-{ #category : #'public - implicit replication' }
+{ #category : 'public - implicit replication' }
 GbxDelegate >> asGSObjectCopy
 	"I'm already a GSObject"
 
@@ -81,7 +83,7 @@ GbxDelegate >> asGSObjectCopy
 		failure: 'Did you really intend to send #asGSObjectCopy to a delegate?'.
 	^self
 
-{ #category : #'public - implicit replication' }
+{ #category : 'public - implicit replication' }
 GbxDelegate >> asLocalObjectUsingReplicationSpecSet: repSpecSet
 	"This method returns a Smalltalk object corresponding with the GemStone object
 	 represented by the receiver.  The repSpecSet argument is a symbol specifying
@@ -91,7 +93,7 @@ GbxDelegate >> asLocalObjectUsingReplicationSpecSet: repSpecSet
 	^self asLocalObjectToLevel: self session defaultGStoSTLevel
 		replicationSpecSet: repSpecSet
 
-{ #category : #'public - implicit replication' }
+{ #category : 'public - implicit replication' }
 GbxDelegate >> asLocalObject
 	"This method returns a Smalltalk object associated with the GemStone object represented by the receiver."
 
@@ -99,17 +101,17 @@ GbxDelegate >> asLocalObject
 	"Fault to finite level, stubbing at leaf nodes, using caches"
 	^self asLocalObjectToLevel: self session defaultGStoSTLevel
 
-{ #category : #'GemStone extensions' }
+{ #category : 'GemStone extensions' }
 GbxDelegate >> stubYourself
 	"This is behavior intended for client objects only, so don't forward or
 	 attempt to stub a stub; just answer the receiver."
 
-{ #category : #'public - object management' }
+{ #category : 'public - object management' }
 GbxDelegate >> createObjectClass: oClass values: values
 	
 	^self subclassResponsibility
 
-{ #category : #'public - object management' }
+{ #category : 'public - object management' }
 GbxDelegate >> releaseInGs
 	"This method allows your application to inform GemStone the object
 	 represented by the receiver can be released for garbage collection. This
@@ -119,12 +121,12 @@ GbxDelegate >> releaseInGs
 	self gbsMessenger 
 		error: 'GbxDelegate>>releaseInGs is not supported in this version of GBS.'
 
-{ #category : #'public - object management' }
+{ #category : 'public - object management' }
 GbxDelegate >> createObjectClass: oClass values: values clusterBucket: clusterBucket permanent: aBool
 	
 	^self subclassResponsibility
 
-{ #category : #'public - object management' }
+{ #category : 'public - object management' }
 GbxDelegate >> save
 	"If you use a GemStone/S 64-bit server, you should not send #save. In the single-trip protocol used with 64-bit 
 	servers, moving objects in and out of the export set is automatic, and should not be done manually."
@@ -134,7 +136,7 @@ Note that results of new object creation methods, remotePerform, and remote exec
 
 	self session saveObjects: (Array with: self)
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintClient: client in: aSession on: aStream 
 	aStream
 		cr;
@@ -145,7 +147,7 @@ GbxDelegate >> debugPrintClient: client in: aSession on: aStream
 		in: aSession
 		on: aStream
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> printDelegateOn: aStream 
 	aStream cr.
 	aStream
@@ -168,7 +170,7 @@ GbxDelegate >> printDelegateOn: aStream
 				print: ex originator;
 				nextPutAll: ' >>']
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintClientBlockedOn: aStream 
 	aStream
 		cr;
@@ -176,12 +178,12 @@ GbxDelegate >> debugPrintClientBlockedOn: aStream
 		tab.
 	self debugPrintBasicClientBlockedOn: aStream
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintDeadSessionOn: aStream 
 	aStream nextPutAll: '#deadSessionFlag is '.
 	self hasLiveSessionFlag not printOn: aStream
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugCurrentSessionPrintOn: aStream 
 	| sess |
 	sess := GBSM searchForCurrentSession.
@@ -193,7 +195,7 @@ GbxDelegate >> debugCurrentSessionPrintOn: aStream
 				nextPutAll: 'Session no longer logged in, using current session.'].
 	^sess
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintFlagsOn: aStream
 
 	aStream
@@ -222,12 +224,12 @@ GbxDelegate >> debugPrintFlagsOn: aStream
 		tab.
 	self debugPrintInExportOn: aStream
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintInExportOn: aStream 
 	aStream nextPutAll: '#inExport is '.
 	self inExport printOn: aStream
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintBasicClient: client in: aSession on: aStream
 
 	client == nil
@@ -248,11 +250,11 @@ GbxDelegate >> debugPrintBasicClient: client in: aSession on: aStream
 					aStream nextPutAll: 'cached isImmutable is '.
 					client gbxIsImmutable printOn: aStream]]
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintBasicClientBlockedOn: aStream 
 	aStream nextPutAll: '*ServerToClient map access is blocked by another process'
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> gbxDebugPrintOn: aStream
 	"Symbols, specials, and metaclasses may not be in the GS export set."
 
@@ -274,7 +276,7 @@ GbxDelegate >> gbxDebugPrintOn: aStream
 	differs ifTrue: [^self].
 	self debugPrintClient: client in: aSession on: aStream
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintIsDefunctOn: aStream 
 	aStream
 		cr;
@@ -282,7 +284,7 @@ GbxDelegate >> debugPrintIsDefunctOn: aStream
 		tab.
 	self debugPrintBasicIsDefunctOn: aStream
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintBasicExportInfoClient: client loggedIn: loggedIn in: aSession on: aStream
 	"Symbols, specials, and metaclasses may not be in the GS export set."
 
@@ -300,7 +302,7 @@ GbxDelegate >> debugPrintBasicExportInfoClient: client loggedIn: loggedIn in: aS
 							do: [:ex | aStream nextPutAll: 'Unknown GS exported (' , ex description , ')']]].
 	client ~~ nil ifTrue: [aStream nextPutAll: '; cached'] ifFalse: [aStream nextPutAll: '; uncached']
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintBasicIsDefunctOn: aStream
 	"If the receiver is marked defunct but is has a logged-in session this method
 	acquires the session's CInterface's accessProtect and GciCallProtect.
@@ -323,18 +325,18 @@ GbxDelegate >> debugPrintBasicIsDefunctOn: aStream
 						ifFalse: [aStream nextPutAll: ' (sessionQuickIsLoggedIn returned false)']
 						ifTrue: [self exists ifFalse: [aStream nextPutAll: ' (doesn''t exist in gem)']]]]
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintIsIdentityClampedOn: aStream
 
 	aStream nextPutAll: '#isIdentityClamped is '.
 	self isIdentityClamped printOn: aStream
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintIsROMObjectOn: aStream 
 	aStream nextPutAll: '#isROMObject is '.
 	self isReadOnlyObject printOn: aStream
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> gbxPrintClientOn: aStream
 
 	| sess client |
@@ -357,7 +359,7 @@ GbxDelegate >> gbxPrintClientOn: aStream
 				aStream
 					nextPutAll: '<<error occurred accessing object>> ' , ex messageText]
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> gbxPrintServerOn: aStream
 
 	aStream cr.
@@ -377,7 +379,7 @@ GbxDelegate >> gbxPrintServerOn: aStream
 				[:ex |
 				aStream nextPutAll: '<<error occurred accessing object>>' , ex messageText]
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintBasicIsSpecialOn: aStream
 
 	| isSpecial |
@@ -395,7 +397,7 @@ GbxDelegate >> debugPrintBasicIsSpecialOn: aStream
 					[session critical: [self asLocalSpecial printOn: aStream]
 						unlessBlocked: [aStream nextPutAll: '<blocked session>']]]
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintIsSpecialOn: aStream 
 	aStream
 		cr;
@@ -403,12 +405,12 @@ GbxDelegate >> debugPrintIsSpecialOn: aStream
 		tab.
 	self debugPrintBasicIsSpecialOn: aStream
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintIsStDirtyOn: aStream 
 	aStream nextPutAll: '#isStDirty is '.
 	self isStDirty printOn: aStream
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintBasicSessionInfoOn: aStream 
 	"Print my session and whether or not it's logged in to aStream.
 	Answer whether or not my session is logged in."
@@ -428,7 +430,7 @@ GbxDelegate >> debugPrintBasicSessionInfoOn: aStream
 		nextPutAll: status.
 	^status = '(believed logged in)'
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintCachedClientDiffers: client in: aSession on: aStream
 	
 	^client ~~ nil
@@ -452,7 +454,7 @@ GbxDelegate >> debugPrintCachedClientDiffers: client in: aSession on: aStream
 					true]]
 		ifFalse: [true]
 
-{ #category : #'private - debug printing' }
+{ #category : 'private - debug printing' }
 GbxDelegate >> debugPrintSessionInfoOn: aStream 
 	aStream
 		cr;
@@ -460,7 +462,7 @@ GbxDelegate >> debugPrintSessionInfoOn: aStream
 		tab.
 	^self debugPrintBasicSessionInfoOn: aStream
 
-{ #category : #'private - implicit replication' }
+{ #category : 'private - implicit replication' }
 GbxDelegate >> asLocalObjectToLevel: level replicationScheme: scheme
 	"This method returns a client object corresponding with the server object
 	 represented by the receiver.  If we already have a replicate, answer that without 
@@ -480,7 +482,7 @@ GbxDelegate >> asLocalObjectToLevel: level replicationScheme: scheme
 		ifTrue: [localObj := self traverseToLevel: level replicationScheme: scheme].
 	^localObj
 
-{ #category : #'private - implicit replication' }
+{ #category : 'private - implicit replication' }
 GbxDelegate >> traverseToLevel: level replicationScheme: scheme
 
 	| serverTraversal |
@@ -491,7 +493,7 @@ GbxDelegate >> traverseToLevel: level replicationScheme: scheme
 		replicationScheme: scheme.
 	^serverTraversal execute
 
-{ #category : #'private - class behavior' }
+{ #category : 'private - class behavior' }
 GbxDelegate >> compile: aString classified: aProtocol
 	"Private.  Return nil if no compile error; otherwise a two element array containing the error text and
 	the index into the source code at which the error occurred."
@@ -524,7 +526,7 @@ GbxDelegate >> compile: aString classified: aProtocol
 	errorIndex := error at: 2.
 	^Array with: errorText with: errorIndex
 
-{ #category : #'private - class behavior' }
+{ #category : 'private - class behavior' }
 GbxDelegate >> versionDescription
 	"Private.  Send this message when the receiver represents a GemStone class.  The
 	 result is classname[vernum] (for example, X[2])"
@@ -533,7 +535,7 @@ GbxDelegate >> versionDescription
 		unsynchronizedEvaluate: 'self name, ''['', (self classHistory indexOf: self) printString, '']'''
 		context: self
 
-{ #category : #'private - class behavior' }
+{ #category : 'private - class behavior' }
 GbxDelegate >> compileInSmalltalkMethodAt: aSelector warn: warnBool fixErrors: fixBool
 	"GBS Private.  Attempt to compile the GemStone source code for aSelector in the receiver in the corresponding Smalltalk class.
 	 If fixBool is true, the user will be prompted with a window for fixing compiler errors.
@@ -557,7 +559,7 @@ GbxDelegate >> compileInSmalltalkMethodAt: aSelector warn: warnBool fixErrors: f
 	stClass compile: source classified: category.
 	^true
 
-{ #category : #'private - class behavior' }
+{ #category : 'private - class behavior' }
 GbxDelegate >> remoteInheritsFrom: otherClassDelegate
 	"Private.  Returns true if the receiver is a GemStone class that contains aGSClass in its superclass chain.
 	Returns false for any other objects."
@@ -570,13 +572,13 @@ GbxDelegate >> remoteInheritsFrom: otherClassDelegate
 		with: otherClassDelegate
 		context: nil
 
-{ #category : #'private - converting' }
+{ #category : 'private - converting' }
 GbxDelegate >> asKernelPomOop
 	"GBS private"
 
 	^GbxKernelPomOop oopNumber: (self session oopNumberForOop: self oopValue)
 
-{ #category : #'public - forwarder access' }
+{ #category : 'public - forwarder access' }
 GbxDelegate >> asForwarder
 	"GBS. If there is a mapped client object for the server object 
 	I represent, answer the result of sending #asForwarder to it.
@@ -592,14 +594,14 @@ GbxDelegate >> asForwarder
 					mySession privateConnectNewClient: fwdr toServer: self]].
 	^cached == NotCachedToken ifTrue: [fwdr] ifFalse: [cached asForwarder]
 
-{ #category : #'public - forwarder access' }
+{ #category : 'public - forwarder access' }
 GbxDelegate >> asUncachedForwarder
 
 	GbsConfiguration
 		deprecated: 'GbxDelegate>>asUncachedForwarder deprecated March, 2011. Use GbxDelegate>>gbsAsUncachedForwarder instead'.
 	^self gbsAsUncachedForwarder
 
-{ #category : #'public - forwarder access' }
+{ #category : 'public - forwarder access' }
 GbxDelegate >> gbsAsUncachedForwarder
 	"GBS. If there is a mapped client object for the server object 
 	I represent, answer the result of sending #asUncachedForwarder to it.
@@ -618,11 +620,11 @@ GbxDelegate >> gbsAsUncachedForwarder
 					fwdr]
 				ifFalse: [cached gbsAsUncachedForwarder]]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> serverInterfaceDo: aBlock 
 	^self session serverInterfaceDo: aBlock
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> validateSessionForProxy: aProxy 
 	"Private.  Raise an error if there are any obvious problems with
 	 the proxy for the receiver delegate."
@@ -637,7 +639,7 @@ GbxDelegate >> validateSessionForProxy: aProxy
 
 			aProxy gbxBasicClass debugWhile: [self session]]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> fetch: max OOPsAtDebug: startIndex
 	"Fetch the OOPs of one or more instance variables (named or unnamed) of an object"
 	"Do NOT throw an error if the object is not pointers or NSC"
@@ -662,7 +664,7 @@ GbxDelegate >> fetch: max OOPsAtDebug: startIndex
 		with: startIndex
 		context: self
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> sessionIsLoggedIn
 	"Private"
 
@@ -670,11 +672,11 @@ GbxDelegate >> sessionIsLoggedIn
 	sess := self noCheckSession.
 	^sess notNil and: [sess isLoggedIn]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> flags
 	^self basicAt: 2
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> markStDirty: clientObject
 	"Private.  
 	clientObject must be my associated client object. Passing this object in is not a clean design,
@@ -698,7 +700,7 @@ GbxDelegate >> markStDirty: clientObject
 			self setDirtyBit.
 			self session addToDirtyPool: clientObject forDelegate: self]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> gbxStoreInTraversal: storeTraversal 
 	"Private.  Generate an error if this is not a delegate for storeTraversal's session."
 
@@ -708,7 +710,7 @@ GbxDelegate >> gbxStoreInTraversal: storeTraversal
 			self gbsMessenger 
 				error: 'Attempt to store a reference to a delegate into another session.']
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> asLocalSpecial
 	"Private.  If the receiver represents a GemStone special object (based on oop encoding),
 	 return the local equivalent special object.  Otherwise, return NotCachedToken"
@@ -717,7 +719,7 @@ GbxDelegate >> asLocalSpecial
 	sess := self session.
 	^sess sessionCritical: [sess localSpecialFromOop: self]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> remoteInstance
 	"Private to GBS. Must be sent to a delegate for a server metaclass.
 	Answer a delegate for the class that is the sole instance of that metaclass."
@@ -730,22 +732,22 @@ GbxDelegate >> remoteInstance
 				context: self.
 	^GbxDelegate oopValue: classOop session: sess
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> isSpecial
 	"Examples of special objects are nil, true, false, char, etc.;
 	 they don't need to be in the GS export set."
 
 	^self session isSpecialOop: self
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> at: anything 
 	self shouldNotImplement
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> at: anything put: something 
 	self shouldNotImplement
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> fetch: count OOPsAt: sourceOffset into: target startingAt: targetOffset 
 	"Using a limited buffer, fetch count oops from the receiver and place them in the targetOffset of target.  This is method is private, as it doesn't perform any error checking.  The sender must know what it is doing."
 
@@ -769,14 +771,14 @@ GbxDelegate >> fetch: count OOPsAt: sourceOffset into: target startingAt: target
 			whileTrue: [].
 	^target
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> sessionId: anInteger 
 	"if an error occurs at login, the error will come back with delegates of sessionId  0. 
 	We need to go in and massage the delegates of the GbsError in this case"
 
 	^self basicAt: 1 put: anInteger
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> forSession: aSession
 
 	"Private.  Return self if I am a remote object for aSession.  Otherwise, return nil"
@@ -785,14 +787,14 @@ GbxDelegate >> forSession: aSession
 		ifTrue: [ ^self ]
 		ifFalse: [ ^nil ]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> fetchImplementation
 	"Private.  This returns the implementation of the receiver (0 = pointer, 1 = byte, 2 = NSC, 3 = special)"
 	"Use the methods isPointer, isByte, isNSC, and isSpecial"
 
 	^(self session unsynchronizedEvaluate: 'self class implementationFormat' context: self) \\ 4
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> gbxDelegate
 	"Private.  Answer nil or a client-object, found cached for any
 	 session, representing a remote-object that is the logical
@@ -803,7 +805,7 @@ GbxDelegate >> gbxDelegate
 	self error: 'Should not send gbxDelegate to Delegates'.
 	^nil
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> notForSession: aSession
 
 	"Private.  Return nil if I am a proxy for aSession, or for an invalid session.
@@ -816,11 +818,11 @@ GbxDelegate >> notForSession: aSession
 				ifTrue: [ self ]
 				ifFalse: [ nil ]]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> session: aGbsSession 
 	self basicAt: 1 put: aGbsSession sessionId
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> connectingDelegate: otherDelegate withClient: clientObj
 	"Private. I'm already connected to clientObj. Now we're connecting clientObj to otherDelegate, which is not me.
 	Answer the appropriate delegate or list to replace me in the cache."
@@ -854,7 +856,7 @@ Superseding delegate: %3'
 				with: clientObj gbxDebugPrintString
 				with: otherDelegate gbxDebugPrintString]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> sessionHasValidSessionId
 	"Private. The danger of using this method is it trusts
 	 the Smalltalk state of the sessionId.  If our actual
@@ -866,7 +868,7 @@ GbxDelegate >> sessionHasValidSessionId
 	sess := self noCheckSession.
 	^sess notNil and: [ sess hasValidSessionId ]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> fetch: count bytesAt: sourceOffset into: target startingAt: targetOffset 
 	"Using a limited buffer, fetch count bytes from the receiver and place them in the targetOffset of target.  This is method is private, as it doesn't perform any error checking.  The sender must know what it is doing."
 
@@ -888,25 +890,25 @@ GbxDelegate >> fetch: count bytesAt: sourceOffset into: target startingAt: targe
 			whileTrue: [].
 	^target
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> stubbing
 	"Sender must hold my session's sessionProtect."
 
 	self session addToNoLongerReplicated: self
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> forAnySingleSession
 
 	"Private.  The receiver satisfies this request.  Compare with GbxObjectList>>forAnyOrCurrentSessionForObject:."
 	^self
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> markDirty
 	"GbsObject's ought not to be marked dirty"
 
 	^self gbsMessenger error: 'Delegates should not be marked dirty'
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> noCheckSession
 	"Returns either this Delegate's session (if it is alive), or nil "
 
@@ -914,7 +916,7 @@ GbxDelegate >> noCheckSession
 		ifTrue: [GBSM sessionWithId: self sessionId]
 		ifFalse: [nil]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> doesNotUnderstand: aMessage 
 	"This overrides Object's behavior by checking for selectors that begin with 'gs'.
 	If this is the case, the 'gs' part is stripped from the selector and it is sent to
@@ -939,7 +941,7 @@ GbxDelegate >> doesNotUnderstand: aMessage
 					^self remotePerform: newSel withArgs: aMessage arguments].
 			^super doesNotUnderstand: aMessage]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegate >> checkSession
 	"If the session from which this GbsObject was derived is no longer
 	 logged in, raise an error which attributes a cause of death, if available."
@@ -949,7 +951,7 @@ GbxDelegate >> checkSession
 			[GbsError 
 				raiseBadSessionIdFor: (GBSM disconnectedSessionWithId: self sessionId)]
 
-{ #category : #'public - remote execution' }
+{ #category : 'public - remote execution' }
 GbxDelegate >> performOnGsServer: selector withArguments: args
 	"Perform the given selector on the server, and replicate the result."
 
@@ -963,7 +965,7 @@ GbxDelegate >> performOnGsServer: selector withArguments: args
 		shouldReplicateResult: true;
 		execute
 
-{ #category : #'public - remote execution' }
+{ #category : 'public - remote execution' }
 GbxDelegate >> remotePerform: selector withArgs: args
 	"Send aSelector with arguments to the GemStone object the receiver represents and return the resulting delegate.  Convert arguments to delegates if necessary."
 
@@ -984,7 +986,7 @@ GbxDelegate >> remotePerform: selector withArgs: args
 		shouldReplicateResult: false;
 		execute
 
-{ #category : #'public - remote execution' }
+{ #category : 'public - remote execution' }
 GbxDelegate >> remotePerform: aSelector with: anArg with: argTwo with: argThree 
 	"Send aSelector with arguments to the GemStone object the receiver represents and return the resulting GemStoneObject."
 
@@ -994,53 +996,53 @@ GbxDelegate >> remotePerform: aSelector with: anArg with: argTwo with: argThree
 				with: argTwo
 				with: argThree)
 
-{ #category : #'public - remote execution' }
+{ #category : 'public - remote execution' }
 GbxDelegate >> remotePerform: aSelector with: anArg with: argTwo 
 	"Send aSelector with arguments to the GemStone object the receiver represents and return the resulting GemStoneObject."
 
 	^self remotePerform: aSelector withArgs: (Array with: anArg with: argTwo)
 
-{ #category : #'public - remote execution' }
+{ #category : 'public - remote execution' }
 GbxDelegate >> remotePerform: aSelector with: anArg 
 	"Send aSelector with anArg to the GemStone object the receiver represents and return the resulting GemStoneObject."
 
 	^self remotePerform: aSelector withArgs: (Array with: anArg)
 
-{ #category : #'public - remote execution' }
+{ #category : 'public - remote execution' }
 GbxDelegate >> remotePerform: aSelector 
 	"Send aSelector to the GemStone object the receiver represents and return the resulting GemStoneObject."
 
 	^self remotePerform: aSelector withArgs: #()
 
-{ #category : #'public - nsc access' }
+{ #category : 'public - nsc access' }
 GbxDelegate >> addOOPs: gemStoneObjects 
 	"This adds the given collection of OOPs to the NSC I represent.  Returns self."
 
 	self gbsMessenger 
 		error: 'GbxDelegate>>#addOOPs: is not supported in this version of GBS.'
 
-{ #category : #'public - nsc access' }
+{ #category : 'public - nsc access' }
 GbxDelegate >> removeOOP: aGSObject 
 	"This removes the given GemStone Object from the NSC that I represent. Returns false if aGSObject was not present in the receiver, true otherwise."
 
 	self gbsMessenger 
 		error: 'GbxDelegate>>#removeOOP: not supported in this version of GBS'
 
-{ #category : #'public - nsc access' }
+{ #category : 'public - nsc access' }
 GbxDelegate >> addOOP: aDelegate 
 	"This adds the given GemStone Object to the NSC that I represent.  Returns self."
 
 	self gbsMessenger 
 		error: 'GbxDelegate>>#addOOP: is not supported in this version of GBS.'
 
-{ #category : #'public - nsc access' }
+{ #category : 'public - nsc access' }
 GbxDelegate >> removeOOPs: gsObjects 
 	"This removes the collection of GbsObjects from the NSC that I represent. True is returned if all were present, false if any one element of gsObjects was not present in the receiver (note that elements which were present are removed)."
 
 	self gbsMessenger 
 		error: 'GbxDelegate>>#removeOOPs: not supported in this version of GBS'.
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxDelegate >> gbxCanBeArgForUnsynchronizedOperationInSession: session
 	" Note that we do allow dirty delegates, while we do not allow dirty client objects.
 	The rationale is that if the programmer passes in a delegate to an unsynchronized operation,
@@ -1049,7 +1051,7 @@ GbxDelegate >> gbxCanBeArgForUnsynchronizedOperationInSession: session
 
 	^self isForSession: session
 
-{ #category : #'public - comparing' }
+{ #category : 'public - comparing' }
 GbxDelegate >> hash
 	"We could compute a reasonable hash more quickly, 
 	but we don't store Delegates in hashed collections very often."
@@ -1058,7 +1060,7 @@ GbxDelegate >> hash
 
 	^self noCheckSession hashForDelegate: self
 
-{ #category : #'public - comparing' }
+{ #category : 'public - comparing' }
 GbxDelegate >> = anObject 
 	"If two Delegates represent the same GemStone object, they are equal"
 
@@ -1066,23 +1068,23 @@ GbxDelegate >> = anObject
 	anObject isGSObject ifFalse: [^false].
 	^anObject equalsDelegate: self
 
-{ #category : #'private - testing' }
+{ #category : 'private - testing' }
 GbxDelegate >> isEightByte
 	^false
 
-{ #category : #'private - testing' }
+{ #category : 'private - testing' }
 GbxDelegate >> serverCanAcceptClassChanges
 	"The 64-bit 3.2 server (and later) can change the class of a server object through store traversal."
 
 	self subclassResponsibility
 
-{ #category : #'private - testing' }
+{ #category : 'private - testing' }
 GbxDelegate >> gbxIsDelegate
 	"private"
 
 	^true
 
-{ #category : #'private - testing' }
+{ #category : 'private - testing' }
 GbxDelegate >> isGcProtected
 	"Private. Answer true if the server object is in the session's export set or referenced set
 	so it cannot be garbage collected. Answer false if it's not or we can't tell."
@@ -1099,7 +1101,7 @@ GbxDelegate >> isGcProtected
 		unlessBlocked: [false]
 		onError: [:ex | false]
 
-{ #category : #'public - object protocol' }
+{ #category : 'public - object protocol' }
 GbxDelegate >> printOn: aStream 
 	aStream
 		nextPutAll: 'a ';
@@ -1112,20 +1114,20 @@ GbxDelegate >> printOn: aStream
 	self oopValue printOn: aStream base: 16.
 	aStream nextPut: $}
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetchVaryingOOPAt: index 
 	"Return the GbsObject representing the object at index in the varying portion of the receiver.  Operates on both NSCs and indexable objects.  For NSCs, the result for a given index may change after modification of the receiver."
 
 	^(self fetch: 1 varyingOOPsAt: index) at: 1
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetch: num namedOOPsAt: index onto: aStream 
 	"Appends num or less GemStoneObjects fetched from the receiver starting at the specified index using structural access.  The index of the first element is 1."
 
 	aStream nextPutAll: (self fetch: num namedOOPsAt: index).
 	^index + num
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetch: max varyingOOPsAt: startIndex
 	"Fetches up to 'max' varying instance variables starting at varying offset 'index'.  Operates on both Nscs and indexable objects.   For Nscs, the result for a given value of 'index' may change after a modification of the receiver."
 
@@ -1148,7 +1150,7 @@ GbxDelegate >> fetch: max varyingOOPsAt: startIndex
 		with: startIndex
 		context: self
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetch: max OOPsAt: startIndex
 	"Fetch the OOPs of one or more instance variables (named or unnamed) of an object"
 	"Throw an error if the object is not pointers or NSC"
@@ -1176,23 +1178,23 @@ GbxDelegate >> fetch: max OOPsAt: startIndex
 		with: startIndex
 		context: self
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetch: max varyingOOPsAt: index onto: aStream 
 	aStream nextPutAll: (self fetch: max varyingOOPsAt: index).
 	^index + max
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetchByteAt: index 
 	"Returns the byte at index in the receiver as a SmallInteger"
 
 	^(self fetch: 1 bytesAt: index) at: 1
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetch: max OOPsAt: index onto: aStream 
 	aStream nextPutAll: (self fetch: max OOPsAt: index).
 	^index + max
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetch: max bytesAt: startIndex
 	"Fetch up to max bytes of the receiver from GemStone starting at index, returning a ByteArray."
 
@@ -1213,47 +1215,47 @@ GbxDelegate >> fetch: max bytesAt: startIndex
 		with: startIndex
 		context: self
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetchCharAt: index 
 	"This pulls one character of the receiver up from the GemStone"
 
 	self gbxFixMe.	"There is no test coverage for this message.."
 	^(self fetch: 1 charsAt: index) at: 1
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetch: max bytesAt: index onto: aStream 
 	"Fetch up to max bytes of the receiver from GemStone starting at index, appending to aStream."
 
 	aStream nextPutAll: (self fetch: max bytesAt: index).
 	^index + max
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetch: max charsAt: index 
 	"Fetch up to max bytes of the receiver from GemStone starting at index, returning a ByteString."
 
 	^(self fetch: max bytesAt: index) gbxChangeClassTo: '' class
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetchIdxOOPAt: index 
 	"Pre-3.2 functionality now provided by more general fetchVaryingOOPAt:"
 
 	^self fetchVaryingOOPAt: index
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetchNamedOOPAt: index 
 	"Returns the GemStoneObject fetched from the named instance variable portion of the receiver at the specified index using structural access.  The index of the first instance variable is 1."
 
 	self gbsMessenger 
 		error: '#fetch:namedOOPAt: is not supported in this version of GBS.'
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetch: max charsAt: index onto: aStream 
 	"Fetch up to max bytes of the receiver from GemStone starting at index, appending to aStream."
 
 	aStream nextPutAll: (self fetch: max charsAt: index).
 	^index + max
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetchOOPAt: index 
 	"Returns the single element fetched from the receiver (a GemStoneObject representing a GemStone pointer object or NSC) at the specified index using structural access.  The index of the first element is 1."
 
@@ -1268,43 +1270,43 @@ GbxDelegate >> fetchOOPAt: index
 						, index printString , ' that was out of range. '].
 	^resultArray at: 1
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetchObjInfoStartingAt: firstOffset maxBytes: maxBytes 
 	^self gbsMessenger 
 		error: 'GbxDelegate>>#fetchObjInfoStartingAt:maxBytes: is not supported in this version of GBS'
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetch: max idxOOPsAt: index 
 	"As of 3.2, this functionality is defined in terms of the more general fetch:varyingOOPsAt:"
 
 	^self fetch: max varyingOOPsAt: index
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetch: max idxOOPsAt: index onto: aStream 
 	aStream nextPutAll: (self fetch: max varyingOOPsAt: index).
 	^index + max
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetchObjectInfo
 	^self gbsMessenger 
 		error: 'GbxDelegate>>#fetchObjectInfo is not supported in this version of GBS'
 
-{ #category : #'public - fetching' }
+{ #category : 'public - fetching' }
 GbxDelegate >> fetch: num namedOOPsAt: index 
 	"Returns an array of num or less GemStoneObjects fetched from the receiver starting at the specified index using structural access.  The index of the first element is 1."
 
 	self gbsMessenger 
 		error: '#fetch:namedOOPsAt: is not supported in this version of GBS.'
 
-{ #category : #'private - oop access' }
+{ #category : 'private - oop access' }
 GbxDelegate >> oopByteAt: byteOffset put: byteValue 
 	self subclassResponsibility
 
-{ #category : #'private - oop access' }
+{ #category : 'private - oop access' }
 GbxDelegate >> oopByteAt: byteOffset 
 	self subclassResponsibility
 
-{ #category : #'private - oop access' }
+{ #category : 'private - oop access' }
 GbxDelegate >> oopNumberLower3
 	"Returns the SmallInteger representation of the 3 least significant bytes
 	 of the oop number.  For 4 byte oops this is bytes 2-4 (all but the most 
@@ -1314,7 +1316,7 @@ GbxDelegate >> oopNumberLower3
 
 	^self subclassResponsibility
 
-{ #category : #'private - oop access' }
+{ #category : 'private - oop access' }
 GbxDelegate >> oopValue: anInteger 
 	"this assumes a new delegate is all 0's"
 
@@ -1328,7 +1330,7 @@ GbxDelegate >> oopValue: anInteger
 			temp := temp bitShift: -8.
 			index := index - 1]
 
-{ #category : #'private - oop access' }
+{ #category : 'private - oop access' }
 GbxDelegate >> oopNumberHighBytes
 	"Returns the SmallInteger representation of the 1 or 2 most significant bytes
 	 of the oop number (all but the lower three).  For 4 byte oops this is byte 1 (the most 
@@ -1337,7 +1339,7 @@ GbxDelegate >> oopNumberHighBytes
 
 	^self subclassResponsibility
 
-{ #category : #'private - oop access' }
+{ #category : 'private - oop access' }
 GbxDelegate >> oopShortAt: shortOffset
 	"Return the unsigned 16-bit chunk of the oop at the given shortOffset, starting from the 
 	 high order end.  For example, (aDelegate oopShortAt: 1) returns the most 
@@ -1348,15 +1350,15 @@ GbxDelegate >> oopShortAt: shortOffset
 	^((self oopByteAt: byteOffset) bitShift: 8)
 		bitOr: (self oopByteAt: byteOffset + 1)
 
-{ #category : #'private - oop access' }
+{ #category : 'private - oop access' }
 GbxDelegate >> oopNumberAt: byteOffset 
 	self subclassResponsibility
 
-{ #category : #'private - oop access' }
+{ #category : 'private - oop access' }
 GbxDelegate >> bytesPerOop
 	^self class bytesPerOop
 
-{ #category : #'private - execution' }
+{ #category : 'private - execution' }
 GbxDelegate >> unsynchronizedPerform: selector withArgs: args
 	"Private to GBS.  Bypass the normal <remotePerform:> methods so as to avoid store traversals, etc.
 	Does NOT maintain normal GBS state synchronization between client and server.
@@ -1395,25 +1397,25 @@ GbxDelegate >> unsynchronizedPerform: selector withArgs: args
 		stopForBreakpoints: false;
 		execute
 
-{ #category : #'private - execution' }
+{ #category : 'private - execution' }
 GbxDelegate >> unsynchronizedPerform: aSymbol with: arg1 
 	"Private.  Bypass the normal <remotePerform:> methods so as to avoid store traversals, etc."
 
 	^self unsynchronizedPerform: aSymbol withArgs: (Array with: arg1)
 
-{ #category : #'private - execution' }
+{ #category : 'private - execution' }
 GbxDelegate >> unsynchronizedPerform: aSymbol
 	"Private.  Bypass the normal <remotePerform:> methods so as to avoid store traversals, etc."
 
 	^self unsynchronizedPerform: aSymbol withArgs: #()
 
-{ #category : #'private - execution' }
+{ #category : 'private - execution' }
 GbxDelegate >> unsynchronizedPerform: aSymbol with: arg1 with: arg2 
 	"Private.  Bypass the normal <remotePerform:> methods so as to avoid store traversals, etc."
 
 	^self unsynchronizedPerform: aSymbol withArgs: (Array with: arg1 with: arg2)
 
-{ #category : #'public - storing' }
+{ #category : 'public - storing' }
 GbxDelegate >> storeBytes: array at: index
 	"Store the given array of bytes into this object."
 
@@ -1435,62 +1437,62 @@ GbxDelegate >> storeBytes: array at: index
 		with: index
 		context: self
 
-{ #category : #'public - storing' }
+{ #category : 'public - storing' }
 GbxDelegate >> storeBytes: arrayOrString at: index instanceOf: remoteClass 
 	"Store the given arrayOrString of bytes into this object.  The remoteClass argument should be a proxy for the GemStone class of the receiver, or Onil.  This information is used to determine whether byte swapping is required for objects such as floats."
 
 	^self gbsMessenger 
 		error: 'GbxDelegate>>#storeBytes:at:instanceOf: is not supported in this version of GBS'
 
-{ #category : #'public - storing' }
+{ #category : 'public - storing' }
 GbxDelegate >> storeChar: aChar at: index 
 	"This method stores aChar into the GemStone object represented by the receiver.  This method may be used for either byte or character stores."
 
 	self gbxFixMe.	"There is no test coverage for this message.."
 	^self storeByte: aChar at: index
 
-{ #category : #'public - storing' }
+{ #category : 'public - storing' }
 GbxDelegate >> storeChars: string at: index 
 	"Store the given string into this object."
 
 	^self storeBytes: string at: index
 
-{ #category : #'public - storing' }
+{ #category : 'public - storing' }
 GbxDelegate >> storeIdxOOP: aGSObject at: index 
 	"Store aGSObject at index in the indexable portion of the GemStone object represented by the receiver"
 
 	^self gbsMessenger 
 		error: 'GbxDelegate>>#storeIdxOOP:at: is not supported in this version of GBS'
 
-{ #category : #'public - storing' }
+{ #category : 'public - storing' }
 GbxDelegate >> storeIdxOOPs: arrayOfGSObjects at: index 
 	"Store arrayOfGSObjects starting at index into the GemStone object represented by the receiver"
 
 	^self gbsMessenger 
 		error: 'GbxDelegate>>#storeIdxOOPs:at: is not supported in this version of GBS'
 
-{ #category : #'public - storing' }
+{ #category : 'public - storing' }
 GbxDelegate >> storeNamedOOP: aGSObject at: index 
 	"Store aGSObject at index in the named instance variable portion of the receiver"
 
 	^self gbsMessenger 
 		error: 'GbxDelegate>>#storeNamedOOP:at: is not supported in this version of GBS'
 
-{ #category : #'public - storing' }
+{ #category : 'public - storing' }
 GbxDelegate >> storeNamedOOPs: arrayOfGSObjects at: index 
 	"Store arrayOfGSObjects starting at index into the named instance variable portion of the receiver"
 
 	^self gbsMessenger 
 		error: 'GbxDelegate>>#storeNamedOOPs:at: is not supported in this version of GBS'
 
-{ #category : #'public - storing' }
+{ #category : 'public - storing' }
 GbxDelegate >> replaceOOPs: gsObjects 
 	"Replace the contents of the GemStone object represented by the receiver with gsObjects, an Array of GbxDelegates.  Applies to named as well as varying instance variables (indexable or NSC).  Values supplied for private instance variables will be silently ignored and passed over."
 
 	self gbsMessenger 
 		error: '#replaceOOPs: is not supported in this version of GBS.'
 
-{ #category : #'public - storing' }
+{ #category : 'public - storing' }
 GbxDelegate >> storeOOP: aGSObject at: index 
 	"Store aGSObject at index in the GemStone object represented by the receiver"
 
@@ -1502,52 +1504,52 @@ GbxDelegate >> storeOOP: aGSObject at: index
 		withArguments: (Array with: aGSObject with: index)
 		context: self
 
-{ #category : #'public - storing' }
+{ #category : 'public - storing' }
 GbxDelegate >> replaceVaryingOOPs: gsObjects 
 	"Replace the varying portion (indexable or NSC) of the GemStone object represented by the receiver with gsObjects, an Array of GbsObjects.  This does not affect any named instance variables."
 
 	self gbsMessenger 
 		error: '#replaceVaryingOOPs: is not supported in this version of GBS.'
 
-{ #category : #'public - storing' }
+{ #category : 'public - storing' }
 GbxDelegate >> storeByte: aByte at: index 
 	"This method stores aByte into the GemStone object represented by the receiver.  This method may be used for either byte or character stores."
 
 	self storeBytes: (ByteArray with: aByte asInteger) at: index
 
-{ #category : #'public - storing' }
+{ #category : 'public - storing' }
 GbxDelegate >> storeOOPs: arrayOfGSObjects at: index 
 	"Store arrayOfGSObjects starting at index in the GemStone object represented by the receiver"
 
 	^self gbsMessenger 
 		error: 'GbxDelegate>>#storeBytes:at:instanceOf: is not supported in this version of GBS'
 
-{ #category : #'private - flag masks' }
+{ #category : 'private - flag masks' }
 GbxDelegate >> dirtyMask
 	^1
 
-{ #category : #'private - flag masks' }
+{ #category : 'private - flag masks' }
 GbxDelegate >> deadSessionMask
 	^4
 
-{ #category : #'private - flag masks' }
+{ #category : 'private - flag masks' }
 GbxDelegate >> readOnlyMask
 	^8
 
-{ #category : #'private - flag masks' }
+{ #category : 'private - flag masks' }
 GbxDelegate >> bit2reservedForCustomerUse
 	"Formerly, the skewMask. No longer used by the GBS product."
 	^2
 
-{ #category : #'private - flag masks' }
+{ #category : 'private - flag masks' }
 GbxDelegate >> inExportMask
 	^32
 
-{ #category : #'private - flag masks' }
+{ #category : 'private - flag masks' }
 GbxDelegate >> identityClampedMask
 	^16
 
-{ #category : #'private - remote execution' }
+{ #category : 'private - remote execution' }
 GbxDelegate >> unsynchronizedPerformOnGsServer: selector withArgs: args
 	"Private to GBS. Very dangerous, must follow the rules:
 	* No modifying server objects that might be replicated
@@ -1575,7 +1577,7 @@ GbxDelegate >> unsynchronizedPerformOnGsServer: selector withArgs: args
 		stopForBreakpoints: false;
 		execute
 
-{ #category : #'private - remote execution' }
+{ #category : 'private - remote execution' }
 GbxDelegate >> unsynchronizedPerformOnGsServer: selector 
 	"Private to GBS. Very dangerous, must follow the rules:
 	* No modifying server objects that might be replicated
@@ -1584,7 +1586,7 @@ GbxDelegate >> unsynchronizedPerformOnGsServer: selector
 
 	^self unsynchronizedPerformOnGsServer: selector withArgs: #()
 
-{ #category : #'private - remote execution' }
+{ #category : 'private - remote execution' }
 GbxDelegate >> unsynchronizedRemoteClass
 	"Answer a delegate for the class of the server object that I represent."
 	"Do this carefully, since one place it is used is during replication clamp construction.
@@ -1595,7 +1597,7 @@ GbxDelegate >> unsynchronizedRemoteClass
 	classOop := sess unsynchronizedEvaluate: 'self class asOop' context: self.
 	^GbxDelegate oopValue: classOop session: sess
 
-{ #category : #'public - testing' }
+{ #category : 'public - testing' }
 GbxDelegate >> isExported
 	"Return true if the receiver is in the session's export set.
 	Answer false if we can't tell."
@@ -1611,11 +1613,11 @@ GbxDelegate >> isExported
 		unlessBlocked: [false]
 		onError: [:ex | false]
 
-{ #category : #'public - testing' }
+{ #category : 'public - testing' }
 GbxDelegate >> isGSObject
 	^true
 
-{ #category : #'public - explicit replication' }
+{ #category : 'public - explicit replication' }
 GbxDelegate >> asLocalBoolean
 	"Convert to a local boolean value if possible"
 
@@ -1623,7 +1625,7 @@ GbxDelegate >> asLocalBoolean
 		deprecated: 'Delegate>>asLocalBoolean deprecated March, 2006. Send #asLocalObject instead'.
 	^self asLocalObject
 
-{ #category : #'public - explicit replication' }
+{ #category : 'public - explicit replication' }
 GbxDelegate >> asLocalSymbol
 	"Creates and returns a Smalltalk symbol from the receiver."
 
@@ -1631,13 +1633,13 @@ GbxDelegate >> asLocalSymbol
 		deprecated: 'Delegate>>asLocalSymbol deprecated March, 2006. Send #asLocalObject  or #asLocalObjectCopy instead'.
 	^self asLocalObject
 
-{ #category : #'public - explicit replication' }
+{ #category : 'public - explicit replication' }
 GbxDelegate >> asLocalUndefined
 	GbsConfiguration 
 		deprecated: 'Delegate>>asLocalUndefined deprecated March, 2006. Use ''nil'' instead'.
 	^nil
 
-{ #category : #'public - explicit replication' }
+{ #category : 'public - explicit replication' }
 GbxDelegate >> asLocalCharacter
 	"Return myself as a Smalltalk Character if possible"
 
@@ -1645,7 +1647,7 @@ GbxDelegate >> asLocalCharacter
 		deprecated: 'Delegate>>asLocalCharacter deprecated March, 2006. Send #asLocalObject instead'.
 	^self asLocalObject
 
-{ #category : #'public - explicit replication' }
+{ #category : 'public - explicit replication' }
 GbxDelegate >> asLocalDouble
 	"Returns a Double"
 
@@ -1653,25 +1655,25 @@ GbxDelegate >> asLocalDouble
 		deprecated: 'Delegate>>asLocalDouble deprecated March, 2006. Send #asLocalObject instead'.
 	^self asLocalObject
 
-{ #category : #'public - explicit replication' }
+{ #category : 'public - explicit replication' }
 GbxDelegate >> asLocalFloat
 	GbsConfiguration 
 		deprecated: 'Delegate>>asLocalFloat deprecated March, 2006. Send #asLocalObject instead'.
 	^self asLocalDouble asFloat
 
-{ #category : #'public - explicit replication' }
+{ #category : 'public - explicit replication' }
 GbxDelegate >> asLocalFraction
 	GbsConfiguration 
 		deprecated: 'Delegate>>asLocalFraction deprecated March, 2006. Send #asLocalObject instead'.
 	^self asLocalObject
 
-{ #category : #'public - explicit replication' }
+{ #category : 'public - explicit replication' }
 GbxDelegate >> asLocalInteger
 	GbsConfiguration 
 		deprecated: 'Delegate>>asLocalInteger deprecated March, 2006. Send #asLocalObject'.
 	^self asLocalObject
 
-{ #category : #'public - explicit replication' }
+{ #category : 'public - explicit replication' }
 GbxDelegate >> asLocalLargeNegativeInteger
 	"Assuming the receiver is a GemStone LargeNegativeInteger, replicate in Smalltalk"
 
@@ -1679,7 +1681,7 @@ GbxDelegate >> asLocalLargeNegativeInteger
 		deprecated: 'Delegate>>asLocalLargeNegativeInteger deprecated March, 2006. Send #asLocalObject instead'.
 	^self asLocalObject
 
-{ #category : #'public - explicit replication' }
+{ #category : 'public - explicit replication' }
 GbxDelegate >> asLocalLargePositiveInteger
 	"Assuming the receiver is a GemStone LargePositiveInteger, replicate in Smalltalk"
 
@@ -1687,13 +1689,13 @@ GbxDelegate >> asLocalLargePositiveInteger
 		deprecated: 'Delegate>>asLocalLargePositiveInteger deprecated March, 2006. Send #asLocalObject instead'.
 	^self asLocalObject
 
-{ #category : #'public - explicit replication' }
+{ #category : 'public - explicit replication' }
 GbxDelegate >> asLocalNumber
 	GbsConfiguration 
 		deprecated: 'Delegate>>asLocalLargeNumber deprecated March, 2006. Send #asLocalObject instead'.
 	^self asLocalObject
 
-{ #category : #'public - explicit replication' }
+{ #category : 'public - explicit replication' }
 GbxDelegate >> asLocalSmallInteger
 	"Returns a client Small Integer.  Note that no checking is done to verify that the oopValue of the receiver is a valid GemStone SmallInteger; if it's not, 0 will be returned."
 
@@ -1701,7 +1703,7 @@ GbxDelegate >> asLocalSmallInteger
 		deprecated: 'Delegate>>asLocalSmallInteger deprecated March, 2006. Send #asLocalObject  or #asLocalObjectCopy instead'.
 	^self asLocalObject
 
-{ #category : #'public - explicit replication' }
+{ #category : 'public - explicit replication' }
 GbxDelegate >> asLocalString
 	"This pulls the bytes of the receiver up from the GemStone and puts them into a local String object"
 
@@ -1709,7 +1711,7 @@ GbxDelegate >> asLocalString
 		deprecated: 'Delegate>>asLocalString deprecated March, 2006. Send #asLocalObject instead'.
 	^self asLocalObject
 
-{ #category : #'private - temporary' }
+{ #category : 'private - temporary' }
 GbxDelegate >> remoteClassIsClientForwarder
 	"Answer true if the server I represent is of class ClientForwarder"
 
@@ -1720,7 +1722,7 @@ GbxDelegate >> remoteClassIsClientForwarder
 		verifyArgs: [true]
 		session: self session) = OClientForwarder
 
-{ #category : #'TEMPORARY' }
+{ #category : 'TEMPORARY' }
 GbxDelegate >> fetchObjectValues
 	"Return an array of delegates representing the instance variables of <self>."
 
@@ -1729,7 +1731,7 @@ GbxDelegate >> fetchObjectValues
 	self gbxFixMe.	"This message should be deprecated."
 	^self fetch: 1000000 OOPsAt: 1
 
-{ #category : #'TEMPORARY' }
+{ #category : 'TEMPORARY' }
 GbxDelegate >> fetchObjectValuesDebug
 	"Return an array of delegates representing the instance variables of <self>."
 
@@ -1738,31 +1740,31 @@ GbxDelegate >> fetchObjectValuesDebug
 	self gbxFixMe.	"This message should be deprecated."
 	^self fetch: 1000000 OOPsAtDebug: 1
 
-{ #category : #'private - inst var accessing' }
+{ #category : 'private - inst var accessing' }
 GbxDelegate >> instVarAt: anIndex 
 	^self unsynchronizedPerform: #instVarAt: with: anIndex
 
-{ #category : #'private - inst var accessing' }
+{ #category : 'private - inst var accessing' }
 GbxDelegate >> instVarNames
 	^(self remoteClass unsynchronizedPerform: #allInstVarNames) asLocalObject
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> checkAuth
 	"Check authorization of this object for the current user.  The result is represented as #none, #read, or #write, and is the result of a complete authorization check, including owner, group, and world authorization(s).  Special objects such as SmallIntegers will always be reported as #read authorization.  Reports an error if the object doesn't exist."
 
 	^(self session checkAuth: (Array with: self)) at: 1
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> remoteVaryingSize
 	"Return the number of varying elements (indexable or NSC) in the receiver"
 
 	^self session evaluate: 'self _basicSize' context: self
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> isBytes
 	^self fetchImplementation == 1
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> gbxIsGSDefunct
 	"Private. Answer true if the proxy is defunct."
 
@@ -1770,7 +1772,7 @@ GbxDelegate >> gbxIsGSDefunct
 	self sessionHasValidSessionId ifFalse: [^true].
 	^self exists not
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> session
 	| id ses |
 	self checkSession.
@@ -1785,25 +1787,25 @@ GbxDelegate >> session
 			self checkSession].
 	^nil
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> sessionId
 	^self basicAt: 1
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> isForSession: aSession 
 	"Returns true if receiver's session is aSession"
 
 	^self sessionId == aSession sessionId
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> isNSC
 	^self fetchImplementation == 2
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> isStringObject
 	^(self remotePerform: #isKindOf: with: OCharacterCollection) = Otrue
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> oopValue
 	"Constructs an integer representation of the object ID (oop) of the server object I represent. 
 	Not recommended for wide use -- in general it's better to leave oops in their byte representation."
@@ -1814,7 +1816,7 @@ GbxDelegate >> oopValue
 		do: [:index | temp := temp * 16r100 + (self oopByteAt: index)].
 	^temp
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> exists
 	"Return false if the GemStone object I represent does not exist"
 
@@ -1823,7 +1825,7 @@ GbxDelegate >> exists
 		verifyArgs: [true]
 		session: self session
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> remoteClass
 	"Answer a delegate for the class of the server object that I represent."
 	"Do this carefully, since one place it is used is during replication clamp construction.
@@ -1834,14 +1836,14 @@ GbxDelegate >> remoteClass
 	classOop := sess evaluate: 'self class asOop' context: self.
 	^GbxDelegate oopValue: classOop session: sess
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> remoteClassName
 	"This returns a Smalltalk string that is the name of the class of the
 	GemStone object represented by the receiver."
 
 	^self session evaluate: 'self class name asString' context: self
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> remoteDescription
 	"Return a Smalltalk string describing the GemStone object"
 	
@@ -1856,29 +1858,29 @@ GbxDelegate >> remoteDescription
 			stream nextPutAll: ex messageText.
 			stream contents]
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> remoteIdxSize
 	"As of release 3.2, a more general version of this method exists - remoteVaryingSize"
 
 	self gbxFixMe.	"There is no test coverage for this message.."
 	^self remoteVaryingSize
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> isPointers
 	^self fetchImplementation == 0
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> remoteNamedSize
 	self gbxFixMe.	"There is no test coverage for this message.."
 	^self session evaluate: 'self class instSize' context: self
 
-{ #category : #'public - general access' }
+{ #category : 'public - general access' }
 GbxDelegate >> remoteSize
 	"This returns the size of the GemStone object that I represent, including all named and indexed instvars "
 
 	^self session evaluate: 'self _primitiveSize' context: self
 
-{ #category : #'private - flag access' }
+{ #category : 'private - flag access' }
 GbxDelegate >> isIdentityClamped
 	"Private.  Return true if the receiver is known to be identity clamped.  
 	Since GBS controls adds and removals from the identity clamp set, this
@@ -1886,17 +1888,17 @@ GbxDelegate >> isIdentityClamped
 
 	^(self flags bitAnd: self identityClampedMask) ~~ 0
 
-{ #category : #'private - flag access' }
+{ #category : 'private - flag access' }
 GbxDelegate >> flags: anInteger
 	self basicAt: 2 put: anInteger
 
-{ #category : #'private - flag access' }
+{ #category : 'private - flag access' }
 GbxDelegate >> isReadOnlyObject
 	"Private"
 
 	^(self flags bitAnd: self readOnlyMask) ~~ 0
 
-{ #category : #'private - flag access' }
+{ #category : 'private - flag access' }
 GbxDelegate >> isReadOnlyObject: aBoolean 
 	"Private"
 
@@ -1904,13 +1906,13 @@ GbxDelegate >> isReadOnlyObject: aBoolean
 		ifTrue: [self flags: (self flags bitOr: self readOnlyMask)]
 		ifFalse: [self flags: (self flags bitAnd: 16rFF - self readOnlyMask)]
 
-{ #category : #'private - flag access' }
+{ #category : 'private - flag access' }
 GbxDelegate >> isStDirty
 	"Private.  Return true if the Smalltalk/GemStone object relationship is Smalltalk dirty (the Smalltalk state is more current than the GemStone state)"
 
 	^(self flags bitAnd: self dirtyMask) ~~ 0
 
-{ #category : #'private - flag access' }
+{ #category : 'private - flag access' }
 GbxDelegate >> markStNotDirty: anObj
 	"Private.  Flag this Smalltalk/GemStone object relationship as not being Smalltalk dirty."
 
@@ -1921,13 +1923,13 @@ GbxDelegate >> markStNotDirty: anObj
 					self isStDirty ifFalse: [^self].
 					self clearDirtyBit]]
 
-{ #category : #'private - flag access' }
+{ #category : 'private - flag access' }
 GbxDelegate >> noLongerExported
 	"I am no longer in the the server's pure export set, clear the flag."
 
 	self flags: (self flags bitAnd: 16rFF - self inExportMask)
 
-{ #category : #'private - flag access' }
+{ #category : 'private - flag access' }
 GbxDelegate >> nowExported
 	"signal that this object is in the server's export set. Either we just found out the object is 
 	in the export set because we got a full report for it, or we are about to put it in the export 
@@ -1935,56 +1937,56 @@ GbxDelegate >> nowExported
 
 	self flags: (self flags bitOr: self inExportMask)
 
-{ #category : #'private - flag access' }
+{ #category : 'private - flag access' }
 GbxDelegate >> setDeadSession
 	"Private.  If the receiver isn't for all sessions, set the DeadSessionFlag"
 
 	self flags: (self flags bitOr: self deadSessionMask)
 
-{ #category : #'private - flag access' }
+{ #category : 'private - flag access' }
 GbxDelegate >> clearDirtyBit
 	"Private"
 
 	self flags: (self flags bitAnd: 16rFF - self dirtyMask)
 
-{ #category : #'private - flag access' }
+{ #category : 'private - flag access' }
 GbxDelegate >> clearIdentityClampedBit
 	"Private"
 
 	self flags: (self flags bitAnd: 16rFF - self identityClampedMask)
 
-{ #category : #'private - flag access' }
+{ #category : 'private - flag access' }
 GbxDelegate >> setDirtyBit
 	"Private"
 
 	self flags: (self flags bitOr: self dirtyMask)
 
-{ #category : #'private - flag access' }
+{ #category : 'private - flag access' }
 GbxDelegate >> hasLiveSessionFlag
 	"Indicates session has logged out or instance wasn't created
 	 properly."
 
 	^(self flags bitAnd: self deadSessionMask) == 0
 
-{ #category : #'private - flag access' }
+{ #category : 'private - flag access' }
 GbxDelegate >> setIdentityClampedBit
 	"Private"
 
 	self flags: (self flags bitOr: self identityClampedMask)
 
-{ #category : #'private - flag access' }
+{ #category : 'private - flag access' }
 GbxDelegate >> inExport
 	"Answer true if I believe my oop to be in the server's pure export set."
 
 	^(self flags bitAnd: self inExportMask) ~~ 0
 
-{ #category : #'private - comparing' }
+{ #category : 'private - comparing' }
 GbxDelegate >> equalsDelegate: aDelegate 
 	^(self sameOopAs: aDelegate) and: 
 			[aDelegate sessionId = self sessionId 
 				and: [aDelegate hasLiveSessionFlag and: [self hasLiveSessionFlag]]]
 
-{ #category : #'private - comparing' }
+{ #category : 'private - comparing' }
 GbxDelegate >> sameOopAs: aBufferOopOrDelegate
 	
 	self bytesPerOop == aBufferOopOrDelegate bytesPerOop ifFalse: [^false].
@@ -1997,12 +1999,12 @@ GbxDelegate >> sameOopAs: aBufferOopOrDelegate
 				ifFalse: [^false]].
 	^true
 
-{ #category : #'gemstone private' }
+{ #category : 'gemstone private' }
 GbxDelegate >> gbxCouldBeForwarder
 
 	^self isReadOnlyObject not
 
-{ #category : #'gemstone private' }
+{ #category : 'gemstone private' }
 GbxDelegate >> gbxExistingOrSpecialDelegateInSession: aGSSession
 
 	(self isForSession: aGSSession) ifTrue: [^self].
@@ -2010,11 +2012,11 @@ GbxDelegate >> gbxExistingOrSpecialDelegateInSession: aGSSession
 	aGSSession checkSession.
 	self gbsMessenger error: 'Attempt to use a delegate from another session.'
 
-{ #category : #'private - instance creation' }
+{ #category : 'private - instance creation' }
 GbxDelegate class >> new
 	^self basicNew: self bytesPerOop + 4
 
-{ #category : #'private - instance creation' }
+{ #category : 'private - instance creation' }
 GbxDelegate class >> oopValue: anOop session: session
 	"anOop is an integer in this case. Use this message only when absolutely necessary. There should usually be a better way."
 	"Create a temporary delegate, but return the canonical one unless it's a special.
@@ -2031,19 +2033,19 @@ GbxDelegate class >> oopValue: anOop session: session
 		ifFalse: 
 			[session sessionCriticalNoSessionCheck: [session delegateForOop: newDel]]
 
-{ #category : #'GBS private' }
+{ #category : 'GBS private' }
 GbxDelegate class >> gbsReplicatorClass
 
 	^GbxNullReplicator
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxDelegate class >> forSession: aSession 
 	"WARNING: Delegates are canonical, except for delegates that represent server specials.
 	This method is only to be used for creating server special delegates."
 
 	^aSession delegateClass new session: aSession
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbxDelegate class >> bytesPerOop
 	"Either 4 or 8"
 	^self subclassResponsibility

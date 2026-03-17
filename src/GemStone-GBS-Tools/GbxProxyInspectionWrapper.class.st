@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxProxyInspectionWrapper',
-	#superclass : #'GbxInspectionWrapperWithSession',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxProxyInspectionWrapper',
+	#superclass : 'GbxInspectionWrapperWithSession',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'user interface' }
+{ #category : 'user interface' }
 GbxProxyInspectionWrapper >> inspectorActions
 	"add fault-on-demand to stubs. Trigger an event to notify interested parties"
 
@@ -18,14 +20,14 @@ GbxProxyInspectionWrapper >> inspectorActions
 						block: [self faultStub])].
 	^oc asArray
 
-{ #category : #'user interface' }
+{ #category : 'user interface' }
 GbxProxyInspectionWrapper >> faultStub
 	localObject zzzisStub 
 		ifTrue: 
 			[localObject fault.
 			self triggerEvent: #objectChanged]
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxProxyInspectionWrapper >> basicPrintOn: aStream
 	"proxies should never be immutable. see comment in GbxAbstractProxy isImmutable.
 	we want the proxy class also, not the cached remote class"
@@ -37,7 +39,7 @@ GbxProxyInspectionWrapper >> basicPrintOn: aStream
 						, (remoteClassName first isVowel ifTrue: [' for an '] ifFalse: [' for a '])
 							, remoteClassName])
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxProxyInspectionWrapper >> inspectorClasses
 
 	| oc |
@@ -48,7 +50,7 @@ GbxProxyInspectionWrapper >> inspectorClasses
 	oc add: Tools.Trippy.WatchLogInspector. 
 	^self possiblyAddBehaviorInspector: oc
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxProxyInspectionWrapper >> inspectorClientExtraAttributes
 	^Array with: (Tools.Trippy.DerivedAttribute 
 				label: #identityHash << #gbs >> 'identityHash'
@@ -56,17 +58,17 @@ GbxProxyInspectionWrapper >> inspectorClientExtraAttributes
 		with: (Tools.Trippy.DerivedAttribute label: #size << #gbs >> 'size'
 				valueBlock: [self proxy gbxBasicSize])
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxProxyInspectionWrapper >> possiblyAddBehaviorInspector: oc
 	"no action in VW 8.0"
 
 	^oc
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxProxyInspectionWrapper >> proxy
 	^localObject
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxProxyInspectionWrapper >> localObjectIdentityHash
 	^localObject identityHash
 

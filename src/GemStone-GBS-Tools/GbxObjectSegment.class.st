@@ -1,28 +1,31 @@
 Class {
-	#name : #'GbxObjectSegment',
-	#superclass : #'ObjectSegment',
-	#instVars : [ #'isUncached' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxObjectSegment',
+	#superclass : 'ObjectSegment',
+	#instVars : [
+		'isUncached'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxObjectSegment >> isUncached
 	^isUncached
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxObjectSegment >> isUncached: anObject
 	isUncached := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxObjectSegment >> cached
 	isUncached := false
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxObjectSegment >> firstPart: anObject
 	firstPart := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxObjectSegment >> lastPart: anObject
 	lastPart := anObject
 

@@ -1,32 +1,34 @@
 Class {
-	#name : #'GbsBuffer',
-	#superclass : #'Array',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsBuffer',
+	#superclass : 'Array',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsBuffer >> namedValueAt: index
 	^self at: index
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsBuffer >> indexableValueAt: index put: anObject
 	^self at: index put: anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsBuffer >> indexableValueAt: index
 	^self at: index
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsBuffer >> namedValueAt: index put: anObject
 	^self at: index put: anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsBuffer >> namedSize
 	^self size
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsBuffer >> indexableSize
 	^self size
 

@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrStrToPathIvname',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrStrToPathIvname',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrStrToPathIvname class >> gemStoneErrorNumber6430 ^2222
 

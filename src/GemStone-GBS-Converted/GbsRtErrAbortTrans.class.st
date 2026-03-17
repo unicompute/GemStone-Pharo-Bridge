@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrAbortTrans',
-	#superclass : #'GbsAbortingError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrAbortTrans',
+	#superclass : 'GbsAbortingError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrAbortTrans class >> gemStoneErrorNumber6430 ^3001
 

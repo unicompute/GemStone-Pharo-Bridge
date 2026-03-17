@@ -1,12 +1,22 @@
 Class {
-	#name : #'GbxStatMonitor',
-	#superclass : #'Object',
-	#instVars : [ #'process' #'state' #'stateChangeProtect' #'nextResumption' #'delay' #'archiver' #'sampleInterval' #'cacheSampleIntervalMultiplier' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxStatMonitor',
+	#superclass : 'Object',
+	#instVars : [
+		'process',
+		'state',
+		'stateChangeProtect',
+		'nextResumption',
+		'delay',
+		'archiver',
+		'sampleInterval',
+		'cacheSampleIntervalMultiplier'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'utilities' }
+{ #category : 'utilities' }
 GbxStatMonitor >> handlingErrorsDo: aBlock 
 	"Evaluate aBlock.  If any error occurs (usually caused by stat archive file removal),
 	 handle it gracefully, notify or log the error, and turn off stats."
@@ -24,17 +34,17 @@ GbxStatMonitor >> handlingErrorsDo: aBlock
 				ifTrue: [self gbsMessenger warn: msg]
 				ifFalse: [self gbsMessenger comment: msg]]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxStatMonitor >> addStatResource: statResource 
 	archiver isNil ifFalse: [ archiver addStatResource: statResource ]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxStatMonitor >> sampleInterval
 	"Return the interval in milliseconds between two stat samples"
 
 	^sampleInterval
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxStatMonitor >> setState: newState 
 	"Uncomment extra debugging to find a problem"
 
@@ -53,7 +63,7 @@ GbxStatMonitor >> setState: newState
 
 	state := newState
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxStatMonitor >> removeStatResource: statResource 
 	"if the instanceId is nil, then that means we haven't yet completed our login and
 	the stat resource is being removed. Presumably this means that the login
@@ -62,12 +72,12 @@ GbxStatMonitor >> removeStatResource: statResource
 	(archiver isNil or: [statResource instanceId isNil]) 
 		ifFalse: [^archiver removeStatResource: statResource]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxStatMonitor >> processName
 
 	^'GBS Stat Monitor - sample rate ', sampleInterval printString, ' milliseconds'
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxStatMonitor >> cacheSampleIntervalMultiplier: anInteger 
 	"This value times sampleInterval is the interval between two cache stat samples.  For example, a
 	 cacheSampleIntervalMultiplier of 1 means cache stats will be sampled every time stats are
@@ -76,12 +86,12 @@ GbxStatMonitor >> cacheSampleIntervalMultiplier: anInteger
 
 	cacheSampleIntervalMultiplier := anInteger
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxStatMonitor >> isProcessRunning
 
 	^state == #running and: [ process notNil and: [ process isTerminated not ]]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxStatMonitor >> cacheSampleIntervalMultiplier
 	"This value times sampleInterval is the interval between two cache stat samples.  For example, a
 	 cacheSampleIntervalMultiplier of 1 means cache stats will be sampled every time stats are
@@ -90,19 +100,19 @@ GbxStatMonitor >> cacheSampleIntervalMultiplier
 
 	^cacheSampleIntervalMultiplier
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxStatMonitor >> archiverClass
 
 	^GbxStatArchiver
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxStatMonitor >> sampleInterval: milliseconds 
 	"Set the interval between samples in milliseconds"
 
 	sampleInterval := milliseconds.
 	process isNil ifFalse: [process name: self processName]
 
-{ #category : #'sampling and archiving' }
+{ #category : 'sampling and archiving' }
 GbxStatMonitor >> sampleAndArchive: iteration
 	"This method is executed to perform a single statistics snapshot and archive it.  Return
 	 the time in microseconds spent sampling."
@@ -116,7 +126,7 @@ GbxStatMonitor >> sampleAndArchive: iteration
 		].
 	^sampleTime
 
-{ #category : #'monitor process loop' }
+{ #category : 'monitor process loop' }
 GbxStatMonitor >> startProcess
 	"GbxStatMonitor instance startProcess"
 	"GbxStatMonitor instance stopProcess"
@@ -138,7 +148,7 @@ GbxStatMonitor >> startProcess
 			process resume.
 			handoff wait]
 
-{ #category : #'monitor process loop' }
+{ #category : 'monitor process loop' }
 GbxStatMonitor >> stopProcess
 	"GbxStatMonitor instance startProcess"
 	"GbxStatMonitor instance stopProcess"
@@ -160,7 +170,7 @@ GbxStatMonitor >> stopProcess
 			["Wait for the monitor process to complete (unless we *are* the monitor process)"
 			[state = #stopped] whileFalse: [(GbxDelay forMilliseconds: 20) wait]]
 
-{ #category : #'monitor process loop' }
+{ #category : 'monitor process loop' }
 GbxStatMonitor >> monitorLoop
 	"This is the loop executed by the GBS Statistics Monitor process.  Use startProcess."
 
@@ -186,7 +196,7 @@ GbxStatMonitor >> monitorLoop
 	archiver isNil ifFalse: [archiver close].
 	archiver := nil
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxStatMonitor >> sampleAndArchiveMainStats
 	"This method is executed to perform a single manager/session statistics snapshot and archive it.  
 	 Return the time in microseconds spent sampling."
@@ -198,7 +208,7 @@ GbxStatMonitor >> sampleAndArchiveMainStats
 	GBSM statResource incMainStatSampleTime: sampleTime.
 	^sampleTime
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxStatMonitor >> sampleCacheStats
 	"This method is executed to perform a single cache statistics snapshot and archive it"
 
@@ -210,7 +220,7 @@ GbxStatMonitor >> sampleCacheStats
 	GBSM statResource incCacheStatSampleTime: sampleTime.
 	^sampleTime
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxStatMonitor >> initialize
 
 	"GbxStatMonitor instance initialize"
@@ -223,7 +233,7 @@ GbxStatMonitor >> initialize
 	nextResumption := nil.
 	delay := nil
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 GbxStatMonitor class >> initialize
 	"By default, the stat monitor process runs at a higher priority than applications,
 	 to get a better chance at each stat collection representing a stable 'snapshot' 
@@ -231,13 +241,13 @@ GbxStatMonitor class >> initialize
 
 	StatMonitorPriority := Processor userInterruptPriority
 
-{ #category : #'configuring' }
+{ #category : 'configuring' }
 GbxStatMonitor class >> statMonitorPriority
 	"The priority at which the stat monitor process runs."
 
 	^StatMonitorPriority
 
-{ #category : #'configuring' }
+{ #category : 'configuring' }
 GbxStatMonitor class >> statMonitorPriority: priorityInteger 
 	"Assign the stat monitor process priority to be priorityInteger, which must
 	 be a valid priority defined by the ProcessorScheduler class.  The next
@@ -245,14 +255,14 @@ GbxStatMonitor class >> statMonitorPriority: priorityInteger
 
 	StatMonitorPriority := priorityInteger
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxStatMonitor class >> new
 
 	"Disallowed.  Use instance to get the sole instance."
 
 	^self shouldNotImplement
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxStatMonitor class >> instance
 
 	"Returns the sole instance of GbxStatMonitor"

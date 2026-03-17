@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxDeferredNamedAssignment',
-	#superclass : #'GbxDeferredAssignment',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxDeferredNamedAssignment',
+	#superclass : 'GbxDeferredAssignment',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'resolving' }
+{ #category : 'resolving' }
 GbxDeferredNamedAssignment >> assignValue: val 
 	buffer namedValueAt: clientOffset put: val
 

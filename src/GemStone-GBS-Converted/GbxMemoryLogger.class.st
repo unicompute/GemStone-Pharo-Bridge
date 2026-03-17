@@ -1,16 +1,20 @@
 Class {
-	#name : #'GbxMemoryLogger',
-	#superclass : #'GbxLogger',
-	#instVars : [ #'buffer' #'position' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxMemoryLogger',
+	#superclass : 'GbxLogger',
+	#instVars : [
+		'buffer',
+		'position'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'changing state' }
+{ #category : 'changing state' }
 GbxMemoryLogger >> stopLogging
 	"We have no special work to do to stop logging."
 
-{ #category : #'logging' }
+{ #category : 'logging' }
 GbxMemoryLogger >> writeOn: aStream
 
 	| oldestStartPosition |
@@ -22,7 +26,7 @@ GbxMemoryLogger >> writeOn: aStream
 		nextPutAll: (buffer copyFrom: oldestStartPosition to: buffer size);
 		nextPutAll: (buffer copyFrom: 1 to: position - 1)
 
-{ #category : #'logging' }
+{ #category : 'logging' }
 GbxMemoryLogger >> logMessage: aMessage
 
 	"Log the message to the memory-based stream"
@@ -31,7 +35,7 @@ GbxMemoryLogger >> logMessage: aMessage
 		nextPutAll: aMessage;
 		nextPutAll: self class newline
 
-{ #category : #'logging' }
+{ #category : 'logging' }
 GbxMemoryLogger >> nextPutAll: aMessage
 
 	"Log the message to the memory-based stream"
@@ -59,7 +63,7 @@ GbxMemoryLogger >> nextPutAll: aMessage
 	position := position + trimmedMsg size.
 	position > buffer size ifTrue: [ position := position - buffer size ]
 
-{ #category : #'logging' }
+{ #category : 'logging' }
 GbxMemoryLogger >> writeToFile
 	"Dump the contents of the buffer to file.  Return the name of the file (a GbxFilename)"
 
@@ -70,7 +74,7 @@ GbxMemoryLogger >> writeToFile
 	aStream close.
 	^fileName
 
-{ #category : #'logging' }
+{ #category : 'logging' }
 GbxMemoryLogger >> contents
 	"Answer the contents of this buffer."
 
@@ -79,53 +83,53 @@ GbxMemoryLogger >> contents
 	self writeOn: aStream.
 	^aStream contents
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxMemoryLogger >> initializeWithBufferSized: aNumber andFileName: aString
 
 	self initializeWithFileName: aString.
 	self initializeBufferOfSize: aNumber
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxMemoryLogger >> initializeBufferOfSize: anInteger
 
 	buffer := String new: anInteger.
 	position := 1
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxMemoryLogger >> initializeWithBufferOfMegabytes: aNumber andFileName: aString
 
 	self initializeWithBufferSized: (aNumber * self bytesPerMegabyte) ceiling
 		andFileName: aString
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxMemoryLogger >> bytesPerMegabyte
 
 	^1048576
 
-{ #category : #'initialization' }
+{ #category : 'initialization' }
 GbxMemoryLogger class >> initialize
 
 	Newline := String with: Character lf
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxMemoryLogger class >> usingBufferOfMegabytes: aNumber andFileNamed: aString
 
 	^(self new)
 		initializeWithBufferOfMegabytes: aNumber andFileName: aString;
 		yourself
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxMemoryLogger class >> usingFileNamed: aString
 
 	^self usingBufferOfMegabytes: self defaultBufferSizeInMegabytes
 		andFileNamed: aString
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbxMemoryLogger class >> defaultBufferSizeInMegabytes
 
 	^1
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbxMemoryLogger class >> newline
 
 	Newline isNil ifTrue: [ self initialize ].

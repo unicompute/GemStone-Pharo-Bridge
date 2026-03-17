@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsErrArgumentErr',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsErrArgumentErr',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsErrArgumentErr class >> gemStoneErrorNumber6430 ^2509
 

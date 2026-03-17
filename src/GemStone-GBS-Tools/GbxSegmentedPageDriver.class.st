@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxSegmentedPageDriver',
-	#superclass : #'SegmentedPageDriver',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxSegmentedPageDriver',
+	#superclass : 'SegmentedPageDriver',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxSegmentedPageDriver >> markSegmentCached: segment ifBetween: base and: end 
 	"for now, safely(?) assume that any cached range would never be anything but a superset of the range passed in"
 
@@ -15,7 +17,7 @@ GbxSegmentedPageDriver >> markSegmentCached: segment ifBetween: base and: end
 			(interval first <= base and: [interval last >= end]) 
 				ifTrue: [segment isUncached: false]]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxSegmentedPageDriver >> computeSegmentList
 	"Answer a sequence consisting of everything to show in the segement list. The first segment's part's are just dummy Part's which is slightly different than trippy's behavior. GemStone collections will only show the 'index' range, not the key or index printStrings. "
 
@@ -41,7 +43,7 @@ GbxSegmentedPageDriver >> computeSegmentList
 			segments add: segment].
 	^segments
 
-{ #category : #'notifications' }
+{ #category : 'notifications' }
 GbxSegmentedPageDriver >> segmentSelectionChanged
 	| segments |
 	segments := page segmentListHolder selections asSortedCollection.

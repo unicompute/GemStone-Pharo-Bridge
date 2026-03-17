@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxOverrideUtility',
-	#superclass : #'Object',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxOverrideUtility',
+	#superclass : 'Object',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxOverrideUtility class >> compileSpecMethodFor: overrideSet in: specClass
 
 	| newSource oldSource |
@@ -14,7 +16,7 @@ GbxOverrideUtility class >> compileSpecMethodFor: overrideSet in: specClass
 	oldSource := specClass specMethodSource.
 	self compileSpecSource: newSource inClass: specClass oldSource: oldSource
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxOverrideUtility class >> specMethodSourceFor: anOverrideSet
 	"Answer a formatted string so that version comparisons can be practical."
 
@@ -22,7 +24,7 @@ GbxOverrideUtility class >> specMethodSourceFor: anOverrideSet
 		methodSourceForSpec: anOverrideSet
 		version: GbxVwVersion current
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxOverrideUtility class >> allOverridesInPackage: package
 	"We want only the *last* override for each class or method."
 
@@ -43,7 +45,7 @@ GbxOverrideUtility class >> allOverridesInPackage: package
 		do: [:dictionaryForSelector | dictionaryForSelector do: iterator].
 	^result
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxOverrideUtility class >> resolvePackageName: packageName ifFail: failBlock
 
 	| package |
@@ -55,7 +57,7 @@ GbxOverrideUtility class >> resolvePackageName: packageName ifFail: failBlock
 						, packageName , ' not found.'.
 			failBlock value]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxOverrideUtility class >> removeAllOverridesFromPackage: aPackage
 	"After creating specs from existing overrides, we must remove the overrides."
 
@@ -83,13 +85,13 @@ GbxOverrideUtility class >> removeAllOverridesFromPackage: aPackage
 					override reinstall.
 					Override removeOverrideAfterReinstall: override]]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxOverrideUtility class >> overrideSpecClasses
 	"We cannot explicitly reference the classes because they don't all exist while loading is in progress."
 
 	^GemStone.Gbs.GbxAbstractOverrideSpec subclasses
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxOverrideUtility class >> compileSpecSource: newSource inClass: specClass oldSource: oldSource
 
 	newSource = oldSource ifTrue: [^self	"Nothing to do"].
@@ -107,7 +109,7 @@ GbxOverrideUtility class >> compileSpecSource: newSource inClass: specClass oldS
 					[self
 						error: 'Spec method for ' , specClass printString , ' failed to compile.']]
 
-{ #category : #'utilities' }
+{ #category : 'utilities' }
 GbxOverrideUtility class >> differencesBetweenInstalledOverridesAndSpecs
 	"Answer the differences between a spec derived from the installed overrides and the corresponding saved spec.
 	 A collection of Dictionarys with the attributes with differences."
@@ -115,7 +117,7 @@ GbxOverrideUtility class >> differencesBetweenInstalledOverridesAndSpecs
 	^self overrideSpecClasses
 		collect: [:specClass | specClass differencesBetweenInstalledOverridesAndSpec]
 
-{ #category : #'utilities' }
+{ #category : 'utilities' }
 GbxOverrideUtility class >> ensureNoOverridesRemainInPundle: aPundle
 
 	| overrides packagesWithOverrides message |
@@ -141,7 +143,7 @@ GbxOverrideUtility class >> ensureNoOverridesRemainInPundle: aPundle
 			message nextPutAll:')'.
 			self error: message contents]
 
-{ #category : #'utilities' }
+{ #category : 'utilities' }
 GbxOverrideUtility class >> generateOverrideSpecs
 	"self generateOverrideSpecs"
 
@@ -156,7 +158,7 @@ GbxOverrideUtility class >> generateOverrideSpecs
 								, '; cannot generate an override spec from it'].
 			self compileSpecMethodFor: overrideSet in: specClass]
 
-{ #category : #'utilities' }
+{ #category : 'utilities' }
 GbxOverrideUtility class >> prepareOverridesForRelease
 	"When preparing a release, we remove any override of VisualWorks code to avoid copyright infringement."
 	"self prepareOverridesForRelease"
@@ -165,7 +167,7 @@ GbxOverrideUtility class >> prepareOverridesForRelease
 		generateOverrideSpecs;
 		removeOverridesForRelease
 
-{ #category : #'utilities' }
+{ #category : 'utilities' }
 GbxOverrideUtility class >> reformatOverrideSpecMethods
 	"Use this method when there are changes to the formatter and we need to
 	 update all the existing spec methods to reflect the consequences."
@@ -185,7 +187,7 @@ GbxOverrideUtility class >> reformatOverrideSpecMethods
 					oldSource := eachSpecClass sourceStringFor: eachPragma selector.
 					self compileSpecSource: newSource inClass: eachSpecClass  oldSource: oldSource]]
 
-{ #category : #'utilities' }
+{ #category : 'utilities' }
 GbxOverrideUtility class >> reinstallOverrides
 	"After removing overrides, you might want to re-install them."
 
@@ -193,7 +195,7 @@ GbxOverrideUtility class >> reinstallOverrides
 	self removeOverridesForRelease.
 	self overrideSpecClasses do: [:specClass | specClass apply]
 
-{ #category : #'utilities' }
+{ #category : 'utilities' }
 GbxOverrideUtility class >> removeOverridesForRelease
 	"When preparing a release, we remove any override of VisualWorks code to avoid copyright infringement."
 	"self removeOverridesForRelease"
@@ -202,7 +204,7 @@ GbxOverrideUtility class >> removeOverridesForRelease
 			[:specClass |
 			self removeAllOverridesFromPackage: specClass overridesPackage]
 
-{ #category : #'utilities' }
+{ #category : 'utilities' }
 GbxOverrideUtility class >> applyOverrideSet: overrideSet
 	"Only apply if the named package contains no overrides.
 	 If it is not empty we assume overrides have already been applied.
@@ -215,14 +217,14 @@ GbxOverrideUtility class >> applyOverrideSet: overrideSet
 				raiseSignal: 'Overrides not applied for ', overrideSet packageName, '. There are already overrides loaded in the image.'.
 				^nil]
 
-{ #category : #'utilities' }
+{ #category : 'utilities' }
 GbxOverrideUtility class >> uninstalledOverridesSpecs
 	"Answer the override spec classes that do not have overrides installed."
 
 	^self overrideSpecClasses
 		select: [:specClass | (GbxOverrideSet fromPackage: specClass overridesPackage) hasNoEffect]
 
-{ #category : #'utilities' }
+{ #category : 'utilities' }
 GbxOverrideUtility class >> areThereSavedOverridesInstalled
 	"Answer whether there are override methods which can safely be deleted
 	 since the override specs match them."
@@ -230,13 +232,13 @@ GbxOverrideUtility class >> areThereSavedOverridesInstalled
 	^self overrideSpecClasses
 		allSatisfy: [:specClass | specClass canInstalledOverridesBeSafelyRemoved]
 
-{ #category : #'utilities' }
+{ #category : 'utilities' }
 GbxOverrideUtility class >> unsavedOverrideSpecs
 
 	^self overrideSpecClasses
 		select: [:specClass | specClass areInstalledOverridesUnsaved]
 
-{ #category : #'utilities' }
+{ #category : 'utilities' }
 GbxOverrideUtility class >> checkForUnsavedOverrideChanges
 	"Check whether override methods have been modified (added, changed, or deleted)
 	 without the corresponding spec having been updated.
@@ -252,7 +254,7 @@ GbxOverrideUtility class >> checkForUnsavedOverrideChanges
 			[self error: 'There are unsaved overrides installed in '
 						, (unsavedSpecs collect: [:each | each overridesPackage]) printString]
 
-{ #category : #'utilities' }
+{ #category : 'utilities' }
 GbxOverrideUtility class >> confirmReplacingUnsavedOverrides
 	"Answer whether it is safe to reinstall override if any methods have been modified (added, changed, or deleted)
 	 without the corresponding spec having been updated. If there are none, then it is safe by definition."

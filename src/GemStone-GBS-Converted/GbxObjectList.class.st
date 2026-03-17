@@ -1,19 +1,21 @@
 Class {
-	#name : #'GbxObjectList',
-	#superclass : #'GbxRemoteObject',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxObjectList',
+	#superclass : 'GbxRemoteObject',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxObjectList >> isForSession: aGSSession
 
 	"Return true if any of the GbxObjects in this list are for aGSSession"
 
 	^(self forSession: aGSSession) notNil
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxObjectList >> isReadOnlyObject
 	"Private.  If any of the proxies think the client object is a read-only
 	 object, then it probably is."
@@ -21,7 +23,7 @@ GbxObjectList >> isReadOnlyObject
 	self do: [:each | each isReadOnlyObject ifTrue: [^true]].
 	^false
 
-{ #category : #'selecting' }
+{ #category : 'selecting' }
 GbxObjectList >> notForSession: aGSSession
 	"Return all my GbxObjects which are not for session aGSSession.
 	 If there are none, return nil.
@@ -36,7 +38,7 @@ GbxObjectList >> notForSession: aGSSession
 	result size = 1 ifTrue: [^result at: 1].
 	^self class withAll: result
 
-{ #category : #'selecting' }
+{ #category : 'selecting' }
 GbxObjectList >> forSession: aGSSession
 	"If any of my elements is a remote object in the given session, return
 	that proxy.  Otherwise, return nil. Like a #detect:ifNone:"
@@ -44,7 +46,7 @@ GbxObjectList >> forSession: aGSSession
 	self do: [:each | (each isForSession: aGSSession) ifTrue: [^each]].
 	^nil
 
-{ #category : #'dirty management' }
+{ #category : 'dirty management' }
 GbxObjectList >> markStDirty: ignored
 
 	"A Smalltalk object associated with more than one GbxObject should never be marked dirty!"
@@ -52,30 +54,30 @@ GbxObjectList >> markStDirty: ignored
 	self gbsMessenger error: 'Attempt to mark a Smalltalk object dirty for which more than one GbxObject is registered'.
 	^false
 
-{ #category : #'dirty management' }
+{ #category : 'dirty management' }
 GbxObjectList >> isStDirty
 
 	self do: [:each | each isStDirty ifTrue: [^true]].
 	^false
 
-{ #category : #'dirty management' }
+{ #category : 'dirty management' }
 GbxObjectList >> markStNotDirty: stObj
 
 	self do: [:each | each markStNotDirty: stObj]
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxObjectList >> printNameAndSizeOn: aStream 
 	super printOn: aStream.
 	aStream nextPutAll: ' size: '.
 	self size printOn: aStream
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxObjectList >> printOn: aStream 
 	self printNameAndSizeOn: aStream.
 	aStream nextPutAll: ' '.
 	self asArray printOn: aStream
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxObjectList >> gbxPrintServerOn: aStream 
 	aStream cr.
 	aStream nextPutAll: 'server = '.
@@ -84,7 +86,7 @@ GbxObjectList >> gbxPrintServerOn: aStream
 	[self asArray do: [:delegate | delegate gbxPrintServerOn: aStream]] 
 		ensure: [aStream indentLess]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxObjectList >> gbxPrintClientOn: aStream
 
 	aStream cr.
@@ -94,7 +96,7 @@ GbxObjectList >> gbxPrintClientOn: aStream
 	[self asArray do: [:delegate | delegate gbxPrintClientOn: aStream]]
 		ensure: [aStream indentLess]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxObjectList >> forAnySingleSession
 
 	"Since the receiver isn't a single proxy, search for a proxy in the current session."
@@ -106,13 +108,13 @@ GbxObjectList >> forAnySingleSession
 	].
 	^proxy
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxObjectList >> do: aBlock 
 	"GBS private. Enumerate over my delegates."
 
 	1 to: self size do: [:index | aBlock value: (self at: index)]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxObjectList >> printDelegateOn: aStream 
 	aStream cr.
 	aStream nextPutAll: 'delegate = '.
@@ -121,7 +123,7 @@ GbxObjectList >> printDelegateOn: aStream
 	[self asArray do: [:delegate | delegate printDelegateOn: aStream]] 
 		ensure: [aStream indentLess]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxObjectList >> connectingDelegate: newDelegate withClient: anObj 
 	"If the receiver contains any delegates for the same session as newDelegate, replace it with newDelegate.  Otherwise, return a concatenation of the receiver and newDelegate."
 
@@ -147,14 +149,14 @@ GbxObjectList >> connectingDelegate: newDelegate withClient: anObj
 	self gbsMessenger 
 		error: 'Error in GBS code. Match should have been found.'
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxObjectList >> gbxDebugPrintOn: aStream 
 	self printOn: aStream.
 	aStream nextPutAll: ' ('.
 	self asArray do: [:ea | ea printDelegateOn: aStream cr].
 	aStream nextPutAll: ')'
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxObjectList >> asArray
 	"Private. Convert to an array to gain Array behavior.
 	 This method is only used for testing, but is
@@ -165,7 +167,7 @@ GbxObjectList >> asArray
 	1 to: self size do: [:index | answer at: index put: (self at: index)].
 	^answer
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxObjectList class >> withAll: aCollection 
 	| answer |
 	answer := self new: aCollection size.
@@ -173,7 +175,7 @@ GbxObjectList class >> withAll: aCollection
 		do: [:index | answer at: index put: (aCollection at: index)].
 	^answer
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxObjectList class >> with: element1 with: element2 
 	"Create a new GbxObjectList with the given elements.  If element1 is an instance of this class, return a new instance that is the concatenation of it with element2."
 

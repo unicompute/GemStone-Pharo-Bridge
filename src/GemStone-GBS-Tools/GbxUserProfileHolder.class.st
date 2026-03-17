@@ -1,22 +1,31 @@
 Class {
-	#name : #'GbxUserProfileHolder',
-	#superclass : #'Object',
-	#instVars : [ #'remoteUserProfile' #'session' #'newDefaultSegment' #'newPrivileges' #'newSymbDicts' #'newUserId' #'cachedUserId' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxUserProfileHolder',
+	#superclass : 'Object',
+	#instVars : [
+		'remoteUserProfile',
+		'session',
+		'newDefaultSegment',
+		'newPrivileges',
+		'newSymbDicts',
+		'newUserId',
+		'cachedUserId'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbxUserProfileHolder >> hash
 
 	^self class hash + self userId hash
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbxUserProfileHolder >> <= aGSUserProfileHolder
 
 	^ self userId <= aGSUserProfileHolder userId
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbxUserProfileHolder >> = aGSUserProfileHolder
 
 	" Answer true if I am equivalent to aGSUserProfileHolder. "
@@ -24,7 +33,7 @@ GbxUserProfileHolder >> = aGSUserProfileHolder
 	^ self class == aGSUserProfileHolder class
 		and: [self userId = aGSUserProfileHolder userId]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> privileges
 
 	" Answer an array of symbols identifying this user's privileges on GemStone.
@@ -37,14 +46,14 @@ GbxUserProfileHolder >> privileges
 		ifTrue: [ Array new ]
 		ifFalse: [self basicPrivileges]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> basicPrivileges
 
 	" Answer an array of symbols identifying this user's privileges on GemStone. "
 
 	^ self remoteUserProfile privileges
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> language
 
 	" Answer the language from the receiver's UserProfile. "
@@ -53,23 +62,23 @@ GbxUserProfileHolder >> language
 		[^ 'English' ].
 	^ self remoteUserProfile nativeLanguage
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> remoteUserProfile
 	" Answer the value of remoteUserProfile, a forwarder to a UserProfile on GemStone. "
 
 	^remoteUserProfile
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> resetCachedUserId
 
 	cachedUserId := nil
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> cachedUserId: aSymbol
 
 	cachedUserId := aSymbol
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> createNewDefaultSegment
 	" Answer a new Object Security Policy identifying this user's default one on GemStone. "
 
@@ -81,7 +90,7 @@ securityPolicy worldAuthorization: #read.
 GsCurrentSession currentSession commitTransaction.
 securityPolicy'
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> userForwarderFor: aSymbol
 
 	" Answer an UNCACHED forwarder for the object whose name is aSymbol my symbol lists. "
@@ -95,7 +104,7 @@ GbxUserProfileHolder >> userForwarderFor: aSymbol
 		[^ self error: aSymbol printString , ' not defined'].
 	^ assn ucfwvalue
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> defaultSegment
 	" Answer a forwarder to a Object Security Policy which is this user's default one on GemStone. "
 
@@ -105,7 +114,7 @@ GbxUserProfileHolder >> defaultSegment
 		[^ self basicDefaultSegment ].
 	^ self createNewDefaultSegment
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> dictionaries
 
 	" Answer a list of symbol dictionaries available to me. "
@@ -123,7 +132,7 @@ GbxUserProfileHolder >> dictionaries
 		userDicts add: (GbxSymbolListDictionaryHolder on: (symList ucfwat: ix) "beForwarder").].
 	^ userDicts
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> userId
 	" Answer the unique user identifier (a Symbol) associated with the receiver. "
 
@@ -131,7 +140,7 @@ GbxUserProfileHolder >> userId
 		[^ self newUserId ].
 	^ self gemStoneUserId
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> groups
 	" Answer the groups from the receiver's UserProfile.
 	  WARNING:  We used to return #(), but it sometimes got stubbed. "
@@ -141,7 +150,7 @@ GbxUserProfileHolder >> groups
 		evaluate: '(self groups collect:[:ea | ea asString]) asSet asSortedCollection '
 		context: self remoteUserProfile gbxDelegate) asList
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> gemStoneUserId
 	" Answer the unique user identifier (a Symbol) currently associated with the receiver on GemStone. "
 
@@ -150,7 +159,7 @@ GbxUserProfileHolder >> gemStoneUserId
 		ifTrue: [cachedUserId := self remoteUserProfile ucfwuserId asGSObject asLocalObject].
 	^cachedUserId
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> password
 
 	" Answer the password from the receiver's UserProfile.
@@ -158,7 +167,7 @@ GbxUserProfileHolder >> password
 
 	^ ''
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> internalForwarderFor: aSymbol
 
 	" Answer an UNCACHED forwarder for the object whose name is aSymbol my internal symbol lists. "
@@ -169,14 +178,14 @@ GbxUserProfileHolder >> internalForwarderFor: aSymbol
 			[^ aSymbolListDictionayForwarder ucfwat: aSymbol ].].
 	self error: aSymbol printString , ' not defined'.
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> newDefaultSegment
 
 	" Answer the value of newDefaultSegment, a segment identifying this user's default segment on GemStone. "
 
 	^ newDefaultSegment
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> newPrivileges
 
 	" Answer the value of newPrivileges, an array of symbols
@@ -184,14 +193,14 @@ GbxUserProfileHolder >> newPrivileges
 
 	^ newPrivileges
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> basicDefaultSegment
 
 	" Answer a forwarder to this user's default segment on GemStone. "
 
 	^ self remoteUserProfile ucfwdefaultObjectSecurityPolicy
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxUserProfileHolder >> newSymbDicts
 
 	" Answer the value of newSymbDicts, a list of forwarders to SymbolListDictionaries on GemStone. "
@@ -201,7 +210,7 @@ GbxUserProfileHolder >> newSymbDicts
 		self addDefaultSymbolDictionaries.].
 	^ newSymbDicts
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxUserProfileHolder >> hasChangedUserId
 
 	" Answer true if I am connected to a valid GS UserProfile and have a different user ID. "
@@ -210,7 +219,7 @@ GbxUserProfileHolder >> hasChangedUserId
 		and: [self newUserId notNil
 			and: [self remoteUserProfile userId ~= self userId ]]
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxUserProfileHolder >> gbxIsGSDefunct
 
 	" Answer true if I no longer represent a valid GS object. "
@@ -218,14 +227,14 @@ GbxUserProfileHolder >> gbxIsGSDefunct
 	self isNewUser ifTrue: [^false].
 	^self remoteUserProfile gbxIsGSDefunct
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxUserProfileHolder >> isNewUser
 
 	" Answer true if I am not connected to a valid GS UserProfile. "
 
 	^ self remoteUserProfile isNil
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxUserProfileHolder >> addDefaultSymbolDictionaries
 
 	" I add the default symbol list dictionaries to the new user. "
@@ -241,7 +250,7 @@ GbxUserProfileHolder >> addDefaultSymbolDictionaries
 		add: userGlobals ;
 		add: globals.
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxUserProfileHolder >> newUserId
 
 	" Answer the value of newUserId, a symbol
@@ -249,7 +258,7 @@ GbxUserProfileHolder >> newUserId
 
 	^ newUserId
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxUserProfileHolder >> sessionForwarderFor: aSymbol
 
 	" Answer an UNCACHED forwarder for the object whose name is aSymbol in the current session. "
@@ -258,14 +267,14 @@ GbxUserProfileHolder >> sessionForwarderFor: aSymbol
 		uncachedForwarderAt: aSymbol
 		ifAbsent: [self error: aSymbol printString , ' not defined']
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxUserProfileHolder >> session
 
 	" Answer the value of session, a GsSession that identifies the current environment. "
 
 	^ session
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxUserProfileHolder >> remoteUserProfile: aUserProfileForwarder
 
 	" Set the value of remoteUserProfile, a forwarder to a UserProfile on GemStone. "
@@ -274,26 +283,26 @@ GbxUserProfileHolder >> remoteUserProfile: aUserProfileForwarder
 		[^ self error: 'not a forwarder'].
 	remoteUserProfile := aUserProfileForwarder.
 
-{ #category : #'initialization' }
+{ #category : 'initialization' }
 GbxUserProfileHolder >> on: aUserProfileForwarder
 
 	self remoteUserProfile: aUserProfileForwarder.
 	^ self
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxUserProfileHolder >> displayString
 
 	" Answer my user ID for printing. "
 
 	^ self userId asString
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxUserProfileHolder >> printOn: aStream
 
 
 	aStream nextPutAll: self userId asString.
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxUserProfileHolder >> removeDictionaryAt: anIndex
 
 	" I remove the specified SymbolListDictionay from the user's list of dictionaries. "
@@ -305,20 +314,20 @@ GbxUserProfileHolder >> removeDictionaryAt: anIndex
 			[self remoteUserProfile
 				ucfwremoveDictionaryAt: anIndex.].
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxUserProfileHolder >> session: aGsSession
 
 	" Set the value of session, a GsSession that identifies the current environment. "
 
 	session := aGsSession.
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxUserProfileHolder >> newUserId: aString
 	" Set the value of newUserId, a string identifying a new UserProfile (or the renaming of an existing one) on GemStone. "
 
 	newUserId := aString asString.
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxUserProfileHolder >> newPrivileges: anArray
 
 	" Set the value of newPrivileges, an array of symbols
@@ -326,14 +335,14 @@ GbxUserProfileHolder >> newPrivileges: anArray
 
 	newPrivileges := anArray.
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxUserProfileHolder >> newDefaultSegment: aGSSegment
 
 	" Set the value of newDefaultSegment, a segment identifying this user's default segment on GemStone. "
 
 	newDefaultSegment := aGSSegment.
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxUserProfileHolder >> insertDictionary: aSymbolListDictionayForwarder
 at: anIndex
 
@@ -351,12 +360,12 @@ at: anIndex
 				ucfwinsertDictionary: aSymbolListDictionayForwarder
 				at: anIndex.].
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxUserProfileHolder class >> on: aUserProfileForwarder
 
 	^self new on: aUserProfileForwarder
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxUserProfileHolder class >> newUserId: aString
 in: aGsSession
 

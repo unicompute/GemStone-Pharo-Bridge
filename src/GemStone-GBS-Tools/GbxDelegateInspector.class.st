@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxDelegateInspector',
-	#superclass : #'GbxBasicInspector',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxDelegateInspector',
+	#superclass : 'GbxBasicInspector',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxDelegateInspector >> initialize: anObject
 	
 	object := anObject.
@@ -14,28 +16,28 @@ GbxDelegateInspector >> initialize: anObject
 	undoHistory := OrderedCollection new.
 	self session: anObject delegate noCheckSession
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDelegateInspector >> object
 	^object delegate
 
-{ #category : #'decomposing' }
+{ #category : 'decomposing' }
 GbxDelegateInspector >> partCount
 	^fixedFields size
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxDelegateInspector >> derivedFields
 	^[object delegateInspectorExtraAttributes] 
 		on: MessageNotUnderstood
 		do: [:ex | ex return: Array new]
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxDelegateInspector >> selfAttribute
 	^GbxDerivedAttribute 
 		label: 'self'
 		value: object delegate
 		printString: object delegatePrintString
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegateInspector >> doItReceiver
 	"Answer the object that should be informed of the result of evaluating a
 	text selection."
@@ -44,7 +46,7 @@ GbxDelegateInspector >> doItReceiver
 
 	^object delegate
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegateInspector >> namedFields
 	| protected |
 	protected := self protectedVariableNames.
@@ -55,7 +57,7 @@ GbxDelegateInspector >> namedFields
 			(protected includes: each) ifTrue: [part beProtected].
 			part]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDelegateInspector class >> tabLabel
 
 	^self gbxTabLabel: 'GS Delegate'

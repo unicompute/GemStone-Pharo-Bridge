@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrPreventingCommit',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrPreventingCommit',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrPreventingCommit class >> gemStoneErrorNumber6430 ^2321
 

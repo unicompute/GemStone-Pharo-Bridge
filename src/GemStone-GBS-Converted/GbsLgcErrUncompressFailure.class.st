@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsLgcErrUncompressFailure',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsLgcErrUncompressFailure',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsLgcErrUncompressFailure class >> gemStoneErrorNumber6430 ^2166
 

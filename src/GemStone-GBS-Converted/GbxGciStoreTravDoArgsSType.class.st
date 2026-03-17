@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxGciStoreTravDoArgsSType',
-	#superclass : #'GbxStructure',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxGciStoreTravDoArgsSType',
+	#superclass : 'GbxStructure',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxGciStoreTravDoArgsSType >> initialize
 	"Set things appropriately for initial allocation."
 
@@ -14,31 +16,31 @@ GbxGciStoreTravDoArgsSType >> initialize
 		alteredTheOops: 0;
 		alteredNumOops: 0
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxGciStoreTravDoArgsSType >> alteredNumOops
 	^data memberAt: #alteredNumOops
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxGciStoreTravDoArgsSType >> storeTravFlags
 	^data memberAt: #storeTravFlags
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxGciStoreTravDoArgsSType >> alteredTheOops
 	^data memberAt: #alteredTheOops
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxGciStoreTravDoArgsSType >> alteredSymbolBuf
 	^self subclassResponsibility
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxGciStoreTravDoArgsSType >> storeTravBuff
 	^data memberAt: #storeTravBuff
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxGciStoreTravDoArgsSType >> alteredNumPairs
 	^self subclassResponsibility
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxGciStoreTravDoArgsSType >> printOn: aStream indent: indent 
 	aStream tab: indent - 1.
 	aStream nextPutAll: self class name , ' with:'.
@@ -58,11 +60,11 @@ GbxGciStoreTravDoArgsSType >> printOn: aStream indent: indent
 	self printPecArgsOn: aStream indent: indent.
 	self printStructEndOn: aStream indent: indent
 
-{ #category : #'private - printing' }
+{ #category : 'private - printing' }
 GbxGciStoreTravDoArgsSType >> printStructEndOn: aStream indent: indent 
 	^self subclassResponsibility
 
-{ #category : #'private - printing' }
+{ #category : 'private - printing' }
 GbxGciStoreTravDoArgsSType >> printPArgsOn: aStream indent: indent 
 	aStream nextPutAll: 'receiver = '.
 	self receiver printOn: aStream.
@@ -77,7 +79,7 @@ GbxGciStoreTravDoArgsSType >> printPArgsOn: aStream indent: indent
 	self numArgs printOn: aStream.
 	aStream crtab: indent
 
-{ #category : #'private - printing' }
+{ #category : 'private - printing' }
 GbxGciStoreTravDoArgsSType >> printPecArgsOn: aStream indent: indent 
 	"Union members used when doPerform=
 	0 -- e_args  (ExecuteStr)
@@ -94,11 +96,11 @@ GbxGciStoreTravDoArgsSType >> printPecArgsOn: aStream indent: indent
 		ifTrue: [self printEArgsOn: aStream indent: indent].
 	doPerform == 4 ifTrue: [self printCArgsOn: aStream indent: indent]
 
-{ #category : #'private - printing' }
+{ #category : 'private - printing' }
 GbxGciStoreTravDoArgsSType >> printCArgsOn: aStream indent: indent 
 	self subclassResponsibility
 
-{ #category : #'private - printing' }
+{ #category : 'private - printing' }
 GbxGciStoreTravDoArgsSType >> printEArgsOn: aStream indent: indent 
 	aStream nextPutAll: 'source = '.
 	self source printOn: aStream.

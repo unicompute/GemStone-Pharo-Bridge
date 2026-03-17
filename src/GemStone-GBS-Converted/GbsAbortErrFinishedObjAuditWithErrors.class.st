@@ -1,8 +1,10 @@
 Class {
-	#name : #'GbsAbortErrFinishedObjAuditWithErrors',
-	#superclass : #'GbsAbortingError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsAbortErrFinishedObjAuditWithErrors',
+	#superclass : 'GbsAbortingError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

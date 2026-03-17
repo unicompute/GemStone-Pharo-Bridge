@@ -1,16 +1,23 @@
 Class {
-	#name : #'GbxBehaviorServerClassCache',
-	#superclass : #'Object',
-	#instVars : [ #'className' #'classMethodCache' #'instanceMethodCache' #'serverCache' #'classDelegate' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxBehaviorServerClassCache',
+	#superclass : 'Object',
+	#instVars : [
+		'className',
+		'classMethodCache',
+		'instanceMethodCache',
+		'serverCache',
+		'classDelegate'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBehaviorServerClassCache >> serverCache: anObject
 	serverCache := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBehaviorServerClassCache >> instanceMethodCache
 	"lazily cache the instance category names and selectors from the server"
 
@@ -25,11 +32,11 @@ GbxBehaviorServerClassCache >> instanceMethodCache
 						context: classDelegate].
 	^instanceMethodCache
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBehaviorServerClassCache >> className
 	^className
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBehaviorServerClassCache >> classMethodCache
 	"lazily cache the class category names and selectors from the server"
 
@@ -44,47 +51,47 @@ GbxBehaviorServerClassCache >> classMethodCache
 						context: classDelegate remoteClass].
 	^classMethodCache
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBehaviorServerClassCache >> classDelegate: anObject
 	classDelegate := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBehaviorServerClassCache >> className: aString
 	className := aString
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBehaviorServerClassCache >> currentBehavior
 	^serverCache isAtInstanceSide 
 		ifTrue: [self instanceMethodCache]
 		ifFalse: [self classMethodCache]
 
-{ #category : #'protocols' }
+{ #category : 'protocols' }
 GbxBehaviorServerClassCache >> classProtocols
 	^self classMethodCache keys
 
-{ #category : #'protocols' }
+{ #category : 'protocols' }
 GbxBehaviorServerClassCache >> instanceProtocols
 	^self instanceMethodCache keys
 
-{ #category : #'protocols' }
+{ #category : 'protocols' }
 GbxBehaviorServerClassCache >> protocolForSelector: aSelectorDisplay 
 	^serverCache isAtInstanceSide 
 		ifTrue: [self instanceProtocolForSelector: aSelectorDisplay selector]
 		ifFalse: [self classProtocolForSelector: aSelectorDisplay selector]
 
-{ #category : #'protocols' }
+{ #category : 'protocols' }
 GbxBehaviorServerClassCache >> instanceProtocolForSelector: aSelector 
 	instanceMethodCache keysAndValuesDo: 
 			[:categoryName :selectorArray | 
 			selectorArray do: [:sel | sel = aSelector ifTrue: [^categoryName]]]
 
-{ #category : #'protocols' }
+{ #category : 'protocols' }
 GbxBehaviorServerClassCache >> classProtocolForSelector: aSelector 
 	classMethodCache keysAndValuesDo: 
 			[:categoryName :selectorArray | 
 			selectorArray do: [:sel | sel = aSelector ifTrue: [^categoryName]]]
 
-{ #category : #'methods' }
+{ #category : 'methods' }
 GbxBehaviorServerClassCache >> instanceSelectors
 	| instanceSelectors |
 	instanceSelectors := SortedCollection new.
@@ -92,7 +99,7 @@ GbxBehaviorServerClassCache >> instanceSelectors
 		keysAndValuesDo: [:protocolName :selectors | instanceSelectors addAll: selectors].
 	^instanceSelectors
 
-{ #category : #'methods' }
+{ #category : 'methods' }
 GbxBehaviorServerClassCache >> classSelectors
 	| classSelectors |
 	classSelectors := SortedCollection new.
@@ -100,7 +107,7 @@ GbxBehaviorServerClassCache >> classSelectors
 		keysAndValuesDo: [:protocolName :selectors | classSelectors addAll: selectors].
 	^classSelectors
 
-{ #category : #'methods' }
+{ #category : 'methods' }
 GbxBehaviorServerClassCache >> classMethodTextsFor: selectors 
 	^serverCache session 
 		evaluate: '
@@ -113,7 +120,7 @@ GbxBehaviorServerClassCache >> classMethodTextsFor: selectors
 		gbxSourceCodes'
 		context: selectors asGSObject
 
-{ #category : #'methods' }
+{ #category : 'methods' }
 GbxBehaviorServerClassCache >> instanceMethodTextsFor: selectors 
 	^serverCache session 
 		evaluate: '
@@ -125,7 +132,7 @@ GbxBehaviorServerClassCache >> instanceMethodTextsFor: selectors
 		gbxSourceCodes'
 		context: selectors asGSObject
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxBehaviorServerClassCache class >> on: aSymbol forServerCache: aGbxBehaviorServerCache 
 	| inst |
 	inst := self new.

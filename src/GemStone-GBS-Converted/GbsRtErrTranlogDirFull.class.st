@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrTranlogDirFull',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrTranlogDirFull',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrTranlogDirFull class >> gemStoneErrorNumber6430 ^2339
 

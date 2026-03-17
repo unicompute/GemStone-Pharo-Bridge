@@ -1,8 +1,10 @@
 Class {
-	#name : #'StringKeyValueDictionary',
-	#superclass : #'KeyValueDictionary',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'StringKeyValueDictionary',
+	#superclass : 'KeyValueDictionary',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

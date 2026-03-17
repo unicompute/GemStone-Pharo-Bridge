@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrSignalAlmostOutOfMemory',
-	#superclass : #'GbsEventError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrSignalAlmostOutOfMemory',
+	#superclass : 'GbsEventError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrSignalAlmostOutOfMemory class >> gemStoneErrorNumber6430 ^6013
 

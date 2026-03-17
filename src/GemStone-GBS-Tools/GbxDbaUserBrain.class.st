@@ -1,12 +1,15 @@
 Class {
-	#name : #'GbxDbaUserBrain',
-	#superclass : #'GbxDbaBrain',
-	#instVars : [ #'user' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxDbaUserBrain',
+	#superclass : 'GbxDbaBrain',
+	#instVars : [
+		'user'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'changing' }
+{ #category : 'changing' }
 GbxDbaUserBrain >> languageChange
 	" The user has changed the native language. "
 
@@ -22,7 +25,7 @@ GbxDbaUserBrain >> languageChange
 		^ self newLanguage: self user language ].
 	self hasChanges: true.
 
-{ #category : #'changing' }
+{ #category : 'changing' }
 GbxDbaUserBrain >> passwordChange
 	" The user has changed the password. "
 
@@ -35,7 +38,7 @@ GbxDbaUserBrain >> passwordChange
 	self hasChanges: true.
 	^tool repeatPassword: self
 
-{ #category : #'changing' }
+{ #category : 'changing' }
 GbxDbaUserBrain >> userIdChange
 	" The user has changed the user ID. "
 
@@ -84,7 +87,7 @@ GbxDbaUserBrain >> userIdChange
 
 	hadError ifTrue: [^revertBlock value].
 
-{ #category : #'changing' }
+{ #category : 'changing' }
 GbxDbaUserBrain >> cleanupPasswordString: originalString
 	"GBS Private. Transform the originalString into a form that can be used as
 	 a password. This was necessary for handling double byte strings. The VA
@@ -101,7 +104,7 @@ GbxDbaUserBrain >> cleanupPasswordString: originalString
 	].
 	^stream contents
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxDbaUserBrain >> hasCompatiblePasteBuffer
 	" Answer true if the current item in the clipboard is a segment for this session. "
 
@@ -113,7 +116,7 @@ GbxDbaUserBrain >> hasCompatiblePasteBuffer
 		quietly: true.
 	^ assn notNil
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxDbaUserBrain >> hasValidNewUserInfo
 	" Answer true if my data is sufficient for a valid new UserProfile. "
 
@@ -126,13 +129,13 @@ GbxDbaUserBrain >> hasValidNewUserInfo
 		self newPassword: 'gemstone'.].
 	^ true
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxDbaUserBrain >> isUserGroupSelected
 	" Answer true when a group is selected. "
 
 	^ self currentGroupsSelection notNil
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaUserBrain >> userLanguageChoices
 	" Answer a sorted list of all currently available languages (as strings). "
 
@@ -140,7 +143,7 @@ GbxDbaUserBrain >> userLanguageChoices
 		collect: [: aSymbol | aSymbol asString])
 			asSortedCollection asArray
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaUserBrain >> user
 	" Answer the value of user, the GSUserProfileHolder whose information shows in my window. "
 
@@ -153,7 +156,7 @@ GbxDbaUserBrain >> user
 		^ nil].
 	^ user
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDbaUserBrain >> addGroupNamed: aName
 
 	self session
@@ -163,67 +166,67 @@ GbxDbaUserBrain >> addGroupNamed: aName
 		remotePerform: #addGroup:
 		with: aName
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaUserBrain >> newLanguage: aString
 	" Set the value of my window's language field. "
 
 	^ self windowInterface newLanguage: aString
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaUserBrain >> currentGroups
 	" Answer the list of groups in my window's groups field. "
 
 	^ self windowInterface currentGroups
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaUserBrain >> newId: aString
 	" Set the value of my window's id field. "
 
 	^ self windowInterface newId: aString
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaUserBrain >> currentPassword
 	" Answer the value of my window's password field. "
 
 	^ self windowInterface currentPassword
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaUserBrain >> newGroupsSelection: aSymbol
 	" I change the current selection of my window's groups list. "
 
 	self windowInterface newGroupsSelection: aSymbol.
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaUserBrain >> newGroups: aGroupNameList
 	" Set the list of groups in my window's groups field. "
 
 	self windowInterface newGroups: aGroupNameList.
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaUserBrain >> currentLanguage
 	" Answer the value of my window's language field. "
 
 	^ self windowInterface currentLanguage
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaUserBrain >> currentId
 	" Answer the value of my window's id field. "
 
 	^ self windowInterface currentId
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaUserBrain >> newPassword: aString
 	" I change the value of my window's password field to aString. "
 
 	^ self windowInterface newPassword: aString
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaUserBrain >> currentGroupsSelection
 	" Answer the current selection of my window's groups. "
 
 	^ self windowInterface currentGroupsSelection
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> showSymbolList
 	" Spawn a window that shows the SymbolList for this user. "
 
@@ -233,7 +236,7 @@ GbxDbaUserBrain >> showSymbolList
 		openOnUser: self user
 		in: self session.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> addExistingGroup
 	" Allow the user to specify an existing group from a menu of group names. "
 
@@ -248,7 +251,7 @@ GbxDbaUserBrain >> addExistingGroup
 	self addGroup: (choices at: choiceIndex).
 	self ableAddGroupButtons.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> updateUserRequest
 	" I allow the user to refresh the current repository user. "
 
@@ -275,7 +278,7 @@ GbxDbaUserBrain >> updateUserRequest
 	self updateAllData.
 	self userIdChange.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> moveUserGlobalsFrom: aSymbolListDictionaryForwarderList
 to: aSymbolListDictionaryForwarder
 	" I must add all of my user's UserGlobals entries to the new UserGlobals in aSymbolListDictionaryForwarder. "
@@ -299,7 +302,7 @@ to: aSymbolListDictionaryForwarder
 		at: (aSymbolListDictionaryForwarderList identityIndexOf: oldUG)
 		put: aSymbolListDictionaryForwarder.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> apply
 	" I save all changes to the GemStone DB image. "
 	"Note: The expected return value from here is questionable.
@@ -359,7 +362,7 @@ GbxDbaUserBrain >> apply
 									with: remoteUser]].
 				ex return]
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> updateUserCommonInfo
 	" The user is saving changes to an existing UserProfile.  I must determine what has changed and apply the changes to the SmalltalkDB image. "
 
@@ -373,7 +376,7 @@ GbxDbaUserBrain >> updateUserCommonInfo
 	self hasChanges: false.
 	self changeNotification: #dbaUserChanged
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> renameUserId
 	" I obtain the new User ID from the administrator. "
 
@@ -405,13 +408,13 @@ GbxDbaUserBrain >> renameUserId
 								self clearPassword.
 								self hasChanges: true]]]
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> updateUserInfo
 	" The user is saving changes to an existing UserProfile.  I must determine what has changed and apply the changes to the SmalltalkDB image. "
 
 	self updateUserCommonInfo
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> addNewSymbolListsTo: aNewUserProfileForwarder
 	" I must pass the user's new symbol list dictionaries to the new UserProfile in GemStone.
 	  NOTE:  A newly-created UserProfile has two symbol list dictionaries named UserGlobals and Globals.  Globals is the same as my user's Globals, but I must add all of my user's UserGlobals entries to the new UserProfile.  The order of adding other symbol list dictionaries from my user is also tricky.
@@ -435,19 +438,19 @@ GbxDbaUserBrain >> addNewSymbolListsTo: aNewUserProfileForwarder
 			aSymlListDictForwarder ucfwassignToObjectSecurityPolicy: aNewUserProfileForwarder ucfwdefaultObjectSecurityPolicy.].
 		addIndex := addIndex + 1.].
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> showSegments
 
 	GbxSegmentTool openOnSession: tool session
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> removeGroup
 	" Allow the user to delete the currently selected group. "
 
 	self removeGroup: self currentGroupsSelection.
 	self ableAddGroupButtons.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> updateUserPrivileges
 	" The user is saving changes to an existing UserProfile.  I must determine what has changed and apply the changes to the SmalltalkDB image. "
 
@@ -457,20 +460,20 @@ GbxDbaUserBrain >> updateUserPrivileges
 		[^ self ].
 	self user remoteUserProfile ucfwprivileges: self user newPrivileges.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> clearPassword
 	" Discard any changes made to the password. "
 
 	self newPassword: String new.
 	tool confirmPassword: String new.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> updateDataRequest
 	" I allow external changes to refresh the current repository user. "
 
 	self updateUserRequest.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> existingGroupChoices
 	" Answer a sorted list of existing group names (excluding those already being used) for use in a menu. "
 
@@ -484,14 +487,14 @@ GbxDbaUserBrain >> existingGroupChoices
 			ifAbsent:  [].].
 	^ choices asSortedCollection asArray
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> ok
 	" I save all changes to the GemStone DB image. "
 
 	self apply.
 	self windowInterface closeRequest.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> updateRenamedUserInfo
 	" The user is saving changes to an existing UserProfile whose user ID is being changed.  I must determine what has changed and apply the changes to the SmalltalkDB image. "
 
@@ -505,7 +508,7 @@ GbxDbaUserBrain >> updateRenamedUserInfo
 	self updateUserCommonInfo.
 	self changeNotification: #dbaUserAdded.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> addNewGroup
 	" Allow the user to specify the name for a new group. "
 
@@ -522,7 +525,7 @@ GbxDbaUserBrain >> addNewGroup
 	self addGroup: newName.
 	self ableAddGroupButtons.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> validateName: sgmtName inDict: dictProxy withName: dictName
 	"Verify that the given Security Policy name is a valid key for a segment in the given dictionary."
 
@@ -544,7 +547,7 @@ GbxDbaUserBrain >> validateName: sgmtName inDict: dictProxy withName: dictName
 				with: sgmtName) ifFalse: [^'']].
 	^nil
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> removeGroup: aGroupNameString
 	" Remove aGroupNameString from the list of groups. "
 
@@ -556,7 +559,7 @@ GbxDbaUserBrain >> removeGroup: aGroupNameString
 	self hasChanges: true.
 	tool disableButtons: self
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> updateUserId
 	" The user is saving changes to an existing UserProfile.  I must determine what has changed and apply the changes to the SmalltalkDB image. "
 
@@ -567,7 +570,7 @@ GbxDbaUserBrain >> updateUserId
 			with: self user userId
 			with: self tool password value)
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> allExistingGroupChoices
 	" Answer a set of all possible existing group names for use in a menu. "
 
@@ -578,13 +581,13 @@ GbxDbaUserBrain >> allExistingGroupChoices
 	choices addAll: self currentGroups.
 	^choices
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> showPrivileges
 	" Spawn a window that shows the privilege for this user. "
 
 	GbxDbaUserPrivilegesBrowser dialogOnBrowser: self windowInterface.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> updateUserPasswordOk
 	"Determine if the password has changed, and if so, apply it to the SmalltalkDB image.
 	 Answer false if the change fails in any way. The #cleanupPasswordString: send was
@@ -614,7 +617,7 @@ GbxDbaUserBrain >> updateUserPasswordOk
 	remoteUser ucfwoldPassword: oldPassword newPassword: newPassword.
 	^true
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> createSecurityPolicy: securityPolicyName
 	"Create a new Object Security Policy with the given name in the given dictionary."
 
@@ -660,7 +663,7 @@ GbxDbaUserBrain >> createSecurityPolicy: securityPolicyName
 	self allSegments add: sgmtHldr.
 	^sgmtHldr segmentProxy	"just return the delegate"
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> updateDefaultSegment
 	" I must determine if the Default Object Security Policy has changed and, if so, apply the changes to the SmalltalkDB image. "
 
@@ -678,14 +681,14 @@ GbxDbaUserBrain >> updateDefaultSegment
 				with: ex originator messageText.
 			ex return]
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> abortTransaction
 	" Allow the user to discard all changes made in the current transaction. "
 
 	super abortTransaction.
 	self updateUserRequest.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> userGroupSelected
 	" When no group is selected, certain buttons must be disabled. "
 
@@ -695,7 +698,7 @@ GbxDbaUserBrain >> userGroupSelected
 		ifFalse:
 			[self disableButtons.].
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> updateUserGroups
 	" I must determine if any entries is the group list have changed, and if so, apply those changes to the SmalltalkDB image. "
 
@@ -712,7 +715,7 @@ GbxDbaUserBrain >> updateUserGroups
 						[self user remoteUserProfile gbxDelegate remotePerform: #removeGroup:
 							with: aDeletedGroupName]]
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> addGroup: aGroupNameString
 	" Add aGroupNameString to the list of groups. "
 
@@ -729,7 +732,7 @@ GbxDbaUserBrain >> addGroup: aGroupNameString
 				asList.
 	self hasChanges: true
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> pasteSegment
 	" I make the GemStone Object Security Policy in the paste buffer the security policy for my GemStone user profile. "
 
@@ -743,7 +746,7 @@ GbxDbaUserBrain >> pasteSegment
 	self hasChanges: true.
 	self gbsMessenger warn: 'Pasted.'.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> addNewUserInfo
 	" The user is saving changes to a new UserProfile.  I must pass all data to the SmalltalkDB image. "
 
@@ -776,7 +779,7 @@ GbxDbaUserBrain >> addNewUserInfo
 	self changeNotification: #dbaUserAdded.
 	^newGsUser
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> selectSegment
 
 	| segments segment seg |
@@ -796,7 +799,7 @@ GbxDbaUserBrain >> selectSegment
 				ifFalse: [nil]]
 		ifFalse: [segment segmentProxy]
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> updateUserLanguage
 	" The user is saving changes to an existing UserProfile.  I must determine what has changed and apply the changes to the SmalltalkDB image. "
 
@@ -807,24 +810,24 @@ GbxDbaUserBrain >> updateUserLanguage
 		[^ self ].
 	self user remoteUserProfile ucfwnativeLanguage: value asSymbol.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaUserBrain >> confirmAdd
 
 	^tool confirmAdd: self
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaUserBrain >> disableOtherFields
 	" Certain fields must be disabled when no user ID is present. "
 
 	self enableOtherFields: false.
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaUserBrain >> enableOtherFields: anEnableBoolean
 	" Certain of my window's fields must be enabled or disabled, depending on whether a user ID is present. "
 
 	self windowInterface enableOtherFields: anEnableBoolean.
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaUserBrain >> ablePasteSegmentButton
 	" Activate or deactivate the 'Paste To Default Segment' button.
 	  NOTE:  To be VW / VS compatible, button names must start with an uppercase letter.
@@ -836,7 +839,7 @@ GbxDbaUserBrain >> ablePasteSegmentButton
 		ifFalse:
 			[self disableGroup: #( PasteSegmentButton ).].
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaUserBrain >> updateAllData
 	" I have switched to a new user, so I must update all data that shows in my window. "
 
@@ -849,7 +852,7 @@ GbxDbaUserBrain >> updateAllData
 	self hasChanges: false.
 	tool ableAddGroupButtons: self
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaUserBrain >> ableAddGroupButtons
 	" Activate or deactivate the Add... button.
 	  NOTE:  To be VW / VS compatible, button names must start with an uppercase letter.
@@ -861,7 +864,7 @@ GbxDbaUserBrain >> ableAddGroupButtons
 		ifFalse:
 			[self enableGroup: #( AddExistingGroupButton ).].
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaUserBrain >> enableSaveButtons
 	" Activate certain buttons after the user has made changes.
 	  NOTE:  To be VW / VS compatible, button names must start with an uppercase letter.
@@ -869,13 +872,13 @@ GbxDbaUserBrain >> enableSaveButtons
 
 	self enableGroup: #( OkButton  ApplyButton ).
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaUserBrain >> enableOtherFields
 	" Certain fields must be enabled when a user ID is present. "
 
 	self enableOtherFields: true.
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaUserBrain >> enableUserButtons
 	" Activate the default buttons when a user ID has been specified.
 	  NOTE:  To be VW / VS compatible, button names must start with an uppercase letter.
@@ -883,13 +886,13 @@ GbxDbaUserBrain >> enableUserButtons
 
 	tool enableUserButtons
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaUserBrain >> disableButtons
 	" Deactivate certain buttons until a user is selected."
 
 	tool disableGroup: self
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaUserBrain >> disableSaveButtons
 	" Deactivate certain buttons until the user has made changes.
 	  NOTE:  To be VW / VS compatible, button names must start with an uppercase letter.
@@ -897,7 +900,7 @@ GbxDbaUserBrain >> disableSaveButtons
 
 	self disableGroup: #( OkButton  ApplyButton ).
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaUserBrain >> enableButtons
 	" Activate certain buttons while a user is selected.
 	  NOTE:  To be VW / VS compatible, button names must start with an uppercase letter.
@@ -905,7 +908,7 @@ GbxDbaUserBrain >> enableButtons
 
 	self enableGroup: #( RemoveGroupButton ).
 
-{ #category : #'interface opening' }
+{ #category : 'interface opening' }
 GbxDbaUserBrain >> postBuild
 	" I take any additional action after the builder has completed work on my window. "
 
@@ -917,7 +920,7 @@ GbxDbaUserBrain >> postBuild
 			self enableUserButtons].
 	tool enablePasteButton
 
-{ #category : #'external changing' }
+{ #category : 'external changing' }
 GbxDbaUserBrain >> updateNotification: aSymbol
 	" Some other DBA window has changed something.  I may have to update my user ID menu or my information. "
 
@@ -925,7 +928,7 @@ GbxDbaUserBrain >> updateNotification: aSymbol
 		[self ablePasteSegmentButton.].
 	super updateNotification: aSymbol.
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxDbaUserBrain >> update: anAspectSymbol
 with: aParameter
 	" Receive a change notice from an object of whom the receiver is a dependent.  The argument anAspectSymbol is typically a Symbol that indicates what change has occurred. "
@@ -937,7 +940,7 @@ with: aParameter
 				[self hasChanges: false.
 				self userIdChange.].].].
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxDbaUserBrain >> hasChanges: aBoolean
 	" Enable certain buttons if the user has done anything that needs to be saved. "
 
@@ -948,14 +951,14 @@ GbxDbaUserBrain >> hasChanges: aBoolean
 		ifFalse:
 			[self disableSaveButtons.].
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxDbaUserBrain >> newPrivileges: anArray
 	" Save the array of symbols identifying this user's privileges on GemStone. "
 
 	self user newPrivileges: anArray.
 	self hasChanges: true.
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxDbaUserBrain >> user: aGSUserProfileHolder
 	" Set the value of user, the GSUserProfileHolder whose information shows in my window. "
 

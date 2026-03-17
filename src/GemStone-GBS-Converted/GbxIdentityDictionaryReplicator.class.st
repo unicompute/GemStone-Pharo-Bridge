@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxIdentityDictionaryReplicator',
-	#superclass : #'GbxDeferredElementsReplicator',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxIdentityDictionaryReplicator',
+	#superclass : 'GbxDeferredElementsReplicator',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxIdentityDictionaryReplicator >> indexedInstvarsOf: anObject inServerOrderDo: aBlock
 	"anObject is a client object, an instance of the class that I replicate.
 	For each indexed instvar
@@ -21,13 +23,13 @@ GbxIdentityDictionaryReplicator >> indexedInstvarsOf: anObject inServerOrderDo: 
 			aBlock value: key.
 			aBlock value: value]
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxIdentityDictionaryReplicator >> serverIndexedSizeOf: anObject
 	"Answer the number of indexed instance variables in the server representation of anObject"
 
 	^anObject size * 2	"Key and value for each entry"
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxIdentityDictionaryReplicator >> instvarsOf: anObject inServerOrderDo: aBlock
 	"anObject is a client object, an instance of the class that I replicate.
 	For each instvar (named or indexed) that is mapped to the server,

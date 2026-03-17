@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrAuthArraySize',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrAuthArraySize',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrAuthArraySize class >> gemStoneErrorNumber6430 ^2006
 

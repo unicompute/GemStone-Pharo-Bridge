@@ -1,16 +1,19 @@
 Class {
-	#name : #'GbxManyClientToOneKernelConnector',
-	#superclass : #'GbsFastConnector',
-	#instVars : [ #'secondaryClientObjs' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxManyClientToOneKernelConnector',
+	#superclass : 'GbsFastConnector',
+	#instVars : [
+		'secondaryClientObjs'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxManyClientToOneKernelConnector >> secondaryClientObjs: anObject
 	secondaryClientObjs := anObject
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxManyClientToOneKernelConnector >> printOn: stream
 
 	super printOn: stream.
@@ -21,7 +24,7 @@ GbxManyClientToOneKernelConnector >> printOn: stream
 			stream space].
 	stream nextPut: $)
 
-{ #category : #'private connecting' }
+{ #category : 'private connecting' }
 GbxManyClientToOneKernelConnector >> postConnectClient: primaryClass server: delegate inSession: sess
 	"Private to GBS.  Events to occur after connecting.
 	Sender must hold session's sessionProtect"
@@ -51,7 +54,7 @@ GbxManyClientToOneKernelConnector >> postConnectClient: primaryClass server: del
 					sess setReplicatorForClient: secondaryMetaclass
 						sameAsReplicatorForClient: primaryMetaclass]]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxManyClientToOneKernelConnector class >> primaryClientObj: primaryClientObj secondaryClientObjs: secondaryClientObjs serverOop: serverOop
 
 	| conn |

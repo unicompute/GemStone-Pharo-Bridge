@@ -1,16 +1,23 @@
 Class {
-	#name : #'GbxObjectWithDeferredAssignments',
-	#superclass : #'Object',
-	#instVars : [ #'clientObject' #'deferredAssignments' #'indexedBuffer' #'namedBuffer' #'session' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxObjectWithDeferredAssignments',
+	#superclass : 'Object',
+	#instVars : [
+		'clientObject',
+		'deferredAssignments',
+		'indexedBuffer',
+		'namedBuffer',
+		'session'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'deferring' }
+{ #category : 'deferring' }
 GbxObjectWithDeferredAssignments >> add: aDeferredAssignment 
 	deferredAssignments add: aDeferredAssignment
 
-{ #category : #'deferring' }
+{ #category : 'deferring' }
 GbxObjectWithDeferredAssignments >> deferIndexedOffset: clientOffset oop: oop
 	"Oop points to traversal buffer memory, must copy into a delegate, even though this delegate
 	will not be put into the cache in most cases."
@@ -22,7 +29,7 @@ GbxObjectWithDeferredAssignments >> deferIndexedOffset: clientOffset oop: oop
 				delegate: (oop asGSObjectInSession: session)
 				buffer: indexedBuffer).
 
-{ #category : #'deferring' }
+{ #category : 'deferring' }
 GbxObjectWithDeferredAssignments >> deferNamedOffset: clientOffset oop: oop
 	"Oop points to traversal buffer memory, must copy into a delegate."
 
@@ -31,31 +38,31 @@ GbxObjectWithDeferredAssignments >> deferNamedOffset: clientOffset oop: oop
 				delegate: (oop asGSObjectInSession: session)
 				buffer: namedBuffer)
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxObjectWithDeferredAssignments >> indexedBuffer: anObject
 	indexedBuffer := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxObjectWithDeferredAssignments >> namedBuffer: anObject
 	namedBuffer := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxObjectWithDeferredAssignments >> session: anObject
 	session := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxObjectWithDeferredAssignments >> clientObject: anObject
 	clientObject := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxObjectWithDeferredAssignments >> clientObject
 	^clientObject
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxObjectWithDeferredAssignments >> initialize
 	deferredAssignments := OrderedCollection new
 
-{ #category : #'resolving' }
+{ #category : 'resolving' }
 GbxObjectWithDeferredAssignments >> resolve
 	"Sender must hold the session's sessionProtect"
 
@@ -67,17 +74,17 @@ GbxObjectWithDeferredAssignments >> resolve
 	clientObject gbxTrapFutureChanges]
 			valueUnpreemptively
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxObjectWithDeferredAssignments >> deferredIndexedAssignmentClass
 	
 	^GbxDeferredIndexedAssignment.
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxObjectWithDeferredAssignments >> deferredNamedAssignmentClass
 	
 	^GbxDeferredNamedAssignment.
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxObjectWithDeferredAssignments class >> new
 	^super new initialize
 

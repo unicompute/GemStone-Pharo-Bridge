@@ -1,12 +1,19 @@
 Class {
-	#name : #'GbxThreadStateDictionary',
-	#superclass : #'Object',
-	#instVars : [ #'keys' #'values' #'tally' #'needFinalization' #'capacity' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxThreadStateDictionary',
+	#superclass : 'Object',
+	#instVars : [
+		'keys',
+		'values',
+		'tally',
+		'needFinalization',
+		'capacity'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxThreadStateDictionary >> initialize
 
 	| tableSize |
@@ -18,7 +25,7 @@ GbxThreadStateDictionary >> initialize
 	tally := 0.
 	needFinalization := false
 
-{ #category : #'public' }
+{ #category : 'public' }
 GbxThreadStateDictionary >> value: aValue
 	"Associate the given value with the executing thread.
 	Sender must hold my session's sessionProtect."
@@ -40,7 +47,7 @@ GbxThreadStateDictionary >> value: aValue
 		ifNotNil: [values at: index put: aValue].
 	^aValue
 
-{ #category : #'public' }
+{ #category : 'public' }
 GbxThreadStateDictionary >> value
 	"Answer the value set for the current thread, or nil if the current thread has never set a value.
 	Sender must hold my session's sessionProtect."
@@ -52,7 +59,7 @@ GbxThreadStateDictionary >> value
 		ifTrue: [values at: index]
 		ifFalse: [nil]
 
-{ #category : #'finalization' }
+{ #category : 'finalization' }
 GbxThreadStateDictionary >> update: anAspectSymbol with: aParameter from: aSender
 	"If I'm being told that I need finalization, record that fact.
 	During a rehash, notification could come from old or new keys,
@@ -60,7 +67,7 @@ GbxThreadStateDictionary >> update: anAspectSymbol with: aParameter from: aSende
 
 	anAspectSymbol = #ElementExpired ifTrue: [needFinalization := true]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxThreadStateDictionary >> indexForKey: aProcess
 	"Answer the index at which aProcess appears, or the index where it would be if it were present.
 	keyArray is an identity-hashed open-addressing with linear probing table.
@@ -77,7 +84,7 @@ GbxThreadStateDictionary >> indexForKey: aProcess
 				currentIndex > tableSize ifTrue: [currentIndex := 1]].
 	^currentIndex
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxThreadStateDictionary >> rehashToTableOfSize: newTableSize
 	"Copy the table to a new table of the given size, which should be a 'good' prime, 
 	then replace the old table with the new one. Omit any tombstones while copying.
@@ -114,7 +121,7 @@ GbxThreadStateDictionary >> rehashToTableOfSize: newTableSize
 	"Old keys and values arrays are now unreferenced. I'm still a dependent of the old keys WeakArray, so it's possible
 	needsFinalization could be set by both new and old keys arrays before the old keys is GCed, but this is harmless."
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxThreadStateDictionary >> rehash
 	"Sender must hold my session's sessionProtect."
 	"If we're finalizing, keep the same table size, since we are about to free some space. 
@@ -124,14 +131,14 @@ GbxThreadStateDictionary >> rehash
 				ifTrue: [keys size]
 				ifFalse: [Set goodSizeFrom: keys size * 2])
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxThreadStateDictionary >> rehashIfNeeded
 	"We rehash for either of two reasons: the VM has notified us that there are 
   tombstones to collect, or we are too full and need to grow."
 
 	(needFinalization or: [tally >= capacity]) ifTrue: [self rehash]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxThreadStateDictionary class >> new
 
 	^super new initialize

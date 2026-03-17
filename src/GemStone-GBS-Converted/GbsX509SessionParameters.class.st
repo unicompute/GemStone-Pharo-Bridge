@@ -1,12 +1,23 @@
 Class {
-	#name : #'GbsX509SessionParameters',
-	#superclass : #'GbxSessionSpecification',
-	#instVars : [ #'netldiHostOrIp' #'netldiNameOrPort' #'privateKey' #'cert' #'caCert' #'extraGemArgs' #'dirArg' #'logArg' #'argsArePemStrings' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsX509SessionParameters',
+	#superclass : 'GbxSessionSpecification',
+	#instVars : [
+		'netldiHostOrIp',
+		'netldiNameOrPort',
+		'privateKey',
+		'cert',
+		'caCert',
+		'extraGemArgs',
+		'dirArg',
+		'logArg',
+		'argsArePemStrings'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbsX509SessionParameters >> = aGbsX509SessionParameters
 
 	^(aGbsX509SessionParameters isKindOf: self class)
@@ -18,7 +29,7 @@ GbsX509SessionParameters >> = aGbsX509SessionParameters
 		and: [self logArg = aGbsX509SessionParameters logArg
 		and: [self connectors = aGbsX509SessionParameters connectors]]]]]]]
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbsX509SessionParameters >> hash
 
 	^self cert hash
@@ -29,102 +40,102 @@ GbsX509SessionParameters >> hash
 	+ self logArg hash
 	+ self connectors
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> privateKey
 
 	^privateKey
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> privateKey: anObject
 
 	privateKey := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> extraGemArgs
 
 	^extraGemArgs
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> extraGemArgs: anObject
 
 	extraGemArgs := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> logArg
 
 	^logArg
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> argsArePemStrings
 
 	^argsArePemStrings
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> argsArePemStrings: anObject
 
 	argsArePemStrings := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> logArg: anObject
 
 	logArg := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> caCert
 
 	^caCert
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> caCert: anObject
 
 	caCert := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> netldiHostOrIp
 
 	^netldiHostOrIp
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> cert
 
 	^cert
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> netldiHostOrIp: anObject
 
 	netldiHostOrIp := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> netldiNameOrPort
 
 	^netldiNameOrPort
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> cert: anObject
 
 	cert := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> dirArg
 
 	^dirArg
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> netldiNameOrPort: anObject
 
 	netldiNameOrPort := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsX509SessionParameters >> dirArg: anObject
 
 	dirArg := anObject
 
-{ #category : #'GBS private' }
+{ #category : 'GBS private' }
 GbsX509SessionParameters >> isX509
 
 	^true
 
-{ #category : #'session management' }
+{ #category : 'session management' }
 GbsX509SessionParameters >> loginOnPasswordExpirationWarning: aOneArgBlock
 	"Log in to GemStone with the receiver's login parameters. "
 
@@ -136,13 +147,13 @@ GbsX509SessionParameters >> loginOnPasswordExpirationWarning: aOneArgBlock
 			aOneArgBlock value: ex originator.
 			ex resume]
 
-{ #category : #'session management' }
+{ #category : 'session management' }
 GbsX509SessionParameters >> loginRpc
 	"just login. Linked logins not supported with x509 logins"
 
 	^self login
 
-{ #category : #'session management' }
+{ #category : 'session management' }
 GbsX509SessionParameters >> login
 	"Log into GemStone with the receiver parameters, spawning an rpc
 	 gem session.  The parameters required for an x509 rpc login 
@@ -152,14 +163,14 @@ GbsX509SessionParameters >> login
 	^self
 		loginOnPasswordExpirationWarning: [:aGSError | self gbsMessenger warn: aGSError messageText]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbsX509SessionParameters >> initialize
 
 	super initialize.
 	argsArePemStrings := false.
 	extraGemArgs := dirArg := logArg := ''
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbsX509SessionParameters >> printOn: aStream
 
 	aStream
@@ -171,7 +182,7 @@ GbsX509SessionParameters >> printOn: aStream
 		space;
 		nextPutAll: (netldiHostOrIp ifNil: [String new])
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsX509SessionParameters class >> new
 
 	^(super new)

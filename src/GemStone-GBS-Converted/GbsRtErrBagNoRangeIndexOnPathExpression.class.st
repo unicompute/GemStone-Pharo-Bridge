@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrBagNoRangeIndexOnPathExpression',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrBagNoRangeIndexOnPathExpression',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrBagNoRangeIndexOnPathExpression class >> gemStoneErrorNumber6430 ^2312
 

@@ -1,8 +1,10 @@
 Class {
-	#name : #'CannotReturn',
-	#superclass : #'Error',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'CannotReturn',
+	#superclass : 'Error',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

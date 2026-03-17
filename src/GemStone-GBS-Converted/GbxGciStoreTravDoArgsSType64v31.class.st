@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxGciStoreTravDoArgsSType64v31',
-	#superclass : #'GbxGciStoreTravDoArgsSType64v3',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxGciStoreTravDoArgsSType64v31',
+	#superclass : 'GbxGciStoreTravDoArgsSType64v3',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private - printing' }
+{ #category : 'private - printing' }
 GbxGciStoreTravDoArgsSType64v31 >> printEArgsOn: aStream indent: indent
 
 	aStream nextPutAll: 'contextObject = '.
@@ -34,7 +36,7 @@ GbxGciStoreTravDoArgsSType64v31 >> printEArgsOn: aStream indent: indent
 	self eEnvironmentId printOn: aStream.
 	aStream crtab: indent
 
-{ #category : #'private - printing' }
+{ #category : 'private - printing' }
 GbxGciStoreTravDoArgsSType64v31 >> printPArgsOn: aStream indent: indent 
 	aStream nextPutAll: 'receiver = '.
 	self receiver printOn: aStream.
@@ -52,7 +54,7 @@ GbxGciStoreTravDoArgsSType64v31 >> printPArgsOn: aStream indent: indent
 	self pEnvironmentId printOn: aStream.
 	aStream crtab: indent
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxGciStoreTravDoArgsSType64v31 >> printOn: aStream indent: indent
 
 	aStream tab: indent - 1.

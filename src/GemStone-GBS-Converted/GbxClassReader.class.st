@@ -1,17 +1,27 @@
 Class {
-	#name : #'GbxClassReader',
-	#superclass : #'Object',
-	#instVars : [ #'lineNumber' #'lastResult' #'currentTokens' #'currentMessages' #'currentCategory' #'currentClass' #'inputStream' #'session' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxClassReader',
+	#superclass : 'Object',
+	#instVars : [
+		'lineNumber',
+		'lastResult',
+		'currentTokens',
+		'currentMessages',
+		'currentCategory',
+		'currentClass',
+		'inputStream',
+		'session'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClassReader >> session: anObject
 
 	session := anObject
 
-{ #category : #'error handling' }
+{ #category : 'error handling' }
 GbxClassReader >> error: anError
 
 	"This method displays a file-in error box to let the user know that file-in has been terminated."
@@ -21,14 +31,14 @@ GbxClassReader >> error: anError
 		with: anError
 		with: (lineNumber printString gbxCopyWrappedTo: 40)
 
-{ #category : #'error handling' }
+{ #category : 'error handling' }
 GbxClassReader >> error
 
 	"This is the generic file-in error handler."
 
 	^self error: 'Unsupported or unrecognized command found'
 
-{ #category : #'error handling' }
+{ #category : 'error handling' }
 GbxClassReader >> performObject: sourceObj at: index put: valueObj
 	"This actually performs the object command using the arguments
 	 we parsed out of the command line."
@@ -83,7 +93,7 @@ GbxClassReader >> performObject: sourceObj at: index put: valueObj
 	self error: 'Invalid object implementation type'.
 	^#error
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassReader >> parseGemStoneSource
 
 	"This method is used to parse the inputStream from the current
@@ -105,7 +115,7 @@ GbxClassReader >> parseGemStoneSource
 
 	^source gbxLfsOnly
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassReader >> parseLine: aLine
 	"This method takes the given line and parses it.  Tokens are
 	 stored in 'currentTokens' and the messages that those tokens
@@ -119,7 +129,7 @@ GbxClassReader >> parseLine: aLine
 				at: token asLowercase
 				ifAbsent: [#error]]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassReader >> printObjectResult: anObject
 
 	"This prints the result of an OBJECT command"
@@ -132,7 +142,7 @@ GbxClassReader >> printObjectResult: anObject
 			ifFalse: [ anObject ]
 		).
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassReader >> verifyClassName
 	"This method aids method compilation by taking the second token and checking the name for existence in the user's symbol list.  If there is no 2nd token, then we return currentClass (if it is something other than ONil).  If there is a 2nd token, then we check to see if the object is a class defining object.  Errors are produced for object-not-found and non-class defining object situations.  In case of success, return the class defining object.  In case of error, return ONil.  As a side effect, we set the currentClass to the new class defining object."
 
@@ -175,11 +185,11 @@ assoc == nil
 			self gbsMessenger comment: 'Current class is %1.' with: classSymbol].
 	^classObj
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassReader >> currentCategory: aString
 	currentCategory := aString
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassReader >> genericExecution
 	"This method will do executions for the RUN and OPAL commands.  It sets up an error block and does the execution until it returns successfully.  Users may bail out at any time (via notifiers).  As a by-product, if execution returns successfully, we store the result in 'lastResult' so we can use the '**' operator in OBJECT commands."
 	
@@ -198,7 +208,7 @@ GbxClassReader >> genericExecution
 				ifTrue: [ex return: nil]
 				ifFalse: [ex retry]]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassReader >> getInteger: aString
 	"This method will convert the given string into an Integer.
 	 If we cannot convert the string directly into an Integer, an
@@ -223,11 +233,11 @@ GbxClassReader >> getInteger: aString
 					^#error]].
 	^returnVal
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassReader >> currentClass: aClassObject
 	currentClass := aClassObject
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassReader >> compileMethod
 	"This method will compile a GemStone instance or class method.  currentTokens should have at least 2 tokens, the 2nd of which is the class name in which to compile the method."
 	
@@ -252,7 +262,7 @@ GbxClassReader >> compileMethod
 				ifTrue: [ex return: nil]
 				ifFalse: [ex retry]]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassReader >> getObjectSpec: aString 
 	"Using the given string, return the OOP of the string interpreted
 	 as an object specification.  Objects may be specified in the
@@ -331,7 +341,7 @@ GbxClassReader >> getObjectSpec: aString
 			^#error].
 	^anAssoc remotePerform: #value
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassReader >> handleCompilerError: errorDescriptor inSource: sourceString
 	"If the GbsTools are loaded, we can open a dialog to edit the erroneous expression.
 	 Otherwise, we can only notify that the compile error occurred and let the user/developer deal with it."
@@ -348,29 +358,29 @@ GbxClassReader >> handleCompilerError: errorDescriptor inSource: sourceString
 					with: sourceString.
 			nil]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassReader >> inputStream: aStream
 	inputStream := aStream
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClassReader >> lastResult: anObject
 	lastResult := anObject
 
-{ #category : #'session' }
+{ #category : 'session' }
 GbxClassReader >> session
 
 	"Answer the GbsSession this instance is associated with.  If nil, attach to current session."
 	session isNil ifTrue: [ session := GBSM currentSession ].
 	^session
 
-{ #category : #'file-in commands' }
+{ #category : 'file-in commands' }
 GbxClassReader >> run
 
 	"This method performs the 'run' command."
 
 self genericExecution
 
-{ #category : #'file-in commands' }
+{ #category : 'file-in commands' }
 GbxClassReader >> env
 	"Added in GemStone/64. Same behavior as
 	set compile_env: 0"
@@ -380,11 +390,11 @@ GbxClassReader >> env
 	(currentTokens at: 2) ~= '0'
 		ifTrue: [^self error: 'Only "env 0" is currently supported']
 
-{ #category : #'file-in commands' }
+{ #category : 'file-in commands' }
 GbxClassReader >> classmethod
 	self compileMethod
 
-{ #category : #'file-in commands' }
+{ #category : 'file-in commands' }
 GbxClassReader >> removeAllClassMethods
 	"Remove all classmethods in the current or specified class"
 
@@ -396,7 +406,7 @@ GbxClassReader >> removeAllClassMethods
 										nil]'
 		context: currentClass
 
-{ #category : #'file-in commands' }
+{ #category : 'file-in commands' }
 GbxClassReader >> removeAllMethods
 	"Remove all methods in the current or specified class"
 
@@ -408,7 +418,7 @@ GbxClassReader >> removeAllMethods
 											nil]'
 		context: currentClass
 
-{ #category : #'file-in commands' }
+{ #category : 'file-in commands' }
 GbxClassReader >> ignore
 
 	"Some file-in commands are ignored by GBS file-in.  Any of those
@@ -418,7 +428,7 @@ GbxClassReader >> ignore
 		comment: 'Warning ''%1'' ignored.'
 		with: (currentTokens at: 1).
 
-{ #category : #'file-in commands' }
+{ #category : 'file-in commands' }
 GbxClassReader >> category
 
 	"This method sets the current category for use in compiling methods.  The category name is formed by concatenating the rest of the tokens in currentTokens (from the 2nd upto the end of the array).  If the category name is encased in single quotes, then we eliminate those single quotes."
@@ -445,13 +455,13 @@ GbxClassReader >> category
 			with: currentCategory.
 	]
 
-{ #category : #'file-in commands' }
+{ #category : 'file-in commands' }
 GbxClassReader >> silentIgnore
 	"Some file-in commands are ignored by GBS file-in.
 	Ones that are generated by a standard fileout are
 	ignored silently, without the warning given by #ignore."
 
-{ #category : #'file-in commands' }
+{ #category : 'file-in commands' }
 GbxClassReader >> object
 	"This method performs an OBJECT command.  There must be at least
 	 one argument - the object specification.  Optional arguments
@@ -508,7 +518,7 @@ GbxClassReader >> object
 	sourceObj = #error ifTrue: [^self].
 	^self printObjectResult: sourceObj
 
-{ #category : #'file-in commands' }
+{ #category : 'file-in commands' }
 GbxClassReader >> commit
 
 	"This method performs a commit to the GemStone repository.  As the
@@ -524,7 +534,7 @@ GbxClassReader >> commit
 		ifTrue: [ self gbsMessenger commentAdd: '...succeeded.' ]
 		ifFalse: [ self gbsMessenger commentAdd: '...failed.' ].
 
-{ #category : #'file-in commands' }
+{ #category : 'file-in commands' }
 GbxClassReader >> set
 	"In fileins, we currently only recognize a subset of set commands.
 	 All other sets are erroneous."
@@ -534,11 +544,11 @@ GbxClassReader >> set
 		at: (currentTokens at: 2) asLowercase
 		ifAbsent: [^self error: 'Unrecognized set sub-command']).
 
-{ #category : #'file-in commands' }
+{ #category : 'file-in commands' }
 GbxClassReader >> method
 	self compileMethod
 
-{ #category : #'file-in commands' }
+{ #category : 'file-in commands' }
 GbxClassReader >> input
 
 	"During a file-in, the 'input' command specifies another file to file in.  When the input command completes, the outer filein will continue."
@@ -558,7 +568,7 @@ GbxClassReader >> input
 		stream close
 	]
 
-{ #category : #'file-in commands' }
+{ #category : 'file-in commands' }
 GbxClassReader >> fileIn
 
 	"This method actually performs a GemStone file-in operation."
@@ -576,7 +586,7 @@ GbxClassReader >> fileIn
 		            (currentMessages at: 1) = #error
 		                ifTrue: [ ^self ]]]]
 
-{ #category : #'streaming' }
+{ #category : 'streaming' }
 GbxClassReader >> nextLineReadingCommand: aBoolean
 
 	"This method fetches the next line of input from the inputStream
@@ -616,26 +626,26 @@ self atEnd
 
 ^aLine copyFrom: 1 to: aLine size
 
-{ #category : #'streaming' }
+{ #category : 'streaming' }
 GbxClassReader >> peek
 	^inputStream peek
 
-{ #category : #'streaming' }
+{ #category : 'streaming' }
 GbxClassReader >> peekFor: aCharacter
 	^inputStream peekFor: aCharacter
 
-{ #category : #'streaming' }
+{ #category : 'streaming' }
 GbxClassReader >> next
 	| temp |
 	temp := (String new: 1).
 	temp at: 1 put: (inputStream next).
 	^temp
 
-{ #category : #'streaming' }
+{ #category : 'streaming' }
 GbxClassReader >> atEnd
 	^inputStream atEnd
 
-{ #category : #'set sub-commands' }
+{ #category : 'set sub-commands' }
 GbxClassReader >> setSourceStringClass
 	"In fileins, we currently only recognize setting the source 
 	string class to String. All others are erroneous."
@@ -644,7 +654,7 @@ GbxClassReader >> setSourceStringClass
 	(currentTokens at: 3) ~= 'String'
 		ifTrue: [^self error: 'Only "set sourcestringclass String" is currently supported']
 
-{ #category : #'set sub-commands' }
+{ #category : 'set sub-commands' }
 GbxClassReader >> setCompileEnvironment
 	"In fileins, we currently only recognize setting the compile 
 	environment number to 0. All others are erroneous."
@@ -653,7 +663,7 @@ GbxClassReader >> setCompileEnvironment
 	(currentTokens at: 3) ~= '0'
 		ifTrue: [^self error: 'Only "set compile_env: 0" is currently supported']
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 GbxClassReader class >> initializeKnownTokens
 	"GbxClassReader initializeKnownTokens"
 	
@@ -706,7 +716,7 @@ GbxClassReader class >> initializeKnownTokens
 		at: 'time' put: #ignore;
 		at: 'uncompress' put: #error
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 GbxClassReader class >> initialize
 	"GbxClassReader initialize"
 
@@ -714,7 +724,7 @@ GbxClassReader class >> initialize
 		initializeKnownTokens;
 		initializeSetSubcommandHandlers
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 GbxClassReader class >> initializeSetSubcommandHandlers
 	"GbxClassReader initializeSetSubcommandHandlers"
 	
@@ -723,7 +733,7 @@ GbxClassReader class >> initializeSetSubcommandHandlers
 		at: 'compile_env:' put: #setCompileEnvironment;
 		at: 'sourcestringclass' put: #setSourceStringClass
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxClassReader class >> on: aStream 
 	"This method creates a new instance of GemStoneClassReader on the given stream."
 

@@ -1,22 +1,26 @@
 Class {
-	#name : #'GbxStoreTraversal',
-	#superclass : #'GbxTraversal',
-	#instVars : [ #'session' #'packedNotYetAccepted' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxStoreTraversal',
+	#superclass : 'GbxTraversal',
+	#instVars : [
+		'session',
+		'packedNotYetAccepted'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxStoreTraversal >> session
 	^session
 
-{ #category : #'packing' }
+{ #category : 'packing' }
 GbxStoreTraversal >> flushBufferIfFull
 	"If there is not room for another report, send it."
 
 	buffer hasRoomForReport ifFalse: [self flushBufferToServer]
 
-{ #category : #'packing' }
+{ #category : 'packing' }
 GbxStoreTraversal >> flushBufferToServer
 	"The buffer is full while there is still more to pack, send the buffer's contents to the 
 	gem and ready the now-empty buffer for more packing."
@@ -28,18 +32,18 @@ GbxStoreTraversal >> flushBufferToServer
 	self exportPackedNotYetAccepted.
 	buffer emptyBuffer
 
-{ #category : #'packing' }
+{ #category : 'packing' }
 GbxStoreTraversal >> finishedReport
 	"Header and valueBuffer all filled in -- advance the report to the next free space."
 
 	buffer finishedReport
 
-{ #category : #'packing' }
+{ #category : 'packing' }
 GbxStoreTraversal >> packed: anObject
 
 	packedNotYetAccepted add: anObject
 
-{ #category : #'packing' }
+{ #category : 'packing' }
 GbxStoreTraversal >> pack: anObject
 	"Must hold all packed objects until done with the server interaction, so they don't get reported to the server
 	as being GCed or no longer replicated until definitively after they've been flushed. 
@@ -60,14 +64,14 @@ GbxStoreTraversal >> pack: anObject
 										inSession: session]].
 			replicator store: anObject inTraversal: self]
 
-{ #category : #'GBS private' }
+{ #category : 'GBS private' }
 GbxStoreTraversal >> emptyPackedNotYetAcceptedInto: aCollection
 	"Sender must hold my session's protect."
 
 	aCollection addAll: packedNotYetAccepted.
 	self initializePackedNotYetAccepted
 
-{ #category : #'GBS private' }
+{ #category : 'GBS private' }
 GbxStoreTraversal >> exportPackedNotYetAccepted
 
 	packedNotYetAccepted
@@ -76,19 +80,19 @@ GbxStoreTraversal >> exportPackedNotYetAccepted
 	They are no longer dirty, so we no longer need to keep watch over them."
 	self initializePackedNotYetAccepted
 
-{ #category : #'object interface' }
+{ #category : 'object interface' }
 GbxStoreTraversal >> objectReport
 
 	^buffer objectReport
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxStoreTraversal >> release
 	"Sender must hold my session's sessionProtect."
 
 	super release.
 	session removeStoreTraversal: self
 
-{ #category : #'private - initializing' }
+{ #category : 'private - initializing' }
 GbxStoreTraversal >> initializeForInteraction: anInteraction
 	"Sender must hold my session's sessionProtect."
 
@@ -97,12 +101,12 @@ GbxStoreTraversal >> initializeForInteraction: anInteraction
 	self initializePackedNotYetAccepted.
 	session addStoreTraversal: self
 
-{ #category : #'private - initializing' }
+{ #category : 'private - initializing' }
 GbxStoreTraversal >> initializePackedNotYetAccepted
 
 	packedNotYetAccepted := IdentitySet new
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxStoreTraversal class >> for: aServerInteraction 
 	"Sender must hold my session's sessionProtect."
 

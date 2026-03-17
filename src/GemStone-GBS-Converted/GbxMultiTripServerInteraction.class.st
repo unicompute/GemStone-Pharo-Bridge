@@ -1,24 +1,26 @@
 Class {
-	#name : #'GbxMultiTripServerInteraction',
-	#superclass : #'GbxServerInteraction',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxMultiTripServerInteraction',
+	#superclass : 'GbxServerInteraction',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxMultiTripServerInteraction >> defaultResult
 	
 	self gbsMessenger error: 'No default result for this type of interaction'
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxMultiTripServerInteraction >> shouldExportResults
 	"In multi-trip, there is no referenced set, so we must always put results into the export set
 	to prevent their garbage collection."
 
 	^true
 
-{ #category : #'private - executing' }
+{ #category : 'private - executing' }
 GbxMultiTripServerInteraction >> replicateAlteredObjectsAfterError
 	"Used after an error interrupted execution. Note that an 'error' includes things like 
 	client forwarder sends and breakpoints.
@@ -37,7 +39,7 @@ GbxMultiTripServerInteraction >> replicateAlteredObjectsAfterError
 	session termination, or server out of memory."
 	^result gbxIsGSError ifTrue: [result] ifFalse: [resultDelegateOrError]
 
-{ #category : #'private - executing' }
+{ #category : 'private - executing' }
 GbxMultiTripServerInteraction >> replicateResult
 	"aDelegate is the server object answered by the message send.
 	First, replicate from the traversal of immediate faulters (which is already in the traversal). 

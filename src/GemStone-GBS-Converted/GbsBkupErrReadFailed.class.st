@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsBkupErrReadFailed',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsBkupErrReadFailed',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsBkupErrReadFailed class >> gemStoneErrorNumber6430 ^2307
 

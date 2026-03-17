@@ -1,16 +1,20 @@
 Class {
-	#name : #'GbxBasicInspector',
-	#superclass : #'BasicInspector',
-	#instVars : [ #'selfAttribute' #'namedFields' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxBasicInspector',
+	#superclass : 'BasicInspector',
+	#instVars : [
+		'selfAttribute',
+		'namedFields'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'menu management' }
+{ #category : 'menu management' }
 GbxBasicInspector >> addAddAndRemoveItemsTo: aMenu 
 	"Not supported for GemStone server classes"
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBasicInspector >> selfAttribute
 
 	selfAttribute isNil
@@ -21,13 +25,13 @@ GbxBasicInspector >> selfAttribute
 						printString: (self remotePrintStringFor: self object delegate)].
 	^selfAttribute
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBasicInspector >> gbxCachedRanges
 	"return our collection of interval indices which were cached"
 
 	^self object basicCache cachedRanges
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBasicInspector >> dynamicInstVarFields
 
 	
@@ -54,7 +58,7 @@ GbxBasicInspector >> dynamicInstVarFields
 			on: Core.MessageNotUnderstood
 			do: [:ex | ^Core.Array with: 'error getting dynamic inst vars']
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBasicInspector >> remotePrintStringFor: delegate
 
 	^self object session
@@ -66,12 +70,12 @@ GbxBasicInspector >> remotePrintStringFor: delegate
 										gbxWriteStream contents'
 		context: delegate
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxBasicInspector >> refreshSelfAttribute
 	selfAttribute := nil.
 	self selfAttribute
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxBasicInspector >> derivedFields
 
 	^
@@ -84,19 +88,19 @@ GbxBasicInspector >> derivedFields
 			on: MessageNotUnderstood
 			do: [:ex | ex return: Array new]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxBasicInspector >> createInsertionUndo: partCollection before: anIndex 
 	"undos not implemented in GemStone inspectors yet"
 
 	self gbxFixMe
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxBasicInspector >> namedFields
 	namedFields isNil ifTrue:[
 		namedFields := self object basicNamedVariablesProtectedBy: self protectedVariableNames].
 	^namedFields
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxBasicInspector >> refresh
 	self refreshSelfAttribute.
 	object basicCache ifNotNil: [object refreshBasicArray].
@@ -104,7 +108,7 @@ GbxBasicInspector >> refresh
 	fixedFields := nil.
 	super refresh.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxBasicInspector >> gbxCacheInterval: anInterval 
 	"adjust for the fixed fields in the basic display"
 
@@ -113,7 +117,7 @@ GbxBasicInspector >> gbxCacheInterval: anInterval
 				to: anInterval last - fixedFields size
 				by: anInterval increment)
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxBasicInspector >> initialize: anObject
 	
 	object := anObject.
@@ -122,20 +126,20 @@ GbxBasicInspector >> initialize: anObject
 	undoHistory := OrderedCollection new.
 	self session: anObject delegate noCheckSession
 
-{ #category : #'decomposing' }
+{ #category : 'decomposing' }
 GbxBasicInspector >> partCount
 	^fixedFields size + self object basicCache elements size
 
-{ #category : #'decomposing' }
+{ #category : 'decomposing' }
 GbxBasicInspector >> partAt: anInteger 
 	anInteger <= fixedFields size ifTrue: [^fixedFields at: anInteger].
 	^self object basicCache elements at: anInteger - fixedFields size
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxBasicInspector class >> gbxIsGbsInspector
 	^true
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxBasicInspector class >> tabLabel
 
 	^self gbxTabLabel: 'GS Basic'

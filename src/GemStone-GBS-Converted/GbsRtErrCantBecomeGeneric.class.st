@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrCantBecomeGeneric',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrCantBecomeGeneric',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrCantBecomeGeneric class >> gemStoneErrorNumber6430 ^2426
 

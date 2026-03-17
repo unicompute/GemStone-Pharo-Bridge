@@ -1,69 +1,73 @@
 Class {
-	#name : #'GbxInspectionWrapper',
-	#superclass : #'Object',
-	#instVars : [ #'localObject' #'inspectedObject' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxInspectionWrapper',
+	#superclass : 'Object',
+	#instVars : [
+		'localObject',
+		'inspectedObject'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapper >> inspectedObject: anObject
 	inspectedObject := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapper >> localObject
 	^localObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapper >> inspectedObject
 	^inspectedObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapper >> localObject: anObject
 	localObject := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxInspectionWrapper >> gbxClientDoItReceiver
 	"A message understood only by wrappers, to return the object used as 'self' for client execution
 	in an inspector. Otherwise equivalent to #doItReceiver"
 
 	^localObject == SpecialGemStoneObjects.NotCachedToken ifTrue: [nil] ifFalse: [localObject]
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxInspectionWrapper >> inspectorClasses
 
 	^localObject gbxIsProxy
 		ifTrue: [OrderedCollection with: GbxClientBasicProxyInspector]
 		ifFalse: [super inspectorClasses]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxInspectionWrapper >> fetchInitialInfo
 	self subclassResponsibility
 
-{ #category : #'user interface' }
+{ #category : 'user interface' }
 GbxInspectionWrapper >> browseHierarchy
 	inspectedObject browseHierarchy
 
-{ #category : #'user interface' }
+{ #category : 'user interface' }
 GbxInspectionWrapper >> browse
 	inspectedObject browse
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxInspectionWrapper >> printString
 
 	^self gbxDebugPrintString
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxInspectionWrapper >> printOn: aStream
 
 	^self gbxDebugPrintOn: aStream
 
-{ #category : #'gemstone private' }
+{ #category : 'gemstone private' }
 GbxInspectionWrapper >> gbxDebugPrintOn: aStream
 
 	^inspectedObject gbxDebugPrintOn: aStream
 
-{ #category : #'private - inspecting' }
+{ #category : 'private - inspecting' }
 GbxInspectionWrapper class >> isDelegate: obj
 	"Answer whether obj is a delegate without sending messages to obj that it doesn't understand"
 
@@ -72,7 +76,7 @@ GbxInspectionWrapper class >> isDelegate: obj
 		to: obj
 		else: [false]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxInspectionWrapper class >> findLocalObjectFromObject: aDelegateOrNot delegate: delegate sesssion: sess
 	"we don't know yet if we're inspecting a delegate or a client object"
 
@@ -87,12 +91,12 @@ GbxInspectionWrapper class >> findLocalObjectFromObject: aDelegateOrNot delegate
 									[sess clientObjForDelegate: delegate otherwise: NotCachedToken]]].
 	^localObj
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxInspectionWrapper class >> wrapperClassFor: anObject
 
 	^anObject gbxIsProxy ifTrue: [GbxProxyInspectionWrapper] ifFalse: [GbxReplicateInspectionWrapper]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxInspectionWrapper class >> wrap: aDelegateOrNot delegate: delegate session: sess
 
 	| inst localObj |
@@ -107,7 +111,7 @@ GbxInspectionWrapper class >> wrap: aDelegateOrNot delegate: delegate session: s
 	inst fetchInitialInfo.
 	^inst
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxInspectionWrapper class >> wrapObject: aDelegateOrNot
 
 	| delegate sess local |
@@ -135,7 +139,7 @@ GbxInspectionWrapper class >> wrapObject: aDelegateOrNot
 			[" dead or blocked session"
 			^GbxInspectionWrapperNoSession new localObject: aDelegateOrNot]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxInspectionWrapper class >> on: aDelegateOrNot 
 	"determine as best we can what kind of wrapper to be"
 

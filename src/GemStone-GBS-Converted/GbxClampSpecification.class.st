@@ -1,78 +1,88 @@
 Class {
-	#name : #'GbxClampSpecification',
-	#superclass : #'Object',
-	#instVars : [ #'idClamps' #'classClamps' #'instVarLevels' #'addSubleafHeaders' #'instVarLevelsSelector' #'traversalCallBackSelector' #'valueClamps' #'environmentId' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxClampSpecification',
+	#superclass : 'Object',
+	#instVars : [
+		'idClamps',
+		'classClamps',
+		'instVarLevels',
+		'addSubleafHeaders',
+		'instVarLevelsSelector',
+		'traversalCallBackSelector',
+		'valueClamps',
+		'environmentId'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampSpecification >> idClamps: anObject
 
 	idClamps := anObject.
 	self markDirty
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampSpecification >> addSubleafHeaders
 
 	^addSubleafHeaders
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampSpecification >> traversalCallBackSelector
 
 	^traversalCallBackSelector
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampSpecification >> idClamps
 
 	^idClamps
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampSpecification >> replaceInstVarLevelsForClass: clientClass with: levelsArray
 
 	levelsArray == nil
 		ifTrue: [instVarLevels removeKeyIfPresent: clientClass]
 		ifFalse: [instVarLevels at: clientClass put: levelsArray]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampSpecification >> environmentId
 
 	^environmentId
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampSpecification >> removeInstVarLevelsForClass: aClientClass
 
 	instVarLevels removeKeyIfPresent: aClientClass
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampSpecification >> classClamps: anObject
 
 	classClamps := anObject.
 	self markDirty
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampSpecification >> instVarLevelsSelector: aSymbolOrNil
 
 	instVarLevelsSelector := aSymbolOrNil.
 	self markDirty
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampSpecification >> classClamps
 
 	^classClamps
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampSpecification >> instVarLevels: anObject
 
 	instVarLevels := anObject.
 	self markDirty
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClampSpecification >> valueClamps
 
 	^valueClamps
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxClampSpecification >> initialize
 
 	addSubleafHeaders := true.
@@ -80,7 +90,7 @@ GbxClampSpecification >> initialize
 	environmentId := 0.
 	self markDirty
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxClampSpecification class >> newWithIdentityClampsHolder: idClamps classClamps: classClamps
 
 	| inst |

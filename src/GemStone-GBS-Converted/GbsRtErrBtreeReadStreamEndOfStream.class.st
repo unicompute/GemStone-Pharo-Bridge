@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrBtreeReadStreamEndOfStream',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrBtreeReadStreamEndOfStream',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrBtreeReadStreamEndOfStream class >> gemStoneErrorNumber6430 ^2293
 

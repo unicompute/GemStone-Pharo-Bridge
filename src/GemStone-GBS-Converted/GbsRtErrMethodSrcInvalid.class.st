@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrMethodSrcInvalid',
-	#superclass : #'GbsCompilerError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrMethodSrcInvalid',
+	#superclass : 'GbsCompilerError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrMethodSrcInvalid class >> gemStoneErrorNumber6430 ^1074
 

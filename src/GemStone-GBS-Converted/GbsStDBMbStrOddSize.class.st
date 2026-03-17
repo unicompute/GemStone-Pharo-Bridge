@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsStDBMbStrOddSize',
-	#superclass : #'GbsCompilerError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsStDBMbStrOddSize',
+	#superclass : 'GbsCompilerError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsStDBMbStrOddSize class >> gemStoneErrorNumber6430 ^1063
 

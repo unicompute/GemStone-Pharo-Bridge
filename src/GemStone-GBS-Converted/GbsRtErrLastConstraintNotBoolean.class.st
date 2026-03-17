@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrLastConstraintNotBoolean',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrLastConstraintNotBoolean',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrLastConstraintNotBoolean class >> gemStoneErrorNumber6430 ^2327
 

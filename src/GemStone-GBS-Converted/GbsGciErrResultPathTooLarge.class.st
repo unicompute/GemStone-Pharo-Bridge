@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsGciErrResultPathTooLarge',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsGciErrResultPathTooLarge',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsGciErrResultPathTooLarge class >> gemStoneErrorNumber6430 ^2220
 

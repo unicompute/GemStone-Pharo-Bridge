@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtMaxRepeatingChars',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtMaxRepeatingChars',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtMaxRepeatingChars class >> gemStoneErrorNumber6430 ^2344
 

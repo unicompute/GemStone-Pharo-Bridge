@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbsAssertionError',
-	#superclass : #'GbsInterfaceError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsAssertionError',
+	#superclass : 'GbsInterfaceError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsAssertionError >> mayResume
 	^true
 

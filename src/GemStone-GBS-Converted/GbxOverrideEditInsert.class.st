@@ -1,38 +1,41 @@
 Class {
-	#name : #'GbxOverrideEditInsert',
-	#superclass : #'GbxOverrideEdit',
-	#instVars : [ #'string' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxOverrideEditInsert',
+	#superclass : 'GbxOverrideEdit',
+	#instVars : [
+		'string'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'storing' }
+{ #category : 'storing' }
 GbxOverrideEditInsert >> string: anObject
 
 	string := anObject
 
-{ #category : #'storing' }
+{ #category : 'storing' }
 GbxOverrideEditInsert >> string
 
 	^string
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbxOverrideEditInsert >> = anotherObject
 
 	^self class = anotherObject class
 		and: [self string = anotherObject string]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOverrideEditInsert >> count
 
 	^self string size
 
-{ #category : #'applying' }
+{ #category : 'applying' }
 GbxOverrideEditInsert >> applyFrom: inputStream to: outputStream
 
 	outputStream nextPutAll: string
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxOverrideEditInsert >> initializeFromSubSequence: aSubSequence
 	"Subsequence of TextFragments (which are Subsequences themselves)"
 
@@ -45,7 +48,7 @@ GbxOverrideEditInsert >> initializeFromSubSequence: aSubSequence
 	"Copy from the underlying source string."
 	string := lastFragment sequence copyFrom: offset + 1 to: offset + length
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxOverrideEditInsert >> storeOn: aStream
 
 	aStream
@@ -53,7 +56,7 @@ GbxOverrideEditInsert >> storeOn: aStream
 		nextPutAll: ' string: '.
 	string storeOn: aStream
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxOverrideEditInsert class >> string: aString
 
 	^(self new)

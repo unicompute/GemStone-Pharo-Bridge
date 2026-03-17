@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsStDBUnusedTemp',
-	#superclass : #'GbsCompilerError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsStDBUnusedTemp',
+	#superclass : 'GbsCompilerError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsStDBUnusedTemp class >> gemStoneErrorNumber6430 ^1062
 

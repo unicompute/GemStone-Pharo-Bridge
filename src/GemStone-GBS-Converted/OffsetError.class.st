@@ -1,17 +1,21 @@
 Class {
-	#name : #'OffsetError',
-	#superclass : #'ImproperOperation',
-	#instVars : [ #'maximum' #'actual' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'OffsetError',
+	#superclass : 'ImproperOperation',
+	#instVars : [
+		'maximum',
+		'actual'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 OffsetError >> maximum
 
 	^maximum
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 OffsetError >> actual
 
 	^actual

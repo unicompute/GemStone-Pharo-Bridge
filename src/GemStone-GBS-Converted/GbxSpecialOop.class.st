@@ -1,20 +1,23 @@
 Class {
-	#name : #'GbxSpecialOop',
-	#superclass : #'GbxKernelOop',
-	#instVars : [ #'clientSpecial' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxSpecialOop',
+	#superclass : 'GbxKernelOop',
+	#instVars : [
+		'clientSpecial'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbxSpecialOop >> hash
 	^clientSpecial hash
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSpecialOop >> clientSpecial: anObject
 	clientSpecial := anObject
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxSpecialOop >> printOn: aStream
 
 	super printOn: aStream.
@@ -23,22 +26,22 @@ GbxSpecialOop >> printOn: aStream
 		print: clientSpecial;
 		nextPutAll: ')'
 
-{ #category : #'converting' }
+{ #category : 'converting' }
 GbxSpecialOop >> asGSObjectInSession: aSession 
 	^clientSpecial asGSObjectInSession: aSession
 
-{ #category : #'converting' }
+{ #category : 'converting' }
 GbxSpecialOop >> asKernelPomOop
 	"and thouest says that it is not permitted to represent server specials as pom oops"
 
 	^self error: 'You cannot treat a special like a POM oop'
 
-{ #category : #'gemstone private' }
+{ #category : 'gemstone private' }
 GbxSpecialOop >> gbxExistingOrSpecialDelegateInSession: aSession
 
 	^clientSpecial gbxExistingOrSpecialDelegateInSession: aSession
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 GbxSpecialOop class >> initialize
 	"GbxSpecialOop initialize"
 
@@ -47,7 +50,7 @@ GbxSpecialOop class >> initialize
 	OFalse := Ofalse := self for: false.
 	Zero := self for: 0
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxSpecialOop class >> for: aClientSpecial 
 	^self new clientSpecial: aClientSpecial
 

@@ -1,22 +1,28 @@
 Class {
-	#name : #'GbxEventDetector',
-	#superclass : #'Object',
-	#instVars : [ #'callSequencer' #'process' #'runningProtect' #'session' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxEventDetector',
+	#superclass : 'Object',
+	#instVars : [
+		'callSequencer',
+		'process',
+		'runningProtect',
+		'session'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxEventDetector >> initialize
 	runningProtect := GbxSemaphore forMutualExclusion.
 	^self
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxEventDetector >> session: aSession 
 	session := aSession.
 	callSequencer := session serverInterface callSequencer
 
-{ #category : #'public' }
+{ #category : 'public' }
 GbxEventDetector >> start
 	"By design, each instance is good for only one start/stop cycle, 
 	so we can assume a fresh instance here
@@ -27,7 +33,7 @@ GbxEventDetector >> start
 	self newRunningProcess.
 	session sessionProtect eventDetectorThread: process
 
-{ #category : #'public' }
+{ #category : 'public' }
 GbxEventDetector >> stop
 	"By design, each instance is good for only one start/stop cycle,
 	so we can assume a running process here."
@@ -42,15 +48,15 @@ GbxEventDetector >> stop
 	process := nil.
 	session sessionProtect eventDetectorThread: nil
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxEventDetector >> process
 	^process
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxEventDetector >> newRunningProcess
 	^self subclassResponsibility
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxEventDetector >> pollForCurrentSignals
 
 	| result |
@@ -70,7 +76,7 @@ GbxEventDetector >> pollForCurrentSignals
 	result ~~ session]
 			whileTrue: []
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxEventDetector class >> session: aSession
 	"Answer a new instance of the appropriate concrete subclass"
 
@@ -78,11 +84,11 @@ GbxEventDetector class >> session: aSession
 	class := aSession isLinked ifTrue: [GbxPollingEventDetector] ifFalse: [GbxWaitingEventDetector].
 	^class privSession: aSession
 
-{ #category : #'private-instance creation' }
+{ #category : 'private-instance creation' }
 GbxEventDetector class >> privSession: aSession 
 	^self new session: aSession
 
-{ #category : #'private-instance creation' }
+{ #category : 'private-instance creation' }
 GbxEventDetector class >> new
 	^super new initialize
 

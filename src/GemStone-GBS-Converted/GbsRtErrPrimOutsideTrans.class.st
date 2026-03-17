@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrPrimOutsideTrans',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrPrimOutsideTrans',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrPrimOutsideTrans class >> gemStoneErrorNumber6430 ^2030
 

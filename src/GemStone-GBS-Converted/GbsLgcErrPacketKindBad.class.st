@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsLgcErrPacketKindBad',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsLgcErrPacketKindBad',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsLgcErrPacketKindBad class >> gemStoneErrorNumber6430 ^2230
 

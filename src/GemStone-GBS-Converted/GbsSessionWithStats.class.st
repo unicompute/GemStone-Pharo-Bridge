@@ -1,24 +1,26 @@
 Class {
-	#name : #'GbsSessionWithStats',
-	#superclass : #'GbsSession',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsSessionWithStats',
+	#superclass : 'GbsSession',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsSessionWithStats >> replicationClass
 	"With stats, use the stat version."
 
 	^GbxReplicationWithStats
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsSessionWithStats >> mainStatsEnabled
 	"When main stats are enabled, a session is an instance of GbsSessionWithStats"
 
 	^true
 
-{ #category : #'reimplemented to update stats' }
+{ #category : 'reimplemented to update stats' }
 GbsSessionWithStats >> signalFromGemStoneSession
 
 	"Reimplemented to update changedObjNotifications stat."
@@ -28,18 +30,18 @@ GbsSessionWithStats >> signalFromGemStoneSession
 	signal isNil ifFalse: [ self statResource incSessionSignals ].
 	^signal
 
-{ #category : #'reimplemented to update stats' }
+{ #category : 'reimplemented to update stats' }
 GbsSessionWithStats >> getFreeOops: numOops
 
 	self statResource incFreeOopsFetched: numOops.
 	^super getFreeOops: numOops
 
-{ #category : #'reimplemented to update stats' }
+{ #category : 'reimplemented to update stats' }
 GbsSessionWithStats >> storingObjectInTraversal
 
 	self statResource incObjectsStoredByTraversal
 
-{ #category : #'reimplemented to update stats' }
+{ #category : 'reimplemented to update stats' }
 GbsSessionWithStats >> signaledObjects
 
 	"Returns an array containing the current contents of the signaledObjects set and clears the signaledObjects set."
@@ -50,13 +52,13 @@ GbsSessionWithStats >> signaledObjects
 	self statResource incChangedObjNotifications: signaledObjects size.
 	^signaledObjects
 
-{ #category : #'reimplemented to update stats' }
+{ #category : 'reimplemented to update stats' }
 GbsSessionWithStats >> processEventHandlerFor: aGbsError 
 
 	aGbsError asExceptionClass updateStats: self statResource.
 	^super processEventHandlerFor: aGbsError
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbsSessionWithStats >> initializeStatAdaptors
 	"Initialize components that have stat adaptors - enable stats"
 

@@ -1,28 +1,31 @@
 Class {
-	#name : #'GbxOverrideEditWithCount',
-	#superclass : #'GbxOverrideEdit',
-	#instVars : [ #'count' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxOverrideEditWithCount',
+	#superclass : 'GbxOverrideEdit',
+	#instVars : [
+		'count'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbxOverrideEditWithCount >> = anotherObject
 
 	^self class = anotherObject class
 		and: [self count = anotherObject count]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOverrideEditWithCount >> count
 
 	^count
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOverrideEditWithCount >> count: anObject
 
 	count := anObject
 
-{ #category : #'storing' }
+{ #category : 'storing' }
 GbxOverrideEditWithCount >> storeOn: aStream
 
 	aStream
@@ -30,7 +33,7 @@ GbxOverrideEditWithCount >> storeOn: aStream
 		nextPutAll: ' count: '.
 	count storeOn: aStream
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxOverrideEditWithCount >> initializeFromSubSequence: aSubSequence
 	"Subsequence of TextFragments (which are Subsequences themselves)"
 
@@ -42,7 +45,7 @@ GbxOverrideEditWithCount >> initializeFromSubSequence: aSubSequence
 
 	count := length
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxOverrideEditWithCount class >> count: anInteger
 
 	^(self new)

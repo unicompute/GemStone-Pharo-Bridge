@@ -1,16 +1,19 @@
 Class {
-	#name : #'GbxRemoteServices',
-	#superclass : #'Object',
-	#instVars : [ #'gbxServices' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxRemoteServices',
+	#superclass : 'Object',
+	#instVars : [
+		'gbxServices'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxRemoteServices >> gbxServices
 	^gbxServices
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxRemoteServices >> gbxServices: anObject
 	gbxServices := anObject
 

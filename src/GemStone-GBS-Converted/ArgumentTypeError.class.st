@@ -1,17 +1,21 @@
 Class {
-	#name : #'ArgumentTypeError',
-	#superclass : #'ImproperOperation',
-	#instVars : [ #'expectedClass' #'actualArg' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'ArgumentTypeError',
+	#superclass : 'ImproperOperation',
+	#instVars : [
+		'expectedClass',
+		'actualArg'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 ArgumentTypeError >> actualArg
 
 	^actualArg
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 ArgumentTypeError >> expectedClass
 
 	^expectedClass

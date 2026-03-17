@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsGciErrCatchBuffNotFound',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsGciErrCatchBuffNotFound',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsGciErrCatchBuffNotFound class >> gemStoneErrorNumber6430 ^2209
 

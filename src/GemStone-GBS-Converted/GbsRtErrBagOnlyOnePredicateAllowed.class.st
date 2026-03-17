@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrBagOnlyOnePredicateAllowed',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrBagOnlyOnePredicateAllowed',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrBagOnlyOnePredicateAllowed class >> gemStoneErrorNumber6430 ^2311
 

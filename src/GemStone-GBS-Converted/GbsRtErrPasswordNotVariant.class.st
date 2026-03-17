@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrPasswordNotVariant',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrPasswordNotVariant',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrPasswordNotVariant class >> gemStoneErrorNumber6430 ^2374
 

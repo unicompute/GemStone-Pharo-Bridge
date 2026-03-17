@@ -1,12 +1,21 @@
 Class {
-	#name : #'GbxScaledDecimalParser',
-	#superclass : #'Object',
-	#instVars : [ #'string' #'position' #'sign' #'fractionalPart' #'defaultScale' #'explicitScale' #'integerPart' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxScaledDecimalParser',
+	#superclass : 'Object',
+	#instVars : [
+		'string',
+		'position',
+		'sign',
+		'fractionalPart',
+		'defaultScale',
+		'explicitScale',
+		'integerPart'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxScaledDecimalParser >> initialize
 
 	defaultScale := 0.
@@ -15,7 +24,7 @@ GbxScaledDecimalParser >> initialize
 	integerPart := fractionalPart := 0.
 	position := 1
 
-{ #category : #'public' }
+{ #category : 'public' }
 GbxScaledDecimalParser >> parse: aString
 	"Parse the given string as a ScaledDecimal and answer that ScaledDecimal. 
 	If the parse fails, signal an exception."
@@ -30,17 +39,17 @@ GbxScaledDecimalParser >> parse: aString
 		parseTrailingSpace.
 	^self scaledDecimal
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxScaledDecimalParser >> skipBlanks
 
 	[position <= string size and: [(string at: position) = $ ]] whileTrue: [position := position + 1]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxScaledDecimalParser >> failOOR: aString
 
 	OutOfRange raiseSignal: aString , ' at position ' , position printString
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxScaledDecimalParser >> skipPlus
 
 	| foundPlus |
@@ -49,7 +58,7 @@ GbxScaledDecimalParser >> skipPlus
 	foundPlus ifTrue: [position := position + 1].
 	^foundPlus
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxScaledDecimalParser >> integerFromDigits: digits
 
 	| value |
@@ -57,7 +66,7 @@ GbxScaledDecimalParser >> integerFromDigits: digits
 	digits do: [:digit | value := value * 10 + digit digitValue].
 	^value
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxScaledDecimalParser >> parseDigits
 
 	| digits digit |
@@ -67,7 +76,7 @@ GbxScaledDecimalParser >> parseDigits
 			position := position + 1].
 	^digits contents
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxScaledDecimalParser >> parseFractionalPart
 	"optional; decimal point followed by 0 or more digits."
 
@@ -80,7 +89,7 @@ GbxScaledDecimalParser >> parseFractionalPart
 			defaultScale := digits size.
 			fractionalPart := self integerFromDigits: digits]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxScaledDecimalParser >> parseIntegerAndFraction
 	"optional; decimal point followed by 0 or more digits."
 
@@ -94,7 +103,7 @@ GbxScaledDecimalParser >> parseIntegerAndFraction
 				parseIntegerPart;
 				parseFractionalPart]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxScaledDecimalParser >> parseIntegerPart
 	"Digit+"
 
@@ -103,7 +112,7 @@ GbxScaledDecimalParser >> parseIntegerPart
 	digits size < 1 ifTrue: [self failOOR: 'Digit expected'].
 	integerPart := self integerFromDigits: digits.
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxScaledDecimalParser >> parseScale
 	"optional; 's' followed by 0 or more digits."
 
@@ -117,7 +126,7 @@ GbxScaledDecimalParser >> parseScale
 			(haveSign and: [digits size = 0]) ifTrue: [self failOOR: 'digits required after scale sign'].
 			digits size > 0 ifTrue: [explicitScale := self integerFromDigits: digits]]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxScaledDecimalParser >> parseSign
 	"optional + or -"
 
@@ -131,12 +140,12 @@ GbxScaledDecimalParser >> parseSign
 					[sign := -1.
 					position := position + 1]]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxScaledDecimalParser >> parseTrailingSpace
 
 	(position <= string size and: [(string at: position) ~~ $ ]) ifTrue: [self failOOR: 'illegal trailing digit']
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxScaledDecimalParser >> scaledDecimal
 	"Compute the value of what we've parsed."
 
@@ -150,12 +159,12 @@ GbxScaledDecimalParser >> scaledDecimal
 	mantissa := sign * (integerPart * intFactor + (fractionalPart * fracFactor)).
 	^ScaledDecimal _mantissa: mantissa scale: explicitScale
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxScaledDecimalParser >> failI: aString
 
 	ImproperOperation raiseSignal: aString , ' at position ' , position printString
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxScaledDecimalParser class >> parse: aString
 
 	^self new initialize parse: aString

@@ -1,82 +1,106 @@
 Class {
-	#name : #'GbxSessionStatResource',
-	#superclass : #'GbxStatResource',
-	#instVars : [ #'bytesSentByStoreTraversal' #'bytesTraversed' #'changedObjNotifications' #'freeOopsFetched' #'gciCallsToGem' #'gciCallsToGemTime' #'gciErrors' #'lostOtRoots' #'nbEndResultNoProgress' #'nbEndResultProgressed' #'nbEndResultReady' #'objectsStoredByTraversal' #'objectsTraversed' #'serverMapSize' #'session' #'sessionProtectInvocations' #'sessionSignals' #'sigAborts' #'storeTraversals' #'traversalUnpackingTime' #'traverseCallTime' #'traverseCalls' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxSessionStatResource',
+	#superclass : 'GbxStatResource',
+	#instVars : [
+		'bytesSentByStoreTraversal',
+		'bytesTraversed',
+		'changedObjNotifications',
+		'freeOopsFetched',
+		'gciCallsToGem',
+		'gciCallsToGemTime',
+		'gciErrors',
+		'lostOtRoots',
+		'nbEndResultNoProgress',
+		'nbEndResultProgressed',
+		'nbEndResultReady',
+		'objectsStoredByTraversal',
+		'objectsTraversed',
+		'serverMapSize',
+		'session',
+		'sessionProtectInvocations',
+		'sessionSignals',
+		'sigAborts',
+		'storeTraversals',
+		'traversalUnpackingTime',
+		'traverseCallTime',
+		'traverseCalls'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incSessionProtectInvocations
 	sessionProtectInvocations incValue: 1
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incChangedObjNotifications: delta
 
 	changedObjNotifications incValue: delta
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incFreeOopsFetched: delta
 
 	freeOopsFetched incValue: delta
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incSessionSignals
 	sessionSignals incValue: 1
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incSigAborts
 	sigAborts incValue: 1
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incGciCallsToGem
 	gciCallsToGem incValue: 1
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incStoreTraversals
 	storeTraversals incValue: 1
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incTraversalUnpackingTime: delta
 
 	traversalUnpackingTime incValue: delta
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incGciCallsToGemTime: delta
 
 	gciCallsToGemTime incValue: delta
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incLostOtRoots
 	lostOtRoots incValue: 1
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incTraverseCallTime: delta
 
 	traverseCallTime incValue: delta
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incNbEndResultNoProgress
 	nbEndResultNoProgress incValue: 1
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incNbEndResultProgressed
 	nbEndResultProgressed incValue: 1
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incTraverseCalls
 
 	traverseCalls incValue: 1
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> gbxIncGciErrors
 	gciErrors incValue: 1
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incNbEndResultReady
 	nbEndResultReady incValue: 1
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> gbxIncProgress: primResult 
 	primResult == GbxNonBlockingGciCallSequencer resultReady 
 		ifTrue: [self incNbEndResultReady]
@@ -85,112 +109,112 @@ GbxSessionStatResource >> gbxIncProgress: primResult
 				ifTrue: [self incNbEndResultProgressed]
 				ifFalse: [self incNbEndResultNoProgress]]
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incObjectsStoredByTraversal
 
 	objectsStoredByTraversal incValue: 1
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incObjectsTraversed
 	objectsTraversed incValue: 1
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incBytesSentByStoreTraversal: delta
 
 	bytesSentByStoreTraversal incValue: delta
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxSessionStatResource >> incBytesTraversed: delta
 
 	bytesTraversed incValue: delta
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> freeOopsFetched
 	^freeOopsFetched value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> gciCallsToGem
 	^gciCallsToGem value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> sessionProtectInvocations
 	^sessionProtectInvocations value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> sessionSignals
 	^sessionSignals value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> gciCallsToGemTime
 	^gciCallsToGemTime value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> sigAborts
 	^sigAborts value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> storeTraversals
 	^storeTraversals value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> gciErrors
 	^gciErrors value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> lostOtRoots
 	^lostOtRoots value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> traversalUnpackingTime
 	^traversalUnpackingTime value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> nbEndResultNoProgress
 	^nbEndResultNoProgress value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> nbEndResultProgressed
 	^nbEndResultProgressed value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> traverseCallTime
 	^traverseCallTime value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> traverseCalls
 	^traverseCalls value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> bytesSentByStoreTraversal
 
 	^bytesSentByStoreTraversal value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> nbEndResultReady
 	^nbEndResultReady value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> dirtyPoolSize
 	^session dirtyPoolSize
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> bytesTraversed
 
 	^bytesTraversed value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> objectsStoredByTraversal
 	^objectsStoredByTraversal value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> objectsTraversed
 	^objectsTraversed value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> changedObjNotifications
 	^changedObjNotifications value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> classesMapped
 	"check for stubs because classes can't be stubs on the client
 	and it saves a server trip"
@@ -207,27 +231,27 @@ GbxSessionStatResource >> classesMapped
 		unlessBlocked: [Error signal: 'session blocked'].
 	^count
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxSessionStatResource >> serverMapSize
 
 	serverMapSize setValue: session serverMap size.
 	^serverMapSize value
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxSessionStatResource >> instanceDescription
 	^session printString , '-ssn:' 
 		, (session 
 				unsynchronizedEvaluate: 'GsCurrentSession currentSession sessionSerialNum') 
 					printString
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxSessionStatResource >> writeSampleTo: statArchive 
 	"Poll the serverMapSize before archiving"
 
 	self serverMapSize.
 	^super writeSampleTo: statArchive
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxSessionStatResource >> initializeStatistics
 	super initializeStatistics.
 	bytesSentByStoreTraversal := self 
@@ -261,12 +285,12 @@ GbxSessionStatResource >> initializeStatistics
 	traverseCallTime := self newGbxStatFor: 'traverseCallTime' value: 0.
 	traverseCalls := self newGbxStatFor: 'traverseCalls' value: 0
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxSessionStatResource >> session: aGbsSession
 
 	session := aGbsSession
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 GbxSessionStatResource class >> initialize
 	"Create GbxStatDescriptors for this stat resource"
 
@@ -422,15 +446,15 @@ GbxSessionStatResource class >> initialize
 					isLargerBetter: false
 					unit: 'traversals')
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxSessionStatResource class >> resourceTypeName
 	^'GbsSession'
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxSessionStatResource class >> resourceTypeDescription
 	^'Statistics associated with a logged in GbsSession'
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxSessionStatResource class >> resourceTypeId
 	^1
 

@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrRemoteLoginFailed',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrRemoteLoginFailed',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrRemoteLoginFailed class >> gemStoneErrorNumber6430 ^2371
 

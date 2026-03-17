@@ -1,25 +1,28 @@
 Class {
-	#name : #'GbxSpecialConverter64',
-	#superclass : #'GbxSpecialConverter',
-	#instVars : [ #'supportsImmediateTimes' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxSpecialConverter64',
+	#superclass : 'GbxSpecialConverter',
+	#instVars : [
+		'supportsImmediateTimes'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxSpecialConverter64 >> isSpecialOop: anOop 
 	"Answer true if delegate represents a server special object
 	(SmallInteger, SmallDouble, nil, true, false, Character, JISCharacter, SmallFraction, more)"
 
 	^((anOop oopByteAt: 8) bitAnd: 2r00000110) ~~ 0
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> isSpecialCharacter: aCharacter
 	"Answer whether aCharacter fits in the Unicode range. (code points up to 16r10ffff)"
 
 	^aCharacter asInteger <= 16r10FFFF.
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> isSpecialDate: aDate
 	"Answer whether the server supports SmallDate.
 	 If aDate is not in the range representable on the server, answer false.
@@ -31,11 +34,11 @@ GbxSpecialConverter64 >> isSpecialDate: aDate
 			on: GemStone.Gbs.Exceptions.OutOfRange
 			do: [:ex | ex return: false]]
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> delegateClass
 	^self isBigEndian ifTrue: [GbxB8Delegate] ifFalse: [GbxL8Delegate]
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> delegateForCharacter: aCharacter forSession: aSession
 	"Characters can have a code point of up to 16r10ffff, so may take as many as three bytes."
 
@@ -50,11 +53,11 @@ GbxSpecialConverter64 >> delegateForCharacter: aCharacter forSession: aSession
 		oopByteAt: 5 put: (int bitShift: -16);
 		yourself
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> oopNumberForOop: oop 
 	^oop bitShift: -8
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> isSpecialDouble: aDouble session: aSession
 	"Answer whether aDouble is in the range for server SmallDoubles.
 	 For something that is rarely used, duplicating the complicated code
@@ -64,7 +67,7 @@ GbxSpecialConverter64 >> isSpecialDouble: aDouble session: aSession
 
 	^(self delegateForSpecialDouble: aDouble forSession: aSession) notNil.
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> delegateForSpecialDate: aDate forSession: aSession
 	"If aDate is not in the range representable on the server,
 	will error. If the server does not support SmallDate, will answer nil.
@@ -98,7 +101,7 @@ GbxSpecialConverter64 >> delegateForSpecialDate: aDate forSession: aSession
 	aDate gbxIsImmutable: true.
 	^delegate
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> isSpecialFractionNumerator: numerator denominator: denominator
 	"Answer whether a Fraction's numerator and denominator are in the range for server SmallFractions.
 	 Ordinarily, one would expect the denominator to be > 1, but it is possible
@@ -108,13 +111,13 @@ GbxSpecialConverter64 >> isSpecialFractionNumerator: numerator denominator: deno
 	^(numerator between: -16r10000000 and: 16rFFFFFFF)
 		and: [denominator between: 0 and: 16r7FFFFFF].
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> isSpecialFraction: aFraction
 	"Answer whether aFraction is in the range for server SmallFractions."
 
 	^self isSpecialFractionNumerator: aFraction numerator denominator: aFraction denominator
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> isSpecialScaledDecimalMantissa: mantissa scale: scale
 	"Answer whether a ScaledDecimal's mantissa and scale are in the range for server SmallScaledDecimals."
 
@@ -122,13 +125,13 @@ GbxSpecialConverter64 >> isSpecialScaledDecimalMantissa: mantissa scale: scale
 		and: [(mantissa between: -16r4000000000000 and: 16r3FFFFFFFFFFFF)
 		and: [scale between: 0 and: 16r1F]].
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> traversalBufferClass
 	"Overridden for 8-byte oops"
 
 	^GbxTraversalBuffer6432
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> delegateForSpecialFraction: aFraction forSession: aSession 
 	"Answer nil if aFraction is not in the range for server SmallFractions. 
 	 Otherwise, answer an existing or new delegate representing the server SmallFraction.
@@ -173,13 +176,13 @@ GbxSpecialConverter64 >> delegateForSpecialFraction: aFraction forSession: aSess
 		put: (numerator bitAnd: 16rFF).	"This final bitAnd: is necessary for negative numbers, to eliminate the sign."
 	^delegate
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> isSpecialScaledDecimal: aScaledDecimal
 	"Answer whether aScaledDecimal is in the range for server SmallScaledDecimals."
 
 	^self isSpecialScaledDecimalMantissa: aScaledDecimal mantissa scale: aScaledDecimal scale.
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> delegateForSpecialInteger: anInteger forSession: aSession
 	"Answer a delegate for a server SmallInteger equivalent to anInteger, or nil if anInteger is out of range.
 
@@ -208,7 +211,7 @@ GbxSpecialConverter64 >> delegateForSpecialInteger: anInteger forSession: aSessi
 			del oopByteAt: 1 put: (int bitAnd: 16rFF).
 			del]	"Final bitAnd: is necessary for negative numbers."
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> delegateForSpecialScaledDecimal: aScaledDecimal forSession: aSession
 	"Answer nil if aScaledDecimal is not in the range for server SmallScaledDecimals. 
 	 Otherwise, answer an existing or new delegate representing the server SmallScaledDecimal.
@@ -237,20 +240,20 @@ GbxSpecialConverter64 >> delegateForSpecialScaledDecimal: aScaledDecimal forSess
 	"This final bitAnd: is necessary for negative numbers, to eliminate the sign."
 	^delegate
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> isSpecialTime: aTime
 	"Answser whether the server supports SmallTime."
 
 	^supportsImmediateTimes
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> oopArrayClass
 	
 	^self isBigEndian
 		ifTrue: [GbxB8OopArray]
 		ifFalse: [GbxL8OopArray]
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> delegateForSpecialTime: aTime forSession: aSession
 	"If the server does not support SmallTime, will answer nil.
 	Otherwise, will answer a delegate for a SmallTime immediate oop,
@@ -277,18 +280,18 @@ GbxSpecialConverter64 >> delegateForSpecialTime: aTime forSession: aSession
 	aTime gbxIsImmutable: true.
 	^delegate
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> oopForOopNumber: oopNumber
 	
 	^oopNumber * 16r100 + 1
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> dictionaryDepth
 	"The depth of ObjIdDictionary to create for this kind of server."
 
 	^3
 
-{ #category : #'GBS private - session interface' }
+{ #category : 'GBS private - session interface' }
 GbxSpecialConverter64 >> bufferOopClass
 	"Overridden for 8-byte oops"
 	
@@ -296,7 +299,7 @@ GbxSpecialConverter64 >> bufferOopClass
 		ifTrue: [GbxB8BufferOop]
 		ifFalse: [GbxL8BufferOop]
 
-{ #category : #'private - converting' }
+{ #category : 'private - converting' }
 GbxSpecialConverter64 >> localFromSmallIntegerOop: delegate
 	"Delegate is assumed to represent a server SmallInteger. 
 	Answer the local SmallInteger or large integer"
@@ -311,7 +314,7 @@ GbxSpecialConverter64 >> localFromSmallIntegerOop: delegate
 		+ (delegate oopByteAt: 7)) * 16r20
 		+ ((delegate oopByteAt: 8) bitShift: -3)
 
-{ #category : #'private - converting' }
+{ #category : 'private - converting' }
 GbxSpecialConverter64 >> localFromExtendedSpecialOop: delegate
 	"Answer the UndefinedObject, Boolean, or Character represented by delegate.
 	Delegate is assumed to represent one of these."
@@ -330,7 +333,7 @@ GbxSpecialConverter64 >> localFromExtendedSpecialOop: delegate
 	"26 - 31. 2r11010100 through 2r11111100 reserved for future specials."
 	self gbsMessenger error: 'Unrecognized object tag %1' with: byte0	"No idea what it is!"
 
-{ #category : #'private - converting' }
+{ #category : 'private - converting' }
 GbxSpecialConverter64 >> localFromCharacterOop: delegate
 	"Answer a Character, which can have a code point of up to 16r10ffff."
 	
@@ -339,7 +342,7 @@ GbxSpecialConverter64 >> localFromCharacterOop: delegate
 				+ ((delegate oopByteAt: 6) * 16r100)
 				+ ((delegate oopByteAt: 5) * 16r10000)
 
-{ #category : #'private - converting' }
+{ #category : 'private - converting' }
 GbxSpecialConverter64 >> localFromSmallTimeOop: delegate
 	"Delegate is assumed to represent a server SmallTime. 
 	 Answer the corresponding local Time.
@@ -364,7 +367,7 @@ GbxSpecialConverter64 >> localFromSmallTimeOop: delegate
 	so no one can get a reference to this delegate."
 	^result
 
-{ #category : #'private - converting' }
+{ #category : 'private - converting' }
 GbxSpecialConverter64 >> localFromSmallScaledDecimalOop: delegate
 	"Delegate is assumed to represent a server SmallScaledDecimal. 
 	 Answer the corresponding local ScaledDecimal.
@@ -390,7 +393,7 @@ GbxSpecialConverter64 >> localFromSmallScaledDecimalOop: delegate
 				* 16r8 + (lowByte bitShift: -5).
 	^ScaledDecimal _mantissa: mantissa scale: (lowByte bitAnd: 16r1F)
 
-{ #category : #'private - converting' }
+{ #category : 'private - converting' }
 GbxSpecialConverter64 >> localFromSmallFractionOop: delegate
 	"Delegate is assumed to represent a server SmallFraction. 
 	 Answer the corresponding local Fraction.
@@ -421,7 +424,7 @@ GbxSpecialConverter64 >> localFromSmallFractionOop: delegate
 				+ (delegate oopByteAt: 7).
 	^numerator / denominator
 
-{ #category : #'private - converting' }
+{ #category : 'private - converting' }
 GbxSpecialConverter64 >> localFromSmallDateOop: delegate
 	"Delegate is assumed to represent a server SmallDate. 
 	 Answer the corresponding local Date.
@@ -450,19 +453,19 @@ GbxSpecialConverter64 >> localFromSmallDateOop: delegate
 	so no one can get a reference to this delegate."
 	^result
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxSpecialConverter64 >> oopForFalse
 	^2r1100
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxSpecialConverter64 >> oopForTrue
 	^2r100001100
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxSpecialConverter64 >> oopForNil
 	^2r10100
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxSpecialConverter64 >> normalizedMicrosecondsForTime: aTime
 	"aTime is a VW Time, with a precision of nanoseconds, and is unbounded.
 	It can be negative or positive beyond 24 hours.
@@ -480,18 +483,18 @@ GbxSpecialConverter64 >> normalizedMicrosecondsForTime: aTime
 		ifTrue: [microseconds := microseconds + 1].
 	^microseconds \\ 86400000000
 
-{ #category : #'initializing - private' }
+{ #category : 'initializing - private' }
 GbxSpecialConverter64 >> initialize
 
 	super initialize.
 	self initializeSupportedImmediates
 
-{ #category : #'initializing - private' }
+{ #category : 'initializing - private' }
 GbxSpecialConverter64 >> initializeSupportedImmediates
 
 	supportsImmediateTimes := GbxServerVersion current supportsImmediateTimes
 
-{ #category : #'converting' }
+{ #category : 'converting' }
 GbxSpecialConverter64 >> localSpecialFromOop: anOop
 	"If gsOop represents a GemStone special object (based on oop encoding), 
 	return the local equivalent special object.  Otherwise, return NotCachedToken.

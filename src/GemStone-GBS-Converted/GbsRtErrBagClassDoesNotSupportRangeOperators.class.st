@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrBagClassDoesNotSupportRangeOperators',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrBagClassDoesNotSupportRangeOperators',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrBagClassDoesNotSupportRangeOperators class >> gemStoneErrorNumber6430 ^2309
 

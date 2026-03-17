@@ -1,19 +1,23 @@
 Class {
-	#name : #'GbxForwarderReplicator',
-	#superclass : #'GbxReplicator',
-	#instVars : [ #'serverClass' #'clientClass' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxForwarderReplicator',
+	#superclass : 'GbxReplicator',
+	#instVars : [
+		'serverClass',
+		'clientClass'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxForwarderReplicator >> initializeForServerClass: serverClassDelegate manager: aManager
 
 	serverClass := serverClassDelegate.
 	manager := aManager.
 	session := aManager session
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxForwarderReplicator >> initializeForClientClass: aClientClass serverClass: classDelegate manager: aManager
 
 	clientClass := aClientClass.
@@ -21,24 +25,24 @@ GbxForwarderReplicator >> initializeForClientClass: aClientClass serverClass: cl
 	manager := aManager.
 	session := aManager session
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxForwarderReplicator >> clientClass
 
 	^clientClass
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxForwarderReplicator >> serverClass
 
 	^serverClass
 
-{ #category : #'per-object replication' }
+{ #category : 'per-object replication' }
 GbxForwarderReplicator >> forReplication: replication replicateFromDeferredReport: report
 	"I always create and map a forwarder for any report, whether header-only or not."
 	"Sender must hold session's semaphore, and clientMap semaphore."
 
 	self forReplication: replication replicateFromReport: report
 
-{ #category : #'per-object replication' }
+{ #category : 'per-object replication' }
 GbxForwarderReplicator >> forReplication: replication replicateFromReport: report
 	"I always create and map a forwarder for any report, whether header-only or not.
 	If there's a previously-mapped stub, I must replace it with the new forwarder."
@@ -64,14 +68,14 @@ GbxForwarderReplicator >> forReplication: replication replicateFromReport: repor
 			delegate nowExported.
 			session addToNoLongerReplicated: delegate]
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxForwarderReplicator >> shouldBeClassClamped
 	"Replicator instances that are for classes that should be class clamped should answer true to this.
 	This will be mostly the replicators for classes that answer true to #instancesAreForwarders."
 
 	^true
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxForwarderReplicator >> createClientObjectForOop: reportOop
 	"Create and map a forwarder."
 	"Sender must hold aSession's sessionProtect and the clientMap semaphore."
@@ -81,7 +85,7 @@ GbxForwarderReplicator >> createClientObjectForOop: reportOop
 	session unprotectedConnectNewClient: clientObject toServer: reportOop. "Which identity clamps the forwarder"
 	^clientObject
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxForwarderReplicator class >> forClientClass: clientClass serverClass: classDelegate manager: manager
 
 	^self new

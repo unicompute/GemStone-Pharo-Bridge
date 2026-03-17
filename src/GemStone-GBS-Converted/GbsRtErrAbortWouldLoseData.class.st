@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrAbortWouldLoseData',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrAbortWouldLoseData',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrAbortWouldLoseData class >> gemStoneErrorNumber6430 ^2412
 

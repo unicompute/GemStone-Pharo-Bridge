@@ -1,17 +1,23 @@
 Class {
-	#name : #'GbxDirtyPool',
-	#superclass : #'Object',
-	#instVars : [ #'session' #'dirtyStack' #'dirtyAwaitingPacking' #'activeStoreTraversals' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxDirtyPool',
+	#superclass : 'Object',
+	#instVars : [
+		'session',
+		'dirtyStack',
+		'dirtyAwaitingPacking',
+		'activeStoreTraversals'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'public' }
+{ #category : 'public' }
 GbxDirtyPool >> removeStoreTraversal: aStoreTraversal
 
 	activeStoreTraversals remove: aStoreTraversal
 
-{ #category : #'public' }
+{ #category : 'public' }
 GbxDirtyPool >> packed: anObject
 	"To be used once the *last* portion of the object has been placed in a traversal buffer.
 	Part of the object being sent to the gem in a previous traversal buffer doesn't count."
@@ -19,23 +25,23 @@ GbxDirtyPool >> packed: anObject
 
 	dirtyAwaitingPacking remove: anObject
 
-{ #category : #'public' }
+{ #category : 'public' }
 GbxDirtyPool >> addObject: anObject
 
 	dirtyStack addObject: anObject
 
-{ #category : #'public' }
+{ #category : 'public' }
 GbxDirtyPool >> packTopIn: aStoreTraversal
 	"Sender must hold my session's sessionProtect."
 
 	dirtyStack top destructiveDo: [:obj | aStoreTraversal pack: obj]
 
-{ #category : #'public' }
+{ #category : 'public' }
 GbxDirtyPool >> size
 
 	^dirtyStack size
 
-{ #category : #'public' }
+{ #category : 'public' }
 GbxDirtyPool >> emptyInto: resultCollection
 	"Take all of the dirty objects that I'm holding, in all their various forms, and add them to resultCollection.
 	At the end of this process I should be completely empty.
@@ -49,7 +55,7 @@ GbxDirtyPool >> emptyInto: resultCollection
 		emptyDirtyAwaitingPackingInto: resultCollection;
 		emptyActiveStoreTraversalsInto: resultCollection
 
-{ #category : #'public' }
+{ #category : 'public' }
 GbxDirtyPool >> startingToPack: anObject
 	"AnObject has been identified as a dirty object to pack in a traversal buffer
 	to be sent to the gem. Its dirty referents will be packed first, however."
@@ -57,17 +63,17 @@ GbxDirtyPool >> startingToPack: anObject
 
 	dirtyAwaitingPacking add: anObject
 
-{ #category : #'public' }
+{ #category : 'public' }
 GbxDirtyPool >> addStoreTraversal: aStoreTraversal
 
 	activeStoreTraversals add: aStoreTraversal
 
-{ #category : #'public' }
+{ #category : 'public' }
 GbxDirtyPool >> isEmpty
 
 	^dirtyStack isEmpty
 
-{ #category : #'public' }
+{ #category : 'public' }
 GbxDirtyPool >> setAsideDirtyWhile: aBlock
 	"Private to GBS.
 	Execute aBlock with an empty top dirty pool, then restore the former top dirty pool."
@@ -83,30 +89,30 @@ GbxDirtyPool >> setAsideDirtyWhile: aBlock
 	result]
 			ensure: [dirtyStack popTo: dirtySave]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxDirtyPool >> initialize
 
 	dirtyStack := GbxDirtySetStack newForSession: session.
 	self initializeDirtyAwaitingPacking.
 	activeStoreTraversals := IdentitySet new
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxDirtyPool >> session: aGbsSession
 
 	session := aGbsSession
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxDirtyPool >> initializeDirtyAwaitingPacking
 
 	dirtyAwaitingPacking := IdentitySet new
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDirtyPool >> emptyActiveStoreTraversalsInto: resultCollection
 
 	activeStoreTraversals
 		do: [:traversal | traversal emptyPackedNotYetAcceptedInto: resultCollection]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDirtyPool >> emptyDirtyAwaitingPackingInto: resultCollection
 
 	dirtyAwaitingPacking do: 
@@ -115,7 +121,7 @@ GbxDirtyPool >> emptyDirtyAwaitingPackingInto: resultCollection
 			(each asGSObjectInSession: session) clearDirtyBit].
 	self initializeDirtyAwaitingPacking
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxDirtyPool class >> newForSession: aGbsSession
 
 	^(self new)

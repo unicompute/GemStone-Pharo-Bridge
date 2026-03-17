@@ -1,36 +1,39 @@
 Class {
-	#name : #'GbxFetchTraversal',
-	#superclass : #'GbxTraversal',
-	#instVars : [ #'traversalCompleted' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxFetchTraversal',
+	#superclass : 'GbxTraversal',
+	#instVars : [
+		'traversalCompleted'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private - initializing' }
+{ #category : 'private - initializing' }
 GbxFetchTraversal >> initializeForInteraction: anInteraction
 	"Sender must hold my session's sessionProtect."
 	
 	super initializeForInteraction: anInteraction.
 	traversalCompleted := true
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxFetchTraversal >> traversalCompleted: anObject
 	^traversalCompleted := anObject
 
-{ #category : #'private - accessing' }
+{ #category : 'private - accessing' }
 GbxFetchTraversal >> serverInterface
 	"The interface to the server for this session"
 
 	^serverInterface
 
-{ #category : #'private - accessing' }
+{ #category : 'private - accessing' }
 GbxFetchTraversal >> traversalCompleted
 
 	"The receiver is presumably a traversal report obtained from GemStoneObject|traverse, GemStoneObject|moreTraversal, or  GemStoneObject|traverseToLevel:threshold:maxBytes:. This method returns a boolean stating whether the traversal of the object has been completed.  If false is returned, GemStoneObject|moreTraversal may be invoked to obtain another buffer full of the traversal"
 
 	^traversalCompleted
 
-{ #category : #'enumerating' }
+{ #category : 'enumerating' }
 GbxFetchTraversal >> reportsAllButLastDo: reportsBlock
 	"Evaluate the block once per report, getting more buffers from the server as necessary.
 	Do not evaluate the last report, just return it.
@@ -44,12 +47,12 @@ GbxFetchTraversal >> reportsAllButLastDo: reportsBlock
 	"Now process the last (or only) buffer"
 	^buffer reportsAllButLastDo: reportsBlock
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxFetchTraversal class >> fetchTraversalClass: aClass
 
 	FetchTraversalClass := aClass
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxFetchTraversal class >> for: aServerInteraction 
 	"Sender must hold my session's sessionProtect."
 

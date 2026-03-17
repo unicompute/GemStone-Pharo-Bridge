@@ -1,8 +1,10 @@
 Class {
-	#name : #'TransactionBacklog',
-	#superclass : #'Notification',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'TransactionBacklog',
+	#superclass : 'Notification',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

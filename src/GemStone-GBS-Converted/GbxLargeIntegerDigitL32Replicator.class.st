@@ -1,24 +1,26 @@
 Class {
-	#name : #'GbxLargeIntegerDigitL32Replicator',
-	#superclass : #'GbxLargeIntegerDigit32Replicator',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxLargeIntegerDigitL32Replicator',
+	#superclass : 'GbxLargeIntegerDigit32Replicator',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxLargeIntegerDigitL32Replicator >> computeServerBytesFor: int
 	"Answer a new byte array comprising the bytes to be put in one or more (if split) object reports for 
 		the server large integer corresponding to the given client large integer. "
 
 	^self computeUnswizzledServerBytesFor: int
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxLargeIntegerDigitL32Replicator >> signedByteIndex
 
 	^1
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxLargeIntegerDigitL32Replicator >> createEmptyReplicateForReport
 	"The current report is the first report for the integer in question. 
 	If this report is also the last report for the integer (it will be in most cases) 
@@ -33,14 +35,14 @@ GbxLargeIntegerDigitL32Replicator >> createEmptyReplicateForReport
 			[needPostFaultReplacement := true.
 			signedClass basicNew: currentReport idxSize - 4]
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxLargeIntegerDigitL32Replicator >> copyBytesFromReportToClientObject
 
 	self copyRawBytesFromReportToClientObject.
 	(needPostFaultReplacement and: [currentReport isLastReportForObject])
 		ifTrue: [self trimLeadingZeroes]
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxLargeIntegerDigitL32Replicator >> neededSizeFromReportValues
 	"Answer the number of bytes needed to represent the server object whose entire state is in currentReport.
 	It is not valid to send this message if currentReport only contains part of the state of the object (which will be the 

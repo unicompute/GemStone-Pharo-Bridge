@@ -1,17 +1,24 @@
 Class {
-	#name : #'GbsNameConnector',
-	#superclass : #'GbsConnector',
-	#instVars : [ #'stName' #'gsName' #'dictionaryName' #'binding' #'environment' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsNameConnector',
+	#superclass : 'GbsConnector',
+	#instVars : [
+		'stName',
+		'gsName',
+		'dictionaryName',
+		'binding',
+		'environment'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbsNameConnector >> hash
 
 	^self clientObjDescription hash
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbsNameConnector >> = aConnector
 
 	"Two connectors are equal if they describe the same Smalltalk object"
@@ -19,26 +26,26 @@ GbsNameConnector >> = aConnector
 		ifTrue: [ self clientObjDescription = aConnector clientObjDescription ]
 		ifFalse: [ super = aConnector ]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsNameConnector >> stName
 	^stName
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsNameConnector >> environment
 
 	^environment ifNil: [environment := Smalltalk]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsNameConnector >> environment: anObject
 	environment := anObject
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsNameConnector >> gsName
 	"Private"
 
 	^gsName
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsNameConnector >> verifyNameAssoc: anAssoc
 	"Private.  Need to use special Smalltalk class for name associations, to assure that assignments
 	 in Smalltalk are propagated to GemStone, and to prevent the name itself from being propagated
@@ -47,7 +54,7 @@ GbsNameConnector >> verifyNameAssoc: anAssoc
 	anAssoc class == GbxNameAssociation ifTrue: [^self].
 	anAssoc gbxBecome: (GbxNameAssociation newWithValuesFrom: anAssoc andGsName: gsName)
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsNameConnector >> nilSTObj
 	"Private.  nil the Smalltalk object for the connector if the
 	post connect action is #updateST or #forwarder.
@@ -57,13 +64,13 @@ GbsNameConnector >> nilSTObj
 	pca := self postConnectAction.
 	(pca == #forwarder or: [pca == #updateST]) ifTrue: [binding ifNotNil: [binding value: nil]]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsNameConnector >> connectsAssociation
 	"Private"
 
 	^true
 
-{ #category : #'private connecting' }
+{ #category : 'private connecting' }
 GbsNameConnector >> clientForwarderTo: clientAssoc session: sess
 	"Answer a delegate for the association of the client forwarder for my variable.
 	 If necessary, the server variable will be assigned to be a client forwarder in postConnect."
@@ -100,7 +107,7 @@ GbsNameConnector >> clientForwarderTo: clientAssoc session: sess
 		saveObjects: (Array with: valueDelegate).
 	^assocDelegate
 
-{ #category : #'private connecting' }
+{ #category : 'private connecting' }
 GbsNameConnector >> postConnectClient: clientAssoc server: assocDelegate inSession: sess
 	"Private.
 	Sender must hold sessionProtect"
@@ -136,7 +143,7 @@ GbsNameConnector >> postConnectClient: clientAssoc server: assocDelegate inSessi
 				ifTrue: [valueDelegate asForwarder]
 				ifFalse: [valueDelegate asLocalObject])
 
-{ #category : #'private connecting' }
+{ #category : 'private connecting' }
 GbsNameConnector >> canForwardTo: clientBinding inSession: aSession
 	"Answer true iff the client object is something that a server ClientForwarder can be connected to.
 	The client object is the value of the passed-in binding.
@@ -144,7 +151,7 @@ GbsNameConnector >> canForwardTo: clientBinding inSession: aSession
 
 	^(clientBinding value gbxIsServerSpecialInSession: aSession) not
 
-{ #category : #'connecting' }
+{ #category : 'connecting' }
 GbsNameConnector >> disconnectInSession: session
 	"Resolve my GemStone and Smalltalk objects, and make sure they are unconnected in session"
 
@@ -169,26 +176,26 @@ GbsNameConnector >> disconnectInSession: session
 			(clientValue ~~ nil and: [valueDelegate ~~ nil])
 				ifTrue: [valueDelegate isSpecial ifFalse: [session disconnectClient: clientValue fromServer: valueDelegate]]]
 
-{ #category : #'private printing' }
+{ #category : 'private printing' }
 GbsNameConnector >> clientObjDescription
 	" Private - Answer a string describing my Client binding. "
 
 	^ '#' , stName
 
-{ #category : #'private printing' }
+{ #category : 'private printing' }
 GbsNameConnector >> hasDictionaryName
 	" Private - Answer true if I know about my dictionary name. "
 
 	^ dictionaryName notNil and: [ dictionaryName isEmpty not ]
 
-{ #category : #'private printing' }
+{ #category : 'private printing' }
 GbsNameConnector >> stDescription
 	" Private - Answer a string describing my Client binding. 
 	Sent by aspect adaptor in connector browser"
 
 	^'#' , stName
 
-{ #category : #'private printing' }
+{ #category : 'private printing' }
 GbsNameConnector >> gsDescription
 	" Private - Answer a string describing my GemStone binding.
 	  NOTE:  We used to append the dictionary name, but we couldn't be sure it was right (bug #13942). "
@@ -198,7 +205,7 @@ GbsNameConnector >> gsDescription
 
 	^ gsName printString
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbsNameConnector >> storeOn: aStream
 	"Write an executable expression to the stream such that evaluating
 	 the expression would reconstruct the receiver.
@@ -221,7 +228,7 @@ GbsNameConnector >> storeOn: aStream
 			].
 	aStream nextPutAll: ')'.
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbsNameConnector >> printOn: aStream
 
 	aStream nextPutAll: self class name;
@@ -233,7 +240,7 @@ GbsNameConnector >> printOn: aStream
 		[aStream nextPutAll: ' dictionaryName: '.
 		dictionaryName printOn: aStream]
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsNameConnector >> serverAssociationResolvingString
 
 	^'[:restrictToDict :dictName :associationName :variableName :shouldCreate |
@@ -257,7 +264,7 @@ GbsNameConnector >> serverAssociationResolvingString
 
 	^association]'
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsNameConnector >> dictionaryName
 	"Private"
 
@@ -265,13 +272,13 @@ GbsNameConnector >> dictionaryName
 		ifTrue: [ dictionaryName ]
 		ifFalse: [ #UserGlobals ].
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsNameConnector >> resolveGSObjInSession: aGSSession
 	"Private.  Resolve and return GemStone object to be connected - the symbol list association holding the object named gsName."
 
 	^self resolveRequiredServerAssociationInSession: aGSSession
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsNameConnector >> resolveServerAssociationInSession: session createMissing: createBoolean
 
 	| assocDelegate errorMessage |
@@ -296,12 +303,12 @@ GbsNameConnector >> resolveServerAssociationInSession: session createMissing: cr
 			^nil].
 	^assocDelegate
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsNameConnector >> resolveRequiredServerAssociationInSession: session
 
 	^self resolveServerAssociationInSession: session createMissing: false
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsNameConnector >> resolveClientObj
 	"Private.  Resolve and return Smalltalk object to be connected.
 		Do not trigger any defunct stub or defunct forwarder errors."
@@ -325,19 +332,19 @@ GbsNameConnector >> resolveClientObj
 	stAssoc isImmutable ifFalse: [stAssoc gsName: gsName].
 	^stAssoc
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsNameConnector >> updateGSfromST: anSTObj session: aGSSession
 	"Private.  Update the GemStone object from specification in the
 	 receiver.  Return the GemStone name association."
 
 	^self resolveOrCreateServerAssociationInSession: aGSSession
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsNameConnector >> resolveOrCreateServerAssociationInSession: session
 
 	^self resolveServerAssociationInSession: session createMissing: true
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsNameConnector >> updateClientfromDelegate: delegate
 	"Private.  Update the Smalltalk object as specified in the receiver.  Return the Smalltalk name association."
 
@@ -352,13 +359,13 @@ GbsNameConnector >> updateClientfromDelegate: delegate
 	binding markNotDirty.
 	^binding
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsNameConnector >> variableName
 	"Private. An ordinary name connector does not have a variable name."
 
 	^nil
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsNameConnector >> resolveGSClassInSession: aGSSession ifAbsent: absentBlock
 	"Private"
 
@@ -391,7 +398,7 @@ GbsNameConnector >> resolveGSClassInSession: aGSSession ifAbsent: absentBlock
 	delegate = aGSSession oopNil ifTrue: [^absentBlock value].
 	^delegate
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsNameConnector >> resolveGSClassInSession: aGSSession
 	"Private.  Resolve and return GemStone class to be connected"
 
@@ -408,14 +415,14 @@ GbsNameConnector >> resolveGSClassInSession: aGSSession
 				with: self dictionaryName.
 			nil]
 
-{ #category : #'private initialization' }
+{ #category : 'private initialization' }
 GbsNameConnector >> stName: stNm gsName: gsNm dictionaryName: dictNm postConnectAction: pca
 	"Private.  Initialize with specified values"
 
 	postConnectAction := pca.
 	self stName: stNm gsName: gsNm dictionaryName: dictNm
 
-{ #category : #'private initialization' }
+{ #category : 'private initialization' }
 GbsNameConnector >> stName: stNm gsName: gsNm
 
 	"Private.  Initialize with specified values"
@@ -423,7 +430,7 @@ GbsNameConnector >> stName: stNm gsName: gsNm
 	stName := stNm.
 	gsName := gsNm
 
-{ #category : #'private initialization' }
+{ #category : 'private initialization' }
 GbsNameConnector >> stName: stNm gsName: gsNm dictionaryName: dictNm
 	"Private.  Initialize with specified values"
 
@@ -432,21 +439,21 @@ GbsNameConnector >> stName: stNm gsName: gsNm dictionaryName: dictNm
 	dictionaryName := dictNm.
 	connectionCondition := [true]	"most connectors just connect"
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsNameConnector class >> requestNamePrompting: aPrompt ifError: errorBlock
 
 	"Prompt the user for a name"
 
 	^self requestNamePrompting: aPrompt initialAnswer: '' ifError: errorBlock
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsNameConnector class >> stName: stName gsName: gsName
 
 	"Returns a new instance with specified values"
 
 	^self stName: stName gsName: gsName dictionaryName: nil
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsNameConnector class >> stName: stName gsName: gsName dictionaryName: dictName
 
 	"Returns a new instance with specified values"
@@ -457,7 +464,7 @@ GbsNameConnector class >> stName: stName gsName: gsName dictionaryName: dictName
 		dictionaryName: dictName
 		postConnectAction: self defaultPostConnectAction
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsNameConnector class >> fromUser
 
 	"Prompt the user for information to create an instance of the receiver"

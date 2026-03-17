@@ -1,15 +1,17 @@
 Class {
-	#name : #'GbxKeyedDummyElement',
-	#superclass : #'GbxKeyIndexElement',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxKeyedDummyElement',
+	#superclass : 'GbxKeyIndexElement',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxKeyedDummyElement >> key
 	^nil
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxKeyedDummyElement >> value: anObject
 

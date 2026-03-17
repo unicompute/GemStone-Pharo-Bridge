@@ -1,17 +1,24 @@
 Class {
-	#name : #'GbxReplication',
-	#superclass : #'Object',
-	#instVars : [ #'interaction' #'objectsWithDeferredAssignments' #'reportsWithDeferredElements' #'reportsWithNoMappedClass' #'session' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxReplication',
+	#superclass : 'Object',
+	#instVars : [
+		'interaction',
+		'objectsWithDeferredAssignments',
+		'reportsWithDeferredElements',
+		'reportsWithNoMappedClass',
+		'session'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxReplication >> interaction
 
 	^interaction
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxReplication >> resolve
 	"Private.  Resolve the things left unresolved from the initial traversal."
 	"The sender must hold my session protect."
@@ -23,7 +30,7 @@ GbxReplication >> resolve
 				resolveDeferredAssignments;
 				resolveObjectsWithDeferredElements]
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxReplication >> replicateFromTraversal: aFetchTraversal
 	"Answer nil unless an error occurs during replication. In that case, answer
 	the error.
@@ -63,13 +70,13 @@ GbxReplication >> replicateFromTraversal: aFetchTraversal
 							self replicateFromTraversalReport: lastReportOrError]]].
 	^nil
 
-{ #category : #'replicator interface' }
+{ #category : 'replicator interface' }
 GbxReplication >> addDeferredElementsReport: report
 	"Sender must ensure that this report does not reside in a buffer that might get reused."
 
 	reportsWithDeferredElements add: report
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxReplication >> replicatorForReport: report
 
 	^session replicatorForServerBehavior: report objClass
@@ -77,7 +84,7 @@ GbxReplication >> replicatorForReport: report
 			[session unmappedClassReplicatorClass forSession: session
 				serverBehavior: (report objClass asGSObjectInSession: session)]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxReplication >> replicateFromTraversalReport: report
 	"Private.  Given the description of a GemStone object from a traversal object header,
 	 replicate the object as a client object.  If the object is already in the cache,
@@ -88,7 +95,7 @@ GbxReplication >> replicateFromTraversalReport: report
 	replicator := self replicatorForReport: report.
 	replicator forReplication: self replicateFromReport: report
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxReplication >> replicateFromDeferredReport: report
 	"Private.  Given the description of a GemStone object from a traversal object header,
 	 replicate the object as a client object.  If the object is already in the cache,
@@ -103,7 +110,7 @@ GbxReplication >> replicateFromDeferredReport: report
 	replicator := self replicatorForReport: report.
 	replicator forReplication: self replicateFromDeferredReport: report
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxReplication >> resolveUnmappedClasses
 	"Private.  ReportsWithNoMappedClass is an OrderedCollection of GbxObjectReports describing
 	 reports from the last traversal buffer that require class generation.
@@ -120,14 +127,14 @@ GbxReplication >> resolveUnmappedClasses
 				with: aReport.
 			self replicateFromDeferredReport: aReport]	"Perform class generation"
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxReplication >> addUnmappedClassReport: report
 	"Private.  The given report must be in its own private buffer, not a traversal buffer which could be re-used.
 	The sender must hold session protect."
 
 	reportsWithNoMappedClass add: report
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxReplication >> resolveObjectsWithDeferredElements
 	"Process reports for hashed collections that must have complete contents in order to compute hash
 	values correctly, and must be able to unstub if necessary."
@@ -139,12 +146,12 @@ GbxReplication >> resolveObjectsWithDeferredElements
 	reportsWithDeferredElements
 		do: [:report | self replicateFromDeferredReport: report]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxReplication >> addDeferredAssignments: deferredAssignments
 
 	objectsWithDeferredAssignments add: deferredAssignments
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxReplication >> resolveDeferredAssignments
 	"Private.  objectsWithDeferredAssignments is an OrderedCollection of GbxObjectWithDeferredAssignments.
 	See the comment on that class."
@@ -160,11 +167,11 @@ GbxReplication >> resolveDeferredAssignments
 			objectWithDeferredAssignments resolve].
 	objectsWithDeferredAssignments := OrderedCollection new
 
-{ #category : #'private - accessing' }
+{ #category : 'private - accessing' }
 GbxReplication >> session: anObject
 	session := anObject
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxReplication >> initializeForInteraction: anInteraction
 	"Must initialize after session is set."
 
@@ -175,7 +182,7 @@ GbxReplication >> initializeForInteraction: anInteraction
 	reportsWithDeferredElements := OrderedCollection new.
 	^self
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxReplication class >> forInteraction: anInteraction
 
 	^self new initializeForInteraction: anInteraction

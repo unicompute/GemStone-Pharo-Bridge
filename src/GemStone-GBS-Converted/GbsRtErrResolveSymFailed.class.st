@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrResolveSymFailed',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrResolveSymFailed',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrResolveSymFailed class >> gemStoneErrorNumber6430 ^2189
 

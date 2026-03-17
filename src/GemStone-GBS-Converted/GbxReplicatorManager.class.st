@@ -1,23 +1,31 @@
 Class {
-	#name : #'GbxReplicatorManager',
-	#superclass : #'Object',
-	#instVars : [ #'session' #'serverMap' #'clientMap' #'needServerInstVarNames' #'replicatorsNeedingServerInstVarNames' #'clampManager' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxReplicatorManager',
+	#superclass : 'Object',
+	#instVars : [
+		'session',
+		'serverMap',
+		'clientMap',
+		'needServerInstVarNames',
+		'replicatorsNeedingServerInstVarNames',
+		'clampManager'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'finalizing' }
+{ #category : 'finalizing' }
 GbxReplicatorManager >> startingInteraction
 
 	clampManager startingInteraction
 
-{ #category : #'finalizing' }
+{ #category : 'finalizing' }
 GbxReplicatorManager >> endingInteraction
 	"Sender must hold my session's protect"
 
 	clampManager endingInteraction
 
-{ #category : #'private - deferred updating' }
+{ #category : 'private - deferred updating' }
 GbxReplicatorManager >> fetchMissingServerInstVarNames
 	"Sender must hold my session's protect semaphore."
 
@@ -31,7 +39,7 @@ GbxReplicatorManager >> fetchMissingServerInstVarNames
 	replicatorsNeedingServerInstVarNames with: allInstVarNames
 		do: [:repl :ivars | repl initializeForServerInstVarNames: ivars]
 
-{ #category : #'replicator creation' }
+{ #category : 'replicator creation' }
 GbxReplicatorManager >> connectReplicator: aReplicator toServerBehavior: behaviorDelegate
 	"Connect only to the server oop. Only for cases where the client is not mapped, for instance a skew replicator."
 	"Sender must hold session protect."
@@ -39,7 +47,7 @@ GbxReplicatorManager >> connectReplicator: aReplicator toServerBehavior: behavio
 	self semaphoreCheck.
 	serverMap atOop: behaviorDelegate putClient: aReplicator
 
-{ #category : #'replicator creation' }
+{ #category : 'replicator creation' }
 GbxReplicatorManager >> mapReplicatorForClientBehavior: clientBehavior serverBehavior: behaviorDelegate
 	"Sender must hold session protect."
 
@@ -55,12 +63,12 @@ GbxReplicatorManager >> mapReplicatorForClientBehavior: clientBehavior serverBeh
 	clampManager updateClassClampForReplicator: replicator
 	"The behavior itself is identity clamped by #clamp:client: when it is mapped."
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxReplicatorManager >> session
 
 	^session
 
-{ #category : #'replicator access' }
+{ #category : 'replicator access' }
 GbxReplicatorManager >> replicatorForServerBehavior: oopOrDelegate ifAbsentPut: replicatorCreationBlock
 
 	^session sessionCritical: 
@@ -71,13 +79,13 @@ GbxReplicatorManager >> replicatorForServerBehavior: oopOrDelegate ifAbsentPut: 
 					[serverMap atOop: oopOrDelegate putClient: replicatorCreationBlock value]
 				ifFalse: [resultOfLookup]]
 
-{ #category : #'replicator access' }
+{ #category : 'replicator access' }
 GbxReplicatorManager >> numberOfReplicators
 	"We don't acquire protect here, so the answer should be close, but adds or removes could be in progress."
 
 	^clientMap size
 
-{ #category : #'replicator access' }
+{ #category : 'replicator access' }
 GbxReplicatorManager >> replicatorForServerBehavior: oopOrDelegate ifAbsent: alternativeBlock
 
 	^session sessionCritical: 
@@ -87,20 +95,20 @@ GbxReplicatorManager >> replicatorForServerBehavior: oopOrDelegate ifAbsent: alt
 				ifTrue: [alternativeBlock value]
 				ifFalse: [resultOfLookup]]
 
-{ #category : #'replicator access' }
+{ #category : 'replicator access' }
 GbxReplicatorManager >> replicatorForClientBehavior: aClientBehavior ifAbsent: alternativeBlock
 	"No semaphore needs to be held for this operation."
 
 	^clientMap at: aClientBehavior ifAbsent: alternativeBlock
 
-{ #category : #'replicator access' }
+{ #category : 'replicator access' }
 GbxReplicatorManager >> currentReplicators
 	"Sender must hold my session's protect semaphore."
 
 	self semaphoreCheck.
 	^clientMap values
 
-{ #category : #'replicator access' }
+{ #category : 'replicator access' }
 GbxReplicatorManager >> atClient: clientBehavior put: replicator
 	"Map only from the client side, not the server side.
 	Only used for special cases like delegates, which are not mapped to the server yet have a replicator,
@@ -109,7 +117,7 @@ GbxReplicatorManager >> atClient: clientBehavior put: replicator
 
 	clientMap at: clientBehavior put: replicator
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxReplicatorManager >> semaphoreCheck
 	"All access to the replicator mapping dictionaries must be done by a process holding the session's semaphore."
 
@@ -118,7 +126,7 @@ GbxReplicatorManager >> semaphoreCheck
 			[self gbsMessenger
 				error: 'ReplicatorManager map access without sessionProtect']
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxReplicatorManager >> atClient: clientBehavior andServer: behaviorDelegate put: replicator
 	"Sender must hold my protect."
 
@@ -126,7 +134,7 @@ GbxReplicatorManager >> atClient: clientBehavior andServer: behaviorDelegate put
 	clientMap at: clientBehavior put: replicator.
 	serverMap atOop: behaviorDelegate putClient: replicator
 
-{ #category : #'replicator removing' }
+{ #category : 'replicator removing' }
 GbxReplicatorManager >> removeReplicatorForClientBehavior: clientBehavior andServerBehavior: behaviorDelegate
 	"Sender must hold my session's sessionProtect."
 
@@ -141,7 +149,7 @@ GbxReplicatorManager >> removeReplicatorForClientBehavior: clientBehavior andSer
 	clientReplicator
 		ifNotNil: [clampManager removeClampsForReplicator: clientReplicator]
 
-{ #category : #'replicator removing' }
+{ #category : 'replicator removing' }
 GbxReplicatorManager >> removeReplicatorForServerBehavior: behaviorDelegate
 	"Used when only server -> client mapping exists, not client -> server mapping.
 	Such as an unmapped class replicator."
@@ -150,7 +158,7 @@ GbxReplicatorManager >> removeReplicatorForServerBehavior: behaviorDelegate
 	self semaphoreCheck.
 	serverMap removeOop: behaviorDelegate
 
-{ #category : #'replicator interface' }
+{ #category : 'replicator interface' }
 GbxReplicatorManager >> serverInstVarNamesNeededByReplicator: aReplicator
 	"A replicator is telling me that it does not have the names of server instvars.
 	I'll batch together all replicators that need this and get them all at once at the next synchronized round trip."
@@ -160,7 +168,7 @@ GbxReplicatorManager >> serverInstVarNamesNeededByReplicator: aReplicator
 	replicatorsNeedingServerInstVarNames add: aReplicator.
 	needServerInstVarNames := true
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxReplicatorManager >> initializeForSession: sess
 
 	session := sess.
@@ -170,7 +178,7 @@ GbxReplicatorManager >> initializeForSession: sess
 	replicatorsNeedingServerInstVarNames := OrderedCollection new.
 	clampManager := session clampManagerClass forManager: self
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxReplicatorManager >> initializeFundamentalReplicators
 	"Create and map the special one-of-a-kind replicators."
 	"Sender must hold my session's protect"
@@ -185,38 +193,38 @@ GbxReplicatorManager >> initializeFundamentalReplicators
 	oop number 0, but the dictionary is fine with it. I'm going to leave it this way since putting in 
 	special cases in the code would be both more complex and slower."
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxReplicatorManager >> release
 	"The session is logging out. Eliminate any dependency on it being logged in."
 
 	clampManager release
 
-{ #category : #'clamp access' }
+{ #category : 'clamp access' }
 GbxReplicatorManager >> defaultReplicationSpecSet: aSymbol
 	"Sender must hold my session's protect"
 
 	^clampManager defaultReplicationSpecSet: aSymbol
 
-{ #category : #'clamp access' }
+{ #category : 'clamp access' }
 GbxReplicatorManager >> replicationSchemeForSet: setSymbol
 	"Sender must hold my session's protect semaphore."
 
 	^clampManager replicationSchemeForSet: setSymbol
 
-{ #category : #'clamp access' }
+{ #category : 'clamp access' }
 GbxReplicatorManager >> defaultReplicationSpecSet
 	"Sender must hold my session's protect."
 
 	^clampManager defaultReplicationSpecSet
 
-{ #category : #'clamp access' }
+{ #category : 'clamp access' }
 GbxReplicatorManager >> removeIdentityClampForClient: aClientObject withDelegate: aDelegate
 
 	^session sessionCritical: 
 			[clampManager removeIdentityClampForClient: aClientObject
 				withDelegate: aDelegate]
 
-{ #category : #'clamp access' }
+{ #category : 'clamp access' }
 GbxReplicatorManager >> usingReplicationSpecSet: setSymbol do: aBlock
 	"Evaluate the given nilary block using the given replication spec set name. 
 	This does not affect the session's default replication spec set. The given replication spec set is used only in this Smalltalk Process
@@ -226,32 +234,32 @@ GbxReplicatorManager >> usingReplicationSpecSet: setSymbol do: aBlock
 
 	^clampManager usingReplicationSpecSet: setSymbol do: aBlock
 
-{ #category : #'clamp access' }
+{ #category : 'clamp access' }
 GbxReplicatorManager >> currentReplicationScheme
 	"Sender must hold my session's protect"
 
 	^clampManager currentReplicationScheme
 
-{ #category : #'clamp access' }
+{ #category : 'clamp access' }
 GbxReplicatorManager >> invalidateSchemeWithSelector: aSelector
 	"If I have a scheme identified by aSelector, and it's valid, invalidate it and answer true.
 	Otherwise, answer false."
 
 	^clampManager invalidateSchemeWithSelector: aSelector
 
-{ #category : #'clamp access' }
+{ #category : 'clamp access' }
 GbxReplicatorManager >> identityClamps
 
 	^clampManager identityClamps
 
-{ #category : #'clamp access' }
+{ #category : 'clamp access' }
 GbxReplicatorManager >> addIdentityClampForClient: aClientObject withDelegate: aDelegate
 
 	session sessionCritical: 
 			[clampManager addIdentityClampForClient: aClientObject
 				withDelegate: aDelegate]
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxReplicatorManager >> updateServerInstVarNamesForReplicators: replicators
 	"The sender must hold my session's protect semaphore."
 
@@ -261,7 +269,7 @@ GbxReplicatorManager >> updateServerInstVarNamesForReplicators: replicators
 		do: [:rep :names | rep initializeForServerInstVarNames: names].
 	clampManager updateClampsForReplicators: replicators
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxReplicatorManager >> fetchServerInstVarNamesForReplicators: replicators
 	"Classes is a collection of client classes. The unsynchronizedEvaluateBlock: call allows us to 
 	send the client classes as arguments to the server without first getting the gsClasses. 
@@ -274,7 +282,7 @@ GbxReplicatorManager >> fetchServerInstVarNamesForReplicators: replicators
 		unsynchronizedEvaluateBlock: '[:classes | classes collect:[:class | class  _instVarNames]]'
 		with: classes asArray
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxReplicatorManager >> changedSelector: aSelector inClass: aClass
 	"A metaclass has had a method added, removed, or changed.
 	I may need to update my offsets and clamps
@@ -293,13 +301,13 @@ GbxReplicatorManager >> changedSelector: aSelector inClass: aClass
 						ifTrue: [session sessionCritical: [replicator initializeServerOffsets]].
 					clampManager changedSelector: aSelector forReplicator: replicator]]
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxReplicatorManager >> updateClassClampForReplicator: replicator
 	"Sender must hold my session's protect"
 
 	clampManager updateClassClampForReplicator: replicator
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxReplicatorManager >> updateInstVarNamesAndClamps
 	"Do any deferred updating that is needed. The only kind of updates that are deferred 
 	are those for which server instance variable names are missing, so that these fetches can be batched."
@@ -316,13 +324,13 @@ GbxReplicatorManager >> updateInstVarNamesAndClamps
 							replicatorsNeedingServerInstVarNames := OrderedCollection new.
 							needServerInstVarNames := false]]]
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxReplicatorManager >> changedClampByCallback
 	"Sender must hold my session's protect."
 
 	clampManager changedClampByCallback
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxReplicatorManager class >> newForSession: sess
 
 	| inst |

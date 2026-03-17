@@ -1,12 +1,15 @@
 Class {
-	#name : #'GbxArrayReplicator',
-	#superclass : #'GbxPointerObjectReplicator',
-	#instVars : [ #'fillResultWithDelegates' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxArrayReplicator',
+	#superclass : 'GbxPointerObjectReplicator',
+	#instVars : [
+		'fillResultWithDelegates'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxArrayReplicator >> initializeForClientClass: aClientClass serverClass: classDelegate manager: aManager
 
 	super
@@ -17,7 +20,7 @@ GbxArrayReplicator >> initializeForClientClass: aClientClass serverClass: classD
 	serverInstVarNames := #().
 	fillResultWithDelegates := false
 
-{ #category : #'per-object replication' }
+{ #category : 'per-object replication' }
 GbxArrayReplicator >> forReplication: aReplication replicateFromReport: report
 	"Sender must hold session's semaphore, and clientMap semaphore."
 
@@ -31,7 +34,7 @@ GbxArrayReplicator >> forReplication: aReplication replicateFromReport: report
 					and: [reportOop sameOopAs: interaction resultDelegateOrError].
 	super forReplication: replication replicateFromReport: report
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxArrayReplicator >> referentForOop: oop shouldBeForwarder: shouldBeForwarder
 	"In this special-pupose subclass, objects are filled with delegates instead of client objects."
 	"Sender must hold my session's sessionProtect and the ClientMap's writeProtect semaphores."

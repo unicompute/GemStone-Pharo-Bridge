@@ -1,41 +1,46 @@
 Class {
-	#name : #'GbxBehaviorServerCache',
-	#superclass : #'Object',
-	#instVars : [ #'classNames' #'classCaches' #'inspector' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxBehaviorServerCache',
+	#superclass : 'Object',
+	#instVars : [
+		'classNames',
+		'classCaches',
+		'inspector'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBehaviorServerCache >> inspector: anObject
 	inspector := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBehaviorServerCache >> isAtInstanceSide
 	^inspector isAtInstanceSide
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBehaviorServerCache >> inspector
 	^inspector
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBehaviorServerCache >> classNames: anObject 
 	classNames := anObject.
 	self initialize
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBehaviorServerCache >> classNames
 	^classNames
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBehaviorServerCache >> theClassName
 	^classNames last
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBehaviorServerCache >> session
 	^inspector session
 
-{ #category : #'protocols' }
+{ #category : 'protocols' }
 GbxBehaviorServerCache >> currentProtocolsFor: className 
 	"return the instance or class side protocols for the given className"
 
@@ -45,25 +50,25 @@ GbxBehaviorServerCache >> currentProtocolsFor: className
 		ifTrue: [classCache instanceProtocols]
 		ifFalse: [classCache classProtocols]
 
-{ #category : #'protocols' }
+{ #category : 'protocols' }
 GbxBehaviorServerCache >> protocolForSelector: aSelector 
 	| classCache |
 	classCache := classCaches at: self theClassName.
 	^classCache protocolForSelector: aSelector
 
-{ #category : #'protocols' }
+{ #category : 'protocols' }
 GbxBehaviorServerCache >> protocolExists: aSymbol 
 	"check the object's class for an existing protocol"
 
 	^(self currentProtocolsFor: self theClassName) includes: aSymbol
 
-{ #category : #'protocols' }
+{ #category : 'protocols' }
 GbxBehaviorServerCache >> currentBehaviorFor: className 
 	"return a dictionary of protocols and selectors"
 
 	^(classCaches at: className) currentBehavior
 
-{ #category : #'methods' }
+{ #category : 'methods' }
 GbxBehaviorServerCache >> classesReferencedFrom: aSelectorDisplay 
 	| literals context |
 	context := self isAtInstanceSide 
@@ -85,7 +90,7 @@ GbxBehaviorServerCache >> classesReferencedFrom: aSelectorDisplay
 				context: context.
 	^literals asSortedCollection: [:a :b | a < b]
 
-{ #category : #'methods' }
+{ #category : 'methods' }
 GbxBehaviorServerCache >> currentMethodsTextFor: selectorDictionary 
 	"return a collection of strings representing the method context given a dictionary of classNames to selectors"
 
@@ -99,7 +104,7 @@ GbxBehaviorServerCache >> currentMethodsTextFor: selectorDictionary
 				ifFalse: [strings addAll: (cache classMethodTextsFor: selectors)]].
 	^strings
 
-{ #category : #'methods' }
+{ #category : 'methods' }
 GbxBehaviorServerCache >> currentSelectorsFor: className protocol: protocolName 
 	"return the instance or class selectors for a given protocol name"
 
@@ -109,7 +114,7 @@ GbxBehaviorServerCache >> currentSelectorsFor: className protocol: protocolName
 		ifTrue: [classCache instanceMethodCache at: protocolName]
 		ifFalse: [classCache classMethodCache at: protocolName]
 
-{ #category : #'methods' }
+{ #category : 'methods' }
 GbxBehaviorServerCache >> allMethodSymbolsFor: aSelectorDisplay 
 	| context |
 	context := self isAtInstanceSide 
@@ -121,7 +126,7 @@ GbxBehaviorServerCache >> allMethodSymbolsFor: aSelectorDisplay
 				, aSelectorDisplay selector printString , ') _selectorPool'
 		context: context
 
-{ #category : #'methods' }
+{ #category : 'methods' }
 GbxBehaviorServerCache >> currentSelectorsFor: className 
 	"return the instance or class selectors for the class name"
 
@@ -131,7 +136,7 @@ GbxBehaviorServerCache >> currentSelectorsFor: className
 		ifTrue: [classCache instanceSelectors]
 		ifFalse: [classCache classSelectors]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxBehaviorServerCache >> initialize
 	classCaches := Dictionary new.
 	classNames do: 
@@ -139,7 +144,7 @@ GbxBehaviorServerCache >> initialize
 			classCaches at: className
 				put: (GbxBehaviorServerClassCache on: className forServerCache: self)]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxBehaviorServerCache class >> on: aCollection inspector: aGbxBehaviorInspector 
 	| inst |
 	inst := self new.

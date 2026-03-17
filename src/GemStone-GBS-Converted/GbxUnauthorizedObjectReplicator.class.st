@@ -1,12 +1,15 @@
 Class {
-	#name : #'GbxUnauthorizedObjectReplicator',
-	#superclass : #'GbxObjectReplicator',
-	#instVars : [ #'reportHasNilClass' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxUnauthorizedObjectReplicator',
+	#superclass : 'GbxObjectReplicator',
+	#instVars : [
+		'reportHasNilClass'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxUnauthorizedObjectReplicator >> pack: anObject withDelegate: aDelegate inTraversal: storeTraversal
 	"Unauthorized object stubs should never be dirty, and so never packed.
 	If asked, do nothing, but if assertions are on fail."
@@ -14,7 +17,7 @@ GbxUnauthorizedObjectReplicator >> pack: anObject withDelegate: aDelegate inTrav
 	[false] gbxAssertEquals: true
 		message: 'Unauthorized object stubs should never be dirty, and thus never packed.'
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxUnauthorizedObjectReplicator >> packDirtyReferentsOf: anObject inTraversal: storeTraversal
 	"Unauthorized object stubs have no referents, so it's safe to do nothing here.
 	However, we should actually never enter this method, so fail if assertions are on."
@@ -22,13 +25,13 @@ GbxUnauthorizedObjectReplicator >> packDirtyReferentsOf: anObject inTraversal: s
 	[false] gbxAssertEquals: true
 		message: 'Unauthorized object stubs should never be dirty, and thus never packed.'
 
-{ #category : #'per-object initialization' }
+{ #category : 'per-object initialization' }
 GbxUnauthorizedObjectReplicator >> initializeForNewObject
 
 	super initializeForNewObject.
 	reportHasNilClass := false
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxUnauthorizedObjectReplicator >> updateClientClassAndSize
 	"The class of clientObject needs to be changed to match currentReport, which is 
 	known to be a full or header-only report calling for an unauthorized object stub.
@@ -38,34 +41,34 @@ GbxUnauthorizedObjectReplicator >> updateClientClassAndSize
 
 	self updateClientSize
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxUnauthorizedObjectReplicator >> canUnstubInPlace
 	"Can't unstub at all, actually..."
 
 	^false
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxUnauthorizedObjectReplicator >> createClientObject
 	"Create but do not map an unauthorized object stub."
 	"Sender must hold aSession's sessionProtect"
 
 	clientObject := self unauthorizedObjectStubClass new
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxUnauthorizedObjectReplicator >> clientClassIsCorrect
 	"Answer whether the class of clientObject is correct with respect to currentReport.
 	In this case, the only correct class is our unauthorized object stub class."
 
 	^clientObject gbxBasicClass == self unauthorizedObjectStubClass
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxUnauthorizedObjectReplicator >> clientSizeIsCorrect
 	"This question is only asked if the client class is correct. 
 	Since unauthorized object stubs only come in one size..."
 
 	^true
 
-{ #category : #'clamping' }
+{ #category : 'clamping' }
 GbxUnauthorizedObjectReplicator >> updateInstVarLevelsOfScheme: scheme
 	"Unauthorized object stubs do not inherit from Object on the server, and so do not understand
 	clamp-by-callback messages. In order to prevent clamp-by-callback messages from being sent,
@@ -79,7 +82,7 @@ GbxUnauthorizedObjectReplicator >> updateInstVarLevelsOfScheme: scheme
 		forwardIndexedPart: false
 		forClass: self clientClass
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxUnauthorizedObjectReplicator >> initializeForManager: aManager
 
 	| stubClass sess |
@@ -90,12 +93,12 @@ GbxUnauthorizedObjectReplicator >> initializeForManager: aManager
 		serverClass: (sess cacheAtST: stubClass)
 		manager: aManager
 
-{ #category : #'per-object replication' }
+{ #category : 'per-object replication' }
 GbxUnauthorizedObjectReplicator >> unauthorizedObjectStubClass
 
 	^GbxUnauthorizedObjectStub
 
-{ #category : #'per-object replication' }
+{ #category : 'per-object replication' }
 GbxUnauthorizedObjectReplicator >> forReplication: replication replicateFromReport: report
 	"Don't have read access to the server object, so map it to an unauthorized object stub. 
 	An attempt to unstub this stub will signal an error."
@@ -108,7 +111,7 @@ GbxUnauthorizedObjectReplicator >> forReplication: replication replicateFromRepo
 		replicateFromReport;
 		initializeForNewObject
 
-{ #category : #'per-object replication' }
+{ #category : 'per-object replication' }
 GbxUnauthorizedObjectReplicator >> replicateFromReport
 	"Private.  Given the description of a GemStone object from a traversal object header,
 	 replicate the object as a client unauthorized object stub. Self is returned."
@@ -121,7 +124,7 @@ GbxUnauthorizedObjectReplicator >> replicateFromReport
 	"Catch any assignments made to instvars of what is now an unauthorized object stub."
 	clientObject gbxTrapFutureChanges
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxUnauthorizedObjectReplicator class >> newForManager: aManager
 
 	^self new initializeForManager: aManager

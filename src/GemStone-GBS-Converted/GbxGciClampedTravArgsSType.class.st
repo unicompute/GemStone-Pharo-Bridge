@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxGciClampedTravArgsSType',
-	#superclass : #'GbxStructure',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxGciClampedTravArgsSType',
+	#superclass : 'GbxStructure',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxGciClampedTravArgsSType >> printOn: aStream indent: indent 
 	| travBuffSize |
 	aStream tab: indent - 1.

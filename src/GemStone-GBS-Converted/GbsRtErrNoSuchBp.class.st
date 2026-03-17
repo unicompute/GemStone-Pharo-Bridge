@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrNoSuchBp',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrNoSuchBp',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrNoSuchBp class >> gemStoneErrorNumber6430 ^2024
 

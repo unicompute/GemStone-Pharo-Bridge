@@ -1,12 +1,20 @@
 Class {
-	#name : #'GbxOopKeyedNode',
-	#superclass : #'Object',
-	#instVars : [ #'upperBytes' #'notCachedToken' #'owningMap' #'parentIndex' #'tableSize' #'tally' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxOopKeyedNode',
+	#superclass : 'Object',
+	#instVars : [
+		'upperBytes',
+		'notCachedToken',
+		'owningMap',
+		'parentIndex',
+		'tableSize',
+		'tally'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'auditing' }
+{ #category : 'auditing' }
 GbxOopKeyedNode >> auditInto: results parent: expectedParent parentIndex: expectedParentIndex session: aSession
 	"Check my consistency just about every way possible."
 	"Tally vs. used element checks are per-node, so reset the count for this node."
@@ -39,34 +47,34 @@ GbxOopKeyedNode >> auditInto: results parent: expectedParent parentIndex: expect
 	"* each used element can be found from its key's hash without probing past a nil key"
 	self auditHashingInto: results
 
-{ #category : #'auditing' }
+{ #category : 'auditing' }
 GbxOopKeyedNode >> auditUnusedSpaceInto: results
 	self subclassResponsibility
 
-{ #category : #'auditing' }
+{ #category : 'auditing' }
 GbxOopKeyedNode >> auditHashingInto: results
 	self subclassResponsibility
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOopKeyedNode >> size
 	"Answer how many keys I have records for. This will include keys for which I only have a delegate but no client object, and keys for which the client object and/or delegate have been GCed but not yet finalized."
 
 	^tally
 
-{ #category : #'private-accessing' }
+{ #category : 'private-accessing' }
 GbxOopKeyedNode >> segmentClass
 
 	self subclassResponsibility
 
-{ #category : #'private-accessing' }
+{ #category : 'private-accessing' }
 GbxOopKeyedNode >> owningMap: anObject
 	owningMap := anObject
 
-{ #category : #'private-accessing' }
+{ #category : 'private-accessing' }
 GbxOopKeyedNode >> parentIndex: anObject
 	parentIndex := anObject
 
-{ #category : #'private-growing and shrinking' }
+{ #category : 'private-growing and shrinking' }
 GbxOopKeyedNode >> makeRoom
 	"Make room for at least one new entry.
 	Can't finalize, since we don't have a container to finalize into, so just grow."
@@ -79,7 +87,7 @@ GbxOopKeyedNode >> makeRoom
 
 	self changeCapacityTo: (Set goodSizeFrom: tableSize * 2)
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxOopKeyedNode >> initializeForCapacity: capacity
 
 	tableSize := capacity.
@@ -92,7 +100,7 @@ GbxOopKeyedNode >> initializeForCapacity: capacity
 			self basicAt: i
 				put: (self segmentClass parent: self index: i upperBytes: upperBytes)]
 
-{ #category : #'private-auditing' }
+{ #category : 'private-auditing' }
 GbxOopKeyedNode >> auditUniqueSegmentsInto: results
 	" Things checked here:
 	* Each of my indexed instvars refers to a unique TableSegment"
@@ -118,7 +126,7 @@ GbxOopKeyedNode >> auditUniqueSegmentsInto: results
 		actual: uniqueSegments size
 		expected: self basicSize printString
 
-{ #category : #'private-auditing' }
+{ #category : 'private-auditing' }
 GbxOopKeyedNode >> auditIsPrime: anInteger
 	" a poor man's prime number check"
 
@@ -129,7 +137,7 @@ GbxOopKeyedNode >> auditIsPrime: anInteger
 		do: [:idx | anInteger \\ idx = 0 ifTrue: [^false]].
 	^true
 
-{ #category : #'private-auditing' }
+{ #category : 'private-auditing' }
 GbxOopKeyedNode >> auditSegmentsInto: results session: aSession
 	" Things checked here:
 	* tally is equal to the number of used elements
@@ -158,7 +166,7 @@ GbxOopKeyedNode >> auditSegmentsInto: results session: aSession
 		actual: results numUsedElements
 		expected: tally printString
 
-{ #category : #'private-auditing' }
+{ #category : 'private-auditing' }
 GbxOopKeyedNode >> auditTableSizeInto: results
 	" Things checked here:
 	* My tableSize is prime
@@ -192,7 +200,7 @@ GbxOopKeyedNode >> auditTableSizeInto: results
 		expected: 'between ' , tableSizeLowBound printString , ' and '
 				, tableSizeHighBound printString
 
-{ #category : #'private-auditing' }
+{ #category : 'private-auditing' }
 GbxOopKeyedNode >> auditParentage: expectedParent index: expectedParentIndex into: results
 	" Things checked here:
 	* The serverMap that is requesting this audit is the same map that I believe to be my parent
@@ -221,7 +229,7 @@ GbxOopKeyedNode >> auditParentage: expectedParent index: expectedParentIndex int
 		actual: upperBytes
 		expected: expectedUpperBytes printString
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxOopKeyedNode class >> owningMap: serverMap parentIndex: index capacity: capacity
 	"Leave enough extra capacity so we can reach at least size entries while still under the 70% limit."
 
@@ -233,7 +241,7 @@ GbxOopKeyedNode class >> owningMap: serverMap parentIndex: index capacity: capac
 		initializeForCapacity: capacity.
 	^inst
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxOopKeyedNode class >> owningMap: serverMap parentIndex: index initialSize: size
 	"Leave enough extra capacity so we can reach at least size entries while still under the 70% limit."
 

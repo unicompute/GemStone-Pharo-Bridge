@@ -1,32 +1,37 @@
 Class {
-	#name : #'GbxOopKeyedDictionary',
-	#superclass : #'Object',
-	#instVars : [ #'numNodeSlots' #'notCachedToken' #'session' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxOopKeyedDictionary',
+	#superclass : 'Object',
+	#instVars : [
+		'numNodeSlots',
+		'notCachedToken',
+		'session'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'node interface' }
+{ #category : 'node interface' }
 GbxOopKeyedDictionary >> replaceNodeAt: index with: newNode
 	"One of my child nodes has changed size and is asking to be replaced.
 	The sender must hold the session's  sessionProtect"
 
 	self basicAt: index put: newNode
 
-{ #category : #'TEMPORARY' }
+{ #category : 'TEMPORARY' }
 GbxOopKeyedDictionary >> check
 	
 	session hasCriticalAccess ifFalse: [self gbsMessenger error: 'ServerMap access without sessionProtect']
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOopKeyedDictionary >> session
 	^session
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOopKeyedDictionary >> session: anObject
 	session := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOopKeyedDictionary >> size
 	"Count my elements and answer the number present.
 	This operation is relatively expensive, because it must
@@ -37,7 +42,7 @@ GbxOopKeyedDictionary >> size
 	self nodesDo: [:node | count := count + node size].
 	^count
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOopKeyedDictionary >> clientAtOop: oop
 	"Answer the value at key. If key not present, answer NotCachedToken.
 	Keys representing special oops should never appear in the dictionary,
@@ -52,7 +57,7 @@ GbxOopKeyedDictionary >> clientAtOop: oop
 	node := self basicAt: index.
 	^node == nil ifTrue: [notCachedToken] ifFalse: [node clientAtOop: oop]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOopKeyedDictionary >> atOop: oop putClient: client
 	"Add an association between the given oop and client object.
 	Answer the canonical delegate for the given oop."
@@ -73,7 +78,7 @@ GbxOopKeyedDictionary >> atOop: oop putClient: client
 	node == nil ifTrue: [node := self createNodeAt: index].
 	^node atOop: oop putClient: client
 
-{ #category : #'auditing' }
+{ #category : 'auditing' }
 GbxOopKeyedDictionary >> unprotectedAudit
 	"For debugging, soes not acquire sessionProtect so is not safe for general use."
 
@@ -100,7 +105,7 @@ GbxOopKeyedDictionary >> unprotectedAudit
 						session: session]].
 	^results verify
 
-{ #category : #'auditing' }
+{ #category : 'auditing' }
 GbxOopKeyedDictionary >> audit
 	"What can be checked at this level:
      * I am owningDictionary of all nodes
@@ -108,12 +113,12 @@ GbxOopKeyedDictionary >> audit
 
 	^session sessionCriticalNoSessionCheck: [self unprotectedAudit]
 
-{ #category : #'non-copying' }
+{ #category : 'non-copying' }
 GbxOopKeyedDictionary >> copy
 
 	self shouldNotImplement
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxOopKeyedDictionary >> nodesDo: aBlock
 
 	1 to: numNodeSlots
@@ -123,7 +128,7 @@ GbxOopKeyedDictionary >> nodesDo: aBlock
 			node := self basicAt: i.
 			node ~~ nil ifTrue: [aBlock value: node]]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxOopKeyedDictionary >> copyEmptyWithCapacity: newSize
 	"Used when growing"
 
@@ -134,7 +139,7 @@ GbxOopKeyedDictionary >> copyEmptyWithCapacity: newSize
 		session: session.
 	^newSelf
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxOopKeyedDictionary >> growToAtLeast: index
 	"Grow to accommodate repositories that have had more than a billion objects oop highwater mark. Grow to the power-of-two size necessary to include index. This prevents us growing too many times while still not growing more than twice as big as needed.
 	This top-level never shrinks, since its optimum size depends on the oop highwater mark of the repository, which never shrinks."
@@ -147,7 +152,7 @@ GbxOopKeyedDictionary >> growToAtLeast: index
 	1 to: numNodeSlots do: [:i | newSelf basicAt: i put: (self basicAt: i)].
 	self become: newSelf
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxOopKeyedDictionary >> createNodeAt: index
 	"Create a node for a 16MObject range of oops"
 
@@ -158,12 +163,12 @@ GbxOopKeyedDictionary >> createNodeAt: index
 				parentIndex: index
 				initialSize: session configuration serverMapLeafCapacity)
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxOopKeyedDictionary >> nodeClass
 
 	self subclassResponsibility
 
-{ #category : #'removing' }
+{ #category : 'removing' }
 GbxOopKeyedDictionary >> removeOop: key
 	"Remove the mapped client object for the oop. Answer the node's response, which differs by subclass, or nil if 
 	there is no node (which means that I do not contain an entry with the given key).
@@ -180,13 +185,13 @@ GbxOopKeyedDictionary >> removeOop: key
 		ifTrue: [nil]	"Formalize it to make the Code Critic happy."
 		ifFalse: [node removeOop: key]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxOopKeyedDictionary >> initialize
 
 	notCachedToken := NotCachedToken.	"NotCachedToken *is* cached, for faster and very frequent access"
 	numNodeSlots := self basicSize
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxOopKeyedDictionary class >> newForSession: sess
 
 	| inst |
@@ -196,7 +201,7 @@ GbxOopKeyedDictionary class >> newForSession: sess
 		session: sess.
 	^inst
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxOopKeyedDictionary class >> new
 
 	^self shouldNotImplement

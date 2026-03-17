@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxIdentitySetReplicator',
-	#superclass : #'GbxUnorderedCollectionReplicator',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxIdentitySetReplicator',
+	#superclass : 'GbxUnorderedCollectionReplicator',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxIdentitySetReplicator >> clientClassIsCorrect
 	"Answer true if the class of the server class of the existing mapped client object 
 	is not sufficiently the same as the class of the server object being replicated.

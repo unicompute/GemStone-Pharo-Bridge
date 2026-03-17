@@ -1,19 +1,21 @@
 Class {
-	#name : #'GbxIdentityBagInspector',
-	#superclass : #'GbxArrayInspector',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxIdentityBagInspector',
+	#superclass : 'GbxArrayInspector',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxIdentityBagInspector >> refresh
 	"refresh the remote IdentityBag values, then refresh the gui"
 
 	object refreshIdentityBag.
 	super refresh
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxIdentityBagInspector >> removeSelected
 	"GBS: make sure we refresh the collection afterwards"
 
@@ -24,11 +26,11 @@ GbxIdentityBagInspector >> removeSelected
 				with: (sel valueDelegate delegate "dig into the wrapper to get the object")].
 	self refresh
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxIdentityBagInspector >> gbxCacheInterval: anInterval 
 	object cacheIdentityBagInterval: anInterval
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxIdentityBagInspector >> initialize: anObject 
 	undoHistory := OrderedCollection new.
 	object := anObject.

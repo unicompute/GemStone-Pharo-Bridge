@@ -1,61 +1,66 @@
 Class {
-	#name : #'GbxSegmentHolder',
-	#superclass : #'Object',
-	#instVars : [ #'segmentProxy' #'dictProxy' #'segmentName' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxSegmentHolder',
+	#superclass : 'Object',
+	#instVars : [
+		'segmentProxy',
+		'dictProxy',
+		'segmentName'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbxSegmentHolder >> <= aHolder
 
    "Comparison operator used for sorting segment holder collections."
 
    ^(self segmentName <= aHolder segmentName)
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSegmentHolder >> segmentProxy
 
    "Return the value of the 'segmentProxy' instance variable."
 
    ^segmentProxy
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSegmentHolder >> dictProxy
 
    "Return the value of the 'dictProxy' instance variable."
 
    ^dictProxy
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSegmentHolder >> segmentName
 
    "Return the value of the 'segmentName' instance variable."
 
    ^segmentName
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxSegmentHolder >> dictProxy: dict
 
    "Set the value of the 'dictProxy' instance variable."
 
    dictProxy := dict
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxSegmentHolder >> segmentProxy: sgmt
 
    "Set the value of the 'segmentProxy' instance variable."
 
    segmentProxy := sgmt
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxSegmentHolder >> segmentName: nm
 
    "Set the value of the 'segmentName' instance variable."
 
    segmentName := nm
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxSegmentHolder >> getSegmentName: userProxy
 	"Determine the name of the segment holder's segment relative to
 	the given user. If no name is found and the segment is not the
@@ -85,7 +90,7 @@ GbxSegmentHolder >> getSegmentName: userProxy
 									asSymbol].
 			dictProxy := anArrayProxy]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxSegmentHolder class >> new
 
    "Disallow #new operator, use #newWithSgmt:name:dict: or
@@ -93,7 +98,7 @@ GbxSegmentHolder class >> new
 
    self shouldNotImplement
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxSegmentHolder class >> newWithSgmt: sgmtProxy name: nm dict: dictProxy
 
    "Create a segment holder from the new segment with the given name
@@ -107,7 +112,7 @@ GbxSegmentHolder class >> newWithSgmt: sgmtProxy name: nm dict: dictProxy
    inst dictProxy: dictProxy.
    ^inst
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxSegmentHolder class >> newWithSgmt: sgmtProxy user: userProxy
 
    "Create a segment holder from an existing segment and determine its

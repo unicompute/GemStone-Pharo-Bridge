@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrPathTermObjectNotAnNsc',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrPathTermObjectNotAnNsc',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrPathTermObjectNotAnNsc class >> gemStoneErrorNumber6430 ^2298
 

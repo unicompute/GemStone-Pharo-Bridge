@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrPasswordMissingChar',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrPasswordMissingChar',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrPasswordMissingChar class >> gemStoneErrorNumber6430 ^2513
 

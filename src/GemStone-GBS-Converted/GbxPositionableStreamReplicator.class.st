@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxPositionableStreamReplicator',
-	#superclass : #'GbxPointerObjectReplicator',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxPositionableStreamReplicator',
+	#superclass : 'GbxPointerObjectReplicator',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxPositionableStreamReplicator >> namedInstvarsOf: anObject inServerOrderDo: aBlock
 	"anObject is a client object, an instance of the class that I replicate.
 	For each instvar (named or indexed) that is mapped to the server,

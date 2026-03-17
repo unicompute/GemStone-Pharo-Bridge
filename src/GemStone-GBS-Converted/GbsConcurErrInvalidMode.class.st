@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsConcurErrInvalidMode',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsConcurErrInvalidMode',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsConcurErrInvalidMode class >> gemStoneErrorNumber6430 ^2279
 

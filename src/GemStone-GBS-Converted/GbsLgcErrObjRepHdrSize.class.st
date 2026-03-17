@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsLgcErrObjRepHdrSize',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsLgcErrObjRepHdrSize',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsLgcErrObjRepHdrSize class >> gemStoneErrorNumber6430 ^2172
 

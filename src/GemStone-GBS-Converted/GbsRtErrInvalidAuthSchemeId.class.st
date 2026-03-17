@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrInvalidAuthSchemeId',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrInvalidAuthSchemeId',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrInvalidAuthSchemeId class >> gemStoneErrorNumber6430 ^2600
 

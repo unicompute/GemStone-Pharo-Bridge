@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxIncGcStateStat',
-	#superclass : #'GbxObjectMemoryStat',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxIncGcStateStat',
+	#superclass : 'GbxObjectMemoryStat',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxIncGcStateStat >> numericValueFrom: anObjectMemory
 
 	| letter |

@@ -1,12 +1,15 @@
 Class {
-	#name : #'ImproperOperation',
-	#superclass : #'Error',
-	#instVars : [ #'object' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'ImproperOperation',
+	#superclass : 'Error',
+	#instVars : [
+		'object'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 ImproperOperation >> object
 
 	^object

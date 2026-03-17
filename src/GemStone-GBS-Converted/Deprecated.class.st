@@ -1,8 +1,10 @@
 Class {
-	#name : #'Deprecated',
-	#superclass : #'Notification',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'Deprecated',
+	#superclass : 'Notification',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrUncompiledMethod',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrUncompiledMethod',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrUncompiledMethod class >> gemStoneErrorNumber6430 ^2212
 

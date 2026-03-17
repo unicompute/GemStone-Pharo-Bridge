@@ -1,16 +1,19 @@
 Class {
-	#name : #'GbsCompilerError',
-	#superclass : #'GbsGemStoneError',
-	#instVars : [ #'errorDescriptor' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsCompilerError',
+	#superclass : 'GbsGemStoneError',
+	#instVars : [
+		'errorDescriptor'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsCompilerError >> errorDescriptor
 	^errorDescriptor
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsCompilerError >> errorDescriptor: anObject
 	errorDescriptor := anObject
 

@@ -1,22 +1,27 @@
 Class {
-	#name : #'OutOfRange',
-	#superclass : #'ImproperOperation',
-	#instVars : [ #'minimum' #'maximum' #'actual' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'OutOfRange',
+	#superclass : 'ImproperOperation',
+	#instVars : [
+		'minimum',
+		'maximum',
+		'actual'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 OutOfRange >> maximum
 
 	^maximum
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 OutOfRange >> minimum
 
 	^minimum
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 OutOfRange >> actual
 
 	^actual

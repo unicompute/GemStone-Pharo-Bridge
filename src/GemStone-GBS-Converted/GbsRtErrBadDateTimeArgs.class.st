@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrBadDateTimeArgs',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrBadDateTimeArgs',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrBadDateTimeArgs class >> gemStoneErrorNumber6430 ^2022
 

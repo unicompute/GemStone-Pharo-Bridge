@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsStDBErrNotPosIntOrExpr',
-	#superclass : #'GbsCompilerError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsStDBErrNotPosIntOrExpr',
+	#superclass : 'GbsCompilerError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsStDBErrNotPosIntOrExpr class >> gemStoneErrorNumber6430 ^1045
 

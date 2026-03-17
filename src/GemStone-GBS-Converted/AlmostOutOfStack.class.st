@@ -1,8 +1,10 @@
 Class {
-	#name : #'AlmostOutOfStack',
-	#superclass : #'Admonition',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'AlmostOutOfStack',
+	#superclass : 'Admonition',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

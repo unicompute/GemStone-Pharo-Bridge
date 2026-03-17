@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxBehaviorMapTableSegment',
-	#superclass : #'GbxHashTableSegment',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxBehaviorMapTableSegment',
+	#superclass : 'GbxHashTableSegment',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxBehaviorMapTableSegment class >> instanceBasicSize
 
 	^2048

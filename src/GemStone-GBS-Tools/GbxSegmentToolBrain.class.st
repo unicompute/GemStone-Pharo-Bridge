@@ -1,12 +1,16 @@
 Class {
-	#name : #'GbxSegmentToolBrain',
-	#superclass : #'GbxAdminToolsBrain',
-	#instVars : [ #'allGroups' #'allUsers' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxSegmentToolBrain',
+	#superclass : 'GbxAdminToolsBrain',
+	#instVars : [
+		'allGroups',
+		'allUsers'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSegmentToolBrain >> allGroups
 	"Return a list of group holders for all groups in our tool's session."
 
@@ -23,7 +27,7 @@ GbxSegmentToolBrain >> allGroups
 					allGroups add: (GbxGroupHolder newWithGrp: grp users: self allUsers)]].
 	^allGroups
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSegmentToolBrain >> membersForGrp: selGrpRec
    " Answer a list of user profile holders representing the members for the selected group record. "
 
@@ -32,7 +36,7 @@ GbxSegmentToolBrain >> membersForGrp: selGrpRec
 			ifTrue: [ selGrpRec groupHldr members ]
 			ifFalse: [ SortedCollection new ]]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSegmentToolBrain >> segments
 	" Answer a list of segment records for all object security policies readable by the tool session's user. "
 
@@ -52,7 +56,7 @@ GbxSegmentToolBrain >> segments
 								ifTrue: [sgmts add: (self windowInterface sgmtRecClass newWithSgmt: sgmtHldr tool: self windowInterface)]]].
 			sgmts]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSegmentToolBrain >> allUsers
 	"Return a list of user profile holders for all users in our tool's session."
 
@@ -69,7 +73,7 @@ GbxSegmentToolBrain >> allUsers
 					allUsers add: (GbxUserProfileHolder on: userFrwdr)]].
 	^allUsers
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSegmentToolBrain >> groupsForSgmt: selSgmtRec
 	" Answer a list of group records for the selected segment record. "
 
@@ -98,7 +102,7 @@ GbxSegmentToolBrain >> groupsForSgmt: selSgmtRec
 														tool: self windowInterface)]]]]].
 	^groups
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxSegmentToolBrain >> changeNameTo: sgmtName holder: sgmtHldr dictionary: dictProxy
 
 	| dictSgmtProxy dictName result |
@@ -127,7 +131,7 @@ GbxSegmentToolBrain >> changeNameTo: sgmtName holder: sgmtHldr dictionary: dictP
 				warn: 'You do not have write authorization for the dictionary containing object security policy ''%1''!'
 				with: sgmtHldr segmentName]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxSegmentToolBrain >> collectGroupNamesFor: segmentOrUserProxy
 
 	| grps |
@@ -136,7 +140,7 @@ GbxSegmentToolBrain >> collectGroupNamesFor: segmentOrUserProxy
 				context: segmentOrUserProxy.
 	^grps
 
-{ #category : #'actions-group' }
+{ #category : 'actions-group' }
 GbxSegmentToolBrain >> removeGroup: selGrpRec fromSgmt: selSgmtRec updateList: grps
 	"Remove given group from given Object Security Policy."
 
@@ -167,7 +171,7 @@ GbxSegmentToolBrain >> removeGroup: selGrpRec fromSgmt: selSgmtRec updateList: g
 					[self gbsMessenger warn: 'You do not have Object Security Policy Protection privilege!']].
 	^nil
 
-{ #category : #'actions-group' }
+{ #category : 'actions-group' }
 GbxSegmentToolBrain >> addGroupToSgmt: selSgmtRec updateList: grps
 	"Prompt for the name of the group to be added."
 
@@ -196,7 +200,7 @@ GbxSegmentToolBrain >> addGroupToSgmt: selSgmtRec updateList: grps
 					[self gbsMessenger warn: 'You do not have Object Security Policy Protection privilege!']].
 	^nil
 
-{ #category : #'actions-group' }
+{ #category : 'actions-group' }
 GbxSegmentToolBrain >> changeGroupAuthTo: grpAuth forGroup: selGrpRec inSgmt: selSgmtRec
 	"Change the auhtorization for the given group in the given Object Security Policy to the given authorization."
 
@@ -220,7 +224,7 @@ GbxSegmentToolBrain >> changeGroupAuthTo: grpAuth forGroup: selGrpRec inSgmt: se
 					ifFalse: [self gbsMessenger warn: 'You do not have Object Security Policy Protection privilege!']].
 	^nil
 
-{ #category : #'actions-group' }
+{ #category : 'actions-group' }
 GbxSegmentToolBrain >> replaceGroup: selGrpRec inSgmt: selSgmtRec withGroup: grpName andAuth: grpAuth
 	"Replace the given group in the given object security policy with the given new group."
 
@@ -247,7 +251,7 @@ GbxSegmentToolBrain >> replaceGroup: selGrpRec inSgmt: selSgmtRec withGroup: grp
 					ifFalse: [self gbsMessenger warn: 'You do not have Object Security Policy Protection privilege!']].
 	^nil
 
-{ #category : #'actions-group' }
+{ #category : 'actions-group' }
 GbxSegmentToolBrain >> addGroup: grpName toSgmt: selSgmtRec withAuth: grpAuth replace: oldGrp
 	" Add the given group to the given Object Security Policy, replacing the old group if given. "
 
@@ -310,7 +314,7 @@ GbxSegmentToolBrain >> addGroup: grpName toSgmt: selSgmtRec withAuth: grpAuth re
 			[sgmtProxy remotePerform: #group:authorization: with: grpNm with: grpAuth].
 	^grpHldr
 
-{ #category : #'reports' }
+{ #category : 'reports' }
 GbxSegmentToolBrain >> userReport
 	"Generate a report on all the users in the tool's session."
 
@@ -349,7 +353,7 @@ GbxSegmentToolBrain >> userReport
 		withTitle: 'User Report'
 		formatList: formatList
 
-{ #category : #'reports' }
+{ #category : 'reports' }
 GbxSegmentToolBrain >> groupReport
 	"Generate a report on all the groups in the tool's session."
 
@@ -387,7 +391,7 @@ GbxSegmentToolBrain >> groupReport
 		withTitle: 'Group Report'
 		formatList: formatList
 
-{ #category : #'reports' }
+{ #category : 'reports' }
 GbxSegmentToolBrain >> segmentReport
 	"Generate a report on all the object security policies a the user can read in the tool's session, including the
 	GsIndexingSegment which is not displayed in the Security Policy table of the tool."
@@ -451,7 +455,7 @@ GbxSegmentToolBrain >> segmentReport
 		withTitle: 'Security Policy Report'
 		formatList: formatList
 
-{ #category : #'actions-member' }
+{ #category : 'actions-member' }
 GbxSegmentToolBrain >> removeMember: selMbr fromGrp: selGrpRec updateList: mbrs
 	"Remove given member from given group."
 
@@ -475,7 +479,7 @@ GbxSegmentToolBrain >> removeMember: selMbr fromGrp: selGrpRec updateList: mbrs
 				ifFalse: [self gbsMessenger warn: 'You do not have write authorization for user ''' , mbrName , '''!']].
 	^nil
 
-{ #category : #'actions-member' }
+{ #category : 'actions-member' }
 GbxSegmentToolBrain >> addMember: mbrName toGrp: selGrpRec
 	"Add a member to the given group."
 
@@ -506,7 +510,7 @@ GbxSegmentToolBrain >> addMember: mbrName toGrp: selGrpRec
 	mbrProxy remotePerform: #addGroup: with: grp.
 	^mbrHldr
 
-{ #category : #'actions-member' }
+{ #category : 'actions-member' }
 GbxSegmentToolBrain >> addMemberToGrp: selGrpRec updateList: mbrs
 
    "Prompt for the name of the member to be added."
@@ -522,7 +526,7 @@ GbxSegmentToolBrain >> addMemberToGrp: selGrpRec updateList: mbrs
 	  ].
    ^nil
 
-{ #category : #'actions-segment' }
+{ #category : 'actions-segment' }
 GbxSegmentToolBrain >> changeWorldAuthTo: worldAuth forSgmt: selSgmtRec
 	"Change the world authorization for the given Object Security Policy to the given authorization."
 
@@ -546,7 +550,7 @@ GbxSegmentToolBrain >> changeWorldAuthTo: worldAuth forSgmt: selSgmtRec
 						[self gbsMessenger warn: 'You do not have Object Security Policy Protection privilege!']].
 	^nil
 
-{ #category : #'actions-segment' }
+{ #category : 'actions-segment' }
 GbxSegmentToolBrain >> createSegment: sgmtName inDict: dictName
 	"Create a new Object Security Policy with the given name in the given dictionary."
 
@@ -577,7 +581,7 @@ GbxSegmentToolBrain >> createSegment: sgmtName inDict: dictName
 	self allSegments add: sgmtHldr.
 	^sgmtHldr
 
-{ #category : #'actions-segment' }
+{ #category : 'actions-segment' }
 GbxSegmentToolBrain >> createSegmentUpdateList: sgmtRecs
 	"Prompt for the name and dictionary of the object security policy to be created."
 
@@ -596,7 +600,7 @@ GbxSegmentToolBrain >> createSegmentUpdateList: sgmtRecs
 			[self gbsMessenger warn: 'You do not have Object Security Policy Creation privilege!'].
 	^nil
 
-{ #category : #'actions-segment' }
+{ #category : 'actions-segment' }
 GbxSegmentToolBrain >> grabSegment: selSgmtRec
 
    "Place the given Object Security Policy in the GBS clipboard."
@@ -610,13 +614,13 @@ GbxSegmentToolBrain >> grabSegment: selSgmtRec
 	   ].
    ^nil
 
-{ #category : #'actions-segment' }
+{ #category : 'actions-segment' }
 GbxSegmentToolBrain >> setCurrentForDisplayUsingRecord: record 
 	| currSgmtProxy |
 	currSgmtProxy := self session systemProxy remotePerform: #currentObjectSecurityPolicy.
 	self assignCurrentIndicatorForProxy: currSgmtProxy and: record
 
-{ #category : #'actions-segment' }
+{ #category : 'actions-segment' }
 GbxSegmentToolBrain >> setCurrentSegment: selSgmtRec updateList: sgmtRecs
 	" Set the tool session's current Object Security Policy to the given Object Security Policy.
 	  Answer selSgmtRec if successful; otherwise answer nil. "
@@ -644,7 +648,7 @@ GbxSegmentToolBrain >> setCurrentSegment: selSgmtRec updateList: sgmtRecs
 	self showBusyWhile: [systemProxy remotePerform: #currentObjectSecurityPolicy: with: sgmtProxy].
 	^selSgmtRec
 
-{ #category : #'actions-segment' }
+{ #category : 'actions-segment' }
 GbxSegmentToolBrain >> assignCurrentIndicatorForProxy: currSgmtProxy and: record
 
 	| sgmtProxy |
@@ -653,13 +657,13 @@ GbxSegmentToolBrain >> assignCurrentIndicatorForProxy: currSgmtProxy and: record
 		ifTrue: [record isCurrentHolder value: true]
 		ifFalse: [record isCurrentHolder value: false]
 
-{ #category : #'actions-segment' }
+{ #category : 'actions-segment' }
 GbxSegmentToolBrain >> setDefaultForDisplayUsingRecord: record 
 	| defSgmtProxy |
 	defSgmtProxy := self userProfileProxy remotePerform: #defaultObjectSecurityPolicy.
 	self assignDefaultIndicatorForProxy: defSgmtProxy and: record
 
-{ #category : #'actions-segment' }
+{ #category : 'actions-segment' }
 GbxSegmentToolBrain >> setDefaultSegment: selSgmtRec updateList: sgmtRecs
 	" Set the tool session user's default Object Security Policy to the given Object Security Policy.
 	  Answer selSgmtRec if successful; otherwise answer nil. "
@@ -695,7 +699,7 @@ GbxSegmentToolBrain >> setDefaultSegment: selSgmtRec updateList: sgmtRecs
 			[self userProfileProxy remotePerform: #defaultObjectSecurityPolicy: with: sgmtProxy].
 	^selSgmtRec
 
-{ #category : #'actions-segment' }
+{ #category : 'actions-segment' }
 GbxSegmentToolBrain >> assignDefaultIndicatorForProxy: defSgmtProxy and: record
 
 	| sgmtProxy |
@@ -704,7 +708,7 @@ GbxSegmentToolBrain >> assignDefaultIndicatorForProxy: defSgmtProxy and: record
 		ifTrue: [record isDefaultHolder value: true]
 		ifFalse: [record isDefaultHolder value: false]
 
-{ #category : #'actions-segment' }
+{ #category : 'actions-segment' }
 GbxSegmentToolBrain >> changeNameTo: sgmtName forSgmt: selSgmtRec
 	"Change the name for the given Object Security Policy to the given name."
 
@@ -724,7 +728,7 @@ GbxSegmentToolBrain >> changeNameTo: sgmtName forSgmt: selSgmtRec
 						with: dictName asSymbol].
 	self changeNameTo: sgmtName holder: sgmtHldr dictionary: dictProxy
 
-{ #category : #'actions-segment' }
+{ #category : 'actions-segment' }
 GbxSegmentToolBrain >> validateName: sgmtName inDict: dictProxy withName: dictName
 	"Verify that the given Object Security Policy name is a valid key for an Object Security Policy in the given dictionary."
 
@@ -744,7 +748,7 @@ GbxSegmentToolBrain >> validateName: sgmtName inDict: dictProxy withName: dictNa
 					ifFalse: [^'']].
 	^nil
 
-{ #category : #'actions-segment' }
+{ #category : 'actions-segment' }
 GbxSegmentToolBrain >> changeOwnerAuthTo: ownerAuth forSgmt: selSgmtRec
 	"Change the owner authorization for the given Object Security Policy to the given authorization."
 
@@ -767,7 +771,7 @@ GbxSegmentToolBrain >> changeOwnerAuthTo: ownerAuth forSgmt: selSgmtRec
 						[self gbsMessenger warn: 'You do not have Object Security Policy Protection privilege!']].
 	^nil
 
-{ #category : #'actions-segment' }
+{ #category : 'actions-segment' }
 GbxSegmentToolBrain >> changeOwnerTo: ownerName forSgmt: selSgmtRec
 	"Change the owner for the given Object Security Policy to the user with the given name."
 
@@ -807,7 +811,7 @@ GbxSegmentToolBrain >> changeOwnerTo: ownerName forSgmt: selSgmtRec
 						with: selSgmtRec segmentHldr segmentName]].
 	^nil
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbxSegmentToolBrain >> addGroupSuggestion
 	"workaround for bug #47128  P2  NoModificationError thrown while adding new group."
 

@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxBehaviorOopMapNode',
-	#superclass : #'GbxOopKeyedNode',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxBehaviorOopMapNode',
+	#superclass : 'GbxOopKeyedNode',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private-enumerating' }
+{ #category : 'private-enumerating' }
 GbxBehaviorOopMapNode >> elementsDo: aBlock
 	"Iterate through all of my elements, free or not, evaluating the two-argument block for each 
 	SmallInteger key and client object.
@@ -30,7 +32,7 @@ GbxBehaviorOopMapNode >> elementsDo: aBlock
 			[:i |
 			aBlock value: (lastSegment basicAt: i) value: (lastSegment basicAt: i + 1)]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBehaviorOopMapNode >> clientAtOop: oop
 	"Answer the client object associated with the given oop. If I don't have one, answer NotCachedToken"
 	"Sender must hold my session's sessionProtect"
@@ -71,7 +73,7 @@ GbxBehaviorOopMapNode >> clientAtOop: oop
 			["key not found"
 			notCachedToken]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxBehaviorOopMapNode >> atOop: oop putClient: client
 	"Add an association between the given oop and client object, which will be a replicator.
 	Answer the client replicator."
@@ -118,12 +120,12 @@ GbxBehaviorOopMapNode >> atOop: oop putClient: client
 			tally * 10 // 7 > tableSize ifTrue: [self makeRoom]].
 	^client
 
-{ #category : #'private-accessing' }
+{ #category : 'private-accessing' }
 GbxBehaviorOopMapNode >> segmentClass
 
 	^GbxBehaviorMapTableSegment
 
-{ #category : #'private-removing' }
+{ #category : 'private-removing' }
 GbxBehaviorOopMapNode >> removeElementAt: index
 	"Remove element (key, client) at index. Index is 0-based within my table.
 	Must fix any collision chains that are disturbed by this deletion. The invariant that must be preserved is that if you start at the hash index of a key and proceed to higher indexes, wrapping to zero if you would otherwise exceed table size (this direction is known here as 'clockwise') you must either find the hashed key without encountering a nil key, or the hashed key is not present.
@@ -170,7 +172,7 @@ GbxBehaviorOopMapNode >> removeElementAt: index
 			[self
 				changeCapacityTo: (minimumTableSize max: (Set goodSizeFrom: tally * 2))]
 
-{ #category : #'removing' }
+{ #category : 'removing' }
 GbxBehaviorOopMapNode >> removeOop: oop
 	"Remove the mapped client object (a replicator) for the oop. Answer the formerly-mapped replicator, or nil if not found."
 	"Sender must hold my session's accessProtect."
@@ -214,7 +216,7 @@ GbxBehaviorOopMapNode >> removeOop: oop
 			["key not found, answer nil"
 			nil]
 
-{ #category : #'private-growing and shrinking' }
+{ #category : 'private-growing and shrinking' }
 GbxBehaviorOopMapNode >> changeCapacityTo: newCapacity
 	"Change my table size to newCapacity, which may be either larger or smaller than my current tableSize.
 	The sender should assure that newCapacity is large enough to hold my current contents while leaving at least 30% of the table free. NewCapacity should also be a good prime number.
@@ -231,7 +233,7 @@ GbxBehaviorOopMapNode >> changeCapacityTo: newCapacity
 			key ~~ nil ifTrue: [copy addElementKey: key clientObj: clientObj]].
 	owningMap replaceNodeAt: parentIndex with: copy
 
-{ #category : #'private-growing and shrinking' }
+{ #category : 'private-growing and shrinking' }
 GbxBehaviorOopMapNode >> addElementKey: key clientObj: client del: delegate
 	"Only for use when changing capacity. Add the given key/client/delegate trio. 
 	Assume we don't already have such an entry for this key.
@@ -272,7 +274,7 @@ GbxBehaviorOopMapNode >> addElementKey: key clientObj: client del: delegate
 	(client == 0 or: [delegate == 0]) ifTrue: [segment mourn].
 	tally := tally + 1
 
-{ #category : #'private-growing and shrinking' }
+{ #category : 'private-growing and shrinking' }
 GbxBehaviorOopMapNode >> addElementKey: key clientObj: client
 	"Only for use when changing capacity. Add the given key/client/ pair. 
 	Assume we don't already have such an entry for this key."
@@ -309,7 +311,7 @@ GbxBehaviorOopMapNode >> addElementKey: key clientObj: client
 		basicAt: keyOffset + 1 put: client.
 	tally := tally + 1
 
-{ #category : #'private-auditing' }
+{ #category : 'private-auditing' }
 GbxBehaviorOopMapNode >> auditUnusedSpaceInto: results
 	" Things checked here:
 	* My last segment contains only nils past tableSize"
@@ -327,7 +329,7 @@ GbxBehaviorOopMapNode >> auditUnusedSpaceInto: results
 				actual: (lastSegment basicAt: i)
 				expected: 'nil']
 
-{ #category : #'private-auditing' }
+{ #category : 'private-auditing' }
 GbxBehaviorOopMapNode >> auditHashingInto: results
 	" Things checked here:
 	* each used element can be found from its key's hash without probing past a nil key"

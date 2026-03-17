@@ -1,31 +1,35 @@
 Class {
-	#name : #'GbxSemaphoreWithStats',
-	#superclass : #'Object',
-	#instVars : [ #'semaphore' #'statAdaptor' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxSemaphoreWithStats',
+	#superclass : 'Object',
+	#instVars : [
+		'semaphore',
+		'statAdaptor'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxSemaphoreWithStats >> semaphore: aSemaphore statAdaptor: aStatAdaptor
 
 	semaphore := aSemaphore.
 	statAdaptor := aStatAdaptor
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSemaphoreWithStats >> eventDetectorThread: anObject
 	semaphore eventDetectorThread: anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSemaphoreWithStats >> semaphore
 	^semaphore
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxSemaphoreWithStats >> semaphoreSummaryOn: aStream
 
 	semaphore semaphoreSummaryOn: aStream
 
-{ #category : #'stat enable/disable' }
+{ #category : 'stat enable/disable' }
 GbxSemaphoreWithStats >> statAdaptor: aStatAdaptorOrNil 
 	"Return the receiver if aStatAdaptorOrNil is non-nil - stats are already 
 	 enabled.  If it's nil, return the semaphore - stats are being disabled."
@@ -36,12 +40,12 @@ GbxSemaphoreWithStats >> statAdaptor: aStatAdaptorOrNil
 			[statAdaptor := aStatAdaptorOrNil.
 			self]
 
-{ #category : #'dispatching' }
+{ #category : 'dispatching' }
 GbxSemaphoreWithStats >> isActiveProcessInCriticalRegion
 
 	^semaphore isActiveProcessInCriticalRegion
 
-{ #category : #'dispatching' }
+{ #category : 'dispatching' }
 GbxSemaphoreWithStats >> critical: aBlock
 
 	| result start |
@@ -50,7 +54,7 @@ GbxSemaphoreWithStats >> critical: aBlock
 	statAdaptor endCall: start.
 	^result
 
-{ #category : #'dispatching' }
+{ #category : 'dispatching' }
 GbxSemaphoreWithStats >> critical: criticalBlock unlessBlocked: altBlock 
 	| result start |
 	start := statAdaptor startCall.
@@ -58,7 +62,7 @@ GbxSemaphoreWithStats >> critical: criticalBlock unlessBlocked: altBlock
 	statAdaptor endCall: start.
 	^result
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxSemaphoreWithStats class >> semaphore: aSemaphore statAdaptor: aStatAdaptor
 
 	^super new semaphore: aSemaphore statAdaptor: aStatAdaptor

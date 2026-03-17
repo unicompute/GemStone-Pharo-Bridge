@@ -1,12 +1,21 @@
 Class {
-	#name : #'GbxPointerObjectReplicator',
-	#superclass : #'GbxObjectReplicator',
-	#instVars : [ #'serverInstVarNames' #'serverToClientOffsets' #'deferredAssignments' #'indexedBuffer' #'namedBuffer' #'replicationScheme' #'replication' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxPointerObjectReplicator',
+	#superclass : 'GbxObjectReplicator',
+	#instVars : [
+		'serverInstVarNames',
+		'serverToClientOffsets',
+		'deferredAssignments',
+		'indexedBuffer',
+		'namedBuffer',
+		'replicationScheme',
+		'replication'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private clamping' }
+{ #category : 'private clamping' }
 GbxPointerObjectReplicator >> instVarLevelForServerInstVar: index fromSpecs: specs noStubLevel: noStubLevel
 	"index may be up to 1 greater than the number of server named instvars, in which case it represents the indexed instvars."
 
@@ -22,7 +31,7 @@ GbxPointerObjectReplicator >> instVarLevelForServerInstVar: index fromSpecs: spe
 				ifAbsent: [^noStubLevel < 0 ifTrue: [noStubLevel] ifFalse: [nil]].
 	^self instVarLevelFor: rawSpec
 
-{ #category : #'private clamping' }
+{ #category : 'private clamping' }
 GbxPointerObjectReplicator >> dictionaryFormOfReplicationSpec: replicationSpec
 
 	| specs |
@@ -36,7 +45,7 @@ GbxPointerObjectReplicator >> dictionaryFormOfReplicationSpec: replicationSpec
 						error: 'Each element of a replication spec should be a two- or three-element array.']].
 	^specs
 
-{ #category : #'private clamping' }
+{ #category : 'private clamping' }
 GbxPointerObjectReplicator >> instVarLevelFor: rawInstVarLevelsSpec
 	"stInstVarSpec is the two or three element array found in the client's
 	 implementations of replicationSpec.  The first element is an instvar
@@ -69,7 +78,7 @@ GbxPointerObjectReplicator >> instVarLevelFor: rawInstVarLevelsSpec
 		with: operator.
 	^nil
 
-{ #category : #'private clamping' }
+{ #category : 'private clamping' }
 GbxPointerObjectReplicator >> shouldBeForwarderFor: rawInstVarLevelsSpec
 	"stInstVarSpec is the two or three element array found in the client's
 	 implementations of replicationSpec.  The first element is an instvar
@@ -83,7 +92,7 @@ GbxPointerObjectReplicator >> shouldBeForwarderFor: rawInstVarLevelsSpec
 	operator := rawInstVarLevelsSpec at: 2.
 	^operator == #forwarder
 
-{ #category : #'private clamping' }
+{ #category : 'private clamping' }
 GbxPointerObjectReplicator >> shouldBeForwarderForServerInstVar: index fromSpecs: specs
 
 	| clientIndex clientIvarName |
@@ -92,7 +101,7 @@ GbxPointerObjectReplicator >> shouldBeForwarderForServerInstVar: index fromSpecs
 	clientIvarName := clientClass allInstVarNames at: clientIndex.
 	^self shouldBeForwarderFor: (specs at: clientIvarName ifAbsent: [^false])
 
-{ #category : #'per-object accessing' }
+{ #category : 'per-object accessing' }
 GbxPointerObjectReplicator >> deferredAssignments
 	"To be sent only when wanting to add to the deferred assignments.
 	deferredAssignments must be nil if it is empty."
@@ -107,18 +116,18 @@ GbxPointerObjectReplicator >> deferredAssignments
 				indexedBuffer: indexedBuffer].
 	^deferredAssignments.
 
-{ #category : #'per-object testing' }
+{ #category : 'per-object testing' }
 GbxPointerObjectReplicator >> clientObjectIsComplete
 	"Answer false if there is more work needed on this client object."
 
 	^self expectsAnotherReport not and: [deferredAssignments == nil]
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxPointerObjectReplicator >> canUnstubInPlace
 
 	^self clientSizeIsCorrect
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxPointerObjectReplicator >> assignInstvars
 	"Sender must hold my session's sessionProtect and the ClientMap's writeProtect semaphores."
 
@@ -126,7 +135,7 @@ GbxPointerObjectReplicator >> assignInstvars
 		assignNamedInstvars;
 		assignIndexedInstvars
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxPointerObjectReplicator >> referentForOop: oop shouldBeForwarder: shouldBeForwarder
 	"Private.  Look up the GemStone 'oop' and answer either:
 	1) The corresponding special object
@@ -148,7 +157,7 @@ GbxPointerObjectReplicator >> referentForOop: oop shouldBeForwarder: shouldBeFor
 				toServer: (oop asGSObjectInSession: session)].
 	^val
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxPointerObjectReplicator >> updateClientObjectForFault
 	"Sender must hold sessionProtect.
 	If the client object is immutable, it is an error to try to change it."
@@ -161,7 +170,7 @@ GbxPointerObjectReplicator >> updateClientObjectForFault
 	self gbxFixMe.
 	self errorIfClientImmutable
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxPointerObjectReplicator >> assignIndexedInstvars
 	"Sender must hold my session's sessionProtect and the ClientMap's writeProtect semaphores."
 
@@ -182,16 +191,16 @@ GbxPointerObjectReplicator >> assignIndexedInstvars
 				ifFalse: 
 					[indexedBuffer indexableValueAt: serverOffset - namedSize put: referent]]
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxPointerObjectReplicator >> deferredAssignmentsClass
 	
 	^GbxObjectWithDeferredAssignments.
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxPointerObjectReplicator >> deferNamedAssignmentAt: clientOffset oop: oop 
 	self deferredAssignments deferNamedOffset: clientOffset oop: oop
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxPointerObjectReplicator >> clientSizeIsCorrect
 	"We need to know whether the number of total pointers (named plus indexed) is correct.
 	Especially in the unstubbing case, the number of named instvars may be different
@@ -203,11 +212,11 @@ GbxPointerObjectReplicator >> clientSizeIsCorrect
 	newSize := clientClass instSize + currentReport idxSize.
 	^existingSize = newSize
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxPointerObjectReplicator >> deferIndexedAssignmentAt: clientOffset oop: oop 
 	self deferredAssignments deferIndexedOffset: clientOffset oop: oop
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxPointerObjectReplicator >> assignNamedInstvars
 	"Sender must hold my session's sessionProtect and the ClientMap's writeProtect semaphores."
 
@@ -229,17 +238,17 @@ GbxPointerObjectReplicator >> assignNamedInstvars
 						ifTrue: [self deferNamedAssignmentAt: clientOffset oop: oop]
 						ifFalse: [namedBuffer namedValueAt: clientOffset put: referent]]]
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxPointerObjectReplicator >> session: anObject
 
 	session := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxPointerObjectReplicator >> replicationScheme: anObject
 
 	replicationScheme := anObject
 
-{ #category : #'private-initialization' }
+{ #category : 'private-initialization' }
 GbxPointerObjectReplicator >> validateInstVarName: name isIn: names message: message
 
 	(GbsConfiguration current confirm and: [(names includes: name) not])
@@ -250,7 +259,7 @@ GbxPointerObjectReplicator >> validateInstVarName: name isIn: names message: mes
 				with: name
 				with: message]
 
-{ #category : #'private-initialization' }
+{ #category : 'private-initialization' }
 GbxPointerObjectReplicator >> initializeServerOffsets
 	"This message must be sent after the client and server classes and session and server instvar names are all known.
 	Compute the server offsets based on the client and server instvar names and the instvarMapping, if any."
@@ -297,18 +306,18 @@ GbxPointerObjectReplicator >> initializeServerOffsets
 						ifFalse: [clientInstVarNames indexOf: clientName ifAbsent: [nil]])].
 	serverToClientOffsets := tempOffsets asArray
 
-{ #category : #'per-object initialization' }
+{ #category : 'per-object initialization' }
 GbxPointerObjectReplicator >> initializeForNewObject
 
 	super initializeForNewObject.
 	replication := deferredAssignments := indexedBuffer := namedBuffer := nil
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxPointerObjectReplicator >> isComplete
 
 	^serverInstVarNames ~~ nil
 
-{ #category : #'per-object replication' }
+{ #category : 'per-object replication' }
 GbxPointerObjectReplicator >> forReplication: aReplication replicateFromReport: report
 	"Sender must hold session's semaphore, and clientMap semaphore."
 
@@ -324,7 +333,7 @@ GbxPointerObjectReplicator >> forReplication: aReplication replicateFromReport: 
 		ifFalse: [replication addDeferredAssignments: deferredAssignments].
 	report isLastReportForObject ifTrue: [self initializeForNewObject]
 
-{ #category : #'per-object replication' }
+{ #category : 'per-object replication' }
 GbxPointerObjectReplicator >> replicateFromReport
 	"Private.  Given the description of a GemStone object from a traversal object header,
 	 replicate the object as a client object.  If the object is already in the cache,
@@ -364,7 +373,7 @@ GbxPointerObjectReplicator >> replicateFromReport
 	self gbxFixMe.	"assigns need to be unpreemptible"
 	clientObject gbxTrapFutureChanges
 
-{ #category : #'clamping' }
+{ #category : 'clamping' }
 GbxPointerObjectReplicator >> updateInstVarLevelsOfScheme: scheme
 	"If the scheme's selector has been removed, or the replication spec is a clamp by callback spec,
 	 remove the class and related details from the scheme. Otherwise, update the scheme with
@@ -396,7 +405,7 @@ GbxPointerObjectReplicator >> updateInstVarLevelsOfScheme: scheme
 				indexedInstvarsShouldBeForwardersForReplicationSpecs: specs)
 		forClass: self clientClass
 
-{ #category : #'clamping' }
+{ #category : 'clamping' }
 GbxPointerObjectReplicator >> createForwarderOffsetsForReplicationSpecs: specs
 	"Answer an array of booleans, or nil. Nil is answered if my server class has no named instvars, or 
 	if the scheme's selector is not understood by my client class.
@@ -415,7 +424,7 @@ GbxPointerObjectReplicator >> createForwarderOffsetsForReplicationSpecs: specs
 				put: (self shouldBeForwarderForServerInstVar: i fromSpecs: specs)].
 	^resultArray
 
-{ #category : #'clamping' }
+{ #category : 'clamping' }
 GbxPointerObjectReplicator >> createInstVarLevelsForReplicationSpecs: specs
 	"Answer an instVarLevels array in the form the server expects, or nil if the scheme's selector
 	is not defined for my class, which can happen if a scheme is removed after a session logs in.
@@ -440,7 +449,7 @@ GbxPointerObjectReplicator >> createInstVarLevelsForReplicationSpecs: specs
 						noStubLevel: noStubLevel)].
 	^levels
 
-{ #category : #'clamping' }
+{ #category : 'clamping' }
 GbxPointerObjectReplicator >> indexedInstvarsShouldBeForwardersForReplicationSpecs: specs
 	"Answer a boolean indicating whether instances of this class should have
 	any indexed instvars replicated as forwarders, or nil if this question is moot."
@@ -448,7 +457,7 @@ GbxPointerObjectReplicator >> indexedInstvarsShouldBeForwardersForReplicationSpe
 	^self
 		shouldBeForwarderFor: (specs at: 'indexable_part' ifAbsent: [^false])
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxPointerObjectReplicator >> namedInstvarsOf: anObject inServerOrderDo: aBlock
 	"anObject is a client object, an instance of the class that I replicate.
 	For each instvar (named or indexed) that is mapped to the server,
@@ -464,7 +473,7 @@ GbxPointerObjectReplicator >> namedInstvarsOf: anObject inServerOrderDo: aBlock
 		to: serverToClientOffsets size
 		do: aBlock
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxPointerObjectReplicator >> packDirtyReferentsOf: anObject inTraversal: storeTraversal
 	"Recursively store object reports into the traversal buffer describing anObject's
 	referents, and their referents, and so on. Only objects marked dirty are stored, and they will
@@ -473,13 +482,13 @@ GbxPointerObjectReplicator >> packDirtyReferentsOf: anObject inTraversal: storeT
 	self instvarsOf: anObject
 		inServerOrderDo: [:clientObj | storeTraversal pack: clientObj]
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxPointerObjectReplicator >> serverOverallSizeOf: anObject
 	"Answer the number of named plus indexed instance variables in the server representation of anObject"
 
 	^self serverNamedSize + (self serverIndexedSizeOf: anObject)
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxPointerObjectReplicator >> pack: anObject withDelegate: aDelegate inTraversal: storeTraversal
 	"Store a report for anObject in the storeTraversal. If I won't fit, put the part of 
 	anObject that will fit in, flush it to the server, and repeat until all of anObject has been stored."
@@ -556,7 +565,7 @@ GbxPointerObjectReplicator >> pack: anObject withDelegate: aDelegate inTraversal
 	storeTraversal packed: anObject.
 	session packed: anObject
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxPointerObjectReplicator >> instvarsOf: anObject inServerOrderDo: aBlock
 	"anObject is a client object, an instance of the class that I replicate.
 	For each instvar (named or indexed) that is mapped to the server,
@@ -570,13 +579,13 @@ GbxPointerObjectReplicator >> instvarsOf: anObject inServerOrderDo: aBlock
 		namedInstvarsOf: anObject namedValues inServerOrderDo: aBlock;
 		indexedInstvarsOf: anObject indexableValues inServerOrderDo: aBlock
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxPointerObjectReplicator >> serverNamedSize
 	"Answer the number of named instance variables of my server class."
 
 	^serverToClientOffsets size
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxPointerObjectReplicator >> indexedInstvarsOf: anObject inServerOrderDo: aBlock
 	"anObject is a client object, an instance of the class that I replicate.
 	For each indexed instvar
@@ -588,18 +597,18 @@ GbxPointerObjectReplicator >> indexedInstvarsOf: anObject inServerOrderDo: aBloc
 
 	1 to: anObject gbxBasicSize do: [:i | aBlock value: (anObject basicAt: i)]
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxPointerObjectReplicator >> serverIndexedSizeOf: anObject
 	"Answer the number of indexed instance variables in the server representation of anObject"
 
 	^anObject gbxBasicSize
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxPointerObjectReplicator >> objImpl
 
 	^0	"Pointers"
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxPointerObjectReplicator >> namedInstvarsOf: anObject inServerOrderFrom: startIndex to: stopIndex do: aBlock
 	"Do the default mapping for the given server range of instvars, as modified by #instVarMap"
 
@@ -615,13 +624,13 @@ GbxPointerObjectReplicator >> namedInstvarsOf: anObject inServerOrderFrom: start
 							With the overlay flag set, this indicates to leave existing value alone"]
 						ifFalse: [anObject namedValueAt: sourceIndex])]
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxPointerObjectReplicator >> storageDelegateForReference: clientObj
 	"By default, just the delegate of the given client object. Subclasses can override this for GBS Customization behavior."
 
 	^clientObj asGSObjectInSession: session
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxPointerObjectReplicator >> initializeForClientClass: aClientClass serverClass: classDelegate manager: aManager
 
 	super
@@ -630,7 +639,7 @@ GbxPointerObjectReplicator >> initializeForClientClass: aClientClass serverClass
 		manager: aManager.
 	manager serverInstVarNamesNeededByReplicator: self
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxPointerObjectReplicator >> initializeForServerInstVarNames: names
 	"This message must be sent after the basic initialization that provides the client and server classes and session.
 	Remember the server instvar names (primarily for ease of debugging) and compute the offsets array, which is
@@ -640,7 +649,7 @@ GbxPointerObjectReplicator >> initializeForServerInstVarNames: names
 	serverInstVarNames := names.
 	self initializeServerOffsets
 
-{ #category : #'stubbing' }
+{ #category : 'stubbing' }
 GbxPointerObjectReplicator >> nilMappedSlotsOf: aStub
 	"An object is being made a stub, when it was a replicate of my class. Since it was a replicate, my offsets should be current.
 	It is currently a stub, so it only has indexed instvars at this point, but the first ones map to any named instvars of its previous

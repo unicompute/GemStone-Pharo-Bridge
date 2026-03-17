@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsObjErrNotIndexable',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsObjErrNotIndexable',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsObjErrNotIndexable class >> gemStoneErrorNumber6430 ^2012
 

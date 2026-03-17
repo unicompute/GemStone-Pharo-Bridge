@@ -1,18 +1,20 @@
 Class {
-	#name : #'GbxOrderedCollectionReplicator',
-	#superclass : #'GbxPointerObjectReplicator',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxOrderedCollectionReplicator',
+	#superclass : 'GbxPointerObjectReplicator',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxOrderedCollectionReplicator >> serverIndexedSizeOf: anObject
 	"Answer the number of indexed instance variables in the server representation of anObject"
 
 	^anObject size
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxOrderedCollectionReplicator >> indexedInstvarsOf: anObject inServerOrderDo: aBlock
 	"anObject is a client object, an instance of the class that I replicate.
 	For each indexed instvar

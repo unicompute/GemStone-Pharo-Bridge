@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrCantBecomeOneIdx',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrCantBecomeOneIdx',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrCantBecomeOneIdx class >> gemStoneErrorNumber6430 ^2119
 

@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrAlreadyHasSubclasses',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrAlreadyHasSubclasses',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrAlreadyHasSubclasses class >> gemStoneErrorNumber6430 ^2335
 

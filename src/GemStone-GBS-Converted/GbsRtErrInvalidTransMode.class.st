@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrInvalidTransMode',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrInvalidTransMode',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrInvalidTransMode class >> gemStoneErrorNumber6430 ^2001
 

@@ -1,42 +1,61 @@
 Class {
-	#name : #'GbxServerInterface',
-	#superclass : #'Object',
-	#instVars : [ #'alteredOopBuffer' #'byteFetchBuffer' #'callSequencer' #'clampedTravArgsBuffer' #'dirtyOopBuffer' #'eventDetector' #'gcedOopBuffer' #'longHolderBuffer' #'longHolderBuffer2' #'needMoreTraversal' #'oopFetchBuffer' #'oopsNoLongerReplicatedBuffer' #'singleStepIsRequested' #'storeTravDoArgsBuffer' #'noLongerReplicatedOops' #'thisSession' #'traversalBufferManager' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxServerInterface',
+	#superclass : 'Object',
+	#instVars : [
+		'alteredOopBuffer',
+		'byteFetchBuffer',
+		'callSequencer',
+		'clampedTravArgsBuffer',
+		'dirtyOopBuffer',
+		'eventDetector',
+		'gcedOopBuffer',
+		'longHolderBuffer',
+		'longHolderBuffer2',
+		'needMoreTraversal',
+		'oopFetchBuffer',
+		'oopsNoLongerReplicatedBuffer',
+		'singleStepIsRequested',
+		'storeTravDoArgsBuffer',
+		'noLongerReplicatedOops',
+		'thisSession',
+		'traversalBufferManager'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'tracing and debugging' }
+{ #category : 'tracing and debugging' }
 GbxServerInterface >> enableTracingToFileNamed: filename
 
 	^callSequencer primInterface
 		enableTracingToFileNamed: filename
 		errorBuffer: callSequencer errorBuffer asAddress.
 
-{ #category : #'tracing and debugging' }
+{ #category : 'tracing and debugging' }
 GbxServerInterface >> printOnTraceFile: aMessage 
 	"Print aMessage on the current GBC trace file, if tracing is enabled.  Include the given session number after the message."
 
 	^callSequencer primInterface printOnTraceFile: aMessage
 
-{ #category : #'tracing and debugging' }
+{ #category : 'tracing and debugging' }
 GbxServerInterface >> disableTracingToFile
 
 	callSequencer primInterface
 		disableTracingToFileErrorBuffer: callSequencer errorBuffer asAddress.
 
-{ #category : #'tracing and debugging' }
+{ #category : 'tracing and debugging' }
 GbxServerInterface >> requestSingleStep
 	"Next non-private execution is requested to break on entry"
 
 	singleStepIsRequested := true
 
-{ #category : #'Delegate interface' }
+{ #category : 'Delegate interface' }
 GbxServerInterface >> existsFor: target 
 	^callSequencer setSessionPerformCheck: 
 			[callSequencer primInterface gciObjExists: target oopValue]
 
-{ #category : #'Delegate interface' }
+{ #category : 'Delegate interface' }
 GbxServerInterface >> remoteClassFor: target 
 	"GciFetchClass"
 	"Now used only for fetching the class of what might be ClientForwarders"
@@ -44,7 +63,7 @@ GbxServerInterface >> remoteClassFor: target
 	^self gciCallReturnDelegate: 
 			[callSequencer primInterface gciFetchClass: target oopValue]
 
-{ #category : #'Delegate interface' }
+{ #category : 'Delegate interface' }
 GbxServerInterface >> for: target storeOOPs: arrayOfGSObjects at: index
 	
 	^callSequencer
@@ -56,7 +75,7 @@ GbxServerInterface >> for: target storeOOPs: arrayOfGSObjects at: index
 				with: (self oopArrayFromDelegates: arrayOfGSObjects) asAddress
 				with: arrayOfGSObjects size]
 
-{ #category : #'Delegate interface' }
+{ #category : 'Delegate interface' }
 GbxServerInterface >> for: target storeNamedOOPs: arrayOfGSObjects at: index
 	
 	^callSequencer
@@ -68,7 +87,7 @@ GbxServerInterface >> for: target storeNamedOOPs: arrayOfGSObjects at: index
 				with: (self oopArrayFromDelegates: arrayOfGSObjects) asAddress
 				with: arrayOfGSObjects size]
 
-{ #category : #'Delegate interface' }
+{ #category : 'Delegate interface' }
 GbxServerInterface >> for: target storeIdxOOPs: arrayOfGSObjects at: index
 	
 	^callSequencer
@@ -80,7 +99,7 @@ GbxServerInterface >> for: target storeIdxOOPs: arrayOfGSObjects at: index
 				with: (self oopArrayFromDelegates: arrayOfGSObjects) asAddress
 				with: arrayOfGSObjects size]
 
-{ #category : #'Delegate interface' }
+{ #category : 'Delegate interface' }
 GbxServerInterface >> for: target createObjectClass: oClass values: values clusterBucket: clusterBucket permanent: aBool
 	
 	^self
@@ -106,7 +125,7 @@ GbxServerInterface >> for: target createObjectClass: oClass values: values clust
 						with: clusterBucket
 						with: aBool]]
 
-{ #category : #'events/nonblocking support' }
+{ #category : 'events/nonblocking support' }
 GbxServerInterface >> stopEventDetection
 	"It's OK to send this even if event detection is already stopped."
 
@@ -115,7 +134,7 @@ GbxServerInterface >> stopEventDetection
 			[eventDetector stop.
 			eventDetector := nil]
 
-{ #category : #'events/nonblocking support' }
+{ #category : 'events/nonblocking support' }
 GbxServerInterface >> startEventDetection
 	"Private.  After this method is called, GemStone-generated events occurring in this session will be detected by the Smalltalk client (ex: changed object notification, gem-to-gem notifiers, signaled abort).  On unix platforms, an asynchronous implementation is used.  Otherwise, a polling implementation is used."
 
@@ -123,7 +142,7 @@ GbxServerInterface >> startEventDetection
 	eventDetector := GbxEventDetector session: thisSession.
 	eventDetector start
 
-{ #category : #'buffers' }
+{ #category : 'buffers' }
 GbxServerInterface >> oopsNoLongerReplicatedBuffer
 	"Return a buffer that represents a C array of GemStone oops."
 
@@ -133,7 +152,7 @@ GbxServerInterface >> oopsNoLongerReplicatedBuffer
 						size: thisSession configuration gcedObjBufferSize].
 	^oopsNoLongerReplicatedBuffer
 
-{ #category : #'buffers' }
+{ #category : 'buffers' }
 GbxServerInterface >> byteFetchBufferOfSize: aSize
 	"Return a buffer that for use with fetch calls."
 	
@@ -141,7 +160,7 @@ GbxServerInterface >> byteFetchBufferOfSize: aSize
 		ifTrue: [byteFetchBuffer := GbxByteArray size: aSize]
 		ifFalse: [byteFetchBuffer ensureSizeIsAtLeast: aSize]
 
-{ #category : #'buffers' }
+{ #category : 'buffers' }
 GbxServerInterface >> oopFetchBufferOfSize: aSize
 	"Return a buffer that represents a C array of GemStone oops."
 	
@@ -149,7 +168,7 @@ GbxServerInterface >> oopFetchBufferOfSize: aSize
 		ifTrue: [oopFetchBuffer := thisSession oopArrayClass size: aSize]
 		ifFalse: [oopFetchBuffer ensureSizeIsAtLeast: aSize]
 
-{ #category : #'buffers' }
+{ #category : 'buffers' }
 GbxServerInterface >> longHolderBuffer2
 	"Return a buffer that represents a pointer to a long."
 
@@ -157,7 +176,7 @@ GbxServerInterface >> longHolderBuffer2
 		longHolderBuffer2 := GbxLongHolderType allocate].
 	^longHolderBuffer2
 
-{ #category : #'buffers' }
+{ #category : 'buffers' }
 GbxServerInterface >> longHolderBuffer
 	"Return a buffer that represents a pointer to a long."
 
@@ -165,7 +184,7 @@ GbxServerInterface >> longHolderBuffer
 		longHolderBuffer := GbxLongHolderType allocate].
 	^longHolderBuffer
 
-{ #category : #'buffers' }
+{ #category : 'buffers' }
 GbxServerInterface >> clampedTravArgsBuffer
 	"Return a buffer that represents the GciClampedTravArgsSType structure."
 
@@ -173,7 +192,7 @@ GbxServerInterface >> clampedTravArgsBuffer
 		clampedTravArgsBuffer := GbxGciClampedTravArgsSType allocate].
 	^clampedTravArgsBuffer
 
-{ #category : #'buffers' }
+{ #category : 'buffers' }
 GbxServerInterface >> storeTravDoArgsBuffer
 	"Return a buffer that represents the GciStoreTravDoArgsSType structure.
 	Perform basic initialization."
@@ -193,7 +212,7 @@ GbxServerInterface >> storeTravDoArgsBuffer
      * access footprint of a large store traversal */"
 	^storeTravDoArgsBuffer
 
-{ #category : #'GbsSessionManager interface' }
+{ #category : 'GbsSessionManager interface' }
 GbxServerInterface >> gbsImageStartup
 	"Discard defunct C pointers"
 
@@ -207,12 +226,12 @@ GbxServerInterface >> gbsImageStartup
 	storeTravDoArgsBuffer := nil.
 	callSequencer == nil ifFalse: [callSequencer gbsImageStartup]
 
-{ #category : #'GbsSessionManager interface' }
+{ #category : 'GbsSessionManager interface' }
 GbxServerInterface >> floatKind: aFloatOrDouble 
 	self gbxFixMe.	"Compute this ourselves, rather than making a GCI call"
 	^callSequencer floatKind: aFloatOrDouble
 
-{ #category : #'GbsSessionManager interface' }
+{ #category : 'GbsSessionManager interface' }
 GbxServerInterface >> loadUserActionLibrary: libraryName
 	"Private to GBS."
 
@@ -220,7 +239,7 @@ GbxServerInterface >> loadUserActionLibrary: libraryName
 			[callSequencer primInterface
 				gciLoadUserActionLibrary: libraryName gbxAsCString]
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxServerInterface >> storeTravDoArgsForStep: serverInteraction afterError: error selector: cSelector args: args
 	"Allocates C memory for the selector; sender must free when done.
 	error is a GbsError"
@@ -238,7 +257,7 @@ GbxServerInterface >> storeTravDoArgsForStep: serverInteraction afterError: erro
 	storeTravDoArgs doFlags: 16r22.	"When stepping, don't stop for breakpoints, no async events, disable native code."
 	^storeTravDoArgs
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxServerInterface >> storeTravDoArgsForMessageSend: messageSend
 	"Allocates C memory for the selector; sender must free when done."
 
@@ -256,7 +275,7 @@ GbxServerInterface >> storeTravDoArgsForMessageSend: messageSend
 		storeTravFlags: (self storeTravFlagsForInteraction: messageSend).
 	^storeTravDoArgs
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxServerInterface >> storeTravDoArgsForEvaluation: evaluation
 	"Initialize the members of the args struct that are common between 
 	single-trip and multi-trip, and answer the struct.
@@ -283,7 +302,7 @@ GbxServerInterface >> storeTravDoArgsForEvaluation: evaluation
 		storeTravFlags: (self storeTravFlagsForInteraction: evaluation).
 	^storeTravDoArgs
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxServerInterface >> stepAfter: error forInteraction: serverInteraction
 	"Perform a step on the server. Answer a delegate representing the server object
 	returned from the server, or a GbsError.
@@ -313,14 +332,14 @@ GbxServerInterface >> stepAfter: error forInteraction: serverInteraction
 	^self roundTripForInteraction: serverInteraction withStoreTravDoArgs:
 			storeTravDoArgs clampedTravArgs: clampedTravArgs
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxServerInterface >> storeTravFlagsForInteraction: aServerInteraction
 
 	^aServerInteraction shouldSynchronize
 		ifTrue: [self storeTravFlags bitOr: 8	"GCI_STORE_TRAV_FINISH_UPDATES = 0x8"]
 		ifFalse: [self storeTravFlags]
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxServerInterface >> performInteraction: serverInteraction
 	"Perform the specified server interaction. Answer a delegate representing the server object
 	returned from the server, or a GbsError.
@@ -345,12 +364,12 @@ GbxServerInterface >> performInteraction: serverInteraction
 				self gcedOopBuffer clear].
 	^result
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxServerInterface >> storeTravDoArgsForTraversal: serverTraversal
 	
 	^self subclassResponsibility
 
-{ #category : #'ServerInteraction interface' }
+{ #category : 'ServerInteraction interface' }
 GbxServerInterface >> clampedTravArgsForServerInteraction: serverInteraction
 
 	| ctArgs |
@@ -362,7 +381,7 @@ GbxServerInterface >> clampedTravArgsForServerInteraction: serverInteraction
 		retrievalFlags: (self retrievalFlagsForServerInteraction: serverInteraction).
 	^ctArgs
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerInterface >> storeTravFlagsFor: config 
 	"From GS64 2.2.2 gci.ht:
 enum { GCI_STORE_TRAV_DEFAULT = 0,
@@ -396,13 +415,13 @@ enum { GCI_STORE_TRAV_DEFAULT = 0,
 
 	^config bulkLoad ifTrue: [7] ifFalse: [3]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerInterface >> session
 	"Answer the session I live to serve."
 
 	^thisSession
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerInterface >> initializeTraversalBufferManager
 	"If I'm GBSM's server interface, thisSession will be nil.
 	Nobody should ask GBSM's interface to do any traversals, though."
@@ -412,41 +431,41 @@ GbxServerInterface >> initializeTraversalBufferManager
 			[traversalBufferManager := GbxTraversalBufferManager
 						forSession: thisSession]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerInterface >> callSequencer
 	^callSequencer
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerInterface >> session: aGSSession
 	"Set the session with which this C interface object is associated."
 
 	thisSession := aGSSession
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerInterface >> storeTravFlags
 	^self storeTravFlagsFor: thisSession configuration
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerInterface >> bufferOopClass
 	^thisSession bufferOopClass
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxServerInterface >> isSingleTrip
 	"Answer false if using the legacy multi-trip interface; 
 	true if using the single-trip (GciStoreTravDoTravRefs) interface introduced in GS64 2.2.5.x"
 	
 	self subclassResponsibility
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxServerInterface >> isBigEndian
 	
 	^UninterpretedBytes isBigEndian
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxServerInterface >> isBlocking
 	^callSequencer isBlocking
 
-{ #category : #'private-primitive access' }
+{ #category : 'private-primitive access' }
 GbxServerInterface >> gciPerformNoDebugReceiver: target selector: aSelector args: argArray numArgs: gsObjects flags: flagInt 
 	"Make the C call, with a uniform interface 
 	across blocking and non-blocking.
@@ -460,7 +479,7 @@ GbxServerInterface >> gciPerformNoDebugReceiver: target selector: aSelector args
 		numArgs: gsObjects
 		flags: flagInt
 
-{ #category : #'private-primitive access' }
+{ #category : 'private-primitive access' }
 GbxServerInterface >> gciExecuteStrFromContextDbg: sourceString sourceSize: size sourceClass: class context: serverContext symbolList: aSymbolList flags: flagInt 
 	"Make the C call, with a uniform interface 
 	across blocking and non-blocking.
@@ -475,7 +494,7 @@ GbxServerInterface >> gciExecuteStrFromContextDbg: sourceString sourceSize: size
 		symbolList: aSymbolList
 		flags: flagInt
 
-{ #category : #'private-primitive access' }
+{ #category : 'private-primitive access' }
 GbxServerInterface >> gciMoreTraversalBuffer: travBuff maxSize: travBuffSize 
 	"Make the C call, with a uniform interface 
 	across blocking and non-blocking.
@@ -484,7 +503,7 @@ GbxServerInterface >> gciMoreTraversalBuffer: travBuff maxSize: travBuffSize
 
 	^callSequencer gciMoreTraversalBuffer: travBuff maxSize: travBuffSize
 
-{ #category : #'private-primitive access' }
+{ #category : 'private-primitive access' }
 GbxServerInterface >> gciStoreTravBuffer: travBuffer flags: flagsInt 
 	"Make the C call, with a uniform interface 
 	across blocking and non-blocking.
@@ -493,7 +512,7 @@ GbxServerInterface >> gciStoreTravBuffer: travBuffer flags: flagsInt
 
 	^callSequencer gciStoreTravBuffer: travBuffer flags: flagsInt
 
-{ #category : #'support' }
+{ #category : 'support' }
 GbxServerInterface >> gciCallReturnDelegate: callBlock 
 	"Do the operation in <aBlock> (which must be a GCI call with a non-blocking variant)
 	protected from other threads by <accessProtect> mutual exclusion semaphore.
@@ -507,19 +526,19 @@ GbxServerInterface >> gciCallReturnDelegate: callBlock
 		ifTrue: [result]
 		ifFalse: [GbxDelegate oopValue: result session: thisSession]
 
-{ #category : #'support' }
+{ #category : 'support' }
 GbxServerInterface >> oopArrayFromDelegates: delegates
 	"Delegates must be a sequenceable collection."
 
 	^(self oopFetchBufferOfSize: delegates size)
 		initializeFromDelegates: delegates
 
-{ #category : #'support' }
+{ #category : 'support' }
 GbxServerInterface >> gciGemTrace: anInteger
 
 	callSequencer gciGemTrace: anInteger
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerInterface >> makeCacheStrongAndFinalizeIntoBuffers
 	"Make my session's serverMap strong and scan it into my buffers."
 	"Sender must hold my session's sessionProtect"
@@ -529,18 +548,18 @@ GbxServerInterface >> makeCacheStrongAndFinalizeIntoBuffers
 		finalizeIntoNoLongerReplicatedBuffer: self oopsNoLongerReplicatedBuffer
 			gcedBuffer: self gcedOopBuffer
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerInterface >> needMoreTraversal
 	"Assert that we need more traversal."
 
 	needMoreTraversal := true
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerInterface >> roundTripForInteraction: serverInteraction withStoreTravDoArgs: storeTravDoArgs clampedTravArgs: clampedTravArgs
 	
 	self subclassResponsibility
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerInterface >> assertNotInTraversal
 	"Error if we're in a state where we need to do a MoreTraversal."
 
@@ -552,7 +571,7 @@ GbxServerInterface >> assertNotInTraversal
 				basicFailure: 'Operation out of order. Traversal in progress.'.
 			needMoreTraversal := false	"Only error once; if the exception is proceeded"]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerInterface >> setNetFor: session linked: linked hostPassword: password 
 	"Private. Set session login network parameters.
 	The sender must be holding GciCallProtect."
@@ -569,7 +588,7 @@ GbxServerInterface >> setNetFor: session linked: linked hostPassword: password
 								ifFalse: [parameters gemService gbxAsCString])].
 	^result
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerInterface >> doFlagsForInteraction: aServerInteraction
 	"Answer an integer value to be used as the doFlags member of a GciStoreTravDoArgsSType 
 	struct. Which flags are used depend both on my own state (for single step in particular) 
@@ -611,18 +630,18 @@ GbxServerInterface >> doFlagsForInteraction: aServerInteraction
 				ifFalse: [1]]
 		ifFalse: [2]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerInterface >> doneWithTraversal
 	"We're done with the current traversal."
 
 	needMoreTraversal := false
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerInterface >> x509LoginFor: parameters
 
 	self subclassResponsibility
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerInterface >> finalizeIntoNoLongerReplicatedBuffer: noLongerReplicatedBuffer gcedBuffer: gcedBuffer
 	"Fill the given buffers with objIds of objects that I no longer have any reference to (gcedBuffer) 
 	and objects that may have been replicated but now only have a reference to."
@@ -654,7 +673,7 @@ GbxServerInterface >> finalizeIntoNoLongerReplicatedBuffer: noLongerReplicatedBu
 		with: noLongerReplicatedBuffer
 		with: gcedBuffer
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerInterface >> finishIGCMarking
 	"If an incremental garbage collection is in the marking phase, finish the mark.
 	We send this message before making the ServerMap weak.
@@ -664,7 +683,7 @@ GbxServerInterface >> finishIGCMarking
 	ObjectMemory current incGCIsMarking
 		ifTrue: [ObjectMemory finishIncrementalGC]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerInterface >> gcedOopBuffer
 	gcedOopBuffer == nil 
 		ifTrue: 
@@ -672,7 +691,7 @@ GbxServerInterface >> gcedOopBuffer
 						size: thisSession configuration gcedObjBufferSize].
 	^gcedOopBuffer
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerInterface >> loginFlags
 	"Answer an integer with various bits set according to
 	 what login variations are needed/wanted."
@@ -708,7 +727,7 @@ GbxServerInterface >> loginFlags
 
 	^self subclassResponsibility
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerInterface >> loginUser: username password: password flags: loginFlags 
 	"Private. Make the GciLogin() call. 
 	This must be done in the proper context.
@@ -722,7 +741,7 @@ GbxServerInterface >> loginUser: username password: password flags: loginFlags
 				flags: loginFlags
 				haltOnErr: -1]
 
-{ #category : #'traversal buffers' }
+{ #category : 'traversal buffers' }
 GbxServerInterface >> allocateTraversalBufferFor: aServerInteraction 
 	"Answer a locked traversal buffer.
 
@@ -731,7 +750,7 @@ GbxServerInterface >> allocateTraversalBufferFor: aServerInteraction
 	^traversalBufferManager allocateBufferFor: aServerInteraction
 		size: thisSession configuration traversalBufferSize
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> sessionIsRemote
 	"GciSessionIsRemote"
 	"sender must hold session's sessionProtect, error processing can create a delegate"
@@ -739,7 +758,7 @@ GbxServerInterface >> sessionIsRemote
 	^callSequencer
 		setSessionPerformCheck: [callSequencer primInterface gciSessionIsRemote]
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> softBreak
 	"Note: do NOT acquire my accessProtect semaphore. 
 	The thread we're trying to interrupt already has it."
@@ -748,7 +767,7 @@ GbxServerInterface >> softBreak
 	^callSequencer 
 		setSessionPerformCheck: [callSequencer primInterface gciSoftBreak]
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> isRemote
 	"GciIsRemote -- answers false if we've loaded the gcilnk library, true if it's the gcirpc library.
 	Does not necessarily determine whether any given session is linked."
@@ -756,7 +775,7 @@ GbxServerInterface >> isRemote
 
 	^callSequencer isRemote
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> isLoggedIn
 	"Answer true if my session is logged in or a GbsError if
       it is not.
@@ -771,7 +790,7 @@ GbxServerInterface >> isLoggedIn
 	maybeError := callSequencer setSessionPerformCheck: [].
 	^maybeError gbxIsGSError ifTrue: [maybeError] ifFalse: [true]
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> loginLinked: linked passwords: passwords errorHolder: errorHolder 
 	"Log in and answer an integer representing the local (client) session id.  If the login
 	 fails, answer 0.  If an error occurs, it will be placed in the first element of errorHolder, normally an Array."
@@ -791,7 +810,7 @@ GbxServerInterface >> loginLinked: linked passwords: passwords errorHolder: erro
 								flags: self loginFlags.
 					result gbxIsGSError ifTrue: [errorHolder at: 1 put: result]]]
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> loginX509: parameters errorHolder: errorHolder
 	"Log in and answer an integer representing the local (client) session id.  If the login
 	 fails, answer 0.  If an error occurs, it will be placed in the first element of errorHolder, normally an Array."
@@ -801,7 +820,7 @@ GbxServerInterface >> loginX509: parameters errorHolder: errorHolder
 			result := self x509LoginFor: parameters.
 			result gbxIsGSError ifTrue: [errorHolder at: 1 put: result]]
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> logout
 	"Changed in GBS 5.2 018 to go through the accessProtect semaphore too."
 
@@ -812,19 +831,19 @@ GbxServerInterface >> logout
 				with: self session sessionId.
 			callSequencer primInterface gciLogout]
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> newMessageSend
 	^self subclassResponsibility
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> newServerEvaluation
 	^self subclassResponsibility
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> newServerTraversal
 	^self subclassResponsibility
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> checkAuth: arrayOfGSObjects
 	
 	| result size buffer |
@@ -840,7 +859,7 @@ GbxServerInterface >> checkAuth: arrayOfGSObjects
 		ifTrue: [result]
 		ifFalse: [buffer asByteArrayOfSize: size]
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> pollForSignalFor: session deferFatalErrors: deferFatalErrors
 
 	| resultOrError |
@@ -856,19 +875,19 @@ GbxServerInterface >> pollForSignalFor: session deferFatalErrors: deferFatalErro
 			"This error should be reraised in an application thread"].
 	^resultOrError
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> saveFetchedOops: delegates
 
 	self subclassResponsibility
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> dirtyObjectsInit
 	"GciDirtyObjsInit"
 
 	^callSequencer 
 		setSessionPerformCheck: [callSequencer primInterface gciDirtyObjsInit]
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> getFreeOops: numberOfOops
 	
 	| result buffer |
@@ -884,7 +903,7 @@ GbxServerInterface >> getFreeOops: numberOfOops
 					thisSession].
 	^result
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> saveObjects: delegates
 	"Delegates must be a sequenceable collection."
 
@@ -894,11 +913,11 @@ GbxServerInterface >> saveObjects: delegates
 	^callSequencer setSessionPerformCheck: 
 			[callSequencer primInterface gciSaveObjs: oopArrayAddr with: size]
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> getSignalHandle
 	^callSequencer getSignalHandle
 
-{ #category : #'GbsSession interface' }
+{ #category : 'GbsSession interface' }
 GbxServerInterface >> hardBreak
 	"Note: do NOT acquire my accessProtect semaphore. 
 	The thread we're trying to interrupt already has it."
@@ -906,14 +925,14 @@ GbxServerInterface >> hardBreak
 	self doneWithTraversal.	"If we're in a traversal sequence, this will invalidate it."
 	^callSequencer setSessionPerformCheck: [callSequencer primInterface gciHardBreak]
 
-{ #category : #'retrievalFlags' }
+{ #category : 'retrievalFlags' }
 GbxServerInterface >> exportFlag
 	"We generally want to add any traversed objects to the pure export set. 
 	The flag for this is GCI_RETRIEVE_EXPORT, whose value is 1."
 
 	^1
 
-{ #category : #'retrievalFlags' }
+{ #category : 'retrievalFlags' }
 GbxServerInterface >> retrievalFlagsForServerInteraction: serverInteraction
 
 	| retrievalFlags |
@@ -922,12 +941,12 @@ GbxServerInterface >> retrievalFlagsForServerInteraction: serverInteraction
 		ifTrue: [retrievalFlags := retrievalFlags + self exportFlag].
 	^retrievalFlags
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxServerInterface >> initializeNoLongerReplicatedOops
 
 	noLongerReplicatedOops := Set new
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxServerInterface >> initializeForSession: sess configuration: config
 	"AccessProtect uses recursion in the moreTraversal case."
 	"flags arg for GciPerformNoDebug (and other calls)"
@@ -940,11 +959,11 @@ GbxServerInterface >> initializeForSession: sess configuration: config
 	callSequencer primInterface.	"make sure it's initialized."
 	self initializeNoLongerReplicatedOops
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxServerInterface >> shutdownSocket: aSocket withHandle: handle 
 	^callSequencer shutdownSocket: aSocket withHandle: handle
 
-{ #category : #'traversal interface' }
+{ #category : 'traversal interface' }
 GbxServerInterface >> moreTraversalInTraversal: traversal
 	"Fill traversal's buffer with more from the server. Answer true if done, false if there is more to be traversed than would fit in the buffer, an error if there is an error during the traversal, such as server VM out of memory."
 	
@@ -960,7 +979,7 @@ GbxServerInterface >> moreTraversalInTraversal: traversal
 		ifFalse: [traversalComplete ifTrue: [self doneWithTraversal]].
 	^traversalComplete
 
-{ #category : #'traversal interface' }
+{ #category : 'traversal interface' }
 GbxServerInterface >> storeTraversalBuffer: aBuffer flags: anInteger
 	
 	self assertNotInTraversal.
@@ -971,7 +990,7 @@ GbxServerInterface >> storeTraversalBuffer: aBuffer flags: anInteger
 				flags: anInteger]
 		resultType: #voidResult
 
-{ #category : #'initialization' }
+{ #category : 'initialization' }
 GbxServerInterface class >> postLoad: aParcel 
 	"During parcel load, by default #initialize will be sent. We can't do that here,
 	because some of the code needed to run #initialize is in other parcels. Wait until
@@ -979,18 +998,18 @@ GbxServerInterface class >> postLoad: aParcel
 
 	"Do nothing."
 
-{ #category : #'initialization' }
+{ #category : 'initialization' }
 GbxServerInterface class >> initialize
 
 	GbxGciCallSequencer initialize
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxServerInterface class >> forSession: sess 
 	"Return a new initialized instance for the given session"
 
 	^self forSession: sess configuration: sess configuration
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxServerInterface class >> forSession: sess configuration: config 
 	"Return a new initialized instance for the given GbsConfiguration"
 

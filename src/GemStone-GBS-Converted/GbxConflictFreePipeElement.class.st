@@ -1,12 +1,16 @@
 Class {
-	#name : #'GbxConflictFreePipeElement',
-	#superclass : #'Object',
-	#instVars : [ #'nextElement' #'payload' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxConflictFreePipeElement',
+	#superclass : 'Object',
+	#instVars : [
+		'nextElement',
+		'payload'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'public' }
+{ #category : 'public' }
 GbxConflictFreePipeElement >> removePayload
 
 	| aPayload |
@@ -14,17 +18,17 @@ GbxConflictFreePipeElement >> removePayload
 	payload := nil.	"So we don't keep it alive."
 	^aPayload
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxConflictFreePipeElement >> nextElement: anObject
 
 	nextElement := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxConflictFreePipeElement >> payload: anObject
 
 	payload := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxConflictFreePipeElement >> nextElement
 
 	^nextElement

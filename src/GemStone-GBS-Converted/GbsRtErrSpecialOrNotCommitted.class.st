@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrSpecialOrNotCommitted',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrSpecialOrNotCommitted',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrSpecialOrNotCommitted class >> gemStoneErrorNumber6430 ^2027
 

@@ -1,51 +1,58 @@
 Class {
-	#name : #'GbxMultiTripServerEvaluation',
-	#superclass : #'GbxMultiTripServerInteraction',
-	#instVars : [ #'contextDelegate' #'isBlock' #'sourceCode' #'symbolListDelegate' #'cSourceCode' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxMultiTripServerEvaluation',
+	#superclass : 'GbxMultiTripServerInteraction',
+	#instVars : [
+		'contextDelegate',
+		'isBlock',
+		'sourceCode',
+		'symbolListDelegate',
+		'cSourceCode'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxMultiTripServerEvaluation >> sourceCode: anObject
 	
 	sourceCode := anObject.
 	cSourceCode := anObject gbxAsCString
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxMultiTripServerEvaluation >> contextDelegate
 	^contextDelegate
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxMultiTripServerEvaluation >> cSourceCode
 	
 	^cSourceCode
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxMultiTripServerEvaluation >> symbolListDelegate: anObject
 	symbolListDelegate := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxMultiTripServerEvaluation >> symbolListDelegate
 	^symbolListDelegate
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxMultiTripServerEvaluation >> isBlock: anObject
 	isBlock := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxMultiTripServerEvaluation >> isBlock
 	^isBlock
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxMultiTripServerEvaluation >> contextDelegate: anObject
 	contextDelegate := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxMultiTripServerEvaluation >> sourceCode
 	^sourceCode
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxMultiTripServerEvaluation >> adjustForBlock
 	
 	| sourceStream |
@@ -69,7 +76,7 @@ GbxMultiTripServerEvaluation >> adjustForBlock
 						nextPut: $)]].
 	self sourceCode: sourceStream contents
 
-{ #category : #'validation' }
+{ #category : 'validation' }
 GbxMultiTripServerEvaluation >> verify
 	"Raise an error if someone gave me bogus things to execute.
 	If everything looks hunky-dory, answer true."
@@ -78,7 +85,7 @@ GbxMultiTripServerEvaluation >> verify
 		& (GbsError verify: contextDelegate is: GbxDelegate) 
 			& (GbsError verify: symbolListDelegate is: GbxDelegate)
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxMultiTripServerEvaluation >> initialize
 	"Initialize instance variables that have defaults. Others must be set explicitly."
 	
@@ -87,7 +94,7 @@ GbxMultiTripServerEvaluation >> initialize
 	symbolListDelegate := session oopNil.
 	isBlock := false
 
-{ #category : #'dispatching' }
+{ #category : 'dispatching' }
 GbxMultiTripServerEvaluation >> storeTravDoArgs
 	"Answer an arguments struct appropriate for myself.
 	Since I don't know anything about such structs, ask the server interface for it, since it knows
@@ -96,7 +103,7 @@ GbxMultiTripServerEvaluation >> storeTravDoArgs
 	isBlock ifTrue: [self adjustForBlock].
 	^serverInterface storeTravDoArgsForEvaluation: self
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxMultiTripServerEvaluation >> printOn: aStream
 
 	super printOn: aStream.

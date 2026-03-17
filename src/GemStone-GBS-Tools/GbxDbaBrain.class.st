@@ -1,19 +1,23 @@
 Class {
-	#name : #'GbxDbaBrain',
-	#superclass : #'GbxAdminToolsBrain',
-	#instVars : [ #'hasChanges' #'allUsersForwarder' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxDbaBrain',
+	#superclass : 'GbxAdminToolsBrain',
+	#instVars : [
+		'hasChanges',
+		'allUsersForwarder'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaBrain >> defaultSecurityPolicyChoices
 
 	^((self allSegments collect: [:ea | ea segmentName]) asSortedCollection)
 		add: #nil;
 		yourself
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaBrain >> allUsers
 	" Answer the value of allUsers, which contains a reference to #AllUsers in GemStone. "
 
@@ -21,14 +25,14 @@ GbxDbaBrain >> allUsers
 		[allUsersForwarder := self sessionForwarderFor: #AllUsers.].
 	^ allUsersForwarder
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaBrain >> allUserIds
 	" Answer a list of userId strings from the UserProfiles in AllUsers. "
 
 	self showBusyWhile: 
 			[^tool session evaluate: 'AllUsers collect:[:ea | ea userId asString]']
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaBrain >> allGroups
 	" Answer a list of GbxGroupHolders for the groups named in GemStone's AllGroups global. "
 
@@ -39,7 +43,7 @@ GbxDbaBrain >> allGroups
 			allGrps do: [:aGroupNameString | list add: (GbxGroupHolder newWithGrp: aGroupNameString users: self allUsers)].
 			^list]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaBrain >> sessionForwarderFor: aSymbol
 	" Answer an UNCACHED forwarder for the object whose name is aSymbol in the current session. "
 
@@ -47,13 +51,13 @@ GbxDbaBrain >> sessionForwarderFor: aSymbol
 		uncachedForwarderAt: aSymbol
 		ifAbsent: [self error: aSymbol printString , ' not defined']
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaBrain >> userForwarderFor: aSymbol
 	" Answer an UNCACHED forwarder for the object whose name is aSymbol in the current user. "
 
 	^ self user userForwarderFor: aSymbol
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaBrain >> userNamed: aNameString 
 	" Answer the UserProfile from AllUsers whose name matches aNameString.
 	  Answer nil if no such user exists. "
@@ -66,13 +70,13 @@ GbxDbaBrain >> userNamed: aNameString
 								, ' ifAbsent: [ nil ]'.
 			^result = self session oopNil ifTrue: [nil] ifFalse: [result asForwarder]]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaBrain >> discardChanges
 	" Answer false if the user has made changes and wants to keep them. "
 
 	^ self discardChanges: false
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaBrain >> userNameChoices
 	" Answer a list of user IDs for use in a menu. "
 
@@ -81,7 +85,7 @@ GbxDbaBrain >> userNameChoices
 			list := AllUsers collect: [:each | each userId asString].
 			list asSortedCollection asArray'.
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaBrain >> hasChanges
 	" Answer the value of hasChanges, which is true if the user has done anything that needs to be saved. "
 
@@ -89,7 +93,7 @@ GbxDbaBrain >> hasChanges
 		[hasChanges := false.].
 	^ hasChanges
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxDbaBrain >> discardChanges: aMarkBoolean
 	" Answer false if the user has made changes and wants to keep them.  If aMarkBoolean is true, I must give the user a visual indication of which window I am. "
 
@@ -100,13 +104,13 @@ GbxDbaBrain >> discardChanges: aMarkBoolean
 	 code to select the default dialog button. It was already a no-op for VA. The VW code
 	 was fragile. Therefore, it was removed as of GbsAdminToolsVW 51.6"
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxDbaBrain >> hasUserNamed: aNameString
 	" Answer true if AllUsers contains a UserProfile whose name matches aNameString. "
 
 	^ (self userNamed: aNameString) notNil
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDbaBrain >> checkWildcardIn: aString
 for: aList
 ifNoMatch: anExitBlock
@@ -118,7 +122,7 @@ ifNoMatch: anExitBlock
 		title: ''
 		ifNoMatch: anExitBlock
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDbaBrain >> checkWildcardIn: aString
 for: aList
 title: aTitleString
@@ -144,7 +148,7 @@ ifNoMatch: anExitBlock
 		[^ anExitBlock value ].
 	^ (matchList at: choiceIndex) asString
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDbaBrain >> checkWildcardInUserId: aString
 ifMatch: aOneArgMatchBlock
 ifNoMatch: anExitBlock
@@ -158,26 +162,26 @@ ifNoMatch: anExitBlock
 		ifNoMatch: [^ anExitBlock value ].
 	^ aOneArgMatchBlock value: chosenName
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaBrain >> newUserListSelection: aGSUserProfileHolder
 	" I change the current selection of my window's user list. "
 
 	self windowInterface newUserListSelection: aGSUserProfileHolder.
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaBrain >> passwordRequest: aMessageString
 	" Answer a password (string) obtained from the user. "
 
 	^ self windowInterface passwordRequest: aMessageString
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaBrain >> choiceIndexFromMenuArray: aList
 	" Answer an index into aList, as specified by the user from a menu.
 	  Answer nil if no entry is chosen. "
 
 	^ self windowInterface choiceIndexFromMenuArray: aList
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaBrain >> abortTransaction
 	" Allow the user to discard all changes made in the current transaction.
 	  Answer true if the user aborted, or false if the abort was cancelled.
@@ -186,13 +190,13 @@ GbxDbaBrain >> abortTransaction
 	allUsersForwarder := nil.
 	super abortTransaction.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaBrain >> closeRequest
 	" Answer true if I may close my window without loosing any changes (or if the user doesn't care). "
 
 	^ self discardChanges
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaBrain >> able: anEnableBoolean
 components: idList
 
@@ -200,23 +204,23 @@ components: idList
 		able: anEnableBoolean
 		components: idList.
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaBrain >> disableGroup: idList
 
 	self able: false components: idList
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaBrain >> displayStatus: aString
 	" Show the specified message to the user while he/she is waiting. "
 
 	self windowInterface displayStatus: aString.
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaBrain >> enableGroup: idList
 
 	self able: true components: idList
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxDbaBrain >> updateRequest: aspect
 	" The session I am attached to wants to do something.  Return a boolean granting or denying request.
 	WARNING:  Do NOT use # in the array declaration. "
@@ -225,13 +229,13 @@ GbxDbaBrain >> updateRequest: aspect
 		[^ true ].
 	^ self discardChanges: true
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxDbaBrain >> hasChanges: aBoolean
 	" Set the value of hasChanges, which is true if the user has done anything that needs to be saved. "
 
 	hasChanges := aBoolean.
 
-{ #category : #'external changing' }
+{ #category : 'external changing' }
 GbxDbaBrain class >> myUserIDMenuNotificationSymbols
 	" Answer a list of symbols that mean I have to update my user ID menu list.
 	  WARNING:  For VW / VS compatibility, do not user '#' before each symbol. "

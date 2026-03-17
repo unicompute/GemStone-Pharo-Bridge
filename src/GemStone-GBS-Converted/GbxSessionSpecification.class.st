@@ -1,65 +1,71 @@
 Class {
-	#name : #'GbxSessionSpecification',
-	#superclass : #'Object',
-	#instVars : [ #'connectors' #'username' #'password' #'sessionClass' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxSessionSpecification',
+	#superclass : 'Object',
+	#instVars : [
+		'connectors',
+		'username',
+		'password',
+		'sessionClass'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSessionSpecification >> connectors: anObject
 
 	connectors := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSessionSpecification >> username: aUsername
 
 	username := aUsername
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSessionSpecification >> username
 
 	^username
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSessionSpecification >> sessionClass: aClass
 
 	sessionClass := aClass
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSessionSpecification >> sessionClass
 
 	^sessionClass
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSessionSpecification >> password
 
 	^password
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSessionSpecification >> password: aPassword
 
 	password := aPassword
 
-{ #category : #'private-initialization' }
+{ #category : 'private-initialization' }
 GbxSessionSpecification >> isX509
 
 	^false
 
-{ #category : #'private-initialization' }
+{ #category : 'private-initialization' }
 GbxSessionSpecification >> initialize
 	"Private"
 
 	connectors := Set new.
 	sessionClass := GbsSession.
 
-{ #category : #'private-initialization' }
+{ #category : 'private-initialization' }
 GbxSessionSpecification >> rehashConnectors
 
 	"Private.  If the value of any connector's Smalltalk object has changed, this will fix the resulting hash table corruption"
 	connectors rehash
 
-{ #category : #'connectors' }
+{ #category : 'connectors' }
 GbxSessionSpecification >> removeConnector: aGSConnector 
 	"We're aggressive about rehashing because the hash value of connectors changes if the Smalltalk object it resolves to changes"
 
@@ -67,7 +73,7 @@ GbxSessionSpecification >> removeConnector: aGSConnector
 		rehash;
 		remove: aGSConnector ifAbsent: [nil]
 
-{ #category : #'connectors' }
+{ #category : 'connectors' }
 GbxSessionSpecification >> addConnector: aConnector
 
 	"Add aConnector to our collection of GbsConnectors.  These
@@ -80,7 +86,7 @@ GbxSessionSpecification >> addConnector: aConnector
 
 	^self addConnectors: (Array with: aConnector)
 
-{ #category : #'connectors' }
+{ #category : 'connectors' }
 GbxSessionSpecification >> addNoConnectConnector: aConnector
 
 	"Add aConnector to our collection of GbsConnectors.  These are
@@ -92,7 +98,7 @@ GbxSessionSpecification >> addNoConnectConnector: aConnector
 
 	^self addNoConnectConnectors: (Array with: aConnector)
 
-{ #category : #'connectors' }
+{ #category : 'connectors' }
 GbxSessionSpecification >> addNoConnectConnectors: collectionOfConnectors
 	"Add each connector in the collection collectionOfConnectors to
 	 the receiver's collection of GbsConnectors.  These are definitions
@@ -114,7 +120,7 @@ GbxSessionSpecification >> addNoConnectConnectors: collectionOfConnectors
 			connectors add: aConnector.
 			stobj := aConnector resolveSTObjIfFail: [nil]]
 
-{ #category : #'connectors' }
+{ #category : 'connectors' }
 GbxSessionSpecification >> addConnectors: collectionOfConnectors
 
 	"Add each connector in collectionOfConnectors to our collection
@@ -131,7 +137,7 @@ GbxSessionSpecification >> addConnectors: collectionOfConnectors
 		collectionOfConnectors do: [ :connector |
 			connector connectInSession: sess ]]
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxSessionSpecification >> storeOn: aStream
 	"Produce a store string which survives instance variable reordering"
 
@@ -151,7 +157,7 @@ GbxSessionSpecification >> storeOn: aStream
 				nextPutAll: ';'].
 	aStream nextPutAll: ' yourself)'
 
-{ #category : #'private - connectors' }
+{ #category : 'private - connectors' }
 GbxSessionSpecification >> nilAllConnectors
 	"Private.  nil the Smalltalk object for all session-based connectors that are either
 	name, class var, or class inst var connectors and have a post connect action
@@ -159,18 +165,18 @@ GbxSessionSpecification >> nilAllConnectors
 
 	GBSM nilAllConnectors: self connectorList
 
-{ #category : #'private - connectors' }
+{ #category : 'private - connectors' }
 GbxSessionSpecification >> connectors
 
 	^connectors
 
-{ #category : #'private - connectors' }
+{ #category : 'private - connectors' }
 GbxSessionSpecification >> connectorList
 
 	"Private.  A Set of GbsConnectors to be connected whenever this session logs in"
 	^connectors
 
-{ #category : #'private - connectors' }
+{ #category : 'private - connectors' }
 GbxSessionSpecification >> connectorExistsFor: anObject
 
 	"Private.  If a global or session-parameters-based connector exists for anObject,
@@ -184,14 +190,14 @@ GbxSessionSpecification >> connectorExistsFor: anObject
 		ifNone: [ nil ]) isNil ifFalse: [ ^true ].
 	^false
 
-{ #category : #'private - connectors' }
+{ #category : 'private - connectors' }
 GbxSessionSpecification >> allClassConnectorsDo: aBlock
 
 	"Private.  Iterate over session and global connectors, in merged sorted order.  Class connectors come first, in superclass order."
 
 	GBSM allClassConnectors: connectors do: aBlock
 
-{ #category : #'private - connectors' }
+{ #category : 'private - connectors' }
 GbxSessionSpecification >> removeClassConnectorsFor: aStClass
 	" Private.  Remove the class connector for aStClass, if one exists.
 	NOTE:  This works only on session connectors.  It does not affect any global connectors. "

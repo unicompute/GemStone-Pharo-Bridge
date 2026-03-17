@@ -1,17 +1,23 @@
 Class {
-	#name : #'GbxNonBlockingGciCallSequencer',
-	#superclass : #'GbxGciCallSequencer',
-	#instVars : [ #'inNonBlockingCall' #'inInterruptableCall' #'pointerPointer' #'nbSocket' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxNonBlockingGciCallSequencer',
+	#superclass : 'GbxGciCallSequencer',
+	#instVars : [
+		'inNonBlockingCall',
+		'inInterruptableCall',
+		'pointerPointer',
+		'nbSocket'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxNonBlockingGciCallSequencer >> isBlocking
 
 	^false
 
-{ #category : #'nonblocking support' }
+{ #category : 'nonblocking support' }
 GbxNonBlockingGciCallSequencer >> handleInterruptWhile: aBlock 
 	"Evaluate aBlock while handling user interrupt.  If user interrupt
 	 occurs, send gciSoftBreak.  If there has been no response after
@@ -31,7 +37,7 @@ GbxNonBlockingGciCallSequencer >> handleInterruptWhile: aBlock
 					ex resume]
 				ifFalse: [ex pass]]
 
-{ #category : #'nonblocking support' }
+{ #category : 'nonblocking support' }
 GbxNonBlockingGciCallSequencer >> waitForResult: initialResult type: resultType
 	"InitialResult must be the answer from the original GCI call. If we're in a 
 	non-blocking operation, and the initialResult wasn't an error, block the active 
@@ -58,7 +64,7 @@ GbxNonBlockingGciCallSequencer >> waitForResult: initialResult type: resultType
 							readWaitWithTimeoutMs: thisSession configuration socketWaitTimeout]].
 	^self pointerPointer perform: resultType
 
-{ #category : #'nonblocking support' }
+{ #category : 'nonblocking support' }
 GbxNonBlockingGciCallSequencer >> stopNbWaitSocket
 	"Shutdown the socket accessor that is waiting for activity on the in-band GCI socket."
 
@@ -67,11 +73,11 @@ GbxNonBlockingGciCallSequencer >> stopNbWaitSocket
 			[self shutdownSocket: nbSocket withHandle: self getNBNotifyHandle.
 			nbSocket := nil]
 
-{ #category : #'nonblocking support' }
+{ #category : 'nonblocking support' }
 GbxNonBlockingGciCallSequencer >> waitFor: mSec 
 	(GbxDelay forMilliseconds: mSec) wait
 
-{ #category : #'nonblocking support' }
+{ #category : 'nonblocking support' }
 GbxNonBlockingGciCallSequencer >> processUserBreakCountHolder: countHolder 
 	"The first two user interrupts will send GemStone a soft break, which
 	 should interrupt the GemStone interpreter.  The third will send hard
@@ -87,7 +93,7 @@ GbxNonBlockingGciCallSequencer >> processUserBreakCountHolder: countHolder
 	 with no response."
 	self gbsMessenger error: 'GemStone did not respond to soft or hard break'
 
-{ #category : #'nonblocking support' }
+{ #category : 'nonblocking support' }
 GbxNonBlockingGciCallSequencer >> pollForResult: initialResult type: resultType
 	"InitialResult must be the answer from the original GCI call. If we're in a 
 	non-blocking operation, and the initialResult wasn't an error, block the active 
@@ -117,7 +123,7 @@ GbxNonBlockingGciCallSequencer >> pollForResult: initialResult type: resultType
 					self waitFor: currentDelay]].
 	^self pointerPointer perform: resultType
 
-{ #category : #'call services' }
+{ #category : 'call services' }
 GbxNonBlockingGciCallSequencer >> gciCall: callBlock resultType: typeSymbol 
 	"Acquire GciCallProtect, set the current session, execute the 'real work' GCI 
 	call in <callBlock> (which must be a call with a non-blocking variant),
@@ -157,7 +163,7 @@ GbxNonBlockingGciCallSequencer >> gciCall: callBlock resultType: typeSymbol
 						inInterruptableCall := false].
 			result]
 
-{ #category : #'buffers' }
+{ #category : 'buffers' }
 GbxNonBlockingGciCallSequencer >> pointerPointer
 	"Return a buffer that acts as a pointer to a pointer."
 
@@ -165,13 +171,13 @@ GbxNonBlockingGciCallSequencer >> pointerPointer
 		pointerPointer := GbxPointer allocate].
 	^pointerPointer
 
-{ #category : #'socket interface' }
+{ #category : 'socket interface' }
 GbxNonBlockingGciCallSequencer >> getNBNotifyHandle
 	"Sender must hold my accessProtect"
 
 	^self setSessionPerformCheck: [self primInterface gciNBGetNotifyHandle]
 
-{ #category : #'socket interface' }
+{ #category : 'socket interface' }
 GbxNonBlockingGciCallSequencer >> nbSocket
 	"Create the socket accessor that will wait for activity on the in-band socket as
 	an alternative to doing time-based delays.
@@ -187,19 +193,19 @@ GbxNonBlockingGciCallSequencer >> nbSocket
 			nbSocket := self socketAccessorOn: handle].
 	^nbSocket
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxNonBlockingGciCallSequencer >> initialize
 	inNonBlockingCall := false.
 	inInterruptableCall := false
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxNonBlockingGciCallSequencer >> gbsImageStartup
 	"Discard defunct C pointers"
 
 	super gbsImageStartup.
 	pointerPointer := nil
 
-{ #category : #'private-primitive access' }
+{ #category : 'private-primitive access' }
 GbxNonBlockingGciCallSequencer >> gciStoreTravDoTravRefsnlr: oopsNoLongerReplicated nnr: numNotReplicated ogoc: oopsGcedOnClient ngc: numGced stdArgs: stdArgs ctArgs: ctArgs 
 	"Make the C call, with a uniform interface 
 	across blocking and non-blocking.
@@ -216,7 +222,7 @@ GbxNonBlockingGciCallSequencer >> gciStoreTravDoTravRefsnlr: oopsNoLongerReplica
 		stdArgs: stdArgs
 		ctArgs: ctArgs
 
-{ #category : #'private-primitive access' }
+{ #category : 'private-primitive access' }
 GbxNonBlockingGciCallSequencer >> gciPerformNoDebugReceiver: target selector: aSelector args: argArray numArgs: gsObjects flags: flagInt 
 	"Make the C call, with a uniform interface 
 	across blocking and non-blocking.
@@ -232,7 +238,7 @@ GbxNonBlockingGciCallSequencer >> gciPerformNoDebugReceiver: target selector: aS
 		numArgs: gsObjects
 		flags: flagInt
 
-{ #category : #'private-primitive access' }
+{ #category : 'private-primitive access' }
 GbxNonBlockingGciCallSequencer >> gciMoreTraversalBuffer: travBuff maxSize: travBuffSize 
 	"Make the C call, with a uniform interface 
 	across blocking and non-blocking.
@@ -243,7 +249,7 @@ GbxNonBlockingGciCallSequencer >> gciMoreTraversalBuffer: travBuff maxSize: trav
 	^self primInterface gciNbMoreTraversalBuffer: travBuff
 		maxSize: travBuffSize
 
-{ #category : #'private-primitive access' }
+{ #category : 'private-primitive access' }
 GbxNonBlockingGciCallSequencer >> gciExecute: executeString context: contextOop symbolList: symlistOop travSpec: travSpec 
 	"Make the C call, with a uniform interface 
 	across blocking and non-blocking.
@@ -258,7 +264,7 @@ GbxNonBlockingGciCallSequencer >> gciExecute: executeString context: contextOop 
 		symbolList: symlistOop
 		travSpec: travSpec
 
-{ #category : #'private-primitive access' }
+{ #category : 'private-primitive access' }
 GbxNonBlockingGciCallSequencer >> gciStoreTravDo: storeTravDoArgs 
 	"Make the C call, with a uniform interface 
 	across blocking and non-blocking.
@@ -269,7 +275,7 @@ GbxNonBlockingGciCallSequencer >> gciStoreTravDo: storeTravDoArgs
 	inInterruptableCall := true.
 	^self primInterface gciNbStoreTravDo: storeTravDoArgs
 
-{ #category : #'private-primitive access' }
+{ #category : 'private-primitive access' }
 GbxNonBlockingGciCallSequencer >> gciContinueProcess: errorContextOop returnValue: returnOop flags: flagInt error: errorInt 
 	"Make the C call, with a uniform interface 
 	across blocking and non-blocking.
@@ -284,7 +290,7 @@ GbxNonBlockingGciCallSequencer >> gciContinueProcess: errorContextOop returnValu
 		flags: flagInt
 		error: errorInt
 
-{ #category : #'private-primitive access' }
+{ #category : 'private-primitive access' }
 GbxNonBlockingGciCallSequencer >> gciExecuteStrFromContextDbg: sourceString sourceSize: size sourceClass: class context: serverContext symbolList: aSymbolList flags: flagInt 
 	"Make the C call, with a uniform interface 
 	across blocking and non-blocking.
@@ -301,7 +307,7 @@ GbxNonBlockingGciCallSequencer >> gciExecuteStrFromContextDbg: sourceString sour
 		symbolList: aSymbolList
 		flags: flagInt
 
-{ #category : #'private-primitive access' }
+{ #category : 'private-primitive access' }
 GbxNonBlockingGciCallSequencer >> gciClampedTravOops: oopArray numOops: numOops travSpec: travSpec 
 	"Make the C call, with a uniform interface 
 	across blocking and non-blocking.
@@ -314,7 +320,7 @@ GbxNonBlockingGciCallSequencer >> gciClampedTravOops: oopArray numOops: numOops 
 		numOops: numOops
 		travSpec: travSpec
 
-{ #category : #'private-primitive access' }
+{ #category : 'private-primitive access' }
 GbxNonBlockingGciCallSequencer >> gciStoreTravBuffer: travBuffer flags: flagsInt 
 	"Make the C call, with a uniform interface 
 	across blocking and non-blocking.
@@ -324,15 +330,15 @@ GbxNonBlockingGciCallSequencer >> gciStoreTravBuffer: travBuffer flags: flagsInt
 	inNonBlockingCall := true.
 	^self primInterface gciNbStoreTravBuffer: travBuffer flags: flagsInt
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbxNonBlockingGciCallSequencer class >> resultReady
 	^2
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbxNonBlockingGciCallSequencer class >> resultNotReady
 	^0
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbxNonBlockingGciCallSequencer class >> resultProgressed
 	^1
 

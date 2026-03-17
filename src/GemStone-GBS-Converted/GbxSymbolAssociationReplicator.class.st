@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxSymbolAssociationReplicator',
-	#superclass : #'GbxPointerObjectReplicator',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxSymbolAssociationReplicator',
+	#superclass : 'GbxPointerObjectReplicator',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxSymbolAssociationReplicator >> clientClassIsCorrect
 	"Answer true if the class of the server class of the existing mapped client object 
 	is not sufficiently the same as the class of the server object being replicated.
@@ -18,7 +20,7 @@ GbxSymbolAssociationReplicator >> clientClassIsCorrect
 			[clientObject gbxBasicClass == clientClass
 				or: [clientObject gbxBasicClass == GbxNameAssociation]]
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxSymbolAssociationReplicator >> clientSizeIsCorrect
 	"We need to know whether the number of total pointers (named plus indexed) is correct.
 	Especially in the unstubbing case, the number of named instvars may be different

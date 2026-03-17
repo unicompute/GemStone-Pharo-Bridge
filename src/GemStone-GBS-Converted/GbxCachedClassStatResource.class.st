@@ -1,47 +1,52 @@
 Class {
-	#name : #'GbxCachedClassStatResource',
-	#superclass : #'GbxStatResource',
-	#instVars : [ #'numInstances' #'gbsBytesCached' #'cachedClass' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxCachedClassStatResource',
+	#superclass : 'GbxStatResource',
+	#instVars : [
+		'numInstances',
+		'gbsBytesCached',
+		'cachedClass'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxCachedClassStatResource >> incGbsBytesCached: delta
 	gbsBytesCached incValue: delta
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxCachedClassStatResource >> incNumInstances
 	numInstances incValue: 1
 
-{ #category : #'stat updating' }
+{ #category : 'stat updating' }
 GbxCachedClassStatResource >> reinitializeStats
 	gbsBytesCached setValue: 0.
 	numInstances setValue: 0
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxCachedClassStatResource >> numInstances
 	"The number of instances of cachedClass in stObjectCache"
 
 	^numInstances value
 
-{ #category : #'stat accessing' }
+{ #category : 'stat accessing' }
 GbxCachedClassStatResource >> gbxBytesCached
 	"The number of bytes occupied by instances of cachedClass in stObjectCache"
 
 	^gbsBytesCached value
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxCachedClassStatResource >> instanceDescription
 
 	^cachedClass name
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxCachedClassStatResource >> cachedClass: aClass
 
 	cachedClass := aClass
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxCachedClassStatResource >> initializeStatistics
 	"Set the receiver's statistics to 0"
 
@@ -49,7 +54,7 @@ GbxCachedClassStatResource >> initializeStatistics
 	numInstances := self newGbxStatFor: 'numInstances' value: 0.
 	gbsBytesCached := self newGbxStatFor: 'gbsBytesCached' value: 0
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 GbxCachedClassStatResource class >> initialize
 	"Create GbxStatDescriptors for this stat resource"
 
@@ -70,15 +75,15 @@ GbxCachedClassStatResource class >> initialize
 					isLargerBetter: false
 					unit: 'bytes')
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxCachedClassStatResource class >> resourceTypeDescription
 	^'Statistics associated with instances of a specific class in the stObjectCache'
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxCachedClassStatResource class >> resourceTypeId
 	^2
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxCachedClassStatResource class >> resourceTypeName
 	^'Cache'
 

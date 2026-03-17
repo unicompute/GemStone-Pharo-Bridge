@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrBagOperationNotSupportedForStreamSelection',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrBagOperationNotSupportedForStreamSelection',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrBagOperationNotSupportedForStreamSelection class >> gemStoneErrorNumber6430 ^2314
 

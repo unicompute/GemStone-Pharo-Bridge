@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsErrMemoryRegionFull',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsErrMemoryRegionFull',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsErrMemoryRegionFull class >> gemStoneErrorNumber6430 ^2511
 

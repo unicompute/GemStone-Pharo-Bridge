@@ -1,12 +1,21 @@
 Class {
-	#name : #'GbxClientObjDictionaryBucket',
-	#superclass : #'Object',
-	#instVars : [ #'freeHead' #'highwater' #'keys' #'needFinalization' #'owner' #'ownerIndex' #'size' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxClientObjDictionaryBucket',
+	#superclass : 'Object',
+	#instVars : [
+		'freeHead',
+		'highwater',
+		'keys',
+		'needFinalization',
+		'owner',
+		'ownerIndex',
+		'size'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'growing' }
+{ #category : 'growing' }
 GbxClientObjDictionaryBucket >> makeRoom
 	"I need to make room for another pair. If I can make room by finalizing, I need to do so.
 	If no room is to be made by finalizing, I need to replace myself with a larger bucket."
@@ -16,7 +25,7 @@ GbxClientObjDictionaryBucket >> makeRoom
 	self finalizeIfNeeded.
 	freeHead == nil ifTrue: [self grow]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClientObjDictionaryBucket >> delegateAtClient: key 
 	"Answer the value for a key, if present. If not present, answer nil."
 
@@ -38,7 +47,7 @@ GbxClientObjDictionaryBucket >> delegateAtClient: key
 			[value := self basicAt: index.
 			(keys at: index) == key ifTrue: [value] ifFalse: [nil]]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClientObjDictionaryBucket >> clearForSession: aSession 
 	"aSession is logging out. Remove any values that are for the given session. 
 	If the only value for any key is for aSession, remove that key as well."
@@ -72,7 +81,7 @@ GbxClientObjDictionaryBucket >> clearForSession: aSession
 													freeHead := index.
 													size := size - 1]]]]]]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClientObjDictionaryBucket >> atNewClient: clientObject putDelegate: delegate 
 	"Similar to #at:put: in an IdentityDictionary, but the key is known by the sender to be not currently present, so I can skip looking to see if it's already there."
 
@@ -97,7 +106,7 @@ GbxClientObjDictionaryBucket >> atNewClient: clientObject putDelegate: delegate
 	delegate isStDirty ifFalse: [clientObject gbxTrapFutureChanges].
 	^true
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClientObjDictionaryBucket >> atClient: key putDelegate: value 
 	"Similar to #at:put: in an IdentityDictionary, We don't know whether the key is already present, so we have to look"
 
@@ -123,7 +132,7 @@ GbxClientObjDictionaryBucket >> atClient: key putDelegate: value
 		put: (existingDelegate connectingDelegate: value withClient: key).
 	^true
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClientObjDictionaryBucket >> removeStub: key 
 	"A special-purpose message for when we're about to do a one-way become on the key,
 	which will almost certainly move it out of this bucket.
@@ -149,7 +158,7 @@ GbxClientObjDictionaryBucket >> removeStub: key
 			size := size - 1].
 	^delegate
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxClientObjDictionaryBucket >> removeClient: key forSession: aSession
 	"Remove the key"
 	"The sender must hold my owner's writeProtect."
@@ -164,13 +173,13 @@ GbxClientObjDictionaryBucket >> removeClient: key forSession: aSession
 	index == 0 ifTrue: [^nil	"key not found"].
 	self removeClientAtIndex: index forSession: aSession
 
-{ #category : #'queries' }
+{ #category : 'queries' }
 GbxClientObjDictionaryBucket >> capacity
 	"Answer how many key-value pairs I can hold."
 
 	^keys size
 
-{ #category : #'queries' }
+{ #category : 'queries' }
 GbxClientObjDictionaryBucket >> size
 	"Answer how many key-value pairs I currently hold.
 	This may be overstated, since the count will include any keys that have been garbage collected
@@ -178,7 +187,7 @@ GbxClientObjDictionaryBucket >> size
 
 	^size
 
-{ #category : #'utility' }
+{ #category : 'utility' }
 GbxClientObjDictionaryBucket >> auditHashing
 	| cls |
 	keys do: 
@@ -195,7 +204,7 @@ GbxClientObjDictionaryBucket >> auditHashing
 								with: key identityHash
 								with: ownerIndex]]]
 
-{ #category : #'finalization' }
+{ #category : 'finalization' }
 GbxClientObjDictionaryBucket >> finalize
 	"Recover space from all keys that have been garbage collected"
 
@@ -220,12 +229,12 @@ GbxClientObjDictionaryBucket >> finalize
 						size := size - 1]].
 	self postFinalize
 
-{ #category : #'finalization' }
+{ #category : 'finalization' }
 GbxClientObjDictionaryBucket >> needFinalization
 	needFinalization := true.
 	owner needFinalization
 
-{ #category : #'finalization' }
+{ #category : 'finalization' }
 GbxClientObjDictionaryBucket >> postFinalize
 	"See whether I'm now small enough that I should compact or shrink"
 
@@ -233,7 +242,7 @@ GbxClientObjDictionaryBucket >> postFinalize
 
 	self gbxFixMe	"Needs to be written."
 
-{ #category : #'finalization' }
+{ #category : 'finalization' }
 GbxClientObjDictionaryBucket >> finalizeIfNeeded
 	"Reset needFinalization before finalization in case high-priority finalizer thread notifies 
 	us we need finalization during finalization. We will sometimes finalize when we don't need to, 
@@ -247,14 +256,14 @@ GbxClientObjDictionaryBucket >> finalizeIfNeeded
 			[needFinalization := false.
 			self finalize]
 
-{ #category : #'finalization' }
+{ #category : 'finalization' }
 GbxClientObjDictionaryBucket >> update: anAspectSymbol with: aParameter from: aSender 
 	"If I'm being told that I need finalization, record that fact."
 
 	(aSender == keys and: [anAspectSymbol = #ElementExpired]) 
 		ifTrue: [self needFinalization]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClientObjDictionaryBucket >> removeClientAtIndex: index forSession: aSession
 	"Sender must ensure that there is actually an entry at index."
 	"The sender must hold my owner's writeProtect."
@@ -277,7 +286,7 @@ GbxClientObjDictionaryBucket >> removeClientAtIndex: index forSession: aSession
 							freeHead := index.
 							size := size - 1]]]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClientObjDictionaryBucket >> threadFreeChain
 	"Initialize the free chain. Assumes I'm empty, will obliterate any keys present."
 
@@ -285,7 +294,7 @@ GbxClientObjDictionaryBucket >> threadFreeChain
 	keys at: keys size put: nil.	"Terminate the chain"
 	freeHead := 1
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClientObjDictionaryBucket >> grow
 	"Copy my live elements to another larger bucket, then tell my owner to replace me with that bucket."
 
@@ -303,7 +312,7 @@ GbxClientObjDictionaryBucket >> grow
 	newBucket needFinalization.
 	owner replaceBucketAt: ownerIndex with: newBucket
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxClientObjDictionaryBucket >> atNewClient: clientObject putDelegateOrList: delegateOrList 
 	"Private. Used ONLY when growing to move everything associated with one client 
 	object from an old bucket to a new bucket. The receiver MUST already be large enough to hold the new object.
@@ -324,7 +333,7 @@ GbxClientObjDictionaryBucket >> atNewClient: clientObject putDelegateOrList: del
 	index > highwater ifTrue: [highwater := index].
 	size := size + 1.
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxClientObjDictionaryBucket >> initializeOwner: dictionary index: index 
 	"Initialization is not protected against Process termination. The only window where this could cause a problem
 	is during the first login after GBS is loaded into an image. We assume that was completed correctly.
@@ -341,7 +350,7 @@ GbxClientObjDictionaryBucket >> initializeOwner: dictionary index: index
 	needFinalization := false.
 	self threadFreeChain
 
-{ #category : #'stack dumping' }
+{ #category : 'stack dumping' }
 GbxClientObjDictionaryBucket >> keysDo: aBlock
 	"Used in gathering cache inventory stats. Not necessarily a consistent view."
 
@@ -350,7 +359,7 @@ GbxClientObjDictionaryBucket >> keysDo: aBlock
 			(key gbxBasicClass == SmallInteger or: [key == nil])
 				ifFalse: [aBlock value: key]]
 
-{ #category : #'stack dumping' }
+{ #category : 'stack dumping' }
 GbxClientObjDictionaryBucket >> keysAndValuesDo: aBlock 
 	"this should only be used to dump out the clientMap"
 
@@ -362,7 +371,7 @@ GbxClientObjDictionaryBucket >> keysAndValuesDo: aBlock
 			(key gbxBasicClass == SmallInteger or: [key == nil]) 
 				ifFalse: [aBlock value: key value: (self basicAt: i)]]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxClientObjDictionaryBucket class >> new: size owner: dictionary index: index 
 	| inst |
 	inst := self basicNew: size.

@@ -1,12 +1,14 @@
 Class {
-	#name : #'Unicode7',
-	#superclass : #'ByteString',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'Unicode7',
+	#superclass : 'ByteString',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'converting' }
+{ #category : 'converting' }
 Unicode7 >> asTwoByteString
 	"We don't really convert to a TwoByteString, but 
 	rather use the promotion logic in VW, then create
@@ -14,7 +16,7 @@ Unicode7 >> asTwoByteString
 
 	^Unicode16 fromString: self
 
-{ #category : #'converting' }
+{ #category : 'converting' }
 Unicode7 >> asFourByteString
 	"We don't really convert to a TwoByteString, but 
 	rather use the promotion logic in VW, then create
@@ -22,7 +24,7 @@ Unicode7 >> asFourByteString
 
 	^Unicode32 fromString: self
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 Unicode7 class >> initialize
 	"Unicode7 initialize"
 

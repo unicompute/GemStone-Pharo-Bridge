@@ -1,8 +1,10 @@
 Class {
-	#name : #'ThreadError',
-	#superclass : #'Error',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'ThreadError',
+	#superclass : 'Error',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

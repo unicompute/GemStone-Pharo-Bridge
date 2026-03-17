@@ -1,12 +1,15 @@
 Class {
-	#name : #'GbsMemoryPolicy',
-	#superclass : #'LargeGrainMemoryPolicy',
-	#instVars : [ #'needIncrementalReclamation' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsMemoryPolicy',
+	#superclass : 'LargeGrainMemoryPolicy',
+	#instVars : [
+		'needIncrementalReclamation'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'incremental GC' }
+{ #category : 'incremental GC' }
 GbsMemoryPolicy >> incrementalReclamation
 	"Defer inc GC until we're not in replication"
 
@@ -14,7 +17,7 @@ GbsMemoryPolicy >> incrementalReclamation
 		ifFalse: [super incrementalReclamation]
 		ifTrue: [needIncrementalReclamation := true]
 
-{ #category : #'GBS-specific' }
+{ #category : 'GBS-specific' }
 GbsMemoryPolicy >> postReplicationAction
 
 	needIncrementalReclamation
@@ -22,7 +25,7 @@ GbsMemoryPolicy >> postReplicationAction
 			[self fullReclamation.
 			needIncrementalReclamation := false]
 
-{ #category : #'private - IGC' }
+{ #category : 'private - IGC' }
 GbsMemoryPolicy >> igcObjects: anInteger interruptably: aBoolean
 
 	ObjectMemory
@@ -30,13 +33,13 @@ GbsMemoryPolicy >> igcObjects: anInteger interruptably: aBoolean
 		objects: anInteger
 		bytes: 536870911
 
-{ #category : #'install/deinstall' }
+{ #category : 'install/deinstall' }
 GbsMemoryPolicy >> noticeOfInstall
 	"When a GbsMemoryPolicy or a subclass is installed as the current memory policy, it must also be the memory policy that GBSM knows about. When the current system memory policy is a non-GBS policy, GBSM's policy must still be a GBS policy, though it won't do much."
 
 	GBSM memoryPolicy: self
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsMemoryPolicy >> fullReclamation
 	"Run the incremental garbage collector from start to finish. If it aborts, do a stop-the-world GC."
 
@@ -64,7 +67,7 @@ GbsMemoryPolicy >> fullReclamation
 	self updateNumScavengesAsOfLastGC.
 	ObjectMemory softLowSpaceLimit: self newSoftLowSpaceLimit
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsMemoryPolicy >> initialize
 
 	super initialize.

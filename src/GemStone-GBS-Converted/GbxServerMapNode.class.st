@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxServerMapNode',
-	#superclass : #'GbxOopKeyedNode',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxServerMapNode',
+	#superclass : 'GbxOopKeyedNode',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'replication support' }
+{ #category : 'replication support' }
 GbxServerMapNode >> beStrongAndFinalizeIntoNoLongerReplicatedBuffer: noLongerReplicatedBuffer gcedBuffer: gcedBuffer
 	"1. Change all of my references to delegates and to client objects to strong references. 
 	2. Scan all node table segments that need finalization, and add appropriate oops into the given buffers.
@@ -27,14 +29,14 @@ GbxServerMapNode >> beStrongAndFinalizeIntoNoLongerReplicatedBuffer: noLongerRep
 			tableSize > minimumTableSize])
 		ifTrue: [self changeCapacityTo: (minimumTableSize max: (Set goodSizeFrom: tally * 2))]
 
-{ #category : #'replication support' }
+{ #category : 'replication support' }
 GbxServerMapNode >> beWeak
 	"Change all of my references to delegates and to client objects to weak references."
 	"The sender must hold my session's sessionProtect"
 
 	1 to: self basicSize do: [:i | (self basicAt: i) beWeak: true]
 
-{ #category : #'private-enumerating' }
+{ #category : 'private-enumerating' }
 GbxServerMapNode >> elementsDo: aBlock
 	"Iterate through all of my elements, free or not, evaluating the three-argument block for each 
 	SmallInteger key, client object, and delegate.
@@ -66,7 +68,7 @@ GbxServerMapNode >> elementsDo: aBlock
 				value: (lastSegment basicAt: i + 1)
 				value: (lastSegment basicAt: i + 2)]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerMapNode >> delegateForOop: oop
 	" Answer the canonical delegate for he oop. If the given oop is a delegate, and there is no 
 	canonical delegate for the oop, it becomes the canonical delegate for the oop.
@@ -115,7 +117,7 @@ GbxServerMapNode >> delegateForOop: oop
 			tally * 10 // 7 > tableSize ifTrue: [self makeRoom]].
 	^delegate
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerMapNode >> clientAtOop: oop
 	"Answer the client object associated with the given oop. If I don't have one, answer NotCachedToken"
 	"Sender must hold my session's sessionProtect"
@@ -154,7 +156,7 @@ GbxServerMapNode >> clientAtOop: oop
 			["key not found"
 			notCachedToken]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerMapNode >> atOop: oop putClient: client
 	"Add an association between the given oop and client object.
 	Answer the canonical delegate for the given oop."
@@ -200,7 +202,7 @@ GbxServerMapNode >> atOop: oop putClient: client
 			tally * 10 // 7 > tableSize ifTrue: [self makeRoom]].
 	^delegate
 
-{ #category : #'enumeration' }
+{ #category : 'enumeration' }
 GbxServerMapNode >> delegatesAndClientObjsDo: aBlock
 	"For each entry I hold, evaluate the given two-argument block with arguments of the delegate and the client object.
 	The delegate will not be nil, but the client object may be nil."
@@ -211,23 +213,23 @@ GbxServerMapNode >> delegatesAndClientObjsDo: aBlock
 			(key ~~ nil and: [del ~~ nil and: [del ~~ 0]])
 				ifTrue: [aBlock value: del value: (clientObj == 0 ifTrue: [nil] ifFalse: [clientObj])]]
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxServerMapNode >> isWeak
 
 	^owningMap isWeak
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerMapNode >> beWeak: aBoolean
 	"Sender must hold my session's sessionProtect"
 
 	1 to: self basicSize do: [:i | (self basicAt: i) beWeak: aBoolean]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerMapNode >> newDelegateFromOop: oop
 
 	^oop isGSObject ifTrue: [oop] ifFalse: [oop asNewDelegateInSession: owningMap session]
 
-{ #category : #'private-removing' }
+{ #category : 'private-removing' }
 GbxServerMapNode >> removeElementAt: index
 	"Remove element (key, client, delegate) at index. Index is 0-based within my table.
 	Must fix any collision chains that are disturbed by this deletion. The invariant that must be preserved is that if you start at the hash index of a key and proceed to higher indexes, wrapping to zero if you would otherwise exceed table size (this direction is known here as 'clockwise') you must either find the hashed key without encountering a nil key, or the hashed key is not present.
@@ -267,7 +269,7 @@ GbxServerMapNode >> removeElementAt: index
 	"Do not shrink at this time. I shrink only after a finalization sweep to make sure that
 	I only shrink once should a very large proportion of my contents be GCed at the same time."
 
-{ #category : #'removing' }
+{ #category : 'removing' }
 GbxServerMapNode >> pretendClientIsCollected: oop
 	"Put a nil in the client slot corresponding to oop (normally a Delegate).
 	This formerly left a tombstone there, but updating of the gem's export set is now
@@ -311,7 +313,7 @@ GbxServerMapNode >> pretendClientIsCollected: oop
 			["not found, ignore"
 			]
 
-{ #category : #'removing' }
+{ #category : 'removing' }
 GbxServerMapNode >> removeOop: oop
 	"Remove the mapped client object *and delegate* for the oop. The answer from this method should not be used.
 	This is used only in a few exceptional circumstances. Most explicit unmapping should use #pretendClientIsCollected:. This method will not update the server's export set and referenced set, and thus can result in server-side collection of an object for which someone is still holding a delegate."
@@ -353,12 +355,12 @@ GbxServerMapNode >> removeOop: oop
 			["key not found, do nothing"
 			]
 
-{ #category : #'private-accessing' }
+{ #category : 'private-accessing' }
 GbxServerMapNode >> segmentClass
 
 	^GbxServerMapTableSegment
 
-{ #category : #'private-growing and shrinking' }
+{ #category : 'private-growing and shrinking' }
 GbxServerMapNode >> changeCapacityTo: newCapacity
 	"Change my table size to newCapacity, which may be either larger or smaller than my current tableSize.
 	The sender should assure that newCapacity is large enough to hold my current contents while leaving at least 30% of the table free. NewCapacity should also be a good prime number.
@@ -377,7 +379,7 @@ GbxServerMapNode >> changeCapacityTo: newCapacity
 			key ~~ nil ifTrue: [copy addElementKey: key clientObj: clientObj del: del]].	"Copy including unfinalized tombstones."
 	owningMap replaceNodeAt: parentIndex with: copy
 
-{ #category : #'private-growing and shrinking' }
+{ #category : 'private-growing and shrinking' }
 GbxServerMapNode >> addElementKey: key clientObj: client del: delegate
 	"Only for use when changing capacity. Add the given key/client/delegate trio. 
 	Assume we don't already have such an entry for this key.
@@ -418,7 +420,7 @@ GbxServerMapNode >> addElementKey: key clientObj: client del: delegate
 	(client == 0 or: [delegate == 0]) ifTrue: [segment mourn].
 	tally := tally + 1
 
-{ #category : #'private-auditing' }
+{ #category : 'private-auditing' }
 GbxServerMapNode >> auditHashingInto: results
 	" Things checked here:
 	* each used element can be found from its key's hash without probing past a nil key"
@@ -465,7 +467,7 @@ GbxServerMapNode >> auditHashingInto: results
 					actual: hashIndex
 					expected: index printString , ' with intervening nil at: ' , indexOfMostRecentNil printString]
 
-{ #category : #'private-auditing' }
+{ #category : 'private-auditing' }
 GbxServerMapNode >> auditUnusedSpaceInto: results
 	" Things checked here:
 	* My last segment contains only nils past tableSize"

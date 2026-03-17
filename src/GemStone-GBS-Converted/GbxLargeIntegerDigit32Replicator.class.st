@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxLargeIntegerDigit32Replicator',
-	#superclass : #'GbxLargeIntegerReplicator',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxLargeIntegerDigit32Replicator',
+	#superclass : 'GbxLargeIntegerReplicator',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxLargeIntegerDigit32Replicator >> copyRawBytesFromReportToClientObject
 	"If this is the first report, the first four bytes are the sign, which has already been decided, so skip them."
 
@@ -26,14 +28,14 @@ GbxLargeIntegerDigit32Replicator >> copyRawBytesFromReportToClientObject
 				with: rawBuffer
 				startingAt: bytesBuffer offset + numBytesToSkip]
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxLargeIntegerDigit32Replicator >> signedByteIndex
 	"Answer the offset of the one byte within the four bytes allocated
 	 for the sign that actually represents the sign."
 
 	^self subclassResponsibility
 
-{ #category : #'per-object private' }
+{ #category : 'per-object private' }
 GbxLargeIntegerDigit32Replicator >> clientClassForReportValues
 	"Only send this message when the sender knows that the report contains the required bytes."
 
@@ -41,7 +43,7 @@ GbxLargeIntegerDigit32Replicator >> clientClassForReportValues
 		ifTrue: [LargePositiveInteger]
 		ifFalse: [LargeNegativeInteger]
 
-{ #category : #'private store replication' }
+{ #category : 'private store replication' }
 GbxLargeIntegerDigit32Replicator >> computeUnswizzledServerBytesFor: int
 	"Answer a new byte array comprising the bytes to be put in one or more (if split) object reports for 
 		the server large integer corresponding to the given client large integer. "

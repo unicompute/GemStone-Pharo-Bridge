@@ -1,17 +1,20 @@
 Class {
-	#name : #'GbxNoServerClassReplicator',
-	#superclass : #'GbxReplicator',
-	#instVars : [ #'clientClass' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxNoServerClassReplicator',
+	#superclass : 'GbxReplicator',
+	#instVars : [
+		'clientClass'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxNoServerClassReplicator >> clientClass
 
 	^clientClass
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxNoServerClassReplicator >> printOn: aStream
 
 	| name |
@@ -21,19 +24,19 @@ GbxNoServerClassReplicator >> printOn: aStream
 		nextPutAll: ' for ';
 		nextPutAll: name
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxNoServerClassReplicator >> initializeForClientClass: aClientClass manager: aManager
 
 	clientClass := aClientClass.
 	manager := aManager.
 	session := aManager session
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxNoServerClassReplicator class >> forClientClass: clientClass manager: manager
 
 	^self new initializeForClientClass: clientClass manager: manager
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxNoServerClassReplicator class >> forClientClass: clientClass serverClass: delegate manager: manager
 	"Null replicators don't care what the server class is."
 

@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsHostFatalErrOutOfMem',
-	#superclass : #'GbsFatalError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsHostFatalErrOutOfMem',
+	#superclass : 'GbsFatalError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsHostFatalErrOutOfMem class >> gemStoneErrorNumber6430 ^4004
 

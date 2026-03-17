@@ -1,12 +1,16 @@
 Class {
-	#name : #'GbsConnector',
-	#superclass : #'Object',
-	#instVars : [ #'postConnectAction' #'connectionCondition' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsConnector',
+	#superclass : 'Object',
+	#instVars : [
+		'postConnectAction',
+		'connectionCondition'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbsConnector >> = aConnection
 
 	"Two connectors are equal if they resolve the same Smalltalk object"
@@ -20,7 +24,7 @@ GbsConnector >> = aConnection
 			^stSelf == stOther ]
 		ifFalse: [ ^false ]
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbsConnector >> hash
 
 	"Return the identity hash of the Smalltalk object.  If any error occurs
@@ -30,36 +34,36 @@ GbsConnector >> hash
 		on: GbsError hostErrorSignal
 		do: [:ex | ex return: self identityHash ]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConnector >> connectionCondition: anObject
 	connectionCondition := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsConnector >> connectionCondition
 	^connectionCondition
 
-{ #category : #'initialization' }
+{ #category : 'initialization' }
 GbsConnector >> beForwarderOnConnect
 
 	"Make the Smalltalk object a forwarder upon connection"
 	self postConnectAction: #forwarder
 
-{ #category : #'initialization' }
+{ #category : 'initialization' }
 GbsConnector >> noUpdateOnConnect
 
 	self postConnectAction: nil
 
-{ #category : #'initialization' }
+{ #category : 'initialization' }
 GbsConnector >> updateSTOnConnect
 
 	self postConnectAction: #updateST
 
-{ #category : #'initialization' }
+{ #category : 'initialization' }
 GbsConnector >> updateGSOnConnect
 
 	self postConnectAction: #updateGS
 
-{ #category : #'connecting and disconnecting' }
+{ #category : 'connecting and disconnecting' }
 GbsConnector >> connectInSession: sess ifFail: oneArgBlock
 	"Resolve my GemStone and Smalltalk objects, and set up a relationship
 	 for them in aGSSession.  On failure, oneArgBlock is evaluated with
@@ -72,14 +76,14 @@ GbsConnector >> connectInSession: sess ifFail: oneArgBlock
 				on: Error
 				do: [:ex | ex return: (oneArgBlock value: ex description)]]
 
-{ #category : #'connecting and disconnecting' }
+{ #category : 'connecting and disconnecting' }
 GbsConnector >> connect
 
 	"Resolve my GemStone and Smalltalk objects, and set up a relationship for them in the current session.  Multi-session applications should use connectInSession:"
 
 	^self connectInSession: GBSM currentSession
 
-{ #category : #'connecting and disconnecting' }
+{ #category : 'connecting and disconnecting' }
 GbsConnector >> connectInSession: aGSSession
 
 	"Resolve my GemStone and Smalltalk objects, and set up a relationship for them in aGSSession"
@@ -93,7 +97,7 @@ GbsConnector >> connectInSession: aGSSession
 			nil
 		].
 
-{ #category : #'connecting and disconnecting' }
+{ #category : 'connecting and disconnecting' }
 GbsConnector >> disconnectInSession: session
 	"Resolve my GemStone and Smalltalk objects, and make sure they are unconnected in aGSSession.
 	If one cannot be resolved, still disconnect based on the other. If neither can be resolved, do nothing"
@@ -111,45 +115,45 @@ GbsConnector >> disconnectInSession: session
 					st == nil ifTrue: [^self]].
 			gs isSpecial ifFalse: [session disconnectClient: st fromServer: gs]]
 
-{ #category : #'private connecting' }
+{ #category : 'private connecting' }
 GbsConnector >> clientForwarderTo: clientObject session: session
 
 	^self gbsMessenger
 		error: 'Client forwarders are not supported for class %1'
 		with: self class
 
-{ #category : #'private connecting' }
+{ #category : 'private connecting' }
 GbsConnector >> postConnectSaveGsObjectInSession: anObject 
 	"Private. Answer nil or an GbsObject or oop to be added to the
 	 session export set to avoid GC."
 
 	^nil
 
-{ #category : #'private connecting' }
+{ #category : 'private connecting' }
 GbsConnector >> postConnectClient: clientObj server: delegate inSession: aGSSession
 	"Private.  Events to occur after connecting. Default is none."
 
-{ #category : #'private connecting' }
+{ #category : 'private connecting' }
 GbsConnector >> canForwardTo: clientObject inSession: aSession
 	"Answer true iff the client object is something that a server ClientForwarder can be connected to."
 
 	self subclassResponsibility
 
-{ #category : #'private connecting' }
+{ #category : 'private connecting' }
 GbsConnector >> postConnectAction: action
 
 	(action isNil or: [ (self validPostConnectActions includes: action) ])
 		ifFalse: [ ^self gbsMessenger error: 'Invalid post-connect action - %1' with: action ].
 	postConnectAction := action
 
-{ #category : #'private connecting' }
+{ #category : 'private connecting' }
 GbsConnector >> postConnectAction
 	"Private"
 
 	postConnectAction isNil ifTrue: [ postConnectAction := #none ].
 	^postConnectAction
 
-{ #category : #'private connecting' }
+{ #category : 'private connecting' }
 GbsConnector >> validPostConnectActions
 	"Private"
 
@@ -158,14 +162,14 @@ GbsConnector >> validPostConnectActions
 	resolvest := self resolveSTObjIfFail: [nil].
 	^resolvest isBehavior ifTrue: [all copyWithout: #forwarder] ifFalse: [all]
 
-{ #category : #'private connecting' }
+{ #category : 'private connecting' }
 GbsConnector >> connectsAssociation
 
 	"Private.  Return true if the connector connects an association related to the object"
 
 	^false
 
-{ #category : #'private connecting' }
+{ #category : 'private connecting' }
 GbsConnector >> privConnectInSession: sess
 	"Private.  Resolve my GemStone and Smalltalk objects, and set up a relationship for them in aGSSession.  This method might raise any signal."
 
@@ -235,14 +239,14 @@ GbsConnector >> privConnectInSession: sess
 					"In single-trip, is in referenced set, but must be in export set once connected to a replicate."
 					self postConnectClient: st server: gs inSession: sess]]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsConnector >> clientObjIsUnstubbedClass
 	"Private.  For building replication clamps, we need to be sure that unstubbing will not happen or
 	we end up in an infinite loop."
 
 	^false
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsConnector >> verifyoldST: oldSTOrNil newST: newST oldGS: oldGSOrNil newGS: newGS session: aGSSession
 	"Private.  Check if we are overriding an existing connection with something different"
 
@@ -262,24 +266,24 @@ GbsConnector >> verifyoldST: oldSTOrNil newST: newST oldGS: oldGSOrNil newGS: ne
 			^false]
 		ifTrue: [^true]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsConnector >> checkDefunctness: anSTObj 
 	"Private.  If anSTObj is a forwarder or stub, make sure its session is valid.  If not, a signal is raised."
 
 	anSTObj gbxIsProxy ifTrue: [anSTObj gbxValidateExistence].
 	^anSTObj
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsConnector >> typeOrdering
 	"Private"
 
 	^#(Fast Class Name ClassVar ClassInstVar) indexOf: self type
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsConnector >> nilSTObj
 	"Private.  Default is do nothing."
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsConnector >> browserLessOrEqualTo: aConnector
 
 	"Private.  Less-than-or-equal-to for displaying a list of connectors in a browser"
@@ -290,20 +294,20 @@ GbsConnector >> browserLessOrEqualTo: aConnector
 		ifFalse: [
 			^self typeOrdering < aConnector typeOrdering ]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsConnector >> isKnownKernelOop
 
 	"Private.  Return true if the connector is guaranteed to resolve to a GemStone kernel object.  Most connectors can't guarantee this."
 	^false
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsConnector >> isClassConnector
 
 	"Private.  Answer true if the connector is a class connector.  Default to false. "
 
 	^ false
 
-{ #category : #'verification' }
+{ #category : 'verification' }
 GbsConnector >> connectVerification
 	"If true, connectors will verify that they are not redefining an object connection, and class connectors will verify that the class structures match."
 
@@ -311,11 +315,11 @@ GbsConnector >> connectVerification
 		deprecated: 'GbsConnector>>connectVerification. Deprecated March, 2006. Use GbsConfiguration>>connectVerification instead'.
 	^GbsConfiguration current connectVerification
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsConnector >> gbxIsGSConnector
 	^true
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsConnector >> isConnectedInSession: sess
 	"Return true if the Smalltalk and GemStone objects defined by the receiver are currently connected in aGSSession"
 
@@ -328,50 +332,50 @@ GbsConnector >> isConnectedInSession: sess
 	delegate := self resolveGSObjInSession: sess ifFail: [^false].
 	^sess isST: client connectedToGS: delegate
 
-{ #category : #'private printing' }
+{ #category : 'private printing' }
 GbsConnector >> stDescription
 	"Private. Sent by aspect adaptor in connector browser"
 
 	self subclassResponsibility
 
-{ #category : #'private printing' }
+{ #category : 'private printing' }
 GbsConnector >> gsDescription
 	"Private - do not delete as it is sent by the gui code with a #perform:, 
 	see the #windowSpec for GbsConnectorBrowser"
 
 	self subclassResponsibility
 
-{ #category : #'private printing' }
+{ #category : 'private printing' }
 GbsConnector >> type
 	"Private"
 
 	^self class type
 
-{ #category : #'private printing' }
+{ #category : 'private printing' }
 GbsConnector >> clientObjDescription
 	"Private"
 
 	self subclassResponsibility
 
-{ #category : #'gbs private testing' }
+{ #category : 'gbs private testing' }
 GbsConnector >> isClassConnectorTypeNone
 	"Private to GBS"
 
 	^false
 
-{ #category : #'gbs private testing' }
+{ #category : 'gbs private testing' }
 GbsConnector >> isFastConnectorTypeNone
 	"Private to GBS"
 
 	^false
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsConnector >> updateClientfromDelegate: delegate
 
 	"Private.  Update the Smalltalk object from the given GemStone object.  Return the Smalltalk object."
 	self subclassResponsibility
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsConnector >> resolveSTObjIfFail: failBlockWithOptionalArg
 	"Private.  Resolve and return Smalltalk object to be connected.
 	 Do not trigger defunct stub or defunct forwarder errors.
@@ -382,7 +386,7 @@ GbsConnector >> resolveSTObjIfFail: failBlockWithOptionalArg
 		on: GbsError hostErrorSignal
 		do: [:ex | ex return: (failBlockWithOptionalArg cull: ex) ].
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsConnector >> resolveGSObjInSession: aGSSession ifFail: failBlockWithOptionalArg
 	"Private.  Resolve and return GemStone object to be connected.
 	 If the fail block takes an argument, pass the exception explaining
@@ -394,27 +398,27 @@ GbsConnector >> resolveGSObjInSession: aGSSession ifFail: failBlockWithOptionalA
 		on: GbsError hostErrorSignal
 		do: [:ex | ex return: (failBlockWithOptionalArg cull: ex) ]
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsConnector >> resolveGSObjInSession: aGSSession
 
 	"Private.  Resolve and return GemStone object to be connected"
 
 	^self subclassResponsibility
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsConnector >> updateGSfromST: anSTObj session: aGSSession
 
 	"Private.  Update the GemStone object from the given Smalltalk object.  Return the GemStone object."
 	self subclassResponsibility
 
-{ #category : #'private resolving' }
+{ #category : 'private resolving' }
 GbsConnector >> resolveClientObj
 
 	"Private.  Resolve and return Smalltalk object to be connected"
 
 	^self subclassResponsibility
 
-{ #category : #'class constants' }
+{ #category : 'class constants' }
 GbsConnector class >> connectVerification
 	"If true, connectors will verify that they are not redefining an object connection, and class connectors will verify that the class structures match."
 
@@ -422,7 +426,7 @@ GbsConnector class >> connectVerification
 		deprecated: 'GbsConnector class>>connectVerification. Deprecated March, 2006. Use GbsConfiguration>>connectVerification instead'.
 	^GbsConfiguration current connectVerification
 
-{ #category : #'class constants' }
+{ #category : 'class constants' }
 GbsConnector class >> type
 
 	"Private.  By default, type is derived from the class name"
@@ -434,17 +438,17 @@ GbsConnector class >> type
 		type := (t copyFrom: 4 to: i) asSymbol ].
 	^type
 
-{ #category : #'class constants' }
+{ #category : 'class constants' }
 GbsConnector class >> defaultPostConnectAction
 
 	^#updateST
 
-{ #category : #'class constants' }
+{ #category : 'class constants' }
 GbsConnector class >> validPostConnectActions
 
 	^ValidPostConnectActions	"Private"
 
-{ #category : #'initialization' }
+{ #category : 'initialization' }
 GbsConnector class >> connectVerification: aBool 
 	"If aBool is set to true, connectors will verify that they are not redefining an object connection, and class connectors will verify that the class structures match."
 
@@ -452,24 +456,24 @@ GbsConnector class >> connectVerification: aBool
 		deprecated: 'GbsConnector class>>connectVerification:. Deprecated March, 2006. Use GbsConfiguration>>connectVerification: instead'.
 	GbsConfiguration current connectVerification: aBool
 
-{ #category : #'initialization' }
+{ #category : 'initialization' }
 GbsConnector class >> initialize
 	ValidPostConnectActions := #(#updateST #updateGS #forwarder #clientForwarder #none)
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsConnector class >> fromUser
 
 	"Prompt the user for information to create an instance of the receiver"
 	self subclassResponsibility
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsConnector class >> new
 
 	"Return a new instance with the default postconnect action"
 
 	^self basicNew postConnectAction: self defaultPostConnectAction
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsConnector class >> supportsFromUser
 	"GBS Private. Answer whether the user is allowed to create connectors of this type through the GUI."
 

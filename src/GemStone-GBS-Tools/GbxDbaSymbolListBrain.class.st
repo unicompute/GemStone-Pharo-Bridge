@@ -1,18 +1,22 @@
 Class {
-	#name : #'GbxDbaSymbolListBrain',
-	#superclass : #'GbxDbaBrain',
-	#instVars : [ #'mode' #'user' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Tools'
+	#name : 'GbxDbaSymbolListBrain',
+	#superclass : 'GbxDbaBrain',
+	#instVars : [
+		'mode',
+		'user'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Tools'
 }
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaSymbolListBrain >> dictionaryPasteIndex
 	" Answer the index + 1 of the current selection in the list of names of symbol dictionaries available to my user.  Answer 1 if nothing is currently selected. "
 
 	^ self currentDictsSelectionIndex + 1
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaSymbolListBrain >> dictionaryCutIndex
 	" Answer the index of the current selection in the list of names of symbol dictionaries available to my user.  Abort if nothing is currently selected. "
 
@@ -20,19 +24,19 @@ GbxDbaSymbolListBrain >> dictionaryCutIndex
 		[^ self error: 'no dict selected' ].
 	^ self currentDictsSelectionIndex
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaSymbolListBrain >> dictionaries
 	" Answer a list of symbol dictionaries available to my user. "
 
 	^ self user dictionaries
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaSymbolListBrain >> user
 	" Answer the value of user, the GSUserProfileHolder whose Symbol List shows in my window. "
 
 	^ user
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaSymbolListBrain >> currentGsForwarder
 	" Answer a forwarder on the current selection. "
 
@@ -40,7 +44,7 @@ GbxDbaSymbolListBrain >> currentGsForwarder
 		ifTrue: [self currentDictsSelection remoteSymbolListDictionary]
 		ifFalse: [self userForwarderFor: self currentItemsSelection]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaSymbolListBrain >> itemNames
 	" Answer a list of symbols in the current symbol dictionary. "
 
@@ -50,7 +54,7 @@ GbxDbaSymbolListBrain >> itemNames
 		ifFalse:
 			[ #() ]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaSymbolListBrain >> userForwarderFor: aSymbol
 	" Answer an UNCACHED forwarder for the object whose name is aSymbol in the current user. "
 
@@ -67,13 +71,13 @@ GbxDbaSymbolListBrain >> userForwarderFor: aSymbol
 				with: aSymbol].
 	^assn ucfwvalue
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaSymbolListBrain >> currDictionaryName
 	" Answer the name of the currently selected GemStone SymbolListDictionary. "
 
 	^ self currentDictsSelection displayString
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaSymbolListBrain >> itemInformation
 	" Answer a string that shows more information about the selected item in either the dictionary list or the name list. "
 
@@ -97,13 +101,13 @@ GbxDbaSymbolListBrain >> itemInformation
 		with: self currentItemsSelection
 		with: self inDictionaryMode
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaSymbolListBrain >> currDictionaryForwarder
 	" Answer a forwarder to the currently selected GemStone SymbolListDictionary. "
 
 	^ self currentDictsSelection remoteSymbolListDictionary
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaSymbolListBrain >> initialNote
 	" I take advantage of the selected item status line by presenting the user some notes on this window. "
 
@@ -113,7 +117,7 @@ GbxDbaSymbolListBrain >> initialNote
 			ifFalse: ['immediately']) ,
 		'.'
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDbaSymbolListBrain >> mode
 	" Answer the value of mode, a Symbol describing what the buttons affect. "
 
@@ -121,19 +125,19 @@ GbxDbaSymbolListBrain >> mode
 		[mode := #dict.].
 	^ mode
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxDbaSymbolListBrain >> hasEntryCompatiblePasteBuffer
 	" Answer true if the current contents of GbxClipboardObj is usable for pasting into the entry list. "
 
 	^ GbxClipboardObj isEmpty not
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxDbaSymbolListBrain >> hasDictionarySelected
 	" Answer true if a dictionary is currently selected. "
 
 	^ self currentDictsSelection notNil
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxDbaSymbolListBrain >> hasDictCompatiblePasteBuffer
 	" Answer true if the current contents of GbxClipboardObj is usable for pasting into the dictionary list. "
 
@@ -145,7 +149,7 @@ GbxDbaSymbolListBrain >> hasDictCompatiblePasteBuffer
 	assn isNil ifTrue: [^false].
 	^assn value gbxDelegate remoteClassName = 'SymbolDictionary'
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxDbaSymbolListBrain >> hasCompatiblePasteBuffer
 	" Answer true if the current contents of GSClipboardObj is usable for pasting in my current mode. "
 
@@ -153,13 +157,13 @@ GbxDbaSymbolListBrain >> hasCompatiblePasteBuffer
 		ifTrue: [self hasDictCompatiblePasteBuffer]
 		ifFalse: [self hasEntryCompatiblePasteBuffer & self hasDictionarySelected]
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxDbaSymbolListBrain >> inEntryMode
 	" Answer true if the buttons affect entries in the current dictionary. "
 
 	^ self inDictionaryMode not
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxDbaSymbolListBrain >> hasClassEntryItemSelected
 	" Answer true if the current entry selection is a GemStone class. "
 
@@ -168,19 +172,19 @@ GbxDbaSymbolListBrain >> hasClassEntryItemSelected
 			(item := self userForwarderFor: self currentItemsSelection) notNil 
 				and: [item performOnGsServer: #isBehavior]]
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxDbaSymbolListBrain >> inDictionaryMode
 	" Answer true if the buttons affect dictionaries. "
 
 	^ #dict == self mode
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxDbaSymbolListBrain >> hasItemSelected
 	" Answer true if an entry item is currently selected. "
 
 	^ self currentItemsSelection notNil
 
-{ #category : #'changing' }
+{ #category : 'changing' }
 GbxDbaSymbolListBrain >> selectedItemNameChangeQuietly
 	" The user has typed into the dictionary/entry name field. "
 
@@ -191,7 +195,7 @@ GbxDbaSymbolListBrain >> selectedItemNameChangeQuietly
 			[self selectedEntryNameChangeQuietly.].
 	self ableContextButtons.
 
-{ #category : #'changing' }
+{ #category : 'changing' }
 GbxDbaSymbolListBrain >> selectedItemNameChange
 	" The user has typed into the dictionary/entry name field. "
 
@@ -202,7 +206,7 @@ GbxDbaSymbolListBrain >> selectedItemNameChange
 			[self selectedEntryNameChange.].
 	self ableContextButtons.
 
-{ #category : #'changing' }
+{ #category : 'changing' }
 GbxDbaSymbolListBrain >> checkWildcardFor: aList
 ifNoMatch: anExitBlock
 	" If the user has typed a wildcard selection, I present a menu of matching items. "
@@ -215,7 +219,7 @@ ifNoMatch: anExitBlock
 		ifNoMatch: [^ anExitBlock value ].
 	self newItemName: chosenName.
 
-{ #category : #'changing' }
+{ #category : 'changing' }
 GbxDbaSymbolListBrain >> selectedEntryNameChangeQuietly
 	" Either the user or my code has changed the entry name field. "
 
@@ -225,7 +229,7 @@ GbxDbaSymbolListBrain >> selectedEntryNameChangeQuietly
 		^ self ].
 	self itemNameListSelected.
 
-{ #category : #'changing' }
+{ #category : 'changing' }
 GbxDbaSymbolListBrain >> selectedEntryNameChange
 	" The user has typed into the entry name field. "
 
@@ -242,7 +246,7 @@ GbxDbaSymbolListBrain >> selectedEntryNameChange
 				ifNoMatch: noMatchBlock.].
 	self selectedEntryNameChangeQuietly.
 
-{ #category : #'changing' }
+{ #category : 'changing' }
 GbxDbaSymbolListBrain >> selectedDictionaryNameChange
 	" The user has typed into the dictionary name field. "
 
@@ -257,7 +261,7 @@ GbxDbaSymbolListBrain >> selectedDictionaryNameChange
 			^ self dictionaryListSelected ].].
 	self gbsMessenger warn:  'There is no SymbolDictionary named %1.' with: self currentItemName.
 
-{ #category : #'changing' }
+{ #category : 'changing' }
 GbxDbaSymbolListBrain >> checkWildcardIfNoMatch: anExitBlock
 	" If the user has typed a wildcard selection, I present a menu of matching items. "
 
@@ -281,121 +285,121 @@ GbxDbaSymbolListBrain >> checkWildcardIfNoMatch: anExitBlock
 			^ self newItemName: chosenName ].].
 	anExitBlock value.
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> currentItemsSelection
 	" Answer the selection in my window's items list. "
 
 	^ self windowInterface currentItemsSelection
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> currentUserId
 	" Answer the value in my window's userId field. "
 
 	^ self windowInterface currentUserId
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> setMenuLabelsTo: aSuffixString
 	" I revise the items in my menu bar to reflect the current mode. "
 
 	self windowInterface setMenuLabelsTo: aSuffixString.
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> newDictsList: aList
 	" Set the list in my window's dicts list. "
 
 	self windowInterface newDictsList: aList.
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> currentItemsSelectionIndex
 	" Answer the index of the selection in my window's items list. "
 
 	^ self windowInterface currentItemsSelectionIndex
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> newItemsSelection: aSymbol
 	" Set the selection in my window's items list. "
 
 	self windowInterface newItemsSelection: aSymbol.
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> newDictsSelection: aSymbol
 	" Set the selection in my window's dicts list. "
 
 	self windowInterface newDictsSelection: aSymbol.
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> currentDictsList
 	" Answer the list in my window's dicts list. "
 
 	^ self windowInterface currentDictsList
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> newItemInfo: aString
 	" Set the value of my window's itemInfo field. "
 
 	self windowInterface newItemInfo: aString.
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> newEntriesLabel: aString
 	" Set the value of my window's entriesLabel field. "
 
 	self windowInterface newEntriesLabel: aString.
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> newUserId: aString
 	" Set the value in my window's userId field. "
 
 	self windowInterface newUserId: aString.
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> selectedItemNameLabel
 	" Answer the label for the selected item's name. "
 
 	^ self windowInterface selectedItemNameLabel
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> currentDictsSelection
 	" Answer the selection in my window's dicts list. "
 
 	^ self windowInterface currentDictsSelection
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> newItemName: aString
 	" Set the value in my window's itemName field. "
 
 	self windowInterface newItemName: aString.
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> newItemsList: aList
 	" Set the list in my window's items list. "
 
 	self windowInterface newItemsList: aList.
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> currentDictsSelectionIndex
 	" Answer the index of the selection in my window's dicts list. "
 
 	^ self windowInterface currentDictsSelectionIndex
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> currentItemName
 	" Answer the value in my window's itemName field. "
 
 	^ self windowInterface currentItemName
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> setSelectedItemNameLabel: aString
 	" Set the label for the selected item's name. "
 
 	self windowInterface setSelectedItemNameLabel: aString.
 
-{ #category : #'window accessing' }
+{ #category : 'window accessing' }
 GbxDbaSymbolListBrain >> currentItemsList
 	" Answer the list in my window's items list. "
 
 	^ self windowInterface currentItemsList
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> pasteItem
 	" Place the paste buffer into the current selection. "
 
@@ -403,7 +407,7 @@ GbxDbaSymbolListBrain >> pasteItem
 		ifTrue: [self pasteDictItem]
 		ifFalse: [self pasteEntryItem].
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> copy: anObject
 named: aString
 mode: aSymbol
@@ -432,13 +436,13 @@ mode: aSymbol
 		descr: label contents.
 	self ableContextButtons.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> inspectDictItem
 	" Inspect the current dictionary selection. "
 
 	self currentDictsSelection remoteSymbolListDictionary inspect.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> switchMode
 	" Change mode and repaint the affected widgets. "
 
@@ -447,7 +451,7 @@ GbxDbaSymbolListBrain >> switchMode
 		ifFalse: [#dict]).
 	self updateInCurrentMode.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> copyItem
 	" Place the current selection into the paste buffer. "
 
@@ -455,13 +459,13 @@ GbxDbaSymbolListBrain >> copyItem
 		ifTrue: [self copyDictItem]
 		ifFalse: [self copyEntryItem].
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> pasteDictItem
 	" Place the paste buffer into the user's list of symbol dictionaries. "
 
 	self pasteMode: #dict.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> userNameChange
 	" The user has chosen a new user, either by typing or from the menu of users. "
 
@@ -502,7 +506,7 @@ GbxDbaSymbolListBrain >> userNameChange
 			ex return: revertBlock value
 		].
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> cutDictionary: aNameString
 	" I remove the SymbolDictionary object named aNameString from the current user.
 	  Answer true if the cut is successful. "
@@ -519,13 +523,13 @@ GbxDbaSymbolListBrain >> cutDictionary: aNameString
 			ex return: false
 		].
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> pasteEntryItem
 	" Place the paste buffer into the currently selected symbol dictionary. "
 
 	self pasteMode: #entry.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> addDictItem
 	" Allow the user to add a new dictionary to the current UserProfile. "
 
@@ -540,7 +544,7 @@ GbxDbaSymbolListBrain >> addDictItem
 		mode: #dict
 		with: #( 'Add' 'Added' ).
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> pasteOrAdd: anAssociation
 mode: aSymbol
 with: aLabelArray
@@ -562,7 +566,7 @@ with: aLabelArray
 		ifFalse:
 			[self updateNonModeList.].
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> checkSpecialDict: aDictNameSymbol
 ifMistake: anExitBlock
 	" Private - Warn the user if the symbol list dictionary named
@@ -576,7 +580,7 @@ ifMistake: anExitBlock
 		with: aDictNameSymbol
 	) ifFalse: [ ^anExitBlock value ].
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> cutItem
 	" Place the current selection into the paste buffer and remove it from its dictionary. "
 
@@ -584,7 +588,7 @@ GbxDbaSymbolListBrain >> cutItem
 		ifTrue: [self cutDictItem]
 		ifFalse: [self cutEntryItem].
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> updateSymbolListsRequest
 	" I repaint the current information, as it may be obsolete. Deselect item before
 	update, as it may no longer exist."
@@ -603,7 +607,7 @@ GbxDbaSymbolListBrain >> updateSymbolListsRequest
 			 ifTrue: [self newItemsSelection: selectedItem].
 		].
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> copyEntryItem
 	" Place the current selection into the paste buffer. "
 
@@ -611,7 +615,7 @@ GbxDbaSymbolListBrain >> copyEntryItem
 		named: self currentItemsSelection
 		mode: #entry.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> inspectItem
 	" Inspect the current selection. "
 
@@ -619,7 +623,7 @@ GbxDbaSymbolListBrain >> inspectItem
 		ifTrue: [self inspectDictItem]
 		ifFalse: [self inspectEntryItem].
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> cutDictItem
 	" Place the current dictionary selection into the paste buffer and remove it from the user. "
 
@@ -638,7 +642,7 @@ GbxDbaSymbolListBrain >> cutDictItem
 		named: name
 		mode: #dict.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> pasteEntry: anAssociation 
 	" I place the contents of anAssociation into the current SymbolDictionary.
 	  Answer true if the paste is successful. "
@@ -666,7 +670,7 @@ GbxDbaSymbolListBrain >> pasteEntry: anAssociation
 					with: ex originator messageText.
 				ex return: false]
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> browseClassEntryItem
 	" Browse the current dictionary entry selection, which is a GemStone class.
 	NOTE:  Fixed by Chuck Schmidt to resolve the class with respect to the selected user and his/her symbol list. "
@@ -687,7 +691,7 @@ GbxDbaSymbolListBrain >> browseClassEntryItem
 		label: 'GemStone Class Browser for  ', className, ' on ', self session printString
 		selecting: className asSymbol.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> cutEntryItem
 	" Place the current entry selection into the paste buffer and remove it from the dictionary. "
 
@@ -696,7 +700,7 @@ GbxDbaSymbolListBrain >> cutEntryItem
 		named: self currentItemsSelection
 		mode: #entry.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> addItem
 	" Allow the user to add a new item to the current environment. "
 
@@ -704,7 +708,7 @@ GbxDbaSymbolListBrain >> addItem
 		ifTrue: [self addDictItem]
 		ifFalse: [self addEntryItem].
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> pasteMode: aSymbol
 	" Place the paste buffer into the current selection. "
 
@@ -726,7 +730,7 @@ GbxDbaSymbolListBrain >> pasteMode: aSymbol
 		mode: aSymbol
 		with:  #( 'Paste' 'Pasted' ).
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> copyDictItem
 	" Place the current selection into the paste buffer. "
 
@@ -734,13 +738,13 @@ GbxDbaSymbolListBrain >> copyDictItem
 		named: (self currentDictsSelection dictName ifNil: [''])
 		mode: #dict.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> inspectEntryItem
 	" Inspect the current dictionary entry selection. "
 
 	(self currentDictsSelection remoteSymbolListDictionary ucfwat: self currentItemsSelection) inspect.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> updateNonModeList
 	" I update the contents of the list in the non-selected mode. "
 
@@ -750,7 +754,7 @@ GbxDbaSymbolListBrain >> updateNonModeList
 		ifFalse:
 			[self showDictionaries.].
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> pasteDictionary: anAssociation
 	" I add the SymbolList in anAssociation to the user's list.
 	  Answer true if the paste is successful. "
@@ -770,7 +774,7 @@ GbxDbaSymbolListBrain >> pasteDictionary: anAssociation
 			ex return: false
 		].
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> cut: anObject
 named: aString
 mode: aSymbol
@@ -788,7 +792,7 @@ mode: aSymbol
 	self clearModeSelection.
 	self showItems.
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> addEntryItem
 	" Allow the user to add a new entry to the current dictionary. "
 
@@ -801,7 +805,7 @@ GbxDbaSymbolListBrain >> addEntryItem
 		mode: #entry
 		with: #( 'Add' 'Added' ).
 
-{ #category : #'actions' }
+{ #category : 'actions' }
 GbxDbaSymbolListBrain >> cutEntry: aNameString
 	" I remove the object named aNameString from the currently selected SymbolDictionary.
 	  Answer true if the cut is successful. "
@@ -819,7 +823,7 @@ GbxDbaSymbolListBrain >> cutEntry: aNameString
 		ifFalse:
 			[ false ]
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaSymbolListBrain >> clearModeSelection
 	" The current selection has been cut. "
 
@@ -836,7 +840,7 @@ GbxDbaSymbolListBrain >> clearModeSelection
 				self setEntryMode.].
 		self enableButtons.].
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaSymbolListBrain >> dictionaryListSelected
 	" When no dictionary is selected, certain buttons must be disabled. "
 
@@ -855,7 +859,7 @@ GbxDbaSymbolListBrain >> dictionaryListSelected
 					self hideItems.
 					self setSelectedItemNameLabel: String new]]
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaSymbolListBrain >> disableButtons
 	" Deactivate certain buttons until a dictionary is selected.
 	  NOTE:  To be VW / VS compatible, button names must start with an uppercase letter.
@@ -864,7 +868,7 @@ GbxDbaSymbolListBrain >> disableButtons
 	self disableGroup: #( ModeButton ).
 	self ableContextButtons.
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaSymbolListBrain >> enableButtons
 	" Activate certain buttons while a dictionary is selected.
 	  NOTE:  To be VW / VS compatible, button names must start with an uppercase letter.
@@ -873,14 +877,14 @@ GbxDbaSymbolListBrain >> enableButtons
 	self enableGroup: #( ModeButton  AddItemButton ).
 	self ableContextButtons.
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaSymbolListBrain >> hideItems
 	" When a dictionary is deselected, I must hide the names in it. "
 
 	self newItemsList: #().
 	self newEntriesLabel: ''.
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaSymbolListBrain >> itemNameListSelected
 	" When no entry is selected, certain buttons must be disabled. "
 
@@ -894,7 +898,7 @@ GbxDbaSymbolListBrain >> itemNameListSelected
 					self showSelectedItemName.
 					self setSelectedItemNameLabel: 'Selected Dictionary']]
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaSymbolListBrain >> setDictMode
 	" I configure the buttons to act on dictionaries. "
 
@@ -904,7 +908,7 @@ GbxDbaSymbolListBrain >> setDictMode
 	self enableButtons.
 	self showSelectedItemName.
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaSymbolListBrain >> setEntryMode
 	" I configure the buttons to act on entries in the current dictionary. "
 
@@ -914,7 +918,7 @@ GbxDbaSymbolListBrain >> setEntryMode
 	self enableButtons.
 	self showSelectedItemName
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaSymbolListBrain >> showDictionaries
 	" When a dictionary list is changed, I must update it. "
 
@@ -926,7 +930,7 @@ GbxDbaSymbolListBrain >> showDictionaries
 		self newDictsSelection: selection.
 		self updateInCurrentMode.].
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaSymbolListBrain >> showItems
 	" When a dictionary is selected, I must show the names in it. "
 
@@ -944,7 +948,7 @@ GbxDbaSymbolListBrain >> showItems
 				['']).
 		self updateInCurrentMode.	].
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaSymbolListBrain >> showSelectedItemName
 	" Update the selected item's name. "
 
@@ -965,7 +969,7 @@ GbxDbaSymbolListBrain >> showSelectedItemName
 					[label enable.
 					self newItemInfo: self itemInformation]]
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaSymbolListBrain >> ableContextButtons
 	" Activate or deactivate certain buttons, depending on the current context.
 	  NOTE:  To be VW / VS compatible, button names must start with an uppercase letter.
@@ -988,7 +992,7 @@ GbxDbaSymbolListBrain >> ableContextButtons
 		ifFalse:
 			[self disableGroup: #( BrowseClassEntryItemButton ).].
 
-{ #category : #'window changing' }
+{ #category : 'window changing' }
 GbxDbaSymbolListBrain >> updateInCurrentMode
 	" Repaint the affected widgets. "
 
@@ -996,7 +1000,7 @@ GbxDbaSymbolListBrain >> updateInCurrentMode
 		ifTrue: [self setDictMode]
 		ifFalse: [self setEntryMode].
 
-{ #category : #'external changing' }
+{ #category : 'external changing' }
 GbxDbaSymbolListBrain >> updateNotification: aSymbol
 	" Some other DBA window has changed something.  I may have to update my user ID menu or my information. "
 
@@ -1006,7 +1010,7 @@ GbxDbaSymbolListBrain >> updateNotification: aSymbol
 		[self ableContextButtons.].
 	super updateNotification: aSymbol.
 
-{ #category : #'external changing' }
+{ #category : 'external changing' }
 GbxDbaSymbolListBrain >> updateDataRequest
 	" I allow external changes to refresh the list of current dictionaries, etc. "
 
@@ -1016,7 +1020,7 @@ GbxDbaSymbolListBrain >> updateDataRequest
 		[^ self windowInterface closeRequest ].
 	self updateSymbolListsRequest.
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxDbaSymbolListBrain >> user: aGSUserProfileHolder
 	" Set the value of user, the GSUserProfileHolder whose Symbol List shows in my window. "
 
@@ -1025,20 +1029,20 @@ GbxDbaSymbolListBrain >> user: aGSUserProfileHolder
 		[^ self error: 'not a forwarder'].
 	user := aGSUserProfileHolder.
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxDbaSymbolListBrain >> mode: aSymbol
 	" Set the value of mode, a Symbol describing what the buttons affect. "
 
 	mode := aSymbol.
 
-{ #category : #'external changing' }
+{ #category : 'external changing' }
 GbxDbaSymbolListBrain class >> myNotificationSymbols
 	" Answer a list of symbols that mean I have to update my information.  Default to no symbols.
 	  WARNING:  For VW / VS compatibility, do not user '#' before each symbol. "
 
 	^ super myNotificationSymbols , #(committed aborted symbolRemoved).
 
-{ #category : #'interface opening' }
+{ #category : 'interface opening' }
 GbxDbaSymbolListBrain class >> fileAndEditMenuText
 	" Answer an array of text for the variable parts of my window's menu bar.
 	  WARNING:  Do not use embedded '#'s for VW/VS compatibility. "

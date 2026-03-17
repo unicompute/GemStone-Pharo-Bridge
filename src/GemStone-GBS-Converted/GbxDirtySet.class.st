@@ -1,12 +1,16 @@
 Class {
-	#name : #'GbxDirtySet',
-	#superclass : #'Object',
-	#instVars : [ #'tombstone' #'tally' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxDirtySet',
+	#superclass : 'Object',
+	#instVars : [
+		'tombstone',
+		'tally'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'enumerating' }
+{ #category : 'enumerating' }
 GbxDirtySet >> destructiveDo: aBlock
 	"Evaluate aBlock at least once for each of my elements, with that element as an argument.
 	After evaluating the block, remove the element from myself.
@@ -37,7 +41,7 @@ GbxDirtySet >> destructiveDo: aBlock
 									tally := tally - 1]].
 					currentIndex := currentIndex + 1]]
 
-{ #category : #'enumerating' }
+{ #category : 'enumerating' }
 GbxDirtySet >> emptyInto: resultCollection forSession: session
 
 	self destructiveDo: 
@@ -45,7 +49,7 @@ GbxDirtySet >> emptyInto: resultCollection forSession: session
 			resultCollection add: each.
 			(each asGSObjectInSession: session) clearDirtyBit]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDirtySet >> add: anObject
 	"Add the object if not already here by identity."
 
@@ -64,29 +68,29 @@ GbxDirtySet >> add: anObject
 			tally := tally + 1].
 	^anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxDirtySet >> size
 
 	^tally
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxDirtySet >> initialize
 
 	tombstone := Object new.
 	tally := 0
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxDirtySet >> isEmpty
 
 	^tally = 0
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDirtySet >> growIfNeeded
 	"Max loading of ~75%"
 
 	tally * 4 // self basicSize > 2 ifTrue: [self grow]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDirtySet >> grow
 	"Make myself the next good capacity greater than double my current capacity."
 
@@ -100,7 +104,7 @@ GbxDirtySet >> grow
 			element ~~ nil & (element ~~ tombstone) ifTrue: [newSelf add: element]].
 	self become: newSelf
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxDirtySet >> indexOf: key
 	"Answer the index where anObject is, or nil if the object is not found.
 	Must search past tombstones. The table will never be full, but could have no nils (all unused slots tombstones),
@@ -119,7 +123,7 @@ GbxDirtySet >> indexOf: key
 				currentIndex = startIndex ifTrue: [stopLooking := true]].
 	^currentKey == key ifTrue: [currentIndex] ifFalse: [nil]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxDirtySet class >> new: capacity
 
 	| tableSize |

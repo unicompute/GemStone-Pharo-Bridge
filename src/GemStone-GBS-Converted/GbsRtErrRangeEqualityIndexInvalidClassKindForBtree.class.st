@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrRangeEqualityIndexInvalidClassKindForBtree',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrRangeEqualityIndexInvalidClassKindForBtree',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrRangeEqualityIndexInvalidClassKindForBtree class >> gemStoneErrorNumber6430 ^2300
 

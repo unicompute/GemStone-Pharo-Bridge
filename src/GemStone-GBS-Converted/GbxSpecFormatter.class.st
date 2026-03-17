@@ -1,17 +1,22 @@
 Class {
-	#name : #'GbxSpecFormatter',
-	#superclass : #'Object',
-	#instVars : [ #'spec' #'stream' #'version' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxSpecFormatter',
+	#superclass : 'Object',
+	#instVars : [
+		'spec',
+		'stream',
+		'version'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'formatting - class overrides' }
+{ #category : 'formatting - class overrides' }
 GbxSpecFormatter >> formatClassOverridesIndenting: indentation
 
 	self formatClassOverridesArrayKeyword: #classOverrides: with: spec classOverrides indenting: indentation + 1
 
-{ #category : #'formatting - class overrides' }
+{ #category : 'formatting - class overrides' }
 GbxSpecFormatter >> formatClassOverrideArrayElement: aClassOverride indenting: indentation
 
 	stream print: aClassOverride class.
@@ -19,7 +24,7 @@ GbxSpecFormatter >> formatClassOverrideArrayElement: aClassOverride indenting: i
 	self formatCRCKeywordForOverride: aClassOverride indenting: indentation + 3.
 	self formatEditsKeywordForOverride: aClassOverride indenting: indentation + 3.
 
-{ #category : #'formatting - class overrides' }
+{ #category : 'formatting - class overrides' }
 GbxSpecFormatter >> formatClassOverridesArrayKeyword: aSymbol with: anArray indenting: indentation
 
 	self
@@ -28,28 +33,28 @@ GbxSpecFormatter >> formatClassOverridesArrayKeyword: aSymbol with: anArray inde
 		indenting: indentation
 		using: [:eachElement :indent | self formatClassOverrideArrayElement: eachElement indenting: indent]
 
-{ #category : #'accessing - constants' }
+{ #category : 'accessing - constants' }
 GbxSpecFormatter >> arrayPrefix
 
 	^self shouldUseComputedArray
 		ifTrue: ['{']
 		ifFalse: ['(OrderedCollection new']
 
-{ #category : #'accessing - constants' }
+{ #category : 'accessing - constants' }
 GbxSpecFormatter >> arrayElementSuffix
 
 	^self shouldUseComputedArray
 		ifTrue: [').']
 		ifFalse: [');']
 
-{ #category : #'accessing - constants' }
+{ #category : 'accessing - constants' }
 GbxSpecFormatter >> arrayElementPrefix
 
 	^self shouldUseComputedArray
 		ifTrue: ['(']
 		ifFalse: ['add: (']
 
-{ #category : #'accessing - constants' }
+{ #category : 'accessing - constants' }
 GbxSpecFormatter >> initialIndentation
 	"Method source is indented compared to a bare spec creation string."
 
@@ -57,26 +62,26 @@ GbxSpecFormatter >> initialIndentation
 		ifTrue: [0]
 		ifFalse: [1]
 
-{ #category : #'accessing - constants' }
+{ #category : 'accessing - constants' }
 GbxSpecFormatter >> emptyArrayLiteral
 
 	^self shouldUseComputedArray
 		ifTrue: ['{}']
 		ifFalse: ['#()']
 
-{ #category : #'accessing - constants' }
+{ #category : 'accessing - constants' }
 GbxSpecFormatter >> arraySuffix
 
 	^self shouldUseComputedArray
 		ifTrue: ['}']
 		ifFalse: ['yourself)']
 
-{ #category : #'formatting - arrays' }
+{ #category : 'formatting - arrays' }
 GbxSpecFormatter >> formatOverrideEditArrayElement: anOverrideEdit indenting: aSmallInteger
 
 	anOverrideEdit storeOn: stream
 
-{ #category : #'formatting - arrays' }
+{ #category : 'formatting - arrays' }
 GbxSpecFormatter >> formatArrayKeyword: aSymbol with: anArray indenting: indentation using: aTwoArgBlock
 
 	| elementIndentation |
@@ -89,7 +94,7 @@ GbxSpecFormatter >> formatArrayKeyword: aSymbol with: anArray indenting: indenta
 		stream nextPutAll: self arrayElementSuffix].
 	self format: self arraySuffix indenting: elementIndentation
 
-{ #category : #'formatting - arrays' }
+{ #category : 'formatting - arrays' }
 GbxSpecFormatter >> formatEditsKeywordForOverride: anOverride indenting: indentation
 
 	self
@@ -97,7 +102,7 @@ GbxSpecFormatter >> formatEditsKeywordForOverride: anOverride indenting: indenta
 		with: anOverride edits
 		indenting: indentation
 
-{ #category : #'formatting - arrays' }
+{ #category : 'formatting - arrays' }
 GbxSpecFormatter >> formatEmptyArrayKeyword: aSymbol indenting: indentation
 
 	self
@@ -105,7 +110,7 @@ GbxSpecFormatter >> formatEmptyArrayKeyword: aSymbol indenting: indentation
 		as: self emptyArrayLiteral
 		indenting: indentation
 
-{ #category : #'formatting - arrays' }
+{ #category : 'formatting - arrays' }
 GbxSpecFormatter >> formatEditsArrayForMethodOverride: aSymbol with: anArray indenting: indentation
 
 	self
@@ -114,7 +119,7 @@ GbxSpecFormatter >> formatEditsArrayForMethodOverride: aSymbol with: anArray ind
 		indenting: indentation
 		using: [:eachElement :indent | self formatOverrideEditArrayElement: eachElement indenting: indent]
 
-{ #category : #'formatting - private' }
+{ #category : 'formatting - private' }
 GbxSpecFormatter >> format: aString indenting: indentation
 
 	stream
@@ -122,7 +127,7 @@ GbxSpecFormatter >> format: aString indenting: indentation
 		tab: indentation;
 		nextPutAll: aString.
 
-{ #category : #'formatting - private' }
+{ #category : 'formatting - private' }
 GbxSpecFormatter >> formatBehaviorKeywordForOverride: anOverride indenting: indentation
 
 	self
@@ -130,7 +135,7 @@ GbxSpecFormatter >> formatBehaviorKeywordForOverride: anOverride indenting: inde
 		as: anOverride behavior storeString
 		indenting: indentation
 
-{ #category : #'formatting - private' }
+{ #category : 'formatting - private' }
 GbxSpecFormatter >> formatCRCKeywordForOverride: anOverride indenting: indentation
 
 	self
@@ -138,7 +143,7 @@ GbxSpecFormatter >> formatCRCKeywordForOverride: anOverride indenting: indentati
 		as: anOverride crc printString
 		indenting: indentation
 
-{ #category : #'formatting - private' }
+{ #category : 'formatting - private' }
 GbxSpecFormatter >> formatKeyword: aSymbol as: aString indenting: indentation
 
 	stream
@@ -148,7 +153,7 @@ GbxSpecFormatter >> formatKeyword: aSymbol as: aString indenting: indentation
 		space;
 		nextPutAll: aString.
 
-{ #category : #'formatting - spec set' }
+{ #category : 'formatting - spec set' }
 GbxSpecFormatter >> formatDestinationPackageNameIndenting: indentation
 
 	self
@@ -156,7 +161,7 @@ GbxSpecFormatter >> formatDestinationPackageNameIndenting: indentation
 		as: spec packageName printString
 		indenting: indentation + 1
 
-{ #category : #'formatting - spec set' }
+{ #category : 'formatting - spec set' }
 GbxSpecFormatter >> formatOptionalVersion
 	"A non-null version requires formatted spec method source.
 	 A null version is used for just the formatted spec itself."
@@ -178,7 +183,7 @@ GbxSpecFormatter >> formatOptionalVersion
 		tab;
 		nextPut: $^.
 
-{ #category : #'formatting - spec set' }
+{ #category : 'formatting - spec set' }
 GbxSpecFormatter >> formatSpec
 
 	| initialIndentation |
@@ -189,7 +194,7 @@ GbxSpecFormatter >> formatSpec
 	self formatVariableOverridesIndenting: initialIndentation.
 	self formatMethodOverridesIndenting: initialIndentation.
 
-{ #category : #'formatting - method overrides' }
+{ #category : 'formatting - method overrides' }
 GbxSpecFormatter >> formatMethodOverridesArrayKeyword: aSymbol with: anArray indenting: indentation
 
 	self
@@ -198,12 +203,12 @@ GbxSpecFormatter >> formatMethodOverridesArrayKeyword: aSymbol with: anArray ind
 		indenting: indentation
 		using: [:eachElement :indent | self formatMethodOverrideArrayElement: eachElement indenting: indent]
 
-{ #category : #'formatting - method overrides' }
+{ #category : 'formatting - method overrides' }
 GbxSpecFormatter >> formatMethodOverridesIndenting: indentation
 
 	self formatMethodOverridesArrayKeyword: #methodOverrides: with: spec methodOverrides indenting: indentation + 1
 
-{ #category : #'formatting - method overrides' }
+{ #category : 'formatting - method overrides' }
 GbxSpecFormatter >> formatMethodOverrideArrayElement: aMethodOverride indenting: indentation
 
 	stream print: aMethodOverride class.
@@ -212,7 +217,7 @@ GbxSpecFormatter >> formatMethodOverrideArrayElement: aMethodOverride indenting:
 	self formatCRCKeywordForOverride: aMethodOverride indenting: indentation + 3.
 	self formatEditsKeywordForOverride: aMethodOverride indenting: indentation + 3.
 
-{ #category : #'formatting - method overrides' }
+{ #category : 'formatting - method overrides' }
 GbxSpecFormatter >> formatSelectorKeywordForMethodOverride: aMethodOverride indenting: indentation
 
 	self
@@ -220,24 +225,24 @@ GbxSpecFormatter >> formatSelectorKeywordForMethodOverride: aMethodOverride inde
 		as: aMethodOverride selector storeString
 		indenting: indentation
 
-{ #category : #'formatting' }
+{ #category : 'formatting' }
 GbxSpecFormatter >> format
 
 	self formatOptionalVersion.
 	self formatSpec.
 	^stream contents
 
-{ #category : #'formatting - variable overrides' }
+{ #category : 'formatting - variable overrides' }
 GbxSpecFormatter >> formatVariableOverridesIndenting: indentation
 
 	self formatVariableOverridesArrayKeyword: #variableOverrides: with: spec variableOverrides indenting: indentation + 1
 
-{ #category : #'formatting - variable overrides' }
+{ #category : 'formatting - variable overrides' }
 GbxSpecFormatter >> formatVariableOverrideArrayElement: eachElement indenting: indentation
 
 	self error: 'Variable overrides not yet implemented'
 
-{ #category : #'formatting - variable overrides' }
+{ #category : 'formatting - variable overrides' }
 GbxSpecFormatter >> formatVariableOverridesArrayKeyword: aSymbol with: anArray indenting: indentation
 
 	self
@@ -246,41 +251,41 @@ GbxSpecFormatter >> formatVariableOverridesArrayKeyword: aSymbol with: anArray i
 		indenting: indentation
 		using: [:eachElement :indent | self formatVariableOverrideArrayElement: eachElement indenting: indent]
 
-{ #category : #'initializing - private' }
+{ #category : 'initializing - private' }
 GbxSpecFormatter >> initializeSpec: anOverrideSet version: aVersionNumber stream: aStream
 
 	spec := anOverrideSet.
 	version := aVersionNumber.
 	stream := aStream.
 
-{ #category : #'testing - private' }
+{ #category : 'testing - private' }
 GbxSpecFormatter >> isBareSpec
 
 	^version isNull
 
-{ #category : #'testing - private' }
+{ #category : 'testing - private' }
 GbxSpecFormatter >> shouldUseComputedArray
 	"For now, unconditionally avoid the computed array construct so GBS can still support VW 8.3.2."
 
 	"^self isBareSpec or: [version >= '9.0']"
 	^false
 
-{ #category : #'examples' }
+{ #category : 'examples' }
 GbxSpecFormatter class >> formatSimpleSpec
 
 	^self formattedSpec: self simpleSpec
 
-{ #category : #'examples' }
+{ #category : 'examples' }
 GbxSpecFormatter class >> formatSimpleSpecMethod
 
 	^self methodSourceForSpec: self simpleSpec versionString: '9.1.1'
 
-{ #category : #'examples' }
+{ #category : 'examples' }
 GbxSpecFormatter class >> formatLegacySimpleSpecMethod
 
 	^self methodSourceForSpec: self simpleSpec versionString: '8.3.2'
 
-{ #category : #'examples' }
+{ #category : 'examples' }
 GbxSpecFormatter class >> simpleSpec
 
 	^GemStone.Gbs.GbxOverrideSet
@@ -320,7 +325,7 @@ GbxSpecFormatter class >> simpleSpec
 									yourself));
 				yourself)
 
-{ #category : #'instance creation - private' }
+{ #category : 'instance creation - private' }
 GbxSpecFormatter class >> spec: anOverrideSet version: aVersionNumber stream: aStream
 
 	^self new
@@ -328,7 +333,7 @@ GbxSpecFormatter class >> spec: anOverrideSet version: aVersionNumber stream: aS
 		version: aVersionNumber
 		stream: aStream
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxSpecFormatter class >> methodSourceForSpec: anOverrideSet versionString: aVersionString
 	"Write the formatted representation of the specified override spec on aStream
 	 with the preamble required to be a spec method
@@ -338,7 +343,7 @@ GbxSpecFormatter class >> methodSourceForSpec: anOverrideSet versionString: aVer
 		methodSourceForSpec: anOverrideSet
 		version: (GbxVersionNumber versionString: aVersionString)
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxSpecFormatter class >> methodSourceForSpec: anOverrideSet version: aVersionNumber
 	"Write the formatted representation of the specified override spec on aStream
 	 with the preamble required to be a spec method
@@ -346,21 +351,21 @@ GbxSpecFormatter class >> methodSourceForSpec: anOverrideSet version: aVersionNu
 
 	^self methodSourceForSpec: anOverrideSet version: aVersionNumber on: String new writeStream
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxSpecFormatter class >> formattedSpec: anOverrideSet
 	"Write the formatted representation of the specified override spec on a stream
 	 and answer the contents of the stream."
 
 	^self formattedSpec: anOverrideSet on: String new writeStream
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxSpecFormatter class >> formattedSpec: anOverrideSet on: aStream
 	"Write the formatted representation of the specified override spec on aStream
 	 and answer the contents of the stream."
 
 	^(self spec: anOverrideSet version: GbxVersionNumber null stream: aStream) format
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxSpecFormatter class >> methodSourceForSpec: anOverrideSet version: aVersionNumber on: aStream
 	"Write the formatted representation of the specified override spec on aStream
 	 with the preamble required to be a spec method

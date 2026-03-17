@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsClassErrSubclassDisallowed',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsClassErrSubclassDisallowed',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsClassErrSubclassDisallowed class >> gemStoneErrorNumber6430 ^2014
 

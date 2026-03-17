@@ -1,19 +1,25 @@
 Class {
-	#name : #'GbxFinalizationLatch',
-	#superclass : #'Object',
-	#instVars : [ #'accessProtect' #'blocker' #'workerIsWaiting' #'workIsAvailable' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxFinalizationLatch',
+	#superclass : 'Object',
+	#instVars : [
+		'accessProtect',
+		'blocker',
+		'workerIsWaiting',
+		'workIsAvailable'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxFinalizationLatch >> initialize
 	accessProtect := GbxSemaphore forMutualExclusion.
 	blocker := GbxSemaphore new.
 	workIsAvailable := false.
 	workerIsWaiting := false
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxFinalizationLatch >> waitForWork
 	| mustWait |
 	accessProtect critical: 
@@ -28,7 +34,7 @@ GbxFinalizationLatch >> waitForWork
 	Must decide whether to wait *inside* the critical block, and actually wait *outside*."
 	mustWait ifTrue: [blocker wait]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxFinalizationLatch >> needFinalization
 	accessProtect critical: 
 			[workerIsWaiting 
@@ -37,7 +43,7 @@ GbxFinalizationLatch >> needFinalization
 					blocker signal]
 				ifFalse: [workIsAvailable := true]]
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxFinalizationLatch class >> new
 	^super new initialize
 

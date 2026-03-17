@@ -1,8 +1,10 @@
 Class {
-	#name : #'IntegerKeyValueDictionary',
-	#superclass : #'KeyValueDictionary',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'IntegerKeyValueDictionary',
+	#superclass : 'KeyValueDictionary',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

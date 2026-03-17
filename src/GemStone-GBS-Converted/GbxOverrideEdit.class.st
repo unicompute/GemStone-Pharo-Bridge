@@ -1,40 +1,42 @@
 Class {
-	#name : #'GbxOverrideEdit',
-	#superclass : #'GbxOverride',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxOverrideEdit',
+	#superclass : 'GbxOverride',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbxOverrideEdit >> hash
 	"Override edits do not make sense in a hashed collection; punt to the default implementation."
 
 	^super hash
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbxOverrideEdit >> = anotherObject
 
 	^self subclassResponsibility
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxOverrideEdit >> count
 	"Answer the size of the edit"
 	
 	^self subclassResponsibility
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxOverrideEdit >> initializeFromSubSequence: aSubSequence
 
 	self subclassResponsibility
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxOverrideEdit >> initializeFromSubSequence: aSubSequence forParent: aMethodVersionOverride
 
 	parent := aMethodVersionOverride.
 	self initializeFromSubSequence: aSubSequence
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxOverrideEdit >> printOn: aStream
 
 	aStream
@@ -43,12 +45,12 @@ GbxOverrideEdit >> printOn: aStream
 		print: self count;
 		nextPutAll: ')'
 
-{ #category : #'applying' }
+{ #category : 'applying' }
 GbxOverrideEdit >> applyFrom: inputStream to: outputStream
 
 	self subclassResponsibility
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxOverrideEdit class >> classForSubSequence: aSubSequence
 
 	aSubSequence isMatch ifTrue: [^GbxOverrideEditCopy].
@@ -56,7 +58,7 @@ GbxOverrideEdit class >> classForSubSequence: aSubSequence
 	aSubSequence isDelete ifTrue: [^GbxOverrideEditDelete].
 	self error: 'Unknown subSequence type'
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxOverrideEdit class >> fromSubSequence: aSubSequence forParent: aMethodVersionOverride
 
 	^((self classForSubSequence: aSubSequence) new)

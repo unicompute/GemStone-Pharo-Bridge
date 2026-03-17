@@ -1,12 +1,16 @@
 Class {
-	#name : #'GbxSkewedFaultingReplicator',
-	#superclass : #'GbxReplicator',
-	#instVars : [ #'oldServerClass' #'newServerClass' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxSkewedFaultingReplicator',
+	#superclass : 'GbxReplicator',
+	#instVars : [
+		'oldServerClass',
+		'newServerClass'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'per-object replication' }
+{ #category : 'per-object replication' }
 GbxSkewedFaultingReplicator >> forReplication: replication replicateFromDeferredReport: report
 	"Migrate to a copy of the instance on the server, and use the mapped class's replicator to replicate the 
 	result. Then copy that result and map the copy to the original report oop."
@@ -43,7 +47,7 @@ GbxSkewedFaultingReplicator >> forReplication: replication replicateFromDeferred
 	"When autoMarkDirty false, client obj should not be immutable."
 	clientObject gbxIsImmutable: skewedClientObject gbxIsImmutable
 
-{ #category : #'per-object replication' }
+{ #category : 'per-object replication' }
 GbxSkewedFaultingReplicator >> forReplication: replication replicateFromReport: report
 	"Since we must go to the server to migrate the instance, and can't do that in the middle of a traversal,
 	we must defer the report."
@@ -51,17 +55,17 @@ GbxSkewedFaultingReplicator >> forReplication: replication replicateFromReport: 
 
 	replication addUnmappedClassReport: report copyWithPrivateBuffer
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxSkewedFaultingReplicator >> isSkew
 
 	^true
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxSkewedFaultingReplicator >> newServerClass
 
 	^newServerClass
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxSkewedFaultingReplicator >> verifyClassRelationship
 	"The old class and the new class must be in the same class history, and new must be later in the class history than the old.
 	Sender must hold sessionProtect."
@@ -88,7 +92,7 @@ GbxSkewedFaultingReplicator >> verifyClassRelationship
 				with: newServerClass
 				with: skewMessage]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxSkewedFaultingReplicator >> initializeForSession: aSession serverBehavior: classDelegate clientClass: clientClass
 	"Sender must hold sessionProtect."
 
@@ -99,7 +103,7 @@ GbxSkewedFaultingReplicator >> initializeForSession: aSession serverBehavior: cl
 	self verifyClassRelationship.
 	^self
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxSkewedFaultingReplicator >> verifyReplicatorExistsForClientClass: clientClass
 
 	session replicatorForClientBehavior: clientClass
@@ -107,7 +111,7 @@ GbxSkewedFaultingReplicator >> verifyReplicatorExistsForClientClass: clientClass
 			[self gbsMessenger
 				error: 'No replicator for mapped class during skew replication.']
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxSkewedFaultingReplicator class >> forSession: session serverBehavior: classDelegate clientClass: clientClass
 	"Sender must hold sessionProtect."
 

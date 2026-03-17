@@ -1,19 +1,28 @@
 Class {
-	#name : #'GbxKeyValueFaulter',
-	#superclass : #'Object',
-	#instVars : [ #'dictionary' #'lastKey' #'lastKeySlot' #'lastValue' #'lastValueSlot' #'deferredKeys' #'deferredValues' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxKeyValueFaulter',
+	#superclass : 'Object',
+	#instVars : [
+		'dictionary',
+		'lastKey',
+		'lastKeySlot',
+		'lastValue',
+		'lastValueSlot',
+		'deferredKeys',
+		'deferredValues'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'initialization' }
+{ #category : 'initialization' }
 GbxKeyValueFaulter >> dictionary: aDict
 
 	deferredKeys := Dictionary new.
 	deferredValues := Dictionary new.
 	dictionary := aDict
 
-{ #category : #'replication' }
+{ #category : 'replication' }
 GbxKeyValueFaulter >> indexableValueAt: index put: anObj
 
 	"This message is sent by replication.  If this is an odd slot, it's a key for the dictionary.
@@ -24,7 +33,7 @@ GbxKeyValueFaulter >> indexableValueAt: index put: anObj
 		ifTrue: [ self incomingKey: anObj assocIndex: (index // 2) + 1 ]
 		ifFalse: [ self incomingValue: anObj assocIndex: (index // 2) ]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxKeyValueFaulter >> incomingKey: incomingKey assocIndex: assocIndex
 
 	| deferredValue |
@@ -43,7 +52,7 @@ GbxKeyValueFaulter >> incomingKey: incomingKey assocIndex: assocIndex
 	lastKey := incomingKey.
 	lastKeySlot := assocIndex.
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxKeyValueFaulter >> incomingValue: incomingValue assocIndex: assocIndex
 
 	| deferredKey |
@@ -62,7 +71,7 @@ GbxKeyValueFaulter >> incomingValue: incomingValue assocIndex: assocIndex
 	lastValue := incomingValue.
 	lastValueSlot := assocIndex.
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxKeyValueFaulter class >> for: aDictionary 
 	^self new dictionary: aDictionary
 

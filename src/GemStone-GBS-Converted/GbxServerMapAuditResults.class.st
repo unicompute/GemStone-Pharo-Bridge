@@ -1,12 +1,17 @@
 Class {
-	#name : #'GbxServerMapAuditResults',
-	#superclass : #'Object',
-	#instVars : [ #'map' #'failures' #'numUsedElements' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxServerMapAuditResults',
+	#superclass : 'Object',
+	#instVars : [
+		'map',
+		'failures',
+		'numUsedElements'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'assertions' }
+{ #category : 'assertions' }
 GbxServerMapAuditResults >> assert: aBoolean node: aNode description: description actual: actual expected: expected
 	"Actual should be the actual object, not a string describing it."
 
@@ -18,33 +23,33 @@ GbxServerMapAuditResults >> assert: aBoolean node: aNode description: descriptio
 								with: actual gbxDebugPrintString
 								with: expected))]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerMapAuditResults >> addUsedElements: anInteger
 
 	numUsedElements := numUsedElements + anInteger
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerMapAuditResults >> map
 	^map
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerMapAuditResults >> addFailure: aFailure
 
 	failures add: aFailure
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerMapAuditResults >> numUsedElements: anObject
 	numUsedElements := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerMapAuditResults >> numUsedElements
 	^numUsedElements
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerMapAuditResults >> map: anObject
 	map := anObject
 
-{ #category : #'verifying' }
+{ #category : 'verifying' }
 GbxServerMapAuditResults >> verify
 	"Check results. If there are any inconsistencies, raise an error."
 
@@ -63,13 +68,13 @@ GbxServerMapAuditResults >> verify
 		error: 'Audit failed with %1 failures (see above or Transcript).'
 			with: failures size.
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxServerMapAuditResults >> initialize
 
 	failures := OrderedCollection new.
 	numUsedElements := 0
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxServerMapAuditResults class >> new
 
 	^super new initialize

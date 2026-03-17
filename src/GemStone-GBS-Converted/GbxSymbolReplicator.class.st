@@ -1,12 +1,15 @@
 Class {
-	#name : #'GbxSymbolReplicator',
-	#superclass : #'GbxByteObjectReplicator',
-	#instVars : [ #'stringClass' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxSymbolReplicator',
+	#superclass : 'GbxByteObjectReplicator',
+	#instVars : [
+		'stringClass'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'per-object replication' }
+{ #category : 'per-object replication' }
 GbxSymbolReplicator >> replicateFromReport
 	"Private.  Given the description of a GemStone object from a traversal object header,
 	 replicate the object as a client object.  If the object is already in the cache,
@@ -39,7 +42,7 @@ GbxSymbolReplicator >> replicateFromReport
 					clientObject oneWayBecome: newSymbol].
 			clientObject := newSymbol]
 
-{ #category : #'store replication' }
+{ #category : 'store replication' }
 GbxSymbolReplicator >> store: anObject withDelegate: aDelegate inTraversal: storeTraversal
 	"Recursively store object reports into the traversal buffer describing anObject
 	and its referents. Only objects marked dirty are stored, and they will
@@ -50,7 +53,7 @@ GbxSymbolReplicator >> store: anObject withDelegate: aDelegate inTraversal: stor
 
 	anObject asGSObjectInSession: session	"Force creation if not already present."
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxSymbolReplicator >> initializeForClientClass: aClientClass serverClass: classDelegate manager: aManager
 
 	super
@@ -59,7 +62,7 @@ GbxSymbolReplicator >> initializeForClientClass: aClientClass serverClass: class
 		manager: aManager.
 	stringClass := StringClassMapping at: aClientClass
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 GbxSymbolReplicator class >> initialize
 	"GbxSymbolReplicator initialize"
 

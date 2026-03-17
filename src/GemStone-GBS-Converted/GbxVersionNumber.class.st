@@ -1,47 +1,50 @@
 Class {
-	#name : #'GbxVersionNumber',
-	#superclass : #'Magnitude',
-	#instVars : [ #'versionComponents' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxVersionNumber',
+	#superclass : 'Magnitude',
+	#instVars : [
+		'versionComponents'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbxVersionNumber >> > aStringOrServerVersion 
 	^(aStringOrServerVersion isKindOf: String) 
 		ifTrue: [self > (self class versionString: aStringOrServerVersion)]
 		ifFalse: [(self compareWith: aStringOrServerVersion) == 1]
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbxVersionNumber >> < aStringOrServerVersion 
 	^(aStringOrServerVersion isKindOf: String) 
 		ifTrue: [self < (self class versionString: aStringOrServerVersion)]
 		ifFalse: [(self compareWith: aStringOrServerVersion) == -1]
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbxVersionNumber >> hash
 	"Since we are able to be equal to a string, we must use string as the basis of the hash."
 	
 	^ self versionString hash
 
-{ #category : #'comparing' }
+{ #category : 'comparing' }
 GbxVersionNumber >> = aStringOrServerVersion 
 	^(aStringOrServerVersion isKindOf: String) 
 		ifTrue: [self = (self class versionString: aStringOrServerVersion)]
 		ifFalse: [(self compareWith: aStringOrServerVersion) == 0]
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxVersionNumber >> printVersionOn: aStream
 
 	versionComponents
 		do: [:each | aStream print: each]
 		separatedBy: [aStream nextPut: $.]
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxVersionNumber >> printOn: aStream 
 	self printVersionOn: aStream
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxVersionNumber >> digits
 
 	| stream |
@@ -50,13 +53,13 @@ GbxVersionNumber >> digits
 		do: [:each | stream print: each].
 	^stream contents
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxVersionNumber >> isNull
 	"A null version has no components"
 	
 	^versionComponents isEmpty
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxVersionNumber >> compareWith: otherVersion 
 	"Answer 1 if I am later than otherVersion, -1 if I am earlier than 
 	otherVersion, and 0 if I am the same as otherVersion."
@@ -77,15 +80,15 @@ GbxVersionNumber >> compareWith: otherVersion
 	mySize < itsSize ifTrue: [^-1].
 	^0
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxVersionNumber >> componentSize
 	^versionComponents size
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxVersionNumber >> versionString: versionString 
 	versionComponents := self parseVersionString: versionString
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxVersionNumber >> versionString
 
 	| aStream |
@@ -93,11 +96,11 @@ GbxVersionNumber >> versionString
 	self printVersionOn: aStream.
 	^aStream contents
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxVersionNumber >> componentAt: index 
 	^versionComponents at: index
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxVersionNumber >> parseVersionString: versionString 
 	"versionString is expected to be in the form of ii.jj.kk.ll, where ii, jj, etc are 
 	each one or more decimal digits, and there can one to any number of groups, 
@@ -118,11 +121,11 @@ GbxVersionNumber >> parseVersionString: versionString
 			initialIndex := periodIndex + 1].
 	^components
 
-{ #category : #'private - instance creation' }
+{ #category : 'private - instance creation' }
 GbxVersionNumber class >> versionString: versionString 
 	^self new versionString: versionString
 
-{ #category : #'private - instance creation' }
+{ #category : 'private - instance creation' }
 GbxVersionNumber class >> null
 
 	^self versionString: ''

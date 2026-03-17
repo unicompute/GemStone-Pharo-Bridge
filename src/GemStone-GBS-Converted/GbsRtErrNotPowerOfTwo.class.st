@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrNotPowerOfTwo',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrNotPowerOfTwo',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrNotPowerOfTwo class >> gemStoneErrorNumber6430 ^2512
 

@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRepErrReposNotAttached',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRepErrReposNotAttached',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRepErrReposNotAttached class >> gemStoneErrorNumber6430 ^2154
 

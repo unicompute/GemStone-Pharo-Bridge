@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxUnauthorizedObjectStub',
-	#superclass : #'GbxObjectStub',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxUnauthorizedObjectStub',
+	#superclass : 'GbxObjectStub',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'faulting' }
+{ #category : 'faulting' }
 GbxUnauthorizedObjectStub >> faultToLevel: levelOrNil session: session delegate: delegate
 	"A 32-bit server will just give another nil-class report on an attempt to unstub, 
 	and a 64-bit server with unauthorized object stubs enabled will give a report for the stub. 
@@ -32,7 +34,7 @@ GbxUnauthorizedObjectStub >> faultToLevel: levelOrNil session: session delegate:
 		context: nil
 		toLevel: level
 
-{ #category : #'GBS private' }
+{ #category : 'GBS private' }
 GbxUnauthorizedObjectStub class >> gbsReplicatorClass
 
 	^GbxUnauthorizedObjectReplicator

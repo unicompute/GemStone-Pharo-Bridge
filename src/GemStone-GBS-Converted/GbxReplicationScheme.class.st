@@ -1,12 +1,19 @@
 Class {
-	#name : #'GbxReplicationScheme',
-	#superclass : #'GbxAbstractReplicationScheme',
-	#instVars : [ #'clamp' #'indexedInstvarsShouldBeForwardersDict' #'selector' #'forwarderOffsetsDict' #'isValid' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxReplicationScheme',
+	#superclass : 'GbxAbstractReplicationScheme',
+	#instVars : [
+		'clamp',
+		'indexedInstvarsShouldBeForwardersDict',
+		'selector',
+		'forwarderOffsetsDict',
+		'isValid'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxReplicationScheme >> updateForClampingByCallback: aBoolean inSession: aSession
 	"Update my Clamp Specification to reflect aBoolean, the current Clamp by Callback setting."
 
@@ -14,12 +21,12 @@ GbxReplicationScheme >> updateForClampingByCallback: aBoolean inSession: aSessio
 				determineInstVarLevelsSelectorForClampByCallback: aBoolean
 				inSession: aSession)
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxReplicationScheme >> replaceInstVarLevelsForClass: clientClass with: instVarLevels
 
 	clamp replaceInstVarLevelsForClass: clientClass with: instVarLevels
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxReplicationScheme >> replaceIndexedInstvarsShoudBeForwardersForClass: clientClass with: aBooleanOrNil
 
 	aBooleanOrNil == nil
@@ -28,21 +35,21 @@ GbxReplicationScheme >> replaceIndexedInstvarsShoudBeForwardersForClass: clientC
 		ifFalse: 
 			[indexedInstvarsShouldBeForwardersDict at: clientClass put: aBooleanOrNil]
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxReplicationScheme >> removeInstVarLevelsForClass: clientClass
 
 	clamp removeInstVarLevelsForClass: clientClass.
 	forwarderOffsetsDict removeKey: clientClass ifAbsent: [].
 	indexedInstvarsShouldBeForwardersDict removeKey: clientClass ifAbsent: []
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxReplicationScheme >> replaceForwarderOffsetsForClass: clientClass with: forwarderOffsets
 
 	forwarderOffsets == nil
 		ifTrue: [forwarderOffsetsDict removeKey: clientClass ifAbsent: []]
 		ifFalse: [forwarderOffsetsDict at: clientClass put: forwarderOffsets]
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxReplicationScheme >> removeArtefactsForClass: aClass
 
 	self
@@ -51,7 +58,7 @@ GbxReplicationScheme >> removeArtefactsForClass: aClass
 		forwardIndexedPart: nil
 		forClass: aClass
 
-{ #category : #'updating' }
+{ #category : 'updating' }
 GbxReplicationScheme >> updateInstVarLevels: instVarLevels forwarderOffsets: forwarderOffsets forwardIndexedPart: indexedShouldBeForwarders forClass: clientClass
 
 	self
@@ -60,7 +67,7 @@ GbxReplicationScheme >> updateInstVarLevels: instVarLevels forwarderOffsets: for
 		replaceIndexedInstvarsShoudBeForwardersForClass: clientClass
 			with: indexedShouldBeForwarders
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxReplicationScheme >> determineInstVarLevelsSelectorForClampByCallback: aBoolean inSession: aSession
 	"Answer the appropriate selector for the server's Clamp by Callback.
 	 There is no callback selector if Clamp by Callback is off,
@@ -74,12 +81,12 @@ GbxReplicationScheme >> determineInstVarLevelsSelectorForClampByCallback: aBoole
 		inSession: aSession.
 	^clampByCallbackSelector
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxReplicationScheme >> clamp: aClampSpec
 
 	clamp := aClampSpec
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxReplicationScheme >> clamp
 
 	isValid
@@ -88,27 +95,27 @@ GbxReplicationScheme >> clamp
 				error: 'Attempt to use a replication spec set that is no longer valid, possibly because its definition method in Object class has been removed.'].
 	^clamp
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxReplicationScheme >> indexedInstvarsShouldBeForwardersInClass: clientClass
 
 	^indexedInstvarsShouldBeForwardersDict at: clientClass
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxReplicationScheme >> selector: aSymbol
 
 	selector := aSymbol
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxReplicationScheme >> forwarderOffsetsForClass: clientClass
 
 	^forwarderOffsetsDict at: clientClass ifAbsent: [#()]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxReplicationScheme >> selector
 
 	^selector
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxReplicationScheme >> validateClampByCallbackSelector: clampByCallbackSelector inSession: aSession
 	"This is a simplistic test. If Object instances can understand the selector,
 	 we assume/hope that the developer has done a good job of implementing
@@ -124,11 +131,11 @@ GbxReplicationScheme >> validateClampByCallbackSelector: clampByCallbackSelector
 		with: clampByCallbackSelector
 		with: self selector
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxReplicationScheme >> isValid
 	^ isValid
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxReplicationScheme >> invalidate
 	"If valid, invalidate and answer true.
 	If invalid, answer false."
@@ -138,19 +145,19 @@ GbxReplicationScheme >> invalidate
 	isValid := false.
 	^result
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxReplicationScheme >> usesClamps
 
 	^true
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbxReplicationScheme >> printOn: aStream
 
 	aStream
 		nextPutAll: 'Replication Scheme ';
 		nextPutAll: selector
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxReplicationScheme >> initializeForIdentityClamps: identityClamps classClamps: classClamps
 
 	clamp := GbxClampSpecification newWithIdentityClampsHolder: identityClamps
@@ -159,7 +166,7 @@ GbxReplicationScheme >> initializeForIdentityClamps: identityClamps classClamps:
 	indexedInstvarsShouldBeForwardersDict := IdentityDictionary new.
 	isValid := true
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxReplicationScheme class >> newForSelector: replicationSet identityClamps: identityClamps classClamps: classClamps clampByCallback: aBoolean inSession: aSession
 
 	^(self new)

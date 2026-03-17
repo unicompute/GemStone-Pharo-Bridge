@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsStDBErrTermsNotParen',
-	#superclass : #'GbsCompilerError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsStDBErrTermsNotParen',
+	#superclass : 'GbsCompilerError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsStDBErrTermsNotParen class >> gemStoneErrorNumber6430 ^1052
 

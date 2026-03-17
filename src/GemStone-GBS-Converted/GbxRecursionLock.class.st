@@ -1,12 +1,14 @@
 Class {
-	#name : #'GbxRecursionLock',
-	#superclass : #'GbxSemaphore',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxRecursionLock',
+	#superclass : 'GbxSemaphore',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'mutual exclusion' }
+{ #category : 'mutual exclusion' }
 GbxRecursionLock >> critical: mutuallyExcludedBlock
 	"Answer the result of evaluating criticalBlock while allowing
 	 the receiver to synchronize processing with other processes.
@@ -25,7 +27,7 @@ GbxRecursionLock >> critical: mutuallyExcludedBlock
 			[lockingProcess := nil.
 			self signal]
 
-{ #category : #'private GBS' }
+{ #category : 'private GBS' }
 GbxRecursionLock >> critical: mutuallyExcludedBlock unlessBlocked: altBlock
 	"Answer the result of evaluating criticalBlock while allowing
 	 the receiver to synchronize processing with other processes; however,
@@ -35,7 +37,7 @@ GbxRecursionLock >> critical: mutuallyExcludedBlock unlessBlocked: altBlock
 		ifTrue: [^mutuallyExcludedBlock value].
 	^super critical: mutuallyExcludedBlock unlessBlocked: altBlock
 
-{ #category : #'private GBS' }
+{ #category : 'private GBS' }
 GbxRecursionLock >> critical: mutuallyExcludedBlock waitingUpTo: milliseconds ifTimeout: altBlock
 	"Answer the result of evaluating criticalBlock while allowing
 	 the receiver to synchronize processing with other processes; however,

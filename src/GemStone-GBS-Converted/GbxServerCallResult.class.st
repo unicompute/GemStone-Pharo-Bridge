@@ -1,12 +1,22 @@
 Class {
-	#name : #'GbxServerCallResult',
-	#superclass : #'Object',
-	#instVars : [ #'alteredCompleted' #'alteredPairs' #'dirtyOops' #'gsError' #'resultOop' #'serverInterface' #'session' #'immediateOops' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxServerCallResult',
+	#superclass : 'Object',
+	#instVars : [
+		'alteredCompleted',
+		'alteredPairs',
+		'dirtyOops',
+		'gsError',
+		'resultOop',
+		'serverInterface',
+		'session',
+		'immediateOops'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerCallResult >> processAlteredSymbolsBuffer
 	1 to: alteredPairs size
 		by: 2
@@ -15,7 +25,7 @@ GbxServerCallResult >> processAlteredSymbolsBuffer
 			session swizzleAlteredOops: (Array with: (alteredPairs at: i)
 						with: (alteredPairs at: i + 1))]
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbxServerCallResult >> processDirtyOopBuffer
 	"Dirty oops are those of mapped objects that have been modified on the server.
 	If it's a replicate and it's a lazy faulter, stub it. If it's immediate or the top-level result,
@@ -34,53 +44,53 @@ GbxServerCallResult >> processDirtyOopBuffer
 						ifTrue: [clientObj gbxUpdateFromDelegate: dirtyDelegate]
 						ifFalse: [immediateOops add: dirtyDelegate]]]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerCallResult >> dirtyOops
 	^dirtyOops
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerCallResult >> alteredPairs: anObject
 	alteredPairs := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerCallResult >> resultOrError
 	
 	^gsError == nil
 		ifTrue: [resultOop]
 		ifFalse: [gsError]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerCallResult >> resultOop: anObject
 	resultOop := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerCallResult >> alteredCompleted: anObject
 	alteredCompleted := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerCallResult >> gsError: anObject
 	gsError := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerCallResult >> serverInterface: anObject
 	serverInterface := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxServerCallResult >> dirtyOops: anObject
 	dirtyOops := anObject
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxServerCallResult >> hasGSError
 	
 	^gsError ~~ nil
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbxServerCallResult >> isFatalError
 	
 	gsError == nil ifTrue: [^false].
 	^gsError isFatalError
 
-{ #category : #'serverInterface interface' }
+{ #category : 'serverInterface interface' }
 GbxServerCallResult >> processDirtyAndAltered
 	"Process any dirty objects and server objects that were returned from the storeTravDo. Answer
 	my collection of immediate oops, which the sender should re-replicate from the server. "
@@ -96,13 +106,13 @@ GbxServerCallResult >> processDirtyAndAltered
 				processAlteredSymbolsBuffer].
 	^immediateOops
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxServerCallResult >> initializeForServerInterface: aServerInterface 
 	serverInterface := aServerInterface.
 	session := serverInterface session.
 	immediateOops := OrderedCollection new: 500
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbxServerCallResult class >> serverInterface: aServerInterface 
 	^self new initializeForServerInterface: aServerInterface
 

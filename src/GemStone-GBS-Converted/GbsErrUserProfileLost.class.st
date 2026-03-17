@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsErrUserProfileLost',
-	#superclass : #'GbsFatalError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsErrUserProfileLost',
+	#superclass : 'GbsFatalError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsErrUserProfileLost class >> gemStoneErrorNumber6430 ^4008
 

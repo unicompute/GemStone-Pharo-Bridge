@@ -1,12 +1,28 @@
 Class {
-	#name : #'GbsError',
-	#superclass : #'Object',
-	#instVars : [ #'arguments' #'category' #'deferProcessing' #'dontRaise' #'errorText' #'exceptionOop' #'fatal' #'gsResult' #'number' #'process' #'reason' #'session' #'stepLevel' #'terminateOnUnwind' ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsError',
+	#superclass : 'Object',
+	#instVars : [
+		'arguments',
+		'category',
+		'deferProcessing',
+		'dontRaise',
+		'errorText',
+		'exceptionOop',
+		'fatal',
+		'gsResult',
+		'number',
+		'process',
+		'reason',
+		'session',
+		'stepLevel',
+		'terminateOnUnwind'
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'private accessing' }
+{ #category : 'private accessing' }
 GbsError >> deferProcessing
 	"This method returns the current value of deferProcessing.  If it's true,
 	 it has the side affect of settinng it to false."
@@ -17,25 +33,25 @@ GbsError >> deferProcessing
 			deferProcessing := false].
 	^defer == true
 
-{ #category : #'private accessing' }
+{ #category : 'private accessing' }
 GbsError >> arguments: anArray
 	"Private"
 
 	arguments := anArray
 
-{ #category : #'private accessing' }
+{ #category : 'private accessing' }
 GbsError >> serverProcess: newVal
 	"Private"
 
 	^process := newVal
 
-{ #category : #'private accessing' }
+{ #category : 'private accessing' }
 GbsError >> fatal: aBoolean
 	"Private"
 
 	fatal := aBoolean
 
-{ #category : #'private accessing' }
+{ #category : 'private accessing' }
 GbsError >> errorText: aString causeOfDeath: aGbsErrorOrNil
 	"Set the error string to aString.  If the given cause of death is
 	 not nil, embellish the errorText with the cause of death."
@@ -47,13 +63,13 @@ GbsError >> errorText: aString causeOfDeath: aGbsErrorOrNil
 				ifFalse: [aGbsErrorOrNil messageText , ', probable cause of: ' , receiverText]).
 	self reason: ''	"Normally set by the GCI interface when it creates an error."
 
-{ #category : #'private accessing' }
+{ #category : 'private accessing' }
 GbsError >> category: aGemStoneObject
 	"Private"
 
 	category := aGemStoneObject
 
-{ #category : #'private accessing' }
+{ #category : 'private accessing' }
 GbsError >> deferProcessing: defer
 
 	"If deferProcessing is true on a session's causeOfDeath GbsError, that
@@ -62,29 +78,29 @@ GbsError >> deferProcessing: defer
 
 	deferProcessing := defer
 
-{ #category : #'private accessing' }
+{ #category : 'private accessing' }
 GbsError >> session: aGSSession
 	"Private"
 
 	session := aGSSession
 
-{ #category : #'private accessing' }
+{ #category : 'private accessing' }
 GbsError >> number: anInteger
 	"Private"
 
 	number := anInteger
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> stackDepth
 
 	^process = self session oopNil ifFalse: [process performOnGsServer: #stackDepth] ifTrue: [0]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> number
 
 	^number
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> augmentErrorTextForCompilerError
 	"rather long method which adds the compiler error 
 	text to help the user. Text is abbreviated if necessary"
@@ -121,26 +137,26 @@ GbsError >> augmentErrorTextForCompilerError
 				nextPutAll: suffixString.
 			self errorText: newSourceStream contents causeOfDeath: self causeOfDeath]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> errorText: aString
 
 	errorText := aString
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> exceptionOop: aDelegate
 
 	exceptionOop := aDelegate
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> arguments
 	^arguments
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> category
 
 	^category
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> causeOfDeath
 
 	"If this GbsError's session has a cause of death, return it - it may
@@ -150,19 +166,19 @@ GbsError >> causeOfDeath
 		ifTrue: [ nil ]
 		ifFalse: [ session causeOfDeath ]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> fatal
 
 	^fatal
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> gsResult: anObject
 
 	"This is used by the debugger for communicating the result of completing
 	 GemStone execution to be returned by the signal processing method"
 	gsResult := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> compilerErrorNumber
 	"GemStone compiler errors are reported differently than other errors.  Rather than having a single error and zero or more arguments, all compiler errors are reported with number 1001 and have a single argument that is an error descriptor object.  Each error descriptor is an array of three elements:  1) an error number (numbered from 002 to 999),  2) an offset into the source code string pointing to where the error was detected, and 3) message text describing the error."
 
@@ -170,14 +186,14 @@ GbsError >> compilerErrorNumber
 	errorDescriptor := arguments at: 1.
 	^errorDescriptor session evaluate: '(self at: 1) at: 1' context: errorDescriptor
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> compilerErrorOffset
 	"GemStone compiler errors are reported differently than other errors.  Rather than having a single error and zero or more arguments, all compiler errors are reported with number 1 and have a single argument that is an error descriptor object.  Each error descriptor is an array of three elements:  1) an error number (numbered from 002 to 999),  2) an offset into the source code string pointing to where the error was detected, and 3) message text describing the error."
 
 	self gbxFixMe.	"Should have a client ErrorDescription class rather than all these round trips."
 	^(((arguments at: 1) fetchOOPAt: 1) fetchOOPAt: 2) asLocalObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> session
 
 	"Return the GbsSession that this error occurred in"
@@ -186,7 +202,7 @@ GbsError >> session
 		ifTrue: [ ^GBSM currentSession ]
 		ifFalse: [ ^session ]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> gsReturnVal
 	"Answer the delegate for the object that should replace top of stack if this error is resumed.
 	If the top of stack should not be replaced, answer OOP_ILLEGAL.
@@ -199,7 +215,7 @@ GbsError >> gsReturnVal
 	gsResult := OIllegal asGSObjectInSession: self session.
 	^result == nil ifTrue: [gsResult] ifFalse: [result]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> compilerErrorSource
 	"Compiler errors sometimes report the source code causing the error.  If the receiver contains this information, return it as a local string.  Otherwise, return nil."
 
@@ -208,23 +224,23 @@ GbsError >> compilerErrorSource
 		ifTrue: [^(arguments at: 2) asLocalObject]
 		ifFalse: [^nil]
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> compilerErrorText
 	"GemStone compiler errors are reported differently than other errors.  Rather than having a single error and zero or more arguments, all compiler errors are reported with number 1 and have a single argument that is an error descriptor object.  Each error descriptor is an array of three elements:  1) an error number (numbered from 1002 to 1999),  2) an offset into the source code string pointing to where the error was detected, and 3) message text describing the error."
 
 	self gbxFixMe.	"Should have a client ErrorDescription class rather than all these round trips."
 	^(((arguments at: 1) fetchOOPAt: 1) fetchOOPAt: 3) asLocalObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> reason
 	^reason ifNil: ['']
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> reason: aString
 
 	reason := aString
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> continuable
 
 	"With the exception of the following errors, an error that is not fatal is continuable:  rtErrStackLimit, bkupErrRestoreSuccessful, abortErrFinishedObjAudit."
@@ -236,16 +252,16 @@ GbsError >> continuable
 		(ex ~~ (GbsError signalFor: #bkupErrRestoreSuccessful)) &
 		(ex ~~ (GbsError signalFor: #abortErrFinishedObjAudit))
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> serverProcess
 
 	^process
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> dontRaise: anObject
 	dontRaise := anObject
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> errorSymbol
 
 	"Return the symbolic name associated with this error"
@@ -257,72 +273,72 @@ GbsError >> errorSymbol
 	errorSymbol at: 1 put: ((errorSymbol at: 1) asLowercase).
 	^errorSymbol asSymbol
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> stepLevel
 	^stepLevel
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> messageText
 
 	^self reason isEmpty
 		ifTrue: [self errorText]
 		ifFalse: [self errorText , ' ' , self reason].
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbsError >> errorText
 	"Should use #messageText to get all the information, error text and reason."
 
 	^errorText ifNil: ['']
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsError >> gbxIsGSError
 
 	"Coerce instances of GSError to true and everything else to false"
 	^true
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsError >> isBreakPointLike
 	^number == 6002 "rtErrStep"
 		or: [number == 6006	"rtErrStackBreakpoint"
 		or: [number == 6005	"rtErrCodeBreakpoint"
 		or: [number == 6001	"rtErrPause"]]]
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsError >> isRealError
 	"If this instance was created using lastError, but the previous GemStone call did not cause an error, then this instance does not represent an actual error.  In this case, this method returns false; otherwise, it returns true."
 
 	^category isGSObject 
 		and: [category ~= self session oopNil and: [number ~= 0]]
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsError >> isAsyncAbortError
 
 	^number = 3007
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsError >> isInterpreterError
 
 	^(category = OGemStoneErrorCategory) & (number//1000 == 2)
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsError >> isAbortingError
 
 	^(category = OGemStoneErrorCategory) & (number//1000 == 3)
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsError >> isFatalError
 	"For an error from GemStone, the fatal field of a GemStone error is true whenever the error number is in the 4000 range.  We also want to consider fatal errors for which the fatal field has not been initialized. This includes system errors indicating problems making a GCI call.
 	We also consider as fatal error 2423, RtErrGciTravNotLicensed, License does not allow Gci Traversal operations. This is not fatal from the server's point of view, but it is fatal to GBS since GBS relies on traversal so heavily that if not fatal would try to do traversal operations in attempting to maintain synchronization after the error, causing infinite recursion."
 
 	^fatal ~~ false or: [number == 2423]
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsError >> isGemStoneError
 	"Return true if this error orignated in GemStone.  Otherwise, return false (which could indicate a primitive failure)."
 
 	^category isGSObject and: [number ~= 0]
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsError >> hasValidServerProcess
 	"True if I have a valid GemStone context"
 
@@ -339,12 +355,12 @@ GbsError >> hasValidServerProcess
 			"and: [ process remoteClass = OGsProcess
 		and: [ (process privatePerform: #stackDepth) asLocalInteger >= 1 ]] "]
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsError >> isEventError
 
 	^(category = OGemStoneErrorCategory) & (number//1000 == 6)
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsError >> hasServerProcess
 	"True if I have a GemStone context that appears good."
 
@@ -352,12 +368,12 @@ GbsError >> hasServerProcess
 	session hasValidSessionId ifFalse: [^false].
 	^process isGSObject and: [process isSpecial not]
 
-{ #category : #'testing' }
+{ #category : 'testing' }
 GbsError >> isCompilerError
 	fatal == true ifTrue: [^false].	"Short circuit to avoid problem reporting login failure"
 	^number // 1000 == 1 and: [category = OGemStoneErrorCategory]
 
-{ #category : #'private debugger support' }
+{ #category : 'private debugger support' }
 GbsError >> stepLevel: anIntegerOrNil 
 	"When server execution that stopped with the receiver is continued, 
 	if nil continue, if an integer step in that level counting from the top 
@@ -365,11 +381,11 @@ GbsError >> stepLevel: anIntegerOrNil
 
 	stepLevel := anIntegerOrNil
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbsError >> initialize
 	terminateOnUnwind := true
 
-{ #category : #'printing' }
+{ #category : 'printing' }
 GbsError >> printOn: aStream
 
 	aStream
@@ -388,7 +404,7 @@ GbsError >> printOn: aStream
 		nextPutAll: 'number: '.
 	number printOn: aStream
 
-{ #category : #'private error processing' }
+{ #category : 'private error processing' }
 GbsError >> processGemStoneError
 	"Private.  Raise a signal representing this GemStoneError"
 
@@ -398,7 +414,7 @@ GbsError >> processGemStoneError
 
 	"If we return a value, either no exception was thrown or we're resuming."
 
-{ #category : #'private error processing' }
+{ #category : 'private error processing' }
 GbsError >> asSignal
 	"Private and deprecated.  A GemStone error is no longer represented by a signal,
 	 but is represented by an Exception."
@@ -407,7 +423,7 @@ GbsError >> asSignal
 		deprecated: 'GbsSession>>asSignal deprecated March, 2006. A GemStone error is no longer represented by a signal, 	 but is represented by an Exception. Send #asExceptionClass directly'.
 	^self asExceptionClass
 
-{ #category : #'private error processing' }
+{ #category : 'private error processing' }
 GbsError >> terminateGsProcess
 	"If I have a valid GsProcess, terminate it.
 
@@ -429,7 +445,7 @@ GbsError >> terminateGsProcess
 							ex return]]]
 		ifFalse: [terminateOnUnwind := true]
 
-{ #category : #'private error processing' }
+{ #category : 'private error processing' }
 GbsError >> asExceptionClassDontCallGemStone
 	"Private.  Answer the exception class representing this GemStone error.  Don't
 	 try to call GemStone - so, if this is a compiler error, just answer the generic
@@ -439,12 +455,12 @@ GbsError >> asExceptionClassDontCallGemStone
 	^GbsErrorNumbersToClasses at: number
 		ifAbsent: [GbsGemStoneError]
 
-{ #category : #'private error processing' }
+{ #category : 'private error processing' }
 GbsError >> replicateException
 
 	^exceptionOop asLocalObject
 
-{ #category : #'private error processing' }
+{ #category : 'private error processing' }
 GbsError >> asExceptionClass
 	"Private.  Answer the exception class representing this GemStone error.  Note:  If
 	 this is a compiler error, the specific error number must be fetched from GemStone"
@@ -455,7 +471,7 @@ GbsError >> asExceptionClass
 	^GbsErrorNumbersToClasses at: errNum
 		ifAbsent: [GbsGemStoneError]
 
-{ #category : #'private error processing' }
+{ #category : 'private error processing' }
 GbsError >> raiseException
 	"Raise the appropriate exception for my kind of error.
 	If the exception handler resumes, save the result value for 
@@ -476,7 +492,7 @@ GbsError >> raiseException
 	result isNil ifFalse: [error gsResult: (result putInGSSession: session)].
 	^error
 
-{ #category : #'private error processing' }
+{ #category : 'private error processing' }
 GbsError >> asException
 
 	| cause error exception |
@@ -494,13 +510,13 @@ GbsError >> asException
 	exception originator: error.
 	^exception
 
-{ #category : #'private error processing' }
+{ #category : 'private error processing' }
 GbsError >> process
 
 	"Private.  Raise a signal representing this GemStoneError"
 	^self processVerifyArgs: [ true ]
 
-{ #category : #'private error processing' }
+{ #category : 'private error processing' }
 GbsError >> processHandlers
 	"Private.  If the session has an event handler for this signal, it will be processed
 	 here.  An exception will also be raised here, if there is either no event handler, or
@@ -520,7 +536,7 @@ GbsError >> processHandlers
 			^self].
 	^self session processEventHandlerFor: self
 
-{ #category : #'private-class initialization' }
+{ #category : 'private-class initialization' }
 GbsError class >> initErrorNumbersDict: dict selector: selector
 	"Initialize the given dictionary that maps GemStone error numbers to client ANSI exception classes.
 	Access the error numbers using the given version-specific selector, either #gemStoneErrorNumber32, #gemStoneErrorNumber64, or #gemStoneErrorNumber6430"
@@ -559,7 +575,7 @@ GbsError class >> initErrorNumbersDict: dict selector: selector
 			self gbsMessenger
 				error: 'Error number conflicts - see Transcript. Proceed to complete the udpate.']
 
-{ #category : #'private-class initialization' }
+{ #category : 'private-class initialization' }
 GbsError class >> initErrorNumbersToClasses
 	"Initialize the dictionaries that map GemStone error numbers to client ANSI exception classes."
 
@@ -571,7 +587,7 @@ GbsError class >> initErrorNumbersToClasses
 	at library load time. GbsErrorNumbersToClasses is to have some error
 	dict when no library has yet been loaded."
 
-{ #category : #'private-class initialization' }
+{ #category : 'private-class initialization' }
 GbsError class >> initSignals
 	"GbsError initialize"
 
@@ -584,7 +600,7 @@ GbsError class >> initSignals
 		notifierString: 'Unable to replicate a BlockClosure'.
 	GbsAssertionError notifierString: 'A GBS assertion check has failed'
 
-{ #category : #'private-class initialization' }
+{ #category : 'private-class initialization' }
 GbsError class >> initializeErrorNameToClassCompatibility
 
 	"For backward compatibility - map the old names for error categories to the new class names"
@@ -601,7 +617,7 @@ GbsError class >> initializeErrorNameToClassCompatibility
 		at: #gsiBlockReplicationFailed put: GbsBlockReplicationError;
 		at: #gsiUnsupportedFloat put: GbsUnsupportedFloatError
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 GbsError class >> initialize
 
 	"GbsError initialize"
@@ -610,7 +626,7 @@ GbsError class >> initialize
 	self initErrorNumbersToClasses.
 	self initializeErrorNameToClassCompatibility
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsError class >> classNameFromErrorSymbol: errorSym
 
 	| classname |
@@ -619,14 +635,14 @@ GbsError class >> classNameFromErrorSymbol: errorSym
 	classname := 'Gbs' , classname.
 	^classname asSymbol
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsError class >> gsiError: aString
 	"This method is obsolete."
 
 	^self gbsMessenger
 		error: aString.
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsError class >> forException: exception errorText: aString session: aGbsSession 
 	"Return a new GbsError corresponding to the given exception class.  The argument exception must be an exception class corresponding to a GemStone server error."
 
@@ -645,7 +661,7 @@ in 32 and 64 bit."
 				ifFalse: [aGbsSession oopNil]).
 	^err
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsError class >> serverErrorClasses
 	"Return a new collection of client classes representing GemStone errors"
 	
@@ -656,12 +672,12 @@ GbsError class >> serverErrorClasses
 	existingClasses removeAll: GbsGemStoneError subclasses.	"The immediate subclasses are abstract."
 	^existingClasses
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsError class >> selectErrorMap
 
 	GbsErrorNumbersToClasses := GbsErrorNumbersToClasses6430
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsError class >> closestSignalTo: targetSignal from: sourceSignals
 
 	"Given the collection of Signals, sourceSignals, return one
@@ -693,7 +709,7 @@ GbsError class >> closestSignalTo: targetSignal from: sourceSignals
 	"Note: The old #accepts: had to be used instead of ANSI #handles: because
 		 targetSignal is a signal (not an exception) and #handles: sends #creator."
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsError class >> raiseBadSessionIdFor: aGbsSession errorText: errorText
 
 	"Create a new GbsError for #gciErrBadSessionId, associated with the
@@ -706,7 +722,7 @@ GbsError class >> raiseBadSessionIdFor: aGbsSession errorText: errorText
 		session: aGbsSession.
 	^err process
 
-{ #category : #'private' }
+{ #category : 'private' }
 GbsError class >> raiseBadSessionIdFor: aGbsSession
 
 	"Create a new GbsError for #gciErrBadSessionId, associated with the
@@ -716,21 +732,21 @@ GbsError class >> raiseBadSessionIdFor: aGbsSession
 		raiseBadSessionIdFor: aGbsSession
 		errorText: 'This session is not logged in to GemStone'
 
-{ #category : #'signal constants' }
+{ #category : 'signal constants' }
 GbsError class >> defineErrorNumber: number class: errorClass
 
 	"Register the given user-defined server error number with the given Smalltalk error class.  After using this method, subsequent occurrences of the given error number during GemStone execution will raise the given signal in Smalltalk."
 
 	GbsErrorNumbersToClasses at: number put: errorClass
 
-{ #category : #'signal constants' }
+{ #category : 'signal constants' }
 GbsError class >> signalFor: anErrorSymbol
 	"Converts a GemStone error symbol to a client side error class"
 	"e.g. GbsError signalFor: #rtErrDoesNotUnderstand"
 
 	^self exceptionClassFor: anErrorSymbol
 
-{ #category : #'signal constants' }
+{ #category : 'signal constants' }
 GbsError class >> exceptionClassFor: anErrorSymbol
 	"Converts a GemStone error symbol to a client side error class"
 	"e.g. GbsError signalFor: #rtErrDoesNotUnderstand"
@@ -743,14 +759,14 @@ GbsError class >> exceptionClassFor: anErrorSymbol
 				ifAbsent: 
 					[self gbsMessenger error: 'Unknown error symbol - %1' with: anErrorSymbol]]
 
-{ #category : #'signal constants' }
+{ #category : 'signal constants' }
 GbsError class >> errorSignal
 
 	"Signal indicating a GemStone (back end) error"
 
 	^GemStone.Gbs.GbsGemStoneError
 
-{ #category : #'private-argument verification' }
+{ #category : 'private-argument verification' }
 GbsError class >> verifyBytes: anObject
 
 	"Returns true if anObject is stored as bytes.  Otherwise, a signal a GBS error."
@@ -766,7 +782,7 @@ GbsError class >> verifyBytes: anObject
 			^false
 		]
 
-{ #category : #'private-argument verification' }
+{ #category : 'private-argument verification' }
 GbsError class >> verify: anObject is: aClass or: anotherClass
 
 	"Returns true if anObject is a kind of aClass or anotherClass.  Otherwise, a signal a GBS error."
@@ -780,7 +796,7 @@ GbsError class >> verify: anObject is: aClass or: anotherClass
 			^false
 		]
 
-{ #category : #'private-argument verification' }
+{ #category : 'private-argument verification' }
 GbsError class >> verify: anObject is: aCollectionClass of: aClass
 
 	"Returns true if anObject is a kind of aCollectionClass, and each of its elements is a kind of aClass.  Otherwise, a signal a GBS error."
@@ -794,7 +810,7 @@ GbsError class >> verify: anObject is: aCollectionClass of: aClass
 				ifTrue: [ ^true ]].
 	^false
 
-{ #category : #'private-argument verification' }
+{ #category : 'private-argument verification' }
 GbsError class >> verify: anObject is: aClass
 
 	"Returns true if anObject is a kind of aClass.  Otherwise, a signal a GBS error."
@@ -808,7 +824,7 @@ GbsError class >> verify: anObject is: aClass
 			^false
 		]
 
-{ #category : #'private-argument verification' }
+{ #category : 'private-argument verification' }
 GbsError class >> primUnpolledResultOrError: resultOrError verifyArgs: verifyArgsBlock session: session
 
 	"Private - This is a fix for BUG18642. This method is identical to the
@@ -822,7 +838,7 @@ GbsError class >> primUnpolledResultOrError: resultOrError verifyArgs: verifyArg
 		ifTrue: [^resultOrError processVerifyArgs: verifyArgsBlock].
 	^resultOrError
 
-{ #category : #'private-argument verification' }
+{ #category : 'private-argument verification' }
 GbsError class >> verifyBytes: anObject or: aCollectionClass of: aClass
 
 	"Returns true if anObject is bytes, or a collection whose elements are each a kind of aClass.  Otherwise, a signal a GBS error."
@@ -834,7 +850,7 @@ GbsError class >> verifyBytes: anObject or: aCollectionClass of: aClass
 		ifTrue: [ ^true ]
 		ifFalse: [ ^self verify: anObject is: aCollectionClass of: aClass ]
 
-{ #category : #'private-argument verification' }
+{ #category : 'private-argument verification' }
 GbsError class >> primResultOrError: resultOrError verifyArgs: verifyArgsBlock session: session 
 	"If resultOrError is an error, process it.  If it is a result, return it.
 	 Before returning it, however, call GciPollForSignal
@@ -852,7 +868,7 @@ GbsError class >> primResultOrError: resultOrError verifyArgs: verifyArgsBlock s
 					whileTrue: [event process]].
 	^resultOrError
 
-{ #category : #'obsolete' }
+{ #category : 'obsolete' }
 GbsError class >> gsiErrorSignal
 	"Used to signal errors that occur at the GBS level, as opposed to GbsError>>errorSignal, which is used to signal GemStone errors at the repository level."
 
@@ -860,16 +876,16 @@ GbsError class >> gsiErrorSignal
 		deprecated: 'GbsError class>>#gsiErrorSignal deprecated January 2008. Reference GbsInterfaceError directly'.
 	^GbsInterfaceError
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsError class >> new
 	^super new initialize
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsError class >> number: anInteger
 
 	^self new number: anInteger	"Private"
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 GbsError class >> number: anInteger session: aGSSession
 
 	^self new number: anInteger; session: aGSSession

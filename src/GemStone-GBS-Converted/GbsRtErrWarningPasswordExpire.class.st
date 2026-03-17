@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrWarningPasswordExpire',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrWarningPasswordExpire',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrWarningPasswordExpire class >> gemStoneErrorNumber6430 ^2347
 

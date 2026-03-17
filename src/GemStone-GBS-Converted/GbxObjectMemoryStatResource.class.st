@@ -1,17 +1,19 @@
 Class {
-	#name : #'GbxObjectMemoryStatResource',
-	#superclass : #'GbxStatResource',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbxObjectMemoryStatResource',
+	#superclass : 'GbxStatResource',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxObjectMemoryStatResource >> instanceDescription
 
 	^'ObjectMemoryStats'
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxObjectMemoryStatResource >> writeSampleTo: statArchive
 	"Iterate over each stat to write to archive file"
 
@@ -19,7 +21,7 @@ GbxObjectMemoryStatResource >> writeSampleTo: statArchive
 	om := ObjectMemory current.
 	stats do: [:stat | stat writeSampleFrom: om to: statArchive]
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxObjectMemoryStatResource >> newincGCStateStat
 	"Return a new GbxStat for the given stat name"
 
@@ -27,7 +29,7 @@ GbxObjectMemoryStatResource >> newincGCStateStat
 	desc := self class statDescriptors detect: [:sd | sd name = 'incGCState'].
 	^GbxIncGcStateStat newWithDescription: desc
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxObjectMemoryStatResource >> newStatFor: statName
 	"Return a new GbxStat for the given stat name"
 
@@ -35,7 +37,7 @@ GbxObjectMemoryStatResource >> newStatFor: statName
 	desc := self class statDescriptors detect: [:sd | sd name = statName].
 	^GbxObjectMemoryStat newWithDescription: desc
 
-{ #category : #'initialize-release' }
+{ #category : 'initialize-release' }
 GbxObjectMemoryStatResource >> initializeStatistics
 	"Set the receiver's statistics to 0"
 
@@ -118,7 +120,7 @@ GbxObjectMemoryStatResource >> initializeStatistics
 		add: (self newStatFor: 'threadedDataEntries');
 		add: (self newStatFor: 'threadedOTEntries')
 
-{ #category : #'class initialization' }
+{ #category : 'class initialization' }
 GbxObjectMemoryStatResource class >> initialize
 	"Create GbxStatDescriptors for this stat resource"
 	"self initialize"
@@ -659,21 +661,21 @@ GbxObjectMemoryStatResource class >> initialize
 					isLargerBetter: false
 					unit: 'entries')
 
-{ #category : #'accessing' }
+{ #category : 'accessing' }
 GbxObjectMemoryStatResource class >> singleton
 
 	singleton == nil ifTrue: [singleton := self basicNew initializeStatistics].
 	^singleton
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxObjectMemoryStatResource class >> resourceTypeName
 	^'ObjectMemory'
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxObjectMemoryStatResource class >> resourceTypeDescription
 	^'Statistics associated with VW''s memory and garbage collection'
 
-{ #category : #'archiving' }
+{ #category : 'archiving' }
 GbxObjectMemoryStatResource class >> resourceTypeId
 	^3
 

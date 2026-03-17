@@ -1,8 +1,10 @@
 Class {
-	#name : #'ReadStreamLegacy',
-	#superclass : #'PositionableStreamLegacy',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'ReadStreamLegacy',
+	#superclass : 'PositionableStreamLegacy',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 

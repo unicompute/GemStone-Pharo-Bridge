@@ -1,11 +1,13 @@
 Class {
-	#name : #'GbsRtErrLrgIntOverflow',
-	#superclass : #'GbsInterpreterError',
-	#instVars : [  ],
-	#classVars : [  ],
-	#category : #'GemStone-GBS-Converted'
+	#name : 'GbsRtErrLrgIntOverflow',
+	#superclass : 'GbsInterpreterError',
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : #'constants' }
+{ #category : 'constants' }
 GbsRtErrLrgIntOverflow class >> gemStoneErrorNumber6430 ^2503
 
