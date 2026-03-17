@@ -2914,8 +2914,8 @@ GbsRemoteDebugger >> resolveRestartLevelForUI [
 	((preserved isNumber and: [ preserved > 1 ])
 		and: [
 			(level isNil)
-				or: [ level <= 1 ]
-				or: [ (step isNumber and: [ step > 1 ]) ]
+				or: [ (level <= 1)
+				or: [ (step isNumber and: [ step > 1 ]) ] ]
 		]) ifTrue: [ ^ preserved ].
 
 	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
