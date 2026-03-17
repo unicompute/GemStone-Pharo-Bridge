@@ -2848,7 +2848,7 @@ GbsRemoteDebugger >> normalizePauseLandingSelection [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restart [
-	| didRestart beforeStep afterStep |
+	| didRestart beforeStep afterStep restartLevel |
 	"Log pre-restart state"
 	beforeStep := self serverExecutedFrameStepPoint.
 	Transcript
@@ -2859,8 +2859,18 @@ GbsRemoteDebugger >> restart [
 		show: ' selectedExecuted=';
 		show: self currentSelectedContextIsExecutedCodeFrame asString;
 		cr.
-	
-	didRestart := self safeServiceCall: [ service restart ] default: false.
+
+	restartLevel := self resolveExecutedFrameLevelFromServer.
+	((restartLevel isNumber and: [ restartLevel > 0 ]) not) ifTrue: [
+		restartLevel := self currentSelectedFrameLevel
+	].
+	((restartLevel isNumber and: [ restartLevel > 0 ]) not) ifTrue: [ restartLevel := 1 ].
+	Transcript
+		show: '[UI restart] using restartLevel=';
+		show: restartLevel asString;
+		cr.
+
+	didRestart := self trimServerStackToLevel: restartLevel.
 	
 	"Log post-restart state before fetch"
 	afterStep := self serverExecutedFrameStepPoint.
@@ -2871,6 +2881,10 @@ GbsRemoteDebugger >> restart [
 	
 	didRestart ifTrue: [
 		self settleAfterRestart.
+		((self serverExecutedFrameStepPoint ifNil: [ 0 ]) > 1) ifTrue: [
+			self forceServerJumpToStepPoint1.
+			self settleAfterRestart
+		].
 		"Log post-fetch state"
 		afterStep := self serverExecutedFrameStepPoint.
 		Transcript
@@ -2886,6 +2900,52 @@ GbsRemoteDebugger >> restart [
 		restartPinnedContext := nil
 	].
 	^ didRestart
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> trimServerStackToLevel: aLevel [
+	| level script raw |
+	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
+	level := aLevel.
+	((level isNumber and: [ level > 0 ]) not) ifTrue: [ level := 1 ].
+
+	script := '[
+		| obj proc procOop restartLevel |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_trimStackToLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_trimStackToLevel:) not ]) and: [ obj respondsTo: #serverProcessOop ]) ifTrue: [
+			procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
+			(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
+				proc := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
+			]
+		].
+		((proc isNil or: [ (proc respondsTo: #_trimStackToLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_trimStackToLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		proc isNil ifTrue: [ ^ ''false'' ].
+		restartLevel := ', level asString, '.
+		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ^ ''false'' ].
+		''true''
+	] value'.
+
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	raw ifNil: [ ^ false ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	^ (raw = true)
+		or: [
+			(raw respondsTo: #asString)
+				and: [ (#('true' '1' 'ok') includes: raw asString asLowercase) ]
+		]
 ]
 
 { #category : 'private' }
