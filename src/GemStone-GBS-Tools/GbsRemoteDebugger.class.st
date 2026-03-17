@@ -2860,11 +2860,7 @@ GbsRemoteDebugger >> restart [
 		show: self currentSelectedContextIsExecutedCodeFrame asString;
 		cr.
 
-	restartLevel := self resolveExecutedFrameLevelFromServer.
-	((restartLevel isNumber and: [ restartLevel > 0 ]) not) ifTrue: [
-		restartLevel := self currentSelectedFrameLevel
-	].
-	((restartLevel isNumber and: [ restartLevel > 0 ]) not) ifTrue: [ restartLevel := 1 ].
+	restartLevel := self resolveRestartLevelForUI.
 	Transcript
 		show: '[UI restart] using restartLevel=';
 		show: restartLevel asString;
@@ -2900,6 +2896,34 @@ GbsRemoteDebugger >> restart [
 		restartPinnedContext := nil
 	].
 	^ didRestart
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> resolveRestartLevelForUI [
+	| level preserved step |
+	preserved := self
+		safeServiceCall: [
+			(service respondsTo: #restartHomeLevelForReset)
+				ifTrue: [ service restartHomeLevelForReset ]
+				ifFalse: [ nil ]
+		]
+		default: nil.
+	level := self resolveExecutedFrameLevelFromServer.
+	step := self serverExecutedFrameStepPoint.
+
+	((preserved isNumber and: [ preserved > 1 ])
+		and: [
+			(level isNil)
+				or: [ level <= 1 ]
+				or: [ (step isNumber and: [ step > 1 ]) ]
+		]) ifTrue: [ ^ preserved ].
+
+	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
+
+	level := self currentSelectedFrameLevel.
+	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
+
+	^ 1
 ]
 
 { #category : 'private' }
