@@ -1275,22 +1275,6 @@ GbsRemoteDebugger >> setInitialSourceCode: aString [
 	self contextSelected: topContext
 ]
 
-{ #category : 'private' }
-GbsRemoteDebugger >> preferredInitialContextIndex [
-	| index executedIndex |
-	contextList ifNil: [ ^ 1 ].
-	contextList isEmpty ifTrue: [ ^ 1 ].
-
-	"Restart determinism: always prefer the executed-code frame, wherever it is."
-	executedIndex := contextList findFirst: [ :ctx | self isExecutedCodeFrame: ctx ].
-	executedIndex > 0 ifTrue: [ ^ executedIndex ].
-
-	index := contextList
-		findFirst: [ :ctx | self isLikelyUserFrame: ctx ].
-	index = 0 ifTrue: [ ^ 1 ].
-	^ index
-]
-
 { #category : 'accessing' }
 GbsRemoteDebugger >> processOop [
 	^ processOop
@@ -1626,21 +1610,6 @@ GbsRemoteDebugger >> stackData: anArray [
 	stackList ifNotNil: [ self fetchStackFrames ].
 ]
 
-{ #category : 'private' }
-GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
-	self safeServiceCall: [ service jumpToStepPoint: 1 ] default: false.
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> currentSelectedContextIsExecutedCodeFrame [
-	| index |
-	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ false ].
-	index := (stackList notNil and: [ stackList respondsTo: #selectedIndex ])
-		ifTrue: [ stackList selectedIndex ifNil: [ 1 ] ]
-		ifFalse: [ 1 ].
-	(index isNumber and: [ index > 0 and: [ index <= contextList size ] ]) ifFalse: [ ^ false ].
-	^ self isExecutedCodeFrame: (contextList at: index)
-]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> stepInto [
@@ -2701,9 +2670,6 @@ GbsRemoteDebugger >> normalizePauseLandingSelection [
 ]
 
 { #category : 'private' }
-
-
-{ #category : 'private' }
 GbsRemoteDebugger >> restartWithDeferredSecondPass [
 	| worldStateClass |
 	self restart.
@@ -2779,7 +2745,9 @@ GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
 		attempts := attempts + 1
 	].
 
-	ready ifTrue: [ self restart ].
+	ready ifTrue: [ 
+		self restartNeedsServerRewind ifTrue: [ self restart ]
+	].
 	^ firstPass
 ]
 
@@ -2865,17 +2833,6 @@ GbsRemoteDebugger >> serverExecutedFrameStepPoint [
 	executed ifNil: [ ^ nil ].
 	^ (executed respondsTo: #quickStepPoint)
 		ifTrue: [ [ executed quickStepPoint asInteger ] on: Error do: [ nil ] ]
-		ifFalse: [ nil ]
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> resolveExecutedFrameLevelFromServer [
-	| executed |
-	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ nil ].
-	executed := contextList detect: [ :ctx | self isExecutedCodeFrame: ctx ] ifNone: [ nil ].
-	executed ifNil: [ ^ nil ].
-	^ (executed respondsTo: #level)
-		ifTrue: [ [ executed level asInteger ] on: Error do: [ nil ] ]
 		ifFalse: [ nil ]
 ]
 
