@@ -456,6 +456,15 @@ GbxContextListPolicy >> fetchServerContexts [
 			]
 		] thenSelect: #isNotNil.
 
+	contexts isEmpty ifTrue: [
+		(debugger respondsTo: #fetchContextsDirectly) ifTrue: [
+			debugger logRestartText: 'fetchServerContexts: falling back to debugger fetchContextsDirectly'.
+			contexts := [ debugger fetchContextsDirectly ] on: Error do: [ #( ) ].
+			contexts ifNil: [ contexts := #( ) ].
+			debugger logRestartText: 'fetchServerContexts: direct fallback count=' , contexts size asString
+		]
+	].
+
 	debugger logRestartText: 'fetchServerContexts END contexts count=' , contexts size asString.
 	^ contexts
 ]
