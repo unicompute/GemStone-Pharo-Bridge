@@ -356,13 +356,17 @@ GbxContextListPolicy >> fetchServerContexts [
 		rawData := '' 
 	].
 	(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
+	(rawData respondsTo: #splitOn) ifFalse: [
+		debugger logRestartText: 'fetchServerContexts: rawData does not respond to #splitOn, type=' , rawData class name.
+		rawData := [ rawData asString ] on: Error do: [ '' ]
+	].
 	debugger logRestartText: 'fetchServerContexts: rawData length=' , rawData size asString.
 	"Log first 200 chars of rawData for debugging"
 	debugger logRestartText: 'fetchServerContexts: rawData first200=[' , (rawData copyFrom: 1 to: (rawData size min: 200)) , ']'.
 	"Parse context lines from script output, filtering DEBUG and empty lines"
-	contexts := (rawData splitOn: Character lf)
-		select: [ :line | line isNotEmpty and: [ (line beginsWith: 'DEBUG:') not ] ]
-		thenCollect: [ :line |
+	contexts := ((rawData splitOn: Character lf)
+		select: [ :line | line isNotEmpty and: [ (line beginsWith: 'DEBUG:') not ] ])
+		collect: [ :line |
 			| parts |
 			[
 				parts := line splitOn: Character tab.
@@ -422,7 +426,8 @@ GbxContextListPolicy >> fetchServerContexts [
 				debugger logRestartText: 'fetchServerContexts: ERROR parsing line: ' , (line copyFrom: 1 to: (line size min: 100)).
 				nil
 			]
-		] thenSelect: #isNotNil.
+		].
+	contexts := contexts select: #isNotNil.
 
 	contexts isEmpty ifTrue: [
 		(debugger respondsTo: #fetchContextsDirectly) ifTrue: [
