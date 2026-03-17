@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRepErrBkupNoStart class >> gemStoneErrorNumber6430 ^2392
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGciErrTravCompleted class >> gemStoneErrorNumber6430 ^2216
+[
+
+]
 

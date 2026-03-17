@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsLgcErrPacketKindBad class >> gemStoneErrorNumber6430 ^2230
+[
+
+]
 

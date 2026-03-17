@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsObjErrResultNscTooBig class >> gemStoneErrorNumber6430 ^2207
+[
+
+]
 

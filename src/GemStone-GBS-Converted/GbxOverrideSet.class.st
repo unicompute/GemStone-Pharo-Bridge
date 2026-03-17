@@ -15,6 +15,7 @@ Class {
 
 { #category : 'storing' }
 GbxOverrideSet >> storeOn: aStream
+[
 
 	aStream
 		nextPutAll: self class fullName;
@@ -32,26 +33,32 @@ GbxOverrideSet >> storeOn: aStream
 		storeOverrides: methodOverrides
 		withKeyword: #methodOverrides:
 		on: aStream.
+]
 
 { #category : 'comparing' }
 GbxOverrideSet >> hash
+[
 
 	^self classOverrides hash
 		+ self methodOverrides hash
 		+ self variableOverrides hash
 		+ self packageName hash
+]
 
 { #category : 'comparing' }
 GbxOverrideSet >> = anotherOverrideSet
+[
 
 	^self class = anotherOverrideSet class
 		and: [self packageName = anotherOverrideSet packageName
 		and: [self classOverrides = anotherOverrideSet classOverrides
 		and: [self methodOverrides = anotherOverrideSet methodOverrides
 		and: [self variableOverrides = anotherOverrideSet variableOverrides]]]]
+]
 
 { #category : 'comparing' }
 GbxOverrideSet >> differencesFrom: anotherOverrideSet
+[
 	"Compose the differences into a Dictionary and answer that."
 
 	| result |
@@ -79,9 +86,11 @@ GbxOverrideSet >> differencesFrom: anotherOverrideSet
 				put: (self differencesBetweenOverrides: self variableOverrides
 						and: anotherOverrideSet variableOverrides)].
 	^result
+]
 
 { #category : 'comparing' }
 GbxOverrideSet >> differencesBetweenOverrides: someOverrides and: otherOverrides
+[
 	"Subsequences probably aren't sufficient.
 	 It seems like two overides for the same method can differ in their edits,
 	 and the subsequence will be delete one and add the other."
@@ -115,75 +124,101 @@ GbxOverrideSet >> differencesBetweenOverrides: someOverrides and: otherOverrides
 	editsOnlyConflicts notEmpty ifTrue: [results at: #editsOnlyConflicts put: editsOnlyConflicts].
 	complexConflicts notEmpty ifTrue: [results at: #complexConflicts put: complexConflicts].
 	^results
+]
 
 { #category : 'accessing' }
 GbxOverrideSet >> variableOverrides
+[
 
 	^variableOverrides
+]
 
 { #category : 'accessing' }
 GbxOverrideSet >> packageName
+[
 
 	^packageName
+]
 
 { #category : 'accessing' }
 GbxOverrideSet >> methodOverrides: aCollection
+[
 
 	methodOverrides := self setupOverrides: aCollection
+]
 
 { #category : 'accessing' }
 GbxOverrideSet >> methodOverrides
+[
 
 	^methodOverrides
+]
 
 { #category : 'accessing' }
 GbxOverrideSet >> packageName: aString
+[
 
 	packageName := aString
+]
 
 { #category : 'accessing' }
 GbxOverrideSet >> classOverrides: aCollection
+[
 
 	classOverrides := self setupOverrides: aCollection
+]
 
 { #category : 'accessing' }
 GbxOverrideSet >> package
+[
 
 	^package
 		ifNil: 
 			[self resolvePackageIfFail: [^nil	"Cannot continue"].
 			package]
+]
 
 { #category : 'accessing' }
 GbxOverrideSet >> classOverrides
+[
 
 	^classOverrides
+]
 
 { #category : 'accessing' }
 GbxOverrideSet >> variableOverrides: aCollection
+[
 
 	variableOverrides := self setupOverrides: aCollection
+]
 
 { #category : 'testing' }
 GbxOverrideSet >> hasNoEffect
+[
 
 	classOverrides isEmpty ifFalse: [^false].
 	variableOverrides isEmpty ifFalse: [^false].
 	methodOverrides isEmpty ifFalse: [^false].
 	^true
+]
 
 { #category : 'testing' }
 GbxOverrideSet >> hasEffect
+[
 
 	^self hasNoEffect not
+]
 
 { #category : 'testing' }
 GbxOverrideSet >> contentDiffersFrom: anotherOverrideSet
+[
 
 	^self ~= anotherOverrideSet
+]
 
 { #category : 'private' }
 GbxOverrideSet >> addMethodOverrides
+[
 
 	| overriddenMethods |
 	overriddenMethods := self allOverridesInPackage
@@ -194,9 +229,11 @@ GbxOverrideSet >> addMethodOverrides
 			methodOverrides
 				add: (GbxMethodOverride fromOverriddenMethod: each forParent: self)].
 	self sortOverrides: methodOverrides.
+]
 
 { #category : 'private' }
 GbxOverrideSet >> addClassOverrides
+[
 
 	| overriddenClasses |
 	overriddenClasses := self allOverridesInPackage
@@ -206,26 +243,34 @@ GbxOverrideSet >> addClassOverrides
 			classOverrides
 				add: (GbxClassOverride fromOverriddenClass: each forParent: self)].
 	self sortOverrides: classOverrides.
+]
 
 { #category : 'private' }
 GbxOverrideSet >> sortOverrides: anOrderedCollection
+[
 
 	anOrderedCollection sort: [:a :b | a printString <= b printString]
+]
 
 { #category : 'private' }
 GbxOverrideSet >> resolvePackageIfFail: failBlock
+[
 
 	package := GbxOverrideUtility
 				resolvePackageName: packageName
 				ifFail: failBlock
+]
 
 { #category : 'private' }
 GbxOverrideSet >> allOverridesInPackage
+[
 
 	^GbxOverrideUtility allOverridesInPackage: self package
+]
 
 { #category : 'private' }
 GbxOverrideSet >> addVariableOverrides
+[
 
 	| overridesInPackage |
 	overridesInPackage := self allOverridesInPackage
@@ -233,9 +278,11 @@ GbxOverrideSet >> addVariableOverrides
 	overridesInPackage isEmpty
 		ifFalse: [self error: 'Variable overrides not yet implemented'].
 	self sortOverrides: variableOverrides.
+]
 
 { #category : 'applying' }
 GbxOverrideSet >> apply
+[
 	"Answer true if all overrides succeeded, false if any failed."
 
 	| report |
@@ -258,15 +305,19 @@ GbxOverrideSet >> apply
 			[OverrideFailureWarning raiseSignal: report contents.
 			^false].
 	^true
+]
 
 { #category : 'initialize-release' }
 GbxOverrideSet >> initialize
+[
 	classOverrides := OrderedCollection new.
 	variableOverrides := OrderedCollection new.
 	methodOverrides := OrderedCollection new
+]
 
 { #category : 'initialize-release' }
 GbxOverrideSet >> addAllOverridesInPackage: aPackage
+[
 
 	package := aPackage.
 	packageName := aPackage name.
@@ -274,9 +325,11 @@ GbxOverrideSet >> addAllOverridesInPackage: aPackage
 		addClassOverrides;
 		addVariableOverrides;
 		addMethodOverrides
+]
 
 { #category : 'initialize-release' }
 GbxOverrideSet >> setupOverrides: aCollection
+[
 	"Make sure the overrides are of the correct class with their parent set
 	 and sorted so that comparisons are useful."
 
@@ -285,9 +338,11 @@ GbxOverrideSet >> setupOverrides: aCollection
 	self sortOverrides: overrides.
 	overrides do: [:each | each parent: self].
 	^overrides
+]
 
 { #category : 'printing' }
 GbxOverrideSet >> printOn: aStream
+[
 
 	aStream
 		nextPutAll: self class name;
@@ -300,9 +355,11 @@ GbxOverrideSet >> printOn: aStream
 		nextPutAll: '/';
 		print: self variableOverrides size;
 		nextPutAll: ')'
+]
 
 { #category : 'instance creation' }
 GbxOverrideSet class >> destinationPackageName: nameString classOverrides: classOverrideArray variableOverrides: variableOverrideArray methodOverrides: methodOverrideArray
+[
 	"Used when applying overrides at GBS load time."
 
 	^(self new)
@@ -311,9 +368,11 @@ GbxOverrideSet class >> destinationPackageName: nameString classOverrides: class
 		variableOverrides: variableOverrideArray;
 		methodOverrides: methodOverrideArray;
 		yourself
+]
 
 { #category : 'instance creation' }
 GbxOverrideSet class >> fromPackage: overridesPackage 
+[
 	"Used for generating information about existing overrides before making parcels.
 	These overrides will then be removed, then re-created at load time."
 	"Answer an instance that specifies all of the overrides that the named package contains,
@@ -323,8 +382,11 @@ GbxOverrideSet class >> fromPackage: overridesPackage
 		initialize;
 		addAllOverridesInPackage: overridesPackage;
 		yourself
+]
 
 { #category : 'instance creation' }
 GbxOverrideSet class >> new
+[
 	^ self basicNew initialize
+]
 

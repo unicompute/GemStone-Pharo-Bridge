@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBMissingProtectedToken class >> gemStoneErrorNumber6430 ^1060
+[
+
+]
 

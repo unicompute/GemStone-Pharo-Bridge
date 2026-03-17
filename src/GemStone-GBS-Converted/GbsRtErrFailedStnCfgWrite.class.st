@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrFailedStnCfgWrite class >> gemStoneErrorNumber6430 ^2357
+[
+
+]
 

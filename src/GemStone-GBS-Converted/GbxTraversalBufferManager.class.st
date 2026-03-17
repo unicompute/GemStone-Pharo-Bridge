@@ -13,21 +13,28 @@ Class {
 
 { #category : 'initialize-release' }
 GbxTraversalBufferManager >> initialize
+[
 
 	traversalBuffers := OrderedCollection new.
 	traversalBufferClass := session traversalBufferClass
+]
 
 { #category : 'accessing' }
 GbxTraversalBufferManager >> session: aGbsSession
+[
 
 	session := aGbsSession
+]
 
 { #category : 'accessing' }
 GbxTraversalBufferManager >> traversalBufferClass: anObject
+[
 	traversalBufferClass := anObject
+]
 
 { #category : 'private' }
 GbxTraversalBufferManager >> traversalBufferOfSize: aSize
+[
 	"Return an unlocked traversal buffer of at least size <aSize>.  If none are currently
 	available, create a new one and add it to the list of available buffers.
 
@@ -55,9 +62,11 @@ GbxTraversalBufferManager >> traversalBufferOfSize: aSize
 				failure: 'There are now %1 traversal buffers allocated in this session. This seems like too many.'
 				with: traversalBuffers size].
 	^aBuffer
+]
 
 { #category : 'buffers' }
 GbxTraversalBufferManager >> allocateBufferFor: anOwner size: size 
+[
 	"Return a locked traversal buffer that internally knows who is using it.
 
 	Sender must hold my session's sessionProtect."
@@ -66,12 +75,15 @@ GbxTraversalBufferManager >> allocateBufferFor: anOwner size: size
 	buffer := self traversalBufferOfSize: size.
 	buffer lockFor: anOwner.
 	^buffer
+]
 
 { #category : 'instance creation' }
 GbxTraversalBufferManager class >> forSession: session
+[
 
 	^(self new)
 		session: session;
 		initialize;
 		yourself
+]
 

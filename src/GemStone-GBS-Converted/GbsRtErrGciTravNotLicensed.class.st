@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrGciTravNotLicensed class >> gemStoneErrorNumber6430 ^2423
+[
+
+]
 

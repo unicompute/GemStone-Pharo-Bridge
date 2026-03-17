@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrIllegalRamSelf class >> gemStoneErrorNumber6430 ^2156
+[
+
+]
 

@@ -12,20 +12,25 @@ Class {
 
 { #category : 'private accessing' }
 GbsClassVarConnector >> gsvarName
+[
 
 	"Private.  If gsvarName is not set, use cvarName.  This is so upgraded images will work (in 3.0, gsvarName did not exist)"
 	gsvarName isNil
 		ifTrue: [ ^cvarName ]
 		ifFalse: [ ^gsvarName ]
+]
 
 { #category : 'private accessing' }
 GbsClassVarConnector >> stvarName
+[
 "Private"
 
 	^cvarName asSymbol
+]
 
 { #category : 'private' }
 GbsClassVarConnector >> nilSTObj
+[
 	"Private.  nil the Smalltalk object for the connector if the
 	 post connect action is #updateST or #forwarder. This is done
 	 during post logout to reduce defunct stub errors. Answer the
@@ -40,15 +45,19 @@ GbsClassVarConnector >> nilSTObj
 	binding isNil ifFalse: [binding value: nil]]
 			on: GbsConnectorError
 			do: [:ex | ex return: nil]
+]
 
 { #category : 'private connecting' }
 GbsClassVarConnector >> validPostConnectActions
+[
 	"Private"
 
 	^self class validPostConnectActions.
+]
 
 { #category : 'printing' }
 GbsClassVarConnector >> printOn: aStream
+[
 
 	super printOn: aStream.
 
@@ -56,28 +65,36 @@ GbsClassVarConnector >> printOn: aStream
 	self stvarName printOn: aStream.
 	aStream nextPutAll: ' gsvarName: '.
 	self gsvarName printOn: aStream.
+]
 
 { #category : 'private printing' }
 GbsClassVarConnector >> gsDescription
+[
 	"Private - do not delete as it is sent by the gui code with a #perform:, 
 	see the #windowSpec for GbsConnectorBrowser"
 
 	^gsName printString, ' (', self gsvarName printString, ')'
+]
 
 { #category : 'private printing' }
 GbsClassVarConnector >> clientObjDescription
+[
 	"Private"
 
 	^stName asSymbol printString, ' (', self stvarName asSymbol printString, ')'
+]
 
 { #category : 'private printing' }
 GbsClassVarConnector >> stDescription
+[
 	"Private. Sent by aspect adaptor in connector browser"
 
 	^stName asSymbol printString, ' (', self stvarName asSymbol printString, ')'
+]
 
 { #category : 'private resolving' }
 GbsClassVarConnector >> updateGSfromST: anSTObj session: aGSSession
+[
 
 	| gsClass vars gsObj |
 	gsClass := self resolveGSClassInSession: aGSSession
@@ -90,15 +107,19 @@ GbsClassVarConnector >> updateGSfromST: anSTObj session: aGSSession
 	gsObj := self resolveGSObjInSession: aGSSession.
 	gsObj markStDirty: anSTObj.
 	^gsObj
+]
 
 { #category : 'private resolving' }
 GbsClassVarConnector >> variableName
+[
 	"Private"
 
 	^self gsvarName asSymbol
+]
 
 { #category : 'private resolving' }
 GbsClassVarConnector >> resolveSTClass
+[
 	"Private"
 
 	| cls |
@@ -120,9 +141,11 @@ GbsClassVarConnector >> resolveSTClass
 				with: stName.
 			^nil].
 	^cls
+]
 
 { #category : 'private resolving' }
 GbsClassVarConnector >> serverAssociationResolvingString
+[
 
 	^'[:restrictToDict :dictName :associationName :classVarName :shouldCreate |
 
@@ -145,18 +168,22 @@ GbsClassVarConnector >> serverAssociationResolvingString
 			association := class _classVars associationAt: classVarName otherwise: nil].
 
 	^association]'
+]
 
 { #category : 'private resolving' }
 GbsClassVarConnector >> gemStoneClassForSession: aGSSession
+[
 
 	| clientClass |
 	clientClass := self resolveSTClass.
 	^self hasDictionaryName
 		ifTrue: [aGSSession gemStoneClassFor: clientClass inDictionaryNamed: self dictionaryName]
 		ifFalse: [aGSSession gemStoneClassFor: clientClass]
+]
 
 { #category : 'private resolving' }
 GbsClassVarConnector >> resolveGSObjInSession: session
+[
 	"Private.  Resolve and return GemStone object to be connected - the association containing the class variable"
 
 	| gsClass gsAssoc |
@@ -178,9 +205,11 @@ GbsClassVarConnector >> resolveGSObjInSession: session
 				with: gsName.
 			^nil].
 	^gsAssoc
+]
 
 { #category : 'private initialization' }
 GbsClassVarConnector >> stName: stNm gsName: gsNm stvarName: stvNm gsvarName: gsvNm
+[
 	"Private.  Initialize with specified values"
 
 	stName := stNm.
@@ -188,16 +217,20 @@ GbsClassVarConnector >> stName: stNm gsName: gsNm stvarName: stvNm gsvarName: gs
 	cvarName := stvNm.
 	gsvarName := gsvNm.
 	connectionCondition := [true]
+]
 
 { #category : 'private initialization' }
 GbsClassVarConnector >> stName: stNm gsName: gsNm cvarName: cvNm
+[
 
 	"Private.  The class variable name is the same in Smalltalk and GemStone"
 
 	^self stName: stNm gsName: gsNm dictionaryName: nil stvarName: cvNm gsvarName: cvNm
+]
 
 { #category : 'private initialization' }
 GbsClassVarConnector >> stName: stNm gsName: gsNm dictionaryName: dictNm stvarName: stvNm gsvarName: gsvNm
+[
 	"Private.  Initialize with specified values"
 
 	stName := stNm.
@@ -206,30 +239,38 @@ GbsClassVarConnector >> stName: stNm gsName: gsNm dictionaryName: dictNm stvarNa
 	cvarName := stvNm.
 	gsvarName := gsvNm.
 	connectionCondition := [true]
+]
 
 { #category : 'private initialization' }
 GbsClassVarConnector >> stName: stNm gsName: gsNm
+[
 
 	"Private.  Use stName:gsName:cvarName:"
 
 	self stName: stNm gsName: gsNm cvarName: ''
+]
 
 { #category : 'instance creation' }
 GbsClassVarConnector class >> stName: stName gsName: gsName cvarName: cvName
+[
 
 	"Returns a new instance with specified values"
 
 	^self new stName: stName gsName: gsName dictionaryName: nil stvarName: cvName gsvarName: cvName
+]
 
 { #category : 'instance creation' }
 GbsClassVarConnector class >> stName: stName gsName: gsName dictionaryName: dictName stvarName: stvName gsvarName: gsvName
+[
 
 	"Returns a new instance with specified values"
 
 	^self new stName: stName gsName: gsName dictionaryName: dictName stvarName: stvName gsvarName: gsvName
+]
 
 { #category : 'instance creation' }
 GbsClassVarConnector class >> fromUser
+[
 
 	"Prompt the user for information to create an instance of the receiver"
 	"self fromUser"
@@ -244,11 +285,14 @@ GbsClassVarConnector class >> fromUser
 		ifError: [ ^nil ].
 
 	^self stName: stName gsName: gsName dictionaryName: dictName stvarName: stvarName gsvarName: gsvarName
+]
 
 { #category : 'instance creation' }
 GbsClassVarConnector class >> stName: stName gsName: gsName stvarName: stvName gsvarName: gsvName
+[
 
 	"Returns a new instance with specified values"
 
 	^self new stName: stName gsName: gsName dictionaryName: nil stvarName: stvName gsvarName: gsvName
+]
 

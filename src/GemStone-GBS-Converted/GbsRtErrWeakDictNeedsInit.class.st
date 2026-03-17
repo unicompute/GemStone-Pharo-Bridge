@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrWeakDictNeedsInit class >> gemStoneErrorNumber6430 ^2401
+[
+
+]
 

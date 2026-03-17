@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtMaxRepeatingChars class >> gemStoneErrorNumber6430 ^2344
+[
+
+]
 

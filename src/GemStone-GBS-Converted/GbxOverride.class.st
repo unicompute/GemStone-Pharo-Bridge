@@ -11,11 +11,15 @@ Class {
 
 { #category : 'accessing' }
 GbxOverride >> parent: anObject
+[
 
 	parent := anObject
+]
 
 { #category : 'accessing' }
 GbxOverride >> parent
+[
 
 	^parent
+]
 

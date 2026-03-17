@@ -10,6 +10,7 @@ Class {
 
 { #category : 'accessing' }
 GbxDbaUserListBrain >> databaseUserList
+[
 	" Answer a sorted list of all possible users of the current repository. "
 	"This is a little ugly, but the old user profile holder requires the user
 	be a forwarder. To avoid rewriting that heavily-used class completely, 
@@ -32,9 +33,11 @@ GbxDbaUserListBrain >> databaseUserList
 						context: (userProfiles collect: [:ea | ea remoteUserProfile]).	"collect inital ids on one trip"
 			userProfiles with: ids do: [:profile :id | profile cachedUserId: id].
 			^userProfiles]
+]
 
 { #category : 'accessing' }
 GbxDbaUserListBrain >> currentUser
+[
 	" Answer the currently selected user in my userList. "
 
 	| currUser |
@@ -48,15 +51,19 @@ GbxDbaUserListBrain >> currentUser
 		self closeRequest.
 		^ nil].
 	^ currUser
+]
 
 { #category : 'testing' }
 GbxDbaUserListBrain >> isDatabaseUserSelected
+[
 	" Answer true when a GemStone user is selected. "
 
 	^ self currentUser notNil
+]
 
 { #category : 'changing' }
 GbxDbaUserListBrain >> dbUserNameChange
+[
 	" The user has modified the text for the name of the currently selected GemStone user. "
 
 	| disableBlock name user |
@@ -86,44 +93,58 @@ GbxDbaUserListBrain >> dbUserNameChange
 		ifFalse:
 			[self newUserListSelection: (GbxUserProfileHolder on: user).
 			self enableButtons.].
+]
 
 { #category : 'private' }
 GbxDbaUserListBrain >> protectedUserNames
+[
 
 	^self class protectedUserNames
+]
 
 { #category : 'window accessing' }
 GbxDbaUserListBrain >> newUserName: aString
+[
 	" I change the value of my window's user name field to aString. "
 
 	self windowInterface newUserName: aString.
+]
 
 { #category : 'window accessing' }
 GbxDbaUserListBrain >> currentUserListSelection
+[
 	" Answer the current selection of my window's user list. "
 
 	^ self windowInterface currentUserListSelection
+]
 
 { #category : 'window accessing' }
 GbxDbaUserListBrain >> currentUserName
+[
 	" Answer the value of my window's user name field with leading/trailing blanks removed. "
 
 	^ self windowInterface currentUserName
+]
 
 { #category : 'window accessing' }
 GbxDbaUserListBrain >> newUserList: aList
+[
 	" I change the value of my window's user list's list. "
 
 	self windowInterface newUserList: aList.
+]
 
 { #category : 'window accessing' }
 GbxDbaUserListBrain >> basicCurrentUserName
+[
 	" Answer the value of my window's user name field without trimming blanks. "
 
 	^ self windowInterface basicCurrentUserName
+]
 
 { #category : 'actions' }
 GbxDbaUserListBrain >> reallyDeleteUser: aDeleteUserProfileGSForwarder switchingTo: aReplacementUserProfileGSForwarder
+[
 	" I delete the specified UserProfile on the SmalltalkGS side and change security policies owned by it to be owned by the replacement UserProfile. "
 
 	| mug name1 securityPolicy securityPolicies sysRepos userId userTag |
@@ -151,9 +172,11 @@ GbxDbaUserListBrain >> reallyDeleteUser: aDeleteUserProfileGSForwarder switching
 		remotePerform: #removeAndCleanup:
 		with: aDeleteUserProfileGSForwarder.
 	self gbsMessenger warn: 'User removed and security policies cleaned up'.
+]
 
 { #category : 'actions' }
 GbxDbaUserListBrain >> reallyDeleteUser
+[
 	" I allow the GemStone administrator to delete the current GemStone user. "
 
 	| deleteUserProfileObj myUserProfileObj hadError |
@@ -186,21 +209,27 @@ GbxDbaUserListBrain >> reallyDeleteUser
 				^ex resume].
 	hadError ifTrue: [^self].
 	self changeNotification: #dbaUserDeleted
+]
 
 { #category : 'actions' }
 GbxDbaUserListBrain >> deleteUser
+[
 	" I allow the GemStone administrator to delete the current GemStone user. "
 
 	self showBusyWhile:
 		[ self reallyDeleteUser. ].
+]
 
 { #category : 'actions' }
 GbxDbaUserListBrain >> browserClass
+[
 
 	^GbxDbaUserBrowser3
+]
 
 { #category : 'actions' }
 GbxDbaUserListBrain >> createUser
+[
 	" Spawn a window that allows the GemStone administrator to create a new GemStone user. "
 
 	| currName currUser aBuilder |
@@ -211,9 +240,11 @@ GbxDbaUserListBrain >> createUser
 		ifTrue: [currName := ''].
 	aBuilder := self browserClass openOnUserId: currName in: self session.
 	^aBuilder window model
+]
 
 { #category : 'actions' }
 GbxDbaUserListBrain >> userInfoOpen
+[
 	" Spawn a window on the GemStone user that is currently selected. "
 
 	| name user |
@@ -229,16 +260,20 @@ GbxDbaUserListBrain >> userInfoOpen
 	self browserClass
 		openOnUserId: name
 		in: self session.
+]
 
 { #category : 'actions' }
 GbxDbaUserListBrain >> abortTransaction
+[
 	" Allow the user to discard all changes made in the current transaction. "
 
 	super abortTransaction.
 	self updateUsersRequest.
+]
 
 { #category : 'actions' }
 GbxDbaUserListBrain >> showUserInfo
+[
 	" Spawn a window on the GemStone user that is currently selected. "
 	"Note: The expected return value here is questionable."
 
@@ -258,9 +293,11 @@ GbxDbaUserListBrain >> showUserInfo
 					with: self currentUser userId asString
 					with: ex originator messageText.
 				ex return: false]
+]
 
 { #category : 'window changing' }
 GbxDbaUserListBrain >> databaseUserSelected
+[
 	" When no user is selected, certain buttons must be disabled. "
 
 	self isDatabaseUserSelected
@@ -270,55 +307,70 @@ GbxDbaUserListBrain >> databaseUserSelected
 		ifFalse:
 			[self disableButtons.
 			self newUserName: ''.].
+]
 
 { #category : 'window changing' }
 GbxDbaUserListBrain >> displayStatus: aString
+[
 	" Show the specified message to the user while he/she is waiting. "
 
 	super displayStatus: (aString isEmpty
 		ifTrue: [self session printString]
 		ifFalse: [aString]).
+]
 
 { #category : 'window changing' }
 GbxDbaUserListBrain >> disableButtons
+[
 	" Deactivate certain buttons until a user is selected.
 	  NOTE:  To be VW / VS compatible, button names must start with an uppercase letter.
 	  WARNING:  Do not use # within array declarations. "
 
 	self disableGroup: #( DeleteUserButton  ShowUserInfoButton ).
+]
 
 { #category : 'window changing' }
 GbxDbaUserListBrain >> enableButtons
+[
 	" Activate certain buttons while a user is selected.
 	  NOTE:  To be VW / VS compatible, button names must start with an uppercase letter.
 	  WARNING:  Do not use # within array declarations. "
 
 	self enableGroup: #( DeleteUserButton  ShowUserInfoButton ).
+]
 
 { #category : 'external changing' }
 GbxDbaUserListBrain >> updateDataRequest
+[
 	" I allow external changes to refresh the list of current GemStone users. "
 
 	self updateUsersRequest.
+]
 
 { #category : 'external changing' }
 GbxDbaUserListBrain >> updateUsersRequest
+[
 	" I allow the GemStone administrator to refresh the list of current GemStone users. "
 
 	self showBusyWhile:
 		[ self newUserList: self databaseUserList.
 		self newUserName: ''.
 		self dbUserNameChange. ].
+]
 
 { #category : 'external changing' }
 GbxDbaUserListBrain class >> myNotificationSymbols
+[
 	" Answer a list of symbols that mean I have to update my information.
 	  WARNING:  For VW / VS compatibility, do not user '#' before each symbol. "
 
 	^ #( aborted  dbaUserAdded  dbaUserDeleted )
+]
 
 { #category : 'utility' }
 GbxDbaUserListBrain class >> protectedUserNames
+[
 
 	^#('CodeLibrarianUser' ' DataCurator' 'SystemUser' 'GcUser' 'HostAgentUser' 'Nameless' 'SymbolUser')
+]
 

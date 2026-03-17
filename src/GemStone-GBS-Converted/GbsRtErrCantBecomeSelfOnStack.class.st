@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrCantBecomeSelfOnStack class >> gemStoneErrorNumber6430 ^2322
+[
+
+]
 

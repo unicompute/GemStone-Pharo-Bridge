@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrSymbolTooLarge class >> gemStoneErrorNumber6430 ^2402
+[
+
+]
 

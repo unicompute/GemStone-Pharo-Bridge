@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBUnusedTemp class >> gemStoneErrorNumber6430 ^1062
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGciErrTravBuffTooSmall class >> gemStoneErrorNumber6430 ^2217
+[
+
+]
 

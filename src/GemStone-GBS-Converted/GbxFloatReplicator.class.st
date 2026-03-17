@@ -10,7 +10,9 @@ Class {
 
 { #category : 'private' }
 GbxFloatReplicator >> setImmutabilityOf: aClientObject
+[
 	"Numbers are always immutable."
 
 	self setMagnitudeImmutabilityOf: aClientObject
+]
 

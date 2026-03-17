@@ -10,6 +10,8 @@ Class {
 
 { #category : 'private' }
 GbxBehaviorOopMap >> nodeClass
+[
 
 	^GbxBehaviorOopMapNode
+]
 

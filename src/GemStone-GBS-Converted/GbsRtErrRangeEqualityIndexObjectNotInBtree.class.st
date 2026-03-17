@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrRangeEqualityIndexObjectNotInBtree class >> gemStoneErrorNumber6430 ^2301
+[
+
+]
 

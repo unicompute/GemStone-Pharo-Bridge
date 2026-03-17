@@ -11,9 +11,13 @@ Class {
 
 { #category : 'accessing' }
 GbsCompilerError >> errorDescriptor
+[
 	^errorDescriptor
+]
 
 { #category : 'accessing' }
 GbsCompilerError >> errorDescriptor: anObject
+[
 	errorDescriptor := anObject
+]
 

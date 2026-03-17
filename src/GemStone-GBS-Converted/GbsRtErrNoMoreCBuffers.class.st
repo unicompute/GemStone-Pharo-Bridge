@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrNoMoreCBuffers class >> gemStoneErrorNumber6430 ^2369
+[
+
+]
 

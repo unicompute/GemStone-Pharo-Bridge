@@ -10,6 +10,8 @@ Class {
 
 { #category : 'GBS private' }
 SymbolAssociation class >> gbsReplicatorClass
+[
 
 	^GemStone.Gbs.GbxSymbolAssociationReplicator
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrRemoveSpecialUser class >> gemStoneErrorNumber6430 ^2379
+[
+
+]
 

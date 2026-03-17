@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrCodeBreakpoint class >> gemStoneErrorNumber6430 ^6005
+[
+
+]
 

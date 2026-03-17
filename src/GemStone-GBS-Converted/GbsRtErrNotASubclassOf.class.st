@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrNotASubclassOf class >> gemStoneErrorNumber6430 ^2272
+[
+
+]
 

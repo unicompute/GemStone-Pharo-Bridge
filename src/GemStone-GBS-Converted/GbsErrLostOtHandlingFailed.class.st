@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrLostOtHandlingFailed class >> gemStoneErrorNumber6430 ^4058
+[
+
+]
 

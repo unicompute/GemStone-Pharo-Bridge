@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGsErrShrpcUnexpectedNetEvent class >> gemStoneErrorNumber6430 ^4010
+[
+
+]
 

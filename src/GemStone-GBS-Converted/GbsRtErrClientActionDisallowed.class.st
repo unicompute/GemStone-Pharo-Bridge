@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrClientActionDisallowed class >> gemStoneErrorNumber6430 ^2378
+[
+
+]
 

@@ -10,11 +10,14 @@ Class {
 
 { #category : 'testing' }
 GbsCallTracing class >> isCallTracingActive
+[
 
 	^Logger notNil
+]
 
 { #category : 'logging to memory' }
 GbsCallTracing class >> startCallTracingToMemoryMegabytes: aNumber fileName: filename
+[
 	"Turn on call tracing to record the traces in a ring buffer of the specified size.
 	 The contents of the ring buffer can be written to the specified file on request.
 	 Answer the resulting logger."
@@ -24,38 +27,48 @@ GbsCallTracing class >> startCallTracingToMemoryMegabytes: aNumber fileName: fil
 			Logger := GbxMemoryLogger usingBufferOfMegabytes: aNumber
 						andFileNamed: filename].
 	^Logger
+]
 
 { #category : 'logging to memory' }
 GbsCallTracing class >> writeToFile
+[
 
 	self isCallTracingActive ifFalse: [^self].
 	Logger writeToFile
+]
 
 { #category : 'logging to memory' }
 GbsCallTracing class >> startCallTracingToMemoryMegabytes: aNumber
+[
 	"Turn on call tracing to record the traces in a ring buffer of the specified size.
 	 The contents of the ring buffer can be written to a default file on request.
 	 Answer the resulting logger."
 
 	^self startCallTracingToMemoryMegabytes: aNumber
 		fileName: self defaultLogFileName
+]
 
 { #category : 'class initialization' }
 GbsCallTracing class >> initialize
+[
 	"GbsCallTracing initialize"
 
 	mutex := GbxRecursionLock forMutualExclusion.
 	TraceNestingLevel := 0.
+]
 
 { #category : 'logging to file' }
 GbsCallTracing class >> traceFileNameIfNone: aBlock
+[
 
 	^self isCallTracingActive
 		ifTrue: [Logger filename]
 		ifFalse: [aBlock value].
+]
 
 { #category : 'logging to file' }
 GbsCallTracing class >> startCallTracingToFileNamed: filename
+[
 	"Turn on call tracing to record the traces to the specified file.
 	 Answer the resulting logger."
 
@@ -64,9 +77,11 @@ GbsCallTracing class >> startCallTracingToFileNamed: filename
 			Logger := GbxFileLogger usingFileNamed: filename.
 			Logger startLogging].
 	^Logger
+]
 
 { #category : 'logging to file' }
 GbsCallTracing class >> traceToFilename: aString during: aBlock
+[
 
 	"Example usage (from diagnosing a GC problem in a test):
 	GbsCallTracing
@@ -89,9 +104,11 @@ GbsCallTracing class >> traceToFilename: aString during: aBlock
 			[oldName isNil
 				ifTrue: [self stopCallTracing]
 				ifFalse: [self startCallTracingToFileNamed: oldName]].
+]
 
 { #category : 'logging to file' }
 GbsCallTracing class >> traceFor: aBlock
+[
 withTiming: doTiming
 startMessage: string1
 endMessage: string2
@@ -134,17 +151,21 @@ endMessage: string2
 								ifTrue: [ ' - total time: ' , time printString , ' milliseconds. **' ]
 							  	ifFalse: [ '**' ]) ]].
 	^ result.
+]
 
 { #category : 'logging to file' }
 GbsCallTracing class >> startCallTracingToFile
+[
 	"Turn on call tracing to record the traces to a default file.
 	 Answer the resulting logger."
 	"GbsCallTracing startCallTracingToFile"
 
 	^self startCallTracingToFileNamed: self defaultLogFileName
+]
 
 { #category : 'logging to file' }
 GbsCallTracing class >> traceFor: aBlock withTiming: doTiming
+[
 	"Enable GemBuilder & GCI tracing during the execution of aBlock (a zero-argument block).
 	 Wrap the trace output with banner strings before and after.  Invocations of traceFor: can be nested;
 	 the banners will keep track of the nesting and enabling of logging will be controlled properly.
@@ -152,40 +173,52 @@ GbsCallTracing class >> traceFor: aBlock withTiming: doTiming
 	 Answer the result of evaluating the block."
 
 	^ self traceFor: aBlock withTiming: doTiming startMessage: nil endMessage: nil
+]
 
 { #category : 'logging to file' }
 GbsCallTracing class >> traceFor: aBlock
+[
 	"Enable GemBuilder & GCI tracing during the execution of aBlock (a zero-argument block).
 	 See GbxStatManager class>>#traceFor:withTiming:startMessage:endMessage:."
 
 	^ self traceFor: aBlock withTiming: false
+]
 
 { #category : 'private' }
 GbsCallTracing class >> privateStopCallTracing
+[
 	"Turns off call tracing, if presently on. Should only be sent under mutex protection."
 
 	self isCallTracingActive ifFalse:[^self].
 	Logger stopLogging.
 	Logger := nil.
+]
 
 { #category : 'private' }
 GbsCallTracing class >> defaultLogFileName
+[
 
 	^'gbstrace-' , GbsStackDumper timestampForFilename , '.log'
+]
 
 { #category : 'private' }
 GbsCallTracing class >> logger
+[
 	"Currently only used by tests"
 
 	^Logger
+]
 
 { #category : 'logging' }
 GbsCallTracing class >> logMessage: messageString
+[
 
 	Logger logMessage: messageString
+]
 
 { #category : 'logging' }
 GbsCallTracing class >> stopCallTracing
+[
 	"Turns off call tracing, if presently on.
 	 Be sure to write out all trace data. It's important for memory tracing."
 	"GbsCallTracing stopCallTracing"
@@ -194,4 +227,5 @@ GbsCallTracing class >> stopCallTracing
 			[self
 				writeToFile;
 				privateStopCallTracing]
+]
 

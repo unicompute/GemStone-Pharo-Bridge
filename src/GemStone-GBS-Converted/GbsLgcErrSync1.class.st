@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsLgcErrSync1 class >> gemStoneErrorNumber6430 ^2225
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrNotSameClassHist class >> gemStoneErrorNumber6430 ^2179
+[
+
+]
 

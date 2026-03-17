@@ -18,6 +18,7 @@ Class {
 
 { #category : 'protection' }
 GbxLargeIdentityDictionary >> writeCritical: aBlock
+[
 
 	"The accessProtect semaphore is used for protection against
 	 multiple threaded access to this instance. All writes are done
@@ -27,9 +28,11 @@ GbxLargeIdentityDictionary >> writeCritical: aBlock
 
 	"This can offer a performance boost when a series of
 	 operations will be performed."
+]
 
 { #category : 'protection' }
 GbxLargeIdentityDictionary >> readCritical: aBlock
+[
 	"#readCritical: differs from #writeCritical: in that it may allow
 	 Asynchronous reads so long as a write is not in progress
 	 by another process.	 This can offer a performance boost
@@ -38,31 +41,41 @@ GbxLargeIdentityDictionary >> readCritical: aBlock
 	^self useResurrectionAvoidance
 	ifFalse: [ accessProtect critical: aBlock ]
 	ifTrue:  [ accessProtect critical: [self finalizeCritical: aBlock] ]
+]
 
 { #category : 'accessing' }
 GbxLargeIdentityDictionary >> bucketSlotsGrown
+[
 	"This isn't a measure of the total items in buckets or the total number
 	 of bucket slots. This is the total number of slots that all buckets have
 	 grown."
 
 	^bucketSlotsGrown
+]
 
 { #category : 'accessing' }
 GbxLargeIdentityDictionary >> initialBucketSize
+[
 
 	^initialBucketSize
+]
 
 { #category : 'accessing' }
 GbxLargeIdentityDictionary >> numElements: anObject
+[
 	^numElements := anObject
+]
 
 { #category : 'accessing' }
 GbxLargeIdentityDictionary >> numElements
+[
 
 	^numElements
+]
 
 { #category : 'accessing' }
 GbxLargeIdentityDictionary >> unmatchedPairs
+[
 
 	"Answer the number of key/value pairs where either
 	 the key of the value is considered empty--but not both.
@@ -73,9 +86,11 @@ GbxLargeIdentityDictionary >> unmatchedPairs
 	count := super unmatchedPairs.
 	self bucketsDo: [:b | count := count + b unmatchedPairs ].
 	^count
+]
 
 { #category : 'accessing' }
 GbxLargeIdentityDictionary >> observedBucketSlotsAllocated
+[
 	"Answer the true number of collisions for the receiver.
 	 Note: This number can become quickly out of date due to finalization."
 
@@ -83,9 +98,11 @@ GbxLargeIdentityDictionary >> observedBucketSlotsAllocated
 	count := 0.
 	self bucketsDo: [:bucket | count := count + bucket tableSize].
 	^count
+]
 
 { #category : 'accessing' }
 GbxLargeIdentityDictionary >> observedBucketSlotsGrown
+[
 	"Answer the true number of collisions for the receiver.
 	 Note: This number can become quickly out of date due to finalization."
 
@@ -93,14 +110,18 @@ GbxLargeIdentityDictionary >> observedBucketSlotsGrown
 	count := 0.
 	self bucketsDo: [:bucket | count := count + bucket tableSize - initialBucketSize].
 	^count
+]
 
 { #category : 'accessing' }
 GbxLargeIdentityDictionary >> primBuckets
+[
 
 	^buckets
+]
 
 { #category : 'accessing' }
 GbxLargeIdentityDictionary >> allUnmatched
+[
 
 	"This is used for debugging. It shows unmatched pairs
 	 in a more inspectable form."
@@ -120,17 +141,21 @@ GbxLargeIdentityDictionary >> allUnmatched
 		].
 	].
 	^oc asArray
+]
 
 { #category : 'accessing' }
 GbxLargeIdentityDictionary >> at: aKey otherwise: otherwiseObject
+[
 
 	"Return the value that corresponds to aKey.  If no such key/value
 	 pair exists, return otherwiseObject."
 
 	^self readCritical: [ self basicAt: aKey otherwise: otherwiseObject ].
+]
 
 { #category : 'accessing' }
 GbxLargeIdentityDictionary >> sizeEstimate
+[
 
 	"Returns the number of key/value pairs in the receiver. Due to
 	 finalization in weak arrays, numElements may be temporarily
@@ -138,9 +163,11 @@ GbxLargeIdentityDictionary >> sizeEstimate
 	 be an estimate but don't allow a negative number."
 
 	^0 max: numElements
+]
 
 { #category : 'accessing' }
 GbxLargeIdentityDictionary >> bucketDistribution
+[
 
 	"Answer a bag populated with the sizes of all the buckets
 	 in the receiver. For statistics only."
@@ -149,15 +176,19 @@ GbxLargeIdentityDictionary >> bucketDistribution
 	bag := Bag new.
 	self bucketsDo: [:bucket | bag add: bucket tableSaturation ].
 	^bag
+]
 
 { #category : 'accessing' }
 GbxLargeIdentityDictionary >> weakness
+[
 	"Answer either nil,  #KEYS, or #VALUES."
 
 	^weakness
+]
 
 { #category : 'accessing' }
 GbxLargeIdentityDictionary >> tableSaturation
+[
 
 	"Answer the number table slots that are populated with
 	 anything--even if unbalanced due to finalization."
@@ -171,9 +202,11 @@ GbxLargeIdentityDictionary >> tableSaturation
 			ifFalse: [count := count + bucket tableSaturation].
 	].
 	^count
+]
 
 { #category : 'testing' }
 GbxLargeIdentityDictionary >> basicHasValidSize
+[
 	"Answer boolean whether the value of numElements and
 	 bucketSlotsGrown agrees with the number observed."
 
@@ -187,27 +220,35 @@ GbxLargeIdentityDictionary >> basicHasValidSize
 	sizeStored - inFinalization = sizeObserved ifFalse: [^false].
 	storedBucketSlotsGrown = observedBucketSlotsGrown ifFalse: [^false].
 	^true
+]
 
 { #category : 'testing' }
 GbxLargeIdentityDictionary >> hasWeakKeys
+[
 
 	^weakness == #KEYS
+]
 
 { #category : 'testing' }
 GbxLargeIdentityDictionary >> hasWeakValues
+[
 
 	^weakness == #VALUES
+]
 
 { #category : 'initialization' }
 GbxLargeIdentityDictionary >> reductionDenominator
+[
 	"Answer a number that will be used as the divisor for calculating
 	 the number of bucket removals that must be done before #reduceBuckets
 	 is sent. A higher value reduces buckets more frequently than a lower number."
 
 	^12
+]
 
 { #category : 'initialization' }
 GbxLargeIdentityDictionary >> seekOptimalTableSize
+[
 	"Maintain an optimal size for the receiver. A smaller than optimal
 	 size affects performance because of slow bucket access; however,
 	 regrowth has a large immediate performance cost.
@@ -215,9 +256,11 @@ GbxLargeIdentityDictionary >> seekOptimalTableSize
 	Sender must hold my accessProtect."
 
 	self rebuildTable: numElements * 2 mustRehash: false
+]
 
 { #category : 'initialization' }
 GbxLargeIdentityDictionary >> basicRebuildTable: proposedSize mustRehash: mustRehash 
+[
 	"Rebuilds the hash table by saving the current state, initializing and
 	 changing the size of the table, and adding the key value pairs saved
 	 back to the dictionary.
@@ -243,16 +286,20 @@ GbxLargeIdentityDictionary >> basicRebuildTable: proposedSize mustRehash: mustRe
 	holderStream reset.
 	count 
 		timesRepeat: [self basicRegularAt: holderStream next put: holderStream next]
+]
 
 { #category : 'initialization' }
 GbxLargeIdentityDictionary >> accessProtector
+[
 	"Answer nil or a semaphore used to serialize access to
 	 the receiver."
 
 	^accessProtect
+]
 
 { #category : 'initialization' }
 GbxLargeIdentityDictionary >> selectedPrimes
+[
 	"Initialize selected prime numbers table.  This contains selected prime
 	 numbers up to ~2^20.  In the interest of space and speed, it doesn't contain all
 	 prime numbers within this range, but ones close to 2^(n/2) where n<40.
@@ -300,9 +347,11 @@ primes := GbxLargeIdentityDictionary new selectedPrimes.
 					with: prime
 					with: aBitMoreThanDoublePrime]]
 "
+]
 
 { #category : 'initialization' }
 GbxLargeIdentityDictionary >> tableSizeFrom: aSize 
+[
 	"Return an integer such that it is >= to aSize, and either:
 		 a) it is from our table of selected prime numbers, or
 		 b) it is equal to the maximumTableSize"
@@ -325,9 +374,11 @@ GbxLargeIdentityDictionary >> tableSizeFrom: aSize
 	top - bot > 1] 
 			whileTrue: [].
 	^(primes at: top) min: self maximumTableSize
+]
 
 { #category : 'initialization' }
 GbxLargeIdentityDictionary >> initializeTableSize: size 
+[
 	"Initialize for capability of storing size key/value pairs
 
 	Sender must hold my accessProtect."
@@ -349,9 +400,11 @@ GbxLargeIdentityDictionary >> initializeTableSize: size
 	buckets isNil 
 		ifFalse: [buckets do: [:b | b isNil ifFalse: [b owner: nil]]].
 	buckets := Array new: size	"Must come after super init..."
+]
 
 { #category : 'initialization' }
 GbxLargeIdentityDictionary >> rebuildTable: proposedSize mustRehash: mustRehash 
+[
 	"Rebuild the hash table by saving the current state, initializing
 	 and changing the size of the table, and adding the key value
 	 pairs saved back to the hash dictionary. This must be executed
@@ -373,14 +426,18 @@ GbxLargeIdentityDictionary >> rebuildTable: proposedSize mustRehash: mustRehash
 			[(GbsConfiguration current assertionChecks and: [mustRehash not]) 
 				ifTrue: [self auditHashing].
 			super rebuildTable: proposedSize mustRehash: mustRehash]
+]
 
 { #category : 'initialization' }
 GbxLargeIdentityDictionary >> changeBucketSlotGrowthBy: sizeChange
+[
 
 	bucketSlotsGrown := bucketSlotsGrown + sizeChange.
+]
 
 { #category : 'initialization' }
 GbxLargeIdentityDictionary >> deepCopy
+[
 	| copy |
 	self readCritical: 
 			[copy := (self shallowCopy)
@@ -389,9 +446,11 @@ GbxLargeIdentityDictionary >> deepCopy
 			self 
 				keysAndValuesDo: [:aKey :aValue | copy basicRegularAt: aKey copy put: aValue copy]].
 	^copy
+]
 
 { #category : 'initialization' }
 GbxLargeIdentityDictionary >> initializeWeakness: aSymbolOrNil size: proposedSize 
+[
 	| newTableSize |
 	newTableSize := self tableSizeFrom: proposedSize.
 	initialBucketSize := 3 max: proposedSize // newTableSize.
@@ -403,9 +462,11 @@ GbxLargeIdentityDictionary >> initializeWeakness: aSymbolOrNil size: proposedSiz
 			[self
 				weakness: aSymbolOrNil;
 				initializeTableSize: newTableSize]
+]
 
 { #category : 'initialization' }
 GbxLargeIdentityDictionary >> recount
+[
 
 	"If the maintained count values are out of sync, then this will
 	 return them to the correct values."
@@ -414,14 +475,18 @@ GbxLargeIdentityDictionary >> recount
 		numElements := self tableSaturation.
 		bucketSlotsGrown := self observedBucketSlotsGrown.
 	].
+]
 
 { #category : 'initialization' }
 GbxLargeIdentityDictionary >> reduceAfter
+[
 
 	^reduceAfter
+]
 
 { #category : 'enumeration' }
 GbxLargeIdentityDictionary >> basicKeysAndValuesDo: twoArgBlock
+[
 
 	"For each key/value pair in the receiver, evaluate the two-argument
 	 block aBlock with a key/value pair as the arguments."
@@ -435,45 +500,57 @@ GbxLargeIdentityDictionary >> basicKeysAndValuesDo: twoArgBlock
 		(bucket := buckets at: tableIndex) isNil
 			ifFalse: [ bucket keysAndValuesDo: twoArgBlock ]
 	].
+]
 
 { #category : 'enumeration' }
 GbxLargeIdentityDictionary >> keysAndValuesDo: twoArgBlock
+[
 
 	"For each key/value pair in the receiver, evaluate the two-argument
 	 block aBlock with a key/value pair as the arguments."
 
 	self readCritical: [self basicKeysAndValuesDo: twoArgBlock]
+]
 
 { #category : 'enumeration' }
 GbxLargeIdentityDictionary >> bucketsDo: aBlock
+[
 	"Evaluate aBlock for each bucket that has been defined. Keep
 	 in mind that not all elements are stored in buckets, most are
 	 stored in the keys and values collections."
 
 	buckets do: [:bucket | nil == bucket ifFalse: [aBlock value: bucket]]
+]
 
 { #category : 'key comparing' }
 GbxLargeIdentityDictionary >> compare: anObject with: anotherObject
+[
 
 	"Key comparison is based on identity, not equality"
 
 	^anObject == anotherObject
+]
 
 { #category : 'key comparing' }
 GbxLargeIdentityDictionary >> species
+[
 
 	^IdentityDictionary
+]
 
 { #category : 'removing' }
 GbxLargeIdentityDictionary >> primRemoveKeySafelyAt: index 
+[
 	
 	[keys at: index put: nil.
 	values at: index put: nil.
 	self decrementNumElements] 
 			valueUnpreemptively
+]
 
 { #category : 'removing' }
 GbxLargeIdentityDictionary >> checkReduceBuckets
+[
 	"Private. Unnecessary buckets are periodically removed to
 	 reduce memory consumption and maintain performance.
 	 This method can be sent at times when cleanup is safe
@@ -485,9 +562,11 @@ GbxLargeIdentityDictionary >> checkReduceBuckets
 	tableSize > ((numElements max: 100) * 10) 
 		ifTrue: [self rebuildTable: numElements * 2 mustRehash: false].
 	reduceAfter > 0 ifFalse: [self basicReduceBuckets]
+]
 
 { #category : 'removing' }
 GbxLargeIdentityDictionary >> basicRemoveKey: aKey otherwise: otherwiseObject 
+[
 	"Removes the key/value pair with key aKey from the receiver and returns the value
 	 If no key/value pair is present with key aKey, return otherwiseObject.
 
@@ -509,9 +588,11 @@ GbxLargeIdentityDictionary >> basicRemoveKey: aKey otherwise: otherwiseObject
 		ifFalse: [^bucket removeKey: aKey otherwise: otherwiseObject].
 	"Key not found"
 	^otherwiseObject
+]
 
 { #category : 'removing' }
 GbxLargeIdentityDictionary >> removedKey: keyOrNil value: valueOrNil 
+[
 	"Note: VW finalization doesn't allow you to know the object that was
 	 finalized. Refer to additional notes in #removalSelector:.
 	Note that the finalization thread does NOT acquire my accessProtect before sending this message.
@@ -536,16 +617,20 @@ GbxLargeIdentityDictionary >> removedKey: keyOrNil value: valueOrNil
 							with: keyOrNil
 							with: valueOrNil]
 					ifFalse: [removalSelector value: keyOrNil value: valueOrNil]]
+]
 
 { #category : 'removing' }
 GbxLargeIdentityDictionary >> removedKey: keyOrNil value: valueOrNil from: aBucket
+[
 	"Notification that oldKey was removed from aBucket."
 
 	self removedKey: keyOrNil value: valueOrNil.
 	reduceAfter := reduceAfter - 1.
+]
 
 { #category : 'removing' }
 GbxLargeIdentityDictionary >> basicReduceBuckets
+[
 	"Private. Done periodically to remove buckets that are no longer
 	 necessary due to bucket size reductions. Performance
 	 degrades as the number of buckets increases.
@@ -554,16 +639,20 @@ GbxLargeIdentityDictionary >> basicReduceBuckets
 
 	reduceAfter := (tableSize max: numElements) // self reductionDenominator.
 	self bucketsDo: [:bucket | bucket checkNecessity]
+]
 
 { #category : 'removing' }
 GbxLargeIdentityDictionary >> removeKey: aKey otherwise: otherwiseObject
+[
 	"Removes the key/value pair with key aKey from the receiver and returns the value
 	 If no key/value pair is present with key aKey, return otherwiseObject."
 
 	^accessProtect critical: [ self basicRemoveKey: aKey otherwise: otherwiseObject ]
+]
 
 { #category : 'removing' }
 GbxLargeIdentityDictionary >> removeUnnecessaryBucket: aBucket 
+[
 	"Notice given from aBucket that it thinks it is no longer necessary
 	 and would like to disassociate itself with the receiver. A bucket
 	 is no longer necessary when it contains 0 or 1 key/value pairs. Ensure
@@ -590,22 +679,28 @@ GbxLargeIdentityDictionary >> removeUnnecessaryBucket: aBucket
 	buckets at: bucketOffset put: nil.
 	aBucket breakDependencies.
 	aBucket owner: nil
+]
 
 { #category : 'removing' }
 GbxLargeIdentityDictionary >> removalSelector: aSymbolOrTwoArgBlock
+[
 	"Set the two argument selector that will be sent to the owner with
 	 removed key and value as arguments. VW doesn't allow you to
 	 know the object finalized, so expect nil as one of the arguments.
 	 Be careful not to resurrect a finalized object using VA."
 
 	removalSelector := aSymbolOrTwoArgBlock.
+]
 
 { #category : 'removing' }
 GbxLargeIdentityDictionary >> decrementNumElements
+[
 	numElements := numElements - 1
+]
 
 { #category : 'private - accessing' }
 GbxLargeIdentityDictionary >> basicAt: aKey otherwise: otherwiseObject 
+[
 	"Return the value that corresponds to aKey.  If no such key/value
 	 pair exists, return otherwiseObject.
 
@@ -626,24 +721,30 @@ GbxLargeIdentityDictionary >> basicAt: aKey otherwise: otherwiseObject
 	(bucket := buckets at: index) == nil 
 		ifFalse: [^bucket at: aKey otherwise: otherwiseObject].
 	^otherwiseObject
+]
 
 { #category : 'finalization' }
 GbxLargeIdentityDictionary >> hasCriticalAccess
+[
 	"Answer whether the active process can access this dictionary right now"
 
 	^accessProtect isActiveProcessInCriticalRegion
+]
 
 { #category : 'private' }
 GbxLargeIdentityDictionary >> weakness: aSymbol
+[
 
 	(#(nil KEYS VALUES) includes: aSymbol)
 		ifFalse: [self gbsMessenger error: 'Invalid weakness setting'].
 	(keys == nil and: [values == nil])
 		ifFalse: [self gbsMessenger error: 'Improper use. Can only be set before initialization.'].
 	weakness := aSymbol.
+]
 
 { #category : 'inspecting' }
 GbxLargeIdentityDictionary >> statistics
+[
 
 	"Returns a Dictionary containing statisitics that can be useful
 	 in determining the performance of a hash dictionary.  The following
@@ -684,9 +785,11 @@ GbxLargeIdentityDictionary >> statistics
 		at: #tableSize put: self tableSize;
 		at: #TheDictionary put: self;
 		yourself
+]
 
 { #category : 'inspecting' }
 GbxLargeIdentityDictionary >> auditHashing
+[
 	"Private. Items are added to the caches at certain index positions based on
 	 a computed value. If the computed value for an object changes over time
 	 then the object may considered missing from the cache even though it
@@ -726,9 +829,11 @@ GbxLargeIdentityDictionary >> auditHashing
 					(buckets at: index) isNil 
 						ifFalse: [failure := (buckets at: index) auditHashing | failure]].
 			failure]
+]
 
 { #category : 'inspecting' }
 GbxLargeIdentityDictionary >> gbxDebugPrintOn: aStream
+[
 	"Print debug information for the receiver. Use the
 	 #printOn: if there would be a delay in printing."
 
@@ -737,9 +842,11 @@ GbxLargeIdentityDictionary >> gbxDebugPrintOn: aStream
 			critical: [ self basicDebugPrintOn: aStream ]
 			unlessBlocked: [ super printOn: aStream ].
 	] ifFalse: [ super printOn: aStream ].
+]
 
 { #category : 'inspecting' }
 GbxLargeIdentityDictionary >> basicDebugPrintOn: aStream 
+[
 	| localCount obsa obsg tsat tpne bc bcu unmp obs |
 	super printOn: aStream.
 	aStream
@@ -878,23 +985,29 @@ GbxLargeIdentityDictionary >> basicDebugPrintOn: aStream
 			((count * bucketSize * 1000 / tsat) truncated / 10) asFloat 
 				printOn: aStream.
 			aStream nextPutAll: ' %)']
+]
 
 { #category : 'adding' }
 GbxLargeIdentityDictionary >> maximumBucketSlotGrowth
+[
 	"Bucket growth (not including initial size) is monitored, and only
 	 so much growth is permitted until the hash table is grown."
 
 	^(tableSize // 99) * initialBucketSize
+]
 
 { #category : 'adding' }
 GbxLargeIdentityDictionary >> isGrowthRecommended
+[
 	"Sender must hold my accessProtect"
 
 	^tableSize < self maximumTableSize 
 		and: [bucketSlotsGrown > self maximumBucketSlotGrowth]
+]
 
 { #category : 'adding' }
 GbxLargeIdentityDictionary >> at: aKey put: aValue 
+[
 	"Stores the aKey/aValue pair in the hash dictionary.  Rebuilds the
 	 hash table if the addition caused the number of collisions to
 	 exceed the limit allowed."
@@ -903,9 +1016,11 @@ GbxLargeIdentityDictionary >> at: aKey put: aValue
 			[self basicRegularAt: aKey put: aValue.
 			self isGrowthRecommended ifTrue: [self seekOptimalTableSize]].
 	^aValue
+]
 
 { #category : 'adding' }
 GbxLargeIdentityDictionary >> basicRegularAt: aKey put: aValue 
+[
 	"Stores the aKey/value pair in the dictionary.
 
 	Sender must hold my accessProtect"
@@ -962,16 +1077,20 @@ GbxLargeIdentityDictionary >> basicRegularAt: aKey put: aValue
 	aBucket == (buckets at: index) 
 		ifTrue: [numElements := numElements + numAdded]
 		ifFalse: [self basicRegularAt: aKey put: aValue]
+]
 
 { #category : 'adding' }
 GbxLargeIdentityDictionary >> replacing: oldValue with: newValue forKey: aKey
+[
 	"Private. Notification that a value is being replaced. Answer
 	 an object to use as the newValue."
 
 	^newValue
+]
 
 { #category : 'adding' }
 GbxLargeIdentityDictionary >> newBucketAt: index 
+[
 	"Sender must hold my accessProtect"
 
 	| aBucket |
@@ -981,43 +1100,54 @@ GbxLargeIdentityDictionary >> newBucketAt: index
 				atOffset: index.
 	buckets at: index put: aBucket.
 	^aBucket
+]
 
 { #category : 'instance creation' }
 GbxLargeIdentityDictionary class >> new: tableSize
+[
 
 	"Return a new instance with an initial table size that allows room to add key/value pairs before having to rebuild the tables"
 
 	^self basicNew
 		initializeWeakness: nil
 		size: tableSize
+]
 
 { #category : 'instance creation' }
 GbxLargeIdentityDictionary class >> newWeakValues: tableSize
+[
 
 	"Return a new instance with an initial table size that allows room to add key/value pairs before having to rebuild the tables"
 
 	^self basicNew
 		initializeWeakness: #VALUES
 		size: tableSize
+]
 
 { #category : 'instance creation' }
 GbxLargeIdentityDictionary class >> new
+[
 
 	"Return a new instance with a minimal initial table size."
 
 	^self new: 3
+]
 
 { #category : 'instance creation' }
 GbxLargeIdentityDictionary class >> newWeakKeys: tableSize
+[
 
 	"Return a new instance with an initial table size that allows room to add key/value pairs before having to rebuild the tables"
 
 	^self basicNew
 		initializeWeakness: #KEYS
 		size: tableSize
+]
 
 { #category : 'components' }
 GbxLargeIdentityDictionary class >> bucketClass
+[
 
 	^GbxLargeIdentityDictionaryBucket
+]
 

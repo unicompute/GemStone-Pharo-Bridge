@@ -10,6 +10,7 @@ Class {
 
 { #category : 'public' }
 GbxPollingEventDetector >> newRunningProcess
+[
 	"Create a Smalltalk process to poll for GemStone asynchronous events.
 	The polling frequency (in milliseconds) can be modified by sending
 	GbsConfiguration current eventPollingFrequency: milliseconds"
@@ -36,4 +37,5 @@ GbxPollingEventDetector >> newRunningProcess
 				gbxNewProcessNamed: 'GbsEventPollerForSession' , session printString.
 	process priority: session configuration eventPriority.
 	process resume
+]
 

@@ -10,10 +10,13 @@ Class {
 
 { #category : 'accessing' }
 GbxKeyIndexElement >> partName
+[
 	^key printString
+]
 
 { #category : 'accessing' }
 GbxKeyIndexElement >> value: anObject 
+[
 	"we could receive a delegate or a wrapper or a special"
 
 	| delegate |
@@ -27,22 +30,29 @@ GbxKeyIndexElement >> value: anObject
 		with: delegate.
 	valueDelegate := delegate.
 	^valueDelegate
+]
 
 { #category : 'accessing' }
 GbxKeyIndexElement >> displayString
+[
 
 	^Tools.Trippy.Inspector safeDisplayStringOf: key
+]
 
 { #category : 'accessing' }
 GbxKeyIndexElement >> key
+[
 	^key
+]
 
 { #category : 'instance creation' }
 GbxKeyIndexElement class >> of: object at: anIndex value: aGBSObject valueName: aString 
+[
 	^(self new)
 		object: object;
 		key: anIndex;
 		valueDelegate: aGBSObject;
 		valueName: aString;
 		yourself
+]
 

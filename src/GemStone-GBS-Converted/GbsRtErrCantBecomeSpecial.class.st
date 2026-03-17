@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrCantBecomeSpecial class >> gemStoneErrorNumber6430 ^2081
+[
+
+]
 

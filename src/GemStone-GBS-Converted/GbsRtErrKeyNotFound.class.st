@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrKeyNotFound class >> gemStoneErrorNumber6430 ^2021
+[
+
+]
 

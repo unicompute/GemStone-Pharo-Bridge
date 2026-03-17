@@ -10,6 +10,8 @@ Class {
 
 { #category : 'applying' }
 GbxOverrideEditCopy >> applyFrom: inputStream to: outputStream
+[
 
 	outputStream nextPutAll: (inputStream next: count)
+]
 

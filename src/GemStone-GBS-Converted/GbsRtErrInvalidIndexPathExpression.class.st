@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrInvalidIndexPathExpression class >> gemStoneErrorNumber6430 ^2288
+[
+
+]
 

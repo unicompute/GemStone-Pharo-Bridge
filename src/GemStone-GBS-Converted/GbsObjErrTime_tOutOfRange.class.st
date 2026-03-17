@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsObjErrTime_tOutOfRange class >> gemStoneErrorNumber6430 ^2317
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrDependencyListTooLarge class >> gemStoneErrorNumber6430 ^2289
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGciErrNoStartCmd class >> gemStoneErrorNumber6430 ^2204
+[
+
+]
 

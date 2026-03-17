@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrBadConstraintForMigration class >> gemStoneErrorNumber6430 ^2320
+[
+
+]
 

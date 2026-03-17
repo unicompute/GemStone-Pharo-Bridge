@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsBkupErrRestoreSuccessful class >> gemStoneErrorNumber6430 ^4046
+[
+
+]
 

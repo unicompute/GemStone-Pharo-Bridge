@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGsErrStnNetLost class >> gemStoneErrorNumber6430 ^4035
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsAssocErrBadComparison class >> gemStoneErrorNumber6430 ^2128
+[
+
+]
 

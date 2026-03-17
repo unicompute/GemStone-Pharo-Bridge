@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsLgcErrObjRepHdrSize class >> gemStoneErrorNumber6430 ^2172
+[
+
+]
 

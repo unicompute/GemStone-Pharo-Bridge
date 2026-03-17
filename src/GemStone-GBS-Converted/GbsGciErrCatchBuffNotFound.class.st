@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGciErrCatchBuffNotFound class >> gemStoneErrorNumber6430 ^2209
+[
+
+]
 

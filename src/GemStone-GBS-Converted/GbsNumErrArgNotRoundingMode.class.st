@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsNumErrArgNotRoundingMode class >> gemStoneErrorNumber6430 ^2067
+[
+
+]
 

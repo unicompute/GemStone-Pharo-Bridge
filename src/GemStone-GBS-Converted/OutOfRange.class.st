@@ -13,16 +13,22 @@ Class {
 
 { #category : 'accessing' }
 OutOfRange >> maximum
+[
 
 	^maximum
+]
 
 { #category : 'accessing' }
 OutOfRange >> minimum
+[
 
 	^minimum
+]
 
 { #category : 'accessing' }
 OutOfRange >> actual
+[
 
 	^actual
+]
 

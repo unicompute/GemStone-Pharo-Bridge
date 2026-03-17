@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBEnvTooBig class >> gemStoneErrorNumber6430 ^1069
+[
+
+]
 

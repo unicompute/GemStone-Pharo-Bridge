@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrNativeCodeGen class >> gemStoneErrorNumber6430 ^2481
+[
+
+]
 

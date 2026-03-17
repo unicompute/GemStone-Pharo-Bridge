@@ -10,6 +10,7 @@ Class {
 
 { #category : 'putting' }
 GbxB8OopArray >> addUpper: upperBytes lower3: lower3
+[
 	"Given a pair of SmallIntegers, one that represent the lower three bytes of the oop number and 
 	one that represents the upper two bytes, adds an 8-byte POM oop to the buffer.
 	The eight bytes of the oop are:
@@ -32,9 +33,12 @@ GbxB8OopArray >> addUpper: upperBytes lower3: lower3
 		unsignedShortAt: start + 6
 		put: l0 * 16r100 + 1.
 	numOops := numOops + 1
+]
 
 { #category : 'private' }
 GbxB8OopArray >> bufferOopClass
+[
 	
 	^GbxB8BufferOop
+]
 

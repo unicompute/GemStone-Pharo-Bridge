@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrMethodSrcInvalid class >> gemStoneErrorNumber6430 ^1074
+[
+
+]
 

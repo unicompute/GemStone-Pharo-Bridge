@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrArgOutOfRange class >> gemStoneErrorNumber6430 ^2061
+[
+
+]
 

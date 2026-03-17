@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBErrBadChrInRadixNum class >> gemStoneErrorNumber6430 ^1012
+[
+
+]
 

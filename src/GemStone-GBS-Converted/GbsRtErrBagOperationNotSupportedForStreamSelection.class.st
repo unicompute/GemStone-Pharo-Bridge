@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrBagOperationNotSupportedForStreamSelection class >> gemStoneErrorNumber6430 ^2314
+[
+
+]
 

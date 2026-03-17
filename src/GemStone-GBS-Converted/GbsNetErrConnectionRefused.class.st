@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsNetErrConnectionRefused class >> gemStoneErrorNumber6430 ^4136
+[
+
+]
 

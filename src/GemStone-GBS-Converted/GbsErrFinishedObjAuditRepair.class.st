@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrFinishedObjAuditRepair class >> gemStoneErrorNumber6430 ^4033
+[
+
+]
 

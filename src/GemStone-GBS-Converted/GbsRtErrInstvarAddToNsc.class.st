@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrInstvarAddToNsc class >> gemStoneErrorNumber6430 ^2266
+[
+
+]
 

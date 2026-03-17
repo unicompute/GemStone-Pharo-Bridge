@@ -10,16 +10,21 @@ Class {
 
 { #category : 'accessing' }
 GbxTextEditorInspector >> documentHolder
+[
 	"vw8x support"
 
 	^textHolder
+]
 
 { #category : 'actions' }
 GbxTextEditorInspector >> refresh
+[
 	self textHolder value: object refreshText
+]
 
 { #category : 'actions' }
 GbxTextEditorInspector >> textAccepted: aController
+[
 
 	| newDelegate |
 	newDelegate := self session
@@ -39,19 +44,26 @@ GbxTextEditorInspector >> textAccepted: aController
 		ifTrue: 
 			[self container navigator updateShellsInspectedObject	"get default container"]
 		ifFalse: [container updateShellsInspectedObject]
+]
 
 { #category : 'initialize-release' }
 GbxTextEditorInspector >> initialize: anObject
+[
 	
 	self session: anObject delegate noCheckSession.
 	super initialize: anObject
+]
 
 { #category : 'testing' }
 GbxTextEditorInspector class >> gbxIsGbsInspector
+[
 	^true
+]
 
 { #category : 'accessing' }
 GbxTextEditorInspector class >> tabLabel
+[
 
 	^self gbxTabLabel: 'GS Text'
+]
 

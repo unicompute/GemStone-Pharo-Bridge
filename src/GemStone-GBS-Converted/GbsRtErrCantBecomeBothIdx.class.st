@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrCantBecomeBothIdx class >> gemStoneErrorNumber6430 ^2091
+[
+
+]
 

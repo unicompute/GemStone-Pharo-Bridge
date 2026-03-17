@@ -10,6 +10,7 @@ Class {
 
 { #category : 'per-object private' }
 GbxSymbolAssociationReplicator >> clientClassIsCorrect
+[
 	"Answer true if the class of the server class of the existing mapped client object 
 	is not sufficiently the same as the class of the server object being replicated.
 	Since a GbxNameAssociation on the client is an SymbolAssociation on the server, 
@@ -19,9 +20,11 @@ GbxSymbolAssociationReplicator >> clientClassIsCorrect
 	^currentReport isHeaderOnly or: 
 			[clientObject gbxBasicClass == clientClass
 				or: [clientObject gbxBasicClass == GbxNameAssociation]]
+]
 
 { #category : 'per-object private' }
 GbxSymbolAssociationReplicator >> clientSizeIsCorrect
+[
 	"We need to know whether the number of total pointers (named plus indexed) is correct.
 	Especially in the unstubbing case, the number of named instvars may be different
 	but the total size may still be correct."
@@ -34,4 +37,5 @@ GbxSymbolAssociationReplicator >> clientSizeIsCorrect
 	^existingClass = GbxNameAssociation
 		ifTrue: [true]
 		ifFalse: [super clientSizeIsCorrect]
+]
 

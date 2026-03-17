@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrNotPowerOfTwo class >> gemStoneErrorNumber6430 ^2512
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBErrMaxArg class >> gemStoneErrorNumber6430 ^1017
+[
+
+]
 

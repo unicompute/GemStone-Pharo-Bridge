@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsAssocErrClassModifiable class >> gemStoneErrorNumber6430 ^2130
+[
+
+]
 

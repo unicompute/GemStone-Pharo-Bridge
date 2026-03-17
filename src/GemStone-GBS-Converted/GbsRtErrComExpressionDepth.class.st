@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrComExpressionDepth class >> gemStoneErrorNumber6430 ^1073
+[
+
+]
 

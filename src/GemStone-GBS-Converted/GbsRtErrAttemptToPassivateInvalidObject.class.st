@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrAttemptToPassivateInvalidObject class >> gemStoneErrorNumber6430 ^2329
+[
+
+]
 

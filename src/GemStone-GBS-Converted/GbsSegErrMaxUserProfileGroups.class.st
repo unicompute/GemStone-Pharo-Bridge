@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsSegErrMaxUserProfileGroups class >> gemStoneErrorNumber6430 ^2359
+[
+
+]
 

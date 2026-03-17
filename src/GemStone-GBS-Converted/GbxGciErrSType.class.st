@@ -10,6 +10,7 @@ Class {
 
 { #category : 'accessing' }
 GbxGciErrSType >> asGbsErrorForSession: aGbsSession
+[
 	"Return a new instance of GbsError initialized from the contents of this struct.
 	If this is the first fatal error for aGbsSession, record it as the cause of death.
 	If aGbsSession already has a cause of death, include its description in
@@ -40,9 +41,11 @@ GbxGciErrSType >> asGbsErrorForSession: aGbsSession
 				yourself.
 	((fatal and: [preexistingCauseOfDeath isNil]) and: [haveSession]) ifTrue: [aGbsSession causeOfDeath: newError].
 	^newError
+]
 
 { #category : 'accessing' }
 GbxGciErrSType >> argDelegatesForSession: aGSSession
+[
 	
 	| argCount oopArray |
 	argCount := self argCount min: 10.
@@ -50,9 +53,12 @@ GbxGciErrSType >> argDelegatesForSession: aGSSession
 		buffer: (Core.UninterpretedBytes from: data contents datum asByteArray)
 		offset: self argsOffset.
 	^oopArray asDelegateArrayOfSize: argCount forSession: aGSSession
+]
 
 { #category : 'accessing' }
 GbxGciErrSType >> argsOffset
+[
 
 	self subclassResponsibility
+]
 

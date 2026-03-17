@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrGsSocketInvariant class >> gemStoneErrorNumber6430 ^2363
+[
+
+]
 

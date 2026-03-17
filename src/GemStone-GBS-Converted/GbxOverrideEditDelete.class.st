@@ -10,6 +10,8 @@ Class {
 
 { #category : 'applying' }
 GbxOverrideEditDelete >> applyFrom: inputStream to: outputStream
+[
 
 	inputStream skip: count
+]
 

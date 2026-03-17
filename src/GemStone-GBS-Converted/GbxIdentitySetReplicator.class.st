@@ -10,6 +10,7 @@ Class {
 
 { #category : 'per-object private' }
 GbxIdentitySetReplicator >> clientClassIsCorrect
+[
 	"Answer true if the class of the server class of the existing mapped client object 
 	is not sufficiently the same as the class of the server object being replicated.
 	Since a GbxIdentityClampSet on the client is an IdentitySet on the server, 
@@ -21,4 +22,5 @@ GbxIdentitySetReplicator >> clientClassIsCorrect
 	^clientObject gbxBasicClass == clientClass or: 
 			[clientClass == IdentitySet
 				and: [clientObject gbxBasicClass == GbxIdentityClampSet]]
+]
 

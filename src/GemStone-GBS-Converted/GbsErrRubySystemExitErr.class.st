@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrRubySystemExitErr class >> gemStoneErrorNumber6430 ^2510
+[
+
+]
 

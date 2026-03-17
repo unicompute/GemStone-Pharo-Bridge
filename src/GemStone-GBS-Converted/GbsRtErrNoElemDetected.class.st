@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrNoElemDetected class >> gemStoneErrorNumber6430 ^2354
+[
+
+]
 

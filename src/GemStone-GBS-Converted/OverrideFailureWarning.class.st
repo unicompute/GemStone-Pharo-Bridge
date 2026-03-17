@@ -10,7 +10,9 @@ Class {
 
 { #category : 'private - actions' }
 OverrideFailureWarning >> defaultAction
+[
 
 	Transcript cr; nextPutAll: self description.
 	^self gbsMessenger warn: self description.
+]
 

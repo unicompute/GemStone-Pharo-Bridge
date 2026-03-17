@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrNoExistingSymbol class >> gemStoneErrorNumber6430 ^2404
+[
+
+]
 

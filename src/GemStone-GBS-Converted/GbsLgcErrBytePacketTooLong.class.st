@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsLgcErrBytePacketTooLong class >> gemStoneErrorNumber6430 ^2227
+[
+
+]
 

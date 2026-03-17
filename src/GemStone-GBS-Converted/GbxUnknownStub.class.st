@@ -10,6 +10,7 @@ Class {
 
 { #category : 'faulting' }
 GbxUnknownStub >> faultToLevel: levelOrNil session: session delegate: delegate
+[
 	"Lazy faulting support.  Cause this stub to fault in from the repository to the specified level.
 	If this unknown stub was created because of delayed finalization of the ServerMap, it might or might not be in the server's export set,
 	so in order to fault it we might have to remove it from the export set.
@@ -29,4 +30,5 @@ GbxUnknownStub >> faultToLevel: levelOrNil session: session delegate: delegate
 		withArguments: (Array with: delegate)
 		context: nil
 		toLevel: level
+]
 

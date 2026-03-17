@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrObjectNoDependencyList class >> gemStoneErrorNumber6430 ^2296
+[
+
+]
 

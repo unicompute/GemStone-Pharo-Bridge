@@ -12,6 +12,7 @@ Class {
 
 { #category : 'per-object replication' }
 GbxSkewedFaultingReplicator >> forReplication: replication replicateFromDeferredReport: report
+[
 	"Migrate to a copy of the instance on the server, and use the mapped class's replicator to replicate the 
 	result. Then copy that result and map the copy to the original report oop."
 	"Sender must hold session semaphore and cache semaphore."
@@ -46,27 +47,35 @@ GbxSkewedFaultingReplicator >> forReplication: replication replicateFromDeferred
 		ifFalse: [clientObject gbxBecome: skewedClientObject].
 	"When autoMarkDirty false, client obj should not be immutable."
 	clientObject gbxIsImmutable: skewedClientObject gbxIsImmutable
+]
 
 { #category : 'per-object replication' }
 GbxSkewedFaultingReplicator >> forReplication: replication replicateFromReport: report
+[
 	"Since we must go to the server to migrate the instance, and can't do that in the middle of a traversal,
 	we must defer the report."
 	"Sender must hold session's semaphore, and clientMap semaphore."
 
 	replication addUnmappedClassReport: report copyWithPrivateBuffer
+]
 
 { #category : 'testing' }
 GbxSkewedFaultingReplicator >> isSkew
+[
 
 	^true
+]
 
 { #category : 'accessing' }
 GbxSkewedFaultingReplicator >> newServerClass
+[
 
 	^newServerClass
+]
 
 { #category : 'initialize-release' }
 GbxSkewedFaultingReplicator >> verifyClassRelationship
+[
 	"The old class and the new class must be in the same class history, and new must be later in the class history than the old.
 	Sender must hold sessionProtect."
 
@@ -91,9 +100,11 @@ GbxSkewedFaultingReplicator >> verifyClassRelationship
 				with: (session lookupOop: newServerClass) name
 				with: newServerClass
 				with: skewMessage]
+]
 
 { #category : 'initialize-release' }
 GbxSkewedFaultingReplicator >> initializeForSession: aSession serverBehavior: classDelegate clientClass: clientClass
+[
 	"Sender must hold sessionProtect."
 
 	session := aSession.
@@ -102,21 +113,26 @@ GbxSkewedFaultingReplicator >> initializeForSession: aSession serverBehavior: cl
 	self verifyReplicatorExistsForClientClass: clientClass.
 	self verifyClassRelationship.
 	^self
+]
 
 { #category : 'initialize-release' }
 GbxSkewedFaultingReplicator >> verifyReplicatorExistsForClientClass: clientClass
+[
 
 	session replicatorForClientBehavior: clientClass
 		ifAbsent: 
 			[self gbsMessenger
 				error: 'No replicator for mapped class during skew replication.']
+]
 
 { #category : 'instance creation' }
 GbxSkewedFaultingReplicator class >> forSession: session serverBehavior: classDelegate clientClass: clientClass
+[
 	"Sender must hold sessionProtect."
 
 	^self new
 		initializeForSession: session
 		serverBehavior: classDelegate
 		clientClass: clientClass
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsHostErrCantSpawn class >> gemStoneErrorNumber6430 ^4042
+[
+
+]
 

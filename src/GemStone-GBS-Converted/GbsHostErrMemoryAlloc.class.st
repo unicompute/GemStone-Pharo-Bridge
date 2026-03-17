@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsHostErrMemoryAlloc class >> gemStoneErrorNumber6430 ^2208
+[
+
+]
 

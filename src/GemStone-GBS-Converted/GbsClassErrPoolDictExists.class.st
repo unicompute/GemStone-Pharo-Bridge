@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsClassErrPoolDictExists class >> gemStoneErrorNumber6430 ^2044
+[
+
+]
 

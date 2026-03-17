@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtUnresolvedFwdRefs class >> gemStoneErrorNumber6430 ^2058
+[
+
+]
 

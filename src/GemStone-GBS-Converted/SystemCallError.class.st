@@ -11,6 +11,8 @@ Class {
 
 { #category : 'accessing' }
 SystemCallError >> errno
+[
 
 	^errno
+]
 

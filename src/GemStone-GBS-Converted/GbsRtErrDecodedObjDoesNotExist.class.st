@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrDecodedObjDoesNotExist class >> gemStoneErrorNumber6430 ^2393
+[
+
+]
 

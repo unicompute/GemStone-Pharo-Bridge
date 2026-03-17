@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrBagNoRangeIndexOnPathExpression class >> gemStoneErrorNumber6430 ^2312
+[
+
+]
 

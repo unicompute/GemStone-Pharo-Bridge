@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGciErrTravObjNotFound class >> gemStoneErrorNumber6430 ^2215
+[
+
+]
 

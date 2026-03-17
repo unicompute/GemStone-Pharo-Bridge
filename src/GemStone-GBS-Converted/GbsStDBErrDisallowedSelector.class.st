@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBErrDisallowedSelector class >> gemStoneErrorNumber6430 ^1046
+[
+
+]
 

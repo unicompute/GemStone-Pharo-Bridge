@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsClassErrByteObjInstVars class >> gemStoneErrorNumber6430 ^2036
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBErrNotDefined class >> gemStoneErrorNumber6430 ^1031
+[
+
+]
 

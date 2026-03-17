@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBErrLiteralInvariant class >> gemStoneErrorNumber6430 ^1048
+[
+
+]
 

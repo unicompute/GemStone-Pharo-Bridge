@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsClassErrConstraintNotClass class >> gemStoneErrorNumber6430 ^2037
+[
+
+]
 

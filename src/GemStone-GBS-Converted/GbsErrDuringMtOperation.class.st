@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrDuringMtOperation class >> gemStoneErrorNumber6430 ^2514
+[
+
+]
 

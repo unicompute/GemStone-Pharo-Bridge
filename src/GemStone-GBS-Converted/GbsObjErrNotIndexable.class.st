@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsObjErrNotIndexable class >> gemStoneErrorNumber6430 ^2012
+[
+
+]
 

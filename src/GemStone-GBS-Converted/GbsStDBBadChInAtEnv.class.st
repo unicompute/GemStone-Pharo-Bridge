@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBBadChInAtEnv class >> gemStoneErrorNumber6430 ^1068
+[
+
+]
 

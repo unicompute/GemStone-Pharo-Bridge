@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsOtErrRebuildSuccessful class >> gemStoneErrorNumber6430 ^3010
+[
+
+]
 

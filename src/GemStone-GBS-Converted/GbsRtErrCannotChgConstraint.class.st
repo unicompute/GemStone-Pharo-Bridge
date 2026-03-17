@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrCannotChgConstraint class >> gemStoneErrorNumber6430 ^2062
+[
+
+]
 

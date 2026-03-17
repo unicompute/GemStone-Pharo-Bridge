@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrUalibLoadFailed class >> gemStoneErrorNumber6430 ^2171
+[
+
+]
 

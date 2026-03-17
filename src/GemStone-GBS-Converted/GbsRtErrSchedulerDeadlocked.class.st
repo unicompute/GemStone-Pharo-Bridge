@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrSchedulerDeadlocked class >> gemStoneErrorNumber6430 ^2366
+[
+
+]
 

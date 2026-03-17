@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrCommitAbortPending class >> gemStoneErrorNumber6430 ^6007
+[
+
+]
 

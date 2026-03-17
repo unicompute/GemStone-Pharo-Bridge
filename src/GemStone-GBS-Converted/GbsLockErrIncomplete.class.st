@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsLockErrIncomplete class >> gemStoneErrorNumber6430 ^2073
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBErrEofInChrLit class >> gemStoneErrorNumber6430 ^1006
+[
+
+]
 

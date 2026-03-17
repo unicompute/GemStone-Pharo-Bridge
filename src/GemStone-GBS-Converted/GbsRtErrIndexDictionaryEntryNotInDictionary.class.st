@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrIndexDictionaryEntryNotInDictionary class >> gemStoneErrorNumber6430 ^2297
+[
+
+]
 

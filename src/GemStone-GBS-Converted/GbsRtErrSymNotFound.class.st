@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrSymNotFound class >> gemStoneErrorNumber6430 ^2191
+[
+
+]
 

@@ -15,11 +15,14 @@ Class {
 
 { #category : 'initialize-release' }
 GbxStatArchiver >> createStreamOn: aFile
+[
 
 	^(aFile withEncoding: #binary) writeStream
+]
 
 { #category : 'initialize-release' }
 GbxStatArchiver >> initializeWithFile: aFile
+[
 
 	writeProtect := Semaphore forMutualExclusion.
 	writeProtect critical: 
@@ -39,55 +42,69 @@ GbxStatArchiver >> initializeWithFile: aFile
 					 threads have visibility of this archiver."
 					self basicAddStatResource: s statResource
 						instanceDescription: s statResource instanceDescription]]
+]
 
 { #category : 'public api' }
 GbxStatArchiver >> addStatResource: statResource 
+[
 	"To avoid possible deadlock (bug 33133), get the description before entering writeProtect"
 
 	| description |
 	description := statResource instanceDescription.
 	writeProtect critical: 
 			[self basicAddStatResource: statResource instanceDescription: description]
+]
 
 { #category : 'public api' }
 GbxStatArchiver >> removeStatResource: statResource 
+[
 	| result |
 	writeProtect critical: 
 			[result := resources remove: statResource ifAbsent: [ nil ].
 			self writeResourceDeleted: statResource].
 	^result
+]
 
 { #category : 'public api' }
 GbxStatArchiver >> writeSampleHeaderAndSample
+[
 	writeProtect critical: 
 			[self
 				writeSampleHeader;
 				writeSample]
+]
 
 { #category : 'public api' }
 GbxStatArchiver >> close
+[
 	writeProtect critical: 
 			[stream close.
 			resources do: [:resource | resource closedArchive]]
+]
 
 { #category : 'private' }
 GbxStatArchiver >> writeShort: short
+[
 
 	"Write the given 16 bit short (as specified in GFS_File_Format.doc"
 
 	stream nextWordPut: short
+]
 
 { #category : 'private' }
 GbxStatArchiver >> writeByte: byte 
+[
 	"Write the given 8 bit byte (as specified in GFS_File_Format.doc)"
 
 	| toWrite |
 	toWrite := byte.
 	byte < 0 ifTrue: [ toWrite := 256 + byte ].
 	stream nextPut: toWrite
+]
 
 { #category : 'private' }
 GbxStatArchiver >> writeCompressedNumber: num
+[
 
 	| buffer idx v |
 	(num between: Min1ByteCompactValue and: Max1ByteCompactValue)
@@ -129,9 +146,11 @@ GbxStatArchiver >> writeCompressedNumber: num
 	idx to: 1
 		by: -1
 		do: [:i | self writeByte: (buffer at: i)]
+]
 
 { #category : 'private' }
 GbxStatArchiver >> writeString: string 
+[
 	"Write the given string (as specified in GFS_File_Format.doc"
 
 	"Can't use the following - it sometimes writes the length as one byte"
@@ -145,16 +164,20 @@ GbxStatArchiver >> writeString: string
 	stream nextPut: length // 256.
 	stream nextPut: length \\ 256.
 	string do: [:char | stream nextPut: char asInteger]
+]
 
 { #category : 'private' }
 GbxStatArchiver >> writeInt: int
+[
 
 	"Write the given 32 bit int (as specified in GFS_File_Format.doc"
 
 	stream nextLongPut: int
+]
 
 { #category : 'private' }
 GbxStatArchiver >> writeHeader
+[
 	| currentEpochMs dir |
 	currentEpochMs := Time millisecondClockValue - JavaEpochStart.
 
@@ -186,27 +209,35 @@ GbxStatArchiver >> writeHeader
 	"Machine Information"
 	self writeString: SocketAccessor getHostname.
 	stream flush
+]
 
 { #category : 'private' }
 GbxStatArchiver >> writeLong: long
+[
 	"Write the given 64 bit long (as specified in GFS_File_Format.doc)"
 
 	stream nextNumber: 8 "bytes" put: long
+]
 
 { #category : 'private' }
 GbxStatArchiver >> writeProlog
+[
 	self
 		writeHeader;
 		writeResourceTypesAndDescriptors
+]
 
 { #category : 'private' }
 GbxStatArchiver >> writeResourceDeleted: statResource 
+[
 	GbxStatMonitor instance handlingErrorsDo: 
 			[self writeByte: DeleteToken.
 			self writeInt: statResource instanceId]
+]
 
 { #category : 'private' }
 GbxStatArchiver >> writeResourceInstanceInformationFor: statResource instanceDescription: instanceDescription
+[
 	"Instance create token"
 	"Note: instanceDescription is passed as an argument, instead of this method sedning statResource instanceDescription, to fix a deadlock (bug 33133).  The archiver's writeProtect is held at this point in time, and a session stat resource needs to grab the stObjectCache's semaphore, which can deadlock - so the fix chosen is to send instanceDescription *before* entering the archiver's writeProtect semaphore."
 
@@ -219,9 +250,11 @@ GbxStatArchiver >> writeResourceInstanceInformationFor: statResource instanceDes
 	self writeLong: 0.
 	"Type ID"
 	self writeInt: statResource class resourceTypeId
+]
 
 { #category : 'private' }
 GbxStatArchiver >> writeResourceTypesAndDescriptors
+[
 	"Type information"
 
 	| resourceTypes |
@@ -243,9 +276,11 @@ GbxStatArchiver >> writeResourceTypesAndDescriptors
 			"Number of descriptors"
 			self writeShort: resourceType numberOfDescriptors.
 			resourceType writeDescriptorInformationOn: self]
+]
 
 { #category : 'private' }
 GbxStatArchiver >> basicAddStatResource: statResource  instanceDescription: instanceDescription
+[
 	"This should only be called by methods in this class - it doesn't use writeProtect"
 
 	statResource instanceId: nextInstanceId.
@@ -254,9 +289,11 @@ GbxStatArchiver >> basicAddStatResource: statResource  instanceDescription: inst
 	 making it fair game for sampling"
 	self writeResourceInstanceInformationFor: statResource instanceDescription: instanceDescription.
 	resources add: statResource
+]
 
 { #category : 'private' }
 GbxStatArchiver >> writeSample
+[
 	"Make sure to call writeSampleHeader before this"
 
 	resources do: 
@@ -281,9 +318,11 @@ GbxStatArchiver >> writeSample
 	"End of a sample run"
 	self writeByte: IllegalValueToken.
 	stream flush
+]
 
 { #category : 'private' }
 GbxStatArchiver >> writeSampleHeader
+[
 
 	"Sample token - marks the start of a sample"
 	| lastSampleMs delta |
@@ -298,21 +337,27 @@ GbxStatArchiver >> writeSampleHeader
 		ifFalse: [ 
 			self writeShort: IntTimestampToken.
 			self writeInt: delta ].
+]
 
 { #category : 'private' }
 GbxStatArchiver >> writeBoolean: aBoolean
+[
 
 	aBoolean
 		ifTrue: [ self writeByte: 1 ]
 		ifFalse: [ self writeByte: 0 ]
+]
 
 { #category : 'defaults' }
 GbxStatArchiver class >> defaultStatFileName
+[
 
 	^'GBSStatArchive-' , GbsStackDumper timestampForFilename , '.gfs'
+]
 
 { #category : 'instance creation' }
 GbxStatArchiver class >> newNamed: filename
+[
 	"Return a new GbxStatArchive instance on a new stat archive file 
 	 named filename.  Raise an exception if a file already exists by 
 	 that name."
@@ -323,24 +368,30 @@ GbxStatArchiver class >> newNamed: filename
 		^self gbsMessenger error: 'A file named ', filename, ' already exists' ].
 
 	^self basicNew initializeWithFile: file
+]
 
 { #category : 'instance creation' }
 GbxStatArchiver class >> named: filename
+[
 	"Return a new GbxStatArchive instance on a new or existing stat 
 	 archive file named filename.  If it's an existing file, statistics will
 	 be appended."
 
 	^self gbsMessenger error: 'Not yet implemented'
+]
 
 { #category : 'instance creation' }
 GbxStatArchiver class >> new
+[
 	"Return a new GbxStatArchive instance on a new stat archive file 
 	 named GBSStatArchive-YYYY-MM-DD-HH.MM.SS.SSS.gfs"
 
 	^self newNamed: self defaultStatFileName
+]
 
 { #category : 'initialize-release' }
 GbxStatArchiver class >> initialize
+[
 	"GbxStatArchiver initialize"
 
 	"version"
@@ -378,4 +429,5 @@ GbxStatArchiver class >> initialize
 	Min1ByteCompactValue := -121.
 	Max2ByteCompactValue := 32767.
 	Min2ByteCompactValue := -32768
+]
 

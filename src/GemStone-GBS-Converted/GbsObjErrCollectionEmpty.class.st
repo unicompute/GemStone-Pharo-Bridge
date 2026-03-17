@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsObjErrCollectionEmpty class >> gemStoneErrorNumber6430 ^2019
+[
+
+]
 

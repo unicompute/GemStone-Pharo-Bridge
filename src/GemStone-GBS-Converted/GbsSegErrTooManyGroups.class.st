@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsSegErrTooManyGroups class >> gemStoneErrorNumber6430 ^2098
+[
+
+]
 

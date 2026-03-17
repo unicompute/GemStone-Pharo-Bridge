@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRepErrBadFileSpec class >> gemStoneErrorNumber6430 ^2125
+[
+
+]
 

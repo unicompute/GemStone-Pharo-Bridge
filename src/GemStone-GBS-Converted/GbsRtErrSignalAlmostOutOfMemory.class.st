@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrSignalAlmostOutOfMemory class >> gemStoneErrorNumber6430 ^6013
+[
+
+]
 

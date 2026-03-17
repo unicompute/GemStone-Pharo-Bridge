@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrGsCommitListNBTimeout class >> gemStoneErrorNumber6430 ^2360
+[
+
+]
 

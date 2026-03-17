@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrLrgIntOverflow class >> gemStoneErrorNumber6430 ^2503
+[
+
+]
 

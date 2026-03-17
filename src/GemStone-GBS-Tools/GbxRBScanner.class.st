@@ -10,10 +10,12 @@ Class {
 
 { #category : 'accessing' }
 GbxRBScanner class >> classificationTable
+[
 
 	| ct |
 	ct := super classificationTable.
 	ct at: ${ asInteger put: #special.
 	ct at: $} asInteger put: #special.
 	^ct
+]
 

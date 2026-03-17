@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBErrBadFlt class >> gemStoneErrorNumber6430 ^1028
+[
+
+]
 

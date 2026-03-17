@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBByteArrElemRange class >> gemStoneErrorNumber6430 ^1070
+[
+
+]
 

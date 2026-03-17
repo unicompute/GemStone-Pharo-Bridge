@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrLogDirNotExist class >> gemStoneErrorNumber6430 ^2348
+[
+
+]
 

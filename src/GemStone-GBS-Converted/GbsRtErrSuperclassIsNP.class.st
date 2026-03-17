@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrSuperclassIsNP class >> gemStoneErrorNumber6430 ^2408
+[
+
+]
 

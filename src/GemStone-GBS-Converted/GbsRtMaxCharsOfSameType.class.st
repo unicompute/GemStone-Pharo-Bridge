@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtMaxCharsOfSameType class >> gemStoneErrorNumber6430 ^2345
+[
+
+]
 

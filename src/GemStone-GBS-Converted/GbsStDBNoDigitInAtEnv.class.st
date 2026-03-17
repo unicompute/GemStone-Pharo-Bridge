@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBNoDigitInAtEnv class >> gemStoneErrorNumber6430 ^1067
+[
+
+]
 

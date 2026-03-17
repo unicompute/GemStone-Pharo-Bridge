@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrMaxClusterId class >> gemStoneErrorNumber6430 ^2076
+[
+
+]
 

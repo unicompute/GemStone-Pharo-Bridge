@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrTranLogOpenFail class >> gemStoneErrorNumber6430 ^4032
+[
+
+]
 

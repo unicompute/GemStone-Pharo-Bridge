@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsAssocErrNoElementsDetected class >> gemStoneErrorNumber6430 ^2096
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBErrUnexpectedPound class >> gemStoneErrorNumber6430 ^1008
+[
+
+]
 

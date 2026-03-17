@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsHostErrFileDirectory class >> gemStoneErrorNumber6430 ^2199
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsLgcErrTravswizzFailure class >> gemStoneErrorNumber6430 ^2167
+[
+
+]
 

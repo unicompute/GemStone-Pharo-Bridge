@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGsErrStnShutdown class >> gemStoneErrorNumber6430 ^4057
+[
+
+]
 

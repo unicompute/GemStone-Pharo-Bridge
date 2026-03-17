@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsAuthErrSegSetCurrentSeg class >> gemStoneErrorNumber6430 ^2257
+[
+
+]
 

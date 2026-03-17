@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrAuthArraySize class >> gemStoneErrorNumber6430 ^2006
+[
+
+]
 

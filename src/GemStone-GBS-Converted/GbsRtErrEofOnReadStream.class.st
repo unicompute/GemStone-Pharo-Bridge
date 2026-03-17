@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrEofOnReadStream class >> gemStoneErrorNumber6430 ^2192
+[
+
+]
 

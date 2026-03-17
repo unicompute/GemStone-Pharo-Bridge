@@ -11,10 +11,13 @@ Class {
 
 { #category : 'accessing' }
 GbxManyClientToOneKernelConnector >> secondaryClientObjs: anObject
+[
 	secondaryClientObjs := anObject
+]
 
 { #category : 'printing' }
 GbxManyClientToOneKernelConnector >> printOn: stream
+[
 
 	super printOn: stream.
 	stream nextPutAll: ', #('.
@@ -23,9 +26,11 @@ GbxManyClientToOneKernelConnector >> printOn: stream
 			each gbxDebugPrintOn: stream.
 			stream space].
 	stream nextPut: $)
+]
 
 { #category : 'private connecting' }
 GbxManyClientToOneKernelConnector >> postConnectClient: primaryClass server: delegate inSession: sess
+[
 	"Private to GBS.  Events to occur after connecting.
 	Sender must hold session's sessionProtect"
 
@@ -53,12 +58,15 @@ GbxManyClientToOneKernelConnector >> postConnectClient: primaryClass server: del
 						putDelegate: (primaryMetaclass asGSObjectInSession: sess).
 					sess setReplicatorForClient: secondaryMetaclass
 						sameAsReplicatorForClient: primaryMetaclass]]
+]
 
 { #category : 'instance creation' }
 GbxManyClientToOneKernelConnector class >> primaryClientObj: primaryClientObj secondaryClientObjs: secondaryClientObjs serverOop: serverOop
+[
 
 	| conn |
 	conn := self stObj: primaryClientObj gsObj: serverOop.
 	conn secondaryClientObjs: secondaryClientObjs.
 	^conn
+]
 

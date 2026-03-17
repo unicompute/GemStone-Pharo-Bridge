@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsAuthErrStoreTrav class >> gemStoneErrorNumber6430 ^2518
+[
+
+]
 

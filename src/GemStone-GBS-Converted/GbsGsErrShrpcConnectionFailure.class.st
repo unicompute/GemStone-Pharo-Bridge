@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGsErrShrpcConnectionFailure class >> gemStoneErrorNumber6430 ^4009
+[
+
+]
 

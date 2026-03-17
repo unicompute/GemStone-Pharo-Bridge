@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGciErrUserActionPending class >> gemStoneErrorNumber6430 ^2264
+[
+
+]
 

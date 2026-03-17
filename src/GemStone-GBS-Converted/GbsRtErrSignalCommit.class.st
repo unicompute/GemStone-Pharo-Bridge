@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrSignalCommit class >> gemStoneErrorNumber6430 ^6008
+[
+
+]
 

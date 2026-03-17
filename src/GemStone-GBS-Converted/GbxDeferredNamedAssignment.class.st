@@ -10,5 +10,7 @@ Class {
 
 { #category : 'resolving' }
 GbxDeferredNamedAssignment >> assignValue: val 
+[
 	buffer namedValueAt: clientOffset put: val
+]
 

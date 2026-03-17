@@ -13,22 +13,31 @@ Class {
 
 { #category : 'accessing' }
 GbxDeferredAssignment >> delegate: aDelegate
+[
 	delegate := aDelegate
+]
 
 { #category : 'accessing' }
 GbxDeferredAssignment >> buffer: anObject
+[
 	buffer := anObject
+]
 
 { #category : 'accessing' }
 GbxDeferredAssignment >> clientOffset: anObject
+[
 	clientOffset := anObject
+]
 
 { #category : 'resolving' }
 GbxDeferredAssignment >> assignValue: val 
+[
 	^self subclassResponsibility
+]
 
 { #category : 'resolving' }
 GbxDeferredAssignment >> resolveIn: sess
+[
 	"Sender must hold the session's sessionProtect"
 
 	| val |
@@ -40,11 +49,14 @@ GbxDeferredAssignment >> resolveIn: sess
 			val := GbxUnknownStub new.
 			sess privateConnectNewClient: val toServer: delegate].
 	self assignValue: val
+]
 
 { #category : 'instance creation' }
 GbxDeferredAssignment class >> offset: clientOffset delegate: aDelegate buffer: aBuffer 
+[
 	^(self new)
 		clientOffset: clientOffset;
 		delegate: aDelegate;
 		buffer: aBuffer
+]
 

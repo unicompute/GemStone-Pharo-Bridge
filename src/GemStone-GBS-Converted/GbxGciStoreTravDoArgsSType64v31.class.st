@@ -10,6 +10,7 @@ Class {
 
 { #category : 'private - printing' }
 GbxGciStoreTravDoArgsSType64v31 >> printEArgsOn: aStream indent: indent
+[
 
 	aStream nextPutAll: 'contextObject = '.
 	self contextObject printOn: aStream.
@@ -35,9 +36,11 @@ GbxGciStoreTravDoArgsSType64v31 >> printEArgsOn: aStream indent: indent
 	aStream nextPutAll: 'environmentId = '.
 	self eEnvironmentId printOn: aStream.
 	aStream crtab: indent
+]
 
 { #category : 'private - printing' }
 GbxGciStoreTravDoArgsSType64v31 >> printPArgsOn: aStream indent: indent 
+[
 	aStream nextPutAll: 'receiver = '.
 	self receiver printOn: aStream.
 	aStream crtab: indent.
@@ -53,9 +56,11 @@ GbxGciStoreTravDoArgsSType64v31 >> printPArgsOn: aStream indent: indent
 	aStream nextPutAll: 'environmentId = '.
 	self pEnvironmentId printOn: aStream.
 	aStream crtab: indent
+]
 
 { #category : 'printing' }
 GbxGciStoreTravDoArgsSType64v31 >> printOn: aStream indent: indent
+[
 
 	aStream tab: indent - 1.
 	aStream nextPutAll: self class name , ' with:'.
@@ -81,4 +86,5 @@ GbxGciStoreTravDoArgsSType64v31 >> printOn: aStream indent: indent
 	aStream crtab: indent.
 	aStream nextPutAll: 'storeTravFlags = '.
 	self storeTravFlags printOn: aStream
+]
 

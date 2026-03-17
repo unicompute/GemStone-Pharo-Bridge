@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrTimeoutInterrupt class >> gemStoneErrorNumber6430 ^6015
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsFatalErrInternal class >> gemStoneErrorNumber6430 ^4126
+[
+
+]
 

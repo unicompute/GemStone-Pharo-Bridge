@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrArgNotChr class >> gemStoneErrorNumber6430 ^2020
+[
+
+]
 

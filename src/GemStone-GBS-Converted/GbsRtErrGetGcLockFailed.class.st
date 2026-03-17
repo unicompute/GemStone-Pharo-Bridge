@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrGetGcLockFailed class >> gemStoneErrorNumber6430 ^2501
+[
+
+]
 

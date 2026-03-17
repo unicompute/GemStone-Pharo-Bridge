@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGciErrParentSession class >> gemStoneErrorNumber6430 ^2146
+[
+
+]
 

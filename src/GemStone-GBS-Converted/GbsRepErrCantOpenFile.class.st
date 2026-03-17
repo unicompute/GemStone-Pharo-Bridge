@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRepErrCantOpenFile class >> gemStoneErrorNumber6430 ^2052
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBErrStmtNoEffect class >> gemStoneErrorNumber6430 ^1037
+[
+
+]
 

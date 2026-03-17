@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrAutoLostOt class >> gemStoneErrorNumber6430 ^3008
+[
+
+]
 

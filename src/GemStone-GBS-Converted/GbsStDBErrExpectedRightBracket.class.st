@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBErrExpectedRightBracket class >> gemStoneErrorNumber6430 ^1035
+[
+
+]
 

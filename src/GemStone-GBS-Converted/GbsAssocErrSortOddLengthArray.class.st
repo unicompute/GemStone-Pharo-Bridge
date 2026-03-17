@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsAssocErrSortOddLengthArray class >> gemStoneErrorNumber6430 ^2193
+[
+
+]
 

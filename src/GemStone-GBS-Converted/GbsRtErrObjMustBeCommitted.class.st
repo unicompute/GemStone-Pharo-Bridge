@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrObjMustBeCommitted class >> gemStoneErrorNumber6430 ^2405
+[
+
+]
 

@@ -10,11 +10,14 @@ Class {
 
 { #category : 'per-object private' }
 GbxMultiByteStringReplicator >> copyBytesFromReportToClientObject
+[
 
 	clientObject gbxCopyBytesFromReport: currentReport
+]
 
 { #category : 'private store replication' }
 GbxMultiByteStringReplicator >> copyInto: report from: anObject numBytes: numBytes startingAt: firstOffset
+[
 
 	| bytesSource |
 	bytesSource := report shouldSwizzleByteOrder
@@ -24,4 +27,5 @@ GbxMultiByteStringReplicator >> copyInto: report from: anObject numBytes: numByt
 		copyIntoBytesBufferFrom: bytesSource
 		numBytes: numBytes
 		startingAt: firstOffset
+]
 

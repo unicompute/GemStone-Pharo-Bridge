@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsObjErrOopNotAllocated class >> gemStoneErrorNumber6430 ^2106
+[
+
+]
 

@@ -10,6 +10,7 @@ Class {
 
 { #category : 'building collections' }
 GbxBasicCache >> cacheArrayInterval: anInterval
+[
 	"grab using basicAt: rather than using one of the superclass methods"
 
 	| resultArray newElements delta |
@@ -62,9 +63,11 @@ GbxBasicCache >> cacheArrayInterval: anInterval
 			anInterval
 				do: [:idx | elements at: idx put: (newElements at: idx - delta)].
 			cachedRanges add: anInterval]
+]
 
 { #category : 'accessing' }
 GbxBasicCache >> actualSize
+[
 	"Answer the number of indexed instance variables in
 	 the server personality of the inspected object.
 	
@@ -90,4 +93,5 @@ GbxBasicCache >> actualSize
 					ifFalse:[self _basicSize]'
 						context: delegate].
 	^actualSize
+]
 

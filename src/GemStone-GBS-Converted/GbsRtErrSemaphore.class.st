@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrSemaphore class >> gemStoneErrorNumber6430 ^2177
+[
+
+]
 

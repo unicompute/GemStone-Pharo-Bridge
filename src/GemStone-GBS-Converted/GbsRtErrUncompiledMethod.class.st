@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrUncompiledMethod class >> gemStoneErrorNumber6430 ^2212
+[
+
+]
 

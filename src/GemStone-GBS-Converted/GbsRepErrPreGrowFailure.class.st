@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRepErrPreGrowFailure class >> gemStoneErrorNumber6430 ^2028
+[
+
+]
 

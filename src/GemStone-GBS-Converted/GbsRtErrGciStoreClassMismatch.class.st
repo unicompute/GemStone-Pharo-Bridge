@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrGciStoreClassMismatch class >> gemStoneErrorNumber6430 ^2246
+[
+
+]
 

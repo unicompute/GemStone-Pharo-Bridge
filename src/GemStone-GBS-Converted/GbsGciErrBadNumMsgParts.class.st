@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGciErrBadNumMsgParts class >> gemStoneErrorNumber6430 ^2005
+[
+
+]
 

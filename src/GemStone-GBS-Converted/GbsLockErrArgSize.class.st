@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsLockErrArgSize class >> gemStoneErrorNumber6430 ^2113
+[
+
+]
 

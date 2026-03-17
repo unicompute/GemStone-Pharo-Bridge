@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsObjErrCorruptObj class >> gemStoneErrorNumber6430 ^2261
+[
+
+]
 

@@ -18,6 +18,7 @@ Class {
 
 { #category : 'deprecated' }
 GbsTimeZone >> localTimeFromGMT: aGMTTime 
+[
 	"Convert the GMT Time to a local Time, returned as a new instance.
 	 The argument is not modified."
 
@@ -28,9 +29,11 @@ GbsTimeZone >> localTimeFromGMT: aGMTTime
 				ifTrue: [secondsFromGMT + secondsForDST]
 				ifFalse: [secondsFromGMT].
 	^self wrappedTimeFromSeconds: aGMTTime asSeconds + gmtDiff
+]
 
 { #category : 'deprecated' }
 GbsTimeZone >> gmtTimeFromLocal: aLocalTime 
+[
 	"Convert the local Time to a GMT Time, based on whether we are currently
 	 in daylight savings time.  Return a new instance of Time - the argument is
 	 not modified."
@@ -42,9 +45,11 @@ GbsTimeZone >> gmtTimeFromLocal: aLocalTime
 				ifTrue: [secondsFromGMT + secondsForDST]
 				ifFalse: [secondsFromGMT].
 	^self wrappedTimeFromSeconds: aLocalTime asSeconds - gmtDiff
+]
 
 { #category : 'comparing' }
 GbsTimeZone >> = aGbsTimeZone
+[
 
 	self == aGbsTimeZone ifTrue: [ ^true ].
 	(aGbsTimeZone isMemberOf: self class) ifFalse: [ ^false ].
@@ -58,14 +63,18 @@ GbsTimeZone >> = aGbsTimeZone
 		dayOfYearForStandard: dayOfYearForStandard
 		dayOfWeekForStandard: dayOfWeekForStandard
 		secondsBeginStandard: secondsBeginStandard
+]
 
 { #category : 'comparing' }
 GbsTimeZone >> hash
+[
 
 	^secondsFromGMT hash
+]
 
 { #category : 'GBS private' }
 GbsTimeZone >> localToUniversal: localTimestamp
+[
 	"Convert the local DateTime to a GMT DateTime, returned as a new instance.
 	 The argument is not modified."
 
@@ -75,9 +84,11 @@ GbsTimeZone >> localToUniversal: localTimestamp
 				ifFalse: [secondsFromGMT].
 	^localTimestamp class
 		fromMilliseconds: localTimestamp asMilliseconds - (gmtDiff * 1000)
+]
 
 { #category : 'initialization' }
 GbsTimeZone >> secondsFromGMT: secsFromGMT
+[
 secondsForDST: secsForDST
 dayOfYearForDST: doyForDST
 dayOfWeekForDST: dowForDST
@@ -94,9 +105,11 @@ secondsBeginStandard: secsBeginStandard
 	dayOfYearForStandard := doyForStandard.  "Day of year index to start standard time"
 	dayOfWeekForStandard := dowForStandard.  "Day of week index (Monday is 1, Sunday is 7) to start standard time"
 	secondsBeginStandard := secsBeginStandard.  "Seconds after midnight to begin standard time"
+]
 
 { #category : 'private' }
 GbsTimeZone >> equalsSecondsFromGMT: sfgmt
+[
 secondsForDST: sfdst
 dayOfYearForDST: dydst
 dayOfWeekForDST: dwdst
@@ -113,9 +126,11 @@ secondsBeginStandard: sbstd
 	and: [ dayOfYearForStandard = dystd
 	and: [ dayOfWeekForStandard = dwstd
 	and: [ secondsBeginStandard = sbstd ]]]]]]]
+]
 
 { #category : 'private' }
 GbsTimeZone >> wrappedTimeFromSeconds: anInteger
+[
 
 	"Return a new Time from anInteger seconds, which might
 	 be wrapped before or after midnight."
@@ -127,9 +142,11 @@ GbsTimeZone >> wrappedTimeFromSeconds: anInteger
 	"Check for wraparound to previous day"
 	seconds < 0 ifTrue: [ seconds := seconds + 86400 ].
 	^Time fromSeconds: seconds
+]
 
 { #category : 'gmt conversion' }
 GbsTimeZone >> isDST: aDateTime 
+[
 	"Return true if aDateTime falls in daylight savings time, false otherwise"
 
 	| start end |
@@ -139,9 +156,11 @@ GbsTimeZone >> isDST: aDateTime
 	start < end 
 		ifTrue: [^aDateTime >= start and: [aDateTime < end]]
 		ifFalse: [^aDateTime >= start or: [aDateTime < end]]
+]
 
 { #category : 'gmt conversion' }
 GbsTimeZone >> localDateTimeFromGMT: gmtDateTime
+[
 	"Convert the GMT DateTime to a local DateTime, returned as a new instance.
 	 The argument is not modified."
 	"first convert the DateTime to local time, then decide when if the time is in 
@@ -153,16 +172,20 @@ GbsTimeZone >> localDateTimeFromGMT: gmtDateTime
 	^(self isDST: localDateTime)
 		ifTrue: [localDateTime addSeconds: secondsForDST]
 		ifFalse: [localDateTime]
+]
 
 { #category : 'gmt conversion' }
 GbsTimeZone >> gmtDateTimeFromLocal: localTimestamp
+[
 	"Convert the local DateTime to a GMT DateTime, returned as a new instance.
 	 The argument is not modified."
 
 	^self localToUniversal: localTimestamp
+]
 
 { #category : 'gmt conversion' }
 GbsTimeZone >> startOfDSTInYear: year
+[
 
 	"Return a Timestamp marking the beginning of daylight savings time in the given year"
 	| theDay |
@@ -175,9 +198,11 @@ GbsTimeZone >> startOfDSTInYear: year
 	^self datetimeClass
 		date: theDay
 		time: (Time fromSeconds: secondsBeginDST)
+]
 
 { #category : 'gmt conversion' }
 GbsTimeZone >> startOfStandardInYear: year
+[
 
 	"Return a Timestamp marking the end of daylight savings time in the given year"
 	| theDay |
@@ -190,9 +215,11 @@ GbsTimeZone >> startOfStandardInYear: year
 	^self datetimeClass
 		date: theDay
 		time: (Time fromSeconds: secondsBeginStandard)
+]
 
 { #category : 'printing' }
 GbsTimeZone >> printOn: aStream
+[
 
 	| nm |
 	nm := nil.
@@ -201,9 +228,11 @@ GbsTimeZone >> printOn: aStream
 	nm isNil
 		ifTrue: [ self printVerboseOn: aStream ]
 		ifFalse: [ aStream nextPut: $(; nextPutAll: self class name; nextPutAll: ' named: #'; nextPutAll: nm; nextPut: $) ]
+]
 
 { #category : 'printing' }
 GbsTimeZone >> printVerboseOn: aStream
+[
 
 	aStream
 		nextPut: $(;
@@ -226,15 +255,19 @@ GbsTimeZone >> printVerboseOn: aStream
 	aStream cr; nextPutAll: '	secondsBeginStandard: '.
 	secondsBeginStandard printOn: aStream.
 	aStream nextPut: $)
+]
 
 { #category : 'class initialization' }
 GbsTimeZone class >> initialize
+[
 
 	"GbsTimeZone initialize"
 	self initializeNamedTimeZones
+]
 
 { #category : 'class initialization' }
 GbsTimeZone class >> current: aGbsTimeZone
+[
 
 	"Specify a timezone object representing the image's current timezone,
 	 which wil be used for converting client Timezone & Time objects (which
@@ -255,15 +288,19 @@ GbsTimeZone class >> current: aGbsTimeZone
 	)."
 
 	CurrentTimeZone := aGbsTimeZone
+]
 
 { #category : 'class initialization' }
 GbsTimeZone class >> gbsClassUnloading
+[
 
 	NamedTimeZones := nil.
 	CurrentTimeZone := nil.
+]
 
 { #category : 'class initialization' }
 GbsTimeZone class >> initializeNamedTimeZones
+[
 
 	"GbsTimeZone initializeNamedTimeZones"
 
@@ -329,9 +366,11 @@ GbsTimeZone class >> initializeNamedTimeZones
 				dayOfYearForStandard: 0
 				dayOfWeekForStandard: 0
 				secondsBeginStandard: 0)
+]
 
 { #category : 'instance creation' }
 GbsTimeZone class >> named: aSymbol
+[
 
 	"Returns a predefined instance of GbsTimeZone stored with the name aSymbol,
 	 or raises an error if there is no predefined GbsTimeZone with that name"
@@ -339,16 +378,20 @@ GbsTimeZone class >> named: aSymbol
 	^NamedTimeZones
 		at: aSymbol
 		ifAbsent: [ self gbsMessenger error: 'No GbsTimeZone named %1.  Valid names are: %2' with: aSymbol with: self names ]
+]
 
 { #category : 'instance creation' }
 GbsTimeZone class >> names
+[
 
 	"Returns an array of symbols representing predefined GbsTimeZone instances
 	 that can be retrieved using GbsTimeZone class>>named:"
 	^NamedTimeZones keys asArray
+]
 
 { #category : 'instance creation' }
 GbsTimeZone class >> current
+[
 
 	"Return a timezone object representing the image's current timezone"
 	self basicCurrent isNil ifTrue: [
@@ -357,9 +400,11 @@ GbsTimeZone class >> current
 			ifTrue: [^self gbsMessenger error: 'A time zone must be specified using GbsTimeZone current:' ]
 	].
 	^self basicCurrent
+]
 
 { #category : 'instance creation' }
 GbsTimeZone class >> secondsFromGMT: secondsFromGMT
+[
 secondsForDST: secondsForDST
 dayOfYearForDST: dayOfYearForDST
 dayOfWeekForDST: dayOfWeekForDST
@@ -379,9 +424,12 @@ secondsBeginStandard: secondsBeginStandard
 		dayOfYearForStandard: dayOfYearForStandard  "Day of year index to start standard time"
 		dayOfWeekForStandard: dayOfWeekForStandard  "Day of week index (Monday is 1, Sunday is 7) to start standard time"
 		secondsBeginStandard: secondsBeginStandard  "Seconds after midnight to begin standard time"
+]
 
 { #category : 'private' }
 GbsTimeZone class >> basicCurrent
+[
 
 	^CurrentTimeZone
+]
 

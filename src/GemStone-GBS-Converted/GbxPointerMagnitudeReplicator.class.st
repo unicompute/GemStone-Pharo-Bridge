@@ -10,7 +10,9 @@ Class {
 
 { #category : 'private' }
 GbxPointerMagnitudeReplicator >> setImmutabilityOf: aClientObject
+[
 	"Magnitudes are always immutable."
 
 	self setMagnitudeImmutabilityOf: aClientObject
+]
 

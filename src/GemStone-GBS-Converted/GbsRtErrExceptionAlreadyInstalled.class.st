@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrExceptionAlreadyInstalled class >> gemStoneErrorNumber6430 ^2480
+[
+
+]
 

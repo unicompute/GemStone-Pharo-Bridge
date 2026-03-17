@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrMemoryRegionFull class >> gemStoneErrorNumber6430 ^2511
+[
+
+]
 

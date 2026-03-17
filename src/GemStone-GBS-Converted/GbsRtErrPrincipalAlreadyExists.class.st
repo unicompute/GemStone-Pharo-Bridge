@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrPrincipalAlreadyExists class >> gemStoneErrorNumber6430 ^2609
+[
+
+]
 

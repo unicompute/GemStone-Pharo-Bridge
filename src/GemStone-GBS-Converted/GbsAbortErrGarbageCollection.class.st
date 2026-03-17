@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsAbortErrGarbageCollection class >> gemStoneErrorNumber6430 ^3006
+[
+
+]
 

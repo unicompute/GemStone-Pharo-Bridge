@@ -10,8 +10,13 @@ Class {
 
 { #category : 'accessing' }
 GbxKeyedDummyElement >> key
+[
 	^nil
+]
 
 { #category : 'accessing' }
 GbxKeyedDummyElement >> value: anObject
+[
+
+]
 

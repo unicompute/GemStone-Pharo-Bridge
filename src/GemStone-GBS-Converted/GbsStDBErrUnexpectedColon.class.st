@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBErrUnexpectedColon class >> gemStoneErrorNumber6430 ^1007
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrStackLimit class >> gemStoneErrorNumber6430 ^2059
+[
+
+]
 

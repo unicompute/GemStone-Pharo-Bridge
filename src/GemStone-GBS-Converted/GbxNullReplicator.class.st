@@ -10,5 +10,7 @@ Class {
 
 { #category : 'store replication' }
 GbxNullReplicator >> store: anObject withDelegate: delegate inTraversal: storeTraversal
+[
 	"Do nothing"
+]
 

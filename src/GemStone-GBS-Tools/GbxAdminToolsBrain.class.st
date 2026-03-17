@@ -10,6 +10,7 @@ Class {
 
 { #category : 'private' }
 GbxAdminToolsBrain >> addSessionInfoTo: aStream
+[
 	" Add some info about the session for this tool to aStream. "
 
 	super addSessionInfoTo: aStream.
@@ -23,4 +24,5 @@ GbxAdminToolsBrain >> addSessionInfoTo: aStream
 			nextPutAll: GbxClipboardObj firstClipboardSession printString ;
 			nextPut: $..
 	].
+]
 

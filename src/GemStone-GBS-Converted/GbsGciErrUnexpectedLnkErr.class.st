@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGciErrUnexpectedLnkErr class >> gemStoneErrorNumber6430 ^4101
+[
+
+]
 

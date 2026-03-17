@@ -13,6 +13,7 @@ Class {
 
 { #category : 'per-object private' }
 GbxLargeIntegerReplicator >> correctSizeOfClientObject
+[
 	"Answer how many bytes the client object should contain. This is the number of bytes 
 	int currently contains, less any high-order bytes that are zero.
 	Should only be sent after the high-order one bits are present, so
@@ -22,14 +23,18 @@ GbxLargeIntegerReplicator >> correctSizeOfClientObject
 		by: -1
 		do: [:i | (clientObject basicAt: i) == 0 ifFalse: [^i]].
 	self gbsMessenger error: 'Large Integer is zero'
+]
 
 { #category : 'per-object private' }
 GbxLargeIntegerReplicator >> createEmptyReplicateForReport
+[
 
 	self subclassResponsibility
+]
 
 { #category : 'per-object private' }
 GbxLargeIntegerReplicator >> trimLeadingZeroes
+[
 
 	| correctSize replacement |
 	correctSize := self correctSizeOfClientObject.
@@ -43,43 +48,55 @@ GbxLargeIntegerReplicator >> trimLeadingZeroes
 				startingAt: 1.
 			"clientObject is already mapped, so must use become: to replace it."
 			clientObject gbxBecome: replacement]
+]
 
 { #category : 'private store replication' }
 GbxLargeIntegerReplicator >> byteSizeOf: anObject
+[
 
 	^(self serverBytesFor: anObject) size
+]
 
 { #category : 'private store replication' }
 GbxLargeIntegerReplicator >> copyInto: report from: anObject numBytes: numBytes startingAt: firstOffset
+[
 
 	report
 		copyIntoBytesBufferFrom: (self serverBytesFor: anObject)
 		numBytes: numBytes
 		startingAt: firstOffset
+]
 
 { #category : 'private store replication' }
 GbxLargeIntegerReplicator >> serverBytesFor: int
+[
 
 	^int == integer
 		ifTrue: [serverBytes]
 		ifFalse: 
 			[integer := int.
 			serverBytes := self computeServerBytesFor: int]
+]
 
 { #category : 'private store replication' }
 GbxLargeIntegerReplicator >> computeServerBytesFor: int
+[
 
 	^self subclassResponsibility
+]
 
 { #category : 'per-object initialization' }
 GbxLargeIntegerReplicator >> initializeForNewObject
+[
 
 	super initializeForNewObject.
 	integer := serverBytes := nil.
 	needPostFaultReplacement := false
+]
 
 { #category : 'per-object replication' }
 GbxLargeIntegerReplicator >> replicateFromReport
+[
 	"Sender must hold my session's sessionProtect and the ClientMap's writeProtect semaphores."
 
 	super replicateFromReport.
@@ -87,9 +104,11 @@ GbxLargeIntegerReplicator >> replicateFromReport
 		ifTrue: 
 			[clientObject gbxIsImmutable: true.
 			self delegate isReadOnlyObject: true]
+]
 
 { #category : 'instance creation' }
 GbxLargeIntegerReplicator class >> forClientClass: clientClass serverClass: classDelegate manager: manager
+[
 	"Create an instance of the appropriate one of my concrete subclasses."
 
 	| concreteClass |
@@ -100,4 +119,5 @@ GbxLargeIntegerReplicator class >> forClientClass: clientClass serverClass: clas
 		initializeForClientClass: clientClass
 		serverClass: classDelegate
 		manager: manager
+]
 

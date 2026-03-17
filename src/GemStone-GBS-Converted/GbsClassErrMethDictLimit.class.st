@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsClassErrMethDictLimit class >> gemStoneErrorNumber6430 ^2180
+[
+
+]
 

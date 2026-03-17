@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBErrEofInComment class >> gemStoneErrorNumber6430 ^1005
+[
+
+]
 

@@ -10,6 +10,7 @@ Class {
 
 { #category : 'private - cache dumping' }
 GbsStackDumper class >> dumpServerMapBodyForSession: session on: dumpingStream
+[
 
 	^session serverMap delegatesAndClientObjsDo: 
 			[:del :clientObj |
@@ -30,14 +31,18 @@ GbsStackDumper class >> dumpServerMapBodyForSession: session on: dumpingStream
 				indentLess;
 				cr;
 				nextPutAll: '---']
+]
 
 { #category : 'private - cache dumping' }
 GbsStackDumper class >> dumpClientMapOn: stream 
+[
 	self dumpClientMapHeaderOn: stream.
 	self dumpClientMapBodyOn: stream
+]
 
 { #category : 'private - cache dumping' }
 GbsStackDumper class >> dumpClientMapHeaderOn: stream 
+[
 	stream
 		cr;
 		cr;
@@ -54,9 +59,11 @@ GbsStackDumper class >> dumpClientMapHeaderOn: stream
 			[stream
 				nextPutAll: '**** No sessions logged in. Only defunct proxies should remain in client map ****';
 				cr]
+]
 
 { #category : 'private - cache dumping' }
 GbsStackDumper class >> dumpClientMapBodyOn: dumpingStream
+[
 
 	GBSM clientMap keysAndValuesDo: 
 			[:key :value |
@@ -77,14 +84,18 @@ GbsStackDumper class >> dumpClientMapBodyOn: dumpingStream
 				indentLess;
 				cr;
 				nextPutAll: '---']
+]
 
 { #category : 'private - cache dumping' }
 GbsStackDumper class >> dumpServerMapsOn: dumpingStream 
+[
 	GBSM sessions 
 		do: [:sess | self dumpServerMapForSession: sess on: dumpingStream]
+]
 
 { #category : 'private - cache dumping' }
 GbsStackDumper class >> dumpServerMapForSession: session on: dumpingStream 
+[
 	| gotSemaphore |
 	gotSemaphore := false.
 	dumpingStream
@@ -110,9 +121,11 @@ GbsStackDumper class >> dumpServerMapForSession: session on: dumpingStream
 			[dumpingStream 
 				nextPutAll: '<<semaphore for session ' , session printString 
 						, ' held. Server map not available>>']
+]
 
 { #category : 'private - cache dumping' }
 GbsStackDumper class >> dumpCachesOn: stream 
+[
 	| cachedStubDebugging cachedForwarderDebugging |
 	cachedStubDebugging := GbsConfiguration current stubDebugging.
 	cachedForwarderDebugging := GbsConfiguration current forwarderDebugging.
@@ -124,9 +137,11 @@ GbsStackDumper class >> dumpCachesOn: stream
 			ensure: 
 				[GbsConfiguration current stubDebugging: cachedStubDebugging.
 				GbsConfiguration current forwarderDebugging: cachedForwarderDebugging]
+]
 
 { #category : 'public - stack dumping' }
 GbsStackDumper class >> dumpAllProcessStacks
+[
 	"Dump the stacks of all Processes running in the client Smalltalk to a file.
 	Answer a string representing the name of the file dumped to.
 	The file will be created in the current directory with a name that is based on the current date and time.
@@ -137,9 +152,11 @@ GbsStackDumper class >> dumpAllProcessStacks
 	"	GemStone.Gbs.GbsStackDumper dumpAllProcessStacks. 	"
 
 	^self dumpAllProcessStacksUsingFileNamePattern: 'StacksAt%1.txt'.
+]
 
 { #category : 'public - stack dumping' }
 GbsStackDumper class >> printAllProcessStacksOn: aStream
+[
 	"Dump the stacks of all Processes running in the client Smalltalk to the given Stream.
 	Information about all client contexts will be written. For any Process that is calling the server, the server
 	context information will also be included if possible. It may not always be possible to include this information, 
@@ -177,9 +194,11 @@ GbsStackDumper class >> printAllProcessStacksOn: aStream
 	outerDumpThread yourself.	"Lint -- this 'unused' variable is for debugging."
 	semaphore wait. "Don't return until dumping threads are done."
 	aStream flush
+]
 
 { #category : 'public - stack dumping' }
 GbsStackDumper class >> dumpAllProcessStacksUsingFileNamePattern: aString
+[
 	"Dump the stacks of all Processes running in the client Smalltalk to a file.
 	Answer a string representing the name of the file dumped to.
 	The file will be created in the current directory with a name that is based on the current date and time.
@@ -196,15 +215,19 @@ GbsStackDumper class >> dumpAllProcessStacksUsingFileNamePattern: aString
 	filename := Filename defaultClass suggest: filename.
 	self dumpAllProcessStacksToFileNamed: filename.
 	^filename
+]
 
 { #category : 'public - stack dumping' }
 GbsStackDumper class >> dumpFullDiagnostic
+[
 	"calls dumpAllProcessStacks for now. Perhaps someday, it will include more detailed diagnostics"
 
 	self dumpAllProcessStacks
+]
 
 { #category : 'public - stack dumping' }
 GbsStackDumper class >> dumpAllProcessStacksToFileNamed: nameString
+[
 	"Dump the stacks of all Processes running in the client Smalltalk to a file.
 	The file will be created with the given name.
 	Information about all client contexts will be written. For any Process that is calling the server, the server
@@ -233,9 +256,11 @@ GbsStackDumper class >> dumpAllProcessStacksToFileNamed: nameString
 					cr;
 					nextPutAll: '<<Maximum number of characters reached. Stack dump terminated.>>']]
 			ensure: [aStream close]
+]
 
 { #category : 'private - stack computation' }
 GbsStackDumper class >> bottomGlueFrom: topGlueContext 
+[
 	"Given aCtx, the top context of a glue run, answer the bottom
 	 context of that run."
 
@@ -254,9 +279,11 @@ GbsStackDumper class >> bottomGlueFrom: topGlueContext
 	ctx isNil or: [ctx gbxIsServerCallContext or: [ctx gbxIsGsTopGlue]]] 
 			whileFalse: [ctx gbxIsGsBottomGlue ifTrue: [bottomGlue := ctx]].
 	^bottomGlue
+]
 
 { #category : 'private - stack computation' }
 GbsStackDumper class >> computeContextListSelectedContext: selectedContext topContext: topContext stackLimit: stackLimit glueIsHidden: glueIsHidden 
+[
 	"Returns an array of contexts"
 
 	| stk ctx includesSelectedCtx inGlue nextVisibleContext |
@@ -298,9 +325,11 @@ GbsStackDumper class >> computeContextListSelectedContext: selectedContext topCo
 				inGlue ifFalse: [stk nextPut: ctx].
 				ctx := ctx sender].
 	^stk contents
+]
 
 { #category : 'private - stack computation' }
 GbsStackDumper class >> activationsFrom: gsProcess context: serverCallContext
+[
 
 	| sess |
 	sess := gsProcess noCheckSession.	"Don't check session here, we may be dumping a stack from a fatal error."
@@ -323,9 +352,11 @@ GbsStackDumper class >> activationsFrom: gsProcess context: serverCallContext
 								forProcess: gsProcess;
 								error: ex)]
 				retryFor: 500]
+]
 
 { #category : 'private - stack computation' }
 GbsStackDumper class >> contextListFromGsProcessOfServerCallContext: serverCallContext glueIsHidden: glueIsHidden
+[
 	"Answer the list of GbxActivations on the stack of a GSProcess 
 	for which <serverCallContext> is the client context that marks the send.
 	Each send from the client to the server results in a new GSProcess, so 
@@ -344,9 +375,11 @@ GbsStackDumper class >> contextListFromGsProcessOfServerCallContext: serverCallC
 	list isEmpty ifTrue: [^#()].
 	glueIsHidden ifTrue: [list := list select: [:gsact | gsact isGsGlue not]].
 	^list
+]
 
 { #category : 'private - proxy handling' }
 GbsStackDumper class >> defaultPrintClient: anObject on: aStream
+[
 
 	| limitedSizeStream identityHash gbxIdentityHash |
 	limitedSizeStream := GemStone.Gbs.GbxLimitingStream on: aStream.
@@ -376,9 +409,11 @@ GbsStackDumper class >> defaultPrintClient: anObject on: aStream
 				limitedSizeStream
 					nextPutAll: '<<error printing client object (' , ex printString
 							, ') no further information>>']
+]
 
 { #category : 'private - proxy handling' }
 GbsStackDumper class >> printClient: anObject on: aStream
+[
 	"Only GBS-specific objects understand #gbxPrintClientOn:"
 
 	^GbxReflection
@@ -386,14 +421,18 @@ GbsStackDumper class >> printClient: anObject on: aStream
 		to: anObject
 		with: aStream
 		ifNotUnderstood: [self defaultPrintClient: anObject on: aStream]
+]
 
 { #category : 'private - proxy handling' }
 GbsStackDumper class >> debugPrint: anObject on: aStream
+[
 
 	GbxReflection debugPrint: anObject on: aStream
+]
 
 { #category : 'private - proxy handling' }
 GbsStackDumper class >> ifUnderstoodSend: aUnarySelector to: anObject else: aBlock
+[
 	"anObject might be a proxy that does not understand this message -- if so
 	answer the value of the block instead"
 
@@ -402,16 +441,20 @@ GbsStackDumper class >> ifUnderstoodSend: aUnarySelector to: anObject else: aBlo
 		to: anObject
 		arguments: Array new
 		else: aBlock
+]
 
 { #category : 'private - proxy handling' }
 GbsStackDumper class >> classOf: anObject
+[
 	"Answer the object which is the argument's class.."
 
 	<primitive: 211>
 	^self primitiveFailed
+]
 
 { #category : 'private - proxy handling' }
 GbsStackDumper class >> ifUnderstoodSend: selector to: anObject arguments: arguments else: aBlock
+[
 	"anObject might be a proxy that does not understand this message -- if so
 	answer the value of the block instead"
 
@@ -420,14 +463,18 @@ GbsStackDumper class >> ifUnderstoodSend: selector to: anObject arguments: argum
 	^(objectClass canUnderstand: selector)
 		ifTrue: [anObject perform: selector withArguments: arguments]
 		ifFalse: [aBlock value]
+]
 
 { #category : 'private - proxy handling' }
 GbsStackDumper class >> identityHashOf: anObject
+[
 
 	^GbxReflection identityHashOf: anObject
+]
 
 { #category : 'private - proxy handling' }
 GbsStackDumper class >> printServer: anObject on: aStream
+[
 	"Objects that don't understand #gbxPrintServerOn: (because they 
 	don't inherit from Object) can't have a server representation."
 
@@ -436,14 +483,18 @@ GbsStackDumper class >> printServer: anObject on: aStream
 		to: anObject
 		with: aStream
 		ifNotUnderstood: [nil]
+]
 
 { #category : 'private - proxy handling' }
 GbsStackDumper class >> gbxIdentityHashOf: anObject
+[
 
 	^GbxReflection gbxIdentityHashOf: anObject
+]
 
 { #category : 'private - proxy handling' }
 GbsStackDumper class >> printDelegateOf: anObject on: aStream
+[
 	"Objects that don't understand #gbxDelegate (because they 
 	don't inherit from Object) can't have a delegate."
 
@@ -460,9 +511,11 @@ GbsStackDumper class >> printDelegateOf: anObject on: aStream
 						to: anObject
 						ifNotUnderstood: [nil]].
 	delegate isNil ifFalse: [delegate printDelegateOn: aStream]
+]
 
 { #category : 'private - stack dumping' }
 GbsStackDumper class >> printContext: cxt on: stream count: cxtCount
+[
 
 	| homeReceiver limitedStream |
 	limitedStream := GbxLimitingStream on: stream.
@@ -492,9 +545,11 @@ GbsStackDumper class >> printContext: cxt on: stream count: cxtCount
 	self printInstVarsIn: cxt on: limitedStream.
 	"LimitedStream does not buffer, so no need to flush here."
 	^cxtCount + 1
+]
 
 { #category : 'private - stack dumping' }
 GbsStackDumper class >> processesToDumpStartingWith: requestingProcess 
+[
 	"Answer an ordered collection of Processes
 	 Omit the active Process, and put requestingProcess first."
 
@@ -508,9 +563,11 @@ GbsStackDumper class >> processesToDumpStartingWith: requestingProcess
 	^(procs asOrderedCollection)
 		addFirst: requestingProcess;
 		yourself
+]
 
 { #category : 'private - stack dumping' }
 GbsStackDumper class >> dumpStackHeaderToFileNamed: nameString
+[
 
 	| file aStream time date |
 	date := Date today.
@@ -552,9 +609,11 @@ GbsStackDumper class >> dumpStackHeaderToFileNamed: nameString
 	GBSM sessionSummaryOn: aStream.
 	aStream cr.
 	^aStream
+]
 
 { #category : 'private - stack dumping' }
 GbsStackDumper class >> printTemporariesIn: cxt on: stream
+[
 
 	| tempNames |
 	stream
@@ -602,9 +661,11 @@ GbsStackDumper class >> printTemporariesIn: cxt on: stream
 							nextPutAll: ex messageText;
 							cr]].
 	stream indentLess
+]
 
 { #category : 'private - stack dumping' }
 GbsStackDumper class >> printShortContext: cxt on: stream count: cxtCount 
+[
 	stream
 		cr;
 		nextPut: $[;
@@ -614,9 +675,11 @@ GbsStackDumper class >> printShortContext: cxt on: stream count: cxtCount
 	cxtCount < 10 ifTrue: [stream space].
 	stream print: cxt.
 	^cxtCount + 1
+]
 
 { #category : 'private - stack dumping' }
 GbsStackDumper class >> dumpAllProcessStacksEvery: seconds while: aBlock 
+[
 	"This code will dump the full client-side stack (with details) of all
 	 processes running in a VisualWorks image to a file."
 
@@ -636,9 +699,11 @@ GbsStackDumper class >> dumpAllProcessStacksEvery: seconds while: aBlock
 	proc resume.
 	[answer := aBlock value] ensure: [finished value: true].
 	^answer
+]
 
 { #category : 'private - stack dumping' }
 GbsStackDumper class >> printProcess: process on: stream
+[
 	"Write a description of the given Process on the given Stream.
 	Include detailed stack information. If an error or hang happens during the
 	printing, note this on the stream and go on.
@@ -670,9 +735,11 @@ GbsStackDumper class >> printProcess: process on: stream
 	contexts
 		do:
 			[:cxt | cxtCount := self printContext: cxt on: stream count: cxtCount]
+]
 
 { #category : 'private - stack dumping' }
 GbsStackDumper class >> printInstVarsIn: cxt on: stream
+[
 
 	| instVarNames |
 	stream
@@ -720,9 +787,11 @@ GbsStackDumper class >> printInstVarsIn: cxt on: stream
 					print: ex;
 					cr].
 	stream indentLess
+]
 
 { #category : 'private - stack dumping' }
 GbsStackDumper class >> timestampForFilename
+[
 	"Answer a representation of the local date and time suitable for use as part of a filename.
 	Avoid use of $:, which cannot be used in Windows filenames."
 
@@ -733,4 +802,5 @@ GbsStackDumper class >> timestampForFilename
 		replaceAll: $T with: $-;
 		replaceAll: $: with: $..
 	^timestamp
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGsErrMaxSessionsLimit class >> gemStoneErrorNumber6430 ^4039
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrProcessStepInNative class >> gemStoneErrorNumber6430 ^6014
+[
+
+]
 

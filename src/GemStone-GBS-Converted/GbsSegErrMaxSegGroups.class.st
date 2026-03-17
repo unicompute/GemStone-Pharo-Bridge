@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsSegErrMaxSegGroups class >> gemStoneErrorNumber6430 ^2056
+[
+
+]
 

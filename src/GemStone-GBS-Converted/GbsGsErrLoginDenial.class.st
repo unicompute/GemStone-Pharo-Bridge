@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGsErrLoginDenial class >> gemStoneErrorNumber6430 ^4051
+[
+
+]
 

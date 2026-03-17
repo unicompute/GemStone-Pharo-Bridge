@@ -10,6 +10,8 @@ Class {
 
 { #category : 'accessing' }
 GbxGciErrSType64v3 >> argsOffset
+[
 	
 	^25
+]
 

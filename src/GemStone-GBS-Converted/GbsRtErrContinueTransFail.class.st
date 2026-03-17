@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrContinueTransFail class >> gemStoneErrorNumber6430 ^2409
+[
+
+]
 

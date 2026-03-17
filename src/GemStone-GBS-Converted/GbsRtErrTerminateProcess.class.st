@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrTerminateProcess class >> gemStoneErrorNumber6430 ^6018
+[
+
+]
 

@@ -10,6 +10,7 @@ Class {
 
 { #category : 'printing' }
 GbxGciClampedTravArgsSType >> printOn: aStream indent: indent 
+[
 	| travBuffSize |
 	aStream tab: indent - 1.
 	aStream nextPutAll: self class name , ' with:'.
@@ -30,4 +31,5 @@ GbxGciClampedTravArgsSType >> printOn: aStream indent: indent
 	aStream nextPutAll: 'retrievalFlags = ' , self retrievalFlags printString.
 	aStream crtab: indent.
 	aStream nextPutAll: 'resultOop = ' , self resultOop printString
+]
 

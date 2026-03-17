@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRepErrBadDbfSwizzle class >> gemStoneErrorNumber6430 ^4006
+[
+
+]
 

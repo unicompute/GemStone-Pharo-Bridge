@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrNscParticipatesInMultipleTerms class >> gemStoneErrorNumber6430 ^2247
+[
+
+]
 

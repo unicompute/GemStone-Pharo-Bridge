@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrSesBlockedOnOutput class >> gemStoneErrorNumber6430 ^2254
+[
+
+]
 

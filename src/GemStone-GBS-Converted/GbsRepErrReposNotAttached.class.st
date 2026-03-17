@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRepErrReposNotAttached class >> gemStoneErrorNumber6430 ^2154
+[
+
+]
 

@@ -43,6 +43,7 @@ Class {
 
 { #category : 'private - st object management' }
 GbsSession >> uncacheNonExistentGSObjects
+[
 	"Private.  Remove cache entries for which the GemStone oop no longer exists.  Such oops don't normally exist in the cache, because saveObjects is called for each of them before commits and aborts.  It's important to remove these entries because stubbing such an object would mortally wound the Smalltalk counterpart."
 	"GBSM currentSession uncacheNonExistentGSObjects"
 	"Sender must hold my sessionProtect and client map write lock."
@@ -58,9 +59,11 @@ GbsSession >> uncacheNonExistentGSObjects
 					serverMap removeOop: del.
 					"If there was a client object associated with this delegate, remove it from clientMap."
 					clientObj ~~ nil ifTrue: [gbsm removeAtST: clientObj forSession: self]]]
+]
 
 { #category : 'private - st object management' }
 GbsSession >> addToDirtyPool: anObject forDelegate: delegate
+[
 	"Private.  Add anObj to the dirtyPool. This aids in dirty object flushing, and
 	supplies a strong reference to anObj preventing it from being
 	garbage collected before it is flushed to GemStone."
@@ -68,18 +71,22 @@ GbsSession >> addToDirtyPool: anObject forDelegate: delegate
 	self sessionCritical: 
 			[dirtyPool addObject: anObject.
 			delegate isReadOnlyObject ifFalse: [anObject gbxIgnoreFutureChanges]]
+]
 
 { #category : 'private - st object management' }
 GbsSession >> setAsideDirtyWhile: aBlock
+[
 	"Private to GBS.
 	Execute aBlock with an empty top dirty pool, then restore the former top dirty pool.
 	aBlock's execution should leave its dirty pool empty."
 	"Sender must hold my sessionProtect."
 
 	^dirtyPool setAsideDirtyWhile: aBlock
+]
 
 { #category : 'private - st object management' }
 GbsSession >> stubDirtySTObjects
+[
 	"Private.  Roll back all dirty Smalltalk objects to the current repository state.  This occurs after an abnormal abort, causing Smalltalk objects which were dirty before the abort to revert to their pre aborted transaction state."
 
 	self gbsMessenger
@@ -116,9 +123,11 @@ GbsSession >> stubDirtySTObjects
 		statusTag: nil
 		message: '(s%1) completed GbsSession>>stubDirtySTObjects'
 		with: self sessionId
+]
 
 { #category : 'public-clamping' }
 GbsSession >> replicationSpecSet: aSymbol
+[
 	"The value of replicationSpecSet is a symbol which is the name of the
 	 replication spec set currently in effect.  This symbol corresponds to the
 	 unary message selector which is sent to application classes to specify
@@ -134,9 +143,11 @@ GbsSession >> replicationSpecSet: aSymbol
 
 	self
 		sessionCritical: [replicatorManager defaultReplicationSpecSet: aSymbol]
+]
 
 { #category : 'public-clamping' }
 GbsSession >> usingReplicationSpecSet: setSymbol do: aBlock
+[
 	"Evaluate the given nilary block using the given replication spec set name. 
 	This does not affect the session's default replication spec set. The given replication spec set is used only in this Smalltalk Process
 	(green thread) and only for this session. If the block interacts with any other sessions, the replication spec set
@@ -147,9 +158,11 @@ GbsSession >> usingReplicationSpecSet: setSymbol do: aBlock
 	^replicatorManager ifNotNil: [replicatorManager usingReplicationSpecSet: setSymbol do: aBlock]
 		ifNil: [self checkSession]
 	"replicatorManager will be nil if I've been logged out."
+]
 
 { #category : 'public-clamping' }
 GbsSession >> replicationSpecSet
+[
 	"The value of replicationSpecSet is a symbol which is the name of the
 	 replication spec set currently in effect.  This symbol corresponds to the
 	 unary message selector which is sent to application classes to specify
@@ -167,9 +180,11 @@ GbsSession >> replicationSpecSet
 	by #usingReplicationSpecSet:do:"
 
 	^self sessionCritical: [replicatorManager defaultReplicationSpecSet]
+]
 
 { #category : 'remote execution' }
 GbsSession >> fwevaluate: aString context: aContext symbolList: aSymbolList 
+[
 	"Execute aString, GemStone Smalltalk code, on the server. Use as the execution 
 	context (providing binding for self, super, and instance variable names) 
 	the server object associated with aContext.  Resolve shared variables using 
@@ -180,9 +195,11 @@ GbsSession >> fwevaluate: aString context: aContext symbolList: aSymbolList
 		execute: aString
 		context: (aContext asGSObjectInSession: self)
 		symbolList: (aSymbolList asGSObjectInSession: self)) asForwarder
+]
 
 { #category : 'remote execution' }
 GbsSession >> evaluate: aString symbolList: aSymbolList 
+[
 	"Execute aString, GemStone Smalltalk code, on the server.  Resolve shared variables using 
 	the server object associated with aSymbolList. aSymbolList may 
 	be a replicate, stub, or forwarder.  Answer the result as a replicate."
@@ -191,9 +208,11 @@ GbsSession >> evaluate: aString symbolList: aSymbolList
 		evaluate: aString
 		context: OIllegal
 		symbolList: aSymbolList
+]
 
 { #category : 'remote execution' }
 GbsSession >> evaluate: aString toLevel: level 
+[
 	"Execute aString, GemStone Smalltalk code, on the server,
 	 and answer the result as a replicate."
 
@@ -201,9 +220,11 @@ GbsSession >> evaluate: aString toLevel: level
 		evaluate: aString
 		toLevel: level
 		context: (OIllegal asGSObjectInSession: self)
+]
 
 { #category : 'remote execution' }
 GbsSession >> fwevaluate: aString symbolList: aSymbolList 
+[
 	"Execute aString, GemStone Smalltalk code, on the server.  Resolve shared variables using 
 	the server object associated with aSymbolList. aSymbolList may 
 	be a replicate, stub, or forwarder.  Answer the result as a forwarder."
@@ -212,9 +233,11 @@ GbsSession >> fwevaluate: aString symbolList: aSymbolList
 		fwevaluate: aString
 		context: OIllegal
 		symbolList: aSymbolList
+]
 
 { #category : 'remote execution' }
 GbsSession >> evaluate: aString toLevel: level context: aContext 
+[
 	"Execute aString, GemStone Smalltalk code, on the server. Use as the execution 
 	context (providing binding for self, super, and instance variable names) 
 	the server object associated with aContext.  aContext may be a replicate, stub, 
@@ -225,9 +248,11 @@ GbsSession >> evaluate: aString toLevel: level context: aContext
 		toLevel: level
 		context: aContext
 		symbolList: self oopNil
+]
 
 { #category : 'remote execution' }
 GbsSession >> evaluate: sourceString toLevel: level context: gsContext symbolList: gsSymbolList
+[
 	"Execute aString, GemStone Smalltalk code, on the server. Use as the execution 
 	context (providing binding for self, super, and instance variable names) 
 	the server object associated with aContext.  Resolve shared variables using 
@@ -244,24 +269,30 @@ GbsSession >> evaluate: sourceString toLevel: level context: gsContext symbolLis
 		contextDelegate: ctxDel;
 		symbolListDelegate: symListDel;
 		execute
+]
 
 { #category : 'remote execution' }
 GbsSession >> execute: aString 
+[
 	"Execute Smalltalk string aString, containing GemStone Smalltalk code, in GemStone"
 
 	^self execute: aString symbolList: self oopNil
+]
 
 { #category : 'remote execution' }
 GbsSession >> execute: aString context: aContext 
+[
 	"Execute aString, a GemStone Smalltalk string in GemStone context aContext"
 
 	^self 
 		execute: aString
 		context: aContext
 		symbolList: self oopNil
+]
 
 { #category : 'remote execution' }
 GbsSession >> hardBreak
+[
 	"Sending this message while a non-blocking GemStone call is in progress will
 	 cause the GemStone execution engine to be interrupted.  The GemStone call
 	 will raise the error rtErrHardBreak, which can be proceeded.  This call differs
@@ -272,9 +303,11 @@ GbsSession >> hardBreak
 		primResultOrError: self serverInterface hardBreak
 		verifyArgs: [true]
 		session: self
+]
 
 { #category : 'remote execution' }
 GbsSession >> execute: sourceString context: gsContext symbolList: gsSymbolList
+[
 	"Execute the GemStone Smalltalk string in GemStone context gsContext"
 
 	| evaluation ctxDel symListDel |
@@ -287,16 +320,20 @@ GbsSession >> execute: sourceString context: gsContext symbolList: gsSymbolList
 		symbolListDelegate: symListDel;
 		shouldReplicateResult: false;
 		execute
+]
 
 { #category : 'remote execution' }
 GbsSession >> execute: aString symbolList: aGSObjectSymbolList 
+[
 	^self 
 		execute: aString
 		context: OIllegal
 		symbolList: aGSObjectSymbolList
+]
 
 { #category : 'remote execution' }
 GbsSession >> softBreak
+[
 	"Sending this message while a non-blocking GemStone call is in progress will
 	 cause the GemStone execution engine to be interrupted.  The GemStone call
 	 will raise the error rtErrSoftBreak, which can be proceeded.  This call differs
@@ -307,16 +344,20 @@ GbsSession >> softBreak
 		primResultOrError: self serverInterface softBreak
 		verifyArgs: [true]
 		session: self
+]
 
 { #category : 'remote execution' }
 GbsSession >> fwevaluate: aString 
+[
 	"Execute aString, GemStone Smalltalk code, on the server,
 	 and answer the result as a forwarder."
 
 	^self fwevaluate: aString context: OIllegal
+]
 
 { #category : 'remote execution' }
 GbsSession >> fwevaluate: aString context: aContext 
+[
 	"Execute aString, GemStone Smalltalk code, on the server. Use as the execution 
 	context (providing binding for self, super, and instance variable names) 
 	the server object associated with aContext.  aContext may be a replicate, stub, 
@@ -326,9 +367,11 @@ GbsSession >> fwevaluate: aString context: aContext
 		fwevaluate: aString
 		context: aContext
 		symbolList: self oopNil
+]
 
 { #category : 'remote execution' }
 GbsSession >> evaluate: aString context: aContext 
+[
 	"Execute aString, GemStone Smalltalk code, on the server. Use as the execution 
 	context (providing binding for self, super, and instance variable names) 
 	the server object associated with aContext.  aContext may be a replicate, stub, 
@@ -338,9 +381,11 @@ GbsSession >> evaluate: aString context: aContext
 		evaluate: aString
 		context: aContext
 		symbolList: self oopNil
+]
 
 { #category : 'remote execution' }
 GbsSession >> evaluate: sourceString context: gsContext symbolList: gsSymbolList
+[
 	"Execute aString, GemStone Smalltalk code, on the server. Use as the execution 
 	context (providing binding for self, super, and instance variable names) 
 	the server object associated with aContext.  Resolve shared variables using 
@@ -356,16 +401,20 @@ GbsSession >> evaluate: sourceString context: gsContext symbolList: gsSymbolList
 		contextDelegate: ctxDel;
 		symbolListDelegate: symListDel;
 		execute
+]
 
 { #category : 'remote execution' }
 GbsSession >> evaluate: aString 
+[
 	"Execute aString, GemStone Smalltalk code, on the server,
 	 and answer the result as a replicate."
 
 	^self evaluate: aString context: (OIllegal asGSObjectInSession: self)
+]
 
 { #category : 'class translation' }
 GbsSession >> gemStoneClassFor: stClass ifNone: aBlock
+[
 
 	"Given Smalltalk class stClass, return a GemStone class appropriate for replicating instances of stClass in GemStone.
 	 If there is no corresponding entry in the transparency cache, then look for a suitable class of the same name.  If none
@@ -374,9 +423,11 @@ GbsSession >> gemStoneClassFor: stClass ifNone: aBlock
 	^[ self gemStoneClassFor: stClass ]
 		on: GbsClassGenerationError
 		do: [ :ex | ex return: aBlock value ]
+]
 
 { #category : 'class translation' }
 GbsSession >> smalltalkClassFor: gsClass ifNone: aBlock
+[
 
 	"Given gsClass, return a Smalltalk class appropriate for replicating instances of gsClass in Smalltalk.
 	If there is no corresponding entry in the transparency cache, then look for a class of the same name.
@@ -385,9 +436,11 @@ GbsSession >> smalltalkClassFor: gsClass ifNone: aBlock
 	^[ self smalltalkClassFor: gsClass ]
 		on: GbsClassGenerationError
 		do: [ :ex | ex return: aBlock value ]
+]
 
 { #category : 'class translation' }
 GbsSession >> gemStoneClassFor: clientBehavior
+[
 	"Given the client class or metaclass clientBehavior, return a server behavior appropriate for replicating instances of clientBehavior.
 	 If the given class or metaclass is not mapped, but the corresponding metaclass or class is, map based on that.
 	 If neither class nor metaclass is already mapped, then look for a suitable class of the same name and map both class and metaclass.  
@@ -396,9 +449,11 @@ GbsSession >> gemStoneClassFor: clientBehavior
 	 If this isn't possible, GbsClassGenerationError will be raised."
 
 	^self gemStoneClassFor: clientBehavior inDictionaryNamed: nil
+]
 
 { #category : 'class translation' }
 GbsSession >> gemStoneClassFor: clientBehavior inDictionaryNamed: dictionaryNameOrNil
+[
 	"Given the client class or metaclass clientBehavior, return a server behavior appropriate for replicating instances of clientBehavior.
 	 If the given class or metaclass is not mapped, but the corresponding metaclass or class is, map based on that.
 	 If neither class nor metaclass is already mapped, then look for a suitable class of the same name and map both class and metaclass.  
@@ -466,9 +521,11 @@ GbsSession >> gemStoneClassFor: clientBehavior inDictionaryNamed: dictionaryName
 				message: 'Failed to find or generate a server class for client class or metaclass %1'
 				with: clientClass name].
 	^behaviorDelegate
+]
 
 { #category : 'class translation' }
 GbsSession >> smalltalkClassFor: behaviorOop
+[
 	"Given the server class or metaclass behaviorOop (a delegate or oop), return a corresponding client behavior
 	 appropriate for replicating instances that class.  If there is no
 	 mapped behavior, then look for a class of the
@@ -485,15 +542,19 @@ GbsSession >> smalltalkClassFor: behaviorOop
 			(clientBehavior ~~ nil and: [clientBehavior zzzisStub not])
 				ifTrue: [clientBehavior]
 				ifFalse: [behaviorDelegate performOnGsServer: #yourself]]
+]
 
 { #category : 'private - printing' }
 GbsSession >> printOn: aStream 
+[
 	"Private"
 
 	aStream nextPutAll: sessionDisplayString
+]
 
 { #category : 'private - printing' }
 GbsSession >> gbxDebugPrintOn: aStream
+[
 	"Private"
 	
 	self printOn: aStream.
@@ -509,140 +570,190 @@ GbsSession >> gbxDebugPrintOn: aStream
 		tab;
 		nextPutAll: 'dirtyPool size is '.
 	dirtyPool size printOn: aStream
+]
 
 { #category : 'GBS private' }
 GbsSession >> isSpecialScaledDecimal: aScaledDecimal
+[
 	^specialConverter isSpecialScaledDecimal: aScaledDecimal
+]
 
 { #category : 'GBS private' }
 GbsSession >> startingToPack: anObject
+[
 	"AnObject has been identified as a dirty object to pack in a traversal buffer
 	to be sent to the gem. Its dirty referents will be packed first, however."
 
 	dirtyPool startingToPack: anObject
+]
 
 { #category : 'GBS private' }
 GbsSession >> isSpecialOop: anOop 
+[
 	^specialConverter isSpecialOop: anOop
+]
 
 { #category : 'GBS private' }
 GbsSession >> nestingLevel: anObject
+[
 
 	nestingLevel := anObject
+]
 
 { #category : 'GBS private' }
 GbsSession >> shouldReplicateExceptions
+[
 	"Private to GBS. Answer true if exceptions should be replicated. Can only be true when logged into a GS64 3.0 or later server."
 
 	^configuration replicateExceptions
+]
 
 { #category : 'GBS private' }
 GbsSession >> delegateForSpecialInteger: anInteger 
+[
 	"anInteger must be in the range representable as a SmallInteger on the server. 
 	Depending on the server version, this may or may not be the same range as 
 	SmallIntegers on the client."
 
 	^specialConverter delegateForSpecialInteger: anInteger forSession: self
+]
 
 { #category : 'GBS private' }
 GbsSession >> changedSelector: aSelector inClass: aClass
+[
 	"A metaclass has had a method added, removed, or changed.
 	I may need to update my clamps
 	if the method is an instVarMap or a replication spec method, 
 	and I have the class mapped."
 
 	replicatorManager changedSelector: aSelector inClass: aClass
+]
 
 { #category : 'GBS private' }
 GbsSession >> dirtyPoolSize
+[
 	^dirtyPool size
+]
 
 { #category : 'GBS private' }
 GbsSession >> oopIllegal
+[
 	^specialConverter oopIllegalForSession: self
+]
 
 { #category : 'GBS private' }
 GbsSession >> isSpecialDate: aDate
+[
 	^specialConverter isSpecialDate: aDate
+]
 
 { #category : 'GBS private' }
 GbsSession >> delegateForCharacter: aCharacter 
+[
 	^specialConverter delegateForCharacter: aCharacter forSession: self
+]
 
 { #category : 'GBS private' }
 GbsSession >> traversalBufferClass
+[
 	^specialConverter traversalBufferClass
+]
 
 { #category : 'GBS private' }
 GbsSession >> isSpecialDouble: aDouble
+[
 	"Sender must hold sessionProtect"
 
 	^specialConverter isSpecialDouble: aDouble session: self
+]
 
 { #category : 'GBS private' }
 GbsSession >> replicatorManager
+[
 
 	^replicatorManager
+]
 
 { #category : 'GBS private' }
 GbsSession >> isSpecialInteger: anInteger 
+[
 	^specialConverter isSpecialInteger: anInteger
+]
 
 { #category : 'GBS private' }
 GbsSession >> delegateForSpecialFraction: aFraction
+[
 	"aFraction must be in the range representable as a SmallFraction on the server. 
 	SmallFraction is not available on all server versions."
 
 	^specialConverter delegateForSpecialFraction: aFraction forSession: self
+]
 
 { #category : 'GBS private' }
 GbsSession >> nestingLevel
+[
 
 	^nestingLevel
+]
 
 { #category : 'GBS private' }
 GbsSession >> sessionCriticalWithoutAssertionChecks: criticalBlock unlessBlocked: blockedBlock 
+[
 	^sessionProtect critical: 
 			[self checkSession.
 			criticalBlock value]
 		unlessBlocked: blockedBlock
+]
 
 { #category : 'GBS private' }
 GbsSession >> delegateForSpecialTime: aTime
+[
 	"If the server version supports SmallTime, answer a delegate for a 
 	SmallTime immediate oop, and set aTime to be immutable.
 	If the server does not support SmallTime, answer nil and leave
 	aTime's mutability unchanged."
 
 	^specialConverter delegateForSpecialTime: aTime forSession: self
+]
 
 { #category : 'GBS private' }
 GbsSession >> delegateClass
+[
 	^specialConverter delegateClass
+]
 
 { #category : 'GBS private' }
 GbsSession >> oopArrayClass
+[
 	^specialConverter oopArrayClass
+]
 
 { #category : 'GBS private' }
 GbsSession >> oopFalse
+[
 	^specialConverter oopFalseForSession: self
+]
 
 { #category : 'GBS private' }
 GbsSession >> isSpecialCharacter: aCharacter 
+[
 	^specialConverter isSpecialCharacter: aCharacter
+]
 
 { #category : 'GBS private' }
 GbsSession >> startingInteraction: anInteraction
+[
 
 	self sessionCritical: 
 			[activeInteractions size == 0
 				ifTrue: [self startingFirstInteraction: anInteraction].
 			[(activeInteractions includes: anInteraction) not] gbxAssert.
 			activeInteractions add: anInteraction]
+]
 
 { #category : 'GBS private' }
 GbsSession >> endingLastInteraction: anInteraction
+[
 	"Can be overridden in subclasses."
 	"If we're in unwind from a fatal error discovered during an interaction, 
 					my postLogin may already have run, clearing out variables."
@@ -650,23 +761,31 @@ GbsSession >> endingLastInteraction: anInteraction
 	replicatorManager ifNotNil: [replicatorManager endingInteraction].
 	serverMap ifNotNil: [serverMap beWeak].
 	GBSM sessionExitingInteractions
+]
 
 { #category : 'GBS private' }
 GbsSession >> localSpecialFromOop: anOop
+[
 	"Sender must hold sessionProtect."
 
 	^specialConverter localSpecialFromOop: anOop
+]
 
 { #category : 'GBS private' }
 GbsSession >> isSpecialFraction: aFraction
+[
 	^specialConverter isSpecialFraction: aFraction
+]
 
 { #category : 'GBS private' }
 GbsSession >> oopTrue
+[
 	^specialConverter oopTrueForSession: self
+]
 
 { #category : 'GBS private' }
 GbsSession >> sessionCritical: criticalBlock unlessBlocked: blockedBlock retryFor: milliseconds
+[
 	"Trying a single time to get the session critical block sometimes is not enough,
 	for example, if our polling has grabbed the session semaphore.
 	We can retry for a specified number of milliseconds"
@@ -680,66 +799,86 @@ GbsSession >> sessionCritical: criticalBlock unlessBlocked: blockedBlock retryFo
 			result := self sessionCritical: criticalBlock unlessBlocked: [blocked := true].
 			blocked ifFalse:[^result]].
 	^blockedBlock value
+]
 
 { #category : 'GBS private' }
 GbsSession >> isSpecialTime: aTime
+[
 	^specialConverter isSpecialTime: aTime
+]
 
 { #category : 'GBS private' }
 GbsSession >> delegateForSpecialDouble: aDouble
+[
 	"aDouble must be in the range representable as a SmallDouble on the server. 
 	Depending on the server version, there may or may not be any Doubles that 
 	meet this requirement.
 	Sender must hold my sessionProtect"
 
 	^specialConverter delegateForSpecialDouble: aDouble forSession: self
+]
 
 { #category : 'GBS private' }
 GbsSession >> removeStoreTraversal: aStoreTraversal
+[
 	"This method executes as part of cleanup from a failed error, 
 	so the session may already be dead and have nilled dirtyPool."
 
 	dirtyPool ifNotNil: [:dp | dp removeStoreTraversal: aStoreTraversal]
+]
 
 { #category : 'GBS private' }
 GbsSession >> isUnwindingAsyncAbort: anObject
+[
 
 	isUnwindingAsyncAbort := anObject
+]
 
 { #category : 'GBS private' }
 GbsSession >> delegateForSpecialScaledDecimal: aScaledDecimal
+[
 	"If aScaledDecimal is not in the range representable as a SmallScaledDecimal on the server,
 	will answer nil.
 	SmallScaledDecimal is not available on all server versions."
 
 	^specialConverter delegateForSpecialScaledDecimal: aScaledDecimal
 		forSession: self
+]
 
 { #category : 'GBS private' }
 GbsSession >> bufferOopClass
+[
 	^specialConverter bufferOopClass
+]
 
 { #category : 'GBS private' }
 GbsSession >> newInteractionState
+[
 	"In support of GBS Extensions"
 
 	^GbxInteractionState new
+]
 
 { #category : 'GBS private' }
 GbsSession >> addStoreTraversal: aStoreTraversal
+[
 
 	dirtyPool addStoreTraversal: aStoreTraversal
+]
 
 { #category : 'GBS private' }
 GbsSession >> startingFirstInteraction: anInteraction
+[
 	"Can be overridden in subclasses."
 
 	GBSM sessionEnteringInteractions.
 	serverInterface makeCacheStrongAndFinalizeIntoBuffers.
 	replicatorManager startingInteraction
+]
 
 { #category : 'GBS private' }
 GbsSession >> endingInteraction: anInteraction
+[
 	"Cannot do a session check here -- one of the reasons for ending an interaction is that we're processing a fatal error."
 
 	self sessionCriticalNoSessionCheck: 
@@ -749,34 +888,44 @@ GbsSession >> endingInteraction: anInteraction
 					].
 			activeInteractions size == 0
 				ifTrue: [self endingLastInteraction: anInteraction]]
+]
 
 { #category : 'GBS private' }
 GbsSession >> oopNil
+[
 	^specialConverter oopNilForSession: self
+]
 
 { #category : 'GBS private' }
 GbsSession >> delegateForSpecialDate: aDate
+[
 	"If aDate is not in the range representable on the server,
 	will error. If the server does not support SmallDate, will answer nil.
 	Otherwise, will answer a delegate for a SmallDate immediate oop."
 
 	^specialConverter delegateForSpecialDate: aDate forSession: self
+]
 
 { #category : 'GBS private' }
 GbsSession >> packed: anObject
+[
 	"The last (or only) report for anObject has been placed in a traversal buffer
 	for transport to the server."
 
 	self storingObjectInTraversal.	"stats"
 	dirtyPool packed: anObject
+]
 
 { #category : 'GBS private' }
 GbsSession >> isUnwindingAsyncAbort
+[
 
 	^isUnwindingAsyncAbort
+]
 
 { #category : 'GBS private' }
 GbsSession >> sessionCritical: criticalBlock unlessBlocked: blockedBlock 
+[
 	"Private to GBS.  Evaluate aBlock while excluding any other thread from
 	 doing operations such as a commit, abort, flush, or critical: against this session.
 	If some other process appears to hold the session lock, just run blockedBlock instead."
@@ -784,9 +933,11 @@ GbsSession >> sessionCritical: criticalBlock unlessBlocked: blockedBlock
 	self sessionCriticalAssertionChecks.
 	^self sessionCriticalWithoutAssertionChecks: criticalBlock
 		unlessBlocked: blockedBlock
+]
 
 { #category : 'private - transaction control' }
 GbsSession >> postAbnormalAbort
+[
 	"Private.  An abort has just occurred - synchronize caches"
 	"self stubDirtyExistingSTObjects."
 	"self stubDirtyExistingGSObjects."
@@ -806,20 +957,26 @@ GbsSession >> postAbnormalAbort
 				with: self
 				with: Time now].
 	self changed: #aborted
+]
 
 { #category : 'private - transaction control' }
 GbsSession >> resetAsyncAbortActions
+[
 
 	asyncAbortStartAction := [:dirtySet | self gbsMessenger error: self asyncAbortSetupErrorMessage].
 	asyncAbortFinishAction := ["One error is enough. No need to natter."]
+]
 
 { #category : 'private - transaction control' }
 GbsSession >> asyncAbortSetupErrorMessage
+[
 
 	^'Use of transactionless mode or GemAutoServiceSigAbort requires that the asyncAbort Actions be set.\Refer to GbsSession>>#asyncAbortStartAction:finishAction: for details.'
+]
 
 { #category : 'private - transaction control' }
 GbsSession >> postAbort
+[
 	"Private.  An abort has just occurred"
 
 	self resetClassOrganizer.
@@ -830,9 +987,11 @@ GbsSession >> postAbort
 				with: self
 				with: Time now].
 	self changed: #aborted
+]
 
 { #category : 'private - transaction control' }
 GbsSession >> postCommitSucceeded: succeeded
+[
 	"Private"
 
 	self resetClassOrganizer.
@@ -851,30 +1010,38 @@ GbsSession >> postCommitSucceeded: succeeded
 						with: Time now]].
 
 	succeeded ifTrue: [self changed: #committed]
+]
 
 { #category : 'notification' }
 GbsSession >> signaledObjects
+[
 	"Returns an array containing the current contents of the signaledObjects set and clears the signaledObjects set."
 
 	^self systemProxy performOnGsServer: #signaledObjects
+]
 
 { #category : 'notification' }
 GbsSession >> enableSignaledGemStoneSessionError
+[
 
 	"Enables the generation of an error when a signal from another session is received.  When this error is signaled, it is also disabled to allow the exception handler to run without receiving another interrupt.  Therefore, the exception handler should re-enable the condition before returning."
 
 	self systemProxy unsynchronizedPerform: #enableSignaledGemStoneSessionError
+]
 
 { #category : 'notification' }
 GbsSession >> enableSignaledObjectsError
+[
 
 	"Turn on generation of #rtErrSignalCommit.  This signal indicates that one or more objects in the session's notify set have been modified and committed by some session.  When the signal occurs, further generation of it is disabled."
 	"GBSM currentSession enableSignaledObjectsError"
 
 	self systemProxy unsynchronizedPerform: #enableSignaledObjectsError
+]
 
 { #category : 'notification' }
 GbsSession >> gemSignalAction: aBlock
+[
 
 	"When a gem-to-gem signal is received, evaluate aBlock.  This should be a
 	 three-argument block.  The first argument will be the serial number
@@ -918,9 +1085,11 @@ GbsSession >> gemSignalAction: aBlock
 		raiseException: false.
 	self enableSignaledGemStoneSessionError]
 			ensure: [self startEventDetection]
+]
 
 { #category : 'notification' }
 GbsSession >> notificationAction: aBlock 
+[
 	"When notification occurs, evaluate aBlock.  This should be a one-argument block.  An IdentitySet of signalling objects (Smalltalk objects) will be passed as the argument.  If notification occurs during GemStone execution, continue that execution.  If aBlock is nil, previously installed notificationAction will be deinstalled."
 
 	| notifSignal |
@@ -953,49 +1122,61 @@ GbsSession >> notificationAction: aBlock
 		raiseException: false.
 	self enableSignaledObjectsError.
 	self startEventDetection
+]
 
 { #category : 'notification' }
 GbsSession >> notifySet
+[
 	"Returns an Array of (Smalltalk) objects that are currently registered for notification when a new state is committed"
 
 	^self systemProxy performOnGsServer: #notifySet
+]
 
 { #category : 'notification' }
 GbsSession >> addAllToNotifySet: aCollection
+[
 	"Adds all the elements of aCollection (either a Smalltalk object or a GbsObject) to the set of objects for which this session is notified if a new state for one or more of them is committed."
 
 	self systemProxy
 		remotePerform: #addAllToNotifySet:
 		with: aCollection
+]
 
 { #category : 'notification' }
 GbsSession >> removeAllFromNotifySet: aCollection
+[
 
 	"Removes all elements of aCollection from the notifySet.  Does not generate an error if any of the elements is not in the notifySet."
 
 	self systemProxy
 		remotePerform: #removeAllFromNotifySet:
 		with: aCollection
+]
 
 { #category : 'notification' }
 GbsSession >> removeFromNotifySet: anObject
+[
 
 	"Removes anObject from the notifySet.  Does not generate an error if anObject is not in the notifySet."
 
 	self systemProxy
 		remotePerform: #removeFromNotifySet:
 		with: anObject
+]
 
 { #category : 'notification' }
 GbsSession >> addToNotifySet: anObject
+[
 	"Adds anObject (either a Smalltalk object or a GbsObject) to the set of objects for which this session is notified if a new state for one or more of them is committed."
 
 	self systemProxy
 		remotePerform: #addToNotifySet:
 		with: anObject
+]
 
 { #category : 'notification' }
 GbsSession >> sendSignal: aSignal to: sessionIdOrSerial withMessage: aString
+[
 
 	"Sends a signal (a SmallInteger) to the session specified by sessionIdOrSerial
 	 (a SmallInteger) with the String aString as a message.  The sessionIdOrSerial
@@ -1011,22 +1192,28 @@ GbsSession >> sendSignal: aSignal to: sessionIdOrSerial withMessage: aString
 		with: aSignal
 		with: sessionIdOrSerial
 		with: aString.
+]
 
 { #category : 'notification' }
 GbsSession >> clearNotifySet
+[
 	"Removes all objects that are currently in the notifySet."
 
 	self systemProxy remotePerform: #clearNotifySet
+]
 
 { #category : 'notification' }
 GbsSession >> disableSignaledGemStoneSessionError
+[
 
 	"Disables the generation of an error when a signal from another session is received"
 
 	self systemProxy unsynchronizedPerform: #disableSignaledGemStoneSessionError
+]
 
 { #category : 'notification' }
 GbsSession >> sessionSignalAction: aBlock
+[
 	"When a GsInterSessionSignal is received, evaluate aBlock.  This should
 	 be a one-argument block.  The argument will be a forwarder to the
 	 instance of GsInterSessionSignal that was received.  If the signal is
@@ -1072,39 +1259,49 @@ GbsSession >> sessionSignalAction: aBlock
 		raiseException: false.
 	self enableSignaledGemStoneSessionError]
 			ensure: [self startEventDetection]
+]
 
 { #category : 'notification' }
 GbsSession >> signalFromGemStoneSession
+[
 	"Returns an array containing information about a signal from another GemStone session.  If there is no signal in the queue, then nil is returned.  Otherwise, returns a 3 element array with the following information:
 	1.  The serial number of the session that sent the signal.
 	2.  The signal value (a SmallInteger).
 	3.  A signal message (a String)."
 
 	^self systemProxy performOnGsServer: #_signalFromGemStoneSession
+]
 
 { #category : 'notification' }
 GbsSession >> disableSignaledObjectsError
+[
 
 	"Turn off generation of #rtErrSignalCommit."
 	"GBSM currentSession disableSignaledObjectsError"
 
 	self systemProxy unsynchronizedPerform: #disableSignaledObjectsError
+]
 
 { #category : 'private' }
 GbsSession >> sessionCriticalNoSessionCheck: aBlock 
+[
 	"Private.  Evaluate aBlock while excluding any other thread from
 	 doing operations such as a commit, abort, flush, or critical: against this session."
 
 	self sessionCriticalAssertionChecks.
 	^sessionProtect critical: aBlock
+]
 
 { #category : 'private' }
 GbsSession >> gciGemTrace: anInteger
+[
 
 	serverInterface gciGemTrace: anInteger
+]
 
 { #category : 'private' }
 GbsSession >> postLostOTroot
+[
 	"Private.  This is executed after abortErrLostOtRoot is received.  The root of the
 	 object table was lost due to the fact that the receiver did not respond
 	 to rtErrSignalAbort in the specified amount of time (see stone config
@@ -1132,14 +1329,18 @@ GbsSession >> postLostOTroot
 									"identify what objects need updating on one pass, then update on a second pass. 									We avoid problems with changing the map during the iteration this way"]].
 					clientObjsNeedingUpdate delegatesAndClientObjsDo: [:del :clientObj | clientObj gbxUpdateFromDelegate: del]]].
 	GbsConfiguration current verbose ifTrue: [self gbsMessenger comment: '%1 has been forcefully aborted (lost OT root).' with: self]
+]
 
 { #category : 'private' }
 GbsSession >> unauthorizedObjectReplicatorClass
+[
 
 	^GbxUnauthorizedObjectReplicator
+]
 
 { #category : 'private' }
 GbsSession >> uncachedForwarderAt: aSymbol ifAbsent: aBlock 
+[
 	"Private.  Like at:ifAbsent:, except the return value is a forwarder that is not added to the GBS cache."
 
 	| result |
@@ -1160,9 +1361,11 @@ GbsSession >> uncachedForwarderAt: aSymbol ifAbsent: aBlock
 		with: result.
 	result isNil ifTrue: [^aBlock value].
 	^result gbsAsUncachedForwarderInSession: self
+]
 
 { #category : 'private' }
 GbsSession >> primcheckAuth: arrayOfGSObjects 
+[
 	"Private"
 
 	^self sessionCritical: 
@@ -1174,26 +1377,34 @@ GbsSession >> primcheckAuth: arrayOfGSObjects
 						is: Array
 						of: GbxDelegate]
 				session: self]
+]
 
 { #category : 'private' }
 GbsSession >> remoteSession
+[
 
 	^(OGsCurrentSession asGSObjectInSession: self)
 		remotePerform: #currentSession
+]
 
 { #category : 'private' }
 GbsSession >> unmappedClassReplicatorClass
+[
 
 	^GbxUnmappedClassReplicator
+]
 
 { #category : 'private' }
 GbsSession >> replicationClass
+[
 	"No stats, use the plain version."
 
 	^GbxReplication
+]
 
 { #category : 'private' }
 GbsSession >> validateAllDirty
+[
 	"OBSOLETE, needs update if it is to actually work.
 	Dirty are tracked both by a dirty bit on a delegate and by inclusion
 	 in the session dirtyPool. This ensures that both are consistent with
@@ -1248,46 +1459,62 @@ GbsSession >> validateAllDirty
 						[GbsConfiguration current stubDebugging: sd.
 						GbsConfiguration current forwarderDebugging: fd]].
 	^errors isEmpty
+]
 
 { #category : 'private' }
 GbsSession >> replicatorClassForClasses
+[
 
 	^GbxClassReplicator
+]
 
 { #category : 'private' }
 GbsSession >> replicatorClassForMetaclasses
+[
 
 	^GbxMetaclassReplicator
+]
 
 { #category : 'private' }
 GbsSession >> clampManagerClass
+[
 
 	^GbxClampManager
+]
 
 { #category : 'private' }
 GbsSession >> replicatorManagerClass
+[
 
 	^GbxReplicatorManager
+]
 
 { #category : 'private' }
 GbsSession >> resetClassOrganizer
+[
 
 	"Private.  Cause the class organizer to be rebuilt on demand"
 	gsClassOrganizer := nil
+]
 
 { #category : 'private' }
 GbsSession >> serverInterfaceDo: aBlock 
+[
 	^self sessionCritical: [aBlock value: serverInterface]
+]
 
 { #category : 'private' }
 GbsSession >> checkSession
+[
 	"Validate that this session has a valid id.  If not, raise an error 
 	 which identifies the cause of death, if available."
 
 	self hasValidSessionId ifFalse: [GbsError raiseBadSessionIdFor: self]
+]
 
 { #category : 'private' }
 GbsSession >> gemTimeZone
+[
 	"Return a proxy for this session's default TimeZone instance.
 	In server versions starting with GemStone/64 2.2 and later, 
 	and in servers with patched time zone support, TimeZone 
@@ -1300,14 +1527,18 @@ GbsSession >> gemTimeZone
 			[gemTimeZone := (OTimeZone asGSObjectInSession: self) 
 						unsynchronizedPerform: #current].
 	^gemTimeZone
+]
 
 { #category : 'private' }
 GbsSession >> forwarderReplicatorClass
+[
 
 	^GbxForwarderReplicator
+]
 
 { #category : 'private' }
 GbsSession >> sessionCritical: aBlock 
+[
 	"Private.  Evaluate aBlock while excluding any other thread from
 	 doing operations such as a commit, abort, flush, or critical: against this session."
 
@@ -1315,16 +1546,20 @@ GbsSession >> sessionCritical: aBlock
 	^sessionProtect critical: 
 			[self checkSession.
 			aBlock value]
+]
 
 { #category : 'private' }
 GbsSession >> gsCurrentSession
+[
 	"Returns an uncached forwarder to the GsCurrentSession instance on the server that
 	corresponds to the receiver."
 
 	^self remoteSession gbsAsUncachedForwarderInSession: self
+]
 
 { #category : 'private' }
 GbsSession >> hasValidSessionId
+[
 	"Private.  The danger of using this method is it trusts
 	 the Smalltalk state of the sessionId.  If our actual
 	 connection to the repository has been lost, the sessionId
@@ -1332,9 +1567,11 @@ GbsSession >> hasValidSessionId
 	 answer, send #isLoggedIn."
 
 	^sessionId ~~ 0
+]
 
 { #category : 'private' }
 GbsSession >> sessionCriticalAssertionChecks
+[
 	"This method asserts in short that you must hold the session semaphore
 	in order to hold any of the other interesting GBS semaphores. Or you must
 	hold none of the semaphores"
@@ -1353,9 +1590,11 @@ GbsSession >> sessionCriticalAssertionChecks
 		ifFalse: [false]]
 			gbxAssertEquals: false
 			message: 'Semaphores were acquired out of sequence. Deadlocks could occur if session semaphore is obtained after other semaphores.'
+]
 
 { #category : 'private - connectors at login' }
 GbsSession >> connectClassConnectorsTypeNoneIn: allConnectors addFailedConnectorsTo: failedConnectors addMessagesTo: messages
+[
 	"Private.  Used at login time.
 	The sender must hold my sessionProtect.
 	Bulk connect the qualifying connectors."
@@ -1391,9 +1630,11 @@ GbsSession >> connectClassConnectorsTypeNoneIn: allConnectors addFailedConnector
 								failedConnectors add: conn.
 								messages add: ex errorString.
 								ex return]]]
+]
 
 { #category : 'private - connectors at login' }
 GbsSession >> fetchBehaviorDelegatesForFastConnectors: connectors
+[
 	"Private.  Used at login time.
 	The sender must hold my sessionProtect.
 	Answer an array of delegates, a pair of delegates for each fast connector in toConnect.
@@ -1437,9 +1678,11 @@ GbsSession >> fetchBehaviorDelegatesForFastConnectors: connectors
 	^arrayOfOops collect: 
 			[:oop |
 			oop == nil ifTrue: [nil] ifFalse: [GbxDelegate oopValue: oop session: self]]
+]
 
 { #category : 'private - connectors at login' }
 GbsSession >> connectAllConnectors
+[
 	"Private.  This message should be sent at login time.
 	The sender must hold my sessionProtect."
 
@@ -1466,9 +1709,11 @@ GbsSession >> connectAllConnectors
 	"Handle failed connectors.  If RemoveInvalidConnectors, remove them.  Else,
 	 if Confirm is true, prompt for their removal. Else, just show a transcript comment if verbose is true"
 	self handleFailedConnectors: failedConnectors messages: messages
+]
 
 { #category : 'private - connectors at login' }
 GbsSession >> fetchBehaviorDelegatesForClassConnectors: connectors
+[
 	"Private.  Used at login time.
 	The sender must hold my sessionProtect.
 	Answer an array of delegates, a pair of delegates for each class connector in toConnect.
@@ -1532,9 +1777,11 @@ GbsSession >> fetchBehaviorDelegatesForClassConnectors: connectors
 		unsynchronizedEvaluateBlockReturnResultBodyAsDelegates: executionString
 		with: objectAndDictionaryNames asArray
 		context: nil
+]
 
 { #category : 'private - connectors at login' }
 GbsSession >> connectOtherConnectorsIn: allConnectors addFailedConnectorsTo: failedConnectors addMessagesTo: messages
+[
 	"Private.  This message is sent at login time.
 	The sender must hold my sessionProtect.
 	Connect all connectors that cannot be connected in bulk one at a time."
@@ -1551,9 +1798,11 @@ GbsSession >> connectOtherConnectorsIn: allConnectors addFailedConnectorsTo: fai
 					failedConnectors add: conn.
 					messages add: msg].
 			self updateInstVarNamesAndClamps	"Just in case this connector actually connected a class."]
+]
 
 { #category : 'private - connectors at login' }
 GbsSession >> connectFastConnectorsIn: allConnectors addFailedConnectorsTo: failedConnectors addMessagesTo: messages
+[
 	"Private.  This message is sent at login time.
 	The sender must hold my sessionProtect.
 	For any fast connectors that connect classes, also connect the metaclasses.
@@ -1594,9 +1843,11 @@ GbsSession >> connectFastConnectorsIn: allConnectors addFailedConnectorsTo: fail
 									failedConnectors add: conn.
 									messages add: ex errorString.
 									ex return]]]
+]
 
 { #category : 'private - connectors at login' }
 GbsSession >> mapCrucialClasses
+[
 	"Private.  This message is used at login time.
 	The sender must hold my sessionProtect.
 	Map certain crucial kernel classes without mapping their metaclasses, to bootstrap the mapping process.
@@ -1636,9 +1887,11 @@ GbsSession >> mapCrucialClasses
 					[:conn |
 					conn isFastConnectorTypeNone and: [conn resolveClientObj = clientClass]])
 				simpleConnectInSession: self]
+]
 
 { #category : 'private - connectors at login' }
 GbsSession >> connectClientClass: clientClass toServerClass: classDel serverMetaclass: metaclassDel forConnector: conn
+[
 	"Private.  Used at login time.
 	The sender must hold my sessionProtect.
 	Sender must verify that clientClass is indeed a (non-meta) class.
@@ -1662,9 +1915,11 @@ GbsSession >> connectClientClass: clientClass toServerClass: classDel serverMeta
 			[self connectClient: clientClass toServer: classDel.
 			self connectClient: clientClass class toServer: metaclassDel.
 			conn postConnectClient: clientClass server: classDel inSession: self]
+]
 
 { #category : 'private - connectors at login' }
 GbsSession >> handleFailedConnectors: failedConnectors messages: messages
+[
 
 	| msg |
 	failedConnectors isEmpty ifTrue: [^self].
@@ -1682,16 +1937,20 @@ GbsSession >> handleFailedConnectors: failedConnectors messages: messages
 					[:conn |
 					gbsm removeGlobalConnector: conn.
 					parameters removeConnector: conn]]
+]
 
 { #category : 'testing' }
 GbsSession >> isBlocking
+[
 	"Return true if the GemStone communication protocol being used
 	 is blocking.  See the config parameter blockingProtocolRpc."
 
 	^serverInterface isBlocking
+]
 
 { #category : 'testing' }
 GbsSession >> isLoggedIn
+[
 	"Return true if I am logged into GemStone, else return false.  This method raises
 	 an exception if it detects that the session has died for some reason."
 
@@ -1708,27 +1967,33 @@ GbsSession >> isLoggedIn
 
 			^isLoggedIn process].
 	^isLoggedIn	"isLoggedIn must be true at this point."
+]
 
 { #category : 'testing' }
 GbsSession >> isRemote
+[
 	"Returns true if the gem is a remote process.
 	 Note: this may return a different answer than
 	 'GBSM isRemote', as a vm capable of having a
 	 linked gem can also have a remote gem."
 
 	^isRemote == true
+]
 
 { #category : 'testing' }
 GbsSession >> isLinked
+[
 	"Returns true if the gem for this session is linked with
 	 the Smalltalk virtual machine.  Note: this may return a
 	 different answer than 'GBSM isLinked', as a vm capable
 	 of having a linked session can also have a remote session."
 
 	^isRemote == false
+]
 
 { #category : 'testing' }
 GbsSession >> usingSharedCache
+[
 	"Answer boolean whether the gem is using a shared cache."
 
 	"	GBSM currentSession usingSharedCache.	"
@@ -1737,9 +2002,11 @@ GbsSession >> usingSharedCache
 	zeroBasedSlot := ((OSystem asGSObjectInSession: self) 
 				unsynchronizedPerform: #myCacheProcessSlot) asLocalObject.
 	^zeroBasedSlot >= 0
+]
 
 { #category : 'private - initialization' }
 GbsSession >> initializeWithParameters: aGSSessionParameters
+[
 	"Private.  Initialize my class translation dictionaries and empty my caches"
 
 	sessionId := 0.	"The invalid session ID. Initialized early so isLoggedIn works right away."
@@ -1750,9 +2017,11 @@ GbsSession >> initializeWithParameters: aGSSessionParameters
 	self initializeSpecialConverter.
 	sessionProtect := GbxSessionRecursionLock forMutualExclusion.
 	self initializeEventHandlers
+]
 
 { #category : 'private - initialization' }
 GbsSession >> abortTransaction
+[
 
 	"Abort the GemStone transaction for this session, rolling back all modifications
 	 made to committed repository objects and providing a new view of the most
@@ -1779,9 +2048,11 @@ GbsSession >> abortTransaction
 		statusTag: nil
 		message: '(s%1) completed GbsSession>>abortTransaction'
 		with: self sessionId.
+]
 
 { #category : 'private - initialization' }
 GbsSession >> initialize
+[
 	"Private. Early initialization, before any attempt to log in."
 
 	notCachedToken := NotCachedToken.	"Cache for performance. 'notCached' may be a misnomer?"
@@ -1792,14 +2063,18 @@ GbsSession >> initialize
 	isUnwindingAsyncAbort := false.
 	replicatorManager := self replicatorManagerClass newForSession: self.
 	self resetAsyncAbortActions
+]
 
 { #category : 'private - initialization' }
 GbsSession >> initializeServerInterface
+[
 	serverInterface := gbsm serverInterfaceClass forSession: self.
 	self initializeStatAdaptors
+]
 
 { #category : 'private - testing' }
 GbsSession >> initializeIsRemote
+[
 	"Private. Should only be sent once immediately after login, as it makes GCI calls
 	 which cannot be made in all circumstances."
 
@@ -1811,22 +2086,28 @@ GbsSession >> initializeIsRemote
 						session: self]]
 					on: GbsInterfaceError , GbsGemStoneError
 					do: [:ex | ex return: nil]
+]
 
 { #category : 'private - testing' }
 GbsSession >> isSingleTrip
+[
 	"Answer false if using the legacy multi-trip interface; 
 	true if using the single-trip (GciStoreTravDoTravRefs) interface introduced in GS64 2.2.5.x"
 	
 	^serverInterface isSingleTrip
+]
 
 { #category : 'private - testing' }
 GbsSession >> hasCriticalAccess
+[
 	"Answer whether the active process can access this dictionary right now"
 
 	^sessionProtect isActiveProcessInCriticalRegion
+]
 
 { #category : 'private - testing' }
 GbsSession >> critical: criticalBlock unlessBlocked: blockedBlock onError: errorBlock retryFor: milliseconds
+[
 	"this method should be used sparingly. If the result of the session critical access is
 	the symbol #blocked, this method will fail."
 
@@ -1840,71 +2121,93 @@ GbsSession >> critical: criticalBlock unlessBlocked: blockedBlock onError: error
 					on: Error
 					do: [:ex | ^errorBlock value: ex]].
 	^answer == #blocked ifTrue: [blockedBlock value] ifFalse: [answer]
+]
 
 { #category : 'private - testing' }
 GbsSession >> critical: criticalBlock unlessBlocked: blockedBlock onError: errorBlock
+[
 
 	^[self critical: criticalBlock unlessBlocked: blockedBlock] on: Error do: errorBlock
+]
 
 { #category : 'private - testing' }
 GbsSession >> critical: criticalBlock unlessBlocked: blockedBlock 
+[
 	^sessionProtect critical: criticalBlock unlessBlocked: blockedBlock
+]
 
 { #category : 'private - testing' }
 GbsSession >> isStreamsImplementationPortable
+[
 	"This method is used during login, so it must have a minimal implementation.
 	 Replication is not allowed at that point."
 
 	^(self unsynchronizedEvaluate: 'PositionableStream isPortableStreamImplementation') "= OTrue" asLocalObject	"Might work, Booleans are specials."
+]
 
 { #category : 'private - clamping' }
 GbsSession >> removeClampedObject: aClientObject withDelegate: aDelegate
+[
 	"Private.  Remove <anObject> from the list of 'id' clamps in the clamp specification.
 	If not present, ignore."
 
 	replicatorManager removeIdentityClampForClient: aClientObject
 		withDelegate: aDelegate
+]
 
 { #category : 'private - clamping' }
 GbsSession >> addClampedObject: aClientObject withDelegate: aDelegate
+[
 	"Private.  Add the object to the list of 'id' clamps in all of my clamp specifications."
 
 	replicatorManager addIdentityClampForClient: aClientObject
 		withDelegate: aDelegate
+]
 
 { #category : 'private - clamping' }
 GbsSession >> replicationSchemeForSet: setSymbol
+[
 
 	^self sessionCritical: [replicatorManager replicationSchemeForSet: setSymbol]
+]
 
 { #category : 'private - clamping' }
 GbsSession >> currentReplicationScheme
+[
 	"Private to GBS. Answer the current replication scheme for this thread (Smalltalk Process). 
 	If none, answer the scheme for the session. Note this answers a GbxReplicationScheme, 
 	not the symbol by which it is known."
 
 	^self sessionCritical: [replicatorManager currentReplicationScheme]
+]
 
 { #category : 'private - clamping' }
 GbsSession >> updateInstVarNamesAndClamps
+[
 
 	replicatorManager updateInstVarNamesAndClamps
+]
 
 { #category : 'private - clamping' }
 GbsSession >> invalidateSchemeWithSelector: aSelector
+[
 	"If I have a scheme identified by aSelector, and it's valid, invalidate it and answer true.
 	Otherwise, answer false."
 
 	^replicatorManager invalidateSchemeWithSelector: aSelector
+]
 
 { #category : 'private - clamping' }
 GbsSession >> updateClassClampForReplicator: replicator
+[
 	"Sender must hold my sessionProtect"
 
 	replicatorManager updateClassClampForReplicator: replicator
+]
 
 { #category : 'private - gs object management' }
 GbsSession >> swizzleAlteredOops: alteredDelegatePairs
+[
 	"Private.  The elements of alteredDelegatePairs are pairs of GemStone Delegates,
        old delegate and new delegate in that order, of GemStone objects whose oops have
 	 changed.  An old delegate may be (and probably is) mapped to a client object. The new
@@ -1929,9 +2232,11 @@ GbsSession >> swizzleAlteredOops: alteredDelegatePairs
 					oldClientObj == notCachedToken
 						ifTrue: [serverMap delegateForOop: oldDel]
 						ifFalse: [serverMap atOop: oldDel putClient: oldClientObj]]]
+]
 
 { #category : 'private - gs object management' }
 GbsSession >> dirtyGSObjectsInit
+[
 	"Private.  This method serves two purposes:  First, it must be called to turn on the dirty object set feature.  The gem will not maintain a dirty object set, or signal pre-abort and pre-commit events, until this method is called the first time.  Once the feature is turned on, however, it will remain on until the session logs out.  Second, this method can be called at any time to empty the dirty set."
 
 	GbsError 
@@ -1939,9 +2244,11 @@ GbsSession >> dirtyGSObjectsInit
 				sessionCritical: [self serverInterface dirtyObjectsInit])
 		verifyArgs: [true]
 		session: self
+]
 
 { #category : 'private - gs object management' }
 GbsSession >> getFreeOops: numberOfOops 
+[
 	"Private.  Allocates GemStone object identifiers without creating objects,
 	 and returns these as an array of GbsObjects. A GbsObject returned by
 	 this method remains allocated to this session until it is logged out, or
@@ -1970,23 +2277,29 @@ GbsSession >> getFreeOops: numberOfOops
 		session: self
 
 	"Use of #primUnpolledReultOrError:... was to fix BUG18642."
+]
 
 { #category : 'private - gs object management' }
 GbsSession >> getFreeOop
+[
 	"Private.  Return an oop from this GbsSession's oop cache.  
 	This is an oop that has been allocated to this session, for which an object has not actually been created.  "
 
 	^freeOops nextFreeOop
+]
 
 { #category : 'private - gs object management' }
 GbsSession >> delegateForOop: anOop
+[
 	"Answer the canonical delegate for the given oop, which MUST not be a server special oop"
 	"Sender must hold my sessionProtect"
 
 	^serverMap delegateForOop: anOop
+]
 
 { #category : 'private - gs object management' }
 GbsSession >> checkAuth: arrayOfGSObjects
+[
 
 	"Private.  For each object in arrayOfGSObjects, this method checks the authorization for the current user.  The authorization for each input object is returned in the corresponding index of the return array.  Each result is represented as #none, #read, or #write.  The authorization reported for each object is the result of a complete authorization check, including owner, group, and world authorization(s).  Special objects such as SmallIntegers will always be reported as #read authorization.  Reports an error if any member of arrayOfGSObjects is not a legal oop."
 
@@ -1996,9 +2309,11 @@ GbsSession >> checkAuth: arrayOfGSObjects
 	1 to: auths size do: [ :i |
 		result at: i put: (#( none read write ) at: (auths at: i)) ].
 	^result
+]
 
 { #category : 'private - gs object management' }
 GbsSession >> saveObjects: delegates
+[
 	"Delegates must be a sequenceable collection of delegates"
 	"Private.  Add each object in delegates to the gem's export set. This prevents their being garabage collected in GemStone, and in 64-bit GemStone has other effects as well. This does NOT cause the objects to be referenced from a permanent object, and thus there is no guarantee that they will be saved in GemStone after this session logs out."
 
@@ -2011,22 +2326,28 @@ GbsSession >> saveObjects: delegates
 		verifyArgs: 
 			[GbsError verify: delegates is: SequenceableCollection of: GbxDelegate]
 		session: self
+]
 
 { #category : 'private - accessing' }
 GbsSession >> gsClassOrganizer
+[
 	"Private.  Answer an instance of a GemStone ClassOrganizer."
 
 	gsClassOrganizer == nil ifTrue: [ self updateClassOrganizer ].
 	^gsClassOrganizer
+]
 
 { #category : 'private - accessing' }
 GbsSession >> myUserProfileProxy
+[
 	"Private"
 
 	^self systemProxy unsynchronizedPerform: #myUserProfile
+]
 
 { #category : 'private - accessing' }
 GbsSession >> noCasePatternMatchOn: aString
+[
 
 	| executeString pattern |
 	pattern := OrderedCollection new.
@@ -2052,22 +2373,28 @@ GbsSession >> noCasePatternMatchOn: aString
 		evaluateBlock: executeString
 		withArguments: (Array with: pattern asArray)
 		context: self allSymbols
+]
 
 { #category : 'private - accessing' }
 GbsSession >> allSymbols
+[
 	"Returns a GbsObject for AllSymbols.  In GemStone64, this was removed
 	 from Globals and is resolvable only from SymbolUser's UserProfile."
 
 	^self unsynchronizedExecute: '((AllUsers userWithId: ''SymbolUser'') resolveSymbol: #AllSymbols) value'
+]
 
 { #category : 'private - accessing' }
 GbsSession >> symbolListProxy
+[
 	"Private"
 
 	^self myUserProfileProxy unsynchronizedPerform: #symbolList
+]
 
 { #category : 'private - accessing' }
 GbsSession >> caseSensitivePatternMatchOn: aString
+[
 
 	| executeString pattern |
 	pattern := OrderedCollection new.
@@ -2089,9 +2416,11 @@ GbsSession >> caseSensitivePatternMatchOn: aString
 		evaluateBlock: executeString
 		withArguments: (Array with: pattern asArray)
 		context: self allSymbols
+]
 
 { #category : 'private - accessing' }
 GbsSession >> symbolsMatching: aString
+[
 	"Private.  Return a list of Symbols that match <aString> which may contain wild-card characters * and ?."
 	"Rules.
 		If I search for methods called 'from:', I expect only those.
@@ -2108,30 +2437,38 @@ GbsSession >> symbolsMatching: aString
 	(aString detect: [:char | char isUppercase] ifNone: []) isNil
 		ifFalse: [^self caseSensitivePatternMatchOn: aString].
 	^self noCasePatternMatchOn: aString
+]
 
 { #category : 'private - accessing' }
 GbsSession >> serverInterface
+[
 
 	"Private.  Return the object implementing the interface to the c repository calls"
 	serverInterface isNil ifTrue: [
 		^GbsError raiseBadSessionIdFor: self.
 	].
 	^serverInterface
+]
 
 { #category : 'private - accessing' }
 GbsSession >> myDependents: dependentsOrNil
+[
 	"Private.  Set the receivers dependents."
 
 	dependents := dependentsOrNil
+]
 
 { #category : 'private - accessing' }
 GbsSession >> clampedObjects
+[
 	"Private -- used by tests."
 
 	^replicatorManager identityClamps
+]
 
 { #category : 'private - accessing' }
 GbsSession >> classSearchString
+[
 
 	^'
 	"Answer a five element array for each match, comprising:
@@ -2160,15 +2497,19 @@ GbsSession >> classSearchString
 				put: (eachQuint at: 1 "class name"), '' ('', (eachQuint at: 3 "dictionary name"), '')'']].
 	matches := matches asSortedCollection: [:a :b | a last < b last "display strings"].
 	matches asArray]'
+]
 
 { #category : 'private - accessing' }
 GbsSession >> systemProxy
+[
 	"Private"
 
 	^OSystem asGSObjectInSession: self
+]
 
 { #category : 'private - accessing' }
 GbsSession >> updateClassOrganizer
+[
 	"Private"
 
 	GbsConfiguration current verbose 
@@ -2176,15 +2517,19 @@ GbsSession >> updateClassOrganizer
 	gsClassOrganizer := self execute: 'ClassOrganizer new'.
 	GbsConfiguration current verbose 
 		ifTrue: [self gbsMessenger commentAdd: 'done.']
+]
 
 { #category : 'private - accessing' }
 GbsSession >> defaultDictionary
+[
 	"Private - Creates if not present."
 
 	^self symbolDictionaryNamed: self class defaultDictionaryName
+]
 
 { #category : 'private - accessing' }
 GbsSession >> dictionaryNamesMatching: aString
+[
 	"Private.  Return a list of class names that match <aString> which may contain wild-card characters * and ?."
 	"since this is a class name match, it is convenient to make the first char capitalized"
 
@@ -2192,9 +2537,11 @@ GbsSession >> dictionaryNamesMatching: aString
 		evaluateBlock: self dictionarySearchString
 		with: aString asGSPattern
 		context: nil
+]
 
 { #category : 'private - accessing' }
 GbsSession >> dictionarySearchString
+[
 
 	^'
 [:origPattern |
@@ -2218,22 +2565,28 @@ matches isEmpty
 				exactMatches := matches select: [:each | each size == matchSize].
 				exactMatches isEmpty ifFalse: [matches := exactMatches]]].
 matches]'
+]
 
 { #category : 'private - accessing' }
 GbsSession >> myDependents
+[
 	"Private.  Answer the receiver's dependents or nil."
 
 	^dependents
+]
 
 { #category : 'private - session management' }
 GbsSession >> basicLogout
+[
 	"Private. Log me out of the server. If I'm already logged out, ignore the resulting error.
 	Has no effect in the client,  the client cleanup is done in senders of this message."
 
 	serverInterface isNil ifFalse: [serverInterface logout]	"This could answer a fatal GbsError, but we're ignoring that error."
+]
 
 { #category : 'private - session management' }
 GbsSession >> basicX509Login
+[
 	"Private.  Log into the server. Answer true if login successful, false otherwise."
 	"Sender must hold sessionProtect."
 
@@ -2263,9 +2616,11 @@ GbsSession >> basicX509Login
 				ifFalse: ['login failed.'])
 		with: self sessionId.
 	^isLoggedIn
+]
 
 { #category : 'private - session management' }
 GbsSession >> loginLinked: linked 
+[
 	"Private.  If linked (a Boolean) is true, the login attempt will be for a linked session.  If false, rpc.  Returns the receiver if login is successful, nil otherwise.
 	If login does not complete for any reason, log out to clean up."
 
@@ -2275,9 +2630,11 @@ GbsSession >> loginLinked: linked
 			self postLogin.
 			GbxStatMonitor instance addStatResource: stats]] 
 			ifCurtailed: [self logout]
+]
 
 { #category : 'private - session management' }
 GbsSession >> cleanUp
+[
 	"GBS Private. Akin to #quietLogout, but does not actually 
 	ask the gci library to logout. Instead, just do the surrounding
 	work."
@@ -2285,9 +2642,11 @@ GbsSession >> cleanUp
 	self sessionCriticalNoSessionCheck: 
 			[self preLogout.
 			self postLogout]
+]
 
 { #category : 'private - session management' }
 GbsSession >> loginX509
+[
 	"Private.  Login with x509 parameters, which must already be set.
 	 Returns the receiver if login is successful, nil otherwise.
 	If login does not complete for any reason, log out to clean up."
@@ -2298,9 +2657,11 @@ GbsSession >> loginX509
 			self postLogin.
 			GbxStatMonitor instance addStatResource: stats]]
 			ifCurtailed: [self logout]
+]
 
 { #category : 'private - session management' }
 GbsSession >> logoutDialog
+[
 
 	"Private.  Ask if the user wants to commit before logging out, and give them the chance to cancel the logout"
 
@@ -2314,15 +2675,19 @@ GbsSession >> logoutDialog
 	(commit == nil or: [commit == false])
 		ifTrue: [(self gbsMessenger confirm: 'Commit denied.  Logout anyway?') ifFalse: [ ^self ]].
 	self logout
+]
 
 { #category : 'private - session management' }
 GbsSession >> configureGemAbortMaxCrs
+[
 	"HACK to workaround server bug #49434. See bug #49438."
 
 	self execute: 'System configurationAt: #GemAbortMaxCrs put: 16r3FFFFFFF'
+]
 
 { #category : 'private - session management' }
 GbsSession >> createTimeZoneConnectors
+[
 	"we have determined that we are using the new Olsen time
 	zone database in the server. Create appropriate connectors"
 	
@@ -2342,9 +2707,11 @@ GbsSession >> createTimeZoneConnectors
 				with:
 					(GbsClassConnector stName: #'GemStone.Gbs.GbxTimeZoneTransition' gsName:
 							#TimeZoneTransition))
+]
 
 { #category : 'private - session management' }
 GbsSession >> postLogin
+[
 	"Private.  Things to do immediately after logging in.
 	Sender must hold my sessionProtect."
 
@@ -2366,16 +2733,20 @@ GbsSession >> postLogin
 	self getGemIds.
 	GbsConfiguration current verbose
 		ifTrue: [self gbsMessenger comment: 'Logged in %1' with: self]
+]
 
 { #category : 'private - session management' }
 GbsSession >> enableOopDropping
+[
 	"per bug #39548-Objects in pure export set should be able to drop from RAM
 	Turn on option if connecting to a 3.0+ server"
 
 	self execute: 'System gemConfigurationAt: #GemDropCommittedExportedObjs put: true'
+]
 
 { #category : 'private - session management' }
 GbsSession >> fixUpDelegatesFor: error 
+[
 	"if we got an error on login, the GbsError has contents that are delegates with the wrong sessionId.
 	Give them the proper sessionId."
 
@@ -2383,9 +2754,11 @@ GbsSession >> fixUpDelegatesFor: error
 	error category sessionId: sessionId.
 	error arguments isNil 
 		ifFalse: [error arguments do: [:arg | arg sessionId: sessionId]]
+]
 
 { #category : 'private - session management' }
 GbsSession >> postLogout
+[
 	"Private.  Clean-up required after session has logged out or otherwise terminated"
 
 	self sessionCriticalNoSessionCheck: 
@@ -2405,9 +2778,11 @@ GbsSession >> postLogout
 			logoutTimestamp := Timestamp now.
 			configuration connectorNilling ifTrue: [parameters nilAllConnectors].
 			self initializeLoggedOutSessionDisplayString]
+]
 
 { #category : 'private - session management' }
 GbsSession >> preLogout
+[
 	"Private.  Do any necessary clean-up that must occur before logout.
 	Can happen after the session is actually logged out, for fatal errors 
 	that do not give us a chance to react before logout.
@@ -2417,9 +2792,11 @@ GbsSession >> preLogout
 	self stopEventDetection.
 	self stopNbWaitSocket.
 	self stopProcessBalancer
+]
 
 { #category : 'private - session management' }
 GbsSession >> getGemIds
+[
 
 	| ids |
 	ids := self evaluate: 
@@ -2439,17 +2816,21 @@ GbsSession >> getGemIds
 
 	"Update with the gem ids"
 	self initializeLoggedInSessionDisplayString.
+]
 
 { #category : 'private - session management' }
 GbsSession >> quietLogout
+[
 	"GBS Private. Do the work of logging out, without asking permission or logging the logout."
 
 	self sessionCriticalNoSessionCheck: 
 			[self preLogout.
 			[self basicLogout] ensure: [self postLogout]]
+]
 
 { #category : 'private - session management' }
 GbsSession >> initializeLoggedInSessionDisplayString
+[
 
 	| aStream |
 	aStream := WriteStream on: (String new: 100).
@@ -2465,14 +2846,18 @@ GbsSession >> initializeLoggedInSessionDisplayString
 		nextPutAll: ' Session ID: ';
 		print: gemSessionId.
 	sessionDisplayString := aStream contents
+]
 
 { #category : 'private - session management' }
 GbsSession >> initializeLoggedOutSessionDisplayString
+[
 
 	sessionDisplayString := 'Session (not logged in) for ' , parameters printString
+]
 
 { #category : 'private - session management' }
 GbsSession >> basicLoginLinked: linked
+[
 	"Private.  Log into the server. Answer true if login successful, false otherwise."
 	"Sender must hold sessionProtect."
 
@@ -2517,14 +2902,18 @@ GbsSession >> basicLoginLinked: linked
 		message: (isLoggedIn ifTrue: ['(s%1) login successful, ID = %1'] ifFalse: ['login failed.'])
 		with: self sessionId.
 	^isLoggedIn
+]
 
 { #category : 'private - session management' }
 GbsSession >> initializeTimeZone
+[
 
 	^clientTimeZone := TimeZone default
+]
 
 { #category : 'private - session management' }
 GbsSession >> initializeTimeZoneFromServer
+[
 	"predates VW 7.7"
 	"initialize a session-specific time zone for this session. 
 	If we are not running against a database that supports
@@ -2555,9 +2944,11 @@ GbsSession >> initializeTimeZoneFromServer
 			| timeZone |
 			timeZone := (Globals at: #TimeZoneInfo ifAbsent:[]) isNil not. 
 			timeZone ifTrue:[TimeZone current copy] ifFalse:[nil]']
+]
 
 { #category : 'private - cache management' }
 GbsSession >> clientObjForDelegate: anOop otherwise: otherwiseObject
+[
 	"Private to GBS.  If there is an entry for anOop in the serverMap, return the associated client
 	 object.  Otherwise, return otherwiseObject."
 	"Sender must hold my session's sessionProtect."
@@ -2566,9 +2957,11 @@ GbsSession >> clientObjForDelegate: anOop otherwise: otherwiseObject
 	serverMap isNil ifTrue: [^otherwiseObject].
 	cachedObj := self lookupOop: anOop.
 	^cachedObj == notCachedToken ifTrue: [otherwiseObject] ifFalse: [cachedObj]
+]
 
 { #category : 'private - cache management' }
 GbsSession >> connectClient: anObject toServer: oopOrDelegate
+[
 	"If not already mapped, add entries in the caches relating delegate and anObject."
 
 	| delegate |
@@ -2583,9 +2976,11 @@ GbsSession >> connectClient: anObject toServer: oopOrDelegate
 					existingClientObj := serverMap clientAtOop: delegate.
 					existingClientObj == anObject
 						ifFalse: [self unprotectedConnectPossiblyExistingClient: anObject toServer: delegate]]]
+]
 
 { #category : 'private - cache management' }
 GbsSession >> emptyCaches
+[
 	"Private.  Forget about dirty Smalltalk objects, and remove cache
 	 entries for stObjects associated with this session."
 
@@ -2599,9 +2994,11 @@ GbsSession >> emptyCaches
 	freeOops := nil.
 	gsClassOrganizer := nil.
 	isRemote := nil
+]
 
 { #category : 'private - cache management' }
 GbsSession >> disconnectClient: clientObject fromServer: aDelegate
+[
 	"Private.  Remove entries in the caches relating gsObject and clientObject.
 	We expect that clientObject and gsObject are both non-nil.
 	 If any of the entries weren't found, no error is reported."
@@ -2630,17 +3027,21 @@ GbsSession >> disconnectClient: clientObject fromServer: aDelegate
 				ifTrue: 
 					[self disconnectReplicatorForClientBehavior: clientObject
 						andServerBehavior: aDelegate]]
+]
 
 { #category : 'private - cache management' }
 GbsSession >> clientAtOop: anOop 
+[
 	"Answer the cached client object or NotCachedToken"
 
 	"Sender must hold my session's accessProtect."
 
 	^serverMap clientAtOop: anOop
+]
 
 { #category : 'private - cache management' }
 GbsSession >> initializeCaches
+[
 	"Private.  This should be called at login time.
 	The sender must hold my sessionProtect."
 	"WARNING: Executing the following code will destroy current Smalltalk/GemStone object relationships"
@@ -2651,35 +3052,43 @@ GbsSession >> initializeCaches
 	self mapCrucialClasses.
 	parameters rehashConnectors.
 	self connectAllConnectors
+]
 
 { #category : 'private - cache management' }
 GbsSession >> flushDirtyToGS
+[
 	"Private.  This method causes all dirty Smalltalk objects associated with this session to be stored in GemStone. 
 	Any normal server message send does this.
 	Note that if there are dirty objects deeper in the dirtyPool's stack, they will likely *not* get flushed.
 	This is, unfortunately, legacy behavior in some nested round trip scenarios, such as on-the-fly class mapping."
 
 	dirtyPool isEmpty ifFalse: [self oopNil remotePerform: #yourself]
+]
 
 { #category : 'private - cache management' }
 GbsSession >> isST: anObj connectedToGS: aGSObj
+[
 	"Private.  Answer true if both the GS->ST and ST->GS caches show anObj and aGSObj connected"
 
 	^self sessionCritical: 
 			[(self cacheAtST: anObj) = aGSObj
 				and: [(self clientObjForDelegate: aGSObj otherwise: self oopNil) == anObj]]
+]
 
 { #category : 'private - cache management' }
 GbsSession >> privateConnectNewClient: clientObject toServer: oop
+[
 	"Assumes that the client object is newly created, unless it is of an #instancesAreUnique class.
 	Answer the canonical delegate for oop."
 	"Sender must hold the session semaphore."
 
 	^self
 		cacheCritical: [self unprotectedConnectNewClient: clientObject toServer: oop]
+]
 
 { #category : 'private - cache management' }
 GbsSession >> unprotectedConnectNewClient: clientObject toServer: oop 
+[
 	"Assumes that the client object is newly created, unless it is of an #instancesAreUnique class.
 	Answer the canonical delegate for oop."
 
@@ -2695,40 +3104,50 @@ GbsSession >> unprotectedConnectNewClient: clientObject toServer: oop
 			"If it's a forwarder or behavior, make sure it gets clamped"
 			self clamp: delegate client: clientObject.
 			delegate]
+]
 
 { #category : 'private - cache management' }
 GbsSession >> dictionaryDepth
+[
 	"2 if by land, 3 if by GS64 2.0 and later"
 
 	^specialConverter dictionaryDepth
+]
 
 { #category : 'private - cache management' }
 GbsSession >> allocateCaches
+[
 	"Private."
 
 	serverMap := GbxServerMap newForSession: self.
 	freeOops := GbxFreeOopStream for: self.
 	dirtyPool := GbxDirtyPool newForSession: self
+]
 
 { #category : 'private - cache management' }
 GbsSession >> cacheAtST: anObj 
+[
 	"Private.  If anObj exists in the transparency cache, 
 	answer the delegate associated with this session.
 	If no such delegate, answer nil."
 
 	^anObj gbxDelegate forSession: self
+]
 
 { #category : 'private - cache management' }
 GbsSession >> basicConnectPossiblyExistingClient: clientObject toServer: oop
+[
 	"Sender must hold my sessionProtect and the ClientMaps writeProtect semaphores."
 
 	| delegate |
 	delegate := serverMap atOop: oop putClient: clientObject.
 	gbsm atST: clientObject putGS: delegate.
 	^delegate
+]
 
 { #category : 'private - cache management' }
 GbsSession >> unprotectedConnectPossiblyExistingClient: clientObject toServer: oop
+[
 	"We don't know if this object existed previously or not, make sure
 	that we do the appropriate checks as we add to the caches.
 	Answer the canonical delegate for oop.
@@ -2745,9 +3164,11 @@ GbsSession >> unprotectedConnectPossiblyExistingClient: clientObject toServer: o
 			[replicatorManager mapReplicatorForClientBehavior: clientObject
 				serverBehavior: delegate].
 	^delegate
+]
 
 { #category : 'private - cache management' }
 GbsSession >> cacheAtST: anObject otherwise: otherwiseObject 
+[
 	"Private.  If anObject has locally cached a GemStone object proxy, or is found in
 	 stObjectCache, and its session is identical to the receiver, return the
 	 associated remoteObject.  Otherwise, return otherwiseObject.  If anObject is
@@ -2759,9 +3180,11 @@ GbsSession >> cacheAtST: anObject otherwise: otherwiseObject
 	^(remoteObject := self cacheAtST: anObject) == nil 
 		ifTrue: [otherwiseObject]
 		ifFalse: [remoteObject]
+]
 
 { #category : 'private - cache management' }
 GbsSession >> userMessageFromFailedConnectors: failedConnectors messages: messages 
+[
 	| msg |
 	msg := String new.
 	1 to: (failedConnectors size min: 10)
@@ -2777,40 +3200,52 @@ GbsSession >> userMessageFromFailedConnectors: failedConnectors messages: messag
 			[msg := msg , (String with: Character cr) , '<...' 
 						, (failedConnectors size - 10) printString , ' more...>'].
 	^msg
+]
 
 { #category : 'private - cache management' }
 GbsSession >> cacheCritical: aBlock 
+[
 	^GBSM clientMap writeCritical: aBlock
+]
 
 { #category : 'private - cache management' }
 GbsSession >> clamp: delegate client: clientObject
+[
 
 	(clientObject zzzisStub not
 		and: [clientObject zzzisForwarder or: [clientObject isBehavior]])
 			ifTrue: [self addClampedObject: clientObject withDelegate: delegate]
+]
 
 { #category : 'configuration information' }
 GbsSession >> clampByCallback
+[
 
 	^configuration clampByCallback
+]
 
 { #category : 'configuration information' }
 GbsSession >> clampByCallback: aBoolean
+[
 
 	aBoolean = self clampByCallback ifTrue: [^self].
 	configuration clampByCallback: aBoolean.
 	self sessionCritical: [replicatorManager changedClampByCallback]
+]
 
 { #category : 'configuration information' }
 GbsSession >> defaultGStoSTLevel
+[
 	"Returns a SmallInteger indicating the default number of levels to replicate when updating an object from GemStone to Smalltalk.  A level of 2 means retrieve the root object and each object it references.  A level of 0 indicates no limit."
 
 	^self isRemote 
 		ifTrue: [configuration faultLevelRpc]
 		ifFalse: [configuration faultLevelLnk]
+]
 
 { #category : 'private - method compilation' }
 GbsSession >> compileInstMethod: aString forClass: gemStoneClass inMethodCategory: category 
+[
 	"Private"
 
 	self 
@@ -2818,9 +3253,11 @@ GbsSession >> compileInstMethod: aString forClass: gemStoneClass inMethodCategor
 		forClass: gemStoneClass
 		inMethodCategory: category
 		symbolList: self oopNil
+]
 
 { #category : 'private - method compilation' }
 GbsSession >> compileClassMethod: aString forClass: gemStoneClass inMethodCategory: category symbolList: symlist 
+[
 	"Private"
 
 	^self 
@@ -2828,9 +3265,11 @@ GbsSession >> compileClassMethod: aString forClass: gemStoneClass inMethodCatego
 		class: gemStoneClass unsynchronizedRemoteClass
 		category: category
 		symbolList: symlist
+]
 
 { #category : 'private - method compilation' }
 GbsSession >> compileClassMethod: aString forClass: gemStoneClass inMethodCategory: category 
+[
 	"Private"
 
 	self 
@@ -2838,9 +3277,11 @@ GbsSession >> compileClassMethod: aString forClass: gemStoneClass inMethodCatego
 		forClass: gemStoneClass
 		inMethodCategory: category
 		symbolList: self oopNil
+]
 
 { #category : 'private - method compilation' }
 GbsSession >> compileMethod: aString class: serverClass category: category symbolList: symlistOrNil
+[
 	"Compile aString as a method in serverClass in the given method category.  If 
 	 serverClass is a metaclass, the method will be a class method.  Use symlistOrNil
 	 as the symbol list during parsing.  If symlistOrNil is oop nil, use the default 
@@ -2865,9 +3306,11 @@ GbsSession >> compileMethod: aString class: serverClass category: category symbo
 			(GbsCompilerError new)
 				errorDescriptor: errorDescriptor asLocalObject;
 				raiseSignal: errorString]
+]
 
 { #category : 'private - method compilation' }
 GbsSession >> checkTransactionContinueCompile
+[
 	"Private. Answer boolean whether the sender should continue code compilation
 	 despite being outside of a transaction."
 
@@ -2876,9 +3319,11 @@ GbsSession >> checkTransactionContinueCompile
 	^self gbsMessenger 
 		confirm: 'Session %1 is not in a transaction.\The results of this compilation will be lost on entering a transaction.\Do you want to proceed with the compilation?'
 		with: self
+]
 
 { #category : 'private - method compilation' }
 GbsSession >> compileInstMethod: aString forClass: serverClass inMethodCategory: category symbolList: symlist 
+[
 	"Private"
 
 	^self 
@@ -2886,15 +3331,19 @@ GbsSession >> compileInstMethod: aString forClass: serverClass inMethodCategory:
 		class: serverClass
 		category: category
 		symbolList: symlist
+]
 
 { #category : 'private - offset caching' }
 GbsSession >> updateServerInstVarNamesForReplicators: replicators
+[
 	"The sender must hold my protect semaphore."
 
 	replicatorManager updateServerInstVarNamesForReplicators: replicators
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedExecuteBlock: sourceString with: arg context: contextDelegate
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
@@ -2903,9 +3352,11 @@ GbsSession >> unsynchronizedExecuteBlock: sourceString with: arg context: contex
 		unsynchronizedExecuteBlock: sourceString
 		withArguments: (Array with: arg)
 		context: contextDelegate
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedEvaluateBlock: sourceString context: contextDelegate 
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
@@ -2914,9 +3365,11 @@ GbsSession >> unsynchronizedEvaluateBlock: sourceString context: contextDelegate
 		unsynchronizedEvaluateBlock: sourceString
 		withArguments: #()
 		context: contextDelegate
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedEvaluateBlockReturnResultBodyAsDelegates: sourceString withArguments: args context: contextDelegate
+[
 
 	| delegates evaluation |
 	self gbsMessenger
@@ -2939,9 +3392,11 @@ GbsSession >> unsynchronizedEvaluateBlockReturnResultBodyAsDelegates: sourceStri
 	delegates := evaluation execute.
 	serverInterface saveFetchedOops: delegates.	"Must add to the export set in multi-trip, or they may get GCed"
 	^delegates
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedExecuteBlock: sourceString withArguments: args context: contextDelegate
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
@@ -2965,9 +3420,11 @@ GbsSession >> unsynchronizedExecuteBlock: sourceString withArguments: args conte
 		replicationScheme: GbxNullReplicationScheme new;
 		stopForBreakpoints: false;
 		execute
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedEvaluateBlock: sourceString with: arg1 with: arg2
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
@@ -2975,38 +3432,48 @@ GbsSession >> unsynchronizedEvaluateBlock: sourceString with: arg1 with: arg2
 	^self
 		unsynchronizedEvaluateBlock: sourceString
 		withArguments: (Array with: arg1 with: arg2)
+]
 
 { #category : 'private - execution' }
 GbsSession >> newMessageSend
+[
 	"Private to GBS."
 
 	^serverInterface newMessageSend
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedExecute: aString 
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
 
 	^self unsynchronizedExecute: aString symbolList: self oopNil
+]
 
 { #category : 'private - execution' }
 GbsSession >> executeBlock: sourceString with: arg1 with: arg2 context: receiverObject
+[
 	"Private to GBS."
 
 	^self
 		executeBlock: sourceString
 		withArguments: (Array with: arg1 with: arg2)
 		context: receiverObject
+]
 
 { #category : 'private - execution' }
 GbsSession >> delegateForUnsynchronizedContext: context
+[
 
 	[context gbxCanBeArgForUnsynchronizedOperationInSession: self] gbxAssert.
 	^context asGSObjectInSession: self
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedExecute: aString symbolList: aSymbolList 
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
@@ -3015,9 +3482,11 @@ GbsSession >> unsynchronizedExecute: aString symbolList: aSymbolList
 		unsynchronizedExecute: aString
 		context: self oopNil
 		symbolList: aSymbolList
+]
 
 { #category : 'private - execution' }
 GbsSession >> executeBlock: sourceString with: arg1 with: arg2 with: arg3 with: arg4 with: arg5 context: receiverObject
+[
 	"Private to GBS."
 
 	^self
@@ -3030,9 +3499,11 @@ GbsSession >> executeBlock: sourceString with: arg1 with: arg2 with: arg3 with: 
 				add: arg5;
 				yourself) asArray
 		context: receiverObject
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedEvaluateBlock: sourceString withArguments: args
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
@@ -3041,18 +3512,22 @@ GbsSession >> unsynchronizedEvaluateBlock: sourceString withArguments: args
 		unsynchronizedEvaluateBlock: sourceString
 		withArguments: args
 		context: self oopIllegal
+]
 
 { #category : 'private - execution' }
 GbsSession >> evaluateBlock: sourceString with: arg1 with: arg2 context: receiverObject 
+[
 	"Private to GBS."
 
 	^self 
 		evaluateBlock: sourceString
 		withArguments: (Array with: arg1 with: arg2)
 		context: receiverObject
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedEvaluate: sourceString context: contextDelegate
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
@@ -3073,9 +3548,11 @@ GbsSession >> unsynchronizedEvaluate: sourceString context: contextDelegate
 		replicationLevel: 0;
 		stopForBreakpoints: false;
 		execute
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedEvaluateBlockReturnResultBodyAsDelegates: sourceString with: arg1 with: arg2 context: contextDelegate
+[
 	"Private to GBS.  Special purpose method for fetch*oops; expects to replicate a result Array to level one and
 	just return an array of delegates for the stubs it contains.
 	Does not synchronize server and client object spaces, so safe
@@ -3086,18 +3563,22 @@ GbsSession >> unsynchronizedEvaluateBlockReturnResultBodyAsDelegates: sourceStri
 		unsynchronizedEvaluateBlockReturnResultBodyAsDelegates: sourceString
 		withArguments: (Array with: arg1 with: arg2)
 		context: contextDelegate
+]
 
 { #category : 'private - execution' }
 GbsSession >> executeBlock: sourceString with: arg context: receiverObject
+[
 	"Private to GBS."
 
 	^self
 		executeBlock: sourceString
 		withArguments: (Array with: arg)
 		context: receiverObject
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedExecuteBlock: sourceString with: arg1 with: arg2 with: arg3 context: contextDelegate
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
@@ -3106,9 +3587,11 @@ GbsSession >> unsynchronizedExecuteBlock: sourceString with: arg1 with: arg2 wit
 		unsynchronizedExecuteBlock: sourceString
 		withArguments: (Array with: arg1 with: arg2 with: arg3)
 		context: contextDelegate
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedEvaluateBlock: sourceString with: anObject context: contextDelegate
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
@@ -3116,9 +3599,11 @@ GbsSession >> unsynchronizedEvaluateBlock: sourceString with: anObject context: 
 	^self unsynchronizedEvaluateBlock: sourceString
 		withArguments: (Array with: anObject)
 		context: contextDelegate
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedEvaluateReturnResultBodyAsDelegates: sourceString context: contextDelegate
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
@@ -3136,18 +3621,22 @@ GbsSession >> unsynchronizedEvaluateReturnResultBodyAsDelegates: sourceString co
 	delegates := evaluation execute.
 	serverInterface saveFetchedOops: delegates.	"Must add to the export set in multi-trip, or they may get GCed"
 	^delegates
+]
 
 { #category : 'private - execution' }
 GbsSession >> executeBlock: sourceString with: arg1 with: arg2 with: arg3 with: arg4 context: receiverObject
+[
 	"Private to GBS."
 
 	^self
 		executeBlock: sourceString
 		withArguments: (Array with: arg1 with: arg2 with: arg3 with: arg4)
 		context: receiverObject
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedEvaluateBlock: sourceString with: arg1 with: arg2 with: arg3
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
@@ -3155,15 +3644,19 @@ GbsSession >> unsynchronizedEvaluateBlock: sourceString with: arg1 with: arg2 wi
 	^self
 		unsynchronizedEvaluateBlock: sourceString
 		withArguments: (Array with: arg1 with: arg2 with: arg3)
+]
 
 { #category : 'private - execution' }
 GbsSession >> newServerTraversal
+[
 	"Private to GBS."
 
 	^serverInterface newServerTraversal
+]
 
 { #category : 'private - execution' }
 GbsSession >> addToNoLongerReplicated: aDelegate
+[
 	"This oop is in the server's pure export set, because the server sent a full report for it.
 	If we do not replicate the object, or turn the replicate into a stub or forwarder, we must 
 	let the server know. The noLongerReplicated list is where we keep the delegates whose 
@@ -3171,9 +3664,11 @@ GbsSession >> addToNoLongerReplicated: aDelegate
 	"Sender must hold my sessionProtect."
 
 	serverInterface addToNoLongerReplicated: aDelegate
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedExecute: sourceString context: contextDelegate symbolList: gsSymbolList
+[
 	"Private.  Bypass the normal <execute:> methods so as to avoid store traversals.
 	For internal GBS use only. Does not obey replicate synchronization semantics.
 	Immune from debugger stepping and asynchronous events."
@@ -3197,9 +3692,11 @@ GbsSession >> unsynchronizedExecute: sourceString context: contextDelegate symbo
 		replicationScheme: GbxNullReplicationScheme new;
 		stopForBreakpoints: false;
 		execute
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedEvaluateBlockReturnResultBodyAsDelegates: sourceString with: arg1 context: contextDelegate
+[
 	"Private to GBS.  Special purpose method for fetching oops; expects to replicate a result Array to level one and
 	just return an array of delegates for the stubs it contains.
 	Does not synchronize server and client object spaces, so safe
@@ -3210,18 +3707,22 @@ GbsSession >> unsynchronizedEvaluateBlockReturnResultBodyAsDelegates: sourceStri
 		unsynchronizedEvaluateBlockReturnResultBodyAsDelegates: sourceString
 		withArguments: (Array with: arg1)
 		context: contextDelegate
+]
 
 { #category : 'private - execution' }
 GbsSession >> evaluateBlock: sourceString with: anObject context: receiverObject 
+[
 	"Private to GBS."
 
 	^self 
 		evaluateBlock: sourceString
 		withArguments: (Array with: anObject)
 		context: receiverObject
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedExecuteBlock: sourceString with: arg1 with: arg2 context: contextDelegate
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
@@ -3230,9 +3731,11 @@ GbsSession >> unsynchronizedExecuteBlock: sourceString with: arg1 with: arg2 con
 		unsynchronizedExecuteBlock: sourceString
 		withArguments: (Array with: arg1 with: arg2)
 		context: contextDelegate
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedEvaluate: sourceString
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
@@ -3246,9 +3749,11 @@ GbsSession >> unsynchronizedEvaluate: sourceString
 		replicationLevel: 0;
 		stopForBreakpoints: false;
 		execute
+]
 
 { #category : 'private - execution' }
 GbsSession >> evaluateBlock: sourceString withArguments: args context: contextObject toLevel: level
+[
 	"Private to GBS. Only works in single-trip, at least for now."
 
 	| evaluation |
@@ -3266,25 +3771,31 @@ GbsSession >> evaluateBlock: sourceString withArguments: args context: contextOb
 		contextDelegate: (contextObject asGSObjectInSession: self);
 		replicationLevel: level;
 		execute
+]
 
 { #category : 'private - execution' }
 GbsSession >> newServerEvaluation
+[
 	"Private to GBS."
 
 	self checkSession.
 	^serverInterface newServerEvaluation
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedEvaluateBlock: sourceString with: anObject 
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
 
 	^self unsynchronizedEvaluateBlock: sourceString
 		withArguments: (Array with: anObject)
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedEvaluateReturnResultBodyAsDelegates: sourceString
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
@@ -3301,18 +3812,22 @@ GbsSession >> unsynchronizedEvaluateReturnResultBodyAsDelegates: sourceString
 	delegates := evaluation execute.
 	serverInterface saveFetchedOops: delegates.	"Must add to the export set in multi-trip, or they may get GCed"
 	^delegates
+]
 
 { #category : 'private - execution' }
 GbsSession >> executeBlock: sourceString with: arg1 with: arg2 with: arg3 context: receiverObject
+[
 	"Private to GBS."
 
 	^self
 		executeBlock: sourceString
 		withArguments: (Array with: arg1 with: arg2 with: arg3)
 		context: receiverObject
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedEvaluateBlock: sourceString with: arg1 with: arg2 context: contextDelegate
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
@@ -3321,18 +3836,22 @@ GbsSession >> unsynchronizedEvaluateBlock: sourceString with: arg1 with: arg2 co
 		unsynchronizedEvaluateBlock: sourceString
 		withArguments: (Array with: arg1 with: arg2)
 		context: contextDelegate
+]
 
 { #category : 'private - execution' }
 GbsSession >> evaluateBlock: sourceString context: receiverObject
+[
 	"Private to GBS."
 
 	^self 
 		evaluateBlock: sourceString
 		withArguments: #()
 		context: receiverObject
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedExecute: aString context: aContext 
+[
 	"Private.  Bypass the normal <execute:> methods so as to avoid store traversals.
 	For internal GBS use only. Does not obey replicate synchronization semantics.
 	Immune from debugger stepping and asynchronous events."
@@ -3341,9 +3860,11 @@ GbsSession >> unsynchronizedExecute: aString context: aContext
 		unsynchronizedExecute: aString
 		context: aContext
 		symbolList: self oopNil
+]
 
 { #category : 'private - execution' }
 GbsSession >> executeBlock: sourceString withArguments: args context: contextDelegate
+[
 	"Private to GBS."
 
 	| evaluation |
@@ -3361,9 +3882,11 @@ GbsSession >> executeBlock: sourceString withArguments: args context: contextDel
 		shouldReplicateResult: false;
 		contextDelegate: (contextDelegate asGSObjectInSession: self);
 		execute
+]
 
 { #category : 'private - execution' }
 GbsSession >> unsynchronizedEvaluateBlock: sourceString withArguments: args context: contextDelegate
+[
 	"Private to GBS.  Does not synchronize server and client object spaces, so safe
 	only in specific internal GBS operations.
 	Immune from debugger stepping and asynchronous events."
@@ -3386,9 +3909,11 @@ GbsSession >> unsynchronizedEvaluateBlock: sourceString withArguments: args cont
 		stopForBreakpoints: false;
 		replicationLevel: 0;
 		execute
+]
 
 { #category : 'private - execution' }
 GbsSession >> evaluateBlock: sourceString withArguments: args context: receiverObject
+[
 	"Private to GBS."
 
 	| evaluation |
@@ -3405,36 +3930,48 @@ GbsSession >> evaluateBlock: sourceString withArguments: args context: receiverO
 		isBlock: true;
 		contextDelegate: (receiverObject asGSObjectInSession: self);
 		execute
+]
 
 { #category : 'accessing' }
 GbsSession >> causeOfDeath
+[
 
 	"The first fatal error a session encounters will save that error
 	 as the likely cause of death for subsequent errors associated
 	 with this session."
 
 	^causeOfDeath
+]
 
 { #category : 'accessing' }
 GbsSession >> clientTimeZone: anObject
+[
 	clientTimeZone := anObject
+]
 
 { #category : 'accessing' }
 GbsSession >> gemSessionId
+[
 
 	^gemSessionId
+]
 
 { #category : 'accessing' }
 GbsSession >> clientTimeZone
+[
 	^clientTimeZone
+]
 
 { #category : 'accessing' }
 GbsSession >> gemSerialNumber
+[
 
 	^gemSerialNumber
+]
 
 { #category : 'accessing' }
 GbsSession >> causeOfDeath: aGbsError
+[
 	"Set the cause of this session's death, so subsequent
 	 errors can identify their likely cause.
 
@@ -3442,38 +3979,52 @@ GbsSession >> causeOfDeath: aGbsError
 	detected error is recorded as the cause of death."
 	
 	causeOfDeath := aGbsError
+]
 
 { #category : 'accessing' }
 GbsSession >> gemProcessId
+[
 
 	^gemProcessId
+]
 
 { #category : 'accessing' }
 GbsSession >> eventDetectorErrorHandler: anObject
+[
 	eventDetectorErrorHandler := anObject
+]
 
 { #category : 'accessing' }
 GbsSession >> logoutTimestamp
+[
 	"Answer the pper bound for the point in time this session could appear in log files"
 
 	^logoutTimestamp
+]
 
 { #category : 'accessing' }
 GbsSession >> configuration
+[
 	^configuration
+]
 
 { #category : 'accessing' }
 GbsSession >> eventDetectorErrorHandler
+[
 	^eventDetectorErrorHandler
+]
 
 { #category : 'accessing' }
 GbsSession >> loginTimestamp
+[
 	"Answer the lower bound for the point in time this session could appear in log files"
 
 	^loginTimestamp
+]
 
 { #category : 'private - event detection' }
 GbsSession >> pollForSignalDeferFatalErrors: deferFatalErrors
+[
 	"Private.  Checks to see if any GemStone-originated events have been signaled, such
 	 as changed object notification, gem-to-gem signals, signaled abort, or lost-OT-root.
 	 If so, a GbsError describing the event will raise a Smalltalk signal.  If a fatal error is
@@ -3490,9 +4041,11 @@ GbsSession >> pollForSignalDeferFatalErrors: deferFatalErrors
 	^resultOrError gbxIsGSError
 		ifTrue: [resultOrError processVerifyArgs: [true]]
 		ifFalse: [resultOrError]
+]
 
 { #category : 'session management' }
 GbsSession >> logout
+[
 	"This logs this session out of GemStone.  The sessionId will be modified to an invalid id.
 	Answers true if logged out, false otherwise."
 
@@ -3509,27 +4062,35 @@ GbsSession >> logout
 		ifTrue: [self gbsMessenger comment: 'Logging out %1.' with: self].
 	self quietLogout.
 	^true
+]
 
 { #category : 'session management' }
 GbsSession >> setClientTimeZoneFromServer
+[
 	"public method for setting client time zone from the server."
 
 	self initializeTimeZoneFromServer
+]
 
 { #category : 'session management' }
 GbsSession >> parameters
+[
 
 	"Returns a GbsSessionParameters, describing the login parameters used for this session"
 	^parameters
+]
 
 { #category : 'session management' }
 GbsSession >> sessionId
+[
 
 	"Return the integer representing the logical GemStone session from the GBC's perspective"
 	^sessionId
+]
 
 { #category : 'session management' }
 GbsSession >> version
+[
 	"Returns a string that provides the version of the Gem, Stone, and repository image for this session."
 
 	| array |
@@ -3538,22 +4099,28 @@ GbsSession >> version
 	^'Gem version: ' , (array at: 1) , '; Stone version: ' , (array at: 2) 
 		, '; Server image version: ' , (array at: 3) 
 		, '.'
+]
 
 { #category : 'private - export set maintenance' }
 GbsSession >> serverMap
+[
 	"Private."
 
 	^serverMap
+]
 
 { #category : 'private - services' }
 GbsSession >> servicesWarning
+[
 
 	^'GBS Services are not installed in this server, or the GBS Services installed do not support this version of GBS.
 Please have your system administrator install GBS services.
 GBS may perform erratically until this is done.'
+]
 
 { #category : 'private - async abort' }
 GbsSession >> autoServiceSigAbort: aBoolean
+[
 
 	self isRemote
 		ifFalse: 
@@ -3563,9 +4130,11 @@ GbsSession >> autoServiceSigAbort: aBoolean
 		evaluateBlock: '[:bool | System configurationAt: #GemAutoServiceSigAbort put: bool]'
 		with: aBoolean
 		context: nil
+]
 
 { #category : 'private - async abort' }
 GbsSession >> processAsyncAbort
+[
 	"Sender must hold sessionProtect."
 
 	| aggregateDirty result |
@@ -3575,9 +4144,11 @@ GbsSession >> processAsyncAbort
 	self traverseAllServerDirtyObjects.
 	result := asyncAbortFinishAction value.
 	(GbxReturnNotification returning: result) raiseSignal
+]
 
 { #category : 'private - async abort' }
 GbsSession >> traverseAllServerDirtyObjects
+[
 	"Could get an async abort notification while fetching dirty after an async abort notification.
 	Keep repeating until complete."
 
@@ -3588,24 +4159,30 @@ GbsSession >> traverseAllServerDirtyObjects
 			on: GbxAsyncAbortNotification
 			do: [:ex | ex return: false]]
 				whileFalse
+]
 
 { #category : 'private - async abort' }
 GbsSession >> traverseServerDirtyObjects
+[
 	"This will prompt the server to traverse to the client any dirty objects that it is holding."
 
 	self oopNil performOnGsServer: #yourself
+]
 
 { #category : 'removing locks' }
 GbsSession >> removeLocksForSession
+[
 
 	"Removes all locks held by this session.  Returns the receiver.
 	This method succeeds even if the session no longer has
 	read authorization for one or more of its locked objects."
 
 	self systemProxy remotePerform: #removeLocksForSession
+]
 
 { #category : 'removing locks' }
 GbsSession >> removeAllFromCommitOrAbortReleaseLocksSet: aCollection
+[
 
 	"Removes all objects in aCollection from a set of locks to be
 	 released at the next successful commit or abort."
@@ -3613,9 +4190,11 @@ GbsSession >> removeAllFromCommitOrAbortReleaseLocksSet: aCollection
 	self systemProxy
 		remotePerform: #removeAllFromCommitOrAbortReleaseLocksSet:
 		with: aCollection
+]
 
 { #category : 'removing locks' }
 GbsSession >> removeLockAll: aCollection
+[
 
 	"Removes all locks held by the current session on the objects in
 	 aCollection.  Returns the receiver.  This method will remove the
@@ -3627,18 +4206,22 @@ GbsSession >> removeLockAll: aCollection
 	self systemProxy
 		remotePerform: #removeLockAll:
 		with: aCollection
+]
 
 { #category : 'removing locks' }
 GbsSession >> addToCommitReleaseLocksSet: anObject
+[
 
 	"Adds anObject to a set of locks to be released at the next successful commit.  If anObject is not locked by the current session, it is not added to the set."
 
 	self systemProxy
 		remotePerform: #addToCommitReleaseLocksSet:
 		with: anObject
+]
 
 { #category : 'removing locks' }
 GbsSession >> removeLock: anObject
+[
 
 	"Removes the lock held by the current session on anObject.
 	Returns the receiver.  This method succeeds even if you do not
@@ -3647,54 +4230,66 @@ GbsSession >> removeLock: anObject
 	self systemProxy
 		remotePerform: #removeLock:
 		with: anObject
+]
 
 { #category : 'removing locks' }
 GbsSession >> addToCommitOrAbortReleaseLocksSet: anObject
+[
 
 	"Adds anObject to a set of locks to be released at the next successful commit or abort.  If anObject is not locked by the current session, it is not added to the set."
 
 	self systemProxy
 		remotePerform: #addToCommitOrAbortReleaseLocksSet:
 		with: anObject
+]
 
 { #category : 'removing locks' }
 GbsSession >> removeFromCommitReleaseLocksSet: anObject
+[
 
 	"Removes anObject from a set of locks to be released at the next successful commit."
 
 	self systemProxy
 		remotePerform: #removeFromCommitReleaseLocksSet:
 		with: anObject
+]
 
 { #category : 'removing locks' }
 GbsSession >> addAllToCommitReleaseLocksSet: aCollection
+[
 
 	"Adds elements of aCollection to a set of locks to be released at the next successful commit.  If any element of aCollection is not locked by the current session it is not added to the set."
 
 	self systemProxy
 		remotePerform: #addAllToCommitReleaseLocksSet:
 		with: aCollection
+]
 
 { #category : 'removing locks' }
 GbsSession >> removeFromCommitOrAbortReleaseLocksSet: anObject
+[
 
 	"Removes anObject from a set of locks to be released at the next successful commit or abort."
 
 	self systemProxy
 		remotePerform: #removeFromCommitOrAbortReleaseLocksSet:
 		with: anObject
+]
 
 { #category : 'removing locks' }
 GbsSession >> addAllToCommitOrAbortReleaseLocksSet: aCollection
+[
 
 	"Adds elements of aCollection to a set of locks to be released at the next successful commit or abort.  If any element of aCollection is not locked by the current session it is not added to the set."
 
 	self systemProxy
 		remotePerform: #addAllToCommitOrAbortReleaseLocksSet:
 		with: aCollection
+]
 
 { #category : 'removing locks' }
 GbsSession >> removeAllFromCommitReleaseLocksSet: aCollection
+[
 
 	"Removes all objects in aCollection from a set of locks to be
 	 released at the next successful commit."
@@ -3702,53 +4297,69 @@ GbsSession >> removeAllFromCommitReleaseLocksSet: aCollection
 	self systemProxy
 		remotePerform: #removeAllFromCommitReleaseLocksSet:
 		with: aCollection
+]
 
 { #category : 'copying' }
 GbsSession >> copy
+[
 
 	"There should only be one instance of this class with a given id"
 	^self
+]
 
 { #category : 'private - server kinds' }
 GbsSession >> oopForOopNumber: oopNumber 
+[
 	^specialConverter oopForOopNumber: oopNumber
+]
 
 { #category : 'private - server kinds' }
 GbsSession >> oopNumberForOop: oop 
+[
 	^specialConverter oopNumberForOop: oop
+]
 
 { #category : 'private - server kinds' }
 GbsSession >> hashForDelegate: aDelegate
+[
 
 	^self sessionCritical: [specialConverter hashForDelegate: aDelegate]
+]
 
 { #category : 'printing' }
 GbsSession >> sessionSummaryOn: aStream
+[
 
 	aStream
 		nextPutAll: self class name;
 		space;
 		nextPutAll: 'Session Protect: '.
 	self sessionProtect semaphoreSummaryOn: aStream
+]
 
 { #category : 'obsolete' }
 GbsSession >> commit
+[
 	"This method is the same as commitTransaction, and may be removed
 	 in a future release."
 
 	GbsConfiguration 
 		deprecated: 'GbsSession>>commit deprecated March, 2006. Send #commitTransaction instead'.
 	^self commitTransaction
+]
 
 { #category : 'obsolete' }
 GbsSession >> abort
+[
 
 	"This is the same as abortTransaction, and may be removed in a future release."
 
 	^self abortTransaction
+]
 
 { #category : 'private - traversal' }
 GbsSession >> lookupOop: anOop
+[
 	"Private.  Given the GemStone oop, return the client object.  If oop is not found, answer 
 	NotCachedToken."
 	"Sender must hold my session's sessionProtect."
@@ -3759,20 +4370,26 @@ GbsSession >> lookupOop: anOop
 	clientObj == notCachedToken
 		ifTrue: [clientObj := serverMap clientAtOop: anOop].
 	^clientObj
+]
 
 { #category : 'private - store traversal' }
 GbsSession >> storeTraversalBuffer: aBuffer
+[
 	"Private"
 
 	self storeTraversalBuffer: aBuffer flags: self serverInterface storeTravFlags
+]
 
 { #category : 'private - store traversal' }
 GbsSession >> storingObjectInTraversal
+[
 
 	"Do nothing.  Reimplemented in subclass for statistics"
+]
 
 { #category : 'private - store traversal' }
 GbsSession >> flushDirtyPoolTo: aStoreTraversal
+[
 	"Pack each dirty object in the top dirty pool. If there are more objects dirtied as
 	 a side effect of processing while this level is the top, they will also be packed, since
 	each level of the dirtp pool is a queue.
@@ -3781,9 +4398,11 @@ GbsSession >> flushDirtyPoolTo: aStoreTraversal
 	The sender must hold my sessionProtect."
 
 	dirtyPool packTopIn: aStoreTraversal
+]
 
 { #category : 'private - store traversal' }
 GbsSession >> storeTraversalBuffer: aBuffer flags: anInteger
+[
 	"Private"
 
 	| nilOrError |
@@ -3804,9 +4423,11 @@ GbsSession >> storeTraversalBuffer: aBuffer flags: anInteger
 		statusTag: nil
 		message: '(s%1) completed GbsSession>>storeTraversalBuffer:flags:'
 		with: self sessionId
+]
 
 { #category : 'setting locks' }
 GbsSession >> readLock: anObject ifDenied: denyBlock ifChanged: changeBlock
+[
 
 	"Requests a read lock on anObject.  If the lock is granted, this
 	method returns the receiver.
@@ -3832,9 +4453,11 @@ GbsSession >> readLock: anObject ifDenied: denyBlock ifChanged: changeBlock
 		result = #changed ifTrue: [ ^changeBlock value ].
 		^self gbsMessenger error: 'Unexpected result from read lock request' ].
 	^self
+]
 
 { #category : 'setting locks' }
 GbsSession >> writeLockAll: aCollection
+[
 
 	"Requests a write lock on each object in aCollection.
 	Returns the receiver if all of the locks are granted.
@@ -3845,9 +4468,11 @@ GbsSession >> writeLockAll: aCollection
 	self systemProxy
 		remotePerform: #writeLockAll:
 		with: aCollection
+]
 
 { #category : 'setting locks' }
 GbsSession >> readLock:  anObject
+[
 
 	"Requests a read lock on anObject.  If the lock is granted, this
 	method returns the receiver.
@@ -3865,9 +4490,11 @@ GbsSession >> readLock:  anObject
 
 	(self systemProxy
 		remotePerform: #readLock: with: anObject)
+]
 
 { #category : 'setting locks' }
 GbsSession >> writeLock: anObject ifDenied: denyBlock ifChanged: changeBlock
+[
 
 	"Requests a write lock on anObject.  If the lock is granted, this
 	method returns the receiver.
@@ -3889,9 +4516,11 @@ GbsSession >> writeLock: anObject ifDenied: denyBlock ifChanged: changeBlock
 		result = #changed ifTrue: [ ^changeBlock value ].
 		^self gbsMessenger error: 'Unexpected result from write lock request' ].
 	^self
+]
 
 { #category : 'setting locks' }
 GbsSession >> writeLock: anObject
+[
 
 	"Requests a write lock on anObject.  If the lock is granted, this
 	method returns the receiver.
@@ -3902,9 +4531,11 @@ GbsSession >> writeLock: anObject
 	self systemProxy
 		remotePerform: #writeLock:
 		with: anObject
+]
 
 { #category : 'setting locks' }
 GbsSession >> readLockAll: aCollection ifIncomplete: incompleteBlock
+[
 
 	"Requests a read lock on each object in aCollection.
 	Returns the receiver if all of the locks are granted.
@@ -3947,9 +4578,11 @@ GbsSession >> readLockAll: aCollection ifIncomplete: incompleteBlock
 				ifTrue: [ result := self ]
 				ifFalse: [ result := result asLocalObject ].
 			^result ]
+]
 
 { #category : 'setting locks' }
 GbsSession >> readLockAll: aCollection
+[
 
 	"Requests a read lock on each object in aCollection.
 	Returns the receiver if all of the locks are granted.
@@ -3965,9 +4598,11 @@ GbsSession >> readLockAll: aCollection
 
 	(self systemProxy
 		remotePerform: #readLockAll: with: aCollection)
+]
 
 { #category : 'setting locks' }
 GbsSession >> writeLockAll: aCollection ifIncomplete: incompleteBlock
+[
 
 	"Requests a write lock on each object in aCollection.
 	Returns the receiver if all of the locks are granted.
@@ -4004,9 +4639,11 @@ GbsSession >> writeLockAll: aCollection ifIncomplete: incompleteBlock
 				ifTrue: [ result := self ]
 				ifFalse: [ result := result asLocalObject ].
 			^result ]
+]
 
 { #category : 'private - notification' }
 GbsSession >> interSessionSignalCreationString
+[
 	"Source code for a block that creates and answers an intersession signal object given the session serial number, the signal number, and the message string as arguments.
 	In older servers, there is no accessor for the session serial number, so we have to use the awful instVarAt:put: hack. See bug 30958."
 	"^GbxServerVersion current is64v3
@@ -4021,9 +4658,11 @@ GbsSession >> interSessionSignalCreationString
 	^'[:serNum :sigNum :message | | sig | sig := GsInterSessionSignal signal: sigNum message: message.
   sig instVarAt: 1 put: serNum.
   sig]'
+]
 
 { #category : 'private - notification' }
 GbsSession >> interSessionSignalPollString
+[
 	"Source code that answers an intersession signal object or nil if there are no more signals to receive right now.
 	 The server method #signalFromSession is deprecated. If Deprecated is signalled, GbxEventDetector>>#pollForCurrentSignals
 	 will catch it and resume. When this method is modified to stop using a deprecated method, the Event Detector should stop
@@ -4036,9 +4675,11 @@ GbsSession >> interSessionSignalPollString
 
 	"GBS does not have a non-deprecated implementation yet."
 	^'GsCurrentSession currentSession signalFromSession'
+]
 
 { #category : 'private - class redefinition' }
 GbsSession >> recompileWithSubclassesFrom: oldClass to: newClass failedMethods: failedMethods symbolList: symList
+[
 	"Private."
 
 	| rfailed subclasses removedVars newSubclass sel src newMeta cls |
@@ -4121,9 +4762,11 @@ GbsSession >> recompileWithSubclassesFrom: oldClass to: newClass failedMethods: 
 						to: newSubclass
 						failedMethods: failedMethods
 						symbolList: symList]]
+]
 
 { #category : 'private - class redefinition' }
 GbsSession >> reportFailedMethodRecompiles: failedMethods
+[
 	"If the GbsTools are loaded, we can open a browser to edit/view the method(s).
 	 Otherwise, we can only notify that the compile error(s) occurred and let the user/developer deal with it."
 
@@ -4162,9 +4805,11 @@ GbsSession >> reportFailedMethodRecompiles: failedMethods
 					with: summaryReport contents;
 				comment: 'Compiler error(s) occurred:\%1'
 					with: fullReport contents]
+]
 
 { #category : 'private - class redefinition' }
 GbsSession >> migrateInstancesWithSubclassesOf: topClass
+[
 
 	"Private.  GBS.  This would be much more elegant as a GemStone method."
 	self execute: '
@@ -4192,9 +4837,11 @@ GbsSession >> migrateInstancesWithSubclassesOf: topClass
 			migrateInstances: (instances at: i)
 			to: (targetClasses at: i) ]'
 	context: ((Array with: topClass with: self gsClassOrganizer) putInGSSession: self)
+]
 
 { #category : 'private - class redefinition' }
 GbsSession >> versionedOldClass: oldClass withNewClass: newClass
+[
 	"Private.  Iterate over the old class and all its subclasses to recompile"
 
 	| failedMethods |
@@ -4211,9 +4858,11 @@ GbsSession >> versionedOldClass: oldClass withNewClass: newClass
 					failedMethods: failedMethods
 					symbolList: self symbolListProxy.
 				self reportFailedMethodRecompiles: failedMethods]
+]
 
 { #category : 'threading' }
 GbsSession >> critical: aBlock 
+[
 	"Evaluate aBlock, not allowing any other client Smalltalk Process 
 	to interact with this session until the block completes."
 
@@ -4221,23 +4870,29 @@ GbsSession >> critical: aBlock
 			[GbsConfiguration current alwaysUseGemCursor 
 				ifTrue: [gbsm showBusyWhile: aBlock]
 				ifFalse: [aBlock value]]
+]
 
 { #category : 'private - object creation' }
 GbsSession >> newObjects: classArray withIdxSizes: sizeArray 
+[
 	"Private.  Returns an array of GbsObjects in this session.  The size of the resulting array is the same size as classArray and sizeArray.  The nth element of the result will be a GbsObject for a new instance of class classArray[n], with an indexable size of sizeArray[n]."
 
 	self gbsMessenger 
 		error: '#newObjects:withIdxSizes: is not supported in this version of GBS.'
+]
 
 { #category : 'private - object creation' }
 GbsSession >> newObjectOfClass: classDelegate 
+[
 	"Private.  Returns a proxy for a new GemStone object of the given class in the receiver session."
 
 	self gbxFixMe.	"This method should be removed after all senders of it are gone."
 	^self unsynchronizedExecute: 'self _basicNew' context: classDelegate
+]
 
 { #category : 'private - processor balancing' }
 GbsSession >> processorSchedulerBalanceClient: clientDelay gemStone: gsDelay 
+[
 	"Private.  Create a client process to balance processing time between
 	 client and GemStone processes.  When this method is called with
 	 positive integer values, GemBuilder will fork a client process which
@@ -4296,9 +4951,11 @@ GbsSession >> processorSchedulerBalanceClient: clientDelay gemStone: gsDelay
 					newProcess.
 	procBalancer priority: configuration eventPriority.
 	procBalancer resume
+]
 
 { #category : 'private - processor balancing' }
 GbsSession >> yieldToGemStoneForMilliseconds: duration 
+[
 	"Private.  Yield control to the GemStone ProcessorScheduler"
 
 	"Do the wait at the highest priority, to prevent a higher priority
@@ -4307,15 +4964,19 @@ GbsSession >> yieldToGemStoneForMilliseconds: duration
 
 	self execute: 'Delay _highPriorityWaitForMilliseconds: self'
 		context: duration
+]
 
 { #category : 'private - processor balancing' }
 GbsSession >> stopProcessBalancer
+[
 	"Private"
 
 	procBalancer := nil
+]
 
 { #category : 'named objects' }
 GbsSession >> resolveSymbolObj: aGemStoneObject 
+[
 	"Lookup aGemStoneObject (a Smalltalk string) in the GemStone session's default symbol list.  Raise a GBS error if not found."
 
 	GbsConfiguration 
@@ -4326,9 +4987,11 @@ GbsSession >> resolveSymbolObj: aGemStoneObject
 		ifAbsent: 
 			[self gbsMessenger error: 'No GemStone object named %1'
 				with: aGemStoneObject asLocalObject]
+]
 
 { #category : 'named objects' }
 GbsSession >> resolveSymbolObj: aGemStoneObject ifAbsent: aBlock 
+[
 	"Lookup aGemStoneObject (a GemStone string) in the GemStone session's default symbol list.  If it isn't found, execute zero-argument block aBlock."
 
 	GbsConfiguration 
@@ -4337,9 +5000,11 @@ GbsSession >> resolveSymbolObj: aGemStoneObject ifAbsent: aBlock
 		resolveSymbolObj: aGemStoneObject
 		symbolList: self oopNil
 		ifAbsent: aBlock
+]
 
 { #category : 'named objects' }
 GbsSession >> at: aSymbol put: stObject inDictionaryNamed: dictName
+[
 
 	"Stores the GemStone replicate of stObject in the GemStone symbol dictionary named dictName.  The GemStone/Smalltalk object relationship will be registered with the GBS transparency mechanism (if it isn't already registered)."
 
@@ -4366,23 +5031,29 @@ GbsSession >> at: aSymbol put: stObject inDictionaryNamed: dictName
 		with: stObject
 		with: dictName.
 	^stObject
+]
 
 { #category : 'named objects' }
 GbsSession >> fwat: aSymbol
+[
 
 	"Like at:, except the return value is a forwarder."
 
 	^self fwat: aSymbol ifAbsent: [ self gbsMessenger error: 'No GemStone object is named %1' with: aSymbol ]
+]
 
 { #category : 'named objects' }
 GbsSession >> objectNamed: aString
+[
 
 	"This method is to preserve the old protocol.  The new resolveSymbol methods are much faster than the GBS 2.0 objectNamed methods."
 
 	^self resolveSymbol: aString
+]
 
 { #category : 'named objects' }
 GbsSession >> resolveSymbolObj: aGSObject symbolList: gsSymbolList 
+[
 	"Lookup aGSObject (a GemStone string) in the GemStone symbol list gsSymbolList (a GemStoneObject).  If it isn't found, a GBS error is raised."
 
 	GbsConfiguration 
@@ -4392,9 +5063,11 @@ GbsSession >> resolveSymbolObj: aGSObject symbolList: gsSymbolList
 		symbolList: gsSymbolList
 		ifAbsent: 
 			[self gbsMessenger error: 'No GemStone object named %1' with: aGSObject]
+]
 
 { #category : 'named objects' }
 GbsSession >> fwat: aSymbol ifAbsent: aBlock
+[
 	"Like at:ifAbsent:, except the return value is a forwarder"
 
 	| result |
@@ -4418,23 +5091,29 @@ GbsSession >> fwat: aSymbol ifAbsent: aBlock
 		with: self sessionId
 		with: result.
 	^result
+]
 
 { #category : 'named objects' }
 GbsSession >> objectNamed: aString ifAbsent: aBlock
+[
 
 	"This method is to preserve the old protocol.  The new resolveSymbol methods are much faster than the GBS 2.0 objectNamed methods."
 
 	^self resolveSymbol: aString ifAbsent: aBlock
+]
 
 { #category : 'named objects' }
 GbsSession >> add: anAssociation
+[
 
 	"Stores the GemStone replicate of anAssociation in the GemStone 'UserGlobals' dictionary.  The GemStone/Smalltalk object relationship will be registered with the GBS transparency mechanism (if it isn't already registered)."
 
 	^self at: anAssociation key put: anAssociation value
+]
 
 { #category : 'named objects' }
 GbsSession >> resolveSymbolObj: stringDelegate symbolList: gsSymbolList ifAbsent: aBlock 
+[
 	"Lookup aGSObject (a delegate for a server string) in the server symbol list gsSymbolList (a delegate).  If it isn't found, execute zero-argument block aBlock."
 
 	GbsConfiguration 
@@ -4443,9 +5122,11 @@ GbsSession >> resolveSymbolObj: stringDelegate symbolList: gsSymbolList ifAbsent
 		resolveSymbol: stringDelegate
 		symbolList: gsSymbolList
 		ifAbsent: aBlock
+]
 
 { #category : 'named objects' }
 GbsSession >> removeKey: aSymbol ifAbsent: aBlock inDictionaryNamed: dictName
+[
 	"Removes the given key from the GemStone symbol dictionary named dictName.  Returns the Smalltalk replicate of the value that existed at the given key.  If the key doesn't exist, return aBlock value."
 
 	| dict |
@@ -4453,9 +5134,11 @@ GbsSession >> removeKey: aSymbol ifAbsent: aBlock inDictionaryNamed: dictName
 	dict isNil ifTrue: [^aBlock value].
 	^[dict performOnGsServer: #removeKey: withArguments: (Array with: aSymbol)] on: (GbsError signalFor: #rtErrKeyNotFound)
 		do: [:ex | ex return: aBlock value]
+]
 
 { #category : 'named objects' }
 GbsSession >> at: aSymbol ifAbsent: aBlock 
+[
 	"Resolves aSymbol within this session's GemStone symbol list, and returns the Smalltalk replicate for that GemStone object.  The GemStone/Smalltalk object relationship will be registered with the GBS transparency mechanism."
 
 	| result |
@@ -4480,25 +5163,31 @@ GbsSession >> at: aSymbol ifAbsent: aBlock
 		with: aBlock
 		with: result.
 	^result
+]
 
 { #category : 'named objects' }
 GbsSession >> removeKey: aSymbol ifAbsent: aBlock
+[
 
 	"Removes the given key from UserGlobals.  Returns the Smalltalk replicate of the value that existed at the given key.  If the key doesn't exist, return aBlock value."
 
 	^self removeKey: aSymbol ifAbsent: aBlock inDictionaryNamed: #UserGlobals
+]
 
 { #category : 'named objects' }
 GbsSession >> removeKey: aSymbol inDictionaryNamed: dictName
+[
 	"Removes the given key from the GemStone symbol dictionary named dictName.  Returns the Smalltalk replicate of the value that existed at the given key."
 
 	| dict |
 	dict := self resolveSymbol: dictName
 				ifAbsent: [^self gbsMessenger error: 'There is no dictionary named %1 in your GemStone symbol list' with: dictName].
 	^dict performOnGsServer: #removeKey: withArguments: (Array with: aSymbol)
+]
 
 { #category : 'named objects' }
 GbsSession >> resolveSymbol: aString 
+[
 	"Lookup aString (a Smalltalk string) in the GemStone session's default symbol list.  Raise a GBS error if not found."
 
 	^self 
@@ -4506,46 +5195,58 @@ GbsSession >> resolveSymbol: aString
 		symbolList: self oopNil
 		ifAbsent: 
 			[self gbsMessenger error: 'No GemStone object named %1' with: aString]
+]
 
 { #category : 'named objects' }
 GbsSession >> at: aSymbol
+[
 
 	"Resolves aSymbol within this session's GemStone symbol list, and returns the Smalltalk replicate for that GemStone object.  The GemStone/Smalltalk object relationship will be registered with the GBS transparency mechanism."
 
 	^self at: aSymbol ifAbsent: [ self gbsMessenger error: 'No GemStone object named %1' with: aSymbol ]
+]
 
 { #category : 'named objects' }
 GbsSession >> at: aSymbol put: stObject
+[
 
 	"Stores the GemStone replicate of stObject in the GemStone 'UserGlobals' dictionary.  The GemStone/Smalltalk object relationship will be registered with the GBS transparency mechanism (if it isn't already registered)."
 
 	^self at: aSymbol put: stObject inDictionaryNamed: #UserGlobals
+]
 
 { #category : 'named objects' }
 GbsSession >> removeKey: aSymbol
+[
 
 	"Removes the given key from the GemStone symbol dictionary named dictName.  Returns the Smalltalk replicate of the value that existed at the given key."
 
 	^self removeKey: aSymbol inDictionaryNamed: #UserGlobals
+]
 
 { #category : 'named objects' }
 GbsSession >> includesKey: aSymbol
+[
 
 	"Return true if aSymbol is in this GemStone session's name space"
 
 	^(self resolveSymbol: aSymbol ifAbsent: [ nil ]) notNil
+]
 
 { #category : 'named objects' }
 GbsSession >> resolveSymbol: aString ifAbsent: aBlock 
+[
 	"Lookup aString (a Smalltalk string) in the GemStone session's default symbol list.  If it isn't found, execute zero-argument block aBlock."
 
 	^self 
 		resolveSymbol: aString
 		symbolList: self oopNil
 		ifAbsent: aBlock
+]
 
 { #category : 'named objects' }
 GbsSession >> resolveSymbol: aString symbolList: gsSymbolList
+[
 
 	"Lookup aString (a Smalltalk string) in the GemStone symbol list gsSymbolList (a GemStoneObject).  If it isn't found, a GBS error is raised."
 
@@ -4553,9 +5254,11 @@ GbsSession >> resolveSymbol: aString symbolList: gsSymbolList
 		resolveSymbol: aString
 		symbolList: gsSymbolList
 		ifAbsent: [ self gbsMessenger error: 'No GemStone object named %1' with: aString ]
+]
 
 { #category : 'named objects' }
 GbsSession >> resolveSymbol: aString symbolList: gsSymbolList ifAbsent: aBlock
+[
 	"Lookup aString (a Smalltalk string) in the GemStone symbol list gsSymbolList (a GemStoneObject).
 	 If it isn't found, execute zero-argument block aBlock."
 
@@ -4580,9 +5283,11 @@ GbsSession >> resolveSymbol: aString symbolList: gsSymbolList ifAbsent: aBlock
 				with: token
 				context: gsSymbolList.
 	^result == token ifTrue: [aBlock value] ifFalse: [result]
+]
 
 { #category : 'transaction control' }
 GbsSession >> continueTransaction
+[
 	"Tells the  GemStone session to perform the System>>continueTransaction method.  See the description of System>>continueTransaction in the GemStone documentation.  Answer whether a commit done instead would have been successful."
 
 	| couldCommit |
@@ -4605,9 +5310,11 @@ GbsSession >> continueTransaction
 		with: self sessionId
 		with: couldCommit.
 	^couldCommit
+]
 
 { #category : 'transaction control' }
 GbsSession >> disableSignaledAbortError
+[
 
 	"Turn off generation of #rtErrSignalAbort (which signals that the gem process should abort to connect to a more current repository root).  Ignore the error if it is generated as we turn it off."
 	"GBSM currentSession disableSignaledAbortError"
@@ -4615,35 +5322,43 @@ GbsSession >> disableSignaledAbortError
 	[ self systemProxy unsynchronizedPerform: #disableSignaledAbortError ]
 		on: (GbsError signalFor: #rtErrSignalAbort)
 		do: [ :ex | ex return ]
+]
 
 { #category : 'transaction control' }
 GbsSession >> enableSignaledAbortError
+[
 	"Turn on generation of #rtErrSignalAbort, which, when generated, is a suggestion that the session should abort to connect to a more current repository root.  When this signal occurs, it is disabled."
 
 	"GBSM currentSession enableSignaledAbortError"
 
 	self sessionCritical: 
 			[self systemProxy unsynchronizedPerform: #enableSignaledAbortError]
+]
 
 { #category : 'transaction control' }
 GbsSession >> inTransaction
+[
 	"Returns true if the receiver is in inside a transaction.  If false, a transaction must be explicitly started with beginTransaction before commit will be permitted."
 
 	^self sessionCritical: 
 			[self isLoggedIn 
 				and: [(self systemProxy unsynchronizedPerform: #inTransaction) asLocalObject]]
+]
 
 { #category : 'transaction control' }
 GbsSession >> needsCommit
+[
 	"Return true if this session's current transaction might have made changes
 	 to the repository.  Return false if it is known that no changes have been made
 	 (ie, so far this is a read-only transaction)."
 
 	dirtyPool size > 0 ifTrue: [^true].
 	^self systemProxy performOnGsServer: #needsCommit
+]
 
 { #category : 'transaction control' }
 GbsSession >> beginTransaction
+[
 
 	"Starts a new transaction for the session.  If the session is already in a transaction,
 	 aborts the transaction and then starts a new transaction for the session.  If any
@@ -4670,9 +5385,11 @@ GbsSession >> beginTransaction
 		with: self sessionId.
 
 	self changed: #beganTransaction.
+]
 
 { #category : 'transaction control' }
 GbsSession >> signaledAbortAction: aBlock 
+[
 	"When #rtErrSignalAbort occurs, evaluate aBlock.  This should be a zero-argument block.
 	 If notification occurs during GemStone execution, continue that execution.  If aBlock is
 	 nil, previously installed signaledAbortAction will be deinstalled."
@@ -4702,9 +5419,11 @@ GbsSession >> signaledAbortAction: aBlock
 		raiseException: false.
 	self enableSignaledAbortError.
 	self startEventDetection
+]
 
 { #category : 'transaction control' }
 GbsSession >> transactionConflicts
+[
 	"Returns a symbol dictionary in which the keys are:
 		Read-Write			ReadSet and WriteSetUnion conflicts.
 		Write-Read			WriteSet and ReadSetUnion conflicts.
@@ -4722,9 +5441,11 @@ GbsSession >> transactionConflicts
 	commit and therefore may be examined until the next commit."
 
 	^self systemProxy performOnGsServer: #transactionConflicts
+]
 
 { #category : 'transaction control' }
 GbsSession >> hasConflicts
+[
 
 "Determines, given my present state, if any concurrency
  conflicts exist that would cause a subsequent commit operation to fail.
@@ -4752,16 +5473,20 @@ GbsSession >> hasConflicts
 
 
 	^ self gsCurrentSession hasConflicts.
+]
 
 { #category : 'transaction control' }
 GbsSession >> transactionMode
+[
 	"Returns the current state of the transaction mode for the session, either
 	 #autoBegin or #manualBegin.  The default for transactionMode is #autoBegin."
 
 	^self unsynchronizedEvaluate: 'System transactionMode'
+]
 
 { #category : 'transaction control' }
 GbsSession >> transactionMode: newMode 
+[
 	"Sets a newMode for the transaction mode and exits the previous mode by performing an abort.  Valid arguments are #autoBegin and #manualBegin.  When the receiver is in the #autoBegin transaction mode, aborts and commits automatically begin a new transaction.  Returns the receiver."
 
 	self gbsMessenger 
@@ -4782,9 +5507,11 @@ GbsSession >> transactionMode: newMode
 		message: '(s%1) completed GSSession>>transactionMode:'
 		with: self sessionId.
 	gbsm changed: #transactionMode with: self
+]
 
 { #category : 'transaction control' }
 GbsSession >> asyncAbortStartAction: startBlock finishAction: finishBlock
+[
 	"Use of this feature requires consulting, since it requires coordinated 
 	use of other consulting-only features such as custom replicators.
 	
@@ -4823,17 +5550,21 @@ GbsSession >> asyncAbortStartAction: startBlock finishAction: finishBlock
 			["Disable async abort *first* since this action might itself detect an async abort."
 			self autoServiceSigAbort: false.
 			self resetAsyncAbortActions]
+]
 
 { #category : 'transaction control' }
 GbsSession >> commitAndReleaseLocks
+[
 	"Attempts to commit the transaction for the receiver session.
 	If the commit succeeds, releases all locks for the session and
 	returns true.  Otherwise, returns false and does not release locks."
 
 	^self systemProxy performOnGsServer: #commitAndReleaseLocks
+]
 
 { #category : 'transaction control' }
 GbsSession >> commitTransaction
+[
 	"Attempt to commit the GemStone transaction for this session.  If the commit
 	 succeeds and the transaction mode is #autoBegin, a new transaction is
 	 started.  If #manualBegin, a new transaction is not started after a successful
@@ -4860,9 +5591,11 @@ GbsSession >> commitTransaction
 		with: self sessionId
 		with: committed.
 	^committed
+]
 
 { #category : 'private - event handling' }
 GbsSession >> onEventSignal: signal handle: handler raiseException: raiseException 
+[
 	"When the signal occurs, handler (a one or two argument block) will be evaluated
 	 with an instance of GbsError as the first argument, and the session that received the
 	 error as the optional second argument.  The boolean raiseException indicates whether
@@ -4883,26 +5616,32 @@ GbsSession >> onEventSignal: signal handle: handler raiseException: raiseExcepti
 			raiseException
 				ifTrue: [gsErr raiseException]
 				ifFalse: [result]]
+]
 
 { #category : 'private - event handling' }
 GbsSession >> startEventDetection
+[
 	"Private.  After this method is called, GemStone-generated events occurring in 
 	this session will be detected by the Smalltalk client (ex: changed object 
 	notification, gem-to-gem notifiers, signaled abort)."
 
 	self sessionCritical: [serverInterface startEventDetection]
+]
 
 { #category : 'private - event handling' }
 GbsSession >> handleClientForwarders
+[
 	"Private.  GBSM currentSession handleClientForwarders"
 
 	self 
 		onEventSignal: (GbsError signalFor: #clientForwarderSend)
 		handle: [:gsErr :sess | sess doClientForwarderSend: gsErr]
 		raiseException: false
+]
 
 { #category : 'private - event handling' }
 GbsSession >> doClientForwarderSend: gsErr
+[
 	"Perform the requested client forwarder send specified by
 	 gsErr.  Poke the result into gsResult into gsErr and return
 	 that result."
@@ -4934,17 +5673,21 @@ GbsSession >> doClientForwarderSend: gsErr
 		message: '(s%1) completed GbsSession>>doClientForwarderSend'
 		with: self sessionId.
 	^gsErr
+]
 
 { #category : 'private - event handling' }
 GbsSession >> stopNbWaitSocket
+[
 	"Private. It's OK to send this even if we aren't using socket waits, or the socket is already stopped."
 
 	| cif |
 	cif := serverInterface.	"cInterface could become nil at any moment, hence the temp var."
 	cif notNil ifTrue: [cif stopNbWaitSocket]
+]
 
 { #category : 'private - event handling' }
 GbsSession >> initializeEventHandlers
+[
 	"Private.  Event handlers will get processed before GemBuilder raises
 	 an exception for that event."
 
@@ -4970,9 +5713,11 @@ GbsSession >> initializeEventHandlers
 				[:gsErr :sess | "Nothing to do after 3.3"]
 			raiseException: true;
 		handleClientForwarders
+]
 
 { #category : 'private - event handling' }
 GbsSession >> stopEventDetection
+[
 	"Private. It's OK to send this even if event detection is already stopped.
 	Session could be already logged out, or logging out."
 
@@ -4980,9 +5725,11 @@ GbsSession >> stopEventDetection
 	sif := serverInterface.	"serverInterface could become nil at any moment, hence the temp var."
 	sif notNil
 		ifTrue: [self sessionCriticalNoSessionCheck: [sif stopEventDetection]]
+]
 
 { #category : 'private - event handling' }
 GbsSession >> processEventHandlerFor: aGbsError 
+[
 	"Private.  If there's an event block for aGbsError, evaluate it."
 
 	| handler match |
@@ -5000,9 +5747,11 @@ GbsSession >> processEventHandlerFor: aGbsError
 		with: aGbsError messageText.
 	handler := eventHandlers at: match.
 	^handler value: aGbsError value: self
+]
 
 { #category : 'lock status' }
 GbsSession >> systemLocks
+[
 	"Returns a Dictionary describing all objects that are currently
 	 locked.  For each Association in the result Dictionary, the key
 	 is a SmallInteger (the session number of a GemStone session that
@@ -5020,27 +5769,33 @@ GbsSession >> systemLocks
 	 are not returned."
 
 	^self systemProxy performOnGsServer: #systemLocks
+]
 
 { #category : 'lock status' }
 GbsSession >> lockKind: anObject
+[
 	"Returns a Symbol (#none, #deferredUnlock, #read, #write, or #exclusive)
 	representing the kind of lock held on anObject by any session in the system."
 
 	^self systemProxy
 		performOnGsServer: #lockKind:
 		withArguments: (Array with: anObject)
+]
 
 { #category : 'lock status' }
 GbsSession >> lockOwners: anObject
+[
 	"Returns an Array of session numbers (SmallIntegers) representing
 	the sessions that hold a lock on anObject.  If the object is not
 	locked by any session, the result Array is empty.  Note that
 	a write or exclusive lock can have only one owner."
 
 	^self systemProxy performOnGsServer: #lockOwners: withArguments: (Array with: anObject)
+]
 
 { #category : 'lock status' }
 GbsSession >> sessionLocks
+[
 	"Returns a three-element Array describing the locks held by the
 	 current session.  The first element is an Array of all read-locked
 	 objects, the second is an Array of all write-locked objects, and
@@ -5050,9 +5805,11 @@ GbsSession >> sessionLocks
 	 locks at all, all three of these Arrays are empty."
 
 	^self systemProxy performOnGsServer: #sessionLocks
+]
 
 { #category : 'private - class translation' }
 GbsSession >> doVarsForGS: gsClass match: stClass type: varTypeMessage
+[
 	"given a server class and a client class, compare the variable names"
 	
 	| ws |
@@ -5073,9 +5830,11 @@ GbsSession >> doVarsForGS: gsClass match: stClass type: varTypeMessage
 			'self ' , varTypeMessage , ' asSet = ' , ws contents
 		context: gsClass) ifFalse: [^false].
 	^true
+]
 
 { #category : 'private - class translation' }
 GbsSession >> doesClientClass: clientClass matchServerClass: serverClassDel
+[
 	"Returns true if the given Smalltalk class matches the given GemStone class in
 	 implementation structure, or if the Smalltalk class appears to have compensated for any
 	 differences by implementing replication support methods."
@@ -5087,9 +5846,11 @@ GbsSession >> doesClientClass: clientClass matchServerClass: serverClassDel
 	^self gbsMessenger
 		confirm: 'GemStone class and Smalltalk class named %1 don''t have the same structure--relate them anyway?'
 		with: clientClass
+]
 
 { #category : 'private - class translation' }
 GbsSession >> lowestConnectedSuperclassesForSt: stClass gs: gsClass ifNone: noneBlock 
+[
 	"Private.  Returns an association whose key is a Smalltalk class and value is a GbsObject representing a GemStone class, such that a connection exists between those two classes, and it is first (lowest) connection found in tracing up their superclass hierarchy.  If both classes inherit from Object, and no other connection exists, then Object->OObject will be returned.  If either class doesn't inherit from Object and no other connection is found, noneBlock will be evaluated."
 
 	| lowestCommonStSuper connectedStSuper |
@@ -5104,9 +5865,11 @@ GbsSession >> lowestConnectedSuperclassesForSt: stClass gs: gsClass ifNone: none
 	^lowestCommonStSuper isNil 
 		ifTrue: [noneBlock value]
 		ifFalse: [Association key: lowestCommonStSuper value: connectedStSuper]
+]
 
 { #category : 'private - class translation' }
 GbsSession >> mapClientBehavior: clientBehavior toServer: behaviorDelegate
+[
 	"Map the given client class or metaclass to the given delegate. 
 	The sender must ensure that this mapping is not already made, 
 	and that the clientBehavior is not mapped to any server object.
@@ -5143,9 +5906,11 @@ GbsSession >> mapClientBehavior: clientBehavior toServer: behaviorDelegate
 						comment: '%1 has mapped GemStone and Smalltalk classes named %2.'
 						with: self
 						with: clientBehavior name]]
+]
 
 { #category : 'private - class translation' }
 GbsSession >> mappedClientClass: clientClass toServer: classDelegate
+[
 	"Private.  Do any work needed after a class is auto-mapped by a replicator. Auto-mapping is done on a same-name basis, so the server class name will always be the same as the client class simple name."
 
 	(configuration generateClassConnectors
@@ -5154,9 +5919,11 @@ GbsSession >> mappedClientClass: clientClass toServer: classDelegate
 				[parameters
 					addNoConnectConnector: (GbsClassConnector stName: clientClass fullName
 							gsName: clientClass name)]
+]
 
 { #category : 'private - class translation' }
 GbsSession >> basicDoesClientClass: clientClass matchServerClass: serverClassDel
+[
 	"Returns true if the given Smalltalk class matches the given GemStone class in
 	 implementation structure, or if the Smalltalk class appears to have compensated for any
 	 differences by implementing replication support methods."
@@ -5179,9 +5946,11 @@ GbsSession >> basicDoesClientClass: clientClass matchServerClass: serverClassDel
 		ifNone: []) notNil
 		ifTrue: [^true].
 	^false
+]
 
 { #category : 'private - class translation' }
 GbsSession >> privdoesClientClass: clientClass matchServerClass: serverClassDel
+[
 	"Private.  Returns true if the given Smalltalk class matches the given GemStone class in implementation structure.  
 	This message may NOT be called in the middle of a GemStone object traversal, since it initiates server execution.  
 	This version of the method does not consider whether the Smalltalk class might compensate for any differences by 
@@ -5239,9 +6008,11 @@ GbsSession >> privdoesClientClass: clientClass matchServerClass: serverClassDel
 	"well, the only thing left is non-indexable pointer objects"
 	^clientClass isVariable not
 		& (gsFormat // 4 \\ 2 = 0 & (gsFormat \\ 4 = 0))	"non indexable"	"pointer"
+]
 
 { #category : 'private - class translation' }
 GbsSession >> classesNotToCreateOnServer
+[
 	" Answer a collection of client classes that should not be created on the server. 
 	This is for one of several reasons: 
 	* The class is a special class that should already exist on the server 
@@ -5272,9 +6043,11 @@ GbsSession >> classesNotToCreateOnServer
 				add: GbxKernelPomOop.
 			ClassesNotToCreateOnServer := classes].
 	^classes
+]
 
 { #category : 'private - class translation' }
 GbsSession >> createClientClassFor: serverBehavior classified: category
+[
 	"Private.  Try to create a client class for the given server class or metaclass.  This may require recursion to create the superclasses needed."
 
 	^self
@@ -5282,9 +6055,11 @@ GbsSession >> createClientClassFor: serverBehavior classified: category
 		usingName: nil
 		classified: category
 		generateConnector: configuration generateClassConnectors
+]
 
 { #category : 'private - class translation' }
 GbsSession >> serverClassDefinitionStringFor: clientClass usingServerName: serverName inDictionaryNamed: serverDictName ifFail: oneArgFailBlock
+[
 
 	| instVars classInstVars classVars aStream isBits isVariable creationMessageString |
 	instVars := clientClass gbxServerInstVarNames
@@ -5338,9 +6113,11 @@ GbsSession >> serverClassDefinitionStringFor: clientClass usingServerName: serve
 		nextPutAll: 'inDictionary: ';
 		nextPutAll: serverDictName.
 	^aStream contents
+]
 
 { #category : 'private - class translation' }
 GbsSession >> serverClassWithSameNameAs: clientClass inDictionaryNamed: dictionaryNameOrNil
+[
 	"Given a client class which is not mapped, with a metaclass that is not mapped, 
 	 this method checks the server for a compatible class with the same name.
 	 If a dictionary name is specified, the class search is restricted to that specific
@@ -5388,9 +6165,11 @@ GbsSession >> serverClassWithSameNameAs: clientClass inDictionaryNamed: dictiona
 				[parameters
 					addNoConnectConnector: (GbsClassConnector stName: cName gsName: cName)].
 	^classDelegate
+]
 
 { #category : 'private - class translation' }
 GbsSession >> createClientClassFor: serverClass usingName: nameOrNil classified: category generateConnector: generateConnector
+[
 	"Private.  Try to create a client class for the given server class, which must be a delegate for a non-meta server class.  
 	This may require recursion to create the superclasses needed.  
 	If nameOrNil is nil, the client class will use the same name as the server class.  
@@ -5458,9 +6237,11 @@ result'
 			self mapClientBehavior: clientClass class
 				toServer: (serverClass remotePerform: #class)].
 	^clientClass
+]
 
 { #category : 'private - class translation' }
 GbsSession >> symbolDictionaryNamed: dictName
+[
 	"Private.  Answer a GbsObject representing the symbol list dictionary named dictName.
 	 If no such dictionary exists in the user's symbol list, one is created."
 
@@ -5482,9 +6263,11 @@ GbsSession >> symbolDictionaryNamed: dictName
 					dict]]'
 		with: dictName asSymbol
 		context: nil
+]
 
 { #category : 'private - class translation' }
 GbsSession >> validateClassForServerCreation: stClass 
+[
 	"If clientClass is one that should not be created on the server, raise an exception and 
 	answer false if the exception is resumed. Otherwise, answer true."
 
@@ -5514,9 +6297,11 @@ GbsSession >> validateClassForServerCreation: stClass
 				with: stClass.
 			^false].
 	^true
+]
 
 { #category : 'private - class translation' }
 GbsSession >> createServerClassFor: clientClass inDictionaryNamed: serverDictName 
+[
 	"Private.  Try to invent a GemStone class for the given Smalltalk
 	 class - this may also require recursion to create the superclasses
 	 needed."
@@ -5527,9 +6312,11 @@ GbsSession >> createServerClassFor: clientClass inDictionaryNamed: serverDictNam
 		usingName: nil
 		generateConnector: (configuration generateClassConnectors 
 				and: [(self parameters connectorExistsFor: clientClass) not])
+]
 
 { #category : 'private - class translation' }
 GbsSession >> createServerClassFor: clientClass inDictionaryNamed: serverDictName usingName: serverNameOrNil generateConnector: generateConnector
+[
 	"Try to invent a GemStone class for the given Smalltalk class - this may also require recursion to create the superclasses needed.  If nameOrNil is nil, the name of stClass will be used.  Otherwise, nameOrNil will be used.
 	If we are successful in creating the class, we map it to the given clientClass, first unmapping any mapping that the clientClass may have had."
 
@@ -5591,9 +6378,11 @@ GbsSession >> createServerClassFor: clientClass inDictionaryNamed: serverDictNam
 			self mapClientBehavior: clientClass class
 				toServer: (classDelegate remotePerform: #class)].
 	^classDelegate
+]
 
 { #category : 'private - replicators' }
 GbsSession >> connectReplicator: aReplicator toClientBehavior: clientBehavior andServerBehavior: behaviorDelegate
+[
 	"For use with most replicators, those that have both client and server behavior."
 	"sender must hold my sessionProtect"
 
@@ -5601,31 +6390,39 @@ GbsSession >> connectReplicator: aReplicator toClientBehavior: clientBehavior an
 		atClient: clientBehavior
 		andServer: behaviorDelegate
 		put: aReplicator
+]
 
 { #category : 'private - replicators' }
 GbsSession >> replicatorForClientBehavior: aClientBehavior ifAbsent: alternativeBlock
+[
 
 	^replicatorManager replicatorForClientBehavior: aClientBehavior
 		ifAbsent: alternativeBlock
+]
 
 { #category : 'private - replicators' }
 GbsSession >> replicatorForClient: anObject ifAbsent: alternativeBlock
+[
 	"Can be overridden in custom session subclasses."
 
 	^self replicatorForClientBehavior: anObject gbxBasicClass
 		ifAbsent: alternativeBlock
+]
 
 { #category : 'private - replicators' }
 GbsSession >> disconnectReplicatorForServerBehavior: behaviorDelegate
+[
 	"This message should be used only for replicators that have no 
 	client class (for instance, unmapped class replicator), and are therefore
 	not mapped by client class."
 	"sender must hold my sessionProtect"
 
 	replicatorManager removeReplicatorForServerBehavior: behaviorDelegate
+]
 
 { #category : 'private - replicators' }
 GbsSession >> setReplicatorForClient: secondaryBehavior sameAsReplicatorForClient: primaryBehavior
+[
 	"Used for those rare many-client-to-one-server class or metaclass mappings.
 	The canonical mapping must already be present."
 	"Sender must hold my sessionProtect semaphore."
@@ -5636,47 +6433,59 @@ GbsSession >> setReplicatorForClient: secondaryBehavior sameAsReplicatorForClien
 					[self gbsMessenger
 						error: 'Attempted second mapping without first mapping present.'].
 	replicatorManager atClient: secondaryBehavior put: replicator
+]
 
 { #category : 'private - replicators' }
 GbsSession >> disconnectReplicatorForClientBehavior: clientBehavior andServerBehavior: behaviorDelegate
+[
 	"sender must hold my sessionProtect"
 
 	replicatorManager removeReplicatorForClientBehavior: clientBehavior
 		andServerBehavior: behaviorDelegate
+]
 
 { #category : 'private - replicators' }
 GbsSession >> replicatorForServerBehavior: oopOrDelegate ifAbsentPut: replicatorCreationBlock
+[
 	"If there is not already a replicator for the given server behavior, evaluate the block and map it to that server behavior.
 	Note that this does *not* map the replicator to a client class."
 
 	^replicatorManager replicatorForServerBehavior: oopOrDelegate
 		ifAbsentPut: replicatorCreationBlock
+]
 
 { #category : 'private - replicators' }
 GbsSession >> connectReplicator: aReplicator toServerBehavior: behaviorDelegate
+[
 	"For use only with one-way replicators that do not map a client behavior."
 	"sender must hold my sessionProtect"
 
 	replicatorManager connectReplicator: aReplicator
 		toServerBehavior: behaviorDelegate
+]
 
 { #category : 'private - replicators' }
 GbsSession >> replicatorForServerBehavior: oopOrDelegate ifAbsent: alternativeBlock
+[
 
 	^replicatorManager replicatorForServerBehavior: oopOrDelegate
 		ifAbsent: alternativeBlock
+]
 
 { #category : 'initialize-release' }
 GbsSession >> useDiagnosticSpecialConverter
+[
 	"The diagnostic special converter can only be used under specific conditions.
 	 Otherwise, we'll just use the regular special converted."
 
 	^GbsConfiguration current useDiagnosticSpecialConverter
 		and: [GbsConfiguration is64BitClient
 		and: [UninterpretedBytes isBigEndian not]]
+]
 
 { #category : 'initialize-release' }
 GbsSession >> initializeSpecialConverter
+[
 
 	| class |
 	class := GbsConfiguration is64BitClient
@@ -5686,24 +6495,30 @@ GbsSession >> initializeSpecialConverter
 						ifFalse: [GbxSpecialConverter64Vw64]]
 				ifFalse: [GbxSpecialConverter64Vw32].
 	specialConverter := class new
+]
 
 { #category : 'accessing' }
 GbsSession class >> classWithStats
+[
 	"Answer the class to use to gather session statistics for sessions that are instances of me."
 
 	^GbsSessionWithStats
+]
 
 { #category : 'accessing' }
 GbsSession class >> defaultDictionaryName
+[
 
 	| found |
 	found := self gbxResolve: #GSDefaultClassDictionary.
 	^found isNil
 		ifTrue: [#UserClasses]
 		ifFalse: [ found ]
+]
 
 { #category : 'private - instance creation' }
 GbsSession class >> loginLinked: linked withParameters: aGSSessionParameters
+[
 	"Private to GBS.
 	Login with given parameters.  If linked is true, do a linked login, otherwise rpc."
 	"On successful login, return a new instance of this class.  Otherwise, return nil."
@@ -5726,9 +6541,11 @@ GbsSession class >> loginLinked: linked withParameters: aGSSessionParameters
 				rememberPassword: sess parameters rememberPassword;
 				password: sess parameters password].
 	^loginResult
+]
 
 { #category : 'private - instance creation' }
 GbsSession class >> loginWithX509Parameters: paramaters
+[
 	"Private to GBS.
 	Login with given x509 parameters."
 	"On successful login, return a new instance of this class.  Otherwise, return nil."
@@ -5737,31 +6554,39 @@ GbsSession class >> loginWithX509Parameters: paramaters
 	sess := self new.
 	sess initializeWithParameters: paramaters.
 	^sess loginX509
+]
 
 { #category : 'configuring GBS' }
 GbsSession class >> generateGSClasses
+[
 	"Return a Boolean indicating whether GemStone class generation is enabled"
 
 	GbsConfiguration 
 		deprecated: 'GbsSession class>>generateGSClasses deprecated August, 2005. Use GbsConfiguration>>generateServerClasses instead'.
 	^GbsConfiguration current generateServerClasses
+]
 
 { #category : 'configuring GBS' }
 GbsSession class >> generateGSClasses: aBool 
+[
 	"Enable or disable GemStone class generation"
 
 	GbsConfiguration 
 		deprecated: 'GbsSession class>>generateGSClasses: deprecated August, 2005. Use GbsConfiguration>>generateServerClasses: instead'.
 	GbsConfiguration current generateServerClasses: aBool
+]
 
 { #category : 'configuring GBS' }
 GbsSession class >> assertionChecks
+[
 	GbsConfiguration 
 		deprecated: 'GbsSession class>>assertionChecks deprecated August, 2005. Use GbsConfiguration>>assertionChecks instead'.
 	^GbsConfiguration current assertionChecks
+]
 
 { #category : 'configuring GBS' }
 GbsSession class >> verbose
+[
 	"If aBool is true, GemBuilder will put a message on the system transcript when special events occur (logout/login/commit/abort)."
 
 	"GBSM verbose"
@@ -5769,31 +6594,39 @@ GbsSession class >> verbose
 	GbsConfiguration 
 		deprecated: 'GbsSession class>>verbose deprecated August, 2005. Use GbsConfiguration>>verbose instead'.
 	^GbsConfiguration current verbose
+]
 
 { #category : 'configuring GBS' }
 GbsSession class >> assertionChecks: aBoolean 
+[
 	GbsConfiguration 
 		deprecated: 'GbsSession class>>assertionChecks: deprecated August, 2005. Use GbsConfiguration>>assertionChecks: instead'.
 	GbsConfiguration current assertionChecks: aBoolean
+]
 
 { #category : 'configuring GBS' }
 GbsSession class >> generateSTClasses
+[
 	"Return a Boolean indicating whether Smalltalk class generation is enabled"
 
 	GbsConfiguration 
 		deprecated: 'GbsSession class>>generateSTClasses deprecated August, 2005. Use GbsConfiguration>>generateClientClasses instead'.
 	^GbsConfiguration current generateClientClasses
+]
 
 { #category : 'configuring GBS' }
 GbsSession class >> generateSTClasses: aBool 
+[
 	"Enable or disable Smalltalk class generation"
 
 	GbsConfiguration 
 		deprecated: 'GbsSession class>>generateSTClasses: deprecated August, 2005. Use GbsConfiguration>>generateClientClasses: instead'.
 	GbsConfiguration current generateClientClasses: aBool
+]
 
 { #category : 'configuring GBS' }
 GbsSession class >> verbose: aBool 
+[
 	"If aBool is true, GemBuilder will put a message on the system transcript when special events occur (logout/login/commit/abort)."
 
 	"GBSM verbose: true"
@@ -5801,37 +6634,47 @@ GbsSession class >> verbose: aBool
 	GbsConfiguration 
 		deprecated: 'GbsSession class>>verbose: deprecated August, 2005. Use GbsConfiguration>>verbose: instead'.
 	GbsConfiguration current verbose: aBool
+]
 
 { #category : 'configuring GBS' }
 GbsSession class >> removeInvalidConnectors
+[
 	GbsConfiguration 
 		deprecated: 'GbsSession class>>removeInvalidConnectors deprecated August, 2005. Use GbsConfiguration>>removeInvalidConnectors instead'.
 	^GbsConfiguration current removeInvalidConnectors
+]
 
 { #category : 'configuring GBS' }
 GbsSession class >> removeInvalidConnectors: aBool 
+[
 	"If true, connectors which fail to resolve at login time will automatically be removed from the connector collections.  If false, and if Verbose is true, the user is prompted for their removal.  Otherwise, connector failure raises a signal."
 
 	GbsConfiguration 
 		deprecated: 'GbsSession class>>removeInvalidConnectors: deprecated August, 2005. Use GbsConfiguration>>removeInvalidConnectors: instead'.
 	GbsConfiguration current removeInvalidConnectors: aBool
+]
 
 { #category : 'configuring GBS' }
 GbsSession class >> eventPriority
+[
 	"Return the Smalltalk process priority level for GemStone-initiated events"
 
 	GbsConfiguration 
 		deprecated: 'GbsSession class>>eventPriority deprecated August, 2005. Use GbsConfiguration>>eventPriority instead'.
 	^GbsConfiguration current eventPriority
+]
 
 { #category : 'configuring GBS' }
 GbsSession class >> generateClassConnectors
+[
 	GbsConfiguration 
 		deprecated: 'GbsSession class>>generateClassConnectors deprecated August, 2005. Use GbsConfiguration>>generateClassConnectors instead'.
 	^GbsConfiguration current generateClassConnectors
+]
 
 { #category : 'configuring GBS' }
 GbsSession class >> eventPriority: priority 
+[
 	"Set the Smalltalk process priority level for GemStone-initiated events.
 	The default priority (Processor userSchedulingPriority) is the safest in that a GemStone event such as 'lost OT root' will not interrupt an application process that might be in the middle of accessing the GBS caches.  Such an interruption might corrupt the caches.  This priority level has the adverse side effect that an event will not be processed unless the application process is idle or does a Processor yield.
 	Running the eventPriority at a higher level, such as (Processor userInterruptPriority), will ensure that GemStone events are processed when they are received by GemBuilder, at the risk of corrupting the current application process.  The 'lost OT root' event is very likely to modify the transparency caches, and events such as changed object notification, signaled abort, or gem-to-gem notification will execute whatever user-defined Smalltalk block has been supplied for that event."
@@ -5839,9 +6682,11 @@ GbsSession class >> eventPriority: priority
 	GbsConfiguration 
 		deprecated: 'GbsSession class>>eventPriority: deprecated August, 2005. Use GbsConfiguration>>eventPriority: instead'.
 	GbsConfiguration current eventPriority: priority
+]
 
 { #category : 'configuring GBS' }
 GbsSession class >> generateClassConnectors: aBool 
+[
 	"If aBool is set to true, then whenever a Smalltalk or GemStone class is generated, or a same-name class mapping is automatically established, a session-based connector will be created for the class mapping."
 
 	"GBSM generateClassConnectors: true"
@@ -5849,9 +6694,12 @@ GbsSession class >> generateClassConnectors: aBool
 	GbsConfiguration 
 		deprecated: 'GbsSession class>>generateClassConnectors: deprecated August, 2005. Use GbsConfiguration>>generateClassConnectors: instead'.
 	GbsConfiguration current generateClassConnectors: aBool
+]
 
 { #category : 'code maintenance' }
 GbsSession class >> dependsOnStructureOfServerCall
+[
 	"Browse senders of this method to find places in the code that depend on the 
 	internal structure of GbsSession>>serverCall:verifyArgs"
+]
 

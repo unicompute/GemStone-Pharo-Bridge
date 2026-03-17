@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGsErrDisconnectInLogin class >> gemStoneErrorNumber6430 ^4038
+[
+
+]
 

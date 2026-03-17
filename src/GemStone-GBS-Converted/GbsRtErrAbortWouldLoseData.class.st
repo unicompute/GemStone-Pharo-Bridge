@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrAbortWouldLoseData class >> gemStoneErrorNumber6430 ^2412
+[
+
+]
 

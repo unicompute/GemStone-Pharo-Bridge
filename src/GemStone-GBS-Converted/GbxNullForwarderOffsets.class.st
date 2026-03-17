@@ -10,6 +10,8 @@ Class {
 
 { #category : 'accessing' }
 GbxNullForwarderOffsets class >> at: index
+[
 
 	^false
+]
 

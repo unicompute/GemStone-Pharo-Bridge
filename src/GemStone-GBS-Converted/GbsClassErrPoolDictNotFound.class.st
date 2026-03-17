@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsClassErrPoolDictNotFound class >> gemStoneErrorNumber6430 ^2045
+[
+
+]
 

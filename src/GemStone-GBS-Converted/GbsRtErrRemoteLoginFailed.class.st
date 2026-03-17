@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrRemoteLoginFailed class >> gemStoneErrorNumber6430 ^2371
+[
+
+]
 

@@ -10,7 +10,9 @@ Class {
 
 { #category : 'testing' }
 GbsFatalError class >> mayResume
+[
 	"Resuming a fatal error is generally useless."
 
 	^false
+]
 

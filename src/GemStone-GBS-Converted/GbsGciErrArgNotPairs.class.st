@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGciErrArgNotPairs class >> gemStoneErrorNumber6430 ^2377
+[
+
+]
 

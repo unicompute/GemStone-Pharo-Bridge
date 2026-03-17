@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGciErrNoUserAction class >> gemStoneErrorNumber6430 ^2358
+[
+
+]
 

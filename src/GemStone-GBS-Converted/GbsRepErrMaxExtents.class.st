@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRepErrMaxExtents class >> gemStoneErrorNumber6430 ^2016
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGciErrCatchBuffLimit class >> gemStoneErrorNumber6430 ^2210
+[
+
+]
 

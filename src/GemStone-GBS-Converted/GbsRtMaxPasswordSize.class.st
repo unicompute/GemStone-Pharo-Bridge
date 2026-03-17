@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtMaxPasswordSize class >> gemStoneErrorNumber6430 ^2341
+[
+
+]
 

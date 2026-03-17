@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrNoBackupInProgress class >> gemStoneErrorNumber6430 ^2302
+[
+
+]
 

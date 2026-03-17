@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrFreeSpaceThreshold class >> gemStoneErrorNumber6430 ^2338
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrTranlogDirFull class >> gemStoneErrorNumber6430 ^2339
+[
+
+]
 

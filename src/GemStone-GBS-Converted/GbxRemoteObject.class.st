@@ -10,6 +10,7 @@ Class {
 
 { #category : 'private' }
 GbxRemoteObject >> validateSessionForProxy: aProxy 
+[
 	"Private.  Raise an error if there are any obvious problems with
 	 the proxy for the receiver delegate.
 	Since a single proxy should not be associated with multiple sessions, 
@@ -18,15 +19,19 @@ GbxRemoteObject >> validateSessionForProxy: aProxy
 	aProxy gbxProxyError: 'Defunct %1 - invalid self'
 		with: aProxy gbxBasicClass.
 	^nil
+]
 
 { #category : 'private' }
 GbxRemoteObject >> forAnySingleSession
+[
 
 	"Private.  The receiver satisfies this request.  Compare with GbxObjectList>>forAnyOrCurrentSessionForObject:."
 	^self
+]
 
 { #category : 'dirty management' }
 GbxRemoteObject >> gbxDelegate
+[
 	"Private.  Answer nil or a client-object, found cached for any
 	 session, representing a remote-object that is the logical
 	 equivalent to the receiver. An instance of any subclass of
@@ -37,4 +42,5 @@ GbxRemoteObject >> gbxDelegate
 	a replicate, answer nil."
 
 	^nil
+]
 

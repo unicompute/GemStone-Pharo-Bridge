@@ -17,33 +17,44 @@ Class {
 
 { #category : 'accessing' }
 GbxStatDescriptor >> isByte
+[
 
 	^type == GemStone.Gbs.GbxStatArchiver.TypeByte8
+]
 
 { #category : 'accessing' }
 GbxStatDescriptor >> id
+[
 	"The id of this descriptor in its stat resource"
 	^id
+]
 
 { #category : 'accessing' }
 GbxStatDescriptor >> isShort
+[
 
 	^type == GemStone.Gbs.GbxStatArchiver.TypeShort16
+]
 
 { #category : 'accessing' }
 GbxStatDescriptor >> name
+[
 
 	^name
+]
 
 { #category : 'printing' }
 GbxStatDescriptor >> printOn: aStream 
+[
 	super printOn: aStream.
 	aStream
 		nextPutAll: ': ';
 		print: name
+]
 
 { #category : 'archiving' }
 GbxStatDescriptor >> writeToArchiver: statArchiver 
+[
 	statArchiver writeString: name.
 	"Data type code"
 	statArchiver writeByte: type.
@@ -55,26 +66,32 @@ GbxStatDescriptor >> writeToArchiver: statArchiver
 	statArchiver writeString: unit.
 	"Description"
 	statArchiver writeString: description
+]
 
 { #category : 'initialize-release' }
 GbxStatDescriptor >> name: nameString description: descriptionString type: typeInt isCounter: isCounterBool isLargerBetter: isLargerBetterBool unit: unitString
+[
 	name := nameString.
 	description := descriptionString.
 	type := typeInt.
 	isCounter := isCounterBool.
 	isLargerBetter := isLargerBetterBool.
 	unit := unitString
+]
 
 { #category : 'initialize-release' }
 GbxStatDescriptor >> setId: anInt 
+[
 	"Set id to a zero-based offset into a stat resource's descriptor collection"
 
 	self gbsMessenger assert: id isNil
 		failure: 'GbxStatDescriptor>>setId initialized twice'.
 	id := anInt
+]
 
 { #category : 'initialize-release' }
 GbxStatDescriptor class >> name: nameString description: descriptionString type: typeInt isCounter: isCounterBool isLargerBetter: isLargerBetterBool unit: unitString
+[
 	^super new 
 		name: nameString
 		description: descriptionString
@@ -82,4 +99,5 @@ GbxStatDescriptor class >> name: nameString description: descriptionString type:
 		isCounter: isCounterBool
 		isLargerBetter: isLargerBetterBool
 		unit: unitString
+]
 

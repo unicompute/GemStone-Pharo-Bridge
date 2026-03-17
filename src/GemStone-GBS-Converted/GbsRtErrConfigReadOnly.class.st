@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrConfigReadOnly class >> gemStoneErrorNumber6430 ^2195
+[
+
+]
 

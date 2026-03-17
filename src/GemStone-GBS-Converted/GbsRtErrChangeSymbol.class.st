@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrChangeSymbol class >> gemStoneErrorNumber6430 ^2333
+[
+
+]
 

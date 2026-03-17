@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBSuperNotAllowed class >> gemStoneErrorNumber6430 ^1061
+[
+
+]
 

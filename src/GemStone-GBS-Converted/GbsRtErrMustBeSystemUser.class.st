@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrMustBeSystemUser class >> gemStoneErrorNumber6430 ^2213
+[
+
+]
 

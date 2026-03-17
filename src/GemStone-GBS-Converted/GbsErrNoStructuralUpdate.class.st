@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrNoStructuralUpdate class >> gemStoneErrorNumber6430 ^2350
+[
+
+]
 

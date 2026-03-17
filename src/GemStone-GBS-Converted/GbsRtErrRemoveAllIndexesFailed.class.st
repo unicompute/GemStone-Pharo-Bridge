@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrRemoveAllIndexesFailed class >> gemStoneErrorNumber6430 ^2415
+[
+
+]
 

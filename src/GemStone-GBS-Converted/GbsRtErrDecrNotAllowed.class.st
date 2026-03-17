@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrDecrNotAllowed class >> gemStoneErrorNumber6430 ^2153
+[
+
+]
 

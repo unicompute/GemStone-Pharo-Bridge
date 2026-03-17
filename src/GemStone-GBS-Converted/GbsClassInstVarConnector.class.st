@@ -10,6 +10,7 @@ Class {
 
 { #category : 'private resolving' }
 GbsClassInstVarConnector >> updateClientfromDelegate: delegate
+[
 
 	| stMeta stClass offset pca |
 	stClass := self resolveSTClass.
@@ -29,9 +30,11 @@ GbsClassInstVarConnector >> updateClientfromDelegate: delegate
 	^stClass instVarAt: offset put: (pca == #forwarder
 		ifTrue: [ delegate asForwarder ]
 		ifFalse: [ delegate asLocalObject ])
+]
 
 { #category : 'private resolving' }
 GbsClassInstVarConnector >> updateGSfromST: anSTObj session: aGSSession
+[
 	"Private.  Make sure the GemStone variable exists.  Updating its value will happen during postConnect"
 
 	| gsClass gsObj |
@@ -57,16 +60,20 @@ GbsClassInstVarConnector >> updateGSfromST: anSTObj session: aGSSession
 					with: self gsvarName
 					with: gsObj].
 	^gsObj
+]
 
 { #category : 'private resolving' }
 GbsClassInstVarConnector >> resolveClientObj
+[
 	"Private.  Resolve and return Smalltalk object to be connected.
 	Trigger any defunct stub or defunct forwarder errors."
 
 	^self resolveSTObjCheckingIfDefunct: true
+]
 
 { #category : 'private resolving' }
 GbsClassInstVarConnector >> resolveGSObjInSession: aGSSession
+[
 	"Private.  Resolve and return GemStone object to be connected - the value of the inst var of the class"
 
 	| gsClass value |
@@ -78,9 +85,11 @@ GbsClassInstVarConnector >> resolveGSObjInSession: aGSSession
 			self gbsMessenger raise: GbsConnectorError message: ex description.
 			ex return: nil].
 	^value
+]
 
 { #category : 'private resolving' }
 GbsClassInstVarConnector >> resolveSTObjCheckingIfDefunct: check
+[
 	"Private.  Resolve and return Smalltalk object to be connected.  If <check> is true, check for defunctness."
 
 	| stClass stMeta offset civar |
@@ -103,9 +112,11 @@ GbsClassInstVarConnector >> resolveSTObjCheckingIfDefunct: check
 		^nil
 	].
 	^civar
+]
 
 { #category : 'connecting' }
 GbsClassInstVarConnector >> disconnectInSession: session
+[
 	"Resolve my GemStone and Smalltalk objects, and make sure they are both unconnected in aGSSession, even if they are no longer connected to each other. The latter condition will be true if one of the client or server variables has been assigned to, since class instance variable connectors cannot track assignments as other name connectors can.
 	If one cannot be resolved, still disconnect the other. If neither can be resolved, do nothing"
 
@@ -123,9 +134,11 @@ GbsClassInstVarConnector >> disconnectInSession: session
 					[| clientForServer |
 					clientForServer := session clientObjForDelegate: server otherwise: nil.
 					clientForServer ~~ nil ifTrue: [session disconnectClient: clientForServer fromServer: server]]]
+]
 
 { #category : 'private connecting' }
 GbsClassInstVarConnector >> clientForwarderTo: clientObject session: sess
+[
 	"Return a delegate for the client forwarder I specify. If the server variable holds anything other than a
 	 ClientForwarder, assign a new ClientForwarder to the server variable."
 
@@ -138,25 +151,31 @@ GbsClassInstVarConnector >> clientForwarderTo: clientObject session: sess
 						execute: '| cf | cf := ClientForwarder new. ', self gsvarName, ' := cf. ^cf'
 						context: (self resolveGSClassInSession: sess)].
 	^cfDelegate
+]
 
 { #category : 'private connecting' }
 GbsClassInstVarConnector >> postConnectClient: clientObj server: cfDelegate inSession: sess
+[
 	"Private"
 	"Must identity clamp client forwarders once connected to avoid propagating client changing to the server,
 	and to avoid getting reports for the ClientForwarder"
 
 	self postConnectAction == #clientForwarder
 		ifTrue: [sess addClampedObject: clientObj withDelegate: cfDelegate]
+]
 
 { #category : 'private connecting' }
 GbsClassInstVarConnector >> canForwardTo: clientObject inSession: aSession
+[
 	"Answer true iff the client object is something that a server ClientForwarder can be connected to.
 	Sender must hold sessionProtect."
 
 	^(clientObject gbxIsServerSpecialInSession: aSession) not
+]
 
 { #category : 'private' }
 GbsClassInstVarConnector >> nilSTObj
+[
 	"Private.  nil the Smalltalk object for the connector if the
 	 post connect action is #updateST or #forwarder. This is done
 	 during post logout to reduce defunct stub errors. Answer
@@ -178,15 +197,19 @@ GbsClassInstVarConnector >> nilSTObj
 	]
 		on: GbsConnectorError
 		do: [ :ex | ex return: nil ]
+]
 
 { #category : 'private' }
 GbsClassInstVarConnector >> connectsAssociation
+[
 	"Private"
 
 	^false
+]
 
 { #category : 'instance creation' }
 GbsClassInstVarConnector class >> fromUser
+[
 
 	"Prompt the user for information to create an instance of the receiver"
 	"self fromUser"
@@ -201,4 +224,5 @@ GbsClassInstVarConnector class >> fromUser
 		ifError: [ ^nil ].
 
 	^self stName: stName gsName: gsName dictionaryName: dictName stvarName: stvarName gsvarName: gsvarName
+]
 

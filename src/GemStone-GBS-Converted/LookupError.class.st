@@ -11,6 +11,8 @@ Class {
 
 { #category : 'accessing' }
 LookupError >> key
+[
 
 	^key
+]
 

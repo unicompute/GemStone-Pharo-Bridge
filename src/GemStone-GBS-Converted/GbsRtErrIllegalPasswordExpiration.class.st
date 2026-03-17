@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrIllegalPasswordExpiration class >> gemStoneErrorNumber6430 ^2606
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrBagInvalidPredicateForStreamSelection class >> gemStoneErrorNumber6430 ^2313
+[
+
+]
 

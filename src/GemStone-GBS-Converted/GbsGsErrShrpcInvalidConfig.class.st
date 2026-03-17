@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGsErrShrpcInvalidConfig class >> gemStoneErrorNumber6430 ^4011
+[
+
+]
 

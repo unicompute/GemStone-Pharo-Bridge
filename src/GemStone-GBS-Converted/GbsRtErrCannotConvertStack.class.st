@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrCannotConvertStack class >> gemStoneErrorNumber6430 ^2488
+[
+
+]
 

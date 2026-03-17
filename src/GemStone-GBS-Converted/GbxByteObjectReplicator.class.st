@@ -10,6 +10,7 @@ Class {
 
 { #category : 'clamping' }
 GbxByteObjectReplicator >> updateInstVarLevelsOfScheme: scheme
+[
 	"Configure the scheme with default replication for the indexable part
 	 (which is the whole of the client class?) and no forwarders for either
 	 named nor indexed instance variables, since there are no named
@@ -20,9 +21,11 @@ GbxByteObjectReplicator >> updateInstVarLevelsOfScheme: scheme
 		forwarderOffsets: #()
 		forwardIndexedPart: false
 		forClass: self clientClass
+]
 
 { #category : 'per-object private' }
 GbxByteObjectReplicator >> copyBytesFromClientObjectTo: aByteObject
+[
 
 	| firstOffset numberOfBytes |
 	firstOffset := currentReport firstOffset.
@@ -34,20 +37,26 @@ GbxByteObjectReplicator >> copyBytesFromClientObjectTo: aByteObject
 				to: numberOfBytes
 				with: clientObject
 				startingAt: firstOffset]
+]
 
 { #category : 'per-object private' }
 GbxByteObjectReplicator >> canUnstubInPlace
+[
 	"Byte objects always use zero-length stubs, so never unstub in place."
 
 	^false
+]
 
 { #category : 'per-object private' }
 GbxByteObjectReplicator >> copyBytesFromReportToClientObject
+[
 
 	self copyBytesFromReportTo: clientObject
+]
 
 { #category : 'per-object private' }
 GbxByteObjectReplicator >> copyBytesFromReportTo: aByteObject
+[
 
 	| firstOffset lastOffset |
 	firstOffset := currentReport firstOffset.
@@ -58,27 +67,35 @@ GbxByteObjectReplicator >> copyBytesFromReportTo: aByteObject
 				copyBytesBufferInto: aByteObject
 				from: firstOffset
 				to: lastOffset]
+]
 
 { #category : 'per-object private' }
 GbxByteObjectReplicator >> clientSizeIsCorrect
+[
 	"For Byte objects, there are no named instvars, so it's just the number of bytes."
 
 	^clientObject gbxBasicSize = currentReport idxSize
+]
 
 { #category : 'private store replication' }
 GbxByteObjectReplicator >> copyInto: report from: anObject numBytes: numBytes startingAt: firstOffset
+[
 
 	report
 		copyIntoBytesBufferFrom: anObject
 		numBytes: numBytes
 		startingAt: firstOffset
+]
 
 { #category : 'private store replication' }
 GbxByteObjectReplicator >> packDirtyReferentsOf: anObject inTraversal: storeTraversal
+[
 	"Byte objects have no referents."
+]
 
 { #category : 'private store replication' }
 GbxByteObjectReplicator >> pack: anObject withDelegate: aDelegate inTraversal: storeTraversal
+[
 	"Store a report for anObject in the storeTraversal. If I won't fit, put the part of 
 	anObject that will fit in, flush it to the server, and repeat until all of anObject has been stored."
 
@@ -99,9 +116,11 @@ GbxByteObjectReplicator >> pack: anObject withDelegate: aDelegate inTraversal: s
 								inTraversal: storeTraversal)].
 	storeTraversal packed: anObject.
 	session packed: anObject
+]
 
 { #category : 'private store replication' }
 GbxByteObjectReplicator >> packOneReportFor: anObject withDelegate: aDelegate startingAt: firstOffset inTraversal: storeTraversal
+[
 	"Store a report for anObject in the storeTraversal, starting at 1-based offset firstOffset within anObject.
 	If the rest of anObject won't fit, make a report for the part of anObject that will fit. 
 	In either case, answer the number of value buffer bytes packed."
@@ -146,14 +165,18 @@ GbxByteObjectReplicator >> packOneReportFor: anObject withDelegate: aDelegate st
 				with: aDelegate
 				with: firstOffset].
 	^valueBuffNumBytes
+]
 
 { #category : 'private store replication' }
 GbxByteObjectReplicator >> byteSizeOf: anObject
+[
 
 	^anObject gbxBasicSize
+]
 
 { #category : 'per-object replication' }
 GbxByteObjectReplicator >> verifyObjectBytes
+[
 
 	| numberOfBytes reportBytes clientBytes |
 	numberOfBytes := currentReport valueBuffSize.
@@ -162,9 +185,11 @@ GbxByteObjectReplicator >> verifyObjectBytes
 	self copyBytesFromReportTo: reportBytes.
 	self copyBytesFromClientObjectTo: clientBytes.
 	clientBytes = reportBytes ifFalse: [self signalNoModificationError]
+]
 
 { #category : 'per-object replication' }
 GbxByteObjectReplicator >> mutateObject
+[
 
 	clientObject gbxIgnoreFutureChanges.	"Fill in object body bytes."
 	self copyBytesFromReportToClientObject.
@@ -174,9 +199,11 @@ GbxByteObjectReplicator >> mutateObject
 			clientObject postFaultInSession: session].
 	self gbxFixMe.	"assigns need to be unpreemptible"
 	clientObject gbxTrapFutureChanges
+]
 
 { #category : 'per-object replication' }
 GbxByteObjectReplicator >> mutateOrVerifyObject
+[
 	"If the client object is mutable, update it with the bytes in the report.
 	If immutable, verify that the bytes in the report match the bytes in the client object."
 
@@ -186,9 +213,11 @@ GbxByteObjectReplicator >> mutateOrVerifyObject
 			["Fill in object body bytes."
 			"assigns need to be unpreemptible"
 			self mutateObject]
+]
 
 { #category : 'per-object replication' }
 GbxByteObjectReplicator >> forReplication: replication replicateFromReport: report
+[
 	"Sender must hold session's semaphore, and clientMap semaphore."
 
 	report isFirstReportForObject ifTrue: [self initializeForNewObject].
@@ -196,9 +225,11 @@ GbxByteObjectReplicator >> forReplication: replication replicateFromReport: repo
 	reportOop := report objId.
 	self replicateFromReport.
 	report isLastReportForObject ifTrue: [self initializeForNewObject]
+]
 
 { #category : 'per-object replication' }
 GbxByteObjectReplicator >> replicateFromReport
+[
 	"Private.  Given the description of a GemStone object from a traversal object header,
 	 replicate the object as a client object.  If the object is already in the cache,
 	 and it's not a stub, ignore it.. Self is returned."
@@ -224,10 +255,13 @@ GbxByteObjectReplicator >> replicateFromReport
 			["If we have a stub or forwarder at this point, we're done."
 			clientObject gbxIsProxy ifTrue: [^self]].
 	self mutateOrVerifyObject
+]
 
 { #category : 'per-object testing' }
 GbxByteObjectReplicator >> clientObjectIsComplete
+[
 	"Answer false if there is more work needed on this client object."
 
 	^self expectsAnotherReport not
+]
 

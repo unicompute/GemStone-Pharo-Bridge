@@ -10,6 +10,7 @@ Class {
 
 { #category : 'per-object private' }
 GbxLargeIntegerDigit32Replicator >> copyRawBytesFromReportToClientObject
+[
 	"If this is the first report, the first four bytes are the sign, which has already been decided, so skip them."
 
 	| numBytesToSkip bytesBuffer rawBuffer firstOffset targetStart targetEnd |
@@ -27,24 +28,30 @@ GbxLargeIntegerDigit32Replicator >> copyRawBytesFromReportToClientObject
 				to: targetEnd
 				with: rawBuffer
 				startingAt: bytesBuffer offset + numBytesToSkip]
+]
 
 { #category : 'per-object private' }
 GbxLargeIntegerDigit32Replicator >> signedByteIndex
+[
 	"Answer the offset of the one byte within the four bytes allocated
 	 for the sign that actually represents the sign."
 
 	^self subclassResponsibility
+]
 
 { #category : 'per-object private' }
 GbxLargeIntegerDigit32Replicator >> clientClassForReportValues
+[
 	"Only send this message when the sender knows that the report contains the required bytes."
 
 	^(currentReport valueByteAt: self signedByteIndex) == 0
 		ifTrue: [LargePositiveInteger]
 		ifFalse: [LargeNegativeInteger]
+]
 
 { #category : 'private store replication' }
 GbxLargeIntegerDigit32Replicator >> computeUnswizzledServerBytesFor: int
+[
 	"Answer a new byte array comprising the bytes to be put in one or more (if split) object reports for 
 		the server large integer corresponding to the given client large integer. "
 
@@ -59,4 +66,5 @@ GbxLargeIntegerDigit32Replicator >> computeUnswizzledServerBytesFor: int
 		with: int
 		startingAt: 1.
 	^result
+]
 

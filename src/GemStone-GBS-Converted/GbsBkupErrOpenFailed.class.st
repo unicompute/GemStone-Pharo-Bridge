@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsBkupErrOpenFailed class >> gemStoneErrorNumber6430 ^2303
+[
+
+]
 

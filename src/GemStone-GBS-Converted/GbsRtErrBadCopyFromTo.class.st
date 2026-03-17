@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrBadCopyFromTo class >> gemStoneErrorNumber6430 ^2089
+[
+
+]
 

@@ -15,11 +15,14 @@ Class {
 
 { #category : 'accessing' }
 GbxReplication >> interaction
+[
 
 	^interaction
+]
 
 { #category : 'ServerInteraction interface' }
 GbxReplication >> resolve
+[
 	"Private.  Resolve the things left unresolved from the initial traversal."
 	"The sender must hold my session protect."
 	
@@ -29,9 +32,11 @@ GbxReplication >> resolve
 				resolveUnmappedClasses;
 				resolveDeferredAssignments;
 				resolveObjectsWithDeferredElements]
+]
 
 { #category : 'ServerInteraction interface' }
 GbxReplication >> replicateFromTraversal: aFetchTraversal
+[
 	"Answer nil unless an error occurs during replication. In that case, answer
 	the error.
 	If bodyAsDelegates is true, fill the instance variables of the object with 
@@ -69,23 +74,29 @@ GbxReplication >> replicateFromTraversal: aFetchTraversal
 								with: (GbsConfiguration current verbose ifTrue: [lastReportOrError] ifFalse: ['']).
 							self replicateFromTraversalReport: lastReportOrError]]].
 	^nil
+]
 
 { #category : 'replicator interface' }
 GbxReplication >> addDeferredElementsReport: report
+[
 	"Sender must ensure that this report does not reside in a buffer that might get reused."
 
 	reportsWithDeferredElements add: report
+]
 
 { #category : 'private' }
 GbxReplication >> replicatorForReport: report
+[
 
 	^session replicatorForServerBehavior: report objClass
 		ifAbsentPut: 
 			[session unmappedClassReplicatorClass forSession: session
 				serverBehavior: (report objClass asGSObjectInSession: session)]
+]
 
 { #category : 'private' }
 GbxReplication >> replicateFromTraversalReport: report
+[
 	"Private.  Given the description of a GemStone object from a traversal object header,
 	 replicate the object as a client object.  If the object is already in the cache,
 	 and it's not a stub, ignore it."
@@ -94,9 +105,11 @@ GbxReplication >> replicateFromTraversalReport: report
 	| replicator |
 	replicator := self replicatorForReport: report.
 	replicator forReplication: self replicateFromReport: report
+]
 
 { #category : 'private' }
 GbxReplication >> replicateFromDeferredReport: report
+[
 	"Private.  Given the description of a GemStone object from a traversal object header,
 	 replicate the object as a client object.  If the object is already in the cache,
 	 and it's not a stub, ignore it."
@@ -109,9 +122,11 @@ GbxReplication >> replicateFromDeferredReport: report
 	| replicator |
 	replicator := self replicatorForReport: report.
 	replicator forReplication: self replicateFromDeferredReport: report
+]
 
 { #category : 'private' }
 GbxReplication >> resolveUnmappedClasses
+[
 	"Private.  ReportsWithNoMappedClass is an OrderedCollection of GbxObjectReports describing
 	 reports from the last traversal buffer that require class generation.
 	 Perform the class generation and then replicate those objects."
@@ -126,16 +141,20 @@ GbxReplication >> resolveUnmappedClasses
 				with: session sessionId
 				with: aReport.
 			self replicateFromDeferredReport: aReport]	"Perform class generation"
+]
 
 { #category : 'private' }
 GbxReplication >> addUnmappedClassReport: report
+[
 	"Private.  The given report must be in its own private buffer, not a traversal buffer which could be re-used.
 	The sender must hold session protect."
 
 	reportsWithNoMappedClass add: report
+]
 
 { #category : 'private' }
 GbxReplication >> resolveObjectsWithDeferredElements
+[
 	"Process reports for hashed collections that must have complete contents in order to compute hash
 	values correctly, and must be able to unstub if necessary."
 	"At this point, all classes should be mapped, and each object will have been created or unstubbed.
@@ -145,14 +164,18 @@ GbxReplication >> resolveObjectsWithDeferredElements
 
 	reportsWithDeferredElements
 		do: [:report | self replicateFromDeferredReport: report]
+]
 
 { #category : 'private' }
 GbxReplication >> addDeferredAssignments: deferredAssignments
+[
 
 	objectsWithDeferredAssignments add: deferredAssignments
+]
 
 { #category : 'private' }
 GbxReplication >> resolveDeferredAssignments
+[
 	"Private.  objectsWithDeferredAssignments is an OrderedCollection of GbxObjectWithDeferredAssignments.
 	See the comment on that class."
 	"The sender must hold my session protect."
@@ -166,13 +189,17 @@ GbxReplication >> resolveDeferredAssignments
 				with: objectWithDeferredAssignments.
 			objectWithDeferredAssignments resolve].
 	objectsWithDeferredAssignments := OrderedCollection new
+]
 
 { #category : 'private - accessing' }
 GbxReplication >> session: anObject
+[
 	session := anObject
+]
 
 { #category : 'initialize-release' }
 GbxReplication >> initializeForInteraction: anInteraction
+[
 	"Must initialize after session is set."
 
 	interaction := anInteraction.
@@ -181,9 +208,12 @@ GbxReplication >> initializeForInteraction: anInteraction
 	reportsWithNoMappedClass := OrderedCollection new.
 	reportsWithDeferredElements := OrderedCollection new.
 	^self
+]
 
 { #category : 'instance creation' }
 GbxReplication class >> forInteraction: anInteraction
+[
 
 	^self new initializeForInteraction: anInteraction
+]
 

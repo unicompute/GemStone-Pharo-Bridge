@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsClassErrDupVarConstr class >> gemStoneErrorNumber6430 ^2276
+[
+
+]
 

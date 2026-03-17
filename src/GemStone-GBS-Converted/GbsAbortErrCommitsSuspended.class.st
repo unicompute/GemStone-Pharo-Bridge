@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsAbortErrCommitsSuspended class >> gemStoneErrorNumber6430 ^3002
+[
+
+]
 

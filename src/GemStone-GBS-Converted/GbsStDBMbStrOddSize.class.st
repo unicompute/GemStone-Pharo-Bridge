@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBMbStrOddSize class >> gemStoneErrorNumber6430 ^1063
+[
+
+]
 

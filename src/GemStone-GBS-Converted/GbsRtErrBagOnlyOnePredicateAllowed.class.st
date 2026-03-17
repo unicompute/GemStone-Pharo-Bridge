@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrBagOnlyOnePredicateAllowed class >> gemStoneErrorNumber6430 ^2311
+[
+
+]
 

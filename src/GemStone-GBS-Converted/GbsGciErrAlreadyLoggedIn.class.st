@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGciErrAlreadyLoggedIn class >> gemStoneErrorNumber6430 ^2147
+[
+
+]
 

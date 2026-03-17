@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRepErrBadExtentSize class >> gemStoneErrorNumber6430 ^2051
+[
+
+]
 

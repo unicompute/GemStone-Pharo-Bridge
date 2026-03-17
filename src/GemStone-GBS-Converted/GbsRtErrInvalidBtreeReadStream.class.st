@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrInvalidBtreeReadStream class >> gemStoneErrorNumber6430 ^2152
+[
+
+]
 

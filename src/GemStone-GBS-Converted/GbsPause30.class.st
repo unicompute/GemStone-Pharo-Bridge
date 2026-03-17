@@ -10,4 +10,7 @@ Class {
 
 { #category : 'instance creation' }
 GbsPause30 class >> gemStoneErrorNumber6430 ^2709
+[
+
+]
 

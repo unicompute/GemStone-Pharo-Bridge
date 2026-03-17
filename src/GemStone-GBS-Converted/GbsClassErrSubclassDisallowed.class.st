@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsClassErrSubclassDisallowed class >> gemStoneErrorNumber6430 ^2014
+[
+
+]
 

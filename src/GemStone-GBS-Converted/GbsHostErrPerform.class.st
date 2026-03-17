@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsHostErrPerform class >> gemStoneErrorNumber6430 ^2201
+[
+
+]
 

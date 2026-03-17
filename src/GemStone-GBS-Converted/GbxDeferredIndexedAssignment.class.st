@@ -10,5 +10,7 @@ Class {
 
 { #category : 'resolving' }
 GbxDeferredIndexedAssignment >> assignValue: val 
+[
 	buffer indexableValueAt: clientOffset put: val
+]
 

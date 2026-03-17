@@ -15,25 +15,34 @@ Class {
 
 { #category : 'accessing' }
 GbxGciCallSequencer >> configuration: anObject
+[
 	configuration := anObject
+]
 
 { #category : 'accessing' }
 GbxGciCallSequencer >> configuration
+[
 	^configuration
+]
 
 { #category : 'accessing' }
 GbxGciCallSequencer >> primInterface
+[
 	"For now, still just the one primInterface. Later, different interfaces per session."
 
 	primInterface == nil ifTrue: [primInterface := self class primInterface].
 	^primInterface
+]
 
 { #category : 'accessing' }
 GbxGciCallSequencer >> session: aGbsSession 
+[
 	thisSession := aGbsSession
+]
 
 { #category : 'call services' }
 GbxGciCallSequencer >> gciCall: callBlock resultType: typeSymbol 
+[
 	"The most commonly-used call sequence. Must be used for all calls that
 	have a non-blocking variant.
 	typeSymbol must be one of the selectors in GbxPointer>results, currently
@@ -43,9 +52,11 @@ GbxGciCallSequencer >> gciCall: callBlock resultType: typeSymbol
 	#voidResult"
 
 	^self subclassResponsibility
+]
 
 { #category : 'call services' }
 GbxGciCallSequencer >> setSessionPerformCheck: aBlock
+[
 	"Do the operation in <aBlock> after setting the GBC session id so that the operation applies to
 	 the correct session. Protect with a global semaphore, rather than the session-based semaphore,
 	 because preemption of one gcisetsession/gcisomecall sequence with another
@@ -58,14 +69,18 @@ GbxGciCallSequencer >> setSessionPerformCheck: aBlock
 		critical:
 			[self primInterface gciSetSessionId: thisSession sessionId.
 			self performCheck: aBlock]
+]
 
 { #category : 'call services' }
 GbxGciCallSequencer >> gciGemTrace: anInteger
+[
 
 	self primInterface gciGemTrace: anInteger
+]
 
 { #category : 'call services' }
 GbxGciCallSequencer >> loginCall: loginBlock 
+[
 	"Special call sequence for login, where we have no session ID before, but do after.
 	Answer the session ID, which will be zero if we did not log in successfully."
 
@@ -78,15 +93,19 @@ GbxGciCallSequencer >> loginCall: loginBlock
 			any other way of knowing what session ID we got."
 			sessionId := self primInterface gciGetSessionId.
 			sessionId]
+]
 
 { #category : 'private' }
 GbxGciCallSequencer >> callProtectCritical: criticalBlock 
+[
 	"Used only for login"
 
 	^GciCallProtect critical: criticalBlock
+]
 
 { #category : 'private' }
 GbxGciCallSequencer >> setInvalidSessionID
+[
 	"Set invalid GCI session id, then discard the resulting GCI error.
 	Any sender of this message should be holding GciCallProtect.
 	Only used during login, so it's OK (and necessary) to reset the
@@ -101,9 +120,11 @@ GbxGciCallSequencer >> setInvalidSessionID
 			["Clear the GCI error, but don't try to represent the error in GBS yet"
 			self primInterface gciErr: self errorBuffer asAddress].
 	thisSession causeOfDeath: nil
+]
 
 { #category : 'private - sequencing' }
 GbxGciCallSequencer >> performCheck: aBlock
+[
 	"Evaluate <aBlock> and check for a GBC error.  Return the result of the block 
 	or if a GBC error occurred, a GbsError representing the error. This message 
 	should only be sent inside a GciCallProtect critical section. Otherwise, 
@@ -124,9 +145,11 @@ GbxGciCallSequencer >> performCheck: aBlock
 						ifTrue: [thisSession statResource gbxIncGciErrors].
 					result := errorBuffer asGbsErrorForSession: thisSession]].
 	^result
+]
 
 { #category : 'support' }
 GbxGciCallSequencer >> gciCriticalPerformCheck: aBlock 
+[
 	"Do the operation in <aBlock> protected from other threads 
 	by the GciCallProtect mutual exclusion semaphore.
 	This particular method also checks for GBC errors 
@@ -136,73 +159,97 @@ GbxGciCallSequencer >> gciCriticalPerformCheck: aBlock
 	specific to a particular session, but can generate an error."
 
 	^GciCallProtect critical: [self performCheck: aBlock]
+]
 
 { #category : 'support' }
 GbxGciCallSequencer >> socketAccessorOn: handle
+[
 	"Return a valid socket accessor for the current platform.
 	 As of 3.2, it's always the ThreadSafe Socket Accessor."
 
 	^GbxThreadSafeSocketAccessor openOn: handle sequencer: self.
+]
 
 { #category : 'private - accessing' }
 GbxGciCallSequencer >> errorBufferClass
+[
 
 	^GbxGciErrSType64v3
+]
 
 { #category : 'private - accessing' }
 GbxGciCallSequencer >> errorBuffer
+[
 	"Return a buffer that represents the GciErrSType structure."
 
 	errorBuffer isNil ifTrue: [errorBuffer := self errorBufferClass allocate].
 	^errorBuffer
+]
 
 { #category : 'initialize-release' }
 GbxGciCallSequencer >> shutdownSocket: aSocket withHandle: handle
+[
 	"Disable the socket accessor <aSocket> for the current platform. 
 	Sender must hold my accessProtect semaphore.
 	Must handle the case where the socket has already been shut down by the GCI,
 	typically because of a fatal error."
 
 	aSocket notNil ifTrue: [aSocket release]
+]
 
 { #category : 'initialize-release' }
 GbxGciCallSequencer >> gbsImageStartup
+[
 	"Discard defunct C pointers"
 
 	errorBuffer := nil
+]
 
 { #category : 'GbsSessionManager interface' }
 GbxGciCallSequencer >> floatKind: aFloatOrDouble 
+[
 	^self gciCriticalPerformCheck: 
 			[self primInterface gciFloatKind: aFloatOrDouble]
+]
 
 { #category : 'GbsSession interface' }
 GbxGciCallSequencer >> isRemote
+[
 	^self 
 		gciCriticalPerformCheck: [self primInterface gciIsRemote]
+]
 
 { #category : 'GbsSession interface' }
 GbxGciCallSequencer >> getSignalHandle
+[
 	"Sender must hold my accessProtect semaphore."
 
 	^self setSessionPerformCheck: [self primInterface gciGetSignalHandle]
+]
 
 { #category : 'GbsSession interface' }
 GbxGciCallSequencer >> stopNbWaitSocket
+[
 	"Don't have one, ignore"
+]
 
 { #category : 'testing' }
 GbxGciCallSequencer class >> isGciCallProtectHeld
+[
 	"Answer true if the active thread holds GciCallProtect"
 
 	^GciCallProtect isActiveProcessInCriticalRegion
+]
 
 { #category : 'GCI initialization' }
 GbxGciCallSequencer class >> gciInit
+[
 	self primInterface gciInit
+]
 
 { #category : 'GCI initialization' }
 GbxGciCallSequencer class >> initializeGci
+[
 	"Make the gci initialization calls.  Should only be called by
 	 initializeGciHandlingMultipleLibraryFilenames."
 
@@ -212,34 +259,44 @@ GbxGciCallSequencer class >> initializeGci
 		gciInit.
 	GbsConfiguration current fullCompression 
 		ifTrue: [self enableFullCompression]
+]
 
 { #category : 'GCI initialization' }
 GbxGciCallSequencer class >> setCacheName: cacheName
+[
 	"GciSetCacheName"
 	self primInterface
 		gciSetCacheName: cacheName gbxAsCString
+]
 
 { #category : 'GCI initialization' }
 GbxGciCallSequencer class >> initAppName: appName logWarnings: logWarnings
+[
 	"GciInitAppName"
 	self primInterface
 		gciInitAppName: appName gbxAsCString
 		logWarnings: logWarnings
+]
 
 { #category : 'GCI initialization' }
 GbxGciCallSequencer class >> enableFullCompression
+[
 	"GciEnableFullCompression"
 	self primInterface
 		gciEnableFullCompression
+]
 
 { #category : 'private - accessing' }
 GbxGciCallSequencer class >> gciCallProtect
+[
 	"very private"
 
 	^GciCallProtect
+]
 
 { #category : 'initialize-release' }
 GbxGciCallSequencer class >> initializeGemCursor
+[
 
 	"Initialize the gem cursor."
 
@@ -281,21 +338,27 @@ GbxGciCallSequencer class >> initializeGemCursor
 			    2r0000000010000000)
 			hotSpot:  9@15
 			name: '') ]
+]
 
 { #category : 'initialize-release' }
 GbxGciCallSequencer class >> nilPrimInterface
+[
 
 	PrimInterface := nil
+]
 
 { #category : 'initialize-release' }
 GbxGciCallSequencer class >> initialize
+[
 	"GbxGciCallSequencer initialize"
 
 	GciCallProtect := GbxSemaphore forMutualExclusion.
 	self nilPrimInterface
+]
 
 { #category : 'initialize-release' }
 GbxGciCallSequencer class >> gciCallProtectStatAdaptor: aStatAdaptorOrNil 
+[
 	"If aStatResourceOrNil is nil, use a regular semaphore for GciCallProtect.  Otherwise,
 	 use a stat-enabled semaphore."
 
@@ -305,37 +368,47 @@ GbxGciCallSequencer class >> gciCallProtectStatAdaptor: aStatAdaptorOrNil
 	 To disable, the wrapper is discarded, and a direct reference to the old semaphore is restored."
 
 	GciCallProtect := GciCallProtect statAdaptor: aStatAdaptorOrNil
+]
 
 { #category : 'initialize-release' }
 GbxGciCallSequencer class >> postLoad: aParcel 
+[
 	"During parcel load, by default #initialize will be sent. We can't do that here,
 	because some of the code needed to run #initialize is in other parcels. Wait until
 	the post-load action for the parcel to initialize."
 
 	"Do nothing."
+]
 
 { #category : 'primInterface' }
 GbxGciCallSequencer class >> isPrimInterfaceInitialized
+[
 	^PrimInterface ~~ nil
+]
 
 { #category : 'primInterface' }
 GbxGciCallSequencer class >> primInterface
+[
 	"Return the instance of the C primitive interface.
 
 	Removed the double initialization of the library for hpux. We can extract from store if need be."
 
 	PrimInterface isNil ifTrue: [self initializePrimInterface].
 	^PrimInterface
+]
 
 { #category : 'primInterface' }
 GbxGciCallSequencer class >> raiseNotLoaded
+[
 
 	GemStone.Gbs.GbsInterfaceError
 		raiseErrorString: 'GBS C Interface not loaded'.
 	^nil
+]
 
 { #category : 'primInterface' }
 GbxGciCallSequencer class >> initializePrimInterface
+[
 	"GbxCLibrarySelectionInterface determines which subclass of ExternalInterface should be instantiated for the gemstone shared library"
 
 	| selectionLibrary |
@@ -360,35 +433,45 @@ GbxGciCallSequencer class >> initializePrimInterface
 			self initializeGci.
 			GbsError selectErrorMap].
 	self initializeGemCursor
+]
 
 { #category : 'simple GCI calls' }
 GbxGciCallSequencer class >> gciProduct
+[
 	^[self primInterface gciProduct]
 		on: GbsError hostErrorSignal
 		do: [:ex | ex returnWith: 0	"The code for 'unknown product'"]
+]
 
 { #category : 'simple GCI calls' }
 GbxGciCallSequencer class >> gciVersion
+[
 	^self primInterface gciVersion
+]
 
 { #category : 'simple GCI calls' }
 GbxGciCallSequencer class >> noLoadGciVersion
+[
 	"Don't load the library if it's not loaded, just answer nil"
 
 	^PrimInterface == nil
 		ifTrue: [nil]
 		ifFalse: [self gciVersion]
+]
 
 { #category : 'simple GCI calls' }
 GbxGciCallSequencer class >> noLoadGciProduct
+[
 	"Don't load the library if it's not loaded, just answer the code for unknown product"
 
 	^PrimInterface == nil
 		ifTrue: [0]
 		ifFalse: [self gciProduct]
+]
 
 { #category : 'instance creation' }
 GbxGciCallSequencer class >> forSession: sess configuration: config
+[
 
 	| concreteClass inst |
 	concreteClass := config blockingProtocolRpc
@@ -399,4 +482,5 @@ GbxGciCallSequencer class >> forSession: sess configuration: config
 		session: sess;
 		configuration: config.
 	^inst
+]
 

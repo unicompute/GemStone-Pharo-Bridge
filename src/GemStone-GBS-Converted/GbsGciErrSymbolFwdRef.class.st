@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGciErrSymbolFwdRef class >> gemStoneErrorNumber6430 ^2332
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrHardBreak class >> gemStoneErrorNumber6430 ^6004
+[
+
+]
 

@@ -10,6 +10,7 @@ Class {
 
 { #category : 'mutual exclusion' }
 GbxRecursionLock >> critical: mutuallyExcludedBlock
+[
 	"Answer the result of evaluating criticalBlock while allowing
 	 the receiver to synchronize processing with other processes.
 	Use a terminationProtectionBlock so that the ensure: is sent 
@@ -26,9 +27,11 @@ GbxRecursionLock >> critical: mutuallyExcludedBlock
 	^terminationProtectionBlock ensure: 
 			[lockingProcess := nil.
 			self signal]
+]
 
 { #category : 'private GBS' }
 GbxRecursionLock >> critical: mutuallyExcludedBlock unlessBlocked: altBlock
+[
 	"Answer the result of evaluating criticalBlock while allowing
 	 the receiver to synchronize processing with other processes; however,
 	 if the activeProcess would have to wait then just run altBlock."
@@ -36,9 +39,11 @@ GbxRecursionLock >> critical: mutuallyExcludedBlock unlessBlocked: altBlock
 	lockingProcess == Processor activeProcess
 		ifTrue: [^mutuallyExcludedBlock value].
 	^super critical: mutuallyExcludedBlock unlessBlocked: altBlock
+]
 
 { #category : 'private GBS' }
 GbxRecursionLock >> critical: mutuallyExcludedBlock waitingUpTo: milliseconds ifTimeout: altBlock
+[
 	"Answer the result of evaluating criticalBlock while allowing
 	 the receiver to synchronize processing with other processes; however,
 	 if the activeProcess would have to wait then just run altBlock."
@@ -49,4 +54,5 @@ GbxRecursionLock >> critical: mutuallyExcludedBlock waitingUpTo: milliseconds if
 		critical: mutuallyExcludedBlock
 		waitingUpTo: milliseconds
 		ifTimeout: altBlock
+]
 

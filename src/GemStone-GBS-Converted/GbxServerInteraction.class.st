@@ -27,130 +27,185 @@ Class {
 
 { #category : 'accessing' }
 GbxServerInteraction >> replicationScheme: aScheme
+[
 
 	replicationScheme := aScheme
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> shouldReplicateResultBodyAsDelegates
+[
 
 	^shouldReplicateResultBodyAsDelegates
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> shouldSynchronize
+[
 
 	^shouldSynchronize
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> replicationClampDelegate
+[
 	^replicationClampDelegate
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> arguments: args 
+[
 	arguments := args
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> replicationClampDelegate: anObject
+[
 	"This message should not be used to explicitly set the clamp for new interactions, since it bypasses clamp updating.
 	It is for use by replicateAlteredObjectsAfterError:, when I'm a follow-up interaction to another interaction and 
 	should use the same clamp."
 
 	replicationClampDelegate := anObject
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> shouldSynchronize: aBoolean 
+[
 	shouldSynchronize := aBoolean
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> replicationLevel
+[
 	^replicationLevel
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> replicationLevel: level
+[
 	replicationLevel := level
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> statResource
+[
 
 	^statResource
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> stopForBreakpoints
+[
 	^stopForBreakpoints
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> session
+[
 
 	^session
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> replicationScheme
+[
 
 	^replicationScheme
 		ifNil: [replicationScheme := session currentReplicationScheme]
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> stopForBreakpoints: anObject
+[
 	stopForBreakpoints := anObject
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> storeTraversal
+[
 	^storeTraversal
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> resultDelegateOrError
+[
 
 	^resultDelegateOrError
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> serverInterface
+[
 	^serverInterface
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> argumentDelegates
+[
 	^argumentDelegates
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> serverInterface: anObject
+[
 	serverInterface := anObject
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> session: anObject
+[
 	session := anObject
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> fetchTraversal
+[
 	^fetchTraversal
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> interactionState
+[
 
 	^interactionState
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> shouldReplicateResult
+[
 	^shouldReplicateResult
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> shouldReplicateResult: anObject
+[
 	shouldReplicateResult := anObject
+]
 
 { #category : 'accessing' }
 GbxServerInteraction >> interactionState: anInteractionState
+[
 
 	interactionState := anInteractionState
+]
 
 { #category : 'testing' }
 GbxServerInteraction >> hasObjectsToStore
+[
 	
 	^storeTraversal buffer isEmpty not
+]
 
 { #category : 'private-accessing' }
 GbxServerInteraction >> shouldReplicateResultBodyAsDelegates: aBoolean
+[
 
 	shouldReplicateResultBodyAsDelegates := aBoolean
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> replicateAlteredObjectsAfterError
+[
 	"Used after an error interrupted execution. Note that an 'error' includes things like 
 	client forwarder sends and breakpoints.
 
@@ -159,9 +214,11 @@ GbxServerInteraction >> replicateAlteredObjectsAfterError
 	that error is probably worse than the original error, so answer the new error."
 
 	^self subclassResponsibility
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> replicateResult
+[
 	"resultDelegateOrError is the server object answered by the message send.
 	On entry, delegatesToTraverse is the immediate-faulting altered objects.
 
@@ -169,9 +226,11 @@ GbxServerInteraction >> replicateResult
 	the error."
 
 	self subclassResponsibility
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> completeResult: delegateOrError
+[
 	"aDelegate is the server object answered by the message send. 
 	Answer either aDelegate or, if result replication is specified, its client counterpart."
 
@@ -199,9 +258,11 @@ GbxServerInteraction >> completeResult: delegateOrError
 								ifFalse: [self getCachedResultFromDelegate: delegateOrError]]
 						ifFalse: [delegateOrError]].
 	^result
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> continueAfter: error
+[
 	"We've resumed from an exception (could be a client forwarder send or a debugger step).
 	Need to re-flush dirty, do a StoreTravDoTravRefs(4) to continue, replicate any altered objects 
 	(and the result if not error), and return the result."
@@ -213,9 +274,11 @@ GbxServerInteraction >> continueAfter: error
 		with: error.
 	^self
 		doRoundTrip: [serverInterface continueAfter: error forInteraction: self]
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> roundTripCurtailed
+[
 	"When the round trip is curtailed, report a (loss of) synchronization error,
 	 unless there is reason not to:
 		- unwinding from an async abort
@@ -226,9 +289,11 @@ GbxServerInteraction >> roundTripCurtailed
 		and: [shouldSynchronize
 		and: [session causeOfDeath == nil]])
 			ifTrue: [GbsSynchronizationError signalWith: session]
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> doRoundTrip: aBlock
+[
 
 	| newResultOrError |
 	session sessionCritical: 
@@ -258,9 +323,11 @@ GbxServerInteraction >> doRoundTrip: aBlock
 						[session nestingLevel: nestingLevelWas.
 						self releaseTraversals]].
 	^newResultOrError
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> fetchReplicationClamp
+[
 	"If the replication clamp has not been explicitly set, 
 	find or create and answer the replication clamp delegate for this interaction. 
 	If the replication clamp must be created, this will involve other server interactions.
@@ -280,18 +347,22 @@ GbxServerInteraction >> fetchReplicationClamp
 	^self replicationScheme usesClamps
 		ifTrue: [self replicationScheme clamp asGSObjectInSession: session]
 		ifFalse: [session oopNil]
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> stepAfter: error
+[
 	"We're stepping through a server execution."
 
 	self doRoundTrip: [serverInterface stepAfter: error forInteraction: self].
 	^resultDelegateOrError = error serverProcess
 		ifTrue: [error]
 		ifFalse: [resultDelegateOrError]
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> stepOrContinueAfter: error
+[
 	"Either step or continue after the given GbsError. The error tells us which to do."
 
 	self gbsMessenger
@@ -305,9 +376,11 @@ GbxServerInteraction >> stepOrContinueAfter: error
 	^error stepLevel isNil
 		ifTrue: [self continueAfter: error]
 		ifFalse: [self stepAfter: error]
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> getCachedResultFromDelegate: delegateOrError
+[
 	"Look up the delegate. If its not cached, this is an error."
 	"Sender must hold my session's sessionProtect."
 
@@ -320,9 +393,11 @@ GbxServerInteraction >> getCachedResultFromDelegate: delegateOrError
 			result := GbxUnknownStub new.
 			session privateConnectNewClient: result toServer: delegateOrError].
 	^result
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> synchronizeForResultOrError
+[
 	"resultDelegateOrError may be a result delegate, or may be a GbsError.
 	Synchronize altered/swizzled objects if we have them. Fetch them if synchronizing and we don't have them.
 	If not error, replicate result if specified. Don't finish resolving the replication.
@@ -353,9 +428,11 @@ GbxServerInteraction >> synchronizeForResultOrError
 			[storeTraversal exportPackedNotYetAccepted.
 			answer := self replicateResult].
 	^answer
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> unwindServerCall: aResult 
+[
 	"The client stack is being cut back past the point that a server 
 	GsProcess was initiated -- need to terminate the GsProcess. 
 	aResult is normally a GbsError, but it's possible under abnormal 
@@ -364,22 +441,28 @@ GbxServerInteraction >> unwindServerCall: aResult
 	there isn't much we can do."
 
 	aResult gbxIsGSError ifTrue: [aResult terminateGsProcess]
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> makeArgumentDelegates
+[
 	argumentDelegates := arguments 
 				collect: [:arg | arg asGSObjectInSession: session]
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> makeInitialCall
+[
 
 	self gbsMessenger statusTag: #makeInitialCall: message: '%1' with: self.
 	^self doRoundTrip: 
 			[GBSM clientMap checkFinalizer.
 			serverInterface performInteraction: self]
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> packForStore
+[
 	"Sender must hold session's sessionProtect"
 
 	storeTraversal emptyBuffer.	"In an error-continue scenario, we use this traversal more than once,
@@ -387,9 +470,11 @@ GbxServerInteraction >> packForStore
 	shouldSynchronize
 		ifTrue: [self packAllDirtyForServer]
 		ifFalse: [self packDirtyArgumentsForUnsynchronizedOperation]
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> allocateTraversals
+[
 	"Sender must hold my session's sessionProtect."
 	
 	statResource == nil
@@ -399,9 +484,11 @@ GbxServerInteraction >> allocateTraversals
 		ifFalse:
 			[storeTraversal := GbxStoreTraversalWithStats for: self statResource: statResource.
 			fetchTraversal := GbxFetchTraversalWithStats for: self statResource: statResource]
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> privateExecute
+[
 	"Actually perform the server interaction, and process the results.
 	Answer either a delegate or a replicate, as specified by replicateResult."
 
@@ -430,9 +517,11 @@ GbxServerInteraction >> privateExecute
 	the dependencies. You should be able to find all the dependencies by browsing senders 
 	of #dependsOnStructureOfServerCall. If you add a dependency, please add a send of 
 	this message."
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> releaseTraversals
+[
 	"In all normal cases, including all expected error cases, both traversals are allocated and assigned
 	before this message is sent. However, since this message is sent by an ensure block, and both variables
 	are nil when the block is entered, we'll guard it. One case where this is needed is if the Process is terminated.
@@ -442,39 +531,49 @@ GbxServerInteraction >> releaseTraversals
 
 	storeTraversal ~~ nil ifTrue: [storeTraversal release].
 	fetchTraversal ~~ nil ifTrue: [fetchTraversal release]
+]
 
 { #category : 'private - executing' }
 GbxServerInteraction >> cleanupCurtailed: resultOrError
+[
 
 	self unwindServerCall: resultOrError
+]
 
 { #category : 'validation' }
 GbxServerInteraction >> verify
+[
 	"Raise an error if someone gave me bogus things to execute.
 	If everything looks hunky-dory, answer true."
 
 	^self subclassResponsibility
+]
 
 { #category : 'initialize-release' }
 GbxServerInteraction >> initialize
+[
 	"Initialize instance variables that have defaults. Others must be set explicitly."
 
 	arguments := #().	"Not all interactions take arguments, but this is safe to iterate over even so."
 	shouldSynchronize := shouldReplicateResult := stopForBreakpoints := true.
 	shouldReplicateResultBodyAsDelegates := false.
 	replicationLevel := session defaultGStoSTLevel
+]
 
 { #category : 'private - flushing' }
 GbxServerInteraction >> packAllDirtyForServer
+[
 	"Pack all dirty objects into a traversal buffer to be sent to the server. 
 	If more dirty objects than will fit, send intermediate traversal buffers."
 	"Sender must hold session's sessionProtect"
 
 	self makeArgumentDelegates.	"This will dirty any arguments that are client objects."
 	session flushDirtyPoolTo: storeTraversal
+]
 
 { #category : 'private - flushing' }
 GbxServerInteraction >> copyNotConnectedArguments
+[
 	"All arguments that are not delegates and do not have delegates are sent #copy, and these will be used as the actual arguments.
 	Used by the #unsynchronized* methods to avoid replicating literal strings and the like to the server."
 
@@ -483,9 +582,11 @@ GbxServerInteraction >> copyNotConnectedArguments
 					(arg isGSObject
 						ifTrue: [arg]
 						ifFalse: [arg gbxDelegate forSession: session]) ifNil: [arg copy]]
+]
 
 { #category : 'private - flushing' }
 GbxServerInteraction >> packDirtyArgumentsForUnsynchronizedOperation
+[
 	"Pack only any of the arguments that are marked dirty into a traversal buffer to be sent to the server. 
 	If more dirty objects than will fit, send intermediate traversal buffers. This *should* be 
 	limited to those arguments that are client-only objects, and need to be replicated to the server."
@@ -510,25 +611,31 @@ GbxServerInteraction >> packDirtyArgumentsForUnsynchronizedOperation
 			gbxAssert.
 	self copyNotConnectedArguments.
 	session setAsideDirtyWhile: [self packAllDirtyForServer]
+]
 
 { #category : 'dispatching' }
 GbxServerInteraction >> storeTravDoArgs
+[
 	"Answer an arguments struct appropriate for myself.
 	Since I don't know anything about such structs, ask the server interface for it, since it knows
 	about such things."
 
 	^self subclassResponsibility
+]
 
 { #category : 'dispatching' }
 GbxServerInteraction >> clampedTravArgs
+[
 	"Answer an arguments struct appropriate for myself.
 	Since I don't know anything about such structs, ask the server interface for it, since it knows
 	about such things."
 
 	^serverInterface clampedTravArgsForServerInteraction: self
+]
 
 { #category : 'printing' }
 GbxServerInteraction >> printOn: aStream
+[
 
 	super printOn: aStream.
 	aStream nextPutAll: ' for session '.
@@ -539,9 +646,11 @@ GbxServerInteraction >> printOn: aStream
 		nextPutAll: 'replicationSpecSelector: ';
 		print: (replicationScheme ifNil: [nil] ifNotNil: [:scheme | scheme selector]);
 		cr
+]
 
 { #category : 'executing' }
 GbxServerInteraction >> execute
+[
 	"Actually perform the server interaction, and process the results.
 	Answer either a delegate or a replicate, as specified by replicateResult."
 
@@ -565,9 +674,11 @@ GbxServerInteraction >> execute
 				session isUnwindingAsyncAbort: true.
 				ex return]]
 			ifCurtailed: [session isUnwindingAsyncAbort: false]
+]
 
 { #category : 'instance creation' }
 GbxServerInteraction class >> interface: aServerInterface
+[
 
 	| newInstance session |
 	newInstance := self new.
@@ -578,4 +689,5 @@ GbxServerInteraction class >> interface: aServerInterface
 		interactionState: session newInteractionState;
 		initialize.
 	^newInstance
+]
 

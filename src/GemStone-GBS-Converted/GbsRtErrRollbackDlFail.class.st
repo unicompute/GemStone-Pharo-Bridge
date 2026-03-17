@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrRollbackDlFail class >> gemStoneErrorNumber6430 ^2425
+[
+
+]
 

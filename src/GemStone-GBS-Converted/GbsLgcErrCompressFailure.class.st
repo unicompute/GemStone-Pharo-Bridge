@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsLgcErrCompressFailure class >> gemStoneErrorNumber6430 ^2165
+[
+
+]
 

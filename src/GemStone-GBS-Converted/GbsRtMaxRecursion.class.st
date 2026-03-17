@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtMaxRecursion class >> gemStoneErrorNumber6430 ^2138
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsLgcErrInconsistentSize class >> gemStoneErrorNumber6430 ^2239
+[
+
+]
 

@@ -21,24 +21,33 @@ Class {
 
 { #category : 'GemStone extensions' }
 GbxInspectionWrapperWithSession >> gbxIsWrapped
+[
 	^true
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> basicCache: anObject
+[
 	basicCache := anObject
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> currentObjectSize
+[
 	"how many objects have we brought across the wire"
 
 	^self objectSize min: maxElements
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> session
+[
 	^session
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> delegateInspectorExtraAttributes
+[
 	"the blocks are so that the derived attributes can update themselves with every entry into the field"
 
 	| derivedAttributes isLoggedIn aSession ws differs loggedBlock sessionBlock clientBlock cachedClient |
@@ -108,21 +117,29 @@ GbxInspectionWrapperWithSession >> delegateInspectorExtraAttributes
 	derivedAttributes add: (Tools.Trippy.TextAttribute label: 'basic'
 				textBlock: [self debugPrintBasicIn: aSession cachedClient: cachedClient]).
 	^derivedAttributes
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> size
+[
 	^self currentObjectSize
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> gbxDoItReceiver
+[
 	^delegate
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> delegate
+[
 	^delegate
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> basicSize
+[
 	"used to make sure the basic tab consistently shows the number
 	of indexed variables reported by _basicSize"
 	
@@ -137,21 +154,29 @@ GbxInspectionWrapperWithSession >> basicSize
 				on: Error
 				do: [:ex | 0]].
 	^objectSize
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> remoteClass
+[
 	^remoteClass
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> objectIsClass: anObject
+[
 	objectIsClass := anObject
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> session: anObject
+[
 	session := anObject
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> objectSize
+[
 	"how many objects are available"
 	"if we can't get the semaphore, assume no elements as its the only safe thing to do"
 	
@@ -166,50 +191,68 @@ GbxInspectionWrapperWithSession >> objectSize
 				on: Error
 				do: [:ex | 0]].
 	^objectSize
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> objectText
+[
 
 	^objectText
 		ifNil: [objectText := self session evaluate: 'self asQuadByteString' context: delegate]
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> remoteClassName
+[
 	^remoteClassName
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> delegate: anObject
+[
 	delegate := anObject
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> remoteClass: anObject
+[
 	remoteClass := anObject
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> doItReceiver
+[
 	"This answer isn't correct, but it's expedient.
 	You get into trouble if you return an actual proxy here.
 	See bug 39781"
 	
 	^delegate
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> remoteClassName: anObject
+[
 	remoteClassName := anObject
+]
 
 { #category : 'accessing' }
 GbxInspectionWrapperWithSession >> resetObjectSize
+[
 	objectSize := nil.
 	self cache actualSize: nil.
+]
 
 { #category : 'testing' }
 GbxInspectionWrapperWithSession >> isSorted
+[
 	"assuming we're a collection, is our collection sorted?"
 
 	^cache isSorted
+]
 
 { #category : 'testing' }
 GbxInspectionWrapperWithSession >> isUncached
+[
 	"are we cached in the gs cache?"
 
 	| cachedDelegate cachedProxy |
@@ -219,9 +262,11 @@ GbxInspectionWrapperWithSession >> isUncached
 					[session clientObjForDelegate: cachedDelegate otherwise: 'not there']
 				unlessBlocked: [^false].
 	^(cachedProxy == localObject) not
+]
 
 { #category : 'testing' }
 GbxInspectionWrapperWithSession >> objectIsClass
+[
 	"if we encounter a problem getting the value, just return false"
 	
 	objectIsClass isNil
@@ -239,18 +284,24 @@ GbxInspectionWrapperWithSession >> objectIsClass
 						on: GbsError errorSignal
 						do: [:ex | ^false]]].
 	^objectIsClass
+]
 
 { #category : 'testing' }
 GbxInspectionWrapperWithSession >> isUnretrievable
+[
 
 	^remoteClassName isNil
+]
 
 { #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> critical: criticalBlock unlessBlocked: blockedBlock 
+[
 	^session critical: criticalBlock unlessBlocked: blockedBlock
+]
 
 { #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> gbxInspectorClasses
+[
 
 	| superClassInfo |
 	cachedInspectorClasses ifNotNil: [^cachedInspectorClasses].
@@ -268,24 +319,30 @@ GbxInspectionWrapperWithSession >> gbxInspectorClasses
 			(self gbxInspectorClassesDictionaryByName at: assoc key ifAbsent: []) ifNotNil: [:coll | ^cachedInspectorClasses := coll]].
 	"Does not inherit from Object, use a basic inspector."
 	^Array with: GbxBasicInspector
+]
 
 { #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> debugPrintClientBlocked
+[
 	| ws |
 	ws := String new writeStream.
 	delegate debugPrintBasicClientBlockedOn: ws.
 	^ws contents
+]
 
 { #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> delegatePrintString
+[
 
 	| ws |
 	ws := String new writeStream.
 	delegate gbxDebugPrintOn: ws.
 	^ws contents
+]
 
 { #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> debugPrintBasicIn: aSession cachedClient: client 
+[
 	| ws |
 	ws := String new writeStream.
 	delegate 
@@ -293,24 +350,30 @@ GbxInspectionWrapperWithSession >> debugPrintBasicIn: aSession cachedClient: cli
 		in: aSession
 		on: ws.
 	^ws contents
+]
 
 { #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> debugPrintIsSpecial
+[
 	| ws |
 	ws := String new writeStream.
 	delegate debugPrintBasicIsSpecialOn: ws.
 	^ws contents
+]
 
 { #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> debugPrintIsDefunct
+[
 	| ws |
 	ws := String new writeStream.
 	delegate session critical: [delegate debugPrintBasicIsDefunctOn: ws]
 		unlessBlocked: [ws nextPutAll: 'Unretrievable GemStone object'].
 	^ws contents
+]
 
 { #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> debugPrintFlags
+[
 
 	| ws |
 	ws := String new writeStream.
@@ -320,13 +383,17 @@ GbxInspectionWrapperWithSession >> debugPrintFlags
 	ws cr.
 	delegate debugPrintIsIdentityClampedOn: ws.
 	^ws contents
+]
 
 { #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> gbxOldInspect
+[
 	^delegate gbxOldInspect
+]
 
 { #category : 'private - inspecting' }
 GbxInspectionWrapperWithSession >> debugPrintExportInfoLoggedIn: loggedIn in: aSession cachedClient: client 
+[
 	| ws |
 	ws := String new writeStream.
 	self critical: 
@@ -337,9 +404,11 @@ GbxInspectionWrapperWithSession >> debugPrintExportInfoLoggedIn: loggedIn in: aS
 				on: ws]
 		unlessBlocked: [ws nextPutAll: 'Unretrievable GemStone object'].
 	^ws contents
+]
 
 { #category : 'initialize-release' }
 GbxInspectionWrapperWithSession >> fetchInitialInfoUsingReflection
+[
 	"Get the object's class, class name, and whether the object is a (non-meta) class, without sending the object any messages. This way will work even if the object being inspected is a proxy that lies when sent #class, such as a ClientForwarder"
 
 	^delegate session
@@ -352,13 +421,17 @@ GbxInspectionWrapperWithSession >> fetchInitialInfoUsingReflection
 		gbxArray at: 3 put: ( class isMeta ).
 		gbxArray]'
 		with: delegate
+]
 
 { #category : 'initialize-release' }
 GbxInspectionWrapperWithSession >> initialize
+[
 	maxElements := 200
+]
 
 { #category : 'initialize-release' }
 GbxInspectionWrapperWithSession >> fetchInitialInfo
+[
 	"initial information that can be learned about the remote object should be done here
 	 to minimize round trips and handle elegantly the blocked semaphore case
 
@@ -386,25 +459,31 @@ GbxInspectionWrapperWithSession >> fetchInitialInfo
 				self remoteClassName: 'Unretrievable Object'.
 				self objectIsClass: false].
 	^#succeeded
+]
 
 { #category : 'user interface' }
 GbxInspectionWrapperWithSession >> gbxInspectorClassesDictionaryByName
+[
 
 	^(Dictionary new)
 		at: 'CollisionBucket'
 			put: (Array with: GbxTrippyDictionaryInspector with: GbxBasicInspector);
 		yourself
+]
 
 { #category : 'user interface' }
 GbxInspectionWrapperWithSession >> inspect
+[
 	"added to support old inspectors"
 
 	(Tools.Trippy.Inspector useSimpleInspector not and: [session isNil])
 		ifTrue: [delegate inspect]
 		ifFalse: [super inspect]
+]
 
 { #category : 'user interface' }
 GbxInspectionWrapperWithSession >> gbxInspectorClassesDictionary
+[
 	^(Dictionary new)
 		at: OCharacterCollection
 			put: (Array 
@@ -423,9 +502,11 @@ GbxInspectionWrapperWithSession >> gbxInspectorClassesDictionary
 		at: OObject put: (Array with: GbxBasicInspector);
 		at: Onil put: Array new;
 		yourself
+]
 
 { #category : 'user interface' }
 GbxInspectionWrapperWithSession >> inspectorCollaborators
+[
 
 	| oc proceed |
 	oc := OrderedCollection new.
@@ -449,88 +530,112 @@ GbxInspectionWrapperWithSession >> inspectorCollaborators
 														context: delegate) asForwarder]]
 								ifFalse: [Tools.Trippy.InspectorShell gbxCancelToken]])].
 	^oc
+]
 
 { #category : 'user interface' }
 GbxInspectionWrapperWithSession >> browse
+[
 
 	delegate browseHierarchy
+]
 
 { #category : 'updating' }
 GbxInspectionWrapperWithSession >> refreshSet
+[
 	"hand off to the cache for retrieval"
 
 	self resetObjectSize.
 	self objectSize = 0 ifTrue: [^#()].
 	self cache refreshSet.
 	^self cache elements
+]
 
 { #category : 'updating' }
 GbxInspectionWrapperWithSession >> refreshIdentityBag
+[
 	"force a full refresh of the bag. hand off to the cache for retrieval"
 
 	self resetObjectSize.
 	self objectSize = 0 ifTrue: [^#()].
 	self cache refreshIdentityBag.
 	^self cache elements
+]
 
 { #category : 'updating' }
 GbxInspectionWrapperWithSession >> refreshText
+[
 	self resetObjectSize.
 	objectText := nil.
 	^self objectText
+]
 
 { #category : 'updating' }
 GbxInspectionWrapperWithSession >> refreshDictionary
+[
 	"hand off to the cache for retrieval"
 
 	self resetObjectSize.
 	self objectSize = 0 ifTrue: [^#()].
 	self cache refreshDictionary.
 	^self cache elements
+]
 
 { #category : 'updating' }
 GbxInspectionWrapperWithSession >> refreshBasicSet
+[
 	"hand off to the cache for retrieval"
 
 	self resetObjectSize.
 	self objectSize = 0 ifTrue: [^#()].
 	self basicCache refreshSet.
 	^self basicCache elements
+]
 
 { #category : 'updating' }
 GbxInspectionWrapperWithSession >> refreshArray
+[
 	"hand off to the cache for retrieval"
 
 	self resetObjectSize.
 	(self cache actualSize: self objectSize) = 0 ifTrue: [^#()].
 	self cache refreshArray.
 	^self cache elements
+]
 
 { #category : 'updating' }
 GbxInspectionWrapperWithSession >> refreshBasicArray
+[
 	"hand off to the cache for retrieval"
 
 	self resetObjectSize.
 	self basicSize = 0 ifTrue: [^#()].
 	self basicCache refreshArray.
 	^self basicCache elements
+]
 
 { #category : 'collections' }
 GbxInspectionWrapperWithSession >> cacheDictionaryInterval: anInterval 
+[
 	"cache objects in collection in this interval"
 
 	self cache cacheDictionaryInterval: anInterval
+]
 
 { #category : 'collections' }
 GbxInspectionWrapperWithSession >> cachedElements
+[
 	^self cache elements
+]
 
 { #category : 'collections' }
 GbxInspectionWrapperWithSession >> cacheArrayInterval: anInterval 
+[
 	self cache cacheArrayInterval: anInterval
+]
 
 { #category : 'collections' }
 GbxInspectionWrapperWithSession >> basicNamedVariablesProtectedBy: protected
+[
 
 	| instVarNames nameObjArray values valuePrintStrings result |
 	self gbxFixMe.	"protected variables haven't been implemented yet"
@@ -549,34 +654,46 @@ GbxInspectionWrapperWithSession >> basicNamedVariablesProtectedBy: protected
 						cachedPrintString: (valuePrintStrings at: idx)
 						index: idx)].
 	^result
+]
 
 { #category : 'collections' }
 GbxInspectionWrapperWithSession >> cache
+[
 	cache isNil ifTrue: [cache := GbxCollectionCache on: delegate].
 	^cache
+]
 
 { #category : 'collections' }
 GbxInspectionWrapperWithSession >> cachedRanges
+[
 	"pass the request for cached indices off to the GbxCollectionCache"
 
 	^self cache cachedRanges
+]
 
 { #category : 'collections' }
 GbxInspectionWrapperWithSession >> basicCache
+[
 	^basicCache
+]
 
 { #category : 'collections' }
 GbxInspectionWrapperWithSession >> cacheSetInterval: anInterval 
+[
 	"cache objects in collection in this interval"
 
 	self cache cacheSetInterval: anInterval
+]
 
 { #category : 'collections' }
 GbxInspectionWrapperWithSession >> cacheIdentityBagInterval: anInterval 
+[
 	self cache cacheIdentityBagInterval: anInterval
+]
 
 { #category : 'collections' }
 GbxInspectionWrapperWithSession >> variablesSourceString
+[
 
 	^' [:gbxOuterObject | | gbxValues gbxNames gbxValuePrintStrings gbxOuterClass |
 	gbxNames := Array new.
@@ -593,15 +710,19 @@ GbxInspectionWrapperWithSession >> variablesSourceString
 		gbxValuePrintStrings add: gbxWriteStream contents].
 	Array with: gbxNames with: gbxValues with: gbxValuePrintStrings]
 '
+]
 
 { #category : 'printing' }
 GbxInspectionWrapperWithSession >> uncachedPrintString
+[
 	"determine if we are looking at an uncached proxy (probably a forwarder)"
 
 	^self isUncached ifFalse: [String new] ifTrue: ['Uncached ']
+]
 
 { #category : 'utility' }
 GbxInspectionWrapperWithSession class >> enhancedRemotePrintString
+[
 	"if the object we want to printString can have some useful info attached, do it here. For convenience, we grab the hex value of chars from the server.
 	Expected preface: Declare gbxObject, gbxClass, gbxWriteStream. Set gbxObject to the object you want the print string of.
 	Expected epilogue: Use gbxWriteStream, eventually getting its contents."
@@ -631,10 +752,13 @@ gbxFallbackString := gbxClass asString describeClassName.
 			nextPut: $";
 			nextPutAll: (gbxObject asInteger printStringRadix: 16 showRadix: true);
 			nextPut: $"].'
+]
 
 { #category : 'private-events' }
 GbxInspectionWrapperWithSession class >> constructEventsTriggered
+[
 	^(super constructEventsTriggered)
 		add: #objectChanged;
 		yourself
+]
 

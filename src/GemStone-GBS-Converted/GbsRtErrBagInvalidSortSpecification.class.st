@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrBagInvalidSortSpecification class >> gemStoneErrorNumber6430 ^2315
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGsErrStnNetProtocol class >> gemStoneErrorNumber6430 ^4034
+[
+
+]
 

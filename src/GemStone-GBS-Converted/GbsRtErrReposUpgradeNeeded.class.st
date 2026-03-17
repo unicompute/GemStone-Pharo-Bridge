@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrReposUpgradeNeeded class >> gemStoneErrorNumber6430 ^2486
+[
+
+]
 

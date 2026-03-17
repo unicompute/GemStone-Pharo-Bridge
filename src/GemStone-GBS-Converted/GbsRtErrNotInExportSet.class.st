@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrNotInExportSet class >> gemStoneErrorNumber6430 ^2422
+[
+
+]
 

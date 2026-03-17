@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrMaxCommitRetry class >> gemStoneErrorNumber6430 ^2290
+[
+
+]
 

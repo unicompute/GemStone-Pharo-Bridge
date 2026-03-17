@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrTagNotAllowed class >> gemStoneErrorNumber6430 ^2054
+[
+
+]
 

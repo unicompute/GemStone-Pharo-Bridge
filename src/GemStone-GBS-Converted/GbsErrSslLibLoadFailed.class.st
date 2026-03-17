@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrSslLibLoadFailed class >> gemStoneErrorNumber6430 ^4150
+[
+
+]
 

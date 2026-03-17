@@ -11,9 +11,13 @@ Class {
 
 { #category : 'accessing' }
 GbxRemoteServices >> gbxServices
+[
 	^gbxServices
+]
 
 { #category : 'accessing' }
 GbxRemoteServices >> gbxServices: anObject
+[
 	gbxServices := anObject
+]
 

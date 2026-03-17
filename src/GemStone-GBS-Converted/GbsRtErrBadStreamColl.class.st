@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrBadStreamColl class >> gemStoneErrorNumber6430 ^2184
+[
+
+]
 

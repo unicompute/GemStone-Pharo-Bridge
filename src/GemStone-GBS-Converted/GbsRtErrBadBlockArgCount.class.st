@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrBadBlockArgCount class >> gemStoneErrorNumber6430 ^2018
+[
+
+]
 

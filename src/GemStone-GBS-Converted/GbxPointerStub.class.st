@@ -10,6 +10,7 @@ Class {
 
 { #category : 'instance creation' }
 GbxPointerStub class >> stubObject: anObject forDelegate: delegate freeSlots: freeSlots
+[
 	"Turn anObject into a stub using changeClass, not become:.  ChangeClass is quicker than become: and does not require copying any translucent instvars."
 	"Sender must hold delegate's session's sessionProtect."
 
@@ -26,4 +27,5 @@ GbxPointerStub class >> stubObject: anObject forDelegate: delegate freeSlots: fr
 	"If in persistent-slot nilling mode, nil out all persistent instVars"
 	freeSlots ifTrue: [replicator nilMappedSlotsOf: anObject].
 	delegate stubbing
+]
 

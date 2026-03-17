@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsClassErrRemoveInherIv class >> gemStoneErrorNumber6430 ^2278
+[
+
+]
 

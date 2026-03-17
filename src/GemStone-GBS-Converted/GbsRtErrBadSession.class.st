@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrBadSession class >> gemStoneErrorNumber6430 ^2139
+[
+
+]
 

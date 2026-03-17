@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrUserProfileLost class >> gemStoneErrorNumber6430 ^4008
+[
+
+]
 

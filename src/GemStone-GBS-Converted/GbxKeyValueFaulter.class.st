@@ -17,13 +17,16 @@ Class {
 
 { #category : 'initialization' }
 GbxKeyValueFaulter >> dictionary: aDict
+[
 
 	deferredKeys := Dictionary new.
 	deferredValues := Dictionary new.
 	dictionary := aDict
+]
 
 { #category : 'replication' }
 GbxKeyValueFaulter >> indexableValueAt: index put: anObj
+[
 
 	"This message is sent by replication.  If this is an odd slot, it's a key for the dictionary.
 	 If it's an even slot, it's a value for the dictionary that corresponds with the key supplied
@@ -32,9 +35,11 @@ GbxKeyValueFaulter >> indexableValueAt: index put: anObj
 	index odd
 		ifTrue: [ self incomingKey: anObj assocIndex: (index // 2) + 1 ]
 		ifFalse: [ self incomingValue: anObj assocIndex: (index // 2) ]
+]
 
 { #category : 'private' }
 GbxKeyValueFaulter >> incomingKey: incomingKey assocIndex: assocIndex
+[
 
 	| deferredValue |
 	lastValueSlot = assocIndex ifTrue: [
@@ -51,9 +56,11 @@ GbxKeyValueFaulter >> incomingKey: incomingKey assocIndex: assocIndex
 	].
 	lastKey := incomingKey.
 	lastKeySlot := assocIndex.
+]
 
 { #category : 'private' }
 GbxKeyValueFaulter >> incomingValue: incomingValue assocIndex: assocIndex
+[
 
 	| deferredKey |
 	lastKeySlot = assocIndex ifTrue: [
@@ -70,8 +77,11 @@ GbxKeyValueFaulter >> incomingValue: incomingValue assocIndex: assocIndex
 	].
 	lastValue := incomingValue.
 	lastValueSlot := assocIndex.
+]
 
 { #category : 'instance creation' }
 GbxKeyValueFaulter class >> for: aDictionary 
+[
 	^self new dictionary: aDictionary
+]
 

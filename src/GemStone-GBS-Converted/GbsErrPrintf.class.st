@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrPrintf class >> gemStoneErrorNumber6430 ^2505
+[
+
+]
 

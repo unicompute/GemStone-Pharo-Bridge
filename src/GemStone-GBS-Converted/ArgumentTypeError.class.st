@@ -12,11 +12,15 @@ Class {
 
 { #category : 'accessing' }
 ArgumentTypeError >> actualArg
+[
 
 	^actualArg
+]
 
 { #category : 'accessing' }
 ArgumentTypeError >> expectedClass
+[
 
 	^expectedClass
+]
 

@@ -11,6 +11,7 @@ Class {
 
 { #category : 'replication support' }
 GbxServerMapTableSegment >> beStrongAndFinalizeIntoNoLongerReplicatedBuffer: noLongerReplicatedBuffer gcedBuffer: gcedBuffer
+[
 	"1. Change all of my references to delegates and to client objects to strong references. 
 	2. If I need finalization, finalize my piece of the table and add appropriate oops into the given buffers.
 	Either or both of the delegate and the client object may have been collected. 
@@ -76,9 +77,11 @@ GbxServerMapTableSegment >> beStrongAndFinalizeIntoNoLongerReplicatedBuffer: noL
 										tombstoneIndex := tombstoneIndex - 2]
 									ifFalse: [self gbsMessenger error: 'Delegate GCed before client object']]].
 			needFinalization := false]
+]
 
 { #category : 'enumeration' }
 GbxServerMapTableSegment >> delegatesAndClientObjsDo: aBlock
+[
 	"For each entry I hold, evaluate the given two-argument block with arguments of the delegate and the client object.
 	The delegate will not be nil, but the client object may be nil."
 	"Sender must hold my session's accessProtect."
@@ -95,31 +98,39 @@ GbxServerMapTableSegment >> delegatesAndClientObjsDo: aBlock
 					delegate := self basicAt: keyIndex + 2.
 					delegate == 0 ifTrue: [delegate := nil].
 					delegate ~~ nil ifTrue: [aBlock value: delegate value: clientObj]]]
+]
 
 { #category : 'finalization' }
 GbxServerMapTableSegment >> mourn
+[
 	"Sent in the VW high-priority finalization thread. Just record the fact that finalization is needed,
 	the finalization will be done by another thread before replication."
 
 	needFinalization := true
+]
 
 { #category : 'primitives' }
 GbxServerMapTableSegment >> beWeak: aBoolean
+[
 	"Determine whether the receiver references its contents weakly or not.
 	 Answer the receiver's previous weakness state."
 	<primitive: 467>
 
 	^self primitiveFailed
+]
 
 { #category : 'primitives' }
 GbxServerMapTableSegment >> isWeak
+[
 	"Answer if the receiver references its contents weakly."
 	<primitive: 465>
 
 	^self primitiveFailed
+]
 
 { #category : 'primitives' }
 GbxServerMapTableSegment >> indexOf: oldValue replaceWith: newValue startingAt: startIndex stoppingAt: stopIndex
+[
 	"Searches the specified portion of the receiver for the first reference 
 	to oldValue, replacing that reference with newValue, and answers
 	the 1-based index at which the oldValue was found. Zero is returned if
@@ -129,15 +140,19 @@ GbxServerMapTableSegment >> indexOf: oldValue replaceWith: newValue startingAt: 
 	<primitive: 422>
 
 	self primitiveFailed
+]
 
 { #category : 'initialize-release' }
 GbxServerMapTableSegment >> initialize
+[
 
 	needFinalization := false.
 	self beWeak: parent isWeak.
+]
 
 { #category : 'private-auditing' }
 GbxServerMapTableSegment >> auditUsedElementKey: key client: client delegate: del into: results session: aSession
+[
 	"Element is used (valid key) but may have unfinalized tombstone for client and/or delegate.
 	Things checked here:
 	* all used elements have keys that are SmallIntegers in the correct range (1 to 2**24, inclusive)
@@ -188,9 +203,11 @@ GbxServerMapTableSegment >> auditUsedElementKey: key client: client delegate: de
 				description: 'Found delegate with lower bytes %1, expected %2.'
 				actual: del
 				expected: (key - 1) printString]
+]
 
 { #category : 'private-auditing' }
 GbxServerMapTableSegment >> auditParentage: expectedParent index: expectedParentIndex upperBytes: expectedUpperBytes into: results
+[
 	"Things checked here:
 	* my parent and index agree with those passed in
 	* my upperBytes is the same as my parent's
@@ -228,9 +245,11 @@ GbxServerMapTableSegment >> auditParentage: expectedParent index: expectedParent
 		description: 'segment basicSize=%1, expected %2'
 		actual: self basicSize
 		expected: '3072'
+]
 
 { #category : 'private-auditing' }
 GbxServerMapTableSegment >> auditElementsInto: results session: aSession
+[
 	"Things checked here:
 	* all used elements have keys that are SmallIntegers in the correct range (1 to 2**24, inclusive)
 	* all unused elements have nil keys
@@ -260,16 +279,21 @@ GbxServerMapTableSegment >> auditElementsInto: results session: aSession
 						into: results
 						session: aSession]].
 	results addUsedElements: numUsedElements
+]
 
 { #category : 'private' }
 GbxServerMapTableSegment class >> instanceBasicSize
+[
 
 	^3072
+]
 
 { #category : 'private' }
 GbxServerMapTableSegment class >> gbxShouldMournEarly
+[
 	"GBS private. Answer true if my instances implement #mourn in a trivial manner that cannot block or error, 
 	and it is important that all of them be mourned before any normal mourning is done."
 
 	^true
+]
 

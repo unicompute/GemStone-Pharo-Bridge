@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsObjErrDictConstraintViolation class >> gemStoneErrorNumber6430 ^2340
+[
+
+]
 

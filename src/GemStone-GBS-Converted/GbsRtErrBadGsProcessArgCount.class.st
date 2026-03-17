@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrBadGsProcessArgCount class >> gemStoneErrorNumber6430 ^2373
+[
+
+]
 

@@ -10,15 +10,18 @@ Class {
 
 { #category : 'private support' }
 GbxTimestampReplicator >> clientTimeZone
+[
 
 	| timeZone |
 	timeZone := session clientTimeZone == nil
 				ifTrue: [GbsTimeZone current]
 				ifFalse: [session clientTimeZone].
 	^timeZone
+]
 
 { #category : 'private store replication' }
 GbxTimestampReplicator >> namedInstvarsOf: anObject inServerOrderDo: aBlock
+[
 	"anObject is a client object, an instance of the class that I replicate.
 	For each instvar (named or indexed) that is mapped to the server,
 	evaluate the unary aBlock with that instvar's value as the argument.
@@ -42,4 +45,5 @@ GbxTimestampReplicator >> namedInstvarsOf: anObject inServerOrderDo: aBlock
 		inServerOrderFrom: 5
 		to: serverToClientOffsets size
 		do: aBlock
+]
 

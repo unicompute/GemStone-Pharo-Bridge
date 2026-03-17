@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGciErrFetchPathFail class >> gemStoneErrorNumber6430 ^2221
+[
+
+]
 

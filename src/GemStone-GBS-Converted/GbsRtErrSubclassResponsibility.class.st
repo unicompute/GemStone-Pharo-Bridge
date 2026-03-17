@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrSubclassResponsibility class >> gemStoneErrorNumber6430 ^2008
+[
+
+]
 

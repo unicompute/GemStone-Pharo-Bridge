@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsClassErrMethCatExists class >> gemStoneErrorNumber6430 ^2032
+[
+
+]
 

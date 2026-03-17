@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsAssocErrPathTooLong class >> gemStoneErrorNumber6430 ^2175
+[
+
+]
 

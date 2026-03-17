@@ -13,14 +13,19 @@ Class {
 
 { #category : 'private-auditing' }
 GbxHashTableSegment >> auditParentage: expectedParent index: expectedParentIndex upperBytes: expectedUpperBytes into: results
+[
 	"Not all subclasses need to implement this, so it cannot be a subclass responsibility."
+]
 
 { #category : 'private-auditing' }
 GbxHashTableSegment >> auditElementsInto: results session: aSession
+[
 	"Not all subclasses need to implement this, so it cannot be a subclass responsibility."
+]
 
 { #category : 'private-auditing' }
 GbxHashTableSegment >> auditNilElementClient: client delegate: del into: results
+[
 	"Things checked here:
 	* each unused element should have a nil delegate and a nil clientObj"
 
@@ -36,9 +41,11 @@ GbxHashTableSegment >> auditNilElementClient: client delegate: del into: results
 		description: 'element with nil key had a delegate of  %1, expected %2.'
 		actual: del
 		expected: 'nil'
+]
 
 { #category : 'auditing' }
 GbxHashTableSegment >> auditInto: results parent: expectedParent parentIndex: expectedParentIndex upperBytes: expectedUpperBytes session: aSession
+[
 	"Statistics gathered at this level:
 	* Number of used elements (those with non-nil key).
 	Things checked here:
@@ -59,26 +66,36 @@ GbxHashTableSegment >> auditInto: results parent: expectedParent parentIndex: ex
 	* each used element that has a non-zero client object should also have a non-zero delegate
 	* each unused element should have a nil delegate and a nil clientObj"
 	self auditElementsInto: results session: aSession
+]
 
 { #category : 'private-accessing' }
 GbxHashTableSegment >> upperBytes: anObject
+[
 	upperBytes := anObject
+]
 
 { #category : 'private-accessing' }
 GbxHashTableSegment >> parent: anObject
+[
 	parent := anObject
+]
 
 { #category : 'private-accessing' }
 GbxHashTableSegment >> parentIndex: anObject
+[
 	parentIndex := anObject
+]
 
 { #category : 'private' }
 GbxHashTableSegment class >> instanceBasicSize
+[
 
 	self subclassResponsibility
+]
 
 { #category : 'instance creation' }
 GbxHashTableSegment class >> parent: node index: parentIndex upperBytes: upperBytes
+[
 
 	| inst |
 	inst := self basicNew: self instanceBasicSize.
@@ -88,4 +105,5 @@ GbxHashTableSegment class >> parent: node index: parentIndex upperBytes: upperBy
 		parentIndex: parentIndex;
 		upperBytes: upperBytes.
 	^inst
+]
 

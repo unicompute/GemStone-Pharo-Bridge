@@ -10,18 +10,25 @@ Class {
 
 { #category : 'accessing' }
 GbxReplicateInspectionWrapper >> partName
+[
 	^objectText
+]
 
 { #category : 'accessing' }
 GbxReplicateInspectionWrapper >> value
+[
 	^self
+]
 
 { #category : 'accessing' }
 GbxReplicateInspectionWrapper >> doItReceiver
+[
 	^localObject
+]
 
 { #category : 'printing' }
 GbxReplicateInspectionWrapper >> basicPrintOn: aStream
+[
 	"it is possible for a client object's class and gemstone object's class to be different. Make sure to handle this case in the window title"
 
 	| wasBlocked |
@@ -39,9 +46,11 @@ GbxReplicateInspectionWrapper >> basicPrintOn: aStream
 					[localObject isImmutable
 						and: [delegate isReadOnlyObject or: [delegate isSpecial]]])
 				ifTrue: [aStream nextPutAll: ' (immutable)']]
+]
 
 { #category : 'printing' }
 GbxReplicateInspectionWrapper >> gbxDebugPrintOn: aStream
+[
 	"defer printString to the wrapped object.
 
 	However, if its the NotCachedToken, then show the delegate printString as that is more interesting and helpful. "
@@ -60,9 +69,11 @@ GbxReplicateInspectionWrapper >> gbxDebugPrintOn: aStream
 					aStream cr.
 					aStream nextPutAllText: 'associated with delegate: ' asText allBold.
 					delegate printOn: aStream]]
+]
 
 { #category : 'printing' }
 GbxReplicateInspectionWrapper >> printRemoteOn: aStream
+[
 
 	| remotePrintString wasBlocked |
 	
@@ -81,14 +92,18 @@ GbxReplicateInspectionWrapper >> printRemoteOn: aStream
 					'Unretrievable GemStone Object'].
 	aStream nextPutAll: remotePrintString.
 	^wasBlocked
+]
 
 { #category : 'printing' }
 GbxReplicateInspectionWrapper >> printClientOn: aStream 
+[
 	aStream nextPutAll: 'client: '.
 	localObject basicPrintOn: aStream
+]
 
 { #category : 'printing' }
 GbxReplicateInspectionWrapper >> printString
+[
 	"make a TextStream for nice formatting"
 
 	| aStream |
@@ -99,14 +114,18 @@ GbxReplicateInspectionWrapper >> printString
 			on: Error
 			do: [:err | aStream nextPutAll: '||| Printing error: ' , err description].
 	^aStream contents
+]
 
 { #category : 'private - inspecting' }
 GbxReplicateInspectionWrapper >> addServerBehaviorInspectorTo: oc
+[
 
 	"no action in VW 8.0"
+]
 
 { #category : 'private - inspecting' }
 GbxReplicateInspectionWrapper >> inspectorClasses
+[
 
 	| oc addBehaviorTab |
 	oc := OrderedCollection new.
@@ -127,9 +146,11 @@ GbxReplicateInspectionWrapper >> inspectorClasses
 		ifTrue: [self addServerBehaviorInspectorTo: oc].
 	oc add: Tools.Trippy.WatchLogInspector.
 	^oc
+]
 
 { #category : 'private - inspecting' }
 GbxReplicateInspectionWrapper >> inspectables
+[
 
 	| oc |
 	oc := OrderedCollection new.
@@ -147,19 +168,25 @@ GbxReplicateInspectionWrapper >> inspectables
 					[4 timesRepeat: [oc add: self]	"the last one is for the GbxBehaviorInspector"]].
 	oc add: localObject. "Watch Log"
 	^oc asArray
+]
 
 { #category : 'private - inspecting' }
 GbxReplicateInspectionWrapper >> inspectableObjectFor: aClass
+[
 
 	^self inspectables at: (self inspectorClasses indexOf: aClass)
+]
 
 { #category : 'private - inspecting' }
 GbxReplicateInspectionWrapper >> addClientBehaviorInspectorTo: oc
+[
 
 	"no action in VW 8.0"
+]
 
 { #category : 'user interface' }
 GbxReplicateInspectionWrapper >> inspectorActions
+[
 	"add fault-on-demand to stubs. Trigger an event to notify interested parties"
 
 	| oc |
@@ -171,4 +198,5 @@ GbxReplicateInspectionWrapper >> inspectorActions
 							[localObject stubYourself.
 							self triggerEvent: #objectChanged])].
 	^oc asArray
+]
 

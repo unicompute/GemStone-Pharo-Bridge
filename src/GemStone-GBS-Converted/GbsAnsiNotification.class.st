@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsAnsiNotification class >> gemStoneErrorNumber6430 ^2487
+[
+
+]
 

@@ -10,35 +10,44 @@ Class {
 
 { #category : 'archiving' }
 GbxObjectMemoryStatResource >> instanceDescription
+[
 
 	^'ObjectMemoryStats'
+]
 
 { #category : 'archiving' }
 GbxObjectMemoryStatResource >> writeSampleTo: statArchive
+[
 	"Iterate over each stat to write to archive file"
 
 	| om |
 	om := ObjectMemory current.
 	stats do: [:stat | stat writeSampleFrom: om to: statArchive]
+]
 
 { #category : 'initialize-release' }
 GbxObjectMemoryStatResource >> newincGCStateStat
+[
 	"Return a new GbxStat for the given stat name"
 
 	| desc |
 	desc := self class statDescriptors detect: [:sd | sd name = 'incGCState'].
 	^GbxIncGcStateStat newWithDescription: desc
+]
 
 { #category : 'initialize-release' }
 GbxObjectMemoryStatResource >> newStatFor: statName
+[
 	"Return a new GbxStat for the given stat name"
 
 	| desc |
 	desc := self class statDescriptors detect: [:sd | sd name = statName].
 	^GbxObjectMemoryStat newWithDescription: desc
+]
 
 { #category : 'initialize-release' }
 GbxObjectMemoryStatResource >> initializeStatistics
+[
 	"Set the receiver's statistics to 0"
 
 	super initializeStatistics.
@@ -119,9 +128,11 @@ GbxObjectMemoryStatResource >> initializeStatistics
 		add: (self newStatFor: 'threadedDataBytes');
 		add: (self newStatFor: 'threadedDataEntries');
 		add: (self newStatFor: 'threadedOTEntries')
+]
 
 { #category : 'class initialization' }
 GbxObjectMemoryStatResource class >> initialize
+[
 	"Create GbxStatDescriptors for this stat resource"
 	"self initialize"
 
@@ -660,22 +671,31 @@ GbxObjectMemoryStatResource class >> initialize
 					isCounter: false
 					isLargerBetter: false
 					unit: 'entries')
+]
 
 { #category : 'accessing' }
 GbxObjectMemoryStatResource class >> singleton
+[
 
 	singleton == nil ifTrue: [singleton := self basicNew initializeStatistics].
 	^singleton
+]
 
 { #category : 'archiving' }
 GbxObjectMemoryStatResource class >> resourceTypeName
+[
 	^'ObjectMemory'
+]
 
 { #category : 'archiving' }
 GbxObjectMemoryStatResource class >> resourceTypeDescription
+[
 	^'Statistics associated with VW''s memory and garbage collection'
+]
 
 { #category : 'archiving' }
 GbxObjectMemoryStatResource class >> resourceTypeId
+[
 	^3
+]
 

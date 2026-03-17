@@ -11,6 +11,8 @@ Class {
 
 { #category : 'accessing' }
 ZeroDivide >> dividend
+[
 
 	^dividend
+]
 

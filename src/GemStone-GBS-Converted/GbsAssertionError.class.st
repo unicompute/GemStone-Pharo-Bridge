@@ -10,5 +10,7 @@ Class {
 
 { #category : 'testing' }
 GbsAssertionError >> mayResume
+[
 	^true
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrBadDictConstraint class >> gemStoneErrorNumber6430 ^2072
+[
+
+]
 

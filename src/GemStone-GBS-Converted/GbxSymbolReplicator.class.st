@@ -11,6 +11,7 @@ Class {
 
 { #category : 'per-object replication' }
 GbxSymbolReplicator >> replicateFromReport
+[
 	"Private.  Given the description of a GemStone object from a traversal object header,
 	 replicate the object as a client object.  If the object is already in the cache,
 	 and it's not a stub, ignore it.. Self is returned."
@@ -41,9 +42,11 @@ GbxSymbolReplicator >> replicateFromReport
 						writeCritical: [GBSM clientMap removeClient: clientObject forSession: session].
 					clientObject oneWayBecome: newSymbol].
 			clientObject := newSymbol]
+]
 
 { #category : 'store replication' }
 GbxSymbolReplicator >> store: anObject withDelegate: aDelegate inTraversal: storeTraversal
+[
 	"Recursively store object reports into the traversal buffer describing anObject
 	and its referents. Only objects marked dirty are stored, and they will
 	become 'not dirty'."
@@ -52,18 +55,22 @@ GbxSymbolReplicator >> store: anObject withDelegate: aDelegate inTraversal: stor
 	Symbol>>newGSObjectMappingInSession:, and they are immutable so should never have to be updated."
 
 	anObject asGSObjectInSession: session	"Force creation if not already present."
+]
 
 { #category : 'initialize-release' }
 GbxSymbolReplicator >> initializeForClientClass: aClientClass serverClass: classDelegate manager: aManager
+[
 
 	super
 		initializeForClientClass: aClientClass
 		serverClass: classDelegate
 		manager: aManager.
 	stringClass := StringClassMapping at: aClientClass
+]
 
 { #category : 'class initialization' }
 GbxSymbolReplicator class >> initialize
+[
 	"GbxSymbolReplicator initialize"
 
 	StringClassMapping := Dictionary new.
@@ -71,4 +78,5 @@ GbxSymbolReplicator class >> initialize
 		at: ByteSymbol put: ByteString;
 		at: TwoByteSymbol put: TwoByteString;
 		at: FourByteSymbol put: FourByteString
+]
 

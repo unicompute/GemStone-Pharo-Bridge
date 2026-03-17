@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBErrSourceNotEUCFormat class >> gemStoneErrorNumber6430 ^1054
+[
+
+]
 

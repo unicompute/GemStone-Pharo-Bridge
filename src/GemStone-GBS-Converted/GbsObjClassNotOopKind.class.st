@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsObjClassNotOopKind class >> gemStoneErrorNumber6430 ^2109
+[
+
+]
 

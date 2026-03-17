@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrGaijiNotSupported class >> gemStoneErrorNumber6430 ^2282
+[
+
+]
 

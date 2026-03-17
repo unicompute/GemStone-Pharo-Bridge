@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBErrTermsNotParen class >> gemStoneErrorNumber6430 ^1052
+[
+
+]
 

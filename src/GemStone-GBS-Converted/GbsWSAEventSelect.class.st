@@ -10,5 +10,7 @@ Class {
 
 { #category : 'accessing' }
 GbsWSAEventSelect >> mayResume
+[
 	^true
+]
 

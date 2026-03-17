@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsObjErrNotInColl class >> gemStoneErrorNumber6430 ^2015
+[
+
+]
 

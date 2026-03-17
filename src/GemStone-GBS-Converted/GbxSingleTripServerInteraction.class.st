@@ -10,6 +10,7 @@ Class {
 
 { #category : 'private - executing' }
 GbxSingleTripServerInteraction >> replicateAlteredObjectsAfterError
+[
 	"Used after an error interrupted execution. Note that an 'error' includes things like 
 	client forwarder sends and breakpoints.
 
@@ -36,9 +37,11 @@ GbxSingleTripServerInteraction >> replicateAlteredObjectsAfterError
 	"Shouldn't normally error here, but need to check in case of things like 
 	session termination, or server out of memory."
 	^result gbxIsGSError ifTrue: [result] ifFalse: [resultDelegateOrError]
+]
 
 { #category : 'private - executing' }
 GbxSingleTripServerInteraction >> replicateResult
+[
 	"In single-trip, the traversal contains all altered objects, and the traversal of the result if it was specified earlier.
 	Answer the given delegate unless an error occurs during replication. In that case, answer
 	the error."
@@ -46,11 +49,14 @@ GbxSingleTripServerInteraction >> replicateResult
 	| error |
 	error := replication replicateFromTraversal: fetchTraversal.
 	^error == nil ifTrue: [resultDelegateOrError] ifFalse: [error]
+]
 
 { #category : 'accessing' }
 GbxSingleTripServerInteraction >> shouldExportResults
+[
 	"Only export the result if we're replicating the result. Otherwise, result oops end 
 	up in the export set when they should be only in the referenced set to keep them alive."
 
 	^shouldReplicateResult
+]
 

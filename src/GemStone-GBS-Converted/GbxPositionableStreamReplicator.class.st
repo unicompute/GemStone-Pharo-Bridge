@@ -10,6 +10,7 @@ Class {
 
 { #category : 'private store replication' }
 GbxPositionableStreamReplicator >> namedInstvarsOf: anObject inServerOrderDo: aBlock
+[
 	"anObject is a client object, an instance of the class that I replicate.
 	For each instvar (named or indexed) that is mapped to the server,
 	evaluate the unary aBlock with that instvar's value as the argument.
@@ -25,4 +26,5 @@ GbxPositionableStreamReplicator >> namedInstvarsOf: anObject inServerOrderDo: aB
 		inServerOrderFrom: 3
 		to: serverToClientOffsets size
 		do: aBlock
+]
 

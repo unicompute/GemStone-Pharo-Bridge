@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsBkupErrInProgress class >> gemStoneErrorNumber6430 ^2306
+[
+
+]
 

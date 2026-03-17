@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsAssocErrBadDirection class >> gemStoneErrorNumber6430 ^2194
+[
+
+]
 

@@ -10,7 +10,9 @@ Class {
 
 { #category : 'constants' }
 GbxAbstractException class >> mayResume
+[
 
 	"To signify resumability in VW"
 	^true
+]
 

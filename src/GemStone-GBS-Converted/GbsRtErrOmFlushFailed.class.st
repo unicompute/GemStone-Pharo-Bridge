@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrOmFlushFailed class >> gemStoneErrorNumber6430 ^2403
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGciErrActiveSessions class >> gemStoneErrorNumber6430 ^2260
+[
+
+]
 

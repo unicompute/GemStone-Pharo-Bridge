@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrLocalSessionFailedCommit class >> gemStoneErrorNumber6430 ^2352
+[
+
+]
 

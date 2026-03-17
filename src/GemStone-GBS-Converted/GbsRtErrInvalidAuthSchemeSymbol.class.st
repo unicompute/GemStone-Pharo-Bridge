@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrInvalidAuthSchemeSymbol class >> gemStoneErrorNumber6430 ^2601
+[
+
+]
 

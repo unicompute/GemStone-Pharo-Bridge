@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGsErrBadGemDbfVersion class >> gemStoneErrorNumber6430 ^4045
+[
+
+]
 

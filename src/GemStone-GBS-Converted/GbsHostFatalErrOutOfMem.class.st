@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsHostFatalErrOutOfMem class >> gemStoneErrorNumber6430 ^4004
+[
+
+]
 

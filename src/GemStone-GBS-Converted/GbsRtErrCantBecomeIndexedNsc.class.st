@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrCantBecomeIndexedNsc class >> gemStoneErrorNumber6430 ^2135
+[
+
+]
 

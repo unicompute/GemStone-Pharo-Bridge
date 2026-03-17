@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRepErrReplicateOnline class >> gemStoneErrorNumber6430 ^2050
+[
+
+]
 

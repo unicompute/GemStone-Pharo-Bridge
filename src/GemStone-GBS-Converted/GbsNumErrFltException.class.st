@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsNumErrFltException class >> gemStoneErrorNumber6430 ^2066
+[
+
+]
 

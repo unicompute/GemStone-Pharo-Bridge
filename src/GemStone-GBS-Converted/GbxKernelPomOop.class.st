@@ -11,14 +11,19 @@ Class {
 
 { #category : 'comparing' }
 GbxKernelPomOop >> hash
+[
 	^oopNumber hash
+]
 
 { #category : 'accessing' }
 GbxKernelPomOop >> oopNumber
+[
 	^oopNumber
+]
 
 { #category : 'converting to delegate' }
 GbxKernelPomOop >> gbxExistingOrSpecialDelegateInSession: aSession 
+[
 	"Once upon a time, OIllegal could not live in the cache, because its 0 oopNumber was the same as the tombstone.
 	That's no longer true, but still the session keeps the delegate for it. All other POM oops live in the cache."
 
@@ -27,20 +32,26 @@ GbxKernelPomOop >> gbxExistingOrSpecialDelegateInSession: aSession
 		ifFalse: 
 			[GbxDelegate oopValue: (aSession oopForOopNumber: oopNumber)
 				session: aSession]
+]
 
 { #category : 'converting to delegate' }
 GbxKernelPomOop >> asGSObjectInSession: aSession
+[
 	"Once upon a time, OIllegal could not live in the cache, because its 0 oopNumber was the same as the tombstone.
 	That's no longer true, but still the session keeps the delegate for it. All other POM oops live in the cache."
 
 	^self gbxExistingOrSpecialDelegateInSession: aSession
+]
 
 { #category : 'initialize-release' }
 GbxKernelPomOop >> oopNumber: anInteger 
+[
 	oopNumber := anInteger
+]
 
 { #category : 'printing' }
 GbxKernelPomOop >> printOn: aStream
+[
 
 	| variableName |
 	variableName := self variableName.
@@ -52,18 +63,24 @@ GbxKernelPomOop >> printOn: aStream
 			[aStream nextPutAll: 'oopNumber: '.
 			oopNumber printOn: aStream]
 		ifFalse: [aStream nextPutAll: variableName]
+]
 
 { #category : 'printing' }
 GbxKernelPomOop >> variableName
+[
 	SpecialGemStoneObjects bindingsDo: [:b | self = b value ifTrue: [^b key]].
 	^nil
+]
 
 { #category : 'converting' }
 GbxKernelPomOop >> asKernelPomOop
+[
 	^self
+]
 
 { #category : 'class initialization' }
 GbxKernelPomOop class >> initialize
+[
 	"GbxKernelPomOop initialize"
 
 	OAbstractDictionary := GbxKernelPomOop oopNumber: 432.
@@ -232,8 +249,11 @@ GbxKernelPomOop class >> initialize
 	OWriteStream := GbxKernelPomOop oopNumber: 301.
 	OZeroDivide := GbxKernelPomOop oopNumber: 513.
 	LastKernelOopNumber := 1318	"Computed from OOP_LAST_RESERVED_OOP in oop.ht"
+]
 
 { #category : 'instance creation' }
 GbxKernelPomOop class >> oopNumber: anInteger 
+[
 	^self new oopNumber: anInteger
+]
 

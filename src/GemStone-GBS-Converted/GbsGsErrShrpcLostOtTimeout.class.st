@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGsErrShrpcLostOtTimeout class >> gemStoneErrorNumber6430 ^4047
+[
+
+]
 

@@ -11,13 +11,16 @@ Class {
 
 { #category : 'constants' }
 GbsGemStoneError >> defaultResumeValue
+[
 	"Answer the default value to resume server execution with.
 		The default is to leave the server argument stack alone."
 
 	^OIllegal
+]
 
 { #category : 'accessing' }
 GbsGemStoneError >> serverArguments
+[
 
 	"Return an array of arguments to this exception.  These are the client replicates
 	 of the GemStone error arguments"
@@ -34,13 +37,17 @@ GbsGemStoneError >> serverArguments
 		]].
 
 	^serverArguments
+]
 
 { #category : 'accessing' }
 GbsGemStoneError >> serverArguments: anArray
+[
 	serverArguments := anArray
+]
 
 { #category : 'constants' }
 GbsGemStoneError class >> gemStoneErrorNumber6430
+[
 	"Return the number GemStone uses to identify this error.  There are a
 	 few GemStone errors that are known by more than one number (the 
 	 number changed from one version of the server to the next) - for those
@@ -49,4 +56,5 @@ GbsGemStoneError class >> gemStoneErrorNumber6430
 	Errors that don't exist in one or the other won't define the method, so answer nil."
 	
 	^nil
+]
 

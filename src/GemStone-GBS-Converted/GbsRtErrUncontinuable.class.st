@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrUncontinuable class >> gemStoneErrorNumber6430 ^6011
+[
+
+]
 

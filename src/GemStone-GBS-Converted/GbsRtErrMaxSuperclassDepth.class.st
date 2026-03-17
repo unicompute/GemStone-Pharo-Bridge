@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrMaxSuperclassDepth class >> gemStoneErrorNumber6430 ^2394
+[
+
+]
 

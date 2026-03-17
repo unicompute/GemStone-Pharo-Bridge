@@ -11,16 +11,22 @@ Class {
 
 { #category : 'accessing' }
 GbxStoreTraversalWithStats >> statResource
+[
 
 	^statResource
+]
 
 { #category : 'initialize-release' }
 GbxStoreTraversalWithStats >> statResource: aSessionStatResource
+[
 	
 	statResource := aSessionStatResource
+]
 
 { #category : 'instance creation' }
 GbxStoreTraversalWithStats class >> for: aServerInteraction statResource: aStatResource
+[
 	
 	^(super for: aServerInteraction) statResource: aStatResource
+]
 

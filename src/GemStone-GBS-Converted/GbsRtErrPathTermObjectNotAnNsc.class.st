@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrPathTermObjectNotAnNsc class >> gemStoneErrorNumber6430 ^2298
+[
+
+]
 

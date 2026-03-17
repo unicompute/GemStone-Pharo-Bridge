@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGsActiveUserLimitExceeded class >> gemStoneErrorNumber6430 ^4050
+[
+
+]
 

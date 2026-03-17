@@ -10,6 +10,7 @@ Class {
 
 { #category : 'private' }
 GbxMetaclassReplicator >> replicateMetaclassAsForwarder
+[
 	"And answer the forwarder."
 	"Sender must hold session's protect and cache semaphore."
 
@@ -17,14 +18,18 @@ GbxMetaclassReplicator >> replicateMetaclassAsForwarder
 	forwarder := GbsForwarder new.
 	session unprotectedConnectNewClient: forwarder toServer: metaclassDelegate.
 	^forwarder
+]
 
 { #category : 'private' }
 GbxMetaclassReplicator >> getClassAndMetaclassInformation
+[
 
 	self getClassAndMetaclassInformationForBehavior: report objId
+]
 
 { #category : 'per-object replication' }
 GbxMetaclassReplicator >> forReplication: replication replicateFromDeferredReport: aReport
+[
 	"This report is a full report for an as yet unmapped metaclass. We're now at a point where we can map it
 	and the class that is its instance. This will have the side effect of identity clamping both the class
 	and metaclass, so no future reports will be received for the class or metaclass."
@@ -54,9 +59,11 @@ GbxMetaclassReplicator >> forReplication: replication replicateFromDeferredRepor
 			theClientClass := classDelegate performOnGsServer: #yourself.
 			"In, for instance, a skew case, the mapping cannot be made to a client class, so we fall back to a forwarder."
 			theClientClass zzzisForwarder ifTrue: [self replicateMetaclassAsForwarder]]
+]
 
 { #category : 'instance creation' }
 GbxMetaclassReplicator class >> forClientClass: clientBehavior serverClass: behaviorDelegate manager: manager
+[
 
 	clientBehavior == Metaclass
 		ifFalse: 
@@ -64,4 +71,5 @@ GbxMetaclassReplicator class >> forClientClass: clientBehavior serverClass: beha
 				error: 'Attempting to create a metaclass replicator for a class other than Metaclass.'].
 	^self new initializeForSession: manager session
 		serverBehavior: behaviorDelegate
+]
 

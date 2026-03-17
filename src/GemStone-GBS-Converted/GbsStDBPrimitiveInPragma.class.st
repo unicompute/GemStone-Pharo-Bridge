@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBPrimitiveInPragma class >> gemStoneErrorNumber6430 ^1064
+[
+
+]
 

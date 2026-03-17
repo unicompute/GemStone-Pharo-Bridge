@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrAlmostOomPending class >> gemStoneErrorNumber6430 ^2517
+[
+
+]
 

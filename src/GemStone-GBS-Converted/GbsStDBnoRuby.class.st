@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBnoRuby class >> gemStoneErrorNumber6430 ^1079
+[
+
+]
 

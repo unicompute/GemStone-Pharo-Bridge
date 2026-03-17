@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrDoesNotUnderstand class >> gemStoneErrorNumber6430 ^2010
+[
+
+]
 

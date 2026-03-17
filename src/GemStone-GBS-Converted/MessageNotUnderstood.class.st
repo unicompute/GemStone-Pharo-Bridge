@@ -13,16 +13,22 @@ Class {
 
 { #category : 'accessing' }
 MessageNotUnderstood >> reportedReceiver
+[
 
 	^receiver
+]
 
 { #category : 'accessing' }
 MessageNotUnderstood >> envId
+[
 
 	^envId
+]
 
 { #category : 'accessing' }
 MessageNotUnderstood >> selector
+[
 
 	^selector
+]
 

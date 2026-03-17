@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrArgumentErr class >> gemStoneErrorNumber6430 ^2509
+[
+
+]
 

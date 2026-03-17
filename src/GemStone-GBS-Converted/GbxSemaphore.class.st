@@ -11,6 +11,7 @@ Class {
 
 { #category : 'private GBS' }
 GbxSemaphore >> critical: mutuallyExcludedBlock waitingUpTo: milliseconds ifTimeout: altBlock
+[
 	"Answer the result of evaluating criticalBlock while allowing
 	 the receiver to synchronize processing with other processes; however,
 	 if the activeProcess would have to wait then wait up to milliseconds, 
@@ -50,9 +51,11 @@ GbxSemaphore >> critical: mutuallyExcludedBlock waitingUpTo: milliseconds ifTime
 						(Delay forMilliseconds: 1) wait]]
 						ifCurtailed: [activeProcess priority: oldPriority]].
 	^acquired ifTrue: [result] ifFalse: [altBlock value]
+]
 
 { #category : 'private GBS' }
 GbxSemaphore >> critical: mutuallyExcludedBlock unlessBlocked: altBlock
+[
 	"Answer the result of evaluating criticalBlock while allowing
 	 the receiver to synchronize processing with other processes; however,
 	 if the activeProcess would have to wait then just run altBlock.
@@ -82,17 +85,21 @@ GbxSemaphore >> critical: mutuallyExcludedBlock unlessBlocked: altBlock
 			result := altBlock value]]
 			ifCurtailed: [activeProcess priority: oldPriority].
 	^result
+]
 
 { #category : 'private GBS' }
 GbxSemaphore >> isActiveProcessInCriticalRegion
+[
 
 	"Return true if the active process is the one in this recursion lock's
 	 critical region"
 
 	^lockingProcess == Processor activeProcess
+]
 
 { #category : 'mutual exclusion' }
 GbxSemaphore >> critical: mutuallyExcludedBlock
+[
 	"Answer the result of evaluating criticalBlock while allowing
 	 the receiver to synchronize processing with other processes.
 	Use a terminationProtectionBlock so that the ensure: is sent 
@@ -107,17 +114,21 @@ GbxSemaphore >> critical: mutuallyExcludedBlock
 	^terminationProtectionBlock ensure: 
 			[lockingProcess := nil.
 			self signal]
+]
 
 { #category : 'printing' }
 GbxSemaphore >> printOn: aStream
+[
 
 	super printOn: aStream.
 	aStream nextPut: $(.
 	lockingProcess printOn: aStream.
 	aStream nextPut: $).
+]
 
 { #category : 'printing' }
 GbxSemaphore >> semaphoreSummaryOn: aStream
+[
 
 	| size |
 	aStream
@@ -131,4 +142,5 @@ GbxSemaphore >> semaphoreSummaryOn: aStream
 		print: size;
 		nextPutAll: ' Waiting Processes, Locking Process: ';
 		print: lockingProcess.
+]
 

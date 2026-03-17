@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrIdentityIndexCannotInvokeRangeOperation class >> gemStoneErrorNumber6430 ^2299
+[
+
+]
 

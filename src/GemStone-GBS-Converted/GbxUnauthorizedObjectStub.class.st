@@ -10,6 +10,7 @@ Class {
 
 { #category : 'faulting' }
 GbxUnauthorizedObjectStub >> faultToLevel: levelOrNil session: session delegate: delegate
+[
 	"A 32-bit server will just give another nil-class report on an attempt to unstub, 
 	and a 64-bit server with unauthorized object stubs enabled will give a report for the stub. 
 	What we're after is an error from the server if we still do not have read access to the object,
@@ -33,9 +34,12 @@ GbxUnauthorizedObjectStub >> faultToLevel: levelOrNil session: session delegate:
 		withArguments: (Array with: delegate)
 		context: nil
 		toLevel: level
+]
 
 { #category : 'GBS private' }
 GbxUnauthorizedObjectStub class >> gbsReplicatorClass
+[
 
 	^GbxUnauthorizedObjectReplicator
+]
 

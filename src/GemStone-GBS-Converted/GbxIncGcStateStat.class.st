@@ -10,6 +10,7 @@ Class {
 
 { #category : 'archiving' }
 GbxIncGcStateStat >> numericValueFrom: anObjectMemory
+[
 
 	| letter |
 	letter := super numericValueFrom: anObjectMemory.
@@ -17,4 +18,5 @@ GbxIncGcStateStat >> numericValueFrom: anObjectMemory
 		ifAbsent: 
 			[self gbsMessenger error: 'Unexpected incGC state' , (String with: letter)])
 			- 1
+]
 

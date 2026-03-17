@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsLockErrTimeout class >> gemStoneErrorNumber6430 ^2419
+[
+
+]
 

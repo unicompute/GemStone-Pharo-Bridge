@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBErrFirstTermCannotBeSetValued class >> gemStoneErrorNumber6430 ^1058
+[
+
+]
 

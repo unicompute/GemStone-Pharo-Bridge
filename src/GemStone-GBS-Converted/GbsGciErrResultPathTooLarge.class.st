@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsGciErrResultPathTooLarge class >> gemStoneErrorNumber6430 ^2220
+[
+
+]
 

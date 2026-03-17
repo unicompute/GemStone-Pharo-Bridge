@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsClassErrClassVarNameExists class >> gemStoneErrorNumber6430 ^2043
+[
+
+]
 

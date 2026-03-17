@@ -17,13 +17,16 @@ Class {
 
 { #category : 'initialize-release' }
 GbxUnmappedClassReplicator >> initializeForSession: aSession serverBehavior: aDelegate
+[
 
 	session := aSession.
 	manager := session replicatorManager.
 	serverClass := aDelegate
+]
 
 { #category : 'per-object replication' }
 GbxUnmappedClassReplicator >> forReplication: replication replicateFromDeferredReport: aReport
+[
 	"My server class is as yet unmapped. We're now at a point where we can map it, 
 	replacing myself as the replicator for that server class, and ask the new replicator
 	to handle the replication.
@@ -60,9 +63,11 @@ GbxUnmappedClassReplicator >> forReplication: replication replicateFromDeferredR
 				ifFalse: 
 					[self gbsMessenger
 						error: 'Unmapped class replicator attempting to replicate unexpected class.']]
+]
 
 { #category : 'per-object replication' }
 GbxUnmappedClassReplicator >> forReplication: replication replicateFromReport: aReport
+[
 	"We don't need a mapped class to create a stub. 
 	If it's a full report we must defer, and map the class at resolve time."
 	"Sender must hold session's semaphore, and clientMap semaphore."
@@ -70,22 +75,28 @@ GbxUnmappedClassReplicator >> forReplication: replication replicateFromReport: a
 	aReport isHeaderOnly
 		ifTrue: [self forReplication: replication replicateStubFromReport: aReport]
 		ifFalse: [replication addUnmappedClassReport: aReport copyWithPrivateBuffer]
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> clientClassForServerClass
+[
 	"Customer overrides this in subclass."
 
 	^self clientClassWithSameNameAsServerClass
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> clientClassIsAlreadyMapped
+[
 	"Client metaclass is mapped iff the client class is mapped, so only need to test the class.
 	Classes can be mapped in more than one session, we care only about whether it's mapped in our session."
 
 	^(clientClass gbxDelegate forSession: session) ~~ nil
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> mapInstanceForwarderReplicator
+[
 	"When connecting a class that answers true to #instancesAreForwarders"
 	"Sender must hold my session's protect and the ClientMap's writeProtect semaphores."
 
@@ -113,9 +124,11 @@ GbxUnmappedClassReplicator >> mapInstanceForwarderReplicator
 	session unprotectedConnectPossiblyExistingClient: clientClass class
 		toServer: metaclassDelegate.
 	self replaceProxies
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> mapMetaclassAndClass
+[
 	"Unmap any currently-mapped replicators for the class and metaclass. I will be one of those replicators, but it doesn't matter,
 	we're about to create new, better replicators.
 	Map the given client class and its metaclass to the given server class and metaclass. This will create and map an ObjectReplicator
@@ -139,23 +152,29 @@ GbxUnmappedClassReplicator >> mapMetaclassAndClass
 	session
 		mappedClientClass: clientClass toServer: classDelegate;
 		updateInstVarNamesAndClamps
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> unmapMetaclassProxy
+[
 
 	metaclassProxy ~~ NotCachedToken
 		ifTrue: 
 			[session disconnectClient: metaclassProxy fromServer: metaclassDelegate]
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> unmapProxies
+[
 
 	self
 		unmapClassProxy;
 		unmapMetaclassProxy
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> clientClassWithSameNameAsServerClass
+[
 	"Answer the class, or nil if there is no class bound to that name."
 
 	| className possibleClass |
@@ -165,9 +184,11 @@ GbxUnmappedClassReplicator >> clientClassWithSameNameAsServerClass
 	^(possibleClass isBehavior not or: [possibleClass isMeta])
 		ifTrue: [nil]
 		ifFalse: [possibleClass]
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> mapSkewedReplicator
+[
 	"Create the skew replicator or error if illegal, and map the replicator to the given class delegate.
 	Since there is no associated client class, only the replicator for the class is mapped, the class itself is not mapped.
 	Also, no mapping is made for the metaclass.
@@ -184,24 +205,30 @@ GbxUnmappedClassReplicator >> mapSkewedReplicator
 	session
 		disconnectReplicatorForServerBehavior: classDelegate;
 		connectReplicator: replicator toServerBehavior: classDelegate
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> replaceClassProxy
+[
 
 	classProxy ~~ NotCachedToken
 		ifTrue: [classProxy oneWayBecome: clientClass]
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> unstubAndMap
+[
 	"Sender must hold my session's sessionProtect and the ClientMap's writeProtect semaphores."
 
 	self
 		unmapProxies;
 		mapMetaclassAndClass;
 		replaceProxies
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> createClientClassClassified: categoryName
+[
 	"Just create and answer the class, no mapping at this point. We use synchronized execution in this method because
 	it is not legal to do class mapping during unsynchronized execution, so we're synchronized anyway."
 	"Sender must hold session's protect semaphore."
@@ -241,9 +268,11 @@ GbxUnmappedClassReplicator >> createClientClassClassified: categoryName
 			[^self gbsMessenger raise: GbsClassGenerationError
 				message: 'A non-class object was generated'].
 	^aClientClass
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> findExistingProxies
+[
 	"If there are any existing mappings for client class or metaclass,
 	they should be to forwarders or stubs.
 	A mapping to a client metaclass or to a forwarder should have 
@@ -256,15 +285,19 @@ GbxUnmappedClassReplicator >> findExistingProxies
 	[metaclassProxy gbxIsProxy | (metaclassProxy == NotCachedToken)
 		& (classProxy gbxIsProxy | (classProxy == NotCachedToken))]
 			gbxAssert
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> replaceMetaclassProxyWith: clientMetaclassOrForwarder
+[
 
 	metaclassProxy ~~ NotCachedToken
 		ifTrue: [metaclassProxy oneWayBecome: clientMetaclassOrForwarder]
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> findOrGenerateClientClass
+[
 	"If there is a same-named client class that is both unmapped and compatible, answer it.
 	If there is not a same-named client class, create one (if configuration allows) and answer it.
 	Otherwise, answer nil."
@@ -274,17 +307,21 @@ GbxUnmappedClassReplicator >> findOrGenerateClientClass
 		ifTrue: [clientClass := self generateClientClass]
 		ifFalse: [self checkCompatibilityWithServerClassOfClientClass].
 	^clientClass
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> replaceProxies
+[
 
 	| clientMetaclass |
 	clientMetaclass := clientClass class.
 	self replaceMetaclassProxyWith: clientMetaclass.
 	self replaceClassProxy
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> replicateClassAsForwarder
+[
 	"And answer the forwarder."
 	"Sender must hold session's protect and cache semaphore."
 
@@ -292,9 +329,11 @@ GbxUnmappedClassReplicator >> replicateClassAsForwarder
 	forwarder := GbsForwarder new.
 	session unprotectedConnectNewClient: forwarder toServer: classDelegate.
 	^forwarder
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> forReplication: replication replicateStubFromReport: aReport
+[
 	"If we already have an object for the report oop, no action.
 	Otherwise, create a stub from the given report (usually header-only)"
 	"Sender must hold both session and clientMap semaphores."
@@ -307,9 +346,11 @@ GbxUnmappedClassReplicator >> forReplication: replication replicateStubFromRepor
 			[| newStub |
 			newStub := self stubClass newFromReport: aReport.
 			session unprotectedConnectNewClient: newStub toServer: oop]
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> generateClientClass
+[
 	"Create and answer a client-side class with the same name and instvars as the given server class.
 	Signal an error if client class generation is disabled."
 
@@ -326,9 +367,11 @@ GbxUnmappedClassReplicator >> generateClientClass
 				message: 'No client class %1, class generation is disabled.'
 				with: cname].
 	^aClientClass
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> replicateClassInstanceForReplication: replication
+[
 	"The report is for an instance of an unmapped class, not for the class itself."
 	"Sender must hold my session's sessionProtect and the ClientMap's writeProtect semaphores."
 
@@ -348,14 +391,18 @@ GbxUnmappedClassReplicator >> replicateClassInstanceForReplication: replication
 						ifAbsent: [self gbsMessenger error: 'No replicator found after class mapping'].
 			newReplicator forReplication: replication
 				replicateFromDeferredReport: report]
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> getClassAndMetaclassInformation
+[
 
 	self getClassAndMetaclassInformationForBehavior: report objClass
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> getClassAndMetaclassInformationForBehavior: behaviorOop
+[
 
 	| classMetaclassPair |
 	classMetaclassPair := self classMetaclassPairForBehavior: behaviorOop.
@@ -363,9 +410,11 @@ GbxUnmappedClassReplicator >> getClassAndMetaclassInformationForBehavior: behavi
 		ifTrue: [self gbsMessenger error: 'Server object is not a behavior.'].
 	classDelegate := classMetaclassPair at: 1.
 	metaclassDelegate := classMetaclassPair at: 2
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> replicateClassItself
+[
 	"Report is for the class."
 	"Sender must hold session's protect and cache semaphore."
 
@@ -379,9 +428,11 @@ GbxUnmappedClassReplicator >> replicateClassItself
 					[self clientClassIsAlreadyMapped
 						ifTrue: [self replicateClassAsForwarder]
 						ifFalse: [self unstubAndMap]]]
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> checkCompatibilityWithServerClassOfClientClass
+[
 
 	(session doesClientClass: clientClass matchServerClass: classDelegate)
 		ifFalse: 
@@ -390,9 +441,11 @@ GbxUnmappedClassReplicator >> checkCompatibilityWithServerClassOfClientClass
 				message: '%1 is incompatible between GemStone and Smalltalk'
 				with: clientClass name.
 			clientClass := nil]
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> classMetaclassPairForBehavior: behaviorOop
+[
 
 	^session
 		unsynchronizedEvaluateReturnResultBodyAsDelegates: '
@@ -410,15 +463,19 @@ self isMeta
 			at: 2 put: self class].
 pair'
 		context: (behaviorOop asGSObjectInSession: session)
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> shouldMapAsSkew
+[
 	"Customer overrides this in custom subclass."
 
 	^self clientClassIsAlreadyMapped
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> infoForServerClass
+[
 	"Fetch and answer enough info about the give class (which must be a class, and not a metaclass) to create a matching client class."
 
 	^session
@@ -438,15 +495,19 @@ result
 result'
 		toLevel: 0
 		context: classDelegate
+]
 
 { #category : 'private' }
 GbxUnmappedClassReplicator >> unmapClassProxy
+[
 
 	classProxy ~~ NotCachedToken
 		ifTrue: [session disconnectClient: classProxy fromServer: classDelegate]
+]
 
 { #category : 'flushing' }
 GbxUnmappedClassReplicator class >> replicatorToFlush: anObject inSession: session
+[
 	"This could be customized in other replicator classes in GBS extensions. 
 	Default behavior here is to map anObject's class and answer the resulting mapped replicator."
 
@@ -460,8 +521,11 @@ GbxUnmappedClassReplicator class >> replicatorToFlush: anObject inSession: sessi
 			[session
 				updateServerInstVarNamesForReplicators: (Array with: newReplicator)].
 	^newReplicator
+]
 
 { #category : 'instance creation' }
 GbxUnmappedClassReplicator class >> forSession: session serverBehavior: aDelegate
+[
 	^self new initializeForSession:	session serverBehavior: aDelegate
+]
 

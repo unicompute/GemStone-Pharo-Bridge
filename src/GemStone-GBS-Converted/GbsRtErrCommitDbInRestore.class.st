@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrCommitDbInRestore class >> gemStoneErrorNumber6430 ^2248
+[
+
+]
 

@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsStDBErrCodeGenLogic class >> gemStoneErrorNumber6430 ^1057
+[
+
+]
 

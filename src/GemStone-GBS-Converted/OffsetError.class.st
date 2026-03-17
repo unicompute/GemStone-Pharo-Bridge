@@ -12,11 +12,15 @@ Class {
 
 { #category : 'accessing' }
 OffsetError >> maximum
+[
 
 	^maximum
+]
 
 { #category : 'accessing' }
 OffsetError >> actual
+[
 
 	^actual
+]
 

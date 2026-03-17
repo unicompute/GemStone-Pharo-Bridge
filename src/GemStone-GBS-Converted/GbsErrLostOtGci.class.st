@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsErrLostOtGci class >> gemStoneErrorNumber6430 ^4030
+[
+
+]
 

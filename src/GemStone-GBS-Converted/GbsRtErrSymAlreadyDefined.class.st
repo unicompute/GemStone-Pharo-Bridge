@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrSymAlreadyDefined class >> gemStoneErrorNumber6430 ^2190
+[
+
+]
 

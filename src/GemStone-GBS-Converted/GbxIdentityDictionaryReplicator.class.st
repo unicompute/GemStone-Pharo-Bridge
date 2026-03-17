@@ -10,6 +10,7 @@ Class {
 
 { #category : 'private store replication' }
 GbxIdentityDictionaryReplicator >> indexedInstvarsOf: anObject inServerOrderDo: aBlock
+[
 	"anObject is a client object, an instance of the class that I replicate.
 	For each indexed instvar
 	evaluate the unary aBlock with that instvar's value as the argument.
@@ -22,15 +23,19 @@ GbxIdentityDictionaryReplicator >> indexedInstvarsOf: anObject inServerOrderDo: 
 			[:key :value |
 			aBlock value: key.
 			aBlock value: value]
+]
 
 { #category : 'private store replication' }
 GbxIdentityDictionaryReplicator >> serverIndexedSizeOf: anObject
+[
 	"Answer the number of indexed instance variables in the server representation of anObject"
 
 	^anObject size * 2	"Key and value for each entry"
+]
 
 { #category : 'private store replication' }
 GbxIdentityDictionaryReplicator >> instvarsOf: anObject inServerOrderDo: aBlock
+[
 	"anObject is a client object, an instance of the class that I replicate.
 	For each instvar (named or indexed) that is mapped to the server,
 	evaluate the unary aBlock with that instvar's value as the argument.
@@ -45,4 +50,5 @@ GbxIdentityDictionaryReplicator >> instvarsOf: anObject inServerOrderDo: aBlock
 	self
 		namedInstvarsOf: anObject inServerOrderDo: aBlock;
 		indexedInstvarsOf: anObject inServerOrderDo: aBlock
+]
 

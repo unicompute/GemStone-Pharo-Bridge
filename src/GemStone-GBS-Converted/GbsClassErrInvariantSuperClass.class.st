@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsClassErrInvariantSuperClass class >> gemStoneErrorNumber6430 ^2038
+[
+
+]
 

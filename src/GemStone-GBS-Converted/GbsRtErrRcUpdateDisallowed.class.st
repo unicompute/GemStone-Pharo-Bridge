@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrRcUpdateDisallowed class >> gemStoneErrorNumber6430 ^2500
+[
+
+]
 

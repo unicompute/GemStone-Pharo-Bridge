@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrShrpcCompatibility class >> gemStoneErrorNumber6430 ^2186
+[
+
+]
 

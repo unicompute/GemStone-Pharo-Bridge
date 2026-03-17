@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsObjErrNotObjectSecurityPolicy class >> gemStoneErrorNumber6430 ^2011
+[
+
+]
 

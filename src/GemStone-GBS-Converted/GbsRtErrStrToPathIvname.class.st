@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrStrToPathIvname class >> gemStoneErrorNumber6430 ^2222
+[
+
+]
 

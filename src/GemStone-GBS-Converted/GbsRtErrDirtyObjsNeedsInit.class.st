@@ -10,4 +10,7 @@ Class {
 
 { #category : 'constants' }
 GbsRtErrDirtyObjsNeedsInit class >> gemStoneErrorNumber6430 ^2086
+[
+
+]
 

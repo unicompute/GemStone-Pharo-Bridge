@@ -10,6 +10,8 @@ Class {
 
 { #category : 'private' }
 GbxBehaviorMapTableSegment class >> instanceBasicSize
+[
 
 	^2048
+]
 
