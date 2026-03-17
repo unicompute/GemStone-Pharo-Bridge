@@ -2848,16 +2848,17 @@ GbsRemoteDebugger >> normalizePauseLandingSelection [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restart [
-	| didRestart beforeStep afterStep restartLevel |
+	| didRestart beforeStep afterStep restartLevel wasExecuted |
 	"Log pre-restart state"
 	beforeStep := self serverExecutedFrameStepPoint.
+	wasExecuted := self currentSelectedContextIsExecutedCodeFrame.
 	Transcript
 		show: '[UI restart] PRE-restart serverStep=';
 		show: (beforeStep ifNil: [ 'nil' ] ifNotNil: [ :v | v asString ]);
 		show: ' selectedLevel=';
 		show: self currentSelectedFrameLevel asString;
 		show: ' selectedExecuted=';
-		show: self currentSelectedContextIsExecutedCodeFrame asString;
+		show: wasExecuted asString;
 		cr.
 
 	restartLevel := self resolveRestartLevelForUI.
@@ -2877,7 +2878,7 @@ GbsRemoteDebugger >> restart [
 	
 	didRestart ifTrue: [
 		self settleAfterRestart.
-		((self serverExecutedFrameStepPoint ifNil: [ 0 ]) > 1) ifTrue: [
+		(wasExecuted or: [ (self serverExecutedFrameStepPoint ifNil: [ 0 ]) > 1 ]) ifTrue: [
 			self forceServerJumpToStepPoint1.
 			self settleAfterRestart
 		].
