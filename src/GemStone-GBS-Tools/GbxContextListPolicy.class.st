@@ -342,22 +342,54 @@ GbxContextListPolicy >> fetchServerContexts [
 				level := level + 1
 			]
 		].
+		stream nextPutAll: ''DEBUG: fetchServerContexts total contexts='', stream position asString; cr.
 		stream contents
 	] value'.
 
 	rawData := [
 		(debugger session respondsTo: #executeAndFetch:context:)
-			ifTrue: [ debugger session executeAndFetch: script context: 20 ]
-			ifFalse: [ debugger session evaluate: script ]
-	] on: Error do: [ nil ].
-	rawData ifNil: [
-		rawData := [ debugger session evaluate: script ] on: Error do: [ nil ]
+			ifTrue: [ 
+				debugger logRestartText: 'fetchServerContexts: calling executeAndFetch:context:'.
+				debugger session executeAndFetch: script context: 20 
+			]
+			ifFalse: [ 
+				debugger logRestartText: 'fetchServerContexts: calling evaluate:'.
+				debugger session evaluate: script 
+			]
+	] on: Error do: [ :ex | 
+		debugger logRestartText: 'fetchServerContexts: ERROR executing script: ' , ex messageText.
+		nil 
 	].
-	(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
-	rawData ifNil: [ rawData := '' ].
-	rawData = false ifTrue: [ rawData := '' ].
-	rawData = 'nil' ifTrue: [ rawData := '' ].
-	(rawData respondsTo: #splitOn) ifFalse: [ rawData := '' ].
+	debugger logRestartText: 'fetchServerContexts: rawData type=' , (rawData ifNil: [ 'nil' ] ifNotNil: [ rawData class name ]).
+	rawData ifNil: [
+		debugger logRestartText: 'fetchServerContexts: rawData is nil, retrying with evaluate'.
+		rawData := [ debugger session evaluate: script ] on: Error do: [ :ex |
+			debugger logRestartText: 'fetchServerContexts: ERROR on retry: ' , ex messageText.
+			nil
+		]
+	].
+	(rawData respondsTo: #asLocalString) ifTrue: [ 
+		debugger logRestartText: 'fetchServerContexts: converting to local string'.
+		rawData := rawData asLocalString 
+	].
+	rawData ifNil: [ 
+		debugger logRestartText: 'fetchServerContexts: rawData still nil after retry'.
+		rawData := '' 
+	].
+	rawData = false ifTrue: [ 
+		debugger logRestartText: 'fetchServerContexts: rawData=false, converting to empty'.
+		rawData := '' 
+	].
+	rawData = 'nil' ifTrue: [ 
+		debugger logRestartText: 'fetchServerContexts: rawData=''nil'', converting to empty'.
+		rawData := '' 
+	].
+	(rawData respondsTo: #splitOn) ifFalse: [ 
+		debugger logRestartText: 'fetchServerContexts: rawData does not respond to #splitOn, type=' , (rawData class name).
+		rawData := '' 
+	].
+	"Log raw data length and first 200 chars"
+	debugger logRestartText: 'fetchServerContexts: rawData length=' , rawData size asString , ' first200=[' , (rawData copyFrom: 1 to: (rawData size min: 200)) , ']'.
 	"Log DEBUG lines from script"
 	(rawData splitOn: Character lf) do: [ :line |
 		(line beginsWith: 'DEBUG:') ifTrue: [
