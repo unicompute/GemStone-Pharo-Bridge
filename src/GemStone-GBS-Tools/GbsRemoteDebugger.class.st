@@ -1740,7 +1740,7 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 	level ifNil: [ level := 1 ].
 
 	script := '[
-		| obj proc restartLevel stackReport fullEntry quick |
+		| obj proc restartLevel stackReport fullEntry quick currentTop |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ false ].
 		proc := obj.
@@ -1759,29 +1759,37 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 		proc isNil ifTrue: [ ^ false ].
 		
 		restartLevel := ', level asString, '.
-		
-		"Check current step point at the executed code frame level"
-		quick := 0.
-		stackReport := [ proc _gsiStackReportFromLevel: restartLevel toLevel: restartLevel ] on: Error do: [ nil ].
-		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
-			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
-			fullEntry ifNotNil: [
-				quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ]
+
+		"Phase 1: Forcefully trim the stack to the target level.
+		GemStone _trimStackToLevel: is documented to reset the PC of the new top frame."
+		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
+			[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ]
+		].
+
+		"Phase 2: Use jumpToStepPoint: on the NEW top frame (which was restartLevel).
+		This is a reinforced second pass to ensure the server-side state is synchronized."
+		currentTop := [ proc topContext ] on: Error do: [ nil ].
+		currentTop ifNotNil: [
+			(currentTop respondsTo: #jumpToStepPoint:) ifTrue: [
+				[ currentTop jumpToStepPoint: 1 ] on: Error do: [ ]
+			].
+			(currentTop respondsTo: #runToStepPoint:) ifTrue: [
+				[ currentTop runToStepPoint: 1 ] on: Error do: [ ]
+			].
+			"Fallbacks for other GemStone versions"
+			(currentTop respondsTo: #_stepPoint:) ifTrue: [
+				[ currentTop _stepPoint: 1 ] on: Error do: [ ]
 			]
 		].
-		
-		"If already at step 1, nothing to do"
-		quick <= 1 ifTrue: [ ^ true ].
-		
-		"Try jumpToStepPoint: if available (may not exist on all GemStone versions)"
-		(proc respondsTo: #jumpToStepPoint:) ifTrue: [
-			[ proc jumpToStepPoint: 1 ] on: Error do: [ ].
-			^ true
+
+		"Phase 3: Verify the result"
+		quick := 0.
+		stackReport := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
+		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
+			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
 		].
-		
-		"jumpToStepPoint: not available. Re-trim to force PC reset."
-		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ].
-		true
+		(quick <= 1) ifTrue: [ true ] ifFalse: [ false ]
 	] value'.
 
 	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
@@ -3019,29 +3027,34 @@ GbsRemoteDebugger >> trimServerStackToLevel: aLevel [
 				]
 		].
 
+		"Phase 1: Forcefully trim the stack to the target level.
+		GemStone _trimStackToLevel: is documented to reset the PC of the new top frame."
 		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ^ ''false'' ].
 
-		"_trimStackToLevel: resets the stack to step=1.
-		The jumpToStepPoint: call below is kept for compatibility with GemStone versions
-		that support it, but _trimStackToLevel: is the primary mechanism."
+		"Phase 2: Use jumpToStepPoint: on the NEW top frame (which was restartLevel).
+		This is a reinforced second pass to ensure the server-side state is synchronized."
+		currentTop := [ proc topContext ] on: Error do: [ nil ].
+		currentTop ifNotNil: [
+			(currentTop respondsTo: #jumpToStepPoint:) ifTrue: [
+				[ currentTop jumpToStepPoint: 1 ] on: Error do: [ ]
+			].
+			(currentTop respondsTo: #runToStepPoint:) ifTrue: [
+				[ currentTop runToStepPoint: 1 ] on: Error do: [ ]
+			].
+			"Fallbacks for other GemStone versions"
+			(currentTop respondsTo: #_stepPoint:) ifTrue: [
+				[ currentTop _stepPoint: 1 ] on: Error do: [ ]
+			]
+		].
+
+		"Phase 3: Verify the result"
 		quick := 0.
 		stackReport := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
 		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
 			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
-			fullEntry ifNotNil: [
-				quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ]
-			]
+			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ]
 		].
-		"Try jumpToStepPoint: only if step > 1 (may not exist on all GemStone versions)"
-		quick > 1 ifTrue: [
-			(proc respondsTo: #jumpToStepPoint:)
-				ifTrue: [ [ proc jumpToStepPoint: 1 ] on: Error do: [ ] ]
-				ifFalse: [
-					(proc respondsTo: #jumpTo:)
-						ifTrue: [ [ proc jumpTo: 1 ] on: Error do: [ ] ]
-				]
-		].
-		''true''
+		(quick <= 1) ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]
 	] value'.
 
 	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
