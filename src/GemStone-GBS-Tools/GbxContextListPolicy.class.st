@@ -138,9 +138,11 @@ GbxContextListPolicy >> debugger: aDebugger [
 
 { #category : 'context list' }
 GbxContextListPolicy >> fetchServerContexts [
-	"Fetch server activations using the VW flow:
-	serverCall/error oop -> gbsError -> serverProcess -> stack report."
-	| processOop script rawData contexts |
+	"Fetch server activations by resolving the actual debug process oop and
+	then letting GbxActivation>>reset populate each frame from
+	_gsiDebuggerDetailedReportAt:. This stays closer to VW behavior and avoids
+	depending on the exact _gsiStackReportFromLevel:toLevel: field layout."
+	| processOop resolvedProcessOop depthScript rawDepth maxDepth contexts |
 	debugger logRestartText: 'fetchServerContexts START'.
 
 	processOop := debugger processOop.
@@ -149,285 +151,47 @@ GbxContextListPolicy >> fetchServerContexts [
 		debugger logRestartText: 'fetchServerContexts processOop is nil or 20, returning empty'.
 		^ #( ) 
 	].
-	
-	script := '[
-		| obj gbsError gsProcess ctx stream maxDepth level frame stackReport fullEntry methodOrNil className selectorName source ctxOop quickStep offsets offsetsText lineNumber offset procOop |
-		obj := Object _objectForOop: ', processOop asString, '.
-		stream := WriteStream on: String new.
-		stream nextPutAll: ''DEBUG: obj='', (obj ifNil: [ ''nil'' ] ifNotNil: [ obj class name ]); cr.
-		obj isNil ifTrue: [ ^ stream contents ].
-		gbsError := nil.
-		gsProcess := nil.
-		ctx := nil.
 
-		(obj respondsTo: #serverProcess) ifTrue: [ gbsError := obj ].
-		gbsError isNil ifTrue: [
-			(obj respondsTo: #gbxResult)
-				ifTrue: [ gbsError := [ obj gbxResult ] on: Error do: [ nil ] ]
-		].
-		stream nextPutAll: ''DEBUG: gbsError='', (gbsError ifNil: [ ''nil'' ] ifNotNil: [ gbsError class name ]); cr.
-			gbsError notNil ifTrue: [
-				gsProcess := [ gbsError serverProcess ] on: Error do: [ nil ]
-			].
-			stream nextPutAll: ''DEBUG: gsProcess after gbsError='', (gsProcess ifNil: [ ''nil'' ] ifNotNil: [ gsProcess class name ]); cr.
-			gsProcess isNil ifTrue: [
-				(gbsError notNil and: [ gbsError respondsTo: #serverProcessOop ]) ifTrue: [
-					procOop := [ gbsError serverProcessOop ] on: Error do: [ nil ].
-					stream nextPutAll: ''DEBUG: procOop from gbsError='', procOop asString; cr.
-					(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
-						gsProcess := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
-					]
-				]
-			].
-			gsProcess isNil ifTrue: [
-				(obj respondsTo: #_gsiStackReportFromLevel:toLevel:)
-					ifTrue: [ gsProcess := obj ]
-			].
-			stream nextPutAll: ''DEBUG: gsProcess after _gsiStackReport='', (gsProcess ifNil: [ ''nil'' ] ifNotNil: [ gsProcess class name ]); cr.
-			gsProcess isNil ifTrue: [
-				(obj respondsTo: #serverProcessOop) ifTrue: [
-					procOop := [ obj serverProcessOop ] on: Error do: [ nil ].
-					stream nextPutAll: ''DEBUG: procOop from obj='', procOop asString; cr.
-					(procOop isNumber and: [ procOop > 20 ]) ifTrue: [
-						gsProcess := [ Object _objectForOop: procOop ] on: Error do: [ nil ]
-					]
-				]
-			].
-			gsProcess isNil ifTrue: [
-				(obj respondsTo: #process)
-					ifTrue: [ gsProcess := [ obj process ] on: Error do: [ nil ] ]
-			].
-		(gsProcess isNil and: [ obj respondsTo: #topContext ]) ifTrue: [
-			ctx := [ obj topContext ] on: Error do: [ nil ].
-			(ctx notNil and: [ ctx respondsTo: #process ])
-				ifTrue: [ gsProcess := [ ctx process ] on: Error do: [ nil ] ]
-		].
-		stream nextPutAll: ''DEBUG: final gsProcess='', (gsProcess ifNil: [ ''nil'' ] ifNotNil: [ gsProcess class name ]); cr.
-		stream nextPutAll: ''DEBUG: gsProcess respondsTo _gsiStackReport='', (gsProcess ifNil: [ ''nil'' ] ifNotNil: [ (gsProcess respondsTo: #_gsiStackReportFromLevel:toLevel:) asString ]); cr.
+	resolvedProcessOop := (debugger respondsTo: #resolveDebugProcessOopFromCurrentProcessOop)
+		ifTrue: [ [ debugger resolveDebugProcessOopFromCurrentProcessOop ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	((resolvedProcessOop isNumber and: [ resolvedProcessOop > 20 ]) not)
+		ifTrue: [ resolvedProcessOop := processOop ].
+	debugger logRestartText: 'fetchServerContexts resolvedProcessOop=' , resolvedProcessOop asString.
 
-		((gsProcess notNil) and: [
-			(gsProcess respondsTo: #_gsiStackReportFromLevel:toLevel:)
-				or: [ gsProcess respondsTo: #_gsiDebuggerDetailedReportAt: ] ]) ifTrue: [
-			maxDepth := 200.
-			level := 1.
-			[ level <= maxDepth ] whileTrue: [
-				fullEntry := nil.
-				(gsProcess respondsTo: #_gsiStackReportFromLevel:toLevel:)
-					ifTrue: [
-						stackReport := [ gsProcess _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
-						(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
-							ifTrue: [ fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ] ]
-					].
-				fullEntry isNil ifTrue: [
-					(gsProcess respondsTo: #_gsiDebuggerDetailedReportAt:) ifTrue: [
-						frame := [ gsProcess _gsiDebuggerDetailedReportAt: level ] on: Error do: [ nil ].
-						(frame notNil and: [ (frame respondsTo: #size) and: [ frame size >= 1 ] ])
-							ifTrue: [ fullEntry := [ frame first ] on: Error do: [ nil ] ]
-					]
-				].
-				fullEntry isNil
-					ifTrue: [ level := maxDepth + 1 ]
-					ifFalse: [
-						methodOrNil := ((fullEntry respondsTo: #at:) and: [ fullEntry size >= 1 ])
-							ifTrue: [ [ fullEntry at: 1 ] on: Error do: [ nil ] ]
-							ifFalse: [ nil ].
-						className := [
-							methodOrNil ifNil: [ ''<unknown>'' ] ifNotNil: [
-								methodOrNil inClass ifNil: [ ''<unknown>'' ] ifNotNil: [ methodOrNil inClass name ]
-							]
-						] on: Error do: [ ''<unknown>'' ].
-						selectorName := [
-							methodOrNil ifNil: [
-								((fullEntry respondsTo: #size) and: [ fullEntry size >= 4 ])
-									ifTrue: [
-										(fullEntry at: 4)
-											ifNil: [ ''<unknown>'' ]
-											ifNotNil: [ :sel | sel asString ]
-									]
-									ifFalse: [ ''<unknown>'' ]
-							] ifNotNil: [
-								[ methodOrNil selector asString ] on: Error do: [ ''<unknown>'' ]
-							]
-						] on: Error do: [ ''<unknown>'' ].
-						source := [
-							((fullEntry respondsTo: #size) and: [ fullEntry size >= 9 ])
-								ifTrue: [
-									(fullEntry at: 9)
-										ifNil: [ '''' ]
-										ifNotNil: [ :src | src asString ]
-								]
-								ifFalse: [ '''' ]
-						] on: Error do: [ '''' ].
-						quickStep := [
-							((fullEntry respondsTo: #size) and: [ fullEntry size >= 5 ])
-								ifTrue: [ fullEntry at: 5 ]
-								ifFalse: [ 0 ]
-						] on: Error do: [ 0 ].
-						quickStep ifNil: [ quickStep := 0 ].
-						offsets := [
-							((fullEntry respondsTo: #size) and: [ fullEntry size >= 6 ])
-								ifTrue: [ fullEntry at: 6 ]
-								ifFalse: [ #() ]
-						] on: Error do: [ #() ].
-						offsets ifNil: [ offsets := #() ].
-						offsetsText := String streamContents: [ :offsetStream |
-							1 to: offsets size do: [ :idx |
-								| raw |
-								raw := offsets at: idx.
-								raw isNil
-									ifTrue: [ offsetStream nextPutAll: ''nil'' ]
-									ifFalse: [ offsetStream nextPutAll: raw asString ].
-								idx < offsets size ifTrue: [ offsetStream nextPut: $, ]
-							]
-						].
-						lineNumber := 0.
-						(quickStep isNumber and: [ quickStep > 0 and: [ quickStep <= offsets size ] ]) ifTrue: [
-							offset := [ (offsets at: quickStep) asInteger ] on: Error do: [ nil ].
-							(offset isNumber and: [ offset > 0 ]) ifTrue: [
-								lineNumber := 1.
-								1 to: ((offset - 1) min: source size) do: [ :i |
-									| ch |
-									ch := source at: i.
-									(ch = Character lf or: [ ch = Character cr ]) ifTrue: [ lineNumber := lineNumber + 1 ]
-								]
-							]
-						].
-						source := source
-							copyReplaceAll: String cr with: ''<CR>'';
-							copyReplaceAll: String lf with: ''<LF>'';
-							copyReplaceAll: Character tab asString with: ''<TAB>''.
-						ctxOop := [ gsProcess asOop printString ] on: Error do: [ ''0'' ].
-						stream
-							nextPutAll: level asString; tab;
-							nextPutAll: className; tab;
-							nextPutAll: selectorName; tab;
-							nextPutAll: source; tab;
-							nextPutAll: ctxOop; tab;
-							nextPutAll: quickStep asString; tab;
-							nextPutAll: offsetsText; tab;
-							nextPutAll: lineNumber asString;
-							lf.
-						level := level + 1
-					]
-			]
+	depthScript := '[
+		| obj depth frame |
+		obj := Object _objectForOop: ', resolvedProcessOop asString, '.
+		obj isNil ifTrue: [ ^ ''0'' ].
+		depth := 0.
+		[ depth < 200 ] whileTrue: [
+			frame := [ obj _gsiDebuggerDetailedReportAt: depth + 1 ] on: Error do: [ nil ].
+			frame isNil ifTrue: [ ^ depth asString ].
+			depth := depth + 1
 		].
-
-		"Fallback: sender-chain walk when stack report is unavailable."
-		stream position = 0 ifTrue: [
-			ctx isNil ifTrue: [
-				(obj respondsTo: #sender) ifTrue: [ ctx := obj ].
-				(ctx isNil and: [ gsProcess notNil and: [ gsProcess respondsTo: #topContext ] ])
-					ifTrue: [ ctx := [ gsProcess topContext ] on: Error do: [ nil ] ]
-			].
-			maxDepth := 200.
-			level := 1.
-			[ ctx notNil and: [ level <= maxDepth ] ] whileTrue: [
-				className := [ ctx method inClass name ] on: Error do: [ ''<unknown>'' ].
-				selectorName := [ ctx selector asString ] on: Error do: [ ''<unknown>'' ].
-				source := [ ctx sourceCode ] on: Error do: [ '''' ].
-				source := source ifNil: [ '''' ].
-				source := source
-					copyReplaceAll: String cr with: ''<CR>'';
-					copyReplaceAll: String lf with: ''<LF>'';
-					copyReplaceAll: Character tab asString with: ''<TAB>''.
-				ctxOop := [ ctx asOop printString ] on: Error do: [ ''0'' ].
-				stream
-					nextPutAll: level asString; tab;
-					nextPutAll: className; tab;
-					nextPutAll: selectorName; tab;
-					nextPutAll: source; tab;
-					nextPutAll: ctxOop;
-					lf.
-				ctx := [ ctx sender ] on: Error do: [ nil ].
-				level := level + 1
-			]
-		].
-		stream contents
+		depth asString
 	] value'.
 
-	rawData := [
-		debugger session evaluate: script
+	rawDepth := [
+		debugger session evaluate: depthScript
 	] on: Error do: [ :ex |
-		debugger logRestartText: 'fetchServerContexts: ERROR: ' , ex messageText.
-		''
+		debugger logRestartText: 'fetchServerContexts: ERROR depth probe: ' , ex messageText.
+		nil
 	].
-	rawData ifNil: [ 
-		debugger logRestartText: 'fetchServerContexts: rawData is nil'.
-		rawData := '' 
-	].
-	(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
-	(rawData respondsTo: #splitOn) ifFalse: [
-		debugger logRestartText: 'fetchServerContexts: rawData does not respond to #splitOn, type=' , rawData class name.
-		rawData := [ rawData asString ] on: Error do: [ '' ]
-	].
-	debugger logRestartText: 'fetchServerContexts: rawData length=' , rawData size asString.
-	"Log first 200 chars of rawData for debugging"
-	debugger logRestartText: 'fetchServerContexts: rawData first200=[' , (rawData copyFrom: 1 to: (rawData size min: 200)) , ']'.
-	"Parse context lines from script output, filtering DEBUG and empty lines"
-	contexts := ((rawData splitOn: Character lf)
-		select: [ :line | line isNotEmpty and: [ (line beginsWith: 'DEBUG:') not ] ])
-		collect: [ :line |
-			| parts |
-			[
-				parts := line splitOn: Character tab.
-				parts size >= 5 ifTrue: [
-					| activation selectorSymbol ctxOop quickStepValue offsetsTokens offsetsValue lineNumberValue |
-					selectorSymbol := [ (parts at: 3) asSymbol ] on: Error do: [ #unboundMethod ].
-					ctxOop := [ (parts at: 5) asInteger ] on: Error do: [ processOop ].
-					quickStepValue := (parts size >= 6
-						ifTrue: [ [ (parts at: 6) asInteger ] on: Error do: [ 0 ] ]
-						ifFalse: [ 0 ]).
-					offsetsTokens := (parts size >= 7
-						ifTrue: [ (parts at: 7) splitOn: $, ]
-						ifFalse: [ #() ]).
-					lineNumberValue := (parts size >= 8
-						ifTrue: [ [ (parts at: 8) asInteger ] on: Error do: [ 0 ] ]
-						ifFalse: [ 0 ]).
-					offsetsValue := offsetsTokens collect: [ :token |
-						| cleaned |
-						cleaned := token withBlanksTrimmed.
-						cleaned isEmpty ifTrue: [ nil ] ifFalse: [
-							cleaned = 'nil'
-								ifTrue: [ nil ]
-								ifFalse: [ [ cleaned asInteger ] on: Error do: [ nil ] ]
-						]
-					].
-					activation := GbxActivation new.
-					(activation respondsTo: #session:)
-						ifTrue: [ activation session: debugger session ]
-						ifFalse: [ activation instVarNamed: 'session' put: debugger session ].
-					[ activation level: ([ parts first asInteger ] on: Error do: [ 1 ]) ] on: Error do: [ ].
-					(activation respondsTo: #initializeFromClass:selector:source:contextOop:)
-						ifTrue: [
-							[ activation
-								initializeFromClass: (parts at: 2)
-								selector: selectorSymbol
-								source: ((((parts at: 4)
-									copyReplaceAll: '<TAB>' with: Character tab asString)
-									copyReplaceAll: '<CR>' with: String cr)
-									copyReplaceAll: '<LF>' with: String lf)
-								contextOop: ctxOop ] on: Error do: [ ]
-						]
-						ifFalse: [
-							[ activation methodClass: (parts at: 2) ] on: Error do: [ ].
-							[ activation selector: selectorSymbol ] on: Error do: [ ].
-							[ activation sourceString: ((((parts at: 4)
-								copyReplaceAll: '<TAB>' with: Character tab asString)
-								copyReplaceAll: '<CR>' with: String cr)
-								copyReplaceAll: '<LF>' with: String lf) ] on: Error do: [ ].
-							[ activation processOop: ctxOop ] on: Error do: [ ]
-						].
-					[ activation quickStepPoint: quickStepValue ] on: Error do: [ ].
-					[ activation sourceOffsets: offsetsValue ] on: Error do: [ ].
-					[ activation ipOffset: lineNumberValue ] on: Error do: [ ].
-					activation
-				]
-			] on: Error do: [ 
-				debugger logRestartText: 'fetchServerContexts: ERROR parsing line: ' , (line copyFrom: 1 to: (line size min: 100)).
-				nil
-			]
+	(rawDepth respondsTo: #asLocalString) ifTrue: [ rawDepth := rawDepth asLocalString ].
+	maxDepth := [ rawDepth asString asInteger ] on: Error do: [ 0 ].
+	debugger logRestartText: 'fetchServerContexts maxDepth=' , maxDepth asString.
+
+	contexts := OrderedCollection new.
+	1 to: maxDepth do: [ :level |
+		| activation |
+		activation := GbxActivation processOop: resolvedProcessOop level: level session: debugger session.
+		activation gsMethodId ifNil: [
+			debugger logRestartText: 'fetchServerContexts stopping at invalid level=' , level asString.
+			^ contexts asArray
 		].
-	contexts := contexts select: #isNotNil.
+		contexts add: activation
+	].
 
 	contexts isEmpty ifTrue: [
 		(debugger respondsTo: #fetchContextsDirectly) ifTrue: [
@@ -439,7 +203,7 @@ GbxContextListPolicy >> fetchServerContexts [
 	].
 
 	debugger logRestartText: 'fetchServerContexts END contexts count=' , contexts size asString.
-	^ contexts
+	^ contexts asArray
 ]
 
 { #category : 'context list' }
