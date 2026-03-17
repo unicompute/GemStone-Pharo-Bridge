@@ -1,5 +1,23 @@
 | packageNames organizer checks classNamesToForceRemove mustHaveChecks |
 [
+  [ '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/prebootstrap_pharo13.st' asFileReference fileIn ]
+    on: Error
+    do: [ :ex |
+      Transcript
+        show: 'PREBOOTSTRAP_ERROR: ';
+        show: ex messageText;
+        cr
+    ].
+
+  [ '/Users/tariq/src/gemtools/Pharo-Gemstone.st' asFileReference fileIn ]
+    on: Error
+    do: [ :ex |
+      Transcript
+        show: 'BOOTSTRAP_ERROR: ';
+        show: ex messageText;
+        cr
+    ].
+
   organizer := (Smalltalk at: #PackageOrganizer ifAbsent: [ nil ]).
   organizer ifNil: [ organizer := (Smalltalk at: #RPackageOrganizer ifAbsent: [ nil ]) ].
   classNamesToForceRemove := OrderedCollection new.
