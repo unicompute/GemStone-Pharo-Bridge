@@ -1822,9 +1822,18 @@ GbxDebuggerService >> selectTopServerContext [
 	| topServer |
 	contextStackPolicy ifNil: [ ^ self ].
 	contextStackPolicy computeContextList.
-	topServer := (contextStackPolicy respondsTo: #topServerContext)
-		ifTrue: [ contextStackPolicy topServerContext ]
-		ifFalse: [ nil ].
+	
+	"PRIORITY: Try to find an executed code frame first (e.g. after restart)"
+	topServer := contextStackPolicy contextList detect: [ :ctx | 
+		(ctx respondsTo: #isExecutedCodeFrame) and: [ ctx isExecutedCodeFrame ]
+	] ifNone: [ nil ].
+	
+	topServer ifNil: [ 
+		topServer := (contextStackPolicy respondsTo: #topServerContext)
+			ifTrue: [ contextStackPolicy topServerContext ]
+			ifFalse: [ nil ].
+	].
+	
 	topServer ifNil: [
 		topServer := contextStackPolicy contextList
 			ifEmpty: [ nil ]
