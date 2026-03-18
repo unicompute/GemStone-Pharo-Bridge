@@ -18,6 +18,9 @@ Class {
 		'terminateOnUnwind'
 	],
 	#classVars : [
+		'ErrorNameToClassCompatibility',
+		'GbsErrorNumbersToClasses',
+		'GbsErrorNumbersToClasses6430'
 	],
 	#category : 'GemStone-GBS-Converted'
 }
