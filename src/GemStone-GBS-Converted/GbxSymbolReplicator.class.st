@@ -77,7 +77,5 @@ GbxSymbolReplicator class >> initialize
 	StringClassMapping := Dictionary new.
 	StringClassMapping
 		at: ByteSymbol put: ByteString;
-		at: TwoByteSymbol put: TwoByteString;
-		at: FourByteSymbol put: FourByteString
+		at: WideSymbol put: WideString
 ]
-

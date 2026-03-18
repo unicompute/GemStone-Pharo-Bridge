@@ -14,4 +14,6 @@ GbsPharoBootstrap class >> installCompatibilityAliases
 [
 	Smalltalk at: #TwoByteString put: WideString.
 	Smalltalk at: #FourByteString put: WideString.
+	Smalltalk at: #TwoByteSymbol put: WideSymbol.
+	Smalltalk at: #FourByteSymbol put: WideSymbol.
 ]
