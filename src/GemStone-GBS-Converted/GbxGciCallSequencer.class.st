@@ -402,7 +402,7 @@ GbxGciCallSequencer class >> primInterface
 GbxGciCallSequencer class >> raiseNotLoaded
 [
 
-	GemStone.Gbs.GbsInterfaceError
+	GbsInterfaceError
 		raiseErrorString: 'GBS C Interface not loaded'.
 	^nil
 ]

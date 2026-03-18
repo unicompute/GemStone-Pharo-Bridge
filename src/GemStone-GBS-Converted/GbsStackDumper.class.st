@@ -382,7 +382,7 @@ GbsStackDumper class >> defaultPrintClient: anObject on: aStream
 [
 
 	| limitedSizeStream identityHash gbxIdentityHash |
-	limitedSizeStream := GemStone.Gbs.GbxLimitingStream on: aStream.
+	limitedSizeStream := GbxLimitingStream on: aStream.
 	limitedSizeStream cr.
 	limitedSizeStream printClientHeaderFor: anObject.
 	identityHash := self identityHashOf: anObject.
@@ -401,7 +401,7 @@ GbsStackDumper class >> defaultPrintClient: anObject on: aStream
 				space].
 	
 	[[self debugPrint: anObject on: limitedSizeStream]
-		on: GemStone.Gbs.GbsMaxStreamSizeNotification
+		on: GbsMaxStreamSizeNotification
 		do: [:ex | limitedSizeStream nextPutAll: '<< etc. >>']]
 			on: Error
 			do: 

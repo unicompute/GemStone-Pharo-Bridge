@@ -12,6 +12,6 @@ Class {
 SymbolAssociation class >> gbsReplicatorClass
 [
 
-	^GemStone.Gbs.GbxSymbolAssociationReplicator
+	^GbxSymbolAssociationReplicator
 ]
 

@@ -153,42 +153,42 @@ GbxSessionManagerStatResource class >> initialize
 		addStatDescriptor: (GbxStatDescriptor 
 					name: 'numSessions'
 					description: 'The number of logged in GbsSessions'
-					type: GemStone.Gbs.GbxStatArchiver.TypeShort16
+					type: GbxStatArchiver.TypeShort16
 					isCounter: false
 					isLargerBetter: false
 					unit: 'sessions');
 		addStatDescriptor: (GbxStatDescriptor 
 					name: 'sessionListProtectInvocations'
 					description: 'The number of accesses to the sessionListProtect semaphore'
-					type: GemStone.Gbs.GbxStatArchiver.TypeInt32
+					type: GbxStatArchiver.TypeInt32
 					isCounter: true
 					isLargerBetter: false
 					unit: 'accesses');
 		addStatDescriptor: (GbxStatDescriptor 
 					name: 'gciCallProtectInvocations'
 					description: 'The number of accesses to the GciCallProtect semaphore (a GbxCInterface shared variable)'
-					type: GemStone.Gbs.GbxStatArchiver.TypeInt32
+					type: GbxStatArchiver.TypeInt32
 					isCounter: true
 					isLargerBetter: false
 					unit: 'accesses');
 		addStatDescriptor: (GbxStatDescriptor 
 					name: 'clientMapSize'
 					description: 'The number of client objects in the client map, the dictionary structure that maps client objects to server objects. There is one client map, shared between all sessions.'
-					type: GemStone.Gbs.GbxStatArchiver.TypeInt32
+					type: GbxStatArchiver.TypeInt32
 					isCounter: false
 					isLargerBetter: false
 					unit: 'entries');
 		addStatDescriptor: (GbxStatDescriptor 
 					name: 'mainStatSampleTime'
 					description: 'The amount of time spent sampling manager and session statistics'
-					type: GemStone.Gbs.GbxStatArchiver.TypeInt32
+					type: GbxStatArchiver.TypeInt32
 					isCounter: true
 					isLargerBetter: false
 					unit: 'microseconds');
 		addStatDescriptor: (GbxStatDescriptor 
 					name: 'cacheStatSampleTime'
 					description: 'The amount of time spent sampling cache statistics'
-					type: GemStone.Gbs.GbxStatArchiver.TypeInt32
+					type: GbxStatArchiver.TypeInt32
 					isCounter: true
 					isLargerBetter: false
 					unit: 'microseconds')

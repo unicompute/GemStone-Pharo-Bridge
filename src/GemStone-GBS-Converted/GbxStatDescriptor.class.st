@@ -19,7 +19,7 @@ Class {
 GbxStatDescriptor >> isByte
 [
 
-	^type == GemStone.Gbs.GbxStatArchiver.TypeByte8
+	^type == GbxStatArchiver.TypeByte8
 ]
 
 { #category : 'accessing' }
@@ -33,7 +33,7 @@ GbxStatDescriptor >> id
 GbxStatDescriptor >> isShort
 [
 
-	^type == GemStone.Gbs.GbxStatArchiver.TypeShort16
+	^type == GbxStatArchiver.TypeShort16
 ]
 
 { #category : 'accessing' }

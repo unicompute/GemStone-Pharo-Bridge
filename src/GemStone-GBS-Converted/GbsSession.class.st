@@ -2700,12 +2700,12 @@ GbsSession >> createTimeZoneConnectors
 		addConnectors:
 			(Array
 				with:
-					(GbsClassConnector stName: #'GemStone.Gbs.GbxTimeZoneInfo' gsName:
+					(GbsClassConnector stName: #'GbxTimeZoneInfo' gsName:
 							#TimeZoneInfo)
 				with:
-					(GbsClassConnector stName: #'GemStone.Gbs.GbxTimeZone' gsName: #TimeZone)
+					(GbsClassConnector stName: #'GbxTimeZone' gsName: #TimeZone)
 				with:
-					(GbsClassConnector stName: #'GemStone.Gbs.GbxTimeZoneTransition' gsName:
+					(GbsClassConnector stName: #'GbxTimeZoneTransition' gsName:
 							#TimeZoneTransition))
 ]
 

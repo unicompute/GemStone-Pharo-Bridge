@@ -358,41 +358,42 @@ GbxSpecFormatter class >> formatLegacySimpleSpecMethod
 { #category : 'examples' }
 GbxSpecFormatter class >> simpleSpec
 [
+	"Example spec for testing - uses fictional classes"
 
-	^GemStone.Gbs.GbxOverrideSet
+	^GbxOverrideSet
 		destinationPackageName: 'FictionalPackage'
 		classOverrides: (OrderedCollection new
-				add: (GemStone.Gbs.GbxClassOverride
+				add: (GbxClassOverride
 							behavior: Tools.AbstractWorkspace
 							crc: 3207545579
 							edits: (OrderedCollection new
-									add: (GemStone.Gbs.GbxOverrideEditCopy count: 122);
-									add: (GemStone.Gbs.GbxOverrideEditInsert string: 'toolbarHolder ');
+									add: (GbxOverrideEditCopy count: 122);
+									add: (GbxOverrideEditInsert string: 'toolbarHolder ');
 									yourself));
 				yourself)
 		variableOverrides: #()
 		methodOverrides: (OrderedCollection new
-				add: (GemStone.Gbs.GbxMethodOverride
+				add: (GbxMethodOverride
 							behavior: Core.Bag
 							selector: #add:withOccurrences:
 							crc: 1268044848
 							edits: (OrderedCollection new
-									add: (GemStone.Gbs.GbxOverrideEditCopy count: 266);
-									add: (GemStone.Gbs.GbxOverrideEditDelete count: 1);
-									add: (GemStone.Gbs.GbxOverrideEditCopy count: 49);
-									add: (GemStone.Gbs.GbxOverrideEditDelete count: 3);
-									add: (GemStone.Gbs.GbxOverrideEditInsert string: ' ');
-									add: (GemStone.Gbs.GbxOverrideEditCopy count: 13);
-									add: (GemStone.Gbs.GbxOverrideEditDelete count: 3);
-									add: (GemStone.Gbs.GbxOverrideEditInsert string: ' ');
-									add: (GemStone.Gbs.GbxOverrideEditCopy count: 14);
-									add: (GemStone.Gbs.GbxOverrideEditDelete count: 1);
-									add: (GemStone.Gbs.GbxOverrideEditInsert string: '
+									add: (GbxOverrideEditCopy count: 266);
+									add: (GbxOverrideEditDelete count: 1);
+									add: (GbxOverrideEditCopy count: 49);
+									add: (GbxOverrideEditDelete count: 3);
+									add: (GbxOverrideEditInsert string: ' ');
+									add: (GbxOverrideEditCopy count: 13);
+									add: (GbxOverrideEditDelete count: 3);
+									add: (GbxOverrideEditInsert string: ' ');
+									add: (GbxOverrideEditCopy count: 14);
+									add: (GbxOverrideEditDelete count: 1);
+									add: (GbxOverrideEditInsert string: '
 				');
-									add: (GemStone.Gbs.GbxOverrideEditCopy count: 97);
-									add: (GemStone.Gbs.GbxOverrideEditInsert string: 'self gbxConsiderModified.	"Force self to be modified, thus marked dirty if it''s a GBS replicate"
+									add: (GbxOverrideEditCopy count: 97);
+									add: (GbxOverrideEditInsert string: 'self gbxConsiderModified.	"Force self to be modified, thus marked dirty if it''s a GBS replicate"
 	');
-									add: (GemStone.Gbs.GbxOverrideEditCopy count: 10);
+									add: (GbxOverrideEditCopy count: 10);
 									yourself));
 				yourself)
 ]

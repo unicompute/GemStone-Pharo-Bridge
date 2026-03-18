@@ -100,7 +100,7 @@ GbxOverrideUtility class >> overrideSpecClasses
 [
 	"We cannot explicitly reference the classes because they don't all exist while loading is in progress."
 
-	^GemStone.Gbs.GbxAbstractOverrideSpec subclasses
+	^GbxAbstractOverrideSpec subclasses
 ]
 
 { #category : 'private' }

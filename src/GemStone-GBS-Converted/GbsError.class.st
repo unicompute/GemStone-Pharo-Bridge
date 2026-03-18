@@ -915,7 +915,7 @@ GbsError class >> errorSignal
 
 	"Signal indicating a GemStone (back end) error"
 
-	^GemStone.Gbs.GbsGemStoneError
+	^GbsGemStoneError
 ]
 
 { #category : 'private-argument verification' }

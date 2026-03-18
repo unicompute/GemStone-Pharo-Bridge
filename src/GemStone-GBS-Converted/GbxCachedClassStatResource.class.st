@@ -81,14 +81,14 @@ GbxCachedClassStatResource class >> initialize
 		addStatDescriptor: (GbxStatDescriptor 
 					name: 'numInstances'
 					description: 'The number of instances of this class in the stObjectCache'
-					type: GemStone.Gbs.GbxStatArchiver.TypeInt32
+					type: GbxStatArchiver.TypeInt32
 					isCounter: false
 					isLargerBetter: false
 					unit: 'instances');
 		addStatDescriptor: (GbxStatDescriptor 
 					name: 'gbsBytesCached'
 					description: 'The number of bytes occupied by instances of this class in the stObjectCache'
-					type: GemStone.Gbs.GbxStatArchiver.TypeInt32
+					type: GbxStatArchiver.TypeInt32
 					isCounter: false
 					isLargerBetter: false
 					unit: 'bytes')

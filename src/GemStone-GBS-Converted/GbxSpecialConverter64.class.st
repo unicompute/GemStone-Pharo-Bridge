@@ -36,7 +36,7 @@ GbxSpecialConverter64 >> isSpecialDate: aDate
 	^supportsImmediateTimes and:
 		[[self normalizeDate: aDate.
 		true]
-			on: GemStone.Gbs.Exceptions.OutOfRange
+			on: Exceptions.OutOfRange
 			do: [:ex | ex return: false]]
 ]
 
