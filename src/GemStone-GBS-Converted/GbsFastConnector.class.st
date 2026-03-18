@@ -203,7 +203,7 @@ GbsFastConnector >> updateClientfromDelegate: delegate
 { #category : 'testing' }
 GbsFastConnector class >> supportsFromUser
 [
-	"GBS Private. Answer whether the user is allowed to create connectors of this type through the GUI."
+	"GBS Private. Answer whether the user is allowed to create connectors of this type through the G"
 
 	^false
 ]

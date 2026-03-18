@@ -2884,7 +2884,7 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
 	context := contextList at: index.
 
-	"CRITICAL FIX for second restart bug: Mark context as restarted BEFORE updating UI.
+	"CRITICAL FIX for second restart bug: Mark context as restarted BEFORE updating 
 	This ensures step=1 is set before the display reads the step point value.
 	The server may report old step point, so we force it to 1 locally."
 	(context respondsTo: #markAsExecutedCodeFrame) ifTrue: [

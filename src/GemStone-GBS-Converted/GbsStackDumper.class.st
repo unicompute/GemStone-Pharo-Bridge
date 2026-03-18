@@ -149,7 +149,7 @@ GbsStackDumper class >> dumpAllProcessStacks
 	context information will also be included if possible. It may not always be possible to include this information, 
 	depending on the state of communications with the server. If it is not possible to obtain server information, 
 	the stack dump will put a message in the stack dump and continue within a few seconds."
-	"	GemStone.Gbs.GbsStackDumper dumpAllProcessStacks. 	"
+	"	GbsStackDumper dumpAllProcessStacks. 	"
 
 	^self dumpAllProcessStacksUsingFileNamePattern: 'StacksAt%1.txt'.
 ]
@@ -206,7 +206,7 @@ GbsStackDumper class >> dumpAllProcessStacksUsingFileNamePattern: aString
 	context information will also be included if possible. It may not always be possible to include this information, 
 	depending on the state of communications with the server. If it is not possible to obtain server information, 
 	the stack dump will put a message in the stack dump and continue within a few seconds."
-	"	GemStone.Gbs.GbsStackDumper dumpAllProcessStacksUsingFileNamePattern: 'StacksAt%1.txt'. 	"
+	"	GbsStackDumper dumpAllProcessStacksUsingFileNamePattern: 'StacksAt%1.txt'. 	"
 
 	| filename |
 	filename := self gbsMessenger

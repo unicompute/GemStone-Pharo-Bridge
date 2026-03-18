@@ -581,7 +581,7 @@ GbsConnector class >> new
 { #category : 'instance creation' }
 GbsConnector class >> supportsFromUser
 [
-	"GBS Private. Answer whether the user is allowed to create connectors of this type through the GUI."
+	"GBS Private. Answer whether the user is allowed to create connectors of this type through the G"
 
 	^true	"by default."
 ]

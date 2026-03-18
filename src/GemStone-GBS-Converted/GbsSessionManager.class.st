@@ -1495,7 +1495,7 @@ GbsSessionManager >> globalClassConnectorsList
 		(ServerClasses.ReadStreamLegacy					ReadStreamLegacy)
 		(ServerClasses.ReadStreamPortable				ReadStreamPortable)
 		(ServerClasses.ReadByteStream					ReadByteStream			GemStone_Portable_Streams			3)
-"		(GemStone.Gbs.ServerClasses.ReadWriteStream					ReadWriteStream			nil								2)"
+"		(ReadWriteStream					ReadWriteStream			nil								2)"
 		(ServerClasses.ReadWriteStreamPortable			ReadWriteStreamPortable)
 		(ServerClasses.WriteStream						WriteStream				GemStone_Portable_Streams)
 		(ServerClasses.WriteStreamLegacy					WriteStreamLegacy)

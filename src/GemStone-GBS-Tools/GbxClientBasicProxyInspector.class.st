@@ -2,7 +2,6 @@ Class {
 	#name : 'GbxClientBasicProxyInspector',
 	#superclass : 'GbxBasicInspector',
 	#instVars : [
-		'selfAttribute'
 	],
 	#classVars : [
 	],

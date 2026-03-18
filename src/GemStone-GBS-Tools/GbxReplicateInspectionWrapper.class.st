@@ -109,7 +109,7 @@ GbxReplicateInspectionWrapper >> printString
 	| aStream |
 	aStream := GbxLimitingStream on: (TextStream on: (String new: 16)).
 	
-	[[self gbxDebugPrintOn: aStream] on: GemStone.Gbs.GbsMaxStreamSizeNotification
+	[[self gbxDebugPrintOn: aStream] on: GbsMaxStreamSizeNotification
 		do: [:notification | aStream nextPutAll: ' << etc. >>']]
 			on: Error
 			do: [:err | aStream nextPutAll: '||| Printing error: ' , err description].

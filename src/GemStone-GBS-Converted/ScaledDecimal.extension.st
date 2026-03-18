@@ -32,5 +32,5 @@ ScaledDecimal class >> _mantissa: m scale: s [
 
 { #category : '*GemStone-GBS-Converted' }
 ScaledDecimal class >> gbsReplicatorClass [
-	^ GemStone.Gbs.GbxPointerMagnitudeReplicator
+	^ GbxPointerMagnitudeReplicator
 ]

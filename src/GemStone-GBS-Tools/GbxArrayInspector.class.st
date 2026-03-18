@@ -40,7 +40,7 @@ GbxArrayInspector >> privateMoveAllAtIndices: aCollection beforeIndex: anIndex
 					[:each |
 					| del |
 					del := (object cachedElements at: each) valueDelegate.
-					(del isKindOf: GemStone.Gbs.GbxInspectionWrapper)
+					(del isKindOf: GbxInspectionWrapper)
 						ifTrue: [del delegate]
 						ifFalse: [del]].
 	object delegate

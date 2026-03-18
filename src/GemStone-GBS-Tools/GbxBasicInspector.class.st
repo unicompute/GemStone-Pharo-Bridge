@@ -62,8 +62,8 @@ GbxBasicInspector >> dynamicInstVarFields
 		unlessBlocked: [^OrderedCollection new]
 		retryFor: 500.
 	^dynamicInstVars asArray]
-			on: Core.MessageNotUnderstood
-			do: [:ex | ^Core.Array with: 'error getting dynamic inst vars']
+			on: MessageNotUnderstood
+			do: [:ex | ^Array with: 'error getting dynamic inst vars']
 ]
 
 { #category : 'accessing' }

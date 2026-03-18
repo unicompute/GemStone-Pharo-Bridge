@@ -82,7 +82,7 @@ GbxSymbolListDictionaryHolder >> on: aSymbolListDictionaryForwarder
 [
 	
 	[self dictName: aSymbolListDictionaryForwarder name]
-		on: GemStone.Gbs.GbsAuthErrSegRead
+		on: GbsAuthErrSegRead
 		do: [:ex | self dictName: 'restricted object'].
 	self remoteSymbolListDictionary: aSymbolListDictionaryForwarder.
 	^self

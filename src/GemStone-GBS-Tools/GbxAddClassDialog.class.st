@@ -234,63 +234,63 @@ GbxAddClassDialog class >> windowSpec
 	"Tools.UIPainter new openOnClass: self andSelector: #windowSpec"
 
 	<resource: #canvas>
-	^#(#{UI.FullSpec} 
+	^#(#{FullSpec} 
 		#window: 
-		#(#{UI.WindowSpec} 
+		#(#{WindowSpec} 
 			#label: 'Add GemStone Class' 
-			#bounds: #(#{Graphics.Rectangle} 669 386 1012 664 ) ) 
+			#bounds: #(#{Rectangle} 669 386 1012 664 ) ) 
 		#component: 
-		#(#{UI.SpecCollection} 
+		#(#{SpecCollection} 
 			#collection: #(
-				#(#{UI.LabelSpec} 
-					#layout: #(#{UI.AlignmentOrigin} -10 0.4 0 0.15 1 0.5 ) 
+				#(#{LabelSpec} 
+					#layout: #(#{AlignmentOrigin} -10 0.4 0 0.15 1 0.5 ) 
 					#name: #Label1 
 					#label: 'New Class:' ) 
-				#(#{UI.InputFieldSpec} 
-					#layout: #(#{Graphics.LayoutFrame} 2 0.4 -15 0.15 -10 1 15 0.15 ) 
+				#(#{InputFieldSpec} 
+					#layout: #(#{LayoutFrame} 2 0.4 -15 0.15 -10 1 15 0.15 ) 
 					#name: #NewClassInputField 
 					#model: #newClassName 
 					#type: #text ) 
-				#(#{UI.LabelSpec} 
-					#layout: #(#{UI.AlignmentOrigin} -10 0.4 0 0.3 1 0.5 ) 
+				#(#{LabelSpec} 
+					#layout: #(#{AlignmentOrigin} -10 0.4 0 0.3 1 0.5 ) 
 					#name: #Label2 
 					#label: 'Superclass:' ) 
-				#(#{UI.InputFieldSpec} 
-					#layout: #(#{Graphics.LayoutFrame} 2 0.4 -15 0.3 -10 1 15 0.3 ) 
+				#(#{InputFieldSpec} 
+					#layout: #(#{LayoutFrame} 2 0.4 -15 0.3 -10 1 15 0.3 ) 
 					#name: #SuperClassInputField 
 					#model: #superClassName 
 					#type: #text ) 
-				#(#{UI.LabelSpec} 
-					#layout: #(#{UI.AlignmentOrigin} -10 0.4 0 0.45 1 0.5 ) 
+				#(#{LabelSpec} 
+					#layout: #(#{AlignmentOrigin} -10 0.4 0 0.45 1 0.5 ) 
 					#name: #Label3 
 					#label: 'Instance Variables:' ) 
-				#(#{UI.InputFieldSpec} 
-					#layout: #(#{Graphics.LayoutFrame} 2 0.4 -15 0.45 -10 1 15 0.45 ) 
+				#(#{InputFieldSpec} 
+					#layout: #(#{LayoutFrame} 2 0.4 -15 0.45 -10 1 15 0.45 ) 
 					#name: #InputField3 
 					#model: #newInstVars ) 
-				#(#{UI.LabelSpec} 
-					#layout: #(#{UI.AlignmentOrigin} -10 0.4 0 0.6 1 0.5 ) 
+				#(#{LabelSpec} 
+					#layout: #(#{AlignmentOrigin} -10 0.4 0 0.6 1 0.5 ) 
 					#name: #Label4 
 					#label: 'Class Variables:' ) 
-				#(#{UI.InputFieldSpec} 
-					#layout: #(#{Graphics.LayoutFrame} 2 0.4 -15 0.6 -10 1 15 0.6 ) 
+				#(#{InputFieldSpec} 
+					#layout: #(#{LayoutFrame} 2 0.4 -15 0.6 -10 1 15 0.6 ) 
 					#name: #InputField4 
 					#model: #newClassVars ) 
-				#(#{UI.ActionButtonSpec} 
-					#layout: #(#{Graphics.LayoutFrame} -40 0.333333 -15 0.9 40 0.333333 15 0.9 ) 
+				#(#{ActionButtonSpec} 
+					#layout: #(#{LayoutFrame} -40 0.333333 -15 0.9 40 0.333333 15 0.9 ) 
 					#name: #ActionButton1 
 					#model: #accept 
 					#label: 'Accept' 
 					#isDefault: true 
 					#defaultable: true ) 
-				#(#{UI.ActionButtonSpec} 
-					#layout: #(#{Graphics.LayoutFrame} -40 0.666666 -15 0.9 40 0.666666 15 0.9 ) 
+				#(#{ActionButtonSpec} 
+					#layout: #(#{LayoutFrame} -40 0.666666 -15 0.9 40 0.666666 15 0.9 ) 
 					#name: #ActionButton2 
 					#model: #cancel 
 					#label: 'Cancel' 
 					#defaultable: true ) 
-				#(#{UI.CheckBoxSpec} 
-					#layout: #(#{UI.AlignmentOrigin} 2 0.4 0 0.75 0 0.5 ) 
+				#(#{CheckBoxSpec} 
+					#layout: #(#{AlignmentOrigin} 2 0.4 0 0.75 0 0.5 ) 
 					#name: #ModifiableCheckBox 
 					#model: #modifiable 
 					#label: 'Modifiable' ) ) ) )
