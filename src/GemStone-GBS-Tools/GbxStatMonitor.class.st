@@ -24,6 +24,10 @@ Class {
 		'sampleInterval',
 		'cacheSampleIntervalMultiplier'
 	],
+	#classVars : [
+		'Instance',
+		'StatMonitorPriority'
+	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }

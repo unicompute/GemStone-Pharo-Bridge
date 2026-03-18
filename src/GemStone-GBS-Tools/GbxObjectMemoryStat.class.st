@@ -6,7 +6,11 @@ Class {
 		'objectCount',
 		'byteCount',
 		'oopCount',
-		'percentFull'
+		'percentFull',
+		'description',
+		'lastArchivedValue',
+		'value',
+		'selector'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -18,6 +22,16 @@ GbxObjectMemoryStat class >> on: aSession [
 		session: aSession;
 		resourceType: #objectMemory;
 		yourself
+]
+
+{ #category : 'instance creation' }
+GbxObjectMemoryStat class >> newFor: aSelector [
+	^ self basicNew selector: aSelector
+]
+
+{ #category : 'instance creation' }
+GbxObjectMemoryStat class >> newWithDescription: aDescription [
+	^ self basicNew description: aDescription
 ]
 
 { #category : 'accessing' }
@@ -59,6 +73,12 @@ GbxObjectMemoryStat >> collectStats [
 ]
 
 { #category : 'accessing' }
+GbxObjectMemoryStat >> description: aStatDescriptor [
+	description := aStatDescriptor.
+	^ self
+]
+
+{ #category : 'accessing' }
 GbxObjectMemoryStat >> initialize [
 	super initialize.
 	name := 'Object Memory'.
@@ -78,6 +98,13 @@ GbxObjectMemoryStat >> oopCount [
 	^ oopCount ifNil: [ 0 ]
 ]
 
+{ #category : 'archiving' }
+GbxObjectMemoryStat >> numericValueFrom: anObjectMemory [
+	| rawValue |
+	rawValue := anObjectMemory perform: self selector.
+	^ rawValue ifNil: [ 0 ]
+]
+
 { #category : 'accessing' }
 GbxObjectMemoryStat >> percentFull [
 	^ percentFull ifNil: [ 0 ]
@@ -94,9 +121,41 @@ GbxObjectMemoryStat >> session: aSession [
 ]
 
 { #category : 'accessing' }
+GbxObjectMemoryStat >> selector [
+	selector ifNil: [ selector := description name asSymbol ].
+	^ selector
+]
+
+{ #category : 'accessing' }
+GbxObjectMemoryStat >> selector: aSelector [
+	selector := aSelector.
+	^ self
+]
+
+{ #category : 'accessing' }
 GbxObjectMemoryStat >> summary [
 	"Return a summary string of object memory stats"
 	^ 'Object Memory: ', objectCount asString, ' objects, ',
 	  byteCount asString, ' bytes, ',
 	  oopCount asString, ' oops (', percentFull asString, '% full)'
+]
+
+{ #category : 'archiving' }
+GbxObjectMemoryStat >> writeSampleFrom: anObjectMemory to: statArchive [
+	| type valueToWrite |
+	description ifNil: [ ^ self ].
+	value := self numericValueFrom: anObjectMemory.
+	lastArchivedValue isNil
+		ifTrue: [ valueToWrite := value ]
+		ifFalse: [
+			valueToWrite := value - lastArchivedValue.
+			valueToWrite = 0 ifTrue: [ ^ self ] ].
+	statArchive writeByte: description id.
+	lastArchivedValue := value.
+	type := description type.
+	type = 3
+		ifTrue: [ ^ statArchive writeByte: valueToWrite ].
+	type = 4
+		ifTrue: [ ^ statArchive writeShort: valueToWrite ].
+	statArchive writeCompressedNumber: valueToWrite
 ]
