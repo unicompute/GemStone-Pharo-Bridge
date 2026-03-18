@@ -36,7 +36,7 @@ GbxKeyIndexElement >> value: anObject
 GbxKeyIndexElement >> displayString
 [
 
-	^Tools.Trippy.Inspector safeDisplayStringOf: key
+	^GbxInspector safeDisplayStringOf: key
 ]
 
 { #category : 'accessing' }

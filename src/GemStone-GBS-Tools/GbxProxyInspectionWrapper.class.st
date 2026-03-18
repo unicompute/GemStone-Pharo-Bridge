@@ -17,7 +17,7 @@ GbxProxyInspectionWrapper >> inspectorActions
 	oc := super inspectorActions asOrderedCollection.
 	localObject zzzisStub
 		ifTrue: 
-			[oc add: (Tools.Trippy.Action label: #Fault << #gbs >> 'Fault'
+			[oc add: (GbxAction label: #Fault << #gbs >> 'Fault'
 						block: [self faultStub])].
 	^oc asArray
 ]
@@ -54,17 +54,17 @@ GbxProxyInspectionWrapper >> inspectorClasses
 	oc add: GbxClientBasicProxyInspector.
 	oc addAll: self gbxInspectorClasses.
 	oc add: GbxDelegateInspector.
-	oc add: Tools.Trippy.WatchLogInspector. 
+	oc add: GbxWatchLogInspector. 
 	^self possiblyAddBehaviorInspector: oc
 ]
 
 { #category : 'private - inspecting' }
 GbxProxyInspectionWrapper >> inspectorClientExtraAttributes
 [
-	^Array with: (Tools.Trippy.DerivedAttribute 
+	^Array with: (GbxDerivedAttribute 
 				label: #identityHash << #gbs >> 'identityHash'
 				valueBlock: [self localObjectIdentityHash])
-		with: (Tools.Trippy.DerivedAttribute label: #size << #gbs >> 'size'
+		with: (GbxDerivedAttribute label: #size << #gbs >> 'size'
 				valueBlock: [self proxy gbxBasicSize])
 ]
 

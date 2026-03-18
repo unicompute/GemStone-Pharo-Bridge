@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxSegmentedPageDriver',
-	#superclass : 'SegmentedPageDriver',
+	#superclass : 'Object',
 	#instVars : [
 	],
 	#classVars : [

@@ -66,7 +66,7 @@ GbxDelegateInspector >> namedFields
 	^self object class allInstVarNames collect: 
 			[:each | 
 			| part |
-			part := Tools.Trippy.NamedVariable of: self object named: each.
+			part := GbxNamedVariable of: self object named: each.
 			(protected includes: each) ifTrue: [part beProtected].
 			part]
 ]

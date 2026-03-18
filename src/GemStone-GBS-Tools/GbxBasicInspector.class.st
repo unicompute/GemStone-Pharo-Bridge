@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxBasicInspector',
-	#superclass : 'BasicInspector',
+	#superclass : 'Object',
 	#instVars : [
 		'selfAttribute',
 		'namedFields'
@@ -94,7 +94,7 @@ GbxBasicInspector >> derivedFields
 	^
 	[self object remoteClassName = 'GsNMethod'
 		ifTrue: 
-			[Array with: (Tools.Trippy.DerivedAttribute
+			[Array with: (GbxDerivedAttribute
 						label: #sourceCode << #gbs >> 'sourceCode'
 						valueBlock: [(self object delegate performOnGsServer: #sourceString) copy])]
 		ifFalse: [object inspectorClientExtraAttributes]]

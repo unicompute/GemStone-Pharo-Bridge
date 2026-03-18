@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxDerivedAttribute',
-	#superclass : 'DerivedAttribute',
+	#superclass : 'Object',
 	#instVars : [
 		'delegatePrintString'
 	],
@@ -21,7 +21,7 @@ GbxDerivedAttribute >> initialize: aString value: anObject printString: aString2
 GbxDerivedAttribute >> value
 [
 
-	^value isNil ifTrue: [Tools.Trippy.Inspector wrappedOrNot: value] ifFalse: [value]
+	^value isNil ifTrue: [GbxInspector wrappedOrNot: value] ifFalse: [value]
 ]
 
 { #category : 'private' }

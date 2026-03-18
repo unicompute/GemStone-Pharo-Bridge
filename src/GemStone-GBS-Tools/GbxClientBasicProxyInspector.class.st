@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxClientBasicProxyInspector',
-	#superclass : 'BasicInspector',
+	#superclass : 'GbxBasicInspector',
 	#instVars : [
 		'selfAttribute'
 	],
@@ -122,10 +122,10 @@ GbxClientBasicProxyInspector >> derivedFields
 	^
 	[(self object zzzisStub or: [self object zzzisForwarder]) 
 		ifTrue: 
-			[Array with: (Tools.Trippy.DerivedAttribute 
+			[Array with: (GbxDerivedAttribute 
 						label: #identityHash << #gbs >> 'identityHash'
 						valueBlock: [object identityHash])
-				with: (Tools.Trippy.DerivedAttribute label: #size << #gbs >> 'size'
+				with: (GbxDerivedAttribute label: #size << #gbs >> 'size'
 						valueBlock: [object gbxBasicSize])]
 		ifFalse: [object inspectorClientExtraAttributes]] 
 			on: MessageNotUnderstood

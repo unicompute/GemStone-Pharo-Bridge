@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxBackgroundSearchDriver',
-	#superclass : 'BackgroundSearchDriver',
+	#superclass : 'Object',
 	#instVars : [
 		'session'
 	],

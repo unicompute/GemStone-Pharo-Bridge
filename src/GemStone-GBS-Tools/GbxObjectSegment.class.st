@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxObjectSegment',
-	#superclass : 'ObjectSegment',
+	#superclass : 'Object',
 	#instVars : [
 		'isUncached'
 	],

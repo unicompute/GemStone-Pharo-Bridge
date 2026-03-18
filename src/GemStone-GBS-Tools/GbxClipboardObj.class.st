@@ -101,11 +101,8 @@ GbxClipboardObj >> type
 ]
 
 { #category : 'accessing' }
-GbxClipboardObj >> getForSession: aSession
+GbxClipboardObj >> getForSession: aSession context: aContext quietly: aQuietlyBoolean
 [
-context: aContext
-quietly: aQuietlyBoolean
-
    "This function is used for the less intelligent version of the clipboard. If the context and session for
 	which the object is requested is the same as the object's session and context then the object is
 	returned otherwise nil is returned.  If the requested context is nil, then only the session is checked."
@@ -320,11 +317,8 @@ GbxClipboardObj class >> getClipboardForSession: aSession context: aContext
 ]
 
 { #category : 'accessing' }
-GbxClipboardObj class >> getObjectForSession: aSession
+GbxClipboardObj class >> getObjectForSession: aSession context: aContext quietly: aQuietlyBoolean
 [
-context: aContext
-quietly: aQuietlyBoolean
-
   "This method is used for the less intelligent version of the clipboard. It returns the clipboard object
    only if the requested session and context are correct."
 

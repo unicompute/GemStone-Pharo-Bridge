@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxTextEditorInspector',
-	#superclass : 'TextEditorInspector',
+	#superclass : 'Object',
 	#instVars : [
 	],
 	#classVars : [

@@ -419,7 +419,7 @@ GbxInspectionWrapperWithSession >> inspect
 [
 	"added to support old inspectors"
 
-	(Tools.Trippy.Inspector useSimpleInspector not and: [session isNil])
+	(GbxInspector useSimpleInspector not and: [session isNil])
 		ifTrue: [delegate inspect]
 		ifFalse: [super inspect]
 ]
@@ -453,11 +453,11 @@ GbxInspectionWrapperWithSession >> inspectorCollaborators
 
 	| oc proceed |
 	oc := OrderedCollection new.
-	oc add: (Tools.Trippy.Collaborator label: #ToGSClass << #gbs >> 'GS Class'
+	oc add: (GbxCollaborator label: #ToGSClass << #gbs >> 'GS Class'
 				block: [GBSM showBusyWhile: [self class on: self remoteClass]]).
 	self objectIsClass
 		ifTrue: 
-			[oc add: (Tools.Trippy.Collaborator
+			[oc add: (GbxCollaborator
 						label: #AllInstances << #gbs >> 'All GS Instances'
 						block: 
 							[proceed := GbxDialog
@@ -471,7 +471,7 @@ GbxInspectionWrapperWithSession >> inspectorCollaborators
 											[GbxInspectionWrapper
 												on: (self session unsynchronizedExecute: 'self allInstances asArray'
 														context: delegate) asForwarder]]
-								ifFalse: [Tools.Trippy.InspectorShell gbxCancelToken]])].
+								ifFalse: [GbxInspectorShell gbxCancelToken]])].
 	^oc
 ]
 

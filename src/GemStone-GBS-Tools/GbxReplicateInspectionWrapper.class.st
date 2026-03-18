@@ -144,7 +144,7 @@ GbxReplicateInspectionWrapper >> inspectorClasses
 	oc add: GbxDelegateInspector.
 	addBehaviorTab
 		ifTrue: [self addServerBehaviorInspectorTo: oc].
-	oc add: Tools.Trippy.WatchLogInspector.
+	oc add: GbxWatchLogInspector.
 	^oc
 ]
 
@@ -157,7 +157,7 @@ GbxReplicateInspectionWrapper >> inspectables
 	(localObject ~~ NotCachedToken and: [delegate hasLiveSessionFlag])
 		ifTrue: 
 			[oc
-				addAll: ((Tools.Trippy.Inspector
+				addAll: ((GbxInspector
 						gbxCautiousInspectorClassesFor: localObject)
 							collect: [:class | localObject])].
 	oc add: self.
@@ -193,7 +193,7 @@ GbxReplicateInspectionWrapper >> inspectorActions
 	oc := super inspectorActions asOrderedCollection.
 	localObject == SpecialGemStoneObjects.NotCachedToken
 		ifFalse: 
-			[oc add: (Tools.Trippy.Action label: #Stub << #gbs >> 'Become Stub'
+			[oc add: (GbxAction label: #Stub << #gbs >> 'Become Stub'
 						block: 
 							[localObject stubYourself.
 							self triggerEvent: #objectChanged])].

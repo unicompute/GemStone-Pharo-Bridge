@@ -476,7 +476,7 @@ GbxCollectionCache >> cacheDictionaryInterval: anInterval executionString: aStri
 				cachedRanges := OrderedCollection with: (Interval from: 1 to: 1).
 				elements := Array new: 1.
 				elements at: 1
-					put: (Tools.Trippy.DerivedAttribute
+					put: (GbxDerivedAttribute
 							label: 'An error occured trying to access the object'
 							value: ex)]
 ]
@@ -591,7 +591,7 @@ GbxCollectionCache >> cacheInterval: anInterval executionString: aString isSorte
 				cachedRanges := OrderedCollection with: (Interval from: 1 to: 1).
 				elements := Array new: 1.
 				elements at: 1
-					put: (Tools.Trippy.DerivedAttribute
+					put: (GbxDerivedAttribute
 							label: 'An error occured trying to access the object'
 							value: (Array with: ex with: ex messageText))]
 ]

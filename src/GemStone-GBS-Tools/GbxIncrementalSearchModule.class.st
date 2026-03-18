@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxIncrementalSearchModule',
-	#superclass : 'IncrementalSearchModule',
+	#superclass : 'Object',
 	#instVars : [
 		'session'
 	],

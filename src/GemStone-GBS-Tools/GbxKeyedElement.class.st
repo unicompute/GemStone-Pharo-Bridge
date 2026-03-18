@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxKeyedElement',
-	#superclass : 'KeyedElement',
+	#superclass : 'Object',
 	#instVars : [
 		'keyDelegate',
 		'keyName',
@@ -125,7 +125,7 @@ GbxKeyedElement >> value
 
 	^valueDelegate gbxIsWrapped
 		ifTrue: [valueDelegate]
-		ifFalse: [valueDelegate := Tools.Trippy.Inspector wrappedOrNot: valueDelegate]
+		ifFalse: [valueDelegate := GbxInspector wrappedOrNot: valueDelegate]
 ]
 
 { #category : 'accessing' }
