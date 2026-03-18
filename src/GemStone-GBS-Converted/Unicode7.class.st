@@ -4,6 +4,7 @@ Class {
 	#instVars : [
 	],
 	#classVars : [
+		'encoder'
 	],
 	#category : 'GemStone-GBS-Converted'
 }

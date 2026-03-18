@@ -5,6 +5,7 @@ Class {
 		'stringClass'
 	],
 	#classVars : [
+		'StringClassMapping'
 	],
 	#category : 'GemStone-GBS-Converted'
 }

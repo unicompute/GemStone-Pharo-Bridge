@@ -26,6 +26,7 @@ Class {
 		'traverseCalls'
 	],
 	#classVars : [
+		'statDescriptors'
 	],
 	#category : 'GemStone-GBS-Converted'
 }

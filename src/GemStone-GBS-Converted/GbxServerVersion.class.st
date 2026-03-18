@@ -5,6 +5,7 @@ Class {
 		'productCode'
 	],
 	#classVars : [
+		'Current'
 	],
 	#category : 'GemStone-GBS-Converted'
 }

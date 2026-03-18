@@ -7,6 +7,7 @@ Class {
 		'cachedClass'
 	],
 	#classVars : [
+		'statDescriptors'
 	],
 	#category : 'GemStone-GBS-Converted'
 }

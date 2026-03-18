@@ -10,6 +10,7 @@ Class {
 		'cacheStatSampleTime'
 	],
 	#classVars : [
+		'statDescriptors'
 	],
 	#category : 'GemStone-GBS-Converted'
 }

@@ -9,6 +9,7 @@ Class {
 		'configuration'
 	],
 	#classVars : [
+		'GciCallProtect'
 	],
 	#category : 'GemStone-GBS-Converted'
 }

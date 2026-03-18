@@ -6,6 +6,7 @@ Class {
 		'connectionCondition'
 	],
 	#classVars : [
+		'ValidPostConnectActions'
 	],
 	#category : 'GemStone-GBS-Converted'
 }

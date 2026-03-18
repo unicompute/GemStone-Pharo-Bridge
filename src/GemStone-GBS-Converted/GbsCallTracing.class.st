@@ -4,6 +4,9 @@ Class {
 	#instVars : [
 	],
 	#classVars : [
+		'Logger',
+		'mutex',
+		'TraceNestingLevel'
 	],
 	#category : 'GemStone-GBS-Converted'
 }

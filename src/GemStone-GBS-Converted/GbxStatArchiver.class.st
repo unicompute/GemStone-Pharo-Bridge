@@ -9,6 +9,31 @@ Class {
 		'writeProtect'
 	],
 	#classVars : [
+		'ArchiveVersion',
+		'CompactValue2Token',
+		'DeleteToken',
+		'HeaderToken',
+		'IllegalResourceInstIdToken',
+		'IllegalValueToken',
+		'InstanceCreateToken',
+		'IntResourceInstIdToken',
+		'IntTimestampToken',
+		'JavaEpochStart',
+		'Max1ByteCompactValue',
+		'Max2ByteCompactValue',
+		'MaxByteResourceInstId',
+		'MaxShortVal',
+		'Min1ByteCompactValue',
+		'Min2ByteCompactValue',
+		'SampleToken',
+		'ShortResourceInstIdToken',
+		'TypeByte8',
+		'TypeDouble',
+		'TypeFloat',
+		'TypeInt32',
+		'TypeLong64',
+		'TypeShort16',
+		'TypeToken'
 	],
 	#category : 'GemStone-GBS-Converted'
 }
@@ -86,7 +111,7 @@ GbxStatArchiver >> close
 GbxStatArchiver >> writeShort: short
 [
 
-	"Write the given 16 bit short (as specified in GFS_File_Format.doc"
+	"Write the given 16 bit short (as specified in GFS_File_Format.doc)"
 
 	stream nextWordPut: short
 ]
@@ -149,9 +174,9 @@ GbxStatArchiver >> writeCompressedNumber: num
 ]
 
 { #category : 'private' }
-GbxStatArchiver >> writeString: string 
+GbxStatArchiver >> writeString: string
 [
-	"Write the given string (as specified in GFS_File_Format.doc"
+	"Write the given string (as specified in GFS_File_Format.doc)"
 
 	"Can't use the following - it sometimes writes the length as one byte"
 
@@ -170,7 +195,7 @@ GbxStatArchiver >> writeString: string
 GbxStatArchiver >> writeInt: int
 [
 
-	"Write the given 32 bit int (as specified in GFS_File_Format.doc"
+	"Write the given 32 bit int (as specified in GFS_File_Format.doc)"
 
 	stream nextLongPut: int
 ]

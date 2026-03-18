@@ -6,6 +6,7 @@ Class {
 		'position'
 	],
 	#classVars : [
+		'Newline'
 	],
 	#category : 'GemStone-GBS-Converted'
 }

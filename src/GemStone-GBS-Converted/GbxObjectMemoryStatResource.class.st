@@ -4,6 +4,8 @@ Class {
 	#instVars : [
 	],
 	#classVars : [
+		'singleton',
+		'statDescriptors'
 	],
 	#category : 'GemStone-GBS-Converted'
 }

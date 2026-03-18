@@ -5,6 +5,8 @@ Class {
 		'method'
 	],
 	#classVars : [
+		'CallbackOverrides',
+		'ReplicateOverrides'
 	],
 	#category : 'GemStone-GBS-Converted'
 }

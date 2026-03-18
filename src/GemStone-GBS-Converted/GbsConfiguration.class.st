@@ -42,6 +42,8 @@ Class {
 		'socketWaitTimeout'
 	],
 	#classVars : [
+		'Current',
+		'Defaults'
 	],
 	#category : 'GemStone-GBS-Converted'
 }

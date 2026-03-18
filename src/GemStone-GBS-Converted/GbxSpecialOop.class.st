@@ -5,6 +5,13 @@ Class {
 		'clientSpecial'
 	],
 	#classVars : [
+		'OFalse',
+		'ONil',
+		'OTrue',
+		'Ofalse',
+		'Onil',
+		'Otrue',
+		'Zero'
 	],
 	#category : 'GemStone-GBS-Converted'
 }
