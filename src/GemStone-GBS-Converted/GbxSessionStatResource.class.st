@@ -396,153 +396,27 @@ GbxSessionStatResource class >> initialize
 
 	statDescriptors := OrderedCollection new.
 	self
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'bytesSentByStoreTraversal'
-					description: 'The number of bytes sent cumulatively by store traversal calls'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'bytesTraversed'
-					description: 'The cumulative number of bytes returned by traversal calls'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'changedObjNotifications'
-					description: 'The number of changed object notifications received'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'notifications');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'freeOopsFetched'
-					description: 'The number of free oops fetched'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'oops');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'gciCallsToGem'
-					description: 'The number of gci calls made that communicate with the gem'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'calls to gem');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'gciCallsToGemTime'
-					description: 'The amount of time spent in gci calls that communicate with the gem'
-					type: GbxStatArchiver.TypeLong64
-					isCounter: true
-					isLargerBetter: false
-					unit: 'microseconds');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'gciErrors'
-					description: 'The number of errors reported by GciErr()'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'errors');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'lostOtRoots'
-					description: 'The number of lost ot roots signals received'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'lost ot roots');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'nbEndResultNoProgress'
-					description: 'The number of times GciNbEnd() was called when the result wasn''t ready and no progress was made'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'calls');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'nbEndResultProgressed'
-					description: 'The number of times GciNbEnd() was called and progress was made'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'calls');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'nbEndResultReady'
-					description: 'The number of times GciNbEnd() was called and a result was ready'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'calls');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'objectsStoredByTraversal'
-					description: 'The total number of objects stored by store traversal calls'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'objects');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'objectsTraversed'
-					description: 'The total number of objects (with or without a value buffer) received by traversal call'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'objects');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'serverMapSize'
-					description: 'The number of server objects mapped to client objects and/or delegates by this session''s serverMap'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'entries');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'sessionProtectInvocations'
-					description: 'The number of times the sessionProtect semaphore has been invoked'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'invocations');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'sessionSignals'
-					description: 'The number of gem-to-gem signals received'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'signals');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'sigAborts'
-					description: 'The number of signaled aborts received'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'signaled aborts');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'storeTraversals'
-					description: 'The number of store traversal calls made'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'storeTraversals');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'traversalUnpackingTime'
-					description: 'The total number of milliseconds spent unpacking traversal buffers'
-					type: GbxStatArchiver.TypeLong64
-					isCounter: true
-					isLargerBetter: false
-					unit: 'microseconds');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'traverseCallTime'
-					description: 'The amount of time spent in traversal calls. The first traversal processing in single round trip will not be counted as this is heavily intertwined with execution.'
-					type: GbxStatArchiver.TypeLong64
-					isCounter: true
-					isLargerBetter: false
-					unit: 'microseconds');
-		addStatDescriptor: (GbxStatDescriptor 
-					name: 'traverseCalls'
-					description: 'The number of traversal calls (all types, including more traversal)'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'traversals')
+		addStatDescriptor: (self newStatFor: 'bytesSentByStoreTraversal');
+		addStatDescriptor: (self newStatFor: 'bytesTraversed');
+		addStatDescriptor: (self newStatFor: 'changedObjNotifications');
+		addStatDescriptor: (self newStatFor: 'freeOopsFetched');
+		addStatDescriptor: (self newStatFor: 'gciCallsToGem');
+		addStatDescriptor: (self newStatFor: 'gciCallsToGemTime');
+		addStatDescriptor: (self newStatFor: 'gciErrors');
+		addStatDescriptor: (self newStatFor: 'lostOtRoots');
+		addStatDescriptor: (self newStatFor: 'nbEndResultNoProgress');
+		addStatDescriptor: (self newStatFor: 'nbEndResultProgressed');
+		addStatDescriptor: (self newStatFor: 'nbEndResultReady');
+		addStatDescriptor: (self newStatFor: 'objectsStoredByTraversal');
+		addStatDescriptor: (self newStatFor: 'objectsTraversed');
+		addStatDescriptor: (self newStatFor: 'serverMapSize');
+		addStatDescriptor: (self newStatFor: 'sessionProtectInvocations');
+		addStatDescriptor: (self newStatFor: 'sessionSignals');
+		addStatDescriptor: (self newStatFor: 'sigAborts');
+		addStatDescriptor: (self newStatFor: 'storeTraversals');
+		addStatDescriptor: (self newStatFor: 'traversalUnpackingTime');
+		addStatDescriptor: (self newStatFor: 'traverseCallTime');
+		addStatDescriptor: (self newStatFor: 'traverseCalls')
 ]
 
 { #category : 'archiving' }
