@@ -5,8 +5,8 @@ Class {
 	],
 	#classVars : [
 	],
-	#category : 'GemStone-GBS-Bootstrap',
-	#package : 'GemStone-GBS-Bootstrap'
+	#category : 'GemStone-GBS-Tools',
+	#package : 'GemStone-GBS-Tools'
 }
 
 { #category : 'accessing' }
