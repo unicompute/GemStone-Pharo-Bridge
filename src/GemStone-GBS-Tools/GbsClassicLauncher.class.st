@@ -40,7 +40,6 @@ GbsClassicLauncher class >> iconNamed: aSymbol
 
 { #category : 'menus' }
 GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
-	<worldMenu>
 	| launcherClass workspaceClass |
 	launcherClass := Smalltalk at: #GbsLauncher ifAbsent: [ nil ].
 	workspaceClass := Smalltalk at: #GbsWorkspace ifAbsent: [ nil ].
