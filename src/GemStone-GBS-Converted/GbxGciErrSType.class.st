@@ -46,11 +46,11 @@ GbxGciErrSType >> asGbsErrorForSession: aGbsSession
 { #category : 'accessing' }
 GbxGciErrSType >> argDelegatesForSession: aGSSession
 [
-	
+
 	| argCount oopArray |
 	argCount := self argCount min: 10.
 	oopArray := aGSSession oopArrayClass
-		buffer: (Core.UninterpretedBytes from: data contents datum asByteArray)
+		buffer: data contents datum asByteArray
 		offset: self argsOffset.
 	^oopArray asDelegateArrayOfSize: argCount forSession: aGSSession
 ]
