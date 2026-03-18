@@ -19,7 +19,7 @@ Class {
 GbxStatDescriptor >> isByte
 [
 
-	^type == GbxStatArchiver.TypeByte8
+	^type = 3
 ]
 
 { #category : 'accessing' }
@@ -33,7 +33,7 @@ GbxStatDescriptor >> id
 GbxStatDescriptor >> isShort
 [
 
-	^type == GbxStatArchiver.TypeShort16
+	^type = 4
 ]
 
 { #category : 'accessing' }
@@ -84,8 +84,7 @@ GbxStatDescriptor >> setId: anInt
 [
 	"Set id to a zero-based offset into a stat resource's descriptor collection"
 
-	self gbsMessenger assert: id isNil
-		failure: 'GbxStatDescriptor>>setId initialized twice'.
+	id ifNotNil: [ self error: 'GbxStatDescriptor>>setId initialized twice' ].
 	id := anInt
 ]
 
@@ -100,4 +99,3 @@ GbxStatDescriptor class >> name: nameString description: descriptionString type:
 		isLargerBetter: isLargerBetterBool
 		unit: unitString
 ]
-

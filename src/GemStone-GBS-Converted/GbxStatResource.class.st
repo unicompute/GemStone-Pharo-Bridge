@@ -6,6 +6,7 @@ Class {
 		'stats'
 	],
 	#classVars : [
+		'statDescriptors'
 	],
 	#category : 'GemStone-GBS-Converted'
 }
@@ -87,7 +88,20 @@ GbxStatResource class >> statDescriptors
 [
 	"An OrderedCollection of GbxStatDescriptor instances describing the stats held by
 	 an instance of this stat resource class."
-	^statDescriptors
+	^statDescriptors ifNil: [ statDescriptors := OrderedCollection new ]
+]
+
+{ #category : 'initialize-release' }
+GbxStatResource class >> newStatFor: statName
+[
+
+	^GbxStatDescriptor
+		name: statName
+		description: statName
+		type: 5
+		isCounter: true
+		isLargerBetter: true
+		unit: ''
 ]
 
 { #category : 'archiving' }
@@ -131,10 +145,10 @@ GbxStatResource class >> new
 GbxStatResource class >> addStatDescriptor: aGbxStatDescriptor
 [
 
+	statDescriptors ifNil: [ statDescriptors := OrderedCollection new ].
 	statDescriptors add: aGbxStatDescriptor.
 	"Set the descriptor id to a zero-based index into the stat descriptor 
 	collection for this class.  This is used when writing to the java-encoded
 	archive."
 	aGbxStatDescriptor setId: statDescriptors size - 1
 ]
-
