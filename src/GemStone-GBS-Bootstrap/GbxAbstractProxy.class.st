@@ -174,10 +174,13 @@ GbxAbstractProxy >> gbsAsUncachedForwarder
 	grabbing the ClientMap's writeProtect. Here, we can get away with not doing that
 	because we do not need the sessionProtect at all, so we are not subject to deadlock."
 
-	| fwdr |
+	| fwdr gbsm |
 	fwdr := GbsForwarder new.
-	GBSM clientMap
-		writeCritical: [GBSM atST: fwdr putGS: self gbxValidateDelegateAndSession].
+	gbsm := Smalltalk globals
+		at: #GBSM
+		ifAbsent: [ self error: 'GBSM is not available' ].
+	gbsm clientMap
+		writeCritical: [ gbsm atST: fwdr putGS: self gbxValidateDelegateAndSession ].
 	^fwdr
 ]
 
