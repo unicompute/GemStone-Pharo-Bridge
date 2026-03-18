@@ -49,73 +49,16 @@ GbxInspectionWrapperWithSession >> session
 GbxInspectionWrapperWithSession >> delegateInspectorExtraAttributes
 [
 	"the blocks are so that the derived attributes can update themselves with every entry into the field"
+	"Pharo compatibility: Tools.Trippy.TextAttribute doesn't exist in Pharo"
 
-	| derivedAttributes isLoggedIn aSession ws differs loggedBlock sessionBlock clientBlock cachedClient |
+	| derivedAttributes isLoggedIn aSession ws |
 	derivedAttributes := OrderedCollection new.
-	derivedAttributes add: (Tools.Trippy.TextAttribute label: 'gsOop'
-				textBlock: [delegate oopValue printString]).
-	loggedBlock :=
-			[isLoggedIn := delegate
-						debugPrintBasicSessionInfoOn: (ws := String new writeStream).
-			ws contents].
-	loggedBlock value.
-	derivedAttributes
-		add: (Tools.Trippy.TextAttribute label: 'session' textBlock: loggedBlock);
-		add: (Tools.Trippy.TextAttribute label: 'flags'
-					textBlock: [self debugPrintFlags]).
-	derivedAttributes
-		add: (Tools.Trippy.TextAttribute label: 'isSpecial'
-					textBlock: [self debugPrintIsSpecial]);
-		add: (Tools.Trippy.TextAttribute label: 'isDefunct'
-					textBlock: [self debugPrintIsDefunct]).
-	aSession := isLoggedIn
-				ifTrue: [delegate noCheckSession]
-				ifFalse: 
-					[| sess |
-					sessionBlock :=
-							[ws := String new writeStream.
-							sess := delegate debugCurrentSessionPrintOn: ws.
-							ws contents].
-					sessionBlock value.
-					derivedAttributes
-						add: (Tools.Trippy.TextAttribute label: 'session' textBlock: sessionBlock).
-					sess].
-	aSession isNil ifTrue: [^derivedAttributes].
-	clientBlock :=
-			[cachedClient := aSession sessionCritical: [aSession lookupOop: delegate]
-						unlessBlocked: [#blocked].
-			ws := String new writeStream.
-			cachedClient == #blocked
-				ifTrue: 
-					[differs := false.
-					self debugPrintClientBlocked]
-				ifFalse: 
-					[cachedClient == NotCachedToken
-						ifTrue: 
-							[differs := true.
-							ws nextPutAll: 'Client does not exist']
-						ifFalse: 
-							[delegate session sessionCritical: 
-									[differs := delegate
-												debugPrintCachedClientDiffers: cachedClient
-												in: aSession
-												on: ws]
-								unlessBlocked: 
-									[differs := false.
-									ws nextPutAll: 'Unretrievable GemStone object']].
-					ws contents]].
-	clientBlock value.
-	derivedAttributes
-		add: (Tools.Trippy.TextAttribute label: 'client' textBlock: clientBlock).
-	differs ifTrue: [^derivedAttributes].
-	derivedAttributes add: (Tools.Trippy.TextAttribute label: 'export'
-				textBlock: 
-					[self
-						debugPrintExportInfoLoggedIn: isLoggedIn
-						in: aSession
-						cachedClient: cachedClient]).
-	derivedAttributes add: (Tools.Trippy.TextAttribute label: 'basic'
-				textBlock: [self debugPrintBasicIn: aSession cachedClient: cachedClient]).
+	
+	"Skip Trippy-specific attributes - not available in Pharo"
+	isLoggedIn := delegate debugPrintBasicSessionInfoOn: (ws := String new writeStream).
+	ws contents.
+	
+	"Return empty collection for Pharo compatibility"
 	^derivedAttributes
 ]
 
