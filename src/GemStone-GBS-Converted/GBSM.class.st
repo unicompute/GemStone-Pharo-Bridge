@@ -3,7 +3,8 @@ Class {
 	#superclass : 'Object',
 	#classInstVars : [
 		'CurrentSession',
-		'Dependents'
+		'Dependents',
+		'Manager'
 	],
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'
@@ -17,6 +18,8 @@ GBSM class >> addDependent: anObject [
 
 { #category : 'cleanup' }
 GBSM class >> aboutToQuit [
+	Manager ifNotNil: [
+		[ Manager aboutToQuit ] on: Error do: [ ] ].
 	self changed: #gbxAboutToQuit.
 	self reset
 ]
@@ -38,16 +41,18 @@ GBSM class >> changed: anEventSymbol with: anObject [
 
 { #category : 'accessing' }
 GBSM class >> currentSession [
-    CurrentSession ifNotNil: [ ^ CurrentSession ].
-    ^ GbsSessionParameters currentSession
+	CurrentSession ifNotNil: [ ^ CurrentSession ].
+	^ GbsSessionParameters currentSession
 ]
 
 { #category : 'accessing' }
 GBSM class >> currentSession: aSession [
 	| previous |
 	previous := CurrentSession.
-    CurrentSession := aSession.
-    (GbsSessionParameters currentSession == aSession)
+	CurrentSession := aSession.
+	Manager ifNotNil: [
+		[ Manager currentSession: aSession ] on: Error do: [ ] ].
+	(GbsSessionParameters currentSession == aSession)
 		ifFalse: [ GbsSessionParameters currentSession: aSession ].
 	previous == aSession ifFalse: [
 		self changed: #gbxCurrentSessionChanged with: aSession ]
@@ -58,6 +63,26 @@ GBSM class >> dependents [
 	^ Dependents ifNil: [ Dependents := OrderedCollection new ]
 ]
 
+{ #category : 'message forwarding' }
+GBSM class >> doesNotUnderstand: aMessage [
+	^ self manager
+		perform: aMessage selector
+		withArguments: aMessage arguments
+]
+
+{ #category : 'accessing' }
+GBSM class >> manager [
+	Manager ifNil: [
+		Manager := GbsSessionManager basicNew.
+		Manager initialize ].
+	^ Manager
+]
+
+{ #category : 'accessing' }
+GBSM class >> managerIfPresent [
+	^ Manager
+]
+
 { #category : 'dependents' }
 GBSM class >> removeDependent: anObject [
 	self dependents remove: anObject ifAbsent: [ ]
@@ -65,6 +90,14 @@ GBSM class >> removeDependent: anObject [
 
 { #category : 'cleanup' }
 GBSM class >> reset [
-    CurrentSession := nil.
-	Dependents := OrderedCollection new
+	CurrentSession := nil.
+	Dependents := OrderedCollection new.
+	Manager := nil
+]
+
+{ #category : 'ui' }
+GBSM class >> showBusyWhile: aBlock [
+	(UIManager default notNil and: [ UIManager default respondsTo: #showWaitCursorWhile: ])
+		ifTrue: [ ^ UIManager default showWaitCursorWhile: aBlock ].
+	^ aBlock value
 ]

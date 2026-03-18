@@ -2,17 +2,39 @@ Class {
 	#name : 'GbsSessionParameters',
 	#superclass : 'GbxSessionSpecification',
 	#instVars : [
+		'name',
+		'sessionId',
 		'gemStoneName',
 		'hostUsername',
 		'hostPassword',
 		'gemService',
+		'netObject',
 		'rememberPassword',
 		'rememberHostPassword'
 	],
 	#classVars : [
+		'AllParameters',
+		'AllSessions',
+		'CurrentSession',
+		'PollingEnabled',
+		'RegisterNewParameters'
 	],
 	#category : 'GemStone-GBS-Converted'
 }
+
+{ #category : 'accessing' }
+GbsSessionParameters >> name
+[
+
+	^name ifNil: [self generatedName]
+]
+
+{ #category : 'accessing' }
+GbsSessionParameters >> name: aString
+[
+
+	name := aString
+]
 
 { #category : 'comparing' }
 GbsSessionParameters >> = aGbsSessionParameters
@@ -143,6 +165,65 @@ GbsSessionParameters >> hostPassword: aHostPassword
 	hostPassword := aHostPassword
 ]
 
+{ #category : 'accessing' }
+GbsSessionParameters >> netObject
+[
+
+	^netObject ifNil: ['']
+]
+
+{ #category : 'accessing' }
+GbsSessionParameters >> netObject: aString
+[
+
+	netObject := aString
+]
+
+{ #category : 'accessing' }
+GbsSessionParameters >> gsRemember
+[
+
+	^self rememberPassword
+]
+
+{ #category : 'accessing' }
+GbsSessionParameters >> gsRemember: aBoolean
+[
+
+	self rememberPassword: aBoolean
+]
+
+{ #category : 'accessing' }
+GbsSessionParameters >> hostRemember
+[
+
+	^self rememberHostPassword
+]
+
+{ #category : 'accessing' }
+GbsSessionParameters >> hostRemember: aBoolean
+[
+
+	self rememberHostPassword: aBoolean
+]
+
+{ #category : 'accessing' }
+GbsSessionParameters >> sessionId
+[
+
+	sessionId ifNotNil: [^sessionId].
+	^self liveSessionFromParameters
+		ifNil: [nil]
+		ifNotNil: [:session | [session sessionId] on: Error do: [nil]]
+]
+
+{ #category : 'accessing' }
+GbsSessionParameters >> sessionId: anObject
+[
+
+	sessionId := anObject
+]
+
 { #category : 'printing' }
 GbsSessionParameters >> printOn: aStream
 [
@@ -185,10 +266,15 @@ GbsSessionParameters >> login
 	"Must hold loginProtect throughout to prevent another thread from 'stealing' the linked session
 	after we've determined it's available."
 
-	^GBSM loginCritical: 
+	| session |
+	session := GBSM loginCritical: 
 			[GBSM isLinkedLoginAvailable 
 				ifTrue: [self loginLnk]
 				ifFalse: [self loginRpc]]
+	session ifNotNil: [
+		self sessionId: ([session sessionId] on: Error do: [nil]).
+		self class registerSession: self].
+	^session
 ]
 
 { #category : 'session management' }
@@ -264,6 +350,96 @@ GbsSessionParameters >> passwordsLinked: linked ifCancel: cancelBlock
 	^result
 ]
 
+{ #category : 'private' }
+GbsSessionParameters >> generatedName
+[
+
+	| user stone |
+	user := username ifNil: [''].
+	stone := gemStoneName ifNil: [''].
+	user isEmpty ifTrue: [^stone].
+	stone isEmpty ifTrue: [^user].
+	^user , '@' , stone
+]
+
+{ #category : 'private' }
+GbsSessionParameters >> liveSession
+[
+
+	| current |
+	(self liveSessionFromParameters) ifNotNil: [ :session | ^ session ].
+	current := self class currentSession.
+	(current isNil or: [ sessionId isNil ]) ifTrue: [ ^ nil ].
+	(current respondsTo: #sessionId) ifFalse: [ ^ nil ].
+	^(([ current sessionId ] on: Error do: [ nil ]) = sessionId)
+		ifTrue: [ current ]
+		ifFalse: [ nil ]
+]
+
+{ #category : 'private' }
+GbsSessionParameters >> liveSessionFromParameters
+[
+
+	| sessions |
+	sessions := [ GBSM sessionsWithParameters: self ] on: Error do: [ #() ].
+	(sessions respondsTo: #detect:ifNone:) ifFalse: [ ^ nil ].
+	^sessions
+		detect: [ :each |
+			(each respondsTo: #hasValidSessionId)
+				ifTrue: [ [ each hasValidSessionId ] on: Error do: [ false ] ]
+				ifFalse: [
+					(each respondsTo: #isLoggedIn)
+						and: [ [ each isLoggedIn ] on: Error do: [ false ] ] ] ]
+		ifNone: [ nil ]
+]
+
+{ #category : 'private - initialization' }
+GbsSessionParameters >> initialize
+[
+	"Private"
+
+	super initialize.
+	name ifNil: [name := ''].
+	gemStoneName ifNil: [gemStoneName := self class defaultStoneName].
+	hostUsername ifNil: [hostUsername := ''].
+	hostPassword ifNil: [hostPassword := ''].
+	gemService ifNil: [gemService := self class defaultGemServiceName].
+	netObject ifNil: [netObject := ''].
+	rememberPassword ifNil: [rememberPassword := false].
+	rememberHostPassword ifNil: [rememberHostPassword := false].
+	username ifNil: [username := ''].
+	password ifNil: [password := '']
+]
+
+{ #category : 'testing' }
+GbsSessionParameters >> isConnected
+[
+
+	self liveSession ifNotNil: [ ^ true ].
+	^self sessionId notNil
+]
+
+{ #category : 'testing' }
+GbsSessionParameters >> isLoggedIn
+[
+
+	^self isConnected
+]
+
+{ #category : 'session management' }
+GbsSessionParameters >> logout
+[
+
+	| session didLogout |
+	session := self liveSession.
+	session ifNil: [
+		self sessionId: nil.
+		^false ].
+	didLogout := [ session logout ] on: Error do: [ :ex | ex pass ].
+	didLogout ifTrue: [ self sessionId: nil ].
+	^didLogout
+]
+
 { #category : 'defaults' }
 GbsSessionParameters class >> defaultGemServiceName
 [
@@ -298,6 +474,128 @@ GbsSessionParameters class >> registerNewParameters
 
 	RegisterNewParameters isNil ifTrue: [ RegisterNewParameters := false ].
 	^RegisterNewParameters
+]
+
+{ #category : 'accessing' }
+GbsSessionParameters class >> allParameters
+[
+
+	^AllParameters ifNil: [AllParameters := OrderedCollection new]
+]
+
+{ #category : 'accessing' }
+GbsSessionParameters class >> allSessions
+[
+
+	^AllSessions ifNil: [AllSessions := OrderedCollection new]
+]
+
+{ #category : 'accessing' }
+GbsSessionParameters class >> currentSession
+[
+
+	^CurrentSession
+]
+
+{ #category : 'accessing' }
+GbsSessionParameters class >> currentSession: anObject
+[
+
+	| sessionParameters sessionId existing |
+	CurrentSession := anObject.
+	anObject ifNil: [ ^ anObject ].
+	(anObject respondsTo: #parameters) ifFalse: [ ^ anObject ].
+	sessionParameters := [ anObject parameters ] on: Error do: [ nil ].
+	sessionParameters ifNil: [ ^ anObject ].
+	sessionId := (anObject respondsTo: #sessionId)
+		ifTrue: [ [ anObject sessionId ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	existing := self allParameters
+		detect: [ :each | each = sessionParameters ]
+		ifNone: [ nil ].
+	sessionParameters := existing ifNil: [ sessionParameters ] ifNotNil: [ existing ].
+	(sessionParameters respondsTo: #sessionId:) ifTrue: [ sessionParameters sessionId: sessionId ].
+	self registerSession: sessionParameters.
+	^anObject
+]
+
+{ #category : 'accessing' }
+GbsSessionParameters class >> pollingEnabled
+[
+
+	PollingEnabled isNil ifTrue: [ PollingEnabled := false ].
+	^PollingEnabled
+]
+
+{ #category : 'accessing' }
+GbsSessionParameters class >> pollingEnabled: aBoolean
+[
+
+	PollingEnabled := aBoolean
+]
+
+{ #category : 'accessing' }
+GbsSessionParameters class >> togglePolling
+[
+
+	self pollingEnabled: self pollingEnabled not.
+	^self pollingEnabled
+]
+
+{ #category : 'session management' }
+GbsSessionParameters class >> registerSession: anObject
+[
+
+	| sessionId |
+	anObject ifNil: [ ^ nil ].
+	self allSessions remove: anObject ifAbsent: [ ].
+	sessionId := (anObject respondsTo: #sessionId)
+		ifTrue: [ [ anObject sessionId ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	sessionId ifNotNil: [
+		self allSessions
+			removeAllSuchThat: [ :each |
+				each == anObject ifTrue: [ false ] ifFalse: [
+					(each respondsTo: #sessionId)
+						and: [ ([ each sessionId ] on: Error do: [ nil ]) = sessionId ] ] ] ].
+	self allSessions add: anObject.
+	^anObject
+]
+
+{ #category : 'session management' }
+GbsSessionParameters class >> unregisterSession: anObject
+[
+
+	| sessionId |
+	anObject ifNil: [ ^ nil ].
+	sessionId := (anObject respondsTo: #sessionId)
+		ifTrue: [ [ anObject sessionId ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	self allSessions remove: anObject ifAbsent: [ ].
+	sessionId ifNotNil: [
+		self allSessions
+			removeAllSuchThat: [ :each |
+				(each respondsTo: #sessionId)
+					and: [ ([ each sessionId ] on: Error do: [ nil ]) = sessionId ] ] ].
+	^anObject
+]
+
+{ #category : 'instance creation' }
+GbsSessionParameters class >> addParameter: aSessionParameters
+[
+
+	aSessionParameters ifNil: [ ^ nil ].
+	self allParameters remove: aSessionParameters ifAbsent: [ ].
+	self allParameters add: aSessionParameters.
+	^aSessionParameters
+]
+
+{ #category : 'instance creation' }
+GbsSessionParameters class >> removeParameter: aSessionParameters
+[
+
+	self unregisterSession: aSessionParameters.
+	^self allParameters remove: aSessionParameters ifAbsent: [ nil ]
 ]
 
 { #category : 'instance creation' }
@@ -358,7 +656,7 @@ GbsSessionParameters class >> newWithGemStoneName: aGemStoneName username: aUser
 		rememberHostPassword: aRememberHostPasswordBoolean;
 		gemService: aGemServiceName;
 		initialize.
-	addToKnown ifTrue: [ GBSM addParameters: inst ].
+	addToKnown ifTrue: [ self addParameter: inst ].
 	^inst
 ]
 
@@ -374,4 +672,3 @@ GbsSessionParameters class >> newWithGemStoneName: aGemStoneName username: aUser
 		hostPassword: ''
 		gemService: self defaultGemServiceName
 ]
-
