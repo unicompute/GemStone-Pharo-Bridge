@@ -714,14 +714,15 @@ GbsError class >> initSignals
 [
 	"GbsError initialize"
 
-	GbsUnsupportedFloatError 
+	"VisualWorks compatibility - notifierString: doesn't exist in Pharo"
+	"GbsUnsupportedFloatError
 		notifierString: 'Attempt to replicate a GemStone float that isn''t supported in Smalltalk'.
 	GbsClassGenerationError notifierString: 'Class creation error'.
 	GbsConnectorError notifierString: 'Connection error'.
 	GbsNotCachedError notifierString: 'Not cached'.
-	GbsBlockReplicationError 
+	GbsBlockReplicationError
 		notifierString: 'Unable to replicate a BlockClosure'.
-	GbsAssertionError notifierString: 'A GBS assertion check has failed'
+	GbsAssertionError notifierString: 'A GBS assertion check has failed'"
 ]
 
 { #category : 'private-class initialization' }
