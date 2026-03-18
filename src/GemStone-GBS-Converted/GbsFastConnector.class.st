@@ -125,7 +125,8 @@ GbsFastConnector >> stObj: anObject gsObj: aGSObject postConnectAction: pca
 	"Private"
 
 	self stObj: anObject gsObj: aGSObject.
-	postConnectAction := pca
+	postConnectAction := pca.
+	^self
 ]
 
 { #category : 'private initialization' }
@@ -135,7 +136,8 @@ GbsFastConnector >> stObj: anObject gsObj: aGSObject
 
 	serverKernelOop := aGSObject.
 	clientObj := anObject.
-	connectionCondition := [true]	"most connectors just connect"
+	connectionCondition := [true].	"most connectors just connect"
+	^self
 ]
 
 { #category : 'private initialization' }
@@ -235,4 +237,3 @@ GbsFastConnector class >> gemstone: aGSObject smalltalk: anObject
 		deprecated: 'GbsFastConnector>>gemstone:smalltalk: deprecated March, 2006. Send #stObj:gsObj: instead'.
 	^self stObj: anObject gsObj: aGSObject
 ]
-

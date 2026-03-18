@@ -483,7 +483,8 @@ GbsNameConnector >> stName: stNm gsName: gsNm dictionaryName: dictNm postConnect
 	"Private.  Initialize with specified values"
 
 	postConnectAction := pca.
-	self stName: stNm gsName: gsNm dictionaryName: dictNm
+	self stName: stNm gsName: gsNm dictionaryName: dictNm.
+	^self
 ]
 
 { #category : 'private initialization' }
@@ -493,7 +494,8 @@ GbsNameConnector >> stName: stNm gsName: gsNm
 	"Private.  Initialize with specified values"
 
 	stName := stNm.
-	gsName := gsNm
+	gsName := gsNm.
+	^self
 ]
 
 { #category : 'private initialization' }
@@ -504,7 +506,8 @@ GbsNameConnector >> stName: stNm gsName: gsNm dictionaryName: dictNm
 	stName := stNm.
 	gsName := gsNm.
 	dictionaryName := dictNm.
-	connectionCondition := [true]	"most connectors just connect"
+	connectionCondition := [true].	"most connectors just connect"
+	^self
 ]
 
 { #category : 'private' }
@@ -554,4 +557,3 @@ GbsNameConnector class >> fromUser
 
 	^self stName: stName gsName: gsName dictionaryName: dictName
 ]
-

@@ -216,7 +216,8 @@ GbsClassVarConnector >> stName: stNm gsName: gsNm stvarName: stvNm gsvarName: gs
 	gsName := gsNm.
 	cvarName := stvNm.
 	gsvarName := gsvNm.
-	connectionCondition := [true]
+	connectionCondition := [true].
+	^self
 ]
 
 { #category : 'private initialization' }
@@ -238,7 +239,8 @@ GbsClassVarConnector >> stName: stNm gsName: gsNm dictionaryName: dictNm stvarNa
 	dictionaryName := dictNm.
 	cvarName := stvNm.
 	gsvarName := gsvNm.
-	connectionCondition := [true]
+	connectionCondition := [true].
+	^self
 ]
 
 { #category : 'private initialization' }
@@ -247,7 +249,8 @@ GbsClassVarConnector >> stName: stNm gsName: gsNm
 
 	"Private.  Use stName:gsName:cvarName:"
 
-	self stName: stNm gsName: gsNm cvarName: ''
+	self stName: stNm gsName: gsNm cvarName: ''.
+	^self
 ]
 
 { #category : 'instance creation' }
@@ -295,4 +298,3 @@ GbsClassVarConnector class >> stName: stName gsName: gsName stvarName: stvName g
 
 	^self new stName: stName gsName: gsName dictionaryName: nil stvarName: stvName gsvarName: gsvName
 ]
-

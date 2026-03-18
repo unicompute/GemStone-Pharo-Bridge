@@ -154,6 +154,30 @@ GbsSessionManagerTest >> testRemoveInvalidConnectorsDropsUnknownClientMappings [
 ]
 
 { #category : 'tests' }
+GbsSessionManagerTest >> testClassConnectorFactoryReturnsConnectorInstance [
+	| connector |
+	connector := GbsClassConnector
+		stName: 'Array'
+		gsName: 'Array'
+		dictionaryName: nil.
+	self assert: (connector isKindOf: GbsClassConnector).
+	self assert: connector connectionCondition value
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testClassVarConnectorFactoryReturnsConnectorInstance [
+	| connector |
+	connector := GbsClassVarConnector
+		stName: 'Object'
+		gsName: 'Object'
+		dictionaryName: nil
+		stvarName: 'Dependents'
+		gsvarName: 'Dependents'.
+	self assert: (connector isKindOf: GbsClassVarConnector).
+	self assert: connector connectionCondition value
+]
+
+{ #category : 'tests' }
 GbsSessionManagerTest >> testClassSideFastConnectorRegistryRoundTrip [
 	| registry |
 	registry := Dictionary new
@@ -178,6 +202,15 @@ GbsSessionManagerTest >> testClassSideInitializeFastConnectorsPopulatesRegistry 
 	self assert: registry notNil.
 	self assert: (registry isKindOf: Dictionary).
 	self assert: (registry at: 'ByteString' ifAbsent: [ nil ]) equals: 'String'
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testFastConnectorFactoryReturnsConnectorInstance [
+	| connector oop |
+	oop := GbxKernelPomOop basicNew.
+	connector := GbsFastConnector stObj: #ByteString gsObj: oop.
+	self assert: (connector isKindOf: GbsFastConnector).
+	self assert: connector connectionCondition value
 ]
 
 { #category : 'tests' }
