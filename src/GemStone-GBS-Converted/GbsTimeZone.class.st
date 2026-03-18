@@ -403,16 +403,8 @@ GbsTimeZone class >> current
 ]
 
 { #category : 'instance creation' }
-GbsTimeZone class >> secondsFromGMT: secondsFromGMT
+GbsTimeZone class >> secondsFromGMT: secondsFromGMT secondsForDST: secondsForDST dayOfYearForDST: dayOfYearForDST dayOfWeekForDST: dayOfWeekForDST secondsBeginDST: secondsBeginDST dayOfYearForStandard: dayOfYearForStandard dayOfWeekForStandard: dayOfWeekForStandard secondsBeginStandard: secondsBeginStandard
 [
-secondsForDST: secondsForDST
-dayOfYearForDST: dayOfYearForDST
-dayOfWeekForDST: dayOfWeekForDST
-secondsBeginDST: secondsBeginDST
-dayOfYearForStandard: dayOfYearForStandard
-dayOfWeekForStandard: dayOfWeekForStandard
-secondsBeginStandard: secondsBeginStandard
-
 	"Return a new instance of the receiver describing a time zone"
 
 	^self new
