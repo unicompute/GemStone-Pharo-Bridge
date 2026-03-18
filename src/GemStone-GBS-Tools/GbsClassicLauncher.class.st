@@ -23,6 +23,12 @@ Class {
 	#package : 'GemStone-GBS-Tools'
 }
 
+{ #category : 'icons' }
+GbsClassicLauncher class >> iconNamed: aSymbol
+[
+	^ Smalltalk icons iconNamed: aSymbol
+]
+
 { #category : 'menus' }
 GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
 	| launcherClass workspaceClass |
