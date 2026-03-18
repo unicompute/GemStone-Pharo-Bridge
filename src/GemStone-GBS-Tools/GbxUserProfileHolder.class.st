@@ -420,10 +420,10 @@ GbxUserProfileHolder >> newDefaultSegment: aGSSegment
 
 { #category : 'updating' }
 GbxUserProfileHolder >> insertDictionary: aSymbolListDictionayForwarder
-[
 at: anIndex
+[
 
-	" I save the forwarder to the specified SymbolListDictionay at the specified place in the user's list of dictionaries. "
+		" I save the forwarder to the specified SymbolListDictionay at the specified place in the user's list of dictionaries. "
 
 	aSymbolListDictionayForwarder zzzisForwarder ifFalse:
 		[^ self error: 'not a forwarder'].
@@ -447,13 +447,12 @@ GbxUserProfileHolder class >> on: aUserProfileForwarder
 
 { #category : 'instance creation' }
 GbxUserProfileHolder class >> newUserId: aString
-[
 in: aGsSession
+[
 
-	" Answer an instance of the receiver on a new UserProfile in the GemStone session aGsSession, whose user ID is specified by aString. "
+		" Answer an instance of the receiver on a new UserProfile in the GemStone session aGsSession, whose user ID is specified by aString. "
 
 	^ self new
 		newUserId: aString ;
 		session: aGsSession
 ]
-

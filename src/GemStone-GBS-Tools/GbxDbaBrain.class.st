@@ -136,10 +136,10 @@ GbxDbaBrain >> hasUserNamed: aNameString
 
 { #category : 'private' }
 GbxDbaBrain >> checkWildcardIn: aString
-[
 for: aList
 ifNoMatch: anExitBlock
-	" Answer a string selected by the user from a menu of matching items in aList if the user has typed a wildcard selection in aString.  If no matches are found, I evaluate anExitBlock. "
+[
+		" Answer a string selected by the user from a menu of matching items in aList if the user has typed a wildcard selection in aString.  If no matches are found, I evaluate anExitBlock. "
 
 	^ self
 		checkWildcardIn: aString
@@ -150,12 +150,12 @@ ifNoMatch: anExitBlock
 
 { #category : 'private' }
 GbxDbaBrain >> checkWildcardIn: aString
-[
 for: aList
 title: aTitleString
 ifNoMatch: anExitBlock
-	" Answer a string selected by the user from a menu of matching items in aList if the user has typed a wildcard selection in aString.  If no matches are found, I evaluate anExitBlock.
-	NOTE:  Answer aString if the user has not typed a wildcard selection. "
+[
+		" Answer a string selected by the user from a menu of matching items in aList if the user has typed a wildcard selection in aString.  If no matches are found, I evaluate anExitBlock.
+		NOTE:  Answer aString if the user has not typed a wildcard selection. "
 
 	| choiceIndex matchList |
 
@@ -178,10 +178,10 @@ ifNoMatch: anExitBlock
 
 { #category : 'private' }
 GbxDbaBrain >> checkWildcardInUserId: aString
-[
 ifMatch: aOneArgMatchBlock
 ifNoMatch: anExitBlock
-	" If the user has typed a wildcard user ID selection in aString, I present a menu of matching user IDs. "
+[
+		" If the user has typed a wildcard user ID selection in aString, I present a menu of matching user IDs. "
 
 	| chosenName |
 

@@ -252,9 +252,9 @@ GbxDbaSymbolListBrain >> selectedItemNameChange
 
 { #category : 'changing' }
 GbxDbaSymbolListBrain >> checkWildcardFor: aList
-[
 ifNoMatch: anExitBlock
-	" If the user has typed a wildcard selection, I present a menu of matching items. "
+[
+		" If the user has typed a wildcard selection, I present a menu of matching items. "
 
 	| chosenName |
 
@@ -503,10 +503,10 @@ GbxDbaSymbolListBrain >> pasteItem
 
 { #category : 'actions' }
 GbxDbaSymbolListBrain >> copy: anObject
-[
 named: aString
 mode: aSymbol
-	" Place the current selection into the paste buffer. "
+[
+		" Place the current selection into the paste buffer. "
 
 	| label objClassName |
 
@@ -658,10 +658,10 @@ GbxDbaSymbolListBrain >> addDictItem
 
 { #category : 'actions' }
 GbxDbaSymbolListBrain >> pasteOrAdd: anAssociation
-[
 mode: aSymbol
 with: aLabelArray
-	" Place the value of anAssociation into the current selection, using the key as its name. "
+[
+		" Place the value of anAssociation into the current selection, using the key as its name. "
 
 	| successful |
 
@@ -682,9 +682,9 @@ with: aLabelArray
 
 { #category : 'actions' }
 GbxDbaSymbolListBrain >> checkSpecialDict: aDictNameSymbol
-[
 ifMistake: anExitBlock
-	" Private - Warn the user if the symbol list dictionary named
+[
+		" Private - Warn the user if the symbol list dictionary named
 	  aDictNameSymbol is one of the special symbol list dictionaries
 	  whose removal may cause problems. "
 
@@ -920,10 +920,10 @@ GbxDbaSymbolListBrain >> pasteDictionary: anAssociation
 
 { #category : 'actions' }
 GbxDbaSymbolListBrain >> cut: anObject
-[
 named: aString
 mode: aSymbol
-	" Place the current selection into the paste buffer and remove it from its dictionary. "
+[
+		" Place the current selection into the paste buffer and remove it from its dictionary. "
 
 	| cutSuccessful |
 
@@ -1253,4 +1253,3 @@ GbxDbaSymbolListBrain class >> fileAndEditMenuText
 			)
 		)
 ]
-

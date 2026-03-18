@@ -326,9 +326,9 @@ GbxDbaUserBrain >> updateUserRequest
 
 { #category : 'actions' }
 GbxDbaUserBrain >> moveUserGlobalsFrom: aSymbolListDictionaryForwarderList
-[
 to: aSymbolListDictionaryForwarder
-	" I must add all of my user's UserGlobals entries to the new UserGlobals in aSymbolListDictionaryForwarder. "
+[
+		" I must add all of my user's UserGlobals entries to the new UserGlobals in aSymbolListDictionaryForwarder. "
 
 	| newKeys oldUG |
 
@@ -1066,9 +1066,9 @@ GbxDbaUserBrain >> updateNotification: aSymbol
 
 { #category : 'updating' }
 GbxDbaUserBrain >> update: anAspectSymbol
-[
 with: aParameter
-	" Receive a change notice from an object of whom the receiver is a dependent.  The argument anAspectSymbol is typically a Symbol that indicates what change has occurred. "
+[
+		" Receive a change notice from an object of whom the receiver is a dependent.  The argument anAspectSymbol is typically a Symbol that indicates what change has occurred. "
 
 	super update: anAspectSymbol.
 	#dbaUserChanged == anAspectSymbol ifTrue:
@@ -1107,4 +1107,3 @@ GbxDbaUserBrain >> user: aGSUserProfileHolder
 
 	user := aGSUserProfileHolder.
 ]
-

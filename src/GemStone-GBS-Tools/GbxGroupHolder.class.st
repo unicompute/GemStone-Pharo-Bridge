@@ -110,10 +110,10 @@ GbxGroupHolder class >> new
 
 { #category : 'instance creation' }
 GbxGroupHolder class >> newWithGrp: aGroupNameString
-[
 users: users
+[
 
-   "Create a group holder from an existing group which could already have
+	   "Create a group holder from an existing group which could already have
 	members. The group holder contains the group and the userProfile
 	members belonging to the group."
 
@@ -124,4 +124,3 @@ users: users
    inst getMembers: users.
    ^inst
 ]
-
