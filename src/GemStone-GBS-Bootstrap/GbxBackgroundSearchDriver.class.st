@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxAbstractProxy',
+	#name : 'GbxBackgroundSearchDriver',
 	#superclass : 'Object',
 	#instVars : [
 	],

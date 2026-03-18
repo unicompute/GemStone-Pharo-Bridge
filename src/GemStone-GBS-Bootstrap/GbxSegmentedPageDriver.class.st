@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxAbstractProxy',
+	#name : 'GbxSegmentedPageDriver',
 	#superclass : 'Object',
 	#instVars : [
 	],

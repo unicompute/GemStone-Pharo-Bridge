@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxAbstractProxy',
+	#name : 'GbxMemoryPolicy',
 	#superclass : 'Object',
 	#instVars : [
 	],

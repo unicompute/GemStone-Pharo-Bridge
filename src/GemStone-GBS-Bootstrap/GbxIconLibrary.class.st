@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxAbstractProxy',
+	#name : 'GbxIconLibrary',
 	#superclass : 'Object',
 	#instVars : [
 	],

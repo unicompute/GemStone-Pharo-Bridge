@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxAbstractProxy',
+	#name : 'AlphaBlendedIcons',
 	#superclass : 'Object',
 	#instVars : [
 	],

@@ -1,6 +1,6 @@
 Class {
 	#name : 'LargeGrainMemoryPolicy',
-	#superclass : 'Object',
+	#superclass : 'GbxMemoryPolicy',
 	#instVars : [
 	],
 	#classVars : [

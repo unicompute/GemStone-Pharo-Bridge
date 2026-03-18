@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxAbstractProxy',
+	#name : 'ArrayInspector',
 	#superclass : 'Object',
 	#instVars : [
 	],

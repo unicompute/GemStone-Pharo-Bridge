@@ -1,6 +1,6 @@
 Class {
-	#name : 'GbxAbstractProxy',
-	#superclass : 'Object',
+	#name : 'GbxUnknownStub',
+	#superclass : 'GbxObjectStub',
 	#instVars : [
 	],
 	#classVars : [

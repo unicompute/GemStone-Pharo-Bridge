@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxAbstractProxy',
+	#name : 'GbxIncrementalSearchModule',
 	#superclass : 'Object',
 	#instVars : [
 	],

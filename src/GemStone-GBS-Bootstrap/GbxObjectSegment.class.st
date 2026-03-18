@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxAbstractProxy',
+	#name : 'GbxObjectSegment',
 	#superclass : 'Object',
 	#instVars : [
 	],

@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxAbstractProxy',
+	#name : 'GbxDynamicInstVarAttribute',
 	#superclass : 'Object',
 	#instVars : [
 	],
