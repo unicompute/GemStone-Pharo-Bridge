@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxIncrementalSearchModule',
+	#name : 'SegmentedPageDriver',
 	#superclass : 'Object',
 	#instVars : [
 	],
@@ -10,26 +10,20 @@ Class {
 }
 
 { #category : 'accessing' }
-GbxIncrementalSearchModule >> forGemStoneClassSelection: anObject browser: aBrowser
+SegmentedPageDriver >> computeSegmentList
+[
+	"VisualWorks compatibility stub"
+	^#()
+]
+
+{ #category : 'accessing' }
+SegmentedPageDriver >> markSegmentCached: anObject ifBetween: start and: end
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxIncrementalSearchModule >> session
-[
-	"VisualWorks compatibility stub"
-	^nil
-]
-
-{ #category : 'accessing' }
-GbxIncrementalSearchModule >> session: anObject
-[
-	"VisualWorks compatibility stub"
-]
-
-{ #category : 'accessing' }
-GbxIncrementalSearchModule >> setupDrivers
+SegmentedPageDriver >> segmentSelectionChanged
 [
 	"VisualWorks compatibility stub"
 ]

@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxSegmentedPageDriver',
+	#name : 'BackgroundSearchDriver',
 	#superclass : 'Object',
 	#instVars : [
 	],
@@ -10,20 +10,20 @@ Class {
 }
 
 { #category : 'accessing' }
-GbxSegmentedPageDriver >> computeSegmentList
-[
-	"VisualWorks compatibility stub"
-	^#()
-]
-
-{ #category : 'accessing' }
-GbxSegmentedPageDriver >> markSegmentCached: anObject ifBetween: start and: end
+BackgroundSearchDriver >> killSearchProcess
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxSegmentedPageDriver >> segmentSelectionChanged
+BackgroundSearchDriver >> session
+[
+	"VisualWorks compatibility stub"
+	^nil
+]
+
+{ #category : 'accessing' }
+BackgroundSearchDriver >> session: anObject
 [
 	"VisualWorks compatibility stub"
 ]

@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxBasicInspector',
+	#name : 'BasicInspector',
 	#superclass : 'Object',
 	#instVars : [
 	],
@@ -10,106 +10,106 @@ Class {
 }
 
 { #category : 'testing' }
-GbxBasicInspector >> gbxIsGbsInspector
+BasicInspector >> gbxIsGbsInspector
 [
 	"VisualWorks compatibility stub"
 	^true
 ]
 
 { #category : 'accessing' }
-GbxBasicInspector >> tabLabel
+BasicInspector >> tabLabel
 [
 	"VisualWorks compatibility stub"
 	^'Inspector'
 ]
 
 { #category : 'accessing' }
-GbxBasicInspector >> addAddAndRemoveItemsTo: aMenu
+BasicInspector >> addAddAndRemoveItemsTo: aMenu
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxBasicInspector >> createInsertionUndo: anObject before: index
+BasicInspector >> createInsertionUndo: anObject before: index
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxBasicInspector >> derivedFields
-[
-	"VisualWorks compatibility stub"
-	^#()
-]
-
-{ #category : 'accessing' }
-GbxBasicInspector >> dynamicInstVarFields
+BasicInspector >> derivedFields
 [
 	"VisualWorks compatibility stub"
 	^#()
 ]
 
 { #category : 'accessing' }
-GbxBasicInspector >> gbxCacheInterval: anInteger
-[
-	"VisualWorks compatibility stub"
-]
-
-{ #category : 'accessing' }
-GbxBasicInspector >> gbxCachedRanges
+BasicInspector >> dynamicInstVarFields
 [
 	"VisualWorks compatibility stub"
 	^#()
 ]
 
 { #category : 'accessing' }
-GbxBasicInspector >> initialize: anObject
+BasicInspector >> gbxCacheInterval: anInteger
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxBasicInspector >> namedFields
+BasicInspector >> gbxCachedRanges
 [
 	"VisualWorks compatibility stub"
 	^#()
 ]
 
 { #category : 'accessing' }
-GbxBasicInspector >> partAt: index
+BasicInspector >> initialize: anObject
+[
+	"VisualWorks compatibility stub"
+]
+
+{ #category : 'accessing' }
+BasicInspector >> namedFields
+[
+	"VisualWorks compatibility stub"
+	^#()
+]
+
+{ #category : 'accessing' }
+BasicInspector >> partAt: index
 [
 	"VisualWorks compatibility stub"
 	^nil
 ]
 
 { #category : 'accessing' }
-GbxBasicInspector >> partCount
+BasicInspector >> partCount
 [
 	"VisualWorks compatibility stub"
 	^0
 ]
 
 { #category : 'accessing' }
-GbxBasicInspector >> refresh
+BasicInspector >> refresh
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxBasicInspector >> refreshSelfAttribute
+BasicInspector >> refreshSelfAttribute
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxBasicInspector >> remotePrintStringFor: anObject
+BasicInspector >> remotePrintStringFor: anObject
 [
 	"VisualWorks compatibility stub"
 	^''
 ]
 
 { #category : 'accessing' }
-GbxBasicInspector >> selfAttribute
+BasicInspector >> selfAttribute
 [
 	"VisualWorks compatibility stub"
 	^nil

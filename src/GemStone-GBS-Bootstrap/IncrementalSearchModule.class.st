@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxDerivedAttribute',
+	#name : 'IncrementalSearchModule',
 	#superclass : 'Object',
 	#instVars : [
 	],
@@ -10,27 +10,26 @@ Class {
 }
 
 { #category : 'accessing' }
-GbxDerivedAttribute >> label: aString value: anObject printString: aPrintString
+IncrementalSearchModule >> forGemStoneClassSelection: anObject browser: aBrowser
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxDerivedAttribute >> initialize: aLabel value: anObject printString: aPrintString
-[
-	"VisualWorks compatibility stub"
-]
-
-{ #category : 'accessing' }
-GbxDerivedAttribute >> text
-[
-	"VisualWorks compatibility stub"
-	^''
-]
-
-{ #category : 'accessing' }
-GbxDerivedAttribute >> value
+IncrementalSearchModule >> session
 [
 	"VisualWorks compatibility stub"
 	^nil
+]
+
+{ #category : 'accessing' }
+IncrementalSearchModule >> session: anObject
+[
+	"VisualWorks compatibility stub"
+]
+
+{ #category : 'accessing' }
+IncrementalSearchModule >> setupDrivers
+[
+	"VisualWorks compatibility stub"
 ]

@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxTextEditorInspector',
+	#name : 'TextEditorInspector',
 	#superclass : 'Object',
 	#instVars : [
 	],
@@ -10,40 +10,40 @@ Class {
 }
 
 { #category : 'testing' }
-GbxTextEditorInspector >> gbxIsGbsInspector
+TextEditorInspector >> gbxIsGbsInspector
 [
 	"VisualWorks compatibility stub"
 	^true
 ]
 
 { #category : 'accessing' }
-GbxTextEditorInspector >> tabLabel
+TextEditorInspector >> tabLabel
 [
 	"VisualWorks compatibility stub"
 	^'Text Editor'
 ]
 
 { #category : 'accessing' }
-GbxTextEditorInspector >> documentHolder
+TextEditorInspector >> documentHolder
 [
 	"VisualWorks compatibility stub"
 	^nil
 ]
 
 { #category : 'accessing' }
-GbxTextEditorInspector >> initialize: anObject
+TextEditorInspector >> initialize: anObject
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxTextEditorInspector >> refresh
+TextEditorInspector >> refresh
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxTextEditorInspector >> textAccepted: aString
+TextEditorInspector >> textAccepted: aString
 [
 	"VisualWorks compatibility stub"
 ]

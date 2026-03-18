@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxBackgroundSearchDriver',
+	#name : 'ObjectSegment',
 	#superclass : 'Object',
 	#instVars : [
 	],
@@ -10,20 +10,33 @@ Class {
 }
 
 { #category : 'accessing' }
-GbxBackgroundSearchDriver >> killSearchProcess
+ObjectSegment >> cached
+[
+	"VisualWorks compatibility stub"
+	^false
+]
+
+{ #category : 'accessing' }
+ObjectSegment >> firstPart: anObject
+[
+	"VisualWorks compatibility stub"
+]
+
+{ #category : 'testing' }
+ObjectSegment >> isUncached
+[
+	"VisualWorks compatibility stub"
+	^true
+]
+
+{ #category : 'testing' }
+ObjectSegment >> isUncached: aBoolean
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxBackgroundSearchDriver >> session
-[
-	"VisualWorks compatibility stub"
-	^nil
-]
-
-{ #category : 'accessing' }
-GbxBackgroundSearchDriver >> session: anObject
+ObjectSegment >> lastPart: anObject
 [
 	"VisualWorks compatibility stub"
 ]

@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxObjectSegment',
+	#name : 'DerivedAttribute',
 	#superclass : 'Object',
 	#instVars : [
 	],
@@ -10,33 +10,27 @@ Class {
 }
 
 { #category : 'accessing' }
-GbxObjectSegment >> cached
-[
-	"VisualWorks compatibility stub"
-	^false
-]
-
-{ #category : 'accessing' }
-GbxObjectSegment >> firstPart: anObject
-[
-	"VisualWorks compatibility stub"
-]
-
-{ #category : 'testing' }
-GbxObjectSegment >> isUncached
-[
-	"VisualWorks compatibility stub"
-	^true
-]
-
-{ #category : 'testing' }
-GbxObjectSegment >> isUncached: aBoolean
+DerivedAttribute >> label: aString value: anObject printString: aPrintString
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxObjectSegment >> lastPart: anObject
+DerivedAttribute >> initialize: aLabel value: anObject printString: aPrintString
 [
 	"VisualWorks compatibility stub"
+]
+
+{ #category : 'accessing' }
+DerivedAttribute >> text
+[
+	"VisualWorks compatibility stub"
+	^''
+]
+
+{ #category : 'accessing' }
+DerivedAttribute >> value
+[
+	"VisualWorks compatibility stub"
+	^nil
 ]

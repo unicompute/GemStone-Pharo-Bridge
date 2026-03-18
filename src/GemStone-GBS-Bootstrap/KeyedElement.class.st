@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxKeyedElement',
+	#name : 'KeyedElement',
 	#superclass : 'Object',
 	#instVars : [
 	],
@@ -10,113 +10,113 @@ Class {
 }
 
 { #category : 'accessing' }
-GbxKeyedElement >> of: anObject key: aKey keyName: aKeyName value: aValue valueName: aValueName
+KeyedElement >> of: anObject key: aKey keyName: aKeyName value: aValue valueName: aValueName
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'comparing' }
-GbxKeyedElement >> = anObject
+KeyedElement >> = anObject
 [
 	"VisualWorks compatibility stub"
 	^false
 ]
 
 { #category : 'accessing' }
-GbxKeyedElement >> basicValueDelegate
+KeyedElement >> basicValueDelegate
 [
 	"VisualWorks compatibility stub"
 	^nil
 ]
 
 { #category : 'accessing' }
-GbxKeyedElement >> displayString
+KeyedElement >> displayString
 [
 	"VisualWorks compatibility stub"
 	^''
 ]
 
 { #category : 'accessing' }
-GbxKeyedElement >> key
+KeyedElement >> key
 [
 	"VisualWorks compatibility stub"
 	^nil
 ]
 
 { #category : 'accessing' }
-GbxKeyedElement >> keyDelegate
+KeyedElement >> keyDelegate
 [
 	"VisualWorks compatibility stub"
 	^nil
 ]
 
 { #category : 'accessing' }
-GbxKeyedElement >> keyDelegate: anObject
+KeyedElement >> keyDelegate: anObject
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxKeyedElement >> keyName: aString
+KeyedElement >> keyName: aString
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxKeyedElement >> partName
+KeyedElement >> partName
 [
 	"VisualWorks compatibility stub"
 	^''
 ]
 
 { #category : 'accessing' }
-GbxKeyedElement >> refresh
+KeyedElement >> refresh
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxKeyedElement >> sameTypeEquals: anObject
+KeyedElement >> sameTypeEquals: anObject
 [
 	"VisualWorks compatibility stub"
 	^false
 ]
 
 { #category : 'accessing' }
-GbxKeyedElement >> text
+KeyedElement >> text
 [
 	"VisualWorks compatibility stub"
 	^''
 ]
 
 { #category : 'accessing' }
-GbxKeyedElement >> value
+KeyedElement >> value
 [
 	"VisualWorks compatibility stub"
 	^nil
 ]
 
 { #category : 'accessing' }
-GbxKeyedElement >> value: anObject
+KeyedElement >> value: anObject
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxKeyedElement >> valueDelegate
+KeyedElement >> valueDelegate
 [
 	"VisualWorks compatibility stub"
 	^nil
 ]
 
 { #category : 'accessing' }
-GbxKeyedElement >> valueDelegate: anObject
+KeyedElement >> valueDelegate: anObject
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxKeyedElement >> valueName: aString
+KeyedElement >> valueName: aString
 [
 	"VisualWorks compatibility stub"
 ]

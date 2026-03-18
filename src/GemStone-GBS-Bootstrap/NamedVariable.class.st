@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxNamedVariable',
+	#name : 'NamedVariable',
 	#superclass : 'Object',
 	#instVars : [
 	],
@@ -10,57 +10,57 @@ Class {
 }
 
 { #category : 'accessing' }
-GbxNamedVariable >> of: anObject named: aString value: aValue cachedPrintString: aString index: anInteger
+NamedVariable >> of: anObject named: aString value: aValue cachedPrintString: aString index: anInteger
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxNamedVariable >> cachedPrintString: aString
+NamedVariable >> cachedPrintString: aString
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxNamedVariable >> delegate: anObject
+NamedVariable >> delegate: anObject
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxNamedVariable >> index: anInteger
+NamedVariable >> index: anInteger
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxNamedVariable >> initialize
+NamedVariable >> initialize
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxNamedVariable >> name: aString
+NamedVariable >> name: aString
 [
 	"VisualWorks compatibility stub"
 ]
 
 { #category : 'accessing' }
-GbxNamedVariable >> text
+NamedVariable >> text
 [
 	"VisualWorks compatibility stub"
 	^''
 ]
 
 { #category : 'accessing' }
-GbxNamedVariable >> value
+NamedVariable >> value
 [
 	"VisualWorks compatibility stub"
 	^nil
 ]
 
 { #category : 'accessing' }
-GbxNamedVariable >> value: anObject
+NamedVariable >> value: anObject
 [
 	"VisualWorks compatibility stub"
 ]
