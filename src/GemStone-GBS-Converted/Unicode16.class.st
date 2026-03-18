@@ -1,11 +1,13 @@
 Class {
 	#name : 'Unicode16',
-	#superclass : 'TwoByteString',
+	#superclass : 'WideString',
+	#type : 'variable',
 	#instVars : [
 	],
 	#classVars : [
 	],
-	#category : 'GemStone-GBS-Converted'
+	#category : 'GemStone-GBS-Converted',
+	#package : 'GemStone-GBS-Converted'
 }
 
 { #category : 'accessing' }
@@ -26,4 +28,3 @@ Unicode16 >> asFourByteString
 
 	^Unicode32 fromString: self
 ]
-

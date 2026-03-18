@@ -1,10 +1,11 @@
 Class {
 	#name : 'Unicode32',
-	#superclass : 'FourByteString',
+	#superclass : 'WideString',
+	#type : 'variable',
 	#instVars : [
 	],
 	#classVars : [
 	],
-	#category : 'GemStone-GBS-Converted'
+	#category : 'GemStone-GBS-Converted',
+	#package : 'GemStone-GBS-Converted'
 }
-
