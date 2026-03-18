@@ -5,6 +5,7 @@ Class {
 		'traversalCompleted'
 	],
 	#classVars : [
+		'FetchTraversalClass'
 	],
 	#category : 'GemStone-GBS-Converted'
 }

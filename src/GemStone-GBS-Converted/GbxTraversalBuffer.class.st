@@ -8,6 +8,7 @@ Class {
 		'session'
 	],
 	#classVars : [
+		'minimumReportSize'
 	],
 	#category : 'GemStone-GBS-Converted'
 }
@@ -211,7 +212,7 @@ GbxTraversalBuffer >> allocateDataSize: logicalSize
 
 	| physSize |
 	physSize := logicalSize + self headerSize.
-	data := UninterpretedBytes newInFixedSpace: physSize.
+	data := ByteArray new: physSize.
 	lock := nil. "The unlocked state -- make it explicit."
 	self
 		allocatedBytes: logicalSize;
