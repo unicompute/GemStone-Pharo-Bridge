@@ -1022,10 +1022,10 @@ GbsConfiguration class >> osType
 [
 	"Answer the OS type symbol: #win, #unix, #mac"
 
-	| osName |
-	osName := Smalltalk os familyName.
-	osName = #MacOS ifTrue: [^#mac].
-	osName = #Windows ifTrue: [^#win].
+	| os |
+	os := Smalltalk os.
+	os isMacOS ifTrue: [^#mac].
+	os isWindows ifTrue: [^#win].
 	^#unix  "default for Linux and other Unix variants"
 ]
 
