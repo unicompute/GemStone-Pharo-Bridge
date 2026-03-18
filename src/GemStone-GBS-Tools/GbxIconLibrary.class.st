@@ -18,7 +18,7 @@ GbxIconLibrary class >> addMethod: selector forPng: pathString
 		compile: (self methodSourceForPng: pathString selector: selector)
 		classified: 'png imports'
 		notifying: nil
-		environment: GemStone.Gbs
+		environment: Smalltalk
 ]
 
 { #category : 'png imports' }

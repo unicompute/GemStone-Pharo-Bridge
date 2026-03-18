@@ -906,7 +906,7 @@ GbsError class >> exceptionClassFor: anErrorSymbol
 
 	| className |
 	className := self classNameFromErrorSymbol: anErrorSymbol.
-	^GemStone.Gbs at: className
+	^Smalltalk at: className
 		ifAbsent: 
 			[ErrorNameToClassCompatibility at: anErrorSymbol
 				ifAbsent: 
