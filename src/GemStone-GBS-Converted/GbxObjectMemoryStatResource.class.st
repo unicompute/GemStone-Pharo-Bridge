@@ -141,538 +141,81 @@ GbxObjectMemoryStatResource class >> initialize
 	singleton := nil.
 	statDescriptors := OrderedCollection new.
 	self
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'allocFailures'
-					description: 'The number of OldSpace allocations that failed to find a sufficiently large data chunk on the threaded free list; hence the allocation was probably satisfied by eating into the contiguous free space between the OT and the data heap.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'allocations');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'allocMatches'
-					description: 'The number of OldSpace allocations that succeeded with an exact match.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: true
-					unit: 'allocations');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'allocProbes'
-					description: 'The number of threaded data chunks examined by OldSpace allocations.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'chunks');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'allocSplits'
-					description: 'The number of OldSpace allocations that succeeded by splitting a data chunk on the free list.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'allocations');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'availableContiguousFixedSpace'
-					description: 'The size (in bytes) of the largest chunk of contiguous free space in FixedSpace'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: true
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'availableContiguousOldSpace'
-					description: 'The size (in bytes) of the largest chunk of contiguous free space in OldSpace after subtracting off the space reserved for use by the virtual machine. This figure does not include the free space on the threaded free lists. Contiguous space is consumed when an object will not fit in an entry on the threaded free lists.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: true
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'availableContiguousSpace'
-					description: 'The size (in bytes) of the largest chunk of contiguous free space in old and fixed space after subtracting off the space reserved for use by the virtual machine. This figure does not include the free space on the threaded free lists. Contiguous space is consumed when an object will not fit in an entry on the threaded free lists.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: true
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'availableFreeBytes'
-					description: 'The number of free memory bytes available in the heap.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: true
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'availableFreeEdenBytes'
-					description: 'The number of free memory bytes available in eden.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: true
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'availableFreeFixedSpaceBytes'
-					description: 'The number of free FixedSpace bytes available for use (i.e., threadedDataBytes + contiguousFreeBytes.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: true
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'availableFreeLargeSpaceBytes'
-					description: 'The number of free LargeSpace bytes available for use (i.e., threadedDataBytes + contiguousFreeBytes.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: true
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'availableFreeOldSpaceBytes'
-					description: 'The number of free OldSpace bytes available for use (i.e., threadedDataBytes + contiguousFreeBytes - reservedContiguousFreeBytes.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: true
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'availableFreeOldSpaceBytesLimit'
-					description: 'The LowSpaceSemaphore is signalled by the virtual machine when the availableFreeOldSpaceBytes drops below this limit.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'compCodeCacheBytes'
-					description: 'The size of the compiledCodeCache in bytes.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'contiguousFreeOldBytes'
-					description: 'The total number of contiguous free bytes in OldSpace. This figure does not include any space on the threaded free lists. Some of this space is reserved for use by the virtual machine.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: true
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'dynamicallyAllocatedFootprint'
-					description: 'The total size (in bytes) of the dynamically allocated footprint.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'edenBytes'
-					description: 'The size of Eden in bytes.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'edenUsedBytes'
-					description: 'The number of used bytes in Eden.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'edenUsedBytesScavengeThreshold'
-					description: 'The scavenger will be invoked when edenUsedBytes exceeds this threshold.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'enumerationCallsPerMillisecond'
-					description: 'How many objects per millisecond were processed in the most recent invocation of allInstancesWeakly:. This can be used to estimate the system''s object scanning performance for tasks like incremental marking.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'objects/ms');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'fixedBytes'
-					description: 'The size of FixedSpace in bytes.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'fixedSegments'
-					description: 'The number of FixedSpace segments.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'segments');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'fixedUsedBytes'
-					description: 'The usage of FixedSpace in bytes.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'fixedUsedObjects'
-					description: 'The usage of FixedSpace in objects.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'objects');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'freePermBytes'
-					description: 'The number of free PermSpace bytes.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: true
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'incAbortedCount'
-					description: 'The number of times the incremental GC aborted its mark phase.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'aborts');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'incGCState'
-					description: 'The current state of the incremental garbage collector. 0 = resting, 1 = marking, 2 = aborting, 3 = sweeping.'
-					type: GbxStatArchiver.TypeByte8
-					isCounter: false
-					isLargerBetter: false
-					unit: 'enumeration');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'incMarkedBytes'
-					description: 'The total bytes of data in the marked objects.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'incMarkedObjects'
-					description: 'The number of objects currently marked.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'objects');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'incMarkedWeakBytes'
-					description: 'The total bytes of data in the marked objects that are weak.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'incMarkedWeakObjects'
-					description: 'The number of marked objects that are weak.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'incMarkStackOverflows'
-					description: 'The number of times the incremental GC''s mark stack overflowed.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'overflows');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'incNilledBytes'
-					description: 'The number of bytes in the weak objects examined so far.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'incNilledObjects'
-					description: 'The number of weak objects examined so far (to see if they contain dead references that need nilling out).'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'objects');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'incReclaimedBytes'
-					description: 'The bytes of data reclaimed so far in this collection.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'incReclaimedObjects'
-					description: 'The number of objects reclaimed so far in this collection.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'objects');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'incSweepAllocatedBytes'
-					description: 'The bytes of data in the OldSpace objects allocated since the start of the incremental sweep phase.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'incSweepAllocatedObjects'
-					description: 'The number of OldSpace objects allocated since the start of the incremental sweep phase.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'objects');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'incSweptObjects'
-					description: 'The number of objects swept so far in this collection.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'objects');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'incUnmarkedObjects'
-					description: 'The number of objects unmarked since aborting the incremental GC.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'objects');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'largeBytes'
-					description: 'The size of LargeSpace in bytes.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'largeFreeBytesTenuringThreshold'
-					description: 'The scavenger will tenure LargeSpace objects when the free bytes in LargeSpace drops below this threshold.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'largeUsedBytes'
-					description: 'The the number of used bytes in LargeSpace.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'largeUsedObjects'
-					description: 'The number of objects housed in LargeSpace.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'objects');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'maximalFreeOldBytes'
-					description: 'The size in bytes of the largest chunk of contiguous free bytes in OldSpace.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'nativeStackSpills'
-					description: 'The number of times the native stack was not large enough to hold all the internal representation of Smalltalk process frames, thus forcing a spill of context objects into new space.  This number is also incremented every time a new Smalltalk process is forked. Excessively high values should be taken as a hint to either increase the native stack space size via ObjectMemory class>>sizesAtStartup:, or to adopt an implementation strategy that forks Smalltalk processes less often.  See also ObjectMemory class>>sizesAtStartup for more information.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'spills');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'newBytesAvailableForStorage'
-					description: 'The number of bytes that can be used to house objects in new space.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'numCompactNMethods'
-					description: 'The number of times the compiled code cache was compacted due to lack of space.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'compactions');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'numDataCompactions'
-					description: 'The number of OldSpace data compactions that have been performed since the start of the VM.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'compactions');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'numGCs'
-					description: 'The number of compacting GCs that have been performed since the start of the VM.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'GCs');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'numGlobalGCs'
-					description: 'The number of global GCs that have been performed since the start of the VM.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'GCs');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'numIncGCs'
-					description: 'The number of incremental GCs that have been performed since the start of the VM.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'GCs');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'numMarkStackOverflows'
-					description: 'The number of times the GC mark stack overflowed.  This should be avoided because it makes GC considerably slower.  To address this issue, increase the size of new space (eden + survivor).'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'overflows');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'numScavenges'
-					description: 'The number of new space scavenges that VW has performed since the launch of the VM'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'scavenges');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'numWeakObjectListOverflows'
-					description: 'The number of times the weak object list overflowed during GC. This should be avoided because then not all weak objects are processed in a single GC. To address this issue, increase the size of compiled code cache space.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: true
-					isLargerBetter: false
-					unit: 'overflows');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'oldBytes'
-					description: 'The size of OldSpace in bytes."'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'oldDataBytes'
-					description: 'The total data bytes in OldSpace, including the threaded free data.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'oldRtBytes'
-					description: 'The size of the old remembered table in bytes.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'oldRtEntries'
-					description: 'The size of the old remembered table in terms of the total number of entries.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'RtEntries');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'oldRtUsedEntries'
-					description: 'The number of actual entries in the old remembered table.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'RtEntries');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'oldSegments'
-					description: 'The number of OldSpace segments.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'segments');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'oopsLeft'
-					description: 'Estimate of the number of additional objects that can be housed in object memory.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'objects');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'permBytes'
-					description: 'The size of PermSpace in bytes.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'permDataBytes'
-					description: 'The total data bytes in PermSpace.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'permOTEs'
-					description: 'The number of entries in the PermSpace OT'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'entries');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'reservedContiguousFreeBytes'
-					description: 'The bytes of contiguous free space reserved for use by the virtual machine.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'rtBytes'
-					description: 'The size of the remembered table in bytes'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'rtEntries'
-					description: 'The size of the remembered table in terms of the total number of entries.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'entries');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'rtUsedEntries'
-					description: 'The number of actual entries in the remembered table.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'entries');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'stackBytes'
-					description: 'The size of StackSpace in bytes.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'survBytes'
-					description: 'The size of a single SurvivorSpace in bytes.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'survUsedBytes'
-					description: 'The number of used bytes in the occupied SurvivorSpace.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'survUsedBytesTenuringThreshold'
-					description: 'The scavenger will start to tenure objects when survUsedBytes exceeds this threshold.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'threadedDataBytes'
-					description: 'The number of bytes of data in OldSpace''s free list.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'bytes');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'threadedDataEntries'
-					description: 'The number of data chunks in OldSpace''s free list.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'chunks');
-		addStatDescriptor: (GbxStatDescriptor
-					name: 'threadedOTEntries'
-					description: 'The number of OTEs in OldSpace''s free list.'
-					type: GbxStatArchiver.TypeInt32
-					isCounter: false
-					isLargerBetter: false
-					unit: 'entries')
+		addStatDescriptor: (self newStatFor: 'allocFailures');
+		addStatDescriptor: (self newStatFor: 'allocMatches');
+		addStatDescriptor: (self newStatFor: 'allocProbes');
+		addStatDescriptor: (self newStatFor: 'allocSplits');
+		addStatDescriptor: (self newStatFor: 'availableContiguousFixedSpace');
+		addStatDescriptor: (self newStatFor: 'availableContiguousOldSpace');
+		addStatDescriptor: (self newStatFor: 'availableContiguousSpace');
+		addStatDescriptor: (self newStatFor: 'availableFreeBytes');
+		addStatDescriptor: (self newStatFor: 'availableFreeEdenBytes');
+		addStatDescriptor: (self newStatFor: 'availableFreeFixedSpaceBytes');
+		addStatDescriptor: (self newStatFor: 'availableFreeLargeSpaceBytes');
+		addStatDescriptor: (self newStatFor: 'availableFreeOldSpaceBytes');
+		addStatDescriptor: (self newStatFor: 'availableFreeOldSpaceBytesLimit');
+		addStatDescriptor: (self newStatFor: 'compCodeCacheBytes');
+		addStatDescriptor: (self newStatFor: 'contiguousFreeOldBytes');
+		addStatDescriptor: (self newStatFor: 'dynamicallyAllocatedFootprint');
+		addStatDescriptor: (self newStatFor: 'edenBytes');
+		addStatDescriptor: (self newStatFor: 'edenUsedBytes');
+		addStatDescriptor: (self newStatFor: 'edenUsedBytesScavengeThreshold');
+		addStatDescriptor: (self newStatFor: 'enumerationCallsPerMillisecond');
+		addStatDescriptor: (self newStatFor: 'fixedBytes');
+		addStatDescriptor: (self newStatFor: 'fixedSegments');
+		addStatDescriptor: (self newStatFor: 'fixedUsedBytes');
+		addStatDescriptor: (self newStatFor: 'fixedUsedObjects');
+		addStatDescriptor: (self newStatFor: 'freePermBytes');
+		addStatDescriptor: (self newStatFor: 'incAbortedCount');
+		addStatDescriptor: (self newStatFor: 'incMarkedBytes');
+		addStatDescriptor: (self newStatFor: 'incMarkedObjects');
+		addStatDescriptor: (self newStatFor: 'incMarkedWeakBytes');
+		addStatDescriptor: (self newStatFor: 'incMarkedWeakObjects');
+		addStatDescriptor: (self newStatFor: 'incMarkStackOverflows');
+		addStatDescriptor: (self newStatFor: 'incNilledBytes');
+		addStatDescriptor: (self newStatFor: 'incNilledObjects');
+		addStatDescriptor: (self newStatFor: 'incReclaimedBytes');
+		addStatDescriptor: (self newStatFor: 'incReclaimedObjects');
+		addStatDescriptor: (self newStatFor: 'incSweepAllocatedBytes');
+		addStatDescriptor: (self newStatFor: 'incSweepAllocatedObjects');
+		addStatDescriptor: (self newStatFor: 'incSweptObjects');
+		addStatDescriptor: (self newStatFor: 'incUnmarkedObjects');
+		addStatDescriptor: (self newStatFor: 'largeBytes');
+		addStatDescriptor: (self newStatFor: 'largeFreeBytesTenuringThreshold');
+		addStatDescriptor: (self newStatFor: 'largeUsedBytes');
+		addStatDescriptor: (self newStatFor: 'largeUsedObjects');
+		addStatDescriptor: (self newStatFor: 'maximalFreeOldBytes');
+		addStatDescriptor: (self newStatFor: 'nativeStackSpills');
+		addStatDescriptor: (self newStatFor: 'newBytesAvailableForStorage');
+		addStatDescriptor: (self newStatFor: 'numCompactNMethods');
+		addStatDescriptor: (self newStatFor: 'numDataCompactions');
+		addStatDescriptor: (self newStatFor: 'numGCs');
+		addStatDescriptor: (self newStatFor: 'numGlobalGCs');
+		addStatDescriptor: (self newStatFor: 'numIncGCs');
+		addStatDescriptor: (self newStatFor: 'numMarkStackOverflows');
+		addStatDescriptor: (self newStatFor: 'numScavenges');
+		addStatDescriptor: (self newStatFor: 'numWeakObjectListOverflows');
+		addStatDescriptor: (self newStatFor: 'oldBytes');
+		addStatDescriptor: (self newStatFor: 'oldDataBytes');
+		addStatDescriptor: (self newStatFor: 'oldRtBytes');
+		addStatDescriptor: (self newStatFor: 'oldRtEntries');
+		addStatDescriptor: (self newStatFor: 'oldRtUsedEntries');
+		addStatDescriptor: (self newStatFor: 'oldSegments');
+		addStatDescriptor: (self newStatFor: 'oopsLeft');
+		addStatDescriptor: (self newStatFor: 'permBytes');
+		addStatDescriptor: (self newStatFor: 'permDataBytes');
+		addStatDescriptor: (self newStatFor: 'permOTEs');
+		addStatDescriptor: (self newStatFor: 'reservedContiguousFreeBytes');
+		addStatDescriptor: (self newStatFor: 'rtBytes');
+		addStatDescriptor: (self newStatFor: 'rtEntries');
+		addStatDescriptor: (self newStatFor: 'rtUsedEntries');
+		addStatDescriptor: (self newStatFor: 'stackBytes');
+		addStatDescriptor: (self newStatFor: 'survBytes');
+		addStatDescriptor: (self newStatFor: 'survUsedBytes');
+		addStatDescriptor: (self newStatFor: 'survUsedBytesTenuringThreshold');
+		addStatDescriptor: (self newStatFor: 'threadedDataBytes');
+		addStatDescriptor: (self newStatFor: 'threadedDataEntries');
+		addStatDescriptor: (self newStatFor: 'threadedOTEntries')
 ]
 
 { #category : 'accessing' }
