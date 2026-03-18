@@ -40,9 +40,8 @@ GbsClassicLauncher class >> iconNamed: aSymbol
 
 { #category : 'menus' }
 GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
-	| launcherClass workspaceClass |
+	| launcherClass |
 	launcherClass := Smalltalk at: #GbsLauncher ifAbsent: [ nil ].
-	workspaceClass := Smalltalk at: #GbsWorkspace ifAbsent: [ nil ].
     (aBuilder item: #GemStone)
         order: 79.9;
         label: 'GemStone';
@@ -146,16 +145,10 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                 with: [
                     (aBuilder item: #NewGSWorkspace)
                         label: 'New GS Workspace';
-                        action: [
-							workspaceClass
-								ifNil: [ UIManager default inform: 'Workspace presenter unavailable.' ]
-								ifNotNil: [ workspaceClass new open ] ].
+                        action: [ self openWorkspaceOnCurrentSession ].
                     (aBuilder item: #OpenGSWorkspace)
                         label: 'Open GS Workspace...';
-                        action: [
-							workspaceClass
-								ifNil: [ UIManager default inform: 'Workspace presenter unavailable.' ]
-								ifNotNil: [ workspaceClass new open ] ].
+                        action: [ self openWorkspaceOnCurrentSession ].
                     (aBuilder item: #GSFileIn)
                         label: 'GS File in...';
                         action: [ self gsFileInOnCurrentSession ].
@@ -167,10 +160,7 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                         action: [ self openBreakpointsBrowser ].
                     (aBuilder item: #GSSystemWorkspace)
                         label: 'System Workspace';
-                        action: [
-							workspaceClass
-								ifNil: [ UIManager default inform: 'Workspace presenter unavailable.' ]
-								ifNotNil: [ workspaceClass new open ] ] ].
+                        action: [ self openWorkspaceOnCurrentSession ] ].
 
             (aBuilder item: #GbsUtilities)
                 label: 'Utilities';
@@ -720,6 +710,21 @@ GbsClassicLauncher class >> openBrowserOnCurrentSession [
 ]
 
 { #category : 'menus' }
+GbsClassicLauncher class >> openWorkspaceOnCurrentSession [
+	| session workspaceClass |
+	workspaceClass := Smalltalk at: #GbsWorkspace ifAbsent: [ nil ].
+	workspaceClass ifNil: [ ^ UIManager default inform: 'Workspace presenter unavailable.' ].
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	GbsSessionParameters currentSession: session.
+	[
+		workspaceClass new open
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open workspace: ', ex messageText
+	].
+]
+
+{ #category : 'menus' }
 GbsClassicLauncher class >> openBrowserOnCurrentSessionDo: oneArgBlock [
 	| session browser |
 	session := self currentSessionOrInform.
@@ -1209,34 +1214,13 @@ GbsClassicLauncher >> doEditParameter [
 ]
 
 { #category : 'actions' }
+GbsClassicLauncher >> doLoginLink [
+	^ self loginSelectedParametersUsing: #loginLnk
+]
+
+{ #category : 'actions' }
 GbsClassicLauncher >> doLoginRpc [
-	| session |
-    parametersList selection selectedItem ifNotNil: [ :params |
-        
-        "Show progress"
-        UIManager default showWaitCursorWhile: [ 
-            [
-                "Use the SELECTED object to login"
-                session := params login.
-                
-                "Update the UI"
-                self refreshAll.
-                
-                params isConnected 
-                    ifTrue: [ 
-                        GbsSessionParameters currentSession: session.
-                        UIManager default defer: [
-                        	GbsLauncher allInstancesDo: [ :launcher | launcher updateUIState ].
-                        	GbsClassicLauncher allInstancesDo: [ :launcher | launcher refreshAll ] ].
-                        self inform: 'Login Successful: ', params name 
-                    ].
-                
-            ] on: Error do: [ :ex | 
-                self inform: 'Login Error: ', ex messageText.
-                ex inspect. 
-            ]
-        ].
-    ] ifNil: [ self inform: 'Please select a configuration first.' ].
+	^ self loginSelectedParametersUsing: #loginRpc
 ]
 
 { #category : 'actions' }
@@ -1331,7 +1315,7 @@ GbsClassicLauncher >> initializePresenters [
     sessionList beSingleSelection.
 
     "Buttons"
-    btnLoginLink := self newButton label: 'Login Link'; icon: (self iconNamed: #glamorousGo); action: [ self doLoginRpc ].
+    btnLoginLink := self newButton label: 'Login Link'; icon: (self iconNamed: #glamorousGo); action: [ self doLoginLink ].
     btnLoginRpc  := self newButton label: 'Login RPC'; icon: (self iconNamed: #glamorousGo); action: [ self doLoginRpc ].
     btnAdd       := self newButton label: 'Add...'; icon: (self iconNamed: #add); action: [ self doAddParameter ].
     btnCopy      := self newButton label: 'Copy'; icon: (self iconNamed: #smallCopy); action: [ self doCopyParameter ].
@@ -1367,11 +1351,37 @@ GbsClassicLauncher >> initializeWindow: aWindow [
 
 { #category : 'actions' }
 GbsClassicLauncher >> makeCurrent [
-    self withSelectedSession: [ :s | 
-        GbsSessionParameters currentSession: s.
-        self inform: 'Session set as Current'.
-        self refreshSessionList.
-    ].
+	self withSelectedSession: [ :s |
+		GbsSessionParameters currentSession: s.
+		self inform: 'Session set as Current'.
+		self refreshSessionList.
+	].
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> loginSelectedParametersUsing: aSelector [
+	| params session loginError |
+	params := [ parametersList selection selectedItem ] on: Error do: [ nil ].
+	params ifNil: [ ^ self inform: 'Please select a configuration first.' ].
+
+	loginError := nil.
+	session := nil.
+	UIManager default showWaitCursorWhile: [
+		[ session := params perform: aSelector ]
+			on: Error
+			do: [ :ex | loginError := ex ] ].
+
+	loginError ifNotNil: [ ^ self inform: 'Login Error: ', loginError messageText ].
+	session ifNil: [ ^ self inform: 'Login failed.' ].
+
+	GbsSessionParameters currentSession: session.
+	[ self refreshAll ] on: Error do: [ ].
+	UIManager default defer: [
+		GbsLauncher allInstancesDo: [ :launcher |
+			[ launcher updateUIState ] on: Error do: [ ] ].
+		GbsClassicLauncher allInstancesDo: [ :launcher |
+			[ launcher refreshAll ] on: Error do: [ ] ] ].
+	self inform: 'Login Successful: ', params name
 ]
 
 { #category : 'menus' }
@@ -1392,19 +1402,24 @@ GbsClassicLauncher >> menuBrowse [
 { #category : 'menus' }
 GbsClassicLauncher >> menuParameters [
     ^ self newMenu
-        addItem: [ :item | item name: 'Add...'; action: [ self inform: 'Add Parameter' ] ];
-        addItem: [ :item | item name: 'Edit'; action: [ self inform: 'Edit Parameter' ] ];
-        addItem: [ :item | item name: 'Delete'; action: [ self inform: 'Delete Parameter' ] ];
+        addItem: [ :item | item name: 'Add...'; action: [ self doAddParameter ] ];
+        addItem: [ :item | item name: 'Copy'; action: [ self doCopyParameter ] ];
+        addItem: [ :item | item name: 'Edit'; action: [ self doEditParameter ] ];
+        addItem: [ :item | item name: 'Delete'; action: [ self doDeleteParameter ] ];
         yourself.
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher >> menuSession [
     ^ self newMenu
-        addItem: [ :item | item name: 'Login'; action: [ self inform: 'Use the main Launcher to create sessions' ] ];
+        addItem: [ :item | item name: 'Login Link'; action: [ self doLoginLink ] ];
+        addItem: [ :item | item name: 'Login RPC'; action: [ self doLoginRpc ] ];
         addItem: [ :item | item name: 'Logout'; action: [ self doLogout ] ];
+        addItem: [ :item | item name: 'Current'; action: [ self makeCurrent ] ];
         addItem: [ :item | item name: 'Commit'; action: [ self doCommit ] ];
         addItem: [ :item | item name: 'Abort'; action: [ self doAbort ] ];
+        addItem: [ :item | item name: 'Begin'; action: [ self doBegin ] ];
+        addItem: [ :item | item name: 'Break'; action: [ self doBreak ] ];
         yourself.
 ]
 
@@ -1419,16 +1434,28 @@ GbsClassicLauncher >> menuTools [
             action: [
 				workspaceClass
 					ifNil: [ self inform: 'Workspace presenter unavailable.' ]
-					ifNotNil: [ workspaceClass new open ] ] ];
+					ifNotNil: [
+						| session |
+						session := self sessionForBrowsing.
+						session
+							ifNil: [ self inform: 'Select or log into a GemStone session first.' ]
+							ifNotNil: [ self openWorkspaceFor: session ] ] ] ];
 
         addItem: [ :item | 
             item name: 'Transcript'; 
             action: [ 
-                | transcriptPresenter |
-                transcriptClass ifNil: [ ^ self inform: 'Remote transcript unavailable.' ].
-                transcriptPresenter := transcriptClass new.
-                transcriptPresenter open.
-                transcriptPresenter startPolling.
+                | transcriptPresenter session |
+                transcriptClass
+					ifNil: [ self inform: 'Remote transcript unavailable.' ]
+					ifNotNil: [
+						session := self sessionForBrowsing.
+						(self isSessionUsableForBrowsing: session)
+							ifTrue: [
+								GbsSessionParameters currentSession: session.
+	                			transcriptPresenter := transcriptClass new.
+	                			transcriptPresenter open.
+	                			transcriptPresenter startPolling ]
+							ifFalse: [ self inform: 'Select or log into a GemStone session first.' ] ].
             ] ];
         addItem: [ :item | item name: 'Toggle Polling'; action: [ GbsSessionParameters togglePolling. self refreshAll ] ];
         yourself.
@@ -1638,6 +1665,8 @@ GbsClassicLauncher >> openBrowserForQuery [
 { #category : 'private' }
 GbsClassicLauncher >> isSessionUsableForBrowsing: aSession [
 	aSession ifNil: [ ^ false ].
+	((aSession respondsTo: #execute:) or: [ aSession respondsTo: #executeAndFetch: ])
+		ifFalse: [ ^ false ].
 	(aSession respondsTo: #isLoggedIn)
 		ifTrue: [ ^ [ aSession isLoggedIn == true ] on: Error do: [ false ] ].
 	^ true
@@ -1645,22 +1674,24 @@ GbsClassicLauncher >> isSessionUsableForBrowsing: aSession [
 
 { #category : 'actions' }
 GbsClassicLauncher >> openWorkspaceFor: aSession [
-	| workspaceClass |
-    aSession ifNil: [ ^ self ].
+	| workspaceClass resolvedSession |
+	aSession ifNil: [ ^ self ].
 	workspaceClass := Smalltalk at: #GbsWorkspace ifAbsent: [ nil ].
 	workspaceClass ifNil: [ ^ self inform: 'Workspace presenter unavailable.' ].
-    
-    "1. Ensure this session is the active one globally before opening tools"
-    GbsSessionParameters currentSession: aSession.
-    self refreshAll.
-    
-    "2. Open the Workspace"
-    workspaceClass new open.
+	resolvedSession := self liveSessionFrom: aSession.
+	resolvedSession ifNil: [ resolvedSession := aSession ].
+
+	"1. Ensure this session is the active one globally before opening tools"
+	GbsSessionParameters currentSession: resolvedSession.
+	self refreshAll.
+
+	"2. Open the Workspace"
+	workspaceClass new open.
 ]
 
 { #category : 'actions' }
 GbsClassicLauncher >> refreshAll [
-	| activeSessions |
+	| activeSessions current currentSessionId matchingSelection |
     "Use asArray so Spec2 sees a NEW collection and forces a visual refresh"
     parametersList items: GbsSessionParameters allParameters asArray.
 	activeSessions := GbsSessionParameters allSessions
@@ -1670,26 +1701,41 @@ GbsClassicLauncher >> refreshAll [
     sessionList items: activeSessions asArray.
     
     "Safely re-select the current session if it still exists"
-    GbsSessionParameters currentSession ifNotNil: [ :current |
-        (activeSessions includes: current) ifTrue: [ 
-            sessionList selectItem: current 
-        ]
-    ].
+	current := GbsSessionParameters currentSession.
+	currentSessionId := self sessionIdFrom: current.
+	matchingSelection := current ifNil: [ nil ] ifNotNil: [
+		activeSessions
+			detect: [ :each |
+				(each == current)
+					or: [
+						currentSessionId notNil
+							and: [ (self sessionIdFrom: each) = currentSessionId ] ] ]
+			ifNone: [ nil ] ].
+	matchingSelection ifNotNil: [ sessionList selectItem: matchingSelection ].
     
     self updateButtonStates.
 ]
 
 { #category : 'actions' }
 GbsClassicLauncher >> refreshSessionList [
-	| activeSessions |
+	| activeSessions current currentSessionId matchingSelection |
 	activeSessions := GbsSessionParameters allSessions
 		select: [ :each |
 			(each respondsTo: #isConnected)
 				and: [ [ each isConnected ] on: Error do: [ false ] ] ].
     sessionList items: activeSessions.
     parametersList items: GbsSessionParameters allParameters. "Assuming this collection exists"
-    GbsSessionParameters currentSession ifNotNil: [ :s |
-		(activeSessions includes: s) ifTrue: [ sessionList selectItem: s ] ].
+	current := GbsSessionParameters currentSession.
+	currentSessionId := self sessionIdFrom: current.
+	matchingSelection := current ifNil: [ nil ] ifNotNil: [
+		activeSessions
+			detect: [ :each |
+				(each == current)
+					or: [
+						currentSessionId notNil
+							and: [ (self sessionIdFrom: each) = currentSessionId ] ] ]
+			ifNone: [ nil ] ].
+	matchingSelection ifNotNil: [ sessionList selectItem: matchingSelection ].
 ]
 
 { #category : 'private' }
@@ -1724,10 +1770,32 @@ GbsClassicLauncher >> sessionForBrowsing [
 GbsClassicLauncher >> browsingSessionFrom: selectedObject [
 	"Classic launcher list can contain parameter records, but browsers need a live GbsSession."
 	selectedObject ifNil: [ ^ nil ].
-	(selectedObject respondsTo: #executeAndFetch:) ifTrue: [ ^ selectedObject ].
-	(selectedObject class name = #GbsSessionParameters)
-		ifTrue: [ ^ GbsSessionParameters currentSession ].
-	^ GbsSessionParameters currentSession
+	^ self liveSessionFrom: selectedObject
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> liveSessionFrom: anObject [
+	| sessionId resolved current |
+	anObject ifNil: [ ^ nil ].
+	(self isSessionUsableForBrowsing: anObject) ifTrue: [ ^ anObject ].
+	sessionId := self sessionIdFrom: anObject.
+	sessionId ifNotNil: [
+		resolved := [ GBSM sessionWithId: sessionId ] on: Error do: [ nil ].
+		(self isSessionUsableForBrowsing: resolved) ifTrue: [ ^ resolved ] ].
+	current := GbsSessionParameters currentSession.
+	(self isSessionUsableForBrowsing: current) ifFalse: [ ^ nil ].
+	sessionId ifNil: [ ^ current ].
+	^ ((self sessionIdFrom: current) = sessionId)
+		ifTrue: [ current ]
+		ifFalse: [ nil ]
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> sessionIdFrom: anObject [
+	anObject ifNil: [ ^ nil ].
+	(anObject respondsTo: #sessionId)
+		ifTrue: [ ^ [ anObject sessionId ] on: Error do: [ nil ] ].
+	^ nil
 ]
 
 { #category : 'polling' }
@@ -1753,13 +1821,18 @@ GbsClassicLauncher >> stopPolling [
 
 { #category : 'actions' }
 GbsClassicLauncher >> updateButtonStates [
-    | selectedParam selectedSession |
-    
-    selectedParam := parametersList selection selectedItem.
-    selectedSession := sessionList selection selectedItem.
+	| selectedParam selectedSession liveSession canLogin |
+	selectedParam := [ parametersList selection selectedItem ] on: Error do: [ nil ].
+	selectedSession := [ sessionList selection selectedItem ] on: Error do: [ nil ].
+	liveSession := self liveSessionFrom: selectedSession.
+	canLogin := selectedParam notNil
+		and: [
+			(selectedParam respondsTo: #isConnected)
+				ifTrue: [ ([ selectedParam isConnected ] on: Error do: [ false ]) not ]
+				ifFalse: [ true ] ].
 
     "1. Login buttons: Enable only if a parameter is selected AND it is NOT connected"
-    (selectedParam notNil and: [ selectedParam isConnected not ])
+	canLogin
         ifTrue: [ 
             btnLoginRpc enable. 
             btnLoginLink enable. 
@@ -1769,21 +1842,25 @@ GbsClassicLauncher >> updateButtonStates [
             btnLoginLink disable. 
         ].
 
-    "2. Session buttons (Logout, Commit, etc.): Enable only if an active session is selected"
-    selectedSession notNil
-        ifTrue: [ 
-            btnLogout enable. btnCommit enable. btnAbort enable. 
-            btnCurrent enable. btnBegin enable. btnBreak enable. 
-        ]
-        ifFalse: [ 
-            btnLogout disable. btnCommit disable. btnAbort disable. 
-            btnCurrent disable. btnBegin disable. btnBreak disable. 
-        ].
+	"2. Session buttons: logout works on the selected row; other actions need a live session"
+	selectedSession notNil
+		ifTrue: [ btnLogout enable ]
+		ifFalse: [ btnLogout disable ].
+	liveSession notNil
+		ifTrue: [
+			btnCommit enable. btnAbort enable.
+			btnCurrent enable. btnBegin enable. btnBreak enable ]
+		ifFalse: [
+			btnCommit disable. btnAbort disable.
+			btnCurrent disable. btnBegin disable. btnBreak disable ].
 ]
 
 { #category : 'private' }
 GbsClassicLauncher >> withSelectedSession: aBlock [
-    sessionList selection selectedItem 
-        ifNotNil: [ :session | aBlock value: session ]
-        ifNil: [ self inform: 'Please select a session from the list.' ].
+	| selected resolved |
+	selected := [ sessionList selection selectedItem ] on: Error do: [ nil ].
+	selected ifNil: [ ^ self inform: 'Please select a session from the list.' ].
+	resolved := self liveSessionFrom: selected.
+	resolved ifNil: [ ^ self inform: 'Selected item is not a live GemStone session.' ].
+	^ aBlock value: resolved
 ]

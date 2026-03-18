@@ -1708,3 +1708,37 @@ GbsAdminToolsPresenterTest >> testAdminSessionSupportCurrentUsableSessionReturns
 	self assert: GbsAdminSessionSupport currentUsableSession isNil.
 	GbsSessionParameters currentSession: saved
 ]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testAdminSessionSupportCurrentUsableSessionReturnsNilForClosureCandidate [
+	| saved |
+	saved := GbsSessionParameters currentSession.
+	GbsSessionParameters currentSession: [ :ignored | ignored ].
+	self assert: GbsSessionParameters currentSession isNil.
+	self assert: GbsAdminSessionSupport currentUsableSession isNil.
+	GbsSessionParameters currentSession: saved
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testAdminSessionSupportCurrentUsableSessionResolvesLiveSessionFromParameters [
+	| savedCurrent params liveSession resolved |
+	savedCurrent := GbsSessionParameters currentSession.
+	[
+		GBSM reset.
+		params := GbsSessionParameters new.
+		params sessionId: 7.
+		liveSession := MockGbsSession new.
+		liveSession
+			sessionId: 7;
+			isLoggedIn: true.
+		GBSM manager privAddSession: liveSession.
+		GbsSessionParameters currentSession: params.
+
+		resolved := GbsAdminSessionSupport currentUsableSession.
+
+		self assert: resolved == liveSession.
+		self assert: GbsSessionParameters currentSession == liveSession
+	] ensure: [
+		GBSM reset.
+		GbsSessionParameters currentSession: savedCurrent ]
+]

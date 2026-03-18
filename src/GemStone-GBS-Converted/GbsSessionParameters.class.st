@@ -487,13 +487,17 @@ GbsSessionParameters class >> allParameters
 GbsSessionParameters class >> allSessions
 [
 
-	^AllSessions ifNil: [AllSessions := OrderedCollection new]
+	AllSessions ifNil: [AllSessions := OrderedCollection new].
+	AllSessions removeAllSuchThat: [ :each | self isInvalidSessionRegistryCandidate: each ].
+	^AllSessions
 ]
 
 { #category : 'accessing' }
 GbsSessionParameters class >> currentSession
 [
 
+	(self isInvalidCurrentSessionCandidate: CurrentSession)
+		ifTrue: [ CurrentSession := nil ].
 	^CurrentSession
 ]
 
@@ -502,6 +506,10 @@ GbsSessionParameters class >> currentSession: anObject
 [
 
 	| sessionParameters sessionId existing |
+	(self isInvalidCurrentSessionCandidate: anObject)
+		ifTrue: [
+			CurrentSession := nil.
+			^ nil ].
 	CurrentSession := anObject.
 	anObject ifNil: [ ^ anObject ].
 	(anObject respondsTo: #parameters) ifFalse: [ ^ anObject ].
@@ -517,6 +525,22 @@ GbsSessionParameters class >> currentSession: anObject
 	(sessionParameters respondsTo: #sessionId:) ifTrue: [ sessionParameters sessionId: sessionId ].
 	self registerSession: sessionParameters.
 	^anObject
+]
+
+{ #category : 'accessing' }
+GbsSessionParameters class >> isInvalidCurrentSessionCandidate: anObject
+[
+
+	anObject ifNil: [ ^ false ].
+	^#(BlockClosure FullBlockClosure CleanBlockClosure) includes: anObject class name
+]
+
+{ #category : 'accessing' }
+GbsSessionParameters class >> isInvalidSessionRegistryCandidate: anObject
+[
+
+	anObject ifNil: [ ^ true ].
+	^self isInvalidCurrentSessionCandidate: anObject
 ]
 
 { #category : 'accessing' }
@@ -547,7 +571,7 @@ GbsSessionParameters class >> registerSession: anObject
 [
 
 	| sessionId |
-	anObject ifNil: [ ^ nil ].
+	(self isInvalidSessionRegistryCandidate: anObject) ifTrue: [ ^ nil ].
 	self allSessions remove: anObject ifAbsent: [ ].
 	sessionId := (anObject respondsTo: #sessionId)
 		ifTrue: [ [ anObject sessionId ] on: Error do: [ nil ] ]
@@ -567,7 +591,7 @@ GbsSessionParameters class >> unregisterSession: anObject
 [
 
 	| sessionId |
-	anObject ifNil: [ ^ nil ].
+	(self isInvalidSessionRegistryCandidate: anObject) ifTrue: [ ^ nil ].
 	sessionId := (anObject respondsTo: #sessionId)
 		ifTrue: [ [ anObject sessionId ] on: Error do: [ nil ] ]
 		ifFalse: [ nil ].

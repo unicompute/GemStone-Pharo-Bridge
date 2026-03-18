@@ -24,25 +24,13 @@ Class {
 
 { #category : 'initialization' }
 GbsLauncher >> connectPresenters [
-	| workspaceClass transcriptClass |
-	workspaceClass := Smalltalk at: #GbsWorkspace ifAbsent: [ nil ].
-	transcriptClass := Smalltalk at: #GbsRemoteTranscript ifAbsent: [ nil ].
 	btnLogin action: [ self doLogin ].
 	btnLogout action: [ self doLogout ].
 	btnCommit action: [ self doCommit ].
 	btnAbort action: [ self doAbort ].
-	btnWorkspace action: [
-		workspaceClass
-			ifNil: [ self inform: 'Workspace presenter unavailable.' ]
-			ifNotNil: [ workspaceClass new open ] ].
+	btnWorkspace action: [ self openWorkspace ].
 	btnBrowser action: [ UIManager default defer: [ self openSystemBrowser ] ].
-	
-	"Wire the Transcript button to open our custom VW-ported window!"
-	btnTranscript action: [
-		transcriptClass
-			ifNil: [ self inform: 'Remote transcript unavailable.' ]
-			ifNotNil: [ transcriptClass new open ] ].
-	
+	btnTranscript action: [ self openTranscript ].
 	btnUsers action: [ UIManager default defer: [ self openUsers ] ].
 	btnPolling action: [ self togglePollingPreference ].
 ]
@@ -52,6 +40,7 @@ GbsLauncher >> openSystemBrowser [
 	| session |
 	session := GbsAdminSessionSupport currentUsableSessionOrInform.
 	session ifNil: [ ^ self ].
+	GbsSessionParameters currentSession: session.
 	[
 		GbsBrowser openOn: session
 	] on: Error do: [ :ex |
@@ -64,10 +53,43 @@ GbsLauncher >> openUsers [
 	| session |
 	session := GbsAdminSessionSupport currentUsableSessionOrInform.
 	session ifNil: [ ^ self ].
+	GbsSessionParameters currentSession: session.
 	[
 		GbsUserListPresenter openOn: session
 	] on: Error do: [ :ex |
 		self inform: 'Could not open users list: ', ex messageText
+	].
+]
+
+{ #category : 'actions' }
+GbsLauncher >> openWorkspace [
+	| session workspaceClass |
+	session := GbsAdminSessionSupport currentUsableSessionOrInform.
+	session ifNil: [ ^ self ].
+	workspaceClass := Smalltalk at: #GbsWorkspace ifAbsent: [ nil ].
+	workspaceClass ifNil: [ ^ self inform: 'Workspace presenter unavailable.' ].
+	GbsSessionParameters currentSession: session.
+	[
+		workspaceClass new open
+	] on: Error do: [ :ex |
+		self inform: 'Could not open workspace: ', ex messageText
+	].
+]
+
+{ #category : 'actions' }
+GbsLauncher >> openTranscript [
+	| session transcriptClass presenter |
+	session := GbsAdminSessionSupport currentUsableSessionOrInform.
+	session ifNil: [ ^ self ].
+	transcriptClass := Smalltalk at: #GbsRemoteTranscript ifAbsent: [ nil ].
+	transcriptClass ifNil: [ ^ self inform: 'Remote transcript unavailable.' ].
+	GbsSessionParameters currentSession: session.
+	[
+		presenter := transcriptClass new.
+		presenter open.
+		(presenter respondsTo: #startPolling) ifTrue: [ presenter startPolling ]
+	] on: Error do: [ :ex |
+		self inform: 'Could not open remote transcript: ', ex messageText
 	].
 ]
 
@@ -111,29 +133,35 @@ GbsLauncher >> doCommit [
 
 { #category : 'actions' }
 GbsLauncher >> doLogin [
-    | session |
+    | session params |
     statusLabel label: 'Status: Connecting...'.
     [
         GbsServerInterface uniqueInstance libraryPath: inputLibPath text.
-
-        session := GbsSessionParameters new
+        params := GbsSessionParameters new
             name: ('{1}@{2}' format: { inputUser text. inputStone text });
             gemStoneName: inputStone text;
             username: inputUser text;
             password: inputPass text;
-            login.
-                    
-        GbsSessionParameters currentSession: session.
-        self ensureCurrentSessionVisibleInAllSessions.
-        
-        self refreshAllLaunchers.
-        
-        self inform: 'Connected Successfully!'.
-            
+            yourself.
+        session := params login.
     ] on: Error do: [ :ex | 
         self inform: 'Connection Failed: ', ex messageText.
         self updateUIState.
+        ^ self
     ].
+
+    session ifNil: [
+        self inform: 'Connection Failed: login returned no session.'.
+        self updateUIState.
+        ^ self
+    ].
+
+    GbsSessionParameters currentSession: session.
+    [ self ensureCurrentSessionVisibleInAllSessions ] on: Error do: [ ].
+    [ self refreshAllLaunchers ] on: Error do: [ :ex |
+        self inform: 'Connected, but some windows did not refresh: ', ex messageText ].
+    self updateUIState.
+    self inform: 'Connected Successfully!'.
 ]
 
 { #category : 'actions' }
@@ -330,10 +358,13 @@ GbsLauncher >> firstConnectedSessionParameters [
 { #category : 'private' }
 GbsLauncher >> refreshAllLaunchers [
 	UIManager default defer: [
-		GbsLauncher allInstancesDo: [ :each | each updateUIState ].
+		GbsLauncher allInstancesDo: [ :each |
+			[ each updateUIState ] on: Error do: [ ] ].
 		GbsSessionBrowserPresenter allInstancesDo: [ :presenter |
-			(presenter respondsTo: #refreshAll) ifTrue: [ presenter refreshAll ] ].
-		GbsClassicLauncher allInstancesDo: [ :each | each refreshAll ] ]
+			(presenter respondsTo: #refreshAll) ifTrue: [
+				[ presenter refreshAll ] on: Error do: [ ] ] ].
+		GbsClassicLauncher allInstancesDo: [ :each |
+			[ each refreshAll ] on: Error do: [ ] ] ]
 ]
 
 { #category : 'private' }
@@ -347,6 +378,8 @@ GbsLauncher >> sessionIdFrom: anObject [
 { #category : 'private' }
 GbsLauncher >> isSessionUsableForBrowsing: aSession [
 	aSession ifNil: [ ^ false ].
+	((aSession respondsTo: #execute:) or: [ aSession respondsTo: #executeAndFetch: ])
+		ifFalse: [ ^ false ].
 	(aSession respondsTo: #isLoggedIn)
 		ifTrue: [ ^ [ aSession isLoggedIn == true ] on: Error do: [ false ] ].
 	^ true

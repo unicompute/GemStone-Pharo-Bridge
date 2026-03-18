@@ -60,3 +60,30 @@ GbsLauncherTest >> testActiveSessionParametersUsesCurrentSessionIdMatch [
 	GbsSessionParameters currentSession: current.
 	self assert: launcher activeSessionParameters == connectedParam
 ]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testAllSessionsRemovesClosureCandidate [
+	GbsSessionParameters allSessions add: [ :ignored | ignored ].
+	self assert: GbsSessionParameters allSessions isEmpty
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testAdminSessionSupportResolvesLiveSessionFromParameterRecord [
+	| params liveSession resolved |
+	[
+		GBSM reset.
+		params := GbsSessionParameters new.
+		params sessionId: 7.
+		liveSession := MockGbsSession new.
+		liveSession
+			sessionId: 7;
+			isLoggedIn: true.
+		GBSM manager privAddSession: liveSession.
+		GbsSessionParameters currentSession: params.
+
+		resolved := GbsAdminSessionSupport currentUsableSession.
+
+		self assert: resolved == liveSession.
+		self assert: GbsSessionParameters currentSession == liveSession
+	] ensure: [ GBSM reset ]
+]

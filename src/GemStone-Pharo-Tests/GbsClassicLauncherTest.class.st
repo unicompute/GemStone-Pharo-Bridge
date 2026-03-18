@@ -26,7 +26,8 @@ GbsClassicLauncherTest >> tearDown [
 { #category : 'tests' }
 GbsClassicLauncherTest >> testOpenSystemBrowserUsesSessionForBrowsing [
 	| fakeSession |
-	fakeSession := Object new.
+	fakeSession := MockGbsSession new.
+	fakeSession isLoggedIn: true.
 	launcher forcedSession: fakeSession.
 
 	self assert: launcher openSystemBrowser.
@@ -128,7 +129,8 @@ GbsClassicLauncherTest >> testClassPerformBrowseHierarchyQueryPassesSubScope [
 { #category : 'tests' }
 GbsClassicLauncherTest >> testOpenSymbolDictionaryBrowserPassesDictionaryName [
 	| fakeSession |
-	fakeSession := Object new.
+	fakeSession := MockGbsSession new.
+	fakeSession isLoggedIn: true.
 	launcher forcedSession: fakeSession.
 	launcher requestedDictionaryName: 'UserGlobals'.
 
@@ -147,4 +149,21 @@ GbsClassicLauncherTest >> testBrowsingSessionFromParametersUsesCurrentSession [
 	GbsSessionParameters currentSession: liveSession.
 
 	self assert: (launcher browsingSessionFrom: params) == liveSession
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherTest >> testBrowsingSessionFromParametersResolvesLiveSessionBySessionId [
+	| params liveSession |
+	[
+		GBSM reset.
+		params := GbsSessionParameters new.
+		params sessionId: 9.
+		liveSession := MockGbsSession new.
+		liveSession
+			sessionId: 9;
+			isLoggedIn: true.
+		GBSM manager privAddSession: liveSession.
+
+		self assert: (launcher browsingSessionFrom: params) == liveSession
+	] ensure: [ GBSM reset ]
 ]
