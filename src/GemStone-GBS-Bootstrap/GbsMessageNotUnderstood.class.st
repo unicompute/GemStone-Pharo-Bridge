@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbsMessageNotUnderstood',
 	#superclass : 'MessageNotUnderstood',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#category : 'GemStone-GBS-Bootstrap',
+	#package : 'GemStone-GBS-Bootstrap'
 }

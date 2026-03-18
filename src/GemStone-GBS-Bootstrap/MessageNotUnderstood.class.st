@@ -8,7 +8,8 @@ Class {
 	],
 	#classVars : [
 	],
-	#category : 'GemStone-GBS-Converted'
+	#category : 'GemStone-GBS-Bootstrap',
+	#package : 'GemStone-GBS-Bootstrap'
 }
 
 { #category : 'accessing' }
@@ -31,4 +32,3 @@ MessageNotUnderstood >> selector
 
 	^selector
 ]
-

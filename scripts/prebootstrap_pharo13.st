@@ -89,6 +89,10 @@
 		#(#GbsAbortingError #GbsGemStoneError 'GemStone-GBS-Converted').
 		#(#GbsInterpreterError #GbsGemStoneError 'GemStone-GBS-Converted').
 		#(#GbsFatalError #GbsGemStoneError 'GemStone-GBS-Converted').
+		#(#MessageNotUnderstood #MessageNotUnderstood 'GemStone-GBS-Converted').
+		#(#GbsMessageNotUnderstood #MessageNotUnderstood 'GemStone-GBS-Converted').
+		#(#ZeroDivide #ZeroDivide 'GemStone-GBS-Converted').
+		#(#GbsZeroDivide #ZeroDivide 'GemStone-GBS-Converted').
 		#(#GbxHashTableSegment #Object 'GemStone-GBS-Converted').
 		#(#GbxOopKeyedDictionary #Object 'GemStone-GBS-Converted').
 		#(#GbxOopKeyedNode #Object 'GemStone-GBS-Converted').

@@ -5,7 +5,8 @@ Class {
 	],
 	#classVars : [
 	],
-	#category : 'GemStone-GBS-Converted'
+	#category : 'GemStone-GBS-Bootstrap',
+	#package : 'GemStone-GBS-Bootstrap'
 }
 
 { #category : 'constants' }
@@ -15,4 +16,3 @@ GbxAbstractException class >> mayResume
 	"To signify resumability in VW"
 	^true
 ]
-
