@@ -838,6 +838,14 @@ GbsConfiguration >> initialize
 	verbose := true	"Write significant events to transcript"
 ]
 
+{ #category : 'testing' }
+GbsConfiguration >> isRunningUnderAssertingVM
+[
+	"Answer true if running under an asserting VM (VisualWorks specific)"
+
+	^false  "Not applicable in Pharo"
+]
+
 { #category : 'printing' }
 GbsConfiguration >> storeOn: aStream 
 [
