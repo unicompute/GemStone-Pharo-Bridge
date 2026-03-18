@@ -301,14 +301,8 @@ GbsSessionParameters class >> registerNewParameters
 ]
 
 { #category : 'instance creation' }
-GbsSessionParameters class >> newWithGemStoneName: aGemStoneName
+GbsSessionParameters class >> newWithGemStoneName: aGemStoneName username: aUsername password: aPassword hostUsername: aHostUsername hostPassword: aHostPassword gemService: aGemServiceName
 [
-username: aUsername
-password: aPassword
-hostUsername: aHostUsername
-hostPassword: aHostPassword
-gemService: aGemServiceName
-
 	^ self
 		newWithGemStoneName: aGemStoneName
 		username: aUsername
@@ -334,16 +328,8 @@ GbsSessionParameters class >> new
 ]
 
 { #category : 'instance creation' }
-GbsSessionParameters class >> newWithGemStoneName: aGemStoneName
+GbsSessionParameters class >> newWithGemStoneName: aGemStoneName username: aUsername password: aPassword rememberPassword: aRememberPasswordBoolean hostUsername: aHostUsername hostPassword: aHostPassword rememberHostPassword: aRememberHostPasswordBoolean gemService: aGemServiceName
 [
-username: aUsername
-password: aPassword
-rememberPassword: aRememberPasswordBoolean
-hostUsername: aHostUsername
-hostPassword: aHostPassword
-rememberHostPassword: aRememberHostPasswordBoolean
-gemService: aGemServiceName
-
 	^self
 		newWithGemStoneName: aGemStoneName
 		username: aUsername
@@ -357,17 +343,8 @@ gemService: aGemServiceName
 ]
 
 { #category : 'instance creation' }
-GbsSessionParameters class >> newWithGemStoneName: aGemStoneName
+GbsSessionParameters class >> newWithGemStoneName: aGemStoneName username: aUsername password: aPassword rememberPassword: aRememberPasswordBoolean hostUsername: aHostUsername hostPassword: aHostPassword rememberHostPassword: aRememberHostPasswordBoolean gemService: aGemServiceName addToKnownParameters: addToKnown
 [
-username: aUsername
-password: aPassword
-rememberPassword: aRememberPasswordBoolean
-hostUsername: aHostUsername
-hostPassword: aHostPassword
-rememberHostPassword: aRememberHostPasswordBoolean
-gemService: aGemServiceName
-addToKnownParameters: addToKnown
-
 	| inst |
 
 	inst := super new.
