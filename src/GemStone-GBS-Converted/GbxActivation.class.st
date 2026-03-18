@@ -576,9 +576,8 @@ GbxActivation >> printOn: aStream
 ]
 
 { #category : 'private' }
-GbxActivation class >> basicFromProcess: aProcess
+GbxActivation class >> basicFromProcess: aProcess atLevel: aStackOffset
 [
-atLevel: aStackOffset
 	" Private - Answer an instance of me on aProcess at stack frame aStackOffset. "
 
 	| act |
