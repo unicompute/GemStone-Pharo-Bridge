@@ -108,16 +108,8 @@ secondsBeginStandard: secsBeginStandard
 ]
 
 { #category : 'private' }
-GbsTimeZone >> equalsSecondsFromGMT: sfgmt
+GbsTimeZone >> equalsSecondsFromGMT: sfgmt secondsForDST: sfdst dayOfYearForDST: dydst dayOfWeekForDST: dwdst secondsBeginDST: sbdst dayOfYearForStandard: dystd dayOfWeekForStandard: dwstd secondsBeginStandard: sbstd
 [
-secondsForDST: sfdst
-dayOfYearForDST: dydst
-dayOfWeekForDST: dwdst
-secondsBeginDST: sbdst
-dayOfYearForStandard: dystd
-dayOfWeekForStandard: dwstd
-secondsBeginStandard: sbstd
-
 	^secondsFromGMT = sfgmt
 	and: [ secondsForDST = sfdst
 	and: [ dayOfYearForDST = dydst
