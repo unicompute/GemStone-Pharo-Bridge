@@ -15,7 +15,9 @@ BaselineOfGemStonePharo >> baseline: spec [
 			with: [ spec postLoadDoIt: #postloadBootstrapCompatibility ].
 		
 		spec package: 'GemStone-GBS-Converted'
-			with: [ spec requires: #('GemStone-GBS-Bootstrap') ].
+			with: [
+				spec requires: #('GemStone-GBS-Bootstrap').
+				spec preLoadDoIt: #preloadConvertedCompatibility ].
 		
 		spec package: 'GemStone-GBS-Tools' 
 			with: [
@@ -40,6 +42,15 @@ BaselineOfGemStonePharo >> baseline: spec [
 BaselineOfGemStonePharo >> postloadBootstrapCompatibility [
 	(Smalltalk at: #GbsPharoBootstrap ifAbsent: [ ^ self ])
 		installCompatibilityAliases
+]
+
+{ #category : 'baselines' }
+BaselineOfGemStonePharo >> preloadConvertedCompatibility [
+	(Smalltalk at: #GbxLateSystem ifAbsent: [ ^ self ])
+		ifNotNil: [ :existing |
+			(existing superclass isNil
+				or: [ existing superclass name ~= #Subsystem ])
+				ifTrue: [ [ existing removeFromSystem ] on: Error do: [ ] ] ]
 ]
 
 { #category : 'baselines' }
