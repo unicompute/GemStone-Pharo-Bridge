@@ -4771,26 +4771,26 @@ GbsSession >> reportFailedMethodRecompiles: failedMethods
 	 Otherwise, we can only notify that the compile error(s) occurred and let the user/developer deal with it."
 
 	failedMethods isEmpty ifTrue: [^self].
-	#{GemStone.Gbs.GbxMethodListBrowser} ifDefinedDo: 
-			[:browser |
+	(Smalltalk at: #GbxMethodListBrowser ifAbsent: [ nil ])
+		ifNotNil: [ :browser |
 			browser
 				openListBrowserOn: failedMethods
 				label: 'methods failing recompilation'
-				session: self]
-		elseDo: 
-			[| summaryReport fullReport |
+				session: self ]
+		ifNil:
+			[ | summaryReport fullReport |
 			summaryReport := String new writeStream.
-			failedMethods doWithIndex: 
-					[:methodErrorHolder :index |
+			failedMethods doWithIndex:
+					[ :methodErrorHolder :index |
 					summaryReport
 						print: index;
 						nextPutAll: ')';
 						tab;
 						nextPutAll: methodErrorHolder displayString;
-						cr].
+						cr ].
 			fullReport := String new writeStream.
-			failedMethods doWithIndex: 
-					[:methodErrorHolder :index |
+			failedMethods doWithIndex:
+					[ :methodErrorHolder :index |
 					fullReport
 						print: index;
 						nextPutAll: ')';
@@ -4799,12 +4799,12 @@ GbsSession >> reportFailedMethodRecompiles: failedMethods
 						cr;
 						nextPutAll: methodErrorHolder sourceText asString;
 						cr;
-						cr].
+						cr ].
 			self gbsMessenger
 				warn: 'Compiler error(s) occurred (details on the Transcript)\%1'
 					with: summaryReport contents;
 				comment: 'Compiler error(s) occurred:\%1'
-					with: fullReport contents]
+					with: fullReport contents ]
 ]
 
 { #category : 'private - class redefinition' }
