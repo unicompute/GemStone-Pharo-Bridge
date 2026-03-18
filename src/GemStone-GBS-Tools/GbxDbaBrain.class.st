@@ -238,8 +238,8 @@ GbxDbaBrain >> closeRequest
 
 { #category : 'window changing' }
 GbxDbaBrain >> able: anEnableBoolean
-[
 components: idList
+[
 
 	self windowInterface
 		able: anEnableBoolean
@@ -295,4 +295,3 @@ GbxDbaBrain class >> myUserIDMenuNotificationSymbols
 
 	^ #( aborted  dbaUserAdded  dbaUserDeleted )
 ]
-
