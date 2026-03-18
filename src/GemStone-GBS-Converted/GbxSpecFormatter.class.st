@@ -364,7 +364,7 @@ GbxSpecFormatter class >> simpleSpec
 		destinationPackageName: 'FictionalPackage'
 		classOverrides: (OrderedCollection new
 				add: (GbxClassOverride
-							behavior: Tools.AbstractWorkspace
+							behavior: Workspace
 							crc: 3207545579
 							edits: (OrderedCollection new
 									add: (GbxOverrideEditCopy count: 122);
@@ -374,7 +374,7 @@ GbxSpecFormatter class >> simpleSpec
 		variableOverrides: #()
 		methodOverrides: (OrderedCollection new
 				add: (GbxMethodOverride
-							behavior: Core.Bag
+							behavior: Bag
 							selector: #add:withOccurrences:
 							crc: 1268044848
 							edits: (OrderedCollection new
