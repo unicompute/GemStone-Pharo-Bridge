@@ -1501,9 +1501,11 @@ GbsSessionManager >> globalClassConnectorsList
 		(GemStone.Gbs.ServerClasses.WriteStreamLegacy					WriteStreamLegacy)
 		(GemStone.Gbs.ServerClasses.WriteStreamPortable				WriteStreamPortable)
 		(GemStone.Gbs.ServerClasses.TranscriptStreamPortable			TranscriptStreamPortable)
-		(GemStone.Gbs.Unicode7									Unicode7)
-		(GemStone.Gbs.Unicode16									Unicode16)
-		(GemStone.Gbs.Unicode32									Unicode32)
+		"In Pharo 13, Unicode7/16/32 cannot be subclassed due to special layouts.
+		 GemStone Unicode strings map to Pharo's native ByteString/WideString"
+		(GemStone.Gbs.Unicode7									ByteString)
+		(GemStone.Gbs.Unicode16									WideString)
+		(GemStone.Gbs.Unicode32									WideString)
 		)
 ]
 
