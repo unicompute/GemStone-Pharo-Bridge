@@ -488,9 +488,10 @@ GbsClassicLauncher class >> reconnectAllWindows [
 			(presenter respondsTo: #session) ifTrue: [
 				| session |
 				session := presenter session.
-				(session isNil or: [ 
-					(session respondsTo: #isConnected) and: [ [ session isConnected ] on: Error do: [ false ] ] not ]
-				]) ifTrue: [
+				(session isNil
+					or: [
+						(session respondsTo: #isConnected)
+							and: [ ([ session isConnected ] on: Error do: [ false ]) not ] ]) ifTrue: [
 					[ presenter refreshAll ] on: Error do: [ ].
 					count := count + 1
 				]
@@ -501,9 +502,10 @@ GbsClassicLauncher class >> reconnectAllWindows [
 			(workspace respondsTo: #session) ifTrue: [
 				| session |
 				session := workspace session.
-				(session isNil or: [ 
-					(session respondsTo: #isConnected) and: [ [ session isConnected ] on: Error do: [ false ] ] not ]
-				]) ifTrue: [
+				(session isNil
+					or: [
+						(session respondsTo: #isConnected)
+							and: [ ([ session isConnected ] on: Error do: [ false ]) not ] ]) ifTrue: [
 					[ workspace refreshUI ] on: Error do: [ ].
 					count := count + 1
 				]
@@ -514,9 +516,10 @@ GbsClassicLauncher class >> reconnectAllWindows [
 			(presenter respondsTo: #session) ifTrue: [
 				| session |
 				session := presenter session.
-				(session isNil or: [ 
-					(session respondsTo: #isConnected) and: [ [ session isConnected ] on: Error do: [ false ] ] not ]
-				]) ifTrue: [
+				(session isNil
+					or: [
+						(session respondsTo: #isConnected)
+							and: [ ([ session isConnected ] on: Error do: [ false ]) not ] ]) ifTrue: [
 					[ presenter refreshAll ] on: Error do: [ ].
 					count := count + 1
 				]
