@@ -26,7 +26,16 @@ Class {
 { #category : 'icons' }
 GbsClassicLauncher class >> iconNamed: aSymbol
 [
-	^ Smalltalk icons iconNamed: aSymbol
+	"Do not let menu registration fail just because an icon backend moved."
+	^ [ UIManager default iconNamed: aSymbol ]
+		on: Error
+		do: [
+			[ Smalltalk ui icons iconNamed: aSymbol ]
+				on: Error
+				do: [
+					[ Smalltalk icons iconNamed: aSymbol ]
+						on: Error
+						do: [ nil ] ] ]
 ]
 
 { #category : 'menus' }
