@@ -1014,13 +1014,27 @@ GbsConfiguration class >> isVisualAgeImage
 [
 	" Answer true if we are running a VisualAge image. "
 
-	^#VisualAge == self stType
+	^false  "Not supported in Pharo"
+]
+
+{ #category : 'testing' }
+GbsConfiguration class >> osType
+[
+	"Answer the OS type symbol: #win, #unix, #mac"
+
+	| os |
+	os := Smalltalk os.
+	(os isKindOf: UnixOS) ifTrue: [
+		^ os familyName = #MacOS ifTrue: [#mac] ifFalse: [#unix]
+	].
+	(os isKindOf: WindowsOS) ifTrue: [^#win].
+	^#unix  "default"
 ]
 
 { #category : 'testing' }
 GbsConfiguration class >> isPlatformWindows
 [
-	"GBS private. 
+	"GBS private.
 	Answer true if we are running on Windows."
 
 	^self osType == #win
@@ -1031,7 +1045,7 @@ GbsConfiguration class >> isVisualWorksImage
 [
 	" Answer true if we are running a VisualWorks image. "
 
-	^ #VisualWorks == self stType
+	^ false  "Not supported in Pharo"
 ]
 
 { #category : 'testing' }
@@ -1040,7 +1054,7 @@ GbsConfiguration class >> visualWorks: vwBlock visualAge: vaBlock
 
 	self isVisualWorksImage ifTrue: [^vwBlock value].
 	self isVisualAgeImage ifTrue: [^vaBlock value].
-	self error: 'System is neither VisualWorks nor VisualAge'
+	^vwBlock value  "Default to VisualWorks block in Pharo"
 ]
 
 { #category : 'utilities' }
