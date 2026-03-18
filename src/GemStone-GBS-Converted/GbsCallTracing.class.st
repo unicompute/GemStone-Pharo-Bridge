@@ -110,11 +110,8 @@ GbsCallTracing class >> traceToFilename: aString during: aBlock
 ]
 
 { #category : 'logging to file' }
-GbsCallTracing class >> traceFor: aBlock
+GbsCallTracing class >> traceFor: aBlock withTiming: doTiming startMessage: string1 endMessage: string2
 [
-withTiming: doTiming
-startMessage: string1
-endMessage: string2
 	"Enable GBS & GCI tracing during the execution of aBlock (a zero-argument block).
 	 Wrap the trace output with banner strings before and after.  Invocations of can be nested;
 	 the banners will keep track of the nesting and enabling of logging will be controlled properly.
@@ -136,7 +133,7 @@ endMessage: string2
 			TraceNestingLevel := 0.
 			self logMessage: 'Exception occurred while tracing.'.
 			self logMessage: (ex messageText).
-			ex pass. 
+			ex pass.
 		].
 	TraceNestingLevel = 0	"Exception occurred in block evaluation."
 		ifFalse: [ TraceNestingLevel := TraceNestingLevel - 1.
