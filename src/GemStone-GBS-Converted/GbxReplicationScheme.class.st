@@ -151,9 +151,9 @@ GbxReplicationScheme >> validateClampByCallbackSelector: clampByCallbackSelector
 	 everywhere on the server that it is needed and that it correctly provides the
 	 appropriate instVarLevels results when called."
 
-	((SpecialGemStoneObjects.OObject asGSObjectInSession: aSession)
+	((SpecialGemStoneObjects at: 'OObject') asGSObjectInSession: aSession)
 		unsynchronizedPerformOnGsServer: #canUnderstand:
-		withArgs: (Array with: clampByCallbackSelector)) ifTrue: [^self].
+		withArgs: (Array with: clampByCallbackSelector) ifTrue: [^self].
 	self gbsMessenger
 		raise: Error
 		message: 'The configuration option #clampByCallback for the replication scheme "%2" requires the default server method Object>>#%1 to exist.'

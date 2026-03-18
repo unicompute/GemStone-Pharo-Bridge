@@ -87,16 +87,8 @@ GbsTimeZone >> localToUniversal: localTimestamp
 ]
 
 { #category : 'initialization' }
-GbsTimeZone >> secondsFromGMT: secsFromGMT
+GbsTimeZone >> secondsFromGMT: secsFromGMT secondsForDST: secsForDST dayOfYearForDST: doyForDST dayOfWeekForDST: dowForDST secondsBeginDST: secsBeginDST dayOfYearForStandard: doyForStandard dayOfWeekForStandard: dowForStandard secondsBeginStandard: secsBeginStandard
 [
-secondsForDST: secsForDST
-dayOfYearForDST: doyForDST
-dayOfWeekForDST: dowForDST
-secondsBeginDST: secsBeginDST
-dayOfYearForStandard: doyForStandard
-dayOfWeekForStandard: dowForStandard
-secondsBeginStandard: secsBeginStandard
-
 	secondsFromGMT := secsFromGMT.  "Number of seconds the time zone is offset from GMT"
 	secondsForDST := secsForDST.  "Number of seconds to shift for daylight savings time"
 	dayOfYearForDST := doyForDST.  "Day of year index to start daylight savings"
