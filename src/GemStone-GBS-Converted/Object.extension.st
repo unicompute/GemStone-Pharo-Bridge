@@ -16,6 +16,24 @@ Object >> gbsMessenger [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> changeRequest: anAspect [
+	| dependents |
+	dependents := (self respondsTo: #myDependents)
+		ifTrue: [ self myDependents ]
+		ifFalse: [
+			(self respondsTo: #dependents)
+				ifTrue: [ self dependents ]
+				ifFalse: [ nil ] ].
+	dependents ifNil: [ ^ true ].
+	dependents do: [ :each |
+		(each respondsTo: #updateRequest:)
+			ifTrue: [
+				([ each updateRequest: anAspect ] on: Error do: [ true ])
+					ifFalse: [ ^ false ] ] ].
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> gbxResolve: varNameSymbol [
 	^ self class gbxResolve: varNameSymbol
 ]

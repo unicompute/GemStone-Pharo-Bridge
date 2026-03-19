@@ -1184,7 +1184,11 @@ GbxServerInterface class >> forSession: sess
 [
 	"Return a new initialized instance for the given session"
 
-	^self forSession: sess configuration: sess configuration
+	| config |
+	config := sess
+		ifNil: [ GbsConfiguration current copy ]
+		ifNotNil: [ sess configuration ifNil: [ GbsConfiguration current copy ] ].
+	^self forSession: sess configuration: config
 ]
 
 { #category : 'instance creation' }
