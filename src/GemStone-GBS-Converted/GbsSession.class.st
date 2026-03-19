@@ -1855,7 +1855,7 @@ GbsSession >> mapCrucialClasses
 	We need some classes mapped before we can query the server about metaclasses."
 	"We also need a null replicator for our delegate class"
 
-	| unmappableClientClasses mappableClientClasses |
+	| unmappableClientClasses mappableClientClasses allConnectors |
 	replicatorManager initializeFundamentalReplicators.
 	unmappableClientClasses := OrderedCollection new: 10.
 	unmappableClientClasses
@@ -1882,12 +1882,16 @@ GbsSession >> mapCrucialClasses
 		add: ByteString;
 		add: ByteSymbol;
 		add: Array.
+	allConnectors := gbsm connectorList copy.
+	allConnectors addAll: parameters connectorList.
 	mappableClientClasses do: 
 			[:clientClass |
-			(gbsm connectorList detect: 
+			(allConnectors
+				detect:
 					[:conn |
-					conn isFastConnectorTypeNone and: [conn resolveClientObj = clientClass]])
-				simpleConnectInSession: self]
+					conn isFastConnectorTypeNone and: [conn resolveClientObj = clientClass]]
+				ifNone: [nil])
+				ifNotNil: [:conn | conn simpleConnectInSession: self]]
 ]
 
 { #category : 'private - connectors at login' }
