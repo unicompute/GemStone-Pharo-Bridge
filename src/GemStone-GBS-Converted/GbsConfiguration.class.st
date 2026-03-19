@@ -679,6 +679,37 @@ GbsConfiguration >> libraryName
 ]
 
 { #category : 'accessing' }
+GbsConfiguration >> setDefaultLibraryName
+[
+	"Choose a sensible library default for headless Pharo images."
+
+	| candidates found |
+	candidates := OrderedCollection new.
+	(self class osType == #mac)
+		ifTrue: [
+			candidates
+				add: ([ GbsLibrary macLibraryName ] on: Error do: [ nil ]);
+				add: '/opt/gemstone/product/lib/libgcirpc-3.7.4.3-64.dylib';
+				add: '/opt/gemstone/product/lib/libgcilnk-3.7.4.3-64.dylib';
+				add: '/Users/tariq/GemStone64Bit3.7.4.3-arm64.Darwin/lib/libgcirpc-3.7.4.3-64.dylib';
+				add: '/Users/tariq/GemStone64Bit3.7.4.3-arm64.Darwin/lib/libgcilnk-3.7.4.3-64.dylib' ].
+	(self class osType == #unix)
+		ifTrue: [
+			candidates
+				add: '/opt/gemstone/product/lib/libgcirpc.so';
+				add: '/opt/gemstone/product/lib/libgcilnk.so';
+				add: '/opt/gemstone/product/lib/libgcirpc-3.7.4.3-64.so';
+				add: '/opt/gemstone/product/lib/libgcilnk-3.7.4.3-64.so' ].
+	found := candidates
+		detect: [ :each |
+			each notNil
+				and: [ each ~= ''
+				and: [ [ each asFileReference exists ] on: Error do: [ false ] ] ] ]
+		ifNone: [ nil ].
+	found ifNotNil: [ libraryName := found ]
+]
+
+{ #category : 'accessing' }
 GbsConfiguration >> serverMapLeafCapacity
 [
 	^serverMapLeafCapacity
@@ -926,8 +957,29 @@ GbsConfiguration class >> sharedLibraryExtension
 	| osType |
 	osType := self osType.
 	osType = #win ifTrue: [^'dll'].
+	osType = #mac ifTrue: [^'dylib'].
 	osType = #unix ifTrue: [^'so'].
 	^osType	"Unknown"
+]
+
+{ #category : 'accessing' }
+GbsConfiguration class >> doesUserWantToRetryAfterFailingToLoad: aLibraryName
+[
+	"Headless Pharo default: do not prompt."
+
+	^false
+]
+
+{ #category : 'accessing' }
+GbsConfiguration class >> promptForNewLibraryName
+[
+	^self current libraryName
+]
+
+{ #category : 'accessing' }
+GbsConfiguration class >> promptForNewLibraryNameInDirectory: dirOrNil
+[
+	^self promptForNewLibraryName
 ]
 
 { #category : 'accessing' }
