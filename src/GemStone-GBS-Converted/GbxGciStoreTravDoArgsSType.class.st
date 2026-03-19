@@ -21,19 +21,43 @@ GbxGciStoreTravDoArgsSType >> initialize
 { #category : 'accessing' }
 GbxGciStoreTravDoArgsSType >> alteredNumOops
 [
-	^data memberAt: #alteredNumOops
+	^self uint32At: 9
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> alteredNumOops: anInteger
+[
+	self uint32At: 9 put: anInteger
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> alteredCompleted
+[
+	^self boolAt: 13
 ]
 
 { #category : 'accessing' }
 GbxGciStoreTravDoArgsSType >> storeTravFlags
 [
-	^data memberAt: #storeTravFlags
+	^self uint32At: 89
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> storeTravFlags: aLong
+[
+	self uint32At: 89 put: aLong
 ]
 
 { #category : 'accessing' }
 GbxGciStoreTravDoArgsSType >> alteredTheOops
 [
-	^data memberAt: #alteredTheOops
+	^self oopAt: 81
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> alteredTheOops: aPointer
+[
+	self oopAt: 81 put: aPointer
 ]
 
 { #category : 'accessing' }
@@ -45,13 +69,139 @@ GbxGciStoreTravDoArgsSType >> alteredSymbolBuf
 { #category : 'accessing' }
 GbxGciStoreTravDoArgsSType >> storeTravBuff
 [
-	^data memberAt: #storeTravBuff
+	^self oopAt: 73
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> storeTravBuff: aPointer
+[
+	self oopAt: 73 put: aPointer
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> doFlags
+[
+	^self uint32At: 5
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> doFlags: aLong
+[
+	self uint32At: 5 put: aLong
 ]
 
 { #category : 'accessing' }
 GbxGciStoreTravDoArgsSType >> alteredNumPairs
 [
 	^self subclassResponsibility
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> args
+[
+	^self oopAt: 57
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> args: aPointer
+[
+	self oopAt: 57 put: aPointer
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> contextObject
+[
+	^self oopAt: 17
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> contextObject: anOop
+[
+	self oopAt: 17 put: anOop
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> numArgs
+[
+	^self uint32At: 65
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> numArgs: anInteger
+[
+	self uint32At: 65 put: anInteger
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> receiver
+[
+	^self oopAt: 17
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> receiver: anOop
+[
+	self oopAt: 17 put: anOop
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> selector
+[
+	^self oopAt: 49
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> selector: aPointer
+[
+	self oopAt: 49 put: aPointer
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> source
+[
+	^self oopAt: 49
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> source: aPointer
+[
+	self oopAt: 49 put: aPointer
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> sourceClass
+[
+	^self oopAt: 25
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> sourceClass: anOop
+[
+	self oopAt: 25 put: anOop
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> sourceSize
+[
+	^self uint64At: 41
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> sourceSize: aSize
+[
+	self uint64At: 41 put: aSize
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> symbolList
+[
+	^self oopAt: 33
+]
+
+{ #category : 'accessing' }
+GbxGciStoreTravDoArgsSType >> symbolList: anOop
+[
+	self oopAt: 33 put: anOop
 ]
 
 { #category : 'printing' }
@@ -143,4 +293,3 @@ GbxGciStoreTravDoArgsSType >> printEArgsOn: aStream indent: indent
 	self symbolList printOn: aStream.
 	aStream crtab: indent
 ]
-

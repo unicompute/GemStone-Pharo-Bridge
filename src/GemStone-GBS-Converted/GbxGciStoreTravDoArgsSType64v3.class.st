@@ -13,7 +13,7 @@ GbxGciStoreTravDoArgsSType64v3 >> pEnvironmentId: anInteger
 [
 	"The environment ID in which to perform the execution. 0 for normal Smalltalk execution."
 
-	self pArgsRef memberAt: #environmentId put: anInteger
+	self uint16At: 69 put: anInteger
 ]
 
 { #category : 'accessing' }
@@ -21,7 +21,7 @@ GbxGciStoreTravDoArgsSType64v3 >> eEnvironmentId: anInteger
 [
 	"The environment ID in which to perform the execution. 0 for normal Smalltalk execution."
 
-	self eArgsRef memberAt: #environmentId put: anInteger
+	self uint16At: 69 put: anInteger
 ]
 
 { #category : 'accessing' }
@@ -29,7 +29,7 @@ GbxGciStoreTravDoArgsSType64v3 >> pEnvironmentId
 [
 	"The environment ID in which to perform the execution. 0 for normal Smalltalk execution."
 
-	^self pArgsRef memberAt: #environmentId
+	^self uint16At: 69
 ]
 
 { #category : 'accessing' }
@@ -37,7 +37,7 @@ GbxGciStoreTravDoArgsSType64v3 >> eEnvironmentId
 [
 	"The environment ID in which to perform the execution. 0 for normal Smalltalk execution."
 
-	^self eArgsRef memberAt: #environmentId
+	^self uint16At: 69
 ]
 
 { #category : 'initialize-release' }
@@ -54,4 +54,3 @@ GbxGciStoreTravDoArgsSType64v3 >> initialize
 		eEnvironmentId: 0.
 	^self
 ]
-

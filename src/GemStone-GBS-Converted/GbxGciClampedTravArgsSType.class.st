@@ -36,83 +36,81 @@ GbxGciClampedTravArgsSType >> printOn: aStream indent: indent
 { #category : 'accessing' }
 GbxGciClampedTravArgsSType >> clampSpec
 [
-	^data memberAt: #clampSpec
+	^self oopAt: 1
 ]
 
 { #category : 'accessing' }
 GbxGciClampedTravArgsSType >> clampSpec: aSpec
 [
-	data memberAt: #clampSpec put: aSpec
+	self oopAt: 1 put: aSpec
 ]
 
 { #category : 'accessing' }
 GbxGciClampedTravArgsSType >> isRpc
 [
-	^data memberAt: #isRpc
+	^self boolAt: 33
 ]
 
 { #category : 'accessing' }
 GbxGciClampedTravArgsSType >> level
 [
-	^data memberAt: #level
+	^self uint32At: 25
 ]
 
 { #category : 'accessing' }
 GbxGciClampedTravArgsSType >> level: aSpec
 [
-	data memberAt: #level put: aSpec
+	self uint32At: 25 put: aSpec
 ]
 
 { #category : 'accessing' }
 GbxGciClampedTravArgsSType >> objRepHdrSize
 [
-	^data memberAt: #objRepHdrSize
+	"GS64 does not carry objRepHdrSize in this struct."
+
+	^0
 ]
 
 { #category : 'accessing' }
 GbxGciClampedTravArgsSType >> resultOop
 [
-	^data memberAt: #resultOop
+	^self oopAt: 9
 ]
 
 { #category : 'accessing' }
 GbxGciClampedTravArgsSType >> retrievalFlags
 [
-	^data memberAt: #retrievalFlags
+	^self uint32At: 29
 ]
 
 { #category : 'accessing' }
 GbxGciClampedTravArgsSType >> retrievalFlags: aSpec
 [
-	data memberAt: #retrievalFlags put: aSpec
+	self uint32At: 29 put: aSpec
 ]
 
 { #category : 'accessing' }
 GbxGciClampedTravArgsSType >> travBuff
 [
-	^data memberAt: #travBuff
+	^self oopAt: 17
 ]
 
 { #category : 'accessing' }
 GbxGciClampedTravArgsSType >> travBuff: aSpec
 [
-	data memberAt: #travBuff put: aSpec
+	self oopAt: 17 put: aSpec
 ]
 
 { #category : 'accessing' }
 GbxGciClampedTravArgsSType >> travBuffSize
 [
-	"On a 64-bit oop library, this will fail."
+	"GS64 does not carry travBuffSize in this struct."
 
-	^data memberAt: #travBuffSize
+	^0
 ]
 
 { #category : 'accessing' }
 GbxGciClampedTravArgsSType >> travBuffSize: aSpec
 [
-	"On a 64-bit oop library, this will do nothing."
-
-	[data memberAt: #travBuffSize put: aSpec]
-		on: Error
-		do: [:ex | ex return]
+	"GS64 does not carry travBuffSize in this struct."
 ]
