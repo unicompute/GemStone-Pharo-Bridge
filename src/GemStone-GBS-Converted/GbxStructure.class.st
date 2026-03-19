@@ -94,7 +94,15 @@ GbxStructure >> boolAt: byteOffset put: aBoolean
 { #category : 'private' }
 GbxStructure >> cStringAt: byteOffset
 [
-	^(data + byteOffset - 1) readString
+	| bytes index byte limit |
+	limit := self class fixedSize.
+	bytes := ByteArray streamContents: [:stream |
+		index := byteOffset.
+		[index <= limit and: [(byte := data unsignedByteAt: index) ~= 0]]
+			whileTrue:
+				[stream nextPut: byte.
+				index := index + 1]].
+	^[bytes utf8Decoded] on: Error do: [bytes asString]
 ]
 
 { #category : 'accessing' }
