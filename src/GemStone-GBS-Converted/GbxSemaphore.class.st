@@ -87,6 +87,18 @@ GbxSemaphore >> critical: mutuallyExcludedBlock unlessBlocked: altBlock
 	^result
 ]
 
+{ #category : 'process termination handling' }
+GbxSemaphore >> handleProcessTerminationOfWaitingContext: suspendedContext
+[
+
+	| homeMethod |
+	homeMethod := suspendedContext homeMethod.
+	(homeMethod == (GbxSemaphore compiledMethodAt: #waitIfCurtailedSignal)
+		or: [homeMethod == (GbxSemaphore compiledMethodAt: #waitifCurtailedSignal)])
+		ifTrue: [^suspendedContext home].
+	^super handleProcessTerminationOfWaitingContext: suspendedContext
+]
+
 { #category : 'private GBS' }
 GbxSemaphore >> isActiveProcessInCriticalRegion
 [
@@ -116,6 +128,21 @@ GbxSemaphore >> critical: mutuallyExcludedBlock
 			self signal]
 ]
 
+{ #category : 'private GBS' }
+GbxSemaphore >> waitIfCurtailedSignal
+[
+
+	[self wait]
+		ifCurtailed: [self signal]
+]
+
+{ #category : 'private GBS' }
+GbxSemaphore >> waitifCurtailedSignal
+[
+
+	^self waitIfCurtailedSignal
+]
+
 { #category : 'printing' }
 GbxSemaphore >> printOn: aStream
 [
@@ -143,4 +170,3 @@ GbxSemaphore >> semaphoreSummaryOn: aStream
 		nextPutAll: ' Waiting Processes, Locking Process: ';
 		print: lockingProcess.
 ]
-
