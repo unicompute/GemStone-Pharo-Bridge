@@ -117,6 +117,13 @@ Object >> gbxDelegate [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxBasicClass [
+	"Private. Use this instead of #class when proxies may be involved."
+
+	^ self class
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> gbxFixMe [
 	"A send of gbxFixMe indicates code that still needs work."
 ]
