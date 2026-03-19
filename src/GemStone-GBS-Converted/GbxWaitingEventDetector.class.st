@@ -18,19 +18,19 @@ GbxWaitingEventDetector >> newRunningProcess
 	eventWaitBlock :=
 			[runningProtect critical:
 					[[
-					[self pollForCurrentSignals.
+					[[self pollForCurrentSignals.
 					signalSocket readWaitWithTimeoutMs: self readWaitTimeout]
-							on: GbsWSAEventSelect
-							do:
-								[:ex |
-								"Ignore stale socket notifications during teardown."
-								]
-							on: Error
-							do:
-								[:ex |
-								session eventDetectorErrorHandler isNil
-									ifTrue: [ex pass]
-									ifFalse: [session eventDetectorErrorHandler value: ex]]]
+						on: GbsWSAEventSelect
+						do:
+							[:ex |
+							"Ignore stale socket notifications during teardown."
+							]]
+						on: Error
+						do:
+							[:ex |
+							session eventDetectorErrorHandler isNil
+								ifTrue: [ex pass]
+								ifFalse: [session eventDetectorErrorHandler value: ex]]]
 							repeat]].
 	process := eventWaitBlock
 				gbxNewProcessNamed: 'GBS EventDetector for ' , session printString.

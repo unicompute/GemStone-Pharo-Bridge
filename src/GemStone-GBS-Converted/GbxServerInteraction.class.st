@@ -681,7 +681,7 @@ GbxServerInteraction class >> interface: aServerInterface
 [
 
 	| newInstance session |
-	newInstance := self new.
+	newInstance := self basicNew.
 	session := aServerInterface session.
 	newInstance
 		serverInterface: aServerInterface;
@@ -690,4 +690,3 @@ GbxServerInteraction class >> interface: aServerInterface
 		initialize.
 	^newInstance
 ]
-
