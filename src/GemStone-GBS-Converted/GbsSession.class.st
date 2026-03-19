@@ -3179,7 +3179,11 @@ GbsSession >> cacheAtST: anObj
 	answer the delegate associated with this session.
 	If no such delegate, answer nil."
 
-	^anObj gbxDelegate forSession: self
+	| delegates |
+	delegates := anObj gbxDelegate.
+	^delegates
+		ifNil: [ nil ]
+		ifNotNil: [ delegates forSession: self ]
 ]
 
 { #category : 'private - cache management' }
