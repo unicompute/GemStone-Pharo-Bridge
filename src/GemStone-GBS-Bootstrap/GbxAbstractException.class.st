@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxAbstractException',
-	#superclass : 'Object',
+	#superclass : 'Exception',
 	#instVars : [
 	],
 	#classVars : [
