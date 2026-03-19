@@ -23,14 +23,14 @@ GbxSemaphore >> critical: mutuallyExcludedBlock waitingUpTo: milliseconds ifTime
 	are balanced, even in the face of process termination at odd moments."
 
 	| acquired triedAtLeastOnce timeoutMs activeProcess oldPriority result |
-	timeoutMs := Timestamp now asMilliseconds + milliseconds.
+	timeoutMs := Time millisecondClockValue + milliseconds.
 	activeProcess := Processor activeProcess.
 	oldPriority := activeProcess priority.
 	acquired := false.
 	triedAtLeastOnce := false.	"Short timeouts might fail the first time, so try at least once."
 	
 	[triedAtLeastOnce
-		and: [acquired or: [Timestamp now asMilliseconds > timeoutMs]]]
+		and: [acquired or: [Time millisecondClockValue > timeoutMs]]]
 			whileFalse: 
 				[triedAtLeastOnce := true.
 				activeProcess priority: Processor highestPriority.

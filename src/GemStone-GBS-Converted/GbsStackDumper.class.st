@@ -796,11 +796,10 @@ GbsStackDumper class >> timestampForFilename
 	Avoid use of $:, which cannot be used in Windows filenames."
 
 	| timestamp |
-	timestamp := (Locale current printAsTime: Timestamp now
+	timestamp := (Locale current printAsTime: DateAndTime now
 				policyNamed: #iso8601Enhanced) asString.
 	timestamp
 		replaceAll: $T with: $-;
 		replaceAll: $: with: $..
 	^timestamp
 ]
-

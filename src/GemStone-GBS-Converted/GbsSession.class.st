@@ -792,8 +792,8 @@ GbsSession >> sessionCritical: criticalBlock unlessBlocked: blockedBlock retryFo
 
 	| blocked startTime result |
 	blocked := true.
-	startTime := Timestamp now asMilliseconds.
-	[Timestamp now asMilliseconds <= (startTime + milliseconds) and: [blocked]]
+	startTime := Time millisecondClockValue.
+	[Time millisecondClockValue <= (startTime + milliseconds) and: [blocked]]
 		whileTrue: 
 			[ blocked := false. 
 			result := self sessionCritical: criticalBlock unlessBlocked: [blocked := true].
@@ -2144,9 +2144,9 @@ GbsSession >> critical: criticalBlock unlessBlocked: blockedBlock onError: error
 	the symbol #blocked, this method will fail."
 
 	| endTime answer |
-	endTime := Timestamp now asMilliseconds + milliseconds.
+	endTime := Time millisecondClockValue + milliseconds.
 	answer := #blocked.
-	[answer == #blocked and: [Timestamp now asMilliseconds < endTime]] whileTrue: 
+	[answer == #blocked and: [Time millisecondClockValue < endTime]] whileTrue: 
 			[
 			[answer := self critical: criticalBlock unlessBlocked: [#blocked].
 			(Delay forMilliseconds: 10) wait]
@@ -2750,7 +2750,7 @@ GbsSession >> postLogin
 	Sender must hold my sessionProtect."
 
 	self isLoggedIn ifFalse: [^self].
-	loginTimestamp := Timestamp now.
+	loginTimestamp := DateAndTime now.
 	self initializeIsRemote.
 	self initializeLoggedInSessionDisplayString.
 	"int converter can't be initialized until GCI lib loaded, but must be before connectors connect."
@@ -2809,7 +2809,7 @@ GbsSession >> postLogout
 			sessionId := 0.
 			[replicatorManager == nil] gbxAssert.
 			serverInterface := nil.
-			logoutTimestamp := Timestamp now.
+			logoutTimestamp := DateAndTime now.
 			configuration connectorNilling ifTrue: [parameters nilAllConnectors].
 			self initializeLoggedOutSessionDisplayString]
 ]

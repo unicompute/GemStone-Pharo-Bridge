@@ -218,7 +218,7 @@ GbxStatArchiver >> writeHeader
 	"System start time - epoch time in milliseconds when the system got started"
 	self writeLong: currentEpochMs.	"Don't know how to get image startup time"
 	"Time Zone Offset in milliseconds from GMT (positive or negative)"
-	self writeInt: (TimeZone default secondsFromGMTAtLocal: Timestamp now) * 1000.
+	self writeInt: (TimeZone default secondsFromGMTAtLocal: DateAndTime now) * 1000.
 	"Time Zone Id - name of the timezone"
 	self writeString: GbsTimeZone current printString.
 	"System Directory Path - for this, try to supply the image's current directory"
@@ -448,9 +448,7 @@ GbxStatArchiver class >> initialize
 
 	"constants"
 	MaxShortVal := 65535.
-	JavaEpochStart := (Timestamp 
-				readFromDateAndTime: '1/1/1970 00:00' readStream) asSeconds 
-				* 1000.
+	JavaEpochStart := (DateAndTime year: 1970 month: 1 day: 1) asSeconds * 1000.
 	Max1ByteCompactValue := 127.
 	Min1ByteCompactValue := -121.
 	Max2ByteCompactValue := 32767.
