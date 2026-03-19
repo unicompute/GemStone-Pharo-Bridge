@@ -262,7 +262,7 @@ GbsError >> gsReturnVal
 
 	| result |
 	result := gsResult.
-	gsResult := OIllegal asGSObjectInSession: self session.
+	gsResult := GbxKernelPomOop oopIllegal asGSObjectInSession: self session.
 	^result == nil ifTrue: [gsResult] ifFalse: [result]
 ]
 

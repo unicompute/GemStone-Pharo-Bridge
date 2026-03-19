@@ -423,3 +423,27 @@ GbxKernelPomOop class >> oopNumber: anInteger
 [
 	^self new oopNumber: anInteger
 ]
+
+{ #category : 'accessing' }
+GbxKernelPomOop class >> oopIllegal
+[
+	^OIllegal
+]
+
+{ #category : 'accessing' }
+GbxKernelPomOop class >> oopInteger
+[
+	^OInteger
+]
+
+{ #category : 'accessing' }
+GbxKernelPomOop class >> oopObject
+[
+	^OObject
+]
+
+{ #category : 'accessing' }
+GbxKernelPomOop class >> oopSystem
+[
+	^OSystem
+]

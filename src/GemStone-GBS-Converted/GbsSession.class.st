@@ -206,7 +206,7 @@ GbsSession >> evaluate: aString symbolList: aSymbolList
 
 	^self 
 		evaluate: aString
-		context: OIllegal
+		context: self oopIllegal
 		symbolList: aSymbolList
 ]
 
@@ -219,7 +219,7 @@ GbsSession >> evaluate: aString toLevel: level
 	^self 
 		evaluate: aString
 		toLevel: level
-		context: (OIllegal asGSObjectInSession: self)
+		context: self oopIllegal
 ]
 
 { #category : 'remote execution' }
@@ -231,7 +231,7 @@ GbsSession >> fwevaluate: aString symbolList: aSymbolList
 
 	^self 
 		fwevaluate: aString
-		context: OIllegal
+		context: self oopIllegal
 		symbolList: aSymbolList
 ]
 
@@ -327,7 +327,7 @@ GbsSession >> execute: aString symbolList: aGSObjectSymbolList
 [
 	^self 
 		execute: aString
-		context: OIllegal
+		context: self oopIllegal
 		symbolList: aGSObjectSymbolList
 ]
 
@@ -352,7 +352,7 @@ GbsSession >> fwevaluate: aString
 	"Execute aString, GemStone Smalltalk code, on the server,
 	 and answer the result as a forwarder."
 
-	^self fwevaluate: aString context: OIllegal
+	^self fwevaluate: aString context: self oopIllegal
 ]
 
 { #category : 'remote execution' }
@@ -409,7 +409,7 @@ GbsSession >> evaluate: aString
 	"Execute aString, GemStone Smalltalk code, on the server,
 	 and answer the result as a replicate."
 
-	^self evaluate: aString context: (OIllegal asGSObjectInSession: self)
+	^self evaluate: aString context: self oopIllegal
 ]
 
 { #category : 'class translation' }
@@ -6488,7 +6488,9 @@ GbsSession >> useDiagnosticSpecialConverter
 	"The diagnostic special converter can only be used under specific conditions.
 	 Otherwise, we'll just use the regular special converted."
 
-	^false
+	^GbsConfiguration current useDiagnosticSpecialConverter
+		and: [GbsConfiguration is64BitClient
+		and: [Smalltalk isBigEndian not]]
 ]
 
 { #category : 'initialize-release' }

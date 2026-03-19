@@ -270,7 +270,7 @@ GbsSessionParameters >> login
 	session := GBSM loginCritical: 
 			[GBSM isLinkedLoginAvailable 
 				ifTrue: [self loginLnk]
-				ifFalse: [self loginRpc]]
+				ifFalse: [self loginRpc]].
 	session ifNotNil: [
 		self sessionId: ([session sessionId] on: Error do: [nil]).
 		self class registerSession: self].

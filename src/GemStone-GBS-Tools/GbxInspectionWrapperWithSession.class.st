@@ -214,7 +214,7 @@ GbxInspectionWrapperWithSession >> objectIsClass
 	
 	objectIsClass isNil
 		ifTrue:
-			[objectIsClass := self delegate == OIllegal
+			[objectIsClass := self delegate == self session oopIllegal
 				ifTrue: [false]
 				ifFalse:
 					[[self session
@@ -704,4 +704,3 @@ GbxInspectionWrapperWithSession class >> constructEventsTriggered
 		add: #objectChanged;
 		yourself
 ]
-

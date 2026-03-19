@@ -15,7 +15,7 @@ GbsGemStoneError >> defaultResumeValue
 	"Answer the default value to resume server execution with.
 		The default is to leave the server argument stack alone."
 
-	^OIllegal
+	^GbxKernelPomOop oopIllegal
 ]
 
 { #category : 'accessing' }
@@ -57,4 +57,3 @@ GbsGemStoneError class >> gemStoneErrorNumber6430
 	
 	^nil
 ]
-

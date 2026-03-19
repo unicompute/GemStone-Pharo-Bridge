@@ -12,6 +12,8 @@ Class {
 		'secondsBeginStandard'
 	],
 	#classVars : [
+		'CurrentTimeZone',
+		'NamedTimeZones'
 	],
 	#category : 'GemStone-GBS-Converted'
 }
@@ -408,4 +410,3 @@ GbsTimeZone class >> basicCurrent
 
 	^CurrentTimeZone
 ]
-

@@ -24,7 +24,7 @@ GbxGciClampedTravArgsSType >> printOn: aStream indent: indent
 	[travBuffSize := self travBuffSize.
 	aStream nextPutAll: 'travBuffSize = ' , travBuffSize printString.
 	aStream crtab: indent] 
-			on: MemberNotFoundError
+			on: Error
 			do: [:ex | ex return].
 	aStream nextPutAll: 'level = ' , self level printString.
 	aStream crtab: indent.
@@ -33,3 +33,86 @@ GbxGciClampedTravArgsSType >> printOn: aStream indent: indent
 	aStream nextPutAll: 'resultOop = ' , self resultOop printString
 ]
 
+{ #category : 'accessing' }
+GbxGciClampedTravArgsSType >> clampSpec
+[
+	^data memberAt: #clampSpec
+]
+
+{ #category : 'accessing' }
+GbxGciClampedTravArgsSType >> clampSpec: aSpec
+[
+	data memberAt: #clampSpec put: aSpec
+]
+
+{ #category : 'accessing' }
+GbxGciClampedTravArgsSType >> isRpc
+[
+	^data memberAt: #isRpc
+]
+
+{ #category : 'accessing' }
+GbxGciClampedTravArgsSType >> level
+[
+	^data memberAt: #level
+]
+
+{ #category : 'accessing' }
+GbxGciClampedTravArgsSType >> level: aSpec
+[
+	data memberAt: #level put: aSpec
+]
+
+{ #category : 'accessing' }
+GbxGciClampedTravArgsSType >> objRepHdrSize
+[
+	^data memberAt: #objRepHdrSize
+]
+
+{ #category : 'accessing' }
+GbxGciClampedTravArgsSType >> resultOop
+[
+	^data memberAt: #resultOop
+]
+
+{ #category : 'accessing' }
+GbxGciClampedTravArgsSType >> retrievalFlags
+[
+	^data memberAt: #retrievalFlags
+]
+
+{ #category : 'accessing' }
+GbxGciClampedTravArgsSType >> retrievalFlags: aSpec
+[
+	data memberAt: #retrievalFlags put: aSpec
+]
+
+{ #category : 'accessing' }
+GbxGciClampedTravArgsSType >> travBuff
+[
+	^data memberAt: #travBuff
+]
+
+{ #category : 'accessing' }
+GbxGciClampedTravArgsSType >> travBuff: aSpec
+[
+	data memberAt: #travBuff put: aSpec
+]
+
+{ #category : 'accessing' }
+GbxGciClampedTravArgsSType >> travBuffSize
+[
+	"On a 64-bit oop library, this will fail."
+
+	^data memberAt: #travBuffSize
+]
+
+{ #category : 'accessing' }
+GbxGciClampedTravArgsSType >> travBuffSize: aSpec
+[
+	"On a 64-bit oop library, this will do nothing."
+
+	[data memberAt: #travBuffSize put: aSpec]
+		on: Error
+		do: [:ex | ex return]
+]

@@ -260,7 +260,7 @@ GbxGciSingleTripInterface >> addToNoLongerReplicated: aDelegate
 
 	[aDelegate isGSObject] gbxAssert.
 	(aDelegate inExport
-		and: [aDelegate isSpecial not and: [aDelegate ~= OIllegal]])
+		and: [aDelegate isSpecial not and: [aDelegate ~= thisSession oopIllegal]])
 			ifTrue: [noLongerReplicatedOops add: aDelegate]
 ]
 
@@ -269,4 +269,3 @@ GbxGciSingleTripInterface >> newServerEvaluation
 [
 	^GbxSingleTripServerEvaluation interface: thisSession serverInterface
 ]
-

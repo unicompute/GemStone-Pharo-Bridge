@@ -12,6 +12,14 @@ Class {
 		'session'
 	],
 	#classVars : [
+		'Bytes',
+		'NSC',
+		'OCharacter',
+		'OInteger',
+		'OSmallInteger',
+		'OSystem',
+		'Pointers',
+		'Special'
 	],
 	#category : 'GemStone-GBS-Converted'
 }
@@ -830,4 +838,3 @@ GbxClassReader class >> on: aStream
 	instance lastResult: GBSM currentSession oopNil.
 	^instance
 ]
-

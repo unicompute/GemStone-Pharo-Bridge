@@ -241,7 +241,7 @@ GbxClampManager >> initialize
 
 	classClamps := GbxClassSet new: 500.
 	identityClamps := GbxIdentityClampSet new: 500.
-	replicationSchemes := GbxConcurrentReadIdentityDictionary new: 1.
+	replicationSchemes := (self gbxResolve: #GbxConcurrentReadIdentityDictionary) new: 1.
 	threadSpecificSchemes := GbxThreadStateDictionary new.
 	^self
 ]

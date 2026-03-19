@@ -21,6 +21,8 @@ Class {
 		'stats'
 	],
 	#classVars : [
+		'LargeGrainMemoryPolicy',
+		'ObjectMemory'
 	],
 	#category : 'GemStone-GBS-Converted'
 }

@@ -31,6 +31,11 @@ Object >> gbxBindingFor: varNameSymbol in: namespaceName [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxFixMe [
+	"A send of gbxFixMe indicates code that still needs work."
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object class >> gbxResolve: varNameSymbol [
 	| varAssoc |
 	varAssoc := self gbxBindingFor: varNameSymbol.

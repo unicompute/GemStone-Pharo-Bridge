@@ -362,7 +362,7 @@ GbxServerInterface >> stepAfter: error forInteraction: serverInteraction
 	
 	| storeTravDoArgs clampedTravArgs cSelector result args |
 	result := error gsReturnVal.
-	(result = OIllegal or: [result = thisSession oopNil])
+	(result = thisSession oopIllegal or: [result = thisSession oopNil])
 		ifTrue:
 			[cSelector := #_stepOverInFrame: gbxAsCString.
 			args := Array
@@ -1197,4 +1197,3 @@ GbxServerInterface class >> forSession: sess configuration: config
 	inst initializeForSession: sess configuration: config.
 	^inst
 ]
-
