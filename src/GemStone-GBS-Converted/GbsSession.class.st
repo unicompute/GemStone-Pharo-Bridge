@@ -2724,11 +2724,18 @@ GbsSession >> createTimeZoneConnectors
 [
 	"we have determined that we are using the new Olsen time
 	zone database in the server. Create appropriate connectors"
-	
-	((GbxTimeZoneInfo gbxDelegate forSession: self) notNil
+
+	| timeZoneInfoDelegate timeZoneDelegate timeZoneTransitionDelegate |
+	timeZoneInfoDelegate := GbxTimeZoneInfo gbxDelegate.
+	timeZoneDelegate := GbxTimeZone gbxDelegate.
+	timeZoneTransitionDelegate := GbxTimeZoneTransition gbxDelegate.
+	((timeZoneInfoDelegate notNil
+		and: [(timeZoneInfoDelegate forSession: self) notNil])
 		and:
-			[(GbxTimeZone gbxDelegate forSession: self) notNil
-				and: [(GbxTimeZoneTransition gbxDelegate forSession: self) notNil]])
+			[timeZoneDelegate notNil
+				and: [(timeZoneDelegate forSession: self) notNil]
+				and: [timeZoneTransitionDelegate notNil
+					and: [(timeZoneTransitionDelegate forSession: self) notNil]]])
 		ifTrue: [^self].
 	parameters
 		addConnectors:
