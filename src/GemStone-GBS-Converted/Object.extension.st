@@ -735,6 +735,23 @@ Object >> shouldRaiseGemStoneWindow [
 	^ false
 ]
 
+{ #category : '*GemStone-GBS-Converted-accessing' }
+Object >> stType [
+	^ #Pharo
+]
+
+{ #category : '*GemStone-GBS-Converted-accessing' }
+Object >> osType [
+	^ Smalltalk os isWindows
+		ifTrue: [ #win ]
+		ifFalse: [ #unix ]
+]
+
+{ #category : '*GemStone-GBS-Converted-testing' }
+Object >> isRunningUnderAssertingVM [
+	^ false
+]
+
 { #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> putInGS [
 	^ self putInGSSession: GbsSessionManager current currentSession
@@ -758,6 +775,23 @@ Object >> putInGSSession: aSession toLevel: level [
 { #category : '*GemStone-GBS-Converted-messenger' }
 Object class >> gbsMessenger [
 	^ GbxMessageDispatcher singleton
+]
+
+{ #category : '*GemStone-GBS-Converted-accessing' }
+Object class >> stType [
+	^ #Pharo
+]
+
+{ #category : '*GemStone-GBS-Converted-accessing' }
+Object class >> osType [
+	^ Smalltalk os isWindows
+		ifTrue: [ #win ]
+		ifFalse: [ #unix ]
+]
+
+{ #category : '*GemStone-GBS-Converted-testing' }
+Object class >> isRunningUnderAssertingVM [
+	^ false
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
