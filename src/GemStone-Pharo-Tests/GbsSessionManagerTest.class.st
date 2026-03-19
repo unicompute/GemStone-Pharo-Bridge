@@ -268,6 +268,22 @@ GbsSessionManagerTest >> testConvertedSupportFactoriesReturnInstances [
 ]
 
 { #category : 'tests' }
+GbsSessionManagerTest >> testConvertedLoginInfrastructureFactoriesReturnInstances [
+	| config session statResource |
+	config := GbsConfiguration new.
+	self assert: (config isKindOf: GbsConfiguration).
+	self assert: config verbose.
+
+	session := GbsSession new.
+	self assert: (session isKindOf: GbsSession).
+
+	statResource := GbxSessionStatResource new.
+	self assert: (statResource isKindOf: GbxSessionStatResource).
+	self assert: (GbxStatMonitor instance isKindOf: GbxStatMonitor).
+	self assert: (GbxObjectMemoryStatResource singleton isKindOf: GbxObjectMemoryStatResource)
+]
+
+{ #category : 'tests' }
 GbsSessionManagerTest >> testConnectorConnectionStateDefaultsToConnected [
 	Smalltalk globals at: #GbsConnectorConnectionRegistry put: Dictionary new.
 	Smalltalk globals at: #GbsConnectorObjectRegistry put: Dictionary new.

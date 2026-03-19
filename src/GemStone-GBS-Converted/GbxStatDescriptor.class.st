@@ -97,5 +97,6 @@ GbxStatDescriptor class >> name: nameString description: descriptionString type:
 		type: typeInt
 		isCounter: isCounterBool
 		isLargerBetter: isLargerBetterBool
-		unit: unitString
+		unit: unitString;
+		yourself
 ]

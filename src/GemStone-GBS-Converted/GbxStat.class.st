@@ -98,7 +98,9 @@ GbxStat class >> newWithDescription: aGbxStatDescription value: initialValue
 [
 	"Answer a newly created and initialized instance."
 
-	^self basicNew description: aGbxStatDescription value: initialValue
+	^self basicNew
+		description: aGbxStatDescription value: initialValue;
+		yourself
 ]
 
 { #category : 'instance creation' }
@@ -108,4 +110,3 @@ GbxStat class >> new
 
 	^self shouldNotImplement
 ]
-

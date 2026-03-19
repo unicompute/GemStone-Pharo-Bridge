@@ -219,7 +219,8 @@ GbxNonBlockingGciCallSequencer >> nbSocket
 GbxNonBlockingGciCallSequencer >> initialize
 [
 	inNonBlockingCall := false.
-	inInterruptableCall := false
+	inInterruptableCall := false.
+	^self
 ]
 
 { #category : 'initialize-release' }
@@ -391,4 +392,3 @@ GbxNonBlockingGciCallSequencer class >> resultProgressed
 [
 	^1
 ]
-

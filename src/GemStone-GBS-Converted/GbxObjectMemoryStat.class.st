@@ -67,13 +67,16 @@ GbxObjectMemoryStat >> description: aStatDescriptor
 GbxObjectMemoryStat class >> newFor: selector
 [
 
-	^self basicNew selector: selector
+	^self basicNew
+		selector: selector;
+		yourself
 ]
 
 { #category : 'instance creation' }
 GbxObjectMemoryStat class >> newWithDescription: description
 [
 
-	^self basicNew description: description
+	^self basicNew
+		description: description;
+		yourself
 ]
-

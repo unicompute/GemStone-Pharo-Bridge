@@ -954,8 +954,11 @@ GbsSessionManager >> newServerInterface
 [
 	"Create a new server interface to be used by GBSM. For now, GBSM's interface is always blocking."
 
+	| config |
+	config := GbsConfiguration current copy.
+	config blockingProtocolRpc: true.
 	^self serverInterfaceClass forSession: nil
-		configuration: (GbsConfiguration current copy blockingProtocolRpc: true)
+		configuration: config
 ]
 
 { #category : 'global connections' }
@@ -1780,7 +1783,9 @@ GbsSessionManager >> serverInterface
 [
 	"Private"
 
-	serverInterface isNil ifTrue: [ serverInterface := self newServerInterface ].
+	(serverInterface isNil or: [
+		(serverInterface respondsTo: #loginLinked:passwords:errorHolder:) not ])
+		ifTrue: [ serverInterface := self newServerInterface ].
 	^serverInterface
 ]
 
@@ -2123,4 +2128,3 @@ GbsSessionManager class >> new
 	"This class has only one instance.  See GbsSessionManager class>>initialize."
 	^self shouldNotImplement
 ]
-

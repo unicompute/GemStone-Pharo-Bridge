@@ -835,7 +835,8 @@ GbsConfiguration >> initialize
 	traversalBufferSize := 250000.
 	useGbsMemoryPolicy := true.
 	useDiagnosticSpecialConverter := self isRunningUnderAssertingVM.
-	verbose := true	"Write significant events to transcript"
+	verbose := true.	"Write significant events to transcript"
+	^self
 ]
 
 { #category : 'testing' }
@@ -1084,6 +1085,7 @@ GbsConfiguration class >> current
 
 	" GbsConfiguration current "
 
+	(Current isKindOf: self) ifFalse: [ Current := self new ].
 	^Current
 ]
 
@@ -1142,4 +1144,3 @@ GbsConfiguration class >> dumpAllProcessStacks
 
 	^GbsStackDumper dumpAllProcessStacks
 ]
-

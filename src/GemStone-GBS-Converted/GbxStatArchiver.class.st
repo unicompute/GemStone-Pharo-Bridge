@@ -66,7 +66,8 @@ GbxStatArchiver >> initializeWithFile: aFile
 					 it's safe to send instanceDescription at this point in time, because no other 
 					 threads have visibility of this archiver."
 					self basicAddStatResource: s statResource
-						instanceDescription: s statResource instanceDescription]]
+						instanceDescription: s statResource instanceDescription]].
+	^self
 ]
 
 { #category : 'public api' }
@@ -455,4 +456,3 @@ GbxStatArchiver class >> initialize
 	Max2ByteCompactValue := 32767.
 	Min2ByteCompactValue := -32768
 ]
-

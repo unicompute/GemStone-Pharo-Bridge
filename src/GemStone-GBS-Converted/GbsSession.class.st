@@ -964,7 +964,8 @@ GbsSession >> resetAsyncAbortActions
 [
 
 	asyncAbortStartAction := [:dirtySet | self gbsMessenger error: self asyncAbortSetupErrorMessage].
-	asyncAbortFinishAction := ["One error is enough. No need to natter."]
+	asyncAbortFinishAction := ["One error is enough. No need to natter."].
+	^self
 ]
 
 { #category : 'private - transaction control' }
@@ -2062,7 +2063,8 @@ GbsSession >> initialize
 	nestingLevel := 0.
 	isUnwindingAsyncAbort := false.
 	replicatorManager := self replicatorManagerClass newForSession: self.
-	self resetAsyncAbortActions
+	self resetAsyncAbortActions.
+	^self
 ]
 
 { #category : 'private - initialization' }
@@ -6702,4 +6704,3 @@ GbsSession class >> dependsOnStructureOfServerCall
 	"Browse senders of this method to find places in the code that depend on the 
 	internal structure of GbsSession>>serverCall:verifyArgs"
 ]
-

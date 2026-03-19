@@ -222,7 +222,11 @@ GbxObjectMemoryStatResource class >> initialize
 GbxObjectMemoryStatResource class >> singleton
 [
 
-	singleton == nil ifTrue: [singleton := self basicNew initializeStatistics].
+	(singleton isKindOf: self) ifFalse: [ singleton := nil ].
+	singleton == nil ifTrue: [
+		singleton := self basicNew
+			initializeStatistics;
+			yourself ].
 	^singleton
 ]
 
@@ -243,4 +247,3 @@ GbxObjectMemoryStatResource class >> resourceTypeId
 [
 	^3
 ]
-

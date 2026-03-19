@@ -267,7 +267,8 @@ GbxStatMonitor >> initialize
 	sampleInterval := 2000.
 	cacheSampleIntervalMultiplier := 5. "Every 5th sample will gather cache statistics"
 	nextResumption := nil.
-	delay := nil
+	delay := nil.
+	^self
 ]
 
 { #category : 'class initialization' }
@@ -312,7 +313,7 @@ GbxStatMonitor class >> instance
 [
 
 	"Returns the sole instance of GbxStatMonitor"
+	(Instance isKindOf: self) ifFalse: [ Instance := nil ].
 	Instance isNil ifTrue: [ Instance := self basicNew initialize ].
 	^Instance
 ]
-

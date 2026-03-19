@@ -138,7 +138,9 @@ GbxStatResource class >> numberOfDescriptors
 GbxStatResource class >> new
 [
 
-	^super new initializeStatistics
+	^super new
+		initializeStatistics;
+		yourself
 ]
 
 { #category : 'initialize-release' }
