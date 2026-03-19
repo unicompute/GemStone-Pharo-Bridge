@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxAbstractControlInterrupt',
-	#superclass : 'Object',
+	#superclass : 'GbxAbstractException',
 	#instVars : [
 	],
 	#classVars : [
