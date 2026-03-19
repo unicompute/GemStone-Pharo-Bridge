@@ -9,7 +9,9 @@ Class {
 		'configuration'
 	],
 	#classVars : [
-		'GciCallProtect'
+		'GciCallProtect',
+		'PrimInterface',
+		'SpecialGemStoneObjects'
 	],
 	#category : 'GemStone-GBS-Converted'
 }
@@ -484,4 +486,3 @@ GbxGciCallSequencer class >> forSession: sess configuration: config
 		configuration: config.
 	^inst
 ]
-
