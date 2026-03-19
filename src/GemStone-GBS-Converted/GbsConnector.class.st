@@ -42,7 +42,8 @@ GbsConnector >> hash
 { #category : 'accessing' }
 GbsConnector >> connectionCondition: anObject
 [
-	connectionCondition := anObject
+	connectionCondition := anObject.
+	^self
 ]
 
 { #category : 'accessing' }
@@ -56,28 +57,32 @@ GbsConnector >> beForwarderOnConnect
 [
 
 	"Make the Smalltalk object a forwarder upon connection"
-	self postConnectAction: #forwarder
+	self postConnectAction: #forwarder.
+	^self
 ]
 
 { #category : 'initialization' }
 GbsConnector >> noUpdateOnConnect
 [
 
-	self postConnectAction: nil
+	self postConnectAction: nil.
+	^self
 ]
 
 { #category : 'initialization' }
 GbsConnector >> updateSTOnConnect
 [
 
-	self postConnectAction: #updateST
+	self postConnectAction: #updateST.
+	^self
 ]
 
 { #category : 'initialization' }
 GbsConnector >> updateGSOnConnect
 [
 
-	self postConnectAction: #updateGS
+	self postConnectAction: #updateGS.
+	^self
 ]
 
 { #category : 'connecting and disconnecting' }
@@ -178,7 +183,8 @@ GbsConnector >> postConnectAction: action
 
 	(action isNil or: [ (self validPostConnectActions includes: action) ])
 		ifFalse: [ ^self gbsMessenger error: 'Invalid post-connect action - %1' with: action ].
-	postConnectAction := action
+	postConnectAction := action.
+	^self
 ]
 
 { #category : 'private connecting' }
@@ -575,7 +581,9 @@ GbsConnector class >> new
 
 	"Return a new instance with the default postconnect action"
 
-	^self basicNew postConnectAction: self defaultPostConnectAction
+	^self basicNew
+		postConnectAction: self defaultPostConnectAction;
+		yourself
 ]
 
 { #category : 'instance creation' }
@@ -585,4 +593,3 @@ GbsConnector class >> supportsFromUser
 
 	^true	"by default."
 ]
-

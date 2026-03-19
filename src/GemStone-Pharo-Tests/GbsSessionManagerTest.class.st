@@ -178,6 +178,25 @@ GbsSessionManagerTest >> testClassVarConnectorFactoryReturnsConnectorInstance [
 ]
 
 { #category : 'tests' }
+GbsSessionManagerTest >> testConnectorInheritedNewReturnsConnectorInstance [
+	| connector |
+	connector := GbsClassVarConnector new.
+	self assert: (connector isKindOf: GbsClassVarConnector).
+	self assert: connector postConnectAction equals: #updateST
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testConnectorSettersRemainFluent [
+	| connector block |
+	connector := GbsClassConnector new.
+	block := [ true ].
+	self assert: (connector connectionCondition: block) identicalTo: connector.
+	self assert: connector connectionCondition identicalTo: block.
+	self assert: (connector noUpdateOnConnect) identicalTo: connector.
+	self assert: connector postConnectAction equals: #none
+]
+
+{ #category : 'tests' }
 GbsSessionManagerTest >> testClassSideFastConnectorRegistryRoundTrip [
 	| registry |
 	registry := Dictionary new

@@ -12,7 +12,8 @@ Class {
 { #category : 'accessing' }
 GbxManyClientToOneKernelConnector >> secondaryClientObjs: anObject
 [
-	secondaryClientObjs := anObject
+	secondaryClientObjs := anObject.
+	^self
 ]
 
 { #category : 'printing' }
@@ -69,4 +70,3 @@ GbxManyClientToOneKernelConnector class >> primaryClientObj: primaryClientObj se
 	conn secondaryClientObjs: secondaryClientObjs.
 	^conn
 ]
-
