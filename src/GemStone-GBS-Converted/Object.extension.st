@@ -34,6 +34,42 @@ Object >> changeRequest: anAspect [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> changed: anAspect [
+	^ self changed: anAspect with: nil
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> changed: anAspect with: anObject [
+	| dependents |
+	dependents := (self respondsTo: #myDependents)
+		ifTrue: [ self myDependents ]
+		ifFalse: [
+			(self respondsTo: #dependents)
+				ifTrue: [ self dependents ]
+				ifFalse: [ nil ] ].
+	dependents ifNil: [ ^ self ].
+	dependents do: [ :each |
+		(each respondsTo: #update:with:from:)
+			ifTrue: [
+				[ each update: anAspect with: anObject from: self ]
+					on: Error
+					do: [ ] ]
+			ifFalse: [
+				(each respondsTo: #update:from:)
+					ifTrue: [
+						[ each update: anAspect from: self ]
+							on: Error
+							do: [ ] ]
+					ifFalse: [
+						(each respondsTo: #update:)
+							ifTrue: [
+								[ each update: anAspect ]
+									on: Error
+									do: [ ] ] ] ] ].
+	^ self
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> asGSObject [
 	| remoteObject |
 	remoteObject := self gbxDelegate.
