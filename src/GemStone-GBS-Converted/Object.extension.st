@@ -194,6 +194,24 @@ Object >> gbxAsCString [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxReplaceBytesFrom: start to: stop with: replacement startingAt: repStart [
+	"GemStone compatibility for byte-indexed objects."
+
+	| offset |
+	stop - start + repStart > replacement basicSize
+		ifTrue: [ self error: 'There are not enough elements to perform the replacement' ].
+	offset := repStart - start.
+	(self == replacement and: [ repStart < start ])
+		ifTrue: [
+			stop to: start by: -1 do: [ :index |
+				self basicAt: index put: (replacement basicAt: offset + index) ] ]
+		ifFalse: [
+			start to: stop do: [ :index |
+				self basicAt: index put: (replacement basicAt: offset + index) ] ].
+	^ self
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> gbxBecome: anObject [
 	^ self becomeForward: anObject
 ]
