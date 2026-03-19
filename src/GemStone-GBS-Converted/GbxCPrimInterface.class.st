@@ -196,3 +196,53 @@ GbxCPrimInterface >> gciSaveObjs: theOops with: numOops [
 GbxCPrimInterface >> gciFetchClass: theObject [
 	^ self ffiCall: #(uint64 GciFetchClass(uint64 theObject))
 ]
+
+{ #category : 'procedures' }
+GbxCPrimInterface >> gciGetFreeOops: count with: resultOops [
+	^ self ffiCall: #(void GciGetFreeOops(int count, void* resultOops))
+]
+
+{ #category : 'procedures' }
+GbxCPrimInterface >> gciNBGetNotifyHandle [
+	^ self ffiCall: #(int GciNbGetNotifyHandle(void))
+]
+
+{ #category : 'procedures' }
+GbxCPrimInterface >> gciPollSocket: socketFd forRead: timeout [
+	"Return 0 if timed out, 1 if ready for read, and -1 on error."
+
+	^ self ffiCall: #(int GciPollSocketForRead(int socketFd, int timeout))
+]
+
+{ #category : 'non-blocking procedures' }
+GbxCPrimInterface >> gciNbEndResultPtrPtr: resultPtrPtr [
+	^ self ffiCall: #(int GciNbEnd(void* resultPtrPtr))
+]
+
+{ #category : 'non-blocking procedures' }
+GbxCPrimInterface >> gciNbMoreTraversalBuffer: travBuff maxSize: travBuffSize [
+	"Shed the size argument, which is not needed by the 64-bit GCI entry point."
+
+	^ self ffiCall: #(void GciNbMoreTraversal(void* travBuff))
+]
+
+{ #category : 'procedures' }
+GbxCPrimInterface >> gciMoreTraversalBuffer: travBuff maxSize: travBuffSize [
+	"Shed the size argument, which is not needed by the 64-bit GCI entry point."
+
+	^ (self ffiCall: #(int GciMoreTraversal(void* travBuff))) = 1
+]
+
+{ #category : 'non-blocking procedures' }
+GbxCPrimInterface >> gciNbStoreTravDoTravRefsnlr: oopsNoLongerReplicated nnr: numNotReplicated ogoc: oopsGcedOnClient ngc: numGced stdArgs: stdArgs ctArgs: ctArgs [
+	^ self
+		ffiCall:
+			#(void GciNbStoreTravDoTravRefs_(void* oopsNoLongerReplicated, int numNotReplicated, void* oopsGcedOnClient, int numGced, void* stdArgs, void* ctArgs))
+]
+
+{ #category : 'procedures' }
+GbxCPrimInterface >> gciStoreTravDoTravRefsnlr: oopsNoLongerReplicated nnr: numNotReplicated ogoc: oopsGcedOnClient ngc: numGced stdArgs: stdArgs ctArgs: ctArgs [
+	^ self
+		ffiCall:
+			#(int GciStoreTravDoTravRefs_(void* oopsNoLongerReplicated, int numNotReplicated, void* oopsGcedOnClient, int numGced, void* stdArgs, void* ctArgs))
+]
