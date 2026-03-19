@@ -81,9 +81,8 @@ GbxTraversalBufferManager >> allocateBufferFor: anOwner size: size
 GbxTraversalBufferManager class >> forSession: session
 [
 
-	^(self new)
+	^(self basicNew)
 		session: session;
 		initialize;
 		yourself
 ]
-
