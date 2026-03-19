@@ -129,6 +129,11 @@ Object >> gbxFixMe [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxAssertImmutable [
+	self gbsMessenger assertImmutable: self
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> gbxIsImmutable [
 	(self respondsTo: #isReadOnlyObject)
 		ifTrue: [ ^ self isReadOnlyObject ].
@@ -189,12 +194,413 @@ Object >> gbxAsCString [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxBecome: anObject [
+	^ self becomeForward: anObject
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxBecomeForwarder [
+	| fwd |
+	self gbxIsImmutable: true.
+	fwd := GbsForwarder new.
+	^ self gbxBecome: fwd
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxCanBeArgForUnsynchronizedOperationInSession: session [
+	| delegate |
+	delegate := self gbxDelegate.
+	delegate isNil ifTrue: [ ^ false ].
+	(delegate respondsTo: #forSession:)
+		ifTrue: [ delegate := delegate forSession: session ].
+	^ delegate notNil and: [ delegate isStDirty not ]
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxCanBeStubbed [
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxCanTraversalSplit [
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxConnectingToMultipleSessions [
+	self gbxIsModifiable
+		ifTrue: [
+			self gbsMessenger
+				error: 'Attempt to associate a %1 with more than one GemStone session'
+				with: self class ]
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxCouldBeForwarder [
+	| delegate |
+	delegate := self gbxDelegate.
+	^ delegate isNil
+		ifTrue: [ self gbxIsImmutable not ]
+		ifFalse: [ delegate gbxCouldBeForwarder ]
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxDebugPrintOn: aStream [
+	^ self printOn: aStream
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxDebugPrintString [
+	| stream |
+	stream := WriteStream on: String new.
+	[ self gbxDebugPrintOn: stream ]
+		on: Error
+		do: [ :err | stream nextPutAll: '||| Printing error: ' , err description ].
+	^ stream contents
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxDeepCopy [
+	^ self gbxDeepCopyCycles: (GbxLargeIdentityDictionary new: 23)
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxDeepCopyCycles: cycles [
+	^ cycles
+		at: self
+		ifAbsent: [
+			| copy |
+			copy := self shallowCopy.
+			cycles at: self put: copy.
+			self class isBits
+				ifFalse: [
+					1 to: self class instSize do: [ :i |
+						copy instVarAt: i put: ((self instVarAt: i) gbxDeepCopyCycles: cycles) ].
+					1 to: self basicSize do: [ :i |
+						copy basicAt: i put: ((self basicAt: i) gbxDeepCopyCycles: cycles) ] ].
+			copy ]
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxExistingOrSpecialDelegateInSession: aSession [
+	^ aSession cacheAtST: self
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxFaultNowForDelegate: delegate [
+	| session serverTraversal result |
+	session := delegate session.
+	session addToNoLongerReplicated: delegate.
+	serverTraversal := session newServerTraversal.
+	result := serverTraversal
+		rootDelegate: delegate;
+		replicationLevel: 1;
+		execute.
+	[ result == self ] gbxAssert
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> newGSObjectMappingInSession: aGbsSession [
 	| aDelegate |
 	aDelegate := aGbsSession getFreeOop.
 	aGbsSession connectClient: self toServer: aDelegate.
 	aDelegate markStDirty: self.
 	^ aDelegate
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> fault [
+	^ self
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> faultPolicy [
+	^ GbsConfiguration current defaultFaultPolicy
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> faultToLevel: level [
+	| remoteObject session |
+	remoteObject := self gbxDelegate ifNotNil: [ :delegate | delegate forAnySingleSession ].
+	remoteObject isNil ifTrue: [ ^ self ].
+	session := remoteObject session.
+	session isNil ifTrue: [ ^ self ].
+	remoteObject
+		traverseToLevel: level
+		replicationScheme: session currentReplicationScheme
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> asForwarder [
+	| delegate session |
+	self gbxCouldBeForwarder ifFalse: [ ^ self ].
+	delegate := self asGSObject.
+	session := delegate session.
+	session sessionCritical: [
+		self gbxIsProxy
+			ifTrue: [ ^ self asForwarder ].
+		delegate isStDirty ifTrue: [ delegate session flushDirtyToGS ].
+		session addClampedObject: self withDelegate: delegate.
+		self gbxBecomeForwarder.
+		session addToNoLongerReplicated: delegate ]
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> asGSObjectCopy [
+	^ self asGSObjectCopyInSession: GbsSessionManager current currentSession
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> asGSObjectCopyInSession: aGbsSession [
+	| result |
+	GbsConfiguration
+		deprecated: 'Copy replication deprecated March, 2006. Use normal replication instead'.
+	result := self gbxDeepCopy asGSObjectInSession: aGbsSession.
+	aGbsSession flushDirtyToGS.
+	^ result
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> beForwarder [
+	^ self asForwarder
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> beReplicate [
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbsAsUncachedForwarder [
+	| delegate sess |
+	delegate := self gbxDelegate.
+	sess := delegate
+		ifNil: [ GbsSessionManager current currentSession ]
+		ifNotNil: [ :del | del forAnySingleSession session ].
+	sess isNil ifTrue: [ ^ self ].
+	^ self gbsAsUncachedForwarderInSession: sess
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbsAsUncachedForwarderInSession: sess [
+	| fwdr |
+	self gbxCouldBeForwarder ifFalse: [ ^ self ].
+	fwdr := GbsForwarder new.
+	sess sessionCritical: [
+		sess cacheCritical: [
+			GBSM atST: fwdr putGS: (self asGSObjectInSession: sess) ] ].
+	^ fwdr
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gsIsDirty [
+	| remoteObject |
+	remoteObject := self gbxDelegate.
+	^ remoteObject notNil and: [ remoteObject isStDirty ]
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> indexableSize [
+	^ self basicSize
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> indexableValueAt: index [
+	^ self basicAt: index
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> indexableValueAt: index put: aValue [
+	^ self basicAt: index put: aValue
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> indexableValues [
+	^ self
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> indexableValues: anArray [
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> indexableValuesBuffer [
+	^ self
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> isGSObject [
+	^ false
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> markDirty [
+	| remoteObject |
+	remoteObject := self gbxDelegate.
+	remoteObject notNil ifTrue: [ remoteObject markStDirty: self ]
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> markNotDirty [
+	| remoteObject |
+	remoteObject := self gbxDelegate.
+	remoteObject notNil ifTrue: [ remoteObject markStNotDirty: self ]
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> namedSize [
+	^ self class instSize
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> namedValueAt: index [
+	^ self instVarAt: index
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> namedValueAt: index put: aValue [
+	self instVarAt: index put: aValue
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> namedValues [
+	^ self
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> namedValues: anArray [
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> namedValues: namedValues indexableValues: indexableValues [
+	self namedValues: namedValues.
+	self indexableValues: indexableValues
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> namedValuesBuffer [
+	^ self
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> performOnGsServer: selector withArguments: argArray [
+	| delegate |
+	delegate := self gbxDelegate ifNotNil: [ :del | del forAnySingleSession ].
+	delegate isNil
+		ifTrue: [ ^ self gbsMessenger error: 'Cannot perform on server, no server mapping' ].
+	^ delegate performOnGsServer: selector withArguments: argArray
+]
+
+{ #category : '*GemStone-GBS-Converted-debugging' }
+Object >> gbxGsDebuggerSession [
+	| delegate |
+	delegate := self gbxDelegate.
+	delegate isNil ifTrue: [ ^ nil ].
+	^ [ delegate forAnySingleSession session ] on: Error do: [ nil ]
+]
+
+{ #category : '*GemStone-GBS-Converted-debugging' }
+Object >> gbxIsGsBottomGlue: aSelector [
+	^ false
+]
+
+{ #category : '*GemStone-GBS-Converted-debugging' }
+Object >> gbxIsGsTopGlue: aSelector [
+	^ false
+]
+
+{ #category : '*GemStone-GBS-Converted-debugging' }
+Object >> gbxStepsIntoGemStone: aSelector showGlue: showGlue [
+	^ false
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> postFault [
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> postFaultInSession: aSession [
+	self postFault
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> preFault [
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> preFaultWithReport: report inSession: aSession [
+	self preFault
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> updateFromGS [
+	| delegate session |
+	delegate := self asGSObject.
+	session := delegate session.
+	session sessionCritical: [ self gbxUpdateFromDelegate: delegate ]
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxUpdateFromDelegate: delegate [
+	delegate isReadOnlyObject
+		ifTrue: [
+			self gbsMessenger
+				error: 'Attempt to update an object that shouldn''t be modified in the client.' ].
+	self faultPolicy == #lazy
+		ifTrue: [
+			| replicator |
+			replicator := delegate session
+				replicatorForClientBehavior: self gbxBasicClass
+				ifAbsent: [ nil ].
+			replicator isNil
+				ifTrue: [
+					GbxObjectStub
+						stubObject: self
+						forDelegate: delegate
+						freeSlots: self class freeSlotsOnStubbing ]
+				ifFalse: [
+					replicator
+						stubObject: self
+						forDelegate: delegate
+						freeSlots: self class freeSlotsOnStubbing ] ]
+		ifFalse: [ self gbxFaultNowForDelegate: delegate ]
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxIsDelegate [
+	^ false
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxIsGSConnector [
+	^ false
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxIsGSDefunct [
+	^ false
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxIsModifiable [
+	| delegate |
+	(GbsConfiguration current autoMarkDirty and: [ self gbxIsImmutable ])
+		ifFalse: [ ^ true ].
+	delegate := self gbxDelegate.
+	delegate isNil ifTrue: [ ^ false ].
+	^ delegate isReadOnlyObject not
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxValidateDelegateAndSession [
+	| delegate |
+	self gbxFixMe.
+	delegate := self gbxDelegate.
+	delegate isNil
+		ifTrue: [
+			self gbsMessenger error: 'Defunct %1 - unconnected' with: self gbxBasicClass.
+			^ nil ].
+	(delegate validateSessionForProxy: self) isNil ifTrue: [ ^ nil ].
+	^ delegate
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
@@ -223,6 +629,18 @@ Object class >> gbsMessenger [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object class >> gbsReplicatorClass [
+	^ self isBits
+		ifTrue: [ GbxByteObjectReplicator ]
+		ifFalse: [ GbxPointerObjectReplicator ]
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object class >> gbsSkewedReplicatorClass [
+	^ GbxSkewedFaultingReplicator
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object class >> gbxResolve: varNameSymbol [
 	| varAssoc |
 	varAssoc := self gbxBindingFor: varNameSymbol.
@@ -248,4 +666,22 @@ Object class >> gbxBindingFor: varNameSymbol [
 { #category : '*GemStone-GBS-Converted-compatibility' }
 Object class >> gbxBindingFor: varNameSymbol in: namespaceName [
 	^ self gbxBindingFor: varNameSymbol
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object class >> replicationSpec [
+	^ #()
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object class >> transitiveClosureSpec [
+	| repspec closurespec type |
+	repspec := self replicationSpec.
+	repspec == #callback ifTrue: [ ^ #() ].
+	closurespec := OrderedCollection new.
+	repspec do: [ :spec |
+		type := spec at: 2.
+		(type == #min or: [ type == #max or: [ type == #stub ] ])
+			ifFalse: [ closurespec add: spec ] ].
+	^ closurespec
 ]

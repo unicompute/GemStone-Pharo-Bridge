@@ -21,3 +21,43 @@ Set class >> gbxIsPrime: anInteger [
 		factor := factor + 2 ].
 	^ true
 ]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Set class >> gbsReplicatorClass [
+	^ GbxUnorderedCollectionReplicator
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Set class >> gsObjImpl [
+	^ 2
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Set class >> replicationSpec [
+	^ super replicationSpec , #((indexable_part min 1))
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Set class >> newFromGSObjectReport: report [
+	^ self new: (self gbxIndexableSizeFromReport: report)
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Set class >> gbxIndexableSizeFromReport: report [
+	^ ((report idxSize max: 3) * 1.3) truncated
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Set >> gbxElementsDo: aBlock [
+	^ self do: aBlock
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Set >> postFault [
+	self markNotDirty
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Set >> indexableValueAt: index put: aValue [
+	self add: aValue
+]
