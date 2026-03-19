@@ -16,17 +16,12 @@ Time class >> gbxHours: h minutes: m seconds: s [
 { #category : '*GemStone-GBS-Converted-GBS-extensions' }
 Time >> postFault [
 	"Private.  GBS.  GemStone replication support.  Convert GemStone milliseconds to VisualWorks hours/minutes/seconds/milliseconds."
-	"GemStone milliseconds was mapped into the milliseconds instvar"
+	"GemStone milliseconds was mapped into the first instvar; in Pharo Time stores seconds and nanos."
 
-	| secs secsIntoHour millisecondsHolder |
-	millisecondsHolder := milliseconds.
-	self initialize.	"in VW 7.10, sets all instVars to 0"
-	milliseconds := millisecondsHolder \\ 1000.
-	secs := millisecondsHolder // 1000.
-	secsIntoHour := secs \\ 3600.
-	hours := secs // 3600.
-	minutes := secsIntoHour // 60.
-	seconds := secsIntoHour \\ 60
+	| millisecondsHolder |
+	millisecondsHolder := seconds.
+	seconds := millisecondsHolder // 1000.
+	nanos := (millisecondsHolder \\ 1000) * 1000000
 ]
 
 { #category : '*GemStone-GBS-Converted-GBS-extensions' }
@@ -97,4 +92,3 @@ Time >> osType [
 Time >> isRunningUnderAssertingVM [
 	^false
 ]
-

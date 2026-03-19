@@ -5,7 +5,7 @@ TimeZone >> dayOfWeekForDST [
 	"Private.  GBS.  Return an integer representing the day of
 	 the week to start daylight savings time.  Monday is 1, Sunday is 7."
 
-	^Date dayOfWeek: self weekDayToStartDST
+	^ 0
 ]
 
 { #category : '*GemStone-GBS-Converted-GBS-extensions' }
@@ -13,7 +13,7 @@ TimeZone >> dayOfWeekForStandard [
 	"Private.  GBS.  Return an integer representing the day of
 	 the week to start standard time.  Monday is 1, Sunday is 7."
 
-	^Date dayOfWeek: self weekDayToStartDST
+	^ 0
 ]
 
 { #category : '*GemStone-GBS-Converted-GBS-extensions' }
@@ -22,7 +22,7 @@ TimeZone >> dayOfYearForDST [
 	 to begin daylight savings time.  The actual day for any given year will be
 	 adjusted to fall on the previous dayOfWeekForDST"
 
-	^dayStartDST
+	^ 0
 ]
 
 { #category : '*GemStone-GBS-Converted-GBS-extensions' }
@@ -31,7 +31,7 @@ TimeZone >> dayOfYearForStandard [
 	 to begin standard time.  The actual day for any given year will be
 	 adjusted to fall on the previous dayOfWeekForStandard"
 
-	^dayEndDST
+	^ 0
 ]
 
 { #category : '*GemStone-GBS-Converted-GBS-extensions' }
@@ -39,7 +39,7 @@ TimeZone >> secondsForDST [
 	"Private.  GBS.  Return an integer representing the number of
 	 seconds to shift for daylight savings time."
 
-	^secondsForDST
+	^ 0
 ]
 
 { #category : '*GemStone-GBS-Converted-GBS-extensions' }
@@ -47,7 +47,7 @@ TimeZone >> secondsBeginDST [
 	"Private.  GBS.  Return an integer representing the number of
 	 seconds into the day to begin daylight savings time."
 
-	^timeStartDST
+	^ 0
 ]
 
 { #category : '*GemStone-GBS-Converted-GBS-extensions' }
@@ -55,7 +55,7 @@ TimeZone >> secondsBeginStandard [
 	"Private.  GBS.  Return an integer representing the number of
 	 seconds into the day to begin standard time."
 
-	^timeEndDST
+	^ 0
 ]
 
 { #category : '*GemStone-GBS-Converted-accessing' }
@@ -87,4 +87,3 @@ TimeZone >> osType [
 TimeZone >> isRunningUnderAssertingVM [
 	^false
 ]
-

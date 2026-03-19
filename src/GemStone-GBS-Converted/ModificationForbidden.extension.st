@@ -7,24 +7,24 @@ ModificationForbidden >> raiseRequest [
 	"CS: fix for become isImmutable flag handling"
 
 	| slot |
-	index isNil 
+	fieldIndex isNil 
 		ifTrue: 
-			[^(#(#primBecome: #becomeNoRetry:) includes: selector) 
+			[^(#(#primBecome: #becomeNoRetry:) includes: retrySelector) 
 				ifTrue: [self gbxHandleAttemptedBecome]
 				ifFalse: 
 					["Likely one of #(changeClassTo: changeClassToThatOf:)"
 
 					self gbxHandleAttemptedClassChange]].
-	slot := selector == #instVarAt:put: 
-				ifTrue: [index]
-				ifFalse: [index + self object gbxBasicClass instSize].
+	slot := retrySelector == #instVarAt:put: 
+				ifTrue: [fieldIndex]
+				ifFalse: [fieldIndex + self object gbxBasicClass instSize].
 	"Otherwise #at:put: or #basicAt:put:"
 	^self gbxIsIdenticalAssignment 
-		ifTrue: [value]
+		ifTrue: [newValue]
 		ifFalse: 
 			[self object 
 				gbxMutationAt: slot
-				value: value
+				value: newValue
 				noModError: self]
 ]
 
@@ -40,11 +40,11 @@ ModificationForbidden >> gbxHandleAttemptedClassChange [
 	"If allowable, mark the object dirty so the class change propagates to the server."
 
 	| delegate response |
-	((delegate := parameter gbxDelegate) isNil or: [delegate isReadOnlyObject])
+	((delegate := self object gbxDelegate) isNil or: [delegate isReadOnlyObject])
 		ifTrue: [^super raiseRequest].
-	delegate serverCanAcceptClassChanges ifTrue: [parameter markDirty].
+	delegate serverCanAcceptClassChanges ifTrue: [self object markDirty].
 	
-	[parameter gbxIsImmutable: false.
+	[self object gbxIsImmutable: false.
 	response := self retryModification.
 	"response in this case should always be the same as self object"
 	response gbxIsImmutable: true]
@@ -63,27 +63,28 @@ ModificationForbidden >> gbxReallyRaiseRequest [
 ModificationForbidden >> gbxHandleAttemptedBecome [
 	"If allowed, make the change and mark both receiver and argument dirty so change gets propagated to the server."
 
-	| recWas argWas delegate response |
-	recWas := parameter gbxIsImmutable.
-	argWas := value gbxIsImmutable.
+	| recWas argWas delegate response argument |
+	argument := self newValue.
+	recWas := self object gbxIsImmutable.
+	argWas := argument gbxIsImmutable.
 	((recWas and: 
-			[(delegate := parameter gbxDelegate) isNil or: [delegate isReadOnlyObject]])
+			[(delegate := self object gbxDelegate) isNil or: [delegate isReadOnlyObject]])
 		or: 
 			[argWas
-				and: [(delegate := value gbxDelegate) isNil or: [delegate isReadOnlyObject]]])
+				and: [(delegate := argument gbxDelegate) isNil or: [delegate isReadOnlyObject]]])
 			ifTrue: [^super raiseRequest].
 	"Mark both dirty so change is propagated to the server."
 	delegate serverCanAcceptClassChanges
 		ifTrue: 
-			[parameter markDirty.
-			value markDirty].
+			[self object markDirty.
+			argument markDirty].
 	
 	[self object gbxIsImmutable: false.
-	value gbxIsImmutable: false.
+	argument gbxIsImmutable: false.
 	response := self retryModification.
 	"Receiver and argument are now swapped."
 	self object gbxIsImmutable: recWas.
-	value gbxIsImmutable: argWas]
+	argument gbxIsImmutable: argWas]
 			valueUnpreemptively.
 	^response
 ]
@@ -93,7 +94,12 @@ ModificationForbidden >> gbxIsIdenticalAssignment [
 	"Answer true if the proposed modification actually makes no change to the object, false otherwise.
 	Only good for at:put: and instvarAt:put:."
 
-	^value == self currentValue
+	fieldIndex isNil ifTrue: [ ^ false ].
+	retrySelector == #instVarAt:put:
+		ifTrue: [ ^ newValue == (self object instVarAt: fieldIndex) ].
+	retrySelector == #basicAt:put:
+		ifTrue: [ ^ newValue == (self object basicAt: fieldIndex) ].
+	^ newValue == (self object at: fieldIndex)
 ]
 
 { #category : '*GemStone-GBS-Converted-accessing' }

@@ -3,7 +3,7 @@ Extension { #name : #'CompiledBlock' }
 { #category : '*GemStone-GBS-Converted-GBS-extensions' }
 CompiledBlock >> gbxHasSource [
 
-	^outerMethod gbxHasSource
+	^ self hasSourceCode
 ]
 
 { #category : '*GemStone-GBS-Converted-accessing' }
@@ -35,4 +35,3 @@ CompiledBlock >> osType [
 CompiledBlock >> isRunningUnderAssertingVM [
 	^false
 ]
-
