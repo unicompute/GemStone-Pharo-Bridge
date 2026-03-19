@@ -975,7 +975,7 @@ GbxDelegate >> connectingDelegate: otherDelegate withClient: clientObj
 	mySession := self session.
 	
 	[otherDelegate session hasCriticalAccess
-		and: [GBSM hasCacheWriteCriticalAccess]]
+		and: [GbsSessionManager current hasCacheWriteCriticalAccess]]
 			gbxAssertEquals: true
 			message: 'Must hold both sessionProtect and stObjectCache accessProtect at this point.'.
 	otherDelegate isReadOnlyObject: self isReadOnlyObject.

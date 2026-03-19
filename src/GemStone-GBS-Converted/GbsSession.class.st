@@ -760,7 +760,7 @@ GbsSession >> endingLastInteraction: anInteraction
 
 	replicatorManager ifNotNil: [replicatorManager endingInteraction].
 	serverMap ifNotNil: [serverMap beWeak].
-	GBSM sessionExitingInteractions
+	GbsSessionManager current sessionExitingInteractions
 ]
 
 { #category : 'GBS private' }
@@ -871,7 +871,7 @@ GbsSession >> startingFirstInteraction: anInteraction
 [
 	"Can be overridden in subclasses."
 
-	GBSM sessionEnteringInteractions.
+	GbsSessionManager current sessionEnteringInteractions.
 	serverInterface makeCacheStrongAndFinalizeIntoBuffers.
 	replicatorManager startingInteraction
 ]

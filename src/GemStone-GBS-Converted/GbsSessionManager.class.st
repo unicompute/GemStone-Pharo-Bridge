@@ -1990,6 +1990,20 @@ GbsSessionManager class >> version
 	^GbsConfiguration version
 ]
 
+{ #category : 'accessing' }
+GbsSessionManager class >> current
+[
+	"Answer the singleton manager whether #GBSM is still bound to the shim class
+	or has already been rebound to the manager instance."
+
+	| gbsm |
+	gbsm := Smalltalk globals at: #GBSM ifAbsent: [ nil ].
+	gbsm ifNil: [ ^ GBSM manager ].
+	((gbsm isKindOf: Behavior) and: [ gbsm respondsTo: #manager ])
+		ifTrue: [ ^ gbsm manager ].
+	^ gbsm
+]
+
 { #category : 'initialization' }
 GbsSessionManager class >> initializeMiscConstants
 [

@@ -496,7 +496,7 @@ GbsConfiguration >> useGbsMemoryPolicy: aBoolean
 [
 
 	useGbsMemoryPolicy := aBoolean.
-	GBSM checkMemoryPolicy	"I may not be GbsConfiguration current, so just tell GBSM to 'check'"
+	GbsSessionManager current checkMemoryPolicy	"I may not be GbsConfiguration current, so just tell GBSM to 'check'"
 ]
 
 { #category : 'accessing' }

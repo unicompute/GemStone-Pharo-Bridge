@@ -266,9 +266,10 @@ GbsSessionParameters >> login
 	"Must hold loginProtect throughout to prevent another thread from 'stealing' the linked session
 	after we've determined it's available."
 
-	| session |
-	session := GBSM loginCritical: 
-			[GBSM isLinkedLoginAvailable 
+	| manager session |
+	manager := GbsSessionManager current.
+	session := manager loginCritical: 
+			[manager isLinkedLoginAvailable 
 				ifTrue: [self loginLnk]
 				ifFalse: [self loginRpc]].
 	session ifNotNil: [
@@ -286,8 +287,10 @@ GbsSessionParameters >> loginLinked: aBoolean onPasswordExpirationWarning: aOneA
 	"Must acquire loginProtect before logging in so we don't 'steal' the linked session 
 	from another thread that's in the midst of running #login."
 
+	| manager |
+	manager := GbsSessionManager current.
 	^
-	[GBSM
+	[manager
 		loginCritical: [self sessionClass loginLinked: aBoolean withParameters: self]]
 			on: (GbsError exceptionClassFor: #rtErrWarningPasswordExpire)
 			do: 

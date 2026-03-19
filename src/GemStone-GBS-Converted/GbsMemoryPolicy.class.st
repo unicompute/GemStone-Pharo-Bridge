@@ -14,7 +14,7 @@ GbsMemoryPolicy >> incrementalReclamation
 [
 	"Defer inc GC until we're not in replication"
 
-	GBSM hasSessionsInInteractions
+	GbsSessionManager current hasSessionsInInteractions
 		ifFalse: [super incrementalReclamation]
 		ifTrue: [needIncrementalReclamation := true]
 ]
@@ -44,7 +44,7 @@ GbsMemoryPolicy >> noticeOfInstall
 [
 	"When a GbsMemoryPolicy or a subclass is installed as the current memory policy, it must also be the memory policy that GBSM knows about. When the current system memory policy is a non-GBS policy, GBSM's policy must still be a GBS policy, though it won't do much."
 
-	GBSM memoryPolicy: self
+	GbsSessionManager current memoryPolicy: self
 ]
 
 { #category : 'private' }
@@ -84,4 +84,3 @@ GbsMemoryPolicy >> initialize
 	super initialize.
 	needIncrementalReclamation := false.
 ]
-
