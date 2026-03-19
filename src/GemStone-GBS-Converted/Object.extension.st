@@ -40,6 +40,17 @@ Object >> gbxFixMe [
 	"A send of gbxFixMe indicates code that still needs work."
 ]
 
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxIsGSError [
+	^ false
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxAsCString [
+	(self isKindOf: Symbol) ifTrue: [ ^ self asString ].
+	^ self
+]
+
 { #category : '*GemStone-GBS-Converted-messenger' }
 Object class >> gbsMessenger [
 	^ GbxMessageDispatcher singleton
