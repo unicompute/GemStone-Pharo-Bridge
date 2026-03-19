@@ -92,10 +92,14 @@ GbxDirtySetStack >> push
 [
 	"Push an empty set to the stack."
 
+	| config |
 	top >= stack size ifTrue: [self grow].
 	top := top + 1.
+	config := session
+		ifNil: [ GbsConfiguration current ]
+		ifNotNil: [ session configuration ifNil: [ GbsConfiguration current ] ].
 	stack at: top
-		put: (GbxDirtySet new: session configuration initialDirtyPoolSize)
+		put: (GbxDirtySet new: config initialDirtyPoolSize)
 ]
 
 { #category : 'testing' }
@@ -145,7 +149,7 @@ GbxDirtySetStack >> initialize
 GbxDirtySetStack class >> newForSession: aGbsSession
 [
 
-	^(self new)
+	^(self basicNew)
 		session: aGbsSession;
 		initialize;
 		yourself

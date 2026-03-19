@@ -160,6 +160,31 @@ CstMessageDispatcher >> print: aString withArguments: args [
 ]
 
 { #category : 'printing' }
+CstMessageDispatcher >> print: aString on: aStream [
+	^ self print: aString on: aStream withArguments: #()
+]
+
+{ #category : 'printing' }
+CstMessageDispatcher >> print: aString on: aStream with: arg1 [
+	^ self print: aString on: aStream withArguments: (Array with: arg1)
+]
+
+{ #category : 'printing' }
+CstMessageDispatcher >> print: aString on: aStream with: arg1 with: arg2 [
+	^ self print: aString on: aStream withArguments: (Array with: arg1 with: arg2)
+]
+
+{ #category : 'printing' }
+CstMessageDispatcher >> print: aString on: aStream with: arg1 with: arg2 with: arg3 [
+	^ self print: aString on: aStream withArguments: (Array with: arg1 with: arg2 with: arg3)
+]
+
+{ #category : 'printing' }
+CstMessageDispatcher >> print: aString on: aStream with: arg1 with: arg2 with: arg3 with: arg4 [
+	^ self print: aString on: aStream withArguments: (Array with: arg1 with: arg2 with: arg3 with: arg4)
+]
+
+{ #category : 'printing' }
 CstMessageDispatcher >> print: aString on: aStream withArguments: args [
 	| rStream source |
 	source := self convertString: aString.

@@ -156,7 +156,7 @@ GbxDirtyPool >> emptyDirtyAwaitingPackingInto: resultCollection
 GbxDirtyPool class >> newForSession: aGbsSession
 [
 
-	^(self new)
+	^(self basicNew)
 		session: aGbsSession;
 		initialize;
 		yourself
