@@ -13,7 +13,8 @@ Class {
 { #category : 'accessing' }
 GbxServerMapAuditFailure >> description: anObject
 [
-	description := anObject
+	description := anObject.
+	^self
 ]
 
 { #category : 'accessing' }
@@ -31,7 +32,8 @@ GbxServerMapAuditFailure >> description
 { #category : 'accessing' }
 GbxServerMapAuditFailure >> node: anObject
 [
-	node := anObject
+	node := anObject.
+	^self
 ]
 
 { #category : 'printing' }
@@ -64,4 +66,3 @@ GbxServerMapAuditFailure class >> description: descriptiveString
 
 	^self new description: descriptiveString
 ]
-

@@ -21,7 +21,8 @@ GbxUnmappedClassReplicator >> initializeForSession: aSession serverBehavior: aDe
 
 	session := aSession.
 	manager := session replicatorManager.
-	serverClass := aDelegate
+	serverClass := aDelegate.
+	^self
 ]
 
 { #category : 'per-object replication' }
@@ -528,4 +529,3 @@ GbxUnmappedClassReplicator class >> forSession: session serverBehavior: aDelegat
 [
 	^self new initializeForSession:	session serverBehavior: aDelegate
 ]
-

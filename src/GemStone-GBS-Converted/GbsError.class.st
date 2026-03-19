@@ -100,7 +100,8 @@ GbsError >> session: aGSSession
 [
 	"Private"
 
-	session := aGSSession
+	session := aGSSession.
+	^self
 ]
 
 { #category : 'private accessing' }
@@ -108,7 +109,8 @@ GbsError >> number: anInteger
 [
 	"Private"
 
-	number := anInteger
+	number := anInteger.
+	^self
 ]
 
 { #category : 'accessing' }
@@ -1067,4 +1069,3 @@ GbsError class >> number: anInteger session: aGSSession
 
 	^self new number: anInteger; session: aGSSession
 ]
-

@@ -253,7 +253,8 @@ GbxObjectReplicator >> initializeForClientClass: aClientClass serverClass: class
 	manager := aManager.
 	session := aManager session.
 	notCachedToken := NotCachedToken.
-	self initializeForNewObject
+	self initializeForNewObject.
+	^self
 ]
 
 { #category : 'initialize-release' }
@@ -312,4 +313,3 @@ GbxObjectReplicator class >> forClientClass: clientClass serverClass: classDeleg
 		serverClass: classDelegate
 		manager: manager
 ]
-

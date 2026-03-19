@@ -127,7 +127,8 @@ GbxMethod >> oopValue: anOop session: aGSSession
 	methodDelegate := GbxDelegate oopValue: anOop session: aGSSession.
 	classDelegate := #uninitialized.
 	selector := #UnboundMethod.
-	className := #'Unknown Class'
+	className := #'Unknown Class'.
+	^self
 ]
 
 { #category : 'initialize-release' }
@@ -169,4 +170,3 @@ GbxMethod class >> oopValue: anOop session: aGSSession
 [
 	^self new oopValue: anOop session: aGSSession
 ]
-

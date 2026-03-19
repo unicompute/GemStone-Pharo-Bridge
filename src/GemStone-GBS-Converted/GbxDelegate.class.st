@@ -901,7 +901,8 @@ GbxDelegate >> sessionId: anInteger
 	"if an error occurs at login, the error will come back with delegates of sessionId  0. 
 	We need to go in and massage the delegates of the GbsError in this case"
 
-	^self basicAt: 1 put: anInteger
+	self basicAt: 1 put: anInteger.
+	^self
 ]
 
 { #category : 'private' }
@@ -955,7 +956,8 @@ GbxDelegate >> notForSession: aSession
 { #category : 'private' }
 GbxDelegate >> session: aGbsSession 
 [
-	self basicAt: 1 put: aGbsSession sessionId
+	self basicAt: 1 put: aGbsSession sessionId.
+	^self
 ]
 
 { #category : 'private' }
@@ -1565,7 +1567,8 @@ GbxDelegate >> oopValue: anInteger
 	[temp ~~ 0] whileTrue: 
 			[self oopByteAt: index put: (temp bitAnd: 16rFF).
 			temp := temp bitShift: -8.
-			index := index - 1]
+			index := index - 1].
+	^self
 ]
 
 { #category : 'private - oop access' }
@@ -2471,4 +2474,3 @@ GbxDelegate class >> bytesPerOop
 	"Either 4 or 8"
 	^self subclassResponsibility
 ]
-

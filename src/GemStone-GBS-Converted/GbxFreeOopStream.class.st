@@ -31,7 +31,8 @@ GbxFreeOopStream >> nextFreeOop
 { #category : 'private-accessing' }
 GbxFreeOopStream >> session: aSession 
 [
-	session := aSession
+	session := aSession.
+	^self
 ]
 
 { #category : 'initialize-release' }
@@ -54,4 +55,3 @@ GbxFreeOopStream class >> new
 [
 	^super new initialize
 ]
-

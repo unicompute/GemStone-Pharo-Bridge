@@ -212,7 +212,8 @@ GbxKernelPomOop >> asGSObjectInSession: aSession
 { #category : 'initialize-release' }
 GbxKernelPomOop >> oopNumber: anInteger 
 [
-	oopNumber := anInteger
+	oopNumber := anInteger.
+	^self
 ]
 
 { #category : 'printing' }
@@ -422,4 +423,3 @@ GbxKernelPomOop class >> oopNumber: anInteger
 [
 	^self new oopNumber: anInteger
 ]
-

@@ -62,7 +62,8 @@ GbxContextualMessageDispatcher >> appModelContext: anAppModel
 	 apply too. This allows any dialog windows opened by the receiver to
 	 to be related to their parent window."
 
-	appModelContext := anAppModel
+	appModelContext := anAppModel.
+	^self
 ]
 
 { #category : 'accessing' }
@@ -80,4 +81,3 @@ GbxContextualMessageDispatcher class >> newForContext: anAppModel
 	(anAppModel respondsTo: #builder) ifFalse: [^self singleton].
 	^self new appModelContext: anAppModel
 ]
-

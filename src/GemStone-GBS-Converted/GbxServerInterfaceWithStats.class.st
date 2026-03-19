@@ -28,7 +28,8 @@ GbxServerInterfaceWithStats >> serverInterface: interface statResource: resource
 [
 
 	serverInterface := interface.
-	statResource := resource
+	statResource := resource.
+	^self
 ]
 
 { #category : 'delegating and updating stats' }
@@ -684,4 +685,3 @@ GbxServerInterfaceWithStats class >> serverInterface: interface statResource: re
 
 	^self new serverInterface: interface statResource: resource
 ]
-

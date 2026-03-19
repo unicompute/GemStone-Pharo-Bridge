@@ -21,7 +21,8 @@ GbxKeyValueFaulter >> dictionary: aDict
 
 	deferredKeys := Dictionary new.
 	deferredValues := Dictionary new.
-	dictionary := aDict
+	dictionary := aDict.
+	^self
 ]
 
 { #category : 'replication' }
@@ -84,4 +85,3 @@ GbxKeyValueFaulter class >> for: aDictionary
 [
 	^self new dictionary: aDictionary
 ]
-

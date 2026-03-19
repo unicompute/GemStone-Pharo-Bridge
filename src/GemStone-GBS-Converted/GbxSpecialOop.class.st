@@ -25,7 +25,8 @@ GbxSpecialOop >> hash
 { #category : 'accessing' }
 GbxSpecialOop >> clientSpecial: anObject
 [
-	clientSpecial := anObject
+	clientSpecial := anObject.
+	^self
 ]
 
 { #category : 'printing' }
@@ -76,4 +77,3 @@ GbxSpecialOop class >> for: aClientSpecial
 [
 	^self new clientSpecial: aClientSpecial
 ]
-

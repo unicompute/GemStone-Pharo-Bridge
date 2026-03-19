@@ -23,7 +23,8 @@ GbxEventDetector >> initialize
 GbxEventDetector >> session: aSession 
 [
 	session := aSession.
-	callSequencer := session serverInterface callSequencer
+	callSequencer := session serverInterface callSequencer.
+	^self
 ]
 
 { #category : 'public' }
@@ -111,4 +112,3 @@ GbxEventDetector class >> new
 [
 	^super new initialize
 ]
-

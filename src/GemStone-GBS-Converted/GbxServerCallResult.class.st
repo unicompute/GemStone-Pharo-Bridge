@@ -137,7 +137,8 @@ GbxServerCallResult >> initializeForServerInterface: aServerInterface
 [
 	serverInterface := aServerInterface.
 	session := serverInterface session.
-	immediateOops := OrderedCollection new: 500
+	immediateOops := OrderedCollection new: 500.
+	^self
 ]
 
 { #category : 'instance creation' }
@@ -145,4 +146,3 @@ GbxServerCallResult class >> serverInterface: aServerInterface
 [
 	^self new initializeForServerInterface: aServerInterface
 ]
-

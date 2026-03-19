@@ -110,7 +110,8 @@ GbxUnauthorizedObjectReplicator >> initializeForManager: aManager
 	self
 		initializeForClientClass: stubClass
 		serverClass: (sess cacheAtST: stubClass)
-		manager: aManager
+		manager: aManager.
+	^self
 ]
 
 { #category : 'per-object replication' }
@@ -156,4 +157,3 @@ GbxUnauthorizedObjectReplicator class >> newForManager: aManager
 
 	^self new initializeForManager: aManager
 ]
-

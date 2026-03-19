@@ -15,7 +15,8 @@ GbxSemaphoreWithStats >> semaphore: aSemaphore statAdaptor: aStatAdaptor
 [
 
 	semaphore := aSemaphore.
-	statAdaptor := aStatAdaptor
+	statAdaptor := aStatAdaptor.
+	^self
 ]
 
 { #category : 'accessing' }
@@ -84,4 +85,3 @@ GbxSemaphoreWithStats class >> semaphore: aSemaphore statAdaptor: aStatAdaptor
 
 	^super new semaphore: aSemaphore statAdaptor: aStatAdaptor
 ]
-

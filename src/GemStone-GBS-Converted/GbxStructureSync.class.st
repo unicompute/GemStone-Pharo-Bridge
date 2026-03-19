@@ -41,6 +41,7 @@ GbxStructureSync >> stObj: st gsObj: gs
 	"stObj := st."
 	self stObjTable at: self put: st.
 	gsObj := gs.
+	^self
 ]
 
 { #category : 'proxy methods' }
@@ -85,4 +86,3 @@ GbxStructureSync class >> stObj: st gsObj: gs
 
 	^self new stObj: st gsObj: gs
 ]
-

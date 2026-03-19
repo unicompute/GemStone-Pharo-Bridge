@@ -107,7 +107,8 @@ GbxVersionNumber >> componentSize
 { #category : 'private' }
 GbxVersionNumber >> versionString: versionString 
 [
-	versionComponents := self parseVersionString: versionString
+	versionComponents := self parseVersionString: versionString.
+	^self
 ]
 
 { #category : 'private' }
@@ -161,4 +162,3 @@ GbxVersionNumber class >> null
 
 	^self versionString: ''
 ]
-

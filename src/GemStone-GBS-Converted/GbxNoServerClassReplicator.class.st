@@ -34,7 +34,8 @@ GbxNoServerClassReplicator >> initializeForClientClass: aClientClass manager: aM
 
 	clientClass := aClientClass.
 	manager := aManager.
-	session := aManager session
+	session := aManager session.
+	^self
 ]
 
 { #category : 'instance creation' }
@@ -51,4 +52,3 @@ GbxNoServerClassReplicator class >> forClientClass: clientClass serverClass: del
 
 	^self forClientClass: clientClass manager: manager
 ]
-

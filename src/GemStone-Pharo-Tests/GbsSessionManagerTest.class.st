@@ -233,6 +233,41 @@ GbsSessionManagerTest >> testFastConnectorFactoryReturnsConnectorInstance [
 ]
 
 { #category : 'tests' }
+GbsSessionManagerTest >> testConvertedDelegateFactoriesReturnDelegateInstances [
+	| session delegate |
+	session := self minimalConvertedSession.
+	delegate := GbxDelegate forSession: session.
+	self assert: (delegate isKindOf: GbxDelegate).
+	self assert: delegate sessionId equals: 42.
+	self assert: (delegate oopValue: 99) identicalTo: delegate
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testConvertedErrorFactoryReturnsErrorInstance [
+	| session error |
+	session := self minimalConvertedSession.
+	error := GbsError number: 17 session: session.
+	self assert: (error isKindOf: GbsError)
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testConvertedKernelAndVersionFactoriesReturnInstances [
+	self assert: (GbxKernelPomOop oopNumber: 123) class equals: GbxKernelPomOop.
+	self assert: (GbxVersionNumber versionString: '3.7.4.3') class equals: GbxVersionNumber.
+	self assert: (GbxSpecialOop for: true) class equals: GbxSpecialOop
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testConvertedSupportFactoriesReturnInstances [
+	| session stream |
+	session := self minimalConvertedSession.
+	stream := GbxFreeOopStream for: session.
+	self assert: (stream isKindOf: GbxFreeOopStream).
+	self assert: (GbxKeyValueFaulter for: Dictionary new) class equals: GbxKeyValueFaulter.
+	self assert: (GbxServerMapAuditFailure description: 'broken') class equals: GbxServerMapAuditFailure
+]
+
+{ #category : 'tests' }
 GbsSessionManagerTest >> testConnectorConnectionStateDefaultsToConnected [
 	Smalltalk globals at: #GbsConnectorConnectionRegistry put: Dictionary new.
 	Smalltalk globals at: #GbsConnectorObjectRegistry put: Dictionary new.
@@ -258,6 +293,15 @@ GbsSessionManagerTest >> testConnectorConnectionStateCanBeUpdatedPerSessionAndCo
 		isConnectorClient: 'ByteArray'
 		server: 'ByteArray'
 		connectedInSession: 'OtherUser@gs64stone')
+]
+
+{ #category : 'private' }
+GbsSessionManagerTest >> minimalConvertedSession [
+	| session |
+	session := MockGbsSession new.
+	session instVarNamed: 'sessionId' put: 42.
+	session instVarNamed: 'specialConverter' put: GbxSpecialConverter64 new.
+	^session
 ]
 
 { #category : 'tests' }
