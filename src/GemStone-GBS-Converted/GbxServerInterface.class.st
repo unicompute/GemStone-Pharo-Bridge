@@ -166,6 +166,12 @@ GbxServerInterface >> startEventDetection
 	eventDetector start
 ]
 
+{ #category : 'events/nonblocking support' }
+GbxServerInterface >> stopNbWaitSocket
+[
+	^callSequencer stopNbWaitSocket
+]
+
 { #category : 'buffers' }
 GbxServerInterface >> oopsNoLongerReplicatedBuffer
 [
@@ -1200,4 +1206,31 @@ GbxServerInterface class >> forSession: sess configuration: config
 	inst := self new.
 	inst initializeForSession: sess configuration: config.
 	^inst
+]
+
+{ #category : 'class initialization' }
+GbxServerInterface class >> disableStats
+[
+	"First, make sure PrimInterface is initialized"
+
+	GbxGciCallSequencer primInterface
+]
+
+{ #category : 'class initialization' }
+GbxServerInterface class >> enableStats
+[
+	"Make sure PrimInterface is initialized. This may not be needed."
+
+	GBSM serverInterface callSequencer primInterface
+]
+
+{ #category : 'initialize-release' }
+GbxServerInterface >> statResource: aStatResource
+[
+	"If aStatResource is nil, return a non-wrapped GbxCInterface.  Otherwise,
+	return a GbxCInterfaceWithStats-wrapped cinterface."
+
+	^aStatResource isNil
+		ifTrue: [self]
+		ifFalse: [GbxServerInterfaceWithStats serverInterface: self statResource: aStatResource]
 ]

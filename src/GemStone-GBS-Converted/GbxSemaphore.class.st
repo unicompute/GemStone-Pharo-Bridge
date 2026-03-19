@@ -109,6 +109,18 @@ GbxSemaphore >> isActiveProcessInCriticalRegion
 	^lockingProcess == Processor activeProcess
 ]
 
+{ #category : 'initialize-release' }
+GbxSemaphore >> statAdaptor: aStatAdaptorOrNil
+[
+	"Return a GbxSemaphoreWithStats wrapping the receiver, if aStatAdaptorOrNil
+	is non-nil - stats are being enabled. If it's nil, return self - stats are
+	already disabled."
+
+	^aStatAdaptorOrNil isNil
+		ifTrue: [self]
+		ifFalse: [GbxSemaphoreWithStats semaphore: self statAdaptor: aStatAdaptorOrNil]
+]
+
 { #category : 'mutual exclusion' }
 GbxSemaphore >> critical: mutuallyExcludedBlock
 [

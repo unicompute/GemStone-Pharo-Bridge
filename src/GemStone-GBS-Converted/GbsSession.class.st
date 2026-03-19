@@ -2080,6 +2080,16 @@ GbsSession >> initializeServerInterface
 	self initializeStatAdaptors
 ]
 
+{ #category : 'private - initialization' }
+GbsSession >> initializeStatAdaptors
+[
+	"Initialize components that have stat adaptors - disable stats"
+
+	serverInterface := serverInterface statResource: nil.
+	self sessionCriticalNoSessionCheck:
+		[sessionProtect := sessionProtect statAdaptor: nil]
+]
+
 { #category : 'private - testing' }
 GbsSession >> initializeIsRemote
 [
@@ -2103,6 +2113,20 @@ GbsSession >> isSingleTrip
 	true if using the single-trip (GciStoreTravDoTravRefs) interface introduced in GS64 2.2.5.x"
 	
 	^serverInterface isSingleTrip
+]
+
+{ #category : 'testing' }
+GbsSession >> mainStatsEnabled
+[
+	"When main stats are enabled, a session is an instance of GbsSessionWithStats"
+
+	^false
+]
+
+{ #category : 'accessing' }
+GbsSession >> statResource
+[
+	^stats
 ]
 
 { #category : 'private - testing' }

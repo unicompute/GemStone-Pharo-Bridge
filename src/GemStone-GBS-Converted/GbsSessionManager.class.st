@@ -49,6 +49,28 @@ GbsSessionManager >> blockReplicationEnabled
 	^GbsConfiguration current blockReplicationEnabled
 ]
 
+{ #category : 'private - initialization' }
+GbsSessionManager >> initializeStatAdaptors
+[
+	"Initialize components that have stat adaptors - disable stats"
+
+	GbxGciCallSequencer gciCallProtectStatAdaptor: nil
+]
+
+{ #category : 'testing' }
+GbsSessionManager >> mainStatsEnabled
+[
+	^self class == GbsSessionManagerWithStats
+]
+
+{ #category : 'accessing' }
+GbsSessionManager >> statResource
+[
+	"Return the session manager stat resource."
+
+	^stats
+]
+
 { #category : 'configuring gembuilder' }
 GbsSessionManager >> connectorNilling: aBoolean 
 [
