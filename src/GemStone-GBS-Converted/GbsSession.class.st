@@ -6514,7 +6514,7 @@ GbsSession >> useDiagnosticSpecialConverter
 
 	^GbsConfiguration current useDiagnosticSpecialConverter
 		and: [GbsConfiguration is64BitClient
-		and: [Smalltalk isBigEndian not]]
+		and: [EndianDetector isBigEndian not]]
 ]
 
 { #category : 'initialize-release' }

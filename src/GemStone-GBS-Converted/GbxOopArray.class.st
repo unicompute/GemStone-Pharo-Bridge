@@ -147,7 +147,7 @@ GbxOopArray >> initializeFromDelegates: delegates
 GbxOopArray >> isBigEndian
 [
 	
-	^UninterpretedBytes isBigEndian
+	^EndianDetector isBigEndian
 ]
 
 { #category : 'private' }
@@ -277,4 +277,3 @@ GbxOopArray class >> buffer: anUninterpretedBytes offset: byteOffset
 	inst buffer: anUninterpretedBytes offset: byteOffset.
 	^inst
 ]
-

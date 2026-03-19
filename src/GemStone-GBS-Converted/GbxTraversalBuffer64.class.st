@@ -30,7 +30,7 @@ GbxTraversalBuffer64 >> wordAlign: integerOffset
 GbxTraversalBuffer64 >> objRepTypeClass
 [
 
-	^Smalltalk isBigEndian
+	^EndianDetector isBigEndian
 		ifTrue: [GbxB8v3ObjectReport]
 		ifFalse: [GbxL8v3ObjectReport]
 ]
@@ -74,4 +74,3 @@ GbxTraversalBuffer64 >> usedBytes
 	
 	^data longLongAt: 9
 ]
-

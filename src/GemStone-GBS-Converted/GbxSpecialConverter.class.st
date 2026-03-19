@@ -258,7 +258,7 @@ GbxSpecialConverter >> delegateForSpecialFraction: aFraction forSession: aSessio
 { #category : 'private - converting' }
 GbxSpecialConverter >> isBigEndian
 [
-	^Smalltalk isBigEndian
+	^EndianDetector isBigEndian
 ]
 
 { #category : 'private - converting' }

@@ -542,7 +542,7 @@ GbxServerInterface >> isSingleTrip
 GbxServerInterface >> isBigEndian
 [
 	
-	^UninterpretedBytes isBigEndian
+	^EndianDetector isBigEndian
 ]
 
 { #category : 'testing' }

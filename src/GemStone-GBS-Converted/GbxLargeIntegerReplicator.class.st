@@ -112,7 +112,7 @@ GbxLargeIntegerReplicator class >> forClientClass: clientClass serverClass: clas
 	"Create an instance of the appropriate one of my concrete subclasses."
 
 	| concreteClass |
-	concreteClass := UninterpretedBytes isBigEndian
+	concreteClass := EndianDetector isBigEndian
 				ifTrue: [GbxLargeIntegerDigitB32Replicator]
 				ifFalse: [GbxLargeIntegerDigitL32Replicator].
 	^concreteClass new
@@ -120,4 +120,3 @@ GbxLargeIntegerReplicator class >> forClientClass: clientClass serverClass: clas
 		serverClass: classDelegate
 		manager: manager
 ]
-
