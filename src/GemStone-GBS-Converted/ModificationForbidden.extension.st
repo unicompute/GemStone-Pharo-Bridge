@@ -44,8 +44,10 @@ ModificationForbidden >> gbxHandleAttemptedClassChange [
 		ifTrue: [^super raiseRequest].
 	delegate serverCanAcceptClassChanges ifTrue: [parameter markDirty].
 	
-	[response := self retryModification.
-	"response in this case should always be the same as self object"]
+	[parameter gbxIsImmutable: false.
+	response := self retryModification.
+	"response in this case should always be the same as self object"
+	response gbxIsImmutable: true]
 			valueUnpreemptively.
 	^response
 ]
@@ -76,8 +78,8 @@ ModificationForbidden >> gbxHandleAttemptedBecome [
 			[parameter markDirty.
 			value markDirty].
 	
-	[self 
-	
+	[self object gbxIsImmutable: false.
+	value gbxIsImmutable: false.
 	response := self retryModification.
 	"Receiver and argument are now swapped."
 	self object gbxIsImmutable: recWas.
@@ -123,4 +125,3 @@ ModificationForbidden >> osType [
 ModificationForbidden >> isRunningUnderAssertingVM [
 	^false
 ]
-
