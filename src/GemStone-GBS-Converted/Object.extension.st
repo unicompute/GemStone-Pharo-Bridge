@@ -337,8 +337,21 @@ Object >> faultPolicy [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> isImmediate [
+	(self respondsTo: #isImmediateObject)
+		ifTrue: [ ^ self isImmediateObject ].
+	^ false
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> islmmediate [
+	^ self isImmediate
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> faultToLevel: level [
 	| remoteObject session |
+	self isImmediate ifTrue: [ ^ self ].
 	remoteObject := self gbxDelegate ifNotNil: [ :delegate | delegate forAnySingleSession ].
 	remoteObject isNil ifTrue: [ ^ self ].
 	session := remoteObject session.
@@ -414,6 +427,11 @@ Object >> gsIsDirty [
 	| remoteObject |
 	remoteObject := self gbxDelegate.
 	^ remoteObject notNil and: [ remoteObject isStDirty ]
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gsIsPersistent [
+	^ self gbxDelegate notNil
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
@@ -508,6 +526,11 @@ Object >> performOnGsServer: selector withArguments: argArray [
 	^ delegate performOnGsServer: selector withArguments: argArray
 ]
 
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> performOnGsServer: selector [
+	^ self performOnGsServer: selector withArguments: #()
+]
+
 { #category : '*GemStone-GBS-Converted-debugging' }
 Object >> gbxGsDebuggerSession [
 	| delegate |
@@ -533,6 +556,10 @@ Object >> gbxStepsIntoGemStone: aSelector showGlue: showGlue [
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> postFault [
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> postFlush [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
@@ -599,6 +626,16 @@ Object >> gbxIsGSDefunct [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxIsProxy [
+	^ false
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxIsServerSpecialInSession: aSession [
+	^ false
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> gbxIsModifiable [
 	| delegate |
 	(GbsConfiguration current autoMarkDirty and: [ self gbxIsImmutable ])
@@ -619,6 +656,83 @@ Object >> gbxValidateDelegateAndSession [
 			^ nil ].
 	(delegate validateSessionForProxy: self) isNil ifTrue: [ ^ nil ].
 	^ delegate
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxAsServerBytes [
+	^ self gbsMessenger error: 'Invalid argument'
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxBasicSize [
+	^ self basicSize
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxChangeClassTo: aClass [
+	aClass adoptInstance: self.
+	^ self
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxCopyBytesFromReport: report [
+	| firstOffset lastOffset |
+	firstOffset := report firstOffset.
+	lastOffset := firstOffset + report valueBuffSize - 1.
+	lastOffset >= firstOffset ifTrue: [
+		report
+			copyBytesBufferInto: self
+			from: firstOffset
+			to: lastOffset ]
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxIdentityHash [
+	^ self identityHash
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxIgnoreFutureChanges [
+	GbsConfiguration current autoMarkDirty
+		ifTrue: [ self gbxIsImmutable: false ]
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxTrapFutureChanges [
+	GbsConfiguration current autoMarkDirty
+		ifTrue: [ self gbxIsImmutable: true ]
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxWhileMutableDoUnpreemptively: aBlock [
+	^ [ self gbxIsImmutable
+			ifTrue: [
+				self gbxIsImmutable: false.
+				aBlock ensure: [ self gbxIsImmutable: true ] ]
+			ifFalse: [ aBlock value ] ]
+		valueUnpreemptively
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> fixRefsTo: old with: new [
+	self class isBits ifTrue: [ ^ self ].
+	1 to: self class instSize do: [ :index |
+		(self instVarAt: index) == old ifTrue: [
+			self instVarAt: index put: new ] ].
+	1 to: self basicSize do: [ :index |
+		(self basicAt: index) == old ifTrue: [
+			self basicAt: index put: new ] ].
+	^ self
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> shouldCollapseGemStoneWindow [
+	^ false
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> shouldRaiseGemStoneWindow [
+	^ false
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
