@@ -1,6 +1,7 @@
 Class {
 	#name : 'GbxB8Delegate',
 	#superclass : 'Gbx8Delegate',
+	#type : #bytes,
 	#instVars : [
 	],
 	#classVars : [
@@ -68,4 +69,3 @@ GbxB8Delegate class >> bytesPerOop
 [
 	^8
 ]
-

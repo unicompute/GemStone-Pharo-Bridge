@@ -1,6 +1,7 @@
 Class {
 	#name : 'GbxByteStub',
 	#superclass : 'GbxObjectStub',
+	#type : #bytes,
 	#instVars : [
 	],
 	#classVars : [
@@ -37,4 +38,3 @@ GbxByteStub class >> stubObject: anObject forDelegate: delegate freeSlots: freeS
 	anObject gbxBecome: stub.
 	delegate stubbing
 ]
-
