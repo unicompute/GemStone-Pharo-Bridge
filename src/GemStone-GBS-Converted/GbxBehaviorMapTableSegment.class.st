@@ -1,6 +1,7 @@
 Class {
 	#name : 'GbxBehaviorMapTableSegment',
 	#superclass : 'GbxHashTableSegment',
+	#type : #variable,
 	#instVars : [
 	],
 	#classVars : [
@@ -14,4 +15,3 @@ GbxBehaviorMapTableSegment class >> instanceBasicSize
 
 	^2048
 ]
-

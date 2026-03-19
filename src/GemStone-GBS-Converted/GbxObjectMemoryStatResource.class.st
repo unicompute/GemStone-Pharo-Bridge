@@ -33,7 +33,13 @@ GbxObjectMemoryStatResource >> newincGCStateStat
 	"Return a new GbxStat for the given stat name"
 
 	| desc |
-	desc := self class statDescriptors detect: [:sd | sd name = 'incGCState'].
+	desc := self class statDescriptors
+		detect: [ :sd | sd name = 'incGCState' ]
+		ifNone: [
+			| newDescriptor |
+			newDescriptor := self class newStatFor: 'incGCState'.
+			self class addStatDescriptor: newDescriptor.
+			newDescriptor ].
 	^GbxIncGcStateStat newWithDescription: desc
 ]
 
@@ -43,7 +49,13 @@ GbxObjectMemoryStatResource >> newStatFor: statName
 	"Return a new GbxStat for the given stat name"
 
 	| desc |
-	desc := self class statDescriptors detect: [:sd | sd name = statName].
+	desc := self class statDescriptors
+		detect: [ :sd | sd name = statName ]
+		ifNone: [
+			| newDescriptor |
+			newDescriptor := self class newStatFor: statName.
+			self class addStatDescriptor: newDescriptor.
+			newDescriptor ].
 	^GbxObjectMemoryStat newWithDescription: desc
 ]
 

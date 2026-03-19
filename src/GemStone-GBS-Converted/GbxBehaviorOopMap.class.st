@@ -1,6 +1,7 @@
 Class {
 	#name : 'GbxBehaviorOopMap',
 	#superclass : 'GbxOopKeyedDictionary',
+	#type : #variable,
 	#instVars : [
 	],
 	#classVars : [
@@ -14,4 +15,3 @@ GbxBehaviorOopMap >> nodeClass
 
 	^GbxBehaviorOopMapNode
 ]
-

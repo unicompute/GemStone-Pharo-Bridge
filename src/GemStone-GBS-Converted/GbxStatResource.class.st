@@ -77,7 +77,13 @@ GbxStatResource >> newGbxStatFor: statName value: initialValue
 	"Return a new GbxStat for the given stat name"
 
 	| desc stat |
-	desc := self class statDescriptors detect: [ :sd | sd name = statName ].
+	desc := self class statDescriptors
+		detect: [ :sd | sd name = statName ]
+		ifNone: [
+			| newDescriptor |
+			newDescriptor := self class newStatFor: statName.
+			self class addStatDescriptor: newDescriptor.
+			newDescriptor ].
 	stat := GbxStat newWithDescription: desc value: initialValue.
 	stats add: stat.
 	^stat

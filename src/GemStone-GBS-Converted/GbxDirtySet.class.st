@@ -1,6 +1,7 @@
 Class {
 	#name : 'GbxDirtySet',
 	#superclass : 'Object',
+	#type : #variable,
 	#instVars : [
 		'tombstone',
 		'tally'
@@ -151,4 +152,3 @@ GbxDirtySet class >> new: capacity
 		initialize;
 		yourself
 ]
-

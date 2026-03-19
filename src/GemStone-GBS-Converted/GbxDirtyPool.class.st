@@ -115,7 +115,8 @@ GbxDirtyPool >> initialize
 
 	dirtyStack := GbxDirtySetStack newForSession: session.
 	self initializeDirtyAwaitingPacking.
-	activeStoreTraversals := IdentitySet new
+	activeStoreTraversals := IdentitySet new.
+	^self
 ]
 
 { #category : 'initialize-release' }
@@ -160,4 +161,3 @@ GbxDirtyPool class >> newForSession: aGbsSession
 		initialize;
 		yourself
 ]
-

@@ -554,14 +554,15 @@ GbxSpecialConverter64 >> initialize
 [
 
 	super initialize.
-	self initializeSupportedImmediates
+	self initializeSupportedImmediates.
+	^self
 ]
 
 { #category : 'initializing - private' }
 GbxSpecialConverter64 >> initializeSupportedImmediates
 [
 
-	supportsImmediateTimes := GbxServerVersion current supportsImmediateTimes
+	supportsImmediateTimes := false
 ]
 
 { #category : 'converting' }
@@ -580,4 +581,3 @@ GbxSpecialConverter64 >> localSpecialFromOop: anOop
 	tag3Bits == 2r110 ifTrue: [^self localFromSmallDoubleOop: anOop].
 	^notCachedToken	"Not really a special"
 ]
-

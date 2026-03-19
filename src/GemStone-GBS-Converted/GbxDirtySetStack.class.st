@@ -137,7 +137,8 @@ GbxDirtySetStack >> initialize
 
 	stack := Array new: 5.
 	top := 0.
-	self push
+	self push.
+	^self
 ]
 
 { #category : 'instance creation' }
@@ -149,4 +150,3 @@ GbxDirtySetStack class >> newForSession: aGbsSession
 		initialize;
 		yourself
 ]
-

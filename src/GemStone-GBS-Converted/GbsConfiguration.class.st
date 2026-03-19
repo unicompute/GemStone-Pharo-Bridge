@@ -1056,6 +1056,12 @@ GbsConfiguration class >> isVisualWorksImage
 ]
 
 { #category : 'testing' }
+GbsConfiguration class >> is64BitClient
+[
+	^ Smalltalk wordSize = 8
+]
+
+{ #category : 'testing' }
 GbsConfiguration class >> visualWorks: vwBlock visualAge: vaBlock
 [
 

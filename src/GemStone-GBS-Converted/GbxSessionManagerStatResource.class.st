@@ -127,9 +127,11 @@ GbxSessionManagerStatResource >> initializeStatistics
 [
 	"Set the receiver's statistics to 0"
 
+	| loggedInSessionCount |
 	super initializeStatistics.
+	loggedInSessionCount := [ GBSM loggedInSessions size ] on: Error do: [ 0 ].
 	numSessions := self newGbxStatFor: 'numSessions'
-				value: GBSM loggedInSessions size.
+				value: loggedInSessionCount.
 	sessionListProtectInvocations := self 
 				newGbxStatFor: 'sessionListProtectInvocations'
 				value: 0.
@@ -175,4 +177,3 @@ GbxSessionManagerStatResource class >> resourceTypeId
 [
 	^0
 ]
-

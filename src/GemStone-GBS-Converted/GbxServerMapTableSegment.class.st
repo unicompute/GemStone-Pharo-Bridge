@@ -1,6 +1,7 @@
 Class {
 	#name : 'GbxServerMapTableSegment',
 	#superclass : 'GbxHashTableSegment',
+	#type : #weak,
 	#instVars : [
 		'needFinalization'
 	],
@@ -296,4 +297,3 @@ GbxServerMapTableSegment class >> gbxShouldMournEarly
 
 	^true
 ]
-

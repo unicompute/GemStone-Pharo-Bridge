@@ -885,6 +885,7 @@ GbsSessionManager >> initialize
 	self initializeKernelConnectors.
 	self gbsImageStartup.
 	isInitialized := true.
+	^self
 ]
 
 { #category : 'private - initialization' }
@@ -1580,17 +1581,17 @@ GbsSessionManager >> createKernelConnectorFor: array
 	clientName := array at: 1.
 	serverOName := 'O' , (array at: 2).
 	serverOop := self gbxResolve: serverOName in: #SpecialGemStoneObjects.
-	clientName isCharacters
+	clientName isArray
 		ifTrue: 
-			[conn := GbsFastConnector stObj: (self gbxResolve: clientName)
-						gsObj: serverOop]
-		ifFalse: 
 			[| clientObjs |
 			clientObjs := clientName collect: [:key | self gbxResolve: key].
 			conn := GbxManyClientToOneKernelConnector
 						primaryClientObj: clientObjs first
 						secondaryClientObjs: (clientObjs allButFirst: 1)
-						serverOop: serverOop].
+						serverOop: serverOop]
+		ifFalse:
+			[conn := GbsFastConnector stObj: (self gbxResolve: clientName)
+						gsObj: serverOop].
 	conn connectionCondition: (array at: 3).
 	conn noUpdateOnConnect.
 	globalConnectors add: conn.	"Add directly, which allows what would normally be duplicates"
@@ -1619,7 +1620,7 @@ GbsSessionManager >> initializeKernelConnectors
 			| spec conditionNumber |
 			"Copy the spec array and file in the third element with the condition block"
 			spec := Array with: nil with: nil with: 0.
-			array startingAt: 1 replaceElementsIn: spec from: 1 to: array size.
+			spec replaceFrom: 1 to: array size with: array startingAt: 1.
 			conditionNumber := array size > 2 ifTrue: [array at: 3] ifFalse: [1].
 			spec at: 3 put: (kernelConnectorConditions at: conditionNumber).
 			self createKernelConnectorFor: spec].
@@ -1630,10 +1631,31 @@ GbsSessionManager >> initializeKernelConnectors
 			| spec conditionNumber |
 			"Copy the spec array and fill in the last element with the condition block"
 			spec := Array with: nil with: nil with: nil with: 0.
-			array startingAt: 1 replaceElementsIn: spec from: 1 to: array size.
+			spec replaceFrom: 1 to: array size with: array startingAt: 1.
 			conditionNumber := array size > 3 ifTrue: [array at: 4] ifFalse: [1].
 			spec at: 4 put: (kernelConnectorConditions at: conditionNumber).
 			self createKernelClassConnectorFor: spec]
+]
+
+{ #category : 'private - global connections' }
+GbsSessionManager >> clientSpecificGlobalConnectorsList
+[
+	"VisualWorks adds a larger image-specific connector set in a separate package.
+	Pharo only needs the small subset of mappings that exist in the base image."
+
+	^#(
+		(BlockClosure BlockClosure)
+		(ByteString String)
+		(ByteSymbol Symbol)
+		(Float SmallFloat)
+		(Metaclass Metaclass)
+		(PositionableStream PositionableStream)
+		(SequenceableCollection SequenceableCollection)
+		(Stream Stream)
+		(WideString DoubleByteString)
+		(WideSymbol DoubleByteSymbol)
+	)
+		select: [ :spec | (self gbxResolve: spec first) notNil ]
 ]
 
 { #category : 'private - global connections' }
@@ -1970,27 +1992,30 @@ GbsSessionManager class >> version
 GbsSessionManager class >> initializeMiscConstants
 [
 	"GbsSessionManager initializeMiscConstants"
+	| notCachedToken |
 
 	"Minimum traversal buffer size - from GCI_MIN_TRAV_BUFF_SIZE in gci.ht"
 
-	MinTraversalBufferSize := 2048.
-	SmallTraversalBufferSize := 5000.
+	Smalltalk at: #MinTraversalBufferSize put: 2048.
+	Smalltalk at: #SmallTraversalBufferSize put: 5000.
 
 
 	"GemStone object implementation types."
-	Pointers := 0.
-	Bytes := 1.
-	NSC := 2.
-	Special := 3.
+	Smalltalk at: #Pointers put: 0.
+	Smalltalk at: #Bytes put: 1.
+	Smalltalk at: #NSC put: 2.
+	Smalltalk at: #Special put: 3.
 
 	"Store Buffers Flags"
-	StoreValuesFinishUpdates := 8.
+	Smalltalk at: #StoreValuesFinishUpdates put: 8.
 
 
 	"Other"
-	NotCachedToken := 'Not cached' copy.
-	NotCachedToken gbxIsImmutable: true.
-	NameSlot := 11
+	notCachedToken := (Smalltalk at: #NotCachedToken ifAbsent: [ 'Not cached' copy ]) copy.
+	(notCachedToken respondsTo: #gbxIsImmutable:)
+		ifTrue: [ notCachedToken gbxIsImmutable: true ].
+	Smalltalk at: #NotCachedToken put: notCachedToken.
+	Smalltalk at: #NameSlot put: 11
 ]
 
 { #category : 'initialization' }

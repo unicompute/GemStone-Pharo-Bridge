@@ -1,6 +1,7 @@
 Class {
 	#name : 'GbxServerMap',
 	#superclass : 'GbxOopKeyedDictionary',
+	#type : #variable,
 	#instVars : [
 		'isWeak'
 	],
@@ -141,4 +142,3 @@ GbxServerMap >> initialize
 	super initialize.
 	isWeak := true
 ]
-

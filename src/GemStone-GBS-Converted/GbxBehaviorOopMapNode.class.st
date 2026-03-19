@@ -1,6 +1,7 @@
 Class {
 	#name : 'GbxBehaviorOopMapNode',
 	#superclass : 'GbxOopKeyedNode',
+	#type : #variable,
 	#instVars : [
 	],
 	#classVars : [
@@ -399,4 +400,3 @@ GbxBehaviorOopMapNode >> auditHashingInto: results
 					expected: index printString , ' with intervening nil at: '
 							, indexOfMostRecentNil printString]
 ]
-

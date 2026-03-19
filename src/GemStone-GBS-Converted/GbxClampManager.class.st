@@ -242,7 +242,8 @@ GbxClampManager >> initialize
 	classClamps := GbxClassSet new: 500.
 	identityClamps := GbxIdentityClampSet new: 500.
 	replicationSchemes := GbxConcurrentReadIdentityDictionary new: 1.
-	threadSpecificSchemes := GbxThreadStateDictionary new
+	threadSpecificSchemes := GbxThreadStateDictionary new.
+	^self
 ]
 
 { #category : 'initialize-release' }
@@ -340,4 +341,3 @@ GbxClampManager class >> forManager: aReplicatorManager
 
 	^self new initialize manager: aReplicatorManager
 ]
-

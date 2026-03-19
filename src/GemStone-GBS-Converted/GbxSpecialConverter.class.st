@@ -311,7 +311,8 @@ GbxSpecialConverter >> oopForFalse
 { #category : 'initialize-release' }
 GbxSpecialConverter >> initialize
 [
-	notCachedToken := NotCachedToken	"It seems deeply wrong to cache the NotCachedToken... but we do it for performance."
+	notCachedToken := NotCachedToken.	"It seems deeply wrong to cache the NotCachedToken... but we do it for performance."
+	^self
 ]
 
 { #category : 'converting' }
@@ -330,4 +331,3 @@ GbxSpecialConverter class >> new
 [
 	^super new initialize
 ]
-

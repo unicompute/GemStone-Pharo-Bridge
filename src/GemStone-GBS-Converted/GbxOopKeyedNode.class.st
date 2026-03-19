@@ -1,6 +1,7 @@
 Class {
 	#name : 'GbxOopKeyedNode',
 	#superclass : 'Object',
+	#type : #variable,
 	#instVars : [
 		'upperBytes',
 		'notCachedToken',
@@ -281,4 +282,3 @@ GbxOopKeyedNode class >> owningMap: serverMap parentIndex: index initialSize: si
 		parentIndex: index
 		capacity: (Set goodSizeFrom: size * 3 // 2)
 ]
-

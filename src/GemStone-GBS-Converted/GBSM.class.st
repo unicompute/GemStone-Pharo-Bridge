@@ -73,6 +73,7 @@ GBSM class >> doesNotUnderstand: aMessage [
 { #category : 'accessing' }
 GBSM class >> manager [
 	Manager ifNil: [
+		GbsSessionManager initialize.
 		Manager := GbsSessionManager basicNew.
 		Manager initialize ].
 	^ Manager

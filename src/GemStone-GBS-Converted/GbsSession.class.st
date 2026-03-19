@@ -2056,7 +2056,13 @@ GbsSession >> initialize
 [
 	"Private. Early initialization, before any attempt to log in."
 
-	notCachedToken := NotCachedToken.	"Cache for performance. 'notCached' may be a misnomer?"
+	notCachedToken := Smalltalk
+		at: #NotCachedToken
+		ifAbsent: [
+			GbsSessionManager initialize.
+			Smalltalk at: #NotCachedToken ifAbsentPut: [ 'Not cached' copy ] ].
+	(notCachedToken respondsTo: #gbxIsImmutable:)
+		ifTrue: [ notCachedToken gbxIsImmutable: true ].
 	gbsm := GBSM.	"a-caching we will go... (shared var lookups are expensive if done with high frequency)"
 	sessionDisplayString := 'Session (not yet logged in)'.
 	activeInteractions := IdentitySet new.
@@ -2630,7 +2636,8 @@ GbsSession >> loginLinked: linked
 	[self sessionCriticalNoSessionCheck: 
 			[(self basicLoginLinked: linked) ifFalse: [^nil].
 			self postLogin.
-			GbxStatMonitor instance addStatResource: stats]] 
+			GbxStatMonitor instance addStatResource: stats.
+			^self]]
 			ifCurtailed: [self logout]
 ]
 
@@ -2657,7 +2664,8 @@ GbsSession >> loginX509
 	[self sessionCriticalNoSessionCheck: 
 			[self basicX509Login ifFalse: [^nil].
 			self postLogin.
-			GbxStatMonitor instance addStatResource: stats]]
+			GbxStatMonitor instance addStatResource: stats.
+			^self]]
 			ifCurtailed: [self logout]
 ]
 
@@ -6480,9 +6488,7 @@ GbsSession >> useDiagnosticSpecialConverter
 	"The diagnostic special converter can only be used under specific conditions.
 	 Otherwise, we'll just use the regular special converted."
 
-	^GbsConfiguration current useDiagnosticSpecialConverter
-		and: [GbsConfiguration is64BitClient
-		and: [UninterpretedBytes isBigEndian not]]
+	^false
 ]
 
 { #category : 'initialize-release' }
@@ -6491,11 +6497,8 @@ GbsSession >> initializeSpecialConverter
 
 	| class |
 	class := GbsConfiguration is64BitClient
-				ifTrue: 
-					[self useDiagnosticSpecialConverter
-						ifTrue: [GbxDiagnosticSpecialConverter64Vw64]
-						ifFalse: [GbxSpecialConverter64Vw64]]
-				ifFalse: [GbxSpecialConverter64Vw32].
+				ifTrue: [GbxSpecialConverter64]
+				ifFalse: [GbxSpecialConverter].
 	specialConverter := class new
 ]
 

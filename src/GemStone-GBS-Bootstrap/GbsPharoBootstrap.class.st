@@ -16,6 +16,7 @@ GbsPharoBootstrap class >> installCompatibilityAliases
 	Smalltalk at: #FourByteString put: WideString.
 	Smalltalk at: #TwoByteSymbol put: WideSymbol.
 	Smalltalk at: #FourByteSymbol put: WideSymbol.
+	Smalltalk at: #Timestamp put: DateAndTime.
 ]
 
 { #category : 'icons' }

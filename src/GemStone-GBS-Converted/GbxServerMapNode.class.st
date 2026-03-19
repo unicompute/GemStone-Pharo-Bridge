@@ -1,6 +1,7 @@
 Class {
 	#name : 'GbxServerMapNode',
 	#superclass : 'GbxOopKeyedNode',
+	#type : #variable,
 	#instVars : [
 	],
 	#classVars : [
@@ -520,4 +521,3 @@ GbxServerMapNode >> auditUnusedSpaceInto: results
 				actual: (lastSegment basicAt: i)
 				expected: 'nil']
 ]
-

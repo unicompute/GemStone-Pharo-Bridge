@@ -1,6 +1,7 @@
 Class {
 	#name : 'GbxClientObjDictionaryBucket',
 	#superclass : 'Object',
+	#type : #variable,
 	#instVars : [
 		'freeHead',
 		'highwater',
@@ -423,4 +424,3 @@ GbxClientObjDictionaryBucket class >> new: size owner: dictionary index: index
 	inst initializeOwner: dictionary index: index.
 	^inst
 ]
-

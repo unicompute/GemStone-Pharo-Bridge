@@ -223,7 +223,6 @@ GbsFastConnector class >> stObj: anObject gsObj: aGSObject
 [
 	"any fast connector should be created with a GbxKernelPomOop"
 
-	self gbxFixMe.	"The current thinking is that we don't want the user to create KernelOops, so we may want to add a way to create a FastConnector for sessions that are not logged in. Or we may choose to disallow creation of FastConnectors unless logged in. Right now, the stObj:gsObj: method sends asKernelPomOop to the gs object that is passed in. If the gs object a GbxDelegate, it relies on its session's special converter to get the oopNumber for the KernelOop. Since the GbxDelegate doesn't store its session, it would send up an error message when trying to create the kernel oop in this way. "
 	^self basicNew 
 		stObj: anObject
 		gsObj: aGSObject asKernelPomOop

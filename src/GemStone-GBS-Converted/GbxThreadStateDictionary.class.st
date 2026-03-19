@@ -24,7 +24,8 @@ GbxThreadStateDictionary >> initialize
 	keys addDependent: self.
 	values := Array new: tableSize.
 	tally := 0.
-	needFinalization := false
+	needFinalization := false.
+	^self
 ]
 
 { #category : 'public' }
@@ -160,4 +161,3 @@ GbxThreadStateDictionary class >> new
 
 	^super new initialize
 ]
-

@@ -41,7 +41,8 @@ GbxFreeOopStream >> initialize
 	"Set position to just past the end of the initial cache, so the first #next will have to fetch oops."
 
 	cache := #().
-	position := 1
+	position := 1.
+	^self
 ]
 
 { #category : 'instance creation' }
