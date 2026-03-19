@@ -640,6 +640,28 @@ GbsError >> process
 ]
 
 { #category : 'private error processing' }
+GbsError >> processVerifyArgs: verifyArgsBlock
+[
+	"Raise a signal representing this GemStoneError"
+
+	self isGemStoneError ifTrue: [^self processGemStoneError].
+
+	"Error didn't originate in GemStone - run verifyArgsBlock"
+	^verifyArgsBlock value
+		ifTrue:
+			["Apparently, the error isn't due to bad arguments. Primitive failure (SystemError)?"
+			number isError
+				ifTrue:
+					[self gbsMessenger
+						error: 'GCI call failed with error: %1 and parameter: %2'
+						with: number name
+						with: number parameter]
+				ifFalse:
+					[self gbsMessenger
+						error: 'GemBuilder encountered an unknown error']]
+]
+
+{ #category : 'private error processing' }
 GbsError >> processHandlers
 [
 	"Private.  If the session has an event handler for this signal, it will be processed
