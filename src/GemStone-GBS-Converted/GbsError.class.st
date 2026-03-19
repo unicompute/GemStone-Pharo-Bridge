@@ -562,6 +562,7 @@ GbsError >> asExceptionClassDontCallGemStone
 	 compiler error class rather than calling GemStone to determine the compiler
 	 error number."
 
+	self class ensureErrorMapsInitialized.
 	^GbsErrorNumbersToClasses at: number
 		ifAbsent: [GbsGemStoneError]
 ]
@@ -580,6 +581,7 @@ GbsError >> asExceptionClass
 	 this is a compiler error, the specific error number must be fetched from GemStone"
 
 	| errNum |
+	self class ensureErrorMapsInitialized.
 	errNum := number.
 	self isCompilerError ifTrue: [errNum := self compilerErrorNumber].
 	^GbsErrorNumbersToClasses at: errNum
@@ -731,6 +733,14 @@ GbsError class >> initSignals
 ]
 
 { #category : 'private-class initialization' }
+GbsError class >> ensureErrorMapsInitialized
+[
+
+	(GbsErrorNumbersToClasses isNil or: [ErrorNameToClassCompatibility isNil])
+		ifTrue: [self initialize]
+]
+
+{ #category : 'private-class initialization' }
 GbsError class >> initializeErrorNameToClassCompatibility
 [
 
@@ -818,6 +828,7 @@ GbsError class >> serverErrorClasses
 GbsError class >> selectErrorMap
 [
 
+	self ensureErrorMapsInitialized.
 	GbsErrorNumbersToClasses := GbsErrorNumbersToClasses6430
 ]
 
@@ -888,6 +899,7 @@ GbsError class >> defineErrorNumber: number class: errorClass
 
 	"Register the given user-defined server error number with the given Smalltalk error class.  After using this method, subsequent occurrences of the given error number during GemStone execution will raise the given signal in Smalltalk."
 
+	self ensureErrorMapsInitialized.
 	GbsErrorNumbersToClasses at: number put: errorClass
 ]
 
@@ -907,6 +919,7 @@ GbsError class >> exceptionClassFor: anErrorSymbol
 	"e.g. GbsError signalFor: #rtErrDoesNotUnderstand"
 
 	| className |
+	self ensureErrorMapsInitialized.
 	className := self classNameFromErrorSymbol: anErrorSymbol.
 	^Smalltalk at: className
 		ifAbsent: 
