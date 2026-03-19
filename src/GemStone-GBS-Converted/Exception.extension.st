@@ -3,15 +3,16 @@ Extension { #name : 'Exception' }
 { #category : '*GemStone-GBS-Converted-compatibility' }
 Exception >> originator
 [
-	^ self
-		propertyAt: #gbsOriginator
+	^ self class
+		gbsOriginators
+		at: self
 		ifAbsent: [ self ]
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
 Exception >> originator: anObject
 [
-	self propertyAt: #gbsOriginator put: anObject.
+	self class gbsOriginators at: self put: anObject.
 	^ self
 ]
 
@@ -46,6 +47,14 @@ Exception class >> accepts: anExceptionCreator
 Exception class >> handles: aSignalledException
 [
 	^ self accepts: aSignalledException
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Exception class >> gbsOriginators
+[
+	^ Smalltalk globals
+		at: #GbsExceptionOriginators
+		ifAbsentPut: [ WeakIdentityKeyDictionary new ]
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
