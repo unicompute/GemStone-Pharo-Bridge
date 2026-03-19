@@ -15,7 +15,7 @@ GbxCLibrarySelectionInterface class >> tryToLoadLibraryNamed: libName [
 
 	(libName isNil or: [ libName isEmpty ]) ifTrue: [ ^ nil ].
 	(((libName includes: $/) or: [ libName includes: $\ ])
-		and: [ [ libName asFileReference exists ] on: Error do: [ false ] not ])
+		and: [ ([ libName asFileReference exists ] on: Error do: [ false ]) not ])
 		ifTrue: [ ^ nil ].
 	GbxCPrimInterface vmLibPath: libName.
 	^ self uniqueInstance
