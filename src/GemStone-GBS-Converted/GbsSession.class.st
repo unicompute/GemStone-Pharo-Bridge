@@ -4144,6 +4144,12 @@ GbsSession >> sessionId
 	^sessionId
 ]
 
+{ #category : 'accessing' }
+GbsSession >> sessionProtect
+[
+	^sessionProtect
+]
+
 { #category : 'session management' }
 GbsSession >> version
 [
