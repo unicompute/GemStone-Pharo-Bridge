@@ -68,7 +68,7 @@ GbxGciCallSequencer >> setSessionPerformCheck: aBlock
 
 	Suitable for use only with calls that do not have a non-blocking variant"
 	
-	^GciCallProtect
+	^self gciCallProtect
 		critical:
 			[self primInterface gciSetSessionId: thisSession sessionId.
 			self performCheck: aBlock]
@@ -103,7 +103,7 @@ GbxGciCallSequencer >> callProtectCritical: criticalBlock
 [
 	"Used only for login"
 
-	^GciCallProtect critical: criticalBlock
+	^self gciCallProtect critical: criticalBlock
 ]
 
 { #category : 'private' }
@@ -161,7 +161,7 @@ GbxGciCallSequencer >> gciCriticalPerformCheck: aBlock
 	This is the message to send to perform Gci calls that are not 
 	specific to a particular session, but can generate an error."
 
-	^GciCallProtect critical: [self performCheck: aBlock]
+	^self gciCallProtect critical: [self performCheck: aBlock]
 ]
 
 { #category : 'support' }
@@ -187,6 +187,12 @@ GbxGciCallSequencer >> errorBuffer
 
 	errorBuffer isNil ifTrue: [errorBuffer := self errorBufferClass allocate].
 	^errorBuffer
+]
+
+{ #category : 'private - accessing' }
+GbxGciCallSequencer >> gciCallProtect
+[
+	^self class gciCallProtect
 ]
 
 { #category : 'initialize-release' }
@@ -241,7 +247,7 @@ GbxGciCallSequencer class >> isGciCallProtectHeld
 [
 	"Answer true if the active thread holds GciCallProtect"
 
-	^GciCallProtect isActiveProcessInCriticalRegion
+	^self gciCallProtect isActiveProcessInCriticalRegion
 ]
 
 { #category : 'GCI initialization' }
@@ -294,6 +300,7 @@ GbxGciCallSequencer class >> gciCallProtect
 [
 	"very private"
 
+	GciCallProtect ifNil: [ GciCallProtect := GbxSemaphore forMutualExclusion ].
 	^GciCallProtect
 ]
 
@@ -370,7 +377,7 @@ GbxGciCallSequencer class >> gciCallProtectStatAdaptor: aStatAdaptorOrNil
 	 protection).  To enable stats, that semaphore is wrapped in a GbxSemaphoreWithStats.
 	 To disable, the wrapper is discarded, and a direct reference to the old semaphore is restored."
 
-	GciCallProtect := GciCallProtect statAdaptor: aStatAdaptorOrNil
+	GciCallProtect := self gciCallProtect statAdaptor: aStatAdaptorOrNil
 ]
 
 { #category : 'initialize-release' }
