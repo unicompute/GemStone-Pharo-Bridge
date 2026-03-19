@@ -10,6 +10,11 @@ Object >> cstArgumentPrintOn: aStream [
 	self printOn: aStream
 ]
 
+{ #category : '*GemStone-GBS-Converted-messenger' }
+Object >> gbsMessenger [
+	^ GbxMessageDispatcher singleton
+]
+
 { #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> gbxResolve: varNameSymbol [
 	^ self class gbxResolve: varNameSymbol
@@ -33,6 +38,11 @@ Object >> gbxBindingFor: varNameSymbol in: namespaceName [
 { #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> gbxFixMe [
 	"A send of gbxFixMe indicates code that still needs work."
+]
+
+{ #category : '*GemStone-GBS-Converted-messenger' }
+Object class >> gbsMessenger [
+	^ GbxMessageDispatcher singleton
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
