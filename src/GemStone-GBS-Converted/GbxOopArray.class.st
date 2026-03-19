@@ -182,8 +182,7 @@ GbxOopArray >> allocateDataSize: newPhysicalSizeInOops
 		ifTrue:
 			[self gbsMessenger error:
 					'Not enough room in new size for current contents'].
-	newBuffer := UninterpretedBytes
-		newInFixedSpace: newPhysicalSizeInOops * self bytesPerOop.
+	newBuffer := ByteArray new: newPhysicalSizeInOops * self bytesPerOop.
 	buffer == nil
 		ifFalse:
 			[| byteSize |
@@ -263,7 +262,7 @@ GbxOopArray class >> size: aSize
 	
 	| inst buffer |
 	inst := self new.
-	buffer := UninterpretedBytes newInFixedSpace: aSize * inst bytesPerOop.
+	buffer := ByteArray new: aSize * inst bytesPerOop.
 	inst buffer: buffer offset: 1.
 	^inst
 ]
