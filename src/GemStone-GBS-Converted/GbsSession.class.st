@@ -2749,16 +2749,18 @@ GbsSession >> postLogin
 	"Private.  Things to do immediately after logging in.
 	Sender must hold my sessionProtect."
 
+	| manager |
 	self isLoggedIn ifFalse: [^self].
 	loginTimestamp := DateAndTime now.
 	self initializeIsRemote.
 	self initializeLoggedInSessionDisplayString.
 	"int converter can't be initialized until GCI lib loaded, but must be before connectors connect."
-	gbsm privAddSession: self.
+	manager := GbsSessionManager current.
+	manager privAddSession: self.
 	self dirtyGSObjectsInit.
 	self initializeCaches.
-	gbsm currentSession: self.
-	gbsm notifyOfAddedSession: self.	"causes VS session browser to update, so must follow #currentSession: "
+	manager currentSession: self.
+	manager notifyOfAddedSession: self.	"causes VS session browser to update, so must follow #currentSession: "
 	self initializeTimeZone.
 	self startEventDetection.
 	"self startGbsServices."
@@ -2795,6 +2797,7 @@ GbsSession >> postLogout
 [
 	"Private.  Clean-up required after session has logged out or otherwise terminated"
 
+	| manager |
 	self sessionCriticalNoSessionCheck: 
 			["Do this work only once per GbsSession"
 			self hasValidSessionId ifFalse: [^self].
@@ -2805,7 +2808,8 @@ GbsSession >> postLogout
 			self emptyCaches.	"Do this before setting sessionId to 0"
 			"Once all known delegates for this session are marked dead, 
 			 we can remove ourselves from GBSM's list."
-			gbsm disconnectSession: self.
+			manager := GbsSessionManager current.
+			manager disconnectSession: self.
 			sessionId := 0.
 			[replicatorManager == nil] gbxAssert.
 			serverInterface := nil.

@@ -12,6 +12,7 @@ Class {
 		'cacheSampleIntervalMultiplier'
 	],
 	#classVars : [
+		'Instance',
 		'StatMonitorPriority'
 	],
 	#category : 'GemStone-GBS-Converted'
