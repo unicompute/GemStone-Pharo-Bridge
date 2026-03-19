@@ -256,6 +256,12 @@ GbxSpecialConverter >> delegateForSpecialFraction: aFraction forSession: aSessio
 ]
 
 { #category : 'private - converting' }
+GbxSpecialConverter >> isBigEndian
+[
+	^Smalltalk isBigEndian
+]
+
+{ #category : 'private - converting' }
 GbxSpecialConverter >> localFromSmallIntegerOop: delegate
 [
 	"Delegate is assumed to represent a server SmallInteger. 
