@@ -34,6 +34,28 @@ Object >> changeRequest: anAspect [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> asGSObject [
+	| remoteObject |
+	remoteObject := self gbxDelegate.
+	^ remoteObject isNil
+		ifTrue: [ self asGSObjectInSession: GbsSessionManager current currentSession ]
+		ifFalse: [ remoteObject forAnySingleSession ]
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> asGSObjectInSession: aGbsSession [
+	| delegate |
+	delegate := aGbsSession cacheAtST: self.
+	delegate isNil
+		ifTrue: [
+			aGbsSession sessionCritical: [
+				delegate := aGbsSession cacheAtST: self.
+				delegate isNil
+					ifTrue: [ delegate := self newGSObjectMappingInSession: aGbsSession ] ] ].
+	^ delegate forSession: aGbsSession
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> gbxResolve: varNameSymbol [
 	^ self class gbxResolve: varNameSymbol
 ]
@@ -54,6 +76,11 @@ Object >> gbxBindingFor: varNameSymbol in: namespaceName [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxDelegate [
+	^ GbsSessionManager current delegateForClientObject: self
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> gbxFixMe [
 	"A send of gbxFixMe indicates code that still needs work."
 ]
@@ -67,6 +94,35 @@ Object >> gbxIsGSError [
 Object >> gbxAsCString [
 	(self isKindOf: Symbol) ifTrue: [ ^ self asString ].
 	^ self
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> newGSObjectMappingInSession: aGbsSession [
+	| aDelegate |
+	aDelegate := aGbsSession getFreeOop.
+	aGbsSession connectClient: self toServer: aDelegate.
+	aDelegate markStDirty: self.
+	^ aDelegate
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> putInGS [
+	^ self putInGSSession: GbsSessionManager current currentSession
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> putInGSSession: aGbsSession [
+	| proxy |
+	proxy := self asGSObjectInSession: aGbsSession.
+	proxy isStDirty ifTrue: [ aGbsSession flushDirtyToGS ].
+	^ proxy
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> putInGSSession: aSession toLevel: level [
+	GbsConfiguration
+		deprecated: 'Object>>putInGSSession:toLevel: deprecated January, 2008. Use #putInGSSession instead, or even better, use normal replication mechanisms and avoid forcing objects to the server in separate network round trips.'.
+	^ self putInGSSession: aSession
 ]
 
 { #category : '*GemStone-GBS-Converted-messenger' }

@@ -607,7 +607,8 @@ GbsError >> raiseException
 	error := exception originator.	"Usually self, but could be cause of death instead."
 	result := exception raiseSignal.
 	"If we get here, the exception has been resumed."
-	result isNil ifFalse: [error gsResult: (result putInGSSession: session)].
+	(exception isResumable and: [result isNil not])
+		ifTrue: [error gsResult: (result putInGSSession: session)].
 	^error
 ]
 

@@ -18,6 +18,28 @@ GbsGemStoneError >> defaultResumeValue
 	^GbxKernelPomOop oopIllegal
 ]
 
+{ #category : 'defaults' }
+GbsGemStoneError >> defaultAction
+[
+	self isFatalError
+		ifTrue: [ ^ super defaultAction ].
+	^ self resume
+]
+
+{ #category : 'testing' }
+GbsGemStoneError >> isFatalError
+[
+	^ self originator
+		ifNil: [ false ]
+		ifNotNil: [ :error | error isFatalError ]
+]
+
+{ #category : 'testing' }
+GbsGemStoneError >> isResumable
+[
+	^ self isFatalError not
+]
+
 { #category : 'accessing' }
 GbsGemStoneError >> serverArguments
 [
