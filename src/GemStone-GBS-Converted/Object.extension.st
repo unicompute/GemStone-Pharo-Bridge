@@ -122,6 +122,55 @@ Object >> gbxFixMe [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxIsImmutable [
+	(self respondsTo: #isReadOnlyObject)
+		ifTrue: [ ^ self isReadOnlyObject ].
+	(self respondsTo: #isImmediateObject)
+		ifTrue: [ ^ self isImmediateObject ].
+	(self respondsTo: #isImmutable)
+		ifTrue: [ ^ self isImmutable ].
+	^ false
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxIsImmutable: aBoolean [
+	| wasImmutable |
+	wasImmutable := self gbxIsImmutable.
+	((self respondsTo: #isImmediateObject) and: [ self isImmediateObject ])
+		ifTrue: [ ^ wasImmutable ].
+	(self respondsTo: #isReadOnlyObject:)
+		ifTrue: [
+			self isReadOnlyObject: aBoolean.
+			^ wasImmutable ].
+	aBoolean
+		ifTrue: [
+			(self respondsTo: #beReadOnlyObject)
+				ifTrue: [
+					self beReadOnlyObject.
+					^ wasImmutable ] ]
+		ifFalse: [
+			(self respondsTo: #beWritableObject)
+				ifTrue: [
+					self beWritableObject.
+					^ wasImmutable ] ].
+	(self respondsTo: #isImmutable:)
+		ifTrue: [
+			self isImmutable: aBoolean.
+			^ wasImmutable ].
+	^ wasImmutable
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxIsimmutable [
+	^ self gbxIsImmutable
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxIsimmutable: aBoolean [
+	^ self gbxIsImmutable: aBoolean
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> gbxIsGSError [
 	^ false
 ]
