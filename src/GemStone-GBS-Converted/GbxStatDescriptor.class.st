@@ -8,7 +8,9 @@ Class {
 		'description',
 		'isCounter',
 		'isLargerBetter',
-		'unit'
+		'unit',
+		'category',
+		'statClass'
 	],
 	#classVars : [
 	],
@@ -43,13 +45,111 @@ GbxStatDescriptor >> name
 	^name
 ]
 
+{ #category : 'accessing' }
+GbxStatDescriptor >> name: aString
+[
+	name := aString
+]
+
+{ #category : 'accessing' }
+GbxStatDescriptor >> unit
+[
+	^ unit ifNil: [ '' ]
+]
+
+{ #category : 'accessing' }
+GbxStatDescriptor >> unit: aString
+[
+	unit := aString
+]
+
+{ #category : 'accessing' }
+GbxStatDescriptor >> description
+[
+	^ description
+]
+
+{ #category : 'accessing' }
+GbxStatDescriptor >> isLargerBetter: aBoolean
+[
+	isLargerBetter := aBoolean
+]
+
+{ #category : 'accessing' }
+GbxStatDescriptor >> category
+[
+	^ category
+]
+
+{ #category : 'accessing' }
+GbxStatDescriptor >> category: aString
+[
+	category := aString
+]
+
+{ #category : 'accessing' }
+GbxStatDescriptor >> description: aString
+[
+	description := aString
+]
+
+{ #category : 'accessing' }
+GbxStatDescriptor >> isCounter
+[
+	^ isCounter ifNil: [ false ]
+]
+
+{ #category : 'accessing' }
+GbxStatDescriptor >> isCounter: aBoolean
+[
+	isCounter := aBoolean
+]
+
+{ #category : 'accessing' }
+GbxStatDescriptor >> isLargerBetter
+[
+	^ isLargerBetter ifNil: [ false ]
+]
+
+{ #category : 'accessing' }
+GbxStatDescriptor >> statClass
+[
+	^ statClass
+]
+
+{ #category : 'accessing' }
+GbxStatDescriptor >> statClass: aClass
+[
+	statClass := aClass
+]
+
+{ #category : 'accessing' }
+GbxStatDescriptor >> type
+[
+	^ type ifNil: [ 5 ]
+]
+
+{ #category : 'accessing' }
+GbxStatDescriptor >> type: anInteger
+[
+	type := anInteger
+]
+
 { #category : 'printing' }
-GbxStatDescriptor >> printOn: aStream 
+GbxStatDescriptor >> printOn: aStream
 [
 	super printOn: aStream.
 	aStream
 		nextPutAll: ': ';
 		print: name
+]
+
+{ #category : 'printing' }
+GbxStatDescriptor >> printString
+[
+	^ category
+		ifNil: [ name, ': ', description ]
+		ifNotNil: [ name, ' (', category, '): ', description ]
 ]
 
 { #category : 'archiving' }
@@ -91,12 +191,33 @@ GbxStatDescriptor >> setId: anInt
 { #category : 'initialize-release' }
 GbxStatDescriptor class >> name: nameString description: descriptionString type: typeInt isCounter: isCounterBool isLargerBetter: isLargerBetterBool unit: unitString
 [
-	^super new 
+	^super new
 		name: nameString
 		description: descriptionString
 		type: typeInt
 		isCounter: isCounterBool
 		isLargerBetter: isLargerBetterBool
 		unit: unitString;
+		yourself
+]
+
+{ #category : 'instance creation' }
+GbxStatDescriptor class >> named: aString description: desc category: cat
+[
+	^ self new
+		name: aString;
+		description: desc;
+		category: cat;
+		yourself
+]
+
+{ #category : 'instance creation' }
+GbxStatDescriptor class >> named: aString description: desc category: cat unit: aString
+[
+	^ self new
+		name: aString;
+		description: desc;
+		category: cat;
+		unit: aString;
 		yourself
 ]

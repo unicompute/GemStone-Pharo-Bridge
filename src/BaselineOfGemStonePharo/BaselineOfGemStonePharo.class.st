@@ -17,7 +17,7 @@ BaselineOfGemStonePharo >> baseline: spec [
 		spec package: 'GemStone-GBS-Converted'
 			with: [
 				spec requires: #('GemStone-GBS-Bootstrap').
-				spec preLoadDoIt: #preloadConvertedCompatibility ].
+				spec postLoadDoIt: #postloadConvertedCompatibility ].
 		
 		spec package: 'GemStone-GBS-Tools' 
 			with: [
@@ -51,6 +51,13 @@ BaselineOfGemStonePharo >> preloadConvertedCompatibility [
 			(existing superclass isNil
 				or: [ existing superclass name ~= #Subsystem ])
 				ifTrue: [ [ existing removeFromSystem ] on: Error do: [ ] ] ]
+]
+
+{ #category : 'baselines' }
+BaselineOfGemStonePharo >> postloadConvertedCompatibility [
+	"Initialize GbxStatArchiver class variables"
+	(Smalltalk at: #GbxStatArchiver ifAbsent: [ ^ self ])
+		initialize
 ]
 
 { #category : 'baselines' }
