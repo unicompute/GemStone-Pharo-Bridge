@@ -2,7 +2,8 @@ Class {
 	#name : 'GbxIdentityClampSet',
 	#superclass : 'IdentitySet',
 	#instVars : [
-		'needFinalization'
+		'needFinalization',
+		'isWeakContainer'
 	],
 	#classVars : [
 	],
@@ -151,6 +152,27 @@ GbxIdentityClampSet >> beWeak
 ]
 
 { #category : 'finalization' }
+GbxIdentityClampSet >> isWeakContainer
+[
+
+	isWeakContainer ifNil: [isWeakContainer := true].
+	^isWeakContainer
+]
+
+{ #category : 'finalization' }
+GbxIdentityClampSet >> isWeakContainer: aBoolean
+[
+	"VW can toggle IdentitySet weakness at the VM level. In Pharo we keep the
+	state explicitly so callers can follow the same protocol even though the
+	container itself is not switched by a primitive."
+
+	| previous |
+	previous := self isWeakContainer.
+	isWeakContainer := aBoolean.
+	^previous
+]
+
+{ #category : 'finalization' }
 GbxIdentityClampSet >> finalizeIfNeeded
 [
 	"Sender must hold my session's sessionProtect."
@@ -172,14 +194,16 @@ GbxIdentityClampSet >> initialize
 [
 
 	super initialize.
-	needFinalization := false
+	needFinalization := false.
+	isWeakContainer := true
 ]
 
 { #category : 'initialize-release' }
 GbxIdentityClampSet >> initializeForSession: sess
 [
 
-	needFinalization := false
+	needFinalization := false.
+	isWeakContainer := true
 ]
 
 { #category : 'adding' }
@@ -208,4 +232,3 @@ GbxIdentityClampSet class >> new: initialCapacity
 	inst initialize.
 	^inst
 ]
-

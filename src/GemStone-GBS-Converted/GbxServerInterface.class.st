@@ -799,8 +799,18 @@ GbxServerInterface >> finishIGCMarking
 	We do this because when in the marking phase, changing an object from weak to strong
 	is much more expensive (it is scanned immediately if < 4096 slots)."
 
-	ObjectMemory current incGCIsMarking
-		ifTrue: [ObjectMemory finishIncrementalGC]
+	| objectMemory memoryStatus |
+	objectMemory := Smalltalk globals at: #ObjectMemory ifAbsent: [nil].
+	objectMemory ifNil: [^self].
+	(objectMemory respondsTo: #current)
+		ifFalse: [^self].
+	memoryStatus := objectMemory current.
+	((memoryStatus notNil)
+		and: [memoryStatus respondsTo: #incGCIsMarking]
+		and: [memoryStatus incGCIsMarking])
+			ifTrue: 
+				[(objectMemory respondsTo: #finishIncrementalGC)
+					ifTrue: [objectMemory finishIncrementalGC]]
 ]
 
 { #category : 'private' }
