@@ -631,6 +631,28 @@ Object >> gbxIsProxy [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> zzzisStub [
+	^ false
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> zzzisForwarder [
+	^ false
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxShouldBeWrapped [
+	"Answer true for ordinary replicates so inspection wrappers can opt in."
+
+	^ self gbxDelegate notNil
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxIsWrapped [
+	^ false
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> gbxIsServerSpecialInSession: aSession [
 	^ false
 ]
