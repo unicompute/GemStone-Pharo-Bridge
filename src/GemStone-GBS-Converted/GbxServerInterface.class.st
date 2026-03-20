@@ -872,27 +872,14 @@ GbxServerInterface >> loginUser: username password: password flags: loginFlags
 	This must be done in the proper context.
 	The sender must hold GciCallProtect"
 
-	| encryptedPassword encryptedPasswordBuffer effectiveFlags passwordString usernameString |
+	| passwordString usernameString |
 	^callSequencer performCheck: 
 			[self gbsMessenger statusTag: #GciLogin message: ''.
 			usernameString := username ifNil: [''].
 			passwordString := password ifNil: [''].
-			effectiveFlags := loginFlags bitOr: 1.	"GCI_LOGIN_PW_ENCRYPTED"
-			encryptedPasswordBuffer := ExternalAddress allocate: 1024.
-			[
-			encryptedPassword := callSequencer primInterface
-				gciEncrypt: passwordString gbxAsCString
-				into: encryptedPasswordBuffer
-				size: 1024.
-			((encryptedPassword isNil)
-				or: [(encryptedPassword respondsTo: #isNull) and: [encryptedPassword isNull]])
-					ifTrue: [GbsInterfaceError raiseSignal: 'Password encryption failed'].
 			callSequencer primInterface 
 				gciLoginUsername: usernameString gbxAsCString
-				password: encryptedPasswordBuffer
-				flags: effectiveFlags
-				haltOnErr: -1]
-				ensure: [encryptedPasswordBuffer free]]
+				password: passwordString gbxAsCString]
 ]
 
 { #category : 'traversal buffers' }
