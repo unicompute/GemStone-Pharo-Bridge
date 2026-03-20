@@ -666,6 +666,7 @@ GbsSessionManager >> hasSessionsInInteractions
 	an answer that is correct most of the time is good enough,
 	since it's used as a hint to my MemoryPolicy."
 
+	self ensureInteractionTrackingInitialized.
 	^numSessionsInInteraction > 0
 ]
 
@@ -677,9 +678,17 @@ GbsSessionManager >> memoryPolicy
 ]
 
 { #category : 'GBS private' }
+GbsSessionManager >> ensureInteractionTrackingInitialized
+[
+	numSessionsInInteractionProtect ifNil: [
+		numSessionsInInteractionProtect := GbxRecursionLock forMutualExclusion ].
+	numSessionsInInteraction ifNil: [ numSessionsInInteraction := 0 ]
+]
+
+{ #category : 'GBS private' }
 GbsSessionManager >> sessionEnteringInteractions
 [
-
+	self ensureInteractionTrackingInitialized.
 	numSessionsInInteractionProtect critical: [numSessionsInInteraction := numSessionsInInteraction + 1]
 ]
 
@@ -784,12 +793,12 @@ GbsSessionManager >> loginCritical: aBlock
 { #category : 'GBS private' }
 GbsSessionManager >> sessionExitingInteractions
 [
-
+	self ensureInteractionTrackingInitialized.
 	numSessionsInInteractionProtect
 		critical: [numSessionsInInteraction := numSessionsInInteraction - 1].
 	"This may run a fullReclamation even when some session(s) still have strong serverMap(s).
 	This is intentional: One session has just made its serverMap weak, so we should at least collect from that one."
-	memoryPolicy postReplicationAction
+	memoryPolicy ifNotNil: [ memoryPolicy postReplicationAction ]
 ]
 
 { #category : 'transactions - obsolete' }
@@ -908,6 +917,7 @@ GbsSessionManager >> initialize
 	sessionListProtect := GbxRecursionLock forMutualExclusion.
 	loginProtect := GbxRecursionLock forMutualExclusion.
 	numSessionsInInteractionProtect := GbxRecursionLock forMutualExclusion.
+	numSessionsInInteraction := 0.
 	memoryPolicy := GbsMemoryPolicy new.
 	self initializeDisconnectedSessions.
 	GbsConfiguration isVisualWorksImage

@@ -736,6 +736,13 @@ Object >> gbxWhileMutableDoUnpreemptively: aBlock [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> whileMutableDo: aBlock [
+	"Compatibility wrapper used by internal replicated collections."
+
+	^ self gbxWhileMutableDoUnpreemptively: aBlock
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> fixRefsTo: old with: new [
 	self class isBits ifTrue: [ ^ self ].
 	1 to: self class instSize do: [ :index |
