@@ -173,6 +173,12 @@ GbsConfiguration >> autoMarkDirty: anObject
 ]
 
 { #category : 'accessing' }
+GbsConfiguration >> autoMarkDirty
+[
+	^autoMarkDirty
+]
+
+{ #category : 'accessing' }
 GbsConfiguration >> faultLevelLnk: anInteger
 [
 	faultLevelLnk := anInteger

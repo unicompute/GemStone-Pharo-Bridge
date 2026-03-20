@@ -342,6 +342,26 @@ GbsSessionManager >> blockingProtocolRpc: aBoolean
 ]
 
 { #category : 'configuring gembuilder' }
+GbsSessionManager >> autoMarkDirty
+[
+	"The autoMarkDirty parameter defines whether client-side modifications are detected automatically."
+
+	GbsConfiguration
+		deprecated: 'GbsSessionManager>>autoMarkDirty. Deprecated August, 2005. Use GbsConfiguration>>autoMarkDirty instead'.
+	^GbsConfiguration current autoMarkDirty
+]
+
+{ #category : 'configuring gembuilder' }
+GbsSessionManager >> autoMarkDirty: aBoolean
+[
+	"The autoMarkDirty parameter defines whether client-side modifications are detected automatically."
+
+	GbsConfiguration
+		deprecated: 'GbsSessionManager>>autoMarkDirty:. Deprecated August, 2005. Use GbsConfiguration>>autoMarkDirty: instead'.
+	GbsConfiguration current autoMarkDirty: aBoolean
+]
+
+{ #category : 'configuring gembuilder' }
 GbsSessionManager >> faultLevelLnk
 [
 	"The default number of levels to fault an object in linked sessions"
