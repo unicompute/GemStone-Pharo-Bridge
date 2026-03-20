@@ -13,12 +13,14 @@ Class {
 	],
 	#classVars : [
 		'Bytes',
+		'KnownTokens',
 		'NSC',
 		'OCharacter',
 		'OInteger',
 		'OSmallInteger',
 		'OSystem',
 		'Pointers',
+		'SetSubcommandHandlers',
 		'Special'
 	],
 	#category : 'GemStone-GBS-Converted'
