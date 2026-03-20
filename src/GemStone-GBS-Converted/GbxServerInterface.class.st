@@ -685,16 +685,20 @@ GbxServerInterface >> setNetFor: session linked: linked hostPassword: password
 	"Private. Set session login network parameters.
 	The sender must be holding GciCallProtect."
 
-	| result parameters |
+	| gemService hostPassword hostUsername result parameters stoneName |
 	parameters := session parameters.
+	stoneName := parameters gemStoneName ifNil: [''].
+	hostUsername := parameters hostUsername ifNil: [''].
+	hostPassword := password ifNil: [''].
+	gemService := linked
+		ifTrue: ['gcilnkobj']
+		ifFalse: [parameters gemService ifNil: ['']].
 	result := callSequencer performCheck: 
 					[callSequencer primInterface 
-						gciSetNetStoneName: parameters gemStoneName gbxAsCString
-						hostUsername: parameters hostUsername gbxAsCString
-						hostPassword: password gbxAsCString
-						gemService: (linked 
-								ifTrue: ['gcilnkobj' gbxAsCString]
-								ifFalse: [parameters gemService gbxAsCString])].
+						gciSetNetStoneName: stoneName gbxAsCString
+						hostUsername: hostUsername gbxAsCString
+						hostPassword: hostPassword gbxAsCString
+						gemService: gemService gbxAsCString].
 	^result
 ]
 
@@ -868,13 +872,27 @@ GbxServerInterface >> loginUser: username password: password flags: loginFlags
 	This must be done in the proper context.
 	The sender must hold GciCallProtect"
 
+	| encryptedPassword encryptedPasswordBuffer effectiveFlags passwordString usernameString |
 	^callSequencer performCheck: 
 			[self gbsMessenger statusTag: #GciLogin message: ''.
+			usernameString := username ifNil: [''].
+			passwordString := password ifNil: [''].
+			effectiveFlags := loginFlags bitOr: 1.	"GCI_LOGIN_PW_ENCRYPTED"
+			encryptedPasswordBuffer := ExternalAddress allocate: 1024.
+			[
+			encryptedPassword := callSequencer primInterface
+				gciEncrypt: passwordString gbxAsCString
+				into: encryptedPasswordBuffer
+				size: 1024.
+			((encryptedPassword isNil)
+				or: [(encryptedPassword respondsTo: #isNull) and: [encryptedPassword isNull]])
+					ifTrue: [GbsInterfaceError raiseSignal: 'Password encryption failed'].
 			callSequencer primInterface 
-				gciLoginUsername: username gbxAsCString
-				password: password gbxAsCString
-				flags: loginFlags
+				gciLoginUsername: usernameString gbxAsCString
+				password: encryptedPasswordBuffer
+				flags: effectiveFlags
 				haltOnErr: -1]
+				ensure: [encryptedPasswordBuffer free]]
 ]
 
 { #category : 'traversal buffers' }

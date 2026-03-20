@@ -144,9 +144,16 @@ GbxCPrimInterface >> gciGemTrace: anInt [
 ]
 
 { #category : 'procedures' }
+GbxCPrimInterface >> gciEncrypt: rawPassword into: outBuffer size: bufferSize [
+	^ self
+		ffiCall: #(void* GciEncrypt(String rawPassword, void* outBuffer, int64 bufferSize))
+		options: #( + optNonThreaded )
+]
+
+{ #category : 'procedures' }
 GbxCPrimInterface >> gciLoginUsername: gemstoneUsername password: gemstonePassword flags: loginFlags haltOnErr: errNum [
 	^ self
-		ffiCall: #(int GciLoginEx(String gemstoneUsername, String gemstonePassword, uint32 loginFlags, int errNum))
+		ffiCall: #(int GciLoginEx(String gemstoneUsername, void* gemstonePassword, uint32 loginFlags, int errNum))
 		options: #( + optNonThreaded )
 ]
 
