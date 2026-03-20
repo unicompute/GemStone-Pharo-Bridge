@@ -160,14 +160,14 @@ GbxCPrimInterface >> gciLoginUsername: gemstoneUsername password: gemstonePasswo
 { #category : 'procedures' }
 GbxCPrimInterface >> gciLoginUsername: gemstoneUsername password: gemstonePassword flags: loginFlags haltOnErr: errNum [
 	^ self
-		ffiCall: #(int GciLoginEx(String gemstoneUsername, void* gemstonePassword, uint32 loginFlags, int errNum))
+		ffiCall: #(uint64 GciLoginEx(void* gemstoneUsername, void* gemstonePassword, int loginFlags, int errNum))
 		options: #( + optNonThreaded )
 ]
 
 { #category : 'procedures' }
 GbxCPrimInterface >> gciSetNetStoneName: StoneName hostUsername: HostUserId hostPassword: HostPassword gemService: GemService [
 	^ self
-		ffiCall: #(void GciSetNet(String StoneName, String HostUserId, String HostPassword, String GemService))
+		ffiCall: #(void GciSetNet(void* StoneName, void* HostUserId, void* HostPassword, void* GemService))
 		options: #( + optNonThreaded )
 ]
 

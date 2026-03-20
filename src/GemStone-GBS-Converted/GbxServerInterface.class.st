@@ -868,7 +868,7 @@ GbxServerInterface >> loginFlags
 { #category : 'private' }
 GbxServerInterface >> loginUser: username password: password flags: loginFlags 
 [
-	"Private. Make the GciLogin() call. 
+	"Private. Make the GciLoginEx() call. 
 	This must be done in the proper context.
 	The sender must hold GciCallProtect"
 
@@ -879,7 +879,9 @@ GbxServerInterface >> loginUser: username password: password flags: loginFlags
 			passwordString := password ifNil: [''].
 			callSequencer primInterface 
 				gciLoginUsername: usernameString gbxAsCString
-				password: passwordString gbxAsCString]
+				password: passwordString gbxAsCString
+				flags: loginFlags
+				haltOnErr: -1]
 ]
 
 { #category : 'traversal buffers' }
