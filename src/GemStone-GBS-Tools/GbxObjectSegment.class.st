@@ -1,8 +1,7 @@
 Class {
 	#name : 'GbxObjectSegment',
-	#superclass : 'Object',
+	#superclass : 'ObjectSegment',
 	#instVars : [
-		'isUncached'
 	],
 	#classVars : [
 	],
@@ -38,4 +37,3 @@ GbxObjectSegment >> lastPart: anObject
 [
 	lastPart := anObject
 ]
-

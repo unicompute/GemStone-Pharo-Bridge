@@ -2,6 +2,10 @@ Class {
 	#name : 'BasicInspector',
 	#superclass : 'Object',
 	#instVars : [
+		'object',
+		'fixedFields',
+		'undoHistory',
+		'session'
 	],
 	#classVars : [
 	],
@@ -65,7 +69,9 @@ BasicInspector >> gbxCachedRanges
 { #category : 'accessing' }
 BasicInspector >> initialize: anObject
 [
-	"VisualWorks compatibility stub"
+	object := anObject.
+	fixedFields := Array new.
+	undoHistory := OrderedCollection new
 ]
 
 { #category : 'accessing' }
@@ -96,6 +102,24 @@ BasicInspector >> refresh
 ]
 
 { #category : 'accessing' }
+BasicInspector >> object
+[
+	^object
+]
+
+{ #category : 'accessing' }
+BasicInspector >> object: anObject
+[
+	object := anObject
+]
+
+{ #category : 'accessing' }
+BasicInspector >> protectedVariableNames
+[
+	^#()
+]
+
+{ #category : 'accessing' }
 BasicInspector >> refreshSelfAttribute
 [
 	"VisualWorks compatibility stub"
@@ -113,4 +137,16 @@ BasicInspector >> selfAttribute
 [
 	"VisualWorks compatibility stub"
 	^nil
+]
+
+{ #category : 'accessing' }
+BasicInspector >> session
+[
+	^session
+]
+
+{ #category : 'accessing' }
+BasicInspector >> session: anObject
+[
+	session := anObject
 ]

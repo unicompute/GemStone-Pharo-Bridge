@@ -1,8 +1,7 @@
 Class {
 	#name : 'GbxIncrementalSearchModule',
-	#superclass : 'Object',
+	#superclass : 'IncrementalSearchModule',
 	#instVars : [
-		'session'
 	],
 	#classVars : [
 	],
@@ -67,4 +66,3 @@ GbxIncrementalSearchModule class >> forGemStoneClassSelection: aString browser: 
 		iconSelector: #toolListIcon.
 	^instance
 ]
-

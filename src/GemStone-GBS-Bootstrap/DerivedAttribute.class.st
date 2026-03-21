@@ -2,6 +2,9 @@ Class {
 	#name : 'DerivedAttribute',
 	#superclass : 'Object',
 	#instVars : [
+		'label',
+		'value',
+		'object'
 	],
 	#classVars : [
 	],
@@ -18,7 +21,8 @@ DerivedAttribute >> label: aString value: anObject printString: aPrintString
 { #category : 'accessing' }
 DerivedAttribute >> initialize: aLabel value: anObject printString: aPrintString
 [
-	"VisualWorks compatibility stub"
+	label := aLabel.
+	value := anObject
 ]
 
 { #category : 'accessing' }
@@ -31,6 +35,29 @@ DerivedAttribute >> text
 { #category : 'accessing' }
 DerivedAttribute >> value
 [
-	"VisualWorks compatibility stub"
-	^nil
+	^value
+]
+
+{ #category : 'accessing' }
+DerivedAttribute >> label
+[
+	^label
+]
+
+{ #category : 'accessing' }
+DerivedAttribute >> label: aString
+[
+	label := aString
+]
+
+{ #category : 'accessing' }
+DerivedAttribute >> object
+[
+	^object
+]
+
+{ #category : 'accessing' }
+DerivedAttribute >> object: anObject
+[
+	object := anObject
 ]

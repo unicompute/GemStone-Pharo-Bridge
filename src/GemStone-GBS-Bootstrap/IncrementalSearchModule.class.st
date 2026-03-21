@@ -2,6 +2,16 @@ Class {
 	#name : 'IncrementalSearchModule',
 	#superclass : 'Object',
 	#instVars : [
+		'entryModule',
+		'searchDriver',
+		'searchBlock',
+		'guessDriver',
+		'session',
+		'firstLabel',
+		'secondLabel',
+		'objectToStringBlock',
+		'displayStringSelector',
+		'iconSelector'
 	],
 	#classVars : [
 	],
@@ -18,18 +28,71 @@ IncrementalSearchModule >> forGemStoneClassSelection: anObject browser: aBrowser
 { #category : 'accessing' }
 IncrementalSearchModule >> session
 [
-	"VisualWorks compatibility stub"
-	^nil
+	^session
 ]
 
 { #category : 'accessing' }
 IncrementalSearchModule >> session: anObject
 [
-	"VisualWorks compatibility stub"
+	session := anObject
 ]
 
 { #category : 'accessing' }
 IncrementalSearchModule >> setupDrivers
 [
 	"VisualWorks compatibility stub"
+]
+
+{ #category : 'accessing' }
+IncrementalSearchModule >> acceptSearchResults: anObject
+[
+	"VisualWorks compatibility stub"
+]
+
+{ #category : 'accessing' }
+IncrementalSearchModule >> currentStrings
+[
+	^#()
+]
+
+{ #category : 'accessing' }
+IncrementalSearchModule >> displayStringSelector: aSymbol
+[
+	displayStringSelector := aSymbol.
+	^self
+]
+
+{ #category : 'accessing' }
+IncrementalSearchModule >> firstLabel: aString
+[
+	firstLabel := aString.
+	^self
+]
+
+{ #category : 'accessing' }
+IncrementalSearchModule >> iconSelector: aSymbol
+[
+	iconSelector := aSymbol.
+	^self
+]
+
+{ #category : 'accessing' }
+IncrementalSearchModule >> objectToStringBlock: aBlock
+[
+	objectToStringBlock := aBlock.
+	^self
+]
+
+{ #category : 'accessing' }
+IncrementalSearchModule >> searchBlock: aBlock
+[
+	searchBlock := aBlock.
+	^self
+]
+
+{ #category : 'accessing' }
+IncrementalSearchModule >> secondLabel: aString
+[
+	secondLabel := aString.
+	^self
 ]

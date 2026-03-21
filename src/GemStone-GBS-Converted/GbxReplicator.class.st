@@ -3,12 +3,25 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'manager',
-		'session'
+		'session',
+		'target'
 	],
 	#classVars : [
 	],
 	#category : 'GemStone-GBS-Converted'
 }
+
+{ #category : 'accessing' }
+GbxReplicator >> target
+[
+	^target
+]
+
+{ #category : 'accessing' }
+GbxReplicator >> target: anObject
+[
+	target := anObject
+]
 
 { #category : 'private store replication' }
 GbxReplicator >> store: anObject withDelegate: delegate inTraversal: storeTraversal
@@ -137,4 +150,3 @@ GbxReplicator >> store: anObject inTraversal: storeTraversal
 		ifFalse: 
 			[self store: anObject withDelegate: aDelegate inTraversal: storeTraversal]
 ]
-

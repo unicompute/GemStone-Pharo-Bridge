@@ -2,6 +2,11 @@ Class {
 	#name : 'ObjectSegment',
 	#superclass : 'Object',
 	#instVars : [
+		'firstIndex',
+		'lastIndex',
+		'firstPart',
+		'lastPart',
+		'isUncached'
 	],
 	#classVars : [
 	],
@@ -12,31 +17,51 @@ Class {
 { #category : 'accessing' }
 ObjectSegment >> cached
 [
-	"VisualWorks compatibility stub"
-	^false
+	isUncached := false
+]
+
+{ #category : 'accessing' }
+ObjectSegment >> firstIndex
+[
+	^firstIndex
 ]
 
 { #category : 'accessing' }
 ObjectSegment >> firstPart: anObject
 [
-	"VisualWorks compatibility stub"
+	firstPart := anObject
+]
+
+{ #category : 'accessing' }
+ObjectSegment >> from: start part: startPart to: stop part: stopPart
+[
+	firstIndex := start.
+	lastIndex := stop.
+	firstPart := startPart.
+	lastPart := stopPart.
+	^self
 ]
 
 { #category : 'testing' }
 ObjectSegment >> isUncached
 [
-	"VisualWorks compatibility stub"
-	^true
+	^isUncached
 ]
 
 { #category : 'testing' }
 ObjectSegment >> isUncached: aBoolean
 [
-	"VisualWorks compatibility stub"
+	isUncached := aBoolean
+]
+
+{ #category : 'accessing' }
+ObjectSegment >> lastIndex
+[
+	^lastIndex
 ]
 
 { #category : 'accessing' }
 ObjectSegment >> lastPart: anObject
 [
-	"VisualWorks compatibility stub"
+	lastPart := anObject
 ]

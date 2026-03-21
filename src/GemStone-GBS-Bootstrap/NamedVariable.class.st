@@ -2,6 +2,10 @@ Class {
 	#name : 'NamedVariable',
 	#superclass : 'Object',
 	#instVars : [
+		'object',
+		'name',
+		'index',
+		'protected'
 	],
 	#classVars : [
 	],
@@ -36,7 +40,7 @@ NamedVariable >> index: anInteger
 { #category : 'accessing' }
 NamedVariable >> initialize
 [
-	"VisualWorks compatibility stub"
+	protected := false
 ]
 
 { #category : 'accessing' }
@@ -63,4 +67,22 @@ NamedVariable >> value
 NamedVariable >> value: anObject
 [
 	"VisualWorks compatibility stub"
+]
+
+{ #category : 'accessing' }
+NamedVariable >> beProtected
+[
+	protected := true
+]
+
+{ #category : 'accessing' }
+NamedVariable >> object
+[
+	^object
+]
+
+{ #category : 'accessing' }
+NamedVariable >> object: anObject
+[
+	object := anObject
 ]

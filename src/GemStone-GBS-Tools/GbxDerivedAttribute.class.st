@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxDerivedAttribute',
-	#superclass : 'Object',
+	#superclass : 'DerivedAttribute',
 	#instVars : [
 		'delegatePrintString'
 	],
@@ -36,4 +36,3 @@ GbxDerivedAttribute class >> label: aString value: anObject printString: aString
 
 	^self new initialize: aString value: anObject printString: aString2
 ]
-

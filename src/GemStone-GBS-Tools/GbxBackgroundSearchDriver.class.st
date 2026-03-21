@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxBackgroundSearchDriver',
-	#superclass : 'Object',
+	#superclass : 'BackgroundSearchDriver',
 	#instVars : [
 		'session'
 	],
@@ -31,4 +31,3 @@ GbxBackgroundSearchDriver >> session
 
 	^session
 ]
-

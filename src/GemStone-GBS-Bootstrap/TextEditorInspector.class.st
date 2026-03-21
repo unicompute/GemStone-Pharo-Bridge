@@ -2,6 +2,10 @@ Class {
 	#name : 'TextEditorInspector',
 	#superclass : 'Object',
 	#instVars : [
+		'object',
+		'textHolder',
+		'container',
+		'session'
 	],
 	#classVars : [
 	],
@@ -26,14 +30,13 @@ TextEditorInspector >> tabLabel
 { #category : 'accessing' }
 TextEditorInspector >> documentHolder
 [
-	"VisualWorks compatibility stub"
-	^nil
+	^textHolder
 ]
 
 { #category : 'accessing' }
 TextEditorInspector >> initialize: anObject
 [
-	"VisualWorks compatibility stub"
+	object := anObject
 ]
 
 { #category : 'accessing' }
@@ -46,4 +49,40 @@ TextEditorInspector >> refresh
 TextEditorInspector >> textAccepted: aString
 [
 	"VisualWorks compatibility stub"
+]
+
+{ #category : 'accessing' }
+TextEditorInspector >> object
+[
+	^object
+]
+
+{ #category : 'accessing' }
+TextEditorInspector >> object: anObject
+[
+	object := anObject
+]
+
+{ #category : 'accessing' }
+TextEditorInspector >> session
+[
+	^session ifNil: [ object ifNotNil: [ object session ] ]
+]
+
+{ #category : 'accessing' }
+TextEditorInspector >> session: anObject
+[
+	session := anObject
+]
+
+{ #category : 'accessing' }
+TextEditorInspector >> textHolder
+[
+	^textHolder
+]
+
+{ #category : 'accessing' }
+TextEditorInspector >> textHolder: anObject
+[
+	textHolder := anObject
 ]

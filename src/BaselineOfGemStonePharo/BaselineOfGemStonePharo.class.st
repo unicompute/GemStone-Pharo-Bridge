@@ -22,7 +22,8 @@ BaselineOfGemStonePharo >> baseline: spec [
 		spec package: 'GemStone-GBS-Tools' 
 			with: [
 				spec requires: #('GemStone-GBS-Converted').
-				spec preLoadDoIt: #preloadToolsCompatibility ].
+				spec preLoadDoIt: #preloadToolsCompatibility.
+				spec postLoadDoIt: #postloadToolsCompatibility ].
 			
 		spec package: 'GemStone-Pharo-Tests' 
 			with: [ spec requires: #('GemStone-GBS-Converted' 'GemStone-GBS-Tools') ].
@@ -56,6 +57,9 @@ BaselineOfGemStonePharo >> preloadConvertedCompatibility [
 { #category : 'baselines' }
 BaselineOfGemStonePharo >> postloadConvertedCompatibility [
 	| archiver |
+	(Smalltalk at: #GbsPharoBootstrap ifAbsent: [ nil ])
+		ifNotNil: [ :bootstrap | bootstrap publishConvertedRuntimeGlobals ].
+
 	archiver := Smalltalk at: #GbxStatArchiver ifAbsent: [ ^ self ].
 	archiver initialize.
 
@@ -75,4 +79,10 @@ BaselineOfGemStonePharo >> preloadToolsCompatibility [
 	(Smalltalk at: #Reconnect ifAbsent: [ ^ self ])
 		ifNotNil: [ :existing |
 			[ existing removeFromSystem ] on: Error do: [ ] ]
+]
+
+{ #category : 'baselines' }
+BaselineOfGemStonePharo >> postloadToolsCompatibility [
+	(Smalltalk at: #GbsPharoBootstrap ifAbsent: [ ^ self ])
+		refreshWorldMenuIfPossible
 ]

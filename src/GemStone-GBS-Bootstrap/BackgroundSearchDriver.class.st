@@ -2,6 +2,7 @@ Class {
 	#name : 'BackgroundSearchDriver',
 	#superclass : 'Object',
 	#instVars : [
+		'searchProcess'
 	],
 	#classVars : [
 	],
@@ -12,7 +13,7 @@ Class {
 { #category : 'accessing' }
 BackgroundSearchDriver >> killSearchProcess
 [
-	"VisualWorks compatibility stub"
+	searchProcess := nil
 ]
 
 { #category : 'accessing' }

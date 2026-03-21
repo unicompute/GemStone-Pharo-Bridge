@@ -2,6 +2,8 @@ Class {
 	#name : 'SegmentedPageDriver',
 	#superclass : 'Object',
 	#instVars : [
+		'page',
+		'segmentSize'
 	],
 	#classVars : [
 	],
@@ -26,4 +28,34 @@ SegmentedPageDriver >> markSegmentCached: anObject ifBetween: start and: end
 SegmentedPageDriver >> segmentSelectionChanged
 [
 	"VisualWorks compatibility stub"
+]
+
+{ #category : 'accessing' }
+SegmentedPageDriver >> computeFieldList
+[
+	^#()
+]
+
+{ #category : 'accessing' }
+SegmentedPageDriver >> page
+[
+	^page
+]
+
+{ #category : 'accessing' }
+SegmentedPageDriver >> page: anObject
+[
+	page := anObject
+]
+
+{ #category : 'accessing' }
+SegmentedPageDriver >> segmentSize
+[
+	^segmentSize ifNil: [ 25 ]
+]
+
+{ #category : 'accessing' }
+SegmentedPageDriver >> segmentSize: anInteger
+[
+	segmentSize := anInteger
 ]

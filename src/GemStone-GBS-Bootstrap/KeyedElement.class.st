@@ -2,6 +2,8 @@ Class {
 	#name : 'KeyedElement',
 	#superclass : 'Object',
 	#instVars : [
+		'object',
+		'key'
 	],
 	#classVars : [
 	],
@@ -39,8 +41,7 @@ KeyedElement >> displayString
 { #category : 'accessing' }
 KeyedElement >> key
 [
-	"VisualWorks compatibility stub"
-	^nil
+	^key
 ]
 
 { #category : 'accessing' }
@@ -48,6 +49,24 @@ KeyedElement >> keyDelegate
 [
 	"VisualWorks compatibility stub"
 	^nil
+]
+
+{ #category : 'accessing' }
+KeyedElement >> key: anObject
+[
+	key := anObject
+]
+
+{ #category : 'accessing' }
+KeyedElement >> object
+[
+	^object
+]
+
+{ #category : 'accessing' }
+KeyedElement >> object: anObject
+[
+	object := anObject
 ]
 
 { #category : 'accessing' }

@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxBasicInspector',
-	#superclass : 'Object',
+	#superclass : 'BasicInspector',
 	#instVars : [
 		'selfAttribute',
 		'namedFields'
@@ -175,4 +175,3 @@ GbxBasicInspector class >> tabLabel
 
 	^self gbxTabLabel: 'GS Basic'
 ]
-

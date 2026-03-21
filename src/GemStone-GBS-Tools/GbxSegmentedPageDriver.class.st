@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxSegmentedPageDriver',
-	#superclass : 'Object',
+	#superclass : 'SegmentedPageDriver',
 	#instVars : [
 	],
 	#classVars : [
@@ -63,4 +63,3 @@ GbxSegmentedPageDriver >> segmentSelectionChanged
 					segment cached]].
 	page fieldListHolder list: self computeFieldList
 ]
-

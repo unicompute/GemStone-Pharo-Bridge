@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxNamedVariable',
-	#superclass : 'Object',
+	#superclass : 'NamedVariable',
 	#instVars : [
 		'delegate',
 		'cachedPrintString'
@@ -89,4 +89,3 @@ GbxNamedVariable class >> of: anObject named: aString value: aGbsObject cachedPr
 		index: anInteger;
 		yourself
 ]
-

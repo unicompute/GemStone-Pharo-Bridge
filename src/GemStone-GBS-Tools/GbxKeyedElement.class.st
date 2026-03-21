@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxKeyedElement',
-	#superclass : 'Object',
+	#superclass : 'KeyedElement',
 	#instVars : [
 		'keyDelegate',
 		'keyName',
@@ -147,4 +147,3 @@ GbxKeyedElement class >> of: object key: key keyName: keyName value: value value
 		valueName: valueName;
 		yourself
 ]
-

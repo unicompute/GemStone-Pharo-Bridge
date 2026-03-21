@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxTextEditorInspector',
-	#superclass : 'Object',
+	#superclass : 'TextEditorInspector',
 	#instVars : [
 	],
 	#classVars : [
@@ -66,4 +66,3 @@ GbxTextEditorInspector class >> tabLabel
 
 	^self gbxTabLabel: 'GS Text'
 ]
-
