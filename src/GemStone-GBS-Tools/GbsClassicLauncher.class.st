@@ -639,7 +639,7 @@ GbsClassicLauncher class >> openGbxNewConfigurationTool [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxReplicatorManager [
-	self openGbxUtility: #GbxReplicatorManager
+	self openGbxUtility: #GbxReplicatorManagerTool
 ]
 
 { #category : 'menus' }

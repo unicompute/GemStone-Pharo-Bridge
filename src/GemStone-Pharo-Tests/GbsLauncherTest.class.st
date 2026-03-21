@@ -109,3 +109,12 @@ GbsLauncherTest >> testAdminSessionSupportFallsBackToConnectedRegistryEntryWhenC
 		self assert: GbsSessionParameters currentSession == liveSession
 	] ensure: [ GBSM reset ]
 ]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testReplicatorManagerKeepsRuntimeApiAndShape [
+	self assert: (GbxReplicatorManager respondsTo: #newForSession:).
+	self
+		assert: GbxReplicatorManager instVarNames
+		equals: #(session serverMap clientMap needServerInstVarNames replicatorsNeedingServerInstVarNames clampManager).
+	self assert: (Smalltalk at: #GbxReplicatorManagerTool ifAbsent: [ nil ]) notNil
+]

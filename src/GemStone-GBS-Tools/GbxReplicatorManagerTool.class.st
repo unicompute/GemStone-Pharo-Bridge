@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxReplicatorManager',
+	#name : 'GbxReplicatorManagerTool',
 	#superclass : 'Object',
 	#instVars : [
 		'session',
@@ -11,14 +11,14 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxReplicatorManager class >> on: aSession [
+GbxReplicatorManagerTool class >> on: aSession [
 	^ self new
 		session: aSession;
 		yourself
 ]
 
 { #category : 'replication' }
-GbxReplicatorManager >> replicatorFor: anObject [
+GbxReplicatorManagerTool >> replicatorFor: anObject [
 	"Get appropriate replicator for an object"
 	| className replicatorClass |
 	
@@ -35,35 +35,35 @@ GbxReplicatorManager >> replicatorFor: anObject [
 ]
 
 { #category : 'accessing' }
-GbxReplicatorManager >> defaultReplicatorClass [
+GbxReplicatorManagerTool >> defaultReplicatorClass [
 	^ defaultReplicatorClass ifNil: [ GbxObjectReplicator ]
 ]
 
 { #category : 'accessing' }
-GbxReplicatorManager >> defaultReplicatorClass: aClass [
+GbxReplicatorManagerTool >> defaultReplicatorClass: aClass [
 	defaultReplicatorClass := aClass
 ]
 
 { #category : 'initialization' }
-GbxReplicatorManager >> initialize [
+GbxReplicatorManagerTool >> initialize [
 	super initialize.
 	replicatorRegistry := Dictionary new.
 	defaultReplicatorClass := GbxObjectReplicator.
 ]
 
 { #category : 'registration' }
-GbxReplicatorManager >> registerReplicator: aClass forClass: className [
+GbxReplicatorManagerTool >> registerReplicator: aClass forClass: className [
 	"Register a replicator class for a class"
 	replicatorRegistry at: className put: aClass.
 ]
 
 { #category : 'accessing' }
-GbxReplicatorManager >> replicatorRegistry [
+GbxReplicatorManagerTool >> replicatorRegistry [
 	^ replicatorRegistry
 ]
 
 { #category : 'replication' }
-GbxReplicatorManager >> replicate: anObject [
+GbxReplicatorManagerTool >> replicate: anObject [
 	"Replicate an object using appropriate replicator"
 	| replicator |
 	
@@ -72,7 +72,7 @@ GbxReplicatorManager >> replicate: anObject [
 ]
 
 { #category : 'replication' }
-GbxReplicatorManager >> selectReplicatorFor: anObject [
+GbxReplicatorManagerTool >> selectReplicatorFor: anObject [
 	"Select appropriate replicator class for an object based on its type"
 	
 	anObject class name includes: 'Dictionary' ifTrue: [ ^ GbxDictionaryReplicator ].
@@ -86,11 +86,11 @@ GbxReplicatorManager >> selectReplicatorFor: anObject [
 ]
 
 { #category : 'accessing' }
-GbxReplicatorManager >> session [
+GbxReplicatorManagerTool >> session [
 	^ session
 ]
 
 { #category : 'accessing' }
-GbxReplicatorManager >> session: aSession [
+GbxReplicatorManagerTool >> session: aSession [
 	session := aSession
 ]
