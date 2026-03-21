@@ -368,7 +368,8 @@ GbsServerInterface >> apiGciLoginEx: user pass: password flags: flags context: c
 ]
 
 { #category : 'api' }
-GbsServerInterface >> apiGciLoginEx: u password: p flags: f context: c [ ^ self ffiCall: #(int GciLoginEx(void* u, void* p, int f, void* c))
+GbsServerInterface >> apiGciLoginEx: u password: p flags: f context: c [
+	^ self ffiCall: #(uint64 GciLoginEx(void* u, void* p, int f, void* c)) module: libraryPath
 ]
 
 { #category : 'api - login' }
@@ -398,7 +399,7 @@ GbsServerInterface >> apiGciPollForSignal [
 { #category : 'api - login' }
 GbsServerInterface >> apiGciLogout: sessionId [
     <primitive: #primitiveNativeCall error: errorCode>
-    ^ self ffiCall: #(bool GciLogout(int sessionId))
+    ^ self ffiCall: #(int GciLogout(int sessionId)) module: libraryPath
 ]
 
 { #category : 'api' }
