@@ -54,6 +54,7 @@ GbsPharoBootstrap class >> installGlobalCompatibilityPlaceholders
 		installPlaceholderGlobal: #NotCachedToken
 		value: [ 'Not cached' copy ];
 		installPlaceholderGlobal: #ClassesNotToCreateOnServer value: [ nil ];
+		installPlaceholderGlobal: #GSClipboard value: [ nil ];
 		installPlaceholderGlobal: #GScursor value: [ nil ];
 		installPlaceholderGlobal: #LastKernelOopNumber value: [ 1318 ];
 		installPlaceholderGlobal: #MinTraversalBufferSize value: [ 2048 ];
@@ -69,6 +70,7 @@ GbsPharoBootstrap class >> installGlobalCompatibilityPlaceholders
 
 	specials
 		at: #NotCachedToken put: (Smalltalk at: #NotCachedToken);
+		at: #GSClipboard put: (Smalltalk at: #GSClipboard ifAbsent: [ nil ]);
 		at: #GScursor put: (Smalltalk at: #GScursor ifAbsent: [ nil ])
 ]
 

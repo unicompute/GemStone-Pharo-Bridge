@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxBehaviorOopMapNode',
+	#name : 'GbxBehaviorOopMapNodeTool',
 	#superclass : 'Object',
 	#instVars : [
 		'oop',
@@ -13,7 +13,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxBehaviorOopMapNode class >> oop: anOop behavior: aBehavior [
+GbxBehaviorOopMapNodeTool class >> oop: anOop behavior: aBehavior [
 	^ self new
 		oop: anOop;
 		behavior: aBehavior;
@@ -21,57 +21,57 @@ GbxBehaviorOopMapNode class >> oop: anOop behavior: aBehavior [
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMapNode >> behavior [
+GbxBehaviorOopMapNodeTool >> behavior [
 	^ behavior
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMapNode >> behavior: aBehavior [
+GbxBehaviorOopMapNodeTool >> behavior: aBehavior [
 	behavior := aBehavior
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMapNode >> isClass [
+GbxBehaviorOopMapNodeTool >> isClass [
 	^ isClass ifNil: [ false ]
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMapNode >> isClass: aBoolean [
+GbxBehaviorOopMapNodeTool >> isClass: aBoolean [
 	isClass := aBoolean
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMapNode >> isMetaclass [
+GbxBehaviorOopMapNodeTool >> isMetaclass [
 	^ isMetaclass ifNil: [ false ]
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMapNode >> isMetaclass: aBoolean [
+GbxBehaviorOopMapNodeTool >> isMetaclass: aBoolean [
 	isMetaclass := aBoolean
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMapNode >> oop [
+GbxBehaviorOopMapNodeTool >> oop [
 	^ oop
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMapNode >> oop: anOop [
+GbxBehaviorOopMapNodeTool >> oop: anOop [
 	oop := anOop
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMapNode >> printString [
+GbxBehaviorOopMapNodeTool >> printString [
 	^ 'BehaviorNode (oop: ', (oop ifNil: [ 'nil' ] ifNotNil: [ oop asString ]),
 	  ', class: ', isClass asString, ', meta: ', isMetaclass asString, ')'
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMapNode >> session [
+GbxBehaviorOopMapNodeTool >> session [
 	^ session
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMapNode >> session: aSession [
+GbxBehaviorOopMapNodeTool >> session: aSession [
 	session := aSession
 ]

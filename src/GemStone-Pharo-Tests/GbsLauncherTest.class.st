@@ -120,6 +120,15 @@ GbsLauncherTest >> testReplicatorManagerKeepsRuntimeApiAndShape [
 ]
 
 { #category : 'tests' }
+GbsLauncherTest >> testBehaviorOopMapKeepsRuntimeApiAndToolVariants [
+	self assert: (GbxBehaviorOopMap respondsTo: #newForSession:).
+	self assert: GbxBehaviorOopMap superclass equals: GbxOopKeyedDictionary.
+	self assert: GbxBehaviorOopMapNode superclass equals: GbxOopKeyedNode.
+	self assert: (Smalltalk at: #GbxBehaviorOopMapTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxBehaviorOopMapNodeTool ifAbsent: [ nil ]) notNil
+]
+
+{ #category : 'tests' }
 GbsLauncherTest >> testStatsClassesKeepRuntimeApiAndToolVariants [
 	self
 		assert: (GbxStatDescriptor respondsTo: #name:description:type:isCounter:isLargerBetter:unit:).
@@ -149,6 +158,7 @@ GbsLauncherTest >> testCompatibilityBootstrapInstallsPlaceholdersAndNamespace [
 	specials := Smalltalk at: #SpecialGemStoneObjects.
 	self assert: (Smalltalk globals includesKey: #SpecialGemStoneObjects).
 	self assert: (Smalltalk globals includesKey: #NotCachedToken).
+	self assert: (Smalltalk globals includesKey: #GSClipboard).
 	self assert: (Smalltalk globals includesKey: #OObject).
 	self assert: (Smalltalk globals includesKey: #Filename).
 	self assert: (Smalltalk at: #Filename) equals: GbxFilename.

@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxBehaviorOopMap',
+	#name : 'GbxBehaviorOopMapTool',
 	#superclass : 'Object',
 	#instVars : [
 		'session',
@@ -11,14 +11,14 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxBehaviorOopMap class >> on: aSession [
+GbxBehaviorOopMapTool class >> on: aSession [
 	^ self new
 		session: aSession;
 		yourself
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMap >> addNode: aNode [
+GbxBehaviorOopMapTool >> addNode: aNode [
 	"Add a node to the map"
 	| oop |
 	
@@ -30,19 +30,19 @@ GbxBehaviorOopMap >> addNode: aNode [
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMap >> at: anOop [
+GbxBehaviorOopMapTool >> at: anOop [
 	"Get node at OOP"
 	^ oopMap at: anOop ifAbsent: [ nil ]
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMap >> at: anOop ifAbsent: aBlock [
+GbxBehaviorOopMapTool >> at: anOop ifAbsent: aBlock [
 	"Get node at OOP or evaluate block"
 	^ oopMap at: anOop ifAbsent: aBlock
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMap >> at: anOop put: aNode [
+GbxBehaviorOopMapTool >> at: anOop put: aNode [
 	"Put node at OOP"
 	| existing |
 	
@@ -54,50 +54,50 @@ GbxBehaviorOopMap >> at: anOop put: aNode [
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMap >> clear [
+GbxBehaviorOopMapTool >> clear [
 	"Clear the map"
 	oopMap := Dictionary new.
 	nodeCount := 0.
 ]
 
 { #category : 'initialization' }
-GbxBehaviorOopMap >> initialize [
+GbxBehaviorOopMapTool >> initialize [
 	super initialize.
 	oopMap := Dictionary new.
 	nodeCount := 0.
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMap >> nodeCount [
+GbxBehaviorOopMapTool >> nodeCount [
 	^ nodeCount
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMap >> nodes [
+GbxBehaviorOopMapTool >> nodes [
 	^ oopMap values
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMap >> oopMap [
+GbxBehaviorOopMapTool >> oopMap [
 	^ oopMap
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMap >> printString [
+GbxBehaviorOopMapTool >> printString [
 	^ 'BehaviorOopMap (', nodeCount asString, ' nodes)'
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMap >> session [
+GbxBehaviorOopMapTool >> session [
 	^ session
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMap >> session: aSession [
+GbxBehaviorOopMapTool >> session: aSession [
 	session := aSession
 ]
 
 { #category : 'accessing' }
-GbxBehaviorOopMap >> size [
+GbxBehaviorOopMapTool >> size [
 	^ nodeCount
 ]

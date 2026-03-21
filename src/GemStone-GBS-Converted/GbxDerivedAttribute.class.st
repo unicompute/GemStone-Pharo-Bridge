@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxDerivedAttribute',
-	#superclass : 'Object',
+	#superclass : 'DerivedAttribute',
 	#instVars : [
 		'delegatePrintString'
 	],

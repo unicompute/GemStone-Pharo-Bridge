@@ -1,8 +1,7 @@
 Class {
 	#name : 'GbxClientBasicProxyInspector',
-	#superclass : 'Object',
+	#superclass : 'GbxBasicInspector',
 	#instVars : [
-		'selfAttribute'
 	],
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'
