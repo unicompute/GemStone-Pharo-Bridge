@@ -2720,7 +2720,10 @@ GbsSession >> configureGemAbortMaxCrs
 [
 	"HACK to workaround server bug #49434. See bug #49438."
 
-	self execute: 'System configurationAt: #GemAbortMaxCrs put: 16r3FFFFFFF'
+	[
+		self execute: 'System configurationAt: #GemAbortMaxCrs put: 16r3FFFFFFF'
+	] on: Error do: [ ^ self ].
+	^ self
 ]
 
 { #category : 'private - session management' }
@@ -2791,7 +2794,10 @@ GbsSession >> enableOopDropping
 	"per bug #39548-Objects in pure export set should be able to drop from RAM
 	Turn on option if connecting to a 3.0+ server"
 
-	self execute: 'System gemConfigurationAt: #GemDropCommittedExportedObjs put: true'
+	[
+		self execute: 'System gemConfigurationAt: #GemDropCommittedExportedObjs put: true'
+	] on: Error do: [ ^ self ].
+	^ self
 ]
 
 { #category : 'private - session management' }
@@ -2851,23 +2857,27 @@ GbsSession >> getGemIds
 [
 
 	| ids |
-	ids := self evaluate: 
-			'| current serial description |
-			current := GsCurrentSession currentSession.
-			serial := current serialNumber.
-			description := System descriptionOfSessionSerialNum: serial.
-			Dictionary new
-				at: #serialNumber put: serial;
-				at: #sessionId put: (description at: 10);
-				at: #processId put:  (description at: 2);
-				yourself'.
+	ids := [
+		self evaluate: 
+				'| current serial description |
+				current := GsCurrentSession currentSession.
+				serial := current serialNumber.
+				description := System descriptionOfSessionSerialNum: serial.
+				Dictionary new
+					at: #serialNumber put: serial;
+					at: #sessionId put: (description at: 10);
+					at: #processId put:  (description at: 2);
+					yourself'
+	] on: Error do: [ ^ self ].
+	(ids respondsTo: #at:ifAbsent:) ifFalse: [ ^ self ].
 
-	gemProcessId :=  ids at: #processId.
-	gemSerialNumber := ids at: #serialNumber.
-	gemSessionId := ids at: #sessionId.
+	gemProcessId :=  ids at: #processId ifAbsent: [ gemProcessId ].
+	gemSerialNumber := ids at: #serialNumber ifAbsent: [ gemSerialNumber ].
+	gemSessionId := ids at: #sessionId ifAbsent: [ gemSessionId ].
 
 	"Update with the gem ids"
 	self initializeLoggedInSessionDisplayString.
+	^ self
 ]
 
 { #category : 'private - session management' }
