@@ -266,7 +266,7 @@ GbsPharoBootstrap class >> refreshWorldMenuIfPossible
 [
 	| refreshBlock |
 	refreshBlock := [
-		| world state |
+		| menubarClass world state |
 		world := Smalltalk at: #World ifAbsent: [ nil ].
 		world ifNotNil: [
 			world := (world respondsTo: #currentWorld)
@@ -274,7 +274,10 @@ GbsPharoBootstrap class >> refreshWorldMenuIfPossible
 				ifFalse: [ world ] ].
 		state := [ world ifNotNil: [ world worldState ] ] on: Error do: [ nil ].
 		state ifNotNil: [
-			[ state worldMenu ] on: Error do: [ ] ] ].
+			[ state worldMenu ] on: Error do: [ ] ].
+		menubarClass := Smalltalk at: #MenubarMorph ifAbsent: [ nil ].
+		menubarClass ifNotNil: [
+			[ menubarClass reset ] on: Error do: [ ] ] ].
 
 	[ UIManager default defer: refreshBlock ]
 		on: Error
