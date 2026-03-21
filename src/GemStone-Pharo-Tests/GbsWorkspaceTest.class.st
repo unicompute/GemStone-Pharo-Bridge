@@ -83,6 +83,29 @@ GbsWorkspaceTest >> testBestDebugProcessOopPrefersCandidateWithStack [
 ]
 
 { #category : 'tests' }
+GbsWorkspaceTest >> testActiveSessionForRemoteExecutionFallsBackToConnectedRegistryEntry [
+	| workspace params liveSession resolved |
+	[
+		GBSM reset.
+		workspace := GbsWorkspace new.
+		params := GbsSessionParameters new.
+		params sessionId: 12.
+		GbsSessionParameters registerSession: params.
+		liveSession := MockGbsSession new.
+		liveSession
+			sessionId: 12;
+			isLoggedIn: true.
+		GBSM manager privAddSession: liveSession.
+		GbsSessionParameters currentSession: nil.
+
+		resolved := workspace activeSessionForRemoteExecution.
+
+		self assert: resolved == liveSession.
+		self assert: GbsSessionParameters currentSession == liveSession
+	] ensure: [ GBSM reset ]
+]
+
+{ #category : 'tests' }
 GbsWorkspaceTest >> testDoItPrefersServerProcessOopOverTag [
 	| workspace mockSession |
 

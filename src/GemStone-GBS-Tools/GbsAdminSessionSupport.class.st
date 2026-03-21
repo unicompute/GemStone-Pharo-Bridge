@@ -8,12 +8,11 @@ Class {
 { #category : 'accessing' }
 GbsAdminSessionSupport class >> currentUsableSession [
 	| session |
-	session := GbsSessionParameters currentSession.
-	session ifNil: [ ^ nil ].
-	(self isUsableSession: session) ifTrue: [ ^ session ].
-	session := self resolveLiveSessionFrom: session.
-	session ifNil: [ ^ nil ].
-	GbsSessionParameters currentSession: session.
+	session := self usableSessionFromCandidate: GbsSessionParameters currentSession.
+	session ifNil: [ session := self usableSessionFromRegistry ].
+	session ifNil: [
+		session := self usableSessionFromCandidate: ([ GBSM searchForCurrentSession ] on: Error do: [ nil ]) ].
+	session ifNotNil: [ GbsSessionParameters currentSession: session ].
 	^ session
 ]
 
@@ -53,5 +52,21 @@ GbsAdminSessionSupport class >> sessionIdFrom: anObject [
 	anObject ifNil: [ ^ nil ].
 	(anObject respondsTo: #sessionId)
 		ifTrue: [ ^ [ anObject sessionId ] on: Error do: [ nil ] ].
+	^ nil
+]
+
+{ #category : 'private' }
+GbsAdminSessionSupport class >> usableSessionFromCandidate: anObject [
+	anObject ifNil: [ ^ nil ].
+	(self isUsableSession: anObject) ifTrue: [ ^ anObject ].
+	^ self resolveLiveSessionFrom: anObject
+]
+
+{ #category : 'private' }
+GbsAdminSessionSupport class >> usableSessionFromRegistry [
+	GbsSessionParameters allSessions do: [ :each |
+		| session |
+		session := self usableSessionFromCandidate: each.
+		session ifNotNil: [ ^ session ] ].
 	^ nil
 ]

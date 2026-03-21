@@ -148,7 +148,10 @@ GbsWorkspace >> debugProcessCandidate: processCandidate hasStackIn: aSession [
 
 { #category : 'private' }
 GbsWorkspace >> activeSessionForRemoteExecution [
-	| current connectedParam |
+	| resolved current connectedParam |
+	resolved := GbsAdminSessionSupport currentUsableSession.
+	resolved ifNotNil: [ ^ resolved ].
+
 	current := GbsSessionParameters currentSession.
 	(self isUsableGemStoneSession: current) ifTrue: [ ^ current ].
 
@@ -170,8 +173,7 @@ GbsWorkspace >> sessionWrapperFromParameters: aSessionParameters [
 	| wrapped |
 	wrapped := GbsSession new.
 	(aSessionParameters respondsTo: #sessionId) ifTrue: [
-		wrapped sessionId: aSessionParameters sessionId.
-		wrapped sessionOop: aSessionParameters sessionId ].
+		wrapped sessionId: aSessionParameters sessionId ].
 	wrapped
 		isLoggedIn: true;
 		parameters: aSessionParameters.

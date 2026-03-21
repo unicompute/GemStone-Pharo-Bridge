@@ -87,3 +87,25 @@ GbsLauncherTest >> testAdminSessionSupportResolvesLiveSessionFromParameterRecord
 		self assert: GbsSessionParameters currentSession == liveSession
 	] ensure: [ GBSM reset ]
 ]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testAdminSessionSupportFallsBackToConnectedRegistryEntryWhenCurrentMissing [
+	| params liveSession resolved |
+	[
+		GBSM reset.
+		params := GbsSessionParameters new.
+		params sessionId: 8.
+		GbsSessionParameters registerSession: params.
+		liveSession := MockGbsSession new.
+		liveSession
+			sessionId: 8;
+			isLoggedIn: true.
+		GBSM manager privAddSession: liveSession.
+		GbsSessionParameters currentSession: nil.
+
+		resolved := GbsAdminSessionSupport currentUsableSession.
+
+		self assert: resolved == liveSession.
+		self assert: GbsSessionParameters currentSession == liveSession
+	] ensure: [ GBSM reset ]
+]

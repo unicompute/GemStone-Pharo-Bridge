@@ -57,6 +57,22 @@ MockGbsSession >> executeAndFetch: script context: contextOop [
 	^ self executeAndFetch: script
 ]
 
+{ #category : 'testing' }
+MockGbsSession >> isLoggedIn [
+	| value |
+	value := self stubs at: #isLoggedIn ifAbsent: [ nil ].
+	value ifNil: [ ^ self hasValidSessionId ].
+	(value respondsTo: #value) ifTrue: [ ^ value value ].
+	^ value
+]
+
+{ #category : 'testing' }
+MockGbsSession >> isLoggedIn: aBoolean [
+	self stubs at: #isLoggedIn put: aBoolean.
+	aBoolean ifFalse: [ sessionId := 0 ].
+	^ aBoolean
+]
+
 { #category : 'accessing' }
 MockGbsSession >> gciAbort [
 	^ self stubs at: #gciAbort ifAbsent: [ 1 ]
@@ -123,6 +139,11 @@ MockGbsSession >> signalInterrupt [
 MockGbsSession >> serverInterface [
 	"Return self so this mock can also intercept serverInterface calls!"
 	^ self
+]
+
+{ #category : 'accessing' }
+MockGbsSession >> sessionId: anInteger [
+	sessionId := anInteger
 ]
 
 { #category : 'accessing' }
