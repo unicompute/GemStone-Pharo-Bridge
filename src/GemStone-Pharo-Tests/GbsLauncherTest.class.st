@@ -296,6 +296,26 @@ GbsLauncherTest >> testIconLibraryUsesPharoSafePlaceholderIcons
 ]
 
 { #category : 'tests' }
+GbsLauncherTest >> testRefreshWorldMenuMakesGemStoneEntryVisible
+[
+	| world state menu labels |
+	GbsPharoBootstrap refreshWorldMenuIfPossible.
+	world := Smalltalk at: #World ifAbsent: [ nil ].
+	world := (world notNil and: [ world respondsTo: #currentWorld ])
+		ifTrue: [ world currentWorld ]
+		ifFalse: [ world ].
+	state := world ifNotNil: [ world worldState ].
+	menu := state ifNotNil: [ state worldMenu ].
+	labels := OrderedCollection new.
+	(menu respondsTo: #items)
+		ifTrue: [
+			menu items do: [ :item |
+				(item respondsTo: #contents)
+					ifTrue: [ labels add: item contents asString ] ] ].
+	self assert: (labels includes: 'GemStone')
+]
+
+{ #category : 'tests' }
 GbsLauncherTest >> testSessionManagerStatResourceSafelyInitializesNumSessions
 [
 	| statResource |

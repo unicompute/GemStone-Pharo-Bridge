@@ -282,10 +282,14 @@ GbsPharoBootstrap class >> refreshWorldMenuIfPossible
 			[
 				(menubarClass respondsTo: #showMenubar:)
 					ifTrue: [ menubarClass showMenubar: true ]
-					ifFalse: [ menubarClass reset ]
+			] on: Error do: [ ].
+			[
+				(menubarClass respondsTo: #reset)
+					ifTrue: [ menubarClass reset ]
 			] on: Error do: [ ] ] ].
 
 	[ UIManager default defer: refreshBlock ]
 		on: Error
-		do: [ refreshBlock value ]
+		do: [ ].
+	refreshBlock value
 ]
