@@ -172,6 +172,15 @@ GbsLauncherTest >> testBehaviorOopMapKeepsRuntimeApiAndToolVariants [
 ]
 
 { #category : 'tests' }
+GbsLauncherTest >> testClampManagerKeepsRuntimeApiAndToolVariant [
+	self assert: (GbxClampManager respondsTo: #forManager:).
+	self
+		assert: GbxClampManager instVarNames
+		equals: #(classClamps defaultReplicationScheme identityClamps manager replicationSchemes threadSpecificSchemes).
+	self assert: (Smalltalk at: #GbxClampManagerTool ifAbsent: [ nil ]) notNil
+]
+
+{ #category : 'tests' }
 GbsLauncherTest >> testStatsClassesKeepRuntimeApiAndToolVariants [
 	self
 		assert: (GbxStatDescriptor respondsTo: #name:description:type:isCounter:isLargerBetter:unit:).

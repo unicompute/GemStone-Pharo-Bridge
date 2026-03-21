@@ -619,7 +619,7 @@ GbsClassicLauncher class >> openGbxBehaviorServerClassCache [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxClampManager [
-	self openGbxUtility: #GbxClampManager
+	self openGbxUtility: #GbxClampManagerTool
 ]
 
 { #category : 'menus' }

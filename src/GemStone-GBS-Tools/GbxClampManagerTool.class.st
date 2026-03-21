@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxClampManager',
+	#name : 'GbxClampManagerTool',
 	#superclass : 'Object',
 	#instVars : [
 		'session',
@@ -11,14 +11,14 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxClampManager class >> on: aSession [
+GbxClampManagerTool class >> on: aSession [
 	^ self new
 		session: aSession;
 		yourself
 ]
 
 { #category : 'clamping' }
-GbxClampManager >> clampSpecFor: anObject [
+GbxClampManagerTool >> clampSpecFor: anObject [
 	"Get clamp specification for an object"
 	| className spec |
 	
@@ -28,39 +28,39 @@ GbxClampManager >> clampSpecFor: anObject [
 ]
 
 { #category : 'accessing' }
-GbxClampManager >> clampSpecifications [
+GbxClampManagerTool >> clampSpecifications [
 	^ clampSpecifications ifNil: [ clampSpecifications := Dictionary new ]
 ]
 
 { #category : 'accessing' }
-GbxClampManager >> defaultClampLevel [
+GbxClampManagerTool >> defaultClampLevel [
 	^ defaultClampLevel ifNil: [ 3 ]
 ]
 
 { #category : 'accessing' }
-GbxClampManager >> defaultClampLevel: anInteger [
+GbxClampManagerTool >> defaultClampLevel: anInteger [
 	defaultClampLevel := anInteger
 ]
 
 { #category : 'initialization' }
-GbxClampManager >> initialize [
+GbxClampManagerTool >> initialize [
 	super initialize.
 	clampSpecifications := Dictionary new.
 	defaultClampLevel := 3.
 ]
 
 { #category : 'clamping' }
-GbxClampManager >> registerClampSpec: aSpec forClass: className [
+GbxClampManagerTool >> registerClampSpec: aSpec forClass: className [
 	"Register a clamp specification for a class"
 	clampSpecifications at: className put: aSpec.
 ]
 
 { #category : 'accessing' }
-GbxClampManager >> session [
+GbxClampManagerTool >> session [
 	^ session
 ]
 
 { #category : 'accessing' }
-GbxClampManager >> session: aSession [
+GbxClampManagerTool >> session: aSession [
 	session := aSession
 ]
