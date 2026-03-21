@@ -76,22 +76,22 @@ GbxCachedClassStatResource class >> initialize
 [
 	"Create GbxStatDescriptors for this stat resource"
 
+	| desc1 desc2 |
 	(GbxStatDescriptor respondsTo: #name:description:type:isCounter:isLargerBetter:unit:)
 		ifFalse: [ ^ self ].
 
-	| desc1 desc2 |
 	statDescriptors := OrderedCollection new.
 	desc1 := GbxStatDescriptor
 				name: 'numInstances'
 				description: 'The number of instances of this class in the stObjectCache'
-				type: GbxStatArchiver.TypeInt32
+				type: 5
 				isCounter: false
 				isLargerBetter: false
 				unit: 'instances'.
 	desc2 := GbxStatDescriptor
 				name: 'gbsBytesCached'
 				description: 'The number of bytes occupied by instances of this class in the stObjectCache'
-				type: GbxStatArchiver.TypeInt32
+				type: 5
 				isCounter: false
 				isLargerBetter: false
 				unit: 'bytes'.
