@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxArrayInspector',
-	#superclass : 'Object',
+	#superclass : 'ArrayInspector',
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'
 }

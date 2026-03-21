@@ -31,7 +31,14 @@ GbxSessionManagerStatResource >> incMainStatSampleTime: delta
 { #category : 'stat updating' }
 GbxSessionManagerStatResource >> setNumSessions
 [
-	numSessions setValue: GBSM loggedInSessions size
+	| manager |
+	numSessions ifNil: [ self initializeStatistics ].
+	manager := Smalltalk at: #GBSM ifAbsent: [ nil ].
+	numSessions
+		setValue:
+			(manager
+				ifNil: [ 0 ]
+				ifNotNil: [ [ manager loggedInSessions size ] on: Error do: [ 0 ] ])
 ]
 
 { #category : 'stat updating' }
@@ -86,6 +93,7 @@ GbxSessionManagerStatResource >> numSessions
 	"The number of logged in GbsSessions.  If a session has died abnormally, and GBS
 	 has not yet discovered its death, this number will erroneously include that session."
 
+	numSessions ifNil: [ ^ 0 ].
 	^numSessions value
 ]
 

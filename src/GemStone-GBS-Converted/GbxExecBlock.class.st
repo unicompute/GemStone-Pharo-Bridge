@@ -2,7 +2,10 @@ Class {
 	#name : 'GbxExecBlock',
 	#superclass : 'Object',
 	#instVars : [
-		'method'
+		'method',
+		'session',
+		'blockOop',
+		'numArgs'
 	],
 	#classVars : [
 		'CallbackOverrides',
@@ -183,4 +186,3 @@ GbxExecBlock class >> canUnstubInPlaceFromReport: report stubSize: stubSize
 	 by the compiler."
 	^false
 ]
-

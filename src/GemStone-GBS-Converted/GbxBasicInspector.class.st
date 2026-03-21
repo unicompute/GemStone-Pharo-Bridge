@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxBasicInspector',
-	#superclass : 'Object',
+	#superclass : 'BasicInspector',
 	#instVars : [
 		'selfAttribute',
 		'namedFields'

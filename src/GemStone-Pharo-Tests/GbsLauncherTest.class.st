@@ -254,3 +254,42 @@ GbsLauncherTest >> testFilenameCompatibilityWrapperProvidesAliasAndFileStreams
 		self assert: file asString equals: file asFileReference fullName
 	] ensure: [ file asFileReference ensureDelete ]
 ]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testConvertedCompatibilityClassesKeepExpectedSuperclassShape
+[
+	self assert: GbxNamedVariable superclass equals: NamedVariable.
+	self assert: GbxObjectSegment superclass equals: ObjectSegment.
+	self assert: GbxBasicInspector superclass equals: BasicInspector.
+	self assert: GbxArrayInspector superclass equals: ArrayInspector.
+	self assert: GbxKeyedElement superclass equals: KeyedElement.
+	self assert: GbxExecBlock instVarNames equals: #(method session blockOop numArgs)
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testEarlyLateSystemCompatibilityStubsExist
+[
+	self assert: (Smalltalk at: #EarlyInterestNotificationSystem ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #FinalizationSystem ifAbsent: [ nil ]) notNil.
+	self assert: (GbxEarlySystem new prerequisiteSystems includes: EarlyInterestNotificationSystem).
+	self assert: (GbxLateSystem new prerequisiteSystems includes: FinalizationSystem).
+	self shouldnt: [ GbxFinalizer installGbxFinalizer ] raise: Error
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testIconLibraryUsesPharoSafePlaceholderIcons
+[
+	self assert: GbxIconLibrary browseSystem class equals: Form.
+	self assert: GbxIconLibrary browseSystem extent equals: 24@24.
+	self assert: GbxIconLibrary noChanges class equals: Form.
+	self assert: GbxIconLibrary noChanges extent equals: 16@16
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testSessionManagerStatResourceSafelyInitializesNumSessions
+[
+	| statResource |
+	statResource := GbxSessionManagerStatResource new.
+	self shouldnt: [ statResource setNumSessions ] raise: Error.
+	self assert: statResource numSessions equals: 0
+]

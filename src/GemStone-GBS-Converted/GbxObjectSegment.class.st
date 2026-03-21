@@ -1,8 +1,7 @@
 Class {
 	#name : 'GbxObjectSegment',
-	#superclass : 'Object',
+	#superclass : 'ObjectSegment',
 	#instVars : [
-		'isUncached'
 	],
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'

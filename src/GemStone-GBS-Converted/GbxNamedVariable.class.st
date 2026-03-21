@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxNamedVariable',
-	#superclass : 'Object',
+	#superclass : 'NamedVariable',
 	#instVars : [
 		'delegate',
 		'cachedPrintString'
