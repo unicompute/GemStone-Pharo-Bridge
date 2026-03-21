@@ -394,6 +394,9 @@ GbxSessionStatResource class >> initialize
 
 	"self initialize"
 
+	(GbxStatDescriptor respondsTo: #name:description:type:isCounter:isLargerBetter:unit:)
+		ifFalse: [ ^ self ].
+
 	statDescriptors := OrderedCollection new.
 	self
 		addStatDescriptor: (self newStatFor: 'bytesSentByStoreTraversal');
@@ -436,4 +439,3 @@ GbxSessionStatResource class >> resourceTypeId
 [
 	^1
 ]
-

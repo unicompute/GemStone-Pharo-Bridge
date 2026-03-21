@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxObjectMemoryStat',
-	#superclass : 'GbxStatResource',
+	#superclass : 'GbxToolStatResource',
 	#instVars : [
 		'session',
 		'objectCount',
@@ -82,10 +82,10 @@ GbxObjectMemoryStat >> description: aStatDescriptor [
 GbxObjectMemoryStat >> initialize [
 	super initialize.
 	name := 'Object Memory'.
-	self addStat: (GbxStat named: 'objectCount').
-	self addStat: (GbxStat named: 'byteCount').
-	self addStat: (GbxStat named: 'oopCount').
-	self addStat: (GbxStat named: 'percentFull').
+	self addStat: (GbxToolStat named: 'objectCount').
+	self addStat: (GbxToolStat named: 'byteCount').
+	self addStat: (GbxToolStat named: 'oopCount').
+	self addStat: (GbxToolStat named: 'percentFull').
 ]
 
 { #category : 'accessing' }

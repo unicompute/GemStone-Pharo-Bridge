@@ -1,6 +1,6 @@
 Class {
-	#name : 'GbxSessionStatResource',
-	#superclass : 'GbxStatResource',
+	#name : 'GbxToolSessionStatResource',
+	#superclass : 'GbxToolStatResource',
 	#instVars : [
 		'session',
 		'sessionId',
@@ -14,7 +14,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxSessionStatResource class >> on: aSession [
+GbxToolSessionStatResource class >> on: aSession [
 	^ self new
 		session: aSession;
 		resourceType: #session;
@@ -22,12 +22,12 @@ GbxSessionStatResource class >> on: aSession [
 ]
 
 { #category : 'accessing' }
-GbxSessionStatResource >> abortCount [
+GbxToolSessionStatResource >> abortCount [
 	^ abortCount ifNil: [ 0 ]
 ]
 
 { #category : 'accessing' }
-GbxSessionStatResource >> collectStats [
+GbxToolSessionStatResource >> collectStats [
 	"Collect session statistics from GemStone"
 	| script result parts |
 	
@@ -64,48 +64,48 @@ GbxSessionStatResource >> collectStats [
 ]
 
 { #category : 'accessing' }
-GbxSessionStatResource >> commitCount [
+GbxToolSessionStatResource >> commitCount [
 	^ commitCount ifNil: [ 0 ]
 ]
 
 { #category : 'accessing' }
-GbxSessionStatResource >> initialize [
+GbxToolSessionStatResource >> initialize [
 	super initialize.
 	name := 'Session'.
-	self addStat: (GbxStat named: 'sessionId').
-	self addStat: (GbxStat named: 'loginTime').
-	self addStat: (GbxStat named: 'rpcCount').
-	self addStat: (GbxStat named: 'commitCount').
-	self addStat: (GbxStat named: 'abortCount').
+	self addStat: (GbxToolStat named: 'sessionId').
+	self addStat: (GbxToolStat named: 'loginTime').
+	self addStat: (GbxToolStat named: 'rpcCount').
+	self addStat: (GbxToolStat named: 'commitCount').
+	self addStat: (GbxToolStat named: 'abortCount').
 ]
 
 { #category : 'accessing' }
-GbxSessionStatResource >> loginTime [
+GbxToolSessionStatResource >> loginTime [
 	^ loginTime
 ]
 
 { #category : 'accessing' }
-GbxSessionStatResource >> rpcCount [
+GbxToolSessionStatResource >> rpcCount [
 	^ rpcCount ifNil: [ 0 ]
 ]
 
 { #category : 'accessing' }
-GbxSessionStatResource >> session [
+GbxToolSessionStatResource >> session [
 	^ session
 ]
 
 { #category : 'accessing' }
-GbxSessionStatResource >> session: aSession [
+GbxToolSessionStatResource >> session: aSession [
 	session := aSession
 ]
 
 { #category : 'accessing' }
-GbxSessionStatResource >> sessionId [
+GbxToolSessionStatResource >> sessionId [
 	^ sessionId
 ]
 
 { #category : 'accessing' }
-GbxSessionStatResource >> summary [
+GbxToolSessionStatResource >> summary [
 	"Return a summary string of session stats"
 	^ 'Session ', sessionId, ': ', rpcCount asString, ' RPCs, ',
 	  commitCount asString, ' commits, ',

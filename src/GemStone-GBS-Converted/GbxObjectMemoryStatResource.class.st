@@ -150,6 +150,9 @@ GbxObjectMemoryStatResource class >> initialize
 	"Create GbxStatDescriptors for this stat resource"
 	"self initialize"
 
+	(GbxStatDescriptor respondsTo: #name:description:type:isCounter:isLargerBetter:unit:)
+		ifFalse: [ ^ self ].
+
 	singleton := nil.
 	statDescriptors := OrderedCollection new.
 	self

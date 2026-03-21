@@ -1,11 +1,12 @@
 Class {
-	#name : 'GbxStatResource',
+	#name : 'GbxToolStatResource',
 	#superclass : 'Object',
 	#instVars : [
 		'name',
 		'stats',
 		'resourceType',
-		'instanceId'
+		'instanceId',
+		'interval'
 	],
 	#classVars : [
 		'statDescriptors'
@@ -15,21 +16,21 @@ Class {
 }
 
 { #category : 'initialize-release' }
-GbxStatResource class >> addStatDescriptor: aGbxStatDescriptor [
+GbxToolStatResource class >> addStatDescriptor: aGbxStatDescriptor [
 	statDescriptors ifNil: [ statDescriptors := OrderedCollection new ].
 	statDescriptors add: aGbxStatDescriptor.
 	aGbxStatDescriptor setId: statDescriptors size - 1
 ]
 
 { #category : 'instance creation' }
-GbxStatResource class >> named: aString [
+GbxToolStatResource class >> named: aString [
 	^ self new
 		name: aString;
 		yourself
 ]
 
 { #category : 'instance creation' }
-GbxStatResource class >> named: aString type: aSymbol [
+GbxToolStatResource class >> named: aString type: aSymbol [
 	^ self new
 		name: aString;
 		resourceType: aSymbol;
@@ -37,13 +38,13 @@ GbxStatResource class >> named: aString type: aSymbol [
 ]
 
 { #category : 'instance creation' }
-GbxStatResource class >> new [
+GbxToolStatResource class >> new [
 	^ super new initializeStatistics
 ]
 
 { #category : 'initialize-release' }
-GbxStatResource class >> newStatFor: statName [
-	^ GbxStatDescriptor
+GbxToolStatResource class >> newStatFor: statName [
+	^ GbxToolStatDescriptor
 		name: statName
 		description: statName
 		type: 5
@@ -53,103 +54,125 @@ GbxStatResource class >> newStatFor: statName [
 ]
 
 { #category : 'archiving' }
-GbxStatResource class >> numberOfDescriptors [
+GbxToolStatResource class >> numberOfDescriptors [
 	^ self statDescriptors size
 ]
 
 { #category : 'archiving' }
-GbxStatResource class >> resourceTypeDescription [
+GbxToolStatResource class >> resourceTypeDescription [
 	^ self name
 ]
 
 { #category : 'archiving' }
-GbxStatResource class >> resourceTypeId [
+GbxToolStatResource class >> resourceTypeId [
 	^ -1
 ]
 
 { #category : 'archiving' }
-GbxStatResource class >> resourceTypeName [
+GbxToolStatResource class >> resourceTypeName [
 	^ self name
 ]
 
 { #category : 'accessing' }
-GbxStatResource class >> statDescriptors [
+GbxToolStatResource class >> statDescriptors [
 	^ statDescriptors ifNil: [ statDescriptors := OrderedCollection new ]
 ]
 
 { #category : 'archiving' }
-GbxStatResource class >> writeDescriptorInformationOn: statArchiver [
+GbxToolStatResource class >> writeDescriptorInformationOn: statArchiver [
 	self statDescriptors do: [ :desc | desc writeToArchiver: statArchiver ]
 ]
 
 { #category : 'initialization' }
-GbxStatResource >> initialize [
+GbxToolStatResource >> initialize [
 	super initialize.
 	stats := OrderedCollection new.
 ]
 
 { #category : 'accessing' }
-GbxStatResource >> addStat: aStat [
+GbxToolStatResource >> addStat: aStat [
 	| existing |
 	existing := self statAt: aStat name.
 	existing ifNotNil: [ stats remove: existing ifAbsent: [ ] ].
 	stats add: aStat
 ]
 
+{ #category : 'accessing' }
+GbxToolStatResource >> addStatNamed: statName description: statDescription category: statCategory [
+	| descriptor stat |
+	descriptor := GbxToolStatDescriptor
+		named: statName
+		description: statDescription
+		category: statCategory.
+	stat := GbxToolStat newWithDescription: descriptor value: 0.
+	self addStat: stat.
+	^ stat
+]
+
 { #category : 'archiving' }
-GbxStatResource >> closedArchive [
+GbxToolStatResource >> closedArchive [
 	stats do: [ :stat |
 		(stat respondsTo: #closedArchive) ifTrue: [ stat closedArchive ] ]
 ]
 
 { #category : 'accessing' }
-GbxStatResource >> collectStats [
+GbxToolStatResource >> collectStats [
 	"Collect statistics from the resource"
 	self subclassResponsibility
 ]
 
 { #category : 'initialize-release' }
-GbxStatResource >> initializeStatistics [
+GbxToolStatResource >> initializeStatistics [
 	^ self
 ]
 
 { #category : 'archiving' }
-GbxStatResource >> instanceDescription [
+GbxToolStatResource >> instanceDescription [
 	^ self printString
 ]
 
 { #category : 'archiving' }
-GbxStatResource >> instanceId [
+GbxToolStatResource >> instanceId [
 	^ instanceId
 ]
 
 { #category : 'archiving' }
-GbxStatResource >> instanceId: anInteger [
+GbxToolStatResource >> instanceId: anInteger [
 	instanceId := anInteger
 ]
 
 { #category : 'accessing' }
-GbxStatResource >> name [
+GbxToolStatResource >> interval [
+	^ interval ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+GbxToolStatResource >> interval: milliseconds [
+	interval := milliseconds
+]
+
+{ #category : 'accessing' }
+GbxToolStatResource >> name [
 	^ name
 ]
 
 { #category : 'accessing' }
-GbxStatResource >> name: aString [
+GbxToolStatResource >> name: aString [
 	name := aString
 ]
 
 { #category : 'initialize-release' }
-GbxStatResource >> newGbxStatFor: statName value: initialValue [
+GbxToolStatResource >> newGbxStatFor: statName value: initialValue [
 	| desc stat |
 	desc := self class statDescriptors detect: [ :sd | sd name = statName ] ifNone: [ nil ].
 	desc ifNil: [ ^ nil ].
-	stat := GbxStat newWithDescription: desc value: initialValue.
+	stat := GbxToolStat newWithDescription: desc value: initialValue.
 	stats add: stat.
 	^ stat
 ]
 
 { #category : 'printing' }
-GbxStatResource >> printOn: aStream [
+GbxToolStatResource >> printOn: aStream [
 	aStream
 		nextPutAll: 'a ';
 		nextPutAll: self class name.
@@ -160,27 +183,27 @@ GbxStatResource >> printOn: aStream [
 ]
 
 { #category : 'accessing' }
-GbxStatResource >> printString [
+GbxToolStatResource >> printString [
 	^ resourceType ifNil: [ name ] ifNotNil: [ name, ' (', resourceType asString, ')' ]
 ]
 
 { #category : 'accessing' }
-GbxStatResource >> resourceType [
+GbxToolStatResource >> resourceType [
 	^ resourceType
 ]
 
 { #category : 'accessing' }
-GbxStatResource >> resourceType: aSymbol [
+GbxToolStatResource >> resourceType: aSymbol [
 	resourceType := aSymbol
 ]
 
 { #category : 'accessing' }
-GbxStatResource >> statAt: aString [
+GbxToolStatResource >> statAt: aString [
 	^ stats detect: [ :each | each name = aString ] ifNone: [ nil ]
 ]
 
 { #category : 'accessing' }
-GbxStatResource >> statAt: aString ifPresent: presentBlock [
+GbxToolStatResource >> statAt: aString ifPresent: presentBlock [
 	| stat |
 	stat := self statAt: aString.
 	stat ifNotNil: [ ^ presentBlock value: stat ].
@@ -188,7 +211,7 @@ GbxStatResource >> statAt: aString ifPresent: presentBlock [
 ]
 
 { #category : 'accessing' }
-GbxStatResource >> statAt: aString ifPresent: presentBlock ifAbsent: absentBlock [
+GbxToolStatResource >> statAt: aString ifPresent: presentBlock ifAbsent: absentBlock [
 	| stat |
 	stat := self statAt: aString.
 	^ stat
@@ -197,12 +220,12 @@ GbxStatResource >> statAt: aString ifPresent: presentBlock ifAbsent: absentBlock
 ]
 
 { #category : 'accessing' }
-GbxStatResource >> stats [
+GbxToolStatResource >> stats [
 	^ stats
 ]
 
 { #category : 'accessing' }
-GbxStatResource >> summary [
+GbxToolStatResource >> summary [
 	"Return a summary string of all stats"
 	| stream |
 	
@@ -219,11 +242,11 @@ GbxStatResource >> summary [
 ]
 
 { #category : 'accessing' }
-GbxStatResource >> updateStat: aString value: aValue [
+GbxToolStatResource >> updateStat: aString value: aValue [
 	| stat |
 	stat := self statAt: aString.
 	stat ifNil: [
-		stat := GbxStat named: aString.
+		stat := GbxToolStat named: aString.
 		self addStat: stat ].
 	(stat respondsTo: #setValue:)
 		ifTrue: [ stat setValue: aValue ]
@@ -231,7 +254,7 @@ GbxStatResource >> updateStat: aString value: aValue [
 ]
 
 { #category : 'archiving' }
-GbxStatResource >> writeSampleTo: statArchive [
+GbxToolStatResource >> writeSampleTo: statArchive [
 	stats do: [ :stat |
 		(stat respondsTo: #writeSampleTo:) ifTrue: [ stat writeSampleTo: statArchive ] ]
 ]

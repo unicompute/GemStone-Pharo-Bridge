@@ -664,12 +664,12 @@ GbsClassicLauncher class >> openGbxServerMap [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxStatMonitor [
-	self openGbxUtility: #GbxStatMonitor
+	self openGbxUtility: #GbxToolStatMonitor
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxStatResource [
-	self openGbxUtility: #GbxStatResource
+	self openGbxUtility: #GbxToolStatResource
 ]
 
 { #category : 'menus' }
@@ -684,7 +684,7 @@ GbsClassicLauncher class >> openGbxObjectMemoryStat [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxSessionStatResource [
-	self openGbxUtility: #GbxSessionStatResource
+	self openGbxUtility: #GbxToolSessionStatResource
 ]
 
 { #category : 'menus' }

@@ -76,6 +76,9 @@ GbxCachedClassStatResource class >> initialize
 [
 	"Create GbxStatDescriptors for this stat resource"
 
+	(GbxStatDescriptor respondsTo: #name:description:type:isCounter:isLargerBetter:unit:)
+		ifFalse: [ ^ self ].
+
 	| desc1 desc2 |
 	statDescriptors := OrderedCollection new.
 	desc1 := GbxStatDescriptor
@@ -114,4 +117,3 @@ GbxCachedClassStatResource class >> resourceTypeName
 [
 	^'Cache'
 ]
-

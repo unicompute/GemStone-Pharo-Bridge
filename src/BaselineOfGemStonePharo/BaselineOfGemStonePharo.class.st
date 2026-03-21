@@ -55,9 +55,19 @@ BaselineOfGemStonePharo >> preloadConvertedCompatibility [
 
 { #category : 'baselines' }
 BaselineOfGemStonePharo >> postloadConvertedCompatibility [
-	"Initialize GbxStatArchiver class variables"
-	(Smalltalk at: #GbxStatArchiver ifAbsent: [ ^ self ])
-		initialize
+	| archiver |
+	archiver := Smalltalk at: #GbxStatArchiver ifAbsent: [ ^ self ].
+	archiver initialize.
+
+	#(
+		GbxStatMonitor
+		GbxSessionManagerStatResource
+		GbxSessionStatResource
+		GbxCachedClassStatResource
+		GbxObjectMemoryStatResource
+	) do: [ :classSymbol |
+		(Smalltalk at: classSymbol ifAbsent: [ nil ])
+			ifNotNil: [ :cls | cls initialize ] ]
 ]
 
 { #category : 'baselines' }

@@ -118,3 +118,25 @@ GbsLauncherTest >> testReplicatorManagerKeepsRuntimeApiAndShape [
 		equals: #(session serverMap clientMap needServerInstVarNames replicatorsNeedingServerInstVarNames clampManager).
 	self assert: (Smalltalk at: #GbxReplicatorManagerTool ifAbsent: [ nil ]) notNil
 ]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testStatsClassesKeepRuntimeApiAndToolVariants [
+	self
+		assert: (GbxStatDescriptor respondsTo: #name:description:type:isCounter:isLargerBetter:unit:).
+	self
+		assert: GbxStatDescriptor instVarNames
+		equals: #(type id name description isCounter isLargerBetter unit category statClass).
+	self
+		assert: GbxStatResource instVarNames
+		equals: #(instanceId stats).
+	self assert: GbxStatMonitor superclass equals: Object.
+	self
+		assert: GbxStatMonitor instVarNames
+		equals: #(process state stateChangeProtect nextResumption delay archiver sampleInterval cacheSampleIntervalMultiplier).
+	self assert: (GbxStatMonitor respondsTo: #instance).
+	self assert: (Smalltalk at: #GbxToolStat ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxToolStatDescriptor ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxToolStatResource ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxToolStatMonitor ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxToolSessionStatResource ifAbsent: [ nil ]) notNil
+]

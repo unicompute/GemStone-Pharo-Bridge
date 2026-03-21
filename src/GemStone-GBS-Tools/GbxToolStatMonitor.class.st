@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxStatMonitor',
+	#name : 'GbxToolStatMonitor',
 	#superclass : 'SpPresenter',
 	#instVars : [
 		'session',
@@ -33,14 +33,14 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxStatMonitor class >> on: aSession [
+GbxToolStatMonitor class >> on: aSession [
 	^ self new
 		session: aSession;
 		yourself
 ]
 
 { #category : 'instance creation' }
-GbxStatMonitor class >> openOn: aSession [
+GbxToolStatMonitor class >> openOn: aSession [
 	| monitor |
 	
 	monitor := self on: aSession.
@@ -50,7 +50,7 @@ GbxStatMonitor class >> openOn: aSession [
 ]
 
 { #category : 'layout' }
-GbxStatMonitor >> defaultLayout [
+GbxToolStatMonitor >> defaultLayout [
 	^ SpBoxLayout newVertical
 		spacing: 5;
 		add: (self buildToolbar) height: 35;
@@ -61,7 +61,7 @@ GbxStatMonitor >> defaultLayout [
 ]
 
 { #category : 'building' }
-GbxStatMonitor >> buildToolbar [
+GbxToolStatMonitor >> buildToolbar [
 	^ SpBoxLayout newHorizontal
 		spacing: 3;
 		add: refreshButton width: 100;
@@ -69,7 +69,7 @@ GbxStatMonitor >> buildToolbar [
 ]
 
 { #category : 'building' }
-GbxStatMonitor >> buildStatsGroups [
+GbxToolStatMonitor >> buildStatsGroups [
 	| groupsLayout |
 	
 	groupsLayout := SpBoxLayout newHorizontal
@@ -116,7 +116,7 @@ GbxStatMonitor >> buildStatsGroups [
 ]
 
 { #category : 'building' }
-GbxStatMonitor >> buildStatGroup: title specs: statSpecs [
+GbxToolStatMonitor >> buildStatGroup: title specs: statSpecs [
 	"Build a stat group with title and stat items"
 	| groupLayout statLabels |
 	
@@ -140,7 +140,7 @@ GbxStatMonitor >> buildStatGroup: title specs: statSpecs [
 ]
 
 { #category : 'building' }
-GbxStatMonitor >> buildRefreshControls [
+GbxToolStatMonitor >> buildRefreshControls [
 	^ SpBoxLayout newHorizontal
 		spacing: 10;
 		add: autoRefreshCheckbox;
@@ -149,7 +149,7 @@ GbxStatMonitor >> buildRefreshControls [
 ]
 
 { #category : 'initialization' }
-GbxStatMonitor >> initializePresenters [
+GbxToolStatMonitor >> initializePresenters [
 	summaryLabel := self newLabel.
 	summaryLabel label: 'Monitoring: Not started'.
 	
@@ -164,8 +164,8 @@ GbxStatMonitor >> initializePresenters [
 			state ifTrue: [ self startMonitoring ] ifFalse: [ self stopMonitoring ].
 		].
 	
-	"Initialize monitor"
-	monitor := GbxStatMonitor on: session.
+	"Use a local stats container for the presenter display model."
+	monitor := GbxToolStatResource named: 'Monitor' type: #monitor.
 	monitor interval: 5000.
 	
 	"Add stats to monitor"
@@ -182,14 +182,14 @@ GbxStatMonitor >> initializePresenters [
 ]
 
 { #category : 'initialization' }
-GbxStatMonitor >> initializeWindow: aWindowPresenter [
+GbxToolStatMonitor >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GBS Statistics Monitor';
 		initialExtent: 1000 @ 600.
 ]
 
 { #category : 'monitoring' }
-GbxStatMonitor >> startMonitoring [
+GbxToolStatMonitor >> startMonitoring [
 	"Start auto-refresh monitoring"
 	
 	autoRefreshTimer ifNotNil: [ autoRefreshTimer terminate ].
@@ -206,7 +206,7 @@ GbxStatMonitor >> startMonitoring [
 ]
 
 { #category : 'monitoring' }
-GbxStatMonitor >> stopMonitoring [
+GbxToolStatMonitor >> stopMonitoring [
 	"Stop auto-refresh monitoring"
 	
 	autoRefreshTimer ifNotNil: [
@@ -219,7 +219,7 @@ GbxStatMonitor >> stopMonitoring [
 ]
 
 { #category : 'monitoring' }
-GbxStatMonitor >> refreshStats [
+GbxToolStatMonitor >> refreshStats [
 	"Refresh all statistics"
 	
 	session ifNil: [ ^ self ].
@@ -241,7 +241,7 @@ GbxStatMonitor >> refreshStats [
 ]
 
 { #category : 'fetching' }
-GbxStatMonitor >> fetchAllStats [
+GbxToolStatMonitor >> fetchAllStats [
 	"Fetch all statistics from server"
 	| script result parts |
 	
@@ -328,7 +328,7 @@ GbxStatMonitor >> fetchAllStats [
 ]
 
 { #category : 'updating' }
-GbxStatMonitor >> updateDisplay [
+GbxToolStatMonitor >> updateDisplay [
 	"Update the display with current stats"
 	
 	"Update cache stats"
@@ -366,7 +366,7 @@ GbxStatMonitor >> updateDisplay [
 ]
 
 { #category : 'updating' }
-GbxStatMonitor >> updateStatGroup: group with: statValues [
+GbxToolStatMonitor >> updateStatGroup: group with: statValues [
 	"Update a stat group with new values"
 	| labels |
 	
@@ -383,28 +383,28 @@ GbxStatMonitor >> updateStatGroup: group with: statValues [
 ]
 
 { #category : 'accessing' }
-GbxStatMonitor >> session [
+GbxToolStatMonitor >> session [
 	^ session
 ]
 
 { #category : 'accessing' }
-GbxStatMonitor >> session: aSession [
+GbxToolStatMonitor >> session: aSession [
 	session := aSession.
 	cache := GbxBasicCache on: aSession.
 ]
 
 { #category : 'accessing' }
-GbxStatMonitor >> monitor [
+GbxToolStatMonitor >> monitor [
 	^ monitor
 ]
 
 { #category : 'accessing' }
-GbxStatMonitor >> cache [
+GbxToolStatMonitor >> cache [
 	^ cache
 ]
 
 { #category : 'cleanup' }
-GbxStatMonitor >> close [
+GbxToolStatMonitor >> close [
 	"Clean up when closing"
 	
 	self stopMonitoring.

@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxStat',
+	#name : 'GbxToolStat',
 	#superclass : 'Object',
 	#instVars : [
 		'name',
@@ -15,14 +15,14 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxStat class >> named: aString [
+GbxToolStat class >> named: aString [
 	^ self new
 		name: aString;
 		yourself
 ]
 
 { #category : 'instance creation' }
-GbxStat class >> named: aString value: aNumber [
+GbxToolStat class >> named: aString value: aNumber [
 	^ self new
 		name: aString;
 		value: aNumber;
@@ -30,30 +30,30 @@ GbxStat class >> named: aString value: aNumber [
 ]
 
 { #category : 'instance creation' }
-GbxStat class >> newWithDescription: aGbxStatDescription value: initialValue [
+GbxToolStat class >> newWithDescription: aGbxStatDescription value: initialValue [
 	^ self basicNew
 		description: aGbxStatDescription
 		value: initialValue
 ]
 
 { #category : 'comparing' }
-GbxStat >> = anObject [
-	^ (anObject isKindOf: GbxStat)
+GbxToolStat >> = anObject [
+	^ (anObject isKindOf: GbxToolStat)
 		and: [ self name = anObject name ]
 ]
 
 { #category : 'archiving' }
-GbxStat >> closedArchive [
+GbxToolStat >> closedArchive [
 	lastArchivedValue := nil
 ]
 
 { #category : 'accessing' }
-GbxStat >> description [
+GbxToolStat >> description [
 	^ description
 ]
 
 { #category : 'initialize-release' }
-GbxStat >> description: aGbxStatDescription value: initialValue [
+GbxToolStat >> description: aGbxStatDescription value: initialValue [
 	description := aGbxStatDescription.
 	name ifNil: [ name := aGbxStatDescription name ].
 	value := initialValue.
@@ -61,47 +61,47 @@ GbxStat >> description: aGbxStatDescription value: initialValue [
 ]
 
 { #category : 'accessing' }
-GbxStat >> delta [
+GbxToolStat >> delta [
 	^ delta ifNil: [ 0 ]
 ]
 
 { #category : 'accessing' }
-GbxStat >> delta: aNumber [
+GbxToolStat >> delta: aNumber [
 	delta := aNumber
 ]
 
 { #category : 'accessing' }
-GbxStat >> hash [
+GbxToolStat >> hash [
 	^ self name hash
 ]
 
 { #category : 'accessing' }
-GbxStat >> incValue: aDelta [
+GbxToolStat >> incValue: aDelta [
 	value := self value + aDelta
 ]
 
 { #category : 'accessing' }
-GbxStat >> lastValue [
+GbxToolStat >> lastValue [
 	^ lastValue
 ]
 
 { #category : 'accessing' }
-GbxStat >> lastValue: aNumber [
+GbxToolStat >> lastValue: aNumber [
 	lastValue := aNumber
 ]
 
 { #category : 'accessing' }
-GbxStat >> name [
+GbxToolStat >> name [
 	^ name ifNil: [ description ifNil: [ nil ] ifNotNil: [ description name ] ]
 ]
 
 { #category : 'accessing' }
-GbxStat >> name: aString [
+GbxToolStat >> name: aString [
 	name := aString
 ]
 
 { #category : 'printing' }
-GbxStat >> printOn: aStream [
+GbxToolStat >> printOn: aStream [
 	super printOn: aStream.
 	aStream nextPutAll: ' named: '.
 	self name printOn: aStream.
@@ -110,12 +110,12 @@ GbxStat >> printOn: aStream [
 ]
 
 { #category : 'accessing' }
-GbxStat >> printString [
+GbxToolStat >> printString [
 	^ self name, ': ', self value asString, ' (Δ', self delta asString, ')'
 ]
 
 { #category : 'accessing' }
-GbxStat >> reset [
+GbxToolStat >> reset [
 	"Reset the stat to zero"
 	lastValue := value.
 	value := 0.
@@ -124,17 +124,17 @@ GbxStat >> reset [
 ]
 
 { #category : 'accessing' }
-GbxStat >> timestamp [
+GbxToolStat >> timestamp [
 	^ timestamp
 ]
 
 { #category : 'accessing' }
-GbxStat >> timestamp: aDateAndTime [
+GbxToolStat >> timestamp: aDateAndTime [
 	timestamp := aDateAndTime
 ]
 
 { #category : 'accessing' }
-GbxStat >> update [
+GbxToolStat >> update [
 	"Update the stat value and calculate delta"
 	lastValue := value.
 	delta := 0.
@@ -142,7 +142,7 @@ GbxStat >> update [
 ]
 
 { #category : 'accessing' }
-GbxStat >> updateValue: aNumber [
+GbxToolStat >> updateValue: aNumber [
 	"Update the stat value and calculate delta"
 	lastValue := value.
 	value := aNumber.
@@ -153,22 +153,22 @@ GbxStat >> updateValue: aNumber [
 ]
 
 { #category : 'accessing' }
-GbxStat >> value [
+GbxToolStat >> value [
 	^ value ifNil: [ 0 ]
 ]
 
 { #category : 'accessing' }
-GbxStat >> value: aNumber [
+GbxToolStat >> value: aNumber [
 	value := aNumber
 ]
 
 { #category : 'accessing' }
-GbxStat >> setValue: newValue [
+GbxToolStat >> setValue: newValue [
 	value := newValue
 ]
 
 { #category : 'archiving' }
-GbxStat >> writeSampleTo: statArchive [
+GbxToolStat >> writeSampleTo: statArchive [
 	| valueToWrite type |
 	description ifNil: [ ^ self ].
 	lastArchivedValue isNil

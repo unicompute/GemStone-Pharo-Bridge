@@ -1,6 +1,6 @@
 Class {
 	#name : 'GbxGcStatResource',
-	#superclass : 'GbxStatResource',
+	#superclass : 'GbxToolStatResource',
 	#instVars : [
 		'session',
 		'gcCount',
@@ -71,11 +71,11 @@ GbxGcStatResource >> gcTime [
 GbxGcStatResource >> initialize [
 	super initialize.
 	name := 'Garbage Collection'.
-	self addStat: (GbxStat named: 'gcCount').
-	self addStat: (GbxStat named: 'gcTime').
-	self addStat: (GbxStat named: 'lastGcTime').
-	self addStat: (GbxStat named: 'objectsScavenged').
-	self addStat: (GbxStat named: 'objectsTenured').
+	self addStat: (GbxToolStat named: 'gcCount').
+	self addStat: (GbxToolStat named: 'gcTime').
+	self addStat: (GbxToolStat named: 'lastGcTime').
+	self addStat: (GbxToolStat named: 'objectsScavenged').
+	self addStat: (GbxToolStat named: 'objectsTenured').
 ]
 
 { #category : 'accessing' }

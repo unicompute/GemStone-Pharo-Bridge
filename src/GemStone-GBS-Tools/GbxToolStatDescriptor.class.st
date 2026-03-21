@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxStatDescriptor',
+	#name : 'GbxToolStatDescriptor',
 	#superclass : 'Object',
 	#instVars : [
 		'name',
@@ -17,7 +17,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxStatDescriptor class >> name: nameString description: descriptionString type: typeInt isCounter: isCounterBool isLargerBetter: isLargerBetterBool unit: unitString [
+GbxToolStatDescriptor class >> name: nameString description: descriptionString type: typeInt isCounter: isCounterBool isLargerBetter: isLargerBetterBool unit: unitString [
 	^ self new
 		name: nameString
 		description: descriptionString
@@ -28,7 +28,7 @@ GbxStatDescriptor class >> name: nameString description: descriptionString type:
 ]
 
 { #category : 'instance creation' }
-GbxStatDescriptor class >> named: aString description: desc category: cat [
+GbxToolStatDescriptor class >> named: aString description: desc category: cat [
 	^ self new
 		name: aString;
 		description: desc;
@@ -37,7 +37,7 @@ GbxStatDescriptor class >> named: aString description: desc category: cat [
 ]
 
 { #category : 'instance creation' }
-GbxStatDescriptor class >> named: aString description: desc category: cat unit: aString [
+GbxToolStatDescriptor class >> named: aString description: desc category: cat unit: aString [
 	^ self new
 		name: aString;
 		description: desc;
@@ -47,57 +47,57 @@ GbxStatDescriptor class >> named: aString description: desc category: cat unit: 
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> category [
+GbxToolStatDescriptor >> category [
 	^ category
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> category: aString [
+GbxToolStatDescriptor >> category: aString [
 	category := aString
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> description [
+GbxToolStatDescriptor >> description [
 	^ description
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> description: aString [
+GbxToolStatDescriptor >> description: aString [
 	description := aString
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> id [
+GbxToolStatDescriptor >> id [
 	^ id
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> isByte [
+GbxToolStatDescriptor >> isByte [
 	^ type = 3
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> isLargerBetter: aBoolean [
+GbxToolStatDescriptor >> isLargerBetter: aBoolean [
 	isLargerBetter := aBoolean
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> isShort [
+GbxToolStatDescriptor >> isShort [
 	^ type = 4
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> name [
+GbxToolStatDescriptor >> name [
 	^ name
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> name: aString [
+GbxToolStatDescriptor >> name: aString [
 	name := aString
 ]
 
 { #category : 'initialize-release' }
-GbxStatDescriptor >> name: nameString description: descriptionString type: typeInt isCounter: isCounterBool isLargerBetter: isLargerBetterBool unit: unitString [
+GbxToolStatDescriptor >> name: nameString description: descriptionString type: typeInt isCounter: isCounterBool isLargerBetter: isLargerBetterBool unit: unitString [
 	name := nameString.
 	description := descriptionString.
 	type := typeInt.
@@ -108,7 +108,7 @@ GbxStatDescriptor >> name: nameString description: descriptionString type: typeI
 ]
 
 { #category : 'printing' }
-GbxStatDescriptor >> printOn: aStream [
+GbxToolStatDescriptor >> printOn: aStream [
 	super printOn: aStream.
 	aStream
 		nextPutAll: ': ';
@@ -116,50 +116,50 @@ GbxStatDescriptor >> printOn: aStream [
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> printString [
+GbxToolStatDescriptor >> printString [
 	^ category
 		ifNil: [ name, ': ', description ]
 		ifNotNil: [ name, ' (', category, '): ', description ]
 ]
 
 { #category : 'initialize-release' }
-GbxStatDescriptor >> setId: anInt [
-	id ifNotNil: [ self error: 'GbxStatDescriptor>>setId initialized twice' ].
+GbxToolStatDescriptor >> setId: anInt [
+	id ifNotNil: [ self error: 'GbxToolStatDescriptor>>setId initialized twice' ].
 	id := anInt
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> statClass [
+GbxToolStatDescriptor >> statClass [
 	^ statClass
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> statClass: aClass [
+GbxToolStatDescriptor >> statClass: aClass [
 	statClass := aClass
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> type [
+GbxToolStatDescriptor >> type [
 	^ type ifNil: [ 5 ]
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> type: anInteger [
+GbxToolStatDescriptor >> type: anInteger [
 	type := anInteger
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> unit [
+GbxToolStatDescriptor >> unit [
 	^ unit ifNil: [ '' ]
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> unit: aString [
+GbxToolStatDescriptor >> unit: aString [
 	unit := aString
 ]
 
 { #category : 'archiving' }
-GbxStatDescriptor >> writeToArchiver: statArchiver [
+GbxToolStatDescriptor >> writeToArchiver: statArchiver [
 	statArchiver writeString: name.
 	statArchiver writeByte: self type.
 	statArchiver writeBoolean: (isCounter ifNil: [ false ]).
