@@ -42,7 +42,9 @@ BaselineOfGemStonePharo >> baseline: spec [
 { #category : 'baselines' }
 BaselineOfGemStonePharo >> postloadBootstrapCompatibility [
 	(Smalltalk at: #GbsPharoBootstrap ifAbsent: [ ^ self ])
-		installCompatibilityAliases
+		ifNotNil: [ :bootstrap |
+			bootstrap installCompatibilityAliases.
+			bootstrap refreshWorldMenuIfPossible ]
 ]
 
 { #category : 'baselines' }
