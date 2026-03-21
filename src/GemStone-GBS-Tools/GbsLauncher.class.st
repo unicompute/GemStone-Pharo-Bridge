@@ -40,7 +40,7 @@ GbsLauncher >> openSystemBrowser [
 	| session |
 	session := GbsAdminSessionSupport currentUsableSessionOrInform.
 	session ifNil: [ ^ self ].
-	GbsSessionParameters currentSession: session.
+	GbsAdminSessionSupport publishCurrentSession: session.
 	[
 		GbsBrowser openOn: session
 	] on: Error do: [ :ex |
@@ -53,7 +53,7 @@ GbsLauncher >> openUsers [
 	| session |
 	session := GbsAdminSessionSupport currentUsableSessionOrInform.
 	session ifNil: [ ^ self ].
-	GbsSessionParameters currentSession: session.
+	GbsAdminSessionSupport publishCurrentSession: session.
 	[
 		GbsUserListPresenter openOn: session
 	] on: Error do: [ :ex |
@@ -68,7 +68,7 @@ GbsLauncher >> openWorkspace [
 	session ifNil: [ ^ self ].
 	workspaceClass := Smalltalk at: #GbsWorkspace ifAbsent: [ nil ].
 	workspaceClass ifNil: [ ^ self inform: 'Workspace presenter unavailable.' ].
-	GbsSessionParameters currentSession: session.
+	GbsAdminSessionSupport publishCurrentSession: session.
 	[
 		workspaceClass new open
 	] on: Error do: [ :ex |
@@ -83,7 +83,7 @@ GbsLauncher >> openTranscript [
 	session ifNil: [ ^ self ].
 	transcriptClass := Smalltalk at: #GbsRemoteTranscript ifAbsent: [ nil ].
 	transcriptClass ifNil: [ ^ self inform: 'Remote transcript unavailable.' ].
-	GbsSessionParameters currentSession: session.
+	GbsAdminSessionSupport publishCurrentSession: session.
 	[
 		presenter := transcriptClass new.
 		presenter open.
@@ -156,7 +156,7 @@ GbsLauncher >> doLogin [
         ^ self
     ].
 
-    GbsSessionParameters currentSession: session.
+    GbsAdminSessionSupport publishCurrentSession: session.
     [ self ensureCurrentSessionVisibleInAllSessions ] on: Error do: [ ].
     [ self refreshAllLaunchers ] on: Error do: [ :ex |
         self inform: 'Connected, but some windows did not refresh: ', ex messageText ].

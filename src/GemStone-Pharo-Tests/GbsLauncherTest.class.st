@@ -74,9 +74,10 @@ GbsLauncherTest >> testAdminSessionSupportResolvesLiveSessionFromParameterRecord
 		GBSM reset.
 		params := GbsSessionParameters new.
 		params sessionId: 7.
-		liveSession := MockGbsSession new.
+		liveSession := GbsSessionSupportFakeLiveSession new.
 		liveSession
 			sessionId: 7;
+			parameters: params;
 			isLoggedIn: true.
 		GBSM manager privAddSession: liveSession.
 		GbsSessionParameters currentSession: params.
@@ -96,12 +97,54 @@ GbsLauncherTest >> testAdminSessionSupportFallsBackToConnectedRegistryEntryWhenC
 		params := GbsSessionParameters new.
 		params sessionId: 8.
 		GbsSessionParameters registerSession: params.
-		liveSession := MockGbsSession new.
+		liveSession := GbsSessionSupportFakeLiveSession new.
 		liveSession
 			sessionId: 8;
+			parameters: params;
 			isLoggedIn: true.
 		GBSM manager privAddSession: liveSession.
 		GbsSessionParameters currentSession: nil.
+
+		resolved := GbsAdminSessionSupport currentUsableSession.
+
+		self assert: resolved == liveSession.
+		self assert: GbsSessionParameters currentSession == liveSession
+	] ensure: [ GBSM reset ]
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testAdminSessionSupportResolvesCurrentFakeCandidateViaLiveSession [
+	| candidate liveSession resolved |
+	[
+		GBSM reset.
+		candidate := GbsSessionSupportFakeCandidate new.
+		liveSession := GbsSessionSupportFakeLiveSession new.
+		liveSession
+			sessionId: 17;
+			isLoggedIn: true.
+		candidate liveSession: liveSession.
+		GbsSessionParameters currentSession: candidate.
+
+		resolved := GbsAdminSessionSupport currentUsableSession.
+
+		self assert: resolved == liveSession.
+		self assert: GbsSessionParameters currentSession == liveSession
+	] ensure: [ GBSM reset ]
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testAdminSessionSupportResolvesRegistryFakeCandidateViaLiveSession [
+	| candidate liveSession resolved |
+	[
+		GBSM reset.
+		candidate := GbsSessionSupportFakeCandidate new.
+		liveSession := GbsSessionSupportFakeLiveSession new.
+		liveSession
+			sessionId: 18;
+			isLoggedIn: true.
+		candidate liveSession: liveSession.
+		GbsSessionParameters currentSession: nil.
+		GbsSessionParameters registerSession: candidate.
 
 		resolved := GbsAdminSessionSupport currentUsableSession.
 

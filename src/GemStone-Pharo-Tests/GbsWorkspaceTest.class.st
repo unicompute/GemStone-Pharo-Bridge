@@ -91,9 +91,10 @@ GbsWorkspaceTest >> testActiveSessionForRemoteExecutionFallsBackToConnectedRegis
 		params := GbsSessionParameters new.
 		params sessionId: 12.
 		GbsSessionParameters registerSession: params.
-		liveSession := MockGbsSession new.
+		liveSession := GbsSessionSupportFakeLiveSession new.
 		liveSession
 			sessionId: 12;
+			parameters: params;
 			isLoggedIn: true.
 		GBSM manager privAddSession: liveSession.
 		GbsSessionParameters currentSession: nil.

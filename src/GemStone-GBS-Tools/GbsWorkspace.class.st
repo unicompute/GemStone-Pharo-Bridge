@@ -177,7 +177,7 @@ GbsWorkspace >> sessionWrapperFromParameters: aSessionParameters [
 	wrapped
 		isLoggedIn: true;
 		parameters: aSessionParameters.
-	GbsSessionParameters currentSession: wrapped.
+	GbsAdminSessionSupport publishCurrentSession: wrapped.
 	^ wrapped
 ]
 

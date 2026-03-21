@@ -1374,7 +1374,7 @@ GbsClassicLauncher >> loginSelectedParametersUsing: aSelector [
 	loginError ifNotNil: [ ^ self inform: 'Login Error: ', loginError messageText ].
 	session ifNil: [ ^ self inform: 'Login failed.' ].
 
-	GbsSessionParameters currentSession: session.
+	GbsAdminSessionSupport publishCurrentSession: session.
 	[ self refreshAll ] on: Error do: [ ].
 	UIManager default defer: [
 		GbsLauncher allInstancesDo: [ :launcher |
@@ -1682,7 +1682,7 @@ GbsClassicLauncher >> openWorkspaceFor: aSession [
 	resolvedSession ifNil: [ resolvedSession := aSession ].
 
 	"1. Ensure this session is the active one globally before opening tools"
-	GbsSessionParameters currentSession: resolvedSession.
+	GbsAdminSessionSupport publishCurrentSession: resolvedSession.
 	self refreshAll.
 
 	"2. Open the Workspace"
