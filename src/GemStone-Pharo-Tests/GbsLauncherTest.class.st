@@ -157,6 +157,31 @@ GbsLauncherTest >> testCompatibilityBootstrapInstallsPlaceholdersAndNamespace [
 ]
 
 { #category : 'tests' }
+GbsLauncherTest >> testCompatibilityBootstrapInitializeInstallsAliasesForDirectLoads [
+	| hadFilename previousFilename hadSpecials previousSpecials |
+	hadFilename := Smalltalk globals includesKey: #Filename.
+	previousFilename := Smalltalk at: #Filename ifAbsent: [ nil ].
+	hadSpecials := Smalltalk globals includesKey: #SpecialGemStoneObjects.
+	previousSpecials := Smalltalk at: #SpecialGemStoneObjects ifAbsent: [ nil ].
+
+	[
+		Smalltalk globals removeKey: #Filename ifAbsent: [ ].
+		Smalltalk globals removeKey: #SpecialGemStoneObjects ifAbsent: [ ].
+
+		GbsPharoBootstrap initialize.
+
+		self assert: (Smalltalk globals includesKey: #Filename).
+		self assert: (Smalltalk globals includesKey: #SpecialGemStoneObjects)
+	] ensure: [
+		hadFilename
+			ifTrue: [ Smalltalk at: #Filename put: previousFilename ]
+			ifFalse: [ Smalltalk globals removeKey: #Filename ifAbsent: [ ] ].
+		hadSpecials
+			ifTrue: [ Smalltalk at: #SpecialGemStoneObjects put: previousSpecials ]
+			ifFalse: [ Smalltalk globals removeKey: #SpecialGemStoneObjects ifAbsent: [ ] ] ]
+]
+
+{ #category : 'tests' }
 GbsLauncherTest >> testCompatibilityBootstrapPublishesConvertedRuntimeGlobals [
 	| specials |
 	GbsPharoBootstrap publishConvertedRuntimeGlobals.

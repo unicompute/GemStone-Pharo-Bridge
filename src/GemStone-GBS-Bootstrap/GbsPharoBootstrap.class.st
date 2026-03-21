@@ -17,6 +17,22 @@ GbsPharoBootstrap class >> installCompatibilityAliases
 ]
 
 { #category : 'bootstrap' }
+GbsPharoBootstrap class >> activateCompatibilityInCurrentImage
+[
+	self installCompatibilityAliases.
+	self publishConvertedRuntimeGlobals.
+	self refreshWorldMenuIfPossible
+]
+
+{ #category : 'class initialization' }
+GbsPharoBootstrap class >> initialize
+[
+	"Allow direct package loads to install placeholder globals before Converted compiles."
+
+	self installCompatibilityAliases
+]
+
+{ #category : 'bootstrap' }
 GbsPharoBootstrap class >> installPharoAliases
 [
 	Smalltalk at: #TwoByteString put: WideString.
