@@ -267,24 +267,41 @@ GbsWorkspace >> gsFileItIn [
 
 { #category : 'initialization' }
 GbsWorkspace >> initialize [
-	super initialize
+
+  super initialize.
+  "In Pharo 13, we ensure the code presenter is ready for interaction"
+  textEditor
+    syntaxHighlight: true;
+    beForObject: self.
+
+  textEditor bindKeyCombination: $g command toAction: [ self executeInGemStone ].
+  textEditor bindKeyCombination: $g control toAction: [ self executeInGemStone ]
 ]
 
 { #category : 'initialization' }
 GbsWorkspace >> initializePresenters [
 	textEditor := self newCode.
+	
+	"CRITICAL FIX: Removed syntaxHighlight and beForObject so pasting doesn't trigger FFI lookups!"
+	
 	textEditor contextMenu: [ self workspaceMenu ].
+	
 	textEditor bindKeyCombination: $d command toAction: [ self doIt ].
 	textEditor bindKeyCombination: $p command toAction: [ self gemStonePrintIt ].
-	textEditor bindKeyCombination: $g command toAction: [ self executeInGemStone ].
-	textEditor bindKeyCombination: $g control toAction: [ self executeInGemStone ].
-
+	
 	btnExecute := self newButton
 		label: 'Execute in GemStone (Cmd+G)';
 		icon: ( self iconNamed: #glamorousPlay );
 		action: [ self doIt ].
+		
 	btnCommit := self newButton label: 'Commit'; icon: (self iconNamed: #smallSave); action: [ self doCommit ].
 	btnAbort := self newButton label: 'Abort (Sync)'; icon: (self iconNamed: #smallCancel); action: [ self doAbort ].
+]
+
+{ #category : 'initialization' }
+GbsWorkspace >> initializeShortcutKeys [
+    textEditor bindKeyCombination: $g command toAction: [ self executeInGemStone ].
+    textEditor bindKeyCombination: $g control toAction: [ self executeInGemStone ]
 ]
 
 { #category : 'initialization' }
