@@ -241,6 +241,20 @@ GbsLauncherTest >> testGbxObjectListSupportsVariableSizedConstructors [
 ]
 
 { #category : 'tests' }
+GbsLauncherTest >> testGbxObjectListFallsBackToFirstNonNilDelegateWithoutCurrentSession [
+	| first second list |
+	[
+		GBSM reset.
+		first := GbxObjectListElementFake new.
+		second := GbxObjectListElementFake new.
+		list := GbxObjectList withAll: { nil. first. second }.
+
+		self assert: (list forSession: nil) isNil.
+		self assert: list forAnySingleSession == first
+	] ensure: [ GBSM reset ]
+]
+
+{ #category : 'tests' }
 GbsLauncherTest >> testClampManagerKeepsRuntimeApiAndToolVariant [
 	self assert: (GbxClampManager respondsTo: #forManager:).
 	self

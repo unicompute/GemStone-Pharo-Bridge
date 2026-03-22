@@ -51,6 +51,7 @@ GbxObjectList >> forSession: aGSSession
 	"If any of my elements is a remote object in the given session, return
 	that proxy.  Otherwise, return nil. Like a #detect:ifNone:"
 
+	aGSSession ifNil: [ ^ nil ].
 	self do: [:each | (each isForSession: aGSSession) ifTrue: [^each]].
 	^nil
 ]
@@ -127,8 +128,8 @@ GbxObjectList >> forAnySingleSession
 	| proxy |
 	proxy := self forSession: GBSM currentSession.
 	proxy isNil ifTrue: [
-		"Our list doesn't contain a proxy for the current session - grab any"
-		proxy := self at: 1.
+		"Our list doesn't contain a proxy for the current session - grab any live entry"
+		self do: [ :each | ^ each ].
 	].
 	^proxy
 ]
@@ -138,7 +139,10 @@ GbxObjectList >> do: aBlock
 [
 	"GBS private. Enumerate over my delegates."
 
-	1 to: self size do: [:index | aBlock value: (self at: index)]
+	1 to: self size do: [ :index |
+		| each |
+		each := self at: index.
+		each ifNotNil: [ aBlock value: each ] ]
 ]
 
 { #category : 'private' }

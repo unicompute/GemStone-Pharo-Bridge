@@ -2167,6 +2167,7 @@ GbxDelegate >> isForSession: aSession
 [
 	"Returns true if receiver's session is aSession"
 
+	aSession ifNil: [ ^ false ].
 	^self sessionId == aSession sessionId
 ]
 
