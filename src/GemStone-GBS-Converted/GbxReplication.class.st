@@ -24,14 +24,16 @@ GbxReplication >> interaction
 GbxReplication >> resolve
 [
 	"Private.  Resolve the things left unresolved from the initial traversal."
-	"The sender must hold my session protect."
-	
-	GBSM clientMap
-		writeCritical:
-			[self
-				resolveUnmappedClasses;
-				resolveDeferredAssignments;
-				resolveObjectsWithDeferredElements]
+	"Always acquire sessionProtect before the cache write lock here. Several deferred
+	class-mapping paths assume both semaphores are held when they remap replicators."
+
+	session sessionCritical:
+		[GBSM clientMap
+			writeCritical:
+				[self
+					resolveUnmappedClasses;
+					resolveDeferredAssignments;
+					resolveObjectsWithDeferredElements]]
 ]
 
 { #category : 'ServerInteraction interface' }
@@ -216,4 +218,3 @@ GbxReplication class >> forInteraction: anInteraction
 
 	^self new initializeForInteraction: anInteraction
 ]
-
