@@ -2674,9 +2674,10 @@ GbsSession >> loginLinked: linked
 			[(self basicLoginLinked: linked)
 				ifTrue: 
 					[self postLogin.
-					GbxStatMonitor instance addStatResource: stats.
 					result := self]]]
 			ifCurtailed: [self logout].
+	result == self
+		ifTrue: [self finishPostLogin].
 	^result
 ]
 
@@ -2706,9 +2707,10 @@ GbsSession >> loginX509
 			[self basicX509Login
 				ifTrue: 
 					[self postLogin.
-					GbxStatMonitor instance addStatResource: stats.
 					result := self]]]
 			ifCurtailed: [self logout].
+	result == self
+		ifTrue: [self finishPostLogin].
 	^result
 ]
 
@@ -2794,11 +2796,23 @@ GbsSession >> postLogin
 	manager currentSession: self.
 	manager notifyOfAddedSession: self.	"causes VS session browser to update, so must follow #currentSession: "
 	self initializeTimeZone.
-	self startEventDetection.
-	self startDeferredPostLoginInitialization.
+	"Event detection and deferred follow-up run after the session critical section unwinds."
 	"self startGbsServices."
 	GbsConfiguration current verbose
 		ifTrue: [self gbsMessenger comment: 'Logged in %1' with: self]
+]
+
+{ #category : 'private - session management' }
+GbsSession >> finishPostLogin
+[
+	"Complete login work that should not run while the session critical section
+	is still held by the login thread."
+
+	self isLoggedIn ifFalse: [ ^ self ].
+	self startEventDetection.
+	self startDeferredPostLoginInitialization.
+	GbxStatMonitor instance addStatResource: stats.
+	^ self
 ]
 
 { #category : 'private - session management' }
