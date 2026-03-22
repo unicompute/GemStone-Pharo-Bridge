@@ -448,8 +448,7 @@ GbsStackDumper class >> classOf: anObject
 [
 	"Answer the object which is the argument's class.."
 
-	<primitive: 211>
-	^self primitiveFailed
+	^GbxReflection classOf: anObject
 ]
 
 { #category : 'private - proxy handling' }
