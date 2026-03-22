@@ -1,6 +1,7 @@
 Class {
 	#name : 'GbxObjectList',
 	#superclass : 'GbxRemoteObject',
+	#type : 'variable',
 	#instVars : [
 	],
 	#classVars : [
@@ -230,4 +231,3 @@ GbxObjectList class >> with: element1 with: element2
 				at: 2 put: element2;
 				yourself]
 ]
-

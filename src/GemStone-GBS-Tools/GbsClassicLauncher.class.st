@@ -1372,28 +1372,27 @@ GbsClassicLauncher >> loginSelectedParametersUsing: aSelector [
 			| session loginErrorText |
 			session := nil.
 			loginErrorText := nil.
-			[ session := params perform: aSelector ]
-				on: Error
-				do: [ :ex | loginErrorText := ex messageText ].
+				[ session := params perform: aSelector ]
+					on: Error
+					do: [ :ex | loginErrorText := ex messageText ].
 
-			self deferUI: [
-				loginErrorText ifNotNil: [
-					self refreshAll.
-					self inform: 'Login Error: ', loginErrorText.
-					^ self ].
-				session ifNil: [
-					self refreshAll.
-					self inform: 'Login failed.'.
-					^ self ].
-
-				GbsAdminSessionSupport publishCurrentSession: session.
-				[ self refreshAll ] on: Error do: [ ].
-				GbsLauncher allInstancesDo: [ :launcher |
-					[ launcher updateUIState ] on: Error do: [ ] ].
-				GbsClassicLauncher allInstancesDo: [ :launcher |
-					[ launcher refreshAll ] on: Error do: [ ] ].
-				self inform: 'Login Successful: ', params name ] ]
-]
+				self deferUI: [
+					loginErrorText ifNotNil: [
+						self refreshAll.
+						self inform: 'Login Error: ', loginErrorText. ]
+						ifNil: [
+							session ifNil: [
+								self refreshAll.
+								self inform: 'Login failed.' ]
+								ifNotNil: [
+									GbsAdminSessionSupport publishCurrentSession: session.
+									[ self refreshAll ] on: Error do: [ ].
+									GbsLauncher allInstancesDo: [ :launcher |
+										[ launcher updateUIState ] on: Error do: [ ] ].
+									GbsClassicLauncher allInstancesDo: [ :launcher |
+										[ launcher refreshAll ] on: Error do: [ ] ].
+									self inform: 'Login Successful: ', params name ] ] ] ]
+	]
 
 { #category : 'private' }
 GbsClassicLauncher >> deferUI: aBlock [

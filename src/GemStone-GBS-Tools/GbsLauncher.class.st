@@ -162,29 +162,27 @@ GbsLauncher >> doLogin [
 					password: password;
 					yourself.
 				session := params login
-			] on: Error do: [ :ex |
-				errorText := ex messageText ].
+				] on: Error do: [ :ex |
+					errorText := ex messageText ].
 
-			self deferUI: [
-				errorText ifNotNil: [
-					self inform: 'Connection Failed: ', errorText.
-					self updateUIState.
-					^ self ].
-
-				session ifNil: [
-					self inform: 'Connection Failed: login returned no session.'.
-					self updateUIState.
-					^ self ].
-
-				GbsAdminSessionSupport publishCurrentSession: session.
-				[ self ensureCurrentSessionVisibleInAllSessionsForUser: user stone: stone ] on: Error do: [ ].
-				[ self refreshAllLaunchers ] on: Error do: [ :ex |
-					refreshErrorText := ex messageText ].
-				self updateUIState.
-				refreshErrorText ifNotNil: [
-					self inform: 'Connected, but some windows did not refresh: ', refreshErrorText ]
-					ifNil: [ self inform: 'Connected Successfully!' ] ] ]
-]
+				self deferUI: [
+					errorText ifNotNil: [
+						self inform: 'Connection Failed: ', errorText.
+						self updateUIState. ]
+						ifNil: [
+							session ifNil: [
+								self inform: 'Connection Failed: login returned no session.'.
+								self updateUIState. ]
+								ifNotNil: [
+									GbsAdminSessionSupport publishCurrentSession: session.
+									[ self ensureCurrentSessionVisibleInAllSessionsForUser: user stone: stone ] on: Error do: [ ].
+									[ self refreshAllLaunchers ] on: Error do: [ :ex |
+										refreshErrorText := ex messageText ].
+									self updateUIState.
+									refreshErrorText ifNotNil: [
+										self inform: 'Connected, but some windows did not refresh: ', refreshErrorText ]
+										ifNil: [ self inform: 'Connected Successfully!' ] ] ] ] ]
+	]
 
 { #category : 'actions' }
 GbsLauncher >> doLogout [

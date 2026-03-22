@@ -194,6 +194,21 @@ GbsLauncherTest >> testBehaviorOopMapKeepsRuntimeApiAndToolVariants [
 ]
 
 { #category : 'tests' }
+GbsLauncherTest >> testGbxObjectListSupportsVariableSizedConstructors [
+	| pair trio |
+	self assert: GbxObjectList isVariable.
+
+	pair := GbxObjectList with: 1 with: 2.
+	self assert: pair size equals: 2.
+	self assert: (pair at: 1) equals: 1.
+	self assert: (pair at: 2) equals: 2.
+
+	trio := GbxObjectList withAll: #(1 2 3).
+	self assert: trio size equals: 3.
+	self assert: trio asArray equals: #(1 2 3)
+]
+
+{ #category : 'tests' }
 GbsLauncherTest >> testClampManagerKeepsRuntimeApiAndToolVariant [
 	self assert: (GbxClampManager respondsTo: #forManager:).
 	self
