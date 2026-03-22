@@ -718,7 +718,8 @@ GbxPointerObjectReplicator >> initializeForClientClass: aClientClass serverClass
 		initializeForClientClass: aClientClass
 		serverClass: classDelegate
 		manager: aManager.
-	manager serverInstVarNamesNeededByReplicator: self
+	self shouldFetchDeferredServerInstVarNames
+		ifTrue: [manager serverInstVarNamesNeededByReplicator: self]
 ]
 
 { #category : 'initialize-release' }
@@ -731,6 +732,13 @@ GbxPointerObjectReplicator >> initializeForServerInstVarNames: names
 
 	serverInstVarNames := names.
 	self initializeServerOffsets
+]
+
+{ #category : 'testing' }
+GbxPointerObjectReplicator >> shouldFetchDeferredServerInstVarNames
+[
+
+	^true
 ]
 
 { #category : 'stubbing' }
@@ -751,4 +759,3 @@ GbxPointerObjectReplicator >> nilMappedSlotsOf: aStub
 			clientClass instSize + 1 to: aStub gbxBasicSize
 				do: [:idx | aStub gbxBasicAt: idx put: nil]]
 ]
-

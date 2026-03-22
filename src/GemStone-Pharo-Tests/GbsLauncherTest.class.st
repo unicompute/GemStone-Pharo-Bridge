@@ -163,6 +163,26 @@ GbsLauncherTest >> testReplicatorManagerKeepsRuntimeApiAndShape [
 ]
 
 { #category : 'tests' }
+GbsLauncherTest >> testArrayReplicatorSkipsDeferredServerInstVarFetchQueue [
+	| manager replicator |
+	manager := GbxReplicatorManagerInitFake new.
+
+	replicator := GbxArrayReplicator
+		forClientClass: Array
+		serverClass: Object
+		manager: manager.
+
+	self assert: manager queuedReplicators isEmpty.
+	self assert: replicator isComplete.
+	self
+		assert: (replicator instVarNamed: 'serverInstVarNames')
+		equals: #().
+	self
+		assert: (replicator instVarNamed: 'serverToClientOffsets')
+		equals: #()
+]
+
+{ #category : 'tests' }
 GbsLauncherTest >> testBehaviorOopMapKeepsRuntimeApiAndToolVariants [
 	self assert: (GbxBehaviorOopMap respondsTo: #newForSession:).
 	self assert: GbxBehaviorOopMap superclass equals: GbxOopKeyedDictionary.

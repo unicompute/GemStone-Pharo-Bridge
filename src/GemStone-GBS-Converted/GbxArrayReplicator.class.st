@@ -49,3 +49,9 @@ GbxArrayReplicator >> referentForOop: oop shouldBeForwarder: shouldBeForwarder
 		ifFalse: [super referentForOop: oop shouldBeForwarder: shouldBeForwarder]
 ]
 
+{ #category : 'testing' }
+GbxArrayReplicator >> shouldFetchDeferredServerInstVarNames
+[
+
+	^false
+]
