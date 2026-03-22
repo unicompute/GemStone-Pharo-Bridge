@@ -86,6 +86,23 @@ Context >> makeSelectorBold: text [
 	text makeSelectorBoldIn: self mclass
 ]
 
+{ #category : '*GemStone-GBS-Converted-GBS-private-extensions' }
+Context >> mclass [
+	"VisualWorks compatibility. The debugger expects a local client context
+	to answer the class that owns the executing method."
+
+	| localMethodClass homeReceiver |
+	localMethodClass := self methodClass.
+	localMethodClass ifNotNil: [ ^ localMethodClass ].
+	(self method respondsTo: #methodClass) ifTrue: [
+		localMethodClass := self method methodClass.
+		localMethodClass ifNotNil: [ ^ localMethodClass ] ].
+	homeReceiver := self homeReceiver.
+	^ homeReceiver
+		ifNil: [ Object ]
+		ifNotNil: [ homeReceiver class ]
+]
+
 { #category : '*GemStone-GBS-Converted-testing' }
 Context >> gbxIsGsGlue [
 	"Private. GBS."
@@ -132,4 +149,3 @@ Context >> osType [
 Context >> isRunningUnderAssertingVM [
 	^false
 ]
-
