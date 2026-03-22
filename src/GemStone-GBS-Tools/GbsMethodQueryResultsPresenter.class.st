@@ -590,9 +590,7 @@ GbsMethodQueryResultsPresenter >> openQueryForSelectedSelectorMode: modeString t
 { #category : 'private' }
 GbsMethodQueryResultsPresenter >> queryResultsTitleForSelector: selector modePrefix: prefixString count: aCount [
 	| sessionPart |
-	sessionPart := (session respondsTo: #sessionId)
-		ifTrue: [ 'Session ', session sessionId asString, ' ' ]
-		ifFalse: [ '' ].
+	sessionPart := GbsAdminSessionSupport sessionTitlePrefixFor: session.
 	^ sessionPart, prefixString, selector asString, ' (', aCount asString, ')'
 ]
 

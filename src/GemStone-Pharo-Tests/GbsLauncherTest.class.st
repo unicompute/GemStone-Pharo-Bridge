@@ -133,6 +133,18 @@ GbsLauncherTest >> testAdminSessionSupportResolvesCurrentFakeCandidateViaLiveSes
 ]
 
 { #category : 'tests' }
+GbsLauncherTest >> testAdminSessionSupportFormatsSessionTitlesSafely [
+	| session |
+	session := GbsSessionSupportFakeLiveSession new.
+	session sessionId: 12.
+
+	self assert: (GbsAdminSessionSupport sessionIdStringFrom: nil) equals: ''.
+	self assert: (GbsAdminSessionSupport sessionTitlePrefixFor: nil) equals: ''.
+	self assert: (GbsAdminSessionSupport sessionIdStringFrom: session) equals: '12'.
+	self assert: (GbsAdminSessionSupport sessionTitlePrefixFor: session) equals: 'Session 12 '
+]
+
+{ #category : 'tests' }
 GbsLauncherTest >> testAdminSessionSupportResolvesRegistryFakeCandidateViaLiveSession [
 	| candidate liveSession resolved |
 	[

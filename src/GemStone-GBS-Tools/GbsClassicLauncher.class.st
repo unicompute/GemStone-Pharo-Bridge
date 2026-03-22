@@ -808,10 +808,8 @@ GbsClassicLauncher class >> browseMethodsWithSubstringOnCurrentSession [
 	presenterClass ifNil: [
 		UIManager default inform: 'Could not open query results window: GbsMethodQueryResultsPresenter is not loaded.'.
 		^ self ].
-	sessionPart := (session respondsTo: #sessionId)
-		ifTrue: [ 'Session ', session sessionId asString, ' ' ]
-		ifFalse: [ '' ].
-	title := sessionPart, 'Methods with substring ', pattern trimBoth, ' (', references size asString, ')'.
+		sessionPart := GbsAdminSessionSupport sessionTitlePrefixFor: session.
+		title := sessionPart, 'Methods with substring ', pattern trimBoth, ' (', references size asString, ')'.
 	[ presenterClass openOn: session references: references title: title ]
 		on: Error
 		do: [ :ex | UIManager default inform: 'Could not open query results window: ', ex messageText ].
@@ -894,10 +892,8 @@ GbsClassicLauncher class >> performBrowseQueryWithPrompt: promptString mode: mod
 	presenterClass ifNil: [
 		UIManager default inform: 'Could not open query results window: GbsMethodQueryResultsPresenter is not loaded.'.
 		^ self ].
-	sessionPart := (session respondsTo: #sessionId)
-		ifTrue: [ 'Session ', session sessionId asString, ' ' ]
-		ifFalse: [ '' ].
-	title := sessionPart, titlePrefixString, query trimBoth, ' (', references size asString, ')'.
+		sessionPart := GbsAdminSessionSupport sessionTitlePrefixFor: session.
+		title := sessionPart, titlePrefixString, query trimBoth, ' (', references size asString, ')'.
 	[ presenterClass openOn: session references: references title: title ]
 		on: Error
 		do: [ :ex | UIManager default inform: 'Could not open query results window: ', ex messageText ].
@@ -928,10 +924,8 @@ GbsClassicLauncher class >> performBrowseHierarchyQueryWithPrompt: promptString 
 	references isEmpty ifTrue: [
 		UIManager default inform: 'No matches found.'.
 		^ self ].
-	sessionPart := (session respondsTo: #sessionId)
-		ifTrue: [ 'Session ', session sessionId asString, ' ' ]
-		ifFalse: [ '' ].
-	scopeLabel := scope = 'super'
+		sessionPart := GbsAdminSessionSupport sessionTitlePrefixFor: session.
+		scopeLabel := scope = 'super'
 		ifTrue: [ ' (superclasses)' ]
 		ifFalse: [ scope = 'this'
 			ifTrue: [ ' (this class)' ]
@@ -1307,12 +1301,14 @@ GbsClassicLauncher >> initializePresenters [
     parametersList addColumn: (SpStringTableColumn title: 'Name' evaluated: #name).
     parametersList beSingleSelection.
 
-    sessionList := self newTable.
-    sessionList
-        addColumn: (SpStringTableColumn title: 'Session ID' evaluated: [ :s | s sessionId asString ]);
-        addColumn: (SpStringTableColumn title: 'Name' evaluated: [ :s | s name ]);
-        addColumn: (SpStringTableColumn title: 'State' evaluated: [ :s | s isConnected ifTrue: ['Connected'] ifFalse: ['Disconnected'] ]).
-    sessionList beSingleSelection.
+	    sessionList := self newTable.
+	    sessionList
+	        addColumn: (SpStringTableColumn
+				title: 'Session ID'
+				evaluated: [ :s | GbsAdminSessionSupport sessionIdStringFrom: s ]);
+	        addColumn: (SpStringTableColumn title: 'Name' evaluated: [ :s | s name ]);
+	        addColumn: (SpStringTableColumn title: 'State' evaluated: [ :s | s isConnected ifTrue: ['Connected'] ifFalse: ['Disconnected'] ]).
+	    sessionList beSingleSelection.
 
     "Buttons"
     btnLoginLink := self newButton label: 'Login Link'; icon: (self iconNamed: #glamorousGo); action: [ self doLoginLink ].

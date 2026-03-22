@@ -134,6 +134,23 @@ GbsAdminSessionSupport class >> sessionIdFrom: anObject [
 ]
 
 { #category : 'private' }
+GbsAdminSessionSupport class >> sessionIdStringFrom: anObject [
+	| sessionId |
+	sessionId := self sessionIdFrom: anObject.
+	^ sessionId
+		ifNil: [ '' ]
+		ifNotNil: [ sessionId asString ]
+]
+
+{ #category : 'private' }
+GbsAdminSessionSupport class >> sessionTitlePrefixFor: anObject [
+	| sessionIdString |
+	sessionIdString := self sessionIdStringFrom: anObject.
+	sessionIdString isEmpty ifTrue: [ ^ '' ].
+	^ 'Session ', sessionIdString, ' '
+]
+
+{ #category : 'private' }
 GbsAdminSessionSupport class >> usableSessionFromCandidate: anObject [
 	anObject ifNil: [ ^ nil ].
 	(self isUsableSession: anObject) ifTrue: [ ^ anObject ].

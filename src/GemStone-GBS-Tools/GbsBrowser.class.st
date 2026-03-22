@@ -1651,9 +1651,7 @@ GbsBrowser >> openQueryResults: references title: titleString [
 { #category : 'private' }
 GbsBrowser >> queryResultsTitleForSelector: selectorString mode: modeString count: aCount [
 	| sessionPart modePart |
-	sessionPart := (session respondsTo: #sessionId)
-		ifTrue: [ 'Session ', session sessionId asString, ' ' ]
-		ifFalse: [ '' ].
+	sessionPart := GbsAdminSessionSupport sessionTitlePrefixFor: session.
 	modePart := modeString = 'implementors'
 		ifTrue: [ 'Implementors of ' ]
 		ifFalse: [
