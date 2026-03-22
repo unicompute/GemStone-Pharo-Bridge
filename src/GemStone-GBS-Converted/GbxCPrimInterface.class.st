@@ -11,6 +11,7 @@ Class {
 		'ExternalLibrary',
 		'ExternalLibraryHolder',
 		'ExternalMethod',
+		'ProcessLocalRunner',
 		'UninterpretedBytes',
 		'VMLibPath'
 	],
@@ -38,6 +39,14 @@ GbxCPrimInterface class >> sharedLibraryFilename [
 GbxCPrimInterface class >> newInterface: libraryFilename [
 	self vmLibPath: libraryFilename.
 	^ self uniqueInstance
+]
+
+{ #category : 'threaded ffi' }
+GbxCPrimInterface class >> processLocalRunner [
+	^ ProcessLocalRunner ifNil: [
+		ProcessLocalRunner := TFProcessLocalWorker new
+			defaultWorker: TFSameThreadRunner uniqueInstance;
+			yourself ]
 ]
 
 { #category : 'serverInterface interface' }
@@ -246,9 +255,15 @@ GbxCPrimInterface >> gciNBGetNotifyHandle [
 { #category : 'procedures' }
 GbxCPrimInterface >> gciPollSocket: socketFd forRead: timeout [
 	"Return 0 if timed out, 1 if ready for read, and -1 on error.
-	Run on the UFFI worker thread so the event detector wait does not block the VM."
+	GbxThreadSafeSocketAccessor temporarily routes this call onto a dedicated
+	worker so the event detector wait does not block the VM."
 
-	^ self ffiCall: #(int _threaded GciPollSocketForRead(int socketFd, int timeout))
+	^ self ffiCall: #(int GciPollSocketForRead(int socketFd, int timeout))
+]
+
+{ #category : 'threaded ffi' }
+GbxCPrimInterface >> runner [
+	^ self class processLocalRunner
 ]
 
 { #category : 'non-blocking procedures' }

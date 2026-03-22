@@ -3,7 +3,8 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'sequencer',
-		'handle'
+		'handle',
+		'worker'
 	],
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'
@@ -16,12 +17,15 @@ GbxThreadSafeSocketAccessor class >> openOn: aHandle sequencer: aSequencer
 	inst := self new.
 	inst handle: aHandle.
 	inst sequencer: aSequencer.
+	inst worker: (TFWorker named: 'GBS Signal Socket ' , aHandle asString).
 	^inst
 ]
 
 { #category : 'accessing' }
 GbxThreadSafeSocketAccessor >> release
 [
+	worker ifNotNil: [worker release].
+	worker := nil.
 	handle := nil.
 	sequencer := nil
 ]
@@ -50,8 +54,22 @@ GbxThreadSafeSocketAccessor >> handle: anObject
 	handle := anObject
 ]
 
+{ #category : 'accessing' }
+GbxThreadSafeSocketAccessor >> worker
+[
+	^worker
+]
+
+{ #category : 'accessing' }
+GbxThreadSafeSocketAccessor >> worker: anObject
+[
+	worker := anObject
+]
+
 { #category : 'waiting' }
 GbxThreadSafeSocketAccessor >> readWaitWithTimeoutMs: delay
 [
-	^sequencer primInterface gciPollSocket: handle forRead: delay
+	^TFProcessLocalWorker
+		use: worker
+		during: [sequencer primInterface gciPollSocket: handle forRead: delay]
 ]

@@ -355,12 +355,40 @@ GbsLauncherTest >> testPharoDefaultsUseBlockingRpc [
 ]
 
 { #category : 'tests' }
-GbsLauncherTest >> testSignalSocketPollUsesThreadedFfiCall [
-	| source |
-	source := [ (GbxCPrimInterface >> #gciPollSocket:forRead:) sourceCode ]
-		on: Error
-		do: [ '' ].
-	self assert: (source includesSubstring: '_threaded')
+GbsLauncherTest >> testSignalSocketPollUsesProcessLocalRunnerByDefault [
+	| runner |
+	runner := GbxCPrimInterface uniqueInstance runner.
+	self assert: runner class equals: TFProcessLocalWorker.
+	self assert: runner defaultWorker == TFSameThreadRunner uniqueInstance
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testSignalSocketWaitUsesDedicatedWorker [
+	| previousWorker accessor1 accessor2 sequencer1 sequencer2 prim1 prim2 |
+	previousWorker := TFProcessLocalWorker worker.
+	sequencer1 := GbxSocketPollSequencerFake new.
+	sequencer2 := GbxSocketPollSequencerFake new.
+	prim1 := sequencer1 primInterface.
+	prim2 := sequencer2 primInterface.
+	accessor1 := GbxThreadSafeSocketAccessor openOn: 41 sequencer: sequencer1.
+	accessor2 := GbxThreadSafeSocketAccessor openOn: 42 sequencer: sequencer2.
+	[
+		self assert: (accessor1 readWaitWithTimeoutMs: 10) equals: prim1 returnValue.
+		self assert: prim1 lastHandle equals: 41.
+		self assert: prim1 lastDelay equals: 10.
+		self assert: (prim1 workerSeen isKindOf: TFWorker).
+
+		self assert: (accessor2 readWaitWithTimeoutMs: 20) equals: prim2 returnValue.
+		self assert: prim2 lastHandle equals: 42.
+		self assert: prim2 lastDelay equals: 20.
+		self assert: (prim2 workerSeen isKindOf: TFWorker).
+
+		self deny: prim1 workerSeen == prim2 workerSeen.
+		self assert: TFProcessLocalWorker worker == previousWorker
+	] ensure: [
+		accessor1 release.
+		accessor2 release.
+		TFProcessLocalWorker worker: previousWorker ]
 ]
 
 { #category : 'tests' }
