@@ -40,7 +40,39 @@ GbsPharoBootstrap class >> initialize
 { #category : 'bootstrap' }
 GbsPharoBootstrap class >> ensureLiveCompatibilityMethods
 [
-	self ensureContextMclassMethodIfNeeded
+	self
+		ensureContextHomeReceiverMethodIfNeeded;
+		ensureContextMclassMethodIfNeeded
+]
+
+{ #category : 'bootstrap' }
+GbsPharoBootstrap class >> ensureContextHomeReceiverMethodIfNeeded
+[
+	| contextClass selector |
+	contextClass := Smalltalk at: #Context ifAbsent: [ ^ self ].
+	selector := #homeReceiver.
+	(contextClass includesSelector: selector)
+		ifFalse: [
+			[ contextClass
+				compile: self contextHomeReceiverMethodSource
+				classified: '*GemStone-GBS-Converted-GBS-private-extensions' ]
+				on: Error
+				do: [ ] ]
+]
+
+{ #category : 'bootstrap' }
+GbsPharoBootstrap class >> contextHomeReceiverMethodSource
+[
+	^ 'homeReceiver
+	"VisualWorks compatibility. For Pharo method and block contexts the
+	receiver already matches the home receiver needed by the debugger."
+
+	(self respondsTo: #home)
+		ifTrue: [
+			| home |
+			home := self home.
+			home ifNotNil: [ ^ home receiver ] ].
+	^ self receiver'
 ]
 
 { #category : 'bootstrap' }

@@ -87,6 +87,19 @@ Context >> makeSelectorBold: text [
 ]
 
 { #category : '*GemStone-GBS-Converted-GBS-private-extensions' }
+Context >> homeReceiver [
+	"VisualWorks compatibility. For Pharo method and block contexts the
+	receiver already matches the home receiver needed by the debugger."
+
+	(self respondsTo: #home)
+		ifTrue: [
+			| home |
+			home := self home.
+			home ifNotNil: [ ^ home receiver ] ].
+	^ self receiver
+]
+
+{ #category : '*GemStone-GBS-Converted-GBS-private-extensions' }
 Context >> mclass [
 	"VisualWorks compatibility. The debugger expects a local client context
 	to answer the class that owns the executing method."
