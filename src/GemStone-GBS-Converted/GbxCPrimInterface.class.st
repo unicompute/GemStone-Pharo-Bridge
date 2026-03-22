@@ -245,9 +245,10 @@ GbxCPrimInterface >> gciNBGetNotifyHandle [
 
 { #category : 'procedures' }
 GbxCPrimInterface >> gciPollSocket: socketFd forRead: timeout [
-	"Return 0 if timed out, 1 if ready for read, and -1 on error."
+	"Return 0 if timed out, 1 if ready for read, and -1 on error.
+	Run on the UFFI worker thread so the event detector wait does not block the VM."
 
-	^ self ffiCall: #(int GciPollSocketForRead(int socketFd, int timeout))
+	^ self ffiCall: #(int _threaded GciPollSocketForRead(int socketFd, int timeout))
 ]
 
 { #category : 'non-blocking procedures' }

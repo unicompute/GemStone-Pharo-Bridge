@@ -355,6 +355,15 @@ GbsLauncherTest >> testPharoDefaultsUseBlockingRpc [
 ]
 
 { #category : 'tests' }
+GbsLauncherTest >> testSignalSocketPollUsesThreadedFfiCall [
+	| source |
+	source := [ (GbxCPrimInterface >> #gciPollSocket:forRead:) sourceCode ]
+		on: Error
+		do: [ '' ].
+	self assert: (source includesSubstring: '_threaded')
+]
+
+{ #category : 'tests' }
 GbsLauncherTest >> testDateInstVarMapDoesNotUseVisualWorksDaySlot [
 	self
 		assert:
