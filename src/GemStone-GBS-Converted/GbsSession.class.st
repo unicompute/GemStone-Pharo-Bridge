@@ -291,6 +291,22 @@ GbsSession >> execute: aString context: aContext
 ]
 
 { #category : 'remote execution' }
+GbsSession >> executeAndFetch: aString
+[
+	"Evaluate GemStone Smalltalk and answer the fetched client-side result."
+
+	^self unsynchronizedEvaluate: aString
+]
+
+{ #category : 'remote execution' }
+GbsSession >> executeAndFetch: aString context: aContext
+[
+	"Evaluate GemStone Smalltalk in the given server context and answer the fetched client-side result."
+
+	^self unsynchronizedEvaluate: aString context: aContext
+]
+
+{ #category : 'remote execution' }
 GbsSession >> hardBreak
 [
 	"Sending this message while a non-blocking GemStone call is in progress will

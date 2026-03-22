@@ -132,6 +132,43 @@ GbsBrowserTest >> testGsPrintItAppendsResult [
 ]
 
 { #category : 'tests' }
+GbsBrowserTest >> testCurrentBehaviorServerCacheUsesSelectedClass [
+	| browser cache classes meta resolvedClass session |
+	browser := GbsBrowser new.
+	session := MockGbsSession new.
+	resolvedClass := Object new.
+	session stubs at: #resolveSymbol put: [ :className |
+		self assert: className equals: 'DemoClass'.
+		resolvedClass ].
+	classes := GbxFakeListPresenterForBrowser new.
+	classes selectedItem: 'DemoClass'.
+	meta := GbxFakeCheckBoxForBrowser new.
+	meta state: false.
+
+	browser session: session.
+	browser instVarNamed: 'classesList' put: classes.
+	browser instVarNamed: 'metaCheckbox' put: meta.
+
+	cache := browser currentBehaviorServerCache.
+
+	self assert: cache notNil.
+	self assert: cache classNames asArray equals: #('DemoClass').
+	self assert: browser theClass == resolvedClass
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testIsAtInstanceSideTracksMetaCheckboxState [
+	| browser meta |
+	browser := GbsBrowser new.
+	meta := GbxFakeCheckBoxForBrowser new.
+	browser instVarNamed: 'metaCheckbox' put: meta.
+
+	self assert: browser isAtInstanceSide.
+	meta state: true.
+	self deny: browser isAtInstanceSide
+]
+
+{ #category : 'tests' }
 GbsBrowserTest >> testQueryImplementorsUsesPromptAndOpensSingleResult [
 	| browser |
 	browser := TestableGbsBrowser new.

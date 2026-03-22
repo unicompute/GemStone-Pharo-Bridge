@@ -84,3 +84,25 @@ GbxActivationTest >> testExecutedCodePrintStringFallsBackToLevelWhenStepPointMis
 
 	self assert: activation printString equals: 'GS: Executed code @8'
 ]
+
+{ #category : 'tests' }
+GbxActivationTest >> testResetUsesDetailedReportFrameDirectly [
+	| activation session capturedScript |
+	activation := GbxActivationTool new.
+	session := MockGbsSession new.
+	session stubs at: #evaluate put: [ :script |
+		capturedScript := script.
+		'DemoClass|foo|2|10,20|arg,temp|foo ^ 1|7|2|3|DemoClass|aReceiver|DemoReceiver|selfValue' ].
+
+	activation
+		session: session;
+		processOop: 111;
+		level: 1.
+
+	activation reset.
+
+	self deny: (capturedScript includesSubstring: 'fullEntry := frame first').
+	self assert: activation methodClass equals: 'DemoClass'.
+	self assert: activation selector equals: #foo.
+	self assert: activation receiverClass equals: 'DemoReceiver'
+]

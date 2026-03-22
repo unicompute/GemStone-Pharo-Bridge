@@ -405,8 +405,38 @@ GbsBrowser >> selectedCodeOrAll [
 ]
 
 { #category : 'accessing' }
+GbsBrowser >> session [
+	^ session
+]
+
+{ #category : 'accessing' }
 GbsBrowser >> session: aSession [
 	session := aSession.
+]
+
+{ #category : 'private' }
+GbsBrowser >> currentBehaviorServerCache [
+	| className |
+	className := self selectedClassName.
+	className ifNil: [ ^ nil ].
+	^ GbxBehaviorServerCache on: (Array with: className) inspector: self
+]
+
+{ #category : 'private' }
+GbsBrowser >> isAtInstanceSide [
+	^ (metaCheckbox respondsTo: #state)
+		ifTrue: [ metaCheckbox state ~= true ]
+		ifFalse: [ true ]
+]
+
+{ #category : 'private' }
+GbsBrowser >> theClass [
+	| className |
+	className := self selectedClassName.
+	className ifNil: [ ^ nil ].
+	^ [ session resolveSymbol: className ifAbsent: [ nil ] ]
+		on: Error
+		do: [ nil ]
 ]
 
 { #category : 'menus' }

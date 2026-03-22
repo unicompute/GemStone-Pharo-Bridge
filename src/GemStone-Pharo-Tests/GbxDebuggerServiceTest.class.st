@@ -51,6 +51,7 @@ GbxDebuggerServiceTest >> testInspectCurrentReceiverUsesDetailedReportOop [
 	session stubs
 		at: #executeAndFetchContext
 		put: [ :script :ctx |
+			self deny: (script includesSubstring: 'frame first').
 			(script includesSubstring: '_gsiDebuggerDetailedReportAt:')
 				ifTrue: [ '222' ]
 				ifFalse: [ '0' ] ].
@@ -83,6 +84,7 @@ GbxDebuggerServiceTest >> testInspectVariableNamedUsesServerFrameLocalOop [
 	session stubs
 		at: #executeAndFetchContext
 		put: [ :script :ctx |
+			self deny: (script includesSubstring: 'frame first').
 			(script includesSubstring: 'idx := 0')
 				ifTrue: [ '444' ]
 				ifFalse: [ '0' ] ].

@@ -395,12 +395,17 @@ GbxDebuggerService >> currentReceiverOop [
 	lvl := self currentContextLevel.
 	(procOop isNil or: [ lvl isNil ]) ifTrue: [ ^ nil ].
 	script := '[
-		| proc frame fullEntry receiverObj |
+		| proc frame fullEntry firstItem receiverObj |
 		proc := Object _objectForOop: ', procOop asString, '.
 		proc ifNil: [ ^ ''0'' ].
 		frame := [ proc _gsiDebuggerDetailedReportAt: ', lvl asString, ' ] on: Error do: [ nil ].
 		frame ifNil: [ ^ ''0'' ].
-		fullEntry := [ frame first ] on: Error do: [ nil ].
+		fullEntry := frame.
+		firstItem := [ fullEntry at: 1 ] on: Error do: [ nil ].
+		((firstItem notNil)
+			and: [ (firstItem respondsTo: #selector) not
+			and: [ firstItem respondsTo: #at ] ])
+			ifTrue: [ fullEntry := firstItem ].
 		fullEntry ifNil: [ ^ ''0'' ].
 		receiverObj := [ fullEntry at: 2 ] on: Error do: [ nil ].
 		receiverObj ifNil: [ ^ ''0'' ].
@@ -792,12 +797,17 @@ GbxDebuggerService >> oopForVariableNamed: aVariableName [
 	(procOop isNil or: [ lvl isNil ]) ifTrue: [ ^ nil ].
 	escapedName := aVariableName copyReplaceAll: '''' with: ''''''.
 	script := '[
-		| proc frame fullEntry receiverObj names vals idx value |
+		| proc frame fullEntry firstItem receiverObj names vals idx value |
 		proc := Object _objectForOop: ', procOop asString, '.
 		proc ifNil: [ ^ ''0'' ].
 		frame := [ proc _gsiDebuggerDetailedReportAt: ', lvl asString, ' ] on: Error do: [ nil ].
 		frame ifNil: [ ^ ''0'' ].
-		fullEntry := [ frame first ] on: Error do: [ nil ].
+		fullEntry := frame.
+		firstItem := [ fullEntry at: 1 ] on: Error do: [ nil ].
+		((firstItem notNil)
+			and: [ (firstItem respondsTo: #selector) not
+			and: [ firstItem respondsTo: #at ] ])
+			ifTrue: [ fullEntry := firstItem ].
 		fullEntry ifNil: [ ^ ''0'' ].
 		(''', escapedName, ''' = ''self'') ifTrue: [
 			receiverObj := [ fullEntry at: 2 ] on: Error do: [ nil ].

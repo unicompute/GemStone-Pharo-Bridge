@@ -58,6 +58,21 @@ MockGbsSession >> executeAndFetch: script context: contextOop [
 ]
 
 { #category : 'execution' }
+MockGbsSession >> resolveSymbol: aString [
+	| block |
+	block := self stubs at: #resolveSymbol ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: aString ].
+	^ aString
+]
+
+{ #category : 'execution' }
+MockGbsSession >> resolveSymbol: aString ifAbsent: aBlock [
+	| result |
+	result := self resolveSymbol: aString.
+	^ result ifNil: [ aBlock value ] ifNotNil: [ result ]
+]
+
+{ #category : 'execution' }
 MockGbsSession >> gemStoneClassFor: aBehavior [
 	| block |
 	block := self stubs at: #gemStoneClassFor ifAbsent: [ nil ].
@@ -152,6 +167,11 @@ MockGbsSession >> serverInterface [
 { #category : 'accessing' }
 MockGbsSession >> sessionId: anInteger [
 	sessionId := anInteger
+]
+
+{ #category : 'accessing' }
+MockGbsSession >> sessionOop: anInteger [
+	self sessionId: anInteger
 ]
 
 { #category : 'accessing' }

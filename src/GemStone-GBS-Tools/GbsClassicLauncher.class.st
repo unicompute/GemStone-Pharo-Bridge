@@ -245,6 +245,33 @@ GbsClassicLauncher class >> currentSessionOrInform [
 ]
 
 { #category : 'menus' }
+GbsClassicLauncher class >> browserWithSelectedClassForSession: aSession [
+	^ GbsBrowser allInstances
+		detect: [ :each |
+			(([ each session ] on: Error do: [ nil ]) == aSession)
+				and: [ ([ each selectedClassName ] on: Error do: [ nil ]) notNil ] ]
+		ifNone: [ nil ]
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> defaultTrippyOopForSession: aSession [
+	^ [ aSession executeAndFetch: 'GsCurrentSession current asOop asString' ]
+		on: Error
+		do: [ '20' ]
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> formatUtilityText: aUtilityResult [
+	aUtilityResult isNil ifTrue: [ ^ '' ].
+	aUtilityResult isString ifTrue: [ ^ aUtilityResult ].
+	(aUtilityResult respondsTo: #do:) ifTrue: [
+		^ String streamContents: [ :stream |
+			aUtilityResult do: [ :each |
+				stream nextPutAll: each asString; cr ] ] ].
+	^ aUtilityResult printString
+]
+
+{ #category : 'menus' }
 GbsClassicLauncher class >> generateClassConnectors [
 	| mgr |
 	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
@@ -588,48 +615,101 @@ GbsClassicLauncher class >> refreshAllWindows [
 GbsClassicLauncher class >> openGbxUtility: utilityClassName [
 	"Open a GemStone utility by class name."
 	| session utilityClass utility |
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
 	utilityClass := Smalltalk at: utilityClassName asSymbol ifAbsent: [ nil ].
 	utilityClass ifNil: [
-		^ UIManager default inform: 'Utility class ', utilityClassName, ' not found.'
+		^ UIManager default inform: 'Utility class ', utilityClassName asString, ' not found.'
 	].
 	[
+		(utilityClass respondsTo: #open) ifTrue: [ ^ utilityClass open ].
+		session := self currentSessionOrInform.
+		session ifNil: [ ^ self ].
+		(utilityClass respondsTo: #openOn:) ifTrue: [ ^ utilityClass openOn: session ].
+		(utilityClass respondsTo: #on:) ifTrue: [
+			utility := utilityClass on: session.
+			(utility respondsTo: #open) ifTrue: [ ^ utility open ].
+			^ self inspectUtilityObject: utility named: utilityClass name ].
 		utility := utilityClass new.
 		(utility respondsTo: #session:) ifTrue: [ utility session: session ].
-		(utility respondsTo: #open) ifTrue: [ utility open ]
-			ifFalse: [
-				(utility respondsTo: #openOn:) ifTrue: [ utility openOn: session ]
-					ifFalse: [ UIManager default inform: 'Utility ', utilityClassName, ' does not support opening.' ]
-			]
+		(utility respondsTo: #open) ifTrue: [ ^ utility open ].
+		^ self inspectUtilityObject: utility named: utilityClass name
 	] on: Error do: [ :ex |
-		UIManager default inform: 'Failed to open ', utilityClassName, ': ', ex messageText
+		UIManager default inform: 'Failed to open ', utilityClass name, ': ', ex messageText
 	]
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxEnvyTools [
-	self openGbxUtility: #GbxEnvyTools
+	| applications session |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	GbsEnvyTools currentEnvySession: session.
+	GbsEnvyTools isEnvyEnabled ifFalse: [
+		^ UIManager default inform: 'Envy integration is not enabled.' ].
+	[
+		applications := GbsEnvyTools browseApplications.
+		(applications isNil or: [ applications isEmpty ])
+			ifTrue: [ UIManager default inform: 'No Envy applications available.' ]
+			ifFalse: [
+				UIManager default
+					edit: (self formatUtilityText: applications)
+					label: 'Envy Applications' ]
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Failed to open GbsEnvyTools: ', ex messageText ]
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxBehaviorServerClassCache [
-	self openGbxUtility: #GbxBehaviorServerClassCache
+	| browser cache session |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	browser := self browserWithSelectedClassForSession: session.
+	browser ifNil: [
+		^ UIManager default inform: 'Open a GemStone browser and select a class first.' ].
+	cache := [ browser currentBehaviorServerCache ]
+		on: Error
+		do: [ :ex |
+			^ UIManager default inform: 'Could not build the server class cache: ', ex messageText ].
+	cache ifNil: [
+		^ UIManager default inform: 'Select a class in the GemStone browser first.' ].
+	self inspectUtilityObject: cache named: 'Server Class Cache'
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxClampManager [
-	self openGbxUtility: #GbxClampManagerTool
+	| manager session |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	manager := [ session replicatorManager instVarNamed: 'clampManager' ]
+		on: Error
+		do: [ nil ].
+	manager ifNil: [ ^ self openGbxUtility: #GbxClampManagerTool ].
+	self inspectUtilityObject: manager named: 'Clamp Manager'
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxFileLogger [
-	self openGbxUtility: #GbxFileLoggerTool
+	| logger path |
+	path := UIManager default
+		request: 'Log file path:'
+		initialAnswer: '/tmp/gbs-file-logger.log'.
+	(path isNil or: [ path trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	[
+		logger := GbxFileLoggerTool on: path trimBoth.
+		logger logInfo: 'Created from the GemStone Utilities menu.'.
+		self inspectUtilityObject: logger named: 'File Logger'
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Failed to open GbxFileLoggerTool: ', ex messageText ]
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxMemoryLogger [
-	self openGbxUtility: #GbxMemoryLoggerTool
+	| logger |
+	[
+		logger := GbxMemoryLoggerTool new.
+		logger logInfo: 'Created from the GemStone Utilities menu.'.
+		self inspectUtilityObject: logger named: 'Memory Logger'
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Failed to open GbxMemoryLoggerTool: ', ex messageText ]
 ]
 
 { #category : 'menus' }
@@ -639,12 +719,17 @@ GbsClassicLauncher class >> openGbxNewConfigurationTool [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxReplicatorManager [
-	self openGbxUtility: #GbxReplicatorManagerTool
+	| manager session |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	manager := [ session replicatorManager ] on: Error do: [ nil ].
+	manager ifNil: [ ^ self openGbxUtility: #GbxReplicatorManagerTool ].
+	self inspectUtilityObject: manager named: 'Replicator Manager'
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxSegmentHolder [
-	self openGbxUtility: #GbxSegmentHolder
+	self openGbxSegmentTool
 ]
 
 { #category : 'menus' }
@@ -654,12 +739,17 @@ GbsClassicLauncher class >> openGbxSegmentTool [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxSegmentToolBrain [
-	self openGbxUtility: #GbxSegmentToolBrain
+	self openGbxSegmentTool
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxServerMap [
-	self openGbxUtility: #GbxServerMapTool
+	| map session |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	map := [ session serverMap ] on: Error do: [ nil ].
+	map ifNil: [ ^ self openGbxUtility: #GbxServerMapTool ].
+	self inspectUtilityObject: map named: 'Server Map'
 ]
 
 { #category : 'menus' }
@@ -669,32 +759,80 @@ GbsClassicLauncher class >> openGbxStatMonitor [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxStatResource [
-	self openGbxUtility: #GbxToolStatResource
+	| resource |
+	resource := [ GBSM manager statResource ] on: Error do: [ nil ].
+	resource ifNil: [
+		resource := GbxToolStatResource
+			named: 'GemStone Statistics'
+			type: #sessionManager ].
+	self inspectUtilityObject: resource named: 'Stat Resource'
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxGcStatResource [
-	self openGbxUtility: #GbxGcStatResource
+	| resource session |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	resource := GbxGcStatResource on: session.
+	[ resource collectStats ] on: Error do: [ ].
+	self inspectUtilityObject: resource named: 'GC Stat Resource'
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxObjectMemoryStat [
-	self openGbxUtility: #GbxObjectMemoryStatTool
+	| resource session |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	resource := GbxObjectMemoryStatTool on: session.
+	[ resource collectStats ] on: Error do: [ ].
+	self inspectUtilityObject: resource named: 'Object Memory Stat'
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxSessionStatResource [
-	self openGbxUtility: #GbxToolSessionStatResource
+	| resource session |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	resource := GbxToolSessionStatResource on: session.
+	[ resource collectStats ] on: Error do: [ ].
+	self inspectUtilityObject: resource named: 'Session Stat Resource'
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxStoreTraversalTool [
-	self openGbxUtility: #GbxStoreTraversalTool
+	| session utility |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	utility := GbxStoreTraversalTool on: session cache: Dictionary new.
+	self inspectUtilityObject: utility named: 'Store Traversal Tool'
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxTrippy [
-	self openGbxUtility: #GbxTrippy
+	| oop oopString session |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	oopString := UIManager default
+		request: 'GemStone OOP to inspect in Trippy:'
+		initialAnswer: (self defaultTrippyOopForSession: session).
+	(oopString isNil or: [ oopString trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	oop := [ oopString trimBoth asInteger ] on: Error do: [ nil ].
+	oop ifNil: [
+		^ UIManager default inform: 'Enter a numeric GemStone oop.' ].
+	[
+		GbxTrippy inspectOop: oop session: session
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open Trippy: ', ex messageText ]
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> inspectUtilityObject: anObject named: labelString [
+	anObject ifNil: [
+		^ UIManager default inform: labelString, ' is unavailable.' ].
+	^ [ anObject inspect ]
+		on: Error
+		do: [ :ex |
+			UIManager default inform: 'Could not open ', labelString, ': ', ex messageText ]
 ]
 
 { #category : 'menus' }

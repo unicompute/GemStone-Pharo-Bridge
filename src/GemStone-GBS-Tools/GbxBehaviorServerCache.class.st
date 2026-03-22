@@ -172,6 +172,7 @@ GbxBehaviorServerCache >> currentSelectorsFor: className
 GbxBehaviorServerCache >> initialize
 [
 	classCaches := Dictionary new.
+	classNames ifNil: [ ^ self ].
 	classNames do: 
 			[:className | 
 			classCaches at: className
@@ -189,4 +190,3 @@ GbxBehaviorServerCache class >> on: aCollection inspector: aGbxBehaviorInspector
 		initialize.
 	^inst
 ]
-

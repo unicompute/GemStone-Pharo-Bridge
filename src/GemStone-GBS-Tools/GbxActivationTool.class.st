@@ -277,14 +277,19 @@ GbxActivationTool >> reset [
 	| script result parts |
 	
 	script := '[
-		| obj frame fullEntry methodOrNil thisReceiver thisSelf numArgsTemps className selectorName sourceStr |
+		| obj frame fullEntry firstItem methodOrNil thisReceiver thisSelf numArgsTemps className selectorName sourceStr |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj ifNil: [ ^ ''ERROR|nil'' ].
 		frame := [ obj _gsiDebuggerDetailedReportAt: ', level asString, ' ] on: Error do: [ nil ].
 		frame ifNil: [ ^ ''ERROR|nil'' ].
-		fullEntry := frame first.
+		fullEntry := frame.
+		firstItem := [ fullEntry at: 1 ] on: Error do: [ nil ].
+		((firstItem notNil)
+			and: [ (firstItem respondsTo: #selector) not
+			and: [ firstItem respondsTo: #at ] ])
+			ifTrue: [ fullEntry := firstItem ].
 		fullEntry ifNil: [ ^ ''ERROR|nil'' ].
-		methodOrNil := fullEntry first.
+		methodOrNil := [ fullEntry at: 1 ] on: Error do: [ nil ].
 		thisReceiver := fullEntry at: 2.
 		thisSelf := fullEntry at: 3.
 		numArgsTemps := 
@@ -538,7 +543,7 @@ GbxActivationTool >> tempNamesAndValues [
 	| script result localDict |
 	
 	script := '[
-		| obj dict frame names vals maxCount receiverObj stream keyText valueText |
+		| obj dict frame fullEntry firstItem names vals maxCount receiverObj stream keyText valueText |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj ifNil: [ ^ '''' ].
 		dict := Dictionary new.
@@ -547,10 +552,16 @@ GbxActivationTool >> tempNamesAndValues [
 		(obj respondsTo: #_gsiDebuggerDetailedReportAt:) ifTrue: [
 			frame := [ obj _gsiDebuggerDetailedReportAt: ', level asString, ' ] on: Error do: [ nil ].
 			frame ifNotNil: [
-				receiverObj := [ (frame at: 1) at: 2 ] on: Error do: [ nil ].
+				fullEntry := frame.
+				firstItem := [ fullEntry at: 1 ] on: Error do: [ nil ].
+				((firstItem notNil)
+					and: [ (firstItem respondsTo: #selector) not
+					and: [ firstItem respondsTo: #at ] ])
+					ifTrue: [ fullEntry := firstItem ].
+				receiverObj := [ fullEntry at: 2 ] on: Error do: [ nil ].
 				receiverObj ifNotNil: [ dict at: ''self'' put: receiverObj ].
-				names := [ frame at: 7 ] on: Error do: [ #() ].
-				vals := [ frame at: 8 ] on: Error do: [ #() ].
+				names := [ fullEntry at: 7 ] on: Error do: [ #() ].
+				vals := [ fullEntry at: 8 ] on: Error do: [ #() ].
 				maxCount := (names size min: vals size) min: 200.
 				1 to: maxCount do: [ :i |
 					[ dict at: (names at: i) asString put: (vals at: i) ] on: Error do: [ ].
