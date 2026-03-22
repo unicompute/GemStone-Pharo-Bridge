@@ -2794,11 +2794,11 @@ GbsSession >> postLogin
 	manager currentSession: self.
 	manager notifyOfAddedSession: self.	"causes VS session browser to update, so must follow #currentSession: "
 	self initializeTimeZone.
-	self startEventDetection.
-	"self startGbsServices."
 	self enableOopDropping.
 	self configureGemAbortMaxCrs.
 	self getGemIds.
+	self startEventDetection.
+	"self startGbsServices."
 	GbsConfiguration current verbose
 		ifTrue: [self gbsMessenger comment: 'Logged in %1' with: self]
 ]
