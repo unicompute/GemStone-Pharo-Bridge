@@ -40,6 +40,28 @@ GbxCPrimInterface class >> newInterface: libraryFilename [
 	^ self uniqueInstance
 ]
 
+{ #category : 'serverInterface interface' }
+GbxCPrimInterface >> storeTravDoArgsSTypeClass [
+	"Current bridge support targets the 64-bit store-traversal layout used by
+	modern GemStone libraries."
+
+	^ GbxGciStoreTravDoArgsSType64v31
+]
+
+{ #category : 'serverInterface interface' }
+GbxCPrimInterface >> executableBlockClassOop [
+	"ExecutableBlock in GS64 v2.x, ExecBlock in GS64 3.x."
+
+	^ GbxKernelPomOop oopNumber: 560
+]
+
+{ #category : 'serverInterface interface' }
+GbxCPrimInterface >> clampSpecClassOop [
+	"ClampSpecification kernel oop for the 64-bit runtimes we target."
+
+	^ GbxKernelPomOop oopNumber: 530
+]
+
 { #category : 'accessing - platform' }
 GbxCPrimInterface >> macLibraryName [
 	^ self class sharedLibraryFilename

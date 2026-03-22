@@ -5,7 +5,8 @@ Class {
 		'buffer',
 		'offset',
 		'bufferOop',
-		'numOops'
+		'numOops',
+		'bufferCapacityOops'
 	],
 	#classVars : [
 	],
@@ -53,6 +54,9 @@ GbxOopArray >> buffer: anUninterpretedBytes offset: byteOffset
 	
 	buffer := anUninterpretedBytes.
 	offset := byteOffset.
+	bufferCapacityOops := (anUninterpretedBytes isKindOf: ByteArray)
+		ifTrue: [anUninterpretedBytes size // self bytesPerOop]
+		ifFalse: [bufferCapacityOops].
 	numOops := 0
 ]
 
@@ -77,6 +81,9 @@ GbxOopArray >> setBufferTo: anUninterpretedBytes
 [
 	
 	buffer := anUninterpretedBytes.
+	bufferCapacityOops := (anUninterpretedBytes isKindOf: ByteArray)
+		ifTrue: [anUninterpretedBytes size // self bytesPerOop]
+		ifFalse: [bufferCapacityOops].
 	self bufferOop setBufferTo: anUninterpretedBytes.
 	self setOffsetTo: 1
 ]
@@ -102,6 +109,12 @@ GbxOopArray >> oopAt: oopIndex
 GbxOopArray >> numOops
 [
 	^numOops
+]
+
+{ #category : 'private' }
+GbxOopArray >> bufferCapacityOops: anInteger
+[
+	bufferCapacityOops := anInteger
 ]
 
 { #category : 'putting' }
@@ -182,14 +195,21 @@ GbxOopArray >> allocateDataSize: newPhysicalSizeInOops
 		ifTrue:
 			[self gbsMessenger error:
 					'Not enough room in new size for current contents'].
-	newBuffer := ByteArray new: newPhysicalSizeInOops * self bytesPerOop.
+	newBuffer := ExternalAddress allocate: newPhysicalSizeInOops * self bytesPerOop.
+	newBuffer autoRelease.
+	1 to: newPhysicalSizeInOops * self bytesPerOop do: [ :index | newBuffer byteAt: index put: 0 ].
 	buffer == nil
 		ifFalse:
 			[| byteSize |
 			byteSize := numOops * self bytesPerOop.
-			newBuffer replaceBytesFrom: 1 to: byteSize with: buffer startingAt: 1].
+			newBuffer
+				gbxReplaceBytesFrom: 1
+				to: byteSize
+				with: buffer
+				startingAt: 1].
 	buffer := newBuffer.
 	offset := 1.
+	bufferCapacityOops := newPhysicalSizeInOops.
 	bufferOop := nil
 ]
 
@@ -262,8 +282,11 @@ GbxOopArray class >> size: aSize
 	
 	| inst buffer |
 	inst := self new.
-	buffer := ByteArray new: aSize * inst bytesPerOop.
+	buffer := ExternalAddress allocate: aSize * inst bytesPerOop.
+	buffer autoRelease.
+	1 to: aSize * inst bytesPerOop do: [ :index | buffer byteAt: index put: 0 ].
 	inst buffer: buffer offset: 1.
+	inst bufferCapacityOops: aSize.
 	^inst
 ]
 

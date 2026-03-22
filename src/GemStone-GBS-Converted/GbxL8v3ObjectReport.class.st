@@ -9,14 +9,14 @@ Class {
 GbxL8v3ObjectReport >> isOverlayed
 [
 
-	^((data basicAt: offset + 32) bitAnd: 16r20) ~= 0
+	^((data byteAt: offset + 32) bitAnd: 16r20) ~= 0
 ]
 
 { #category : 'accessing header' }
 GbxL8v3ObjectReport >> lacksReadAuth
 [
 
-	^((data basicAt: offset + 32) bitAnd: 16r40) ~= 0
+	^((data byteAt: offset + 32) bitAnd: 16r40) ~= 0
 ]
 
 { #category : 'accessing header' }
@@ -25,15 +25,15 @@ GbxL8v3ObjectReport >> segment: aSegment
 
 	segment := aSegment.
 	data
-		basicAt: offset + 6 put: (aSegment bitAnd: 16rFF);
-		basicAt: offset + 7 put: (aSegment bitShift: -8)
+		byteAt: offset + 6 put: (aSegment bitAnd: 16rFF);
+		byteAt: offset + 7 put: (aSegment bitShift: -8)
 ]
 
 { #category : 'accessing header' }
 GbxL8v3ObjectReport >> isIndexable
 [
 
-	^((data basicAt: offset + 32) bitAnd: 4) ~= 0
+	^((data byteAt: offset + 32) bitAnd: 4) ~= 0
 ]
 
 { #category : 'accessing header' }
@@ -42,8 +42,8 @@ GbxL8v3ObjectReport >> namedSize
 
 	namedSize == nil
 		ifTrue: 
-			[namedSize := (data basicAt: offset + 5) * 16r100
-				+ (data basicAt: offset + 4)].
+			[namedSize := (data byteAt: offset + 5) * 16r100
+				+ (data byteAt: offset + 4)].
 	^namedSize
 ]
 
@@ -51,7 +51,7 @@ GbxL8v3ObjectReport >> namedSize
 GbxL8v3ObjectReport >> objImpl
 [
 
-	objImpl == nil ifTrue: [objImpl := (data basicAt: offset + 32) bitAnd: 3].
+	objImpl == nil ifTrue: [objImpl := (data byteAt: offset + 32) bitAnd: 3].
 	^objImpl
 ]
 
@@ -59,7 +59,7 @@ GbxL8v3ObjectReport >> objImpl
 GbxL8v3ObjectReport >> isClamped
 [
 
-	^((data basicAt: offset + 32) bitAnd: 16r80) ~= 0
+	^((data byteAt: offset + 32) bitAnd: 16r80) ~= 0
 ]
 
 { #category : 'accessing header' }
@@ -69,8 +69,8 @@ GbxL8v3ObjectReport >> namedSize: aSize
 
 	namedSize := aSize.
 	data
-		basicAt: offset + 4 put: (aSize bitAnd: 16rFF);
-		basicAt: offset + 5 put: (aSize bitShift: -8)
+		byteAt: offset + 4 put: (aSize bitAnd: 16rFF);
+		byteAt: offset + 5 put: (aSize bitShift: -8)
 ]
 
 { #category : 'accessing header' }
@@ -79,8 +79,8 @@ GbxL8v3ObjectReport >> segment
 
 	segment == nil
 		ifTrue: 
-			[segment := (data basicAt: offset + 7) * 16r100
-				+ (data basicAt: offset + 6)].
+			[segment := (data byteAt: offset + 7) * 16r100
+				+ (data byteAt: offset + 6)].
 	^segment
 ]
 
@@ -88,7 +88,7 @@ GbxL8v3ObjectReport >> segment
 GbxL8v3ObjectReport >> isInvariant
 [
 
-	^((data basicAt: offset + 32) bitAnd: 8) ~= 0
+	^((data byteAt: offset + 32) bitAnd: 8) ~= 0
 ]
 
 { #category : 'private-addressing' }

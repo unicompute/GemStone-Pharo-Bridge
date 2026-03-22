@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxServerMap',
+	#name : 'GbxServerMapTool',
 	#superclass : 'Object',
 	#instVars : [
 		'session',
@@ -13,24 +13,24 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxServerMap class >> on: aSession [
+GbxServerMapTool class >> on: aSession [
 	^ self new
 		session: aSession;
 		yourself
 ]
 
 { #category : 'auditing' }
-GbxServerMap >> audit [
+GbxServerMapTool >> audit [
 	"Audit the server map for consistency"
 	| results |
 	
-	results := GbxServerMapAuditResults new.
+	results := GbxServerMapAuditResultsTool new.
 	self auditNodes: nodes results: results.
 	^ results
 ]
 
 { #category : 'auditing' }
-GbxServerMap >> auditNodes: nodeCollection results: auditResults [
+GbxServerMapTool >> auditNodes: nodeCollection results: auditResults [
 	"Audit a collection of nodes"
 	
 	nodeCollection do: [ :node |
@@ -40,42 +40,42 @@ GbxServerMap >> auditNodes: nodeCollection results: auditResults [
 ]
 
 { #category : 'accessing' }
-GbxServerMap >> nodes [
+GbxServerMapTool >> nodes [
 	^ nodes ifNil: [ nodes := Dictionary new ]
 ]
 
 { #category : 'accessing' }
-GbxServerMap >> rootNode [
+GbxServerMapTool >> rootNode [
 	^ rootNode
 ]
 
 { #category : 'accessing' }
-GbxServerMap >> rootNode: aNode [
+GbxServerMapTool >> rootNode: aNode [
 	rootNode := aNode
 ]
 
 { #category : 'accessing' }
-GbxServerMap >> segments [
+GbxServerMapTool >> segments [
 	^ segments
 ]
 
 { #category : 'accessing' }
-GbxServerMap >> segments: aCollection [
+GbxServerMapTool >> segments: aCollection [
 	segments := aCollection
 ]
 
 { #category : 'accessing' }
-GbxServerMap >> session [
+GbxServerMapTool >> session [
 	^ session
 ]
 
 { #category : 'accessing' }
-GbxServerMap >> session: aSession [
+GbxServerMapTool >> session: aSession [
 	session := aSession
 ]
 
 { #category : 'building' }
-GbxServerMap >> buildFromServer [
+GbxServerMapTool >> buildFromServer [
 	"Build the server map from GemStone"
 	| script result |
 	
@@ -98,7 +98,7 @@ GbxServerMap >> buildFromServer [
 ]
 
 { #category : 'parsing' }
-GbxServerMap >> parseSegments: aString [
+GbxServerMapTool >> parseSegments: aString [
 	"Parse segments string into nodes"
 	| lines parts node |
 	
@@ -107,7 +107,7 @@ GbxServerMap >> parseSegments: aString [
 		line isNotEmpty ifTrue: [
 			parts := line splitOn: $|.
 			parts size >= 2 ifTrue: [
-				node := GbxServerMapNode new
+				node := GbxServerMapNodeTool new
 					name: parts first;
 					oop: parts second asInteger;
 					session: session;
@@ -119,6 +119,6 @@ GbxServerMap >> parseSegments: aString [
 ]
 
 { #category : 'accessing' }
-GbxServerMap >> printString [
+GbxServerMapTool >> printString [
 	^ 'ServerMap (', (self nodes size) asString, ' nodes)'
 ]

@@ -34,7 +34,7 @@ GbsObject class >> fromFloat: aFloat
 
 	GbsConfiguration 
 		deprecated: 'GbsObject class>>fromFloat: deprecated March, 2006. Send #asGSObjectInSession: instead.'.
-	(GbsError verify: aFloat is: LimitedPrecisionReal) 
+	(GbsError verify: aFloat is: Float) 
 		ifTrue: [^aFloat asGSObject]
 ]
 
@@ -155,4 +155,3 @@ GbsObject class >> getFreeOop
 		deprecated: 'Delegate class>>getFreeOop deprecated March, 2006. Instead, create server objects through replication or server Smalltalk execution.'.
 	^GBSM currentSession getFreeOop
 ]
-

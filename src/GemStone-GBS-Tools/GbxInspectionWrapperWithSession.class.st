@@ -602,7 +602,7 @@ GbxInspectionWrapperWithSession >> basicNamedVariablesProtectedBy: protected
 { #category : 'collections' }
 GbxInspectionWrapperWithSession >> cache
 [
-	cache isNil ifTrue: [cache := GbxCollectionCache on: delegate].
+	cache isNil ifTrue: [cache := GbxCollectionCacheTool on: delegate].
 	^cache
 ]
 

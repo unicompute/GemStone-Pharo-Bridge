@@ -1,13 +1,13 @@
 Class {
-	#name : 'GbxTimeReplicator',
+	#name : 'GbxLargeIntegerReplicatorTool',
 	#superclass : 'GbxReplicator',
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }
 
 { #category : 'replication' }
-GbxTimeReplicator >> replicate [
-	"Replicate a Time from GemStone"
+GbxLargeIntegerReplicatorTool >> replicate [
+	"Replicate a LargeInteger from GemStone"
 	| script |
 	
 	target ifNil: [ ^ nil ].

@@ -1,12 +1,12 @@
 Class {
-	#name : 'GbxDictionaryReplicator',
+	#name : 'GbxDictionaryReplicatorTool',
 	#superclass : 'GbxReplicator',
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }
 
 { #category : 'replication' }
-GbxDictionaryReplicator >> replicate [
+GbxDictionaryReplicatorTool >> replicate [
 	"Replicate a Dictionary from GemStone"
 	| script result dict |
 	

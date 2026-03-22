@@ -2,6 +2,7 @@ Class {
 	#name : 'GbxObjectReport',
 	#superclass : 'Object',
 	#instVars : [
+		'bufferBytes',
 		'bytesBuffer',
 		'data',
 		'firstOffset',
@@ -201,9 +202,18 @@ GbxObjectReport >> setBufferTo: anUninterpretedBytes
 	"Set the buffer and make the oop and byte accessors point into its value portion."
 
 	data := anUninterpretedBytes.
+	bufferBytes := (anUninterpretedBytes isKindOf: ByteArray)
+		ifTrue: [anUninterpretedBytes size]
+		ifFalse: [bufferBytes].
 	self oopsBuffer setBufferTo: anUninterpretedBytes.
 	self bytesBuffer setBufferTo: anUninterpretedBytes.
 	self setOffsetTo: 1
+]
+
+{ #category : 'private-addressing' }
+GbxObjectReport >> bufferBytes: anInteger
+[
+	bufferBytes := anInteger
 ]
 
 { #category : 'private-addressing' }
@@ -322,7 +332,7 @@ GbxObjectReport >> maxValueBufferOops
 GbxObjectReport >> maxValueBufferBytes
 [
 
-	^data sizeInBytes - (offset - 1) - fixedSize
+	^bufferBytes - (offset - 1) - fixedSize
 ]
 
 { #category : 'accessing' }
@@ -366,7 +376,7 @@ GbxObjectReport >> valueBuffSize
 [
 
 	valueBuffSize == nil
-		ifTrue: [valueBuffSize := data longAt: offset].
+		ifTrue: [valueBuffSize := data unsignedLongAt: offset].
 	^valueBuffSize
 ]
 
@@ -407,7 +417,7 @@ GbxObjectReport >> valueBuffSize: aSize
 [
 
 	valueBuffSize := aSize.
-	data longAt: offset put: aSize
+	data unsignedLongAt: offset put: aSize
 ]
 
 { #category : 'accessing header' }

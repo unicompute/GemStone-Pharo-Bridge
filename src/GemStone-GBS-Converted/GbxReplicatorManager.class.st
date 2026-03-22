@@ -40,7 +40,7 @@ GbxReplicatorManager >> fetchMissingServerInstVarNames
 				collect: [:repl | repl serverClass].
 	allInstVarNames := session
 				unsynchronizedEvaluateBlock: '[:classes | classes collect:[:each | each  _instVarNames copy]]'
-				with: classDelegates.
+				with: classDelegates asArray.
 	replicatorsNeedingServerInstVarNames with: allInstVarNames
 		do: [:repl :ivars | repl initializeForServerInstVarNames: ivars]
 ]
@@ -409,4 +409,3 @@ GbxReplicatorManager class >> newForSession: sess
 	inst initializeForSession: sess.
 	^inst
 ]
-

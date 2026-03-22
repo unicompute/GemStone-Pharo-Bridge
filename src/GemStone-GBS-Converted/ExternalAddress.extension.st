@@ -9,3 +9,18 @@ ExternalAddress >> asAddress [
 ExternalAddress >> plusOffset: anInteger [
 	^ self + anInteger
 ]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+ExternalAddress >> gbxByteSizeForReplace [
+	^ nil
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+ExternalAddress >> gbxByteAtForReplace: index [
+	^ self byteAt: index
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+ExternalAddress >> gbxByteAtForReplace: index put: value [
+	^ self byteAt: index put: value
+]

@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxEventDetector',
+	#name : 'GbxEventDetectorTool',
 	#superclass : 'Object',
 	#instVars : [
 		'session',
@@ -12,14 +12,14 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxEventDetector class >> on: aSession [
+GbxEventDetectorTool class >> on: aSession [
 	^ self new
 		session: aSession;
 		yourself
 ]
 
 { #category : 'events' }
-GbxEventDetector >> addHandler: aBlock forEvent: eventName [
+GbxEventDetectorTool >> addHandler: aBlock forEvent: eventName [
 	"Add an event handler"
 	eventHandlers ifNil: [ eventHandlers := Dictionary new ].
 	
@@ -28,7 +28,7 @@ GbxEventDetector >> addHandler: aBlock forEvent: eventName [
 ]
 
 { #category : 'events' }
-GbxEventDetector >> detectEvents [
+GbxEventDetectorTool >> detectEvents [
 	"Start detecting events"
 	isDetecting := true.
 	
@@ -39,12 +39,12 @@ GbxEventDetector >> detectEvents [
 ]
 
 { #category : 'accessing' }
-GbxEventDetector >> eventCount [
+GbxEventDetectorTool >> eventCount [
 	^ eventCount ifNil: [ 0 ]
 ]
 
 { #category : 'events' }
-GbxEventDetector >> fireEvent: eventName withData: data [
+GbxEventDetectorTool >> fireEvent: eventName withData: data [
 	"Fire an event with data"
 	| handlers |
 	
@@ -59,7 +59,7 @@ GbxEventDetector >> fireEvent: eventName withData: data [
 ]
 
 { #category : 'initialization' }
-GbxEventDetector >> initialize [
+GbxEventDetectorTool >> initialize [
 	super initialize.
 	eventHandlers := Dictionary new.
 	isDetecting := false.
@@ -67,12 +67,12 @@ GbxEventDetector >> initialize [
 ]
 
 { #category : 'accessing' }
-GbxEventDetector >> isDetecting [
+GbxEventDetectorTool >> isDetecting [
 	^ isDetecting ifNil: [ false ]
 ]
 
 { #category : 'events' }
-GbxEventDetector >> pollForEvents [
+GbxEventDetectorTool >> pollForEvents [
 	"Poll for events from GemStone"
 	| script result |
 	
@@ -97,17 +97,17 @@ GbxEventDetector >> pollForEvents [
 ]
 
 { #category : 'accessing' }
-GbxEventDetector >> session [
+GbxEventDetectorTool >> session [
 	^ session
 ]
 
 { #category : 'accessing' }
-GbxEventDetector >> session: aSession [
+GbxEventDetectorTool >> session: aSession [
 	session := aSession
 ]
 
 { #category : 'events' }
-GbxEventDetector >> stopDetecting [
+GbxEventDetectorTool >> stopDetecting [
 	"Stop detecting events"
 	isDetecting := false.
 ]

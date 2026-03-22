@@ -81,12 +81,16 @@ GbxEventDetector >> pollForCurrentSignals
 					[:ex |
 					"If there's a fatal error, the event detector thread should shut down.
 					 We can't rely on catching GbsFataError's as not all fatal errors have client class mappings.
-					 We *know* the polling uses a deprecated method. If we catch a Deprecated, just resume."
+					 We *know* the polling uses a deprecated method. If we catch a Deprecated, just resume.
+					 On Pharo, a fresh login can also race into an object-does-not-exist
+					 poll result before the session is fully settled; treat that as no event."
 					ex originator number // 1000 = 4
 						ifTrue: [Processor activeProcess terminate]
 						ifFalse: [ex originator number = 2746
 							ifTrue: [ex resume]
-							ifFalse: [ex pass]]].
+							ifFalse: [ex originator number = 2101
+								ifTrue: [ex return: session]
+								ifFalse: [ex pass]]]].
 	result ~~ session]
 			whileTrue: []
 ]

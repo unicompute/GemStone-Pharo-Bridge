@@ -10,8 +10,11 @@ Date class >> gbsReplicatorClass [
 Date class >> instVarMap [
 	"GBS"
 
-	^super instVarMap ,
-		#( (day dayOfYear) )
+	"VW Date mapped the server's dayOfYear onto a local #day instvar. Pharo's Date is a
+	Timespan with #start/#duration, so that mapping is invalid and aborts login-time
+	replicator setup. Leave the mapping empty until Date gets a dedicated Pharo replicator."
+
+	^super instVarMap
 ]
 
 { #category : '*GemStone-GBS-Converted-GBS-extensions' }
@@ -82,4 +85,3 @@ Date >> osType [
 Date >> isRunningUnderAssertingVM [
 	^false
 ]
-

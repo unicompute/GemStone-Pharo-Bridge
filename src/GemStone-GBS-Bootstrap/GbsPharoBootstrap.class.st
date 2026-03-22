@@ -40,6 +40,10 @@ GbsPharoBootstrap class >> installPharoAliases
 	Smalltalk at: #TwoByteSymbol put: WideSymbol.
 	Smalltalk at: #FourByteSymbol put: WideSymbol.
 	Smalltalk at: #Timestamp put: DateAndTime.
+	Smalltalk at: #LimitedPrecisionReal put: Float.
+	Smalltalk at: #GbxArray put: Array.
+	Smalltalk at: #NoModificationError put: Error.
+	Smalltalk at: #RedefinitionNotification put: Notification.
 	(Smalltalk at: #GbxFilename ifAbsent: [ nil ])
 		ifNotNil: [ :filenameClass | Smalltalk at: #Filename put: filenameClass ]
 ]
@@ -92,6 +96,9 @@ GbsPharoBootstrap class >> installPlaceholderGlobalsNamed: symbolCollection
 GbsPharoBootstrap class >> runtimePlaceholderGlobalNames
 [
 	^#(
+		CRC32Function
+		Exceptions
+		GbxVwVersion
 		OAbstractDictionary
 		OCharacter
 		OCharacterCollection
@@ -117,6 +124,20 @@ GbsPharoBootstrap class >> runtimePlaceholderGlobalNames
 		Ofalse
 		Onil
 		Otrue
+		OSHandle
+		ObjectMemory
+		InputState
+		MethodDefinition
+		Override
+		Policies
+		ProcessHandle
+		Registry
+		SocketAccessor
+		StObjTable
+		Store
+		SystemUtils
+		SystemVariable
+		Workspace
 		Zero
 	)
 ]

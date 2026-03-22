@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxBehaviorMapTableSegment',
+	#name : 'GbxBehaviorMapTableSegmentTool',
 	#superclass : 'Object',
 	#instVars : [
 		'segmentIndex',
@@ -12,7 +12,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxBehaviorMapTableSegment class >> index: anIndex bucketCount: count [
+GbxBehaviorMapTableSegmentTool class >> index: anIndex bucketCount: count [
 	^ self new
 		segmentIndex: anIndex;
 		bucketCount: count;
@@ -20,7 +20,7 @@ GbxBehaviorMapTableSegment class >> index: anIndex bucketCount: count [
 ]
 
 { #category : 'accessing' }
-GbxBehaviorMapTableSegment >> at: anOop [
+GbxBehaviorMapTableSegmentTool >> at: anOop [
 	"Get entry at OOP hash"
 	| index |
 	
@@ -29,7 +29,7 @@ GbxBehaviorMapTableSegment >> at: anOop [
 ]
 
 { #category : 'accessing' }
-GbxBehaviorMapTableSegment >> at: anOop put: anEntry [
+GbxBehaviorMapTableSegmentTool >> at: anOop put: anEntry [
 	"Put entry at OOP hash"
 	| index |
 	
@@ -41,57 +41,57 @@ GbxBehaviorMapTableSegment >> at: anOop put: anEntry [
 ]
 
 { #category : 'accessing' }
-GbxBehaviorMapTableSegment >> bucketCount [
+GbxBehaviorMapTableSegmentTool >> bucketCount [
 	^ bucketCount ifNil: [ 0 ]
 ]
 
 { #category : 'accessing' }
-GbxBehaviorMapTableSegment >> bucketCount: anInteger [
+GbxBehaviorMapTableSegmentTool >> bucketCount: anInteger [
 	bucketCount := anInteger.
 	entries := Dictionary new.
 ]
 
 { #category : 'accessing' }
-GbxBehaviorMapTableSegment >> clear [
+GbxBehaviorMapTableSegmentTool >> clear [
 	"Clear the segment"
 	entries := Dictionary new.
 	occupancy := 0.
 ]
 
 { #category : 'accessing' }
-GbxBehaviorMapTableSegment >> entries [
+GbxBehaviorMapTableSegmentTool >> entries [
 	^ entries ifNil: [ entries := Dictionary new ]
 ]
 
 { #category : 'accessing' }
-GbxBehaviorMapTableSegment >> hashIndexFor: anOop [
+GbxBehaviorMapTableSegmentTool >> hashIndexFor: anOop [
 	"Calculate hash index for an OOP"
 	^ anOop \\ bucketCount
 ]
 
 { #category : 'accessing' }
-GbxBehaviorMapTableSegment >> occupancy [
+GbxBehaviorMapTableSegmentTool >> occupancy [
 	^ occupancy ifNil: [ 0 ]
 ]
 
 { #category : 'accessing' }
-GbxBehaviorMapTableSegment >> percentFull [
+GbxBehaviorMapTableSegmentTool >> percentFull [
 	bucketCount = 0 ifTrue: [ ^ 0 ].
 	^ (occupancy * 100) // bucketCount
 ]
 
 { #category : 'accessing' }
-GbxBehaviorMapTableSegment >> printString [
+GbxBehaviorMapTableSegmentTool >> printString [
 	^ 'BehaviorMapSegment ', self segmentIndex asString,
 	  ' (', self percentFull asString, '% full)'
 ]
 
 { #category : 'accessing' }
-GbxBehaviorMapTableSegment >> segmentIndex [
+GbxBehaviorMapTableSegmentTool >> segmentIndex [
 	^ segmentIndex
 ]
 
 { #category : 'accessing' }
-GbxBehaviorMapTableSegment >> segmentIndex: anInteger [
+GbxBehaviorMapTableSegmentTool >> segmentIndex: anInteger [
 	segmentIndex := anInteger
 ]

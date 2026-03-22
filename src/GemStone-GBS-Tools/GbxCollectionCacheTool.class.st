@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxCollectionCache',
+	#name : 'GbxCollectionCacheTool',
 	#superclass : 'Object',
 	#instVars : [
 		'elements',
@@ -24,7 +24,7 @@ Class {
 }
 
 { #category : 'execution strings' }
-GbxCollectionCache >> setExecutionString: anInterval 
+GbxCollectionCacheTool >> setExecutionString: anInterval 
 [
 	"The general algorithm for larger collections is to iterate over the collection using a do: loop starting at 1 each time. When we get within the interval window, suck out the elements until we're outside the window again. Then return immediately. This avoids the penalty of creating a temporary sequenceable object which could get stuck onto disk.
 	"
@@ -72,7 +72,7 @@ GbxCollectionCache >> setExecutionString: anInterval
 ]
 
 { #category : 'execution strings' }
-GbxCollectionCache >> sortedExecutionString: anInterval
+GbxCollectionCacheTool >> sortedExecutionString: anInterval
 [
 	"sort anything less than 2000 elements, nothing larger for performance and page size reasons. "
 
@@ -114,7 +114,7 @@ GbxCollectionCache >> sortedExecutionString: anInterval
 ]
 
 { #category : 'execution strings' }
-GbxCollectionCache >> arrayExecutionString: anInterval 
+GbxCollectionCacheTool >> arrayExecutionString: anInterval 
 [
 	^'
 	| gbxValueNames gbxValues gbxDiff gbxObject gbxWriteStream gbxClass gbxClasses gbxClassNames gbxIsClass gbxArray  |
@@ -153,7 +153,7 @@ GbxCollectionCache >> arrayExecutionString: anInterval
 ]
 
 { #category : 'execution strings' }
-GbxCollectionCache >> sortedDictionaryExecutionString: anInterval 
+GbxCollectionCacheTool >> sortedDictionaryExecutionString: anInterval 
 [
 	"sort anything less than 2000 keys, nothing larger for performance and page size reasons. "
 
@@ -218,7 +218,7 @@ GbxCollectionCache >> sortedDictionaryExecutionString: anInterval
 ]
 
 { #category : 'execution strings' }
-GbxCollectionCache >> dictionaryExecutionString: anInterval 
+GbxCollectionCacheTool >> dictionaryExecutionString: anInterval 
 [
 	"see #setExecutionString: comments for algorithm explanation. This is very similar, except we return delegates and printStrings for the keys as well."
 
@@ -290,56 +290,56 @@ GbxCollectionCache >> dictionaryExecutionString: anInterval
 ]
 
 { #category : 'accessing' }
-GbxCollectionCache >> classNames
+GbxCollectionCacheTool >> classNames
 [
 
 	^classNames
 ]
 
 { #category : 'accessing' }
-GbxCollectionCache >> keyClassOops
+GbxCollectionCacheTool >> keyClassOops
 [
 
 	^keyClassOops
 ]
 
 { #category : 'accessing' }
-GbxCollectionCache >> delegate
+GbxCollectionCacheTool >> delegate
 [
 
 	^delegate
 ]
 
 { #category : 'accessing' }
-GbxCollectionCache >> keyIsClass
+GbxCollectionCacheTool >> keyIsClass
 [
 
 	^keyIsClass
 ]
 
 { #category : 'accessing' }
-GbxCollectionCache >> keyNames
+GbxCollectionCacheTool >> keyNames
 [
 
 	^keyNames
 ]
 
 { #category : 'accessing' }
-GbxCollectionCache >> keyOops
+GbxCollectionCacheTool >> keyOops
 [
 
 	^keyOops
 ]
 
 { #category : 'accessing' }
-GbxCollectionCache >> valueNames
+GbxCollectionCacheTool >> valueNames
 [
 
 	^valueNames
 ]
 
 { #category : 'accessing' }
-GbxCollectionCache >> actualSize
+GbxCollectionCacheTool >> actualSize
 [
 	
 	actualSize isNil
@@ -349,26 +349,26 @@ GbxCollectionCache >> actualSize
 ]
 
 { #category : 'accessing' }
-GbxCollectionCache >> delegate: anObject
+GbxCollectionCacheTool >> delegate: anObject
 [
 	delegate := anObject
 ]
 
 { #category : 'accessing' }
-GbxCollectionCache >> actualSize: anObject
+GbxCollectionCacheTool >> actualSize: anObject
 [
 	actualSize := anObject
 ]
 
 { #category : 'accessing' }
-GbxCollectionCache >> valueOops
+GbxCollectionCacheTool >> valueOops
 [
 
 	^valueOops
 ]
 
 { #category : 'accessing' }
-GbxCollectionCache >> cachedRanges
+GbxCollectionCacheTool >> cachedRanges
 [
 	"return an array of intervals representing slots in the collection which we should or have returned. This should be an initial range (1..n) and any ranges the user has selected"
 
@@ -376,41 +376,41 @@ GbxCollectionCache >> cachedRanges
 ]
 
 { #category : 'accessing' }
-GbxCollectionCache >> classOops
+GbxCollectionCacheTool >> classOops
 [
 
 	^classOops
 ]
 
 { #category : 'accessing' }
-GbxCollectionCache >> initialBufferSize
+GbxCollectionCacheTool >> initialBufferSize
 [
 
 	^initialBufferSize
 ]
 
 { #category : 'accessing' }
-GbxCollectionCache >> elements
+GbxCollectionCacheTool >> elements
 [
 	^elements
 ]
 
 { #category : 'accessing' }
-GbxCollectionCache >> isClass
+GbxCollectionCacheTool >> isClass
 [
 
 	^isClass
 ]
 
 { #category : 'accessing' }
-GbxCollectionCache >> keyClassNames
+GbxCollectionCacheTool >> keyClassNames
 [
 
 	^keyClassNames
 ]
 
 { #category : 'testing' }
-GbxCollectionCache >> isSorted
+GbxCollectionCacheTool >> isSorted
 [
 	"for collections where we sort on small collections"
 
@@ -418,7 +418,7 @@ GbxCollectionCache >> isSorted
 ]
 
 { #category : 'private' }
-GbxCollectionCache >> extractValueObjectsFrom: fetchedValues for: anInterval
+GbxCollectionCacheTool >> extractValueObjectsFrom: fetchedValues for: anInterval
 [
 	
 	^((fetchedValues at: 1) session
@@ -435,7 +435,7 @@ GbxCollectionCache >> extractValueObjectsFrom: fetchedValues for: anInterval
 ]
 
 { #category : 'caching' }
-GbxCollectionCache >> cacheDictionaryInterval: anInterval executionString: aString isSorted: isSorted
+GbxCollectionCacheTool >> cacheDictionaryInterval: anInterval executionString: aString isSorted: isSorted
 [
 	"Errors can occur during the fetch. Handle any unhandlable errors by informing the user that
 	the collection cannot be retrieved."
@@ -482,7 +482,7 @@ GbxCollectionCache >> cacheDictionaryInterval: anInterval executionString: aStri
 ]
 
 { #category : 'caching' }
-GbxCollectionCache >> extractDictionaryOopInfoFrom: resultArray
+GbxCollectionCacheTool >> extractDictionaryOopInfoFrom: resultArray
 [
 
 	keyOops := resultArray at: 1.
@@ -498,7 +498,7 @@ GbxCollectionCache >> extractDictionaryOopInfoFrom: resultArray
 ]
 
 { #category : 'caching' }
-GbxCollectionCache >> cacheDictionaryInterval: anInterval 
+GbxCollectionCacheTool >> cacheDictionaryInterval: anInterval 
 [
 	GBSM showBusyWhile: 
 			[self 
@@ -510,7 +510,7 @@ GbxCollectionCache >> cacheDictionaryInterval: anInterval
 ]
 
 { #category : 'caching' }
-GbxCollectionCache >> dictionaryWrapperFor: dlg element: element index: idx1
+GbxCollectionCacheTool >> dictionaryWrapperFor: dlg element: element index: idx1
 [
 
 	| wrapper |
@@ -533,7 +533,7 @@ GbxCollectionCache >> dictionaryWrapperFor: dlg element: element index: idx1
 ]
 
 { #category : 'caching' }
-GbxCollectionCache >> cacheSetInterval: anInterval 
+GbxCollectionCacheTool >> cacheSetInterval: anInterval 
 [
 	"gather up the set elements indexed within the interval. Sort if our array meets the criteria for sorting which is, basically, small collections"
 
@@ -547,7 +547,7 @@ GbxCollectionCache >> cacheSetInterval: anInterval
 ]
 
 { #category : 'caching' }
-GbxCollectionCache >> cacheArrayInterval: anInterval 
+GbxCollectionCacheTool >> cacheArrayInterval: anInterval 
 [
 	"gather up the array elements indexed within the interval. never sort sequenceable collections. They already have an order"
 
@@ -559,7 +559,7 @@ GbxCollectionCache >> cacheArrayInterval: anInterval
 ]
 
 { #category : 'caching' }
-GbxCollectionCache >> cacheInterval: anInterval executionString: aString isSorted: isSorted
+GbxCollectionCacheTool >> cacheInterval: anInterval executionString: aString isSorted: isSorted
 [
 	"used for IdentityBags and Sequencable collections. Pass in if it is being sorted or not.
 	Errors can occur during the fetch. Handle any unhandlable errors by informing the user that
@@ -597,7 +597,7 @@ GbxCollectionCache >> cacheInterval: anInterval executionString: aString isSorte
 ]
 
 { #category : 'caching' }
-GbxCollectionCache >> wrapperFor: dlg element: element index: idx1
+GbxCollectionCacheTool >> wrapperFor: dlg element: element index: idx1
 [
 
 	| wrapper |
@@ -620,7 +620,7 @@ GbxCollectionCache >> wrapperFor: dlg element: element index: idx1
 ]
 
 { #category : 'caching' }
-GbxCollectionCache >> cacheIdentityBagInterval: anInterval 
+GbxCollectionCacheTool >> cacheIdentityBagInterval: anInterval 
 [
 	"gather up the bag's elements indexed within the interval. bags are never sorted."
 
@@ -632,7 +632,7 @@ GbxCollectionCache >> cacheIdentityBagInterval: anInterval
 ]
 
 { #category : 'caching' }
-GbxCollectionCache >> extractOopInfoFrom: resultArray
+GbxCollectionCacheTool >> extractOopInfoFrom: resultArray
 [
 
 	valueOops := resultArray at: 1.
@@ -643,21 +643,21 @@ GbxCollectionCache >> extractOopInfoFrom: resultArray
 ]
 
 { #category : 'initialize-release' }
-GbxCollectionCache >> initialize
+GbxCollectionCacheTool >> initialize
 [
 	initialBufferSize := 2000.
 	cachedRanges := OrderedCollection with: (1 to: initialBufferSize).
 ]
 
 { #category : 'initialize-release' }
-GbxCollectionCache >> initializeElements
+GbxCollectionCacheTool >> initializeElements
 [
 	elements := Array new: self actualSize.
 	1 to: self actualSize do: [:idx | elements at: idx put: idx]
 ]
 
 { #category : 'updating' }
-GbxCollectionCache >> refreshDictionary
+GbxCollectionCacheTool >> refreshDictionary
 [
 	"recache everything from scratch"
 
@@ -667,7 +667,7 @@ GbxCollectionCache >> refreshDictionary
 ]
 
 { #category : 'updating' }
-GbxCollectionCache >> refreshIdentityBag
+GbxCollectionCacheTool >> refreshIdentityBag
 [
 	"recache everything from scratch"
 
@@ -677,7 +677,7 @@ GbxCollectionCache >> refreshIdentityBag
 ]
 
 { #category : 'updating' }
-GbxCollectionCache >> refreshArray
+GbxCollectionCacheTool >> refreshArray
 [
 	"recache everything from scratch"
 
@@ -686,7 +686,7 @@ GbxCollectionCache >> refreshArray
 ]
 
 { #category : 'updating' }
-GbxCollectionCache >> refreshSet
+GbxCollectionCacheTool >> refreshSet
 [
 	"recache everything from scratch"
 
@@ -695,7 +695,7 @@ GbxCollectionCache >> refreshSet
 ]
 
 { #category : 'instance creation' }
-GbxCollectionCache class >> on: aGbsObject 
+GbxCollectionCacheTool class >> on: aGbsObject 
 [
 	^self new initialize delegate: aGbsObject
 ]

@@ -1,6 +1,6 @@
 Class {
-	#name : 'GbxWaitingEventDetector',
-	#superclass : 'GbxEventDetector',
+	#name : 'GbxWaitingEventDetectorTool',
+	#superclass : 'GbxEventDetectorTool',
 	#instVars : [
 		'eventQueue',
 		'waitForEvents',
@@ -12,14 +12,14 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxWaitingEventDetector class >> on: aSession [
+GbxWaitingEventDetectorTool class >> on: aSession [
 	^ self new
 		session: aSession;
 		yourself
 ]
 
 { #category : 'instance creation' }
-GbxWaitingEventDetector class >> on: aSession timeout: milliseconds [
+GbxWaitingEventDetectorTool class >> on: aSession timeout: milliseconds [
 	^ self new
 		session: aSession;
 		timeout: milliseconds;
@@ -27,7 +27,7 @@ GbxWaitingEventDetector class >> on: aSession timeout: milliseconds [
 ]
 
 { #category : 'events' }
-GbxWaitingEventDetector >> detectEvents [
+GbxWaitingEventDetectorTool >> detectEvents [
 	"Start waiting for events"
 	isDetecting := true.
 	eventQueue := SharedQueue new.
@@ -38,7 +38,7 @@ GbxWaitingEventDetector >> detectEvents [
 ]
 
 { #category : 'events' }
-GbxWaitingEventDetector >> fireEvent: eventName withData: data [
+GbxWaitingEventDetectorTool >> fireEvent: eventName withData: data [
 	"Fire an event with data"
 	super fireEvent: eventName withData: data.
 	
@@ -48,26 +48,26 @@ GbxWaitingEventDetector >> fireEvent: eventName withData: data [
 ]
 
 { #category : 'initialization' }
-GbxWaitingEventDetector >> initialize [
+GbxWaitingEventDetectorTool >> initialize [
 	super initialize.
 	waitForEvents := true.
 	timeout := 5000. "5 seconds default"
 ]
 
 { #category : 'events' }
-GbxWaitingEventDetector >> nextEvent [
+GbxWaitingEventDetectorTool >> nextEvent [
 	"Get next event (blocking)"
 	^ eventQueue next
 ]
 
 { #category : 'events' }
-GbxWaitingEventDetector >> nextEventIfAvailable [
+GbxWaitingEventDetectorTool >> nextEventIfAvailable [
 	"Get next event if available (non-blocking)"
 	^ eventQueue nextAvailable
 ]
 
 { #category : 'events' }
-GbxWaitingEventDetector >> nextEventWithTimeout [
+GbxWaitingEventDetectorTool >> nextEventWithTimeout [
 	"Get next event with timeout"
 	| deadline |
 	
@@ -84,17 +84,17 @@ GbxWaitingEventDetector >> nextEventWithTimeout [
 ]
 
 { #category : 'accessing' }
-GbxWaitingEventDetector >> timeout [
+GbxWaitingEventDetectorTool >> timeout [
 	^ timeout
 ]
 
 { #category : 'accessing' }
-GbxWaitingEventDetector >> timeout: anInteger [
+GbxWaitingEventDetectorTool >> timeout: anInteger [
 	timeout := anInteger
 ]
 
 { #category : 'events' }
-GbxWaitingEventDetector >> waitForEvent [
+GbxWaitingEventDetectorTool >> waitForEvent [
 	"Wait for an event to occur"
 	| script result |
 	

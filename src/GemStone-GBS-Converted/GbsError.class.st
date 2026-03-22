@@ -960,6 +960,42 @@ GbsError class >> errorSignal
 	^GbsGemStoneError
 ]
 
+{ #category : 'signal constants' }
+GbsError class >> hostErrorSignal
+[
+	"Return the standard host Smalltalk error signal/exception."
+
+	^Error
+]
+
+{ #category : 'signal constants' }
+GbsError class >> haltSignal
+[
+	"Return the standard host Smalltalk halt/debug exception."
+
+	^Smalltalk at: #Halt ifAbsent: [ Error ]
+]
+
+{ #category : 'signal constants' }
+GbsError class >> noHandlerSignal
+[
+	"Return the host exception raised when no handler is found."
+
+	^Smalltalk
+		at: #UnhandledError
+		ifAbsent: [ self hostErrorSignal ]
+]
+
+{ #category : 'signal constants' }
+GbsError class >> userBreakSignal
+[
+	"Return the host exception raised for user interrupts."
+
+	^Smalltalk
+		at: #UserInterrupt
+		ifAbsent: [ self hostErrorSignal ]
+]
+
 { #category : 'private-argument verification' }
 GbsError class >> verifyBytes: anObject
 [

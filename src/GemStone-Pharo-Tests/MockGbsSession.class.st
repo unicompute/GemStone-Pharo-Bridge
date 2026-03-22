@@ -57,6 +57,14 @@ MockGbsSession >> executeAndFetch: script context: contextOop [
 	^ self executeAndFetch: script
 ]
 
+{ #category : 'execution' }
+MockGbsSession >> gemStoneClassFor: aBehavior [
+	| block |
+	block := self stubs at: #gemStoneClassFor ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: aBehavior ].
+	^ super gemStoneClassFor: aBehavior
+]
+
 { #category : 'testing' }
 MockGbsSession >> isLoggedIn [
 	| value |

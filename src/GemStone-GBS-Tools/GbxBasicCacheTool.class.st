@@ -1,6 +1,6 @@
 Class {
-	#name : 'GbxBasicCache',
-	#superclass : 'GbxCollectionCache',
+	#name : 'GbxBasicCacheTool',
+	#superclass : 'GbxCollectionCacheTool',
 	#instVars : [
 	],
 	#classVars : [
@@ -9,7 +9,7 @@ Class {
 }
 
 { #category : 'building collections' }
-GbxBasicCache >> cacheArrayInterval: anInterval
+GbxBasicCacheTool >> cacheArrayInterval: anInterval
 [
 	"grab using basicAt: rather than using one of the superclass methods"
 
@@ -66,7 +66,7 @@ GbxBasicCache >> cacheArrayInterval: anInterval
 ]
 
 { #category : 'accessing' }
-GbxBasicCache >> actualSize
+GbxBasicCacheTool >> actualSize
 [
 	"Answer the number of indexed instance variables in
 	 the server personality of the inspected object.

@@ -74,7 +74,7 @@ GbxTraversalBuffer >> remainingSpace
 	"Return the amount of buffer space remaining, not counting any contents of the
 	 current object report, which is assumed to point just past the used data."
 
-	^data sizeInBytes - objectReport offset + 1
+	^self bufferSize - objectReport offset + 1
 ]
 
 { #category : 'accessing' }
@@ -82,7 +82,7 @@ GbxTraversalBuffer >> bufferSize
 [
 	"Return the size of the allocated buffer."
 
-	^data sizeInBytes
+	^self allocatedBytes + self headerSize
 ]
 
 { #category : 'accessing' }
@@ -212,7 +212,9 @@ GbxTraversalBuffer >> allocateDataSize: logicalSize
 
 	| physSize |
 	physSize := logicalSize + self headerSize.
-	data := ByteArray new: physSize.
+	data := ExternalAddress allocate: physSize.
+	data autoRelease.
+	1 to: physSize do: [ :index | data byteAt: index put: 0 ].
 	lock := nil. "The unlocked state -- make it explicit."
 	self
 		allocatedBytes: logicalSize;
@@ -225,7 +227,9 @@ GbxTraversalBuffer >> initializeObjectReport
 	"Return a sliding object report that will be used to store objects into the traversal buffer."
 
 	objectReport := self objRepTypeClass session: session.
-	objectReport setBufferTo: data
+	objectReport
+		setBufferTo: data;
+		bufferBytes: self bufferSize
 ]
 
 { #category : 'enumerating' }
@@ -245,7 +249,9 @@ GbxTraversalBuffer >> reportsAllButLastDo: reportBlock
 			nil]
 		ifFalse: 
 			[objReport := self objRepTypeClass session: session.
-			objReport setBufferTo: data.
+			objReport
+				setBufferTo: data;
+				bufferBytes: self bufferSize.
 			
 			[objReport setOffsetTo: position.
 			position := (self wordAlign: position + objReport sizeWithValueBuff - 1)
@@ -307,7 +313,9 @@ GbxTraversalBuffer >> printReportsOn: stream
 	tOffset := 1.
 	stream cr.
 	rep := self objRepTypeClass session: session.
-	rep setBufferTo: data.
+	rep
+		setBufferTo: data;
+		bufferBytes: self bufferSize.
 	
 	[rep setOffsetTo: self headerSize + tOffset.
 	tOffset + rep sizeWithValueBuff > lastOffset
@@ -375,4 +383,3 @@ GbxTraversalBuffer class >> minimumReportSize
 			minimumReportSize := buff objRepTypeClass fixedSize + 8].
 	^minimumReportSize
 ]
-

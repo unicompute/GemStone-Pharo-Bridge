@@ -390,7 +390,7 @@ GbxToolStatMonitor >> session [
 { #category : 'accessing' }
 GbxToolStatMonitor >> session: aSession [
 	session := aSession.
-	cache := GbxBasicCache on: aSession.
+	cache := GbxBasicCacheTool on: aSession.
 ]
 
 { #category : 'accessing' }

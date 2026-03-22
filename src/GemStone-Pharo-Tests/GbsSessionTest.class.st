@@ -44,6 +44,17 @@ GbsSessionTest >> testCommitTransactionFailure [
 	self deny: mockSession commitTransaction.
 ]
 
+{ #category : 'tests' }
+GbsSessionTest >> testClassAsGSObjectUsesGsClassAlias [
+	| mockSession |
+	mockSession := MockGbsSession new.
+	mockSession stubs
+		at: #gemStoneClassFor
+		put: [ :behavior | behavior == GsClass ifTrue: [ #viaGsClass ] ifFalse: [ #unexpected ] ].
+
+	self assert: (Class asGSObjectInSession: mockSession) equals: #viaGsClass
+]
+
 { #category : 'running' }
 GbsSessionTest >> testExecuteStringReturnsUnboxedObject [
 	| mockSession result |

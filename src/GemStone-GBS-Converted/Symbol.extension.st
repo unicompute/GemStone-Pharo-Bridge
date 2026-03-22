@@ -24,6 +24,11 @@ Symbol >> gbxCanTraversalSplit [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Symbol >> gbxAsCString [
+	^ ExternalAddress fromString: self asString
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Symbol >> gbxCouldBeForwarder [
 	^ false
 ]

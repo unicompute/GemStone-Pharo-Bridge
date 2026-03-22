@@ -167,8 +167,10 @@ GbsLauncherTest >> testBehaviorOopMapKeepsRuntimeApiAndToolVariants [
 	self assert: (GbxBehaviorOopMap respondsTo: #newForSession:).
 	self assert: GbxBehaviorOopMap superclass equals: GbxOopKeyedDictionary.
 	self assert: GbxBehaviorOopMapNode superclass equals: GbxOopKeyedNode.
+	self assert: GbxBehaviorMapTableSegment superclass equals: GbxHashTableSegment.
 	self assert: (Smalltalk at: #GbxBehaviorOopMapTool ifAbsent: [ nil ]) notNil.
-	self assert: (Smalltalk at: #GbxBehaviorOopMapNodeTool ifAbsent: [ nil ]) notNil
+	self assert: (Smalltalk at: #GbxBehaviorOopMapNodeTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxBehaviorMapTableSegmentTool ifAbsent: [ nil ]) notNil
 ]
 
 { #category : 'tests' }
@@ -178,6 +180,109 @@ GbsLauncherTest >> testClampManagerKeepsRuntimeApiAndToolVariant [
 		assert: GbxClampManager instVarNames
 		equals: #(classClamps defaultReplicationScheme identityClamps manager replicationSchemes threadSpecificSchemes).
 	self assert: (Smalltalk at: #GbxClampManagerTool ifAbsent: [ nil ]) notNil
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testServerMapKeepsRuntimeApiAndToolVariants [
+	self assert: (GbxServerMap respondsTo: #newForSession:).
+	self assert: GbxServerMap superclass equals: GbxOopKeyedDictionary.
+	self assert: GbxServerMapNode superclass equals: GbxOopKeyedNode.
+	self assert: GbxServerMapTableSegment superclass equals: GbxHashTableSegment.
+	self assert: (Smalltalk at: #GbxServerMapTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxServerMapNodeTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxServerMapAuditResultsTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxServerMapTableSegmentTool ifAbsent: [ nil ]) notNil
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testEventDetectorKeepsRuntimeApiAndToolVariants [
+	self assert: GbxEventDetector superclass equals: Object.
+	self
+		assert: GbxEventDetector instVarNames
+		equals: #(callSequencer process runningProtect session).
+	self assert: GbxWaitingEventDetector superclass equals: GbxEventDetector.
+	self assert: GbxPollingEventDetector superclass equals: GbxEventDetector.
+	self assert: (Smalltalk at: #GbxEventDetectorTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxWaitingEventDetectorTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxPollingEventDetectorTool ifAbsent: [ nil ]) notNil
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testCompatibilityResolverAcceptsStringNames [
+	self assert: (Object gbxResolve: 'GbxServerMap') equals: GbxServerMap.
+	self assert: (Object gbxResolve: 'OArray' in: #SpecialGemStoneObjects) notNil.
+	self assert: (Object gbxBindingFor: 'Object') notNil
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testCoreCompatibilityAliasesAndStubsExist [
+	self assert: (Smalltalk at: #LimitedPrecisionReal) equals: Float.
+	self assert: (Smalltalk at: #GbxArray) equals: Array.
+	self assert: (Smalltalk at: #GbxMethodErrorHolder ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #Notifier ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #ProcessHandle ifAbsent: [ nil ]) notNil.
+	self assert: (GbsSession canUnderstand: #isConnected).
+	self assert: LargeGrainMemoryPolicy instVarNames equals: #(memoryStatus)
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testConnectorTypesUsePerClassCaching [
+	self assert: GbsNameConnector type equals: #Name.
+	self assert: GbsFastConnector type equals: #Fast
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testPharoDefaultsUseBlockingRpc [
+	self assert: GbsConfiguration new blockingProtocolRpc
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testDateInstVarMapDoesNotUseVisualWorksDaySlot [
+	self
+		assert:
+			(Date instVarMap
+				noneSatisfy: [ :mapping | (mapping at: 1 ifAbsent: [ nil ]) = #day ])
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testUnauthorizedReplicatorKeepsRuntimeApiAndToolVariant [
+	self assert: (GbxUnauthorizedObjectReplicator respondsTo: #newForManager:).
+	self assert: GbxUnauthorizedObjectReplicator superclass equals: GbxObjectReplicator.
+	self assert: (Smalltalk at: #GbxUnauthorizedObjectReplicatorTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxArrayReplicatorTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxClassReplicatorTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxDeferredElementsReplicatorTool ifAbsent: [ nil ]) notNil
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testBasicCacheKeepsRuntimeApiAndToolVariants [
+	self assert: GbxBasicCache superclass equals: GbxCollectionCache.
+	self
+		assert: GbxBasicCache instVarNames
+		equals: #(oopToProxy proxyToOop session hitCount missCount proxyCount maxProxies weakRegistry).
+	self
+		assert: GbxCollectionCache instVarNames
+		equals: #(cache statistics).
+	self assert: (Smalltalk at: #GbxBasicCacheTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxCollectionCacheTool ifAbsent: [ nil ]) notNil
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testTraversalClassesKeepRuntimeApiAndToolVariants [
+	self assert: GbxStoreTraversal superclass equals: GbxTraversal.
+	self
+		assert: GbxStoreTraversal instVarNames
+		equals: #(session packedNotYetAccepted).
+	self assert: GbxFetchTraversal superclass equals: GbxTraversal.
+	self
+		assert: GbxFetchTraversal instVarNames
+		equals: #(serverInterface traversalCompleted).
+	self assert: (Smalltalk at: #GbxStoreTraversalTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxFetchTraversalTool ifAbsent: [ nil ]) notNil.
+	self
+		assert: (GbxFetchTraversal class
+			compiledMethodAt: #for:
+			ifAbsent: [ nil ]) notNil
 ]
 
 { #category : 'tests' }

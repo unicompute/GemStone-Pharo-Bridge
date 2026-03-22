@@ -16,3 +16,13 @@ SequenceableCollection >> gbxCanBeArgForUnsynchronizedOperationInSession: sessio
 			ifFalse: [ ^ false ] ].
 	^ true
 ]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+SequenceableCollection >> nextIndexOf: anObject from: startIndex to: stopIndex [
+	| first last |
+	first := startIndex max: 1.
+	last := stopIndex min: self size.
+	first to: last do: [ :index |
+		(self at: index) = anObject ifTrue: [ ^ index ] ].
+	^ nil
+]

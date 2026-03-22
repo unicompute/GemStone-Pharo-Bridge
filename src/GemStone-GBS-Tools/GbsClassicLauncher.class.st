@@ -221,9 +221,9 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                     (aBuilder item: #OpenGbxSessionStatResource)
                         label: 'Session Stat Resource';
                         action: [ self openGbxSessionStatResource ].
-                    (aBuilder item: #OpenGbxStoreTraversal)
+                    (aBuilder item: #OpenGbxStoreTraversalTool)
                         label: 'Store Traversal';
-                        action: [ self openGbxStoreTraversal ].
+                        action: [ self openGbxStoreTraversalTool ].
                     (aBuilder item: #OpenGbxTrippy)
                         label: 'Trippy';
                         action: [ self openGbxTrippy ] ].
@@ -659,7 +659,7 @@ GbsClassicLauncher class >> openGbxSegmentToolBrain [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxServerMap [
-	self openGbxUtility: #GbxServerMap
+	self openGbxUtility: #GbxServerMapTool
 ]
 
 { #category : 'menus' }
@@ -688,8 +688,8 @@ GbsClassicLauncher class >> openGbxSessionStatResource [
 ]
 
 { #category : 'menus' }
-GbsClassicLauncher class >> openGbxStoreTraversal [
-	self openGbxUtility: #GbxStoreTraversal
+GbsClassicLauncher class >> openGbxStoreTraversalTool [
+	self openGbxUtility: #GbxStoreTraversalTool
 ]
 
 { #category : 'menus' }

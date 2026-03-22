@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxServerMapTableSegment',
+	#name : 'GbxServerMapTableSegmentTool',
 	#superclass : 'Object',
 	#instVars : [
 		'segmentId',
@@ -14,7 +14,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxServerMapTableSegment class >> segmentId: anId name: aString [
+GbxServerMapTableSegmentTool class >> segmentId: anId name: aString [
 	^ self new
 		segmentId: anId;
 		segmentName: aString;
@@ -22,7 +22,7 @@ GbxServerMapTableSegment class >> segmentId: anId name: aString [
 ]
 
 { #category : 'accessing' }
-GbxServerMapTableSegment >> addNode: aNode [
+GbxServerMapTableSegmentTool >> addNode: aNode [
 	"Add a node to this segment"
 	nodes ifNil: [ nodes := OrderedCollection new ].
 	nodes add: aNode.
@@ -30,64 +30,64 @@ GbxServerMapTableSegment >> addNode: aNode [
 ]
 
 { #category : 'accessing' }
-GbxServerMapTableSegment >> bucketCount [
+GbxServerMapTableSegmentTool >> bucketCount [
 	^ bucketCount ifNil: [ 0 ]
 ]
 
 { #category : 'accessing' }
-GbxServerMapTableSegment >> bucketCount: anInteger [
+GbxServerMapTableSegmentTool >> bucketCount: anInteger [
 	bucketCount := anInteger
 ]
 
 { #category : 'accessing' }
-GbxServerMapTableSegment >> nodes [
+GbxServerMapTableSegmentTool >> nodes [
 	^ nodes ifNil: [ #() ]
 ]
 
 { #category : 'accessing' }
-GbxServerMapTableSegment >> nodes: aCollection [
+GbxServerMapTableSegmentTool >> nodes: aCollection [
 	nodes := aCollection.
 	occupancy := aCollection size.
 ]
 
 { #category : 'accessing' }
-GbxServerMapTableSegment >> occupancy [
+GbxServerMapTableSegmentTool >> occupancy [
 	^ occupancy ifNil: [ 0 ]
 ]
 
 { #category : 'accessing' }
-GbxServerMapTableSegment >> occupancy: anInteger [
+GbxServerMapTableSegmentTool >> occupancy: anInteger [
 	occupancy := anInteger
 ]
 
 { #category : 'accessing' }
-GbxServerMapTableSegment >> percentFull [
+GbxServerMapTableSegmentTool >> percentFull [
 	bucketCount = 0 ifTrue: [ ^ 0 ].
 	^ (occupancy * 100) // bucketCount
 ]
 
 { #category : 'accessing' }
-GbxServerMapTableSegment >> printString [
+GbxServerMapTableSegmentTool >> printString [
 	^ 'Segment ', segmentName, ' (id: ', segmentId asString, ', ',
 	  self percentFull asString, '% full)'
 ]
 
 { #category : 'accessing' }
-GbxServerMapTableSegment >> segmentId [
+GbxServerMapTableSegmentTool >> segmentId [
 	^ segmentId
 ]
 
 { #category : 'accessing' }
-GbxServerMapTableSegment >> segmentId: anInteger [
+GbxServerMapTableSegmentTool >> segmentId: anInteger [
 	segmentId := anInteger
 ]
 
 { #category : 'accessing' }
-GbxServerMapTableSegment >> segmentName [
+GbxServerMapTableSegmentTool >> segmentName [
 	^ segmentName
 ]
 
 { #category : 'accessing' }
-GbxServerMapTableSegment >> segmentName: aString [
+GbxServerMapTableSegmentTool >> segmentName: aString [
 	segmentName := aString
 ]

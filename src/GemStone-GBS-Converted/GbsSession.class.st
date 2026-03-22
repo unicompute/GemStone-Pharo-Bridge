@@ -1722,7 +1722,7 @@ GbsSession >> fetchBehaviorDelegatesForClassConnectors: connectors
 	If the connector's server-side name does not resolve, or does not resolve to a class, the 
 	class delegate will be oopNil and the metaclass delegate will be meaningless."
 
-	| objectAndDictionaryNames executionString |
+	| objectAndDictionaryNames executionString arrayOfOops |
 	connectors isEmpty ifTrue: [^self].
 	objectAndDictionaryNames := OrderedCollection new.
 	connectors do: 
@@ -1731,8 +1731,8 @@ GbsSession >> fetchBehaviorDelegatesForClassConnectors: connectors
 			add: connector gsName;
 			add: (connector hasDictionaryName ifTrue: [connector dictionaryName] ifFalse: [nil])].
 
-	executionString := '
-			[:names |
+	executionString := WriteStream on: (String new: 500).
+	executionString nextPutAll: '
 			"Each temporary name must be an existing symbol on the server. 
 			Or else, if the stone is in restore mode, we cannot login because
 			symbol creation is restricted. Temporary variable names are 
@@ -1743,9 +1743,14 @@ GbsSession >> fetchBehaviorDelegatesForClassConnectors: connectors
 			If the dictionary name is nil, look for the named object in the symbol list,
 			otherwise look for it in the named dictionary."
 
-			| userProfile behaviors |
+			| names userProfile behaviorOops |
+			names := #('.
+	objectAndDictionaryNames do: [ :each |
+		each storeOn: executionString.
+		executionString space ].
+	executionString nextPutAll: ').
 			userProfile := System myUserProfile.
-			behaviors := Array new.
+			behaviorOops := Array new.
 
 			1 to: names size
 				by: 2
@@ -1764,20 +1769,22 @@ GbsSession >> fetchBehaviorDelegatesForClassConnectors: connectors
 						do: [:ex | ^{index. name. dictName. ex messageText}].
 					(cls isBehavior and: [cls isMeta not])
 						ifTrue: 
-							[behaviors
-								add: cls;
-								add: cls class]
+							[behaviorOops
+								add: cls asOop;
+								add: cls class asOop]
 						ifFalse: 
-							[behaviors
+							[behaviorOops
 								add: nil;
 								add: nil]].
-			^behaviors]'.
+			^behaviorOops'.
 
 	"Bulk resolve on the server - one network round trip"
-	^self
-		unsynchronizedEvaluateBlockReturnResultBodyAsDelegates: executionString
-		with: objectAndDictionaryNames asArray
-		context: nil
+	arrayOfOops := self unsynchronizedEvaluate: executionString contents.
+	^arrayOfOops
+		collect: [ :oop |
+			oop == nil
+				ifTrue: [ self oopNil ]
+				ifFalse: [ GbxDelegate oopValue: oop session: self ] ]
 ]
 
 { #category : 'private - connectors at login' }
@@ -2660,13 +2667,17 @@ GbsSession >> loginLinked: linked
 	"Private.  If linked (a Boolean) is true, the login attempt will be for a linked session.  If false, rpc.  Returns the receiver if login is successful, nil otherwise.
 	If login does not complete for any reason, log out to clean up."
 
-	
-	[self sessionCriticalNoSessionCheck: 
-			[(self basicLoginLinked: linked) ifFalse: [^nil].
-			self postLogin.
-			GbxStatMonitor instance addStatResource: stats.
-			^self]]
-			ifCurtailed: [self logout]
+	| result |
+	result := nil.
+	[
+	self sessionCriticalNoSessionCheck: 
+			[(self basicLoginLinked: linked)
+				ifTrue: 
+					[self postLogin.
+					GbxStatMonitor instance addStatResource: stats.
+					result := self]]]
+			ifCurtailed: [self logout].
+	^result
 ]
 
 { #category : 'private - session management' }
@@ -2688,13 +2699,17 @@ GbsSession >> loginX509
 	 Returns the receiver if login is successful, nil otherwise.
 	If login does not complete for any reason, log out to clean up."
 
-	
-	[self sessionCriticalNoSessionCheck: 
-			[self basicX509Login ifFalse: [^nil].
-			self postLogin.
-			GbxStatMonitor instance addStatResource: stats.
-			^self]]
-			ifCurtailed: [self logout]
+	| result |
+	result := nil.
+	[
+	self sessionCriticalNoSessionCheck: 
+			[self basicX509Login
+				ifTrue: 
+					[self postLogin.
+					GbxStatMonitor instance addStatResource: stats.
+					result := self]]]
+			ifCurtailed: [self logout].
+	^result
 ]
 
 { #category : 'private - session management' }
@@ -2722,7 +2737,7 @@ GbsSession >> configureGemAbortMaxCrs
 
 	[
 		self execute: 'System configurationAt: #GemAbortMaxCrs put: 16r3FFFFFFF'
-	] on: Error do: [ ^ self ].
+	] on: Exception do: [ ^ self ].
 	^ self
 ]
 
@@ -2796,7 +2811,7 @@ GbsSession >> enableOopDropping
 
 	[
 		self execute: 'System gemConfigurationAt: #GemDropCommittedExportedObjs put: true'
-	] on: Error do: [ ^ self ].
+	] on: Exception do: [ ^ self ].
 	^ self
 ]
 
@@ -2868,7 +2883,7 @@ GbsSession >> getGemIds
 					at: #sessionId put: (description at: 10);
 					at: #processId put:  (description at: 2);
 					yourself'
-	] on: Error do: [ ^ self ].
+	] on: Exception do: [ ^ self ].
 	(ids respondsTo: #at:ifAbsent:) ifFalse: [ ^ self ].
 
 	gemProcessId :=  ids at: #processId ifAbsent: [ gemProcessId ].

@@ -24,14 +24,14 @@ Gbx8ObjectReport >> setObjIdFromDelegate: del
 Gbx8ObjectReport >> isPartial
 [
 
-	^((data basicAt: offset + 32) bitAnd: 16r10) ~= 0
+	^((data byteAt: offset + 32) bitAnd: 16r10) ~= 0
 ]
 
 { #category : 'accessing header' }
 Gbx8ObjectReport >> firstOffset
 [
 
-	firstOffset == nil ifTrue: [firstOffset := data longLongAt: offset + 24].
+	firstOffset == nil ifTrue: [firstOffset := data unsignedLongLongAt: offset + 24].
 	^firstOffset
 ]
 
@@ -107,7 +107,7 @@ Gbx8ObjectReport >> firstOffset: anOffset
 
 	firstOffset := anOffset.
 	data
-		longLongAt: offset + 24
+		unsignedLongLongAt: offset + 24
 		put: anOffset
 ]
 

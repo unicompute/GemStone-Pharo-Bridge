@@ -7,6 +7,11 @@ GbsSession >> isLoggedIn: aBoolean [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+GbsSession >> isConnected [
+	^ self isLoggedIn
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 GbsSession >> parameters: aGbsSessionParameters [
 	parameters := aGbsSessionParameters
 ]

@@ -101,6 +101,24 @@ GbxDelegate >> asGSObjectCopy
 	^self
 ]
 
+{ #category : 'compatibility' }
+GbxDelegate >> gbxByteSizeForReplace
+[
+	^self basicSize
+]
+
+{ #category : 'compatibility' }
+GbxDelegate >> gbxByteAtForReplace: index
+[
+	^self basicAt: index
+]
+
+{ #category : 'compatibility' }
+GbxDelegate >> gbxByteAtForReplace: index put: value
+[
+	^self basicAt: index put: value
+]
+
 { #category : 'public - implicit replication' }
 GbxDelegate >> asLocalObjectUsingReplicationSpecSet: repSpecSet
 [

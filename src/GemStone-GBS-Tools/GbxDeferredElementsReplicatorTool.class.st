@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxDeferredElementsReplicator',
+	#name : 'GbxDeferredElementsReplicatorTool',
 	#superclass : 'GbxReplicator',
 	#instVars : [
 		'deferredAssignments'
@@ -9,21 +9,21 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxDeferredElementsReplicator class >> forCollection: aCollection [
+GbxDeferredElementsReplicatorTool class >> forCollection: aCollection [
 	^ self new
 		target: aCollection;
 		yourself
 ]
 
 { #category : 'replication' }
-GbxDeferredElementsReplicator >> addDeferredAssignment: anAssignment [
+GbxDeferredElementsReplicatorTool >> addDeferredAssignment: anAssignment [
 	"Add a deferred assignment"
 	deferredAssignments ifNil: [ deferredAssignments := OrderedCollection new ].
 	deferredAssignments add: anAssignment.
 ]
 
 { #category : 'replication' }
-GbxDeferredElementsReplicator >> executeDeferredAssignments [
+GbxDeferredElementsReplicatorTool >> executeDeferredAssignments [
 	"Execute all deferred assignments"
 	
 	deferredAssignments ifNil: [ ^ self ].
@@ -36,13 +36,13 @@ GbxDeferredElementsReplicator >> executeDeferredAssignments [
 ]
 
 { #category : 'initialization' }
-GbxDeferredElementsReplicator >> initialize [
+GbxDeferredElementsReplicatorTool >> initialize [
 	super initialize.
 	deferredAssignments := nil.
 ]
 
 { #category : 'replication' }
-GbxDeferredElementsReplicator >> replicateElement: anElement atIndex: index [
+GbxDeferredElementsReplicatorTool >> replicateElement: anElement atIndex: index [
 	"Replicate an element with deferred assignment"
 	| replicator replicated |
 	

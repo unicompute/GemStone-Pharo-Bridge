@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxServerMapNode',
+	#name : 'GbxServerMapNodeTool',
 	#superclass : 'Object',
 	#instVars : [
 		'name',
@@ -15,7 +15,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxServerMapNode class >> named: aString oop: anOop [
+GbxServerMapNodeTool class >> named: aString oop: anOop [
 	^ self new
 		name: aString;
 		oop: anOop;
@@ -23,7 +23,7 @@ GbxServerMapNode class >> named: aString oop: anOop [
 ]
 
 { #category : 'auditing' }
-GbxServerMapNode >> auditWith: auditResults [
+GbxServerMapNodeTool >> auditWith: auditResults [
 	"Audit this node and record results"
 	| isValid |
 	
@@ -38,62 +38,62 @@ GbxServerMapNode >> auditWith: auditResults [
 ]
 
 { #category : 'accessing' }
-GbxServerMapNode >> children [
+GbxServerMapNodeTool >> children [
 	^ children ifNil: [ children := OrderedCollection new ]
 ]
 
 { #category : 'accessing' }
-GbxServerMapNode >> children: aCollection [
+GbxServerMapNodeTool >> children: aCollection [
 	children := aCollection
 ]
 
 { #category : 'accessing' }
-GbxServerMapNode >> isCached [
+GbxServerMapNodeTool >> isCached [
 	^ isCached ifNil: [ false ]
 ]
 
 { #category : 'accessing' }
-GbxServerMapNode >> isCached: aBoolean [
+GbxServerMapNodeTool >> isCached: aBoolean [
 	isCached := aBoolean
 ]
 
 { #category : 'accessing' }
-GbxServerMapNode >> name [
+GbxServerMapNodeTool >> name [
 	^ name
 ]
 
 { #category : 'accessing' }
-GbxServerMapNode >> name: aString [
+GbxServerMapNodeTool >> name: aString [
 	name := aString
 ]
 
 { #category : 'accessing' }
-GbxServerMapNode >> nodeType [
+GbxServerMapNodeTool >> nodeType [
 	^ nodeType
 ]
 
 { #category : 'accessing' }
-GbxServerMapNode >> nodeType: aSymbol [
+GbxServerMapNodeTool >> nodeType: aSymbol [
 	nodeType := aSymbol
 ]
 
 { #category : 'accessing' }
-GbxServerMapNode >> oop [
+GbxServerMapNodeTool >> oop [
 	^ oop
 ]
 
 { #category : 'accessing' }
-GbxServerMapNode >> oop: anOop [
+GbxServerMapNodeTool >> oop: anOop [
 	oop := anOop
 ]
 
 { #category : 'accessing' }
-GbxServerMapNode >> parent [
+GbxServerMapNodeTool >> parent [
 	^ parent
 ]
 
 { #category : 'accessing' }
-GbxServerMapNode >> parent: aNode [
+GbxServerMapNodeTool >> parent: aNode [
 	parent := aNode.
 	aNode ifNotNil: [
 		aNode children add: self.
@@ -101,22 +101,22 @@ GbxServerMapNode >> parent: aNode [
 ]
 
 { #category : 'accessing' }
-GbxServerMapNode >> printString [
+GbxServerMapNodeTool >> printString [
 	^ name, ' (oop: ', (oop ifNil: [ 'nil' ] ifNotNil: [ oop asString ]), ')'
 ]
 
 { #category : 'accessing' }
-GbxServerMapNode >> session [
+GbxServerMapNodeTool >> session [
 	^ session
 ]
 
 { #category : 'accessing' }
-GbxServerMapNode >> session: aSession [
+GbxServerMapNodeTool >> session: aSession [
 	session := aSession
 ]
 
 { #category : 'accessing' }
-GbxServerMapNode >> validate [
+GbxServerMapNodeTool >> validate [
 	"Validate this node"
 	^ (name notNil and: [ name isNotEmpty ])
 		and: [ (oop isNil or: [ oop > 20 ]) ]

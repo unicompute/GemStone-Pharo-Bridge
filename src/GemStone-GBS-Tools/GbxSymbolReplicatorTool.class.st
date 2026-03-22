@@ -1,12 +1,12 @@
 Class {
-	#name : 'GbxSymbolReplicator',
-	#superclass : 'GbxStringReplicator',
+	#name : 'GbxSymbolReplicatorTool',
+	#superclass : 'GbxStringReplicatorTool',
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }
 
 { #category : 'replication' }
-GbxSymbolReplicator >> replicate [
+GbxSymbolReplicatorTool >> replicate [
 	"Replicate a symbol from GemStone"
 	| script |
 	

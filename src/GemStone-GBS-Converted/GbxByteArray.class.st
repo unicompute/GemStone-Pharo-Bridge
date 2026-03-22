@@ -3,7 +3,8 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'buffer',
-		'offset'
+		'offset',
+		'bufferSize'
 	],
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'
@@ -14,7 +15,9 @@ GbxByteArray class >> size: aSize
 [
 	"Return a new instance that points to a newly allocated buffer of size aSize."
 
-	^self buffer: (ByteArray new: aSize) offset: 1
+	^self new
+		allocateDataSize: aSize;
+		yourself
 ]
 
 { #category : 'instance creation' }
@@ -47,7 +50,7 @@ GbxByteArray >> byteAt: byteOffset
 [
 	"Answer the byte at the given 1-based offset"
 
-	^buffer basicAt: offset + byteOffset - 1
+	^buffer byteAt: offset + byteOffset - 1
 ]
 
 { #category : 'accessing' }
@@ -56,6 +59,9 @@ GbxByteArray >> setBufferTo: anUninterpretedBytes
 	"Set our buffer pointer. Reset offset."
 
 	buffer := anUninterpretedBytes.
+	bufferSize := (anUninterpretedBytes isKindOf: ByteArray)
+		ifTrue: [anUninterpretedBytes size]
+		ifFalse: [bufferSize].
 	self setOffsetTo: 1
 ]
 
@@ -72,7 +78,7 @@ GbxByteArray >> byteAt: byteOffset put: byteValue
 	"Set the byte at the given 1-based offset"
 
 	^buffer
-		basicAt: offset + byteOffset - 1
+		byteAt: offset + byteOffset - 1
 		put: byteValue
 ]
 
@@ -155,7 +161,10 @@ GbxByteArray >> copyTo: aByteObject size: numBytes sourceStart: sourceStart targ
 GbxByteArray >> allocateDataSize: size
 [
 
-	buffer := ByteArray new: size.
+	buffer := ExternalAddress allocate: size.
+	buffer autoRelease.
+	1 to: size do: [ :index | buffer byteAt: index put: 0 ].
+	bufferSize := size.
 	offset := 1
 ]
 
@@ -164,7 +173,7 @@ GbxByteArray >> ensureSizeIsAtLeast: aSize
 [
 	"Guarantee the data buffer is at least aSize in size."
 
-	(buffer isNil or: [buffer size < aSize]) ifTrue: [self allocateDataSize: aSize]
+	(buffer isNil or: [bufferSize < aSize]) ifTrue: [self allocateDataSize: aSize]
 ]
 
 { #category : 'initialize-release' }
@@ -172,5 +181,8 @@ GbxByteArray >> buffer: anUninterpretedBytes offset: byteOffset
 [
 
 	buffer := anUninterpretedBytes.
+	bufferSize := (anUninterpretedBytes isKindOf: ByteArray)
+		ifTrue: [anUninterpretedBytes size]
+		ifFalse: [nil].
 	offset := byteOffset
 ]

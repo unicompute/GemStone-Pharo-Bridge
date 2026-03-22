@@ -11,8 +11,8 @@ GbxB8v3ObjectReport >> namedSize
 
 	namedSize == nil
 		ifTrue: 
-			[namedSize := (data basicAt: offset + 4) * 16r100
-				+ (data basicAt: offset + 5)].
+			[namedSize := (data byteAt: offset + 4) * 16r100
+				+ (data byteAt: offset + 5)].
 	^namedSize
 ]
 
@@ -20,7 +20,7 @@ GbxB8v3ObjectReport >> namedSize
 GbxB8v3ObjectReport >> objImpl
 [
 
-	objImpl == nil ifTrue: [objImpl := (data basicAt: offset + 39) bitAnd: 3].
+	objImpl == nil ifTrue: [objImpl := (data byteAt: offset + 39) bitAnd: 3].
 	^objImpl
 ]
 
@@ -28,7 +28,7 @@ GbxB8v3ObjectReport >> objImpl
 GbxB8v3ObjectReport >> isClamped
 [
 
-	^((data basicAt: offset + 39) bitAnd: 16r80) ~= 0
+	^((data byteAt: offset + 39) bitAnd: 16r80) ~= 0
 ]
 
 { #category : 'accessing header' }
@@ -38,8 +38,8 @@ GbxB8v3ObjectReport >> namedSize: aSize
 
 	namedSize := aSize.
 	data
-		basicAt: offset + 5 put: (aSize bitAnd: 16rFF);
-		basicAt: offset + 4 put: (aSize bitShift: -8)
+		byteAt: offset + 5 put: (aSize bitAnd: 16rFF);
+		byteAt: offset + 4 put: (aSize bitShift: -8)
 ]
 
 { #category : 'accessing header' }
@@ -48,8 +48,8 @@ GbxB8v3ObjectReport >> segment
 
 	segment == nil
 		ifTrue: 
-			[segment := (data basicAt: offset + 6) * 16r100
-				+ (data basicAt: offset + 7)].
+			[segment := (data byteAt: offset + 6) * 16r100
+				+ (data byteAt: offset + 7)].
 	^segment
 ]
 
@@ -57,21 +57,21 @@ GbxB8v3ObjectReport >> segment
 GbxB8v3ObjectReport >> isInvariant
 [
 
-	^((data basicAt: offset + 39) bitAnd: 8) ~= 0
+	^((data byteAt: offset + 39) bitAnd: 8) ~= 0
 ]
 
 { #category : 'accessing header' }
 GbxB8v3ObjectReport >> isOverlayed
 [
 
-	^((data basicAt: offset + 39) bitAnd: 16r20) ~= 0
+	^((data byteAt: offset + 39) bitAnd: 16r20) ~= 0
 ]
 
 { #category : 'accessing header' }
 GbxB8v3ObjectReport >> lacksReadAuth
 [
 
-	^((data basicAt: offset + 39) bitAnd: 16r40) ~= 0
+	^((data byteAt: offset + 39) bitAnd: 16r40) ~= 0
 ]
 
 { #category : 'accessing header' }
@@ -80,15 +80,15 @@ GbxB8v3ObjectReport >> segment: aSegment
 
 	segment := aSegment.
 	data
-		basicAt: offset + 7 put: (aSegment bitAnd: 16rFF);
-		basicAt: offset + 6 put: (aSegment bitShift: -8)
+		byteAt: offset + 7 put: (aSegment bitAnd: 16rFF);
+		byteAt: offset + 6 put: (aSegment bitShift: -8)
 ]
 
 { #category : 'accessing header' }
 GbxB8v3ObjectReport >> isIndexable
 [
 
-	^((data basicAt: offset + 39) bitAnd: 4) ~= 0
+	^((data byteAt: offset + 39) bitAnd: 4) ~= 0
 ]
 
 { #category : 'private-addressing' }

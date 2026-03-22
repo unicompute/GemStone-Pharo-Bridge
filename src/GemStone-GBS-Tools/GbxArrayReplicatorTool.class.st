@@ -1,12 +1,12 @@
 Class {
-	#name : 'GbxArrayReplicator',
+	#name : 'GbxArrayReplicatorTool',
 	#superclass : 'GbxReplicator',
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }
 
 { #category : 'replication' }
-GbxArrayReplicator >> replicate [
+GbxArrayReplicatorTool >> replicate [
 	"Replicate an array from GemStone"
 	| arrayClass size elements |
 	
@@ -25,7 +25,7 @@ GbxArrayReplicator >> replicate [
 ]
 
 { #category : 'fetching' }
-GbxArrayReplicator >> fetchClass [
+GbxArrayReplicatorTool >> fetchClass [
 	"Fetch array class from server"
 	| script |
 	
@@ -34,7 +34,7 @@ GbxArrayReplicator >> fetchClass [
 ]
 
 { #category : 'fetching' }
-GbxArrayReplicator >> fetchElements: size [
+GbxArrayReplicatorTool >> fetchElements: size [
 	"Fetch array elements from server"
 	| script |
 	
@@ -57,7 +57,7 @@ GbxArrayReplicator >> fetchElements: size [
 ]
 
 { #category : 'fetching' }
-GbxArrayReplicator >> fetchSize [
+GbxArrayReplicatorTool >> fetchSize [
 	"Fetch array size from server"
 	| script |
 	
@@ -66,7 +66,7 @@ GbxArrayReplicator >> fetchSize [
 ]
 
 { #category : 'creation' }
-GbxArrayReplicator >> createArrayWith: elements class: className [
+GbxArrayReplicatorTool >> createArrayWith: elements class: className [
 	"Create local array from elements"
 	| array |
 	

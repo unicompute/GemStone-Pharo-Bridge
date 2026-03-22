@@ -2,6 +2,7 @@ Class {
 	#name : 'LargeGrainMemoryPolicy',
 	#superclass : 'GbxMemoryPolicy',
 	#instVars : [
+		'memoryStatus'
 	],
 	#classVars : [
 	],

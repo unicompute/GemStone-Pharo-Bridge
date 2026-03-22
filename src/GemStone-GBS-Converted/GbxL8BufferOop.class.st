@@ -14,21 +14,21 @@ GbxL8BufferOop >> delegateClass
 { #category : 'oop access' }
 GbxL8BufferOop >> oopByteAt: byteOffset
 [
-	^buffer basicAt: offset + 8 - byteOffset
+	^buffer byteAt: offset + 8 - byteOffset
 ]
 
 { #category : 'oop access' }
 GbxL8BufferOop >> oopNumberLower3
 [
-	^(buffer basicAt: offset + 3) * 16r10000
-		+ ((buffer basicAt: offset + 2) * 16r100)
-		+ (buffer basicAt: offset + 1)
+	^(buffer byteAt: offset + 3) * 16r10000
+		+ ((buffer byteAt: offset + 2) * 16r100)
+		+ (buffer byteAt: offset + 1)
 ]
 
 { #category : 'oop access' }
 GbxL8BufferOop >> oopNumberHighBytes
 [
-	^(buffer basicAt: offset + 5) * 16r100 + (buffer basicAt: offset + 4)
+	^(buffer byteAt: offset + 5) * 16r100 + (buffer byteAt: offset + 4)
 ]
 
 { #category : 'oop access' }
@@ -36,20 +36,20 @@ GbxL8BufferOop >> oopShortAt: shortOffset
 [
 	| byteOffset |
 	byteOffset := 8 - (shortOffset * 2).
-	^(buffer basicAt: offset + byteOffset + 1) * 16r100
-		+ (buffer basicAt: offset + byteOffset)
+	^(buffer byteAt: offset + byteOffset + 1) * 16r100
+		+ (buffer byteAt: offset + byteOffset)
 ]
 
 { #category : 'oop access' }
 GbxL8BufferOop >> oopNumberAt: byteOffset
 [
-	^buffer basicAt: offset + 6 - byteOffset
+	^buffer byteAt: offset + 6 - byteOffset
 ]
 
 { #category : 'oop access' }
 GbxL8BufferOop >> oopByteAt: byteOffset put: byteValue
 [
 	^buffer
-		basicAt: offset + 8 - byteOffset
+		byteAt: offset + 8 - byteOffset
 		put: byteValue
 ]

@@ -134,18 +134,31 @@ GbxVersionNumber >> parseVersionString: versionString
 	each one or more decimal digits, and there can one to any number of groups, 
 	and they are separated by periods, but no leading or trailing period."
 
-	| components initialIndex |
+	| components initialIndex size |
 	components := OrderedCollection new.
+	size := versionString size.
 	initialIndex := 1.
-	[initialIndex <= versionString size] whileTrue: 
-			[| periodIndex |
+	[initialIndex <= size] whileTrue: 
+			[| periodIndex digitStart digitEnd |
+			[
+				initialIndex <= size
+					and: [ (versionString at: initialIndex) isDigit not ]
+			] whileTrue: [ initialIndex := initialIndex + 1 ].
+			initialIndex <= size ifFalse: [ ^components ].
 			periodIndex := versionString 
 						nextIndexOf: $.
 						from: initialIndex
-						to: versionString size.
-			periodIndex == nil ifTrue: [periodIndex := versionString size + 1].
+						to: size.
+			periodIndex == nil ifTrue: [periodIndex := size + 1].
+			digitStart := initialIndex.
+			digitEnd := periodIndex - 1.
+			[
+				digitEnd >= digitStart
+					and: [ (versionString at: digitEnd) isDigit not ]
+			] whileTrue: [ digitEnd := digitEnd - 1 ].
+			digitEnd < digitStart ifTrue: [ ^components ].
 			components 
-				add: (versionString copyFrom: initialIndex to: periodIndex - 1) asNumber.
+				add: (versionString copyFrom: digitStart to: digitEnd) asNumber.
 			initialIndex := periodIndex + 1].
 	^components
 ]

@@ -704,9 +704,12 @@ GbsSessionManager >> atNewClient: clientObject putDelegate: delegate
 GbsSessionManager >> checkMemoryPolicy
 [
 
-	| currentPolicy currentIsGbs useGbsMemoryPolicy |
+	| currentPolicy currentIsGbs objectMemory useGbsMemoryPolicy |
 	useGbsMemoryPolicy := GbsConfiguration current useGbsMemoryPolicy.
-	currentPolicy := ObjectMemory currentMemoryPolicy.
+	objectMemory := Smalltalk globals at: #ObjectMemory ifAbsent: [ nil ].
+	(objectMemory respondsTo: #currentMemoryPolicy)
+		ifFalse: [ ^ self ].
+	currentPolicy := objectMemory currentMemoryPolicy.
 	currentIsGbs := currentPolicy respondsTo: #postReplicationAction.
 	currentIsGbs == useGbsMemoryPolicy
 		ifFalse: 
@@ -718,7 +721,7 @@ GbsSessionManager >> checkMemoryPolicy
 					["turn off"
 					|  newPolicy |
 					newPolicy  := LargeGrainMemoryPolicy new.
-					ObjectMemory installMemoryPolicy: newPolicy]]
+					objectMemory installMemoryPolicy: newPolicy]]
 ]
 
 { #category : 'GBS private' }
@@ -1413,11 +1416,15 @@ GbsSessionManager >> emptyCaches
 	"Very Private.  This is to be used with extreme care. This method may be removed
 	 in a future GBS version."
 
+	| cacheSize |
+	cacheSize := clientMap
+		ifNil: [ 0 ]
+		ifNotNil: [ clientMap size ].
 	self gbsMessenger 
 		statusTag: #cache
 		message: 'WARNING: %1>>emptyCaches. Cache contained %1 objects which are now defunct.'
 		with: self
-		with: clientMap size.
+		with: cacheSize.
 	"Avoid finalization of current stObjectCache"
 	clientMap notNil ifTrue: [clientMap release].
 	clientMap := nil.
@@ -1545,25 +1552,17 @@ GbsSessionManager >> globalClassConnectorsList
 	^#("Private.  
 		Client Name"												"Server name"				"Optional Server Symbol Dictionary"	"Optional condition number"
 		(GbsReadByteStream							ReadByteStream			GemStone_Legacy_Streams			3)
-		(ServerClasses.PositionableStream					PositionableStream			GemStone_Portable_Streams)
-		(ServerClasses.PositionableStreamLegacy			PositionableStreamLegacy)
-		(ServerClasses.PositionableStreamPortable			PositionableStreamPortable)
-		(ServerClasses.FileStreamPortable					FileStreamPortable)
-		(ServerClasses.ReadStream						ReadStream				GemStone_Portable_Streams)
-		(ServerClasses.ReadStreamLegacy					ReadStreamLegacy)
-		(ServerClasses.ReadStreamPortable				ReadStreamPortable)
-		(ServerClasses.ReadByteStream					ReadByteStream			GemStone_Portable_Streams			3)
+		(PositionableStreamLegacy					PositionableStreamLegacy)
+		(PositionableStreamPortable					PositionableStreamPortable)
+		(FileStreamPortable							FileStreamPortable)
+		(ReadStreamLegacy							ReadStreamLegacy)
+		(ReadStreamPortable							ReadStreamPortable)
+		(ReadByteStream							ReadByteStream			GemStone_Portable_Streams			3)
 "		(ReadWriteStream					ReadWriteStream			nil								2)"
-		(ServerClasses.ReadWriteStreamPortable			ReadWriteStreamPortable)
-		(ServerClasses.WriteStream						WriteStream				GemStone_Portable_Streams)
-		(ServerClasses.WriteStreamLegacy					WriteStreamLegacy)
-		(ServerClasses.WriteStreamPortable				WriteStreamPortable)
-		(ServerClasses.TranscriptStreamPortable			TranscriptStreamPortable)
-		"In Pharo 13, Unicode7/16/32 cannot be subclassed due to special layouts.
-		 GemStone Unicode strings map to Pharo's native ByteString/WideString"
-		(Unicode7									ByteString)
-		(Unicode16									WideString)
-		(Unicode32									WideString)
+		(ReadWriteStreamPortable					ReadWriteStreamPortable)
+		(WriteStreamLegacy							WriteStreamLegacy)
+		(WriteStreamPortable							WriteStreamPortable)
+		(TranscriptStreamPortable					TranscriptStreamPortable)
 		)
 ]
 
@@ -1580,45 +1579,45 @@ GbsSessionManager >> exceptionConnectorsList
 					(HaltInterrupt													Halt)
 					(BreakInterrupt												Breakpoint)
 				(Notification													Notification)
-					(Exceptions.Admonition 								Admonition)
-						(Exceptions.AlmostOutOfMemory 						AlmostOutOfMemory)
-						(Exceptions.AlmostOutOfStack 						AlmostOutOfStack)
-						(Exceptions.RepositoryViewLost 						RepositoryViewLost)
-					(Exceptions.Deprecated 								Deprecated)
-					(Exceptions.FloatingPointException 					FloatingPointException)
-					(Exceptions.ObjectsCommittedNotification				 ObjectsCommittedNotification)
-					(Exceptions.TransactionBacklog 						TransactionBacklog)
+					(Admonition 								Admonition)
+						(AlmostOutOfMemory 						AlmostOutOfMemory)
+						(AlmostOutOfStack 						AlmostOutOfStack)
+						(RepositoryViewLost 						RepositoryViewLost)
+					(Deprecated 								Deprecated)
+					(FloatingPointException 					FloatingPointException)
+					(ObjectsCommittedNotification				 ObjectsCommittedNotification)
+					(TransactionBacklog 						TransactionBacklog)
 				(Warning 														Warning)
-					(Exceptions.InterSessionSignal 						InterSessionSignal)
+					(InterSessionSignal 						InterSessionSignal)
 				(Error 														Error)
-					(Exceptions.MessageNotUnderstood 					MessageNotUnderstood)
-					(Exceptions.InternalError 							InternalError)
-					(Exceptions.GciTransportError 							GciTransportError)
+					(MessageNotUnderstood 					MessageNotUnderstood)
+					(InternalError 							InternalError)
+					(GciTransportError 							GciTransportError)
 					(CompilationError 												CompileError)
-					(Exceptions.UserDefinedError 							UserDefinedError)
-					(Exceptions.SecurityError 							SecurityError)
-					(Exceptions.ThreadError 								ThreadError)
-					(Exceptions.ImproperOperation 						ImproperOperation)
-						(Exceptions.LookupError 								LookupError)
-						(Exceptions.ArgumentError 							ArgumentError)
-						(Exceptions.OffsetError 								OffsetError)
-						(Exceptions.OutOfRange 								OutOfRange)
-							(Exceptions.FloatingPointError 						FloatingPointError)
-					(Exceptions.ArgumentTypeError 						ArgumentTypeError)
-					(Exceptions.CannotReturn 							CannotReturn)
-					(Exceptions.EndOfStream 							EndOfStream)
-					(Exceptions.ExternalError 							ExternalError)
-						(Exceptions.IOError 								IOError)
-							(Exceptions.SocketError 								SocketError)
-						(Exceptions.SystemCallError 							SystemCallError)
-					(Exceptions.IndexingErrorPreventingCommit				IndexingErrorPreventingCommit)
-					(Exceptions.LockError 								LockError)
+					(UserDefinedError 							UserDefinedError)
+					(SecurityError 							SecurityError)
+					(ThreadError 								ThreadError)
+					(ImproperOperation 						ImproperOperation)
+						(LookupError 								LookupError)
+						(ArgumentError 							ArgumentError)
+						(OffsetError 								OffsetError)
+						(OutOfRange 								OutOfRange)
+							(FloatingPointError 						FloatingPointError)
+					(ArgumentTypeError 						ArgumentTypeError)
+					(CannotReturn 							CannotReturn)
+					(EndOfStream 							EndOfStream)
+					(ExternalError 							ExternalError)
+						(IOError 								IOError)
+							(SocketError 								SocketError)
+						(SystemCallError 							SystemCallError)
+					(IndexingErrorPreventingCommit				IndexingErrorPreventingCommit)
+					(LockError 								LockError)
 					(ArithmeticError 												NumericError)
-						(Exceptions.ZeroDivide								ZeroDivide)
-					(Exceptions.RepositoryError 							RepositoryError)
-					(Exceptions.TransactionError 							TransactionError)
-					(Exceptions.UncontinuableError 						UncontinuableError)
-					(Exceptions.SignalBufferFull 							SignalBufferFull)
+						(ZeroDivide								ZeroDivide)
+					(RepositoryError 							RepositoryError)
+					(TransactionError 							TransactionError)
+					(UncontinuableError 						UncontinuableError)
+					(SignalBufferFull 							SignalBufferFull)
 		)
 ]
 
@@ -1787,28 +1786,28 @@ GbsSessionManager >> globalFastConnectorsList
 		(GbxFastIdentityKeyValueDictionary 			FastIdentityKeyValueDictionary)
 		(GbxGsMethodDictionary 						GsMethodDictionary)
 		(GbxUnauthorizedObjectStub 					UnauthorizedObjectStub)
-		(ServerClasses.ClientForwarder 				ClientForwarder)
-		(ServerClasses.GsClass						Class)
-		(ServerClasses.GsClassOrganizer				ClassOrganizer)
-		('ServerClasses.GsNMethod' 					GsNMethod)
-		(ServerClasses.GsSession					GsSession)
-		(ServerClasses.GsCurrentSession				GsCurrentSession)
-		(ServerClasses.GsRdbConnection				GsRdbConnection)
-		(ServerClasses.GsIdentityDictionary			IdentityDictionary)
-		(ServerClasses.GsInterSessionSignal			GsInterSessionSignal)
-		(ServerClasses.GsMethod					GsMethod)
-		(ServerClasses.IntegerKeyValueDictionary		IntegerKeyValueDictionary)
-		(ServerClasses.KeyValueDictionary				KeyValueDictionary)
-		(ServerClasses.LanguageDictionary			LanguageDictionary)
-		(ServerClasses.RcCounter					RcCounter)
-		(ServerClasses.RcIdentityBag					RcIdentityBag)
-		(ServerClasses.RcKeyValueDictionary			RcKeyValueDictionary)
-		(ServerClasses.RcQueue						RcQueue)
-		(ServerClasses.Segment						Segment)
-		(ServerClasses.StringKeyValueDictionary		StringKeyValueDictionary)
-		(ServerClasses.SymbolDictionary				SymbolDictionary)
-		(ServerClasses.SymbolKeyValueDictionary		SymbolKeyValueDictionary)
-		(ServerClasses.UserProfile					UserProfile)
+		(ClientForwarder 						ClientForwarder)
+		(GsClass								Class)
+		(GsClassOrganizer						ClassOrganizer)
+		(GsNMethod 							GsNMethod)
+		(GsSession							GsSession)
+		(GsCurrentSession						GsCurrentSession)
+		(GsRdbConnection						GsRdbConnection)
+		(GsIdentityDictionary					IdentityDictionary)
+		(GsInterSessionSignal					GsInterSessionSignal)
+		(GsMethod							GsMethod)
+		(IntegerKeyValueDictionary				IntegerKeyValueDictionary)
+		(KeyValueDictionary						KeyValueDictionary)
+		(LanguageDictionary						LanguageDictionary)
+		(RcCounter							RcCounter)
+		(RcIdentityBag							RcIdentityBag)
+		(RcKeyValueDictionary					RcKeyValueDictionary)
+		(RcQueue								RcQueue)
+		(Segment								Segment)
+		(StringKeyValueDictionary				StringKeyValueDictionary)
+		(SymbolDictionary						SymbolDictionary)
+		(SymbolKeyValueDictionary				SymbolKeyValueDictionary)
+		(UserProfile							UserProfile)
 		(IdentityBag											IdentityBag)
 		(IdentityDictionary										IdentityKeyValueDictionary)
 		((IdentitySet

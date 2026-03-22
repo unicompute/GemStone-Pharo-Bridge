@@ -1,6 +1,6 @@
 Class {
-	#name : 'GbxPollingEventDetector',
-	#superclass : 'GbxEventDetector',
+	#name : 'GbxPollingEventDetectorTool',
+	#superclass : 'GbxEventDetectorTool',
 	#instVars : [
 		'pollInterval',
 		'lastPollTime'
@@ -10,14 +10,14 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxPollingEventDetector class >> on: aSession [
+GbxPollingEventDetectorTool class >> on: aSession [
 	^ self new
 		session: aSession;
 		yourself
 ]
 
 { #category : 'instance creation' }
-GbxPollingEventDetector class >> on: aSession interval: milliseconds [
+GbxPollingEventDetectorTool class >> on: aSession interval: milliseconds [
 	^ self new
 		session: aSession;
 		pollInterval: milliseconds;
@@ -25,7 +25,7 @@ GbxPollingEventDetector class >> on: aSession interval: milliseconds [
 ]
 
 { #category : 'events' }
-GbxPollingEventDetector >> detectEvents [
+GbxPollingEventDetectorTool >> detectEvents [
 	"Start polling for events"
 	isDetecting := true.
 	
@@ -37,28 +37,28 @@ GbxPollingEventDetector >> detectEvents [
 ]
 
 { #category : 'initialization' }
-GbxPollingEventDetector >> initialize [
+GbxPollingEventDetectorTool >> initialize [
 	super initialize.
 	pollInterval := 500. "500ms default"
 ]
 
 { #category : 'accessing' }
-GbxPollingEventDetector >> lastPollTime [
+GbxPollingEventDetectorTool >> lastPollTime [
 	^ lastPollTime
 ]
 
 { #category : 'accessing' }
-GbxPollingEventDetector >> pollInterval [
+GbxPollingEventDetectorTool >> pollInterval [
 	^ pollInterval
 ]
 
 { #category : 'accessing' }
-GbxPollingEventDetector >> pollInterval: anInteger [
+GbxPollingEventDetectorTool >> pollInterval: anInteger [
 	pollInterval := anInteger
 ]
 
 { #category : 'events' }
-GbxPollingEventDetector >> pollForEvents [
+GbxPollingEventDetectorTool >> pollForEvents [
 	"Poll for events from GemStone"
 	| script result |
 	

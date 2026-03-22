@@ -13,7 +13,7 @@ Gbx8v3ObjectReport >> idxSize
 [
 
 	indexedSize == nil
-		ifTrue: [indexedSize := (data longLongAt: offset + 32) bitShift: -24].
+		ifTrue: [indexedSize := (data unsignedLongLongAt: offset + 32) bitShift: -24].
 	^indexedSize
 ]
 
@@ -32,7 +32,7 @@ Gbx8v3ObjectReport >> storeIndexedSizeBits
 
 	| indexedSizeBits |
 	indexedSizeBits := indexedSize * 16r1000000 + bits.
-	data longLongAt: offset + 32 put: indexedSizeBits
+	data unsignedLongLongAt: offset + 32 put: indexedSizeBits
 ]
 
 { #category : 'accessing header' }

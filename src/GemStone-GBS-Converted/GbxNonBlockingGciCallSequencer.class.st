@@ -52,22 +52,7 @@ GbxNonBlockingGciCallSequencer >> waitForResult: initialResult type: resultType
 	must be a symbol, a selector in the 'results' protocol of GbxPointer.
 	Sender must hold this session's accessProtect."
 
-	| done statsEnabled |
-	(inNonBlockingCall not or: [initialResult gbxIsGSError])
-		ifTrue: [^initialResult].	"Okay, we're in a non-blocking call; wait for the result."
-	statsEnabled := thisSession mainStatsEnabled.
-	
-	[done := self setSessionPerformCheck: 
-					[self primInterface gciNbEndResultPtrPtr: self pointerPointer asAddress].
-	statsEnabled ifTrue: [thisSession statResource gbxIncProgress: done].
-	done == self class resultReady]
-			whileFalse: 
-				[done gbxIsGSError ifTrue: [^done].
-				done == self class resultProgressed
-					ifFalse: 
-						[self nbSocket
-							readWaitWithTimeoutMs: thisSession configuration socketWaitTimeout]].
-	^self pointerPointer perform: resultType
+	^self pollForResult: initialResult type: resultType
 ]
 
 { #category : 'nonblocking support' }

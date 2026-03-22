@@ -129,6 +129,11 @@ Object >> gbxFixMe [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxIsThisLastReport: report [
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> gbxAssertImmutable [
 	self gbsMessenger assertImmutable: self
 ]
@@ -194,20 +199,40 @@ Object >> gbxAsCString [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxByteSizeForReplace [
+	^ self basicSize
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxByteAtForReplace: index [
+	^ self basicAt: index
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxByteAtForReplace: index put: value [
+	^ self basicAt: index put: value
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> gbxReplaceBytesFrom: start to: stop with: replacement startingAt: repStart [
 	"GemStone compatibility for byte-indexed objects."
 
-	| offset |
-	stop - start + repStart > replacement basicSize
+	| offset replacementSize |
+	replacementSize := replacement gbxByteSizeForReplace.
+	(replacementSize notNil and: [ stop - start + repStart > replacementSize ])
 		ifTrue: [ self error: 'There are not enough elements to perform the replacement' ].
 	offset := repStart - start.
 	(self == replacement and: [ repStart < start ])
 		ifTrue: [
 			stop to: start by: -1 do: [ :index |
-				self basicAt: index put: (replacement basicAt: offset + index) ] ]
+				self
+					gbxByteAtForReplace: index
+					put: (replacement gbxByteAtForReplace: offset + index) ] ]
 		ifFalse: [
 			start to: stop do: [ :index |
-				self basicAt: index put: (replacement basicAt: offset + index) ] ].
+				self
+					gbxByteAtForReplace: index
+					put: (replacement gbxByteAtForReplace: offset + index) ] ].
 	^ self
 ]
 
@@ -855,12 +880,32 @@ Object class >> gbxResolve: varNameSymbol in: namespaceName [
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
 Object class >> gbxBindingFor: varNameSymbol [
-	^ Smalltalk globals associationAt: varNameSymbol ifAbsent: [ nil ]
+	^ Smalltalk globals
+		associationAt: (varNameSymbol isString ifTrue: [ varNameSymbol asSymbol ] ifFalse: [ varNameSymbol ])
+		ifAbsent: [ nil ]
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
 Object class >> gbxBindingFor: varNameSymbol in: namespaceName [
-	^ self gbxBindingFor: varNameSymbol
+	| namespace normalizedKey resolvedNamespaceName |
+	normalizedKey := varNameSymbol isString
+		ifTrue: [ varNameSymbol asSymbol ]
+		ifFalse: [ varNameSymbol ].
+	resolvedNamespaceName := namespaceName isString
+		ifTrue: [ namespaceName asSymbol ]
+		ifFalse: [ namespaceName ].
+	namespace := resolvedNamespaceName isSymbol
+		ifTrue: [ Smalltalk globals at: resolvedNamespaceName ifAbsent: [ Smalltalk globals ] ]
+		ifFalse: [
+			resolvedNamespaceName inject: Smalltalk globals into: [ :current :each |
+				| key |
+				key := each isString ifTrue: [ each asSymbol ] ifFalse: [ each ].
+				(current respondsTo: #at:ifAbsent:)
+					ifTrue: [ current at: key ifAbsent: [ current ] ]
+					ifFalse: [ current ] ] ].
+	^ (namespace respondsTo: #associationAt:ifAbsent:)
+		ifTrue: [ namespace associationAt: normalizedKey ifAbsent: [ nil ] ]
+		ifFalse: [ nil ]
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }

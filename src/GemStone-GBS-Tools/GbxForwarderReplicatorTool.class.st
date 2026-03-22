@@ -1,12 +1,12 @@
 Class {
-	#name : 'GbxForwarderReplicator',
+	#name : 'GbxForwarderReplicatorTool',
 	#superclass : 'GbxReplicator',
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }
 
 { #category : 'replication' }
-GbxForwarderReplicator >> replicate [
+GbxForwarderReplicatorTool >> replicate [
 	"Replicate a forwarder (stub) from GemStone"
 	| forwarder |
 	

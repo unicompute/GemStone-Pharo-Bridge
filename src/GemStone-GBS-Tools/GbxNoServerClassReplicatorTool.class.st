@@ -1,12 +1,12 @@
 Class {
-	#name : 'GbxNoServerClassReplicator',
+	#name : 'GbxNoServerClassReplicatorTool',
 	#superclass : 'GbxReplicator',
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }
 
 { #category : 'replication' }
-GbxNoServerClassReplicator >> replicate [
+GbxNoServerClassReplicatorTool >> replicate [
 	"Replicate an object with no server class mapping"
 	| script className |
 	

@@ -1,23 +1,23 @@
 Class {
-	#name : 'GbxIdentitySetReplicator',
+	#name : 'GbxOrderedCollectionReplicatorTool',
 	#superclass : 'GbxReplicator',
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }
 
 { #category : 'replication' }
-GbxIdentitySetReplicator >> replicate [
-	"Replicate an IdentitySet from GemStone"
-	| script result set |
+GbxOrderedCollectionReplicatorTool >> replicate [
+	"Replicate an OrderedCollection from GemStone"
+	| script result collection |
 	
 	target ifNil: [ ^ nil ].
 	session ifNil: [ ^ nil ].
 	
 	script := '[
-		| is stream |
-		is := Object _objectForOop: ', target oop asString, '.
+		| oc stream |
+		oc := Object _objectForOop: ', target oop asString, '.
 		stream := WriteStream on: String new.
-		is do: [ :elem |
+		oc do: [ :elem |
 			| oop |
 			oop := Reflection oopOf: elem.
 			stream
@@ -29,7 +29,7 @@ GbxIdentitySetReplicator >> replicate [
 	
 	result := session executeAndFetch: script.
 	
-	set := IdentitySet new.
+	collection := OrderedCollection new.
 	result ifNotNil: [
 		result splitOn: Character lf do: [ :line |
 			line isNotEmpty ifTrue: [
@@ -37,11 +37,11 @@ GbxIdentitySetReplicator >> replicate [
 				parts := line splitOn: $|.
 				parts size >= 1 ifTrue: [
 					elem := parts first.
-					set add: elem.
+					collection add: elem.
 				].
 			].
 		].
 	].
 	
-	^ set.
+	^ collection.
 ]

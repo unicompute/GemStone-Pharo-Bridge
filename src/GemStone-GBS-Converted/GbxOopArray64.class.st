@@ -13,7 +13,7 @@ GbxOopArray64 >> bufferSize
 [
 	"Return the size of the allocated buffer in oops, assuming it's all mine, i.e. that I was created with size:."
 	
-	^buffer basicSize bitShift: -3
+	^bufferCapacityOops
 ]
 
 { #category : 'random-access putting' }
@@ -78,4 +78,3 @@ GbxOopArray64 >> bytesPerOop
 	
 	^8
 ]
-

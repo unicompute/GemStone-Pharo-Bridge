@@ -2,6 +2,10 @@ Extension { #name : 'Class' }
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
 Class >> asGSObjectInSession: aGbsSession [
+	self == Class ifTrue: [
+		| gsClass |
+		gsClass := Smalltalk at: #GsClass ifAbsent: [ nil ].
+		gsClass notNil ifTrue: [ ^ gsClass asGSObjectInSession: aGbsSession ] ].
 	^ aGbsSession gemStoneClassFor: self
 ]
 

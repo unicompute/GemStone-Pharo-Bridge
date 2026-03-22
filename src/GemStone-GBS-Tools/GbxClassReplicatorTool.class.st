@@ -1,13 +1,13 @@
 Class {
-	#name : 'GbxUnmappedClassReplicator',
-	#superclass : 'GbxClassReplicator',
+	#name : 'GbxClassReplicatorTool',
+	#superclass : 'GbxReplicator',
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }
 
 { #category : 'replication' }
-GbxUnmappedClassReplicator >> replicate [
-	"Replicate an unmapped class from GemStone"
+GbxClassReplicatorTool >> replicate [
+	"Replicate a class from GemStone"
 	| script className classHolder |
 	
 	target ifNil: [ ^ nil ].
@@ -17,7 +17,7 @@ GbxUnmappedClassReplicator >> replicate [
 	className := session executeAndFetch: script.
 	
 	classHolder := GbxClassHolder new
-		name: className, ' (unmapped)';
+		name: className;
 		proxy: target;
 		session: session;
 		yourself.

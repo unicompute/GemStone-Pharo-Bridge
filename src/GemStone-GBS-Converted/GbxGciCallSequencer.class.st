@@ -307,47 +307,56 @@ GbxGciCallSequencer class >> gciCallProtect
 { #category : 'initialize-release' }
 GbxGciCallSequencer class >> initializeGemCursor
 [
+	| gemCursor |
 
 	"Initialize the gem cursor."
 
 	(SpecialGemStoneObjects at: #GScursor ifAbsent: [ nil ]) isNil ifTrue: [
-		SpecialGemStoneObjects at: #GScursor put: (Cursor
-			imageArray: #(
-			    2r0000000000000000
-			    2r0000000000000000
-			    2r0000000000000000
-			    2r0000000000000000
-			    2r0000111111111000
-			    2r0001011011011100
-			    2r0010100100100110
-			    2r0111111111111111
-			    2r0010001000100010
-			    2r0001000101000100
-			    2r0000110010011000
-			    2r0000010101010000
-			    2r0000001000100000
-			    2r0000000101000000
-			    2r0000000010000000
-			    2r0000000000000000)
-			maskArray: #(
-			    2r0000000000000000
-			    2r0000000000000000
-			    2r0000000000000000
-			    2r0000111111111000
-			    2r0001111111111100
-			    2r0011111111111110
-			    2r0111101101101111
-			    2r1111111111111111
-			    2r0111011101110111
-			    2r0011101111101110
-			    2r0001110111011100
-			    2r0000111111111000
-			    2r0000011101110000
-			    2r0000001111100000
-			    2r0000000111000000
-			    2r0000000010000000)
-			hotSpot:  9@15
-			name: '') ]
+		gemCursor := (Cursor class respondsTo: #imageArray:maskArray:hotSpot:name:)
+			ifTrue: [
+				Cursor
+					imageArray: #(
+					    2r0000000000000000
+					    2r0000000000000000
+					    2r0000000000000000
+					    2r0000000000000000
+					    2r0000111111111000
+					    2r0001011011011100
+					    2r0010100100100110
+					    2r0111111111111111
+					    2r0010001000100010
+					    2r0001000101000100
+					    2r0000110010011000
+					    2r0000010101010000
+					    2r0000001000100000
+					    2r0000000101000000
+					    2r0000000010000000
+					    2r0000000000000000)
+					maskArray: #(
+					    2r0000000000000000
+					    2r0000000000000000
+					    2r0000000000000000
+					    2r0000111111111000
+					    2r0001111111111100
+					    2r0011111111111110
+					    2r0111101101101111
+					    2r1111111111111111
+					    2r0111011101110111
+					    2r0011101111101110
+					    2r0001110111011100
+					    2r0000111111111000
+					    2r0000011101110000
+					    2r0000001111100000
+					    2r0000000111000000
+					    2r0000000010000000)
+					hotSpot: 9@15
+					name: '' ]
+			ifFalse: [
+				(Cursor respondsTo: #wait)
+					ifTrue: [ Cursor wait ]
+					ifFalse: [ nil ] ].
+		SpecialGemStoneObjects at: #GScursor put: gemCursor.
+		Smalltalk at: #GScursor put: gemCursor ]
 ]
 
 { #category : 'initialize-release' }

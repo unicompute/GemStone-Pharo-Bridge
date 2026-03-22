@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxServerMapAuditResults',
+	#name : 'GbxServerMapAuditResultsTool',
 	#superclass : 'Object',
 	#instVars : [
 		'errors',
@@ -12,7 +12,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxServerMapAuditResults class >> new [
+GbxServerMapAuditResultsTool class >> new [
 	^ super new
 		errors: OrderedCollection new;
 		warnings: OrderedCollection new;
@@ -22,69 +22,69 @@ GbxServerMapAuditResults class >> new [
 ]
 
 { #category : 'accessing' }
-GbxServerMapAuditResults >> addError: aString [
+GbxServerMapAuditResultsTool >> addError: aString [
 	errors add: aString.
 ]
 
 { #category : 'accessing' }
-GbxServerMapAuditResults >> addWarning: aString [
+GbxServerMapAuditResultsTool >> addWarning: aString [
 	warnings add: aString.
 ]
 
 { #category : 'accessing' }
-GbxServerMapAuditResults >> auditTime [
+GbxServerMapAuditResultsTool >> auditTime [
 	^ auditTime
 ]
 
 { #category : 'accessing' }
-GbxServerMapAuditResults >> auditTime: aDateAndTime [
+GbxServerMapAuditResultsTool >> auditTime: aDateAndTime [
 	auditTime := aDateAndTime
 ]
 
 { #category : 'accessing' }
-GbxServerMapAuditResults >> errors [
+GbxServerMapAuditResultsTool >> errors [
 	^ errors
 ]
 
 { #category : 'accessing' }
-GbxServerMapAuditResults >> errors: aCollection [
+GbxServerMapAuditResultsTool >> errors: aCollection [
 	errors := aCollection
 ]
 
 { #category : 'testing' }
-GbxServerMapAuditResults >> hasErrors [
+GbxServerMapAuditResultsTool >> hasErrors [
 	^ errors isEmpty not
 ]
 
 { #category : 'testing' }
-GbxServerMapAuditResults >> hasWarnings [
+GbxServerMapAuditResultsTool >> hasWarnings [
 	^ warnings isEmpty not
 ]
 
 { #category : 'testing' }
-GbxServerMapAuditResults >> isSuccess [
+GbxServerMapAuditResultsTool >> isSuccess [
 	^ errors isEmpty
 ]
 
 { #category : 'accessing' }
-GbxServerMapAuditResults >> nodesAudited [
+GbxServerMapAuditResultsTool >> nodesAudited [
 	^ nodesAudited
 ]
 
 { #category : 'accessing' }
-GbxServerMapAuditResults >> nodesAudited: anInteger [
+GbxServerMapAuditResultsTool >> nodesAudited: anInteger [
 	nodesAudited := anInteger
 ]
 
 { #category : 'accessing' }
-GbxServerMapAuditResults >> printString [
+GbxServerMapAuditResultsTool >> printString [
 	^ 'Audit Results: ', errors size asString, ' errors, ',
 	  warnings size asString, ' warnings, ',
 	  nodesAudited asString, ' nodes audited'
 ]
 
 { #category : 'accessing' }
-GbxServerMapAuditResults >> summary [
+GbxServerMapAuditResultsTool >> summary [
 	"Return a summary string of audit results"
 	| stream |
 	
@@ -115,11 +115,11 @@ GbxServerMapAuditResults >> summary [
 ]
 
 { #category : 'accessing' }
-GbxServerMapAuditResults >> warnings [
+GbxServerMapAuditResultsTool >> warnings [
 	^ warnings
 ]
 
 { #category : 'accessing' }
-GbxServerMapAuditResults >> warnings: aCollection [
+GbxServerMapAuditResultsTool >> warnings: aCollection [
 	warnings := aCollection
 ]

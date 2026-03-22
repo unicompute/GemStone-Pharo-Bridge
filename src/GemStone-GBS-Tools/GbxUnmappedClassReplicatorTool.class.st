@@ -1,23 +1,23 @@
 Class {
-	#name : 'GbxMetaclassReplicator',
-	#superclass : 'GbxClassReplicator',
+	#name : 'GbxUnmappedClassReplicatorTool',
+	#superclass : 'GbxClassReplicatorTool',
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }
 
 { #category : 'replication' }
-GbxMetaclassReplicator >> replicate [
-	"Replicate a metaclass from GemStone"
+GbxUnmappedClassReplicatorTool >> replicate [
+	"Replicate an unmapped class from GemStone"
 	| script className classHolder |
 	
 	target ifNil: [ ^ nil ].
 	session ifNil: [ ^ nil ].
 	
-	script := '(Object _objectForOop: ', target oop asString, ') thisClass name'.
+	script := '(Object _objectForOop: ', target oop asString, ') name'.
 	className := session executeAndFetch: script.
 	
 	classHolder := GbxClassHolder new
-		name: className, ' class';
+		name: className, ' (unmapped)';
 		proxy: target;
 		session: session;
 		yourself.

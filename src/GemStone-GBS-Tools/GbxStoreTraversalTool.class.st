@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxStoreTraversal',
+	#name : 'GbxStoreTraversalTool',
 	#superclass : 'GbxTraversal',
 	#instVars : [
 		'session',
@@ -14,7 +14,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxStoreTraversal class >> on: aSession cache: aCache [
+GbxStoreTraversalTool class >> on: aSession cache: aCache [
 	^ self new
 		session: aSession;
 		cache: aCache;
@@ -22,7 +22,7 @@ GbxStoreTraversal class >> on: aSession cache: aCache [
 ]
 
 { #category : 'traversal' }
-GbxStoreTraversal >> storeObject: anObject [
+GbxStoreTraversalTool >> storeObject: anObject [
 	"Store an object to GemStone"
 	| oop |
 	
@@ -44,7 +44,7 @@ GbxStoreTraversal >> storeObject: anObject [
 ]
 
 { #category : 'traversal' }
-GbxStoreTraversal >> storeObjects: objectArray [
+GbxStoreTraversalTool >> storeObjects: objectArray [
 	"Store multiple objects to GemStone"
 	| oops |
 	
@@ -57,7 +57,7 @@ GbxStoreTraversal >> storeObjects: objectArray [
 ]
 
 { #category : 'unswizzling' }
-GbxStoreTraversal >> unswizzleObject: anObject [
+GbxStoreTraversalTool >> unswizzleObject: anObject [
 	"Unswizzle an object to raw bytes"
 	
 	anObject isArray ifTrue: [ ^ self unswizzleArray: anObject ].
@@ -71,7 +71,7 @@ GbxStoreTraversal >> unswizzleObject: anObject [
 ]
 
 { #category : 'unswizzling' }
-GbxStoreTraversal >> unswizzleArray: anArray [
+GbxStoreTraversalTool >> unswizzleArray: anArray [
 	"Unswizzle an array"
 	| size |
 	
@@ -91,7 +91,7 @@ GbxStoreTraversal >> unswizzleArray: anArray [
 ]
 
 { #category : 'unswizzling' }
-GbxStoreTraversal >> unswizzleCollection: aCollection [
+GbxStoreTraversalTool >> unswizzleCollection: aCollection [
 	"Unswizzle a collection"
 	| size |
 	
@@ -111,7 +111,7 @@ GbxStoreTraversal >> unswizzleCollection: aCollection [
 ]
 
 { #category : 'unswizzling' }
-GbxStoreTraversal >> unswizzleDictionary: aDictionary [
+GbxStoreTraversalTool >> unswizzleDictionary: aDictionary [
 	"Unswizzle a dictionary"
 	| count offset |
 	
@@ -135,7 +135,7 @@ GbxStoreTraversal >> unswizzleDictionary: aDictionary [
 ]
 
 { #category : 'unswizzling' }
-GbxStoreTraversal >> unswizzleSet: aSet [
+GbxStoreTraversalTool >> unswizzleSet: aSet [
 	"Unswizzle a set"
 	| size offset |
 	
@@ -155,7 +155,7 @@ GbxStoreTraversal >> unswizzleSet: aSet [
 ]
 
 { #category : 'unswizzling' }
-GbxStoreTraversal >> unswizzleString: aString [
+GbxStoreTraversalTool >> unswizzleString: aString [
 	"Unswizzle a string"
 	| size |
 	
@@ -172,13 +172,13 @@ GbxStoreTraversal >> unswizzleString: aString [
 ]
 
 { #category : 'unswizzling' }
-GbxStoreTraversal >> unswizzleSymbol: aSymbol [
+GbxStoreTraversalTool >> unswizzleSymbol: aSymbol [
 	"Unswizzle a symbol"
 	self unswizzleString: aSymbol asString.
 ]
 
 { #category : 'unswizzling' }
-GbxStoreTraversal >> unswizzleProxy: aProxy [
+GbxStoreTraversalTool >> unswizzleProxy: aProxy [
 	"Unswizzle a proxy"
 	| oop |
 	
@@ -192,7 +192,7 @@ GbxStoreTraversal >> unswizzleProxy: aProxy [
 ]
 
 { #category : 'storage' }
-GbxStoreTraversal >> storeBufferToServer [
+GbxStoreTraversalTool >> storeBufferToServer [
 	"Store buffer contents to server"
 	| oop |
 	
@@ -215,7 +215,7 @@ GbxStoreTraversal >> storeBufferToServer [
 ]
 
 { #category : 'utilities' }
-GbxStoreTraversal >> allocateBufferForSize: size [
+GbxStoreTraversalTool >> allocateBufferForSize: size [
 	"Allocate buffer for given size"
 	
 	buffer ifNotNil: [ buffer free ].
@@ -224,7 +224,7 @@ GbxStoreTraversal >> allocateBufferForSize: size [
 ]
 
 { #category : 'utilities' }
-GbxStoreTraversal >> getOopFor: anObject [
+GbxStoreTraversalTool >> getOopFor: anObject [
 	"Get OOP for an object"
 	| oop |
 	
@@ -246,50 +246,50 @@ GbxStoreTraversal >> getOopFor: anObject [
 ]
 
 { #category : 'initialization' }
-GbxStoreTraversal >> initialize [
+GbxStoreTraversalTool >> initialize [
 	super initialize.
-	cache := GbxBasicCache new.
+	cache := GbxBasicCacheTool new.
 	dirtyObjects := OrderedCollection new.
 	objectsStored := 0.
 	storeBlock := [ :obj | self unswizzleObject: obj ].
 ]
 
 { #category : 'accessing' }
-GbxStoreTraversal >> cache [
+GbxStoreTraversalTool >> cache [
 	^ cache
 ]
 
 { #category : 'accessing' }
-GbxStoreTraversal >> cache: aCache [
+GbxStoreTraversalTool >> cache: aCache [
 	cache := aCache
 ]
 
 { #category : 'accessing' }
-GbxStoreTraversal >> dirtyObjects [
+GbxStoreTraversalTool >> dirtyObjects [
 	^ dirtyObjects
 ]
 
 { #category : 'accessing' }
-GbxStoreTraversal >> objectsStored [
+GbxStoreTraversalTool >> objectsStored [
 	^ objectsStored
 ]
 
 { #category : 'accessing' }
-GbxStoreTraversal >> session [
+GbxStoreTraversalTool >> session [
 	^ session
 ]
 
 { #category : 'accessing' }
-GbxStoreTraversal >> session: aSession [
+GbxStoreTraversalTool >> session: aSession [
 	session := aSession
 ]
 
 { #category : 'accessing' }
-GbxStoreTraversal >> storeBlock [
+GbxStoreTraversalTool >> storeBlock [
 	^ storeBlock
 ]
 
 { #category : 'accessing' }
-GbxStoreTraversal >> storeBlock: aBlock [
+GbxStoreTraversalTool >> storeBlock: aBlock [
 	storeBlock := aBlock
 ]

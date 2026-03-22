@@ -839,7 +839,9 @@ GbsConfiguration >> initialize
 	assertionChecks := false.
 	autoMarkDirty := self class isVisualAgeImage or: [nil respondsTo: #isImmutable].
 	backupPolling := self shouldUseBackupPolling.
-	blockingProtocolRpc := false.
+	"Pharo currently relies on the blocking sequencer for fresh RPC logins.
+	The non-blocking path still stalls during login-time cache/bootstrap work."
+	blockingProtocolRpc := true.
 	blockReplicationEnabled := true.
 	blockReplicationPolicy := #replicate.
 	bulkLoad := false.
@@ -1010,7 +1012,7 @@ GbsConfiguration class >> gciProductName
 			[| ver |
 			ver := GbxGciCallSequencer gciVersion.
 			"strip off the artificially added: GCI-, then turn into a number"
-			prodCode := (ver copyFrom: 5 to: ver size) asNumber < 5 
+			prodCode := ((GbxVersionNumber versionString: (ver copyFrom: 5 to: ver size)) < '5')
 						ifTrue: [2]
 						ifFalse: [1]].
 	^nameArray at: prodCode

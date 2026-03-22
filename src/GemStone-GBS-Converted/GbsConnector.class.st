@@ -5,6 +5,9 @@ Class {
 		'postConnectAction',
 		'connectionCondition'
 	],
+	#classInstVars : [
+		'type'
+	],
 	#classVars : [
 		'ValidPostConnectActions'
 	],

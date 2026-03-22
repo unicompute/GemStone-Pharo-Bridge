@@ -144,7 +144,7 @@ GbxBasicInspector >> initialize: anObject
 [
 	
 	object := anObject.
-	self object basicCache: (GbxBasicCache on: self object delegate).
+	self object basicCache: (GbxBasicCacheTool on: self object delegate).
 	self refresh.
 	undoHistory := OrderedCollection new.
 	self session: anObject delegate noCheckSession

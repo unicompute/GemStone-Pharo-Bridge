@@ -48,7 +48,7 @@ GbxTraversalBuffer64 >> allocatedBytes: numBytes
 [
 	"The first eight bytes of the trav buffer are the number of bytes allocated."
 	
-	data longLongAt: 1 put: numBytes
+	data unsignedLongLongAt: 1 put: numBytes
 ]
 
 { #category : 'private' }
@@ -57,7 +57,7 @@ GbxTraversalBuffer64 >> usedBytes: numBytes
 	"Store the number of bytes used into the buffer's header. Bytes should represent only
 	the bytes used for object reports, and should not include the bytes in the buffer header."
 	
-	data longLongAt: 9 put: numBytes
+	data unsignedLongLongAt: 9 put: numBytes
 ]
 
 { #category : 'private' }
@@ -65,12 +65,12 @@ GbxTraversalBuffer64 >> allocatedBytes
 [
 	"The first eight bytes of the trav buffer are the number of bytes allocated."
 	
-	^data longLongAt: 1
+	^data unsignedLongLongAt: 1
 ]
 
 { #category : 'private' }
 GbxTraversalBuffer64 >> usedBytes
 [
 	
-	^data longLongAt: 9
+	^data unsignedLongLongAt: 9
 ]

@@ -36,21 +36,31 @@ Behavior >> gbsByteSwizzleStride [
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
 Behavior >> gbxBindingFor: varNameSymbol [
-	^ Smalltalk globals associationAt: varNameSymbol ifAbsent: [ nil ]
+	^ Smalltalk globals
+		associationAt: (varNameSymbol isString ifTrue: [ varNameSymbol asSymbol ] ifFalse: [ varNameSymbol ])
+		ifAbsent: [ nil ]
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
 Behavior >> gbxBindingFor: varNameSymbol in: namespaceName [
-	| namespace |
-	namespace := namespaceName isSymbol
-		ifTrue: [ Smalltalk globals at: namespaceName ifAbsent: [ Smalltalk globals ] ]
+	| namespace normalizedKey resolvedNamespaceName |
+	normalizedKey := varNameSymbol isString
+		ifTrue: [ varNameSymbol asSymbol ]
+		ifFalse: [ varNameSymbol ].
+	resolvedNamespaceName := namespaceName isString
+		ifTrue: [ namespaceName asSymbol ]
+		ifFalse: [ namespaceName ].
+	namespace := resolvedNamespaceName isSymbol
+		ifTrue: [ Smalltalk globals at: resolvedNamespaceName ifAbsent: [ Smalltalk globals ] ]
 		ifFalse: [
-			namespaceName inject: Smalltalk globals into: [ :ns :each |
+			resolvedNamespaceName inject: Smalltalk globals into: [ :ns :each |
+				| key |
+				key := each isString ifTrue: [ each asSymbol ] ifFalse: [ each ].
 				(ns respondsTo: #at:ifAbsent:)
-					ifTrue: [ ns at: each ifAbsent: [ ns ] ]
+					ifTrue: [ ns at: key ifAbsent: [ ns ] ]
 					ifFalse: [ ns ] ] ].
 	^ (namespace respondsTo: #associationAt:ifAbsent:)
-		ifTrue: [ namespace associationAt: varNameSymbol ifAbsent: [ nil ] ]
+		ifTrue: [ namespace associationAt: normalizedKey ifAbsent: [ nil ] ]
 		ifFalse: [ nil ]
 ]
 

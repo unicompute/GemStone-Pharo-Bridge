@@ -1,13 +1,13 @@
 Class {
-	#name : 'GbxStringReplicator',
+	#name : 'GbxTimestampReplicatorTool',
 	#superclass : 'GbxReplicator',
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }
 
 { #category : 'replication' }
-GbxStringReplicator >> replicate [
-	"Replicate a string from GemStone"
+GbxTimestampReplicatorTool >> replicate [
+	"Replicate a Timestamp from GemStone"
 	| script |
 	
 	target ifNil: [ ^ nil ].

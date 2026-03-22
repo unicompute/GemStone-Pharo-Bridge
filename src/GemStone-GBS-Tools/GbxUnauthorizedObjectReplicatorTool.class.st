@@ -1,19 +1,19 @@
 Class {
-	#name : 'GbxStubReplicator',
+	#name : 'GbxUnauthorizedObjectReplicatorTool',
 	#superclass : 'GbxReplicator',
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }
 
 { #category : 'replication' }
-GbxStubReplicator >> replicate [
-	"Replicate a stub from GemStone"
+GbxUnauthorizedObjectReplicatorTool >> replicate [
+	"Replicate an unauthorized object (stub)"
 	| stub |
 	
 	target ifNil: [ ^ nil ].
 	session ifNil: [ ^ nil ].
 	
-	stub := GbxObjectStub new.
+	stub := GbxUnauthorizedObjectStub new.
 	stub
 		oop: target oop;
 		session: session;

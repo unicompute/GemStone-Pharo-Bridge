@@ -50,6 +50,11 @@ String >> gbxAsServerBytes [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+String >> gbxAsCString [
+	^ ExternalAddress fromString: self
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 String >> gbxCanBeArgForUnsynchronizedOperationInSession: session [
 	^ true
 ]

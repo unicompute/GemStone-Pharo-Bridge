@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxFetchTraversal',
+	#name : 'GbxFetchTraversalTool',
 	#superclass : 'GbxTraversal',
 	#instVars : [
 		'session',
@@ -15,7 +15,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxFetchTraversal class >> on: aSession cache: aCache [
+GbxFetchTraversalTool class >> on: aSession cache: aCache [
 	^ self new
 		session: aSession;
 		cache: aCache;
@@ -23,7 +23,7 @@ GbxFetchTraversal class >> on: aSession cache: aCache [
 ]
 
 { #category : 'traversal' }
-GbxFetchTraversal >> fetchObjectAtOop: anOop [
+GbxFetchTraversalTool >> fetchObjectAtOop: anOop [
 	"Fetch and swizzle a single object"
 	| proxy |
 	
@@ -39,7 +39,7 @@ GbxFetchTraversal >> fetchObjectAtOop: anOop [
 ]
 
 { #category : 'traversal' }
-GbxFetchTraversal >> fetchObjectsAtOops: oopArray [
+GbxFetchTraversalTool >> fetchObjectsAtOops: oopArray [
 	"Fetch and swizzle multiple objects"
 	| results |
 	
@@ -52,7 +52,7 @@ GbxFetchTraversal >> fetchObjectsAtOops: oopArray [
 ]
 
 { #category : 'fetching' }
-GbxFetchTraversal >> fetchRawDataForOop: anOop [
+GbxFetchTraversalTool >> fetchRawDataForOop: anOop [
 	"Fetch raw data for an OOP from server"
 	| size classOop |
 	
@@ -79,16 +79,16 @@ GbxFetchTraversal >> fetchRawDataForOop: anOop [
 ]
 
 { #category : 'initialization' }
-GbxFetchTraversal >> initialize [
+GbxFetchTraversalTool >> initialize [
 	super initialize.
-	cache := GbxBasicCache new.
+	cache := GbxBasicCacheTool new.
 	level := 3. "Default replication level"
 	objectsFetched := 0.
 	swizzleBlock := [ :oop :data | self defaultSwizzleForOop: oop data: data ].
 ]
 
 { #category : 'swizzling' }
-GbxFetchTraversal >> defaultSwizzleForOop: anOop data: data [
+GbxFetchTraversalTool >> defaultSwizzleForOop: anOop data: data [
 	"Default swizzling logic"
 	| className proxy |
 	
@@ -105,7 +105,7 @@ GbxFetchTraversal >> defaultSwizzleForOop: anOop data: data [
 ]
 
 { #category : 'swizzling' }
-GbxFetchTraversal >> createProxyForClass: className oop: anOop [
+GbxFetchTraversalTool >> createProxyForClass: className oop: anOop [
 	"Create a proxy for a specific class"
 	
 	className = 'Array' ifTrue: [ ^ self createArrayProxyForOop: anOop ].
@@ -123,7 +123,7 @@ GbxFetchTraversal >> createProxyForClass: className oop: anOop [
 ]
 
 { #category : 'swizzling' }
-GbxFetchTraversal >> createArrayProxyForOop: anOop [
+GbxFetchTraversalTool >> createArrayProxyForOop: anOop [
 	"Create an array proxy"
 	| size array i elemOop |
 	
@@ -139,7 +139,7 @@ GbxFetchTraversal >> createArrayProxyForOop: anOop [
 ]
 
 { #category : 'swizzling' }
-GbxFetchTraversal >> createCollectionProxyForOop: anOop [
+GbxFetchTraversalTool >> createCollectionProxyForOop: anOop [
 	"Create a collection proxy"
 	| size collection i elemOop |
 	
@@ -155,7 +155,7 @@ GbxFetchTraversal >> createCollectionProxyForOop: anOop [
 ]
 
 { #category : 'swizzling' }
-GbxFetchTraversal >> createDictionaryProxyForOop: anOop [
+GbxFetchTraversalTool >> createDictionaryProxyForOop: anOop [
 	"Create a dictionary proxy"
 	| dict keyOop valueOop |
 	
@@ -174,7 +174,7 @@ GbxFetchTraversal >> createDictionaryProxyForOop: anOop [
 ]
 
 { #category : 'swizzling' }
-GbxFetchTraversal >> createSetProxyForOop: anOop [
+GbxFetchTraversalTool >> createSetProxyForOop: anOop [
 	"Create a set proxy"
 	| size set i elemOop |
 	
@@ -190,7 +190,7 @@ GbxFetchTraversal >> createSetProxyForOop: anOop [
 ]
 
 { #category : 'swizzling' }
-GbxFetchTraversal >> createStringProxyForOop: anOop [
+GbxFetchTraversalTool >> createStringProxyForOop: anOop [
 	"Create a string proxy"
 	| size string |
 	
@@ -205,7 +205,7 @@ GbxFetchTraversal >> createStringProxyForOop: anOop [
 ]
 
 { #category : 'swizzling' }
-GbxFetchTraversal >> createSymbolProxyForOop: anOop [
+GbxFetchTraversalTool >> createSymbolProxyForOop: anOop [
 	"Create a symbol proxy"
 	| string |
 	
@@ -214,7 +214,7 @@ GbxFetchTraversal >> createSymbolProxyForOop: anOop [
 ]
 
 { #category : 'reading' }
-GbxFetchTraversal >> readClassNameFromBuffer [
+GbxFetchTraversalTool >> readClassNameFromBuffer [
 	"Read class name from buffer"
 	| className |
 	
@@ -223,25 +223,25 @@ GbxFetchTraversal >> readClassNameFromBuffer [
 ]
 
 { #category : 'reading' }
-GbxFetchTraversal >> readSizeFromBuffer [
+GbxFetchTraversalTool >> readSizeFromBuffer [
 	"Read size from buffer"
 	^ buffer uint64At: 1.
 ]
 
 { #category : 'reading' }
-GbxFetchTraversal >> readOopAtOffset: offset [
+GbxFetchTraversalTool >> readOopAtOffset: offset [
 	"Read an OOP at a specific offset"
 	^ buffer uint64At: offset.
 ]
 
 { #category : 'reading' }
-GbxFetchTraversal >> readByteAtOffset: offset [
+GbxFetchTraversalTool >> readByteAtOffset: offset [
 	"Read a byte at a specific offset"
 	^ buffer unsignedByteAt: offset.
 ]
 
 { #category : 'reading' }
-GbxFetchTraversal >> readNextOop [
+GbxFetchTraversalTool >> readNextOop [
 	"Read next OOP from buffer (sequential)"
 	| oop |
 	
@@ -251,68 +251,68 @@ GbxFetchTraversal >> readNextOop [
 ]
 
 { #category : 'testing' }
-GbxFetchTraversal >> hasMoreEntries [
+GbxFetchTraversalTool >> hasMoreEntries [
 	"Check if there are more entries to read"
 	^ buffer currentPosition < bufferSize.
 ]
 
 { #category : 'accessing' }
-GbxFetchTraversal >> cache [
+GbxFetchTraversalTool >> cache [
 	^ cache
 ]
 
 { #category : 'accessing' }
-GbxFetchTraversal >> cache: aCache [
+GbxFetchTraversalTool >> cache: aCache [
 	cache := aCache
 ]
 
 { #category : 'accessing' }
-GbxFetchTraversal >> clampSpec [
+GbxFetchTraversalTool >> clampSpec [
 	^ clampSpec
 ]
 
 { #category : 'accessing' }
-GbxFetchTraversal >> clampSpec: aSpec [
+GbxFetchTraversalTool >> clampSpec: aSpec [
 	clampSpec := aSpec
 ]
 
 { #category : 'accessing' }
-GbxFetchTraversal >> level [
+GbxFetchTraversalTool >> level [
 	^ level
 ]
 
 { #category : 'accessing' }
-GbxFetchTraversal >> level: anInteger [
+GbxFetchTraversalTool >> level: anInteger [
 	level := anInteger
 ]
 
 { #category : 'accessing' }
-GbxFetchTraversal >> objectsFetched [
+GbxFetchTraversalTool >> objectsFetched [
 	^ objectsFetched
 ]
 
 { #category : 'accessing' }
-GbxFetchTraversal >> session [
+GbxFetchTraversalTool >> session [
 	^ session
 ]
 
 { #category : 'accessing' }
-GbxFetchTraversal >> session: aSession [
+GbxFetchTraversalTool >> session: aSession [
 	session := aSession
 ]
 
 { #category : 'accessing' }
-GbxFetchTraversal >> swizzleBlock [
+GbxFetchTraversalTool >> swizzleBlock [
 	^ swizzleBlock
 ]
 
 { #category : 'accessing' }
-GbxFetchTraversal >> swizzleBlock: aBlock [
+GbxFetchTraversalTool >> swizzleBlock: aBlock [
 	swizzleBlock := aBlock
 ]
 
 { #category : 'swizzling' }
-GbxFetchTraversal >> swizzleBuffer [
+GbxFetchTraversalTool >> swizzleBuffer [
 	"Swizzle the entire buffer"
 	^ swizzleBlock value: nil value: buffer.
 ]

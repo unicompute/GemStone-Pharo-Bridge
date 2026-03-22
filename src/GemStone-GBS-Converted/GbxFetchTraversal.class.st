@@ -70,8 +70,7 @@ GbxFetchTraversal class >> for: aServerInteraction
 [
 	"Sender must hold my session's sessionProtect."
 
-	^FetchTraversalClass new
+	^(FetchTraversalClass ifNil: [ self ]) new
 		initializeForInteraction: aServerInteraction;
 		yourself
 ]
-
