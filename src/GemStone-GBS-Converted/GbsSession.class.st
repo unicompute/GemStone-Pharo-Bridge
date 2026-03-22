@@ -2677,7 +2677,7 @@ GbsSession >> loginLinked: linked
 					result := self]]]
 			ifCurtailed: [self logout].
 	result == self
-		ifTrue: [self finishPostLogin].
+		ifTrue: [self scheduleFinishPostLogin].
 	^result
 ]
 
@@ -2710,7 +2710,7 @@ GbsSession >> loginX509
 					result := self]]]
 			ifCurtailed: [self logout].
 	result == self
-		ifTrue: [self finishPostLogin].
+		ifTrue: [self scheduleFinishPostLogin].
 	^result
 ]
 
@@ -2812,6 +2812,22 @@ GbsSession >> finishPostLogin
 	self startEventDetection.
 	self startDeferredPostLoginInitialization.
 	GbxStatMonitor instance addStatResource: stats.
+	^ self
+]
+
+{ #category : 'private - session management' }
+GbsSession >> scheduleFinishPostLogin
+[
+	"Run post-login completion outside the synchronous login return path.
+	This keeps the launcher/UI responsive and avoids reacquiring session locks
+	while higher-level login critical sections are still unwinding."
+
+	| process |
+	self isLoggedIn ifFalse: [ ^ self ].
+	process := [ self finishPostLogin ] gbxNewProcessNamed:
+			'GBS FinishPostLogin for ', self printString.
+	process priority: Processor userBackgroundPriority.
+	process resume.
 	^ self
 ]
 

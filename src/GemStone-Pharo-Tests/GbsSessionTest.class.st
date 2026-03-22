@@ -118,6 +118,19 @@ GbsSessionTest >> testLoginFailureSignalsError [
 ]
 
 { #category : 'tests' }
+GbsSessionTest >> testLoginLinkedSchedulesFinishPostLoginInsteadOfRunningInline [
+	| mockSession result |
+	mockSession := GbsLoginSequencingSession new.
+
+	result := mockSession loginLinked: false.
+
+	self assert: result == mockSession.
+	self assert: mockSession postLoginCalled.
+	self assert: mockSession scheduleFinishPostLoginCalled.
+	self deny: mockSession finishPostLoginCalled
+]
+
+{ #category : 'tests' }
 GbsSessionTest >> testLoginSuccess [
 	| mockSession |
 	mockSession := MockGbsSession new.
@@ -126,6 +139,19 @@ GbsSessionTest >> testLoginSuccess [
 
 	mockSession loginStone: 'gs64stone' user: 'DataCurator' password: 'swordfish'.
 	self assert: mockSession isLoggedIn.
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testLoginX509SchedulesFinishPostLoginInsteadOfRunningInline [
+	| mockSession result |
+	mockSession := GbsLoginSequencingSession new.
+
+	result := mockSession loginX509.
+
+	self assert: result == mockSession.
+	self assert: mockSession postLoginCalled.
+	self assert: mockSession scheduleFinishPostLoginCalled.
+	self deny: mockSession finishPostLoginCalled
 ]
 
 { #category : 'tests' }
