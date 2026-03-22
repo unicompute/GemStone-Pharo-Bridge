@@ -765,6 +765,29 @@ GbxDebuggerServiceTest >> testRestartSelectsExecutedCodeFrameAtLineOne [
 ]
 
 { #category : 'tests' }
+GbxDebuggerServiceTest >> testRecomputeContextListSynchronizesProcessOopFromRefreshedContext [
+	| refreshed fakePolicy |
+	refreshed := GbxFakeActivationForService new.
+	refreshed
+		processOop: 333;
+		level: 1;
+		selector: #bar;
+		methodClass: 'OtherClass';
+		sourceString: 'bar ^ 2';
+		sourceOffsets: #(1);
+		quickStepPoint: 1.
+	fakePolicy := GbxFakeContextListPolicyForService new.
+	fakePolicy contextList: { refreshed }.
+	service processOop: 111.
+	service instVarNamed: 'contextStackPolicy' put: fakePolicy.
+
+	service recomputeContextList.
+
+	self assert: service currentContext == refreshed.
+	self assert: service processOop equals: 333
+]
+
+{ #category : 'tests' }
 GbxDebuggerServiceTest >> testRestartTwiceKeepsExecutedCodeContextSelected [
 	| oldContext nonExecuted restartedExecuted fakePolicy |
 	oldContext := self
@@ -803,6 +826,26 @@ GbxDebuggerServiceTest >> testRestartTwiceKeepsExecutedCodeContextSelected [
 	self assert: service currentContext == restartedExecuted.
 	self assert: service restart.
 	self assert: service currentContext == restartedExecuted
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testSelectContextSynchronizesProcessOopFromSelectedServerContext [
+	| selected |
+	selected := GbxFakeActivationForService new.
+	selected
+		processOop: 222;
+		level: 1;
+		selector: #bar;
+		methodClass: 'OtherClass';
+		sourceString: 'bar ^ 2';
+		sourceOffsets: #(1);
+		quickStepPoint: 1.
+	service processOop: 111.
+
+	service selectContext: selected.
+
+	self assert: service currentContext == selected.
+	self assert: service processOop equals: 222
 ]
 
 { #category : 'tests' }

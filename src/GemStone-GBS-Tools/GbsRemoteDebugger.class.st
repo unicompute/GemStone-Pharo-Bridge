@@ -467,6 +467,7 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 	].
 
 	"Use the selected context"
+	self synchronizeProcessOopFromContext: context.
 	service ifNotNil: [ service selectContext: context ].
 	context ifNil: [ ^ self ].
 
@@ -1233,6 +1234,19 @@ GbsRemoteDebugger >> processOop: anOop [
 ]
 
 { #category : 'private' }
+GbsRemoteDebugger >> resolvedProcessOopFromContext: aContext [
+	| candidate |
+	aContext ifNil: [ ^ nil ].
+	(aContext respondsTo: #processOop)
+		ifTrue: [ candidate := [ aContext processOop ] on: Error do: [ nil ] ].
+	((candidate isNumber and: [ candidate > 20 ]) not and: [ aContext respondsTo: #process ])
+		ifTrue: [ candidate := [ aContext process ] on: Error do: [ nil ] ].
+	^ (candidate isNumber and: [ candidate > 20 ])
+		ifTrue: [ candidate ]
+		ifFalse: [ nil ]
+]
+
+{ #category : 'private' }
 GbsRemoteDebugger >> refreshUiState [
 	self updateButton: stepIntoButton enabled: self canStepInto.
 	self updateButton: stepButton enabled: self canStepInto.
@@ -1410,6 +1424,16 @@ GbsRemoteDebugger >> session [
 { #category : 'accessing' }
 GbsRemoteDebugger >> session: aSession [
 	session := aSession
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> synchronizeProcessOopFromContext: aContext [
+	| candidate |
+	candidate := self resolvedProcessOopFromContext: aContext.
+	candidate ifNil: [ ^ self ].
+	processOop := candidate.
+	(service notNil and: [ service respondsTo: #processOop: ])
+		ifTrue: [ [ service processOop: candidate ] on: Error do: [ ] ]
 ]
 
 { #category : 'actions' }

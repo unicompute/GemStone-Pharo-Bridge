@@ -297,6 +297,40 @@ GbsRemoteDebuggerPresenterTest >> testRestartDelegatesToService [
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testContextSelectedSynchronizesProcessOopWithSelectedFrame [
+	| context fakeList fakeText table |
+	context := GbxFakeContextForRemoteDebugger new
+		methodClass: 'SmallInteger';
+		selector: #/;
+		sourceString: '1/0';
+		processOop: 444;
+		level: 1;
+		tempNamesAndValues: Dictionary new;
+		yourself.
+
+	debugger processOop: 222.
+	service processOop: 222.
+	debugger instVarNamed: 'contextList' put: { context }.
+	fakeList := GbxFakeListPresenterForRemoteDebugger new.
+	fakeList selectIndex: 1.
+	debugger instVarNamed: 'stackList' put: fakeList.
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: 'placeholder'.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+	table := GbxFakeTablePresenterForRemoteDebugger new.
+	debugger instVarNamed: 'variablesTable' put: table.
+	debugger instVarNamed: 'receiverInfoTable' put: table.
+	debugger instVarNamed: 'frameInfoTable' put: table.
+	debugger instVarNamed: 'processInfoTable' put: table.
+
+	debugger contextSelected: context.
+
+	self assert: debugger processOop equals: 444.
+	self assert: service processOop equals: 444.
+	self assert: service currentContext == context
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testRestartWithConfirmedExecutedFrameSecondPassDoesSingleRestartCycle [
 	| firstContext executedContext fakeList fakeText |
 	firstContext := GbxFakeContextForRemoteDebugger new

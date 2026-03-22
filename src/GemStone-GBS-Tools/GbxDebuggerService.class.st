@@ -344,6 +344,7 @@ GbxDebuggerService >> currentContext [
 { #category : 'accessing' }
 GbxDebuggerService >> currentContext: aContext [
 	currentContext := aContext.
+	self synchronizeProcessOopFromContext: aContext.
 	self updateSourceMapFromCurrentContext
 ]
 
@@ -382,10 +383,10 @@ GbxDebuggerService >> currentFrameOop [
 
 { #category : 'inspector' }
 GbxDebuggerService >> currentProcessOop [
-	currentContext ifNil: [ ^ nil ].
-	(currentContext respondsTo: #processOop) ifTrue: [ ^ currentContext processOop ].
-	(currentContext respondsTo: #process) ifTrue: [ ^ currentContext process ].
-	^ nil
+	| candidate |
+	candidate := self resolvedProcessOopFromContext: currentContext.
+	candidate ifNotNil: [ ^ candidate ].
+	^ processOop
 ]
 
 { #category : 'inspector' }
@@ -683,9 +684,9 @@ GbxDebuggerService >> initializeForDebugging [
 	contextStackPolicy computeContextList.
 	
 	contextStackPolicy contextList ifNotEmpty: [ :contexts |
-		currentContext := contexts first.
+		self currentContext: contexts first.
 	].
-	self updateSourceMapFromCurrentContext.
+	currentContext ifNil: [ self updateSourceMapFromCurrentContext ].
 ]
 
 { #category : 'inspector' }
@@ -871,6 +872,19 @@ GbxDebuggerService >> processOop: anOop [
 	processOop := anOop
 ]
 
+{ #category : 'private' }
+GbxDebuggerService >> resolvedProcessOopFromContext: aContext [
+	| candidate |
+	aContext ifNil: [ ^ nil ].
+	(aContext respondsTo: #processOop)
+		ifTrue: [ candidate := [ aContext processOop ] on: Error do: [ nil ] ].
+	((candidate isNumber and: [ candidate > 20 ]) not and: [ aContext respondsTo: #process ])
+		ifTrue: [ candidate := [ aContext process ] on: Error do: [ nil ] ].
+	^ (candidate isNumber and: [ candidate > 20 ])
+		ifTrue: [ candidate ]
+		ifFalse: [ nil ]
+]
+
 { #category : 'variables' }
 GbxDebuggerService >> receiver [
 	"Get the receiver of the current context"
@@ -1028,7 +1042,7 @@ GbxDebuggerService >> recomputeContextList [
 	"Recompute the context list after a step operation.
 	Always rebind currentContext to the freshly-computed list entry, even when
 	an equal/stale context object is still considered present."
-	| contexts refreshed |
+	| contexts refreshed selectedContext |
 	contextStackPolicy ifNil: [
 		self updateSourceMapFromCurrentContext.
 		self notifyContextChanged.
@@ -1039,17 +1053,19 @@ GbxDebuggerService >> recomputeContextList [
 	
 	currentContext isNil
 		ifTrue: [
-			contexts ifNotEmpty: [ :list | currentContext := list first ]
+			contexts ifNotEmpty: [ :list | selectedContext := list first ]
 		]
 		ifFalse: [
 			refreshed := contexts
 				detect: [ :each | (each == currentContext) or: [ each = currentContext ] ]
 				ifNone: [ nil ].
 			refreshed
-				ifNil: [ contexts ifNotEmpty: [ :list | currentContext := list first ] ]
-				ifNotNil: [ currentContext := refreshed ]
+				ifNil: [ contexts ifNotEmpty: [ :list | selectedContext := list first ] ]
+				ifNotNil: [ selectedContext := refreshed ]
 		].
-	self updateSourceMapFromCurrentContext.
+	selectedContext
+		ifNotNil: [ self currentContext: selectedContext ]
+		ifNil: [ self updateSourceMapFromCurrentContext ].
 	self notifyContextChanged.
 ]
 
@@ -1631,8 +1647,12 @@ GbxDebuggerService >> runDebugProcessCommand: commandName withInteger: anInteger
 { #category : 'context list' }
 GbxDebuggerService >> selectContext: aContext [
 	"Select a specific context"
-	currentContext == aContext ifTrue: [ ^ self ].
+	currentContext == aContext ifTrue: [
+		self synchronizeProcessOopFromContext: aContext.
+		^ self
+	].
 	currentContext := aContext.
+	self synchronizeProcessOopFromContext: aContext.
 	self updateSourceMapFromCurrentContext.
 	self notifyContextChanged.
 ]
@@ -1640,10 +1660,12 @@ GbxDebuggerService >> selectContext: aContext [
 { #category : 'context list' }
 GbxDebuggerService >> selectContextAt: anIndex [
 	"Select a context by index in the context list"
-	| contexts |
+	| contexts selectedContext |
 	contexts := self contextList.
 	anIndex <= contexts size ifTrue: [
-		currentContext := contexts at: anIndex.
+		selectedContext := contexts at: anIndex.
+		currentContext := selectedContext.
+		self synchronizeProcessOopFromContext: selectedContext.
 		self updateSourceMapFromCurrentContext.
 		self notifyContextChanged.
 	].
@@ -1961,6 +1983,13 @@ GbxDebuggerService >> stepOutOfServerIntoClient [
 GbxDebuggerService >> gbsErrorClass [
 	"Get the GbsError class for exception handling"
 	^ Smalltalk at: #GbsError ifAbsent: [ Error ]
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> synchronizeProcessOopFromContext: aContext [
+	| candidate |
+	candidate := self resolvedProcessOopFromContext: aContext.
+	candidate ifNotNil: [ processOop := candidate ]
 ]
 
 { #category : 'private-GS execution' }

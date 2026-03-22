@@ -35,6 +35,7 @@ Class {
 		'compileErrorMessage',
 		'contextList',
 		'currentContext',
+		'processOop',
 		'onRestartBlock',
 		'onStepOverBlock',
 		'onStepIntoBlock'
@@ -430,6 +431,16 @@ GbxFakeServiceForRemoteDebugger >> currentContext [
 { #category : 'accessing' }
 GbxFakeServiceForRemoteDebugger >> currentContext: aContext [
 	currentContext := aContext
+]
+
+{ #category : 'accessing' }
+GbxFakeServiceForRemoteDebugger >> processOop [
+	^ processOop
+]
+
+{ #category : 'accessing' }
+GbxFakeServiceForRemoteDebugger >> processOop: anInteger [
+	processOop := anInteger
 ]
 
 { #category : 'stepping' }
