@@ -1750,7 +1750,7 @@ GbsSession >> fetchBehaviorDelegatesForClassConnectors: connectors
 		executionString space ].
 	executionString nextPutAll: ').
 			userProfile := System myUserProfile.
-			behaviorOops := Array new.
+			behaviorOops := OrderedCollection new: names size.
 
 			1 to: names size
 				by: 2
@@ -1776,7 +1776,7 @@ GbsSession >> fetchBehaviorDelegatesForClassConnectors: connectors
 							[behaviorOops
 								add: nil;
 								add: nil]].
-			^behaviorOops'.
+			^behaviorOops asArray'.
 
 	"Bulk resolve on the server - one network round trip"
 	arrayOfOops := self unsynchronizedEvaluate: executionString contents.
