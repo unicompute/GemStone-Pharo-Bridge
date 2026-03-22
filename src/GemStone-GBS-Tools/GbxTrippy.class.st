@@ -105,7 +105,7 @@ GbxTrippy >> initializePresenters [
 		action: [ self doItSelected ].
 	
 	navigationStack := OrderedCollection new.
-	cache := GbxBasicCacheTool on: session.
+	cache := GbxBasicCache on: session.
 	traversal := GbxFetchTraversalTool on: session cache: cache.
 ]
 

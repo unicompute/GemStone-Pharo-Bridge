@@ -81,7 +81,7 @@ GbxFetchTraversalTool >> fetchRawDataForOop: anOop [
 { #category : 'initialization' }
 GbxFetchTraversalTool >> initialize [
 	super initialize.
-	cache := GbxBasicCacheTool new.
+	cache := GbxBasicCache new.
 	level := 3. "Default replication level"
 	objectsFetched := 0.
 	swizzleBlock := [ :oop :data | self defaultSwizzleForOop: oop data: data ].

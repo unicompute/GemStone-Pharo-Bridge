@@ -248,7 +248,7 @@ GbxStoreTraversalTool >> getOopFor: anObject [
 { #category : 'initialization' }
 GbxStoreTraversalTool >> initialize [
 	super initialize.
-	cache := GbxBasicCacheTool new.
+	cache := GbxBasicCache new.
 	dirtyObjects := OrderedCollection new.
 	objectsStored := 0.
 	storeBlock := [ :obj | self unswizzleObject: obj ].

@@ -21,6 +21,7 @@ GbsPharoBootstrap class >> activateCompatibilityInCurrentImage
 [
 	self installCompatibilityAliases.
 	self publishConvertedRuntimeGlobals.
+	self refreshKernelClassConnectorsIfPossible.
 	self clearLoginCriticalMethodBreakpointsIfPossible.
 	self refreshWorldMenuIfPossible
 ]
@@ -166,6 +167,14 @@ GbsPharoBootstrap class >> publishConvertedRuntimeGlobals
 
 	self publishGciCompatibilityGlobals.
 	self publishSpecialGemStoneObjects
+]
+
+{ #category : 'bootstrap' }
+GbsPharoBootstrap class >> refreshKernelClassConnectorsIfPossible
+[
+	| managerClass |
+	managerClass := Smalltalk at: #GbsSessionManager ifAbsent: [ ^ self ].
+	[ managerClass current ensureKernelClassConnectorsPresent ] on: Error do: [ ]
 ]
 
 { #category : 'bootstrap' }

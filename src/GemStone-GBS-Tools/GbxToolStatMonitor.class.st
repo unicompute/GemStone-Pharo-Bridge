@@ -118,13 +118,13 @@ GbxToolStatMonitor >> buildStatsGroups [
 { #category : 'building' }
 GbxToolStatMonitor >> buildStatGroup: title specs: statSpecs [
 	"Build a stat group with title and stat items"
-	| groupLayout statLabels |
+	| groupLayout |
 	
 	groupLayout := SpBoxLayout newVertical
 		spacing: 3.
 	
 	"Title"
-	groupLayout add: (self newLabel label: title; emphasis: #bold; yourself) height: 25.
+	groupLayout add: (self newLabel label: title; yourself) height: 25.
 	
 	"Stat items"
 	statSpecs do: [ :spec |
@@ -172,13 +172,18 @@ GbxToolStatMonitor >> initializePresenters [
 	monitor addStatNamed: 'hitCount' description: 'Cache hits' category: 'Cache'.
 	monitor addStatNamed: 'missCount' description: 'Cache misses' category: 'Cache'.
 	monitor addStatNamed: 'hitRatio' description: 'Cache hit ratio' category: 'Cache'.
+	monitor addStatNamed: 'sessionId' description: 'Session id' category: 'Session'.
 	monitor addStatNamed: 'rpcCount' description: 'RPC calls' category: 'Session'.
 	monitor addStatNamed: 'commitCount' description: 'Commits' category: 'Session'.
 	monitor addStatNamed: 'abortCount' description: 'Aborts' category: 'Session'.
 	monitor addStatNamed: 'gcCount' description: 'GC collections' category: 'GC'.
 	monitor addStatNamed: 'gcTime' description: 'GC time (ms)' category: 'GC'.
+	monitor addStatNamed: 'objectsScavenged' description: 'Objects scavenged' category: 'GC'.
+	monitor addStatNamed: 'objectsTenured' description: 'Objects tenured' category: 'GC'.
 	monitor addStatNamed: 'objectCount' description: 'Objects' category: 'Memory'.
 	monitor addStatNamed: 'byteCount' description: 'Bytes' category: 'Memory'.
+	monitor addStatNamed: 'oopCount' description: 'Oops' category: 'Memory'.
+	monitor addStatNamed: 'percentFull' description: 'Percent full' category: 'Memory'.
 ]
 
 { #category : 'initialization' }
@@ -242,8 +247,8 @@ GbxToolStatMonitor >> refreshStats [
 
 { #category : 'fetching' }
 GbxToolStatMonitor >> fetchAllStats [
-	"Fetch all statistics from server"
-	| script result parts |
+	"Fetch lightweight client-side statistics so the monitor remains usable in Pharo."
+	| sessionStats sessionId rpcCount |
 	
 	"Fetch cache stats"
 	monitor statAt: 'hitCount' ifPresent: [ :stat |
@@ -256,75 +261,23 @@ GbxToolStatMonitor >> fetchAllStats [
 		stat value: (cache hitRatio * 100).
 	].
 	
-	"Fetch session stats"
-	script := '[
-		| sess stream |
-		sess := GsCurrentSession current.
-		stream := WriteStream on: String new.
-		stream
-			nextPutAll: sess sessionId asString; nextPutAll: ''|'';
-			nextPutAll: sess rpcCount asString; nextPutAll: ''|'';
-			nextPutAll: sess commitCount asString; nextPutAll: ''|'';
-			nextPutAll: sess abortCount asString.
-		stream contents
-	] value'.
-	
-	result := session executeAndFetch: script.
-	result ifNotNil: [
-		parts := result splitOn: $|.
-		parts size >= 4 ifTrue: [
-			monitor statAt: 'sessionId' ifPresent: [ :stat | stat value: parts first ].
-			monitor statAt: 'rpcCount' ifPresent: [ :stat | stat value: parts second asInteger ].
-			monitor statAt: 'commitCount' ifPresent: [ :stat | stat value: parts third asInteger ].
-			monitor statAt: 'abortCount' ifPresent: [ :stat | stat value: parts fourth asInteger ].
-		].
-	].
-	
-	"Fetch GC stats"
-	script := '[
-		| stream |
-		stream := WriteStream on: String new.
-		stream
-			nextPutAll: System vmGcCount asString; nextPutAll: ''|'';
-			nextPutAll: System vmGcTime asString; nextPutAll: ''|'';
-			nextPutAll: System objectsScavenged asString; nextPutAll: ''|'';
-			nextPutAll: System objectsTenured asString.
-		stream contents
-	] value'.
-	
-	result := session executeAndFetch: script.
-	result ifNotNil: [
-		parts := result splitOn: $|.
-		parts size >= 4 ifTrue: [
-			monitor statAt: 'gcCount' ifPresent: [ :stat | stat value: parts first asInteger ].
-			monitor statAt: 'gcTime' ifPresent: [ :stat | stat value: parts second asInteger ].
-			monitor statAt: 'objectsScavenged' ifPresent: [ :stat | stat value: parts third asInteger ].
-			monitor statAt: 'objectsTenured' ifPresent: [ :stat | stat value: parts fourth asInteger ].
-		].
-	].
-	
-	"Fetch memory stats"
-	script := '[
-		| stream |
-		stream := WriteStream on: String new.
-		stream
-			nextPutAll: System objectCount asString; nextPutAll: ''|'';
-			nextPutAll: System byteCount asString; nextPutAll: ''|'';
-			nextPutAll: System oopCount asString; nextPutAll: ''|'';
-			nextPutAll: System percentFull asString.
-		stream contents
-	] value'.
-	
-	result := session executeAndFetch: script.
-	result ifNotNil: [
-		parts := result splitOn: $|.
-		parts size >= 4 ifTrue: [
-			monitor statAt: 'objectCount' ifPresent: [ :stat | stat value: parts first asInteger ].
-			monitor statAt: 'byteCount' ifPresent: [ :stat | stat value: parts second asInteger ].
-			monitor statAt: 'oopCount' ifPresent: [ :stat | stat value: parts third asInteger ].
-			monitor statAt: 'percentFull' ifPresent: [ :stat | stat value: parts fourth asInteger ].
-		].
-	].
+	sessionStats := [ session statResource ] on: Error do: [ nil ].
+	sessionId := [ session sessionId ] on: Error do: [ 'N/A' ].
+	rpcCount := (sessionStats notNil and: [ sessionStats respondsTo: #gciCallsToGem ])
+		ifTrue: [ [ sessionStats gciCallsToGem ] on: Error do: [ 0 ] ]
+		ifFalse: [ 0 ].
+	monitor statAt: 'sessionId' ifPresent: [ :stat | stat value: sessionId ].
+	monitor statAt: 'rpcCount' ifPresent: [ :stat | stat value: rpcCount ].
+	monitor statAt: 'commitCount' ifPresent: [ :stat | stat value: 0 ].
+	monitor statAt: 'abortCount' ifPresent: [ :stat | stat value: 0 ].
+	monitor statAt: 'gcCount' ifPresent: [ :stat | stat value: 0 ].
+	monitor statAt: 'gcTime' ifPresent: [ :stat | stat value: 0 ].
+	monitor statAt: 'objectsScavenged' ifPresent: [ :stat | stat value: 0 ].
+	monitor statAt: 'objectsTenured' ifPresent: [ :stat | stat value: 0 ].
+	monitor statAt: 'objectCount' ifPresent: [ :stat | stat value: 0 ].
+	monitor statAt: 'byteCount' ifPresent: [ :stat | stat value: 0 ].
+	monitor statAt: 'oopCount' ifPresent: [ :stat | stat value: 0 ].
+	monitor statAt: 'percentFull' ifPresent: [ :stat | stat value: 0 ].
 ]
 
 { #category : 'updating' }
@@ -390,7 +343,7 @@ GbxToolStatMonitor >> session [
 { #category : 'accessing' }
 GbxToolStatMonitor >> session: aSession [
 	session := aSession.
-	cache := GbxBasicCacheTool on: aSession.
+	cache := GbxBasicCache on: aSession.
 ]
 
 { #category : 'accessing' }

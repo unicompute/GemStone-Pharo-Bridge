@@ -1563,6 +1563,7 @@ GbsSessionManager >> globalClassConnectorsList
 		(WriteStreamLegacy							WriteStreamLegacy)
 		(WriteStreamPortable							WriteStreamPortable)
 		(TranscriptStreamPortable					TranscriptStreamPortable)
+		(Unicode7								Unicode7)
 		)
 ]
 
@@ -1744,6 +1745,46 @@ GbsSessionManager >> createKernelClassConnectorFor: specArray
 	conn connectionCondition: (specArray at: 4).
 	globalConnectors add: conn.	"Add directly, which allows what would normally be duplicates"
 	^conn
+]
+
+{ #category : 'private - global connections' }
+GbsSessionManager >> ensureKernelClassConnectorsPresent
+[
+	"Refresh kernel class connectors in an already-running image without rebuilding the
+	whole kernel connector set. This preserves fast connectors that intentionally share
+	a client class."
+
+	globalConnectors ifNil: [ globalConnectors := IdentitySet new ].
+	self refreshPublishedRuntimeGlobalsForKernelConnectors.
+	kernelConnectorConditions ifNil: [ self initializeKernelConnectorConditions ].
+
+	self globalClassConnectorsList do:
+		[:array |
+		| spec conditionNumber conn |
+		spec := Array with: nil with: nil with: nil with: 0.
+		spec replaceFrom: 1 to: array size with: array startingAt: 1.
+		conditionNumber := array size > 3 ifTrue: [ array at: 4 ] ifFalse: [ 1 ].
+		spec at: 4 put: (kernelConnectorConditions at: conditionNumber).
+		(self hasKernelClassConnectorMatching: spec)
+			ifFalse: [
+				conn := self createKernelClassConnectorFor: spec.
+				self loggedInSessions do:
+					[:sess |
+					(conn connectionCondition cull: sess)
+						ifTrue: [ conn connectInSession: sess ] ] ] ]
+]
+
+{ #category : 'private - global connections' }
+GbsSessionManager >> hasKernelClassConnectorMatching: specArray
+[
+	^globalConnectors anySatisfy:
+		[:conn |
+		(conn isKindOf: GbsClassConnector)
+			and: [
+				conn stName = (specArray at: 1)
+					and: [
+						conn gsName = (specArray at: 2)
+							and: [ conn dictionaryName = (specArray at: 3) ] ] ] ]
 ]
 
 { #category : 'private - global connections' }

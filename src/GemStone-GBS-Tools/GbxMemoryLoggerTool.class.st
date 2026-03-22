@@ -44,9 +44,16 @@ GbxMemoryLoggerTool >> log: aString [
 	logCount := logCount + 1.
 	
 	"Trim if needed"
-	messages size > maxMessages ifTrue: [
-		messages removeFirst: messages size - maxMessages.
+	messages size > self maxMessages ifTrue: [
+		messages removeFirst: messages size - self maxMessages.
 	].
+]
+
+{ #category : 'initialization' }
+GbxMemoryLoggerTool >> initialize [
+	super initialize.
+	messages := OrderedCollection new.
+	maxMessages := 1000.
 ]
 
 { #category : 'accessing' }

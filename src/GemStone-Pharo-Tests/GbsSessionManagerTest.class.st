@@ -224,6 +224,47 @@ GbsSessionManagerTest >> testClassSideInitializeFastConnectorsPopulatesRegistry 
 ]
 
 { #category : 'tests' }
+GbsSessionManagerTest >> testUnicode7KernelClassConnectorAndBootstrapClassExist [
+	| manager originalGlobalConnectors specs unicode7 globalConnectors |
+	manager := GbsSessionManager current.
+	originalGlobalConnectors := manager instVarNamed: 'globalConnectors'.
+	[
+		manager instVarNamed: 'globalConnectors' put: IdentitySet new.
+		manager ensureKernelClassConnectorsPresent.
+		specs := manager globalClassConnectorsList.
+		unicode7 := Smalltalk at: #Unicode7 ifAbsent: [ nil ].
+		globalConnectors := manager instVarNamed: 'globalConnectors'.
+
+		self assert: unicode7 notNil.
+		self assert: unicode7 superclass equals: ByteString.
+		self assert: unicode7 isVariable.
+		self assert: (specs anySatisfy: [ :spec |
+			spec first = #Unicode7 and: [ spec second = #Unicode7 ] ]).
+		self assert: (globalConnectors anySatisfy: [ :conn |
+			(conn isKindOf: GbsClassConnector)
+				and: [ conn stName = #Unicode7 and: [ conn gsName = #Unicode7 ] ] ])
+	] ensure: [
+		manager instVarNamed: 'globalConnectors' put: originalGlobalConnectors ]
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testBootstrapRefreshKernelClassConnectorsRepairsCurrentManager [
+	| manager originalGlobalConnectors globalConnectors |
+	manager := GbsSessionManager current.
+	originalGlobalConnectors := manager instVarNamed: 'globalConnectors'.
+	[
+		manager instVarNamed: 'globalConnectors' put: IdentitySet new.
+		GbsPharoBootstrap refreshKernelClassConnectorsIfPossible.
+		globalConnectors := manager instVarNamed: 'globalConnectors'.
+
+		self assert: (globalConnectors anySatisfy: [ :conn |
+			(conn isKindOf: GbsClassConnector)
+				and: [ conn stName = #Unicode7 and: [ conn gsName = #Unicode7 ] ] ])
+	] ensure: [
+		manager instVarNamed: 'globalConnectors' put: originalGlobalConnectors ]
+]
+
+{ #category : 'tests' }
 GbsSessionManagerTest >> testFastConnectorFactoryReturnsConnectorInstance [
 	| connector oop |
 	oop := GbxKernelPomOop basicNew.

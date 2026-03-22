@@ -165,64 +165,23 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
             (aBuilder item: #GbsUtilities)
                 label: 'Utilities';
                 with: [
-                    (aBuilder item: #ReconnectAllWindows)
-                        label: 'Reconnect All Windows';
-                        action: [ self reconnectAllWindows ].
-                    (aBuilder item: #RefreshAllWindows)
-                        label: 'Refresh All Windows';
-                        action: [ self refreshAllWindows ].
-                    (aBuilder item: #UtilitiesSeparator)
-                        label: '-'.
-                    (aBuilder item: #OpenGbxEnvyTools)
-                        label: 'Envy Tools';
-                        action: [ self openGbxEnvyTools ].
-                    (aBuilder item: #OpenGbxBehaviorServerClassCache)
-                        label: 'Server Class Cache';
-                        action: [ self openGbxBehaviorServerClassCache ].
-                    (aBuilder item: #OpenGbxClampManager)
-                        label: 'Clamp Manager';
-                        action: [ self openGbxClampManager ].
                     (aBuilder item: #OpenGbxFileLogger)
                         label: 'File Logger';
                         action: [ self openGbxFileLogger ].
                     (aBuilder item: #OpenGbxMemoryLogger)
                         label: 'Memory Logger';
                         action: [ self openGbxMemoryLogger ].
-                    (aBuilder item: #OpenGbxNewConfigurationTool)
-                        label: 'Configuration Tool';
-                        action: [ self openGbxNewConfigurationTool ].
                     (aBuilder item: #OpenGbxReplicatorManager)
-                        label: 'Replicator Manager';
+                        label: 'Replication Manager';
                         action: [ self openGbxReplicatorManager ].
-                    (aBuilder item: #OpenGbxSegmentHolder)
-                        label: 'Segment Holder';
-                        action: [ self openGbxSegmentHolder ].
-                    (aBuilder item: #OpenGbxSegmentTool)
-                        label: 'Segment Tool';
-                        action: [ self openGbxSegmentTool ].
-                    (aBuilder item: #OpenGbxSegmentToolBrain)
-                        label: 'Segment Tool Brain';
-                        action: [ self openGbxSegmentToolBrain ].
                     (aBuilder item: #OpenGbxServerMap)
                         label: 'Server Map';
                         action: [ self openGbxServerMap ].
                     (aBuilder item: #OpenGbxStatMonitor)
                         label: 'Stat Monitor';
                         action: [ self openGbxStatMonitor ].
-                    (aBuilder item: #OpenGbxStatResource)
-                        label: 'Stat Resource';
-                        action: [ self openGbxStatResource ].
-                    (aBuilder item: #OpenGbxGcStatResource)
-                        label: 'GC Stat Resource';
-                        action: [ self openGbxGcStatResource ].
-                    (aBuilder item: #OpenGbxObjectMemoryStat)
-                        label: 'Object Memory Stat';
-                        action: [ self openGbxObjectMemoryStat ].
-                    (aBuilder item: #OpenGbxSessionStatResource)
-                        label: 'Session Stat Resource';
-                        action: [ self openGbxSessionStatResource ].
                     (aBuilder item: #OpenGbxStoreTraversalTool)
-                        label: 'Store Traversal';
+                        label: 'Store Traversal Tool';
                         action: [ self openGbxStoreTraversalTool ].
                     (aBuilder item: #OpenGbxTrippy)
                         label: 'Trippy';
@@ -255,7 +214,7 @@ GbsClassicLauncher class >> browserWithSelectedClassForSession: aSession [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> defaultTrippyOopForSession: aSession [
-	^ [ aSession executeAndFetch: 'GsCurrentSession current asOop asString' ]
+	^ [ aSession executeAndFetch: 'GsCurrentSession currentSession asOop asString' ]
 		on: Error
 		do: [ '20' ]
 ]
@@ -719,12 +678,7 @@ GbsClassicLauncher class >> openGbxNewConfigurationTool [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxReplicatorManager [
-	| manager session |
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	manager := [ session replicatorManager ] on: Error do: [ nil ].
-	manager ifNil: [ ^ self openGbxUtility: #GbxReplicatorManagerTool ].
-	self inspectUtilityObject: manager named: 'Replicator Manager'
+	self openGbxUtility: #GbxReplicatorManagerTool
 ]
 
 { #category : 'menus' }
@@ -744,12 +698,7 @@ GbsClassicLauncher class >> openGbxSegmentToolBrain [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxServerMap [
-	| map session |
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	map := [ session serverMap ] on: Error do: [ nil ].
-	map ifNil: [ ^ self openGbxUtility: #GbxServerMapTool ].
-	self inspectUtilityObject: map named: 'Server Map'
+	self openGbxUtility: #GbxServerMapTool
 ]
 
 { #category : 'menus' }
@@ -803,7 +752,7 @@ GbsClassicLauncher class >> openGbxStoreTraversalTool [
 	| session utility |
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
-	utility := GbxStoreTraversalTool on: session cache: Dictionary new.
+	utility := GbxStoreTraversalTool on: session cache: (GbxBasicCache on: session).
 	self inspectUtilityObject: utility named: 'Store Traversal Tool'
 ]
 

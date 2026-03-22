@@ -63,6 +63,7 @@ BaselineOfGemStonePharo >> postloadConvertedCompatibility [
 	(Smalltalk at: #GbsPharoBootstrap ifAbsent: [ nil ])
 		ifNotNil: [ :bootstrap |
 			bootstrap publishConvertedRuntimeGlobals.
+			bootstrap refreshKernelClassConnectorsIfPossible.
 			bootstrap clearLoginCriticalMethodBreakpointsIfPossible.
 			bootstrap refreshWorldMenuIfPossible ].
 

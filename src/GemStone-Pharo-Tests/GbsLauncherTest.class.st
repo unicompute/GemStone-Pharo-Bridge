@@ -578,6 +578,78 @@ GbsLauncherTest >> testFilenameCompatibilityWrapperProvidesAliasAndFileStreams
 ]
 
 { #category : 'tests' }
+GbsLauncherTest >> testFileLoggerToolWritesUsingFilenameCompatibilityWrapper
+[
+	| path logger ref contents |
+	path := '/tmp/gbs-file-logger-', UUID new asString, '.log'.
+	ref := path asFileReference.
+	logger := GbxFileLoggerTool on: path.
+	[
+		self shouldnt: [ logger logInfo: 'probe' ] raise: Error.
+		contents := ref contents.
+		self assert: (contents includesSubstring: 'probe')
+	] ensure: [
+		logger close.
+		ref exists ifTrue: [ ref ensureDelete ].
+		(path, '.old') asFileReference exists
+			ifTrue: [ (path, '.old') asFileReference ensureDelete ] ]
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testMemoryLoggerToolUsesDefaultMaxMessagesWhenLogging
+[
+	| logger |
+	logger := GbxMemoryLoggerTool new.
+	self shouldnt: [ logger logInfo: 'probe' ] raise: Error.
+	self assert: logger messages size equals: 1.
+	self assert: logger maxMessages equals: 1000
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testTraversalToolsDefaultToBasicCache
+[
+	self assert: GbxFetchTraversalTool new cache class equals: GbxBasicCache.
+	self assert: GbxStoreTraversalTool new cache class equals: GbxBasicCache
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testDefaultTrippyOopUsesCurrentSessionSelector
+[
+	| session |
+	session := GbsExecuteAndFetchCompatSession basicNew.
+	session nextValue: '20'.
+	self assert: (GbsClassicLauncher defaultTrippyOopForSession: session) equals: '20'.
+	self assert: session lastSource equals: 'GsCurrentSession currentSession asOop asString'
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testUtilitiesMenuSourceOmitsUnsupportedEntries
+[
+	| source |
+	source := (GbsClassicLauncher class >> #menuCommandGemStoneOn:) sourceCode.
+	self deny: (source includesSubstring: 'Reconnect All Windows').
+	self deny: (source includesSubstring: 'Refresh All Windows').
+	self deny: (source includesSubstring: 'Envy Tools').
+	self deny: (source includesSubstring: 'Server Class Cache').
+	self deny: (source includesSubstring: 'Clamp Manager').
+	self deny: (source includesSubstring: 'Configuration Tool').
+	self deny: (source includesSubstring: 'Stat Resource').
+	self deny: (source includesSubstring: 'GC Stat Resource').
+	self deny: (source includesSubstring: 'Object Memory Stat').
+	self deny: (source includesSubstring: 'Session Stat Resource').
+	self deny: (source includesSubstring: 'Segment Holder').
+	self deny: (source includesSubstring: 'Segment Tool').
+	self deny: (source includesSubstring: 'Segment Tool Brain').
+	self assert: (source includesSubstring: 'File Logger').
+	self assert: (source includesSubstring: 'Memory Logger').
+	self assert: (source includesSubstring: 'Replication Manager').
+	self assert: (source includesSubstring: 'Stat Monitor').
+	self assert: (source includesSubstring: 'Server Map').
+	self assert: (source includesSubstring: 'Store Traversal Tool').
+	self assert: (source includesSubstring: 'Trippy')
+]
+
+{ #category : 'tests' }
 GbsLauncherTest >> testConvertedCompatibilityClassesKeepExpectedSuperclassShape
 [
 	self assert: GbxNamedVariable superclass equals: NamedVariable.
