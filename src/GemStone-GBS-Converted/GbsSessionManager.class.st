@@ -1634,6 +1634,10 @@ GbsSessionManager >> createKernelConnectorFor: array
 	clientName := array at: 1.
 	serverOName := 'O' , (array at: 2).
 	serverOop := self gbxResolve: serverOName in: #SpecialGemStoneObjects.
+	serverOop ifNil: [
+		self refreshPublishedRuntimeGlobalsForKernelConnectors.
+		serverOop := self gbxResolve: serverOName in: #SpecialGemStoneObjects ].
+	serverOop ifNil: [ ^ nil ].
 	clientName isArray
 		ifTrue: 
 			[| clientObjs |
@@ -1664,6 +1668,7 @@ GbsSessionManager >> initializeKernelConnectors
 	"GBSM initializeKernelConnectors "
 
 	"First forget any existing global connectors. Use an IdentitySet so hash of connectors can change without breaking the collection"
+	self refreshPublishedRuntimeGlobalsForKernelConnectors.
 	globalConnectors := IdentitySet new.
 
 	"Now the fast connectors by oop"
@@ -1688,6 +1693,14 @@ GbsSessionManager >> initializeKernelConnectors
 			conditionNumber := array size > 3 ifTrue: [array at: 4] ifFalse: [1].
 			spec at: 4 put: (kernelConnectorConditions at: conditionNumber).
 			self createKernelClassConnectorFor: spec]
+]
+
+{ #category : 'private - global connections' }
+GbsSessionManager >> refreshPublishedRuntimeGlobalsForKernelConnectors
+[
+	(Smalltalk at: #GbsPharoBootstrap ifAbsent: [ nil ])
+		ifNotNil: [ :bootstrap |
+			[ bootstrap publishConvertedRuntimeGlobals ] on: Error do: [ ] ]
 ]
 
 { #category : 'private - global connections' }

@@ -1,6 +1,6 @@
 Class {
-	#name : 'GbxStackInspector',
-	#superclass : 'GbxContextInspector',
+	#name : 'GbxStackInspectorTool',
+	#superclass : 'GbxContextInspectorTool',
 	#instVars : [
 		'processOop',
 		'stackList',
@@ -11,7 +11,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxStackInspector class >> inspectStackOfProcess: processOop session: aSession [
+GbxStackInspectorTool class >> inspectStackOfProcess: processOop session: aSession [
 	"Inspect the stack of a GemStone process"
 	| inspector |
 	
@@ -22,7 +22,7 @@ GbxStackInspector class >> inspectStackOfProcess: processOop session: aSession [
 ]
 
 { #category : 'accessing' }
-GbxStackInspector >> inspectProcess: aProcessOop session: aSession [
+GbxStackInspectorTool >> inspectProcess: aProcessOop session: aSession [
 	| stackData items |
 	
 	processOop := aProcessOop.
@@ -51,13 +51,13 @@ GbxStackInspector >> inspectProcess: aProcessOop session: aSession [
 		selectedItem := selection selectedItem.
 		contextOop := selectedItem third.
 		contextOop ifNotNil: [
-			GbxContextInspector inspectContext: contextOop session: session
+			GbxContextInspectorTool inspectContext: contextOop session: session
 		].
 	].
 ]
 
 { #category : 'fetching' }
-GbxStackInspector >> fetchStackFrames [
+GbxStackInspectorTool >> fetchStackFrames [
 	"Fetch stack frames from the server process"
 	| script result |
 	
@@ -96,7 +96,7 @@ GbxStackInspector >> fetchStackFrames [
 ]
 
 { #category : 'fetching' }
-GbxStackInspector >> parseStackFrames: aString [
+GbxStackInspectorTool >> parseStackFrames: aString [
 	"Parse stack frame string into array of { description . contextOop }"
 	| items lines parts |
 	
@@ -119,7 +119,7 @@ GbxStackInspector >> parseStackFrames: aString [
 ]
 
 { #category : 'initialization' }
-GbxStackInspector >> initializePresenters [
+GbxStackInspectorTool >> initializePresenters [
 	super initializePresenters.
 	
 	"Remove code editor for stack inspector - read-only"
@@ -129,7 +129,7 @@ GbxStackInspector >> initializePresenters [
 ]
 
 { #category : 'initialization' }
-GbxStackInspector >> initializeWindow: aWindowPresenter [
+GbxStackInspectorTool >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GemStone Stack Inspector';
 		initialExtent: 500 @ 600.

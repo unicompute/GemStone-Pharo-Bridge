@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxLogger',
+	#name : 'GbxLoggerTool',
 	#superclass : 'Object',
 	#instVars : [
 		'logLevel',
@@ -11,14 +11,14 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxLogger class >> new [
+GbxLoggerTool class >> new [
 	^ super new
 		initialize;
 		yourself
 ]
 
 { #category : 'logging' }
-GbxLogger >> debug: aString [
+GbxLoggerTool >> debug: aString [
 	"Log a debug message"
 	(self shouldLog: #debug) ifTrue: [
 		self log: 'DEBUG: ', aString.
@@ -26,19 +26,19 @@ GbxLogger >> debug: aString [
 ]
 
 { #category : 'accessing' }
-GbxLogger >> disable [
+GbxLoggerTool >> disable [
 	"Disable logging"
 	isEnabled := false.
 ]
 
 { #category : 'accessing' }
-GbxLogger >> enable [
+GbxLoggerTool >> enable [
 	"Enable logging"
 	isEnabled := true.
 ]
 
 { #category : 'logging' }
-GbxLogger >> error: aString [
+GbxLoggerTool >> error: aString [
 	"Log an error message"
 	(self shouldLog: #error) ifTrue: [
 		self logError: aString.
@@ -46,17 +46,17 @@ GbxLogger >> error: aString [
 ]
 
 { #category : 'accessing' }
-GbxLogger >> isEnabled [
+GbxLoggerTool >> isEnabled [
 	^ isEnabled ifNil: [ true ]
 ]
 
 { #category : 'accessing' }
-GbxLogger >> isEnabled: aBoolean [
+GbxLoggerTool >> isEnabled: aBoolean [
 	isEnabled := aBoolean
 ]
 
 { #category : 'initialization' }
-GbxLogger >> initialize [
+GbxLoggerTool >> initialize [
 	super initialize.
 	logLevel := #info.
 	isEnabled := true.
@@ -64,7 +64,7 @@ GbxLogger >> initialize [
 ]
 
 { #category : 'logging' }
-GbxLogger >> info: aString [
+GbxLoggerTool >> info: aString [
 	"Log an info message"
 	(self shouldLog: #info) ifTrue: [
 		self logInfo: aString.
@@ -72,43 +72,43 @@ GbxLogger >> info: aString [
 ]
 
 { #category : 'logging' }
-GbxLogger >> log: aString [
+GbxLoggerTool >> log: aString [
 	"Log a message - subclass responsibility"
 	self subclassResponsibility
 ]
 
 { #category : 'logging' }
-GbxLogger >> logCount [
+GbxLoggerTool >> logCount [
 	^ logCount ifNil: [ 0 ]
 ]
 
 { #category : 'logging' }
-GbxLogger >> logError: aString [
+GbxLoggerTool >> logError: aString [
 	"Log an error message - subclass responsibility"
 	self log: aString.
 	logCount := logCount + 1.
 ]
 
 { #category : 'logging' }
-GbxLogger >> logInfo: aString [
+GbxLoggerTool >> logInfo: aString [
 	"Log an info message - subclass responsibility"
 	self log: aString.
 	logCount := logCount + 1.
 ]
 
 { #category : 'accessing' }
-GbxLogger >> logLevel [
+GbxLoggerTool >> logLevel [
 	^ logLevel
 ]
 
 { #category : 'accessing' }
-GbxLogger >> logLevel: aSymbol [
+GbxLoggerTool >> logLevel: aSymbol [
 	"Set log level: #debug, #info, #warning, #error"
 	logLevel := aSymbol.
 ]
 
 { #category : 'logging' }
-GbxLogger >> shouldLog: levelSymbol [
+GbxLoggerTool >> shouldLog: levelSymbol [
 	"Determine if a message at the given level should be logged"
 	
 	isEnabled ifFalse: [ ^ false ].
@@ -117,7 +117,7 @@ GbxLogger >> shouldLog: levelSymbol [
 ]
 
 { #category : 'logging' }
-GbxLogger >> shouldLogLevel: msgLevel beLoggedAt: currentLevel [
+GbxLoggerTool >> shouldLogLevel: msgLevel beLoggedAt: currentLevel [
 	"Determine if msgLevel should be logged at currentLevel"
 	| levels msgIndex currentIndex |
 	
@@ -129,7 +129,7 @@ GbxLogger >> shouldLogLevel: msgLevel beLoggedAt: currentLevel [
 ]
 
 { #category : 'logging' }
-GbxLogger >> warning: aString [
+GbxLoggerTool >> warning: aString [
 	"Log a warning message"
 	(self shouldLog: #warning) ifTrue: [
 		self logWarning: aString.
@@ -137,7 +137,7 @@ GbxLogger >> warning: aString [
 ]
 
 { #category : 'logging' }
-GbxLogger >> logWarning: aString [
+GbxLoggerTool >> logWarning: aString [
 	"Log a warning message - subclass responsibility"
 	self log: aString.
 	logCount := logCount + 1.

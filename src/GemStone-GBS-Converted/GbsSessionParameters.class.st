@@ -441,9 +441,18 @@ GbsSessionParameters >> logout
 	session := self liveSession.
 	session ifNil: [
 		self sessionId: nil.
+		((self class currentSession == self)
+			or: [ self class currentSession isNil not
+			and: [ (self class currentSession respondsTo: #parameters)
+			and: [ (self class currentSession parameters == self) ] ] ])
+			ifTrue: [ self class currentSession: nil ].
 		^false ].
 	didLogout := [ session logout ] on: Error do: [ :ex | ex pass ].
-	didLogout ifTrue: [ self sessionId: nil ].
+	didLogout ifTrue: [
+		self sessionId: nil.
+		((self class currentSession == session)
+			or: [ self class currentSession == self ])
+			ifTrue: [ self class currentSession: nil ] ].
 	^didLogout
 ]
 

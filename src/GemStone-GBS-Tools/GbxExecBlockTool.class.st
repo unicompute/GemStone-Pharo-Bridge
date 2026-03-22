@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxExecBlock',
+	#name : 'GbxExecBlockTool',
 	#superclass : 'Object',
 	#instVars : [
 		'method',
@@ -12,7 +12,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxExecBlock class >> oop: anOop session: aSession [
+GbxExecBlockTool class >> oop: anOop session: aSession [
 	^ self new
 		blockOop: anOop;
 		session: aSession;
@@ -20,7 +20,7 @@ GbxExecBlock class >> oop: anOop session: aSession [
 ]
 
 { #category : 'execution' }
-GbxExecBlock >> value [
+GbxExecBlockTool >> value [
 	"Execute block with no arguments"
 	| script |
 	
@@ -36,31 +36,31 @@ GbxExecBlock >> value [
 ]
 
 { #category : 'accessing' }
-GbxExecBlock >> blockOop [
+GbxExecBlockTool >> blockOop [
 	^ blockOop
 ]
 
 { #category : 'accessing' }
-GbxExecBlock >> blockOop: anOop [
+GbxExecBlockTool >> blockOop: anOop [
 	blockOop := anOop
 ]
 
 { #category : 'accessing' }
-GbxExecBlock >> numArgs [
+GbxExecBlockTool >> numArgs [
 	^ numArgs ifNil: [ 0 ]
 ]
 
 { #category : 'accessing' }
-GbxExecBlock >> numArgs: anInteger [
+GbxExecBlockTool >> numArgs: anInteger [
 	numArgs := anInteger
 ]
 
 { #category : 'accessing' }
-GbxExecBlock >> session [
+GbxExecBlockTool >> session [
 	^ session
 ]
 
 { #category : 'accessing' }
-GbxExecBlock >> session: aSession [
+GbxExecBlockTool >> session: aSession [
 	session := aSession
 ]

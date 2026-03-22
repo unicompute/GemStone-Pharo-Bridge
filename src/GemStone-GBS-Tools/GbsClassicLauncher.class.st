@@ -624,12 +624,12 @@ GbsClassicLauncher class >> openGbxClampManager [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxFileLogger [
-	self openGbxUtility: #GbxFileLogger
+	self openGbxUtility: #GbxFileLoggerTool
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxMemoryLogger [
-	self openGbxUtility: #GbxMemoryLogger
+	self openGbxUtility: #GbxMemoryLoggerTool
 ]
 
 { #category : 'menus' }
@@ -679,7 +679,7 @@ GbsClassicLauncher class >> openGbxGcStatResource [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxObjectMemoryStat [
-	self openGbxUtility: #GbxObjectMemoryStat
+	self openGbxUtility: #GbxObjectMemoryStatTool
 ]
 
 { #category : 'menus' }

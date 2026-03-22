@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxKeyValueFaulter',
+	#name : 'GbxKeyValueFaulterTool',
 	#superclass : 'Object',
 	#instVars : [
 		'dictionary',
@@ -13,7 +13,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxKeyValueFaulter class >> dictionary: aDict key: aKey [
+GbxKeyValueFaulterTool class >> dictionary: aDict key: aKey [
 	^ self new
 		dictionary: aDict;
 		key: aKey;
@@ -21,22 +21,22 @@ GbxKeyValueFaulter class >> dictionary: aDict key: aKey [
 ]
 
 { #category : 'accessing' }
-GbxKeyValueFaulter >> cachedValue [
+GbxKeyValueFaulterTool >> cachedValue [
 	^ cachedValue
 ]
 
 { #category : 'accessing' }
-GbxKeyValueFaulter >> dictionary [
+GbxKeyValueFaulterTool >> dictionary [
 	^ dictionary
 ]
 
 { #category : 'accessing' }
-GbxKeyValueFaulter >> dictionary: aDict [
+GbxKeyValueFaulterTool >> dictionary: aDict [
 	dictionary := aDict
 ]
 
 { #category : 'faulting' }
-GbxKeyValueFaulter >> faultIn [
+GbxKeyValueFaulterTool >> faultIn [
 	"Fault in the value from server"
 	| script |
 	
@@ -56,36 +56,36 @@ GbxKeyValueFaulter >> faultIn [
 ]
 
 { #category : 'testing' }
-GbxKeyValueFaulter >> isFaulted [
+GbxKeyValueFaulterTool >> isFaulted [
 	^ isFaulted ifNil: [ false ]
 ]
 
 { #category : 'accessing' }
-GbxKeyValueFaulter >> key [
+GbxKeyValueFaulterTool >> key [
 	^ key
 ]
 
 { #category : 'accessing' }
-GbxKeyValueFaulter >> key: aKey [
+GbxKeyValueFaulterTool >> key: aKey [
 	key := aKey
 ]
 
 { #category : 'accessing' }
-GbxKeyValueFaulter >> printString [
+GbxKeyValueFaulterTool >> printString [
 	^ 'KeyValueFaulter (', key asString, ', faulted: ', isFaulted asString, ')'
 ]
 
 { #category : 'accessing' }
-GbxKeyValueFaulter >> session [
+GbxKeyValueFaulterTool >> session [
 	^ session
 ]
 
 { #category : 'accessing' }
-GbxKeyValueFaulter >> session: aSession [
+GbxKeyValueFaulterTool >> session: aSession [
 	session := aSession
 ]
 
 { #category : 'accessing' }
-GbxKeyValueFaulter >> value [
+GbxKeyValueFaulterTool >> value [
 	^ self faultIn
 ]

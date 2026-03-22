@@ -162,7 +162,7 @@ GbsRemoteDebuggerPresenterTest >> testApplySourceMapHighlightSelectsIntervalOnSo
 	fakeText text: 'abcde'.
 	service sourceMap: { 1 -> (2 to: 4) }.
 	debugger instVarNamed: 'sourceText' put: fakeText.
-	context := GbxActivation new.
+	context := GbxActivationTool new.
 
 	debugger applySourceMapHighlightFor: context.
 
@@ -179,7 +179,7 @@ GbsRemoteDebuggerPresenterTest >> testApplySourceMapHighlightUsesCurrentStepPoin
 		'4' -> (4 to: 4)
 	}.
 	debugger instVarNamed: 'sourceText' put: fakeText.
-	context := GbxActivation new.
+	context := GbxActivationTool new.
 	context quickStepPoint: 4.
 
 	debugger applySourceMapHighlightFor: context.
@@ -195,7 +195,7 @@ GbsRemoteDebuggerPresenterTest >> testApplySourceMapHighlightFallsBackToDisplaye
 	service sourceMap: #().
 	debugger instVarNamed: 'sourceText' put: fakeText.
 
-	context := GbxActivation new.
+	context := GbxActivationTool new.
 	context
 		methodClass: 'nil';
 		selector: #nil;

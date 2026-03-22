@@ -1,12 +1,12 @@
 Class {
-	#name : 'GbxExecBlock4',
-	#superclass : 'GbxExecBlock',
+	#name : 'GbxExecBlock4Tool',
+	#superclass : 'GbxExecBlockTool',
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }
 
 { #category : 'execution' }
-GbxExecBlock4 >> value: arg1 value: arg2 value: arg3 value: arg4 [
+GbxExecBlock4Tool >> value: arg1 value: arg2 value: arg3 value: arg4 [
 	"Execute block with 4 arguments"
 	| script |
 	
@@ -22,7 +22,7 @@ GbxExecBlock4 >> value: arg1 value: arg2 value: arg3 value: arg4 [
 ]
 
 { #category : 'initialization' }
-GbxExecBlock4 >> initialize [
+GbxExecBlock4Tool >> initialize [
 	super initialize.
 	numArgs := 4.
 ]

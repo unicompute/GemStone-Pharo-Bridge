@@ -2846,6 +2846,18 @@ GbsSession >> postLogout
 			manager := GbsSessionManager current.
 			manager disconnectSession: self.
 			sessionId := 0.
+			((Smalltalk at: #GBSM ifAbsent: [ nil ]) respondsTo: #currentSession)
+				ifTrue: [
+					[ (Smalltalk at: #GBSM) currentSession == self
+						ifTrue: [ (Smalltalk at: #GBSM) currentSession: nil ] ]
+						on: Error
+						do: [ ] ].
+			(parameters respondsTo: #sessionId:)
+				ifTrue: [ [ parameters sessionId: nil ] on: Error do: [ ] ].
+			[ GbsSessionParameters currentSession == self
+				ifTrue: [ GbsSessionParameters currentSession: nil ] ]
+				on: Error
+				do: [ ].
 			[replicatorManager == nil] gbxAssert.
 			serverInterface := nil.
 			logoutTimestamp := DateAndTime now.

@@ -1,6 +1,6 @@
 Class {
-	#name : 'GbxMemoryLogger',
-	#superclass : 'GbxLogger',
+	#name : 'GbxMemoryLoggerTool',
+	#superclass : 'GbxLoggerTool',
 	#instVars : [
 		'messages',
 		'maxMessages'
@@ -10,28 +10,28 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxMemoryLogger class >> new [
+GbxMemoryLoggerTool class >> new [
 	^ super new
 		initialize;
 		yourself
 ]
 
 { #category : 'instance creation' }
-GbxMemoryLogger class >> maxMessages: anInteger [
+GbxMemoryLoggerTool class >> maxMessages: anInteger [
 	^ self new
 		maxMessages: anInteger;
 		yourself
 ]
 
 { #category : 'accessing' }
-GbxMemoryLogger >> clear [
+GbxMemoryLoggerTool >> clear [
 	"Clear all logged messages"
 	messages := OrderedCollection new.
 	logCount := 0.
 ]
 
 { #category : 'logging' }
-GbxMemoryLogger >> log: aString [
+GbxMemoryLoggerTool >> log: aString [
 	"Log a message to memory"
 	| timestamp message |
 	
@@ -50,22 +50,22 @@ GbxMemoryLogger >> log: aString [
 ]
 
 { #category : 'accessing' }
-GbxMemoryLogger >> maxMessages [
+GbxMemoryLoggerTool >> maxMessages [
 	^ maxMessages ifNil: [ 1000 ]
 ]
 
 { #category : 'accessing' }
-GbxMemoryLogger >> maxMessages: anInteger [
+GbxMemoryLoggerTool >> maxMessages: anInteger [
 	maxMessages := anInteger
 ]
 
 { #category : 'accessing' }
-GbxMemoryLogger >> messages [
+GbxMemoryLoggerTool >> messages [
 	^ messages ifNil: [ #() ]
 ]
 
 { #category : 'accessing' }
-GbxMemoryLogger >> messagesAsText [
+GbxMemoryLoggerTool >> messagesAsText [
 	"Return all messages as formatted text"
 	| stream |
 	
@@ -85,7 +85,7 @@ GbxMemoryLogger >> messagesAsText [
 ]
 
 { #category : 'accessing' }
-GbxMemoryLogger >> recentMessages: count [
+GbxMemoryLoggerTool >> recentMessages: count [
 	"Get the most recent N messages"
 	| startIndex |
 	

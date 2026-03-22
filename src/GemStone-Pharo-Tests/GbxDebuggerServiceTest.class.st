@@ -1047,7 +1047,7 @@ GbxDebuggerServiceTest >> testCutbackGsProcessesAboveUsesFirstServerContextAndTe
 { #category : 'private' }
 GbxDebuggerServiceTest >> makeActivationMethodClass: className selector: selectorSymbol stepPoint: step sourceOffsets: offsets source: sourceText [
 	| activation |
-	activation := GbxActivation new.
+	activation := GbxActivationTool new.
 	activation
 		processOop: 111;
 		level: 8;

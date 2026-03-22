@@ -29,7 +29,8 @@ GbsPharoBootstrap class >> initialize
 [
 	"Allow direct package loads to install placeholder globals before Converted compiles."
 
-	self installCompatibilityAliases
+	self installCompatibilityAliases.
+	self refreshWorldMenuIfPossible
 ]
 
 { #category : 'bootstrap' }

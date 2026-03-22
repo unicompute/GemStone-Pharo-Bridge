@@ -8,7 +8,7 @@ Class {
 { #category : 'tests' }
 GbxActivationTest >> testVisibleSourceMapHighlightsAssignmentToken [
 	| activation map |
-	activation := GbxActivation new.
+	activation := GbxActivationTool new.
 	activation sourceString: '^ x := y + z'.
 	activation sourceOffsets: #(5).
 
@@ -22,7 +22,7 @@ GbxActivationTest >> testVisibleSourceMapHighlightsAssignmentToken [
 { #category : 'tests' }
 GbxActivationTest >> testVisibleSourceMapHighlightsBinaryTokenSpan [
 	| activation map |
-	activation := GbxActivation new.
+	activation := GbxActivationTool new.
 	activation sourceString: 'a ~~ b'.
 	activation sourceOffsets: #(3).
 
@@ -35,7 +35,7 @@ GbxActivationTest >> testVisibleSourceMapHighlightsBinaryTokenSpan [
 { #category : 'tests' }
 GbxActivationTest >> testVisibleSourceMapSkipsNilAndOutOfBoundsOffsets [
 	| activation map |
-	activation := GbxActivation new.
+	activation := GbxActivationTool new.
 	activation sourceString: 'abc'.
 	activation sourceOffsets: { nil. 0. 4. 2 }.
 
@@ -49,7 +49,7 @@ GbxActivationTest >> testVisibleSourceMapSkipsNilAndOutOfBoundsOffsets [
 { #category : 'tests' }
 GbxActivationTest >> testSourceIntervalForStepPoint [
 	| activation |
-	activation := GbxActivation new.
+	activation := GbxActivationTool new.
 	activation sourceString: 'x := y + z'.
 	activation sourceOffsets: #(1 6 10).
 
@@ -60,7 +60,7 @@ GbxActivationTest >> testSourceIntervalForStepPoint [
 { #category : 'tests' }
 GbxActivationTest >> testExecutedCodePrintStringIncludesStepAndLine [
 	| activation |
-	activation := GbxActivation new.
+	activation := GbxActivationTool new.
 	activation
 		methodClass: 'nil';
 		selector: #nil;
@@ -75,7 +75,7 @@ GbxActivationTest >> testExecutedCodePrintStringIncludesStepAndLine [
 { #category : 'tests' }
 GbxActivationTest >> testExecutedCodePrintStringFallsBackToLevelWhenStepPointMissing [
 	| activation |
-	activation := GbxActivation new.
+	activation := GbxActivationTool new.
 	activation
 		methodClass: 'nil';
 		selector: #nil;

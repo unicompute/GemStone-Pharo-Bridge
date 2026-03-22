@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxDeferredAssignment',
+	#name : 'GbxDeferredAssignmentTool',
 	#superclass : 'Object',
 	#instVars : [
 		'target',
@@ -11,7 +11,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxDeferredAssignment class >> target: aDelegate value: anObject [
+GbxDeferredAssignmentTool class >> target: aDelegate value: anObject [
 	^ self new
 		target: aDelegate;
 		value: anObject;
@@ -19,7 +19,7 @@ GbxDeferredAssignment class >> target: aDelegate value: anObject [
 ]
 
 { #category : 'executing' }
-GbxDeferredAssignment >> execute [
+GbxDeferredAssignmentTool >> execute [
 	"Execute the deferred assignment"
 	target ifNil: [ ^ self ].
 	value ifNil: [ ^ self ].
@@ -28,31 +28,31 @@ GbxDeferredAssignment >> execute [
 ]
 
 { #category : 'accessing' }
-GbxDeferredAssignment >> session [
+GbxDeferredAssignmentTool >> session [
 	^ session
 ]
 
 { #category : 'accessing' }
-GbxDeferredAssignment >> session: aSession [
+GbxDeferredAssignmentTool >> session: aSession [
 	session := aSession
 ]
 
 { #category : 'accessing' }
-GbxDeferredAssignment >> target [
+GbxDeferredAssignmentTool >> target [
 	^ target
 ]
 
 { #category : 'accessing' }
-GbxDeferredAssignment >> target: aDelegate [
+GbxDeferredAssignmentTool >> target: aDelegate [
 	target := aDelegate
 ]
 
 { #category : 'accessing' }
-GbxDeferredAssignment >> value [
+GbxDeferredAssignmentTool >> value [
 	^ value
 ]
 
 { #category : 'accessing' }
-GbxDeferredAssignment >> value: anObject [
+GbxDeferredAssignmentTool >> value: anObject [
 	value := anObject
 ]

@@ -741,7 +741,7 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 						]
 					].
 					[ | activation |
-					activation := GbxActivation new.
+					activation := GbxActivationTool new.
 					(activation respondsTo: #session:)
 						ifTrue: [ activation session: session ]
 						ifFalse: [ activation instVarNamed: 'session' put: session ].
@@ -958,7 +958,7 @@ GbsRemoteDebugger >> fetchStackFramesFromData [
 		parts := frameStr splitOn: $|.
 		parts size >= 3 ifTrue: [
 			index := index + 1.
-			activation := GbxActivation new.
+			activation := GbxActivationTool new.
 			(activation respondsTo: #session:)
 				ifTrue: [ activation session: session ]
 				ifFalse: [ activation instVarNamed: 'session' put: session ].

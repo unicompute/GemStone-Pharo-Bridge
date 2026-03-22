@@ -49,7 +49,7 @@ GbxDeferredElementsReplicatorTool >> replicateElement: anElement atIndex: index 
 	replicator := self replicatorFor: anElement.
 	replicated := replicator replicate.
 	
-	self addDeferredAssignment: (GbxDeferredIndexedAssignment
+	self addDeferredAssignment: (GbxDeferredIndexedAssignmentTool
 		target: target
 		index: index
 		value: replicated).

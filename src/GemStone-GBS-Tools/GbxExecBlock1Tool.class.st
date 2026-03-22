@@ -1,13 +1,13 @@
 Class {
-	#name : 'GbxExecBlock2',
-	#superclass : 'GbxExecBlock',
+	#name : 'GbxExecBlock1Tool',
+	#superclass : 'GbxExecBlockTool',
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }
 
 { #category : 'execution' }
-GbxExecBlock2 >> value: arg1 value: arg2 [
-	"Execute block with 2 arguments"
+GbxExecBlock1Tool >> value: arg1 [
+	"Execute block with 1 argument"
 	| script |
 	
 	session ifNil: [ ^ nil ].
@@ -15,14 +15,14 @@ GbxExecBlock2 >> value: arg1 value: arg2 [
 	script := '[
 		| blk |
 		blk := Object _objectForOop: ', blockOop asString, '.
-		blk value: ', arg1 asString, ' value: ', arg2 asString, '
+		blk value: ', arg1 asString, '
 	] value'.
 	
 	^ session executeAndFetch: script.
 ]
 
 { #category : 'initialization' }
-GbxExecBlock2 >> initialize [
+GbxExecBlock1Tool >> initialize [
 	super initialize.
-	numArgs := 2.
+	numArgs := 1.
 ]

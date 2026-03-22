@@ -1,6 +1,6 @@
 Class {
-	#name : 'GbxDeferredNamedAssignment',
-	#superclass : 'GbxDeferredAssignment',
+	#name : 'GbxDeferredNamedAssignmentTool',
+	#superclass : 'GbxDeferredAssignmentTool',
 	#instVars : [
 		'name'
 	],
@@ -9,7 +9,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxDeferredNamedAssignment class >> target: aDelegate name: aString value: anObject [
+GbxDeferredNamedAssignmentTool class >> target: aDelegate name: aString value: anObject [
 	^ self new
 		target: aDelegate;
 		name: aString;
@@ -18,7 +18,7 @@ GbxDeferredNamedAssignment class >> target: aDelegate name: aString value: anObj
 ]
 
 { #category : 'executing' }
-GbxDeferredNamedAssignment >> execute [
+GbxDeferredNamedAssignmentTool >> execute [
 	"Execute the deferred named assignment"
 	target ifNil: [ ^ self ].
 	value ifNil: [ ^ self ].
@@ -28,11 +28,11 @@ GbxDeferredNamedAssignment >> execute [
 ]
 
 { #category : 'accessing' }
-GbxDeferredNamedAssignment >> name [
+GbxDeferredNamedAssignmentTool >> name [
 	^ name
 ]
 
 { #category : 'accessing' }
-GbxDeferredNamedAssignment >> name: aString [
+GbxDeferredNamedAssignmentTool >> name: aString [
 	name := aString
 ]

@@ -139,7 +139,7 @@ GbxContextListPolicy >> debugger: aDebugger [
 { #category : 'context list' }
 GbxContextListPolicy >> fetchServerContexts [
 	"Fetch server activations by resolving the actual debug process oop and
-	then letting GbxActivation>>reset populate each frame from
+	then letting GbxActivationTool>>reset populate each frame from
 	_gsiDebuggerDetailedReportAt:. This stays closer to VW behavior and avoids
 	depending on the exact _gsiStackReportFromLevel:toLevel: field layout."
 	| processOop resolvedProcessOop depthScript rawDepth maxDepth contexts |
@@ -185,7 +185,7 @@ GbxContextListPolicy >> fetchServerContexts [
 	contexts := OrderedCollection new.
 	1 to: maxDepth do: [ :level |
 		| activation |
-		activation := GbxActivation processOop: resolvedProcessOop level: level session: debugger session.
+		activation := GbxActivationTool processOop: resolvedProcessOop level: level session: debugger session.
 		activation gsMethodId ifNil: [
 			debugger logRestartText: 'fetchServerContexts stopping at invalid level=' , level asString.
 			^ contexts asArray

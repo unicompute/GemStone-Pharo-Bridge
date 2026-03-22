@@ -195,6 +195,43 @@ GbsLauncherTest >> testServerMapKeepsRuntimeApiAndToolVariants [
 ]
 
 { #category : 'tests' }
+GbsLauncherTest >> testDebuggerToolClassesKeepRuntimeVariantsSeparated [
+	self assert: GbxActivation superclass equals: Object.
+	self assert: GbxContextInspector superclass equals: Object.
+	self assert: GbxStackInspector superclass equals: GbxContextInspector.
+	self assert: GbxReceiverInspector superclass equals: GbxContextInspector.
+	self assert: GbxBreakPoint instVarNames equals: #(selector remoteClass stepPoint).
+	self assert: (Smalltalk at: #GbxActivationTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxContextInspectorTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxStackInspectorTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxReceiverInspectorTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxBreakPointTool ifAbsent: [ nil ]) notNil
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testLoggingAndDeferredToolClassesKeepRuntimeVariantsSeparated [
+	self assert: GbxLogger instVarNames equals: #(filename).
+	self assert: GbxDeferredAssignment instVarNames equals: #(clientOffset delegate buffer).
+	self assert: GbxObjectMemoryStat superclass equals: GbxStat.
+	self assert: (Smalltalk at: #GbxLoggerTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxFileLoggerTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxMemoryLoggerTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxDeferredAssignmentTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxDeferredIndexedAssignmentTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxDeferredNamedAssignmentTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxKeyValueFaulterTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxObjectMemoryStatTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxExecBlockTool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxExecBlock0Tool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxExecBlock1Tool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxExecBlock2Tool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxExecBlock3Tool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxExecBlock4Tool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxExecBlock5Tool ifAbsent: [ nil ]) notNil.
+	self assert: (Smalltalk at: #GbxExecBlockNTool ifAbsent: [ nil ]) notNil
+]
+
+{ #category : 'tests' }
 GbsLauncherTest >> testEventDetectorKeepsRuntimeApiAndToolVariants [
 	self assert: GbxEventDetector superclass equals: Object.
 	self
@@ -457,6 +494,26 @@ GbsLauncherTest >> testRefreshWorldMenuMakesGemStoneEntryVisible
 [
 	| world state menu labels |
 	GbsPharoBootstrap refreshWorldMenuIfPossible.
+	world := Smalltalk at: #World ifAbsent: [ nil ].
+	world := (world notNil and: [ world respondsTo: #currentWorld ])
+		ifTrue: [ world currentWorld ]
+		ifFalse: [ world ].
+	state := world ifNotNil: [ world worldState ].
+	menu := state ifNotNil: [ state worldMenu ].
+	labels := OrderedCollection new.
+	(menu respondsTo: #items)
+		ifTrue: [
+			menu items do: [ :item |
+				(item respondsTo: #contents)
+					ifTrue: [ labels add: item contents asString ] ] ].
+	self assert: (labels includes: 'GemStone')
+]
+
+{ #category : 'tests' }
+GbsLauncherTest >> testBootstrapInitializeMakesGemStoneEntryVisible
+[
+	| world state menu labels |
+	GbsPharoBootstrap initialize.
 	world := Smalltalk at: #World ifAbsent: [ nil ].
 	world := (world notNil and: [ world respondsTo: #currentWorld ])
 		ifTrue: [ world currentWorld ]

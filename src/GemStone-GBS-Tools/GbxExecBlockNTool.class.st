@@ -1,6 +1,6 @@
 Class {
-	#name : 'GbxExecBlockN',
-	#superclass : 'GbxExecBlock',
+	#name : 'GbxExecBlockNTool',
+	#superclass : 'GbxExecBlockTool',
 	#instVars : [
 		'arguments'
 	],
@@ -9,7 +9,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxExecBlockN class >> oop: anOop session: aSession args: argArray [
+GbxExecBlockNTool class >> oop: anOop session: aSession args: argArray [
 	^ self new
 		blockOop: anOop;
 		session: aSession;
@@ -18,7 +18,7 @@ GbxExecBlockN class >> oop: anOop session: aSession args: argArray [
 ]
 
 { #category : 'execution' }
-GbxExecBlockN >> valueWithArguments: argArray [
+GbxExecBlockNTool >> valueWithArguments: argArray [
 	"Execute block with N arguments"
 	| script argsString |
 	
@@ -39,18 +39,18 @@ GbxExecBlockN >> valueWithArguments: argArray [
 ]
 
 { #category : 'accessing' }
-GbxExecBlockN >> arguments [
+GbxExecBlockNTool >> arguments [
 	^ arguments
 ]
 
 { #category : 'accessing' }
-GbxExecBlockN >> arguments: aCollection [
+GbxExecBlockNTool >> arguments: aCollection [
 	arguments := aCollection.
 	numArgs := aCollection size.
 ]
 
 { #category : 'initialization' }
-GbxExecBlockN >> initialize [
+GbxExecBlockNTool >> initialize [
 	super initialize.
 	arguments := #().
 ]

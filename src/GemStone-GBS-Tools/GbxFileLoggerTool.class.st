@@ -1,6 +1,6 @@
 Class {
-	#name : 'GbxFileLogger',
-	#superclass : 'GbxLogger',
+	#name : 'GbxFileLoggerTool',
+	#superclass : 'GbxLoggerTool',
 	#instVars : [
 		'filePath',
 		'fileStream',
@@ -12,14 +12,14 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxFileLogger class >> on: aFilePath [
+GbxFileLoggerTool class >> on: aFilePath [
 	^ self new
 		filePath: aFilePath;
 		yourself
 ]
 
 { #category : 'instance creation' }
-GbxFileLogger class >> on: aFilePath maxFileSize: bytes [
+GbxFileLoggerTool class >> on: aFilePath maxFileSize: bytes [
 	^ self new
 		filePath: aFilePath;
 		maxFileSize: bytes;
@@ -27,7 +27,7 @@ GbxFileLogger class >> on: aFilePath maxFileSize: bytes [
 ]
 
 { #category : 'logging' }
-GbxFileLogger >> close [
+GbxFileLoggerTool >> close [
 	"Close the log file"
 	fileStream ifNotNil: [
 		fileStream close.
@@ -36,34 +36,34 @@ GbxFileLogger >> close [
 ]
 
 { #category : 'accessing' }
-GbxFileLogger >> currentFileSize [
+GbxFileLoggerTool >> currentFileSize [
 	^ currentFileSize ifNil: [ 0 ]
 ]
 
 { #category : 'accessing' }
-GbxFileLogger >> filePath [
+GbxFileLoggerTool >> filePath [
 	^ filePath
 ]
 
 { #category : 'accessing' }
-GbxFileLogger >> filePath: aString [
+GbxFileLoggerTool >> filePath: aString [
 	filePath := aString.
 	self openFile.
 ]
 
 { #category : 'accessing' }
-GbxFileLogger >> fileStream [
+GbxFileLoggerTool >> fileStream [
 	^ fileStream
 ]
 
 { #category : 'initialization' }
-GbxFileLogger >> initialize [
+GbxFileLoggerTool >> initialize [
 	super initialize.
 	maxFileSize := 10485760. "10 MB default"
 ]
 
 { #category : 'logging' }
-GbxFileLogger >> log: aString [
+GbxFileLoggerTool >> log: aString [
 	"Log a message to file"
 	
 	self ensureOpen.
@@ -86,35 +86,35 @@ GbxFileLogger >> log: aString [
 ]
 
 { #category : 'logging' }
-GbxFileLogger >> logError: aString [
+GbxFileLoggerTool >> logError: aString [
 	"Log an error message"
 	self log: 'ERROR: ', aString.
 ]
 
 { #category : 'logging' }
-GbxFileLogger >> logInfo: aString [
+GbxFileLoggerTool >> logInfo: aString [
 	"Log an info message"
 	self log: 'INFO: ', aString.
 ]
 
 { #category : 'logging' }
-GbxFileLogger >> logWarning: aString [
+GbxFileLoggerTool >> logWarning: aString [
 	"Log a warning message"
 	self log: 'WARNING: ', aString.
 ]
 
 { #category : 'accessing' }
-GbxFileLogger >> maxFileSize [
+GbxFileLoggerTool >> maxFileSize [
 	^ maxFileSize
 ]
 
 { #category : 'accessing' }
-GbxFileLogger >> maxFileSize: anInteger [
+GbxFileLoggerTool >> maxFileSize: anInteger [
 	maxFileSize := anInteger
 ]
 
 { #category : 'file handling' }
-GbxFileLogger >> openFile [
+GbxFileLoggerTool >> openFile [
 	"Open the log file for appending"
 	
 	self close.
@@ -130,7 +130,7 @@ GbxFileLogger >> openFile [
 ]
 
 { #category : 'file handling' }
-GbxFileLogger >> ensureOpen [
+GbxFileLoggerTool >> ensureOpen [
 	"Ensure the file is open"
 	fileStream ifNil: [
 		self openFile.
@@ -138,7 +138,7 @@ GbxFileLogger >> ensureOpen [
 ]
 
 { #category : 'file handling' }
-GbxFileLogger >> rotateFile [
+GbxFileLoggerTool >> rotateFile [
 	"Rotate the log file"
 	| oldPath newPath |
 	

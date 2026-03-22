@@ -1,12 +1,12 @@
 Class {
-	#name : 'GbxReceiverInspector',
-	#superclass : 'GbxContextInspector',
+	#name : 'GbxReceiverInspectorTool',
+	#superclass : 'GbxContextInspectorTool',
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }
 
 { #category : 'instance creation' }
-GbxReceiverInspector class >> inspectReceiverOf: anActivation session: aSession [
+GbxReceiverInspectorTool class >> inspectReceiverOf: anActivation session: aSession [
 	"Inspect the receiver of the given activation (context)"
 	| receiverOop inspector |
 	
@@ -25,7 +25,7 @@ GbxReceiverInspector class >> inspectReceiverOf: anActivation session: aSession 
 ]
 
 { #category : 'instance creation' }
-GbxReceiverInspector class >> inspectReceiverOfContext: contextOop session: aSession [
+GbxReceiverInspectorTool class >> inspectReceiverOfContext: contextOop session: aSession [
 	"Inspect the receiver of the given context OOP"
 	| script receiverOop inspector |
 	
@@ -46,7 +46,7 @@ GbxReceiverInspector class >> inspectReceiverOfContext: contextOop session: aSes
 ]
 
 { #category : 'fetching' }
-GbxReceiverInspector class >> fetchReceiverOopFor: anActivation session: aSession [
+GbxReceiverInspectorTool class >> fetchReceiverOopFor: anActivation session: aSession [
 	"Fetch the receiver OOP from the server for an activation"
 	| script |
 	
@@ -63,7 +63,7 @@ GbxReceiverInspector class >> fetchReceiverOopFor: anActivation session: aSessio
 ]
 
 { #category : 'initialization' }
-GbxReceiverInspector >> initializeWindow: aWindowPresenter [
+GbxReceiverInspectorTool >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GemStone Receiver Inspector';
 		initialExtent: 450 @ 500.

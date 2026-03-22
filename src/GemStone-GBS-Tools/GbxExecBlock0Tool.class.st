@@ -1,12 +1,12 @@
 Class {
-	#name : 'GbxExecBlock0',
-	#superclass : 'GbxExecBlock',
+	#name : 'GbxExecBlock0Tool',
+	#superclass : 'GbxExecBlockTool',
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
 }
 
 { #category : 'execution' }
-GbxExecBlock0 >> value [
+GbxExecBlock0Tool >> value [
 	"Execute block with 0 arguments"
 	| script |
 	
@@ -22,7 +22,7 @@ GbxExecBlock0 >> value [
 ]
 
 { #category : 'initialization' }
-GbxExecBlock0 >> initialize [
+GbxExecBlock0Tool >> initialize [
 	super initialize.
 	numArgs := 0.
 ]

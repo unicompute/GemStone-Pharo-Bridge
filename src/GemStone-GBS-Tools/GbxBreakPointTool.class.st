@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxBreakPoint',
+	#name : 'GbxBreakPointTool',
 	#superclass : 'Object',
 	#instVars : [
 		'breakNumber',
@@ -18,7 +18,7 @@ Class {
 }
 
 { #category : 'comparing' }
-GbxBreakPoint >> = anotherBP
+GbxBreakPointTool >> = anotherBP
 [
 	" Answer true if the receiver is functionally equivalent to anotherBP.
 	  NOTE:  The value of <displayString> and <stepPoint> changes when the
@@ -32,14 +32,14 @@ GbxBreakPoint >> = anotherBP
 ]
 
 { #category : 'comparing' }
-GbxBreakPoint >> hash
+GbxBreakPointTool >> hash
 [
 
 	^self identityHash + breakNumber hash + remoteClass hash + selector hash
 ]
 
 { #category : 'accessing' }
-GbxBreakPoint >> methodBreakEnablementArray
+GbxBreakPointTool >> methodBreakEnablementArray
 [
 	"Answer a collection of all method breakpoint numbers that are enabled."
 
@@ -59,35 +59,35 @@ GbxBreakPoint >> methodBreakEnablementArray
 ]
 
 { #category : 'accessing' }
-GbxBreakPoint >> sourceOffsets
+GbxBreakPointTool >> sourceOffsets
 [
 
 	^self compiledMethod _sourceOffsets
 ]
 
 { #category : 'accessing' }
-GbxBreakPoint >> remoteClass
+GbxBreakPointTool >> remoteClass
 [
 
 	^remoteClass
 ]
 
 { #category : 'accessing' }
-GbxBreakPoint >> methodSourceCode
+GbxBreakPointTool >> methodSourceCode
 [
 
 	^self compiledMethod sourceString
 ]
 
 { #category : 'accessing' }
-GbxBreakPoint >> displayString
+GbxBreakPointTool >> displayString
 [
 
 	^displayString
 ]
 
 { #category : 'accessing' }
-GbxBreakPoint >> compiledMethod
+GbxBreakPointTool >> compiledMethod
 [
 	"Answer the actual GsNMethod in which the breakpoint is set."
 
@@ -95,7 +95,7 @@ GbxBreakPoint >> compiledMethod
 ]
 
 { #category : 'accessing' }
-GbxBreakPoint >> disabled
+GbxBreakPointTool >> disabled
 [
 	"Answer whether the breakpoint was disabled at the time this instance was populated."
 
@@ -103,14 +103,14 @@ GbxBreakPoint >> disabled
 ]
 
 { #category : 'accessing' }
-GbxBreakPoint >> stepPoint
+GbxBreakPointTool >> stepPoint
 [
 
 	^stepPoint
 ]
 
 { #category : 'accessing' }
-GbxBreakPoint >> allBreakpointsSubArraySpanSize
+GbxBreakPointTool >> allBreakpointsSubArraySpanSize
 [
 	"The result from #_allBreakpoints flattens the results for each breakpoint into a single array.
 	 Different server versions have different spans for the sub-arrays."
@@ -119,21 +119,21 @@ GbxBreakPoint >> allBreakpointsSubArraySpanSize
 ]
 
 { #category : 'accessing' }
-GbxBreakPoint >> breakNumber
+GbxBreakPointTool >> breakNumber
 [
 
 	^breakNumber
 ]
 
 { #category : 'accessing' }
-GbxBreakPoint >> selector
+GbxBreakPointTool >> selector
 [
 
 	^selector
 ]
 
 { #category : 'accessing' }
-GbxBreakPoint >> className
+GbxBreakPointTool >> className
 [
 	"Answer the name of the class the breakpointed method is in.
 	 Metaclasses include ' class' suffix.
@@ -143,7 +143,7 @@ GbxBreakPoint >> className
 ]
 
 { #category : 'accessing' }
-GbxBreakPoint >> breakpointLevel
+GbxBreakPointTool >> breakpointLevel
 [
 	"Breakpoint level was added in 3.7 server. It will be nil for earlier versions.
 	 Level 0 returns to the GCI.
@@ -153,7 +153,7 @@ GbxBreakPoint >> breakpointLevel
 ]
 
 { #category : 'initialization' }
-GbxBreakPoint >> breakNumber: aSeqNum method: aMethodForwarder classProxy: classProxy className: aClassName selector: aSelector displayString: aString stepPoint: aStepPoint disabled: aBoolean breakpointLevel: anIntegerOrNil
+GbxBreakPointTool >> breakNumber: aSeqNum method: aMethodForwarder classProxy: classProxy className: aClassName selector: aSelector displayString: aString stepPoint: aStepPoint disabled: aBoolean breakpointLevel: anIntegerOrNil
 [
 
 	breakNumber := aSeqNum.
@@ -168,14 +168,14 @@ GbxBreakPoint >> breakNumber: aSeqNum method: aMethodForwarder classProxy: class
 ]
 
 { #category : 'testing' }
-GbxBreakPoint >> isDisabled
+GbxBreakPointTool >> isDisabled
 [
 
 	^self isEnabled not
 ]
 
 { #category : 'testing' }
-GbxBreakPoint >> isEnabled
+GbxBreakPointTool >> isEnabled
 [
 
 
@@ -183,14 +183,14 @@ GbxBreakPoint >> isEnabled
 ]
 
 { #category : 'actions' }
-GbxBreakPoint >> clear
+GbxBreakPointTool >> clear
 [
 
 	self compiledMethod clearBreakAtStepPoint: self stepPoint
 ]
 
 { #category : 'list accessing' }
-GbxBreakPoint class >> breakPointListFor: aSession
+GbxBreakPointTool class >> breakPointListFor: aSession
 [
 	" Answer a list of instances of the receiver, which describe the current breakpoints from GemStone."
 
@@ -214,7 +214,7 @@ GbxBreakPoint class >> breakPointListFor: aSession
 ]
 
 { #category : 'list accessing' }
-GbxBreakPoint class >> fullBreakReportFor: aSession
+GbxBreakPointTool class >> fullBreakReportFor: aSession
 [
 	"Return what we need out of the report without creating stubs for classes"
 
@@ -264,7 +264,7 @@ breakpointLevel is new in 3.7.0."
 ]
 
 { #category : 'instance creation' }
-GbxBreakPoint class >> breakNumber: aSeqNum method: aMethodForwarder classProxy: classProxy className: aClassName selector: aSelector displayString: aString stepPoint: aStepPoint disabled: aBoolean breakpointLevel: anIntegerOrNil
+GbxBreakPointTool class >> breakNumber: aSeqNum method: aMethodForwarder classProxy: classProxy className: aClassName selector: aSelector displayString: aString stepPoint: aStepPoint disabled: aBoolean breakpointLevel: anIntegerOrNil
 [
 	"Answer an instance of the receiver with the specified values."
 

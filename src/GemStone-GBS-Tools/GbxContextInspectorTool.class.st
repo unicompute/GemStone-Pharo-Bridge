@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxContextInspector',
+	#name : 'GbxContextInspectorTool',
 	#superclass : 'GbsInspector',
 	#instVars : [
 		'contextOop',
@@ -13,7 +13,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxContextInspector class >> inspectContext: aContextOop session: aSession [
+GbxContextInspectorTool class >> inspectContext: aContextOop session: aSession [
 	"Inspect a GemStone context (Activation)"
 	| inspector |
 	
@@ -24,8 +24,8 @@ GbxContextInspector class >> inspectContext: aContextOop session: aSession [
 ]
 
 { #category : 'instance creation' }
-GbxContextInspector class >> inspectActivation: anActivation session: aSession [
-	"Inspect a GbxActivation object"
+GbxContextInspectorTool class >> inspectActivation: anActivation session: aSession [
+	"Inspect a GbxActivationTool object"
 	| inspector |
 	
 	inspector := self new.
@@ -35,7 +35,7 @@ GbxContextInspector class >> inspectActivation: anActivation session: aSession [
 ]
 
 { #category : 'accessing' }
-GbxContextInspector >> inspectActivation: anActivation session: aSession [
+GbxContextInspectorTool >> inspectActivation: anActivation session: aSession [
 	activation := anActivation.
 	contextOop := anActivation contextOop.
 	
@@ -43,7 +43,7 @@ GbxContextInspector >> inspectActivation: anActivation session: aSession [
 ]
 
 { #category : 'accessing' }
-GbxContextInspector >> inspectContextOop: aContextOop session: aSession [
+GbxContextInspectorTool >> inspectContextOop: aContextOop session: aSession [
 	| className printString rawData parsedItems items |
 	
 	contextOop := aContextOop.
@@ -79,7 +79,7 @@ GbxContextInspector >> inspectContextOop: aContextOop session: aSession [
 ]
 
 { #category : 'fetching' }
-GbxContextInspector >> fetchContextPrintString [
+GbxContextInspectorTool >> fetchContextPrintString [
 	"Fetch a descriptive string for the context"
 	| script |
 	
@@ -102,7 +102,7 @@ GbxContextInspector >> fetchContextPrintString [
 ]
 
 { #category : 'fetching' }
-GbxContextInspector >> fetchContextFields [
+GbxContextInspectorTool >> fetchContextFields [
 	"Fetch context instance variables from server"
 	| script |
 	
@@ -126,7 +126,7 @@ GbxContextInspector >> fetchContextFields [
 ]
 
 { #category : 'initialization' }
-GbxContextInspector >> initializeWindow: aWindowPresenter [
+GbxContextInspectorTool >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GemStone Context Inspector';
 		initialExtent: 450 @ 500.

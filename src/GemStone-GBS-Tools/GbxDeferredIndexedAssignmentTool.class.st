@@ -1,6 +1,6 @@
 Class {
-	#name : 'GbxDeferredIndexedAssignment',
-	#superclass : 'GbxDeferredAssignment',
+	#name : 'GbxDeferredIndexedAssignmentTool',
+	#superclass : 'GbxDeferredAssignmentTool',
 	#instVars : [
 		'index'
 	],
@@ -9,7 +9,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxDeferredIndexedAssignment class >> target: aDelegate index: anIndex value: anObject [
+GbxDeferredIndexedAssignmentTool class >> target: aDelegate index: anIndex value: anObject [
 	^ self new
 		target: aDelegate;
 		index: anIndex;
@@ -18,7 +18,7 @@ GbxDeferredIndexedAssignment class >> target: aDelegate index: anIndex value: an
 ]
 
 { #category : 'executing' }
-GbxDeferredIndexedAssignment >> execute [
+GbxDeferredIndexedAssignmentTool >> execute [
 	"Execute the deferred indexed assignment"
 	target ifNil: [ ^ self ].
 	value ifNil: [ ^ self ].
@@ -28,11 +28,11 @@ GbxDeferredIndexedAssignment >> execute [
 ]
 
 { #category : 'accessing' }
-GbxDeferredIndexedAssignment >> index [
+GbxDeferredIndexedAssignmentTool >> index [
 	^ index
 ]
 
 { #category : 'accessing' }
-GbxDeferredIndexedAssignment >> index: anInteger [
+GbxDeferredIndexedAssignmentTool >> index: anInteger [
 	index := anInteger
 ]

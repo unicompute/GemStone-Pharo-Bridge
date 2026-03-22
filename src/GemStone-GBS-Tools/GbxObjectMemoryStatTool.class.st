@@ -1,5 +1,5 @@
 Class {
-	#name : 'GbxObjectMemoryStat',
+	#name : 'GbxObjectMemoryStatTool',
 	#superclass : 'GbxToolStatResource',
 	#instVars : [
 		'session',
@@ -17,7 +17,7 @@ Class {
 }
 
 { #category : 'instance creation' }
-GbxObjectMemoryStat class >> on: aSession [
+GbxObjectMemoryStatTool class >> on: aSession [
 	^ self new
 		session: aSession;
 		resourceType: #objectMemory;
@@ -25,22 +25,22 @@ GbxObjectMemoryStat class >> on: aSession [
 ]
 
 { #category : 'instance creation' }
-GbxObjectMemoryStat class >> newFor: aSelector [
+GbxObjectMemoryStatTool class >> newFor: aSelector [
 	^ self basicNew selector: aSelector
 ]
 
 { #category : 'instance creation' }
-GbxObjectMemoryStat class >> newWithDescription: aDescription [
+GbxObjectMemoryStatTool class >> newWithDescription: aDescription [
 	^ self basicNew description: aDescription
 ]
 
 { #category : 'accessing' }
-GbxObjectMemoryStat >> byteCount [
+GbxObjectMemoryStatTool >> byteCount [
 	^ byteCount ifNil: [ 0 ]
 ]
 
 { #category : 'accessing' }
-GbxObjectMemoryStat >> collectStats [
+GbxObjectMemoryStatTool >> collectStats [
 	"Collect object memory statistics from GemStone"
 	| script result parts |
 	
@@ -73,13 +73,13 @@ GbxObjectMemoryStat >> collectStats [
 ]
 
 { #category : 'accessing' }
-GbxObjectMemoryStat >> description: aStatDescriptor [
+GbxObjectMemoryStatTool >> description: aStatDescriptor [
 	description := aStatDescriptor.
 	^ self
 ]
 
 { #category : 'accessing' }
-GbxObjectMemoryStat >> initialize [
+GbxObjectMemoryStatTool >> initialize [
 	super initialize.
 	name := 'Object Memory'.
 	self addStat: (GbxToolStat named: 'objectCount').
@@ -89,51 +89,51 @@ GbxObjectMemoryStat >> initialize [
 ]
 
 { #category : 'accessing' }
-GbxObjectMemoryStat >> objectCount [
+GbxObjectMemoryStatTool >> objectCount [
 	^ objectCount ifNil: [ 0 ]
 ]
 
 { #category : 'accessing' }
-GbxObjectMemoryStat >> oopCount [
+GbxObjectMemoryStatTool >> oopCount [
 	^ oopCount ifNil: [ 0 ]
 ]
 
 { #category : 'archiving' }
-GbxObjectMemoryStat >> numericValueFrom: anObjectMemory [
+GbxObjectMemoryStatTool >> numericValueFrom: anObjectMemory [
 	| rawValue |
 	rawValue := anObjectMemory perform: self selector.
 	^ rawValue ifNil: [ 0 ]
 ]
 
 { #category : 'accessing' }
-GbxObjectMemoryStat >> percentFull [
+GbxObjectMemoryStatTool >> percentFull [
 	^ percentFull ifNil: [ 0 ]
 ]
 
 { #category : 'accessing' }
-GbxObjectMemoryStat >> session [
+GbxObjectMemoryStatTool >> session [
 	^ session
 ]
 
 { #category : 'accessing' }
-GbxObjectMemoryStat >> session: aSession [
+GbxObjectMemoryStatTool >> session: aSession [
 	session := aSession
 ]
 
 { #category : 'accessing' }
-GbxObjectMemoryStat >> selector [
+GbxObjectMemoryStatTool >> selector [
 	selector ifNil: [ selector := description name asSymbol ].
 	^ selector
 ]
 
 { #category : 'accessing' }
-GbxObjectMemoryStat >> selector: aSelector [
+GbxObjectMemoryStatTool >> selector: aSelector [
 	selector := aSelector.
 	^ self
 ]
 
 { #category : 'accessing' }
-GbxObjectMemoryStat >> summary [
+GbxObjectMemoryStatTool >> summary [
 	"Return a summary string of object memory stats"
 	^ 'Object Memory: ', objectCount asString, ' objects, ',
 	  byteCount asString, ' bytes, ',
@@ -141,7 +141,7 @@ GbxObjectMemoryStat >> summary [
 ]
 
 { #category : 'archiving' }
-GbxObjectMemoryStat >> writeSampleFrom: anObjectMemory to: statArchive [
+GbxObjectMemoryStatTool >> writeSampleFrom: anObjectMemory to: statArchive [
 	| type valueToWrite |
 	description ifNil: [ ^ self ].
 	value := self numericValueFrom: anObjectMemory.
