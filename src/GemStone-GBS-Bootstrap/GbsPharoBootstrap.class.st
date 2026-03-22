@@ -21,6 +21,7 @@ GbsPharoBootstrap class >> activateCompatibilityInCurrentImage
 [
 	self installCompatibilityAliases.
 	self publishConvertedRuntimeGlobals.
+	self clearLoginCriticalMethodBreakpointsIfPossible.
 	self refreshWorldMenuIfPossible
 ]
 
@@ -30,6 +31,7 @@ GbsPharoBootstrap class >> initialize
 	"Allow direct package loads to install placeholder globals before Converted compiles."
 
 	self installCompatibilityAliases.
+	self clearLoginCriticalMethodBreakpointsIfPossible.
 	self refreshWorldMenuIfPossible
 ]
 
@@ -232,6 +234,39 @@ GbsPharoBootstrap class >> specialGemStoneObjects
 					ifTrue: [ existing keysAndValuesDo: [ :key :value | namespace at: key put: value ] ] ] ].
 	Smalltalk at: #SpecialGemStoneObjects put: namespace.
 	^ namespace
+]
+
+{ #category : 'bootstrap' }
+GbsPharoBootstrap class >> clearLoginCriticalMethodBreakpointsIfPossible
+[
+	self loginCriticalMethodReferences do: [ :spec |
+		| targetClass selector compiledMethod protocol source |
+		targetClass := Smalltalk at: spec first ifAbsent: [ nil ].
+		targetClass ifNil: [  ] ifNotNil: [
+			selector := spec second.
+			(targetClass includesSelector: selector) ifTrue: [
+				compiledMethod := targetClass >> selector.
+				((compiledMethod respondsTo: #hasBreakpoint) and: [ compiledMethod hasBreakpoint ])
+					ifTrue: [
+						source := [ compiledMethod sourceCode ] on: Error do: [ nil ].
+						protocol := [ compiledMethod protocol ] on: Error do: [ 'as yet unclassified' ].
+						source ifNotNil: [
+							[ targetClass compile: source classified: protocol ] on: Error do: [ ] ] ] ] ] ]
+]
+
+{ #category : 'bootstrap' }
+GbsPharoBootstrap class >> loginCriticalMethodReferences
+[
+	^ #(
+		(GbxSemaphore critical:)
+		(GbxRecursionLock critical:)
+		(GbxWaitingEventDetector newRunningProcess)
+		(GbsSession mapCrucialClasses)
+		(GbsSession initializeCaches)
+		(GbsSession postLogin)
+		(GbsSessionParameters login)
+		(GbsLauncher doLogin)
+	)
 ]
 
 { #category : 'icons' }

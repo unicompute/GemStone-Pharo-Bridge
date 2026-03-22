@@ -2216,7 +2216,7 @@ GbsRemoteDebugger >> gsDebugIt [
 	^ [ 
 		session execute: code.
 		true
-	] on: GbsError do: [ :ex |
+	] on: GbsError errorSignal do: [ :ex |
 		errorText := ex messageText.
 		processCandidate := self processOopFromGbsError: ex.
 		(processCandidate isNumber and: [ processCandidate > 20 ])

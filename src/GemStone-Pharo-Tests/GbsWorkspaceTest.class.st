@@ -56,6 +56,34 @@ GbsWorkspaceTest >> testDoItHandlesGemStoneError [
 ]
 
 { #category : 'tests' }
+GbsWorkspaceTest >> testDoItHandlesRealGemStoneExceptionClass [
+	| workspace mockSession originator |
+	workspace := TestableGbsWorkspace new.
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	workspace textEditor text: '1 / 0'.
+
+	originator := GbsError new
+		errorText: 'boom';
+		serverProcess: 222;
+		exceptionOop: 333;
+		yourself.
+	mockSession stubs
+		at: #execute
+		put: [ :script |
+			(GbsGemStoneError new
+				messageText: 'GS Server Error - boom';
+				originator: originator;
+				yourself) signal ].
+	GbsSessionParameters currentSession: mockSession.
+
+	workspace doIt.
+
+	self assert: workspace debuggerOpened.
+	self assert: workspace lastOpenedProcessOop equals: 222.
+]
+
+{ #category : 'tests' }
 GbsWorkspaceTest >> testBestDebugProcessOopPrefersCandidateWithStack [
 	| workspace mockSession err resolved |
 	workspace := TestableGbsWorkspace new.

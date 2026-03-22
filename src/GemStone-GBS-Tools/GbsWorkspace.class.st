@@ -55,7 +55,7 @@ GbsWorkspace >> doIt [
 	[
 		result := activeSession execute: code.
 		GbsRemoteTranscript drainSessionLogsToWindowsAndLocal: activeSession.
-	] on: GbsError do: [ :ex |
+	] on: GbsError errorSignal do: [ :ex |
 		exceptionCandidate := (ex respondsTo: #exceptionOop)
 			ifTrue: [ ex exceptionOop ]
 			ifFalse: [ nil ].
@@ -260,7 +260,7 @@ GbsWorkspace >> gsFileItIn [
 		activeSession execute: code.
 		GbsRemoteTranscript drainSessionLogsToWindowsAndLocal: activeSession.
 		self inform: 'GemStone file-in executed.'
-	] on: GbsError do: [ :ex |
+	] on: GbsError errorSignal do: [ :ex |
 		self inform: 'GemStone file-in failed: ', ex messageText
 	].
 ]

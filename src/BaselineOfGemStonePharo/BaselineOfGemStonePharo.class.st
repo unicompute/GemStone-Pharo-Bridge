@@ -44,6 +44,7 @@ BaselineOfGemStonePharo >> postloadBootstrapCompatibility [
 	(Smalltalk at: #GbsPharoBootstrap ifAbsent: [ ^ self ])
 		ifNotNil: [ :bootstrap |
 			bootstrap installCompatibilityAliases.
+			bootstrap clearLoginCriticalMethodBreakpointsIfPossible.
 			bootstrap refreshWorldMenuIfPossible ]
 ]
 
@@ -60,7 +61,9 @@ BaselineOfGemStonePharo >> preloadConvertedCompatibility [
 BaselineOfGemStonePharo >> postloadConvertedCompatibility [
 	| archiver |
 	(Smalltalk at: #GbsPharoBootstrap ifAbsent: [ nil ])
-		ifNotNil: [ :bootstrap | bootstrap publishConvertedRuntimeGlobals ].
+		ifNotNil: [ :bootstrap |
+			bootstrap publishConvertedRuntimeGlobals.
+			bootstrap clearLoginCriticalMethodBreakpointsIfPossible ].
 
 	archiver := Smalltalk at: #GbxStatArchiver ifAbsent: [ ^ self ].
 	archiver initialize.
@@ -86,5 +89,7 @@ BaselineOfGemStonePharo >> preloadToolsCompatibility [
 { #category : 'baselines' }
 BaselineOfGemStonePharo >> postloadToolsCompatibility [
 	(Smalltalk at: #GbsPharoBootstrap ifAbsent: [ ^ self ])
-		refreshWorldMenuIfPossible
+		ifNotNil: [ :bootstrap |
+			bootstrap clearLoginCriticalMethodBreakpointsIfPossible.
+			bootstrap refreshWorldMenuIfPossible ]
 ]

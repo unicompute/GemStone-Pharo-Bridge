@@ -41,6 +41,24 @@ GbsGemStoneError >> isResumable
 ]
 
 { #category : 'accessing' }
+GbsGemStoneError >> exceptionOop
+[
+	| error |
+	error := self originator.
+	(error respondsTo: #exceptionOop) ifFalse: [ ^ nil ].
+	^ error exceptionOop
+]
+
+{ #category : 'accessing' }
+GbsGemStoneError >> serverProcessOop
+[
+	| error |
+	error := self originator.
+	(error respondsTo: #serverProcessOop) ifFalse: [ ^ nil ].
+	^ error serverProcessOop
+]
+
+{ #category : 'accessing' }
 GbsGemStoneError >> serverArguments
 [
 

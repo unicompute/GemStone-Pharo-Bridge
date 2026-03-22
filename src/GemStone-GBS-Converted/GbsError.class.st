@@ -181,6 +181,14 @@ GbsError >> exceptionOop: aDelegate
 ]
 
 { #category : 'accessing' }
+GbsError >> exceptionOop
+[
+	exceptionOop ifNil: [ ^ nil ].
+	(exceptionOop respondsTo: #oopValue) ifTrue: [ ^ exceptionOop oopValue ].
+	^ exceptionOop
+]
+
+{ #category : 'accessing' }
 GbsError >> arguments
 [
 	^arguments
@@ -318,6 +326,14 @@ GbsError >> serverProcess
 [
 
 	^process
+]
+
+{ #category : 'accessing' }
+GbsError >> serverProcessOop
+[
+	process ifNil: [ ^ nil ].
+	(process respondsTo: #oopValue) ifTrue: [ ^ process oopValue ].
+	^ process
 ]
 
 { #category : 'accessing' }

@@ -68,7 +68,7 @@ GbsPlaygroundActions class >> gsEvaluateIn: aPlaygroundPresenter debugOnError: d
 		result := activeSession execute: code.
 		GbsRemoteTranscript drainSessionLogsToWindowsAndLocal: activeSession.
 		^ result
-	] on: GbsError do: [ :ex |
+	] on: GbsError errorSignal do: [ :ex |
 		exceptionCandidate := (ex respondsTo: #exceptionOop)
 			ifTrue: [ ex exceptionOop ]
 			ifFalse: [ nil ].

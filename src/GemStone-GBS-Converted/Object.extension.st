@@ -124,6 +124,13 @@ Object >> gbxBasicClass [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> gbxUnmappedClassReplicatorClass [
+	"Subclasses can override this for GBS-specific replication behavior."
+
+	^ GbxUnmappedClassReplicator
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> gbxFixMe [
 	"A send of gbxFixMe indicates code that still needs work."
 ]
