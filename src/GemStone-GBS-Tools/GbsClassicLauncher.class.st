@@ -1360,28 +1360,56 @@ GbsClassicLauncher >> makeCurrent [
 
 { #category : 'actions' }
 GbsClassicLauncher >> loginSelectedParametersUsing: aSelector [
-	| params session loginError |
+	| params |
 	params := [ parametersList selection selectedItem ] on: Error do: [ nil ].
 	params ifNil: [ ^ self inform: 'Please select a configuration first.' ].
 
-	loginError := nil.
-	session := nil.
-	UIManager default showWaitCursorWhile: [
-		[ session := params perform: aSelector ]
-			on: Error
-			do: [ :ex | loginError := ex ] ].
+	btnLoginRpc disable.
+	btnLoginLink disable.
+	self
+		runBackgroundProcessNamed: 'GBS Classic Login for ', params name
+		do: [
+			| session loginErrorText |
+			session := nil.
+			loginErrorText := nil.
+			[ session := params perform: aSelector ]
+				on: Error
+				do: [ :ex | loginErrorText := ex messageText ].
 
-	loginError ifNotNil: [ ^ self inform: 'Login Error: ', loginError messageText ].
-	session ifNil: [ ^ self inform: 'Login failed.' ].
+			self deferUI: [
+				loginErrorText ifNotNil: [
+					self refreshAll.
+					self inform: 'Login Error: ', loginErrorText.
+					^ self ].
+				session ifNil: [
+					self refreshAll.
+					self inform: 'Login failed.'.
+					^ self ].
 
-	GbsAdminSessionSupport publishCurrentSession: session.
-	[ self refreshAll ] on: Error do: [ ].
-	UIManager default defer: [
-		GbsLauncher allInstancesDo: [ :launcher |
-			[ launcher updateUIState ] on: Error do: [ ] ].
-		GbsClassicLauncher allInstancesDo: [ :launcher |
-			[ launcher refreshAll ] on: Error do: [ ] ] ].
-	self inform: 'Login Successful: ', params name
+				GbsAdminSessionSupport publishCurrentSession: session.
+				[ self refreshAll ] on: Error do: [ ].
+				GbsLauncher allInstancesDo: [ :launcher |
+					[ launcher updateUIState ] on: Error do: [ ] ].
+				GbsClassicLauncher allInstancesDo: [ :launcher |
+					[ launcher refreshAll ] on: Error do: [ ] ].
+				self inform: 'Login Successful: ', params name ] ]
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> deferUI: aBlock [
+	[
+		UIManager default defer: aBlock
+	] on: Error do: [
+		aBlock value ]
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> runBackgroundProcessNamed: aString do: aBlock [
+	| process |
+	process := aBlock gbxNewProcessNamed: aString.
+	process priority: Processor userBackgroundPriority.
+	process resume.
+	^ process
 ]
 
 { #category : 'menus' }

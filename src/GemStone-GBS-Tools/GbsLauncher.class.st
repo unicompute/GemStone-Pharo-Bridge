@@ -133,35 +133,57 @@ GbsLauncher >> doCommit [
 
 { #category : 'actions' }
 GbsLauncher >> doLogin [
-    | session params |
-    statusLabel label: 'Status: Connecting...'.
-    [
-        GbsServerInterface uniqueInstance libraryPath: inputLibPath text.
-        params := GbsSessionParameters new
-            name: ('{1}@{2}' format: { inputUser text. inputStone text });
-            gemStoneName: inputStone text;
-            username: inputUser text;
-            password: inputPass text;
-            yourself.
-        session := params login.
-    ] on: Error do: [ :ex | 
-        self inform: 'Connection Failed: ', ex messageText.
-        self updateUIState.
-        ^ self
-    ].
+	| libPath stone user password |
+	libPath := inputLibPath text.
+	stone := inputStone text.
+	user := inputUser text.
+	password := inputPass text.
 
-    session ifNil: [
-        self inform: 'Connection Failed: login returned no session.'.
-        self updateUIState.
-        ^ self
-    ].
+	statusLabel label: 'Status: Connecting...'.
+	btnLogin disable.
+	inputStone disable.
+	inputUser disable.
+	inputPass disable.
+	inputLibPath disable.
 
-    GbsAdminSessionSupport publishCurrentSession: session.
-    [ self ensureCurrentSessionVisibleInAllSessions ] on: Error do: [ ].
-    [ self refreshAllLaunchers ] on: Error do: [ :ex |
-        self inform: 'Connected, but some windows did not refresh: ', ex messageText ].
-    self updateUIState.
-    self inform: 'Connected Successfully!'.
+	self
+		runBackgroundProcessNamed: 'GBS Launcher Login for ', user, '@', stone
+		do: [
+			| session errorText params refreshErrorText |
+			session := nil.
+			errorText := nil.
+			refreshErrorText := nil.
+			[
+				GbsServerInterface uniqueInstance libraryPath: libPath.
+				params := GbsSessionParameters new
+					name: ('{1}@{2}' format: { user. stone });
+					gemStoneName: stone;
+					username: user;
+					password: password;
+					yourself.
+				session := params login
+			] on: Error do: [ :ex |
+				errorText := ex messageText ].
+
+			self deferUI: [
+				errorText ifNotNil: [
+					self inform: 'Connection Failed: ', errorText.
+					self updateUIState.
+					^ self ].
+
+				session ifNil: [
+					self inform: 'Connection Failed: login returned no session.'.
+					self updateUIState.
+					^ self ].
+
+				GbsAdminSessionSupport publishCurrentSession: session.
+				[ self ensureCurrentSessionVisibleInAllSessionsForUser: user stone: stone ] on: Error do: [ ].
+				[ self refreshAllLaunchers ] on: Error do: [ :ex |
+					refreshErrorText := ex messageText ].
+				self updateUIState.
+				refreshErrorText ifNotNil: [
+					self inform: 'Connected, but some windows did not refresh: ', refreshErrorText ]
+					ifNil: [ self inform: 'Connected Successfully!' ] ] ]
 ]
 
 { #category : 'actions' }
@@ -325,6 +347,13 @@ GbsLauncher >> activeSessionParameters [
 
 { #category : 'private' }
 GbsLauncher >> ensureCurrentSessionVisibleInAllSessions [
+	^ self
+		ensureCurrentSessionVisibleInAllSessionsForUser: inputUser text
+		stone: inputStone text
+]
+
+{ #category : 'private' }
+GbsLauncher >> ensureCurrentSessionVisibleInAllSessionsForUser: userName stone: stoneName [
 	| current currentSessionId existing |
 	current := GbsSessionParameters currentSession.
 	currentSessionId := self sessionIdFrom: current.
@@ -338,9 +367,9 @@ GbsLauncher >> ensureCurrentSessionVisibleInAllSessions [
 	existing ifNotNil: [ ^ self ].
 
 	existing := GbsSessionParameters new
-		name: ('{1}@{2}' format: { inputUser text. inputStone text });
-		gemStoneName: inputStone text;
-		username: inputUser text;
+		name: ('{1}@{2}' format: { userName. stoneName });
+		gemStoneName: stoneName;
+		username: userName;
 		yourself.
 	existing instVarNamed: 'sessionId' put: currentSessionId.
 	GbsSessionParameters registerSession: existing
@@ -365,6 +394,23 @@ GbsLauncher >> refreshAllLaunchers [
 				[ presenter refreshAll ] on: Error do: [ ] ] ].
 		GbsClassicLauncher allInstancesDo: [ :each |
 			[ each refreshAll ] on: Error do: [ ] ] ]
+]
+
+{ #category : 'private' }
+GbsLauncher >> deferUI: aBlock [
+	[
+		UIManager default defer: aBlock
+	] on: Error do: [
+		aBlock value ]
+]
+
+{ #category : 'private' }
+GbsLauncher >> runBackgroundProcessNamed: aString do: aBlock [
+	| process |
+	process := aBlock gbxNewProcessNamed: aString.
+	process priority: Processor userBackgroundPriority.
+	process resume.
+	^ process
 ]
 
 { #category : 'private' }
