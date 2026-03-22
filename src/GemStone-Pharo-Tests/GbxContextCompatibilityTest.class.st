@@ -24,3 +24,24 @@ GbxContextCompatibilityTest >> testMclassAnswersOwningClassForBlockContext [
 GbxContextCompatibilityTest >> testMclassAnswersOwningClassForMethodContext [
 	self assert: self methodContextMethodClass equals: self class
 ]
+
+{ #category : 'tests' }
+GbxContextCompatibilityTest >> testActivateCompatibilityReinstallsContextMclass [
+	| originalSource originalProtocol |
+	originalSource := (Context >> #mclass) sourceCode.
+	originalProtocol := (Context >> #mclass) protocol.
+
+	[
+		Context removeSelector: #mclass.
+		self deny: (Context includesSelector: #mclass).
+
+		GbsPharoBootstrap activateCompatibilityInCurrentImage.
+
+		self assert: (Context includesSelector: #mclass).
+		self assert: self methodContextMethodClass equals: self class
+	] ensure: [
+		(Context includesSelector: #mclass)
+			ifTrue: [ Context removeSelector: #mclass ].
+		Context compile: originalSource classified: originalProtocol
+	]
+]

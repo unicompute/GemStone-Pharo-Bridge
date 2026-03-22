@@ -13,7 +13,8 @@ Class {
 GbsPharoBootstrap class >> installCompatibilityAliases
 [
 	self installPharoAliases.
-	self installGlobalCompatibilityPlaceholders
+	self installGlobalCompatibilityPlaceholders.
+	self ensureLiveCompatibilityMethods
 ]
 
 { #category : 'bootstrap' }
@@ -34,6 +35,47 @@ GbsPharoBootstrap class >> initialize
 	self installCompatibilityAliases.
 	self clearLoginCriticalMethodBreakpointsIfPossible.
 	self refreshWorldMenuIfPossible
+]
+
+{ #category : 'bootstrap' }
+GbsPharoBootstrap class >> ensureLiveCompatibilityMethods
+[
+	self ensureContextMclassMethodIfNeeded
+]
+
+{ #category : 'bootstrap' }
+GbsPharoBootstrap class >> ensureContextMclassMethodIfNeeded
+[
+	| contextClass selector |
+	contextClass := Smalltalk at: #Context ifAbsent: [ ^ self ].
+	selector := #mclass.
+	(contextClass includesSelector: selector)
+		ifFalse: [
+			[ contextClass
+				compile: self contextMclassMethodSource
+				classified: '*GemStone-GBS-Converted-GBS-private-extensions' ]
+				on: Error
+				do: [ ] ]
+]
+
+{ #category : 'bootstrap' }
+GbsPharoBootstrap class >> contextMclassMethodSource
+[
+	^ 'mclass
+	"VisualWorks compatibility. The debugger expects a local client context
+	to answer the class that owns the executing method."
+
+	| localMethodClass homeReceiver |
+	localMethodClass := self methodClass.
+	localMethodClass ifNotNil: [ ^ localMethodClass ].
+	((self respondsTo: #method) and: [ self method notNil and: [ self method respondsTo: #methodClass ] ])
+		ifTrue: [
+			localMethodClass := self method methodClass.
+			localMethodClass ifNotNil: [ ^ localMethodClass ] ].
+	homeReceiver := self homeReceiver.
+	^ homeReceiver
+		ifNil: [ Object ]
+		ifNotNil: [ homeReceiver class ]'
 ]
 
 { #category : 'bootstrap' }
