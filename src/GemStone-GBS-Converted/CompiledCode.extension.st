@@ -7,6 +7,20 @@ CompiledCode >> gbxDeepCopyCycles: cycles [
 	^self
 ]
 
+{ #category : '*GemStone-GBS-Converted-GBS-extensions' }
+CompiledCode >> at: index [
+	"VW compatibility: Return the literal at the given index."
+
+	^ self literalAt: index
+]
+
+{ #category : '*GemStone-GBS-Converted-GBS-extensions' }
+CompiledCode >> homeMethod [
+	"VW compatibility: Answer the home method of the receiver."
+
+	^ self method
+]
+
 { #category : '*GemStone-GBS-Converted-accessing' }
 CompiledCode class >> stType [
 	^#Pharo

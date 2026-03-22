@@ -31,6 +31,27 @@ Context >> gbxSelector [
 ]
 
 { #category : '*GemStone-GBS-Converted-GBS-private-extensions' }
+Context >> mclass [
+	"VW compatibility: Answer the class in which the method is defined."
+
+	^ self method methodClass
+]
+
+{ #category : '*GemStone-GBS-Converted-GBS-private-extensions' }
+Context >> homeReceiver [
+	"VW compatibility: Answer the receiver of the home context."
+
+	^ self home receiver
+]
+
+{ #category : '*GemStone-GBS-Converted-GBS-private-extensions' }
+Context >> homeMethod [
+	"VW compatibility: Answer the home method of the context."
+
+	^ self method method
+]
+
+{ #category : '*GemStone-GBS-Converted-GBS-private-extensions' }
 Context >> gbxIsGsTopGlue [
 	"Private.  GBS."
 
