@@ -2794,10 +2794,8 @@ GbsSession >> postLogin
 	manager currentSession: self.
 	manager notifyOfAddedSession: self.	"causes VS session browser to update, so must follow #currentSession: "
 	self initializeTimeZone.
-	self enableOopDropping.
-	self configureGemAbortMaxCrs.
-	self getGemIds.
 	self startEventDetection.
+	self startDeferredPostLoginInitialization.
 	"self startGbsServices."
 	GbsConfiguration current verbose
 		ifTrue: [self gbsMessenger comment: 'Logged in %1' with: self]
@@ -2812,6 +2810,27 @@ GbsSession >> enableOopDropping
 	[
 		self execute: 'System gemConfigurationAt: #GemDropCommittedExportedObjs put: true'
 	] on: Exception do: [ ^ self ].
+	^ self
+]
+
+{ #category : 'private - session management' }
+GbsSession >> startDeferredPostLoginInitialization
+[
+	"These are useful, but they are not required for the login to be usable.
+	Keep them off the synchronous login path so GUI login does not block while
+	the session is already valid."
+
+	| process |
+	process := [
+		self hasValidSessionId
+			ifTrue: [ [ self enableOopDropping ] on: Error do: [ ] ].
+		self hasValidSessionId
+			ifTrue: [ [ self configureGemAbortMaxCrs ] on: Error do: [ ] ].
+		self hasValidSessionId
+			ifTrue: [ [ self getGemIds ] on: Error do: [ ] ] ] gbxNewProcessNamed:
+			'GBS PostLogin for ', self printString.
+	process priority: Processor userBackgroundPriority.
+	process resume.
 	^ self
 ]
 

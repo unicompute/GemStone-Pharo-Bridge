@@ -63,7 +63,8 @@ BaselineOfGemStonePharo >> postloadConvertedCompatibility [
 	(Smalltalk at: #GbsPharoBootstrap ifAbsent: [ nil ])
 		ifNotNil: [ :bootstrap |
 			bootstrap publishConvertedRuntimeGlobals.
-			bootstrap clearLoginCriticalMethodBreakpointsIfPossible ].
+			bootstrap clearLoginCriticalMethodBreakpointsIfPossible.
+			bootstrap refreshWorldMenuIfPossible ].
 
 	archiver := Smalltalk at: #GbxStatArchiver ifAbsent: [ ^ self ].
 	archiver initialize.
