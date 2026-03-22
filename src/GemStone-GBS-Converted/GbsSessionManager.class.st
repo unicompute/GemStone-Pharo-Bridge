@@ -1280,9 +1280,9 @@ GbsSessionManager >> notifyOfAddedSession: aGSSession
 [
 	"Add aGSSession to sessions."
 
-	self changed: #sessionAdded with: aGSSession.
-	self triggerEvent: #gbxSessionAdded.
-	self statResource setNumSessions
+	[ self changed: #sessionAdded with: aGSSession ] on: Error do: [ ].
+	[ self triggerEvent: #gbxSessionAdded ] on: Error do: [ ].
+	[ self statResource setNumSessions ] on: Error do: [ ]
 ]
 
 { #category : 'session management' }
@@ -1407,7 +1407,7 @@ GbsSessionManager >> currentSession: aGSSession
 	aGSSession hasValidSessionId 
 		ifFalse: [^GbsError raiseBadSessionIdFor: aGSSession].
 	currentSession := aGSSession.
-	self changed: #session with: aGSSession
+	[ self changed: #session with: aGSSession ] on: Error do: [ ]
 ]
 
 { #category : 'private - stObj cache' }

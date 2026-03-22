@@ -145,6 +145,26 @@ GbsLauncherTest >> testAdminSessionSupportFormatsSessionTitlesSafely [
 ]
 
 { #category : 'tests' }
+GbsLauncherTest >> testSessionManagerIgnoresDependentErrorsDuringSessionAnnouncements [
+	| dependent manager session |
+	[
+		GBSM reset.
+		manager := GBSM manager.
+		dependent := GbsBrokenDependent new.
+		manager addDependent: dependent.
+		session := MockGbsSession new.
+		session
+			sessionId: 21;
+			isLoggedIn: true.
+
+		self shouldnt: [ manager currentSession: session ] raise: Error.
+		self shouldnt: [ manager notifyOfAddedSession: session ] raise: Error
+	] ensure: [
+		GBSM removeDependent: dependent.
+		GBSM reset ]
+]
+
+{ #category : 'tests' }
 GbsLauncherTest >> testAdminSessionSupportResolvesRegistryFakeCandidateViaLiveSession [
 	| candidate liveSession resolved |
 	[
