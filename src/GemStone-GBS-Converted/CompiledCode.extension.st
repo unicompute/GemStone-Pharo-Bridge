@@ -7,6 +7,13 @@ CompiledCode >> gbxDeepCopyCycles: cycles [
 	^self
 ]
 
+{ #category : '*GemStone-GBS-Converted-GBS-private-extensions' }
+CompiledCode >> homeMethod [
+	"VisualWorks compatibility."
+
+	^ self
+]
+
 { #category : '*GemStone-GBS-Converted-accessing' }
 CompiledCode class >> stType [
 	^#Pharo
@@ -36,4 +43,3 @@ CompiledCode >> osType [
 CompiledCode >> isRunningUnderAssertingVM [
 	^false
 ]
-

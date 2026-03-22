@@ -10,9 +10,16 @@ Context >> gbxIsServerCallContext [
 	true ifFalse: [GbsSession dependsOnStructureOfServerCall].
 	"The above marker is so we can find dependencies should we need to change
 	GbxServerInteraction>>privateExecute."
-	^self mclass == GbxServerInteraction and: 
-			[(self gbxSelector = #privateExecute and: [self isBlockContext])
-				and: [self method == (self method homeMethod at: 1)]]
+	^ self mclass == GbxServerInteraction
+		and: [
+			(self gbxSelector = #privateExecute and: [ self isBlockContext ])
+				and: [
+					| homeMethod firstNestedBlock |
+					homeMethod := self method homeMethod.
+					firstNestedBlock := homeMethod literals
+						detect: [ :each | each isCompiledBlock ]
+						ifNone: [ nil ].
+					self method == firstNestedBlock ] ]
 ]
 
 { #category : '*GemStone-GBS-Converted-testing' }

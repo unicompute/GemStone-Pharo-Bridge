@@ -41,8 +41,58 @@ GbsPharoBootstrap class >> initialize
 GbsPharoBootstrap class >> ensureLiveCompatibilityMethods
 [
 	self
+		ensureCompiledBlockHomeMethodIfNeeded;
+		ensureCompiledCodeHomeMethodIfNeeded;
 		ensureContextHomeReceiverMethodIfNeeded;
 		ensureContextMclassMethodIfNeeded
+]
+
+{ #category : 'bootstrap' }
+GbsPharoBootstrap class >> ensureCompiledBlockHomeMethodIfNeeded
+[
+	| targetClass selector |
+	targetClass := Smalltalk at: #CompiledBlock ifAbsent: [ ^ self ].
+	selector := #homeMethod.
+	(targetClass includesSelector: selector)
+		ifFalse: [
+			[ targetClass
+				compile: self compiledBlockHomeMethodSource
+				classified: '*GemStone-GBS-Converted-GBS-private-extensions' ]
+				on: Error
+				do: [ ] ]
+]
+
+{ #category : 'bootstrap' }
+GbsPharoBootstrap class >> ensureCompiledCodeHomeMethodIfNeeded
+[
+	| targetClass selector |
+	targetClass := Smalltalk at: #CompiledCode ifAbsent: [ ^ self ].
+	selector := #homeMethod.
+	(targetClass includesSelector: selector)
+		ifFalse: [
+			[ targetClass
+				compile: self compiledCodeHomeMethodSource
+				classified: '*GemStone-GBS-Converted-GBS-private-extensions' ]
+				on: Error
+				do: [ ] ]
+]
+
+{ #category : 'bootstrap' }
+GbsPharoBootstrap class >> compiledBlockHomeMethodSource
+[
+	^ 'homeMethod
+	"VisualWorks compatibility."
+
+	^ self outerCode'
+]
+
+{ #category : 'bootstrap' }
+GbsPharoBootstrap class >> compiledCodeHomeMethodSource
+[
+	^ 'homeMethod
+	"VisualWorks compatibility."
+
+	^ self'
 ]
 
 { #category : 'bootstrap' }

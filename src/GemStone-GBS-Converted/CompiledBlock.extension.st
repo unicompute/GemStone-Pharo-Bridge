@@ -6,6 +6,13 @@ CompiledBlock >> gbxHasSource [
 	^ self hasSourceCode
 ]
 
+{ #category : '*GemStone-GBS-Converted-GBS-private-extensions' }
+CompiledBlock >> homeMethod [
+	"VisualWorks compatibility."
+
+	^ self outerCode
+]
+
 { #category : '*GemStone-GBS-Converted-accessing' }
 CompiledBlock class >> stType [
 	^#Pharo

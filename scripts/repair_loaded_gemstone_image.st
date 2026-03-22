@@ -3,6 +3,8 @@
 	tonelReader := Smalltalk at: #TonelReader ifAbsent: [ nil ].
 	criticalFiles := #(
 		'/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Bootstrap/GbsPharoBootstrap.class.st'
+		'/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Converted/CompiledCode.extension.st'
+		'/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Converted/CompiledBlock.extension.st'
 		'/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Converted/Context.extension.st'
 		'/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Converted/GbsStackDumper.class.st'
 	).
