@@ -204,10 +204,9 @@ GbxToolStatMonitor >> startMonitoring [
 			self refreshStats.
 			(Delay forSeconds: 5) wait.
 		]
-	] forkAt: Processor backgroundPriority.
-	
+	] forkAt: Processor userBackgroundPriority.
+
 	summaryLabel label: 'Monitoring: Active (5s interval)'.
-	summaryLabel foreground: (Color green).
 ]
 
 { #category : 'monitoring' }
@@ -220,7 +219,6 @@ GbxToolStatMonitor >> stopMonitoring [
 	].
 	
 	summaryLabel label: 'Monitoring: Stopped'.
-	summaryLabel foreground: (Color red).
 ]
 
 { #category : 'monitoring' }
@@ -237,11 +235,9 @@ GbxToolStatMonitor >> refreshStats [
 		self updateDisplay.
 		
 		summaryLabel label: 'Last updated: ', DateAndTime now asString.
-		summaryLabel foreground: (Color black).
-		
+
 	] on: Error do: [ :ex |
 		summaryLabel label: 'Error: ', ex messageText.
-		summaryLabel foreground: (Color red).
 	].
 ]
 

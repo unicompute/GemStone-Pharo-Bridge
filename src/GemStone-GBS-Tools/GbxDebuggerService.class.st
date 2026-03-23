@@ -797,17 +797,19 @@ GbxDebuggerService >> isSessionUsable [
 
 { #category : 'process control' }
 GbxDebuggerService >> isTerminated [
-	"Check if the debugged process is terminated"
+	"Check if the debugged process is terminated.
+	Default to false (assume alive) when the check cannot be performed —
+	the actual step/run commands guard themselves via canExecuteOnDebugProcess."
 	| result |
-	(self canExecuteOnDebugProcess) ifFalse: [ ^ true ].
+	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
 	result := self executeDebugScript: '[
 		| proc |
 		proc := Object _objectForOop: ', processOop asString, '.
 		proc ifNil: [ ^ ''true'' ].
 		proc isTerminated
 	] value'.
-	result ifNil: [ ^ true ].
-	^ self asBooleanResult: result default: true
+	result ifNil: [ ^ false ].
+	^ self asBooleanResult: result default: false
 ]
 
 { #category : 'accessing' }

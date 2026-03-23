@@ -35,7 +35,7 @@ GbxEventDetectorTool >> detectEvents [
 	[ isDetecting ] whileTrue: [
 		self pollForEvents.
 		(Delay forMilliseconds: 100) wait.
-	] forkAt: Processor backgroundPriority.
+	] forkAt: Processor userBackgroundPriority.
 ]
 
 { #category : 'accessing' }

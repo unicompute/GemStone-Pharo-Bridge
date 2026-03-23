@@ -666,7 +666,7 @@ GbsClassicLauncher class >> openGbxMemoryLogger [
 	[
 		logger := GbxMemoryLoggerTool new.
 		logger logInfo: 'Created from the GemStone Utilities menu.'.
-		self inspectUtilityObject: logger named: 'Memory Logger'
+		GbxToolMemoryLoggerPresenter openOn: logger
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Failed to open GbxMemoryLoggerTool: ', ex messageText ]
 ]
@@ -678,7 +678,14 @@ GbsClassicLauncher class >> openGbxNewConfigurationTool [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxReplicatorManager [
-	self openGbxUtility: #GbxReplicatorManagerTool
+	| session manager |
+	[
+		session := self currentSessionOrInform.
+		session ifNil: [ ^ self ].
+		manager := GbxReplicatorManagerTool on: session.
+		GbxToolReplicatorManagerPresenter openOn: manager
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Failed to open GbxReplicatorManagerTool: ', ex messageText ]
 ]
 
 { #category : 'menus' }
@@ -698,7 +705,14 @@ GbsClassicLauncher class >> openGbxSegmentToolBrain [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxServerMap [
-	self openGbxUtility: #GbxServerMapTool
+	| session tool |
+	[
+		session := self currentSessionOrInform.
+		session ifNil: [ ^ self ].
+		tool := GbxServerMapTool on: session.
+		GbxToolServerMapPresenter openOn: tool
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Failed to open GbxServerMapTool: ', ex messageText ]
 ]
 
 { #category : 'menus' }
@@ -750,10 +764,13 @@ GbsClassicLauncher class >> openGbxSessionStatResource [
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxStoreTraversalTool [
 	| session utility |
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	utility := GbxStoreTraversalTool on: session cache: (GbxBasicCache on: session).
-	self inspectUtilityObject: utility named: 'Store Traversal Tool'
+	[
+		session := self currentSessionOrInform.
+		session ifNil: [ ^ self ].
+		utility := GbxStoreTraversalTool on: session cache: (GbxBasicCache on: session).
+		GbxToolStoreTraversalPresenter openOn: utility
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Failed to open GbxStoreTraversalTool: ', ex messageText ]
 ]
 
 { #category : 'menus' }

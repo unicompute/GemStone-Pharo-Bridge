@@ -33,7 +33,7 @@ GbxPollingEventDetectorTool >> detectEvents [
 		self pollForEvents.
 		lastPollTime := DateAndTime now.
 		(Delay forMilliseconds: pollInterval) wait.
-	] forkAt: Processor backgroundPriority.
+	] forkAt: Processor userBackgroundPriority.
 ]
 
 { #category : 'initialization' }
