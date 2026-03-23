@@ -539,6 +539,26 @@ GbsRemoteDebuggerPresenterTest >> testResolveDebugProcessOopFromCurrentProcessOo
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testResolvedDebugProcessOopScriptDoesNotEmitMalformedRespondsToOrSelector [
+	| capturedScript mockSession resolved |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs
+		at: #executeAndFetchContext
+		put: [ :script :context |
+			capturedScript := script.
+			'444' ].
+
+	resolved := GbsRemoteDebugger
+		resolvedDebugProcessOopFromCandidate: 333
+		session: mockSession.
+
+	self assert: resolved equals: 444.
+	self deny: (capturedScript includesSubstring: 'respondsTo: #_gsiStackReportFromLevel:toLevel: or:').
+	self assert: (capturedScript includesSubstring: 'or: [ (obj respondsTo: #_gsiStackReportFromLevel:toLevel:)')
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testNormalizePauseLandingSelectionSelectsTopFrame [
 	| top lower fakeList fakeText |
 	top := GbxFakeContextForRemoteDebugger new

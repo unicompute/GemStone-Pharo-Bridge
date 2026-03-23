@@ -59,6 +59,15 @@ GbsGemStoneError >> serverProcessOop
 ]
 
 { #category : 'accessing' }
+GbsGemStoneError >> tag
+[
+	| error |
+	error := self originator.
+	(error respondsTo: #tag) ifFalse: [ ^ nil ].
+	^ error tag
+]
+
+{ #category : 'accessing' }
 GbsGemStoneError >> serverArguments
 [
 

@@ -210,7 +210,7 @@ GbsRemoteDebugger class >> resolvedDebugProcessOopFromCandidate: processCandidat
 				].
 				obj isNil ifTrue: [ nil ] ifFalse: [
 					((obj respondsTo: #_gsiDebuggerDetailedReportAt:)
-						or: [ obj respondsTo: #_gsiStackReportFromLevel:toLevel:
+						or: [ (obj respondsTo: #_gsiStackReportFromLevel:toLevel:)
 						or: [ obj respondsTo: #_trimStackToLevel: ] ])
 						ifTrue: [ obj ]
 						ifFalse: [
@@ -220,7 +220,7 @@ GbsRemoteDebugger class >> resolvedDebugProcessOopFromCandidate: processCandidat
 							].
 							((proc notNil) and: [
 								(proc respondsTo: #_gsiDebuggerDetailedReportAt:)
-									or: [ proc respondsTo: #_gsiStackReportFromLevel:toLevel:
+									or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:)
 									or: [ proc respondsTo: #_trimStackToLevel: ] ] ])
 								ifTrue: [ proc ]
 								ifFalse: [
@@ -229,7 +229,7 @@ GbsRemoteDebugger class >> resolvedDebugProcessOopFromCandidate: processCandidat
 									].
 									((proc notNil) and: [
 										(proc respondsTo: #_gsiDebuggerDetailedReportAt:)
-											or: [ proc respondsTo: #_gsiStackReportFromLevel:toLevel:
+											or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:)
 											or: [ proc respondsTo: #_trimStackToLevel: ] ] ])
 										ifTrue: [ proc ]
 										ifFalse: [
@@ -242,7 +242,7 @@ GbsRemoteDebugger class >> resolvedDebugProcessOopFromCandidate: processCandidat
 													proc := [ top process ] on: Error do: [ nil ].
 													((proc notNil) and: [
 														(proc respondsTo: #_gsiDebuggerDetailedReportAt:)
-															or: [ proc respondsTo: #_gsiStackReportFromLevel:toLevel:
+															or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:)
 															or: [ proc respondsTo: #_trimStackToLevel: ] ] ])
 														ifTrue: [ proc ]
 														ifFalse: [ nil ]
@@ -1391,6 +1391,22 @@ GbsRemoteDebugger >> isLikelyUserFrame: aContext [
 	^ true
 ]
 
+{ #category : 'private' }
+GbsRemoteDebugger >> isRestartExecutedFrame: aContext [
+	| className selectorName source |
+	aContext ifNil: [ ^ false ].
+	(aContext respondsTo: #isExecutedCodeFrame)
+		ifTrue: [ ^ [ aContext isExecutedCodeFrame ] on: Error do: [ false ] ].
+
+	className := [ aContext methodClassOrUnknown asString ] on: Error do: [ '' ].
+	selectorName := [ aContext selectorOrUnknown asString ] on: Error do: [ '' ].
+	source := [ aContext sourceString ifNil: [ '' ] ] on: Error do: [ '' ].
+	source isEmpty ifTrue: [ ^ false ].
+
+	^ (className = 'nil' or: [ className = '<unknown>' ])
+		and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ]
+]
+
 { #category : 'accessing' }
 GbsRemoteDebugger >> label: aString [
 	errorMessageLabel ifNotNil: [ errorMessageLabel label: aString ]
@@ -1422,6 +1438,21 @@ GbsRemoteDebugger >> preferredInitialContextIndex [
 		findFirst: [ :ctx | self isLikelyUserFrame: ctx ].
 	index = 0 ifTrue: [ ^ 1 ].
 	^ index
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartExecutedContextIndex [
+	contextList ifNil: [ ^ 0 ].
+	contextList isEmpty ifTrue: [ ^ 0 ].
+	^ contextList findFirst: [ :ctx | self isRestartExecutedFrame: ctx ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartExecutedContextOrNil [
+	| index |
+	index := self restartExecutedContextIndex.
+	index = 0 ifTrue: [ ^ nil ].
+	^ contextList at: index
 ]
 
 { #category : 'accessing' }
@@ -1835,11 +1866,8 @@ GbsRemoteDebugger >> resetServerPCToStepOneIfNeeded [
 	"Reset server PC to step 1 if we're in an executed code frame.
 	This ensures stepping starts from the beginning of the method."
 	| context |
-	contextList ifNil: [ ^ false ].
-	contextList ifEmpty: [ ^ false ].
-	
-	context := contextList at: 1.
-	((context respondsTo: #isExecutedCodeFrame) and: [ context isExecutedCodeFrame ]) ifFalse: [ ^ false ].
+	context := self restartExecutedContextOrNil.
+	context ifNil: [ ^ false ].
 	
 	"Force server to jump to step 1"
 	^ self forceServerJumpToStepPoint1
@@ -1906,12 +1934,18 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
 
 	script := '[
-		| obj proc hasMethod |
+		| obj proc hasMethod serverProcOop |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ false ].
 		proc := obj.
 		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+			(obj respondsTo: #serverProcessOop) ifTrue: [
+				serverProcOop := [ obj serverProcessOop ] on: Error do: [ nil ].
+				(serverProcOop isInteger or: [ serverProcOop class == SmallInteger ])
+					ifTrue: [ proc := Object _objectForOop: serverProcOop ]
+			].
+			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #serverProcess ])
+				ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
 		].
 		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
 			proc := [ obj process ] on: Error do: [ nil ]
@@ -2031,9 +2065,7 @@ GbsRemoteDebugger >> currentSelectedContextIsExecutedCodeFrame [
 		(index > 0 and: [ contextList notNil and: [ index <= contextList size ] ])
 			ifTrue: [ context := contextList at: index ]
 	].
-	context ifNil: [ ^ false ].
-	^ (context respondsTo: #isExecutedCodeFrame)
-		and: [ context isExecutedCodeFrame ]
+	^ self isRestartExecutedFrame: context
 ]
 
 { #category : 'actions' }
@@ -2846,12 +2878,11 @@ GbsRemoteDebugger >> ensureServerPCToStepOneAfterRestart [
 	Called before stepping to ensure correct behavior.
 	
 	Note: _trimStackToLevel: already resets to step=1, so this is a verification/backup step."
-	| context |
-	contextList ifNil: [ ^ self ].
-	contextList ifEmpty: [ ^ self ].
-
-	context := contextList at: 1.
-	((context respondsTo: #isExecutedCodeFrame) and: [ context isExecutedCodeFrame ]) ifFalse: [ ^ self ].
+	| context resolved |
+	context := self restartExecutedContextOrNil.
+	context ifNil: [ ^ self ].
+	resolved := self resolvedProcessOopFromContext: context.
+	(resolved isNumber and: [ resolved > 20 ]) ifTrue: [ processOop := resolved ].
 
 	"Force server to jump to step 1 (backup if trim didn't set it)"
 	self forceServerJumpToStepPoint1
@@ -2860,12 +2891,7 @@ GbsRemoteDebugger >> ensureServerPCToStepOneAfterRestart [
 { #category : 'private' }
 GbsRemoteDebugger >> restartNeedsServerRewind [
 	| executed step |
-	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ false ].
-	executed := contextList
-		detect: [ :ctx |
-			(ctx respondsTo: #isExecutedCodeFrame)
-				and: [ ctx isExecutedCodeFrame ] ]
-		ifNone: [ nil ].
+	executed := self restartExecutedContextOrNil.
 	executed ifNil: [ ^ false ].
 	step := (executed respondsTo: #quickStepPoint)
 		ifTrue: [ [ executed quickStepPoint asInteger ] on: Error do: [ 0 ] ]
@@ -3079,14 +3105,7 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ self ].
 
 	"Find server-reported executed-code frame"
-	index := contextList
-		findFirst: [ :ctx |
-			| className selectorName |
-			className := [ ctx methodClassOrUnknown asString ] on: Error do: [ '' ].
-			selectorName := [ ctx selectorOrUnknown asString ] on: Error do: [ '' ].
-			(className = 'nil' or: [ className = '<unknown>' ])
-				and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ] ].
-
+	index := self restartExecutedContextIndex.
 	index = 0 ifTrue: [ index := 1 ].
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
 	context := contextList at: index.
@@ -3114,6 +3133,11 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	
 	"Force UI refresh to ensure Step=1 is displayed"
 	self refreshUiState
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartWithConfirmedExecutedFrameSecondPass [
+	^ self restart
 ]
 
 { #category : 'private' }

@@ -292,12 +292,34 @@ GbsError >> compilerErrorOffset
 { #category : 'accessing' }
 GbsError >> session
 [
-
 	"Return the GbsSession that this error occurred in"
 
-	session isNil
-		ifTrue: [ ^GBSM currentSession ]
-		ifFalse: [ ^session ]
+	| current resolved |
+	session ifNotNil: [ ^ session ].
+
+	resolved := [ GBSM currentSession ] on: Error do: [ nil ].
+	resolved ifNotNil: [ ^ resolved ].
+
+	current := [ GbsSessionParameters currentSession ] on: Error do: [ nil ].
+	current ifNil: [ ^ nil ].
+	((current respondsTo: #execute:) or: [ current respondsTo: #executeAndFetch: ])
+		ifTrue: [ ^ current ].
+	(current respondsTo: #liveSession)
+		ifTrue: [
+			resolved := [ current liveSession ] on: Error do: [ nil ].
+			resolved ifNotNil: [ ^ resolved ] ].
+	(current respondsTo: #liveSessionFromParameters)
+		ifTrue: [
+			resolved := [ current liveSessionFromParameters ] on: Error do: [ nil ].
+			resolved ifNotNil: [ ^ resolved ] ].
+	(current respondsTo: #parameters)
+		ifTrue: [
+			resolved := [ current parameters ] on: Error do: [ nil ].
+			(resolved notNil and: [ resolved respondsTo: #liveSessionFromParameters ])
+				ifTrue: [
+					resolved := [ resolved liveSessionFromParameters ] on: Error do: [ nil ].
+					resolved ifNotNil: [ ^ resolved ] ] ].
+	^ nil
 ]
 
 { #category : 'accessing' }
@@ -540,6 +562,7 @@ GbsError >> hasServerProcess
 GbsError >> isCompilerError
 [
 	fatal == true ifTrue: [^false].	"Short circuit to avoid problem reporting login failure"
+	number isInteger ifFalse: [ ^ false ].
 	^number // 1000 == 1 and: [category = OGemStoneErrorCategory]
 ]
 
@@ -669,11 +692,12 @@ GbsError >> raiseException
 	continuing server execution and answer myself.
 	Substitute the cause of death if it exists and has been deferred."
 
-	| result error exception |
+	| result error exception resolvedSession |
+	resolvedSession := self session.
 	self gbsMessenger
 		statusTag: #gemStoneError
 		message: '(s%1) GS Server Error - %2 - %3'
-		with: self session sessionId
+		with: (resolvedSession ifNil: [ 0 ] ifNotNil: [ resolvedSession sessionId ])
 		with: self errorSymbol
 		with: self messageText.
 	exception := self asException.
@@ -681,19 +705,35 @@ GbsError >> raiseException
 	result := exception raiseSignal.
 	"If we get here, the exception has been resumed."
 	(exception isResumable and: [result isNil not])
-		ifTrue: [error gsResult: (result putInGSSession: session)].
+		ifTrue: [
+			error gsResult: (resolvedSession
+				ifNil: [ result ]
+				ifNotNil: [ result putInGSSession: resolvedSession ]) ].
 	^error
+]
+
+{ #category : 'signaling' }
+GbsError >> raiseSignal
+[
+	^ self raiseException
+]
+
+{ #category : 'signaling' }
+GbsError >> signal
+[
+	^ self raiseException
 ]
 
 { #category : 'private error processing' }
 GbsError >> asException
 [
 
-	| cause error exception |
+	| cause error exception resolvedSession |
+	resolvedSession := self session.
 	cause := self causeOfDeath.
 	error := cause isNil ifTrue: [self] ifFalse: [cause deferProcessing ifTrue: [cause] ifFalse: [self]].
 	error augmentErrorTextForCompilerError.
-	(cause == nil and: [session shouldReplicateExceptions])
+	(cause == nil and: [ resolvedSession notNil and: [ resolvedSession shouldReplicateExceptions ] ])
 		ifTrue: 
 			["replicate the exception"
 			exception := error replicateException]

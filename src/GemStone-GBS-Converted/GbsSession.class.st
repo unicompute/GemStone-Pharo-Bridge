@@ -669,7 +669,8 @@ GbsSession >> shouldReplicateExceptions
 [
 	"Private to GBS. Answer true if exceptions should be replicated. Can only be true when logged into a GS64 3.0 or later server."
 
-	^configuration replicateExceptions
+	^ configuration notNil
+		and: [ configuration replicateExceptions ]
 ]
 
 { #category : 'GBS private' }
