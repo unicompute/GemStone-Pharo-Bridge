@@ -172,14 +172,25 @@ GbxContextListPolicy >> fetchServerContexts [
 		depth asString
 	] value'.
 
-	rawDepth := [
-		debugger session evaluate: depthScript
-	] on: Error do: [ :ex |
-		debugger logRestartText: 'fetchServerContexts: ERROR depth probe: ' , ex messageText.
-		nil
+	rawDepth := nil.
+	1 to: 3 do: [ :attempt |
+		rawDepth ifNil: [
+			rawDepth := [
+				debugger session evaluate: depthScript
+			] on: Error do: [ :ex |
+				debugger logRestartText: 'fetchServerContexts: ERROR depth probe (attempt ', attempt asString, '): ' , ex messageText.
+				nil
+			].
+			(rawDepth respondsTo: #asLocalString) ifTrue: [ rawDepth := rawDepth asLocalString ].
+			maxDepth := [ rawDepth asString asInteger ] on: Error do: [ 0 ].
+			
+			(maxDepth = 0 and: [ attempt < 3 ]) ifTrue: [
+				debugger logRestartText: 'fetchServerContexts: attempt ', attempt asString, ' failed, retrying...'.
+				rawDepth := nil.
+				(Delay forMilliseconds: 100 * attempt) wait.
+			].
+		].
 	].
-	(rawDepth respondsTo: #asLocalString) ifTrue: [ rawDepth := rawDepth asLocalString ].
-	maxDepth := [ rawDepth asString asInteger ] on: Error do: [ 0 ].
 
 	"Diagnostic fallback if depth is 0"
 	(maxDepth = 0 and: [ (resolvedProcessOop isNumber and: [ resolvedProcessOop > 20 ]) ]) ifTrue: [

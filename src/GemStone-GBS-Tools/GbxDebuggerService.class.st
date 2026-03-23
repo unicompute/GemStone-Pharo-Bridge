@@ -1188,8 +1188,8 @@ GbxDebuggerService >> ensureRestartAtStepOne [
 	step := self currentStepPoint ifNil: [ 1 ].
 	self logRestartText: 'ensureRestartAtStepOne step=', step asString.
 	step > 1 ifFalse: [ ^ self ].
-	(self jumpToStepPoint: 1)
-		ifFalse: [ self runToStepPoint: 1 ].
+	(self jumpToStepPoint: 1 recompute: false)
+		ifFalse: [ self runToStepPoint: 1 recompute: false ].
 	self selectTopServerContext
 ]
 
@@ -1206,12 +1206,12 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	lvl ifNil: [ lvl := 1 ].
 	
 	"Try jumpToStepPoint: first (may work on some GemStone versions)"
-	didReset := self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true.
+	didReset := self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: false.
 	self logRestartText: 'resetServerPCToStepOne jumpToStepPoint:1 -> ', didReset asString.
 	didReset ifTrue: [ ^ true ].
 	
 	"Try runToStepPoint: as fallback"
-	didReset := self runDebugProcessCommand: 'runToStepPoint' withInteger: 1 recompute: true.
+	didReset := self runDebugProcessCommand: 'runToStepPoint' withInteger: 1 recompute: false.
 	self logRestartText: 'resetServerPCToStepOne runToStepPoint:1 -> ', didReset asString.
 	didReset ifTrue: [ ^ true ].
 	
@@ -2159,20 +2159,28 @@ GbxDebuggerService >> pause [
 
 { #category : 'process control' }
 GbxDebuggerService >> runToStepPoint: aStepPoint [
+	^ self runToStepPoint: aStepPoint recompute: true
+]
+
+GbxDebuggerService >> runToStepPoint: aStepPoint recompute: shouldRecompute [
 	((aStepPoint isNumber and: [ aStepPoint > 0 ]) not) ifTrue: [ ^ false ].
-	(self runDebugProcessCommand: 'runToStepPoint' withInteger: aStepPoint recompute: true)
+	(self runDebugProcessCommand: 'runToStepPoint' withInteger: aStepPoint recompute: shouldRecompute)
 		ifTrue: [ ^ true ].
-	(self runDebugProcessCommand: 'runTo' withInteger: aStepPoint recompute: true)
+	(self runDebugProcessCommand: 'runTo' withInteger: aStepPoint recompute: shouldRecompute)
 		ifTrue: [ ^ true ].
 	^ false
 ]
 
 { #category : 'process control' }
 GbxDebuggerService >> jumpToStepPoint: aStepPoint [
+	^ self jumpToStepPoint: aStepPoint recompute: true
+]
+
+GbxDebuggerService >> jumpToStepPoint: aStepPoint recompute: shouldRecompute [
 	((aStepPoint isNumber and: [ aStepPoint > 0 ]) not) ifTrue: [ ^ false ].
-	(self runDebugProcessCommand: 'jumpToStepPoint' withInteger: aStepPoint recompute: true)
+	(self runDebugProcessCommand: 'jumpToStepPoint' withInteger: aStepPoint recompute: shouldRecompute)
 		ifTrue: [ ^ true ].
-	(self runDebugProcessCommand: 'jumpTo' withInteger: aStepPoint recompute: true)
+	(self runDebugProcessCommand: 'jumpTo' withInteger: aStepPoint recompute: shouldRecompute)
 		ifTrue: [ ^ true ].
 	^ false
 ]
