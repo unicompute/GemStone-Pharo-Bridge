@@ -16,6 +16,12 @@ Object >> gbsMessenger [
 ]
 
 { #category : '*GemStone-GBS-Converted-compatibility' }
+Object >> respondsTo: aSelector or: anotherSelector [
+	"VW compatibility: answer true if the receiver responds to either selector."
+	^ (self respondsTo: aSelector) or: [ self respondsTo: anotherSelector ]
+]
+
+{ #category : '*GemStone-GBS-Converted-compatibility' }
 Object >> changeRequest: anAspect [
 	| dependents |
 	dependents := (self respondsTo: #myDependents)

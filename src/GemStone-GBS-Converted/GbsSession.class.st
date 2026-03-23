@@ -2922,6 +2922,8 @@ GbsSession >> startDeferredPostLoginInitialization
 	| process |
 	process := [
 		self hasValidSessionId
+			ifTrue: [ [ self installGsObjectCompatibilityMethods ] on: Error do: [ ] ].
+		self hasValidSessionId
 			ifTrue: [ [ self enableOopDropping ] on: Error do: [ ] ].
 		self hasValidSessionId
 			ifTrue: [ [ self configureGemAbortMaxCrs ] on: Error do: [ ] ].
@@ -2931,6 +2933,19 @@ GbsSession >> startDeferredPostLoginInitialization
 	process priority: Processor userBackgroundPriority.
 	process resume.
 	^ self
+]
+
+{ #category : 'private - session management' }
+GbsSession >> installGsObjectCompatibilityMethods
+[
+	"Install VW-compatibility methods on GemStone's Object class that GBS server-side
+	 code requires. respondsTo:or: is a VW Object extension used in GBS exception-handling
+	 code compiled into the GemStone server, but not present in GemStone's standard library."
+
+	self execute: '(Object includesSelector: #respondsTo:or:) ifFalse: [
+    Object
+        compileMethod: ''respondsTo: aSelector or: anotherSelector
+^(self respondsTo: aSelector) or: [self respondsTo: anotherSelector]'']'
 ]
 
 { #category : 'private - session management' }
