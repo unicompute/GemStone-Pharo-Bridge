@@ -180,6 +180,13 @@ GbxContextListPolicy >> fetchServerContexts [
 	].
 	(rawDepth respondsTo: #asLocalString) ifTrue: [ rawDepth := rawDepth asLocalString ].
 	maxDepth := [ rawDepth asString asInteger ] on: Error do: [ 0 ].
+
+	"Diagnostic fallback if depth is 0"
+	(maxDepth = 0 and: [ (resolvedProcessOop isNumber and: [ resolvedProcessOop > 20 ]) ]) ifTrue: [
+		debugger logRestartText: 'fetchServerContexts: depth 0 detected, trying emergency probe'.
+		maxDepth := [ (debugger session evaluate: '[ (Object _objectForOop: ', resolvedProcessOop asString, ') stackDepth ] value') asLocalString asInteger ] on: Error do: [ 0 ].
+	].
+
 	debugger logRestartText: 'fetchServerContexts maxDepth=' , maxDepth asString.
 
 	contexts := OrderedCollection new.

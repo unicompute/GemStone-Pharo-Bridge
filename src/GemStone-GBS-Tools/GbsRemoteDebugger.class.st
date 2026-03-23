@@ -850,9 +850,6 @@ GbsRemoteDebugger >> fetchStackFrames [
 	].
 
 	contexts ifEmpty: [
-		contexts := self fetchContextsDirectly
-	].
-	contexts ifEmpty: [
 		| resolved |
 		resolved := self resolveDebugProcessOopFromCurrentProcessOop.
 		((resolved isNumber and: [ resolved > 20 ]) and: [ resolved ~= processOop ]) ifTrue: [
@@ -864,6 +861,14 @@ GbsRemoteDebugger >> fetchStackFrames [
 	].
 
 	contextList := contexts ifNil: [ #( ) ].
+	contextList ifEmpty: [
+		"Final attempt: if still empty, try to refresh service and recompute"
+		(service respondsTo: #recomputeContextList) ifTrue: [
+			[ service recomputeContextList. contexts := service contextList ] on: Error do: [ ].
+		].
+		contextList := contexts ifNil: [ #( ) ].
+	].
+
 	contextList ifEmpty: [
 		stackList items: #('No stack frames available - error occurred in GemStone').
 		self setSourceText: ''.

@@ -679,8 +679,20 @@ GbxDebuggerService >> initialize [
 
 { #category : 'initialization' }
 GbxDebuggerService >> initializeForDebugging [
-	"Initialize the debugger for a new debugging session"
+	"Initialize the debugger for a new debugging session.
+	Ensure we resolve the real GsProcess Oop if we were opened on an Exception."
+	| resolved |
 	contextStackPolicy := GbxContextListPolicy debugger: self.
+	
+	"Try to resolve process Oop early"
+	resolved := (self respondsTo: #resolvedProcessOopFromContext:)
+		ifTrue: [ self resolvedProcessOopFromContext: currentContext ]
+		ifFalse: [ nil ].
+	(resolved isNumber and: [ resolved > 20 ]) ifTrue: [ 
+		processOop := resolved.
+		(debugger respondsTo: #processOop:) ifTrue: [ debugger processOop: resolved ].
+	].
+
 	contextStackPolicy computeContextList.
 	
 	contextStackPolicy contextList ifNotEmpty: [ :contexts |
@@ -1180,10 +1192,13 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	"Force the debugged server process to restart at method entry (step=1).
 	This is the deterministic restart anchor used by basicReenterServerContext,
 	especially important for repeated Restart actions.
-	
+
 	Note: _trimStackToLevel: (called in cutbackGsTo:) already resets the stack
 	to step=1. This method is kept for compatibility but the trim handles the reset."
-	| didReset |
+	| didReset lvl |
+	lvl := self currentContextLevel.
+	lvl ifNil: [ lvl := 1 ].
+	
 	"Try jumpToStepPoint: first (may work on some GemStone versions)"
 	didReset := self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true.
 	self logRestartText: 'resetServerPCToStepOne jumpToStepPoint:1 -> ', didReset asString.
@@ -1989,7 +2004,11 @@ GbxDebuggerService >> gbsErrorClass [
 GbxDebuggerService >> synchronizeProcessOopFromContext: aContext [
 	| candidate |
 	candidate := self resolvedProcessOopFromContext: aContext.
-	candidate ifNotNil: [ processOop := candidate ]
+	candidate ifNotNil: [ 
+		processOop := candidate.
+		(debugger notNil and: [ debugger respondsTo: #processOop: ])
+			ifTrue: [ [ debugger processOop: candidate ] on: Error do: [ ] ].
+	]
 ]
 
 { #category : 'private-GS execution' }
