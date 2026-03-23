@@ -34,7 +34,14 @@ GbsPharoBootstrap class >> initialize
 
 	self installCompatibilityAliases.
 	self clearLoginCriticalMethodBreakpointsIfPossible.
-	self refreshWorldMenuIfPossible
+	self refreshWorldMenuIfPossible.
+	[ Smalltalk addToStartUpList: self ] on: Error do: [ ]
+]
+
+{ #category : 'class initialization' }
+GbsPharoBootstrap class >> startUp: resuming
+[
+	resuming ifTrue: [ self refreshWorldMenuIfPossible ]
 ]
 
 { #category : 'bootstrap' }

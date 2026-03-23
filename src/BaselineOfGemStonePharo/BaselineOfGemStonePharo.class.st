@@ -93,5 +93,5 @@ BaselineOfGemStonePharo >> postloadToolsCompatibility [
 	(Smalltalk at: #GbsPharoBootstrap ifAbsent: [ ^ self ])
 		ifNotNil: [ :bootstrap |
 			bootstrap clearLoginCriticalMethodBreakpointsIfPossible.
-			bootstrap refreshWorldMenuIfPossible ]
+			[ bootstrap refreshWorldMenuIfPossible ] fork ]
 ]
