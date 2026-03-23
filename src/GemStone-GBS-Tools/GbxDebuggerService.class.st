@@ -12,6 +12,7 @@ Class {
 		'processOop',
 		'label',
 		'contextStackPolicy',
+		'topContext',
 		'currentContext',
 		'selectionRange',
 		'sourceMap',
@@ -89,6 +90,17 @@ GbxDebuggerService >> breakpoint: aBreakPoint matchesSelection: anInterval [
 { #category : 'breakpoint support' }
 GbxDebuggerService >> breakpointClass [
 	^ Smalltalk at: #GbxBreakPoint ifAbsent: [ nil ]
+]
+
+{ #category : 'accessing' }
+GbxDebuggerService >> context [
+	^ currentContext
+]
+
+{ #category : 'accessing' }
+GbxDebuggerService >> context: aContext [
+	currentContext := aContext.
+	topContext := aContext
 ]
 
 { #category : 'breakpoint support' }
@@ -675,6 +687,7 @@ GbxDebuggerService >> initialize [
 	pendingEvents := OrderedCollection new.
 	dontUpdateInspectors := false.
 	lastCompileError := nil.
+	topContext := nil.
 	restartHomeResetPasses := 0.
 ]
 
@@ -1960,6 +1973,29 @@ GbxDebuggerService >> basicSendIntoServer [
 	]
 ]
 
+{ #category : 'private' }
+GbxDebuggerService >> aboutToDebugServer [
+	"Answer true when the selected client context is about to send into GemStone."
+	| receiver selector |
+	currentContext ifNil: [ ^ false ].
+	(self isCurrentClientContext not) ifTrue: [ ^ false ].
+	(currentContext respondsTo: #pdpWillSend)
+		ifTrue: [ currentContext pdpWillSend ifFalse: [ ^ false ] ].
+	selector := (currentContext respondsTo: #peekForSelector)
+		ifTrue: [ currentContext peekForSelector ]
+		ifFalse: [ nil ].
+	selector ifNil: [ ^ false ].
+	receiver := (currentContext respondsTo: #gbxPeekForReceiver)
+		ifTrue: [ currentContext gbxPeekForReceiver ]
+		ifFalse: [ nil ].
+	receiver ifNil: [ ^ false ].
+	^ GbsStackDumper
+		ifUnderstoodSend: #gbxStepsIntoGemStone:showGlue:
+		to: receiver
+		arguments: (Array with: selector with: self glueIsHidden not)
+		else: [ false ]
+]
+
 { #category : 'private-GS execution' }
 GbxDebuggerService >> basicServerStepInLevel: level [
 	"The selected context is a server context. Perform a step in the
@@ -2329,8 +2365,18 @@ GbxDebuggerService >> toggleGlueHiding [
 
 { #category : 'accessing' }
 GbxDebuggerService >> topContext [
-	"Best-effort client top context for mixed client/server stack logic."
-	^ thisContext sender
+	topContext ifNotNil: [ ^ topContext ].
+	(debugger notNil and: [ debugger respondsTo: #topContext ]) ifTrue: [
+		^ debugger topContext
+	].
+	(self isCurrentClientContext and: [ currentContext respondsTo: #sender ])
+		ifTrue: [ ^ currentContext ].
+	^ nil
+]
+
+{ #category : 'accessing' }
+GbxDebuggerService >> topContext: aContext [
+	topContext := aContext
 ]
 
 { #category : 'source code' }
@@ -2487,4 +2533,12 @@ GbxDebuggerService >> pendingMessage [
 	].
 	
 	^ message
+]
+
+{ #category : 'testing' }
+GbxDebuggerService >> isCurrentClientContext [
+	currentContext ifNil: [ ^ false ].
+	(currentContext respondsTo: #gbxIsServerContext)
+		ifTrue: [ ^ currentContext gbxIsServerContext not ].
+	^ true
 ]

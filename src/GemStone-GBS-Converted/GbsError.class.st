@@ -26,6 +26,18 @@ Class {
 	#category : 'GemStone-GBS-Converted'
 }
 
+{ #category : 'debugging' }
+GbsError class >> gbxIsGsBottomGlue: aSelector [
+	^ #(primResultOrError:verifyArgs:session: exportedPrimResultOrError:verifyArgs:session:)
+		includes: aSelector
+]
+
+{ #category : 'debugging' }
+GbsError class >> gbxIsGsTopGlue: aSelector [
+	^ #(initialize)
+		includes: aSelector
+]
+
 { #category : 'private accessing' }
 GbsError >> deferProcessing
 [
@@ -183,6 +195,23 @@ GbsError >> messageText [
 GbsError >> messageText: aString [
 	errorText := aString.
 	^ self
+]
+
+{ #category : 'debugging' }
+GbsError >> gbxGsDebuggerSession [
+	^ self session
+]
+
+{ #category : 'debugging' }
+GbsError >> gbxIsGsBottomGlue: aSelector [
+	^ #(process processHandlers processGemStoneError processVerifyArgs:)
+		includes: aSelector
+]
+
+{ #category : 'debugging' }
+GbsError >> gbxIsGsTopGlue: aSelector [
+	^ #(processHandlers)
+		includes: aSelector
 ]
 
 { #category : 'accessing' }

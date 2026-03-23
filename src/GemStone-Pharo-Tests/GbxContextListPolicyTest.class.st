@@ -210,3 +210,54 @@ GbxContextListPolicyTest >> testFirstClientContextAboveDoesNotCountIntermediateG
 
 	self assert: (policy firstClientContextAbove: gsContext) isNil
 ]
+
+{ #category : 'tests' }
+GbxContextListPolicyTest >> testComputeContextListUsesStackDumperWhenTopContextIsAvailable [
+	| debugger policy list topContext |
+
+	debugger := GbxFakeDebuggerForPolicy new.
+	policy := GbxTestableContextListPolicy debugger: debugger.
+	topContext := thisContext.
+	debugger topContext: topContext.
+
+	list := policy computeContextList.
+
+	self assert: list isNotEmpty.
+	self assert: list first == topContext
+]
+
+{ #category : 'tests' }
+GbxContextListPolicyTest >> testIsHiddenGlueTreatsIntermediateContextsAsHidden [
+	| debugger policy topClient topGlue intermediate bottomGlue visibleBelow |
+
+	debugger := GbxFakeDebuggerForPolicy new.
+	policy := GbxTestableContextListPolicy debugger: debugger.
+
+	visibleBelow := GbxFakeContextForPolicy new.
+	visibleBelow isGlue: false.
+
+	bottomGlue := GbxFakeContextForPolicy new.
+	bottomGlue
+		gbxIsGsBottomGlue: true;
+		sender: visibleBelow.
+
+	intermediate := GbxFakeContextForPolicy new.
+	intermediate
+		isGlue: false;
+		sender: bottomGlue.
+
+	topGlue := GbxFakeContextForPolicy new.
+	topGlue
+		gbxIsGsTopGlue: true;
+		sender: intermediate.
+
+	topClient := GbxFakeContextForPolicy new.
+	topClient
+		isGlue: false;
+		sender: topGlue.
+
+	debugger topContext: topClient.
+
+	self assert: (policy isHiddenGlue: intermediate).
+	self deny: (policy isHiddenGlue: visibleBelow)
+]

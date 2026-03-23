@@ -4,6 +4,7 @@ Class {
 	#instVars : [
 		'sender',
 		'receiver',
+		'result',
 		'isGlue',
 		'isServer',
 		'isTopGlue',
@@ -11,7 +12,8 @@ Class {
 		'isServerCall',
 		'processOop',
 		'methodClass',
-		'selector'
+		'selector',
+		'willSend'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -35,6 +37,16 @@ GbxFakeContextForPolicy >> receiver [
 { #category : 'accessing' }
 GbxFakeContextForPolicy >> receiver: anObject [
 	receiver := anObject
+]
+
+{ #category : 'accessing' }
+GbxFakeContextForPolicy >> gbxResult [
+	^ result
+]
+
+{ #category : 'accessing' }
+GbxFakeContextForPolicy >> gbxResult: anObject [
+	result := anObject
 ]
 
 { #category : 'testing' }
@@ -120,4 +132,24 @@ GbxFakeContextForPolicy >> selector [
 { #category : 'accessing' }
 GbxFakeContextForPolicy >> selector: aSymbol [
 	selector := aSymbol
+]
+
+{ #category : 'accessing' }
+GbxFakeContextForPolicy >> peekForSelector [
+	^ self selector
+]
+
+{ #category : 'accessing' }
+GbxFakeContextForPolicy >> gbxPeekForReceiver [
+	^ self receiver
+]
+
+{ #category : 'testing' }
+GbxFakeContextForPolicy >> pdpWillSend [
+	^ willSend ifNil: [ selector notNil ]
+]
+
+{ #category : 'accessing' }
+GbxFakeContextForPolicy >> pdpWillSend: aBoolean [
+	willSend := aBoolean
 ]

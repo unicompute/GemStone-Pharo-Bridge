@@ -49,6 +49,17 @@ GbxCPrimInterface class >> processLocalRunner [
 			yourself ]
 ]
 
+{ #category : 'debugging' }
+GbxCPrimInterface >> gbxIsGsBottomGlue: aSelector [
+	^ true
+]
+
+{ #category : 'debugging' }
+GbxCPrimInterface >> gbxStepsIntoGemStone: aSelector showGlue: showGlue [
+	"Instances of this class are the final stop before calling GemStone."
+	^ true
+]
+
 { #category : 'serverInterface interface' }
 GbxCPrimInterface >> storeTravDoArgsSTypeClass [
 	"Current bridge support targets the 64-bit store-traversal layout used by

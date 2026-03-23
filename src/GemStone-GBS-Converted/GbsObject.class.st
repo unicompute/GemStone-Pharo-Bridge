@@ -155,3 +155,29 @@ GbsObject class >> getFreeOop
 		deprecated: 'Delegate class>>getFreeOop deprecated March, 2006. Instead, create server objects through replication or server Smalltalk execution.'.
 	^GBSM currentSession getFreeOop
 ]
+
+{ #category : 'debugging' }
+GbsObject >> gbxGsDebuggerSession [
+	^ self session
+]
+
+{ #category : 'debugging' }
+GbsObject >> gbxIsGsBottomGlue: aSelector [
+	^ #(
+		basicRemotePerform:
+		basicRemotePerform:with:
+		basicRemotePerform:with:with:
+		basicRemotePerform:with:with:with:
+		remotePerform:
+		remotePerform:with:
+		remotePerform:with:with:
+		remotePerform:with:with:with:
+		remotePerform:withArgs:
+	) includes: aSelector
+]
+
+{ #category : 'debugging' }
+GbsObject >> gbxStepsIntoGemStone: aSelector showGlue: showGlue [
+	showGlue ifTrue: [ ^ false ].
+	^ self gbxIsGsBottomGlue: aSelector
+]

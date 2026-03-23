@@ -3,6 +3,7 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'topContext',
+		'context',
 		'processOop',
 		'session'
 	],
@@ -18,6 +19,16 @@ GbxFakeDebuggerForPolicy >> topContext [
 { #category : 'accessing' }
 GbxFakeDebuggerForPolicy >> topContext: aContext [
 	topContext := aContext
+]
+
+{ #category : 'accessing' }
+GbxFakeDebuggerForPolicy >> context [
+	^ context
+]
+
+{ #category : 'accessing' }
+GbxFakeDebuggerForPolicy >> context: aContext [
+	context := aContext
 ]
 
 { #category : 'accessing' }
@@ -38,4 +49,9 @@ GbxFakeDebuggerForPolicy >> session [
 { #category : 'accessing' }
 GbxFakeDebuggerForPolicy >> session: anObject [
 	session := anObject
+]
+
+{ #category : 'logging' }
+GbxFakeDebuggerForPolicy >> logRestartText: aString [
+	^ self
 ]

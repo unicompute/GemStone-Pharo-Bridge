@@ -41,6 +41,54 @@ Class {
 	#category : 'GemStone-GBS-Converted'
 }
 
+{ #category : 'debugging' }
+GbsSession >> gbxGsDebuggerSession [
+	^ self
+]
+
+{ #category : 'debugging' }
+GbsSession >> gbxIsGsBottomGlue: aSelector [
+	^ #(
+		basicExecute:
+		basicExecute:context:
+		basicExecute:context:symbolList:
+		basicExecute:symbolList:
+		basicExecuteObj:symbolList:
+		basicRemotePerform:withArgs:
+		evaluate:
+		evaluate:context:
+		evaluate:context:symbolList:
+		evaluate:symbolList:
+		execute:
+		execute:context:
+		execute:context:symbolList:
+		execute:context:symbolList:dirtyFlag:
+		execute:symbolList:
+		fwevaluate:
+		fwevaluate:context:
+		fwevaluate:context:symbolList:
+		fwevaluate:symbolList:
+	) includes: aSelector
+]
+
+{ #category : 'debugging' }
+GbsSession >> gbxIsGsTopGlue: aSelector [
+	^ #(
+		continue:
+		continue:returnValue:
+		doClientForwarderSend:
+		handleClientForwarders
+		onEventSignal:handle:raiseException:
+		processEventHandlerFor:
+	) includes: aSelector
+]
+
+{ #category : 'debugging' }
+GbsSession >> gbxStepsIntoGemStone: aSelector showGlue: showGlue [
+	showGlue ifTrue: [ ^ false ].
+	^ self gbxIsGsBottomGlue: aSelector
+]
+
 { #category : 'private - st object management' }
 GbsSession >> uncacheNonExistentGSObjects
 [

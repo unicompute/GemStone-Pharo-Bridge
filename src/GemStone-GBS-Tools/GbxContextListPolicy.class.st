@@ -85,12 +85,54 @@ GbxContextListPolicy >> clientContextsStartingAt: aContext upToContextExclusive:
 	^ contexts
 ]
 
+{ #category : 'private' }
+GbxContextListPolicy >> estimatedStackLimitFromTopContext: aContext [
+	| depth ctx |
+	depth := 0.
+	ctx := aContext.
+	[ ctx notNil and: [ depth < 512 ] ] whileTrue: [
+		depth := depth + 1.
+		ctx := [ ctx sender ] on: Error do: [ nil ]
+	].
+	^ (depth max: 1) + 256
+]
+
+{ #category : 'private' }
+GbxContextListPolicy >> mixedContextListFromTopContext: aContext [
+	| selectedContext stackLimit |
+	aContext ifNil: [ ^ nil ].
+	selectedContext := (debugger respondsTo: #context)
+		ifTrue: [ debugger context ]
+		ifFalse: [ nil ].
+	stackLimit := self estimatedStackLimitFromTopContext: aContext.
+	^ [ GbsStackDumper
+		computeContextListSelectedContext: selectedContext
+		topContext: aContext
+		stackLimit: stackLimit
+		glueIsHidden: glueIsHidden ]
+		on: Error
+		do: [ :ex | nil ]
+]
+
 { #category : 'context list' }
 GbxContextListPolicy >> computeContextList [
 	"Compute the logical context list from GemStone plus any client contexts
 	above the top server context (VW mixed-stack parity)."
-	| allContexts serverContexts topServerContext firstClientContext marker |
+	| allContexts marker mixedContexts serverContexts topContext topServerContext firstClientContext |
 	debugger logRestartText: 'computeContextList START'.
+
+	topContext := (debugger respondsTo: #topContext)
+		ifTrue: [ debugger topContext ]
+		ifFalse: [ nil ].
+	((topContext isKindOf: Context) or: [ topContext class = Context ]) ifTrue: [
+		mixedContexts := self mixedContextListFromTopContext: topContext.
+		mixedContexts ifNotNil: [
+			contextList := mixedContexts asArray.
+			debugger logRestartText: 'computeContextList using GbsStackDumper count=' , contextList size asString.
+			^ contextList
+		]
+	].
+
 	serverContexts := self fetchServerContexts.
 	debugger logRestartText: 'computeContextList fetchServerContexts returned ' , serverContexts size asString.
 	allContexts := OrderedCollection new.
@@ -133,7 +175,7 @@ GbxContextListPolicy >> contextList [
 { #category : 'initialization' }
 GbxContextListPolicy >> debugger: aDebugger [
 	debugger := aDebugger.
-	glueIsHidden := GlueIsHiddenDefault
+	glueIsHidden := GlueIsHiddenDefault ifNil: [ true ]
 ]
 
 { #category : 'context list' }
@@ -261,7 +303,7 @@ GbxContextListPolicy >> firstClientContextAbove: gsContext [
 
 { #category : 'accessing' }
 GbxContextListPolicy >> glueIsHidden [
-	^ glueIsHidden
+	^ glueIsHidden ifNil: [ true ]
 ]
 
 { #category : 'accessing' }
@@ -278,7 +320,6 @@ GbxContextListPolicy >> isBottomGlueContext: aContext [
 
 { #category : 'private' }
 GbxContextListPolicy >> isDirectGlueContext: aContext [
-	| className |
 	aContext ifNil: [ ^ false ].
 	(aContext respondsTo: #isGlue) ifTrue: [ ^ aContext isGlue ].
 	(self isServerCallContext: aContext) ifTrue: [ ^ true ].
@@ -288,9 +329,6 @@ GbxContextListPolicy >> isDirectGlueContext: aContext [
 		ifTrue: [ aContext gbxIsGsGlue ifTrue: [ ^ true ] ].
 	(aContext respondsTo: #gbxIsServerContext)
 		ifTrue: [ aContext gbxIsServerContext ifTrue: [ ^ self isGlueContext: aContext ] ].
-	className := aContext class name asString.
-	((className beginsWith: 'Gbs') or: [ className beginsWith: 'Gbx' ])
-		ifTrue: [ ^ true ].
 	^ false
 ]
 
@@ -355,7 +393,7 @@ GbxContextListPolicy >> isGlueContext: aContext [
 { #category : 'context list' }
 GbxContextListPolicy >> isHiddenGlue: aContext [
 	"Check if a context should be hidden as glue"
-	^ glueIsHidden and: [ self isGlueContext: aContext ]
+	^ glueIsHidden and: [ self isGlue: aContext ]
 ]
 
 { #category : 'private' }
@@ -449,7 +487,9 @@ GbxContextListPolicy >> topServerContext [
 	"Return the topmost server context"
 	| list |
 	list := self contextList.
-	^ list ifEmpty: [ nil ] ifNotEmpty: [ list first ]
+	^ list
+		detect: [ :each | (each respondsTo: #gbxIsServerContext) and: [ each gbxIsServerContext ] ]
+		ifNone: [ nil ]
 ]
 
 { #category : 'testing' }

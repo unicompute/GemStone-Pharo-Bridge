@@ -19,6 +19,11 @@ GbxAbstractProxy >> gbxSession [
 	^ delegate validateSessionForProxy: self
 ]
 
+{ #category : 'debugging' }
+GbxAbstractProxy >> gbxGsDebuggerSession [
+	^ self gbxSession
+]
+
 { #category : 'validation' }
 GbxAbstractProxy >> gbxValidateExistence [
 	"Validate the proxy and verify that the server-side object still exists."

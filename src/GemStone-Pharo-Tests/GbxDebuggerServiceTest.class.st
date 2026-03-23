@@ -264,6 +264,49 @@ GbxDebuggerServiceTest >> testCanSetBreakPointIsFalseWhenBreakpointAtCurrentStep
 ]
 
 { #category : 'tests' }
+GbxDebuggerServiceTest >> testContextSetterTracksClientTopContextSeparatelyFromSelection [
+	| clientContext serverContext |
+	clientContext := GbxFakeContextForPolicy new.
+	serverContext := GbxFakeActivationForService new.
+
+	service context: clientContext.
+	service currentContext: serverContext.
+
+	self assert: service context == serverContext.
+	self assert: service topContext == clientContext
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testAboutToDebugServerRecognizesGemStoneSendTargets [
+	| clientContext |
+	service instVarNamed: 'contextStackPolicy' put: (GbxContextListPolicy debugger: service).
+	clientContext := GbxFakeContextForPolicy new.
+	clientContext
+		receiver: GbsSession new;
+		selector: #evaluate:;
+		pdpWillSend: true.
+
+	service context: clientContext.
+
+	self assert: service aboutToDebugServer
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testAboutToDebugServerRejectsPlainClientSendTargets [
+	| clientContext |
+	service instVarNamed: 'contextStackPolicy' put: (GbxContextListPolicy debugger: service).
+	clientContext := GbxFakeContextForPolicy new.
+	clientContext
+		receiver: Object new;
+		selector: #yourself;
+		pdpWillSend: true.
+
+	service context: clientContext.
+
+	self deny: service aboutToDebugServer
+]
+
+{ #category : 'tests' }
 GbxDebuggerServiceTest >> testToggleBreakPointRemovesWhenCurrentStepPointAlreadyHasBreakpoint [
 	| bp |
 	bp := GbxFakeBreakPointForService

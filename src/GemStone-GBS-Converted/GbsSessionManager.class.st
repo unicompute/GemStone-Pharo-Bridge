@@ -27,6 +27,42 @@ Class {
 	#category : 'GemStone-GBS-Converted'
 }
 
+{ #category : 'debugging' }
+GbsSessionManager >> gbxGsDebuggerSession [
+	^ self currentSessionIfNone: [ nil ]
+]
+
+{ #category : 'debugging' }
+GbsSessionManager >> gbxIsGsBottomGlue: aSelector [
+	^ aSelector = #doesNotUnderstand:
+]
+
+{ #category : 'debugging' }
+GbsSessionManager >> gbxStepsIntoGemStone: aSelector showGlue: showGlue [
+	showGlue ifTrue: [ ^ false ].
+	^ #(
+		basicExecute:
+		basicExecute:context:
+		basicExecute:context:symbolList:
+		basicExecute:symbolList:
+		basicExecuteObj:symbolList:
+		basicRemotePerform:withArgs:
+		evaluate:
+		evaluate:context:
+		evaluate:context:symbolList:
+		evaluate:symbolList:
+		execute:
+		execute:context:
+		execute:context:symbolList:
+		execute:context:symbolList:dirtyFlag:
+		execute:symbolList:
+		fwevaluate:
+		fwevaluate:context:
+		fwevaluate:context:symbolList:
+		fwevaluate:symbolList:
+	) includes: aSelector
+]
+
 { #category : 'configuring gembuilder' }
 GbsSessionManager >> faultLevelRpc
 [

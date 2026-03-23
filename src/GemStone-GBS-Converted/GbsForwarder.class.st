@@ -35,6 +35,17 @@ GbsForwarder >> gbxDeepCopyCycles: cycles
 	^self
 ]
 
+{ #category : 'debugging' }
+GbsForwarder >> gbxIsGsBottomGlue: aSelector [
+	"All forwarder sends are GemStone glue unless forwarder debugging is enabled."
+	^ GbsConfiguration current forwarderDebugging not
+]
+
+{ #category : 'debugging' }
+GbsForwarder >> gbxStepsIntoGemStone: aSelector showGlue: showGlue [
+	^ showGlue not
+]
+
 { #category : 'Object GBS methods' }
 GbsForwarder >> gbxUpdateFromDelegate: aGSObject
 [
@@ -373,4 +384,3 @@ GbsForwarder class >> debugWhile: aBlock
 	aBlock value] 
 			ensure: [GbsConfiguration current forwarderDebugging: saveDebugState]
 ]
-
