@@ -45,7 +45,8 @@ Class {
 		'inspectVariableButton',
 		'errorMessageLabel',
 		'glueIsHidden',
-		'stackData'
+		'stackData',
+		'isUpdatingStack'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -835,20 +836,23 @@ GbsRemoteDebugger >> fetchFullSourceFor: aContext [
 { #category : 'actions' }
 GbsRemoteDebugger >> fetchStackFrames [
 	| contexts |
+	isUpdatingStack ifTrue: [ ^ self ].
+	isUpdatingStack := true.
+	[
+		"Check if we have captured stack data"
+		stackData ifNotNil: [
+			^ self fetchStackFramesFromData
+		].
 
-	"Check if we have captured stack data"
-	stackData ifNotNil: [
-		^ self fetchStackFramesFromData
-	].
-
-	contexts := #( ).
-	service ifNotNil: [
-		[
-			(service respondsTo: #recomputeContextList)
-				ifTrue: [ service recomputeContextList ].
-			contexts := service contextList
-		] on: Error do: [ contexts := #( ) ]
-	].
+		contexts := #( ).
+		service ifNotNil: [
+			[
+				(service respondsTo: #recomputeContextList)
+					ifTrue: [ service recomputeContextList ].
+				contexts := service contextList
+			] on: Error do: [ contexts := #( ) ]
+		].
+	] ensure: [ isUpdatingStack := false ].
 
 	contexts ifEmpty: [
 		| resolved |
@@ -1037,6 +1041,13 @@ GbsRemoteDebugger >> highlightSourceLineFromCompileError: errorMessage [
 	lineNumber := [ (lower copyFrom: start to: lower size) asNumber ] on: Error do: [ nil ].
 	lineNumber ifNil: [ ^ self ].
 	self selectLineNumber: lineNumber inTextPresenter: sourceText.
+]
+
+{ #category : 'initialization' }
+GbsRemoteDebugger >> initialize [
+	super initialize.
+	isUpdatingStack := false.
+	glueIsHidden := true.
 ]
 
 { #category : 'initialization' }

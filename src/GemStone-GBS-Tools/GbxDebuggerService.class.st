@@ -2010,7 +2010,7 @@ GbxDebuggerService >> gbsErrorClass [
 GbxDebuggerService >> synchronizeProcessOopFromContext: aContext [
 	| candidate |
 	candidate := self resolvedProcessOopFromContext: aContext.
-	candidate ifNotNil: [ 
+	(candidate notNil and: [ candidate ~= processOop ]) ifTrue: [ 
 		processOop := candidate.
 		(debugger notNil and: [ debugger respondsTo: #processOop: ])
 			ifTrue: [ [ debugger processOop: candidate ] on: Error do: [ ] ].
