@@ -184,6 +184,8 @@ GbsRemoteDebugger class >> debugProcessHasStack: processCandidate in: aSession [
 
 { #category : 'debug process resolution' }
 GbsRemoteDebugger class >> normalizedDebugProcessCandidate: anObject [
+	"Normalize a process candidate to a numeric OOP value.
+	Answers nil if the candidate cannot be normalized to a valid OOP (> 20)."
 	| oop |
 	anObject ifNil: [ ^ nil ].
 	oop := anObject isNumber
@@ -194,66 +196,104 @@ GbsRemoteDebugger class >> normalizedDebugProcessCandidate: anObject [
 ]
 
 { #category : 'debug process resolution' }
+GbsRemoteDebugger class >> toOopFromObject: anObject session: aSession [
+	"Convert a GemStone object to its OOP value following the C test discipline.
+	This is the Pharo-side equivalent of the toOop block in test_restart_verify.cpp"
+	| script raw |
+	anObject ifNil: [ ^ nil ].
+	anObject isNumber ifTrue: [ ^ anObject ].
+	
+	"Try to get OOP via server-side conversion"
+	script := '[
+		| obj |
+		obj := ', (anObject isString 
+			ifTrue: [ '''', anObject, '''' ] 
+			ifFalse: [ anObject printString ]), '.
+		(obj isInteger or: [ obj class == SmallInteger ]) ifTrue: [ ^ obj ].
+		[ obj asOop ] on: Error do: [ [ Reflection oopOf: obj ] on: Error do: [ 0 ] ]
+	] value'.
+	
+	raw := [ aSession executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	raw ifNil: [ ^ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	^ [ raw asString asInteger ] on: Error do: [ nil ]
+]
+
+{ #category : 'debug process resolution' }
 GbsRemoteDebugger class >> resolvedDebugProcessOopFromCandidate: processCandidate session: aSession [
+	"Resolve the actual GsProcess OOP from a candidate following the C test discipline.
+	This implements the exact resolution chain from test_restart_verify.cpp:
+		1. Check if candidate itself is a GsProcess (has _gsiDebugger* methods)
+		2. Try candidate>>serverProcess
+		3. Try candidate>>process  
+		4. Try candidate>>topContext>>process
+	Each step verifies the result has GsProcess capabilities before returning."
 	| normalized raw script |
 	(aSession isNil or: [ processCandidate isNil ]) ifTrue: [ ^ nil ].
 	normalized := self normalizedDebugProcessCandidate: processCandidate.
 	normalized ifNil: [ ^ nil ].
+	
+	"Execute the resolution script on the GemStone server side.
+	This follows the exact C test discipline from test_restart_verify.cpp"
 	script := '[
-		| primary resolveProc toOop resolved |
+		| primary secondary resolveProc toOop resolved |
+		
+		"resolveProc implements the C test resolution chain"
 		resolveProc := [ :candidate |
 			| obj proc top |
 			obj := candidate.
-			obj isNil ifTrue: [ nil ] ifFalse: [
-				(obj isInteger or: [ obj class == SmallInteger ]) ifTrue: [
-					obj := Object _objectForOop: obj
-				].
-				obj isNil ifTrue: [ nil ] ifFalse: [
-					((obj respondsTo: #_gsiDebuggerDetailedReportAt:)
-						or: [ (obj respondsTo: #_gsiStackReportFromLevel:toLevel:)
-						or: [ obj respondsTo: #_trimStackToLevel: ] ])
-						ifTrue: [ obj ]
-						ifFalse: [
-							proc := nil.
-							(obj respondsTo: #serverProcess) ifTrue: [
-								proc := [ obj serverProcess ] on: Error do: [ nil ]
-							].
-							((proc notNil) and: [
-								(proc respondsTo: #_gsiDebuggerDetailedReportAt:)
-									or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:)
-									or: [ proc respondsTo: #_trimStackToLevel: ] ] ])
-								ifTrue: [ proc ]
-								ifFalse: [
-									(obj respondsTo: #process) ifTrue: [
-										proc := [ obj process ] on: Error do: [ nil ]
-									].
-									((proc notNil) and: [
-										(proc respondsTo: #_gsiDebuggerDetailedReportAt:)
-											or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:)
-											or: [ proc respondsTo: #_trimStackToLevel: ] ] ])
-										ifTrue: [ proc ]
-										ifFalse: [
-											top := nil.
-											(obj respondsTo: #topContext) ifTrue: [
-												top := [ obj topContext ] on: Error do: [ nil ]
-											].
-											(top notNil and: [ top respondsTo: #process ])
-												ifTrue: [
-													proc := [ top process ] on: Error do: [ nil ].
-													((proc notNil) and: [
-														(proc respondsTo: #_gsiDebuggerDetailedReportAt:)
-															or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:)
-															or: [ proc respondsTo: #_trimStackToLevel: ] ] ])
-														ifTrue: [ proc ]
-														ifFalse: [ nil ]
-												]
-												ifFalse: [ nil ]
-										]
-								]
-						]
+			
+			"Handle OOP -> object conversion"
+			obj isNil ifTrue: [ ^ nil ].
+			(obj isInteger or: [ obj class == SmallInteger ]) ifTrue: [
+				obj := Object _objectForOop: obj
+			].
+			obj isNil ifTrue: [ ^ nil ].
+			
+			"Step 1: Check if obj itself is a GsProcess"
+			((obj respondsTo: #_gsiDebuggerDetailedReportAt:)
+				or: [ (obj respondsTo: #_gsiStackReportFromLevel:toLevel:)
+				or: [ obj respondsTo: #_trimStackToLevel: ] ])
+				ifTrue: [ ^ obj ].
+			
+			"Step 2: Try serverProcess"
+			(obj respondsTo: #serverProcess) ifTrue: [
+				proc := [ obj serverProcess ] on: Error do: [ nil ].
+				(proc notNil and: [
+					(proc respondsTo: #_gsiDebuggerDetailedReportAt:)
+						or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:)
+						or: [ proc respondsTo: #_trimStackToLevel: ] ] ])
+					ifTrue: [ ^ proc ]
+			].
+			
+			"Step 3: Try process"
+			(obj respondsTo: #process) ifTrue: [
+				proc := [ obj process ] on: Error do: [ nil ].
+				(proc notNil and: [
+					(proc respondsTo: #_gsiDebuggerDetailedReportAt:)
+						or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:)
+						or: [ proc respondsTo: #_trimStackToLevel: ] ] ])
+					ifTrue: [ ^ proc ]
+			].
+			
+			"Step 4: Try topContext >> process"
+			(obj respondsTo: #topContext) ifTrue: [
+				top := [ obj topContext ] on: Error do: [ nil ].
+				(top notNil and: [ top respondsTo: #process ]) ifTrue: [
+					proc := [ top process ] on: Error do: [ nil ].
+					(proc notNil and: [
+						(proc respondsTo: #_gsiDebuggerDetailedReportAt:)
+							or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:)
+							or: [ proc respondsTo: #_trimStackToLevel: ] ] ])
+						ifTrue: [ ^ proc ]
 				]
-			]
+			].
+			
+			"No valid process found"
+			^ nil
 		].
+		
+		"toOop converts an object back to its OOP value"
 		toOop := [ :anObject |
 			(anObject isInteger or: [ anObject class == SmallInteger ])
 				ifTrue: [ anObject ]
@@ -263,15 +303,21 @@ GbsRemoteDebugger class >> resolvedDebugProcessOopFromCandidate: processCandidat
 						do: [ [ Reflection oopOf: anObject ] on: Error do: [ 0 ] ]
 				]
 		].
+		
+		"Try primary candidate first, then secondary if available"
 		primary := Object _objectForOop: ', normalized asString, '.
 		resolved := resolveProc value: primary.
+		
+		"Return the resolved process OOP"
 		resolved isNil
 			ifTrue: [ ''0'' ]
 			ifFalse: [ [ (toOop value: resolved) printString ] on: Error do: [ ''0'' ] ]
 	] value'.
+	
 	raw := [ aSession executeAndFetch: script context: 20 ] on: Error do: [ nil ].
 	raw ifNil: [ ^ nil ].
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	
 	^ (self normalizedDebugProcessCandidate: raw)
 		ifNil: [
 			(#('true' '1' 'yes' 'ok') includes: raw asString asLowercase)
