@@ -171,6 +171,7 @@ GbsRemoteDebugger class >> debugProcessHasStack: processCandidate in: aSession [
 					ifFalse: [ nil ] ]).
 		proc ifNil: [ ^ ''false'' ].
 		(proc respondsTo: #_gsiStackReportFromLevel:toLevel:) ifFalse: [ ^ ''false'' ].
+		(proc respondsTo: #_gsiDebuggerDetailedReportAt:) ifFalse: [ ^ ''false'' ].
 		report := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
 		((report notNil) and: [ (report respondsTo: #size) and: [ report size >= 2 ] ])
 			ifTrue: [ ''true'' ]

@@ -1426,11 +1426,16 @@ GbxDebuggerService >> firstServerContextAbove: clientContext [
 GbxDebuggerService >> restart [
 	"Restart the current context using the coordinated reenter operation.
 	Fixes bug where second restart does not reset Frame Step to 1."
-	| didRestart target |
+	| didRestart target resolvedOop |
 	self logRestartState: 'restart/start' context: self currentContext.
 	target := self restartTargetContext.
 	target ifNotNil: [ self selectContext: target ].
 	didRestart := self basicReenterServerContext.
+	
+	"RE-RESOLVE PROCESS OOP AFTER RESTART"
+	resolvedOop := self resolveDebugProcessOopFromCurrentProcessOop.
+	resolvedOop ifNotNil: [ self processOop: resolvedOop ].
+
 	didRestart ifTrue: [
 		self selectRestartTargetContext.
 		(self isExecutedCodeAtStepOne) ifFalse: [
@@ -1873,23 +1878,31 @@ GbxDebuggerService >> sourceOffsetForBreakPoint: aBreakPoint [
 GbxDebuggerService >> stepInto [
 	"VW parity: step-into on server contexts is implemented by _stepOverInFrame:
 	with the step-through flag in the high bit of level."
-	| level before |
+	| level before resolvedOop |
 	before := self currentStepPoint.
 	level := self effectiveServerStepLevel.
 	level ifNil: [ level := 1 ].
 	(self serverStepOverFrameLevel: (level bitOr: 16r100000000))
-		ifTrue: [ ^ self normalizeExecutedCodeSingleStepFrom: before ].
+		ifTrue: [ 
+			resolvedOop := self resolveDebugProcessOopFromCurrentProcessOop.
+			resolvedOop ifNotNil: [ self processOop: resolvedOop ].
+			^ self normalizeExecutedCodeSingleStepFrom: before 
+		].
 	^ false
 ]
 
 { #category : 'stepping' }
 GbxDebuggerService >> stepOver [
-	| level before |
+	| level before resolvedOop |
 	before := self currentStepPoint.
 	level := self effectiveServerStepLevel.
 	level ifNil: [ level := 1 ].
 	(self serverStepOverFrameLevel: level)
-		ifTrue: [ ^ self normalizeExecutedCodeSingleStepFrom: before ].
+		ifTrue: [ 
+			resolvedOop := self resolveDebugProcessOopFromCurrentProcessOop.
+			resolvedOop ifNotNil: [ self processOop: resolvedOop ].
+			^ self normalizeExecutedCodeSingleStepFrom: before 
+		].
 	^ false
 ]
 
@@ -2020,8 +2033,8 @@ GbxDebuggerService >> aboutToDebugServer [
 	^ GbsStackDumper
 		ifUnderstoodSend: #gbxStepsIntoGemStone:showGlue:
 		to: receiver
-		arguments: (Array with: selector with: self glueIsHidden not)
-		else: [ false ]
+		with: selector
+		with: glueIsHidden
 ]
 
 { #category : 'private-GS execution' }

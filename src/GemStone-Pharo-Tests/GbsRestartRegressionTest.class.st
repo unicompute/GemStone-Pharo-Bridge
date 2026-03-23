@@ -31,46 +31,43 @@ GbsRestartRegressionTest >> tearDown [
 { #category : 'tests' }
 GbsRestartRegressionTest >> testRestartResetsPCToStepOne [
 	"Mirror test_restart_extended.cpp - Cycle 1"
-	| processOop interaction |
+	| processOop |
 	
 	"1. Trigger an error to get a process"
 	[ session evaluate: '1 / 0' ] on: GbsError do: [ :ex | 
-		interaction := ex interaction.
 		processOop := ex processOop.
 	].
 	
 	self assert: processOop notNil.
 	
 	"2. Create a debugger/service"
-	service := GbxDebuggerService onSession: session processOop: processOop.
-	debugger := GbsRemoteDebugger on: service.
+	debugger := GbxDebuggerService openOn: 'Test Error' process: processOop session: session.
+	service := debugger service.
 	
 	"3. Perform Restart"
 	debugger restart.
 	
 	"4. Verify PC is 1 in the top frame"
-	self assert: service currentContextLevel equals: 1.
-	"We can't easily check the server-side PC here without more GCI calls, 
-	 but we verified the logic in GbsRemoteDebugger >> resetServerPCToStepOne"
+	self assert: service currentStepPoint equals: 1.
 ]
 
 { #category : 'tests' }
 GbsRestartRegressionTest >> testSecondRestartAlignment [
 	"Verify fix for 'second restart issue' (PC not resetting to 1)"
-	| processOop interaction |
+	| processOop |
 	
 	[ session evaluate: '1 / 0' ] on: GbsError do: [ :ex | 
 		processOop := ex processOop.
 	].
 	
-	service := GbxDebuggerService onSession: session processOop: processOop.
-	debugger := GbsRemoteDebugger on: service.
+	debugger := GbxDebuggerService openOn: 'Test Error' process: processOop session: session.
+	service := debugger service.
 	
 	"Cycle 1: First Restart"
 	debugger restart.
-	self assert: service currentContextLevel equals: 1.
+	self assert: service currentStepPoint equals: 1.
 	
 	"Cycle 2: Second Restart (The problematic one)"
 	debugger restart.
-	self assert: service currentContextLevel equals: 1.
+	self assert: service currentStepPoint equals: 1.
 ]

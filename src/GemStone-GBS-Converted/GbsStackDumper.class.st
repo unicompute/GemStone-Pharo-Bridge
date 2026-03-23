@@ -7,6 +7,23 @@ Class {
 	],
 	#category : 'GemStone-GBS-Converted'
 }
+GbsStackDumper class >> ifUnderstoodSend: selector to: receiver [
+	^ (receiver respondsTo: selector)
+		ifTrue: [ receiver perform: selector ]
+		ifFalse: [ false ]
+]
+
+GbsStackDumper class >> ifUnderstoodSend: selector to: receiver with: arg1 with: arg2 [
+	^ (receiver respondsTo: selector)
+		ifTrue: [ receiver perform: selector with: arg1 with: arg2 ]
+		ifFalse: [ false ]
+]
+
+GbsStackDumper class >> ifUnderstoodSend: selector to: receiver arguments: args else: aBlock [
+	^ (receiver respondsTo: selector)
+		ifTrue: [ receiver perform: selector withArguments: args ]
+		ifFalse: [ aBlock value ]
+]
 
 { #category : 'private - cache dumping' }
 GbsStackDumper class >> dumpServerMapBodyForSession: session on: dumpingStream
