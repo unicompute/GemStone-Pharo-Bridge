@@ -2035,7 +2035,7 @@ GbxDebuggerService >> aboutToDebugServer [
 		ifUnderstoodSend: #gbxStepsIntoGemStone:showGlue:
 		to: receiver
 		with: selector
-		with: glueIsHidden
+		with: self glueIsHidden
 ]
 
 { #category : 'private-GS execution' }

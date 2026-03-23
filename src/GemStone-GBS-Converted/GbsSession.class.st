@@ -2051,6 +2051,19 @@ GbsSession >> isLoggedIn
 ]
 
 { #category : 'testing' }
+GbsSession >> isConnected
+[
+	^ self isLoggedIn
+]
+
+{ #category : 'testing' }
+GbsSession >> isLoggedIn: aBoolean
+[
+	aBoolean ifFalse: [ sessionId := 0 ].
+	^ aBoolean
+]
+
+{ #category : 'testing' }
 GbsSession >> isRemote
 [
 	"Returns true if the gem is a remote process.
@@ -2893,6 +2906,10 @@ GbsSession >> scheduleFinishPostLogin
 
 	| process |
 	self isLoggedIn ifFalse: [ ^ self ].
+	"Install server-side compatibility methods synchronously on the login thread,
+	 before the session becomes available for user code.  The session semaphore is
+	 not held at this point, so execute: is safe to call."
+	[ self installGsObjectCompatibilityMethods ] on: Error do: [ ].
 	process := [ self finishPostLogin ] gbxNewProcessNamed:
 			'GBS FinishPostLogin for ', self printString.
 	process priority: Processor userBackgroundPriority.
@@ -2922,8 +2939,6 @@ GbsSession >> startDeferredPostLoginInitialization
 	| process |
 	process := [
 		self hasValidSessionId
-			ifTrue: [ [ self installGsObjectCompatibilityMethods ] on: Error do: [ ] ].
-		self hasValidSessionId
 			ifTrue: [ [ self enableOopDropping ] on: Error do: [ ] ].
 		self hasValidSessionId
 			ifTrue: [ [ self configureGemAbortMaxCrs ] on: Error do: [ ] ].
@@ -2945,7 +2960,10 @@ GbsSession >> installGsObjectCompatibilityMethods
 	self execute: '(Object includesSelector: #respondsTo:or:) ifFalse: [
     Object
         compileMethod: ''respondsTo: aSelector or: anotherSelector
-^(self respondsTo: aSelector) or: [self respondsTo: anotherSelector]'']'
+    ^(self respondsTo: aSelector) or: [self respondsTo: anotherSelector]''
+        dictionaries: System myUserProfile symbolList
+        category: ''GBS compatibility''
+        environmentId: 0]'
 ]
 
 { #category : 'private - session management' }
@@ -4307,11 +4325,23 @@ GbsSession >> parameters
 ]
 
 { #category : 'session management' }
+GbsSession >> parameters: aGbsSessionParameters
+[
+	parameters := aGbsSessionParameters
+]
+
+{ #category : 'session management' }
 GbsSession >> sessionId
 [
 
 	"Return the integer representing the logical GemStone session from the GBC's perspective"
 	^sessionId
+]
+
+{ #category : 'session management' }
+GbsSession >> sessionId: anInteger
+[
+	sessionId := anInteger
 ]
 
 { #category : 'accessing' }
