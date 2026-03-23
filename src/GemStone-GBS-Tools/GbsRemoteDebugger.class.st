@@ -2908,6 +2908,9 @@ GbsRemoteDebugger >> restart [
 		self normalizeRestartSelectionAndPosition.
 		"Ensure server PC is at step 1 after restart"
 		self ensureServerPCToStepOneAfterRestart.
+		"Refresh button states — fetchStackFrames may have disabled them before
+		buildSingleExecutedCodeFrame repopulated the context list."
+		self refreshUiState.
 	].
 	^ didRestart
 ]
