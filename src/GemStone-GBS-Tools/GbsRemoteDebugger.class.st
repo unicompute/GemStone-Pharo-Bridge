@@ -73,6 +73,7 @@ GbsRemoteDebugger class >> openOn: anErrorString process: processOop session: aS
 	[aService glueIsHidden: false] on: Error do: [ ].
 	debugger := self new.
 	debugger service: aService.
+	aService debugger: debugger.
 	debugger session: aSession.
 	debugger open.
 	debugger label: anErrorString.

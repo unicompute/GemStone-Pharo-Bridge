@@ -23,7 +23,8 @@ Class {
 		'doStepIntoBlock',
 		'dontUpdateInspectors',
 		'lastCompileError',
-		'restartHomeResetPasses'
+		'restartHomeResetPasses',
+		'debugger'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -770,6 +771,11 @@ GbxDebuggerService >> isTerminated [
 	] value'.
 	result ifNil: [ ^ true ].
 	^ self asBooleanResult: result default: true
+]
+
+{ #category : 'accessing' }
+GbxDebuggerService >> debugger: aDebugger [
+	debugger := aDebugger
 ]
 
 { #category : 'accessing' }
