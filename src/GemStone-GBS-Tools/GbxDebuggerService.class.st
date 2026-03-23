@@ -909,72 +909,23 @@ GbxDebuggerService >> processOop: anOop [
 
 { #category : 'private' }
 GbxDebuggerService >> resolvedProcessOopFromContext: aContext [
-	"Resolve the actual GsProcess OOP from a context following the C test discipline.
-	This implements the exact resolution chain from test_restart_verify.cpp:
-		1. Try context>>processOop
-		2. Try context>>process
-		3. Try context>>receiver (for error-like objects) >> serverProcess
-		4. Try context>>receiver >> process
-	Each step verifies the result is a valid OOP (> 20)."
-	| candidate receiver |
+	| candidate |
 	aContext ifNil: [ ^ nil ].
-	
-	"Step 1: Try processOop"
-	(aContext respondsTo: #processOop) ifTrue: [
-		candidate := [ aContext processOop ] on: Error do: [ nil ].
-		(candidate isNumber and: [ candidate > 20 ]) ifTrue: [ ^ candidate ]
-	].
-	
-	"Step 2: Try process"
-	(aContext respondsTo: #process) ifTrue: [
-		candidate := [ aContext process ] on: Error do: [ nil ].
-		(candidate isNumber and: [ candidate > 20 ]) ifTrue: [ ^ candidate ]
-	].
-	
-	"Step 3: Try receiver >> serverProcess (for error-like objects)"
-	receiver := [ aContext receiver ] on: Error do: [ nil ].
-	receiver ifNotNil: [
-		(receiver respondsTo: #serverProcessOop) ifTrue: [
-			candidate := [ receiver serverProcessOop ] on: Error do: [ nil ].
-			(candidate isNumber and: [ candidate > 20 ]) ifTrue: [ ^ candidate ]
-		].
-		(receiver respondsTo: #serverProcess) ifTrue: [
-			candidate := [ receiver serverProcess ] on: Error do: [ nil ].
-			(candidate isNumber and: [ candidate > 20 ]) ifTrue: [ ^ candidate ]
-		].
-		
-		"Step 4: Try receiver >> process"
-		(receiver respondsTo: #process) ifTrue: [
-			candidate := [ receiver process ] on: Error do: [ nil ].
-			(candidate isNumber and: [ candidate > 20 ]) ifTrue: [ ^ candidate ]
-		].
-	].
-	
-	^ nil
+	(aContext respondsTo: #processOop)
+		ifTrue: [ candidate := [ aContext processOop ] on: Error do: [ nil ] ].
+	((candidate isNumber and: [ candidate > 20 ]) not and: [ aContext respondsTo: #process ])
+		ifTrue: [ candidate := [ aContext process ] on: Error do: [ nil ] ].
+	^ (candidate isNumber and: [ candidate > 20 ])
+		ifTrue: [ candidate ]
+		ifFalse: [ nil ]
 ]
 
 { #category : 'private' }
 GbxDebuggerService >> resolveDebugProcessOopFromCurrentProcessOop [
-	"Resolve the debug process OOP following the C test discipline.
-	Tries the current processOop first, then falls back to resolution from context."
-	| resolved |
-	
-	"Try direct resolution from current processOop"
-	(processOop isNumber and: [ processOop > 20 ]) ifTrue: [
-		resolved := GbsRemoteDebugger
-			resolvedDebugProcessOopFromCandidates: { processOop }
-			session: session
-			fallback: processOop.
-		resolved ifNotNil: [ ^ resolved ]
-	].
-	
-	"Fall back to resolution from current context"
-	currentContext ifNotNil: [
-		resolved := self resolvedProcessOopFromContext: currentContext.
-		resolved ifNotNil: [ ^ resolved ]
-	].
-	
-	^ processOop
+	^ GbsRemoteDebugger
+		resolvedDebugProcessOopFromCandidates: { processOop }
+		session: session
+		fallback: processOop
 ]
 
 { #category : 'variables' }

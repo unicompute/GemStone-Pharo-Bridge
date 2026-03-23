@@ -180,29 +180,20 @@ GbxContextListPolicy >> debugger: aDebugger [
 
 { #category : 'context list' }
 GbxContextListPolicy >> fetchServerContexts [
-	"Fetch server activations by resolving the actual debug process oop following
-	the C test discipline from test_restart_verify.cpp, then letting 
-	GbxActivationTool>>reset populate each frame from _gsiDebuggerDetailedReportAt:.
-	
-	The resolution chain (from C test discipline) is:
-		1. Check if candidate itself is a GsProcess (has _gsiDebugger* methods)
-		2. Try candidate>>serverProcess
-		3. Try candidate>>process  
-		4. Try candidate>>topContext>>process
-	
-	This stays closer to VW behavior and avoids depending on the exact 
-	_gsiStackReportFromLevel:toLevel: field layout."
+	"Fetch server activations by resolving the actual debug process oop and
+	then letting GbxActivationTool>>reset populate each frame from
+	_gsiDebuggerDetailedReportAt:. This stays closer to VW behavior and avoids
+	depending on the exact _gsiStackReportFromLevel:toLevel: field layout."
 	| processOop resolvedProcessOop depthScript rawDepth maxDepth contexts |
 	debugger logRestartText: 'fetchServerContexts START'.
 
 	processOop := debugger processOop.
 	debugger logRestartText: 'fetchServerContexts processOop=' , (processOop ifNil: [ 'nil' ] ifNotNil: [ processOop asString ]).
-	(processOop isNil or: [ processOop = 20 ]) ifTrue: [
+	(processOop isNil or: [ processOop = 20 ]) ifTrue: [ 
 		debugger logRestartText: 'fetchServerContexts processOop is nil or 20, returning empty'.
-		^ #( )
+		^ #( ) 
 	].
 
-	"Use the C test discipline resolution chain via debugger"
 	resolvedProcessOop := (debugger respondsTo: #resolveDebugProcessOopFromCurrentProcessOop)
 		ifTrue: [ [ debugger resolveDebugProcessOopFromCurrentProcessOop ] on: Error do: [ nil ] ]
 		ifFalse: [ nil ].
@@ -234,7 +225,7 @@ GbxContextListPolicy >> fetchServerContexts [
 			].
 			(rawDepth respondsTo: #asLocalString) ifTrue: [ rawDepth := rawDepth asLocalString ].
 			maxDepth := [ rawDepth asString asInteger ] on: Error do: [ 0 ].
-
+			
 			(maxDepth = 0 and: [ attempt < 3 ]) ifTrue: [
 				debugger logRestartText: 'fetchServerContexts: attempt ', attempt asString, ' failed, retrying...'.
 				rawDepth := nil.
