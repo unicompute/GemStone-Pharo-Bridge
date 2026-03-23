@@ -25,6 +25,9 @@ Class {
 		'dontUpdateInspectors',
 		'lastCompileError',
 		'restartHomeResetPasses',
+		'context',
+		'serverProcess',
+		'process',
 		'debugger'
 	],
 	#category : 'GemStone-GBS-Tools',
@@ -100,7 +103,24 @@ GbxDebuggerService >> context [
 { #category : 'accessing' }
 GbxDebuggerService >> context: aContext [
 	currentContext := aContext.
-	topContext := aContext
+	topContext := aContext.
+	context := aContext
+]
+
+GbxDebuggerService >> serverProcess [
+	^ serverProcess
+]
+
+GbxDebuggerService >> serverProcess: aProcess [
+	serverProcess := aProcess
+]
+
+GbxDebuggerService >> process [
+	^ process
+]
+
+GbxDebuggerService >> process: aProcess [
+	process := aProcess
 ]
 
 { #category : 'breakpoint support' }
