@@ -857,10 +857,12 @@ GbsRemoteDebugger >> fetchStackFrames [
 	contexts ifEmpty: [
 		| resolved |
 		resolved := self resolveDebugProcessOopFromCurrentProcessOop.
-		((resolved isNumber and: [ resolved > 20 ]) and: [ resolved ~= processOop ]) ifTrue: [
-			processOop := resolved.
-			(service notNil and: [ service respondsTo: #processOop: ])
-				ifTrue: [ [ service processOop: resolved ] on: Error do: [ ] ].
+		(resolved isNumber and: [ resolved > 20 ]) ifTrue: [
+			(resolved ~= processOop) ifTrue: [
+				processOop := resolved.
+				(service notNil and: [ service respondsTo: #processOop: ])
+					ifTrue: [ [ service processOop: resolved ] on: Error do: [ ] ].
+			].
 			contexts := self fetchContextsDirectly.
 		].
 	].
@@ -906,10 +908,9 @@ GbsRemoteDebugger >> resolveDebugProcessOopFromCurrentProcessOop [
 	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ nil ].
 
 	script := '[
-		| obj candidate top hasStack |
+		| obj candidate top hasStack allProcs found |
 		obj := Object _objectForOop: ', processOop asString, '.
-		obj isNil ifTrue: [ ^ ''0'' ].
-
+		
 		hasStack := [ :proc |
 			| report |
 			(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ false ] ifFalse: [
@@ -918,35 +919,31 @@ GbsRemoteDebugger >> resolveDebugProcessOopFromCurrentProcessOop [
 			]
 		].
 
-		(hasStack value: obj) ifTrue: [ ^ (Reflection oopOf: obj) asString ].
+		"1. Try current object"
+		((obj notNil) and: [ hasStack value: obj ]) ifTrue: [ ^ (Reflection oopOf: obj) asString ].
 
-		candidate := (obj respondsTo: #serverProcess)
-			ifTrue: [ [ obj serverProcess ] on: Error do: [ nil ] ]
-			ifFalse: [ nil ].
-		(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
-
-		candidate := (obj respondsTo: #process)
-			ifTrue: [ [ obj process ] on: Error do: [ nil ] ]
-			ifFalse: [ nil ].
-		(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
-
-		top := (obj respondsTo: #topContext)
-			ifTrue: [ [ obj topContext ] on: Error do: [ nil ] ]
-			ifFalse: [ nil ].
-		top ifNotNil: [
-			candidate := (top respondsTo: #process)
-				ifTrue: [ [ top process ] on: Error do: [ nil ] ]
-				ifFalse: [ nil ].
+		"2. Try common process accessors on current object"
+		obj notNil ifTrue: [
+			candidate := (obj respondsTo: #serverProcess) ifTrue: [ [ obj serverProcess ] on: Error do: [ nil ] ] ifFalse: [ nil ].
 			(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
-			(hasStack value: top) ifTrue: [ ^ (Reflection oopOf: top) asString ].
+
+			candidate := (obj respondsTo: #process) ifTrue: [ [ obj process ] on: Error do: [ nil ] ] ifFalse: [ nil ].
+			(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+
+			top := (obj respondsTo: #topContext) ifTrue: [ [ obj topContext ] on: Error do: [ nil ] ] ifFalse: [ nil ].
+			top ifNotNil: [
+				candidate := (top respondsTo: #process) ifTrue: [ [ top process ] on: Error do: [ nil ] ] ifFalse: [ nil ].
+				(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+			].
 		].
 
-		(obj respondsTo: #sender) ifTrue: [
-			candidate := (obj respondsTo: #process)
-				ifTrue: [ [ obj process ] on: Error do: [ nil ] ]
-				ifFalse: [ nil ].
-			(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+		"3. Aggressive: Look for ANY process with a stack in the session"
+		found := nil.
+		allProcs := [ System _allGsProcesses ] on: Error do: [ #() ].
+		allProcs do: [ :p |
+			(found isNil and: [ hasStack value: p ]) ifTrue: [ found := p ].
 		].
+		found notNil ifTrue: [ ^ (Reflection oopOf: found) asString ].
 
 		''0''
 	] value'.
@@ -2763,24 +2760,13 @@ GbsRemoteDebugger >> restartUsingDirectTrimFromExecutedFrame [
 		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ^ ''false'' ].
 
 		"_trimStackToLevel: resets the stack to step=1.
-		The jumpToStepPoint: call below is kept for compatibility with GemStone versions
-		that support it, but _trimStackToLevel: is the primary mechanism."
-		quick := 0.
-		stackReport := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
-		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
-			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
-			fullEntry ifNotNil: [
-				quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ]
-			]
-		].
-		"Try jumpToStepPoint: only if step > 1 (may not exist on all GemStone versions)"
-		quick > 1 ifTrue: [
-			(proc respondsTo: #jumpToStepPoint:)
-				ifTrue: [ [ proc jumpToStepPoint: 1 ] on: Error do: [ ] ]
-				ifFalse: [
-					(proc respondsTo: #jumpTo:)
-						ifTrue: [ [ proc jumpTo: 1 ] on: Error do: [ ] ]
-				]
+		We also force it here for robustness."
+		(proc respondsTo: #_gsiStepAtLevel:step:) ifTrue: [
+			[ proc _gsiStepAtLevel: 1 step: 1 ] on: Error do: [ ].
+		] ifFalse: [
+			(proc respondsTo: #jumpToStepPoint:) ifTrue: [
+				[ proc jumpToStepPoint: 1 ] on: Error do: [ ].
+			].
 		].
 		''true''
 	] value'.
