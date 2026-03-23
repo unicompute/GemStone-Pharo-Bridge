@@ -38,7 +38,11 @@ Class {
 	],
 	#classVars : [
 	],
-	#category : 'GemStone-GBS-Converted'
+	#category : 'GemStone-GBS-Converted',
+	#package : 'GemStone-GBS-Converted',
+	#pools : [
+		'GbxKernelPomOop'
+	]
 }
 
 { #category : 'debugging' }

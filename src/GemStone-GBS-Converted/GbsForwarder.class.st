@@ -5,7 +5,11 @@ Class {
 	],
 	#classVars : [
 	],
-	#category : 'GemStone-GBS-Converted'
+	#category : 'GemStone-GBS-Converted',
+	#package : 'GemStone-GBS-Converted',
+	#pools : [
+		'GbxKernelPomOop'
+	]
 }
 
 { #category : 'GBS private' }
@@ -37,6 +41,12 @@ GbsForwarder >> gbxDeepCopyCycles: cycles
 
 { #category : 'debugging' }
 GbsForwarder >> gbxIsGsBottomGlue: aSelector [
+	"All forwarder sends are GemStone glue unless forwarder debugging is enabled."
+	^ GbsConfiguration current forwarderDebugging not
+]
+
+{ #category : 'debugging' }
+GbsForwarder >> gbxIsGsTopGlue: aSelector [
 	"All forwarder sends are GemStone glue unless forwarder debugging is enabled."
 	^ GbsConfiguration current forwarderDebugging not
 ]

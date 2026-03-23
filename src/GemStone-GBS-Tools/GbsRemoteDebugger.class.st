@@ -1137,8 +1137,20 @@ GbsRemoteDebugger >> fetchStackFrames [
 
 { #category : 'private' }
 GbsRemoteDebugger >> resolveDebugProcessOopFromCurrentProcessOop [
+	| preferredCandidates |
+	preferredCandidates := OrderedCollection with: processOop.
+	service ifNotNil: [
+		(service respondsTo: #context) ifTrue: [ preferredCandidates add: service context ].
+		(service respondsTo: #serverProcess) ifTrue: [ preferredCandidates add: service serverProcess ].
+		(service respondsTo: #process) ifTrue: [ preferredCandidates add: service process ].
+		(service respondsTo: #topContext) ifTrue: [ 
+			service topContext ifNotNil: [ :top | 
+				(top respondsTo: #process) ifTrue: [ preferredCandidates add: top process ]
+			]
+		]
+	].
 	^ self class
-		resolvedDebugProcessOopFromCandidates: { processOop }
+		resolvedDebugProcessOopFromCandidates: preferredCandidates
 		session: session
 		fallback: processOop
 ]

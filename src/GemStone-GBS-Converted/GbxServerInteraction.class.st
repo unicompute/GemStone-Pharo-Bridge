@@ -190,6 +190,19 @@ GbxServerInteraction >> interactionState: anInteractionState
 ]
 
 { #category : 'testing' }
+GbxServerInteraction >> gbxIsGsBottomGlue: aSelector
+[
+	^#(continueAfter: roundTripCurtailed doRoundTrip: stepAfter: stepOrContinueAfter: synchronizeForResultOrError unwindServerCall: makeArgumentDelegates makeInitialCall: packForStore allocateTraversals releaseTraversals cleanupCurtailed: verify)
+		includes: aSelector
+]
+
+{ #category : 'testing' }
+GbxServerInteraction >> gbxIsGsTopGlue: aSelector
+[
+	^#(execute privateExecute) includes: aSelector
+]
+
+{ #category : 'testing' }
 GbxServerInteraction >> hasObjectsToStore
 [
 	
