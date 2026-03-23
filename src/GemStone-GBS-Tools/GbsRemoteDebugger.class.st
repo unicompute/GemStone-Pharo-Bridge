@@ -2877,13 +2877,33 @@ GbsRemoteDebugger >> normalizePauseLandingSelection [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restart [
-	| didRestart |
+	| didRestart savedSource |
+	"Save source from any context that has it before restart.
+	After _trimStackToLevel:, the server may return no source for the DoIt frame."
+	savedSource := contextList
+		ifNil: [ '' ]
+		ifNotNil: [
+			| found |
+			found := contextList
+				detect: [ :ctx | (ctx respondsTo: #sourceCode) and: [ ctx sourceCode notEmpty ] ]
+				ifNone: [ nil ].
+			found ifNil: [ '' ] ifNotNil: [ [ found sourceCode ] on: Error do: [ '' ] ]
+		].
+
 	didRestart := self safeServiceCall: [ service restart ] default: false.
 	didRestart ifFalse: [ didRestart := self restartUsingDirectTrimFromExecutedFrame ].
 	didRestart ifTrue: [
 		self fetchStackFrames.
 		(contextList isNil or: [ contextList isEmpty ]) ifTrue: [
 			self buildSingleExecutedCodeFrame
+		].
+		"Restore saved source to any frame that has no source after restart."
+		savedSource ifNotEmpty: [
+			contextList do: [ :ctx |
+				((ctx respondsTo: #sourceCode) and: [ ctx sourceCode isEmpty ]) ifTrue: [
+					(ctx respondsTo: #sourceString:) ifTrue: [ ctx sourceString: savedSource ]
+				]
+			]
 		].
 		self normalizeRestartSelectionAndPosition.
 		"Ensure server PC is at step 1 after restart"

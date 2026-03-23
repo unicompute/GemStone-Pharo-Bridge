@@ -300,7 +300,7 @@ GbxActivationTool >> reset [
 				ifFalse: [ methodOrNil _numArgsTempsCblkargs ].
 		className := methodOrNil ifNil: [ ''<unknown>'' ] ifNotNil: [ methodOrNil inClass ifNil: [ ''<unknown>'' ] ifNotNil: [ methodOrNil inClass name ] ].
 			selectorName := fullEntry at: 4.
-			selectorName ifNil: [ selectorName := ''<unknown>'' ].
+			selectorName ifNil: [ selectorName := ''unboundMethod'' ].
 			sourceStr := fullEntry at: 9.
 			sourceStr ifNil: [ sourceStr := '''' ].
 			sourceStr := sourceStr copyReplaceAll: ''|'' with: ''<PIPE>''.
