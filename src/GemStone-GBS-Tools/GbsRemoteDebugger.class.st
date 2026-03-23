@@ -211,8 +211,9 @@ GbsRemoteDebugger class >> resolvedDebugProcessOopFromCandidate: processCandidat
 				].
 				obj isNil ifTrue: [ nil ] ifFalse: [
 					((obj respondsTo: #_gsiDebuggerDetailedReportAt:)
-						or: [ (obj respondsTo: #_gsiStackReportFromLevel:toLevel:)
-						or: [ obj respondsTo: #_trimStackToLevel: ] ])
+						or: [ obj respondsTo: #_gsiStackReportFromLevel:toLevel:
+						or: [ obj respondsTo: #_trimStackToLevel:
+						or: [ obj respondsTo: #_stepOverInFrame: ] ] ])
 						ifTrue: [ obj ]
 						ifFalse: [
 							proc := nil.
@@ -221,8 +222,9 @@ GbsRemoteDebugger class >> resolvedDebugProcessOopFromCandidate: processCandidat
 							].
 							((proc notNil) and: [
 								(proc respondsTo: #_gsiDebuggerDetailedReportAt:)
-									or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:)
-									or: [ proc respondsTo: #_trimStackToLevel: ] ] ])
+									or: [ proc respondsTo: #_gsiStackReportFromLevel:toLevel:
+									or: [ proc respondsTo: #_trimStackToLevel:
+									or: [ proc respondsTo: #_stepOverInFrame: ] ] ] ])
 								ifTrue: [ proc ]
 								ifFalse: [
 									(obj respondsTo: #process) ifTrue: [
@@ -230,8 +232,9 @@ GbsRemoteDebugger class >> resolvedDebugProcessOopFromCandidate: processCandidat
 									].
 									((proc notNil) and: [
 										(proc respondsTo: #_gsiDebuggerDetailedReportAt:)
-											or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:)
-											or: [ proc respondsTo: #_trimStackToLevel: ] ] ])
+											or: [ proc respondsTo: #_gsiStackReportFromLevel:toLevel:
+											or: [ proc respondsTo: #_trimStackToLevel:
+											or: [ proc respondsTo: #_stepOverInFrame: ] ] ] ])
 										ifTrue: [ proc ]
 										ifFalse: [
 											top := nil.
@@ -243,8 +246,9 @@ GbsRemoteDebugger class >> resolvedDebugProcessOopFromCandidate: processCandidat
 													proc := [ top process ] on: Error do: [ nil ].
 													((proc notNil) and: [
 														(proc respondsTo: #_gsiDebuggerDetailedReportAt:)
-															or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:)
-															or: [ proc respondsTo: #_trimStackToLevel: ] ] ])
+															or: [ proc respondsTo: #_gsiStackReportFromLevel:toLevel:
+															or: [ proc respondsTo: #_trimStackToLevel:
+															or: [ proc respondsTo: #_stepOverInFrame: ] ] ] ])
 														ifTrue: [ proc ]
 														ifFalse: [ nil ]
 												]

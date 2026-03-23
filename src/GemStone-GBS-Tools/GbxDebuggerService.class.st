@@ -943,13 +943,14 @@ GbxDebuggerService >> resolvedProcessOopFromContext: aContext [
 { #category : 'private' }
 GbxDebuggerService >> resolveDebugProcessOopFromCurrentProcessOop [
 	| preferredCandidates |
-	preferredCandidates := OrderedCollection with: processOop.
-	preferredCandidates add: context.
-	preferredCandidates add: serverProcess.
-	preferredCandidates add: process.
+	preferredCandidates := OrderedCollection new.
+	context ifNotNil: [ preferredCandidates add: context ].
+	serverProcess ifNotNil: [ preferredCandidates add: serverProcess ].
+	process ifNotNil: [ preferredCandidates add: process ].
 	topContext ifNotNil: [ :top | 
 		(top respondsTo: #process) ifTrue: [ preferredCandidates add: top process ]
 	].
+	"Fallback to the last known processOop if everything above fails to resolve"
 	^ GbsRemoteDebugger
 		resolvedDebugProcessOopFromCandidates: preferredCandidates
 		session: session
