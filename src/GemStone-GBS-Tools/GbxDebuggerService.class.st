@@ -686,9 +686,13 @@ GbxDebuggerService >> initializeForDebugging [
 	contextStackPolicy := GbxContextListPolicy debugger: self.
 	
 	"Try to resolve process Oop early"
-	resolved := (self respondsTo: #resolvedProcessOopFromContext:)
-		ifTrue: [ self resolvedProcessOopFromContext: currentContext ]
-		ifFalse: [ nil ].
+	resolved := (self respondsTo: #resolveDebugProcessOopFromCurrentProcessOop)
+		ifTrue: [ self resolveDebugProcessOopFromCurrentProcessOop ]
+		ifFalse: [
+			(self respondsTo: #resolvedProcessOopFromContext:)
+				ifTrue: [ self resolvedProcessOopFromContext: currentContext ]
+				ifFalse: [ nil ]
+		].
 	(resolved isNumber and: [ resolved > 20 ]) ifTrue: [ 
 		processOop := resolved.
 		(debugger respondsTo: #processOop:) ifTrue: [ debugger processOop: resolved ].
@@ -901,6 +905,14 @@ GbxDebuggerService >> resolvedProcessOopFromContext: aContext [
 	^ (candidate isNumber and: [ candidate > 20 ])
 		ifTrue: [ candidate ]
 		ifFalse: [ nil ]
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> resolveDebugProcessOopFromCurrentProcessOop [
+	^ GbsRemoteDebugger
+		resolvedDebugProcessOopFromCandidates: { processOop }
+		session: session
+		fallback: processOop
 ]
 
 { #category : 'variables' }

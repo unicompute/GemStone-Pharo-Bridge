@@ -101,64 +101,17 @@ GbsPlaygroundActions class >> gsEvaluateIn: aPlaygroundPresenter debugOnError: d
 
 { #category : 'helpers' }
 GbsPlaygroundActions class >> bestDebugProcessOopFromError: anError session: aSession [
-	| candidates usable |
-	candidates := OrderedCollection new.
-	(self normalizedDebugProcessCandidate: ((anError respondsTo: #serverProcessOop)
-		ifTrue: [ anError serverProcessOop ]
-		ifFalse: [ nil ]))
-		ifNotNil: [ :oop | candidates add: oop ].
-	(self normalizedDebugProcessCandidate: ((anError respondsTo: #tag)
-		ifTrue: [ anError tag ]
-		ifFalse: [ nil ]))
-		ifNotNil: [ :oop |
-			(candidates includes: oop) ifFalse: [ candidates add: oop ] ].
-	(self normalizedDebugProcessCandidate: ((anError respondsTo: #exceptionOop)
-		ifTrue: [ anError exceptionOop ]
-		ifFalse: [ nil ]))
-		ifNotNil: [ :oop |
-			(candidates includes: oop) ifFalse: [ candidates add: oop ] ].
-	usable := candidates
-		detect: [ :each | self debugProcessCandidate: each hasStackIn: aSession ]
-		ifNone: [ nil ].
-	^ usable ifNil: [ candidates ifEmpty: [ 20 ] ifNotEmpty: [ candidates first ] ]
+	^ GbsRemoteDebugger bestDebugProcessOopFromError: anError session: aSession
 ]
 
 { #category : 'helpers' }
 GbsPlaygroundActions class >> normalizedDebugProcessCandidate: anObject [
-	| oop |
-	anObject ifNil: [ ^ nil ].
-	oop := (anObject isNumber
-		ifTrue: [ anObject ]
-		ifFalse: [ [ anObject asString asInteger ] on: Error do: [ nil ] ]).
-	(oop isNumber and: [ oop > 20 ]) ifFalse: [ ^ nil ].
-	^ oop
+	^ GbsRemoteDebugger normalizedDebugProcessCandidate: anObject
 ]
 
 { #category : 'helpers' }
 GbsPlaygroundActions class >> debugProcessCandidate: processCandidate hasStackIn: aSession [
-	| script raw |
-	(aSession isNil or: [ processCandidate isNil ]) ifTrue: [ ^ false ].
-	script := '[
-		| obj proc report |
-		obj := Object _objectForOop: ', processCandidate asString, '.
-		obj isNil ifTrue: [ ^ ''false'' ].
-		proc := ((obj respondsTo: #_gsiStackReportFromLevel:toLevel:)
-			ifTrue: [ obj ]
-			ifFalse: [
-				(obj respondsTo: #serverProcess)
-					ifTrue: [ [ obj serverProcess ] on: Error do: [ nil ] ]
-					ifFalse: [ nil ] ]).
-		proc ifNil: [ ^ ''false'' ].
-		(proc respondsTo: #_gsiStackReportFromLevel:toLevel:) ifFalse: [ ^ ''false'' ].
-		report := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
-		((report notNil) and: [ (report respondsTo: #size) and: [ report size >= 2 ] ])
-			ifTrue: [ ''true'' ]
-			ifFalse: [ ''false'' ]
-	] value'.
-	raw := [ aSession executeAndFetch: script context: 20 ] on: Error do: [ nil ].
-	raw ifNil: [ ^ false ].
-	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
-	^ raw asString asLowercase = 'true'
+	^ GbsRemoteDebugger debugProcessCandidate: processCandidate hasStackIn: aSession
 ]
 
 { #category : 'actions' }

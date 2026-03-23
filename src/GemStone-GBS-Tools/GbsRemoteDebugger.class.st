@@ -54,33 +54,267 @@ Class {
 
 { #category : 'instance creation' }
 GbsRemoteDebugger class >> openOn: anErrorString process: processOop session: aSession [
-	| service |
+	| resolvedProcessOop service |
+	resolvedProcessOop := self
+		resolvedDebugProcessOopFromCandidates: { processOop }
+		session: aSession
+		fallback: processOop.
 	service := GbxDebuggerService new.
 	service session: aSession.
-	service processOop: processOop.
+	service processOop: resolvedProcessOop.
 	service label: anErrorString.
 	service initializeForDebugging.
 
 	^ self
 		openOn: anErrorString
-		process: processOop
+		process: resolvedProcessOop
 		session: aSession
 		service: service
 ]
 
 { #category : 'instance creation' }
 GbsRemoteDebugger class >> openOn: anErrorString process: processOop session: aSession service: aService [
-	| debugger |
+	| debugger resolvedProcessOop |
+	resolvedProcessOop := self
+		resolvedDebugProcessOopFromCandidates: { processOop }
+		session: aSession
+		fallback: processOop.
 	[aService glueIsHidden: false] on: Error do: [ ].
+	(aService respondsTo: #processOop:)
+		ifTrue: [ [ aService processOop: resolvedProcessOop ] on: Error do: [ ] ].
 	debugger := self new.
 	debugger service: aService.
 	aService debugger: debugger.
 	debugger session: aSession.
 	debugger open.
 	debugger label: anErrorString.
-	debugger processOop: processOop.
+	debugger processOop: resolvedProcessOop.
 	debugger withWindowDo: [ :win | win title: 'GemStone Remote Debugger' ].
 	^ debugger
+]
+
+{ #category : 'debug process resolution' }
+GbsRemoteDebugger class >> addNormalizedDebugProcessCandidate: anObject to: aCollection [
+	| normalized |
+	normalized := self normalizedDebugProcessCandidate: anObject.
+	normalized ifNil: [ ^ self ].
+	(aCollection includes: normalized) ifFalse: [ aCollection add: normalized ]
+]
+
+{ #category : 'debug process resolution' }
+GbsRemoteDebugger class >> bestDebugProcessOopFromError: anError session: aSession [
+	| fallbackCandidates preferredCandidates fallback |
+	fallbackCandidates := OrderedCollection new.
+	self
+		addNormalizedDebugProcessCandidate: ((anError respondsTo: #serverProcessOop)
+			ifTrue: [ anError serverProcessOop ]
+			ifFalse: [ nil ])
+		to: fallbackCandidates.
+	self
+		addNormalizedDebugProcessCandidate: ((anError respondsTo: #tag)
+			ifTrue: [ anError tag ]
+			ifFalse: [ nil ])
+		to: fallbackCandidates.
+	self
+		addNormalizedDebugProcessCandidate: ((anError respondsTo: #exceptionOop)
+			ifTrue: [ anError exceptionOop ]
+			ifFalse: [ nil ])
+		to: fallbackCandidates.
+
+	preferredCandidates := OrderedCollection new.
+	self
+		addNormalizedDebugProcessCandidate: ((anError respondsTo: #tag)
+			ifTrue: [ anError tag ]
+			ifFalse: [ nil ])
+		to: preferredCandidates.
+	self
+		addNormalizedDebugProcessCandidate: ((anError respondsTo: #exceptionOop)
+			ifTrue: [ anError exceptionOop ]
+			ifFalse: [ nil ])
+		to: preferredCandidates.
+	self
+		addNormalizedDebugProcessCandidate: ((anError respondsTo: #serverProcessOop)
+			ifTrue: [ anError serverProcessOop ]
+			ifFalse: [ nil ])
+		to: preferredCandidates.
+
+	fallback := fallbackCandidates
+		ifEmpty: [ 20 ]
+		ifNotEmpty: [ fallbackCandidates first ].
+	^ (self
+		resolvedDebugProcessOopFromCandidates: preferredCandidates
+		session: aSession
+		fallback: fallback)
+		ifNil: [ 20 ]
+]
+
+{ #category : 'debug process resolution' }
+GbsRemoteDebugger class >> debugProcessCandidate: processCandidate hasStackIn: aSession [
+	^ (self usableDebugProcessOopFromCandidate: processCandidate session: aSession) notNil
+]
+
+{ #category : 'debug process resolution' }
+GbsRemoteDebugger class >> debugProcessHasStack: processCandidate in: aSession [
+	| normalized raw script |
+	(aSession isNil or: [ processCandidate isNil ]) ifTrue: [ ^ false ].
+	normalized := self normalizedDebugProcessCandidate: processCandidate.
+	normalized ifNil: [ ^ false ].
+	script := '[
+		| obj proc report |
+		obj := Object _objectForOop: ', normalized asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := ((obj respondsTo: #_gsiStackReportFromLevel:toLevel:)
+			ifTrue: [ obj ]
+			ifFalse: [
+				(obj respondsTo: #serverProcess)
+					ifTrue: [ [ obj serverProcess ] on: Error do: [ nil ] ]
+					ifFalse: [ nil ] ]).
+		proc ifNil: [ ^ ''false'' ].
+		(proc respondsTo: #_gsiStackReportFromLevel:toLevel:) ifFalse: [ ^ ''false'' ].
+		report := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
+		((report notNil) and: [ (report respondsTo: #size) and: [ report size >= 2 ] ])
+			ifTrue: [ ''true'' ]
+			ifFalse: [ ''false'' ]
+	] value'.
+	raw := [ aSession executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	raw ifNil: [ ^ false ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	^ raw asString asLowercase = 'true'
+]
+
+{ #category : 'debug process resolution' }
+GbsRemoteDebugger class >> normalizedDebugProcessCandidate: anObject [
+	| oop |
+	anObject ifNil: [ ^ nil ].
+	oop := anObject isNumber
+		ifTrue: [ anObject ]
+		ifFalse: [ [ anObject asString asInteger ] on: Error do: [ nil ] ].
+	(oop isNumber and: [ oop > 20 ]) ifFalse: [ ^ nil ].
+	^ oop
+]
+
+{ #category : 'debug process resolution' }
+GbsRemoteDebugger class >> resolvedDebugProcessOopFromCandidate: processCandidate session: aSession [
+	| normalized raw script |
+	(aSession isNil or: [ processCandidate isNil ]) ifTrue: [ ^ nil ].
+	normalized := self normalizedDebugProcessCandidate: processCandidate.
+	normalized ifNil: [ ^ nil ].
+	script := '[
+		| primary resolveProc toOop resolved |
+		resolveProc := [ :candidate |
+			| obj proc top |
+			obj := candidate.
+			obj isNil ifTrue: [ nil ] ifFalse: [
+				(obj isInteger or: [ obj class == SmallInteger ]) ifTrue: [
+					obj := Object _objectForOop: obj
+				].
+				obj isNil ifTrue: [ nil ] ifFalse: [
+					((obj respondsTo: #_gsiDebuggerDetailedReportAt:)
+						or: [ obj respondsTo: #_gsiStackReportFromLevel:toLevel:
+						or: [ obj respondsTo: #_trimStackToLevel: ] ])
+						ifTrue: [ obj ]
+						ifFalse: [
+							proc := nil.
+							(obj respondsTo: #serverProcess) ifTrue: [
+								proc := [ obj serverProcess ] on: Error do: [ nil ]
+							].
+							((proc notNil) and: [
+								(proc respondsTo: #_gsiDebuggerDetailedReportAt:)
+									or: [ proc respondsTo: #_gsiStackReportFromLevel:toLevel:
+									or: [ proc respondsTo: #_trimStackToLevel: ] ] ])
+								ifTrue: [ proc ]
+								ifFalse: [
+									(obj respondsTo: #process) ifTrue: [
+										proc := [ obj process ] on: Error do: [ nil ]
+									].
+									((proc notNil) and: [
+										(proc respondsTo: #_gsiDebuggerDetailedReportAt:)
+											or: [ proc respondsTo: #_gsiStackReportFromLevel:toLevel:
+											or: [ proc respondsTo: #_trimStackToLevel: ] ] ])
+										ifTrue: [ proc ]
+										ifFalse: [
+											top := nil.
+											(obj respondsTo: #topContext) ifTrue: [
+												top := [ obj topContext ] on: Error do: [ nil ]
+											].
+											(top notNil and: [ top respondsTo: #process ])
+												ifTrue: [
+													proc := [ top process ] on: Error do: [ nil ].
+													((proc notNil) and: [
+														(proc respondsTo: #_gsiDebuggerDetailedReportAt:)
+															or: [ proc respondsTo: #_gsiStackReportFromLevel:toLevel:
+															or: [ proc respondsTo: #_trimStackToLevel: ] ] ])
+														ifTrue: [ proc ]
+														ifFalse: [ nil ]
+												]
+												ifFalse: [ nil ]
+										]
+								]
+						]
+				]
+			]
+		].
+		toOop := [ :anObject |
+			(anObject isInteger or: [ anObject class == SmallInteger ])
+				ifTrue: [ anObject ]
+				ifFalse: [
+					[ anObject asOop ]
+						on: Error
+						do: [ [ Reflection oopOf: anObject ] on: Error do: [ 0 ] ]
+				]
+		].
+		primary := Object _objectForOop: ', normalized asString, '.
+		resolved := resolveProc value: primary.
+		resolved isNil
+			ifTrue: [ ''0'' ]
+			ifFalse: [ [ (toOop value: resolved) printString ] on: Error do: [ ''0'' ] ]
+	] value'.
+	raw := [ aSession executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	raw ifNil: [ ^ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	^ (self normalizedDebugProcessCandidate: raw)
+		ifNil: [
+			(#('true' '1' 'yes' 'ok') includes: raw asString asLowercase)
+				ifTrue: [ normalized ]
+				ifFalse: [ nil ]
+		]
+]
+
+{ #category : 'debug process resolution' }
+GbsRemoteDebugger class >> resolvedDebugProcessOopFromCandidates: candidateCollection session: aSession fallback: fallbackCandidate [
+	| candidates resolved normalizedFallback |
+	candidates := OrderedCollection new.
+	candidateCollection do: [ :each |
+		self addNormalizedDebugProcessCandidate: each to: candidates
+	].
+	normalizedFallback := self normalizedDebugProcessCandidate: fallbackCandidate.
+	candidates do: [ :each |
+		resolved := self usableDebugProcessOopFromCandidate: each session: aSession.
+		resolved ifNotNil: [ ^ resolved ]
+	].
+	candidates do: [ :each |
+		resolved := self resolvedDebugProcessOopFromCandidate: each session: aSession.
+		resolved ifNotNil: [ ^ resolved ]
+	].
+	^ normalizedFallback ifNil: [
+		candidates ifEmpty: [ nil ] ifNotEmpty: [ candidates first ]
+	]
+]
+
+{ #category : 'debug process resolution' }
+GbsRemoteDebugger class >> usableDebugProcessOopFromCandidate: processCandidate session: aSession [
+	| normalized resolved |
+	normalized := self normalizedDebugProcessCandidate: processCandidate.
+	normalized ifNil: [ ^ nil ].
+	(self debugProcessHasStack: normalized in: aSession) ifTrue: [
+		resolved := self resolvedDebugProcessOopFromCandidate: normalized session: aSession.
+		^ resolved ifNil: [ normalized ]
+	].
+	resolved := self resolvedDebugProcessOopFromCandidate: processCandidate session: aSession.
+	resolved ifNil: [ ^ nil ].
+	^ (self debugProcessHasStack: resolved in: aSession)
+		ifTrue: [ resolved ]
+		ifFalse: [ nil ]
 ]
 
 { #category : 'actions' }
@@ -903,56 +1137,10 @@ GbsRemoteDebugger >> fetchStackFrames [
 
 { #category : 'private' }
 GbsRemoteDebugger >> resolveDebugProcessOopFromCurrentProcessOop [
-	| script raw resolved |
-	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ nil ].
-	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ nil ].
-
-	script := '[
-		| obj candidate top hasStack allProcs found |
-		obj := Object _objectForOop: ', processOop asString, '.
-		
-		hasStack := [ :proc |
-			| report |
-			(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ false ] ifFalse: [
-				report := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
-				(report notNil and: [ (report respondsTo: #size) and: [ report size >= 2 ] ])
-			]
-		].
-
-		"1. Try current object"
-		((obj notNil) and: [ hasStack value: obj ]) ifTrue: [ ^ (Reflection oopOf: obj) asString ].
-
-		"2. Try common process accessors on current object"
-		obj notNil ifTrue: [
-			candidate := (obj respondsTo: #serverProcess) ifTrue: [ [ obj serverProcess ] on: Error do: [ nil ] ] ifFalse: [ nil ].
-			(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
-
-			candidate := (obj respondsTo: #process) ifTrue: [ [ obj process ] on: Error do: [ nil ] ] ifFalse: [ nil ].
-			(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
-
-			top := (obj respondsTo: #topContext) ifTrue: [ [ obj topContext ] on: Error do: [ nil ] ] ifFalse: [ nil ].
-			top ifNotNil: [
-				candidate := (top respondsTo: #process) ifTrue: [ [ top process ] on: Error do: [ nil ] ] ifFalse: [ nil ].
-				(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
-			].
-		].
-
-		"3. Aggressive: Look for ANY process with a stack in the session"
-		found := nil.
-		allProcs := [ System _allGsProcesses ] on: Error do: [ #() ].
-		allProcs do: [ :p |
-			(found isNil and: [ hasStack value: p ]) ifTrue: [ found := p ].
-		].
-		found notNil ifTrue: [ ^ (Reflection oopOf: found) asString ].
-
-		''0''
-	] value'.
-
-	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
-	raw ifNil: [ ^ nil ].
-	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
-	resolved := [ raw asString asInteger ] on: Error do: [ nil ].
-	^ resolved
+	^ self class
+		resolvedDebugProcessOopFromCandidates: { processOop }
+		session: session
+		fallback: processOop
 ]
 
 { #category : 'actions' }
@@ -2803,21 +2991,7 @@ GbsRemoteDebugger >> runToCaret [
 
 { #category : 'private' }
 GbsRemoteDebugger >> processOopFromGbsError: anError [
-	| candidate |
-	candidate := (anError respondsTo: #serverProcessOop)
-		ifTrue: [ anError serverProcessOop ]
-		ifFalse: [ nil ].
-	((candidate isNumber and: [ candidate > 20 ]) not) ifTrue: [
-		candidate := (anError respondsTo: #exceptionOop)
-			ifTrue: [ anError exceptionOop ]
-			ifFalse: [ nil ]
-	].
-	((candidate isNumber and: [ candidate > 20 ]) not) ifTrue: [
-		candidate := (anError respondsTo: #tag)
-			ifTrue: [ anError tag ]
-			ifFalse: [ nil ]
-	].
-	^ candidate
+	^ self class bestDebugProcessOopFromError: anError session: session
 ]
 
 { #category : 'private' }

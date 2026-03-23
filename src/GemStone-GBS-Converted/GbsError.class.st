@@ -15,6 +15,7 @@ Class {
 		'reason',
 		'session',
 		'stepLevel',
+		'tag',
 		'terminateOnUnwind'
 	],
 	#classVars : [
@@ -171,6 +172,17 @@ GbsError >> errorText: aString
 [
 
 	errorText := aString
+]
+
+{ #category : 'accessing' }
+GbsError >> messageText [
+	^ errorText ifNil: [ '' ]
+]
+
+{ #category : 'accessing' }
+GbsError >> messageText: aString [
+	errorText := aString.
+	^ self
 ]
 
 { #category : 'accessing' }
@@ -334,6 +346,22 @@ GbsError >> serverProcessOop
 	process ifNil: [ ^ nil ].
 	(process respondsTo: #oopValue) ifTrue: [ ^ process oopValue ].
 	^ process
+]
+
+{ #category : 'accessing' }
+GbsError >> serverProcessOop: anOop [
+	process := anOop
+]
+
+{ #category : 'accessing' }
+GbsError >> tag [
+	^ tag
+]
+
+{ #category : 'accessing' }
+GbsError >> tag: anObject [
+	tag := anObject.
+	^ self
 ]
 
 { #category : 'accessing' }

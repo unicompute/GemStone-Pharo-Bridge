@@ -488,6 +488,57 @@ GbsRemoteDebuggerPresenterTest >> testPauseProcessDelegatesToService [
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testProcessOopFromGbsErrorUsesResolvedContextCandidate [
+	| err mockSession resolved |
+	err := GbsError new
+		messageText: 'boom';
+		tag: 333;
+		serverProcessOop: 222;
+		exceptionOop: 444;
+		yourself.
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs
+		at: #executeAndFetchContext
+		put: [ :script :context |
+			(script includesSubstring: 'Object _objectForOop: 333')
+				ifTrue: [ '555' ]
+				ifFalse: [
+					(script includesSubstring: 'Object _objectForOop: 555')
+						ifTrue: [ 'true' ]
+						ifFalse: [ '0' ]
+				] ].
+	debugger session: mockSession.
+
+	resolved := debugger processOopFromGbsError: err.
+
+	self assert: resolved equals: 555
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testResolveDebugProcessOopFromCurrentProcessOopUsesResolvedProcess [
+	| mockSession resolved |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs
+		at: #executeAndFetchContext
+		put: [ :script :context |
+			(script includesSubstring: 'Object _objectForOop: 333')
+				ifTrue: [ '444' ]
+				ifFalse: [
+					(script includesSubstring: 'Object _objectForOop: 444')
+						ifTrue: [ 'true' ]
+						ifFalse: [ '0' ]
+				] ].
+	debugger session: mockSession.
+	debugger processOop: 333.
+
+	resolved := debugger resolveDebugProcessOopFromCurrentProcessOop.
+
+	self assert: resolved equals: 444
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testNormalizePauseLandingSelectionSelectsTopFrame [
 	| top lower fakeList fakeText |
 	top := GbxFakeContextForRemoteDebugger new
