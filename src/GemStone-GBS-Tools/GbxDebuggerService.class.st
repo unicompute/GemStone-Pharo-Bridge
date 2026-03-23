@@ -1198,27 +1198,43 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	"Force the debugged server process to restart at method entry (step=1).
 	This is the deterministic restart anchor used by basicReenterServerContext,
 	especially important for repeated Restart actions.
-
-	Note: _trimStackToLevel: (called in cutbackGsTo:) already resets the stack
-	to step=1. This method is kept for compatibility but the trim handles the reset."
-	| didReset lvl |
+	
+	Using a direct script with _gsiStepAtLevel:step: is more robust than 
+	higher-level GCI commands which might fail on repeated restarts."
+	| lvl script result |
 	lvl := self currentContextLevel.
 	lvl ifNil: [ lvl := 1 ].
 	
-	"Try jumpToStepPoint: first (may work on some GemStone versions)"
-	didReset := self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: false.
-	self logRestartText: 'resetServerPCToStepOne jumpToStepPoint:1 -> ', didReset asString.
-	didReset ifTrue: [ ^ true ].
-	
-	"Try runToStepPoint: as fallback"
-	didReset := self runDebugProcessCommand: 'runToStepPoint' withInteger: 1 recompute: false.
-	self logRestartText: 'resetServerPCToStepOne runToStepPoint:1 -> ', didReset asString.
-	didReset ifTrue: [ ^ true ].
-	
-	"_trimStackToLevel: already reset the stack to step=1, so return true.
-	The server stack is the source of truth after trim."
-	self logRestartText: 'resetServerPCToStepOne using _trimStackToLevel result (step=1 already set)'.
-	^ true
+	script := '[
+		| obj proc |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		proc isNil ifTrue: [ ^ ''false'' ].
+		
+		"Try explicit step to level 1, step 1 (level 1 is the new top after trim)"
+		(proc respondsTo: #_gsiStepAtLevel:step:) ifTrue: [
+			[ proc _gsiStepAtLevel: 1 step: 1 ] on: Error do: [ ].
+			^ ''true''
+		].
+
+		"Fallback for older GemStone versions"
+		(proc respondsTo: #jumpToStepPoint:) ifTrue: [
+			[ proc jumpToStepPoint: 1 ] on: Error do: [ ].
+			^ ''true''
+		].
+		''false''
+	] value'.
+
+	result := self executeDebugScript: script.
+	self logRestartText: 'resetServerPCToStepOne level=', lvl asString, ' result=', result printString.
+	^ self asBooleanResult: result default: false
 ]
 
 { #category : 'actions' }

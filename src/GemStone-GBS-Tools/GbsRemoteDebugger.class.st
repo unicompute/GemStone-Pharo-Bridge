@@ -1739,6 +1739,12 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 		].
 		proc isNil ifTrue: [ ^ false ].
 		
+		"Try explicit step to level 1, step 1 (level 1 is the new top after trim)"
+		(proc respondsTo: #_gsiStepAtLevel:step:) ifTrue: [
+			[ proc _gsiStepAtLevel: 1 step: 1 ] on: Error do: [ ].
+			^ true
+		].
+
 		"Try jumpToStepPoint: if available (may not exist on all GemStone versions)"
 		hasMethod := (proc respondsTo: #jumpToStepPoint:).
 		hasMethod ifTrue: [
