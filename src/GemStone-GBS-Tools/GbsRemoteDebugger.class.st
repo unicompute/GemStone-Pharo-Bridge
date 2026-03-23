@@ -872,7 +872,7 @@ GbsRemoteDebugger >> fetchContextsDirectly [
 					ifFalse: [
 						fullEntry := stackReport at: 2.
 						className := [ fullEntry first inClass name ] on: Error do: [ ''<unknown>'' ].
-						selectorName := [ (fullEntry at: 4) asString ] on: Error do: [ ''<unknown>'' ].
+						selectorName := [ (fullEntry at: 4) ifNil: [ ''unboundMethod'' ] ifNotNil: [ :sel | sel asString ] ] on: Error do: [ ''unboundMethod'' ].
 						methodName := [ (fullEntry first selector) asString ] on: Error do: [ ''<unknown>'' ].
 						quickStep := [ (fullEntry at: 5) ] on: Error do: [ 0 ].
 						quickStep ifNil: [ quickStep := 0 ].
@@ -2882,11 +2882,31 @@ GbsRemoteDebugger >> restart [
 	didRestart ifFalse: [ didRestart := self restartUsingDirectTrimFromExecutedFrame ].
 	didRestart ifTrue: [
 		self fetchStackFrames.
+		(contextList isNil or: [ contextList isEmpty ]) ifTrue: [
+			self buildSingleExecutedCodeFrame
+		].
 		self normalizeRestartSelectionAndPosition.
 		"Ensure server PC is at step 1 after restart"
 		self ensureServerPCToStepOneAfterRestart.
 	].
 	^ didRestart
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> buildSingleExecutedCodeFrame [
+	"After restart, if the server did not return a stack, construct a minimal executed-code frame."
+	| activation |
+	activation := GbxActivationTool new.
+	(activation respondsTo: #session:) ifTrue: [ activation session: session ].
+	activation
+		processOop: (processOop ifNil: [ 0 ]);
+		level: 1;
+		yourself.
+	(activation respondsTo: #markAsExecutedCodeFrame) ifTrue: [
+		activation markAsExecutedCodeFrame
+	].
+	contextList := OrderedCollection with: activation.
+	stackList items: (contextList collect: [ :ctx | ctx printString ]).
 ]
 
 { #category : 'private' }
