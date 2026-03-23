@@ -1,4 +1,11 @@
 [
+	"Use a temporary package for all stubs so Metacello does not think they are already
+	 loaded from GemStone-GBS-Converted / GemStone-GBS-Tools. If a stub is registered
+	 in the same package as its target, Metacello skips loading the .class.st file and
+	 the class ends up with zero methods."
+	| stubPackage |
+	stubPackage := 'GemStone-GBS-Prebootstrap'.
+
 	Smalltalk at: #TwoByteString put: WideString.
 	Smalltalk at: #FourByteString put: WideString.
 	Smalltalk at: #Unicode16 put: WideString.
@@ -29,7 +36,7 @@
 				name: #CannotReturn;
 				slots: #(result);
 				sharedVariables: #();
-				package: 'GemStone-GBS-Converted' ] ].
+				package: stubPackage ] ].
 
 	(Smalltalk includesKey: #GbsServerInterface) ifFalse: [
 		Smalltalk classInstaller make: [ :builder |
@@ -39,7 +46,7 @@
 				slots: #(libraryPath);
 				classSlots: #(UniqueInstance);
 				sharedVariables: #();
-				package: 'GemStone-GBS-Converted' ] ].
+				package: stubPackage ] ].
 
 	(Smalltalk includesKey: #GbsSession) ifFalse: [
 		Smalltalk classInstaller make: [ :builder |
@@ -48,7 +55,7 @@
 				name: #GbsSession;
 				slots: #(serverInterface sessionId);
 				sharedVariables: #();
-				package: 'GemStone-GBS-Converted' ] ].
+				package: stubPackage ] ].
 
 	#(GbsWorkspace GbsRemoteTranscript GbsSessionParametersEditor GbsX509ParametersEditor GbsLauncher) do: [ :className |
 		(Smalltalk includesKey: className) ifFalse: [
@@ -58,7 +65,7 @@
 					name: className;
 					slots: #();
 					sharedVariables: #();
-					package: 'GemStone-GBS-Tools' ] ] ].
+					package: stubPackage ] ] ].
 
 	(Smalltalk includesKey: #GbxServerInterface) ifFalse: [
 		Smalltalk classInstaller make: [ :builder |
@@ -67,7 +74,7 @@
 				name: #GbxServerInterface;
 				slots: #(alteredOopBuffer byteFetchBuffer callSequencer clampedTravArgsBuffer dirtyOopBuffer eventDetector gcedOopBuffer longHolderBuffer longHolderBuffer2 needMoreTraversal oopFetchBuffer oopsNoLongerReplicatedBuffer singleStepIsRequested storeTravDoArgsBuffer noLongerReplicatedOops thisSession traversalBufferManager);
 				sharedVariables: #();
-				package: 'GemStone-GBS-Converted' ] ].
+				package: stubPackage ] ].
 
 	{
 		#(#ContextEmergencyError #Error 'Kernel-Exceptions').
@@ -199,10 +206,9 @@
 		#(#UninterpretedBytes #Object 'GemStone-GBS-Converted').
 		#(#Subsystem #Object 'GemStone-GBS-Converted')
 	} do: [ :spec |
-		| name superclass package |
+		| name superclass |
 		name := spec first.
 		superclass := Smalltalk at: spec second.
-		package := spec third.
 		(Smalltalk includesKey: name) ifFalse: [
 			Smalltalk classInstaller make: [ :builder |
 				builder
@@ -210,7 +216,7 @@
 					name: name;
 					slots: #();
 					sharedVariables: #();
-					package: package
+					package: stubPackage
 			]
 		]
 	].

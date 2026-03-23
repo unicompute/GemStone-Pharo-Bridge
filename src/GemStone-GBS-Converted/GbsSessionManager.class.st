@@ -25,10 +25,7 @@ Class {
 		'ObjectMemory'
 	],
 	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted',
-	#pools : [
-		'GbxKernelPomOop'
-	]
+	#package : 'GemStone-GBS-Converted'
 }
 
 { #category : 'debugging' }

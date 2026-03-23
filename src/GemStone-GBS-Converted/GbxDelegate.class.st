@@ -6,10 +6,7 @@ Class {
 	#classVars : [
 	],
 	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted',
-	#pools : [
-		'GbxKernelPomOop'
-	]
+	#package : 'GemStone-GBS-Converted'
 }
 
 { #category : 'public - implicit replication' }
