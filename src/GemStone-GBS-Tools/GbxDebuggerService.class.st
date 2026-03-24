@@ -264,7 +264,8 @@ GbxDebuggerService >> canRemoveBreakPoint [
 
 { #category : 'testing' }
 GbxDebuggerService >> canResume [
-	^ self isTerminated not
+	"Enable Resume when there is a current context — same reasoning as canIssueContextCommand."
+	^ currentContext isNotNil
 ]
 
 { #category : 'testing' }
@@ -289,7 +290,12 @@ GbxDebuggerService >> canJumpToStepPoint [
 
 { #category : 'testing' }
 GbxDebuggerService >> canIssueContextCommand [
-	^ currentContext isNotNil and: [ self isTerminated not ]
+	"Enable context commands whenever a current context is selected.
+	Relying on isTerminated here is unreliable after restart because
+	_trimStackToLevel: can leave the process in a state where GemStone
+	reports isTerminated=true even though the debugger has just rewound it.
+	If the process is truly dead, the step/run operations will fail gracefully."
+	^ currentContext isNotNil
 ]
 
 { #category : 'breakpoint support' }
