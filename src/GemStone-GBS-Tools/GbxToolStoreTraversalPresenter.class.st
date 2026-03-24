@@ -66,10 +66,10 @@ GbxToolStoreTraversalPresenter >> refresh [
 	tool ifNil: [ infoText text: '(no tool attached)'. ^ self ].
 	stream := WriteStream on: String new.
 	stream
-		nextPutAll: 'Objects Stored:    '; print: tool objectsStored; nl;
-		nextPutAll: 'Dirty Objects:     '; print: tool dirtyObjects size; nl;
-		nextPutAll: 'Cache Size:        '; print: ([ tool cache size ] on: Error do: [ '?' ]); nl;
-		nextPutAll: 'Session:           '; nextPutAll: (tool session ifNil: [ 'none' ] ifNotNil: [ :s | [ s printString ] on: Error do: [ s class name ] ]); nl.
+		nextPutAll: 'Objects Stored:    '; print: tool objectsStored; nextPut: Character lf;
+		nextPutAll: 'Dirty Objects:     '; print: tool dirtyObjects size; nextPut: Character lf;
+		nextPutAll: 'Cache Size:        '; print: ([ tool cache size ] on: Error do: [ '?' ]); nextPut: Character lf;
+		nextPutAll: 'Session:           '; nextPutAll: (tool session ifNil: [ 'none' ] ifNotNil: [ :s | [ s printString ] on: Error do: [ s class name ] ]); nextPut: Character lf.
 	infoText text: stream contents.
 	statusLabel label: tool objectsStored asString, ' objects stored'.
 ]

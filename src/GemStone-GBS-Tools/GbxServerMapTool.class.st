@@ -84,11 +84,11 @@ GbxServerMapTool >> buildFromServer [
 	script := '[
 		| stream segs |
 		stream := WriteStream on: String new.
-		segs := System segmentList.
+		segs := SystemRepository select: [:seg | (System canRead: seg) and: [seg ~~ nil]].
 		segs do: [ :seg |
 			stream
-				nextPutAll: seg name asString; nextPutAll: ''|'';
-				nextPutAll: (Reflection oopOf: seg) asString; lf.
+				nextPutAll: seg segmentName asString; nextPutAll: ''|'';
+				nextPutAll: seg _oop asString; lf.
 		].
 		stream contents
 	] value'.
