@@ -120,9 +120,11 @@ GbxFileLoggerTool >> openFile [
 	self close.
 	
 	filePath ifNotNil: [
-		| file |
-		file := (Smalltalk at: #Filename) named: filePath.
-		fileStream := file writeStream.
+		| ref |
+		ref := filePath asFileReference.
+		fileStream := ref exists
+			ifTrue: [ ref readWriteStream ]
+			ifFalse: [ ref writeStream ].
 		fileStream setToEnd.
 		currentFileSize := fileStream position.
 	].
@@ -143,8 +145,8 @@ GbxFileLoggerTool >> rotateFile [
 	
 	self close.
 	
-	oldPath := ((Smalltalk at: #Filename) named: filePath) asFileReference.
-	newPath := ((Smalltalk at: #Filename) named: filePath, '.old') asFileReference.
+	oldPath := filePath asFileReference.
+	newPath := (filePath, '.old') asFileReference.
 	
 	oldPath exists ifTrue: [
 		newPath exists ifTrue: [

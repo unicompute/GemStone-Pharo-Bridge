@@ -1833,13 +1833,6 @@ GbsRemoteDebugger >> stackData: anArray [
 { #category : 'actions' }
 GbsRemoteDebugger >> stepInto [
 	| didStep |
-	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
-		"CRITICAL: Reset server PC to step 1 before stepping from restarted frame"
-		self resetServerPCToStepOneIfNeeded.
-		didStep := self directStepOverExecutedFrame: true.
-		didStep ifTrue: [ self fetchStackFrames ].
-		^ didStep
-	].
 	didStep := self safeServiceCall: [ service stepInto ] default: false.
 	didStep ifFalse: [
 		didStep := self
@@ -1858,13 +1851,6 @@ GbsRemoteDebugger >> step [
 { #category : 'actions' }
 GbsRemoteDebugger >> stepOver [
 	| didStep |
-	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
-		"CRITICAL: Reset server PC to step 1 before stepping from restarted frame"
-		self resetServerPCToStepOneIfNeeded.
-		didStep := self directStepOverExecutedFrame: false.
-		didStep ifTrue: [ self fetchStackFrames ].
-		^ didStep
-	].
 	didStep := self safeServiceCall: [ service stepOver ] default: false.
 	didStep ifFalse: [
 		(self currentSelectedContextIsExecutedCodeFrame)
@@ -2906,8 +2892,6 @@ GbsRemoteDebugger >> restart [
 			]
 		].
 		self normalizeRestartSelectionAndPosition.
-		"Ensure server PC is at step 1 after restart"
-		self ensureServerPCToStepOneAfterRestart.
 		"Refresh button states — fetchStackFrames may have disabled them before
 		buildSingleExecutedCodeFrame repopulated the context list."
 		self refreshUiState.
