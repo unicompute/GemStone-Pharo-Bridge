@@ -279,6 +279,16 @@ GbsClassicLauncher class >> initializeFastConnectors [
 ]
 
 { #category : 'menus' }
+GbsClassicLauncher class >> inspectUtilityObject: anObject named: labelString [
+	anObject ifNil: [
+		^ UIManager default inform: labelString, ' is unavailable.' ].
+	^ [ anObject inspect ]
+		on: Error
+		do: [ :ex |
+			UIManager default inform: 'Could not open ', labelString, ': ', ex messageText ]
+]
+
+{ #category : 'menus' }
 GbsClassicLauncher class >> logoutCurrentSession [
 	| session params sessionId loggedOut |
 	session := GbsSessionParameters currentSession.
@@ -607,14 +617,7 @@ GbsClassicLauncher class >> openGbxServerMap [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxStatMonitor [
-	| monitor |
-	monitor := Smalltalk at: #GbxStatMonitor ifAbsent: [ nil ].
-	monitor ifNil: [
-		^ UIManager default inform: 'Stat Monitor class not found.' ].
-	^ [ monitor instance inspect ]
-		on: Error
-		do: [ :ex |
-			UIManager default inform: 'Could not open Stat Monitor: ', ex messageText ].
+	self openGbxUtility: #GbxToolStatMonitor
 ]
 
 { #category : 'menus' }
@@ -647,6 +650,32 @@ GbsClassicLauncher class >> openGbxTrippy [
 		GbxTrippy inspectOop: oop session: session
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Could not open Trippy: ', ex messageText ]
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxUtility: utilityClassName [
+	"Open a GemStone utility by class name."
+	| session utilityClass utility |
+	utilityClass := Smalltalk at: utilityClassName asSymbol ifAbsent: [ nil ].
+	utilityClass ifNil: [
+		^ UIManager default inform: 'Utility class ', utilityClassName asString, ' not found.'
+	].
+	[
+		(utilityClass respondsTo: #open) ifTrue: [ ^ utilityClass open ].
+		session := self currentSessionOrInform.
+		session ifNil: [ ^ self ].
+		(utilityClass respondsTo: #openOn:) ifTrue: [ ^ utilityClass openOn: session ].
+		(utilityClass respondsTo: #on:) ifTrue: [
+			utility := utilityClass on: session.
+			(utility respondsTo: #open) ifTrue: [ ^ utility open ].
+			^ self inspectUtilityObject: utility named: utilityClass name ].
+		utility := utilityClass new.
+		(utility respondsTo: #session:) ifTrue: [ utility session: session ].
+		(utility respondsTo: #open) ifTrue: [ ^ utility open ].
+		^ self inspectUtilityObject: utility named: utilityClass name
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Failed to open ', utilityClass name, ': ', ex messageText
+	]
 ]
 
 { #category : 'menus' }
