@@ -496,17 +496,34 @@ GbsClassicLauncher class >> openConnectorBrowserOnCurrentSession [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxFileLogger [
-	| logger path |
+	| logger path contents |
+	
+	"Check if call tracing is already active"
+	(GbsCallTracing isCallTracingActive and: [ GbsCallTracing logger isKindOf: GbxFileLogger ]) 
+		ifTrue: [
+			"Show existing file logger contents"
+			logger := GbsCallTracing logger.
+			contents := logger contents.
+			^ self 
+				openTextViewerOn: contents 
+				title: 'File Logger - ', logger filename
+		].
+	
+	"Start new file logging"
 	path := UIManager default
 		request: 'Log file path:'
 		initialAnswer: '/tmp/gbs-file-logger.log'.
 	(path isNil or: [ path trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	
 	[
-		logger := GbxFileLoggerTool on: path trimBoth.
-		logger logInfo: 'Created from the GemStone Utilities menu.'.
-		logger inspect
+		logger := GbsCallTracing startCallTracingToFileNamed: path trimBoth.
+		logger logMessage: '--- Call tracing started ---'.
+		contents := logger contents.
+		self 
+			openTextViewerOn: contents 
+			title: 'File Logger - ', logger filename
 	] on: Error do: [ :ex |
-		UIManager default inform: 'Failed to open GbxFileLoggerTool: ', ex messageText ]
+		UIManager default inform: 'Failed to open File Logger: ', ex messageText ]
 ]
 
 { #category : 'menus' }
@@ -1497,7 +1514,15 @@ GbsClassicLauncher >> updateButtonStates [
 
 { #category : 'private' }
 GbsClassicLauncher >> withSelectedSession: aBlock [
-    sessionList selection selectedItem 
+    sessionList selection selectedItem
         ifNotNil: [ :session | aBlock value: session ]
         ifNil: [ self inform: 'Please select a session from the list.' ].
+]
+
+{ #category : 'utilities' }
+GbsClassicLauncher class >> openTextViewerOn: aString title: aTitle [
+	"Open a text viewer/workspace with the given contents"
+	| text |
+	text := aString asString asText.
+	^ text editWithLabel: aTitle
 ]
