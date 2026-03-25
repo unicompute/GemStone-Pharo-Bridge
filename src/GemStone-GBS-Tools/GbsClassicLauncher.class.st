@@ -148,6 +148,27 @@ GbsClassicLauncher class >> clearAllConnectorClassMappingsOnCurrentSession [
 		UIManager default inform: 'Failed to clear connector class overrides: ', ex messageText ]
 ]
 
+{ #category : 'utilities' }
+GbsClassicLauncher class >> clearLogFileWithLogger: aFileLogger [
+	"Clear the log file contents"
+	(aFileLogger respondsTo: #filename) ifTrue: [
+		| fileRef |
+		fileRef := aFileLogger filename asFileReference.
+		fileRef exists ifTrue: [
+			(UIManager default confirm: 'Clear all log entries?') ifTrue: [
+				fileRef delete.
+				fileRef ensureCreateDirectory.
+			]
+		]
+	]
+]
+
+{ #category : 'utilities' }
+GbsClassicLauncher class >> closeFileLoggerWindow: window [
+	"Close the file logger window"
+	window delete
+]
+
 { #category : 'menus' }
 GbsClassicLauncher class >> currentSessionOrInform [
 	| session |
@@ -494,6 +515,24 @@ GbsClassicLauncher class >> openConnectorBrowserOnCurrentSession [
 			UIManager default inform: 'Could not open connector browser: ', ex messageText ].
 ]
 
+{ #category : 'utilities' }
+GbsClassicLauncher class >> openFileLoggerOn: aFileLogger title: aTitle [
+	"Open a file logger viewer showing current log content"
+	| contents |
+	
+	contents := aFileLogger contents.
+	contents ifEmpty: [ contents := '(Log file is empty)' ].
+	
+	"Show in a multi-line text window"
+	[
+		UIManager default 
+			request: aTitle
+			initialAnswer: contents asString
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open log viewer: ', ex messageText
+	]
+]
+
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxFileLogger [
 	| logger path contents |
@@ -524,25 +563,15 @@ GbsClassicLauncher class >> openGbxFileLogger [
 		UIManager default inform: 'Failed to open File Logger: ', ex messageText ]
 ]
 
-{ #category : 'utilities' }
-GbsClassicLauncher class >> showLogContent: contents title: titleString [
-	"Show log content by inspecting the string"
-	
-	contents inspect
-]
-
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxMemoryLogger [
-	| session logger |
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	logger := session replicatorManager memoryLogger.
-	logger ifNil: [
-		^ UIManager default inform: 'Memory logger not available for this session.' ].
-	^ [ logger inspect ]
-		on: Error
-		do: [ :ex |
-			UIManager default inform: 'Could not open Memory Logger: ', ex messageText ].
+	| logger |
+	[
+		logger := GbxMemoryLoggerTool new.
+		logger logInfo: 'Created from the GemStone Utilities menu.'.
+		GbxToolMemoryLoggerPresenter openOn: logger
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Failed to open GbxMemoryLoggerTool: ', ex messageText ]
 ]
 
 { #category : 'menus' }
@@ -655,6 +684,16 @@ GbsClassicLauncher class >> openSettings [
 	^ [ GbsSettingsPresenter open ]
 		on: Error
 		do: [ :ex | UIManager default inform: 'Could not open settings: ', ex messageText ]
+]
+
+{ #category : 'utilities' }
+GbsClassicLauncher class >> openTextViewerOn: aString title: aTitle [
+	"Open a text viewer/workspace with the given contents"
+	| ws |
+	ws := GbsWorkspace new.
+	ws open.
+	ws window title: aTitle.
+	ws textEditor text: aString asString
 ]
 
 { #category : 'menus' }
@@ -775,6 +814,17 @@ GbsClassicLauncher class >> queryOrganizerMethodsFor: tokenString mode: modeStri
 	^ ((raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asSet asArray asSortedCollection asArray
 ]
 
+{ #category : 'utilities' }
+GbsClassicLauncher class >> refreshLogFileOn: textMorph [
+	"Manually refresh the log display"
+	| newContents |
+	newContents := (textMorph textProvider respondsTo: #contents) 
+		ifTrue: [ textMorph textProvider contents ]
+		ifFalse: [ '' ].
+	textMorph text: newContents asText.
+	textMorph textArea scrollToEnd.
+]
+
 { #category : 'menus' }
 GbsClassicLauncher class >> removeInvalidConnectors [
 	| mgr |
@@ -840,6 +890,13 @@ GbsClassicLauncher class >> showConnectorClassMappingsOnCurrentSession [
 		on: Error
 		do: [ :ex | 'Failed to build connector class mapping report: ', ex messageText ].
 	UIManager default edit: text label: 'Connector Class Mappings'
+]
+
+{ #category : 'utilities' }
+GbsClassicLauncher class >> showLogContent: contents title: titleString [
+	"Show log content by inspecting the string"
+	
+	contents inspect
 ]
 
 { #category : 'menus' }
@@ -1522,64 +1579,4 @@ GbsClassicLauncher >> withSelectedSession: aBlock [
     sessionList selection selectedItem
         ifNotNil: [ :session | aBlock value: session ]
         ifNil: [ self inform: 'Please select a session from the list.' ].
-]
-
-{ #category : 'utilities' }
-GbsClassicLauncher class >> openTextViewerOn: aString title: aTitle [
-	"Open a text viewer/workspace with the given contents"
-	| ws |
-	ws := GbsWorkspace new.
-	ws open.
-	ws window title: aTitle.
-	ws textEditor text: aString asString
-]
-
-{ #category : 'utilities' }
-GbsClassicLauncher class >> openFileLoggerOn: aFileLogger title: aTitle [
-	"Open a file logger viewer showing current log content"
-	| contents |
-	
-	contents := aFileLogger contents.
-	contents ifEmpty: [ contents := '(Log file is empty)' ].
-	
-	"Show in a multi-line text window"
-	[
-		UIManager default 
-			request: aTitle
-			initialAnswer: contents asString
-	] on: Error do: [ :ex |
-		UIManager default inform: 'Could not open log viewer: ', ex messageText
-	]
-]
-
-{ #category : 'utilities' }
-GbsClassicLauncher class >> clearLogFileWithLogger: aFileLogger [
-	"Clear the log file contents"
-	(aFileLogger respondsTo: #filename) ifTrue: [
-		| fileRef |
-		fileRef := aFileLogger filename asFileReference.
-		fileRef exists ifTrue: [
-			(UIManager default confirm: 'Clear all log entries?') ifTrue: [
-				fileRef delete.
-				fileRef ensureCreateDirectory.
-			]
-		]
-	]
-]
-
-{ #category : 'utilities' }
-GbsClassicLauncher class >> refreshLogFileOn: textMorph [
-	"Manually refresh the log display"
-	| newContents |
-	newContents := (textMorph textProvider respondsTo: #contents) 
-		ifTrue: [ textMorph textProvider contents ]
-		ifFalse: [ '' ].
-	textMorph text: newContents asText.
-	textMorph textArea scrollToEnd.
-]
-
-{ #category : 'utilities' }
-GbsClassicLauncher class >> closeFileLoggerWindow: window [
-	"Close the file logger window"
-	window delete
 ]
