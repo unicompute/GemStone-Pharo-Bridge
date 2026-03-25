@@ -501,11 +501,10 @@ GbsClassicLauncher class >> openGbxFileLogger [
 	"Check if call tracing is already active"
 	(GbsCallTracing isCallTracingActive and: [ GbsCallTracing logger isKindOf: GbxFileLogger ]) 
 		ifTrue: [
-			"Show existing file logger contents"
+			"Show existing file logger with auto-refresh"
 			logger := GbsCallTracing logger.
-			contents := logger contents.
 			^ self 
-				openTextViewerOn: contents 
+				openFileLoggerOn: logger 
 				title: 'File Logger - ', logger filename
 		].
 	
@@ -518,9 +517,8 @@ GbsClassicLauncher class >> openGbxFileLogger [
 	[
 		logger := GbsCallTracing startCallTracingToFileNamed: path trimBoth.
 		logger logMessage: '--- Call tracing started ---'.
-		contents := logger contents.
 		self 
-			openTextViewerOn: contents 
+			openFileLoggerOn: logger 
 			title: 'File Logger - ', logger filename
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Failed to open File Logger: ', ex messageText ]
@@ -1522,7 +1520,36 @@ GbsClassicLauncher >> withSelectedSession: aBlock [
 { #category : 'utilities' }
 GbsClassicLauncher class >> openTextViewerOn: aString title: aTitle [
 	"Open a text viewer/workspace with the given contents"
-	| text |
-	text := aString asString asText.
-	^ text editWithLabel: aTitle
+	| ws |
+	ws := GbsWorkspace new.
+	ws open.
+	ws window title: aTitle.
+	ws textEditor text: aString asString
+]
+
+{ #category : 'utilities' }
+GbsClassicLauncher class >> openFileLoggerOn: aFileLogger title: aTitle [
+	"Open a file logger viewer that auto-refreshes with new content"
+	| ws lastSize |
+	ws := GbsWorkspace new.
+	ws open.
+	ws window title: aTitle.
+	ws textEditor text: aFileLogger contents.
+	lastSize := aFileLogger contents size.
+	
+	"Start auto-refresh process"
+	[
+		[ ws window isNotNil and: [ ws window isOpen ] ] whileTrue: [
+			| newContents |
+			newContents := aFileLogger contents.
+			newContents size ~= lastSize ifTrue: [
+				lastSize := newContents size.
+				ws textEditor text: newContents.
+				ws textEditor scrollToBottom.
+			].
+			(Delay forSeconds: 1) wait.
+		]
+	] forkAt: Processor userBackgroundPriority.
+	
+	^ ws
 ]
