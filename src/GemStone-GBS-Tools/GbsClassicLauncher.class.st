@@ -526,15 +526,9 @@ GbsClassicLauncher class >> openGbxFileLogger [
 
 { #category : 'utilities' }
 GbsClassicLauncher class >> showLogContent: contents title: titleString [
-	"Show log content in a proper multi-line text window"
-	| textMorph window |
+	"Show log content in a multi-line text window"
 	
-	textMorph := TextModelMorph textProvider: (TextModel new contents: contents).
-	
-	window := SystemWindow labelled: titleString.
-	window addMorph: textMorph asMorph part: #center extent: 0@0.
-	window setExtent: 800@600.
-	window openInWorld
+	contents asString editWithLabel: titleString
 ]
 
 { #category : 'menus' }
