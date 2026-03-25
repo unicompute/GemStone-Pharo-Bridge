@@ -1529,68 +1529,36 @@ GbsClassicLauncher class >> openTextViewerOn: aString title: aTitle [
 
 { #category : 'utilities' }
 GbsClassicLauncher class >> openFileLoggerOn: aFileLogger title: aTitle [
-	"Open a file logger viewer that auto-refreshes with new content"
-	| window textMorph lastSize refreshProcess buttonPanel clearButton closeButton refreshButton |
+	"Open a file logger viewer that auto-refreshes with new content using a Workspace"
+	| ws lastSize refreshProcess |
 	
-	"Create the text morph for displaying log contents"
-	textMorph := TextModelMorph textProvider: (TextModel contents: aFileLogger contents).
-	textMorph textArea autoAccept: true.
-	
-	"Create buttons using SimpleButtonMorph with action blocks"
-	clearButton := SimpleButtonMorph new.
-	clearButton
-		label: 'Clear';
-		action: [ self clearLogFileWithLogger: aFileLogger ];
-		setProperty: #minWidth toValue: 60.
-	
-	refreshButton := SimpleButtonMorph new.
-	refreshButton
-		label: 'Refresh';
-		action: [ self refreshLogFileOn: textMorph ];
-		setProperty: #minWidth toValue: 60.
-	
-	closeButton := SimpleButtonMorph new.
-	closeButton
-		label: 'Close';
-		action: [ window delete ];
-		setProperty: #minWidth toValue: 60.
-	
-	buttonPanel := LayoutMorph newRow.
-	buttonPanel addMorph: clearButton asMorph.
-	buttonPanel addMorph: (LayoutMorph newSpacer: #horizontal).
-	buttonPanel addMorph: refreshButton asMorph.
-	buttonPanel addMorph: (LayoutMorph newSpacer: #horizontal).
-	buttonPanel addMorph: closeButton asMorph.
-	buttonPanel setProperty: #minHeight toValue: 35.
-	
-	"Create window"
-	window := SystemWindow labelled: aTitle.
-	window addMorph: buttonPanel asMorph part: #top extent: 0@35.
-	window addMorph: textMorph asMorph part: #center extent: 0@0.
-	window setExtent: 600@400.
-	window openInWorld.
-	
+	ws := GbsWorkspace new.
+	ws open.
+	ws window title: aTitle.
+	ws textEditor text: aFileLogger contents.
 	lastSize := aFileLogger contents size.
+	
+	"Add Clear menu item"
+	ws window addMenu: 'Log' action: [ self clearLogFileWithLogger: aFileLogger ] label: 'Clear Log'.
 	
 	"Start auto-refresh process"
 	refreshProcess := [
-		[ window isNotNil and: [ window isInWorld ] ] whileTrue: [
+		[ ws window isNotNil and: [ ws window isOpen ] ] whileTrue: [
 			| newContents |
 			newContents := aFileLogger contents.
 			newContents size ~= lastSize ifTrue: [
 				lastSize := newContents size.
-				textMorph text: newContents asText.
-				textMorph textArea scrollToEnd.
+				ws textEditor text: newContents.
 			].
 			(Delay forSeconds: 1) wait.
 		]
 	] forkAt: Processor userBackgroundPriority.
 	
-	"Store refresh process in window for cleanup"
-	window setProperty: #refreshProcess toValue: refreshProcess.
-	window whenClosedDo: [ refreshProcess terminate ].
+	"Store refresh process for cleanup"
+	ws window setProperty: #refreshProcess toValue: refreshProcess.
+	ws window whenClosedDo: [ refreshProcess terminate ].
 	
-	^ window
+	^ ws
 ]
 
 { #category : 'utilities' }
