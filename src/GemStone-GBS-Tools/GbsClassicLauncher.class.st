@@ -143,6 +143,31 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                         label: 'System Workspace';
                         action: [ GbsWorkspace new open ] ].
 
+            (aBuilder item: #GbsUtilities)
+                label: 'Utilities';
+                with: [
+                    (aBuilder item: #OpenGbxFileLogger)
+                        label: 'File Logger';
+                        action: [ self openGbxFileLogger ].
+                    (aBuilder item: #OpenGbxMemoryLogger)
+                        label: 'Memory Logger';
+                        action: [ self openGbxMemoryLogger ].
+                    (aBuilder item: #OpenGbxReplicatorManager)
+                        label: 'Replication Manager';
+                        action: [ self openGbxReplicatorManager ].
+                    (aBuilder item: #OpenGbxServerMap)
+                        label: 'Server Map';
+                        action: [ self openGbxServerMap ].
+                    (aBuilder item: #OpenGbxStatMonitor)
+                        label: 'Stat Monitor';
+                        action: [ self openGbxStatMonitor ].
+                    (aBuilder item: #OpenGbxStoreTraversalTool)
+                        label: 'Store Traversal Tool';
+                        action: [ self openGbxStoreTraversalTool ].
+                    (aBuilder item: #OpenGbxTrippy)
+                        label: 'Trippy';
+                        action: [ self openGbxTrippy ] ].
+
             (aBuilder item: #AboutGemBuilder)
                 label: 'About GemBuilder...';
                 action: [ self aboutGemBuilder ].
@@ -289,6 +314,105 @@ GbsClassicLauncher class >> openBreakpointsBrowser [
 		on: Error
 		do: [ :ex |
 			UIManager default inform: 'Could not open breakpoints browser: ', ex messageText ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxFileLogger [
+	| session logger |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	logger := session replicatorManager fileLogger.
+	logger ifNil: [
+		^ UIManager default inform: 'File logger not available for this session.' ].
+	^ [ logger inspect ]
+		on: Error
+		do: [ :ex |
+			UIManager default inform: 'Could not open File Logger: ', ex messageText ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxMemoryLogger [
+	| session logger |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	logger := session replicatorManager memoryLogger.
+	logger ifNil: [
+		^ UIManager default inform: 'Memory logger not available for this session.' ].
+	^ [ logger inspect ]
+		on: Error
+		do: [ :ex |
+			UIManager default inform: 'Could not open Memory Logger: ', ex messageText ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxReplicatorManager [
+	| session mgr |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	mgr := session replicatorManager.
+	mgr ifNil: [
+		^ UIManager default inform: 'Replication Manager not available for this session.' ].
+	^ [ mgr inspect ]
+		on: Error
+		do: [ :ex |
+			UIManager default inform: 'Could not open Replication Manager: ', ex messageText ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxServerMap [
+	| session serverMap |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	serverMap := session replicatorManager serverMap.
+	serverMap ifNil: [
+		^ UIManager default inform: 'Server Map not available for this session.' ].
+	^ [ serverMap inspect ]
+		on: Error
+		do: [ :ex |
+			UIManager default inform: 'Could not open Server Map: ', ex messageText ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxStatMonitor [
+	| monitor |
+	monitor := Smalltalk at: #GbxStatMonitor ifAbsent: [ nil ].
+	monitor ifNil: [
+		^ UIManager default inform: 'Stat Monitor class not found.' ].
+	^ [ monitor instance inspect ]
+		on: Error
+		do: [ :ex |
+			UIManager default inform: 'Could not open Stat Monitor: ', ex messageText ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxStoreTraversalTool [
+	| session traversal |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	traversal := session currentTraversal.
+	traversal ifNil: [
+		^ UIManager default inform: 'No active store traversal for this session.' ].
+	^ [ traversal inspect ]
+		on: Error
+		do: [ :ex |
+			UIManager default inform: 'Could not open Store Traversal Tool: ', ex messageText ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxTrippy [
+	| session trippyDict |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	trippyDict := Dictionary new.
+	trippyDict
+		at: 'Session' put: session;
+		at: 'ReplicatorManager' put: session replicatorManager;
+		at: 'ServerMap' put: session replicatorManager serverMap;
+		at: 'ClientMap' put: session replicatorManager clientMap.
+	^ [ trippyDict inspect ]
+		on: Error
+		do: [ :ex |
+			UIManager default inform: 'Could not open Trippy: ', ex messageText ].
 ]
 
 { #category : 'menus' }
