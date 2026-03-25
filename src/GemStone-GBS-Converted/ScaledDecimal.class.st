@@ -9,6 +9,8 @@ Class {
 	#name : 'ScaledDecimal',
 	#superclass : 'Number',
 	#instVars : [
+		'numerator',
+		'denominator',
 		'mantissa',
 		'scale'
 	],

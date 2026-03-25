@@ -74,14 +74,14 @@ GbxReplicatorManagerTool >> replicatorRegistry [
 { #category : 'replication' }
 GbxReplicatorManagerTool >> selectReplicatorFor: anObject [
 	"Select appropriate replicator class for an object based on its type"
-	
-	anObject class name includes: 'Dictionary' ifTrue: [ ^ GbxDictionaryReplicatorTool ].
-	anObject class name includes: 'Array' ifTrue: [ ^ GbxArrayReplicatorTool ].
-	anObject class name includes: 'OrderedCollection' ifTrue: [ ^ GbxOrderedCollectionReplicatorTool ].
-	anObject class name includes: 'Set' ifTrue: [ ^ GbxIdentitySetReplicatorTool ].
-	anObject class name includes: 'String' ifTrue: [ ^ GbxStringReplicatorTool ].
-	anObject class name includes: 'Symbol' ifTrue: [ ^ GbxSymbolReplicatorTool ].
-	
+
+	anObject class name includes: 'Dictionary' ifTrue: [ ^ GbxDictionaryReplicator ].
+	anObject class name includes: 'Array' ifTrue: [ ^ GbxArrayReplicator ].
+	anObject class name includes: 'OrderedCollection' ifTrue: [ ^ GbxOrderedCollectionReplicator ].
+	anObject class name includes: 'Set' ifTrue: [ ^ GbxIdentitySetReplicator ].
+	anObject class name includes: 'String' ifTrue: [ ^ GbxByteObjectReplicator ].
+	anObject class name includes: 'Symbol' ifTrue: [ ^ GbxSymbolReplicator ].
+
 	^ defaultReplicatorClass
 ]
 

@@ -23,19 +23,19 @@ GbxServerMapTool class >> on: aSession [
 GbxServerMapTool >> audit [
 	"Audit the server map for consistency"
 	| results |
-	
-	results := GbxServerMapAuditResultsTool new.
-	self auditNodes: nodes results: results.
+
+	results := Dictionary new.
+	results at: 'status' put: 'Audit not implemented'.
+	results at: 'nodes' put: (self nodes size).
 	^ results
 ]
 
 { #category : 'auditing' }
 GbxServerMapTool >> auditNodes: nodeCollection results: auditResults [
 	"Audit a collection of nodes"
-	
+
 	nodeCollection do: [ :node |
-		node auditWith: auditResults.
-		self auditNodes: node children results: auditResults.
+		"Node auditing not implemented in this version"
 	].
 ]
 
@@ -71,17 +71,15 @@ GbxServerMapTool >> nodes [
 GbxServerMapTool >> parseSegments: aString [
 	"Parse segments string into nodes"
 	| lines parts node |
-	
+
 	lines := aString splitOn: Character lf.
 	lines do: [ :line |
 		line isNotEmpty ifTrue: [
 			parts := line splitOn: $|.
 			parts size >= 2 ifTrue: [
-				node := GbxServerMapNodeTool new
-					name: parts first;
-					oop: parts second asInteger;
-					session: session;
-					yourself.
+				node := Dictionary new.
+				node at: 'name' put: parts first.
+				node at: 'oop' put: parts second asInteger.
 				self nodes at: parts first put: node.
 			]
 		]
