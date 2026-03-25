@@ -576,30 +576,26 @@ GbsClassicLauncher class >> openGbxMemoryLogger [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxReplicatorManager [
-	| session mgr |
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	mgr := session replicatorManager.
-	mgr ifNil: [
-		^ UIManager default inform: 'Replication Manager not available for this session.' ].
-	^ [ mgr inspect ]
-		on: Error
-		do: [ :ex |
-			UIManager default inform: 'Could not open Replication Manager: ', ex messageText ].
+	| session manager |
+	[
+		session := self currentSessionOrInform.
+		session ifNil: [ ^ self ].
+		manager := GbxReplicatorManagerTool on: session.
+		GbxToolReplicatorManagerPresenter openOn: manager
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Failed to open GbxReplicatorManagerTool: ', ex messageText ]
 ]
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxServerMap [
-	| session serverMap |
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	serverMap := session replicatorManager serverMap.
-	serverMap ifNil: [
-		^ UIManager default inform: 'Server Map not available for this session.' ].
-	^ [ serverMap inspect ]
-		on: Error
-		do: [ :ex |
-			UIManager default inform: 'Could not open Server Map: ', ex messageText ].
+	| session tool |
+	[
+		session := self currentSessionOrInform.
+		session ifNil: [ ^ self ].
+		tool := GbxServerMapTool on: session.
+		GbxToolServerMapPresenter openOn: tool
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Failed to open GbxServerMapTool: ', ex messageText ]
 ]
 
 { #category : 'menus' }
