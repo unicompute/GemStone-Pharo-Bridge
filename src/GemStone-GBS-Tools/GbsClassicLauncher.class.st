@@ -1535,12 +1535,11 @@ GbsClassicLauncher class >> openFileLoggerOn: aFileLogger title: aTitle [
 	contents := aFileLogger contents.
 	contents ifEmpty: [ contents := '(Log file is empty)' ].
 	
-	"Show in a Workspace window"
+	"Show in a multi-line text window"
 	[
-		| ws |
-		ws := Workspace new.
-		ws contents: contents asString.
-		ws openLabel: aTitle
+		UIManager default 
+			request: aTitle
+			initialAnswer: contents asString
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Could not open log viewer: ', ex messageText
 	]
