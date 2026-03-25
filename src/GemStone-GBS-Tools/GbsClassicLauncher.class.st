@@ -181,6 +181,13 @@ GbsClassicLauncher class >> currentSessionOrInform [
 ]
 
 { #category : 'menus' }
+GbsClassicLauncher class >> defaultTrippyOopForSession: aSession [
+	^ [ aSession executeAndFetch: 'GsCurrentSession currentSession asOop asString' ]
+		on: Error
+		do: [ '20' ]
+]
+
+{ #category : 'menus' }
 GbsClassicLauncher class >> editConnectorClassMappingOnCurrentSession [
 	| session mgr pairs pairLabels pairIndex pair clientName serverName choices labels classIndex selectedClass |
 	session := self currentSessionOrInform.
@@ -626,19 +633,20 @@ GbsClassicLauncher class >> openGbxStoreTraversalTool [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxTrippy [
-	| session trippyDict |
+	| oop oopString session |
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
-	trippyDict := Dictionary new.
-	trippyDict
-		at: 'Session' put: session;
-		at: 'ReplicatorManager' put: session replicatorManager;
-		at: 'ServerMap' put: session replicatorManager serverMap;
-		at: 'ClientMap' put: session replicatorManager clientMap.
-	^ [ trippyDict inspect ]
-		on: Error
-		do: [ :ex |
-			UIManager default inform: 'Could not open Trippy: ', ex messageText ].
+	oopString := UIManager default
+		request: 'GemStone OOP to inspect in Trippy:'
+		initialAnswer: (self defaultTrippyOopForSession: session).
+	(oopString isNil or: [ oopString trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	oop := [ oopString trimBoth asInteger ] on: Error do: [ nil ].
+	oop ifNil: [
+		^ UIManager default inform: 'Enter a numeric GemStone oop.' ].
+	[
+		GbxTrippy inspectOop: oop session: session
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open Trippy: ', ex messageText ]
 ]
 
 { #category : 'menus' }
