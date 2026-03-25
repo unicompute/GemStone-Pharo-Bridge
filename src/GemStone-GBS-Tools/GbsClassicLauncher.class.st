@@ -1538,9 +1538,6 @@ GbsClassicLauncher class >> openFileLoggerOn: aFileLogger title: aTitle [
 	ws textEditor text: aFileLogger contents.
 	lastSize := aFileLogger contents size.
 	
-	"Add Clear menu item"
-	ws window addMenu: 'Log' action: [ self clearLogFileWithLogger: aFileLogger ] label: 'Clear Log'.
-	
 	"Start auto-refresh process"
 	refreshProcess := [
 		[ ws window isNotNil and: [ ws window isOpen ] ] whileTrue: [
