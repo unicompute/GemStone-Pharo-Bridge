@@ -1530,26 +1530,97 @@ GbsClassicLauncher class >> openTextViewerOn: aString title: aTitle [
 { #category : 'utilities' }
 GbsClassicLauncher class >> openFileLoggerOn: aFileLogger title: aTitle [
 	"Open a file logger viewer that auto-refreshes with new content"
-	| ws lastSize |
-	ws := GbsWorkspace new.
-	ws open.
-	ws window title: aTitle.
-	ws textEditor text: aFileLogger contents.
+	| window textMorph lastSize refreshProcess buttonPanel clearButton closeButton refreshButton |
+	
+	"Create the text morph for displaying log contents"
+	textMorph := TextModelMorph textProvider: (TextModel contents: aFileLogger contents).
+	textMorph textArea autoAccept: true.
+	
+	"Create buttons using SimpleButtonMorph with action blocks"
+	clearButton := SimpleButtonMorph new.
+	clearButton
+		label: 'Clear';
+		action: [ self clearLogFileWithLogger: aFileLogger ];
+		setProperty: #minWidth toValue: 60.
+	
+	refreshButton := SimpleButtonMorph new.
+	refreshButton
+		label: 'Refresh';
+		action: [ self refreshLogFileOn: textMorph ];
+		setProperty: #minWidth toValue: 60.
+	
+	closeButton := SimpleButtonMorph new.
+	closeButton
+		label: 'Close';
+		action: [ window delete ];
+		setProperty: #minWidth toValue: 60.
+	
+	buttonPanel := LayoutMorph newRow.
+	buttonPanel addMorph: clearButton asMorph.
+	buttonPanel addMorph: (LayoutMorph newSpacer: #horizontal).
+	buttonPanel addMorph: refreshButton asMorph.
+	buttonPanel addMorph: (LayoutMorph newSpacer: #horizontal).
+	buttonPanel addMorph: closeButton asMorph.
+	buttonPanel setProperty: #minHeight toValue: 35.
+	
+	"Create window"
+	window := SystemWindow labelled: aTitle.
+	window addMorph: buttonPanel asMorph part: #top extent: 0@35.
+	window addMorph: textMorph asMorph part: #center extent: 0@0.
+	window setExtent: 600@400.
+	window openInWorld.
+	
 	lastSize := aFileLogger contents size.
 	
 	"Start auto-refresh process"
-	[
-		[ ws window isNotNil and: [ ws window isOpen ] ] whileTrue: [
+	refreshProcess := [
+		[ window isNotNil and: [ window isInWorld ] ] whileTrue: [
 			| newContents |
 			newContents := aFileLogger contents.
 			newContents size ~= lastSize ifTrue: [
 				lastSize := newContents size.
-				ws textEditor text: newContents.
-				ws textEditor scrollToBottom.
+				textMorph text: newContents asText.
+				textMorph textArea scrollToEnd.
 			].
 			(Delay forSeconds: 1) wait.
 		]
 	] forkAt: Processor userBackgroundPriority.
 	
-	^ ws
+	"Store refresh process in window for cleanup"
+	window setProperty: #refreshProcess toValue: refreshProcess.
+	window whenClosedDo: [ refreshProcess terminate ].
+	
+	^ window
+]
+
+{ #category : 'utilities' }
+GbsClassicLauncher class >> clearLogFileWithLogger: aFileLogger [
+	"Clear the log file contents"
+	(aFileLogger respondsTo: #filename) ifTrue: [
+		| fileRef |
+		fileRef := aFileLogger filename asFileReference.
+		fileRef exists ifTrue: [
+			(UIManager default confirm: 'Clear all log entries?') ifTrue: [
+				fileRef delete.
+				fileRef ensureCreateDirectory.
+			]
+		]
+	]
+]
+
+{ #category : 'utilities' }
+GbsClassicLauncher class >> refreshLogFileOn: textMorph [
+	"Manually refresh the log display"
+	| newContents |
+	newContents := (textMorph textProvider respondsTo: #contents) 
+		ifTrue: [ textMorph textProvider contents ]
+		ifFalse: [ '' ].
+	textMorph text: newContents asText.
+	textMorph textArea scrollToEnd.
+]
+
+{ #category : 'utilities' }
+GbsClassicLauncher class >> closeFileLoggerWindow: window [
+	"Close the file logger window"
+	window delete
 ]
