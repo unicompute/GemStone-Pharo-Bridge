@@ -237,16 +237,16 @@ GbxTrippy >> goUp [
 GbxTrippy >> initializePresenters [
 	pathLabel := self newLabel.
 	pathLabel label: 'Root'.
-	
+
 	objectTable := self newTable.
 	objectTable
 		addColumn: (SpStringTableColumn title: 'Name' evaluated: [ :item | item at: 1 ]);
 		addColumn: (SpStringTableColumn title: 'Type' evaluated: [ :item | item at: 2 ]);
 		addColumn: (SpStringTableColumn title: 'Value' evaluated: [ :item | item at: 3 ]);
 		whenActivatedDo: [ :selection | self navigateTo: selection selectedItem ].
-	
+
 	infoPanel := self newText.
-	infoPanel beReadOnly.
+	infoPanel editable: false.
 	
 	backButton := self newButton
 		label: '← Back';
