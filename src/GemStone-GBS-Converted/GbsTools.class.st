@@ -6,6 +6,14 @@ Class {
 }
 
 { #category : 'lifecycle' }
+GbsTools class >> initializeClasses [
+	| runtime |
+	runtime := Smalltalk globals at: #GbsRuntime ifAbsent: [ nil ].
+	(runtime isNil or: [ (runtime respondsTo: #initializeClasses) not ]) ifTrue: [ ^ #() ].
+	^ runtime initializeClasses
+]
+
+{ #category : 'lifecycle' }
 GbsTools class >> loaded [
 	(Smalltalk globals at: #GbsRuntime ifAbsent: [ nil ])
 		ifNotNil: [ :runtime | (runtime respondsTo: #loaded) ifTrue: [ runtime loaded ] ].
@@ -15,12 +23,4 @@ GbsTools class >> loaded [
 GbsTools class >> removing [
 	(Smalltalk globals at: #GbsRuntime ifAbsent: [ nil ])
 		ifNotNil: [ :runtime | (runtime respondsTo: #removing) ifTrue: [ runtime removing ] ].
-]
-
-{ #category : 'lifecycle' }
-GbsTools class >> initializeClasses [
-	| runtime |
-	runtime := Smalltalk globals at: #GbsRuntime ifAbsent: [ nil ].
-	(runtime isNil or: [ (runtime respondsTo: #initializeClasses) not ]) ifTrue: [ ^ #() ].
-	^ runtime initializeClasses
 ]

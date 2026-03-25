@@ -27,29 +27,36 @@ GbsConnectorGroup class >> session: aSession managerClass: aManagerClass [
 		yourself
 ]
 
-{ #category : 'accessing' }
-GbsConnectorGroup >> managerClass: aClass [
-	managerClass := aClass
+{ #category : 'actions' }
+GbsConnectorGroup >> addConnector: aConnector [
+	| clientName serverName |
+	managerClass ifNil: [ ^ self ].
+	clientName := (aConnector respondsTo: #stDescription)
+		ifTrue: [ aConnector stDescription ]
+		ifFalse: [ '' ].
+	serverName := (aConnector respondsTo: #gsDescription)
+		ifTrue: [ aConnector gsDescription ]
+		ifFalse: [ '' ].
+	self isGlobalGroup
+		ifTrue: [
+			(managerClass respondsTo: #addConnectorClient:server:)
+				ifTrue: [ managerClass addConnectorClient: clientName server: serverName ] ]
+		ifFalse: [
+			(managerClass respondsTo: #addConnectorClient:server:forSession:)
+				ifTrue: [ managerClass addConnectorClient: clientName server: serverName forSession: session ]
+				ifFalse: [
+					(managerClass respondsTo: #addConnectorClient:server:)
+						ifTrue: [ managerClass addConnectorClient: clientName server: serverName ] ] ]
 ]
 
-{ #category : 'accessing' }
-GbsConnectorGroup >> session [
-	^ session
+{ #category : 'actions' }
+GbsConnectorGroup >> addNoConnectConnector: aConnector [
+	self addConnector: aConnector
 ]
 
-{ #category : 'accessing' }
-GbsConnectorGroup >> session: aSession [
-	session := aSession
-]
-
-{ #category : 'accessing' }
-GbsConnectorGroup >> isGlobalGroup [
-	^ isGlobalGroup == true
-]
-
-{ #category : 'accessing' }
-GbsConnectorGroup >> isGlobalGroup: aBoolean [
-	isGlobalGroup := aBoolean == true
+{ #category : 'actions' }
+GbsConnectorGroup >> addNoConnectGlobalConnector: aConnector [
+	self addConnector: aConnector
 ]
 
 { #category : 'accessing' }
@@ -75,36 +82,28 @@ GbsConnectorGroup >> connectorList [
 	^ #()
 ]
 
-{ #category : 'actions' }
-GbsConnectorGroup >> addNoConnectConnector: aConnector [
-	self addConnector: aConnector
+{ #category : 'accessing' }
+GbsConnectorGroup >> isGlobalGroup [
+	^ isGlobalGroup == true
 ]
 
-{ #category : 'actions' }
-GbsConnectorGroup >> addNoConnectGlobalConnector: aConnector [
-	self addConnector: aConnector
+{ #category : 'accessing' }
+GbsConnectorGroup >> isGlobalGroup: aBoolean [
+	isGlobalGroup := aBoolean == true
 ]
 
-{ #category : 'actions' }
-GbsConnectorGroup >> addConnector: aConnector [
-	| clientName serverName |
-	managerClass ifNil: [ ^ self ].
-	clientName := (aConnector respondsTo: #stDescription)
-		ifTrue: [ aConnector stDescription ]
-		ifFalse: [ '' ].
-	serverName := (aConnector respondsTo: #gsDescription)
-		ifTrue: [ aConnector gsDescription ]
-		ifFalse: [ '' ].
-	self isGlobalGroup
-		ifTrue: [
-			(managerClass respondsTo: #addConnectorClient:server:)
-				ifTrue: [ managerClass addConnectorClient: clientName server: serverName ] ]
-		ifFalse: [
-			(managerClass respondsTo: #addConnectorClient:server:forSession:)
-				ifTrue: [ managerClass addConnectorClient: clientName server: serverName forSession: session ]
-				ifFalse: [
-					(managerClass respondsTo: #addConnectorClient:server:)
-						ifTrue: [ managerClass addConnectorClient: clientName server: serverName ] ] ]
+{ #category : 'accessing' }
+GbsConnectorGroup >> managerClass: aClass [
+	managerClass := aClass
+]
+
+{ #category : 'printing' }
+GbsConnectorGroup >> printOn: aStream [
+	super printOn: aStream.
+	aStream
+		nextPutAll: '(';
+		nextPutAll: self connectorGroupDescription;
+		nextPut: $)
 ]
 
 { #category : 'actions' }
@@ -134,6 +133,16 @@ GbsConnectorGroup >> removeGlobalConnector: aConnector [
 	self removeConnector: aConnector
 ]
 
+{ #category : 'accessing' }
+GbsConnectorGroup >> session [
+	^ session
+]
+
+{ #category : 'accessing' }
+GbsConnectorGroup >> session: aSession [
+	session := aSession
+]
+
 { #category : 'private' }
 GbsConnectorGroup >> sessionParameters [
 	| params current |
@@ -155,14 +164,6 @@ GbsConnectorGroup >> sessionParameters [
 ]
 
 { #category : 'private' }
-GbsConnectorGroup >> sessionUsername [
-	| params |
-	params := self sessionParameters.
-	params ifNil: [ ^ nil ].
-	^ [ params username asString ] on: Error do: [ nil ]
-]
-
-{ #category : 'private' }
 GbsConnectorGroup >> sessionStoneName [
 	| params |
 	params := self sessionParameters.
@@ -170,11 +171,10 @@ GbsConnectorGroup >> sessionStoneName [
 	^ [ params gemStoneName asString ] on: Error do: [ nil ]
 ]
 
-{ #category : 'printing' }
-GbsConnectorGroup >> printOn: aStream [
-	super printOn: aStream.
-	aStream
-		nextPutAll: '(';
-		nextPutAll: self connectorGroupDescription;
-		nextPut: $)
+{ #category : 'private' }
+GbsConnectorGroup >> sessionUsername [
+	| params |
+	params := self sessionParameters.
+	params ifNil: [ ^ nil ].
+	^ [ params username asString ] on: Error do: [ nil ]
 ]

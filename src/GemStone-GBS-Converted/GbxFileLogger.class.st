@@ -15,15 +15,17 @@ GbxFileLogger class >> usingFileNamed: aString [
 		yourself
 ]
 
-{ #category : 'changing state' }
-GbxFileLogger >> startLogging [
-	"Start logging to the file"
-	loggingEnabled := true
+{ #category : 'logging' }
+GbxFileLogger >> contents [
+	"Return the contents of the log file"
+	| fileRef |
+	fileRef := filename asFileReference.
+	^ fileRef exists ifTrue: [ fileRef contents asString ] ifFalse: [ '' ]
 ]
 
-{ #category : 'changing state' }
-GbxFileLogger >> stopLogging [
-	"Stop logging to the file"
+{ #category : 'initialize-release' }
+GbxFileLogger >> initializeWithFileName: aString [
+	super initializeWithFileName: aString.
 	loggingEnabled := false
 ]
 
@@ -40,21 +42,19 @@ GbxFileLogger >> logMessage: aMessage [
 	]
 ]
 
+{ #category : 'changing state' }
+GbxFileLogger >> startLogging [
+	"Start logging to the file"
+	loggingEnabled := true
+]
+
+{ #category : 'changing state' }
+GbxFileLogger >> stopLogging [
+	"Stop logging to the file"
+	loggingEnabled := false
+]
+
 { #category : 'logging' }
 GbxFileLogger >> writeToFile [
 	"Do nothing, as the log is already written to file"
-]
-
-{ #category : 'logging' }
-GbxFileLogger >> contents [
-	"Return the contents of the log file"
-	| fileRef |
-	fileRef := filename asFileReference.
-	^ fileRef exists ifTrue: [ fileRef contents asString ] ifFalse: [ '' ]
-]
-
-{ #category : 'initialize-release' }
-GbxFileLogger >> initializeWithFileName: aString [
-	super initializeWithFileName: aString.
-	loggingEnabled := false
 ]

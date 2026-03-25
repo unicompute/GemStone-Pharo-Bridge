@@ -30,21 +30,6 @@ GbxToolStatMonitor class >> openOn: aSession [
 	^ GbxToolStatMonitorPresenter openOn: tool
 ]
 
-{ #category : 'accessing' }
-GbxToolStatMonitor >> session [
-	^ session
-]
-
-{ #category : 'accessing' }
-GbxToolStatMonitor >> session: aSession [
-	session := aSession
-]
-
-{ #category : 'accessing' }
-GbxToolStatMonitor >> stats [
-	^ stats ifNil: [ stats := Dictionary new ]
-]
-
 { #category : 'actions' }
 GbxToolStatMonitor >> refresh [
 	"Refresh statistics from server"
@@ -61,4 +46,19 @@ GbxToolStatMonitor >> refresh [
 	
 	result := session executeAndFetch: script.
 	stats := result
+]
+
+{ #category : 'accessing' }
+GbxToolStatMonitor >> session [
+	^ session
+]
+
+{ #category : 'accessing' }
+GbxToolStatMonitor >> session: aSession [
+	session := aSession
+]
+
+{ #category : 'accessing' }
+GbxToolStatMonitor >> stats [
+	^ stats ifNil: [ stats := Dictionary new ]
 ]

@@ -11,6 +11,18 @@ Class {
 }
 
 { #category : 'accessing' }
+GbsError >> exceptionOop [
+
+	^ exceptionOop
+]
+
+{ #category : 'accessing' }
+GbsError >> exceptionOop: anObject [
+
+	exceptionOop := anObject
+]
+
+{ #category : 'accessing' }
 GbsError >> gemStoneExceptionProxy [
 
 	^ gemStoneExceptionProxy
@@ -32,16 +44,4 @@ GbsError >> serverProcessOop [
 GbsError >> serverProcessOop: anObject [
 
 	serverProcessOop := anObject
-]
-
-{ #category : 'accessing' }
-GbsError >> exceptionOop [
-
-	^ exceptionOop
-]
-
-{ #category : 'accessing' }
-GbsError >> exceptionOop: anObject [
-
-	exceptionOop := anObject
 ]

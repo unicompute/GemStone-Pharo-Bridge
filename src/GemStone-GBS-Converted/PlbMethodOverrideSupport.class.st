@@ -15,13 +15,6 @@ PlbMethodOverrideSupport class >> debugLog: aString [
 ]
 
 { #category : 'accessing' }
-PlbMethodOverrideSupport class >> isDebugging [
-	| cmd |
-	cmd := [ SmalltalkImage current vm getSystemAttribute: 1 ] on: Error do: [ '' ].
-	^ (cmd isString and: [ cmd includesSubstring: '-debug' ]) or: [ debugging == true ]
-]
-
-{ #category : 'accessing' }
 PlbMethodOverrideSupport class >> debugging: aBoolean [
 	debugging := aBoolean == true
 ]
@@ -39,18 +32,25 @@ PlbMethodOverrideSupport class >> installOverrideMethods [
 	mgr refreshAllOverrides.
 ]
 
-{ #category : 'actions' }
-PlbMethodOverrideSupport class >> uninstallOverrideMethods [
-	| old |
-	old := Smalltalk globals at: #MethodOverrideManager ifAbsent: [ nil ].
-	Smalltalk globals at: #MethodOverrideManager put: nil.
-	old ifNotNil: [ old refreshAllOverrides ].
+{ #category : 'accessing' }
+PlbMethodOverrideSupport class >> isDebugging [
+	| cmd |
+	cmd := [ SmalltalkImage current vm getSystemAttribute: 1 ] on: Error do: [ '' ].
+	^ (cmd isString and: [ cmd includesSubstring: '-debug' ]) or: [ debugging == true ]
 ]
 
 { #category : 'lifecycle' }
 PlbMethodOverrideSupport class >> loaded [
 	self debugLog: 'PlbMethodOverrideSupport loaded'.
 	self installOverrideMethods
+]
+
+{ #category : 'packaging' }
+PlbMethodOverrideSupport class >> packagingRulesFor: aCollector [
+	(aCollector respondsTo: #ignoreNoImplementorErrorsForMessageSend:)
+		ifTrue: [
+			aCollector ignoreNoImplementorErrorsForMessageSend: #applicationFor:.
+			aCollector ignoreNoImplementorErrorsForMessageSend: #applicationFor:is: ]
 ]
 
 { #category : 'lifecycle' }
@@ -77,10 +77,10 @@ PlbMethodOverrideSupport class >> startUp [
 	self installOverrideMethods
 ]
 
-{ #category : 'packaging' }
-PlbMethodOverrideSupport class >> packagingRulesFor: aCollector [
-	(aCollector respondsTo: #ignoreNoImplementorErrorsForMessageSend:)
-		ifTrue: [
-			aCollector ignoreNoImplementorErrorsForMessageSend: #applicationFor:.
-			aCollector ignoreNoImplementorErrorsForMessageSend: #applicationFor:is: ]
+{ #category : 'actions' }
+PlbMethodOverrideSupport class >> uninstallOverrideMethods [
+	| old |
+	old := Smalltalk globals at: #MethodOverrideManager ifAbsent: [ nil ].
+	Smalltalk globals at: #MethodOverrideManager put: nil.
+	old ifNotNil: [ old refreshAllOverrides ].
 ]

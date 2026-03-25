@@ -21,13 +21,8 @@ GbsNameConnector class >> stName: aClientName gsName: aServerName [
 ]
 
 { #category : 'accessing' }
-GbsNameConnector >> stName [
-	^ stName ifNil: [ '' ]
-]
-
-{ #category : 'accessing' }
-GbsNameConnector >> stName: aString [
-	stName := aString ifNil: [ '' ] ifNotNil: [ aString asString ]
+GbsNameConnector >> gsDescription [
+	^ self gsName
 ]
 
 { #category : 'accessing' }
@@ -46,6 +41,11 @@ GbsNameConnector >> stDescription [
 ]
 
 { #category : 'accessing' }
-GbsNameConnector >> gsDescription [
-	^ self gsName
+GbsNameConnector >> stName [
+	^ stName ifNil: [ '' ]
+]
+
+{ #category : 'accessing' }
+GbsNameConnector >> stName: aString [
+	stName := aString ifNil: [ '' ] ifNotNil: [ aString asString ]
 ]

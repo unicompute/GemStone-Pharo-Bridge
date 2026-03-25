@@ -34,11 +34,66 @@ CstMessageHandler class >> selectCorrectBehavior [
 	^ candidates last
 ]
 
+{ #category : 'prompts' }
+CstMessageHandler >> choose: promptString fromList: list values: values lines: lines cancel: cancelBlock [
+	| index |
+	index := UIManager default chooseFrom: list title: promptString.
+	index = 0 ifTrue: [ ^ cancelBlock value ].
+	^ values at: index ifAbsent: [ cancelBlock value ]
+]
+
+{ #category : 'prompts' }
+CstMessageHandler >> choose: multilineMessage labels: labelArray values: returnValueArray default: defaultValue [
+	| index |
+	index := UIManager default chooseFrom: labelArray title: multilineMessage.
+	index = 0 ifTrue: [ ^ defaultValue ].
+	^ returnValueArray at: index ifAbsent: [ defaultValue ]
+]
+
+{ #category : 'prompts' }
+CstMessageHandler >> confirm: aString [
+	^ UIManager default confirm: aString
+]
+
+{ #category : 'prompts' }
+CstMessageHandler >> confirmOrCancel: aString [
+	| index |
+	index := UIManager default chooseFrom: #('Yes' 'No' 'Cancel') title: aString.
+	index = 1 ifTrue: [ ^ true ].
+	index = 2 ifTrue: [ ^ false ].
+	^ nil
+]
+
+{ #category : 'printing' }
+CstMessageHandler >> convertString: aString [
+	| string |
+	string := self translate: aString.
+	^ string copyReplaceAll: '\' with: String cr
+]
+
+{ #category : 'accessing' }
+CstMessageHandler >> cstMessenger [
+	^ self owner ifNil: [ CstMessageDispatcher singleton ]
+]
+
+{ #category : 'accessing' }
+CstMessageHandler >> formattedTimestamp [
+	| dt |
+	dt := DateAndTime now.
+	^ dt asString
+]
+
 { #category : 'initialization' }
 CstMessageHandler >> initialize [
 	hostSignal := Error.
 	hostPrompter := UIManager default.
 	^ self
+]
+
+{ #category : 'reporting' }
+CstMessageHandler >> notify: aString [
+	UIManager default inform: aString.
+	^ aString
 ]
 
 { #category : 'accessing' }
@@ -50,23 +105,6 @@ CstMessageHandler >> owner [
 CstMessageHandler >> owner: aMessageDispatcher [
 	owner := aMessageDispatcher.
 	^ self
-]
-
-{ #category : 'accessing' }
-CstMessageHandler >> cstMessenger [
-	^ self owner ifNil: [ CstMessageDispatcher singleton ]
-]
-
-{ #category : 'printing' }
-CstMessageHandler >> translate: aString [
-	^ aString
-]
-
-{ #category : 'printing' }
-CstMessageHandler >> convertString: aString [
-	| string |
-	string := self translate: aString.
-	^ string copyReplaceAll: '\' with: String cr
 ]
 
 { #category : 'printing' }
@@ -102,54 +140,18 @@ CstMessageHandler >> reportFailure: aString [
 ]
 
 { #category : 'reporting' }
-CstMessageHandler >> reportWarning: aString [
-	^ self notify: (self cstMessenger print: 'Warning: %1' with: aString)
-]
-
-{ #category : 'reporting' }
 CstMessageHandler >> reportFailures [
 	^ true
 ]
 
 { #category : 'reporting' }
-CstMessageHandler >> notify: aString [
-	UIManager default inform: aString.
-	^ aString
-]
-
-{ #category : 'prompts' }
-CstMessageHandler >> confirm: aString [
-	^ UIManager default confirm: aString
-]
-
-{ #category : 'prompts' }
-CstMessageHandler >> confirmOrCancel: aString [
-	| index |
-	index := UIManager default chooseFrom: #('Yes' 'No' 'Cancel') title: aString.
-	index = 1 ifTrue: [ ^ true ].
-	index = 2 ifTrue: [ ^ false ].
-	^ nil
+CstMessageHandler >> reportWarning: aString [
+	^ self notify: (self cstMessenger print: 'Warning: %1' with: aString)
 ]
 
 { #category : 'prompts' }
 CstMessageHandler >> request: aString default: defaultString [
 	^ UIManager default request: aString initialAnswer: defaultString
-]
-
-{ #category : 'prompts' }
-CstMessageHandler >> choose: promptString fromList: list values: values lines: lines cancel: cancelBlock [
-	| index |
-	index := UIManager default chooseFrom: list title: promptString.
-	index = 0 ifTrue: [ ^ cancelBlock value ].
-	^ values at: index ifAbsent: [ cancelBlock value ]
-]
-
-{ #category : 'prompts' }
-CstMessageHandler >> choose: multilineMessage labels: labelArray values: returnValueArray default: defaultValue [
-	| index |
-	index := UIManager default chooseFrom: labelArray title: multilineMessage.
-	index = 0 ifTrue: [ ^ defaultValue ].
-	^ returnValueArray at: index ifAbsent: [ defaultValue ]
 ]
 
 { #category : 'prompts' }
@@ -166,9 +168,7 @@ CstMessageHandler >> transcript [
 	^ self owner basicTranscript
 ]
 
-{ #category : 'accessing' }
-CstMessageHandler >> formattedTimestamp [
-	| dt |
-	dt := DateAndTime now.
-	^ dt asString
+{ #category : 'printing' }
+CstMessageHandler >> translate: aString [
+	^ aString
 ]

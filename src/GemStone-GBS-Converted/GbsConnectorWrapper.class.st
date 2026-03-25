@@ -28,12 +28,26 @@ GbsConnectorWrapper class >> connector: aGbsConnector [
 		yourself
 ]
 
-{ #category : 'initialization' }
-GbsConnectorWrapper >> initialize [
-	super initialize.
-	postConnectAction := 'none'.
-	invalidPostConnectActions := #().
-	connectionStateBySession := Dictionary new
+{ #category : 'accessing' }
+GbsConnectorWrapper >> clientName [
+	(connector notNil and: [ connector respondsTo: #stDescription ]) ifTrue: [
+		^ connector stDescription asString ].
+	^ clientName ifNil: [ '' ]
+]
+
+{ #category : 'accessing' }
+GbsConnectorWrapper >> clientName: aString [
+	clientName := aString ifNil: [ '' ] ifNotNil: [ aString asString ]
+]
+
+{ #category : 'actions' }
+GbsConnectorWrapper >> connectInSession: aSession ifFail: oneArgBlock [
+	| key |
+	(connector notNil and: [ connector respondsTo: #connectInSession:ifFail: ]) ifTrue: [
+		^ connector connectInSession: aSession ifFail: oneArgBlock ].
+	key := self sessionKeyFor: aSession.
+	connectionStateBySession at: key put: true.
+	^ true
 ]
 
 { #category : 'accessing' }
@@ -48,25 +62,6 @@ GbsConnectorWrapper >> connector: aGbsConnector [
 		self clientName: connector stDescription ].
 	(connector notNil and: [ connector respondsTo: #gsDescription ]) ifTrue: [
 		self serverName: connector gsDescription ].
-]
-
-{ #category : 'accessing' }
-GbsConnectorWrapper >> clientName [
-	(connector notNil and: [ connector respondsTo: #stDescription ]) ifTrue: [
-		^ connector stDescription asString ].
-	^ clientName ifNil: [ '' ]
-]
-
-{ #category : 'accessing' }
-GbsConnectorWrapper >> clientName: aString [
-	clientName := aString ifNil: [ '' ] ifNotNil: [ aString asString ]
-]
-
-{ #category : 'accessing' }
-GbsConnectorWrapper >> serverName [
-	(connector notNil and: [ connector respondsTo: #gsDescription ]) ifTrue: [
-		^ connector gsDescription asString ].
-	^ serverName ifNil: [ '' ]
 ]
 
 { #category : 'accessing' }
@@ -86,23 +81,29 @@ GbsConnectorWrapper >> connectorType [
 	^ 'Connector'
 ]
 
-{ #category : 'accessing' }
-GbsConnectorWrapper >> serverName: aString [
-	serverName := aString ifNil: [ '' ] ifNotNil: [ aString asString ]
+{ #category : 'testing' }
+GbsConnectorWrapper >> connectsAssociation [
+	(connector notNil and: [ connector respondsTo: #connectsAssociation ]) ifTrue: [
+		^ connector connectsAssociation ].
+	^ false
 ]
 
-{ #category : 'accessing' }
-GbsConnectorWrapper >> postConnectAction [
-	(connector notNil and: [ connector respondsTo: #postConnectAction ]) ifTrue: [
-		^ connector postConnectAction ].
-	^ postConnectAction ifNil: [ 'none' ]
+{ #category : 'actions' }
+GbsConnectorWrapper >> disconnectInSession: aSession [
+	| key |
+	(connector notNil and: [ connector respondsTo: #disconnectInSession: ]) ifTrue: [
+		^ connector disconnectInSession: aSession ].
+	key := self sessionKeyFor: aSession.
+	connectionStateBySession at: key put: false.
+	^ true
 ]
 
-{ #category : 'accessing' }
-GbsConnectorWrapper >> postConnectAction: anActionString [
-	(connector notNil and: [ connector respondsTo: #postConnectAction: ]) ifTrue: [
-		^ connector postConnectAction: anActionString ].
-	postConnectAction := anActionString ifNil: [ 'none' ] ifNotNil: [ anActionString asString ]
+{ #category : 'initialization' }
+GbsConnectorWrapper >> initialize [
+	super initialize.
+	postConnectAction := 'none'.
+	invalidPostConnectActions := #().
+	connectionStateBySession := Dictionary new
 ]
 
 { #category : 'accessing' }
@@ -119,24 +120,13 @@ GbsConnectorWrapper >> invalidPostConnectActions: aCollection [
 	invalidPostConnectActions := ((aCollection ifNil: [ #() ]) collect: [ :each | each asString asLowercase ]) asArray
 ]
 
-{ #category : 'actions' }
-GbsConnectorWrapper >> connectInSession: aSession ifFail: oneArgBlock [
+{ #category : 'testing' }
+GbsConnectorWrapper >> isConnectedForSessionKey: sessionKey [
 	| key |
-	(connector notNil and: [ connector respondsTo: #connectInSession:ifFail: ]) ifTrue: [
-		^ connector connectInSession: aSession ifFail: oneArgBlock ].
-	key := self sessionKeyFor: aSession.
-	connectionStateBySession at: key put: true.
-	^ true
-]
-
-{ #category : 'actions' }
-GbsConnectorWrapper >> disconnectInSession: aSession [
-	| key |
-	(connector notNil and: [ connector respondsTo: #disconnectInSession: ]) ifTrue: [
-		^ connector disconnectInSession: aSession ].
-	key := self sessionKeyFor: aSession.
-	connectionStateBySession at: key put: false.
-	^ true
+	(connector notNil and: [ connector respondsTo: #isConnectedForSessionKey: ]) ifTrue: [
+		^ connector isConnectedForSessionKey: sessionKey ].
+	key := sessionKey ifNil: [ 'default' ] ifNotNil: [ sessionKey asString ].
+	^ connectionStateBySession at: key ifAbsent: [ true ]
 ]
 
 { #category : 'testing' }
@@ -148,44 +138,18 @@ GbsConnectorWrapper >> isConnectedInSession: aSession [
 	^ connectionStateBySession at: key ifAbsent: [ true ]
 ]
 
-{ #category : 'testing' }
-GbsConnectorWrapper >> isConnectedForSessionKey: sessionKey [
-	| key |
-	(connector notNil and: [ connector respondsTo: #isConnectedForSessionKey: ]) ifTrue: [
-		^ connector isConnectedForSessionKey: sessionKey ].
-	key := sessionKey ifNil: [ 'default' ] ifNotNil: [ sessionKey asString ].
-	^ connectionStateBySession at: key ifAbsent: [ true ]
+{ #category : 'accessing' }
+GbsConnectorWrapper >> postConnectAction [
+	(connector notNil and: [ connector respondsTo: #postConnectAction ]) ifTrue: [
+		^ connector postConnectAction ].
+	^ postConnectAction ifNil: [ 'none' ]
 ]
 
-{ #category : 'actions' }
-GbsConnectorWrapper >> setConnected: aBoolean forSessionKey: sessionKey [
-	| key |
-	(connector notNil and: [ connector respondsTo: #setConnected:forSessionKey: ]) ifTrue: [
-		^ connector setConnected: aBoolean forSessionKey: sessionKey ].
-	key := sessionKey ifNil: [ 'default' ] ifNotNil: [ sessionKey asString ].
-	connectionStateBySession at: key put: (aBoolean == true).
-	^ aBoolean == true
-]
-
-{ #category : 'testing' }
-GbsConnectorWrapper >> connectsAssociation [
-	(connector notNil and: [ connector respondsTo: #connectsAssociation ]) ifTrue: [
-		^ connector connectsAssociation ].
-	^ false
-]
-
-{ #category : 'resolving' }
-GbsConnectorWrapper >> resolveSTObjIfFail: failBlock [
-	(connector notNil and: [ connector respondsTo: #resolveSTObjIfFail: ]) ifTrue: [
-		^ connector resolveSTObjIfFail: failBlock ].
-	^ failBlock value
-]
-
-{ #category : 'resolving' }
-GbsConnectorWrapper >> resolveGSObjInSession: aSession ifFail: failBlock [
-	(connector notNil and: [ connector respondsTo: #resolveGSObjInSession:ifFail: ]) ifTrue: [
-		^ connector resolveGSObjInSession: aSession ifFail: failBlock ].
-	^ failBlock value
+{ #category : 'accessing' }
+GbsConnectorWrapper >> postConnectAction: anActionString [
+	(connector notNil and: [ connector respondsTo: #postConnectAction: ]) ifTrue: [
+		^ connector postConnectAction: anActionString ].
+	postConnectAction := anActionString ifNil: [ 'none' ] ifNotNil: [ anActionString asString ]
 ]
 
 { #category : 'printing' }
@@ -195,6 +159,32 @@ GbsConnectorWrapper >> printOn: aStream [
 		nextPutAll: '(';
 		nextPutAll: (connector ifNil: [ self clientName, ' -> ', self serverName ] ifNotNil: [ connector printString ]);
 		nextPutAll: ')'
+]
+
+{ #category : 'resolving' }
+GbsConnectorWrapper >> resolveGSObjInSession: aSession ifFail: failBlock [
+	(connector notNil and: [ connector respondsTo: #resolveGSObjInSession:ifFail: ]) ifTrue: [
+		^ connector resolveGSObjInSession: aSession ifFail: failBlock ].
+	^ failBlock value
+]
+
+{ #category : 'resolving' }
+GbsConnectorWrapper >> resolveSTObjIfFail: failBlock [
+	(connector notNil and: [ connector respondsTo: #resolveSTObjIfFail: ]) ifTrue: [
+		^ connector resolveSTObjIfFail: failBlock ].
+	^ failBlock value
+]
+
+{ #category : 'accessing' }
+GbsConnectorWrapper >> serverName [
+	(connector notNil and: [ connector respondsTo: #gsDescription ]) ifTrue: [
+		^ connector gsDescription asString ].
+	^ serverName ifNil: [ '' ]
+]
+
+{ #category : 'accessing' }
+GbsConnectorWrapper >> serverName: aString [
+	serverName := aString ifNil: [ '' ] ifNotNil: [ aString asString ]
 ]
 
 { #category : 'private' }
@@ -209,4 +199,14 @@ GbsConnectorWrapper >> sessionKeyFor: aSession [
 	^ (user ifNil: [ 'unknown-user' ] ifNotNil: [ user asString ]),
 		'@',
 		(stone ifNil: [ 'unknown-stone' ] ifNotNil: [ stone asString ])
+]
+
+{ #category : 'actions' }
+GbsConnectorWrapper >> setConnected: aBoolean forSessionKey: sessionKey [
+	| key |
+	(connector notNil and: [ connector respondsTo: #setConnected:forSessionKey: ]) ifTrue: [
+		^ connector setConnected: aBoolean forSessionKey: sessionKey ].
+	key := sessionKey ifNil: [ 'default' ] ifNotNil: [ sessionKey asString ].
+	connectionStateBySession at: key put: (aBoolean == true).
+	^ aBoolean == true
 ]

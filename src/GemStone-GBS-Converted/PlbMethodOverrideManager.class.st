@@ -17,63 +17,6 @@ PlbMethodOverrideManager class >> debugging: aBoolean [
 ]
 
 { #category : 'private' }
-PlbMethodOverrideManager >> initializeDebugging: aBoolean [
-	debugging := aBoolean == true
-]
-
-{ #category : 'private' }
-PlbMethodOverrideManager >> isDebugging [
-	^ debugging == true
-]
-
-{ #category : 'private' }
-PlbMethodOverrideManager >> debugLog: aString [
-	self isDebugging ifFalse: [ ^ self ].
-	Transcript cr; show: aString
-]
-
-{ #category : 'private' }
-PlbMethodOverrideManager >> overrideSelectorPrefix [
-	^ 'override_'
-]
-
-{ #category : 'private' }
-PlbMethodOverrideManager >> overriddenSelectorPrefix [
-	^ 'overridden_'
-]
-
-{ #category : 'private' }
-PlbMethodOverrideManager >> is: aSelector prefixedWith: prefixString [
-	| s |
-	s := aSelector asString.
-	^ s beginsWith: prefixString
-]
-
-{ #category : 'private' }
-PlbMethodOverrideManager >> removePrefixFrom: aSelector [
-	| s |
-	s := aSelector asString.
-	(self is: s prefixedWith: self overrideSelectorPrefix)
-		ifTrue: [
-			^ (s allButFirst: self overrideSelectorPrefix size) asSymbol ].
-	(self is: s prefixedWith: self overriddenSelectorPrefix)
-		ifTrue: [
-			^ (s allButFirst: self overriddenSelectorPrefix size) asSymbol ].
-	^ aSelector
-]
-
-{ #category : 'private' }
-PlbMethodOverrideManager >> isCurrentlyInstalling [
-	^ currentlyInstalling == true
-]
-
-{ #category : 'private' }
-PlbMethodOverrideManager >> beInstallingDuring: aBlock [
-	currentlyInstalling := true.
-	^ aBlock ensure: [ currentlyInstalling := false ]
-]
-
-{ #category : 'private' }
 PlbMethodOverrideManager >> allOverrideMethods [
 	| answer |
 	answer := OrderedCollection new.
@@ -98,8 +41,29 @@ PlbMethodOverrideManager >> allOverrideMethodsFor: aClass [
 ]
 
 { #category : 'private' }
-PlbMethodOverrideManager >> isPermittedToInstall [
-	^ (Smalltalk globals at: #MethodOverrideManager ifAbsent: [ nil ]) notNil
+PlbMethodOverrideManager >> beInstallingDuring: aBlock [
+	currentlyInstalling := true.
+	^ aBlock ensure: [ currentlyInstalling := false ]
+]
+
+{ #category : 'actions' }
+PlbMethodOverrideManager >> class: aClass changedSelector: selector [
+	self isCurrentlyInstalling ifTrue: [ ^ self ].
+	(self is: selector prefixedWith: self overriddenSelectorPrefix) ifTrue: [ ^ self ].
+	(self is: selector prefixedWith: self overrideSelectorPrefix)
+		ifTrue: [ self refreshOverriddenForClass: aClass selector: (self removePrefixFrom: selector) ]
+		ifFalse: [ self installOverrideClass: aClass selector: selector ]
+]
+
+{ #category : 'private' }
+PlbMethodOverrideManager >> debugLog: aString [
+	self isDebugging ifFalse: [ ^ self ].
+	Transcript cr; show: aString
+]
+
+{ #category : 'private' }
+PlbMethodOverrideManager >> initializeDebugging: aBoolean [
+	debugging := aBoolean == true
 ]
 
 { #category : 'actions' }
@@ -126,20 +90,36 @@ PlbMethodOverrideManager >> installOverrideClass: aClass selector: normalSelecto
 	self debugLog: 'Installed override for ', aClass name, '>>', normalSelector asString
 ]
 
-{ #category : 'actions' }
-PlbMethodOverrideManager >> refreshOverriddenForClass: aClass selector: normalSelector [
-	| overriddenSelector overriddenSource category |
-	overriddenSelector := (self overriddenSelectorPrefix, normalSelector asString) asSymbol.
-	(aClass includesSelector: overriddenSelector) ifTrue: [
-		overriddenSource := [ aClass sourceCodeAt: overriddenSelector ] on: Error do: [ '' ].
-		category := [ aClass organization categoryOfElement: normalSelector ] on: Error do: [ 'as yet unclassified' ].
-		overriddenSource isEmpty ifFalse: [
-			self beInstallingDuring: [
-				aClass
-					compile: (self source: overriddenSource droppingSelectorPrefix: self overriddenSelectorPrefix)
-					classified: category.
-				[ aClass removeSelector: overriddenSelector ] on: Error do: [ :ex | ] ] ] ].
-	^ self installOverrideClass: aClass selector: normalSelector
+{ #category : 'private' }
+PlbMethodOverrideManager >> is: aSelector prefixedWith: prefixString [
+	| s |
+	s := aSelector asString.
+	^ s beginsWith: prefixString
+]
+
+{ #category : 'private' }
+PlbMethodOverrideManager >> isCurrentlyInstalling [
+	^ currentlyInstalling == true
+]
+
+{ #category : 'private' }
+PlbMethodOverrideManager >> isDebugging [
+	^ debugging == true
+]
+
+{ #category : 'private' }
+PlbMethodOverrideManager >> isPermittedToInstall [
+	^ (Smalltalk globals at: #MethodOverrideManager ifAbsent: [ nil ]) notNil
+]
+
+{ #category : 'private' }
+PlbMethodOverrideManager >> overriddenSelectorPrefix [
+	^ 'overridden_'
+]
+
+{ #category : 'private' }
+PlbMethodOverrideManager >> overrideSelectorPrefix [
+	^ 'override_'
 ]
 
 { #category : 'actions' }
@@ -159,12 +139,32 @@ PlbMethodOverrideManager >> refreshAllOverridesFor: aClass [
 ]
 
 { #category : 'actions' }
-PlbMethodOverrideManager >> class: aClass changedSelector: selector [
-	self isCurrentlyInstalling ifTrue: [ ^ self ].
-	(self is: selector prefixedWith: self overriddenSelectorPrefix) ifTrue: [ ^ self ].
-	(self is: selector prefixedWith: self overrideSelectorPrefix)
-		ifTrue: [ self refreshOverriddenForClass: aClass selector: (self removePrefixFrom: selector) ]
-		ifFalse: [ self installOverrideClass: aClass selector: selector ]
+PlbMethodOverrideManager >> refreshOverriddenForClass: aClass selector: normalSelector [
+	| overriddenSelector overriddenSource category |
+	overriddenSelector := (self overriddenSelectorPrefix, normalSelector asString) asSymbol.
+	(aClass includesSelector: overriddenSelector) ifTrue: [
+		overriddenSource := [ aClass sourceCodeAt: overriddenSelector ] on: Error do: [ '' ].
+		category := [ aClass organization categoryOfElement: normalSelector ] on: Error do: [ 'as yet unclassified' ].
+		overriddenSource isEmpty ifFalse: [
+			self beInstallingDuring: [
+				aClass
+					compile: (self source: overriddenSource droppingSelectorPrefix: self overriddenSelectorPrefix)
+					classified: category.
+				[ aClass removeSelector: overriddenSelector ] on: Error do: [ :ex | ] ] ] ].
+	^ self installOverrideClass: aClass selector: normalSelector
+]
+
+{ #category : 'private' }
+PlbMethodOverrideManager >> removePrefixFrom: aSelector [
+	| s |
+	s := aSelector asString.
+	(self is: s prefixedWith: self overrideSelectorPrefix)
+		ifTrue: [
+			^ (s allButFirst: self overrideSelectorPrefix size) asSymbol ].
+	(self is: s prefixedWith: self overriddenSelectorPrefix)
+		ifTrue: [
+			^ (s allButFirst: self overriddenSelectorPrefix size) asSymbol ].
+	^ aSelector
 ]
 
 { #category : 'private' }

@@ -30,16 +30,16 @@ GbsServerInterface >> apiGciAbort [
 	^ self ffiCall: #(void GciAbort()) module: libraryPath
 ]
 
-{ #category : 'api' }
-GbsServerInterface >> apiGciAbortCurrent [
-	^ self ffiCall: #(int GciAbort()) module: libraryPath options: #( + optNonThreaded )
-]
-
 { #category : 'api - session' }
 GbsServerInterface >> apiGciAbort: aSessionId [
     <primitive: #primitiveNativeCall error: errorCode>
     ^ self ffiCall: #(void GciAbort(uint64 aSessionId))
         module: libraryPath
+]
+
+{ #category : 'api' }
+GbsServerInterface >> apiGciAbortCurrent [
+	^ self ffiCall: #(int GciAbort()) module: libraryPath options: #( + optNonThreaded )
 ]
 
 { #category : 'api' }
@@ -245,15 +245,15 @@ GbsServerInterface >> apiGciLoginEx: gemService user: userId pass: password [
 GbsServerInterface >> apiGciLogout [ ^ self ffiCall: #(int GciLogout())
 ]
 
-{ #category : 'api' }
-GbsServerInterface >> apiGciPollForSignal [
-	^ self ffiCall: #(int GciPollForSignal()) module: libraryPath options: #( + optNonThreaded )
-]
-
 { #category : 'api - login' }
 GbsServerInterface >> apiGciLogout: sessionId [
     <primitive: #primitiveNativeCall error: errorCode>
     ^ self ffiCall: #(bool GciLogout(int sessionId))
+]
+
+{ #category : 'api' }
+GbsServerInterface >> apiGciPollForSignal [
+	^ self ffiCall: #(int GciPollForSignal()) module: libraryPath options: #( + optNonThreaded )
 ]
 
 { #category : 'api' }

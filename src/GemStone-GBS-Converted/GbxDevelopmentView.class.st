@@ -8,15 +8,15 @@ Class {
 	#package : 'GemStone-GBS-Converted'
 }
 
+{ #category : 'accessing' }
+GbxDevelopmentView >> decorateWindowTitle [
+	self windowTitle: self windowTitleString
+]
+
 { #category : 'initialization' }
 GbxDevelopmentView >> finalInitialize [
 	self decorateWindowTitle.
 	^ self
-]
-
-{ #category : 'accessing' }
-GbxDevelopmentView >> decorateWindowTitle [
-	self windowTitle: self windowTitleString
 ]
 
 { #category : 'accessing' }

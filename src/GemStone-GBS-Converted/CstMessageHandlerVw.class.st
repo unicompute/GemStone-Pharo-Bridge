@@ -12,41 +12,6 @@ CstMessageHandlerVw class >> mightApplyForImage [
 	^ sysVersion includesSubstring: 'VisualWorks'
 ]
 
-{ #category : 'initialization' }
-CstMessageHandlerVw >> initialize [
-	super initialize.
-	hostSignal := Error.
-	hostPrompter := UIManager default.
-	^ self
-]
-
-{ #category : 'accessing' }
-CstMessageHandlerVw >> hostErrorSignal [
-	^ hostSignal ifNil: [ Error ]
-]
-
-{ #category : 'accessing' }
-CstMessageHandlerVw >> prompter [
-	^ hostPrompter
-]
-
-{ #category : 'printing' }
-CstMessageHandlerVw >> convertString: aString [
-	^ (super convertString: aString) copyReplaceAll: '\' with: String cr
-]
-
-{ #category : 'reporting' }
-CstMessageHandlerVw >> reportComment: aString [
-	self reportCommentAdd: String cr, aString.
-	^ aString
-]
-
-{ #category : 'prompts' }
-CstMessageHandlerVw >> request: message default: initialAnswer [
-	^ (self prompter request: message initialAnswer: initialAnswer)
-		ifNil: [ super request: message default: initialAnswer ]
-]
-
 { #category : 'prompts' }
 CstMessageHandlerVw >> choose: promptString fromList: list values: values lines: lines cancel: cancelBlock [
 	| index |
@@ -77,29 +42,14 @@ CstMessageHandlerVw >> confirmOrCancel: aString [
 		default: nil
 ]
 
-{ #category : 'reporting' }
-CstMessageHandlerVw >> notify: aString [
-	(self uiManager respondsTo: #inform:)
-		ifTrue: [ self uiManager inform: aString ].
-	^ aString
+{ #category : 'printing' }
+CstMessageHandlerVw >> convertString: aString [
+	^ (super convertString: aString) copyReplaceAll: '\' with: String cr
 ]
 
-{ #category : 'prompts' }
-CstMessageHandlerVw >> requestFileName: prompt default: default version: versionType ifFail: failBlock [
-	| filePath exists |
-	filePath := self openFileSelectionForPrompt: prompt.
-	filePath ifNil: [
-		filePath := self uiRequest: prompt initialAnswer: default ].
-	(filePath isNil or: [ filePath isEmpty ]) ifTrue: [ ^ failBlock value ].
-	exists := self fileExistsAtPath: filePath.
-	(versionType = #new and: [ exists ]) ifTrue: [
-		(self uiConfirm: filePath, ' exists - use anyway?')
-			ifFalse: [ ^ failBlock value ] ].
-	(versionType = #old and: [ exists not ]) ifTrue: [
-		(self uiConfirm: filePath, ' does not exist - try again?')
-			ifTrue: [ ^ self requestFileName: prompt default: default version: versionType ifFail: failBlock ]
-			ifFalse: [ ^ failBlock value ] ].
-	^ filePath
+{ #category : 'private-ui' }
+CstMessageHandlerVw >> fileExistsAtPath: pathString [
+	^ [ pathString asFileReference exists ] on: Error do: [ false ]
 ]
 
 { #category : 'accessing' }
@@ -128,24 +78,24 @@ CstMessageHandlerVw >> formattedTimestamp [
 			nextPutAll: (pad value: ts nanoSecond // 1000000 value: 3) ]
 ]
 
-{ #category : 'private-ui' }
-CstMessageHandlerVw >> uiManager [
-	^ UIManager default
+{ #category : 'accessing' }
+CstMessageHandlerVw >> hostErrorSignal [
+	^ hostSignal ifNil: [ Error ]
 ]
 
-{ #category : 'private-ui' }
-CstMessageHandlerVw >> uiChooseFrom: labels title: aTitle [
-	^ self uiManager chooseFrom: labels title: aTitle
+{ #category : 'initialization' }
+CstMessageHandlerVw >> initialize [
+	super initialize.
+	hostSignal := Error.
+	hostPrompter := UIManager default.
+	^ self
 ]
 
-{ #category : 'private-ui' }
-CstMessageHandlerVw >> uiConfirm: aString [
-	^ self uiManager confirm: aString
-]
-
-{ #category : 'private-ui' }
-CstMessageHandlerVw >> uiRequest: prompt initialAnswer: defaultString [
-	^ self uiManager request: prompt initialAnswer: defaultString
+{ #category : 'reporting' }
+CstMessageHandlerVw >> notify: aString [
+	(self uiManager respondsTo: #inform:)
+		ifTrue: [ self uiManager inform: aString ].
+	^ aString
 ]
 
 { #category : 'private-ui' }
@@ -166,11 +116,6 @@ CstMessageHandlerVw >> openFileSelectionForPrompt: prompt [
 	^ selected asString
 ]
 
-{ #category : 'private-ui' }
-CstMessageHandlerVw >> fileExistsAtPath: pathString [
-	^ [ pathString asFileReference exists ] on: Error do: [ false ]
-]
-
 { #category : 'printing' }
 CstMessageHandlerVw >> printArgument: anArg on: aStream [
 	[ anArg cstArgumentPrintOn: aStream ]
@@ -178,4 +123,59 @@ CstMessageHandlerVw >> printArgument: anArg on: aStream [
 		do: [ :ex |
 			aStream nextPutAll: '<#printOn: Error>'.
 			ex return: nil ]
+]
+
+{ #category : 'accessing' }
+CstMessageHandlerVw >> prompter [
+	^ hostPrompter
+]
+
+{ #category : 'reporting' }
+CstMessageHandlerVw >> reportComment: aString [
+	self reportCommentAdd: String cr, aString.
+	^ aString
+]
+
+{ #category : 'prompts' }
+CstMessageHandlerVw >> request: message default: initialAnswer [
+	^ (self prompter request: message initialAnswer: initialAnswer)
+		ifNil: [ super request: message default: initialAnswer ]
+]
+
+{ #category : 'prompts' }
+CstMessageHandlerVw >> requestFileName: prompt default: default version: versionType ifFail: failBlock [
+	| filePath exists |
+	filePath := self openFileSelectionForPrompt: prompt.
+	filePath ifNil: [
+		filePath := self uiRequest: prompt initialAnswer: default ].
+	(filePath isNil or: [ filePath isEmpty ]) ifTrue: [ ^ failBlock value ].
+	exists := self fileExistsAtPath: filePath.
+	(versionType = #new and: [ exists ]) ifTrue: [
+		(self uiConfirm: filePath, ' exists - use anyway?')
+			ifFalse: [ ^ failBlock value ] ].
+	(versionType = #old and: [ exists not ]) ifTrue: [
+		(self uiConfirm: filePath, ' does not exist - try again?')
+			ifTrue: [ ^ self requestFileName: prompt default: default version: versionType ifFail: failBlock ]
+			ifFalse: [ ^ failBlock value ] ].
+	^ filePath
+]
+
+{ #category : 'private-ui' }
+CstMessageHandlerVw >> uiChooseFrom: labels title: aTitle [
+	^ self uiManager chooseFrom: labels title: aTitle
+]
+
+{ #category : 'private-ui' }
+CstMessageHandlerVw >> uiConfirm: aString [
+	^ self uiManager confirm: aString
+]
+
+{ #category : 'private-ui' }
+CstMessageHandlerVw >> uiManager [
+	^ UIManager default
+]
+
+{ #category : 'private-ui' }
+CstMessageHandlerVw >> uiRequest: prompt initialAnswer: defaultString [
+	^ self uiManager request: prompt initialAnswer: defaultString
 ]

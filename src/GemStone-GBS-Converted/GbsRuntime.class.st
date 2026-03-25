@@ -6,42 +6,16 @@ Class {
 }
 
 { #category : 'lifecycle' }
-GbsRuntime class >> gbxResolve: aSymbol [
-	^ Smalltalk globals at: aSymbol ifAbsent: [ nil ]
-]
-
-{ #category : 'lifecycle' }
-GbsRuntime class >> loaded [
-	self initializeClasses.
-	((self gbxResolve: #GbsSessionManager) respondsTo: #initializeFastConnectors)
-		ifTrue: [ (self gbxResolve: #GbsSessionManager) initializeFastConnectors ].
-]
-
-{ #category : 'lifecycle' }
-GbsRuntime class >> removing [
-	| mgr |
-	mgr := self gbxResolve: #GbsSessionManager.
-	(mgr notNil and: [ mgr respondsTo: #gbsRemoving ])
-		ifTrue: [ mgr gbsRemoving ].
-]
-
-{ #category : 'lifecycle' }
-GbsRuntime class >> startUp [
-	| mgr |
-	mgr := self gbxResolve: #GbsSessionManager.
-	(mgr notNil and: [ mgr respondsTo: #gbsImageStartup ])
-		ifTrue: [ mgr gbsImageStartup ]
-		ifFalse: [
-			(mgr notNil and: [ mgr respondsTo: #initializeFastConnectors ])
-				ifTrue: [ mgr initializeFastConnectors ] ].
-]
-
-{ #category : 'lifecycle' }
 GbsRuntime class >> exiting [
 	| gbsm |
 	gbsm := self gbxResolve: #GBSM.
 	(gbsm notNil and: [ gbsm respondsTo: #aboutToQuit ])
 		ifTrue: [ gbsm aboutToQuit ].
+]
+
+{ #category : 'lifecycle' }
+GbsRuntime class >> gbxResolve: aSymbol [
+	^ Smalltalk globals at: aSymbol ifAbsent: [ nil ]
 ]
 
 { #category : 'lifecycle' }
@@ -59,6 +33,13 @@ GbsRuntime class >> initializeClasses [
 					on: Error
 					do: [ :ex | ] ] ].
 	^ initialized
+]
+
+{ #category : 'lifecycle' }
+GbsRuntime class >> loaded [
+	self initializeClasses.
+	((self gbxResolve: #GbsSessionManager) respondsTo: #initializeFastConnectors)
+		ifTrue: [ (self gbxResolve: #GbsSessionManager) initializeFastConnectors ].
 ]
 
 { #category : 'lifecycle' }
@@ -124,6 +105,14 @@ GbsRuntime class >> packagerIncludeSelectors [
 ]
 
 { #category : 'lifecycle' }
+GbsRuntime class >> removing [
+	| mgr |
+	mgr := self gbxResolve: #GbsSessionManager.
+	(mgr notNil and: [ mgr respondsTo: #gbsRemoving ])
+		ifTrue: [ mgr gbsRemoving ].
+]
+
+{ #category : 'lifecycle' }
 GbsRuntime class >> reportInstances [
 	| classes total |
 	total := 0.
@@ -137,4 +126,15 @@ GbsRuntime class >> reportInstances [
 		count := [ each allInstances size ] on: Error do: [ 0 ].
 		count > 0 ifTrue: [ total := total + count ] ].
 	^ total
+]
+
+{ #category : 'lifecycle' }
+GbsRuntime class >> startUp [
+	| mgr |
+	mgr := self gbxResolve: #GbsSessionManager.
+	(mgr notNil and: [ mgr respondsTo: #gbsImageStartup ])
+		ifTrue: [ mgr gbsImageStartup ]
+		ifFalse: [
+			(mgr notNil and: [ mgr respondsTo: #initializeFastConnectors ])
+				ifTrue: [ mgr initializeFastConnectors ] ].
 ]

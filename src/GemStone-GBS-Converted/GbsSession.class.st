@@ -250,15 +250,6 @@ GbsSession >> executeAndFetch: script context: contextOop [
 	^ interface fetchString: stringOop.
 ]
 
-{ #category : 'execution' }
-GbsSession >> validateReadyForExecution: script [
-	(script isString and: [ script isEmpty not ]) ifFalse: [
-		GbsError signal: 'Cannot execute empty script.' ].
-
-	self isLoggedIn ifFalse: [
-		GbsError signal: 'Not logged in to GemStone.' ].
-]
-
 { #category : 'error handling' }
 GbsSession >> fetchLastError [
 	| errStruct success errorMessage |
@@ -659,4 +650,13 @@ GbsSession >> stopPolling [
     pollingProcess ifNotNil: [ 
         pollingProcess terminate.
         pollingProcess := nil ].
+]
+
+{ #category : 'execution' }
+GbsSession >> validateReadyForExecution: script [
+	(script isString and: [ script isEmpty not ]) ifFalse: [
+		GbsError signal: 'Cannot execute empty script.' ].
+
+	self isLoggedIn ifFalse: [
+		GbsError signal: 'Not logged in to GemStone.' ].
 ]

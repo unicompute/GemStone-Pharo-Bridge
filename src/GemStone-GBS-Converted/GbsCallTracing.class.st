@@ -14,6 +14,12 @@ GbsCallTracing class >> isCallTracingActive [
 	^ Logger isNotNil
 ]
 
+{ #category : 'logging' }
+GbsCallTracing class >> logMessage: aString [
+	"Log a message to the current logger"
+	Logger ifNotNil: [ Logger logMessage: aString ]
+]
+
 { #category : 'accessing' }
 GbsCallTracing class >> logger [
 	^ Logger
@@ -26,12 +32,6 @@ GbsCallTracing class >> startCallTracingToFileNamed: filename [
 	Logger := GbxFileLogger usingFileNamed: filename.
 	Logger startLogging.
 	^ Logger
-]
-
-{ #category : 'logging' }
-GbsCallTracing class >> logMessage: aString [
-	"Log a message to the current logger"
-	Logger ifNotNil: [ Logger logMessage: aString ]
 ]
 
 { #category : 'logging' }

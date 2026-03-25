@@ -21,42 +21,13 @@ GbxContextInspector class >> openOn: anObject service: aService [
 	^ inspector
 ]
 
-{ #category : 'accessing' }
-GbxContextInspector >> object [
-	^ object
-]
-
-{ #category : 'accessing' }
-GbxContextInspector >> object: anObject [
-	object := anObject
-]
-
-{ #category : 'accessing' }
-GbxContextInspector >> properties [
-	properties ifNil: [ properties := Dictionary new ].
-	^ properties
-]
-
-{ #category : 'accessing' }
-GbxContextInspector >> service [
-	^ service
-]
-
-{ #category : 'accessing' }
-GbxContextInspector >> service: anObject [
-	service := anObject
-]
-
-{ #category : 'accessing' }
-GbxContextInspector >> gbxDoItAgent [
-	"VW parity: execute in the debugger service when available."
-	^ service
-]
-
-{ #category : 'testing' }
-GbxContextInspector >> hasServerContextObject [
-	^ (object respondsTo: #gbxIsServerContext)
-		and: [ object gbxIsServerContext = true ]
+{ #category : 'private-menu messages' }
+GbxContextInspector >> copyFieldNamed: aName [
+	| value |
+	value := self fieldValueAtName: aName.
+	value ifNil: [ ^ false ].
+	Clipboard clipboardText: value asString.
+	^ true
 ]
 
 { #category : 'doIt/accept' }
@@ -64,6 +35,33 @@ GbxContextInspector >> evaluateText: aText from: aController ifFail: failBlock [
 	"VW parity hook: server contexts evaluate remotely in selected frame."
 	self hasServerContextObject ifFalse: [ ^ failBlock value ].
 	^ self gbxServerEvaluateText: aText from: aController ifFail: failBlock
+]
+
+{ #category : 'field list' }
+GbxContextInspector >> fieldList [
+	| temps |
+	self hasServerContextObject ifFalse: [ ^ #() ].
+	temps := [ object tempNamesAndValues ] on: Error do: [ nil ].
+	temps ifNil: [ ^ #() ].
+	(temps respondsTo: #keys) ifTrue: [ ^ temps keys asArray ].
+	(temps respondsTo: #associations) ifTrue: [ ^ (temps associations collect: [ :a | a key ]) asArray ].
+	^ #()
+]
+
+{ #category : 'field list' }
+GbxContextInspector >> fieldValueAtName: aName [
+	| temps |
+	self hasServerContextObject ifFalse: [ ^ nil ].
+	temps := [ object tempNamesAndValues ] on: Error do: [ nil ].
+	temps ifNil: [ ^ nil ].
+	(temps respondsTo: #at:ifAbsent:) ifTrue: [ ^ temps at: aName ifAbsent: [ nil ] ].
+	^ nil
+]
+
+{ #category : 'accessing' }
+GbxContextInspector >> gbxDoItAgent [
+	"VW parity: execute in the debugger service when available."
+	^ service
 ]
 
 { #category : 'doIt/accept' }
@@ -93,32 +91,34 @@ GbxContextInspector >> gbxServerEvaluateText: aString from: aController ifFail: 
 	^ raw
 ]
 
-{ #category : 'field list' }
-GbxContextInspector >> fieldList [
-	| temps |
-	self hasServerContextObject ifFalse: [ ^ #() ].
-	temps := [ object tempNamesAndValues ] on: Error do: [ nil ].
-	temps ifNil: [ ^ #() ].
-	(temps respondsTo: #keys) ifTrue: [ ^ temps keys asArray ].
-	(temps respondsTo: #associations) ifTrue: [ ^ (temps associations collect: [ :a | a key ]) asArray ].
-	^ #()
+{ #category : 'testing' }
+GbxContextInspector >> hasServerContextObject [
+	^ (object respondsTo: #gbxIsServerContext)
+		and: [ object gbxIsServerContext = true ]
 ]
 
-{ #category : 'field list' }
-GbxContextInspector >> fieldValueAtName: aName [
-	| temps |
-	self hasServerContextObject ifFalse: [ ^ nil ].
-	temps := [ object tempNamesAndValues ] on: Error do: [ nil ].
-	temps ifNil: [ ^ nil ].
-	(temps respondsTo: #at:ifAbsent:) ifTrue: [ ^ temps at: aName ifAbsent: [ nil ] ].
-	^ nil
+{ #category : 'accessing' }
+GbxContextInspector >> object [
+	^ object
 ]
 
-{ #category : 'private-menu messages' }
-GbxContextInspector >> copyFieldNamed: aName [
-	| value |
-	value := self fieldValueAtName: aName.
-	value ifNil: [ ^ false ].
-	Clipboard clipboardText: value asString.
-	^ true
+{ #category : 'accessing' }
+GbxContextInspector >> object: anObject [
+	object := anObject
+]
+
+{ #category : 'accessing' }
+GbxContextInspector >> properties [
+	properties ifNil: [ properties := Dictionary new ].
+	^ properties
+]
+
+{ #category : 'accessing' }
+GbxContextInspector >> service [
+	^ service
+]
+
+{ #category : 'accessing' }
+GbxContextInspector >> service: anObject [
+	service := anObject
 ]

@@ -18,6 +18,11 @@ GbxBreakPoint class >> breakPointListFor: aSession [
 	^ BreakPointList ifNil: [ #() ]
 ]
 
+{ #category : 'accessing' }
+GbxBreakPoint class >> reset [
+	BreakPointList := OrderedCollection new
+]
+
 { #category : 'instance creation' }
 GbxBreakPoint class >> selector: aSelector remoteClass: aClassName stepPoint: anInteger [
 	| bp list |
@@ -31,25 +36,10 @@ GbxBreakPoint class >> selector: aSelector remoteClass: aClassName stepPoint: an
 	^ bp
 ]
 
-{ #category : 'accessing' }
-GbxBreakPoint class >> reset [
-	BreakPointList := OrderedCollection new
-]
-
 { #category : 'actions' }
 GbxBreakPoint >> clear [
 	BreakPointList ifNil: [ ^ self ].
 	BreakPointList remove: self ifAbsent: [ ].
-]
-
-{ #category : 'accessing' }
-GbxBreakPoint >> selector [
-	^ selector
-]
-
-{ #category : 'accessing' }
-GbxBreakPoint >> selector: aSelector [
-	selector := aSelector
 ]
 
 { #category : 'accessing' }
@@ -60,6 +50,16 @@ GbxBreakPoint >> remoteClass [
 { #category : 'accessing' }
 GbxBreakPoint >> remoteClass: aClassName [
 	remoteClass := aClassName
+]
+
+{ #category : 'accessing' }
+GbxBreakPoint >> selector [
+	^ selector
+]
+
+{ #category : 'accessing' }
+GbxBreakPoint >> selector: aSelector [
+	selector := aSelector
 ]
 
 { #category : 'accessing' }

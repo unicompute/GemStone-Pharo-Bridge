@@ -8,18 +8,16 @@ Class {
 	#package : 'GemStone-GBS-Converted'
 }
 
+{ #category : 'private-menu messages' }
+GbxStackInspector >> copyField [
+	selectedFieldName ifNil: [ ^ false ].
+	^ self copyFieldNamed: selectedFieldName
+]
+
 { #category : 'field list' }
 GbxStackInspector >> fieldList [
 	self hasServerContextObject ifTrue: [ ^ self serverFieldList ].
 	^ super fieldList
-]
-
-{ #category : 'field list' }
-GbxStackInspector >> serverFieldList [
-	| names |
-	names := [ object argNames ] on: Error do: [ #() ].
-	(self properties at: #tempNames put: names).
-	^ names
 ]
 
 { #category : 'field list' }
@@ -32,10 +30,12 @@ GbxStackInspector >> selectedFieldName: aString [
 	selectedFieldName := aString
 ]
 
-{ #category : 'private-menu messages' }
-GbxStackInspector >> copyField [
-	selectedFieldName ifNil: [ ^ false ].
-	^ self copyFieldNamed: selectedFieldName
+{ #category : 'field list' }
+GbxStackInspector >> serverFieldList [
+	| names |
+	names := [ object argNames ] on: Error do: [ #() ].
+	(self properties at: #tempNames put: names).
+	^ names
 ]
 
 { #category : 'text' }
