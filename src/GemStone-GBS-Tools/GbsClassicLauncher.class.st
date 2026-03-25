@@ -505,7 +505,7 @@ GbsClassicLauncher class >> openGbxFileLogger [
 			logger := GbsCallTracing logger.
 			contents := logger contents.
 			contents ifEmpty: [ contents := '(Log file is empty)'. ].
-			^ UIManager default request: 'File Logger - ' , logger filename initialAnswer: contents
+			^ self showLogContent: contents title: 'File Logger - ' , logger filename
 		].
 
 	"Start new file logging"
@@ -519,9 +519,22 @@ GbsClassicLauncher class >> openGbxFileLogger [
 		logger logMessage: '--- Call tracing started ---'.
 		contents := logger contents.
 		contents ifEmpty: [ contents := '(Log file is empty)'. ].
-		UIManager default request: 'File Logger - ' , logger filename initialAnswer: contents
+		self showLogContent: contents title: 'File Logger - ' , logger filename
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Failed to open File Logger: ', ex messageText ]
+]
+
+{ #category : 'utilities' }
+GbsClassicLauncher class >> showLogContent: contents title: titleString [
+	"Show log content in a proper multi-line text window"
+	| textMorph window |
+	
+	textMorph := TextModelMorph textProvider: (TextModel new contents: contents).
+	
+	window := SystemWindow labelled: titleString.
+	window addMorph: textMorph asMorph part: #center extent: 0@0.
+	window setExtent: 800@600.
+	window openInWorld
 ]
 
 { #category : 'menus' }
