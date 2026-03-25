@@ -1529,33 +1529,27 @@ GbsClassicLauncher class >> openTextViewerOn: aString title: aTitle [
 
 { #category : 'utilities' }
 GbsClassicLauncher class >> openFileLoggerOn: aFileLogger title: aTitle [
-	"Open a file logger viewer that auto-refreshes with new content using a Workspace"
-	| ws lastSize refreshProcess |
+	"Open a file logger viewer showing current log content"
+	| contents |
 	
-	ws := GbsWorkspace new.
-	ws open.
-	ws window title: aTitle.
-	ws textEditor text: aFileLogger contents.
-	lastSize := aFileLogger contents size.
+	contents := aFileLogger contents.
+	contents ifEmpty: [ contents := '(Log file is empty)' ].
 	
-	"Start auto-refresh process"
-	refreshProcess := [
-		[ ws window isNotNil and: [ ws window isOpen ] ] whileTrue: [
-			| newContents |
-			newContents := aFileLogger contents.
-			newContents size ~= lastSize ifTrue: [
-				lastSize := newContents size.
-				ws textEditor text: newContents.
-			].
-			(Delay forSeconds: 1) wait.
-		]
-	] forkAt: Processor userBackgroundPriority.
-	
-	"Store refresh process for cleanup"
-	ws window setProperty: #refreshProcess toValue: refreshProcess.
-	ws window whenClosedDo: [ refreshProcess terminate ].
-	
-	^ ws
+	"Show in a read-only workspace"
+	[
+		| ws |
+		ws := GbsWorkspace new.
+		ws open.
+		ws window title: aTitle.
+		ws textEditor text: contents.
+		ws textEditor beReadOnly.
+		"Hide the execute/commit/abort buttons by disabling them"
+		ws btnExecute enable: false.
+		ws btnCommit enable: false.
+		ws btnAbort enable: false.
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open log viewer: ', ex messageText
+	]
 ]
 
 { #category : 'utilities' }
