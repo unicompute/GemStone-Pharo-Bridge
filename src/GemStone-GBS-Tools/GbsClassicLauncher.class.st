@@ -505,7 +505,7 @@ GbsClassicLauncher class >> openGbxFileLogger [
 			logger := GbsCallTracing logger.
 			contents := logger contents.
 			contents ifEmpty: [ contents := '(Log file is empty)'. ].
-			^ self showLogContent: contents title: 'File Logger - ' , logger filename
+			^ contents inspect
 		].
 
 	"Start new file logging"
@@ -519,16 +519,16 @@ GbsClassicLauncher class >> openGbxFileLogger [
 		logger logMessage: '--- Call tracing started ---'.
 		contents := logger contents.
 		contents ifEmpty: [ contents := '(Log file is empty)'. ].
-		self showLogContent: contents title: 'File Logger - ' , logger filename
+		contents inspect
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Failed to open File Logger: ', ex messageText ]
 ]
 
 { #category : 'utilities' }
 GbsClassicLauncher class >> showLogContent: contents title: titleString [
-	"Show log content in a multi-line text window"
+	"Show log content by inspecting the string"
 	
-	contents asString editWithLabel: titleString
+	contents inspect
 ]
 
 { #category : 'menus' }
