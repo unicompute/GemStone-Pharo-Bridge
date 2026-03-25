@@ -622,16 +622,14 @@ GbsClassicLauncher class >> openGbxStatMonitor [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxStoreTraversalTool [
-	| session traversal |
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	traversal := session currentTraversal.
-	traversal ifNil: [
-		^ UIManager default inform: 'No active store traversal for this session.' ].
-	^ [ traversal inspect ]
-		on: Error
-		do: [ :ex |
-			UIManager default inform: 'Could not open Store Traversal Tool: ', ex messageText ].
+	| session utility |
+	[
+		session := self currentSessionOrInform.
+		session ifNil: [ ^ self ].
+		utility := GbxStoreTraversalTool on: session cache: (GbxBasicCache on: session).
+		GbxToolStoreTraversalPresenter openOn: utility
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Failed to open GbxStoreTraversalTool: ', ex messageText ]
 ]
 
 { #category : 'menus' }
