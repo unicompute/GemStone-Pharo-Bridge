@@ -124,17 +124,16 @@ GbxFileLoggerTool >> maxFileSize: anInteger [
 { #category : 'file handling' }
 GbxFileLoggerTool >> openFile [
 	"Open the log file for appending"
-	
+
 	self close.
-	
+
 	filePath ifNotNil: [
 		| ref |
 		ref := filePath asFileReference.
-		fileStream := ref exists
-			ifTrue: [ ref readWriteStream ]
-			ifFalse: [ ref writeStream ].
+		"In Pharo, use writeStream for appending (creates if not exists)"
+		fileStream := ref writeStream.
 		fileStream setToEnd.
-		currentFileSize := fileStream position.
+		currentFileSize := ref size.
 	].
 ]
 
