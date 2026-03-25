@@ -497,29 +497,29 @@ GbsClassicLauncher class >> openConnectorBrowserOnCurrentSession [
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxFileLogger [
 	| logger path contents |
-	
+
 	"Check if call tracing is already active"
-	(GbsCallTracing isCallTracingActive and: [ GbsCallTracing logger isKindOf: GbxFileLogger ]) 
+	(GbsCallTracing isCallTracingActive and: [ GbsCallTracing logger isKindOf: GbxFileLogger ])
 		ifTrue: [
-			"Show existing file logger with auto-refresh"
+			"Show existing file logger contents"
 			logger := GbsCallTracing logger.
-			^ self 
-				openFileLoggerOn: logger 
-				title: 'File Logger - ', logger filename
+			contents := logger contents.
+			contents ifEmpty: [ contents := '(Log file is empty)'. ].
+			^ UIManager default request: 'File Logger - ' , logger filename initialAnswer: contents
 		].
-	
+
 	"Start new file logging"
 	path := UIManager default
 		request: 'Log file path:'
 		initialAnswer: '/tmp/gbs-file-logger.log'.
 	(path isNil or: [ path trimBoth isEmpty ]) ifTrue: [ ^ self ].
-	
+
 	[
 		logger := GbsCallTracing startCallTracingToFileNamed: path trimBoth.
 		logger logMessage: '--- Call tracing started ---'.
-		self 
-			openFileLoggerOn: logger 
-			title: 'File Logger - ', logger filename
+		contents := logger contents.
+		contents ifEmpty: [ contents := '(Log file is empty)'. ].
+		UIManager default request: 'File Logger - ' , logger filename initialAnswer: contents
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Failed to open File Logger: ', ex messageText ]
 ]
