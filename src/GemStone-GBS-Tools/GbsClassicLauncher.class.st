@@ -504,7 +504,7 @@ GbsClassicLauncher class >> openGbxFileLogger [
 	[
 		logger := GbxFileLoggerTool on: path trimBoth.
 		logger logInfo: 'Created from the GemStone Utilities menu.'.
-		self inspectUtilityObject: logger named: 'File Logger'
+		logger inspect
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Failed to open GbxFileLoggerTool: ', ex messageText ]
 ]
