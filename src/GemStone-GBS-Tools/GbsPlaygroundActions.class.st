@@ -17,19 +17,6 @@ GbsPlaygroundActions class >> activeSessionOrInform [
 ]
 
 { #category : 'helpers' }
-GbsPlaygroundActions class >> selectedCodeFrom: aPlaygroundPresenter [
-	| code textPresenter |
-	code := [ aPlaygroundPresenter selectedTextOrLine ] on: Error do: [ '' ].
-	(code isString and: [ code isEmpty ]) ifTrue: [
-		textPresenter := [ aPlaygroundPresenter text ] on: Error do: [ nil ].
-		code := (textPresenter notNil and: [ textPresenter respondsTo: #text ])
-			ifTrue: [ [ textPresenter text asString ] on: Error do: [ '' ] ]
-			ifFalse: [ '' ]
-	].
-	^ code asString copyReplaceAll: String cr with: String lf
-]
-
-{ #category : 'helpers' }
 GbsPlaygroundActions class >> appendPrintedResult: resultString in: aPlaygroundPresenter [
 	| textPresenter currentText |
 	textPresenter := [ aPlaygroundPresenter text ] on: Error do: [ nil ].
@@ -46,12 +33,12 @@ GbsPlaygroundActions class >> appendPrintedResult: resultString in: aPlaygroundP
 ]
 
 { #category : 'actions' }
-GbsPlaygroundActions class >> gsDoItIn: aPlaygroundPresenter [
+GbsPlaygroundActions class >> gsDebugItIn: aPlaygroundPresenter [
 	^ self gsEvaluateIn: aPlaygroundPresenter debugOnError: true
 ]
 
 { #category : 'actions' }
-GbsPlaygroundActions class >> gsDebugItIn: aPlaygroundPresenter [
+GbsPlaygroundActions class >> gsDoItIn: aPlaygroundPresenter [
 	^ self gsEvaluateIn: aPlaygroundPresenter debugOnError: true
 ]
 
@@ -113,6 +100,20 @@ GbsPlaygroundActions class >> gsEvaluateIn: aPlaygroundPresenter debugOnError: d
 ]
 
 { #category : 'actions' }
+GbsPlaygroundActions class >> gsFileItInIn: aPlaygroundPresenter [
+	| code activeSession |
+	code := self selectedCodeFrom: aPlaygroundPresenter.
+	code ifEmpty: [ ^ self ].
+	activeSession := self activeSessionOrInform.
+	activeSession ifNil: [ ^ self ].
+	[ activeSession execute: code.
+	  GbsRemoteTranscript drainSessionLogsToWindowsAndLocal: activeSession.
+	  UIManager default inform: 'GemStone file-in executed.' ]
+		on: Error
+		do: [ :ex | UIManager default inform: 'GS-File it in failed: ', ex messageText ].
+]
+
+{ #category : 'actions' }
 GbsPlaygroundActions class >> gsInspectItIn: aPlaygroundPresenter [
 	| code activeSession oop |
 	code := self selectedCodeFrom: aPlaygroundPresenter.
@@ -139,20 +140,6 @@ GbsPlaygroundActions class >> gsPrintItIn: aPlaygroundPresenter [
 	GbsRemoteTranscript drainSessionLogsToWindowsAndLocal: activeSession.
 ]
 
-{ #category : 'actions' }
-GbsPlaygroundActions class >> gsFileItInIn: aPlaygroundPresenter [
-	| code activeSession |
-	code := self selectedCodeFrom: aPlaygroundPresenter.
-	code ifEmpty: [ ^ self ].
-	activeSession := self activeSessionOrInform.
-	activeSession ifNil: [ ^ self ].
-	[ activeSession execute: code.
-	  GbsRemoteTranscript drainSessionLogsToWindowsAndLocal: activeSession.
-	  UIManager default inform: 'GemStone file-in executed.' ]
-		on: Error
-		do: [ :ex | UIManager default inform: 'GS-File it in failed: ', ex messageText ].
-]
-
 { #category : 'helpers' }
 GbsPlaygroundActions class >> openRemoteDebuggerOn: errorString processOop: processOop session: aSession [
 	| errorText safeProcessOop |
@@ -169,4 +156,17 @@ GbsPlaygroundActions class >> openRemoteDebuggerOn: errorString processOop: proc
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Error opening debugger: ', ex messageText
 	].
+]
+
+{ #category : 'helpers' }
+GbsPlaygroundActions class >> selectedCodeFrom: aPlaygroundPresenter [
+	| code textPresenter |
+	code := [ aPlaygroundPresenter selectedTextOrLine ] on: Error do: [ '' ].
+	(code isString and: [ code isEmpty ]) ifTrue: [
+		textPresenter := [ aPlaygroundPresenter text ] on: Error do: [ nil ].
+		code := (textPresenter notNil and: [ textPresenter respondsTo: #text ])
+			ifTrue: [ [ textPresenter text asString ] on: Error do: [ '' ] ]
+			ifFalse: [ '' ]
+	].
+	^ code asString copyReplaceAll: String cr with: String lf
 ]

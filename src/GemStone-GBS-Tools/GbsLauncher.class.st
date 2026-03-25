@@ -38,34 +38,6 @@ GbsLauncher >> connectPresenters [
 	btnPolling action: [ self togglePollingPreference ].
 ]
 
-{ #category : 'actions' }
-GbsLauncher >> openSystemBrowser [
-	| session |
-	session := GbsSessionParameters currentSession.
-	(self isSessionUsableForBrowsing: session) ifFalse: [
-		^ self inform: 'No connected GemStone session. Please login first.'
-	].
-	[
-		GbsBrowser openOn: session
-	] on: Error do: [ :ex |
-		self inform: 'Could not open browser: ', ex messageText
-	].
-]
-
-{ #category : 'actions' }
-GbsLauncher >> openUsers [
-	| session |
-	session := GbsSessionParameters currentSession.
-	(self isSessionUsableForBrowsing: session) ifFalse: [
-		^ self inform: 'No connected GemStone session. Please login first.'
-	].
-	[
-		GbsUserListPresenter openOn: session
-	] on: Error do: [ :ex |
-		self inform: 'Could not open users list: ', ex messageText
-	].
-]
-
 { #category : 'layout' }
 GbsLauncher >> defaultLayout [
 	^ SpBoxLayout newVertical spacing: 5;
@@ -194,6 +166,42 @@ GbsLauncher >> initializeWindow: aWindowPresenter [
         initialExtent: 350@420.
 ]
 
+{ #category : 'private' }
+GbsLauncher >> isSessionUsableForBrowsing: aSession [
+	aSession ifNil: [ ^ false ].
+	(aSession respondsTo: #isLoggedIn)
+		ifTrue: [ ^ [ aSession isLoggedIn == true ] on: Error do: [ false ] ].
+	^ true
+]
+
+{ #category : 'actions' }
+GbsLauncher >> openSystemBrowser [
+	| session |
+	session := GbsSessionParameters currentSession.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		^ self inform: 'No connected GemStone session. Please login first.'
+	].
+	[
+		GbsBrowser openOn: session
+	] on: Error do: [ :ex |
+		self inform: 'Could not open browser: ', ex messageText
+	].
+]
+
+{ #category : 'actions' }
+GbsLauncher >> openUsers [
+	| session |
+	session := GbsSessionParameters currentSession.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		^ self inform: 'No connected GemStone session. Please login first.'
+	].
+	[
+		GbsUserListPresenter openOn: session
+	] on: Error do: [ :ex |
+		self inform: 'Could not open users list: ', ex messageText
+	].
+]
+
 { #category : 'polling' }
 GbsLauncher >> startPolling [ 
     pollingProcess ifNotNil: [ pollingProcess terminate ].
@@ -258,12 +266,4 @@ GbsLauncher >> updateUIState [
 		btnWorkspace disable. btnBrowser disable. btnTranscript disable.
 		btnUsers ifNotNil: [ btnUsers disable ].
 	].
-]
-
-{ #category : 'private' }
-GbsLauncher >> isSessionUsableForBrowsing: aSession [
-	aSession ifNil: [ ^ false ].
-	(aSession respondsTo: #isLoggedIn)
-		ifTrue: [ ^ [ aSession isLoggedIn == true ] on: Error do: [ false ] ].
-	^ true
 ]

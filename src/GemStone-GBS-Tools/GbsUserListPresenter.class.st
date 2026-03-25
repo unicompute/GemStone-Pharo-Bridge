@@ -29,6 +29,24 @@ GbsUserListPresenter class >> openOn: aSession [
 	^ presenter
 ]
 
+{ #category : 'menus' }
+GbsUserListPresenter >> buildMenuBar [
+	^ self newMenuBar
+		addGroup: [ :group |
+			group
+				addItem: [ :item | item name: 'File'; subMenu: self menuFile ];
+				addItem: [ :item | item name: 'User'; subMenu: self menuUser ];
+				addItem: [ :item | item name: 'Help'; subMenu: self menuHelp ] ];
+		yourself
+]
+
+{ #category : 'actions' }
+GbsUserListPresenter >> closeWindow [
+	self window
+		ifNotNil: [ self window close ]
+		ifNil: [ self delete ]
+]
+
 { #category : 'layout' }
 GbsUserListPresenter >> connectPresenters [
 	userList whenSelectionChangedDo: [ :selection |
@@ -84,39 +102,35 @@ GbsUserListPresenter >> defaultLayout [
 		yourself
 ]
 
-{ #category : 'menus' }
-GbsUserListPresenter >> buildMenuBar [
-	^ self newMenuBar
-		addGroup: [ :group |
-			group
-				addItem: [ :item | item name: 'File'; subMenu: self menuFile ];
-				addItem: [ :item | item name: 'User'; subMenu: self menuUser ];
-				addItem: [ :item | item name: 'Help'; subMenu: self menuHelp ] ];
-		yourself
-]
-
-{ #category : 'menus' }
-GbsUserListPresenter >> menuFile [
-	^ self newMenu
-		addItem: [ :item | item name: 'Refresh'; action: [ self refreshUserList ] ];
-		addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ];
-		yourself
-]
-
-{ #category : 'menus' }
-GbsUserListPresenter >> menuUser [
-	^ self newMenu
-		addItem: [ :item | item name: 'Create User...'; action: [ self openCreateUserDialog ] ];
-		addItem: [ :item | item name: 'Show User Info'; action: [ self showSelectedUserInfo ] ];
-		addItem: [ :item | item name: 'Delete User...'; action: [ self deleteSelectedUser ] ];
-		yourself
-]
-
-{ #category : 'menus' }
-GbsUserListPresenter >> menuHelp [
-	^ self newMenu
-		addItem: [ :item | item name: 'About GemStone User List'; action: [ UIManager default inform: 'GemStone User List' ] ];
-		yourself
+{ #category : 'actions' }
+GbsUserListPresenter >> deleteSelectedUser [
+	| userName confirmed script |
+	userName := self selectedUserName.
+	userName ifNil: [ ^ self ].
+	confirmed := UIManager default
+		confirm: 'Delete user "', userName, '"?'
+		label: 'Delete GemStone User'.
+	confirmed ifFalse: [ ^ self ].
+	script := '
+	| users user |
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNil: [ self error: ''AllUsers not found'' ].
+	user := users detect: [ :u | u userId asString = ''', userName, ''' ] ifNone: [ nil ].
+	user ifNil: [ self error: ''User not found'' ].
+	(users respondsTo: #remove:)
+		ifTrue: [ users remove: user ]
+		ifFalse: [
+			(users respondsTo: #removeUser:)
+				ifTrue: [ users removeUser: user ]
+				ifFalse: [ self error: ''Cannot remove user with available API'' ] ].
+	true'.
+	[
+		session execute: script.
+		self refreshUserList.
+		UIManager default inform: 'Deleted user ', userName, '.'
+	] on: Error do: [ :ex |
+		self inform: 'Delete user failed: ', ex messageText
+	]
 ]
 
 { #category : 'layout' }
@@ -145,14 +159,6 @@ GbsUserListPresenter >> fetchGroupsFor: userName [
 
 	groupList items: groupNames asSortedCollection asArray.
 	userNameField text: userName asString
-]
-
-{ #category : 'private' }
-GbsUserListPresenter >> isSessionUsable [
-	session ifNil: [ ^ false ].
-	(session respondsTo: #isLoggedIn)
-		ifTrue: [ ^ [ session isLoggedIn == true ] on: Error do: [ false ] ].
-	^ true
 ]
 
 { #category : 'accessing - deprecated' }
@@ -200,6 +206,70 @@ GbsUserListPresenter >> initializeWindow: aWindowPresenter [
 		initialExtent: 760 @ 560
 ]
 
+{ #category : 'private' }
+GbsUserListPresenter >> isSessionUsable [
+	session ifNil: [ ^ false ].
+	(session respondsTo: #isLoggedIn)
+		ifTrue: [ ^ [ session isLoggedIn == true ] on: Error do: [ false ] ].
+	^ true
+]
+
+{ #category : 'menus' }
+GbsUserListPresenter >> menuFile [
+	^ self newMenu
+		addItem: [ :item | item name: 'Refresh'; action: [ self refreshUserList ] ];
+		addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsUserListPresenter >> menuHelp [
+	^ self newMenu
+		addItem: [ :item | item name: 'About GemStone User List'; action: [ UIManager default inform: 'GemStone User List' ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsUserListPresenter >> menuUser [
+	^ self newMenu
+		addItem: [ :item | item name: 'Create User...'; action: [ self openCreateUserDialog ] ];
+		addItem: [ :item | item name: 'Show User Info'; action: [ self showSelectedUserInfo ] ];
+		addItem: [ :item | item name: 'Delete User...'; action: [ self deleteSelectedUser ] ];
+		yourself
+]
+
+{ #category : 'actions' }
+GbsUserListPresenter >> openCreateUserDialog [
+	(self isSessionUsable not) ifTrue: [ ^ self ].
+	GbsCreateUserPresenter
+		openOn: session
+		onCreated: [ self refreshUserList ]
+]
+
+{ #category : 'private' }
+GbsUserListPresenter >> openUserInfoFallbackText: infoTextValue forUser: userName [
+	| label text |
+	text := infoTextValue ifNil: [ '' ] ifNotNil: [ infoTextValue asString ].
+	label := 'GemStone User Info - ', (userName ifNil: [ '' ] ifNotNil: [ userName asString ]).
+	(UIManager default respondsTo: #edit:label:)
+		ifTrue: [ UIManager default edit: text label: label. ^ true ].
+	(UIManager default respondsTo: #inform:)
+		ifTrue: [ UIManager default inform: text. ^ true ].
+	^ false
+]
+
+{ #category : 'private' }
+GbsUserListPresenter >> openUserInfoWindowFor: userName text: infoTextValue session: aSession [
+	| klass |
+	klass := self userInfoPresenterClass.
+	klass ifNil: [ ^ false ].
+	(klass respondsTo: #openForUser:text:session:) ifFalse: [ ^ false ].
+	^ [
+		klass openForUser: userName text: infoTextValue session: aSession.
+		true
+	] on: Error do: [ false ]
+]
+
 { #category : 'accessing' }
 GbsUserListPresenter >> refreshUserList [
 	| script rawString userNames |
@@ -227,6 +297,11 @@ GbsUserListPresenter >> refreshUserList [
 	self updateActionButtons
 ]
 
+{ #category : 'private' }
+GbsUserListPresenter >> selectedUserName [
+	^ userList selection selectedItem ifNotNil: [ :name | name asString ]
+]
+
 { #category : 'accessing' }
 GbsUserListPresenter >> session: aGbsSession [
     session := aGbsSession.
@@ -236,62 +311,6 @@ GbsUserListPresenter >> session: aGbsSession [
 		userNameField ifNotNil: [ userNameField text: '' ].
 		self updateActionButtons.
 	]
-]
-
-{ #category : 'accessing - deprecated' }
-GbsUserListPresenter >> title [
-	^ 'GemStone User List'
-]
-
-{ #category : 'actions' }
-GbsUserListPresenter >> closeWindow [
-	self window
-		ifNotNil: [ self window close ]
-		ifNil: [ self delete ]
-]
-
-{ #category : 'actions' }
-GbsUserListPresenter >> deleteSelectedUser [
-	| userName confirmed script |
-	userName := self selectedUserName.
-	userName ifNil: [ ^ self ].
-	confirmed := UIManager default
-		confirm: 'Delete user "', userName, '"?'
-		label: 'Delete GemStone User'.
-	confirmed ifFalse: [ ^ self ].
-	script := '
-	| users user |
-	users := System myUserProfile symbolList objectNamed: #AllUsers.
-	users ifNil: [ self error: ''AllUsers not found'' ].
-	user := users detect: [ :u | u userId asString = ''', userName, ''' ] ifNone: [ nil ].
-	user ifNil: [ self error: ''User not found'' ].
-	(users respondsTo: #remove:)
-		ifTrue: [ users remove: user ]
-		ifFalse: [
-			(users respondsTo: #removeUser:)
-				ifTrue: [ users removeUser: user ]
-				ifFalse: [ self error: ''Cannot remove user with available API'' ] ].
-	true'.
-	[
-		session execute: script.
-		self refreshUserList.
-		UIManager default inform: 'Deleted user ', userName, '.'
-	] on: Error do: [ :ex |
-		self inform: 'Delete user failed: ', ex messageText
-	]
-]
-
-{ #category : 'actions' }
-GbsUserListPresenter >> openCreateUserDialog [
-	(self isSessionUsable not) ifTrue: [ ^ self ].
-	GbsCreateUserPresenter
-		openOn: session
-		onCreated: [ self refreshUserList ]
-]
-
-{ #category : 'private' }
-GbsUserListPresenter >> selectedUserName [
-	^ userList selection selectedItem ifNotNil: [ :name | name asString ]
 ]
 
 { #category : 'actions' }
@@ -306,33 +325,22 @@ GbsUserListPresenter >> showSelectedUserInfo [
 			ifFalse: [ UIManager default inform: 'Could not open user info window.' ] ]
 ]
 
+{ #category : 'accessing - deprecated' }
+GbsUserListPresenter >> title [
+	^ 'GemStone User List'
+]
+
+{ #category : 'private' }
+GbsUserListPresenter >> updateActionButtons [
+	| hasSelection |
+	hasSelection := self selectedUserName notNil.
+	showUserInfoButton ifNotNil: [ hasSelection ifTrue: [ showUserInfoButton enable ] ifFalse: [ showUserInfoButton disable ] ].
+	deleteUserButton ifNotNil: [ hasSelection ifTrue: [ deleteUserButton enable ] ifFalse: [ deleteUserButton disable ] ]
+]
+
 { #category : 'private' }
 GbsUserListPresenter >> userInfoPresenterClass [
 	^ Smalltalk at: #GbsUserInfoPresenter ifAbsent: [ nil ]
-]
-
-{ #category : 'private' }
-GbsUserListPresenter >> openUserInfoWindowFor: userName text: infoTextValue session: aSession [
-	| klass |
-	klass := self userInfoPresenterClass.
-	klass ifNil: [ ^ false ].
-	(klass respondsTo: #openForUser:text:session:) ifFalse: [ ^ false ].
-	^ [
-		klass openForUser: userName text: infoTextValue session: aSession.
-		true
-	] on: Error do: [ false ]
-]
-
-{ #category : 'private' }
-GbsUserListPresenter >> openUserInfoFallbackText: infoTextValue forUser: userName [
-	| label text |
-	text := infoTextValue ifNil: [ '' ] ifNotNil: [ infoTextValue asString ].
-	label := 'GemStone User Info - ', (userName ifNil: [ '' ] ifNotNil: [ userName asString ]).
-	(UIManager default respondsTo: #edit:label:)
-		ifTrue: [ UIManager default edit: text label: label. ^ true ].
-	(UIManager default respondsTo: #inform:)
-		ifTrue: [ UIManager default inform: text. ^ true ].
-	^ false
 ]
 
 { #category : 'private' }
@@ -381,12 +389,4 @@ GbsUserListPresenter >> userInfoTextFor: userName [
 			'Privileges: ', (String streamContents: [ :s |
 				enabled do: [ :each | s nextPutAll: each ] separatedBy: [ s nextPutAll: ', ' ] ]) ].
 	^ (info ifNil: [ 'No information available.' ] ifNotNil: [ info asString ]), String cr, privilegeText
-]
-
-{ #category : 'private' }
-GbsUserListPresenter >> updateActionButtons [
-	| hasSelection |
-	hasSelection := self selectedUserName notNil.
-	showUserInfoButton ifNotNil: [ hasSelection ifTrue: [ showUserInfoButton enable ] ifFalse: [ showUserInfoButton disable ] ].
-	deleteUserButton ifNotNil: [ hasSelection ifTrue: [ deleteUserButton enable ] ifFalse: [ deleteUserButton disable ] ]
 ]

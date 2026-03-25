@@ -92,6 +92,89 @@ GbsInspector >> defaultLayout [
 		yourself
 ]
 
+{ #category : 'evaluation' }
+GbsInspector >> evaluateCodeInContext: codeString [
+	| contextOop raw |
+	(codeString isString and: [ codeString isEmpty not ]) ifFalse: [ ^ nil ].
+	session ifNil: [ ^ nil ].
+	contextOop := self evaluationContextOop.
+	raw := [ session executeAndFetch: codeString context: contextOop ] on: Error do: [ nil ].
+	raw ifNil: [ ^ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	^ raw
+]
+
+{ #category : 'evaluation' }
+GbsInspector >> evaluationContextOop [
+	((evaluationContextOop isNumber) and: [ evaluationContextOop > 20 ])
+		ifTrue: [ ^ evaluationContextOop ].
+	^ (session respondsTo: #sessionOop)
+		ifTrue: [ session sessionOop ]
+		ifFalse: [ 20 ]
+]
+
+{ #category : 'evaluation' }
+GbsInspector >> gsDoIt [
+	| code |
+	code := self selectedCodeOrAll.
+	code isEmpty ifTrue: [ ^ false ].
+	^ self gsDoIt: code
+]
+
+{ #category : 'evaluation' }
+GbsInspector >> gsDoIt: codeString [
+	| raw |
+	raw := self evaluateCodeInContext: codeString.
+	^ raw notNil and: [ (raw asString beginsWith: 'Error:') not ]
+]
+
+{ #category : 'evaluation' }
+GbsInspector >> gsInspectIt [
+	| code |
+	code := self selectedCodeOrAll.
+	code isEmpty ifTrue: [ ^ false ].
+	^ self gsInspectIt: code
+]
+
+{ #category : 'evaluation' }
+GbsInspector >> gsInspectIt: codeString [
+	| contextOop resultOop |
+	session ifNil: [ ^ false ].
+	contextOop := self evaluationContextOop.
+	resultOop := [
+		session serverInterface
+			apiGciExecuteStr: codeString
+			context: contextOop
+			env: 0
+	] on: Error do: [ nil ].
+	((resultOop isNumber and: [ resultOop > 20 ]) not) ifTrue: [ ^ false ].
+	GbsInspector inspect: resultOop session: session context: contextOop.
+	^ true
+]
+
+{ #category : 'evaluation' }
+GbsInspector >> gsPrintIt [
+	| code value currentText |
+	code := self selectedCodeOrAll.
+	code isEmpty ifTrue: [ ^ false ].
+	value := self gsPrintIt: code.
+	value ifNil: [ ^ false ].
+	currentText := (codeEditor respondsTo: #text)
+		ifTrue: [ codeEditor text asString ]
+		ifFalse: [ '' ].
+	(codeEditor respondsTo: #text:)
+		ifTrue: [ codeEditor text: currentText, ' "', value asString, '"' ].
+	^ true
+]
+
+{ #category : 'evaluation' }
+GbsInspector >> gsPrintIt: codeString [
+	| script |
+	codeString ifNil: [ ^ nil ].
+	script := '[ ', codeString, ' ] value printString'.
+	^ self evaluateCodeInContext: script
+]
+
 { #category : 'initialization' }
 GbsInspector >> initializePresenters [
 	classLabel := self newLabel.
@@ -157,89 +240,6 @@ GbsInspector >> inspectOop: anOop session: aSession context: aContextOop [
 			GbsInspector inspect: childOop session: session 
 		].
 	].
-]
-
-{ #category : 'evaluation' }
-GbsInspector >> evaluationContextOop [
-	((evaluationContextOop isNumber) and: [ evaluationContextOop > 20 ])
-		ifTrue: [ ^ evaluationContextOop ].
-	^ (session respondsTo: #sessionOop)
-		ifTrue: [ session sessionOop ]
-		ifFalse: [ 20 ]
-]
-
-{ #category : 'evaluation' }
-GbsInspector >> evaluateCodeInContext: codeString [
-	| contextOop raw |
-	(codeString isString and: [ codeString isEmpty not ]) ifFalse: [ ^ nil ].
-	session ifNil: [ ^ nil ].
-	contextOop := self evaluationContextOop.
-	raw := [ session executeAndFetch: codeString context: contextOop ] on: Error do: [ nil ].
-	raw ifNil: [ ^ nil ].
-	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
-	^ raw
-]
-
-{ #category : 'evaluation' }
-GbsInspector >> gsDoIt [
-	| code |
-	code := self selectedCodeOrAll.
-	code isEmpty ifTrue: [ ^ false ].
-	^ self gsDoIt: code
-]
-
-{ #category : 'evaluation' }
-GbsInspector >> gsDoIt: codeString [
-	| raw |
-	raw := self evaluateCodeInContext: codeString.
-	^ raw notNil and: [ (raw asString beginsWith: 'Error:') not ]
-]
-
-{ #category : 'evaluation' }
-GbsInspector >> gsInspectIt [
-	| code |
-	code := self selectedCodeOrAll.
-	code isEmpty ifTrue: [ ^ false ].
-	^ self gsInspectIt: code
-]
-
-{ #category : 'evaluation' }
-GbsInspector >> gsInspectIt: codeString [
-	| contextOop resultOop |
-	session ifNil: [ ^ false ].
-	contextOop := self evaluationContextOop.
-	resultOop := [
-		session serverInterface
-			apiGciExecuteStr: codeString
-			context: contextOop
-			env: 0
-	] on: Error do: [ nil ].
-	((resultOop isNumber and: [ resultOop > 20 ]) not) ifTrue: [ ^ false ].
-	GbsInspector inspect: resultOop session: session context: contextOop.
-	^ true
-]
-
-{ #category : 'evaluation' }
-GbsInspector >> gsPrintIt [
-	| code value currentText |
-	code := self selectedCodeOrAll.
-	code isEmpty ifTrue: [ ^ false ].
-	value := self gsPrintIt: code.
-	value ifNil: [ ^ false ].
-	currentText := (codeEditor respondsTo: #text)
-		ifTrue: [ codeEditor text asString ]
-		ifFalse: [ '' ].
-	(codeEditor respondsTo: #text:)
-		ifTrue: [ codeEditor text: currentText, ' "', value asString, '"' ].
-	^ true
-]
-
-{ #category : 'evaluation' }
-GbsInspector >> gsPrintIt: codeString [
-	| script |
-	codeString ifNil: [ ^ nil ].
-	script := '[ ', codeString, ' ] value printString'.
-	^ self evaluateCodeInContext: script
 ]
 
 { #category : 'evaluation' }

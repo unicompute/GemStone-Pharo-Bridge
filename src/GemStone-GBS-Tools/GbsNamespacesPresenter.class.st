@@ -22,6 +22,20 @@ GbsNamespacesPresenter class >> openOn: aSession [
 	^ presenter
 ]
 
+{ #category : 'private' }
+GbsNamespacesPresenter >> closeWindow [
+	self window
+		ifNotNil: [ self window close ]
+		ifNil: [ self delete ]
+]
+
+{ #category : 'initialization' }
+GbsNamespacesPresenter >> connectPresenters [
+	refreshButton action: [ self refreshNamespaces ].
+	closeButton action: [ self closeWindow ].
+	self refreshNamespaces
+]
+
 { #category : 'layout' }
 GbsNamespacesPresenter >> defaultLayout [
 	^ SpBoxLayout newTopToBottom
@@ -32,13 +46,6 @@ GbsNamespacesPresenter >> defaultLayout [
 			spacing: 8;
 			yourself) expand: false;
 		yourself
-]
-
-{ #category : 'initialization' }
-GbsNamespacesPresenter >> connectPresenters [
-	refreshButton action: [ self refreshNamespaces ].
-	closeButton action: [ self closeWindow ].
-	self refreshNamespaces
 ]
 
 { #category : 'initialization' }
@@ -67,28 +74,11 @@ GbsNamespacesPresenter >> initializeWindow: aWindowPresenter [
 ]
 
 { #category : 'private' }
-GbsNamespacesPresenter >> parseRows: rawString [
-	| lines |
-	(rawString isString and: [ rawString isNotEmpty ]) ifFalse: [ ^ #() ].
-	lines := rawString lines.
-	^ lines collect: [ :line |
-		| columns |
-		columns := line splitOn: Character tab.
-		{ (columns at: 1 ifAbsent: [ '' ]).
-		  (columns at: 2 ifAbsent: [ '' ]).
-		  (columns at: 3 ifAbsent: [ '' ]) } ]
-]
-
-{ #category : 'actions' }
-GbsNamespacesPresenter >> refreshNamespaces [
-	| raw rows |
-	(self isSessionUsable not) ifTrue: [
-		namespacesTable items: #().
-		^ self
-	].
-	raw := [ session evaluate: self namespacesScript ] on: Error do: [ :ex | self inform: 'Fetch namespaces failed: ', ex messageText. '' ].
-	rows := self parseRows: raw.
-	namespacesTable items: rows
+GbsNamespacesPresenter >> isSessionUsable [
+	session ifNil: [ ^ false ].
+	(session respondsTo: #isLoggedIn)
+		ifTrue: [ ^ [ session isLoggedIn == true ] on: Error do: [ false ] ].
+	^ true
 ]
 
 { #category : 'private' }
@@ -115,21 +105,31 @@ GbsNamespacesPresenter >> namespacesScript [
 ]
 
 { #category : 'private' }
+GbsNamespacesPresenter >> parseRows: rawString [
+	| lines |
+	(rawString isString and: [ rawString isNotEmpty ]) ifFalse: [ ^ #() ].
+	lines := rawString lines.
+	^ lines collect: [ :line |
+		| columns |
+		columns := line splitOn: Character tab.
+		{ (columns at: 1 ifAbsent: [ '' ]).
+		  (columns at: 2 ifAbsent: [ '' ]).
+		  (columns at: 3 ifAbsent: [ '' ]) } ]
+]
+
+{ #category : 'actions' }
+GbsNamespacesPresenter >> refreshNamespaces [
+	| raw rows |
+	(self isSessionUsable not) ifTrue: [
+		namespacesTable items: #().
+		^ self
+	].
+	raw := [ session evaluate: self namespacesScript ] on: Error do: [ :ex | self inform: 'Fetch namespaces failed: ', ex messageText. '' ].
+	rows := self parseRows: raw.
+	namespacesTable items: rows
+]
+
+{ #category : 'private' }
 GbsNamespacesPresenter >> session: aSession [
 	session := aSession
-]
-
-{ #category : 'private' }
-GbsNamespacesPresenter >> isSessionUsable [
-	session ifNil: [ ^ false ].
-	(session respondsTo: #isLoggedIn)
-		ifTrue: [ ^ [ session isLoggedIn == true ] on: Error do: [ false ] ].
-	^ true
-]
-
-{ #category : 'private' }
-GbsNamespacesPresenter >> closeWindow [
-	self window
-		ifNotNil: [ self window close ]
-		ifNil: [ self delete ]
 ]

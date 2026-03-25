@@ -9,18 +9,6 @@ Class {
 	#package : 'GemStone-GBS-Tools'
 }
 
-{ #category : 'setup' }
-GbsRemoteTranscript class >> installForwarder [
-  "Connect Pharo's system Transcript to our custom window"
-
-  "GbsRemoteTranscript installForwarder."
-
-  Transcript announcer
-    when: StringSignal
-    do: [ :signal | self allInstancesDo: [ :win | win appendLog: signal message ] ]
-    for: self
-]
-
 { #category : 'updating' }
 GbsRemoteTranscript class >> drainCurrentSessionLogsToWindowsAndLocal [
 	| session |
@@ -40,6 +28,18 @@ GbsRemoteTranscript class >> drainSessionLogsToWindowsAndLocal: aSession [
 	self allInstancesDo: [ :win | win appendLog: safeLogs ].
 	Transcript show: safeLogs.
 	^ safeLogs
+]
+
+{ #category : 'setup' }
+GbsRemoteTranscript class >> installForwarder [
+  "Connect Pharo's system Transcript to our custom window"
+
+  "GbsRemoteTranscript installForwarder."
+
+  Transcript announcer
+    when: StringSignal
+    do: [ :signal | self allInstancesDo: [ :win | win appendLog: signal message ] ]
+    for: self
 ]
 
 { #category : 'gemstone integration' }

@@ -43,71 +43,64 @@ GbsCreateUserPresenter class >> openOn: aSession onCreated: aBlock [
 	^ presenter
 ]
 
-{ #category : 'private' }
-GbsCreateUserPresenter >> createdBlock: aBlock [
-	createdBlock := aBlock
+{ #category : 'layout' }
+GbsCreateUserPresenter >> actionButtonWidth [
+	^ 180
 ]
 
-{ #category : 'initialization' }
-GbsCreateUserPresenter >> initializePresenters [
-	mainMenu := self buildMenuBar.
+{ #category : 'actions' }
+GbsCreateUserPresenter >> addSelectedGroup [
+	| group members avail |
+	group := self selectedItemFromList: availableGroupsList.
+	group ifNil: [ ^ self ].
+	members := memberGroupsList items asOrderedCollection.
+	(members includes: group) ifFalse: [ members add: group ].
+	avail := availableGroupsList items asOrderedCollection.
+	avail remove: group ifAbsent: [ ].
+	memberGroupsList items: members asArray.
+	availableGroupsList items: avail asArray
+]
 
-	userField := self newTextInput.
-	passwordField := self newTextInput bePassword.
-	confirmPasswordField := self newTextInput bePassword.
-	gemStoneAuthRadio := self newRadioButton label: 'GemStone'.
-	unixAuthRadio := self newRadioButton label: 'UNIX'.
-	ldapAuthRadio := self newRadioButton label: 'LDAP'.
-	baseDnField := self newTextInput.
-	filterDnField := self newTextInput.
+{ #category : 'layout' }
+GbsCreateUserPresenter >> authFieldWidth [
+	^ 300
+]
 
-	memberGroupsList := self newList.
-	memberGroupsList headerTitle: 'Is Member Of'.
-	memberGroupsList display: [ :each | each asString ].
-	availableGroupsList := self newList.
-	availableGroupsList headerTitle: 'Available'.
-	availableGroupsList display: [ :each | each asString ].
-
-	addGroupButton := self newButton
-		label: '<<';
-		action: [ self addSelectedGroup ];
-		yourself.
-	removeGroupButton := self newButton
-		label: '>>';
-		action: [ self removeSelectedGroup ];
-		yourself.
-
-	newGroupField := self newTextInput.
-	createGroupButton := self newButton
-		label: 'Create';
-		action: [ self createGroup ];
-		yourself.
-
-	privilegesButton := self newButton
-		label: 'Privileges...';
-		action: [ self editPrivileges ];
-		yourself.
-	symbolListButton := self newButton
-		label: 'Symbol List...';
-		action: [ self editSymbolList ];
-		yourself.
-	securityPoliciesButton := self newButton
-		label: 'Object Security Policies ...';
-		action: [ self editSecurityPolicies ];
-		yourself.
-
-	saveButton := self newButton
-		label: 'Save';
-		action: [ self saveUserCommit: false ];
-		yourself.
-	saveAndCommitButton := self newButton
-		label: 'Save And Commit';
-		action: [ self saveUserCommit: true ];
-		yourself.
-	closeButton := self newButton
-		label: 'Close';
-		action: [ self closeWindow ];
+{ #category : 'menus' }
+GbsCreateUserPresenter >> buildMenuBar [
+	^ self newMenuBar
+		addGroup: [ :group |
+			group
+				addItem: [ :item | item name: 'File'; subMenu: self menuFile ];
+				addItem: [ :item | item name: 'User'; subMenu: self menuUser ];
+				addItem: [ :item | item name: 'Help'; subMenu: self menuHelp ] ];
 		yourself
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> centeredPane: aPaneLayout width: aWidth [
+	^ SpBoxLayout newLeftToRight
+		add: (self newLabel label: '') expand: true;
+		add: aPaneLayout width: aWidth;
+		add: (self newLabel label: '') expand: true;
+		yourself
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> closeWindow [
+	self window
+		ifNotNil: [ self window close ]
+		ifNil: [ self delete ]
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> configureAuthRadioGroup [
+	(gemStoneAuthRadio respondsTo: #associatedRadioButtons:)
+		ifTrue: [ gemStoneAuthRadio associatedRadioButtons: { unixAuthRadio. ldapAuthRadio } ].
+	(unixAuthRadio respondsTo: #associatedRadioButtons:)
+		ifTrue: [ unixAuthRadio associatedRadioButtons: { gemStoneAuthRadio. ldapAuthRadio } ].
+	(ldapAuthRadio respondsTo: #associatedRadioButtons:)
+		ifTrue: [ ldapAuthRadio associatedRadioButtons: { gemStoneAuthRadio. unixAuthRadio } ].
 ]
 
 { #category : 'initialization' }
@@ -121,6 +114,37 @@ GbsCreateUserPresenter >> connectPresenters [
 	filterDnField enabled: false.
 	pendingPrivileges := nil.
 	self refreshGroups
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> contentWidth [
+	^ 800
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> createButtonWidth [
+	^ 120
+]
+
+{ #category : 'actions' }
+GbsCreateUserPresenter >> createGroup [
+	| groupName avail |
+	groupName := newGroupField text asString withBlanksTrimmed.
+	groupName isEmpty ifTrue: [ ^ self ].
+	avail := availableGroupsList items asOrderedCollection.
+	(avail includes: groupName) ifFalse: [ avail add: groupName ].
+	availableGroupsList items: (avail asSortedCollection asArray).
+	newGroupField text: ''
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> createdBlock: aBlock [
+	createdBlock := aBlock
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> credentialsPaneHeight [
+	^ 145
 ]
 
 { #category : 'layout' }
@@ -208,102 +232,49 @@ GbsCreateUserPresenter >> defaultLayout [
 		yourself
 ]
 
-{ #category : 'layout' }
-GbsCreateUserPresenter >> credentialsPaneHeight [
-	^ 145
-]
-
-{ #category : 'layout' }
-GbsCreateUserPresenter >> sideAndAuthHeight [
-	^ 220
-]
-
-{ #category : 'layout' }
-GbsCreateUserPresenter >> textRowLabel: labelString field: aField [
-	^ self textRowLabel: labelString field: aField fieldWidth: self textFieldWidth
-]
-
-{ #category : 'layout' }
-GbsCreateUserPresenter >> textRowLabel: labelString field: aField fieldWidth: widthValue [
-	^ SpBoxLayout newLeftToRight
-		add: (self newLabel label: labelString) width: self rowLabelWidth;
-		add: aField width: widthValue;
-		spacing: 6;
-		yourself
-]
-
-{ #category : 'layout' }
-GbsCreateUserPresenter >> rowLabelWidth [
-	^ 150
-]
-
-{ #category : 'layout' }
-GbsCreateUserPresenter >> textFieldWidth [
-	^ 520
-]
-
-{ #category : 'layout' }
-GbsCreateUserPresenter >> sideButtonWidth [
-	^ 250
-]
-
-{ #category : 'layout' }
-GbsCreateUserPresenter >> groupListWidth [
-	^ 300
-]
-
-{ #category : 'layout' }
-GbsCreateUserPresenter >> transferButtonWidth [
-	^ 90
-]
-
-{ #category : 'layout' }
-GbsCreateUserPresenter >> newGroupFieldWidth [
-	^ 440
-]
-
-{ #category : 'layout' }
-GbsCreateUserPresenter >> createButtonWidth [
-	^ 120
-]
-
-{ #category : 'layout' }
-GbsCreateUserPresenter >> actionButtonWidth [
-	^ 180
-]
-
-{ #category : 'layout' }
-GbsCreateUserPresenter >> authFieldWidth [
-	^ 300
-]
-
-{ #category : 'layout' }
-GbsCreateUserPresenter >> contentWidth [
-	^ 800
-]
-
-{ #category : 'layout' }
-GbsCreateUserPresenter >> centeredPane: aPaneLayout width: aWidth [
-	^ SpBoxLayout newLeftToRight
-		add: (self newLabel label: '') expand: true;
-		add: aPaneLayout width: aWidth;
-		add: (self newLabel label: '') expand: true;
-		yourself
-]
-
-{ #category : 'initialization' }
-GbsCreateUserPresenter >> initializeWindow: aWindowPresenter [
-	aWindowPresenter
-		title: 'GemStone User';
-		initialExtent: 920 @ 860
+{ #category : 'private' }
+GbsCreateUserPresenter >> defaultPrivilegesDictionary [
+	| dict |
+	dict := Dictionary new.
+	self supportedPrivilegeNames do: [ :each | dict at: each put: false ].
+	^ dict
 ]
 
 { #category : 'actions' }
-GbsCreateUserPresenter >> refreshGroups [
-	| groups |
-	groups := self fetchAllGroups.
-	memberGroupsList items: #().
-	availableGroupsList items: groups
+GbsCreateUserPresenter >> editPrivileges [
+	| userName current |
+	session ifNil: [ ^ self ].
+	userName := userField text asString withBlanksTrimmed.
+	userName isEmpty ifTrue: [ ^ self inform: 'Enter User ID before editing privileges.' ].
+	current := pendingPrivileges
+		ifNil: [ self fetchPrivilegesForUser: userName ]
+		ifNotNil: [ pendingPrivileges copy ].
+	[
+		GbsUserPrivilegesPresenter
+			openForUser: userName
+			initialPrivileges: current
+			onAccept: [ :updated |
+				pendingPrivileges := updated copy ]
+	] on: Error do: [ :ex |
+		self inform: 'Could not open privileges window: ', ex messageText ]
+]
+
+{ #category : 'actions' }
+GbsCreateUserPresenter >> editSecurityPolicies [
+	session ifNil: [ ^ self ].
+	[ GbsSecurityPoliciesPresenter openOn: session ] on: Error do: [ :ex | self inform: ex messageText ]
+]
+
+{ #category : 'actions' }
+GbsCreateUserPresenter >> editSymbolList [
+	| userName |
+	session ifNil: [ ^ self ].
+	userName := userField text asString withBlanksTrimmed.
+	[
+		GbsSymbolListBrowserPresenter
+			openOn: session
+			userName: userName
+	] on: Error do: [ :ex | self inform: 'Could not open Symbol List Browser: ', ex messageText ]
 ]
 
 { #category : 'private' }
@@ -312,6 +283,30 @@ GbsCreateUserPresenter >> fetchAllGroups [
 	raw := [ session evaluate: self groupsScript ] on: Error do: [ '' ].
 	(raw isString and: [ raw isNotEmpty ]) ifFalse: [ ^ #() ].
 	^ ((raw splitOn: Character tab) reject: [ :each | each isEmpty ]) asSortedCollection asArray
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> fetchPrivilegesForUser: userName [
+	| script raw map |
+	script := self privilegesScriptForUser: userName.
+	raw := [ session evaluate: script ] on: Error do: [ '' ].
+	map := self defaultPrivilegesDictionary copy.
+	(raw isString and: [ raw isNotEmpty ]) ifFalse: [ ^ map ].
+	raw lines do: [ :line |
+		| parts key value |
+		parts := line splitOn: Character tab.
+		parts size >= 2 ifTrue: [
+			key := (parts first asString ifEmpty: [ '' ]) asSymbol.
+			value := (parts second asString asLowercase = 'true').
+			(map includesKey: key) ifTrue: [ map at: key put: value ]
+		]
+	].
+	^ map
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> groupListWidth [
+	^ 300
 ]
 
 { #category : 'private' }
@@ -335,17 +330,182 @@ GbsCreateUserPresenter >> groupsScript [
 	strm contents'
 ]
 
+{ #category : 'initialization' }
+GbsCreateUserPresenter >> initializePresenters [
+	mainMenu := self buildMenuBar.
+
+	userField := self newTextInput.
+	passwordField := self newTextInput bePassword.
+	confirmPasswordField := self newTextInput bePassword.
+	gemStoneAuthRadio := self newRadioButton label: 'GemStone'.
+	unixAuthRadio := self newRadioButton label: 'UNIX'.
+	ldapAuthRadio := self newRadioButton label: 'LDAP'.
+	baseDnField := self newTextInput.
+	filterDnField := self newTextInput.
+
+	memberGroupsList := self newList.
+	memberGroupsList headerTitle: 'Is Member Of'.
+	memberGroupsList display: [ :each | each asString ].
+	availableGroupsList := self newList.
+	availableGroupsList headerTitle: 'Available'.
+	availableGroupsList display: [ :each | each asString ].
+
+	addGroupButton := self newButton
+		label: '<<';
+		action: [ self addSelectedGroup ];
+		yourself.
+	removeGroupButton := self newButton
+		label: '>>';
+		action: [ self removeSelectedGroup ];
+		yourself.
+
+	newGroupField := self newTextInput.
+	createGroupButton := self newButton
+		label: 'Create';
+		action: [ self createGroup ];
+		yourself.
+
+	privilegesButton := self newButton
+		label: 'Privileges...';
+		action: [ self editPrivileges ];
+		yourself.
+	symbolListButton := self newButton
+		label: 'Symbol List...';
+		action: [ self editSymbolList ];
+		yourself.
+	securityPoliciesButton := self newButton
+		label: 'Object Security Policies ...';
+		action: [ self editSecurityPolicies ];
+		yourself.
+
+	saveButton := self newButton
+		label: 'Save';
+		action: [ self saveUserCommit: false ];
+		yourself.
+	saveAndCommitButton := self newButton
+		label: 'Save And Commit';
+		action: [ self saveUserCommit: true ];
+		yourself.
+	closeButton := self newButton
+		label: 'Close';
+		action: [ self closeWindow ];
+		yourself
+]
+
+{ #category : 'initialization' }
+GbsCreateUserPresenter >> initializeWindow: aWindowPresenter [
+	aWindowPresenter
+		title: 'GemStone User';
+		initialExtent: 920 @ 860
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> literalArrayOfStrings: aCollection [
+	| parts |
+	parts := (aCollection ifNil: [ #() ]) collect: [ :each | self literalString: each asString ].
+	^ '{ ', (parts joinUsing: '. '), ' }'
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> literalArrayOfSymbols: aCollection [
+	| parts |
+	parts := (aCollection ifNil: [ #() ]) collect: [ :each | each storeString ].
+	^ '#( ', (parts joinUsing: ' '), ' )'
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> literalDictionary: aDictionary [
+	| pairs |
+	pairs := (aDictionary ifNil: [ Dictionary new ]) associations collect: [ :assoc |
+		'(', assoc key storeString, ' -> ', ((assoc value == true) ifTrue: [ 'true' ] ifFalse: [ 'false' ]), ')' ].
+	^ 'Dictionary newFrom: { ', (pairs joinUsing: '. '), ' }'
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> literalString: aString [
+	^ '''', (aString copyReplaceAll: '''' with: ''''''), ''''
+]
+
+{ #category : 'menus' }
+GbsCreateUserPresenter >> menuFile [
+	^ self newMenu
+		addItem: [ :item | item name: 'Save'; action: [ self saveUserCommit: false ] ];
+		addItem: [ :item | item name: 'Save And Commit'; action: [ self saveUserCommit: true ] ];
+		addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsCreateUserPresenter >> menuHelp [
+	^ self newMenu
+		addItem: [ :item | item name: 'About GemStone User'; action: [ UIManager default inform: 'GemStone User Editor' ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsCreateUserPresenter >> menuUser [
+	^ self newMenu
+		addItem: [ :item | item name: 'Privileges...'; action: [ self editPrivileges ] ];
+		addItem: [ :item | item name: 'Symbol List...'; action: [ self editSymbolList ] ];
+		addItem: [ :item | item name: 'Object Security Policies...'; action: [ self editSecurityPolicies ] ];
+		yourself
+]
+
+{ #category : 'layout' }
+GbsCreateUserPresenter >> newGroupFieldWidth [
+	^ 440
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> privilegesScriptForUser: userName [
+	| userLiteral privilegeArrayLiteral |
+	userLiteral := self literalString: userName.
+	privilegeArrayLiteral := self literalArrayOfSymbols: self supportedPrivilegeNames.
+	^ '
+	| users user strm groups privilegeNames valueFor |
+	strm := WriteStream on: String new.
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNil: [ ^ '''' ].
+	user := users detect: [ :u | u userId asString = ', userLiteral, ' ] ifNone: [ nil ].
+	user ifNil: [ ^ '''' ].
+	groups := (user respondsTo: #groups)
+		ifTrue: [ user groups collect: [ :g | (g respondsTo: #name) ifTrue: [ g name asString ] ifFalse: [ g asString ] ] ]
+		ifFalse: [ #() ].
+	privilegeNames := ', privilegeArrayLiteral, '.
+	valueFor := [ :privName |
+		| base alt getter1 getter2 |
+		base := privName asString.
+		alt := (base isEmpty)
+			ifTrue: [ base ]
+			ifFalse: [ (base first asLowercase asString), (base allButFirst) ].
+		getter1 := (''is'', base) asSymbol.
+		getter2 := alt asSymbol.
+		(user respondsTo: getter1)
+			ifTrue: [ ^ (user perform: getter1) == true ].
+		(user respondsTo: getter2)
+			ifTrue: [ ^ (user perform: getter2) == true ].
+		(base = ''DataCurator'') ifTrue: [ ^ groups includes: ''DataCuratorGroup'' ].
+		(base = ''SystemUser'') ifTrue: [ ^ groups includes: ''System'' ].
+		(base = ''HostAgentUser'') ifTrue: [ ^ groups includes: ''HostAgentUser'' ].
+		(base = ''SymbolUser'') ifTrue: [ ^ groups includes: ''SymbolUser'' ].
+		(base = ''Nameless'') ifTrue: [ ^ groups includes: ''Nameless'' ].
+		(base = ''GcUser'') ifTrue: [ ^ groups includes: ''GcUser'' ].
+		^ false ].
+	privilegeNames do: [ :name |
+		strm
+			nextPutAll: name asString;
+			tab;
+			nextPutAll: ((valueFor value: name) ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]);
+			cr ].
+	strm contents'
+]
+
 { #category : 'actions' }
-GbsCreateUserPresenter >> addSelectedGroup [
-	| group members avail |
-	group := self selectedItemFromList: availableGroupsList.
-	group ifNil: [ ^ self ].
-	members := memberGroupsList items asOrderedCollection.
-	(members includes: group) ifFalse: [ members add: group ].
-	avail := availableGroupsList items asOrderedCollection.
-	avail remove: group ifAbsent: [ ].
-	memberGroupsList items: members asArray.
-	availableGroupsList items: avail asArray
+GbsCreateUserPresenter >> refreshGroups [
+	| groups |
+	groups := self fetchAllGroups.
+	memberGroupsList items: #().
+	availableGroupsList items: groups
 ]
 
 { #category : 'actions' }
@@ -361,64 +521,9 @@ GbsCreateUserPresenter >> removeSelectedGroup [
 	availableGroupsList items: (avail asSortedCollection asArray)
 ]
 
-{ #category : 'actions' }
-GbsCreateUserPresenter >> createGroup [
-	| groupName avail |
-	groupName := newGroupField text asString withBlanksTrimmed.
-	groupName isEmpty ifTrue: [ ^ self ].
-	avail := availableGroupsList items asOrderedCollection.
-	(avail includes: groupName) ifFalse: [ avail add: groupName ].
-	availableGroupsList items: (avail asSortedCollection asArray).
-	newGroupField text: ''
-]
-
-{ #category : 'private' }
-GbsCreateUserPresenter >> configureAuthRadioGroup [
-	(gemStoneAuthRadio respondsTo: #associatedRadioButtons:)
-		ifTrue: [ gemStoneAuthRadio associatedRadioButtons: { unixAuthRadio. ldapAuthRadio } ].
-	(unixAuthRadio respondsTo: #associatedRadioButtons:)
-		ifTrue: [ unixAuthRadio associatedRadioButtons: { gemStoneAuthRadio. ldapAuthRadio } ].
-	(ldapAuthRadio respondsTo: #associatedRadioButtons:)
-		ifTrue: [ ldapAuthRadio associatedRadioButtons: { gemStoneAuthRadio. unixAuthRadio } ].
-]
-
-{ #category : 'private' }
-GbsCreateUserPresenter >> wireAuthRadioEvents [
-	(gemStoneAuthRadio respondsTo: #whenChangedDo:)
-		ifTrue: [ gemStoneAuthRadio whenChangedDo: [ self updateAuthFieldVisibility ] ].
-	(unixAuthRadio respondsTo: #whenChangedDo:)
-		ifTrue: [ unixAuthRadio whenChangedDo: [ self updateAuthFieldVisibility ] ].
-	(ldapAuthRadio respondsTo: #whenChangedDo:)
-		ifTrue: [ ldapAuthRadio whenChangedDo: [ self updateAuthFieldVisibility ] ].
-	(gemStoneAuthRadio respondsTo: #whenActivatedDo:)
-		ifTrue: [ gemStoneAuthRadio whenActivatedDo: [ self updateAuthFieldVisibility ] ].
-	(unixAuthRadio respondsTo: #whenActivatedDo:)
-		ifTrue: [ unixAuthRadio whenActivatedDo: [ self updateAuthFieldVisibility ] ].
-	(ldapAuthRadio respondsTo: #whenActivatedDo:)
-		ifTrue: [ ldapAuthRadio whenActivatedDo: [ self updateAuthFieldVisibility ] ].
-]
-
-{ #category : 'private' }
-GbsCreateUserPresenter >> updateAuthFieldVisibility [
-	| ldapSelected |
-	ldapSelected := ldapAuthRadio state == true.
-	baseDnField enabled: ldapSelected.
-	filterDnField enabled: ldapSelected.
-]
-
-{ #category : 'private' }
-GbsCreateUserPresenter >> selectedItemFromList: aListPresenter [
-	| selected |
-	aListPresenter ifNil: [ ^ nil ].
-	(aListPresenter respondsTo: #selectedItem)
-		ifTrue: [
-			selected := [ aListPresenter selectedItem ] on: Error do: [ nil ].
-			selected ifNotNil: [ ^ selected ] ].
-	(aListPresenter respondsTo: #selection)
-		ifTrue: [
-			selected := [ aListPresenter selection selectedItem ] on: Error do: [ nil ].
-			selected ifNotNil: [ ^ selected ] ].
-	^ nil
+{ #category : 'layout' }
+GbsCreateUserPresenter >> rowLabelWidth [
+	^ 150
 ]
 
 { #category : 'actions' }
@@ -445,6 +550,15 @@ GbsCreateUserPresenter >> saveUserCommit: commitAfterSave [
 	] on: Error do: [ :ex |
 		self inform: 'Save user failed: ', ex messageText
 	]
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> scriptToCreateUser: userName password: password [
+	^ self
+		scriptToSaveUser: userName
+		password: password
+		groups: #()
+		privileges: self defaultPrivilegesDictionary
 ]
 
 { #category : 'private' }
@@ -509,40 +623,33 @@ GbsCreateUserPresenter >> scriptToSaveUser: userName password: password groups: 
 ]
 
 { #category : 'private' }
-GbsCreateUserPresenter >> scriptToCreateUser: userName password: password [
-	^ self
-		scriptToSaveUser: userName
-		password: password
-		groups: #()
-		privileges: self defaultPrivilegesDictionary
+GbsCreateUserPresenter >> selectedItemFromList: aListPresenter [
+	| selected |
+	aListPresenter ifNil: [ ^ nil ].
+	(aListPresenter respondsTo: #selectedItem)
+		ifTrue: [
+			selected := [ aListPresenter selectedItem ] on: Error do: [ nil ].
+			selected ifNotNil: [ ^ selected ] ].
+	(aListPresenter respondsTo: #selection)
+		ifTrue: [
+			selected := [ aListPresenter selection selectedItem ] on: Error do: [ nil ].
+			selected ifNotNil: [ ^ selected ] ].
+	^ nil
 ]
 
 { #category : 'private' }
-GbsCreateUserPresenter >> literalString: aString [
-	^ '''', (aString copyReplaceAll: '''' with: ''''''), ''''
+GbsCreateUserPresenter >> session: aSession [
+	session := aSession
 ]
 
-{ #category : 'private' }
-GbsCreateUserPresenter >> literalArrayOfStrings: aCollection [
-	| parts |
-	parts := (aCollection ifNil: [ #() ]) collect: [ :each | self literalString: each asString ].
-	^ '{ ', (parts joinUsing: '. '), ' }'
+{ #category : 'layout' }
+GbsCreateUserPresenter >> sideAndAuthHeight [
+	^ 220
 ]
 
-{ #category : 'private' }
-GbsCreateUserPresenter >> literalDictionary: aDictionary [
-	| pairs |
-	pairs := (aDictionary ifNil: [ Dictionary new ]) associations collect: [ :assoc |
-		'(', assoc key storeString, ' -> ', ((assoc value == true) ifTrue: [ 'true' ] ifFalse: [ 'false' ]), ')' ].
-	^ 'Dictionary newFrom: { ', (pairs joinUsing: '. '), ' }'
-]
-
-{ #category : 'private' }
-GbsCreateUserPresenter >> defaultPrivilegesDictionary [
-	| dict |
-	dict := Dictionary new.
-	self supportedPrivilegeNames do: [ :each | dict at: each put: false ].
-	^ dict
+{ #category : 'layout' }
+GbsCreateUserPresenter >> sideButtonWidth [
+	^ 250
 ]
 
 { #category : 'private' }
@@ -581,157 +688,50 @@ GbsCreateUserPresenter >> supportedPrivilegeNames [
 	)
 ]
 
-{ #category : 'private' }
-GbsCreateUserPresenter >> fetchPrivilegesForUser: userName [
-	| script raw map |
-	script := self privilegesScriptForUser: userName.
-	raw := [ session evaluate: script ] on: Error do: [ '' ].
-	map := self defaultPrivilegesDictionary copy.
-	(raw isString and: [ raw isNotEmpty ]) ifFalse: [ ^ map ].
-	raw lines do: [ :line |
-		| parts key value |
-		parts := line splitOn: Character tab.
-		parts size >= 2 ifTrue: [
-			key := (parts first asString ifEmpty: [ '' ]) asSymbol.
-			value := (parts second asString asLowercase = 'true').
-			(map includesKey: key) ifTrue: [ map at: key put: value ]
-		]
-	].
-	^ map
+{ #category : 'layout' }
+GbsCreateUserPresenter >> textFieldWidth [
+	^ 520
 ]
 
-{ #category : 'private' }
-GbsCreateUserPresenter >> privilegesScriptForUser: userName [
-	| userLiteral privilegeArrayLiteral |
-	userLiteral := self literalString: userName.
-	privilegeArrayLiteral := self literalArrayOfSymbols: self supportedPrivilegeNames.
-	^ '
-	| users user strm groups privilegeNames valueFor |
-	strm := WriteStream on: String new.
-	users := System myUserProfile symbolList objectNamed: #AllUsers.
-	users ifNil: [ ^ '''' ].
-	user := users detect: [ :u | u userId asString = ', userLiteral, ' ] ifNone: [ nil ].
-	user ifNil: [ ^ '''' ].
-	groups := (user respondsTo: #groups)
-		ifTrue: [ user groups collect: [ :g | (g respondsTo: #name) ifTrue: [ g name asString ] ifFalse: [ g asString ] ] ]
-		ifFalse: [ #() ].
-	privilegeNames := ', privilegeArrayLiteral, '.
-	valueFor := [ :privName |
-		| base alt getter1 getter2 |
-		base := privName asString.
-		alt := (base isEmpty)
-			ifTrue: [ base ]
-			ifFalse: [ (base first asLowercase asString), (base allButFirst) ].
-		getter1 := (''is'', base) asSymbol.
-		getter2 := alt asSymbol.
-		(user respondsTo: getter1)
-			ifTrue: [ ^ (user perform: getter1) == true ].
-		(user respondsTo: getter2)
-			ifTrue: [ ^ (user perform: getter2) == true ].
-		(base = ''DataCurator'') ifTrue: [ ^ groups includes: ''DataCuratorGroup'' ].
-		(base = ''SystemUser'') ifTrue: [ ^ groups includes: ''System'' ].
-		(base = ''HostAgentUser'') ifTrue: [ ^ groups includes: ''HostAgentUser'' ].
-		(base = ''SymbolUser'') ifTrue: [ ^ groups includes: ''SymbolUser'' ].
-		(base = ''Nameless'') ifTrue: [ ^ groups includes: ''Nameless'' ].
-		(base = ''GcUser'') ifTrue: [ ^ groups includes: ''GcUser'' ].
-		^ false ].
-	privilegeNames do: [ :name |
-		strm
-			nextPutAll: name asString;
-			tab;
-			nextPutAll: ((valueFor value: name) ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]);
-			cr ].
-	strm contents'
+{ #category : 'layout' }
+GbsCreateUserPresenter >> textRowLabel: labelString field: aField [
+	^ self textRowLabel: labelString field: aField fieldWidth: self textFieldWidth
 ]
 
-{ #category : 'private' }
-GbsCreateUserPresenter >> literalArrayOfSymbols: aCollection [
-	| parts |
-	parts := (aCollection ifNil: [ #() ]) collect: [ :each | each storeString ].
-	^ '#( ', (parts joinUsing: ' '), ' )'
-]
-
-{ #category : 'actions' }
-GbsCreateUserPresenter >> editPrivileges [
-	| userName current |
-	session ifNil: [ ^ self ].
-	userName := userField text asString withBlanksTrimmed.
-	userName isEmpty ifTrue: [ ^ self inform: 'Enter User ID before editing privileges.' ].
-	current := pendingPrivileges
-		ifNil: [ self fetchPrivilegesForUser: userName ]
-		ifNotNil: [ pendingPrivileges copy ].
-	[
-		GbsUserPrivilegesPresenter
-			openForUser: userName
-			initialPrivileges: current
-			onAccept: [ :updated |
-				pendingPrivileges := updated copy ]
-	] on: Error do: [ :ex |
-		self inform: 'Could not open privileges window: ', ex messageText ]
-]
-
-{ #category : 'actions' }
-GbsCreateUserPresenter >> editSymbolList [
-	| userName |
-	session ifNil: [ ^ self ].
-	userName := userField text asString withBlanksTrimmed.
-	[
-		GbsSymbolListBrowserPresenter
-			openOn: session
-			userName: userName
-	] on: Error do: [ :ex | self inform: 'Could not open Symbol List Browser: ', ex messageText ]
-]
-
-{ #category : 'actions' }
-GbsCreateUserPresenter >> editSecurityPolicies [
-	session ifNil: [ ^ self ].
-	[ GbsSecurityPoliciesPresenter openOn: session ] on: Error do: [ :ex | self inform: ex messageText ]
-]
-
-{ #category : 'private' }
-GbsCreateUserPresenter >> session: aSession [
-	session := aSession
-]
-
-{ #category : 'private' }
-GbsCreateUserPresenter >> closeWindow [
-	self window
-		ifNotNil: [ self window close ]
-		ifNil: [ self delete ]
-]
-
-{ #category : 'menus' }
-GbsCreateUserPresenter >> buildMenuBar [
-	^ self newMenuBar
-		addGroup: [ :group |
-			group
-				addItem: [ :item | item name: 'File'; subMenu: self menuFile ];
-				addItem: [ :item | item name: 'User'; subMenu: self menuUser ];
-				addItem: [ :item | item name: 'Help'; subMenu: self menuHelp ] ];
+{ #category : 'layout' }
+GbsCreateUserPresenter >> textRowLabel: labelString field: aField fieldWidth: widthValue [
+	^ SpBoxLayout newLeftToRight
+		add: (self newLabel label: labelString) width: self rowLabelWidth;
+		add: aField width: widthValue;
+		spacing: 6;
 		yourself
 ]
 
-{ #category : 'menus' }
-GbsCreateUserPresenter >> menuFile [
-	^ self newMenu
-		addItem: [ :item | item name: 'Save'; action: [ self saveUserCommit: false ] ];
-		addItem: [ :item | item name: 'Save And Commit'; action: [ self saveUserCommit: true ] ];
-		addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ];
-		yourself
+{ #category : 'layout' }
+GbsCreateUserPresenter >> transferButtonWidth [
+	^ 90
 ]
 
-{ #category : 'menus' }
-GbsCreateUserPresenter >> menuUser [
-	^ self newMenu
-		addItem: [ :item | item name: 'Privileges...'; action: [ self editPrivileges ] ];
-		addItem: [ :item | item name: 'Symbol List...'; action: [ self editSymbolList ] ];
-		addItem: [ :item | item name: 'Object Security Policies...'; action: [ self editSecurityPolicies ] ];
-		yourself
+{ #category : 'private' }
+GbsCreateUserPresenter >> updateAuthFieldVisibility [
+	| ldapSelected |
+	ldapSelected := ldapAuthRadio state == true.
+	baseDnField enabled: ldapSelected.
+	filterDnField enabled: ldapSelected.
 ]
 
-{ #category : 'menus' }
-GbsCreateUserPresenter >> menuHelp [
-	^ self newMenu
-		addItem: [ :item | item name: 'About GemStone User'; action: [ UIManager default inform: 'GemStone User Editor' ] ];
-		yourself
+{ #category : 'private' }
+GbsCreateUserPresenter >> wireAuthRadioEvents [
+	(gemStoneAuthRadio respondsTo: #whenChangedDo:)
+		ifTrue: [ gemStoneAuthRadio whenChangedDo: [ self updateAuthFieldVisibility ] ].
+	(unixAuthRadio respondsTo: #whenChangedDo:)
+		ifTrue: [ unixAuthRadio whenChangedDo: [ self updateAuthFieldVisibility ] ].
+	(ldapAuthRadio respondsTo: #whenChangedDo:)
+		ifTrue: [ ldapAuthRadio whenChangedDo: [ self updateAuthFieldVisibility ] ].
+	(gemStoneAuthRadio respondsTo: #whenActivatedDo:)
+		ifTrue: [ gemStoneAuthRadio whenActivatedDo: [ self updateAuthFieldVisibility ] ].
+	(unixAuthRadio respondsTo: #whenActivatedDo:)
+		ifTrue: [ unixAuthRadio whenActivatedDo: [ self updateAuthFieldVisibility ] ].
+	(ldapAuthRadio respondsTo: #whenActivatedDo:)
+		ifTrue: [ ldapAuthRadio whenActivatedDo: [ self updateAuthFieldVisibility ] ].
 ]

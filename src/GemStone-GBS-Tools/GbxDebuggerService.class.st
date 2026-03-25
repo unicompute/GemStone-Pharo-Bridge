@@ -62,6 +62,18 @@ GbxDebuggerService class >> openOn: anErrorString process: processOop session: a
 		service: service
 ]
 
+{ #category : 'doIt/accept/explain' }
+GbxDebuggerService >> acceptTextFrom: textController [
+	"Accept/compile text from editor.
+	Calls gbxRecompileMethod: for server contexts."
+	currentContext gbxIsServerContext
+		ifTrue: [ self gbxRecompileMethod: textController text notifying: textController ]
+		ifFalse: [ 
+			"For client contexts, use standard evaluation"
+			self evaluateCodeInCurrentFrame: textController text
+		]
+]
+
 { #category : 'private' }
 GbxDebuggerService >> asBooleanResult: raw default: defaultBoolean [
 	| value |
@@ -75,6 +87,133 @@ GbxDebuggerService >> asBooleanResult: raw default: defaultBoolean [
 	(#('true' '1' 'yes' 'ok') includes: value) ifTrue: [ ^ true ].
 	(#('false' '0' 'no' 'nil' '') includes: value) ifTrue: [ ^ false ].
 	^ defaultBoolean
+]
+
+{ #category : 'private-step points' }
+GbxDebuggerService >> basicJumpToCaret [
+	"Jump to caret position without executing code.
+	Not supported for server frames - use runToStepPoint instead."
+	| targetStepPoint |
+	targetStepPoint := self earliestSelectedStepPoint.
+	targetStepPoint ifNil: [ ^ false ].
+	
+	^ self jumpToStepPoint: targetStepPoint
+]
+
+{ #category : 'actions' }
+GbxDebuggerService >> basicReenterServerContext [
+	"Executed in a debugger service process.
+	A server context is selected. Reset to the initial state of that context,
+	as if it had just been entered. Discard any execution since the context
+	was entered."
+	| theContext |
+	"Always prefer the executed-code restart target over the currently selected
+	frame so a single Restart click is deterministic."
+	theContext := self restartTargetContext.
+	theContext ifNil: [ theContext := currentContext ].
+	theContext ifNil: [ ^ false ].
+	self selectContext: theContext.
+	self logRestartState: 'basicReenter/start' context: theContext.
+
+	(self cutbackTo: theContext
+		finishWith: [
+			"First, reset the server-side PC to step 1 BEFORE fetching the context list.
+			This ensures the server reports the correct step point."
+			self resetServerPCToStepOne.
+
+			"Level numbers may have changed; recompute and select server-truth context."
+			self selectTopServerContext.
+			self selectRestartTargetContext.
+
+			"Force another refresh to ensure the display shows step=1"
+			self notifyContextChanged
+		]) ifFalse: [ ^ false ].
+	self logRestartState: 'basicReenter/done' context: self currentContext.
+
+	^ true
+]
+
+{ #category : 'private-GS execution' }
+GbxDebuggerService >> basicSendIntoServer [
+	"Send when the next send will take us from client to server.
+	Requests single step and handles GbsError for rtErrStep."
+	| gbsErr initial |
+	self requestServerSingleStep.
+	
+	[ self privateStep ]
+		on: Error "ContextEmergencyError in VW"
+		do: [ :ex |
+			gbsErr := ex parameter.
+			(gbsErr isNil or: [ 
+				(gbsErr respondsTo: #creator) ifFalse: [ true ]
+				ifTrue: [ gbsErr creator ~~ (self gbsErrorClass signalFor: #rtErrStep) ]
+			]) ifTrue: [
+				ex pass "Pass non-rtErrStep errors up"
+			]
+		].
+	
+	gbsErr ifNotNil: [
+		"Server method didn't stop for single step (simple method).
+		Put new contexts on stack and update selection."
+		initial := (gbsErr respondsTo: #initialContext)
+			ifTrue: [ [ gbsErr initialContext ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		initial ifNotNil: [ currentContext := initial ].
+		self selectTopServerContext
+	]
+]
+
+{ #category : 'private-GS execution' }
+GbxDebuggerService >> basicServerStepInLevel: level [
+	"The selected context is a server context. Perform a step in the
+	given level of that context's GsProcess.
+	Level should be the level of the selected context, or if top context
+	is selected and level is 0, do a send."
+	| gbsError scContext |
+	gbsError := currentContext gbsError.
+	gbsError ifNil: [ ^ self ].
+	
+	gbsError stepLevel: level.
+	
+	"Internally select the serverCall context for the selected context"
+	currentContext := scContext := currentContext serverCallContext.
+	scContext ifNil: [ ^ self ].
+	
+	self resetPCSelection.
+	
+	"Step until right after the send of #stepOrContinueAfter (PC=31)"
+	self stepUntilPC: 31.
+	
+	(currentContext == scContext) ifFalse: [
+		"Entering client-side exception handler - stop now"
+		^ self
+	].
+	
+	"Step until assign result, back to loop head (PC=10)"
+	self stepUntilPC: 10.
+	
+	(scContext respondsTo: #gbxResult) ifTrue: [
+		(scContext gbxResult respondsTo: #gbxIsGSError) ifTrue: [
+			scContext gbxResult gbxIsGSError
+				ifTrue: [ self selectTopServerContext ]
+				ifFalse: [ self stepOutOfServerIntoClient ]
+		] ifFalse: [
+			self stepOutOfServerIntoClient
+		]
+	] ifFalse: [
+		self stepOutOfServerIntoClient
+	]
+]
+
+{ #category : 'private-step points' }
+GbxDebuggerService >> basicSkipToCaret [
+	"Run to caret position using step points.
+	Steps until targetStepPoint is reached."
+	| targetStepPoint |
+	targetStepPoint := self earliestSelectedStepPoint.
+	targetStepPoint ifNil: [ ^ false ].
+	
+	^ self runToStepPoint: targetStepPoint
 ]
 
 { #category : 'breakpoint support' }
@@ -118,35 +257,6 @@ GbxDebuggerService >> breakpointSummaryString [
 ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> highlightBreakPointsIn: aText [
-	"Highlight breakpoints in text widget with purple underline emphasis.
-	Returns the text with emphasis added."
-	| bps methodSelector |
-	currentContext ifNil: [ ^ aText ].
-	currentContext gbxIsServerContext ifFalse: [ ^ aText ].
-	currentContext isValid ifFalse: [ ^ aText ].
-	self isTerminated ifTrue: [ ^ aText ].
-	
-	methodSelector := self selectedMethodSelector.
-	methodSelector ifNil: [ ^ aText ].
-	
-	bps := self currentBreakPointList select: [ :each |
-		each selector = methodSelector and: [ each remoteClass = self selectedMethodClassName ]
-	].
-	
-	bps do: [ :bp |
-		| offset |
-		offset := currentContext sourceOffsets at: bp stepPoint ifAbsent: [ nil ].
-		offset ifNotNil: [
-			(aText respondsTo: #emphasizeFrom:to:with:) ifTrue: [
-				aText emphasizeFrom: offset to: offset with: #( #underline #color -> #purple )
-			]
-		]
-	].
-	^ aText
-]
-
-{ #category : 'breakpoint support' }
 GbxDebuggerService >> breakpointToRemoveIn: aTextWidget from: breakpoints [
 	| selection stepPointMatch |
 	selection := self selectionIntervalForTextWidget: aTextWidget.
@@ -178,6 +288,25 @@ GbxDebuggerService >> breakpointsInSelectedMethod [
 	]
 ]
 
+{ #category : 'actions-browsing' }
+GbxDebuggerService >> browseClass [
+	"Browse class - uses gbxBrowseClass: for server contexts"
+	currentContext gbxIsServerContext ifTrue: [
+		^ self gbxBrowseClass: currentContext homeReceiver
+	].
+	^ nil
+]
+
+{ #category : 'actions-browsing' }
+GbxDebuggerService >> browseMethod [
+	"Browse current method - uses gbxBrowseMethod: for server contexts"
+	currentContext gbxIsServerContext ifTrue: [
+		^ self gbxBrowseMethod: self selectedMethod
+	].
+	"For client contexts, standard browsing would be used"
+	^ nil
+]
+
 { #category : 'breakpoint support' }
 GbxDebuggerService >> browserClass [
 	^ Smalltalk at: #GbxBrowser ifAbsent: [ nil ]
@@ -204,6 +333,16 @@ GbxDebuggerService >> canInspectCurrentReceiver [
 	^ self currentContext isNotNil
 ]
 
+{ #category : 'testing' }
+GbxDebuggerService >> canIssueContextCommand [
+	^ currentContext isNotNil and: [ self isTerminated not ]
+]
+
+{ #category : 'testing' }
+GbxDebuggerService >> canJumpToStepPoint [
+	^ self canIssueContextCommand
+]
+
 { #category : 'breakpoint support' }
 GbxDebuggerService >> canManageBreakPoints [
 	| selector |
@@ -217,6 +356,11 @@ GbxDebuggerService >> canManageBreakPoints [
 			and: [ currentContext isExecutedCodeFrame ]
 	].
 	^ self selectedMethodClassName isNotNil
+]
+
+{ #category : 'testing' }
+GbxDebuggerService >> canPause [
+	^ self canResume
 ]
 
 { #category : 'breakpoint support' }
@@ -235,13 +379,11 @@ GbxDebuggerService >> canResume [
 ]
 
 { #category : 'testing' }
-GbxDebuggerService >> canRunWithBreakAgain [
-	^ self canResume and: [ self canIssueContextCommand ]
-]
-
-{ #category : 'testing' }
-GbxDebuggerService >> canPause [
-	^ self canResume
+GbxDebuggerService >> canReturnFromFrame [
+	currentContext ifNil: [ ^ false ].
+	(currentContext respondsTo: #gbxIsServerContext)
+		ifTrue: [ currentContext gbxIsServerContext ifTrue: [ ^ false ] ].
+	^ self canStepReturn
 ]
 
 { #category : 'testing' }
@@ -250,13 +392,8 @@ GbxDebuggerService >> canRunToStepPoint [
 ]
 
 { #category : 'testing' }
-GbxDebuggerService >> canJumpToStepPoint [
-	^ self canIssueContextCommand
-]
-
-{ #category : 'testing' }
-GbxDebuggerService >> canIssueContextCommand [
-	^ currentContext isNotNil and: [ self isTerminated not ]
+GbxDebuggerService >> canRunWithBreakAgain [
+	^ self canResume and: [ self canIssueContextCommand ]
 ]
 
 { #category : 'breakpoint support' }
@@ -280,30 +417,8 @@ GbxDebuggerService >> canStepReturn [
 ]
 
 { #category : 'testing' }
-GbxDebuggerService >> canReturnFromFrame [
-	currentContext ifNil: [ ^ false ].
-	(currentContext respondsTo: #gbxIsServerContext)
-		ifTrue: [ currentContext gbxIsServerContext ifTrue: [ ^ false ] ].
-	^ self canStepReturn
-]
-
-{ #category : 'testing' }
 GbxDebuggerService >> canTerminate [
 	^ self isTerminated not
-]
-
-{ #category : 'testing' }
-GbxDebuggerService >> hasLoopControlContext [
-	"VW compatibility hook for Next Loop enablement."
-	^ false
-]
-
-{ #category : 'testing' }
-GbxDebuggerService >> isMethodContextSelected [
-	currentContext ifNil: [ ^ false ].
-	(currentContext respondsTo: #isExecutedCodeFrame)
-		ifTrue: [ ^ currentContext isExecutedCodeFrame not ].
-	^ true
 ]
 
 { #category : 'breakpoint support' }
@@ -316,6 +431,46 @@ GbxDebuggerService >> clearCompileError [
 	lastCompileError := nil
 ]
 
+{ #category : 'private-step points' }
+GbxDebuggerService >> closestLeftStepPoint [
+	"Find the closest step point strictly left of (before) the current selection.
+	Returns the step point number or nil if none found."
+	| map currentStep candidates |
+	map := self sourceMap.
+	map ifEmpty: [ ^ nil ].
+	currentStep := self currentStepPoint.
+	currentStep ifNil: [ ^ nil ].
+	
+	candidates := map select: [ :assoc |
+		(assoc respondsTo: #key) and: [
+			assoc key isNumber and: [ assoc key < currentStep ]
+		]
+	].
+	candidates ifEmpty: [ ^ nil ].
+	
+	^ (candidates collect: [ :assoc | assoc key ]) max
+]
+
+{ #category : 'private-step points' }
+GbxDebuggerService >> closestRightStepPoint [
+	"Find the closest step point strictly right of (after) the current selection.
+	Returns the step point number or nil if none found."
+	| map currentStep candidates |
+	map := self sourceMap.
+	map ifEmpty: [ ^ nil ].
+	currentStep := self currentStepPoint.
+	currentStep ifNil: [ ^ nil ].
+	
+	candidates := map select: [ :assoc |
+		(assoc respondsTo: #key) and: [
+			assoc key isNumber and: [ assoc key > currentStep ]
+		]
+	].
+	candidates ifEmpty: [ ^ nil ].
+	
+	^ (candidates collect: [ :assoc | assoc key ]) min
+]
+
 { #category : 'accessing' }
 GbxDebuggerService >> contextList [
 	contextStackPolicy ifNil: [ ^ #( ) ].
@@ -325,6 +480,66 @@ GbxDebuggerService >> contextList [
 { #category : 'accessing' }
 GbxDebuggerService >> contextStackPolicy [
 	^ contextStackPolicy
+]
+
+{ #category : 'evaluation' }
+GbxDebuggerService >> correctCurrentSelectorWithSource: sourceText [
+	| className selector isMeta classLookupName escapedSource script raw |
+	currentContext ifNil: [ ^ false ].
+	self isSessionUsable ifFalse: [ ^ false ].
+	self clearCompileError.
+	className := self selectedMethodClassName.
+	selector := self selectedMethodSelector.
+	(className isNil or: [ selector isNil or: [ selector = #unboundMethod ] ]) ifTrue: [ ^ false ].
+
+	isMeta := className asString endsWith: ' class'.
+	classLookupName := isMeta
+		ifTrue: [ (className asString copyFrom: 1 to: className size - 6) ]
+		ifFalse: [ className asString ].
+	escapedSource := self escapeForScriptLiteral: sourceText.
+
+	script := '[
+		| cls oldSel protocol result newSel source |
+		cls := System myUserProfile symbolList objectNamed: #', classLookupName, '.
+		cls ifNil: [ ^ ''ERROR|Class not found'' ].
+		', (isMeta ifTrue: [ 'cls := cls class.' ] ifFalse: [ '' ]), '
+		oldSel := #', selector asString, '.
+		source := ''', escapedSource, '''.
+		protocol := [ cls categoryOfSelector: oldSel ] on: Error do: [ ''as yet unclassified'' ].
+		protocol ifNil: [ protocol := ''as yet unclassified'' ].
+		result := [ cls compileMethod: source category: protocol ] on: Error do: [ :ex | ''ERROR|'', ex description ].
+		(result isString and: [ result beginsWith: ''ERROR|'' ]) ifTrue: [ ^ result ].
+		(result isKindOf: Array) ifTrue: [ ^ ''ERROR|Compilation failed'' ].
+		newSel := [ result selector ] on: Error do: [ oldSel ].
+		(newSel ~= oldSel and: [ cls includesSelector: oldSel ]) ifTrue: [
+			[ cls removeSelector: oldSel ] on: Error do: [ :ex | ]
+		].
+		''OK''
+	] value'.
+
+	raw := [ session executeAndFetch: script context: session sessionOop ] on: Error do: [ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	raw ifNil: [
+		lastCompileError := 'Correct selector failed: no response from GemStone'.
+		^ false
+	].
+	(raw = 'OK') ifTrue: [ ^ true ].
+	lastCompileError := (self normalizedCompileErrorFrom: raw).
+	^ false
+]
+
+{ #category : 'context list' }
+GbxDebuggerService >> correctSelectedContextIfGlue [
+	"If the currently selected context should be hidden glue,
+	change the selection to a top visible context.
+	The hidden glue must be at the top of the stack, so the
+	correct context to show is the top visible context."
+	(contextStackPolicy isHiddenGlue: currentContext) ifTrue: [
+		"It is glue - reselect top visible context"
+		self recomputeContextList.
+		"Top visible is likely server context, must recompute"
+		self selectContextAt: 1
+	]
 ]
 
 { #category : 'breakpoint support' }
@@ -464,44 +679,117 @@ GbxDebuggerService >> currentStepPoint [
 	^ raw
 ]
 
-{ #category : 'private-step points' }
-GbxDebuggerService >> closestRightStepPoint [
-	"Find the closest step point strictly right of (after) the current selection.
-	Returns the step point number or nil if none found."
-	| map currentStep candidates |
-	map := self sourceMap.
-	map ifEmpty: [ ^ nil ].
-	currentStep := self currentStepPoint.
-	currentStep ifNil: [ ^ nil ].
-	
-	candidates := map select: [ :assoc |
-		(assoc respondsTo: #key) and: [
-			assoc key isNumber and: [ assoc key > currentStep ]
-		]
-	].
-	candidates ifEmpty: [ ^ nil ].
-	
-	^ (candidates collect: [ :assoc | assoc key ]) min
+{ #category : 'actions' }
+GbxDebuggerService >> cutbackClientContextsAbove: gsContext [
+	"gsContext must be a GemStone server context.
+	Discard any partially-completed client execution above gsContext."
+	| ctx |
+	contextStackPolicy ifNil: [ ^ self ].
+	(contextStackPolicy respondsTo: #firstClientContextAbove:) ifFalse: [ ^ self ].
+	ctx := contextStackPolicy firstClientContextAbove: gsContext.
+	ctx ifNotNil: [ self cutbackTo: ctx finishWith: [ ] ]
 ]
 
-{ #category : 'private-step points' }
-GbxDebuggerService >> closestLeftStepPoint [
-	"Find the closest step point strictly left of (before) the current selection.
-	Returns the step point number or nil if none found."
-	| map currentStep candidates |
-	map := self sourceMap.
-	map ifEmpty: [ ^ nil ].
-	currentStep := self currentStepPoint.
-	currentStep ifNil: [ ^ nil ].
+{ #category : 'actions' }
+GbxDebuggerService >> cutbackGsProcessesAbove: clientContext [
+	"clientContext must be a client context.
+	Discard any partially-completed server execution above clientContext."
+	| ctx |
+	ctx := self firstServerContextAbove: clientContext.
+	ctx ifNotNil: [ self cutbackToGsProcessOf: ctx ]
+]
+
+{ #category : 'actions' }
+GbxDebuggerService >> cutbackGsTo: gsContext [
+	"gsContext must be a GemStone server context.
+	Discard any partially-completed server execution above 
+	gsContext on the stack of its GSProcess. Also discards 
+	any partial execution in gsContext, resetting it to the 
+	beginning."
+	| lvl resolvedHomeLevel script result |
+	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ 1 ].
+	resolvedHomeLevel := self restartLevelFromServerStack.
+	(resolvedHomeLevel isNumber and: [ resolvedHomeLevel > 0 ])
+		ifTrue: [ lvl := resolvedHomeLevel ].
 	
-	candidates := map select: [ :assoc |
-		(assoc respondsTo: #key) and: [
-			assoc key isNumber and: [ assoc key < currentStep ]
-		]
+	script := '[
+		| obj proc |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		
+		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
+		[ proc _trimStackToLevel: ', lvl asString, ' ] on: Error do: [ ^ ''false'' ].
+		''true''
+	] value'.
+
+	result := self executeDebugScript: script.
+	self logRestartText: 'cutbackGsTo level=', lvl asString, ' result=', result printString.
+	^ self asBooleanResult: result default: false
+]
+
+{ #category : 'actions' }
+GbxDebuggerService >> cutbackTo: aContext finishWith: aBlock [
+	"Discard any partially-completed execution above aContext on the logical
+	stack, then evaluate aBlock.
+	If aContext is a server context, also discard partially-completed execution
+	within that server context."
+
+	| isServer |
+	aContext ifNil: [ ^ false ].
+	isServer := (aContext respondsTo: #gbxIsServerContext)
+		and: [ aContext gbxIsServerContext ].
+	isServer
+		ifTrue: [ ^ self cutbackToGsContext: aContext finishWith: aBlock ].
+
+	self cutbackGsProcessesAbove: aContext.
+	aBlock value.
+	^ true
+]
+
+{ #category : 'actions' }
+GbxDebuggerService >> cutbackToGsContext: gsContext finishWith: finishBlockArg [
+	"gsContext must be a GemStone server context.
+	Discard any partially-completed execution above and 
+	within gsContext on my stack, then evaluate finishBlockArg.
+	This operation is performed on the logical stack which 
+	consists of both client and server contexts, so both client 
+	and server contexts may be terminated."
+	
+	self cutbackClientContextsAbove: gsContext.
+	(self cutbackGsTo: gsContext) ifFalse: [ ^ false ].
+	finishBlockArg value.
+	^ true
+]
+
+{ #category : 'actions' }
+GbxDebuggerService >> cutbackToGsProcessOf: gsContext [
+	"gsContext must be a GemStone server context.
+	Discard execution above the owning GS process and terminate that process."
+	| gbsError |
+	self cutbackClientContextsAbove: gsContext.
+	(gsContext respondsTo: #terminateProcess) ifTrue: [
+		[ gsContext terminateProcess ] on: Error do: [ ]
 	].
-	candidates ifEmpty: [ ^ nil ].
-	
-	^ (candidates collect: [ :assoc | assoc key ]) max
+	gbsError := (gsContext respondsTo: #gbsError)
+		ifTrue: [ [ gsContext gbsError ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	(gbsError notNil and: [ gbsError respondsTo: #session: ]) ifTrue: [
+		[ gbsError session: nil ] on: Error do: [ ]
+	].
+	^ true
 ]
 
 { #category : 'private-step points' }
@@ -544,26 +832,48 @@ GbxDebuggerService >> earliestSelectedStepPoint [
 	^ stepPoint
 ]
 
-{ #category : 'private-step points' }
-GbxDebuggerService >> basicSkipToCaret [
-	"Run to caret position using step points.
-	Steps until targetStepPoint is reached."
-	| targetStepPoint |
-	targetStepPoint := self earliestSelectedStepPoint.
-	targetStepPoint ifNil: [ ^ false ].
-	
-	^ self runToStepPoint: targetStepPoint
+{ #category : 'private' }
+GbxDebuggerService >> effectiveServerStepLevel [
+	| level resolved step |
+	level := self currentContextLevel.
+	(self isCurrentExecutedCodeFrame and: [ (step := self currentStepPoint) = 1 ]) ifTrue: [ ^ 1 ].
+	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
+	(self isCurrentExecutedCodeFrame not) ifTrue: [ ^ level ].
+	resolved := self restartLevelFromServerStack.
+	(resolved isNumber and: [ resolved > 0 ]) ifTrue: [ ^ resolved ].
+	^ level
 ]
 
-{ #category : 'private-step points' }
-GbxDebuggerService >> basicJumpToCaret [
-	"Jump to caret position without executing code.
-	Not supported for server frames - use runToStepPoint instead."
-	| targetStepPoint |
-	targetStepPoint := self earliestSelectedStepPoint.
-	targetStepPoint ifNil: [ ^ false ].
+{ #category : 'stack manipulation' }
+GbxDebuggerService >> emergencyRestart: ex [
+	"Handle ContextEmergencyError during simulation.
+	Manages unwind, context restoration, and recovery."
+	| originalContext |
+	originalContext := currentContext.
 	
-	^ self jumpToStepPoint: targetStepPoint
+	"Restore context to pre-error state"
+	ex parameter ifNotNil: [ :param |
+		(param respondsTo: #initialContext) ifTrue: [
+			currentContext := param initialContext
+		]
+	].
+	
+	"Recompute context list and update display"
+	self recomputeContextList.
+	self scheduleTextUpdate.
+	self processEvents
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> ensureRestartAtStepOne [
+	| step |
+	(self isCurrentExecutedCodeFrame) ifFalse: [ ^ self ].
+	step := self currentStepPoint ifNil: [ 1 ].
+	self logRestartText: 'ensureRestartAtStepOne step=', step asString.
+	step > 1 ifFalse: [ ^ self ].
+	(self jumpToStepPoint: 1)
+		ifFalse: [ self runToStepPoint: 1 ].
+	self selectTopServerContext
 ]
 
 { #category : 'private' }
@@ -598,12 +908,231 @@ GbxDebuggerService >> evaluateOopFromScript: scriptString [
 	^ [ raw asInteger ] on: Error do: [ nil ]
 ]
 
+{ #category : 'private-event processing' }
+GbxDebuggerService >> eventOrder [
+	"Define event processing order for debugger updates"
+	^ #( #contextList #text #pc #label )
+]
+
 { #category : 'private' }
 GbxDebuggerService >> executeDebugScript: scriptString [
 	self isSessionUsable ifFalse: [ ^ nil ].
 	^ [ session executeAndFetch: scriptString context: 20 ]
 		on: Error
 		do: [ nil ]
+]
+
+{ #category : 'actions' }
+GbxDebuggerService >> firstServerContextAbove: clientContext [
+	"Return the first server context above clientContext in the logical stack."
+	| ctxList gsContext i ctx numContexts |
+	ctxList := self contextList.
+	gsContext := nil.
+	i := 1.
+	ctx := nil.
+	numContexts := ctxList size.
+	[ i <= numContexts and: [ ctx ~~ clientContext ] ] whileTrue: [
+		ctx := ctxList at: i.
+		((ctx respondsTo: #gbxIsServerContext) and: [ ctx gbxIsServerContext ])
+			ifTrue: [ gsContext := ctx ].
+		i := i + 1
+	].
+	ctx == clientContext ifFalse: [ ^ nil ].
+	^ gsContext
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> forceRestartPositionToMethodStart [
+	"Force the restart target context to position at method start (step=1, line=1)"
+	| target |
+	target := self currentContext.
+	target ifNil: [ target := self restartTargetContext ].
+	target ifNil: [ ^ self ].
+
+	"Reset step point to 1 - use instVar access to bypass any validation"
+	target instVarNamed: #quickStepPoint put: 1.
+
+	"Reset IP offset to 1"
+	target instVarNamed: #ipOffset put: 1.
+
+	"Clear source offsets - they will be recalculated when needed from the server"
+	target instVarNamed: #sourceOffsets put: #( ).
+	
+	"Update the source map to reflect the new step point"
+	self updateSourceMapFromCurrentContext
+]
+
+{ #category : 'private-GS execution' }
+GbxDebuggerService >> gbsErrorClass [
+	"Get the GbsError class for exception handling"
+	^ Smalltalk at: #GbsError ifAbsent: [ Error ]
+]
+
+{ #category : 'actions-browsing' }
+GbxDebuggerService >> gbxBrowseClass: aDelegate [
+	"Browse server class using GbxHierarchyBrowser"
+	| newBrowser aClass remoteClass |
+	aDelegate ifNil: [ ^ nil ].
+	
+	newBrowser := Smalltalk at: #GbxHierarchyBrowser ifAbsent: [ ^ nil ].
+	newBrowser ifNil: [ ^ nil ].
+	
+	newBrowser := newBrowser new.
+	newBrowser session: aDelegate session.
+	
+	remoteClass := aDelegate remoteClass.
+	remoteClass ifNil: [ ^ nil ].
+	
+	(remoteClass unsynchronizedPerformOnGsServer: #isMeta) ifTrue: [
+		remoteClass := aDelegate
+	].
+	
+	aClass := (Smalltalk at: #GbxClassHolder ifAbsent: [ ^ nil ])
+		name: (remoteClass unsynchronizedPerformOnGsServer: #name)
+		proxy: remoteClass.
+	
+	newBrowser myClass: aClass.
+	newBrowser classList: nil
+		class: aClass
+		protocolList: nil
+		protocol: nil
+		methodList: nil
+		selectedMethods: nil.
+	
+	^ newBrowser
+]
+
+{ #category : 'actions-browsing' }
+GbxDebuggerService >> gbxBrowseMethod: delegate [
+	"Browse server method with full info in single round trip.
+	Opens GbxHierarchyBrowser on the method."
+	| newBrowser result classHolder |
+	delegate ifNil: [ ^ nil ].
+	delegate session ifNil: [ ^ nil ].
+	
+	result := delegate session evaluate: '
+		| method displayClass className sel protocol isMeta result |
+		method := self selector isNil ifTrue:[self homeMethod] ifFalse:[self].
+		displayClass := method inClass thisClass.
+		className := displayClass name.
+		sel := method selector.
+		protocol := method inClass categoryOfSelector: sel.
+		isMeta := method inClass isMeta.
+		result := Array new.
+		result add: displayClass asOop;
+			add: className;
+			add: sel;
+			add: protocol;
+			add: isMeta.
+		result
+	' context: delegate.
+	
+	result ifNil: [ ^ nil ].
+	
+	newBrowser := Smalltalk at: #GbxHierarchyBrowser ifAbsent: [ ^ nil ].
+	newBrowser ifNil: [ ^ nil ].
+	
+	newBrowser := newBrowser new.
+	newBrowser session: delegate session.
+	
+	classHolder := (Smalltalk at: #GbxClassHolder ifAbsent: [ ^ nil ])
+		name: (result at: 2)
+		proxy: (Smalltalk at: #GbxDelegate ifAbsent: [ ^ nil ])
+			oopValue: (result at: 1)
+			session: delegate session.
+	
+	newBrowser myClass: classHolder.
+	newBrowser classList: nil
+		class: classHolder
+		protocolList: nil
+		protocol: (result at: 4)
+		methodList: nil
+		selectedMethods: (Array with:
+			(Smalltalk at: #GbxCompiledMethodHolder ifAbsent: [ ^ nil ])
+				name: (result at: 3)).
+	
+	(result at: 5) ifTrue: [
+		newBrowser initalizeMetaTabsToIndex: 2
+	].
+	
+	^ newBrowser
+]
+
+{ #category : 'doIt/accept/explain' }
+GbxDebuggerService >> gbxMethodChanged: newSource [
+	"Handle method change - cutback to home context, update source, and refresh display"
+	| newContext |
+	newContext := self homeContextForCutback.
+	newContext ifNil: [ ^ self ].
+	
+	self cutbackTo: newContext
+		finishWith: [
+			self performDebugOperation: [
+				"Simulate a return value on top client glue context so we don't underflow the stack"
+				self topContext ifNotNil: [ :top | top push: nil ].
+				sourceMap := newContext visibleSourceMap.
+				self selectTopServerContext.
+				self scheduleContextListUpdate
+			]
+		].
+	
+	currentContext gbxIsServerContext ifTrue: [
+		currentContext sourceString: newSource.
+		newContext sourceString: newSource
+	].
+	
+	self scheduleTextUpdate.
+	self processEvents
+]
+
+{ #category : 'doIt/accept/explain' }
+GbxDebuggerService >> gbxRecompileMethod: sourceText notifying: requestor [
+	"Recompile the method in the receiver's current stack frame using sourceText.
+	Answer true if compilation is successful, otherwise false.
+	Displays compiler errors in the requestor (text editor)."
+	| gbxMethod method sess result myErrorText error preErrorText postErrorText |
+	gbxMethod := self selectedMethod.
+	gbxMethod ifNil: [ ^ false ].
+	method := gbxMethod methodDelegate.
+	method ifNil: [ ^ false ].
+	sess := method session.
+	sess ifNil: [ ^ false ].
+	
+	"Check if method class is nil (unbound method)"
+	(gbxMethod methodClass = sess oopNil) ifTrue: [
+		^ false "Can't recompile unbound method"
+	].
+
+	"Save old method in case it needs to be restored"
+	result := [
+		sess unsynchronizedEvaluateBlock: '[:meth :source | meth _recompileWithSource: source]'
+			with: method
+			with: (sourceText gbxConvertToServerLineDelimiter ifNil: [ sourceText ])
+	] on: Error do: [ :ex | ex messageText ].
+	
+	"Check for compilation failure"
+	result ~~ true & (result ~~ false) ifTrue: [
+		"Compilation failed in 32-bit server or error occurred"
+		error := result isEmpty ifTrue: [ nil ] ifFalse: [ result at: 1 ].
+		myErrorText := error size < 3 ifTrue: [ 'error' ] ifFalse: [ error at: 3 ].
+		requestor ifNotNil: [
+			(requestor respondsTo: #insertAndSelect:at:) ifTrue: [
+				requestor insertAndSelect: myErrorText , '->' at: (error at: 2)
+			]
+		].
+		^ false
+	].
+	
+	result ifTrue: [
+		"Success, same selector - notify method changed"
+		self gbxMethodChanged: sourceText.
+		^ true
+	] ifFalse: [
+		"Changed the method selector on recompilation"
+		self scheduleTextUpdate.
+		self processEvents.
+		^ true
+	]
 ]
 
 { #category : 'accessing' }
@@ -659,6 +1188,48 @@ GbxDebuggerService >> hasBreakPointIn: aTextWidget [
 	stepPoint := self currentStepPoint.
 	stepPoint ifNil: [ ^ false ].
 	^ bps anySatisfy: [ :bp | (bp respondsTo: #stepPoint) and: [ bp stepPoint = stepPoint ] ]
+]
+
+{ #category : 'testing' }
+GbxDebuggerService >> hasLoopControlContext [
+	"VW compatibility hook for Next Loop enablement."
+	^ false
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> highlightBreakPointsIn: aText [
+	"Highlight breakpoints in text widget with purple underline emphasis.
+	Returns the text with emphasis added."
+	| bps methodSelector |
+	currentContext ifNil: [ ^ aText ].
+	currentContext gbxIsServerContext ifFalse: [ ^ aText ].
+	currentContext isValid ifFalse: [ ^ aText ].
+	self isTerminated ifTrue: [ ^ aText ].
+	
+	methodSelector := self selectedMethodSelector.
+	methodSelector ifNil: [ ^ aText ].
+	
+	bps := self currentBreakPointList select: [ :each |
+		each selector = methodSelector and: [ each remoteClass = self selectedMethodClassName ]
+	].
+	
+	bps do: [ :bp |
+		| offset |
+		offset := currentContext sourceOffsets at: bp stepPoint ifAbsent: [ nil ].
+		offset ifNotNil: [
+			(aText respondsTo: #emphasizeFrom:to:with:) ifTrue: [
+				aText emphasizeFrom: offset to: offset with: #( #underline #color -> #purple )
+			]
+		]
+	].
+	^ aText
+]
+
+{ #category : 'doIt/accept/explain' }
+GbxDebuggerService >> homeContextForCutback [
+	"Get the home context for cutback operations.
+	This is typically the current context or its home for blocks."
+	^ currentContext
 ]
 
 { #category : 'initialization' }
@@ -731,6 +1302,32 @@ GbxDebuggerService >> inspectorClass [
 ]
 
 { #category : 'private' }
+GbxDebuggerService >> isCurrentExecutedCodeFrame [
+	| className selectorName |
+	currentContext ifNil: [ ^ false ].
+	((currentContext respondsTo: #isExecutedCodeFrame)
+		and: [ currentContext isExecutedCodeFrame ]) ifTrue: [ ^ true ].
+	className := [ currentContext methodClassOrUnknown asString ] on: Error do: [ '' ].
+	selectorName := [ currentContext selectorOrUnknown asString ] on: Error do: [ '' ].
+	^ (className = 'nil' or: [ className = '<unknown>' ])
+		and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ]
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> isExecutedCodeAtStepOne [
+	^ self isCurrentExecutedCodeFrame
+		and: [ (self currentStepPoint ifNil: [ 0 ]) = 1 ]
+]
+
+{ #category : 'testing' }
+GbxDebuggerService >> isMethodContextSelected [
+	currentContext ifNil: [ ^ false ].
+	(currentContext respondsTo: #isExecutedCodeFrame)
+		ifTrue: [ ^ currentContext isExecutedCodeFrame not ].
+	^ true
+]
+
+{ #category : 'private' }
 GbxDebuggerService >> isSessionUsable [
 	| loggedIn |
 	session ifNil: [ ^ false ].
@@ -754,6 +1351,16 @@ GbxDebuggerService >> isTerminated [
 	^ self asBooleanResult: result default: true
 ]
 
+{ #category : 'process control' }
+GbxDebuggerService >> jumpToStepPoint: aStepPoint [
+	((aStepPoint isNumber and: [ aStepPoint > 0 ]) not) ifTrue: [ ^ false ].
+	(self runDebugProcessCommand: 'jumpToStepPoint' withInteger: aStepPoint recompute: true)
+		ifTrue: [ ^ true ].
+	(self runDebugProcessCommand: 'jumpTo' withInteger: aStepPoint recompute: true)
+		ifTrue: [ ^ true ].
+	^ false
+]
+
 { #category : 'accessing' }
 GbxDebuggerService >> label [
 	^ label
@@ -769,6 +1376,54 @@ GbxDebuggerService >> lastCompileError [
 	^ lastCompileError
 ]
 
+{ #category : 'private' }
+GbxDebuggerService >> logRestartState: labelString context: aContext [
+	"Restart diagnostics hook. Keep as no-op by default."
+	^ self
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> logRestartText: aString [
+	"Restart diagnostics hook. Keep as no-op by default."
+	^ self
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> markCurrentContextAsRestarted [
+	"Mark the current context as restarted (step=1, at method entry).
+	This ensures the display shows 'GS: Executed code @1' and stepping starts correctly."
+	| target |
+	target := self currentContext.
+	target ifNil: [ target := self restartTargetContext ].
+	target ifNil: [ ^ self ].
+
+	"Mark as executed code frame - this sets class/selector to unknown and step to 1"
+	(target respondsTo: #markAsExecutedCodeFrame) ifTrue: [
+		target markAsExecutedCodeFrame
+	].
+
+	"Update the source map to reflect the new step point"
+	self updateSourceMapFromCurrentContext
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> normalizeExecutedCodeSingleStepFrom: previousStepPoint [
+	| currentStep target |
+	(previousStepPoint isNumber and: [ previousStepPoint > 0 ]) ifFalse: [ ^ true ].
+	self isCurrentExecutedCodeFrame ifFalse: [ ^ true ].
+	currentStep := self currentStepPoint.
+	target := previousStepPoint + 1.
+	currentStep = target ifTrue: [ ^ true ].
+	self
+		logRestartText:
+			'normalize single-step previous=', previousStepPoint asString,
+			' current=', (currentStep ifNil: [ 'nil' ] ifNotNil: [ currentStep asString ]),
+			' target=', target asString.
+	(self jumpToStepPoint: target) ifTrue: [ ^ true ].
+	(self runToStepPoint: target) ifTrue: [ ^ true ].
+	^ true
+]
+
 { #category : 'evaluation' }
 GbxDebuggerService >> normalizedCompileErrorFrom: rawResult [
 	| text |
@@ -776,6 +1431,30 @@ GbxDebuggerService >> normalizedCompileErrorFrom: rawResult [
 	(text beginsWith: 'ERROR|')
 		ifTrue: [ ^ (text copyFrom: 7 to: text size) ].
 	^ text
+]
+
+{ #category : 'stack accessing' }
+GbxDebuggerService >> notifierStackStringOfSize: n [
+	"Get string representation of top N contexts for display"
+	| contexts stream |
+	contexts := self contextList.
+	contexts ifEmpty: [ ^ label ifNil: [ '' ] ].
+	
+	stream := WriteStream on: String new.
+	stream nextPutAll: (label ifNil: [ 'Debugger' ]).
+	stream cr.
+	
+	1 to: (n min: contexts size) do: [ :i |
+		| ctx |
+		ctx := contexts at: i.
+		stream tab.
+		stream nextPutAll: (ctx respondsTo: #printString)
+			ifTrue: [ ctx printString ]
+			ifFalse: [ ctx asString ].
+		stream cr
+	].
+	
+	^ stream contents
 ]
 
 { #category : 'context list' }
@@ -836,10 +1515,89 @@ GbxDebuggerService >> openInspectorOnOop: anOop [
 	]
 ]
 
+{ #category : 'private-inspectors' }
+GbxDebuggerService >> openInspectors [
+	"Open GbxReceiverInspector, GbxContextInspector, GbxStackInspector"
+	| inspectorClass |
+	inspectorClass := Smalltalk at: #GbxContextInspector ifAbsent: [ ^ self ].
+	
+	"Open receiver inspector"
+	(self canInspectCurrentReceiver) ifTrue: [
+		self inspectCurrentReceiver
+	].
+	
+	"Open context inspector"
+	(self canInspectCurrentFrame) ifTrue: [
+		self inspectCurrentFrame
+	].
+	
+	"Open process inspector"
+	(self canInspectCurrentProcess) ifTrue: [
+		self inspectCurrentProcess
+	]
+]
+
+{ #category : 'process control' }
+GbxDebuggerService >> pause [
+	"Best effort: interrupt the active GemStone session."
+	self isSessionUsable ifFalse: [ ^ false ].
+	^ [ 
+		(session respondsTo: #sendInterrupt)
+			ifTrue: [ session sendInterrupt. true ]
+			ifFalse: [
+				(session respondsTo: #interrupt)
+					ifTrue: [ session interrupt. true ]
+					ifFalse: [
+						(session respondsTo: #signalInterrupt)
+							ifTrue: [ session signalInterrupt. true ]
+							ifFalse: [ false ]
+					]
+			]
+	] on: Error do: [ false ]
+]
+
+{ #category : 'private-support' }
+GbxDebuggerService >> pendingMessage [
+	"If the next step in the current context will not send a message, answer nil.
+	If it will send a message, answer the MessageSend (receiver, selector, arguments)."
+	| r s numArgs message messageClass |
+	(currentContext respondsTo: #pdpWillSend) ifTrue: [
+		currentContext pdpWillSend ifFalse: [ ^ nil ]
+	].
+	
+	r := (currentContext respondsTo: #gbxPeekForReceiver)
+		ifTrue: [ currentContext gbxPeekForReceiver ]
+		ifFalse: [ currentContext receiver ].
+	
+	s := (currentContext respondsTo: #peekForSelector)
+		ifTrue: [ currentContext peekForSelector ]
+		ifFalse: [ nil ].
+	
+	s ifNil: [ ^ nil ].
+	
+	numArgs := s numArgs.
+	messageClass := Smalltalk at: #MessageSend ifAbsent: [ ^ nil ].
+	messageClass ifNil: [ ^ nil ].
+	
+	message := messageClass receiver: r selector: s arguments: (Array new: numArgs).
+	1 to: numArgs do: [ :i |
+		message argumentAt: i put: currentContext
+	].
+	
+	^ message
+]
+
 { #category : 'private' }
 GbxDebuggerService >> prepareForDebugging [
 	"Prepare the debugger for a new debugging session"
 	self initializeForDebugging.
+]
+
+{ #category : 'private-GS execution' }
+GbxDebuggerService >> privateStep [
+	"Perform a private step operation.
+	This is used internally for basicSendIntoServer."
+	^ self stepInto
 ]
 
 { #category : 'private' }
@@ -917,102 +1675,6 @@ GbxDebuggerService >> recompileCurrentMethodWithSource: sourceText [
 	^ false
 ]
 
-{ #category : 'doIt/accept/explain' }
-GbxDebuggerService >> gbxRecompileMethod: sourceText notifying: requestor [
-	"Recompile the method in the receiver's current stack frame using sourceText.
-	Answer true if compilation is successful, otherwise false.
-	Displays compiler errors in the requestor (text editor)."
-	| gbxMethod method sess result myErrorText error preErrorText postErrorText |
-	gbxMethod := self selectedMethod.
-	gbxMethod ifNil: [ ^ false ].
-	method := gbxMethod methodDelegate.
-	method ifNil: [ ^ false ].
-	sess := method session.
-	sess ifNil: [ ^ false ].
-	
-	"Check if method class is nil (unbound method)"
-	(gbxMethod methodClass = sess oopNil) ifTrue: [
-		^ false "Can't recompile unbound method"
-	].
-
-	"Save old method in case it needs to be restored"
-	result := [
-		sess unsynchronizedEvaluateBlock: '[:meth :source | meth _recompileWithSource: source]'
-			with: method
-			with: (sourceText gbxConvertToServerLineDelimiter ifNil: [ sourceText ])
-	] on: Error do: [ :ex | ex messageText ].
-	
-	"Check for compilation failure"
-	result ~~ true & (result ~~ false) ifTrue: [
-		"Compilation failed in 32-bit server or error occurred"
-		error := result isEmpty ifTrue: [ nil ] ifFalse: [ result at: 1 ].
-		myErrorText := error size < 3 ifTrue: [ 'error' ] ifFalse: [ error at: 3 ].
-		requestor ifNotNil: [
-			(requestor respondsTo: #insertAndSelect:at:) ifTrue: [
-				requestor insertAndSelect: myErrorText , '->' at: (error at: 2)
-			]
-		].
-		^ false
-	].
-	
-	result ifTrue: [
-		"Success, same selector - notify method changed"
-		self gbxMethodChanged: sourceText.
-		^ true
-	] ifFalse: [
-		"Changed the method selector on recompilation"
-		self scheduleTextUpdate.
-		self processEvents.
-		^ true
-	]
-]
-
-{ #category : 'doIt/accept/explain' }
-GbxDebuggerService >> gbxMethodChanged: newSource [
-	"Handle method change - cutback to home context, update source, and refresh display"
-	| newContext |
-	newContext := self homeContextForCutback.
-	newContext ifNil: [ ^ self ].
-	
-	self cutbackTo: newContext
-		finishWith: [
-			self performDebugOperation: [
-				"Simulate a return value on top client glue context so we don't underflow the stack"
-				self topContext ifNotNil: [ :top | top push: nil ].
-				sourceMap := newContext visibleSourceMap.
-				self selectTopServerContext.
-				self scheduleContextListUpdate
-			]
-		].
-	
-	currentContext gbxIsServerContext ifTrue: [
-		currentContext sourceString: newSource.
-		newContext sourceString: newSource
-	].
-	
-	self scheduleTextUpdate.
-	self processEvents
-]
-
-{ #category : 'doIt/accept/explain' }
-GbxDebuggerService >> homeContextForCutback [
-	"Get the home context for cutback operations.
-	This is typically the current context or its home for blocks."
-	^ currentContext
-]
-
-{ #category : 'doIt/accept/explain' }
-GbxDebuggerService >> acceptTextFrom: textController [
-	"Accept/compile text from editor.
-	Calls gbxRecompileMethod: for server contexts."
-	currentContext gbxIsServerContext
-		ifTrue: [ self gbxRecompileMethod: textController text notifying: textController ]
-		ifFalse: [ 
-			"For client contexts, use standard evaluation"
-			self evaluateCodeInCurrentFrame: textController text
-		]
-]
-
 { #category : 'context list' }
 GbxDebuggerService >> recomputeContextList [
 	"Recompute the context list after a step operation.
@@ -1069,83 +1731,20 @@ GbxDebuggerService >> removeBreakPoint [
 	^ self removeBreakIn: nil
 ]
 
-{ #category : 'process control' }
-GbxDebuggerService >> resume [
-	"Resume execution of the debugged process"
-	(self runDebugProcessCommand: 'resume' recompute: false)
-		ifTrue: [ ^ true ].
-	^ false
+{ #category : 'private-GS execution' }
+GbxDebuggerService >> requestServerSingleStep [
+	"About to send from client to server. Set the single step flag for the session."
+	| sess |
+	(currentContext respondsTo: #gbxPeekForReceiver) ifFalse: [ ^ self ].
+	sess := currentContext gbxPeekForReceiver gbxGsDebuggerSession.
+	sess ifNil: [ ^ self ].
+	sess serverInterface requestSingleStep
 ]
 
-{ #category : 'process control' }
-GbxDebuggerService >> runWithBreakAgain [
-	"VW-style behavior: ensure the current source step has a breakpoint, then resume."
-	self canRunWithBreakAgain ifFalse: [ ^ false ].
-	self setBreakPointIn: nil.
-	^ self resume
-]
-
-{ #category : 'actions' }
-GbxDebuggerService >> basicReenterServerContext [
-	"Executed in a debugger service process.
-	A server context is selected. Reset to the initial state of that context,
-	as if it had just been entered. Discard any execution since the context
-	was entered."
-	| theContext |
-	"Always prefer the executed-code restart target over the currently selected
-	frame so a single Restart click is deterministic."
-	theContext := self restartTargetContext.
-	theContext ifNil: [ theContext := currentContext ].
-	theContext ifNil: [ ^ false ].
-	self selectContext: theContext.
-	self logRestartState: 'basicReenter/start' context: theContext.
-
-	(self cutbackTo: theContext
-		finishWith: [
-			"First, reset the server-side PC to step 1 BEFORE fetching the context list.
-			This ensures the server reports the correct step point."
-			self resetServerPCToStepOne.
-
-			"Level numbers may have changed; recompute and select server-truth context."
-			self selectTopServerContext.
-			self selectRestartTargetContext.
-
-			"Force another refresh to ensure the display shows step=1"
-			self notifyContextChanged
-		]) ifFalse: [ ^ false ].
-	self logRestartState: 'basicReenter/done' context: self currentContext.
-
-	^ true
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> markCurrentContextAsRestarted [
-	"Mark the current context as restarted (step=1, at method entry).
-	This ensures the display shows 'GS: Executed code @1' and stepping starts correctly."
-	| target |
-	target := self currentContext.
-	target ifNil: [ target := self restartTargetContext ].
-	target ifNil: [ ^ self ].
-
-	"Mark as executed code frame - this sets class/selector to unknown and step to 1"
-	(target respondsTo: #markAsExecutedCodeFrame) ifTrue: [
-		target markAsExecutedCodeFrame
-	].
-
-	"Update the source map to reflect the new step point"
+{ #category : 'private-GS execution' }
+GbxDebuggerService >> resetPCSelection [
+	"Reset PC selection - update source map before stepping"
 	self updateSourceMapFromCurrentContext
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> ensureRestartAtStepOne [
-	| step |
-	(self isCurrentExecutedCodeFrame) ifFalse: [ ^ self ].
-	step := self currentStepPoint ifNil: [ 1 ].
-	self logRestartText: 'ensureRestartAtStepOne step=', step asString.
-	step > 1 ifFalse: [ ^ self ].
-	(self jumpToStepPoint: 1)
-		ifFalse: [ self runToStepPoint: 1 ].
-	self selectTopServerContext
 ]
 
 { #category : 'private' }
@@ -1202,138 +1801,6 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	^ didReset
 ]
 
-{ #category : 'actions' }
-GbxDebuggerService >> cutbackTo: aContext finishWith: aBlock [
-	"Discard any partially-completed execution above aContext on the logical
-	stack, then evaluate aBlock.
-	If aContext is a server context, also discard partially-completed execution
-	within that server context."
-
-	| isServer |
-	aContext ifNil: [ ^ false ].
-	isServer := (aContext respondsTo: #gbxIsServerContext)
-		and: [ aContext gbxIsServerContext ].
-	isServer
-		ifTrue: [ ^ self cutbackToGsContext: aContext finishWith: aBlock ].
-
-	self cutbackGsProcessesAbove: aContext.
-	aBlock value.
-	^ true
-]
-
-{ #category : 'actions' }
-GbxDebuggerService >> cutbackToGsContext: gsContext finishWith: finishBlockArg [
-	"gsContext must be a GemStone server context.
-	Discard any partially-completed execution above and 
-	within gsContext on my stack, then evaluate finishBlockArg.
-	This operation is performed on the logical stack which 
-	consists of both client and server contexts, so both client 
-	and server contexts may be terminated."
-	
-	self cutbackClientContextsAbove: gsContext.
-	(self cutbackGsTo: gsContext) ifFalse: [ ^ false ].
-	finishBlockArg value.
-	^ true
-]
-
-{ #category : 'actions' }
-GbxDebuggerService >> cutbackGsTo: gsContext [
-	"gsContext must be a GemStone server context.
-	Discard any partially-completed server execution above 
-	gsContext on the stack of its GSProcess. Also discards 
-	any partial execution in gsContext, resetting it to the 
-	beginning."
-	| lvl resolvedHomeLevel script result |
-	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ 1 ].
-	resolvedHomeLevel := self restartLevelFromServerStack.
-	(resolvedHomeLevel isNumber and: [ resolvedHomeLevel > 0 ])
-		ifTrue: [ lvl := resolvedHomeLevel ].
-	
-	script := '[
-		| obj proc |
-		obj := Object _objectForOop: ', processOop asString, '.
-		obj isNil ifTrue: [ ^ ''false'' ].
-		proc := obj.
-		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ]
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
-			| top |
-			top := [ obj topContext ] on: Error do: [ nil ].
-			(top notNil and: [ top respondsTo: #process ])
-				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
-		].
-		
-		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
-		[ proc _trimStackToLevel: ', lvl asString, ' ] on: Error do: [ ^ ''false'' ].
-		''true''
-	] value'.
-
-	result := self executeDebugScript: script.
-	self logRestartText: 'cutbackGsTo level=', lvl asString, ' result=', result printString.
-	^ self asBooleanResult: result default: false
-]
-
-{ #category : 'actions' }
-GbxDebuggerService >> cutbackClientContextsAbove: gsContext [
-	"gsContext must be a GemStone server context.
-	Discard any partially-completed client execution above gsContext."
-	| ctx |
-	contextStackPolicy ifNil: [ ^ self ].
-	(contextStackPolicy respondsTo: #firstClientContextAbove:) ifFalse: [ ^ self ].
-	ctx := contextStackPolicy firstClientContextAbove: gsContext.
-	ctx ifNotNil: [ self cutbackTo: ctx finishWith: [ ] ]
-]
-
-{ #category : 'actions' }
-GbxDebuggerService >> cutbackGsProcessesAbove: clientContext [
-	"clientContext must be a client context.
-	Discard any partially-completed server execution above clientContext."
-	| ctx |
-	ctx := self firstServerContextAbove: clientContext.
-	ctx ifNotNil: [ self cutbackToGsProcessOf: ctx ]
-]
-
-{ #category : 'actions' }
-GbxDebuggerService >> cutbackToGsProcessOf: gsContext [
-	"gsContext must be a GemStone server context.
-	Discard execution above the owning GS process and terminate that process."
-	| gbsError |
-	self cutbackClientContextsAbove: gsContext.
-	(gsContext respondsTo: #terminateProcess) ifTrue: [
-		[ gsContext terminateProcess ] on: Error do: [ ]
-	].
-	gbsError := (gsContext respondsTo: #gbsError)
-		ifTrue: [ [ gsContext gbsError ] on: Error do: [ nil ] ]
-		ifFalse: [ nil ].
-	(gbsError notNil and: [ gbsError respondsTo: #session: ]) ifTrue: [
-		[ gbsError session: nil ] on: Error do: [ ]
-	].
-	^ true
-]
-
-{ #category : 'actions' }
-GbxDebuggerService >> firstServerContextAbove: clientContext [
-	"Return the first server context above clientContext in the logical stack."
-	| ctxList gsContext i ctx numContexts |
-	ctxList := self contextList.
-	gsContext := nil.
-	i := 1.
-	ctx := nil.
-	numContexts := ctxList size.
-	[ i <= numContexts and: [ ctx ~~ clientContext ] ] whileTrue: [
-		ctx := ctxList at: i.
-		((ctx respondsTo: #gbxIsServerContext) and: [ ctx gbxIsServerContext ])
-			ifTrue: [ gsContext := ctx ].
-		i := i + 1
-	].
-	ctx == clientContext ifFalse: [ ^ nil ].
-	^ gsContext
-]
-
 { #category : 'process control' }
 GbxDebuggerService >> restart [
 	"Restart the current context using the coordinated reenter operation.
@@ -1364,60 +1831,6 @@ GbxDebuggerService >> restart [
 	self logRestartText: 'restart/result=', didRestart asString.
 	self logRestartState: 'restart/end' context: self currentContext.
 	^ didRestart
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> synchronizeServerProgramCounterAfterRestart [
-	"After restart, force server-side process PC to align with displayed restart frame."
-	| level script result |
-	(self isCurrentExecutedCodeFrame) ifFalse: [ ^ false ].
-	level := self currentContextLevel.
-	(level isNumber and: [ level > 0 ]) ifFalse: [ level := 1 ].
-	script := '[
-		| obj proc |
-		obj := Object _objectForOop: ', processOop asString, '.
-		obj isNil ifTrue: [ ^ ''false'' ].
-		proc := obj.
-		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ]
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
-			| top |
-			top := [ obj topContext ] on: Error do: [ nil ].
-			(top notNil and: [ top respondsTo: #process ])
-				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
-		].
-		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
-		[ proc _trimStackToLevel: ', level asString, ' ] on: Error do: [ ^ ''false'' ].
-		''true''
-	] value'.
-	result := self executeDebugScript: script.
-	(self asBooleanResult: result default: false) ifTrue: [
-		self selectTopServerContext.
-		^ true
-	].
-	^ false
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> isExecutedCodeAtStepOne [
-	^ self isCurrentExecutedCodeFrame
-		and: [ (self currentStepPoint ifNil: [ 0 ]) = 1 ]
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> logRestartState: labelString context: aContext [
-	"Restart diagnostics hook. Keep as no-op by default."
-	^ self
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> logRestartText: aString [
-	"Restart diagnostics hook. Keep as no-op by default."
-	^ self
 ]
 
 { #category : 'private' }
@@ -1491,27 +1904,6 @@ GbxDebuggerService >> restartLevelFromServerStack [
 ]
 
 { #category : 'private' }
-GbxDebuggerService >> forceRestartPositionToMethodStart [
-	"Force the restart target context to position at method start (step=1, line=1)"
-	| target |
-	target := self currentContext.
-	target ifNil: [ target := self restartTargetContext ].
-	target ifNil: [ ^ self ].
-
-	"Reset step point to 1 - use instVar access to bypass any validation"
-	target instVarNamed: #quickStepPoint put: 1.
-
-	"Reset IP offset to 1"
-	target instVarNamed: #ipOffset put: 1.
-
-	"Clear source offsets - they will be recalculated when needed from the server"
-	target instVarNamed: #sourceOffsets put: #( ).
-	
-	"Update the source map to reflect the new step point"
-	self updateSourceMapFromCurrentContext
-]
-
-{ #category : 'private' }
 GbxDebuggerService >> restartTargetContext [
 	| contexts |
 	contexts := self contextList.
@@ -1533,90 +1925,18 @@ GbxDebuggerService >> restartTargetContext [
 		ifNone: [ contexts first ]
 ]
 
-{ #category : 'private' }
-GbxDebuggerService >> selectRestartTargetContext [
-	| target |
-	target := self restartTargetContext.
-	target ifNil: [ ^ self ].
-	self selectContext: target
+{ #category : 'process control' }
+GbxDebuggerService >> resume [
+	"Resume execution of the debugged process"
+	(self runDebugProcessCommand: 'resume' recompute: false)
+		ifTrue: [ ^ true ].
+	^ false
 ]
 
-{ #category : 'context list' }
-GbxDebuggerService >> selectTopServerContext [
-	"The stack has changed. Recompute and select the top GemStone context.
-	Then refresh the displayed list without a second recompute."
-	| topServer |
-	contextStackPolicy ifNil: [ ^ self ].
-	contextStackPolicy computeContextList.
-	topServer := self restartTargetContext.
-	topServer ifNil: [
-		topServer := (contextStackPolicy respondsTo: #topServerContext)
-			ifTrue: [ contextStackPolicy topServerContext ]
-			ifFalse: [ nil ]
-	].
-	topServer ifNil: [
-		topServer := contextStackPolicy contextList
-			ifEmpty: [ nil ]
-			ifNotEmpty: [ :contexts | contexts first ]
-	].
-	topServer ifNotNil: [ self selectContext: topServer ].
-	self schedulePrecomputedContextListUpdate
-]
-
-{ #category : 'private-event processing' }
-GbxDebuggerService >> schedulePrecomputedContextListUpdate [
-	self updatePrecomputedContextList
-]
-
-{ #category : 'private-event processing' }
-GbxDebuggerService >> scheduleContextListUpdate [
-	"Schedule a full context list recomputation and update"
-	self recomputeContextList
-]
-
-{ #category : 'private-event processing' }
-GbxDebuggerService >> scheduleTextUpdate [
-	"Schedule source text display update"
-	"UI would refresh the source code display"
-	self notifyContextChanged
-]
-
-{ #category : 'private-event processing' }
-GbxDebuggerService >> schedulePCUpdate [
-	"Schedule program counter (source highlight) update"
-	"UI would refresh the source code highlighting"
-	self updateSourceMapFromCurrentContext
-]
-
-{ #category : 'private-event processing' }
-GbxDebuggerService >> scheduleLabelUpdate [
-	"Schedule debugger label update"
-	"UI would refresh the debugger title/label"
-]
-
-{ #category : 'private-event processing' }
-GbxDebuggerService >> eventOrder [
-	"Define event processing order for debugger updates"
-	^ #( #contextList #text #pc #label )
-]
-
-{ #category : 'context list' }
-GbxDebuggerService >> correctSelectedContextIfGlue [
-	"If the currently selected context should be hidden glue,
-	change the selection to a top visible context.
-	The hidden glue must be at the top of the stack, so the
-	correct context to show is the top visible context."
-	(contextStackPolicy isHiddenGlue: currentContext) ifTrue: [
-		"It is glue - reselect top visible context"
-		self recomputeContextList.
-		"Top visible is likely server context, must recompute"
-		self selectContextAt: 1
-	]
-]
-
-{ #category : 'private-event processing' }
-GbxDebuggerService >> updatePrecomputedContextList [
-	self updateStackList: self contextList
+{ #category : 'process control' }
+GbxDebuggerService >> returnFromFrame [
+	self canReturnFromFrame ifFalse: [ ^ false ].
+	^ self stepReturn
 ]
 
 { #category : 'private' }
@@ -1696,6 +2016,55 @@ GbxDebuggerService >> runDebugProcessCommand: commandName withInteger: anInteger
 	^ true
 ]
 
+{ #category : 'process control' }
+GbxDebuggerService >> runToStepPoint: aStepPoint [
+	((aStepPoint isNumber and: [ aStepPoint > 0 ]) not) ifTrue: [ ^ false ].
+	(self runDebugProcessCommand: 'runToStepPoint' withInteger: aStepPoint recompute: true)
+		ifTrue: [ ^ true ].
+	(self runDebugProcessCommand: 'runTo' withInteger: aStepPoint recompute: true)
+		ifTrue: [ ^ true ].
+	^ false
+]
+
+{ #category : 'process control' }
+GbxDebuggerService >> runWithBreakAgain [
+	"VW-style behavior: ensure the current source step has a breakpoint, then resume."
+	self canRunWithBreakAgain ifFalse: [ ^ false ].
+	self setBreakPointIn: nil.
+	^ self resume
+]
+
+{ #category : 'private-event processing' }
+GbxDebuggerService >> scheduleContextListUpdate [
+	"Schedule a full context list recomputation and update"
+	self recomputeContextList
+]
+
+{ #category : 'private-event processing' }
+GbxDebuggerService >> scheduleLabelUpdate [
+	"Schedule debugger label update"
+	"UI would refresh the debugger title/label"
+]
+
+{ #category : 'private-event processing' }
+GbxDebuggerService >> schedulePCUpdate [
+	"Schedule program counter (source highlight) update"
+	"UI would refresh the source code highlighting"
+	self updateSourceMapFromCurrentContext
+]
+
+{ #category : 'private-event processing' }
+GbxDebuggerService >> schedulePrecomputedContextListUpdate [
+	self updatePrecomputedContextList
+]
+
+{ #category : 'private-event processing' }
+GbxDebuggerService >> scheduleTextUpdate [
+	"Schedule source text display update"
+	"UI would refresh the source code display"
+	self notifyContextChanged
+]
+
 { #category : 'context list' }
 GbxDebuggerService >> selectContext: aContext [
 	"Select a specific context"
@@ -1715,6 +2084,36 @@ GbxDebuggerService >> selectContextAt: anIndex [
 		self updateSourceMapFromCurrentContext.
 		self notifyContextChanged.
 	].
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> selectRestartTargetContext [
+	| target |
+	target := self restartTargetContext.
+	target ifNil: [ ^ self ].
+	self selectContext: target
+]
+
+{ #category : 'context list' }
+GbxDebuggerService >> selectTopServerContext [
+	"The stack has changed. Recompute and select the top GemStone context.
+	Then refresh the displayed list without a second recompute."
+	| topServer |
+	contextStackPolicy ifNil: [ ^ self ].
+	contextStackPolicy computeContextList.
+	topServer := self restartTargetContext.
+	topServer ifNil: [
+		topServer := (contextStackPolicy respondsTo: #topServerContext)
+			ifTrue: [ contextStackPolicy topServerContext ]
+			ifFalse: [ nil ]
+	].
+	topServer ifNil: [
+		topServer := contextStackPolicy contextList
+			ifEmpty: [ nil ]
+			ifNotEmpty: [ :contexts | contexts first ]
+	].
+	topServer ifNotNil: [ self selectContext: topServer ].
+	self schedulePrecomputedContextListUpdate
 ]
 
 { #category : 'breakpoint support' }
@@ -1746,6 +2145,40 @@ GbxDebuggerService >> selectionIntervalForTextWidget: aTextWidget [
 	stop := controller selectionStopIndex.
 	(start isNil or: [ stop isNil ]) ifTrue: [ ^ nil ].
 	^ start to: stop
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> serverStepOverFrameLevel: levelValue [
+	| result script |
+	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
+	levelValue ifNil: [ ^ false ].
+	script := '[
+		| obj proc stepLevel ok |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc isNil or: [ (proc respondsTo: #perform:with:) not ]) ifTrue: [ ^ ''false'' ].
+		stepLevel := ', levelValue asString, '.
+		ok := [ proc perform: #_stepOverInFrame: with: stepLevel ] on: Error do: [ nil ].
+		ok isNil ifTrue: [ ^ ''false'' ].
+		''true''
+	] value'.
+	result := self executeDebugScript: script.
+	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
+	self selectTopServerContext.
+	^ true
 ]
 
 { #category : 'accessing' }
@@ -1825,289 +2258,6 @@ GbxDebuggerService >> sourceOffsetForBreakPoint: aBreakPoint [
 	^ [ rawOffset asInteger ] on: Error do: [ nil ]
 ]
 
-{ #category : 'stepping' }
-GbxDebuggerService >> stepInto [
-	"VW parity: step-into on server contexts is implemented by _stepOverInFrame:
-	with the step-through flag in the high bit of level."
-	| level before |
-	before := self currentStepPoint.
-	level := self effectiveServerStepLevel.
-	level ifNil: [ level := 1 ].
-	(self serverStepOverFrameLevel: (level bitOr: 16r100000000))
-		ifTrue: [ ^ self normalizeExecutedCodeSingleStepFrom: before ].
-	^ false
-]
-
-{ #category : 'stepping' }
-GbxDebuggerService >> stepOver [
-	| level before |
-	before := self currentStepPoint.
-	level := self effectiveServerStepLevel.
-	level ifNil: [ level := 1 ].
-	(self serverStepOverFrameLevel: level)
-		ifTrue: [ ^ self normalizeExecutedCodeSingleStepFrom: before ].
-	^ false
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> normalizeExecutedCodeSingleStepFrom: previousStepPoint [
-	| currentStep target |
-	(previousStepPoint isNumber and: [ previousStepPoint > 0 ]) ifFalse: [ ^ true ].
-	self isCurrentExecutedCodeFrame ifFalse: [ ^ true ].
-	currentStep := self currentStepPoint.
-	target := previousStepPoint + 1.
-	currentStep = target ifTrue: [ ^ true ].
-	self
-		logRestartText:
-			'normalize single-step previous=', previousStepPoint asString,
-			' current=', (currentStep ifNil: [ 'nil' ] ifNotNil: [ currentStep asString ]),
-			' target=', target asString.
-	(self jumpToStepPoint: target) ifTrue: [ ^ true ].
-	(self runToStepPoint: target) ifTrue: [ ^ true ].
-	^ true
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> effectiveServerStepLevel [
-	| level resolved step |
-	level := self currentContextLevel.
-	(self isCurrentExecutedCodeFrame and: [ (step := self currentStepPoint) = 1 ]) ifTrue: [ ^ 1 ].
-	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
-	(self isCurrentExecutedCodeFrame not) ifTrue: [ ^ level ].
-	resolved := self restartLevelFromServerStack.
-	(resolved isNumber and: [ resolved > 0 ]) ifTrue: [ ^ resolved ].
-	^ level
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> isCurrentExecutedCodeFrame [
-	| className selectorName |
-	currentContext ifNil: [ ^ false ].
-	((currentContext respondsTo: #isExecutedCodeFrame)
-		and: [ currentContext isExecutedCodeFrame ]) ifTrue: [ ^ true ].
-	className := [ currentContext methodClassOrUnknown asString ] on: Error do: [ '' ].
-	selectorName := [ currentContext selectorOrUnknown asString ] on: Error do: [ '' ].
-	^ (className = 'nil' or: [ className = '<unknown>' ])
-		and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ]
-]
-
-{ #category : 'stepping' }
-GbxDebuggerService >> stepReturn [
-	"Step out of the current context (return to sender)"
-	(self runDebugProcessCommand: 'stepReturn' recompute: true)
-		ifTrue: [ ^ true ].
-	^ false
-]
-
-{ #category : 'stepping' }
-GbxDebuggerService >> stepUntilPC: stopPC [
-	"Step until PC reaches stopPC or context changes (max 20 steps).
-	Used for precise server stepping control."
-	| steps |
-	steps := 0.
-	[ steps < 20 ] whileTrue: [
-		| currentPC |
-		currentPC := self currentStepPoint.
-		(currentPC isNil or: [ currentPC >= stopPC ]) ifTrue: [ ^ true ].
-		(self stepOver) ifFalse: [ ^ false ].
-		steps := steps + 1.
-	].
-	^ false
-]
-
-{ #category : 'private-GS execution' }
-GbxDebuggerService >> requestServerSingleStep [
-	"About to send from client to server. Set the single step flag for the session."
-	| sess |
-	(currentContext respondsTo: #gbxPeekForReceiver) ifFalse: [ ^ self ].
-	sess := currentContext gbxPeekForReceiver gbxGsDebuggerSession.
-	sess ifNil: [ ^ self ].
-	sess serverInterface requestSingleStep
-]
-
-{ #category : 'private-GS execution' }
-GbxDebuggerService >> basicSendIntoServer [
-	"Send when the next send will take us from client to server.
-	Requests single step and handles GbsError for rtErrStep."
-	| gbsErr initial |
-	self requestServerSingleStep.
-	
-	[ self privateStep ]
-		on: Error "ContextEmergencyError in VW"
-		do: [ :ex |
-			gbsErr := ex parameter.
-			(gbsErr isNil or: [ 
-				(gbsErr respondsTo: #creator) ifFalse: [ true ]
-				ifTrue: [ gbsErr creator ~~ (self gbsErrorClass signalFor: #rtErrStep) ]
-			]) ifTrue: [
-				ex pass "Pass non-rtErrStep errors up"
-			]
-		].
-	
-	gbsErr ifNotNil: [
-		"Server method didn't stop for single step (simple method).
-		Put new contexts on stack and update selection."
-		initial := (gbsErr respondsTo: #initialContext)
-			ifTrue: [ [ gbsErr initialContext ] on: Error do: [ nil ] ]
-			ifFalse: [ nil ].
-		initial ifNotNil: [ currentContext := initial ].
-		self selectTopServerContext
-	]
-]
-
-{ #category : 'private-GS execution' }
-GbxDebuggerService >> basicServerStepInLevel: level [
-	"The selected context is a server context. Perform a step in the
-	given level of that context's GsProcess.
-	Level should be the level of the selected context, or if top context
-	is selected and level is 0, do a send."
-	| gbsError scContext |
-	gbsError := currentContext gbsError.
-	gbsError ifNil: [ ^ self ].
-	
-	gbsError stepLevel: level.
-	
-	"Internally select the serverCall context for the selected context"
-	currentContext := scContext := currentContext serverCallContext.
-	scContext ifNil: [ ^ self ].
-	
-	self resetPCSelection.
-	
-	"Step until right after the send of #stepOrContinueAfter (PC=31)"
-	self stepUntilPC: 31.
-	
-	(currentContext == scContext) ifFalse: [
-		"Entering client-side exception handler - stop now"
-		^ self
-	].
-	
-	"Step until assign result, back to loop head (PC=10)"
-	self stepUntilPC: 10.
-	
-	(scContext respondsTo: #gbxResult) ifTrue: [
-		(scContext gbxResult respondsTo: #gbxIsGSError) ifTrue: [
-			scContext gbxResult gbxIsGSError
-				ifTrue: [ self selectTopServerContext ]
-				ifFalse: [ self stepOutOfServerIntoClient ]
-		] ifFalse: [
-			self stepOutOfServerIntoClient
-		]
-	] ifFalse: [
-		self stepOutOfServerIntoClient
-	]
-]
-
-{ #category : 'private-GS execution' }
-GbxDebuggerService >> stepOutOfServerIntoClient [
-	"A server step has terminated. Step to appropriate point in client below glue."
-	| itsSender aContext |
-	itsSender := currentContext.
-	
-	[ 
-		aContext := itsSender.
-		itsSender := itsSender sender.
-		(aContext respondsTo: #gbxIsGsBottomGlue) 
-			and: [ aContext gbxIsGsBottomGlue 
-			and: [ itsSender notNil 
-			and: [ (itsSender respondsTo: #gbxIsGsBottomGlue) 
-				ifTrue: [ itsSender gbxIsGsBottomGlue not ]
-				ifFalse: [ true ]
-			]]]
-	] whileTrue.
-	
-	itsSender ifNotNil: [
-		currentContext := itsSender.
-		sourceMap := currentContext visibleSourceMap.
-		self stepOver.
-		self selectContext: currentContext
-	]
-]
-
-{ #category : 'private-GS execution' }
-GbxDebuggerService >> gbsErrorClass [
-	"Get the GbsError class for exception handling"
-	^ Smalltalk at: #GbsError ifAbsent: [ Error ]
-]
-
-{ #category : 'private-GS execution' }
-GbxDebuggerService >> privateStep [
-	"Perform a private step operation.
-	This is used internally for basicSendIntoServer."
-	^ self stepInto
-]
-
-{ #category : 'private-GS execution' }
-GbxDebuggerService >> resetPCSelection [
-	"Reset PC selection - update source map before stepping"
-	self updateSourceMapFromCurrentContext
-]
-
-{ #category : 'stack manipulation' }
-GbxDebuggerService >> emergencyRestart: ex [
-	"Handle ContextEmergencyError during simulation.
-	Manages unwind, context restoration, and recovery."
-	| originalContext |
-	originalContext := currentContext.
-	
-	"Restore context to pre-error state"
-	ex parameter ifNotNil: [ :param |
-		(param respondsTo: #initialContext) ifTrue: [
-			currentContext := param initialContext
-		]
-	].
-	
-	"Recompute context list and update display"
-	self recomputeContextList.
-	self scheduleTextUpdate.
-	self processEvents
-]
-
-{ #category : 'private-inspectors' }
-GbxDebuggerService >> openInspectors [
-	"Open GbxReceiverInspector, GbxContextInspector, GbxStackInspector"
-	| inspectorClass |
-	inspectorClass := Smalltalk at: #GbxContextInspector ifAbsent: [ ^ self ].
-	
-	"Open receiver inspector"
-	(self canInspectCurrentReceiver) ifTrue: [
-		self inspectCurrentReceiver
-	].
-	
-	"Open context inspector"
-	(self canInspectCurrentFrame) ifTrue: [
-		self inspectCurrentFrame
-	].
-	
-	"Open process inspector"
-	(self canInspectCurrentProcess) ifTrue: [
-		self inspectCurrentProcess
-	]
-]
-
-{ #category : 'stack accessing' }
-GbxDebuggerService >> notifierStackStringOfSize: n [
-	"Get string representation of top N contexts for display"
-	| contexts stream |
-	contexts := self contextList.
-	contexts ifEmpty: [ ^ label ifNil: [ '' ] ].
-	
-	stream := WriteStream on: String new.
-	stream nextPutAll: (label ifNil: [ 'Debugger' ]).
-	stream cr.
-	
-	1 to: (n min: contexts size) do: [ :i |
-		| ctx |
-		ctx := contexts at: i.
-		stream tab.
-		stream nextPutAll: (ctx respondsTo: #printString)
-			ifTrue: [ ctx printString ]
-			ifFalse: [ ctx asString ].
-		stream cr
-	].
-	
-	^ stream contents
-]
-
 { #category : 'actions' }
 GbxDebuggerService >> stackForCopy [
 	"Get stack string for copying using GbxContextDumpPolicy"
@@ -2144,58 +2294,89 @@ GbxDebuggerService >> stackForCopySimple [
 	^ stream contents
 ]
 
-{ #category : 'process control' }
-GbxDebuggerService >> returnFromFrame [
-	self canReturnFromFrame ifFalse: [ ^ false ].
-	^ self stepReturn
+{ #category : 'stepping' }
+GbxDebuggerService >> stepInto [
+	"VW parity: step-into on server contexts is implemented by _stepOverInFrame:
+	with the step-through flag in the high bit of level."
+	| level before |
+	before := self currentStepPoint.
+	level := self effectiveServerStepLevel.
+	level ifNil: [ level := 1 ].
+	(self serverStepOverFrameLevel: (level bitOr: 16r100000000))
+		ifTrue: [ ^ self normalizeExecutedCodeSingleStepFrom: before ].
+	^ false
 ]
 
-{ #category : 'process control' }
-GbxDebuggerService >> pause [
-	"Best effort: interrupt the active GemStone session."
-	self isSessionUsable ifFalse: [ ^ false ].
-	^ [ 
-		(session respondsTo: #sendInterrupt)
-			ifTrue: [ session sendInterrupt. true ]
-			ifFalse: [
-				(session respondsTo: #interrupt)
-					ifTrue: [ session interrupt. true ]
-					ifFalse: [
-						(session respondsTo: #signalInterrupt)
-							ifTrue: [ session signalInterrupt. true ]
-							ifFalse: [ false ]
-					]
-			]
-	] on: Error do: [ false ]
+{ #category : 'private-GS execution' }
+GbxDebuggerService >> stepOutOfServerIntoClient [
+	"A server step has terminated. Step to appropriate point in client below glue."
+	| itsSender aContext |
+	itsSender := currentContext.
+	
+	[ 
+		aContext := itsSender.
+		itsSender := itsSender sender.
+		(aContext respondsTo: #gbxIsGsBottomGlue) 
+			and: [ aContext gbxIsGsBottomGlue 
+			and: [ itsSender notNil 
+			and: [ (itsSender respondsTo: #gbxIsGsBottomGlue) 
+				ifTrue: [ itsSender gbxIsGsBottomGlue not ]
+				ifFalse: [ true ]
+			]]]
+	] whileTrue.
+	
+	itsSender ifNotNil: [
+		currentContext := itsSender.
+		sourceMap := currentContext visibleSourceMap.
+		self stepOver.
+		self selectContext: currentContext
+	]
 ]
 
-{ #category : 'process control' }
-GbxDebuggerService >> runToStepPoint: aStepPoint [
-	((aStepPoint isNumber and: [ aStepPoint > 0 ]) not) ifTrue: [ ^ false ].
-	(self runDebugProcessCommand: 'runToStepPoint' withInteger: aStepPoint recompute: true)
-		ifTrue: [ ^ true ].
-	(self runDebugProcessCommand: 'runTo' withInteger: aStepPoint recompute: true)
+{ #category : 'stepping' }
+GbxDebuggerService >> stepOver [
+	| level before |
+	before := self currentStepPoint.
+	level := self effectiveServerStepLevel.
+	level ifNil: [ level := 1 ].
+	(self serverStepOverFrameLevel: level)
+		ifTrue: [ ^ self normalizeExecutedCodeSingleStepFrom: before ].
+	^ false
+]
+
+{ #category : 'stepping' }
+GbxDebuggerService >> stepReturn [
+	"Step out of the current context (return to sender)"
+	(self runDebugProcessCommand: 'stepReturn' recompute: true)
 		ifTrue: [ ^ true ].
 	^ false
 ]
 
-{ #category : 'process control' }
-GbxDebuggerService >> jumpToStepPoint: aStepPoint [
-	((aStepPoint isNumber and: [ aStepPoint > 0 ]) not) ifTrue: [ ^ false ].
-	(self runDebugProcessCommand: 'jumpToStepPoint' withInteger: aStepPoint recompute: true)
-		ifTrue: [ ^ true ].
-	(self runDebugProcessCommand: 'jumpTo' withInteger: aStepPoint recompute: true)
-		ifTrue: [ ^ true ].
+{ #category : 'stepping' }
+GbxDebuggerService >> stepUntilPC: stopPC [
+	"Step until PC reaches stopPC or context changes (max 20 steps).
+	Used for precise server stepping control."
+	| steps |
+	steps := 0.
+	[ steps < 20 ] whileTrue: [
+		| currentPC |
+		currentPC := self currentStepPoint.
+		(currentPC isNil or: [ currentPC >= stopPC ]) ifTrue: [ ^ true ].
+		(self stepOver) ifFalse: [ ^ false ].
+		steps := steps + 1.
+	].
 	^ false
 ]
 
 { #category : 'private' }
-GbxDebuggerService >> serverStepOverFrameLevel: levelValue [
-	| result script |
-	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
-	levelValue ifNil: [ ^ false ].
+GbxDebuggerService >> synchronizeServerProgramCounterAfterRestart [
+	"After restart, force server-side process PC to align with displayed restart frame."
+	| level script result |
+	(self isCurrentExecutedCodeFrame) ifFalse: [ ^ false ].
+	level := self currentContextLevel.
+	(level isNumber and: [ level > 0 ]) ifFalse: [ level := 1 ].
 	script := '[
-		| obj proc stepLevel ok |
+		| obj proc |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
@@ -2211,16 +2392,16 @@ GbxDebuggerService >> serverStepOverFrameLevel: levelValue [
 			(top notNil and: [ top respondsTo: #process ])
 				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
 		].
-		(proc isNil or: [ (proc respondsTo: #perform:with:) not ]) ifTrue: [ ^ ''false'' ].
-		stepLevel := ', levelValue asString, '.
-		ok := [ proc perform: #_stepOverInFrame: with: stepLevel ] on: Error do: [ nil ].
-		ok isNil ifTrue: [ ^ ''false'' ].
+		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
+		[ proc _trimStackToLevel: ', level asString, ' ] on: Error do: [ ^ ''false'' ].
 		''true''
 	] value'.
 	result := self executeDebugScript: script.
-	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
-	self selectTopServerContext.
-	^ true
+	(self asBooleanResult: result default: false) ifTrue: [
+		self selectTopServerContext.
+		^ true
+	].
+	^ false
 ]
 
 { #category : 'variables' }
@@ -2235,52 +2416,6 @@ GbxDebuggerService >> terminate [
 	"Terminate the debugged process"
 	(self runDebugProcessCommand: 'terminate' recompute: false)
 		ifTrue: [ ^ true ].
-	^ false
-]
-
-{ #category : 'evaluation' }
-GbxDebuggerService >> correctCurrentSelectorWithSource: sourceText [
-	| className selector isMeta classLookupName escapedSource script raw |
-	currentContext ifNil: [ ^ false ].
-	self isSessionUsable ifFalse: [ ^ false ].
-	self clearCompileError.
-	className := self selectedMethodClassName.
-	selector := self selectedMethodSelector.
-	(className isNil or: [ selector isNil or: [ selector = #unboundMethod ] ]) ifTrue: [ ^ false ].
-
-	isMeta := className asString endsWith: ' class'.
-	classLookupName := isMeta
-		ifTrue: [ (className asString copyFrom: 1 to: className size - 6) ]
-		ifFalse: [ className asString ].
-	escapedSource := self escapeForScriptLiteral: sourceText.
-
-	script := '[
-		| cls oldSel protocol result newSel source |
-		cls := System myUserProfile symbolList objectNamed: #', classLookupName, '.
-		cls ifNil: [ ^ ''ERROR|Class not found'' ].
-		', (isMeta ifTrue: [ 'cls := cls class.' ] ifFalse: [ '' ]), '
-		oldSel := #', selector asString, '.
-		source := ''', escapedSource, '''.
-		protocol := [ cls categoryOfSelector: oldSel ] on: Error do: [ ''as yet unclassified'' ].
-		protocol ifNil: [ protocol := ''as yet unclassified'' ].
-		result := [ cls compileMethod: source category: protocol ] on: Error do: [ :ex | ''ERROR|'', ex description ].
-		(result isString and: [ result beginsWith: ''ERROR|'' ]) ifTrue: [ ^ result ].
-		(result isKindOf: Array) ifTrue: [ ^ ''ERROR|Compilation failed'' ].
-		newSel := [ result selector ] on: Error do: [ oldSel ].
-		(newSel ~= oldSel and: [ cls includesSelector: oldSel ]) ifTrue: [
-			[ cls removeSelector: oldSel ] on: Error do: [ :ex | ]
-		].
-		''OK''
-	] value'.
-
-	raw := [ session executeAndFetch: script context: session sessionOop ] on: Error do: [ nil ].
-	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
-	raw ifNil: [
-		lastCompileError := 'Correct selector failed: no response from GemStone'.
-		^ false
-	].
-	(raw = 'OK') ifTrue: [ ^ true ].
-	lastCompileError := (self normalizedCompileErrorFrom: raw).
 	^ false
 ]
 
@@ -2309,6 +2444,11 @@ GbxDebuggerService >> topContext [
 	^ thisContext sender
 ]
 
+{ #category : 'private-event processing' }
+GbxDebuggerService >> updatePrecomputedContextList [
+	self updateStackList: self contextList
+]
+
 { #category : 'source code' }
 GbxDebuggerService >> updateSourceMapFromCurrentContext [
 	sourceMap := currentContext
@@ -2323,144 +2463,4 @@ GbxDebuggerService >> updateSourceMapFromCurrentContext [
 GbxDebuggerService >> updateStackList: aList [
 	"Update the stack list in the UI"
 	"Called by context policy"
-]
-
-{ #category : 'actions-browsing' }
-GbxDebuggerService >> browseMethod [
-	"Browse current method - uses gbxBrowseMethod: for server contexts"
-	currentContext gbxIsServerContext ifTrue: [
-		^ self gbxBrowseMethod: self selectedMethod
-	].
-	"For client contexts, standard browsing would be used"
-	^ nil
-]
-
-{ #category : 'actions-browsing' }
-GbxDebuggerService >> browseClass [
-	"Browse class - uses gbxBrowseClass: for server contexts"
-	currentContext gbxIsServerContext ifTrue: [
-		^ self gbxBrowseClass: currentContext homeReceiver
-	].
-	^ nil
-]
-
-{ #category : 'actions-browsing' }
-GbxDebuggerService >> gbxBrowseMethod: delegate [
-	"Browse server method with full info in single round trip.
-	Opens GbxHierarchyBrowser on the method."
-	| newBrowser result classHolder |
-	delegate ifNil: [ ^ nil ].
-	delegate session ifNil: [ ^ nil ].
-	
-	result := delegate session evaluate: '
-		| method displayClass className sel protocol isMeta result |
-		method := self selector isNil ifTrue:[self homeMethod] ifFalse:[self].
-		displayClass := method inClass thisClass.
-		className := displayClass name.
-		sel := method selector.
-		protocol := method inClass categoryOfSelector: sel.
-		isMeta := method inClass isMeta.
-		result := Array new.
-		result add: displayClass asOop;
-			add: className;
-			add: sel;
-			add: protocol;
-			add: isMeta.
-		result
-	' context: delegate.
-	
-	result ifNil: [ ^ nil ].
-	
-	newBrowser := Smalltalk at: #GbxHierarchyBrowser ifAbsent: [ ^ nil ].
-	newBrowser ifNil: [ ^ nil ].
-	
-	newBrowser := newBrowser new.
-	newBrowser session: delegate session.
-	
-	classHolder := (Smalltalk at: #GbxClassHolder ifAbsent: [ ^ nil ])
-		name: (result at: 2)
-		proxy: (Smalltalk at: #GbxDelegate ifAbsent: [ ^ nil ])
-			oopValue: (result at: 1)
-			session: delegate session.
-	
-	newBrowser myClass: classHolder.
-	newBrowser classList: nil
-		class: classHolder
-		protocolList: nil
-		protocol: (result at: 4)
-		methodList: nil
-		selectedMethods: (Array with:
-			(Smalltalk at: #GbxCompiledMethodHolder ifAbsent: [ ^ nil ])
-				name: (result at: 3)).
-	
-	(result at: 5) ifTrue: [
-		newBrowser initalizeMetaTabsToIndex: 2
-	].
-	
-	^ newBrowser
-]
-
-{ #category : 'actions-browsing' }
-GbxDebuggerService >> gbxBrowseClass: aDelegate [
-	"Browse server class using GbxHierarchyBrowser"
-	| newBrowser aClass remoteClass |
-	aDelegate ifNil: [ ^ nil ].
-	
-	newBrowser := Smalltalk at: #GbxHierarchyBrowser ifAbsent: [ ^ nil ].
-	newBrowser ifNil: [ ^ nil ].
-	
-	newBrowser := newBrowser new.
-	newBrowser session: aDelegate session.
-	
-	remoteClass := aDelegate remoteClass.
-	remoteClass ifNil: [ ^ nil ].
-	
-	(remoteClass unsynchronizedPerformOnGsServer: #isMeta) ifTrue: [
-		remoteClass := aDelegate
-	].
-	
-	aClass := (Smalltalk at: #GbxClassHolder ifAbsent: [ ^ nil ])
-		name: (remoteClass unsynchronizedPerformOnGsServer: #name)
-		proxy: remoteClass.
-	
-	newBrowser myClass: aClass.
-	newBrowser classList: nil
-		class: aClass
-		protocolList: nil
-		protocol: nil
-		methodList: nil
-		selectedMethods: nil.
-	
-	^ newBrowser
-]
-
-{ #category : 'private-support' }
-GbxDebuggerService >> pendingMessage [
-	"If the next step in the current context will not send a message, answer nil.
-	If it will send a message, answer the MessageSend (receiver, selector, arguments)."
-	| r s numArgs message messageClass |
-	(currentContext respondsTo: #pdpWillSend) ifTrue: [
-		currentContext pdpWillSend ifFalse: [ ^ nil ]
-	].
-	
-	r := (currentContext respondsTo: #gbxPeekForReceiver)
-		ifTrue: [ currentContext gbxPeekForReceiver ]
-		ifFalse: [ currentContext receiver ].
-	
-	s := (currentContext respondsTo: #peekForSelector)
-		ifTrue: [ currentContext peekForSelector ]
-		ifFalse: [ nil ].
-	
-	s ifNil: [ ^ nil ].
-	
-	numArgs := s numArgs.
-	messageClass := Smalltalk at: #MessageSend ifAbsent: [ ^ nil ].
-	messageClass ifNil: [ ^ nil ].
-	
-	message := messageClass receiver: r selector: s arguments: (Array new: numArgs).
-	1 to: numArgs do: [ :i |
-		message argumentAt: i put: currentContext
-	].
-	
-	^ message
 ]

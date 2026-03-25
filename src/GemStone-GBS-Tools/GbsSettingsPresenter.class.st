@@ -65,6 +65,47 @@ GbsSettingsPresenter class >> open [
 	^ presenter
 ]
 
+{ #category : 'private' }
+GbsSettingsPresenter >> booleanAt: ivarName default: defaultBoolean [
+	| value |
+	configuration ifNil: [ ^ defaultBoolean ].
+	value := configuration valueAt: ivarName ifAbsent: defaultBoolean.
+	(value == true or: [ value == false ]) ifTrue: [ ^ value ].
+	^ defaultBoolean
+]
+
+{ #category : 'actions' }
+GbsSettingsPresenter >> chooseLibraryPath [
+	| dialogClass presenterClass selected dlg initialPath |
+	selected := nil.
+	initialPath := self currentLibraryPathCandidate.
+	presenterClass := Smalltalk at: #StOpenFilePresenter ifAbsent: [ nil ].
+	presenterClass ifNotNil: [
+		selected := [
+			dlg := presenterClass new.
+			(dlg respondsTo: #title:) ifTrue: [ dlg title: 'Select GemBuilder library' ].
+			self primeFileDialog: dlg withInitialPath: initialPath.
+			dlg openModal
+		] on: Error do: [ nil ] ].
+	selected ifNil: [
+		dialogClass := Smalltalk at: #StOpenFileDialog ifAbsent: [ nil ].
+		dialogClass ifNotNil: [
+			selected := [ dialogClass chooseModal ] on: Error do: [ nil ] ] ].
+	selected ifNil: [ ^ self ].
+	(selected isCollection and: [ selected isEmpty not ])
+		ifTrue: [ ^ libraryField text: selected first asFileReference fullName ].
+	(selected respondsTo: #asFileReference)
+		ifTrue: [ ^ libraryField text: selected asFileReference fullName ].
+	libraryField text: selected asString
+]
+
+{ #category : 'actions' }
+GbsSettingsPresenter >> closeWindow [
+	self window
+		ifNotNil: [ self window close ]
+		ifNil: [ self delete ]
+]
+
 { #category : 'accessing' }
 GbsSettingsPresenter >> configuration: aConfiguration [
 	configuration := aConfiguration.
@@ -72,59 +113,20 @@ GbsSettingsPresenter >> configuration: aConfiguration [
 ]
 
 { #category : 'initialization' }
-GbsSettingsPresenter >> initializePresenters [
-	libraryField := self newTextInput.
-	initialCacheSizeField := self newTextInput.
-	initialDirtyPoolField := self newTextInput.
-	haltOnErrorField := self newTextInput.
-	faultLevelRpcField := self newTextInput.
-	delayInterruptField := self newTextInput.
-	traversalBufferField := self newTextInput.
-	eventPollingField := self newTextInput.
-	eventPriorityField := self newTextInput.
-	blockReplicationPolicyDrop := self newDropList.
-	defaultFaultPolicyDrop := self newDropList.
-	blockReplicationPolicyDrop items: #( 'replicate' 'stub' 'none' ).
-	defaultFaultPolicyDrop items: #( 'lazy' 'eager' 'none' ).
-
-	browseButton := self newButton
-		label: 'Browse';
-		action: [ self chooseLibraryPath ];
-		yourself.
-
-	bulkLoadYes := self newRadioButton label: 'Yes'. bulkLoadNo := self newRadioButton label: 'No'.
-	generateClassConnectorsYes := self newRadioButton label: 'Yes'. generateClassConnectorsNo := self newRadioButton label: 'No'.
-	generateClientClassesYes := self newRadioButton label: 'Yes'. generateClientClassesNo := self newRadioButton label: 'No'.
-	generateServerClassesYes := self newRadioButton label: 'Yes'. generateServerClassesNo := self newRadioButton label: 'No'.
-	connectorNillingYes := self newRadioButton label: 'Yes'. connectorNillingNo := self newRadioButton label: 'No'.
-	connectVerificationYes := self newRadioButton label: 'Yes'. connectVerificationNo := self newRadioButton label: 'No'.
-	removeInvalidConnectorsYes := self newRadioButton label: 'Yes'. removeInvalidConnectorsNo := self newRadioButton label: 'No'.
-	assertionChecksYes := self newRadioButton label: 'Yes'. assertionChecksNo := self newRadioButton label: 'No'.
-	forwarderDebuggingYes := self newRadioButton label: 'Yes'. forwarderDebuggingNo := self newRadioButton label: 'No'.
-	stubDebuggingYes := self newRadioButton label: 'Yes'. stubDebuggingNo := self newRadioButton label: 'No'.
-	autoMarkDirtyYes := self newRadioButton label: 'Yes'. autoMarkDirtyNo := self newRadioButton label: 'No'.
-	blockReplicationEnabledYes := self newRadioButton label: 'Yes'. blockReplicationEnabledNo := self newRadioButton label: 'No'.
-	freeSlotsOnStubbingYes := self newRadioButton label: 'Yes'. freeSlotsOnStubbingNo := self newRadioButton label: 'No'.
-	blockingProtocolRpcYes := self newRadioButton label: 'Yes'. blockingProtocolRpcNo := self newRadioButton label: 'No'.
-	fullCompressionYes := self newRadioButton label: 'Yes'. fullCompressionNo := self newRadioButton label: 'No'.
-	confirmYes := self newRadioButton label: 'Yes'. confirmNo := self newRadioButton label: 'No'.
-	verboseYes := self newRadioButton label: 'Yes'. verboseNo := self newRadioButton label: 'No'.
-
-	saveButton := self newButton
-		label: 'Save';
-		icon: (self iconNamed: #smallOk);
-		action: [ self saveSettings ];
-		yourself.
-	cancelButton := self newButton
-		label: 'Cancel';
-		icon: (self iconNamed: #smallCancel);
-		action: [ self closeWindow ];
-		yourself
-]
-
-{ #category : 'initialization' }
 GbsSettingsPresenter >> connectPresenters [
 	self loadFromConfiguration
+]
+
+{ #category : 'private' }
+GbsSettingsPresenter >> currentLibraryPathCandidate [
+	| fromConfig fromServer fromLibrary |
+	fromConfig := self stringValueAt: #libraryName default: ''.
+	(fromConfig isNil or: [ fromConfig isEmpty ]) ifFalse: [ ^ fromConfig ].
+	fromServer := [ GbsServerInterface uniqueInstance libraryPath ] on: Error do: [ '' ].
+	(fromServer isNil or: [ fromServer asString isEmpty ]) ifFalse: [ ^ fromServer asString ].
+	fromLibrary := [ GbsLibrary macLibraryName ] on: Error do: [ '' ].
+	(fromLibrary isNil or: [ fromLibrary asString isEmpty ]) ifFalse: [ ^ fromLibrary asString ].
+	^ ''
 ]
 
 { #category : 'layout' }
@@ -196,39 +198,64 @@ GbsSettingsPresenter >> defaultLayout [
 		yourself
 ]
 
-{ #category : 'layout' }
-GbsSettingsPresenter >> sectionTitle: aString [
-	^ self newLabel label: aString
+{ #category : 'private' }
+GbsSettingsPresenter >> formattedIntegerValueAt: ivarName default: defaultInteger [
+	| raw integerValue |
+	raw := configuration ifNil: [ defaultInteger ] ifNotNil: [ configuration valueAt: ivarName ifAbsent: defaultInteger ].
+	raw ifNil: [ raw := defaultInteger ].
+	integerValue := [ raw asInteger ] on: Error do: [ defaultInteger ].
+	^ integerValue asStringWithCommas
 ]
 
-{ #category : 'layout' }
-GbsSettingsPresenter >> yesNoRowLabel: labelString yes: yesButton no: noButton [
-	| yesNoPair |
-	yesNoPair := SpBoxLayout newLeftToRight
-		add: yesButton width: 58;
-		add: noButton width: 52;
-		spacing: 2;
+{ #category : 'initialization' }
+GbsSettingsPresenter >> initializePresenters [
+	libraryField := self newTextInput.
+	initialCacheSizeField := self newTextInput.
+	initialDirtyPoolField := self newTextInput.
+	haltOnErrorField := self newTextInput.
+	faultLevelRpcField := self newTextInput.
+	delayInterruptField := self newTextInput.
+	traversalBufferField := self newTextInput.
+	eventPollingField := self newTextInput.
+	eventPriorityField := self newTextInput.
+	blockReplicationPolicyDrop := self newDropList.
+	defaultFaultPolicyDrop := self newDropList.
+	blockReplicationPolicyDrop items: #( 'replicate' 'stub' 'none' ).
+	defaultFaultPolicyDrop items: #( 'lazy' 'eager' 'none' ).
+
+	browseButton := self newButton
+		label: 'Browse';
+		action: [ self chooseLibraryPath ];
 		yourself.
-	^ SpBoxLayout newLeftToRight
-		add: (self newLabel label: labelString) width: self rowLabelWidth;
-		add: yesNoPair expand: false;
-		add: (self newLabel label: '') expand: true;
-		spacing: 0;
-		yourself
-]
 
-{ #category : 'layout' }
-GbsSettingsPresenter >> textRowLabel: labelString field: aField [
-	^ SpBoxLayout newLeftToRight
-		add: (self newLabel label: labelString) width: self rowLabelWidth;
-		add: aField width: 220;
-		spacing: 0;
-		yourself
-]
+	bulkLoadYes := self newRadioButton label: 'Yes'. bulkLoadNo := self newRadioButton label: 'No'.
+	generateClassConnectorsYes := self newRadioButton label: 'Yes'. generateClassConnectorsNo := self newRadioButton label: 'No'.
+	generateClientClassesYes := self newRadioButton label: 'Yes'. generateClientClassesNo := self newRadioButton label: 'No'.
+	generateServerClassesYes := self newRadioButton label: 'Yes'. generateServerClassesNo := self newRadioButton label: 'No'.
+	connectorNillingYes := self newRadioButton label: 'Yes'. connectorNillingNo := self newRadioButton label: 'No'.
+	connectVerificationYes := self newRadioButton label: 'Yes'. connectVerificationNo := self newRadioButton label: 'No'.
+	removeInvalidConnectorsYes := self newRadioButton label: 'Yes'. removeInvalidConnectorsNo := self newRadioButton label: 'No'.
+	assertionChecksYes := self newRadioButton label: 'Yes'. assertionChecksNo := self newRadioButton label: 'No'.
+	forwarderDebuggingYes := self newRadioButton label: 'Yes'. forwarderDebuggingNo := self newRadioButton label: 'No'.
+	stubDebuggingYes := self newRadioButton label: 'Yes'. stubDebuggingNo := self newRadioButton label: 'No'.
+	autoMarkDirtyYes := self newRadioButton label: 'Yes'. autoMarkDirtyNo := self newRadioButton label: 'No'.
+	blockReplicationEnabledYes := self newRadioButton label: 'Yes'. blockReplicationEnabledNo := self newRadioButton label: 'No'.
+	freeSlotsOnStubbingYes := self newRadioButton label: 'Yes'. freeSlotsOnStubbingNo := self newRadioButton label: 'No'.
+	blockingProtocolRpcYes := self newRadioButton label: 'Yes'. blockingProtocolRpcNo := self newRadioButton label: 'No'.
+	fullCompressionYes := self newRadioButton label: 'Yes'. fullCompressionNo := self newRadioButton label: 'No'.
+	confirmYes := self newRadioButton label: 'Yes'. confirmNo := self newRadioButton label: 'No'.
+	verboseYes := self newRadioButton label: 'Yes'. verboseNo := self newRadioButton label: 'No'.
 
-{ #category : 'layout' }
-GbsSettingsPresenter >> rowLabelWidth [
-	^ 170
+	saveButton := self newButton
+		label: 'Save';
+		icon: (self iconNamed: #smallOk);
+		action: [ self saveSettings ];
+		yourself.
+	cancelButton := self newButton
+		label: 'Cancel';
+		icon: (self iconNamed: #smallCancel);
+		action: [ self closeWindow ];
+		yourself
 ]
 
 { #category : 'initialization' }
@@ -238,29 +265,11 @@ GbsSettingsPresenter >> initializeWindow: aWindowPresenter [
 		initialExtent: 860 @ 660
 ]
 
-{ #category : 'actions' }
-GbsSettingsPresenter >> chooseLibraryPath [
-	| dialogClass presenterClass selected dlg initialPath |
-	selected := nil.
-	initialPath := self currentLibraryPathCandidate.
-	presenterClass := Smalltalk at: #StOpenFilePresenter ifAbsent: [ nil ].
-	presenterClass ifNotNil: [
-		selected := [
-			dlg := presenterClass new.
-			(dlg respondsTo: #title:) ifTrue: [ dlg title: 'Select GemBuilder library' ].
-			self primeFileDialog: dlg withInitialPath: initialPath.
-			dlg openModal
-		] on: Error do: [ nil ] ].
-	selected ifNil: [
-		dialogClass := Smalltalk at: #StOpenFileDialog ifAbsent: [ nil ].
-		dialogClass ifNotNil: [
-			selected := [ dialogClass chooseModal ] on: Error do: [ nil ] ] ].
-	selected ifNil: [ ^ self ].
-	(selected isCollection and: [ selected isEmpty not ])
-		ifTrue: [ ^ libraryField text: selected first asFileReference fullName ].
-	(selected respondsTo: #asFileReference)
-		ifTrue: [ ^ libraryField text: selected asFileReference fullName ].
-	libraryField text: selected asString
+{ #category : 'private' }
+GbsSettingsPresenter >> integerFromField: aField default: anInteger [
+	| raw |
+	raw := aField text asString copyWithout: $,.
+	^ [ raw asInteger ] on: Error do: [ anInteger ]
 ]
 
 { #category : 'actions' }
@@ -299,72 +308,24 @@ GbsSettingsPresenter >> loadFromConfiguration [
 ]
 
 { #category : 'private' }
-GbsSettingsPresenter >> currentLibraryPathCandidate [
-	| fromConfig fromServer fromLibrary |
-	fromConfig := self stringValueAt: #libraryName default: ''.
-	(fromConfig isNil or: [ fromConfig isEmpty ]) ifFalse: [ ^ fromConfig ].
-	fromServer := [ GbsServerInterface uniqueInstance libraryPath ] on: Error do: [ '' ].
-	(fromServer isNil or: [ fromServer asString isEmpty ]) ifFalse: [ ^ fromServer asString ].
-	fromLibrary := [ GbsLibrary macLibraryName ] on: Error do: [ '' ].
-	(fromLibrary isNil or: [ fromLibrary asString isEmpty ]) ifFalse: [ ^ fromLibrary asString ].
-	^ ''
+GbsSettingsPresenter >> primeFileDialog: aDialog withInitialPath: aPathString [
+	| ref dir |
+	(aPathString isNil or: [ aPathString asString isEmpty ]) ifTrue: [ ^ self ].
+	ref := [ aPathString asFileReference ] on: Error do: [ nil ].
+	ref ifNil: [ ^ self ].
+	dir := ref isDirectory ifTrue: [ ref ] ifFalse: [ ref parent ].
+	(aDialog respondsTo: #path:) ifTrue: [ [ aDialog path: dir ] on: Error do: [ ] ].
+	(aDialog respondsTo: #folder:) ifTrue: [ [ aDialog folder: dir ] on: Error do: [ ] ].
+	(aDialog respondsTo: #directory:) ifTrue: [ [ aDialog directory: dir ] on: Error do: [ ] ].
+	(aDialog respondsTo: #initialDirectory:) ifTrue: [ [ aDialog initialDirectory: dir ] on: Error do: [ ] ].
+	(aDialog respondsTo: #initialFolder:) ifTrue: [ [ aDialog initialFolder: dir ] on: Error do: [ ] ].
+	(aDialog respondsTo: #defaultFolder:) ifTrue: [ [ aDialog defaultFolder: dir ] on: Error do: [ ] ].
+	(aDialog respondsTo: #initialFile:) ifTrue: [ [ aDialog initialFile: ref ] on: Error do: [ ] ]
 ]
 
-{ #category : 'private' }
-GbsSettingsPresenter >> booleanAt: ivarName default: defaultBoolean [
-	| value |
-	configuration ifNil: [ ^ defaultBoolean ].
-	value := configuration valueAt: ivarName ifAbsent: defaultBoolean.
-	(value == true or: [ value == false ]) ifTrue: [ ^ value ].
-	^ defaultBoolean
-]
-
-{ #category : 'private' }
-GbsSettingsPresenter >> stringValueAt: ivarName default: defaultValue [
-	| value |
-	configuration ifNil: [ ^ defaultValue asString ].
-	value := configuration valueAt: ivarName ifAbsent: defaultValue.
-	value ifNil: [ ^ defaultValue asString ].
-	^ value asString
-]
-
-{ #category : 'private' }
-GbsSettingsPresenter >> formattedIntegerValueAt: ivarName default: defaultInteger [
-	| raw integerValue |
-	raw := configuration ifNil: [ defaultInteger ] ifNotNil: [ configuration valueAt: ivarName ifAbsent: defaultInteger ].
-	raw ifNil: [ raw := defaultInteger ].
-	integerValue := [ raw asInteger ] on: Error do: [ defaultInteger ].
-	^ integerValue asStringWithCommas
-]
-
-{ #category : 'private' }
-GbsSettingsPresenter >> setYesNo: pair value: aBoolean [
-	(pair at: 1) state: aBoolean == true.
-	(pair at: 2) state: aBoolean ~= true
-]
-
-{ #category : 'private' }
-GbsSettingsPresenter >> selectDrop: aDropList value: aString [
-	| value |
-	value := aString asString.
-	(aDropList respondsTo: #selectItem:)
-		ifTrue: [ aDropList selectItem: value ]
-		ifFalse: [
-			(aDropList respondsTo: #selectedItem:)
-				ifTrue: [ aDropList selectedItem: value ] ]
-]
-
-{ #category : 'private' }
-GbsSettingsPresenter >> selectedDropText: aDropList default: defaultString [
-	| selected |
-	selected := [ aDropList selectedItem ] on: Error do: [ nil ].
-	selected ifNil: [ ^ defaultString ].
-	^ selected asString
-]
-
-{ #category : 'private' }
-GbsSettingsPresenter >> yesNoValueFor: pair [
-	^ (pair at: 1) state == true
+{ #category : 'layout' }
+GbsSettingsPresenter >> rowLabelWidth [
+	^ 170
 ]
 
 { #category : 'actions' }
@@ -406,32 +367,71 @@ GbsSettingsPresenter >> saveSettings [
 	self closeWindow
 ]
 
-{ #category : 'private' }
-GbsSettingsPresenter >> integerFromField: aField default: anInteger [
-	| raw |
-	raw := aField text asString copyWithout: $,.
-	^ [ raw asInteger ] on: Error do: [ anInteger ]
+{ #category : 'layout' }
+GbsSettingsPresenter >> sectionTitle: aString [
+	^ self newLabel label: aString
 ]
 
 { #category : 'private' }
-GbsSettingsPresenter >> primeFileDialog: aDialog withInitialPath: aPathString [
-	| ref dir |
-	(aPathString isNil or: [ aPathString asString isEmpty ]) ifTrue: [ ^ self ].
-	ref := [ aPathString asFileReference ] on: Error do: [ nil ].
-	ref ifNil: [ ^ self ].
-	dir := ref isDirectory ifTrue: [ ref ] ifFalse: [ ref parent ].
-	(aDialog respondsTo: #path:) ifTrue: [ [ aDialog path: dir ] on: Error do: [ ] ].
-	(aDialog respondsTo: #folder:) ifTrue: [ [ aDialog folder: dir ] on: Error do: [ ] ].
-	(aDialog respondsTo: #directory:) ifTrue: [ [ aDialog directory: dir ] on: Error do: [ ] ].
-	(aDialog respondsTo: #initialDirectory:) ifTrue: [ [ aDialog initialDirectory: dir ] on: Error do: [ ] ].
-	(aDialog respondsTo: #initialFolder:) ifTrue: [ [ aDialog initialFolder: dir ] on: Error do: [ ] ].
-	(aDialog respondsTo: #defaultFolder:) ifTrue: [ [ aDialog defaultFolder: dir ] on: Error do: [ ] ].
-	(aDialog respondsTo: #initialFile:) ifTrue: [ [ aDialog initialFile: ref ] on: Error do: [ ] ]
+GbsSettingsPresenter >> selectDrop: aDropList value: aString [
+	| value |
+	value := aString asString.
+	(aDropList respondsTo: #selectItem:)
+		ifTrue: [ aDropList selectItem: value ]
+		ifFalse: [
+			(aDropList respondsTo: #selectedItem:)
+				ifTrue: [ aDropList selectedItem: value ] ]
 ]
 
-{ #category : 'actions' }
-GbsSettingsPresenter >> closeWindow [
-	self window
-		ifNotNil: [ self window close ]
-		ifNil: [ self delete ]
+{ #category : 'private' }
+GbsSettingsPresenter >> selectedDropText: aDropList default: defaultString [
+	| selected |
+	selected := [ aDropList selectedItem ] on: Error do: [ nil ].
+	selected ifNil: [ ^ defaultString ].
+	^ selected asString
+]
+
+{ #category : 'private' }
+GbsSettingsPresenter >> setYesNo: pair value: aBoolean [
+	(pair at: 1) state: aBoolean == true.
+	(pair at: 2) state: aBoolean ~= true
+]
+
+{ #category : 'private' }
+GbsSettingsPresenter >> stringValueAt: ivarName default: defaultValue [
+	| value |
+	configuration ifNil: [ ^ defaultValue asString ].
+	value := configuration valueAt: ivarName ifAbsent: defaultValue.
+	value ifNil: [ ^ defaultValue asString ].
+	^ value asString
+]
+
+{ #category : 'layout' }
+GbsSettingsPresenter >> textRowLabel: labelString field: aField [
+	^ SpBoxLayout newLeftToRight
+		add: (self newLabel label: labelString) width: self rowLabelWidth;
+		add: aField width: 220;
+		spacing: 0;
+		yourself
+]
+
+{ #category : 'layout' }
+GbsSettingsPresenter >> yesNoRowLabel: labelString yes: yesButton no: noButton [
+	| yesNoPair |
+	yesNoPair := SpBoxLayout newLeftToRight
+		add: yesButton width: 58;
+		add: noButton width: 52;
+		spacing: 2;
+		yourself.
+	^ SpBoxLayout newLeftToRight
+		add: (self newLabel label: labelString) width: self rowLabelWidth;
+		add: yesNoPair expand: false;
+		add: (self newLabel label: '') expand: true;
+		spacing: 0;
+		yourself
+]
+
+{ #category : 'private' }
+GbsSettingsPresenter >> yesNoValueFor: pair [
+	^ (pair at: 1) state == true
 ]

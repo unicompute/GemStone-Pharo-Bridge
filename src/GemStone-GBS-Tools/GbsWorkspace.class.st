@@ -11,6 +11,25 @@ Class {
 	#package : 'GemStone-GBS-Tools'
 }
 
+{ #category : 'private' }
+GbsWorkspace >> activeSessionForRemoteExecution [
+	| current connectedParam |
+	current := GbsSessionParameters currentSession.
+	(self isUsableGemStoneSession: current) ifTrue: [ ^ current ].
+
+	(current notNil and: [ current class name = #GbsSessionParameters ]) ifTrue: [
+		(current respondsTo: #isConnected) ifTrue: [
+			(current isConnected = true) ifTrue: [ ^ self sessionWrapperFromParameters: current ] ] ].
+
+	connectedParam := GbsSessionParameters allSessions
+		detect: [ :each |
+			each class name = #GbsSessionParameters
+				and: [ (each respondsTo: #isConnected) and: [ each isConnected = true ] ] ]
+		ifNone: [ nil ].
+	connectedParam ifNotNil: [ ^ self sessionWrapperFromParameters: connectedParam ].
+	^ nil
+]
+
 { #category : 'layout' }
 GbsWorkspace >> defaultLayout [
 	^ SpBoxLayout newVertical
@@ -101,58 +120,6 @@ GbsWorkspace >> doIt [
 	].
 ]
 
-{ #category : 'private' }
-GbsWorkspace >> activeSessionForRemoteExecution [
-	| current connectedParam |
-	current := GbsSessionParameters currentSession.
-	(self isUsableGemStoneSession: current) ifTrue: [ ^ current ].
-
-	(current notNil and: [ current class name = #GbsSessionParameters ]) ifTrue: [
-		(current respondsTo: #isConnected) ifTrue: [
-			(current isConnected = true) ifTrue: [ ^ self sessionWrapperFromParameters: current ] ] ].
-
-	connectedParam := GbsSessionParameters allSessions
-		detect: [ :each |
-			each class name = #GbsSessionParameters
-				and: [ (each respondsTo: #isConnected) and: [ each isConnected = true ] ] ]
-		ifNone: [ nil ].
-	connectedParam ifNotNil: [ ^ self sessionWrapperFromParameters: connectedParam ].
-	^ nil
-]
-
-{ #category : 'private' }
-GbsWorkspace >> sessionWrapperFromParameters: aSessionParameters [
-	| wrapped |
-	wrapped := GbsSession new.
-	(aSessionParameters respondsTo: #sessionId) ifTrue: [
-		wrapped sessionId: aSessionParameters sessionId.
-		wrapped sessionOop: aSessionParameters sessionId ].
-	wrapped
-		isLoggedIn: true;
-		parameters: aSessionParameters.
-	GbsSessionParameters currentSession: wrapped.
-	^ wrapped
-]
-
-{ #category : 'private' }
-GbsWorkspace >> isUsableGemStoneSession: anObject [
-	anObject ifNil: [ ^ false ].
-	(anObject respondsTo: #execute:) ifFalse: [ ^ false ].
-	(anObject respondsTo: #isLoggedIn)
-		ifTrue: [ ^ [ anObject isLoggedIn = true ] on: Error do: [ false ] ].
-	^ true
-]
-
-{ #category : 'actions' }
-GbsWorkspace >> openRemoteDebuggerOn: errorString processOop: processOop session: aSession [
-	"Compatibility entry-point (used by tests and legacy call sites)."
-	^ self
-		openRemoteDebuggerOn: errorString
-		processOop: processOop
-		session: aSession
-		sourceCode: self selectedCodeOrAll
-]
-
 { #category : 'actions' }
 GbsWorkspace >> executeInGemStone [
 	"Safely catch any old Cmd+G shortcuts and route them to the correct, main-thread method"
@@ -193,16 +160,6 @@ GbsWorkspace >> gsDoIt [
 ]
 
 { #category : 'actions' }
-GbsWorkspace >> gsInspectIt [
-	^ self inspectIt
-]
-
-{ #category : 'actions' }
-GbsWorkspace >> gsPrintIt [
-	^ self gemStonePrintIt
-]
-
-{ #category : 'actions' }
 GbsWorkspace >> gsFileItIn [
 	| code activeSession |
 	code := self selectedCodeOrAll copyReplaceAll: String cr with: String lf.
@@ -216,6 +173,16 @@ GbsWorkspace >> gsFileItIn [
 	] on: GbsError do: [ :ex |
 		self inform: 'GemStone file-in failed: ', ex messageText
 	].
+]
+
+{ #category : 'actions' }
+GbsWorkspace >> gsInspectIt [
+	^ self inspectIt
+]
+
+{ #category : 'actions' }
+GbsWorkspace >> gsPrintIt [
+	^ self gemStonePrintIt
 ]
 
 { #category : 'initialization' }
@@ -347,6 +314,15 @@ GbsWorkspace >> isDebuggerStackCandidateOop: anOop session: aSession [
 	^ (answer == true or: [ answer = 'true' ])
 ]
 
+{ #category : 'private' }
+GbsWorkspace >> isUsableGemStoneSession: anObject [
+	anObject ifNil: [ ^ false ].
+	(anObject respondsTo: #execute:) ifFalse: [ ^ false ].
+	(anObject respondsTo: #isLoggedIn)
+		ifTrue: [ ^ [ anObject isLoggedIn = true ] on: Error do: [ false ] ].
+	^ true
+]
+
 { #category : 'local actions' }
 GbsWorkspace >> localDebugIt [
 
@@ -423,6 +399,16 @@ GbsWorkspace >> localPrintIt [
 ]
 
 { #category : 'actions' }
+GbsWorkspace >> openRemoteDebuggerOn: errorString processOop: processOop session: aSession [
+	"Compatibility entry-point (used by tests and legacy call sites)."
+	^ self
+		openRemoteDebuggerOn: errorString
+		processOop: processOop
+		session: aSession
+		sourceCode: self selectedCodeOrAll
+]
+
+{ #category : 'actions' }
 GbsWorkspace >> openRemoteDebuggerOn: errorString processOop: processOop session: aSession sourceCode: sourceCode [
 	"Open the GbsRemoteDebugger on a GemStone error with source code"
 	| errorText safeProcessOop debugger |
@@ -494,6 +480,20 @@ GbsWorkspace >> selectedCodeOrAll [
 GbsWorkspace >> selectedText [
 
   ^ textEditor selectedText
+]
+
+{ #category : 'private' }
+GbsWorkspace >> sessionWrapperFromParameters: aSessionParameters [
+	| wrapped |
+	wrapped := GbsSession new.
+	(aSessionParameters respondsTo: #sessionId) ifTrue: [
+		wrapped sessionId: aSessionParameters sessionId.
+		wrapped sessionOop: aSessionParameters sessionId ].
+	wrapped
+		isLoggedIn: true;
+		parameters: aSessionParameters.
+	GbsSessionParameters currentSession: wrapped.
+	^ wrapped
 ]
 
 { #category : 'layout' }

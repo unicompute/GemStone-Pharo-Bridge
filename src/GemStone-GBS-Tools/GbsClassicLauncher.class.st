@@ -24,6 +24,279 @@ Class {
 }
 
 { #category : 'menus' }
+GbsClassicLauncher class >> aboutGemBuilder [
+	UIManager default inform: 'GemBuilder for Pharo (GemStone-Pharo-Bridge)'.
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> browseAllClassesOnCurrentSession [
+	^ self openBrowserOnCurrentSession
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> browseClassOnCurrentSession [
+	self openBrowserOnCurrentSessionDo: [ :browser |
+		(browser respondsTo: #findClass) ifTrue: [ browser findClass ] ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> browseHierarchyImplementorsOnCurrentSession [
+	self
+		performBrowseHierarchyQueryWithPrompt: 'Hierarchy implementors of selector:'
+		mode: 'hierarchyImplementors'
+		titlePrefix: 'Hierarchy Implementors of '
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> browseHierarchySendersOnCurrentSession [
+	self
+		performBrowseHierarchyQueryWithPrompt: 'Hierarchy senders of selector:'
+		mode: 'hierarchySenders'
+		titlePrefix: 'Hierarchy Senders of '
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> browseImplementorsOnCurrentSession [
+	self
+		performBrowseQueryWithPrompt: 'Implementors of selector:'
+		mode: 'implementors'
+		titlePrefix: 'Implementors of '
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> browseMethodsWithSubstringOnCurrentSession [
+	| session pattern worker references presenterClass sessionPart title script raw |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	pattern := UIManager default request: 'Methods with source substring:' initialAnswer: ''.
+	(pattern isNil or: [ pattern trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	worker := GbsBrowser new.
+	worker session: session.
+	script := '[
+		| classes stream p |
+		p := ''', (pattern trimBoth copyReplaceAll: '''' with: ''''''), '''.
+		stream := WriteStream on: String new.
+		classes := IdentitySet new.
+		System myUserProfile symbolList do: [ :dict |
+			dict keysAndValuesDo: [ :k :v | (v isBehavior) ifTrue: [ classes add: v ] ] ].
+		classes asArray do: [ :cls |
+			cls selectors do: [ :sel |
+				| src |
+				src := [ (cls compiledMethodAt: sel) sourceString ] on: Error do: [ '''' ].
+				(src includesSubstring: p) ifTrue: [
+					stream nextPutAll: cls name asString; nextPutAll: ''>>''; nextPutAll: sel asString; lf
+				]
+			]
+		].
+		stream contents
+	] value'.
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ :ex |
+		UIManager default inform: 'Browse methods-with-substring failed: ', ex messageText.
+		'' ].
+	references := ((raw asString splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asSortedCollection asArray.
+	references isEmpty ifTrue: [ UIManager default inform: 'No matches found.'. ^ self ].
+	presenterClass := Smalltalk at: #GbsMethodQueryResultsPresenter ifAbsent: [ nil ].
+	presenterClass ifNil: [
+		UIManager default inform: 'Could not open query results window: GbsMethodQueryResultsPresenter is not loaded.'.
+		^ self ].
+	sessionPart := (session respondsTo: #sessionId)
+		ifTrue: [ 'Session ', session sessionId asString, ' ' ]
+		ifFalse: [ '' ].
+	title := sessionPart, 'Methods with substring ', pattern trimBoth, ' (', references size asString, ')'.
+	[ presenterClass openOn: session references: references title: title ]
+		on: Error
+		do: [ :ex | UIManager default inform: 'Could not open query results window: ', ex messageText ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> browseNamespaceOnCurrentSession [
+	self openBrowserOnCurrentSessionDo: [ :browser |
+		(browser respondsTo: #findDictionary) ifTrue: [ browser findDictionary ] ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> browseReferencesOnCurrentSession [
+	self
+		performBrowseQueryWithPrompt: 'References to class or variable name:'
+		mode: 'references'
+		titlePrefix: 'References to '
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> browseSendersOnCurrentSession [
+	self
+		performBrowseQueryWithPrompt: 'Senders of selector:'
+		mode: 'senders'
+		titlePrefix: 'Senders of '
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> clearAllConnectorClassMappingsOnCurrentSession [
+	| session mgr |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
+	(mgr isNil or: [ mgr respondsTo: #clearAllConnectorClassMappings not ]) ifTrue: [
+		^ UIManager default inform: 'Connector manager unavailable.' ].
+	(UIManager default
+		confirm: 'Clear all connector class overrides and revert to default class resolution?'
+		label: 'Clear Connector Class Overrides') ifFalse: [ ^ self ].
+	[
+		mgr clearAllConnectorClassMappings.
+		UIManager default inform: 'Cleared all connector class overrides.'
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Failed to clear connector class overrides: ', ex messageText ]
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> currentSessionOrInform [
+	| session |
+	session := GbsSessionParameters currentSession.
+	(session isNil or: [ (session respondsTo: #isLoggedIn) and: [ session isLoggedIn ~= true ] ]) ifTrue: [
+		UIManager default inform: 'No connected GemStone session. Please login first.'.
+		^ nil
+	].
+	^ session
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> editConnectorClassMappingOnCurrentSession [
+	| session mgr pairs pairLabels pairIndex pair clientName serverName choices labels classIndex selectedClass |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
+	(mgr isNil or: [ mgr respondsTo: #connectorPairs not ]) ifTrue: [
+		^ UIManager default inform: 'Connector manager unavailable.' ].
+	pairs := [ mgr connectorPairs ] on: Error do: [ #() ].
+	pairs isEmpty ifTrue: [ ^ UIManager default inform: 'No connectors available.' ].
+	pairLabels := pairs collect: [ :each |
+		| c s |
+		c := each at: 1 ifAbsent: [ '' ].
+		s := each at: 2 ifAbsent: [ '' ].
+		c asString, ' -> ', s asString ].
+	pairIndex := UIManager default chooseFrom: pairLabels title: 'Select Connector Pair'.
+	pairIndex = 0 ifTrue: [ ^ self ].
+	pair := pairs at: pairIndex ifAbsent: [ ^ self ].
+	clientName := pair at: 1 ifAbsent: [ ^ self ].
+	serverName := pair at: 2 ifAbsent: [ ^ self ].
+	choices := (mgr respondsTo: #connectorClassChoices)
+		ifTrue: [ mgr connectorClassChoices ]
+		ifFalse: [ { GbsFastConnector. GbsNameConnector. GbsClassConnector. GbsClassVarConnector. GbsClassInstVarConnector } ].
+	labels := choices collect: [ :each | each name asString ].
+	classIndex := UIManager default chooseFrom: labels title: 'Connector Class for ', clientName asString, ' -> ', serverName asString.
+	classIndex = 0 ifTrue: [ ^ self ].
+	selectedClass := choices at: classIndex ifAbsent: [ ^ self ].
+	[
+		mgr
+			setConnectorClass: selectedClass
+			forClient: clientName
+			server: serverName.
+		UIManager default inform: 'Connector class mapping saved.'.
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Failed to save connector class mapping: ', ex messageText ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> generateClassConnectors [
+	| mgr |
+	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
+	(mgr isNil or: [ mgr respondsTo: #generateClassConnectors not ]) ifTrue: [
+		^ UIManager default inform: 'Connector manager unavailable.' ].
+	[
+		mgr generateClassConnectors.
+		UIManager default inform: 'Generated class connectors.'
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Generate connectors failed: ', ex messageText ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> gsFileInOnCurrentSession [
+	| session ref source |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	ref := self selectFileInReference.
+	ref ifNil: [ ^ self ].
+	[
+		source := ref contents.
+		session execute: source.
+		UIManager default inform: 'GS File in completed.'
+	] on: Error do: [ :ex |
+		UIManager default inform: 'GS File in failed: ', ex messageText
+	].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> hierarchyQueryReferencesFor: tokenString mode: modeString inSession: aSession rootClassName: rootClassName scope: scopeString [
+	| worker |
+	worker := GbsBrowser new.
+	worker session: aSession.
+	^ worker
+		queryServerMethodsForSelector: tokenString
+		mode: modeString
+		rootClassName: rootClassName
+		hierarchyScope: scopeString
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> initializeFastConnectors [
+	| mgr |
+	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
+	(mgr isNil or: [ mgr respondsTo: #initializeFastConnectors not ]) ifTrue: [
+		^ UIManager default inform: 'Connector manager unavailable.' ].
+	[
+		mgr initializeFastConnectors.
+		UIManager default inform: 'Fast connectors initialized.'
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Initialize connectors failed: ', ex messageText ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> logoutCurrentSession [
+	| session params sessionId loggedOut |
+	session := GbsSessionParameters currentSession.
+	params := nil.
+	sessionId := (session notNil and: [ session respondsTo: #sessionId ])
+		ifTrue: [ [ session sessionId ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+
+	params := GbsSessionParameters allSessions
+		detect: [ :each |
+			((each respondsTo: #isConnected) and: [ each isConnected = true ]) and: [
+				sessionId isNil
+					ifTrue: [ true ]
+					ifFalse: [ (each respondsTo: #sessionId) and: [ each sessionId = sessionId ] ] ] ]
+		ifNone: [ nil ].
+
+	(session isNil and: [ params isNil ]) ifTrue: [
+		^ UIManager default inform: 'No current GemStone session.' ].
+
+	loggedOut := false.
+	params ifNotNil: [
+		[ params logout. loggedOut := true ] on: Error do: [ :ex | ] ].
+	(loggedOut not and: [ session notNil and: [ session respondsTo: #logout ] ]) ifTrue: [
+		[ session logout. loggedOut := true ] on: Error do: [ :ex | ] ].
+	(loggedOut not) ifTrue: [
+		[ GbsServerInterface uniqueInstance apiGciLogout. loggedOut := true ]
+			on: Error
+			do: [ :ex | ] ].
+
+	params ifNotNil: [
+		(params respondsTo: #sessionId:) ifTrue: [ params sessionId: nil ].
+		GbsSessionParameters unregisterSession: params ].
+	GbsSessionParameters currentSession: nil.
+
+	UIManager default defer: [
+		GbsSessionBrowserPresenter allInstancesDo: [ :presenter |
+			(presenter respondsTo: #refreshAll) ifTrue: [ presenter refreshAll ] ].
+		GbsLauncher allInstancesDo: [ :launcher | launcher updateUIState ].
+		GbsClassicLauncher allInstancesDo: [ :launcher | launcher refreshAll ] ].
+
+	UIManager default inform: (loggedOut
+		ifTrue: [ 'Logged out current session.' ]
+		ifFalse: [ 'Session state cleared.' ]).
+]
+
+{ #category : 'menus' }
 GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
     <worldMenu>
     (aBuilder item: #GemStone)
@@ -175,137 +448,6 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
 ]
 
 { #category : 'menus' }
-GbsClassicLauncher class >> aboutGemBuilder [
-	UIManager default inform: 'GemBuilder for Pharo (GemStone-Pharo-Bridge)'.
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> currentSessionOrInform [
-	| session |
-	session := GbsSessionParameters currentSession.
-	(session isNil or: [ (session respondsTo: #isLoggedIn) and: [ session isLoggedIn ~= true ] ]) ifTrue: [
-		UIManager default inform: 'No connected GemStone session. Please login first.'.
-		^ nil
-	].
-	^ session
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> generateClassConnectors [
-	| mgr |
-	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
-	(mgr isNil or: [ mgr respondsTo: #generateClassConnectors not ]) ifTrue: [
-		^ UIManager default inform: 'Connector manager unavailable.' ].
-	[
-		mgr generateClassConnectors.
-		UIManager default inform: 'Generated class connectors.'
-	] on: Error do: [ :ex |
-		UIManager default inform: 'Generate connectors failed: ', ex messageText ].
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> gsFileInOnCurrentSession [
-	| session ref source |
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	ref := self selectFileInReference.
-	ref ifNil: [ ^ self ].
-	[
-		source := ref contents.
-		session execute: source.
-		UIManager default inform: 'GS File in completed.'
-	] on: Error do: [ :ex |
-		UIManager default inform: 'GS File in failed: ', ex messageText
-	].
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> selectFileInReference [
-	| presenter selected path |
-	presenter := Smalltalk at: #StOpenFilePresenter ifAbsent: [ nil ].
-	presenter ifNotNil: [
-		selected := [
-			| dlg result |
-			dlg := presenter new.
-			(dlg respondsTo: #title:) ifTrue: [ dlg title: 'Select GemStone file in script' ].
-			(dlg respondsTo: #extensions:named:)
-				ifTrue: [ dlg extensions: #( 'st' ) named: 'Smalltalk source (*.st)' ].
-			result := dlg openModal.
-			result
-		] on: Error do: [ nil ].
-		selected ifNotNil: [
-			(selected isCollection and: [ selected isEmpty not ])
-				ifTrue: [ ^ selected first asFileReference ].
-			(selected respondsTo: #asFileReference)
-				ifTrue: [ ^ selected asFileReference ] ] ].
-
-	path := UIManager default
-		request: 'Path to .st file to evaluate on GemStone:'
-		initialAnswer: ''.
-	(path isNil or: [ path isEmpty ]) ifTrue: [ ^ nil ].
-	^ path asFileReference
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> initializeFastConnectors [
-	| mgr |
-	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
-	(mgr isNil or: [ mgr respondsTo: #initializeFastConnectors not ]) ifTrue: [
-		^ UIManager default inform: 'Connector manager unavailable.' ].
-	[
-		mgr initializeFastConnectors.
-		UIManager default inform: 'Fast connectors initialized.'
-	] on: Error do: [ :ex |
-		UIManager default inform: 'Initialize connectors failed: ', ex messageText ].
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> logoutCurrentSession [
-	| session params sessionId loggedOut |
-	session := GbsSessionParameters currentSession.
-	params := nil.
-	sessionId := (session notNil and: [ session respondsTo: #sessionId ])
-		ifTrue: [ [ session sessionId ] on: Error do: [ nil ] ]
-		ifFalse: [ nil ].
-
-	params := GbsSessionParameters allSessions
-		detect: [ :each |
-			((each respondsTo: #isConnected) and: [ each isConnected = true ]) and: [
-				sessionId isNil
-					ifTrue: [ true ]
-					ifFalse: [ (each respondsTo: #sessionId) and: [ each sessionId = sessionId ] ] ] ]
-		ifNone: [ nil ].
-
-	(session isNil and: [ params isNil ]) ifTrue: [
-		^ UIManager default inform: 'No current GemStone session.' ].
-
-	loggedOut := false.
-	params ifNotNil: [
-		[ params logout. loggedOut := true ] on: Error do: [ :ex | ] ].
-	(loggedOut not and: [ session notNil and: [ session respondsTo: #logout ] ]) ifTrue: [
-		[ session logout. loggedOut := true ] on: Error do: [ :ex | ] ].
-	(loggedOut not) ifTrue: [
-		[ GbsServerInterface uniqueInstance apiGciLogout. loggedOut := true ]
-			on: Error
-			do: [ :ex | ] ].
-
-	params ifNotNil: [
-		(params respondsTo: #sessionId:) ifTrue: [ params sessionId: nil ].
-		GbsSessionParameters unregisterSession: params ].
-	GbsSessionParameters currentSession: nil.
-
-	UIManager default defer: [
-		GbsSessionBrowserPresenter allInstancesDo: [ :presenter |
-			(presenter respondsTo: #refreshAll) ifTrue: [ presenter refreshAll ] ].
-		GbsLauncher allInstancesDo: [ :launcher | launcher updateUIState ].
-		GbsClassicLauncher allInstancesDo: [ :launcher | launcher refreshAll ] ].
-
-	UIManager default inform: (loggedOut
-		ifTrue: [ 'Logged out current session.' ]
-		ifFalse: [ 'Session state cleared.' ]).
-]
-
-{ #category : 'menus' }
 GbsClassicLauncher class >> openBreakpointsBrowser [
 	| session |
 	session := self currentSessionOrInform.
@@ -317,17 +459,54 @@ GbsClassicLauncher class >> openBreakpointsBrowser [
 ]
 
 { #category : 'menus' }
-GbsClassicLauncher class >> openGbxFileLogger [
-	| session logger |
+GbsClassicLauncher class >> openBrowserOnCurrentSession [
+	| session |
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
-	logger := session replicatorManager fileLogger.
-	logger ifNil: [
-		^ UIManager default inform: 'File logger not available for this session.' ].
-	^ [ logger inspect ]
+	[
+		GbsBrowser openOn: session
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open GemStone browser: ', ex messageText
+	].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openBrowserOnCurrentSessionDo: oneArgBlock [
+	| session browser |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	[
+		browser := GbsBrowser openOn: session.
+		browser ifNotNil: [ oneArgBlock cull: browser ].
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open GemStone browser: ', ex messageText
+	].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openConnectorBrowserOnCurrentSession [
+	| session |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	^ [ GbsConnectorBrowserPresenter openOn: session ]
 		on: Error
 		do: [ :ex |
-			UIManager default inform: 'Could not open File Logger: ', ex messageText ].
+			UIManager default inform: 'Could not open connector browser: ', ex messageText ].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openGbxFileLogger [
+	| logger path |
+	path := UIManager default
+		request: 'Log file path:'
+		initialAnswer: '/tmp/gbs-file-logger.log'.
+	(path isNil or: [ path trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	[
+		logger := GbxFileLoggerTool on: path trimBoth.
+		logger logInfo: 'Created from the GemStone Utilities menu.'.
+		self inspectUtilityObject: logger named: 'File Logger'
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Failed to open GbxFileLoggerTool: ', ex messageText ]
 ]
 
 { #category : 'menus' }
@@ -416,226 +595,6 @@ GbsClassicLauncher class >> openGbxTrippy [
 ]
 
 { #category : 'menus' }
-GbsClassicLauncher class >> openConnectorBrowserOnCurrentSession [
-	| session |
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	^ [ GbsConnectorBrowserPresenter openOn: session ]
-		on: Error
-		do: [ :ex |
-			UIManager default inform: 'Could not open connector browser: ', ex messageText ].
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> editConnectorClassMappingOnCurrentSession [
-	| session mgr pairs pairLabels pairIndex pair clientName serverName choices labels classIndex selectedClass |
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
-	(mgr isNil or: [ mgr respondsTo: #connectorPairs not ]) ifTrue: [
-		^ UIManager default inform: 'Connector manager unavailable.' ].
-	pairs := [ mgr connectorPairs ] on: Error do: [ #() ].
-	pairs isEmpty ifTrue: [ ^ UIManager default inform: 'No connectors available.' ].
-	pairLabels := pairs collect: [ :each |
-		| c s |
-		c := each at: 1 ifAbsent: [ '' ].
-		s := each at: 2 ifAbsent: [ '' ].
-		c asString, ' -> ', s asString ].
-	pairIndex := UIManager default chooseFrom: pairLabels title: 'Select Connector Pair'.
-	pairIndex = 0 ifTrue: [ ^ self ].
-	pair := pairs at: pairIndex ifAbsent: [ ^ self ].
-	clientName := pair at: 1 ifAbsent: [ ^ self ].
-	serverName := pair at: 2 ifAbsent: [ ^ self ].
-	choices := (mgr respondsTo: #connectorClassChoices)
-		ifTrue: [ mgr connectorClassChoices ]
-		ifFalse: [ { GbsFastConnector. GbsNameConnector. GbsClassConnector. GbsClassVarConnector. GbsClassInstVarConnector } ].
-	labels := choices collect: [ :each | each name asString ].
-	classIndex := UIManager default chooseFrom: labels title: 'Connector Class for ', clientName asString, ' -> ', serverName asString.
-	classIndex = 0 ifTrue: [ ^ self ].
-	selectedClass := choices at: classIndex ifAbsent: [ ^ self ].
-	[
-		mgr
-			setConnectorClass: selectedClass
-			forClient: clientName
-			server: serverName.
-		UIManager default inform: 'Connector class mapping saved.'.
-	] on: Error do: [ :ex |
-		UIManager default inform: 'Failed to save connector class mapping: ', ex messageText ].
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> showConnectorClassMappingsOnCurrentSession [
-	| session mgr text |
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
-	(mgr isNil or: [ mgr respondsTo: #connectorClassMappingReportText not ]) ifTrue: [
-		^ UIManager default inform: 'Connector manager unavailable.' ].
-	text := [
-		mgr connectorClassMappingReportText ]
-		on: Error
-		do: [ :ex | 'Failed to build connector class mapping report: ', ex messageText ].
-	UIManager default edit: text label: 'Connector Class Mappings'
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> clearAllConnectorClassMappingsOnCurrentSession [
-	| session mgr |
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
-	(mgr isNil or: [ mgr respondsTo: #clearAllConnectorClassMappings not ]) ifTrue: [
-		^ UIManager default inform: 'Connector manager unavailable.' ].
-	(UIManager default
-		confirm: 'Clear all connector class overrides and revert to default class resolution?'
-		label: 'Clear Connector Class Overrides') ifFalse: [ ^ self ].
-	[
-		mgr clearAllConnectorClassMappings.
-		UIManager default inform: 'Cleared all connector class overrides.'
-	] on: Error do: [ :ex |
-		UIManager default inform: 'Failed to clear connector class overrides: ', ex messageText ]
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> openBrowserOnCurrentSession [
-	| session |
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	[
-		GbsBrowser openOn: session
-	] on: Error do: [ :ex |
-		UIManager default inform: 'Could not open GemStone browser: ', ex messageText
-	].
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> openBrowserOnCurrentSessionDo: oneArgBlock [
-	| session browser |
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	[
-		browser := GbsBrowser openOn: session.
-		browser ifNotNil: [ oneArgBlock cull: browser ].
-	] on: Error do: [ :ex |
-		UIManager default inform: 'Could not open GemStone browser: ', ex messageText
-	].
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> browseAllClassesOnCurrentSession [
-	^ self openBrowserOnCurrentSession
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> browseClassOnCurrentSession [
-	self openBrowserOnCurrentSessionDo: [ :browser |
-		(browser respondsTo: #findClass) ifTrue: [ browser findClass ] ].
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> browseImplementorsOnCurrentSession [
-	self
-		performBrowseQueryWithPrompt: 'Implementors of selector:'
-		mode: 'implementors'
-		titlePrefix: 'Implementors of '
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> browseHierarchySendersOnCurrentSession [
-	self
-		performBrowseHierarchyQueryWithPrompt: 'Hierarchy senders of selector:'
-		mode: 'hierarchySenders'
-		titlePrefix: 'Hierarchy Senders of '
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> browseHierarchyImplementorsOnCurrentSession [
-	self
-		performBrowseHierarchyQueryWithPrompt: 'Hierarchy implementors of selector:'
-		mode: 'hierarchyImplementors'
-		titlePrefix: 'Hierarchy Implementors of '
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> browseMethodsWithSubstringOnCurrentSession [
-	| session pattern worker references presenterClass sessionPart title script raw |
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	pattern := UIManager default request: 'Methods with source substring:' initialAnswer: ''.
-	(pattern isNil or: [ pattern trimBoth isEmpty ]) ifTrue: [ ^ self ].
-	worker := GbsBrowser new.
-	worker session: session.
-	script := '[
-		| classes stream p |
-		p := ''', (pattern trimBoth copyReplaceAll: '''' with: ''''''), '''.
-		stream := WriteStream on: String new.
-		classes := IdentitySet new.
-		System myUserProfile symbolList do: [ :dict |
-			dict keysAndValuesDo: [ :k :v | (v isBehavior) ifTrue: [ classes add: v ] ] ].
-		classes asArray do: [ :cls |
-			cls selectors do: [ :sel |
-				| src |
-				src := [ (cls compiledMethodAt: sel) sourceString ] on: Error do: [ '''' ].
-				(src includesSubstring: p) ifTrue: [
-					stream nextPutAll: cls name asString; nextPutAll: ''>>''; nextPutAll: sel asString; lf
-				]
-			]
-		].
-		stream contents
-	] value'.
-	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ :ex |
-		UIManager default inform: 'Browse methods-with-substring failed: ', ex messageText.
-		'' ].
-	references := ((raw asString splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asSortedCollection asArray.
-	references isEmpty ifTrue: [ UIManager default inform: 'No matches found.'. ^ self ].
-	presenterClass := Smalltalk at: #GbsMethodQueryResultsPresenter ifAbsent: [ nil ].
-	presenterClass ifNil: [
-		UIManager default inform: 'Could not open query results window: GbsMethodQueryResultsPresenter is not loaded.'.
-		^ self ].
-	sessionPart := (session respondsTo: #sessionId)
-		ifTrue: [ 'Session ', session sessionId asString, ' ' ]
-		ifFalse: [ '' ].
-	title := sessionPart, 'Methods with substring ', pattern trimBoth, ' (', references size asString, ')'.
-	[ presenterClass openOn: session references: references title: title ]
-		on: Error
-		do: [ :ex | UIManager default inform: 'Could not open query results window: ', ex messageText ].
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> browseNamespaceOnCurrentSession [
-	self openBrowserOnCurrentSessionDo: [ :browser |
-		(browser respondsTo: #findDictionary) ifTrue: [ browser findDictionary ] ].
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> browseReferencesOnCurrentSession [
-	self
-		performBrowseQueryWithPrompt: 'References to class or variable name:'
-		mode: 'references'
-		titlePrefix: 'References to '
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> browseSendersOnCurrentSession [
-	self
-		performBrowseQueryWithPrompt: 'Senders of selector:'
-		mode: 'senders'
-		titlePrefix: 'Senders of '
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> openUsersOnCurrentSession [
-	| session |
-	session := self currentSessionOrInform.
-	session ifNil: [ ^ self ].
-	[
-		GbsUserListPresenter openOn: session
-	] on: Error do: [ :ex |
-		UIManager default inform: 'Could not open users list: ', ex messageText
-	].
-]
-
-{ #category : 'menus' }
 GbsClassicLauncher class >> openNamespacesOnCurrentSession [
 	| session |
 	session := self currentSessionOrInform.
@@ -645,6 +604,16 @@ GbsClassicLauncher class >> openNamespacesOnCurrentSession [
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Could not open namespaces tool: ', ex messageText
 	].
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openQueryResultsPresenterOn: session references: references title: titleString [
+	| presenterClass |
+	presenterClass := Smalltalk at: #GbsMethodQueryResultsPresenter ifAbsent: [ nil ].
+	presenterClass ifNil: [
+		UIManager default inform: 'Could not open query results window: GbsMethodQueryResultsPresenter is not loaded.'.
+		^ self ].
+	^ presenterClass openOn: session references: references title: titleString
 ]
 
 { #category : 'menus' }
@@ -660,31 +629,22 @@ GbsClassicLauncher class >> openSecurityPoliciesOnCurrentSession [
 ]
 
 { #category : 'menus' }
-GbsClassicLauncher class >> performBrowseQueryWithPrompt: promptString mode: modeString titlePrefix: titlePrefixString [
-	| session query references presenterClass sessionPart title |
-	query := UIManager default request: promptString initialAnswer: ''.
-	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
+GbsClassicLauncher class >> openSettings [
+	^ [ GbsSettingsPresenter open ]
+		on: Error
+		do: [ :ex | UIManager default inform: 'Could not open settings: ', ex messageText ]
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openUsersOnCurrentSession [
+	| session |
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
-	references := [ self queryOrganizerMethodsFor: query trimBoth mode: modeString inSession: session ]
-		on: Error
-		do: [ :ex |
-			UIManager default inform: 'Browse query failed: ', ex messageText.
-			#() ].
-	references isEmpty ifTrue: [
-		UIManager default inform: 'No matches found.'.
-		^ self ].
-	presenterClass := Smalltalk at: #GbsMethodQueryResultsPresenter ifAbsent: [ nil ].
-	presenterClass ifNil: [
-		UIManager default inform: 'Could not open query results window: GbsMethodQueryResultsPresenter is not loaded.'.
-		^ self ].
-	sessionPart := (session respondsTo: #sessionId)
-		ifTrue: [ 'Session ', session sessionId asString, ' ' ]
-		ifFalse: [ '' ].
-	title := sessionPart, titlePrefixString, query trimBoth, ' (', references size asString, ')'.
-	[ presenterClass openOn: session references: references title: title ]
-		on: Error
-		do: [ :ex | UIManager default inform: 'Could not open query results window: ', ex messageText ].
+	[
+		GbsUserListPresenter openOn: session
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open users list: ', ex messageText
+	].
 ]
 
 { #category : 'menus' }
@@ -729,47 +689,31 @@ GbsClassicLauncher class >> performBrowseHierarchyQueryWithPrompt: promptString 
 ]
 
 { #category : 'menus' }
-GbsClassicLauncher class >> selectHierarchyBrowseScope [
-	| labels idx |
-	labels := #('Full Hierarchy' 'Superclasses' 'This Class' 'Subclasses').
-	idx := self uiChooseFrom: labels title: 'Hierarchy Scope'.
-	idx = 0 ifTrue: [ ^ nil ].
-	idx = 2 ifTrue: [ ^ 'super' ].
-	idx = 3 ifTrue: [ ^ 'this' ].
-	idx = 4 ifTrue: [ ^ 'sub' ].
-	^ 'full'
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> hierarchyQueryReferencesFor: tokenString mode: modeString inSession: aSession rootClassName: rootClassName scope: scopeString [
-	| worker |
-	worker := GbsBrowser new.
-	worker session: aSession.
-	^ worker
-		queryServerMethodsForSelector: tokenString
-		mode: modeString
-		rootClassName: rootClassName
-		hierarchyScope: scopeString
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> openQueryResultsPresenterOn: session references: references title: titleString [
-	| presenterClass |
+GbsClassicLauncher class >> performBrowseQueryWithPrompt: promptString mode: modeString titlePrefix: titlePrefixString [
+	| session query references presenterClass sessionPart title |
+	query := UIManager default request: promptString initialAnswer: ''.
+	(query isNil or: [ query trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	references := [ self queryOrganizerMethodsFor: query trimBoth mode: modeString inSession: session ]
+		on: Error
+		do: [ :ex |
+			UIManager default inform: 'Browse query failed: ', ex messageText.
+			#() ].
+	references isEmpty ifTrue: [
+		UIManager default inform: 'No matches found.'.
+		^ self ].
 	presenterClass := Smalltalk at: #GbsMethodQueryResultsPresenter ifAbsent: [ nil ].
 	presenterClass ifNil: [
 		UIManager default inform: 'Could not open query results window: GbsMethodQueryResultsPresenter is not loaded.'.
 		^ self ].
-	^ presenterClass openOn: session references: references title: titleString
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> uiRequest: promptString initialAnswer: defaultString [
-	^ UIManager default request: promptString initialAnswer: defaultString
-]
-
-{ #category : 'menus' }
-GbsClassicLauncher class >> uiChooseFrom: labels title: titleString [
-	^ UIManager default chooseFrom: labels title: titleString
+	sessionPart := (session respondsTo: #sessionId)
+		ifTrue: [ 'Session ', session sessionId asString, ' ' ]
+		ifFalse: [ '' ].
+	title := sessionPart, titlePrefixString, query trimBoth, ' (', references size asString, ')'.
+	[ presenterClass openOn: session references: references title: title ]
+		on: Error
+		do: [ :ex | UIManager default inform: 'Could not open query results window: ', ex messageText ].
 ]
 
 { #category : 'menus' }
@@ -810,13 +754,6 @@ GbsClassicLauncher class >> queryOrganizerMethodsFor: tokenString mode: modeStri
 ]
 
 { #category : 'menus' }
-GbsClassicLauncher class >> openSettings [
-	^ [ GbsSettingsPresenter open ]
-		on: Error
-		do: [ :ex | UIManager default inform: 'Could not open settings: ', ex messageText ]
-]
-
-{ #category : 'menus' }
 GbsClassicLauncher class >> removeInvalidConnectors [
 	| mgr |
 	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
@@ -829,9 +766,185 @@ GbsClassicLauncher class >> removeInvalidConnectors [
 		UIManager default inform: 'Remove invalid connectors failed: ', ex messageText ].
 ]
 
+{ #category : 'menus' }
+GbsClassicLauncher class >> selectFileInReference [
+	| presenter selected path |
+	presenter := Smalltalk at: #StOpenFilePresenter ifAbsent: [ nil ].
+	presenter ifNotNil: [
+		selected := [
+			| dlg result |
+			dlg := presenter new.
+			(dlg respondsTo: #title:) ifTrue: [ dlg title: 'Select GemStone file in script' ].
+			(dlg respondsTo: #extensions:named:)
+				ifTrue: [ dlg extensions: #( 'st' ) named: 'Smalltalk source (*.st)' ].
+			result := dlg openModal.
+			result
+		] on: Error do: [ nil ].
+		selected ifNotNil: [
+			(selected isCollection and: [ selected isEmpty not ])
+				ifTrue: [ ^ selected first asFileReference ].
+			(selected respondsTo: #asFileReference)
+				ifTrue: [ ^ selected asFileReference ] ] ].
+
+	path := UIManager default
+		request: 'Path to .st file to evaluate on GemStone:'
+		initialAnswer: ''.
+	(path isNil or: [ path isEmpty ]) ifTrue: [ ^ nil ].
+	^ path asFileReference
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> selectHierarchyBrowseScope [
+	| labels idx |
+	labels := #('Full Hierarchy' 'Superclasses' 'This Class' 'Subclasses').
+	idx := self uiChooseFrom: labels title: 'Hierarchy Scope'.
+	idx = 0 ifTrue: [ ^ nil ].
+	idx = 2 ifTrue: [ ^ 'super' ].
+	idx = 3 ifTrue: [ ^ 'this' ].
+	idx = 4 ifTrue: [ ^ 'sub' ].
+	^ 'full'
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> showConnectorClassMappingsOnCurrentSession [
+	| session mgr text |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	mgr := Smalltalk at: #GbsSessionManager ifAbsent: [ nil ].
+	(mgr isNil or: [ mgr respondsTo: #connectorClassMappingReportText not ]) ifTrue: [
+		^ UIManager default inform: 'Connector manager unavailable.' ].
+	text := [
+		mgr connectorClassMappingReportText ]
+		on: Error
+		do: [ :ex | 'Failed to build connector class mapping report: ', ex messageText ].
+	UIManager default edit: text label: 'Connector Class Mappings'
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> uiChooseFrom: labels title: titleString [
+	^ UIManager default chooseFrom: labels title: titleString
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> uiRequest: promptString initialAnswer: defaultString [
+	^ UIManager default request: promptString initialAnswer: defaultString
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> browseHierarchyImplementors [
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	^ [
+		self class
+			performBrowseHierarchyQueryWithPrompt: 'Hierarchy implementors of selector:'
+			mode: 'hierarchyImplementors'
+			titlePrefix: 'Hierarchy Implementors of '.
+		true ]
+		on: Error
+		do: [ :ex | self inform: 'Browse hierarchy implementors failed: ', ex messageText. false ]
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> browseHierarchySenders [
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	^ [
+		self class
+			performBrowseHierarchyQueryWithPrompt: 'Hierarchy senders of selector:'
+			mode: 'hierarchySenders'
+			titlePrefix: 'Hierarchy Senders of '.
+		true ]
+		on: Error
+		do: [ :ex | self inform: 'Browse hierarchy senders failed: ', ex messageText. false ]
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> browseImplementors [
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	^ [
+		self class
+			performBrowseQueryWithPrompt: 'Implementors of selector:'
+			mode: 'implementors'
+			titlePrefix: 'Implementors of '.
+		true ]
+		on: Error
+		do: [ :ex | self inform: 'Browse implementors failed: ', ex messageText. false ]
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> browseMethodsWithSubstring [
+	| browser |
+	browser := self openBrowserForQuery.
+	browser ifNil: [ ^ false ].
+	^ [ browser queryMethodsWithString ]
+		on: Error
+		do: [ :ex |
+			self inform: 'Browse methods-with-substring failed: ', ex messageText.
+			false ]
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> browseReferences [
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	^ [
+		self class
+			performBrowseQueryWithPrompt: 'References to class or variable name:'
+			mode: 'references'
+			titlePrefix: 'References to '.
+		true ]
+		on: Error
+		do: [ :ex | self inform: 'Browse references failed: ', ex messageText. false ]
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> browseSenders [
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	^ [
+		self class
+			performBrowseQueryWithPrompt: 'Senders of selector:'
+			mode: 'senders'
+			titlePrefix: 'Senders of '.
+		true ]
+		on: Error
+		do: [ :ex | self inform: 'Browse senders failed: ', ex messageText. false ]
+]
+
 { #category : 'private' }
 GbsClassicLauncher >> browserClass [
 	^ GbsBrowser
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> browsingSessionFrom: selectedObject [
+	"Classic launcher list can contain parameter records, but browsers need a live GbsSession."
+	selectedObject ifNil: [ ^ nil ].
+	(selectedObject respondsTo: #executeAndFetch:) ifTrue: [ ^ selectedObject ].
+	(selectedObject class name = #GbsSessionParameters)
+		ifTrue: [ ^ GbsSessionParameters currentSession ].
+	^ GbsSessionParameters currentSession
 ]
 
 { #category : 'menus' }
@@ -1099,6 +1212,14 @@ GbsClassicLauncher >> initializeWindow: aWindow [
 
 ]
 
+{ #category : 'private' }
+GbsClassicLauncher >> isSessionUsableForBrowsing: aSession [
+	aSession ifNil: [ ^ false ].
+	(aSession respondsTo: #isLoggedIn)
+		ifTrue: [ ^ [ aSession isLoggedIn == true ] on: Error do: [ false ] ].
+	^ true
+]
+
 { #category : 'actions' }
 GbsClassicLauncher >> makeCurrent [
     self withSelectedSession: [ :s | 
@@ -1167,6 +1288,22 @@ GbsClassicLauncher >> menuWindow [
         addItem: [ :item | item name: 'Refresh'; action: [ self refreshSessionList ] ];
         addItem: [ :item | item name: 'Close'; action: [ self delete ] ];
         yourself.
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> openBrowserForQuery [
+	| session browser |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ nil
+	].
+	GbsSessionParameters currentSession: session.
+	browser := [ self browserClass openOn: session ] on: Error do: [ :ex |
+		self inform: 'Could not open browser: ', ex messageText.
+		nil
+	].
+	^ browser
 ]
 
 { #category : 'private' }
@@ -1245,132 +1382,6 @@ GbsClassicLauncher >> openSystemBrowser [
 ]
 
 { #category : 'actions' }
-GbsClassicLauncher >> browseImplementors [
-	| session |
-	session := self sessionForBrowsing.
-	(self isSessionUsableForBrowsing: session) ifFalse: [
-		self inform: 'Select or log into a GemStone session first.'.
-		^ false ].
-	GbsSessionParameters currentSession: session.
-	^ [
-		self class
-			performBrowseQueryWithPrompt: 'Implementors of selector:'
-			mode: 'implementors'
-			titlePrefix: 'Implementors of '.
-		true ]
-		on: Error
-		do: [ :ex | self inform: 'Browse implementors failed: ', ex messageText. false ]
-]
-
-{ #category : 'actions' }
-GbsClassicLauncher >> browseHierarchySenders [
-	| session |
-	session := self sessionForBrowsing.
-	(self isSessionUsableForBrowsing: session) ifFalse: [
-		self inform: 'Select or log into a GemStone session first.'.
-		^ false ].
-	GbsSessionParameters currentSession: session.
-	^ [
-		self class
-			performBrowseHierarchyQueryWithPrompt: 'Hierarchy senders of selector:'
-			mode: 'hierarchySenders'
-			titlePrefix: 'Hierarchy Senders of '.
-		true ]
-		on: Error
-		do: [ :ex | self inform: 'Browse hierarchy senders failed: ', ex messageText. false ]
-]
-
-{ #category : 'actions' }
-GbsClassicLauncher >> browseHierarchyImplementors [
-	| session |
-	session := self sessionForBrowsing.
-	(self isSessionUsableForBrowsing: session) ifFalse: [
-		self inform: 'Select or log into a GemStone session first.'.
-		^ false ].
-	GbsSessionParameters currentSession: session.
-	^ [
-		self class
-			performBrowseHierarchyQueryWithPrompt: 'Hierarchy implementors of selector:'
-			mode: 'hierarchyImplementors'
-			titlePrefix: 'Hierarchy Implementors of '.
-		true ]
-		on: Error
-		do: [ :ex | self inform: 'Browse hierarchy implementors failed: ', ex messageText. false ]
-]
-
-{ #category : 'actions' }
-GbsClassicLauncher >> browseMethodsWithSubstring [
-	| browser |
-	browser := self openBrowserForQuery.
-	browser ifNil: [ ^ false ].
-	^ [ browser queryMethodsWithString ]
-		on: Error
-		do: [ :ex |
-			self inform: 'Browse methods-with-substring failed: ', ex messageText.
-			false ]
-]
-
-{ #category : 'actions' }
-GbsClassicLauncher >> browseReferences [
-	| session |
-	session := self sessionForBrowsing.
-	(self isSessionUsableForBrowsing: session) ifFalse: [
-		self inform: 'Select or log into a GemStone session first.'.
-		^ false ].
-	GbsSessionParameters currentSession: session.
-	^ [
-		self class
-			performBrowseQueryWithPrompt: 'References to class or variable name:'
-			mode: 'references'
-			titlePrefix: 'References to '.
-		true ]
-		on: Error
-		do: [ :ex | self inform: 'Browse references failed: ', ex messageText. false ]
-]
-
-{ #category : 'actions' }
-GbsClassicLauncher >> browseSenders [
-	| session |
-	session := self sessionForBrowsing.
-	(self isSessionUsableForBrowsing: session) ifFalse: [
-		self inform: 'Select or log into a GemStone session first.'.
-		^ false ].
-	GbsSessionParameters currentSession: session.
-	^ [
-		self class
-			performBrowseQueryWithPrompt: 'Senders of selector:'
-			mode: 'senders'
-			titlePrefix: 'Senders of '.
-		true ]
-		on: Error
-		do: [ :ex | self inform: 'Browse senders failed: ', ex messageText. false ]
-]
-
-{ #category : 'private' }
-GbsClassicLauncher >> openBrowserForQuery [
-	| session browser |
-	session := self sessionForBrowsing.
-	(self isSessionUsableForBrowsing: session) ifFalse: [
-		self inform: 'Select or log into a GemStone session first.'.
-		^ nil
-	].
-	GbsSessionParameters currentSession: session.
-	browser := [ self browserClass openOn: session ] on: Error do: [ :ex |
-		self inform: 'Could not open browser: ', ex messageText.
-		nil
-	].
-	^ browser
-]
-
-{ #category : 'private' }
-GbsClassicLauncher >> isSessionUsableForBrowsing: aSession [
-	aSession ifNil: [ ^ false ].
-	(aSession respondsTo: #isLoggedIn)
-		ifTrue: [ ^ [ aSession isLoggedIn == true ] on: Error do: [ false ] ].
-	^ true
-]
-
-{ #category : 'actions' }
 GbsClassicLauncher >> openWorkspaceFor: aSession [
     aSession ifNil: [ ^ self ].
     
@@ -1431,16 +1442,6 @@ GbsClassicLauncher >> sessionForBrowsing [
 	].
 	selected := selected ifNil: [ GbsSessionParameters currentSession ].
 	^ self browsingSessionFrom: selected
-]
-
-{ #category : 'private' }
-GbsClassicLauncher >> browsingSessionFrom: selectedObject [
-	"Classic launcher list can contain parameter records, but browsers need a live GbsSession."
-	selectedObject ifNil: [ ^ nil ].
-	(selectedObject respondsTo: #executeAndFetch:) ifTrue: [ ^ selectedObject ].
-	(selectedObject class name = #GbsSessionParameters)
-		ifTrue: [ ^ GbsSessionParameters currentSession ].
-	^ GbsSessionParameters currentSession
 ]
 
 { #category : 'polling' }

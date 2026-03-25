@@ -26,41 +26,34 @@ GbsUserPrivilegesPresenter class >> openForUser: aUserName initialPrivileges: aD
 	^ presenter
 ]
 
-{ #category : 'accessing' }
-GbsUserPrivilegesPresenter >> userName: aString [
-	userName := aString ifNil: [ '' ] ifNotNil: [ aString asString ]
+{ #category : 'actions' }
+GbsUserPrivilegesPresenter >> acceptChanges [
+	| updated |
+	updated := self currentPrivilegesDictionary.
+	onAcceptBlock ifNotNil: [ onAcceptBlock cull: updated ].
+	self closeWindow
 ]
 
-{ #category : 'accessing' }
-GbsUserPrivilegesPresenter >> privileges: aDictionary [
-	privileges := (aDictionary ifNil: [ Dictionary new ]) copy
-]
-
-{ #category : 'accessing' }
-GbsUserPrivilegesPresenter >> onAcceptBlock: aBlock [
-	onAcceptBlock := aBlock
-]
-
-{ #category : 'initialization' }
-GbsUserPrivilegesPresenter >> initializePresenters [
-	checkContainer := SpBoxLayout newTopToBottom.
-	checkBoxesByName := Dictionary new.
-	saveButton := self newButton
-		label: 'OK';
-		icon: (self iconNamed: #smallOk);
-		action: [ self acceptChanges ];
-		yourself.
-	cancelButton := self newButton
-		label: 'Cancel';
-		icon: (self iconNamed: #smallCancel);
-		action: [ self closeWindow ];
-		yourself
+{ #category : 'actions' }
+GbsUserPrivilegesPresenter >> closeWindow [
+	self window
+		ifNotNil: [ self window close ]
+		ifNil: [ self delete ]
 ]
 
 { #category : 'initialization' }
 GbsUserPrivilegesPresenter >> connectPresenters [
 	privileges ifNil: [ privileges := Dictionary new ].
 	self rebuildChecksFromPrivileges
+]
+
+{ #category : 'private' }
+GbsUserPrivilegesPresenter >> currentPrivilegesDictionary [
+	| dict |
+	dict := Dictionary new.
+	checkBoxesByName keysAndValuesDo: [ :k :check |
+		dict at: k put: (check state == true) ].
+	^ dict
 ]
 
 { #category : 'layout' }
@@ -80,36 +73,31 @@ GbsUserPrivilegesPresenter >> defaultLayout [
 ]
 
 { #category : 'initialization' }
+GbsUserPrivilegesPresenter >> initializePresenters [
+	checkContainer := SpBoxLayout newTopToBottom.
+	checkBoxesByName := Dictionary new.
+	saveButton := self newButton
+		label: 'OK';
+		icon: (self iconNamed: #smallOk);
+		action: [ self acceptChanges ];
+		yourself.
+	cancelButton := self newButton
+		label: 'Cancel';
+		icon: (self iconNamed: #smallCancel);
+		action: [ self closeWindow ];
+		yourself
+]
+
+{ #category : 'initialization' }
 GbsUserPrivilegesPresenter >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'Privileges';
 		initialExtent: 360 @ 760
 ]
 
-{ #category : 'private' }
-GbsUserPrivilegesPresenter >> rebuildChecksFromPrivileges [
-	| orderedNames |
-	checkContainer ifNil: [ checkContainer := SpBoxLayout newTopToBottom ].
-	(checkContainer respondsTo: #removeAll) ifTrue: [ checkContainer removeAll ].
-	privileges ifNil: [ privileges := Dictionary new ].
-	checkBoxesByName := Dictionary new.
-	orderedNames := self orderedPrivilegeNames.
-	orderedNames do: [ :privName |
-		| check |
-		check := self newCheckBox label: privName asString.
-		check state: ((privileges at: privName ifAbsent: [ false ]) == true).
-		checkContainer add: check expand: false.
-		checkBoxesByName at: privName put: check ].
-	checkContainer spacing: 6
-]
-
-{ #category : 'private' }
-GbsUserPrivilegesPresenter >> currentPrivilegesDictionary [
-	| dict |
-	dict := Dictionary new.
-	checkBoxesByName keysAndValuesDo: [ :k :check |
-		dict at: k put: (check state == true) ].
-	^ dict
+{ #category : 'accessing' }
+GbsUserPrivilegesPresenter >> onAcceptBlock: aBlock [
+	onAcceptBlock := aBlock
 ]
 
 { #category : 'private' }
@@ -148,17 +136,29 @@ GbsUserPrivilegesPresenter >> orderedPrivilegeNames [
 	)
 ]
 
-{ #category : 'actions' }
-GbsUserPrivilegesPresenter >> acceptChanges [
-	| updated |
-	updated := self currentPrivilegesDictionary.
-	onAcceptBlock ifNotNil: [ onAcceptBlock cull: updated ].
-	self closeWindow
+{ #category : 'accessing' }
+GbsUserPrivilegesPresenter >> privileges: aDictionary [
+	privileges := (aDictionary ifNil: [ Dictionary new ]) copy
 ]
 
-{ #category : 'actions' }
-GbsUserPrivilegesPresenter >> closeWindow [
-	self window
-		ifNotNil: [ self window close ]
-		ifNil: [ self delete ]
+{ #category : 'private' }
+GbsUserPrivilegesPresenter >> rebuildChecksFromPrivileges [
+	| orderedNames |
+	checkContainer ifNil: [ checkContainer := SpBoxLayout newTopToBottom ].
+	(checkContainer respondsTo: #removeAll) ifTrue: [ checkContainer removeAll ].
+	privileges ifNil: [ privileges := Dictionary new ].
+	checkBoxesByName := Dictionary new.
+	orderedNames := self orderedPrivilegeNames.
+	orderedNames do: [ :privName |
+		| check |
+		check := self newCheckBox label: privName asString.
+		check state: ((privileges at: privName ifAbsent: [ false ]) == true).
+		checkContainer add: check expand: false.
+		checkBoxesByName at: privName put: check ].
+	checkContainer spacing: 6
+]
+
+{ #category : 'accessing' }
+GbsUserPrivilegesPresenter >> userName: aString [
+	userName := aString ifNil: [ '' ] ifNotNil: [ aString asString ]
 ]

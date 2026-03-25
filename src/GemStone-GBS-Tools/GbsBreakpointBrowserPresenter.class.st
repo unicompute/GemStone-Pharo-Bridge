@@ -22,6 +22,55 @@ GbsBreakpointBrowserPresenter class >> openOn: aSession [
 	^ presenter
 ]
 
+{ #category : 'private' }
+GbsBreakpointBrowserPresenter >> breakpoints [
+	| klass |
+	klass := Smalltalk at: #GbxBreakPoint ifAbsent: [ nil ].
+	klass ifNil: [ ^ #() ].
+	^ [ klass breakPointListFor: session ] on: Error do: [ #() ]
+]
+
+{ #category : 'menus' }
+GbsBreakpointBrowserPresenter >> buildMenuBar [
+	^ self newMenuBar
+		addGroup: [ :group |
+			group
+				addItem: [ :item | item name: 'File'; subMenu: self menuFile ];
+				addItem: [ :item | item name: 'Edit'; subMenu: self menuEdit ];
+				addItem: [ :item | item name: 'Breakpoints'; subMenu: self menuBreakpoints ] ]
+]
+
+{ #category : 'actions' }
+GbsBreakpointBrowserPresenter >> closeWindow [
+	self window
+		ifNotNil: [ self window close ]
+		ifNil: [ self delete ]
+]
+
+{ #category : 'initialization' }
+GbsBreakpointBrowserPresenter >> connectPresenters [
+	breakTable whenSelectionChangedDo: [ :selection |
+		self refreshMethodTextFor: selection selectedItem ].
+	self refreshAll
+]
+
+{ #category : 'actions' }
+GbsBreakpointBrowserPresenter >> copyMethodSource [
+	| text |
+	text := [ methodText text ] on: Error do: [ '' ].
+	Clipboard clipboardText: text
+]
+
+{ #category : 'layout' }
+GbsBreakpointBrowserPresenter >> defaultLayout [
+	^ SpBoxLayout newTopToBottom
+		add: mainMenu expand: false;
+		add: breakTable;
+		add: methodText;
+		spacing: 8;
+		yourself
+]
+
 { #category : 'initialization' }
 GbsBreakpointBrowserPresenter >> initializePresenters [
 	mainMenu := self buildMenuBar.
@@ -38,44 +87,23 @@ GbsBreakpointBrowserPresenter >> initializePresenters [
 ]
 
 { #category : 'initialization' }
-GbsBreakpointBrowserPresenter >> connectPresenters [
-	breakTable whenSelectionChangedDo: [ :selection |
-		self refreshMethodTextFor: selection selectedItem ].
-	self refreshAll
-]
-
-{ #category : 'layout' }
-GbsBreakpointBrowserPresenter >> defaultLayout [
-	^ SpBoxLayout newTopToBottom
-		add: mainMenu expand: false;
-		add: breakTable;
-		add: methodText;
-		spacing: 8;
-		yourself
-]
-
-{ #category : 'initialization' }
 GbsBreakpointBrowserPresenter >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GemStone Breakpoint Browser';
 		initialExtent: 760 @ 520
 ]
 
-{ #category : 'menus' }
-GbsBreakpointBrowserPresenter >> buildMenuBar [
-	^ self newMenuBar
-		addGroup: [ :group |
-			group
-				addItem: [ :item | item name: 'File'; subMenu: self menuFile ];
-				addItem: [ :item | item name: 'Edit'; subMenu: self menuEdit ];
-				addItem: [ :item | item name: 'Breakpoints'; subMenu: self menuBreakpoints ] ]
+{ #category : 'private' }
+GbsBreakpointBrowserPresenter >> literalSymbolName: aString [
+	^ (aString copyReplaceAll: ':' with: ':')
 ]
 
 { #category : 'menus' }
-GbsBreakpointBrowserPresenter >> menuFile [
+GbsBreakpointBrowserPresenter >> menuBreakpoints [
 	^ self newMenu
+		addItem: [ :item | item name: 'Remove Selected'; action: [ self removeSelectedBreakpoint ] ];
+		addItem: [ :item | item name: 'Remove All'; action: [ self removeAllBreakpoints ] ];
 		addItem: [ :item | item name: 'Refresh'; action: [ self refreshAll ] ];
-		addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ];
 		yourself
 ]
 
@@ -87,11 +115,10 @@ GbsBreakpointBrowserPresenter >> menuEdit [
 ]
 
 { #category : 'menus' }
-GbsBreakpointBrowserPresenter >> menuBreakpoints [
+GbsBreakpointBrowserPresenter >> menuFile [
 	^ self newMenu
-		addItem: [ :item | item name: 'Remove Selected'; action: [ self removeSelectedBreakpoint ] ];
-		addItem: [ :item | item name: 'Remove All'; action: [ self removeAllBreakpoints ] ];
 		addItem: [ :item | item name: 'Refresh'; action: [ self refreshAll ] ];
+		addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ];
 		yourself
 ]
 
@@ -109,20 +136,44 @@ GbsBreakpointBrowserPresenter >> refreshAll [
 			self refreshMethodTextFor: points first ]
 ]
 
-{ #category : 'private' }
-GbsBreakpointBrowserPresenter >> breakpoints [
-	| klass |
-	klass := Smalltalk at: #GbxBreakPoint ifAbsent: [ nil ].
-	klass ifNil: [ ^ #() ].
-	^ [ klass breakPointListFor: session ] on: Error do: [ #() ]
-]
-
 { #category : 'actions' }
 GbsBreakpointBrowserPresenter >> refreshMethodTextFor: aBreakpoint [
 	| source |
 	aBreakpoint ifNil: [ methodText text: ''. ^ self ].
 	source := self sourceForBreakpoint: aBreakpoint.
 	methodText text: source
+]
+
+{ #category : 'private' }
+GbsBreakpointBrowserPresenter >> remoteClassNameFor: aBreakpoint [
+	(aBreakpoint respondsTo: #remoteClass) ifFalse: [ ^ '' ].
+	^ [ aBreakpoint remoteClass asString ] on: Error do: [ '' ]
+]
+
+{ #category : 'actions' }
+GbsBreakpointBrowserPresenter >> removeAllBreakpoints [
+	self breakpoints do: [ :bp | (bp respondsTo: #clear) ifTrue: [ bp clear ] ].
+	self refreshAll
+]
+
+{ #category : 'actions' }
+GbsBreakpointBrowserPresenter >> removeSelectedBreakpoint [
+	| selected |
+	selected := breakTable selection selectedItem.
+	selected ifNil: [ ^ self ].
+	(selected respondsTo: #clear) ifTrue: [ selected clear ].
+	self refreshAll
+]
+
+{ #category : 'private' }
+GbsBreakpointBrowserPresenter >> selectorNameFor: aBreakpoint [
+	(aBreakpoint respondsTo: #selector) ifFalse: [ ^ '' ].
+	^ [ aBreakpoint selector asString ] on: Error do: [ '' ]
+]
+
+{ #category : 'accessing' }
+GbsBreakpointBrowserPresenter >> session: aSession [
+	session := aSession
 ]
 
 { #category : 'private' }
@@ -156,58 +207,7 @@ GbsBreakpointBrowserPresenter >> sourceScriptForClassName: className selector: s
 ]
 
 { #category : 'private' }
-GbsBreakpointBrowserPresenter >> literalSymbolName: aString [
-	^ (aString copyReplaceAll: ':' with: ':')
-]
-
-{ #category : 'private' }
-GbsBreakpointBrowserPresenter >> remoteClassNameFor: aBreakpoint [
-	(aBreakpoint respondsTo: #remoteClass) ifFalse: [ ^ '' ].
-	^ [ aBreakpoint remoteClass asString ] on: Error do: [ '' ]
-]
-
-{ #category : 'private' }
-GbsBreakpointBrowserPresenter >> selectorNameFor: aBreakpoint [
-	(aBreakpoint respondsTo: #selector) ifFalse: [ ^ '' ].
-	^ [ aBreakpoint selector asString ] on: Error do: [ '' ]
-]
-
-{ #category : 'private' }
 GbsBreakpointBrowserPresenter >> stepPointFor: aBreakpoint [
 	(aBreakpoint respondsTo: #stepPoint) ifFalse: [ ^ '' ].
 	^ [ aBreakpoint stepPoint asString ] on: Error do: [ '' ]
-]
-
-{ #category : 'actions' }
-GbsBreakpointBrowserPresenter >> removeSelectedBreakpoint [
-	| selected |
-	selected := breakTable selection selectedItem.
-	selected ifNil: [ ^ self ].
-	(selected respondsTo: #clear) ifTrue: [ selected clear ].
-	self refreshAll
-]
-
-{ #category : 'actions' }
-GbsBreakpointBrowserPresenter >> removeAllBreakpoints [
-	self breakpoints do: [ :bp | (bp respondsTo: #clear) ifTrue: [ bp clear ] ].
-	self refreshAll
-]
-
-{ #category : 'actions' }
-GbsBreakpointBrowserPresenter >> copyMethodSource [
-	| text |
-	text := [ methodText text ] on: Error do: [ '' ].
-	Clipboard clipboardText: text
-]
-
-{ #category : 'accessing' }
-GbsBreakpointBrowserPresenter >> session: aSession [
-	session := aSession
-]
-
-{ #category : 'actions' }
-GbsBreakpointBrowserPresenter >> closeWindow [
-	self window
-		ifNotNil: [ self window close ]
-		ifNil: [ self delete ]
 ]

@@ -430,6 +430,12 @@ GbxContextListPolicy >> isDirectGlueContext: aContext [
 ]
 
 { #category : 'testing' }
+GbxContextListPolicy >> isFullStack [
+	"Check if displaying full stack (glue shown)"
+	^ glueIsHidden not
+]
+
+{ #category : 'testing' }
 GbxContextListPolicy >> isGlue: aContext [
 	| inGlue nextVisibleContext ctx |
 	aContext ifNil: [ ^ false ].
@@ -550,12 +556,6 @@ GbxContextListPolicy >> topServerContext [
 	| list |
 	list := self contextList.
 	^ list ifEmpty: [ nil ] ifNotEmpty: [ list first ]
-]
-
-{ #category : 'testing' }
-GbxContextListPolicy >> isFullStack [
-	"Check if displaying full stack (glue shown)"
-	^ glueIsHidden not
 ]
 
 { #category : 'context list' }

@@ -35,17 +35,145 @@ GbsUserInfoPresenter class >> openForUser: aUserName text: aString session: aSes
 	^ presenter
 ]
 
-{ #category : 'initialization' }
-GbsUserInfoPresenter >> initialize [
-	super initialize.
-	userName := ''.
-	infoText := ''
+{ #category : 'menus' }
+GbsUserInfoPresenter >> buildMenuBar [
+	^ self newMenuBar
+		addGroup: [ :group |
+			group
+				addItem: [ :item | item name: 'File'; subMenu: self menuFile ];
+				addItem: [ :item | item name: 'User'; subMenu: self menuUser ];
+				addItem: [ :item | item name: 'Help'; subMenu: self menuHelp ] ];
+		yourself
 ]
 
-{ #category : 'accessing' }
-GbsUserInfoPresenter >> userName: aString [
-	userName := aString ifNil: [ '' ] ifNotNil: [ aString asString ].
-	self updateActionButtons
+{ #category : 'private' }
+GbsUserInfoPresenter >> canOperateOnUserInfo [
+	^ (session notNil) and: [ userName isString and: [ userName isNotEmpty ] ]
+]
+
+{ #category : 'actions' }
+GbsUserInfoPresenter >> closeWindow [
+	self window
+		ifNotNil: [ self window close ]
+		ifNil: [ self delete ]
+]
+
+{ #category : 'initialization' }
+GbsUserInfoPresenter >> connectPresenters [
+	(textPresenter respondsTo: #contextMenu:) ifTrue: [
+		textPresenter contextMenu: [ self menuUserPopup ] ].
+	self updateActionButtons.
+	self updateInfoDisplay
+]
+
+{ #category : 'actions' }
+GbsUserInfoPresenter >> copySelectedInfoLine [
+	| line |
+	line := self selectedInfoLine.
+	line ifNil: [ ^ self ].
+	Clipboard clipboardText: line
+]
+
+{ #category : 'layout' }
+GbsUserInfoPresenter >> defaultLayout [
+	| buttonsRow |
+	buttonsRow := SpBoxLayout newLeftToRight
+		add: (self newLabel label: '');
+		add: privilegesButton expand: false;
+		add: symbolListButton expand: false;
+		add: securityPoliciesButton expand: false;
+		add: closeButton expand: false;
+		spacing: 8;
+		yourself.
+	^ SpBoxLayout newTopToBottom
+		add: mainMenu expand: false;
+		add: textPresenter;
+		add: buttonsRow expand: false;
+		spacing: 8;
+		yourself
+]
+
+{ #category : 'private' }
+GbsUserInfoPresenter >> displayLinesFromInfoText [
+	| text |
+	text := infoText ifNil: [ '' ] ifNotNil: [ infoText asString ].
+	text isEmpty ifTrue: [ ^ #() ].
+	^ text lines
+]
+
+{ #category : 'actions' }
+GbsUserInfoPresenter >> editPrivileges [
+	| creator currentPrivileges groups |
+	session ifNil: [ ^ self ].
+	creator := GbsCreateUserPresenter new.
+	creator session: session.
+	currentPrivileges := creator fetchPrivilegesForUser: userName.
+	groups := self fetchGroupsForUser: userName.
+	[
+		self
+			openPrivilegesEditorForUser: userName
+			initialPrivileges: currentPrivileges
+			onAccept: [ :updated |
+				| script |
+				script := creator
+					scriptToSaveUser: userName
+					password: ''
+					groups: groups
+					privileges: updated.
+				session execute: script.
+				self refreshInfoText ]
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open privileges window: ', ex messageText ]
+]
+
+{ #category : 'actions' }
+GbsUserInfoPresenter >> editSecurityPolicies [
+	session ifNil: [ ^ self ].
+	[
+		GbsSecurityPoliciesPresenter openOn: session
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open security policies window: ', ex messageText ]
+]
+
+{ #category : 'actions' }
+GbsUserInfoPresenter >> editSymbolList [
+	session ifNil: [ ^ self ].
+	[
+		GbsSymbolListBrowserPresenter
+			openOn: session
+			userName: userName
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open Symbol List Browser: ', ex messageText ]
+]
+
+{ #category : 'private' }
+GbsUserInfoPresenter >> fetchGroupsForUser: aUserName [
+	| script raw |
+	session ifNil: [ ^ #() ].
+	script := '
+	| users user names |
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNil: [ ^ '''' ].
+	user := users detect: [ :u | u userId asString = ''', aUserName, ''' ] ifNone: [ nil ].
+	user ifNil: [ ^ '''' ].
+	names := (user respondsTo: #groups)
+		ifTrue: [ user groups collect: [ :g | (g respondsTo: #name) ifTrue: [ g name asString ] ifFalse: [ g asString ] ] ]
+		ifFalse: [ #() ].
+	String streamContents: [ :s |
+		names asSortedCollection
+			do: [ :n | s nextPutAll: n asString ]
+			separatedBy: [ s nextPut: $, ] ]'.
+	raw := [ session evaluate: script ] on: Error do: [ '' ].
+	(raw isString and: [ raw isNotEmpty ])
+		ifTrue: [ ^ (raw splitOn: $,) reject: [ :each | each isEmpty ] ].
+	^ #()
+]
+
+{ #category : 'private' }
+GbsUserInfoPresenter >> hasSelectedInfoLine [
+	| line |
+	line := self selectedInfoLine.
+	^ line isString and: [ line isNotEmpty ]
 ]
 
 { #category : 'accessing' }
@@ -53,15 +181,11 @@ GbsUserInfoPresenter >> infoText: aString [
 	infoText := aString ifNil: [ '' ] ifNotNil: [ aString asString ]
 ]
 
-{ #category : 'accessing' }
-GbsUserInfoPresenter >> session: aSession [
-	session := aSession.
-	self updateActionButtons
-]
-
-{ #category : 'accessing' }
-GbsUserInfoPresenter >> privilegesEditorBlock: aBlock [
-	privilegesEditorBlock := aBlock
+{ #category : 'initialization' }
+GbsUserInfoPresenter >> initialize [
+	super initialize.
+	userName := ''.
+	infoText := ''
 ]
 
 { #category : 'initialization' }
@@ -90,48 +214,18 @@ GbsUserInfoPresenter >> initializePresenters [
 ]
 
 { #category : 'initialization' }
-GbsUserInfoPresenter >> connectPresenters [
-	(textPresenter respondsTo: #contextMenu:) ifTrue: [
-		textPresenter contextMenu: [ self menuUserPopup ] ].
-	self updateActionButtons.
-	self updateInfoDisplay
-]
-
-{ #category : 'layout' }
-GbsUserInfoPresenter >> defaultLayout [
-	| buttonsRow |
-	buttonsRow := SpBoxLayout newLeftToRight
-		add: (self newLabel label: '');
-		add: privilegesButton expand: false;
-		add: symbolListButton expand: false;
-		add: securityPoliciesButton expand: false;
-		add: closeButton expand: false;
-		spacing: 8;
-		yourself.
-	^ SpBoxLayout newTopToBottom
-		add: mainMenu expand: false;
-		add: textPresenter;
-		add: buttonsRow expand: false;
-		spacing: 8;
-		yourself
-]
-
-{ #category : 'initialization' }
 GbsUserInfoPresenter >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GemStone User - ', userName;
 		initialExtent: 760 @ 520
 ]
 
-{ #category : 'menus' }
-GbsUserInfoPresenter >> buildMenuBar [
-	^ self newMenuBar
-		addGroup: [ :group |
-			group
-				addItem: [ :item | item name: 'File'; subMenu: self menuFile ];
-				addItem: [ :item | item name: 'User'; subMenu: self menuUser ];
-				addItem: [ :item | item name: 'Help'; subMenu: self menuHelp ] ];
-		yourself
+{ #category : 'actions' }
+GbsUserInfoPresenter >> inspectSelectedInfoLine [
+	| line |
+	line := self selectedInfoLine.
+	line ifNil: [ ^ self ].
+	UIManager default inform: line
 ]
 
 { #category : 'menus' }
@@ -191,51 +285,6 @@ GbsUserInfoPresenter >> menuUserPopup [
 		yourself
 ]
 
-{ #category : 'actions' }
-GbsUserInfoPresenter >> editPrivileges [
-	| creator currentPrivileges groups |
-	session ifNil: [ ^ self ].
-	creator := GbsCreateUserPresenter new.
-	creator session: session.
-	currentPrivileges := creator fetchPrivilegesForUser: userName.
-	groups := self fetchGroupsForUser: userName.
-	[
-		self
-			openPrivilegesEditorForUser: userName
-			initialPrivileges: currentPrivileges
-			onAccept: [ :updated |
-				| script |
-				script := creator
-					scriptToSaveUser: userName
-					password: ''
-					groups: groups
-					privileges: updated.
-				session execute: script.
-				self refreshInfoText ]
-	] on: Error do: [ :ex |
-		UIManager default inform: 'Could not open privileges window: ', ex messageText ]
-]
-
-{ #category : 'actions' }
-GbsUserInfoPresenter >> editSymbolList [
-	session ifNil: [ ^ self ].
-	[
-		GbsSymbolListBrowserPresenter
-			openOn: session
-			userName: userName
-	] on: Error do: [ :ex |
-		UIManager default inform: 'Could not open Symbol List Browser: ', ex messageText ]
-]
-
-{ #category : 'actions' }
-GbsUserInfoPresenter >> editSecurityPolicies [
-	session ifNil: [ ^ self ].
-	[
-		GbsSecurityPoliciesPresenter openOn: session
-	] on: Error do: [ :ex |
-		UIManager default inform: 'Could not open security policies window: ', ex messageText ]
-]
-
 { #category : 'private' }
 GbsUserInfoPresenter >> openPrivilegesEditorForUser: aUserName initialPrivileges: privilegeMap onAccept: acceptBlock [
 	privilegesEditorBlock ifNotNil: [
@@ -250,26 +299,25 @@ GbsUserInfoPresenter >> openPrivilegesEditorForUser: aUserName initialPrivileges
 ]
 
 { #category : 'private' }
-GbsUserInfoPresenter >> fetchGroupsForUser: aUserName [
-	| script raw |
-	session ifNil: [ ^ #() ].
-	script := '
-	| users user names |
-	users := System myUserProfile symbolList objectNamed: #AllUsers.
-	users ifNil: [ ^ '''' ].
-	user := users detect: [ :u | u userId asString = ''', aUserName, ''' ] ifNone: [ nil ].
-	user ifNil: [ ^ '''' ].
-	names := (user respondsTo: #groups)
-		ifTrue: [ user groups collect: [ :g | (g respondsTo: #name) ifTrue: [ g name asString ] ifFalse: [ g asString ] ] ]
-		ifFalse: [ #() ].
-	String streamContents: [ :s |
-		names asSortedCollection
-			do: [ :n | s nextPutAll: n asString ]
-			separatedBy: [ s nextPut: $, ] ]'.
-	raw := [ session evaluate: script ] on: Error do: [ '' ].
-	(raw isString and: [ raw isNotEmpty ])
-		ifTrue: [ ^ (raw splitOn: $,) reject: [ :each | each isEmpty ] ].
-	^ #()
+GbsUserInfoPresenter >> privilegeSummaryText [
+	| creator map enabled |
+	session ifNil: [ ^ '' ].
+	creator := GbsCreateUserPresenter new.
+	creator session: session.
+	map := [ creator fetchPrivilegesForUser: userName ] on: Error do: [ Dictionary new ].
+	enabled := ((map associations
+		select: [ :assoc | assoc value == true ])
+		collect: [ :assoc | assoc key asString ]) asSortedCollection.
+	enabled isEmpty ifTrue: [ ^ String cr, 'Privileges: <none>' ].
+	^ String cr, 'Privileges: ', (String streamContents: [ :s |
+		enabled
+			do: [ :each | s nextPutAll: each ]
+			separatedBy: [ s nextPutAll: ', ' ] ])
+]
+
+{ #category : 'accessing' }
+GbsUserInfoPresenter >> privilegesEditorBlock: aBlock [
+	privilegesEditorBlock := aBlock
 ]
 
 { #category : 'actions' }
@@ -302,45 +350,6 @@ GbsUserInfoPresenter >> refreshInfoText [
 ]
 
 { #category : 'private' }
-GbsUserInfoPresenter >> privilegeSummaryText [
-	| creator map enabled |
-	session ifNil: [ ^ '' ].
-	creator := GbsCreateUserPresenter new.
-	creator session: session.
-	map := [ creator fetchPrivilegesForUser: userName ] on: Error do: [ Dictionary new ].
-	enabled := ((map associations
-		select: [ :assoc | assoc value == true ])
-		collect: [ :assoc | assoc key asString ]) asSortedCollection.
-	enabled isEmpty ifTrue: [ ^ String cr, 'Privileges: <none>' ].
-	^ String cr, 'Privileges: ', (String streamContents: [ :s |
-		enabled
-			do: [ :each | s nextPutAll: each ]
-			separatedBy: [ s nextPutAll: ', ' ] ])
-]
-
-{ #category : 'private' }
-GbsUserInfoPresenter >> displayLinesFromInfoText [
-	| text |
-	text := infoText ifNil: [ '' ] ifNotNil: [ infoText asString ].
-	text isEmpty ifTrue: [ ^ #() ].
-	^ text lines
-]
-
-{ #category : 'private' }
-GbsUserInfoPresenter >> updateInfoDisplay [
-	textPresenter ifNil: [ ^ self ].
-	(textPresenter respondsTo: #text:)
-		ifTrue: [ textPresenter text: (infoText ifNil: [ '' ] ifNotNil: [ infoText asString ]) ].
-	(textPresenter respondsTo: #items:)
-		ifTrue: [ textPresenter items: self displayLinesFromInfoText ]
-]
-
-{ #category : 'private' }
-GbsUserInfoPresenter >> canOperateOnUserInfo [
-	^ (session notNil) and: [ userName isString and: [ userName isNotEmpty ] ]
-]
-
-{ #category : 'private' }
 GbsUserInfoPresenter >> selectedInfoLine [
 	| selected |
 	textPresenter ifNil: [ ^ nil ].
@@ -355,27 +364,10 @@ GbsUserInfoPresenter >> selectedInfoLine [
 	^ nil
 ]
 
-{ #category : 'private' }
-GbsUserInfoPresenter >> hasSelectedInfoLine [
-	| line |
-	line := self selectedInfoLine.
-	^ line isString and: [ line isNotEmpty ]
-]
-
-{ #category : 'actions' }
-GbsUserInfoPresenter >> copySelectedInfoLine [
-	| line |
-	line := self selectedInfoLine.
-	line ifNil: [ ^ self ].
-	Clipboard clipboardText: line
-]
-
-{ #category : 'actions' }
-GbsUserInfoPresenter >> inspectSelectedInfoLine [
-	| line |
-	line := self selectedInfoLine.
-	line ifNil: [ ^ self ].
-	UIManager default inform: line
+{ #category : 'accessing' }
+GbsUserInfoPresenter >> session: aSession [
+	session := aSession.
+	self updateActionButtons
 ]
 
 { #category : 'private' }
@@ -388,9 +380,17 @@ GbsUserInfoPresenter >> updateActionButtons [
 				ifTrue: [ button enabled: enabled ] ] ]
 ]
 
-{ #category : 'actions' }
-GbsUserInfoPresenter >> closeWindow [
-	self window
-		ifNotNil: [ self window close ]
-		ifNil: [ self delete ]
+{ #category : 'private' }
+GbsUserInfoPresenter >> updateInfoDisplay [
+	textPresenter ifNil: [ ^ self ].
+	(textPresenter respondsTo: #text:)
+		ifTrue: [ textPresenter text: (infoText ifNil: [ '' ] ifNotNil: [ infoText asString ]) ].
+	(textPresenter respondsTo: #items:)
+		ifTrue: [ textPresenter items: self displayLinesFromInfoText ]
+]
+
+{ #category : 'accessing' }
+GbsUserInfoPresenter >> userName: aString [
+	userName := aString ifNil: [ '' ] ifNotNil: [ aString asString ].
+	self updateActionButtons
 ]

@@ -73,6 +73,39 @@ GbxActivation >> argNames [
 	^ argAndTempNames copyFrom: 1 to: numArgsAndTemps
 ]
 
+{ #category : 'private' }
+GbxActivation >> displayedLineNumber [
+	| stepPoint rawOffset offset source line pos |
+	source := self sourceString.
+	source isEmpty ifTrue: [
+		(ipOffset isNumber and: [ ipOffset > 0 ]) ifTrue: [ ^ ipOffset ].
+		^ nil
+	].
+
+	stepPoint := self quickStepPoint.
+	stepPoint > 0 ifFalse: [ ^ nil ].
+	rawOffset := self sourceOffsets at: stepPoint ifAbsent: [ nil ].
+	rawOffset ifNil: [ ^ nil ].
+	offset := [ rawOffset asInteger ] on: Error do: [ nil ].
+	offset ifNil: [ ^ nil ].
+	(offset <= 0 or: [ offset > source size ]) ifTrue: [ ^ nil ].
+
+	line := 1.
+	pos := 1.
+	[ pos < offset ] whileTrue: [
+		((source at: pos) = Character lf or: [ (source at: pos) = Character cr ])
+			ifTrue: [ line := line + 1 ].
+		pos := pos + 1
+	].
+	^ line
+]
+
+{ #category : 'private' }
+GbxActivation >> displayedStepPoint [
+	quickStepPoint ifNotNil: [ :step | step > 0 ifTrue: [ ^ step ] ].
+	^ level ifNil: [ 1 ]
+]
+
 { #category : 'accessing' }
 GbxActivation >> ensureArgAndTempNames [
 	argAndTempNames ifNil: [ argAndTempNames := #( ) ].
@@ -147,6 +180,15 @@ GbxActivation >> isBlockContext [
 ]
 
 { #category : 'testing' }
+GbxActivation >> isExecutedCodeFrame [
+	| className selectorString |
+	className := self methodClassOrUnknown asString.
+	selectorString := self selectorOrUnknown asString.
+	^ (className = 'nil' or: [ className = '<unknown>' ])
+		and: [ selectorString = 'nil' or: [ selectorString = 'unboundMethod' ] ]
+]
+
+{ #category : 'testing' }
 GbxActivation >> isValid [
 	^ processOop isNotNil and: [ processOop ~= 20 ]
 ]
@@ -159,6 +201,18 @@ GbxActivation >> level [
 { #category : 'accessing' }
 GbxActivation >> level: anInteger [
 	level := anInteger
+]
+
+{ #category : 'testing' }
+GbxActivation >> markAsExecutedCodeFrame [
+	"Mark this frame as an executed code frame (for restart)"
+	"Sets class/selector to unknown and step/line to 1"
+	methodClass := 'nil'.
+	selector := #unboundMethod.
+	quickStepPoint := 1.
+	ipOffset := 1.
+	"Provide some default offsets so that step points 1-5 at least highlight the start"
+	sourceOffsets := #( 1 1 1 1 1 ).
 ]
 
 { #category : 'temp variables' }
@@ -351,60 +405,6 @@ GbxActivation >> selector: aSymbol [
 { #category : 'accessing' }
 GbxActivation >> selectorOrUnknown [
 	^ selector ifNil: [ #unboundMethod ]
-]
-
-{ #category : 'private' }
-GbxActivation >> displayedLineNumber [
-	| stepPoint rawOffset offset source line pos |
-	source := self sourceString.
-	source isEmpty ifTrue: [
-		(ipOffset isNumber and: [ ipOffset > 0 ]) ifTrue: [ ^ ipOffset ].
-		^ nil
-	].
-
-	stepPoint := self quickStepPoint.
-	stepPoint > 0 ifFalse: [ ^ nil ].
-	rawOffset := self sourceOffsets at: stepPoint ifAbsent: [ nil ].
-	rawOffset ifNil: [ ^ nil ].
-	offset := [ rawOffset asInteger ] on: Error do: [ nil ].
-	offset ifNil: [ ^ nil ].
-	(offset <= 0 or: [ offset > source size ]) ifTrue: [ ^ nil ].
-
-	line := 1.
-	pos := 1.
-	[ pos < offset ] whileTrue: [
-		((source at: pos) = Character lf or: [ (source at: pos) = Character cr ])
-			ifTrue: [ line := line + 1 ].
-		pos := pos + 1
-	].
-	^ line
-]
-
-{ #category : 'private' }
-GbxActivation >> displayedStepPoint [
-	quickStepPoint ifNotNil: [ :step | step > 0 ifTrue: [ ^ step ] ].
-	^ level ifNil: [ 1 ]
-]
-
-{ #category : 'testing' }
-GbxActivation >> isExecutedCodeFrame [
-	| className selectorString |
-	className := self methodClassOrUnknown asString.
-	selectorString := self selectorOrUnknown asString.
-	^ (className = 'nil' or: [ className = '<unknown>' ])
-		and: [ selectorString = 'nil' or: [ selectorString = 'unboundMethod' ] ]
-]
-
-{ #category : 'testing' }
-GbxActivation >> markAsExecutedCodeFrame [
-	"Mark this frame as an executed code frame (for restart)"
-	"Sets class/selector to unknown and step/line to 1"
-	methodClass := 'nil'.
-	selector := #unboundMethod.
-	quickStepPoint := 1.
-	ipOffset := 1.
-	"Provide some default offsets so that step points 1-5 at least highlight the start"
-	sourceOffsets := #( 1 1 1 1 1 ).
 ]
 
 { #category : 'accessing' }
