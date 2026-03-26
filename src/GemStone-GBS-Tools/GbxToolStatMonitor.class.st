@@ -235,8 +235,8 @@ GbxToolStatMonitor >> initializePresenters [
 	monitor addStatNamed: 'oopCount' description: 'Oops' category: 'Memory'.
 	monitor addStatNamed: 'percentFull' description: 'Percent full' category: 'Memory'.
 	
-	chartPanel := self newMorph.
-	chartPanel morph: (Morph new color: Color white; extent: 800@250; yourself).
+	chartPanel := self newText.
+	chartPanel beNotEditable.
 ]
 
 { #category : 'initialization' }
@@ -370,6 +370,30 @@ GbxToolStatMonitor >> updateDisplay [
 		{ 'OOP Count'. (monitor statAt: 'oopCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) }.
 		{ '% Full'. (monitor statAt: 'percentFull' ifPresent: [ :s | s value printString, '%' ] ifAbsent: [ '0%' ]) }.
 	}.
+	chartPanel text: 'Cache Statistics
+Hit Count: ', ((monitor statAt: 'hitCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString, '
+Miss Count: ', ((monitor statAt: 'missCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString, '
+Hit Ratio: ', ((monitor statAt: 'hitRatio') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '% 
+Proxy Count: ', (cache proxyCount ifNil: [0]) printString , '
+Cache Size: ', (cache size ifNil: [0]) printString , '
+
+Session Statistics
+RPC Count: ', ((monitor statAt: 'rpcCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+Commit Count: ', ((monitor statAt: 'commitCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+Abort Count: ', ((monitor statAt: 'abortCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+Session ID: 1
+
+Garbage Collection
+GC Count: ', ((monitor statAt: 'gcCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+GC Time (ms): ', ((monitor statAt: 'gcTime') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+Objects Scavenged: 0
+Objects Tenured: 0
+
+Memory Statistics
+Object Count: ', ((monitor statAt: 'objectCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+Byte Count: ', ((monitor statAt: 'byteCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+OOP Count: ', ((monitor statAt: 'oopCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+% Full: 0%'.
 ]
 
 { #category : 'updating' }
