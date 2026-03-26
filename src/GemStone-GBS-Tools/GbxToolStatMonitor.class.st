@@ -206,7 +206,8 @@ GbxToolStatMonitor >> initializePresenters [
 GbxToolStatMonitor >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GBS Statistics Monitor';
-		initialExtent: 1000 @ 800.
+		initialExtent: 1000 @ 800;
+		whenClosedDo: [ self stopMonitoring ].
 ]
 
 { #category : 'accessing' }
@@ -314,10 +315,12 @@ GbxToolStatMonitor >> updateStatGroup: group with: statValues [
 
 { #category : 'graph' }
 GbxToolStatMonitor >> drawGraph [
-	| m canvas values keys colors x y maxV |
+	| m canvas values keys colors x y maxV graphWidth graphHeight |
 	m := chartPanel morph.
 	m color: Color white.
 	canvas := m getCanvas.
+	graphWidth := m width - 100 max: 400.
+	graphHeight := m height - 100 max: 300.
 	values := {
 		(monitor statAt: 'hitCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
 		(monitor statAt: 'missCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
@@ -333,19 +336,19 @@ GbxToolStatMonitor >> drawGraph [
 	1 to: values size do: [ :i |
 		| v h |
 		v := values at: i.
-		h := (v / maxV) * 400.
-		canvas line: (x @ 450) to: ((x + 100) @ (450 - h)) color: (colors at: i).
-		canvas fillOval: ((x + 45) @ (450 - h - 5) extent: 10@10) color: (colors at: i).
-		x := x + 110.
+		h := (v / maxV) * graphHeight.
+		canvas line: (x @ (50 + graphHeight)) to: ((x + (graphWidth / values size)) @ (50 + graphHeight - h)) color: (colors at: i).
+		canvas fillOval: ((x + ((graphWidth / values size) / 2 - 5)) @ (50 + graphHeight - h - 5) extent: 10@10) color: (colors at: i).
+		x := x + (graphWidth / values size).
 	].
-	5 to: 450 by: 50 do: [ :gy | canvas line: 40@gy to: 750@gy color: Color lightGray ].
-	40 to: 750 by: 110 do: [ :gx | canvas line: gx@50 to: gx@450 color: Color lightGray ].
-	canvas line: 40@50 to: 40@450 color: Color black.
-	canvas line: 40@450 to: 750@450 color: Color black.
+	0 to: graphHeight by: (graphHeight / 5) do: [ :gy | canvas line: 40@(50 + gy) to: (40 + graphWidth)@(50 + gy) color: Color lightGray ].
+	0 to: graphWidth by: (graphWidth / 6) do: [ :gx | canvas line: (40 + gx)@50 to: (40 + gx)@(50 + graphHeight) color: Color lightGray ].
+	canvas line: 40@50 to: 40@(50 + graphHeight) color: Color black.
+	canvas line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) color: Color black.
 	x := 50.
 	1 to: keys size do: [ :i |
-		canvas drawString: (keys at: i) at: (x @ 470) font: nil color: (colors at: i).
-		x := x + 110.
+		canvas drawString: (keys at: i) at: (x @ (60 + graphHeight)) font: nil color: (colors at: i).
+		x := x + (graphWidth / values size).
 	].
 ]
 
