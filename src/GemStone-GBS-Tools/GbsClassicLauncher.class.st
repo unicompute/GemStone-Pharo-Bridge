@@ -472,6 +472,9 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                     (aBuilder item: #OpenGbxStatMonitor)
                         label: 'Stat Monitor';
                         action: [ self openGbxStatMonitor ].
+                    (aBuilder item: #OpenVSD)
+                        label: 'VSD';
+                        action: [ self openVSD ].
                     (aBuilder item: #OpenGbxStoreTraversalTool)
                         label: 'Store Traversal Tool';
                         action: [ self openGbxStoreTraversalTool ].
@@ -618,6 +621,21 @@ GbsClassicLauncher class >> openGbxServerMap [
 { #category : 'menus' }
 GbsClassicLauncher class >> openGbxStatMonitor [
 	self openGbxUtility: #GbxToolStatMonitor
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> openVSD [
+	"Launch the external VSD (Visual Statistics Display) tool using $GEMSTONE"
+	| gemstone vsdPath cmd |
+	gemstone := Smalltalk os environment at: 'GEMSTONE' ifAbsent: [ nil ].
+	gemstone ifNil: [ ^ UIManager default inform: 'GEMSTONE environment variable not set' ].
+	vsdPath := (gemstone , '/bin/vsd') asFileReference.
+	vsdPath exists ifFalse: [
+		^ UIManager default inform: 'VSD not found at ', vsdPath pathString ].
+	cmd := vsdPath pathString , ' &'.
+	[ LibC system: cmd ]
+		on: Error
+		do: [ :ex | UIManager default inform: 'Failed to launch VSD: ', ex messageText ]
 ]
 
 { #category : 'menus' }

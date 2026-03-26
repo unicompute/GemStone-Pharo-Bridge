@@ -132,8 +132,9 @@ GbxToolStatMonitor >> buildStatsGroups [
 { #category : 'building' }
 GbxToolStatMonitor >> buildToolbar [
 	^ SpBoxLayout newHorizontal
-		spacing: 3;
-		add: refreshButton width: 100;
+		spacing: 10;
+		add: autoRefreshCheckbox;
+		add: refreshButton width: 120;
 		yourself
 ]
 
@@ -158,7 +159,7 @@ GbxToolStatMonitor >> defaultLayout [
 		add: (self buildToolbar) height: 35;
 		add: summaryLabel height: 30;
 		add: (self buildStatsGroups);
-		add: (self buildRefreshControls) height: 35;
+		add: chartPanel expand: true;
 		yourself
 ]
 
@@ -233,6 +234,8 @@ GbxToolStatMonitor >> initializePresenters [
 	monitor addStatNamed: 'byteCount' description: 'Bytes' category: 'Memory'.
 	monitor addStatNamed: 'oopCount' description: 'Oops' category: 'Memory'.
 	monitor addStatNamed: 'percentFull' description: 'Percent full' category: 'Memory'.
+	
+	chartPanel := self newMorph.
 ]
 
 { #category : 'initialization' }
