@@ -319,24 +319,32 @@ GbxToolStatMonitor >> drawGraph [
 	values := {
 		(monitor statAt: 'hitCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
 		(monitor statAt: 'missCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		(monitor statAt: 'hitRatio' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
 		(monitor statAt: 'rpcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
 		(monitor statAt: 'gcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		(monitor statAt: 'objectCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
 	}.
-	keys := #('Hits' 'Misses' 'RPC' 'GC').
-	colors := {Color red. Color blue. Color green. Color orange}.
-	maxV := values max.
+	keys := #('Hits' 'Misses' 'Ratio' 'RPC' 'GC' 'Objects').
+	colors := {Color red. Color blue. Color purple. Color green. Color orange. Color brown}.
+	maxV := values max max: 1.
 	x := 50.
-	1 to: 4 do: [ :i |
+	1 to: values size do: [ :i |
 		| v h |
 		v := values at: i.
-		h := (v / (maxV max: 1)) * 400.
-		canvas line: (x @ 450) to: ((x + 140) @ (450 - h)) color: (colors at: i).
-		canvas fillOval: ((x + 65) @ (450 - h - 5) extent: 10@10) color: (colors at: i).
-		canvas drawString: (keys at: i) at: (x + 5) @ 470 font: nil color: (colors at: i).
-		x := x + 170.
+		h := (v / maxV) * 400.
+		canvas line: (x @ 450) to: ((x + 100) @ (450 - h)) color: (colors at: i).
+		canvas fillOval: ((x + 45) @ (450 - h - 5) extent: 10@10) color: (colors at: i).
+		x := x + 110.
 	].
+	5 to: 450 by: 50 do: [ :gy | canvas line: 40@gy to: 750@gy color: Color lightGray ].
+	40 to: 750 by: 110 do: [ :gx | canvas line: gx@50 to: gx@450 color: Color lightGray ].
 	canvas line: 40@50 to: 40@450 color: Color black.
 	canvas line: 40@450 to: 750@450 color: Color black.
+	x := 50.
+	1 to: keys size do: [ :i |
+		canvas drawString: (keys at: i) at: (x @ 470) font: nil color: (colors at: i).
+		x := x + 110.
+	].
 ]
 
 { #category : 'building' }
