@@ -335,7 +335,7 @@ GbxTrippy >> loadObject: anOop [
 		objectTable items: items.
 		
 		"Update info panel"
-		infoPanel text: self buildInfoStringForOop: anOop className: className size: size.
+		infoPanel text: (self buildInfoStringForOop: anOop className: className size: size).
 		
 	] on: Error do: [ :ex |
 		infoPanel text: 'Error: ', ex messageText.
