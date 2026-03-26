@@ -251,17 +251,17 @@ GbxTrippy >> initializePresenters [
 	backButton := self newButton
 		label: '← Back';
 		action: [ self goBack ];
-		disable.
+		enabled: false.
 	
 	forwardButton := self newButton
 		label: 'Forward →';
 		action: [ self goForward ];
-		disable.
+		enabled: false.
 	
 	upButton := self newButton
 		label: '↑ Up';
 		action: [ self goUp ];
-		disable.
+		enabled: false.
 	
 	refreshButton := self newButton
 		label: '⟳ Refresh';
@@ -335,7 +335,7 @@ GbxTrippy >> loadObject: anOop [
 		objectTable items: items.
 		
 		"Update info panel"
-		infoPanel text: self buildInfoStringForOop: anOop className: className size: size.
+		infoPanel text: (self buildInfoStringForOop: anOop className: className size: size).
 		
 	] on: Error do: [ :ex |
 		infoPanel text: 'Error: ', ex messageText.
@@ -390,8 +390,8 @@ GbxTrippy >> traversal [
 GbxTrippy >> updateNavigationButtons [
 	"Update navigation button states"
 	
-	backButton enable: navigationStack size > 1.
-	upButton enable: navigationStack size > 1.
+	backButton enabled: navigationStack size > 1.
+	upButton enabled: navigationStack size > 1.
 ]
 
 { #category : 'updating' }

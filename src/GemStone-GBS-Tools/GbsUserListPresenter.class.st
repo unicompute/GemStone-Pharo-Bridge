@@ -334,8 +334,8 @@ GbsUserListPresenter >> title [
 GbsUserListPresenter >> updateActionButtons [
 	| hasSelection |
 	hasSelection := self selectedUserName notNil.
-	showUserInfoButton ifNotNil: [ hasSelection ifTrue: [ showUserInfoButton enable ] ifFalse: [ showUserInfoButton disable ] ].
-	deleteUserButton ifNotNil: [ hasSelection ifTrue: [ deleteUserButton enable ] ifFalse: [ deleteUserButton disable ] ]
+	showUserInfoButton ifNotNil: [ hasSelection ifTrue: [ showUserInfoButton enabled: true ] ifFalse: [ showUserInfoButton enabled: false ] ].
+	deleteUserButton ifNotNil: [ hasSelection ifTrue: [ deleteUserButton enabled: true ] ifFalse: [ deleteUserButton enabled: false ] ]
 ]
 
 { #category : 'private' }
