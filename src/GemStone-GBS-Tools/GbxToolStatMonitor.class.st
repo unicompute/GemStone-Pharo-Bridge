@@ -236,6 +236,7 @@ GbxToolStatMonitor >> initializePresenters [
 	monitor addStatNamed: 'percentFull' description: 'Percent full' category: 'Memory'.
 	
 	chartPanel := self newMorph.
+	chartPanel morph: (Morph new color: Color white; extent: 800@250; yourself).
 ]
 
 { #category : 'initialization' }
