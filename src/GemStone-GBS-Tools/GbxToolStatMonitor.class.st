@@ -318,7 +318,7 @@ GbxToolStatMonitor >> drawGraph [
 	| m canvas values keys colors x y maxV graphWidth graphHeight |
 	m := chartPanel morph.
 	m color: Color white.
-	canvas := m getCanvas.
+	canvas := m canvas.
 	graphWidth := m width - 100 max: 400.
 	graphHeight := m height - 100 max: 300.
 	values := {
