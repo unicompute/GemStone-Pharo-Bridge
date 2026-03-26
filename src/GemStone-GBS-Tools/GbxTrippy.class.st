@@ -251,17 +251,17 @@ GbxTrippy >> initializePresenters [
 	backButton := self newButton
 		label: '← Back';
 		action: [ self goBack ];
-		beDisabled.
+		enabled: false.
 	
 	forwardButton := self newButton
 		label: 'Forward →';
 		action: [ self goForward ];
-		beDisabled.
+		enabled: false.
 	
 	upButton := self newButton
 		label: '↑ Up';
 		action: [ self goUp ];
-		beDisabled.
+		enabled: false.
 	
 	refreshButton := self newButton
 		label: '⟳ Refresh';
@@ -390,8 +390,8 @@ GbxTrippy >> traversal [
 GbxTrippy >> updateNavigationButtons [
 	"Update navigation button states"
 	
-	backButton beEnabled: navigationStack size > 1.
-	upButton beEnabled: navigationStack size > 1.
+	backButton enabled: navigationStack size > 1.
+	upButton enabled: navigationStack size > 1.
 ]
 
 { #category : 'updating' }
