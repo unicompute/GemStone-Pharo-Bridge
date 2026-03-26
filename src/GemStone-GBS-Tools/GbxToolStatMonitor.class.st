@@ -50,46 +50,26 @@ GbxToolStatMonitor class >> openOn: aSession [
 ]
 
 { #category : 'building' }
-GbxToolStatMonitor >> buildRefreshControls [
-	^ SpBoxLayout newHorizontal
-		spacing: 10;
-		add: autoRefreshCheckbox;
-		add: refreshButton;
-		yourself
-]
-
-{ #category : 'building' }
 GbxToolStatMonitor >> buildStatGroup: title specs: statSpecs [
-	"Build a stat group with title and stat items"
 	| groupLayout |
-	
 	groupLayout := SpBoxLayout newVertical
 		spacing: 3.
-	
-	"Title"
 	groupLayout add: (self newLabel label: title; yourself) height: 25.
-	
-	"Stat items"
 	statSpecs do: [ :spec |
 		| label |
 		label := self newLabel
 			label: spec first, ': --';
 			yourself.
-		
 		groupLayout add: label height: 20.
 	].
-	
 	^ groupLayout
 ]
 
 { #category : 'building' }
 GbxToolStatMonitor >> buildStatsGroups [
 	| groupsLayout |
-	
 	groupsLayout := SpBoxLayout newHorizontal
 		spacing: 10.
-	
-	"Cache Stats"
 	cacheStatsGroup := self buildStatGroup: 'Cache Statistics' specs: {
 		{ 'Hit Count'. #hitCount }.
 		{ 'Miss Count'. #missCount }.
@@ -98,8 +78,6 @@ GbxToolStatMonitor >> buildStatsGroups [
 		{ 'Cache Size'. #cacheSize }.
 	}.
 	groupsLayout add: cacheStatsGroup.
-	
-	"Session Stats"
 	sessionStatsGroup := self buildStatGroup: 'Session Statistics' specs: {
 		{ 'RPC Count'. #rpcCount }.
 		{ 'Commit Count'. #commitCount }.
@@ -107,8 +85,6 @@ GbxToolStatMonitor >> buildStatsGroups [
 		{ 'Session ID'. #sessionId }.
 	}.
 	groupsLayout add: sessionStatsGroup.
-	
-	"GC Stats"
 	gcStatsGroup := self buildStatGroup: 'Garbage Collection' specs: {
 		{ 'GC Count'. #gcCount }.
 		{ 'GC Time (ms)'. #gcTime }.
@@ -116,8 +92,6 @@ GbxToolStatMonitor >> buildStatsGroups [
 		{ 'Objects Tenured'. #objectsTenured }.
 	}.
 	groupsLayout add: gcStatsGroup.
-	
-	"Memory Stats"
 	memoryStatsGroup := self buildStatGroup: 'Memory Statistics' specs: {
 		{ 'Object Count'. #objectCount }.
 		{ 'Byte Count'. #byteCount }.
@@ -125,7 +99,6 @@ GbxToolStatMonitor >> buildStatsGroups [
 		{ '% Full'. #percentFull }.
 	}.
 	groupsLayout add: memoryStatsGroup.
-	
 	^ groupsLayout
 ]
 
@@ -145,10 +118,7 @@ GbxToolStatMonitor >> cache [
 
 { #category : 'cleanup' }
 GbxToolStatMonitor >> close [
-	"Clean up when closing"
-	
 	self stopMonitoring.
-	
 	super close.
 ]
 
@@ -158,27 +128,18 @@ GbxToolStatMonitor >> defaultLayout [
 		spacing: 5;
 		add: (self buildToolbar) height: 35;
 		add: summaryLabel height: 30;
-		add: (self buildStatsGroups);
+		add: cacheStatsGroup;
 		add: chartPanel expand: true;
+		add: (self buildOtherStatsGroups);
 		yourself
 ]
 
 { #category : 'fetching' }
 GbxToolStatMonitor >> fetchAllStats [
-	"Fetch lightweight client-side statistics so the monitor remains usable in Pharo."
 	| sessionStats sessionId rpcCount |
-	
-	"Fetch cache stats"
-	monitor statAt: 'hitCount' ifPresent: [ :stat |
-		stat value: cache hitCount.
-	].
-	monitor statAt: 'missCount' ifPresent: [ :stat |
-		stat value: cache missCount.
-	].
-	monitor statAt: 'hitRatio' ifPresent: [ :stat |
-		stat value: (cache hitRatio * 100).
-	].
-	
+	monitor statAt: 'hitCount' ifPresent: [ :stat | stat value: cache hitCount ].
+	monitor statAt: 'missCount' ifPresent: [ :stat | stat value: cache missCount ].
+	monitor statAt: 'hitRatio' ifPresent: [ :stat | stat value: (cache hitRatio * 100) ].
 	sessionStats := [ session statResource ] on: Error do: [ nil ].
 	sessionId := [ session sessionId ] on: Error do: [ 'N/A' ].
 	rpcCount := (sessionStats notNil and: [ sessionStats respondsTo: #gciCallsToGem ])
@@ -202,23 +163,17 @@ GbxToolStatMonitor >> fetchAllStats [
 GbxToolStatMonitor >> initializePresenters [
 	summaryLabel := self newLabel.
 	summaryLabel label: 'Monitoring: Not started'.
-	
 	refreshButton := self newButton
 		label: '⟳ Refresh Now';
 		action: [ self refreshStats ].
-	
 	autoRefreshCheckbox := self newCheckBox
 		label: 'Auto-refresh (5s)';
 		state: false;
 		whenChangedDo: [ :state |
 			state ifTrue: [ self startMonitoring ] ifFalse: [ self stopMonitoring ].
 		].
-	
-	"Use a local stats container for the presenter display model."
 	monitor := GbxToolStatResource named: 'Monitor' type: #monitor.
 	monitor interval: 5000.
-	
-	"Add stats to monitor"
 	monitor addStatNamed: 'hitCount' description: 'Cache hits' category: 'Cache'.
 	monitor addStatNamed: 'missCount' description: 'Cache misses' category: 'Cache'.
 	monitor addStatNamed: 'hitRatio' description: 'Cache hit ratio' category: 'Cache'.
@@ -234,16 +189,15 @@ GbxToolStatMonitor >> initializePresenters [
 	monitor addStatNamed: 'byteCount' description: 'Bytes' category: 'Memory'.
 	monitor addStatNamed: 'oopCount' description: 'Oops' category: 'Memory'.
 	monitor addStatNamed: 'percentFull' description: 'Percent full' category: 'Memory'.
-	
-	chartPanel := self newText.
-	chartPanel beNotEditable.
+	chartPanel := self newMorph.
+	chartPanel morph: (Morph new color: Color white; extent: 800@500; yourself).
 ]
 
 { #category : 'initialization' }
 GbxToolStatMonitor >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GBS Statistics Monitor';
-		initialExtent: 1000 @ 600.
+		initialExtent: 1000 @ 800.
 ]
 
 { #category : 'accessing' }
@@ -253,38 +207,16 @@ GbxToolStatMonitor >> monitor [
 
 { #category : 'actions' }
 GbxToolStatMonitor >> refresh [
-
-	"Refresh statistics from server"
-	| script result |
-	
 	session ifNil: [ ^ self ].
-	
-	script := '[
-		| stats |
-		stats := Dictionary new.
-		stats at: ''status'' put: ''Stats collection not available in this version''.
-		stats
-	] value'.
-	
-	result := session executeAndFetch: script.
-	stats := result
 ]
 
 { #category : 'monitoring' }
 GbxToolStatMonitor >> refreshStats [
-	"Refresh all statistics"
-	
 	session ifNil: [ ^ self ].
-	
 	[
-		"Fetch stats from server"
 		self fetchAllStats.
-		
-		"Update display"
 		self updateDisplay.
-		
 		summaryLabel label: 'Last updated: ', DateAndTime now asString.
-
 	] on: Error do: [ :ex |
 		summaryLabel label: 'Error: ', ex messageText.
 	].
@@ -303,17 +235,13 @@ GbxToolStatMonitor >> session: aSession [
 
 { #category : 'monitoring' }
 GbxToolStatMonitor >> startMonitoring [
-	"Start auto-refresh monitoring"
-	
 	autoRefreshTimer ifNotNil: [ autoRefreshTimer terminate ].
-	
 	autoRefreshTimer := [
 		[ autoRefreshCheckbox state ] whileTrue: [
 			self refreshStats.
 			(Delay forSeconds: 5) wait.
 		]
 	] forkAt: Processor userBackgroundPriority.
-
 	summaryLabel label: 'Monitoring: Active (5s interval)'.
 ]
 
@@ -324,21 +252,15 @@ GbxToolStatMonitor >> stats [
 
 { #category : 'monitoring' }
 GbxToolStatMonitor >> stopMonitoring [
-	"Stop auto-refresh monitoring"
-	
 	autoRefreshTimer ifNotNil: [
 		autoRefreshTimer terminate.
 		autoRefreshTimer := nil.
 	].
-	
 	summaryLabel label: 'Monitoring: Stopped'.
 ]
 
 { #category : 'updating' }
 GbxToolStatMonitor >> updateDisplay [
-	"Update the display with current stats"
-	
-	"Update cache stats"
 	self updateStatGroup: cacheStatsGroup with: {
 		{ 'Hit Count'. (monitor statAt: 'hitCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) }.
 		{ 'Miss Count'. (monitor statAt: 'missCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) }.
@@ -346,64 +268,32 @@ GbxToolStatMonitor >> updateDisplay [
 		{ 'Proxy Count'. (cache proxyCount ifNil: [ 0 ]) }.
 		{ 'Cache Size'. (cache size ifNil: [ 0 ]) }.
 	}.
-	
-	"Update session stats"
 	self updateStatGroup: sessionStatsGroup with: {
 		{ 'RPC Count'. (monitor statAt: 'rpcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) }.
 		{ 'Commit Count'. (monitor statAt: 'commitCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) }.
 		{ 'Abort Count'. (monitor statAt: 'abortCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) }.
 		{ 'Session ID'. (monitor statAt: 'sessionId' ifPresent: [ :s | s value ] ifAbsent: [ 'N/A' ]) }.
 	}.
-	
-	"Update GC stats"
 	self updateStatGroup: gcStatsGroup with: {
 		{ 'GC Count'. (monitor statAt: 'gcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) }.
 		{ 'GC Time (ms)'. (monitor statAt: 'gcTime' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) }.
 		{ 'Objects Scavenged'. (monitor statAt: 'objectsScavenged' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) }.
 		{ 'Objects Tenured'. (monitor statAt: 'objectsTenured' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) }.
 	}.
-	
-	"Update memory stats"
 	self updateStatGroup: memoryStatsGroup with: {
 		{ 'Object Count'. (monitor statAt: 'objectCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) }.
 		{ 'Byte Count'. (monitor statAt: 'byteCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) }.
 		{ 'OOP Count'. (monitor statAt: 'oopCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) }.
 		{ '% Full'. (monitor statAt: 'percentFull' ifPresent: [ :s | s value printString, '%' ] ifAbsent: [ '0%' ]) }.
 	}.
-	chartPanel text: 'Cache Statistics
-Hit Count: ', ((monitor statAt: 'hitCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString, '
-Miss Count: ', ((monitor statAt: 'missCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString, '
-Hit Ratio: ', ((monitor statAt: 'hitRatio') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '% 
-Proxy Count: ', (cache proxyCount ifNil: [0]) printString , '
-Cache Size: ', (cache size ifNil: [0]) printString , '
-
-Session Statistics
-RPC Count: ', ((monitor statAt: 'rpcCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
-Commit Count: ', ((monitor statAt: 'commitCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
-Abort Count: ', ((monitor statAt: 'abortCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
-Session ID: 1
-
-Garbage Collection
-GC Count: ', ((monitor statAt: 'gcCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
-GC Time (ms): ', ((monitor statAt: 'gcTime') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
-Objects Scavenged: 0
-Objects Tenured: 0
-
-Memory Statistics
-Object Count: ', ((monitor statAt: 'objectCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
-Byte Count: ', ((monitor statAt: 'byteCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
-OOP Count: ', ((monitor statAt: 'oopCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
-% Full: 0%'.
+	self drawGraph.
 ]
 
 { #category : 'updating' }
 GbxToolStatMonitor >> updateStatGroup: group with: statValues [
-	"Update a stat group with new values"
 	| labels |
-	
 	labels := group children select: [ :child | child isKindOf: SpLabelPresenter ].
-	labels := labels allButFirst. "Skip title"
-	
+	labels := labels allButFirst.
 	statValues keysAndValuesDo: [ :i :statData |
 		i <= labels size ifTrue: [
 			| label |
@@ -411,4 +301,39 @@ GbxToolStatMonitor >> updateStatGroup: group with: statValues [
 			label label: statData first, ': ', statData second asString.
 		]
 	].
+]
+
+{ #category : 'graph' }
+GbxToolStatMonitor >> drawGraph [
+	| m canvas x y values keys colors |
+	m := chartPanel morph.
+	m color: Color white.
+	canvas := m getCanvas.
+	values := { (monitor statAt: 'hitCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) . (monitor statAt: 'missCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) . (monitor statAt: 'rpcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) . (monitor statAt: 'gcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) }.
+	keys := #('Hit' 'Miss' 'RPC' 'GC').
+	colors := {Color red. Color blue. Color green. Color orange}.
+	x := 50.
+	y := 400.
+	canvas line: 40@450 to: 760@450 color: Color black.
+	canvas line: 40@50 to: 40@450 color: Color black.
+	1 to: values size do: [ :i |
+		| v h |
+		v := values at: i.
+		h := 400 - (v min: 400).
+		canvas line: x@y to: (x + 40)@(y - h) color: (colors at: i).
+		canvas fillOval: ((x+35)@(y-h-5) extent: 10@10) color: (colors at: i).
+		canvas drawString: (keys at: i) at: (x + 10)@(460) font: nil color: (colors at: i).
+		x := x + 160.
+	].
+]
+
+{ #category : 'building' }
+GbxToolStatMonitor >> buildOtherStatsGroups [
+	| groupsLayout |
+	groupsLayout := SpBoxLayout newHorizontal
+		spacing: 10.
+	groupsLayout add: sessionStatsGroup.
+	groupsLayout add: gcStatsGroup.
+	groupsLayout add: memoryStatsGroup.
+	^ groupsLayout
 ]
