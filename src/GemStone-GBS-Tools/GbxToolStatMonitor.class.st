@@ -42,11 +42,19 @@ GbxToolStatMonitor class >> on: aSession [
 { #category : 'instance creation' }
 GbxToolStatMonitor class >> openOn: aSession [
 	| monitor |
-	
 	monitor := self on: aSession.
 	monitor open.
 	monitor startMonitoring.
 	^ monitor
+]
+
+{ #category : 'building' }
+GbxToolStatMonitor >> buildRefreshControls [
+	^ SpBoxLayout newHorizontal
+		spacing: 10;
+		add: autoRefreshCheckbox;
+		add: refreshButton;
+		yourself
 ]
 
 { #category : 'building' }
@@ -128,9 +136,8 @@ GbxToolStatMonitor >> defaultLayout [
 		spacing: 5;
 		add: (self buildToolbar) height: 35;
 		add: summaryLabel height: 30;
-		add: cacheStatsGroup;
+		add: (self buildStatsGroups);
 		add: chartPanel expand: true;
-		add: (self buildOtherStatsGroups);
 		yourself
 ]
 
@@ -305,33 +312,37 @@ GbxToolStatMonitor >> updateStatGroup: group with: statValues [
 
 { #category : 'graph' }
 GbxToolStatMonitor >> drawGraph [
-	| m canvas x y values keys colors |
+	| m canvas values keys colors x y maxV |
 	m := chartPanel morph.
 	m color: Color white.
 	canvas := m getCanvas.
-	values := { (monitor statAt: 'hitCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) . (monitor statAt: 'missCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) . (monitor statAt: 'rpcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) . (monitor statAt: 'gcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) }.
-	keys := #('Hit' 'Miss' 'RPC' 'GC').
+	values := {
+		(monitor statAt: 'hitCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		(monitor statAt: 'missCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		(monitor statAt: 'rpcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		(monitor statAt: 'gcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+	}.
+	keys := #('Hits' 'Misses' 'RPC' 'GC').
 	colors := {Color red. Color blue. Color green. Color orange}.
+	maxV := values max.
 	x := 50.
-	y := 400.
-	canvas line: 40@450 to: 760@450 color: Color black.
-	canvas line: 40@50 to: 40@450 color: Color black.
-	1 to: values size do: [ :i |
+	1 to: 4 do: [ :i |
 		| v h |
 		v := values at: i.
-		h := 400 - (v min: 400).
-		canvas line: x@y to: (x + 40)@(y - h) color: (colors at: i).
-		canvas fillOval: ((x+35)@(y-h-5) extent: 10@10) color: (colors at: i).
-		canvas drawString: (keys at: i) at: (x + 10)@(460) font: nil color: (colors at: i).
-		x := x + 160.
+		h := (v / (maxV max: 1)) * 400.
+		canvas line: (x @ 450) to: ((x + 140) @ (450 - h)) color: (colors at: i).
+		canvas fillOval: ((x + 65) @ (450 - h - 5) extent: 10@10) color: (colors at: i).
+		canvas drawString: (keys at: i) at: (x + 5) @ 470 font: nil color: (colors at: i).
+		x := x + 170.
 	].
+	canvas line: 40@50 to: 40@450 color: Color black.
+	canvas line: 40@450 to: 750@450 color: Color black.
 ]
 
 { #category : 'building' }
 GbxToolStatMonitor >> buildOtherStatsGroups [
 	| groupsLayout |
-	groupsLayout := SpBoxLayout newHorizontal
-		spacing: 10.
+	groupsLayout := SpBoxLayout newHorizontal spacing: 10.
 	groupsLayout add: sessionStatsGroup.
 	groupsLayout add: gcStatsGroup.
 	groupsLayout add: memoryStatsGroup.
