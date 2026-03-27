@@ -327,22 +327,22 @@ GbxToolStatMonitor >> updateStatGroup: group with: statValues [
 GbxToolStatMonitor >> drawGraph [
 	| form graphWidth graphHeight keys colors maxV canvas font |
 	[
-	form := Form extent: 800@450 depth: 32.
+	form := Form extent: 800 @ 450 depth: 32.
 	canvas := form getCanvas.
-	canvas fillRectangle: (0@0 extent: 800@450) color: Color white.
+	canvas fillRectangle: (0 @ 0 extent: 800 @ 450) color: Color white.
 
 	graphWidth := 650.
 	graphHeight := 300.
 	font := LogicalFont familyName: 'Arial' pointSize: 10.
 
 	"Draw Axes Labels"
-	canvas drawString: 'Value' at: 5@10 font: font color: Color black.
+	canvas drawString: 'Value' at: 5 @ 10 font: font color: Color black.
 	canvas drawString: 'Time' at: (40 + graphWidth) @ (50 + graphHeight + 10) font: font color: Color black.
 
 	history ifEmpty: [
 		"Draw axes"
-		canvas line: 40@50 to: 40@(50 + graphHeight) width: 1 color: Color black.
-		canvas line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) width: 1 color: Color black.
+		canvas line: 40 @ 50 to: 40 @ (50 + graphHeight) width: 1 color: Color black.
+		canvas line: 40 @ (50 + graphHeight) to: (40 + graphWidth) @ (50 + graphHeight) width: 1 color: Color black.
 		chartPanel image: form.
 		^ self ].
 
@@ -356,8 +356,8 @@ GbxToolStatMonitor >> drawGraph [
 	0 to: 5 do: [ :gi |
 		| gy |
 		gy := (50 + (gi * (graphHeight / 5))) rounded.
-		canvas line: 40@gy to: (40 + graphWidth)@gy width: 1 color: Color lightGray.
-		canvas drawString: (maxV - (gi * (maxV / 5))) rounded asString at: 5@ (gy - 5) font: font color: Color gray.
+		canvas line: 40 @ gy to: (40 + graphWidth) @ gy width: 1 color: Color lightGray.
+		canvas drawString: (maxV - (gi * (maxV / 5))) rounded asString at: 5 @ (gy - 5) font: font color: Color gray.
 	].
 
 	1 to: keys size do: [ :ki |
@@ -377,8 +377,8 @@ GbxToolStatMonitor >> drawGraph [
 				ifTrue: [ (40 + ((i - 1) / (history size - 1) * graphWidth)) rounded ]
 				ifFalse: [ 40 + (graphWidth / 2) rounded ].
 			prevX ifNotNil: [
-				canvas line: prevX@prevY to: thisX@yPos width: 2 color: col ].
-			canvas fillRectangle: (thisX - 2 @ (yPos - 2) extent: 4@4) color: col.
+				canvas line: prevX @ prevY to: thisX @ yPos width: 2 color: col ].
+			canvas fillRectangle: (thisX - 2 @ (yPos - 2) extent: 4 @ 4) color: col.
 
 			prevX := thisX.
 			prevY := yPos.
@@ -404,8 +404,8 @@ GbxToolStatMonitor >> drawGraph [
 	].
 
 	"Draw axes"
-	canvas line: 40@50 to: 40@(50 + graphHeight) width: 1 color: Color black.
-	canvas line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) width: 1 color: Color black.
+	canvas line: 40 @ 50 to: 40 @ (50 + graphHeight) width: 1 color: Color black.
+	canvas line: 40 @ (50 + graphHeight) to: (40 + graphWidth) @ (50 + graphHeight) width: 1 color: Color black.
 
 	chartPanel image: form.
 	] on: Error do: [ :ex |
