@@ -124,7 +124,7 @@ GbsSettingsPresenter >> currentLibraryPathCandidate [
 	(fromConfig isNil or: [ fromConfig isEmpty ]) ifFalse: [ ^ fromConfig ].
 	fromServer := [ GbsServerInterface uniqueInstance libraryPath ] on: Error do: [ '' ].
 	(fromServer isNil or: [ fromServer asString isEmpty ]) ifFalse: [ ^ fromServer asString ].
-	fromLibrary := [ GbsLibrary macLibraryName ] on: Error do: [ '' ].
+	fromLibrary := [ GbsServerInterface uniqueInstance defaultLibraryPath ] on: Error do: [ '' ].
 	(fromLibrary isNil or: [ fromLibrary asString isEmpty ]) ifFalse: [ ^ fromLibrary asString ].
 	^ ''
 ]

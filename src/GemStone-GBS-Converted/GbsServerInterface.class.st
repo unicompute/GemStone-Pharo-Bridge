@@ -410,6 +410,22 @@ GbsServerInterface >> executeAndFetchString: aString [
     ^ resultString asString
 ]
 
+{ #category : 'initialization' }
+GbsServerInterface >> initialize [
+	super initialize.
+	libraryPath := self defaultLibraryPath
+]
+
+{ #category : 'private' }
+GbsServerInterface >> defaultLibraryPath [
+	| os |
+	os := OSPlatform current.
+	os isMacOS ifTrue: [ ^ GbsLibrary macLibraryName ].
+	os isUnix ifTrue: [ ^ GbsLibrary unixLibraryName ].
+	os isWindows ifTrue: [ ^ GbsLibrary win32LibraryName ].
+	^ nil
+]
+
 { #category : 'execution' }
 GbsServerInterface >> executeAndPrint: aString inSession: aSessionId [
     | stringOop |
@@ -445,8 +461,7 @@ GbsServerInterface >> ffiLibraryName [
   "UFFI calls this dynamically on the first FFI execution. 
      If it is nil, the compiler will crash."
 
-  libraryPath ifNil: [ self error: 'GbsServerInterface libraryPath was not set by the Launcher!' ].
-  ^ libraryPath
+  ^ libraryPath ifNil: [ libraryPath := self defaultLibraryPath ]
 ]
 
 { #category : 'GemStone-GBS-Converted' }
