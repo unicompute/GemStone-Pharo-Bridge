@@ -383,8 +383,8 @@ GbxToolStatMonitor >> drawGraph [
 		line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) color: Color black width: 1.
 	
 	chartPanel image: form.
-	] on: Error do: [ :ex | 
-		Transcript show: 'DrawGraph error: '', ex messageText; cr.
+	] on: Error do: [ :ex |
+		Transcript show: 'DrawGraph error: ', ex messageText; cr.
 	].
 ]
 
