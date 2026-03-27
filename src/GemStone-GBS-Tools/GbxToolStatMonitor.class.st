@@ -325,8 +325,8 @@ GbxToolStatMonitor >> updateStatGroup: group with: statValues [
 
 { #category : 'graph' }
 GbxToolStatMonitor >> drawGraph [
-	| form graphWidth graphHeight keys colors maxV canvas font |
-	[
+	| form graphWidth graphHeight keys colors maxV canvas font lx ly |
+	
 	form := Form extent: 800 @ 450 depth: 32.
 	canvas := form getCanvas.
 	canvas fillRectangle: (0 @ 0 extent: 800 @ 450) color: Color white.
@@ -350,14 +350,21 @@ GbxToolStatMonitor >> drawGraph [
 	colors := {Color red. Color blue. Color purple. Color green. Color orange. Color brown}.
 
 	maxV := 1.
-	history do: [ :h | keys do: [ :k | maxV := maxV max: (h at: k ifAbsent: [0]) ] ].
+	history do: [ :hItem | 
+		keys do: [ :kItem | 
+			| val |
+			val := hItem at: kItem ifAbsent: [ 0 ].
+			maxV := maxV max: val.
+		].
+	].
 
 	"Draw Grid"
 	0 to: 5 do: [ :gi |
-		| gy |
+		| gy gv |
 		gy := (50 + (gi * (graphHeight / 5))) rounded.
 		canvas line: 40 @ gy to: (40 + graphWidth) @ gy width: 1 color: Color lightGray.
-		canvas drawString: (maxV - (gi * (maxV / 5))) rounded asString at: 5 @ (gy - 5) font: font color: Color gray.
+		gv := (maxV - (gi * (maxV / 5))) rounded.
+		canvas drawString: gv asString at: 5 @ (gy - 5) font: font color: Color gray.
 	].
 
 	1 to: keys size do: [ :ki |
@@ -368,38 +375,37 @@ GbxToolStatMonitor >> drawGraph [
 		prevY := nil.
 		
 		"Draw Data Lines"
-		1 to: history size do: [ :i |
-			| h v yPos thisX |
-			h := history at: i.
-			v := h at: k ifAbsent: [0].
-			yPos := (50 + graphHeight - ((v / maxV) * graphHeight)) rounded.
-			thisX := (history size > 1) 
-				ifTrue: [ (40 + ((i - 1) / (history size - 1) * graphWidth)) rounded ]
+		1 to: history size do: [ :hi |
+			| h v yp tx |
+			h := history at: hi.
+			v := h at: k ifAbsent: [ 0 ].
+			yp := (50 + graphHeight - ((v / maxV) * graphHeight)) rounded.
+			tx := (history size > 1) 
+				ifTrue: [ (40 + ((hi - 1) / (history size - 1) * graphWidth)) rounded ]
 				ifFalse: [ 40 + (graphWidth / 2) rounded ].
 			prevX ifNotNil: [
-				canvas line: prevX @ prevY to: thisX @ yPos width: 2 color: col ].
-			canvas fillRectangle: (thisX - 2 @ (yPos - 2) extent: 4 @ 4) color: col.
+				canvas line: prevX @ prevY to: tx @ yp width: 2 color: col ].
+			canvas fillRectangle: (tx - 2 @ (yp - 2) extent: 4 @ 4) color: col.
 
-			prevX := thisX.
-			prevY := yPos.
+			prevX := tx.
+			prevY := yp.
 		].
 
 		"Draw Legend (Key)"
-		| legendX legendY |
-		legendX := 40 + ((ki - 1) // 3 * 200).
-		legendY := 50 + graphHeight + 40 + ((ki - 1) \\ 3 * 20).
-		canvas line: legendX @ legendY to: (legendX + 20) @ legendY width: 3 color: col.
-		canvas drawString: k at: (legendX + 25) @ (legendY - 7) font: font color: Color black.
+		lx := 40 + ((ki - 1) // 3 * 200).
+		ly := 50 + graphHeight + 40 + ((ki - 1) \\ 3 * 20).
+		canvas line: lx @ ly to: (lx + 20) @ ly width: 3 color: col.
+		canvas drawString: k at: (lx + 25) @ (ly - 7) font: font color: Color black.
 	].
 
 	"Draw Time markers on X-axis"
 	history size > 1 ifTrue: [
-		{1. history size // 2. history size} do: [ :idx |
-			| h timeStr tx |
-			h := history at: idx.
-			timeStr := (h at: #time ifAbsent: [Time now]) asString copyFrom: 12 to: 19.
-			tx := (40 + ((idx - 1) / (history size - 1) * graphWidth)) rounded.
-			canvas drawString: timeStr at: (tx - 20) @ (50 + graphHeight + 5) font: font color: Color gray.
+		{1. (history size // 2). history size} do: [ :ti |
+			| h ts xPos |
+			h := history at: ti.
+			ts := (h at: #time ifAbsent: [ Time now ]) asString copyFrom: 12 to: 19.
+			xPos := (40 + ((ti - 1) / (history size - 1) * graphWidth)) rounded.
+			canvas drawString: ts at: (xPos - 20) @ (50 + graphHeight + 5) font: font color: Color gray.
 		]
 	].
 
@@ -408,9 +414,6 @@ GbxToolStatMonitor >> drawGraph [
 	canvas line: 40 @ (50 + graphHeight) to: (40 + graphWidth) @ (50 + graphHeight) width: 1 color: Color black.
 
 	chartPanel image: form.
-	] on: Error do: [ :ex |
-		Transcript show: 'DrawGraph error: ', ex messageText; cr.
-	].
 ]
 
 { #category : 'building' }
