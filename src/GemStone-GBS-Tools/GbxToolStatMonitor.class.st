@@ -5,7 +5,7 @@ Class {
 		'session',
 		'monitor',
 		'statsList',
-		'chartPanel',
+		'scrollContent',
 		'refreshButton',
 		'autoRefreshCheckbox',
 		'autoRefreshTimer',
@@ -23,7 +23,8 @@ Class {
 		'archiver',
 		'sampleInterval',
 		'cacheSampleIntervalMultiplier',
-		'history'
+		'history',
+		'graphPresenters'
 	],
 	#classVars : [
 		'Instance',
@@ -133,13 +134,19 @@ GbxToolStatMonitor >> close [
 
 { #category : 'layout' }
 GbxToolStatMonitor >> defaultLayout [
-	^ SpBoxLayout newVertical
+	| mainLayout scrollContainer |
+	
+	scrollContainer := SpScrollableLayout with: scrollContent.
+	
+	mainLayout := SpBoxLayout newVertical
 		spacing: 5;
 		add: (self buildToolbar) height: 35;
 		add: summaryLabel height: 30;
 		add: (self buildStatsGroups) height: 145;
-		add: chartPanel expand: true;
-		yourself
+		add: scrollContainer expand: true;
+		yourself.
+		
+	^ mainLayout
 ]
 
 { #category : 'fetching' }
@@ -167,6 +174,7 @@ GbxToolStatMonitor >> fetchAllStats [
 
 { #category : 'initialization' }
 GbxToolStatMonitor >> initializePresenters [
+	| statKeys |
 	summaryLabel := self newLabel.
 	summaryLabel label: 'Monitoring: Not started'.
 	refreshButton := self newButton
@@ -195,17 +203,36 @@ GbxToolStatMonitor >> initializePresenters [
 	monitor addStatNamed: 'byteCount' description: 'Bytes' category: 'Memory'.
 	monitor addStatNamed: 'oopCount' description: 'Oops' category: 'Memory'.
 	monitor addStatNamed: 'percentFull' description: 'Percent full' category: 'Memory'.
-	chartPanel := self newImage.
-	chartPanel image: (Form extent: 800@400 depth: 32).
+	
 	history := OrderedCollection new.
+	
+	statKeys := #(
+		'Hit Count' 'Miss Count' 'Hit Ratio' 'Proxy Count' 'Cache Size'
+		'RPC Count' 'Commit Count' 'Abort Count' 'Session ID'
+		'GC Count' 'GC Time (ms)' 'Objects Scavenged' 'Objects Tenured'
+		'Object Count' 'Byte Count' 'OOP Count' '% Full'
+	).
+	
+	graphPresenters := Dictionary new.
+	scrollContent := self newPresenter.
+	scrollContent layout: (SpBoxLayout newVertical spacing: 10).
+	
+	statKeys do: [ :key |
+		| img |
+		img := self newImage.
+		img image: (Form extent: 800 @ 150 depth: 32).
+		graphPresenters at: key put: img.
+		scrollContent layout add: img height: 150.
+	].
+	
 	self drawGraph.
 ]
 
 { #category : 'initialization' }
 GbxToolStatMonitor >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
-		title: 'GBS Statistics Monitor';
-		initialExtent: 1000 @ 800;
+		title: 'GBS Statistics Monitor - 17 Performance Graphs';
+		initialExtent: 900 @ 900;
 		whenClosedDo: [ self stopMonitoring ].
 ]
 
@@ -229,12 +256,24 @@ GbxToolStatMonitor >> refreshStats [
 		summaryLabel label: 'Last updated: ', (DateAndTime now asString copyUpTo: $.).
 		current := Dictionary new.
 		current at: #time put: DateAndTime now.
-		current at: #hit put: (monitor statAt: 'hitCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: #miss put: (monitor statAt: 'missCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: #ratio put: (monitor statAt: 'hitRatio' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: #rpc put: (monitor statAt: 'rpcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: #gc put: (monitor statAt: 'gcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: #objects put: (monitor statAt: 'objectCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: 'Hit Count' put: (monitor statAt: 'hitCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: 'Miss Count' put: (monitor statAt: 'missCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: 'Hit Ratio' put: (monitor statAt: 'hitRatio' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: 'Proxy Count' put: (cache proxyCount ifNil: [ 0 ]).
+		current at: 'Cache Size' put: (cache size ifNil: [ 0 ]).
+		current at: 'RPC Count' put: (monitor statAt: 'rpcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: 'Commit Count' put: (monitor statAt: 'commitCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: 'Abort Count' put: (monitor statAt: 'abortCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: 'GC Count' put: (monitor statAt: 'gcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: 'GC Time (ms)' put: (monitor statAt: 'gcTime' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: 'Objects Scavenged' put: (monitor statAt: 'objectsScavenged' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: 'Objects Tenured' put: (monitor statAt: 'objectsTenured' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: 'Object Count' put: (monitor statAt: 'objectCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: 'Byte Count' put: (monitor statAt: 'byteCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: 'OOP Count' put: (monitor statAt: 'oopCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: '% Full' put: (monitor statAt: 'percentFull' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: 'Session ID' put: (monitor statAt: 'sessionId' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		
 		history add: current.
 		history size > 100 ifTrue: [ history removeFirst ].
 	] on: Error do: [ :ex |
@@ -325,106 +364,76 @@ GbxToolStatMonitor >> updateStatGroup: group with: statValues [
 
 { #category : 'graph' }
 GbxToolStatMonitor >> drawGraph [
-	| form graphWidth graphHeight keys colors maxV canvas font lx ly |
+	| graphWidth graphHeight canvas font colors windowSize displayHistory |
 	
-	form := Form extent: 800 @ 450 depth: 32.
-	canvas := form getCanvas.
-	canvas fillRectangle: (0 @ 0 extent: 800 @ 450) color: Color white.
-
-	graphWidth := 650.
-	graphHeight := 300.
+	graphWidth := 750.
+	graphHeight := 100.
 	font := LogicalFont familyName: 'Arial' pointSize: 10.
+	colors := {Color red. Color blue. Color purple. Color green. Color orange. Color brown. Color cyan. Color magenta. Color gray. Color black}.
+	
+	windowSize := 20.
+	displayHistory := history size > windowSize 
+		ifTrue: [ history copyFrom: history size - windowSize + 1 to: history size ]
+		ifFalse: [ history ].
 
-	"Draw Axes Labels"
-	canvas drawString: 'Value' at: 5 @ 10 font: font color: Color black.
-	canvas drawString: 'Time' at: (40 + graphWidth) @ (50 + graphHeight + 10) font: font color: Color black.
-
-	history ifEmpty: [
-		"Draw axes"
-		canvas line: 40 @ 50 to: 40 @ (50 + graphHeight) width: 1 color: Color black.
-		canvas line: 40 @ (50 + graphHeight) to: (40 + graphWidth) @ (50 + graphHeight) width: 1 color: Color black.
-		chartPanel image: form.
-		^ self ].
-
-	keys := #('hit' 'miss' 'ratio' 'rpc' 'gc' 'objects').
-	colors := {Color red. Color blue. Color purple. Color green. Color orange. Color brown}.
-
-	maxV := 1.
-	history do: [ :hItem | 
-		keys do: [ :kItem | 
-			| val |
-			val := hItem at: kItem ifAbsent: [ 0 ].
-			maxV := maxV max: val.
-		].
-	].
-
-	"Draw Grid"
-	0 to: 5 do: [ :gridIdx |
-		| gy gridVal |
-		gy := (50 + (gridIdx * (graphHeight / 5))) rounded.
-		canvas line: 40 @ gy to: (40 + graphWidth) @ gy width: 1 color: Color lightGray.
-		gridVal := (maxV - (gridIdx * (maxV / 5))) rounded.
-		canvas drawString: gridVal asString at: 5 @ (gy - 5) font: font color: Color gray.
-	].
-
-	1 to: keys size do: [ :keyIdx |
-		| k col prevX prevY windowSize displayHistory startIdx |
-		k := keys at: keyIdx.
-		col := colors at: keyIdx.
-		prevX := nil.
-		prevY := nil.
+	graphPresenters keysAndValuesDo: [ :statName :presenter |
+		| form maxV color |
+		form := Form extent: 850 @ 150 depth: 32.
+		canvas := form getCanvas.
+		canvas fillRectangle: (0 @ 0 extent: 850 @ 150) color: (Color white alpha: 0.1).
+		canvas frameRectangle: (0 @ 0 extent: 850 @ 150) color: Color lightGray.
 		
-		windowSize := 20.
-		displayHistory := history size > windowSize 
-			ifTrue: [ history copyFrom: history size - windowSize + 1 to: history size ]
-			ifFalse: [ history ].
+		color := colors at: ((statName hash abs \\ colors size) + 1).
 		
-		"Draw Data Lines"
-		1 to: displayHistory size do: [ :histIdx |
-			| h v yp tx |
-			h := displayHistory at: histIdx.
-			v := h at: k ifAbsent: [ 0 ].
-			yp := (50 + graphHeight - ((v / maxV) * graphHeight)) rounded.
-			tx := (windowSize > 1) 
-				ifTrue: [ (40 + ((histIdx - 1) / (windowSize - 1) * graphWidth)) rounded ]
-				ifFalse: [ 40 + (graphWidth / 2) rounded ].
-			prevX ifNotNil: [
-				canvas line: prevX @ prevY to: tx @ yp width: 2 color: col ].
-			canvas fillRectangle: (tx - 2 @ (yp - 2) extent: 4 @ 4) color: col.
-
-			prevX := tx.
-			prevY := yp.
-		].
-
-		"Draw Legend (Key)"
-		lx := 40 + ((keyIdx - 1) // 3 * 200).
-		ly := 50 + graphHeight + 40 + ((keyIdx - 1) \\ 3 * 20).
-		canvas line: lx @ ly to: (lx + 20) @ ly width: 3 color: col.
-		canvas drawString: k at: (lx + 25) @ (ly - 7) font: font color: Color black.
-	].
-
-	"Draw Time markers on X-axis using display window"
-	history size > 1 ifTrue: [
-		| windowSize displayHistory |
-		windowSize := 20.
-		displayHistory := history size > windowSize 
-			ifTrue: [ history copyFrom: history size - windowSize + 1 to: history size ]
-			ifFalse: [ history ].
+		"Draw Title"
+		canvas drawString: statName at: 10 @ 5 font: (LogicalFont familyName: 'Arial' pointSize: 11) color: color.
+		
+		history ifNotEmpty: [
+			| prevX prevY |
+			maxV := 1.
+			displayHistory do: [ :h | maxV := maxV max: (h at: statName ifAbsent: [ 0 ]) ].
 			
-		{1. (displayHistory size // 2). displayHistory size} do: [ :ti |
-			| h ts xPos |
-			h := displayHistory at: ti.
-			ts := (h at: #time ifAbsent: [ Time now ]) asString copyFrom: 12 to: 19.
-			xPos := (40 + ((ti - 1) / (windowSize - 1) * graphWidth)) rounded.
-			canvas drawString: ts at: (xPos - 20) @ (50 + graphHeight + 5) font: font color: Color gray.
-		]
+			"Draw Grid and Axis"
+			canvas line: 50 @ 30 to: 50 @ (30 + graphHeight) width: 1 color: Color black.
+			canvas line: 50 @ (30 + graphHeight) to: (50 + graphWidth) @ (30 + graphHeight) width: 1 color: Color black.
+			
+			"Y-Labels"
+			canvas drawString: maxV rounded asString at: 5 @ 25 font: font color: Color gray.
+			canvas drawString: (maxV / 2) rounded asString at: 5 @ (30 + (graphHeight / 2) - 5) font: font color: Color gray.
+			canvas drawString: '0' at: 5 @ (30 + graphHeight - 5) font: font color: Color gray.
+
+			prevX := nil.
+			prevY := nil.
+			
+			1 to: displayHistory size do: [ :hi |
+				| h v yp tx |
+				h := displayHistory at: hi.
+				v := h at: statName ifAbsent: [ 0 ].
+				yp := (30 + graphHeight - ((v / maxV) * graphHeight)) rounded.
+				tx := (windowSize > 1) 
+					ifTrue: [ (50 + ((hi - 1) / (windowSize - 1) * graphWidth)) rounded ]
+					ifFalse: [ 50 + (graphWidth / 2) rounded ].
+				
+				prevX ifNotNil: [
+					canvas line: prevX @ prevY to: tx @ yp width: 2 color: color ].
+				canvas fillRectangle: (tx - 2 @ (yp - 2) extent: 4 @ 4) color: color.
+
+				prevX := tx.
+				prevY := yp.
+			].
+			
+			"Time Markers"
+			{1. (displayHistory size // 2). displayHistory size} do: [ :ti |
+				| h ts xPos |
+				h := displayHistory at: ti.
+				ts := (h at: #time ifAbsent: [ Time now ]) asString copyFrom: 12 to: 19.
+				xPos := (50 + ((ti - 1) / (windowSize - 1) * graphWidth)) rounded.
+				canvas drawString: ts at: (xPos - 20) @ (30 + graphHeight + 5) font: font color: Color gray.
+			].
+		].
+		
+		presenter image: form.
 	].
-
-	"Draw axes"
-	canvas line: 40 @ 50 to: 40 @ (50 + graphHeight) width: 1 color: Color black.
-	canvas line: 40 @ (50 + graphHeight) to: (40 + graphWidth) @ (50 + graphHeight) width: 1 color: Color black.
-
-	chartPanel image: form.
 ]
 
 { #category : 'building' }
