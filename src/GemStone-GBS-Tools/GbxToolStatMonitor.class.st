@@ -22,7 +22,8 @@ Class {
 		'delay',
 		'archiver',
 		'sampleInterval',
-		'cacheSampleIntervalMultiplier'
+		'cacheSampleIntervalMultiplier',
+		'history'
 	],
 	#classVars : [
 		'Instance',
@@ -196,6 +197,7 @@ GbxToolStatMonitor >> initializePresenters [
 	monitor addStatNamed: 'percentFull' description: 'Percent full' category: 'Memory'.
 	chartPanel := self newMorph.
 	chartPanel morph: (Morph new color: Color white; yourself).
+	history := OrderedCollection new.
 ]
 
 { #category : 'initialization' }
@@ -222,7 +224,18 @@ GbxToolStatMonitor >> refreshStats [
 	[
 		self fetchAllStats.
 		self updateDisplay.
-		summaryLabel label: 'Last updated: ', DateAndTime now asString.
+		summaryLabel label: 'Last updated: ', (DateAndTime now asString copyUpTo: $.).
+		| current |
+		current := Dictionary new.
+		current at: #time put: DateAndTime now.
+		current at: #hit put: (monitor statAt: 'hitCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: #miss put: (monitor statAt: 'missCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: #ratio put: (monitor statAt: 'hitRatio' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: #rpc put: (monitor statAt: 'rpcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: #gc put: (monitor statAt: 'gcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		current at: #objects put: (monitor statAt: 'objectCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		history add: current.
+		history size > 20 ifTrue: [ history removeFirst ].
 	] on: Error do: [ :ex |
 		summaryLabel label: 'Error: ', ex messageText.
 	].
@@ -292,6 +305,30 @@ GbxToolStatMonitor >> updateDisplay [
 		{ 'OOP Count'. (monitor statAt: 'oopCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) }.
 		{ '% Full'. (monitor statAt: 'percentFull' ifPresent: [ :s | s value printString, '%' ] ifAbsent: [ '0%' ]) }.
 	}.
+	chartPanel text: 'Cache Statistics
+Hit Count: ' , ((monitor statAt: 'hitCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+Miss Count: ' , ((monitor statAt: 'missCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+Hit Ratio: ' , ((monitor statAt: 'hitRatio') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '% 
+Proxy Count: ' , (cache proxyCount ifNil: [0]) printString , '
+Cache Size: ' , (cache size ifNil: [0]) printString , '
+
+Session Statistics
+RPC Count: ' , ((monitor statAt: 'rpcCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+Commit Count: ' , ((monitor statAt: 'commitCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+Abort Count: ' , ((monitor statAt: 'abortCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+Session ID: 1
+
+Garbage Collection
+GC Count: ' , ((monitor statAt: 'gcCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+GC Time (ms): ' , ((monitor statAt: 'gcTime') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+Objects Scavenged: 0
+Objects Tenured: 0
+
+Memory Statistics
+Object Count: ' , ((monitor statAt: 'objectCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+Byte Count: ' , ((monitor statAt: 'byteCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+OOP Count: ' , ((monitor statAt: 'oopCount') ifNotNil: [ :s | s value ] ifNil: [0]) printString , '
+% Full: 0%'.
 ]
 
 { #category : 'updating' }
@@ -318,35 +355,36 @@ GbxToolStatMonitor >> drawGraph [
 	canvas := m canvas.
 	graphWidth := m width - 50 max: 400.
 	graphHeight := m height - 100 max: 300.
-	values := {
-		(monitor statAt: 'hitCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		(monitor statAt: 'missCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		(monitor statAt: 'hitRatio' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		(monitor statAt: 'rpcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		(monitor statAt: 'gcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		(monitor statAt: 'objectCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-	}.
-	keys := #('Hits' 'Misses' 'Ratio' 'RPC' 'GC' 'Objects').
+	history ifEmpty: [ ^ self ].
+	values := history last.
+	keys := #('hit' 'miss' 'ratio' 'rpc' 'gc' 'objects').
 	colors := {Color red. Color blue. Color purple. Color green. Color orange. Color brown}.
-	maxV := values max max: 1.
+	maxV := 1.
+	history do: [ :h | keys do: [ :k | maxV := maxV max: (h at: k ifAbsent: [0]) ] ].
 	x := 50.
-	1 to: values size do: [ :i |
-		| v h |
-		v := values at: i.
-		h := (v / maxV) * graphHeight.
-		canvas line: (x @ (50 + graphHeight)) to: ((x + (graphWidth / values size)) @ (50 + graphHeight - h)) color: (colors at: i).
-		canvas fillOval: ((x + ((graphWidth / values size) / 2 - 5)) @ (50 + graphHeight - h - 5) extent: 10@10) color: (colors at: i).
-		x := x + (graphWidth / values size).
+	1 to: keys size do: [ :ki |
+		| k col prevX prevY |
+		k := keys at: ki.
+		col := colors at: ki.
+		prevX := nil.
+		prevY := nil.
+		1 to: history size do: [ :i |
+			| h v yPos thisX |
+			h := history at: i.
+			v := h at: k ifAbsent: [0].
+			yPos := 50 + graphHeight - ((v / maxV) * graphHeight).
+			thisX := 50 + ((i - 1) / (history size - 1) * graphWidth).
+			prevX ifNotNil: [ canvas line: prevX@prevY to: thisX@yPos color: col ].
+			canvas fillOval: (thisX - 3 @ (yPos - 3) extent: 6@6) color: col.
+			prevX := thisX.
+			prevY := yPos.
+		].
+		canvas drawString: k at: (50 + ((ki - 1) * (graphWidth / keys size))) @ (60 + graphHeight) font: nil color: col.
 	].
 	0 to: graphHeight by: (graphHeight / 5) do: [ :gy | canvas line: 40@(50 + gy) to: (40 + graphWidth)@(50 + gy) color: Color lightGray ].
-	0 to: graphWidth by: (graphWidth / 6) do: [ :gx | canvas line: (40 + gx)@50 to: (40 + gx)@(50 + graphHeight) color: Color lightGray ].
+	0 to: graphWidth by: (graphWidth / 10) do: [ :gx | canvas line: (40 + gx)@50 to: (40 + gx)@(50 + graphHeight) color: Color lightGray ].
 	canvas line: 40@50 to: 40@(50 + graphHeight) color: Color black.
 	canvas line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) color: Color black.
-	x := 50.
-	1 to: keys size do: [ :i |
-		canvas drawString: (keys at: i) at: (x @ (60 + graphHeight)) font: nil color: (colors at: i).
-		x := x + (graphWidth / values size).
-	].
 	] on: Error do: [ :ex | m changed ].
 ]
 
