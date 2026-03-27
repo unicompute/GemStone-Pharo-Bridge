@@ -101,7 +101,7 @@ GbxToolStatMonitor >> defaultLayout [
 	"Col 4: Memory (Row 2-5)"
 	memoryKeys keysAndValuesDo: [ :idx :key | gridLayout add: (self buildGraphCell: key) atPoint: 4 @ (idx + 1) ].
 
-	scrollContainer := SpScrollableLayout child: (self newPresenter layout: gridLayout; yourself).
+	scrollContainer := SpScrollableLayout with: (self newPresenter layout: gridLayout; yourself).
 
 	mainLayout := SpBoxLayout newVertical
 		spacing: 5;
