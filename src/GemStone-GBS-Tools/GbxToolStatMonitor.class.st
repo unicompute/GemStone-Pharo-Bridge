@@ -217,6 +217,7 @@ GbxToolStatMonitor >> refreshStats [
 GbxToolStatMonitor >> session: aSession [
 	session := aSession.
 	cache := GbxBasicCache on: aSession.
+	self refreshStats.
 ]
 
 { #category : 'monitoring' }
@@ -300,7 +301,7 @@ GbxToolStatMonitor >> drawGraph [
 				v := h at: key ifAbsent: [ 0 ].
 				yp := (15 + gHeight - ((v / maxV) * gHeight)) rounded.
 				tx := (actualWindow > 1) 
-					ifTrue: [ (40 + ((hIndex - 1) / (actualWindow - 1) * gWidth)) rounded ]
+					ifTrue: [ (40 + gWidth - ((displayHistory size - hIndex) / (actualWindow - 1) * gWidth)) rounded ]
 					ifFalse: [ 40 + (gWidth / 2) rounded ].
 				
 				prevX ifNotNil: [ canvas line: prevX @ prevY to: tx @ yp width: 1 color: color ].
@@ -316,7 +317,7 @@ GbxToolStatMonitor >> drawGraph [
 					| h |
 					h := displayHistory at: ti.
 					ts := (h at: #time ifAbsent: [ Time now ]) asString copyFrom: 12 to: 19.
-					xPos := (40 + ((ti - 1) / (actualWindow - 1) * gWidth)) rounded.
+					xPos := (40 + gWidth - ((displayHistory size - ti) / (actualWindow - 1) * gWidth)) rounded.
 					canvas drawString: ts at: (xPos - 30) @ (15 + gHeight + 2) font: (LogicalFont familyName: 'Arial' pointSize: 8) color: Color gray.
 				].
 			].
