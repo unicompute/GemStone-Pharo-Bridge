@@ -359,8 +359,10 @@ GbxToolStatMonitor >> drawGraph [
 			| h v yPos thisX |
 			h := history at: i.
 			v := h at: k ifAbsent: [0].
-			yPos := 50 + graphHeight - ((v / maxV) * graphHeight).
-			thisX := 50 + ((i - 1) / (history size - 1) * graphWidth).
+			yPos := (50 + graphHeight - ((v / maxV) * graphHeight)) rounded.
+			thisX := (history size > 1) 
+				ifTrue: [ (50 + ((i - 1) / (history size - 1) * graphWidth)) rounded ]
+				ifFalse: [ 50 + (graphWidth / 2) rounded ].
 			prevX ifNotNil: [
 				form getCanvas
 					line: prevX@prevY to: thisX@yPos width: 1 color: col ].
@@ -373,7 +375,7 @@ GbxToolStatMonitor >> drawGraph [
 		].
 		form getCanvas
 			drawString: k
-			at: (50 + ((ki - 1) * (graphWidth / keys size))) @ (60 + graphHeight)
+			at: (50 + ((ki - 1) * (graphWidth / keys size))) rounded @ (60 + graphHeight)
 			font: (LogicalFont familyName: 'Arial' pointSize: 10)
 			color: col.
 	].
@@ -381,10 +383,10 @@ GbxToolStatMonitor >> drawGraph [
 	"Draw grid"
 	0 to: graphHeight by: (graphHeight / 5) do: [ :gy |
 		form getCanvas
-			line: 40@(50 + gy) to: (40 + graphWidth)@(50 + gy) width: 1 color: Color lightGray ].
+			line: 40@(50 + gy) rounded to: (40 + graphWidth)@(50 + gy) rounded width: 1 color: Color lightGray ].
 	0 to: graphWidth by: (graphWidth / 10) do: [ :gx |
 		form getCanvas
-			line: (40 + gx)@50 to: (40 + gx)@(50 + graphHeight) width: 1 color: Color lightGray ].
+			line: (40 + gx) rounded @ 50 to: (40 + gx) rounded @ (50 + graphHeight) width: 1 color: Color lightGray ].
 
 	"Draw axes"
 	form getCanvas
