@@ -31,7 +31,7 @@ GbxToolStatMonitor class >> on: aSession [
 	^ self new
 		session: aSession;
 		yourself
- Afric]
+]
 
 { #category : 'instance creation' }
 GbxToolStatMonitor class >> openOn: aSession [
@@ -80,11 +80,11 @@ GbxToolStatMonitor >> buildToolbar [
 GbxToolStatMonitor >> close [
 	self stopMonitoring.
 	super close.
- Afric]
+]
 
 { #category : 'layout' }
 GbxToolStatMonitor >> defaultLayout [
- Afric| mainLayout gridLayout scrollContainer scrollContentPresenter |
+	| mainLayout gridLayout scrollContainer scrollContentPresenter |
 	
 	gridLayout := SpGridLayout new
 		columnSpacing: 20;
@@ -119,14 +119,14 @@ GbxToolStatMonitor >> defaultLayout [
 	scrollContainer := SpScrollableLayout with: scrollContentPresenter.
 
 	mainLayout := SpBoxLayout newVertical
-		spacing: 2; "Reduced spacing"
-		add: (self buildToolbar) height: 30; "Reduced height"
-		add: summaryLabel height: 20; "Reduced height"
+		spacing: 2;
+		add: (self buildToolbar) height: 30;
+		add: summaryLabel height: 20;
 		add: scrollContainer expand: true;
 		yourself.
 		
 	^ mainLayout
- Afric]
+]
 
 { #category : 'fetching' }
 GbxToolStatMonitor >> fetchAllStats [
@@ -142,7 +142,7 @@ GbxToolStatMonitor >> fetchAllStats [
 	#( 'Proxy Count' 'Cache Size' 'Commit Count' 'Abort Count' 'GC Count' 'GC Time (ms)' 
 	   'Objects Scavenged' 'Objects Tenured' 'Object Count' 'Byte Count' 'OOP Count' '% Full')
 		do: [ :k | monitor statAt: k ifPresent: [ :s | s value: 0 ] ].
- Afric]
+]
 
 { #category : 'initialization' }
 GbxToolStatMonitor >> initializePresenters [
@@ -176,10 +176,10 @@ GbxToolStatMonitor >> initializePresenters [
 		lbl := self newLabel.
 		lbl color: color.
 		valueLabels at: key put: lbl.
- Afric].
+	].
 	
 	self drawGraph.
- Afric]
+]
 
 { #category : 'initialization' }
 GbxToolStatMonitor >> initializeWindow: aWindowPresenter [
@@ -187,7 +187,7 @@ GbxToolStatMonitor >> initializeWindow: aWindowPresenter [
 		title: 'GBS Statistics Monitor - Matrix';
 		initialExtent: 1200 @ 850;
 		whenClosedDo: [ self stopMonitoring ].
- Afric]
+]
 
 { #category : 'monitoring' }
 GbxToolStatMonitor >> refreshStats [
@@ -211,13 +211,13 @@ GbxToolStatMonitor >> refreshStats [
 	] on: Error do: [ :ex |
 		summaryLabel label: 'Error: ', ex messageText.
 	].
- Afric]
+]
 
 { #category : 'accessing' }
 GbxToolStatMonitor >> session: aSession [
 	session := aSession.
 	cache := GbxBasicCache on: aSession.
- Afric]
+]
 
 { #category : 'monitoring' }
 GbxToolStatMonitor >> startMonitoring [
@@ -226,16 +226,16 @@ GbxToolStatMonitor >> startMonitoring [
 		[ autoRefreshCheckbox state ] whileTrue: [
 			self refreshStats.
 			(Delay forSeconds: 5) wait.
- Afric]
+		]
 	] forkAt: Processor userBackgroundPriority.
 	summaryLabel label: 'Monitoring: Active (5s interval)'.
- Afric]
+]
 
 { #category : 'monitoring' }
 GbxToolStatMonitor >> stopMonitoring [
 	autoRefreshTimer ifNotNil: [ autoRefreshTimer terminate. autoRefreshTimer := nil ].
 	summaryLabel label: 'Monitoring: Stopped'.
- Afric]
+]
 
 { #category : 'updating' }
 GbxToolStatMonitor >> updateDisplay [
@@ -249,13 +249,13 @@ GbxToolStatMonitor >> updateDisplay [
 		val := history ifEmpty: [ 0 ] ifNotEmpty: [ history last at: key ifAbsent: [ 0 ] ].
 		suffix := (#('Hit Ratio' '% Full') includes: key) ifTrue: [ '%' ] ifFalse: [ '' ].
 		label label: key, ': ', (val isNumber ifTrue: [ val rounded ] ifFalse: [ val ]) asString, suffix.
- Afric].
+	].
 	self drawGraph.
- Afric]
+]
 
 { #category : 'graph' }
 GbxToolStatMonitor >> drawGraph [
- Afric| colors windowSize displayHistory actualWindow gWidth gHeight |
+	| colors windowSize displayHistory actualWindow gWidth gHeight |
 	
 	colors := {Color red. Color blue. Color purple. Color green. Color orange. Color brown. Color cyan. Color magenta. Color gray. Color black}.
 	windowSize := 20.
@@ -303,10 +303,10 @@ GbxToolStatMonitor >> drawGraph [
 				prevX ifNotNil: [ canvas line: prevX @ prevY to: tx @ yp width: 1 color: color ].
 				canvas fillRectangle: (tx - 1 @ (yp - 1) extent: 2 @ 2) color: color.
 				prevX := tx. prevY := yp.
- Afric].
+			].
 			
 			"Time Markers"
- AfricdisplayHistory size >= 2 ifTrue: [
+			displayHistory size >= 2 ifTrue: [
 				| ts xPos timeIndices |
 				timeIndices := (displayHistory size >= 3) ifTrue: [ {1. (displayHistory size // 2). displayHistory size} ] ifFalse: [ {1. displayHistory size} ].
 				timeIndices do: [ :ti |
@@ -315,9 +315,9 @@ GbxToolStatMonitor >> drawGraph [
 					ts := (h at: #time ifAbsent: [ Time now ]) asString copyFrom: 12 to: 19.
 					xPos := (40 + ((ti - 1) / (actualWindow - 1) * gWidth)) rounded.
 					canvas drawString: ts at: (xPos - 30) @ (15 + gHeight + 2) font: (LogicalFont familyName: 'Arial' pointSize: 8) color: Color gray.
- Afric].
- Afric].
- Afric].
+				].
+			].
+		].
 		presenter image: form.
- Afric].
- Afric]
+	].
+]
