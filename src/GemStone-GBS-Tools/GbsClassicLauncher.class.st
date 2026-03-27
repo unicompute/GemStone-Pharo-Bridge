@@ -642,12 +642,12 @@ GbsClassicLauncher class >> openVSD [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> runGarbageCollection [
-	| session |
+	| session result |
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
 	[
-		session execute: 'SystemRepository markForCollection.'.
-		UIManager default inform: 'Garbage Collection initiated.'
+		result := session executeAndFetch: 'SystemRepository markForCollection.'.
+		UIManager default inform: 'Garbage Collection initiated (', result asString, ' objects marked).'
 	] on: Error do: [ :ex |
 		UIManager default inform: 'GC failed: ', ex messageText
 	].
