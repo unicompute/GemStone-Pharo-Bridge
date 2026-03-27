@@ -338,8 +338,8 @@ GbxToolStatMonitor >> drawGraph [
 	history ifEmpty: [
 		"Draw axes"
 		form getCanvas
-			line: 1 from: 40@50 to: 40@(50 + graphHeight) color: Color black;
-			line: 1 from: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) color: Color black.
+			line: 40@50 to: 40@(50 + graphHeight) width: 1 color: Color black;
+			line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) width: 1 color: Color black.
 		chartPanel image: form.
 		^ self ].
 
@@ -363,10 +363,11 @@ GbxToolStatMonitor >> drawGraph [
 			thisX := 50 + ((i - 1) / (history size - 1) * graphWidth).
 			prevX ifNotNil: [
 				form getCanvas
-					line: 1 from: prevX@prevY to: thisX@yPos color: col ].
+					line: prevX@prevY to: thisX@yPos width: 1 color: col ].
 			form getCanvas
 				fillRectangle: (thisX - 3 @ (yPos - 3) extent: 6@6)
 				color: col.
+
 			prevX := thisX.
 			prevY := yPos.
 		].
@@ -380,15 +381,15 @@ GbxToolStatMonitor >> drawGraph [
 	"Draw grid"
 	0 to: graphHeight by: (graphHeight / 5) do: [ :gy |
 		form getCanvas
-			line: 1 from: 40@(50 + gy) to: (40 + graphWidth)@(50 + gy) color: Color lightGray ].
+			line: 40@(50 + gy) to: (40 + graphWidth)@(50 + gy) width: 1 color: Color lightGray ].
 	0 to: graphWidth by: (graphWidth / 10) do: [ :gx |
 		form getCanvas
-			line: 1 from: (40 + gx)@50 to: (40 + gx)@(50 + graphHeight) color: Color lightGray ].
+			line: (40 + gx)@50 to: (40 + gx)@(50 + graphHeight) width: 1 color: Color lightGray ].
 
 	"Draw axes"
 	form getCanvas
-		line: 1 from: 40@50 to: 40@(50 + graphHeight) color: Color black;
-		line: 1 from: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) color: Color black.
+		line: 40@50 to: 40@(50 + graphHeight) width: 1 color: Color black;
+		line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) width: 1 color: Color black.
 
 	chartPanel image: form.
 	] on: Error do: [ :ex |
