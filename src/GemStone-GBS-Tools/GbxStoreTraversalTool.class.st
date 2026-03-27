@@ -30,11 +30,14 @@ GbxStoreTraversalTool >> cache: aCache [
 
 { #category : 'actions' }
 GbxStoreTraversalTool >> refresh [
-	"Refresh traversal information"
-	"Note: Store traversal is an internal GBS mechanism for packing objects to send to the server"
+	"Refresh traversal information from cache"
 	traversal := Dictionary new.
-	traversal at: 'status' put: 'Store traversal monitoring not fully implemented'.
-	traversal at: 'session' put: session sessionId asString
+	traversal at: 'session' put: (session ifNil: [''] ifNotNil: [session sessionId asString]).
+	traversal at: 'hitCount' put: cache hitCount.
+	traversal at: 'missCount' put: cache missCount.
+	traversal at: 'hitRatio' put: cache hitRatio.
+	traversal at: 'proxyCount' put: cache proxyCount.
+	traversal at: 'size' put: cache size
 ]
 
 { #category : 'accessing' }
