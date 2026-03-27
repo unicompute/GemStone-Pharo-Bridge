@@ -123,6 +123,84 @@ GbxToolStatResource >> initialize [
 
 { #category : 'initialize-release' }
 GbxToolStatResource >> initializeStatistics [
+	self
+		addStatDescriptor: (GbxStatDescriptor 
+					name: 'bytesSentByStoreTraversal'
+					description: 'The number of bytes sent cumulatively by store traversal calls'
+					type: #int32
+					isCounter: true
+					isLargerBetter: false
+					unit: 'bytes');
+		addStatDescriptor: (GbxStatDescriptor 
+					name: 'bytesTraversed'
+					description: 'The cumulative number of bytes returned by traversal calls'
+					type: #int32
+					isCounter: true
+					isLargerBetter: false
+					unit: 'bytes');
+		addStatDescriptor: (GbxStatDescriptor 
+					name: 'changedObjNotifications'
+					description: 'The number of changed object notifications received'
+					type: #int32
+					isCounter: true
+					isLargerBetter: false
+					unit: 'notifications');
+		addStatDescriptor: (GbxStatDescriptor 
+					name: 'freeOopsFetched'
+					description: 'The number of free oops fetched'
+					type: #int32
+					isCounter: true
+					isLargerBetter: false
+					unit: 'oops');
+		addStatDescriptor: (GbxStatDescriptor 
+					name: 'gciCallsToGem'
+					description: 'The number of gci calls made that communicate with the gem'
+					type: #int32
+					isCounter: true
+					isLargerBetter: false
+					unit: 'calls to gem');
+		addStatDescriptor: (GbxStatDescriptor 
+					name: 'gciCallsToGemTime'
+					description: 'The amount of time spent in gci calls that communicate with the gem'
+					type: #long64
+					isCounter: true
+					isLargerBetter: false
+					unit: 'microseconds');
+		addStatDescriptor: (GbxStatDescriptor 
+					name: 'gciErrors'
+					description: 'The number of errors reported by GciErr()'
+					type: #int32
+					isCounter: true
+					isLargerBetter: false
+					unit: 'errors');
+		addStatDescriptor: (GbxStatDescriptor 
+					name: 'lostOtRoots'
+					description: 'The number of lost OT roots'
+					type: #int32
+					isCounter: true
+					isLargerBetter: false
+					unit: 'roots');
+		addStatDescriptor: (GbxStatDescriptor 
+					name: 'objectsStoredByTraversal'
+					description: 'The number of objects stored by traversal'
+					type: #int32
+					isCounter: true
+					isLargerBetter: false
+					unit: 'objects');
+		addStatDescriptor: (GbxStatDescriptor 
+					name: 'storeTraversals'
+					description: 'The number of store traversal calls'
+					type: #int32
+					isCounter: true
+					isLargerBetter: false
+					unit: 'calls');
+		addStatDescriptor: (GbxStatDescriptor 
+					name: 'traverseCalls'
+					description: 'The number of traversal calls'
+					type: #int32
+					isCounter: true
+					isLargerBetter: false
+					unit: 'calls').
 	^ self
 ]
 
