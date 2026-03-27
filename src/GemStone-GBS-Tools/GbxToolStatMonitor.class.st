@@ -205,8 +205,7 @@ GbxToolStatMonitor >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GBS Statistics Monitor';
 		initialExtent: 1000 @ 800;
-		whenClosedDo: [ self stopMonitoring ];
-		whenExtentChangedDo: [ self drawGraph ].
+		whenClosedDo: [ self stopMonitoring ].
 ]
 
 { #category : 'accessing' }
