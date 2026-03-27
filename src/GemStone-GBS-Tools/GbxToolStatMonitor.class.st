@@ -195,8 +195,8 @@ GbxToolStatMonitor >> initializePresenters [
 	monitor addStatNamed: 'byteCount' description: 'Bytes' category: 'Memory'.
 	monitor addStatNamed: 'oopCount' description: 'Oops' category: 'Memory'.
 	monitor addStatNamed: 'percentFull' description: 'Percent full' category: 'Memory'.
-	chartPanel := self newMorph.
-	chartPanel morph: (BoxMorph new color: Color white; yourself).
+	chartPanel := self newImage.
+	chartPanel image: (Form extent: 800@400 depth: 32).
 	history := OrderedCollection new.
 ]
 
@@ -324,21 +324,30 @@ GbxToolStatMonitor >> updateStatGroup: group with: statValues [
 
 { #category : 'graph' }
 GbxToolStatMonitor >> drawGraph [
-	| m canvas values keys colors x y maxV graphWidth graphHeight |
+	| form graphWidth graphHeight keys colors maxV |
 	[ 
-	m := chartPanel morph.
-	m color: Color white.
-	m extent: ((self window ifNotNil: [ self window width - 50 ] ifNil: [ 800 ]) @ 500).
-	canvas := m canvas.
-	graphWidth := m width - 50 max: 400.
-	graphHeight := m height - 100 max: 300.
-	history ifEmpty: [ canvas line: 40@50 to: 40@(50 + graphHeight) color: Color black width: 1. canvas line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) color: Color black width: 1. ^ self ].
-	values := history last.
+	form := Form extent: 800@400 depth: 32.
+	form getCanvas
+		gray: 1.0;
+		fillRectangle: (0@0 extent: 800@400)
+		color: Color white.
+	
+	graphWidth := 700.
+	graphHeight := 300.
+	
+	history ifEmpty: [ 
+		form getCanvas
+			line: 40@50 to: 40@(50 + graphHeight) color: Color black width: 1;
+			line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) color: Color black width: 1.
+		chartPanel image: form.
+		^ self ].
+	
 	keys := #('hit' 'miss' 'ratio' 'rpc' 'gc' 'objects').
 	colors := {Color red. Color blue. Color purple. Color green. Color orange. Color brown}.
+	
 	maxV := 1.
 	history do: [ :h | keys do: [ :k | maxV := maxV max: (h at: k ifAbsent: [0]) ] ].
-	x := 50.
+	
 	1 to: keys size do: [ :ki |
 		| k col prevX prevY |
 		k := keys at: ki.
@@ -351,18 +360,32 @@ GbxToolStatMonitor >> drawGraph [
 			v := h at: k ifAbsent: [0].
 			yPos := 50 + graphHeight - ((v / maxV) * graphHeight).
 			thisX := 50 + ((i - 1) / (history size - 1) * graphWidth).
-			prevX ifNotNil: [ canvas line: prevX@prevY to: thisX@yPos color: col width: 1 ].
-			canvas drawOval: (Rectangle center: thisX@yPos extent: 6@6) color: col.
+			prevX ifNotNil: [ 
+				form getCanvas line: prevX@prevY to: thisX@yPos color: col width: 1 ].
+			form fillOval: (thisX - 3 @ (yPos - 3) extent: 6@6) color: col.
 			prevX := thisX.
 			prevY := yPos.
 		].
-		canvas drawString: k at: (50 + ((ki - 1) * (graphWidth / keys size))) @ (60 + graphHeight) font: (LogicalFont familyName: 'Arial' pointSize: 10) color: col.
+		form getCanvas 
+			drawString: k 
+			at: (50 + ((ki - 1) * (graphWidth / keys size))) @ (60 + graphHeight) 
+			font: (LogicalFont familyName: 'Arial' pointSize: 10) 
+			color: col.
 	].
-	0 to: graphHeight by: (graphHeight / 5) do: [ :gy | canvas line: 40@(50 + gy) to: (40 + graphWidth)@(50 + gy) color: Color lightGray width: 1 ].
-	0 to: graphWidth by: (graphWidth / 10) do: [ :gx | canvas line: (40 + gx)@50 to: (40 + gx)@(50 + graphHeight) color: Color lightGray width: 1 ].
-	canvas line: 40@50 to: 40@(50 + graphHeight) color: Color black width: 1.
-	canvas line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) color: Color black width: 1.
-	] on: Error do: [ :ex | Transcript show: ex messageText; cr ]. m changed.
+	
+	0 to: graphHeight by: (graphHeight / 5) do: [ :gy | 
+		form getCanvas line: 40@(50 + gy) to: (40 + graphWidth)@(50 + gy) color: Color lightGray width: 1 ].
+	0 to: graphWidth by: (graphWidth / 10) do: [ :gx | 
+		form getCanvas line: (40 + gx)@50 to: (40 + gx)@(50 + graphHeight) color: Color lightGray width: 1 ].
+	
+	form getCanvas
+		line: 40@50 to: 40@(50 + graphHeight) color: Color black width: 1;
+		line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) color: Color black width: 1.
+	
+	chartPanel image: form.
+	] on: Error do: [ :ex | 
+		Transcript show: 'DrawGraph error: '', ex messageText; cr.
+	].
 ]
 
 { #category : 'building' }
