@@ -145,6 +145,12 @@ GbxToolStatMonitor >> fetchAllStats [
 ]
 
 { #category : 'initialization' }
+GbxToolStatMonitor >> initialize [
+	super initialize.
+	self layout: self defaultLayout.
+]
+
+{ #category : 'initialization' }
 GbxToolStatMonitor >> initializePresenters [
 	| colors |
 	summaryLabel := self newLabel label: 'Monitoring: Not started'.
@@ -177,8 +183,6 @@ GbxToolStatMonitor >> initializePresenters [
 		lbl color: color.
 		valueLabels at: key put: lbl.
 	].
-	
-	self drawGraph.
 ]
 
 { #category : 'initialization' }
