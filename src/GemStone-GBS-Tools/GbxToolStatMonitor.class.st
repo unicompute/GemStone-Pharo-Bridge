@@ -316,6 +316,7 @@ GbxToolStatMonitor >> updateStatGroup: group with: statValues [
 { #category : 'graph' }
 GbxToolStatMonitor >> drawGraph [
 	| m canvas values keys colors x y maxV graphWidth graphHeight |
+	[ 
 	m := chartPanel morph.
 	m color: Color white.
 	canvas := m canvas.
@@ -350,6 +351,7 @@ GbxToolStatMonitor >> drawGraph [
 		canvas drawString: (keys at: i) at: (x @ (60 + graphHeight)) font: nil color: (colors at: i).
 		x := x + (graphWidth / values size).
 	].
+	] on: Error do: [ :ex | m changed ].
 ]
 
 { #category : 'building' }
