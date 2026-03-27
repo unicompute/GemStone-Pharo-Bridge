@@ -151,9 +151,7 @@ GbxToolStatMonitor >> fetchAllStats [
 	monitor statAt: 'hitRatio' ifPresent: [ :stat | stat value: (cache hitRatio * 100) ].
 	sessionStats := [ session statResource ] on: Error do: [ nil ].
 	sessionId := [ session sessionId ] on: Error do: [ 'N/A' ].
-	rpcCount := (sessionStats notNil and: [ sessionStats respondsTo: #gciCallsToGem ])
-		ifTrue: [ [ sessionStats gciCallsToGem ] on: Error do: [ 0 ] ]
-		ifFalse: [ 0 ].
+	rpcCount := 0.
 	monitor statAt: 'sessionId' ifPresent: [ :stat | stat value: sessionId ].
 	monitor statAt: 'rpcCount' ifPresent: [ :stat | stat value: rpcCount ].
 	monitor statAt: 'commitCount' ifPresent: [ :stat | stat value: 0 ].
@@ -207,7 +205,8 @@ GbxToolStatMonitor >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GBS Statistics Monitor';
 		initialExtent: 1000 @ 800;
-		whenClosedDo: [ self stopMonitoring ].
+		whenClosedDo: [ self stopMonitoring ];
+		whenExtentChangedDo: [ self drawGraph ].
 ]
 
 { #category : 'accessing' }
@@ -320,7 +319,7 @@ GbxToolStatMonitor >> drawGraph [
 	m := chartPanel morph.
 	m color: Color white.
 	canvas := m canvas.
-	graphWidth := m width - 100 max: 400.
+	graphWidth := (self window ifNotNil: [ self window width ] ifNil: [ 800 ]) - 100 max: 400.
 	graphHeight := m height - 100 max: 300.
 	values := {
 		(monitor statAt: 'hitCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
