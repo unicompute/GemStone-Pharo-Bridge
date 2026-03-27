@@ -1,6 +1,10 @@
 Class {
 	#name : 'GbxOutOfSpaceException',
 	#superclass : 'Notification',
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#instVars : [
+	],
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
+

@@ -10,93 +10,94 @@ Class {
 		'isLargerBetter',
 		'unit'
 	],
-	#category : 'GemStone-GBS-Converted',
-	#package : 'GemStone-GBS-Converted'
+	#classVars : [
+	],
+	#category : 'GemStone-GBS-Converted'
 }
 
-{ #category : 'instance creation' }
-GbxStatDescriptor class >> name: aName description: aDescription type: aType isCounter: isCounterBool isLargerBetter: isLargerBool unit: aUnit [
-	^ self new
-		name: aName;
-		description: aDescription;
-		type: aType;
-		isCounter: isCounterBool;
-		isLargerBetter: isLargerBool;
-		unit: aUnit;
-		yourself
+{ #category : 'accessing' }
+GbxStatDescriptor >> isByte
+[
+
+	^type == GemStone.Gbs.GbxStatArchiver.TypeByte8
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> description [
-	^ description
+GbxStatDescriptor >> id
+[
+	"The id of this descriptor in its stat resource"
+	^id
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> description: aString [
-	description := aString
+GbxStatDescriptor >> isShort
+[
+
+	^type == GemStone.Gbs.GbxStatArchiver.TypeShort16
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> id [
-	^ id
+GbxStatDescriptor >> name
+[
+
+	^name
 ]
 
-{ #category : 'accessing' }
-GbxStatDescriptor >> id: anInteger [
-	id := anInteger
+{ #category : 'printing' }
+GbxStatDescriptor >> printOn: aStream
+[
+	super printOn: aStream.
+	aStream
+		nextPutAll: ': ';
+		print: name
 ]
 
-{ #category : 'accessing' }
-GbxStatDescriptor >> isCounter [
-	^ isCounter
+{ #category : 'archiving' }
+GbxStatDescriptor >> writeToArchiver: statArchiver
+[
+	statArchiver writeString: name.
+	"Data type code"
+	statArchiver writeByte: type.
+	"isCounter"
+	statArchiver writeBoolean: isCounter.
+	"isLargerBetter"
+	statArchiver writeBoolean: isLargerBetter.
+	"Unit"
+	statArchiver writeString: unit.
+	"Description"
+	statArchiver writeString: description
 ]
 
-{ #category : 'accessing' }
-GbxStatDescriptor >> isCounter: aBoolean [
-	isCounter := aBoolean
+{ #category : 'initialize-release' }
+GbxStatDescriptor >> name: nameString description: descriptionString type: typeInt isCounter: isCounterBool isLargerBetter: isLargerBetterBool unit: unitString
+[
+	name := nameString.
+	description := descriptionString.
+	type := typeInt.
+	isCounter := isCounterBool.
+	isLargerBetter := isLargerBetterBool.
+	unit := unitString
 ]
 
-{ #category : 'accessing' }
-GbxStatDescriptor >> isLargerBetter [
-	^ isLargerBetter
+{ #category : 'initialize-release' }
+GbxStatDescriptor >> setId: anInt
+[
+	"Set id to a zero-based offset into a stat resource's descriptor collection"
+
+	self gbsMessenger assert: id isNil
+		failure: 'GbxStatDescriptor>>setId initialized twice'.
+	id := anInt
 ]
 
-{ #category : 'accessing' }
-GbxStatDescriptor >> isLargerBetter: aBoolean [
-	isLargerBetter := aBoolean
+{ #category : 'initialize-release' }
+GbxStatDescriptor class >> name: nameString description: descriptionString type: typeInt isCounter: isCounterBool isLargerBetter: isLargerBetterBool unit: unitString
+[
+	^super new 
+		name: nameString
+		description: descriptionString
+		type: typeInt
+		isCounter: isCounterBool
+		isLargerBetter: isLargerBetterBool
+		unit: unitString
 ]
 
-{ #category : 'accessing' }
-GbxStatDescriptor >> name [
-	^ name
-]
-
-{ #category : 'accessing' }
-GbxStatDescriptor >> name: aString [
-	name := aString
-]
-
-{ #category : 'accessing' }
-GbxStatDescriptor >> setId: anInteger [
-	id := anInteger
-]
-
-{ #category : 'accessing' }
-GbxStatDescriptor >> type [
-	^ type
-]
-
-{ #category : 'accessing' }
-GbxStatDescriptor >> type: aSymbol [
-	type := aSymbol
-]
-
-{ #category : 'accessing' }
-GbxStatDescriptor >> unit [
-	^ unit
-]
-
-{ #category : 'accessing' }
-GbxStatDescriptor >> unit: aString [
-	unit := aString
-]
