@@ -325,19 +325,19 @@ GbxToolStatMonitor >> updateStatGroup: group with: statValues [
 
 { #category : 'graph' }
 GbxToolStatMonitor >> drawGraph [
-	| form canvas graphWidth graphHeight keys colors maxV |
+	| form graphWidth graphHeight keys colors maxV |
 	[
 	form := Form extent: 800@400 depth: 32.
-	canvas := form getCanvas.
-	canvas fillRectangle: (0@0 extent: 800@400) color: Color white.
+	form getCanvas
+		fillRectangle: (0@0 extent: 800@400)
+		color: Color white.
 
 	graphWidth := 700.
 	graphHeight := 300.
 
 	history ifEmpty: [
-		canvas
-			line: 40@50 to: 40@(50 + graphHeight) color: Color black width: 1;
-			line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) color: Color black width: 1.
+		form drawLineFrom: 40@50 to: 40@(50 + graphHeight) color: Color black.
+		form drawLineFrom: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) color: Color black.
 		chartPanel image: form.
 		^ self ].
 
@@ -360,26 +360,24 @@ GbxToolStatMonitor >> drawGraph [
 			yPos := 50 + graphHeight - ((v / maxV) * graphHeight).
 			thisX := 50 + ((i - 1) / (history size - 1) * graphWidth).
 			prevX ifNotNil: [
-				canvas line: prevX@prevY to: thisX@yPos color: col width: 1 ].
+				form drawLineFrom: prevX@prevY to: thisX@yPos color: col ].
 			form fillOval: (thisX - 3 @ (yPos - 3) extent: 6@6) color: col.
 			prevX := thisX.
 			prevY := yPos.
 		].
-		canvas
-			drawString: k
+		form drawString: k
 			at: (50 + ((ki - 1) * (graphWidth / keys size))) @ (60 + graphHeight)
 			font: (LogicalFont familyName: 'Arial' pointSize: 10)
 			color: col.
 	].
 
 	0 to: graphHeight by: (graphHeight / 5) do: [ :gy |
-		canvas line: 40@(50 + gy) to: (40 + graphWidth)@(50 + gy) color: Color lightGray width: 1 ].
+		form drawLineFrom: 40@(50 + gy) to: (40 + graphWidth)@(50 + gy) color: Color lightGray ].
 	0 to: graphWidth by: (graphWidth / 10) do: [ :gx |
-		canvas line: (40 + gx)@50 to: (40 + gx)@(50 + graphHeight) color: Color lightGray width: 1 ].
+		form drawLineFrom: (40 + gx)@50 to: (40 + gx)@(50 + graphHeight) color: Color lightGray ].
 
-	canvas
-		line: 40@50 to: 40@(50 + graphHeight) color: Color black width: 1;
-		line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) color: Color black width: 1.
+	form drawLineFrom: 40@50 to: 40@(50 + graphHeight) color: Color black.
+	form drawLineFrom: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) color: Color black.
 
 	chartPanel image: form.
 	] on: Error do: [ :ex |
