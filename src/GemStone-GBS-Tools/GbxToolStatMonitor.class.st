@@ -78,10 +78,10 @@ GbxToolStatMonitor >> defaultLayout [
 		yourself.
 		
 	"Row 1: Column Headers"
-	gridLayout add: (self newLabel label: 'Cache Statistics'; bold; yourself) atPoint: 1 @ 1.
-	gridLayout add: (self newLabel label: 'Session Statistics'; bold; yourself) atPoint: 2 @ 1.
-	gridLayout add: (self newLabel label: 'Garbage Collection'; bold; yourself) atPoint: 3 @ 1.
-	gridLayout add: (self newLabel label: 'Memory Statistics'; bold; yourself) atPoint: 4 @ 1.
+	gridLayout add: (self newLabel label: 'Cache Statistics'; yourself) atPoint: 1 @ 1.
+	gridLayout add: (self newLabel label: 'Session Statistics'; yourself) atPoint: 2 @ 1.
+	gridLayout add: (self newLabel label: 'Garbage Collection'; yourself) atPoint: 3 @ 1.
+	gridLayout add: (self newLabel label: 'Memory Statistics'; yourself) atPoint: 4 @ 1.
 	
 	"Row 2: Summary Text Blocks (The 'Before' behavior)"
 	gridLayout add: (self buildSummaryBox: cacheKeys) atPoint: 1 @ 2.
