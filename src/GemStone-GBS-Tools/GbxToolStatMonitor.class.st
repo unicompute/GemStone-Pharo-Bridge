@@ -44,7 +44,7 @@ GbxToolStatMonitor class >> openOn: aSession [
 
 { #category : 'building' }
 GbxToolStatMonitor >> buildGraphCell: key [
-	| cell color |
+	| cell color colors |
 	colors := {Color red. Color blue. Color purple. Color green. Color orange. Color brown. Color cyan. Color magenta. Color gray. Color black}.
 	color := colors at: ((key hash abs \\ colors size) + 1).
 	
