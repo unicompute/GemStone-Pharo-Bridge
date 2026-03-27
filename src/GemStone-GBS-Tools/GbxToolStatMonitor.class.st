@@ -196,7 +196,6 @@ GbxToolStatMonitor >> initializePresenters [
 	monitor addStatNamed: 'oopCount' description: 'Oops' category: 'Memory'.
 	monitor addStatNamed: 'percentFull' description: 'Percent full' category: 'Memory'.
 	chartPanel := self newImage.
-	chartPanel autoFit: false.
 	chartPanel image: (Form extent: 800@400 depth: 32).
 	history := OrderedCollection new.
 	self drawGraph.
