@@ -75,7 +75,7 @@ GbxToolStatMonitor >> buildStatGroup: title specs: statSpecs [
 
 { #category : 'building' }
 GbxToolStatMonitor >> buildStatsGroups [
-	| groupsLayout cacheBox |
+	| groupsLayout |
 	groupsLayout := SpBoxLayout newHorizontal
 		spacing: 10.
 	cacheStatsGroup := self buildStatGroup: 'Cache Statistics' specs: {
@@ -85,10 +85,7 @@ GbxToolStatMonitor >> buildStatsGroups [
 		{ 'Proxy Count'. #proxyCount }.
 		{ 'Cache Size'. #cacheSize }.
 	}.
-	cacheBox := SpBoxLayout newVertical spacing: 5.
-	cacheBox add: cacheStatsGroup height: 150.
-	cacheBox add: chartPanel expand: true.
-	groupsLayout add: cacheBox.
+	groupsLayout add: cacheStatsGroup.
 	sessionStatsGroup := self buildStatGroup: 'Session Statistics' specs: {
 		{ 'RPC Count'. #rpcCount }.
 		{ 'Commit Count'. #commitCount }.
@@ -140,6 +137,7 @@ GbxToolStatMonitor >> defaultLayout [
 		add: (self buildToolbar) height: 35;
 		add: summaryLabel height: 30;
 		add: (self buildStatsGroups);
+		add: chartPanel expand: true;
 		yourself
 ]
 
