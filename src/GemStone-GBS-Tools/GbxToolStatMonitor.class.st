@@ -88,7 +88,7 @@ GbxToolStatMonitor >> defaultLayout [
 	
 	gridLayout := SpGridLayout new
 		columnSpacing: 20;
-		rowSpacing: 10;
+		rowSpacing: 2;
 		beColumnNotHomogeneous;
 		yourself.
 		
@@ -113,13 +113,13 @@ GbxToolStatMonitor >> defaultLayout [
 	scrollContentPresenter := self newPresenter.
 	scrollContentPresenter layout: (SpBoxLayout newVertical 
 		add: gridLayout; 
-		add: (self newNullPresenter) height: 35; 
+		add: (self newNullPresenter) height: 10; 
 		yourself).
 
 	scrollContainer := SpScrollableLayout with: scrollContentPresenter.
 
 	mainLayout := SpBoxLayout newVertical
-		spacing: 2;
+		spacing: 0;
 		add: (self buildToolbar) height: 30;
 		add: summaryLabel height: 20;
 		add: scrollContainer expand: true;
