@@ -196,7 +196,7 @@ GbxToolStatMonitor >> initializePresenters [
 	monitor addStatNamed: 'oopCount' description: 'Oops' category: 'Memory'.
 	monitor addStatNamed: 'percentFull' description: 'Percent full' category: 'Memory'.
 	chartPanel := self newMorph.
-	chartPanel morph: (Morph new color: Color white; yourself).
+	chartPanel morph: (BoxMorph new color: Color white; yourself).
 	history := OrderedCollection new.
 ]
 
@@ -332,7 +332,7 @@ GbxToolStatMonitor >> drawGraph [
 	canvas := m canvas.
 	graphWidth := m width - 50 max: 400.
 	graphHeight := m height - 100 max: 300.
-	history ifEmpty: [ ^ self ].
+	history ifEmpty: [ canvas line: 40@50 to: 40@(50 + graphHeight) color: Color black width: 1. canvas line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) color: Color black width: 1. ^ self ].
 	values := history last.
 	keys := #('hit' 'miss' 'ratio' 'rpc' 'gc' 'objects').
 	colors := {Color red. Color blue. Color purple. Color green. Color orange. Color brown}.
@@ -351,18 +351,18 @@ GbxToolStatMonitor >> drawGraph [
 			v := h at: k ifAbsent: [0].
 			yPos := 50 + graphHeight - ((v / maxV) * graphHeight).
 			thisX := 50 + ((i - 1) / (history size - 1) * graphWidth).
-			prevX ifNotNil: [ canvas line: prevX@prevY to: thisX@yPos color: col ].
-			canvas fillOval: (thisX - 3 @ (yPos - 3) extent: 6@6) color: col.
+			prevX ifNotNil: [ canvas line: prevX@prevY to: thisX@yPos color: col width: 1 ].
+			canvas drawOval: (Rectangle center: thisX@yPos extent: 6@6) color: col.
 			prevX := thisX.
 			prevY := yPos.
 		].
-		canvas drawString: k at: (50 + ((ki - 1) * (graphWidth / keys size))) @ (60 + graphHeight) font: nil color: col.
+		canvas drawString: k at: (50 + ((ki - 1) * (graphWidth / keys size))) @ (60 + graphHeight) font: (LogicalFont familyName: 'Arial' pointSize: 10) color: col.
 	].
-	0 to: graphHeight by: (graphHeight / 5) do: [ :gy | canvas line: 40@(50 + gy) to: (40 + graphWidth)@(50 + gy) color: Color lightGray ].
-	0 to: graphWidth by: (graphWidth / 10) do: [ :gx | canvas line: (40 + gx)@50 to: (40 + gx)@(50 + graphHeight) color: Color lightGray ].
-	canvas line: 40@50 to: 40@(50 + graphHeight) color: Color black.
-	canvas line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) color: Color black.
-	] on: Error do: [ :ex | m changed ].
+	0 to: graphHeight by: (graphHeight / 5) do: [ :gy | canvas line: 40@(50 + gy) to: (40 + graphWidth)@(50 + gy) color: Color lightGray width: 1 ].
+	0 to: graphWidth by: (graphWidth / 10) do: [ :gx | canvas line: (40 + gx)@50 to: (40 + gx)@(50 + graphHeight) color: Color lightGray width: 1 ].
+	canvas line: 40@50 to: 40@(50 + graphHeight) color: Color black width: 1.
+	canvas line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) color: Color black width: 1.
+	] on: Error do: [ :ex | Transcript show: ex messageText; cr ]. m changed.
 ]
 
 { #category : 'building' }
