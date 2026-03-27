@@ -475,15 +475,15 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                     (aBuilder item: #OpenVSD)
                         label: 'VSD';
                         action: [ self openVSD ].
-                    (aBuilder item: #GarbageCollection)
-                        label: 'Garbage Collection';
-                        action: [ self runGarbageCollection ].
                     (aBuilder item: #OpenGbxStoreTraversalTool)
                         label: 'Store Traversal Tool';
                         action: [ self openGbxStoreTraversalTool ].
                     (aBuilder item: #OpenGbxTrippy)
                         label: 'Trippy';
-                        action: [ self openGbxTrippy ] ].
+                        action: [ self openGbxTrippy ].
+                    (aBuilder item: #GarbageCollection)
+                        label: 'Garbage Collection';
+                        action: [ self runGarbageCollection ] ].
 
             (aBuilder item: #AboutGemBuilder)
                 label: 'About GemBuilder...';
