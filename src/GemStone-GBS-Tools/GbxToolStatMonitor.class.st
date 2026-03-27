@@ -325,21 +325,24 @@ GbxToolStatMonitor >> updateStatGroup: group with: statValues [
 
 { #category : 'graph' }
 GbxToolStatMonitor >> drawGraph [
-	| form graphWidth graphHeight keys colors maxV |
+	| form graphWidth graphHeight keys colors maxV canvas font |
 	[
-	form := Form extent: 800@400 depth: 32.
-	form getCanvas
-		fillRectangle: (0@0 extent: 800@400)
-		color: Color white.
+	form := Form extent: 800@450 depth: 32.
+	canvas := form getCanvas.
+	canvas fillRectangle: (0@0 extent: 800@450) color: Color white.
 
-	graphWidth := 700.
+	graphWidth := 650.
 	graphHeight := 300.
+	font := LogicalFont familyName: 'Arial' pointSize: 10.
+
+	"Draw Axes Labels"
+	canvas drawString: 'Value' at: 5@10 font: font color: Color black.
+	canvas drawString: 'Time' at: (40 + graphWidth) @ (50 + graphHeight + 10) font: font color: Color black.
 
 	history ifEmpty: [
 		"Draw axes"
-		form getCanvas
-			line: 40@50 to: 40@(50 + graphHeight) width: 1 color: Color black;
-			line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) width: 1 color: Color black.
+		canvas line: 40@50 to: 40@(50 + graphHeight) width: 1 color: Color black.
+		canvas line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) width: 1 color: Color black.
 		chartPanel image: form.
 		^ self ].
 
@@ -349,49 +352,60 @@ GbxToolStatMonitor >> drawGraph [
 	maxV := 1.
 	history do: [ :h | keys do: [ :k | maxV := maxV max: (h at: k ifAbsent: [0]) ] ].
 
+	"Draw Grid"
+	0 to: 5 do: [ :gi |
+		| gy |
+		gy := (50 + (gi * (graphHeight / 5))) rounded.
+		canvas line: 40@gy to: (40 + graphWidth)@gy width: 1 color: Color lightGray.
+		canvas drawString: (maxV - (gi * (maxV / 5))) rounded asString at: 5@ (gy - 5) font: font color: Color gray.
+	].
+
 	1 to: keys size do: [ :ki |
 		| k col prevX prevY |
 		k := keys at: ki.
 		col := colors at: ki.
 		prevX := nil.
 		prevY := nil.
+		
+		"Draw Data Lines"
 		1 to: history size do: [ :i |
 			| h v yPos thisX |
 			h := history at: i.
 			v := h at: k ifAbsent: [0].
 			yPos := (50 + graphHeight - ((v / maxV) * graphHeight)) rounded.
 			thisX := (history size > 1) 
-				ifTrue: [ (50 + ((i - 1) / (history size - 1) * graphWidth)) rounded ]
-				ifFalse: [ 50 + (graphWidth / 2) rounded ].
+				ifTrue: [ (40 + ((i - 1) / (history size - 1) * graphWidth)) rounded ]
+				ifFalse: [ 40 + (graphWidth / 2) rounded ].
 			prevX ifNotNil: [
-				form getCanvas
-					line: prevX@prevY to: thisX@yPos width: 1 color: col ].
-			form getCanvas
-				fillRectangle: (thisX - 3 @ (yPos - 3) extent: 6@6)
-				color: col.
+				canvas line: prevX@prevY to: thisX@yPos width: 2 color: col ].
+			canvas fillRectangle: (thisX - 2 @ (yPos - 2) extent: 4@4) color: col.
 
 			prevX := thisX.
 			prevY := yPos.
 		].
-		form getCanvas
-			drawString: k
-			at: (50 + ((ki - 1) * (graphWidth / keys size))) rounded @ (60 + graphHeight)
-			font: (LogicalFont familyName: 'Arial' pointSize: 10)
-			color: col.
+
+		"Draw Legend (Key)"
+		| legendX legendY |
+		legendX := 40 + ((ki - 1) // 3 * 200).
+		legendY := 50 + graphHeight + 40 + ((ki - 1) \\ 3 * 20).
+		canvas line: legendX @ legendY to: (legendX + 20) @ legendY width: 3 color: col.
+		canvas drawString: k at: (legendX + 25) @ (legendY - 7) font: font color: Color black.
 	].
 
-	"Draw grid"
-	0 to: graphHeight by: (graphHeight / 5) do: [ :gy |
-		form getCanvas
-			line: 40@(50 + gy) rounded to: (40 + graphWidth)@(50 + gy) rounded width: 1 color: Color lightGray ].
-	0 to: graphWidth by: (graphWidth / 10) do: [ :gx |
-		form getCanvas
-			line: (40 + gx) rounded @ 50 to: (40 + gx) rounded @ (50 + graphHeight) width: 1 color: Color lightGray ].
+	"Draw Time markers on X-axis"
+	history size > 1 ifTrue: [
+		{1. history size // 2. history size} do: [ :idx |
+			| h timeStr tx |
+			h := history at: idx.
+			timeStr := (h at: #time ifAbsent: [Time now]) asString copyFrom: 12 to: 19.
+			tx := (40 + ((idx - 1) / (history size - 1) * graphWidth)) rounded.
+			canvas drawString: timeStr at: (tx - 20) @ (50 + graphHeight + 5) font: font color: Color gray.
+		]
+	].
 
 	"Draw axes"
-	form getCanvas
-		line: 40@50 to: 40@(50 + graphHeight) width: 1 color: Color black;
-		line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) width: 1 color: Color black.
+	canvas line: 40@50 to: 40@(50 + graphHeight) width: 1 color: Color black.
+	canvas line: 40@(50 + graphHeight) to: (40 + graphWidth)@(50 + graphHeight) width: 1 color: Color black.
 
 	chartPanel image: form.
 	] on: Error do: [ :ex |
