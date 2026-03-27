@@ -294,7 +294,6 @@ GbxToolStatMonitor >> updateDisplay [
 		{ 'OOP Count'. (monitor statAt: 'oopCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]) }.
 		{ '% Full'. (monitor statAt: 'percentFull' ifPresent: [ :s | s value printString, '%' ] ifAbsent: [ '0%' ]) }.
 	}.
-	self drawGraph.
 ]
 
 { #category : 'updating' }
