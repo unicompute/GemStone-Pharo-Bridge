@@ -3,7 +3,8 @@ Class {
 	#superclass : 'SpPresenter',
 	#instVars : [
 		'tool',
-		'infoText'
+		'infoText',
+		'refreshButton'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -20,12 +21,16 @@ GbxToolStoreTraversalPresenter class >> openOn: aTool [
 GbxToolStoreTraversalPresenter >> defaultLayout [
 	^ SpBoxLayout newVertical
 		spacing: 5;
+		add: refreshButton height: 30;
 		add: infoText;
 		yourself
 ]
 
 { #category : 'initialization' }
 GbxToolStoreTraversalPresenter >> initializePresenters [
+	refreshButton := self newButton
+		label: 'Refresh';
+		action: [ self refresh ].
 	infoText := self newText.
 	infoText editable: false.
 ]
