@@ -43,18 +43,13 @@ GbxToolStatMonitor class >> openOn: aSession [
 ]
 
 { #category : 'building' }
-GbxToolStatMonitor >> buildGraphCell: key [
-	| cell color colors |
-	colors := {Color red. Color blue. Color purple. Color green. Color orange. Color brown. Color cyan. Color magenta. Color gray. Color black}.
-	color := colors at: ((key hash abs \\ colors size) + 1).
-	
-	cell := self newPresenter.
-	cell layout: (SpBoxLayout newVertical
-		spacing: 2;
-		add: (valueLabels at: key) height: 20;
-		add: (graphPresenters at: key) expand: true;
-		yourself).
-	^ cell
+GbxToolStatMonitor >> buildSummaryBox: keys [
+	| box |
+	box := self newPresenter.
+	box layout: (SpBoxLayout newVertical spacing: 2).
+	keys do: [ :key | 
+		box layout add: (valueLabels at: key) height: 20 ].
+	^ box
 ]
 
 { #category : 'building' }
@@ -77,31 +72,42 @@ GbxToolStatMonitor >> defaultLayout [
 	| mainLayout gridLayout scrollContainer |
 	
 	gridLayout := SpGridLayout new
-		columnSpacing: 15;
-		rowSpacing: 15;
+		columnSpacing: 20;
+		rowSpacing: 10;
 		beColumnNotHomogeneous;
-		beRowNotHomogeneous;
 		yourself.
 		
 	"Row 1: Column Headers"
-	gridLayout add: (self newLabel label: 'Cache Statistics'; yourself) atPoint: 1 @ 1.
-	gridLayout add: (self newLabel label: 'Session Statistics'; yourself) atPoint: 2 @ 1.
-	gridLayout add: (self newLabel label: 'Garbage Collection'; yourself) atPoint: 3 @ 1.
-	gridLayout add: (self newLabel label: 'Memory Statistics'; yourself) atPoint: 4 @ 1.
+	gridLayout add: (self newLabel label: 'Cache Statistics'; bold; yourself) atPoint: 1 @ 1.
+	gridLayout add: (self newLabel label: 'Session Statistics'; bold; yourself) atPoint: 2 @ 1.
+	gridLayout add: (self newLabel label: 'Garbage Collection'; bold; yourself) atPoint: 3 @ 1.
+	gridLayout add: (self newLabel label: 'Memory Statistics'; bold; yourself) atPoint: 4 @ 1.
+	
+	"Row 2: Summary Text Blocks (The 'Before' behavior)"
+	gridLayout add: (self buildSummaryBox: cacheKeys) atPoint: 1 @ 2.
+	gridLayout add: (self buildSummaryBox: sessionKeys) atPoint: 2 @ 2.
+	gridLayout add: (self buildSummaryBox: gcKeys) atPoint: 3 @ 2.
+	gridLayout add: (self buildSummaryBox: memoryKeys) atPoint: 4 @ 2.
 		
-	"Col 1: Cache (Row 2-6)"
-	cacheKeys keysAndValuesDo: [ :idx :key | gridLayout add: (self buildGraphCell: key) atPoint: 1 @ (idx + 1) ].
+	"Col 1: Cache Graphs (Row 3-7)"
+	cacheKeys keysAndValuesDo: [ :idx :key | 
+		gridLayout add: (graphPresenters at: key) atPoint: 1 @ (idx + 2) ].
 		
-	"Col 2: Session (Row 2-5)"
-	sessionKeys keysAndValuesDo: [ :idx :key | gridLayout add: (self buildGraphCell: key) atPoint: 2 @ (idx + 1) ].
+	"Col 2: Session Graphs (Row 3-6)"
+	sessionKeys keysAndValuesDo: [ :idx :key | 
+		gridLayout add: (graphPresenters at: key) atPoint: 2 @ (idx + 2) ].
 		
-	"Col 3: GC (Row 2-5)"
-	gcKeys keysAndValuesDo: [ :idx :key | gridLayout add: (self buildGraphCell: key) atPoint: 3 @ (idx + 1) ].
+	"Col 3: GC Graphs (Row 3-6)"
+	gcKeys keysAndValuesDo: [ :idx :key | 
+		gridLayout add: (graphPresenters at: key) atPoint: 3 @ (idx + 2) ].
 		
-	"Col 4: Memory (Row 2-5)"
-	memoryKeys keysAndValuesDo: [ :idx :key | gridLayout add: (self buildGraphCell: key) atPoint: 4 @ (idx + 1) ].
+	"Col 4: Memory Graphs (Row 3-6)"
+	memoryKeys keysAndValuesDo: [ :idx :key | 
+		gridLayout add: (graphPresenters at: key) atPoint: 4 @ (idx + 2) ].
 
-	scrollContainer := SpScrollableLayout with: (self newPresenter layout: gridLayout; yourself).
+	scrollContainer := SpScrollableLayout with: (self newPresenter 
+		layout: (SpBoxLayout newVertical add: gridLayout; yourself); 
+		yourself).
 
 	mainLayout := SpBoxLayout newVertical
 		spacing: 5;
@@ -116,15 +122,16 @@ GbxToolStatMonitor >> defaultLayout [
 { #category : 'fetching' }
 GbxToolStatMonitor >> fetchAllStats [
 	| sessionId rpcCount |
-	monitor statAt: 'hitCount' ifPresent: [ :stat | stat value: cache hitCount ].
-	monitor statAt: 'missCount' ifPresent: [ :stat | stat value: cache missCount ].
-	monitor statAt: 'hitRatio' ifPresent: [ :stat | stat value: (cache hitRatio * 100) ].
+	monitor statAt: 'Hit Count' ifPresent: [ :stat | stat value: cache hitCount ].
+	monitor statAt: 'Miss Count' ifPresent: [ :stat | stat value: cache missCount ].
+	monitor statAt: 'Hit Ratio' ifPresent: [ :stat | stat value: (cache hitRatio * 100) ].
 	sessionId := [ session sessionId ] on: Error do: [ 0 ].
 	rpcCount := 0.
-	monitor statAt: 'sessionId' ifPresent: [ :stat | stat value: sessionId ].
-	monitor statAt: 'rpcCount' ifPresent: [ :stat | stat value: rpcCount ].
-	"Initialize other stats in monitor to 0"
-	#( 'commitCount' 'abortCount' 'gcCount' 'gcTime' 'objectsScavenged' 'objectsTenured' 'objectCount' 'byteCount' 'oopCount' 'percentFull')
+	monitor statAt: 'Session ID' ifPresent: [ :stat | stat value: sessionId ].
+	monitor statAt: 'RPC Count' ifPresent: [ :stat | stat value: rpcCount ].
+	
+	#( 'Proxy Count' 'Cache Size' 'Commit Count' 'Abort Count' 'GC Count' 'GC Time (ms)' 
+	   'Objects Scavenged' 'Objects Tenured' 'Object Count' 'Byte Count' 'OOP Count' '% Full')
 		do: [ :k | monitor statAt: k ifPresent: [ :s | s value: 0 ] ].
 ]
 
@@ -143,9 +150,7 @@ GbxToolStatMonitor >> initializePresenters [
 	allKeys := cacheKeys, sessionKeys, gcKeys, memoryKeys.
 
 	monitor := GbxToolStatResource named: 'Monitor' type: #monitor.
-	#( 'hitCount' 'missCount' 'hitRatio' 'sessionId' 'rpcCount' 'commitCount' 'abortCount' 
-	   'gcCount' 'gcTime' 'objectsScavenged' 'objectsTenured' 'objectCount' 'byteCount' 'oopCount' 'percentFull')
-		do: [ :k | monitor addStatNamed: k description: k category: 'System' ].
+	allKeys do: [ :k | monitor addStatNamed: k description: k category: 'System' ].
 	
 	history := OrderedCollection new.
 	graphPresenters := Dictionary new.
@@ -155,7 +160,7 @@ GbxToolStatMonitor >> initializePresenters [
 	allKeys do: [ :key |
 		| img lbl color |
 		img := self newImage.
-		img image: (Form extent: 250 @ 100 depth: 32).
+		img image: (Form extent: 250 @ 80 depth: 32).
 		graphPresenters at: key put: img.
 		
 		color := colors at: ((key hash abs \\ colors size) + 1).
@@ -183,23 +188,13 @@ GbxToolStatMonitor >> refreshStats [
 		self fetchAllStats.
 		current := Dictionary new.
 		current at: #time put: DateAndTime now.
-		current at: 'Hit Count' put: (monitor statAt: 'hitCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: 'Miss Count' put: (monitor statAt: 'missCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: 'Hit Ratio' put: (monitor statAt: 'hitRatio' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		allKeys do: [ :key |
+			current at: key put: (monitor statAt: key ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
+		].
+		
+		"Special handling for Cache-specific ones that might not be in monitor yet"
 		current at: 'Proxy Count' put: (cache proxyCount ifNil: [ 0 ]).
 		current at: 'Cache Size' put: (cache size ifNil: [ 0 ]).
-		current at: 'RPC Count' put: (monitor statAt: 'rpcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: 'Commit Count' put: (monitor statAt: 'commitCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: 'Abort Count' put: (monitor statAt: 'abortCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: 'GC Count' put: (monitor statAt: 'gcCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: 'GC Time (ms)' put: (monitor statAt: 'gcTime' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: 'Objects Scavenged' put: (monitor statAt: 'objectsScavenged' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: 'Objects Tenured' put: (monitor statAt: 'objectsTenured' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: 'Object Count' put: (monitor statAt: 'objectCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: 'Byte Count' put: (monitor statAt: 'byteCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: 'OOP Count' put: (monitor statAt: 'oopCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: '% Full' put: (monitor statAt: 'percentFull' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
-		current at: 'Session ID' put: (monitor statAt: 'sessionId' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
 		
 		history add: current.
 		history size > 100 ifTrue: [ history removeFirst ].
@@ -238,7 +233,6 @@ GbxToolStatMonitor >> updateDisplay [
 	| timeStr |
 	timeStr := Time now asString copyUpTo: $. .
 	summaryLabel label: 'Last updated: ', timeStr.
-	self window ifNotNil: [ :w | w title: 'GBS Monitor Matrix - ', timeStr ].
 	
 	allKeys do: [ :key |
 		| label val suffix |
@@ -261,25 +255,26 @@ GbxToolStatMonitor >> drawGraph [
 		ifFalse: [ history ].
 	actualWindow := windowSize max: displayHistory size.
 	gWidth := 180.
-	gHeight := 60.
+	gHeight := 50.
 
 	allKeys do: [ :key |
 		| presenter form canvas maxV color |
 		presenter := graphPresenters at: key.
-		form := Form extent: 250 @ 100 depth: 32.
+		form := Form extent: 250 @ 80 depth: 32.
 		canvas := form getCanvas.
-		canvas fillRectangle: (0 @ 0 extent: 250 @ 100) color: Color white.
-		canvas frameRectangle: (0 @ 0 extent: 250 @ 100) color: Color lightGray.
+		canvas fillRectangle: (0 @ 0 extent: 250 @ 80) color: Color white.
+		canvas frameRectangle: (0 @ 0 extent: 250 @ 80) color: Color lightGray.
 		
 		color := colors at: ((key hash abs \\ colors size) + 1).
+		canvas drawString: key at: 40 @ 2 font: (LogicalFont familyName: 'Arial' pointSize: 9) color: color.
 		
 		displayHistory ifNotEmpty: [
 			| prevX prevY |
 			maxV := 1.
 			displayHistory do: [ :h | maxV := maxV max: (h at: key ifAbsent: [ 0 ]) ].
 			
-			canvas line: 40 @ 15 to: 40 @ (15 + gHeight) rounded width: 1 color: Color black.
-			canvas line: 40 @ (15 + gHeight) to: (40 + gWidth) @ (15 + gHeight) rounded width: 1 color: Color black.
+			canvas line: 40 @ 15 to: 40 @ (15 + gHeight) width: 1 color: Color black.
+			canvas line: 40 @ (15 + gHeight) to: (40 + gWidth) @ (15 + gHeight) width: 1 color: Color black.
 			
 			canvas drawString: maxV rounded asString at: 2 @ 10 font: (LogicalFont familyName: 'Arial' pointSize: 8) color: Color gray.
 			canvas drawString: '0' at: 2 @ (15 + gHeight - 5) font: (LogicalFont familyName: 'Arial' pointSize: 8) color: Color gray.
