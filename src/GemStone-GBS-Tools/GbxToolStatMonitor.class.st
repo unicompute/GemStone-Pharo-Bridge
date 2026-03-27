@@ -197,7 +197,7 @@ GbxToolStatMonitor >> initializePresenters [
 	monitor addStatNamed: 'oopCount' description: 'Oops' category: 'Memory'.
 	monitor addStatNamed: 'percentFull' description: 'Percent full' category: 'Memory'.
 	chartPanel := self newMorph.
-	chartPanel morph: (Morph new color: Color white; extent: 800@500; yourself).
+	chartPanel morph: (Morph new color: Color white; yourself).
 ]
 
 { #category : 'initialization' }
@@ -317,8 +317,9 @@ GbxToolStatMonitor >> drawGraph [
 	[ 
 	m := chartPanel morph.
 	m color: Color white.
+	m extent: ((self window ifNotNil: [ self window width - 50 ] ifNil: [ 800 ]) @ 500).
 	canvas := m canvas.
-	graphWidth := (self window ifNotNil: [ self window width ] ifNil: [ 800 ]) - 100 max: 400.
+	graphWidth := m width - 50 max: 400.
 	graphHeight := m height - 100 max: 300.
 	values := {
 		(monitor statAt: 'hitCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
