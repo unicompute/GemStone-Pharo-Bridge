@@ -136,7 +136,7 @@ GbxToolStatMonitor >> defaultLayout [
 		spacing: 5;
 		add: (self buildToolbar) height: 35;
 		add: summaryLabel height: 30;
-		add: (self buildStatsGroups);
+		add: (self buildStatsGroups) height: 200;
 		add: chartPanel expand: true;
 		yourself
 ]
