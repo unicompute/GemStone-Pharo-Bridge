@@ -10,11 +10,7 @@ Class {
 		'summaryLabel',
 		'cache',
 		'history',
-		'graphPresenters',
-		'cacheStatsGroup',
-		'sessionStatsGroup',
-		'gcStatsGroup',
-		'memoryStatsGroup'
+		'graphPresenters'
 	],
 	#classVars : [
 		'Instance',
@@ -60,7 +56,8 @@ GbxToolStatMonitor >> defaultLayout [
 	| mainLayout gridLayout |
 	
 	gridLayout := SpGridLayout new
-		spacing: 5;
+		columnSpacing: 10;
+		rowSpacing: 10;
 		beColumnNotHomogeneous;
 		yourself.
 		
@@ -100,7 +97,6 @@ GbxToolStatMonitor >> fetchAllStats [
 	rpcCount := 0.
 	monitor statAt: 'sessionId' ifPresent: [ :stat | stat value: sessionId ].
 	monitor statAt: 'rpcCount' ifPresent: [ :stat | stat value: rpcCount ].
-	"Other stats remain 0 for now as stubs until full GS monitor integration"
 ]
 
 { #category : 'initialization' }
@@ -247,7 +243,7 @@ GbxToolStatMonitor >> drawGraph [
 				yp := (20 + gHeight - ((v / maxV) * gHeight)) rounded.
 				tx := (windowSize > 1) 
 					ifTrue: [ (40 + ((hi - 1) / (windowSize - 1) * gWidth)) rounded ]
-					ifFalse: [ 40 + (gWidth / 2) rounded ].
+					ifFalse: [ 40 + (graphWidth / 2) rounded ].
 				
 				prevX ifNotNil: [ canvas line: prevX @ prevY to: tx @ yp width: 1 color: color ].
 				canvas fillRectangle: (tx - 1 @ (yp - 1) extent: 2 @ 2) color: color.
