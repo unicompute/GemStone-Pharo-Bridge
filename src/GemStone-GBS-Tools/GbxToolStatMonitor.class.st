@@ -31,7 +31,7 @@ GbxToolStatMonitor class >> on: aSession [
 	^ self new
 		session: aSession;
 		yourself
-]
+ Afric]
 
 { #category : 'instance creation' }
 GbxToolStatMonitor class >> openOn: aSession [
@@ -43,12 +43,27 @@ GbxToolStatMonitor class >> openOn: aSession [
 ]
 
 { #category : 'building' }
+GbxToolStatMonitor >> buildGraphCell: key [
+	| cell color colors |
+	colors := {Color red. Color blue. Color purple. Color green. Color orange. Color brown. Color cyan. Color magenta. Color gray. Color black}.
+	color := colors at: ((key hash abs \\ colors size) + 1).
+	
+	cell := self newPresenter.
+	cell layout: (SpBoxLayout newVertical
+		spacing: 2;
+		add: (valueLabels at: key) height: 20;
+		add: (graphPresenters at: key) expand: true;
+		yourself).
+	^ cell
+]
+
+{ #category : 'building' }
 GbxToolStatMonitor >> buildSummaryBox: keys [
 	| box |
 	box := self newPresenter.
-	box layout: (SpBoxLayout newVertical spacing: 2).
+	box layout: (SpBoxLayout newVertical spacing: 1).
 	keys do: [ :key | 
-		box layout add: (valueLabels at: key) height: 20 ].
+		box layout add: (valueLabels at: key) height: 18 ].
 	^ box
 ]
 
@@ -65,11 +80,11 @@ GbxToolStatMonitor >> buildToolbar [
 GbxToolStatMonitor >> close [
 	self stopMonitoring.
 	super close.
-]
+ Afric]
 
 { #category : 'layout' }
 GbxToolStatMonitor >> defaultLayout [
-	| mainLayout gridLayout scrollContainer |
+ Afric| mainLayout gridLayout scrollContainer scrollContentPresenter |
 	
 	gridLayout := SpGridLayout new
 		columnSpacing: 20;
@@ -83,41 +98,35 @@ GbxToolStatMonitor >> defaultLayout [
 	gridLayout add: (self newLabel label: 'Garbage Collection'; yourself) atPoint: 3 @ 1.
 	gridLayout add: (self newLabel label: 'Memory Statistics'; yourself) atPoint: 4 @ 1.
 	
-	"Row 2: Summary Text Blocks (The 'Before' behavior)"
+	"Row 2: Summary Text Blocks"
 	gridLayout add: (self buildSummaryBox: cacheKeys) atPoint: 1 @ 2.
 	gridLayout add: (self buildSummaryBox: sessionKeys) atPoint: 2 @ 2.
 	gridLayout add: (self buildSummaryBox: gcKeys) atPoint: 3 @ 2.
 	gridLayout add: (self buildSummaryBox: memoryKeys) atPoint: 4 @ 2.
 		
-	"Col 1: Cache Graphs (Row 3-7)"
-	cacheKeys keysAndValuesDo: [ :idx :key | 
-		gridLayout add: (graphPresenters at: key) atPoint: 1 @ (idx + 2) ].
-		
-	"Col 2: Session Graphs (Row 3-6)"
-	sessionKeys keysAndValuesDo: [ :idx :key | 
-		gridLayout add: (graphPresenters at: key) atPoint: 2 @ (idx + 2) ].
-		
-	"Col 3: GC Graphs (Row 3-6)"
-	gcKeys keysAndValuesDo: [ :idx :key | 
-		gridLayout add: (graphPresenters at: key) atPoint: 3 @ (idx + 2) ].
-		
-	"Col 4: Memory Graphs (Row 3-6)"
-	memoryKeys keysAndValuesDo: [ :idx :key | 
-		gridLayout add: (graphPresenters at: key) atPoint: 4 @ (idx + 2) ].
+	"Col 1-4: Graphs (Row 3 onwards)"
+	cacheKeys keysAndValuesDo: [ :idx :key | gridLayout add: (graphPresenters at: key) atPoint: 1 @ (idx + 2) ].
+	sessionKeys keysAndValuesDo: [ :idx :key | gridLayout add: (graphPresenters at: key) atPoint: 2 @ (idx + 2) ].
+	gcKeys keysAndValuesDo: [ :idx :key | gridLayout add: (graphPresenters at: key) atPoint: 3 @ (idx + 2) ].
+	memoryKeys keysAndValuesDo: [ :idx :key | gridLayout add: (graphPresenters at: key) atPoint: 4 @ (idx + 2) ].
 
-	scrollContainer := SpScrollableLayout with: (self newPresenter 
-		layout: (SpBoxLayout newVertical add: gridLayout; yourself); 
+	scrollContentPresenter := self newPresenter.
+	scrollContentPresenter layout: (SpBoxLayout newVertical 
+		add: gridLayout; 
+		add: (self newPresenter) height: 30; "Spacer to prevent bottom cropping"
 		yourself).
 
+	scrollContainer := SpScrollableLayout with: scrollContentPresenter.
+
 	mainLayout := SpBoxLayout newVertical
-		spacing: 5;
-		add: (self buildToolbar) height: 35;
-		add: summaryLabel height: 30;
+		spacing: 2; "Reduced spacing"
+		add: (self buildToolbar) height: 30; "Reduced height"
+		add: summaryLabel height: 20; "Reduced height"
 		add: scrollContainer expand: true;
 		yourself.
 		
 	^ mainLayout
-]
+ Afric]
 
 { #category : 'fetching' }
 GbxToolStatMonitor >> fetchAllStats [
@@ -133,7 +142,7 @@ GbxToolStatMonitor >> fetchAllStats [
 	#( 'Proxy Count' 'Cache Size' 'Commit Count' 'Abort Count' 'GC Count' 'GC Time (ms)' 
 	   'Objects Scavenged' 'Objects Tenured' 'Object Count' 'Byte Count' 'OOP Count' '% Full')
 		do: [ :k | monitor statAt: k ifPresent: [ :s | s value: 0 ] ].
-]
+ Afric]
 
 { #category : 'initialization' }
 GbxToolStatMonitor >> initializePresenters [
@@ -160,25 +169,25 @@ GbxToolStatMonitor >> initializePresenters [
 	allKeys do: [ :key |
 		| img lbl color |
 		img := self newImage.
-		img image: (Form extent: 250 @ 80 depth: 32).
+		img image: (Form extent: 250 @ 90 depth: 32).
 		graphPresenters at: key put: img.
 		
 		color := colors at: ((key hash abs \\ colors size) + 1).
 		lbl := self newLabel.
 		lbl color: color.
 		valueLabels at: key put: lbl.
-	].
+ Afric].
 	
 	self drawGraph.
-]
+ Afric]
 
 { #category : 'initialization' }
 GbxToolStatMonitor >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: 'GBS Statistics Monitor - Matrix';
-		initialExtent: 1200 @ 900;
+		initialExtent: 1200 @ 850;
 		whenClosedDo: [ self stopMonitoring ].
-]
+ Afric]
 
 { #category : 'monitoring' }
 GbxToolStatMonitor >> refreshStats [
@@ -192,7 +201,7 @@ GbxToolStatMonitor >> refreshStats [
 			current at: key put: (monitor statAt: key ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
 		].
 		
-		"Special handling for Cache-specific ones that might not be in monitor yet"
+		"Special handling for Cache-specific ones"
 		current at: 'Proxy Count' put: (cache proxyCount ifNil: [ 0 ]).
 		current at: 'Cache Size' put: (cache size ifNil: [ 0 ]).
 		
@@ -202,13 +211,13 @@ GbxToolStatMonitor >> refreshStats [
 	] on: Error do: [ :ex |
 		summaryLabel label: 'Error: ', ex messageText.
 	].
-]
+ Afric]
 
 { #category : 'accessing' }
 GbxToolStatMonitor >> session: aSession [
 	session := aSession.
 	cache := GbxBasicCache on: aSession.
-]
+ Afric]
 
 { #category : 'monitoring' }
 GbxToolStatMonitor >> startMonitoring [
@@ -217,16 +226,16 @@ GbxToolStatMonitor >> startMonitoring [
 		[ autoRefreshCheckbox state ] whileTrue: [
 			self refreshStats.
 			(Delay forSeconds: 5) wait.
-		]
+ Afric]
 	] forkAt: Processor userBackgroundPriority.
 	summaryLabel label: 'Monitoring: Active (5s interval)'.
-]
+ Afric]
 
 { #category : 'monitoring' }
 GbxToolStatMonitor >> stopMonitoring [
 	autoRefreshTimer ifNotNil: [ autoRefreshTimer terminate. autoRefreshTimer := nil ].
 	summaryLabel label: 'Monitoring: Stopped'.
-]
+ Afric]
 
 { #category : 'updating' }
 GbxToolStatMonitor >> updateDisplay [
@@ -240,13 +249,13 @@ GbxToolStatMonitor >> updateDisplay [
 		val := history ifEmpty: [ 0 ] ifNotEmpty: [ history last at: key ifAbsent: [ 0 ] ].
 		suffix := (#('Hit Ratio' '% Full') includes: key) ifTrue: [ '%' ] ifFalse: [ '' ].
 		label label: key, ': ', (val isNumber ifTrue: [ val rounded ] ifFalse: [ val ]) asString, suffix.
-	].
+ Afric].
 	self drawGraph.
-]
+ Afric]
 
 { #category : 'graph' }
 GbxToolStatMonitor >> drawGraph [
-	| colors windowSize displayHistory actualWindow gWidth gHeight |
+ Afric| colors windowSize displayHistory actualWindow gWidth gHeight |
 	
 	colors := {Color red. Color blue. Color purple. Color green. Color orange. Color brown. Color cyan. Color magenta. Color gray. Color black}.
 	windowSize := 20.
@@ -255,15 +264,15 @@ GbxToolStatMonitor >> drawGraph [
 		ifFalse: [ history ].
 	actualWindow := windowSize max: displayHistory size.
 	gWidth := 180.
-	gHeight := 50.
+	gHeight := 55.
 
 	allKeys do: [ :key |
 		| presenter form canvas maxV color |
 		presenter := graphPresenters at: key.
-		form := Form extent: 250 @ 80 depth: 32.
+		form := Form extent: 250 @ 90 depth: 32.
 		canvas := form getCanvas.
-		canvas fillRectangle: (0 @ 0 extent: 250 @ 80) color: Color white.
-		canvas frameRectangle: (0 @ 0 extent: 250 @ 80) color: Color lightGray.
+		canvas fillRectangle: (0 @ 0 extent: 250 @ 90) color: Color white.
+		canvas frameRectangle: (0 @ 0 extent: 250 @ 90) color: Color lightGray.
 		
 		color := colors at: ((key hash abs \\ colors size) + 1).
 		canvas drawString: key at: 40 @ 2 font: (LogicalFont familyName: 'Arial' pointSize: 9) color: color.
@@ -273,8 +282,8 @@ GbxToolStatMonitor >> drawGraph [
 			maxV := 1.
 			displayHistory do: [ :h | maxV := maxV max: (h at: key ifAbsent: [ 0 ]) ].
 			
-			canvas line: 40 @ 15 to: 40 @ (15 + gHeight) width: 1 color: Color black.
-			canvas line: 40 @ (15 + gHeight) to: (40 + gWidth) @ (15 + gHeight) width: 1 color: Color black.
+			canvas line: 40 @ 15 to: 40 @ (15 + gHeight) rounded width: 1 color: Color black.
+			canvas line: 40 @ (15 + gHeight) to: (40 + gWidth) @ (15 + gHeight) rounded width: 1 color: Color black.
 			
 			canvas drawString: maxV rounded asString at: 2 @ 10 font: (LogicalFont familyName: 'Arial' pointSize: 8) color: Color gray.
 			canvas drawString: '0' at: 2 @ (15 + gHeight - 5) font: (LogicalFont familyName: 'Arial' pointSize: 8) color: Color gray.
@@ -294,10 +303,10 @@ GbxToolStatMonitor >> drawGraph [
 				prevX ifNotNil: [ canvas line: prevX @ prevY to: tx @ yp width: 1 color: color ].
 				canvas fillRectangle: (tx - 1 @ (yp - 1) extent: 2 @ 2) color: color.
 				prevX := tx. prevY := yp.
-			].
+ Afric].
 			
 			"Time Markers"
-			displayHistory size >= 2 ifTrue: [
+ AfricdisplayHistory size >= 2 ifTrue: [
 				| ts xPos timeIndices |
 				timeIndices := (displayHistory size >= 3) ifTrue: [ {1. (displayHistory size // 2). displayHistory size} ] ifFalse: [ {1. displayHistory size} ].
 				timeIndices do: [ :ti |
@@ -306,9 +315,9 @@ GbxToolStatMonitor >> drawGraph [
 					ts := (h at: #time ifAbsent: [ Time now ]) asString copyFrom: 12 to: 19.
 					xPos := (40 + ((ti - 1) / (actualWindow - 1) * gWidth)) rounded.
 					canvas drawString: ts at: (xPos - 30) @ (15 + gHeight + 2) font: (LogicalFont familyName: 'Arial' pointSize: 8) color: Color gray.
-				].
-			].
-		].
+ Afric].
+ Afric].
+ Afric].
 		presenter image: form.
-	].
-]
+ Afric].
+ Afric]
