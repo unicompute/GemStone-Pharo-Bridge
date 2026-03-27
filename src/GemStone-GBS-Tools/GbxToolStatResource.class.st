@@ -123,7 +123,7 @@ GbxToolStatResource >> initialize [
 
 { #category : 'initialize-release' }
 GbxToolStatResource >> initializeStatistics [
-	self
+		GbxToolStatResource
 		addStatDescriptor: (GbxStatDescriptor 
 					name: 'bytesSentByStoreTraversal'
 					description: 'The number of bytes sent cumulatively by store traversal calls'
