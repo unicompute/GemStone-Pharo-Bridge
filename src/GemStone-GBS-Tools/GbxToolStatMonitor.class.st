@@ -220,12 +220,12 @@ GbxToolStatMonitor >> refresh [
 
 { #category : 'monitoring' }
 GbxToolStatMonitor >> refreshStats [
+	| current |
 	session ifNil: [ ^ self ].
 	[
 		self fetchAllStats.
 		self updateDisplay.
 		summaryLabel label: 'Last updated: ', (DateAndTime now asString copyUpTo: $.).
-		| current |
 		current := Dictionary new.
 		current at: #time put: DateAndTime now.
 		current at: #hit put: (monitor statAt: 'hitCount' ifPresent: [ :s | s value ] ifAbsent: [ 0 ]).
