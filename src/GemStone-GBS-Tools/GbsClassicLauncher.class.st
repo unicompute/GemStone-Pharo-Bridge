@@ -475,6 +475,9 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                     (aBuilder item: #OpenVSD)
                         label: 'VSD';
                         action: [ self openVSD ].
+                    (aBuilder item: #GarbageCollection)
+                        label: 'Garbage Collection';
+                        action: [ self runGarbageCollection ].
                     (aBuilder item: #OpenGbxStoreTraversalTool)
                         label: 'Store Traversal Tool';
                         action: [ self openGbxStoreTraversalTool ].
@@ -635,6 +638,19 @@ GbsClassicLauncher class >> openVSD [
 	[ LibC system: cmd ]
 		on: Error
 		do: [ :ex | UIManager default inform: 'Failed to launch VSD: ', ex messageText ]
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> runGarbageCollection [
+	| session |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	[
+		session execute: 'SystemRepository markForCollection.'.
+		UIManager default inform: 'Garbage Collection initiated.'
+	] on: Error do: [ :ex |
+		UIManager default inform: 'GC failed: ', ex messageText
+	].
 ]
 
 { #category : 'menus' }
