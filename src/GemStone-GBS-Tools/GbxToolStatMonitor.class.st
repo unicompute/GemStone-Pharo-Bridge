@@ -394,8 +394,8 @@ GbxToolStatMonitor >> drawGraph [
 			displayHistory do: [ :h | maxV := maxV max: (h at: statName ifAbsent: [ 0 ]) ].
 			
 			"Draw Grid and Axis"
-			canvas line: 50 @ 30 to: 50 @ (30 + graphHeight) width: 1 color: Color black.
-			canvas line: 50 @ (30 + graphHeight) to: (50 + graphWidth) @ (30 + graphHeight) width: 1 color: Color black.
+			canvas line: 1 from: 50 @ 30 to: 50 @ (30 + graphHeight) color: Color black.
+			canvas line: 1 from: 50 @ (30 + graphHeight) to: (50 + graphWidth) @ (30 + graphHeight) color: Color black.
 			
 			"Y-Labels"
 			canvas drawString: maxV rounded asString at: 5 @ 25 font: font color: Color gray.
@@ -415,7 +415,7 @@ GbxToolStatMonitor >> drawGraph [
 					ifFalse: [ 50 + (graphWidth / 2) rounded ].
 				
 				prevX ifNotNil: [
-					canvas line: prevX @ prevY to: tx @ yp width: 2 color: color ].
+					canvas line: 2 from: prevX @ prevY to: tx @ yp color: color ].
 				canvas fillRectangle: (tx - 2 @ (yp - 2) extent: 4 @ 4) color: color.
 
 				prevX := tx.
