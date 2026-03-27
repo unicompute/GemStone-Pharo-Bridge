@@ -113,7 +113,7 @@ GbxToolStatMonitor >> defaultLayout [
 	scrollContentPresenter := self newPresenter.
 	scrollContentPresenter layout: (SpBoxLayout newVertical 
 		add: gridLayout; 
-		add: (self newPresenter) height: 30; "Spacer to prevent bottom cropping"
+		add: (self newPresenter) height: 35; 
 		yourself).
 
 	scrollContainer := SpScrollableLayout with: scrollContentPresenter.
@@ -142,12 +142,6 @@ GbxToolStatMonitor >> fetchAllStats [
 	#( 'Proxy Count' 'Cache Size' 'Commit Count' 'Abort Count' 'GC Count' 'GC Time (ms)' 
 	   'Objects Scavenged' 'Objects Tenured' 'Object Count' 'Byte Count' 'OOP Count' '% Full')
 		do: [ :k | monitor statAt: k ifPresent: [ :s | s value: 0 ] ].
-]
-
-{ #category : 'initialization' }
-GbxToolStatMonitor >> initialize [
-	super initialize.
-	self layout: self defaultLayout.
 ]
 
 { #category : 'initialization' }
