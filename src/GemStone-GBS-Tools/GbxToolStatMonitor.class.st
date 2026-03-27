@@ -113,7 +113,7 @@ GbxToolStatMonitor >> defaultLayout [
 	scrollContentPresenter := self newPresenter.
 	scrollContentPresenter layout: (SpBoxLayout newVertical 
 		add: gridLayout; 
-		add: (self newPresenter) height: 35; 
+		add: (self newNullPresenter) height: 35; 
 		yourself).
 
 	scrollContainer := SpScrollableLayout with: scrollContentPresenter.
@@ -177,6 +177,8 @@ GbxToolStatMonitor >> initializePresenters [
 		lbl color: color.
 		valueLabels at: key put: lbl.
 	].
+
+	self layout: self defaultLayout.
 ]
 
 { #category : 'initialization' }
@@ -239,14 +241,17 @@ GbxToolStatMonitor >> stopMonitoring [
 GbxToolStatMonitor >> updateDisplay [
 	| timeStr |
 	timeStr := Time now asString copyUpTo: $. .
-	summaryLabel label: 'Last updated: ', timeStr.
+	summaryLabel label: ('Last updated: {1}' format: { timeStr }).
 	
 	allKeys do: [ :key |
 		| label val suffix |
 		label := valueLabels at: key.
 		val := history ifEmpty: [ 0 ] ifNotEmpty: [ history last at: key ifAbsent: [ 0 ] ].
 		suffix := (#('Hit Ratio' '% Full') includes: key) ifTrue: [ '%' ] ifFalse: [ '' ].
-		label label: key, ': ', (val isNumber ifTrue: [ val rounded ] ifFalse: [ val ]) asString, suffix.
+		label label: ('{1}: {2}{3}' format: { 
+			key. 
+			(val isNumber ifTrue: [ val rounded ] ifFalse: [ val ]). 
+			suffix }).
 	].
 	self drawGraph.
 ]
