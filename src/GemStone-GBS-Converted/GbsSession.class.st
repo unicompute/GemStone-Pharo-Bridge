@@ -34,6 +34,18 @@ GbsSession class >> loginWithUser: aUser password: aPass stone: aStone [
     ] ensure: [ servicePtr free. userPtr free. passPtr free ]
 ]
 
+{ #category : 'private - instance creation' }
+GbsSession class >> classWithStats [
+	^ GbsSessionWithStats
+]
+
+{ #category : 'private - instance creation' }
+GbsSession class >> new [
+	^ GBSM mainStatsEnabled
+		ifTrue: [ self classWithStats basicNew initialize ]
+		ifFalse: [ self basicNew initialize ]
+]
+
 { #category : 'transactions' }
 GbsSession >> abort [
     "Discards uncommitted changes and syncs with the latest GemStone state."
@@ -496,6 +508,11 @@ GbsSession >> handleGciError [
 GbsSession >> initialize [
 	super initialize.
 	isLoggedIn := false.
+]
+
+{ #category : 'testing' }
+GbsSession >> mainStatsEnabled [
+	^ false
 ]
 
 { #category : 'testing' }

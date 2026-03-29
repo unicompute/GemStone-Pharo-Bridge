@@ -5,6 +5,7 @@ Class {
 		'session',
 		'currentOop',
 		'navigationStack',
+		'forwardStack',
 		'pathLabel',
 		'objectTable',
 		'infoPanel',
@@ -204,33 +205,29 @@ GbxTrippy >> goBack [
 	
 	navigationStack size <= 1 ifTrue: [ ^ self ].
 	
-	navigationStack removeLast.
+	forwardStack addLast: navigationStack removeLast.
 	currentOop := navigationStack last.
 	
-	self updatePath.
-	self loadObject: currentOop.
-	self updateNavigationButtons.
+	self showCurrentObject.
 ]
 
 { #category : 'navigation' }
 GbxTrippy >> goForward [
-	"Go forward (not implemented in this simple version)"
-	"Would need a forward stack"
+	"Go forward in navigation history"
+
+	forwardStack isEmpty ifTrue: [ ^ self ].
+
+	currentOop := forwardStack removeLast.
+	navigationStack addLast: currentOop.
+
+	self showCurrentObject.
 ]
 
 { #category : 'navigation' }
 GbxTrippy >> goUp [
 	"Go up to parent object"
 	
-	navigationStack size <= 1 ifTrue: [ ^ self ].
-	
-	"Remove current, go to previous"
-	navigationStack removeLast.
-	currentOop := navigationStack last.
-	
-	self updatePath.
-	self loadObject: currentOop.
-	self updateNavigationButtons.
+	self goBack
 ]
 
 { #category : 'initialization' }
@@ -276,6 +273,7 @@ GbxTrippy >> initializePresenters [
 		action: [ self doItSelected ].
 	
 	navigationStack := OrderedCollection new.
+	forwardStack := OrderedCollection new.
 	cache := GbxBasicCache on: session.
 	traversal := GbxFetchTraversalTool on: session cache: cache.
 ]
@@ -293,12 +291,10 @@ GbxTrippy >> inspectOop: anOop [
 	
 	currentOop := anOop.
 	navigationStack := OrderedCollection new.
-	navigationStack add: anOop.
+	navigationStack addLast: anOop.
+	forwardStack := OrderedCollection new.
 	
-	self updatePath.
-	self loadObject: anOop.
-	
-	self updateNavigationButtons.
+	self showCurrentObject.
 ]
 
 { #category : 'actions' }
@@ -353,13 +349,11 @@ GbxTrippy >> navigateTo: item [
 	oop := item at: 4. "OOP is 4th element"
 	oop ifNil: [ ^ self ].
 	
-	"Push current to stack"
-	navigationStack add: currentOop.
+	navigationStack addLast: oop.
+	forwardStack removeAll.
 	currentOop := oop.
 	
-	self updatePath.
-	self loadObject: oop.
-	self updateNavigationButtons.
+	self showCurrentObject.
 ]
 
 { #category : 'navigation' }
@@ -381,6 +375,13 @@ GbxTrippy >> session: aSession [
 	session := aSession
 ]
 
+{ #category : 'navigation' }
+GbxTrippy >> showCurrentObject [
+	self updatePath.
+	self loadObject: currentOop.
+	self updateNavigationButtons
+]
+
 { #category : 'accessing' }
 GbxTrippy >> traversal [
 	^ traversal
@@ -391,6 +392,7 @@ GbxTrippy >> updateNavigationButtons [
 	"Update navigation button states"
 	
 	backButton enabled: navigationStack size > 1.
+	forwardButton enabled: forwardStack isNotEmpty.
 	upButton enabled: navigationStack size > 1.
 ]
 

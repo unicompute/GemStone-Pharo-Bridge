@@ -62,7 +62,11 @@ GbxToolServerMapPresenter >> refresh [
 	nodeList ifNil: [ ^ self ].
 	tool ifNil: [ nodeList items: #(). ^ self ].
 	items := tool nodes associations asSortedCollection: [ :a :b | a key <= b key ].
-	nodeList items: (items collect: [ :assoc | assoc key, ' (oop: ', assoc value oop asString, ')' ]).
+	nodeList items: (items collect: [ :assoc |
+		| node oop |
+		node := assoc value.
+		oop := node at: #oop ifAbsent: [ nil ].
+		assoc key, ' (oop: ', (oop ifNil: [ '<invalid>' ] ifNotNil: [ oop asString ]), ')' ]).
 	statusLabel label: items size asString, ' segments'.
 ]
 

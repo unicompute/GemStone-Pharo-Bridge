@@ -22,20 +22,56 @@ GbxServerMapTool class >> on: aSession [
 { #category : 'auditing' }
 GbxServerMapTool >> audit [
 	"Audit the server map for consistency"
-	| results |
+	| results issueCount |
 
 	results := Dictionary new.
-	results at: 'status' put: 'Audit not implemented'.
-	results at: 'nodes' put: (self nodes size).
+	results
+		at: #nodeCount put: self nodes size;
+		at: #segmentCount put: (segments ifNil: [ 0 ] ifNotNil: [ segments size ]);
+		at: #duplicateOops put: OrderedCollection new;
+		at: #invalidOops put: OrderedCollection new;
+		at: #missingNames put: OrderedCollection new;
+		at: #duplicateNames put: OrderedCollection new.
+	self auditNodes: self nodes values results: results.
+	issueCount := #(duplicateOops invalidOops missingNames duplicateNames)
+		inject: 0
+		into: [ :sum :key | sum + ((results at: key) size) ].
+	results
+		at: #issueCount put: issueCount;
+		at: #rootNode put: (rootNode ifNil: [ nil ] ifNotNil: [ rootNode at: #name ]);
+		at: #status put: (issueCount = 0 ifTrue: [ 'ok' ] ifFalse: [ 'issues found' ]).
 	^ results
 ]
 
 { #category : 'auditing' }
 GbxServerMapTool >> auditNodes: nodeCollection results: auditResults [
 	"Audit a collection of nodes"
+	| oopOwners seenNames |
 
+	oopOwners := Dictionary new.
+	seenNames := Set new.
 	nodeCollection do: [ :node |
-		"Node auditing not implemented in this version"
+		| name oop |
+		name := node at: #name ifAbsent: [ '' ].
+		oop := node at: #oop ifAbsent: [ nil ].
+
+		name ifEmpty: [ (auditResults at: #missingNames) add: node ].
+		(seenNames includes: name) ifTrue: [
+			(auditResults at: #duplicateNames) add: name ].
+		seenNames add: name.
+
+		((oop isInteger not) or: [ oop <= 0 ]) ifTrue: [
+			(auditResults at: #invalidOops) add: node ].
+
+		((oopOwners at: oop ifAbsentPut: [ OrderedCollection new ])
+			add: name).
+	].
+
+	oopOwners keysAndValuesDo: [ :oop :owners |
+		(oop isInteger and: [ owners size > 1 ]) ifTrue: [
+			(auditResults at: #duplicateOops) add: {
+				#oop -> oop.
+				#names -> owners asArray } asDictionary ].
 	].
 ]
 
@@ -45,6 +81,9 @@ GbxServerMapTool >> buildFromServer [
 	| script result |
 	
 	session ifNil: [ ^ self ].
+	nodes := Dictionary new.
+	segments := OrderedCollection new.
+	rootNode := nil.
 	
 	script := '[
 		| stream segs |
@@ -70,20 +109,28 @@ GbxServerMapTool >> nodes [
 { #category : 'parsing' }
 GbxServerMapTool >> parseSegments: aString [
 	"Parse segments string into nodes"
-	| lines parts node |
+	| lines parts node oop |
 
+	nodes := Dictionary new.
+	segments := OrderedCollection new.
 	lines := aString splitOn: Character lf.
 	lines do: [ :line |
 		line isNotEmpty ifTrue: [
 			parts := line splitOn: $|.
 			parts size >= 2 ifTrue: [
+				oop := [ parts second asInteger ] on: Error do: [ nil ].
 				node := Dictionary new.
-				node at: 'name' put: parts first.
-				node at: 'oop' put: parts second asInteger.
+				node
+					at: #name put: parts first;
+					at: #oop put: oop.
 				self nodes at: parts first put: node.
+				segments add: node.
 			]
 		]
 	].
+	segments := segments asSortedCollection: [ :a :b |
+		(a at: #oop ifAbsent: [ 0 ]) <= (b at: #oop ifAbsent: [ 0 ]) ].
+	rootNode := segments ifEmpty: [ nil ] ifNotEmpty: [ segments first ].
 ]
 
 { #category : 'accessing' }

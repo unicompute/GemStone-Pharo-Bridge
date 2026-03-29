@@ -9,7 +9,8 @@ Class {
 		'missCount',
 		'proxyCount',
 		'maxProxies',
-		'weakRegistry'
+		'weakRegistry',
+		'cachedClassStats'
 	],
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'
@@ -20,6 +21,16 @@ GbxBasicCache class >> on: aSession [
 	^ self new
 		session: aSession;
 		yourself
+]
+
+{ #category : 'cache statistics' }
+GbxBasicCache class >> classWithStats [
+	^ self
+]
+
+{ #category : 'cache statistics' }
+GbxBasicCache class >> classWithoutStats [
+	^ self
 ]
 
 { #category : 'instance creation' }
@@ -79,9 +90,20 @@ GbxBasicCache >> clear [
 	"Clear the cache"
 	oopToProxy := IdentityDictionary new.
 	proxyToOop := IdentityDictionary new.
+	cachedClassStats := nil.
 	proxyCount := 0.
 	hitCount := 0.
 	missCount := 0.
+]
+
+{ #category : 'cache statistics' }
+GbxBasicCache >> discardStats [
+	cachedClassStats := nil
+]
+
+{ #category : 'cache statistics' }
+GbxBasicCache >> cachedClassStats [
+	^ cachedClassStats ifNil: [ cachedClassStats := IdentityDictionary new ]
 ]
 
 { #category : 'cache management' }
@@ -136,6 +158,33 @@ GbxBasicCache >> initialize [
 	proxyCount := 0.
 	maxProxies := 10000.
 	weakRegistry := WeakValueDictionary new.
+	cachedClassStats := nil.
+]
+
+{ #category : 'cache statistics' }
+GbxBasicCache >> inventoryCache [
+	"Recount cached proxies by class for the stat monitor."
+	| statsByClass |
+
+	statsByClass := cachedClassStats ifNil: [ cachedClassStats := IdentityDictionary new ].
+	statsByClass valuesDo: [ :each | each reinitializeStats ].
+	oopToProxy valuesDo: [ :proxy |
+		| proxyClass statResource estimatedBytes |
+		proxyClass := proxy class.
+		statResource := statsByClass
+			at: proxyClass
+			ifAbsentPut: [
+				| resource |
+				resource := GbxCachedClassStatResource new.
+				resource cachedClass: proxyClass.
+				GbxStatMonitor instance addStatResource: resource.
+				resource ].
+		estimatedBytes := ((proxy respondsTo: #basicSize)
+			ifTrue: [ proxy basicSize ]
+			ifFalse: [ 0 ]).
+		statResource
+			incNumInstances;
+			incGbsBytesCached: estimatedBytes ]
 ]
 
 { #category : 'accessing' }

@@ -71,6 +71,17 @@ GbxStatDescriptor >> name [
 	^ name
 ]
 
+{ #category : 'initialize-release' }
+GbxStatDescriptor >> name: nameString description: descriptionString type: typeInt isCounter: isCounterBool isLargerBetter: isLargerBetterBool unit: unitString [
+	name := nameString.
+	description := descriptionString.
+	type := typeInt.
+	isCounter := isCounterBool.
+	isLargerBetter := isLargerBetterBool.
+	unit := unitString.
+	^ self
+]
+
 { #category : 'accessing' }
 GbxStatDescriptor >> name: aString [
 	name := aString
@@ -78,17 +89,18 @@ GbxStatDescriptor >> name: aString [
 
 { #category : 'accessing' }
 GbxStatDescriptor >> setId: anInteger [
+	id ifNotNil: [ self error: 'GbxStatDescriptor>>setId initialized twice' ].
 	id := anInteger
 ]
 
 { #category : 'accessing' }
 GbxStatDescriptor >> type [
-	^ type
+	^ type ifNil: [ GbxStatArchiver TypeInt32 ]
 ]
 
 { #category : 'accessing' }
-GbxStatDescriptor >> type: aSymbol [
-	type := aSymbol
+GbxStatDescriptor >> type: anInteger [
+	type := anInteger
 ]
 
 { #category : 'accessing' }
@@ -99,4 +111,33 @@ GbxStatDescriptor >> unit [
 { #category : 'accessing' }
 GbxStatDescriptor >> unit: aString [
 	unit := aString
+]
+
+{ #category : 'accessing' }
+GbxStatDescriptor >> isByte [
+	^ self type = GbxStatArchiver TypeByte8
+]
+
+{ #category : 'accessing' }
+GbxStatDescriptor >> isShort [
+	^ self type = GbxStatArchiver TypeShort16
+]
+
+{ #category : 'printing' }
+GbxStatDescriptor >> printOn: aStream [
+	super printOn: aStream.
+	aStream
+		nextPutAll: ': ';
+		print: name
+]
+
+{ #category : 'archiving' }
+GbxStatDescriptor >> writeToArchiver: statArchiver [
+	statArchiver
+		writeString: name;
+		writeByte: self type;
+		writeBoolean: (isCounter ifNil: [ false ]);
+		writeBoolean: (isLargerBetter ifNil: [ false ]);
+		writeString: self unit;
+		writeString: (description ifNil: [ '' ])
 ]
