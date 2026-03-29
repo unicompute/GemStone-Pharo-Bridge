@@ -5,16 +5,19 @@ Class {
 	#package : 'GemStone-Pharo-Tests'
 }
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsInspectorTest >> testFetchAndParseLiveInstanceVariables [
 	| session targetOop rawData parsedItems |
 	
-	session := GbsSessionParameters currentSession.
-	(session isNil or: [ session isConnected not ]) ifTrue: [
-		self skip: 'Requires an active GemStone session' ].
+	session := GbsLiveSessionTestSupport ensureSharedSession.
+	session ifNil: [
+		self skip: GbsLiveSessionTestSupport unavailableReason ].
 	
-	"1. Use a guaranteed global object that cannot fail to compile"
-	targetOop := session execute: 'UserGlobals'.
+	"1. Fetch a raw oop for a guaranteed global object"
+	targetOop := session serverInterface
+		apiGciExecuteStr: 'UserGlobals'
+		context: 20
+		env: 0.
 	
 	"2. Safely verify GemStone returned a real object"
 	self assert: targetOop isNotNil description: 'GemStone returned a compile error (nil)'.

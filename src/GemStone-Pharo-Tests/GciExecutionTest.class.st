@@ -5,14 +5,13 @@ Class {
 	#package : 'GemStone-Pharo-Tests'
 }
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GciExecutionTest >> testRawCExecution [
 	| interface session cString result |
 	interface := GbsServerInterface uniqueInstance.
-	session := GbsSessionParameters currentSession.
-	
-	(session isNil or: [ session isConnected not ]) ifTrue: [
-		self skip: 'Requires an active GemStone session' ].
+	session := GbsLiveSessionTestSupport ensureSharedSession.
+	session ifNil: [
+		self skip: GbsLiveSessionTestSupport unavailableReason ].
 	interface ifNil: [ self skip: 'GemStone server interface unavailable' ].
 	
 	"1. SAFELY ALLOCATE IN C-HEAP: Hides the string from Pharo's Garbage Collector"

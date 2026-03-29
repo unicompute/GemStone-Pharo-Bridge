@@ -20,13 +20,13 @@ GbsBrowserTest >> tearDown [
 	super tearDown
 ]
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsBrowserTest >> testFetchRemoteClasses [
 	| session script rawData classes |
 	
-	session := GbsSessionParameters currentSession.
-	(session isNil or: [ session isConnected not ]) ifTrue: [
-		self skip: 'Requires an active GemStone session' ].
+	session := GbsLiveSessionTestSupport ensureSharedSession.
+	session ifNil: [
+		self skip: GbsLiveSessionTestSupport unavailableReason ].
 	
 	script := '[
 		| dict classNames stream |

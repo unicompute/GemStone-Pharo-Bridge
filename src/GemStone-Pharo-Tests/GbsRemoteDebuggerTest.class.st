@@ -11,7 +11,7 @@ Class {
 { #category : 'running' }
 GbsRemoteDebuggerTest >> setUp [
 	super setUp.
-	session := GbsSessionParameters currentSession.
+	session := GbsLiveSessionTestSupport ensureSharedSession.
 	(self hasUsableLiveSession: session) ifFalse: [ session := nil ]
 ]
 
@@ -23,21 +23,15 @@ GbsRemoteDebuggerTest >> tearDown [
 
 { #category : 'private' }
 GbsRemoteDebuggerTest >> hasUsableLiveSession: aSession [
-	aSession ifNil: [ ^ false ].
-	(aSession respondsTo: #evaluate:) ifFalse: [ ^ false ].
-	(aSession respondsTo: #isConnected) ifFalse: [ ^ false ].
-	([ aSession isConnected = true ] on: Error do: [ false ]) ifFalse: [ ^ false ].
-	(aSession respondsTo: #isLoggedIn)
-		ifFalse: [ ^ false ].
-	^ [ aSession isLoggedIn = true ] on: Error do: [ false ]
+	^ GbsLiveSessionTestSupport sessionIsUsable: aSession
 ]
 
 { #category : 'private' }
 GbsRemoteDebuggerTest >> requireLiveConnectedSession [
-	session ifNil: [ self skip: 'Requires an active GemStone session' ]
+	session ifNil: [ self skip: GbsLiveSessionTestSupport unavailableReason ]
 ]
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsRemoteDebuggerTest >> testSessionIsConnected [
 	"Test that we have a valid session before running other tests"
 	
@@ -48,7 +42,7 @@ GbsRemoteDebuggerTest >> testSessionIsConnected [
 	self deny: session sessionOop = 0 description: 'Session should have valid OOP'.
 ]
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsRemoteDebuggerTest >> testSimpleExecution [
 	"Test 1: Simple execution should not raise errors"
 	| result |
@@ -60,7 +54,7 @@ GbsRemoteDebuggerTest >> testSimpleExecution [
 	self assert: result = 2.
 ]
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsRemoteDebuggerTest >> testDivisionByZeroRaisesError [
 	"Test 2: Division by zero should raise GbsError"
 	
@@ -69,7 +63,7 @@ GbsRemoteDebuggerTest >> testDivisionByZeroRaisesError [
 	self should: [ session evaluate: '1 / 0' ] raise: GbsError.
 ]
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsRemoteDebuggerTest >> testVariableAssignment [
 	"Test 3: Variable assignment and retrieval"
 	| result |
@@ -81,7 +75,7 @@ GbsRemoteDebuggerTest >> testVariableAssignment [
 	self assert: result = 42.
 ]
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsRemoteDebuggerTest >> testBlockExecution [
 	"Test 4: Block execution with arguments"
 	| result |
@@ -93,19 +87,19 @@ GbsRemoteDebuggerTest >> testBlockExecution [
 	self assert: result = 15.
 ]
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsRemoteDebuggerTest >> testStringUppercase [
 	"Test 5: String operations"
 	| result |
 	
 	self requireLiveConnectedSession.
 	
-	result := session evaluate: '''hello'' uppercase'.
+	result := session evaluate: '''hello'' asUppercase'.
 	
 	self assert: result = 'HELLO'.
 ]
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsRemoteDebuggerTest >> testArrayAccess [
 	"Test 6: Array access"
 	| result |
@@ -117,7 +111,7 @@ GbsRemoteDebuggerTest >> testArrayAccess [
 	self assert: result = 2.
 ]
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsRemoteDebuggerTest >> testArrayOutOfBoundsRaisesError [
 	"Test 7: Array out of bounds should raise error"
 	
@@ -126,7 +120,7 @@ GbsRemoteDebuggerTest >> testArrayOutOfBoundsRaisesError [
 	self should: [ session evaluate: '#(1 2 3) at: 10' ] raise: GbsError.
 ]
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsRemoteDebuggerTest >> testMessageNotUnderstoodRaisesError [
 	"Test 8: Message not understood should raise error"
 	
@@ -135,7 +129,7 @@ GbsRemoteDebuggerTest >> testMessageNotUnderstoodRaisesError [
 	self should: [ session evaluate: 'Object thisMessageDoesNotExist' ] raise: GbsError.
 ]
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsRemoteDebuggerTest >> testMultiStatementExecution [
 	"Test 9: Multiple statements"
 	| result |
@@ -147,7 +141,7 @@ GbsRemoteDebuggerTest >> testMultiStatementExecution [
 	self assert: result = 30.
 ]
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsRemoteDebuggerTest >> testNestedBlockExecution [
 	"Test 10: Nested blocks"
 	| result |

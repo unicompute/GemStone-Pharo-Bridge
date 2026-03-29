@@ -8,14 +8,14 @@ Class {
 	#package : 'GemStone-Pharo-Tests'
 }
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsTranscriptTest >> testLiveTranscriptFetch [
 	| session writeResult transcriptText |
 	
 	"1. Get the active session"
-	session := GbsSessionParameters currentSession.
-	(session isNil or: [ session isConnected not ]) ifTrue: [
-		self skip: 'Requires an active GemStone session' ].
+	session := GbsLiveSessionTestSupport ensureSharedSession.
+	session ifNil: [
+		self skip: GbsLiveSessionTestSupport unavailableReason ].
 	
 	"2. Write to the remote transcript (returning true so we know it executed)"
 	writeResult := session execute: 'Transcript show: ''TDD Hello''; cr. true'.

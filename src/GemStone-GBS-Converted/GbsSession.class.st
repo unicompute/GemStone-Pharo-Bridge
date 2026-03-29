@@ -173,18 +173,20 @@ GbsSession >> commitTransaction [
 
 { #category : 'execution' }
 GbsSession >> evaluate: s [ 
-    | i r | 
+    | resultOop |
     self validateReadyForExecution: s.
-    i := GbsServerInterface uniqueInstance.
-    r := i apiGciExecuteStr: s context: 20 env: 0. 
-    
-    "CRITICAL: Only check for errors if GemStone returned OOP_ILLEGAL (1)"
-    r = 1 ifTrue: [ 
-        i checkError. 
-        ^ self error: 'GemStone Evaluation Failed' 
-    ]. 
-    
-    ^ self fetchObject: r asInteger
+
+    resultOop := self serverInterface
+        apiGciExecuteStr: s
+        context: 20
+        env: 0.
+
+    resultOop = 1 ifTrue: [ ^ self handleGciError ].
+
+    "GemStone may return nil while still leaving a pending runtime error."
+    self checkForError.
+
+    ^ self fetchObject: resultOop asInteger
 ]
 
 { #category : 'evaluating' }
@@ -600,8 +602,8 @@ GbsSession >> resultFor: anOop [
   "Identify special GemStone OOP tags (GS64 3.7 Guide, Chapter 5)"
 
   anOop = 20 ifTrue: [ ^ nil ].
-  anOop = 28 ifTrue: [ ^ true ].
-  anOop = 12 ifTrue: [ ^ false ].
+  (anOop = 28 or: [ anOop = 268 ]) ifTrue: [ ^ true ].
+  (anOop = 12 or: [ anOop = 140 ]) ifTrue: [ ^ false ].
 
   "Check if it's a SmallInteger (Tag 2)"
   ( anOop bitAnd: 7 ) = 2 ifTrue: [ ^ anOop bitShift: -3 ].

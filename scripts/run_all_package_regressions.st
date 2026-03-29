@@ -1,10 +1,21 @@
-| suite result testClasses failures errors skipped |
+| suite result testClasses selectedTests failures errors skipped lane label liveLane hadFailure flattenTest sessionReady |
 [
   [ Metacello new
       baseline: 'GemStonePharo';
       repository: 'tonel:///Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src';
       load: 'default' ] on: Error do: [ :ex |
         Transcript show: 'LOAD_ERROR: ', ex messageText; cr ].
+
+  lane := (([ Smalltalk os environment at: 'GBS_TEST_LANE' ifAbsent: [ 'all' ] ]
+    on: Error do: [ 'all' ]) asString) asLowercase.
+  liveLane := lane = 'live'.
+  sessionReady := true.
+
+  liveLane ifTrue: [
+    (GbsLiveSessionTestSupport ensureSharedSession) ifNil: [
+      sessionReady := false.
+      Transcript show: 'LIVE_SESSION_ERROR: ', GbsLiveSessionTestSupport unavailableReason; cr.
+      Transcript show: 'BRIDGE_LIVE_REGRESSION_FAILED'; cr ] ].
 
   testClasses := (Smalltalk allClasses
     select: [ :each |
@@ -13,18 +24,46 @@
     asSortedCollection: [ :a :b | a name <= b name ].
 
   suite := OrderedCollection new.
-  testClasses do: [ :each | suite addAll: each suite tests ].
+  flattenTest := [ :collection :candidate |
+    (candidate isKindOf: TestSuite)
+      ifTrue: [ candidate tests do: [ :each | flattenTest value: collection value: each ] ]
+      ifFalse: [ collection add: candidate ] ].
+  testClasses do: [ :each |
+    each suite tests do: [ :candidate |
+      flattenTest value: suite value: candidate ] ].
+
+  selectedTests := suite select: [ :testCase |
+    | protocol isIntegration |
+    protocol := [ (testCase class >> testCase selector) protocol name ]
+      on: Error
+      do: [ nil ].
+    isIntegration := protocol notNil
+      and: [ protocol = 'integration tests' ].
+    lane = 'unit'
+      ifTrue: [ isIntegration not ]
+      ifFalse: [
+        liveLane
+          ifTrue: [ isIntegration ]
+          ifFalse: [ true ] ] ].
 
   result := TestResult new.
-  suite do: [ :testCase | testCase run: result ].
+  sessionReady ifTrue: [
+    selectedTests do: [ :testCase | testCase run: result ] ]
+  ifFalse: [ ].
 
   failures := result failures size.
   errors := result errors size.
   skipped := (result respondsTo: #skippedCount)
     ifTrue: [ result skippedCount ]
     ifFalse: [ 0 ].
+  label := lane = 'unit'
+    ifTrue: [ 'BRIDGE_UNIT_REGRESSION' ]
+    ifFalse: [
+      liveLane
+        ifTrue: [ 'BRIDGE_LIVE_REGRESSION' ]
+        ifFalse: [ 'BRIDGE_REGRESSION' ] ].
   Transcript
-    show: 'BRIDGE_REGRESSION CLASSES=' , testClasses size asString,
+    show: label , ' CLASSES=' , ((selectedTests collect: [ :each | each class ]) asSet size asString),
       ' RUN=' , result runCount asString,
       ' FAIL=' , failures asString,
       ' ERR=' , errors asString,
@@ -38,4 +77,12 @@
   errors > 0 ifTrue: [
     Transcript show: 'ERRORS:'; cr.
     result errors do: [ :e | Transcript show: e printString; cr ] ].
-] ensure: [ Smalltalk snapshot: false andQuit: true ].
+  hadFailure := failures > 0
+    or: [ errors > 0
+    or: [ liveLane and: [ skipped > 0 or: [ sessionReady not ] ] ] ].
+  Transcript show: (hadFailure
+    ifTrue: [ label , '_FAILED' ]
+    ifFalse: [ label , '_OK' ]); cr.
+] ensure: [
+  GbsLiveSessionTestSupport releaseOwnedSession.
+  Smalltalk snapshot: false andQuit: true ].

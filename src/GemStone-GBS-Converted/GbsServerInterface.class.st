@@ -100,7 +100,7 @@ GbsServerInterface >> apiGciErrRaw: aByteArray [
 { #category : 'ffi' }
 GbsServerInterface >> apiGciErrSafe: aVoidPointer [
 	"Uses void* so UFFI passes the raw pointer, completely preventing C-stack buffer overflows"
-	^ self ffiCall: #(bool GciErr(void *aVoidPointer))
+	^ self apiGciErr: aVoidPointer
 ]
 
 { #category : 'api - execution' }
@@ -135,8 +135,19 @@ GbsServerInterface >> apiGciExecuteStr: aString context: aContext environment: e
 
 { #category : 'ffi' }
 GbsServerInterface >> apiGciExecuteStrSafe: sourceString context: contextOop [
-	"Strict 64-bit ABI compliance. Exactly 2 arguments. Prevents Stack Unwind SegFaults!"
-	^ self ffiCall: #(uint64 GciExecuteStr(String sourceString, uint64 contextOop))
+	| resultOop errorBuffer hasError |
+	"Keep the safe path on top of the proven 3-arg execute call and convert
+	pending runtime errors into OOP_ILLEGAL for callers that only need a safe probe."
+	resultOop := self apiGciExecuteStr: sourceString context: contextOop env: 0.
+	resultOop = 1 ifTrue: [ ^ 1 ].
+
+	errorBuffer := ExternalAddress allocate: 2168.
+	[
+		hasError := self apiGciErr: errorBuffer.
+		^ (hasError = 1 or: [ hasError == true ])
+			ifTrue: [ 1 ]
+			ifFalse: [ resultOop ]
+	] ensure: [ errorBuffer free ]
 ]
 
 { #category : 'api - fetching' }

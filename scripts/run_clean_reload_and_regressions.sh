@@ -31,11 +31,22 @@ if grep -q "LOAD_ERROR" <<< "${reload_output}"; then
   exit 1
 fi
 
-test_output="$(HOME=/tmp/pharo-clean-auto/home "${VM}" --headless "${WORK_IMAGE}" st "/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/run_all_package_regressions.st" 2>&1 || true)"
-echo "${test_output}"
-if grep -q "LOAD_ERROR" <<< "${test_output}"; then
-  echo "Regression run failed due to load error." >&2
+unit_output="$(HOME=/tmp/pharo-clean-auto/home GBS_TEST_LANE=unit "${VM}" --headless "${WORK_IMAGE}" st "/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/run_all_package_regressions.st" 2>&1 || true)"
+echo "${unit_output}"
+if grep -q "LOAD_ERROR" <<< "${unit_output}" || grep -q "BRIDGE_UNIT_REGRESSION_FAILED" <<< "${unit_output}"; then
+  echo "Unit regression run failed." >&2
   exit 1
+fi
+
+if [[ -n "${GS_USER:-}" && -n "${GS_PASS:-}" ]]; then
+  live_output="$(HOME=/tmp/pharo-clean-auto/home GBS_TEST_LANE=live GS_STONE="${GS_STONE:-gs64stone}" GS_USER="${GS_USER}" GS_PASS="${GS_PASS}" GS_SERVICE="${GS_SERVICE:-gemnetobject}" "${VM}" --headless "${WORK_IMAGE}" st "/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/run_all_package_regressions.st" 2>&1 || true)"
+  echo "${live_output}"
+  if grep -q "LOAD_ERROR" <<< "${live_output}" || grep -q "BRIDGE_LIVE_REGRESSION_FAILED" <<< "${live_output}"; then
+    echo "Live regression run failed." >&2
+    exit 1
+  fi
+else
+  echo "LIVE_REGRESSION_SKIPPED: set GS_USER and GS_PASS to run integration lane"
 fi
 
 echo "CLEAN_RELOAD_AND_REGRESSION_RUN_DONE"

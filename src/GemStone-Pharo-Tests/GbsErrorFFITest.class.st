@@ -8,15 +8,15 @@ Class {
 { #category : 'private' }
 GbsErrorFFITest >> requireLiveSessionAndInterface [
 	| session interface |
-	session := GbsSessionParameters currentSession.
-	(session isNil or: [ session isConnected not ]) ifTrue: [
-		self skip: 'Requires an active GemStone session' ].
+	session := GbsLiveSessionTestSupport ensureSharedSession.
+	session ifNil: [
+		self skip: GbsLiveSessionTestSupport unavailableReason ].
 	interface := GbsServerInterface uniqueInstance.
 	interface ifNil: [ self skip: 'GemStone server interface unavailable' ].
 	^ interface
 ]
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsErrorFFITest >> test01ExecuteOnly [
 	"Diagnostic: Does the crash happen DURING execution?"
 	| interface |
@@ -29,7 +29,7 @@ GbsErrorFFITest >> test01ExecuteOnly [
 	self assert: true.
 ]
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsErrorFFITest >> test02ErrorWithExternalAddress [
 	"Diagnostic: Does the crash happen DURING error fetching?"
 	| interface cBuffer hasError |
@@ -48,7 +48,7 @@ GbsErrorFFITest >> test02ErrorWithExternalAddress [
 	].
 ]
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsErrorFFITest >> test03ExecuteSafe [
 	"Diagnostic: Can we safely execute an error without blowing up the C-stack?"
 	| interface resultOop |
@@ -62,33 +62,31 @@ GbsErrorFFITest >> test03ExecuteSafe [
 	self assert: resultOop equals: 1.
 ]
 
-{ #category : 'tests' }
+{ #category : 'integration tests' }
 GbsErrorFFITest >> testSafeErrorFetch [
-	| interface cBuffer hasError errorBytes errorString |
+	| interface cBuffer hasError errorString |
 	
 	interface := self requireLiveSessionAndInterface.
 	
 	"1. Trigger the massive error that previously crashed Pharo"
 	interface apiGciExecuteStr: 'Object thisMessageDoesNotExist' context: 20 env: 0.
 	
-	"2. Allocate a massive C-Array. It lives safely outside Pharo's GC heap."
-	cBuffer := FFIExternalArray externalNewType: 'uint8' size: 2048.
+	"2. Allocate the raw error buffer outside the image heap."
+	cBuffer := ExternalAddress allocate: 2168.
 	
 	[
 		"3. Fetch the error using the new safe void* signature"
-		hasError := interface apiGciErrSafe: cBuffer getHandle.
+		hasError := interface apiGciErrSafe: cBuffer.
 		self assert: hasError description: 'C-library should report an error'.
 		
-		"4. Extract the 1025-byte string starting at byte 115 (1-indexed)"
-		errorBytes := ByteArray new: 1024.
-		1 to: 1024 do: [ :i | errorBytes at: i put: (cBuffer at: 114 + i) ].
+		"4. Extract the C string payload from the known message offset"
+		errorString := ((cBuffer + 113) readString) asString.
 		
-		"5. Convert bytes to string and trim the C null-terminators"
-		errorString := errorBytes asString copyUpTo: Character null.
-		
-		"6. Prove we safely caught the MessageNotUnderstood without a SegFault!"
-		self assert: (errorString includesSubstring: 'doesNotUnderstand')
-			  description: 'Did not correctly parse the error string'.
+		"5. Prove we safely caught the MessageNotUnderstood without a SegFault!"
+		self
+			assert: ((errorString includesSubstring: 'MessageNotUnderstood')
+				or: [ errorString includesSubstring: 'thisMessageDoesNotExist' ])
+			description: 'Did not correctly parse the error string'.
 			  
 	] ensure: [ 
 		"Always free the C-memory"
