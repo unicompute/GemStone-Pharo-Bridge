@@ -8,6 +8,12 @@ Class {
 	#package : 'GemStone-Pharo-Tests'
 }
 
+{ #category : 'initialization' }
+MockGbsSession >> initialize [
+	super initialize.
+	isLoggedIn := true
+]
+
 { #category : 'accessing' }
 MockGbsSession >> apiGciExecute: aString context: anInteger [
 	"Intercept the actual FFI call used by execute:"
