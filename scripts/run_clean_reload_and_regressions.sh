@@ -11,6 +11,8 @@ SRC_CHANGES="${SRC_IMAGE%.image}.changes"
 WORK_CHANGES="${WORK_IMAGE%.image}.changes"
 
 mkdir -p "${WORK_DIR}"
+mkdir -p "${WORK_DIR}/pharo-local/ombu-sessions"
+mkdir -p /tmp/pharo-clean-auto/home
 cp -f "${SRC_IMAGE}" "${WORK_IMAGE}"
 if [[ -f "${SRC_CHANGES}" ]]; then
   cp -f "${SRC_CHANGES}" "${WORK_CHANGES}"
@@ -22,14 +24,14 @@ fi
 
 echo "Using work image: ${WORK_IMAGE}"
 
-reload_output="$("${VM}" --headless "${WORK_IMAGE}" st "/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/clean_reload_gemstone.st" 2>&1 || true)"
+reload_output="$(HOME=/tmp/pharo-clean-auto/home "${VM}" --headless "${WORK_IMAGE}" st "/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/clean_reload_gemstone.st" 2>&1 || true)"
 echo "${reload_output}"
 if grep -q "LOAD_ERROR" <<< "${reload_output}"; then
   echo "Clean reload failed." >&2
   exit 1
 fi
 
-test_output="$("${VM}" --headless "${WORK_IMAGE}" st "/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/run_live_debugger_regressions.st" 2>&1 || true)"
+test_output="$(HOME=/tmp/pharo-clean-auto/home "${VM}" --headless "${WORK_IMAGE}" st "/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/run_all_package_regressions.st" 2>&1 || true)"
 echo "${test_output}"
 if grep -q "LOAD_ERROR" <<< "${test_output}"; then
   echo "Regression run failed due to load error." >&2

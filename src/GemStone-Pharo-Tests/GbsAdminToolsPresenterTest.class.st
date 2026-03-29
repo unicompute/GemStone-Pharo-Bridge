@@ -2,15 +2,16 @@ Class {
 	#name : 'GbsAdminToolsPresenterTest',
 	#superclass : 'TestCase',
 	#instVars : [
-	'createUserPresenter',
-	'connectorBrowserPresenter',
-	'namespacesPresenter',
-	'securityPoliciesPresenter',
-	'userListPresenter',
-	'userInfoPresenter',
-	'previousConfiguration',
-	'previousCurrentSession'
-	],
+		'createUserPresenter',
+		'connectorBrowserPresenter',
+		'namespacesPresenter',
+		'securityPoliciesPresenter',
+		'userListPresenter',
+		'userInfoPresenter',
+		'previousConfiguration',
+		'previousCurrentSession',
+		'previousConnectorRegistries'
+		],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
 }
@@ -21,6 +22,8 @@ GbsAdminToolsPresenterTest >> setUp [
 	super setUp.
 	previousConfiguration := GbsConfiguration current.
 	previousCurrentSession := GbsSessionParameters currentSession.
+	previousConnectorRegistries := self snapshotConnectorRegistries.
+	GbsSessionManager resetConnectorState.
 	createUserPresenter := GbsCreateUserPresenter new.
 	connectorBrowserPresenter := GbsConnectorBrowserPresenter new.
 	namespacesPresenter := GbsNamespacesPresenter new.
@@ -38,9 +41,35 @@ GbsAdminToolsPresenterTest >> setUp [
 
 { #category : 'running' }
 GbsAdminToolsPresenterTest >> tearDown [
+	self restoreConnectorRegistries.
 	GbsSessionParameters currentSession: previousCurrentSession.
 	previousConfiguration ifNotNil: [ GbsConfiguration current: previousConfiguration ].
 	super tearDown
+]
+
+{ #category : 'running' }
+GbsAdminToolsPresenterTest >> restoreConnectorRegistries [
+	previousConnectorRegistries ifNil: [ ^ self ].
+	previousConnectorRegistries keysAndValuesDo: [ :key :value |
+		value
+			ifNil: [ Smalltalk globals removeKey: key ifAbsent: [ ] ]
+			ifNotNil: [ Smalltalk globals at: key put: value ] ].
+	previousConnectorRegistries := nil
+]
+
+{ #category : 'running' }
+GbsAdminToolsPresenterTest >> snapshotConnectorRegistries [
+	| keys |
+	keys := #(
+		GbsFastConnectorRegistry
+		GbsConnectorObjectRegistry
+		GbsConnectorConnectionRegistry
+		GbsConnectorClassMappingRegistry
+		GbsConnectorPostConnectActionRegistry
+		GbsSessionConnectorRegistry
+	).
+	^ Dictionary newFromPairs: (keys flatCollect: [ :each |
+		{ each. (Smalltalk globals at: each ifAbsent: [ nil ]) } ])
 ]
 
 { #category : 'tests' }

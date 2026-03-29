@@ -12,6 +12,7 @@ Class {
 GbsRemoteDebuggerTest >> setUp [
 	super setUp.
 	session := GbsSessionParameters currentSession.
+	(self hasUsableLiveSession: session) ifFalse: [ session := nil ]
 ]
 
 { #category : 'running' }
@@ -20,15 +21,30 @@ GbsRemoteDebuggerTest >> tearDown [
 	super tearDown.
 ]
 
+{ #category : 'private' }
+GbsRemoteDebuggerTest >> hasUsableLiveSession: aSession [
+	aSession ifNil: [ ^ false ].
+	(aSession respondsTo: #evaluate:) ifFalse: [ ^ false ].
+	(aSession respondsTo: #isConnected) ifFalse: [ ^ false ].
+	([ aSession isConnected = true ] on: Error do: [ false ]) ifFalse: [ ^ false ].
+	(aSession respondsTo: #isLoggedIn)
+		ifFalse: [ ^ false ].
+	^ [ aSession isLoggedIn = true ] on: Error do: [ false ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebuggerTest >> requireLiveConnectedSession [
+	session ifNil: [ self skip: 'Requires an active GemStone session' ]
+]
+
 { #category : 'tests' }
 GbsRemoteDebuggerTest >> testSessionIsConnected [
 	"Test that we have a valid session before running other tests"
 	
-	session ifNil: [
-		self skip: 'No GemStone session available - please login first'
-	].
+	self requireLiveConnectedSession.
 	
 	self assert: session isLoggedIn description: 'Session should be logged in'.
+	self assert: session isConnected description: 'Session should be connected'.
 	self deny: session sessionOop = 0 description: 'Session should have valid OOP'.
 ]
 
@@ -37,8 +53,7 @@ GbsRemoteDebuggerTest >> testSimpleExecution [
 	"Test 1: Simple execution should not raise errors"
 	| result |
 	
-	session ifNil: [ self skip: 'No session' ].
-	session isLoggedIn ifFalse: [ self skip: 'Not logged in' ].
+	self requireLiveConnectedSession.
 	
 	result := session evaluate: '1 + 1'.
 	
@@ -49,8 +64,7 @@ GbsRemoteDebuggerTest >> testSimpleExecution [
 GbsRemoteDebuggerTest >> testDivisionByZeroRaisesError [
 	"Test 2: Division by zero should raise GbsError"
 	
-	session ifNil: [ self skip: 'No session' ].
-	session isLoggedIn ifFalse: [ self skip: 'Not logged in' ].
+	self requireLiveConnectedSession.
 	
 	self should: [ session evaluate: '1 / 0' ] raise: GbsError.
 ]
@@ -60,8 +74,7 @@ GbsRemoteDebuggerTest >> testVariableAssignment [
 	"Test 3: Variable assignment and retrieval"
 	| result |
 	
-	session ifNil: [ self skip: 'No session' ].
-	session isLoggedIn ifFalse: [ self skip: 'Not logged in' ].
+	self requireLiveConnectedSession.
 	
 	result := session evaluate: '| x | x := 42. x'.
 	
@@ -73,8 +86,7 @@ GbsRemoteDebuggerTest >> testBlockExecution [
 	"Test 4: Block execution with arguments"
 	| result |
 	
-	session ifNil: [ self skip: 'No session' ].
-	session isLoggedIn ifFalse: [ self skip: 'Not logged in' ].
+	self requireLiveConnectedSession.
 	
 	result := session evaluate: '[:x :y | x + y] value: 5 value: 10'.
 	
@@ -86,8 +98,7 @@ GbsRemoteDebuggerTest >> testStringUppercase [
 	"Test 5: String operations"
 	| result |
 	
-	session ifNil: [ self skip: 'No session' ].
-	session isLoggedIn ifFalse: [ self skip: 'Not logged in' ].
+	self requireLiveConnectedSession.
 	
 	result := session evaluate: '''hello'' uppercase'.
 	
@@ -99,8 +110,7 @@ GbsRemoteDebuggerTest >> testArrayAccess [
 	"Test 6: Array access"
 	| result |
 	
-	session ifNil: [ self skip: 'No session' ].
-	session isLoggedIn ifFalse: [ self skip: 'Not logged in' ].
+	self requireLiveConnectedSession.
 	
 	result := session evaluate: '#(1 2 3) at: 2'.
 	
@@ -111,8 +121,7 @@ GbsRemoteDebuggerTest >> testArrayAccess [
 GbsRemoteDebuggerTest >> testArrayOutOfBoundsRaisesError [
 	"Test 7: Array out of bounds should raise error"
 	
-	session ifNil: [ self skip: 'No session' ].
-	session isLoggedIn ifFalse: [ self skip: 'Not logged in' ].
+	self requireLiveConnectedSession.
 	
 	self should: [ session evaluate: '#(1 2 3) at: 10' ] raise: GbsError.
 ]
@@ -121,8 +130,7 @@ GbsRemoteDebuggerTest >> testArrayOutOfBoundsRaisesError [
 GbsRemoteDebuggerTest >> testMessageNotUnderstoodRaisesError [
 	"Test 8: Message not understood should raise error"
 	
-	session ifNil: [ self skip: 'No session' ].
-	session isLoggedIn ifFalse: [ self skip: 'Not logged in' ].
+	self requireLiveConnectedSession.
 	
 	self should: [ session evaluate: 'Object thisMessageDoesNotExist' ] raise: GbsError.
 ]
@@ -132,8 +140,7 @@ GbsRemoteDebuggerTest >> testMultiStatementExecution [
 	"Test 9: Multiple statements"
 	| result |
 	
-	session ifNil: [ self skip: 'No session' ].
-	session isLoggedIn ifFalse: [ self skip: 'Not logged in' ].
+	self requireLiveConnectedSession.
 	
 	result := session evaluate: '| a b | a := 10. b := 20. a + b'.
 	
@@ -145,8 +152,7 @@ GbsRemoteDebuggerTest >> testNestedBlockExecution [
 	"Test 10: Nested blocks"
 	| result |
 	
-	session ifNil: [ self skip: 'No session' ].
-	session isLoggedIn ifFalse: [ self skip: 'Not logged in' ].
+	self requireLiveConnectedSession.
 	
 	result := session evaluate: '[ [ 42 ] value ] value'.
 	

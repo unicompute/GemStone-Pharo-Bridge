@@ -12,7 +12,22 @@ Class {
 
 { #category : 'accessing - platform' }
 GbsLibrary class >> gemstoneHome [
-	^ OSEnvironment default at: 'GEMSTONE' ifAbsent: [ nil ]
+	| environment fallback |
+	environment := (Smalltalk globals at: #OSEnvironment ifAbsent: [ nil ])
+		ifNil: [ nil ]
+		ifNotNil: [ :envClass |
+			(envClass respondsTo: #current)
+				ifTrue: [ [ envClass current ] on: Error do: [ nil ] ]
+				ifFalse: [
+					(envClass respondsTo: #default)
+						ifTrue: [ [ envClass default ] on: Error do: [ nil ] ]
+						ifFalse: [ nil ] ] ].
+	environment ifNil: [
+		environment := [ Smalltalk os environment ] on: Error do: [ nil ] ].
+	environment ifNotNil: [
+		^ environment at: 'GEMSTONE' ifAbsent: [ nil ] ].
+	fallback := '/opt/gemstone/product' asFileReference.
+	^ fallback exists ifTrue: [ fallback fullName ] ifFalse: [ nil ]
 ]
 
 { #category : 'accessing - platform' }

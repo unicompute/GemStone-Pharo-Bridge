@@ -378,6 +378,16 @@ GbsSessionManager class >> initializeGlobalConnectors [
 ]
 
 { #category : 'connector state' }
+GbsSessionManager class >> resetConnectorState [
+	Smalltalk globals at: #GbsFastConnectorRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsConnectorObjectRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsConnectorConnectionRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsConnectorClassMappingRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsConnectorPostConnectActionRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsSessionConnectorRegistry put: Dictionary new
+]
+
+{ #category : 'connector state' }
 GbsSessionManager class >> invalidPostConnectActionsForConnectorClient: clientClassName server: serverClassName [
 	"Parity hook used by connector browser. Return lower-case action names that are invalid.
 	Default fast connector behavior allows all actions."
