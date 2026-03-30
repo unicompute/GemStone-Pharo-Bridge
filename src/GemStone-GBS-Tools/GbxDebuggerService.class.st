@@ -1763,6 +1763,9 @@ GbxDebuggerService >> resetServerPCToStepOne [
 		level := self currentContextLevel.
 		(level isNil or: [ level <= 0 ]) ifTrue: [ level := 1 ] ].
 
+	"Always use the top server context level for restart"
+	level := 1.
+
 	script := '[
 		| obj proc tc restartLevel stackReport fullEntry quick |
 		obj := Object _objectForOop: ', processOop asString, '.
