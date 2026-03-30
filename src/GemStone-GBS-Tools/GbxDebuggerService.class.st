@@ -1752,29 +1752,19 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	"Force the debugged server process to restart at method entry (step=1).
 	This is the deterministic restart anchor used by basicReenterServerContext,
 	especially important for repeated Restart actions.
-	
-	Note: _trimStackToLevel: (called in cutbackGsTo:) already resets the stack
-	to step=1. This method ensures the server PC is also reset by re-trimming
-	at the executed code frame level."
-	| didReset script result level |
-	
-	"Get the executed code frame level"
+	Uses the actual executed-code frame level from the current server stack and
+	then applies a stronger reset ladder than the plain process-level
+	jumpToStepPoint:. This matches the working C++ GemStone FFI probes more
+	closely, especially for repeated restart cycles."
+	| script result level |
+
 	level := self restartLevelFromServerStack.
-	level ifNil: [ level := 1 ].
-	
-	"Try jumpToStepPoint: first (may work on some GemStone versions)"
-	didReset := self runDebugProcessCommand: 'jumpToStepPoint' withInteger: 1 recompute: true.
-	self logRestartText: 'resetServerPCToStepOne jumpToStepPoint:1 -> ', didReset asString.
-	didReset ifTrue: [ ^ true ].
-	
-	"Try runToStepPoint: as fallback"
-	didReset := self runDebugProcessCommand: 'runToStepPoint' withInteger: 1 recompute: true.
-	self logRestartText: 'resetServerPCToStepOne runToStepPoint:1 -> ', didReset asString.
-	didReset ifTrue: [ ^ true ].
-	
-	"_trimStackToLevel: already reset the stack, but re-trim to ensure PC is reset"
+	(level isNil or: [ level <= 0 ]) ifTrue: [
+		level := self currentContextLevel.
+		(level isNil or: [ level <= 0 ]) ifTrue: [ level := 1 ] ].
+
 	script := '[
-		| obj proc |
+		| obj proc tc restartLevel stackReport fullEntry quick |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
@@ -1790,15 +1780,61 @@ GbxDebuggerService >> resetServerPCToStepOne [
 			(top notNil and: [ top respondsTo: #process ])
 				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
 		].
-		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
-		[ proc _trimStackToLevel: ', level asString, ' ] on: Error do: [ nil ].
-		''true''
+		proc isNil ifTrue: [ ^ ''false'' ].
+		restartLevel := ', level asString, '.
+
+		"First, trim to the executed-code frame level."
+		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
+			[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ]
+		].
+
+		"Then force that frame back to step 1 using the strongest available API."
+		(proc respondsTo: #_gsiStepAtLevel:step:) ifTrue: [
+			[ proc _gsiStepAtLevel: restartLevel step: 1 ] on: Error do: [ ]
+		].
+		(proc respondsTo: #jumpToStepPoint:) ifTrue: [
+			[ proc jumpToStepPoint: 1 ] on: Error do: [ ]
+		].
+		(proc respondsTo: #runToStepPoint:) ifTrue: [
+			[ proc runToStepPoint: 1 ] on: Error do: [ ]
+		].
+
+		"Some GemStone builds respond better when the actual context object is nudged."
+		tc := [ proc topContext ] on: Error do: [ nil ].
+		tc notNil ifTrue: [
+			2 to: restartLevel do: [ :ignored |
+				tc := [ tc sender ] on: Error do: [ nil ].
+				tc ifNil: [ ignored := restartLevel ]
+			].
+			tc ifNotNil: [
+				(tc respondsTo: #jumpToStepPoint:) ifTrue: [
+					[ tc jumpToStepPoint: 1 ] on: Error do: [ ]
+				].
+				(tc respondsTo: #runToStepPoint:) ifTrue: [
+					[ tc runToStepPoint: 1 ] on: Error do: [ ]
+				]
+			]
+		].
+
+		"Re-trim once more so the process stack and the frame PC agree."
+		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
+			[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ]
+		].
+
+		quick := 0.
+		stackReport := [ proc _gsiStackReportFromLevel: restartLevel toLevel: restartLevel ] on: Error do: [ nil ].
+		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
+			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+			fullEntry ifNotNil: [
+				quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ]
+			]
+		].
+		(quick <= 1) ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]
 	] value'.
-	
+
 	result := self executeDebugScript: script.
-	didReset := self asBooleanResult: result default: false.
-	self logRestartText: 'resetServerPCToStepOne _trimStackToLevel:', level asString, ' -> ', didReset asString.
-	^ didReset
+	self logRestartText: 'resetServerPCToStepOne level=', level asString, ' result=', result printString.
+	^ self asBooleanResult: result default: false
 ]
 
 { #category : 'process control' }

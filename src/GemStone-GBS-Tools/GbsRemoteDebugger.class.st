@@ -903,8 +903,12 @@ GbsRemoteDebugger >> ensureServerPCToStepOneAfterRestart [
 	contextList ifNil: [ ^ self ].
 	contextList ifEmpty: [ ^ self ].
 
-	context := contextList at: 1.
-	((context respondsTo: #isExecutedCodeFrame) and: [ context isExecutedCodeFrame ]) ifFalse: [ ^ self ].
+	context := contextList
+		detect: [ :each |
+			(each respondsTo: #isExecutedCodeFrame)
+				and: [ each isExecutedCodeFrame ] ]
+		ifNone: [ nil ].
+	context ifNil: [ ^ self ].
 
 	"Force server to jump to step 1 (backup if trim didn't set it)"
 	self forceServerJumpToStepPoint1
@@ -1298,13 +1302,17 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 	again at the executed code frame level to force a PC reset."
 	| script raw level |
 	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
+
+	(service notNil and: [ service respondsTo: #resetServerPCToStepOne ]) ifTrue: [
+		^ self safeServiceCall: [ service resetServerPCToStepOne ] default: false
+	].
 	
 	"Get the executed code frame level from server"
 	level := self resolveExecutedFrameLevelFromServer.
 	level ifNil: [ level := 1 ].
 
 	script := '[
-		| obj proc restartLevel stackReport fullEntry quick |
+		| obj proc tc restartLevel stackReport fullEntry quick |
 		obj := Object _objectForOop: ', processOop asString, '.
 		obj isNil ifTrue: [ ^ false ].
 		proc := obj.
@@ -1324,6 +1332,10 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 		
 		restartLevel := ', level asString, '.
 		
+		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
+			[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ]
+		].
+
 		"Check current step point at the executed code frame level"
 		quick := 0.
 		stackReport := [ proc _gsiStackReportFromLevel: restartLevel toLevel: restartLevel ] on: Error do: [ nil ].
@@ -1337,15 +1349,43 @@ GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
 		"If already at step 1, nothing to do"
 		quick <= 1 ifTrue: [ ^ true ].
 		
-		"Try jumpToStepPoint: if available (may not exist on all GemStone versions)"
+		(proc respondsTo: #_gsiStepAtLevel:step:) ifTrue: [
+			[ proc _gsiStepAtLevel: restartLevel step: 1 ] on: Error do: [ ]
+		].
 		(proc respondsTo: #jumpToStepPoint:) ifTrue: [
 			[ proc jumpToStepPoint: 1 ] on: Error do: [ ].
-			^ true
+		].
+		(proc respondsTo: #runToStepPoint:) ifTrue: [
+			[ proc runToStepPoint: 1 ] on: Error do: [ ]
+		].
+
+		tc := [ proc topContext ] on: Error do: [ nil ].
+		tc notNil ifTrue: [
+			2 to: restartLevel do: [ :ignored |
+				tc := [ tc sender ] on: Error do: [ nil ].
+				tc ifNil: [ ignored := restartLevel ]
+			].
+			tc ifNotNil: [
+				(tc respondsTo: #jumpToStepPoint:) ifTrue: [
+					[ tc jumpToStepPoint: 1 ] on: Error do: [ ]
+				].
+				(tc respondsTo: #runToStepPoint:) ifTrue: [
+					[ tc runToStepPoint: 1 ] on: Error do: [ ]
+				]
+			]
 		].
 		
-		"jumpToStepPoint: not available. Re-trim to force PC reset."
 		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ].
-		true
+
+		quick := 0.
+		stackReport := [ proc _gsiStackReportFromLevel: restartLevel toLevel: restartLevel ] on: Error do: [ nil ].
+		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
+			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+			fullEntry ifNotNil: [
+				quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ]
+			]
+		].
+		quick <= 1
 	] value'.
 
 	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
@@ -2052,8 +2092,12 @@ GbsRemoteDebugger >> resetServerPCToStepOneIfNeeded [
 	contextList ifNil: [ ^ false ].
 	contextList ifEmpty: [ ^ false ].
 	
-	context := contextList at: 1.
-	((context respondsTo: #isExecutedCodeFrame) and: [ context isExecutedCodeFrame ]) ifFalse: [ ^ false ].
+	context := contextList
+		detect: [ :each |
+			(each respondsTo: #isExecutedCodeFrame)
+				and: [ each isExecutedCodeFrame ] ]
+		ifNone: [ nil ].
+	context ifNil: [ ^ false ].
 	
 	"Force server to jump to step 1"
 	^ self forceServerJumpToStepPoint1

@@ -874,9 +874,9 @@ GbxDebuggerServiceTest >> testRestartEmitsStepOneCommands [
 
 	self assert: service restart.
 	self assert: (scripts anySatisfy: [ :each | each includesSubstring: '_trimStackToLevel:' ]).
-	self assert: (scripts anySatisfy: [ :each |
-		(each includesSubstring: 'jumpToStepPoint')
-			and: [ each includesSubstring: 'with: 1' ] ])
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: '_gsiStepAtLevel:step:' ]).
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'jumpToStepPoint:' ]).
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'runToStepPoint:' ])
 ]
 
 { #category : 'tests' }
