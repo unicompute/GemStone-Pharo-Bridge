@@ -58,3 +58,30 @@ GbxCachedClassStatResource class >> resourceTypeId [
 GbxCachedClassStatResource class >> resourceTypeName [
 	^ 'Cache'
 ]
+
+{ #category : 'accessing' }
+GbxCachedClassStatResource >> gbsBytesCached [
+	^ gbsBytesCached ifNil: [ 0 ]
+]
+
+{ #category : 'incrementing' }
+GbxCachedClassStatResource >> incGbsBytesCached: anInteger [
+	gbsBytesCached := self gbsBytesCached + anInteger
+]
+
+{ #category : 'incrementing' }
+GbxCachedClassStatResource >> incNumInstances [
+	numInstances := self numInstances + 1
+]
+
+{ #category : 'accessing' }
+GbxCachedClassStatResource >> numInstances [
+	^ numInstances ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+GbxCachedClassStatResource >> reinitializeStats [
+	super reinitializeStats.
+	numInstances := 0.
+	gbsBytesCached := 0
+]
