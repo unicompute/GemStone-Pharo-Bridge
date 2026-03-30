@@ -17,7 +17,8 @@ GbxOverrideToolsTest >> clearTestOverrideMetadata [
 
 { #category : 'private' }
 GbxOverrideToolsTest >> ensureProductionOverrideState [
-	(GbxOverrideUtility allOverridesInPackage: GbxRuntimeOverrideSpec overridesPackageName) isEmpty
+	((GbxOverrideUtility allOverridesInPackage: GbxRuntimeOverrideSpec overridesPackageName) isEmpty
+		or: [ (GbxOverrideUtility allOverridesInPackage: GbxToolsOverrideSpec overridesPackageName) isEmpty ])
 		ifTrue: [ BaselineOfGemStonePharo new postload: nil package: nil ]
 ]
 
@@ -67,6 +68,32 @@ GbxOverrideToolsTest >> testBaselineHooksRoundTripRuntimeOverrides [
 
 	self assert: (GbxOverrideUtility allOverridesInPackage: GbxRuntimeOverrideSpec overridesPackageName) isEmpty.
 	self assert: (Bag >> #add:withOccurrences:) sourceCode asString equals: originalSource
+]
+
+{ #category : 'tests' }
+GbxOverrideToolsTest >> testBaselineHooksRoundTripToolsOverrides [
+	| baseline originalClassSource originalInstanceSource overriddenClassSource overriddenInstanceSource |
+	baseline := BaselineOfGemStonePharo new.
+	overriddenInstanceSource := (StPlaygroundPagePresenter >> #menuActionsFor:) sourceCode asString.
+	overriddenClassSource := (StPlaygroundPagePresenter class >> #extendedMenuCommands) sourceCode asString.
+
+	self assert: (GbxOverrideUtility allOverridesInPackage: GbxToolsOverrideSpec overridesPackageName) size equals: 2.
+	self assert: (overriddenInstanceSource includesSubstring: 'GemStone').
+	self assert: (overriddenClassSource includesSubstring: 'beginsWith: ''GbsPlayground''').
+
+	baseline preload: nil package: nil.
+	originalInstanceSource := (StPlaygroundPagePresenter >> #menuActionsFor:) sourceCode asString.
+	originalClassSource := (StPlaygroundPagePresenter class >> #extendedMenuCommands) sourceCode asString.
+
+	self assert: (GbxOverrideUtility allOverridesInPackage: GbxToolsOverrideSpec overridesPackageName) isEmpty.
+	self deny: (originalInstanceSource includesSubstring: 'GemStone').
+	self deny: (originalClassSource includesSubstring: 'beginsWith: ''GbsPlayground''').
+
+	baseline postload: nil package: nil.
+
+	self assert: (GbxOverrideUtility allOverridesInPackage: GbxToolsOverrideSpec overridesPackageName) size equals: 2.
+	self assert: (StPlaygroundPagePresenter >> #menuActionsFor:) sourceCode asString equals: overriddenInstanceSource.
+	self assert: (StPlaygroundPagePresenter class >> #extendedMenuCommands) sourceCode asString equals: overriddenClassSource
 ]
 
 { #category : 'tests' }
@@ -251,12 +278,22 @@ GbxOverrideToolsTest >> testPrepareOverridesForReleaseRegeneratesSpecAndRestores
 ]
 
 { #category : 'tests' }
-GbxOverrideToolsTest >> testToolsOverrideSpecIsConcreteAndEmptyInPharo [
-	| spec |
+GbxOverrideToolsTest >> testToolsOverrideSpecProvidesExpectedPlaygroundOverrides [
+	| spec overrides |
 	spec := GbxToolsOverrideSpec spec.
+	overrides := spec methodOverrides.
 
 	self assert: GbxToolsOverrideSpec specMethodSelector equals: #spec93.
 	self assert: GbxToolsOverrideSpec overridesPackageName equals: 'GbsToolsOverrides'.
 	self assert: spec packageName equals: 'GbsToolsOverrides'.
-	self assert: spec hasNoEffect
+	self assert: spec classOverrides isEmpty.
+	self assert: spec variableOverrides isEmpty.
+	self assert: overrides size equals: 2.
+	self deny: spec hasNoEffect.
+	self assert: (overrides anySatisfy: [ :each |
+		each behavior = StPlaygroundPagePresenter
+			and: [ each selector = #menuActionsFor: ] ]).
+	self assert: (overrides anySatisfy: [ :each |
+		each behavior = StPlaygroundPagePresenter class
+			and: [ each selector = #extendedMenuCommands ] ])
 ]
