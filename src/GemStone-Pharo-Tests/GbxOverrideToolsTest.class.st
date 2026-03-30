@@ -5,10 +5,27 @@ Class {
 	#package : 'GemStone-Pharo-Tests'
 }
 
+{ #category : 'private' }
+GbxOverrideToolsTest >> clearTestOverrideMetadata [
+	#(
+		'GemStone-Pharo-Tests'
+		'GbxOverrideDiscoveryPackage'
+		'GbxOverrideReleasePackage'
+	) do: [ :each |
+		GbxOverrideUtility clearInstalledOverrideMetadataForPackageName: each ]
+]
+
+{ #category : 'private' }
+GbxOverrideToolsTest >> ensureProductionOverrideState [
+	(GbxOverrideUtility allOverridesInPackage: GbxRuntimeOverrideSpec overridesPackageName) isEmpty
+		ifTrue: [ BaselineOfGemStonePharo new postload: nil package: nil ]
+]
+
 { #category : 'running' }
 GbxOverrideToolsTest >> setUp [
 	super setUp.
-	GbxOverrideUtility clearInstalledOverrideMetadata.
+	self ensureProductionOverrideState.
+	self clearTestOverrideMetadata.
 	GbxOverrideFixture restoreDefaultDefinition.
 	GbxOverrideReleaseSpecFixture restoreDefaultSpecMethod
 ]
@@ -17,7 +34,8 @@ GbxOverrideToolsTest >> setUp [
 GbxOverrideToolsTest >> tearDown [
 	GbxOverrideFixture restoreDefaultDefinition.
 	GbxOverrideReleaseSpecFixture restoreDefaultSpecMethod.
-	GbxOverrideUtility clearInstalledOverrideMetadata.
+	self clearTestOverrideMetadata.
+	self ensureProductionOverrideState.
 	super tearDown
 ]
 
@@ -26,6 +44,29 @@ GbxOverrideToolsTest >> testAbstractOverrideSpecChoosesNewestDeclaredVersion [
 	self assert: GbxOverrideSpecFixture specMethodSelector equals: #spec200.
 	self assert: GbxOverrideSpecFixture specMethodVersion equals: '2.0'.
 	self assert: GbxOverrideSpecFixture spec packageName equals: 'NewestPackage'
+]
+
+{ #category : 'tests' }
+GbxOverrideToolsTest >> testBaselineHooksRoundTripRuntimeOverrides [
+	| baseline originalSource overriddenSource |
+	baseline := BaselineOfGemStonePharo new.
+
+	baseline preload: nil package: nil.
+	originalSource := (Bag >> #add:withOccurrences:) sourceCode asString.
+
+	self assert: (GbxOverrideUtility allOverridesInPackage: GbxRuntimeOverrideSpec overridesPackageName) isEmpty.
+
+	baseline postload: nil package: nil.
+	overriddenSource := (Bag >> #add:withOccurrences:) sourceCode asString.
+
+	self assert: (GbxOverrideUtility allOverridesInPackage: GbxRuntimeOverrideSpec overridesPackageName) size equals: 4.
+	self assert: (overriddenSource includesSubstring: 'gbxConsiderModified').
+	self deny: overriddenSource equals: originalSource.
+
+	baseline preload: nil package: nil.
+
+	self assert: (GbxOverrideUtility allOverridesInPackage: GbxRuntimeOverrideSpec overridesPackageName) isEmpty.
+	self assert: (Bag >> #add:withOccurrences:) sourceCode asString equals: originalSource
 ]
 
 { #category : 'tests' }
@@ -42,7 +83,7 @@ GbxOverrideToolsTest >> testConcreteRuntimeOverrideSpecProvidesExpectedRuntimeOv
 	self assert: spec methodOverrides size equals: 4.
 	self assert: (selectors includes: #add:withOccurrences:).
 	self assert: (selectors includes: #remove:ifAbsent:).
-	self assert: (selectors includes: #removeAllOccurrencesOf:ifAbsent:).
+	self assert: (selectors includes: #removeKey:ifAbsent:).
 	self assert: (selectors includes: #at:put:)
 ]
 

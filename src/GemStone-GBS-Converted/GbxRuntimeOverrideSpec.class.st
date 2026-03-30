@@ -5,6 +5,83 @@ Class {
 	#package : 'GemStone-GBS-Converted'
 }
 
+{ #category : 'generated' }
+GbxRuntimeOverrideSpec class >> bagAddWithOccurrencesOverrideSource [
+	^ 'add: newObject withOccurrences: anInteger
+	"Add newObject anInteger times to the receiver. Answer newObject."
+
+	contents at: newObject put: (contents at: newObject ifAbsent: [ 0 ]) + anInteger.
+	self gbxConsiderModified.
+	^ newObject'
+]
+
+{ #category : 'generated' }
+GbxRuntimeOverrideSpec class >> bagAddWithOccurrencesSource [
+	^ (Bag >> #add:withOccurrences:) sourceCode asString
+]
+
+{ #category : 'generated' }
+GbxRuntimeOverrideSpec class >> bagRemoveIfAbsentOverrideSource [
+	^ 'remove: oldObject ifAbsent: exceptionBlock
+	"Remove oldObject from the receiver''s elements. If several of the
+	elements are equal to oldObject, only one is removed. If no element is
+	equal to oldObject, answer the result of evaluating anExceptionBlock.
+	Otherwise, answer the argument, oldObject."
+
+	| count |
+	count := contents at: oldObject ifAbsent: [ ^ exceptionBlock value ].
+	count = 1
+		ifTrue: [ contents removeKey: oldObject ]
+		ifFalse: [ contents at: oldObject put: count - 1 ].
+	self gbxConsiderModified.
+	^ oldObject'
+]
+
+{ #category : 'generated' }
+GbxRuntimeOverrideSpec class >> bagRemoveIfAbsentSource [
+	^ (Bag >> #remove:ifAbsent:) sourceCode asString
+]
+
+{ #category : 'generated' }
+GbxRuntimeOverrideSpec class >> bagRemoveKeyIfAbsentOverrideSource [
+	^ 'removeKey: oldObject ifAbsent: exceptionBlock
+	"Remove oldObject''s entry (e.g., the object and all its occurrences) from the receiver''s elements.
+	If no element is equal to oldObject, answer the result of evaluating anExceptionBlock.
+	Otherwise, answer the argument, oldObject."
+
+	contents at: oldObject ifAbsent: [ ^ exceptionBlock value ].
+	contents removeKey: oldObject.
+	self gbxConsiderModified.
+	^ oldObject'
+]
+
+{ #category : 'generated' }
+GbxRuntimeOverrideSpec class >> bagRemoveKeyIfAbsentSource [
+	^ (Bag >> #removeKey:ifAbsent:) sourceCode asString
+]
+
+{ #category : 'generated' }
+GbxRuntimeOverrideSpec class >> identityDictionaryAtPutOverrideSource [
+	^ 'at: key put: anObject
+	"Set the value at key to be anObject. If key is not found, create a
+	new entry for key and set its value to anObject. Answer anObject."
+
+	| index assoc |
+	index := self findElementOrNil: key.
+	assoc := array at: index.
+	assoc
+		ifNil: [ self atNewIndex: index put: (Association key: key value: anObject) ]
+		ifNotNil: [
+			assoc value: anObject.
+			self gbxConsiderModified ].
+	^ anObject'
+]
+
+{ #category : 'generated' }
+GbxRuntimeOverrideSpec class >> identityDictionaryAtPutSource [
+	^ (Dictionary >> #at:put:) sourceCode asString
+]
+
 { #category : 'accessing' }
 GbxRuntimeOverrideSpec class >> overridesPackageName [
 	^ 'GbsRuntimeOverrides'
@@ -13,167 +90,19 @@ GbxRuntimeOverrideSpec class >> overridesPackageName [
 { #category : 'generated' }
 GbxRuntimeOverrideSpec class >> spec832 [
 	<version: '8.3.2'>
-	^ GbxOverrideSet
-		destinationPackageName: self overridesPackageName
-		classOverrides: #()
-		variableOverrides: #()
-		methodOverrides: (OrderedCollection new
-				add: (GbxMethodOverride
-							behavior: Bag
-							selector: #add:withOccurrences:
-							crc: 1268044848
-							edits: (OrderedCollection new
-									add: (GbxOverrideEditCopy count: 447);
-									add: (GbxOverrideEditInsert string: 'self gbxConsiderModified.	"Force self to be modified, thus marked dirty if it''s a GBS replicate"
-	');
-									add: (GbxOverrideEditCopy count: 10);
-									yourself));
-				add: (GbxMethodOverride
-							behavior: Bag
-							selector: #remove:ifAbsent:
-							crc: 2108386237
-							edits: (OrderedCollection new
-									add: (GbxOverrideEditCopy count: 521);
-									add: (GbxOverrideEditInsert string: 'self gbxConsiderModified.
-	');
-									add: (GbxOverrideEditCopy count: 10);
-									yourself));
-				add: (GbxMethodOverride
-							behavior: Bag
-							selector: #removeAllOccurrencesOf:ifAbsent:
-							crc: 3655069410
-							edits: (OrderedCollection new
-									add: (GbxOverrideEditCopy count: 150);
-									add: (GbxOverrideEditDelete count: 1);
-									add: (GbxOverrideEditInsert string: '| objectPresent result |
-	objectPresent := true.	"Assume until proven otherwise."
-	result := ');
-									add: (GbxOverrideEditCopy count: 28);
-									add: (GbxOverrideEditDelete count: 1);
-									add: (GbxOverrideEditInsert string: '
-				');
-									add: (GbxOverrideEditCopy count: 9);
-									add: (GbxOverrideEditInsert string: ' 
-					[objectPresent :=');
-									add: (GbxOverrideEditCopy count: 1);
-									add: (GbxOverrideEditInsert string: 'false.
-					');
-									add: (GbxOverrideEditCopy count: 6);
-									add: (GbxOverrideEditInsert string: ' value].
-	objectPresent ifTrue: [self gbxConsiderModified].	"Force self to be modifed, thus marked dirty if a GBS replicate."
-	^result');
-									yourself));
-				add: (GbxMethodOverride
-							behavior: IdentityDictionary
-							selector: #at:put:
-							crc: 4013936043
-							edits: (OrderedCollection new
-									add: (GbxOverrideEditCopy count: 354);
-									add: (GbxOverrideEditInsert string: '
-			');
-									add: (GbxOverrideEditCopy count: 32);
-									add: (GbxOverrideEditInsert string: '.
-			self gbxConsiderModified	"Force self to be modifed, thus marked dirty if I''m a GBS replicate"');
-									add: (GbxOverrideEditCopy count: 10);
-									yourself));
-				yourself)
+	^ self spec93
 ]
 
 { #category : 'generated' }
 GbxRuntimeOverrideSpec class >> spec911 [
 	<version: '9.1.1'>
-	^ GbxOverrideSet
-		destinationPackageName: self overridesPackageName
-		classOverrides: #()
-		variableOverrides: #()
-		methodOverrides: (OrderedCollection new
-				add: (GbxMethodOverride
-							behavior: Bag
-							selector: #add:withOccurrences:
-							crc: 1268044848
-							edits: (OrderedCollection new
-									add: (GbxOverrideEditCopy count: 266);
-									add: (GbxOverrideEditDelete count: 1);
-									add: (GbxOverrideEditCopy count: 49);
-									add: (GbxOverrideEditDelete count: 3);
-									add: (GbxOverrideEditInsert string: ' ');
-									add: (GbxOverrideEditCopy count: 13);
-									add: (GbxOverrideEditDelete count: 3);
-									add: (GbxOverrideEditInsert string: ' ');
-									add: (GbxOverrideEditCopy count: 14);
-									add: (GbxOverrideEditDelete count: 1);
-									add: (GbxOverrideEditInsert string: '
-				');
-									add: (GbxOverrideEditCopy count: 96);
-									add: (GbxOverrideEditInsert string: '	self gbxConsiderModified.');
-									add: (GbxOverrideEditCopy count: 1);
-									add: (GbxOverrideEditInsert string: '"Force self to be modified, thus marked dirty if it''s a GBS replicate"
-	');
-									add: (GbxOverrideEditCopy count: 10);
-									yourself));
-				add: (GbxMethodOverride
-							behavior: Bag
-							selector: #remove:ifAbsent:
-							crc: 2108386237
-							edits: (OrderedCollection new
-									add: (GbxOverrideEditCopy count: 42);
-									add: (GbxOverrideEditDelete count: 2);
-									add: (GbxOverrideEditCopy count: 474);
-									add: (GbxOverrideEditInsert string: '.
-	self gbxConsiderModified');
-									add: (GbxOverrideEditCopy count: 13);
-									yourself));
-				add: (GbxMethodOverride
-							behavior: Bag
-							selector: #removeAllOccurrencesOf:ifAbsent:
-							crc: 3655069410
-							edits: (OrderedCollection new
-									add: (GbxOverrideEditCopy count: 150);
-									add: (GbxOverrideEditDelete count: 1);
-									add: (GbxOverrideEditInsert string: '| objectPresent result |
-	objectPresent := true.	"Assume until proven otherwise."
-	result := ');
-									add: (GbxOverrideEditCopy count: 28);
-									add: (GbxOverrideEditDelete count: 1);
-									add: (GbxOverrideEditInsert string: '
-				');
-									add: (GbxOverrideEditCopy count: 9);
-									add: (GbxOverrideEditInsert string: ' 
-					[objectPresent :=');
-									add: (GbxOverrideEditCopy count: 1);
-									add: (GbxOverrideEditInsert string: 'false.
-					');
-									add: (GbxOverrideEditCopy count: 6);
-									add: (GbxOverrideEditInsert string: ' value].
-	objectPresent ifTrue: [self gbxConsiderModified].	"Force self to be modifed, thus marked dirty if a GBS replicate."
-	^result');
-									yourself));
-				add: (GbxMethodOverride
-							behavior: IdentityDictionary
-							selector: #at:put:
-							crc: 4013936043
-							edits: (OrderedCollection new
-									add: (GbxOverrideEditCopy count: 56);
-									add: (GbxOverrideEditDelete count: 1);
-									add: (GbxOverrideEditCopy count: 23);
-									add: (GbxOverrideEditDelete count: 1);
-									add: (GbxOverrideEditInsert string: '
-		');
-									add: (GbxOverrideEditCopy count: 273);
-									add: (GbxOverrideEditInsert string: '
-			');
-									add: (GbxOverrideEditCopy count: 32);
-									add: (GbxOverrideEditInsert string: '.
-			self gbxConsiderModified	"Force self to be modifed, thus marked dirty if I''m a GBS replicate"');
-									add: (GbxOverrideEditCopy count: 10);
-									yourself));
-				yourself)
+	^ self spec93
 ]
 
 { #category : 'generated' }
 GbxRuntimeOverrideSpec class >> spec921 [
 	<version: '9.2.1'>
-	^ self spec911
+	^ self spec93
 ]
 
 { #category : 'generated' }
@@ -187,62 +116,22 @@ GbxRuntimeOverrideSpec class >> spec93 [
 				add: (GbxMethodOverride
 							behavior: Bag
 							selector: #add:withOccurrences:
-							crc: 1268044848
-							edits: (OrderedCollection new
-									add: (GbxOverrideEditCopy count: 447);
-									add: (GbxOverrideEditInsert string: 'self gbxConsiderModified.	"Force self to be modified, thus marked dirty if it''s a GBS replicate"
-	');
-									add: (GbxOverrideEditCopy count: 10);
-									yourself));
+							from: self bagAddWithOccurrencesSource
+							to: self bagAddWithOccurrencesOverrideSource);
 				add: (GbxMethodOverride
 							behavior: Bag
 							selector: #remove:ifAbsent:
-							crc: 2108386237
-							edits: (OrderedCollection new
-									add: (GbxOverrideEditCopy count: 42);
-									add: (GbxOverrideEditDelete count: 2);
-									add: (GbxOverrideEditCopy count: 474);
-									add: (GbxOverrideEditInsert string: '.
-	self gbxConsiderModified');
-									add: (GbxOverrideEditCopy count: 13);
-									yourself));
+							from: self bagRemoveIfAbsentSource
+							to: self bagRemoveIfAbsentOverrideSource);
 				add: (GbxMethodOverride
 							behavior: Bag
-							selector: #removeAllOccurrencesOf:ifAbsent:
-							crc: 3655069410
-							edits: (OrderedCollection new
-									add: (GbxOverrideEditCopy count: 150);
-									add: (GbxOverrideEditDelete count: 1);
-									add: (GbxOverrideEditInsert string: '| objectPresent result |
-	objectPresent := true.	"Assume until proven otherwise."
-	result := ');
-									add: (GbxOverrideEditCopy count: 28);
-									add: (GbxOverrideEditDelete count: 1);
-									add: (GbxOverrideEditInsert string: '
-				');
-									add: (GbxOverrideEditCopy count: 9);
-									add: (GbxOverrideEditInsert string: ' 
-					[objectPresent :=');
-									add: (GbxOverrideEditCopy count: 1);
-									add: (GbxOverrideEditInsert string: 'false.
-					');
-									add: (GbxOverrideEditCopy count: 6);
-									add: (GbxOverrideEditInsert string: ' value].
-	objectPresent ifTrue: [self gbxConsiderModified].	"Force self to be modifed, thus marked dirty if a GBS replicate."
-	^result');
-									yourself));
+							selector: #removeKey:ifAbsent:
+							from: self bagRemoveKeyIfAbsentSource
+							to: self bagRemoveKeyIfAbsentOverrideSource);
 				add: (GbxMethodOverride
 							behavior: IdentityDictionary
 							selector: #at:put:
-							crc: 4013936043
-							edits: (OrderedCollection new
-									add: (GbxOverrideEditCopy count: 354);
-									add: (GbxOverrideEditInsert string: '
-			');
-									add: (GbxOverrideEditCopy count: 32);
-									add: (GbxOverrideEditInsert string: '.
-			self gbxConsiderModified	"Force self to be modifed, thus marked dirty if I''m a GBS replicate"');
-									add: (GbxOverrideEditCopy count: 10);
-									yourself));
+							from: self identityDictionaryAtPutSource
+							to: self identityDictionaryAtPutOverrideSource);
 				yourself)
 ]

@@ -1,31 +1,20 @@
 Extension { #name : 'Object' }
 
-{ #category : '*GemStone-GBS-Converted-messenger' }
-Object >> cstArgumentPrintOn: aStream [
-	self printOn: aStream
-]
-
-{ #category : '*GemStone-GBS-Converted-messenger' }
-Object >> cstMessenger [
-	^ CstMessageDispatcher singleton
-]
-
-{ #category : '*GemStone-GBS-Converted-debugging' }
-Object >> gbxDebugPrintOn: aStream [
-	self printOn: aStream
-]
-
-{ #category : '*GemStone-GBS-Converted-debugging' }
-Object >> gbxIsForwarder [
-	^ false
-]
-
-{ #category : '*GemStone-GBS-Converted-debugging' }
-Object >> gbxIsStub [
-	^ false
-]
-
-{ #category : '*GemStone-GBS-Converted-debugging' }
-Object >> gbxIsWrapped [
-	^ false
+{ #category : '*GemStone-GBS-Converted' }
+Object >> gbxConsiderModified [
+	"Best-effort Pharo port of the VW dirty-mark hook. If the receiver does not
+	participate in the GemBuilder replicate/proxy protocol, this is a no-op."
+	| configuration delegate isImmutable |
+	configuration := [ GbsConfiguration current ] on: Error do: [ ^ self ].
+	(configuration respondsTo: #autoMarkDirty) ifFalse: [ ^ self ].
+	configuration autoMarkDirty ifFalse: [ ^ self ].
+	isImmutable := (self respondsTo: #gbxIsImmutable)
+		ifTrue: [ [ self gbxIsImmutable ] on: Error do: [ false ] ]
+		ifFalse: [ false ].
+	isImmutable ifFalse: [ ^ self ].
+	(self respondsTo: #gbxDelegate) ifFalse: [ ^ self ].
+	delegate := [ self gbxDelegate ] on: Error do: [ nil ].
+	(delegate notNil and: [ delegate respondsTo: #markStDirty: ])
+		ifTrue: [ delegate markStDirty: self ].
+	^ self
 ]

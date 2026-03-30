@@ -8,6 +8,16 @@
     'GemStone-GBS-Converted'
   ).
 
+  (Smalltalk at: #GbxOverrideUtility ifAbsent: [ nil ]) ifNotNil: [ :overrideUtility |
+    [ overrideUtility removeOverridesForRelease ]
+      on: Error
+      do: [ :ex |
+        Transcript
+          show: 'UNLOAD_WARN overrides :: ';
+          show: ex messageText;
+          cr
+      ] ].
+
   organizer ifNotNil: [
     packageNames do: [ :pkgName |
       | pkg |

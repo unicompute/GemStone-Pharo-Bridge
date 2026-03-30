@@ -184,7 +184,7 @@ GbxOverrideUtility class >> noteInstalledClassOverride: aClassOverride originalI
 ]
 
 { #category : 'registry' }
-GbxOverrideUtility class >> noteInstalledMethodOverride: aMethodOverride originalSource: sourceString protocol: protocolName [
+GbxOverrideUtility class >> noteInstalledMethodOverride: aMethodOverride originalSource: sourceString protocol: protocolName wasLocal: wasLocal [
 	| packageName key existing metadata |
 	packageName := self packageNameOf: aMethodOverride package.
 	packageName isEmpty ifTrue: [ ^ aMethodOverride ].
@@ -200,6 +200,7 @@ GbxOverrideUtility class >> noteInstalledMethodOverride: aMethodOverride origina
 		at: #selector put: aMethodOverride selector;
 		at: #originalSource put: (existing at: #originalSource ifAbsent: [ sourceString ]);
 		at: #originalProtocol put: (existing at: #originalProtocol ifAbsent: [ protocolName ifNil: [ 'as yet unclassified' ] ]);
+		at: #originalWasLocal put: (existing at: #originalWasLocal ifAbsent: [ wasLocal ]);
 		yourself.
 	(self installedMethodOverridesForPackageName: packageName)
 		at: key
@@ -292,12 +293,16 @@ GbxOverrideUtility class >> restoreClassOverrideFromMetadata: metadata [
 
 { #category : 'registry' }
 GbxOverrideUtility class >> restoreMethodOverrideFromMetadata: metadata [
-	| behavior sourceString protocolName selector |
+	| behavior sourceString protocolName selector wasLocal |
 	behavior := self behaviorFromMetadata: metadata.
 	behavior ifNil: [ ^ false ].
 	sourceString := metadata at: #originalSource ifAbsent: [ ^ false ].
 	protocolName := metadata at: #originalProtocol ifAbsent: [ 'as yet unclassified' ].
 	selector := metadata at: #selector ifAbsent: [ ^ false ].
+	wasLocal := metadata at: #originalWasLocal ifAbsent: [ true ].
+	wasLocal ifFalse: [
+		behavior removeSelector: selector.
+		^ true ].
 	[
 		behavior compile: sourceString classified: protocolName ]
 		on: Error

@@ -9,6 +9,9 @@ Class {
 BaselineOfGemStonePharo >> baseline: spec [
 	<baseline>
 	spec for: #common do: [ 
+		spec
+			preLoadDoIt: #preload:package:;
+			postLoadDoIt: #postload:package:.
 		
 		"1. Define the Packages and their Dependencies"
 		spec package: 'GemStone-GBS-Converted'.
@@ -26,4 +29,21 @@ BaselineOfGemStonePharo >> baseline: spec [
 			group: 'Tests' with: #('GemStone-Pharo-Tests');
 			group: 'default' with: #('Tools' 'Tests').
 	]
+]
+
+{ #category : 'actions' }
+BaselineOfGemStonePharo >> postload: loader package: packageSpec [
+	self class environment
+		at: #GbxRuntimeOverrideSpec
+		ifPresent: [ :runtimeSpec | runtimeSpec apply ].
+	self class environment
+		at: #GbxToolsOverrideSpec
+		ifPresent: [ :toolsSpec | toolsSpec apply ]
+]
+
+{ #category : 'actions' }
+BaselineOfGemStonePharo >> preload: loader package: packageSpec [
+	self class environment
+		at: #GbxOverrideUtility
+		ifPresent: [ :overrideUtility | overrideUtility removeOverridesForRelease ]
 ]

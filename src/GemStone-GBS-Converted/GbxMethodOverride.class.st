@@ -30,8 +30,13 @@ GbxMethodOverride class >> behavior: aBehavior selector: aSelector from: origina
 
 { #category : 'applying' }
 GbxMethodOverride >> apply [
-	| compiledMethod sourceString protocolName newString packageName |
+	| compiledMethod sourceString protocolName newString packageName wasLocal |
 	compiledMethod := behavior compiledMethodAt: selector ifAbsent: [ nil ].
+	wasLocal := compiledMethod notNil.
+	compiledMethod ifNil: [
+		compiledMethod := (behavior respondsTo: #lookupSelector:)
+			ifTrue: [ behavior lookupSelector: selector ]
+			ifFalse: [ nil ] ].
 	compiledMethod ifNil: [
 		^ OverrideFailureWarning
 			raiseSignal: 'Cannot apply method override, base method ',
@@ -59,7 +64,8 @@ GbxMethodOverride >> apply [
 		GbxOverrideUtility
 			noteInstalledMethodOverride: self
 			originalSource: sourceString
-			protocol: protocolName.
+			protocol: protocolName
+			wasLocal: wasLocal.
 		(behavior compiledMethodAt: selector ifAbsent: [ nil ]) ifNotNil: [ :newMethod |
 			newMethod propertyAt: #gbxOverridePackageName put: packageName.
 			newMethod propertyAt: #gbxOverrideOriginalSource put: sourceString.
