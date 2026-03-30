@@ -25,13 +25,16 @@ GbxClassOverride class >> behavior: aBehavior from: originalInstVarString to: ov
 
 { #category : 'applying' }
 GbxClassOverride >> apply [
-	| sourceString |
+	| sourceString originalPackageName packageName newBehavior newString |
 	sourceString := self currentInstVarString.
+	originalPackageName := (behavior respondsTo: #package)
+		ifTrue: [ behavior package name asString ]
+		ifFalse: [ self packageNameForCompilation ].
 	crc = (self crcForString: sourceString) ifFalse: [
 		^ OverrideFailureWarning
 			raiseSignal: 'Cannot apply class override to ', behavior name asString,
 				', override does not match existing instance variable signature' ].
-	^ self
+	newString := self
 		editOriginal: sourceString
 		andApplyUsing: [ :newString |
 			[ self redefineBehaviorWithInstVarString: newString ]
@@ -40,7 +43,19 @@ GbxClassOverride >> apply [
 					^ OverrideFailureWarning
 						raiseSignal: 'Cannot apply class override to ', behavior name asString,
 							': ', ex messageText ].
-			newString ]
+			newString ].
+	packageName := parent ifNil: [ '' ] ifNotNil: [ parent packageName ifNil: [ '' ] ].
+	packageName isEmpty ifFalse: [
+		GbxOverrideUtility
+			noteInstalledClassOverride: self
+			originalInstVarString: sourceString
+			originalPackageName: originalPackageName.
+		newBehavior := Smalltalk globals at: behavior name asSymbol ifAbsent: [ behavior ].
+		newBehavior propertyAt: #gbxOverridePackageName put: packageName.
+		newBehavior propertyAt: #gbxOverrideOriginalInstVarString put: sourceString.
+		newBehavior propertyAt: #gbxOverrideOriginalPackageName put: originalPackageName.
+		behavior := newBehavior ].
+	^ newString
 ]
 
 { #category : 'private' }

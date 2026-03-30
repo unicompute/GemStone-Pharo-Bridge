@@ -8,12 +8,16 @@ Class {
 { #category : 'running' }
 GbxOverrideToolsTest >> setUp [
 	super setUp.
-	GbxOverrideFixture restoreDefaultDefinition
+	GbxOverrideUtility clearInstalledOverrideMetadata.
+	GbxOverrideFixture restoreDefaultDefinition.
+	GbxOverrideReleaseSpecFixture restoreDefaultSpecMethod
 ]
 
 { #category : 'running' }
 GbxOverrideToolsTest >> tearDown [
 	GbxOverrideFixture restoreDefaultDefinition.
+	GbxOverrideReleaseSpecFixture restoreDefaultSpecMethod.
+	GbxOverrideUtility clearInstalledOverrideMetadata.
 	super tearDown
 ]
 
@@ -41,6 +45,35 @@ GbxOverrideToolsTest >> testClassOverrideApplyRedefinesInstanceVariables [
 
 	override apply.
 
+	self assert: GbxOverrideFixture instVarNames asArray equals: #('oldVar' 'extraVar')
+]
+
+{ #category : 'tests' }
+GbxOverrideToolsTest >> testDiscoveryFindsInstalledClassAndMethodOverridesByPackageName [
+	| classOverride methodOverride overrideSet discovered |
+	classOverride := GbxClassOverride
+		behavior: GbxOverrideFixture
+		from: 'oldVar'
+		to: 'oldVar extraVar'.
+	methodOverride := GbxMethodOverride
+		behavior: GbxOverrideFixture
+		selector: #value
+		from: (GbxOverrideFixture >> #value) sourceCode asString
+		to: 'value
+	^ 2'.
+	overrideSet := GbxOverrideSet
+		destinationPackageName: 'GbxOverrideDiscoveryPackage'
+		classOverrides: { classOverride }
+		variableOverrides: #()
+		methodOverrides: { methodOverride }.
+
+	overrideSet apply.
+	discovered := GbxOverrideUtility allOverridesInPackage: 'GbxOverrideDiscoveryPackage'.
+
+	self assert: discovered size equals: 2.
+	self assert: ((discovered select: [ :each | each isKindOf: GbxClassOverride ]) size) equals: 1.
+	self assert: ((discovered select: [ :each | each isKindOf: GbxMethodOverride ]) size) equals: 1.
+	self assert: GbxOverrideFixture new value equals: 2.
 	self assert: GbxOverrideFixture instVarNames asArray equals: #('oldVar' 'extraVar')
 ]
 
@@ -129,4 +162,31 @@ GbxOverrideToolsTest >> testSpecFormatterIncludesExecutableLookingSpec [
 	self assert: (formatted includesSubstring: 'destinationPackageName: ''Pkg''').
 	self assert: (formatted includesSubstring: 'selector: #value').
 	self assert: (formatted includesSubstring: '"version: 2.0"')
+]
+
+{ #category : 'tests' }
+GbxOverrideToolsTest >> testPrepareOverridesForReleaseRegeneratesSpecAndRestoresOriginalDefinition [
+	| methodOverride overrideSet specSource |
+	methodOverride := GbxMethodOverride
+		behavior: GbxOverrideFixture
+		selector: #value
+		from: (GbxOverrideFixture >> #value) sourceCode asString
+		to: 'value
+	^ 9'.
+	overrideSet := GbxOverrideSet
+		destinationPackageName: GbxOverrideReleaseSpecFixture overridesPackageName
+		classOverrides: #()
+		variableOverrides: #()
+		methodOverrides: { methodOverride }.
+
+	overrideSet apply.
+	self assert: GbxOverrideFixture new value equals: 9.
+
+	self assert: GbxOverrideUtility prepareOverridesForRelease.
+
+	specSource := GbxOverrideReleaseSpecFixture specMethodSource.
+	self assert: GbxOverrideFixture new value equals: 1.
+	self assert: (GbxOverrideUtility allOverridesInPackage: GbxOverrideReleaseSpecFixture overridesPackageName) isEmpty.
+	self assert: (specSource includesSubstring: 'destinationPackageName: ''GbxOverrideReleasePackage''').
+	self assert: (specSource includesSubstring: 'selector: #value')
 ]

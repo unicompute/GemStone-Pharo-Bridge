@@ -36,29 +36,37 @@ GbxOverrideSet class >> new [
 
 { #category : 'initialize-release' }
 GbxOverrideSet >> addAllOverridesInPackage: aPackage [
+	| overrides |
 	package := aPackage.
 	packageName := (aPackage respondsTo: #name)
 		ifTrue: [ aPackage name asString ]
 		ifFalse: [ aPackage asString ].
-	self
-		addClassOverrides;
-		addVariableOverrides;
-		addMethodOverrides
+	overrides := self allOverridesInPackage.
+	classOverrides := self setupOverrides: (overrides select: [ :each | each isKindOf: GbxClassOverride ]).
+	variableOverrides := self setupOverrides: #().
+	methodOverrides := self setupOverrides: (overrides select: [ :each | each isKindOf: GbxMethodOverride ])
+]
+
+{ #category : 'accessing' }
+GbxOverrideSet >> allOverridesInPackage [
+	^ GbxOverrideUtility allOverridesInPackage: self package
 ]
 
 { #category : 'private' }
 GbxOverrideSet >> addClassOverrides [
-	self sortOverrides: classOverrides
+	classOverrides := self
+		setupOverrides: (self allOverridesInPackage select: [ :each | each isKindOf: GbxClassOverride ])
 ]
 
 { #category : 'private' }
 GbxOverrideSet >> addMethodOverrides [
-	self sortOverrides: methodOverrides
+	methodOverrides := self
+		setupOverrides: (self allOverridesInPackage select: [ :each | each isKindOf: GbxMethodOverride ])
 ]
 
 { #category : 'private' }
 GbxOverrideSet >> addVariableOverrides [
-	self sortOverrides: variableOverrides
+	variableOverrides := self setupOverrides: #()
 ]
 
 { #category : 'applying' }

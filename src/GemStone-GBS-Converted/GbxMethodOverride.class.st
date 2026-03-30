@@ -30,7 +30,7 @@ GbxMethodOverride class >> behavior: aBehavior selector: aSelector from: origina
 
 { #category : 'applying' }
 GbxMethodOverride >> apply [
-	| compiledMethod sourceString protocolName |
+	| compiledMethod sourceString protocolName newString packageName |
 	compiledMethod := behavior compiledMethodAt: selector ifAbsent: [ nil ].
 	compiledMethod ifNil: [
 		^ OverrideFailureWarning
@@ -43,7 +43,7 @@ GbxMethodOverride >> apply [
 				behavior name asString, '>>#', selector asString,
 				', override does not match existing source signature found' ].
 	protocolName := compiledMethod protocolName ifNil: [ 'as yet unclassified' ].
-	^ self
+	newString := self
 		editOriginal: sourceString
 		andApplyUsing: [ :newString |
 			[ behavior compile: newString classified: protocolName ]
@@ -53,7 +53,18 @@ GbxMethodOverride >> apply [
 						raiseSignal: 'Method override for ',
 							behavior name asString, '>>#', selector asString,
 							' failed to compile: ', ex messageText ].
-			newString ]
+			newString ].
+	packageName := parent ifNil: [ '' ] ifNotNil: [ parent packageName ifNil: [ '' ] ].
+	packageName isEmpty ifFalse: [
+		GbxOverrideUtility
+			noteInstalledMethodOverride: self
+			originalSource: sourceString
+			protocol: protocolName.
+		(behavior compiledMethodAt: selector ifAbsent: [ nil ]) ifNotNil: [ :newMethod |
+			newMethod propertyAt: #gbxOverridePackageName put: packageName.
+			newMethod propertyAt: #gbxOverrideOriginalSource put: sourceString.
+			newMethod propertyAt: #gbxOverrideOriginalProtocol put: protocolName ] ].
+	^ newString
 ]
 
 { #category : 'comparing' }
