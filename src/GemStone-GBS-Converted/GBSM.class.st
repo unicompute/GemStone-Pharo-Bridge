@@ -6,7 +6,9 @@ Class {
 		'MainStatsEnabled',
 		'CacheStatsEnabled',
 		'ManagerStatResource',
-		'ClientMap'
+		'ClientMap',
+		'MemoryPolicy',
+		'SessionsInInteractionCount'
 	],
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'
@@ -52,6 +54,21 @@ GBSM class >> currentSession: aSession [
     CurrentSession := aSession
 ]
 
+{ #category : 'interactions' }
+GBSM class >> beginInteraction [
+	self sessionsInInteractionCount: self sessionsInInteractionCount + 1
+]
+
+{ #category : 'interactions' }
+GBSM class >> endInteraction [
+	self sessionsInInteractionCount: (self sessionsInInteractionCount - 1 max: 0)
+]
+
+{ #category : 'interactions' }
+GBSM class >> hasSessionsInInteractions [
+	^ self sessionsInInteractionCount > 0
+]
+
 { #category : 'accessing' }
 GBSM class >> loggedInSessions [
 	^ GbsSessionManager loggedInSessions
@@ -67,13 +84,30 @@ GBSM class >> mainStatsEnabled: aBoolean [
 	MainStatsEnabled := aBoolean
 ]
 
+{ #category : 'accessing' }
+GBSM class >> memoryPolicy [
+	^ MemoryPolicy
+]
+
+{ #category : 'accessing' }
+GBSM class >> memoryPolicy: anObject [
+	MemoryPolicy := anObject
+]
+
 { #category : 'cleanup' }
 GBSM class >> reset [
     CurrentSession := nil.
 	MainStatsEnabled := false.
 	CacheStatsEnabled := false.
 	ManagerStatResource := nil.
-	ClientMap := nil
+	ClientMap := nil.
+	MemoryPolicy := nil.
+	SessionsInInteractionCount := 0
+]
+
+{ #category : 'ui' }
+GBSM class >> showBusyWhile: aBlock [
+	^ aBlock value
 ]
 
 { #category : 'statistics' }
@@ -114,4 +148,14 @@ GBSM class >> statsEnabled: aBoolean [
 		mainStatsEnabled: aBoolean;
 		cacheStatsEnabled: aBoolean;
 		statMonitorRunning: aBoolean
+]
+
+{ #category : 'interactions' }
+GBSM class >> sessionsInInteractionCount [
+	^ SessionsInInteractionCount ifNil: [ SessionsInInteractionCount := 0 ]
+]
+
+{ #category : 'interactions' }
+GBSM class >> sessionsInInteractionCount: anInteger [
+	SessionsInInteractionCount := anInteger max: 0
 ]
