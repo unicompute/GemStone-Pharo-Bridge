@@ -5,6 +5,11 @@ Class {
 	#package : 'GemStone-GBS-Converted'
 }
 
+{ #category : 'applying' }
+GbxAbstractOverrideSpec class >> apply [
+	^ GbxOverrideUtility applyOverrideSet: self spec
+]
+
 { #category : 'testing' }
 GbxAbstractOverrideSpec class >> areInstalledOverridesUnsaved [
 	| installedOverridesSpec |

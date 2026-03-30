@@ -29,6 +29,24 @@ GbxOverrideToolsTest >> testAbstractOverrideSpecChoosesNewestDeclaredVersion [
 ]
 
 { #category : 'tests' }
+GbxOverrideToolsTest >> testConcreteRuntimeOverrideSpecProvidesExpectedRuntimeOverrides [
+	| spec selectors |
+	spec := GbxRuntimeOverrideSpec spec.
+	selectors := spec methodOverrides collect: [ :each | each selector ].
+
+	self assert: GbxRuntimeOverrideSpec specMethodSelector equals: #spec93.
+	self assert: GbxRuntimeOverrideSpec overridesPackageName equals: 'GbsRuntimeOverrides'.
+	self assert: spec packageName equals: 'GbsRuntimeOverrides'.
+	self assert: spec classOverrides isEmpty.
+	self assert: spec variableOverrides isEmpty.
+	self assert: spec methodOverrides size equals: 4.
+	self assert: (selectors includes: #add:withOccurrences:).
+	self assert: (selectors includes: #remove:ifAbsent:).
+	self assert: (selectors includes: #removeAllOccurrencesOf:ifAbsent:).
+	self assert: (selectors includes: #at:put:)
+]
+
+{ #category : 'tests' }
 GbxOverrideToolsTest >> testClassOverrideApplyRedefinesInstanceVariables [
 	| original replacement override |
 	original := 'oldVar'.
@@ -189,4 +207,15 @@ GbxOverrideToolsTest >> testPrepareOverridesForReleaseRegeneratesSpecAndRestores
 	self assert: (GbxOverrideUtility allOverridesInPackage: GbxOverrideReleaseSpecFixture overridesPackageName) isEmpty.
 	self assert: (specSource includesSubstring: 'destinationPackageName: ''GbxOverrideReleasePackage''').
 	self assert: (specSource includesSubstring: 'selector: #value')
+]
+
+{ #category : 'tests' }
+GbxOverrideToolsTest >> testToolsOverrideSpecIsConcreteAndEmptyInPharo [
+	| spec |
+	spec := GbxToolsOverrideSpec spec.
+
+	self assert: GbxToolsOverrideSpec specMethodSelector equals: #spec93.
+	self assert: GbxToolsOverrideSpec overridesPackageName equals: 'GbsToolsOverrides'.
+	self assert: spec packageName equals: 'GbsToolsOverrides'.
+	self assert: spec hasNoEffect
 ]
