@@ -25,7 +25,7 @@ Class {
 
 { #category : 'menus' }
 GbsClassicLauncher class >> aboutGemBuilder [
-	UIManager default inform: 'GemBuilder for Pharo (GemStone-Pharo-Bridge)'.
+	UIManager default inform: 'GemBuilder for Pharo (GemStone-Pharo-Bridge) ported by unicompute.com'.
 ]
 
 { #category : 'menus' }
