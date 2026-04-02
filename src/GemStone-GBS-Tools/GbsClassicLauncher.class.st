@@ -115,6 +115,26 @@ GbsClassicLauncher class >> browseNamespaceOnCurrentSession [
 ]
 
 { #category : 'menus' }
+GbsClassicLauncher class >> browseCurrentUserGlobalsOnCurrentSession [
+	| session userName |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	userName := [ session executeAndFetch: 'System myUserProfile userId asString' ]
+		on: Error
+		do: [ nil ].
+	(userName isNil or: [ userName trimBoth isEmpty ]) ifTrue: [
+		UIManager default inform: 'Could not determine the current GemStone user.'.
+		^ self ].
+	[
+		GbsSymbolListBrowserPresenter
+			openOn: session
+			userName: userName trimBoth
+			dictionaryName: 'UserGlobals'
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open current UserGlobals: ', ex messageText ]
+]
+
+{ #category : 'menus' }
 GbsClassicLauncher class >> browseSymbolListOnCurrentSession [
 	| session userName |
 	session := self currentSessionOrInform.
@@ -131,6 +151,26 @@ GbsClassicLauncher class >> browseSymbolListOnCurrentSession [
 			userName: userName trimBoth
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Could not open Symbol List Browser: ', ex messageText ]
+]
+
+{ #category : 'menus' }
+GbsClassicLauncher class >> inspectCurrentUserGlobalsOnCurrentSession [
+	| session oop |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	oop := [ session serverInterface
+		apiGciExecuteStr: '(System myUserProfile symbolList objectNamed: #UserGlobals)'
+		context: 20
+		env: 0 ]
+		on: Error
+		do: [ nil ].
+	(oop isNumber and: [ oop > 20 ]) ifFalse: [
+		UIManager default inform: 'Could not inspect current UserGlobals.'.
+		^ self ].
+	[
+		GbsInspector inspect: oop session: session
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open UserGlobals inspector: ', ex messageText ]
 ]
 
 { #category : 'menus' }
@@ -419,9 +459,15 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                     (aBuilder item: #BrowseNamespace)
                         label: 'Namespace...';
                         action: [ self browseNamespaceOnCurrentSession ].
+                    (aBuilder item: #BrowseCurrentUserGlobals)
+                        label: 'Open Current UserGlobals';
+                        action: [ self browseCurrentUserGlobalsOnCurrentSession ].
                     (aBuilder item: #BrowseSymbolList)
                         label: 'Symbol List Browser';
                         action: [ self browseSymbolListOnCurrentSession ].
+                    (aBuilder item: #InspectCurrentUserGlobals)
+                        label: 'Inspect Current UserGlobals';
+                        action: [ self inspectCurrentUserGlobalsOnCurrentSession ].
                     (aBuilder item: #BrowseSenders)
                         label: 'Senders of...';
                         action: [ self browseSendersOnCurrentSession ].
@@ -1400,7 +1446,9 @@ GbsClassicLauncher >> menuBrowse [
         addItem: [ :item | item name: 'All Classes'; action: [ UIManager default defer: [ self openSystemBrowser ] ] ];
         addItem: [ :item | item name: 'Class...'; action: [ UIManager default defer: [ self openClassBrowser ] ] ];
         addItem: [ :item | item name: 'Namespace...'; action: [ UIManager default defer: [ self openSymbolDictionaryBrowser ] ] ];
+        addItem: [ :item | item name: 'Open Current UserGlobals'; action: [ UIManager default defer: [ self openCurrentUserGlobals ] ] ];
         addItem: [ :item | item name: 'Symbol List Browser'; action: [ UIManager default defer: [ self openSymbolListBrowser ] ] ];
+        addItem: [ :item | item name: 'Inspect Current UserGlobals'; action: [ UIManager default defer: [ self inspectCurrentUserGlobals ] ] ];
         addItem: [ :item | item name: 'Senders of...'; action: [ UIManager default defer: [ self browseSenders ] ] ];
         addItem: [ :item | item name: 'Implementors of...'; action: [ UIManager default defer: [ self browseImplementors ] ] ];
         addItem: [ :item | item name: 'Hierarchy Senders of...'; action: [ UIManager default defer: [ self browseHierarchySenders ] ] ];
@@ -1535,6 +1583,33 @@ GbsClassicLauncher >> openSymbolDictionaryBrowser [
 ]
 
 { #category : 'actions' }
+GbsClassicLauncher >> openCurrentUserGlobals [
+	| session userName |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false
+	].
+	userName := [ session executeAndFetch: 'System myUserProfile userId asString' ]
+		on: Error
+		do: [ nil ].
+	(userName isNil or: [ userName trimBoth isEmpty ]) ifTrue: [
+		self inform: 'Could not determine the current GemStone user.'.
+		^ false
+	].
+	GbsSessionParameters currentSession: session.
+	[
+		GbsSymbolListBrowserPresenter
+			openOn: session
+			userName: userName trimBoth
+			dictionaryName: 'UserGlobals'.
+		^ true
+	] on: Error do: [ :ex |
+		self inform: 'Could not open current UserGlobals: ', ex messageText.
+		^ false ]
+]
+
+{ #category : 'actions' }
 GbsClassicLauncher >> openSymbolListBrowser [
 	| session userName |
 	session := self sessionForBrowsing.
@@ -1557,6 +1632,32 @@ GbsClassicLauncher >> openSymbolListBrowser [
 		^ true
 	] on: Error do: [ :ex |
 		self inform: 'Could not open Symbol List Browser: ', ex messageText.
+		^ false ]
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> inspectCurrentUserGlobals [
+	| session oop |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false
+	].
+	oop := [ session serverInterface
+		apiGciExecuteStr: '(System myUserProfile symbolList objectNamed: #UserGlobals)'
+		context: 20
+		env: 0 ]
+		on: Error
+		do: [ nil ].
+	(oop isNumber and: [ oop > 20 ]) ifFalse: [
+		self inform: 'Could not inspect current UserGlobals.'.
+		^ false
+	].
+	[
+		GbsInspector inspect: oop session: session.
+		^ true
+	] on: Error do: [ :ex |
+		self inform: 'Could not open UserGlobals inspector: ', ex messageText.
 		^ false ]
 ]
 

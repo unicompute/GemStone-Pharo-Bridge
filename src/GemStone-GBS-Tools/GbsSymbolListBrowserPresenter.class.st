@@ -27,6 +27,17 @@ GbsSymbolListBrowserPresenter class >> openOn: aSession userName: aUserName [
 	^ presenter
 ]
 
+{ #category : 'instance creation' }
+GbsSymbolListBrowserPresenter class >> openOn: aSession userName: aUserName dictionaryName: aDictionaryName [
+	| presenter |
+	presenter := self openOn: aSession userName: aUserName.
+	(aDictionaryName isString and: [ aDictionaryName isNotEmpty ]) ifTrue: [
+		presenter
+			refreshDictionariesFor: aUserName preservingSelection: aDictionaryName;
+			refreshEntriesForDictionary: aDictionaryName preservingSelection: nil ].
+	^ presenter
+]
+
 { #category : 'actions' }
 GbsSymbolListBrowserPresenter >> addDictionary [
 	| userName dictName script |
