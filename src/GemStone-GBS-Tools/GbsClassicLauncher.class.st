@@ -456,21 +456,15 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                     (aBuilder item: #BrowseClass)
                         label: 'Class...';
                         action: [ self browseClassOnCurrentSession ].
-                    (aBuilder item: #BrowseNamespace)
-                        label: 'Namespace...';
-                        action: [ self browseNamespaceOnCurrentSession ].
-                    (aBuilder item: #BrowseCurrentUserGlobals)
-                        label: 'Open Current UserGlobals';
-                        action: [ self browseCurrentUserGlobalsOnCurrentSession ].
-                    (aBuilder item: #BrowseSymbolList)
-                        label: 'Symbol List Browser';
-                        action: [ self browseSymbolListOnCurrentSession ].
-                    (aBuilder item: #InspectCurrentUserGlobals)
-                        label: 'Inspect Current UserGlobals';
-                        action: [ self inspectCurrentUserGlobalsOnCurrentSession ].
-                    (aBuilder item: #BrowseSenders)
-                        label: 'Senders of...';
-                        action: [ self browseSendersOnCurrentSession ].
+	                (aBuilder item: #BrowseNamespace)
+	                        label: 'Namespace...';
+	                        action: [ self browseNamespaceOnCurrentSession ].
+	                    (aBuilder item: #BrowseSymbolList)
+	                        label: 'Symbol List Browser';
+	                        action: [ self browseSymbolListOnCurrentSession ].
+	                    (aBuilder item: #BrowseSenders)
+	                        label: 'Senders of...';
+	                        action: [ self browseSendersOnCurrentSession ].
                     (aBuilder item: #BrowseImplementors)
                         label: 'Implementors of...';
                         action: [ self browseImplementorsOnCurrentSession ].
@@ -1442,16 +1436,14 @@ GbsClassicLauncher >> makeCurrent [
 
 { #category : 'menus' }
 GbsClassicLauncher >> menuBrowse [
-    ^ self newMenu
-        addItem: [ :item | item name: 'All Classes'; action: [ UIManager default defer: [ self openSystemBrowser ] ] ];
-        addItem: [ :item | item name: 'Class...'; action: [ UIManager default defer: [ self openClassBrowser ] ] ];
-        addItem: [ :item | item name: 'Namespace...'; action: [ UIManager default defer: [ self openSymbolDictionaryBrowser ] ] ];
-        addItem: [ :item | item name: 'Open Current UserGlobals'; action: [ UIManager default defer: [ self openCurrentUserGlobals ] ] ];
-        addItem: [ :item | item name: 'Symbol List Browser'; action: [ UIManager default defer: [ self openSymbolListBrowser ] ] ];
-        addItem: [ :item | item name: 'Inspect Current UserGlobals'; action: [ UIManager default defer: [ self inspectCurrentUserGlobals ] ] ];
-        addItem: [ :item | item name: 'Senders of...'; action: [ UIManager default defer: [ self browseSenders ] ] ];
-        addItem: [ :item | item name: 'Implementors of...'; action: [ UIManager default defer: [ self browseImplementors ] ] ];
-        addItem: [ :item | item name: 'Hierarchy Senders of...'; action: [ UIManager default defer: [ self browseHierarchySenders ] ] ];
+	    ^ self newMenu
+	        addItem: [ :item | item name: 'All Classes'; action: [ UIManager default defer: [ self openSystemBrowser ] ] ];
+	        addItem: [ :item | item name: 'Class...'; action: [ UIManager default defer: [ self openClassBrowser ] ] ];
+	        addItem: [ :item | item name: 'Namespace...'; action: [ UIManager default defer: [ self openSymbolDictionaryBrowser ] ] ];
+	        addItem: [ :item | item name: 'Symbol List Browser'; action: [ UIManager default defer: [ self openSymbolListBrowser ] ] ];
+	        addItem: [ :item | item name: 'Senders of...'; action: [ UIManager default defer: [ self browseSenders ] ] ];
+	        addItem: [ :item | item name: 'Implementors of...'; action: [ UIManager default defer: [ self browseImplementors ] ] ];
+	        addItem: [ :item | item name: 'Hierarchy Senders of...'; action: [ UIManager default defer: [ self browseHierarchySenders ] ] ];
         addItem: [ :item | item name: 'Hierarchy Implementors of...'; action: [ UIManager default defer: [ self browseHierarchyImplementors ] ] ];
         addItem: [ :item | item name: 'References to...'; action: [ UIManager default defer: [ self browseReferences ] ] ];
         addItem: [ :item | item name: 'Methods with substring...'; action: [ UIManager default defer: [ self browseMethodsWithSubstring ] ] ];
