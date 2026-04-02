@@ -1474,6 +1474,10 @@ GbsAdminToolsPresenterTest >> testSymbolListRefreshEntriesPreservesSelectedEntry
 		(script includesSubstring: 'keys asSortedCollection')
 			ifTrue: [ ^ 'KeyA', Character tab asString, '1', String lf, 'KeyB', Character tab asString, '2' ].
 		'' ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		(script includesSubstring: 'each asString = ''KeyB''')
+			ifTrue: [ ^ 'dictionary', String lf, 'users', Character tab asString, 'aDictionary(...)' ].
+		'' ].
 	fakeUsers := GbxFakeListPresenterForBrowser new.
 	fakeUsers selectedItem: 'DataCurator'.
 	fakeDicts := GbxFakeListPresenterForBrowser new.
@@ -1481,7 +1485,7 @@ GbsAdminToolsPresenterTest >> testSymbolListRefreshEntriesPreservesSelectedEntry
 	fakeEntries := GbxFakeListPresenterForBrowser new.
 	fakeEntries selectedItem: 'KeyB'.
 	fakeSelection := GbxFakeTextPresenterForRemoteDebugger new.
-	fakeValue := GbxFakeListPresenterForBrowser new.
+	fakeValue := GbxFakeTablePresenterForRemoteDebugger new.
 
 	presenter instVarNamed: 'session' put: mockSession.
 	presenter instVarNamed: 'userDropList' put: fakeUsers.
@@ -1491,8 +1495,52 @@ GbsAdminToolsPresenterTest >> testSymbolListRefreshEntriesPreservesSelectedEntry
 	presenter instVarNamed: 'valueText' put: fakeValue.
 
 	presenter refreshEntriesForDictionary: 'UserGlobals'.
+	
+	self assert: fakeEntries selectedItem equals: 'KeyB'.
+	self assert: fakeSelection text equals: 'KeyB'.
+	self assert: fakeValue items equals: { { 'users'. 'aDictionary(...)' } }
+]
 
-	self assert: fakeEntries selectedItem equals: 'KeyB'
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSymbolListRefreshUsersShowsSelectedDictionaryValuesOnOpen [
+	| presenter mockSession fakeUsers fakeDicts fakeEntries fakeSelection fakeValue |
+	presenter := (Smalltalk at: #GbsSymbolListBrowserPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #evaluate put: [ :script |
+		(script includesSubstring: 'users do:')
+			ifTrue: [ ^ 'DataCurator', Character tab asString, 'SystemUser' ].
+		(script includesSubstring: '1 to: sl size do:')
+			ifTrue: [ ^ 'UserGlobals', Character tab asString, 'Globals' ].
+		(script includesSubstring: 'keys asSortedCollection')
+			ifTrue: [ ^ 'OkzZuluSeasideState', Character tab asString, 'aDictionary(...)', String lf, 'OtherEntry', Character tab asString, '123' ].
+		'' ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		(script includesSubstring: 'each asString = ''OkzZuluSeasideState''')
+			ifTrue: [ ^ 'dictionary', String lf, 'users', Character tab asString, 'aDictionary(...)', String lf, 'events', Character tab asString, 'aDictionary(...)' ].
+		'' ].
+	fakeUsers := GbxFakeListPresenterForBrowser new.
+	fakeDicts := GbxFakeListPresenterForBrowser new.
+	fakeEntries := GbxFakeListPresenterForBrowser new.
+	fakeSelection := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeValue := GbxFakeTablePresenterForRemoteDebugger new.
+
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'targetUserName' put: 'DataCurator'.
+	presenter instVarNamed: 'userDropList' put: fakeUsers.
+	presenter instVarNamed: 'dictionariesList' put: fakeDicts.
+	presenter instVarNamed: 'entriesList' put: fakeEntries.
+	presenter instVarNamed: 'selectionField' put: fakeSelection.
+	presenter instVarNamed: 'valueText' put: fakeValue.
+
+	presenter refreshUsers.
+
+	self assert: fakeUsers selectedItem equals: 'DataCurator'.
+	self assert: fakeDicts selectedItem equals: 'UserGlobals'.
+	self assert: fakeEntries selectedItem equals: 'OkzZuluSeasideState'.
+	self assert: fakeSelection text equals: 'OkzZuluSeasideState'.
+	self assert: fakeValue items equals: { { 'users'. 'aDictionary(...)' }. { 'events'. 'aDictionary(...)' } }
 ]
 
 { #category : 'tests' }

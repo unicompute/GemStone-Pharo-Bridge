@@ -513,18 +513,18 @@ GbsSymbolListBrowserPresenter >> openStructuredInspectorForPreview: preview titl
 GbsSymbolListBrowserPresenter >> refreshDictionariesFor: userName [
 	| previousDict raw dicts |
 	previousDict := self selectedDictionaryName.
-	userName ifNil: [ dictionariesList items: #(). ^ self ].
+	userName ifNil: [
+		dictionariesList items: #().
+		entriesList items: #().
+		self showSelectedEntryPreview.
+		^ self ].
 	raw := [ session evaluate: (self dictionariesScriptForUser: userName asString) ] on: Error do: [ '' ].
 	dicts := (raw isString and: [ raw isNotEmpty ])
 		ifTrue: [ (raw splitOn: Character tab) reject: [ :each | each isEmpty ] ]
 		ifFalse: [ #() ].
 	dictionariesList items: dicts asArray.
 	self selectDictionaryName: previousDict ifMissingSelectFirst: true.
-	entriesList items: #().
-	entryValuesByKey := Dictionary new.
-	currentPreview := nil.
-	selectionField text: ''.
-	(valueText respondsTo: #items:) ifTrue: [ valueText items: #() ]
+	self refreshEntriesForSelectedDictionary
 ]
 
 { #category : 'actions' }
@@ -537,9 +537,16 @@ GbsSymbolListBrowserPresenter >> refreshDictionariesFor: userName preservingSele
 GbsSymbolListBrowserPresenter >> refreshEntriesForDictionary: dictName [
 	| previousKey raw lines keys userName |
 	previousKey := self selectedEntryName.
-	dictName ifNil: [ ^ self ].
+	dictName ifNil: [
+		entriesList items: #().
+		entryValuesByKey := Dictionary new.
+		self showSelectedEntryPreview.
+		^ self ].
 	userName := self selectedUserName.
-	userName ifNil: [ ^ self ].
+	userName ifNil: [
+		entryValuesByKey := Dictionary new.
+		self showSelectedEntryPreview.
+		^ self ].
 	raw := [ session evaluate: (self entriesScriptForUser: userName dictionary: dictName asString) ]
 		on: Error do: [ '' ].
 	lines := (raw isString and: [ raw isNotEmpty ])
@@ -551,23 +558,32 @@ GbsSymbolListBrowserPresenter >> refreshEntriesForDictionary: dictName [
 		| parts key value |
 		parts := line splitOn: Character tab.
 		key := parts at: 1 ifAbsent: [ '' ].
-		value := parts at: 2 ifAbsent: [ '' ].
-		(key isEmpty not) ifTrue: [
-			keys add: key.
-			entryValuesByKey at: key put: value ] ].
+			value := parts at: 2 ifAbsent: [ '' ].
+			(key isEmpty not) ifTrue: [
+				keys add: key.
+				entryValuesByKey at: key put: value ] ].
 	entriesList items: keys asArray.
 	self selectEntryName: previousKey ifMissingSelectFirst: true.
-	currentPreview := nil.
-	selectionField text: ''.
-	(valueText respondsTo: #items:) ifTrue: [ valueText items: #() ]
+	self showSelectedEntryPreview
 ]
 
 { #category : 'actions' }
 GbsSymbolListBrowserPresenter >> refreshEntriesForDictionary: dictName preservingSelection: entryName [
 	self refreshEntriesForDictionary: dictName.
 	self selectEntryName: entryName ifMissingSelectFirst: true.
-	entryName ifNotNil: [
-		(entryValuesByKey includesKey: entryName) ifTrue: [ self showEntryForKey: entryName ] ]
+	self showSelectedEntryPreview
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> refreshEntriesForSelectedDictionary [
+	| dictName |
+	dictName := self selectedDictionaryName.
+	dictName
+		ifNil: [
+			entriesList items: #().
+			entryValuesByKey := Dictionary new.
+			self showSelectedEntryPreview ]
+		ifNotNil: [ self refreshEntriesForDictionary: dictName ]
 ]
 
 { #category : 'actions' }
@@ -871,6 +887,18 @@ GbsSymbolListBrowserPresenter >> showEntryForKey: key [
 	currentPreview := preview.
 	(valueText respondsTo: #items:)
 		ifTrue: [ valueText items: (preview ifNil: [ #() ] ifNotNil: [ preview at: #rows ifAbsent: [ #() ] ]) ]
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> showSelectedEntryPreview [
+	| key |
+	key := self selectedEntryName.
+	key ifNil: [
+		currentPreview := nil.
+		selectionField text: ''.
+		(valueText respondsTo: #items:) ifTrue: [ valueText items: #() ].
+		^ self ].
+	self showEntryForKey: key
 ]
 
 { #category : 'accessing' }
