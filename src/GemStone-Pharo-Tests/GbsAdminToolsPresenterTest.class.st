@@ -1375,8 +1375,7 @@ GbsAdminToolsPresenterTest >> testSymbolListStructuredPreviewForSelectedPreviewR
 		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].
 	mockSession := MockGbsSession new.
 	mockSession stubs at: #executeAndFetch put: [ :script |
-		((script includesSubstring: 'selectedLabel := ''users''')
-			and: [ script includesSubstring: 'previewKind := ''dictionary''' ])
+		(script includesSubstring: 'path := #((''dictionary'' ''users''))')
 			ifTrue: [ ^ 'collection', String lf, '1', Character tab asString, 'alice', String lf, '2', Character tab asString, 'bob' ].
 		'' ].
 	fakeUsers := GbxFakeListPresenterForBrowser new.
@@ -1399,6 +1398,23 @@ GbsAdminToolsPresenterTest >> testSymbolListStructuredPreviewForSelectedPreviewR
 
 	self assert: (result at: #kind) equals: 'collection'.
 	self assert: (result at: #rows) equals: { { '1'. 'alice' }. { '2'. 'bob' } }
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testStructuredValueInspectorInspectSelectedEntryEvaluatesInspectBlockWithSelectedRow [
+	| presenter fakeTable selected |
+	presenter := (Smalltalk at: #GbsStructuredValueInspectorPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsStructuredValueInspectorPresenter not loaded' ].
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeTable selectedItem: { 'users'. 'aDictionary(...)' }.
+
+	presenter instVarNamed: 'table' put: fakeTable.
+	presenter propertyAt: #inspectBlock put: [ :row | selected := row ].
+
+	presenter inspectSelectedEntry.
+
+	self assert: selected equals: { 'users'. 'aDictionary(...)' }
 ]
 
 { #category : 'tests' }
