@@ -25,6 +25,7 @@ GbsSymbolListBrowserPresenter class >> openOn: aSession userName: aUserName [
 		session: aSession;
 		targetUserName: aUserName;
 		open.
+	presenter refreshUsers.
 	^ presenter
 ]
 
@@ -195,8 +196,7 @@ GbsSymbolListBrowserPresenter >> connectPresenters [
 	(entriesList respondsTo: #contextMenu:) ifTrue: [
 		entriesList contextMenu: [ self menuEntryPopup ] ].
 	(valueText respondsTo: #contextMenu:) ifTrue: [
-		valueText contextMenu: [ self menuPreviewPopup ] ].
-	self refreshUsers
+		valueText contextMenu: [ self menuPreviewPopup ] ]
 ]
 
 { #category : 'layout' }
