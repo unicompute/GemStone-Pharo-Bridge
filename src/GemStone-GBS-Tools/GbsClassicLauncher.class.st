@@ -115,6 +115,25 @@ GbsClassicLauncher class >> browseNamespaceOnCurrentSession [
 ]
 
 { #category : 'menus' }
+GbsClassicLauncher class >> browseSymbolListOnCurrentSession [
+	| session userName |
+	session := self currentSessionOrInform.
+	session ifNil: [ ^ self ].
+	userName := [ session executeAndFetch: 'System myUserProfile userId asString' ]
+		on: Error
+		do: [ nil ].
+	(userName isNil or: [ userName trimBoth isEmpty ]) ifTrue: [
+		UIManager default inform: 'Could not determine the current GemStone user.'.
+		^ self ].
+	[
+		GbsSymbolListBrowserPresenter
+			openOn: session
+			userName: userName trimBoth
+	] on: Error do: [ :ex |
+		UIManager default inform: 'Could not open Symbol List Browser: ', ex messageText ]
+]
+
+{ #category : 'menus' }
 GbsClassicLauncher class >> browseReferencesOnCurrentSession [
 	self
 		performBrowseQueryWithPrompt: 'References to class or variable name:'
@@ -400,6 +419,9 @@ GbsClassicLauncher class >> menuCommandGemStoneOn: aBuilder [
                     (aBuilder item: #BrowseNamespace)
                         label: 'Namespace...';
                         action: [ self browseNamespaceOnCurrentSession ].
+                    (aBuilder item: #BrowseSymbolList)
+                        label: 'Symbol List Browser';
+                        action: [ self browseSymbolListOnCurrentSession ].
                     (aBuilder item: #BrowseSenders)
                         label: 'Senders of...';
                         action: [ self browseSendersOnCurrentSession ].
@@ -1378,6 +1400,7 @@ GbsClassicLauncher >> menuBrowse [
         addItem: [ :item | item name: 'All Classes'; action: [ UIManager default defer: [ self openSystemBrowser ] ] ];
         addItem: [ :item | item name: 'Class...'; action: [ UIManager default defer: [ self openClassBrowser ] ] ];
         addItem: [ :item | item name: 'Namespace...'; action: [ UIManager default defer: [ self openSymbolDictionaryBrowser ] ] ];
+        addItem: [ :item | item name: 'Symbol List Browser'; action: [ UIManager default defer: [ self openSymbolListBrowser ] ] ];
         addItem: [ :item | item name: 'Senders of...'; action: [ UIManager default defer: [ self browseSenders ] ] ];
         addItem: [ :item | item name: 'Implementors of...'; action: [ UIManager default defer: [ self browseImplementors ] ] ];
         addItem: [ :item | item name: 'Hierarchy Senders of...'; action: [ UIManager default defer: [ self browseHierarchySenders ] ] ];
@@ -1509,6 +1532,32 @@ GbsClassicLauncher >> openSymbolDictionaryBrowser [
 	GbsSessionParameters currentSession: session.
 	self openBrowserOn: session dictionary: dictName.
 	^ true
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> openSymbolListBrowser [
+	| session userName |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false
+	].
+	userName := [ session executeAndFetch: 'System myUserProfile userId asString' ]
+		on: Error
+		do: [ nil ].
+	(userName isNil or: [ userName trimBoth isEmpty ]) ifTrue: [
+		self inform: 'Could not determine the current GemStone user.'.
+		^ false
+	].
+	GbsSessionParameters currentSession: session.
+	[
+		GbsSymbolListBrowserPresenter
+			openOn: session
+			userName: userName trimBoth.
+		^ true
+	] on: Error do: [ :ex |
+		self inform: 'Could not open Symbol List Browser: ', ex messageText.
+		^ false ]
 ]
 
 { #category : 'actions' }
