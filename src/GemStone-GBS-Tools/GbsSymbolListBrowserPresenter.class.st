@@ -10,7 +10,8 @@ Class {
 		'entriesList',
 		'selectionField',
 		'valueText',
-		'entryValuesByKey'
+		'entryValuesByKey',
+		'currentPreview'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -154,6 +155,18 @@ GbsSymbolListBrowserPresenter >> canOperateOnSelectedEntry [
 ]
 
 { #category : 'private' }
+GbsSymbolListBrowserPresenter >> canOperateOnSelectedPreviewRow [
+	| row kind |
+	row := self selectedPreviewRow.
+	kind := currentPreview
+		ifNil: [ nil ]
+		ifNotNil: [ currentPreview at: #kind ifAbsent: [ nil ] ].
+	^ row notNil
+		and: [ (#('dictionary' 'collection') includes: kind)
+		and: [ (row at: 1 ifAbsent: [ '' ]) asString ~= '__truncated__' ] ]
+]
+
+{ #category : 'private' }
 GbsSymbolListBrowserPresenter >> canOperateOnSelectedUser [
 	| userName |
 	userName := self selectedUserName.
@@ -181,6 +194,8 @@ GbsSymbolListBrowserPresenter >> connectPresenters [
 		dictionariesList contextMenu: [ self menuDictionaryPopup ] ].
 	(entriesList respondsTo: #contextMenu:) ifTrue: [
 		entriesList contextMenu: [ self menuEntryPopup ] ].
+	(valueText respondsTo: #contextMenu:) ifTrue: [
+		valueText contextMenu: [ self menuPreviewPopup ] ].
 	self refreshUsers
 ]
 
@@ -339,6 +354,28 @@ GbsSymbolListBrowserPresenter >> inspectSelectedEntry [
 						openRows: (preview at: #rows ifAbsent: [ #() ])
 						kind: kind
 						title: key asString ].
+		^ self ].
+	UIManager default inform: (preview at: #value ifAbsent: [ '' ]) asString
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> inspectSelectedPreviewValue [
+	| entryKey preview kind inspectorClass |
+	entryKey := self selectedEntryName.
+	entryKey ifNil: [ ^ self ].
+	preview := self structuredPreviewForSelectedPreviewRowInEntryKey: entryKey.
+	preview ifNil: [ ^ self ].
+	kind := preview at: #kind ifAbsent: [ 'string' ].
+	(#('dictionary' 'collection') includes: kind)
+		ifTrue: [
+			inspectorClass := Smalltalk at: #GbsStructuredValueInspectorPresenter ifAbsent: [ nil ].
+			inspectorClass
+				ifNil: [ UIManager default inform: 'Structured value inspector is not available.' ]
+				ifNotNil: [
+					inspectorClass
+						openRows: (preview at: #rows ifAbsent: [ #() ])
+						kind: kind
+						title: ((self selectedPreviewRow at: 1 ifAbsent: [ 'Value' ]) asString) ].
 			^ self ].
 	UIManager default inform: (preview at: #value ifAbsent: [ '' ]) asString
 ]
@@ -412,6 +449,20 @@ GbsSymbolListBrowserPresenter >> menuHelp [
 		yourself
 ]
 
+{ #category : 'menus' }
+GbsSymbolListBrowserPresenter >> menuPreview [
+	^ self newMenu
+		addItem: [ :item |
+			item name: 'Inspect Entry'; action: [ self inspectSelectedPreviewValue ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedPreviewRow ] ];
+		yourself
+]
+
+{ #category : 'menus' }
+GbsSymbolListBrowserPresenter >> menuPreviewPopup [
+	^ self menuPreview
+]
+
 { #category : 'actions' }
 GbsSymbolListBrowserPresenter >> refreshDictionariesFor: userName [
 	| previousDict raw dicts |
@@ -425,6 +476,7 @@ GbsSymbolListBrowserPresenter >> refreshDictionariesFor: userName [
 	self selectDictionaryName: previousDict ifMissingSelectFirst: true.
 	entriesList items: #().
 	entryValuesByKey := Dictionary new.
+	currentPreview := nil.
 	selectionField text: ''.
 	(valueText respondsTo: #items:) ifTrue: [ valueText items: #() ]
 ]
@@ -459,6 +511,7 @@ GbsSymbolListBrowserPresenter >> refreshEntriesForDictionary: dictName [
 			entryValuesByKey at: key put: value ] ].
 	entriesList items: keys asArray.
 	self selectEntryName: previousKey ifMissingSelectFirst: true.
+	currentPreview := nil.
 	selectionField text: ''.
 	(valueText respondsTo: #items:) ifTrue: [ valueText items: #() ]
 ]
@@ -732,6 +785,20 @@ GbsSymbolListBrowserPresenter >> selectedEntryName [
 ]
 
 { #category : 'private' }
+GbsSymbolListBrowserPresenter >> selectedPreviewRow [
+	| selected |
+	(valueText respondsTo: #selection)
+		ifTrue: [
+			selected := [ valueText selection selectedItem ] on: Error do: [ nil ].
+			selected ifNotNil: [ ^ selected ] ].
+	(valueText respondsTo: #selectedItem)
+		ifTrue: [
+			selected := [ valueText selectedItem ] on: Error do: [ nil ].
+			selected ifNotNil: [ ^ selected ] ].
+	^ nil
+]
+
+{ #category : 'private' }
 GbsSymbolListBrowserPresenter >> selectedUserName [
 	| selected |
 	(userDropList respondsTo: #selectedItem)
@@ -755,6 +822,7 @@ GbsSymbolListBrowserPresenter >> showEntryForKey: key [
 	| preview |
 	selectionField text: key asString.
 	preview := self structuredPreviewForEntryKey: key.
+	currentPreview := preview.
 	(valueText respondsTo: #items:)
 		ifTrue: [ valueText items: (preview ifNil: [ #() ] ifNotNil: [ preview at: #rows ifAbsent: [ #() ] ]) ]
 ]
@@ -807,6 +875,30 @@ GbsSymbolListBrowserPresenter >> structuredPreviewForEntryKey: keyName [
 	dictName := self selectedDictionaryName.
 	(userName isNil or: [ dictName isNil or: [ keyName isNil ] ]) ifTrue: [ ^ nil ].
 	raw := [ session executeAndFetch: (self structuredPreviewScriptForUser: userName dictionary: dictName keyName: keyName) ]
+		on: Error
+		do: [ :ex | 'string', String lf, 'Inspect entry failed: ', ex messageText ].
+	^ self parsedStructuredPreviewFrom: raw
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> structuredPreviewForSelectedPreviewRowInEntryKey: keyName [
+	| userName dictName row kind raw rowLabel |
+	userName := self selectedUserName.
+	dictName := self selectedDictionaryName.
+	row := self selectedPreviewRow.
+	kind := currentPreview
+		ifNil: [ nil ]
+		ifNotNil: [ currentPreview at: #kind ifAbsent: [ nil ] ].
+	rowLabel := row
+		ifNil: [ nil ]
+		ifNotNil: [ row at: 1 ifAbsent: [ nil ] ].
+	(userName isNil or: [ dictName isNil or: [ keyName isNil or: [ rowLabel isNil or: [ kind isNil ] ] ] ]) ifTrue: [ ^ nil ].
+	raw := [ session executeAndFetch: (self
+		structuredPreviewScriptForUser: userName
+		dictionary: dictName
+		keyName: keyName
+		nestedRowLabel: rowLabel asString
+		nestedKind: kind asString) ]
 		on: Error
 		do: [ :ex | 'string', String lf, 'Inspect entry failed: ', ex messageText ].
 	^ self parsedStructuredPreviewFrom: raw
@@ -881,6 +973,97 @@ GbsSymbolListBrowserPresenter >> structuredPreviewScriptForUser: userName dictio
 		nextPutAll: ''string'';
 		cr;
 		nextPutAll: (sanitize value: value).
+	stream contents'
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> structuredPreviewScriptForUser: userName dictionary: dictName keyName: keyName nestedRowLabel: rowLabel nestedKind: nestedKind [
+	| u d k r n |
+	u := self literalString: userName.
+	d := self literalString: dictName.
+	k := self literalString: keyName.
+	r := self literalString: rowLabel.
+	n := self literalString: nestedKind.
+	^ '
+	| users user sl dict entryKey value selectedLabel previewKind nestedValue sanitize stream limit associations items index |
+	sanitize := [ :obj |
+		| string |
+		string := obj printString asString.
+		string := string copyReplaceAll: String cr with: '' ''.
+		string := string copyReplaceAll: String lf with: '' ''.
+		string := string copyReplaceAll: Character tab asString with: ''    ''.
+		string ].
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNil: [ ^ ''string'', String cr, ''AllUsers not found'' ].
+	user := users detect: [ :x | x userId asString = ', u, ' ] ifNone: [ nil ].
+	user ifNil: [ ^ ''string'', String cr, ''User not found'' ].
+	sl := user symbolList.
+	dict := sl detect: [ :each |
+		| name |
+		name := (each respondsTo: #name) ifTrue: [ each name asString ] ifFalse: [ each printString ].
+		name = ', d, ' ] ifNone: [ nil ].
+	dict ifNil: [ ^ ''string'', String cr, ''Dictionary not found'' ].
+	entryKey := dict keys detect: [ :each | each asString = ', k, ' ] ifNone: [ nil ].
+	entryKey ifNil: [ ^ ''string'', String cr, ''Entry not found'' ].
+	value := dict at: entryKey.
+	selectedLabel := ', r, '.
+	previewKind := ', n, '.
+	nestedValue := nil.
+	previewKind = ''dictionary'' ifTrue: [
+		| assoc |
+		assoc := value associations
+			detect: [ :each | (sanitize value: each key) = selectedLabel ]
+			ifNone: [ nil ].
+		assoc ifNil: [ ^ ''string'', String cr, ''Entry not found'' ].
+		nestedValue := assoc value ].
+	previewKind = ''collection'' ifTrue: [
+		selectedLabel = ''__truncated__'' ifTrue: [ ^ ''string'', String cr, ''Entry not found'' ].
+		items := value asArray.
+		index := [ selectedLabel asNumber ] on: Error do: [ nil ].
+		(index isNil or: [ index < 1 or: [ index > items size ] ]) ifTrue: [ ^ ''string'', String cr, ''Entry not found'' ].
+		nestedValue := items at: index ].
+	nestedValue ifNil: [ ^ ''string'', String cr, ''Entry not found'' ].
+	stream := WriteStream on: String new.
+	(nestedValue isKindOf: Dictionary) ifTrue: [
+		stream nextPutAll: ''dictionary''; cr.
+		associations := nestedValue associations asArray.
+		limit := associations size min: 200.
+		1 to: limit do: [ :idx |
+			| assoc |
+			assoc := associations at: idx.
+			stream
+				nextPutAll: (sanitize value: assoc key);
+				tab;
+				nextPutAll: (sanitize value: assoc value).
+			idx < limit ifTrue: [ stream cr ] ].
+		nestedValue size > limit ifTrue: [
+			limit > 0 ifTrue: [ stream cr ].
+			stream
+				nextPutAll: ''__truncated__'';
+				tab;
+				nextPutAll: ''Only first '', limit asString, '' entries shown'' ].
+		^ stream contents ].
+	((nestedValue isCollection) and: [ (nestedValue isKindOf: String) not and: [ (nestedValue isKindOf: Symbol) not ] ]) ifTrue: [
+		stream nextPutAll: ''collection''; cr.
+		items := nestedValue asArray.
+		limit := items size min: 200.
+		1 to: limit do: [ :idx |
+			stream
+				nextPutAll: idx asString;
+				tab;
+				nextPutAll: (sanitize value: (items at: idx)).
+			idx < limit ifTrue: [ stream cr ] ].
+		nestedValue size > limit ifTrue: [
+			limit > 0 ifTrue: [ stream cr ].
+			stream
+				nextPutAll: ''__truncated__'';
+				tab;
+				nextPutAll: ''Only first '', limit asString, '' items shown'' ].
+		^ stream contents ].
+	stream
+		nextPutAll: ''string'';
+		cr;
+		nextPutAll: (sanitize value: nestedValue).
 	stream contents'
 ]
 
