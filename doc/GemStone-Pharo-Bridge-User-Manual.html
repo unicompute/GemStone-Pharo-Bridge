@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>GemStone-Pharo-Bridge User Manual</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm 16mm 18mm 16mm;
+      @bottom-right {
+        content: counter(page);
+        font-size: 9pt;
+        color: #666;
+      }
+    }
+
+    :root {
+      --text: #1a1a1a;
+      --muted: #5d6670;
+      --border: #d9dde3;
+      --accent: #1f5fbf;
+      --surface: #f5f7fa;
+      --surface-2: #eef2f7;
+    }
+
+    body {
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.45;
+      margin: 0;
+    }
+
+    h1, h2, h3, h4 {
+      color: #111;
+      margin: 0 0 0.35rem 0;
+      page-break-after: avoid;
+    }
+
+    h1 {
+      font-size: 24pt;
+      line-height: 1.1;
+      margin-bottom: 0.5rem;
+    }
+
+    h2 {
+      border-bottom: 1px solid var(--border);
+      font-size: 16pt;
+      margin-top: 1.8rem;
+      padding-bottom: 0.2rem;
+    }
+
+    h3 {
+      font-size: 12.5pt;
+      margin-top: 1.2rem;
+    }
+
+    h4 {
+      font-size: 11pt;
+      margin-top: 0.9rem;
+    }
+
+    p {
+      margin: 0.35rem 0 0.65rem 0;
+      orphans: 3;
+      widows: 3;
+    }
+
+    ul, ol {
+      margin: 0.35rem 0 0.8rem 1.2rem;
+      padding: 0;
+    }
+
+    li {
+      margin: 0.2rem 0;
+    }
+
+    code {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      font-size: 9.1pt;
+      padding: 0.05rem 0.22rem;
+    }
+
+    pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow-wrap: break-word;
+      padding: 0.75rem 0.9rem;
+      white-space: pre-wrap;
+    }
+
+    pre code {
+      background: transparent;
+      border: 0;
+      padding: 0;
+    }
+
+    table {
+      border-collapse: collapse;
+      margin: 0.5rem 0 1rem 0;
+      width: 100%;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.42rem 0.5rem;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--surface-2);
+      font-weight: 600;
+    }
+
+    .cover {
+      min-height: 245mm;
+      page-break-after: always;
+      position: relative;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 9pt;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 13pt;
+      margin-bottom: 1rem;
+      max-width: 36rem;
+    }
+
+    .meta {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-top: 1.3rem;
+      padding: 0.9rem 1rem;
+      width: 75%;
+    }
+
+    .meta p {
+      margin: 0.2rem 0;
+    }
+
+    .callout {
+      background: var(--surface);
+      border-left: 4px solid var(--accent);
+      margin: 0.8rem 0 1rem 0;
+      padding: 0.7rem 0.9rem;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin: 1rem 0 1.4rem 0;
+      padding: 0.9rem 1rem;
+    }
+
+    .toc ul {
+      margin-bottom: 0;
+    }
+
+    .small {
+      font-size: 9pt;
+    }
+
+    .screenshot {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: block;
+      margin: 0.8rem auto 0.3rem auto;
+      max-width: 100%;
+      padding: 0.25rem;
+    }
+
+    .caption {
+      color: var(--muted);
+      font-size: 8.8pt;
+      text-align: center;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <div class="eyebrow">GemStone / Pharo</div>
+    <h1>GemStone-Pharo-Bridge User Manual</h1>
+    <p class="subtitle">
+      Practical guide for installing the bridge, connecting to GemStone, and using the Session Browser,
+      GemStone Browser, Workspace, Symbol List Browser, Remote Debugger, connectors, and support tools.
+    </p>
+
+    <div class="meta">
+      <p><strong>Repository:</strong> <code>unicompute/GemStone-Pharo-Bridge</code></p>
+      <p><strong>Prepared from codebase state:</strong> 2026-04-03</p>
+      <p><strong>Primary baseline:</strong> <code>BaselineOfGemStonePharo</code></p>
+      <p><strong>Audience:</strong> Pharo users working with GemStone sessions and GemStone-side tools</p>
+    </div>
+
+    <div class="callout">
+      <strong>Scope.</strong> This manual is based on the current user-facing tools in the repository:
+      load groups, session management, GemStone browsing, workspace execution, transcript capture,
+      Symbol List inspection, remote debugging, and connector administration.
+    </div>
+  </section>
+
+  <section>
+    <h2>Contents</h2>
+    <div class="toc">
+      <ul>
+        <li>1. What the bridge provides</li>
+        <li>2. Prerequisites</li>
+        <li>3. Installing and loading with Metacello</li>
+        <li>4. Loading with Iceberg</li>
+        <li>5. Starting the tools</li>
+        <li>6. Session Browser workflow</li>
+        <li>7. GemStone Browser workflow</li>
+        <li>8. GemStone Workspace workflow</li>
+        <li>9. Symbol List Browser workflow</li>
+        <li>10. Remote Debugger workflow</li>
+        <li>11. Connector Browser and connector maintenance</li>
+        <li>12. Transcript, utilities, and admin tools</li>
+        <li>13. Testing and regression scripts</li>
+        <li>14. Troubleshooting</li>
+        <li>15. Quick reference</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>1. What the bridge provides</h2>
+    <p>
+      GemStone-Pharo-Bridge gives Pharo a user-facing toolset for logging into GemStone and working with
+      GemStone objects and code from a Pharo UI. The baseline defines three load groups:
+      <code>Core</code>, <code>Tools</code>, and <code>Tests</code>. For normal use, load
+      <code>Tools</code> or the default group.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Load group</th>
+          <th>What it contains</th>
+          <th>Typical use</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>Core</code></td>
+          <td>Converted runtime and session/GCI bridge classes</td>
+          <td>Headless or programmatic use</td>
+        </tr>
+        <tr>
+          <td><code>Tools</code></td>
+          <td><code>Core</code> plus Spec-based UI tools</td>
+          <td>Interactive use in Pharo</td>
+        </tr>
+        <tr>
+          <td><code>Tests</code></td>
+          <td>Regression and unit tests</td>
+          <td>Validation and development</td>
+        </tr>
+        <tr>
+          <td><code>default</code></td>
+          <td><code>Tools</code> plus <code>Tests</code></td>
+          <td>Full developer load</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>The bridge centers around these user tools:</p>
+    <ul>
+      <li><strong>Session Browser:</strong> manage connection profiles and active sessions</li>
+      <li><strong>GemStone Browser:</strong> browse dictionaries, classes, protocols, methods, and source</li>
+      <li><strong>GemStone Workspace:</strong> evaluate GemStone code, print results, inspect values, and open the debugger on errors</li>
+      <li><strong>Symbol List Browser:</strong> inspect and edit symbol dictionaries, including <code>UserGlobals</code></li>
+      <li><strong>Remote Debugger:</strong> step, inspect, and recompile against suspended GemStone contexts</li>
+      <li><strong>Connector Browser:</strong> inspect and configure connector behavior</li>
+      <li><strong>Remote Transcript:</strong> collect GemStone transcript output in a Pharo window</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>2. Prerequisites</h2>
+    <p>Before loading the bridge, make sure you have the following in place:</p>
+    <ul>
+      <li>A Pharo image with Metacello available</li>
+      <li>A reachable GemStone stone and the corresponding GCI client libraries available to Pharo</li>
+      <li>A valid GemStone user account and password</li>
+      <li>If using a private GitHub repository, working GitHub credentials for Iceberg or Git</li>
+    </ul>
+
+    <h3>Expected connection fields</h3>
+    <p>
+      Session profiles support the usual connection settings and a set of advanced fields. The current bridge
+      initializes new profiles with a default stone name of <code>gs64stone</code> and a default service of
+      <code>gemnetobject</code>.
+    </p>
+    <ul>
+      <li>Profile name</li>
+      <li>Stone name</li>
+      <li>Username and password</li>
+      <li>Gem service</li>
+      <li>Optional X509 certificate fields</li>
+      <li>Optional NetLDI host/IP and port/name fields</li>
+      <li>Optional extra gem arguments and log settings</li>
+    </ul>
+  </section>
+
+  <section class="page-break">
+    <h2>3. Installing and loading with Metacello</h2>
+
+    <h3>Recommended local-path load</h3>
+    <p>
+      If the repository is already cloned locally, loading from the local Tonel repository is the simplest path.
+    </p>
+    <pre><code>Metacello new
+  baseline: 'GemStonePharo';
+  repository: 'tonel:///path/to/GemStone-Pharo-Bridge/src';
+  load: #('Tools').</code></pre>
+
+    <p>For a full developer load including tests:</p>
+    <pre><code>Metacello new
+  baseline: 'GemStonePharo';
+  repository: 'tonel:///path/to/GemStone-Pharo-Bridge/src';
+  load.</code></pre>
+
+    <h3>Available load groups</h3>
+    <pre><code>"Runtime only"
+Metacello new
+  baseline: 'GemStonePharo';
+  repository: 'tonel:///path/to/GemStone-Pharo-Bridge/src';
+  load: #('Core').
+
+"Runtime plus UI tools"
+Metacello new
+  baseline: 'GemStonePharo';
+  repository: 'tonel:///path/to/GemStone-Pharo-Bridge/src';
+  load: #('Tools').
+
+"Tests only after the rest is loaded"
+Metacello new
+  baseline: 'GemStonePharo';
+  repository: 'tonel:///path/to/GemStone-Pharo-Bridge/src';
+  load: #('Tests').</code></pre>
+
+    <h3>What postload does</h3>
+    <p>
+      The baseline runs pre-load and post-load hooks that remove and re-apply runtime and tools overrides.
+      If you are reloading the bridge during development, this is expected behavior.
+    </p>
+  </section>
+
+  <section>
+    <h2>4. Loading with Iceberg</h2>
+    <p>
+      Iceberg is a good fit for this project. The repository already contains the metadata Iceberg expects for
+      a Tonel project:
+    </p>
+    <ul>
+      <li><code>.project</code> with <code>srcDirectory = src</code></li>
+      <li><code>src/.properties</code> with <code>#format : #tonel</code></li>
+    </ul>
+
+    <h3>Basic Iceberg workflow</h3>
+    <ol>
+      <li>In Pharo, open Iceberg.</li>
+      <li>Add the repository from GitHub or clone it locally first.</li>
+      <li>Check out the branch you want.</li>
+      <li>Load the baseline or evaluate the Metacello expression against the local checkout.</li>
+    </ol>
+
+    <img class="screenshot" src="iceberg.png" alt="Iceberg import screenshot">
+    <div class="caption">Existing repository screenshot shipped in <code>doc/iceberg.png</code>.</div>
+
+    <h3>Private GitHub repositories</h3>
+    <p>
+      If the repository is private, Iceberg still needs valid GitHub credentials. In practice that usually means:
+    </p>
+    <ul>
+      <li>an SSH remote plus a loaded SSH key, or</li>
+      <li>an HTTPS remote plus a GitHub personal access token</li>
+    </ul>
+
+    <div class="callout">
+      <strong>Recommendation.</strong> For private repositories, cloning with Iceberg and then loading from the
+      local Tonel path is usually more predictable than trying to make Metacello itself authenticate directly
+      against GitHub.
+    </div>
+  </section>
+
+  <section>
+    <h2>5. Starting the tools</h2>
+    <p>After loading the <code>Tools</code> group, open the tools from the World menu:</p>
+    <pre><code>World menu → GemStone</code></pre>
+
+    <p>The current menu structure is:</p>
+    <ul>
+      <li><strong>Sessions</strong> → Session Browser, Simple Launcher, Logout Current Session</li>
+      <li><strong>Connectors</strong> → Connector Browser and connector maintenance commands</li>
+      <li><strong>Browse</strong> → All Classes, Class, Namespace, Symbol List Browser, Senders, Implementors, hierarchy queries, references, substring search</li>
+      <li><strong>Admin</strong> → Users, Namespaces, Security Policies</li>
+      <li><strong>Tools</strong> → New GS Workspace, GS File in, Settings, Breakpoints, System Workspace</li>
+      <li><strong>Utilities</strong> → supporting tools such as file logging and diagnostics</li>
+    </ul>
+
+    <h3>Useful open expressions</h3>
+    <pre><code>GbsSessionBrowserPresenter new open.
+GbsWorkspace new open.
+GbsRemoteTranscript new open.</code></pre>
+  </section>
+
+  <section class="page-break">
+    <h2>6. Session Browser workflow</h2>
+    <p>
+      The Session Browser is the normal starting point. It shows two lists:
+      a parameter list of saved connection profiles and a session list of active or remembered sessions.
+    </p>
+
+    <h3>Primary actions</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Control</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>Add...</code></td>
+          <td>Create a new connection profile</td>
+        </tr>
+        <tr>
+          <td><code>Copy</code></td>
+          <td>Duplicate a selected profile</td>
+        </tr>
+        <tr>
+          <td><code>Edit...</code></td>
+          <td>Edit the selected profile</td>
+        </tr>
+        <tr>
+          <td><code>Delete</code></td>
+          <td>Remove the selected profile</td>
+        </tr>
+        <tr>
+          <td><code>Login Link</code> / <code>Login RPC</code></td>
+          <td>Log in using the selected profile</td>
+        </tr>
+        <tr>
+          <td><code>Current</code></td>
+          <td>Mark the selected session as the current session</td>
+        </tr>
+        <tr>
+          <td><code>Commit</code></td>
+          <td>Commit the current transaction</td>
+        </tr>
+        <tr>
+          <td><code>Abort</code></td>
+          <td>Abort the current transaction</td>
+        </tr>
+        <tr>
+          <td><code>Begin</code></td>
+          <td>Begin a GemStone transaction</td>
+        </tr>
+        <tr>
+          <td><code>Break</code></td>
+          <td>Issue a break command to the session</td>
+        </tr>
+        <tr>
+          <td><code>Logout</code></td>
+          <td>Log out the selected session</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Typical login sequence</h3>
+    <ol>
+      <li>Open <strong>GemStone → Sessions → Session Browser</strong>.</li>
+      <li>Click <code>Add...</code> and create a connection profile.</li>
+      <li>Enter at least the profile name, stone name, username, password, and gem service.</li>
+      <li>Select the profile and click <code>Login RPC</code>.</li>
+      <li>Once the session appears as connected, click <code>Current</code>.</li>
+      <li>Double-click the session row to open a GemStone Workspace.</li>
+    </ol>
+
+    <h3>Current session matters</h3>
+    <p>
+      The Workspace, Browser, Transcript, and many menu commands operate on
+      <code>GbsSessionParameters currentSession</code>. If a tool appears to use the wrong session,
+      set the intended session current in the Session Browser and try again.
+    </p>
+  </section>
+
+  <section>
+    <h2>7. GemStone Browser workflow</h2>
+    <p>
+      The GemStone Browser is the main code browser for server-side GemStone classes and methods.
+      It opens on the current connected session and displays:
+    </p>
+    <ul>
+      <li>symbol dictionaries</li>
+      <li>classes</li>
+      <li>protocols</li>
+      <li>methods</li>
+      <li>source text</li>
+    </ul>
+
+    <h3>What you can do in the browser</h3>
+    <ul>
+      <li>browse all classes or a specific class</li>
+      <li>open a namespace/dictionary view</li>
+      <li>query senders, implementors, hierarchy senders, hierarchy implementors, references, and methods containing a substring</li>
+      <li>add dictionaries, classes, categories, instance variables, class variables, and class instance variables</li>
+      <li>edit and compile methods</li>
+      <li>optionally use auto-commit after changes</li>
+    </ul>
+
+    <h3>Practical use</h3>
+    <ol>
+      <li>Choose <strong>GemStone → Browse → All Classes</strong> or <strong>Class...</strong>.</li>
+      <li>Select a dictionary, then a class.</li>
+      <li>Select a protocol and method to view its source.</li>
+      <li>Edit the source and accept it to compile back to GemStone.</li>
+      <li>Commit manually unless auto-commit is enabled.</li>
+    </ol>
+
+    <div class="callout">
+      <strong>Note.</strong> The browser is working against the GemStone symbol list visible to the logged-in user.
+      That means dictionary visibility and write permissions still depend on the connected GemStone account.
+    </div>
+  </section>
+
+  <section>
+    <h2>8. GemStone Workspace workflow</h2>
+    <p>
+      The GemStone Workspace is the easiest place to evaluate code against the current session. It is optimized for
+      one-off execution, print-it style evaluation, inspection, commit, abort, and debugger entry on errors.
+    </p>
+
+    <h3>Main commands</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Action</th>
+          <th>Effect</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>Execute in GemStone</code></td>
+          <td>Runs the selection or entire workspace in GemStone</td>
+        </tr>
+        <tr>
+          <td><code>Commit</code></td>
+          <td>Commit the current transaction</td>
+        </tr>
+        <tr>
+          <td><code>Abort (Sync)</code></td>
+          <td>Abort changes and sync with the latest GemStone state</td>
+        </tr>
+        <tr>
+          <td><code>Print It</code></td>
+          <td>Appends the printed result into the editor</td>
+        </tr>
+        <tr>
+          <td><code>Inspect It</code></td>
+          <td>Inspects the resulting remote object</td>
+        </tr>
+        <tr>
+          <td><code>GS File It In</code></td>
+          <td>Executes the selected source as a GemStone file-in</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Shortcuts</h3>
+    <ul>
+      <li><code>Cmd+G</code> or <code>Ctrl+G</code>: execute in GemStone</li>
+      <li><code>Cmd+D</code>: do it</li>
+      <li><code>Cmd+P</code>: print it</li>
+    </ul>
+
+    <h3>Example</h3>
+    <pre><code>1 + 1
+"should execute successfully"
+
+1 / 0
+"should open the GemStone remote debugger"</code></pre>
+
+    <p>
+      When execution raises a <code>GbsError</code> with remote process metadata,
+      the workspace opens the remote debugger automatically instead of only showing an alert.
+    </p>
+  </section>
+
+  <section class="page-break">
+    <h2>9. Symbol List Browser workflow</h2>
+    <p>
+      The Symbol List Browser is the right tool for working with symbol dictionaries and globals such as
+      <code>UserGlobals</code>. It is distinct from the regular browser:
+    </p>
+    <ul>
+      <li>The regular GemStone Browser focuses on classes and methods.</li>
+      <li>The Symbol List Browser focuses on dictionaries and entries.</li>
+    </ul>
+
+    <h3>What it shows</h3>
+    <ul>
+      <li>a target user selector</li>
+      <li>that user’s dictionaries</li>
+      <li>entries in the selected dictionary</li>
+      <li>a bottom preview table that renders dictionaries as key/value rows and collections as index/value rows</li>
+    </ul>
+
+    <h3>Typical uses</h3>
+    <ul>
+      <li>browse <code>UserGlobals</code> for the current GemStone user</li>
+      <li>inspect application state dictionaries</li>
+      <li>add or remove dictionaries</li>
+      <li>add or remove entries</li>
+      <li>inspect nested dictionaries and collections without dropping back to raw <code>printString</code></li>
+    </ul>
+
+    <h3>Inspect Entry behavior</h3>
+    <p>The current build supports structured inspection:</p>
+    <ul>
+      <li>if the selected entry is a dictionary, it opens a key/value inspector window</li>
+      <li>if the selected entry is a collection, it opens an index/value inspector window</li>
+      <li>the bottom preview pane also supports inspecting nested values</li>
+      <li>for plain scalar values, the browser shows the string representation</li>
+    </ul>
+
+    <h3>When to use it</h3>
+    <p>
+      Use the Symbol List Browser when you need to answer questions like:
+      “What is actually stored in <code>UserGlobals</code>?”
+      or “What keys exist in this application dictionary?”
+    </p>
+  </section>
+
+  <section>
+    <h2>10. Remote Debugger workflow</h2>
+    <p>
+      The Remote Debugger is the bridge’s Pharo-side UI for suspended GemStone execution. It is opened from the
+      workspace on errors or explicitly through service code.
+    </p>
+
+    <h3>What it shows</h3>
+    <ul>
+      <li>GemStone stack frames</li>
+      <li>source code for the selected frame</li>
+      <li>local variables</li>
+      <li>receiver, frame, process, and stack inspection panels</li>
+      <li>execution control buttons</li>
+    </ul>
+
+    <h3>Core debugging actions</h3>
+    <ul>
+      <li>step into</li>
+      <li>step over</li>
+      <li>step return</li>
+      <li>resume</li>
+      <li>restart</li>
+      <li>run to caret</li>
+      <li>return from frame</li>
+      <li>pause or terminate</li>
+      <li>inspect receiver, frame, process, stack, or selected variable</li>
+    </ul>
+
+    <h3>Source editing and recompilation</h3>
+    <p>
+      The debugger also supports accepting source edits. If recompilation succeeds, it refreshes the stack and
+      source view. If recompilation fails, the source pane shows the compile error state.
+    </p>
+
+    <h3>Manual test cases</h3>
+    <p>The test directory already suggests a useful smoke-test set:</p>
+    <pre><code>1 + 1
+1 / 0
+| a b | a := 10. b := 0. a / b.
+Object thisMessageDoesNotExist</code></pre>
+
+    <div class="callout">
+      <strong>Expected result.</strong> Simple successful expressions should return normally. Exceptions such as
+      divide-by-zero or message-not-understood should open the remote debugger.
+    </div>
+  </section>
+
+  <section>
+    <h2>11. Connector Browser and connector maintenance</h2>
+    <p>
+      Connector tools control how local Pharo-side objects and GemStone-side classes are mapped and synchronized.
+      This is an advanced feature, but it is exposed directly from the GemStone menu.
+    </p>
+
+    <h3>Main connector tasks</h3>
+    <ul>
+      <li>open the Connector Browser for the current session</li>
+      <li>initialize fast connectors</li>
+      <li>generate class connectors</li>
+      <li>remove invalid connectors</li>
+      <li>configure connector class mappings</li>
+      <li>show or clear connector class overrides</li>
+    </ul>
+
+    <h3>Connector Browser concepts</h3>
+    <ul>
+      <li><strong>groups</strong>: global or session-specific connector groups</li>
+      <li><strong>connector rows</strong>: client/server class pairs</li>
+      <li><strong>connection state</strong>: connected or disconnected behavior</li>
+      <li><strong>post-connect action</strong>: update strategies and forwarding modes</li>
+    </ul>
+
+    <p>
+      If you are not actively customizing replication or connector behavior, you can ignore this tool initially.
+      For advanced bridge work, it is the main place to inspect and tune connector mappings.
+    </p>
+  </section>
+
+  <section class="page-break">
+    <h2>12. Transcript, utilities, and admin tools</h2>
+
+    <h3>GemStone Remote Transcript</h3>
+    <p>
+      The remote transcript window drains transcript output from the current session and mirrors it into a Pharo
+      window and the local Pharo transcript. This is useful when you want remote logging without switching tools.
+    </p>
+    <ul>
+      <li>Open it from the launcher’s Tools menu or by evaluating <code>GbsRemoteTranscript new open</code>.</li>
+      <li>Use it to observe output after workspace execution.</li>
+      <li>Advanced users can install a GemStone transcript proxy for deeper integration.</li>
+    </ul>
+
+    <h3>Admin tools</h3>
+    <p>The GemStone menu includes direct entry points for:</p>
+    <ul>
+      <li><strong>Users</strong></li>
+      <li><strong>Namespaces</strong></li>
+      <li><strong>Security Policies</strong></li>
+    </ul>
+    <p>
+      Use these only with appropriate GemStone permissions. The menu entries assume a connected session and will
+      fail or inform if there is no current login.
+    </p>
+
+    <h3>Utilities</h3>
+    <p>The bridge also exposes support utilities such as:</p>
+    <ul>
+      <li>File Logger</li>
+      <li>settings dialogs</li>
+      <li>stat monitor and tool-specific diagnostics</li>
+      <li>breakpoint browser</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>13. Testing and regression scripts</h2>
+    <p>
+      The repository includes both Smalltalk test packages and shell/Smalltalk scripts for regression workflows.
+    </p>
+
+    <h3>Package tests</h3>
+    <pre><code>"Run package tests after loading the Tests group"
+TestRunner open.
+"or"
+GbsRemoteDebuggerTest run.</code></pre>
+
+    <h3>Manual debugger smoke tests</h3>
+    <p>
+      The <code>tests/README.md</code> file contains a focused manual checklist for the remote debugger.
+      It is a good first validation pass after a fresh load.
+    </p>
+
+    <h3>Scripts directory</h3>
+    <p>The <code>scripts</code> folder contains repeatable automation for tasks such as:</p>
+    <ul>
+      <li>clean reload and regressions</li>
+      <li>FFI regression runs</li>
+      <li>live debugger integration runs</li>
+      <li>query results presenter tests</li>
+      <li>restart and breakpoint scenarios</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>14. Troubleshooting</h2>
+
+    <h3>No connected GemStone session</h3>
+    <p>
+      Many menu items require a current connected session. If a tool says there is no session:
+    </p>
+    <ol>
+      <li>open the Session Browser</li>
+      <li>log in with a saved profile</li>
+      <li>mark the intended session as current</li>
+      <li>retry the tool command</li>
+    </ol>
+
+    <h3>Workspace does not use the session I expect</h3>
+    <p>
+      Set the intended session as current in the Session Browser. The workspace and several browser commands prefer
+      <code>GbsSessionParameters currentSession</code>.
+    </p>
+
+    <h3>Debugger does not open</h3>
+    <p>
+      Not every GemStone-side failure produces walkable remote context metadata. Start with known debugger-opening
+      expressions such as <code>1 / 0</code> or a message-not-understood case and verify that you are logged in.
+    </p>
+
+    <h3>Private GitHub clone problems</h3>
+    <p>
+      If Iceberg can see the repo but cannot fetch it, check your GitHub credentials. For a private repository,
+      the most reliable path is usually:
+    </p>
+    <ol>
+      <li>configure SSH or HTTPS token access for Git</li>
+      <li>clone with Iceberg</li>
+      <li>load from the local Tonel path with Metacello</li>
+    </ol>
+
+    <h3>Edits do not appear after reload</h3>
+    <p>
+      Reload the baseline or run the appropriate clean reload script. The bridge applies runtime/tool overrides
+      during load, so partial reloads can leave stale behavior if only some packages are refreshed.
+    </p>
+  </section>
+
+  <section>
+    <h2>15. Quick reference</h2>
+
+    <h3>Open the main tools</h3>
+    <pre><code>GbsSessionBrowserPresenter new open.
+GbsWorkspace new open.
+GbsRemoteTranscript new open.</code></pre>
+
+    <h3>Load the bridge from a local checkout</h3>
+    <pre><code>Metacello new
+  baseline: 'GemStonePharo';
+  repository: 'tonel:///path/to/GemStone-Pharo-Bridge/src';
+  load: #('Tools').</code></pre>
+
+    <h3>Open the Symbol List Browser on the current session</h3>
+    <pre><code>GbsClassicLauncher browseSymbolListOnCurrentSession.</code></pre>
+
+    <h3>Open the current UserGlobals</h3>
+    <p>
+      Use <strong>GemStone → Browse → Symbol List Browser</strong>, choose the current GemStone user, select
+      <code>UserGlobals</code>, and then inspect entries from there.
+    </p>
+
+    <h3>Good first smoke test</h3>
+    <ol>
+      <li>Log in from the Session Browser</li>
+      <li>Open a GemStone Workspace</li>
+      <li>Evaluate <code>1 + 1</code></li>
+      <li>Evaluate <code>1 / 0</code></li>
+      <li>Open the Symbol List Browser and inspect <code>UserGlobals</code></li>
+      <li>Open the GemStone Browser and browse a class</li>
+    </ol>
+
+    <div class="callout small">
+      This manual is intended to be a working operator guide. For deeper implementation detail, read the baseline,
+      presenter classes, and regression scripts in the repository alongside this document.
+    </div>
+  </section>
+</body>
+</html>
