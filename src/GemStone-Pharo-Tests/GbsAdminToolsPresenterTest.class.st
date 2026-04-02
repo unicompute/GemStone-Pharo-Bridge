@@ -1278,42 +1278,76 @@ GbsAdminToolsPresenterTest >> testSymbolListCapabilityPredicatesTrackSelectionSt
 ]
 
 { #category : 'tests' }
-GbsAdminToolsPresenterTest >> testSymbolListDecodedInspectableEntryMaterializesCollectionPayload [
+GbsAdminToolsPresenterTest >> testSymbolListParsedStructuredPreviewMaterializesCollectionRows [
 	| presenter result |
 	presenter := (Smalltalk at: #GbsSymbolListBrowserPresenter ifAbsent: [ nil ])
 		ifNotNil: [ :klass | klass new ]
 		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].
 
-	result := presenter decodedInspectableEntryFrom: #('collection' 'OrderedCollection' (#('string' 'alpha') #('string' 'beta'))).
+	result := presenter parsedStructuredPreviewFrom: 'collection', String lf, '1', Character tab asString, 'alpha', String lf, '2', Character tab asString, 'beta'.
 
-	self assert: result class equals: OrderedCollection.
-	self assert: result asArray equals: #('alpha' 'beta')
+	self assert: (result at: #kind) equals: 'collection'.
+	self assert: (result at: #rows) equals: { { '1'. 'alpha' }. { '2'. 'beta' } }
 ]
 
 { #category : 'tests' }
-GbsAdminToolsPresenterTest >> testSymbolListDecodedInspectableEntryMaterializesDictionaryPayload [
+GbsAdminToolsPresenterTest >> testSymbolListParsedStructuredPreviewMaterializesDictionaryRows [
 	| presenter result |
 	presenter := (Smalltalk at: #GbsSymbolListBrowserPresenter ifAbsent: [ nil ])
 		ifNotNil: [ :klass | klass new ]
 		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].
 
-	result := presenter decodedInspectableEntryFrom: #('dictionary' ((#('string' 'users') #('collection' 'Array' (#('string' 'alice') #('string' 'bob')))) (#('string' 'count') #('string' '2')))).
+	result := presenter parsedStructuredPreviewFrom: 'dictionary', String lf, 'users', Character tab asString, '#(''alice'' ''bob'')', String lf, 'count', Character tab asString, '2'.
 
-	self assert: result class equals: Dictionary.
-	self assert: (result at: 'users') equals: #('alice' 'bob').
-	self assert: (result at: 'count') equals: '2'
+	self assert: (result at: #kind) equals: 'dictionary'.
+	self assert: (result at: #rows) equals: { { 'users'. '#(''alice'' ''bob'')' }. { 'count'. '2' } }
 ]
 
 { #category : 'tests' }
-GbsAdminToolsPresenterTest >> testSymbolListDecodedInspectableEntryTreatsPlainStringsAsStrings [
+GbsAdminToolsPresenterTest >> testSymbolListParsedStructuredPreviewTreatsPlainStringsAsScalarRows [
 	| presenter result |
 	presenter := (Smalltalk at: #GbsSymbolListBrowserPresenter ifAbsent: [ nil ])
 		ifNotNil: [ :klass | klass new ]
 		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].
 
-	result := presenter decodedInspectableEntryFrom: 'plain text value'.
+	result := presenter parsedStructuredPreviewFrom: 'string', String lf, 'plain text value'.
 
-	self assert: result equals: 'plain text value'
+	self assert: (result at: #kind) equals: 'string'.
+	self assert: (result at: #rows) equals: { { 'Value'. 'plain text value' } }.
+	self assert: (result at: #value) equals: 'plain text value'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSymbolListShowEntryForKeyPopulatesStructuredPreviewRows [
+	| presenter mockSession fakeUsers fakeDicts fakeEntries fakeSelection fakeValue |
+	presenter := (Smalltalk at: #GbsSymbolListBrowserPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		(script includesSubstring: 'entryKey := dict keys detect:')
+			ifTrue: [ ^ 'dictionary', String lf, 'mediaAssets', Character tab asString, 'aDictionary()', String lf, 'users', Character tab asString, 'aDictionary(...)' ].
+		'' ].
+	fakeUsers := GbxFakeListPresenterForBrowser new.
+	fakeUsers selectedItem: 'DataCurator'.
+	fakeDicts := GbxFakeListPresenterForBrowser new.
+	fakeDicts selectedItem: 'UserGlobals'.
+	fakeEntries := GbxFakeListPresenterForBrowser new.
+	fakeEntries selectedItem: 'OkzZuluSeasideState'.
+	fakeSelection := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeValue := GbxFakeListPresenterForBrowser new.
+
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'userDropList' put: fakeUsers.
+	presenter instVarNamed: 'dictionariesList' put: fakeDicts.
+	presenter instVarNamed: 'entriesList' put: fakeEntries.
+	presenter instVarNamed: 'selectionField' put: fakeSelection.
+	presenter instVarNamed: 'valueText' put: fakeValue.
+
+	presenter showEntryForKey: 'OkzZuluSeasideState'.
+
+	self assert: fakeSelection text equals: 'OkzZuluSeasideState'.
+	self assert: fakeValue items equals: { { 'mediaAssets'. 'aDictionary()' }. { 'users'. 'aDictionary(...)' } }
 ]
 
 { #category : 'tests' }
@@ -1333,7 +1367,7 @@ GbsAdminToolsPresenterTest >> testSymbolListRefreshDictionariesPreservesSelected
 	fakeDicts selectedItem: 'Globals'.
 	fakeEntries := GbxFakeListPresenterForBrowser new.
 	fakeSelection := GbxFakeTextPresenterForRemoteDebugger new.
-	fakeValue := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeValue := GbxFakeListPresenterForBrowser new.
 
 	presenter instVarNamed: 'session' put: mockSession.
 	presenter instVarNamed: 'userDropList' put: fakeUsers.
@@ -1365,7 +1399,7 @@ GbsAdminToolsPresenterTest >> testSymbolListRefreshEntriesPreservesSelectedEntry
 	fakeEntries := GbxFakeListPresenterForBrowser new.
 	fakeEntries selectedItem: 'KeyB'.
 	fakeSelection := GbxFakeTextPresenterForRemoteDebugger new.
-	fakeValue := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeValue := GbxFakeListPresenterForBrowser new.
 
 	presenter instVarNamed: 'session' put: mockSession.
 	presenter instVarNamed: 'userDropList' put: fakeUsers.

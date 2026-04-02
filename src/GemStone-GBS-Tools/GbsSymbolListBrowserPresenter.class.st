@@ -275,8 +275,11 @@ GbsSymbolListBrowserPresenter >> initializePresenters [
 	entriesList display: [ :each | each asString ].
 	selectionField := self newTextInput.
 	selectionField beNotEditable.
-	valueText := self newText.
-	(valueText respondsTo: #beNotEditable) ifTrue: [ valueText beNotEditable ].
+	valueText := self newTable.
+	valueText
+		addColumn: (SpStringTableColumn title: 'Key / Index' evaluated: [ :row | row at: 1 ifAbsent: [ '' ] ]);
+		addColumn: (SpStringTableColumn title: 'Value' evaluated: [ :row | row at: 2 ifAbsent: [ '' ] ]);
+		yourself.
 	entryValuesByKey := Dictionary new
 ]
 
@@ -320,109 +323,24 @@ GbsSymbolListBrowserPresenter >> inspectDictionaryScriptForUser: userName dictio
 
 { #category : 'actions' }
 GbsSymbolListBrowserPresenter >> inspectSelectedEntry [
-	| encoding materialized |
-	encoding := self inspectableEncodingForSelectedEntry.
-	encoding ifNil: [ ^ self ].
-	materialized := self decodedInspectableEntryFrom: encoding.
-	(materialized isKindOf: Dictionary)
-		ifTrue: [ materialized inspect. ^ self ].
-	((materialized isCollection) and: [ materialized isString not ])
-		ifTrue: [ materialized inspect ]
-		ifFalse: [ UIManager default inform: materialized asString ]
-]
-
-{ #category : 'private' }
-GbsSymbolListBrowserPresenter >> decodedInspectableEntryFrom: anEncoding [
-	| kind payload className items dictionary |
-	anEncoding isArray ifFalse: [ ^ anEncoding asString ].
-	anEncoding isEmpty ifTrue: [ ^ '' ].
-	kind := anEncoding first asString.
-
-	kind = 'dictionary' ifTrue: [
-		dictionary := Dictionary new.
-		payload := anEncoding at: 2 ifAbsent: [ #() ].
-		payload do: [ :associationEncoding |
-			| key value |
-			(associationEncoding isCollection and: [ associationEncoding size >= 2 ]) ifTrue: [
-				key := self decodedInspectableEntryFrom: associationEncoding first.
-				value := self decodedInspectableEntryFrom: associationEncoding second.
-				dictionary at: key put: value ] ].
-		^ dictionary ].
-
-	kind = 'collection' ifTrue: [
-		className := (anEncoding at: 2 ifAbsent: [ 'OrderedCollection' ]) asString.
-		payload := anEncoding at: 3 ifAbsent: [ #() ].
-		items := payload collect: [ :each | self decodedInspectableEntryFrom: each ].
-		^ className = 'Array'
-			ifTrue: [ items asArray ]
-			ifFalse: [ items asOrderedCollection ] ].
-
-	kind = 'missing' ifTrue: [ ^ anEncoding at: 2 ifAbsent: [ 'Entry not found.' ] ].
-	kind = 'string' ifTrue: [ ^ anEncoding at: 2 ifAbsent: [ '' ] ].
-	^ anEncoding printString
-]
-
-{ #category : 'private' }
-GbsSymbolListBrowserPresenter >> inspectableEncodingForSelectedEntry [
-	| userName dictName key raw |
-	userName := self selectedUserName.
-	dictName := self selectedDictionaryName.
+	| key preview kind inspectorClass |
 	key := self selectedEntryName.
-	(userName isNil or: [ dictName isNil or: [ key isNil ] ]) ifTrue: [ ^ nil ].
-	raw := [ session evaluate: (self inspectableEncodingScriptForUser: userName dictionary: dictName keyName: key) ]
-		on: Error
-		do: [ :ex | Array with: 'string' with: ('Inspect entry failed: ', ex messageText) ].
-	^ raw
-]
-
-{ #category : 'private' }
-GbsSymbolListBrowserPresenter >> inspectableEncodingScriptForUser: userName dictionary: dictName keyName: keyName [
-	| u d k |
-	u := self literalString: userName.
-	d := self literalString: dictName.
-	k := self literalString: keyName.
-	^ '
-	| users user sl dict entryKey value serialize |
-	users := System myUserProfile symbolList objectNamed: #AllUsers.
-	users ifNil: [ ^ Array with: ''string'' with: ''AllUsers not found'' ].
-	user := users detect: [ :x | x userId asString = ', u, ' ] ifNone: [ nil ].
-	user ifNil: [ ^ Array with: ''string'' with: ''User not found'' ].
-	sl := user symbolList.
-	dict := sl detect: [ :each |
-		| name |
-		name := (each respondsTo: #name) ifTrue: [ each name asString ] ifFalse: [ each printString ].
-		name = ', d, ' ] ifNone: [ nil ].
-	dict ifNil: [ ^ Array with: ''string'' with: ''Dictionary not found'' ].
-	entryKey := dict keys detect: [ :each | each asString = ', k, ' ] ifNone: [ nil ].
-	entryKey ifNil: [ ^ Array with: ''missing'' with: ''Entry not found'' ].
-	value := dict at: entryKey.
-	serialize := nil.
-	serialize := [ :obj :depth |
-		(depth > 4) ifTrue: [ ^ Array with: ''string'' with: obj printString ].
-		(obj isKindOf: Dictionary) ifTrue: [
-			| associations limit encoded |
-			limit := obj size min: 50.
-			associations := obj associations asArray copyFrom: 1 to: limit.
-			encoded := associations collect: [ :assoc |
-				Array
-					with: (serialize value: assoc key value: depth + 1)
-					with: (serialize value: assoc value value: depth + 1) ].
-			obj size > limit ifTrue: [
-				encoded := encoded copyWith: (Array
-					with: (Array with: ''string'' with: ''__truncated__'')
-					with: (Array with: ''string'' with: ''Only first '', limit asString, '' entries shown'')) ].
-			^ Array with: ''dictionary'' with: encoded asArray ].
-		((obj isCollection) and: [ (obj isKindOf: String) not and: [ (obj isKindOf: Symbol) not ] ]) ifTrue: [
-			| items limit encoded |
-			items := obj asArray.
-			limit := items size min: 50.
-			items := items copyFrom: 1 to: limit.
-			encoded := items collect: [ :each | serialize value: each value: depth + 1 ].
-			(obj size > limit) ifTrue: [
-				encoded := encoded copyWith: (Array with: ''string'' with: ''... truncated after '', limit asString, '' items'') ].
-			^ Array with: ''collection'' with: obj class name asString with: encoded asArray ].
-		^ Array with: ''string'' with: obj printString ].
-	serialize value: value value: 0'
+	key ifNil: [ ^ self ].
+	preview := self structuredPreviewForEntryKey: key.
+	preview ifNil: [ ^ self ].
+	kind := preview at: #kind ifAbsent: [ 'string' ].
+	(#('dictionary' 'collection') includes: kind)
+		ifTrue: [
+			inspectorClass := Smalltalk at: #GbsStructuredValueInspectorPresenter ifAbsent: [ nil ].
+			inspectorClass
+				ifNil: [ UIManager default inform: 'Structured value inspector is not available.' ]
+				ifNotNil: [
+					inspectorClass
+						openRows: (preview at: #rows ifAbsent: [ #() ])
+						kind: kind
+						title: key asString ].
+			^ self ].
+	UIManager default inform: (preview at: #value ifAbsent: [ '' ]) asString
 ]
 
 { #category : 'private' }
@@ -508,7 +426,7 @@ GbsSymbolListBrowserPresenter >> refreshDictionariesFor: userName [
 	entriesList items: #().
 	entryValuesByKey := Dictionary new.
 	selectionField text: ''.
-	(valueText respondsTo: #text:) ifTrue: [ valueText text: '' ]
+	(valueText respondsTo: #items:) ifTrue: [ valueText items: #() ]
 ]
 
 { #category : 'actions' }
@@ -542,7 +460,7 @@ GbsSymbolListBrowserPresenter >> refreshEntriesForDictionary: dictName [
 	entriesList items: keys asArray.
 	self selectEntryName: previousKey ifMissingSelectFirst: true.
 	selectionField text: ''.
-	(valueText respondsTo: #text:) ifTrue: [ valueText text: '' ]
+	(valueText respondsTo: #items:) ifTrue: [ valueText items: #() ]
 ]
 
 { #category : 'actions' }
@@ -834,14 +752,136 @@ GbsSymbolListBrowserPresenter >> session: aSession [
 
 { #category : 'actions' }
 GbsSymbolListBrowserPresenter >> showEntryForKey: key [
+	| preview |
 	selectionField text: key asString.
-	(valueText respondsTo: #text:)
-		ifTrue: [ valueText text: (entryValuesByKey at: key ifAbsent: [ '' ]) asString ]
+	preview := self structuredPreviewForEntryKey: key.
+	(valueText respondsTo: #items:)
+		ifTrue: [ valueText items: (preview ifNil: [ #() ] ifNotNil: [ preview at: #rows ifAbsent: [ #() ] ]) ]
 ]
 
 { #category : 'accessing' }
 GbsSymbolListBrowserPresenter >> targetUserName: aString [
 	targetUserName := aString ifNil: [ '' ] ifNotNil: [ aString asString ]
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> parsedStructuredPreviewFrom: rawString [
+	| lines kind rows value |
+	(rawString isString and: [ rawString isNotEmpty ]) ifFalse: [
+		^ Dictionary new
+			at: #kind put: 'string';
+			at: #rows put: { { 'Value'. '' } };
+			at: #value put: '';
+			yourself ].
+	lines := rawString lines.
+	kind := lines
+		ifEmpty: [ 'string' ]
+		ifNotEmpty: [ lines first asString ].
+	rows := OrderedCollection new.
+	(kind = 'dictionary' or: [ kind = 'collection' ]) ifTrue: [
+		(lines allButFirst) do: [ :line |
+			| parts |
+			parts := line splitOn: Character tab.
+			rows add: {
+				(parts at: 1 ifAbsent: [ '' ]).
+				(parts at: 2 ifAbsent: [ '' ]) } ].
+		^ Dictionary new
+			at: #kind put: kind;
+			at: #rows put: rows asArray;
+			at: #value put: '';
+			yourself ].
+	value := lines size > 1
+		ifTrue: [ lines second ]
+		ifFalse: [ '' ].
+	^ Dictionary new
+		at: #kind put: 'string';
+		at: #rows put: { { 'Value'. value asString } };
+		at: #value put: value asString;
+		yourself
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> structuredPreviewForEntryKey: keyName [
+	| userName dictName raw |
+	userName := self selectedUserName.
+	dictName := self selectedDictionaryName.
+	(userName isNil or: [ dictName isNil or: [ keyName isNil ] ]) ifTrue: [ ^ nil ].
+	raw := [ session executeAndFetch: (self structuredPreviewScriptForUser: userName dictionary: dictName keyName: keyName) ]
+		on: Error
+		do: [ :ex | 'string', String lf, 'Inspect entry failed: ', ex messageText ].
+	^ self parsedStructuredPreviewFrom: raw
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> structuredPreviewScriptForUser: userName dictionary: dictName keyName: keyName [
+	| u d k |
+	u := self literalString: userName.
+	d := self literalString: dictName.
+	k := self literalString: keyName.
+	^ '
+	| users user sl dict entryKey value sanitize stream limit index associations items |
+	sanitize := [ :obj |
+		| string |
+		string := obj printString asString.
+		string := string copyReplaceAll: String cr with: '' ''.
+		string := string copyReplaceAll: String lf with: '' ''.
+		string := string copyReplaceAll: Character tab asString with: ''    ''.
+		string ].
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNil: [ ^ ''string'', String cr, ''AllUsers not found'' ].
+	user := users detect: [ :x | x userId asString = ', u, ' ] ifNone: [ nil ].
+	user ifNil: [ ^ ''string'', String cr, ''User not found'' ].
+	sl := user symbolList.
+	dict := sl detect: [ :each |
+		| name |
+		name := (each respondsTo: #name) ifTrue: [ each name asString ] ifFalse: [ each printString ].
+		name = ', d, ' ] ifNone: [ nil ].
+	dict ifNil: [ ^ ''string'', String cr, ''Dictionary not found'' ].
+	entryKey := dict keys detect: [ :each | each asString = ', k, ' ] ifNone: [ nil ].
+	entryKey ifNil: [ ^ ''string'', String cr, ''Entry not found'' ].
+	value := dict at: entryKey.
+	stream := WriteStream on: String new.
+	(value isKindOf: Dictionary) ifTrue: [
+		stream nextPutAll: ''dictionary''; cr.
+		associations := value associations asArray.
+		limit := associations size min: 200.
+		1 to: limit do: [ :idx |
+			| assoc |
+			assoc := associations at: idx.
+			stream
+				nextPutAll: (sanitize value: assoc key);
+				tab;
+				nextPutAll: (sanitize value: assoc value).
+			idx < limit ifTrue: [ stream cr ] ].
+		value size > limit ifTrue: [
+			limit > 0 ifTrue: [ stream cr ].
+			stream
+				nextPutAll: ''__truncated__'';
+				tab;
+				nextPutAll: ''Only first '', limit asString, '' entries shown'' ].
+		^ stream contents ].
+	((value isCollection) and: [ (value isKindOf: String) not and: [ (value isKindOf: Symbol) not ] ]) ifTrue: [
+		stream nextPutAll: ''collection''; cr.
+		items := value asArray.
+		limit := items size min: 200.
+		1 to: limit do: [ :idx |
+			stream
+				nextPutAll: idx asString;
+				tab;
+				nextPutAll: (sanitize value: (items at: idx)).
+			idx < limit ifTrue: [ stream cr ] ].
+		value size > limit ifTrue: [
+			limit > 0 ifTrue: [ stream cr ].
+			stream
+				nextPutAll: ''__truncated__'';
+				tab;
+				nextPutAll: ''Only first '', limit asString, '' items shown'' ].
+		^ stream contents ].
+	stream
+		nextPutAll: ''string'';
+		cr;
+		nextPutAll: (sanitize value: value).
+	stream contents'
 ]
 
 { #category : 'private' }
