@@ -320,11 +320,109 @@ GbsSymbolListBrowserPresenter >> inspectDictionaryScriptForUser: userName dictio
 
 { #category : 'actions' }
 GbsSymbolListBrowserPresenter >> inspectSelectedEntry [
-	| key value |
+	| encoding materialized |
+	encoding := self inspectableEncodingForSelectedEntry.
+	encoding ifNil: [ ^ self ].
+	materialized := self decodedInspectableEntryFrom: encoding.
+	(materialized isKindOf: Dictionary)
+		ifTrue: [ materialized inspect. ^ self ].
+	((materialized isCollection) and: [ materialized isString not ])
+		ifTrue: [ materialized inspect ]
+		ifFalse: [ UIManager default inform: materialized asString ]
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> decodedInspectableEntryFrom: anEncoding [
+	| kind payload className items dictionary |
+	anEncoding isArray ifFalse: [ ^ anEncoding asString ].
+	anEncoding isEmpty ifTrue: [ ^ '' ].
+	kind := anEncoding first asString.
+
+	kind = 'dictionary' ifTrue: [
+		dictionary := Dictionary new.
+		payload := anEncoding at: 2 ifAbsent: [ #() ].
+		payload do: [ :associationEncoding |
+			| key value |
+			(associationEncoding isCollection and: [ associationEncoding size >= 2 ]) ifTrue: [
+				key := self decodedInspectableEntryFrom: associationEncoding first.
+				value := self decodedInspectableEntryFrom: associationEncoding second.
+				dictionary at: key put: value ] ].
+		^ dictionary ].
+
+	kind = 'collection' ifTrue: [
+		className := (anEncoding at: 2 ifAbsent: [ 'OrderedCollection' ]) asString.
+		payload := anEncoding at: 3 ifAbsent: [ #() ].
+		items := payload collect: [ :each | self decodedInspectableEntryFrom: each ].
+		^ className = 'Array'
+			ifTrue: [ items asArray ]
+			ifFalse: [ items asOrderedCollection ] ].
+
+	kind = 'missing' ifTrue: [ ^ anEncoding at: 2 ifAbsent: [ 'Entry not found.' ] ].
+	kind = 'string' ifTrue: [ ^ anEncoding at: 2 ifAbsent: [ '' ] ].
+	^ anEncoding printString
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> inspectableEncodingForSelectedEntry [
+	| userName dictName key raw |
+	userName := self selectedUserName.
+	dictName := self selectedDictionaryName.
 	key := self selectedEntryName.
-	key ifNil: [ ^ self ].
-	value := entryValuesByKey at: key ifAbsent: [ '' ].
-	UIManager default inform: key asString, ' => ', value asString
+	(userName isNil or: [ dictName isNil or: [ key isNil ] ]) ifTrue: [ ^ nil ].
+	raw := [ session evaluate: (self inspectableEncodingScriptForUser: userName dictionary: dictName keyName: key) ]
+		on: Error
+		do: [ :ex | Array with: 'string' with: ('Inspect entry failed: ', ex messageText) ].
+	^ raw
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> inspectableEncodingScriptForUser: userName dictionary: dictName keyName: keyName [
+	| u d k |
+	u := self literalString: userName.
+	d := self literalString: dictName.
+	k := self literalString: keyName.
+	^ '
+	| users user sl dict entryKey value serialize |
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNil: [ ^ Array with: ''string'' with: ''AllUsers not found'' ].
+	user := users detect: [ :x | x userId asString = ', u, ' ] ifNone: [ nil ].
+	user ifNil: [ ^ Array with: ''string'' with: ''User not found'' ].
+	sl := user symbolList.
+	dict := sl detect: [ :each |
+		| name |
+		name := (each respondsTo: #name) ifTrue: [ each name asString ] ifFalse: [ each printString ].
+		name = ', d, ' ] ifNone: [ nil ].
+	dict ifNil: [ ^ Array with: ''string'' with: ''Dictionary not found'' ].
+	entryKey := dict keys detect: [ :each | each asString = ', k, ' ] ifNone: [ nil ].
+	entryKey ifNil: [ ^ Array with: ''missing'' with: ''Entry not found'' ].
+	value := dict at: entryKey.
+	serialize := nil.
+	serialize := [ :obj :depth |
+		(depth > 4) ifTrue: [ ^ Array with: ''string'' with: obj printString ].
+		(obj isKindOf: Dictionary) ifTrue: [
+			| associations limit encoded |
+			limit := obj size min: 50.
+			associations := obj associations asArray copyFrom: 1 to: limit.
+			encoded := associations collect: [ :assoc |
+				Array
+					with: (serialize value: assoc key value: depth + 1)
+					with: (serialize value: assoc value value: depth + 1) ].
+			obj size > limit ifTrue: [
+				encoded := encoded copyWith: (Array
+					with: (Array with: ''string'' with: ''__truncated__'')
+					with: (Array with: ''string'' with: ''Only first '', limit asString, '' entries shown'')) ].
+			^ Array with: ''dictionary'' with: encoded asArray ].
+		((obj isCollection) and: [ (obj isKindOf: String) not and: [ (obj isKindOf: Symbol) not ] ]) ifTrue: [
+			| items limit encoded |
+			items := obj asArray.
+			limit := items size min: 50.
+			items := items copyFrom: 1 to: limit.
+			encoded := items collect: [ :each | serialize value: each value: depth + 1 ].
+			(obj size > limit) ifTrue: [
+				encoded := encoded copyWith: (Array with: ''string'' with: ''... truncated after '', limit asString, '' items'') ].
+			^ Array with: ''collection'' with: obj class name asString with: encoded asArray ].
+		^ Array with: ''string'' with: obj printString ].
+	serialize value: value value: 0'
 ]
 
 { #category : 'private' }

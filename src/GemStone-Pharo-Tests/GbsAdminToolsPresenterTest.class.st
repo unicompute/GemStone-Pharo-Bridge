@@ -1278,6 +1278,45 @@ GbsAdminToolsPresenterTest >> testSymbolListCapabilityPredicatesTrackSelectionSt
 ]
 
 { #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSymbolListDecodedInspectableEntryMaterializesCollectionPayload [
+	| presenter result |
+	presenter := (Smalltalk at: #GbsSymbolListBrowserPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].
+
+	result := presenter decodedInspectableEntryFrom: #('collection' 'OrderedCollection' (#('string' 'alpha') #('string' 'beta'))).
+
+	self assert: result class equals: OrderedCollection.
+	self assert: result asArray equals: #('alpha' 'beta')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSymbolListDecodedInspectableEntryMaterializesDictionaryPayload [
+	| presenter result |
+	presenter := (Smalltalk at: #GbsSymbolListBrowserPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].
+
+	result := presenter decodedInspectableEntryFrom: #('dictionary' ((#('string' 'users') #('collection' 'Array' (#('string' 'alice') #('string' 'bob')))) (#('string' 'count') #('string' '2')))).
+
+	self assert: result class equals: Dictionary.
+	self assert: (result at: 'users') equals: #('alice' 'bob').
+	self assert: (result at: 'count') equals: '2'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSymbolListDecodedInspectableEntryTreatsPlainStringsAsStrings [
+	| presenter result |
+	presenter := (Smalltalk at: #GbsSymbolListBrowserPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].
+
+	result := presenter decodedInspectableEntryFrom: 'plain text value'.
+
+	self assert: result equals: 'plain text value'
+]
+
+{ #category : 'tests' }
 GbsAdminToolsPresenterTest >> testSymbolListRefreshDictionariesPreservesSelectedDictionary [
 	| presenter mockSession fakeUsers fakeDicts fakeEntries fakeSelection fakeValue |
 	presenter := (Smalltalk at: #GbsSymbolListBrowserPresenter ifAbsent: [ nil ])
