@@ -1351,6 +1351,21 @@ GbsAdminToolsPresenterTest >> testSymbolListShowEntryForKeyPopulatesStructuredPr
 ]
 
 { #category : 'tests' }
+GbsAdminToolsPresenterTest >> testStructuredValueInspectorRowsSetterUpdatesExistingTable [
+	| presenter fakeTable rows |
+	presenter := (Smalltalk at: #GbsStructuredValueInspectorPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsStructuredValueInspectorPresenter not loaded' ].
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	rows := { { 'mediaAssets'. 'aDictionary()' }. { 'users'. 'aDictionary(...)' } }.
+
+	presenter instVarNamed: 'table' put: fakeTable.
+	presenter rows: rows.
+
+	self assert: fakeTable items equals: rows
+]
+
+{ #category : 'tests' }
 GbsAdminToolsPresenterTest >> testSymbolListRefreshDictionariesPreservesSelectedDictionary [
 	| presenter mockSession fakeUsers fakeDicts fakeEntries fakeSelection fakeValue |
 	presenter := (Smalltalk at: #GbsSymbolListBrowserPresenter ifAbsent: [ nil ])

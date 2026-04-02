@@ -60,7 +60,9 @@ GbsStructuredValueInspectorPresenter >> kind: aString [
 
 { #category : 'accessing' }
 GbsStructuredValueInspectorPresenter >> rows: aCollection [
-	rows := aCollection ifNil: [ #() ] ifNotNil: [ aCollection asArray ]
+	rows := aCollection ifNil: [ #() ] ifNotNil: [ aCollection asArray ].
+	(table respondsTo: #items:)
+		ifTrue: [ table items: rows ]
 ]
 
 { #category : 'accessing' }
