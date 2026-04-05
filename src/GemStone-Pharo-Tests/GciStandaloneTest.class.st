@@ -75,7 +75,7 @@ GciStandaloneTest class >> runTest [
 { #category : 'ffi' }
 GciStandaloneTest >> ffiLibraryName [
     "Point directly to your legacy C-library"
-    ^ '/Users/tariq/GemStone64Bit3.7.4.3-arm64.Darwin/lib/libgcirpc-3.7.4.3-64.dylib'
+    ^ GbsLibrary macLibraryName
 ]
 
 { #category : 'ffi' }

@@ -89,6 +89,13 @@ GbsLibrary class >> macLibraryName: aString [
 	MacLibraryName := aString
 ]
 
+{ #category : 'class initialization' }
+GbsLibrary class >> reset [
+	MacLibraryName := nil.
+	UnixLibraryName := nil.
+	Win32LibraryName := nil
+]
+
 { #category : 'accessing - platform' }
 GbsLibrary >> macLibraryName [
 	^ self class macLibraryName

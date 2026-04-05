@@ -692,7 +692,7 @@ GbsClassicLauncher class >> openGbxStatMonitor [
 GbsClassicLauncher class >> openVSD [
 	"Launch the external VSD (Visual Statistics Display) tool using $GEMSTONE"
 	| gemstone vsdPath cmd |
-	gemstone := Smalltalk os environment at: 'GEMSTONE' ifAbsent: [ '/Users/tariq/GemStone64Bit3.7.4.3-arm64.Darwin' ].
+	gemstone := Smalltalk os environment at: 'GEMSTONE' ifAbsent: [ GbsLibrary gemstoneHome ].
 	vsdPath := (gemstone , '/bin/vsd') asFileReference.
 	vsdPath exists ifFalse: [
 		^ UIManager default inform: 'VSD not found at ', vsdPath pathString ].
