@@ -45,5 +45,8 @@ BaselineOfGemStonePharo >> postload: loader package: packageSpec [
 BaselineOfGemStonePharo >> preload: loader package: packageSpec [
 	self class environment
 		at: #GbxOverrideUtility
-		ifPresent: [ :overrideUtility | overrideUtility removeOverridesForRelease ]
+		ifPresent: [ :overrideUtility |
+			[ overrideUtility removeOverridesForRelease ]
+				on: MessageNotUnderstood
+				do: [ "Method removed or renamed in newer versions - safely skip" ] ]
 ]

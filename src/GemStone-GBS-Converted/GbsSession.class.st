@@ -543,7 +543,7 @@ GbsSession >> isPolling [
 GbsSession >> loginStone: stoneName user: username password: password [
   "Initializes GCI and attempts to log into the specified Stone"
 
-  | initSuccess loginSuccess errorStruct |
+  | initSuccess loginSuccess errorStruct interpretedError |
   initSuccess := self gciInit.
   initSuccess ifFalse: [ ^ GbsError signal: 'Failed to initialize GemStone GCI library.' ].
 
@@ -557,9 +557,23 @@ GbsSession >> loginStone: stoneName user: username password: password [
 
   loginSuccess ifFalse: [ "Login failed. Fetch the error from the C thread and signal it."
       errorStruct := GciError new.
-      ( self gciErr: errorStruct ) ifTrue: [ self signalError: errorStruct ].
+      ( self gciErr: errorStruct ) ifTrue: [ 
+          "Log to Transcript for debugging"
+          Transcript show: '[GemStone Login Error]'; cr.
+          Transcript show: '  Stone: ', stoneName; cr.
+          Transcript show: '  User: ', username; cr.
+          Transcript show: '  Error Number: ', errorStruct number printString; cr.
+          Transcript show: '  Error Message: ', errorStruct message; cr.
+          
+          "Interpret the error message for netldi issues"
+          interpretedError := self interpretLoginError: errorStruct.
+          
+          Transcript show: '  Interpreted: ', interpretedError; cr; cr.
+          
+          self signalError: errorStruct.
+          ^ GbsError signal: interpretedError ].
 
-      ^ GbsError signal: 'Unknown login failure.'
+      ^ GbsError signal: 'Unknown login failure. Please check your GemStone connection parameters.'
       ].
 
   "If we reach here, we are successfully connected!"
@@ -654,6 +668,113 @@ GbsSession >> signalError: aGciError [
 	errorMessage := aGciError message. 
 	
 	^ GbsError signal: errorMessage
+]
+
+{ #category : 'error handling' }
+GbsSession >> interpretLoginError: anErrorStruct [
+    "Interpret login error and provide user-friendly messages for netldi issues"
+    | errorMsg errNum |
+    errorMsg := anErrorStruct message ifNil: [ '' ].
+    errNum := anErrorStruct number ifNil: [ 0 ].
+    
+    ^ self interpretErrorMessage: errorMsg errorNumber: errNum
+]
+
+{ #category : 'error handling' }
+GbsSession >> interpretErrorMessage: aString errorNumber: anErrorNumber [
+    "Interpret error messages and provide user-friendly explanations for common issues"
+    | errorMsgLower originalMsg |
+    
+    "Convert to string if needed"
+    originalMsg := aString isString 
+        ifTrue: [ aString ] 
+        ifFalse: [ 
+            "Handle ByteArray or other types"
+            [ aString asString ] on: Error do: [ 'Unknown error' ] ].
+    
+    errorMsgLower := originalMsg asLowercase.
+    
+    "Check for netldi-specific errors"
+    (errorMsgLower includesSubstring: 'connection refused') ifTrue: [
+        ^ 'Cannot connect to GemStone netldi daemon.
+
+The netldi is not running or not accessible.
+
+To fix this, start netldi on the GemStone server:
+  startnetldi -a <stone_name> -g <username>
+
+Original error: ', originalMsg ].
+    
+    (errorMsgLower includesSubstring: 'no such') ifTrue: [
+        (errorMsgLower includesSubstring: 'stn' or: [ errorMsgLower includesSubstring: 'stone' ]) ifTrue: [
+            ^ 'Cannot find the GemStone stone.
+
+Please check that the stone exists and netldi is running.
+
+To start the stone and netldi:
+  startnetldi -a <stone_name> -g <username>
+
+Original error: ', originalMsg ] ].
+    
+    (errorMsgLower includesSubstring: 'netldi') ifTrue: [
+        ^ 'GemStone netldi daemon is not running or not accessible.
+
+To fix this, start netldi on the GemStone server:
+  startnetldi -a <stone_name> -g <username>
+
+Original error: ', originalMsg ].
+    
+    (errorMsgLower includesSubstring: 'gemnetobject') ifTrue: [
+        ^ 'Cannot connect to gemnetobject service.
+
+Please ensure the GemStone service is running.
+
+To start netldi:
+  startnetldi -a <stone_name> -g <username>
+
+Original error: ', originalMsg ].
+    
+    (errorMsgLower includesSubstring: 'login') ifTrue: [
+        (errorMsgLower includesSubstring: 'fail' or: [ errorMsgLower includesSubstring: 'denied' or: [ errorMsgLower includesSubstring: 'disabled' ] ]) ifTrue: [
+            ^ 'GemStone login failed.
+
+Please check your username and password, or verify that logins are enabled.
+
+Original error: ', originalMsg ] ].
+    
+    (errorMsgLower includesSubstring: 'shutdown') ifTrue: [
+        ^ 'GemStone is shutting down.
+
+Please wait for it to fully stop and restart it.
+
+To restart:
+  startnetldi -a <stone_name> -g <username>
+
+Original error: ', originalMsg ].
+    
+    (errorMsgLower includesSubstring: 'timeout') ifTrue: [
+        ^ 'Connection to GemStone timed out.
+
+Please check network connectivity and that netldi is running.
+
+To start netldi:
+  startnetldi -a <stone_name> -g <username>
+
+Original error: ', originalMsg ].
+    
+    (anErrorNumber notNil and: [ anErrorNumber ~= 0 ]) ifTrue: [
+        ^ 'GemStone error ', anErrorNumber asString, ': ', originalMsg ].
+    
+    "Fallback message"
+    originalMsg isEmpty ifTrue: [ 
+        ^ 'Login failed. Please check your GemStone connection parameters.
+
+Common issues:
+• netldi is not running - start with: startnetldi -a <stone_name> -g <username>
+• Stone name is incorrect
+• Network connectivity issues' ].
+    
+    ^ originalMsg
 ]
 
 { #category : 'polling' }

@@ -264,8 +264,8 @@ GbsSessionParameters >> logArg: aValue [ logArg := aValue
 
 { #category : 'connection' }
 GbsSessionParameters >> login [
-    | interface outBuf stonePtr userPtr servicePtr emptyPtr result serviceString |
-    
+    | interface outBuf stonePtr userPtr servicePtr emptyPtr result serviceString hostPtr netPtr |
+
     "UI State Check"
     self isConnected ifTrue: [ ^ self inform: 'Already Connected' ].
 
@@ -281,8 +281,12 @@ GbsSessionParameters >> login [
     outBuf := ExternalAddress allocate: 1024.
     stonePtr := ExternalAddress allocate: gemStoneName size + 1.
     userPtr := ExternalAddress allocate: username size + 1.
-    servicePtr := ExternalAddress allocate: serviceString size + 1. "Allocating based on variable"
+    servicePtr := ExternalAddress allocate: serviceString size + 1.
     emptyPtr := ExternalAddress allocate: 1.
+    
+    "Allocate host and net pointers for netldi configuration"
+    hostPtr := ExternalAddress allocate: 256.
+    netPtr := ExternalAddress allocate: 256.
 
     [
         "3. COPY STRINGS (Your Manual Loop Logic)"
@@ -297,13 +301,22 @@ GbsSessionParameters >> login [
         servicePtr byteAt: serviceString size + 1 put: 0.
 
         emptyPtr byteAt: 1 put: 0.
+        
+        "Copy netldi host and port if configured"
+        self netldiHostOrIp ifNotNil: [ :host |
+            1 to: host size do: [ :i | hostPtr byteAt: i put: ( host at: i ) asInteger ].
+            hostPtr byteAt: host size + 1 put: 0 ].
+        
+        self netldiNameOrPort ifNotNil: [ :port |
+            1 to: port size do: [ :i | netPtr byteAt: i put: ( port at: i ) asInteger ].
+            netPtr byteAt: port size + 1 put: 0 ].
 
         "4. ENCRYPT & LOGIN (Your Logic)"
         interface apiGciEncrypt: password into: outBuf size: 1024.
         interface
             apiGciSetNet: stonePtr
-            host: emptyPtr
-            net: emptyPtr
+            host: (self netldiHostOrIp ifNil: [ emptyPtr ] ifNotNil: [ hostPtr ])
+            net: (self netldiNameOrPort ifNil: [ emptyPtr ] ifNotNil: [ netPtr ])
             service: servicePtr.
 
         result := interface
@@ -313,15 +326,15 @@ GbsSessionParameters >> login [
                     context: 0.
 
         result = 1 ifFalse: [
-            interface checkError.
-            self error: 'Login Failed'
-        ]
+            self handleLoginError: interface ]
     ] ensure: [
         outBuf free.
         stonePtr free.
         userPtr free.
         servicePtr free.
-        emptyPtr free
+        emptyPtr free.
+        hostPtr free.
+        netPtr free
     ].
 
 	    "5. UI STATE UPDATES (Crucial for Launcher)"
@@ -334,12 +347,216 @@ GbsSessionParameters >> login [
 	                        isLoggedIn: true;
 	                        parameters: self;
 	                        yourself.
-                        
+
     "Register so it appears in the bottom list"
     self class registerSession: self.
     self inform: 'Login Successful'.
-    
+
     ^ CurrentSession
+]
+
+{ #category : 'connection' }
+GbsSessionParameters >> handleLoginError: interface [
+    "Handle login failure with specific error messages for netldi and connection issues"
+    | errorMessage rawErrMsg errNum hasError buffer |
+    
+    "First, try to read the raw error message from GCI"
+    buffer := ExternalAddress allocate: 2168.
+    [
+        hasError := interface apiGciErr: buffer.
+        (hasError = 1 or: [ hasError == true ]) ifTrue: [
+            errNum := buffer signedLongAt: 5.
+            rawErrMsg := self readErrorMessageFrom: buffer ]
+    ] ensure: [ buffer free ].
+    
+    "Log to Transcript for debugging"
+    Transcript show: '[GemStone Login Error]'; cr.
+    Transcript show: '  Stone: ', self gemStoneName; cr.
+    Transcript show: '  User: ', self username; cr.
+    Transcript show: '  Error Number: ', (errNum ifNil: [ 'nil' ]) printString; cr.
+    Transcript show: '  Raw Message: ', (rawErrMsg ifNil: [ '(empty)' ]); cr.
+    
+    "Build the error message - use netldiErrorMessage if raw message is empty"
+    errorMessage := self interpretErrorMessage: rawErrMsg errorNumber: errNum.
+    
+    "Log the interpreted error"
+    Transcript show: '  Interpreted: '; show: (errorMessage copyReplaceAll: String cr with: ' | '); cr; cr.
+    
+    self error: errorMessage
+]
+
+{ #category : 'connection' }
+GbsSessionParameters >> readErrorMessageFrom: aBuffer [
+    "Try to read error message from buffer using multiple strategies"
+    | msg cleaned |
+    
+    "Strategy 1: Read bytes directly from offset 112 (most reliable)"
+    [ | bytes strEnd |
+      bytes := ByteArray new: 1024.
+      1 to: 1024 do: [ :i |
+          bytes at: i put: (aBuffer + 112) byteAt: i - 1 ].
+      strEnd := bytes indexOf: 0.
+      strEnd > 1 ifTrue: [
+          msg := self convertBytesToString: (bytes copyFrom: 1 to: strEnd - 1).
+          msg trimBoth isEmpty ifFalse: [ ^ msg ] ] ]
+        on: Error do: [ ].
+    
+    "Strategy 2: Try readString at offset 112"
+    [ msg := (aBuffer + 112) readString.
+      msg ifNotNil: [ :raw | 
+          cleaned := self ensureCleanString: raw.
+          cleaned trimBoth isEmpty ifFalse: [ ^ cleaned ] ] ] 
+        on: Error do: [ ].
+    
+    "Strategy 3: Try readString at offset 113"
+    [ msg := (aBuffer + 113) readString.
+      msg ifNotNil: [ :raw | 
+          cleaned := self ensureCleanString: raw.
+          cleaned trimBoth isEmpty ifFalse: [ ^ cleaned ] ] ] 
+        on: Error do: [ ].
+    
+    "Strategy 4: Try readString at offset 114"
+    [ msg := (aBuffer + 114) readString.
+      msg ifNotNil: [ :raw | 
+          cleaned := self ensureCleanString: raw.
+          cleaned trimBoth isEmpty ifFalse: [ ^ cleaned ] ] ] 
+        on: Error do: [ ].
+    
+    ^ nil
+]
+
+{ #category : 'connection' }
+GbsSessionParameters >> convertBytesToString: aByteArray [
+    "Convert ByteArray to String properly"
+    | stream |
+    aByteArray ifNil: [ ^ '' ].
+    aByteArray isEmpty ifTrue: [ ^ '' ].
+    
+    stream := WriteStream on: String new.
+    aByteArray do: [ :byte |
+        byte > 0 ifTrue: [
+            "Convert byte to character"
+            stream nextPut: (Character codePoint: byte) ] ].
+    
+    ^ stream contents
+]
+
+{ #category : 'connection' }
+GbsSessionParameters >> netldiErrorMessage [
+    "Return a helpful message when netldi is likely not running"
+    ^ 'GemStone netldi daemon is not running or not accessible.
+
+To fix this, start netldi on the GemStone server:
+
+  startnetldi -a ', self gemStoneName, ' -g username
+
+If netldi is already running, check:
+• Stone name is correct: ', self gemStoneName, '
+• Network connectivity to the GemStone server
+• Firewall settings are not blocking the connection'
+]
+
+{ #category : 'connection' }
+GbsSessionParameters >> interpretErrorMessage: aString errorNumber: anErrorNumber [
+    "Interpret error messages and provide user-friendly explanations for common issues"
+    | errorMsgLower originalMsg |
+    
+    "Handle nil or empty messages - likely netldi not running"
+    (aString isNil or: [ aString trimBoth isEmpty ]) ifTrue: [
+        ^ self netldiErrorMessage ].
+    
+    "Convert to string if needed"
+    originalMsg := aString isString 
+        ifTrue: [ aString trimBoth ]
+        ifFalse: [ 
+            "Handle ByteArray or other types"
+            [ 
+                (aString isKindOf: ByteArray) ifTrue: [
+                    self convertBytesToString: aString ]
+                ifFalse: [ aString asString trimBoth ]
+            ] on: Error do: [ 
+                ^ self netldiErrorMessage ] ].
+    
+    "Double check if converted message is empty"
+    originalMsg isEmpty ifTrue: [
+        ^ self netldiErrorMessage ].
+    
+    errorMsgLower := originalMsg asLowercase.
+    
+    "Check for netldi-specific errors"
+    (errorMsgLower includesSubstring: 'connection refused') ifTrue: [
+        ^ 'Cannot connect to GemStone netldi daemon.
+
+The netldi is not running or not accessible.
+
+To fix this, start netldi on the GemStone server:
+  startnetldi -a ', self gemStoneName, '
+
+Original error: ', originalMsg ].
+    
+    (errorMsgLower includesSubstring: 'no such') ifTrue: [
+        (errorMsgLower includesSubstring: 'stn' or: [ errorMsgLower includesSubstring: 'stone' ]) ifTrue: [
+            ^ 'Cannot find the GemStone stone "', self gemStoneName, '".
+
+Please check that the stone exists and netldi is running.
+
+To start the stone and netldi:
+  startnetldi -a ', self gemStoneName, '
+
+Original error: ', originalMsg ] ].
+    
+    (errorMsgLower includesSubstring: 'netldi') ifTrue: [
+        ^ 'GemStone netldi daemon is not running or not accessible.
+
+To fix this, start netldi on the GemStone server:
+  startnetldi -a ', self gemStoneName, '
+
+Original error: ', originalMsg ].
+    
+    (errorMsgLower includesSubstring: 'gemnetobject') ifTrue: [
+        ^ 'Cannot connect to gemnetobject service.
+
+Please ensure the GemStone service is running.
+
+To start netldi:
+  startnetldi -a ', self gemStoneName, '
+
+Original error: ', originalMsg ].
+    
+    (errorMsgLower includesSubstring: 'login') ifTrue: [
+        (errorMsgLower includesSubstring: 'fail' or: [ errorMsgLower includesSubstring: 'denied' or: [ errorMsgLower includesSubstring: 'disabled' ] ]) ifTrue: [
+            ^ 'GemStone login failed.
+
+Please check your username and password, or verify that logins are enabled.
+
+Original error: ', originalMsg ] ].
+    
+    (errorMsgLower includesSubstring: 'shutdown') ifTrue: [
+        ^ 'GemStone is shutting down.
+
+Please wait for it to fully stop and restart it:
+  startnetldi -a ', self gemStoneName, '
+
+Original error: ', originalMsg ].
+    
+    (errorMsgLower includesSubstring: 'timeout') ifTrue: [
+        ^ 'Connection to GemStone timed out.
+
+Please check network connectivity and that netldi is running.
+
+To start netldi:
+  startnetldi -a ', self gemStoneName, '
+
+Original error: ', originalMsg ].
+    
+    (anErrorNumber notNil and: [ anErrorNumber ~= 0 ]) ifTrue: [
+        ^ 'GemStone error ', anErrorNumber asString, ': ', originalMsg ].
+    
+    "Fallback message"
+    originalMsg isEmpty ifTrue: [
+        ^ self netldiErrorMessage ].
+    
+    ^ originalMsg
 ]
 
 { #category : 'connection' }
