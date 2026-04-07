@@ -10,6 +10,7 @@ Class {
 		'entriesList',
 		'selectionField',
 		'valueText',
+		'entryText',
 		'entryValuesByKey',
 		'currentPreview'
 	],
@@ -223,7 +224,10 @@ GbsSymbolListBrowserPresenter >> defaultLayout [
 		add: (self newLabel label: 'Dictionaries') expand: false;
 		add: listsRow;
 		add: selectionRow expand: false;
+		add: (self newLabel label: 'Keys / Values') expand: false;
 		add: valueText;
+		add: (self newLabel label: 'PrintString') expand: false;
+		add: entryText;
 		spacing: 8;
 		yourself
 ]
@@ -295,6 +299,8 @@ GbsSymbolListBrowserPresenter >> initializePresenters [
 		addColumn: (SpStringTableColumn title: 'Key / Index' evaluated: [ :row | row at: 1 ifAbsent: [ '' ] ]);
 		addColumn: (SpStringTableColumn title: 'Value' evaluated: [ :row | row at: 2 ifAbsent: [ '' ] ]);
 		yourself.
+	entryText := self newText.
+	entryText beNotEditable.
 	entryValuesByKey := Dictionary new
 ]
 
@@ -492,11 +498,19 @@ GbsSymbolListBrowserPresenter >> menuPreviewPopup [
 
 { #category : 'actions' }
 GbsSymbolListBrowserPresenter >> openStructuredInspectorForPreview: preview title: titleString entryKey: entryKey path: path previewKind: previewKind [
-	| inspectorClass |
+	| inspectorClass previewFetcherBlock |
 	inspectorClass := Smalltalk at: #GbsStructuredValueInspectorPresenter ifAbsent: [ nil ].
 	inspectorClass
 		ifNil: [ UIManager default inform: 'Structured value inspector is not available.' ]
 		ifNotNil: [
+			"Create a block that fetches preview for a given row in the inspector"
+			previewFetcherBlock := [ :row |
+				| rowLabel nextPath |
+				rowLabel := (row at: 1 ifAbsent: [ '' ]) asString.
+				rowLabel = '__truncated__' ifTrue: [ nil ] ifFalse: [
+					nextPath := path asArray copyWith: { previewKind asString. rowLabel }.
+					self structuredPreviewForEntryKey: entryKey path: nextPath ] ].
+			
 			inspectorClass
 				openRows: (preview at: #rows ifAbsent: [ #() ])
 				kind: previewKind
@@ -506,7 +520,12 @@ GbsSymbolListBrowserPresenter >> openStructuredInspectorForPreview: preview titl
 						inspectStructuredPreviewRow: row
 						entryKey: entryKey
 						path: path
-						previewKind: previewKind ] ]
+						previewKind: previewKind ]
+				rawPrintString: (preview at: #rawPrintString ifAbsent: [ '' ])
+				entryKey: entryKey
+				path: path
+				previewKind: previewKind
+				previewFetcherBlock: previewFetcherBlock ]
 ]
 
 { #category : 'actions' }
@@ -886,7 +905,9 @@ GbsSymbolListBrowserPresenter >> showEntryForKey: key [
 	preview := self structuredPreviewForEntryKey: key.
 	currentPreview := preview.
 	(valueText respondsTo: #items:)
-		ifTrue: [ valueText items: (preview ifNil: [ #() ] ifNotNil: [ preview at: #rows ifAbsent: [ #() ] ]) ]
+		ifTrue: [ valueText items: (preview ifNil: [ #() ] ifNotNil: [ preview at: #rows ifAbsent: [ #() ] ]) ].
+	(entryText respondsTo: #text:)
+		ifTrue: [ entryText text: (preview ifNil: [ '' ] ifNotNil: [ preview at: #rawPrintString ifAbsent: [ '' ] ]) ]
 ]
 
 { #category : 'actions' }
@@ -897,6 +918,7 @@ GbsSymbolListBrowserPresenter >> showSelectedEntryPreview [
 		currentPreview := nil.
 		selectionField text: ''.
 		(valueText respondsTo: #items:) ifTrue: [ valueText items: #() ].
+		(entryText respondsTo: #text:) ifTrue: [ entryText text: '' ].
 		^ self ].
 	self showEntryForKey: key
 ]
@@ -908,14 +930,24 @@ GbsSymbolListBrowserPresenter >> targetUserName: aString [
 
 { #category : 'private' }
 GbsSymbolListBrowserPresenter >> parsedStructuredPreviewFrom: rawString [
-	| lines kind rows value |
+	| lines kind rows value rawPrintString rawParts structuredPart |
 	(rawString isString and: [ rawString isNotEmpty ]) ifFalse: [
 		^ Dictionary new
 			at: #kind put: 'string';
 			at: #rows put: { { 'Value'. '' } };
 			at: #value put: '';
+			at: #rawPrintString put: '';
 			yourself ].
-	lines := rawString lines.
+	
+	"Split on raw printString delimiter first"
+	rawParts := rawString splitOn: '===RAWPRINTSTRING==='.
+	rawPrintString := rawParts size > 1
+		ifTrue: [ rawParts last trimBoth ]
+		ifFalse: [ '' ].
+	
+	"Parse structured data from first part only"
+	structuredPart := rawParts first.
+	lines := structuredPart lines.
 	kind := lines
 		ifEmpty: [ 'string' ]
 		ifNotEmpty: [ lines first asString ].
@@ -931,6 +963,7 @@ GbsSymbolListBrowserPresenter >> parsedStructuredPreviewFrom: rawString [
 			at: #kind put: kind;
 			at: #rows put: rows asArray;
 			at: #value put: '';
+			at: #rawPrintString put: rawPrintString;
 			yourself ].
 	value := lines size > 1
 		ifTrue: [ lines second ]
@@ -939,6 +972,7 @@ GbsSymbolListBrowserPresenter >> parsedStructuredPreviewFrom: rawString [
 		at: #kind put: 'string';
 		at: #rows put: { { 'Value'. value asString } };
 		at: #value put: value asString;
+		at: #rawPrintString put: rawPrintString;
 		yourself
 ]
 
@@ -1007,7 +1041,7 @@ GbsSymbolListBrowserPresenter >> structuredPreviewScriptForUser: userName dictio
 	k := self literalString: keyName.
 	p := self pathLiteralStringFor: pathCollection.
 	^ '
-	| users user sl dict entryKey value path sanitize stream limit index associations items |
+	| users user sl dict entryKey value path sanitize stream limit index associations items rawString |
 	sanitize := [ :obj |
 		| string |
 		string := obj printString asString.
@@ -1064,6 +1098,8 @@ GbsSymbolListBrowserPresenter >> structuredPreviewScriptForUser: userName dictio
 				nextPutAll: ''__truncated__'';
 				tab;
 				nextPutAll: ''Only first '', limit asString, '' entries shown'' ].
+		stream nextPutAll: String cr, ''===RAWPRINTSTRING==='' , String cr.
+		stream nextPutAll: value printString.
 		^ stream contents ].
 	((value isCollection) and: [ (value isKindOf: String) not and: [ (value isKindOf: Symbol) not ] ]) ifTrue: [
 		stream nextPutAll: ''collection''; cr.
@@ -1081,11 +1117,15 @@ GbsSymbolListBrowserPresenter >> structuredPreviewScriptForUser: userName dictio
 				nextPutAll: ''__truncated__'';
 				tab;
 				nextPutAll: ''Only first '', limit asString, '' items shown'' ].
+		stream nextPutAll: String cr, ''===RAWPRINTSTRING==='' , String cr.
+		stream nextPutAll: value printString.
 		^ stream contents ].
 	stream
 		nextPutAll: ''string'';
 		cr;
 		nextPutAll: (sanitize value: value).
+	stream nextPutAll: String cr, ''===RAWPRINTSTRING==='' , String cr.
+	stream nextPutAll: value printString.
 	stream contents'
 ]
 
