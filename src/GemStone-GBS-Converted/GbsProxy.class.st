@@ -62,6 +62,13 @@ GbsProxy >> doesNotUnderstand: aMessage [
   ^ session forwardRemoteMessage: aMessage forOop: self oop
 ]
 
+{ #category : 'collections' }
+GbsProxy >> at: aKey ifAbsent: aBlock [
+	(self includesKey: aKey)
+		ifTrue: [ ^ self at: aKey ].
+	^ aBlock value
+]
+
 { #category : 'accessing' }
 GbsProxy >> executor [
 
@@ -174,6 +181,35 @@ GbsProxy >> printString [ ^ String streamContents: [ :s | self printOn: s ]
 
 { #category : 'class membership' }
 GbsProxy >> respondsTo: aSymbol [ ^ GbsProxy includesSelector: aSymbol
+]
+
+{ #category : 'collections' }
+GbsProxy >> objectNamed: aName ifAbsent: aBlock [
+	| script result |
+	session ifNil: [ ^ aBlock value ].
+	script := String streamContents: [ :stream |
+		stream
+			nextPutAll: '(Object _objectForOop: ';
+			nextPutAll: self oop printString;
+			nextPutAll: ') objectNamed: ';
+			nextPutAll: (session marshalArgumentToScript: aName);
+			nextPutAll: ' ifAbsent: [ nil ]' ].
+	result := session executeScriptAndFetchObject: script.
+	^ result ifNil: [ aBlock value ] ifNotNil: [ result ]
+]
+
+{ #category : 'collections' }
+GbsProxy >> remove: anObject ifAbsent: aBlock [
+	(self includes: anObject)
+		ifTrue: [ ^ self remove: anObject ].
+	^ aBlock value
+]
+
+{ #category : 'collections' }
+GbsProxy >> removeKey: aKey ifAbsent: aBlock [
+	(self includesKey: aKey)
+		ifTrue: [ ^ self removeKey: aKey ].
+	^ aBlock value
 ]
 
 { #category : 'accessing' }

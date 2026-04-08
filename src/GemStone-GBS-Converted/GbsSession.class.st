@@ -156,8 +156,8 @@ GbsSession >> checkSignals [
 
 { #category : 'transactions' }
 GbsSession >> commit [
-    "Flushes local object changes to the GemStone database."
-    ^ GbsServerInterface uniqueInstance apiGciCommit: self sessionOop.
+    "Compatibility alias used by older GBS examples."
+    ^ self commitTransaction
 ]
 
 { #category : 'transactions' }
@@ -187,6 +187,22 @@ GbsSession >> evaluate: s [
     self checkForError.
 
     ^ self fetchObject: resultOop asInteger
+]
+
+{ #category : 'execution' }
+GbsSession >> executeScriptAndFetchObject: aString [
+	| resultOop |
+	self validateReadyForExecution: aString.
+
+	resultOop := self serverInterface
+		apiGciExecuteStr: aString
+		context: 20
+		env: 0.
+
+	resultOop = 1 ifTrue: [ ^ self handleGciError ].
+	self checkForError.
+
+	^ self fetchObject: resultOop asInteger
 ]
 
 { #category : 'evaluating' }
@@ -589,11 +605,17 @@ GbsSession >> logout [
     ifFalse: [ GbsError signal: 'Failed to safely logout of GemStone.' ]
 ]
 
+{ #category : 'actions' }
+GbsSession >> disconnect [
+	^ self logout
+]
+
 { #category : 'marshaling' }
 GbsSession >> marshalArgumentToScript: anObject [
   "Converts local Pharo objects into strings that represent them in GemStone syntax"
 
   anObject isInteger ifTrue: [ ^ anObject asString ].
+  anObject isSymbol ifTrue: [ ^ '#', anObject asString ].
   anObject == true ifTrue: [ ^ 'true' ].
   anObject == false ifTrue: [ ^ 'false' ].
   anObject ifNil: [ ^ 'nil' ].
@@ -668,6 +690,31 @@ GbsSession >> signalError: aGciError [
 	errorMessage := aGciError message. 
 	
 	^ GbsError signal: errorMessage
+]
+
+{ #category : 'accessing' }
+GbsSession >> symbolList [
+	^ self executeScriptAndFetchObject: 'System myUserProfile symbolList'
+]
+
+{ #category : 'named-objects' }
+GbsSession >> resolveSymbol: aSymbol [
+	^ self
+		resolveSymbol: aSymbol
+		ifAbsent: [ self error: 'No GemStone object named ', aSymbol asString ]
+]
+
+{ #category : 'named-objects' }
+GbsSession >> resolveSymbol: aSymbol ifAbsent: aBlock [
+	| script result |
+	script := String streamContents: [ :stream |
+		stream
+			nextPutAll: '[:symbol | | association |
+	association := GsSession currentSession resolveSymbol: symbol.
+	association == nil ifTrue: [ nil ] ifFalse: [ association value ]] value: ';
+			nextPutAll: (self marshalArgumentToScript: aSymbol) ].
+	result := self executeScriptAndFetchObject: script.
+	^ result ifNil: [ aBlock value ] ifNotNil: [ result ]
 ]
 
 { #category : 'error handling' }
