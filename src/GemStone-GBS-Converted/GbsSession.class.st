@@ -698,6 +698,33 @@ GbsSession >> symbolList [
 ]
 
 { #category : 'named-objects' }
+GbsSession >> globals [
+	"VisualWorks/VAST-style convenience accessor."
+	^ self sessionForwarderFor: #Globals
+]
+
+{ #category : 'named-objects' }
+GbsSession >> published [
+	"VisualWorks/VAST-style convenience accessor."
+	^ self sessionForwarderFor: #Published
+]
+
+{ #category : 'named-objects' }
+GbsSession >> sessionForwarderFor: aSymbol [
+	"Answer an explicit forwarder/proxy for the named GemStone object in the current session."
+	^ self
+		uncachedForwarderAt: aSymbol
+		ifAbsent: [ self error: aSymbol printString , ' not defined' ]
+]
+
+{ #category : 'named-objects' }
+GbsSession >> uncachedForwarderAt: aSymbol ifAbsent: aBlock [
+	| result |
+	result := self resolveSymbol: aSymbol ifAbsent: [ nil ].
+	^ result ifNil: [ aBlock value ] ifNotNil: [ result ]
+]
+
+{ #category : 'named-objects' }
 GbsSession >> resolveSymbol: aSymbol [
 	^ self
 		resolveSymbol: aSymbol
@@ -715,6 +742,18 @@ GbsSession >> resolveSymbol: aSymbol ifAbsent: aBlock [
 			nextPutAll: (self marshalArgumentToScript: aSymbol) ].
 	result := self executeScriptAndFetchObject: script.
 	^ result ifNil: [ aBlock value ] ifNotNil: [ result ]
+]
+
+{ #category : 'named-objects' }
+GbsSession >> userClasses [
+	"VisualWorks/VAST-style convenience accessor."
+	^ self sessionForwarderFor: #UserClasses
+]
+
+{ #category : 'named-objects' }
+GbsSession >> userGlobals [
+	"VisualWorks/VAST-style convenience accessor."
+	^ self sessionForwarderFor: #UserGlobals
 ]
 
 { #category : 'error handling' }

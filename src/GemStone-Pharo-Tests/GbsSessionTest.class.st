@@ -118,6 +118,28 @@ GbsSessionTest >> testLoginSuccess [
 ]
 
 { #category : 'tests' }
+GbsSessionTest >> testNamedForwarderAccessorsUseSessionForwarderFor [
+	| mockSession globals published userClasses userGlobals |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #evaluate put: [ :script |
+		(script includesSubstring: '#Globals') ifTrue: [ ^ GbsProxy oop: 1001 session: mockSession ].
+		(script includesSubstring: '#Published') ifTrue: [ ^ GbsProxy oop: 1002 session: mockSession ].
+		(script includesSubstring: '#UserClasses') ifTrue: [ ^ GbsProxy oop: 1003 session: mockSession ].
+		(script includesSubstring: '#UserGlobals') ifTrue: [ ^ GbsProxy oop: 1004 session: mockSession ].
+		nil ].
+
+	globals := mockSession globals.
+	published := mockSession published.
+	userClasses := mockSession userClasses.
+	userGlobals := mockSession userGlobals.
+
+	self assert: globals oop equals: 1001.
+	self assert: published oop equals: 1002.
+	self assert: userClasses oop equals: 1003.
+	self assert: userGlobals oop equals: 1004
+]
+
+{ #category : 'tests' }
 GbsSessionTest >> testLogoutSuccess [
 	| mockSession |
 	mockSession := MockGbsSession new.
@@ -162,7 +184,34 @@ GbsSessionTest >> testResultForPrimitives [
   self deny: ( session resultFor: 12 ).
   self assert: ( session resultFor: 82 ) equals: 10.
   "$A (65): (65 << 3) + 6 = 526"
-  self assert: ( session resultFor: 526 ) equals: $A
+	self assert: ( session resultFor: 526 ) equals: $A
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testSessionForwarderForSignalsWhenMissing [
+	| mockSession |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #evaluate put: nil.
+
+	self
+		should: [ mockSession sessionForwarderFor: #MissingThing ]
+		raise: Error
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testSessionForwarderForUsesResolveSymbolAndAnswersProxy [
+	| mockSession result |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #evaluate put: [ :script |
+		(script includesSubstring: '#UserGlobals')
+			ifTrue: [ ^ GbsProxy oop: 4242 session: mockSession ].
+		nil ].
+
+	result := mockSession sessionForwarderFor: #UserGlobals.
+
+	self assert: (result isKindOf: GbsProxy).
+	self assert: result oop equals: 4242.
+	self assert: result session equals: mockSession
 ]
 
 { #category : 'running' }
@@ -172,4 +221,17 @@ GbsSessionTest >> testSignalTriggersNotification [
 	mockSession stubs at: #gciPollForSignal put: 4.
 	
 	self should: [ mockSession checkSignals ] raise: TransactionBacklog
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testUncachedForwarderAtIfAbsentReturnsFallbackWhenMissing [
+	| mockSession result |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #evaluate put: nil.
+
+	result := mockSession
+		uncachedForwarderAt: #MissingThing
+		ifAbsent: [ #fallback ].
+
+	self assert: result equals: #fallback
 ]
