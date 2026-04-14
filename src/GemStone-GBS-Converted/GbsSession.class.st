@@ -46,6 +46,73 @@ GbsSession class >> new [
 		ifFalse: [ self basicNew initialize ]
 ]
 
+{ #category : 'event handling' }
+GbsSession class >> clearNotificationActionFor: aSession [
+	self notificationActions removeKey: aSession ifAbsent: [ ]
+]
+
+{ #category : 'event handling' }
+GbsSession class >> clearSessionSignalActionFor: aSession [
+	self sessionSignalActions removeKey: aSession ifAbsent: [ ]
+]
+
+{ #category : 'event handling' }
+GbsSession class >> clearSignaledAbortActionFor: aSession [
+	self signaledAbortActions removeKey: aSession ifAbsent: [ ]
+]
+
+{ #category : 'event handling' }
+GbsSession class >> notificationActionFor: aSession [
+	^ self notificationActions at: aSession ifAbsent: [ nil ]
+]
+
+{ #category : 'event handling' }
+GbsSession class >> notificationActionFor: aSession put: aBlock [
+	self notificationActions at: aSession put: aBlock
+]
+
+{ #category : 'event handling' }
+GbsSession class >> notificationActions [
+	^ self weakRegistryNamed: #GbsSessionNotificationActions
+]
+
+{ #category : 'event handling' }
+GbsSession class >> sessionSignalActionFor: aSession [
+	^ self sessionSignalActions at: aSession ifAbsent: [ nil ]
+]
+
+{ #category : 'event handling' }
+GbsSession class >> sessionSignalActionFor: aSession put: aBlock [
+	self sessionSignalActions at: aSession put: aBlock
+]
+
+{ #category : 'event handling' }
+GbsSession class >> sessionSignalActions [
+	^ self weakRegistryNamed: #GbsSessionSessionSignalActions
+]
+
+{ #category : 'event handling' }
+GbsSession class >> signaledAbortActionFor: aSession [
+	^ self signaledAbortActions at: aSession ifAbsent: [ nil ]
+]
+
+{ #category : 'event handling' }
+GbsSession class >> signaledAbortActionFor: aSession put: aBlock [
+	self signaledAbortActions at: aSession put: aBlock
+]
+
+{ #category : 'event handling' }
+GbsSession class >> signaledAbortActions [
+	^ self weakRegistryNamed: #GbsSessionSignaledAbortActions
+]
+
+{ #category : 'event handling' }
+GbsSession class >> weakRegistryNamed: aSymbol [
+	^ Smalltalk globals
+		at: aSymbol
+		ifAbsentPut: [ WeakKeyDictionary new ]
+]
+
 { #category : 'transactions' }
 GbsSession >> abort [
     "Discards uncommitted changes and syncs with the latest GemStone state."
@@ -79,64 +146,40 @@ GbsSession >> basicEvaluate: aString [
 
 { #category : 'error handling' }
 GbsSession >> checkAndClearError [
-	| buffer errMsg contextOop exceptionOop debugOop gbsError |
+	| buffer errMsg errNum contextOop exceptionOop |
 	buffer := ExternalAddress allocate: 2168.
 	[
-		"Tell the C-library to give us the error and RESET its internal state"
-		GbsServerInterface uniqueInstance apiGciErr: buffer.
-		
-		"Use the 64-bit offsets we verified from your gci_layout_mac.txt"
-		contextOop := buffer unsignedLongLongAt: 9. "Offset 8"
-		exceptionOop := buffer unsignedLongLongAt: 17. "Offset 16"
-		debugOop := ((contextOop isNil or: [ contextOop = 0 or: [ contextOop = 20 ] ])
-			ifTrue: [ exceptionOop ]
-			ifFalse: [ contextOop ]).
-		(debugOop isNil or: [ debugOop = 0 ]) ifTrue: [ debugOop := 20 ].
-		errMsg := (buffer + 113) readString. "Offset 112"
-		
-		gbsError := GbsError new
-			messageText: errMsg;
-			tag: debugOop;
-			serverProcessOop: contextOop;
-			exceptionOop: exceptionOop;
-			yourself.
-		gbsError signal.
+		self serverInterface apiGciErr: buffer.
+		contextOop := buffer unsignedLongLongAt: 9.
+		exceptionOop := buffer unsignedLongLongAt: 17.
+		errNum := buffer signedLongAt: 105.
+		errMsg := (buffer + 113) readString.
+		^ self
+			handleGemStoneErrorNumber: errNum
+			messageText: errMsg
+			contextOop: contextOop
+			exceptionOop: exceptionOop
 	] ensure: [ buffer free ].
 ]
 
 { #category : 'error handling' }
 GbsSession >> checkForError [
-	| buffer result errNum errMsg contextOop exceptionOop debugOop gbsError |
-
+	| buffer result errNum errMsg contextOop exceptionOop |
 	buffer := ExternalAddress allocate: 2168.
 	[
-		result := GbsServerInterface uniqueInstance apiGciErr: buffer.
-
+		result := self serverInterface apiGciErr: buffer.
 		(result = 1 or: [ result == true ]) ifTrue: [
-			"CRITICAL: Exact GS64 64-bit Memory Offsets!"
-			errNum := buffer signedLongAt: 105. "C-offset 104"
-			contextOop := buffer unsignedLongLongAt: 9. "C-offset 8 - this is the suspended context"
-			exceptionOop := buffer unsignedLongLongAt: 17. "C-offset 16 - exception object"
-			errMsg := (buffer + 113) readString. "C-offset 113"
-			debugOop := ((contextOop isNil or: [ contextOop = 0 or: [ contextOop = 20 ] ])
-				ifTrue: [ exceptionOop ]
-				ifFalse: [ contextOop ]).
-			(debugOop isNil or: [ debugOop = 0 ]) ifTrue: [ debugOop := 20 ].
-
-				"Create the error with BOTH the message and the context OOP"
-				gbsError := GbsError new
-				messageText: errMsg;
-				tag: debugOop;
-				serverProcessOop: contextOop;
-				exceptionOop: exceptionOop;
-				yourself.
-			gbsError gemStoneExceptionProxy: nil.
-			gbsError signal.
-		].
-		"Only signal if there's actually an error (result = 1 or true)"
+			errNum := buffer signedLongAt: 105.
+			contextOop := buffer unsignedLongLongAt: 9.
+			exceptionOop := buffer unsignedLongLongAt: 17.
+			errMsg := (buffer + 113) readString.
+			^ self
+				handleGemStoneErrorNumber: errNum
+				messageText: errMsg
+				contextOop: contextOop
+				exceptionOop: exceptionOop ].
 	] ensure: [
-		buffer free.
-	].
+		buffer free ].
 
 	^ nil
 ]
@@ -169,6 +212,124 @@ GbsSession >> commitTransaction [
 	
 	result := self gciCommit.
 	^ result = 1
+]
+
+{ #category : 'transactions' }
+GbsSession >> beginTransaction [
+	self executeSystemSelector: #beginTransaction withArguments: #().
+	^ self
+]
+
+{ #category : 'transactions' }
+GbsSession >> inTransaction [
+	^ self evaluateSystemSelector: #inTransaction withArguments: #()
+]
+
+{ #category : 'transactions' }
+GbsSession >> transactionMode [
+	^ self evaluateSystemSelector: #transactionMode withArguments: #()
+]
+
+{ #category : 'transactions' }
+GbsSession >> transactionMode: aSymbol [
+	self executeSystemSelector: #transactionMode: withArguments: { aSymbol }.
+	^ self
+]
+
+{ #category : 'private - remote execution' }
+GbsSession >> evaluateSystemSelector: aSelector withArguments: arguments [
+	^ self executeScriptAndFetchObject: (self systemCallScriptForSelector: aSelector arguments: arguments)
+]
+
+{ #category : 'private - remote execution' }
+GbsSession >> executeSystemSelector: aSelector withArguments: arguments [
+	^ self execute: (self systemCallScriptForSelector: aSelector arguments: arguments)
+]
+
+{ #category : 'private - remote execution' }
+GbsSession >> systemCallScriptForSelector: aSelector arguments: arguments [
+	^ String streamContents: [ :stream |
+		stream
+			nextPutAll: 'System perform: #';
+			nextPutAll: aSelector asString.
+		arguments isEmpty ifFalse: [
+			stream
+				nextPutAll: ' withArguments: { ';
+				nextPutAll: (' . ' join: (arguments collect: [ :each | self marshalArgumentToScript: each ]));
+				nextPutAll: ' }' ] ]
+]
+
+{ #category : 'notification' }
+GbsSession >> addToNotifySet: anObject [
+	self executeSystemSelector: #addToNotifySet: withArguments: { anObject }.
+	^ self
+]
+
+{ #category : 'notification' }
+GbsSession >> addAllToNotifySet: aCollection [
+	self executeSystemSelector: #addAllToNotifySet: withArguments: { aCollection }.
+	^ self
+]
+
+{ #category : 'notification' }
+GbsSession >> signaledObjects [
+	^ self localSequenceableCollectionFrom:
+		(self evaluateSystemSelector: #signaledObjects withArguments: #())
+]
+
+{ #category : 'lock status' }
+GbsSession >> removeLock: anObject [
+	self executeSystemSelector: #removeLock: withArguments: { anObject }.
+	^ self
+]
+
+{ #category : 'lock status' }
+GbsSession >> removeLockAll: aCollection [
+	self executeSystemSelector: #removeLockAll: withArguments: { aCollection }.
+	^ self
+]
+
+{ #category : 'lock status' }
+GbsSession >> removeLocksForSession [
+	self executeSystemSelector: #removeLocksForSession withArguments: #().
+	^ self
+]
+
+{ #category : 'lock status' }
+GbsSession >> sessionLocks [
+	^ self materializeSessionLocks:
+		(self evaluateSystemSelector: #sessionLocks withArguments: #())
+]
+
+{ #category : 'lock status' }
+GbsSession >> systemLocks [
+	| associations localLocks |
+	associations := self localSequenceableCollectionFrom:
+		(self executeScriptAndFetchObject: 'System systemLocks associations asArray').
+	localLocks := Dictionary new: associations size.
+	associations do: [ :association |
+		localLocks
+			at: association key
+			put: (self materializeSessionLocks: association value) ].
+	^ localLocks
+]
+
+{ #category : 'lock status' }
+GbsSession >> lockOwners: anObject [
+	^ self localSequenceableCollectionFrom:
+		(self evaluateSystemSelector: #lockOwners: withArguments: { anObject })
+]
+
+{ #category : 'lock status' }
+GbsSession >> lockKind: anObject [
+	^ self evaluateSystemSelector: #lockKind: withArguments: { anObject }
+]
+
+{ #category : 'signalling' }
+GbsSession >> sendSignal: aSignal to: sessionIdOrSerial withMessage: aString [
+	^ self
+		evaluateSystemSelector: #_sendSignal:toSess:withMessage:
+		withArguments: { aSignal. sessionIdOrSerial. aString }
 ]
 
 { #category : 'execution' }
@@ -491,35 +652,100 @@ GbsSession >> gciPollForSignal [
 
 { #category : 'error handling' }
 GbsSession >> handleGciError [
-	| buffer errMsg contextOop exceptionOop debugOop gbsError |
-
-	"Allocate the 2168-byte struct from your gci_layout_mac.txt"
+	| buffer errMsg errNum contextOop exceptionOop |
 	buffer := ExternalAddress allocate: 2168.
 	[
-		"Linear Call: Fetch error and RESET the library state"
-		GbsServerInterface uniqueInstance apiGciErr: buffer.
-
-		"Extract 64-bit context from offset 8 (Pharo index 9)"
+		self serverInterface apiGciErr: buffer.
+		errNum := buffer signedLongAt: 105.
 		contextOop := buffer unsignedLongLongAt: 9.
 		exceptionOop := buffer unsignedLongLongAt: 17.
-		debugOop := ((contextOop isNil or: [ contextOop = 0 or: [ contextOop = 20 ] ])
-			ifTrue: [ exceptionOop ]
-			ifFalse: [ contextOop ]).
-		(debugOop isNil or: [ debugOop = 0 ]) ifTrue: [ debugOop := 20 ].
-		"Extract message from offset 113"
 		errMsg := (buffer + 113) readString.
-
-		"Signal the error. tag carries the context for the debugger."
-		gbsError := GbsError new
-			messageText: errMsg;
-			tag: debugOop;
-			serverProcessOop: contextOop;
-			exceptionOop: exceptionOop;
-			yourself.
-		gbsError signal.
-
+		^ self
+			handleGemStoneErrorNumber: errNum
+			messageText: errMsg
+			contextOop: contextOop
+			exceptionOop: exceptionOop
 	] ensure: [ buffer free ].
 	^ nil
+]
+
+{ #category : 'error handling' }
+GbsSession >> handleGemStoneErrorNumber: anErrorNumber messageText: anErrorMessage contextOop: aContextOop exceptionOop: anExceptionOop [
+	| debugOop gbsError |
+	(#(6008 2748) includes: anErrorNumber) ifTrue: [
+		^ self handleObjectsCommittedNotificationMessage: anErrorMessage ].
+	(#(6009 2750) includes: anErrorNumber) ifTrue: [
+		^ self handleSignaledAbortErrorMessage: anErrorMessage ].
+	(#(6010 2711) includes: anErrorNumber) ifTrue: [
+		^ self
+			handleInterSessionSignalMessage: anErrorMessage
+			exceptionOop: anExceptionOop ].
+
+	debugOop := ((aContextOop isNil or: [ aContextOop = 0 or: [ aContextOop = 20 ] ])
+		ifTrue: [ anExceptionOop ]
+		ifFalse: [ aContextOop ]).
+	(debugOop isNil or: [ debugOop = 0 ]) ifTrue: [ debugOop := 20 ].
+
+	gbsError := GbsError new
+		messageText: anErrorMessage;
+		tag: debugOop;
+		serverProcessOop: aContextOop;
+		exceptionOop: anExceptionOop;
+		yourself.
+	gbsError gemStoneExceptionProxy: nil.
+	gbsError signal
+]
+
+{ #category : 'error handling' }
+GbsSession >> handleObjectsCommittedNotificationMessage: anErrorMessage [
+	| action signaled |
+	action := self notificationAction.
+	action ifNil: [
+		^ ObjectsCommittedNotification signal: anErrorMessage ].
+
+	^ [
+		signaled := self localIdentitySetFrom: self signaledObjects.
+		signaled isEmpty ifFalse: [ action value: signaled ] ]
+		ensure: [
+			[ self enableSignaledObjectsError ]
+				on: Error
+				do: [ ] ]
+]
+
+{ #category : 'error handling' }
+GbsSession >> handleSignaledAbortErrorMessage: anErrorMessage [
+	| action |
+	action := self signaledAbortAction.
+	action ifNil: [
+		^ (GbsRtErrSignalAbort new
+			messageText: anErrorMessage;
+			signal) ].
+
+	^ [ action value ]
+		ensure: [
+			[ self enableSignaledAbortError ]
+				on: Error
+				do: [ ] ]
+]
+
+{ #category : 'error handling' }
+GbsSession >> handleInterSessionSignalMessage: anErrorMessage exceptionOop: anExceptionOop [
+	| action sessionSignal |
+	action := self sessionSignalAction.
+	action ifNil: [
+		^ InterSessionSignal signal: anErrorMessage ].
+
+	^ [
+		sessionSignal := self legacyInterSessionSignalFromExceptionOop: anExceptionOop.
+		sessionSignal ifNil: [
+			sessionSignal := self legacyInterSessionSignalPoll ].
+		[ sessionSignal isNil ] whileFalse: [
+			action value: sessionSignal.
+			sessionSignal := self legacyInterSessionSignalPoll ] ]
+		ensure: [
+			[ self enableSignaledGemStoneSessionError ]
+				on: Error
+				do: [ ] ]
 ]
 
 { #category : 'initialization' }
@@ -553,6 +779,158 @@ GbsSession >> isLoggedIn: aBoolean [
 GbsSession >> isPolling [
 
   ^ pollingProcess isNotNil and: [ pollingProcess isTerminated not ]
+]
+
+{ #category : 'notification' }
+GbsSession >> notificationAction [
+	^ self class notificationActionFor: self
+]
+
+{ #category : 'notification' }
+GbsSession >> notificationAction: aBlock [
+	aBlock ifNil: [
+		self class clearNotificationActionFor: self.
+		[ self disableSignaledObjectsError ] on: Error do: [ ].
+		^ nil ].
+
+	self class notificationActionFor: self put: aBlock.
+	self enableSignaledObjectsError.
+	^ aBlock
+]
+
+{ #category : 'event handling' }
+GbsSession >> sessionSignalAction [
+	^ self class sessionSignalActionFor: self
+]
+
+{ #category : 'event handling' }
+GbsSession >> sessionSignalAction: aBlock [
+	aBlock ifNil: [
+		self class clearSessionSignalActionFor: self.
+		[ self disableSignaledGemStoneSessionError ] on: Error do: [ ].
+		^ nil ].
+
+	self class sessionSignalActionFor: self put: aBlock.
+	self enableSignaledGemStoneSessionError.
+	^ aBlock
+]
+
+{ #category : 'event handling' }
+GbsSession >> signaledAbortAction [
+	^ self class signaledAbortActionFor: self
+]
+
+{ #category : 'event handling' }
+GbsSession >> signaledAbortAction: aBlock [
+	aBlock ifNil: [
+		self class clearSignaledAbortActionFor: self.
+		[ self disableSignaledAbortError ] on: Error do: [ ].
+		^ nil ].
+
+	self class signaledAbortActionFor: self put: aBlock.
+	self enableSignaledAbortError.
+	^ aBlock
+]
+
+{ #category : 'notification' }
+GbsSession >> disableSignaledObjectsError [
+	self isLoggedIn ifFalse: [ ^ self ].
+	^ [
+		self evaluateSystemSelector: #disableSignaledObjectsError withArguments: #()
+	] on: ObjectsCommittedNotification do: [ :ex | ex return: nil ]
+]
+
+{ #category : 'notification' }
+GbsSession >> enableSignaledObjectsError [
+	self isLoggedIn ifFalse: [ ^ self ].
+	^ self evaluateSystemSelector: #enableSignaledObjectsError withArguments: #()
+]
+
+{ #category : 'event handling' }
+GbsSession >> disableSignaledGemStoneSessionError [
+	self isLoggedIn ifFalse: [ ^ self ].
+	^ [
+		self evaluateSystemSelector: #disableSignaledGemStoneSessionError withArguments: #()
+	] on: InterSessionSignal do: [ :ex | ex return: nil ]
+]
+
+{ #category : 'event handling' }
+GbsSession >> enableSignaledGemStoneSessionError [
+	self isLoggedIn ifFalse: [ ^ self ].
+	^ self evaluateSystemSelector: #enableSignaledGemStoneSessionError withArguments: #()
+]
+
+{ #category : 'event handling' }
+GbsSession >> disableSignaledAbortError [
+	self isLoggedIn ifFalse: [ ^ self ].
+	^ [
+		self evaluate: 'System disableSignaledAbortError'
+	] on: GbsRtErrSignalAbort do: [ :ex | ex return: nil ]
+]
+
+{ #category : 'event handling' }
+GbsSession >> enableSignaledAbortError [
+	self isLoggedIn ifFalse: [ ^ self ].
+	^ self evaluate: 'System enableSignaledAbortError'
+]
+
+{ #category : 'private - event handling' }
+GbsSession >> legacyInterSessionSignalFromExceptionOop: anExceptionOop [
+	(anExceptionOop isNil or: [ anExceptionOop = 0 or: [ anExceptionOop = 20 ] ]) ifTrue: [ ^ nil ].
+	^ self executeScriptAndFetchObject: (self legacyInterSessionSignalScriptForExceptionOop: anExceptionOop)
+]
+
+{ #category : 'private - event handling' }
+GbsSession >> legacyInterSessionSignalPoll [
+	^ self executeScriptAndFetchObject: self legacyInterSessionSignalPollScript
+]
+
+{ #category : 'private - event handling' }
+GbsSession >> legacyInterSessionSignalPollScript [
+	^ 'GsCurrentSession currentSession signalFromSession'
+]
+
+{ #category : 'private - event handling' }
+GbsSession >> legacyInterSessionSignalScriptForExceptionOop: anExceptionOop [
+	^ String streamContents: [ :stream |
+		stream
+			nextPutAll: '| modern legacy |';
+			nextPutAll: ' modern := Object _objectForOop: ';
+			nextPutAll: anExceptionOop printString;
+			nextPutAll: '.';
+			nextPutAll: ' modern == nil ifTrue: [ nil ] ifFalse: [';
+			nextPutAll: ' legacy := GsInterSessionSignal signal: modern sentInt message: modern sentMessage.';
+			nextPutAll: ' legacy session: (GsSession sessionWithSerialNumber: modern sendingSessionSerial).';
+			nextPutAll: ' legacy ]' ]
+]
+
+{ #category : 'private - event handling' }
+GbsSession >> localIdentitySetFrom: aCollectionOrProxy [
+	| localSet |
+	localSet := IdentitySet new.
+	(self localSequenceableCollectionFrom: aCollectionOrProxy)
+		do: [ :each | localSet add: each ].
+	^ localSet
+]
+
+{ #category : 'private - event handling' }
+GbsSession >> localSequenceableCollectionFrom: aCollectionOrProxy [
+	| size localCollection |
+	aCollectionOrProxy ifNil: [ ^ #() ].
+	(aCollectionOrProxy isKindOf: GbsProxy) ifFalse: [ ^ aCollectionOrProxy asArray ].
+
+	size := aCollectionOrProxy size.
+	localCollection := Array new: size.
+	1 to: size do: [ :index |
+		localCollection at: index put: (aCollectionOrProxy at: index) ].
+	^ localCollection
+]
+
+{ #category : 'private - event handling' }
+GbsSession >> materializeSessionLocks: aLockCollection [
+	| lockArrays |
+	lockArrays := self localSequenceableCollectionFrom: aLockCollection.
+	^ lockArrays collect: [ :each | self localSequenceableCollectionFrom: each ]
 ]
 
 { #category : 'initialization' }

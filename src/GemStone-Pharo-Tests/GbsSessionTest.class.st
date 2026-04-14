@@ -15,6 +15,14 @@ GbsSessionTest >> setUp [
 ]
 
 { #category : 'running' }
+GbsSessionTest >> tearDown [
+	GbsSession notificationActions removeAll.
+	GbsSession sessionSignalActions removeAll.
+	GbsSession signaledAbortActions removeAll.
+	super tearDown
+]
+
+{ #category : 'running' }
 GbsSessionTest >> testAbortTransaction [
 	| mockSession |
 	mockSession := MockGbsSession new.
@@ -380,4 +388,175 @@ GbsSessionTest >> testUncachedForwarderAtIfAbsentReturnsFallbackWhenMissing [
 		ifAbsent: [ #fallback ].
 
 	self assert: result equals: #fallback
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testBeginTransactionAndTransactionModeUseRemoteSystemCalls [
+	| mockSession beginScript modeScript inTransactionScript setModeScript |
+	mockSession := MockGbsSession new.
+
+	beginScript := mockSession systemCallScriptForSelector: #beginTransaction arguments: #().
+	modeScript := mockSession systemCallScriptForSelector: #transactionMode arguments: #().
+	inTransactionScript := mockSession systemCallScriptForSelector: #inTransaction arguments: #().
+	setModeScript := mockSession systemCallScriptForSelector: #transactionMode: arguments: { #manualBegin }.
+
+	mockSession stubs at: #executeResult put: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = modeScript ifTrue: [ ^ #autoBegin ].
+		script = inTransactionScript ifTrue: [ ^ false ].
+		nil ].
+
+	self assert: mockSession beginTransaction == mockSession.
+	self assert: mockSession transactionMode equals: #autoBegin.
+	self deny: mockSession inTransaction.
+	self assert: (mockSession transactionMode: #manualBegin) == mockSession.
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testHandleInterSessionSignalMessageRunsInstalledActionForFirstAndPolledSignals [
+	| mockSession firstSignal createdScript pollScript handled queuedSignals |
+	mockSession := MockGbsSession new.
+	firstSignal := Object new.
+	handled := OrderedCollection new.
+	queuedSignals := OrderedCollection with: #second with: nil.
+
+	createdScript := mockSession legacyInterSessionSignalScriptForExceptionOop: 77.
+	pollScript := mockSession legacyInterSessionSignalPollScript.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = createdScript ifTrue: [ ^ firstSignal ].
+		script = pollScript ifTrue: [ ^ queuedSignals removeFirst ].
+		nil ].
+
+	mockSession sessionSignalAction: [ :signal | handled add: signal ].
+	mockSession handleInterSessionSignalMessage: 'signal' exceptionOop: 77.
+
+	self assert: handled asArray equals: { firstSignal. #second }
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testHandleObjectsCommittedNotificationMessageRunsInstalledActionWithIdentitySet [
+	| mockSession changedObjects handled signaledObjectsScript |
+	mockSession := MockGbsSession new.
+	changedObjects := { Object new. Object new }.
+	signaledObjectsScript := mockSession systemCallScriptForSelector: #signaledObjects arguments: #().
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = signaledObjectsScript ifTrue: [ ^ changedObjects ].
+		nil ].
+
+	mockSession notificationAction: [ :objects | handled := objects ].
+	mockSession handleObjectsCommittedNotificationMessage: 'changed'.
+
+	self assert: handled class equals: IdentitySet.
+	self assert: handled size equals: 2.
+	self assert: (handled includes: changedObjects first).
+	self assert: (handled includes: changedObjects second)
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testLockQueriesAndSignalSendUseCompatibilityScripts [
+	| mockSession systemLocksScript |
+	mockSession := MockGbsSession new.
+	systemLocksScript := 'System systemLocks associations asArray'.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = (mockSession systemCallScriptForSelector: #lockOwners: arguments: { #seat42 }) ifTrue: [ ^ #(11 12) ].
+		script = (mockSession systemCallScriptForSelector: #lockKind: arguments: { #seat42 }) ifTrue: [ ^ #write ].
+		script = (mockSession systemCallScriptForSelector: #sessionLocks arguments: #()) ifTrue: [ ^ { #(r1 r2). #(w1). #() } ].
+		script = systemLocksScript ifTrue: [ ^ { (Association key: 11 value: { #(read1). #(write1). #() }) } ].
+		script = (mockSession systemCallScriptForSelector: #_sendSignal:toSess:withMessage: arguments: { 15. -42. 'hello' }) ifTrue: [ ^ true ].
+		nil ].
+
+	self assert: (mockSession lockOwners: #seat42) equals: #(11 12).
+	self assert: (mockSession lockKind: #seat42) equals: #write.
+	self assert: (mockSession sessionLocks) equals: { #(r1 r2). #(w1). #() }.
+	self assert: (mockSession systemLocks at: 11) equals: { #(read1). #(write1). #() }.
+	self assert: (mockSession sendSignal: 15 to: -42 withMessage: 'hello')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testNotificationActionEnablesAndDisablesRemoteSignalWhenLoggedIn [
+	| mockSession block scripts |
+	mockSession := MockGbsSession new.
+	block := [ :objects | objects ].
+	scripts := OrderedCollection new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script | scripts add: script. true ].
+
+	mockSession notificationAction: block.
+	self assert: mockSession notificationAction == block.
+	mockSession notificationAction: nil.
+
+	self assert: mockSession notificationAction isNil.
+	self
+		assert: scripts asArray
+		equals: {
+			mockSession systemCallScriptForSelector: #enableSignaledObjectsError arguments: #().
+			mockSession systemCallScriptForSelector: #disableSignaledObjectsError arguments: #() }
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testHandleSignaledAbortErrorMessageRunsInstalledAction [
+	| mockSession handled |
+	mockSession := MockGbsSession new.
+	handled := false.
+
+	mockSession signaledAbortAction: [ handled := true ].
+	mockSession handleSignaledAbortErrorMessage: 'sigAbort'.
+
+	self assert: handled
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testHandleSignaledAbortErrorMessageSignalsWhenNoActionInstalled [
+	| mockSession |
+	mockSession := MockGbsSession new.
+
+	self
+		should: [ mockSession handleSignaledAbortErrorMessage: 'sigAbort' ]
+		raise: GbsRtErrSignalAbort
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testSessionSignalActionEnablesAndDisablesRemoteSignalWhenLoggedIn [
+	| mockSession block scripts |
+	mockSession := MockGbsSession new.
+	block := [ :signal | signal ].
+	scripts := OrderedCollection new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script | scripts add: script. true ].
+
+	mockSession sessionSignalAction: block.
+	self assert: mockSession sessionSignalAction == block.
+	mockSession sessionSignalAction: nil.
+
+	self assert: mockSession sessionSignalAction isNil.
+	self
+		assert: scripts asArray
+		equals: {
+			mockSession systemCallScriptForSelector: #enableSignaledGemStoneSessionError arguments: #().
+			mockSession systemCallScriptForSelector: #disableSignaledGemStoneSessionError arguments: #() }
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testSignaledAbortActionStoresAndClearsBlock [
+	| mockSession block |
+	mockSession := MockGbsSession new.
+	block := [ #aborted ].
+
+	mockSession signaledAbortAction: block.
+	self assert: mockSession signaledAbortAction == block.
+
+	mockSession signaledAbortAction: nil.
+	self assert: mockSession signaledAbortAction isNil
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testSignaledAbortActionEnablesAndDisablesRemoteSignalWhenLoggedIn [
+	| mockSession block scripts |
+	mockSession := MockGbsSession new.
+	block := [ #aborted ].
+	scripts := OrderedCollection new.
+	mockSession stubs at: #evaluate put: [ :script | scripts add: script. true ].
+
+	mockSession signaledAbortAction: block.
+	mockSession signaledAbortAction: nil.
+
+	self assert: scripts asArray equals: #('System enableSignaledAbortError' 'System disableSignaledAbortError')
 ]
