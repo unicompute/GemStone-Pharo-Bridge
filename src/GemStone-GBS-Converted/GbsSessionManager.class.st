@@ -317,6 +317,12 @@ GbsSessionManager class >> globalFastConnectorsList [
     ^ #(
         "Collections"
         #(Array Array)
+        #(OrderedCollection OrderedCollection)
+        #(SortedCollection SortedCollection)
+        #(Bag Bag)
+        #(Set Set)
+        #(IdentitySet IdentitySet)
+        #(IdentityDictionary IdentityDictionary)
         #(ByteArray ByteArray)
         #(ByteString String)
         #(WideString DoubleByteString) "Pharo uses WideString, GS uses DoubleByteString"
@@ -672,11 +678,7 @@ GbsSessionManager >> globalConnectorGroup [
 
 { #category : 'accessing' }
 GbsSessionManager >> globalFastConnectorsList [
-    ^ #(
-        #(Array Array)
-        #(ByteString String)
-        #(DateAndTime DateTime)
-    )
+    ^ self class globalFastConnectorsList
 ]
 
 { #category : 'accessing' }

@@ -63,6 +63,14 @@ MockGbsSession >> executeAndFetch: script context: contextOop [
 	^ self executeAndFetch: script
 ]
 
+{ #category : 'execution' }
+MockGbsSession >> executeScriptAndFetchObject: script [
+	| block |
+	block := self stubs at: #executeScriptAndFetchObject ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: script ].
+	^ self stubs at: #executeScriptAndFetchObjectResult ifAbsent: [ nil ]
+]
+
 { #category : 'accessing' }
 MockGbsSession >> gciAbort [
 	^ self stubs at: #gciAbort ifAbsent: [ 1 ]

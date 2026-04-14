@@ -119,14 +119,21 @@ GbsSessionTest >> testLoginSuccess [
 
 { #category : 'tests' }
 GbsSessionTest >> testNamedForwarderAccessorsUseSessionForwarderFor [
-	| mockSession globals published userClasses userGlobals |
+	| mockSession globals published userClasses userGlobals mapping |
 	mockSession := MockGbsSession new.
-	mockSession stubs at: #evaluate put: [ :script |
-		(script includesSubstring: '#Globals') ifTrue: [ ^ GbsProxy oop: 1001 session: mockSession ].
-		(script includesSubstring: '#Published') ifTrue: [ ^ GbsProxy oop: 1002 session: mockSession ].
-		(script includesSubstring: '#UserClasses') ifTrue: [ ^ GbsProxy oop: 1003 session: mockSession ].
-		(script includesSubstring: '#UserGlobals') ifTrue: [ ^ GbsProxy oop: 1004 session: mockSession ].
-		nil ].
+	mapping := Dictionary new
+		at: '#Globals' put: 1001;
+		at: '#Published' put: 1002;
+		at: '#UserClasses' put: 1003;
+		at: '#UserGlobals' put: 1004;
+		yourself.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script | | match |
+		match := mapping keys
+			detect: [ :each | script includesSubstring: each ]
+			ifNone: [ nil ].
+		match
+			ifNil: [ nil ]
+			ifNotNil: [ GbsProxy oop: (mapping at: match) session: mockSession ] ].
 
 	globals := mockSession globals.
 	published := mockSession published.
@@ -137,6 +144,85 @@ GbsSessionTest >> testNamedForwarderAccessorsUseSessionForwarderFor [
 	self assert: published oop equals: 1002.
 	self assert: userClasses oop equals: 1003.
 	self assert: userGlobals oop equals: 1004
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testMarshalArgumentToScriptBuildsDictionaryExpression [
+	| script |
+	script := session
+		marshalArgumentToScript: (Dictionary new
+			at: 'name' put: 'Tariq';
+			at: 'amount' put: 100;
+			yourself).
+
+	self assert: (script includesSubstring: 'Dictionary new').
+	self assert: (script includesSubstring: 'at: ''name'' put: ''Tariq''').
+	self assert: (script includesSubstring: 'at: ''amount'' put: 100')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testMarshalArgumentToScriptBuildsIdentityDictionaryExpression [
+	| script |
+	script := session
+		marshalArgumentToScript: (IdentityDictionary new
+			at: #ticket put: 'vip';
+			yourself).
+
+	self assert: (script includesSubstring: 'IdentityDictionary new').
+	self assert: (script includesSubstring: 'at: #ticket put: ''vip''')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testMarshalArgumentToScriptBuildsNestedCollectionExpression [
+	| object script |
+	object := OrderedCollection new
+		add: (Association key: #name value: 'Tariq');
+		add: #(1 2 3);
+		yourself.
+	script := session marshalArgumentToScript: object.
+
+	self assert: (script includesSubstring: 'OrderedCollection new').
+	self assert: (script includesSubstring: 'Association key: #name value: ''Tariq''').
+	self assert: (script includesSubstring: 'Array new: 3')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testMarshalArgumentToScriptBuildsRepeatedBagExpression [
+	| bag script |
+	bag := Bag new.
+	bag add: 'vip'.
+	bag add: 'vip'.
+	script := session marshalArgumentToScript: bag.
+
+	self assert: (script includesSubstring: 'Bag new').
+	self assert: (script includesSubstring: 'add: ''vip''; add: ''vip''')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testMarshalArgumentToScriptRejectsCyclicCollections [
+	| object |
+	object := OrderedCollection new.
+	object add: object.
+
+	self
+		should: [ session marshalArgumentToScript: object ]
+		raise: Error
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testMarshalArgumentToScriptBuildsSortedCollectionExpression [
+	| script |
+	script := session
+		marshalArgumentToScript: (SortedCollection new
+			add: 3;
+			add: 1;
+			add: 2;
+			yourself).
+
+	self assert: (script includesSubstring: 'SortedCollection new').
+	self assert: (script includesSubstring: 'add: 1').
+	self assert: (script includesSubstring: 'add: 2').
+	self assert: (script includesSubstring: 'add: 3')
 ]
 
 { #category : 'tests' }
@@ -191,7 +277,7 @@ GbsSessionTest >> testResultForPrimitives [
 GbsSessionTest >> testSessionForwarderForSignalsWhenMissing [
 	| mockSession |
 	mockSession := MockGbsSession new.
-	mockSession stubs at: #evaluate put: nil.
+	mockSession stubs at: #executeScriptAndFetchObjectResult put: nil.
 
 	self
 		should: [ mockSession sessionForwarderFor: #MissingThing ]
@@ -202,16 +288,39 @@ GbsSessionTest >> testSessionForwarderForSignalsWhenMissing [
 GbsSessionTest >> testSessionForwarderForUsesResolveSymbolAndAnswersProxy [
 	| mockSession result |
 	mockSession := MockGbsSession new.
-	mockSession stubs at: #evaluate put: [ :script |
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		(script includesSubstring: '#UserGlobals')
-			ifTrue: [ ^ GbsProxy oop: 4242 session: mockSession ].
-		nil ].
+			ifTrue: [ GbsProxy oop: 4242 session: mockSession ]
+			ifFalse: [ nil ] ].
 
 	result := mockSession sessionForwarderFor: #UserGlobals.
 
 	self assert: (result isKindOf: GbsProxy).
 	self assert: result oop equals: 4242.
 	self assert: result session equals: mockSession
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testForwardRemoteMessageMaterializesLocalDictionaryArguments [
+	| mockSession proxy capturedScript result |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #evaluate put: [ :script |
+		capturedScript := script.
+		true ].
+	proxy := GbsProxy oop: 4242 session: mockSession.
+
+	result := proxy
+		at: #MyTestDict
+		put: (Dictionary new
+			at: 'name' put: 'Tariq';
+			at: 'amount' put: 100;
+			yourself).
+
+	self assert: result.
+	self assert: (capturedScript includesSubstring: 'perform: #at:put:').
+	self assert: (capturedScript includesSubstring: 'Dictionary new').
+	self assert: (capturedScript includesSubstring: 'at: ''name'' put: ''Tariq''').
+	self assert: (capturedScript includesSubstring: 'at: ''amount'' put: 100')
 ]
 
 { #category : 'running' }
@@ -227,7 +336,7 @@ GbsSessionTest >> testSignalTriggersNotification [
 GbsSessionTest >> testUncachedForwarderAtIfAbsentReturnsFallbackWhenMissing [
 	| mockSession result |
 	mockSession := MockGbsSession new.
-	mockSession stubs at: #evaluate put: nil.
+	mockSession stubs at: #executeScriptAndFetchObjectResult put: nil.
 
 	result := mockSession
 		uncachedForwarderAt: #MissingThing

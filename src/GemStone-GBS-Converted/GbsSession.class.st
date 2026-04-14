@@ -612,21 +612,186 @@ GbsSession >> disconnect [
 
 { #category : 'marshaling' }
 GbsSession >> marshalArgumentToScript: anObject [
-  "Converts local Pharo objects into strings that represent them in GemStone syntax"
+	"Converts local Pharo objects into strings that represent them in GemStone syntax."
 
-  anObject isInteger ifTrue: [ ^ anObject asString ].
-  anObject isSymbol ifTrue: [ ^ '#', anObject asString ].
-  anObject == true ifTrue: [ ^ 'true' ].
-  anObject == false ifTrue: [ ^ 'false' ].
-  anObject ifNil: [ ^ 'nil' ].
-  anObject isString ifTrue: [ ^ '''' , ( anObject copyReplaceAll: '''' with: '''''' ) , '''' ].
+	^ self marshalArgumentToScript: anObject visited: IdentitySet new
+]
 
-  "If the argument is another Proxy, look up its remote pointer!"
-  ( anObject isKindOf: GbsProxy ) ifTrue: [
-    ^ '(Object _objectForOop: ' , anObject oop asString , ')' ].
+{ #category : 'marshaling' }
+GbsSession >> marshalArgumentToScript: anObject visited: visited [
+	anObject isInteger ifTrue: [ ^ anObject asString ].
+	anObject isFloat ifTrue: [ ^ anObject printString ].
+	anObject class == Fraction ifTrue: [
+		^ '(', anObject numerator printString, ' / ', anObject denominator printString, ')' ].
+	anObject isSymbol ifTrue: [ ^ '#', anObject asString ].
+	anObject == true ifTrue: [ ^ 'true' ].
+	anObject == false ifTrue: [ ^ 'false' ].
+	anObject ifNil: [ ^ 'nil' ].
+	anObject isCharacter ifTrue: [
+		^ '(Character value: ', anObject asInteger printString, ')' ].
+	anObject isString ifTrue: [ ^ self marshalStringLiteralToScript: anObject ].
 
-  self error:
-    'Unsupported argument type for remote message send. Pass primitive types or GbsProxy objects.'
+	"If the argument is another Proxy, look up its remote pointer!"
+	(anObject isKindOf: GbsProxy) ifTrue: [
+		^ '(Object _objectForOop: ', anObject oop asString, ')' ].
+
+	^ self marshalComplexArgumentToScript: anObject visited: visited
+]
+
+{ #category : 'marshaling' }
+GbsSession >> marshalArrayArgumentToScript: anArray visited: visited [
+	| statements |
+	statements := OrderedCollection new: anArray size.
+	1 to: anArray size do: [ :index |
+		statements add:
+			'at: ', index printString, ' put: ',
+				(self marshalArgumentToScript: (anArray at: index) visited: visited) ].
+	^ self
+		marshalConstructedObjectExpressionForReceiver: 'Array new: ', anArray size printString
+		statements: statements
+]
+
+{ #category : 'marshaling' }
+GbsSession >> marshalAssociationArgumentToScript: anAssociation visited: visited [
+	^ '(Association key: ',
+		(self marshalArgumentToScript: anAssociation key visited: visited),
+		' value: ',
+		(self marshalArgumentToScript: anAssociation value visited: visited),
+		')'
+]
+
+{ #category : 'marshaling' }
+GbsSession >> marshalBagArgumentToScript: aBag visited: visited [
+	^ self
+		marshalCollectionArgumentToScript: aBag
+		receiver: 'Bag new'
+		visited: visited
+]
+
+{ #category : 'marshaling' }
+GbsSession >> marshalByteArrayArgumentToScript: aByteArray [
+	| statements |
+	statements := OrderedCollection new: aByteArray size.
+	1 to: aByteArray size do: [ :index | | byte |
+		byte := aByteArray at: index.
+		((byte isInteger) and: [ byte >= 0 and: [ byte <= 255 ] ]) ifFalse: [
+			self error: 'ByteArray arguments must contain integers between 0 and 255.' ].
+		statements add: 'at: ', index printString, ' put: ', byte printString ].
+	^ self
+		marshalConstructedObjectExpressionForReceiver: 'ByteArray new: ', aByteArray size printString
+		statements: statements
+]
+
+{ #category : 'marshaling' }
+GbsSession >> marshalCollectionArgumentToScript: aCollection receiver: receiverString visited: visited [
+	| statements |
+	statements := OrderedCollection new: aCollection size.
+	aCollection do: [ :each |
+		statements add: 'add: ', (self marshalArgumentToScript: each visited: visited) ].
+	^ self
+		marshalConstructedObjectExpressionForReceiver: receiverString
+		statements: statements
+]
+
+{ #category : 'marshaling' }
+GbsSession >> marshalComplexArgumentToScript: anObject visited: visited [
+	(visited includes: anObject) ifTrue: [
+		self error: 'Cyclic local object graphs are not supported for remote message send.' ].
+
+	visited add: anObject.
+	^ [
+		anObject class == Array ifTrue: [
+			^ self marshalArrayArgumentToScript: anObject visited: visited ].
+		anObject class == ByteArray ifTrue: [
+			^ self marshalByteArrayArgumentToScript: anObject ].
+		anObject class == OrderedCollection ifTrue: [
+			^ self
+				marshalCollectionArgumentToScript: anObject
+				receiver: 'OrderedCollection new'
+				visited: visited ].
+		anObject class == Set ifTrue: [
+			^ self
+				marshalCollectionArgumentToScript: anObject
+				receiver: 'Set new'
+				visited: visited ].
+		anObject class == IdentitySet ifTrue: [
+			^ self
+				marshalCollectionArgumentToScript: anObject
+				receiver: 'IdentitySet new'
+				visited: visited ].
+		anObject class == Bag ifTrue: [
+			^ self marshalBagArgumentToScript: anObject visited: visited ].
+		anObject class == SortedCollection ifTrue: [
+			^ self
+				marshalCollectionArgumentToScript: anObject
+				receiver: 'SortedCollection new'
+				visited: visited ].
+		anObject class == Dictionary ifTrue: [
+			^ self
+				marshalDictionaryArgumentToScript: anObject
+				receiver: 'Dictionary new'
+				visited: visited ].
+		anObject class == IdentityDictionary ifTrue: [
+			^ self
+				marshalDictionaryArgumentToScript: anObject
+				receiver: 'IdentityDictionary new'
+				visited: visited ].
+		anObject class == Association ifTrue: [
+			^ self marshalAssociationArgumentToScript: anObject visited: visited ].
+		anObject class == Date ifTrue: [
+			^ '(Date year: ', anObject year printString,
+				' month: ', anObject monthIndex printString,
+				' day: ', anObject dayOfMonth printString,
+				')' ].
+		anObject class == Time ifTrue: [
+			^ '(Time hour: ', anObject hour printString,
+				' minute: ', anObject minute printString,
+				' second: ', anObject second printString,
+				')' ].
+		anObject class == DateAndTime ifTrue: [
+			^ '(DateTime fromString: ', (self marshalStringLiteralToScript: anObject printString), ')' ].
+		self error:
+			'Unsupported argument type for remote message send. Pass primitive types, common collections, dates/times, or GbsProxy objects.' ]
+		ensure: [ visited remove: anObject ifAbsent: [ ] ]
+]
+
+{ #category : 'marshaling' }
+GbsSession >> marshalConstructedObjectExpressionForReceiver: receiverString statements: statements [
+	^ String streamContents: [ :stream |
+		| first |
+		stream
+			nextPutAll: '((';
+			nextPutAll: receiverString;
+			nextPut: $).
+		first := true.
+		statements do: [ :each |
+			first
+				ifTrue: [
+					stream nextPut: Character space.
+					first := false ]
+				ifFalse: [ stream nextPutAll: '; ' ].
+			stream nextPutAll: each ].
+		first ifTrue: [ stream nextPut: Character space ] ifFalse: [ stream nextPutAll: '; ' ].
+		stream nextPutAll: 'yourself)' ]
+]
+
+{ #category : 'marshaling' }
+GbsSession >> marshalDictionaryArgumentToScript: aDictionary receiver: receiverString visited: visited [
+	| statements |
+	statements := OrderedCollection new: aDictionary size.
+	aDictionary keysAndValuesDo: [ :key :value |
+		statements add:
+			'at: ', (self marshalArgumentToScript: key visited: visited),
+				' put: ',
+				(self marshalArgumentToScript: value visited: visited) ].
+	^ self
+		marshalConstructedObjectExpressionForReceiver: receiverString
+		statements: statements
+]
+
+{ #category : 'marshaling' }
+GbsSession >> marshalStringLiteralToScript: aString [
+	^ '''', (aString copyReplaceAll: '''' with: ''''''), ''''
 ]
 
 { #category : 'accessing' }
