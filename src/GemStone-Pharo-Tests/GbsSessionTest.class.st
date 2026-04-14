@@ -237,6 +237,43 @@ GbsSessionTest >> testLogoutSuccess [
 ]
 
 { #category : 'tests' }
+GbsSessionTest >> testLogoutClearsAttachedParameterState [
+	| mockSession params |
+	mockSession := MockGbsSession new.
+	mockSession
+		instVarNamed: 'isLoggedIn' put: true;
+		sessionId: 77;
+		sessionOop: 77.
+	mockSession stubs at: #gciLogout put: nil.
+	params := GbsSessionParameters new.
+	params sessionId: 77.
+	params class currentSession: mockSession.
+	params class registerSession: params.
+	mockSession parameters: params.
+
+	mockSession logout.
+
+	self deny: mockSession isLoggedIn.
+	self assert: mockSession sessionId isNil.
+	self assert: mockSession sessionOop isNil.
+	self assert: params sessionId isNil.
+	self assert: params class currentSession isNil.
+	self deny: (params class allSessions includes: params)
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testLogoutTreatsNilFfiReturnAsSuccess [
+	| mockSession |
+	mockSession := MockGbsSession new.
+	mockSession instVarNamed: 'isLoggedIn' put: true.
+	mockSession stubs at: #gciLogout put: nil.
+
+	mockSession logout.
+
+	self deny: mockSession isLoggedIn
+]
+
+{ #category : 'tests' }
 GbsSessionTest >> testPollingLifecycle [
 	| mockSession |
 	mockSession := MockGbsSession new.

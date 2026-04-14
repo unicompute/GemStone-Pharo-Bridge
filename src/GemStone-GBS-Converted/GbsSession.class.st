@@ -598,11 +598,25 @@ GbsSession >> loginStone: stoneName user: username password: password [
 
 { #category : 'actions' }
 GbsSession >> logout [
+	[
+		self isLoggedIn ifFalse: [ ^ self ].
+		self gciLogout
+	] on: Error do: [ :ex |
+		GbsError signal: 'Failed to safely logout of GemStone: ', ex messageText ].
+	self resetAfterLogout
+]
 
-  self isLoggedIn ifFalse: [ ^ self ].
-  self gciLogout = 1
-    ifTrue: [ isLoggedIn := false ]
-    ifFalse: [ GbsError signal: 'Failed to safely logout of GemStone.' ]
+{ #category : 'actions' }
+GbsSession >> resetAfterLogout [
+	self stopPolling.
+	isLoggedIn := false.
+	sessionOop := nil.
+	sessionId := nil.
+	parameters ifNotNil: [
+		parameters sessionId: nil.
+		parameters class currentSession == self ifTrue: [
+			parameters class currentSession: nil ].
+		parameters class unregisterSession: parameters ]
 ]
 
 { #category : 'actions' }

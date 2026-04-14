@@ -643,6 +643,11 @@ GbsSessionParameters >> sessionId [
 ]
 
 { #category : 'accessing' }
+GbsSessionParameters >> sessionId: anInteger [
+	sessionId := anInteger
+]
+
+{ #category : 'accessing' }
 GbsSessionParameters >> username [ ^ username
 ]
 
