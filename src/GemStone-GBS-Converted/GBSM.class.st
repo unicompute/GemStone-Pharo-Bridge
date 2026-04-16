@@ -46,12 +46,31 @@ GBSM class >> clientMap: anObject [
 
 { #category : 'accessing' }
 GBSM class >> currentSession [
-    ^ CurrentSession
+    ^ GbsSessionParameters currentSession
+		ifNil: [ CurrentSession ]
 ]
 
 { #category : 'accessing' }
 GBSM class >> currentSession: aSession [
-    CurrentSession := aSession
+    CurrentSession := aSession.
+	GbsSessionParameters currentSession: aSession.
+	^ aSession
+]
+
+{ #category : 'named-objects' }
+GBSM class >> globals [
+	^ self requireCurrentSession globals
+]
+
+{ #category : 'named-objects' }
+GBSM class >> published [
+	^ self requireCurrentSession published
+]
+
+{ #category : 'named-objects' }
+GBSM class >> requireCurrentSession [
+	^ self currentSession
+		ifNil: [ self error: 'No current GemStone session' ]
 ]
 
 { #category : 'interactions' }
@@ -97,6 +116,7 @@ GBSM class >> memoryPolicy: anObject [
 { #category : 'cleanup' }
 GBSM class >> reset [
     CurrentSession := nil.
+	GbsSessionParameters currentSession: nil.
 	MainStatsEnabled := false.
 	CacheStatsEnabled := false.
 	ManagerStatResource := nil.
@@ -150,6 +170,11 @@ GBSM class >> statsEnabled: aBoolean [
 		statMonitorRunning: aBoolean
 ]
 
+{ #category : 'named-objects' }
+GBSM class >> sessionForwarderFor: aSymbol [
+	^ self requireCurrentSession sessionForwarderFor: aSymbol
+]
+
 { #category : 'interactions' }
 GBSM class >> sessionsInInteractionCount [
 	^ SessionsInInteractionCount ifNil: [ SessionsInInteractionCount := 0 ]
@@ -158,4 +183,14 @@ GBSM class >> sessionsInInteractionCount [
 { #category : 'interactions' }
 GBSM class >> sessionsInInteractionCount: anInteger [
 	SessionsInInteractionCount := anInteger max: 0
+]
+
+{ #category : 'named-objects' }
+GBSM class >> userClasses [
+	^ self requireCurrentSession userClasses
+]
+
+{ #category : 'named-objects' }
+GBSM class >> userGlobals [
+	^ self requireCurrentSession userGlobals
 ]

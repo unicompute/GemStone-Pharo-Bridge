@@ -3,12 +3,14 @@ Class {
 	#superclass : 'TestCase',
 	#instVars : [
 		'previousFastRegistry',
-	'previousConnectionRegistry',
-	'previousInvalidActionRegistry',
-	'previousPostConnectActionRegistry',
-	'previousSessionConnectorRegistry',
-	'previousConnectorObjectRegistry',
-	'previousConnectorClassMappingRegistry'
+		'previousConnectionRegistry',
+		'previousInvalidActionRegistry',
+		'previousPostConnectActionRegistry',
+		'previousSessionConnectorRegistry',
+		'previousConnectorObjectRegistry',
+		'previousConnectorClassMappingRegistry',
+		'previousCurrentSession',
+		'previousParameterCurrentSession'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -23,7 +25,9 @@ GbsSessionManagerTest >> setUp [
 	previousPostConnectActionRegistry := (Smalltalk globals at: #GbsConnectorPostConnectActionRegistry ifAbsent: [ Dictionary new ]) copy.
 	previousSessionConnectorRegistry := (Smalltalk globals at: #GbsSessionConnectorRegistry ifAbsent: [ Dictionary new ]) copy.
 	previousConnectorObjectRegistry := (Smalltalk globals at: #GbsConnectorObjectRegistry ifAbsent: [ Dictionary new ]) copy.
-	previousConnectorClassMappingRegistry := (Smalltalk globals at: #GbsConnectorClassMappingRegistry ifAbsent: [ Dictionary new ]) copy
+	previousConnectorClassMappingRegistry := (Smalltalk globals at: #GbsConnectorClassMappingRegistry ifAbsent: [ Dictionary new ]) copy.
+	previousCurrentSession := GBSM currentSession.
+	previousParameterCurrentSession := GbsSessionParameters currentSession
 ]
 
 { #category : 'running' }
@@ -35,6 +39,8 @@ GbsSessionManagerTest >> tearDown [
 	Smalltalk globals at: #GbsSessionConnectorRegistry put: previousSessionConnectorRegistry.
 	Smalltalk globals at: #GbsConnectorObjectRegistry put: previousConnectorObjectRegistry.
 	Smalltalk globals at: #GbsConnectorClassMappingRegistry put: previousConnectorClassMappingRegistry.
+	GBSM currentSession: previousCurrentSession.
+	GbsSessionParameters currentSession: previousParameterCurrentSession.
 	super tearDown
 ]
 
@@ -112,8 +118,61 @@ GbsSessionManagerTest >> testWideStringSerialization [
     
     "4. Assertions: Verify the exact UTF-8 byte layout expected by the server"
     "The word 'Hello ' is 6 bytes. The '🌍' emoji is 4 bytes in UTF-8: 240 159 140 141"
-    self assert: serializedBytes size equals: 10.
-    self assert: (serializedBytes copyFrom: 7 to: 10) asArray equals: #(240 159 140 141).
+	self assert: serializedBytes size equals: 10.
+	self assert: (serializedBytes copyFrom: 7 to: 10) asArray equals: #(240 159 140 141).
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testGBSMCurrentSessionFallsBackToSessionParametersCurrentSession [
+	| session |
+	session := MockGbsSession new.
+	GBSM currentSession: nil.
+	GbsSessionParameters currentSession: session.
+
+	self assert: GBSM currentSession == session
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testGBSMCurrentSessionSetterUpdatesSessionParameters [
+	| session |
+	session := MockGbsSession new.
+
+	GBSM currentSession: session.
+
+	self assert: GBSM currentSession == session.
+	self assert: GbsSessionParameters currentSession == session
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testGBSMNamedObjectAccessorsDelegateToCurrentSession [
+	| mockSession globals published userClasses userGlobals mapping |
+	mockSession := MockGbsSession new.
+	mapping := Dictionary new
+		at: '#Globals' put: 1001;
+		at: '#Published' put: 1002;
+		at: '#UserClasses' put: 1003;
+		at: '#UserGlobals' put: 1004;
+		yourself.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script | | match |
+		match := mapping keys
+			detect: [ :each | script includesSubstring: each ]
+			ifNone: [ nil ].
+		match
+			ifNil: [ nil ]
+			ifNotNil: [ GbsProxy oop: (mapping at: match) session: mockSession ] ].
+	GBSM currentSession: mockSession.
+
+	globals := GBSM globals.
+	published := GBSM published.
+	userClasses := GBSM userClasses.
+	userGlobals := GBSM userGlobals.
+
+	self assert: globals oop equals: 1001.
+	self assert: published oop equals: 1002.
+	self assert: userClasses oop equals: 1003.
+	self assert: userGlobals oop equals: 1004.
+	self assert: (GBSM currentSession userGlobals) oop equals: 1004.
+	self assert: (GBSM sessionForwarderFor: #UserGlobals) oop equals: 1004
 ]
 
 { #category : 'tests' }
