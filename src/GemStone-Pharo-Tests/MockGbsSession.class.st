@@ -31,6 +31,11 @@ MockGbsSession >> apiGciExecuteStr: scriptString context: contextOop env: envId 
 	^ self stubs at: #apiGciExecuteStr ifAbsent: [ 20 ]
 ]
 
+{ #category : 'accessing' }
+MockGbsSession >> apiGciErr: errorStruct [
+	^ self gciErr: errorStruct
+]
+
 { #category : 'execution' }
 MockGbsSession >> evaluate: aString [
 	| value |
@@ -71,14 +76,36 @@ MockGbsSession >> executeScriptAndFetchObject: script [
 	^ self stubs at: #executeScriptAndFetchObjectResult ifAbsent: [ nil ]
 ]
 
+{ #category : 'execution' }
+MockGbsSession >> executeScriptAndReturnOop: script [
+	| block |
+	block := self stubs at: #executeScriptAndReturnOop ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: script ].
+	^ self stubs at: #executeScriptAndReturnOopResult ifAbsent: [ 20 ]
+]
+
+{ #category : 'execution' }
+MockGbsSession >> forwardRemoteMessage: aMessage forOop: targetOop [
+	| block |
+	block := self stubs at: #forwardRemoteMessage ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: aMessage cull: targetOop ].
+	^ super forwardRemoteMessage: aMessage forOop: targetOop
+]
+
 { #category : 'accessing' }
 MockGbsSession >> gciAbort [
-	^ self stubs at: #gciAbort ifAbsent: [ 1 ]
+	| value |
+	value := self stubs at: #gciAbort ifAbsent: [ 1 ].
+	(value respondsTo: #value) ifTrue: [ ^ value value ].
+	^ value
 ]
 
 { #category : 'accessing' }
 MockGbsSession >> gciCommit [
-	^ self stubs at: #gciCommit ifAbsent: [ 1 ]
+	| value |
+	value := self stubs at: #gciCommit ifAbsent: [ 1 ].
+	(value respondsTo: #value) ifTrue: [ ^ value value ].
+	^ value
 ]
 
 { #category : 'accessing' }

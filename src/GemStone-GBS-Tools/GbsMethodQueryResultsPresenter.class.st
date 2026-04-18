@@ -13,6 +13,7 @@ Class {
 		'btnImplementors',
 		'btnHierarchySenders',
 		'btnHierarchyImplementors',
+		'btnReferences',
 		'btnFileOut',
 		'btnRefresh',
 		'methodsList',
@@ -53,6 +54,55 @@ GbsMethodQueryResultsPresenter >> beginSessionTransaction [
 ]
 
 { #category : 'actions' }
+GbsMethodQueryResultsPresenter >> browseNamedObjectCacheReport [
+	self inform: session namedObjectCacheReportText.
+	^ true
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> browsePromptedSessionStateKey [
+	| rawKey key |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	rawKey := self requestInput: 'Session state key:' initialAnswer: '19'.
+	(rawKey isNil or: [ rawKey trimBoth isEmpty ]) ifTrue: [ ^ false ].
+	key := [ rawKey trimBoth asInteger ]
+		on: Error
+		do: [ nil ].
+	key ifNil: [
+		self inform: 'Enter a numeric session state key.'.
+		^ false ].
+	^ self browseSessionStateAtKey: key
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> browseSessionStateAtKey: aKey [
+	| sessionStateValue oop |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	sessionStateValue := [ session sessionStateAt: aKey ]
+		on: Error
+		do: [ :ex |
+			self inform: 'Session state lookup failed: ', ex messageText.
+			^ false ].
+	sessionStateValue ifNil: [
+		self inform: 'Session state key ', aKey printString, ' is not set.'.
+		^ false ].
+	oop := [ sessionStateValue oop ]
+		on: Error
+		do: [ nil ].
+	oop ifNil: [
+		((sessionStateValue isInteger) and: [ sessionStateValue > 20 ])
+			ifTrue: [ oop := sessionStateValue ] ].
+	oop ifNil: [
+		self inform: 'Session state key ', aKey printString, ' does not currently have an inspectable remote oop.'.
+		^ false ].
+	^ self openInspectorOnOop: oop
+]
+
+{ #category : 'actions' }
 GbsMethodQueryResultsPresenter >> browseHierarchyImplementorsOfSelected [
 	^ self openQueryForSelectedSelectorMode: 'hierarchyImplementors' titlePrefix: 'Hierarchy Implementors of ' hierarchyScope: 'full'
 ]
@@ -78,6 +128,30 @@ GbsMethodQueryResultsPresenter >> browseImplementorsOfSelected [
 ]
 
 { #category : 'actions' }
+GbsMethodQueryResultsPresenter >> browseReferencesToSelectedClass [
+	| className queryRefs title |
+	className := self selectedReferenceClassName.
+	className ifNil: [ ^ false ].
+	queryRefs := [ session methodReferenceStringsToSymbol: className ]
+		on: Error
+		do: [ #() ].
+	queryRefs isEmpty ifTrue: [
+		UIManager default inform: 'No matches found.'.
+		^ false ].
+	title := self
+		queryResultsTitleForSelector: className
+		modePrefix: 'References to '
+		count: queryRefs size.
+	^ self class openOn: session references: queryRefs title: title
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> browseTypedWrapperAutoloadReport [
+	self inform: (GbsSessionManager typedWrapperAutoloadReportTextForSession: session).
+	^ true
+]
+
+{ #category : 'actions' }
 GbsMethodQueryResultsPresenter >> browseSelectedReference [
 	| ref worker |
 	ref := self selectedReference.
@@ -85,7 +159,18 @@ GbsMethodQueryResultsPresenter >> browseSelectedReference [
 	worker := GbsBrowser new.
 	worker session: session.
 	(worker openMethodReference: ref asString)
-		ifFalse: [ UIManager default inform: 'Could not browse selected method.' ]
+		ifFalse: [ self inform: 'Could not browse selected method.' ]
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> browseSelectedMethodInfo [
+	| methodObject |
+	methodObject := self selectedMethodObject.
+	methodObject ifNil: [
+		self inform: 'Select a method first.'.
+		^ false ].
+	self inform: (self methodInfoTextFor: methodObject).
+	^ true
 ]
 
 { #category : 'actions' }
@@ -102,6 +187,7 @@ GbsMethodQueryResultsPresenter >> buildActionBar [
 		add: btnHierarchyImplementors expand: false;
 		add: btnSenders expand: false;
 		add: btnImplementors expand: false;
+		add: btnReferences expand: false;
 		add: btnFileOut expand: false;
 		add: btnRefresh expand: false;
 		yourself
@@ -123,6 +209,13 @@ GbsMethodQueryResultsPresenter >> buildMenuBar [
 GbsMethodQueryResultsPresenter >> clearFilter [
 	references := allReferences copy.
 	self reloadReferencesIntoList
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> clearNamedObjectCache [
+	session clearNamedObjectCache.
+	self inform: 'Named object cache cleared.'.
+	^ true
 ]
 
 { #category : 'actions' }
@@ -205,6 +298,62 @@ GbsMethodQueryResultsPresenter >> filterContains [
 	self reloadReferencesIntoList
 ]
 
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> inform: aString [
+	UIManager default inform: aString.
+	^ aString
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> invocationArgumentsForMethodObject: aMethodObject [
+	| argumentCount input |
+	aMethodObject ifNil: [ ^ nil ].
+	argumentCount := aMethodObject selector numArgs.
+	argumentCount = 0 ifTrue: [ ^ #() ].
+	input := self
+		requestInput: (GbsRemoteMethodObject
+			invocationPromptForSelector: aMethodObject selector
+			argumentCount: argumentCount)
+		initialAnswer: (GbsRemoteMethodObject defaultArgumentInputForCount: argumentCount).
+	input ifNil: [ ^ nil ].
+	^ GbsRemoteMethodObject
+		argumentsFromInput: input
+		expectedCount: argumentCount
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> inspectSelectedMethod [
+	| methodObject oop |
+	methodObject := self selectedMethodObject.
+	methodObject ifNil: [
+		self inform: 'Select a method first.'.
+		^ false ].
+	oop := methodObject oop.
+	(oop isInteger and: [ oop > 20 ]) ifFalse: [ ^ false ].
+	^ self openInspectorOnOop: oop
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> invokeSelectedMethod [
+	| methodObject invocationArguments result |
+	methodObject := self selectedMethodObject.
+	methodObject ifNil: [
+		self inform: 'Select a method first.'.
+		^ false ].
+	methodObject classSide ifFalse: [
+		self inform: 'Query results invocation only supports class-side methods. Use the debugger to bind an instance receiver.'.
+		^ false ].
+	invocationArguments := self invocationArgumentsForMethodObject: methodObject.
+	invocationArguments ifNil: [ ^ false ].
+	result := [ methodObject callWithArguments: invocationArguments ]
+		on: Error
+		do: [ :ex |
+			self inform: 'GemStone invoke failed: ', ex messageText.
+			^ false ].
+	self inform: 'GemStone method result: ', result printString.
+	^ true
+]
+
 { #category : 'actions' }
 GbsMethodQueryResultsPresenter >> findSelector [
 	| token idx items |
@@ -254,6 +403,11 @@ GbsMethodQueryResultsPresenter >> iconForRefreshAction [
 ]
 
 { #category : 'icons' }
+GbsMethodQueryResultsPresenter >> iconForReferencesAction [
+	^ self iconNamed: #smallFind
+]
+
+{ #category : 'icons' }
 GbsMethodQueryResultsPresenter >> iconForSendersAction [
 	^ self iconNamed: #smallForward
 ]
@@ -287,6 +441,11 @@ GbsMethodQueryResultsPresenter >> initializePresenters [
 		label: 'Implementors';
 		icon: (self iconForImplementorsAction);
 		action: [ self browseImplementorsOfSelected ];
+		yourself.
+	btnReferences := self newButton
+		label: 'References';
+		icon: (self iconForReferencesAction);
+		action: [ self browseReferencesToSelectedClass ];
 		yourself.
 	btnFileOut := self newButton
 		label: 'File Out As...';
@@ -370,7 +529,15 @@ GbsMethodQueryResultsPresenter >> menuMethod [
 				item
 					name: 'Browse Hierarchy';
 					icon: self iconForHierarchyImplementorsAction;
-					action: [ self browseHierarchyImplementorsOfSelected ] ] ];
+					action: [ self browseHierarchyImplementorsOfSelected ] ].
+			group addItem: [ :item |
+				item
+					name: 'Browse Method Info';
+					action: [ self browseSelectedMethodInfo ] ].
+			group addItem: [ :item |
+				item
+					name: 'Inspect';
+					action: [ self inspectSelectedMethod ] ] ];
 		addGroup: [ :group |
 			group addItem: [ :item |
 				item
@@ -382,6 +549,15 @@ GbsMethodQueryResultsPresenter >> menuMethod [
 					name: 'Implementors';
 					icon: self iconForImplementorsAction;
 					action: [ self browseImplementorsOfSelected ] ].
+			group addItem: [ :item |
+				item
+					name: 'References';
+					icon: self iconForReferencesAction;
+					action: [ self browseReferencesToSelectedClass ] ].
+			group addItem: [ :item |
+				item
+					name: 'Invoke in GemStone';
+					action: [ self invokeSelectedMethod ] ].
 			group addItem: [ :item | item name: 'Hierarchy Senders'; subMenu: self menuHierarchySenders ].
 			group addItem: [ :item | item name: 'Hierarchy Implementors'; subMenu: self menuHierarchyImplementors ] ];
 		addGroup: [ :group |
@@ -400,6 +576,11 @@ GbsMethodQueryResultsPresenter >> menuSession [
 			group addItem: [ :item | item name: 'Commit Transaction'; action: [ self commitSession ] ].
 			group addItem: [ :item | item name: 'Abort Transaction'; action: [ self abortSession ] ].
 			group addItem: [ :item | item name: 'Begin Transaction'; action: [ self beginSessionTransaction ] ] ];
+		addGroup: [ :group |
+			group addItem: [ :item | item name: 'Named Object Cache Report'; action: [ self browseNamedObjectCacheReport ] ].
+			group addItem: [ :item | item name: 'Clear Named Object Cache'; action: [ self clearNamedObjectCache ] ].
+			group addItem: [ :item | item name: 'Typed Wrapper Autoload Report'; action: [ self browseTypedWrapperAutoloadReport ] ].
+			group addItem: [ :item | item name: 'Inspect Session State Key...'; action: [ self browsePromptedSessionStateKey ] ] ];
 		yourself
 ]
 
@@ -415,6 +596,51 @@ GbsMethodQueryResultsPresenter >> menuWindow [
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Close'; action: [ self closeWindow ] ] ];
 		yourself
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> methodMirrorForReference: referenceString [
+	| methodObject |
+	methodObject := self methodObjectForReference: referenceString.
+	^ methodObject ifNil: [ nil ] ifNotNil: [ methodObject mirror ]
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> methodInfoTextFor: aMethodObject [
+	^ String streamContents: [ :stream |
+		stream
+			nextPutAll: 'Class: ';
+			nextPutAll: aMethodObject ownerName;
+			lf;
+			nextPutAll: 'Selector: #';
+			nextPutAll: aMethodObject selector asString;
+			lf;
+			nextPutAll: 'Protocol: ';
+			nextPutAll: aMethodObject protocol asString;
+			lf;
+			nextPutAll: 'Package: ';
+			nextPutAll: aMethodObject packageName asString;
+			lf;
+			nextPutAll: 'Version: ';
+			nextPutAll: aMethodObject version asString;
+			nextPutAll: ' of ';
+			nextPutAll: aMethodObject numberOfVersions asString;
+			lf;
+			nextPutAll: 'Source: ';
+			nextPutAll: aMethodObject sourceLocation asString ]
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> methodObjectForReference: referenceString [
+	| parsed className selector |
+	referenceString ifNil: [ ^ nil ].
+	parsed := self parseReference: referenceString asString.
+	parsed ifNil: [ ^ nil ].
+	className := parsed first.
+	selector := parsed second asSymbol.
+	^ parsed third
+		ifTrue: [ session classMethodObjectForClassNamed: className selector: selector ]
+		ifFalse: [ session methodObjectForClassNamed: className selector: selector ]
 ]
 
 { #category : 'private' }
@@ -549,9 +775,14 @@ GbsMethodQueryResultsPresenter >> reloadReferencesIntoList [
 { #category : 'private' }
 GbsMethodQueryResultsPresenter >> requestExportPath: defaultPath [
 	| answer |
-	answer := UIManager default request: 'Export file path:' initialAnswer: defaultPath.
+	answer := self requestInput: 'Export file path:' initialAnswer: defaultPath.
 	(answer isNil or: [ answer isEmpty ]) ifTrue: [ ^ nil ].
 	^ answer
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> requestInput: prompt initialAnswer: defaultString [
+	^ UIManager default request: prompt initialAnswer: defaultString
 ]
 
 { #category : 'private' }
@@ -564,6 +795,21 @@ GbsMethodQueryResultsPresenter >> selectedReference [
 	^ nil
 ]
 
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> selectedReferenceClassName [
+	| ref parsed |
+	ref := self selectedReference.
+	ref ifNil: [ ^ nil ].
+	parsed := self parseReference: ref asString.
+	parsed ifNil: [ ^ nil ].
+	^ parsed first
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> selectedMethodObject [
+	^ self methodObjectForReference: self selectedReference
+]
+
 { #category : 'accessing' }
 GbsMethodQueryResultsPresenter >> session: aSession [
 	session := aSession
@@ -571,31 +817,22 @@ GbsMethodQueryResultsPresenter >> session: aSession [
 
 { #category : 'private' }
 GbsMethodQueryResultsPresenter >> showSourceForReference: referenceString [
-	| parsed className selector classLookup script source |
-	referenceString ifNil: [
-		sourceText text: ''.
-		self updateStatusForReference: nil.
-		^ self ].
-	parsed := self parseReference: referenceString asString.
+		| parsed methodObject source |
+		referenceString ifNil: [
+			sourceText text: ''.
+			self updateStatusForReference: nil.
+			^ self ].
+		parsed := self parseReference: referenceString asString.
 	parsed ifNil: [
-		sourceText text: ''.
-		self updateStatusForReference: referenceString.
-		^ self ].
-	className := parsed first.
-	selector := parsed second.
-	classLookup := parsed third
-		ifTrue: [ '(System myUserProfile symbolList objectNamed: #', className, ') class' ]
-		ifFalse: [ 'System myUserProfile symbolList objectNamed: #', className ].
-	script := '[
-		| cls meth |
-		cls := ', classLookup, '.
-		cls ifNil: [ ^ '''' ].
-		meth := cls compiledMethodAt: #''', (selector copyReplaceAll: '''' with: ''''''), ''' ifAbsent: [ nil ].
-		meth ifNil: [ '''' ] ifNotNil: [ meth sourceString ]
-	] value'.
-	source := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
-	sourceText text: (source ifNil: [ '' ] ifNotNil: [ source asString ]).
-	self updateStatusForReference: referenceString
+			sourceText text: ''.
+			self updateStatusForReference: referenceString.
+			^ self ].
+		methodObject := [ self methodObjectForReference: referenceString ] on: Error do: [ nil ].
+		source := methodObject
+			ifNil: [ '' ]
+			ifNotNil: [ [ methodObject sourceCode ] on: Error do: [ '' ] ].
+		sourceText text: (source ifNil: [ '' ] ifNotNil: [ source asString ]).
+		self updateStatusForReference: referenceString
 ]
 
 { #category : 'private' }
@@ -623,6 +860,13 @@ GbsMethodQueryResultsPresenter >> updateStatusForReference: referenceString [
 { #category : 'accessing' }
 GbsMethodQueryResultsPresenter >> windowTitle: aString [
 	windowTitle := (aString ifNil: [ '' ] ifNotNil: [ aString asString ])
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> openInspectorOnOop: anOop [
+	(anOop isInteger and: [ anOop > 20 ]) ifFalse: [ ^ false ].
+	GbsInspector inspect: anOop session: session.
+	^ true
 ]
 
 { #category : 'private' }

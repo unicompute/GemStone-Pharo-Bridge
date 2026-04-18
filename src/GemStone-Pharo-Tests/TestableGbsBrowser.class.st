@@ -13,7 +13,8 @@ Class {
 		'lastQueriedSelector',
 		'lastQueriedMode',
 		'lastQueriedRootClass',
-		'lastQueriedHierarchyScope'
+		'lastQueriedHierarchyScope',
+		'lastInspectedOop'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -55,6 +56,11 @@ TestableGbsBrowser >> inform: aString [
 { #category : 'actions' }
 TestableGbsBrowser >> protocolSelected: protocolName [
 	lastProtocolSelected := protocolName
+]
+
+{ #category : 'testing' }
+TestableGbsBrowser >> runSuperProtocolSelected: protocolName [
+	^ super protocolSelected: protocolName
 ]
 
 { #category : 'testing' }
@@ -117,6 +123,12 @@ TestableGbsBrowser >> openMethodReference: referenceString [
 ]
 
 { #category : 'private' }
+TestableGbsBrowser >> inspectOop: anOop [
+	lastInspectedOop := anOop.
+	^ true
+]
+
+{ #category : 'private' }
 TestableGbsBrowser >> openQueryResults: references title: titleString [
 	| selected |
 	references isEmpty ifTrue: [ ^ false ].
@@ -164,4 +176,9 @@ TestableGbsBrowser >> lastQueriedRootClass [
 { #category : 'accessing' }
 TestableGbsBrowser >> lastQueriedHierarchyScope [
 	^ lastQueriedHierarchyScope
+]
+
+{ #category : 'accessing' }
+TestableGbsBrowser >> lastInspectedOop [
+	^ lastInspectedOop
 ]

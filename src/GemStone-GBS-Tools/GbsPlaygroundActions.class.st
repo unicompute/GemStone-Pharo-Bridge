@@ -121,9 +121,9 @@ GbsPlaygroundActions class >> gsInspectItIn: aPlaygroundPresenter [
 	activeSession := self activeSessionOrInform.
 	activeSession ifNil: [ ^ self ].
 
-	oop := activeSession serverInterface apiGciExecuteStr: code context: 20 env: 0.
+	oop := activeSession executeScriptAndReturnOop: code.
 	((oop isNumber) and: [ oop > 20 ])
-		ifTrue: [ GbsInspector inspect: oop session: activeSession ]
+		ifTrue: [ self inspectOop: oop session: activeSession ]
 		ifFalse: [ UIManager default inform: 'Result is nil or execution failed.' ].
 ]
 
@@ -156,6 +156,59 @@ GbsPlaygroundActions class >> openRemoteDebuggerOn: errorString processOop: proc
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Error opening debugger: ', ex messageText
 	].
+]
+
+{ #category : 'helpers' }
+GbsPlaygroundActions class >> inspectOop: anOop session: aSession [
+	GbsInspector inspect: anOop session: aSession
+]
+
+{ #category : 'helpers' }
+GbsPlaygroundActions class >> inform: aString [
+	^ UIManager default inform: aString
+]
+
+{ #category : 'actions' }
+GbsPlaygroundActions class >> gsInspectSessionStateKeyIn: aPlaygroundPresenter [
+	| activeSession rawKey key sessionStateValue oop |
+	activeSession := self activeSessionOrInform.
+	activeSession ifNil: [ ^ self ].
+
+	rawKey := self requestInput: 'Session state key:' initialAnswer: '19'.
+	(rawKey isNil or: [ rawKey trimBoth isEmpty ]) ifTrue: [ ^ false ].
+	key := [ rawKey trimBoth asInteger ]
+		on: Error
+		do: [ nil ].
+	key ifNil: [
+		self inform: 'Enter a numeric session state key.'.
+		^ false ].
+
+	sessionStateValue := [ activeSession sessionStateAt: key ]
+		on: Error
+		do: [ :ex |
+			self inform: 'Session state lookup failed: ', ex messageText.
+			^ false ].
+	sessionStateValue ifNil: [
+		self inform: 'Session state key ', key printString, ' is not set.'.
+		^ false ].
+
+	oop := [ sessionStateValue oop ]
+		on: Error
+		do: [ nil ].
+	oop ifNil: [
+		((sessionStateValue isInteger) and: [ sessionStateValue > 20 ])
+			ifTrue: [ oop := sessionStateValue ] ].
+	oop ifNil: [
+		self inform: 'Session state key ', key printString, ' does not currently have an inspectable remote oop.'.
+		^ false ].
+
+	self inspectOop: oop session: activeSession.
+	^ true
+]
+
+{ #category : 'helpers' }
+GbsPlaygroundActions class >> requestInput: prompt initialAnswer: defaultString [
+	^ UIManager default request: prompt initialAnswer: defaultString
 ]
 
 { #category : 'helpers' }

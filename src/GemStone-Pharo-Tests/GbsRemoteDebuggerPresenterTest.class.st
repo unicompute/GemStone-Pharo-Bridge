@@ -12,7 +12,7 @@ Class {
 { #category : 'running' }
 GbsRemoteDebuggerPresenterTest >> setUp [
 	super setUp.
-	debugger := GbsRemoteDebugger new.
+	debugger := TestableGbsRemoteDebugger new.
 	service := GbxFakeServiceForRemoteDebugger new.
 	debugger service: service.
 ]
@@ -72,6 +72,33 @@ GbsRemoteDebuggerPresenterTest >> testInspectVariableReturnsFalseWhenNoSelection
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testBrowsePromptedSessionStateKeyRejectsNonNumericInput [
+	| session |
+	session := MockGbsSession new.
+	debugger session: session.
+	debugger enqueueRequestAnswer: 'abc'.
+
+	self deny: debugger browsePromptedSessionStateKey.
+	self assert: debugger lastInfoMessage equals: 'Enter a numeric session state key.'.
+	self assert: debugger lastInspectedOop isNil
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testBrowsePromptedSessionStateKeyUsesSessionFacade [
+	| session |
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: 'key := 21').
+		^ GbsProxy oop: 9501 session: session ].
+	debugger session: session.
+	debugger enqueueRequestAnswer: '21'.
+
+	self assert: debugger browsePromptedSessionStateKey.
+	self assert: debugger lastInspectedOop equals: 9501.
+	self assert: debugger lastInspectedSession == session
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testSetBreakPointDelegatesToService [
 	self assert: debugger setBreakPoint.
 	self assert: service setBreakPointCalls equals: 1.
@@ -115,6 +142,220 @@ GbsRemoteDebuggerPresenterTest >> testGsInspectItDelegatesToService [
 
 	self assert: debugger gsInspectIt.
 	self assert: service gsInspectItCalls equals: 1.
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testServerMethodReferencesForImplementorsUsesSessionFacadeOutsideHierarchy [
+	| session references |
+	session := MockGbsSession new.
+	session stubs
+		at: #executeAndFetch
+		put: [ :script | self fail: 'Non-hierarchy implementor queries should use the repository facade.' ].
+	session stubs
+		at: #executeScriptAndFetchObject
+		put: [ :script |
+			self assert: (script includesSubstring: 'organizer implementorsOf: #size').
+			^ #('Object>>size') ].
+	debugger session: session.
+
+	references := debugger
+		serverMethodReferencesFor: #size
+		hierarchyOnly: false
+		senders: false.
+
+	self assert: references equals: #('Object>>size')
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testServerMethodReferencesForSendersUsesSessionFacadeOutsideHierarchy [
+	| session references |
+	session := MockGbsSession new.
+	session stubs
+		at: #executeAndFetch
+		put: [ :script | self fail: 'Non-hierarchy sender queries should use the repository facade.' ].
+	session stubs
+		at: #executeScriptAndFetchObject
+		put: [ :script |
+			self assert: (script includesSubstring: 'organizer sendersOf: ''size''').
+			^ #('Behavior>>new') ].
+	debugger session: session.
+
+	references := debugger
+		serverMethodReferencesFor: #size
+		hierarchyOnly: false
+		senders: true.
+
+	self assert: references equals: #('Behavior>>new')
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testServerMethodReferencesForHierarchyImplementorsUsesSessionFacade [
+	| session references context |
+	session := MockGbsSession new.
+	session stubs
+		at: #executeAndFetch
+		put: [ :script | self fail: 'Hierarchy implementor queries should use the repository facade.' ].
+	session stubs
+		at: #executeScriptAndFetchObject
+		put: [ :script |
+			self assert: (script includesSubstring: 'className := ''Invoice class''').
+			self assert: (script includesSubstring: 'baseName := className copyFrom: 1 to: className size - 6').
+			self assert: (script includesSubstring: 'objectNamed: baseName asSymbol) class').
+			self assert: (script includesSubstring: 'cls class includesSelector: sel').
+			^ #('Invoice class>>new') ].
+	context := GbxFakeContextForRemoteDebugger new.
+	context methodClass: 'Invoice class'.
+	context selector: #new.
+	service currentContext: context.
+	debugger session: session.
+
+	references := debugger
+		serverMethodReferencesFor: #new
+		hierarchyOnly: true
+		senders: false.
+
+	self assert: references equals: #('Invoice class>>new')
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testServerMethodReferencesForHierarchySendersUsesSessionFacade [
+	| session references context |
+	session := MockGbsSession new.
+	session stubs
+		at: #executeAndFetch
+		put: [ :script | self fail: 'Hierarchy sender queries should use the repository facade.' ].
+	session stubs
+		at: #executeScriptAndFetchObject
+		put: [ :script |
+			self assert: (script includesSubstring: 'className := ''Invoice''').
+			self assert: (script includesSubstring: 'objectNamed: className asSymbol').
+			self assert: (script includesSubstring: 'cls class whichSelectorsReferTo: sel').
+			^ #('Invoice class>>buildDefault') ].
+	context := GbxFakeContextForRemoteDebugger new.
+	context methodClass: 'Invoice'.
+	context selector: #size.
+	service currentContext: context.
+	debugger session: session.
+
+	references := debugger
+		serverMethodReferencesFor: #size
+		hierarchyOnly: true
+		senders: true.
+
+	self assert: references equals: #('Invoice class>>buildDefault')
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testSelectedServerReferenceTargetNameStripsClassSideSuffix [
+	| context |
+	context := GbxFakeContextForRemoteDebugger new.
+	context methodClass: 'Invoice class'.
+	context selector: #new.
+	service currentContext: context.
+
+	self assert: debugger selectedServerReferenceTargetName equals: 'Invoice'
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testServerClassReferenceStringsUsesSessionFacade [
+	| session references context |
+	session := MockGbsSession new.
+	session stubs
+		at: #executeAndFetch
+		put: [ :script | self fail: 'Class reference queries should use the repository facade.' ].
+	session stubs
+		at: #executeScriptAndFetchObject
+		put: [ :script |
+			self assert: (script includesSubstring: 'organizer referencesTo: #Invoice').
+			^ #('Invoice>>totalPrice') ].
+	context := GbxFakeContextForRemoteDebugger new.
+	context methodClass: 'Invoice class'.
+	context selector: #new.
+	service currentContext: context.
+	debugger session: session.
+
+	references := debugger serverClassReferenceStrings.
+
+	self assert: references equals: #('Invoice>>totalPrice')
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testSelectedServerMethodObjectBindsCurrentReceiverForInstanceMethods [
+	| session context methodObject |
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'compiledMethodAt: #totalPrice') ifTrue: [
+			^ #(2001 'Invoice' 'totalPrice' 'pricing' 'totalPrice ^ amount' 'Billing-Core' 'Invoice>>totalPrice' 3 4) ].
+		self fail ].
+	context := GbxFakeContextForRemoteDebugger new.
+	context methodClass: 'Invoice'.
+	context selector: #totalPrice.
+	service currentContext: context.
+	service currentReceiverOop: 9001.
+	debugger session: session.
+
+	methodObject := debugger selectedServerMethodObject.
+
+	self assert: methodObject notNil.
+	self assert: methodObject isBound.
+	self assert: methodObject selector equals: #totalPrice.
+	self assert: methodObject receiver oop equals: 9001
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testInvokeSelectedServerMethodObjectCallsBoundMethodObject [
+	| session context capturedSelector capturedArguments capturedOop result |
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'compiledMethodAt: #totalPrice') ifTrue: [
+			^ #(2001 'Invoice' 'totalPrice' 'pricing' 'totalPrice ^ amount' 'Billing-Core' 'Invoice>>totalPrice' 3 4) ].
+		self fail ].
+	session stubs at: #forwardRemoteMessage put: [ :message :oop |
+		capturedSelector := message selector.
+		capturedArguments := message arguments.
+		capturedOop := oop.
+		#forwarded ].
+	context := GbxFakeContextForRemoteDebugger new.
+	context methodClass: 'Invoice'.
+	context selector: #totalPrice.
+	service currentContext: context.
+	service currentReceiverOop: 9001.
+	debugger session: session.
+
+	result := debugger invokeSelectedServerMethodObject.
+
+	self assert: result equals: #forwarded.
+	self assert: capturedSelector equals: #totalPrice.
+	self assert: capturedArguments equals: #().
+	self assert: capturedOop equals: 9001
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testInvokeSelectedServerMethodPromptsForArguments [
+	| session context capturedSelector capturedArguments capturedOop |
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'compiledMethodAt: #applyDiscount:') ifTrue: [
+			^ #(2002 'Invoice' 'applyDiscount:' 'pricing' 'applyDiscount: percent ^ total * percent' 'Billing-Core' 'Invoice>>applyDiscount:' 3 4) ].
+		self fail ].
+	session stubs at: #forwardRemoteMessage put: [ :message :oop |
+		capturedSelector := message selector.
+		capturedArguments := message arguments.
+		capturedOop := oop.
+		#discounted ].
+	context := GbxFakeContextForRemoteDebugger new.
+	context methodClass: 'Invoice'.
+	context selector: #applyDiscount:.
+	service currentContext: context.
+	service currentReceiverOop: 9001.
+	debugger session: session.
+	debugger enqueueRequestAnswer: '15'.
+
+	self assert: debugger invokeSelectedServerMethod.
+	self assert: capturedSelector equals: #applyDiscount:.
+	self assert: capturedArguments equals: #(15).
+	self assert: capturedOop equals: 9001.
+	self assert: (debugger lastInfoMessage includesSubstring: '#discounted')
 ]
 
 { #category : 'tests' }

@@ -62,6 +62,47 @@ GbsWorkspace >> doCommit [
 ]
 
 { #category : 'actions' }
+GbsWorkspace >> browsePromptedSessionStateKey [
+	| activeSession rawKey key |
+	activeSession := self activeSessionForRemoteExecution.
+	activeSession ifNil: [ ^ self inform: 'No Session' ].
+	rawKey := self requestInput: 'Session state key:' initialAnswer: '19'.
+	(rawKey isNil or: [ rawKey trimBoth isEmpty ]) ifTrue: [ ^ false ].
+	key := [ rawKey trimBoth asInteger ]
+		on: Error
+		do: [ nil ].
+	key ifNil: [
+		self inform: 'Enter a numeric session state key.'.
+		^ false ].
+	^ self browseSessionStateAtKey: key session: activeSession
+]
+
+{ #category : 'actions' }
+GbsWorkspace >> browseSessionStateAtKey: aKey session: aSession [
+	| sessionStateValue oop |
+	aSession ifNil: [ ^ self inform: 'No Session' ].
+	sessionStateValue := [ aSession sessionStateAt: aKey ]
+		on: Error
+		do: [ :ex |
+			self inform: 'Session state lookup failed: ', ex messageText.
+			^ false ].
+	sessionStateValue ifNil: [
+		self inform: 'Session state key ', aKey printString, ' is not set.'.
+		^ false ].
+	oop := [ sessionStateValue oop ]
+		on: Error
+		do: [ nil ].
+	oop ifNil: [
+		((sessionStateValue isInteger) and: [ sessionStateValue > 20 ])
+			ifTrue: [ oop := sessionStateValue ] ].
+	oop ifNil: [
+		self inform: 'Session state key ', aKey printString, ' does not currently have an inspectable remote oop.'.
+		^ false ].
+	self inspectOop: oop session: aSession.
+	^ true
+]
+
+{ #category : 'actions' }
 GbsWorkspace >> doIt [
 	| code activeSession result processOop exceptionCandidate hasRemoteMetadata serverCandidate |
 
@@ -245,6 +286,11 @@ GbsWorkspace >> insertResult: aString [
   textEditor text: newText
 ]
 
+{ #category : 'private' }
+GbsWorkspace >> inspectOop: anOop session: aSession [
+	GbsInspector inspect: anOop session: aSession
+]
+
 { #category : 'actions' }
 GbsWorkspace >> inspectIt [
 	| code activeSession script rawOop |
@@ -255,12 +301,11 @@ GbsWorkspace >> inspectIt [
 	activeSession := GbsSessionParameters currentSession.
 	activeSession ifNil: [ ^ self inform: 'No Session' ].
 	
-	"Use the low-level API to get the RAW OOP, bypassing the GbsProxy conversion"
-	rawOop := GbsServerInterface uniqueInstance apiGciExecuteStr: script context: 20 env: 0.
+	rawOop := activeSession executeScriptAndReturnOop: script.
 	
 	(rawOop = 1 or: [ rawOop = 20 ]) 
 		ifTrue: [ self inform: 'Result is nil or execution failed.' ]
-		ifFalse: [ GbsInspector inspect: rawOop session: activeSession ].
+		ifFalse: [ self inspectOop: rawOop session: activeSession ].
 ]
 
 { #category : 'private' }
@@ -452,6 +497,11 @@ GbsWorkspace >> openRemoteDebuggerWithStack: stackData session: aSession [
 ]
 
 { #category : 'private' }
+GbsWorkspace >> requestInput: prompt initialAnswer: defaultString [
+	^ UIManager default request: prompt initialAnswer: defaultString
+]
+
+{ #category : 'private' }
 GbsWorkspace >> replaceSelectionWith: aString [
 
   | text selectionInterval newText |
@@ -535,6 +585,9 @@ GbsWorkspace >> workspaceMenu [
 		group addItem: [ :item |
 			item name: 'GS-Debug it'; icon: (self iconNamed: #smallDebug);
 			action: [ UIManager default defer: [ self gemStoneDebugIt ] ] ].
+		group addItem: [ :item |
+			item name: 'GS-Inspect Session State Key...'; icon: (self iconNamed: #smallInspectIt);
+			action: [ UIManager default defer: [ self browsePromptedSessionStateKey ] ] ].
 		group addItem: [ :item |
 			item name: 'GS-File it in'; icon: (self iconNamed: #smallSave);
 			action: [ UIManager default defer: [ self gsFileItIn ] ] ].

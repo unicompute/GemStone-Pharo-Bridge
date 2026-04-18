@@ -61,57 +61,24 @@
     ].
   ].
 
+  (Smalltalk at: #MCWorkingCopy ifAbsent: [ nil ]) ifNotNil: [ :workingCopyClass |
+    workingCopyClass allWorkingCopies do: [ :workingCopy |
+      (packageNames includes: workingCopy packageName)
+        ifTrue: [
+          [ workingCopy unregister ] on: Error do: [ :ex |
+            Transcript
+              show: 'UNLOAD_WARN working copy ';
+              show: workingCopy packageName;
+              show: ' :: ';
+              show: ex messageText;
+              cr
+          ] ] ] ].
+
   [ Metacello new
       baseline: 'GemStonePharo';
       repository: 'tonel:///Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src';
       load: 'default' ] on: Error do: [ :ex |
         Transcript show: 'LOAD_ERROR: ', ex messageText; cr ].
-
-  "Force-apply key Tonel definitions to avoid stale cached method bodies
-  in long-lived images (observed for GbxDebuggerService)."
-  #(
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsClassicLauncher.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsBrowser.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsMethodQueryResultsPresenter.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbxDebuggerService.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsRemoteDebugger.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsConnectorBrowserPresenter.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsCreateUserPresenter.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsSecurityPoliciesPresenter.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsSymbolListBrowserPresenter.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsStructuredValueInspectorPresenter.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsUserInfoPresenter.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Tools/GbsNamespacesPresenter.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Converted/GbsConfiguration.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Converted/GbsConnectorGroup.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Converted/GbsSession.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Converted/GbsSessionParameters.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-GBS-Converted/GbsSessionManager.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/GbxFakeGbsErrorForService.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/GbxFakeActivationForService.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/GbxFakeContextListPolicyForService.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/MockGbsSession.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/GbsTestableUserListPresenter.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/GbxDebuggerServiceTest.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/GbsAdminToolsPresenterTest.class.st'
-    '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src/GemStone-Pharo-Tests/GbsSessionTest.class.st'
-  ) do: [ :pathString |
-    | file defs |
-    file := pathString asFileReference.
-    file exists ifTrue: [
-      [ defs := TonelReader new parseTonelFile: file.
-      defs do: [ :def | def load ] ]
-        on: Error
-        do: [ :ex |
-          Transcript
-            show: 'FORCE_LOAD_WARN ';
-            show: file basename;
-            show: ' :: ';
-            show: ex messageText;
-            cr
-        ].
-    ].
-  ].
 
   checks := {
     { #GbxDebuggerService. #basicReenterServerContext. 'self selectTopServerContext'. false }.

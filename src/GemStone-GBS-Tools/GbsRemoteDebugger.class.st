@@ -359,6 +359,62 @@ GbsRemoteDebugger >> browseSelectedMethod [
 	^ self openServerMethodReference: self selectedServerMethodReference
 ]
 
+{ #category : 'private' }
+GbsRemoteDebugger >> currentReceiverProxyForServerMethod [
+	| receiverOop |
+	session ifNil: [ ^ nil ].
+	service ifNil: [ ^ nil ].
+	receiverOop := self safeServiceCall: [ service currentReceiverOop ] default: nil.
+	receiverOop ifNil: [ ^ nil ].
+	(receiverOop isString and: [ receiverOop isEmpty not ]) ifTrue: [
+		receiverOop := [ receiverOop asInteger ] on: Error do: [ nil ] ].
+	(receiverOop isNumber and: [ receiverOop > 20 ]) ifFalse: [ ^ nil ].
+	^ session objectForOop: receiverOop
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> browsePromptedSessionStateKey [
+	| rawKey key |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	rawKey := self requestInput: 'Session state key:' initialAnswer: '19'.
+	(rawKey isNil or: [ rawKey trimBoth isEmpty ]) ifTrue: [ ^ false ].
+	key := [ rawKey trimBoth asInteger ]
+		on: Error
+		do: [ nil ].
+	key ifNil: [
+		self inform: 'Enter a numeric session state key.'.
+		^ false ].
+	^ self browseSessionStateAtKey: key
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> browseSessionStateAtKey: aKey [
+	| sessionStateValue oop |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	sessionStateValue := [ session sessionStateAt: aKey ]
+		on: Error
+		do: [ :ex |
+			self inform: 'Session state lookup failed: ', ex messageText.
+			^ false ].
+	sessionStateValue ifNil: [
+		self inform: 'Session state key ', aKey printString, ' is not set.'.
+		^ false ].
+	oop := [ sessionStateValue oop ]
+		on: Error
+		do: [ nil ].
+	oop ifNil: [
+		((sessionStateValue isInteger) and: [ sessionStateValue > 20 ])
+			ifTrue: [ oop := sessionStateValue ] ].
+	oop ifNil: [
+		self inform: 'Session state key ', aKey printString, ' does not currently have an inspectable remote oop.'.
+		^ false ].
+	^ self inspectOop: oop session: session
+]
+
 { #category : 'menus' }
 GbsRemoteDebugger >> buildMenuBar [
 	^ self newMenuBar
@@ -367,7 +423,8 @@ GbsRemoteDebugger >> buildMenuBar [
 			group addItem: [ :item | item name: 'Method'; subMenu: self methodMenu ].
 			group addItem: [ :item | item name: 'Edit'; subMenu: self editMenu ].
 			group addItem: [ :item | item name: 'Execute'; subMenu: self executeMenu ].
-			group addItem: [ :item | item name: 'Correct'; subMenu: self correctMenu ] ];
+			group addItem: [ :item | item name: 'Correct'; subMenu: self correctMenu ].
+			group addItem: [ :item | item name: 'Session'; subMenu: self sessionMenu ] ];
 		yourself
 ]
 
@@ -1444,6 +1501,20 @@ GbsRemoteDebugger >> gsBrowseAllReferencesFor: aSelector [
 ]
 
 { #category : 'private' }
+GbsRemoteDebugger >> gsBrowseReferencesToSelectedClass [
+	| targetName references selected |
+	targetName := self selectedServerReferenceTargetName.
+	targetName ifNil: [ ^ false ].
+	references := self serverClassReferenceStrings.
+	references isEmpty ifTrue: [
+		UIManager default inform: 'No matching GemStone methods found.'.
+		^ false ].
+	selected := self chooseMethodReferenceFrom: references title: 'References to ', targetName.
+	selected ifNil: [ ^ false ].
+	^ self openServerMethodReference: selected
+]
+
+{ #category : 'private' }
 GbsRemoteDebugger >> gsBrowseQueryFor: aSelector hierarchyOnly: hierarchyOnly senders: sendersOnly [
 	| references selected |
 	aSelector ifNil: [ ^ false ].
@@ -1455,6 +1526,29 @@ GbsRemoteDebugger >> gsBrowseQueryFor: aSelector hierarchyOnly: hierarchyOnly se
 	selected := self chooseMethodReferenceFrom: references title: 'GemStone Methods'.
 	selected ifNil: [ ^ false ].
 	^ self openServerMethodReference: selected
+]
+
+{ #category : 'actions' }
+GbsRemoteDebugger >> invokeSelectedServerMethod [
+	| result |
+	result := [ self invokeSelectedServerMethodObject ] on: Error do: [ :ex |
+		self inform: 'GemStone invoke failed: ', ex messageText.
+		^ false ].
+	result ifNil: [
+		self inform: 'No GemStone method selected.'.
+		^ false ].
+	self inform: 'GemStone method result: ', result printString.
+	^ true
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> invokeSelectedServerMethodObject [
+	| methodObject invocationArguments |
+	methodObject := self selectedServerMethodObject.
+	methodObject ifNil: [ ^ nil ].
+	invocationArguments := self invocationArgumentsForMethodObject: methodObject.
+	invocationArguments ifNil: [ ^ nil ].
+	^ methodObject callWithArguments: invocationArguments
 ]
 
 { #category : 'private' }
@@ -1550,6 +1644,30 @@ GbsRemoteDebugger >> informUnsupported: aString [
 	(UIManager default respondsTo: #inform:)
 		ifTrue: [ UIManager default inform: aString ].
 	^ false
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> inform: aString [
+	(UIManager default respondsTo: #inform:)
+		ifTrue: [ UIManager default inform: aString ].
+	^ aString
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> invocationArgumentsForMethodObject: aMethodObject [
+	| argumentCount input |
+	aMethodObject ifNil: [ ^ nil ].
+	argumentCount := aMethodObject selector numArgs.
+	argumentCount = 0 ifTrue: [ ^ #() ].
+	input := self
+		requestInput: (GbsRemoteMethodObject
+			invocationPromptForSelector: aMethodObject selector
+			argumentCount: argumentCount)
+		initialAnswer: (GbsRemoteMethodObject defaultArgumentInputForCount: argumentCount).
+	input ifNil: [ ^ nil ].
+	^ GbsRemoteMethodObject
+		argumentsFromInput: input
+		expectedCount: argumentCount
 ]
 
 { #category : 'initialization' }
@@ -1677,6 +1795,11 @@ GbsRemoteDebugger >> inspectReceiver [
 GbsRemoteDebugger >> inspectStack [
 	(self openInspectorClassNamed: #GbxStackInspector) ifTrue: [ ^ true ].
 	^ self inspectFrame
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> inspectOop: anOop session: aSession [
+	GbsInspector inspect: anOop session: aSession
 ]
 
 { #category : 'actions' }
@@ -1821,6 +1944,8 @@ GbsRemoteDebugger >> methodMenu [
 	^ self newMenu
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Browse'; action: [ self browseSelectedMethod ] ].
+			group addItem: [ :item | item name: 'GS-Invoke'; action: [ self invokeSelectedServerMethod ] ].
+			group addItem: [ :item | item name: 'GS-Class References'; action: [ self gsBrowseReferencesToSelectedClass ] ].
 			group addItem: [ :item | item name: 'GS-Senders'; subMenu: self gsSendersQuerySubMenu ].
 			group addItem: [ :item | item name: 'GS-Implementors'; subMenu: self gsImplementorsQuerySubMenu ].
 			group addItem: [ :item | item name: 'GS-Hierarchy Senders'; subMenu: self gsHierarchySendersQuerySubMenu ].
@@ -2519,6 +2644,17 @@ GbsRemoteDebugger >> selectedServerClassName [
 ]
 
 { #category : 'private' }
+GbsRemoteDebugger >> selectedServerReferenceTargetName [
+	| className |
+	className := self selectedServerClassName.
+	className ifNil: [ ^ nil ].
+	className := className asString.
+	^ (className endsWith: ' class')
+		ifTrue: [ className copyFrom: 1 to: className size - 6 ]
+		ifFalse: [ className ]
+]
+
+{ #category : 'private' }
 GbsRemoteDebugger >> selectedServerMethodReference [
 	| className selector |
 	className := self selectedServerClassName.
@@ -2528,9 +2664,56 @@ GbsRemoteDebugger >> selectedServerMethodReference [
 ]
 
 { #category : 'private' }
+GbsRemoteDebugger >> selectedServerMethodObject [
+	| className selector baseName methodObject |
+	session ifNil: [ ^ nil ].
+	className := self selectedServerClassName.
+	selector := self selectedServerSelector.
+	(className isNil or: [ selector isNil ]) ifTrue: [ ^ nil ].
+	className := className asString.
+	baseName := (className endsWith: ' class')
+		ifTrue: [ className copyFrom: 1 to: className size - 6 ]
+		ifFalse: [ className ].
+	methodObject := (className endsWith: ' class')
+		ifTrue: [ session classMethodObjectForClassNamed: baseName selector: selector ]
+		ifFalse: [ session methodObjectForClassNamed: baseName selector: selector ].
+	(className endsWith: ' class') ifTrue: [ ^ methodObject ].
+	^ (self currentReceiverProxyForServerMethod)
+		ifNil: [ methodObject ]
+		ifNotNil: [ :receiverProxy | methodObject bindTo: receiverProxy ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> requestInput: prompt initialAnswer: defaultString [
+	^ UIManager default request: prompt initialAnswer: defaultString
+]
+
+{ #category : 'menus' }
+GbsRemoteDebugger >> sessionMenu [
+	^ self newMenu
+		addGroup: [ :group |
+			group addItem: [ :item |
+				item
+					name: 'Inspect Session State Key...';
+					action: [ self browsePromptedSessionStateKey ] ] ];
+		yourself
+]
+
+{ #category : 'private' }
 GbsRemoteDebugger >> selectedServerSelector [
 	service ifNil: [ ^ nil ].
 	^ self safeServiceCall: [ service selectedMethodSelector ] default: nil
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> serverClassReferenceStrings [
+	| targetName |
+	session ifNil: [ ^ #() ].
+	targetName := self selectedServerReferenceTargetName.
+	targetName ifNil: [ ^ #() ].
+	^ [ session methodReferenceStringsToSymbol: targetName ]
+		on: Error
+		do: [ #() ]
 ]
 
 { #category : 'private' }
@@ -2631,48 +2814,24 @@ GbsRemoteDebugger >> selectorQuerySubMenuUsing: aBlock [
 
 { #category : 'private' }
 GbsRemoteDebugger >> serverMethodReferencesFor: aSelector hierarchyOnly: hierarchyOnly senders: sendersOnly [
-	| className escapedSelector escapedClass script raw |
 	session ifNil: [ ^ #( ) ].
-	className := self selectedServerClassName.
-	escapedSelector := aSelector asString copyReplaceAll: '''' with: ''''''.
-	escapedClass := (className ifNil: [ '' ]) asString copyReplaceAll: '''' with: ''''''.
-	script := '[
-		| sel className classes target root stream |
-		sel := #''', escapedSelector, '''.
-		className := ''', escapedClass, '''.
-		stream := WriteStream on: String new.
-		classes := IdentitySet new.
-		System myUserProfile symbolList do: [ :dict |
-			dict keysAndValuesDo: [ :k :v |
-				(v isBehavior) ifTrue: [ classes add: v ] ] ].
-		root := nil.
-		className isEmpty ifFalse: [
-			(className endsWith: '' class'')
-				ifTrue: [ | baseName |
-					baseName := className copyFrom: 1 to: className size - 6.
-					root := (System myUserProfile symbolList objectNamed: baseName asSymbol) class ]
-				ifFalse: [ root := (System myUserProfile symbolList objectNamed: className asSymbol) ] ].
-		', (hierarchyOnly
-			ifTrue: [ 'root notNil ifTrue: [
-				classes := (root withAllSuperclasses , root withAllSubclasses) asIdentitySet ]' ]
-			ifFalse: [ '' ]), '.
-		classes asArray do: [ :cls |
-			| sels |
-			', (sendersOnly
-				ifTrue: [ 'sels := [ cls whichSelectorsReferTo: sel ] on: Error do: [ #() ]' ]
-				ifFalse: [ 'sels := (cls includesSelector: sel) ifTrue: [ Array with: sel ] ifFalse: [ #() ]' ]), '.
-			sels do: [ :s |
-				stream nextPutAll: cls name asString; nextPutAll: ''>>''; nextPutAll: s asString; lf ].
-			', (sendersOnly
-				ifTrue: [ 'sels := [ cls class whichSelectorsReferTo: sel ] on: Error do: [ #() ]' ]
-				ifFalse: [ 'sels := (cls class includesSelector: sel) ifTrue: [ Array with: sel ] ifFalse: [ #() ]' ]), '.
-			sels do: [ :s |
-				stream nextPutAll: cls name asString; nextPutAll: '' class>>''; nextPutAll: s asString; lf ] ].
-		stream contents
-	] value'.
-	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
-	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
-	^ (raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty
+	hierarchyOnly ifFalse: [
+		^ sendersOnly
+			ifTrue: [ session senderMethodReferenceStringsForSelector: aSelector ]
+			ifFalse: [ session implementorMethodReferenceStringsForSelector: aSelector ] ].
+	^ sendersOnly
+		ifTrue: [
+			session
+				hierarchySenderMethodReferenceStringsForSelector: aSelector
+				rootClassName: self selectedServerClassName
+				scope: 'full'
+				includeClassSide: true ]
+		ifFalse: [
+			session
+				hierarchyImplementorMethodReferenceStringsForSelector: aSelector
+				rootClassName: self selectedServerClassName
+				scope: 'full'
+				includeClassSide: true ].
 ]
 
 { #category : 'accessing' }

@@ -363,6 +363,14 @@ GbsSymbolListBrowserPresenter >> inspectSelectedEntry [
 ]
 
 { #category : 'actions' }
+GbsSymbolListBrowserPresenter >> browseReferencersForSelectedEntry [
+	| key |
+	key := self selectedEntryName.
+	key ifNil: [ ^ false ].
+	^ self browseReferencersForEntryKey: key path: #()
+]
+
+{ #category : 'actions' }
 GbsSymbolListBrowserPresenter >> inspectSelectedPreviewValue [
 	| entryKey preview kind row rowLabel path |
 	entryKey := self selectedEntryName.
@@ -391,6 +399,23 @@ GbsSymbolListBrowserPresenter >> inspectSelectedPreviewValue [
 	UIManager default inform: (preview at: #value ifAbsent: [ '' ]) asString
 ]
 
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> browseReferencersForSelectedPreviewValue [
+	| entryKey row rowLabel kind path |
+	entryKey := self selectedEntryName.
+	entryKey ifNil: [ ^ false ].
+	row := self selectedPreviewRow.
+	row ifNil: [ ^ false ].
+	rowLabel := (row at: 1 ifAbsent: [ '' ]) asString.
+	rowLabel = '__truncated__' ifTrue: [ ^ false ].
+	kind := currentPreview
+		ifNil: [ nil ]
+		ifNotNil: [ currentPreview at: #kind ifAbsent: [ nil ] ].
+	kind ifNil: [ ^ false ].
+	path := { { kind asString. rowLabel } }.
+	^ self browseReferencersForEntryKey: entryKey path: path
+]
+
 { #category : 'private' }
 GbsSymbolListBrowserPresenter >> literalString: aString [
 	^ '''', (aString copyReplaceAll: '''' with: ''''''), ''''
@@ -416,6 +441,71 @@ GbsSymbolListBrowserPresenter >> inspectStructuredPreviewRow: row entryKey: entr
 				previewKind: nextKind.
 			^ self ].
 	UIManager default inform: (preview at: #value ifAbsent: [ '' ]) asString
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> browseReferencersForStructuredPreviewRow: row entryKey: entryKey path: path previewKind: previewKind [
+	| rowLabel nextPath |
+	rowLabel := (row at: 1 ifAbsent: [ '' ]) asString.
+	rowLabel isEmpty ifTrue: [ ^ false ].
+	rowLabel = '__truncated__' ifTrue: [ ^ false ].
+	nextPath := path asArray copyWith: { previewKind asString. rowLabel }.
+	^ self browseReferencersForEntryKey: entryKey path: nextPath
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> browsePromptedSessionStateKey [
+	| rawKey key |
+	session ifNil: [ ^ false ].
+	rawKey := self requestInput: 'Session state key:' initialAnswer: '19'.
+	(rawKey isNil or: [ rawKey trimBoth isEmpty ]) ifTrue: [ ^ false ].
+	key := [ rawKey trimBoth asInteger ]
+		on: Error
+		do: [ nil ].
+	key ifNil: [
+		self inform: 'Enter a numeric session state key.'.
+		^ false ].
+	^ self browseSessionStateAtKey: key
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> browseSessionStateAtKey: aKey [
+	| sessionStateValue targetOop |
+	session ifNil: [ ^ false ].
+	sessionStateValue := [ session sessionStateAt: aKey ]
+		on: Error
+		do: [ :ex |
+			self inform: 'Session state lookup failed: ', ex messageText.
+			^ false ].
+	sessionStateValue ifNil: [
+		self inform: 'Session state key ', aKey printString, ' is not set.'.
+		^ false ].
+	targetOop := self oopForInspectableObject: sessionStateValue.
+	targetOop ifNil: [
+		self inform: 'Session state key ', aKey printString, ' does not currently have an inspectable remote oop.'.
+		^ false ].
+	^ self openInspectorOnOop: targetOop
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> browseReferencersForEntryKey: keyName path: pathCollection [
+	| targetOop referencers inspectable selection |
+	targetOop := self oopForEntryKey: keyName path: pathCollection.
+	targetOop ifNil: [
+		self inform: 'Could not determine a remote object for referencer lookup.'.
+		^ false ].
+	referencers := self referencersInMemoryForOop: targetOop.
+	inspectable := referencers select: [ :each | (self oopForInspectableObject: each) notNil ].
+	inspectable isEmpty ifTrue: [
+		self inform: 'No in-memory referencers found.'.
+		^ false ].
+	inspectable size = 1 ifTrue: [
+		^ self openInspectorOnOop: (self oopForInspectableObject: inspectable first) ].
+	selection := self
+		chooseReferencerFrom: inspectable
+		title: 'In-memory referencers'.
+	selection ifNil: [ ^ false ].
+	^ self openInspectorOnOop: (self oopForInspectableObject: selection)
 ]
 
 { #category : 'menus' }
@@ -459,6 +549,12 @@ GbsSymbolListBrowserPresenter >> menuEntry [
 		addItem: [ :item |
 			item name: 'Inspect Entry'; action: [ self inspectSelectedEntry ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedEntry ] ];
+		addItem: [ :item |
+			item name: 'Referencers'; action: [ self browseReferencersForSelectedEntry ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedEntry ] ];
+		addItem: [ :item |
+			item name: 'Inspect Session State Key...'; action: [ self browsePromptedSessionStateKey ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
 		yourself
 ]
 
@@ -488,6 +584,12 @@ GbsSymbolListBrowserPresenter >> menuPreview [
 		addItem: [ :item |
 			item name: 'Inspect Entry'; action: [ self inspectSelectedPreviewValue ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedPreviewRow ] ];
+		addItem: [ :item |
+			item name: 'Referencers'; action: [ self browseReferencersForSelectedPreviewValue ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedPreviewRow ] ];
+		addItem: [ :item |
+			item name: 'Inspect Session State Key...'; action: [ self browsePromptedSessionStateKey ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
 		yourself
 ]
 
@@ -498,10 +600,10 @@ GbsSymbolListBrowserPresenter >> menuPreviewPopup [
 
 { #category : 'actions' }
 GbsSymbolListBrowserPresenter >> openStructuredInspectorForPreview: preview title: titleString entryKey: entryKey path: path previewKind: previewKind [
-	| inspectorClass previewFetcherBlock |
+	| inspectorClass previewFetcherBlock presenter |
 	inspectorClass := Smalltalk at: #GbsStructuredValueInspectorPresenter ifAbsent: [ nil ].
 	inspectorClass
-		ifNil: [ UIManager default inform: 'Structured value inspector is not available.' ]
+		ifNil: [ self inform: 'Structured value inspector is not available.' ]
 		ifNotNil: [
 			"Create a block that fetches preview for a given row in the inspector"
 			previewFetcherBlock := [ :row |
@@ -511,7 +613,7 @@ GbsSymbolListBrowserPresenter >> openStructuredInspectorForPreview: preview titl
 					nextPath := path asArray copyWith: { previewKind asString. rowLabel }.
 					self structuredPreviewForEntryKey: entryKey path: nextPath ] ].
 			
-			inspectorClass
+			presenter := inspectorClass
 				openRows: (preview at: #rows ifAbsent: [ #() ])
 				kind: previewKind
 				title: titleString
@@ -525,7 +627,17 @@ GbsSymbolListBrowserPresenter >> openStructuredInspectorForPreview: preview titl
 				entryKey: entryKey
 				path: path
 				previewKind: previewKind
-				previewFetcherBlock: previewFetcherBlock ]
+				previewFetcherBlock: previewFetcherBlock.
+			presenter
+				propertyAt: #referencersBlock
+				put: [ :row |
+					self
+						browseReferencersForStructuredPreviewRow: row
+						entryKey: entryKey
+						path: path
+						previewKind: previewKind ];
+				propertyAt: #sessionStateBlock
+				put: [ :key | self browseSessionStateAtKey: key ] ]
 ]
 
 { #category : 'actions' }
@@ -898,6 +1010,24 @@ GbsSymbolListBrowserPresenter >> session: aSession [
 	session := aSession
 ]
 
+{ #category : 'ui' }
+GbsSymbolListBrowserPresenter >> chooseReferencerFrom: referencers title: aTitle [
+	| labels index |
+	labels := referencers collect: [ :each | self displayStringForReferencer: each ].
+	index := UIManager default chooseFrom: labels title: aTitle.
+	index = 0 ifTrue: [ ^ nil ].
+	^ referencers at: index ifAbsent: [ nil ]
+]
+
+{ #category : 'ui' }
+GbsSymbolListBrowserPresenter >> displayStringForReferencer: anObject [
+	(anObject isKindOf: GbsProxy) ifTrue: [
+		^ [ anObject asLocalString ]
+			on: Error
+			do: [ 'aGbsProxy(oop: ', anObject oop asString, ')' ] ].
+	^ anObject printString
+]
+
 { #category : 'actions' }
 GbsSymbolListBrowserPresenter >> showEntryForKey: key [
 	| preview |
@@ -1013,6 +1143,66 @@ GbsSymbolListBrowserPresenter >> structuredPreviewForEntryKey: keyName path: pat
 ]
 
 { #category : 'private' }
+GbsSymbolListBrowserPresenter >> oopForEntryKey: keyName path: pathCollection [
+	| userName dictName raw oopValue |
+	userName := self selectedUserName.
+	dictName := self selectedDictionaryName.
+	(userName isNil or: [ dictName isNil or: [ keyName isNil ] ]) ifTrue: [ ^ nil ].
+	raw := [ session executeAndFetch: (self
+		oopScriptForUser: userName
+		dictionary: dictName
+		keyName: keyName
+		path: pathCollection) ]
+		on: Error
+		do: [ nil ].
+	raw ifNil: [ ^ nil ].
+	oopValue := [ raw asString trimBoth asNumber ] on: Error do: [ nil ].
+	^ oopValue
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> oopScriptForUser: userName dictionary: dictName keyName: keyName path: pathCollection [
+	| u d k p |
+	u := self literalString: userName.
+	d := self literalString: dictName.
+	k := self literalString: keyName.
+	p := self pathLiteralStringFor: pathCollection.
+	^ '
+	| users user sl dict entryKey value path |
+	users := System myUserProfile symbolList objectNamed: #AllUsers.
+	users ifNil: [ ^ '''' ].
+	user := users detect: [ :x | x userId asString = ', u, ' ] ifNone: [ nil ].
+	user ifNil: [ ^ '''' ].
+	sl := user symbolList.
+	dict := sl detect: [ :each |
+		| name |
+		name := (each respondsTo: #name) ifTrue: [ each name asString ] ifFalse: [ each printString ].
+		name = ', d, ' ] ifNone: [ nil ].
+	dict ifNil: [ ^ '''' ].
+	entryKey := dict keys detect: [ :each | each asString = ', k, ' ] ifNone: [ nil ].
+	entryKey ifNil: [ ^ '''' ].
+	value := dict at: entryKey.
+	path := ', p, '.
+	path do: [ :step |
+		| stepKind stepLabel assoc items index |
+		stepKind := step first asString.
+		stepLabel := step second asString.
+		stepKind = ''dictionary'' ifTrue: [
+			assoc := value associations
+				detect: [ :each | each key printString asString = stepLabel or: [ each key asString = stepLabel ] ]
+				ifNone: [ nil ].
+			assoc ifNil: [ ^ '''' ].
+			value := assoc value ].
+		stepKind = ''collection'' ifTrue: [
+			stepLabel = ''__truncated__'' ifTrue: [ ^ '''' ].
+			items := value asArray.
+			index := [ stepLabel asNumber ] on: Error do: [ nil ].
+			(index isNil or: [ index < 1 or: [ index > items size ] ]) ifTrue: [ ^ '''' ].
+			value := items at: index ] ].
+	(Reflection oopOf: value) asString'
+]
+
+{ #category : 'private' }
 GbsSymbolListBrowserPresenter >> structuredPreviewForSelectedPreviewRowInEntryKey: keyName [
 	| row kind rowLabel |
 	row := self selectedPreviewRow.
@@ -1026,6 +1216,40 @@ GbsSymbolListBrowserPresenter >> structuredPreviewForSelectedPreviewRowInEntryKe
 	^ self
 		structuredPreviewForEntryKey: keyName
 		path: { { kind asString. rowLabel asString } }
+]
+
+{ #category : 'ui' }
+GbsSymbolListBrowserPresenter >> inform: aString [
+	UIManager default inform: aString.
+	^ aString
+]
+
+{ #category : 'ui' }
+GbsSymbolListBrowserPresenter >> oopForInspectableObject: anObject [
+	(anObject isKindOf: GbsProxy) ifTrue: [ ^ anObject oop ].
+	(anObject isInteger and: [ anObject > 20 ]) ifTrue: [ ^ anObject ].
+	^ nil
+]
+
+{ #category : 'ui' }
+GbsSymbolListBrowserPresenter >> openInspectorOnOop: anOop [
+	(anOop isInteger and: [ anOop > 20 ]) ifFalse: [ ^ false ].
+	GbsInspector inspect: anOop session: session.
+	^ true
+]
+
+{ #category : 'ui' }
+GbsSymbolListBrowserPresenter >> requestInput: prompt initialAnswer: defaultString [
+	^ UIManager default request: prompt initialAnswer: defaultString
+]
+
+{ #category : 'querying' }
+GbsSymbolListBrowserPresenter >> referencersInMemoryForOop: anOop [
+	session ifNil: [ ^ #() ].
+	(anOop isInteger and: [ anOop > 20 ]) ifFalse: [ ^ #() ].
+	^ [ session referencesToOop: anOop ]
+		on: Error
+		do: [ #() ]
 ]
 
 { #category : 'private' }

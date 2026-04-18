@@ -7,7 +7,9 @@ Class {
 		'infoMessages',
 		'lastOpenedSession',
 		'lastOpenedDictionary',
-		'openBrowserCalls'
+		'openBrowserCalls',
+		'lastInspectedOop',
+		'lastInspectedSession'
 	],
 	#classVars : [
 		'ChooseAnswers',
@@ -158,7 +160,24 @@ GbsTestableClassicLauncher >> inform: aString [
 	^ aString
 ]
 
+{ #category : 'private' }
+GbsTestableClassicLauncher >> inspectOop: anOop session: aSession [
+	lastInspectedOop := anOop.
+	lastInspectedSession := aSession.
+	^ anOop
+]
+
 { #category : 'accessing' }
 GbsTestableClassicLauncher >> infoMessages [
 	^ infoMessages ifNil: [ infoMessages := OrderedCollection new ]
+]
+
+{ #category : 'accessing' }
+GbsTestableClassicLauncher >> lastInspectedOop [
+	^ lastInspectedOop
+]
+
+{ #category : 'accessing' }
+GbsTestableClassicLauncher >> lastInspectedSession [
+	^ lastInspectedSession
 ]

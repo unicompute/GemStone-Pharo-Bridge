@@ -155,15 +155,15 @@ GbsClassicLauncher class >> browseSymbolListOnCurrentSession [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> inspectCurrentUserGlobalsOnCurrentSession [
-	| session oop |
+	| session userGlobals oop |
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
-	oop := [ session serverInterface
-		apiGciExecuteStr: '(System myUserProfile symbolList objectNamed: #UserGlobals)'
-		context: 20
-		env: 0 ]
+	userGlobals := [ session namedObjectAt: #UserGlobals ifAbsent: [ nil ] ]
 		on: Error
 		do: [ nil ].
+	oop := (userGlobals isKindOf: GbsProxy)
+		ifTrue: [ userGlobals oop ]
+		ifFalse: [ nil ].
 	(oop isNumber and: [ oop > 20 ]) ifFalse: [
 		UIManager default inform: 'Could not inspect current UserGlobals.'.
 		^ self ].
@@ -905,39 +905,13 @@ GbsClassicLauncher class >> performBrowseQueryWithPrompt: promptString mode: mod
 
 { #category : 'menus' }
 GbsClassicLauncher class >> queryOrganizerMethodsFor: tokenString mode: modeString inSession: aSession [
-	| escapedToken escapedMode script raw |
-	escapedToken := tokenString copyReplaceAll: '''' with: ''''''.
-	escapedMode := modeString copyReplaceAll: '''' with: ''''''.
-	script := '[
-		| token mode org methods searchResults stream |
-		token := ''', escapedToken, '''.
-		mode := ''', escapedMode, '''.
-		org := ClassOrganizer new.
-		methods := #().
-		mode = ''implementors'' ifTrue: [
-			methods := [ org implementorsOf: token asSymbol ] on: Error do: [ #() ] ].
-		mode = ''senders'' ifTrue: [
-			searchResults := [ org sendersOf: token asString ] on: Error do: [ #() ].
-			methods := (searchResults isArray and: [ searchResults isEmpty not ])
-				ifTrue: [ searchResults first ]
-				ifFalse: [ searchResults ] ].
-		mode = ''references'' ifTrue: [
-			searchResults := [ org referencesTo: token asSymbol ] on: Error do: [ #() ].
-			methods := (searchResults isArray and: [ searchResults isEmpty not ])
-				ifTrue: [ searchResults first ]
-				ifFalse: [ searchResults ] ].
-		stream := WriteStream on: String new.
-		(methods ifNil: [ #() ]) do: [ :m |
-			| cls sel |
-			cls := [ m inClass name asString ] on: Error do: [ '''' ].
-			sel := [ m selector asString ] on: Error do: [ '''' ].
-			(cls isEmpty or: [ sel isEmpty ]) ifFalse: [
-				stream nextPutAll: cls; nextPutAll: ''>>''; nextPutAll: sel; lf ] ].
-		stream contents
-	] value'.
-	raw := [ aSession executeAndFetch: script context: 20 ] on: Error do: [ '' ].
-	raw := raw ifNil: [ '' ] ifNotNil: [ raw asString ].
-	^ ((raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asSet asArray asSortedCollection asArray
+	modeString = 'implementors' ifTrue: [
+		^ aSession implementorMethodReferenceStringsForSelector: tokenString ].
+	modeString = 'senders' ifTrue: [
+		^ aSession senderMethodReferenceStringsForSelector: tokenString ].
+	modeString = 'references' ifTrue: [
+		^ aSession methodReferenceStringsToSymbol: tokenString ].
+	^ #()
 ]
 
 { #category : 'utilities' }
@@ -1268,6 +1242,85 @@ GbsClassicLauncher >> doBreak [
 ]
 
 { #category : 'actions' }
+GbsClassicLauncher >> browseNamedObjectCacheReport [
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	self inform: session namedObjectCacheReportText.
+	^ true
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> browseTypedWrapperAutoloadReport [
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	self inform: (GbsSessionManager typedWrapperAutoloadReportTextForSession: session).
+	^ true
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> browseSessionStateReport [
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	self inform: session objectSpaceDiagnostics reportText.
+	^ true
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> inspectMaglevFinalizerRegistry [
+	^ self inspectSessionStateAtKey: 19
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> inspectPromptedSessionStateKey [
+	| rawKey key |
+	rawKey := self class uiRequest: 'Session state key:' initialAnswer: '19'.
+	(rawKey isNil or: [ rawKey trimBoth isEmpty ]) ifTrue: [ ^ false ].
+	key := [ rawKey trimBoth asInteger ]
+		on: Error
+		do: [ nil ].
+	key ifNil: [
+		self inform: 'Enter a numeric session state key.'.
+		^ false ].
+	^ self inspectSessionStateAtKey: key
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> inspectSessionStateAtKey: aKey [
+	| session sessionStateValue oop |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	sessionStateValue := [ session sessionStateAt: aKey ]
+		on: Error
+		do: [ :ex |
+			self inform: 'Session state lookup failed: ', ex messageText.
+			^ false ].
+	sessionStateValue ifNil: [
+		self inform: 'Session state key ', aKey printString, ' is not set.'.
+		^ false ].
+	oop := self oopForInspectableObject: sessionStateValue.
+	oop ifNil: [
+		self inform: 'Session state key ', aKey printString, ' does not currently have an inspectable remote oop.'.
+		^ false ].
+	self inspectOop: oop session: session.
+	^ true
+]
+
+{ #category : 'actions' }
 GbsClassicLauncher >> doCommit [
 	self withSelectedSession: [ :session |
 		session commitTransaction
@@ -1363,6 +1416,19 @@ GbsClassicLauncher >> doLogout [
 		GbsLauncher allInstancesDo: [ :launcher | launcher updateUIState ].
 		GbsClassicLauncher allInstancesDo: [ :launcher | launcher refreshAll ].
 	].
+	^ true
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> clearNamedObjectCache [
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	session clearNamedObjectCache.
+	self inform: 'Named object cache cleared.'.
 	^ true
 ]
 
@@ -1466,7 +1532,28 @@ GbsClassicLauncher >> menuSession [
         addItem: [ :item | item name: 'Logout'; action: [ self doLogout ] ];
         addItem: [ :item | item name: 'Commit'; action: [ self doCommit ] ];
         addItem: [ :item | item name: 'Abort'; action: [ self doAbort ] ];
+        addItem: [ :item | item name: 'Named Object Cache Report'; action: [ self browseNamedObjectCacheReport ] ];
+        addItem: [ :item | item name: 'Clear Named Object Cache'; action: [ self clearNamedObjectCache ] ];
+        addItem: [ :item | item name: 'Typed Wrapper Autoload Report'; action: [ self browseTypedWrapperAutoloadReport ] ];
+        addItem: [ :item | item name: 'Session State Report'; action: [ self browseSessionStateReport ] ];
+        addItem: [ :item | item name: 'Inspect Session State Key...'; action: [ self inspectPromptedSessionStateKey ] ];
+        addItem: [ :item | item name: 'Inspect MagLev Finalizers'; action: [ self inspectMaglevFinalizerRegistry ] ];
         yourself.
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> oopForInspectableObject: anObject [
+	anObject ifNil: [ ^ nil ].
+	(anObject respondsTo: #oop) ifTrue: [ ^ anObject oop ].
+	(anObject isInteger and: [ anObject > 20 ]) ifTrue: [ ^ anObject ].
+	^ nil
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> sessionStateReportTextFor: anObject label: aLabel [
+	^ (GbsObjectSpaceDiagnosticsFacade on: nil)
+		summaryLineFor: anObject
+		label: aLabel
 ]
 
 { #category : 'menus' }
@@ -1635,22 +1722,34 @@ GbsClassicLauncher >> inspectCurrentUserGlobals [
 		self inform: 'Select or log into a GemStone session first.'.
 		^ false
 	].
-	oop := [ session serverInterface
-		apiGciExecuteStr: '(System myUserProfile symbolList objectNamed: #UserGlobals)'
-		context: 20
-		env: 0 ]
-		on: Error
-		do: [ nil ].
+	oop := self currentUserGlobalsOopIn: session.
 	(oop isNumber and: [ oop > 20 ]) ifFalse: [
 		self inform: 'Could not inspect current UserGlobals.'.
 		^ false
 	].
+	GbsSessionParameters currentSession: session.
 	[
-		GbsInspector inspect: oop session: session.
+		self inspectOop: oop session: session.
 		^ true
 	] on: Error do: [ :ex |
 		self inform: 'Could not open UserGlobals inspector: ', ex messageText.
 		^ false ]
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> currentUserGlobalsOopIn: aSession [
+	| userGlobals |
+	userGlobals := [ aSession namedObjectAt: #UserGlobals ifAbsent: [ nil ] ]
+		on: Error
+		do: [ nil ].
+	^ (userGlobals isKindOf: GbsProxy)
+		ifTrue: [ userGlobals oop ]
+		ifFalse: [ nil ]
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> inspectOop: anOop session: aSession [
+	GbsInspector inspect: anOop session: aSession
 ]
 
 { #category : 'actions' }

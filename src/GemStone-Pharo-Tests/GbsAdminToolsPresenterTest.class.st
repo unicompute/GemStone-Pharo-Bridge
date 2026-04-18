@@ -102,6 +102,2393 @@ GbsAdminToolsPresenterTest >> testNamespacesParseRowsParsesTabSeparatedColumns [
 ]
 
 { #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshUsesNamespaceMirrors [
+	| mockSession fakeTable items |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'System myUserProfile symbolList. entries := OrderedCollection new')
+			ifTrue: [ ^ #(#(1 5001 'UserGlobals' nil 'SymbolDictionary' nil)) ].
+		self fail ].
+
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeTable.
+
+	namespacesPresenter refreshNamespaces.
+	items := fakeTable items.
+
+	self assert: items size equals: 1.
+	self assert: items first class equals: GbsRemoteNamespaceMirror.
+	self assert: items first displayName equals: 'UserGlobals'.
+	self assert: items first className equals: 'SymbolDictionary'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshNamespacesSynchronizesDetailsAndRuntime [
+	| mockSession previousNamespace fakeNamespaceTable fakeConstantsTable fakeAutoloadTable fakeText |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'System myUserProfile symbolList. entries := OrderedCollection new')
+			ifTrue: [ ^ #(#(1 5001 'UserGlobals' nil 'SymbolDictionary' nil)) ].
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		((script includesSubstring: 'System myUserProfile symbolList at: 1')
+			and: [ script includesSubstring: 'rubyAutoloadAssociationAtOrNil: each env: 1' ])
+			ifTrue: [ ^ #(#('LazyThing' 'lib/lazy_thing.rb' false 9101)) ].
+		((script includesSubstring: 'System myUserProfile symbolList at: 1')
+			and: [ script includesSubstring: 'entries add: (Array with: each asString' ])
+			ifTrue: [ ^ #(
+				#('Invoice' 7101 'Invoice' nil 'Invoice' 'Accounting::Invoice')
+				#('LazyThing' nil nil 'lib/lazy_thing.rb' nil nil)) ].
+		self fail ].
+	previousNamespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'System myUserProfile symbolList at: 1'
+		symbolListIndex: 1
+		metadata: #(1 5001 'UserGlobals' nil 'SymbolDictionary' nil).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable items: { previousNamespace }.
+	fakeNamespaceTable selectedItem: previousNamespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+
+	namespacesPresenter refreshNamespaces.
+
+	self assert: fakeNamespaceTable selectedItem notNil.
+	self assert: fakeConstantsTable items size equals: 2.
+	self assert: fakeAutoloadTable items size equals: 1.
+	self assert: (fakeText text includesSubstring: 'Selected Namespace: UserGlobals').
+	self assert: (fakeText text includesSubstring: 'Selected Constant:').
+	self assert: (fakeText text includesSubstring: '$LOAD_PATH')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseNamespaceReferencesUsesScopedQueryResults [
+	| presenter mockSession namespace constant fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	presenter := TestableGbsNamespacesPresenter new.
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'referencesTo:')
+			ifTrue: [ ^ #('Accounting::Invoice>>size' 'Other::Thing>>size') ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: '[:value | value] value: nil'
+		symbolListIndex: nil
+		metadata: #(8001 'Accounting' 'Accounting' 'RubyNameSpace' 'Module').
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('Invoice' nil nil nil nil nil).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable items: { namespace }.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable items: { constant }.
+	fakeConstantsTable selectedItem: constant.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	self assert: presenter browseNamespaceReferencesToSelectedConstant.
+	self assert: presenter lastMethodQueryReferences equals: #('Accounting::Invoice>>size').
+	self assert: (presenter lastMethodQueryTitle includesSubstring: 'Namespace References to Invoice')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseNamespaceImplementorsUsesScopedQueryResults [
+	| presenter mockSession namespace fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	presenter := TestableGbsNamespacesPresenter new.
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'implementorsOf:')
+			ifTrue: [ ^ #('Accounting::Invoice>>size' 'Other::Thing>>size') ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: '[:value | value] value: nil'
+		symbolListIndex: nil
+		metadata: #(8001 'Accounting' 'Accounting' 'RubyNameSpace' 'Module').
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable items: { namespace }.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+	presenter enqueueRequestAnswer: 'size'.
+
+	self assert: presenter browseNamespaceImplementorsOfPromptedSelector.
+	self assert: presenter lastMethodQueryReferences equals: #('Accounting::Invoice>>size').
+	self assert: (presenter lastMethodQueryTitle includesSubstring: 'Namespace Implementors of size')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshNamespacesClearsStaleDetailsAndRuntimeContext [
+	| mockSession selectedNamespace oldConstant oldAutoload fakeNamespaceTable fakeConstantsTable fakeAutoloadTable fakeText |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'System myUserProfile symbolList. entries := OrderedCollection new')
+			ifTrue: [ ^ #(#(2 5002 'Globals' nil 'SymbolDictionary' nil)) ].
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		self fail ].
+	selectedNamespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'System myUserProfile symbolList at: 1'
+		symbolListIndex: 1
+		metadata: #(1 5001 'UserGlobals' nil 'SymbolDictionary' nil).
+	oldConstant := GbsRemoteConstantMirror
+		on: selectedNamespace
+		metadata: #('InvoiceAlias' 7101 'Class' nil 'Invoice' 'Accounting::Invoice').
+	oldAutoload := GbsRemoteAutoloadMirror
+		on: selectedNamespace
+		metadata: #('LazyThing' 'lib/lazy_thing.rb' false 9101).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable items: { selectedNamespace }.
+	fakeNamespaceTable selectedItem: selectedNamespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable items: { oldConstant }.
+	fakeConstantsTable selectedItem: oldConstant.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable items: { oldAutoload }.
+	fakeAutoloadTable selectedItem: oldAutoload.
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: 'stale'.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+
+	namespacesPresenter refreshNamespaces.
+
+	self assert: fakeNamespaceTable selectedItem isNil.
+	self assert: fakeConstantsTable items isEmpty.
+	self assert: fakeAutoloadTable items isEmpty.
+	self deny: (fakeText text includesSubstring: 'Selected Namespace:').
+	self deny: (fakeText text includesSubstring: 'Selected Constant:').
+	self deny: (fakeText text includesSubstring: 'Selected Autoload:')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshSelectedNamespaceDetailsUsesNamespaceMirrors [
+	| mockSession fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'System myUserProfile symbolList. entries := OrderedCollection new')
+			ifTrue: [ ^ #(#(1 5001 'UserGlobals' nil 'SymbolDictionary' nil)) ].
+		((script includesSubstring: 'System myUserProfile symbolList at: 1')
+			and: [ script includesSubstring: 'rubyAutoloadAssociationAtOrNil: each env: 1' ])
+			ifTrue: [ ^ #(
+				#('LazyThing' 'lib/lazy_thing.rb' false 9101)
+			) ].
+		((script includesSubstring: 'System myUserProfile symbolList at: 1')
+			and: [ script includesSubstring: 'entries add: (Array with: each asString' ])
+			ifTrue: [ ^ #(
+				#('Invoice' 7101 'Invoice' nil 'Invoice' 'Accounting::Invoice')
+				#('LazyThing' nil nil 'lib/lazy_thing.rb' nil nil)
+			) ].
+		self fail ].
+
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter refreshNamespaces.
+	fakeNamespaceTable selectedItem: fakeNamespaceTable items first.
+	namespacesPresenter refreshSelectedNamespaceDetails.
+
+	self assert: fakeConstantsTable items size equals: 2.
+	self assert: fakeConstantsTable items first name equals: 'Invoice'.
+	self assert: fakeConstantsTable items first targetDisplayName equals: 'Accounting::Invoice'.
+	self assert: fakeAutoloadTable items size equals: 1.
+	self assert: fakeAutoloadTable items first name equals: 'LazyThing'.
+	self assert: fakeAutoloadTable items first autoloadFile equals: 'lib/lazy_thing.rb'.
+	self assert: fakeAutoloadTable items first oop equals: 9101.
+	self assert: fakeAutoloadTable items first stateLabel equals: 'Pending'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshNamespacesPreservesSelectedNamespaceRow [
+	| mockSession fakeTable selectedNamespace replacementNamespace |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	selectedNamespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'System myUserProfile symbolList at: 1'
+		symbolListIndex: 1
+		metadata: #(1 5001 'UserGlobals' nil 'SymbolDictionary' nil).
+	replacementNamespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'System myUserProfile symbolList at: 1'
+		symbolListIndex: 1
+		metadata: #(1 5001 'UserGlobals' nil 'SymbolDictionary' nil).
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'System myUserProfile symbolList. entries := OrderedCollection new')
+			ifTrue: [ ^ #(#(1 5001 'UserGlobals' nil 'SymbolDictionary' nil)) ].
+		self fail ].
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeTable items: { selectedNamespace }.
+	fakeTable selectedItem: selectedNamespace.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeTable.
+
+	namespacesPresenter refreshNamespaces.
+
+	self assert: fakeTable selectedItem ~~ selectedNamespace.
+	self assert: (fakeTable items anySatisfy: [ :each | each == fakeTable selectedItem ])
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshNamespacesClearsStaleSelectedNamespaceRow [
+	| mockSession fakeTable selectedNamespace |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	selectedNamespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'System myUserProfile symbolList at: 1'
+		symbolListIndex: 1
+		metadata: #(1 5001 'UserGlobals' nil 'SymbolDictionary' nil).
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'System myUserProfile symbolList. entries := OrderedCollection new')
+			ifTrue: [ ^ #(#(2 5002 'Globals' nil 'SymbolDictionary' nil)) ].
+		self fail ].
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeTable items: { selectedNamespace }.
+	fakeTable selectedItem: selectedNamespace.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeTable.
+
+	namespacesPresenter refreshNamespaces.
+
+	self assert: fakeTable items size equals: 1.
+	self assert: fakeTable selectedItem isNil
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshNamespacesUsesAutoloadOwnerWhenNamespaceRowMissing [
+	| mockSession fakeNamespaceTable fakeAutoloadTable ownerNamespace autoload |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	ownerNamespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	autoload := GbsRemoteAutoloadMirror
+		on: ownerNamespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' true 9191).
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'System myUserProfile symbolList. entries := OrderedCollection new')
+			ifTrue: [ ^ #(#(1 7001 'Object' 'Object' 'RubyNameSpace' 'Object')) ].
+		self fail ].
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter refreshNamespaces.
+
+	self assert: fakeNamespaceTable selectedItem notNil.
+	self assert: (fakeNamespaceTable items anySatisfy: [ :each | each == fakeNamespaceTable selectedItem ]).
+	self assert: fakeNamespaceTable selectedItem oop equals: 7001
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshNamespacesUsesConstantOwnerWhenNamespaceRowMissing [
+	| mockSession fakeNamespaceTable fakeConstantsTable ownerNamespace constant |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	ownerNamespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	constant := GbsRemoteConstantMirror
+		on: ownerNamespace
+		metadata: #('InvoiceAlias' 7101 'Class' nil 'Invoice' 'Accounting::Invoice').
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'System myUserProfile symbolList. entries := OrderedCollection new')
+			ifTrue: [ ^ #(#(1 7001 'Object' 'Object' 'RubyNameSpace' 'Object')) ].
+		self fail ].
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: constant.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+
+	namespacesPresenter refreshNamespaces.
+
+	self assert: fakeNamespaceTable selectedItem notNil.
+	self assert: (fakeNamespaceTable items anySatisfy: [ :each | each == fakeNamespaceTable selectedItem ]).
+	self assert: fakeNamespaceTable selectedItem oop equals: 7001
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshSelectedNamespaceDetailsPreservesSelectedAutoloadRow [
+	| mockSession namespace oldAutoload fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	namespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'Object nameSpace: 1'
+		symbolListIndex: nil
+		metadata: #(7001 'Object' 'Object' 'RubyNameSpace' 'Object').
+	namespace
+		instVarNamed: 'constantEntries'
+		put: #(#('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice')).
+	namespace
+		instVarNamed: 'autoloadEntries'
+		put: #(#('InvoiceAlias' 'lib/invoice.rb' true 9191)).
+	oldAutoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' true 9191).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: oldAutoload.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter refreshSelectedNamespaceDetails.
+
+	self assert: fakeAutoloadTable selectedItem notNil.
+	self assert: fakeAutoloadTable selectedItem ~~ oldAutoload.
+	self assert: (fakeAutoloadTable items anySatisfy: [ :each | each == fakeAutoloadTable selectedItem ])
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshSelectedNamespaceDetailsRestoresNamespaceRowFromSelectedAutoloadOwner [
+	| mockSession namespace ownerRow autoload fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	namespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'Object nameSpace: 1'
+		symbolListIndex: nil
+		metadata: #(7001 'Object' 'Object' 'RubyNameSpace' 'Object').
+	ownerRow := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'System myUserProfile symbolList at: 1'
+		symbolListIndex: 1
+		metadata: #(7001 'Object' 'Object' 'RubyNameSpace' 'Object').
+	namespace
+		instVarNamed: 'constantEntries'
+		put: #(#('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice')).
+	namespace
+		instVarNamed: 'autoloadEntries'
+		put: #(#('InvoiceAlias' 'lib/invoice.rb' true 9191)).
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' true 9191).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable items: { ownerRow }.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter refreshSelectedNamespaceDetails.
+
+	self assert: fakeNamespaceTable selectedItem == ownerRow
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshSelectedNamespaceDetailsClearsStaleSelectedAutoloadRow [
+	| mockSession namespace oldAutoload fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	namespace instVarNamed: 'constantEntries' put: #().
+	namespace instVarNamed: 'autoloadEntries' put: #().
+	oldAutoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' true 9191).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: oldAutoload.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter refreshSelectedNamespaceDetails.
+
+	self assert: fakeAutoloadTable items isEmpty.
+	self assert: fakeAutoloadTable selectedItem isNil
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshSelectedNamespaceDetailsPreservesSelectedConstantRow [
+	| mockSession namespace oldConstant fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	namespace
+		instVarNamed: 'constantEntries'
+		put: #(#('InvoiceAlias' 7101 'Class' nil 'Invoice' 'Accounting::Invoice')).
+	namespace
+		instVarNamed: 'autoloadEntries'
+		put: #().
+	oldConstant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 7101 'Class' nil 'Invoice' 'Accounting::Invoice').
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: oldConstant.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter refreshSelectedNamespaceDetails.
+
+	self assert: fakeConstantsTable selectedItem notNil.
+	self assert: fakeConstantsTable selectedItem ~~ oldConstant.
+	self assert: (fakeConstantsTable items anySatisfy: [ :each | each == fakeConstantsTable selectedItem ])
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshSelectedNamespaceDetailsRestoresNamespaceRowFromSelectedConstantOwner [
+	| mockSession namespace ownerRow oldConstant fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	namespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'Object nameSpace: 1'
+		symbolListIndex: nil
+		metadata: #(7001 'Object' 'Object' 'RubyNameSpace' 'Object').
+	ownerRow := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'System myUserProfile symbolList at: 1'
+		symbolListIndex: 1
+		metadata: #(7001 'Object' 'Object' 'RubyNameSpace' 'Object').
+	namespace
+		instVarNamed: 'constantEntries'
+		put: #(#('InvoiceAlias' 7101 'Class' nil 'Invoice' 'Accounting::Invoice')).
+	namespace
+		instVarNamed: 'autoloadEntries'
+		put: #().
+	oldConstant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 7101 'Class' nil 'Invoice' 'Accounting::Invoice').
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable items: { ownerRow }.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: oldConstant.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter refreshSelectedNamespaceDetails.
+
+	self assert: fakeNamespaceTable selectedItem == ownerRow
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshSelectedNamespaceDetailsClearsStaleSelectedConstantRow [
+	| mockSession namespace oldConstant fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	namespace instVarNamed: 'constantEntries' put: #().
+	namespace instVarNamed: 'autoloadEntries' put: #().
+	oldConstant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 7101 'Class' nil 'Invoice' 'Accounting::Invoice').
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: oldConstant.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter refreshSelectedNamespaceDetails.
+
+	self assert: fakeConstantsTable items isEmpty.
+	self assert: fakeConstantsTable selectedItem isNil
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshSelectedNamespaceDetailsDoesNotCarryAutoloadSelectionAcrossNamespaceChange [
+	| mockSession oldNamespace newNamespace oldAutoload fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	oldNamespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	newNamespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'Accounting nameSpace: 1'
+		symbolListIndex: nil
+		metadata: #(8001 'Accounting' 'Accounting' 'RubyNameSpace' 'Accounting').
+	newNamespace instVarNamed: 'constantEntries' put: #().
+	newNamespace
+		instVarNamed: 'autoloadEntries'
+		put: #(#('InvoiceAlias' 'lib/invoice.rb' true 9292)).
+	oldAutoload := GbsRemoteAutoloadMirror
+		on: oldNamespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' true 9191).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable items: { oldNamespace. newNamespace }.
+	fakeNamespaceTable selectedItem: newNamespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: oldAutoload.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter refreshSelectedNamespaceDetails.
+
+	self assert: fakeAutoloadTable items size equals: 1.
+	self assert: fakeAutoloadTable selectedItem isNil
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshSelectedNamespaceDetailsDoesNotCarryConstantSelectionAcrossNamespaceChange [
+	| mockSession oldNamespace newNamespace oldConstant fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	oldNamespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	newNamespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'Accounting nameSpace: 1'
+		symbolListIndex: nil
+		metadata: #(8001 'Accounting' 'Accounting' 'RubyNameSpace' 'Accounting').
+	newNamespace
+		instVarNamed: 'constantEntries'
+		put: #(#('InvoiceAlias' 8101 'Class' nil 'Invoice' 'Accounting::Invoice')).
+	newNamespace instVarNamed: 'autoloadEntries' put: #().
+	oldConstant := GbsRemoteConstantMirror
+		on: oldNamespace
+		metadata: #('InvoiceAlias' 7101 'Class' nil 'Invoice' 'Object::Invoice').
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable items: { oldNamespace. newNamespace }.
+	fakeNamespaceTable selectedItem: newNamespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: oldConstant.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter refreshSelectedNamespaceDetails.
+
+	self assert: fakeConstantsTable items size equals: 1.
+	self assert: fakeConstantsTable selectedItem isNil
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshRuntimeInfoIncludesSelectedConstantTarget [
+	| mockSession fakeText namespace constant fakeNamespaceTable fakeConstantsTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 7101 'Class' nil 'Invoice' 'Accounting::Invoice').
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: constant.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+
+	namespacesPresenter refreshRuntimeInfo.
+
+	self assert: (fakeText text includesSubstring: 'Selected Constant: InvoiceAlias').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Source: Selected Constant Target').
+	self assert: (fakeText text includesSubstring: 'Target: Accounting::Invoice').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Namespace: Accounting::Invoice').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Parent: Accounting').
+	self assert: (fakeText text includesSubstring: 'Value Class: Class')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshRuntimeInfoUsesConstantTargetLabelForAutoloadBackedConstantSelection [
+	| mockSession fakeText namespace constant fakeConstantsTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		(script includesSubstring: '_objectForOop: 7101')
+			ifTrue: [ ^ #(8101 'Accounting::Invoice' 'Accounting::Invoice' 'RubyNameSpace' 'Class') ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	namespace
+		instVarNamed: 'autoloadEntries'
+		put: #(#('InvoiceAlias' 'lib/invoice.rb' true 9191)).
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice').
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: constant.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+
+	namespacesPresenter refreshRuntimeInfo.
+
+	self assert: (fakeText text includesSubstring: 'Selected Namespace Source: Selected Constant Owner').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Source: Selected Constant Target').
+	self deny: (fakeText text includesSubstring: 'Lookup Base Source: Selected Autoload Target')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshRuntimeInfoUsesConstantOwnerLookupLabelWhenTargetIsUnavailable [
+	| mockSession fakeText namespace constant fakeConstantsTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('InvoiceAlias' nil nil 'lib/invoice.rb' nil nil).
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: constant.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+
+	namespacesPresenter refreshRuntimeInfo.
+
+	self assert: (fakeText text includesSubstring: 'Selected Namespace Source: Selected Constant Owner').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Source: Selected Constant Owner').
+	self deny: (fakeText text includesSubstring: 'Lookup Base Source: Selected Namespace')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshRuntimeInfoUsesAutoloadOwnerLookupLabelWhenTargetIsUnavailable [
+	| mockSession fakeText namespace autoload fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' false 9191).
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter refreshRuntimeInfo.
+
+	self assert: (fakeText text includesSubstring: 'Selected Namespace Source: Selected Autoload Owner').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Source: Selected Autoload Owner').
+	self deny: (fakeText text includesSubstring: 'Lookup Base Source: Selected Namespace')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshRuntimeInfoNormalizesConstantSelectedInAutoloadTable [
+	| mockSession fakeText namespace constant fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	namespace
+		instVarNamed: 'autoloadEntries'
+		put: #(#('LazyThing' 'lib/lazy_thing.rb' false 9191)).
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('LazyThing' nil nil 'lib/lazy_thing.rb' nil nil).
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: constant.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter refreshRuntimeInfo.
+
+	self assert: (fakeText text includesSubstring: 'Selected Autoload: LazyThing').
+	self assert: (fakeText text includesSubstring: 'Autoload State: Pending').
+	self assert: (fakeText text includesSubstring: 'Autoload File: lib/lazy_thing.rb')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesInspectSelectedAutoloadNormalizesConstantSelectedInAutoloadTable [
+	| mockSession presenter namespace constant fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	namespace
+		instVarNamed: 'autoloadEntries'
+		put: #(#('LazyThing' 'lib/lazy_thing.rb' false 9191)).
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('LazyThing' nil nil 'lib/lazy_thing.rb' nil nil).
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: constant.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	self assert: presenter inspectSelectedAutoload.
+	self assert: presenter lastOpenedOop equals: 9191
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesHandleAutoloadSelectionChangedClearsConstantSelection [
+	| mockSession fakeText namespace constant autoload fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice').
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' true 9191).
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: constant.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter handleAutoloadSelectionChanged.
+
+	self assert: fakeConstantsTable selectedItem isNil.
+	self assert: fakeAutoloadTable selectedItem == autoload.
+	self assert: (fakeText text includesSubstring: 'Selected Autoload: InvoiceAlias').
+	self deny: (fakeText text includesSubstring: 'Selected Constant: InvoiceAlias')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesHandleConstantSelectionChangedClearsAutoloadSelection [
+	| mockSession fakeText namespace constant autoload fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice').
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' true 9191).
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: constant.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter handleConstantSelectionChanged.
+
+	self assert: fakeAutoloadTable selectedItem isNil.
+	self assert: fakeConstantsTable selectedItem == constant.
+	self assert: (fakeText text includesSubstring: 'Selected Constant: InvoiceAlias').
+	self deny: (fakeText text includesSubstring: 'Selected Autoload: InvoiceAlias')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesHandleAutoloadSelectionChangedNormalizesAutoloadBackedConstantSelection [
+	| mockSession fakeText namespace constant fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	namespace
+		instVarNamed: 'constantEntries'
+		put: #(#('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice')).
+	namespace
+		instVarNamed: 'autoloadEntries'
+		put: #(#('InvoiceAlias' 'lib/invoice.rb' true 9191)).
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice').
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: constant.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: constant.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter handleAutoloadSelectionChanged.
+
+	self assert: fakeConstantsTable selectedItem isNil.
+	self assert: fakeAutoloadTable selectedItem class equals: GbsRemoteAutoloadMirror.
+	self assert: fakeAutoloadTable selectedItem name equals: 'InvoiceAlias'.
+	self assert: fakeAutoloadTable selectedItem autoloadFile equals: 'lib/invoice.rb'.
+	self assert: (fakeText text includesSubstring: 'Selected Autoload: InvoiceAlias').
+	self deny: (fakeText text includesSubstring: 'Selected Constant: InvoiceAlias')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesHandleConstantSelectionChangedNormalizesAutoloadMirrorSelection [
+	| mockSession fakeText namespace autoload fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	namespace
+		instVarNamed: 'constantEntries'
+		put: #(#('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice')).
+	namespace
+		instVarNamed: 'autoloadEntries'
+		put: #(#('InvoiceAlias' 'lib/invoice.rb' true 9191)).
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' true 9191).
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: autoload.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter handleConstantSelectionChanged.
+
+	self assert: fakeAutoloadTable selectedItem isNil.
+	self assert: fakeConstantsTable selectedItem class equals: GbsRemoteConstantMirror.
+	self assert: fakeConstantsTable selectedItem name equals: 'InvoiceAlias'.
+	self assert: fakeConstantsTable selectedItem oop equals: 7101.
+	self assert: (fakeText text includesSubstring: 'Selected Constant: InvoiceAlias').
+	self deny: (fakeText text includesSubstring: 'Selected Autoload: InvoiceAlias')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshRuntimeInfoIncludesLookupBaseWithoutSelectedNamespace [
+	| mockSession fakeText namespace constant fakeConstantsTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		(script includesSubstring: '_objectForOop: 7101')
+			ifTrue: [ ^ #(8101 'Accounting::Invoice' 'Accounting::Invoice' 'RubyNameSpace' 'Class') ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 7101 'Class' nil 'Invoice' 'Accounting::Invoice').
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: constant.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+
+	namespacesPresenter refreshRuntimeInfo.
+
+	self deny: (fakeText text includesSubstring: 'Selected Namespace:').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Source: Selected Constant Target').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Namespace: Accounting::Invoice').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Parent: Accounting').
+	self assert: (fakeText text includesSubstring: 'Selected Constant: InvoiceAlias')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshRuntimeInfoIncludesSelectedAutoloadDetails [
+	| mockSession fakeText namespace autoload fakeNamespaceTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' true 9191).
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	autoload
+		namespaceMirror
+		instVarNamed: 'constantEntries'
+		put: #(#('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice')).
+
+	namespacesPresenter refreshRuntimeInfo.
+
+	self assert: (fakeText text includesSubstring: 'Selected Autoload: InvoiceAlias').
+	self assert: (fakeText text includesSubstring: 'Autoload State: Loaded').
+	self assert: (fakeText text includesSubstring: 'Autoload File: lib/invoice.rb').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Source: Selected Autoload Target').
+	self assert: (fakeText text includesSubstring: 'Autoload Target: Accounting::Invoice').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Namespace: Accounting::Invoice').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Parent: Accounting').
+	self assert: (fakeText text includesSubstring: 'Autoload Value Class: Class')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshRuntimeInfoDoesNotShowAutoloadDetailsForSelectedAutoloadBackedConstant [
+	| mockSession fakeText namespace constant fakeNamespaceTable fakeConstantsTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	namespace
+		instVarNamed: 'constantEntries'
+		put: #(#('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice')).
+	namespace
+		instVarNamed: 'autoloadEntries'
+		put: #(#('InvoiceAlias' 'lib/invoice.rb' true 9191)).
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice').
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: constant.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+
+	namespacesPresenter refreshRuntimeInfo.
+
+	self assert: (fakeText text includesSubstring: 'Selected Constant: InvoiceAlias').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Source: Selected Constant Target').
+	self deny: (fakeText text includesSubstring: 'Selected Autoload: InvoiceAlias')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshRuntimeInfoDoesNotShowConstantDetailsForSelectedLoadedAutoload [
+	| mockSession fakeText namespace autoload fakeNamespaceTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	namespace
+		instVarNamed: 'constantEntries'
+		put: #(#('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice')).
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' true 9191).
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter refreshRuntimeInfo.
+
+	self assert: (fakeText text includesSubstring: 'Selected Autoload: InvoiceAlias').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Source: Selected Autoload Target').
+	self deny: (fakeText text includesSubstring: 'Selected Constant: InvoiceAlias')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshRuntimeInfoNormalizesAutoloadMirrorSelectedInConstantsTable [
+	| mockSession fakeText namespace autoload fakeNamespaceTable fakeConstantsTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	namespace
+		instVarNamed: 'constantEntries'
+		put: #(#('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice')).
+	namespace
+		instVarNamed: 'autoloadEntries'
+		put: #(#('InvoiceAlias' 'lib/invoice.rb' true 9191)).
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' true 9191).
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: autoload.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+
+	namespacesPresenter refreshRuntimeInfo.
+
+	self assert: (fakeText text includesSubstring: 'Selected Constant: InvoiceAlias').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Source: Selected Constant Target').
+	self deny: (fakeText text includesSubstring: 'Selected Autoload: InvoiceAlias')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshRuntimeInfoUsesAutoloadOwnerWhenNamespaceRowIsMissing [
+	| mockSession fakeText namespace autoload fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		(script includesSubstring: '_objectForOop: 7101')
+			ifTrue: [ ^ #(8101 'Accounting::Invoice' 'Accounting::Invoice' 'RubyNameSpace' 'Class') ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' true 9191).
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	autoload
+		namespaceMirror
+		instVarNamed: 'constantEntries'
+		put: #(#('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice')).
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter refreshRuntimeInfo.
+
+	self assert: (fakeText text includesSubstring: 'Selected Namespace: Object').
+	self assert: (fakeText text includesSubstring: 'Selected Namespace Source: Selected Autoload Owner').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Source: Selected Autoload Target').
+	self assert: (fakeText text includesSubstring: 'Selected Autoload: InvoiceAlias')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshRuntimeInfoIncludesLoadingAutoloadState [
+	| mockSession fakeText namespace autoload fakeNamespaceTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' nil 9191).
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	namespacesPresenter refreshRuntimeInfo.
+
+	self assert: (fakeText text includesSubstring: 'Selected Autoload: InvoiceAlias').
+	self assert: (fakeText text includesSubstring: 'Autoload State: Loading')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshRuntimeInfoUsesRubyRuntimeSurface [
+	| mockSession fakeText |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib' 'app/models') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [
+			^ (IdentityDictionary new
+				at: #lazyThing put: 'registered';
+				yourself) ].
+		self fail ].
+
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: GbxFakeTablePresenterForRemoteDebugger new.
+
+	namespacesPresenter refreshRuntimeInfo.
+
+	self assert: (fakeText text includesSubstring: 'Ruby Runtime').
+	self assert: (fakeText text includesSubstring: '$LOAD_PATH').
+	self assert: (fakeText text includesSubstring: 'app/models').
+	self assert: (fakeText text includesSubstring: 'Loaded Features').
+	self assert: (fakeText text includesSubstring: 'foo.rb').
+	self assert: (fakeText text includesSubstring: 'Persistent Loaded Features').
+	self assert: (fakeText text includesSubstring: 'persisted.rb').
+	self assert: (fakeText text includesSubstring: 'Session State').
+	self assert: (fakeText text includesSubstring: 'Key 19 (MagLev Finalizer Registry): IdentityDictionary size=1')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRequireSelectedFileUsesRubyRuntimeSurface [
+	| mockSession presenter namespace fakeNamespaceTable lastScript |
+	mockSession := MockGbsSession new.
+	lastScript := ''.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'RubyContext default requireFileNamed: ''foo.rb'' env: 1')
+			ifTrue: [
+				lastScript := script.
+				^ true ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter enqueueRequestAnswer: 'foo.rb'.
+
+	self assert: presenter requireSelectedFile.
+	self assert: (lastScript includesSubstring: 'RubyContext default requireFileNamed: ''foo.rb'' env: 1')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRequireSelectedFileInvalidatesAndRefreshesNamespaceDetails [
+	| mockSession presenter namespace fakeNamespaceTable fakeConstantsTable fakeAutoloadTable phase |
+	mockSession := MockGbsSession new.
+	phase := #before.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'RubyContext default requireFileNamed: ''lazy_thing.rb'' env: 1')
+			ifTrue: [
+				phase := #after.
+				^ true ].
+		(script includesSubstring: 'Object nameSpace: 1')
+			ifTrue: [
+				(script includesSubstring: '_rubyConstants asArray')
+					ifTrue: [
+						^ phase = #before
+							ifTrue: [ #(#('LazyThing' nil nil 'lib/lazy_thing.rb' nil nil)) ]
+							ifFalse: [ #(#('LazyThing' 7101 'Class' nil 'LazyThing' 'LazyThing')) ] ] ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	presenter refreshSelectedNamespaceDetails.
+	self assert: fakeAutoloadTable items size equals: 1.
+	fakeConstantsTable selectedItem: fakeConstantsTable items first.
+	presenter enqueueRequestAnswer: 'lazy_thing.rb'.
+
+	self assert: presenter requireSelectedFile.
+	self assert: fakeConstantsTable items first oop equals: 7101.
+	self assert: fakeAutoloadTable items isEmpty
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesLoadSelectedFileUsesRubyRuntimeSurface [
+	| mockSession presenter namespace fakeNamespaceTable lastScript |
+	mockSession := MockGbsSession new.
+	lastScript := ''.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'RubyContext default loadFileNamed: ''bar.rb'' env: 1')
+			ifTrue: [
+				lastScript := script.
+				^ 'loaded' ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter enqueueRequestAnswer: 'bar.rb'.
+
+	self assert: presenter loadSelectedFile.
+	self assert: (lastScript includesSubstring: 'RubyContext default loadFileNamed: ''bar.rb'' env: 1')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesLoadSelectedFileInvalidatesAndRefreshesNamespaceDetails [
+	| mockSession presenter namespace fakeNamespaceTable fakeConstantsTable fakeAutoloadTable phase |
+	mockSession := MockGbsSession new.
+	phase := #before.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'RubyContext default loadFileNamed: ''lazy_thing.rb'' env: 1')
+			ifTrue: [
+				phase := #after.
+				^ 'loaded' ].
+		(script includesSubstring: 'Object nameSpace: 1')
+			ifTrue: [
+				(script includesSubstring: '_rubyConstants asArray')
+					ifTrue: [
+						^ phase = #before
+							ifTrue: [ #(#('LazyThing' nil nil 'lib/lazy_thing.rb' nil nil)) ]
+							ifFalse: [ #(#('LazyThing' 7101 'Class' nil 'LazyThing' 'LazyThing')) ] ] ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	presenter refreshSelectedNamespaceDetails.
+	self assert: fakeAutoloadTable items size equals: 1.
+	fakeConstantsTable selectedItem: fakeConstantsTable items first.
+	presenter enqueueRequestAnswer: 'lazy_thing.rb'.
+
+	self assert: presenter loadSelectedFile.
+	self assert: fakeConstantsTable items first oop equals: 7101.
+	self assert: fakeAutoloadTable items isEmpty
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesClearPersistentLoadedFeaturesUsesRubyRuntimeSurface [
+	| mockSession presenter namespace fakeNamespaceTable fakeText clearCalls persistentFeatures |
+	mockSession := MockGbsSession new.
+	clearCalls := 0.
+	persistentFeatures := #('persisted.rb').
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ persistentFeatures ].
+		script = 'RubyContext clear_persistent_LOADED_FEATURES' ifTrue: [
+			clearCalls := clearCalls + 1.
+			persistentFeatures := #().
+			^ true ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'runtimeText' put: fakeText.
+
+	self assert: presenter clearPersistentLoadedFeatures.
+	self assert: clearCalls equals: 1.
+	self assert: (fakeText text includesSubstring: 'Persistent Loaded Features').
+	self assert: (fakeText text includesSubstring: '(empty)')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRegisterAutoloadUsesSelectedConstantAndPromptedFile [
+	| mockSession presenter namespace constant fakeNamespaceTable fakeConstantsTable lastScript |
+	mockSession := MockGbsSession new.
+	lastScript := ''.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'respondsTo: #rubyAutoload:file:')
+			ifTrue: [ ^ true ].
+		(script includesSubstring: 'rubyAutoload: name asSymbol file: file')
+			ifTrue: [
+				lastScript := script.
+				^ 'lib/lazy_thing.rb' ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('LazyThing' nil nil nil).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: constant.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	presenter enqueueRequestAnswer: 'lib/lazy_thing.rb'.
+
+	self assert: presenter registerAutoloadForSelectedNamespace.
+	self assert: (lastScript includesSubstring: '''LazyThing''').
+	self assert: (lastScript includesSubstring: '''lib/lazy_thing.rb''')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRegisterAutoloadInvalidatesAndRefreshesNamespaceDetails [
+	| mockSession presenter namespace fakeNamespaceTable fakeConstantsTable fakeAutoloadTable phase |
+	mockSession := MockGbsSession new.
+	phase := #before.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'respondsTo: #rubyAutoload:file:')
+			ifTrue: [ ^ true ].
+		(script includesSubstring: 'rubyAutoload: name asSymbol file: file')
+			ifTrue: [
+				phase := #after.
+				^ 'lib/lazy_thing.rb' ].
+		(script includesSubstring: 'Object nameSpace: 1')
+			ifTrue: [
+				(script includesSubstring: '_rubyConstants asArray')
+					ifTrue: [
+						^ phase = #before
+							ifTrue: [ #(#('LazyThing' nil nil nil nil nil)) ]
+							ifFalse: [ #(#('LazyThing' nil nil 'lib/lazy_thing.rb' nil nil)) ] ] ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	presenter refreshSelectedNamespaceDetails.
+	self assert: fakeAutoloadTable items isEmpty.
+	fakeConstantsTable selectedItem: fakeConstantsTable items first.
+	presenter enqueueRequestAnswer: 'lib/lazy_thing.rb'.
+
+	self assert: presenter registerAutoloadForSelectedNamespace.
+	self assert: fakeAutoloadTable items size equals: 1.
+	self assert: fakeAutoloadTable items first autoloadFile equals: 'lib/lazy_thing.rb'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRequireSelectedAutoloadUsesSelectedEntryFile [
+	| mockSession presenter namespace autoload fakeNamespaceTable fakeAutoloadTable lastScript |
+	mockSession := MockGbsSession new.
+	lastScript := ''.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'RubyContext default requireFileNamed: ''lib/lazy_thing.rb'' env: 1')
+			ifTrue: [
+				lastScript := script.
+				^ true ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('LazyThing' 'lib/lazy_thing.rb' false 9191).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	self assert: presenter requireSelectedAutoload.
+	self assert: (lastScript includesSubstring: 'RubyContext default requireFileNamed: ''lib/lazy_thing.rb'' env: 1')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRequireSelectedAutoloadInvalidatesAndRefreshesNamespaceDetails [
+	| mockSession presenter namespace autoload fakeNamespaceTable fakeConstantsTable fakeAutoloadTable fakeText phase |
+	mockSession := MockGbsSession new.
+	phase := #before.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		(script includesSubstring: 'RubyContext default requireFileNamed: ''lib/lazy_thing.rb'' env: 1')
+			ifTrue: [
+				phase := #after.
+				^ true ].
+		(script includesSubstring: 'Object nameSpace: 1')
+			ifTrue: [
+				(script includesSubstring: 'rubyAutoloadAssociationAtOrNil: each env: 1')
+					ifTrue: [
+						^ phase = #before
+							ifTrue: [ #(#('LazyThing' 'lib/lazy_thing.rb' false 9191)) ]
+							ifFalse: [ #(#('LazyThing' 'lib/lazy_thing.rb' true 9191)) ] ].
+				(script includesSubstring: '_rubyConstants asArray')
+					ifTrue: [
+						^ phase = #before
+							ifTrue: [ #(#('LazyThing' nil nil 'lib/lazy_thing.rb' nil nil)) ]
+							ifFalse: [ #(#('LazyThing' 7101 'Class' 'lib/lazy_thing.rb' 'LazyThing' 'LazyThing')) ] ] ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('LazyThing' 'lib/lazy_thing.rb' false 9191).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+	presenter instVarNamed: 'runtimeText' put: fakeText.
+
+	presenter refreshSelectedNamespaceDetails.
+	self assert: fakeAutoloadTable items first stateLabel equals: 'Pending'.
+	fakeAutoloadTable selectedItem: autoload.
+
+	self assert: presenter requireSelectedAutoload.
+	self assert: fakeAutoloadTable items first stateLabel equals: 'Loaded'.
+	self assert: fakeAutoloadTable items first targetDisplayName equals: 'LazyThing'.
+	self assert: (fakeText text includesSubstring: 'Autoload State: Loaded')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRemoveSelectedAutoloadUsesSelectedAutoloadEntry [
+	| mockSession presenter namespace constant fakeNamespaceTable fakeAutoloadTable lastScript |
+	mockSession := MockGbsSession new.
+	lastScript := ''.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'rubyAutoloadAssociationAtOrNil: name asSymbol env: 1')
+			ifTrue: [
+				lastScript := script.
+				^ true ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('LazyThing' nil nil 'lib/lazy_thing.rb' nil nil).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: constant.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	self assert: presenter removeSelectedAutoload.
+	self assert: (lastScript includesSubstring: '''LazyThing''')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRemoveSelectedAutoloadInvalidatesAndRefreshesNamespaceDetails [
+	| mockSession presenter namespace constant fakeNamespaceTable fakeConstantsTable fakeAutoloadTable phase |
+	mockSession := MockGbsSession new.
+	phase := #before.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'rubyAutoloadAssociationAtOrNil: name asSymbol env: 1')
+			ifTrue: [
+				phase := #after.
+				^ true ].
+		(script includesSubstring: 'Object nameSpace: 1')
+			ifTrue: [
+				(script includesSubstring: '_rubyConstants asArray')
+					ifTrue: [
+						^ phase = #before
+							ifTrue: [ #(#('LazyThing' nil nil 'lib/lazy_thing.rb' nil nil)) ]
+							ifFalse: [ #() ] ] ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('LazyThing' nil nil 'lib/lazy_thing.rb' nil nil).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	presenter refreshSelectedNamespaceDetails.
+	self assert: fakeAutoloadTable items size equals: 1.
+	fakeAutoloadTable selectedItem: constant.
+
+	self assert: presenter removeSelectedAutoload.
+	self assert: fakeConstantsTable items isEmpty.
+	self assert: fakeAutoloadTable items isEmpty
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesInspectSelectedConstantOpensInspectorWorkflow [
+	| mockSession presenter namespace constant fakeConstantsTable |
+	mockSession := MockGbsSession new.
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('Invoice' 7101 'InvoiceClass' nil).
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: constant.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+
+	self assert: presenter inspectSelectedConstant.
+	self assert: presenter lastOpenedOop equals: 7101
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesInspectSelectedAutoloadOpensInspectorWorkflow [
+	| mockSession presenter namespace autoload fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('LazyThing' 'lib/lazy_thing.rb' false 9191).
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	self assert: presenter inspectSelectedAutoload.
+	self assert: presenter lastOpenedOop equals: 9191
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesInspectMaglevFinalizerRegistryOpensInspectorWorkflow [
+	| mockSession presenter registry |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 19') ifTrue: [ ^ registry ].
+		self fail ].
+	registry := GbsProxy oop: 9191 session: mockSession.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+
+	self assert: presenter inspectMaglevFinalizerRegistry.
+	self assert: presenter lastOpenedOop equals: 9191
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesInspectPromptedSessionStateKeyInformsWhenUnset [
+	| mockSession presenter |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 21') ifTrue: [ ^ nil ].
+		self fail ].
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter enqueueRequestAnswer: '21'.
+
+	self deny: presenter inspectPromptedSessionStateKey.
+	self assert: presenter lastInfoMessage equals: 'Session state key 21 is not set.'.
+	self assert: presenter lastOpenedOop isNil
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesInspectPromptedSessionStateKeyRejectsNonNumericInput [
+	| mockSession presenter |
+	mockSession := MockGbsSession new.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter enqueueRequestAnswer: 'abc'.
+
+	self deny: presenter inspectPromptedSessionStateKey.
+	self assert: presenter lastInfoMessage equals: 'Enter a numeric session state key.'.
+	self assert: presenter lastOpenedOop isNil
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesInspectPromptedSessionStateKeyUsesSessionFacade [
+	| mockSession presenter registry |
+	mockSession := MockGbsSession new.
+	registry := GbsProxy oop: 9292 session: mockSession.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 21') ifTrue: [ ^ registry ].
+		self fail ].
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter enqueueRequestAnswer: '21'.
+
+	self assert: presenter inspectPromptedSessionStateKey.
+	self assert: presenter lastOpenedOop equals: 9292
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseSelectedConstantOpensBrowserWorkflow [
+	| mockSession presenter namespace constant fakeConstantsTable |
+	mockSession := MockGbsSession new.
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('InvoiceAlias' nil nil nil 'Invoice' 'Accounting::Invoice').
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: constant.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+
+	self assert: presenter browseSelectedConstantClass.
+	self assert: presenter lastBrowserClassName equals: 'Accounting::Invoice'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseSelectedAutoloadUsesOwningConstantMirror [
+	| mockSession presenter namespace autoload fakeNamespaceTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'Object nameSpace: 1')
+			ifTrue: [
+				(script includesSubstring: '_rubyConstants asArray')
+					ifTrue: [ ^ #(
+						#('InvoiceAlias' nil nil 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice')) ].
+				^ #(7001 nil nil 'RubyNameSpace' 'Object') ].
+		self fail ].
+	namespace := mockSession topLevelNamespaceMirror.
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' false).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	self assert: presenter browseSelectedConstantClass.
+	self assert: presenter lastBrowserClassName equals: 'Accounting::Invoice'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenSelectedAutoloadNamespaceUsesOwningConstantMirror [
+	| mockSession presenter namespace autoload fakeNamespaceTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'cls nameSpace: 1')
+			ifTrue: [ self fail ].
+		(script includesSubstring: '_objectForOop: 7101')
+			ifTrue: [ ^ #(8001 'Accounting' 'Accounting' 'RubyNameSpace' 'Module') ].
+		(script includesSubstring: 'Object nameSpace: 1')
+			ifTrue: [
+				(script includesSubstring: '_rubyConstants asArray')
+					ifTrue: [ ^ #(
+						#('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice')) ].
+				^ #(7001 'Object' 'Object' 'RubyNameSpace' 'Object') ].
+		self fail ].
+	namespace := mockSession topLevelNamespaceMirror.
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' true 9191).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	self assert: presenter openSelectedConstantNamespace.
+	self assert: presenter lastOpenedNamespaceMirror notNil.
+	self assert: presenter lastOpenedNamespaceMirror oop equals: 8001
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenNamespaceMirrorAddsAndSelectsNewRow [
+	| mockSession namespace fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	namespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'Object nameSpace: 1'
+		symbolListIndex: nil
+		metadata: #(7001 'Object' 'Object' 'RubyNameSpace' 'Object').
+	namespace instVarNamed: 'constantEntries' put: #().
+	namespace instVarNamed: 'autoloadEntries' put: #().
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	self assert: (namespacesPresenter openNamespaceMirror: namespace).
+	self assert: fakeNamespaceTable items size equals: 1.
+	self assert: fakeNamespaceTable items first == namespace.
+	self assert: fakeNamespaceTable selectedItem == namespace
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenNamespaceMirrorSelectsExistingEquivalentRow [
+	| mockSession existingRow incomingRow fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	existingRow := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'System myUserProfile symbolList at: 1'
+		symbolListIndex: 1
+		metadata: #(7001 'Object' 'Object' 'RubyNameSpace' 'Object').
+	existingRow instVarNamed: 'constantEntries' put: #().
+	existingRow instVarNamed: 'autoloadEntries' put: #().
+	incomingRow := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'Object nameSpace: 1'
+		symbolListIndex: nil
+		metadata: #(7001 'Object' 'Object' 'RubyNameSpace' 'Object').
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable items: { existingRow }.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	self assert: (namespacesPresenter openNamespaceMirror: incomingRow).
+	self assert: fakeNamespaceTable items size equals: 1.
+	self assert: fakeNamespaceTable items first == incomingRow.
+	self assert: fakeNamespaceTable selectedItem == incomingRow
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenNamespaceMirrorReplacesExistingRowToUseFreshDetails [
+	| mockSession existingRow incomingRow fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	existingRow := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'System myUserProfile symbolList at: 1'
+		symbolListIndex: 1
+		metadata: #(7001 'Object' 'Object' 'RubyNameSpace' 'Object').
+	existingRow
+		instVarNamed: 'constantEntries'
+		put: #(#('StaleThing' nil nil nil nil nil)).
+	existingRow
+		instVarNamed: 'autoloadEntries'
+		put: #().
+	incomingRow := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'Object nameSpace: 1'
+		symbolListIndex: nil
+		metadata: #(7001 'Object' 'Object' 'RubyNameSpace' 'Object').
+	incomingRow
+		instVarNamed: 'constantEntries'
+		put: #(#('FreshThing' nil nil nil nil nil)).
+	incomingRow
+		instVarNamed: 'autoloadEntries'
+		put: #().
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable items: { existingRow }.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	self assert: (namespacesPresenter openNamespaceMirror: incomingRow).
+	self assert: fakeNamespaceTable items first == incomingRow.
+	self assert: fakeNamespaceTable selectedItem == incomingRow.
+	self assert: fakeConstantsTable items size equals: 1.
+	self assert: fakeConstantsTable items first name equals: 'FreshThing'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenNamespaceMirrorClearsDetailSelectionsWhenChangingNamespace [
+	| mockSession oldNamespace newNamespace oldConstant oldAutoload fakeNamespaceTable fakeConstantsTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	oldNamespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'Object nameSpace: 1'
+		symbolListIndex: nil
+		metadata: #(7001 'Object' 'Object' 'RubyNameSpace' 'Object').
+	newNamespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'Accounting nameSpace: 1'
+		symbolListIndex: nil
+		metadata: #(8001 'Accounting' 'Accounting' 'RubyNameSpace' 'Accounting').
+	newNamespace
+		instVarNamed: 'constantEntries'
+		put: #(#('InvoiceAlias' 8101 'Class' nil 'Invoice' 'Accounting::Invoice')).
+	newNamespace
+		instVarNamed: 'autoloadEntries'
+		put: #(#('InvoiceAlias' 'lib/invoice.rb' true 9191)).
+	oldConstant := GbsRemoteConstantMirror
+		on: oldNamespace
+		metadata: #('InvoiceAlias' 7101 'Class' nil 'Invoice' 'Object::Invoice').
+	oldAutoload := GbsRemoteAutoloadMirror
+		on: oldNamespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' true 9191).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable items: { oldNamespace }.
+	fakeNamespaceTable selectedItem: oldNamespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: oldConstant.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: oldAutoload.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	self assert: (namespacesPresenter openNamespaceMirror: newNamespace).
+	self assert: fakeNamespaceTable selectedItem oop equals: 8001.
+	self assert: fakeConstantsTable items size equals: 1.
+	self assert: fakeAutoloadTable items size equals: 1.
+	self assert: fakeConstantsTable selectedItem isNil.
+	self assert: fakeAutoloadTable selectedItem isNil
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenSelectedAutoloadNamespaceUsesOwnerNamespaceWithoutNamespaceRow [
+	| mockSession presenter namespace autoload fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'cls nameSpace: 1')
+			ifTrue: [ self fail ].
+		(script includesSubstring: '_objectForOop: 7101')
+			ifTrue: [ ^ #(8001 'Accounting' 'Accounting' 'RubyNameSpace' 'Module') ].
+		(script includesSubstring: 'Object nameSpace: 1')
+			ifTrue: [
+				(script includesSubstring: '_rubyConstants asArray')
+					ifTrue: [ ^ #(
+						#('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice')) ].
+				^ #(7001 'Object' 'Object' 'RubyNameSpace' 'Object') ].
+		self fail ].
+	namespace := mockSession topLevelNamespaceMirror.
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' true 9191).
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	self assert: presenter openSelectedConstantNamespace.
+	self assert: presenter lastOpenedNamespaceMirror notNil.
+	self assert: presenter lastOpenedNamespaceMirror oop equals: 8001
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenSelectedConstantNamespaceUsesTargetNamespaceMirror [
+	| mockSession presenter namespace constant fakeConstantsTable |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'cls nameSpace: 1')
+			ifTrue: [ self fail ].
+		(script includesSubstring: '_objectForOop: 7101')
+			ifTrue: [ ^ #(8001 'Accounting' 'Accounting' 'RubyNameSpace' 'Module') ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('Accounting' 7101 'Class' nil 'Accounting' 'Accounting').
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: constant.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+
+	self assert: presenter openSelectedConstantNamespace.
+	self assert: presenter lastOpenedNamespaceMirror notNil.
+	self assert: presenter lastOpenedNamespaceMirror oop equals: 8001
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenSelectedConstantNamespaceFallsBackToSelectedNamespaceForPendingAutoload [
+	| mockSession presenter namespace autoload fakeNamespaceTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'Object nameSpace: 1')
+			ifTrue: [
+				(script includesSubstring: '_rubyConstants asArray')
+					ifTrue: [ ^ #() ].
+				^ #(7001 'Object' 'Object' 'RubyNameSpace' 'Object') ].
+		self fail ].
+	namespace := mockSession topLevelNamespaceMirror.
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' false 9191).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	self assert: presenter openSelectedConstantNamespace.
+	self assert: presenter lastOpenedNamespaceMirror notNil.
+	self assert: presenter lastOpenedNamespaceMirror oop equals: 7001
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenSelectedConstantNamespaceUsesSelectedNamespaceWhenNoConstantSelected [
+	| mockSession presenter namespace fakeNamespaceTable |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'Object nameSpace: 1')
+			ifTrue: [ ^ #(7001 'Object' 'Object' 'RubyNameSpace' 'Object') ].
+		self fail ].
+	namespace := mockSession topLevelNamespaceMirror.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+
+	self assert: presenter openSelectedConstantNamespace.
+	self assert: presenter lastOpenedNamespaceMirror notNil.
+	self assert: presenter lastOpenedNamespaceMirror oop equals: 7001
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenParentNamespaceUsesParentNamespaceMirror [
+	| mockSession presenter namespace fakeNamespaceTable |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'cls ifNil: [ nil ] ifNotNil: [ cls nameSpace: 1 ]')
+			ifTrue: [
+				self assert: (script includesSubstring: '_objectForOop: 8101').
+				^ #(8001 'Accounting' 'Accounting' 'RubyNameSpace' 'Module') ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: '[:value | value] value: (Object _objectForOop: 8101)'
+		symbolListIndex: nil
+		metadata: #(8101 'Accounting::Invoice' 'Accounting::Invoice' 'RubyNameSpace' 'Class').
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+
+	self assert: presenter openParentNamespace.
+	self assert: presenter lastOpenedNamespaceMirror notNil.
+	self assert: presenter lastOpenedNamespaceMirror oop equals: 8001
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenParentNamespaceUsesSelectedAutoloadTargetNamespace [
+	| mockSession presenter namespace autoload fakeNamespaceTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: '_objectForOop: 8101')
+			ifTrue: [ ^ #(8001 'Accounting' 'Accounting' 'RubyNameSpace' 'Module') ].
+		(script includesSubstring: '_objectForOop: 7101')
+			ifTrue: [ ^ #(8101 'Accounting::Invoice' 'Accounting::Invoice' 'RubyNameSpace' 'Class') ].
+		(script includesSubstring: 'Object nameSpace: 1')
+			ifTrue: [
+				(script includesSubstring: '_rubyConstants asArray')
+					ifTrue: [ ^ #(
+						#('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice')) ].
+				^ #(7001 'Object' 'Object' 'RubyNameSpace' 'Object') ].
+		self fail ].
+	namespace := mockSession topLevelNamespaceMirror.
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' true 9191).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+
+	self assert: presenter openParentNamespace.
+	self assert: presenter lastOpenedNamespaceMirror notNil.
+	self assert: presenter lastOpenedNamespaceMirror oop equals: 8001
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenParentNamespaceUsesSelectedConstantTargetNamespace [
+	| mockSession presenter namespace constant fakeNamespaceTable fakeConstantsTable |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: '_objectForOop: 8101')
+			ifTrue: [ ^ #(8001 'Accounting' 'Accounting' 'RubyNameSpace' 'Module') ].
+		(script includesSubstring: '_objectForOop: 7101')
+			ifTrue: [ ^ #(8101 'Accounting::Invoice' 'Accounting::Invoice' 'RubyNameSpace' 'Class') ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 7101 'Class' nil 'Invoice' 'Accounting::Invoice').
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: constant.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+
+	self assert: presenter openParentNamespace.
+	self assert: presenter lastOpenedNamespaceMirror notNil.
+	self assert: presenter lastOpenedNamespaceMirror oop equals: 8001
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenTopLevelNamespaceUsesSessionTopLevelMirror [
+	| mockSession presenter fakeNamespaceTable |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'Object nameSpace: 1')
+			ifTrue: [ ^ #(7001 'Object' 'Object' 'RubyNameSpace' 'Object') ].
+		self fail ].
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+
+	self assert: presenter openTopLevelNamespace.
+	self assert: presenter lastOpenedNamespaceMirror notNil.
+	self assert: presenter lastOpenedNamespaceMirror oop equals: 7001
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenPromptedNamespaceInformsWhenMissing [
+	| mockSession presenter fakeNamespaceTable |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script | ^ nil ].
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter enqueueRequestAnswer: 'Accounting::Missing'.
+
+	self deny: presenter openPromptedNamespace.
+	self assert: presenter lastInfoMessage equals: 'Namespace Accounting::Missing was not found.'.
+	self assert: presenter lastOpenedNamespaceMirror isNil
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenPromptedNamespaceUsesFullNameLookup [
+	| mockSession presenter fakeNamespaceTable sawLookup |
+	mockSession := MockGbsSession new.
+	sawLookup := false.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: '''Accounting::Invoice''')
+			ifTrue: [ sawLookup := true ].
+		^ #(8101 'Accounting::Invoice' 'Accounting::Invoice' 'RubyNameSpace' 'Class') ].
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter enqueueRequestAnswer: 'Accounting::Invoice'.
+
+	self assert: presenter openPromptedNamespace.
+	self assert: sawLookup.
+	self assert: presenter lastOpenedNamespaceMirror notNil.
+	self assert: presenter lastOpenedNamespaceMirror oop equals: 8101
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenPromptedNamespaceResolvesDotDotChildPath [
+	| mockSession presenter fakeNamespaceTable currentNamespace |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: '''Accounting::Invoice''').
+		^ #(8101 'Accounting::Invoice' 'Accounting::Invoice' 'RubyNameSpace' 'Class') ].
+	currentNamespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: '[:value | value] value: (Object _objectForOop: 8201)'
+		symbolListIndex: nil
+		metadata: #(8201 'Accounting::Billing' 'Accounting::Billing' 'RubyNameSpace' 'Module').
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: currentNamespace.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter enqueueRequestAnswer: '..::Invoice'.
+
+	self assert: presenter openPromptedNamespace.
+	self assert: presenter lastOpenedNamespaceMirror notNil.
+	self assert: presenter lastOpenedNamespaceMirror oop equals: 8101
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenPromptedNamespaceResolvesDotFromSelectedAutoloadTargetNamespace [
+	| mockSession presenter namespace autoload fakeNamespaceTable fakeAutoloadTable |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: '''Accounting::Invoice''')
+			ifTrue: [ ^ #(8101 'Accounting::Invoice' 'Accounting::Invoice' 'RubyNameSpace' 'Class') ].
+		(script includesSubstring: '_objectForOop: 7101')
+			ifTrue: [ ^ #(8101 'Accounting::Invoice' 'Accounting::Invoice' 'RubyNameSpace' 'Class') ].
+		(script includesSubstring: 'Object nameSpace: 1')
+			ifTrue: [
+				(script includesSubstring: '_rubyConstants asArray')
+					ifTrue: [ ^ #(
+						#('InvoiceAlias' 7101 'Class' 'lib/invoice.rb' 'Invoice' 'Accounting::Invoice')) ].
+				^ #(7001 'Object' 'Object' 'RubyNameSpace' 'Object') ].
+		self fail ].
+	namespace := mockSession topLevelNamespaceMirror.
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 'lib/invoice.rb' true 9191).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeAutoloadTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeAutoloadTable selectedItem: autoload.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
+	presenter enqueueRequestAnswer: '.'.
+
+	self assert: presenter openPromptedNamespace.
+	self assert: presenter lastOpenedNamespaceMirror notNil.
+	self assert: presenter lastOpenedNamespaceMirror oop equals: 8101
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenPromptedNamespaceResolvesDotFromSelectedConstantTargetNamespace [
+	| mockSession presenter namespace constant fakeNamespaceTable fakeConstantsTable |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: '''Accounting::Invoice''')
+			ifTrue: [ ^ #(8101 'Accounting::Invoice' 'Accounting::Invoice' 'RubyNameSpace' 'Class') ].
+		(script includesSubstring: '_objectForOop: 7101')
+			ifTrue: [ ^ #(8101 'Accounting::Invoice' 'Accounting::Invoice' 'RubyNameSpace' 'Class') ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	constant := GbsRemoteConstantMirror
+		on: namespace
+		metadata: #('InvoiceAlias' 7101 'Class' nil 'Invoice' 'Accounting::Invoice').
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	fakeConstantsTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeConstantsTable selectedItem: constant.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter instVarNamed: 'constantsTable' put: fakeConstantsTable.
+	presenter enqueueRequestAnswer: '.'.
+
+	self assert: presenter openPromptedNamespace.
+	self assert: presenter lastOpenedNamespaceMirror notNil.
+	self assert: presenter lastOpenedNamespaceMirror oop equals: 8101
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenPromptedNamespaceResolvesDotToCurrentNamespace [
+	| mockSession presenter fakeNamespaceTable currentNamespace |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: '''Accounting::Invoice''').
+		^ #(8101 'Accounting::Invoice' 'Accounting::Invoice' 'RubyNameSpace' 'Class') ].
+	currentNamespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: '[:value | value] value: (Object _objectForOop: 8101)'
+		symbolListIndex: nil
+		metadata: #(8101 'Accounting::Invoice' 'Accounting::Invoice' 'RubyNameSpace' 'Class').
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: currentNamespace.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter enqueueRequestAnswer: '.'.
+
+	self assert: presenter openPromptedNamespace.
+	self assert: presenter lastOpenedNamespaceMirror notNil.
+	self assert: presenter lastOpenedNamespaceMirror oop equals: 8101
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenPromptedNamespaceResolvesRelativeNameFromSelectedNamespace [
+	| mockSession presenter fakeNamespaceTable currentNamespace |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: '''Accounting::Invoice''').
+		^ #(8101 'Accounting::Invoice' 'Accounting::Invoice' 'RubyNameSpace' 'Class') ].
+	currentNamespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: '[:value | value] value: (Object _objectForOop: 8001)'
+		symbolListIndex: nil
+		metadata: #(8001 'Accounting' 'Accounting' 'RubyNameSpace' 'Module').
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: currentNamespace.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter enqueueRequestAnswer: 'Invoice'.
+
+	self assert: presenter openPromptedNamespace.
+	self assert: presenter lastOpenedNamespaceMirror notNil.
+	self assert: presenter lastOpenedNamespaceMirror oop equals: 8101
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesOpenPromptedNamespaceResolvesDotDotToTopLevelNamespace [
+	| mockSession presenter fakeNamespaceTable currentNamespace |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'findTokens: ''::''')
+			ifTrue: [ self fail ].
+		(script includesSubstring: 'Object nameSpace: 1')
+			ifTrue: [ ^ #(7001 'Object' 'Object' 'RubyNameSpace' 'Object') ].
+		self fail ].
+	currentNamespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: '[:value | value] value: (Object _objectForOop: 8001)'
+		symbolListIndex: nil
+		metadata: #(8001 'Accounting' 'Accounting' 'RubyNameSpace' 'Module').
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: currentNamespace.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	presenter enqueueRequestAnswer: '..'.
+
+	self assert: presenter openPromptedNamespace.
+	self assert: presenter lastOpenedNamespaceMirror notNil.
+	self assert: presenter lastOpenedNamespaceMirror oop equals: 7001
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshRuntimeInfoIncludesNamespacePathAndParent [
+	| mockSession fakeText namespace fakeNamespaceTable |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: '[:value | value] value: (Object _objectForOop: 8101)'
+		symbolListIndex: nil
+		metadata: #(8101 'Accounting::Invoice' 'Accounting::Invoice' 'RubyNameSpace' 'Class').
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable selectedItem: namespace.
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+	namespacesPresenter instVarNamed: 'runtimeText' put: fakeText.
+	namespacesPresenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+	namespacesPresenter instVarNamed: 'constantsTable' put: GbxFakeTablePresenterForRemoteDebugger new.
+	namespacesPresenter instVarNamed: 'autoloadTable' put: GbxFakeTablePresenterForRemoteDebugger new.
+
+	namespacesPresenter refreshRuntimeInfo.
+
+	self assert: (fakeText text includesSubstring: 'Namespace Path: Accounting::Invoice').
+	self assert: (fakeText text includesSubstring: 'Selected Namespace Source: Selected Namespace Row').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Source: Selected Namespace').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Namespace: Accounting::Invoice').
+	self assert: (fakeText text includesSubstring: 'Lookup Base Parent: Accounting').
+	self assert: (fakeText text includesSubstring: 'Parent Namespace: Accounting')
+]
+
+{ #category : 'tests' }
 GbsAdminToolsPresenterTest >> testSecurityPoliciesLiteralStringEscapesEmbeddedQuote [
 	self
 		assert: (securityPoliciesPresenter literalString: 'Data''Curator')
@@ -1418,6 +3805,65 @@ GbsAdminToolsPresenterTest >> testStructuredValueInspectorInspectSelectedEntryEv
 ]
 
 { #category : 'tests' }
+GbsAdminToolsPresenterTest >> testStructuredValueInspectorBrowseReferencersDelegatesReferencersBlockWithSelectedRow [
+	| presenter fakeTable selected |
+	presenter := (Smalltalk at: #GbsStructuredValueInspectorPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsStructuredValueInspectorPresenter not loaded' ].
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeTable selectedItem: { 'users'. 'aDictionary(...)' }.
+
+	presenter instVarNamed: 'table' put: fakeTable.
+	presenter propertyAt: #referencersBlock put: [ :row | selected := row ].
+
+	presenter browseReferencersForSelectedEntry.
+
+	self assert: selected equals: { 'users'. 'aDictionary(...)' }
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testStructuredValueInspectorBrowsePromptedSessionStateKeyDelegatesParsedKey [
+	| presenter requestedKey |
+	presenter := (Smalltalk at: #GbsStructuredValueInspectorPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsStructuredValueInspectorPresenter not loaded' ].
+
+	presenter propertyAt: #requestInputBlock put: [ :prompt :default | '21' ].
+	presenter propertyAt: #sessionStateBlock put: [ :key | requestedKey := key ].
+
+	presenter browsePromptedSessionStateKey.
+
+	self assert: requestedKey equals: 21
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testStructuredValueInspectorBrowsePromptedSessionStateKeyRejectsNonNumericInput [
+	| presenter informed |
+	presenter := (Smalltalk at: #GbsStructuredValueInspectorPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsStructuredValueInspectorPresenter not loaded' ].
+
+	presenter propertyAt: #requestInputBlock put: [ :prompt :default | 'abc' ].
+	presenter propertyAt: #informBlock put: [ :message | informed := message ].
+	presenter propertyAt: #sessionStateBlock put: [ :key | self fail ].
+
+	presenter browsePromptedSessionStateKey.
+
+	self assert: informed equals: 'Enter a numeric session state key.'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testStructuredValueInspectorMenuIncludesSessionStateActionWhenConfigured [
+	| presenter |
+	presenter := (Smalltalk at: #GbsStructuredValueInspectorPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsStructuredValueInspectorPresenter not loaded' ].
+	presenter propertyAt: #sessionStateBlock put: [ :key | ].
+
+	self assert: presenter canBrowseSessionState
+]
+
+{ #category : 'tests' }
 GbsAdminToolsPresenterTest >> testStructuredValueInspectorRowsSetterUpdatesExistingTable [
 	| presenter fakeTable rows |
 	presenter := (Smalltalk at: #GbsStructuredValueInspectorPresenter ifAbsent: [ nil ])
@@ -1430,6 +3876,120 @@ GbsAdminToolsPresenterTest >> testStructuredValueInspectorRowsSetterUpdatesExist
 	presenter rows: rows.
 
 	self assert: fakeTable items equals: rows
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSymbolListBrowseReferencersForSelectedEntryUsesSessionFacadeAndOpensSingleResult [
+	| presenter mockSession fakeUsers fakeDicts fakeEntries |
+	presenter := (Smalltalk at: #TestableGbsSymbolListBrowserPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'TestableGbsSymbolListBrowserPresenter not loaded' ].
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		self assert: (script includesSubstring: '(Reflection oopOf: value) asString').
+		self assert: (script includesSubstring: 'each asString = ''OkzZuluSeasideState''').
+		'9001' ].
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: script equals: '((Object _objectForOop: 9001)) findReferencesInMemory asArray'.
+		^ { GbsProxy oop: 9100 session: mockSession } ].
+	fakeUsers := GbxFakeListPresenterForBrowser new.
+	fakeUsers selectedItem: 'DataCurator'.
+	fakeDicts := GbxFakeListPresenterForBrowser new.
+	fakeDicts selectedItem: 'UserGlobals'.
+	fakeEntries := GbxFakeListPresenterForBrowser new.
+	fakeEntries selectedItem: 'OkzZuluSeasideState'.
+
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'userDropList' put: fakeUsers.
+	presenter instVarNamed: 'dictionariesList' put: fakeDicts.
+	presenter instVarNamed: 'entriesList' put: fakeEntries.
+
+	self assert: presenter browseReferencersForSelectedEntry.
+	self assert: presenter lastOpenedOop equals: 9100
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSymbolListBrowseSessionStateAtKeyUsesSessionFacadeAndOpensInspector [
+	| presenter mockSession |
+	presenter := (Smalltalk at: #TestableGbsSymbolListBrowserPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'TestableGbsSymbolListBrowserPresenter not loaded' ].
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: 'key := 21').
+		^ GbsProxy oop: 9201 session: mockSession ].
+
+	presenter instVarNamed: 'session' put: mockSession.
+
+	self assert: (presenter browseSessionStateAtKey: 21).
+	self assert: presenter lastOpenedOop equals: 9201
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSymbolListBrowsePromptedSessionStateKeyRejectsNonNumericInput [
+	| presenter mockSession |
+	presenter := (Smalltalk at: #TestableGbsSymbolListBrowserPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'TestableGbsSymbolListBrowserPresenter not loaded' ].
+	mockSession := MockGbsSession new.
+
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter enqueueRequestAnswer: 'abc'.
+
+	self deny: presenter browsePromptedSessionStateKey.
+	self assert: presenter lastInfoMessage equals: 'Enter a numeric session state key.'.
+	self assert: presenter lastOpenedOop isNil
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSymbolListBrowsePromptedSessionStateKeyUsesPromptedValue [
+	| presenter mockSession |
+	presenter := (Smalltalk at: #TestableGbsSymbolListBrowserPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'TestableGbsSymbolListBrowserPresenter not loaded' ].
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: 'key := 21').
+		^ GbsProxy oop: 9301 session: mockSession ].
+
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter enqueueRequestAnswer: '21'.
+
+	self assert: presenter browsePromptedSessionStateKey.
+	self assert: presenter lastOpenedOop equals: 9301
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSymbolListBrowseReferencersForSelectedPreviewValueUsesNestedPath [
+	| presenter mockSession fakeUsers fakeDicts fakeEntries fakeValue |
+	presenter := (Smalltalk at: #TestableGbsSymbolListBrowserPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'TestableGbsSymbolListBrowserPresenter not loaded' ].
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		self assert: (script includesSubstring: 'path := #((''dictionary'' ''users''))').
+		'9002' ].
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: script equals: '((Object _objectForOop: 9002)) findReferencesInMemory asArray'.
+		^ { GbsProxy oop: 9200 session: mockSession } ].
+	fakeUsers := GbxFakeListPresenterForBrowser new.
+	fakeUsers selectedItem: 'DataCurator'.
+	fakeDicts := GbxFakeListPresenterForBrowser new.
+	fakeDicts selectedItem: 'UserGlobals'.
+	fakeEntries := GbxFakeListPresenterForBrowser new.
+	fakeEntries selectedItem: 'OkzZuluSeasideState'.
+	fakeValue := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeValue selectedItem: { 'users'. 'aDictionary(...)' }.
+
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'userDropList' put: fakeUsers.
+	presenter instVarNamed: 'dictionariesList' put: fakeDicts.
+	presenter instVarNamed: 'entriesList' put: fakeEntries.
+	presenter instVarNamed: 'valueText' put: fakeValue.
+	presenter instVarNamed: 'currentPreview' put: (Dictionary new at: #kind put: 'dictionary'; yourself).
+
+	self assert: presenter browseReferencersForSelectedPreviewValue.
+	self assert: presenter lastOpenedOop equals: 9200
 ]
 
 { #category : 'tests' }

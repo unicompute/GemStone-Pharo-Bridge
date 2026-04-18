@@ -186,12 +186,16 @@ GbsBrowserTest >> testQueryHierarchyRequiresSelectedClass [
 
 { #category : 'tests' }
 GbsBrowserTest >> testQueryServerMethodsWithExplicitRootClass [
-	| browser |
-	browser := TestableGbsBrowser new.
-	browser queryResults: #('Object>>size') forMode: 'hierarchyImplementors'.
+	| browser session |
+	browser := GbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: 'className := ''Object''').
+		self assert: (script includesSubstring: 'objectNamed: className asSymbol').
+		^ #('Object>>size') ].
+	browser session: session.
 
-	self assert: (browser queryServerMethodsForSelector: 'size' mode: 'hierarchyImplementors' rootClassName: 'Object') size equals: 1.
-	self assert: browser lastQueriedRootClass equals: 'Object'
+	self assert: (browser queryServerMethodsForSelector: 'size' mode: 'hierarchyImplementors' rootClassName: 'Object') size equals: 1
 ]
 
 { #category : 'tests' }
@@ -234,4 +238,393 @@ GbsBrowserTest >> testQueryMethodsWithStringUsesOpenQueryResultsPath [
 	self assert: browser queryMethodsWithString.
 	self assert: (capturedScript includesSubstring: 'init').
 	self assert: browser lastOpenedReference equals: 'Behavior>>initialize'
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testLoadDictionariesUsesSessionFetchRemoteDictionaries [
+	| browser session dictionaries |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #evaluate put: 'Globals, UserGlobals , Published'.
+	session stubs at: #executeAndFetch put: [ :script | self fail ].
+	dictionaries := GbxFakeListPresenterForBrowser new.
+
+	browser session: session.
+	browser instVarNamed: 'dictionariesList' put: dictionaries.
+
+	browser loadDictionaries.
+
+	self assert: dictionaries items asArray equals: #('Globals' 'UserGlobals' 'Published')
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testClassSelectedUsesRemoteClassMirrorProtocols [
+	| browser session protocols methods text meta |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeAndFetch put: [ :script | self fail ].
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: 'behavior methodDict keys asSortedCollection').
+		self deny: (script includesSubstring: 'behavior := cls class').
+		^ {
+			#('accessing' #('alpha' 'beta')).
+			#('testing' #('gamma')) } ].
+	protocols := GbxFakeListPresenterForBrowser new.
+	methods := GbxFakeListPresenterForBrowser new.
+	text := GbxFakeTextPresenterForBrowser new.
+	meta := GbxFakeCheckBoxForBrowser new.
+	meta state: false.
+
+	browser session: session.
+	browser instVarNamed: 'protocolsList' put: protocols.
+	browser instVarNamed: 'methodsList' put: methods.
+	browser instVarNamed: 'sourceText' put: text.
+	browser instVarNamed: 'metaCheckbox' put: meta.
+
+	browser classSelected: 'DemoClass'.
+
+	self assert: protocols items asArray equals: #('-- all --' 'accessing' 'testing').
+	self assert: methods items asArray equals: #().
+	self assert: text text equals: ''
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testProtocolSelectedUsesRemoteClassMirrorSelectors [
+	| browser session classes methods meta |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeAndFetch put: [ :script | self fail ].
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: 'behavior methodDict keys asSortedCollection').
+		^ {
+			#('accessing' #('alpha' 'beta')).
+			#('testing' #('gamma')) } ].
+	classes := GbxFakeListPresenterForBrowser new.
+	classes selectedItem: 'DemoClass'.
+	methods := GbxFakeListPresenterForBrowser new.
+	meta := GbxFakeCheckBoxForBrowser new.
+	meta state: false.
+
+	browser session: session.
+	browser instVarNamed: 'classesList' put: classes.
+	browser instVarNamed: 'methodsList' put: methods.
+	browser instVarNamed: 'metaCheckbox' put: meta.
+
+	browser runSuperProtocolSelected: '-- all --'.
+	self assert: methods items asArray equals: #('alpha' 'beta' 'gamma').
+
+	browser runSuperProtocolSelected: 'testing'.
+	self assert: methods items asArray equals: #('gamma')
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testMethodSelectedUsesRemoteMethodMirrorSource [
+	| browser session classes meta text |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeAndFetch put: [ :script | self fail ].
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: 'compiledMethodAt: #foo').
+		^ #(9001 'DemoClass' 'foo' 'testing' 'foo ^ 1' 'Demo-Package' 'DemoClass>>foo' 1 2) ].
+	classes := GbxFakeListPresenterForBrowser new.
+	classes selectedItem: 'DemoClass'.
+	meta := GbxFakeCheckBoxForBrowser new.
+	meta state: false.
+	text := GbxFakeTextPresenterForBrowser new.
+
+	browser session: session.
+	browser instVarNamed: 'classesList' put: classes.
+	browser instVarNamed: 'metaCheckbox' put: meta.
+	browser instVarNamed: 'sourceText' put: text.
+
+	browser methodSelected: 'foo'.
+
+	self assert: text text equals: 'foo ^ 1'
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testInvokeSelectedMethodCallsClassSideMethodObject [
+	| browser session classes methods meta capturedSelector capturedArguments capturedOop |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeAndFetch put: [ :script | self fail ].
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'compiledMethodAt: #new') ifTrue: [
+			^ #(9002 'DemoClass class' 'new' 'instance creation' 'new ^ super new' 'Demo-Package' 'DemoClass class>>new' 1 2) ].
+		(script includesSubstring: 'cls superclass') ifTrue: [
+			^ #(9001 'DemoClass' 'Object' 'Demo-Package' 'Demo-Category' 2 4) ].
+		self fail ].
+	session stubs at: #forwardRemoteMessage put: [ :message :oop |
+		capturedSelector := message selector.
+		capturedArguments := message arguments.
+		capturedOop := oop.
+		#created ].
+	classes := GbxFakeListPresenterForBrowser new.
+	classes selectedItem: 'DemoClass'.
+	methods := GbxFakeListPresenterForBrowser new.
+	methods selectedItem: 'new'.
+	meta := GbxFakeCheckBoxForBrowser new.
+	meta state: true.
+
+	browser session: session.
+	browser instVarNamed: 'classesList' put: classes.
+	browser instVarNamed: 'methodsList' put: methods.
+	browser instVarNamed: 'metaCheckbox' put: meta.
+
+	self assert: browser invokeSelectedMethod.
+	self assert: capturedSelector equals: #new.
+	self assert: capturedArguments equals: #().
+	self assert: capturedOop equals: 9001.
+	self assert: (browser lastInfoMessage includesSubstring: '#created')
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testInvokeSelectedMethodPromptsForArguments [
+	| browser session classes methods meta capturedSelector capturedArguments capturedOop |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeAndFetch put: [ :script | self fail ].
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'compiledMethodAt: #fromAmount:') ifTrue: [
+			^ #(9003 'DemoMoney class' 'fromAmount:' 'instance creation' 'fromAmount: amount ^ self new' 'Demo-Package' 'DemoMoney class>>fromAmount:' 1 2) ].
+		(script includesSubstring: 'cls superclass') ifTrue: [
+			^ #(9004 'DemoMoney' 'Object' 'Demo-Package' 'Demo-Category' 2 4) ].
+		self fail ].
+	session stubs at: #forwardRemoteMessage put: [ :message :oop |
+		capturedSelector := message selector.
+		capturedArguments := message arguments.
+		capturedOop := oop.
+		#created ].
+	classes := GbxFakeListPresenterForBrowser new.
+	classes selectedItem: 'DemoMoney'.
+	methods := GbxFakeListPresenterForBrowser new.
+	methods selectedItem: 'fromAmount:'.
+	meta := GbxFakeCheckBoxForBrowser new.
+	meta state: true.
+
+	browser session: session.
+	browser instVarNamed: 'classesList' put: classes.
+	browser instVarNamed: 'methodsList' put: methods.
+	browser instVarNamed: 'metaCheckbox' put: meta.
+	browser enqueueRequestAnswer: '10'.
+
+	self assert: browser invokeSelectedMethod.
+	self assert: capturedSelector equals: #fromAmount:.
+	self assert: capturedArguments equals: #(10).
+	self assert: capturedOop equals: 9004
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testInvokeSelectedMethodRejectsInstanceSideMethods [
+	| browser session classes methods meta |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	classes := GbxFakeListPresenterForBrowser new.
+	classes selectedItem: 'DemoClass'.
+	methods := GbxFakeListPresenterForBrowser new.
+	methods selectedItem: 'foo'.
+	meta := GbxFakeCheckBoxForBrowser new.
+	meta state: false.
+
+	browser session: session.
+	browser instVarNamed: 'classesList' put: classes.
+	browser instVarNamed: 'methodsList' put: methods.
+	browser instVarNamed: 'metaCheckbox' put: meta.
+
+	self deny: browser invokeSelectedMethod.
+	self assert: browser lastInfoMessage equals: 'Browser invocation only supports class-side methods. Use the debugger to bind an instance receiver.'
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowseVersionsUsesRemoteMethodMirrorVersionEntries [
+	| browser session classes methods meta text |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeAndFetch put: [ :script | self fail ].
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: 'respondsTo: #allVersionsOf:').
+		self assert: (script includesSubstring: 'sel := #foo').
+		^ {
+			#('version 1' 'foo ^ 1').
+			#('version 2' 'foo ^ 2') } ].
+	classes := GbxFakeListPresenterForBrowser new.
+	classes selectedItem: 'DemoClass'.
+	methods := GbxFakeListPresenterForBrowser new.
+	methods selectedItem: 'foo'.
+	meta := GbxFakeCheckBoxForBrowser new.
+	meta state: false.
+	text := GbxFakeTextPresenterForBrowser new.
+
+	browser session: session.
+	browser instVarNamed: 'classesList' put: classes.
+	browser instVarNamed: 'methodsList' put: methods.
+	browser instVarNamed: 'metaCheckbox' put: meta.
+	browser instVarNamed: 'sourceText' put: text.
+	browser enqueueChooseAnswer: 2.
+
+	self assert: browser browseVersions.
+	self assert: text text equals: 'foo ^ 2'
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testInspectMethodUsesRemoteMethodMirror [
+	| browser session classes methods meta |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeAndFetch put: [ :script | self fail ].
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: 'compiledMethodAt: #foo').
+		^ #(9001 'DemoClass' 'foo' 'testing' 'foo ^ 1' 'Demo-Package' 'DemoClass>>foo' 1 2) ].
+	classes := GbxFakeListPresenterForBrowser new.
+	classes selectedItem: 'DemoClass'.
+	methods := GbxFakeListPresenterForBrowser new.
+	methods selectedItem: 'foo'.
+	meta := GbxFakeCheckBoxForBrowser new.
+	meta state: false.
+
+	browser session: session.
+	browser instVarNamed: 'classesList' put: classes.
+	browser instVarNamed: 'methodsList' put: methods.
+	browser instVarNamed: 'metaCheckbox' put: meta.
+
+	self assert: browser inspectMethod.
+	self assert: browser lastInspectedOop equals: 9001
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowseClassInfoUsesRemoteClassMirrorMetadata [
+	| browser session classes meta |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeAndFetch put: [ :script | self fail ].
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: 'superclassName').
+		^ #(9001 'DemoClass' 'Object' 'Demo-Package' 'Demo-Category' 2 4) ].
+	classes := GbxFakeListPresenterForBrowser new.
+	classes selectedItem: 'DemoClass'.
+	meta := GbxFakeCheckBoxForBrowser new.
+	meta state: false.
+
+	browser session: session.
+	browser instVarNamed: 'classesList' put: classes.
+	browser instVarNamed: 'metaCheckbox' put: meta.
+
+	self assert: browser browseClassInfo.
+	self assert: (browser lastInfoMessage includesSubstring: 'Class: DemoClass').
+	self assert: (browser lastInfoMessage includesSubstring: 'Browser side: instance').
+	self assert: (browser lastInfoMessage includesSubstring: 'Superclass: Object').
+	self assert: (browser lastInfoMessage includesSubstring: 'Package: Demo-Package').
+	self assert: (browser lastInfoMessage includesSubstring: 'Category: Demo-Category').
+	self assert: (browser lastInfoMessage includesSubstring: 'Version: 2 of 4').
+	self assert: (browser lastInfoMessage includesSubstring: 'OOP: 9001')
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowseMethodInfoUsesRemoteMethodMirrorMetadata [
+	| browser session classes methods meta |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeAndFetch put: [ :script | self fail ].
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: 'compiledMethodAt: #foo').
+		^ #(9001 'DemoClass' 'foo' 'testing' 'foo ^ 1' 'Demo-Package' 'DemoClass>>foo' 1 2) ].
+	classes := GbxFakeListPresenterForBrowser new.
+	classes selectedItem: 'DemoClass'.
+	methods := GbxFakeListPresenterForBrowser new.
+	methods selectedItem: 'foo'.
+	meta := GbxFakeCheckBoxForBrowser new.
+	meta state: false.
+
+	browser session: session.
+	browser instVarNamed: 'classesList' put: classes.
+	browser instVarNamed: 'methodsList' put: methods.
+	browser instVarNamed: 'metaCheckbox' put: meta.
+
+	self assert: browser browseMethodInfo.
+	self assert: (browser lastInfoMessage includesSubstring: 'Method: DemoClass>>foo').
+	self assert: (browser lastInfoMessage includesSubstring: 'Side: instance').
+	self assert: (browser lastInfoMessage includesSubstring: 'Owner: DemoClass').
+	self assert: (browser lastInfoMessage includesSubstring: 'Selector: foo').
+	self assert: (browser lastInfoMessage includesSubstring: 'Protocol: testing').
+	self assert: (browser lastInfoMessage includesSubstring: 'Package: Demo-Package').
+	self assert: (browser lastInfoMessage includesSubstring: 'Source location: DemoClass>>foo').
+	self assert: (browser lastInfoMessage includesSubstring: 'Version: 1 of 2').
+	self assert: (browser lastInfoMessage includesSubstring: 'OOP: 9001')
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowseNamedObjectCacheReportUsesSessionCacheText [
+	| browser session cache |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	cache := Dictionary new.
+	cache at: #UserGlobals put: (GbsProxy oop: 9001 session: session).
+	session instVarNamed: 'namedObjectCache' put: cache.
+
+	browser session: session.
+
+	self assert: browser browseNamedObjectCacheReport.
+	self assert: (browser lastInfoMessage includesSubstring: 'Named Object Cache').
+	self assert: (browser lastInfoMessage includesSubstring: 'UserGlobals -> oop 9001')
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowseTypedWrapperAutoloadReportUsesBrowserSessionRegistry [
+	| browser session |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	GbsSessionManager addConnectorClient: 'DemoClient' server: 'DemoServer' forSession: session.
+
+	browser session: session.
+
+	[
+		self assert: browser browseTypedWrapperAutoloadReport.
+		self assert: (browser lastInfoMessage includesSubstring: 'Typed Wrapper Autoload').
+		self assert: (browser lastInfoMessage includesSubstring: 'DemoClient -> DemoServer')
+	] ensure: [
+		GbsSessionManager removeConnectorClient: 'DemoClient' server: 'DemoServer' forSession: session ]
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowsePromptedSessionStateKeyRejectsNonNumericInput [
+	| browser session |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	browser session: session.
+	browser enqueueRequestAnswer: 'abc'.
+
+	self deny: browser browsePromptedSessionStateKey.
+	self assert: browser lastInfoMessage equals: 'Enter a numeric session state key.'.
+	self assert: browser lastInspectedOop isNil
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowsePromptedSessionStateKeyUsesSessionFacade [
+	| browser session |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: 'key := 21').
+		^ GbsProxy oop: 9301 session: session ].
+	browser session: session.
+	browser enqueueRequestAnswer: '21'.
+
+	self assert: browser browsePromptedSessionStateKey.
+	self assert: browser lastInspectedOop equals: 9301
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testClearNamedObjectCacheClearsSessionCache [
+	| browser session cache |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	cache := Dictionary new.
+	cache at: #UserGlobals put: (GbsProxy oop: 9001 session: session).
+	session instVarNamed: 'namedObjectCache' put: cache.
+
+	browser session: session.
+
+	self assert: browser clearNamedObjectCache.
+	self assert: browser lastInfoMessage equals: 'Named object cache cleared.'.
+	self assert: session namedObjectCacheKeys equals: #()
 ]

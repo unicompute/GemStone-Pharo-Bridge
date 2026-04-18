@@ -59,6 +59,21 @@ GbsStructuredValueInspectorPresenter >> canInspectSelectedEntry [
 		and: [ (row at: 1 ifAbsent: [ '' ]) asString ~= '__truncated__' ] ]
 ]
 
+{ #category : 'private' }
+GbsStructuredValueInspectorPresenter >> canBrowseReferencersForSelectedEntry [
+	| row referencersBlock |
+	row := self selectedRow.
+	referencersBlock := self propertyAt: #referencersBlock ifAbsent: [ nil ].
+	^ referencersBlock notNil
+		and: [ row notNil
+		and: [ (row at: 1 ifAbsent: [ '' ]) asString ~= '__truncated__' ] ]
+]
+
+{ #category : 'private' }
+GbsStructuredValueInspectorPresenter >> canBrowseSessionState [
+	^ (self propertyAt: #sessionStateBlock ifAbsent: [ nil ]) notNil
+]
+
 { #category : 'initialization' }
 GbsStructuredValueInspectorPresenter >> connectPresenters [
 	(table respondsTo: #contextMenu:) ifTrue: [
@@ -112,18 +127,65 @@ GbsStructuredValueInspectorPresenter >> inspectSelectedEntry [
 	inspectBlock value: row
 ]
 
+{ #category : 'actions' }
+GbsStructuredValueInspectorPresenter >> browseReferencersForSelectedEntry [
+	| row referencersBlock |
+	self canBrowseReferencersForSelectedEntry ifFalse: [ ^ self ].
+	row := self selectedRow.
+	referencersBlock := self propertyAt: #referencersBlock ifAbsent: [ nil ].
+	referencersBlock value: row
+]
+
+{ #category : 'actions' }
+GbsStructuredValueInspectorPresenter >> browsePromptedSessionStateKey [
+	| rawKey key |
+	self canBrowseSessionState ifFalse: [ ^ self ].
+	rawKey := self requestInput: 'Session state key:' initialAnswer: '19'.
+	(rawKey isNil or: [ rawKey trimBoth isEmpty ]) ifTrue: [ ^ self ].
+	key := [ rawKey trimBoth asInteger ]
+		on: Error
+		do: [ nil ].
+	key ifNil: [
+		self inform: 'Enter a numeric session state key.'.
+		^ self ].
+	self browseSessionStateAtKey: key
+]
+
+{ #category : 'actions' }
+GbsStructuredValueInspectorPresenter >> browseSessionStateAtKey: aKey [
+	| sessionStateBlock |
+	self canBrowseSessionState ifFalse: [ ^ self ].
+	sessionStateBlock := self propertyAt: #sessionStateBlock ifAbsent: [ nil ].
+	sessionStateBlock value: aKey
+]
+
 { #category : 'menus' }
 GbsStructuredValueInspectorPresenter >> menuEntry [
 	^ self newMenu
 		addItem: [ :item |
 			item name: 'Inspect Entry'; action: [ self inspectSelectedEntry ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canInspectSelectedEntry ] ];
+		addItem: [ :item |
+			item name: 'Referencers'; action: [ self browseReferencersForSelectedEntry ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canBrowseReferencersForSelectedEntry ] ];
+		addItem: [ :item |
+			item name: 'Inspect Session State Key...'; action: [ self browsePromptedSessionStateKey ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canBrowseSessionState ] ];
 		yourself
 ]
 
 { #category : 'menus' }
 GbsStructuredValueInspectorPresenter >> menuEntryPopup [
 	^ self menuEntry
+]
+
+{ #category : 'ui' }
+GbsStructuredValueInspectorPresenter >> inform: aString [
+	| informBlock |
+	informBlock := self propertyAt: #informBlock ifAbsent: [ nil ].
+	informBlock ifNotNil: [ ^ informBlock value: aString ].
+	UIManager default inform: aString.
+	^ aString
 ]
 
 { #category : 'accessing' }
@@ -152,6 +214,12 @@ GbsStructuredValueInspectorPresenter >> menuEntry [
 		addItem: [ :item |
 			item name: 'Inspect Entry'; action: [ self inspectSelectedEntry ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canInspectSelectedEntry ] ];
+		addItem: [ :item |
+			item name: 'Referencers'; action: [ self browseReferencersForSelectedEntry ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canBrowseReferencersForSelectedEntry ] ];
+		addItem: [ :item |
+			item name: 'Inspect Session State Key...'; action: [ self browsePromptedSessionStateKey ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canBrowseSessionState ] ];
 		yourself
 ]
 
@@ -191,6 +259,14 @@ GbsStructuredValueInspectorPresenter >> rows: aCollection [
 	rows := aCollection ifNil: [ #() ] ifNotNil: [ aCollection asArray ].
 	(table respondsTo: #items:)
 		ifTrue: [ table items: rows ]
+]
+
+{ #category : 'ui' }
+GbsStructuredValueInspectorPresenter >> requestInput: prompt initialAnswer: defaultString [
+	| requestBlock |
+	requestBlock := self propertyAt: #requestInputBlock ifAbsent: [ nil ].
+	requestBlock ifNotNil: [ ^ requestBlock value: prompt value: defaultString ].
+	^ UIManager default request: prompt initialAnswer: defaultString
 ]
 
 { #category : 'private' }

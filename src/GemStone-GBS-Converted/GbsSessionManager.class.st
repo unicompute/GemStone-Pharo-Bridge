@@ -77,6 +77,20 @@ GbsSessionManager class >> clearPostConnectActionForConnectorClient: clientClass
 	Smalltalk globals at: #GbsConnectorPostConnectActionRegistry put: registry
 ]
 
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> clearAllTypedWrapperClasses [
+	Smalltalk globals at: #GbsTypedWrapperRegistry put: Dictionary new
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> clearTypedWrapperClassForClient: clientClassName server: serverClassName [
+	| key registry |
+	key := self connectorObjectKeyForClient: clientClassName server: serverClassName.
+	registry := self typedWrapperRegistry copy.
+	registry removeKey: key ifAbsent: [ ].
+	Smalltalk globals at: #GbsTypedWrapperRegistry put: registry
+]
+
 { #category : 'connector state' }
 GbsSessionManager class >> connectorClassChoices [
 	^ {
@@ -291,7 +305,9 @@ GbsSessionManager class >> ensureConnectorObjectForClient: clientClassName serve
 
 { #category : 'accessing' }
 GbsSessionManager class >> fastConnectorRegistry [
-	^ Smalltalk globals at: #GbsFastConnectorRegistry ifAbsent: [ Dictionary new ]
+	^ Smalltalk globals
+		at: #GbsFastConnectorRegistry
+		ifAbsentPut: [ self newFastConnectorRegistry ]
 ]
 
 { #category : 'accessing' }
@@ -299,9 +315,275 @@ GbsSessionManager class >> fastConnectorRegistry: aDictionary [
 	Smalltalk globals at: #GbsFastConnectorRegistry put: aDictionary
 ]
 
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperAutoloadPairs [
+	^ self typedWrapperAutoloadPairsForSession: GbsSessionParameters currentSession
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperAutoloadPairsForSession: aSession [
+	^ self
+		typedWrapperAutoloadPairsFromRegistry: (self typedWrapperAutoloadRegistryForSession: aSession)
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperAutoloadEntries [
+	^ self typedWrapperAutoloadEntriesForSession: GbsSessionParameters currentSession
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperAutoloadEntriesForSession: aSession [
+	| sessionKey |
+	sessionKey := self sessionKeyForSessionObject: aSession.
+	^ ((self
+		typedWrapperAutoloadEntriesFromRegistry: self fastConnectorRegistry
+		scope: 'global'
+		source: 'connector')
+		, (self
+			typedWrapperAutoloadEntriesFromPairs: self typedWrapperExplicitAutoloadPairRegistry
+			scope: 'global'
+			source: 'explicit')
+		, (self
+			typedWrapperAutoloadEntriesFromRegistry:
+				(self sessionConnectorRegistry at: sessionKey ifAbsent: [ Dictionary new ])
+			scope: 'session'
+			source: 'connector')
+		, (self
+			typedWrapperAutoloadEntriesFromPairs:
+				(self sessionTypedWrapperExplicitAutoloadPairRegistry at: sessionKey ifAbsent: [ #() ])
+			scope: 'session'
+			source: 'explicit')) asArray
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperAutoloadPairsFromRegistry: aRegistry [
+	| pairs seen |
+	(aRegistry isNil or: [ aRegistry isEmpty ]) ifTrue: [ ^ #() ].
+	pairs := OrderedCollection new.
+	seen := Set new.
+	aRegistry keysAndValuesDo: [ :clientName :serverName |
+		| c s pairKey inverseKey |
+		c := clientName asString.
+		s := serverName asString.
+		pairKey := c, '->', s.
+		inverseKey := s, '->', c.
+		((seen includes: pairKey) or: [ seen includes: inverseKey ]) ifFalse: [
+			pairs add: { c. s }.
+			seen add: pairKey ] ].
+	^ pairs asArray
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperAutoloadEntriesFromRegistry: aRegistry scope: aScope source: aSource [
+	| entries seen |
+	(aRegistry isNil or: [ aRegistry isEmpty ]) ifTrue: [ ^ #() ].
+	entries := OrderedCollection new.
+	seen := Set new.
+	aRegistry keysAndValuesDo: [ :clientName :serverName |
+		| c s pairKey inverseKey |
+		c := clientName asString.
+		s := serverName asString.
+		pairKey := c, '->', s.
+		inverseKey := s, '->', c.
+		((seen includes: pairKey) or: [ seen includes: inverseKey ]) ifFalse: [
+			entries add: { c. s. aScope. aSource }.
+			seen add: pairKey ] ].
+	^ entries asArray
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperAutoloadEntriesFromPairs: aCollection scope: aScope source: aSource [
+	| entries |
+	(aCollection isNil or: [ aCollection isEmpty ]) ifTrue: [ ^ #() ].
+	entries := OrderedCollection new.
+	aCollection do: [ :pair |
+		| clientName serverName |
+		clientName := pair first asString.
+		serverName := pair second asString.
+		entries add: { clientName. serverName. aScope. aSource } ].
+	^ entries asArray
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperAutoloadRegistryForSession: aSession [
+	| merged sessionKey sessionRegistry |
+	merged := self fastConnectorRegistry copy.
+	self
+		mergeBidirectionalRegistry: self typedWrapperExplicitAutoloadRegistry
+		into: merged.
+	sessionKey := self sessionKeyForSessionObject: aSession.
+	sessionRegistry := self sessionConnectorRegistry at: sessionKey ifAbsent: [ Dictionary new ].
+	self mergeBidirectionalRegistry: sessionRegistry into: merged.
+	self
+		mergeBidirectionalRegistry:
+			(self sessionTypedWrapperExplicitAutoloadRegistry
+				at: sessionKey
+				ifAbsent: [ Dictionary new ])
+		into: merged.
+	^ merged
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> mergeBidirectionalRegistry: sourceRegistry into: destinationRegistry [
+	(sourceRegistry isNil or: [ sourceRegistry isEmpty ]) ifTrue: [ ^ destinationRegistry ].
+	sourceRegistry keysAndValuesDo: [ :clientName :serverName |
+		destinationRegistry
+			at: clientName asString put: serverName asString;
+			at: serverName asString put: clientName asString ].
+	^ destinationRegistry
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperAutoloadReportText [
+	^ self typedWrapperAutoloadReportTextForSession: GbsSessionParameters currentSession
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperAutoloadReportTextForSession: aSession [
+	| pairs entries generatedEntries |
+	pairs := self typedWrapperAutoloadPairsForSession: aSession.
+	entries := self typedWrapperAutoloadEntriesForSession: aSession.
+	generatedEntries := self typedWrapperRegistryEntries.
+	((pairs isEmpty)
+		and: [ entries isEmpty
+		and: [ generatedEntries isEmpty ] ]) ifTrue: [
+		^ 'No typed-wrapper autoload registrations.' ].
+	^ String streamContents: [ :stream |
+		stream nextPutAll: 'Typed Wrapper Autoload'; cr; cr.
+		stream nextPutAll: 'Autoload Registrations'; cr.
+		entries isEmpty
+			ifTrue: [ stream nextPutAll: '<none>'; cr ]
+			ifFalse: [
+				entries do: [ :entry |
+					stream
+						nextPutAll: (entry at: 1), ' -> ', (entry at: 2);
+						tab;
+						nextPutAll: (entry at: 3);
+						tab;
+						nextPutAll: (entry at: 4);
+						cr ] ].
+		stream cr.
+		stream nextPutAll: 'Effective Pairs'; cr.
+		pairs isEmpty
+			ifTrue: [ stream nextPutAll: '<none>'; cr ]
+			ifFalse: [
+				pairs do: [ :pair |
+					stream
+						nextPutAll: (pair at: 1), ' -> ', (pair at: 2);
+						cr ] ].
+		stream cr.
+		stream nextPutAll: 'Generated Wrappers'; cr.
+		generatedEntries isEmpty
+			ifTrue: [ stream nextPutAll: '<none>' ]
+			ifFalse: [
+				generatedEntries do: [ :row |
+					stream
+						nextPutAll: (row at: 1), ' -> ', (row at: 2);
+						tab;
+						nextPutAll: (row at: 3);
+						tab;
+						nextPutAll: (row at: 4);
+						tab;
+						nextPutAll: ((row at: 5) ifTrue: [ 'autoload' ] ifFalse: [ 'manual' ]);
+						cr ] ] ]
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperExplicitAutoloadRegistry [
+	^ Smalltalk globals
+		at: #GbsTypedWrapperAutoloadRegistry
+		ifAbsentPut: [ Dictionary new ]
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperExplicitAutoloadRegistry: aDictionary [
+	Smalltalk globals
+		at: #GbsTypedWrapperAutoloadRegistry
+		put: (aDictionary ifNil: [ Dictionary new ])
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> sessionTypedWrapperExplicitAutoloadRegistry [
+	^ Smalltalk globals
+		at: #GbsSessionTypedWrapperAutoloadRegistry
+		ifAbsentPut: [ Dictionary new ]
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperExplicitAutoloadPairRegistry [
+	^ Smalltalk globals
+		at: #GbsTypedWrapperAutoloadPairRegistry
+		ifAbsentPut: [ OrderedCollection new ]
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperExplicitAutoloadPairRegistry: aCollection [
+	Smalltalk globals
+		at: #GbsTypedWrapperAutoloadPairRegistry
+		put: (aCollection ifNil: [ OrderedCollection new ])
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> sessionTypedWrapperExplicitAutoloadPairRegistry [
+	^ Smalltalk globals
+		at: #GbsSessionTypedWrapperAutoloadPairRegistry
+		ifAbsentPut: [ Dictionary new ]
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperRegistryEntries [
+	| autoloadRegistry entries |
+	autoloadRegistry := self typedWrapperAutoloadRegistryForSession: GbsSessionParameters currentSession.
+	entries := self typedWrapperRegistry values asSet collect: [ :wrapperClass |
+		| clientName serverName source eligible |
+		clientName := (wrapperClass respondsTo: #clientBehaviorName)
+			ifTrue: [ wrapperClass clientBehaviorName ]
+			ifFalse: [ '' ].
+		serverName := (wrapperClass respondsTo: #serverBehaviorName)
+			ifTrue: [ wrapperClass serverBehaviorName ]
+			ifFalse: [ '' ].
+		source := (wrapperClass respondsTo: #generatedForwardingSource)
+			ifTrue: [ wrapperClass generatedForwardingSource asString ]
+			ifFalse: [ 'unknown' ].
+		eligible := self
+			shouldAutoloadTypedWrapperForClient: clientName
+			server: serverName
+			usingRegistry: autoloadRegistry.
+		{ clientName. serverName. wrapperClass name asString. source. eligible } ].
+	^ entries asArray sort: [ :a :b |
+		(a first = b first)
+			ifTrue: [ a second <= b second ]
+			ifFalse: [ a first <= b first ] ]
+]
+
 { #category : 'actions' }
 GbsSessionManager class >> generateClassConnectors [
 	^ self initializeFastConnectors
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> generateTypedWrapperForClient: clientClassName server: serverClassName [
+	| clientName serverName wrapperClass |
+	clientName := clientClassName ifNil: [ '' ] ifNotNil: [ clientClassName asString ].
+	serverName := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+	(clientName isEmpty or: [ serverName isEmpty ]) ifTrue: [ ^ nil ].
+	wrapperClass := GbsTypedWrapperBuilder
+		generateWrapperForClient: clientName
+		server: serverName
+		session: GbsSessionParameters currentSession.
+	self
+		setTypedWrapperClass: wrapperClass
+		forClient: clientName
+		server: serverName.
+	^ wrapperClass
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> generateTypedWrappersForConnectorPairs [
+	^ self connectorPairs collect: [ :pair |
+		self
+			generateTypedWrapperForClient: (pair at: 1 ifAbsent: [ '' ])
+			server: (pair at: 2 ifAbsent: [ '' ]) ]
 ]
 
 { #category : 'connector groups' }
@@ -355,26 +637,37 @@ GbsSessionManager class >> globalFastConnectorsList [
 
 { #category : 'initialization' }
 GbsSessionManager class >> initializeFastConnectors [
-    "Initialize the global registry of classes that should be passed by value."
-    
-    | registry |
-    registry := Dictionary new.
-    
-    self globalFastConnectorsList do: [ :pair |
-        | clientClass serverClassName |
-        clientClass := Smalltalk globals at: pair first ifAbsent: [ nil ].
-        serverClassName := pair second.
-        
-        clientClass ifNotNil: [
-            "Map both directions: Client -> Server, and Server -> Client"
-            registry at: clientClass name put: serverClassName.
-            registry at: serverClassName put: clientClass name.
-        ].
-    ].
+	"Initialize the global registry of classes that should be passed by value."
 
-    "Store this in your session manager's class instance variable"
+	| registry |
+	registry := self newFastConnectorRegistry.
 	self fastConnectorRegistry: registry.
-	self rebuildConnectorObjectRegistry
+	self rebuildConnectorObjectRegistry.
+	^ registry
+]
+
+{ #category : 'accessing' }
+GbsSessionManager class >> newFastConnectorRegistry [
+	| registry |
+	registry := Dictionary new.
+	self globalFastConnectorsList do: [ :pair |
+		| clientClass serverClassName |
+		clientClass := Smalltalk globals at: pair first ifAbsent: [ nil ].
+		serverClassName := pair second.
+		clientClass ifNotNil: [
+			registry at: clientClass name put: serverClassName.
+			registry at: serverClassName put: clientClass name ] ].
+	^ registry
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> setTypedWrapperClass: wrapperClass forClient: clientClassName server: serverClassName [
+	| key registry |
+	key := self connectorObjectKeyForClient: clientClassName server: serverClassName.
+	registry := self typedWrapperRegistry copy.
+	registry at: key put: wrapperClass.
+	Smalltalk globals at: #GbsTypedWrapperRegistry put: registry.
+	^ wrapperClass
 ]
 
 { #category : 'actions' }
@@ -390,7 +683,8 @@ GbsSessionManager class >> resetConnectorState [
 	Smalltalk globals at: #GbsConnectorConnectionRegistry put: Dictionary new.
 	Smalltalk globals at: #GbsConnectorClassMappingRegistry put: Dictionary new.
 	Smalltalk globals at: #GbsConnectorPostConnectActionRegistry put: Dictionary new.
-	Smalltalk globals at: #GbsSessionConnectorRegistry put: Dictionary new
+	Smalltalk globals at: #GbsSessionConnectorRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsTypedWrapperRegistry put: Dictionary new
 ]
 
 { #category : 'connector state' }
@@ -501,6 +795,7 @@ GbsSessionManager class >> removeConnectorClient: clientClassName server: server
 		registry removeKey: s ifAbsent: [ ] ].
 	self fastConnectorRegistry: registry.
 	self clearPostConnectActionForConnectorClient: c server: s.
+	self clearTypedWrapperClassForClient: c server: s.
 	self removeConnectorObjectForClient: c server: s
 ]
 
@@ -517,6 +812,7 @@ GbsSessionManager class >> removeConnectorClient: clientClassName server: server
 	registry at: sessionKey put: sessionRegistry.
 	Smalltalk globals at: #GbsSessionConnectorRegistry put: registry.
 	self clearPostConnectActionForConnectorClient: c server: s.
+	self clearTypedWrapperClassForClient: c server: s.
 	self removeConnectorObjectForClient: c server: s
 ]
 
@@ -622,6 +918,250 @@ GbsSessionManager class >> setPostConnectAction: actionString forConnectorClient
 	(wrapper notNil and: [ wrapper respondsTo: #postConnectAction: ])
 		ifTrue: [ wrapper postConnectAction: normalized ].
 	^ normalized
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> registerTypedWrapperAutoloadClient: clientClassName server: serverClassName [
+	| c s registry pairs |
+	c := clientClassName ifNil: [ '' ] ifNotNil: [ clientClassName asString ].
+	s := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+	(c isEmpty or: [ s isEmpty ]) ifTrue: [ ^ self ].
+	registry := self typedWrapperExplicitAutoloadRegistry copy.
+	registry
+		at: c put: s;
+		at: s put: c.
+	self typedWrapperExplicitAutoloadRegistry: registry.
+	pairs := self typedWrapperExplicitAutoloadPairRegistry copy.
+	(pairs anySatisfy: [ :pair | pair first = c and: [ pair second = s ] ])
+		ifFalse: [ pairs add: { c. s } ].
+	self typedWrapperExplicitAutoloadPairRegistry: pairs.
+	^ { c. s }
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> registerTypedWrapperAutoloadClient: clientClassName server: serverClassName forSession: aSession [
+	| c s registry sessionKey sessionRegistry pairRegistry pairs |
+	c := clientClassName ifNil: [ '' ] ifNotNil: [ clientClassName asString ].
+	s := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+	(c isEmpty or: [ s isEmpty ]) ifTrue: [ ^ self ].
+	sessionKey := self sessionKeyForSessionObject: aSession.
+	registry := self sessionTypedWrapperExplicitAutoloadRegistry copy.
+	sessionRegistry := (registry at: sessionKey ifAbsent: [ Dictionary new ]) copy.
+	sessionRegistry
+		at: c put: s;
+		at: s put: c.
+	registry at: sessionKey put: sessionRegistry.
+	Smalltalk globals at: #GbsSessionTypedWrapperAutoloadRegistry put: registry.
+	pairRegistry := self sessionTypedWrapperExplicitAutoloadPairRegistry copy.
+	pairs := (pairRegistry at: sessionKey ifAbsent: [ OrderedCollection new ]) copy.
+	(pairs anySatisfy: [ :pair | pair first = c and: [ pair second = s ] ])
+		ifFalse: [ pairs add: { c. s } ].
+	pairRegistry at: sessionKey put: pairs.
+	Smalltalk globals at: #GbsSessionTypedWrapperAutoloadPairRegistry put: pairRegistry.
+	^ { c. s }
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> unregisterTypedWrapperAutoloadClient: clientClassName server: serverClassName [
+	| c s registry pairs |
+	c := clientClassName ifNil: [ '' ] ifNotNil: [ clientClassName asString ].
+	s := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+	registry := self typedWrapperExplicitAutoloadRegistry copy.
+	registry
+		removeKey: c ifAbsent: [ ];
+		removeKey: s ifAbsent: [ ].
+	self typedWrapperExplicitAutoloadRegistry: registry.
+	pairs := self typedWrapperExplicitAutoloadPairRegistry copy.
+	pairs removeAllSuchThat: [ :pair |
+		(pair first = c and: [ pair second = s ])
+			or: [ pair first = s and: [ pair second = c ] ] ].
+	self typedWrapperExplicitAutoloadPairRegistry: pairs.
+	^ self
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> unregisterTypedWrapperAutoloadClient: clientClassName server: serverClassName forSession: aSession [
+	| c s registry sessionKey sessionRegistry pairRegistry pairs |
+	c := clientClassName ifNil: [ '' ] ifNotNil: [ clientClassName asString ].
+	s := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+	sessionKey := self sessionKeyForSessionObject: aSession.
+	registry := self sessionTypedWrapperExplicitAutoloadRegistry copy.
+	sessionRegistry := (registry at: sessionKey ifAbsent: [ Dictionary new ]) copy.
+	sessionRegistry
+		removeKey: c ifAbsent: [ ];
+		removeKey: s ifAbsent: [ ].
+	registry at: sessionKey put: sessionRegistry.
+	Smalltalk globals at: #GbsSessionTypedWrapperAutoloadRegistry put: registry.
+	^ self
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> clearTypedWrapperAutoloadRegistrations [
+	self typedWrapperExplicitAutoloadRegistry: Dictionary new.
+	self typedWrapperExplicitAutoloadPairRegistry: OrderedCollection new.
+	^ self
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> clearTypedWrapperAutoloadRegistrationsForSession: aSession [
+	| registry sessionKey |
+	sessionKey := self sessionKeyForSessionObject: aSession.
+	registry := self sessionTypedWrapperExplicitAutoloadRegistry copy.
+	registry removeKey: sessionKey ifAbsent: [ ].
+	Smalltalk globals at: #GbsSessionTypedWrapperAutoloadRegistry put: registry.
+	^ self
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> unregisterTypedWrapperAutoloadClient: clientClassName server: serverClassName forSession: aSession [
+	| c s registry sessionKey sessionRegistry pairRegistry pairs |
+	c := clientClassName ifNil: [ '' ] ifNotNil: [ clientClassName asString ].
+	s := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+	sessionKey := self sessionKeyForSessionObject: aSession.
+	registry := self sessionTypedWrapperExplicitAutoloadRegistry copy.
+	sessionRegistry := (registry at: sessionKey ifAbsent: [ Dictionary new ]) copy.
+	sessionRegistry
+		removeKey: c ifAbsent: [ ];
+		removeKey: s ifAbsent: [ ].
+	registry at: sessionKey put: sessionRegistry.
+	Smalltalk globals at: #GbsSessionTypedWrapperExplicitAutoloadRegistry put: registry.
+	pairRegistry := self sessionTypedWrapperExplicitAutoloadPairRegistry copy.
+	pairs := (pairRegistry at: sessionKey ifAbsent: [ OrderedCollection new ]) copy.
+	pairs removeAllSuchThat: [ :pair |
+		(pair first = c and: [ pair second = s ])
+			or: [ pair first = s and: [ pair second = c ] ] ].
+	pairRegistry at: sessionKey put: pairs.
+	Smalltalk globals at: #GbsSessionTypedWrapperAutoloadPairRegistry put: pairRegistry.
+	^ self
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> clearTypedWrapperAutoloadRegistrationsForSession: aSession [
+	| registry pairRegistry sessionKey |
+	sessionKey := self sessionKeyForSessionObject: aSession.
+	registry := self sessionTypedWrapperExplicitAutoloadRegistry copy.
+	registry removeKey: sessionKey ifAbsent: [ ].
+	Smalltalk globals at: #GbsSessionTypedWrapperExplicitAutoloadRegistry put: registry.
+	pairRegistry := self sessionTypedWrapperExplicitAutoloadPairRegistry copy.
+	pairRegistry removeKey: sessionKey ifAbsent: [ ].
+	Smalltalk globals at: #GbsSessionTypedWrapperAutoloadPairRegistry put: pairRegistry.
+	^ self
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperClassForClient: clientClassName server: serverClassName [
+	| key registry wrapperClass className |
+	key := self connectorObjectKeyForClient: clientClassName server: serverClassName.
+	registry := self typedWrapperRegistry.
+	wrapperClass := registry at: key ifAbsent: [ nil ].
+	(wrapperClass notNil and: [ wrapperClass inheritsFrom: GbsTypedProxy ])
+		ifTrue: [
+			(self shouldRefreshTypedWrapperClass: wrapperClass server: serverClassName)
+				ifTrue: [
+					^ self
+						generateTypedWrapperForClient: clientClassName
+						server: serverClassName ].
+			^ wrapperClass ].
+	className := GbsTypedWrapperBuilder
+		wrapperClassNameForClient: clientClassName
+		server: serverClassName.
+	wrapperClass := Smalltalk globals at: className ifAbsent: [ nil ].
+	(wrapperClass notNil and: [ wrapperClass inheritsFrom: GbsTypedProxy ])
+		ifTrue: [
+			self
+				setTypedWrapperClass: wrapperClass
+				forClient: clientClassName
+				server: serverClassName.
+			(self shouldRefreshTypedWrapperClass: wrapperClass server: serverClassName)
+				ifTrue: [
+					^ self
+						generateTypedWrapperForClient: clientClassName
+						server: serverClassName ].
+			^ wrapperClass ].
+	(self shouldAutoloadTypedWrapperForClient: clientClassName server: serverClassName)
+		ifTrue: [
+			^ self
+				generateTypedWrapperForClient: clientClassName
+				server: serverClassName ].
+	^ nil
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperClassForClient: clientClassName server: serverClassName ifAbsentGenerate: aBlock [
+	| wrapperClass |
+	wrapperClass := self
+		typedWrapperClassForClient: clientClassName
+		server: serverClassName.
+	wrapperClass ifNil: [ ^ aBlock value ].
+	^ wrapperClass
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperClassForServerClassNamed: serverClassName [
+	| serverName clientName wrapperClass registry |
+	serverName := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+	serverName isEmpty ifTrue: [ ^ nil ].
+	wrapperClass := self typedWrapperRegistry values
+		detect: [ :each |
+			(each respondsTo: #serverBehaviorName)
+				and: [ each serverBehaviorName = serverName ] ]
+		ifNone: [ nil ].
+	wrapperClass ifNotNil: [
+		(self shouldRefreshTypedWrapperClass: wrapperClass server: serverName)
+			ifTrue: [
+				^ self
+				generateTypedWrapperForClient: wrapperClass clientBehaviorName
+						server: serverName ].
+			^ wrapperClass ].
+	registry := self typedWrapperAutoloadRegistryForSession: GbsSessionParameters currentSession.
+	clientName := registry at: serverName ifAbsent: [ nil ].
+	clientName ifNil: [ ^ nil ].
+	^ self
+		typedWrapperClassForClient: clientName
+		server: serverName
+		ifAbsentGenerate: [ self generateTypedWrapperForClient: clientName server: serverName ]
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> shouldAutoloadTypedWrapperForClient: clientClassName server: serverClassName [
+	^ self
+		shouldAutoloadTypedWrapperForClient: clientClassName
+		server: serverClassName
+		usingRegistry: (self typedWrapperAutoloadRegistryForSession: GbsSessionParameters currentSession)
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> shouldAutoloadTypedWrapperForClient: clientClassName server: serverClassName usingRegistry: registry [
+	| clientName serverName |
+	clientName := clientClassName ifNil: [ '' ] ifNotNil: [ clientClassName asString ].
+	serverName := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+	(clientName isEmpty or: [ serverName isEmpty ]) ifTrue: [ ^ false ].
+	^ ((registry at: clientName ifAbsent: [ nil ]) = serverName)
+		or: [ (registry at: serverName ifAbsent: [ nil ]) = clientName ]
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> shouldRefreshTypedWrapperClass: wrapperClass server: serverClassName [
+	| currentSession remoteMirror |
+	currentSession := GbsSessionParameters currentSession.
+	currentSession ifNil: [ ^ false ].
+	(wrapperClass respondsTo: #generatedForwardingSource) ifFalse: [ ^ false ].
+	wrapperClass generatedForwardingSource ~= #remote ifTrue: [ ^ true ].
+	remoteMirror := [ currentSession classMirrorOfNamed: serverClassName ]
+		on: Error
+		do: [ nil ].
+	remoteMirror ifNil: [ ^ false ].
+	^ (wrapperClass respondsTo: #serverBehaviorVersion)
+		and: [ (wrapperClass serverBehaviorVersion ~= remoteMirror version)
+		or: [ (wrapperClass respondsTo: #serverBehaviorNumberOfVersions)
+		and: [ wrapperClass serverBehaviorNumberOfVersions ~= remoteMirror numberOfVersions ] ] ]
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperRegistry [
+	^ Smalltalk globals
+		at: #GbsTypedWrapperRegistry
+		ifAbsentPut: [ Dictionary new ]
 ]
 
 { #category : 'actions' }

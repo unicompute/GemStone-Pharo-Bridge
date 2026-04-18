@@ -1043,6 +1043,76 @@ GbxDebuggerServiceTest >> testCutbackGsProcessesAboveUsesFirstServerContextAndTe
 	self assert: fakeError session isNil
 ]
 
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testSelectedMethodUsesRemoteMethodMirrorWhenAvailable [
+	context
+		methodClass: 'RemoteThing class';
+		selector: #foo;
+		sourceString: 'stale source'.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'history :=') ifTrue: [
+			^ #(5001 'RemoteThing' 'Object' nil nil 1 3) ].
+		(script includesSubstring: 'compiledMethodAt:') ifTrue: [
+			^ #(6001 'RemoteThing class' 'foo' 'debugging' 'foo ^ 2' nil 'RemoteThing class>>foo' 1 3) ].
+		self fail ].
+
+	self assert: service selectedMethodClassName equals: 'RemoteThing class'.
+	self assert: service selectedMethodSelector equals: #foo.
+	self assert: service selectedMethodProtocol equals: 'debugging'.
+	self assert: service sourceCode equals: 'foo ^ 2'
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testSelectedRemoteMethodObjectBindsReceiverWhenReceiverOopIsAvailable [
+	| methodObject |
+	context
+		methodClass: 'RemoteThing';
+		selector: #foo.
+	session stubs
+		at: #executeScriptAndFetchObject
+		put: [ :script |
+			(script includesSubstring: 'history :=') ifTrue: [
+				^ #(5001 'RemoteThing' 'Object' nil nil 1 3) ].
+			(script includesSubstring: 'compiledMethodAt:') ifTrue: [
+				^ #(6001 'RemoteThing' 'foo' 'debugging' 'foo ^ 2' nil 'RemoteThing>>foo' 1 3) ].
+			self fail ];
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			(script includesSubstring: '_gsiDebuggerDetailedReportAt:')
+				ifTrue: [ '7001' ]
+				ifFalse: [ '0' ] ].
+
+	methodObject := service selectedRemoteMethodObject.
+
+	self assert: methodObject notNil.
+	self assert: methodObject isBound.
+	self assert: methodObject receiver oop equals: 7001
+]
+
+{ #category : 'tests' }
+GbxDebuggerServiceTest >> testRecompileCurrentMethodWithSourceUsesRemoteMethodMirrorMetadata [
+	context
+		methodClass: 'RemoteThing class';
+		selector: #foo.
+	session stubs
+		at: #executeScriptAndFetchObject
+		put: [ :script |
+			(script includesSubstring: 'history :=') ifTrue: [
+				^ #(5001 'RemoteThing' 'Object' nil nil 1 3) ].
+			(script includesSubstring: 'compiledMethodAt:') ifTrue: [
+				^ #(6001 'RemoteThing class' 'foo' 'debugging' 'foo ^ 2' nil 'RemoteThing class>>foo' 1 3) ].
+			self fail ];
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			self assert: (script includesSubstring: '(Object _objectForOop: 5001)').
+			self assert: (script includesSubstring: 'cls := cls class.').
+			self assert: (script includesSubstring: 'protocol := ''debugging''').
+			self assert: (script includesSubstring: 'sel := #foo').
+			'OK' ].
+
+	self assert: (service recompileCurrentMethodWithSource: 'foo ^ 3')
+]
+
 { #category : 'private' }
 GbxDebuggerServiceTest >> makeActivationMethodClass: className selector: selectorSymbol stepPoint: step sourceOffsets: offsets source: sourceText [
 	| activation |

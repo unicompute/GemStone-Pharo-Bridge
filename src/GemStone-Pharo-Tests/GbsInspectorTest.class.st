@@ -75,3 +75,132 @@ GbsInspectorTest >> testGsDoItUsesSessionOopWhenNoEvaluationContextProvided [
 	self assert: ok.
 	self assert: seenContext equals: 777
 ]
+
+{ #category : 'tests' }
+GbsInspectorTest >> testSelectedInspectableOopPrefersSelectedTableRow [
+	| inspector fakeTable |
+	inspector := GbsInspector new.
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeTable selectedItem: { 'child'. 'aChild'. 456 }.
+
+	inspector instVarNamed: 'oop' put: 123.
+	inspector instVarNamed: 'stateTable' put: fakeTable.
+
+	self assert: inspector selectedInspectableOop equals: 456
+]
+
+{ #category : 'tests' }
+GbsInspectorTest >> testBrowseReferencersInMemoryUsesSessionFacadeAndOpensSingleResult [
+	| inspector session fakeTable |
+	inspector := TestableGbsInspector new.
+	session := MockGbsSession new.
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeTable selectedItem: { 'child'. 'aChild'. 456 }.
+	session stubs
+		at: #executeScriptAndFetchObject
+		put: [ :script |
+			self assert: script equals: '((Object _objectForOop: 456)) findReferencesInMemory asArray'.
+			^ { GbsProxy oop: 9001 session: session } ].
+
+	inspector instVarNamed: 'session' put: session.
+	inspector instVarNamed: 'oop' put: 123.
+	inspector instVarNamed: 'stateTable' put: fakeTable.
+
+	self assert: inspector browseReferencersInMemory.
+	self assert: inspector lastOpenedOop equals: 9001
+]
+
+{ #category : 'tests' }
+GbsInspectorTest >> testBrowseReferencersInMemoryInformsWhenNoneFound [
+	| inspector session |
+	inspector := TestableGbsInspector new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script | #() ].
+
+	inspector instVarNamed: 'session' put: session.
+	inspector instVarNamed: 'oop' put: 123.
+
+	self deny: inspector browseReferencersInMemory.
+	self assert: inspector lastInfoMessage equals: 'No in-memory referencers found.'
+]
+
+{ #category : 'tests' }
+GbsInspectorTest >> testBrowsePromptedSessionStateKeyInformsWhenUnset [
+	| inspector session |
+	inspector := TestableGbsInspector new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: 'key := 21').
+		^ nil ].
+
+	inspector instVarNamed: 'session' put: session.
+	inspector enqueueRequestAnswer: '21'.
+
+	self deny: inspector browsePromptedSessionStateKey.
+	self assert: inspector lastInfoMessage equals: 'Session state key 21 is not set.'.
+	self assert: inspector lastOpenedOop isNil
+]
+
+{ #category : 'tests' }
+GbsInspectorTest >> testBrowsePromptedSessionStateKeyRejectsNonNumericInput [
+	| inspector session |
+	inspector := TestableGbsInspector new.
+	session := MockGbsSession new.
+
+	inspector instVarNamed: 'session' put: session.
+	inspector enqueueRequestAnswer: 'abc'.
+
+	self deny: inspector browsePromptedSessionStateKey.
+	self assert: inspector lastInfoMessage equals: 'Enter a numeric session state key.'.
+	self assert: inspector lastOpenedOop isNil
+]
+
+{ #category : 'tests' }
+GbsInspectorTest >> testBrowsePromptedSessionStateKeyUsesSessionAndOpensInspector [
+	| inspector session registry |
+	inspector := TestableGbsInspector new.
+	session := MockGbsSession new.
+	registry := GbsProxy oop: 8181 session: session.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: 'key := 21').
+		^ registry ].
+
+	inspector instVarNamed: 'session' put: session.
+	inspector enqueueRequestAnswer: '21'.
+
+	self assert: inspector browsePromptedSessionStateKey.
+	self assert: inspector lastOpenedOop equals: 8181
+]
+
+{ #category : 'tests' }
+GbsInspectorTest >> testInvokeSelectedObjectMethodPromptsForSelectorAndArguments [
+	| inspector session fakeTable capturedSelector capturedArguments capturedOop |
+	inspector := TestableGbsInspector new.
+	session := MockGbsSession new.
+	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeTable selectedItem: { 'child'. 'anInvoice'. 456 }.
+	session stubs at: #executeAndFetch put: [ :script |
+		self assert: (script includesSubstring: 'Object _objectForOop: 456').
+		'Invoice' ].
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'compiledMethodAt: #applyDiscount:') ifTrue: [
+			^ #(9004 'Invoice' 'applyDiscount:' 'pricing' 'applyDiscount: percent ^ total * percent' 'Billing-Core' 'Invoice>>applyDiscount:' 3 4) ].
+		self fail ].
+	session stubs at: #forwardRemoteMessage put: [ :message :oop |
+		capturedSelector := message selector.
+		capturedArguments := message arguments.
+		capturedOop := oop.
+		#discounted ].
+
+	inspector instVarNamed: 'session' put: session.
+	inspector instVarNamed: 'oop' put: 123.
+	inspector instVarNamed: 'stateTable' put: fakeTable.
+	inspector enqueueRequestAnswer: 'applyDiscount:'.
+	inspector enqueueRequestAnswer: '15'.
+
+	self assert: inspector invokeSelectedObjectMethod.
+	self assert: capturedSelector equals: #applyDiscount:.
+	self assert: capturedArguments equals: #(15).
+	self assert: capturedOop equals: 456.
+	self assert: (inspector lastInfoMessage includesSubstring: '#discounted')
+]

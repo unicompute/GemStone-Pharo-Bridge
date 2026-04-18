@@ -14,6 +14,8 @@ Class {
 		'upButton',
 		'refreshButton',
 		'inspectButton',
+		'referencersButton',
+		'sessionStateButton',
 		'doItButton',
 		'cache',
 		'traversal'
@@ -129,6 +131,8 @@ GbxTrippy >> buildToolbar [
 		add: upButton width: 60;
 		add: refreshButton width: 80;
 		add: inspectButton width: 80;
+		add: referencersButton width: 110;
+		add: sessionStateButton width: 90;
 		add: doItButton width: 80;
 		yourself
 ]
@@ -169,6 +173,81 @@ GbxTrippy >> doItSelected [
 	result := session executeAndFetch: script.
 	
 	InformDialog inform: 'Do it completed. Result: ', result asString.
+]
+
+{ #category : 'actions' }
+GbxTrippy >> browseReferencersInMemory [
+	| targetOop referencers inspectable selection |
+	targetOop := self selectedInspectableOop.
+	targetOop ifNil: [ ^ false ].
+	referencers := self referencersInMemoryForOop: targetOop.
+	inspectable := referencers select: [ :each | (self oopForInspectableObject: each) notNil ].
+	inspectable isEmpty ifTrue: [
+		self inform: 'No in-memory referencers found.'.
+		^ false ].
+	inspectable size = 1 ifTrue: [
+		^ self openTrippyOnOop: (self oopForInspectableObject: inspectable first) ].
+	selection := self
+		chooseReferencerFrom: inspectable
+		title: 'In-memory referencers'.
+	selection ifNil: [ ^ false ].
+	^ self openTrippyOnOop: (self oopForInspectableObject: selection)
+]
+
+{ #category : 'actions' }
+GbxTrippy >> browsePromptedSessionStateKey [
+	| rawKey key |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	rawKey := self requestString: 'Session state key:' initialAnswer: '19'.
+	(rawKey isNil or: [ rawKey trimBoth isEmpty ]) ifTrue: [ ^ false ].
+	key := [ rawKey trimBoth asInteger ]
+		on: Error
+		do: [ nil ].
+	key ifNil: [
+		self inform: 'Enter a numeric session state key.'.
+		^ false ].
+	^ self browseSessionStateAtKey: key
+]
+
+{ #category : 'actions' }
+GbxTrippy >> browseSessionStateAtKey: aKey [
+	| sessionStateValue oop |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	sessionStateValue := [ session sessionStateAt: aKey ]
+		on: Error
+		do: [ :ex |
+			self inform: 'Session state lookup failed: ', ex messageText.
+			^ false ].
+	sessionStateValue ifNil: [
+		self inform: 'Session state key ', aKey printString, ' is not set.'.
+		^ false ].
+	oop := self oopForInspectableObject: sessionStateValue.
+	oop ifNil: [
+		self inform: 'Session state key ', aKey printString, ' does not currently have an inspectable remote oop.'.
+		^ false ].
+	^ self openTrippyOnOop: oop
+]
+
+{ #category : 'ui' }
+GbxTrippy >> chooseReferencerFrom: referencers title: aTitle [
+	| labels index |
+	labels := referencers collect: [ :each | self displayStringForReferencer: each ].
+	index := UIManager default chooseFrom: labels title: aTitle.
+	index = 0 ifTrue: [ ^ nil ].
+	^ referencers at: index ifAbsent: [ nil ]
+]
+
+{ #category : 'ui' }
+GbxTrippy >> displayStringForReferencer: anObject [
+	(anObject isKindOf: GbsProxy) ifTrue: [
+		^ [ anObject asLocalString ]
+			on: Error
+			do: [ 'aGbsProxy(oop: ', anObject oop asString, ')' ] ].
+	^ anObject printString
 ]
 
 { #category : 'fetching' }
@@ -267,6 +346,14 @@ GbxTrippy >> initializePresenters [
 	inspectButton := self newButton
 		label: '🔍 Inspect';
 		action: [ self inspectSelected ].
+
+	referencersButton := self newButton
+		label: '↩ Referencers';
+		action: [ self browseReferencersInMemory ].
+
+	sessionStateButton := self newButton
+		label: '🗃 State';
+		action: [ self browsePromptedSessionStateKey ].
 	
 	doItButton := self newButton
 		label: '⚡ Do it';
@@ -300,15 +387,11 @@ GbxTrippy >> inspectOop: anOop [
 { #category : 'actions' }
 GbxTrippy >> inspectSelected [
 	"Inspect selected item in new Trippy window"
-	| item oop trippy |
+	| oop |
 	
-	item := objectTable selectedItem.
-	item ifNil: [ ^ self ].
-	
-	oop := item at: 4.
-	oop ifNil: [ ^ self ].
-	
-	trippy := GbxTrippy inspectOop: oop session: session.
+	oop := self selectedInspectableOop.
+	oop ifNil: [ ^ false ].
+	^ self openTrippyOnOop: oop
 ]
 
 { #category : 'loading' }
@@ -356,6 +439,31 @@ GbxTrippy >> navigateTo: item [
 	self showCurrentObject.
 ]
 
+{ #category : 'ui' }
+GbxTrippy >> inform: aString [
+	InformDialog inform: aString.
+	^ aString
+]
+
+{ #category : 'ui' }
+GbxTrippy >> oopForInspectableObject: anObject [
+	(anObject isKindOf: GbsProxy) ifTrue: [ ^ anObject oop ].
+	(anObject isInteger and: [ anObject > 20 ]) ifTrue: [ ^ anObject ].
+	^ nil
+]
+
+{ #category : 'ui' }
+GbxTrippy >> openTrippyOnOop: anOop [
+	(anOop isInteger and: [ anOop > 20 ]) ifFalse: [ ^ false ].
+	self class inspectOop: anOop session: session.
+	^ true
+]
+
+{ #category : 'ui' }
+GbxTrippy >> requestString: prompt initialAnswer: defaultString [
+	^ UIManager default request: prompt initialAnswer: defaultString
+]
+
 { #category : 'navigation' }
 GbxTrippy >> refresh [
 	"Refresh current object"
@@ -363,6 +471,28 @@ GbxTrippy >> refresh [
 	currentOop ifNotNil: [
 		self loadObject: currentOop.
 	].
+]
+
+{ #category : 'querying' }
+GbxTrippy >> referencersInMemoryForOop: anOop [
+	session ifNil: [ ^ #() ].
+	(anOop isInteger and: [ anOop > 20 ]) ifFalse: [ ^ #() ].
+	^ [ session referencesToOop: anOop ]
+		on: Error
+		do: [ #() ]
+]
+
+{ #category : 'private' }
+GbxTrippy >> selectedInspectableOop [
+	| item oop |
+	objectTable ifNotNil: [
+		item := [ objectTable selectedItem ] on: Error do: [ nil ].
+		item ifNotNil: [
+			oop := item at: 4 ifAbsent: [ nil ].
+			(oop isInteger and: [ oop > 20 ]) ifTrue: [ ^ oop ] ] ].
+	^ (currentOop isInteger and: [ currentOop > 20 ])
+		ifTrue: [ currentOop ]
+		ifFalse: [ nil ]
 ]
 
 { #category : 'accessing' }

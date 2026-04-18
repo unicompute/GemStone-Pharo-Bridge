@@ -138,3 +138,58 @@ GbsWorkspaceTest >> testGsActionAliasesRouteToPrimaryActions [
 	self assert: workspace gsPrintIt.
 	self assert: workspace didPrintIt
 ]
+
+{ #category : 'tests' }
+GbsWorkspaceTest >> testInspectItUsesExecuteScriptAndReturnOop [
+	| workspace mockSession |
+	workspace := TestableGbsWorkspace new.
+	mockSession := MockGbsSession new.
+	workspace textEditor text: '42'.
+
+	mockSession stubs
+		at: #executeScriptAndReturnOop
+		put: [ :script |
+			self assert: script equals: '[ 42 ] value'.
+			9001 ].
+	mockSession stubs
+		at: #apiGciExecuteStrContextEnv
+		put: [ :script :context :env |
+			self fail: 'Workspace inspectIt should use executeScriptAndReturnOop, not serverInterface.' ].
+	GbsSessionParameters currentSession: mockSession.
+
+	workspace inspectIt.
+
+	self assert: workspace lastInspectedOop equals: 9001.
+	self assert: workspace lastInspectedSession == mockSession
+]
+
+{ #category : 'tests' }
+GbsWorkspaceTest >> testBrowsePromptedSessionStateKeyRejectsNonNumericInput [
+	| workspace mockSession |
+	workspace := TestableGbsWorkspace new.
+	mockSession := MockGbsSession new.
+	GbsSessionParameters currentSession: mockSession.
+	workspace enqueueRequestAnswer: 'abc'.
+
+	self deny: workspace browsePromptedSessionStateKey.
+	self assert: workspace lastInfoMessage equals: 'Enter a numeric session state key.'.
+	self assert: workspace lastInspectedOop isNil
+]
+
+{ #category : 'tests' }
+GbsWorkspaceTest >> testBrowsePromptedSessionStateKeyUsesSessionFacade [
+	| workspace mockSession |
+	workspace := TestableGbsWorkspace new.
+	mockSession := MockGbsSession new.
+	mockSession stubs
+		at: #executeScriptAndFetchObject
+		put: [ :script |
+			self assert: (script includesSubstring: 'key := 21').
+			^ GbsProxy oop: 9601 session: mockSession ].
+	GbsSessionParameters currentSession: mockSession.
+	workspace enqueueRequestAnswer: '21'.
+
+	self assert: workspace browsePromptedSessionStateKey.
+	self assert: workspace lastInspectedOop equals: 9601.
+	self assert: workspace lastInspectedSession == mockSession
+]

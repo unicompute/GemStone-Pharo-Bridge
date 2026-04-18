@@ -301,7 +301,8 @@ GbxDebuggerService >> browseClass [
 GbxDebuggerService >> browseMethod [
 	"Browse current method - uses gbxBrowseMethod: for server contexts"
 	currentContext gbxIsServerContext ifTrue: [
-		^ self gbxBrowseMethod: self selectedMethod
+		^ self browseRemoteSelectedMethod
+			ifNil: [ self gbxBrowseMethod: self selectedMethod ]
 	].
 	"For client contexts, standard browsing would be used"
 	^ nil
@@ -1635,28 +1636,26 @@ GbxDebuggerService >> receiverClass [
 
 { #category : 'evaluation' }
 GbxDebuggerService >> recompileCurrentMethodWithSource: sourceText [
-	| className selector isMeta classLookupName escapedSource script raw |
+	| remoteMethod escapedSource script raw classExpression |
 	currentContext ifNil: [ ^ false ].
 	self isSessionUsable ifFalse: [ ^ false ].
 	self clearCompileError.
-	className := self selectedMethodClassName.
-	selector := self selectedMethodSelector.
-	(className isNil or: [ selector isNil or: [ selector = #unboundMethod ] ]) ifTrue: [ ^ false ].
-
-	isMeta := className asString endsWith: ' class'.
-	classLookupName := isMeta
-		ifTrue: [ (className asString copyFrom: 1 to: className size - 6) ]
-		ifFalse: [ className asString ].
+	remoteMethod := self selectedRemoteMethodObject.
+	(remoteMethod isNil or: [ remoteMethod selector = #unboundMethod ]) ifTrue: [ ^ false ].
 	escapedSource := self escapeForScriptLiteral: sourceText.
+	classExpression := session repository classExpressionFor:
+		(remoteMethod classMirror
+			ifNil: [ remoteMethod classReference ]
+			ifNotNil: [ :each | each proxy ifNil: [ remoteMethod classReference ] ]).
 
 	script := '[
 		| cls sel protocol result source |
-		cls := System myUserProfile symbolList objectNamed: #', classLookupName, '.
+		cls := ', classExpression, '.
 		cls ifNil: [ ^ ''ERROR|Class not found'' ].
-		', (isMeta ifTrue: [ 'cls := cls class.' ] ifFalse: [ '' ]), '
-		sel := #', selector asString, '.
+		', (remoteMethod isClassSide ifTrue: [ 'cls := cls class.' ] ifFalse: [ '' ]), '
+		sel := ', (session marshalArgumentToScript: remoteMethod selector), '.
 		source := ''', escapedSource, '''.
-		protocol := [ cls categoryOfSelector: sel ] on: Error do: [ ''as yet unclassified'' ].
+		protocol := ', (session marshalArgumentToScript: (remoteMethod protocol ifNil: [ 'as yet unclassified' ])), '.
 		protocol ifNil: [ protocol := ''as yet unclassified'' ].
 		result := [ cls compileMethod: source category: protocol ] on: Error do: [ :ex | ''ERROR|'', ex description ].
 		(result isString and: [ result beginsWith: ''ERROR|'' ]) ifTrue: [ ^ result ].
@@ -2157,6 +2156,9 @@ GbxDebuggerService >> selectTopServerContext [
 
 { #category : 'breakpoint support' }
 GbxDebuggerService >> selectedMethodClassName [
+	| remoteMethod |
+	remoteMethod := self selectedRemoteMethodObject.
+	remoteMethod ifNotNil: [ ^ remoteMethod ownerName ].
 	currentContext ifNil: [ ^ nil ].
 	(currentContext respondsTo: #methodClassOrUnknown) ifTrue: [ ^ currentContext methodClassOrUnknown ].
 	(currentContext respondsTo: #methodClass) ifTrue: [ ^ currentContext methodClass ].
@@ -2165,10 +2167,82 @@ GbxDebuggerService >> selectedMethodClassName [
 
 { #category : 'breakpoint support' }
 GbxDebuggerService >> selectedMethodSelector [
+	| remoteMethod |
+	remoteMethod := self selectedRemoteMethodObject.
+	remoteMethod ifNotNil: [ ^ remoteMethod selector ].
 	currentContext ifNil: [ ^ nil ].
 	(currentContext respondsTo: #selectorOrUnknown) ifTrue: [ ^ currentContext selectorOrUnknown ].
 	(currentContext respondsTo: #selector) ifTrue: [ ^ currentContext selector ].
 	^ nil
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> selectedMethodProtocol [
+	| remoteMethod |
+	remoteMethod := self selectedRemoteMethodObject.
+	remoteMethod ifNotNil: [ ^ remoteMethod protocol ].
+	^ nil
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> selectedRemoteMethodLookup [
+	| className isMeta lookupName selector |
+	currentContext ifNil: [ ^ nil ].
+	className := (currentContext respondsTo: #methodClassOrUnknown)
+		ifTrue: [ currentContext methodClassOrUnknown ]
+		ifFalse: [
+			(currentContext respondsTo: #methodClass)
+				ifTrue: [ currentContext methodClass ]
+				ifFalse: [ nil ] ].
+	selector := (currentContext respondsTo: #selectorOrUnknown)
+		ifTrue: [ currentContext selectorOrUnknown ]
+		ifFalse: [
+			(currentContext respondsTo: #selector)
+				ifTrue: [ currentContext selector ]
+				ifFalse: [ nil ] ].
+	(className isNil or: [ selector isNil or: [ selector = #unboundMethod ] ]) ifTrue: [ ^ nil ].
+	isMeta := className asString endsWith: ' class'.
+	lookupName := isMeta
+		ifTrue: [ className asString allButLast: 6 ]
+		ifFalse: [ className asString ].
+	^ { lookupName. selector asSymbol. isMeta }
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> selectedRemoteMethodMirror [
+	| lookup |
+	self isSessionUsable ifFalse: [ ^ nil ].
+	lookup := self selectedRemoteMethodLookup.
+	lookup ifNil: [ ^ nil ].
+	^ [
+		(lookup third
+			ifTrue: [
+				session
+					classMethodMirrorForClassNamed: lookup first
+					selector: lookup second ]
+			ifFalse: [
+				session
+					methodMirrorForClassNamed: lookup first
+					selector: lookup second ]) ]
+		on: Error
+		do: [ :ex | nil ]
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> selectedRemoteMethodObject [
+	| mirror receiverOop receiverProxy |
+	mirror := self selectedRemoteMethodMirror.
+	(mirror isNil or: [ mirror exists not ]) ifTrue: [ ^ nil ].
+	mirror classSide ifTrue: [ ^ mirror asMethodObject ].
+	receiverOop := self currentReceiverOop.
+	((receiverOop isNumber) and: [ receiverOop > 20 ]) ifFalse: [ ^ mirror asMethodObject ].
+	receiverProxy := [ session objectForOop: receiverOop ]
+		on: Error
+		do: [ :ex | nil ].
+	receiverProxy ifNil: [ ^ mirror asMethodObject ].
+	^ [ mirror bindTo: receiverProxy ]
+		on: Error
+		do: [ :ex | mirror asMethodObject ]
 ]
 
 { #category : 'breakpoint support' }
@@ -2256,8 +2330,37 @@ GbxDebuggerService >> setBreakPointIn: aTextWidget [
 { #category : 'source code' }
 GbxDebuggerService >> sourceCode [
 	"Get the source code for the current context"
+	| remoteMethod |
+	remoteMethod := self selectedRemoteMethodObject.
+	(remoteMethod notNil and: [ remoteMethod sourceCode notNil ]) ifTrue: [
+		^ remoteMethod sourceCode ].
 	currentContext ifNil: [ ^ '' ].
 	^ currentContext sourceCode
+]
+
+{ #category : 'actions-browsing' }
+GbxDebuggerService >> browseRemoteSelectedMethod [
+	| methodObject newBrowser classHolder |
+	methodObject := self selectedRemoteMethodObject.
+	methodObject ifNil: [ ^ nil ].
+	newBrowser := Smalltalk at: #GbxHierarchyBrowser ifAbsent: [ ^ nil ].
+	classHolder := (Smalltalk at: #GbxClassHolder ifAbsent: [ ^ nil ])
+		name: methodObject classMirror name
+		proxy: methodObject classMirror proxy.
+	newBrowser := newBrowser new.
+	newBrowser session: session.
+	newBrowser myClass: classHolder.
+	newBrowser classList: nil
+		class: classHolder
+		protocolList: nil
+		protocol: (methodObject protocol ifNil: [ 'as yet unclassified' ])
+		methodList: nil
+		selectedMethods: (Array with:
+			((Smalltalk at: #GbxCompiledMethodHolder ifAbsent: [ ^ nil ])
+				name: methodObject selector)).
+	methodObject isClassSide ifTrue: [
+		newBrowser initalizeMetaTabsToIndex: 2 ].
+	^ newBrowser
 ]
 
 { #category : 'source code' }
