@@ -74,3 +74,9 @@ GciError >> message: aString [
 	bytes size < 1024 ifTrue: [ 
 		handle unsignedByteAt: 40 + bytes size + 1 put: 0 ].
 ]
+
+{ #category : 'accessing' }
+GciError >> number [
+	"Manually read the first int32 field after the four uint64 slots."
+	^ handle signedLongAt: 33
+]

@@ -14,7 +14,9 @@ Class {
 		'lastQueriedMode',
 		'lastQueriedRootClass',
 		'lastQueriedHierarchyScope',
-		'lastInspectedOop'
+		'lastInspectedOop',
+		'lastProvenanceGraph',
+		'lastObjectLog'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -138,6 +140,20 @@ TestableGbsBrowser >> openQueryResults: references title: titleString [
 	^ self openMethodReference: (references at: selected)
 ]
 
+{ #category : 'private' }
+TestableGbsBrowser >> openRubyRuntimeProvenanceBrowserFor: aGraph title: aTitle [
+	lastProvenanceGraph := aGraph.
+	lastInfoMessage := aTitle.
+	^ true
+]
+
+{ #category : 'private' }
+TestableGbsBrowser >> openObjectLogBrowserFor: anObjectLog title: aTitle [
+	lastObjectLog := anObjectLog.
+	lastInfoMessage := aTitle.
+	^ true
+]
+
 { #category : 'accessing' }
 TestableGbsBrowser >> lastInfoMessage [
 	^ lastInfoMessage
@@ -181,4 +197,14 @@ TestableGbsBrowser >> lastQueriedHierarchyScope [
 { #category : 'accessing' }
 TestableGbsBrowser >> lastInspectedOop [
 	^ lastInspectedOop
+]
+
+{ #category : 'accessing' }
+TestableGbsBrowser >> lastProvenanceGraph [
+	^ lastProvenanceGraph
+]
+
+{ #category : 'accessing' }
+TestableGbsBrowser >> lastObjectLog [
+	^ lastObjectLog
 ]

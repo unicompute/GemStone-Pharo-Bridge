@@ -1,9 +1,11 @@
 | suite result testClasses selectedTests failures errors skipped lane label liveLane hadFailure flattenTest sessionReady |
 [
+  | loadGroup packageFilter filterTokens |
   [ Metacello new
       baseline: 'GemStonePharo';
       repository: 'tonel:///Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src';
-      load: 'default' ] on: Error do: [ :ex |
+      load: (([ Smalltalk os environment at: 'GBS_LOAD_GROUP' ifAbsent: [ 'default' ] ]
+        on: Error do: [ 'default' ]) asString) ] on: Error do: [ :ex |
         Transcript show: 'LOAD_ERROR: ', ex messageText; cr ].
 
   lane := (([ Smalltalk os environment at: 'GBS_TEST_LANE' ifAbsent: [ 'all' ] ]
@@ -17,10 +19,21 @@
       Transcript show: 'LIVE_SESSION_ERROR: ', GbsLiveSessionTestSupport unavailableReason; cr.
       Transcript show: 'BRIDGE_LIVE_REGRESSION_FAILED'; cr ] ].
 
+  packageFilter := ([ Smalltalk os environment at: 'GBS_TEST_PACKAGES' ifAbsent: [ '' ] ]
+    on: Error do: [ '' ]) asString trimBoth.
+  filterTokens := packageFilter isEmpty
+    ifTrue: [ nil ]
+    ifFalse: [ (packageFilter findTokens: ',') collect: #trimBoth thenReject: #isEmpty ].
+
   testClasses := (Smalltalk allClasses
     select: [ :each |
       (each inheritsFrom: TestCase)
-        and: [ each package name = 'GemStone-Pharo-Tests' ] ])
+        and: [
+          | packageName |
+          packageName := each package name.
+          filterTokens
+            ifNil: [ packageName beginsWith: 'GemStone-Pharo-' ]
+            ifNotNil: [ filterTokens includes: packageName ] ] ])
     asSortedCollection: [ :a :b | a name <= b name ].
 
   suite := OrderedCollection new.

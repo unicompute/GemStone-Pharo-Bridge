@@ -99,6 +99,7 @@ GbsInspectorTest >> testBrowseReferencersInMemoryUsesSessionFacadeAndOpensSingle
 	session stubs
 		at: #executeScriptAndFetchObject
 		put: [ :script |
+			self assert: session materializationProfile class equals: GbsShallowMaterializationProfile.
 			self assert: script equals: '((Object _objectForOop: 456)) findReferencesInMemory asArray'.
 			^ { GbsProxy oop: 9001 session: session } ].
 
@@ -170,6 +171,108 @@ GbsInspectorTest >> testBrowsePromptedSessionStateKeyUsesSessionAndOpensInspecto
 
 	self assert: inspector browsePromptedSessionStateKey.
 	self assert: inspector lastOpenedOop equals: 8181
+]
+
+{ #category : 'tests' }
+GbsInspectorTest >> testBrowseRubyLoadPathReportUsesRuntimeReport [
+	| inspector session |
+	inspector := TestableGbsInspector new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: session materializationProfile class equals: GbsShallowMaterializationProfile.
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('/opt/demo/lib' '/opt/demo/app') ].
+		(script includesSubstring: 'key := 19') ifTrue: [ ^ nil ].
+		self fail ].
+
+	inspector instVarNamed: 'session' put: session.
+
+	self assert: inspector browseRubyLoadPathReport.
+	self assert: (inspector lastInfoMessage includesSubstring: '$LOAD_PATH').
+	self assert: (inspector lastInfoMessage includesSubstring: '/opt/demo/lib')
+]
+
+{ #category : 'tests' }
+GbsInspectorTest >> testBrowseStaleTypedWrapperLifecycleReportUsesSessionLifecycleReport [
+	| inspector session staleEntry |
+	inspector := TestableGbsInspector new.
+	session := MockGbsSession new.
+	staleEntry := GbsTypedWrapperLifecycleEntry
+		wrapperClass: nil
+		clientName: 'ClientThing'
+		serverName: 'ServerThing'
+		source: 'autoload'
+		localVersion: 1
+		localNumberOfVersions: 1
+		remoteVersion: 2
+		remoteNumberOfVersions: 2
+		status: #stale.
+	session stubs at: #typedWrapperLifecycleReport put: [
+		self assert: session materializationProfile class equals: GbsShallowMaterializationProfile.
+		GbsTypedWrapperLifecycleReport entries: { staleEntry } ].
+
+	inspector instVarNamed: 'session' put: session.
+
+	self assert: inspector browseStaleTypedWrapperLifecycleReport.
+	self assert: (inspector lastInfoMessage includesSubstring: 'ClientThing').
+	self assert: (inspector lastInfoMessage includesSubstring: 'stale')
+]
+
+{ #category : 'tests' }
+GbsInspectorTest >> testBrowsePromptedSessionStateKeysReportUsesDiagnosticsFacade [
+	| inspector session |
+	inspector := TestableGbsInspector new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 19') ifTrue: [
+			^ (IdentityDictionary new at: #lazyThing put: 'registered'; yourself) ].
+		(script includesSubstring: 'key := 21') ifTrue: [ ^ #(1 2 3) ].
+		self fail ].
+
+	inspector instVarNamed: 'session' put: session.
+	inspector enqueueRequestAnswer: '19, 21'.
+
+	self assert: inspector browsePromptedSessionStateKeysReport.
+	self assert: (inspector lastInfoMessage includesSubstring: 'Key 19 (MagLev Finalizer Registry)').
+	self assert: (inspector lastInfoMessage includesSubstring: 'Key 21 (Session State)')
+]
+
+{ #category : 'tests' }
+GbsInspectorTest >> testBrowseObjectsInMemoryReportUsesDiagnosticsFacade [
+	| inspector session |
+	inspector := TestableGbsInspector new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'SystemRepository _listInstancesInMemory:')
+			ifTrue: [ ^ { GbsProxy oop: 9201 session: session. GbsProxy oop: 9202 session: session } ].
+		self fail ].
+
+	inspector instVarNamed: 'session' put: session.
+	inspector
+		enqueueRequestAnswer: '1';
+		enqueueRequestAnswer: '2'.
+
+	self assert: inspector browseObjectsInMemoryReport.
+	self assert: (inspector lastInfoMessage includesSubstring: 'Objects In Memory').
+	self assert: (inspector lastInfoMessage includesSubstring: 'oop=9201')
+]
+
+{ #category : 'tests' }
+GbsInspectorTest >> testBrowseMaglevFinalizerRegistryReportUsesDiagnosticsFacade [
+	| inspector session |
+	inspector := TestableGbsInspector new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 19') ifTrue: [
+			^ GbsProxy oop: 9001 session: session ].
+		(script includesSubstring: 'findReferencesInMemory') ifTrue: [
+			^ { GbsProxy oop: 9101 session: session } ].
+		self fail ].
+
+	inspector instVarNamed: 'session' put: session.
+
+	self assert: inspector browseMaglevFinalizerRegistryReport.
+	self assert: (inspector lastInfoMessage includesSubstring: 'MagLev Finalizer Registry oop=9001 Referencers').
+	self assert: (inspector lastInfoMessage includesSubstring: 'oop=9101')
 ]
 
 { #category : 'tests' }

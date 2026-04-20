@@ -342,6 +342,11 @@ GbsObjectSpaceFacade >> repository [
 	^ session repository
 ]
 
+{ #category : 'accessing' }
+GbsObjectSpaceFacade >> repositoryFacade [
+	^ session objectSpaceRepository
+]
+
 { #category : 'private' }
 GbsObjectSpaceFacade >> referencesToScriptFor: anObject [
 	^ String streamContents: [ :stream |
@@ -391,11 +396,6 @@ GbsObjectSpaceFacade >> sessionStateAt: aKey put: anObject [
 { #category : 'accessing' }
 GbsObjectSpaceFacade >> session: aSession [
 	session := aSession
-]
-
-{ #category : 'querying' }
-GbsObjectSpaceFacade >> maglevFinalizerRegistry [
-	^ self sessionStateAt: 19
 ]
 
 { #category : 'private' }

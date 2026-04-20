@@ -159,9 +159,51 @@ GbsStructuredValueInspectorPresenter >> browseSessionStateAtKey: aKey [
 	sessionStateBlock value: aKey
 ]
 
+{ #category : 'actions' }
+GbsStructuredValueInspectorPresenter >> browseTypedWrapperLifecycleReport [
+	| reportBlock |
+	reportBlock := self propertyAt: #typedWrapperLifecycleReportBlock ifAbsent: [ nil ].
+	reportBlock ifNil: [ ^ self ].
+	self inform: reportBlock value
+]
+
+{ #category : 'actions' }
+GbsStructuredValueInspectorPresenter >> browseStaleTypedWrapperLifecycleReport [
+	| reportBlock |
+	reportBlock := self propertyAt: #staleTypedWrapperReportBlock ifAbsent: [ nil ].
+	reportBlock ifNil: [ ^ self ].
+	self inform: reportBlock value
+]
+
+{ #category : 'actions' }
+GbsStructuredValueInspectorPresenter >> browsePromptedSessionStateKeysReport [
+	| reportBlock rawKeys keys |
+	reportBlock := self propertyAt: #sessionStateKeysReportBlock ifAbsent: [ nil ].
+	reportBlock ifNil: [ ^ self ].
+	rawKeys := self requestInput: 'Session state keys (comma-separated):' initialAnswer: '19'.
+	keys := self parseSessionStateKeysFrom: rawKeys.
+	keys ifNil: [
+		self inform: 'Enter one or more numeric session state keys.'.
+		^ self ].
+	self inform: (reportBlock value: keys)
+]
+
+{ #category : 'actions' }
+GbsStructuredValueInspectorPresenter >> browseObjectsInMemoryReport [
+	| reportBlock start limit |
+	reportBlock := self propertyAt: #objectsInMemoryReportBlock ifAbsent: [ nil ].
+	reportBlock ifNil: [ ^ self ].
+	start := self requestPositiveInteger: 'Object scan start index:' initialAnswer: '1'.
+	start ifNil: [ ^ self ].
+	limit := self requestPositiveInteger: 'Object scan limit:' initialAnswer: '25'.
+	limit ifNil: [ ^ self ].
+	self inform: (reportBlock value: start value: limit)
+]
+
 { #category : 'menus' }
 GbsStructuredValueInspectorPresenter >> menuEntry [
-	^ self newMenu
+	| menu |
+	menu := self newMenu
 		addItem: [ :item |
 			item name: 'Inspect Entry'; action: [ self inspectSelectedEntry ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canInspectSelectedEntry ] ];
@@ -171,7 +213,21 @@ GbsStructuredValueInspectorPresenter >> menuEntry [
 		addItem: [ :item |
 			item name: 'Inspect Session State Key...'; action: [ self browsePromptedSessionStateKey ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canBrowseSessionState ] ];
-		yourself
+		addItem: [ :item |
+			item name: 'Typed Wrapper Lifecycle Report'; action: [ self browseTypedWrapperLifecycleReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: (self propertyAt: #typedWrapperLifecycleReportBlock ifAbsent: [ nil ]) notNil ] ];
+		addItem: [ :item |
+			item name: 'Stale Typed Wrapper Report'; action: [ self browseStaleTypedWrapperLifecycleReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: (self propertyAt: #staleTypedWrapperReportBlock ifAbsent: [ nil ]) notNil ] ];
+		addItem: [ :item |
+			item name: 'Session State Keys Report...'; action: [ self browsePromptedSessionStateKeysReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: (self propertyAt: #sessionStateKeysReportBlock ifAbsent: [ nil ]) notNil ] ];
+		addItem: [ :item |
+			item name: 'Objects In Memory Report...'; action: [ self browseObjectsInMemoryReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: (self propertyAt: #objectsInMemoryReportBlock ifAbsent: [ nil ]) notNil ] ];
+		yourself.
+	self addExtensionEntryMenuItemsTo: menu.
+	^ menu
 ]
 
 { #category : 'menus' }
@@ -186,6 +242,18 @@ GbsStructuredValueInspectorPresenter >> inform: aString [
 	informBlock ifNotNil: [ ^ informBlock value: aString ].
 	UIManager default inform: aString.
 	^ aString
+]
+
+{ #category : 'private' }
+GbsStructuredValueInspectorPresenter >> parseSessionStateKeysFrom: aStringOrNil [
+	| trimmed tokens keys |
+	(aStringOrNil isNil or: [ aStringOrNil trimBoth isEmpty ]) ifTrue: [ ^ nil ].
+	trimmed := aStringOrNil trimBoth.
+	tokens := (trimmed findTokens: ',') collect: #trimBoth thenReject: #isEmpty.
+	tokens isEmpty ifTrue: [ ^ nil ].
+	keys := tokens collect: [ :each |
+		[ each asInteger ] on: Error do: [ ^ nil ] ].
+	^ keys asArray
 ]
 
 { #category : 'accessing' }
@@ -208,19 +276,56 @@ GbsStructuredValueInspectorPresenter >> inspectSelectedEntry [
 	inspectBlock value: row
 ]
 
+{ #category : 'private' }
+GbsStructuredValueInspectorPresenter >> canActivateSelectedEntry [
+	| row activateBlock |
+	row := self selectedRow.
+	activateBlock := self propertyAt: #activateBlock ifAbsent: [ nil ].
+	^ activateBlock notNil
+		and: [ row notNil
+		and: [ (row at: 1 ifAbsent: [ '' ]) asString ~= '__truncated__' ] ]
+]
+
+{ #category : 'actions' }
+GbsStructuredValueInspectorPresenter >> activateSelectedEntry [
+	| row activateBlock |
+	self canActivateSelectedEntry ifFalse: [ ^ self ].
+	row := self selectedRow.
+	activateBlock := self propertyAt: #activateBlock ifAbsent: [ nil ].
+	activateBlock value: row
+]
+
 { #category : 'menus' }
 GbsStructuredValueInspectorPresenter >> menuEntry [
-	^ self newMenu
+	| menu |
+	menu := self newMenu
 		addItem: [ :item |
 			item name: 'Inspect Entry'; action: [ self inspectSelectedEntry ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canInspectSelectedEntry ] ];
+		addItem: [ :item |
+			item name: 'Activate Entry'; action: [ self activateSelectedEntry ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canActivateSelectedEntry ] ];
 		addItem: [ :item |
 			item name: 'Referencers'; action: [ self browseReferencersForSelectedEntry ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canBrowseReferencersForSelectedEntry ] ];
 		addItem: [ :item |
 			item name: 'Inspect Session State Key...'; action: [ self browsePromptedSessionStateKey ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canBrowseSessionState ] ];
-		yourself
+		addItem: [ :item |
+			item name: 'Typed Wrapper Lifecycle Report'; action: [ self browseTypedWrapperLifecycleReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: (self propertyAt: #typedWrapperLifecycleReportBlock ifAbsent: [ nil ]) notNil ] ];
+		addItem: [ :item |
+			item name: 'Stale Typed Wrapper Report'; action: [ self browseStaleTypedWrapperLifecycleReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: (self propertyAt: #staleTypedWrapperReportBlock ifAbsent: [ nil ]) notNil ] ];
+		addItem: [ :item |
+			item name: 'Session State Keys Report...'; action: [ self browsePromptedSessionStateKeysReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: (self propertyAt: #sessionStateKeysReportBlock ifAbsent: [ nil ]) notNil ] ];
+		addItem: [ :item |
+			item name: 'Objects In Memory Report...'; action: [ self browseObjectsInMemoryReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: (self propertyAt: #objectsInMemoryReportBlock ifAbsent: [ nil ]) notNil ] ];
+		yourself.
+	self addExtensionEntryMenuItemsTo: menu.
+	^ menu
 ]
 
 { #category : 'menus' }
@@ -267,6 +372,18 @@ GbsStructuredValueInspectorPresenter >> requestInput: prompt initialAnswer: defa
 	requestBlock := self propertyAt: #requestInputBlock ifAbsent: [ nil ].
 	requestBlock ifNotNil: [ ^ requestBlock value: prompt value: defaultString ].
 	^ UIManager default request: prompt initialAnswer: defaultString
+]
+
+{ #category : 'private' }
+GbsStructuredValueInspectorPresenter >> requestPositiveInteger: promptString initialAnswer: defaultString [
+	| rawValue |
+	rawValue := self requestInput: promptString initialAnswer: defaultString.
+	(rawValue isNil or: [ rawValue trimBoth isEmpty ]) ifTrue: [ ^ nil ].
+	^ [ | value |
+		value := rawValue trimBoth asInteger.
+		value > 0 ifTrue: [ value ] ifFalse: [ nil ] ]
+		on: Error
+		do: [ nil ]
 ]
 
 { #category : 'private' }

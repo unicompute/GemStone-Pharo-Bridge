@@ -1,8 +1,7 @@
 Class {
 	#name : 'GbsRemoteMethodObject',
-	#superclass : 'Object',
+	#superclass : 'GbsRemoteUnboundMethodObject',
 	#instVars : [
-		'mirror',
 		'receiverProxy'
 	],
 	#category : 'GemStone-GBS-Converted',
@@ -90,6 +89,19 @@ GbsRemoteMethodObject >> bindTo: aReceiver [
 GbsRemoteMethodObject >> argumentCount [
 	^ self selector numArgs
 ]
+
+{ #category : 'querying' }
+GbsRemoteMethodObject >> arity [
+	^ self argumentCount
+]
+
+{ #category : 'querying' }
+GbsRemoteMethodObject >> bindingDisplayString [
+	^ self isBound
+		ifTrue: [ 'bound' ]
+		ifFalse: [ 'unbound' ]
+]
+
 
 { #category : 'invocation' }
 GbsRemoteMethodObject >> call [
@@ -364,9 +376,7 @@ GbsRemoteMethodObject >> value: firstArgument value: secondArgument value: third
 
 { #category : 'binding' }
 GbsRemoteMethodObject >> unbind [
-	^ self class
-		onMirror: mirror
-		receiver: nil
+	^ mirror asUnboundMethodObject
 ]
 
 { #category : 'invocation' }

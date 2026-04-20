@@ -545,6 +545,8 @@ GbsBrowserTest >> testBrowseMethodInfoUsesRemoteMethodMirrorMetadata [
 	self assert: (browser lastInfoMessage includesSubstring: 'Side: instance').
 	self assert: (browser lastInfoMessage includesSubstring: 'Owner: DemoClass').
 	self assert: (browser lastInfoMessage includesSubstring: 'Selector: foo').
+	self assert: (browser lastInfoMessage includesSubstring: 'Binding: unbound').
+	self assert: (browser lastInfoMessage includesSubstring: 'Arity: 0').
 	self assert: (browser lastInfoMessage includesSubstring: 'Protocol: testing').
 	self assert: (browser lastInfoMessage includesSubstring: 'Package: Demo-Package').
 	self assert: (browser lastInfoMessage includesSubstring: 'Source location: DemoClass>>foo').
@@ -586,6 +588,53 @@ GbsBrowserTest >> testBrowseTypedWrapperAutoloadReportUsesBrowserSessionRegistry
 ]
 
 { #category : 'tests' }
+GbsBrowserTest >> testBrowseTypedWrapperLifecycleReportUsesBrowserSessionReport [
+	| browser session |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #typedWrapperLifecycleReportText put: [ 'Typed Wrapper Lifecycle', String cr, String cr, 'No typed wrappers generated.' ].
+	browser session: session.
+
+	self assert: browser browseTypedWrapperLifecycleReport.
+	self assert: (browser lastInfoMessage includesSubstring: 'Typed Wrapper Lifecycle')
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowseStaleTypedWrapperLifecycleReportUsesStaleEntries [
+	| browser session stale current |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	stale := GbsTypedWrapperLifecycleEntry
+		wrapperClass: GbsTypedProxy
+		clientName: 'DemoClient'
+		serverName: 'DemoServer'
+		source: 'remote'
+		localVersion: 1
+		localNumberOfVersions: 1
+		remoteVersion: 2
+		remoteNumberOfVersions: 2
+		status: #stale.
+	current := GbsTypedWrapperLifecycleEntry
+		wrapperClass: GbsTypedProxy
+		clientName: 'FreshClient'
+		serverName: 'FreshServer'
+		source: 'remote'
+		localVersion: 1
+		localNumberOfVersions: 1
+		remoteVersion: 1
+		remoteNumberOfVersions: 1
+		status: #current.
+	session stubs at: #typedWrapperLifecycleReport put: [
+		GbsTypedWrapperLifecycleReport entries: { stale. current } ].
+	browser session: session.
+
+	self assert: browser browseStaleTypedWrapperLifecycleReport.
+	self assert: (browser lastInfoMessage includesSubstring: 'Typed Wrapper Lifecycle').
+	self assert: (browser lastInfoMessage includesSubstring: 'DemoClient').
+	self deny: (browser lastInfoMessage includesSubstring: 'FreshClient')
+]
+
+{ #category : 'tests' }
 GbsBrowserTest >> testBrowsePromptedSessionStateKeyRejectsNonNumericInput [
 	| browser session |
 	browser := TestableGbsBrowser new.
@@ -611,6 +660,212 @@ GbsBrowserTest >> testBrowsePromptedSessionStateKeyUsesSessionFacade [
 
 	self assert: browser browsePromptedSessionStateKey.
 	self assert: browser lastInspectedOop equals: 9301
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowseRubyLoadPathReportUsesRuntimeReport [
+	| browser session |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('/opt/demo/lib' '/opt/demo/app') ].
+		(script includesSubstring: 'key := 19') ifTrue: [ ^ nil ].
+		self fail ].
+	browser session: session.
+
+	self assert: browser browseRubyLoadPathReport.
+	self assert: (browser lastInfoMessage includesSubstring: 'Ruby Runtime').
+	self assert: (browser lastInfoMessage includesSubstring: '$LOAD_PATH').
+	self assert: (browser lastInfoMessage includesSubstring: '/opt/demo/lib')
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowseRubyLoadedFeaturesReportUsesRuntimeReport [
+	| browser session |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyContext default transientLoadedFeatures: 1'
+			ifTrue: [ ^ #('json' 'set') ].
+		(script includesSubstring: 'key := 19') ifTrue: [ ^ nil ].
+		self fail ].
+	browser session: session.
+
+	self assert: browser browseRubyLoadedFeaturesReport.
+	self assert: (browser lastInfoMessage includesSubstring: 'Loaded Features').
+	self assert: (browser lastInfoMessage includesSubstring: 'json')
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowseRubyPersistentLoadedFeaturesReportUsesRuntimeReport [
+	| browser session |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyContext default persistentLoadedFeatures: 1'
+			ifTrue: [ ^ #('bigdecimal') ].
+		(script includesSubstring: 'key := 19') ifTrue: [ ^ nil ].
+		self fail ].
+	browser session: session.
+
+	self assert: browser browseRubyPersistentLoadedFeaturesReport.
+	self assert: (browser lastInfoMessage includesSubstring: 'Persistent Loaded Features').
+	self assert: (browser lastInfoMessage includesSubstring: 'bigdecimal')
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowseTopLevelAutoloadRegistrationsReportUsesRuntimeReport [
+	| browser session |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #() ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #() ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #() ].
+		(script includesSubstring: 'rubyAutoloadAssociationAtOrNil:env:')
+			ifTrue: [ ^ { #('DemoConst' nil false nil 'demo/persistent_file' true true) } ].
+		(script includesSubstring: 'key := 19') ifTrue: [ ^ nil ].
+		self fail ].
+	browser session: session.
+
+	self assert: browser browseTopLevelAutoloadRegistrationsReport.
+	self assert: (browser lastInfoMessage includesSubstring: 'Autoload Registrations').
+	self assert: (browser lastInfoMessage includesSubstring: 'DemoConst -> demo/persistent_file [Pending] {Transient+Persistent}')
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowseRubyRuntimeProvenanceGraphUsesRuntimeReport [
+	| browser session |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('/opt/demo/lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('app/models/invoice.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #() ].
+		(script includesSubstring: 'rubyAutoloadAssociationAtOrNil:env:') ifTrue: [ ^ #() ].
+		(script includesSubstring: 'key := 19') ifTrue: [ ^ nil ].
+		self fail ].
+	browser session: session.
+
+	self assert: browser browseRubyRuntimeProvenanceGraph.
+	self assert: (browser lastInfoMessage includesSubstring: 'Ruby Runtime Provenance').
+	self assert: (browser lastInfoMessage includesSubstring: 'Transient Feature -> app/models/invoice.rb')
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowseRubyRuntimeProvenanceBrowserOpensStructuredGraph [
+	| browser session |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('/opt/demo/lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('app/models/invoice.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #() ].
+		(script includesSubstring: 'rubyAutoloadAssociationAtOrNil:env:') ifTrue: [ ^ #() ].
+		(script includesSubstring: 'key := 19') ifTrue: [ ^ nil ].
+		self fail ].
+	browser session: session.
+
+	self assert: browser browseRubyRuntimeProvenanceBrowser.
+	self assert: browser lastInfoMessage equals: 'Ruby Runtime Provenance'.
+	self assert: browser lastProvenanceGraph notNil.
+	self assert: browser lastProvenanceGraph browserRows size > 0
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowseRubyRuntimeProvenanceActionChooserExecutesSelectedAction [
+	| browser session |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('/opt/demo/lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('app/models/invoice.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #() ].
+		(script includesSubstring: 'rubyAutoloadAssociationAtOrNil:env:') ifTrue: [ ^ #() ].
+		(script includesSubstring: 'RubyContext default requireFileNamed: ''app/models/invoice.rb'' env: 1')
+			ifTrue: [ ^ 'required' ].
+		(script includesSubstring: 'key := 19') ifTrue: [ ^ nil ].
+		self fail ].
+	browser session: session.
+	browser enqueueChooseAnswer: 1.
+
+	self assert: browser browseRubyRuntimeProvenanceActionChooser.
+	self assert: (browser lastInfoMessage includesSubstring: 'Executed require app/models/invoice.rb => ''required''').
+	self assert: (browser lastInfoMessage includesSubstring: 'Ruby Runtime Provenance')
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowseObjectLogReportUsesFacade [
+	| browser session |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'ObjectLogEntry objectLog') ifTrue: [
+			^ { { 1. 4. 'Entry saved'. 1234. '2026-01-01T10:00:00Z'. 'runtime'. true. nil. nil } } ].
+		self fail ].
+	browser session: session.
+
+	self assert: browser browseObjectLogReport.
+	self assert: (browser lastInfoMessage includesSubstring: 'ObjectLog').
+	self assert: (browser lastInfoMessage includesSubstring: 'Entry saved')
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowseObjectLogBrowserOpensStructuredLog [
+	| browser session |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'ObjectLogEntry objectLog') ifTrue: [
+			^ { { 1. 2. 'Failure'. 88. '2026-01-01T10:00:00Z'. 'debug'. true. nil. nil } } ].
+		self fail ].
+	browser session: session.
+
+	self assert: browser browseObjectLogBrowser.
+	self assert: browser lastInfoMessage equals: 'ObjectLog'.
+	self assert: browser lastObjectLog notNil.
+	self assert: browser lastObjectLog browserRows size equals: 1
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowsePromptedSessionStateKeysReportUsesDiagnosticsReport [
+	| browser session |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 19')
+			ifTrue: [ ^ (IdentityDictionary new
+				at: #lazyThing put: 'registered';
+				yourself) ].
+		(script includesSubstring: 'key := 21')
+			ifTrue: [ ^ 'cache' ].
+		self fail ].
+	browser session: session.
+	browser enqueueRequestAnswer: '19, 21'.
+
+	self assert: browser browsePromptedSessionStateKeysReport.
+	self assert: (browser lastInfoMessage includesSubstring: 'Session State').
+	self assert: (browser lastInfoMessage includesSubstring: 'Key 19 (MagLev Finalizer Registry): IdentityDictionary size=1').
+	self assert: (browser lastInfoMessage includesSubstring: 'Key 21 (Session State): ByteString')
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testBrowseObjectsInMemoryReportUsesDiagnosticsReport [
+	| browser session |
+	browser := TestableGbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		(self assert: (script includesSubstring: 'startIndex := 3')).
+		(self assert: (script includesSubstring: 'limitValue := 2')).
+		^ { GbsProxy oop: 9101 session: session. GbsProxy oop: 9102 session: session } ].
+	browser session: session.
+	browser enqueueRequestAnswer: '3'.
+	browser enqueueRequestAnswer: '2'.
+
+	self assert: browser browseObjectsInMemoryReport.
+	self assert: (browser lastInfoMessage includesSubstring: 'Objects In Memory').
+	self assert: (browser lastInfoMessage includesSubstring: 'oop=9101').
+	self assert: (browser lastInfoMessage includesSubstring: 'oop=9102')
 ]
 
 { #category : 'tests' }

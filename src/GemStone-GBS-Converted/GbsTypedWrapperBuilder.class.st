@@ -120,7 +120,7 @@ GbsTypedWrapperBuilder class >> forwardingSelectorsForClientBehavior: aBehavior 
 			do: [ :selector |
 				(seen includes: selector) ifFalse: [
 					seen add: selector.
-					(wrapperClass canUnderstand: selector) ifFalse: [
+					(self shouldGenerateForwardingSelector: selector on: wrapperClass) ifTrue: [
 						selectors add: selector ] ] ] ].
 	^ selectors asArray
 ]
@@ -250,9 +250,7 @@ GbsTypedWrapperBuilder class >> removeGeneratedForwardingMethodsFrom: wrapperCla
 	| keepSet |
 	keepSet := selectorsToKeep asSet.
 	wrapperClass methodDict keys do: [ :selector |
-		((((wrapperClass >> selector) respondsTo: #protocol)
-			ifTrue: [ (wrapperClass >> selector) protocol ]
-			ifFalse: [ nil ]) ifNil: [ '' ]) = 'generated forwarding'
+		(self methodProtocolNameFor: selector on: wrapperClass) = 'generated forwarding'
 				ifTrue: [
 					(keepSet includes: selector) ifFalse: [
 						wrapperClass removeSelector: selector ] ] ]
@@ -296,9 +294,30 @@ GbsTypedWrapperBuilder class >> selectorSymbolsFromProtocolEntries: protocolEntr
 		(entry at: 2 ifAbsent: [ #() ]) do: [ :each |
 			| selector |
 			selector := each asString asSymbol.
-			(wrapperClass canUnderstand: selector) ifFalse: [
+			(self shouldGenerateForwardingSelector: selector on: wrapperClass) ifTrue: [
 				selectors add: selector ] ] ].
 	^ selectors asArray
+]
+
+{ #category : 'generation' }
+GbsTypedWrapperBuilder class >> methodProtocolNameFor: aSelector on: wrapperClass [
+	| protocol |
+	protocol := ((wrapperClass >> aSelector) respondsTo: #protocol)
+		ifTrue: [ (wrapperClass >> aSelector) protocol ]
+		ifFalse: [ nil ].
+	protocol ifNil: [ ^ '' ].
+	(protocol respondsTo: #name) ifTrue: [ ^ protocol name asString ].
+	^ protocol asString
+]
+
+{ #category : 'generation' }
+GbsTypedWrapperBuilder class >> shouldGenerateForwardingSelector: aSelector on: wrapperClass [
+	| localMethod protocol |
+	(wrapperClass canUnderstand: aSelector) ifFalse: [ ^ true ].
+	localMethod := wrapperClass methodDict at: aSelector ifAbsent: [ nil ].
+	localMethod ifNil: [ ^ false ].
+	protocol := self methodProtocolNameFor: aSelector on: wrapperClass.
+	^ protocol = 'generated forwarding'
 ]
 
 { #category : 'generation' }

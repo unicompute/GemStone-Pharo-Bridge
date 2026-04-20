@@ -48,6 +48,13 @@ GbsRepositoryFacade >> classMethodMirrorForClass: aClassOrName selector: aSelect
 ]
 
 { #category : 'querying' }
+GbsRepositoryFacade >> classMethodMirrorForClassNamed: aClassName selector: aSelector [
+	^ self
+		classMethodMirrorForClass: aClassName
+		selector: aSelector
+]
+
+{ #category : 'querying' }
 GbsRepositoryFacade >> classMethodObjectForClass: aClassOrName selector: aSelector [
 	^ GbsRemoteMethodObject
 		onMirror: (self
@@ -56,16 +63,24 @@ GbsRepositoryFacade >> classMethodObjectForClass: aClassOrName selector: aSelect
 ]
 
 { #category : 'querying' }
-GbsRepositoryFacade >> classMethodMirrorForClassNamed: aClassName selector: aSelector [
-	^ self
-		classMethodMirrorForClass: aClassName
-		selector: aSelector
+GbsRepositoryFacade >> classUnboundMethodObjectForClass: aClassOrName selector: aSelector [
+	^ GbsRemoteUnboundMethodObject
+		onMirror: (self
+			classMethodMirrorForClass: aClassOrName
+			selector: aSelector)
 ]
 
 { #category : 'querying' }
 GbsRepositoryFacade >> classMethodObjectForClassNamed: aClassName selector: aSelector [
 	^ self
 		classMethodObjectForClass: aClassName
+		selector: aSelector
+]
+
+{ #category : 'querying' }
+GbsRepositoryFacade >> classUnboundMethodObjectForClassNamed: aClassName selector: aSelector [
+	^ self
+		classUnboundMethodObjectForClass: aClassName
 		selector: aSelector
 ]
 
@@ -320,6 +335,13 @@ GbsRepositoryFacade >> methodMirrorForClass: aClassOrName selector: aSelector [
 ]
 
 { #category : 'querying' }
+GbsRepositoryFacade >> methodMirrorForClassNamed: aClassName selector: aSelector [
+	^ self
+		methodMirrorForClass: aClassName
+		selector: aSelector
+]
+
+{ #category : 'querying' }
 GbsRepositoryFacade >> methodObjectForClass: aClassOrName selector: aSelector [
 	^ GbsRemoteMethodObject
 		onMirror: (self
@@ -328,16 +350,24 @@ GbsRepositoryFacade >> methodObjectForClass: aClassOrName selector: aSelector [
 ]
 
 { #category : 'querying' }
-GbsRepositoryFacade >> methodMirrorForClassNamed: aClassName selector: aSelector [
-	^ self
-		methodMirrorForClass: aClassName
-		selector: aSelector
+GbsRepositoryFacade >> unboundMethodObjectForClass: aClassOrName selector: aSelector [
+	^ GbsRemoteUnboundMethodObject
+		onMirror: (self
+			methodMirrorForClass: aClassOrName
+			selector: aSelector)
 ]
 
 { #category : 'querying' }
 GbsRepositoryFacade >> methodObjectForClassNamed: aClassName selector: aSelector [
 	^ self
 		methodObjectForClass: aClassName
+		selector: aSelector
+]
+
+{ #category : 'querying' }
+GbsRepositoryFacade >> unboundMethodObjectForClassNamed: aClassName selector: aSelector [
+	^ self
+		unboundMethodObjectForClass: aClassName
 		selector: aSelector
 ]
 
@@ -687,5 +717,5 @@ GbsRepositoryFacade >> rootAt: aKey put: aValue [
 
 { #category : 'private' }
 GbsRepositoryFacade >> rootKey [
-	^ #GbsPersistentRoot
+	^ #GbsBridgeRoot
 ]

@@ -134,8 +134,14 @@ GbsSession >> abortTransaction [
   self isLoggedIn ifFalse: [ GbsError signal: 'Not logged in.' ].
 
   result := self gciAbort.
-  result = 1 ifFalse: [ "Abort rarely fails unless the connection is dead, but we should catch it."
-    GbsError signal: 'Failed to abort transaction.' ].
+  ((result = 1) or: [ result = true ]) ifFalse: [
+    "Some local stones report a falsey GCI abort result even though the
+    abort succeeds. Fall back to an explicit Smalltalk abortTransaction
+    before treating the connection as broken."
+    [ self evaluate: 'System abortTransaction. true' ]
+      on: Error
+      do: [ GbsError signal: 'Failed to abort transaction.' ] ].
+  GbsSessionManager invalidateStaleTypedWrapperClassesForSession: self.
   self invalidateRepositoryRoots.
   ^ true
 ]
@@ -204,10 +210,11 @@ GbsSession >> checkSignals [
 	].
 ]
 
-{ #category : 'transactions' }
+{ #category : 'deprecated' }
 GbsSession >> commit [
-    "Compatibility alias used by older GBS examples."
-    ^ self commitTransaction
+	"Deprecated. Use #commitTransaction."
+	self deprecated: 'Use #commitTransaction.'.
+	^ self commitTransaction
 ]
 
 { #category : 'transactions' }
@@ -218,8 +225,28 @@ GbsSession >> commitTransaction [
 	self isLoggedIn ifFalse: [ GbsError signal: 'Not logged in.' ].
 	
 	result := self gciCommit.
-	result = 1 ifTrue: [ self invalidateRepositoryRoots ].
+	result = 1 ifTrue: [
+		GbsSessionManager invalidateStaleTypedWrapperClassesForSession: self.
+		self invalidateRepositoryRoots ].
 	^ result = 1
+]
+
+{ #category : 'transactions' }
+GbsSession >> commitTransactionOrSignalConflict [
+	(self commitTransaction)
+		ifTrue: [ ^ true ].
+	GbsCommitConflictError signal: 'GemStone commit conflict.'
+]
+
+{ #category : 'transactions' }
+GbsSession >> commitTransactionWithRetryCount: aRetryCount [
+	| retries attempts |
+	retries := (aRetryCount ifNil: [ 0 ] ifNotNil: [ aRetryCount asInteger ]) max: 0.
+	attempts := retries + 1.
+	1 to: attempts do: [ :attempt |
+		(self commitTransaction) ifTrue: [ ^ true ].
+		attempt < attempts ifTrue: [ self abortTransaction ] ].
+	GbsCommitConflictError signal: 'GemStone commit conflict after ', attempts printString, ' attempts.'
 ]
 
 { #category : 'transactions' }
@@ -842,11 +869,21 @@ GbsSession >> fetchRemoteUsers [
 GbsSession >> fetchTranscriptLogs [
 	| rawText |
 	
-	"1. Use our proven pipeline which correctly passes 20 (nil) as the context"
-	rawText := self executeAndFetch: 'Transcript fetchAndClear'.
-	
-	"2. If GemStone returns nil (no new logs), executeAndFetch returns an Error string. 
-	    We intercept that here and cleanly return an empty string to the UI."
+	rawText := self executeAndFetch: '[
+		| fetched log text |
+		fetched := (Transcript respondsTo: #fetchAndClear)
+			ifTrue: [ [ Transcript fetchAndClear ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		fetched ifNotNil: [ ^ fetched ifNil: [ '''' ] ].
+		log := SessionTemps current at: #PharoTranscriptLog ifAbsent: [ OrderedCollection new ].
+		text := String streamContents: [ :stream |
+			log do: [ :each |
+				stream nextPutAll: each asString.
+				stream cr ] ].
+		SessionTemps current at: #PharoTranscriptLog put: OrderedCollection new.
+		text
+	] value'.
+
 	(rawText beginsWith: 'Error:') ifTrue: [ ^ '' ].
 	
 	^ rawText
@@ -1220,8 +1257,14 @@ GbsSession >> loginStone: stoneName user: username password: password [
           Transcript show: '[GemStone Login Error]'; cr.
           Transcript show: '  Stone: ', stoneName; cr.
           Transcript show: '  User: ', username; cr.
-          Transcript show: '  Error Number: ', errorStruct number printString; cr.
-          Transcript show: '  Error Message: ', errorStruct message; cr.
+          Transcript
+			show: '  Error Number: ';
+			show: ([ errorStruct number printString ] on: Exception do: [ 'n/a' ]);
+			cr.
+          Transcript
+			show: '  Error Message: ';
+			show: ([ errorStruct message ] on: Exception do: [ 'Unknown login failure' ]);
+			cr.
           
           "Interpret the error message for netldi issues"
           interpretedError := self interpretLoginError: errorStruct.
@@ -1256,6 +1299,7 @@ GbsSession >> resetAfterLogout [
 	sessionId := nil.
 	self clearProxyCache.
 	self clearNamedObjectCache.
+	GbsSessionManager clearTypedWrapperAutoloadRegistrationsForSession: self.
 	self invalidateRepositoryRoots.
 	parameters ifNotNil: [
 		parameters sessionId: nil.
@@ -1547,14 +1591,6 @@ GbsSession >> classMethodMirrorForClass: aClassOrName selector: aSelector [
 ]
 
 { #category : 'repository' }
-GbsSession >> classMethodObjectForClass: aClassOrName selector: aSelector [
-	^ self
-		repository
-		classMethodObjectForClass: aClassOrName
-		selector: aSelector
-]
-
-{ #category : 'repository' }
 GbsSession >> classMethodMirrorForClassNamed: aClassName selector: aSelector [
 	^ self
 		repository
@@ -1563,10 +1599,34 @@ GbsSession >> classMethodMirrorForClassNamed: aClassName selector: aSelector [
 ]
 
 { #category : 'repository' }
+GbsSession >> classMethodObjectForClass: aClassOrName selector: aSelector [
+	^ self
+		repository
+		classMethodObjectForClass: aClassOrName
+		selector: aSelector
+]
+
+{ #category : 'repository' }
+GbsSession >> classUnboundMethodObjectForClass: aClassOrName selector: aSelector [
+	^ self
+		repository
+		classUnboundMethodObjectForClass: aClassOrName
+		selector: aSelector
+]
+
+{ #category : 'repository' }
 GbsSession >> classMethodObjectForClassNamed: aClassName selector: aSelector [
 	^ self
 		repository
 		classMethodObjectForClassNamed: aClassName
+		selector: aSelector
+]
+
+{ #category : 'repository' }
+GbsSession >> classUnboundMethodObjectForClassNamed: aClassName selector: aSelector [
+	^ self
+		repository
+		classUnboundMethodObjectForClassNamed: aClassName
 		selector: aSelector
 ]
 
@@ -1754,18 +1814,18 @@ GbsSession >> migrateInstancesWithSubclassesOf: aTopClassOrName allowAbort: aBoo
 ]
 
 { #category : 'repository' }
+GbsSession >> chunkedMigrationRunnerFrom: aSourceClassOrName to: aTargetClassOrName [
+	^ GbsChunkedMigrationRunner
+		on: self
+		source: aSourceClassOrName
+		target: aTargetClassOrName
+]
+
+{ #category : 'repository' }
 GbsSession >> methodMirrorForClass: aClassOrName selector: aSelector [
 	^ self
 		repository
 		methodMirrorForClass: aClassOrName
-		selector: aSelector
-]
-
-{ #category : 'repository' }
-GbsSession >> methodObjectForClass: aClassOrName selector: aSelector [
-	^ self
-		repository
-		methodObjectForClass: aClassOrName
 		selector: aSelector
 ]
 
@@ -1778,10 +1838,34 @@ GbsSession >> methodMirrorForClassNamed: aClassName selector: aSelector [
 ]
 
 { #category : 'repository' }
+GbsSession >> methodObjectForClass: aClassOrName selector: aSelector [
+	^ self
+		repository
+		methodObjectForClass: aClassOrName
+		selector: aSelector
+]
+
+{ #category : 'repository' }
+GbsSession >> unboundMethodObjectForClass: aClassOrName selector: aSelector [
+	^ self
+		repository
+		unboundMethodObjectForClass: aClassOrName
+		selector: aSelector
+]
+
+{ #category : 'repository' }
 GbsSession >> methodObjectForClassNamed: aClassName selector: aSelector [
 	^ self
 		repository
 		methodObjectForClassNamed: aClassName
+		selector: aSelector
+]
+
+{ #category : 'repository' }
+GbsSession >> unboundMethodObjectForClassNamed: aClassName selector: aSelector [
+	^ self
+		repository
+		unboundMethodObjectForClassNamed: aClassName
 		selector: aSelector
 ]
 
@@ -1894,49 +1978,6 @@ GbsSession >> namedObjectAutoloadReportText [
 					cr ] ]
 ]
 
-{ #category : 'maglev-runtime' }
-GbsSession >> rubyLoadPath [
-	^ self executeScriptAndFetchObject: 'RubyFile loadPath: 1'
-]
-
-{ #category : 'maglev-runtime' }
-GbsSession >> rubyLoadedFeatures [
-	^ self executeScriptAndFetchObject: 'RubyContext default transientLoadedFeatures: 1'
-]
-
-{ #category : 'maglev-runtime' }
-GbsSession >> rubyPersistentLoadedFeatures [
-	^ self executeScriptAndFetchObject: 'RubyContext default persistentLoadedFeatures: 1'
-]
-
-{ #category : 'maglev-runtime' }
-GbsSession >> rubyRequireFileNamed: aString [
-	^ self executeScriptAndFetchObject: (String streamContents: [ :stream |
-		stream
-			nextPutAll: 'RubyContext default requireFileNamed: ';
-			nextPutAll: (self marshalArgumentToScript: aString);
-			nextPutAll: ' env: 1' ])
-]
-
-{ #category : 'maglev-runtime' }
-GbsSession >> rubyLoadFileNamed: aString [
-	^ self executeScriptAndFetchObject: (String streamContents: [ :stream |
-		stream
-			nextPutAll: 'RubyContext default loadFileNamed: ';
-			nextPutAll: (self marshalArgumentToScript: aString);
-			nextPutAll: ' env: 1' ])
-]
-
-{ #category : 'maglev-runtime' }
-GbsSession >> clearPersistentRubyLoadedFeatures [
-	^ self executeScriptAndFetchObject: 'RubyContext clear_persistent_LOADED_FEATURES'
-]
-
-{ #category : 'maglev-runtime' }
-GbsSession >> rubyRuntime [
-	^ GbsRubyRuntimeFacade on: self
-]
-
 { #category : 'named-objects' }
 GbsSession >> hasCachedNamedObjectNamed: aName [
 	| symbol |
@@ -1997,6 +2038,46 @@ GbsSession >> objectSpace [
 { #category : 'object space' }
 GbsSession >> objectSpaceDiagnostics [
 	^ GbsObjectSpaceDiagnosticsFacade on: self
+]
+
+{ #category : 'object space' }
+GbsSession >> objectSpaceDiagnosticsReport [
+	^ self objectSpaceDiagnostics report
+]
+
+{ #category : 'typed wrappers' }
+GbsSession >> typedWrapperLifecycleEntries [
+	^ GbsSessionManager typedWrapperLifecycleEntriesForSession: self
+]
+
+{ #category : 'typed wrappers' }
+GbsSession >> typedWrapperLifecycleObjects [
+	^ GbsSessionManager typedWrapperLifecycleObjectsForSession: self
+]
+
+{ #category : 'typed wrappers' }
+GbsSession >> typedWrapperLifecycleReport [
+	^ GbsSessionManager typedWrapperLifecycleReportForSession: self
+]
+
+{ #category : 'typed wrappers' }
+GbsSession >> typedWrapperLifecycleReportText [
+	^ GbsSessionManager typedWrapperLifecycleReportTextForSession: self
+]
+
+{ #category : 'typed wrappers' }
+GbsSession >> invalidateStaleTypedWrapperClasses [
+	^ GbsSessionManager invalidateStaleTypedWrapperClassesForSession: self
+]
+
+{ #category : 'typed wrappers' }
+GbsSession >> refreshStaleTypedWrapperClasses [
+	^ GbsSessionManager refreshStaleTypedWrapperClassesForSession: self
+]
+
+{ #category : 'typed wrappers' }
+GbsSession >> refreshAllTypedWrapperClasses [
+	^ GbsSessionManager refreshAllTypedWrapperClassesForSession: self
 ]
 
 { #category : 'object space' }
@@ -2088,11 +2169,6 @@ GbsSession >> sessionStateAt: aKey put: anObject [
 ]
 
 { #category : 'object space' }
-GbsSession >> maglevFinalizerRegistry [
-	^ self objectSpace maglevFinalizerRegistry
-]
-
-{ #category : 'object space' }
 GbsSession >> referencesTo: anObject [
 	^ self objectSpace referencesTo: anObject
 ]
@@ -2164,6 +2240,18 @@ GbsSession >> published [
 	^ self sessionForwarderFor: #Published
 ]
 
+{ #category : 'named-objects' }
+GbsSession >> bridgeRoot [
+	^ GbsBridgeRootFacade on: self
+]
+
+{ #category : 'deprecated' }
+GbsSession >> persistentRoot [
+	"Deprecated. Use #bridgeRoot."
+	self deprecated: 'Use #bridgeRoot.'.
+	^ self bridgeRoot
+]
+
 { #category : 'repository' }
 GbsSession >> repository [
 	^ GbsRepositoryFacade on: self
@@ -2201,23 +2289,31 @@ GbsSession >> repositoryRootFacadeForKey: aRootKey path: aCollection [
 	^ facade
 ]
 
-{ #category : 'repository' }
+{ #category : 'deprecated' }
 GbsSession >> root [
+	"Deprecated. Use #repository root."
+	self deprecated: 'Use #repository root.'.
 	^ self repository root
 ]
 
-{ #category : 'repository' }
+{ #category : 'deprecated' }
 GbsSession >> rootAt: aKey [
+	"Deprecated. Use #repository rootAt:."
+	self deprecated: 'Use #repository rootAt:.'.
 	^ self repository rootAt: aKey
 ]
 
-{ #category : 'repository' }
+{ #category : 'deprecated' }
 GbsSession >> rootAt: aKey ifAbsent: aBlock [
+	"Deprecated. Use #repository rootAt:ifAbsent:."
+	self deprecated: 'Use #repository rootAt:ifAbsent:.'.
 	^ self repository rootAt: aKey ifAbsent: aBlock
 ]
 
-{ #category : 'repository' }
+{ #category : 'deprecated' }
 GbsSession >> rootAt: aKey put: aValue [
+	"Deprecated. Use #repository rootAt:put:."
+	self deprecated: 'Use #repository rootAt:put:.'.
 	^ self repository rootAt: aKey put: aValue
 ]
 
@@ -2227,6 +2323,12 @@ GbsSession >> sessionForwarderFor: aSymbol [
 	^ self
 		namedObjectAt: aSymbol
 		ifAbsent: [ self error: aSymbol printString , ' not defined' ]
+]
+
+{ #category : 'materialization' }
+GbsSession >> materializeRuntimeValue: anObject [
+	anObject ifNil: [ ^ nil ].
+	^ anObject
 ]
 
 { #category : 'named-objects' }
@@ -2268,6 +2370,33 @@ GbsSession >> userGlobals [
 	^ self sessionForwarderFor: #UserGlobals
 ]
 
+{ #category : 'named-objects' }
+GbsSession >> smalltalk [
+	^ GbsSmalltalkFacade on: self
+]
+
+{ #category : 'named-objects' }
+GbsSession >> symbolDictionaryNamed: aName [
+	^ GbsSymbolDictionaryFacade on: self name: aName
+]
+
+{ #category : 'object space' }
+GbsSession >> objectSpaceRepository [
+	^ GbsObjectSpaceRepositoryFacade on: self
+]
+
+{ #category : 'transactions' }
+GbsSession >> withCommitRetryCount: aRetryCount do: aBlock [
+	| retries attempts result |
+	retries := (aRetryCount ifNil: [ 0 ] ifNotNil: [ aRetryCount asInteger ]) max: 0.
+	attempts := retries + 1.
+	1 to: attempts do: [ :attempt |
+		result := aBlock value.
+		(self commitTransaction) ifTrue: [ ^ result ].
+		attempt < attempts ifTrue: [ self abortTransaction ] ].
+	GbsCommitConflictError signal: 'GemStone commit conflict after ', attempts printString, ' attempts.'
+]
+
 { #category : 'error handling' }
 GbsSession >> interpretLoginError: anErrorStruct [
     "Interpret login error and provide user-friendly messages for netldi issues"
@@ -2303,9 +2432,10 @@ To fix this, start netldi on the GemStone server:
 
 Original error: ', originalMsg ].
     
-    (errorMsgLower includesSubstring: 'no such') ifTrue: [
-        (errorMsgLower includesSubstring: 'stn' or: [ errorMsgLower includesSubstring: 'stone' ]) ifTrue: [
-            ^ 'Cannot find the GemStone stone.
+	(errorMsgLower includesSubstring: 'no such') ifTrue: [
+		((errorMsgLower includesSubstring: 'stn')
+			or: [ errorMsgLower includesSubstring: 'stone' ]) ifTrue: [
+			^ 'Cannot find the GemStone stone.
 
 Please check that the stone exists and netldi is running.
 
@@ -2332,9 +2462,12 @@ To start netldi:
 
 Original error: ', originalMsg ].
     
-    (errorMsgLower includesSubstring: 'login') ifTrue: [
-        (errorMsgLower includesSubstring: 'fail' or: [ errorMsgLower includesSubstring: 'denied' or: [ errorMsgLower includesSubstring: 'disabled' ] ]) ifTrue: [
-            ^ 'GemStone login failed.
+	(errorMsgLower includesSubstring: 'login') ifTrue: [
+		((errorMsgLower includesSubstring: 'fail')
+			or: [
+				(errorMsgLower includesSubstring: 'denied')
+					or: [ errorMsgLower includesSubstring: 'disabled' ] ]) ifTrue: [
+			^ 'GemStone login failed.
 
 Please check your username and password, or verify that logins are enabled.
 

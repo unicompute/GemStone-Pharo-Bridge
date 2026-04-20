@@ -13,6 +13,7 @@ Class {
 		'invokeButton',
 		'referencersButton',
 		'sessionStateButton',
+		'reportButton',
 		'evaluationContextOop'
 	],
 	#category : 'GemStone-GBS-Tools',
@@ -93,6 +94,7 @@ GbsInspector >> defaultLayout [
 			add: invokeButton;
 			add: referencersButton;
 			add: sessionStateButton;
+			add: reportButton;
 			yourself) height: 30;
 		add: codeEditor;
 		yourself
@@ -216,6 +218,20 @@ GbsInspector >> browsePromptedSessionStateKey [
 ]
 
 { #category : 'actions' }
+GbsInspector >> browsePromptedSessionStateKeysReport [
+	| rawKeys keys |
+	session ifNil: [ ^ false ].
+	rawKeys := self requestInput: 'Session state keys (comma-separated):' initialAnswer: '19'.
+	keys := self parseSessionStateKeysFrom: rawKeys.
+	keys ifNil: [
+		self inform: 'Enter one or more numeric session state keys.'.
+		^ false ].
+	self inform: (self withShallowMaterializationDo: [
+		session objectSpaceDiagnostics reportTextForKeys: keys ]).
+	^ true
+]
+
+{ #category : 'actions' }
 GbsInspector >> browseSessionStateAtKey: aKey [
 	| sessionStateValue oopToInspect |
 	session ifNil: [ ^ false ].
@@ -234,21 +250,56 @@ GbsInspector >> browseSessionStateAtKey: aKey [
 	^ self openInspectorOnOop: oopToInspect
 ]
 
-{ #category : 'private' }
-GbsInspector >> invocationArgumentsForMethodObject: aMethodObject [
-	| argumentCount input |
-	aMethodObject ifNil: [ ^ nil ].
-	argumentCount := aMethodObject selector numArgs.
-	argumentCount = 0 ifTrue: [ ^ #() ].
-	input := self
-		requestInput: (GbsRemoteMethodObject
-			invocationPromptForSelector: aMethodObject selector
-			argumentCount: argumentCount)
-		initialAnswer: (GbsRemoteMethodObject defaultArgumentInputForCount: argumentCount).
-	input ifNil: [ ^ nil ].
-	^ GbsRemoteMethodObject
-		argumentsFromInput: input
-		expectedCount: argumentCount
+{ #category : 'actions' }
+GbsInspector >> browseStaleTypedWrapperLifecycleReport [
+	| report staleEntries |
+	session ifNil: [ ^ false ].
+	report := self withShallowMaterializationDo: [ session typedWrapperLifecycleReport ].
+	staleEntries := report staleEntries.
+	staleEntries isEmpty ifTrue: [
+		self inform: 'Typed Wrapper Lifecycle', String cr, String cr, 'No stale typed wrappers.'.
+		^ true ].
+	self inform: (GbsTypedWrapperLifecycleReport entries: staleEntries) text.
+	^ true
+]
+
+{ #category : 'actions' }
+GbsInspector >> browseObjectsInMemoryReport [
+	| start limit |
+	session ifNil: [ ^ false ].
+	start := self requestPositiveInteger: 'Object scan start index:' initialAnswer: '1'.
+	start ifNil: [ ^ false ].
+	limit := self requestPositiveInteger: 'Object scan limit:' initialAnswer: '25'.
+	limit ifNil: [ ^ false ].
+	self inform: (self withShallowMaterializationDo: [
+		(session objectSpaceDiagnostics objectsInMemoryReportFrom: start limit: limit) text ]).
+	^ true
+]
+
+{ #category : 'actions' }
+GbsInspector >> browseTypedWrapperLifecycleReport [
+	session ifNil: [ ^ false ].
+	self inform: (self withShallowMaterializationDo: [ session typedWrapperLifecycleReportText ]).
+	^ true
+]
+
+{ #category : 'actions' }
+GbsInspector >> browseReportChooser [
+	| labels actions index |
+	labels := OrderedCollection withAll: #(
+		'Typed Wrapper Lifecycle Report'
+		'Stale Typed Wrapper Report'
+		'Session State Keys Report...'
+		'Objects In Memory Report...').
+	actions := OrderedCollection withAll: {
+		[ self browseTypedWrapperLifecycleReport ].
+		[ self browseStaleTypedWrapperLifecycleReport ].
+		[ self browsePromptedSessionStateKeysReport ].
+		[ self browseObjectsInMemoryReport ] }.
+	self addExtensionReportOptionsToLabels: labels actions: actions.
+	index := UIManager default chooseFrom: labels title: 'GemStone Reports'.
+	index = 0 ifTrue: [ ^ false ].
+	^ (actions at: index) value
 ]
 
 { #category : 'initialization' }
@@ -274,6 +325,9 @@ GbsInspector >> initializePresenters [
 	sessionStateButton := self newButton
 		label: 'GS-State';
 		action: [ self browsePromptedSessionStateKey ].
+	reportButton := self newButton
+		label: 'GS-Reports';
+		action: [ self browseReportChooser ].
 	
 	stateTable 
 		addColumn: (SpStringTableColumn title: 'Variable' evaluated: [ :item | item first ]);
@@ -351,6 +405,18 @@ GbsInspector >> inform: aString [
 	^ aString
 ]
 
+{ #category : 'private' }
+GbsInspector >> parseSessionStateKeysFrom: aStringOrNil [
+	| trimmed tokens keys |
+	(aStringOrNil isNil or: [ aStringOrNil trimBoth isEmpty ]) ifTrue: [ ^ nil ].
+	trimmed := aStringOrNil trimBoth.
+	tokens := (trimmed findTokens: ',') collect: #trimBoth thenReject: #isEmpty.
+	tokens isEmpty ifTrue: [ ^ nil ].
+	keys := tokens collect: [ :each |
+		[ each asInteger ] on: Error do: [ ^ nil ] ].
+	^ keys asArray
+]
+
 { #category : 'ui' }
 GbsInspector >> oopForInspectableObject: anObject [
 	(anObject isKindOf: GbsProxy) ifTrue: [ ^ anObject oop ].
@@ -400,9 +466,10 @@ GbsInspector >> invokeSelectedObjectMethod [
 GbsInspector >> referencersInMemoryForOop: anOop [
 	session ifNil: [ ^ #() ].
 	(anOop isInteger and: [ anOop > 20 ]) ifFalse: [ ^ #() ].
-	^ [ session referencesToOop: anOop ]
-		on: Error
-		do: [ #() ]
+	^ self withShallowMaterializationDo: [
+		[ session referencesToOop: anOop ]
+			on: Error
+			do: [ #() ] ]
 ]
 
 { #category : 'private' }
@@ -428,6 +495,26 @@ GbsInspector >> remoteMethodObjectForClassName: className selector: aSelector ta
 { #category : 'private' }
 GbsInspector >> requestInput: prompt initialAnswer: defaultString [
 	^ UIManager default request: prompt initialAnswer: defaultString
+]
+
+{ #category : 'private' }
+GbsInspector >> requestPositiveInteger: promptString initialAnswer: defaultString [
+	| rawValue |
+	rawValue := self requestInput: promptString initialAnswer: defaultString.
+	(rawValue isNil or: [ rawValue trimBoth isEmpty ]) ifTrue: [ ^ nil ].
+	^ [ | value |
+		value := rawValue trimBoth asInteger.
+		value > 0 ifTrue: [ value ] ifFalse: [ nil ] ]
+		on: Error
+		do: [ nil ]
+]
+
+{ #category : 'private' }
+GbsInspector >> withShallowMaterializationDo: aBlock [
+	session ifNil: [ ^ aBlock value ].
+	^ session
+		withMaterializationProfile: GbsShallowMaterializationProfile new
+		do: aBlock
 ]
 
 { #category : 'evaluation' }

@@ -62,9 +62,21 @@ GBSM class >> globals [
 	^ self requireCurrentSession globals
 ]
 
+{ #category : 'named-objects' }
+GBSM class >> smalltalk [
+	^ self requireCurrentSession smalltalk
+]
+
 { #category : 'repository' }
 GBSM class >> loadedClasses [
 	^ self requireCurrentSession loadedClasses
+]
+
+{ #category : 'repository' }
+GBSM class >> chunkedMigrationRunnerFrom: aSourceClassOrName to: aTargetClassOrName [
+	^ self requireCurrentSession
+		chunkedMigrationRunnerFrom: aSourceClassOrName
+		to: aTargetClassOrName
 ]
 
 { #category : 'materialization' }
@@ -109,6 +121,63 @@ GBSM class >> generateTypedWrappersForConnectorPairs [
 	^ GbsSessionManager generateTypedWrappersForConnectorPairs
 ]
 
+{ #category : 'typed wrappers' }
+GBSM class >> typedWrapperLifecycleEntries [
+	^ GbsSessionManager
+		typedWrapperLifecycleEntriesForSession: self currentSession
+]
+
+{ #category : 'object space' }
+GBSM class >> objectSpaceRepository [
+	^ self requireCurrentSession objectSpaceRepository
+]
+
+{ #category : 'transactions' }
+GBSM class >> commitTransactionOrSignalConflict [
+	^ self requireCurrentSession commitTransactionOrSignalConflict
+]
+
+{ #category : 'transactions' }
+GBSM class >> commitTransactionWithRetryCount: aRetryCount [
+	^ self requireCurrentSession commitTransactionWithRetryCount: aRetryCount
+]
+
+{ #category : 'typed wrappers' }
+GBSM class >> typedWrapperLifecycleObjects [
+	^ GbsSessionManager
+		typedWrapperLifecycleObjectsForSession: self currentSession
+]
+
+{ #category : 'typed wrappers' }
+GBSM class >> typedWrapperLifecycleReport [
+	^ GbsSessionManager
+		typedWrapperLifecycleReportForSession: self currentSession
+]
+
+{ #category : 'typed wrappers' }
+GBSM class >> typedWrapperLifecycleReportText [
+	^ GbsSessionManager
+		typedWrapperLifecycleReportTextForSession: self currentSession
+]
+
+{ #category : 'typed wrappers' }
+GBSM class >> invalidateStaleTypedWrapperClasses [
+	^ GbsSessionManager
+		invalidateStaleTypedWrapperClassesForSession: self currentSession
+]
+
+{ #category : 'typed wrappers' }
+GBSM class >> refreshStaleTypedWrapperClasses [
+	^ GbsSessionManager
+		refreshStaleTypedWrapperClassesForSession: self currentSession
+]
+
+{ #category : 'typed wrappers' }
+GBSM class >> refreshAllTypedWrapperClasses [
+	^ GbsSessionManager
+		refreshAllTypedWrapperClassesForSession: self currentSession
+]
+
 { #category : 'repository' }
 GBSM class >> classHistoryOf: aClassOrName [
 	^ self requireCurrentSession classHistoryOf: aClassOrName
@@ -123,14 +192,6 @@ GBSM class >> classMethodMirrorForClass: aClassOrName selector: aSelector [
 ]
 
 { #category : 'repository' }
-GBSM class >> classMethodObjectForClass: aClassOrName selector: aSelector [
-	^ self
-		requireCurrentSession
-		classMethodObjectForClass: aClassOrName
-		selector: aSelector
-]
-
-{ #category : 'repository' }
 GBSM class >> classMethodMirrorForClassNamed: aClassName selector: aSelector [
 	^ self
 		requireCurrentSession
@@ -139,10 +200,34 @@ GBSM class >> classMethodMirrorForClassNamed: aClassName selector: aSelector [
 ]
 
 { #category : 'repository' }
+GBSM class >> classMethodObjectForClass: aClassOrName selector: aSelector [
+	^ self
+		requireCurrentSession
+		classMethodObjectForClass: aClassOrName
+		selector: aSelector
+]
+
+{ #category : 'repository' }
+GBSM class >> classUnboundMethodObjectForClass: aClassOrName selector: aSelector [
+	^ self
+		requireCurrentSession
+		classUnboundMethodObjectForClass: aClassOrName
+		selector: aSelector
+]
+
+{ #category : 'repository' }
 GBSM class >> classMethodObjectForClassNamed: aClassName selector: aSelector [
 	^ self
 		requireCurrentSession
 		classMethodObjectForClassNamed: aClassName
+		selector: aSelector
+]
+
+{ #category : 'repository' }
+GBSM class >> classUnboundMethodObjectForClassNamed: aClassName selector: aSelector [
+	^ self
+		requireCurrentSession
+		classUnboundMethodObjectForClassNamed: aClassName
 		selector: aSelector
 ]
 
@@ -320,14 +405,6 @@ GBSM class >> methodMirrorForClass: aClassOrName selector: aSelector [
 ]
 
 { #category : 'repository' }
-GBSM class >> methodObjectForClass: aClassOrName selector: aSelector [
-	^ self
-		requireCurrentSession
-		methodObjectForClass: aClassOrName
-		selector: aSelector
-]
-
-{ #category : 'repository' }
 GBSM class >> methodMirrorForClassNamed: aClassName selector: aSelector [
 	^ self
 		requireCurrentSession
@@ -336,10 +413,34 @@ GBSM class >> methodMirrorForClassNamed: aClassName selector: aSelector [
 ]
 
 { #category : 'repository' }
+GBSM class >> methodObjectForClass: aClassOrName selector: aSelector [
+	^ self
+		requireCurrentSession
+		methodObjectForClass: aClassOrName
+		selector: aSelector
+]
+
+{ #category : 'repository' }
+GBSM class >> unboundMethodObjectForClass: aClassOrName selector: aSelector [
+	^ self
+		requireCurrentSession
+		unboundMethodObjectForClass: aClassOrName
+		selector: aSelector
+]
+
+{ #category : 'repository' }
 GBSM class >> methodObjectForClassNamed: aClassName selector: aSelector [
 	^ self
 		requireCurrentSession
 		methodObjectForClassNamed: aClassName
+		selector: aSelector
+]
+
+{ #category : 'repository' }
+GBSM class >> unboundMethodObjectForClassNamed: aClassName selector: aSelector [
+	^ self
+		requireCurrentSession
+		unboundMethodObjectForClassNamed: aClassName
 		selector: aSelector
 ]
 
@@ -371,41 +472,6 @@ GBSM class >> namedObjectAutoloadKeys [
 { #category : 'named-objects' }
 GBSM class >> namedObjectAutoloadReportText [
 	^ self requireCurrentSession namedObjectAutoloadReportText
-]
-
-{ #category : 'maglev-runtime' }
-GBSM class >> rubyLoadPath [
-	^ self requireCurrentSession rubyLoadPath
-]
-
-{ #category : 'maglev-runtime' }
-GBSM class >> rubyLoadedFeatures [
-	^ self requireCurrentSession rubyLoadedFeatures
-]
-
-{ #category : 'maglev-runtime' }
-GBSM class >> rubyPersistentLoadedFeatures [
-	^ self requireCurrentSession rubyPersistentLoadedFeatures
-]
-
-{ #category : 'maglev-runtime' }
-GBSM class >> rubyRequireFileNamed: aString [
-	^ self requireCurrentSession rubyRequireFileNamed: aString
-]
-
-{ #category : 'maglev-runtime' }
-GBSM class >> rubyLoadFileNamed: aString [
-	^ self requireCurrentSession rubyLoadFileNamed: aString
-]
-
-{ #category : 'maglev-runtime' }
-GBSM class >> clearPersistentRubyLoadedFeatures [
-	^ self requireCurrentSession clearPersistentRubyLoadedFeatures
-]
-
-{ #category : 'maglev-runtime' }
-GBSM class >> rubyRuntime [
-	^ self requireCurrentSession rubyRuntime
 ]
 
 { #category : 'named-objects' }
@@ -474,6 +540,11 @@ GBSM class >> objectSpace [
 { #category : 'object space' }
 GBSM class >> objectSpaceDiagnostics [
 	^ self requireCurrentSession objectSpaceDiagnostics
+]
+
+{ #category : 'object space' }
+GBSM class >> objectSpaceDiagnosticsReport [
+	^ self requireCurrentSession objectSpaceDiagnosticsReport
 ]
 
 { #category : 'object space' }
@@ -562,11 +633,6 @@ GBSM class >> sessionStateAt: aKey ifAbsent: aBlock [
 { #category : 'object space' }
 GBSM class >> sessionStateAt: aKey put: anObject [
 	^ self requireCurrentSession sessionStateAt: aKey put: anObject
-]
-
-{ #category : 'object space' }
-GBSM class >> maglevFinalizerRegistry [
-	^ self requireCurrentSession maglevFinalizerRegistry
 ]
 
 { #category : 'object space' }
@@ -705,28 +771,48 @@ GBSM class >> published [
 	^ self requireCurrentSession published
 ]
 
+{ #category : 'named-objects' }
+GBSM class >> bridgeRoot [
+	^ self requireCurrentSession bridgeRoot
+]
+
+{ #category : 'deprecated' }
+GBSM class >> persistentRoot [
+	"Deprecated. Use #bridgeRoot."
+	self deprecated: 'Use #bridgeRoot.'.
+	^ self bridgeRoot
+]
+
 { #category : 'repository' }
 GBSM class >> repository [
 	^ self requireCurrentSession repository
 ]
 
-{ #category : 'repository' }
+{ #category : 'deprecated' }
 GBSM class >> root [
+	"Deprecated. Use #repository root."
+	self deprecated: 'Use #repository root.'.
 	^ self requireCurrentSession root
 ]
 
-{ #category : 'repository' }
+{ #category : 'deprecated' }
 GBSM class >> rootAt: aKey [
+	"Deprecated. Use #repository rootAt:."
+	self deprecated: 'Use #repository rootAt:.'.
 	^ self requireCurrentSession rootAt: aKey
 ]
 
-{ #category : 'repository' }
+{ #category : 'deprecated' }
 GBSM class >> rootAt: aKey ifAbsent: aBlock [
+	"Deprecated. Use #repository rootAt:ifAbsent:."
+	self deprecated: 'Use #repository rootAt:ifAbsent:.'.
 	^ self requireCurrentSession rootAt: aKey ifAbsent: aBlock
 ]
 
-{ #category : 'repository' }
+{ #category : 'deprecated' }
 GBSM class >> rootAt: aKey put: aValue [
+	"Deprecated. Use #repository rootAt:put:."
+	self deprecated: 'Use #repository rootAt:put:.'.
 	^ self requireCurrentSession rootAt: aKey put: aValue
 ]
 

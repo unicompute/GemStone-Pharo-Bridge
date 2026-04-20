@@ -177,7 +177,20 @@ GbsSessionParameters >> extraGemArgs: aValue [ extraGemArgs := aValue
 GbsSessionParameters >> fetchTranscriptLogs [
     "Ask the server interface to fetch the active Transcript logs"
     ^ GbsServerInterface uniqueInstance 
-        executeAndPrint: 'Transcript fetchAndClear' 
+        executeAndPrint: '[
+		| fetched log text |
+		fetched := (Transcript respondsTo: #fetchAndClear)
+			ifTrue: [ [ Transcript fetchAndClear ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		fetched ifNotNil: [ ^ fetched ifNil: [ '''' ] ].
+		log := SessionTemps current at: #PharoTranscriptLog ifAbsent: [ OrderedCollection new ].
+		text := String streamContents: [ :stream |
+			log do: [ :each |
+				stream nextPutAll: each asString.
+				stream cr ] ].
+		SessionTemps current at: #PharoTranscriptLog put: OrderedCollection new.
+		text
+	] value' 
         inSession: self sessionId.
 ]
 
@@ -366,7 +379,7 @@ GbsSessionParameters >> handleLoginError: interface [
         hasError := interface apiGciErr: buffer.
         (hasError = 1 or: [ hasError == true ]) ifTrue: [
             errNum := buffer signedLongAt: 5.
-            rawErrMsg := self readErrorMessageFrom: buffer ]
+            rawErrMsg := self ensureCleanString: (self readErrorMessageFrom: buffer) ]
     ] ensure: [ buffer free ].
     
     "Log to Transcript for debugging"
@@ -374,7 +387,7 @@ GbsSessionParameters >> handleLoginError: interface [
     Transcript show: '  Stone: ', self gemStoneName; cr.
     Transcript show: '  User: ', self username; cr.
     Transcript show: '  Error Number: ', (errNum ifNil: [ 'nil' ]) printString; cr.
-    Transcript show: '  Raw Message: ', (rawErrMsg ifNil: [ '(empty)' ]); cr.
+    Transcript show: '  Raw Message: ', ((rawErrMsg isNil or: [ rawErrMsg isEmpty ]) ifTrue: [ '(empty)' ] ifFalse: [ rawErrMsg ]); cr.
     
     "Build the error message - use netldiErrorMessage if raw message is empty"
     errorMessage := self interpretErrorMessage: rawErrMsg errorNumber: errNum.
@@ -442,6 +455,30 @@ GbsSessionParameters >> convertBytesToString: aByteArray [
 ]
 
 { #category : 'connection' }
+GbsSessionParameters >> ensureCleanString: aString [
+	| source |
+	aString ifNil: [ ^ '' ].
+	source := aString asString.
+	^ (String streamContents: [ :stream |
+		source do: [ :each |
+			each codePoint = 0 ifFalse: [ stream nextPut: each ] ] ])
+		trimBoth
+]
+
+{ #category : 'connection' }
+GbsSessionParameters >> invalidCredentialsErrorMessage: originalMsg [
+	| message |
+	message := self ensureCleanString: originalMsg.
+	message isEmpty ifTrue: [
+		message := 'Login failed: the userId/password combination is invalid or expired.' ].
+	^ 'GemStone login failed.
+
+Please check your username and password, or verify that logins are enabled.
+
+Original error: ', message
+]
+
+{ #category : 'connection' }
 GbsSessionParameters >> netldiErrorMessage [
     "Return a helpful message when netldi is likely not running"
     ^ 'GemStone netldi daemon is not running or not accessible.
@@ -460,24 +497,23 @@ If netldi is already running, check:
 GbsSessionParameters >> interpretErrorMessage: aString errorNumber: anErrorNumber [
     "Interpret error messages and provide user-friendly explanations for common issues"
     | errorMsgLower originalMsg |
-    
-    "Handle nil or empty messages - likely netldi not running"
-    (aString isNil or: [ aString trimBoth isEmpty ]) ifTrue: [
-        ^ self netldiErrorMessage ].
-    
+
     "Convert to string if needed"
-    originalMsg := aString isString 
-        ifTrue: [ aString trimBoth ]
-        ifFalse: [ 
-            "Handle ByteArray or other types"
+    originalMsg := aString
+        ifNil: [ '' ]
+        ifNotNil: [
             [ 
-                (aString isKindOf: ByteArray) ifTrue: [
-                    self convertBytesToString: aString ]
-                ifFalse: [ aString asString trimBoth ]
-            ] on: Error do: [ 
-                ^ self netldiErrorMessage ] ].
-    
-    "Double check if converted message is empty"
+                (aString isKindOf: ByteArray)
+                    ifTrue: [ self convertBytesToString: aString ]
+                    ifFalse: [ aString asString ]
+            ] on: Error do: [ '' ] ].
+    originalMsg := self ensureCleanString: originalMsg.
+
+    "4051 is authentication failure even when the raw GCI buffer is empty or garbled."
+    anErrorNumber = 4051 ifTrue: [
+        ^ self invalidCredentialsErrorMessage: originalMsg ].
+
+    "Handle nil or empty messages after auth-code handling."
     originalMsg isEmpty ifTrue: [
         ^ self netldiErrorMessage ].
     
@@ -495,7 +531,8 @@ To fix this, start netldi on the GemStone server:
 Original error: ', originalMsg ].
     
     (errorMsgLower includesSubstring: 'no such') ifTrue: [
-        (errorMsgLower includesSubstring: 'stn' or: [ errorMsgLower includesSubstring: 'stone' ]) ifTrue: [
+        ((errorMsgLower includesSubstring: 'stn')
+            or: [ errorMsgLower includesSubstring: 'stone' ]) ifTrue: [
             ^ 'Cannot find the GemStone stone "', self gemStoneName, '".
 
 Please check that the stone exists and netldi is running.
@@ -524,12 +561,15 @@ To start netldi:
 Original error: ', originalMsg ].
     
     (errorMsgLower includesSubstring: 'login') ifTrue: [
-        (errorMsgLower includesSubstring: 'fail' or: [ errorMsgLower includesSubstring: 'denied' or: [ errorMsgLower includesSubstring: 'disabled' ] ]) ifTrue: [
-            ^ 'GemStone login failed.
+        ((errorMsgLower includesSubstring: 'fail')
+            or: [ (errorMsgLower includesSubstring: 'denied')
+            or: [ errorMsgLower includesSubstring: 'disabled' ] ]) ifTrue: [
+            ^ self invalidCredentialsErrorMessage: originalMsg ] ].
 
-Please check your username and password, or verify that logins are enabled.
-
-Original error: ', originalMsg ] ].
+    ((errorMsgLower includesSubstring: 'invalid password')
+        or: [ (errorMsgLower includesSubstring: 'invalid or expired')
+        or: [ errorMsgLower includesSubstring: 'userid/password combination' ] ]) ifTrue: [
+        ^ self invalidCredentialsErrorMessage: originalMsg ].
     
     (errorMsgLower includesSubstring: 'shutdown') ifTrue: [
         ^ 'GemStone is shutting down.

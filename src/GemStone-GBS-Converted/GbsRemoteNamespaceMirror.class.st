@@ -27,17 +27,14 @@ GbsRemoteNamespaceMirror class >> on: aSession fullName: aString [
 	^ self
 		on: aSession
 		expression: (String streamContents: [ :stream |
-			stream nextPutAll: '[:fullName | | parts current assoc value | '.
+			stream nextPutAll: '[:fullName | | parts current value | '.
 			stream nextPutAll: 'parts := fullName asString findTokens: ''::''. '.
 			stream nextPutAll: 'current := Object nameSpace: 1. '.
 			stream nextPutAll: 'parts do: [ :each | '.
 			stream nextPutAll: 'current ifNotNil: [ '.
-			stream nextPutAll: 'assoc := nil. value := nil. '.
-			stream nextPutAll: '(current respondsTo: #rubyConstAssociationAt:) '.
-			stream nextPutAll: 'ifTrue: [ assoc := [ current rubyConstAssociationAt: each asSymbol ] on: Error do: [ nil ]. '.
-			stream nextPutAll: 'assoc ifNotNil: [ value := [ assoc value ] on: Error do: [ nil ] ] ]. '.
-			stream nextPutAll: 'value ifNil: [ (current respondsTo: #at:) '.
-			stream nextPutAll: 'ifTrue: [ value := [ current at: each asSymbol ] on: Error do: [ nil ] ] ]. '.
+			stream nextPutAll: 'value := nil. '.
+			stream nextPutAll: '(current respondsTo: #at:) '.
+			stream nextPutAll: 'ifTrue: [ value := [ current at: each asSymbol ] on: Error do: [ nil ] ]. '.
 			stream nextPutAll: 'current := value ] ]. '.
 			stream nextPutAll: 'current ] value: '.
 			stream nextPutAll: (aSession marshalArgumentToScript: aString) ])
@@ -106,65 +103,6 @@ GbsRemoteNamespaceMirror class >> topLevelOn: aSession [
 		metadata: nil
 ]
 
-{ #category : 'querying' }
-GbsRemoteNamespaceMirror >> autoloadConstantMirrors [
-	^ self constantMirrors select: [ :each | each isAutoload ]
-]
-
-{ #category : 'querying' }
-GbsRemoteNamespaceMirror >> autoloadEntries [
-	^ autoloadEntries ifNil: [
-		autoloadEntries := session executeScriptAndFetchObject: self autoloadEntriesScript ]
-]
-
-{ #category : 'private' }
-GbsRemoteNamespaceMirror >> autoloadEntriesScript [
-	^ String streamContents: [ :stream |
-		stream nextPutAll: '| ns names entries assoc fileName loadState assocOop | '.
-		stream nextPutAll: 'ns := '.
-		stream nextPutAll: self namespaceExpression.
-		stream nextPutAll: '. '.
-		stream nextPutAll: 'ns ifNil: [ #() ] ifNotNil: [ '.
-		stream nextPutAll: 'entries := OrderedCollection new. '.
-		stream nextPutAll: 'names := ((ns respondsTo: #_rubyConstants) '.
-		stream nextPutAll: 'ifTrue: [ ns _rubyConstants asArray ] '.
-		stream nextPutAll: 'ifFalse: [ #() ]) asSortedCollection. '.
-		stream nextPutAll: 'names do: [ :each | '.
-		stream nextPutAll: 'assoc := (ns respondsTo: #rubyAutoloadAssociationAtOrNil:env:) '.
-		stream nextPutAll: 'ifTrue: [ [ ns rubyAutoloadAssociationAtOrNil: each env: 1 ] on: Error do: [ nil ] ] '.
-		stream nextPutAll: 'ifFalse: [ nil ]. '.
-		stream nextPutAll: 'assoc ifNotNil: [ '.
-		stream nextPutAll: 'fileName := [ (assoc respondsTo: #fileName) ifTrue: [ assoc fileName ] ifFalse: [ nil ] ] on: Error do: [ nil ]. '.
-		stream nextPutAll: 'loadState := [ (assoc respondsTo: #isLoaded) ifTrue: [ assoc isLoaded ] ifFalse: [ false ] ] on: Error do: [ false ]. '.
-		stream nextPutAll: 'assocOop := [ assoc asOop ] on: Error do: [ nil ]. '.
-		stream nextPutAll: 'entries add: (Array with: each asString with: fileName with: loadState with: assocOop) ] ]. '.
-		stream nextPutAll: 'entries asArray ]' ]
-]
-
-{ #category : 'querying' }
-GbsRemoteNamespaceMirror >> autoloadMirrors [
-	^ self autoloadEntries collect: [ :each |
-		GbsRemoteAutoloadMirror on: self metadata: each ]
-]
-
-{ #category : 'querying' }
-GbsRemoteNamespaceMirror >> autoloadFileFor: aConstantName [
-	^ session executeScriptAndFetchObject: (self autoloadFileScriptFor: aConstantName)
-]
-
-{ #category : 'private' }
-GbsRemoteNamespaceMirror >> autoloadFileScriptFor: aConstantName [
-	^ String streamContents: [ :stream |
-		stream nextPutAll: '[:ns :name | '.
-		stream nextPutAll: 'ns ifNil: [ nil ] ifNotNil: [ '.
-		stream nextPutAll: '(ns respondsTo: #rubyAutoloadFileFor:) '.
-		stream nextPutAll: 'ifTrue: [ [ ns rubyAutoloadFileFor: name asSymbol ] on: Error do: [ nil ] ] '.
-		stream nextPutAll: 'ifFalse: [ nil ] ]'.
-		stream nextPutAll: '] value: '.
-		stream nextPutAll: self namespaceExpression.
-		stream nextPutAll: ' value: '.
-		stream nextPutAll: (session marshalArgumentToScript: aConstantName asString) ]
-]
 
 { #category : 'querying' }
 GbsRemoteNamespaceMirror >> className [
@@ -172,6 +110,57 @@ GbsRemoteNamespaceMirror >> className [
 	metadata := self namespaceMetadata.
 	metadata ifNil: [ ^ nil ].
 	^ metadata at: 4 ifAbsent: [ nil ]
+]
+
+{ #category : 'querying' }
+GbsRemoteNamespaceMirror >> cachedClassName [
+	| metadata |
+	metadata := namespaceMetadata.
+	metadata ifNil: [ ^ nil ].
+	^ metadata at: 4 ifAbsent: [ nil ]
+]
+
+{ #category : 'querying' }
+GbsRemoteNamespaceMirror >> cachedConstantMirrorAt: aConstantName ifAbsent: aBlock [
+	| constantName |
+	constantEntries ifNil: [ ^ aBlock value ].
+	constantName := aConstantName asString.
+	^ (constantEntries collect: [ :each |
+		GbsRemoteConstantMirror on: self metadata: each ])
+		detect: [ :each | each name = constantName ]
+		ifNone: [ aBlock value ]
+]
+
+{ #category : 'querying' }
+GbsRemoteNamespaceMirror >> cachedDisplayName [
+	^ self cachedFullName
+		ifNil: [ self cachedName
+			ifNil: [ self cachedModuleName
+				ifNil: [ self cachedClassName ] ] ]
+]
+
+{ #category : 'querying' }
+GbsRemoteNamespaceMirror >> cachedFullName [
+	| metadata |
+	metadata := namespaceMetadata.
+	metadata ifNil: [ ^ nil ].
+	^ metadata at: 3 ifAbsent: [ nil ]
+]
+
+{ #category : 'querying' }
+GbsRemoteNamespaceMirror >> cachedModuleName [
+	| metadata |
+	metadata := namespaceMetadata.
+	metadata ifNil: [ ^ nil ].
+	^ metadata at: 5 ifAbsent: [ nil ]
+]
+
+{ #category : 'querying' }
+GbsRemoteNamespaceMirror >> cachedName [
+	| metadata |
+	metadata := namespaceMetadata.
+	metadata ifNil: [ ^ nil ].
+	^ metadata at: 2 ifAbsent: [ nil ]
 ]
 
 { #category : 'querying' }
@@ -183,29 +172,21 @@ GbsRemoteNamespaceMirror >> constantEntries [
 { #category : 'private' }
 GbsRemoteNamespaceMirror >> constantEntriesScript [
 	^ String streamContents: [ :stream |
-		stream nextPutAll: '| ns names entries assoc value autoloadFile valueClassName valueOop valueName valueFullName | '.
+		stream nextPutAll: '| ns names entries value valueClassName valueOop valueName valueFullName | '.
 		stream nextPutAll: 'ns := '.
 		stream nextPutAll: self namespaceExpression.
 		stream nextPutAll: '. '.
 		stream nextPutAll: 'ns ifNil: [ #() ] ifNotNil: [ '.
 		stream nextPutAll: 'entries := OrderedCollection new. '.
-		stream nextPutAll: 'names := ((ns respondsTo: #_rubyConstants) '.
-		stream nextPutAll: 'ifTrue: [ ns _rubyConstants asArray ] '.
-		stream nextPutAll: 'ifFalse: [ (ns respondsTo: #keys) ifTrue: [ ns keys asArray ] ifFalse: [ #() ] ]) asSortedCollection. '.
+		stream nextPutAll: 'names := ((ns respondsTo: #keys) ifTrue: [ ns keys asArray ] ifFalse: [ #() ]) asSortedCollection. '.
 		stream nextPutAll: 'names do: [ :each | '.
-		stream nextPutAll: 'assoc := nil. value := nil. autoloadFile := nil. valueName := nil. valueFullName := nil. '.
-		stream nextPutAll: '(ns respondsTo: #rubyConstAssociationAt:) '.
-		stream nextPutAll: 'ifTrue: [ '.
-		stream nextPutAll: 'assoc := [ ns rubyConstAssociationAt: each ] on: Error do: [ nil ]. '.
-		stream nextPutAll: 'assoc ifNotNil: [ '.
-		stream nextPutAll: 'autoloadFile := [ (assoc respondsTo: #fileName) ifTrue: [ assoc fileName ] ifFalse: [ nil ] ] on: Error do: [ nil ]. '.
-		stream nextPutAll: 'value := [ assoc value ] on: Error do: [ nil ] ] ] '.
-		stream nextPutAll: 'ifFalse: [ (ns respondsTo: #at:) ifTrue: [ value := [ ns at: each ] on: Error do: [ nil ] ] ]. '.
+		stream nextPutAll: 'value := nil. valueName := nil. valueFullName := nil. '.
+		stream nextPutAll: '(ns respondsTo: #at:) ifTrue: [ value := [ ns at: each ] on: Error do: [ nil ] ]. '.
 		stream nextPutAll: 'valueClassName := value ifNil: [ nil ] ifNotNil: [ [ value class name asString ] on: Error do: [ nil ] ]. '.
 		stream nextPutAll: 'valueOop := value ifNil: [ nil ] ifNotNil: [ [ value asOop ] on: Error do: [ nil ] ]. '.
 		stream nextPutAll: 'valueName := value ifNil: [ nil ] ifNotNil: [ [ (value respondsTo: #name) ifTrue: [ value name asString ] ifFalse: [ nil ] ] on: Error do: [ nil ] ]. '.
-		stream nextPutAll: 'valueFullName := value ifNil: [ nil ] ifNotNil: [ [ (value respondsTo: #rubyFullName) ifTrue: [ value rubyFullName asString ] ifFalse: [ (value respondsTo: #fullName) ifTrue: [ value fullName asString ] ifFalse: [ nil ] ] ] on: Error do: [ nil ] ]. '.
-		stream nextPutAll: 'entries add: (Array with: each asString with: valueOop with: valueClassName with: autoloadFile with: valueName with: valueFullName) ]. '.
+		stream nextPutAll: 'valueFullName := value ifNil: [ nil ] ifNotNil: [ [ (value respondsTo: #fullName) ifTrue: [ value fullName asString ] ifFalse: [ nil ] ] on: Error do: [ nil ] ]. '.
+		stream nextPutAll: 'entries add: (Array with: each asString with: valueOop with: valueClassName with: nil with: valueName with: valueFullName) ]. '.
 		stream nextPutAll: 'entries asArray ]' ]
 ]
 
@@ -279,25 +260,6 @@ GbsRemoteNamespaceMirror >> invalidate [
 	^ self
 ]
 
-{ #category : 'actions' }
-GbsRemoteNamespaceMirror >> loadFileNamed: aString [
-	^ session rubyRuntime loadFileNamed: aString
-]
-
-{ #category : 'querying' }
-GbsRemoteNamespaceMirror >> loadedFeatures [
-	^ session rubyRuntime loadedFeatures
-]
-
-{ #category : 'querying' }
-GbsRemoteNamespaceMirror >> loadPath [
-	^ session rubyRuntime loadPath
-]
-
-{ #category : 'querying' }
-GbsRemoteNamespaceMirror >> persistentLoadedFeatures [
-	^ session rubyRuntime persistentLoadedFeatures
-]
 
 { #category : 'querying' }
 GbsRemoteNamespaceMirror >> moduleName [
@@ -418,74 +380,6 @@ GbsRemoteNamespaceMirror >> pathSegments [
 	^ pathString asString findTokens: '::'
 ]
 
-{ #category : 'actions' }
-GbsRemoteNamespaceMirror >> registerAutoload: aConstantName file: aFileName [
-	| result |
-	result := session executeScriptAndFetchObject: (self
-		registerAutoloadScriptFor: aConstantName
-		file: aFileName).
-	self invalidate.
-	^ result
-]
-
-{ #category : 'actions' }
-GbsRemoteNamespaceMirror >> removeAutoload: aConstantName [
-	| result |
-	result := session executeScriptAndFetchObject: (self removeAutoloadScriptFor: aConstantName).
-	self invalidate.
-	^ result
-]
-
-{ #category : 'private' }
-GbsRemoteNamespaceMirror >> removeAutoloadScriptFor: aConstantName [
-	^ String streamContents: [ :stream |
-		stream nextPutAll: '[:ns :name | '.
-		stream nextPutAll: '| assoc hasAutoload | '.
-		stream nextPutAll: 'ns ifNil: [ Error signal: ''Namespace not found.'' ] ifNotNil: [ '.
-		stream nextPutAll: 'assoc := (ns respondsTo: #rubyAutoloadAssociationAtOrNil:env:) '.
-		stream nextPutAll: 'ifTrue: [ [ ns rubyAutoloadAssociationAtOrNil: name asSymbol env: 1 ] on: Error do: [ nil ] ] '.
-		stream nextPutAll: 'ifFalse: [ nil ]. '.
-		stream nextPutAll: 'hasAutoload := assoc notNil ifTrue: [ true ] ifFalse: [ '.
-		stream nextPutAll: '(ns respondsTo: #rubyAutoloadFileFor:) '.
-		stream nextPutAll: 'ifTrue: [ [ (ns rubyAutoloadFileFor: name asSymbol) notNil ] on: Error do: [ false ] ] '.
-		stream nextPutAll: 'ifFalse: [ false ] ]. '.
-		stream nextPutAll: 'hasAutoload ifFalse: [ Error signal: ''Constant is not currently registered as an autoload.'' ]. '.
-		stream nextPutAll: '(ns respondsTo: #removeConst:env:) '.
-		stream nextPutAll: 'ifTrue: [ ns removeConst: name asSymbol env: 1. true ] '.
-		stream nextPutAll: 'ifFalse: [ (ns respondsTo: #removeConst:) '.
-		stream nextPutAll: 'ifTrue: [ ns removeConst: name asSymbol. true ] '.
-		stream nextPutAll: 'ifFalse: [ Error signal: ''Namespace does not support autoload removal.'' ] ] ]'.
-		stream nextPutAll: '] value: '.
-		stream nextPutAll: self namespaceExpression.
-		stream nextPutAll: ' value: '.
-		stream nextPutAll: (session marshalArgumentToScript: aConstantName asString) ]
-]
-
-{ #category : 'private' }
-GbsRemoteNamespaceMirror >> registerAutoloadScriptFor: aConstantName file: aFileName [
-	^ String streamContents: [ :stream |
-		stream nextPutAll: '[:ns :name :file | '.
-		stream nextPutAll: 'ns ifNil: [ Error signal: ''Namespace not found.'' ] ifNotNil: [ '.
-		stream nextPutAll: '(ns respondsTo: #rubyAutoload:file:) '.
-		stream nextPutAll: 'ifTrue: [ ns rubyAutoload: name asSymbol file: file. file ] '.
-		stream nextPutAll: 'ifFalse: [ Error signal: ''Namespace does not support Ruby autoload.'' ] ]'.
-		stream nextPutAll: '] value: '.
-		stream nextPutAll: self namespaceExpression.
-		stream nextPutAll: ' value: '.
-		stream nextPutAll: (session marshalArgumentToScript: aConstantName asString).
-		stream nextPutAll: ' value: '.
-		stream nextPutAll: (session marshalArgumentToScript: aFileName) ]
-]
-
-{ #category : 'actions' }
-GbsRemoteNamespaceMirror >> requireFileNamed: aString [
-	^ session rubyRuntime requireFileNamed: aString
-]
-
-{ #category : 'actions' }
-GbsRemoteNamespaceMirror >> clearPersistentLoadedFeatures [
-	^ session rubyRuntime clearPersistentLoadedFeatures
-]
 
 { #category : 'querying' }
 GbsRemoteNamespaceMirror >> implementorMethodReferenceStringsForSelector: aSelectorOrString [
@@ -494,15 +388,53 @@ GbsRemoteNamespaceMirror >> implementorMethodReferenceStringsForSelector: aSelec
 ]
 
 { #category : 'querying' }
+GbsRemoteNamespaceMirror >> implementorsQueryForSelector: aSelectorOrString [
+	^ self
+		methodQueryForMode: #implementors
+		queryValue: aSelectorOrString asString
+		references: (self implementorMethodReferenceStringsForSelector: aSelectorOrString)
+		titlePrefix: 'Namespace Implementors of '
+]
+
+{ #category : 'querying' }
 GbsRemoteNamespaceMirror >> methodReferenceStringsToSymbol: aSymbolOrString [
 	^ self
 		scopeMethodReferenceStrings: (session methodReferenceStringsToSymbol: aSymbolOrString)
+]
+
+{ #category : 'private' }
+GbsRemoteNamespaceMirror >> methodQueryForMode: aSymbol queryValue: aValue references: aCollection titlePrefix: aString [
+	^ GbsNamespaceScopedMethodQuery
+		session: session
+		namespace: self
+		mode: aSymbol
+		queryValue: aValue
+		references: aCollection
+		title: aString, aValue asString, ' (', (self displayName ifNil: [ 'namespace' ]), ')'
+]
+
+{ #category : 'querying' }
+GbsRemoteNamespaceMirror >> referencesQueryToSymbol: aSymbolOrString [
+	^ self
+		methodQueryForMode: #references
+		queryValue: aSymbolOrString asString
+		references: (self methodReferenceStringsToSymbol: aSymbolOrString)
+		titlePrefix: 'Namespace References to '
 ]
 
 { #category : 'querying' }
 GbsRemoteNamespaceMirror >> senderMethodReferenceStringsForSelector: aSelectorOrString [
 	^ self
 		scopeMethodReferenceStrings: (session senderMethodReferenceStringsForSelector: aSelectorOrString)
+]
+
+{ #category : 'querying' }
+GbsRemoteNamespaceMirror >> sendersQueryForSelector: aSelectorOrString [
+	^ self
+		methodQueryForMode: #senders
+		queryValue: aSelectorOrString asString
+		references: (self senderMethodReferenceStringsForSelector: aSelectorOrString)
+		titlePrefix: 'Namespace Senders of '
 ]
 
 { #category : 'private' }
@@ -529,15 +461,6 @@ GbsRemoteNamespaceMirror >> session [
 { #category : 'accessing' }
 GbsRemoteNamespaceMirror >> session: aSession [
 	session := aSession
-]
-
-{ #category : 'querying' }
-GbsRemoteNamespaceMirror >> supportsAutoload [
-	^ session executeScriptAndFetchObject: (String streamContents: [ :stream |
-		stream nextPutAll: '[:ns | '.
-		stream nextPutAll: 'ns notNil and: [ ns respondsTo: #rubyAutoload:file: ]'.
-		stream nextPutAll: '] value: '.
-		stream nextPutAll: self namespaceExpression ])
 ]
 
 { #category : 'accessing' }

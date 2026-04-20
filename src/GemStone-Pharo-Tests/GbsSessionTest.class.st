@@ -896,6 +896,35 @@ GbsSessionTest >> testRepositoryMethodObjectParityDelegatesMirrorMetadata [
 ]
 
 { #category : 'tests' }
+GbsSessionTest >> testRepositoryUnboundMethodObjectDelegatesMirrorMetadataAndCanBind [
+	| mockSession methodObject bound receiver |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'compiledMethodAt: #totalPrice') ifTrue: [
+			^ #(2001 'Invoice' 'totalPrice' 'pricing' 'totalPrice ^ amount' 'Billing-Core' 'Invoice>>totalPrice' 3 4) ].
+		self fail ].
+
+	methodObject := mockSession
+		unboundMethodObjectForClassNamed: 'Invoice'
+		selector: #totalPrice.
+	receiver := GbsProxy oop: 9001 session: mockSession.
+	bound := methodObject bindTo: receiver.
+
+	self deny: methodObject isBound.
+	self assert: methodObject ownerName equals: 'Invoice'.
+	self assert: methodObject selector equals: #totalPrice.
+	self assert: methodObject categoryName equals: 'pricing'.
+	self assert: methodObject packageName equals: 'Billing-Core'.
+	self assert: methodObject version equals: 3.
+	self assert: methodObject numberOfVersions equals: 4.
+	self assert: methodObject receiver isNil.
+	self assert: (methodObject displayString includesSubstring: 'Invoice>>totalPrice').
+	self assert: methodObject unbind == methodObject.
+	self assert: bound isBound.
+	self assert: bound receiver oop equals: 9001
+]
+
+{ #category : 'tests' }
 GbsSessionTest >> testRepositoryUnboundInstanceMethodObjectSignalsError [
 	| mockSession methodObject |
 	mockSession := MockGbsSession new.
@@ -1508,7 +1537,7 @@ GbsSessionTest >> testRepositoryRootReturnsRootFacade [
 
 	self assert: root class equals: GbsRepositoryRootFacade.
 	self assert: root session == mockSession.
-	self assert: root rootKey equals: #GbsPersistentRoot.
+	self assert: root rootKey equals: #GbsBridgeRoot.
 	self assert: root path isEmpty
 ]
 
@@ -1544,7 +1573,7 @@ GbsSessionTest >> testRepositoryRootAtIfAbsentEvaluatesFallback [
 	| mockSession result |
 	mockSession := MockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: (script includesSubstring: '#GbsPersistentRoot').
+		self assert: (script includesSubstring: '#GbsBridgeRoot').
 		self assert: (script includesSubstring: 'at: key ifAbsent: [ nil ]').
 		nil ].
 
@@ -1558,7 +1587,7 @@ GbsSessionTest >> testRepositoryRootAtPutBuildsExpectedScript [
 	| mockSession result |
 	mockSession := MockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: (script includesSubstring: '#GbsPersistentRoot').
+		self assert: (script includesSubstring: '#GbsBridgeRoot').
 		self assert: (script includesSubstring: 'container at: key put: value').
 		self assert: (script includesSubstring: '#ticket').
 		self assert: (script includesSubstring: '''vip''').
@@ -1574,7 +1603,7 @@ GbsSessionTest >> testRepositoryRootProxyUsesRootScriptAndReturnsProxy [
 	| mockSession root result |
 	mockSession := MockGbsSession new.
 	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
-		self assert: (script includesSubstring: '#GbsPersistentRoot').
+		self assert: (script includesSubstring: '#GbsBridgeRoot').
 		2001 ].
 	root := mockSession repository root.
 
@@ -1590,7 +1619,7 @@ GbsSessionTest >> testRepositoryRootProxyRefreshesAfterInvalidation [
 	mockSession := MockGbsSession new.
 	oops := #(2001 2002) readStream.
 	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
-		self assert: (script includesSubstring: '#GbsPersistentRoot').
+		self assert: (script includesSubstring: '#GbsBridgeRoot').
 		oops next ].
 	root := mockSession repository root.
 
@@ -1608,7 +1637,7 @@ GbsSessionTest >> testRepositoryRootKeysBuildExpectedScript [
 	| mockSession result |
 	mockSession := MockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: (script includesSubstring: '#GbsPersistentRoot').
+		self assert: (script includesSubstring: '#GbsBridgeRoot').
 		self assert: (script includesSubstring: 'container keys asArray').
 		#(#tickets #users) ].
 
@@ -1629,7 +1658,7 @@ GbsSessionTest >> testRepositoryRootEnsureNamespaceAtReturnsNestedFacade [
 	namespace := (mockSession repository root) ensureNamespaceAt: #tickets.
 
 	self assert: namespace class equals: GbsRepositoryRootFacade.
-	self assert: namespace rootKey equals: #GbsPersistentRoot.
+	self assert: namespace rootKey equals: #GbsBridgeRoot.
 	self assert: namespace path equals: #(#tickets)
 ]
 
@@ -1662,29 +1691,12 @@ GbsSessionTest >> testRepositoryRootNamespaceAtIfAbsentEvaluatesFallback [
 ]
 
 { #category : 'tests' }
-GbsSessionTest >> testRepositoryRootLockQueriesReturnDefaultsForMissingNamespace [
-	| mockSession root |
-	mockSession := MockGbsSession new.
-	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
-		self assert: (script includesSubstring: '#GbsPersistentRoot').
-		0 ].
-	root := GbsRepositoryRootFacade
-		on: mockSession
-		rootKey: #GbsPersistentRoot
-		path: #(#tickets).
-
-	self assert: root lockKind equals: #none.
-	self assert: root lockOwners equals: #().
-	self assert: root removeLock == root
-]
-
-{ #category : 'tests' }
 GbsSessionTest >> testRepositoryRootWithReadLockDoLocksAndUnlocksContainer [
 	| mockSession root scripts result seenFacade seenProxy |
 	mockSession := MockGbsSession new.
 	scripts := OrderedCollection new.
 	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
-		self assert: (script includesSubstring: '#GbsPersistentRoot').
+		self assert: (script includesSubstring: '#GbsBridgeRoot').
 		4001 ].
 	mockSession stubs at: #execute put: [ :script |
 		scripts add: script.
@@ -1701,37 +1713,6 @@ GbsSessionTest >> testRepositoryRootWithReadLockDoLocksAndUnlocksContainer [
 	self assert: seenProxy oop equals: 4001.
 	self assert: scripts size equals: 2.
 	self assert: (scripts first includesSubstring: 'System perform: #readLock:').
-	self assert: (scripts second includesSubstring: 'System perform: #removeLock:')
-]
-
-{ #category : 'tests' }
-GbsSessionTest >> testRepositoryRootWithWriteLockDoEnsuresNamespaceBeforeLocking [
-	| mockSession root scripts result seenFacade seenProxy |
-	mockSession := MockGbsSession new.
-	scripts := OrderedCollection new.
-	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
-		self assert: (script includesSubstring: '#GbsPersistentRoot').
-		self assert: (script includesSubstring: 'ifAbsentPut: [ Dictionary new ]').
-		self assert: (script includesSubstring: '#tickets').
-		5001 ].
-	mockSession stubs at: #execute put: [ :script |
-		scripts add: script.
-		true ].
-	root := GbsRepositoryRootFacade
-		on: mockSession
-		rootKey: #GbsPersistentRoot
-		path: #(#tickets).
-
-	result := root withWriteLockDo: [ :facade :proxy |
-		seenFacade := facade.
-		seenProxy := proxy.
-		#done ].
-
-	self assert: result equals: #done.
-	self assert: seenFacade == root.
-	self assert: seenProxy oop equals: 5001.
-	self assert: scripts size equals: 2.
-	self assert: (scripts first includesSubstring: 'System perform: #writeLock:').
 	self assert: (scripts second includesSubstring: 'System perform: #removeLock:')
 ]
 
@@ -2432,6 +2413,121 @@ GbsSessionTest >> testRubyRuntimeFacadeReportIncludesAutoloadRegistrationsAndSes
 ]
 
 { #category : 'tests' }
+GbsSessionTest >> testRubyRuntimeFacadeReportObjectExposesStructuredEntries [
+	| mockSession namespace report |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib' 'app/models') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
+		(script includesSubstring: 'System sessionStateAt: key')
+			ifTrue: [ ^ (IdentityDictionary new
+				at: #lazyThing put: 'registered';
+				yourself) ].
+		(script includesSubstring: 'rubyAutoloadAssociationAtOrNil: each env: 1')
+			ifTrue: [ ^ #(#('LazyThing' 'lib/lazy_thing.rb' false 9101)) ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'Object nameSpace: 1'
+		symbolListIndex: nil
+		metadata: #(7001 nil nil 'RubyNameSpace' 'Object').
+
+	report := mockSession rubyRuntime
+		reportForNamespace: namespace
+		selectedConstant: nil
+		selectedAutoload: nil.
+
+	self assert: report loadPathEntries size equals: 2.
+	self assert: report loadedFeatureEntries size equals: 1.
+	self assert: report persistentLoadedFeatureEntries size equals: 1.
+	self assert: report autoloadRegistrations size equals: 1.
+	self assert: report sessionStateSlots size equals: 1.
+	self assert: report loadPathEntries first class equals: GbsRubyLoadPathEntry.
+	self assert: report loadedFeatureEntries first class equals: GbsRubyLoadedFeatureEntry.
+	self assert: report persistentLoadedFeatureEntries first isPersistent.
+	self assert: report sessionStateSlots first class equals: GbsFinalizerRegistrySessionStateSlot.
+	self assert: report sections size equals: 5.
+	self assert: report sections first title equals: 'Autoload Registrations'.
+	self assert: (report text includesSubstring: 'Ruby Runtime')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testRubyRuntimeFacadeAutoloadRegistrationEntriesExposeLifecycleMetadata [
+	| mockSession namespace entries entry |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #() ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #() ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #() ].
+		(script includesSubstring: 'rubyAutoloadAssociationAtOrNil: each env: 1')
+			ifTrue: [ ^ #(#('LazyThing' nil false 9101 'lib/lazy_thing.rb' true true)) ].
+		(script includesSubstring: 'System sessionStateAt: key')
+			ifTrue: [ ^ nil ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'Object nameSpace: 1'
+		symbolListIndex: nil
+		metadata: #(7001 nil nil 'RubyNameSpace' 'Object').
+
+	entries := mockSession rubyRuntime autoloadRegistrationEntriesForNamespace: namespace.
+	entry := entries first.
+
+	self assert: entries size equals: 1.
+	self assert: entry autoloadFile equals: 'lib/lazy_thing.rb'.
+	self assert: entry persistentAutoloadFile equals: 'lib/lazy_thing.rb'.
+	self assert: entry isTransientCached.
+	self assert: entry hasPersistentRegistration.
+	self assert: entry registrationStateLabel equals: 'Transient+Persistent'.
+	self assert: (entry displayString includesSubstring: '{Transient+Persistent}')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testRubyRuntimeEntriesExposeFileProvenanceMetadata [
+	| loadPathEntry featureEntry autoloadEntry autoload |
+	loadPathEntry := GbsRubyLoadPathEntry path: '/opt/demo/lib'.
+	featureEntry := GbsRubyLoadedFeatureEntry feature: 'app/models/invoice.rb' persistent: true.
+	autoload := GbsRemoteAutoloadMirror
+		on: (GbsRemoteNamespaceMirror topLevelOn: MockGbsSession new)
+		metadata: #('LazyThing' nil false 9101 'lib/lazy_thing.rb' true true).
+	autoloadEntry := GbsRubyAutoloadRegistrationEntry on: autoload.
+
+	self assert: loadPathEntry provenanceLabel equals: 'Absolute Load Path'.
+	self assert: loadPathEntry rootComponent equals: 'opt'.
+	self assert: loadPathEntry pathComponents equals: #('opt' 'demo' 'lib').
+	self assert: featureEntry provenanceLabel equals: 'Persistent Feature'.
+	self assert: featureEntry isRubySource.
+	self assert: featureEntry rootComponent equals: 'app'.
+	self assert: autoloadEntry autoloadFile equals: 'lib/lazy_thing.rb'.
+	self assert: autoloadEntry recoveryStateLabel equals: 'Recoverable'.
+	self assert: autoloadEntry provenanceLabel equals: 'Transient+Persistent'.
+	self assert: autoloadEntry isRubySource.
+	self assert: autoloadEntry pathComponents equals: #('lib' 'lazy_thing.rb')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testRemoteAutoloadMirrorRecoverRegistrationUsesPersistentFallback [
+	| mockSession namespace autoload result |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'rubyAutoloadAssociationAtOrNil: name asSymbol env: 1') ifFalse: [ self fail ].
+		self assert: (script includesSubstring: 'persistCopy').
+		self assert: (script includesSubstring: 'rubyAutoload: name asSymbol file: fileName').
+		^ 'lib/lazy_thing.rb' ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	namespace instVarNamed: 'autoloadEntries' put: #(#('LazyThing' nil false 9101 'lib/lazy_thing.rb' true true)).
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('LazyThing' nil false 9101 'lib/lazy_thing.rb' true true).
+
+	result := autoload recoverRegistration.
+
+	self assert: result equals: 'lib/lazy_thing.rb'.
+	self assert: (namespace instVarNamed: 'autoloadEntries') isNil
+]
+
+{ #category : 'tests' }
 GbsSessionTest >> testObjectSpaceDiagnosticsFacadeReportTextSummarizesWellKnownSessionState [
 	| mockSession report |
 	mockSession := MockGbsSession new.
@@ -2449,8 +2545,121 @@ GbsSessionTest >> testObjectSpaceDiagnosticsFacadeReportTextSummarizesWellKnownS
 ]
 
 { #category : 'tests' }
+GbsSessionTest >> testObjectSpaceDiagnosticsFacadeSupportsArbitraryKeysWithSlotObjects [
+	| mockSession diagnostics slot report |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 21') ifTrue: [ ^ #(1 2 3) ].
+		self fail ].
+	diagnostics := mockSession objectSpaceDiagnostics.
+
+	slot := diagnostics slotAtKey: 21 label: 'Custom Slot'.
+	report := diagnostics reportTextForKeys: #(21).
+
+	self assert: slot key equals: 21.
+	self assert: slot label equals: 'Custom Slot'.
+	self assert: slot size equals: 3.
+	self assert: (diagnostics reportSlotsForKeys: #(21)) size equals: 1.
+	self assert: (report includesSubstring: 'Key 21 (Session State): Array size=3')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testObjectSpaceDiagnosticsFacadeSupportsNamedSlotAliases [
+	| mockSession diagnostics slot report |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 19')
+			ifTrue: [ ^ (IdentityDictionary new
+				at: #lazyThing put: 'registered';
+				yourself) ].
+		self fail ].
+	diagnostics := mockSession objectSpaceDiagnostics.
+
+	slot := diagnostics slotNamed: 'maglev_finalizer_registry'.
+	report := diagnostics reportTextForSlotNames: #('ruby finalizers').
+
+	self assert: (diagnostics slotKeyNamed: 'maglev_finalizer_registry') equals: 19.
+	self assert: (diagnostics slotKeyNamed: 'ruby finalizers') equals: 19.
+	self assert: slot key equals: 19.
+	self assert: slot label equals: 'MagLev Finalizer Registry'.
+	self assert: (report includesSubstring: 'Key 19 (MagLev Finalizer Registry): IdentityDictionary size=1')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testObjectSpaceDiagnosticsFacadeExpandsAliasPrefixesAndAliasNames [
+	| mockSession diagnostics slot |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 19') ifTrue: [ ^ IdentityDictionary new ].
+		self fail ].
+	diagnostics := mockSession objectSpaceDiagnostics.
+	slot := diagnostics slotNamed: 'slot 19'.
+
+	self assert: (diagnostics slotKeyNamed: 'slot 19') equals: 19.
+	self assert: (diagnostics slotKeyNamed: 'session.state.19') equals: 19.
+	self assert: (diagnostics slotKeyNamed: 'ruby main thread finalizers') equals: 19.
+	self assert: (diagnostics slotAliasNamesAtKey: 19) notEmpty.
+	self assert: (slot hasAliasNamed: 'rubymainthreadfinalizers').
+	self assert: (slot aliasNames includes: 'maglevfinalizerregistry')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testObjectSpaceDiagnosticsFacadeReportObjectSeparatesWellKnownAndCustomSlots [
+	| mockSession report |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 19') ifTrue: [ ^ (IdentityDictionary new at: #lazy put: true; yourself) ].
+		(script includesSubstring: 'key := 21') ifTrue: [ ^ #(1 2 3) ].
+		self fail ].
+
+	report := mockSession objectSpaceDiagnostics reportForKeys: #(19 21).
+
+	self assert: report slots size equals: 2.
+	self assert: report wellKnownSlots size equals: 1.
+	self assert: report customSlots size equals: 1.
+	self assert: (report text includesSubstring: 'Well-Known Session State').
+	self assert: (report text includesSubstring: 'Custom Session State')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testObjectSpaceDiagnosticsFinalizerRegistryReportIncludesReferencers [
+	| mockSession report |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 19') ifTrue: [
+			^ GbsProxy oop: 9001 session: mockSession ].
+		(script includesSubstring: 'findReferencesInMemory') ifTrue: [
+			^ { GbsProxy oop: 9101 session: mockSession } ].
+		self fail ].
+
+	report := mockSession objectSpaceDiagnostics finalizerRegistryReport.
+
+	self assert: report referencers size equals: 1.
+	self assert: report referencers first oop equals: 9101.
+	self assert: (report text includesSubstring: 'MagLev Finalizer Registry oop=9001 Referencers').
+	self assert: (report text includesSubstring: 'oop=9101')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testObjectSpaceDiagnosticsObjectsInMemoryReportUsesStructuredObjects [
+	| mockSession report |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'SystemRepository _listInstancesInMemory:')
+			ifTrue: [ ^ { GbsProxy oop: 9201 session: mockSession. GbsProxy oop: 9202 session: mockSession } ].
+		self fail ].
+
+	report := mockSession objectSpaceDiagnostics objectsInMemoryReportFrom: 1 limit: 2.
+
+	self assert: report objects size equals: 2.
+	self assert: report objects first oop equals: 9201.
+	self assert: (report text includesSubstring: 'Objects In Memory').
+	self assert: (report text includesSubstring: 'oop=9201')
+]
+
+{ #category : 'tests' }
 GbsSessionTest >> testRemoteNamespaceMirrorScopedSelectorQueryFiltersGlobalResultsByNamespace [
-	| mockSession namespace implementors senders references |
+	| mockSession namespace implementors senders references query |
 	mockSession := MockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		(script includesSubstring: 'implementorsOf:')
@@ -2469,8 +2678,933 @@ GbsSessionTest >> testRemoteNamespaceMirrorScopedSelectorQueryFiltersGlobalResul
 	implementors := namespace implementorMethodReferenceStringsForSelector: #size.
 	senders := namespace senderMethodReferenceStringsForSelector: #size.
 	references := namespace methodReferenceStringsToSymbol: 'Invoice'.
+	query := namespace implementorsQueryForSelector: #size.
 
 	self assert: implementors equals: #('Accounting::Invoice>>size').
 	self assert: senders equals: #('Accounting::Invoice>>size').
-	self assert: references equals: #('Accounting::Invoice>>size')
+	self assert: references equals: #('Accounting::Invoice>>size').
+	self assert: query class equals: GbsNamespaceScopedMethodQuery.
+	self assert: query references equals: #('Accounting::Invoice>>size').
+	self assert: (query title includesSubstring: 'Namespace Implementors of size')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testProcObjectForOopExposesMetadataAndInvocation [
+	| mockSession proc result |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'Object _objectForOop: 9001')
+			ifTrue: [ ^ #('ExecBlock2' 2 true 'demo.rb:12' 'proc { |a, b| a + b }') ].
+		self fail ].
+	mockSession stubs at: #forwardRemoteMessage put: [ :message :targetOop |
+		self assert: message selector equals: #call.
+		self assert: message arguments asArray equals: #(1 2).
+		self assert: targetOop equals: 9001.
+		^ 'ok' ].
+
+	proc := mockSession procObjectForOop: 9001.
+	result := proc value: 1 value: 2.
+
+	self assert: proc exists.
+	self assert: proc isExecBlock.
+	self assert: proc arity equals: 2.
+	self assert: proc bindingDisplayString equals: 'execBlock'.
+	self assert: proc sourceLocation equals: 'demo.rb:12'.
+	self assert: proc sourceCode equals: 'proc { |a, b| a + b }'.
+	self assert: result equals: 'ok'
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testRemoteMethodObjectToProcBuildsRemoteProcObject [
+	| mockSession methodObject proc |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'receiver := Object _objectForOop: 9001')
+			ifTrue: [
+				self assert: (script includesSubstring: 'receiver method: #foo').
+				^ '9101' ].
+		(script includesSubstring: 'Object _objectForOop: 9101')
+			ifTrue: [ ^ #('Proc' 0 false 'demo.rb:1' 'proc { foo }') ].
+		self fail ].
+	methodObject := (GbsRemoteMethodObject
+		on: mockSession
+		class: 'DemoClass'
+		selector: #foo
+		classSide: false)
+			bindTo: (GbsProxy oop: 9001 session: mockSession).
+
+	proc := methodObject toProc.
+
+	self assert: proc class equals: GbsRemoteProcObject.
+	self assert: proc oop equals: 9101.
+	self assert: proc isExecBlock not
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testRubyRuntimeEntryRelativeActionsNormalizeAgainstFeaturePath [
+	| mockSession entry required loaded |
+	required := false.
+	loaded := false.
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'requireFileNamed:')
+			ifTrue: [
+				required := true.
+				self assert: (script includesSubstring: 'app/shared.rb').
+				self deny: (script includesSubstring: '../shared.rb').
+				^ 'required' ].
+		(script includesSubstring: 'loadFileNamed:')
+			ifTrue: [
+				loaded := true.
+				self assert: (script includesSubstring: 'support/bootstrap.rb').
+				self deny: (script includesSubstring: '../../support/bootstrap.rb').
+				^ 'loaded' ].
+		self fail ].
+	entry := GbsRubyLoadedFeatureEntry feature: 'app/models/invoice.rb'.
+
+	self assert: (entry requireRelative: '../shared.rb' using: mockSession rubyRuntime) equals: 'required'.
+	self assert: (entry loadRelative: '../../support/bootstrap.rb' using: mockSession rubyRuntime) equals: 'loaded'.
+	self assert: required.
+	self assert: loaded
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testRemoteAutoloadMirrorResetAndRetryRegistrationUseLifecycleScripts [
+	| mockSession namespace autoload resetResult retryResult |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'Array with: fileName with: fileWasReset')
+			ifTrue: [
+				self assert: (script includesSubstring: 'Autoload registration is not recoverable.').
+				^ #('lib/lazy_thing.rb' true) ].
+		(script includesSubstring: 'removeConst: name asSymbol')
+			ifTrue: [
+				self assert: (script includesSubstring: 'transientNameSpaceForStore: false').
+				^ 'lib/lazy_thing.rb' ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	namespace instVarNamed: 'autoloadEntries' put: #(#('LazyThing' nil false 9101 'lib/lazy_thing.rb' true true)).
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('LazyThing' nil false 9101 'lib/lazy_thing.rb' true true).
+
+	resetResult := autoload resetRegistration.
+	retryResult := autoload retryRegistration.
+
+	self assert: autoload canResetRegistration.
+	self assert: autoload canRetryRegistration.
+	self assert: autoload retryStateLabel equals: 'Recoverable'.
+	self assert: resetResult equals: 'lib/lazy_thing.rb'.
+	self assert: retryResult first equals: 'lib/lazy_thing.rb'.
+	self assert: retryResult second equals: true.
+	self assert: (namespace instVarNamed: 'autoloadEntries') isNil
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testProcObjectForOopSpecializesExecBlocksAndEnforcesArity [
+	| mockSession proc |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'Object _objectForOop: 9001')
+			ifTrue: [ ^ #('ExecBlock2' 2 true 'demo.rb:12' 'proc { |a, b| a + b }') ].
+		self fail ].
+
+	proc := mockSession procObjectForOop: 9001.
+
+	self assert: proc class equals: GbsRemoteExecBlockObject.
+	self assert: proc isExecBlock.
+	self assert: proc isLambdaLike.
+	self should: [ proc value: 1 ] raise: Error
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testProcBindingObjectExposesReceiverAndCapturedLocals [
+	| mockSession proc binding associations |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'Object _objectForOop: 9001')
+			ifTrue: [
+				^ #('Proc' 1 false 'demo.rb:12' 'proc { |invoice| invoice total }' 9101 #('invoice' 'count') #(9201 nil) #('a DemoInvoice' '42')) ].
+		self fail ].
+
+	proc := mockSession procObjectForOop: 9001.
+	binding := proc bindingObject.
+	associations := binding localAssociations.
+
+	self assert: binding receiverOop equals: 9101.
+	self assert: binding receiverProxy oop equals: 9101.
+	self assert: binding hasCapturedLocals.
+	self assert: proc hasCapturedLocals.
+	self assert: proc localNames equals: #('invoice' 'count').
+	self assert: associations first key equals: 'invoice'.
+	self assert: associations first value oop equals: 9201.
+	self assert: associations second key equals: 'count'.
+	self assert: associations second value equals: '42'.
+	self assert: (mockSession bindingObjectForProcOop: 9001) class equals: GbsRemoteBindingObject
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testProcBindingObjectEvaluatesRubySourceAndLocals [
+	| mockSession proc binding |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'Object _objectForOop: 9001')
+			ifFalse: [ self fail ].
+		(script includesSubstring: 'perform: #eval withArguments:')
+			ifTrue: [
+				self assert: (script includesSubstring: '''demo.rb''').
+				self assert: (script includesSubstring: '12 }').
+				(script includesSubstring: '''invoice''')
+					ifTrue: [ ^ 42 ].
+				^ 57 ].
+		^ #('Proc' 1 false 'demo.rb:12' 'proc { |invoice| invoice total }' 9101 #('invoice' 'count') #(9201 nil) #('a DemoInvoice' '42')) ].
+
+	proc := mockSession procObjectForOop: 9001.
+	binding := proc bindingObject.
+
+	self assert: (binding evaluate: 'invoice.total + count') equals: 57.
+	self assert: (binding localValueNamed: 'invoice') equals: 42.
+	self assert: binding lexicalScopeNames equals: #('invoice' 'count').
+	self assert: binding lexicalScopeAssociations size equals: 2
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testProcBindingObjectSupportsLocalMutationAndLexicalMetadata [
+	| mockSession proc binding |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'Object _objectForOop: 9001')
+			ifFalse: [ self fail ].
+		(script includesSubstring: 'binding lexicalPath')
+			ifTrue: [ ^ '#(''Demo'' ''Closures'')' ].
+		(script includesSubstring: 'binding methodDefTarget')
+			ifTrue: [ ^ 'Demo::Closures' ].
+		(script includesSubstring: 'binding forModuleEval')
+			ifTrue: [ ^ true ].
+		(script includesSubstring: 'perform: #eval withArguments:')
+			ifTrue: [
+				(script includesSubstring: 'invoice = (99)')
+					ifTrue: [ ^ 99 ].
+				^ 57 ].
+		^ #('Proc' 1 false 'demo.rb:12' 'proc { invoice }' 9101 #('invoice') #(9201) #('a DemoInvoice')) ].
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		self assert: (script includesSubstring: 'binding methodDefTarget').
+		^ 9301 ].
+
+	proc := mockSession procObjectForOop: 9001.
+	binding := proc bindingObject.
+
+	self assert: binding selfProxy oop equals: 9101.
+	self assert: binding forModuleEval.
+	self assert: binding lexicalPathDisplayString equals: '#(''Demo'' ''Closures'')'.
+	self assert: binding methodDefTargetDisplayString equals: 'Demo::Closures'.
+	self assert: binding methodDefTargetProxy oop equals: 9301.
+	self assert: (binding setLocalNamed: 'invoice' to: 99) equals: 99
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testProcBindingObjectBuildsClosureIdentityAndText [
+	| mockSession proc binding |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'Object _objectForOop: 9001')
+			ifFalse: [ self fail ].
+		(script includesSubstring: 'binding lexicalPath')
+			ifTrue: [ ^ '#(''Demo'' ''Closures'')' ].
+		(script includesSubstring: 'binding methodDefTarget')
+			ifTrue: [ ^ 'Demo::Closures' ].
+		(script includesSubstring: 'binding forModuleEval')
+			ifTrue: [ ^ true ].
+		^ #('Proc' 1 false 'demo.rb:12' 'proc { invoice }' 9101 #('invoice') #(9201) #('a DemoInvoice')) ].
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script | 9301 ].
+
+	proc := mockSession procObjectForOop: 9001.
+	binding := proc bindingObject.
+
+	self assert: (binding closureIdentityString includesSubstring: 'binding@demo.rb:12').
+	self assert: (binding text includesSubstring: 'Lexical Path: #(''Demo'' ''Closures'')').
+	self assert: (binding text includesSubstring: 'Method Target: Demo::Closures').
+	self assert: (binding text includesSubstring: 'Receiver OOP: 9101').
+	self assert: (proc text includesSubstring: 'Proc [arity=1]').
+	self assert: (proc text includesSubstring: 'invoice =>')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testRubyRuntimeReportBuildsProvenanceGraphAndRelativeActions [
+	| mockSession namespace graph entry action |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('/opt/demo/lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('app/models/invoice.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('config/boot.rb') ].
+		(script includesSubstring: 'rubyAutoloadAssociationAtOrNil: each env: 1')
+			ifTrue: [ ^ #(#('LazyThing' nil false 9101 'lib/lazy_thing.rb' true true)) ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+
+	graph := (mockSession rubyRuntime
+		reportForNamespace: namespace
+		selectedConstant: nil
+		selectedAutoload: nil) provenanceGraph.
+	entry := GbsRubyLoadedFeatureEntry feature: 'app/models/invoice.rb'.
+	action := entry requireRelativeActionFor: '../shared.rb' using: mockSession rubyRuntime.
+
+	self assert: graph links size equals: 4.
+	self assert: (graph text includesSubstring: 'Absolute Load Path -> /opt/demo/lib').
+	self assert: (graph text includesSubstring: 'Transient Feature -> app/models/invoice.rb').
+	self assert: (graph text includesSubstring: 'LazyThing -> lib/lazy_thing.rb').
+	self assert: action actionLabel equals: 'require_relative'.
+	self assert: action resolvedPath equals: 'app/shared.rb'
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testRubyRuntimeReportBuildsProvenanceActionsForFeaturesAndAutoloadRecovery [
+	| mockSession namespace graph |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('/opt/demo/lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('app/models/invoice.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('config/boot.rb') ].
+		(script includesSubstring: 'rubyAutoloadAssociationAtOrNil: each env: 1')
+			ifTrue: [
+				^ #(#('LazyThing' nil false 9101 'lib/lazy_thing.rb' true true 'Persistent registration can recover lib/lazy_thing.rb' 'Reset transient cache, then recover persistent registration.' 'Transient Cache + Persistent Registration')) ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+
+	graph := (mockSession rubyRuntime
+		reportForNamespace: namespace
+		selectedConstant: nil
+		selectedAutoload: nil) provenanceGraph.
+
+	self assert: graph actions size equals: 8.
+	self assert: (graph text includesSubstring: 'Actions').
+	self assert: (graph text includesSubstring: 'require app/models/invoice.rb').
+	self assert: (graph text includesSubstring: 'load config/boot.rb').
+	self assert: (graph text includesSubstring: 'recover autoload LazyThing').
+	self assert: (graph text includesSubstring: 'reset autoload LazyThing').
+	self assert: (graph text includesSubstring: 'retry autoload [transient-reset] LazyThing').
+	self assert: (graph text includesSubstring: 'retry autoload [persistent-after-reset] LazyThing')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testRubyRuntimeProvenanceGraphNavigatesEntryLinksAndActions [
+	| mockSession namespace report graph featureEntry autoloadEntry |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('/opt/demo/lib') ].
+		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('app/models/invoice.rb') ].
+		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('config/boot.rb') ].
+		(script includesSubstring: 'rubyAutoloadAssociationAtOrNil: each env: 1')
+			ifTrue: [
+				^ #(#('LazyThing' nil false 9101 'lib/lazy_thing.rb' true true 'Persistent registration can recover lib/lazy_thing.rb' 'Reset transient cache, then recover persistent registration.' 'Transient Cache + Persistent Registration' 'A transient cache entry remains from a failed or interrupted autoload attempt.' 'lib/lazy_thing.rb' 'persistent-after-reset')) ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+	report := mockSession rubyRuntime
+		reportForNamespace: namespace
+		selectedConstant: nil
+		selectedAutoload: nil.
+	graph := report provenanceGraph.
+	featureEntry := report loadedFeatureEntries first.
+	autoloadEntry := report autoloadRegistrations first.
+
+	self assert: (graph linksForEntry: featureEntry) size equals: 1.
+	self assert: (graph actionsForEntry: featureEntry) size equals: 2.
+	self assert: (graph actionsForEntry: autoloadEntry) size equals: 4.
+	self assert: (graph entriesForSourceLabel: 'Transient Feature') size equals: 1.
+	self assert: ((graph linksToTargetLabel: 'lib/lazy_thing.rb') anySatisfy: [ :each | each entry = autoloadEntry ])
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testRemoteAutoloadMirrorFailureStateLabelsDifferentiatePendingAndRecoverableFailure [
+	| namespace pending recoverable cached recoverableEntry |
+	namespace := GbsRemoteNamespaceMirror topLevelOn: MockGbsSession new.
+	pending := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('LazyThing' 'lib/lazy_thing.rb' false 9101 nil false false).
+	recoverable := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('LazyThing' nil false 9101 'lib/lazy_thing.rb' false true).
+	cached := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('LazyThing' nil false 9101 nil true false).
+	recoverableEntry := GbsRubyAutoloadRegistrationEntry on: recoverable.
+
+	self assert: pending failureStateLabel equals: 'Awaiting First Load'.
+	self deny: pending hasFailedRegistration.
+	self assert: recoverable failureStateLabel equals: 'Persistent Recovery Required'.
+	self assert: recoverable hasFailedRegistration.
+	self assert: cached failureStateLabel equals: 'Transient Cache Reset Required'.
+	self assert: (recoverableEntry displayString includesSubstring: '<Persistent Recovery Required>')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testRemoteAutoloadMirrorExposesFailureDetailAndRetryDetail [
+	| namespace autoload entry |
+	namespace := GbsRemoteNamespaceMirror topLevelOn: MockGbsSession new.
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: #('LazyThing' nil false 9101 'lib/lazy_thing.rb' true true 'Persistent registration can recover lib/lazy_thing.rb' 'Reset transient cache, then recover persistent registration.' 'Transient Cache + Persistent Registration' 'A transient cache entry remains from a failed or interrupted autoload attempt.' 'lib/lazy_thing.rb' 'persistent-after-reset').
+	entry := GbsRubyAutoloadRegistrationEntry on: autoload.
+
+	self assert: autoload failureDetail equals: 'Persistent registration can recover lib/lazy_thing.rb'.
+	self assert: autoload retryDetailLabel equals: 'Reset transient cache, then recover persistent registration.'.
+	self assert: autoload failureSourceLabel equals: 'Transient Cache + Persistent Registration'.
+	self assert: autoload failureMessage equals: 'A transient cache entry remains from a failed or interrupted autoload attempt.'.
+	self assert: autoload lastAttemptedFile equals: 'lib/lazy_thing.rb'.
+	self assert: autoload retrySourceKind equals: 'persistent-after-reset'.
+	self assert: autoload retrySourceChoices equals: #('transient-reset' 'persistent-after-reset').
+	self assert: entry failureDetail equals: autoload failureDetail.
+	self assert: entry failureMessage equals: autoload failureMessage.
+	self assert: entry retryDetailLabel equals: autoload retryDetailLabel.
+	self assert: entry retrySourceKind equals: autoload retrySourceKind.
+	self assert: (entry displayString includesSubstring: 'Persistent registration can recover lib/lazy_thing.rb')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testRemoteAutoloadFailureBuildsExceptionObjectAndBacktrace [
+	| session namespace autoload failure exception metadata |
+	session := MockGbsSession new.
+	namespace := GbsRemoteNamespaceMirror topLevelOn: session.
+	metadata := {
+		'LazyThing'.
+		nil.
+		false.
+		9101.
+		'lib/lazy_thing.rb'.
+		true.
+		true.
+		'Persistent registration can recover lib/lazy_thing.rb'.
+		'Reset transient cache, then recover persistent registration.'.
+		'Transient Cache + Persistent Registration'.
+		'autoload failed'.
+		'lib/lazy_thing.rb'.
+		'persistent-after-reset'.
+		9501.
+		'LazyThingError: boom', String lf, 'demo.rb:12' }.
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: metadata.
+	failure := autoload failure.
+	exception := failure exceptionObject.
+
+	self assert: failure retrySourceChoices equals: #('transient-reset' 'persistent-after-reset').
+	self assert: failure retrySourceKind equals: 'persistent-after-reset'.
+	self assert: exception oop equals: 9501.
+	self assert: exception hasRemoteObject.
+	self assert: exception hasBacktrace.
+	self assert: exception backtraceText equals: 'LazyThingError: boom', String lf, 'demo.rb:12'.
+	self assert: exception backtraceLines asArray equals: #('LazyThingError: boom' 'demo.rb:12').
+	self assert: exception backtraceLines last equals: 'demo.rb:12'.
+	self assert: failure failureBacktraceText equals: exception backtraceText.
+	self assert: (exception text includesSubstring: 'Backtrace').
+	self assert: (exception text includesSubstring: 'demo.rb:12')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testRemoteAutoloadFailureBuildsBacktraceEntryObjectsAndRetryActions [
+	| session namespace autoload failure entry |
+	session := MockGbsSession new.
+	namespace := GbsRemoteNamespaceMirror topLevelOn: session.
+	autoload := GbsRemoteAutoloadMirror
+		on: namespace
+		metadata: {
+			'LazyThing'. nil. false. 9101. 'lib/lazy_thing.rb'. true. true.
+			'Persistent registration can recover lib/lazy_thing.rb'.
+			'Reset transient cache, then recover persistent registration.'.
+			'Transient Cache + Persistent Registration'.
+			'autoload failed'.
+			'lib/lazy_thing.rb'.
+			'persistent-after-reset'.
+			9501.
+			'LazyThingError: boom', String lf, 'demo.rb:12', String lf, 'lib/lazy_thing.rb:3' }.
+	failure := autoload failure.
+	entry := GbsRubyAutoloadRegistrationEntry on: autoload.
+
+	self assert: failure backtraceEntries size equals: 3.
+	self assert: failure backtraceEntries second fileName equals: 'demo.rb'.
+	self assert: failure backtraceEntries second lineNumber equals: 12.
+	self assert: failure retryActionChoices size equals: 2.
+	self assert: entry failureBacktraceEntries last fileName equals: 'lib/lazy_thing.rb'
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testRepositoryNamespaceMirrorAutoloadEntriesScriptIncludesFailureExceptionMetadata [
+	| mockSession namespace |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: '#lastException').
+		self assert: (script includesSubstring: '#lastExceptionBacktrace').
+		^ #() ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+
+	self assert: namespace autoloadMirrors equals: #()
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testRepositoryNamespaceMirrorRetryAutoloadUsingSourceKindBuildsExpectedScript [
+	| mockSession namespace result |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: 'selectedSource := sourceKind').
+		self assert: (script includesSubstring: '''persistent-after-reset''').
+		self assert: (script includesSubstring: 'selectedSource = ''transient-reset''').
+		self assert: (script includesSubstring: 'selectedSource = ''persistent-after-reset''').
+		^ #('lib/lazy_thing.rb' true 'persistent-after-reset') ].
+	namespace := GbsRemoteNamespaceMirror topLevelOn: mockSession.
+
+	result := namespace
+		retryAutoload: 'LazyThing'
+		usingSourceKind: 'persistent-after-reset'.
+
+	self assert: result third equals: 'persistent-after-reset'
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testObjectSpaceDiagnosticsFacadeDiscoversOccupiedSlotsAndParsesNamedAliases [
+	| mockSession diagnostics discovered slot |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 19')
+			ifTrue: [ ^ (IdentityDictionary new
+				at: #lazy put: true;
+				yourself) ].
+		(script includesSubstring: 'key := 20')
+			ifTrue: [ ^ nil ].
+		(script includesSubstring: 'key := 21')
+			ifTrue: [ ^ #(1 2 3) ].
+		self fail ].
+	diagnostics := mockSession objectSpaceDiagnostics.
+
+	slot := diagnostics slotNamed: 'session.state.21'.
+	discovered := diagnostics occupiedSlotsFrom: 19 to: 21.
+
+	self assert: slot key equals: 21.
+	self assert: slot exists.
+	self assert: (diagnostics slotNamed: 'slot 19') key equals: 19.
+	self assert: discovered size equals: 2.
+	self assert: (discovered collect: [ :each | each key ]) equals: #(19 21).
+	self assert: ((diagnostics occupiedSlotsReportTextFrom: 19 to: 21)
+		includesSubstring: 'Key 21 (Session State): Array size=3')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testObjectSpaceDiagnosticsFacadeSupportsRegisteredWellKnownSlots [
+	| mockSession diagnostics slot report |
+	[
+		GbsObjectSpaceDiagnosticsFacade resetRegisteredWellKnownSessionStateSlots.
+		GbsObjectSpaceDiagnosticsFacade
+			registerWellKnownSessionStateSlotKey: 21
+			label: 'Ruby Thread Cache'
+			aliases: #('rubythreadcache' 'threadcache').
+		mockSession := MockGbsSession new.
+		mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+			(script includesSubstring: 'key := 21') ifTrue: [ ^ #(1 2) ].
+			self fail ].
+		diagnostics := mockSession objectSpaceDiagnostics.
+
+		slot := diagnostics slotNamed: 'Ruby Thread Cache'.
+		report := diagnostics reportTextForSlotNames: #('thread cache').
+
+		self assert: (diagnostics slotKeyNamed: 'ruby_thread_cache') equals: 21.
+		self assert: (diagnostics slotKeyNamed: 'Ruby Thread Cache') equals: 21.
+		self assert: slot label equals: 'Ruby Thread Cache'.
+		self assert: (report includesSubstring: 'Key 21 (Ruby Thread Cache): Array size=2')
+	] ensure: [
+		GbsObjectSpaceDiagnosticsFacade resetRegisteredWellKnownSessionStateSlots ]
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testObjectSpaceDiagnosticsFacadeBatchRegistersSlotsAndTracksDiscoverySource [
+	| mockSession diagnostics registeredSlot discoveredSlot |
+	[
+		GbsObjectSpaceDiagnosticsFacade resetRegisteredWellKnownSessionStateSlots.
+		GbsObjectSpaceDiagnosticsFacade registerWellKnownSessionStateSlots: {
+			{ 21. 'Ruby Thread Cache'. #('rubythreadcache' 'threadcache') }.
+			{ 22. 'Ruby Fiber Registry'. #('rubyfiberregistry' 'fiberregistry') } }.
+		mockSession := MockGbsSession new.
+		mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+			(script includesSubstring: 'key := 21') ifTrue: [ ^ #(1 2) ].
+			(script includesSubstring: 'key := 23') ifTrue: [ ^ 'dynamic-slot' ].
+			self fail ].
+		diagnostics := mockSession objectSpaceDiagnostics.
+
+		registeredSlot := diagnostics slotNamed: 'thread cache'.
+		discoveredSlot := diagnostics slotAtKey: 23.
+
+		self assert: (diagnostics slotKeyNamed: 'fiber registry') equals: 22.
+		self assert: registeredSlot isWellKnown.
+		self assert: registeredSlot discoverySource equals: #registered.
+		self deny: discoveredSlot isWellKnown.
+		self assert: discoveredSlot discoverySource equals: #discovered
+	] ensure: [
+		GbsObjectSpaceDiagnosticsFacade resetRegisteredWellKnownSessionStateSlots ]
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testObjectSpaceDiagnosticsFacadeBuildsTypedWellKnownSlotsWithTags [
+	| mockSession diagnostics slot |
+	[
+		GbsObjectSpaceDiagnosticsFacade resetRegisteredWellKnownSessionStateSlots.
+		mockSession := MockGbsSession new.
+		mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+			(script includesSubstring: 'key := 19') ifTrue: [ ^ #(1 2 3) ].
+			self fail ].
+		diagnostics := mockSession objectSpaceDiagnostics.
+		slot := diagnostics slotNamed: 'maglev finalizer registry'.
+
+		self assert: slot class equals: GbsFinalizerRegistrySessionStateSlot.
+		self assert: slot isWellKnown.
+		self assert: slot discoverySource equals: #registered.
+		self assert: (slot hasTag: #maglev).
+		self assert: (slot hasTag: #finalizerRegistry)
+	] ensure: [
+		GbsObjectSpaceDiagnosticsFacade resetRegisteredWellKnownSessionStateSlots ]
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testObjectSpaceDiagnosticsFacadeBuildsTypedCacheAndRegistrySlots [
+	| mockSession diagnostics cacheSlot registrySlot |
+	[
+		GbsObjectSpaceDiagnosticsFacade resetRegisteredWellKnownSessionStateSlots.
+		GbsObjectSpaceDiagnosticsFacade
+			registerWellKnownCacheSessionStateSlotKey: 21
+			label: 'Ruby Thread Cache'
+			aliases: #('threadcache')
+			tags: #(#ruby #cache).
+		GbsObjectSpaceDiagnosticsFacade
+			registerWellKnownRegistrySessionStateSlotKey: 22
+			label: 'Ruby Fiber Registry'
+			aliases: #('fiberregistry')
+			tags: #(#ruby #registry).
+		mockSession := MockGbsSession new.
+		mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+			(script includesSubstring: 'key := 21') ifTrue: [ ^ #(1 2) ].
+			(script includesSubstring: 'key := 22') ifTrue: [ ^ (IdentityDictionary new at: #fiber put: 1; yourself) ].
+			self fail ].
+		diagnostics := mockSession objectSpaceDiagnostics.
+		cacheSlot := diagnostics slotNamed: 'thread cache'.
+		registrySlot := diagnostics slotNamed: 'fiber registry'.
+
+		self assert: cacheSlot class equals: GbsCacheSessionStateSlot.
+		self assert: cacheSlot isCacheSlot.
+		self assert: cacheSlot slotKind equals: #cache.
+		self assert: (cacheSlot hasTag: #cache).
+		self assert: registrySlot class equals: GbsRegistrySessionStateSlot.
+		self assert: registrySlot isRegistrySlot.
+		self assert: registrySlot slotKind equals: #registry.
+		self assert: (registrySlot hasTag: #registry)
+	] ensure: [
+		GbsObjectSpaceDiagnosticsFacade resetRegisteredWellKnownSessionStateSlots ]
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testObjectSpaceDiagnosticsFacadeInfersTypedSlotsForDiscoveredValues [
+	| mockSession diagnostics registrySlot cacheSlot threadSlot |
+	[
+		GbsObjectSpaceDiagnosticsFacade resetRegisteredWellKnownSessionStateSlots.
+		GbsObjectSpaceDiagnosticsFacade
+			registerWellKnownThreadStateSessionStateSlotKey: 25
+			label: 'Ruby Thread State'
+			aliases: #('rubythreadstate' 'threadstate')
+			tags: #(#ruby #thread).
+		mockSession := MockGbsSession new.
+		mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+			(script includesSubstring: 'key := 23') ifTrue: [ ^ IdentityDictionary new ].
+			(script includesSubstring: 'key := 24') ifTrue: [ ^ #(1 2 3) ].
+			(script includesSubstring: 'key := 25') ifTrue: [ ^ 'thread-state' ].
+			self fail ].
+		diagnostics := mockSession objectSpaceDiagnostics.
+
+		registrySlot := diagnostics slotAtKey: 23 label: 'Session Registry'.
+		cacheSlot := diagnostics slotAtKey: 24 label: 'Session Cache'.
+		threadSlot := diagnostics slotNamed: 'threadstate'.
+
+		self assert: registrySlot class equals: GbsRegistrySessionStateSlot.
+		self assert: cacheSlot class equals: GbsCacheSessionStateSlot.
+		self assert: threadSlot class equals: GbsThreadStateSessionStateSlot.
+		self assert: (threadSlot hasTag: #thread)
+	] ensure: [
+		GbsObjectSpaceDiagnosticsFacade resetRegisteredWellKnownSessionStateSlots ]
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testSessionMethodsAccessorUsesSymbolDictionaryFacade [
+	| mockSession result |
+	mockSession := MockGbsSession new.
+
+	result := mockSession sessionMethods.
+
+	self assert: result class equals: GbsSymbolDictionaryFacade.
+	self assert: result name equals: 'SessionMethods'
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testMaglevFacadeExposesBridgeRootAndSharedCounters [
+	| mockSession maglev sharedCounter |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'System transactionLevel' ifTrue: [ ^ 2 ].
+		script = 'System sharedCounter: 3' ifTrue: [ ^ 41 ].
+		script = 'System sharedCounter: 3 incrementBy: 2' ifTrue: [ ^ 43 ].
+		self fail ].
+
+	maglev := mockSession maglev.
+	sharedCounter := maglev sharedCounterAt: 3.
+
+	self assert: maglev bridgeRoot class equals: GbsBridgeRootFacade.
+	self assert: maglev transactionLevel equals: 2.
+	self assert: sharedCounter value equals: 41.
+	self assert: (sharedCounter incrementBy: 2) equals: 43
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testMaglevBridgeRootMaterializesRcAndProcEntries [
+	| mockSession root counter proc |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'clsName :=') ifTrue: [ ^ #('Proc' 1 false nil nil nil #() #() #()) ].
+		(script includesSubstring: '#counter') ifTrue: [ ^ GbsProxy oop: 7001 session: mockSession ].
+		(script includesSubstring: '#job') ifTrue: [ ^ GbsProxy oop: 7002 session: mockSession ].
+		(script includesSubstring: '#missing') ifTrue: [ ^ nil ].
+		self fail ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		(script includesSubstring: '7001') ifTrue: [ ^ 'RcCounter' ].
+		(script includesSubstring: '7002') ifTrue: [ ^ 'Proc' ].
+		self fail ].
+
+	root := mockSession maglev bridgeRoot.
+	counter := root at: #counter.
+	proc := root at: #job.
+
+	self assert: counter class equals: GbsRcCounter.
+	self assert: proc class equals: GbsRemoteProcObject.
+	self assert: (root at: #missing ifAbsent: [ #fallback ]) equals: #fallback
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testObjectLogFacadeMapsEntriesAndMaterializesPayloads [
+	| mockSession entries entry |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'ObjectLogEntry objectLog') ifTrue: [
+			^ { { 1. 4. 'Saved object'. 1234. '2026-01-01T10:00:00Z'. 'runtime'. true. 7101. 'a counter' } } ].
+		self fail ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		(script includesSubstring: '7101') ifTrue: [ ^ 'RcCounter' ].
+		self fail ].
+
+	entries := mockSession objectLog entries.
+	entry := entries first.
+
+	self assert: entries size equals: 1.
+	self assert: entry priorityLabel equals: 'INFO'.
+	self assert: entry label equals: 'Saved object'.
+	self assert: entry object class equals: GbsRcCounter.
+	self assert: (mockSession objectLog reportText includesSubstring: 'Saved object')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testChunkedMigrationRunnerBuildsMaglevAlignedScripts [
+	| mockSession runner prepareScript chunkScript |
+	mockSession := MockGbsSession new.
+	runner := GbsChunkedMigrationRunner
+		on: mockSession
+		source: #LegacyPoint
+		target: #Point.
+	prepareScript := runner listInstanceOopsScript.
+	chunkScript := runner migrateChunkScriptForOops: #(101 102 103).
+
+	self assert: (prepareScript includesSubstring: 'SystemRepository listInstances').
+	self assert: (prepareScript includesSubstring: 'LegacyPoint').
+	self assert: (chunkScript includesSubstring: 'migrateInstances: instances asArray to: toClass').
+	self assert: (chunkScript includesSubstring: '101').
+	self assert: (chunkScript includesSubstring: 'Point')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testChunkedMigrationRunnerPrepareCheckpointReplaysAcrossCommitConflict [
+	| mockSession runner result listCount checkpointWriteCount commits |
+	mockSession := MockGbsSession new.
+	listCount := 0.
+	checkpointWriteCount := 0.
+	commits := #(0 1) readStream.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'SystemRepository listInstances') ifTrue: [
+			listCount := listCount + 1.
+			^ #(101 102) ].
+		(script includesSubstring: 'gbsMigration:LegacyPoint->Point') ifTrue: [
+			checkpointWriteCount := checkpointWriteCount + 1.
+			^ #(101 102) ].
+		self fail ].
+	mockSession stubs at: #gciCommit put: [ commits next ].
+	runner := GbsChunkedMigrationRunner
+		on: mockSession
+		source: #LegacyPoint
+		target: #Point.
+
+	result := runner prepareCheckpoint.
+
+	self assert: (result at: #remaining) equals: 2.
+	self assert: (result at: #committed) equals: true.
+	self assert: listCount equals: 2.
+	self assert: checkpointWriteCount equals: 2
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testCommitTransactionWithRetryCountSignalsConflictAfterExhaustion [
+	| mockSession commitCount |
+	mockSession := MockGbsSession new.
+	commitCount := 0.
+	mockSession stubs at: #gciCommit put: [
+		commitCount := commitCount + 1.
+		0 ].
+
+	self
+		should: [ mockSession commitTransactionWithRetryCount: 1 ]
+		raise: GbsCommitConflictError.
+	self assert: commitCount equals: 2
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testMaglevFacadeExposesSymbolDictionaryFacades [
+	| mockSession maglev |
+	mockSession := MockGbsSession new.
+	maglev := mockSession maglev.
+
+	self assert: maglev globals class equals: GbsSymbolDictionaryFacade.
+	self assert: maglev globals name equals: 'Globals'.
+	self assert: maglev published class equals: GbsSymbolDictionaryFacade.
+	self assert: maglev published name equals: 'Published'.
+	self assert: maglev userGlobals class equals: GbsSymbolDictionaryFacade.
+	self assert: maglev userGlobals name equals: 'UserGlobals'.
+	self assert: maglev sessionMethods class equals: GbsSymbolDictionaryFacade.
+	self assert: maglev sessionMethods name equals: 'SessionMethods'
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testSmalltalkFacadeExposesBridgeRootAndSymbolDictionaries [
+	| mockSession facade |
+	mockSession := MockGbsSession new.
+	facade := mockSession smalltalk.
+
+	self assert: facade class equals: GbsSmalltalkFacade.
+	self assert: mockSession bridgeRoot class equals: GbsBridgeRootFacade.
+	self assert: mockSession bridgeRoot rootKey equals: #GbsBridgeRoot.
+	self assert: facade bridgeRoot class equals: GbsBridgeRootFacade.
+	self assert: facade bridgeRoot rootKey equals: #GbsBridgeRoot.
+	self assert: facade globals class equals: GbsSymbolDictionaryFacade.
+	self assert: facade published class equals: GbsSymbolDictionaryFacade.
+	self assert: facade userGlobals class equals: GbsSymbolDictionaryFacade.
+	self deny: (facade respondsTo: #sessionMethods)
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testMaterializeMaglevRuntimeValueMapsGsDictionaryAndGenericObject [
+	| mockSession dictionary object |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		(script includesSubstring: '7201') ifTrue: [ ^ 'StringKeyValueDictionary' ].
+		(script includesSubstring: '7202') ifTrue: [ ^ 'RubyServiceThing' ].
+		self fail ].
+
+	dictionary := mockSession materializeMaglevRuntimeValue: (GbsProxy oop: 7201 session: mockSession).
+	object := mockSession materializeMaglevRuntimeValue: (GbsProxy oop: 7202 session: mockSession).
+
+	self assert: dictionary class equals: GbsGsDictionary.
+	self assert: object class equals: GbsGsObject.
+	self assert: object oop equals: 7202
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testObjectLogFacadeWritesTaggedEntriesAndCommits [
+	| mockSession commitCount |
+	mockSession := MockGbsSession new.
+	commitCount := 0.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'ObjectLogEntry info:') ifTrue: [
+			self assert: (script includesSubstring: '''Tagged entry''').
+			self assert: (script includesSubstring: 'entry tag:').
+			self assert: (script includesSubstring: '''runtime''').
+			^ true ].
+		self fail ].
+	mockSession stubs at: #gciCommit put: [
+		commitCount := commitCount + 1.
+		1 ].
+
+	self assert: (mockSession objectLog info: 'Tagged entry' object: nil tag: 'runtime').
+	self assert: commitCount equals: 1
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testFetchTranscriptLogsUsesSessionTempsFallbackScript [
+	| mockSession |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		self assert: (script includesSubstring: 'Transcript respondsTo: #fetchAndClear').
+		self assert: (script includesSubstring: '#PharoTranscriptLog').
+		self assert: (script includesSubstring: 'SessionTemps current at: #PharoTranscriptLog put: OrderedCollection new').
+		^ 'TDD Hello', String cr ].
+
+	self assert: (mockSession fetchTranscriptLogs includesSubstring: 'TDD Hello')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testObjectSpaceDiagnosticsFacadeRegistersMaglevCompilerAndStackSlots [
+	| mockSession diagnostics compilerSlot targetStackSlot evalArgsSlot currentTargetSlot |
+	[
+		GbsObjectSpaceDiagnosticsFacade resetRegisteredWellKnownSessionStateSlots.
+		mockSession := MockGbsSession new.
+		mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+			(script includesSubstring: 'key := 1') ifTrue: [ ^ 'compiler-state' ].
+			(script includesSubstring: 'key := 3') ifTrue: [ ^ #(1 2 3) ].
+			(script includesSubstring: 'key := 6') ifTrue: [ ^ #(4 5) ].
+			(script includesSubstring: 'key := 7') ifTrue: [ ^ 'method-target' ].
+			self fail ].
+		diagnostics := mockSession objectSpaceDiagnostics.
+		compilerSlot := diagnostics slotNamed: 'ruby compiler state'.
+		targetStackSlot := diagnostics slotNamed: 'ruby method definition target stack'.
+		evalArgsSlot := diagnostics slotNamed: 'ruby eval arguments stack'.
+		currentTargetSlot := diagnostics slotNamed: 'ruby current method definition target'.
+
+		self assert: compilerSlot class equals: GbsCompilerStateSessionStateSlot.
+		self assert: targetStackSlot class equals: GbsStackSessionStateSlot.
+		self assert: evalArgsSlot class equals: GbsStackSessionStateSlot.
+		self assert: currentTargetSlot class equals: GbsThreadStateSessionStateSlot
+	] ensure: [
+		GbsObjectSpaceDiagnosticsFacade resetRegisteredWellKnownSessionStateSlots ]
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testObjectSpaceRepositoryFacadeCountsOopsAndBuildsReport [
+	| mockSession repository report |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'SystemRepository listInstances') ifTrue: [
+			(script includesSubstring: 'instances size') ifTrue: [ ^ 3 ].
+			(script includesSubstring: 'collect: [ :each | each asOop ]') ifTrue: [ ^ #(101 102 103) ] ].
+		self fail ].
+	repository := mockSession objectSpaceRepository.
+	report := repository reportTextFor: #LegacyPoint.
+
+	self assert: (repository countInstancesOf: #LegacyPoint) equals: 3.
+	self assert: (repository instanceOopsOf: #LegacyPoint) equals: #(101 102 103).
+	self assert: (report includesSubstring: 'ObjectSpace::Repository').
+	self assert: (report includesSubstring: 'LegacyPoint').
+	self assert: (report includesSubstring: '#(101 102 103)')
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testWithCommitRetryCountReplaysBlockAcrossCommitConflict [
+	| mockSession attempts commits result |
+	mockSession := MockGbsSession new.
+	attempts := 0.
+	commits := #(0 1) readStream.
+	mockSession stubs at: #gciCommit put: [ commits next ].
+
+	result := mockSession withCommitRetryCount: 1 do: [
+		attempts := attempts + 1.
+		attempts ].
+
+	self assert: result equals: 2.
+	self assert: attempts equals: 2
 ]

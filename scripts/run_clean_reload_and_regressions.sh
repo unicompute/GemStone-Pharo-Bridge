@@ -26,7 +26,7 @@ echo "Using work image: ${WORK_IMAGE}"
 
 reload_output="$(HOME=/tmp/pharo-clean-auto/home "${VM}" --headless "${WORK_IMAGE}" st "/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/clean_reload_gemstone.st" 2>&1 || true)"
 echo "${reload_output}"
-if grep -q "LOAD_ERROR" <<< "${reload_output}"; then
+if grep -q "LOAD_ERROR" <<< "${reload_output}" || grep -q "COMPATIBILITY_DRIFT_FAILED" <<< "${reload_output}" || grep -q "ARCHITECTURE_BOUNDARY_FAILED" <<< "${reload_output}" || grep -q "PACKAGE_OWNERSHIP_DRIFT_FAILED" <<< "${reload_output}"; then
   echo "Clean reload failed." >&2
   exit 1
 fi
@@ -39,7 +39,13 @@ if grep -q "LOAD_ERROR" <<< "${unit_output}" || grep -q "BRIDGE_UNIT_REGRESSION_
 fi
 
 if [[ -n "${GS_USER:-}" && -n "${GS_PASS:-}" ]]; then
-  live_output="$(HOME=/tmp/pharo-clean-auto/home GBS_TEST_LANE=live GS_STONE="${GS_STONE:-gs64stone}" GS_USER="${GS_USER}" GS_PASS="${GS_PASS}" GS_SERVICE="${GS_SERVICE:-gemnetobject}" "${VM}" --headless "${WORK_IMAGE}" st "/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/run_all_package_regressions.st" 2>&1 || true)"
+  preflight_output="$(bash ./scripts/run_live_preflight.sh "${WORK_IMAGE}" 2>&1 || true)"
+  echo "${preflight_output}"
+  if ! grep -q "LIVE_PREFLIGHT_OK" <<< "${preflight_output}"; then
+    echo "Live preflight failed." >&2
+    exit 1
+  fi
+  live_output="$(HOME=/tmp/pharo-clean-auto/home GBS_TEST_LANE=live GS_STONE="${GS_STONE:-gs64stone}" GS_USER="${GS_USER}" GS_PASS="${GS_PASS}" GS_SERVICE="${GS_SERVICE:-gemnetobject}" GS_NETLDI_HOST="${GS_NETLDI_HOST:-}" GS_NETLDI_NAME_OR_PORT="${GS_NETLDI_NAME_OR_PORT:-}" "${VM}" --headless "${WORK_IMAGE}" st "/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/run_all_package_regressions.st" 2>&1 || true)"
   echo "${live_output}"
   if grep -q "LOAD_ERROR" <<< "${live_output}" || grep -q "BRIDGE_LIVE_REGRESSION_FAILED" <<< "${live_output}"; then
     echo "Live regression run failed." >&2

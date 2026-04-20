@@ -317,8 +317,10 @@ GbsSymbolListBrowserPresenter >> inspectDictionary [
 	userName := self selectedUserName.
 	dictName := self selectedDictionaryName.
 	(userName isNil or: [ dictName isNil ]) ifTrue: [ ^ self ].
-	raw := [ session evaluate: (self inspectDictionaryScriptForUser: userName dictionary: dictName) ]
-		on: Error do: [ :ex | 'Inspect dictionary failed: ', ex messageText ].
+	raw := self withShallowMaterializationDo: [
+		[ session evaluate: (self inspectDictionaryScriptForUser: userName dictionary: dictName) ]
+			on: Error
+			do: [ :ex | 'Inspect dictionary failed: ', ex messageText ] ].
 	UIManager default inform: raw asString
 ]
 
@@ -469,6 +471,22 @@ GbsSymbolListBrowserPresenter >> browsePromptedSessionStateKey [
 ]
 
 { #category : 'actions' }
+GbsSymbolListBrowserPresenter >> browsePromptedSessionStateKeysReport [
+	| rawKeys keys |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	rawKeys := self requestInput: 'Session state keys (comma-separated):' initialAnswer: '19'.
+	keys := self parseSessionStateKeysFrom: rawKeys.
+	keys ifNil: [
+		self inform: 'Enter one or more numeric session state keys.'.
+		^ false ].
+	self inform: (self withShallowMaterializationDo: [
+		session objectSpaceDiagnostics reportTextForKeys: keys ]).
+	^ true
+]
+
+{ #category : 'actions' }
 GbsSymbolListBrowserPresenter >> browseSessionStateAtKey: aKey [
 	| sessionStateValue targetOop |
 	session ifNil: [ ^ false ].
@@ -485,6 +503,36 @@ GbsSymbolListBrowserPresenter >> browseSessionStateAtKey: aKey [
 		self inform: 'Session state key ', aKey printString, ' does not currently have an inspectable remote oop.'.
 		^ false ].
 	^ self openInspectorOnOop: targetOop
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> browseStaleTypedWrapperLifecycleReport [
+	| report staleEntries |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	report := self withShallowMaterializationDo: [ session typedWrapperLifecycleReport ].
+	staleEntries := report staleEntries.
+	staleEntries isEmpty ifTrue: [
+		self inform: 'Typed Wrapper Lifecycle', String cr, String cr, 'No stale typed wrappers.'.
+		^ true ].
+	self inform: (GbsTypedWrapperLifecycleReport entries: staleEntries) text.
+	^ true
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> browseObjectsInMemoryReport [
+	| start limit |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	start := self requestPositiveInteger: 'Object scan start index:' initialAnswer: '1'.
+	start ifNil: [ ^ false ].
+	limit := self requestPositiveInteger: 'Object scan limit:' initialAnswer: '25'.
+	limit ifNil: [ ^ false ].
+	self inform: (self withShallowMaterializationDo: [
+		(session objectSpaceDiagnostics objectsInMemoryReportFrom: start limit: limit) text ]).
+	^ true
 ]
 
 { #category : 'actions' }
@@ -506,6 +554,15 @@ GbsSymbolListBrowserPresenter >> browseReferencersForEntryKey: keyName path: pat
 		title: 'In-memory referencers'.
 	selection ifNil: [ ^ false ].
 	^ self openInspectorOnOop: (self oopForInspectableObject: selection)
+]
+
+{ #category : 'actions' }
+GbsSymbolListBrowserPresenter >> browseTypedWrapperLifecycleReport [
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	self inform: (self withShallowMaterializationDo: [ session typedWrapperLifecycleReportText ]).
+	^ true
 ]
 
 { #category : 'menus' }
@@ -536,7 +593,8 @@ GbsSymbolListBrowserPresenter >> menuDictionaryPopup [
 
 { #category : 'menus' }
 GbsSymbolListBrowserPresenter >> menuEntry [
-	^ self newMenu
+	| menu |
+	menu := self newMenu
 		addItem: [ :item |
 			item name: 'Add...'; action: [ self addEntry ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedDictionary ] ];
@@ -555,7 +613,21 @@ GbsSymbolListBrowserPresenter >> menuEntry [
 		addItem: [ :item |
 			item name: 'Inspect Session State Key...'; action: [ self browsePromptedSessionStateKey ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
-		yourself
+		addItem: [ :item |
+			item name: 'Typed Wrapper Lifecycle Report'; action: [ self browseTypedWrapperLifecycleReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
+		addItem: [ :item |
+			item name: 'Stale Typed Wrapper Report'; action: [ self browseStaleTypedWrapperLifecycleReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
+		addItem: [ :item |
+			item name: 'Session State Keys Report...'; action: [ self browsePromptedSessionStateKeysReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
+		addItem: [ :item |
+			item name: 'Objects In Memory Report...'; action: [ self browseObjectsInMemoryReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
+		yourself.
+	self addExtensionEntryMenuItemsTo: menu.
+	^ menu
 ]
 
 { #category : 'menus' }
@@ -580,7 +652,8 @@ GbsSymbolListBrowserPresenter >> menuHelp [
 
 { #category : 'menus' }
 GbsSymbolListBrowserPresenter >> menuPreview [
-	^ self newMenu
+	| menu |
+	menu := self newMenu
 		addItem: [ :item |
 			item name: 'Inspect Entry'; action: [ self inspectSelectedPreviewValue ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canOperateOnSelectedPreviewRow ] ];
@@ -590,7 +663,21 @@ GbsSymbolListBrowserPresenter >> menuPreview [
 		addItem: [ :item |
 			item name: 'Inspect Session State Key...'; action: [ self browsePromptedSessionStateKey ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
-		yourself
+		addItem: [ :item |
+			item name: 'Typed Wrapper Lifecycle Report'; action: [ self browseTypedWrapperLifecycleReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
+		addItem: [ :item |
+			item name: 'Stale Typed Wrapper Report'; action: [ self browseStaleTypedWrapperLifecycleReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
+		addItem: [ :item |
+			item name: 'Session State Keys Report...'; action: [ self browsePromptedSessionStateKeysReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
+		addItem: [ :item |
+			item name: 'Objects In Memory Report...'; action: [ self browseObjectsInMemoryReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
+		yourself.
+	self addExtensionPreviewMenuItemsTo: menu.
+	^ menu
 ]
 
 { #category : 'menus' }
@@ -636,8 +723,25 @@ GbsSymbolListBrowserPresenter >> openStructuredInspectorForPreview: preview titl
 						entryKey: entryKey
 						path: path
 						previewKind: previewKind ];
+				propertyAt: #typedWrapperLifecycleReportBlock
+				put: [ self withShallowMaterializationDo: [ session typedWrapperLifecycleReportText ] ];
+				propertyAt: #staleTypedWrapperReportBlock
+				put: [ self withShallowMaterializationDo: [
+					| report staleEntries |
+					report := session typedWrapperLifecycleReport.
+					staleEntries := report staleEntries.
+					staleEntries isEmpty
+						ifTrue: [ 'Typed Wrapper Lifecycle', String cr, String cr, 'No stale typed wrappers.' ]
+						ifFalse: [ (GbsTypedWrapperLifecycleReport entries: staleEntries) text ] ] ];
+				propertyAt: #sessionStateKeysReportBlock
+				put: [ :keys | self withShallowMaterializationDo: [
+					session objectSpaceDiagnostics reportTextForKeys: keys ] ];
+				propertyAt: #objectsInMemoryReportBlock
+				put: [ :start :limit | self withShallowMaterializationDo: [
+					(session objectSpaceDiagnostics objectsInMemoryReportFrom: start limit: limit) text ] ];
 				propertyAt: #sessionStateBlock
-				put: [ :key | self browseSessionStateAtKey: key ] ]
+				put: [ :key | self browseSessionStateAtKey: key ].
+			self configureExtensionStructuredInspector: presenter ]
 ]
 
 { #category : 'actions' }
@@ -649,7 +753,10 @@ GbsSymbolListBrowserPresenter >> refreshDictionariesFor: userName [
 		entriesList items: #().
 		self showSelectedEntryPreview.
 		^ self ].
-	raw := [ session evaluate: (self dictionariesScriptForUser: userName asString) ] on: Error do: [ '' ].
+	raw := self withShallowMaterializationDo: [
+		[ session evaluate: (self dictionariesScriptForUser: userName asString) ]
+			on: Error
+			do: [ '' ] ].
 	dicts := (raw isString and: [ raw isNotEmpty ])
 		ifTrue: [ (raw splitOn: Character tab) reject: [ :each | each isEmpty ] ]
 		ifFalse: [ #() ].
@@ -678,8 +785,10 @@ GbsSymbolListBrowserPresenter >> refreshEntriesForDictionary: dictName [
 		entryValuesByKey := Dictionary new.
 		self showSelectedEntryPreview.
 		^ self ].
-	raw := [ session evaluate: (self entriesScriptForUser: userName dictionary: dictName asString) ]
-		on: Error do: [ '' ].
+	raw := self withShallowMaterializationDo: [
+		[ session evaluate: (self entriesScriptForUser: userName dictionary: dictName asString) ]
+			on: Error
+			do: [ '' ] ].
 	lines := (raw isString and: [ raw isNotEmpty ])
 		ifTrue: [ raw lines ]
 		ifFalse: [ #() ].
@@ -720,7 +829,8 @@ GbsSymbolListBrowserPresenter >> refreshEntriesForSelectedDictionary [
 { #category : 'actions' }
 GbsSymbolListBrowserPresenter >> refreshUsers [
 	| raw users defaultUser |
-	raw := [ session evaluate: self usersScript ] on: Error do: [ '' ].
+	raw := self withShallowMaterializationDo: [
+		[ session evaluate: self usersScript ] on: Error do: [ '' ] ].
 	users := (raw isString and: [ raw isNotEmpty ])
 		ifTrue: [ (raw splitOn: Character tab) reject: [ :each | each isEmpty ] ]
 		ifFalse: [ #() ].
@@ -1132,13 +1242,14 @@ GbsSymbolListBrowserPresenter >> structuredPreviewForEntryKey: keyName path: pat
 	userName := self selectedUserName.
 	dictName := self selectedDictionaryName.
 	(userName isNil or: [ dictName isNil or: [ keyName isNil ] ]) ifTrue: [ ^ nil ].
-	raw := [ session executeAndFetch: (self
-		structuredPreviewScriptForUser: userName
-		dictionary: dictName
-		keyName: keyName
-		path: pathCollection) ]
-		on: Error
-		do: [ :ex | 'string', String lf, 'Inspect entry failed: ', ex messageText ].
+	raw := self withShallowMaterializationDo: [
+		[ session executeAndFetch: (self
+			structuredPreviewScriptForUser: userName
+			dictionary: dictName
+			keyName: keyName
+			path: pathCollection) ]
+			on: Error
+			do: [ :ex | 'string', String lf, 'Inspect entry failed: ', ex messageText ] ].
 	^ self parsedStructuredPreviewFrom: raw
 ]
 
@@ -1243,13 +1354,46 @@ GbsSymbolListBrowserPresenter >> requestInput: prompt initialAnswer: defaultStri
 	^ UIManager default request: prompt initialAnswer: defaultString
 ]
 
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> parseSessionStateKeysFrom: aStringOrNil [
+	| trimmed tokens keys |
+	(aStringOrNil isNil or: [ aStringOrNil trimBoth isEmpty ]) ifTrue: [ ^ nil ].
+	trimmed := aStringOrNil trimBoth.
+	tokens := (trimmed findTokens: ',') collect: #trimBoth thenReject: #isEmpty.
+	tokens isEmpty ifTrue: [ ^ nil ].
+	keys := tokens collect: [ :each |
+		[ each asInteger ] on: Error do: [ ^ nil ] ].
+	^ keys asArray
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> requestPositiveInteger: promptString initialAnswer: defaultString [
+	| rawValue |
+	rawValue := self requestInput: promptString initialAnswer: defaultString.
+	(rawValue isNil or: [ rawValue trimBoth isEmpty ]) ifTrue: [ ^ nil ].
+	^ [ | value |
+		value := rawValue trimBoth asInteger.
+		value > 0 ifTrue: [ value ] ifFalse: [ nil ] ]
+		on: Error
+		do: [ nil ]
+]
+
 { #category : 'querying' }
 GbsSymbolListBrowserPresenter >> referencersInMemoryForOop: anOop [
 	session ifNil: [ ^ #() ].
 	(anOop isInteger and: [ anOop > 20 ]) ifFalse: [ ^ #() ].
-	^ [ session referencesToOop: anOop ]
-		on: Error
-		do: [ #() ]
+	^ self withShallowMaterializationDo: [
+		[ session referencesToOop: anOop ]
+			on: Error
+			do: [ #() ] ]
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> withShallowMaterializationDo: aBlock [
+	session ifNil: [ ^ aBlock value ].
+	^ session
+		withMaterializationProfile: GbsShallowMaterializationProfile new
+		do: aBlock
 ]
 
 { #category : 'private' }

@@ -8,7 +8,8 @@ Class {
 		'processOop',
 		'level',
 		'temps',
-		'quickStepPoint'
+		'quickStepPoint',
+		'sourceMap'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -91,7 +92,12 @@ GbxFakeContextForRemoteDebugger >> tempNamesAndValues: aDictionary [
 
 { #category : 'source map' }
 GbxFakeContextForRemoteDebugger >> visibleSourceMap [
-	^ #()
+	^ sourceMap ifNil: [ #() ]
+]
+
+{ #category : 'source map' }
+GbxFakeContextForRemoteDebugger >> visibleSourceMap: aCollection [
+	sourceMap := aCollection
 ]
 
 { #category : 'accessing' }

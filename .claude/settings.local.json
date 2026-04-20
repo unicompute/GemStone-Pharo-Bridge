@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "gemstone": {
+      "command": "node",
+      "args": [
+        "/Users/tariq/.vscode/extensions/gemtalksystems.gemstone-ide-1.3.2/mcp-server/out/index.js",
+        "--proxy-socket",
+        "/var/folders/fr/gycz36c96wlfnh5hl0086jr00000gn/T/jasper-mcp-b09073cd19.sock"
+      ]
+    }
+  }
+}

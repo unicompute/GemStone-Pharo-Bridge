@@ -18,11 +18,6 @@ GbsRemoteConstantMirror class >> on: aNamespaceMirror metadata: anArray [
 ]
 
 { #category : 'querying' }
-GbsRemoteConstantMirror >> autoloadFile [
-	^ self metadata at: 4 ifAbsent: [ nil ]
-]
-
-{ #category : 'querying' }
 GbsRemoteConstantMirror >> browsableName [
 	| fullName valueName constantName |
 	fullName := self valueFullName.
@@ -44,11 +39,6 @@ GbsRemoteConstantMirror >> hasValue [
 ]
 
 { #category : 'querying' }
-GbsRemoteConstantMirror >> isAutoload [
-	^ self autoloadFile notNil
-]
-
-{ #category : 'querying' }
 GbsRemoteConstantMirror >> targetDisplayName [
 	| target |
 	target := self browsableName.
@@ -58,7 +48,24 @@ GbsRemoteConstantMirror >> targetDisplayName [
 
 { #category : 'querying' }
 GbsRemoteConstantMirror >> targetNamespaceMirror [
+	| fullName oopValue expression |
 	self hasValue ifFalse: [ ^ nil ].
+	fullName := self valueFullName.
+	oopValue := self oop.
+	oopValue ifNotNil: [
+		expression := String streamContents: [ :stream |
+			stream
+				nextPutAll: 'System _objectForOop: ';
+				nextPutAll: oopValue printString ].
+		^ GbsRemoteNamespaceMirror
+			on: self session
+			expression: expression
+			symbolListIndex: nil
+			metadata: nil ].
+	fullName ifNotNil: [
+		^ GbsRemoteNamespaceMirror
+			on: self session
+			fullName: fullName ].
 	^ [ self session namespaceMirrorForObject: self proxy ]
 		on: Error
 		do: [ :ex | nil ]
@@ -105,10 +112,6 @@ GbsRemoteConstantMirror >> printOn: aStream [
 			aStream
 				nextPutAll: ' : ';
 				nextPutAll: self valueClassName asString ].
-		self isAutoload ifTrue: [
-			aStream
-				nextPutAll: ' autoload ';
-				nextPutAll: self autoloadFile asString ].
 		aStream nextPut: $) ]
 ]
 

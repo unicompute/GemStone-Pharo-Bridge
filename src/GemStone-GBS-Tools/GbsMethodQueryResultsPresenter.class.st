@@ -3,6 +3,7 @@ Class {
 	#superclass : 'SpPresenter',
 	#instVars : [
 		'session',
+		'methodQuery',
 		'references',
 		'allReferences',
 		'windowTitle',
@@ -37,6 +38,19 @@ GbsMethodQueryResultsPresenter class >> openOn: aSession references: aCollection
 	^ presenter
 ]
 
+{ #category : 'instance creation' }
+GbsMethodQueryResultsPresenter class >> openOn: aSession query: aMethodQuery [
+	| presenter |
+	presenter := self new.
+	presenter
+		session: aSession;
+		methodQuery: aMethodQuery;
+		references: aMethodQuery references;
+		windowTitle: aMethodQuery title;
+		open.
+	^ presenter
+]
+
 { #category : 'actions' }
 GbsMethodQueryResultsPresenter >> abortSession [
 	(session respondsTo: #abort)
@@ -60,6 +74,27 @@ GbsMethodQueryResultsPresenter >> browseNamedObjectCacheReport [
 ]
 
 { #category : 'actions' }
+GbsMethodQueryResultsPresenter >> browseTypedWrapperLifecycleReport [
+	self inform: session typedWrapperLifecycleReportText.
+	^ true
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> browseStaleTypedWrapperLifecycleReport [
+	| report staleEntries |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	report := session typedWrapperLifecycleReport.
+	staleEntries := report staleEntries.
+	staleEntries isEmpty ifTrue: [
+		self inform: 'Typed Wrapper Lifecycle', String cr, String cr, 'No stale typed wrappers.'.
+		^ true ].
+	self inform: (GbsTypedWrapperLifecycleReport entries: staleEntries) text.
+	^ true
+]
+
+{ #category : 'actions' }
 GbsMethodQueryResultsPresenter >> browsePromptedSessionStateKey [
 	| rawKey key |
 	session ifNil: [
@@ -74,6 +109,35 @@ GbsMethodQueryResultsPresenter >> browsePromptedSessionStateKey [
 		self inform: 'Enter a numeric session state key.'.
 		^ false ].
 	^ self browseSessionStateAtKey: key
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> browsePromptedSessionStateKeysReport [
+	| rawKeys keys |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	rawKeys := self requestInput: 'Session state keys (comma-separated):' initialAnswer: '19'.
+	keys := self parseSessionStateKeysFrom: rawKeys.
+	keys ifNil: [
+		self inform: 'Enter one or more numeric session state keys.'.
+		^ false ].
+	self inform: (session objectSpaceDiagnostics reportTextForKeys: keys).
+	^ true
+]
+
+{ #category : 'actions' }
+GbsMethodQueryResultsPresenter >> browseObjectsInMemoryReport [
+	| start limit |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	start := self requestPositiveInteger: 'Object scan start index:' initialAnswer: '1'.
+	start ifNil: [ ^ false ].
+	limit := self requestPositiveInteger: 'Object scan limit:' initialAnswer: '25'.
+	limit ifNil: [ ^ false ].
+	self inform: (session objectSpaceDiagnostics objectsInMemoryReportFrom: start limit: limit) text.
+	^ true
 ]
 
 { #category : 'actions' }
@@ -153,19 +217,19 @@ GbsMethodQueryResultsPresenter >> browseTypedWrapperAutoloadReport [
 
 { #category : 'actions' }
 GbsMethodQueryResultsPresenter >> browseSelectedReference [
-	| ref worker |
+	| methodObject ref |
+	methodObject := self selectedUnboundMethodObject.
+	methodObject ifNotNil: [
+		^ self browseMethodObject: methodObject ].
 	ref := self selectedReference.
 	ref ifNil: [ ^ self ].
-	worker := GbsBrowser new.
-	worker session: session.
-	(worker openMethodReference: ref asString)
-		ifFalse: [ self inform: 'Could not browse selected method.' ]
+	^ self browseMethodReference: ref asString
 ]
 
 { #category : 'actions' }
 GbsMethodQueryResultsPresenter >> browseSelectedMethodInfo [
 	| methodObject |
-	methodObject := self selectedMethodObject.
+	methodObject := self selectedUnboundMethodObject.
 	methodObject ifNil: [
 		self inform: 'Select a method first.'.
 		^ false ].
@@ -305,26 +369,31 @@ GbsMethodQueryResultsPresenter >> inform: aString [
 ]
 
 { #category : 'private' }
-GbsMethodQueryResultsPresenter >> invocationArgumentsForMethodObject: aMethodObject [
-	| argumentCount input |
-	aMethodObject ifNil: [ ^ nil ].
-	argumentCount := aMethodObject selector numArgs.
-	argumentCount = 0 ifTrue: [ ^ #() ].
-	input := self
-		requestInput: (GbsRemoteMethodObject
-			invocationPromptForSelector: aMethodObject selector
-			argumentCount: argumentCount)
-		initialAnswer: (GbsRemoteMethodObject defaultArgumentInputForCount: argumentCount).
-	input ifNil: [ ^ nil ].
-	^ GbsRemoteMethodObject
-		argumentsFromInput: input
-		expectedCount: argumentCount
+GbsMethodQueryResultsPresenter >> browseMethodObject: aMethodObject [
+	| worker |
+	aMethodObject ifNil: [ ^ false ].
+	worker := GbsBrowser new.
+	worker session: session.
+	(worker respondsTo: #openMethodObject:)
+		ifTrue: [ ^ worker openMethodObject: aMethodObject ].
+	^ self browseMethodReference: aMethodObject name
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> browseMethodReference: referenceString [
+	| worker |
+	referenceString ifNil: [ ^ false ].
+	worker := GbsBrowser new.
+	worker session: session.
+	(worker openMethodReference: referenceString asString)
+		ifFalse: [ self inform: 'Could not browse selected method.' ].
+	^ true
 ]
 
 { #category : 'actions' }
 GbsMethodQueryResultsPresenter >> inspectSelectedMethod [
 	| methodObject oop |
-	methodObject := self selectedMethodObject.
+	methodObject := self selectedUnboundMethodObject.
 	methodObject ifNil: [
 		self inform: 'Select a method first.'.
 		^ false ].
@@ -571,7 +640,8 @@ GbsMethodQueryResultsPresenter >> menuMethod [
 
 { #category : 'menus' }
 GbsMethodQueryResultsPresenter >> menuSession [
-	^ self newMenu
+	| menu |
+	menu := self newMenu
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Commit Transaction'; action: [ self commitSession ] ].
 			group addItem: [ :item | item name: 'Abort Transaction'; action: [ self abortSession ] ].
@@ -580,8 +650,14 @@ GbsMethodQueryResultsPresenter >> menuSession [
 			group addItem: [ :item | item name: 'Named Object Cache Report'; action: [ self browseNamedObjectCacheReport ] ].
 			group addItem: [ :item | item name: 'Clear Named Object Cache'; action: [ self clearNamedObjectCache ] ].
 			group addItem: [ :item | item name: 'Typed Wrapper Autoload Report'; action: [ self browseTypedWrapperAutoloadReport ] ].
-			group addItem: [ :item | item name: 'Inspect Session State Key...'; action: [ self browsePromptedSessionStateKey ] ] ];
-		yourself
+			group addItem: [ :item | item name: 'Typed Wrapper Lifecycle Report'; action: [ self browseTypedWrapperLifecycleReport ] ].
+			group addItem: [ :item | item name: 'Stale Typed Wrapper Report'; action: [ self browseStaleTypedWrapperLifecycleReport ] ].
+			group addItem: [ :item | item name: 'Session State Keys Report...'; action: [ self browsePromptedSessionStateKeysReport ] ].
+			group addItem: [ :item | item name: 'Objects In Memory Report...'; action: [ self browseObjectsInMemoryReport ] ].
+			group addItem: [ :item | item name: 'Inspect Session State Key...'; action: [ self browsePromptedSessionStateKey ] ].
+			self addExtensionSessionMenuItemsTo: group ];
+		yourself.
+	^ menu
 ]
 
 { #category : 'menus' }
@@ -601,7 +677,7 @@ GbsMethodQueryResultsPresenter >> menuWindow [
 { #category : 'private' }
 GbsMethodQueryResultsPresenter >> methodMirrorForReference: referenceString [
 	| methodObject |
-	methodObject := self methodObjectForReference: referenceString.
+	methodObject := self unboundMethodObjectForReference: referenceString.
 	^ methodObject ifNil: [ nil ] ifNotNil: [ methodObject mirror ]
 ]
 
@@ -614,6 +690,12 @@ GbsMethodQueryResultsPresenter >> methodInfoTextFor: aMethodObject [
 			lf;
 			nextPutAll: 'Selector: #';
 			nextPutAll: aMethodObject selector asString;
+			lf;
+			nextPutAll: 'Binding: ';
+			nextPutAll: (aMethodObject isBound ifTrue: [ 'bound' ] ifFalse: [ 'unbound' ]);
+			lf;
+			nextPutAll: 'Arity: ';
+			nextPutAll: aMethodObject arity asString;
 			lf;
 			nextPutAll: 'Protocol: ';
 			nextPutAll: aMethodObject protocol asString;
@@ -633,7 +715,12 @@ GbsMethodQueryResultsPresenter >> methodInfoTextFor: aMethodObject [
 { #category : 'private' }
 GbsMethodQueryResultsPresenter >> methodObjectForReference: referenceString [
 	| parsed className selector |
+	methodQuery ifNotNil: [
+		^ [ methodQuery methodObjectForReference: referenceString ]
+			on: Error
+			do: [ :ex | nil ] ].
 	referenceString ifNil: [ ^ nil ].
+	session ifNil: [ ^ nil ].
 	parsed := self parseReference: referenceString asString.
 	parsed ifNil: [ ^ nil ].
 	className := parsed first.
@@ -641,6 +728,16 @@ GbsMethodQueryResultsPresenter >> methodObjectForReference: referenceString [
 	^ parsed third
 		ifTrue: [ session classMethodObjectForClassNamed: className selector: selector ]
 		ifFalse: [ session methodObjectForClassNamed: className selector: selector ]
+]
+
+{ #category : 'accessing' }
+GbsMethodQueryResultsPresenter >> methodQuery [
+	^ methodQuery
+]
+
+{ #category : 'accessing' }
+GbsMethodQueryResultsPresenter >> methodQuery: aMethodQuery [
+	methodQuery := aMethodQuery
 ]
 
 { #category : 'private' }
@@ -786,6 +883,35 @@ GbsMethodQueryResultsPresenter >> requestInput: prompt initialAnswer: defaultStr
 ]
 
 { #category : 'private' }
+GbsMethodQueryResultsPresenter >> uiChooseFrom: choices title: titleString [
+	^ UIManager default chooseFrom: choices title: titleString
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> parseSessionStateKeysFrom: aStringOrNil [
+	| trimmed tokens keys |
+	(aStringOrNil isNil or: [ aStringOrNil trimBoth isEmpty ]) ifTrue: [ ^ nil ].
+	trimmed := aStringOrNil trimBoth.
+	tokens := (trimmed findTokens: ',') collect: #trimBoth thenReject: #isEmpty.
+	tokens isEmpty ifTrue: [ ^ nil ].
+	keys := tokens collect: [ :each |
+		[ each asInteger ] on: Error do: [ ^ nil ] ].
+	^ keys asArray
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> requestPositiveInteger: promptString initialAnswer: defaultString [
+	| rawValue |
+	rawValue := self requestInput: promptString initialAnswer: defaultString.
+	(rawValue isNil or: [ rawValue trimBoth isEmpty ]) ifTrue: [ ^ nil ].
+	^ [ | value |
+		value := rawValue trimBoth asInteger.
+		value > 0 ifTrue: [ value ] ifFalse: [ nil ] ]
+		on: Error
+		do: [ nil ]
+]
+
+{ #category : 'private' }
 GbsMethodQueryResultsPresenter >> selectedReference [
 	| selection |
 	methodsList ifNil: [ ^ nil ].
@@ -797,7 +923,9 @@ GbsMethodQueryResultsPresenter >> selectedReference [
 
 { #category : 'private' }
 GbsMethodQueryResultsPresenter >> selectedReferenceClassName [
-	| ref parsed |
+	| methodObject ref parsed |
+	methodObject := self selectedMethodObject.
+	methodObject ifNotNil: [ ^ methodObject ownerName ].
 	ref := self selectedReference.
 	ref ifNil: [ ^ nil ].
 	parsed := self parseReference: ref asString.
@@ -808,6 +936,11 @@ GbsMethodQueryResultsPresenter >> selectedReferenceClassName [
 { #category : 'private' }
 GbsMethodQueryResultsPresenter >> selectedMethodObject [
 	^ self methodObjectForReference: self selectedReference
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> selectedUnboundMethodObject [
+	^ self unboundMethodObjectForReference: self selectedReference
 ]
 
 { #category : 'accessing' }
@@ -827,12 +960,30 @@ GbsMethodQueryResultsPresenter >> showSourceForReference: referenceString [
 			sourceText text: ''.
 			self updateStatusForReference: referenceString.
 			^ self ].
-		methodObject := [ self methodObjectForReference: referenceString ] on: Error do: [ nil ].
+		methodObject := [ self unboundMethodObjectForReference: referenceString ] on: Error do: [ nil ].
 		source := methodObject
 			ifNil: [ '' ]
 			ifNotNil: [ [ methodObject sourceCode ] on: Error do: [ '' ] ].
 		sourceText text: (source ifNil: [ '' ] ifNotNil: [ source asString ]).
 		self updateStatusForReference: referenceString
+]
+
+{ #category : 'private' }
+GbsMethodQueryResultsPresenter >> unboundMethodObjectForReference: referenceString [
+	| parsed className selector |
+	methodQuery ifNotNil: [
+		^ [ (methodQuery methodObjectForReference: referenceString) unbind ]
+			on: Error
+			do: [ :ex | nil ] ].
+	referenceString ifNil: [ ^ nil ].
+	session ifNil: [ ^ nil ].
+	parsed := self parseReference: referenceString asString.
+	parsed ifNil: [ ^ nil ].
+	className := parsed first.
+	selector := parsed second asSymbol.
+	^ parsed third
+		ifTrue: [ session classUnboundMethodObjectForClassNamed: className selector: selector ]
+		ifFalse: [ session unboundMethodObjectForClassNamed: className selector: selector ]
 ]
 
 { #category : 'private' }

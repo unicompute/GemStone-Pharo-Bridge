@@ -275,7 +275,7 @@ GbsBrowser >> browseMethod [
 { #category : 'actions' }
 GbsBrowser >> browseMethodInfo [
 	| methodObject |
-	methodObject := self selectedMethodObject.
+	methodObject := self selectedUnboundMethodObject.
 	methodObject ifNil: [
 		self inform: 'No method selected!'.
 		^ false ].
@@ -304,6 +304,21 @@ GbsBrowser >> browsePromptedSessionStateKey [
 		self inform: 'Enter a numeric session state key.'.
 		^ false ].
 	^ self browseSessionStateAtKey: key
+]
+
+{ #category : 'actions' }
+GbsBrowser >> browsePromptedSessionStateKeysReport [
+	| rawKeys keys |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	rawKeys := self uiRequest: 'Session state keys (comma-separated):' initialAnswer: '19'.
+	keys := self parseSessionStateKeysFrom: rawKeys.
+	keys ifNil: [
+		self inform: 'Enter one or more numeric session state keys.'.
+		^ false ].
+	self inform: (session objectSpaceDiagnostics reportTextForKeys: keys).
+	^ true
 ]
 
 { #category : 'actions' }
@@ -346,9 +361,64 @@ GbsBrowser >> browseTypedWrapperAutoloadReport [
 ]
 
 { #category : 'actions' }
+GbsBrowser >> browseTypedWrapperLifecycleReport [
+	self inform: session typedWrapperLifecycleReportText.
+	^ true
+]
+
+{ #category : 'actions' }
+GbsBrowser >> browseStaleTypedWrapperLifecycleReport [
+	| report staleEntries |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	report := session typedWrapperLifecycleReport.
+	staleEntries := report staleEntries.
+	staleEntries isEmpty ifTrue: [
+		self inform: 'Typed Wrapper Lifecycle', String cr, String cr, 'No stale typed wrappers.'.
+		^ true ].
+	self inform: (GbsTypedWrapperLifecycleReport entries: staleEntries) text.
+	^ true
+]
+
+{ #category : 'actions' }
+GbsBrowser >> browseObjectsInMemoryReport [
+	| start limit |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	start := self
+		requestPositiveInteger: 'Object scan start index:'
+		initialAnswer: '1'.
+	start ifNil: [ ^ false ].
+	limit := self
+		requestPositiveInteger: 'Object scan limit:'
+		initialAnswer: '25'.
+	limit ifNil: [ ^ false ].
+	self inform: (session objectSpaceDiagnostics objectsInMemoryReportFrom: start limit: limit) text.
+	^ true
+]
+
+{ #category : 'actions' }
+GbsBrowser >> refreshAllTypedWrappers [
+	| refreshed |
+	refreshed := session refreshAllTypedWrapperClasses.
+	self inform: 'Refreshed ', refreshed size printString, ' typed wrapper(s).'.
+	^ true
+]
+
+{ #category : 'actions' }
+GbsBrowser >> refreshStaleTypedWrappers [
+	| refreshed |
+	refreshed := session refreshStaleTypedWrapperClasses.
+	self inform: 'Refreshed ', refreshed size printString, ' stale typed wrapper(s).'.
+	^ true
+]
+
+{ #category : 'actions' }
 GbsBrowser >> browseVersions [
 	| methodObject versions idx |
-	methodObject := self selectedMethodObject.
+	methodObject := self selectedUnboundMethodObject.
 	methodObject ifNil: [ ^ false ].
 	versions := methodObject versionEntries.
 	versions ifNil: [ ^ false ].
@@ -918,7 +988,7 @@ GbsBrowser >> inspectDictionary [
 { #category : 'actions' }
 GbsBrowser >> inspectMethod [
 	| methodObject oop |
-	methodObject := self selectedMethodObject.
+	methodObject := self selectedUnboundMethodObject.
 	methodObject ifNil: [ ^ false ].
 	oop := methodObject oop.
 	(oop isNumber and: [ oop > 20 ]) ifFalse: [ ^ false ].
@@ -958,23 +1028,6 @@ GbsBrowser >> loadDictionaries [
 GbsBrowser >> maybeAutoCommit [
 	autoCommitEnabled ifFalse: [ ^ self ].
 	self commitSession.
-]
-
-{ #category : 'private' }
-GbsBrowser >> invocationArgumentsForMethodObject: aMethodObject [
-	| argumentCount input |
-	aMethodObject ifNil: [ ^ nil ].
-	argumentCount := aMethodObject selector numArgs.
-	argumentCount = 0 ifTrue: [ ^ #() ].
-	input := self
-		uiRequest: (GbsRemoteMethodObject
-			invocationPromptForSelector: aMethodObject selector
-			argumentCount: argumentCount)
-		initialAnswer: (GbsRemoteMethodObject defaultArgumentInputForCount: argumentCount).
-	input ifNil: [ ^ nil ].
-	^ GbsRemoteMethodObject
-		argumentsFromInput: input
-		expectedCount: argumentCount
 ]
 
 { #category : 'menus' }
@@ -1103,7 +1156,8 @@ GbsBrowser >> menuMethod [
 
 { #category : 'menus' }
 GbsBrowser >> menuSession [
-	^ self newMenu
+	| menu |
+	menu := self newMenu
 		addGroup: [ :group |
 			group addItem: [ :item | item name: self autoCommitMenuLabel; action: [ self deferAction: [ self toggleAutoCommit ] ] ] ];
 		addGroup: [ :group |
@@ -1114,8 +1168,16 @@ GbsBrowser >> menuSession [
 			group addItem: [ :item | item name: 'Named Object Cache Report'; action: [ self deferAction: [ self browseNamedObjectCacheReport ] ] ].
 			group addItem: [ :item | item name: 'Clear Named Object Cache'; action: [ self deferAction: [ self clearNamedObjectCache ] ] ].
 			group addItem: [ :item | item name: 'Typed Wrapper Autoload Report'; action: [ self deferAction: [ self browseTypedWrapperAutoloadReport ] ] ].
-			group addItem: [ :item | item name: 'Inspect Session State Key...'; action: [ self deferAction: [ self browsePromptedSessionStateKey ] ] ] ];
-		yourself
+			group addItem: [ :item | item name: 'Typed Wrapper Lifecycle Report'; action: [ self deferAction: [ self browseTypedWrapperLifecycleReport ] ] ].
+			group addItem: [ :item | item name: 'Stale Typed Wrapper Report'; action: [ self deferAction: [ self browseStaleTypedWrapperLifecycleReport ] ] ].
+			group addItem: [ :item | item name: 'Refresh Stale Typed Wrappers'; action: [ self deferAction: [ self refreshStaleTypedWrappers ] ] ].
+			group addItem: [ :item | item name: 'Refresh All Typed Wrappers'; action: [ self deferAction: [ self refreshAllTypedWrappers ] ] ].
+			group addItem: [ :item | item name: 'Inspect Session State Key...'; action: [ self deferAction: [ self browsePromptedSessionStateKey ] ] ].
+			group addItem: [ :item | item name: 'Session State Keys Report...'; action: [ self deferAction: [ self browsePromptedSessionStateKeysReport ] ] ].
+			group addItem: [ :item | item name: 'Objects In Memory Report...'; action: [ self deferAction: [ self browseObjectsInMemoryReport ] ] ].
+			self addExtensionSessionMenuItemsTo: group ];
+		yourself.
+	^ menu
 ]
 
 { #category : 'menus' }
@@ -1135,7 +1197,7 @@ GbsBrowser >> methodSelected: selectorName [
 	| methodObject rawSource |
 	
 	selectorName ifNil: [ ^ sourceText text: '' ].
-	methodObject := self selectedMethodObjectForSelector: selectorName asSymbol.
+	methodObject := self selectedUnboundMethodObjectForSelector: selectorName asSymbol.
 	methodObject ifNil: [ ^ self ].
 	rawSource := methodObject sourceCode.
 	sourceText text: (rawSource ifNil: [ '' ] ifNotNil: [ rawSource asString ]).
@@ -1216,6 +1278,15 @@ GbsBrowser >> normalizeSelectorQuery: rawInput [
 	((text beginsWith: '''') and: [ text endsWith: '''' ]) ifTrue: [
 		text := (text copyFrom: 2 to: text size - 1) trimBoth ].
 	^ text
+]
+
+{ #category : 'private' }
+GbsBrowser >> openMethodObject: aMethodObject [
+	aMethodObject ifNil: [ ^ false ].
+	^ self
+		selectClassNamed: aMethodObject ownerName
+		classSide: aMethodObject isClassSide
+		method: aMethodObject selector asString
 ]
 
 { #category : 'private' }
@@ -1336,6 +1407,16 @@ GbsBrowser >> methodInfoTextForMirror: aMirror [
 			nextPutAll: 'Selector: ';
 			nextPutAll: (self infoValueForDisplay: aMirror selector);
 			lf;
+			nextPutAll: 'Binding: ';
+			nextPutAll: ((aMirror respondsTo: #isBound)
+				ifTrue: [ aMirror isBound ifTrue: [ 'bound' ] ifFalse: [ 'unbound' ] ]
+				ifFalse: [ 'n/a' ]);
+			lf;
+			nextPutAll: 'Arity: ';
+			nextPutAll: (self infoValueForDisplay: ((aMirror respondsTo: #arity)
+				ifTrue: [ aMirror arity ]
+				ifFalse: [ nil ]));
+			lf;
 			nextPutAll: 'Protocol: ';
 			nextPutAll: (self infoValueForDisplay: aMirror protocol);
 			lf;
@@ -1394,6 +1475,24 @@ GbsBrowser >> selectedMethodObjectForSelector: aSelector [
 	^ self classSideSelected
 		ifTrue: [ session classMethodObjectForClassNamed: className selector: aSelector ]
 		ifFalse: [ session methodObjectForClassNamed: className selector: aSelector ]
+]
+
+{ #category : 'private' }
+GbsBrowser >> selectedUnboundMethodObject [
+	| selector |
+	selector := self selectedMethodSelector.
+	selector ifNil: [ ^ nil ].
+	^ self selectedUnboundMethodObjectForSelector: selector
+]
+
+{ #category : 'private' }
+GbsBrowser >> selectedUnboundMethodObjectForSelector: aSelector [
+	| className |
+	className := self selectedClassName.
+	className ifNil: [ ^ nil ].
+	^ self classSideSelected
+		ifTrue: [ session classUnboundMethodObjectForClassNamed: className selector: aSelector ]
+		ifFalse: [ session unboundMethodObjectForClassNamed: className selector: aSelector ]
 ]
 
 { #category : 'private' }
@@ -1549,6 +1648,30 @@ GbsBrowser >> queryResultsTitleForSelector: selectorString mode: modeString coun
 						ifTrue: [ 'References to ' ]
 						ifFalse: [ 'Matches for ' ] ] ].
 	^ sessionPart, modePart, selectorString asString, ' (', aCount asString, ')'
+]
+
+{ #category : 'private' }
+GbsBrowser >> parseSessionStateKeysFrom: aStringOrNil [
+	| trimmed tokens keys |
+	(aStringOrNil isNil or: [ aStringOrNil trimBoth isEmpty ]) ifTrue: [ ^ nil ].
+	trimmed := aStringOrNil trimBoth.
+	tokens := (trimmed findTokens: ',') collect: #trimBoth thenReject: #isEmpty.
+	tokens isEmpty ifTrue: [ ^ nil ].
+	keys := tokens collect: [ :each |
+		[ each asInteger ] on: Error do: [ ^ nil ] ].
+	^ keys asArray
+]
+
+{ #category : 'private' }
+GbsBrowser >> requestPositiveInteger: promptString initialAnswer: defaultString [
+	| rawValue |
+	rawValue := self uiRequest: promptString initialAnswer: defaultString.
+	(rawValue isNil or: [ rawValue trimBoth isEmpty ]) ifTrue: [ ^ nil ].
+	^ [ | value |
+		value := rawValue trimBoth asInteger.
+		value > 0 ifTrue: [ value ] ifFalse: [ nil ] ]
+		on: Error
+		do: [ nil ]
 ]
 
 { #category : 'actions' }

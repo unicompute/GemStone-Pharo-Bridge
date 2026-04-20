@@ -66,6 +66,13 @@ GbsRepositoryRootFacade >> at: aKey put: aValue [
 ]
 
 { #category : 'private' }
+GbsRepositoryRootFacade >> aliasRootKeys [
+	rootKey = #GbsBridgeRoot ifTrue: [ ^ #(#GbsPersistentRoot) ].
+	rootKey = #GbsPersistentRoot ifTrue: [ ^ #(#GbsBridgeRoot) ].
+	^ #()
+]
+
+{ #category : 'private' }
 GbsRepositoryRootFacade >> associationsScript [
 	^ String streamContents: [ :stream |
 		stream
@@ -350,7 +357,27 @@ GbsRepositoryRootFacade >> rootKey: aSymbol [
 
 { #category : 'private' }
 GbsRepositoryRootFacade >> rootScript [
-	^ 'UserGlobals at: #', self rootKey asString, ' ifAbsentPut: [ Dictionary new ]'
+	^ String streamContents: [ :stream |
+		stream
+			nextPutAll: '[:userGlobals :primaryKey :aliasKeys | | root |
+	root := userGlobals
+		at: primaryKey
+		ifAbsent: [
+			| existing |
+			existing := nil.
+			aliasKeys do: [ :each |
+				existing ifNil: [
+					existing := userGlobals at: each ifAbsent: [ nil ] ] ].
+			existing ifNil: [ Dictionary new ] ifNotNil: [ existing ] ].
+	userGlobals at: primaryKey put: root.
+	aliasKeys do: [ :each | userGlobals at: each put: root ].
+	root ]
+	value: UserGlobals
+	value: ';
+			nextPutAll: (session marshalArgumentToScript: self rootKey);
+			nextPutAll: '
+	value: ';
+			nextPutAll: (session marshalArgumentToScript: self aliasRootKeys) ]
 ]
 
 { #category : 'accessing' }

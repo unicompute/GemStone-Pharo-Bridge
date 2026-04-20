@@ -556,6 +556,100 @@ GbsSessionManager class >> typedWrapperRegistryEntries [
 			ifFalse: [ a first <= b first ] ]
 ]
 
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperClasses [
+	^ self typedWrapperRegistry values asSet asArray
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperClassesForServerClassNamed: serverClassName [
+	| serverName |
+	serverName := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+	^ self typedWrapperClasses select: [ :each |
+		(each respondsTo: #serverBehaviorName)
+			and: [ each serverBehaviorName = serverName ] ]
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperLifecycleEntries [
+	^ self typedWrapperLifecycleEntriesForSession: GbsSessionParameters currentSession
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperLifecycleEntriesForSession: aSession [
+	^ (self typedWrapperLifecycleObjectsForSession: aSession collect: [ :each |
+		{
+			each clientName.
+			each serverName.
+			each wrapperName.
+			each source.
+			each localVersion.
+			each localNumberOfVersions.
+			each remoteVersion.
+			each remoteNumberOfVersions.
+			each status asString
+		} ]) asArray sort: [ :a :b |
+			(a first = b first)
+				ifTrue: [ a second <= b second ]
+				ifFalse: [ a first <= b first ] ]
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperLifecycleReportText [
+	^ self typedWrapperLifecycleReportTextForSession: GbsSessionParameters currentSession
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperLifecycleReportTextForSession: aSession [
+	^ (self typedWrapperLifecycleReportForSession: aSession) text
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperLifecycleObjectsForSession: aSession [
+	^ (self typedWrapperClasses collect: [ :wrapperClass |
+		| remoteMirror status |
+		remoteMirror := self
+			typedWrapperRemoteMirrorFor: wrapperClass
+			session: aSession.
+		status := self
+			typedWrapperLifecycleStatusFor: wrapperClass
+			session: aSession.
+		GbsTypedWrapperLifecycleEntry
+			wrapperClass: wrapperClass
+			clientName: ((wrapperClass respondsTo: #clientBehaviorName)
+				ifTrue: [ wrapperClass clientBehaviorName ]
+				ifFalse: [ '' ])
+			serverName: ((wrapperClass respondsTo: #serverBehaviorName)
+				ifTrue: [ wrapperClass serverBehaviorName ]
+				ifFalse: [ '' ])
+			source: ((wrapperClass respondsTo: #generatedForwardingSource)
+				ifTrue: [ wrapperClass generatedForwardingSource asString ]
+				ifFalse: [ 'unknown' ])
+			localVersion: ((wrapperClass respondsTo: #serverBehaviorVersion)
+				ifTrue: [ wrapperClass serverBehaviorVersion ]
+				ifFalse: [ nil ])
+			localNumberOfVersions: ((wrapperClass respondsTo: #serverBehaviorNumberOfVersions)
+				ifTrue: [ wrapperClass serverBehaviorNumberOfVersions ]
+				ifFalse: [ nil ])
+			remoteVersion: (remoteMirror ifNil: [ nil ] ifNotNil: [ remoteMirror version ])
+			remoteNumberOfVersions: (remoteMirror ifNil: [ nil ] ifNotNil: [ remoteMirror numberOfVersions ])
+			status: status ]) asArray sort: [ :a :b |
+				(a clientName = b clientName)
+					ifTrue: [ a serverName <= b serverName ]
+					ifFalse: [ a clientName <= b clientName ] ]
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperLifecycleReport [
+	^ self typedWrapperLifecycleReportForSession: GbsSessionParameters currentSession
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperLifecycleReportForSession: aSession [
+	^ GbsTypedWrapperLifecycleReport
+		entries: (self typedWrapperLifecycleObjectsForSession: aSession)
+]
+
 { #category : 'actions' }
 GbsSessionManager class >> generateClassConnectors [
 	^ self initializeFastConnectors
@@ -992,6 +1086,13 @@ GbsSessionManager class >> unregisterTypedWrapperAutoloadClient: clientClassName
 		removeKey: s ifAbsent: [ ].
 	registry at: sessionKey put: sessionRegistry.
 	Smalltalk globals at: #GbsSessionTypedWrapperAutoloadRegistry put: registry.
+	pairRegistry := self sessionTypedWrapperExplicitAutoloadPairRegistry copy.
+	pairs := (pairRegistry at: sessionKey ifAbsent: [ OrderedCollection new ]) copy.
+	pairs removeAllSuchThat: [ :pair |
+		(pair first = c and: [ pair second = s ])
+			or: [ pair first = s and: [ pair second = c ] ] ].
+	pairRegistry at: sessionKey put: pairs.
+	Smalltalk globals at: #GbsSessionTypedWrapperAutoloadPairRegistry put: pairRegistry.
 	^ self
 ]
 
@@ -1004,44 +1105,11 @@ GbsSessionManager class >> clearTypedWrapperAutoloadRegistrations [
 
 { #category : 'typed wrappers' }
 GbsSessionManager class >> clearTypedWrapperAutoloadRegistrationsForSession: aSession [
-	| registry sessionKey |
-	sessionKey := self sessionKeyForSessionObject: aSession.
-	registry := self sessionTypedWrapperExplicitAutoloadRegistry copy.
-	registry removeKey: sessionKey ifAbsent: [ ].
-	Smalltalk globals at: #GbsSessionTypedWrapperAutoloadRegistry put: registry.
-	^ self
-]
-
-{ #category : 'typed wrappers' }
-GbsSessionManager class >> unregisterTypedWrapperAutoloadClient: clientClassName server: serverClassName forSession: aSession [
-	| c s registry sessionKey sessionRegistry pairRegistry pairs |
-	c := clientClassName ifNil: [ '' ] ifNotNil: [ clientClassName asString ].
-	s := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
-	sessionKey := self sessionKeyForSessionObject: aSession.
-	registry := self sessionTypedWrapperExplicitAutoloadRegistry copy.
-	sessionRegistry := (registry at: sessionKey ifAbsent: [ Dictionary new ]) copy.
-	sessionRegistry
-		removeKey: c ifAbsent: [ ];
-		removeKey: s ifAbsent: [ ].
-	registry at: sessionKey put: sessionRegistry.
-	Smalltalk globals at: #GbsSessionTypedWrapperExplicitAutoloadRegistry put: registry.
-	pairRegistry := self sessionTypedWrapperExplicitAutoloadPairRegistry copy.
-	pairs := (pairRegistry at: sessionKey ifAbsent: [ OrderedCollection new ]) copy.
-	pairs removeAllSuchThat: [ :pair |
-		(pair first = c and: [ pair second = s ])
-			or: [ pair first = s and: [ pair second = c ] ] ].
-	pairRegistry at: sessionKey put: pairs.
-	Smalltalk globals at: #GbsSessionTypedWrapperAutoloadPairRegistry put: pairRegistry.
-	^ self
-]
-
-{ #category : 'typed wrappers' }
-GbsSessionManager class >> clearTypedWrapperAutoloadRegistrationsForSession: aSession [
 	| registry pairRegistry sessionKey |
 	sessionKey := self sessionKeyForSessionObject: aSession.
 	registry := self sessionTypedWrapperExplicitAutoloadRegistry copy.
 	registry removeKey: sessionKey ifAbsent: [ ].
-	Smalltalk globals at: #GbsSessionTypedWrapperExplicitAutoloadRegistry put: registry.
+	Smalltalk globals at: #GbsSessionTypedWrapperAutoloadRegistry put: registry.
 	pairRegistry := self sessionTypedWrapperExplicitAutoloadPairRegistry copy.
 	pairRegistry removeKey: sessionKey ifAbsent: [ ].
 	Smalltalk globals at: #GbsSessionTypedWrapperAutoloadPairRegistry put: pairRegistry.
@@ -1142,12 +1210,19 @@ GbsSessionManager class >> shouldAutoloadTypedWrapperForClient: clientClassName 
 
 { #category : 'typed wrappers' }
 GbsSessionManager class >> shouldRefreshTypedWrapperClass: wrapperClass server: serverClassName [
-	| currentSession remoteMirror |
-	currentSession := GbsSessionParameters currentSession.
-	currentSession ifNil: [ ^ false ].
+	^ self
+		shouldRefreshTypedWrapperClass: wrapperClass
+		server: serverClassName
+		session: GbsSessionParameters currentSession
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> shouldRefreshTypedWrapperClass: wrapperClass server: serverClassName session: aSession [
+	| remoteMirror |
+	aSession ifNil: [ ^ false ].
 	(wrapperClass respondsTo: #generatedForwardingSource) ifFalse: [ ^ false ].
 	wrapperClass generatedForwardingSource ~= #remote ifTrue: [ ^ true ].
-	remoteMirror := [ currentSession classMirrorOfNamed: serverClassName ]
+	remoteMirror := [ aSession classMirrorOfNamed: serverClassName ]
 		on: Error
 		do: [ nil ].
 	remoteMirror ifNil: [ ^ false ].
@@ -1155,6 +1230,108 @@ GbsSessionManager class >> shouldRefreshTypedWrapperClass: wrapperClass server: 
 		and: [ (wrapperClass serverBehaviorVersion ~= remoteMirror version)
 		or: [ (wrapperClass respondsTo: #serverBehaviorNumberOfVersions)
 		and: [ wrapperClass serverBehaviorNumberOfVersions ~= remoteMirror numberOfVersions ] ] ]
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> staleTypedWrapperClassesForSession: aSession [
+	^ self typedWrapperClasses select: [ :each |
+		| serverName |
+		serverName := (each respondsTo: #serverBehaviorName)
+			ifTrue: [ each serverBehaviorName ]
+			ifFalse: [ '' ].
+		self
+			shouldRefreshTypedWrapperClass: each
+			server: serverName
+			session: aSession ]
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> invalidateTypedWrapperClass: wrapperClass [
+	(wrapperClass respondsTo: #generatedForwardingSource) ifFalse: [ ^ wrapperClass ].
+	wrapperClass class
+		compile: 'serverBehaviorVersion
+	^ nil'
+		classified: 'generated metadata'.
+	wrapperClass class
+		compile: 'serverBehaviorNumberOfVersions
+	^ nil'
+		classified: 'generated metadata'.
+	^ wrapperClass
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> invalidateTypedWrapperClassesForServerClassNamed: serverClassName [
+	| wrappers |
+	wrappers := self typedWrapperClassesForServerClassNamed: serverClassName.
+	wrappers do: [ :each | self invalidateTypedWrapperClass: each ].
+	^ wrappers
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> invalidateStaleTypedWrapperClassesForSession: aSession [
+	| wrappers |
+	wrappers := self staleTypedWrapperClassesForSession: aSession.
+	wrappers do: [ :each | self invalidateTypedWrapperClass: each ].
+	^ wrappers
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> refreshStaleTypedWrapperClassesForSession: aSession [
+	| wrappers previousSession refreshed |
+	wrappers := self staleTypedWrapperClassesForSession: aSession.
+	previousSession := GbsSessionParameters currentSession.
+	[ GbsSessionParameters currentSession: aSession.
+	refreshed := wrappers collect: [ :each |
+		self
+			generateTypedWrapperForClient: each clientBehaviorName
+			server: each serverBehaviorName ] ]
+		ensure: [ GbsSessionParameters currentSession: previousSession ].
+	^ refreshed ifNil: [ #() ]
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> refreshAllTypedWrapperClassesForSession: aSession [
+	| wrappers previousSession refreshed |
+	wrappers := self typedWrapperClasses
+		select: [ :each | (each respondsTo: #serverBehaviorName) and: [ each respondsTo: #clientBehaviorName ] ].
+	previousSession := GbsSessionParameters currentSession.
+	[ GbsSessionParameters currentSession: aSession.
+	refreshed := wrappers collect: [ :each |
+		self
+			generateTypedWrapperForClient: each clientBehaviorName
+			server: each serverBehaviorName ] ]
+		ensure: [ GbsSessionParameters currentSession: previousSession ].
+	^ refreshed ifNil: [ #() ]
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperLifecycleStatusFor: wrapperClass session: aSession [
+	| remoteMirror |
+	(wrapperClass respondsTo: #generatedForwardingSource) ifFalse: [ ^ #unknown ].
+	wrapperClass generatedForwardingSource ~= #remote ifTrue: [ ^ #clientGenerated ].
+	remoteMirror := self
+		typedWrapperRemoteMirrorFor: wrapperClass
+		session: aSession.
+	remoteMirror ifNil: [ ^ #missingRemote ].
+	^ (self
+		shouldRefreshTypedWrapperClass: wrapperClass
+		server: wrapperClass serverBehaviorName
+		session: aSession)
+			ifTrue: [ #stale ]
+			ifFalse: [ #current ]
+]
+
+{ #category : 'typed wrappers' }
+GbsSessionManager class >> typedWrapperRemoteMirrorFor: wrapperClass session: aSession [
+	| serverName |
+	aSession ifNil: [ ^ nil ].
+	serverName := (wrapperClass respondsTo: #serverBehaviorName)
+		ifTrue: [ wrapperClass serverBehaviorName ]
+		ifFalse: [ nil ].
+	serverName ifNil: [ ^ nil ].
+	^ [ aSession classMirrorOfNamed: serverName ]
+		on: Error
+		do: [ nil ]
 ]
 
 { #category : 'typed wrappers' }

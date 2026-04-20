@@ -773,11 +773,15 @@ GbsClassicLauncher class >> openGbxUtility: utilityClassName [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> openNamespacesOnCurrentSession [
-	| session |
+	| session presenterClass |
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
+	presenterClass := Smalltalk at: #GbsNamespacesPresenter ifAbsent: [ nil ].
+	presenterClass ifNil: [
+		UIManager default inform: 'Could not open namespaces tool: GbsNamespacesPresenter is not loaded.'.
+		^ self ].
 	[
-		GbsNamespacesPresenter openOn: session
+		presenterClass openOn: session
 	] on: Error do: [ :ex |
 		UIManager default inform: 'Could not open namespaces tool: ', ex messageText
 	].
@@ -905,12 +909,16 @@ GbsClassicLauncher class >> performBrowseQueryWithPrompt: promptString mode: mod
 
 { #category : 'menus' }
 GbsClassicLauncher class >> queryOrganizerMethodsFor: tokenString mode: modeString inSession: aSession [
+	| raw |
 	modeString = 'implementors' ifTrue: [
-		^ aSession implementorMethodReferenceStringsForSelector: tokenString ].
+		raw := aSession implementorMethodReferenceStringsForSelector: tokenString.
+		^ GbsMethodQueryResultsPresenter new normalizeReferences: raw ].
 	modeString = 'senders' ifTrue: [
-		^ aSession senderMethodReferenceStringsForSelector: tokenString ].
+		raw := aSession senderMethodReferenceStringsForSelector: tokenString.
+		^ GbsMethodQueryResultsPresenter new normalizeReferences: raw ].
 	modeString = 'references' ifTrue: [
-		^ aSession methodReferenceStringsToSymbol: tokenString ].
+		raw := aSession methodReferenceStringsToSymbol: tokenString.
+		^ GbsMethodQueryResultsPresenter new normalizeReferences: raw ].
 	^ #()
 ]
 
@@ -1266,6 +1274,35 @@ GbsClassicLauncher >> browseTypedWrapperAutoloadReport [
 ]
 
 { #category : 'actions' }
+GbsClassicLauncher >> browseTypedWrapperLifecycleReport [
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	self inform: session typedWrapperLifecycleReportText.
+	^ true
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> browseStaleTypedWrapperLifecycleReport [
+	| session report staleEntries |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	report := session typedWrapperLifecycleReport.
+	staleEntries := report staleEntries.
+	staleEntries isEmpty ifTrue: [
+		self inform: 'Typed Wrapper Lifecycle', String cr, String cr, 'No stale typed wrappers.'.
+		^ true ].
+	self inform: (GbsTypedWrapperLifecycleReport entries: staleEntries) text.
+	^ true
+]
+
+{ #category : 'actions' }
 GbsClassicLauncher >> browseSessionStateReport [
 	| session |
 	session := self sessionForBrowsing.
@@ -1273,13 +1310,67 @@ GbsClassicLauncher >> browseSessionStateReport [
 		self inform: 'Select or log into a GemStone session first.'.
 		^ false ].
 	GbsSessionParameters currentSession: session.
-	self inform: session objectSpaceDiagnostics reportText.
+	self inform: (session objectSpaceDiagnostics reportTextForKeys: #(19)).
 	^ true
 ]
 
 { #category : 'actions' }
-GbsClassicLauncher >> inspectMaglevFinalizerRegistry [
-	^ self inspectSessionStateAtKey: 19
+GbsClassicLauncher >> browsePromptedSessionStateKeysReport [
+	| session rawKeys keys |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	rawKeys := self class uiRequest: 'Session state keys (comma-separated):' initialAnswer: '19'.
+	keys := self parseSessionStateKeysFrom: rawKeys.
+	keys ifNil: [
+		self inform: 'Enter one or more numeric session state keys.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	self inform: (session objectSpaceDiagnostics reportTextForKeys: keys).
+	^ true
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> browseObjectsInMemoryReport [
+	| session start limit |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	start := self requestPositiveInteger: 'Object scan start index:' initialAnswer: '1'.
+	start ifNil: [ ^ false ].
+	limit := self requestPositiveInteger: 'Object scan limit:' initialAnswer: '25'.
+	limit ifNil: [ ^ false ].
+	GbsSessionParameters currentSession: session.
+	self inform: (session objectSpaceDiagnostics objectsInMemoryReportFrom: start limit: limit) text.
+	^ true
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> refreshAllTypedWrappers [
+	| session refreshed |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	refreshed := session refreshAllTypedWrapperClasses.
+	self inform: 'Refreshed ', refreshed size printString, ' typed wrapper(s).'.
+	^ true
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> refreshStaleTypedWrappers [
+	| session refreshed |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	refreshed := session refreshStaleTypedWrapperClasses.
+	self inform: 'Refreshed ', refreshed size printString, ' stale typed wrapper(s).'.
+	^ true
 ]
 
 { #category : 'actions' }
@@ -1527,7 +1618,8 @@ GbsClassicLauncher >> menuParameters [
 
 { #category : 'menus' }
 GbsClassicLauncher >> menuSession [
-    ^ self newMenu
+	| menu |
+    menu := self newMenu
         addItem: [ :item | item name: 'Login'; action: [ self inform: 'Use the main Launcher to create sessions' ] ];
         addItem: [ :item | item name: 'Logout'; action: [ self doLogout ] ];
         addItem: [ :item | item name: 'Commit'; action: [ self doCommit ] ];
@@ -1535,10 +1627,17 @@ GbsClassicLauncher >> menuSession [
         addItem: [ :item | item name: 'Named Object Cache Report'; action: [ self browseNamedObjectCacheReport ] ];
         addItem: [ :item | item name: 'Clear Named Object Cache'; action: [ self clearNamedObjectCache ] ];
         addItem: [ :item | item name: 'Typed Wrapper Autoload Report'; action: [ self browseTypedWrapperAutoloadReport ] ];
+        addItem: [ :item | item name: 'Typed Wrapper Lifecycle Report'; action: [ self browseTypedWrapperLifecycleReport ] ];
+        addItem: [ :item | item name: 'Stale Typed Wrapper Report'; action: [ self browseStaleTypedWrapperLifecycleReport ] ];
+        addItem: [ :item | item name: 'Refresh Stale Typed Wrappers'; action: [ self refreshStaleTypedWrappers ] ];
+        addItem: [ :item | item name: 'Refresh All Typed Wrappers'; action: [ self refreshAllTypedWrappers ] ];
         addItem: [ :item | item name: 'Session State Report'; action: [ self browseSessionStateReport ] ];
+        addItem: [ :item | item name: 'Session State Keys Report...'; action: [ self browsePromptedSessionStateKeysReport ] ];
+        addItem: [ :item | item name: 'Objects In Memory Report...'; action: [ self browseObjectsInMemoryReport ] ];
         addItem: [ :item | item name: 'Inspect Session State Key...'; action: [ self inspectPromptedSessionStateKey ] ];
-        addItem: [ :item | item name: 'Inspect MagLev Finalizers'; action: [ self inspectMaglevFinalizerRegistry ] ];
         yourself.
+	self addExtensionSessionMenuItemsTo: menu.
+	^ menu
 ]
 
 { #category : 'private' }
@@ -1554,6 +1653,30 @@ GbsClassicLauncher >> sessionStateReportTextFor: anObject label: aLabel [
 	^ (GbsObjectSpaceDiagnosticsFacade on: nil)
 		summaryLineFor: anObject
 		label: aLabel
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> parseSessionStateKeysFrom: aStringOrNil [
+	| trimmed tokens keys |
+	(aStringOrNil isNil or: [ aStringOrNil trimBoth isEmpty ]) ifTrue: [ ^ nil ].
+	trimmed := aStringOrNil trimBoth.
+	tokens := (trimmed findTokens: ',') collect: #trimBoth thenReject: #isEmpty.
+	tokens isEmpty ifTrue: [ ^ nil ].
+	keys := tokens collect: [ :each |
+		[ each asInteger ] on: Error do: [ ^ nil ] ].
+	^ keys asArray
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> requestPositiveInteger: promptString initialAnswer: defaultString [
+	| rawValue |
+	rawValue := self class uiRequest: promptString initialAnswer: defaultString.
+	(rawValue isNil or: [ rawValue trimBoth isEmpty ]) ifTrue: [ ^ nil ].
+	^ [ | value |
+		value := rawValue trimBoth asInteger.
+		value > 0 ifTrue: [ value ] ifFalse: [ nil ] ]
+		on: Error
+		do: [ nil ]
 ]
 
 { #category : 'menus' }

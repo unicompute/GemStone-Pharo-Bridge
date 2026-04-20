@@ -32,6 +32,21 @@ GbsRemoteMethodMirror >> classReference: aClassOrName [
 	classReference := aClassOrName
 ]
 
+{ #category : 'converting' }
+GbsRemoteMethodMirror >> asMethodObject [
+	^ GbsRemoteMethodObject onMirror: self
+]
+
+{ #category : 'converting' }
+GbsRemoteMethodMirror >> asUnboundMethodObject [
+	^ GbsRemoteUnboundMethodObject onMirror: self
+]
+
+{ #category : 'binding' }
+GbsRemoteMethodMirror >> bindTo: aReceiver [
+	^ self asMethodObject bindTo: aReceiver
+]
+
 { #category : 'querying' }
 GbsRemoteMethodMirror >> classSide [
 	^ classSide == true
@@ -117,16 +132,6 @@ GbsRemoteMethodMirror >> classHistory [
 { #category : 'querying' }
 GbsRemoteMethodMirror >> classMirror [
 	^ session classMirrorOf: (classReference ifNil: [ self ownerName ])
-]
-
-{ #category : 'converting' }
-GbsRemoteMethodMirror >> asMethodObject [
-	^ GbsRemoteMethodObject onMirror: self
-]
-
-{ #category : 'binding' }
-GbsRemoteMethodMirror >> bindTo: aReceiver [
-	^ self asMethodObject bindTo: aReceiver
 ]
 
 { #category : 'querying' }

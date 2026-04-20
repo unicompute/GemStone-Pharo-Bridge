@@ -210,7 +210,7 @@
 
     <div class="meta">
       <p><strong>Repository:</strong> <code>unicompute/GemStone-Pharo-Bridge</code></p>
-      <p><strong>Prepared from codebase state:</strong> 2026-04-03</p>
+      <p><strong>Prepared from codebase state:</strong> 2026-04-19</p>
       <p><strong>Primary baseline:</strong> <code>BaselineOfGemStonePharo</code></p>
       <p><strong>Audience:</strong> Pharo users working with GemStone sessions and GemStone-side tools</p>
     </div>
@@ -249,9 +249,8 @@
     <h2>1. What the bridge provides</h2>
     <p>
       GemStone-Pharo-Bridge gives Pharo a user-facing toolset for logging into GemStone and working with
-      GemStone objects and code from a Pharo UI. The baseline defines three load groups:
-      <code>Core</code>, <code>Tools</code>, and <code>Tests</code>. For normal use, load
-      <code>Tools</code> or the default group.
+      GemStone objects and code from a Pharo UI. The codebase is now split into a Smalltalk-first core,
+      optional MagLev/Ruby extension packages, and a narrow compatibility-test layer for deprecated aliases.
     </p>
     <table>
       <thead>
@@ -264,26 +263,38 @@
       <tbody>
         <tr>
           <td><code>Core</code></td>
-          <td>Converted runtime and session/GCI bridge classes</td>
+          <td>Converted Smalltalk core bridge and session/GCI classes</td>
           <td>Headless or programmatic use</td>
         </tr>
         <tr>
-          <td><code>Tools</code></td>
-          <td><code>Core</code> plus Spec-based UI tools</td>
-          <td>Interactive use in Pharo</td>
+          <td><code>Core-Tests</code></td>
+          <td><code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Tools</code>, and <code>GemStone-Pharo-Core-Tests</code></td>
+          <td>Verify the bridge as <code>Pharo &lt;-&gt; GemStone Smalltalk</code> without MagLev</td>
+        </tr>
+        <tr>
+          <td><code>Compatibility-Tests</code></td>
+          <td>Compatibility coverage on top of core plus MagLev support</td>
+          <td>Verify deprecated aliases such as <code>persistentRoot</code> and <code>commit</code></td>
+        </tr>
+        <tr>
+          <td><code>MagLev</code></td>
+          <td>Optional MagLev/Ruby runtime and tool packages</td>
+          <td>Ruby runtime, autoload, ObjectLog, proc/binding, and MagLev-specific tooling</td>
         </tr>
         <tr>
           <td><code>Tests</code></td>
-          <td>Regression and unit tests</td>
+          <td>Core tests, compatibility tests, and full bridge tests</td>
           <td>Validation and development</td>
         </tr>
         <tr>
           <td><code>default</code></td>
-          <td><code>Tools</code> plus <code>Tests</code></td>
+          <td>Full developer load</td>
           <td>Full developer load</td>
         </tr>
       </tbody>
     </table>
+
+    <p>The active core root API is <code>bridgeRoot</code>. Older names such as <code>persistentRoot</code> remain only as compatibility aliases.</p>
 
     <p>The bridge centers around these user tools:</p>
     <ul>
@@ -334,9 +345,9 @@
     <pre><code>Metacello new
   baseline: 'GemStonePharo';
   repository: 'tonel:///path/to/GemStone-Pharo-Bridge/src';
-  load: #('Tools').</code></pre>
+  load: #('Core-Tests').</code></pre>
 
-    <p>For a full developer load including tests:</p>
+    <p>For the full interactive toolset, including MagLev/Ruby extensions when present:</p>
     <pre><code>Metacello new
   baseline: 'GemStonePharo';
   repository: 'tonel:///path/to/GemStone-Pharo-Bridge/src';
@@ -349,17 +360,29 @@ Metacello new
   repository: 'tonel:///path/to/GemStone-Pharo-Bridge/src';
   load: #('Core').
 
-"Runtime plus UI tools"
+"Smalltalk core plus generic tools and Smalltalk-only tests"
 Metacello new
   baseline: 'GemStonePharo';
   repository: 'tonel:///path/to/GemStone-Pharo-Bridge/src';
-  load: #('Tools').
+  load: #('Core-Tests').
 
-"Tests only after the rest is loaded"
+"Compatibility-only alias coverage"
 Metacello new
   baseline: 'GemStonePharo';
   repository: 'tonel:///path/to/GemStone-Pharo-Bridge/src';
-  load: #('Tests').</code></pre>
+  load: #('Compatibility-Tests').
+
+"Optional MagLev/Ruby layer"
+Metacello new
+  baseline: 'GemStonePharo';
+  repository: 'tonel:///path/to/GemStone-Pharo-Bridge/src';
+  load: #('MagLev').
+
+"Full developer load"
+Metacello new
+  baseline: 'GemStonePharo';
+  repository: 'tonel:///path/to/GemStone-Pharo-Bridge/src';
+  load.</code></pre>
 
     <h3>What postload does</h3>
     <p>
@@ -408,7 +431,7 @@ Metacello new
 
   <section>
     <h2>5. Starting the tools</h2>
-    <p>After loading the <code>Tools</code> group, open the tools from the World menu:</p>
+    <p>After loading a tools-capable group such as <code>Core-Tests</code>, <code>MagLev</code>, or <code>default</code>, open the tools from the World menu:</p>
     <pre><code>World menu → GemStone</code></pre>
 
     <p>The current menu structure is:</p>
@@ -776,11 +799,51 @@ Object thisMessageDoesNotExist</code></pre>
       The repository includes both Smalltalk test packages and shell/Smalltalk scripts for regression workflows.
     </p>
 
-    <h3>Package tests</h3>
-    <pre><code>"Run package tests after loading the Tests group"
-TestRunner open.
-"or"
-GbsRemoteDebuggerTest run.</code></pre>
+    <h3>Three supported verification lanes</h3>
+    <p>The current bridge intentionally keeps three separate lanes:</p>
+    <ul>
+      <li><strong>core-only</strong>: verify the Smalltalk core without MagLev packages</li>
+      <li><strong>compatibility-only</strong>: verify deprecated alias coverage in isolation</li>
+      <li><strong>full</strong>: verify the complete unit suite and, when configured, the live GemStone integration lane</li>
+    </ul>
+
+    <h3>Recommended entry point</h3>
+    <pre><code>make help</code></pre>
+
+    <h3>Core-only lane</h3>
+    <pre><code>make core-only
+
+"Direct script form"
+bash ./scripts/run_core_only_clean_reload.sh \
+  "/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image" \
+  "/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean"</code></pre>
+
+    <h3>Compatibility-only lane</h3>
+    <pre><code>make compatibility-only
+
+"Direct script form"
+bash ./scripts/run_compatibility_clean_reload.sh \
+  "/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image" \
+  "/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean"</code></pre>
+
+    <h3>Full clean-reload lane</h3>
+    <pre><code>make full
+
+"Known-good live GemStone env"
+GS_USER='DataCurator' \
+GS_PASS='swordfish' \
+GS_NETLDI_HOST='localhost' \
+GS_NETLDI_NAME_OR_PORT='50377' \
+GEMSTONE='/Users/tariq/GemStone64Bit3.7.5-arm64.Darwin' \
+make full</code></pre>
+
+    <h3>Compatibility drift guard</h3>
+    <p>
+      The clean reload script now enforces a boundary between active APIs and compatibility-only aliases.
+      Compatibility checks for names such as <code>persistentRoot</code> and the old <code>commit</code> alias
+      belong in <code>GemStone-Pharo-Compatibility-Tests</code>, not in the main Smalltalk-core or full bridge
+      test packages. If that boundary drifts, the reload lane fails with <code>COMPATIBILITY_DRIFT_FAILED</code>.
+    </p>
 
     <h3>Manual debugger smoke tests</h3>
     <p>
@@ -791,8 +854,9 @@ GbsRemoteDebuggerTest run.</code></pre>
     <h3>Scripts directory</h3>
     <p>The <code>scripts</code> folder contains repeatable automation for tasks such as:</p>
     <ul>
-      <li>clean reload and regressions</li>
-      <li>FFI regression runs</li>
+      <li>core-only clean reload checks</li>
+      <li>compatibility-only clean reload checks</li>
+      <li>full clean reload and regressions</li>
       <li>live debugger integration runs</li>
       <li>query results presenter tests</li>
       <li>restart and breakpoint scenarios</li>
@@ -855,7 +919,7 @@ GbsRemoteTranscript new open.</code></pre>
     <pre><code>Metacello new
   baseline: 'GemStonePharo';
   repository: 'tonel:///path/to/GemStone-Pharo-Bridge/src';
-  load: #('Tools').</code></pre>
+  load: #('Core-Tests').</code></pre>
 
     <h3>Open the Symbol List Browser on the current session</h3>
     <pre><code>GbsClassicLauncher browseSymbolListOnCurrentSession.</code></pre>

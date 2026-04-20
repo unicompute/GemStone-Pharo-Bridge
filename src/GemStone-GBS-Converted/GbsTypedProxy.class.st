@@ -19,6 +19,27 @@ GbsTypedProxy class >> clientBehaviorName [
 ]
 
 { #category : 'generated metadata' }
+GbsTypedProxy class >> lifecycleEntryForSession: aSession [
+	^ (GbsSessionManager typedWrapperLifecycleObjectsForSession: aSession)
+		detect: [ :each | each wrapperClass == self ]
+		ifNone: [ nil ]
+]
+
+{ #category : 'generated metadata' }
+GbsTypedProxy class >> lifecycleStatusForSession: aSession [
+	| entry |
+	entry := self lifecycleEntryForSession: aSession.
+	^ entry
+		ifNil: [ #unknown ]
+		ifNotNil: [ entry status ]
+]
+
+{ #category : 'generated metadata' }
+GbsTypedProxy class >> isLifecycleStaleForSession: aSession [
+	^ (self lifecycleStatusForSession: aSession) = #stale
+]
+
+{ #category : 'generated metadata' }
 GbsTypedProxy class >> generatedForwardingSelectors [
 	^ #()
 ]

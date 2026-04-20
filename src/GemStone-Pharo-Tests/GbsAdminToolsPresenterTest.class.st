@@ -1822,6 +1822,310 @@ GbsAdminToolsPresenterTest >> testNamespacesInspectPromptedSessionStateKeyUsesSe
 ]
 
 { #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseTypedWrapperLifecycleReportUsesSessionFacade [
+	| mockSession presenter |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #typedWrapperLifecycleReportText put: [ 'Typed Wrapper Lifecycle', String cr, String cr, 'ClientThing -> ServerThing' ].
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+
+	self assert: presenter browseTypedWrapperLifecycleReport.
+	self assert: (presenter lastInfoMessage includesSubstring: 'Typed Wrapper Lifecycle').
+	self assert: (presenter lastInfoMessage includesSubstring: 'ClientThing')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseTypedWrapperAutoloadReportUsesSessionRegistry [
+	| mockSession presenter |
+	mockSession := MockGbsSession new.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+
+	[
+		GbsSessionManager addConnectorClient: 'DemoClient' server: 'DemoServer' forSession: mockSession.
+		self assert: presenter browseTypedWrapperAutoloadReport.
+		self assert: (presenter lastInfoMessage includesSubstring: 'Typed Wrapper Autoload').
+		self assert: (presenter lastInfoMessage includesSubstring: 'DemoClient -> DemoServer')
+	] ensure: [
+		GbsSessionManager removeConnectorClient: 'DemoClient' server: 'DemoServer' forSession: mockSession ]
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseStaleTypedWrapperLifecycleReportShowsStaleEntries [
+	| mockSession presenter staleEntry |
+	mockSession := MockGbsSession new.
+	staleEntry := GbsTypedWrapperLifecycleEntry
+		wrapperClass: nil
+		clientName: 'ClientThing'
+		serverName: 'ServerThing'
+		source: 'autoload'
+		localVersion: 1
+		localNumberOfVersions: 1
+		remoteVersion: 2
+		remoteNumberOfVersions: 2
+		status: #stale.
+	mockSession stubs at: #typedWrapperLifecycleReport put: [
+		GbsTypedWrapperLifecycleReport entries: { staleEntry } ].
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+
+	self assert: presenter browseStaleTypedWrapperLifecycleReport.
+	self assert: (presenter lastInfoMessage includesSubstring: 'ClientThing').
+	self assert: (presenter lastInfoMessage includesSubstring: 'stale')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshStaleTypedWrappersUsesSessionRefresh [
+	| mockSession presenter |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #refreshStaleTypedWrapperClasses put: [ { GbsTypedProxy. Object } ].
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+
+	self assert: presenter refreshStaleTypedWrappers.
+	self assert: presenter lastInfoMessage equals: 'Refreshed 2 stale typed wrapper(s).'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshAllTypedWrappersUsesSessionRefresh [
+	| mockSession presenter |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #refreshAllTypedWrapperClasses put: [ { GbsTypedProxy } ].
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+
+	self assert: presenter refreshAllTypedWrappers.
+	self assert: presenter lastInfoMessage equals: 'Refreshed 1 typed wrapper(s).'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseWrapperActionChooserUsesSelectedWrapperAction [
+	| mockSession presenter |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #refreshAllTypedWrapperClasses put: [ { GbsTypedProxy } ].
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter enqueueChooseAnswer: 5.
+
+	self assert: presenter browseWrapperActionChooser.
+	self assert: presenter lastInfoMessage equals: 'Refreshed 1 typed wrapper(s).'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowsePromptedSessionStateKeysReportUsesDiagnosticsFacade [
+	| mockSession presenter |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 19') ifTrue: [
+			^ (IdentityDictionary new at: #lazyThing put: 'registered'; yourself) ].
+		(script includesSubstring: 'key := 21') ifTrue: [ ^ #(1 2 3) ].
+		self fail ].
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter enqueueRequestAnswer: '19, 21'.
+
+	self assert: presenter browsePromptedSessionStateKeysReport.
+	self assert: (presenter lastInfoMessage includesSubstring: 'Key 19 (MagLev Finalizer Registry)').
+	self assert: (presenter lastInfoMessage includesSubstring: 'Key 21 (Session State)')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseRubyLoadPathReportUsesRuntimeReport [
+	| mockSession presenter |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('/opt/demo/lib' '/opt/demo/app') ].
+		(script includesSubstring: 'key := 19') ifTrue: [ ^ nil ].
+		self fail ].
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+
+	self assert: presenter browseRubyLoadPathReport.
+	self assert: (presenter lastInfoMessage includesSubstring: 'Ruby Runtime').
+	self assert: (presenter lastInfoMessage includesSubstring: '$LOAD_PATH').
+	self assert: (presenter lastInfoMessage includesSubstring: '/opt/demo/lib')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseRubyLoadedFeaturesReportUsesRuntimeReport [
+	| mockSession presenter |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyContext default transientLoadedFeatures: 1'
+			ifTrue: [ ^ #('json' 'set') ].
+		(script includesSubstring: 'key := 19') ifTrue: [ ^ nil ].
+		self fail ].
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+
+	self assert: presenter browseRubyLoadedFeaturesReport.
+	self assert: (presenter lastInfoMessage includesSubstring: 'Loaded Features').
+	self assert: (presenter lastInfoMessage includesSubstring: 'json')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseRubyPersistentLoadedFeaturesReportUsesRuntimeReport [
+	| mockSession presenter |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyContext default persistentLoadedFeatures: 1'
+			ifTrue: [ ^ #('bigdecimal') ].
+		(script includesSubstring: 'key := 19') ifTrue: [ ^ nil ].
+		self fail ].
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+
+	self assert: presenter browseRubyPersistentLoadedFeaturesReport.
+	self assert: (presenter lastInfoMessage includesSubstring: 'Persistent Loaded Features').
+	self assert: (presenter lastInfoMessage includesSubstring: 'bigdecimal')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseNamedObjectCacheReportUsesSessionCacheText [
+	| mockSession presenter cache |
+	mockSession := MockGbsSession new.
+	cache := Dictionary new.
+	cache at: #UserGlobals put: (GbsProxy oop: 9001 session: mockSession).
+	mockSession instVarNamed: 'namedObjectCache' put: cache.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+
+	self assert: presenter browseNamedObjectCacheReport.
+	self assert: (presenter lastInfoMessage includesSubstring: 'Named Object Cache').
+	self assert: (presenter lastInfoMessage includesSubstring: 'UserGlobals -> oop 9001')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesClearNamedObjectCacheClearsSessionCache [
+	| mockSession presenter cache |
+	mockSession := MockGbsSession new.
+	cache := Dictionary new.
+	cache at: #UserGlobals put: (GbsProxy oop: 9001 session: mockSession).
+	mockSession instVarNamed: 'namedObjectCache' put: cache.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+
+	self assert: presenter clearNamedObjectCache.
+	self assert: presenter lastInfoMessage equals: 'Named object cache cleared.'.
+	self assert: mockSession namedObjectCacheKeys equals: #()
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseSessionStateReportUsesDiagnosticsFacade [
+	| mockSession presenter |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 19')
+			ifTrue: [ ^ (IdentityDictionary new
+				at: #lazyThing put: 'registered';
+				yourself) ].
+		self fail ].
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+
+	self assert: presenter browseSessionStateReport.
+	self assert: (presenter lastInfoMessage includesSubstring: 'Session State').
+	self assert: (presenter lastInfoMessage includesSubstring: 'Key 19 (MagLev Finalizer Registry)')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseNamespaceAutoloadRegistrationsReportUsesSelectedNamespace [
+	| mockSession presenter namespace fakeNamespaceTable |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		((script includesSubstring: 'System myUserProfile symbolList at: 1')
+			and: [ script includesSubstring: 'rubyAutoloadAssociationAtOrNil: each env: 1' ])
+			ifTrue: [ ^ #(#('LazyThing' 'lib/lazy_thing.rb' false 9101)) ].
+		self fail ].
+	namespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'System myUserProfile symbolList at: 1'
+		symbolListIndex: 1
+		metadata: #(1 5001 'UserGlobals' nil 'SymbolDictionary' nil).
+	fakeNamespaceTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeNamespaceTable items: { namespace }.
+	fakeNamespaceTable selectedItem: namespace.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter instVarNamed: 'namespacesTable' put: fakeNamespaceTable.
+
+	self assert: presenter browseNamespaceAutoloadRegistrationsReport.
+	self assert: (presenter lastInfoMessage includesSubstring: 'Autoload Registrations').
+	self assert: (presenter lastInfoMessage includesSubstring: 'LazyThing').
+	self assert: (presenter lastInfoMessage includesSubstring: 'lib/lazy_thing.rb')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseRuntimeReportChooserUsesSelectedRuntimeAction [
+	| mockSession presenter cache |
+	mockSession := MockGbsSession new.
+	cache := Dictionary new.
+	cache at: #UserGlobals put: (GbsProxy oop: 9001 session: mockSession).
+	mockSession instVarNamed: 'namedObjectCache' put: cache.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('/opt/demo/lib') ].
+		(script includesSubstring: 'key := 19') ifTrue: [ ^ nil ].
+		self fail ].
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter enqueueChooseAnswer: 1.
+
+	self assert: presenter browseRuntimeReportChooser.
+	self assert: (presenter lastInfoMessage includesSubstring: 'Named Object Cache').
+	self assert: (presenter lastInfoMessage includesSubstring: 'UserGlobals -> oop 9001')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseRuntimeReportChooserCanClearNamedObjectCache [
+	| mockSession presenter cache |
+	mockSession := MockGbsSession new.
+	cache := Dictionary new.
+	cache at: #UserGlobals put: (GbsProxy oop: 9001 session: mockSession).
+	mockSession instVarNamed: 'namedObjectCache' put: cache.
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter enqueueChooseAnswer: 2.
+
+	self assert: presenter browseRuntimeReportChooser.
+	self assert: presenter lastInfoMessage equals: 'Named object cache cleared.'.
+	self assert: mockSession namedObjectCacheKeys equals: #()
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseObjectsInMemoryReportUsesDiagnosticsFacade [
+	| mockSession presenter |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'SystemRepository _listInstancesInMemory:')
+			ifTrue: [ ^ { GbsProxy oop: 9201 session: mockSession. GbsProxy oop: 9202 session: mockSession } ].
+		self fail ].
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter
+		enqueueRequestAnswer: '1';
+		enqueueRequestAnswer: '2'.
+
+	self assert: presenter browseObjectsInMemoryReport.
+	self assert: (presenter lastInfoMessage includesSubstring: 'Objects In Memory').
+	self assert: (presenter lastInfoMessage includesSubstring: 'oop=9201')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesBrowseMaglevFinalizerRegistryReportUsesDiagnosticsFacade [
+	| mockSession presenter |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 19')
+			ifTrue: [ ^ (IdentityDictionary new at: #lazyThing put: 'registered'; yourself) ].
+		self fail ].
+	presenter := TestableGbsNamespacesPresenter new.
+	presenter instVarNamed: 'session' put: mockSession.
+
+	self assert: presenter browseMaglevFinalizerRegistryReport.
+	self assert: (presenter lastInfoMessage includesSubstring: 'MagLev Finalizer Registry')
+]
+
+{ #category : 'tests' }
 GbsAdminToolsPresenterTest >> testNamespacesBrowseSelectedConstantOpensBrowserWorkflow [
 	| mockSession presenter namespace constant fakeConstantsTable |
 	mockSession := MockGbsSession new.
@@ -3879,6 +4183,60 @@ GbsAdminToolsPresenterTest >> testStructuredValueInspectorRowsSetterUpdatesExist
 ]
 
 { #category : 'tests' }
+GbsAdminToolsPresenterTest >> testStructuredValueInspectorBrowseRubyLoadPathReportUsesConfiguredBlock [
+	| presenter informed |
+	presenter := (Smalltalk at: #GbsStructuredValueInspectorPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsStructuredValueInspectorPresenter not loaded' ].
+	presenter
+		propertyAt: #loadPathReportBlock put: [ '$LOAD_PATH', String cr, String cr, 'lib' ];
+		propertyAt: #informBlock put: [ :message | informed := message ].
+
+	presenter browseRubyLoadPathReport.
+
+	self assert: informed equals: '$LOAD_PATH', String cr, String cr, 'lib'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testStructuredValueInspectorBrowsePromptedSessionStateKeysReportDelegatesParsedKeys [
+	| presenter informed keys |
+	presenter := (Smalltalk at: #GbsStructuredValueInspectorPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsStructuredValueInspectorPresenter not loaded' ].
+	presenter
+		propertyAt: #requestInputBlock put: [ :prompt :default | '19, 21' ];
+		propertyAt: #sessionStateKeysReportBlock put: [ :parsedKeys |
+			keys := parsedKeys.
+			'Session State', String cr, String cr, 'Key 19' ];
+		propertyAt: #informBlock put: [ :message | informed := message ].
+
+	presenter browsePromptedSessionStateKeysReport.
+
+	self assert: keys equals: #(19 21).
+	self assert: informed equals: 'Session State', String cr, String cr, 'Key 19'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testStructuredValueInspectorBrowseObjectsInMemoryReportDelegatesPromptedRange [
+	| presenter informed requestedRange answers |
+	presenter := (Smalltalk at: #GbsStructuredValueInspectorPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'GbsStructuredValueInspectorPresenter not loaded' ].
+	answers := OrderedCollection with: '2' with: '5'.
+	presenter
+		propertyAt: #requestInputBlock put: [ :prompt :default | answers removeFirst ];
+		propertyAt: #objectsInMemoryReportBlock put: [ :start :limit |
+			requestedRange := { start. limit }.
+			'Objects In Memory', String cr, String cr, 'oop=9201' ];
+		propertyAt: #informBlock put: [ :message | informed := message ].
+
+	presenter browseObjectsInMemoryReport.
+
+	self assert: requestedRange equals: #(2 5).
+	self assert: informed equals: 'Objects In Memory', String cr, String cr, 'oop=9201'
+]
+
+{ #category : 'tests' }
 GbsAdminToolsPresenterTest >> testSymbolListBrowseReferencersForSelectedEntryUsesSessionFacadeAndOpensSingleResult [
 	| presenter mockSession fakeUsers fakeDicts fakeEntries |
 	presenter := (Smalltalk at: #TestableGbsSymbolListBrowserPresenter ifAbsent: [ nil ])
@@ -3890,6 +4248,7 @@ GbsAdminToolsPresenterTest >> testSymbolListBrowseReferencersForSelectedEntryUse
 		self assert: (script includesSubstring: 'each asString = ''OkzZuluSeasideState''').
 		'9001' ].
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: mockSession materializationProfile class equals: GbsShallowMaterializationProfile.
 		self assert: script equals: '((Object _objectForOop: 9001)) findReferencesInMemory asArray'.
 		^ { GbsProxy oop: 9100 session: mockSession } ].
 	fakeUsers := GbxFakeListPresenterForBrowser new.
@@ -3957,6 +4316,95 @@ GbsAdminToolsPresenterTest >> testSymbolListBrowsePromptedSessionStateKeyUsesPro
 
 	self assert: presenter browsePromptedSessionStateKey.
 	self assert: presenter lastOpenedOop equals: 9301
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSymbolListBrowseRubyLoadPathReportUsesSessionRuntimeFacade [
+	| presenter mockSession |
+	presenter := (Smalltalk at: #TestableGbsSymbolListBrowserPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'TestableGbsSymbolListBrowserPresenter not loaded' ].
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: mockSession materializationProfile class equals: GbsShallowMaterializationProfile.
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('lib' 'app/models') ].
+		self fail ].
+
+	presenter instVarNamed: 'session' put: mockSession.
+
+	self assert: presenter browseRubyLoadPathReport.
+	self assert: (presenter lastInfoMessage includesSubstring: '$LOAD_PATH').
+	self assert: (presenter lastInfoMessage includesSubstring: 'lib')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSymbolListBrowseStaleTypedWrapperLifecycleReportShowsStaleEntries [
+	| presenter mockSession staleEntry |
+	presenter := (Smalltalk at: #TestableGbsSymbolListBrowserPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'TestableGbsSymbolListBrowserPresenter not loaded' ].
+	mockSession := MockGbsSession new.
+	staleEntry := GbsTypedWrapperLifecycleEntry
+		wrapperClass: nil
+		clientName: 'ClientThing'
+		serverName: 'ServerThing'
+		source: 'autoload'
+		localVersion: 1
+		localNumberOfVersions: 1
+		remoteVersion: 2
+		remoteNumberOfVersions: 2
+		status: #stale.
+	mockSession stubs at: #typedWrapperLifecycleReport put: [
+		GbsTypedWrapperLifecycleReport entries: { staleEntry } ].
+
+	presenter instVarNamed: 'session' put: mockSession.
+
+	self assert: presenter browseStaleTypedWrapperLifecycleReport.
+	self assert: (presenter lastInfoMessage includesSubstring: 'ClientThing').
+	self assert: (presenter lastInfoMessage includesSubstring: 'stale')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSymbolListBrowsePromptedSessionStateKeysReportUsesDiagnosticsFacade [
+	| presenter mockSession |
+	presenter := (Smalltalk at: #TestableGbsSymbolListBrowserPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'TestableGbsSymbolListBrowserPresenter not loaded' ].
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 19') ifTrue: [
+			^ (IdentityDictionary new at: #lazyThing put: 'registered'; yourself) ].
+		(script includesSubstring: 'key := 21') ifTrue: [ ^ #(1 2 3) ].
+		self fail ].
+
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter enqueueRequestAnswer: '19, 21'.
+
+	self assert: presenter browsePromptedSessionStateKeysReport.
+	self assert: (presenter lastInfoMessage includesSubstring: 'Key 19 (MagLev Finalizer Registry)').
+	self assert: (presenter lastInfoMessage includesSubstring: 'Key 21 (Session State)')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testSymbolListBrowseObjectsInMemoryReportUsesDiagnosticsFacade [
+	| presenter mockSession |
+	presenter := (Smalltalk at: #TestableGbsSymbolListBrowserPresenter ifAbsent: [ nil ])
+		ifNotNil: [ :klass | klass new ]
+		ifNil: [ self skip: 'TestableGbsSymbolListBrowserPresenter not loaded' ].
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'SystemRepository _listInstancesInMemory:')
+			ifTrue: [ ^ { GbsProxy oop: 9201 session: mockSession. GbsProxy oop: 9202 session: mockSession } ].
+		self fail ].
+
+	presenter instVarNamed: 'session' put: mockSession.
+	presenter
+		enqueueRequestAnswer: '1';
+		enqueueRequestAnswer: '2'.
+
+	self assert: presenter browseObjectsInMemoryReport.
+	self assert: (presenter lastInfoMessage includesSubstring: 'Objects In Memory').
+	self assert: (presenter lastInfoMessage includesSubstring: 'oop=9201')
 ]
 
 { #category : 'tests' }
@@ -4069,6 +4517,7 @@ GbsAdminToolsPresenterTest >> testSymbolListRefreshUsersShowsSelectedDictionaryV
 		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].
 	mockSession := MockGbsSession new.
 	mockSession stubs at: #evaluate put: [ :script |
+		self assert: mockSession materializationProfile class equals: GbsShallowMaterializationProfile.
 		(script includesSubstring: 'users do:')
 			ifTrue: [ ^ 'DataCurator', Character tab asString, 'SystemUser' ].
 		(script includesSubstring: '1 to: sl size do:')
@@ -4077,6 +4526,7 @@ GbsAdminToolsPresenterTest >> testSymbolListRefreshUsersShowsSelectedDictionaryV
 			ifTrue: [ ^ 'OkzZuluSeasideState', Character tab asString, 'aDictionary(...)', String lf, 'OtherEntry', Character tab asString, '123' ].
 		'' ].
 	mockSession stubs at: #executeAndFetch put: [ :script |
+		self assert: mockSession materializationProfile class equals: GbsShallowMaterializationProfile.
 		(script includesSubstring: 'each asString = ''OkzZuluSeasideState''')
 			ifTrue: [ ^ 'dictionary', String lf, 'users', Character tab asString, 'aDictionary(...)', String lf, 'events', Character tab asString, 'aDictionary(...)' ].
 		'' ].

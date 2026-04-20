@@ -89,27 +89,29 @@ GbxContextListPolicy >> clientContextsStartingAt: aContext upToContextExclusive:
 GbxContextListPolicy >> computeContextList [
 	"Compute the logical context list from GemStone plus any client contexts
 	above the top server context (VW mixed-stack parity)."
-	| allContexts serverContexts topServerContext firstClientContext marker |
+	^ self buildContextListFromServerContexts: self fetchServerContexts
+]
 
-	serverContexts := self fetchServerContexts.
+{ #category : 'context list' }
+GbxContextListPolicy >> buildContextListFromServerContexts: serverContexts [
+	| allContexts topServerContext firstClientContext marker |
 	allContexts := OrderedCollection new.
-	allContexts addAll: serverContexts.
+	allContexts addAll: (serverContexts ifNil: [ #() ]).
 
-	topServerContext := serverContexts ifEmpty: [ nil ] ifNotEmpty: [ serverContexts first ].
+	topServerContext := allContexts
+		ifEmpty: [ nil ]
+		ifNotEmpty: [ allContexts first ].
 	topServerContext ifNotNil: [
 		firstClientContext := self firstClientContextAbove: topServerContext.
 		firstClientContext ifNotNil: [
 			marker := self matchingServerCallMarkerForServerContext: topServerContext.
 			allContexts addAll: (self
 				clientContextsStartingAt: firstClientContext
-				upToContextExclusive: marker)
-		]
-	].
-	
-	glueIsHidden 
+				upToContextExclusive: marker) ] ].
+
+	glueIsHidden
 		ifTrue: [ contextList := self filterOutGlue: allContexts ]
 		ifFalse: [ contextList := allContexts ].
-	
 	^ contextList
 ]
 
@@ -562,5 +564,11 @@ GbxContextListPolicy >> topServerContext [
 GbxContextListPolicy >> updateContextList [
 	"Update the context list and notify the debugger"
 	self computeContextList.
+	debugger updateStackList: self contextList
+]
+
+{ #category : 'context list' }
+GbxContextListPolicy >> updateContextListFromServerContexts: serverContexts [
+	self buildContextListFromServerContexts: serverContexts.
 	debugger updateStackList: self contextList
 ]

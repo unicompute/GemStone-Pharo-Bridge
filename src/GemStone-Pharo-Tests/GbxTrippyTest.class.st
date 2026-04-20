@@ -56,6 +56,7 @@ GbxTrippyTest >> testBrowseReferencersInMemoryUsesSessionFacadeAndOpensSingleRes
 	session stubs
 		at: #executeScriptAndFetchObject
 		put: [ :script |
+			self assert: session materializationProfile class equals: GbsShallowMaterializationProfile.
 			self assert: script equals: '((Object _objectForOop: 456)) findReferencesInMemory asArray'.
 			^ { GbsProxy oop: 9001 session: session } ].
 
@@ -126,4 +127,106 @@ GbxTrippyTest >> testBrowsePromptedSessionStateKeyUsesSessionAndOpensTrippy [
 
 	self assert: trippy browsePromptedSessionStateKey.
 	self assert: trippy lastOpenedOop equals: 8181
+]
+
+{ #category : 'tests' }
+GbxTrippyTest >> testBrowseRubyLoadPathReportUsesRuntimeReport [
+	| trippy session |
+	trippy := GbxTestableTrippy new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: session materializationProfile class equals: GbsShallowMaterializationProfile.
+		script = 'RubyFile loadPath: 1' ifTrue: [ ^ #('/opt/demo/lib' '/opt/demo/app') ].
+		(script includesSubstring: 'key := 19') ifTrue: [ ^ nil ].
+		self fail ].
+
+	trippy session: session.
+
+	self assert: trippy browseRubyLoadPathReport.
+	self assert: (trippy lastInfoMessage includesSubstring: '$LOAD_PATH').
+	self assert: (trippy lastInfoMessage includesSubstring: '/opt/demo/lib')
+]
+
+{ #category : 'tests' }
+GbxTrippyTest >> testBrowseStaleTypedWrapperLifecycleReportUsesSessionLifecycleReport [
+	| trippy session staleEntry |
+	trippy := GbxTestableTrippy new.
+	session := MockGbsSession new.
+	staleEntry := GbsTypedWrapperLifecycleEntry
+		wrapperClass: nil
+		clientName: 'ClientThing'
+		serverName: 'ServerThing'
+		source: 'autoload'
+		localVersion: 1
+		localNumberOfVersions: 1
+		remoteVersion: 2
+		remoteNumberOfVersions: 2
+		status: #stale.
+	session stubs at: #typedWrapperLifecycleReport put: [
+		self assert: session materializationProfile class equals: GbsShallowMaterializationProfile.
+		GbsTypedWrapperLifecycleReport entries: { staleEntry } ].
+
+	trippy session: session.
+
+	self assert: trippy browseStaleTypedWrapperLifecycleReport.
+	self assert: (trippy lastInfoMessage includesSubstring: 'ClientThing').
+	self assert: (trippy lastInfoMessage includesSubstring: 'stale')
+]
+
+{ #category : 'tests' }
+GbxTrippyTest >> testBrowsePromptedSessionStateKeysReportUsesDiagnosticsFacade [
+	| trippy session |
+	trippy := GbxTestableTrippy new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 19') ifTrue: [
+			^ (IdentityDictionary new at: #lazyThing put: 'registered'; yourself) ].
+		(script includesSubstring: 'key := 21') ifTrue: [ ^ #(1 2 3) ].
+		self fail ].
+
+	trippy session: session.
+	trippy enqueueRequestAnswer: '19, 21'.
+
+	self assert: trippy browsePromptedSessionStateKeysReport.
+	self assert: (trippy lastInfoMessage includesSubstring: 'Key 19 (MagLev Finalizer Registry)').
+	self assert: (trippy lastInfoMessage includesSubstring: 'Key 21 (Session State)')
+]
+
+{ #category : 'tests' }
+GbxTrippyTest >> testBrowseObjectsInMemoryReportUsesDiagnosticsFacade [
+	| trippy session |
+	trippy := GbxTestableTrippy new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'SystemRepository _listInstancesInMemory:')
+			ifTrue: [ ^ { GbsProxy oop: 9201 session: session. GbsProxy oop: 9202 session: session } ].
+		self fail ].
+
+	trippy session: session.
+	trippy
+		enqueueRequestAnswer: '1';
+		enqueueRequestAnswer: '2'.
+
+	self assert: trippy browseObjectsInMemoryReport.
+	self assert: (trippy lastInfoMessage includesSubstring: 'Objects In Memory').
+	self assert: (trippy lastInfoMessage includesSubstring: 'oop=9201')
+]
+
+{ #category : 'tests' }
+GbxTrippyTest >> testBrowseMaglevFinalizerRegistryReportUsesDiagnosticsFacade [
+	| trippy session |
+	trippy := GbxTestableTrippy new.
+	session := MockGbsSession new.
+	session stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'key := 19') ifTrue: [
+			^ GbsProxy oop: 9001 session: session ].
+		(script includesSubstring: 'findReferencesInMemory') ifTrue: [
+			^ { GbsProxy oop: 9101 session: session } ].
+		self fail ].
+
+	trippy session: session.
+
+	self assert: trippy browseMaglevFinalizerRegistryReport.
+	self assert: (trippy lastInfoMessage includesSubstring: 'MagLev Finalizer Registry oop=9001 Referencers').
+	self assert: (trippy lastInfoMessage includesSubstring: 'oop=9101')
 ]

@@ -42,6 +42,8 @@ GbsSessionManagerTest >> setUp [
 	previousObjectSpaceFinalizationRegistry := Smalltalk globals
 		at: #GbsObjectSpaceFinalizationRegistry
 		ifAbsent: [ nil ].
+	GBSM currentSession: nil.
+	GbsSessionParameters currentSession: nil.
 	GbsObjectSpaceFacade resetFinalizationRegistry
 ]
 
@@ -214,6 +216,32 @@ GbsSessionManagerTest >> testGBSMRepositoryAndObjectSpaceDelegatesToCurrentSessi
 ]
 
 { #category : 'tests' }
+GbsSessionManagerTest >> testGBSMMaglevAndObjectLogDelegatesToCurrentSession [
+	| mockSession |
+	mockSession := MockGbsSession new.
+	GBSM currentSession: mockSession.
+
+	self assert: GBSM smalltalk class equals: GbsSmalltalkFacade.
+	self assert: GBSM smalltalk session == mockSession.
+	self assert: GBSM maglev class equals: GbsMaglevFacade.
+	self assert: GBSM maglev session == mockSession.
+	self assert: GBSM objectLog class equals: GbsObjectLogFacade.
+	self assert: GBSM objectLog session == mockSession
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testGBSMSessionMethodsDelegatesToCurrentSession [
+	| mockSession result |
+	mockSession := MockGbsSession new.
+	GBSM currentSession: mockSession.
+
+	result := GBSM sessionMethods.
+
+	self assert: result class equals: GbsSymbolDictionaryFacade.
+	self assert: result name equals: 'SessionMethods'
+]
+
+{ #category : 'tests' }
 GbsSessionManagerTest >> testGBSMObjectSpaceDelegatesToCurrentSession [
 	| mockSession loaded subclasses instances references paged filtered |
 	mockSession := MockGbsSession new.
@@ -368,7 +396,7 @@ GbsSessionManagerTest >> testGBSMNamedObjectAutoloadDelegatesToCurrentSession [
 ]
 
 { #category : 'tests' }
-GbsSessionManagerTest >> testGBSMRootAndListInstancesDelegatesToCurrentSession [
+GbsSessionManagerTest >> testGBSMBridgeRootAndListInstancesDelegatesToCurrentSession [
 	| mockSession rootResult listResult |
 	mockSession := MockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
@@ -376,14 +404,14 @@ GbsSessionManagerTest >> testGBSMRootAndListInstancesDelegatesToCurrentSession [
 		(script includesSubstring: 'SystemRepository listInstances: { cls }') ifTrue: [ ^ #(1 2) ].
 		nil ].
 	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
-		(script includesSubstring: '#GbsPersistentRoot') ifTrue: [ ^ 2001 ].
+		(script includesSubstring: '#GbsBridgeRoot') ifTrue: [ ^ 2001 ].
 		self fail ].
 	GBSM currentSession: mockSession.
 
-	rootResult := GBSM root.
+	rootResult := GBSM bridgeRoot.
 	listResult := GBSM listInstancesOf: 'Invoice'.
 
-	self assert: rootResult class equals: GbsRepositoryRootFacade.
+	self assert: rootResult class equals: GbsBridgeRootFacade.
 	self assert: rootResult session == mockSession.
 	self assert: rootResult proxy oop equals: 2001.
 	self assert: listResult equals: #(1 2)
@@ -1092,6 +1120,8 @@ GbsSessionManagerTest >> testGBSMRuntimeAndObjectSpaceFacadeDelegatesToCurrentSe
 	self assert: runtime loadPath equals: #('lib').
 	self assert: runtime loadedFeatures equals: #('foo.rb').
 	self assert: runtime persistentLoadedFeatures equals: #('persisted.rb').
+	self assert: runtime reportSections size equals: 4.
+	self assert: diagnostics report class equals: GbsObjectSpaceDiagnosticsReport.
 	self assert: (diagnostics reportText includesSubstring: 'Key 19 (MagLev Finalizer Registry): IdentityDictionary size=1')
 ]
 
@@ -1143,4 +1173,213 @@ GbsSessionManagerTest >> testTypedWrapperLookupRefreshesRemoteWrapperWhenVersion
 
 	self assert: wrapperClass serverBehaviorNumberOfVersions equals: 5.
 	self assert: wrapperClass generatedForwardingSource equals: #remote
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testTypedWrapperLifecycleEntriesReflectCurrentAndStaleStatus [
+	| mockSession wrapperClass version currentRow staleRow |
+	version := 2.
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'history :=') ifTrue: [
+			^ { 5001. 'RemoteLedger'. 'Object'. nil. nil. version. version + 2 } ].
+		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+			^ #(
+				#('accessing' #('size'))
+				#('payments' #('approvePayment:' 'cancelPayment'))) ].
+		self fail ].
+	GBSM currentSession: mockSession.
+
+	wrapperClass := GbsSessionManager
+		generateTypedWrapperForClient: 'ByteArray'
+		server: 'RemoteLedger'.
+	currentRow := (GbsSessionManager typedWrapperLifecycleEntriesForSession: mockSession)
+		detect: [ :each | each third = wrapperClass name asString ].
+
+	version := 3.
+	staleRow := (GbsSessionManager typedWrapperLifecycleEntriesForSession: mockSession)
+		detect: [ :each | each third = wrapperClass name asString ].
+
+	self assert: (currentRow at: 9) equals: 'current'.
+	self assert: (staleRow at: 5) equals: 2.
+	self assert: (staleRow at: 6) equals: 4.
+	self assert: (staleRow at: 7) equals: 3.
+	self assert: (staleRow at: 8) equals: 5.
+	self assert: (staleRow at: 9) equals: 'stale'
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testTypedWrapperLifecycleReportObjectExposesStructuredEntries [
+	| mockSession wrapperClass version report entry |
+	version := 2.
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'history :=') ifTrue: [
+			^ { 5001. 'RemoteLedger'. 'Object'. nil. nil. version. version + 2 } ].
+		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+			^ #(
+				#('accessing' #('size'))
+				#('payments' #('approvePayment:' 'cancelPayment'))) ].
+		self fail ].
+	GBSM currentSession: mockSession.
+
+	wrapperClass := GbsSessionManager
+		generateTypedWrapperForClient: 'ByteArray'
+		server: 'RemoteLedger'.
+	version := 3.
+	report := GbsSessionManager typedWrapperLifecycleReportForSession: mockSession.
+	entry := report entries
+		detect: [ :each | each wrapperClass == wrapperClass ]
+		ifNone: [ nil ].
+
+	self assert: report entries isEmpty not.
+	self assert: report entries first class equals: GbsTypedWrapperLifecycleEntry.
+	self assert: entry notNil.
+	self assert: entry status equals: #stale.
+	self assert: (report staleEntries includes: entry).
+	self assert: (report text includesSubstring: 'Typed Wrapper Lifecycle')
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testTypedProxyLifecycleHelpersExposeStructuredStatus [
+	| mockSession wrapperClass version entry |
+	version := 2.
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'history :=') ifTrue: [
+			^ { 5001. 'RemoteLedger'. 'Object'. nil. nil. version. version + 2 } ].
+		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+			^ #(
+				#('accessing' #('size'))
+				#('payments' #('approvePayment:' 'cancelPayment'))) ].
+		self fail ].
+	GBSM currentSession: mockSession.
+
+	wrapperClass := GbsSessionManager
+		generateTypedWrapperForClient: 'ByteArray'
+		server: 'RemoteLedger'.
+	version := 3.
+	entry := wrapperClass lifecycleEntryForSession: mockSession.
+
+	self assert: entry notNil.
+	self assert: (wrapperClass lifecycleStatusForSession: mockSession) equals: #stale.
+	self assert: (wrapperClass isLifecycleStaleForSession: mockSession)
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testInvalidateStaleTypedWrapperClassesClearsLocalVersionMetadataButKeepsLookupViable [
+	| mockSession wrapperClass version |
+	version := 2.
+	mockSession := MockGbsSession new.
+	mockSession instVarNamed: 'isLoggedIn' put: true.
+	mockSession stubs
+		at: #gciAbort put: 1;
+		at: #executeScriptAndFetchObject
+		put: [ :script |
+			(script includesSubstring: 'history :=') ifTrue: [
+				^ { 5001. 'RemoteLedger'. 'Object'. nil. nil. version. version + 2 } ].
+			(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+				^ #(
+					#('accessing' #('size'))
+					#('payments' #('approvePayment:' 'cancelPayment'))) ].
+			self fail ].
+	GBSM currentSession: mockSession.
+
+	wrapperClass := GbsSessionManager
+		generateTypedWrapperForClient: 'ByteArray'
+		server: 'RemoteLedger'.
+	version := 3.
+
+	mockSession abortTransaction.
+
+	self assert: wrapperClass serverBehaviorVersion isNil.
+	self assert: wrapperClass serverBehaviorNumberOfVersions isNil.
+	wrapperClass := GbsSessionManager typedWrapperClassForServerClassNamed: 'RemoteLedger'.
+	self assert: wrapperClass serverBehaviorVersion equals: 3.
+	self assert: wrapperClass serverBehaviorNumberOfVersions equals: 5
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testRefreshStaleTypedWrapperClassesForSessionRegeneratesWrapperMetadata [
+	| mockSession wrapperClass version refreshed |
+	version := 2.
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'history :=') ifTrue: [
+			^ { 5001. 'RemoteLedger'. 'Object'. nil. nil. version. version + 2 } ].
+		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+			^ #(
+				#('accessing' #('size'))
+				#('payments' #('approvePayment:' 'cancelPayment'))) ].
+		self fail ].
+	GBSM currentSession: mockSession.
+
+	wrapperClass := GbsSessionManager
+		generateTypedWrapperForClient: 'ByteArray'
+		server: 'RemoteLedger'.
+	version := 4.
+
+	refreshed := GbsSessionManager refreshStaleTypedWrapperClassesForSession: mockSession.
+
+	self assert: refreshed size equals: 1.
+	self assert: refreshed first == wrapperClass.
+	self assert: wrapperClass serverBehaviorVersion equals: 4.
+	self assert: wrapperClass serverBehaviorNumberOfVersions equals: 6
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testRefreshAllTypedWrapperClassesForSessionRegeneratesAllRemoteWrappers [
+	| mockSession firstWrapper secondWrapper version refreshed |
+	version := 2.
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'history :=') ifTrue: [
+			(script includesSubstring: '''RemoteLedger''') ifTrue: [ ^ { 5001. 'RemoteLedger'. 'Object'. nil. nil. version. version + 2 } ].
+			(script includesSubstring: '''RemoteInvoice''') ifTrue: [ ^ { 5002. 'RemoteInvoice'. 'Object'. nil. nil. version + 1. version + 3 } ] ].
+		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+			^ #(#('accessing' #('size'))) ].
+		self fail ].
+	GBSM currentSession: mockSession.
+
+	firstWrapper := GbsSessionManager
+		generateTypedWrapperForClient: 'ByteArray'
+		server: 'RemoteLedger'.
+	secondWrapper := GbsSessionManager
+		generateTypedWrapperForClient: 'Array'
+		server: 'RemoteInvoice'.
+	version := 5.
+	refreshed := GbsSessionManager refreshAllTypedWrapperClassesForSession: mockSession.
+
+	self assert: refreshed includes: firstWrapper.
+	self assert: refreshed includes: secondWrapper.
+	self assert: firstWrapper serverBehaviorVersion equals: 5.
+	self assert: secondWrapper serverBehaviorVersion equals: 6
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testResetAfterLogoutClearsSessionTypedWrapperAutoloadRegistrations [
+	| mockSession sessionKey |
+	mockSession := MockGbsSession new.
+	sessionKey := GbsSessionManager sessionKeyForSessionObject: mockSession.
+
+	GbsSessionManager
+		registerTypedWrapperAutoloadClient: 'ByteArray'
+		server: 'RemoteLedger'
+		forSession: mockSession.
+	self
+		assert: ((GbsSessionManager sessionTypedWrapperExplicitAutoloadPairRegistry
+			at: sessionKey
+			ifAbsent: [ #() ]) size)
+		equals: 1.
+
+	mockSession resetAfterLogout.
+
+	self
+		assert: ((GbsSessionManager sessionTypedWrapperExplicitAutoloadRegistry
+			at: sessionKey
+			ifAbsent: [ Dictionary new ]) isEmpty).
+	self
+		assert: ((GbsSessionManager sessionTypedWrapperExplicitAutoloadPairRegistry
+			at: sessionKey
+			ifAbsent: [ #() ]) isEmpty)
 ]

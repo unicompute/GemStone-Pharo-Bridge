@@ -16,6 +16,7 @@ Class {
 		'inspectButton',
 		'referencersButton',
 		'sessionStateButton',
+		'reportButton',
 		'doItButton',
 		'cache',
 		'traversal'
@@ -133,6 +134,7 @@ GbxTrippy >> buildToolbar [
 		add: inspectButton width: 80;
 		add: referencersButton width: 110;
 		add: sessionStateButton width: 90;
+		add: reportButton width: 95;
 		add: doItButton width: 80;
 		yourself
 ]
@@ -212,6 +214,22 @@ GbxTrippy >> browsePromptedSessionStateKey [
 ]
 
 { #category : 'actions' }
+GbxTrippy >> browsePromptedSessionStateKeysReport [
+	| rawKeys keys |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	rawKeys := self requestString: 'Session state keys (comma-separated):' initialAnswer: '19'.
+	keys := self parseSessionStateKeysFrom: rawKeys.
+	keys ifNil: [
+		self inform: 'Enter one or more numeric session state keys.'.
+		^ false ].
+	self inform: (self withShallowMaterializationDo: [
+		session objectSpaceDiagnostics reportTextForKeys: keys ]).
+	^ true
+]
+
+{ #category : 'actions' }
 GbxTrippy >> browseSessionStateAtKey: aKey [
 	| sessionStateValue oop |
 	session ifNil: [
@@ -230,6 +248,64 @@ GbxTrippy >> browseSessionStateAtKey: aKey [
 		self inform: 'Session state key ', aKey printString, ' does not currently have an inspectable remote oop.'.
 		^ false ].
 	^ self openTrippyOnOop: oop
+]
+
+{ #category : 'actions' }
+GbxTrippy >> browseStaleTypedWrapperLifecycleReport [
+	| report staleEntries |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	report := self withShallowMaterializationDo: [ session typedWrapperLifecycleReport ].
+	staleEntries := report staleEntries.
+	staleEntries isEmpty ifTrue: [
+		self inform: 'Typed Wrapper Lifecycle', String cr, String cr, 'No stale typed wrappers.'.
+		^ true ].
+	self inform: (GbsTypedWrapperLifecycleReport entries: staleEntries) text.
+	^ true
+]
+
+{ #category : 'actions' }
+GbxTrippy >> browseObjectsInMemoryReport [
+	| start limit |
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	start := self requestPositiveInteger: 'Object scan start index:' initialAnswer: '1'.
+	start ifNil: [ ^ false ].
+	limit := self requestPositiveInteger: 'Object scan limit:' initialAnswer: '25'.
+	limit ifNil: [ ^ false ].
+	self inform: (self withShallowMaterializationDo: [
+		(session objectSpaceDiagnostics objectsInMemoryReportFrom: start limit: limit) text ]).
+	^ true
+]
+
+{ #category : 'actions' }
+GbxTrippy >> browseTypedWrapperLifecycleReport [
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	self inform: (self withShallowMaterializationDo: [ session typedWrapperLifecycleReportText ]).
+	^ true
+]
+
+{ #category : 'actions' }
+GbxTrippy >> browseReportChooser [
+	| labels actions index |
+	labels := OrderedCollection withAll: #(
+		'Typed Wrapper Lifecycle Report'
+		'Stale Typed Wrapper Report'
+		'Session State Keys Report...'
+		'Objects In Memory Report...').
+	actions := OrderedCollection withAll: {
+		[ self browseTypedWrapperLifecycleReport ].
+		[ self browseStaleTypedWrapperLifecycleReport ].
+		[ self browsePromptedSessionStateKeysReport ].
+		[ self browseObjectsInMemoryReport ] }.
+	self addExtensionReportOptionsToLabels: labels actions: actions.
+	index := UIManager default chooseFrom: labels title: 'GemStone Reports'.
+	index = 0 ifTrue: [ ^ false ].
+	^ (actions at: index) value
 ]
 
 { #category : 'ui' }
@@ -354,6 +430,10 @@ GbxTrippy >> initializePresenters [
 	sessionStateButton := self newButton
 		label: '🗃 State';
 		action: [ self browsePromptedSessionStateKey ].
+
+	reportButton := self newButton
+		label: '📊 Reports';
+		action: [ self browseReportChooser ].
 	
 	doItButton := self newButton
 		label: '⚡ Do it';
@@ -464,6 +544,30 @@ GbxTrippy >> requestString: prompt initialAnswer: defaultString [
 	^ UIManager default request: prompt initialAnswer: defaultString
 ]
 
+{ #category : 'private' }
+GbxTrippy >> parseSessionStateKeysFrom: aStringOrNil [
+	| trimmed tokens keys |
+	(aStringOrNil isNil or: [ aStringOrNil trimBoth isEmpty ]) ifTrue: [ ^ nil ].
+	trimmed := aStringOrNil trimBoth.
+	tokens := (trimmed findTokens: ',') collect: #trimBoth thenReject: #isEmpty.
+	tokens isEmpty ifTrue: [ ^ nil ].
+	keys := tokens collect: [ :each |
+		[ each asInteger ] on: Error do: [ ^ nil ] ].
+	^ keys asArray
+]
+
+{ #category : 'private' }
+GbxTrippy >> requestPositiveInteger: promptString initialAnswer: defaultString [
+	| rawValue |
+	rawValue := self requestString: promptString initialAnswer: defaultString.
+	(rawValue isNil or: [ rawValue trimBoth isEmpty ]) ifTrue: [ ^ nil ].
+	^ [ | value |
+		value := rawValue trimBoth asInteger.
+		value > 0 ifTrue: [ value ] ifFalse: [ nil ] ]
+		on: Error
+		do: [ nil ]
+]
+
 { #category : 'navigation' }
 GbxTrippy >> refresh [
 	"Refresh current object"
@@ -477,9 +581,10 @@ GbxTrippy >> refresh [
 GbxTrippy >> referencersInMemoryForOop: anOop [
 	session ifNil: [ ^ #() ].
 	(anOop isInteger and: [ anOop > 20 ]) ifFalse: [ ^ #() ].
-	^ [ session referencesToOop: anOop ]
-		on: Error
-		do: [ #() ]
+	^ self withShallowMaterializationDo: [
+		[ session referencesToOop: anOop ]
+			on: Error
+			do: [ #() ] ]
 ]
 
 { #category : 'private' }
@@ -503,6 +608,14 @@ GbxTrippy >> session [
 { #category : 'accessing' }
 GbxTrippy >> session: aSession [
 	session := aSession
+]
+
+{ #category : 'private' }
+GbxTrippy >> withShallowMaterializationDo: aBlock [
+	session ifNil: [ ^ aBlock value ].
+	^ session
+		withMaterializationProfile: GbsShallowMaterializationProfile new
+		do: aBlock
 ]
 
 { #category : 'navigation' }

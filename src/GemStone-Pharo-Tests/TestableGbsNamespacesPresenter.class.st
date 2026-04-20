@@ -3,6 +3,7 @@ Class {
 	#superclass : 'GbsNamespacesPresenter',
 	#instVars : [
 		'lastBrowserClassName',
+		'chooseAnswers',
 		'lastInfoMessage',
 		'lastMethodQueryReferences',
 		'lastMethodQueryTitle',
@@ -17,12 +18,18 @@ Class {
 { #category : 'initialization' }
 TestableGbsNamespacesPresenter >> initialize [
 	super initialize.
-	requestAnswers := OrderedCollection new
+	requestAnswers := OrderedCollection new.
+	chooseAnswers := OrderedCollection new
 ]
 
 { #category : 'testing' }
 TestableGbsNamespacesPresenter >> enqueueRequestAnswer: aStringOrNil [
 	requestAnswers add: aStringOrNil
+]
+
+{ #category : 'testing' }
+TestableGbsNamespacesPresenter >> enqueueChooseAnswer: anInteger [
+	chooseAnswers add: anInteger
 ]
 
 { #category : 'ui' }
@@ -81,6 +88,13 @@ TestableGbsNamespacesPresenter >> openMethodQueryReferences: aCollection title: 
 ]
 
 { #category : 'ui' }
+TestableGbsNamespacesPresenter >> openMethodQuery: aMethodQuery [
+	lastMethodQueryReferences := aMethodQuery references asArray.
+	lastMethodQueryTitle := aMethodQuery title.
+	^ true
+]
+
+{ #category : 'ui' }
 TestableGbsNamespacesPresenter >> openNamespaceMirror: aNamespaceMirror [
 	lastOpenedNamespaceMirror := aNamespaceMirror.
 	^ true
@@ -91,4 +105,11 @@ TestableGbsNamespacesPresenter >> requestInput: prompt initialAnswer: defaultStr
 	^ requestAnswers
 		ifEmpty: [ defaultString ]
 		ifNotEmpty: [ requestAnswers removeFirst ]
+]
+
+{ #category : 'ui' }
+TestableGbsNamespacesPresenter >> uiChooseFrom: labels title: aTitle [
+	^ chooseAnswers
+		ifEmpty: [ 0 ]
+		ifNotEmpty: [ chooseAnswers removeFirst ]
 ]
