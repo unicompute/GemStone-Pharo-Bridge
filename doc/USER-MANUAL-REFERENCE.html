@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>GemStone-Pharo-Bridge Operator Reference</title>
+  <style>
+    body { font-family: Helvetica, Arial, sans-serif; margin: 2rem auto; max-width: 58rem; color: #17212b; line-height: 1.5; padding: 0 1.25rem; }
+    h1, h2 { color: #102a43; }
+    code { background: #eef2f6; padding: 0.1rem 0.3rem; border-radius: 0.2rem; }
+    pre { background: #f8fafc; border: 1px solid #d9e2ec; border-radius: 0.4rem; padding: 0.9rem; overflow-x: auto; }
+    ul { padding-left: 1.3rem; }
+    .callout { background: #f8fafc; border-left: 0.35rem solid #486581; padding: 0.9rem 1rem; margin: 1rem 0; }
+  </style>
+</head>
+<body>
+  <h1>GemStone-Pharo-Bridge Operator Reference</h1>
+  <p>Generated from <code>GemStonePharoContract</code>. This is the contract-driven steady-state reference for the active root API, load groups, verification lanes, and live GemStone environment.</p>
+  <h2>Active Root API</h2>
+  <div class="callout"><strong>Use <code>bridgeRoot</code>.</strong> The bridge steady state no longer carries the deleted legacy root aliases.</div>
+  <h2>Active Load Groups</h2>
+  <ul>
+    <li><code>Core</code> -> <code>GemStone-GBS-Converted</code></li>
+    <li><code>Core-Only</code> -> <code>GemStone-GBS-Converted</code></li>
+    <li><code>Core-Tools</code> -> <code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Tools</code></li>
+    <li><code>Core-Tests</code> -> <code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-Pharo-Core-Tests</code></li>
+    <li><code>MagLev-Core</code> -> <code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-MagLev</code></li>
+    <li><code>MagLev-Tools</code> -> <code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-MagLev</code>, <code>GemStone-GBS-MagLev-Tools</code></li>
+    <li><code>MagLev</code> -> <code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-MagLev</code>, <code>GemStone-GBS-MagLev-Tools</code></li>
+    <li><code>Tools</code> -> <code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Tools</code></li>
+    <li><code>All-Tests</code> -> <code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-Tests</code></li>
+    <li><code>Tests</code> -> <code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-Tests</code></li>
+    <li><code>Full</code> -> <code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-MagLev</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-MagLev-Tools</code>, <code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-Tests</code></li>
+    <li><code>default</code> -> <code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-MagLev</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-MagLev-Tools</code>, <code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-Tests</code></li>
+  </ul>
+  <h2>Verification Lanes</h2>
+  <ul>
+    <li><strong><code>core-only</code></strong>: Verify the Smalltalk core without optional MagLev production packages and without deleted legacy surface.</li>
+    <li><strong><code>bootstrap-smoke</code></strong>: Prove that a clean image can micro-bootstrap the helper package and load the requested group before post-load checks run.</li>
+    <li><strong><code>full</code></strong>: Verify the steady-state developer load plus the live GemStone lane.</li>
+    <li><strong><code>artifact-freshness</code></strong>: Verify that the generated contract artifacts and marker-managed doc sections are already up to date.</li>
+    <li><strong><code>verify</code></strong>: Run core-only, bootstrap-smoke, full, artifact-freshness, then the summary-renderer smoke check.</li>
+  </ul>
+  <h2>Recommended Entry Points</h2>
+  <pre><code>make help
+make core-only
+make full
+make verify
+make artifact-freshness</code></pre>
+  <p><code>make verify</code> is sequenced by <code>GemStonePharoVerifyRunner</code>; the live/preflight path inside <code>full</code> is handled by <code>GemStonePharoVerificationRunner</code>.</p>
+  <h2>Live GemStone Environment</h2>
+  <ul>
+    <li><code>GS_USER</code>: GemStone login user used by both the Topaz and GCI probes.</li>
+    <li><code>GS_PASS</code>: GemStone login password used by both the Topaz and GCI probes.</li>
+    <li><code>GS_STONE</code>: Optional stone name override. Defaults to `gs64stone`.</li>
+    <li><code>GS_SERVICE</code>: Optional service name override. Defaults to `gemnetobject`.</li>
+    <li><code>GS_NETLDI_HOST</code>: Optional explicit host for netldi routing.</li>
+    <li><code>GS_NETLDI_NAME_OR_PORT</code>: Optional explicit netldi name or port, for example `gs64ldi` or `50377`.</li>
+    <li><code>GEMSTONE</code>: Optional explicit GemStone client home used by the GCI probe.</li>
+  </ul>
+  <pre><code>GS_USER='DataCurator' \
+GS_PASS='swordfish' \
+GS_NETLDI_HOST='localhost' \
+GS_NETLDI_NAME_OR_PORT='50377' \
+GEMSTONE='/Users/tariq/GemStone64Bit3.7.5-arm64.Darwin' \
+make full</code></pre>
+  <h2>No-compatibility Proof</h2>
+  <p>The clean reload lane proves that deleted package, class, selector, and method-package ownership surface stays absent from the image and the active source roots.</p>
+  <ul>
+    <li>deleted package names stay absent</li>
+    <li>deleted class names stay absent</li>
+    <li>deleted selector surface stays absent</li>
+    <li>deleted method-package ownership stays absent</li>
+  </ul>
+</body>
+</html>

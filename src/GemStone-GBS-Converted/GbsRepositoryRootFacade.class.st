@@ -67,8 +67,6 @@ GbsRepositoryRootFacade >> at: aKey put: aValue [
 
 { #category : 'private' }
 GbsRepositoryRootFacade >> aliasRootKeys [
-	rootKey = #GbsBridgeRoot ifTrue: [ ^ #(#GbsPersistentRoot) ].
-	rootKey = #GbsPersistentRoot ifTrue: [ ^ #(#GbsBridgeRoot) ].
 	^ #()
 ]
 

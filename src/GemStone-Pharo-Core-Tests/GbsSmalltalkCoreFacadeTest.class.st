@@ -25,7 +25,17 @@ GbsSmalltalkCoreFacadeTest >> testBridgeRootAssociationsScriptUsesNeutralKey [
 	mockSession bridgeRoot associations.
 
 	self assert: scripts size equals: 1.
-	self assert: (scripts first includesSubstring: '#GbsBridgeRoot')
+	self assert: (scripts first includesSubstring: '#GbsBridgeRoot').
+	self deny: (scripts first includesSubstring: '#GbsPersistentRoot')
+]
+
+{ #category : 'tests' }
+GbsSmalltalkCoreFacadeTest >> testBridgeRootFacadeHasNoLegacyAliasKeys [
+	| bridgeRoot |
+	bridgeRoot := mockSession bridgeRoot.
+
+	self assert: bridgeRoot rootKey equals: #GbsBridgeRoot.
+	self assert: bridgeRoot aliasRootKeys equals: #()
 ]
 
 { #category : 'tests' }
@@ -42,7 +52,8 @@ GbsSmalltalkCoreFacadeTest >> testBridgeRootMutationScriptsUseNeutralKey [
 	self assert: (bridgeRoot at: #Alpha put: 9) equals: 9.
 	self assert: (bridgeRoot removeKey: #Alpha ifAbsent: [ self fail ]) equals: 9.
 	self assert: scripts size equals: 2.
-	self assert: (scripts allSatisfy: [ :each | each includesSubstring: '#GbsBridgeRoot' ])
+	self assert: (scripts allSatisfy: [ :each | each includesSubstring: '#GbsBridgeRoot' ]).
+	self deny: (scripts anySatisfy: [ :each | each includesSubstring: '#GbsPersistentRoot' ])
 ]
 
 { #category : 'tests' }
@@ -89,12 +100,42 @@ GbsSmalltalkCoreFacadeTest >> testRemoteNamespaceMirrorCachesConstantEntriesAfte
 ]
 
 { #category : 'tests' }
+GbsSmalltalkCoreFacadeTest >> testRemoteNamespaceMirrorConstantEntriesScriptStaysGeneric [
+	| namespace script activePackage |
+	activePackage := [ (GbsRemoteNamespaceMirror >> #constantEntriesScript) package name ]
+		on: Error
+		do: [ nil ].
+	activePackage = 'GemStone-GBS-Converted'
+		ifFalse: [ self skip: 'MagLev namespace override is active in this lane' ].
+	namespace := GbsRemoteNamespaceMirror
+		on: mockSession
+		expression: 'mockNamespace'
+		symbolListIndex: nil
+		metadata: nil.
+	script := namespace constantEntriesScript.
+
+	self assert: (script includesSubstring: 'ns respondsTo: #keys').
+	self assert: (script includesSubstring: 'ns respondsTo: #at:').
+	self deny: (script includesSubstring: '_rubyConstants').
+	self deny: (script includesSubstring: 'rubyConstAssociationAt:').
+	self deny: (script includesSubstring: 'autoload')
+]
+
+{ #category : 'tests' }
 GbsSmalltalkCoreFacadeTest >> testRepositoryRootFacadeUsesBridgeRootPrimaryKey [
 	| root |
 	root := mockSession repository root.
 
 	self assert: root rootKey equals: #GbsBridgeRoot.
 	self assert: root path equals: #()
+]
+
+{ #category : 'tests' }
+GbsSmalltalkCoreFacadeTest >> testRepositoryRootFacadeHasNoLegacyAliasKeys [
+	| root |
+	root := mockSession repository root.
+
+	self assert: root aliasRootKeys equals: #()
 ]
 
 { #category : 'tests' }

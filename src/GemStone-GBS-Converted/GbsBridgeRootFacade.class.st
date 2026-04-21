@@ -25,7 +25,7 @@ GbsBridgeRootFacade >> printOn: aStream [
 
 { #category : 'private' }
 GbsBridgeRootFacade >> aliasRootKeys [
-	^ #(#GbsPersistentRoot)
+	^ #()
 ]
 
 { #category : 'private' }

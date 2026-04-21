@@ -1,116 +1,56 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+. "$(dirname "$0")/lane_common.sh"
+
 VM="${PHARO_VM:-/Users/tariq/Documents/Pharo/vms/130-x64/Pharo.app/Contents/MacOS/Pharo}"
 WORK_IMAGE="${1:?usage: run_live_preflight.sh <work-image>}"
-STONE="${GS_STONE:-gs64stone}"
-USER_NAME="${GS_USER:-}"
-PASSWORD="${GS_PASS:-}"
-SERVICE_NAME="${GS_SERVICE:-gemnetobject}"
-NETLDI_HOST="${GS_NETLDI_HOST:-}"
-NETLDI_NAME_OR_PORT="${GS_NETLDI_NAME_OR_PORT:-}"
-GEMSTONE_HOME="${GEMSTONE:-}"
+JSON_SUMMARY="${GBS_JSON_SUMMARY:-0}"
 
-classify_topaz_failure() {
-  local output="$1"
-  local lowered
-  lowered="$(printf '%s' "${output}" | tr '[:upper:]' '[:lower:]')"
-  if [[ "${lowered}" == *"invalid or expired"* || "${lowered}" == *"invalid password"* || "${lowered}" == *"invalid userid"* || "${lowered}" == *"invalid user"* ]]; then
-    echo "LIVE_PREFLIGHT_AUTH_FAILED"
-  elif [[ "${lowered}" == *"netldi"* || "${lowered}" == *"unable to connect"* || "${lowered}" == *"cannot connect"* || "${lowered}" == *"connection refused"* ]]; then
-    echo "LIVE_PREFLIGHT_ROUTE_FAILED"
-  elif [[ "${lowered}" == *"stone"* && "${lowered}" == *"does not exist"* ]]; then
-    echo "LIVE_PREFLIGHT_STONE_NOT_FOUND"
-  else
-    echo "LIVE_PREFLIGHT_TOPAZ_LOGIN_FAILED"
-  fi
+extract_summary_field() {
+  local field="$1"
+  printf '%s\n' "${output}" | sed -n "s/.* ${field}=\\([^ ]*\\).*/\\1/p" | tail -1
 }
 
-classify_gci_failure() {
-  local output="$1"
-  local lowered
-  lowered="$(printf '%s' "${output}" | tr '[:upper:]' '[:lower:]')"
-  if [[ "${lowered}" == *"invalid or expired"* || "${lowered}" == *"invalid password"* || "${lowered}" == *"invalid credentials"* ]]; then
-    echo "LIVE_PREFLIGHT_GCI_AUTH_FAILED"
-  elif [[ "${lowered}" == *"netldi"* || "${lowered}" == *"gemnetobject"* || "${lowered}" == *"cannot connect"* || "${lowered}" == *"not accessible"* ]]; then
-    echo "LIVE_PREFLIGHT_GCI_ROUTE_FAILED"
-  elif [[ "${lowered}" == *"stone"* && "${lowered}" == *"does not exist"* ]]; then
-    echo "LIVE_PREFLIGHT_GCI_STONE_NOT_FOUND"
-  else
-    echo "LIVE_PREFLIGHT_GCI_LOGIN_FAILED"
-  fi
-}
+output="$(HOME=/tmp/pharo-clean-auto/home GBS_WORK_IMAGE="${WORK_IMAGE}" "${VM}" --headless "${WORK_IMAGE}" st "/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/run_live_preflight_via_runner.st" 2>&1 || true)"
+echo "${output}"
 
-if [[ -z "${USER_NAME}" || -z "${PASSWORD}" ]]; then
-  echo "LIVE_PREFLIGHT_SKIPPED: set GS_USER and GS_PASS to run preflight"
+summary_line="$(printf '%s\n' "${output}" | grep 'LIVE_PREFLIGHT_SUMMARY result=' | tail -1 || true)"
+json_payload="$(printf '%s\n' "${output}" | sed -n 's/^LIVE_PREFLIGHT_SUMMARY_JSON //p' | tail -1)"
+
+if [[ -z "${summary_line}" ]]; then
+  echo "LIVE_PREFLIGHT_SUMMARY result=FAIL code=LIVE_PREFLIGHT_RUNNER_FAILED stone=${GS_STONE:-gs64stone} service=${GS_SERVICE:-gemnetobject} host=${GS_NETLDI_HOST:-implicit} net=${GS_NETLDI_NAME_OR_PORT:-implicit} stone_status=unknown netldi_status=unknown topaz=failed gci=failed"
+  exit 1
+fi
+
+RESULT="$(extract_summary_field result)"
+CODE="$(extract_summary_field code)"
+STONE="$(extract_summary_field stone)"
+SERVICE_NAME="$(extract_summary_field service)"
+HOST_VALUE="$(extract_summary_field host)"
+NET_VALUE="$(extract_summary_field net)"
+STONE_STATUS="$(extract_summary_field stone_status)"
+NETLDI_STATUS="$(extract_summary_field netldi_status)"
+TOPAZ_STATUS="$(extract_summary_field topaz)"
+GCI_STATUS="$(extract_summary_field gci)"
+
+if [[ "${JSON_SUMMARY}" == "1" && -n "${json_payload}" ]]; then
+  gbs_write_json_summary_file "live-preflight-summary.json" "${json_payload}"
+fi
+
+gbs_append_summary_line "#### Live Preflight"
+gbs_append_summary_line "- result: \`${RESULT}\`"
+gbs_append_summary_line "- code: \`${CODE}\`"
+gbs_append_summary_line "- stone: \`${STONE}\`"
+gbs_append_summary_line "- service: \`${SERVICE_NAME}\`"
+gbs_append_summary_line "- host: \`${HOST_VALUE}\`"
+gbs_append_summary_line "- net: \`${NET_VALUE}\`"
+gbs_append_summary_line "- stone-status: \`${STONE_STATUS}\`"
+gbs_append_summary_line "- netldi-status: \`${NETLDI_STATUS}\`"
+gbs_append_summary_line "- topaz: \`${TOPAZ_STATUS}\`"
+gbs_append_summary_line "- gci: \`${GCI_STATUS}\`"
+
+if [[ "${CODE}" == "LIVE_PREFLIGHT_OK" || "${CODE}" == "LIVE_PREFLIGHT_SKIPPED" ]]; then
   exit 0
 fi
-
-echo "LIVE_PREFLIGHT_BEGIN stone=${STONE} service=${SERVICE_NAME} host=${NETLDI_HOST:-'(implicit)'} net=${NETLDI_NAME_OR_PORT:-'(implicit)'}"
-
-gslist_bin="${GEMSTONE_HOME:+${GEMSTONE_HOME}/bin/gslist}"
-if [[ -z "${GEMSTONE_HOME}" || ! -x "${gslist_bin}" ]]; then
-  gslist_bin="$(command -v gslist || true)"
-fi
-
-if [[ -n "${gslist_bin}" ]]; then
-  gslist_output="$("${gslist_bin}" -lcv 2>&1 || true)"
-  echo "${gslist_output}"
-  if grep -Eq "^OK[[:space:]].*[[:space:]]Stone[[:space:]]+${STONE}$" <<< "${gslist_output}"; then
-    echo "LIVE_PREFLIGHT_STONE_OK ${STONE}"
-  else
-    echo "LIVE_PREFLIGHT_STONE_STATUS_UNKNOWN ${STONE}"
-  fi
-  if grep -Eq "^OK[[:space:]].*[[:space:]]Netldi[[:space:]]+" <<< "${gslist_output}"; then
-    echo "LIVE_PREFLIGHT_NETLDI_OK"
-  else
-    echo "LIVE_PREFLIGHT_NETLDI_STATUS_UNKNOWN"
-  fi
-else
-  echo "LIVE_PREFLIGHT_GSLIST_UNAVAILABLE"
-fi
-
-topaz_bin="${GEMSTONE_HOME:+${GEMSTONE_HOME}/bin/topaz}"
-if [[ -z "${GEMSTONE_HOME}" || ! -x "${topaz_bin}" ]]; then
-  topaz_bin="$(command -v topaz || true)"
-fi
-
-if [[ -n "${topaz_bin}" ]]; then
-  topaz_set_command="set user ${USER_NAME} pass ${PASSWORD} gems ${STONE}"
-  if [[ -n "${NETLDI_HOST}" && -n "${NETLDI_NAME_OR_PORT}" ]]; then
-    topaz_set_command="${topaz_set_command} netldi ${NETLDI_HOST}#${NETLDI_NAME_OR_PORT}"
-  fi
-  topaz_output="$(
-    printf '%s\nlogin\nlogout\nquit\n' "${topaz_set_command}" \
-      | "${topaz_bin}" -l 2>&1 || true
-  )"
-  echo "${topaz_output}"
-  if grep -qi "login failed" <<< "${topaz_output}"; then
-    classify_topaz_failure "${topaz_output}"
-    exit 1
-  fi
-  echo "LIVE_PREFLIGHT_TOPAZ_LOGIN_OK"
-else
-  echo "LIVE_PREFLIGHT_TOPAZ_UNAVAILABLE"
-fi
-
-mkdir -p /tmp/pharo-clean-auto/home
-probe_output="$(
-  HOME=/tmp/pharo-clean-auto/home \
-  GS_STONE="${STONE}" \
-  GS_USER="${USER_NAME}" \
-  GS_PASS="${PASSWORD}" \
-  GS_SERVICE="${SERVICE_NAME}" \
-  GS_NETLDI_HOST="${NETLDI_HOST}" \
-  GS_NETLDI_NAME_OR_PORT="${NETLDI_NAME_OR_PORT}" \
-  "${VM}" --headless "${WORK_IMAGE}" st "/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/probe_live_login.st" 2>&1 || true
-)"
-echo "${probe_output}"
-if grep -q "PROBE_LOGIN_OK" <<< "${probe_output}"; then
-  echo "LIVE_PREFLIGHT_GCI_LOGIN_OK"
-  echo "LIVE_PREFLIGHT_OK"
-  exit 0
-fi
-
-classify_gci_failure "${probe_output}"
 exit 1

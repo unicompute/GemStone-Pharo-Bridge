@@ -15,23 +15,9 @@ GbsMaglevFacade class >> on: aSession [
 		yourself
 ]
 
-{ #category : 'deprecated' }
-GbsMaglevFacade >> root [
-	"Deprecated. Use #bridgeRoot."
-	self deprecated: 'Use #bridgeRoot.'.
-	^ self bridgeRoot
-]
-
 { #category : 'querying' }
 GbsMaglevFacade >> bridgeRoot [
 	^ session bridgeRoot
-]
-
-{ #category : 'deprecated' }
-GbsMaglevFacade >> persistentRoot [
-	"Deprecated. Use #bridgeRoot."
-	self deprecated: 'Use #bridgeRoot.'.
-	^ self bridgeRoot
 ]
 
 { #category : 'querying' }

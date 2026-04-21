@@ -1,0 +1,71 @@
+name: verify
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: self-hosted
+    env:
+      PHARO_IMAGE: ${{ vars.PHARO_IMAGE }}
+      PHARO_WORK_DIR: ${{ vars.PHARO_WORK_DIR }}
+      GEMSTONE: ${{ vars.GEMSTONE }}
+      GS_STONE: ${{ vars.GS_STONE }}
+      GS_SERVICE: ${{ vars.GS_SERVICE }}
+      GS_NETLDI_HOST: ${{ vars.GS_NETLDI_HOST }}
+      GS_NETLDI_NAME_OR_PORT: ${{ vars.GS_NETLDI_NAME_OR_PORT }}
+      GS_USER: ${{ secrets.GS_USER }}
+      GS_PASS: ${{ secrets.GS_PASS }}
+      GBS_SUMMARY_FILE: ${{ github.step_summary }}
+      GBS_JSON_SUMMARY: "1"
+      GBS_JSON_SUMMARY_DIR: ${{ runner.temp }}/gbs-json
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate runner configuration
+        run: |
+          test -n "${PHARO_IMAGE}" || { echo "PHARO_IMAGE is not set"; exit 1; }
+          test -n "${PHARO_WORK_DIR}" || { echo "PHARO_WORK_DIR is not set"; exit 1; }
+
+      - name: Run verify lane
+        run: make verify
+
+      - name: Render lane JSON summaries
+        if: always()
+        run: bash ./scripts/render_lane_json_summaries.sh "${{ runner.temp }}/gbs-json"
+
+      - name: Verify generated artifacts are committed
+        run: |
+          git update-index -q --refresh
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git status --short
+            git diff --stat
+            exit 1
+          fi
+
+      - name: Upload generated contract artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-contract-artifacts
+          path: |
+            doc/PACKAGE-GRAPH.md
+            doc/PACKAGE-GRAPH.dot
+            doc/PACKAGE-GRAPH.svg
+            doc/RELOAD-POLICY.md
+            doc/VERIFICATION-LANES.md
+          if-no-files-found: error
+
+      - name: Upload lane summaries
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lane-summaries
+          path: ${{ runner.temp }}/gbs-json
+          if-no-files-found: error

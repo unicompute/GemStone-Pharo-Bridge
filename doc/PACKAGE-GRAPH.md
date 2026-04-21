@@ -1,6 +1,6 @@
 # Package Graph
 
-Generated from `BaselineOfGemStonePharo` package and lane contracts.
+Generated from `GemStonePharoContract` package and lane contracts.
 
 Rendered SVG: [PACKAGE-GRAPH.svg](./PACKAGE-GRAPH.svg)
 
@@ -16,8 +16,6 @@ Rendered SVG: [PACKAGE-GRAPH.svg](./PACKAGE-GRAPH.svg)
   requires: `GemStone-GBS-Tools`, `GemStone-GBS-MagLev`
 - `GemStone-Pharo-Core-Tests`
   requires: `GemStone-GBS-Converted`, `GemStone-GBS-Tools`
-- `GemStone-Pharo-Compatibility-Tests`
-  requires: `GemStone-Pharo-Core-Tests`, `GemStone-GBS-MagLev`
 - `GemStone-Pharo-Tests`
   requires: `GemStone-Pharo-Core-Tests`, `GemStone-GBS-MagLev`, `GemStone-GBS-MagLev-Tools`
 
@@ -27,15 +25,14 @@ Rendered SVG: [PACKAGE-GRAPH.svg](./PACKAGE-GRAPH.svg)
 - `Core-Only` -> `GemStone-GBS-Converted`
 - `Core-Tools` -> `GemStone-GBS-Converted`, `GemStone-GBS-Tools`
 - `Core-Tests` -> `GemStone-GBS-Converted`, `GemStone-GBS-Tools`, `GemStone-Pharo-Core-Tests`
-- `Compatibility-Tests` -> `GemStone-Pharo-Compatibility-Tests`
 - `MagLev-Core` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`
 - `MagLev-Tools` -> `GemStone-GBS-Converted`, `GemStone-GBS-Tools`, `GemStone-GBS-MagLev`, `GemStone-GBS-MagLev-Tools`
 - `MagLev` -> `GemStone-GBS-Converted`, `GemStone-GBS-Tools`, `GemStone-GBS-MagLev`, `GemStone-GBS-MagLev-Tools`
 - `Tools` -> `GemStone-GBS-Converted`, `GemStone-GBS-Tools`
-- `All-Tests` -> `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-Compatibility-Tests`, `GemStone-Pharo-Tests`
-- `Tests` -> `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-Compatibility-Tests`, `GemStone-Pharo-Tests`
-- `Full` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`, `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`, `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-Compatibility-Tests`, `GemStone-Pharo-Tests`
-- `default` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`, `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`, `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-Compatibility-Tests`, `GemStone-Pharo-Tests`
+- `All-Tests` -> `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-Tests`
+- `Tests` -> `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-Tests`
+- `Full` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`, `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`, `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-Tests`
+- `default` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`, `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`, `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-Tests`
 
 ## Forbidden Reverse Dependencies
 

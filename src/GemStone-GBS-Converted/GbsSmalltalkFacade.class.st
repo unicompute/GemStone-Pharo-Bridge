@@ -15,23 +15,9 @@ GbsSmalltalkFacade class >> on: aSession [
 		yourself
 ]
 
-{ #category : 'deprecated' }
-GbsSmalltalkFacade >> root [
-	"Deprecated. Use #bridgeRoot."
-	self deprecated: 'Use #bridgeRoot.'.
-	^ self bridgeRoot
-]
-
 { #category : 'querying' }
 GbsSmalltalkFacade >> bridgeRoot [
 	^ session bridgeRoot
-]
-
-{ #category : 'deprecated' }
-GbsSmalltalkFacade >> persistentRoot [
-	"Deprecated. Use #bridgeRoot."
-	self deprecated: 'Use #bridgeRoot.'.
-	^ self bridgeRoot
 ]
 
 { #category : 'querying' }

@@ -210,13 +210,6 @@ GbsSession >> checkSignals [
 	].
 ]
 
-{ #category : 'deprecated' }
-GbsSession >> commit [
-	"Deprecated. Use #commitTransaction."
-	self deprecated: 'Use #commitTransaction.'.
-	^ self commitTransaction
-]
-
 { #category : 'transactions' }
 GbsSession >> commitTransaction [
 	"Attempts to commit. Returns true if successful, false if there is a conflict.
@@ -2245,13 +2238,6 @@ GbsSession >> bridgeRoot [
 	^ GbsBridgeRootFacade on: self
 ]
 
-{ #category : 'deprecated' }
-GbsSession >> persistentRoot [
-	"Deprecated. Use #bridgeRoot."
-	self deprecated: 'Use #bridgeRoot.'.
-	^ self bridgeRoot
-]
-
 { #category : 'repository' }
 GbsSession >> repository [
 	^ GbsRepositoryFacade on: self
@@ -2287,34 +2273,6 @@ GbsSession >> repositoryRootFacadeForKey: aRootKey path: aCollection [
 		path: normalizedPath.
 	self repositoryRootCache at: cacheKey put: facade.
 	^ facade
-]
-
-{ #category : 'deprecated' }
-GbsSession >> root [
-	"Deprecated. Use #repository root."
-	self deprecated: 'Use #repository root.'.
-	^ self repository root
-]
-
-{ #category : 'deprecated' }
-GbsSession >> rootAt: aKey [
-	"Deprecated. Use #repository rootAt:."
-	self deprecated: 'Use #repository rootAt:.'.
-	^ self repository rootAt: aKey
-]
-
-{ #category : 'deprecated' }
-GbsSession >> rootAt: aKey ifAbsent: aBlock [
-	"Deprecated. Use #repository rootAt:ifAbsent:."
-	self deprecated: 'Use #repository rootAt:ifAbsent:.'.
-	^ self repository rootAt: aKey ifAbsent: aBlock
-]
-
-{ #category : 'deprecated' }
-GbsSession >> rootAt: aKey put: aValue [
-	"Deprecated. Use #repository rootAt:put:."
-	self deprecated: 'Use #repository rootAt:put:.'.
-	^ self repository rootAt: aKey put: aValue
 ]
 
 { #category : 'named-objects' }

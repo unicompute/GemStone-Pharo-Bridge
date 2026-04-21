@@ -1,4 +1,4 @@
-.PHONY: help core-only compatibility-only full verify graph-artifacts artifact-freshness
+.PHONY: help core-only bootstrap-smoke full verify graph-artifacts artifact-freshness
 
 PHARO_IMAGE ?= /Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image
 PHARO_WORK_DIR ?= /Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean
@@ -10,15 +10,15 @@ help:
 		"  make core-only" \
 		"    Load only the Smalltalk core and run GemStone-Pharo-Core-Tests." \
 		"" \
-		"  make compatibility-only" \
-		"    Load compatibility coverage and run GemStone-Pharo-Compatibility-Tests." \
+		"  make bootstrap-smoke" \
+		"    Prove the micro-bootstrap path loads helper classes and the requested load group into a clean image." \
 		"" \
 		"  make full" \
 		"    Run the full clean reload and regression lane." \
 		"    The live lane runs only when GS_USER and GS_PASS are set." \
 		"" \
 		"  make verify" \
-		"    Run core-only, compatibility-only, then the full lane." \
+		"    Run core-only, bootstrap-smoke, full, artifact-freshness, then the summary-renderer smoke check." \
 		"" \
 		"  make graph-artifacts" \
 		"    Regenerate package-graph and verification-lane artifacts in doc/." \
@@ -34,17 +34,14 @@ help:
 core-only:
 	bash ./scripts/run_core_only_clean_reload.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
 
-compatibility-only:
-	bash ./scripts/run_compatibility_clean_reload.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
+bootstrap-smoke:
+	bash ./scripts/run_bootstrap_smoke.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
 
 full:
 	./scripts/run_clean_reload_and_regressions.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
 
 verify:
-	$(MAKE) core-only PHARO_IMAGE="$(PHARO_IMAGE)" PHARO_WORK_DIR="$(PHARO_WORK_DIR)"
-	$(MAKE) compatibility-only PHARO_IMAGE="$(PHARO_IMAGE)" PHARO_WORK_DIR="$(PHARO_WORK_DIR)"
-	$(MAKE) full PHARO_IMAGE="$(PHARO_IMAGE)" PHARO_WORK_DIR="$(PHARO_WORK_DIR)"
-	$(MAKE) artifact-freshness PHARO_IMAGE="$(PHARO_IMAGE)" PHARO_WORK_DIR="$(PHARO_WORK_DIR)"
+	bash ./scripts/run_verify.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
 
 graph-artifacts:
 	bash ./scripts/run_generate_contract_artifacts.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"

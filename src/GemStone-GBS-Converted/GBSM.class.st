@@ -776,44 +776,9 @@ GBSM class >> bridgeRoot [
 	^ self requireCurrentSession bridgeRoot
 ]
 
-{ #category : 'deprecated' }
-GBSM class >> persistentRoot [
-	"Deprecated. Use #bridgeRoot."
-	self deprecated: 'Use #bridgeRoot.'.
-	^ self bridgeRoot
-]
-
 { #category : 'repository' }
 GBSM class >> repository [
 	^ self requireCurrentSession repository
-]
-
-{ #category : 'deprecated' }
-GBSM class >> root [
-	"Deprecated. Use #repository root."
-	self deprecated: 'Use #repository root.'.
-	^ self requireCurrentSession root
-]
-
-{ #category : 'deprecated' }
-GBSM class >> rootAt: aKey [
-	"Deprecated. Use #repository rootAt:."
-	self deprecated: 'Use #repository rootAt:.'.
-	^ self requireCurrentSession rootAt: aKey
-]
-
-{ #category : 'deprecated' }
-GBSM class >> rootAt: aKey ifAbsent: aBlock [
-	"Deprecated. Use #repository rootAt:ifAbsent:."
-	self deprecated: 'Use #repository rootAt:ifAbsent:.'.
-	^ self requireCurrentSession rootAt: aKey ifAbsent: aBlock
-]
-
-{ #category : 'deprecated' }
-GBSM class >> rootAt: aKey put: aValue [
-	"Deprecated. Use #repository rootAt:put:."
-	self deprecated: 'Use #repository rootAt:put:.'.
-	^ self requireCurrentSession rootAt: aKey put: aValue
 ]
 
 { #category : 'named-objects' }

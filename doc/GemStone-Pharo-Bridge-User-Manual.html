@@ -247,54 +247,46 @@
 
   <section>
     <h2>1. What the bridge provides</h2>
+    <!-- BEGIN GENERATED:USER-MANUAL-OVERVIEW -->
     <p>
       GemStone-Pharo-Bridge gives Pharo a user-facing toolset for logging into GemStone and working with
-      GemStone objects and code from a Pharo UI. The codebase is now split into a Smalltalk-first core,
-      optional MagLev/Ruby extension packages, and a narrow compatibility-test layer for deprecated aliases.
+      GemStone objects and code from a Pharo UI. The codebase is split into a Smalltalk-first core
+      and optional MagLev/Ruby extension packages.
     </p>
     <table>
       <thead>
-        <tr>
-          <th>Load group</th>
-          <th>What it contains</th>
-          <th>Typical use</th>
-        </tr>
+        <tr><th>Load group</th><th>What it contains</th><th>Typical use</th></tr>
       </thead>
       <tbody>
         <tr>
           <td><code>Core</code></td>
-          <td>Converted Smalltalk core bridge and session/GCI classes</td>
-          <td>Headless or programmatic use</td>
+          <td><code>GemStone-GBS-Converted</code></td>
+          <td>Smalltalk core bridge only</td>
         </tr>
         <tr>
           <td><code>Core-Tests</code></td>
-          <td><code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Tools</code>, and <code>GemStone-Pharo-Core-Tests</code></td>
-          <td>Verify the bridge as <code>Pharo &lt;-&gt; GemStone Smalltalk</code> without MagLev</td>
-        </tr>
-        <tr>
-          <td><code>Compatibility-Tests</code></td>
-          <td>Compatibility coverage on top of core plus MagLev support</td>
-          <td>Verify deprecated aliases such as <code>persistentRoot</code> and <code>commit</code></td>
+          <td><code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-Pharo-Core-Tests</code></td>
+          <td>Smalltalk core, generic tools, and the core-only test suite</td>
         </tr>
         <tr>
           <td><code>MagLev</code></td>
-          <td>Optional MagLev/Ruby runtime and tool packages</td>
-          <td>Ruby runtime, autoload, ObjectLog, proc/binding, and MagLev-specific tooling</td>
+          <td><code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-MagLev</code>, <code>GemStone-GBS-MagLev-Tools</code></td>
+          <td>convenience alias for the MagLev production stack</td>
         </tr>
         <tr>
           <td><code>Tests</code></td>
-          <td>Core tests, compatibility tests, and full bridge tests</td>
-          <td>Validation and development</td>
+          <td><code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-Tests</code></td>
+          <td>convenience alias for all active test packages</td>
         </tr>
         <tr>
           <td><code>default</code></td>
-          <td>Full developer load</td>
-          <td>Full developer load</td>
+          <td><code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-MagLev</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-MagLev-Tools</code>, <code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-Tests</code></td>
+          <td>alias for `Full`</td>
         </tr>
       </tbody>
     </table>
-
-    <p>The active core root API is <code>bridgeRoot</code>. Older names such as <code>persistentRoot</code> remain only as compatibility aliases.</p>
+    <p>The active core root API is <code>bridgeRoot</code>, backed by <code>#GbsBridgeRoot</code> and <code>GbsBridgeRootFacade</code>.</p>
+<!-- END GENERATED:USER-MANUAL-OVERVIEW -->
 
     <p>The bridge centers around these user tools:</p>
     <ul>
@@ -799,51 +791,43 @@ Object thisMessageDoesNotExist</code></pre>
       The repository includes both Smalltalk test packages and shell/Smalltalk scripts for regression workflows.
     </p>
 
-    <h3>Three supported verification lanes</h3>
-    <p>The current bridge intentionally keeps three separate lanes:</p>
+    <!-- BEGIN GENERATED:USER-MANUAL-TESTING -->
+    <h3>Steady-state verification lanes</h3>
+    <p>The current bridge keeps a small steady-state verification surface:</p>
     <ul>
-      <li><strong>core-only</strong>: verify the Smalltalk core without MagLev packages</li>
-      <li><strong>compatibility-only</strong>: verify deprecated alias coverage in isolation</li>
-      <li><strong>full</strong>: verify the complete unit suite and, when configured, the live GemStone integration lane</li>
+      <li><strong><code>core-only</code></strong>: Verify the Smalltalk core without optional MagLev production packages and without deleted legacy surface.</li>
+      <li><strong><code>bootstrap-smoke</code></strong>: Prove that a clean image can micro-bootstrap the helper package and load the requested group before post-load checks run.</li>
+      <li><strong><code>full</code></strong>: Verify the steady-state developer load plus the live GemStone lane.</li>
+      <li><strong><code>artifact-freshness</code></strong>: Verify that the generated contract artifacts and marker-managed doc sections are already up to date.</li>
+      <li><strong><code>verify</code></strong>: Run core-only, bootstrap-smoke, full, artifact-freshness, then the summary-renderer smoke check.</li>
     </ul>
-
+    <h3>Generated operator reference</h3>
+    <p>
+      The contract generates a human-facing steady-state operator reference at
+      <code>doc/USER-MANUAL-REFERENCE.html</code>. Use that file as the authoritative quick reference for
+      active load groups, verification lanes, live GemStone environment variables, the
+      <code>bridgeRoot</code> API, and the no-compatibility proof.
+    </p>
     <h3>Recommended entry point</h3>
-    <pre><code>make help</code></pre>
-
-    <h3>Core-only lane</h3>
-    <pre><code>make core-only
-
-"Direct script form"
-bash ./scripts/run_core_only_clean_reload.sh \
-  "/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image" \
-  "/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean"</code></pre>
-
-    <h3>Compatibility-only lane</h3>
-    <pre><code>make compatibility-only
-
-"Direct script form"
-bash ./scripts/run_compatibility_clean_reload.sh \
-  "/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image" \
-  "/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean"</code></pre>
-
-    <h3>Full clean-reload lane</h3>
-    <pre><code>make full
-
-"Known-good live GemStone env"
-GS_USER='DataCurator' \
+    <pre><code>make help
+make core-only
+make full
+make verify
+make artifact-freshness</code></pre>
+    <h3>Known-good live example</h3>
+    <pre><code>GS_USER='DataCurator' \
 GS_PASS='swordfish' \
 GS_NETLDI_HOST='localhost' \
 GS_NETLDI_NAME_OR_PORT='50377' \
 GEMSTONE='/Users/tariq/GemStone64Bit3.7.5-arm64.Darwin' \
 make full</code></pre>
-
-    <h3>Compatibility drift guard</h3>
+    <h3>No-compatibility proof</h3>
     <p>
-      The clean reload script now enforces a boundary between active APIs and compatibility-only aliases.
-      Compatibility checks for names such as <code>persistentRoot</code> and the old <code>commit</code> alias
-      belong in <code>GemStone-Pharo-Compatibility-Tests</code>, not in the main Smalltalk-core or full bridge
-      test packages. If that boundary drifts, the reload lane fails with <code>COMPATIBILITY_DRIFT_FAILED</code>.
+      The clean reload lane proves that deleted legacy package, class, selector, and method-package
+      ownership surface stays absent from the image and the active source roots. If that proof fails,
+      the reload lane reports <code>NO_COMPATIBILITY_PROOF_FAILED</code>.
     </p>
+<!-- END GENERATED:USER-MANUAL-TESTING -->
 
     <h3>Manual debugger smoke tests</h3>
     <p>
@@ -855,8 +839,8 @@ make full</code></pre>
     <p>The <code>scripts</code> folder contains repeatable automation for tasks such as:</p>
     <ul>
       <li>core-only clean reload checks</li>
-      <li>compatibility-only clean reload checks</li>
       <li>full clean reload and regressions</li>
+      <li>contract artifact generation and freshness verification</li>
       <li>live debugger integration runs</li>
       <li>query results presenter tests</li>
       <li>restart and breakpoint scenarios</li>
@@ -941,8 +925,9 @@ GbsRemoteTranscript new open.</code></pre>
     </ol>
 
     <div class="callout small">
-      This manual is intended to be a working operator guide. For deeper implementation detail, read the baseline,
-      presenter classes, and regression scripts in the repository alongside this document.
+      This manual is intended to be a working operator guide. For the contract-driven steady-state reference, open
+      <code>doc/USER-MANUAL-REFERENCE.html</code>. For deeper implementation detail, read the baseline, presenter
+      classes, and regression scripts in the repository alongside this document.
     </div>
   </section>
 </body>

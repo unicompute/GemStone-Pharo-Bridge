@@ -1,238 +1,103 @@
 # Testing
 
-This repository currently has three supported verification lanes:
+This guide keeps only the minimal hand-written entry context. The lane descriptions, guard list, and artifact references below are generated from `GemStonePharoContract`.
 
-1. `core-only`
-2. `compatibility-only`
-3. `full`
+<!-- BEGIN GENERATED:TESTING-BODY -->
+This section is generated from `GemStonePharoContract`.
 
-The intent is:
-- `core-only` proves the bridge still loads and runs as `Pharo <-> GemStone Smalltalk` without MagLev packages
-- `compatibility-only` proves deprecated aliases still behave correctly, but in isolation
-- `full` proves the whole bridge, including MagLev packages and the live GemStone lane
+## Verification Entry Points
 
-## Quick Entry Point
+- `core-only`
+  Verify the Smalltalk core without optional MagLev production packages and without deleted legacy surface.
+  load group: `Core-Tests`
+  targets: `GemStone-Pharo-Core-Tests`
+  success markers: `ARCHITECTURE_BOUNDARY_OK`, `PACKAGE_OWNERSHIP_DRIFT_OK`, `NO_COMPAT_SOURCE_SCAN_OK`, `NO_COMPATIBILITY_PROOF_OK`, `BRIDGE_UNIT_REGRESSION_OK`, `BRIDGE_CORE_ONLY_CHECK_OK`
+- `bootstrap-smoke`
+  Prove that a clean image can micro-bootstrap the helper package and load the requested group before post-load checks run.
+  load group: `Core-Tests`
+  targets: `GemStonePharoReloadBootstrapper`, `GemStonePharoReloadRunner`, `GemStone-Pharo-Core-Tests`
+  success markers: `CORE_ONLY_CLEAN_RELOAD_DONE`, `BOOTSTRAP_SMOKE_OK`, `BOOTSTRAP_SMOKE_DONE`
+- `full`
+  Verify the steady-state developer load plus the live GemStone lane.
+  load group: `Full`
+  targets: `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-Tests`
+  success markers: `ARCHITECTURE_BOUNDARY_OK`, `PACKAGE_OWNERSHIP_DRIFT_OK`, `NO_COMPAT_SOURCE_SCAN_OK`, `NO_COMPATIBILITY_PROOF_OK`, `BRIDGE_UNIT_REGRESSION_OK`, `BRIDGE_LIVE_REGRESSION_OK`, `CLEAN_RELOAD_AND_REGRESSION_RUN_DONE`
+- `artifact-freshness`
+  Verify that the generated contract artifacts and marker-managed doc sections are already up to date.
+  load group: `default`
+  targets: `README.md`, `doc/ARCHITECTURE.md`, `doc/GemStone-Pharo-Bridge-User-Manual.html`, `doc/PACKAGE-GRAPH.md`, `doc/PACKAGE-GRAPH.dot`, `doc/PACKAGE-GRAPH.svg`, `doc/LIVE-PREFLIGHT-POLICY.md`, `doc/RELOAD-POLICY.md`, `doc/TESTING.md`, `doc/USER-MANUAL-REFERENCE.html`, `doc/OWNERSHIP-CONTRACT.md`, `doc/VERIFICATION-LANES.md`
+  success markers: `NO_COMPAT_SOURCE_SCAN_OK`, `CONTRACT_ARTIFACTS_FRESH_OK`
+- `verify`
+  Run core-only, bootstrap-smoke, full, artifact-freshness, then the summary-renderer smoke check.
+  load group: `composite`
+  targets: `core-only`, `bootstrap-smoke`, `full`, `artifact-freshness`, `summary-renderer`
+  success markers: `All lane success markers above`
+
+## Wrapper Entry Points
 
 ```bash
 make help
-make verify
-make artifact-freshness
-```
-
-Available wrappers:
-
-```bash
 make core-only
-make compatibility-only
 make full
 make verify
 make graph-artifacts
 make artifact-freshness
 ```
 
-Variables accepted by the wrappers:
-- `PHARO_IMAGE`
-- `PHARO_WORK_DIR`
-- for the live lane: `GS_USER`, `GS_PASS`, `GS_STONE`, `GS_SERVICE`, `GS_NETLDI_HOST`, `GS_NETLDI_NAME_OR_PORT`, `GEMSTONE`
+Top-level verify sequencing is owned by `GemStonePharoVerifyRunner`. Requested unit/live/preflight orchestration within the full lane is owned by `GemStonePharoVerificationRunner` and can run in the same process as the clean reload proof.
+
+Accepted environment variables:
+- `GBS_LOAD_GROUP`
+  Metacello load group to reload before post-load checks run. Defaults to `default`.
+- `GBS_RELOAD_CHECK_MODE`
+  Reload proof mode. Defaults to `default` and supports `core-only`.
+- `GBS_VERIFY_LANE`
+  Optional verification lane to run in the same Smalltalk process after the reload proof. Supports `core-only` and `full`.
+- `GBS_GENERATE_CONTRACT_ARTIFACTS`
+  When `1`, regenerate the contract-driven documentation after reload.
+- `GBS_VERIFY_CONTRACT_ARTIFACTS`
+  When `1`, verify that the contract-driven documentation is already fresh.
+- `GS_USER`
+  GemStone login user used by both the Topaz and GCI probes.
+- `GS_PASS`
+  GemStone login password used by both the Topaz and GCI probes.
+- `GS_STONE`
+  Optional stone name override. Defaults to `gs64stone`.
+- `GS_SERVICE`
+  Optional service name override. Defaults to `gemnetobject`.
+- `GS_NETLDI_HOST`
+  Optional explicit host for netldi routing.
+- `GS_NETLDI_NAME_OR_PORT`
+  Optional explicit netldi name or port, for example `gs64ldi` or `50377`.
+- `GEMSTONE`
+  Optional explicit GemStone client home used by the GCI probe.
 
 ## Generated Contract Artifacts
 
-```bash
-make graph-artifacts
-```
-
-This regenerates:
 - [PACKAGE-GRAPH.md](./PACKAGE-GRAPH.md)
 - [PACKAGE-GRAPH.dot](./PACKAGE-GRAPH.dot)
 - [PACKAGE-GRAPH.svg](./PACKAGE-GRAPH.svg)
+- [LIVE-PREFLIGHT-POLICY.md](./LIVE-PREFLIGHT-POLICY.md)
+- [RELOAD-POLICY.md](./RELOAD-POLICY.md)
+- [USER-MANUAL-REFERENCE.html](./USER-MANUAL-REFERENCE.html)
+- [OWNERSHIP-CONTRACT.md](./OWNERSHIP-CONTRACT.md)
 - [VERIFICATION-LANES.md](./VERIFICATION-LANES.md)
-- [DEPRECATED-ALIASES.md](./DEPRECATED-ALIASES.md)
 
-The artifact generator runs through the clean-reload path with:
+## Machine-readable Summaries
+
+- set `GBS_JSON_SUMMARY=1` to emit JSON summaries from the lane scripts and `make verify`
+- set `GBS_JSON_SUMMARY_DIR=/path/to/output` to persist per-lane JSON files
+
+## Steady-state Guards
+
 - `ARCHITECTURE_BOUNDARY_OK`
+  Package graph, load-group membership, and forbidden reverse dependencies match the contract.
 - `PACKAGE_OWNERSHIP_DRIFT_OK`
-- `COMPATIBILITY_DRIFT_OK`
-- `GENERATED_CONTRACT_ARTIFACTS_OK`
+  Representative class, selector, and split-behavior ownership stay in their allowed packages.
+- `NO_COMPAT_SOURCE_SCAN_OK`
+  Deleted legacy surface is absent from the active source roots, scripts, and selected docs.
+- `NO_COMPATIBILITY_PROOF_OK`
+  Deleted package, class, selector, and method-package ownership surface is absent from the loaded image.
 
-Freshness verification uses:
-
-```bash
-make artifact-freshness
-```
-
-and succeeds with:
-- `CONTRACT_ARTIFACTS_FRESH_OK`
-
-## Core-only Lane
-
-```bash
-make core-only
-```
-
-Direct script form:
-
-```bash
-bash ./scripts/run_core_only_clean_reload.sh "/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image" "/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean"
-```
-
-This lane:
-- loads `Core-Tests`
-- runs only `GemStone-Pharo-Core-Tests`
-- enforces the architecture boundary
-- enforces the package-ownership drift guard
-- enforces the core-only package/class/selector boundary
-
-Expected success markers:
-- `ARCHITECTURE_BOUNDARY_OK`
-- `PACKAGE_OWNERSHIP_DRIFT_OK`
-- `BRIDGE_UNIT_REGRESSION_OK`
-- `BRIDGE_CORE_ONLY_CHECK_OK`
-
-## Compatibility-only Lane
-
-```bash
-make compatibility-only
-```
-
-Direct script form:
-
-```bash
-bash ./scripts/run_compatibility_clean_reload.sh "/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image" "/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean"
-```
-
-This lane:
-- loads `Compatibility-Tests`
-- runs only `GemStone-Pharo-Compatibility-Tests`
-- enforces the architecture boundary
-- enforces the package-ownership drift guard
-- enforces the compatibility drift guard
-
-Expected success markers:
-- `ARCHITECTURE_BOUNDARY_OK`
-- `PACKAGE_OWNERSHIP_DRIFT_OK`
-- `COMPATIBILITY_DRIFT_OK`
-- `BRIDGE_UNIT_REGRESSION_OK`
-- `BRIDGE_COMPATIBILITY_CHECK_OK`
-
-## Full Lane
-
-```bash
-make full
-```
-
-Known-good local live example:
-
-```bash
-GS_USER='DataCurator' \
-GS_PASS='swordfish' \
-GS_NETLDI_HOST='localhost' \
-GS_NETLDI_NAME_OR_PORT='50377' \
-GEMSTONE='/Users/tariq/GemStone64Bit3.7.5-arm64.Darwin' \
-make full
-```
-
-Direct script form:
-
-```bash
-GS_USER='DataCurator' \
-GS_PASS='swordfish' \
-GS_NETLDI_HOST='localhost' \
-GS_NETLDI_NAME_OR_PORT='50377' \
-GEMSTONE='/Users/tariq/GemStone64Bit3.7.5-arm64.Darwin' \
-./scripts/run_clean_reload_and_regressions.sh "/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image" "/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean"
-```
-
-This lane:
-- performs a clean reload
-- runs the full unit suite
-- runs a live preflight that classifies stone/netldi status, Topaz login, and GCI login
-- runs the live GemStone integration suite when login env vars are set
-- enforces the architecture boundary
-- enforces the package-ownership drift guard
-- enforces the compatibility drift guard
-
-Expected success markers:
-- `ARCHITECTURE_BOUNDARY_OK`
-- `PACKAGE_OWNERSHIP_DRIFT_OK`
-- `COMPATIBILITY_DRIFT_OK`
-- `BRIDGE_UNIT_REGRESSION_OK`
-- `BRIDGE_LIVE_REGRESSION_OK`
-- `CLEAN_RELOAD_AND_REGRESSION_RUN_DONE`
-
-## Verify Lane
-
-```bash
-make verify
-```
-
-This runs the three supported lanes in order:
-1. `core-only`
-2. `compatibility-only`
-3. `full`
-
-Use it when you want one command that proves package boundaries, compatibility policy, full unit coverage, and the live GemStone lane.
-It also proves the generated contract artifacts are fresh.
-
-## Compatibility Drift Policy
-
-Compatibility-only alias coverage belongs in `GemStone-Pharo-Compatibility-Tests`.
-
-The main test packages:
-- `GemStone-Pharo-Core-Tests`
-- `GemStone-Pharo-Tests`
-
-must not drift back toward compatibility-only assertions for legacy APIs such as:
-- `persistentRoot`
-- `GbsPersistentRootFacade`
-- `#GbsPersistentRoot`
-- `GBSM root`
-- `GBSM rootAt:`
-- selector sends like `#persistentRoot`
-- selector sends like the old `#commit` alias
-
-If that happens, the reload lane fails with:
-
-```text
-COMPATIBILITY_DRIFT_FAILED
-```
-
-## Package Ownership Drift Policy
-
-The reload lanes also validate representative class and selector ownership so that:
-- Smalltalk core behavior stays in `GemStone-GBS-Converted` and `GemStone-GBS-Tools`
-- MagLev behavior stays in `GemStone-GBS-MagLev` and `GemStone-GBS-MagLev-Tools`
-- compatibility-only coverage stays out of the main active test packages
-
-They also validate a fuller behavior inventory for split classes, so the methods locally defined on classes such as `GbsSession`, `GbsRemoteNamespaceMirror`, `GbsBrowser`, and `GbxDebuggerService` must come from an allowed package set.
-
-If the representative ownership checks fail, the reload lane reports:
-
-```text
-PACKAGE_OWNERSHIP_DRIFT_FAILED
-```
-
-## Package Split Reference
-
-Production:
-- `GemStone-GBS-Converted`
-- `GemStone-GBS-Tools`
-- `GemStone-GBS-MagLev`
-- `GemStone-GBS-MagLev-Tools`
-
-Tests:
-- `GemStone-Pharo-Core-Tests`
-- `GemStone-Pharo-Compatibility-Tests`
-- `GemStone-Pharo-Tests`
-
-## Active Root API
-
-The active root API is:
-- `bridgeRoot`
-- `#GbsBridgeRoot`
-- `GbsBridgeRootFacade`
-
-Compatibility aliases still exist, but they should stay isolated:
-- `persistentRoot`
-- `#GbsPersistentRoot`
-- `GbsPersistentRootFacade`
-- repository convenience aliases such as `root` and `rootAt:`
+The active root API throughout the test and reload lanes is `bridgeRoot`.
+<!-- END GENERATED:TESTING-BODY -->
