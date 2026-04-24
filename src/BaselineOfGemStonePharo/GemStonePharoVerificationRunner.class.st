@@ -86,6 +86,21 @@ GemStonePharoVerificationRunner >> emitCoreOnlySummaryResult: result code: code 
 ]
 
 { #category : 'private' }
+GemStonePharoVerificationRunner >> emitOriginalTestsSummaryResult: result code: code unitStatus: unitStatus preflightStatus: preflightStatus liveStatus: liveStatus [
+	self
+		log: 'ORIGINAL_TESTS_SUMMARY result=', result,
+			' code=', code,
+			' reload=ok',
+			' unit=', unitStatus,
+			' preflight=', preflightStatus,
+			' live=', liveStatus,
+			' work_image=', self imagePath.
+	self log: (result = 'OK'
+		ifTrue: [ 'ORIGINAL_TESTS_CHECK_OK' ]
+		ifFalse: [ 'ORIGINAL_TESTS_CHECK_FAILED' ])
+]
+
+{ #category : 'private' }
 GemStonePharoVerificationRunner >> emitFullSummaryResult: result code: code unitStatus: unitStatus preflightStatus: preflightStatus liveStatus: liveStatus [
 	self
 		log: 'CLEAN_RELOAD_AND_REGRESSION_SUMMARY result=', result,
@@ -488,6 +503,30 @@ GemStonePharoVerificationRunner >> runFullVerification [
 ]
 
 { #category : 'private' }
+GemStonePharoVerificationRunner >> runOriginalTestsVerification [
+	| unitOk |
+	unitOk := self
+		runRegressionLaneNamed: 'unit'
+		packageFilter: 'GemStone-Pharo-Tests'.
+	unitOk ifFalse: [
+		self
+			emitOriginalTestsSummaryResult: 'FAIL'
+			code: 'ORIGINAL_TESTS_UNIT_REGRESSION_FAILED'
+			unitStatus: 'failed'
+			preflightStatus: 'skipped'
+			liveStatus: 'skipped'.
+		^ false ].
+	self log: 'ORIGINAL_TESTS_LIVE_SKIPPED: Original-Tests lane proves the base/original unit layer only.'.
+	self
+		emitOriginalTestsSummaryResult: 'OK'
+		code: 'ORIGINAL_TESTS_CHECK_OK'
+		unitStatus: 'ok'
+		preflightStatus: 'skipped'
+		liveStatus: 'skipped'.
+	^ true
+]
+
+{ #category : 'private' }
 GemStonePharoVerificationRunner >> runPreflight [
 	^ preflightRunBlock
 		ifNil: [ self defaultPreflightResult ]
@@ -602,6 +641,7 @@ GemStonePharoVerificationRunner >> runRegressionLaneNamed: laneName packageFilte
 { #category : 'running' }
 GemStonePharoVerificationRunner >> runVerificationLane [
 	self laneName = 'core-only' ifTrue: [ ^ self runCoreOnlyVerification ].
+	self laneName = 'original-tests' ifTrue: [ ^ self runOriginalTestsVerification ].
 	self laneName = 'full' ifTrue: [ ^ self runFullVerification ].
 	self
 		log: 'VERIFY_LANE_FAILED unknown lane ', self laneName.

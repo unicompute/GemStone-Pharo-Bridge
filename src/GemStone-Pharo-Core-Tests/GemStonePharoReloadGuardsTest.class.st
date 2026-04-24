@@ -76,8 +76,8 @@ GemStonePharoReloadGuardsTest >> testCheckCoreOnlyPassesForExpectedPackageClassA
 		coreOnlyClassChecks: {
 			{ self class name asSymbol. true } };
 		coreOnlySelectorChecks: {
-			{ self class name asSymbol. #helperSelectorForCoreOnlyCheck. true }.
-			{ self class name asSymbol. self legacyRootAliasSymbol. false } }.
+			{ self class name asSymbol. #instance. #helperSelectorForCoreOnlyCheck. true }.
+			{ self class name asSymbol. #instance. self legacyRootAliasSymbol. false } }.
 
 	lines := self collectLogLinesDuring: [ :logBlock |
 		self

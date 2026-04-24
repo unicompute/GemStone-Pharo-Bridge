@@ -22,122 +22,636 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 ## Ownership Families
 
 - `convertedOnly` -> `GemStone-GBS-Converted`
+- `convertedWithCore` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`
+- `convertedWithCoreAndMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
 - `convertedWithMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`
+- `coreOnly` -> `GemStone-GBS-Core`
 - `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
 - `maglevOnly` -> `GemStone-GBS-MagLev`
+- `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
 - `maglevToolsOnly` -> `GemStone-GBS-MagLev-Tools`
 - `toolsOnly` -> `GemStone-GBS-Tools`
+- `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
 - `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
 
 ## Split Behavior Ownership
 
-- `GbsBridgeRootFacade` instance side -> `convertedOnly` -> `GemStone-GBS-Converted`
-- `GbsBrowser` instance side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
-- `GbsClassicLauncher` instance side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsBridgeRootFacade` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsBrowser` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsClassHistoryFacade` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsCacheSessionStateSlot` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsClassicLauncher` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsChunkedMigrationRunner` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsCompilerStateSessionStateSlot` instance side -> `maglevOnly` -> `GemStone-GBS-MagLev`
+- `GbsDeepMaterializationProfile` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsFinalizerRegistrySessionStateSlot` instance side -> `maglevOnly` -> `GemStone-GBS-MagLev`
-- `GbsInspector` instance side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsInspector` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsLegacyMaterializationProfile` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsMaglevFacade` instance side -> `maglevOnly` -> `GemStone-GBS-MagLev`
 - `GbsMaglevRuntimeProxy` instance side -> `maglevOnly` -> `GemStone-GBS-MagLev`
-- `GbsMethodQueryResultsPresenter` instance side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
-- `GbsNamespaceScopedMethodQuery` instance side -> `convertedOnly` -> `GemStone-GBS-Converted`
-- `GbsNamespacesPresenter` instance side -> `maglevToolsOnly` -> `GemStone-GBS-MagLev-Tools`
-- `GbsObjectSpaceDiagnosticsFacade` instance side -> `convertedWithMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`
-- `GbsObjectSpaceFacade` instance side -> `convertedWithMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`
+- `GbsMaterializationProfile` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsMethodQueryResultsPresenter` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsMigrationPlan` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsMigrationPlanEntry` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsNamespaceScopedMethodQuery` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsNamespacesPresenter` instance side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsObjectFinalizer` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsObjectReferencerReport` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsObjectScanReport` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsObjectSpaceDiagnosticsFacade` instance side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsObjectSpaceDiagnosticsReport` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsObjectSpaceFacade` instance side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsObjectSpaceRepositoryFacade` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsObjectLogEntry` instance side -> `maglevOnly` -> `GemStone-GBS-MagLev`
 - `GbsObjectLogFacade` instance side -> `maglevOnly` -> `GemStone-GBS-MagLev`
+- `GbsPlaygroundGsInspectSessionStateCommand` instance side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundGsObjectsInMemoryReportCommand` instance side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundGsSessionStateKeysReportCommand` instance side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundGsStaleTypedWrapperReportCommand` instance side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundGsTypedWrapperLifecycleReportCommand` instance side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundMenuInspectSessionStateCommand` instance side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundMenuObjectsInMemoryReportCommand` instance side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundMenuSessionStateKeysReportCommand` instance side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundMenuStaleTypedWrapperReportCommand` instance side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundMenuTypedWrapperLifecycleReportCommand` instance side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsProxyOnlyMaterializationProfile` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRemoteDebugProcessFacade` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRemoteAutoloadMirror` instance side -> `maglevOnly` -> `GemStone-GBS-MagLev`
-- `GbsRemoteClassMirror` instance side -> `convertedOnly` -> `GemStone-GBS-Converted`
-- `GbsRemoteConstantMirror` instance side -> `convertedWithMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`
-- `GbsRemoteDebugger` instance side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
-- `GbsRemoteMethodMirror` instance side -> `convertedOnly` -> `GemStone-GBS-Converted`
-- `GbsRemoteMethodObject` instance side -> `convertedWithMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`
-- `GbsRemoteNamespaceMirror` instance side -> `convertedWithMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`
-- `GbsRepositoryFacade` instance side -> `convertedOnly` -> `GemStone-GBS-Converted`
-- `GbsRepositoryRootFacade` instance side -> `convertedOnly` -> `GemStone-GBS-Converted`
+- `GbsRemoteClassMirror` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRemoteConstantMirror` instance side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsRemoteDebugger` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsRemoteMethodMirror` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRemoteMethodObject` instance side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsRemoteNamespaceMirror` instance side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsReportSection` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRepositoryFacade` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRepositoryRootFacade` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRemoteUnboundMethodObject` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRubyRuntimeFacade` instance side -> `maglevOnly` -> `GemStone-GBS-MagLev`
-- `GbsSession` instance side -> `convertedWithMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`
-- `GbsSmalltalkFacade` instance side -> `convertedWithMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`
-- `GbxActivationTest` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
-- `GciErrorTest` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
-- `GbsStructuredValueInspectorPresenter` instance side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
-- `GbsSymbolListBrowserPresenter` instance side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
-- `GbsWorkspace` instance side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
-- `GbxDebuggerService` instance side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
-- `GbxTrippy` instance side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
-- `GbsBridgeRootFacade` class side -> `convertedOnly` -> `GemStone-GBS-Converted`
-- `GbsBrowser` class side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
-- `GbsClassicLauncher` class side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsSession` instance side -> `convertedWithCoreAndMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsSessionStateSlot` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsShallowMaterializationProfile` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsSmalltalkFacade` instance side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsStackSessionStateSlot` instance side -> `maglevOnly` -> `GemStone-GBS-MagLev`
+- `GbsSymbolDictionaryFacade` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsTypedProxy` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsTypedWrapperBuilder` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsTypedWrapperLifecycleEntry` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsTypedWrapperLifecycleReport` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsThreadStateSessionStateSlot` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRegistrySessionStateSlot` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbxClassVersionBrowser` instance side -> `convertedWithCore` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`
+- `GbsBrowserCoreToolsTest` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsPlaygroundCoreActionsTest` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsClassicLauncherCoreToolsTest` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsInspectorCoreToolsTest` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsMethodQueryResultsPresenterCoreToolsTest` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsRemoteDebuggerCoreToolsTest` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsSessionCoreTest` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsSessionManagerCoreTest` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsStructuredValueInspectorPresenterCoreToolsTest` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsSymbolListBrowserPresenterCoreToolsTest` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbxTrippyCoreToolsTest` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsWorkspaceCoreActionsTest` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbsClassicLauncher` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbsMethodQueryResultsPresenter` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbsRemoteDebugger` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbsBrowser` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbxFakeServiceForRemoteDebugger` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbxFakeContextForRemoteDebugger` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbsInspector` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbsSymbolListBrowserPresenter` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbxTrippy` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbsWorkspace` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreMockGbsPlaygroundPresenter` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreMockGbsSession` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbsLiveSessionTestSupport` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbsWorkspaceActions` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsBrowserMagLevToolsTest` instance side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsClassicLauncherMagLevToolsTest` instance side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsInspectorMagLevToolsTest` instance side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsMethodQueryResultsPresenterMagLevToolsTest` instance side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsSessionMagLevTest` instance side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsSessionManagerMagLevTest` instance side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsWorkspaceMagLevToolsTest` instance side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbxTrippyMagLevToolsTest` instance side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsNamespacesPresenterMagLevToolsTest` instance side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsStructuredValueInspectorPresenterMagLevToolsTest` instance side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsSymbolListBrowserPresenterMagLevToolsTest` instance side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `TestableGbsNamespacesPresenter` instance side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsStructuredValueInspectorPresenter` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsSymbolListBrowserPresenter` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsWorkspace` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbxContextListPolicy` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbxDebuggerService` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbxTrippy` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsBridgeRootFacade` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsBrowser` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsClassHistoryFacade` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsCacheSessionStateSlot` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsClassicLauncher` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsChunkedMigrationRunner` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsCompilerStateSessionStateSlot` class side -> `maglevOnly` -> `GemStone-GBS-MagLev`
+- `GbsDeepMaterializationProfile` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsFinalizerRegistrySessionStateSlot` class side -> `maglevOnly` -> `GemStone-GBS-MagLev`
-- `GbsInspector` class side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsInspector` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsLegacyMaterializationProfile` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsMaglevFacade` class side -> `maglevOnly` -> `GemStone-GBS-MagLev`
 - `GbsMaglevRuntimeProxy` class side -> `maglevOnly` -> `GemStone-GBS-MagLev`
-- `GbsMethodQueryResultsPresenter` class side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
-- `GbsNamespaceScopedMethodQuery` class side -> `convertedOnly` -> `GemStone-GBS-Converted`
-- `GbsNamespacesPresenter` class side -> `maglevToolsOnly` -> `GemStone-GBS-MagLev-Tools`
-- `GbsObjectSpaceDiagnosticsFacade` class side -> `convertedWithMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`
-- `GbsObjectSpaceFacade` class side -> `convertedWithMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`
+- `GbsMaterializationProfile` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsMethodQueryResultsPresenter` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsMigrationPlan` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsMigrationPlanEntry` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsNamespaceScopedMethodQuery` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsNamespacesPresenter` class side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsObjectFinalizer` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsObjectReferencerReport` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsObjectScanReport` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsObjectSpaceDiagnosticsFacade` class side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsObjectSpaceDiagnosticsReport` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsObjectSpaceFacade` class side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsObjectSpaceRepositoryFacade` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsObjectLogEntry` class side -> `maglevOnly` -> `GemStone-GBS-MagLev`
 - `GbsObjectLogFacade` class side -> `maglevOnly` -> `GemStone-GBS-MagLev`
+- `GbsPlaygroundGsInspectSessionStateCommand` class side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundGsObjectsInMemoryReportCommand` class side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundGsSessionStateKeysReportCommand` class side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundGsStaleTypedWrapperReportCommand` class side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundGsTypedWrapperLifecycleReportCommand` class side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundMenuInspectSessionStateCommand` class side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundMenuObjectsInMemoryReportCommand` class side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundMenuSessionStateKeysReportCommand` class side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundMenuStaleTypedWrapperReportCommand` class side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundMenuTypedWrapperLifecycleReportCommand` class side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsProxyOnlyMaterializationProfile` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRemoteDebugProcessFacade` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRemoteAutoloadMirror` class side -> `maglevOnly` -> `GemStone-GBS-MagLev`
-- `GbsRemoteClassMirror` class side -> `convertedOnly` -> `GemStone-GBS-Converted`
-- `GbsRemoteConstantMirror` class side -> `convertedWithMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`
-- `GbsRemoteDebugger` class side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
-- `GbsRemoteMethodMirror` class side -> `convertedOnly` -> `GemStone-GBS-Converted`
-- `GbsRemoteMethodObject` class side -> `convertedWithMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`
-- `GbsRemoteNamespaceMirror` class side -> `convertedWithMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`
-- `GbsRepositoryFacade` class side -> `convertedOnly` -> `GemStone-GBS-Converted`
-- `GbsRepositoryRootFacade` class side -> `convertedOnly` -> `GemStone-GBS-Converted`
+- `GbsRemoteClassMirror` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRemoteConstantMirror` class side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsRemoteDebugger` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsRemoteMethodMirror` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRemoteMethodObject` class side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsRemoteNamespaceMirror` class side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsReportSection` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRepositoryFacade` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRepositoryRootFacade` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRemoteUnboundMethodObject` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRubyRuntimeFacade` class side -> `maglevOnly` -> `GemStone-GBS-MagLev`
-- `GbsSession` class side -> `convertedWithMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`
-- `GbsSmalltalkFacade` class side -> `convertedWithMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`
-- `GbxActivationTest` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
-- `GciErrorTest` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
-- `GbsStructuredValueInspectorPresenter` class side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
-- `GbsSymbolListBrowserPresenter` class side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
-- `GbsWorkspace` class side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
-- `GbxDebuggerService` class side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
-- `GbxTrippy` class side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
-- `GBSM` class side -> `convertedWithMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-MagLev`
-- `GbsPlaygroundActions` class side -> `toolsWithMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsSession` class side -> `convertedWithCoreAndMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsSessionStateSlot` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsShallowMaterializationProfile` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsSmalltalkFacade` class side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsStackSessionStateSlot` class side -> `maglevOnly` -> `GemStone-GBS-MagLev`
+- `GbsSymbolDictionaryFacade` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsTypedProxy` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsTypedWrapperBuilder` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsTypedWrapperLifecycleEntry` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsTypedWrapperLifecycleReport` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsThreadStateSessionStateSlot` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRegistrySessionStateSlot` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbxClassVersionBrowser` class side -> `convertedWithCore` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`
+- `GbsBrowserCoreToolsTest` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsPlaygroundCoreActionsTest` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsClassicLauncherCoreToolsTest` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsInspectorCoreToolsTest` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsMethodQueryResultsPresenterCoreToolsTest` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsRemoteDebuggerCoreToolsTest` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsSessionCoreTest` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsSessionManagerCoreTest` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsStructuredValueInspectorPresenterCoreToolsTest` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsSymbolListBrowserPresenterCoreToolsTest` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbxTrippyCoreToolsTest` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsWorkspaceCoreActionsTest` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbsClassicLauncher` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbsMethodQueryResultsPresenter` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbsRemoteDebugger` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbsBrowser` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbxFakeServiceForRemoteDebugger` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbxFakeContextForRemoteDebugger` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbsInspector` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbsSymbolListBrowserPresenter` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbxTrippy` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbsWorkspace` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreMockGbsPlaygroundPresenter` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreMockGbsSession` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbsLiveSessionTestSupport` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreTestableGbsWorkspaceActions` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `GbsBrowserMagLevToolsTest` class side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsClassicLauncherMagLevToolsTest` class side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsInspectorMagLevToolsTest` class side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsMethodQueryResultsPresenterMagLevToolsTest` class side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsSessionMagLevTest` class side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsSessionManagerMagLevTest` class side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsWorkspaceMagLevToolsTest` class side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbxTrippyMagLevToolsTest` class side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsNamespacesPresenterMagLevToolsTest` class side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsStructuredValueInspectorPresenterMagLevToolsTest` class side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsSymbolListBrowserPresenterMagLevToolsTest` class side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `TestableGbsNamespacesPresenter` class side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
+- `GbsStructuredValueInspectorPresenter` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsSymbolListBrowserPresenter` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsWorkspace` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbxContextListPolicy` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbxDebuggerService` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbxTrippy` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GBSM` class side -> `convertedWithCoreAndMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsPlaygroundActions` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
 
 ## Explicit Class Ownership
 
-- `GbsRemoteUnboundMethodObject` -> `GemStone-GBS-Converted`
+- `GbsCommitConflictError` -> `GemStone-GBS-Core`
 - `GbsRcCounter` -> `GemStone-GBS-MagLev`
 - `GbsRcHash` -> `GemStone-GBS-MagLev`
 - `GbsRcQueue` -> `GemStone-GBS-MagLev`
 - `GbsSharedCounter` -> `GemStone-GBS-MagLev`
 - `GbsGsObject` -> `GemStone-GBS-MagLev`
 - `GbsGsDictionary` -> `GemStone-GBS-MagLev`
-- `GbxExecBlock` -> `GemStone-GBS-MagLev`
-- `GbxExecBlock0` -> `GemStone-GBS-MagLev`
-- `GbxExecBlock1` -> `GemStone-GBS-MagLev`
-- `GbxExecBlock2` -> `GemStone-GBS-MagLev`
-- `GbxExecBlock3` -> `GemStone-GBS-MagLev`
-- `GbxExecBlock4` -> `GemStone-GBS-MagLev`
-- `GbxExecBlock5` -> `GemStone-GBS-MagLev`
-- `GbxExecBlockN` -> `GemStone-GBS-MagLev`
-- `GbsStDBbadAtRuby` -> `GemStone-GBS-MagLev`
-- `GbsStDBnoRuby` -> `GemStone-GBS-MagLev`
-- `GbsErrRubySystemExitErr` -> `GemStone-GBS-MagLev`
+- `GbxExecBlock` -> `GemStone-GBS-Converted`
+- `GbxExecBlock0` -> `GemStone-GBS-Converted`
+- `GbxExecBlock1` -> `GemStone-GBS-Converted`
+- `GbxExecBlock2` -> `GemStone-GBS-Converted`
+- `GbxExecBlock3` -> `GemStone-GBS-Converted`
+- `GbxExecBlock4` -> `GemStone-GBS-Converted`
+- `GbxExecBlock5` -> `GemStone-GBS-Converted`
+- `GbxExecBlockN` -> `GemStone-GBS-Converted`
+- `GbsStDBbadAtRuby` -> `GemStone-GBS-Converted`
+- `GbsStDBnoRuby` -> `GemStone-GBS-Converted`
+- `GbsErrRubySystemExitErr` -> `GemStone-GBS-Converted`
 
 ## Explicit Selector Ownership
 
-- `GbsSession>>#bridgeRoot` -> `GemStone-GBS-Converted`
-- `GbsSession>>#commitTransactionWithRetryCount:` -> `GemStone-GBS-Converted`
-- `GbsSession>>#objectSpaceDiagnostics` -> `GemStone-GBS-Converted`
-- `GbsSmalltalkFacade>>#bridgeRoot` -> `GemStone-GBS-Converted`
-- `GbsRemoteNamespaceMirror>>#constantEntries` -> `GemStone-GBS-Converted`
-- `GbsRemoteMethodMirror>>#asMethodObject` -> `GemStone-GBS-Converted`
-- `GbsRemoteMethodMirror>>#asUnboundMethodObject` -> `GemStone-GBS-Converted`
-- `GbsRemoteClassMirror>>#methodObjectAt:` -> `GemStone-GBS-Converted`
-- `GbsRemoteClassMirror>>#classMethodObjectAt:` -> `GemStone-GBS-Converted`
-- `GbsNamespaceScopedMethodQuery>>#methodObjectForReference:` -> `GemStone-GBS-Converted`
-- `GbsNamespaceScopedMethodQuery>>#methodObjects` -> `GemStone-GBS-Converted`
-- `GbsBrowser>>#browseNamedObjectCacheReport` -> `GemStone-GBS-Tools`
-- `GbsInspector>>#browseTypedWrapperLifecycleReport` -> `GemStone-GBS-Tools`
-- `GbsMethodQueryResultsPresenter>>#browseObjectsInMemoryReport` -> `GemStone-GBS-Tools`
+- `GbsSession>>#abortTransaction` -> `GemStone-GBS-Core`
+- `GbsSession>>#bridgeRoot` -> `GemStone-GBS-Core`
+- `GbsSession>>#chunkedMigrationRunnerFrom:to:` -> `GemStone-GBS-Core`
+- `GbsSession>>#classHistoryOf:` -> `GemStone-GBS-Core`
+- `GbsSession>>#commitTransaction` -> `GemStone-GBS-Core`
+- `GbsSession>>#commitTransactionOrSignalConflict` -> `GemStone-GBS-Core`
+- `GbsSession>>#commitTransactionWithRetryCount:` -> `GemStone-GBS-Core`
+- `GbsSession>>#invalidateRepositoryRoots` -> `GemStone-GBS-Core`
+- `GbsSession>>#withCommitRetryCount:do:` -> `GemStone-GBS-Core`
+- `GbsSession>>#previewMigrationFrom:to:` -> `GemStone-GBS-Core`
+- `GbsSession>>#previewMigrationFrom:to:allowAbort:` -> `GemStone-GBS-Core`
+- `GbsSession>>#previewMigrationWithSubclassesOf:` -> `GemStone-GBS-Core`
+- `GbsSession>>#previewMigrationWithSubclassesOf:allowAbort:` -> `GemStone-GBS-Core`
+- `GbsSession>>#migrateInstancesFrom:to:` -> `GemStone-GBS-Core`
+- `GbsSession>>#migrateInstancesFrom:to:allowAbort:` -> `GemStone-GBS-Core`
+- `GbsSession>>#migrateInstancesWithSubclassesOf:` -> `GemStone-GBS-Core`
+- `GbsSession>>#migrateInstancesWithSubclassesOf:allowAbort:` -> `GemStone-GBS-Core`
+- `GbsSession>>#namedObjectAt:` -> `GemStone-GBS-Core`
+- `GbsSession>>#namedObjectAt:ifAbsent:` -> `GemStone-GBS-Core`
+- `GbsSession>>#namedObjectCache` -> `GemStone-GBS-Core`
+- `GbsSession>>#clearNamedObjectCache` -> `GemStone-GBS-Core`
+- `GbsSession>>#namedObjectAutoloadRegistry` -> `GemStone-GBS-Core`
+- `GbsSession>>#clearNamedObjectAutoloads` -> `GemStone-GBS-Core`
+- `GbsSession>>#registerNamedObjectAutoload:` -> `GemStone-GBS-Core`
+- `GbsSession>>#registerNamedObjectAutoload:remote:` -> `GemStone-GBS-Core`
+- `GbsSession>>#unregisterNamedObjectAutoload:` -> `GemStone-GBS-Core`
+- `GbsSession>>#hasNamedObjectAutoloadNamed:` -> `GemStone-GBS-Core`
+- `GbsSession>>#namedObjectAutoloadTargetFor:` -> `GemStone-GBS-Core`
+- `GbsSession>>#namedObjectAutoloadEntries` -> `GemStone-GBS-Core`
+- `GbsSession>>#namedObjectAutoloadKeys` -> `GemStone-GBS-Core`
+- `GbsSession>>#namedObjectAutoloadReportText` -> `GemStone-GBS-Core`
+- `GbsSession>>#hasCachedNamedObjectNamed:` -> `GemStone-GBS-Core`
+- `GbsSession>>#normalizedNamedObjectName:` -> `GemStone-GBS-Core`
+- `GbsSession>>#namedObjectCacheEntries` -> `GemStone-GBS-Core`
+- `GbsSession>>#namedObjectCacheKeys` -> `GemStone-GBS-Core`
+- `GbsSession>>#namedObjectCacheReportText` -> `GemStone-GBS-Core`
+- `GbsSession>>#executeScriptAndReturnOop:` -> `GemStone-GBS-Core`
+- `GbsSession>>#fetchObject:withProfile:depth:seen:` -> `GemStone-GBS-Core`
+- `GbsSession>>#fetchProfile` -> `GemStone-GBS-Core`
+- `GbsSession>>#fetchProfile:` -> `GemStone-GBS-Core`
+- `GbsSession>>#fetchByReference` -> `GemStone-GBS-Core`
+- `GbsSession>>#fetchDeep` -> `GemStone-GBS-Core`
+- `GbsSession>>#fetchLegacy` -> `GemStone-GBS-Core`
+- `GbsSession>>#fetchShallow` -> `GemStone-GBS-Core`
+- `GbsSession>>#isImmediateOop:` -> `GemStone-GBS-Core`
+- `GbsSession>>#materializationProfile` -> `GemStone-GBS-Core`
+- `GbsSession>>#materializationProfile:` -> `GemStone-GBS-Core`
+- `GbsSession>>#materializeArrayOop:withProfile:depth:seen:` -> `GemStone-GBS-Core`
+- `GbsSession>>#materializeAssociationOop:withProfile:depth:seen:` -> `GemStone-GBS-Core`
+- `GbsSession>>#materializeByteArrayOop:withProfile:depth:seen:` -> `GemStone-GBS-Core`
+- `GbsSession>>#materializeDictionaryOop:identityKeys:withProfile:depth:seen:` -> `GemStone-GBS-Core`
+- `GbsSession>>#materializeSequenceableCollectionOop:using:withProfile:depth:seen:` -> `GemStone-GBS-Core`
+- `GbsSession>>#withMaterializationProfile:do:` -> `GemStone-GBS-Core`
+- `GbsSession>>#proxyForOop:` -> `GemStone-GBS-Core`
+- `GbsSession>>#proxyForOop:serverClassName:` -> `GemStone-GBS-Core`
+- `GbsSession>>#proxyForOop:usingClass:` -> `GemStone-GBS-Core`
+- `GbsSession>>#cachedProxyForOop:` -> `GemStone-GBS-Core`
+- `GbsSession>>#proxyCache` -> `GemStone-GBS-Core`
+- `GbsSession>>#clearProxyCache` -> `GemStone-GBS-Core`
+- `GbsSession>>#remoteArrayElementOopAt:ofOop:` -> `GemStone-GBS-Core`
+- `GbsSession>>#remoteAssociationPairOopFor:` -> `GemStone-GBS-Core`
+- `GbsSession>>#remoteClassNameForOop:` -> `GemStone-GBS-Core`
+- `GbsSession>>#remoteCollectionAsArrayOop:` -> `GemStone-GBS-Core`
+- `GbsSession>>#remoteDictionaryAssociationsAsArrayOop:` -> `GemStone-GBS-Core`
+- `GbsSession>>#remoteSizeForOop:` -> `GemStone-GBS-Core`
+- `GbsSession>>#remoteStringValueForOop:` -> `GemStone-GBS-Core`
+- `GbsSession>>#objectForOop:` -> `GemStone-GBS-Core`
+- `GbsSession>>#objectSpace` -> `GemStone-GBS-Core`
+- `GbsSession>>#objectSpaceDiagnostics` -> `GemStone-GBS-Core`
+- `GbsSession>>#objectSpaceDiagnosticsReport` -> `GemStone-GBS-Core`
+- `GbsSession>>#objectSpaceRepository` -> `GemStone-GBS-Core`
+- `GbsSession>>#defineFinalizerFor:do:` -> `GemStone-GBS-Core`
+- `GbsSession>>#eachObjectDo:` -> `GemStone-GBS-Core`
+- `GbsSession>>#eachObjectDo:batchSize:` -> `GemStone-GBS-Core`
+- `GbsSession>>#eachObjectOf:do:` -> `GemStone-GBS-Core`
+- `GbsSession>>#eachObjectOf:do:batchSize:` -> `GemStone-GBS-Core`
+- `GbsSession>>#allSubclassesOf:` -> `GemStone-GBS-Core`
+- `GbsSession>>#allSubclassesOfNamed:` -> `GemStone-GBS-Core`
+- `GbsSession>>#instancesInMemoryOf:` -> `GemStone-GBS-Core`
+- `GbsSession>>#instancesInMemoryOf:from:limit:` -> `GemStone-GBS-Core`
+- `GbsSession>>#instancesInMemoryOfNamed:` -> `GemStone-GBS-Core`
+- `GbsSession>>#hasFinalizerFor:` -> `GemStone-GBS-Core`
+- `GbsSession>>#loadedClassesIncludingModules` -> `GemStone-GBS-Core`
+- `GbsSession>>#loadedClassesIncludingModules:` -> `GemStone-GBS-Core`
+- `GbsSession>>#sessionStateAt:` -> `GemStone-GBS-Core`
+- `GbsSession>>#sessionStateAt:ifAbsent:` -> `GemStone-GBS-Core`
+- `GbsSession>>#sessionStateAt:put:` -> `GemStone-GBS-Core`
+- `GbsSession>>#referencesTo:` -> `GemStone-GBS-Core`
+- `GbsSession>>#referencesToOop:` -> `GemStone-GBS-Core`
+- `GbsSession>>#objectsInMemory` -> `GemStone-GBS-Core`
+- `GbsSession>>#objectsInMemoryFrom:limit:` -> `GemStone-GBS-Core`
+- `GbsSession>>#objectsInMemoryMatching:` -> `GemStone-GBS-Core`
+- `GbsSession>>#objectsInMemoryMatching:limit:batchSize:` -> `GemStone-GBS-Core`
+- `GbsSession>>#objectsInMemoryOf:from:limit:` -> `GemStone-GBS-Core`
+- `GbsSession>>#objectsInMemoryOf:matching:` -> `GemStone-GBS-Core`
+- `GbsSession>>#objectsInMemoryOf:matching:limit:batchSize:` -> `GemStone-GBS-Core`
+- `GbsSession>>#undefineFinalizerFor:` -> `GemStone-GBS-Core`
+- `GbsSession>>#repository` -> `GemStone-GBS-Core`
+- `GbsSession>>#repositoryRootFacadeForKey:path:` -> `GemStone-GBS-Core`
+- `GbsSession>>#repositoryRootLifecycleVersion` -> `GemStone-GBS-Core`
+- `GbsSession>>#resetAfterLogout` -> `GemStone-GBS-Core`
+- `GbsSession>>#smalltalk` -> `GemStone-GBS-Core`
+- `GbsSession>>#symbolDictionaryNamed:` -> `GemStone-GBS-Core`
+- `GBSM class>>#chunkedMigrationRunnerFrom:to:` -> `GemStone-GBS-Core`
+- `GBSM class>>#commitTransactionOrSignalConflict` -> `GemStone-GBS-Core`
+- `GBSM class>>#commitTransactionWithRetryCount:` -> `GemStone-GBS-Core`
+- `GBSM class>>#previewMigrationFrom:to:` -> `GemStone-GBS-Core`
+- `GBSM class>>#previewMigrationFrom:to:allowAbort:` -> `GemStone-GBS-Core`
+- `GBSM class>>#previewMigrationWithSubclassesOf:` -> `GemStone-GBS-Core`
+- `GBSM class>>#previewMigrationWithSubclassesOf:allowAbort:` -> `GemStone-GBS-Core`
+- `GBSM class>>#migrateInstancesFrom:to:` -> `GemStone-GBS-Core`
+- `GBSM class>>#migrateInstancesFrom:to:allowAbort:` -> `GemStone-GBS-Core`
+- `GBSM class>>#migrateInstancesWithSubclassesOf:` -> `GemStone-GBS-Core`
+- `GBSM class>>#migrateInstancesWithSubclassesOf:allowAbort:` -> `GemStone-GBS-Core`
+- `GbsSmalltalkFacade>>#bridgeRoot` -> `GemStone-GBS-Core`
+- `GbxClassVersionBrowser>>#classHistory` -> `GemStone-GBS-Core`
+- `GbxClassVersionBrowser>>#classHistory:` -> `GemStone-GBS-Core`
+- `GbxClassVersionBrowser>>#canMigrateInstances` -> `GemStone-GBS-Core`
+- `GbxClassVersionBrowser>>#getClassList` -> `GemStone-GBS-Core`
+- `GbxClassVersionBrowser>>#impactSummaryForPlan:` -> `GemStone-GBS-Core`
+- `GbxClassVersionBrowser>>#latestHolder` -> `GemStone-GBS-Core`
+- `GbxClassVersionBrowser>>#makeCurrentIn:` -> `GemStone-GBS-Core`
+- `GbxClassVersionBrowser>>#oldVersionHolders` -> `GemStone-GBS-Core`
+- `GbxClassVersionBrowser>>#previewMigrationTo:allowAbort:` -> `GemStone-GBS-Core`
+- `GbxClassVersionBrowser>>#previewMigrationToLatestAllowAbort:` -> `GemStone-GBS-Core`
+- `GbxClassVersionBrowser>>#previewOldVersionsToLatestAllowAbort:` -> `GemStone-GBS-Core`
+- `GbxClassVersionBrowser>>#removeOldVersionBindingsFrom:` -> `GemStone-GBS-Core`
+- `GbxClassVersionBrowser>>#selectedHolder` -> `GemStone-GBS-Core`
+- `GbxClassVersionBrowser>>#migrateInstancesTo:allowAbort:` -> `GemStone-GBS-Core`
+- `GbxClassVersionBrowser>>#executePreviewPlan:allowAbort:` -> `GemStone-GBS-Core`
+- `GbsPlaygroundActions class>>#gsInspectItIn:` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundActions class>>#gsBrowseTypedWrapperLifecycleReportIn:` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundActions class>>#gsBrowseStaleTypedWrapperLifecycleReportIn:` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundActions class>>#inspectOop:session:` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundActions class>>#inform:` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundActions class>>#gsInspectSessionStateKeyIn:` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundActions class>>#gsBrowseSessionStateKeysReportIn:` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundActions class>>#gsBrowseObjectsInMemoryReportIn:` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundActions class>>#requestInput:initialAnswer:` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundActions class>>#parseSessionStateKeysFrom:` -> `GemStone-GBS-Core-Tools`
+- `GbsPlaygroundActions class>>#requestPositiveInteger:initialAnswer:` -> `GemStone-GBS-Core-Tools`
+- `GbsWorkspace>>#browseObjectsInMemoryReport` -> `GemStone-GBS-Core-Tools`
+- `GbsWorkspace>>#browsePromptedSessionStateKey` -> `GemStone-GBS-Core-Tools`
+- `GbsWorkspace>>#browsePromptedSessionStateKeysReport` -> `GemStone-GBS-Core-Tools`
+- `GbsWorkspace>>#browseSessionStateAtKey:session:` -> `GemStone-GBS-Core-Tools`
+- `GbsWorkspace>>#browseStaleTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbsWorkspace>>#browseTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbsWorkspace>>#inspectIt` -> `GemStone-GBS-Core-Tools`
+- `GbsWorkspace>>#inspectOop:session:` -> `GemStone-GBS-Core-Tools`
+- `GbsWorkspace>>#parseSessionStateKeysFrom:` -> `GemStone-GBS-Core-Tools`
+- `GbsWorkspace>>#requestInput:initialAnswer:` -> `GemStone-GBS-Core-Tools`
+- `GbsWorkspace>>#requestPositiveInteger:initialAnswer:` -> `GemStone-GBS-Core-Tools`
+- `GbsWorkspace>>#workspaceMenu` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher class>>#inspectCurrentUserGlobalsOnCurrentSession` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher class>>#openNamespacesOnCurrentSession` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher class>>#queryOrganizerMethodsFor:mode:inSession:` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#browseNamedObjectCacheReport` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#browseTypedWrapperAutoloadReport` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#browseTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#browseStaleTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#browseSessionStateReport` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#browsePromptedSessionStateKeysReport` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#browseObjectsInMemoryReport` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#refreshAllTypedWrappers` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#refreshStaleTypedWrappers` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#inspectPromptedSessionStateKey` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#inspectSessionStateAtKey:` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#clearNamedObjectCache` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#menuSession` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#oopForInspectableObject:` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#parseSessionStateKeysFrom:` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#requestPositiveInteger:initialAnswer:` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#inspectCurrentUserGlobals` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#currentUserGlobalsOopIn:` -> `GemStone-GBS-Core-Tools`
+- `GbsClassicLauncher>>#inspectOop:session:` -> `GemStone-GBS-Core-Tools`
+- `GbsMethodQueryResultsPresenter>>#browseNamedObjectCacheReport` -> `GemStone-GBS-Core-Tools`
+- `GbsMethodQueryResultsPresenter>>#browseTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbsMethodQueryResultsPresenter>>#browseStaleTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbsMethodQueryResultsPresenter>>#browsePromptedSessionStateKey` -> `GemStone-GBS-Core-Tools`
+- `GbsMethodQueryResultsPresenter>>#browsePromptedSessionStateKeysReport` -> `GemStone-GBS-Core-Tools`
+- `GbsMethodQueryResultsPresenter>>#browseObjectsInMemoryReport` -> `GemStone-GBS-Core-Tools`
+- `GbsMethodQueryResultsPresenter>>#browseSessionStateAtKey:` -> `GemStone-GBS-Core-Tools`
+- `GbsMethodQueryResultsPresenter>>#browseTypedWrapperAutoloadReport` -> `GemStone-GBS-Core-Tools`
+- `GbsMethodQueryResultsPresenter>>#clearNamedObjectCache` -> `GemStone-GBS-Core-Tools`
+- `GbsMethodQueryResultsPresenter>>#menuSession` -> `GemStone-GBS-Core-Tools`
+- `GbsMethodQueryResultsPresenter>>#parseSessionStateKeysFrom:` -> `GemStone-GBS-Core-Tools`
+- `GbsMethodQueryResultsPresenter>>#requestPositiveInteger:initialAnswer:` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#browsePromptedSessionStateKey` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#browseTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#browseStaleTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#browseSessionStateAtKey:` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#browsePromptedSessionStateKeysReport` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#browseObjectsInMemoryReport` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#buildMenuBar` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#gsBrowseReferencesToSelectedClass` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#methodMenu` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#selectedServerReferenceTargetName` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#requestInput:initialAnswer:` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#uiChooseFrom:title:` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#parseSessionStateKeysFrom:` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#requestPositiveInteger:initialAnswer:` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#sessionMenu` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#serverClassReferenceStrings` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#serverMethodReferencesFor:hierarchyOnly:senders:` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#currentReceiverProxyForServerMethod` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#directStepOverExecutedFrame:` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#directStepWithPrimarySelector:fallbackSelector:` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#fetchContextsDirectly` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#applyFetchedContexts:` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#fetchFullSourceFor:` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#fetchStackFrames` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#forceServerJumpToStepPoint1` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#inform:` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#inspectOop:session:` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#invokeSelectedServerMethod` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#remoteDebugProcess` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#resolveDebugProcessOopFromCurrentProcessOop` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#resolveExecutedFrameLevelFromServer` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#restartUsingDirectTrimFromExecutedFrame` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#returnFromFrame` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#runToCaret` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#selectedStepPointFromCaret` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteDebugger>>#stepReturn` -> `GemStone-GBS-Core-Tools`
+- `GbsRemoteNamespaceMirror>>#constantEntries` -> `GemStone-GBS-Core`
+- `GbsRemoteMethodMirror>>#asMethodObject` -> `GemStone-GBS-Core`
+- `GbsRemoteMethodMirror>>#asUnboundMethodObject` -> `GemStone-GBS-Core`
+- `GbsRemoteClassMirror>>#methodObjectAt:` -> `GemStone-GBS-Core`
+- `GbsRemoteClassMirror>>#classMethodObjectAt:` -> `GemStone-GBS-Core`
+- `GbsNamespaceScopedMethodQuery>>#methodObjectForReference:` -> `GemStone-GBS-Core`
+- `GbsNamespaceScopedMethodQuery>>#methodObjects` -> `GemStone-GBS-Core`
+- `GbsBrowser>>#browseNamedObjectCacheReport` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#browsePromptedSessionStateKey` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#browsePromptedSessionStateKeysReport` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#browseSessionStateAtKey:` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#browseTypedWrapperAutoloadReport` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#browseTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#browseStaleTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#browseObjectsInMemoryReport` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#browseClassInfo` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#browseMethodInfo` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#browseVersions` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#classSelected:` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#classInfoTextForMirror:` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#gsInspectIt` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#inspectAllInstances` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#inspectClass` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#inspectDictionary` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#inspectMethod` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#invokeSelectedMethod` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#loadDictionaries` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#menuClass` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#menuMethod` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#methodSelected:` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#openMethodObject:` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#protocolSelected:` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#classSideSelected` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#infoValueForDisplay:` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#inform:` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#inspectOop:` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#methodInfoTextForMirror:` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#selectedClassMirror` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#selectedMethodMirror` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#selectedMethodMirrorForSelector:` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#selectedMethodObject` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#selectedMethodObjectForSelector:` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#selectedUnboundMethodObject` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#selectedUnboundMethodObjectForSelector:` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#versionSummaryCurrent:total:` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#queryServerMethodsForSelector:mode:rootClassName:hierarchyScope:` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#refreshAllTypedWrappers` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#refreshStaleTypedWrappers` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#clearNamedObjectCache` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#menuSession` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#parseSessionStateKeysFrom:` -> `GemStone-GBS-Core-Tools`
+- `GbsBrowser>>#requestPositiveInteger:initialAnswer:` -> `GemStone-GBS-Core-Tools`
+- `GbsInspector>>#browsePromptedSessionStateKey` -> `GemStone-GBS-Core-Tools`
+- `GbsInspector>>#browsePromptedSessionStateKeysReport` -> `GemStone-GBS-Core-Tools`
+- `GbsInspector>>#browseSessionStateAtKey:` -> `GemStone-GBS-Core-Tools`
+- `GbsInspector>>#browseStaleTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbsInspector>>#browseObjectsInMemoryReport` -> `GemStone-GBS-Core-Tools`
+- `GbsInspector>>#browseTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbsInspector>>#browseReportChooser` -> `GemStone-GBS-Core-Tools`
+- `GbsInspector>>#parseSessionStateKeysFrom:` -> `GemStone-GBS-Core-Tools`
+- `GbsInspector>>#requestPositiveInteger:initialAnswer:` -> `GemStone-GBS-Core-Tools`
+- `GbsInspector>>#withShallowMaterializationDo:` -> `GemStone-GBS-Core-Tools`
+- `GbsStructuredValueInspectorPresenter>>#browsePromptedSessionStateKey` -> `GemStone-GBS-Core-Tools`
+- `GbsStructuredValueInspectorPresenter>>#browsePromptedSessionStateKeysReport` -> `GemStone-GBS-Core-Tools`
+- `GbsStructuredValueInspectorPresenter>>#browseSessionStateAtKey:` -> `GemStone-GBS-Core-Tools`
+- `GbsStructuredValueInspectorPresenter>>#browseStaleTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbsStructuredValueInspectorPresenter>>#browseObjectsInMemoryReport` -> `GemStone-GBS-Core-Tools`
+- `GbsStructuredValueInspectorPresenter>>#browseTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbsStructuredValueInspectorPresenter>>#menuEntry` -> `GemStone-GBS-Core-Tools`
+- `GbsStructuredValueInspectorPresenter>>#menuEntryPopup` -> `GemStone-GBS-Core-Tools`
+- `GbsStructuredValueInspectorPresenter>>#parseSessionStateKeysFrom:` -> `GemStone-GBS-Core-Tools`
+- `GbsStructuredValueInspectorPresenter>>#requestPositiveInteger:initialAnswer:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#inspectDictionary` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#browseReferencersForSelectedEntry` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#browseReferencersForSelectedPreviewValue` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#browseReferencersForStructuredPreviewRow:entryKey:path:previewKind:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#browsePromptedSessionStateKey` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#browsePromptedSessionStateKeysReport` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#browseSessionStateAtKey:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#browseStaleTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#browseObjectsInMemoryReport` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#browseReferencersForEntryKey:path:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#browseTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#menuEntry` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#menuPreview` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#openStructuredInspectorForPreview:title:entryKey:path:previewKind:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#refreshDictionariesFor:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#refreshEntriesForDictionary:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#refreshUsers` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#chooseReferencerFrom:title:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#displayStringForReferencer:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#structuredPreviewForEntryKey:path:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#oopForEntryKey:path:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#oopScriptForUser:dictionary:keyName:path:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#inform:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#oopForInspectableObject:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#openInspectorOnOop:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#requestInput:initialAnswer:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#parseSessionStateKeysFrom:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#requestPositiveInteger:initialAnswer:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#referencersInMemoryForOop:` -> `GemStone-GBS-Core-Tools`
+- `GbsSymbolListBrowserPresenter>>#withShallowMaterializationDo:` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#canExecuteOnDebugProcess` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#currentFrameOop` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#currentProcessOop` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#currentReceiverOop` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#cutbackGsTo:` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#isTerminated` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#oopForVariableNamed:` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#recomputeContextList` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#resetServerPCToStepOne` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#restartLevelFromServerStack` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#runDebugProcessCommand:recompute:` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#updateCurrentContextFromContexts:` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#updateContextListFromServerContexts:` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#runDebugProcessCommand:withInteger:recompute:` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#remoteDebugProcess` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#serverStepOverFrameLevel:` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#synchronizeServerProgramCounterAfterRestart` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#legacyCompileLookup` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#legacyCompileResponseForSource:correctingSelector:` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#legacyCorrectedCompileResponseForSource:` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#legacyRecompileResponseForSource:` -> `GemStone-GBS-Core-Tools`
 - `GbxDebuggerService>>#basicReenterServerContext` -> `GemStone-GBS-Tools`
+- `GbxContextListPolicy>>#buildContextListFromServerContexts:` -> `GemStone-GBS-Core-Tools`
+- `GbxContextListPolicy>>#updateContextListFromServerContexts:` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#buildToolbar` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#browseObjectsInMemoryReport` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#browsePromptedSessionStateKey` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#browsePromptedSessionStateKeysReport` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#browseReferencersInMemory` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#browseReportChooser` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#browseSessionStateAtKey:` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#browseStaleTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#browseTypedWrapperLifecycleReport` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#chooseReferencerFrom:title:` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#displayStringForReferencer:` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#inform:` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#inspectSelected` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#oopForInspectableObject:` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#openTrippyOnOop:` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#parseSessionStateKeysFrom:` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#referencersInMemoryForOop:` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#requestPositiveInteger:initialAnswer:` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#requestString:initialAnswer:` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#selectedInspectableOop` -> `GemStone-GBS-Core-Tools`
+- `GbxTrippy>>#withShallowMaterializationDo:` -> `GemStone-GBS-Core-Tools`
 - `GbsSession>>#objectLog` -> `GemStone-GBS-MagLev`
 - `GbsSession>>#sessionMethods` -> `GemStone-GBS-MagLev`
 - `GbsSession>>#materializeMaglevRuntimeValue:` -> `GemStone-GBS-MagLev`
@@ -166,6 +680,11 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GbsRemoteNamespaceMirror>>#supportsAutoload` -> `GemStone-GBS-MagLev`
 - `GbsRemoteConstantMirror>>#autoloadFile` -> `GemStone-GBS-MagLev`
 - `GbsRemoteConstantMirror>>#isAutoload` -> `GemStone-GBS-MagLev`
+- `GbsPlaygroundActions class>>#gsBrowseRubyLoadPathReportIn:` -> `GemStone-GBS-MagLev-Tools`
+- `GbsPlaygroundActions class>>#gsBrowseRubyLoadedFeaturesReportIn:` -> `GemStone-GBS-MagLev-Tools`
+- `GbsPlaygroundActions class>>#gsBrowseRubyPersistentLoadedFeaturesReportIn:` -> `GemStone-GBS-MagLev-Tools`
+- `GbsPlaygroundActions class>>#gsBrowseTopLevelAutoloadRegistrationsReportIn:` -> `GemStone-GBS-MagLev-Tools`
+- `GbsPlaygroundActions class>>#gsBrowseMaglevFinalizerRegistryReportIn:` -> `GemStone-GBS-MagLev-Tools`
 - `GbsBrowser>>#addExtensionSessionMenuItemsTo:` -> `GemStone-GBS-MagLev-Tools`
 - `GbsBrowser>>#browseRubyLoadPathReport` -> `GemStone-GBS-MagLev-Tools`
 - `GbsClassicLauncher>>#addExtensionSessionMenuItemsTo:` -> `GemStone-GBS-MagLev-Tools`
@@ -179,12 +698,20 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GbsSymbolListBrowserPresenter>>#addExtensionEntryMenuItemsTo:` -> `GemStone-GBS-MagLev-Tools`
 - `GbsSymbolListBrowserPresenter>>#addExtensionPreviewMenuItemsTo:` -> `GemStone-GBS-MagLev-Tools`
 - `GbsSymbolListBrowserPresenter>>#configureExtensionStructuredInspector:` -> `GemStone-GBS-MagLev-Tools`
+- `GbxDebuggerService>>#browseRemoteSelectedMethod` -> `GemStone-GBS-MagLev-Tools`
+- `GbxDebuggerService>>#selectedMethodProtocol` -> `GemStone-GBS-MagLev-Tools`
+- `GbxDebuggerService>>#selectedRemoteMethodLookup` -> `GemStone-GBS-MagLev-Tools`
+- `GbxDebuggerService>>#selectedRemoteMethodMirror` -> `GemStone-GBS-MagLev-Tools`
+- `GbxDebuggerService>>#selectedRemoteMethodObject` -> `GemStone-GBS-MagLev-Tools`
+- `GbxDebuggerService>>#selectedRemoteUnboundMethodObject` -> `GemStone-GBS-MagLev-Tools`
 - `GbxTrippy>>#addExtensionReportOptionsToLabels:actions:` -> `GemStone-GBS-MagLev-Tools`
 
 ## No-compatibility Static Scan
 
 Production source roots:
 - `src/GemStone-GBS-Converted`
+- `src/GemStone-GBS-Core`
+- `src/GemStone-GBS-Core-Tools`
 - `src/GemStone-GBS-Tools`
 - `src/GemStone-GBS-MagLev`
 - `src/GemStone-GBS-MagLev-Tools`

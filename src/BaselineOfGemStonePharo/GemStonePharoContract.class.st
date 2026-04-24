@@ -37,7 +37,23 @@ GemStonePharoContract >> coreOnlyPackageChecks [
 
 { #category : 'contracts' }
 GemStonePharoContract >> coreOnlySelectorChecks [
-	^ self coreOnlyDerivedSelectorChecks
+	| byKey |
+	byKey := Dictionary new.
+	(self coreOnlyDerivedSelectorChecks , self coreOnlyExplicitSelectorChecks)
+		do: [ :each | byKey at: { each first. each second. each third } put: each ].
+	^ byKey values asArray
+]
+
+{ #category : 'contracts' }
+GemStonePharoContract >> coreOnlyExplicitSelectorChecks [
+	^ {
+		{ #GbxDebuggerService. #instance. #browseMethod. true }.
+		{ #GbxDebuggerService. #instance. #correctCurrentSelectorWithSource:. true }.
+		{ #GbxDebuggerService. #instance. #gbxRecompileMethod:notifying:. true }.
+		{ #GbxDebuggerService. #instance. #recompileCurrentMethodWithSource:. true }.
+		{ #GbxDebuggerService. #instance. #selectedMethodClassName. true }.
+		{ #GbxDebuggerService. #instance. #selectedMethodSelector. true }.
+		{ #GbxDebuggerService. #instance. #sourceCode. true } }
 ]
 
 { #category : 'contracts' }
@@ -51,11 +67,11 @@ GemStonePharoContract >> coreOnlyDerivedSelectorChecks [
 		classChecksByName at: each first put: each second ].
 	self packageOwnershipSelectorSpecs do: [ :spec |
 		| key shouldExist |
-		key := { spec first. spec third }.
+		key := { spec first. spec second. spec third }.
 		shouldExist := loadedPackages includes: spec fourth.
 		(seen includes: key) ifFalse: [
 			((classChecksByName at: spec first ifAbsent: [ true ]) or: [ shouldExist ])
-				ifTrue: [ checks add: { spec first. spec third. shouldExist } ].
+				ifTrue: [ checks add: { spec first. spec second. spec third. shouldExist } ].
 			seen add: key ] ].
 	^ checks asArray
 ]
@@ -63,9 +79,9 @@ GemStonePharoContract >> coreOnlyDerivedSelectorChecks [
 { #category : 'contracts' }
 GemStonePharoContract >> forbiddenPackageRequirementSpecs [
 	^ {
-		{ 'GemStone-GBS-Tools'. #('GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') }.
+		{ 'GemStone-GBS-Tools'. #('GemStone-GBS-Core' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') }.
 		{ 'GemStone-Pharo-Core-Tests'. #('GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') }.
-		{ 'GemStone-GBS-Converted'. #('GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools' 'GemStone-GBS-Tools') } }
+		{ 'GemStone-GBS-Converted'. #('GemStone-GBS-Core' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools' 'GemStone-GBS-Tools') } }
 ]
 
 { #category : 'contracts' }
@@ -194,29 +210,35 @@ GemStonePharoContract >> generatedPackageGraphSvg [
 	| layoutByPackage colorByPackage boxWidth boxHeight |
 	layoutByPackage := Dictionary newFromPairs: {
 		'GemStone-GBS-Converted'. (40@40).
+		'GemStone-GBS-Core'. (430@40).
+		'GemStone-GBS-Core-Tools'. (430@220).
 		'GemStone-GBS-Tools'. (40@220).
-		'GemStone-GBS-MagLev'. (430@40).
-		'GemStone-GBS-MagLev-Tools'. (430@220).
-		'GemStone-Pharo-Core-Tests'. (820@40).
-		'GemStone-Pharo-Tests'. (820@220) }.
+		'GemStone-GBS-MagLev'. (820@40).
+		'GemStone-GBS-MagLev-Tools'. (820@220).
+		'GemStone-Pharo-Core-Tests'. (1210@40).
+		'GemStone-Pharo-Tests'. (1210@220).
+		'GemStone-Pharo-MagLev-Tests'. (1210@300) }.
 	colorByPackage := Dictionary newFromPairs: {
 		'GemStone-GBS-Converted'. '#d8ecff'.
+		'GemStone-GBS-Core'. '#dff4ff'.
+		'GemStone-GBS-Core-Tools'. '#dff4ff'.
 		'GemStone-GBS-Tools'. '#d8ecff'.
 		'GemStone-GBS-MagLev'. '#ffe6c7'.
 		'GemStone-GBS-MagLev-Tools'. '#ffe6c7'.
 		'GemStone-Pharo-Core-Tests'. '#e4f7df'.
-		'GemStone-Pharo-Tests'. '#f0e0ff' }.
+		'GemStone-Pharo-Tests'. '#f0e0ff'.
+		'GemStone-Pharo-MagLev-Tests'. '#f7ddf4' }.
 	boxWidth := 300.
 	boxHeight := 56.
 	^ String streamContents: [ :stream |
 		stream
-			nextPutAll: '<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="330" viewBox="0 0 1160 330">'; cr;
+			nextPutAll: '<svg xmlns="http://www.w3.org/2000/svg" width="1550" height="410" viewBox="0 0 1550 410">'; cr;
 			nextPutAll: '  <defs>'; cr;
 			nextPutAll: '    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">'; cr;
 			nextPutAll: '      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a6470"/>'; cr;
 			nextPutAll: '    </marker>'; cr;
 			nextPutAll: '  </defs>'; cr;
-			nextPutAll: '  <rect width="1160" height="330" fill="#ffffff"/>'; cr;
+			nextPutAll: '  <rect width="1550" height="410" fill="#ffffff"/>'; cr;
 			nextPutAll: '  <text x="40" y="24" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#1f2933">GemStone-Pharo-Bridge Package Graph</text>'; cr.
 		self packageRequirementSpecs do: [ :each |
 			| packageName targetOrigin |
@@ -520,9 +542,24 @@ GemStonePharoContract >> generatedUserManualReferenceHtml [
 				cr ].
 		stream
 			nextPutAll: '  </ul>'; cr;
+			nextPutAll: '  <h2>Expected Original-layer Test Exceptions</h2>'; cr;
+			nextPutAll: '  <p><code>make original-drift</code> reports the original/base production layer as clean and currently accepts only these test-layer exceptions:</p>'; cr;
+			nextPutAll: '  <ul>'; cr.
+		self originalLayerExpectedExceptionSpecs do: [ :each |
+			stream
+				nextPutAll: '    <li><code>';
+				nextPutAll: each first;
+				nextPutAll: '</code>: ';
+				nextPutAll: each second;
+				nextPutAll: '</li>';
+				cr ].
+		stream
+			nextPutAll: '  </ul>'; cr;
 			nextPutAll: '  <h2>Recommended Entry Points</h2>'; cr;
 			nextPutAll: '  <pre><code>make help'; cr;
+			nextPutAll: 'make original-drift'; cr;
 			nextPutAll: 'make core-only'; cr;
+			nextPutAll: 'make original-tests'; cr;
 			nextPutAll: 'make full'; cr;
 			nextPutAll: 'make verify'; cr;
 			nextPutAll: 'make artifact-freshness</code></pre>'; cr;
@@ -585,24 +622,38 @@ GemStonePharoContract >> generatedVerificationLanesMarkdown [
 					each fifth
 						do: [ :marker | inner nextPutAll: '`'; nextPutAll: marker; nextPutAll: '`' ]
 						separatedBy: [ inner nextPutAll: ', ' ] ]);
-				cr; cr ] ]
+				cr; cr ].
+		stream
+			nextPutAll: '## Expected Original-layer Test Exceptions'; cr; cr;
+			nextPutAll: '`make original-drift` currently reports the original/base production layer as clean and accepts only these test-layer exceptions:'; cr.
+		self originalLayerExpectedExceptionSpecs do: [ :each |
+			stream
+				nextPutAll: '- `';
+				nextPutAll: each first;
+				nextPutAll: '`';
+				cr;
+				nextPutAll: '  ';
+				nextPutAll: each second;
+				cr ] ]
 ]
 
 { #category : 'contracts' }
 GemStonePharoContract >> groupMemberSpecs [
 	^ {
-		{ 'Core'. #('GemStone-GBS-Converted') }.
-		{ 'Core-Only'. #('GemStone-GBS-Converted') }.
-		{ 'Core-Tools'. #('GemStone-GBS-Converted' 'GemStone-GBS-Tools') }.
-		{ 'Core-Tests'. #('GemStone-GBS-Converted' 'GemStone-GBS-Tools' 'GemStone-Pharo-Core-Tests') }.
-		{ 'MagLev-Core'. #('GemStone-GBS-Converted' 'GemStone-GBS-MagLev') }.
-		{ 'MagLev-Tools'. #('GemStone-GBS-Converted' 'GemStone-GBS-Tools' 'GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') }.
-		{ 'MagLev'. #('GemStone-GBS-Converted' 'GemStone-GBS-Tools' 'GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') }.
-		{ 'Tools'. #('GemStone-GBS-Converted' 'GemStone-GBS-Tools') }.
-		{ 'All-Tests'. #('GemStone-Pharo-Core-Tests' 'GemStone-Pharo-Tests') }.
-		{ 'Tests'. #('GemStone-Pharo-Core-Tests' 'GemStone-Pharo-Tests') }.
-		{ 'Full'. #('GemStone-GBS-Converted' 'GemStone-GBS-MagLev' 'GemStone-GBS-Tools' 'GemStone-GBS-MagLev-Tools' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-Tests') }.
-		{ 'default'. #('GemStone-GBS-Converted' 'GemStone-GBS-MagLev' 'GemStone-GBS-Tools' 'GemStone-GBS-MagLev-Tools' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-Tests') } }
+		{ 'Original'. #('GemStone-GBS-Converted' 'GemStone-GBS-Tools') }.
+		{ 'Original-Tests'. #('GemStone-GBS-Converted' 'GemStone-GBS-Tools' 'GemStone-Pharo-Tests') }.
+		{ 'Core'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core') }.
+		{ 'Core-Only'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core') }.
+		{ 'Core-Tools'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools') }.
+		{ 'Core-Tests'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-Pharo-Core-Tests') }.
+		{ 'MagLev-Core'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev') }.
+		{ 'MagLev-Tools'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') }.
+		{ 'MagLev'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') }.
+		{ 'Tools'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools') }.
+		{ 'All-Tests'. #('GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests' 'GemStone-Pharo-Tests') }.
+		{ 'Tests'. #('GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests' 'GemStone-Pharo-Tests') }.
+		{ 'Full'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev-Tools' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests' 'GemStone-Pharo-Tests') }.
+		{ 'default'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev-Tools' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests' 'GemStone-Pharo-Tests') } }
 ]
 
 { #category : 'contracts' }
@@ -672,6 +723,8 @@ GemStonePharoContract >> noCompatibilitySecondarySourceScanSnippets [
 GemStonePharoContract >> noCompatibilitySourceScanRoots [
 	^ #(
 		'src/GemStone-GBS-Converted'
+		'src/GemStone-GBS-Core'
+		'src/GemStone-GBS-Core-Tools'
 		'src/GemStone-GBS-Tools'
 		'src/GemStone-GBS-MagLev'
 		'src/GemStone-GBS-MagLev-Tools')
@@ -680,7 +733,6 @@ GemStonePharoContract >> noCompatibilitySourceScanRoots [
 { #category : 'contracts' }
 GemStonePharoContract >> noCompatibilitySelectorChecks [
 	^ {
-		{ #GbsSession. #instance. #commit }.
 		{ #GbsSession. #instance. #persistentRoot }.
 		{ #GbsSession. #instance. #root }.
 		{ #GbsSession. #instance. #rootAt: }.
@@ -742,12 +794,19 @@ GemStonePharoContract >> regressionLaneSpecs [
 { #category : 'contracts' }
 GemStonePharoContract >> packageOwnershipAllowedPackagesByFamily [
 	^ Dictionary newFromPairs: {
+		#coreOnly. #('GemStone-GBS-Core').
+		#coreToolsOnly. #('GemStone-GBS-Core-Tools').
+		#coreWithMaglev. #('GemStone-GBS-Core' 'GemStone-GBS-MagLev').
 		#coreTestsOnly. #('GemStone-Pharo-Core-Tests').
+		#maglevTestsOnly. #('GemStone-Pharo-MagLev-Tests').
+		#convertedWithCore. #('GemStone-GBS-Converted' 'GemStone-GBS-Core').
 		#convertedOnly. #('GemStone-GBS-Converted').
+		#convertedWithCoreAndMaglev. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev').
 		#convertedWithMaglev. #('GemStone-GBS-Converted' 'GemStone-GBS-MagLev').
 		#maglevOnly. #('GemStone-GBS-MagLev').
 		#maglevToolsOnly. #('GemStone-GBS-MagLev-Tools').
 		#toolsOnly. #('GemStone-GBS-Tools').
+		#toolsWithCoreToolsAndMaglevTools. #('GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev-Tools').
 		#toolsWithMaglevTools. #('GemStone-GBS-Tools' 'GemStone-GBS-MagLev-Tools') }
 ]
 
@@ -767,46 +826,122 @@ GemStonePharoContract >> packageOwnershipDerivedClassSideBehaviorFamilySpecs [
 { #category : 'contracts' }
 GemStonePharoContract >> packageOwnershipExplicitBehaviorFamilySpecs [
 	^ {
-		{ #GBSM. #class. #convertedWithMaglev }.
-		{ #GbsPlaygroundActions. #class. #toolsWithMaglevTools } }
+		{ #GBSM. #class. #convertedWithCoreAndMaglev }.
+		{ #GbsPlaygroundActions. #class. #toolsWithCoreToolsAndMaglevTools } }
 ]
 
 { #category : 'contracts' }
 GemStonePharoContract >> packageOwnershipInstanceBehaviorFamilySpecs [
 	^ {
-		{ #GbsBridgeRootFacade. #instance. #convertedOnly }.
-		{ #GbsBrowser. #instance. #toolsWithMaglevTools }.
-		{ #GbsClassicLauncher. #instance. #toolsWithMaglevTools }.
+		{ #GbsBridgeRootFacade. #instance. #coreOnly }.
+		{ #GbsBrowser. #instance. #toolsWithCoreToolsAndMaglevTools }.
+		{ #GbsClassHistoryFacade. #instance. #coreOnly }.
+		{ #GbsCacheSessionStateSlot. #instance. #coreOnly }.
+		{ #GbsClassicLauncher. #instance. #toolsWithCoreToolsAndMaglevTools }.
+		{ #GbsChunkedMigrationRunner. #instance. #coreOnly }.
+		{ #GbsCompilerStateSessionStateSlot. #instance. #maglevOnly }.
+		{ #GbsDeepMaterializationProfile. #instance. #coreOnly }.
 		{ #GbsFinalizerRegistrySessionStateSlot. #instance. #maglevOnly }.
-		{ #GbsInspector. #instance. #toolsWithMaglevTools }.
+		{ #GbsInspector. #instance. #toolsWithCoreToolsAndMaglevTools }.
+		{ #GbsLegacyMaterializationProfile. #instance. #coreOnly }.
 		{ #GbsMaglevFacade. #instance. #maglevOnly }.
 		{ #GbsMaglevRuntimeProxy. #instance. #maglevOnly }.
-		{ #GbsMethodQueryResultsPresenter. #instance. #toolsWithMaglevTools }.
-		{ #GbsNamespaceScopedMethodQuery. #instance. #convertedOnly }.
-		{ #GbsNamespacesPresenter. #instance. #maglevToolsOnly }.
-		{ #GbsObjectSpaceDiagnosticsFacade. #instance. #convertedWithMaglev }.
-		{ #GbsObjectSpaceFacade. #instance. #convertedWithMaglev }.
+		{ #GbsMaterializationProfile. #instance. #coreOnly }.
+		{ #GbsMethodQueryResultsPresenter. #instance. #toolsWithCoreToolsAndMaglevTools }.
+		{ #GbsMigrationPlan. #instance. #coreOnly }.
+		{ #GbsMigrationPlanEntry. #instance. #coreOnly }.
+		{ #GbsNamespaceScopedMethodQuery. #instance. #coreOnly }.
+		{ #GbsNamespacesPresenter. #instance. #toolsWithMaglevTools }.
+		{ #GbsObjectFinalizer. #instance. #coreOnly }.
+		{ #GbsObjectReferencerReport. #instance. #coreOnly }.
+		{ #GbsObjectScanReport. #instance. #coreOnly }.
+		{ #GbsObjectSpaceDiagnosticsFacade. #instance. #coreWithMaglev }.
+		{ #GbsObjectSpaceDiagnosticsReport. #instance. #coreOnly }.
+		{ #GbsObjectSpaceFacade. #instance. #coreWithMaglev }.
+		{ #GbsObjectSpaceRepositoryFacade. #instance. #coreOnly }.
 		{ #GbsObjectLogEntry. #instance. #maglevOnly }.
 		{ #GbsObjectLogFacade. #instance. #maglevOnly }.
+		{ #GbsPlaygroundGsInspectSessionStateCommand. #instance. #coreToolsOnly }.
+		{ #GbsPlaygroundGsObjectsInMemoryReportCommand. #instance. #coreToolsOnly }.
+		{ #GbsPlaygroundGsSessionStateKeysReportCommand. #instance. #coreToolsOnly }.
+		{ #GbsPlaygroundGsStaleTypedWrapperReportCommand. #instance. #coreToolsOnly }.
+		{ #GbsPlaygroundGsTypedWrapperLifecycleReportCommand. #instance. #coreToolsOnly }.
+		{ #GbsPlaygroundMenuInspectSessionStateCommand. #instance. #coreToolsOnly }.
+		{ #GbsPlaygroundMenuObjectsInMemoryReportCommand. #instance. #coreToolsOnly }.
+		{ #GbsPlaygroundMenuSessionStateKeysReportCommand. #instance. #coreToolsOnly }.
+		{ #GbsPlaygroundMenuStaleTypedWrapperReportCommand. #instance. #coreToolsOnly }.
+		{ #GbsPlaygroundMenuTypedWrapperLifecycleReportCommand. #instance. #coreToolsOnly }.
+		{ #GbsProxyOnlyMaterializationProfile. #instance. #coreOnly }.
+		{ #GbsRemoteDebugProcessFacade. #instance. #coreOnly }.
 		{ #GbsRemoteAutoloadMirror. #instance. #maglevOnly }.
-		{ #GbsRemoteClassMirror. #instance. #convertedOnly }.
-		{ #GbsRemoteConstantMirror. #instance. #convertedWithMaglev }.
-		{ #GbsRemoteDebugger. #instance. #toolsWithMaglevTools }.
-		{ #GbsRemoteMethodMirror. #instance. #convertedOnly }.
-		{ #GbsRemoteMethodObject. #instance. #convertedWithMaglev }.
-		{ #GbsRemoteNamespaceMirror. #instance. #convertedWithMaglev }.
-		{ #GbsRepositoryFacade. #instance. #convertedOnly }.
-		{ #GbsRepositoryRootFacade. #instance. #convertedOnly }.
+		{ #GbsRemoteClassMirror. #instance. #coreOnly }.
+		{ #GbsRemoteConstantMirror. #instance. #coreWithMaglev }.
+		{ #GbsRemoteDebugger. #instance. #toolsWithCoreToolsAndMaglevTools }.
+		{ #GbsRemoteMethodMirror. #instance. #coreOnly }.
+		{ #GbsRemoteMethodObject. #instance. #coreWithMaglev }.
+		{ #GbsRemoteNamespaceMirror. #instance. #coreWithMaglev }.
+		{ #GbsReportSection. #instance. #coreOnly }.
+		{ #GbsRepositoryFacade. #instance. #coreOnly }.
+		{ #GbsRepositoryRootFacade. #instance. #coreOnly }.
+		{ #GbsRemoteUnboundMethodObject. #instance. #coreOnly }.
 		{ #GbsRubyRuntimeFacade. #instance. #maglevOnly }.
-		{ #GbsSession. #instance. #convertedWithMaglev }.
-		{ #GbsSmalltalkFacade. #instance. #convertedWithMaglev }.
-		{ #GbxActivationTest. #instance. #coreTestsOnly }.
-		{ #GciErrorTest. #instance. #coreTestsOnly }.
-		{ #GbsStructuredValueInspectorPresenter. #instance. #toolsWithMaglevTools }.
-		{ #GbsSymbolListBrowserPresenter. #instance. #toolsWithMaglevTools }.
-		{ #GbsWorkspace. #instance. #toolsWithMaglevTools }.
-		{ #GbxDebuggerService. #instance. #toolsWithMaglevTools }.
-		{ #GbxTrippy. #instance. #toolsWithMaglevTools } }
+		{ #GbsSession. #instance. #convertedWithCoreAndMaglev }.
+		{ #GbsSessionStateSlot. #instance. #coreOnly }.
+		{ #GbsShallowMaterializationProfile. #instance. #coreOnly }.
+		{ #GbsSmalltalkFacade. #instance. #coreWithMaglev }.
+		{ #GbsStackSessionStateSlot. #instance. #maglevOnly }.
+		{ #GbsSymbolDictionaryFacade. #instance. #coreOnly }.
+		{ #GbsTypedProxy. #instance. #coreOnly }.
+		{ #GbsTypedWrapperBuilder. #instance. #coreOnly }.
+		{ #GbsTypedWrapperLifecycleEntry. #instance. #coreOnly }.
+		{ #GbsTypedWrapperLifecycleReport. #instance. #coreOnly }.
+		{ #GbsThreadStateSessionStateSlot. #instance. #coreOnly }.
+		{ #GbsRegistrySessionStateSlot. #instance. #coreOnly }.
+		{ #GbxClassVersionBrowser. #instance. #convertedWithCore }.
+		{ #GbsBrowserCoreToolsTest. #instance. #coreTestsOnly }.
+		{ #GbsPlaygroundCoreActionsTest. #instance. #coreTestsOnly }.
+		{ #GbsClassicLauncherCoreToolsTest. #instance. #coreTestsOnly }.
+		{ #GbsInspectorCoreToolsTest. #instance. #coreTestsOnly }.
+		{ #GbsMethodQueryResultsPresenterCoreToolsTest. #instance. #coreTestsOnly }.
+		{ #GbsRemoteDebuggerCoreToolsTest. #instance. #coreTestsOnly }.
+		{ #GbsSessionCoreTest. #instance. #coreTestsOnly }.
+		{ #GbsSessionManagerCoreTest. #instance. #coreTestsOnly }.
+		{ #GbsStructuredValueInspectorPresenterCoreToolsTest. #instance. #coreTestsOnly }.
+		{ #GbsSymbolListBrowserPresenterCoreToolsTest. #instance. #coreTestsOnly }.
+		{ #GbxTrippyCoreToolsTest. #instance. #coreTestsOnly }.
+		{ #GbsWorkspaceCoreActionsTest. #instance. #coreTestsOnly }.
+		{ #CoreTestableGbsClassicLauncher. #instance. #coreTestsOnly }.
+		{ #CoreTestableGbsMethodQueryResultsPresenter. #instance. #coreTestsOnly }.
+		{ #CoreTestableGbsRemoteDebugger. #instance. #coreTestsOnly }.
+		{ #CoreTestableGbsBrowser. #instance. #coreTestsOnly }.
+		{ #CoreGbxFakeServiceForRemoteDebugger. #instance. #coreTestsOnly }.
+		{ #CoreGbxFakeContextForRemoteDebugger. #instance. #coreTestsOnly }.
+		{ #CoreTestableGbsInspector. #instance. #coreTestsOnly }.
+		{ #CoreTestableGbsSymbolListBrowserPresenter. #instance. #coreTestsOnly }.
+		{ #CoreTestableGbxTrippy. #instance. #coreTestsOnly }.
+		{ #CoreTestableGbsWorkspace. #instance. #coreTestsOnly }.
+		{ #CoreMockGbsPlaygroundPresenter. #instance. #coreTestsOnly }.
+		{ #CoreMockGbsSession. #instance. #coreTestsOnly }.
+		{ #CoreGbsLiveSessionTestSupport. #instance. #coreTestsOnly }.
+		{ #CoreTestableGbsWorkspaceActions. #instance. #coreTestsOnly }.
+		{ #GbsBrowserMagLevToolsTest. #instance. #maglevTestsOnly }.
+		{ #GbsClassicLauncherMagLevToolsTest. #instance. #maglevTestsOnly }.
+		{ #GbsInspectorMagLevToolsTest. #instance. #maglevTestsOnly }.
+		{ #GbsMethodQueryResultsPresenterMagLevToolsTest. #instance. #maglevTestsOnly }.
+		{ #GbsSessionMagLevTest. #instance. #maglevTestsOnly }.
+		{ #GbsSessionManagerMagLevTest. #instance. #maglevTestsOnly }.
+		{ #GbsWorkspaceMagLevToolsTest. #instance. #maglevTestsOnly }.
+{ #GbxTrippyMagLevToolsTest. #instance. #maglevTestsOnly }.
+{ #GbsNamespacesPresenterMagLevToolsTest. #instance. #maglevTestsOnly }.
+{ #GbsStructuredValueInspectorPresenterMagLevToolsTest. #instance. #maglevTestsOnly }.
+{ #GbsSymbolListBrowserPresenterMagLevToolsTest. #instance. #maglevTestsOnly }.
+{ #TestableGbsNamespacesPresenter. #instance. #maglevTestsOnly }.
+		{ #GbsStructuredValueInspectorPresenter. #instance. #toolsWithCoreToolsAndMaglevTools }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #toolsWithCoreToolsAndMaglevTools }.
+		{ #GbsWorkspace. #instance. #toolsWithCoreToolsAndMaglevTools }.
+		{ #GbxContextListPolicy. #instance. #toolsWithCoreToolsAndMaglevTools }.
+		{ #GbxDebuggerService. #instance. #toolsWithCoreToolsAndMaglevTools }.
+		{ #GbxTrippy. #instance. #toolsWithCoreToolsAndMaglevTools } }
 ]
 
 { #category : 'contracts' }
@@ -841,14 +976,17 @@ GemStonePharoContract >> packageOwnershipDerivedClassSpecs [
 
 { #category : 'contracts' }
 GemStonePharoContract >> packageOwnershipExplicitClassSpecs [
-	| packagesByFamily |
+	| packagesByFamily primaryClassPackagesByFamily |
 	packagesByFamily := self packageOwnershipAllowedPackagesByFamily.
+	primaryClassPackagesByFamily := self packageOwnershipPrimaryClassPackagesByFamily.
 	^ self packageOwnershipExplicitClassFamilySpecs collect: [ :spec |
-		| allowedPackages |
+		| allowedPackages expectedPackage |
 		allowedPackages := packagesByFamily at: spec second.
-		allowedPackages size = 1 ifFalse: [
-			self error: 'Class ownership family must resolve to a single package: ', spec second asString ].
-		{ spec first. allowedPackages first } ]
+		expectedPackage := allowedPackages size = 1
+			ifTrue: [ allowedPackages first ]
+			ifFalse: [ primaryClassPackagesByFamily at: spec second ifAbsent: [
+				self error: 'Missing primary class package for ownership family: ', spec second asString ] ].
+		{ spec first. expectedPackage } ]
 ]
 
 { #category : 'contracts' }
@@ -861,13 +999,13 @@ GemStonePharoContract >> packageOwnershipExplicitClassFamilySpecs [
 { #category : 'contracts' }
 GemStonePharoContract >> packageOwnershipExplicitClassGroupSpecs [
 	^ {
-		{ #GbsRemoteUnboundMethodObject. #(''). #convertedOnly }.
+		{ #GbsCommitConflictError. #(''). #coreOnly }.
 		{ #GbsRc. #('Counter' 'Hash' 'Queue'). #maglevOnly }.
 		{ #GbsSharedCounter. #(''). #maglevOnly }.
 		{ #GbsGs. #('Object' 'Dictionary'). #maglevOnly }.
-		{ #GbxExecBlock. #('' '0' '1' '2' '3' '4' '5' 'N'). #maglevOnly }.
-		{ #GbsStDB. #('badAtRuby' 'noRuby'). #maglevOnly }.
-		{ #GbsErrRubySystemExitErr. #(''). #maglevOnly } }
+		{ #GbxExecBlock. #('' '0' '1' '2' '3' '4' '5' 'N'). #convertedWithMaglev }.
+		{ #GbsStDB. #('badAtRuby' 'noRuby'). #convertedWithMaglev }.
+		{ #GbsErrRubySystemExitErr. #(''). #convertedWithMaglev } }
 ]
 
 { #category : 'contracts' }
@@ -878,7 +1016,11 @@ GemStonePharoContract >> packageOwnershipExplicitSelectorSpecs [
 { #category : 'contracts' }
 GemStonePharoContract >> packageOwnershipPrimaryClassPackagesByFamily [
 	^ Dictionary newFromPairs: {
+		#convertedWithCore. 'GemStone-GBS-Converted'.
+		#convertedWithCoreAndMaglev. 'GemStone-GBS-Converted'.
 		#convertedWithMaglev. 'GemStone-GBS-Converted'.
+		#coreWithMaglev. 'GemStone-GBS-Core'.
+		#toolsWithCoreToolsAndMaglevTools. 'GemStone-GBS-Tools'.
 		#toolsWithMaglevTools. 'GemStone-GBS-Tools' }
 ]
 
@@ -886,6 +1028,8 @@ GemStonePharoContract >> packageOwnershipPrimaryClassPackagesByFamily [
 GemStonePharoContract >> packageOwnershipCorePackages [
 	^ #(
 		'GemStone-GBS-Converted'
+		'GemStone-GBS-Core'
+		'GemStone-GBS-Core-Tools'
 		'GemStone-GBS-Tools')
 ]
 
@@ -895,7 +1039,6 @@ GemStonePharoContract >> packageOwnershipForbiddenCoreClassPatterns [
 		'GbsMaglev'
 		'GbsRuby'
 		'GbsObjectLog'
-		'GbxExecBlock'
 		'GbsFinalizerRegistrySessionStateSlot'
 		'GbsRcCounter'
 		'GbsRcHash'
@@ -945,21 +1088,376 @@ GemStonePharoContract >> packageOwnershipSelectorSpecs [
 { #category : 'contracts' }
 GemStonePharoContract >> packageOwnershipSelectorFamilySpecs [
 	^ {
-		{ #GbsSession. #instance. #bridgeRoot. #convertedOnly }.
-		{ #GbsSession. #instance. #commitTransactionWithRetryCount:. #convertedOnly }.
-		{ #GbsSession. #instance. #objectSpaceDiagnostics. #convertedOnly }.
-		{ #GbsSmalltalkFacade. #instance. #bridgeRoot. #convertedOnly }.
-		{ #GbsRemoteNamespaceMirror. #instance. #constantEntries. #convertedOnly }.
-		{ #GbsRemoteMethodMirror. #instance. #asMethodObject. #convertedOnly }.
-		{ #GbsRemoteMethodMirror. #instance. #asUnboundMethodObject. #convertedOnly }.
-		{ #GbsRemoteClassMirror. #instance. #methodObjectAt:. #convertedOnly }.
-		{ #GbsRemoteClassMirror. #instance. #classMethodObjectAt:. #convertedOnly }.
-		{ #GbsNamespaceScopedMethodQuery. #instance. #methodObjectForReference:. #convertedOnly }.
-		{ #GbsNamespaceScopedMethodQuery. #instance. #methodObjects. #convertedOnly }.
-		{ #GbsBrowser. #instance. #browseNamedObjectCacheReport. #toolsOnly }.
-		{ #GbsInspector. #instance. #browseTypedWrapperLifecycleReport. #toolsOnly }.
-		{ #GbsMethodQueryResultsPresenter. #instance. #browseObjectsInMemoryReport. #toolsOnly }.
+		{ #GbsSession. #instance. #abortTransaction. #coreOnly }.
+		{ #GbsSession. #instance. #bridgeRoot. #coreOnly }.
+		{ #GbsSession. #instance. #chunkedMigrationRunnerFrom:to:. #coreOnly }.
+		{ #GbsSession. #instance. #classHistoryOf:. #coreOnly }.
+		{ #GbsSession. #instance. #commitTransaction. #coreOnly }.
+		{ #GbsSession. #instance. #commitTransactionOrSignalConflict. #coreOnly }.
+		{ #GbsSession. #instance. #commitTransactionWithRetryCount:. #coreOnly }.
+		{ #GbsSession. #instance. #invalidateRepositoryRoots. #coreOnly }.
+		{ #GbsSession. #instance. #withCommitRetryCount:do:. #coreOnly }.
+		{ #GbsSession. #instance. #previewMigrationFrom:to:. #coreOnly }.
+		{ #GbsSession. #instance. #previewMigrationFrom:to:allowAbort:. #coreOnly }.
+		{ #GbsSession. #instance. #previewMigrationWithSubclassesOf:. #coreOnly }.
+		{ #GbsSession. #instance. #previewMigrationWithSubclassesOf:allowAbort:. #coreOnly }.
+		{ #GbsSession. #instance. #migrateInstancesFrom:to:. #coreOnly }.
+		{ #GbsSession. #instance. #migrateInstancesFrom:to:allowAbort:. #coreOnly }.
+		{ #GbsSession. #instance. #migrateInstancesWithSubclassesOf:. #coreOnly }.
+		{ #GbsSession. #instance. #migrateInstancesWithSubclassesOf:allowAbort:. #coreOnly }.
+		{ #GbsSession. #instance. #namedObjectAt:. #coreOnly }.
+		{ #GbsSession. #instance. #namedObjectAt:ifAbsent:. #coreOnly }.
+		{ #GbsSession. #instance. #namedObjectCache. #coreOnly }.
+		{ #GbsSession. #instance. #clearNamedObjectCache. #coreOnly }.
+		{ #GbsSession. #instance. #namedObjectAutoloadRegistry. #coreOnly }.
+		{ #GbsSession. #instance. #clearNamedObjectAutoloads. #coreOnly }.
+		{ #GbsSession. #instance. #registerNamedObjectAutoload:. #coreOnly }.
+		{ #GbsSession. #instance. #registerNamedObjectAutoload:remote:. #coreOnly }.
+		{ #GbsSession. #instance. #unregisterNamedObjectAutoload:. #coreOnly }.
+		{ #GbsSession. #instance. #hasNamedObjectAutoloadNamed:. #coreOnly }.
+		{ #GbsSession. #instance. #namedObjectAutoloadTargetFor:. #coreOnly }.
+		{ #GbsSession. #instance. #namedObjectAutoloadEntries. #coreOnly }.
+		{ #GbsSession. #instance. #namedObjectAutoloadKeys. #coreOnly }.
+		{ #GbsSession. #instance. #namedObjectAutoloadReportText. #coreOnly }.
+		{ #GbsSession. #instance. #hasCachedNamedObjectNamed:. #coreOnly }.
+		{ #GbsSession. #instance. #normalizedNamedObjectName:. #coreOnly }.
+		{ #GbsSession. #instance. #namedObjectCacheEntries. #coreOnly }.
+		{ #GbsSession. #instance. #namedObjectCacheKeys. #coreOnly }.
+		{ #GbsSession. #instance. #namedObjectCacheReportText. #coreOnly }.
+		{ #GbsSession. #instance. #executeScriptAndReturnOop:. #coreOnly }.
+		{ #GbsSession. #instance. #fetchObject:withProfile:depth:seen:. #coreOnly }.
+		{ #GbsSession. #instance. #fetchProfile. #coreOnly }.
+		{ #GbsSession. #instance. #fetchProfile:. #coreOnly }.
+		{ #GbsSession. #instance. #fetchByReference. #coreOnly }.
+		{ #GbsSession. #instance. #fetchDeep. #coreOnly }.
+		{ #GbsSession. #instance. #fetchLegacy. #coreOnly }.
+		{ #GbsSession. #instance. #fetchShallow. #coreOnly }.
+		{ #GbsSession. #instance. #isImmediateOop:. #coreOnly }.
+		{ #GbsSession. #instance. #materializationProfile. #coreOnly }.
+		{ #GbsSession. #instance. #materializationProfile:. #coreOnly }.
+		{ #GbsSession. #instance. #materializeArrayOop:withProfile:depth:seen:. #coreOnly }.
+		{ #GbsSession. #instance. #materializeAssociationOop:withProfile:depth:seen:. #coreOnly }.
+		{ #GbsSession. #instance. #materializeByteArrayOop:withProfile:depth:seen:. #coreOnly }.
+		{ #GbsSession. #instance. #materializeDictionaryOop:identityKeys:withProfile:depth:seen:. #coreOnly }.
+		{ #GbsSession. #instance. #materializeSequenceableCollectionOop:using:withProfile:depth:seen:. #coreOnly }.
+		{ #GbsSession. #instance. #withMaterializationProfile:do:. #coreOnly }.
+		{ #GbsSession. #instance. #proxyForOop:. #coreOnly }.
+		{ #GbsSession. #instance. #proxyForOop:serverClassName:. #coreOnly }.
+		{ #GbsSession. #instance. #proxyForOop:usingClass:. #coreOnly }.
+		{ #GbsSession. #instance. #cachedProxyForOop:. #coreOnly }.
+		{ #GbsSession. #instance. #proxyCache. #coreOnly }.
+		{ #GbsSession. #instance. #clearProxyCache. #coreOnly }.
+		{ #GbsSession. #instance. #remoteArrayElementOopAt:ofOop:. #coreOnly }.
+		{ #GbsSession. #instance. #remoteAssociationPairOopFor:. #coreOnly }.
+		{ #GbsSession. #instance. #remoteClassNameForOop:. #coreOnly }.
+		{ #GbsSession. #instance. #remoteCollectionAsArrayOop:. #coreOnly }.
+		{ #GbsSession. #instance. #remoteDictionaryAssociationsAsArrayOop:. #coreOnly }.
+		{ #GbsSession. #instance. #remoteSizeForOop:. #coreOnly }.
+		{ #GbsSession. #instance. #remoteStringValueForOop:. #coreOnly }.
+		{ #GbsSession. #instance. #objectForOop:. #coreOnly }.
+		{ #GbsSession. #instance. #objectSpace. #coreOnly }.
+		{ #GbsSession. #instance. #objectSpaceDiagnostics. #coreOnly }.
+		{ #GbsSession. #instance. #objectSpaceDiagnosticsReport. #coreOnly }.
+		{ #GbsSession. #instance. #objectSpaceRepository. #coreOnly }.
+		{ #GbsSession. #instance. #defineFinalizerFor:do:. #coreOnly }.
+		{ #GbsSession. #instance. #eachObjectDo:. #coreOnly }.
+		{ #GbsSession. #instance. #eachObjectDo:batchSize:. #coreOnly }.
+		{ #GbsSession. #instance. #eachObjectOf:do:. #coreOnly }.
+		{ #GbsSession. #instance. #eachObjectOf:do:batchSize:. #coreOnly }.
+		{ #GbsSession. #instance. #allSubclassesOf:. #coreOnly }.
+		{ #GbsSession. #instance. #allSubclassesOfNamed:. #coreOnly }.
+		{ #GbsSession. #instance. #instancesInMemoryOf:. #coreOnly }.
+		{ #GbsSession. #instance. #instancesInMemoryOf:from:limit:. #coreOnly }.
+		{ #GbsSession. #instance. #instancesInMemoryOfNamed:. #coreOnly }.
+		{ #GbsSession. #instance. #hasFinalizerFor:. #coreOnly }.
+		{ #GbsSession. #instance. #loadedClassesIncludingModules. #coreOnly }.
+		{ #GbsSession. #instance. #loadedClassesIncludingModules:. #coreOnly }.
+		{ #GbsSession. #instance. #sessionStateAt:. #coreOnly }.
+		{ #GbsSession. #instance. #sessionStateAt:ifAbsent:. #coreOnly }.
+		{ #GbsSession. #instance. #sessionStateAt:put:. #coreOnly }.
+		{ #GbsSession. #instance. #referencesTo:. #coreOnly }.
+		{ #GbsSession. #instance. #referencesToOop:. #coreOnly }.
+		{ #GbsSession. #instance. #objectsInMemory. #coreOnly }.
+		{ #GbsSession. #instance. #objectsInMemoryFrom:limit:. #coreOnly }.
+		{ #GbsSession. #instance. #objectsInMemoryMatching:. #coreOnly }.
+		{ #GbsSession. #instance. #objectsInMemoryMatching:limit:batchSize:. #coreOnly }.
+		{ #GbsSession. #instance. #objectsInMemoryOf:from:limit:. #coreOnly }.
+		{ #GbsSession. #instance. #objectsInMemoryOf:matching:. #coreOnly }.
+		{ #GbsSession. #instance. #objectsInMemoryOf:matching:limit:batchSize:. #coreOnly }.
+		{ #GbsSession. #instance. #undefineFinalizerFor:. #coreOnly }.
+		{ #GbsSession. #instance. #repository. #coreOnly }.
+		{ #GbsSession. #instance. #repositoryRootFacadeForKey:path:. #coreOnly }.
+		{ #GbsSession. #instance. #repositoryRootLifecycleVersion. #coreOnly }.
+		{ #GbsSession. #instance. #resetAfterLogout. #coreOnly }.
+		{ #GbsSession. #instance. #smalltalk. #coreOnly }.
+		{ #GbsSession. #instance. #symbolDictionaryNamed:. #coreOnly }.
+		{ #GBSM. #class. #chunkedMigrationRunnerFrom:to:. #coreOnly }.
+		{ #GBSM. #class. #commitTransactionOrSignalConflict. #coreOnly }.
+		{ #GBSM. #class. #commitTransactionWithRetryCount:. #coreOnly }.
+		{ #GBSM. #class. #previewMigrationFrom:to:. #coreOnly }.
+		{ #GBSM. #class. #previewMigrationFrom:to:allowAbort:. #coreOnly }.
+		{ #GBSM. #class. #previewMigrationWithSubclassesOf:. #coreOnly }.
+		{ #GBSM. #class. #previewMigrationWithSubclassesOf:allowAbort:. #coreOnly }.
+		{ #GBSM. #class. #migrateInstancesFrom:to:. #coreOnly }.
+		{ #GBSM. #class. #migrateInstancesFrom:to:allowAbort:. #coreOnly }.
+		{ #GBSM. #class. #migrateInstancesWithSubclassesOf:. #coreOnly }.
+		{ #GBSM. #class. #migrateInstancesWithSubclassesOf:allowAbort:. #coreOnly }.
+		{ #GbsSmalltalkFacade. #instance. #bridgeRoot. #coreOnly }.
+		{ #GbxClassVersionBrowser. #instance. #classHistory. #coreOnly }.
+		{ #GbxClassVersionBrowser. #instance. #classHistory:. #coreOnly }.
+		{ #GbxClassVersionBrowser. #instance. #canMigrateInstances. #coreOnly }.
+		{ #GbxClassVersionBrowser. #instance. #getClassList. #coreOnly }.
+		{ #GbxClassVersionBrowser. #instance. #impactSummaryForPlan:. #coreOnly }.
+		{ #GbxClassVersionBrowser. #instance. #latestHolder. #coreOnly }.
+		{ #GbxClassVersionBrowser. #instance. #makeCurrentIn:. #coreOnly }.
+		{ #GbxClassVersionBrowser. #instance. #oldVersionHolders. #coreOnly }.
+		{ #GbxClassVersionBrowser. #instance. #previewMigrationTo:allowAbort:. #coreOnly }.
+		{ #GbxClassVersionBrowser. #instance. #previewMigrationToLatestAllowAbort:. #coreOnly }.
+		{ #GbxClassVersionBrowser. #instance. #previewOldVersionsToLatestAllowAbort:. #coreOnly }.
+		{ #GbxClassVersionBrowser. #instance. #removeOldVersionBindingsFrom:. #coreOnly }.
+		{ #GbxClassVersionBrowser. #instance. #selectedHolder. #coreOnly }.
+		{ #GbxClassVersionBrowser. #instance. #migrateInstancesTo:allowAbort:. #coreOnly }.
+		{ #GbxClassVersionBrowser. #instance. #executePreviewPlan:allowAbort:. #coreOnly }.
+		{ #GbsPlaygroundActions. #class. #gsInspectItIn:. #coreToolsOnly }.
+		{ #GbsPlaygroundActions. #class. #gsBrowseTypedWrapperLifecycleReportIn:. #coreToolsOnly }.
+		{ #GbsPlaygroundActions. #class. #gsBrowseStaleTypedWrapperLifecycleReportIn:. #coreToolsOnly }.
+		{ #GbsPlaygroundActions. #class. #inspectOop:session:. #coreToolsOnly }.
+		{ #GbsPlaygroundActions. #class. #inform:. #coreToolsOnly }.
+		{ #GbsPlaygroundActions. #class. #gsInspectSessionStateKeyIn:. #coreToolsOnly }.
+		{ #GbsPlaygroundActions. #class. #gsBrowseSessionStateKeysReportIn:. #coreToolsOnly }.
+		{ #GbsPlaygroundActions. #class. #gsBrowseObjectsInMemoryReportIn:. #coreToolsOnly }.
+		{ #GbsPlaygroundActions. #class. #requestInput:initialAnswer:. #coreToolsOnly }.
+		{ #GbsPlaygroundActions. #class. #parseSessionStateKeysFrom:. #coreToolsOnly }.
+		{ #GbsPlaygroundActions. #class. #requestPositiveInteger:initialAnswer:. #coreToolsOnly }.
+		{ #GbsWorkspace. #instance. #browseObjectsInMemoryReport. #coreToolsOnly }.
+		{ #GbsWorkspace. #instance. #browsePromptedSessionStateKey. #coreToolsOnly }.
+		{ #GbsWorkspace. #instance. #browsePromptedSessionStateKeysReport. #coreToolsOnly }.
+		{ #GbsWorkspace. #instance. #browseSessionStateAtKey:session:. #coreToolsOnly }.
+		{ #GbsWorkspace. #instance. #browseStaleTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbsWorkspace. #instance. #browseTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbsWorkspace. #instance. #inspectIt. #coreToolsOnly }.
+		{ #GbsWorkspace. #instance. #inspectOop:session:. #coreToolsOnly }.
+		{ #GbsWorkspace. #instance. #parseSessionStateKeysFrom:. #coreToolsOnly }.
+		{ #GbsWorkspace. #instance. #requestInput:initialAnswer:. #coreToolsOnly }.
+		{ #GbsWorkspace. #instance. #requestPositiveInteger:initialAnswer:. #coreToolsOnly }.
+		{ #GbsWorkspace. #instance. #workspaceMenu. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #class. #inspectCurrentUserGlobalsOnCurrentSession. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #class. #openNamespacesOnCurrentSession. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #class. #queryOrganizerMethodsFor:mode:inSession:. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #browseNamedObjectCacheReport. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #browseTypedWrapperAutoloadReport. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #browseTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #browseStaleTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #browseSessionStateReport. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #browsePromptedSessionStateKeysReport. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #browseObjectsInMemoryReport. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #refreshAllTypedWrappers. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #refreshStaleTypedWrappers. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #inspectPromptedSessionStateKey. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #inspectSessionStateAtKey:. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #clearNamedObjectCache. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #menuSession. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #oopForInspectableObject:. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #parseSessionStateKeysFrom:. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #requestPositiveInteger:initialAnswer:. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #inspectCurrentUserGlobals. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #currentUserGlobalsOopIn:. #coreToolsOnly }.
+		{ #GbsClassicLauncher. #instance. #inspectOop:session:. #coreToolsOnly }.
+		{ #GbsMethodQueryResultsPresenter. #instance. #browseNamedObjectCacheReport. #coreToolsOnly }.
+		{ #GbsMethodQueryResultsPresenter. #instance. #browseTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbsMethodQueryResultsPresenter. #instance. #browseStaleTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbsMethodQueryResultsPresenter. #instance. #browsePromptedSessionStateKey. #coreToolsOnly }.
+		{ #GbsMethodQueryResultsPresenter. #instance. #browsePromptedSessionStateKeysReport. #coreToolsOnly }.
+		{ #GbsMethodQueryResultsPresenter. #instance. #browseObjectsInMemoryReport. #coreToolsOnly }.
+		{ #GbsMethodQueryResultsPresenter. #instance. #browseSessionStateAtKey:. #coreToolsOnly }.
+		{ #GbsMethodQueryResultsPresenter. #instance. #browseTypedWrapperAutoloadReport. #coreToolsOnly }.
+		{ #GbsMethodQueryResultsPresenter. #instance. #clearNamedObjectCache. #coreToolsOnly }.
+		{ #GbsMethodQueryResultsPresenter. #instance. #menuSession. #coreToolsOnly }.
+		{ #GbsMethodQueryResultsPresenter. #instance. #parseSessionStateKeysFrom:. #coreToolsOnly }.
+		{ #GbsMethodQueryResultsPresenter. #instance. #requestPositiveInteger:initialAnswer:. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #browsePromptedSessionStateKey. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #browseTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #browseStaleTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #browseSessionStateAtKey:. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #browsePromptedSessionStateKeysReport. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #browseObjectsInMemoryReport. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #buildMenuBar. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #gsBrowseReferencesToSelectedClass. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #methodMenu. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #selectedServerReferenceTargetName. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #requestInput:initialAnswer:. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #uiChooseFrom:title:. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #parseSessionStateKeysFrom:. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #requestPositiveInteger:initialAnswer:. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #sessionMenu. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #serverClassReferenceStrings. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #serverMethodReferencesFor:hierarchyOnly:senders:. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #currentReceiverProxyForServerMethod. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #directStepOverExecutedFrame:. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #directStepWithPrimarySelector:fallbackSelector:. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #fetchContextsDirectly. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #applyFetchedContexts:. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #fetchFullSourceFor:. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #fetchStackFrames. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #forceServerJumpToStepPoint1. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #inform:. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #inspectOop:session:. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #invokeSelectedServerMethod. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #remoteDebugProcess. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #resolveDebugProcessOopFromCurrentProcessOop. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #resolveExecutedFrameLevelFromServer. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #restartUsingDirectTrimFromExecutedFrame. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #returnFromFrame. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #runToCaret. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #selectedStepPointFromCaret. #coreToolsOnly }.
+		{ #GbsRemoteDebugger. #instance. #stepReturn. #coreToolsOnly }.
+		{ #GbsRemoteNamespaceMirror. #instance. #constantEntries. #coreOnly }.
+		{ #GbsRemoteMethodMirror. #instance. #asMethodObject. #coreOnly }.
+		{ #GbsRemoteMethodMirror. #instance. #asUnboundMethodObject. #coreOnly }.
+		{ #GbsRemoteClassMirror. #instance. #methodObjectAt:. #coreOnly }.
+		{ #GbsRemoteClassMirror. #instance. #classMethodObjectAt:. #coreOnly }.
+		{ #GbsNamespaceScopedMethodQuery. #instance. #methodObjectForReference:. #coreOnly }.
+		{ #GbsNamespaceScopedMethodQuery. #instance. #methodObjects. #coreOnly }.
+		{ #GbsBrowser. #instance. #browseNamedObjectCacheReport. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #browsePromptedSessionStateKey. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #browsePromptedSessionStateKeysReport. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #browseSessionStateAtKey:. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #browseTypedWrapperAutoloadReport. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #browseTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #browseStaleTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #browseObjectsInMemoryReport. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #browseClassInfo. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #browseMethodInfo. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #browseVersions. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #classSelected:. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #classInfoTextForMirror:. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #gsInspectIt. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #inspectAllInstances. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #inspectClass. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #inspectDictionary. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #inspectMethod. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #invokeSelectedMethod. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #loadDictionaries. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #menuClass. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #menuMethod. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #methodSelected:. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #openMethodObject:. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #protocolSelected:. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #classSideSelected. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #infoValueForDisplay:. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #inform:. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #inspectOop:. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #methodInfoTextForMirror:. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #selectedClassMirror. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #selectedMethodMirror. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #selectedMethodMirrorForSelector:. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #selectedMethodObject. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #selectedMethodObjectForSelector:. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #selectedUnboundMethodObject. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #selectedUnboundMethodObjectForSelector:. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #versionSummaryCurrent:total:. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #queryServerMethodsForSelector:mode:rootClassName:hierarchyScope:. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #refreshAllTypedWrappers. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #refreshStaleTypedWrappers. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #clearNamedObjectCache. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #menuSession. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #parseSessionStateKeysFrom:. #coreToolsOnly }.
+		{ #GbsBrowser. #instance. #requestPositiveInteger:initialAnswer:. #coreToolsOnly }.
+		{ #GbsInspector. #instance. #browsePromptedSessionStateKey. #coreToolsOnly }.
+		{ #GbsInspector. #instance. #browsePromptedSessionStateKeysReport. #coreToolsOnly }.
+		{ #GbsInspector. #instance. #browseSessionStateAtKey:. #coreToolsOnly }.
+		{ #GbsInspector. #instance. #browseStaleTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbsInspector. #instance. #browseObjectsInMemoryReport. #coreToolsOnly }.
+		{ #GbsInspector. #instance. #browseTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbsInspector. #instance. #browseReportChooser. #coreToolsOnly }.
+		{ #GbsInspector. #instance. #parseSessionStateKeysFrom:. #coreToolsOnly }.
+		{ #GbsInspector. #instance. #requestPositiveInteger:initialAnswer:. #coreToolsOnly }.
+		{ #GbsInspector. #instance. #withShallowMaterializationDo:. #coreToolsOnly }.
+		{ #GbsStructuredValueInspectorPresenter. #instance. #browsePromptedSessionStateKey. #coreToolsOnly }.
+		{ #GbsStructuredValueInspectorPresenter. #instance. #browsePromptedSessionStateKeysReport. #coreToolsOnly }.
+		{ #GbsStructuredValueInspectorPresenter. #instance. #browseSessionStateAtKey:. #coreToolsOnly }.
+		{ #GbsStructuredValueInspectorPresenter. #instance. #browseStaleTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbsStructuredValueInspectorPresenter. #instance. #browseObjectsInMemoryReport. #coreToolsOnly }.
+		{ #GbsStructuredValueInspectorPresenter. #instance. #browseTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbsStructuredValueInspectorPresenter. #instance. #menuEntry. #coreToolsOnly }.
+		{ #GbsStructuredValueInspectorPresenter. #instance. #menuEntryPopup. #coreToolsOnly }.
+		{ #GbsStructuredValueInspectorPresenter. #instance. #parseSessionStateKeysFrom:. #coreToolsOnly }.
+		{ #GbsStructuredValueInspectorPresenter. #instance. #requestPositiveInteger:initialAnswer:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #inspectDictionary. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #browseReferencersForSelectedEntry. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #browseReferencersForSelectedPreviewValue. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #browseReferencersForStructuredPreviewRow:entryKey:path:previewKind:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #browsePromptedSessionStateKey. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #browsePromptedSessionStateKeysReport. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #browseSessionStateAtKey:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #browseStaleTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #browseObjectsInMemoryReport. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #browseReferencersForEntryKey:path:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #browseTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #menuEntry. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #menuPreview. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #openStructuredInspectorForPreview:title:entryKey:path:previewKind:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #refreshDictionariesFor:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #refreshEntriesForDictionary:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #refreshUsers. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #chooseReferencerFrom:title:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #displayStringForReferencer:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #structuredPreviewForEntryKey:path:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #oopForEntryKey:path:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #oopScriptForUser:dictionary:keyName:path:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #inform:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #oopForInspectableObject:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #openInspectorOnOop:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #requestInput:initialAnswer:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #parseSessionStateKeysFrom:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #requestPositiveInteger:initialAnswer:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #referencersInMemoryForOop:. #coreToolsOnly }.
+		{ #GbsSymbolListBrowserPresenter. #instance. #withShallowMaterializationDo:. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #canExecuteOnDebugProcess. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #currentFrameOop. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #currentProcessOop. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #currentReceiverOop. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #cutbackGsTo:. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #isTerminated. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #oopForVariableNamed:. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #recomputeContextList. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #resetServerPCToStepOne. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #restartLevelFromServerStack. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #runDebugProcessCommand:recompute:. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #updateCurrentContextFromContexts:. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #updateContextListFromServerContexts:. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #runDebugProcessCommand:withInteger:recompute:. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #remoteDebugProcess. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #serverStepOverFrameLevel:. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #synchronizeServerProgramCounterAfterRestart. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #legacyCompileLookup. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #legacyCompileResponseForSource:correctingSelector:. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #legacyCorrectedCompileResponseForSource:. #coreToolsOnly }.
+		{ #GbxDebuggerService. #instance. #legacyRecompileResponseForSource:. #coreToolsOnly }.
 		{ #GbxDebuggerService. #instance. #basicReenterServerContext. #toolsOnly }.
+		{ #GbxContextListPolicy. #instance. #buildContextListFromServerContexts:. #coreToolsOnly }.
+		{ #GbxContextListPolicy. #instance. #updateContextListFromServerContexts:. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #buildToolbar. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #browseObjectsInMemoryReport. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #browsePromptedSessionStateKey. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #browsePromptedSessionStateKeysReport. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #browseReferencersInMemory. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #browseReportChooser. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #browseSessionStateAtKey:. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #browseStaleTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #browseTypedWrapperLifecycleReport. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #chooseReferencerFrom:title:. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #displayStringForReferencer:. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #inform:. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #inspectSelected. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #oopForInspectableObject:. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #openTrippyOnOop:. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #parseSessionStateKeysFrom:. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #referencersInMemoryForOop:. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #requestPositiveInteger:initialAnswer:. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #requestString:initialAnswer:. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #selectedInspectableOop. #coreToolsOnly }.
+		{ #GbxTrippy. #instance. #withShallowMaterializationDo:. #coreToolsOnly }.
 		{ #GbsSession. #instance. #objectLog. #maglevOnly }.
 		{ #GbsSession. #instance. #sessionMethods. #maglevOnly }.
 		{ #GbsSession. #instance. #materializeMaglevRuntimeValue:. #maglevOnly }.
@@ -988,6 +1486,11 @@ GemStonePharoContract >> packageOwnershipSelectorFamilySpecs [
 		{ #GbsRemoteNamespaceMirror. #instance. #supportsAutoload. #maglevOnly }.
 		{ #GbsRemoteConstantMirror. #instance. #autoloadFile. #maglevOnly }.
 		{ #GbsRemoteConstantMirror. #instance. #isAutoload. #maglevOnly }.
+		{ #GbsPlaygroundActions. #class. #gsBrowseRubyLoadPathReportIn:. #maglevToolsOnly }.
+		{ #GbsPlaygroundActions. #class. #gsBrowseRubyLoadedFeaturesReportIn:. #maglevToolsOnly }.
+		{ #GbsPlaygroundActions. #class. #gsBrowseRubyPersistentLoadedFeaturesReportIn:. #maglevToolsOnly }.
+		{ #GbsPlaygroundActions. #class. #gsBrowseTopLevelAutoloadRegistrationsReportIn:. #maglevToolsOnly }.
+		{ #GbsPlaygroundActions. #class. #gsBrowseMaglevFinalizerRegistryReportIn:. #maglevToolsOnly }.
 		{ #GbsBrowser. #instance. #addExtensionSessionMenuItemsTo:. #maglevToolsOnly }.
 		{ #GbsBrowser. #instance. #browseRubyLoadPathReport. #maglevToolsOnly }.
 		{ #GbsClassicLauncher. #instance. #addExtensionSessionMenuItemsTo:. #maglevToolsOnly }.
@@ -1001,6 +1504,12 @@ GemStonePharoContract >> packageOwnershipSelectorFamilySpecs [
 		{ #GbsSymbolListBrowserPresenter. #instance. #addExtensionEntryMenuItemsTo:. #maglevToolsOnly }.
 		{ #GbsSymbolListBrowserPresenter. #instance. #addExtensionPreviewMenuItemsTo:. #maglevToolsOnly }.
 		{ #GbsSymbolListBrowserPresenter. #instance. #configureExtensionStructuredInspector:. #maglevToolsOnly }.
+		{ #GbxDebuggerService. #instance. #browseRemoteSelectedMethod. #maglevToolsOnly }.
+		{ #GbxDebuggerService. #instance. #selectedMethodProtocol. #maglevToolsOnly }.
+		{ #GbxDebuggerService. #instance. #selectedRemoteMethodLookup. #maglevToolsOnly }.
+		{ #GbxDebuggerService. #instance. #selectedRemoteMethodMirror. #maglevToolsOnly }.
+		{ #GbxDebuggerService. #instance. #selectedRemoteMethodObject. #maglevToolsOnly }.
+		{ #GbxDebuggerService. #instance. #selectedRemoteUnboundMethodObject. #maglevToolsOnly }.
 		{ #GbxTrippy. #instance. #addExtensionReportOptionsToLabels:actions:. #maglevToolsOnly } }
 ]
 
@@ -1066,11 +1575,14 @@ GemStonePharoContract >> livePreflightSummaryFields [
 GemStonePharoContract >> packageRequirementSpecs [
 	^ {
 		{ 'GemStone-GBS-Converted'. #() }.
-		{ 'GemStone-GBS-MagLev'. #('GemStone-GBS-Converted') }.
+		{ 'GemStone-GBS-Core'. #('GemStone-GBS-Converted') }.
 		{ 'GemStone-GBS-Tools'. #('GemStone-GBS-Converted') }.
+		{ 'GemStone-GBS-Core-Tools'. #('GemStone-GBS-Core' 'GemStone-GBS-Tools') }.
+		{ 'GemStone-GBS-MagLev'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core') }.
 		{ 'GemStone-GBS-MagLev-Tools'. #('GemStone-GBS-Tools' 'GemStone-GBS-MagLev') }.
-		{ 'GemStone-Pharo-Core-Tests'. #('GemStone-GBS-Converted' 'GemStone-GBS-Tools') }.
-		{ 'GemStone-Pharo-Tests'. #('GemStone-Pharo-Core-Tests' 'GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') } }
+		{ 'GemStone-Pharo-Core-Tests'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools') }.
+		{ 'GemStone-Pharo-MagLev-Tests'. #('GemStone-Pharo-Core-Tests' 'GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') }.
+		{ 'GemStone-Pharo-Tests'. #('GemStone-GBS-Converted' 'GemStone-GBS-Tools') } }
 ]
 
 { #category : 'contracts' }
@@ -1078,9 +1590,17 @@ GemStonePharoContract >> verificationLaneSpecs [
 	^ {
 		{ 'core-only'. 'Verify the Smalltalk core without optional MagLev production packages and without deleted legacy surface.'. 'Core-Tests'. #('GemStone-Pharo-Core-Tests'). #('ARCHITECTURE_BOUNDARY_OK' 'PACKAGE_OWNERSHIP_DRIFT_OK' 'NO_COMPAT_SOURCE_SCAN_OK' 'NO_COMPATIBILITY_PROOF_OK' 'BRIDGE_UNIT_REGRESSION_OK' 'BRIDGE_CORE_ONLY_CHECK_OK') }.
 		{ 'bootstrap-smoke'. 'Prove that a clean image can micro-bootstrap the helper package and load the requested group before post-load checks run.'. 'Core-Tests'. #('GemStonePharoReloadBootstrapper' 'GemStonePharoReloadRunner' 'GemStone-Pharo-Core-Tests'). #('CORE_ONLY_CLEAN_RELOAD_DONE' 'BOOTSTRAP_SMOKE_OK' 'BOOTSTRAP_SMOKE_DONE') }.
-		{ 'full'. 'Verify the steady-state developer load plus the live GemStone lane.'. 'Full'. #('GemStone-Pharo-Core-Tests' 'GemStone-Pharo-Tests'). #('ARCHITECTURE_BOUNDARY_OK' 'PACKAGE_OWNERSHIP_DRIFT_OK' 'NO_COMPAT_SOURCE_SCAN_OK' 'NO_COMPATIBILITY_PROOF_OK' 'BRIDGE_UNIT_REGRESSION_OK' 'BRIDGE_LIVE_REGRESSION_OK' 'CLEAN_RELOAD_AND_REGRESSION_RUN_DONE') }.
+		{ 'original-tests'. 'Verify the original/base production and original/base test layer without the generic Core or optional MagLev overlays. This lane proves the base unit layer only.'. 'Original-Tests'. #('GemStone-Pharo-Tests'). #('ARCHITECTURE_BOUNDARY_OK' 'NO_COMPAT_SOURCE_SCAN_OK' 'NO_COMPATIBILITY_PROOF_OK' 'BRIDGE_UNIT_REGRESSION_OK' 'ORIGINAL_TESTS_CHECK_OK') }.
+		{ 'full'. 'Verify the steady-state developer load plus the live GemStone lane.'. 'Full'. #('GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests' 'GemStone-Pharo-Tests'). #('ARCHITECTURE_BOUNDARY_OK' 'PACKAGE_OWNERSHIP_DRIFT_OK' 'NO_COMPAT_SOURCE_SCAN_OK' 'NO_COMPATIBILITY_PROOF_OK' 'BRIDGE_UNIT_REGRESSION_OK' 'BRIDGE_LIVE_REGRESSION_OK' 'CLEAN_RELOAD_AND_REGRESSION_RUN_DONE') }.
 		{ 'artifact-freshness'. 'Verify that the generated contract artifacts and marker-managed doc sections are already up to date.'. 'default'. #('README.md' 'doc/ARCHITECTURE.md' 'doc/GemStone-Pharo-Bridge-User-Manual.html' 'doc/PACKAGE-GRAPH.md' 'doc/PACKAGE-GRAPH.dot' 'doc/PACKAGE-GRAPH.svg' 'doc/LIVE-PREFLIGHT-POLICY.md' 'doc/RELOAD-POLICY.md' 'doc/TESTING.md' 'doc/USER-MANUAL-REFERENCE.html' 'doc/OWNERSHIP-CONTRACT.md' 'doc/VERIFICATION-LANES.md'). #('NO_COMPAT_SOURCE_SCAN_OK' 'CONTRACT_ARTIFACTS_FRESH_OK') }.
-		{ 'verify'. 'Run core-only, bootstrap-smoke, full, artifact-freshness, then the summary-renderer smoke check.'. 'composite'. #('core-only' 'bootstrap-smoke' 'full' 'artifact-freshness' 'summary-renderer'). #('All lane success markers above') } }
+		{ 'verify'. 'Run core-only, bootstrap-smoke, original-tests, full, artifact-freshness, then the summary-renderer smoke check.'. 'composite'. #('core-only' 'bootstrap-smoke' 'original-tests' 'full' 'artifact-freshness' 'summary-renderer'). #('All lane success markers above') } }
+]
+
+{ #category : 'contracts' }
+GemStonePharoContract >> originalLayerExpectedExceptionSpecs [
+	^ {
+		{ 'src/GemStone-Pharo-Tests/GbsTranscriptTest.class.st'. 'Keeps a pragmatic runtime-dependent transcript skip for the current live GemStone runtime.' }.
+		{ 'src/GemStone-Pharo-Tests/MockGbsSession.class.st'. 'Keeps a test-only login-failure shortcut so the restored base GbsSession production file stays clean.' } }
 ]
 
 { #category : 'contracts' }
@@ -1103,19 +1623,27 @@ GemStonePharoContract >> generatedArchitectureBodyMarkdown [
 		stream
 			nextPutAll: 'This section is generated from `GemStonePharoContract`.'; cr; cr;
 			nextPutAll: '## Design Goal'; cr; cr;
+			nextPutAll: '- `56b6db3...` original production/test packages remain the base layer'; cr;
 			nextPutAll: '- `Pharo <-> GemStone Smalltalk` is the primary layer'; cr;
 			nextPutAll: '- MagLev/Ruby behavior is optional'; cr;
 			nextPutAll: '- legacy alias surface stays absent from production'; cr; cr;
 			nextPutAll: '## Package Layers'; cr; cr;
-			nextPutAll: '- core production: `GemStone-GBS-Converted`, `GemStone-GBS-Tools`'; cr;
+			nextPutAll: '- original/base production: `GemStone-GBS-Converted`, `GemStone-GBS-Tools`'; cr;
+			nextPutAll: '- generic overlay production: `GemStone-GBS-Core`, `GemStone-GBS-Core-Tools`'; cr;
 			nextPutAll: '- optional MagLev production: `GemStone-GBS-MagLev`, `GemStone-GBS-MagLev-Tools`'; cr;
-			nextPutAll: '- active tests: `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-Tests`'; cr; cr;
+			nextPutAll: '- test layers: `GemStone-Pharo-Tests`, `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-MagLev-Tests`'; cr; cr;
 			nextPutAll: '## Active Root API'; cr; cr.
 		self activeRootApiSpecs do: [ :each |
 			stream nextPutAll: '- `'; nextPutAll: each; nextPutAll: '`'; cr ].
 		stream cr; nextPutAll: '## Verification Guards'; cr; cr.
 		self boundaryGuardSpecs do: [ :each |
 			stream nextPutAll: '- `'; nextPutAll: each first; nextPutAll: '`'; cr ].
+		stream cr; nextPutAll: '## Expected Original-layer Test Exceptions'; cr; cr;
+			nextPutAll: 'The original/base production layer is clean. `make original-drift` currently reports only these accepted test-layer exceptions:'; cr.
+		self originalLayerExpectedExceptionSpecs do: [ :each |
+			stream
+				nextPutAll: '- `'; nextPutAll: each first; nextPutAll: '`'; cr;
+				nextPutAll: '  '; nextPutAll: each second; cr ].
 		stream cr; nextPutAll: '## Review Artifacts'; cr; cr;
 			nextPutAll: '- [PACKAGE-GRAPH.md](./PACKAGE-GRAPH.md)'; cr;
 			nextPutAll: '- [OWNERSHIP-CONTRACT.md](./OWNERSHIP-CONTRACT.md)'; cr;
@@ -1130,13 +1658,15 @@ GemStonePharoContract >> generatedReadmeBodyMarkdown [
 			nextPutAll: '## Steady-state Contract Summary'; cr; cr;
 			nextPutAll: 'This section is generated from `GemStonePharoContract` and rewritten by `make graph-artifacts`.'; cr; cr;
 			nextPutAll: '### Package Layout'; cr; cr;
-			nextPutAll: '- core production: `GemStone-GBS-Converted`, `GemStone-GBS-Tools`'; cr;
+			nextPutAll: '- original/base production: `GemStone-GBS-Converted`, `GemStone-GBS-Tools`'; cr;
+			nextPutAll: '- generic overlay production: `GemStone-GBS-Core`, `GemStone-GBS-Core-Tools`'; cr;
 			nextPutAll: '- optional MagLev production: `GemStone-GBS-MagLev`, `GemStone-GBS-MagLev-Tools`'; cr;
-			nextPutAll: '- active tests: `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-Tests`'; cr; cr;
+			nextPutAll: '- test layers: `GemStone-Pharo-Tests`, `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-MagLev-Tests`'; cr; cr;
 			nextPutAll: '### Active Root API'; cr; cr.
 		self activeRootApiSpecs do: [ :each |
 			stream nextPutAll: '- `'; nextPutAll: each; nextPutAll: '`'; cr ].
 		stream cr; nextPutAll: '### Baseline Groups'; cr; cr;
+			nextPutAll: '- `Original`, `Original-Tests`'; cr;
 			nextPutAll: '- `Core-Only`, `Core`, `Core-Tools`, `Core-Tests`'; cr;
 			nextPutAll: '- `MagLev-Core`, `MagLev-Tools`, `MagLev`'; cr;
 			nextPutAll: '- `Tools`, `All-Tests`, `Tests`, `Full`, `default`'; cr;
@@ -1149,6 +1679,12 @@ GemStonePharoContract >> generatedReadmeBodyMarkdown [
 				nextPutAll: '- `'; nextPutAll: each first; nextPutAll: '`'; cr;
 				nextPutAll: '  '; nextPutAll: each second; cr;
 				nextPutAll: '  load group: `'; nextPutAll: each third; nextPutAll: '`'; cr ].
+		stream cr; nextPutAll: '### Expected Original-layer Test Exceptions'; cr; cr;
+			nextPutAll: '`make original-drift` reports the original/base production layer as clean and currently accepts only these test-layer exceptions:'; cr.
+		self originalLayerExpectedExceptionSpecs do: [ :each |
+			stream
+				nextPutAll: '- `'; nextPutAll: each first; nextPutAll: '`'; cr;
+				nextPutAll: '  '; nextPutAll: each second; cr ].
 		stream cr; nextPutAll: '### Generated Contract Artifacts'; cr; cr;
 			nextPutAll: 'Standalone generated artifacts:'; cr;
 			nextPutAll: '- [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md)'; cr;
@@ -1195,10 +1731,18 @@ GemStonePharoContract >> generatedTestingBodyMarkdown [
 						do: [ :marker | inner nextPutAll: '`'; nextPutAll: marker; nextPutAll: '`' ]
 						separatedBy: [ inner nextPutAll: ', ' ] ]);
 				cr ].
+		stream cr; nextPutAll: '## Expected Original-layer Test Exceptions'; cr; cr;
+			nextPutAll: '`make original-drift` currently reports the original/base production layer as clean and accepts only these test-layer exceptions:'; cr.
+		self originalLayerExpectedExceptionSpecs do: [ :each |
+			stream
+				nextPutAll: '- `'; nextPutAll: each first; nextPutAll: '`'; cr;
+				nextPutAll: '  '; nextPutAll: each second; cr ].
 		stream cr; nextPutAll: '## Wrapper Entry Points'; cr; cr;
 			nextPutAll: '```bash'; cr;
 			nextPutAll: 'make help'; cr;
 			nextPutAll: 'make core-only'; cr;
+			nextPutAll: 'make original-drift'; cr;
+			nextPutAll: 'make original-tests'; cr;
 			nextPutAll: 'make full'; cr;
 			nextPutAll: 'make verify'; cr;
 			nextPutAll: 'make graph-artifacts'; cr;
@@ -1245,7 +1789,7 @@ GemStonePharoContract >> generatedUserManualOverviewHtml [
 			nextPutAll: '        <tr><th>Load group</th><th>What it contains</th><th>Typical use</th></tr>'; cr;
 			nextPutAll: '      </thead>'; cr;
 			nextPutAll: '      <tbody>'; cr.
-		#('Core' 'Core-Tests' 'MagLev' 'Tests' 'default') do: [ :groupName |
+		#('Original' 'Original-Tests' 'Core' 'Core-Tests' 'MagLev' 'Tests' 'default') do: [ :groupName |
 			| members description |
 			members := (self groupMemberSpecs detect: [ :each | each first = groupName ]) second.
 			description := self groupDescriptionSpecs at: groupName ifAbsent: [ 'load group' ].
@@ -1282,6 +1826,18 @@ GemStonePharoContract >> generatedUserManualTestingHtml [
 				nextPutAll: '</li>'; cr ].
 		stream
 			nextPutAll: '    </ul>'; cr;
+			nextPutAll: '    <h3>Expected Original-layer Test Exceptions</h3>'; cr;
+			nextPutAll: '    <p><code>make original-drift</code> reports the original/base production layer as clean and currently accepts only these test-layer exceptions:</p>'; cr;
+			nextPutAll: '    <ul>'; cr.
+		self originalLayerExpectedExceptionSpecs do: [ :each |
+			stream
+				nextPutAll: '      <li><code>';
+				nextPutAll: each first;
+				nextPutAll: '</code>: ';
+				nextPutAll: each second;
+				nextPutAll: '</li>'; cr ].
+		stream
+			nextPutAll: '    </ul>'; cr;
 			nextPutAll: '    <h3>Generated operator reference</h3>'; cr;
 			nextPutAll: '    <p>'; cr;
 			nextPutAll: '      The contract generates a human-facing steady-state operator reference at'; cr;
@@ -1291,7 +1847,9 @@ GemStonePharoContract >> generatedUserManualTestingHtml [
 			nextPutAll: '    </p>'; cr;
 			nextPutAll: '    <h3>Recommended entry point</h3>'; cr;
 			nextPutAll: '    <pre><code>make help'; cr;
+			nextPutAll: 'make original-drift'; cr;
 			nextPutAll: 'make core-only'; cr;
+			nextPutAll: 'make original-tests'; cr;
 			nextPutAll: 'make full'; cr;
 			nextPutAll: 'make verify'; cr;
 			nextPutAll: 'make artifact-freshness</code></pre>'; cr;
@@ -1313,16 +1871,18 @@ GemStonePharoContract >> generatedUserManualTestingHtml [
 { #category : 'contracts' }
 GemStonePharoContract >> groupDescriptionSpecs [
 	^ Dictionary newFromPairs: {
+		'Original'. 'original/base production packages only'.
+		'Original-Tests'. 'original/base production packages plus the original/base test layer'.
 		'Core-Only'. 'strict converted-core load for boundary checks'.
 		'Core'. 'Smalltalk core bridge only'.
-		'Core-Tools'. 'Smalltalk core plus generic Pharo tools'.
-		'Core-Tests'. 'Smalltalk core, generic tools, and the core-only test suite'.
+		'Core-Tools'. 'Smalltalk core plus the original Pharo tools and the generic core-tools overlay'.
+		'Core-Tests'. 'Smalltalk core, generic tool overlays, and the core-only test suite'.
 		'MagLev-Core'. 'optional MagLev runtime without MagLev-specific tools'.
 		'MagLev-Tools'. 'optional MagLev runtime plus MagLev-specific tool integration'.
 		'MagLev'. 'convenience alias for the MagLev production stack'.
 		'Tools'. 'convenience alias for the generic tools-capable load'.
-		'All-Tests'. 'all active test packages'.
-		'Tests'. 'convenience alias for all active test packages'.
+		'All-Tests'. 'all active core and MagLev-aware test packages'.
+		'Tests'. 'convenience alias for all active core and MagLev-aware test packages'.
 		'Full'. 'full developer load'.
 		'default'. 'alias for `Full`' }
 ]
@@ -1330,8 +1890,10 @@ GemStonePharoContract >> groupDescriptionSpecs [
 { #category : 'contracts' }
 GemStonePharoContract >> productionPackageSummarySpecs [
 	^ {
-		{ 'GemStone-GBS-Converted'. 'Smalltalk core bridge, session transport, repository access, generic mirrors, root facades, and bridge support code.' }.
-		{ 'GemStone-GBS-Tools'. 'Generic Pharo tools and presenters for the Smalltalk core.' }.
+		{ 'GemStone-GBS-Converted'. 'Legacy bridge/session base plus the remaining generic mirrors, repository access, and support code that still lives in the original package.' }.
+		{ 'GemStone-GBS-Core'. 'Generic overlay package for Smalltalk-facing bridge facades and session/manager extensions that can load on top of the original Converted package.' }.
+		{ 'GemStone-GBS-Tools'. 'The original generic Pharo tools and presenters package.' }.
+		{ 'GemStone-GBS-Core-Tools'. 'Generic tool/report overlay package that adds non-MagLev playground and presenter extensions without changing the original Tools package.' }.
 		{ 'GemStone-GBS-MagLev'. 'Optional MagLev/Ruby runtime surface: runtime loading, autoload, proc/binding support, ObjectLog, RC wrappers, and MagLev facades.' }.
 		{ 'GemStone-GBS-MagLev-Tools'. 'Optional MagLev/Ruby tool integration for browsers, workspaces, debuggers, and inspectors.' } }
 ]
@@ -1340,5 +1902,6 @@ GemStonePharoContract >> productionPackageSummarySpecs [
 GemStonePharoContract >> testPackageSummarySpecs [
 	^ {
 		{ 'GemStone-Pharo-Core-Tests'. 'Smalltalk-core-only tests.' }.
+		{ 'GemStone-Pharo-MagLev-Tests'. 'MagLev-only overlay tests that depend on the optional runtime and tool packages.' }.
 		{ 'GemStone-Pharo-Tests'. 'Active full bridge tests, including MagLev-aware behavior.' } }
 ]

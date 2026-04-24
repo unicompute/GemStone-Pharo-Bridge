@@ -29,7 +29,7 @@ GbsProxy >> == anObject [
   "Direct identity check using the Pharo identity primitive"
 
   <primitive: 110>
-  ^ ( anObject isKindOf: GbsProxy ) and: [
+  ^ ( anObject isMemberOf: GbsProxy ) and: [
       self oop = anObject oop and: [ self session == anObject session ] ]
 ]
 
@@ -50,7 +50,7 @@ GbsProxy >> asLocalString [
 { #category : 'class membership' }
 GbsProxy >> class [
 
-  ^ super class
+  ^ GbsProxy
 ]
 
 { #category : 'printing' }
@@ -140,13 +140,12 @@ GbsProxy >> inspectorClass [ ^ Smalltalk at: #StInspector ifAbsent: [ self class
 { #category : 'testing' }
 GbsProxy >> isKindOf: aClass [
 	"Shield this from doesNotUnderstand:"
-	(aClass respondsTo: #inheritsFrom:) ifFalse: [ ^ false ].
-	^ (self class == aClass) or: [ self class inheritsFrom: aClass ]
+	^ (GbsProxy == aClass) or: [ GbsProxy inheritsFrom: aClass ]
 ]
 
 { #category : 'testing' }
 GbsProxy >> isMemberOf: aClass [
-	^ self class == aClass
+	^ GbsProxy == aClass
 ]
 
 { #category : 'testing' }
@@ -181,8 +180,7 @@ GbsProxy >> printString [ ^ String streamContents: [ :s | self printOn: s ]
 ]
 
 { #category : 'class membership' }
-GbsProxy >> respondsTo: aSymbol [
-	^ self class canUnderstand: aSymbol
+GbsProxy >> respondsTo: aSymbol [ ^ GbsProxy includesSelector: aSymbol
 ]
 
 { #category : 'collections' }

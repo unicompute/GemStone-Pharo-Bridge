@@ -359,115 +359,6 @@ GbsRemoteDebugger >> browseSelectedMethod [
 	^ self openServerMethodReference: self selectedServerMethodReference
 ]
 
-{ #category : 'private' }
-GbsRemoteDebugger >> currentReceiverProxyForServerMethod [
-	| receiverOop |
-	session ifNil: [ ^ nil ].
-	service ifNil: [ ^ nil ].
-	receiverOop := self safeServiceCall: [ service currentReceiverOop ] default: nil.
-	receiverOop ifNil: [ ^ nil ].
-	(receiverOop isString and: [ receiverOop isEmpty not ]) ifTrue: [
-		receiverOop := [ receiverOop asInteger ] on: Error do: [ nil ] ].
-	(receiverOop isNumber and: [ receiverOop > 20 ]) ifFalse: [ ^ nil ].
-	^ session objectForOop: receiverOop
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> browsePromptedSessionStateKey [
-	| rawKey key |
-	session ifNil: [
-		self inform: 'No GemStone session available.'.
-		^ false ].
-	rawKey := self requestInput: 'Session state key:' initialAnswer: '19'.
-	(rawKey isNil or: [ rawKey trimBoth isEmpty ]) ifTrue: [ ^ false ].
-	key := [ rawKey trimBoth asInteger ]
-		on: Error
-		do: [ nil ].
-	key ifNil: [
-		self inform: 'Enter a numeric session state key.'.
-		^ false ].
-	^ self browseSessionStateAtKey: key
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> browseTypedWrapperLifecycleReport [
-	session ifNil: [
-		self inform: 'No GemStone session available.'.
-		^ false ].
-	self inform: session typedWrapperLifecycleReportText.
-	^ true
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> browseStaleTypedWrapperLifecycleReport [
-	| report staleEntries |
-	session ifNil: [
-		self inform: 'No GemStone session available.'.
-		^ false ].
-	report := session typedWrapperLifecycleReport.
-	staleEntries := report staleEntries.
-	staleEntries isEmpty ifTrue: [
-		self inform: 'Typed Wrapper Lifecycle', String cr, String cr, 'No stale typed wrappers.'.
-		^ true ].
-	self inform: (GbsTypedWrapperLifecycleReport entries: staleEntries) text.
-	^ true
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> browseSessionStateAtKey: aKey [
-	| sessionStateValue oop |
-	session ifNil: [
-		self inform: 'No GemStone session available.'.
-		^ false ].
-	sessionStateValue := [ session sessionStateAt: aKey ]
-		on: Error
-		do: [ :ex |
-			self inform: 'Session state lookup failed: ', ex messageText.
-			^ false ].
-	sessionStateValue ifNil: [
-		self inform: 'Session state key ', aKey printString, ' is not set.'.
-		^ false ].
-	oop := [ sessionStateValue oop ]
-		on: Error
-		do: [ nil ].
-	oop ifNil: [
-		((sessionStateValue isInteger) and: [ sessionStateValue > 20 ])
-			ifTrue: [ oop := sessionStateValue ] ].
-	oop ifNil: [
-		self inform: 'Session state key ', aKey printString, ' does not currently have an inspectable remote oop.'.
-		^ false ].
-	^ self inspectOop: oop session: session
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> browsePromptedSessionStateKeysReport [
-	| rawKeys keys |
-	session ifNil: [
-		self inform: 'No GemStone session available.'.
-		^ false ].
-	rawKeys := self requestInput: 'Session state keys (comma-separated):' initialAnswer: '19'.
-	keys := self parseSessionStateKeysFrom: rawKeys.
-	keys ifNil: [
-		self inform: 'Enter one or more numeric session state keys.'.
-		^ false ].
-	self inform: (session objectSpaceDiagnostics reportTextForKeys: keys).
-	^ true
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> browseObjectsInMemoryReport [
-	| start limit |
-	session ifNil: [
-		self inform: 'No GemStone session available.'.
-		^ false ].
-	start := self requestPositiveInteger: 'Object scan start index:' initialAnswer: '1'.
-	start ifNil: [ ^ false ].
-	limit := self requestPositiveInteger: 'Object scan limit:' initialAnswer: '25'.
-	limit ifNil: [ ^ false ].
-	self inform: (session objectSpaceDiagnostics objectsInMemoryReportFrom: start limit: limit) text.
-	^ true
-]
-
 { #category : 'menus' }
 GbsRemoteDebugger >> buildMenuBar [
 	^ self newMenuBar
@@ -476,8 +367,7 @@ GbsRemoteDebugger >> buildMenuBar [
 			group addItem: [ :item | item name: 'Method'; subMenu: self methodMenu ].
 			group addItem: [ :item | item name: 'Edit'; subMenu: self editMenu ].
 			group addItem: [ :item | item name: 'Execute'; subMenu: self executeMenu ].
-			group addItem: [ :item | item name: 'Correct'; subMenu: self correctMenu ].
-			group addItem: [ :item | item name: 'Session'; subMenu: self sessionMenu ] ];
+			group addItem: [ :item | item name: 'Correct'; subMenu: self correctMenu ] ];
 		yourself
 ]
 
@@ -619,7 +509,7 @@ GbsRemoteDebugger >> chooseMethodReferenceFrom: references title: aTitle [
 	| labels index |
 	(references isCollection and: [ references isEmpty not ]) ifFalse: [ ^ nil ].
 	labels := references collect: [ :each | each asString ].
-	index := self uiChooseFrom: labels title: aTitle.
+	index := UIManager default chooseFrom: labels title: aTitle.
 	index = 0 ifTrue: [ ^ nil ].
 	^ labels at: index
 ]
@@ -887,7 +777,7 @@ GbsRemoteDebugger >> defaultLayout [
 
 { #category : 'private' }
 GbsRemoteDebugger >> directStepOverExecutedFrame: stepIntoBoolean [
-	| level effectiveLevel |
+	| level effectiveLevel raw value script |
 	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
 	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ false ].
 
@@ -900,22 +790,84 @@ GbsRemoteDebugger >> directStepOverExecutedFrame: stepIntoBoolean [
 	
 	effectiveLevel := self resolveExecutedFrameLevelFromServer.
 	(effectiveLevel isNumber and: [ effectiveLevel > 0 ]) ifTrue: [ level := effectiveLevel ].
-	^ self remoteDebugProcess
-		stepOverExecutedFrameLevel: level
-		stepInto: stepIntoBoolean
+	stepIntoBoolean ifTrue: [ level := level bitOr: 16r100000000 ].
+
+	script := '[
+		| obj proc stepLevel ok |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc isNil or: [ (proc respondsTo: #perform:with:) not ]) ifTrue: [ ^ ''false'' ].
+		stepLevel := ', level asString, '.
+		ok := [ proc perform: #_stepOverInFrame: with: stepLevel ] on: Error do: [ nil ].
+		ok isNil ifTrue: [ ^ ''false'' ].
+		''true''
+	] value'.
+
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	raw ifNil: [ ^ false ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	value := (raw respondsTo: #asString)
+		ifTrue: [ raw asString asLowercase ]
+		ifFalse: [ '' ].
+	^ value = 'true' or: [ value = '1' or: [ value = 'ok' ] ]
 ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> directStepWithPrimarySelector: primarySelector fallbackSelector: fallbackSelector [
-	| level |
+	| level script raw value |
 	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
 	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ false ].
 	level := self currentSelectedFrameLevel.
 	level ifNil: [ level := 1 ].
-	^ self remoteDebugProcess
-		performStepSelector: primarySelector
-		fallbackSelector: fallbackSelector
-		atLevel: level
+
+	script := '[
+		| obj proc level selector ok |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc isNil or: [ (proc respondsTo: #perform:with:) not ]) ifTrue: [ ^ ''false'' ].
+		level := ', level asString, '.
+		selector := #', primarySelector, '.
+		ok := [ proc perform: selector with: level ] on: Error do: [ nil ].
+		(ok isNil and: [ ''', (fallbackSelector ifNil: '' ifNotNil: [ fallbackSelector ]), ''' notEmpty ]) ifTrue: [
+			ok := [ proc perform: #', (fallbackSelector ifNil: '_doesNotExist:' ifNotNil: [ fallbackSelector ]), ' with: level ] on: Error do: [ nil ]
+		].
+		ok isNil ifTrue: [ ^ ''false'' ].
+		''true''
+	] value'.
+
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	raw ifNil: [ ^ false ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	value := (raw respondsTo: #asString)
+		ifTrue: [ raw asString asLowercase ]
+		ifFalse: [ '' ].
+	^ value = 'true' or: [ value = '1' or: [ value = 'ok' ] ]
 ]
 
 { #category : 'menus' }
@@ -984,37 +936,180 @@ GbsRemoteDebugger >> executeMenu [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> fetchContextsDirectly [
-	processOop ifNil: [ ^ #() ].
-	processOop = 0 ifTrue: [ ^ #() ].
-	^ self remoteDebugProcess contextActivations
-]
+	"Fetch contexts by walking the context sender chain"
+	| script rawData contexts |
 
-{ #category : 'private' }
-GbsRemoteDebugger >> applyFetchedContexts: contexts [
-	contextList := contexts ifNil: [ #( ) ].
-	contextList ifEmpty: [
-		stackList items: #('No stack frames available - error occurred in GemStone').
-		self setSourceText: ''.
-		self clearSourceHighlight.
-		self setVariableTableItems: #().
-		self setReceiverInfoItems: #().
-		self setFrameInfoItems: #().
-		self setProcessInfoItems: #().
-		self refreshUiState.
-		^ self ].
-	stackList items: (contextList collect: [ :ctx | ctx printString ]).
+	processOop ifNil: [
+		^ #( )
+	].
+	processOop = 0 ifTrue: [
+		^ #( )
+	].
 
-	contextList ifNotEmpty: [
-		| preferredIndex |
-		preferredIndex := self preferredInitialContextIndex.
-		stackList selectIndex: preferredIndex.
-		self contextSelected: (contextList at: preferredIndex) ].
-	self refreshUiState
+	script := '[
+		| obj ctx proc stream depth level stackReport fullEntry selectorName methodName className quickStep offsets offsetsText lineNumber sourceText offset |
+		obj := Object _objectForOop: ', processOop asString, '.
+		stream := WriteStream on: String new.
+		obj ifNil: [ ^ '''' ].
+		ctx := nil.
+		proc := nil.
+		(obj respondsTo: #sender) ifTrue: [ ctx := obj ].
+		(ctx isNil and: [ obj respondsTo: #topContext ])
+			ifTrue: [ ctx := [ obj topContext ] on: Error do: [ nil ] ].
+		(ctx isNil and: [ obj respondsTo: #process ])
+			ifTrue: [ proc := [ obj process ] on: Error do: [ nil ] ].
+		(proc isNil and: [ obj respondsTo: #_gsiStackReportFromLevel:toLevel: ])
+			ifTrue: [ proc := obj ].
+		(ctx isNil and: [ proc notNil and: [ proc respondsTo: #topContext ] ])
+			ifTrue: [ ctx := [ proc topContext ] on: Error do: [ nil ] ].
+
+		"Preferred path: process stack report (works when topContext is unavailable)"
+		(proc notNil and: [ proc respondsTo: #_gsiStackReportFromLevel:toLevel: ]) ifTrue: [
+			level := 1.
+			[ level <= 30 ] whileTrue: [
+				stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
+				(stackReport isNil or: [ stackReport size < 2 ])
+					ifTrue: [ level := 31 ]
+					ifFalse: [
+						fullEntry := stackReport at: 2.
+						className := [ fullEntry first inClass name ] on: Error do: [ ''<unknown>'' ].
+						selectorName := [ (fullEntry at: 4) asString ] on: Error do: [ ''<unknown>'' ].
+						methodName := [ (fullEntry first selector) asString ] on: Error do: [ ''<unknown>'' ].
+						quickStep := [ (fullEntry at: 5) ] on: Error do: [ 0 ].
+						quickStep ifNil: [ quickStep := 0 ].
+						offsets := [ fullEntry at: 6 ] on: Error do: [ #() ].
+						offsets ifNil: [ offsets := #() ].
+						offsetsText := String streamContents: [ :offsetStream |
+							1 to: offsets size do: [ :idx |
+								| raw |
+								raw := offsets at: idx.
+								raw isNil
+									ifTrue: [ offsetStream nextPutAll: ''nil'' ]
+									ifFalse: [ offsetStream nextPutAll: raw asString ].
+								idx < offsets size ifTrue: [ offsetStream nextPut: $, ]
+							]
+						].
+						lineNumber := 0.
+						sourceText := [ (fullEntry at: 9) asString ] on: Error do: [ '''' ].
+						sourceText ifNil: [ sourceText := '''' ].
+						(quickStep isNumber and: [ quickStep > 0 and: [ quickStep <= offsets size ] ]) ifTrue: [
+							offset := [ (offsets at: quickStep) asInteger ] on: Error do: [ nil ].
+							(offset isNumber and: [ offset > 0 ]) ifTrue: [
+								lineNumber := 1.
+								1 to: ((offset - 1) min: sourceText size) do: [ :i |
+									| ch |
+									ch := sourceText at: i.
+									(ch = Character lf or: [ ch = Character cr ]) ifTrue: [ lineNumber := lineNumber + 1 ]
+								]
+							]
+						].
+						stream
+							nextPutAll: level asString; tab;
+							nextPutAll: className; tab;
+							nextPutAll: selectorName; tab;
+							nextPutAll: methodName; tab;
+							nextPutAll: quickStep asString; tab;
+							nextPutAll: offsetsText; tab;
+							nextPutAll: lineNumber asString;
+							lf.
+						level := level + 1
+					]
+			].
+			stream position > 0 ifTrue: [ ^ stream contents ].
+		].
+
+		ctx ifNil: [ ^ ''<ctx is nil>'' ].
+		depth := 0.
+		[ ctx notNil and: [ depth < 30 ] ] whileTrue: [
+			className := [ ctx method inClass name ] on: Error do: [ ''<unknown>'' ].
+			depth := depth + 1.
+			stream
+				nextPutAll: depth asString; tab;
+				nextPutAll: className; tab;
+				nextPutAll: (([ ctx selector asString ] on: Error do: [ ''<unknown>'' ])); tab;
+				nextPutAll: (([ ctx method ifNil: [ ''<unknown>'' ] ifNotNil: [ :m | m selector asString ] ] on: Error do: [ ''<unknown>'' ]));
+				lf.
+			ctx := [ ctx sender ] on: Error do: [ nil ].
+		].
+		stream contents
+	] value'.
+
+	[
+		rawData := session evaluate: script.
+		(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
+		rawData ifNil: [ rawData := '' ].
+	] on: Error do: [ :ex |
+		^ #( )
+	].
+
+	rawData ifNil: [
+		^ #( )
+	].
+	rawData = false ifTrue: [
+		^ #( )
+	].
+	(rawData respondsTo: #isEmpty) ifFalse: [
+		^ #( )
+	].
+	rawData isEmpty ifTrue: [
+		^ #( )
+	].
+
+	contexts := (rawData splitOn: Character lf)
+		collect: [ :line |
+			| parts levelValue classValue selectorValue methodValue quickStepValue offsetsTokens offsetsValue lineNumberValue |
+			line isEmpty ifTrue: [ nil ] ifFalse: [
+				parts := line splitOn: Character tab.
+				parts size >= 3 ifTrue: [
+					levelValue := ([ parts first asInteger ] on: Error do: [ 1 ]).
+					classValue := (parts size >= 2 ifTrue: [ parts at: 2 ] ifFalse: [ '<unknown>' ]).
+					selectorValue := (parts size >= 3 ifTrue: [ parts at: 3 ] ifFalse: [ '<unknown>' ]).
+					methodValue := (parts size >= 4 ifTrue: [ parts at: 4 ] ifFalse: [ selectorValue ]).
+					quickStepValue := (parts size >= 5
+						ifTrue: [ [ (parts at: 5) asInteger ] on: Error do: [ 0 ] ]
+						ifFalse: [ 0 ]).
+					offsetsTokens := (parts size >= 6
+						ifTrue: [ (parts at: 6) splitOn: $, ]
+						ifFalse: [ #() ]).
+					lineNumberValue := (parts size >= 7
+						ifTrue: [ [ (parts at: 7) asInteger ] on: Error do: [ 0 ] ]
+						ifFalse: [ 0 ]).
+					offsetsValue := offsetsTokens collect: [ :token |
+						| cleaned |
+						cleaned := token withBlanksTrimmed.
+						cleaned isEmpty ifTrue: [ nil ] ifFalse: [
+							cleaned = 'nil'
+								ifTrue: [ nil ]
+								ifFalse: [ [ cleaned asInteger ] on: Error do: [ nil ] ]
+						]
+					].
+					[ | activation |
+					activation := GbxActivation new.
+					(activation respondsTo: #session:)
+						ifTrue: [ activation session: session ]
+						ifFalse: [ activation instVarNamed: 'session' put: session ].
+					activation
+						processOop: processOop;
+						level: levelValue;
+						methodClass: classValue;
+						selector: ([ selectorValue asSymbol ] on: Error do: [ #unknown ]);
+						gsMethodId: methodValue;
+						quickStepPoint: quickStepValue;
+						sourceOffsets: offsetsValue;
+						sourceString: '';
+						ipOffset: lineNumberValue;
+						yourself
+					] on: Error do: [ nil ]
+				]
+			]
+		] thenSelect: #isNotNil.
+
+	^ contexts
 ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> fetchFullSourceFor: aContext [
-	| ctxProcessOop levelValue |
+	| ctxProcessOop levelValue script raw |
 	aContext ifNil: [ ^ '' ].
 	session ifNil: [ ^ '' ].
 	levelValue := (aContext respondsTo: #level)
@@ -1025,10 +1120,57 @@ GbsRemoteDebugger >> fetchFullSourceFor: aContext [
 		ifTrue: [ aContext processOop ]
 		ifFalse: [ processOop ].
 	(ctxProcessOop isNil or: [ ctxProcessOop = 0 ]) ifTrue: [ ^ '' ].
-	^ (GbsRemoteDebugProcessFacade
-		on: session
-		processOop: ctxProcessOop)
-			fullSourceAtLevel: levelValue
+
+	script := '[
+		| obj stackReport fullEntry src ctx i |
+		obj := Object _objectForOop: ', ctxProcessOop asString, '.
+		obj ifNil: [ ^ '''' ].
+		stackReport := [ obj _gsiStackReportFromLevel: ', levelValue asString, ' toLevel: ', levelValue asString, ' ] on: Error do: [ nil ].
+		src := ''''.
+		(stackReport notNil and: [ stackReport size >= 2 ]) ifTrue: [
+			fullEntry := stackReport at: 2.
+			(fullEntry notNil and: [ fullEntry size >= 9 ]) ifTrue: [
+				src := [ fullEntry at: 9 ] on: Error do: [ '''' ].
+				src ifNil: [ src := '''' ].
+				src := src asString.
+			]
+		].
+
+		"Fallback for do-it frames where stack report source can be truncated."
+		((src includes: Character lf) not) ifTrue: [
+			ctx := nil.
+			(obj respondsTo: #topContext)
+				ifTrue: [ ctx := [ obj topContext ] on: Error do: [ nil ] ].
+			(ctx isNil and: [ obj respondsTo: #sender ])
+				ifTrue: [ ctx := obj ].
+			ctx ifNotNil: [
+				i := 1.
+				[ i < ', levelValue asString, ' and: [ ctx notNil ] ] whileTrue: [
+					ctx := [ ctx sender ] on: Error do: [ nil ].
+					i := i + 1
+				].
+				ctx ifNotNil: [
+					src := [ ctx sourceCode ] on: Error do: [ src ].
+					src ifNil: [ src := '''' ].
+					src := src asString.
+				]
+			]
+		].
+
+		src isEmpty ifTrue: [ ^ '''' ].
+		src := src
+			copyReplaceAll: String cr with: ''<CR>'';
+			copyReplaceAll: String lf with: ''<LF>'';
+			copyReplaceAll: Character tab asString with: ''<TAB>''.
+		src
+	] value'.
+
+	raw := [ session evaluate: script ] on: Error do: [ '' ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	raw ifNil: [ ^ '' ].
+	^ ((raw copyReplaceAll: '<TAB>' with: Character tab asString)
+		copyReplaceAll: '<CR>' with: String cr;
+		copyReplaceAll: '<LF>' with: String lf)
 ]
 
 { #category : 'actions' }
@@ -1062,7 +1204,31 @@ GbsRemoteDebugger >> fetchStackFrames [
 			contexts := self fetchContextsDirectly.
 		].
 	].
-	self applyFetchedContexts: contexts
+
+	contextList := contexts ifNil: [ #( ) ].
+	contextList ifEmpty: [
+		stackList items: #('No stack frames available - error occurred in GemStone').
+		self setSourceText: ''.
+		self clearSourceHighlight.
+		self setVariableTableItems: #().
+		self setReceiverInfoItems: #().
+		self setFrameInfoItems: #().
+		self setProcessInfoItems: #().
+		self refreshUiState.
+		^ self
+	].
+	stackList items: (contextList collect: [ :ctx | ctx printString ]).
+
+	contextList ifNotEmpty: [
+		| preferredIndex |
+		"We no longer unconditionally mark the first context here.
+		Executed code frames are identified by their class/selector in printString.
+		Special marking/resetting for Restart is handled in normalizeRestartSelectionAndPosition."
+		preferredIndex := self preferredInitialContextIndex.
+		stackList selectIndex: preferredIndex.
+		self contextSelected: (contextList at: preferredIndex)
+	].
+	self refreshUiState.
 ]
 
 { #category : 'actions' }
@@ -1128,16 +1294,102 @@ GbsRemoteDebugger >> forceExecutedFrameToStepOneAfterRestart [
 
 { #category : 'private' }
 GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
-	| level |
+	"Force the server process to jump to step point 1.
+	This is critical for correct stepping after restart.
+	
+	The _trimStackToLevel: method resets the stack, but we also need to ensure
+	the server's internal PC is reset. We do this by calling _trimStackToLevel: 
+	again at the executed code frame level to force a PC reset."
+	| script raw level |
 	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
+
 	(service notNil and: [ service respondsTo: #resetServerPCToStepOne ]) ifTrue: [
 		^ self safeServiceCall: [ service resetServerPCToStepOne ] default: false
 	].
-
+	
+	"Get the executed code frame level from server"
 	level := self resolveExecutedFrameLevelFromServer.
 	level ifNil: [ level := 1 ].
-	^ self remoteDebugProcess
-		resetProgramCounterToStepOneAtLevel: level
+
+	script := '[
+		| obj proc tc restartLevel stackReport fullEntry quick |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ false ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		proc isNil ifTrue: [ ^ false ].
+		
+		restartLevel := ', level asString, '.
+		
+		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
+			[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ]
+		].
+
+		"Check current step point at the executed code frame level"
+		quick := 0.
+		stackReport := [ proc _gsiStackReportFromLevel: restartLevel toLevel: restartLevel ] on: Error do: [ nil ].
+		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
+			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+			fullEntry ifNotNil: [
+				quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ]
+			]
+		].
+		
+		"If already at step 1, nothing to do"
+		quick <= 1 ifTrue: [ ^ true ].
+		
+		(proc respondsTo: #_gsiStepAtLevel:step:) ifTrue: [
+			[ proc _gsiStepAtLevel: restartLevel step: 1 ] on: Error do: [ ]
+		].
+		(proc respondsTo: #jumpToStepPoint:) ifTrue: [
+			[ proc jumpToStepPoint: 1 ] on: Error do: [ ].
+		].
+		(proc respondsTo: #runToStepPoint:) ifTrue: [
+			[ proc runToStepPoint: 1 ] on: Error do: [ ]
+		].
+
+		tc := [ proc topContext ] on: Error do: [ nil ].
+		tc notNil ifTrue: [
+			2 to: restartLevel do: [ :ignored |
+				tc := [ tc sender ] on: Error do: [ nil ].
+				tc ifNil: [ ignored := restartLevel ]
+			].
+			tc ifNotNil: [
+				(tc respondsTo: #jumpToStepPoint:) ifTrue: [
+					[ tc jumpToStepPoint: 1 ] on: Error do: [ ]
+				].
+				(tc respondsTo: #runToStepPoint:) ifTrue: [
+					[ tc runToStepPoint: 1 ] on: Error do: [ ]
+				]
+			]
+		].
+		
+		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ].
+
+		quick := 0.
+		stackReport := [ proc _gsiStackReportFromLevel: restartLevel toLevel: restartLevel ] on: Error do: [ nil ].
+		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
+			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+			fullEntry ifNotNil: [
+				quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ]
+			]
+		].
+		quick <= 1
+	] value'.
+
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	^ raw = true or: [ raw = 'true' ]
 ]
 
 { #category : 'private' }
@@ -1192,20 +1444,6 @@ GbsRemoteDebugger >> gsBrowseAllReferencesFor: aSelector [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> gsBrowseReferencesToSelectedClass [
-	| targetName references selected |
-	targetName := self selectedServerReferenceTargetName.
-	targetName ifNil: [ ^ false ].
-	references := self serverClassReferenceStrings.
-	references isEmpty ifTrue: [
-		UIManager default inform: 'No matching GemStone methods found.'.
-		^ false ].
-	selected := self chooseMethodReferenceFrom: references title: 'References to ', targetName.
-	selected ifNil: [ ^ false ].
-	^ self openServerMethodReference: selected
-]
-
-{ #category : 'private' }
 GbsRemoteDebugger >> gsBrowseQueryFor: aSelector hierarchyOnly: hierarchyOnly senders: sendersOnly [
 	| references selected |
 	aSelector ifNil: [ ^ false ].
@@ -1217,19 +1455,6 @@ GbsRemoteDebugger >> gsBrowseQueryFor: aSelector hierarchyOnly: hierarchyOnly se
 	selected := self chooseMethodReferenceFrom: references title: 'GemStone Methods'.
 	selected ifNil: [ ^ false ].
 	^ self openServerMethodReference: selected
-]
-
-{ #category : 'actions' }
-GbsRemoteDebugger >> invokeSelectedServerMethod [
-	| result |
-	result := [ self invokeSelectedServerMethodObject ] on: Error do: [ :ex |
-		self inform: 'GemStone invoke failed: ', ex messageText.
-		^ false ].
-	result ifNil: [
-		self inform: 'No GemStone method selected.'.
-		^ false ].
-	self inform: 'GemStone method result: ', result printString.
-	^ true
 ]
 
 { #category : 'private' }
@@ -1325,13 +1550,6 @@ GbsRemoteDebugger >> informUnsupported: aString [
 	(UIManager default respondsTo: #inform:)
 		ifTrue: [ UIManager default inform: aString ].
 	^ false
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> inform: aString [
-	(UIManager default respondsTo: #inform:)
-		ifTrue: [ UIManager default inform: aString ].
-	^ aString
 ]
 
 { #category : 'initialization' }
@@ -1459,11 +1677,6 @@ GbsRemoteDebugger >> inspectReceiver [
 GbsRemoteDebugger >> inspectStack [
 	(self openInspectorClassNamed: #GbxStackInspector) ifTrue: [ ^ true ].
 	^ self inspectFrame
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> inspectOop: anOop session: aSession [
-	GbsInspector inspect: anOop session: aSession
 ]
 
 { #category : 'actions' }
@@ -1608,8 +1821,6 @@ GbsRemoteDebugger >> methodMenu [
 	^ self newMenu
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Browse'; action: [ self browseSelectedMethod ] ].
-			self addExtensionMethodMenuItemsTo: group.
-			group addItem: [ :item | item name: 'GS-Class References'; action: [ self gsBrowseReferencesToSelectedClass ] ].
 			group addItem: [ :item | item name: 'GS-Senders'; subMenu: self gsSendersQuerySubMenu ].
 			group addItem: [ :item | item name: 'GS-Implementors'; subMenu: self gsImplementorsQuerySubMenu ].
 			group addItem: [ :item | item name: 'GS-Hierarchy Senders'; subMenu: self gsHierarchySendersQuerySubMenu ].
@@ -1894,16 +2105,134 @@ GbsRemoteDebugger >> resetServerPCToStepOneIfNeeded [
 
 { #category : 'private' }
 GbsRemoteDebugger >> resolveDebugProcessOopFromCurrentProcessOop [
+	| script raw resolved |
 	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ nil ].
 	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ nil ].
-	^ self remoteDebugProcess resolvedProcessOop
+
+	script := '[
+		| obj candidate top hasStack |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''0'' ].
+
+		hasStack := [ :proc |
+			| report |
+			(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ false ] ifFalse: [
+				report := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
+				(report notNil and: [ (report respondsTo: #size) and: [ report size >= 2 ] ])
+			]
+		].
+
+		(hasStack value: obj) ifTrue: [ ^ (Reflection oopOf: obj) asString ].
+
+		candidate := (obj respondsTo: #serverProcess)
+			ifTrue: [ [ obj serverProcess ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+
+		candidate := (obj respondsTo: #process)
+			ifTrue: [ [ obj process ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+
+		top := (obj respondsTo: #topContext)
+			ifTrue: [ [ obj topContext ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		top ifNotNil: [
+			candidate := (top respondsTo: #process)
+				ifTrue: [ [ top process ] on: Error do: [ nil ] ]
+				ifFalse: [ nil ].
+			(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+			(hasStack value: top) ifTrue: [ ^ (Reflection oopOf: top) asString ].
+		].
+
+		(obj respondsTo: #sender) ifTrue: [
+			candidate := (obj respondsTo: #process)
+				ifTrue: [ [ obj process ] on: Error do: [ nil ] ]
+				ifFalse: [ nil ].
+			(hasStack value: candidate) ifTrue: [ ^ (Reflection oopOf: candidate) asString ].
+		].
+
+		''0''
+	] value'.
+
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	raw ifNil: [ ^ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	resolved := [ raw asString asInteger ] on: Error do: [ nil ].
+	^ resolved
 ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> resolveExecutedFrameLevelFromServer [
+	| script raw lines |
 	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ nil ].
 	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ nil ].
-	^ self remoteDebugProcess restartLevelFromServerStack
+
+	script := '[
+		| obj proc stream maxDepth level stackReport fullEntry methodOrNil className selectorName |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ '''' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ ^ '''' ].
+		stream := WriteStream on: String new.
+		maxDepth := 200.
+		level := 1.
+		[ level <= maxDepth ] whileTrue: [
+			stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
+			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
+				ifFalse: [ level := maxDepth + 1 ]
+				ifTrue: [
+					fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+					fullEntry isNil
+						ifTrue: [ level := maxDepth + 1 ]
+						ifFalse: [
+							methodOrNil := ((fullEntry respondsTo: #at:) and: [ fullEntry size >= 1 ])
+								ifTrue: [ [ fullEntry at: 1 ] on: Error do: [ nil ] ]
+								ifFalse: [ nil ].
+							className := [ methodOrNil inClass name asString ] on: Error do: [ ''nil'' ].
+							selectorName := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ]
+								on: Error do: [ ''nil'' ].
+							stream
+								nextPutAll: level asString; tab;
+								nextPutAll: className; tab;
+								nextPutAll: selectorName;
+								lf.
+							level := level + 1
+						]
+				]
+		].
+		stream contents
+	] value'.
+
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	raw ifNil: [ ^ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	(raw respondsTo: #splitOn:) ifFalse: [ ^ nil ].
+	lines := raw splitOn: Character lf.
+	lines do: [ :line |
+		| parts className selectorName |
+		parts := line splitOn: Character tab.
+		parts size >= 3 ifTrue: [
+			className := [ (parts at: 2) asString ] on: Error do: [ '' ].
+			selectorName := [ (parts at: 3) asString ] on: Error do: [ '' ].
+			((className = 'nil' or: [ className = '<unknown>' ])
+				and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ])
+				ifTrue: [ ^ [ parts first asInteger ] on: Error do: [ nil ] ]
+		]
+	].
+	^ nil
 ]
 
 { #category : 'private' }
@@ -1938,13 +2267,93 @@ GbsRemoteDebugger >> restartNeedsServerRewind [
 
 { #category : 'private' }
 GbsRemoteDebugger >> restartUsingDirectTrimFromExecutedFrame [
-	| targetLevel |
+	| script raw value targetLevel |
 	(session isNil or: [ processOop isNil ]) ifTrue: [ ^ false ].
 	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ false ].
 	targetLevel := self currentSelectedFrameLevel.
 	((targetLevel isNumber and: [ targetLevel > 0 ]) not) ifTrue: [ targetLevel := 1 ].
-	^ self remoteDebugProcess
-		restartUsingTrimAtExecutedFrameLevelOr: targetLevel
+
+	script := '[
+		| obj proc restartLevel stackReport fullEntry quick level maxDepth methodOrNil className selectorName |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ ^ ''false'' ].
+
+		"Prefer the executed-code frame level (nil class + nil selector) from server stack."
+		restartLevel := ', targetLevel asString, '.
+		level := 1.
+		maxDepth := 200.
+		[ level <= maxDepth ] whileTrue: [
+			stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
+			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
+				ifFalse: [ level := maxDepth + 1 ]
+				ifTrue: [
+					fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+					fullEntry isNil
+						ifTrue: [ level := maxDepth + 1 ]
+						ifFalse: [
+							methodOrNil := ((fullEntry respondsTo: #at:) and: [ fullEntry size >= 1 ])
+								ifTrue: [ [ fullEntry at: 1 ] on: Error do: [ nil ] ]
+								ifFalse: [ nil ].
+							className := [ methodOrNil inClass name asString ] on: Error do: [ ''nil'' ].
+							selectorName := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ]
+								on: Error do: [ ''nil'' ].
+							((className = ''nil'' or: [ className = ''<unknown>'' ])
+								and: [ selectorName = ''nil'' or: [ selectorName = ''unboundMethod'' ] ])
+								ifTrue: [
+									restartLevel := level.
+									level := maxDepth + 1
+								]
+								ifFalse: [ level := level + 1 ]
+						]
+				]
+		].
+
+		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ^ ''false'' ].
+
+		"_trimStackToLevel: resets the stack to step=1.
+		The jumpToStepPoint: call below is kept for compatibility with GemStone versions
+		that support it, but _trimStackToLevel: is the primary mechanism."
+		quick := 0.
+		stackReport := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
+		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
+			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+			fullEntry ifNotNil: [
+				quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ]
+			]
+		].
+		"Try jumpToStepPoint: only if step > 1 (may not exist on all GemStone versions)"
+		quick > 1 ifTrue: [
+			(proc respondsTo: #jumpToStepPoint:)
+				ifTrue: [ [ proc jumpToStepPoint: 1 ] on: Error do: [ ] ]
+				ifFalse: [
+					(proc respondsTo: #jumpTo:)
+						ifTrue: [ [ proc jumpTo: 1 ] on: Error do: [ ] ]
+				]
+		].
+		''true''
+	] value'.
+
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	raw ifNil: [ ^ false ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	value := (raw respondsTo: #asString)
+		ifTrue: [ raw asString asLowercase ]
+		ifFalse: [ '' ].
+	^ value = 'true' or: [ value = '1' or: [ value = 'ok' ] ]
 ]
 
 { #category : 'actions' }
@@ -1955,31 +2364,22 @@ GbsRemoteDebugger >> resume [
 
 { #category : 'private' }
 GbsRemoteDebugger >> returnFromFrame [
-	| contexts |
 	(service notNil and: [ service respondsTo: #returnFromFrame ]) ifTrue: [
 		| didReturn |
 		didReturn := self safeServiceCall: [ service returnFromFrame ] default: false.
 		didReturn ifTrue: [ self fetchStackFrames ].
 		^ didReturn
 	].
-	contexts := self remoteDebugProcess returnFromFrameAndCollectContextActivations.
-	contexts ifNil: [ ^ false ].
-	self applyFetchedContexts: contexts.
-	^ true
+	^ self stepReturn
 ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> runToCaret [
-	| stepPoint didRun contexts |
+	| stepPoint didRun |
 	stepPoint := self selectedStepPointFromCaret.
 	stepPoint ifNil: [ ^ false ].
 	didRun := self safeServiceCall: [ service runToStepPoint: stepPoint ] default: false.
-	didRun ifFalse: [
-		contexts := self remoteDebugProcess runToStepPointAndCollectContextActivations: stepPoint.
-		contexts ifNil: [ ^ false ].
-		self applyFetchedContexts: contexts.
-		^ true ].
-	self fetchStackFrames.
+	didRun ifTrue: [ self fetchStackFrames ].
 	^ didRun
 ]
 
@@ -2004,13 +2404,6 @@ GbsRemoteDebugger >> runWithBreakAgain [
 GbsRemoteDebugger >> safeServiceCall: aBlock default: defaultValue [
 	service ifNil: [ ^ defaultValue ].
 	^ [ aBlock value ] on: Error do: [ defaultValue ]
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> remoteDebugProcess [
-	^ GbsRemoteDebugProcessFacade
-		on: session
-		processOop: processOop
 ]
 
 { #category : 'private' }
@@ -2126,17 +2519,6 @@ GbsRemoteDebugger >> selectedServerClassName [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> selectedServerReferenceTargetName [
-	| className |
-	className := self selectedServerClassName.
-	className ifNil: [ ^ nil ].
-	className := className asString.
-	^ (className endsWith: ' class')
-		ifTrue: [ className copyFrom: 1 to: className size - 6 ]
-		ifFalse: [ className ]
-]
-
-{ #category : 'private' }
 GbsRemoteDebugger >> selectedServerMethodReference [
 	| className selector |
 	className := self selectedServerClassName.
@@ -2146,84 +2528,9 @@ GbsRemoteDebugger >> selectedServerMethodReference [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> requestInput: prompt initialAnswer: defaultString [
-	^ UIManager default request: prompt initialAnswer: defaultString
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> uiChooseFrom: choices title: titleString [
-	^ UIManager default chooseFrom: choices title: titleString
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> parseSessionStateKeysFrom: aStringOrNil [
-	| trimmed tokens keys |
-	(aStringOrNil isNil or: [ aStringOrNil trimBoth isEmpty ]) ifTrue: [ ^ nil ].
-	trimmed := aStringOrNil trimBoth.
-	tokens := (trimmed findTokens: ',') collect: #trimBoth thenReject: #isEmpty.
-	tokens isEmpty ifTrue: [ ^ nil ].
-	keys := tokens collect: [ :each |
-		[ each asInteger ] on: Error do: [ ^ nil ] ].
-	^ keys asArray
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> requestPositiveInteger: promptString initialAnswer: defaultString [
-	| rawValue |
-	rawValue := self requestInput: promptString initialAnswer: defaultString.
-	(rawValue isNil or: [ rawValue trimBoth isEmpty ]) ifTrue: [ ^ nil ].
-	^ [ | value |
-		value := rawValue trimBoth asInteger.
-		value > 0 ifTrue: [ value ] ifFalse: [ nil ] ]
-		on: Error
-		do: [ nil ]
-]
-
-{ #category : 'menus' }
-GbsRemoteDebugger >> sessionMenu [
-	| menu |
-	menu := self newMenu
-		addGroup: [ :group |
-			group addItem: [ :item |
-				item
-					name: 'Typed Wrapper Lifecycle Report';
-					action: [ self browseTypedWrapperLifecycleReport ] ].
-			group addItem: [ :item |
-				item
-					name: 'Stale Typed Wrapper Report';
-					action: [ self browseStaleTypedWrapperLifecycleReport ] ].
-			group addItem: [ :item |
-				item
-					name: 'Session State Keys Report...';
-					action: [ self browsePromptedSessionStateKeysReport ] ].
-			group addItem: [ :item |
-				item
-					name: 'Objects In Memory Report...';
-					action: [ self browseObjectsInMemoryReport ] ].
-			group addItem: [ :item |
-				item
-					name: 'Inspect Session State Key...';
-					action: [ self browsePromptedSessionStateKey ] ] ];
-		yourself.
-	self addExtensionSessionMenuItemsTo: menu.
-	^ menu
-]
-
-{ #category : 'private' }
 GbsRemoteDebugger >> selectedServerSelector [
 	service ifNil: [ ^ nil ].
 	^ self safeServiceCall: [ service selectedMethodSelector ] default: nil
-]
-
-{ #category : 'private' }
-GbsRemoteDebugger >> serverClassReferenceStrings [
-	| targetName |
-	session ifNil: [ ^ #() ].
-	targetName := self selectedServerReferenceTargetName.
-	targetName ifNil: [ ^ #() ].
-	^ [ session methodReferenceStringsToSymbol: targetName ]
-		on: Error
-		do: [ #() ]
 ]
 
 { #category : 'private' }
@@ -2248,9 +2555,7 @@ GbsRemoteDebugger >> selectedStepPointFromCaret [
 	caret := sourceText selectionInterval first.
 	context := (service notNil and: [ service respondsTo: #currentContext ])
 		ifTrue: [ service currentContext ]
-		ifFalse: [ self selectedContextForInspector ].
-	context ifNil: [
-		context := self selectedContextForInspector ].
+		ifFalse: [ nil ].
 	map := self sourceMapFor: context.
 	(map isCollection and: [ map isEmpty not ]) ifFalse: [ ^ nil ].
 	entries := map collect: [ :assoc |
@@ -2326,24 +2631,48 @@ GbsRemoteDebugger >> selectorQuerySubMenuUsing: aBlock [
 
 { #category : 'private' }
 GbsRemoteDebugger >> serverMethodReferencesFor: aSelector hierarchyOnly: hierarchyOnly senders: sendersOnly [
+	| className escapedSelector escapedClass script raw |
 	session ifNil: [ ^ #( ) ].
-	hierarchyOnly ifFalse: [
-		^ sendersOnly
-			ifTrue: [ session senderMethodReferenceStringsForSelector: aSelector ]
-			ifFalse: [ session implementorMethodReferenceStringsForSelector: aSelector ] ].
-	^ sendersOnly
-		ifTrue: [
-			session
-				hierarchySenderMethodReferenceStringsForSelector: aSelector
-				rootClassName: self selectedServerClassName
-				scope: 'full'
-				includeClassSide: true ]
-		ifFalse: [
-			session
-				hierarchyImplementorMethodReferenceStringsForSelector: aSelector
-				rootClassName: self selectedServerClassName
-				scope: 'full'
-				includeClassSide: true ].
+	className := self selectedServerClassName.
+	escapedSelector := aSelector asString copyReplaceAll: '''' with: ''''''.
+	escapedClass := (className ifNil: [ '' ]) asString copyReplaceAll: '''' with: ''''''.
+	script := '[
+		| sel className classes target root stream |
+		sel := #''', escapedSelector, '''.
+		className := ''', escapedClass, '''.
+		stream := WriteStream on: String new.
+		classes := IdentitySet new.
+		System myUserProfile symbolList do: [ :dict |
+			dict keysAndValuesDo: [ :k :v |
+				(v isBehavior) ifTrue: [ classes add: v ] ] ].
+		root := nil.
+		className isEmpty ifFalse: [
+			(className endsWith: '' class'')
+				ifTrue: [ | baseName |
+					baseName := className copyFrom: 1 to: className size - 6.
+					root := (System myUserProfile symbolList objectNamed: baseName asSymbol) class ]
+				ifFalse: [ root := (System myUserProfile symbolList objectNamed: className asSymbol) ] ].
+		', (hierarchyOnly
+			ifTrue: [ 'root notNil ifTrue: [
+				classes := (root withAllSuperclasses , root withAllSubclasses) asIdentitySet ]' ]
+			ifFalse: [ '' ]), '.
+		classes asArray do: [ :cls |
+			| sels |
+			', (sendersOnly
+				ifTrue: [ 'sels := [ cls whichSelectorsReferTo: sel ] on: Error do: [ #() ]' ]
+				ifFalse: [ 'sels := (cls includesSelector: sel) ifTrue: [ Array with: sel ] ifFalse: [ #() ]' ]), '.
+			sels do: [ :s |
+				stream nextPutAll: cls name asString; nextPutAll: ''>>''; nextPutAll: s asString; lf ].
+			', (sendersOnly
+				ifTrue: [ 'sels := [ cls class whichSelectorsReferTo: sel ] on: Error do: [ #() ]' ]
+				ifFalse: [ 'sels := (cls class includesSelector: sel) ifTrue: [ Array with: sel ] ifFalse: [ #() ]' ]), '.
+			sels do: [ :s |
+				stream nextPutAll: cls name asString; nextPutAll: '' class>>''; nextPutAll: s asString; lf ] ].
+		stream contents
+	] value'.
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	^ (raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty
 ]
 
 { #category : 'accessing' }
@@ -2620,14 +2949,9 @@ GbsRemoteDebugger >> stepOver [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> stepReturn [
-	| didStep contexts |
+	| didStep |
 	didStep := self safeServiceCall: [ service stepReturn ] default: false.
-	didStep ifFalse: [
-		contexts := self remoteDebugProcess stepReturnAndCollectContextActivations.
-		contexts ifNil: [ ^ false ].
-		self applyFetchedContexts: contexts.
-		^ true ].
-	self fetchStackFrames.
+	didStep ifTrue: [ self fetchStackFrames ].
 	^ didStep
 ]
 

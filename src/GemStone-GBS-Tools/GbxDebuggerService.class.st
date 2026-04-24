@@ -301,8 +301,7 @@ GbxDebuggerService >> browseClass [
 GbxDebuggerService >> browseMethod [
 	"Browse current method - uses gbxBrowseMethod: for server contexts"
 	currentContext gbxIsServerContext ifTrue: [
-		^ self browseRemoteSelectedMethod
-			ifNil: [ self gbxBrowseMethod: self selectedMethod ]
+		^ self gbxBrowseMethod: self selectedMethod
 	].
 	"For client contexts, standard browsing would be used"
 	^ nil
@@ -315,10 +314,8 @@ GbxDebuggerService >> browserClass [
 
 { #category : 'private' }
 GbxDebuggerService >> canExecuteOnDebugProcess [
-	| activeProcessOop |
-	activeProcessOop := self currentProcessOop.
-	(self isSessionUsable and: [ activeProcessOop isNumber ]) ifFalse: [ ^ false ].
-	^ activeProcessOop > 20
+	(self isSessionUsable and: [ processOop isNumber ]) ifFalse: [ ^ false ].
+	^ processOop > 20
 ]
 
 { #category : 'inspector' }
@@ -485,6 +482,52 @@ GbxDebuggerService >> contextStackPolicy [
 	^ contextStackPolicy
 ]
 
+{ #category : 'evaluation' }
+GbxDebuggerService >> correctCurrentSelectorWithSource: sourceText [
+	| className selector isMeta classLookupName escapedSource script raw |
+	currentContext ifNil: [ ^ false ].
+	self isSessionUsable ifFalse: [ ^ false ].
+	self clearCompileError.
+	className := self selectedMethodClassName.
+	selector := self selectedMethodSelector.
+	(className isNil or: [ selector isNil or: [ selector = #unboundMethod ] ]) ifTrue: [ ^ false ].
+
+	isMeta := className asString endsWith: ' class'.
+	classLookupName := isMeta
+		ifTrue: [ (className asString copyFrom: 1 to: className size - 6) ]
+		ifFalse: [ className asString ].
+	escapedSource := self escapeForScriptLiteral: sourceText.
+
+	script := '[
+		| cls oldSel protocol result newSel source |
+		cls := System myUserProfile symbolList objectNamed: #', classLookupName, '.
+		cls ifNil: [ ^ ''ERROR|Class not found'' ].
+		', (isMeta ifTrue: [ 'cls := cls class.' ] ifFalse: [ '' ]), '
+		oldSel := #', selector asString, '.
+		source := ''', escapedSource, '''.
+		protocol := [ cls categoryOfSelector: oldSel ] on: Error do: [ ''as yet unclassified'' ].
+		protocol ifNil: [ protocol := ''as yet unclassified'' ].
+		result := [ cls compileMethod: source category: protocol ] on: Error do: [ :ex | ''ERROR|'', ex description ].
+		(result isString and: [ result beginsWith: ''ERROR|'' ]) ifTrue: [ ^ result ].
+		(result isKindOf: Array) ifTrue: [ ^ ''ERROR|Compilation failed'' ].
+		newSel := [ result selector ] on: Error do: [ oldSel ].
+		(newSel ~= oldSel and: [ cls includesSelector: oldSel ]) ifTrue: [
+			[ cls removeSelector: oldSel ] on: Error do: [ :ex | ]
+		].
+		''OK''
+	] value'.
+
+	raw := [ session executeAndFetch: script context: session sessionOop ] on: Error do: [ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	raw ifNil: [
+		lastCompileError := 'Correct selector failed: no response from GemStone'.
+		^ false
+	].
+	(raw = 'OK') ifTrue: [ ^ true ].
+	lastCompileError := (self normalizedCompileErrorFrom: raw).
+	^ false
+]
+
 { #category : 'context list' }
 GbxDebuggerService >> correctSelectedContextIfGlue [
 	"If the currently selected context should be hidden glue,
@@ -537,96 +580,48 @@ GbxDebuggerService >> currentExecutionContextOop [
 
 { #category : 'inspector' }
 GbxDebuggerService >> currentFrameOop [
-	^ self remoteDebugProcess
-		currentFrameOopAtLevel: self currentContextLevel
+	| procOop lvl script |
+	procOop := self currentProcessOop.
+	lvl := self currentContextLevel.
+	(procOop isNil or: [ lvl isNil ]) ifTrue: [ ^ nil ].
+	script := '[
+		| proc frameObj |
+		proc := Object _objectForOop: ', procOop asString, '.
+		proc ifNil: [ ^ ''0'' ].
+		frameObj := [ proc _frameContentsAt: ', lvl asString, ' ] on: Error do: [ nil ].
+		frameObj ifNil: [ ^ ''0'' ].
+		(Reflection oopOf: frameObj) asString
+	] value'.
+	^ self evaluateOopFromScript: script
 ]
 
 { #category : 'inspector' }
 GbxDebuggerService >> currentProcessOop [
-	processOop ifNotNil: [ ^ processOop ].
 	currentContext ifNil: [ ^ nil ].
 	(currentContext respondsTo: #processOop) ifTrue: [ ^ currentContext processOop ].
 	(currentContext respondsTo: #process) ifTrue: [ ^ currentContext process ].
 	^ nil
 ]
 
-{ #category : 'evaluation' }
-GbxDebuggerService >> legacyCompileLookup [
-	| className selector isMeta |
-	className := self selectedMethodClassName.
-	selector := self selectedMethodSelector.
-	(className isNil or: [ selector isNil or: [ selector = #unboundMethod ] ]) ifTrue: [ ^ nil ].
-	isMeta := className asString endsWith: ' class'.
-	^ {
-		(isMeta
-			ifTrue: [ className asString allButLast: 6 ]
-			ifFalse: [ className asString ]).
-		selector asSymbol.
-		isMeta.
-		(self selectedMethodProtocol ifNil: [ 'as yet unclassified' ]) }
-]
-
-{ #category : 'evaluation' }
-GbxDebuggerService >> legacyCompileResponseForSource: sourceText correctingSelector: allowSelectorCorrection [
-	| lookup escapedSource raw |
-	lookup := self legacyCompileLookup.
-	lookup ifNil: [ ^ nil ].
-	escapedSource := sourceText
-		ifNil: [ '' ]
-		ifNotNil: [ :each | (each asString copyReplaceAll: String cr with: String lf) copyReplaceAll: '''' with: '''''' ].
-	raw := [ session
-		executeAndFetch: (String streamContents: [ :stream |
-			stream nextPutAll: '[
-		| cls oldSel protocol result newSel source |
-		cls := Smalltalk at: '.
-			stream nextPutAll: lookup first storeString.
-			stream nextPutAll: ' ifAbsent: [ nil ].
-		cls ifNil: [ ^ ''ERROR|Class not found'' ].
-		'.
-			lookup third ifTrue: [ stream nextPutAll: 'cls := cls class.' ].
-			stream nextPutAll: '
-		oldSel := '.
-			stream nextPutAll: lookup second storeString.
-			stream nextPutAll: '.
-		source := '''.
-			stream nextPutAll: escapedSource.
-			stream nextPutAll: '''.
-		protocol := '.
-			stream nextPutAll: lookup fourth storeString.
-			stream nextPutAll: '.
-		result := [ cls compileMethod: source category: protocol ] on: Error do: [ :ex | ''ERROR|'', ex description ].
-		(result isString and: [ result beginsWith: ''ERROR|'' ]) ifTrue: [ ^ result ].
-		'.
-			allowSelectorCorrection ifTrue: [
-				stream nextPutAll: '
-		newSel := [ result selector ] on: Error do: [ oldSel ].
-		(newSel ~= oldSel and: [ cls includesSelector: oldSel ]) ifTrue: [
-			[ cls removeSelector: oldSel ] on: Error do: [ :ex | ]
-		].' ].
-			stream nextPutAll: '
-		''OK''
-	] value' ])
-		context: session sessionOop ]
-		on: Error
-		do: [ nil ].
-	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
-	^ raw
-]
-
-{ #category : 'evaluation' }
-GbxDebuggerService >> legacyCorrectedCompileResponseForSource: sourceText [
-	^ self legacyCompileResponseForSource: sourceText correctingSelector: true
-]
-
-{ #category : 'evaluation' }
-GbxDebuggerService >> legacyRecompileResponseForSource: sourceText [
-	^ self legacyCompileResponseForSource: sourceText correctingSelector: false
-]
-
 { #category : 'inspector' }
 GbxDebuggerService >> currentReceiverOop [
-	^ self remoteDebugProcess
-		currentReceiverOopAtLevel: self currentContextLevel
+	| procOop lvl script |
+	procOop := self currentProcessOop.
+	lvl := self currentContextLevel.
+	(procOop isNil or: [ lvl isNil ]) ifTrue: [ ^ nil ].
+	script := '[
+		| proc frame fullEntry receiverObj |
+		proc := Object _objectForOop: ', procOop asString, '.
+		proc ifNil: [ ^ ''0'' ].
+		frame := [ proc _gsiDebuggerDetailedReportAt: ', lvl asString, ' ] on: Error do: [ nil ].
+		frame ifNil: [ ^ ''0'' ].
+		fullEntry := [ frame first ] on: Error do: [ nil ].
+		fullEntry ifNil: [ ^ ''0'' ].
+		receiverObj := [ fullEntry at: 2 ] on: Error do: [ nil ].
+		receiverObj ifNil: [ ^ ''0'' ].
+		(Reflection oopOf: receiverObj) asString
+	] value'.
+	^ self evaluateOopFromScript: script
 ]
 
 { #category : 'source code' }
@@ -711,14 +706,38 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	gsContext on the stack of its GSProcess. Also discards 
 	any partial execution in gsContext, resetting it to the 
 	beginning."
-	| lvl resolvedHomeLevel result |
+	| lvl resolvedHomeLevel script result |
 	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ 1 ].
 	resolvedHomeLevel := self restartLevelFromServerStack.
 	(resolvedHomeLevel isNumber and: [ resolvedHomeLevel > 0 ])
 		ifTrue: [ lvl := resolvedHomeLevel ].
-	result := self remoteDebugProcess trimStackToLevel: lvl.
+	
+	script := '[
+		| obj proc |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		
+		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
+		[ proc _trimStackToLevel: ', lvl asString, ' ] on: Error do: [ ^ ''false'' ].
+		''true''
+	] value'.
+
+	result := self executeDebugScript: script.
 	self logRestartText: 'cutbackGsTo level=', lvl asString, ' result=', result printString.
-	^ result
+	^ self asBooleanResult: result default: false
 ]
 
 { #category : 'actions' }
@@ -1071,19 +1090,7 @@ GbxDebuggerService >> gbxRecompileMethod: sourceText notifying: requestor [
 	"Recompile the method in the receiver's current stack frame using sourceText.
 	Answer true if compilation is successful, otherwise false.
 	Displays compiler errors in the requestor (text editor)."
-	| remoteMethod gbxMethod method sess result myErrorText error preErrorText postErrorText |
-	remoteMethod := (self respondsTo: #selectedRemoteUnboundMethodObject)
-		ifTrue: [ self selectedRemoteUnboundMethodObject ]
-		ifFalse: [ nil ].
-	remoteMethod ifNotNil: [
-		(self recompileCurrentMethodWithSource: sourceText) ifTrue: [
-			self gbxMethodChanged: sourceText.
-			^ true ].
-		requestor ifNotNil: [
-			(requestor respondsTo: #insertAndSelect:at:) ifTrue: [
-				requestor insertAndSelect: (lastCompileError ifNil: [ 'error' ]) , '->' at: 1 ] ].
-		^ false ].
-
+	| gbxMethod method sess result myErrorText error preErrorText postErrorText |
 	gbxMethod := self selectedMethod.
 	gbxMethod ifNil: [ ^ false ].
 	method := gbxMethod methodDelegate.
@@ -1332,8 +1339,16 @@ GbxDebuggerService >> isSessionUsable [
 { #category : 'process control' }
 GbxDebuggerService >> isTerminated [
 	"Check if the debugged process is terminated"
+	| result |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ true ].
-	^ self remoteDebugProcess isTerminated
+	result := self executeDebugScript: '[
+		| proc |
+		proc := Object _objectForOop: ', processOop asString, '.
+		proc ifNil: [ ^ ''true'' ].
+		proc isTerminated
+	] value'.
+	result ifNil: [ ^ true ].
+	^ self asBooleanResult: result default: true
 ]
 
 { #category : 'process control' }
@@ -1450,9 +1465,37 @@ GbxDebuggerService >> notifyContextChanged [
 
 { #category : 'inspector' }
 GbxDebuggerService >> oopForVariableNamed: aVariableName [
-	^ self remoteDebugProcess
-		oopForVariableNamed: aVariableName
-		atLevel: self currentContextLevel
+	| procOop lvl escapedName script |
+	procOop := self currentProcessOop.
+	lvl := self currentContextLevel.
+	(procOop isNil or: [ lvl isNil ]) ifTrue: [ ^ nil ].
+	escapedName := aVariableName copyReplaceAll: '''' with: ''''''.
+	script := '[
+		| proc frame fullEntry receiverObj names vals idx value |
+		proc := Object _objectForOop: ', procOop asString, '.
+		proc ifNil: [ ^ ''0'' ].
+		frame := [ proc _gsiDebuggerDetailedReportAt: ', lvl asString, ' ] on: Error do: [ nil ].
+		frame ifNil: [ ^ ''0'' ].
+		fullEntry := [ frame first ] on: Error do: [ nil ].
+		fullEntry ifNil: [ ^ ''0'' ].
+		(''', escapedName, ''' = ''self'') ifTrue: [
+			receiverObj := [ fullEntry at: 2 ] on: Error do: [ nil ].
+			receiverObj ifNil: [ ^ ''0'' ].
+			^ (Reflection oopOf: receiverObj) asString
+		].
+		names := [ frame at: 7 ] on: Error do: [ #() ].
+		vals := [ frame at: 8 ] on: Error do: [ #() ].
+		idx := 0.
+		1 to: (names size min: vals size) do: [ :i |
+			(((names at: i) asString = ''', escapedName, ''') and: [ idx = 0 ])
+				ifTrue: [ idx := i ]
+		].
+		idx = 0 ifTrue: [ ^ ''0'' ].
+		value := [ vals at: idx ] on: Error do: [ nil ].
+		value ifNil: [ ^ ''0'' ].
+		(Reflection oopOf: value) asString
+	] value'.
+	^ self evaluateOopFromScript: script
 ]
 
 { #category : 'inspector' }
@@ -1590,12 +1633,54 @@ GbxDebuggerService >> receiverClass [
 	^ currentContext receiverClass
 ]
 
+{ #category : 'evaluation' }
+GbxDebuggerService >> recompileCurrentMethodWithSource: sourceText [
+	| className selector isMeta classLookupName escapedSource script raw |
+	currentContext ifNil: [ ^ false ].
+	self isSessionUsable ifFalse: [ ^ false ].
+	self clearCompileError.
+	className := self selectedMethodClassName.
+	selector := self selectedMethodSelector.
+	(className isNil or: [ selector isNil or: [ selector = #unboundMethod ] ]) ifTrue: [ ^ false ].
+
+	isMeta := className asString endsWith: ' class'.
+	classLookupName := isMeta
+		ifTrue: [ (className asString copyFrom: 1 to: className size - 6) ]
+		ifFalse: [ className asString ].
+	escapedSource := self escapeForScriptLiteral: sourceText.
+
+	script := '[
+		| cls sel protocol result source |
+		cls := System myUserProfile symbolList objectNamed: #', classLookupName, '.
+		cls ifNil: [ ^ ''ERROR|Class not found'' ].
+		', (isMeta ifTrue: [ 'cls := cls class.' ] ifFalse: [ '' ]), '
+		sel := #', selector asString, '.
+		source := ''', escapedSource, '''.
+		protocol := [ cls categoryOfSelector: sel ] on: Error do: [ ''as yet unclassified'' ].
+		protocol ifNil: [ protocol := ''as yet unclassified'' ].
+		result := [ cls compileMethod: source category: protocol ] on: Error do: [ :ex | ''ERROR|'', ex description ].
+		(result isString and: [ result beginsWith: ''ERROR|'' ]) ifTrue: [ ^ result ].
+		(result isKindOf: Array) ifTrue: [ ^ ''ERROR|Compilation failed'' ].
+		''OK''
+	] value'.
+
+	raw := [ session executeAndFetch: script context: session sessionOop ] on: Error do: [ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	raw ifNil: [
+		lastCompileError := 'Compile failed: no response from GemStone'.
+		^ false
+	].
+	(raw = 'OK') ifTrue: [ ^ true ].
+	lastCompileError := (self normalizedCompileErrorFrom: raw).
+	^ false
+]
+
 { #category : 'context list' }
 GbxDebuggerService >> recomputeContextList [
 	"Recompute the context list after a step operation.
 	Always rebind currentContext to the freshly-computed list entry, even when
 	an equal/stale context object is still considered present."
-	| contexts |
+	| contexts refreshed |
 	contextStackPolicy ifNil: [
 		self updateSourceMapFromCurrentContext.
 		self notifyContextChanged.
@@ -1603,7 +1688,19 @@ GbxDebuggerService >> recomputeContextList [
 	].
 	contextStackPolicy computeContextList.
 	contexts := contextStackPolicy contextList.
-	self updateCurrentContextFromContexts: contexts.
+	
+	currentContext isNil
+		ifTrue: [
+			contexts ifNotEmpty: [ :list | currentContext := list first ]
+		]
+		ifFalse: [
+			refreshed := contexts
+				detect: [ :each | (each == currentContext) or: [ each = currentContext ] ]
+				ifNone: [ nil ].
+			refreshed
+				ifNil: [ contexts ifNotEmpty: [ :list | currentContext := list first ] ]
+				ifNotNil: [ currentContext := refreshed ]
+		].
 	self updateSourceMapFromCurrentContext.
 	self notifyContextChanged.
 ]
@@ -1659,7 +1756,7 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	then applies a stronger reset ladder than the plain process-level
 	jumpToStepPoint:. This matches the working C++ GemStone FFI probes more
 	closely, especially for repeated restart cycles."
-	| result level |
+	| script result level |
 
 	level := self restartLevelFromServerStack.
 	(level isNil or: [ level <= 0 ]) ifTrue: [
@@ -1669,9 +1766,78 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	"Always use the top server context level for restart"
 	level := 1.
 
-	result := self remoteDebugProcess resetProgramCounterToStepOneAtLevel: level.
+	script := '[
+		| obj proc tc restartLevel stackReport fullEntry quick |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		proc isNil ifTrue: [ ^ ''false'' ].
+		restartLevel := ', level asString, '.
+
+		"First, trim to the executed-code frame level."
+		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
+			[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ]
+		].
+
+		"Then force that frame back to step 1 using the strongest available API."
+		(proc respondsTo: #_gsiStepAtLevel:step:) ifTrue: [
+			[ proc _gsiStepAtLevel: restartLevel step: 1 ] on: Error do: [ ]
+		].
+		(proc respondsTo: #jumpToStepPoint:) ifTrue: [
+			[ proc jumpToStepPoint: 1 ] on: Error do: [ ]
+		].
+		(proc respondsTo: #runToStepPoint:) ifTrue: [
+			[ proc runToStepPoint: 1 ] on: Error do: [ ]
+		].
+
+		"Some GemStone builds respond better when the actual context object is nudged."
+		tc := [ proc topContext ] on: Error do: [ nil ].
+		tc notNil ifTrue: [
+			2 to: restartLevel do: [ :ignored |
+				tc := [ tc sender ] on: Error do: [ nil ].
+				tc ifNil: [ ignored := restartLevel ]
+			].
+			tc ifNotNil: [
+				(tc respondsTo: #jumpToStepPoint:) ifTrue: [
+					[ tc jumpToStepPoint: 1 ] on: Error do: [ ]
+				].
+				(tc respondsTo: #runToStepPoint:) ifTrue: [
+					[ tc runToStepPoint: 1 ] on: Error do: [ ]
+				]
+			]
+		].
+
+		"Re-trim once more so the process stack and the frame PC agree."
+		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
+			[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ]
+		].
+
+		quick := 0.
+		stackReport := [ proc _gsiStackReportFromLevel: restartLevel toLevel: restartLevel ] on: Error do: [ nil ].
+		(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ]) ifTrue: [
+			fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+			fullEntry ifNotNil: [
+				quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ]
+			]
+		].
+		(quick <= 1) ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]
+	] value'.
+
+	result := self executeDebugScript: script.
 	self logRestartText: 'resetServerPCToStepOne level=', level asString, ' result=', result printString.
-	^ result
+	^ self asBooleanResult: result default: false
 ]
 
 { #category : 'process control' }
@@ -1708,9 +1874,72 @@ GbxDebuggerService >> restart [
 
 { #category : 'private' }
 GbxDebuggerService >> restartLevelFromServerStack [
-	"Delegate to the remote debug facade, which preserves the older
-	restart stack parsing guard based on respondsTo: #splitOn:."
-	^ self remoteDebugProcess restartLevelFromServerStack
+	| raw lines |
+	(self canExecuteOnDebugProcess) ifFalse: [ ^ nil ].
+	raw := self executeDebugScript: '[
+		| obj proc stream maxDepth level stackReport fullEntry methodOrNil className selectorName source quick offsets line offset |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ '''' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [
+				proc := [ obj serverProcess ] on: Error do: [ nil ]
+			]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ])
+			ifTrue: [ ^ '''' ].
+		stream := WriteStream on: String new.
+		maxDepth := 200.
+		level := 1.
+		[ level <= maxDepth ] whileTrue: [
+			fullEntry := nil.
+			stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
+			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
+				ifTrue: [ fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ] ].
+			fullEntry isNil
+				ifTrue: [ level := maxDepth + 1 ]
+				ifFalse: [
+					methodOrNil := ((fullEntry respondsTo: #at:) and: [ fullEntry size >= 1 ])
+						ifTrue: [ [ fullEntry at: 1 ] on: Error do: [ nil ] ]
+						ifFalse: [ nil ].
+					className := [ methodOrNil inClass name asString ] on: Error do: [ ''nil'' ].
+					selectorName := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ]
+						on: Error do: [ ''nil'' ].
+					stream
+						nextPutAll: level asString; tab;
+						nextPutAll: className; tab;
+						nextPutAll: selectorName;
+						lf.
+					level := level + 1
+				]
+		].
+		stream contents
+	] value'.
+	raw ifNil: [ ^ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	(raw respondsTo: #splitOn:) ifFalse: [ ^ nil ].
+	lines := raw splitOn: Character lf.
+	lines do: [ :line |
+		| parts className selectorName |
+		parts := line splitOn: Character tab.
+		parts size >= 3 ifTrue: [
+			className := [ (parts at: 2) asString ] on: Error do: [ '' ].
+			selectorName := [ (parts at: 3) asString ] on: Error do: [ '' ].
+			((className = 'nil' or: [ className = '<unknown>' ])
+				and: [ selectorName = 'nil' or: [ selectorName = 'unboundMethod' ] ])
+				ifTrue: [ ^ [ parts first asInteger ] on: Error do: [ nil ] ]
+		]
+	].
+	^ nil
 ]
 
 { #category : 'private' }
@@ -1751,59 +1980,79 @@ GbxDebuggerService >> returnFromFrame [
 
 { #category : 'private' }
 GbxDebuggerService >> runDebugProcessCommand: commandName recompute: shouldRecompute [
-	| contexts |
+	| result script wasServerContext |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
-	shouldRecompute ifFalse: [
-		^ self remoteDebugProcess runCommand: commandName ].
-	contexts := self remoteDebugProcess
-		runCommandCollectingContextActivations: commandName.
-	contexts ifNil: [ ^ false ].
-	self updateContextListFromServerContexts: contexts.
+	wasServerContext := (currentContext notNil
+		and: [ (currentContext respondsTo: #gbxIsServerContext)
+		and: [ currentContext gbxIsServerContext ] ]).
+	script := '[
+		| obj proc |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		proc isNil ifTrue: [ ^ ''false'' ].
+		proc ', commandName, '.
+		true
+	] value'.
+	result := self executeDebugScript: script.
+	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
+	shouldRecompute ifTrue: [
+		wasServerContext
+			ifTrue: [ self selectTopServerContext ]
+			ifFalse: [ self recomputeContextList ]
+	].
 	^ true
 ]
 
 { #category : 'private' }
-GbxDebuggerService >> updateCurrentContextFromContexts: contexts [
-	| refreshed |
-	currentContext isNil
-		ifTrue: [
-			contexts ifNotEmpty: [ :list | currentContext := list first ] ]
-		ifFalse: [
-			refreshed := contexts
-				detect: [ :each | (each == currentContext) or: [ each = currentContext ] ]
-				ifNone: [ nil ].
-			refreshed
-				ifNil: [ contexts ifNotEmpty: [ :list | currentContext := list first ] ]
-				ifNotNil: [ currentContext := refreshed ] ].
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> updateContextListFromServerContexts: serverContexts [
-	| contexts |
-	contextStackPolicy ifNil: [
-		self updateSourceMapFromCurrentContext.
-		self notifyContextChanged.
-		^ self ].
-	contextStackPolicy updateContextListFromServerContexts: serverContexts.
-	contexts := contextStackPolicy contextList.
-	self updateCurrentContextFromContexts: contexts.
-	self updateSourceMapFromCurrentContext.
-	self notifyContextChanged
-]
-
-{ #category : 'private' }
 GbxDebuggerService >> runDebugProcessCommand: commandName withInteger: anInteger recompute: shouldRecompute [
-	| contexts |
+	| result script wasServerContext |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
 	anInteger ifNil: [ ^ false ].
+	wasServerContext := (currentContext notNil
+		and: [ (currentContext respondsTo: #gbxIsServerContext)
+		and: [ currentContext gbxIsServerContext ] ]).
+	script := '[
+		| obj proc |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		proc isNil ifTrue: [ ^ ''false'' ].
+		[ proc perform: #', commandName, ': with: ', anInteger asString, ' ] on: Error do: [ ^ ''false'' ].
+		true
+	] value'.
+	result := self executeDebugScript: script.
+	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
 	shouldRecompute ifTrue: [
-		contexts := self remoteDebugProcess
-			runCommand: commandName
-			withIntegerCollectingContextActivations: anInteger.
-		contexts ifNil: [ ^ false ].
-		self updateContextListFromServerContexts: contexts.
-		^ true ].
-	^ self remoteDebugProcess runCommand: commandName withInteger: anInteger
+		wasServerContext
+			ifTrue: [ self selectTopServerContext ]
+			ifFalse: [ self recomputeContextList ]
+	].
+	^ true
 ]
 
 { #category : 'process control' }
@@ -1906,11 +2155,20 @@ GbxDebuggerService >> selectTopServerContext [
 	self schedulePrecomputedContextListUpdate
 ]
 
-{ #category : 'private' }
-GbxDebuggerService >> remoteDebugProcess [
-	^ GbsRemoteDebugProcessFacade
-		on: session
-		processOop: self currentProcessOop
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> selectedMethodClassName [
+	currentContext ifNil: [ ^ nil ].
+	(currentContext respondsTo: #methodClassOrUnknown) ifTrue: [ ^ currentContext methodClassOrUnknown ].
+	(currentContext respondsTo: #methodClass) ifTrue: [ ^ currentContext methodClass ].
+	^ nil
+]
+
+{ #category : 'breakpoint support' }
+GbxDebuggerService >> selectedMethodSelector [
+	currentContext ifNil: [ ^ nil ].
+	(currentContext respondsTo: #selectorOrUnknown) ifTrue: [ ^ currentContext selectorOrUnknown ].
+	(currentContext respondsTo: #selector) ifTrue: [ ^ currentContext selector ].
+	^ nil
 ]
 
 { #category : 'breakpoint support' }
@@ -1930,9 +2188,34 @@ GbxDebuggerService >> selectionIntervalForTextWidget: aTextWidget [
 
 { #category : 'private' }
 GbxDebuggerService >> serverStepOverFrameLevel: levelValue [
+	| result script |
 	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
 	levelValue ifNil: [ ^ false ].
-	(self remoteDebugProcess stepOverFrameLevel: levelValue) ifFalse: [ ^ false ].
+	script := '[
+		| obj proc stepLevel ok |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc isNil or: [ (proc respondsTo: #perform:with:) not ]) ifTrue: [ ^ ''false'' ].
+		stepLevel := ', levelValue asString, '.
+		ok := [ proc perform: #_stepOverInFrame: with: stepLevel ] on: Error do: [ nil ].
+		ok isNil ifTrue: [ ^ ''false'' ].
+		''true''
+	] value'.
+	result := self executeDebugScript: script.
+	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
 	self selectTopServerContext.
 	^ true
 ]
@@ -1970,6 +2253,12 @@ GbxDebuggerService >> setBreakPointIn: aTextWidget [
 	^ true
 ]
 
+{ #category : 'source code' }
+GbxDebuggerService >> sourceCode [
+	"Get the source code for the current context"
+	currentContext ifNil: [ ^ '' ].
+	^ currentContext sourceCode
+]
 
 { #category : 'source code' }
 GbxDebuggerService >> sourceMap [
@@ -1985,11 +2274,9 @@ GbxDebuggerService >> sourceMatchesCurrentMethodIn: aTextWidget [
 	aTextWidget ifNil: [ ^ true ].
 	(aTextWidget respondsTo: #text) ifFalse: [ ^ true ].
 	currentContext ifNil: [ ^ true ].
-	sourceText := self sourceCode.
-	sourceText ifNil: [
-		sourceText := (currentContext respondsTo: #sourceCode)
-			ifTrue: [ currentContext sourceCode ]
-			ifFalse: [ (currentContext respondsTo: #sourceString) ifTrue: [ currentContext sourceString ] ifFalse: [ nil ] ] ].
+	sourceText := (currentContext respondsTo: #sourceCode)
+		ifTrue: [ currentContext sourceCode ]
+		ifFalse: [ (currentContext respondsTo: #sourceString) ifTrue: [ currentContext sourceString ] ifFalse: [ nil ] ].
 	sourceText ifNil: [ ^ true ].
 	widgetText := [ aTextWidget text asString ] on: Error do: [ nil ].
 	widgetText ifNil: [ ^ true ].
@@ -2123,12 +2410,33 @@ GbxDebuggerService >> stepUntilPC: stopPC [
 { #category : 'private' }
 GbxDebuggerService >> synchronizeServerProgramCounterAfterRestart [
 	"After restart, force server-side process PC to align with displayed restart frame."
-	| level result |
+	| level script result |
 	(self isCurrentExecutedCodeFrame) ifFalse: [ ^ false ].
 	level := self currentContextLevel.
 	(level isNumber and: [ level > 0 ]) ifFalse: [ level := 1 ].
-	result := self remoteDebugProcess synchronizeProgramCounterAtLevel: level.
-	result ifTrue: [
+	script := '[
+		| obj proc |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
+		[ proc _trimStackToLevel: ', level asString, ' ] on: Error do: [ ^ ''false'' ].
+		''true''
+	] value'.
+	result := self executeDebugScript: script.
+	(self asBooleanResult: result default: false) ifTrue: [
 		self selectTopServerContext.
 		^ true
 	].

@@ -37,8 +37,7 @@ Class {
 		'currentContext',
 		'onRestartBlock',
 		'onStepOverBlock',
-		'onStepIntoBlock',
-		'currentReceiverOopValue'
+		'onStepIntoBlock'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -93,16 +92,6 @@ GbxFakeServiceForRemoteDebugger >> gsPrintIt: codeString [
 GbxFakeServiceForRemoteDebugger >> gsInspectIt: codeString [
 	gsInspectItCalls := self gsInspectItCalls + 1.
 	^ true
-]
-
-{ #category : 'accessing' }
-GbxFakeServiceForRemoteDebugger >> currentReceiverOop [
-	^ currentReceiverOopValue
-]
-
-{ #category : 'accessing' }
-GbxFakeServiceForRemoteDebugger >> currentReceiverOop: anObject [
-	currentReceiverOopValue := anObject
 ]
 
 { #category : 'actions' }
@@ -441,26 +430,6 @@ GbxFakeServiceForRemoteDebugger >> currentContext [
 { #category : 'accessing' }
 GbxFakeServiceForRemoteDebugger >> currentContext: aContext [
 	currentContext := aContext
-]
-
-{ #category : 'accessing' }
-GbxFakeServiceForRemoteDebugger >> selectedMethodClassName [
-	^ currentContext
-		ifNil: [ nil ]
-		ifNotNil: [
-			(currentContext respondsTo: #methodClassOrUnknown)
-				ifTrue: [ currentContext methodClassOrUnknown ]
-				ifFalse: [ nil ] ]
-]
-
-{ #category : 'accessing' }
-GbxFakeServiceForRemoteDebugger >> selectedMethodSelector [
-	^ currentContext
-		ifNil: [ nil ]
-		ifNotNil: [
-			(currentContext respondsTo: #selectorOrUnknown)
-				ifTrue: [ currentContext selectorOrUnknown ]
-				ifFalse: [ nil ] ]
 ]
 
 { #category : 'stepping' }

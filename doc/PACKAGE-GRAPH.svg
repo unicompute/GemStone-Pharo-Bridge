@@ -1,30 +1,44 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="330" viewBox="0 0 1160 330">
+<svg xmlns="http://www.w3.org/2000/svg" width="1550" height="410" viewBox="0 0 1550 410">
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a6470"/>
     </marker>
   </defs>
-  <rect width="1160" height="330" fill="#ffffff"/>
+  <rect width="1550" height="410" fill="#ffffff"/>
   <text x="40" y="24" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#1f2933">GemStone-Pharo-Bridge Package Graph</text>
   <path d="M 340 68 C 380 68, 390 68, 430 68" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
   <path d="M 340 68 C 380 68, 0 248, 40 248" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
-  <path d="M 340 248 C 380 248, 390 248, 430 248" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
   <path d="M 730 68 C 770 68, 390 248, 430 248" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 340 248 C 380 248, 390 248, 430 248" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
   <path d="M 340 68 C 380 68, 780 68, 820 68" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
-  <path d="M 340 248 C 380 248, 780 68, 820 68" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 730 68 C 770 68, 780 68, 820 68" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 340 248 C 380 248, 780 248, 820 248" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
   <path d="M 1120 68 C 1160 68, 780 248, 820 248" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
-  <path d="M 730 68 C 770 68, 780 248, 820 248" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
-  <path d="M 730 248 C 770 248, 780 248, 820 248" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 340 68 C 380 68, 1170 68, 1210 68" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 730 68 C 770 68, 1170 68, 1210 68" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 340 248 C 380 248, 1170 68, 1210 68" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 730 248 C 770 248, 1170 68, 1210 68" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 1510 68 C 1550 68, 1170 328, 1210 328" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 1120 68 C 1160 68, 1170 328, 1210 328" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 1120 248 C 1160 248, 1170 328, 1210 328" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 340 68 C 380 68, 1170 248, 1210 248" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 340 248 C 380 248, 1170 248, 1210 248" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
   <rect x="40" y="40" width="300" height="56" rx="10" ry="10" fill="#d8ecff" stroke="#334155" stroke-width="2"/>
   <text x="56" y="71" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-GBS-Converted</text>
-  <rect x="430" y="40" width="300" height="56" rx="10" ry="10" fill="#ffe6c7" stroke="#334155" stroke-width="2"/>
-  <text x="446" y="71" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-GBS-MagLev</text>
+  <rect x="430" y="40" width="300" height="56" rx="10" ry="10" fill="#dff4ff" stroke="#334155" stroke-width="2"/>
+  <text x="446" y="71" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-GBS-Core</text>
   <rect x="40" y="220" width="300" height="56" rx="10" ry="10" fill="#d8ecff" stroke="#334155" stroke-width="2"/>
   <text x="56" y="251" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-GBS-Tools</text>
-  <rect x="430" y="220" width="300" height="56" rx="10" ry="10" fill="#ffe6c7" stroke="#334155" stroke-width="2"/>
-  <text x="446" y="251" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-GBS-MagLev-Tools</text>
-  <rect x="820" y="40" width="300" height="56" rx="10" ry="10" fill="#e4f7df" stroke="#334155" stroke-width="2"/>
-  <text x="836" y="71" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-Pharo-Core-Tests</text>
-  <rect x="820" y="220" width="300" height="56" rx="10" ry="10" fill="#f0e0ff" stroke="#334155" stroke-width="2"/>
-  <text x="836" y="251" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-Pharo-Tests</text>
+  <rect x="430" y="220" width="300" height="56" rx="10" ry="10" fill="#dff4ff" stroke="#334155" stroke-width="2"/>
+  <text x="446" y="251" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-GBS-Core-Tools</text>
+  <rect x="820" y="40" width="300" height="56" rx="10" ry="10" fill="#ffe6c7" stroke="#334155" stroke-width="2"/>
+  <text x="836" y="71" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-GBS-MagLev</text>
+  <rect x="820" y="220" width="300" height="56" rx="10" ry="10" fill="#ffe6c7" stroke="#334155" stroke-width="2"/>
+  <text x="836" y="251" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-GBS-MagLev-Tools</text>
+  <rect x="1210" y="40" width="300" height="56" rx="10" ry="10" fill="#e4f7df" stroke="#334155" stroke-width="2"/>
+  <text x="1226" y="71" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-Pharo-Core-Tests</text>
+  <rect x="1210" y="300" width="300" height="56" rx="10" ry="10" fill="#f7ddf4" stroke="#334155" stroke-width="2"/>
+  <text x="1226" y="331" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-Pharo-MagLev-Tests</text>
+  <rect x="1210" y="220" width="300" height="56" rx="10" ry="10" fill="#f0e0ff" stroke="#334155" stroke-width="2"/>
+  <text x="1226" y="251" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-Pharo-Tests</text>
 </svg>

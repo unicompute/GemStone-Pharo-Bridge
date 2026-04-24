@@ -149,6 +149,23 @@ GbxDebuggerService >> sourceCode [
 ]
 
 { #category : '*GemStone-GBS-MagLev-Tools' }
+GbxDebuggerService >> sourceMatchesCurrentMethodIn: aTextWidget [
+	| widgetText sourceText |
+	aTextWidget ifNil: [ ^ true ].
+	(aTextWidget respondsTo: #text) ifFalse: [ ^ true ].
+	currentContext ifNil: [ ^ true ].
+	sourceText := self sourceCode.
+	sourceText ifNil: [
+		sourceText := (currentContext respondsTo: #sourceCode)
+			ifTrue: [ currentContext sourceCode ]
+			ifFalse: [ (currentContext respondsTo: #sourceString) ifTrue: [ currentContext sourceString ] ifFalse: [ nil ] ] ].
+	sourceText ifNil: [ ^ true ].
+	widgetText := [ aTextWidget text asString ] on: Error do: [ nil ].
+	widgetText ifNil: [ ^ true ].
+	^ widgetText = sourceText asString
+]
+
+{ #category : '*GemStone-GBS-MagLev-Tools' }
 GbxDebuggerService >> browseRemoteSelectedMethod [
 	| methodObject newBrowser classHolder |
 	methodObject := self selectedRemoteUnboundMethodObject.
@@ -171,4 +188,64 @@ GbxDebuggerService >> browseRemoteSelectedMethod [
 	methodObject isClassSide ifTrue: [
 		newBrowser initalizeMetaTabsToIndex: 2 ].
 	^ newBrowser
+]
+
+{ #category : '*GemStone-GBS-MagLev-Tools' }
+GbxDebuggerService >> browseMethod [
+	"Browse current method - prefers a remote method browser when available."
+	currentContext gbxIsServerContext ifTrue: [
+		^ self browseRemoteSelectedMethod
+			ifNil: [ self gbxBrowseMethod: self selectedMethod ]
+	].
+	^ nil
+]
+
+{ #category : '*GemStone-GBS-MagLev-Tools' }
+GbxDebuggerService >> gbxRecompileMethod: sourceText notifying: requestor [
+	"Recompile the method in the receiver's current stack frame using sourceText.
+	Answer true if compilation is successful, otherwise false.
+	Displays compiler errors in the requestor (text editor)."
+	| remoteMethod gbxMethod method sess result myErrorText error preErrorText postErrorText |
+	remoteMethod := self selectedRemoteUnboundMethodObject.
+	remoteMethod ifNotNil: [
+		(self recompileCurrentMethodWithSource: sourceText) ifTrue: [
+			self gbxMethodChanged: sourceText.
+			^ true ].
+		requestor ifNotNil: [
+			(requestor respondsTo: #insertAndSelect:at:) ifTrue: [
+				requestor insertAndSelect: (lastCompileError ifNil: [ 'error' ]) , '->' at: 1 ] ].
+		^ false ].
+
+	gbxMethod := self selectedMethod.
+	gbxMethod ifNil: [ ^ false ].
+	method := gbxMethod methodDelegate.
+	method ifNil: [ ^ false ].
+	sess := method session.
+	sess ifNil: [ ^ false ].
+
+	(gbxMethod methodClass = sess oopNil) ifTrue: [
+		^ false ].
+
+	result := [
+		sess unsynchronizedEvaluateBlock: '[:meth :source | meth _recompileWithSource: source]'
+			with: method
+			with: (sourceText gbxConvertToServerLineDelimiter ifNil: [ sourceText ])
+	] on: Error do: [ :ex | ex messageText ].
+
+	result ~~ true & (result ~~ false) ifTrue: [
+		error := result isEmpty ifTrue: [ nil ] ifFalse: [ result at: 1 ].
+		myErrorText := error size < 3 ifTrue: [ 'error' ] ifFalse: [ error at: 3 ].
+		requestor ifNotNil: [
+			(requestor respondsTo: #insertAndSelect:at:) ifTrue: [
+				requestor insertAndSelect: myErrorText , '->' at: (error at: 2) ] ].
+		^ false ].
+
+	result ifTrue: [
+		self gbxMethodChanged: sourceText.
+		^ true
+	] ifFalse: [
+		self scheduleTextUpdate.
+		self processEvents.
+		^ true
+	]
 ]

@@ -128,3 +128,22 @@ GemStonePharoReloadRunnerTest >> testRunLoadedImageReturnsFalseWhenRequestedVeri
 
 	self deny: runner runLoadedImage
 ]
+
+{ #category : 'tests' }
+GemStonePharoReloadRunnerTest >> testRunLoadedImageSkipsPackageOwnershipForOriginalTestsLoadGroup [
+	| guards contract |
+	guards := self newGuards.
+	contract := self newContract.
+	runner := GemStonePharoReloadRunner
+		onEnvironment: (Dictionary newFromPairs: {
+			'GBS_LOAD_GROUP'. 'Original-Tests' })
+		log: [ :line | logLines add: line ].
+	runner
+		baselineContract: contract;
+		reloadGuards: guards;
+		loadedPackages: #('GemStone-GBS-Converted' 'GemStone-GBS-Tools' 'GemStone-Pharo-Tests').
+
+	self assert: runner runLoadedImage.
+	self deny: (guards calls includes: #packageOwnership).
+	self assert: (logLines includes: 'PACKAGE_OWNERSHIP_DRIFT_SKIPPED load group Original-Tests')
+]

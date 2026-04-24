@@ -229,10 +229,14 @@ GemStonePharoReloadRunner >> runLoadedImage [
 		loadGroup: self loadGroup
 		loadedPackages: self loadedPackages
 		log: logBlock) & checksSucceeded.
-	checksSucceeded := (self reloadGuards
-		checkPackageOwnershipFor: self baselineContract
-		loadedPackages: self loadedPackages
-		log: logBlock) & checksSucceeded.
+	self shouldCheckPackageOwnership
+		ifTrue: [
+			checksSucceeded := (self reloadGuards
+				checkPackageOwnershipFor: self baselineContract
+				loadedPackages: self loadedPackages
+				log: logBlock) & checksSucceeded ]
+		ifFalse: [
+			self log: 'PACKAGE_OWNERSHIP_DRIFT_SKIPPED load group ', self loadGroup ].
 	checksSucceeded := (self reloadGuards
 		checkNoCompatibilitySourceFor: self baselineContract
 		repoRoot: self repoRoot
@@ -273,6 +277,11 @@ GemStonePharoReloadRunner >> runLoadedImage [
 { #category : 'private' }
 GemStonePharoReloadRunner >> shouldGenerateContractArtifacts [
 	^ self class generateContractArtifactsFromEnvironment: self environment
+]
+
+{ #category : 'private' }
+GemStonePharoReloadRunner >> shouldCheckPackageOwnership [
+	^ (#('Original' 'Original-Tests') includes: self loadGroup) not
 ]
 
 { #category : 'private' }

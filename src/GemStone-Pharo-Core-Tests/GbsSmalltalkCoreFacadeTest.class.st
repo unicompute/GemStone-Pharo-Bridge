@@ -11,7 +11,7 @@ Class {
 { #category : 'running' }
 GbsSmalltalkCoreFacadeTest >> setUp [
 	super setUp.
-	mockSession := MockGbsSession new
+	mockSession := CoreMockGbsSession new
 ]
 
 { #category : 'tests' }

@@ -66,10 +66,32 @@ GemStonePharoLaneRunnerTest >> testHasRequiredPackagesLoadedUsesLoadGroupMembers
 	runner := GemStonePharoLaneRunnerTestRunner
 		onEnvironment: (Dictionary newFromPairs: { 'GBS_LOAD_GROUP'. 'Core-Tests' })
 		log: [ :line | logLines add: line ].
-	runner loadedPackageNames: #('GemStone-GBS-Converted' 'GemStone-GBS-Tools' 'GemStone-Pharo-Core-Tests').
+	runner loadedPackageNames: #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-Pharo-Core-Tests').
 	self assert: runner hasRequiredPackagesLoaded.
-	runner loadedPackageNames: #('GemStone-GBS-Converted' 'GemStone-GBS-Tools').
+	runner loadedPackageNames: #('GemStone-GBS-Converted' 'GemStone-GBS-Tools' 'GemStone-Pharo-Core-Tests').
 	self deny: runner hasRequiredPackagesLoaded
+]
+
+{ #category : 'tests' }
+GemStonePharoLaneRunnerTest >> testLiveLaneAllowsSkippedTestsWhenSessionIsReady [
+	| result |
+	runner := GemStonePharoLaneRunner
+		onEnvironment: (Dictionary newFromPairs: { 'GBS_TEST_LANE'. 'live' })
+		log: [ :line | logLines add: line ].
+	result := TestResult new.
+
+	self deny: (runner hadFailureForResult: result skipped: 1 sessionReady: true)
+]
+
+{ #category : 'tests' }
+GemStonePharoLaneRunnerTest >> testLiveLaneFailsWhenSessionIsUnavailable [
+	| result |
+	runner := GemStonePharoLaneRunner
+		onEnvironment: (Dictionary newFromPairs: { 'GBS_TEST_LANE'. 'live' })
+		log: [ :line | logLines add: line ].
+	result := TestResult new.
+
+	self assert: (runner hadFailureForResult: result skipped: 0 sessionReady: false)
 ]
 
 { #category : 'tests' }

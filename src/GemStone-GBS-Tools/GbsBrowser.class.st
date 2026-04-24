@@ -214,17 +214,6 @@ GbsBrowser >> browseClass [
 ]
 
 { #category : 'actions' }
-GbsBrowser >> browseClassInfo [
-	| mirror |
-	mirror := self selectedClassMirror.
-	mirror ifNil: [
-		self inform: 'No class selected!'.
-		^ false ].
-	self inform: (self classInfoTextForMirror: mirror).
-	^ true
-]
-
-{ #category : 'actions' }
 GbsBrowser >> browseClassReferences [
 	^ self queryReferences
 ]
@@ -273,81 +262,6 @@ GbsBrowser >> browseMethod [
 ]
 
 { #category : 'actions' }
-GbsBrowser >> browseMethodInfo [
-	| methodObject |
-	methodObject := self selectedUnboundMethodObject.
-	methodObject ifNil: [
-		self inform: 'No method selected!'.
-		^ false ].
-	self inform: (self methodInfoTextForMirror: methodObject).
-	^ true
-]
-
-{ #category : 'actions' }
-GbsBrowser >> browseNamedObjectCacheReport [
-	self inform: session namedObjectCacheReportText.
-	^ true
-]
-
-{ #category : 'actions' }
-GbsBrowser >> browsePromptedSessionStateKey [
-	| rawKey key |
-	session ifNil: [
-		self inform: 'No GemStone session available.'.
-		^ false ].
-	rawKey := self uiRequest: 'Session state key:' initialAnswer: '19'.
-	(rawKey isNil or: [ rawKey trimBoth isEmpty ]) ifTrue: [ ^ false ].
-	key := [ rawKey trimBoth asInteger ]
-		on: Error
-		do: [ nil ].
-	key ifNil: [
-		self inform: 'Enter a numeric session state key.'.
-		^ false ].
-	^ self browseSessionStateAtKey: key
-]
-
-{ #category : 'actions' }
-GbsBrowser >> browsePromptedSessionStateKeysReport [
-	| rawKeys keys |
-	session ifNil: [
-		self inform: 'No GemStone session available.'.
-		^ false ].
-	rawKeys := self uiRequest: 'Session state keys (comma-separated):' initialAnswer: '19'.
-	keys := self parseSessionStateKeysFrom: rawKeys.
-	keys ifNil: [
-		self inform: 'Enter one or more numeric session state keys.'.
-		^ false ].
-	self inform: (session objectSpaceDiagnostics reportTextForKeys: keys).
-	^ true
-]
-
-{ #category : 'actions' }
-GbsBrowser >> browseSessionStateAtKey: aKey [
-	| sessionStateValue oop |
-	session ifNil: [
-		self inform: 'No GemStone session available.'.
-		^ false ].
-	sessionStateValue := [ session sessionStateAt: aKey ]
-		on: Error
-		do: [ :ex |
-			self inform: 'Session state lookup failed: ', ex messageText.
-			^ false ].
-	sessionStateValue ifNil: [
-		self inform: 'Session state key ', aKey printString, ' is not set.'.
-		^ false ].
-	oop := [ sessionStateValue oop ]
-		on: Error
-		do: [ nil ].
-	oop ifNil: [
-		((sessionStateValue isInteger) and: [ sessionStateValue > 20 ])
-			ifTrue: [ oop := sessionStateValue ] ].
-	oop ifNil: [
-		self inform: 'Session state key ', aKey printString, ' does not currently have an inspectable remote oop.'.
-		^ false ].
-	^ self inspectOop: oop
-]
-
-{ #category : 'actions' }
 GbsBrowser >> browseSendersOf: aSelector [
 	| refs |
 	refs := self queryServerMethodsForSelector: aSelector asString mode: 'senders'.
@@ -355,80 +269,44 @@ GbsBrowser >> browseSendersOf: aSelector [
 ]
 
 { #category : 'actions' }
-GbsBrowser >> browseTypedWrapperAutoloadReport [
-	self inform: (GbsSessionManager typedWrapperAutoloadReportTextForSession: session).
-	^ true
-]
-
-{ #category : 'actions' }
-GbsBrowser >> browseTypedWrapperLifecycleReport [
-	self inform: session typedWrapperLifecycleReportText.
-	^ true
-]
-
-{ #category : 'actions' }
-GbsBrowser >> browseStaleTypedWrapperLifecycleReport [
-	| report staleEntries |
-	session ifNil: [
-		self inform: 'No GemStone session available.'.
-		^ false ].
-	report := session typedWrapperLifecycleReport.
-	staleEntries := report staleEntries.
-	staleEntries isEmpty ifTrue: [
-		self inform: 'Typed Wrapper Lifecycle', String cr, String cr, 'No stale typed wrappers.'.
-		^ true ].
-	self inform: (GbsTypedWrapperLifecycleReport entries: staleEntries) text.
-	^ true
-]
-
-{ #category : 'actions' }
-GbsBrowser >> browseObjectsInMemoryReport [
-	| start limit |
-	session ifNil: [
-		self inform: 'No GemStone session available.'.
-		^ false ].
-	start := self
-		requestPositiveInteger: 'Object scan start index:'
-		initialAnswer: '1'.
-	start ifNil: [ ^ false ].
-	limit := self
-		requestPositiveInteger: 'Object scan limit:'
-		initialAnswer: '25'.
-	limit ifNil: [ ^ false ].
-	self inform: (session objectSpaceDiagnostics objectsInMemoryReportFrom: start limit: limit) text.
-	^ true
-]
-
-{ #category : 'actions' }
-GbsBrowser >> refreshAllTypedWrappers [
-	| refreshed |
-	refreshed := session refreshAllTypedWrapperClasses.
-	self inform: 'Refreshed ', refreshed size printString, ' typed wrapper(s).'.
-	^ true
-]
-
-{ #category : 'actions' }
-GbsBrowser >> refreshStaleTypedWrappers [
-	| refreshed |
-	refreshed := session refreshStaleTypedWrapperClasses.
-	self inform: 'Refreshed ', refreshed size printString, ' stale typed wrapper(s).'.
-	^ true
-]
-
-{ #category : 'actions' }
 GbsBrowser >> browseVersions [
-	| methodObject versions idx |
-	methodObject := self selectedUnboundMethodObject.
-	methodObject ifNil: [ ^ false ].
-	versions := methodObject versionEntries.
-	versions ifNil: [ ^ false ].
-	versions := versions reject: [ :each | each isNil ].
+	| className selector script raw versions idx |
+	className := self selectedClassName.
+	selector := self selectedMethodSelector.
+	(className isNil or: [ selector isNil ]) ifTrue: [ ^ false ].
+	script := '[
+		| cls sel stream versions |
+		cls := System myUserProfile symbolList objectNamed: #', className, '.
+		sel := #', selector asString, '.
+		stream := WriteStream on: String new.
+		cls ifNil: [ ^ '''' ].
+		versions := (cls respondsTo: #allVersionsOf:)
+			ifTrue: [ [ cls allVersionsOf: sel ] on: Error do: [ #() ] ]
+			ifFalse: [ #() ].
+		versions isEmpty ifTrue: [
+			| src |
+			src := [ (cls compiledMethodAt: sel) sourceString ] on: Error do: [ '''' ].
+			src isEmpty ifFalse: [
+				stream nextPutAll: ''version 1''; tab; nextPutAll: src; lf
+			]
+		] ifFalse: [
+			1 to: versions size do: [ :ix |
+				| m src |
+				m := versions at: ix.
+				src := [ m sourceString ] on: Error do: [ '''' ].
+				stream
+					nextPutAll: ''version ''; nextPutAll: ix asString; tab;
+					nextPutAll: src; lf
+			]
+		].
+		stream contents
+	] value'.
+	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	versions := (raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty.
 	versions isEmpty ifTrue: [ ^ false ].
-	idx := self
-		uiChooseFrom: (versions collect: [ :each | each first asString ])
-		title: 'Method Versions'.
+	idx := UIManager default chooseFrom: (versions collect: [ :ea | (ea splitOn: Character tab) first ]) title: 'Method Versions'.
 	idx = 0 ifTrue: [ ^ false ].
-	sourceText text: (((versions at: idx) at: 2 ifAbsent: [ '' ]) ifNil: [ '' ] ifNotNil: [ :src | src asString ]).
+	sourceText text: ((versions at: idx) allButFirst: (((versions at: idx) indexOf: Character tab ifAbsent: [ 0 ]))).
 	^ true
 ]
 
@@ -449,55 +327,33 @@ GbsBrowser >> buildMenuBar [
 
 { #category : 'actions' }
 GbsBrowser >> classSelected: className [
-	| mirror entries categories |
+	| script rawData categories metaString |
 	
 	className ifNil: [ 
 		protocolsList items: #(). methodsList items: #(). sourceText text: ''. 
 		^ self 
 	].
-
-	mirror := session classMirrorOfNamed: className.
-	entries := self classSideSelected
-		ifTrue: [ mirror classProtocols ]
-		ifFalse: [ mirror instanceProtocols ].
-	categories := entries collect: [ :each | (each at: 1) asString ].
+	
+	"The Metaclass switch!"
+	metaString := (metaCheckbox state == true) ifTrue: [ ' class' ] ifFalse: [ '' ].
+	
+	script := '[
+		| cls stream |
+		cls := (System myUserProfile symbolList objectNamed: #', className, ')', metaString, '.
+		stream := WriteStream on: String new.
+		cls ifNotNil: [
+			cls categoryNames asSortedCollection do: [ :cat | stream nextPutAll: cat asString; lf ].
+		].
+		stream contents
+	] value'.
+	
+	rawData := session executeAndFetch: script.
+	rawData := rawData
+		ifNil: [ '' ]
+		ifNotNil: [ rawData asString ].
+	categories := (rawData splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty.
 	categories := {'-- all --'} asOrderedCollection addAll: categories; yourself.
 	protocolsList items: categories.
-	methodsList items: #().
-	sourceText text: ''
-]
-
-{ #category : 'actions' }
-GbsBrowser >> clearNamedObjectCache [
-	session clearNamedObjectCache.
-	self inform: 'Named object cache cleared.'.
-	^ true
-]
-
-{ #category : 'private' }
-GbsBrowser >> classInfoTextForMirror: aMirror [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: 'Class: ';
-			nextPutAll: (self infoValueForDisplay: aMirror name);
-			lf;
-			nextPutAll: 'Browser side: ';
-			nextPutAll: (self classSideSelected ifTrue: [ 'class' ] ifFalse: [ 'instance' ]);
-			lf;
-			nextPutAll: 'Superclass: ';
-			nextPutAll: (self infoValueForDisplay: aMirror superclassName);
-			lf;
-			nextPutAll: 'Package: ';
-			nextPutAll: (self infoValueForDisplay: aMirror packageName);
-			lf;
-			nextPutAll: 'Category: ';
-			nextPutAll: (self infoValueForDisplay: aMirror categoryName);
-			lf;
-			nextPutAll: 'Version: ';
-			nextPutAll: (self versionSummaryCurrent: aMirror version total: aMirror numberOfVersions);
-			lf;
-			nextPutAll: 'OOP: ';
-			nextPutAll: (self infoValueForDisplay: aMirror oop) ]
 ]
 
 { #category : 'actions' }
@@ -892,7 +748,7 @@ GbsBrowser >> gsInspectIt [
 	code isEmpty ifTrue: [ ^ false ].
 	oop := session serverInterface apiGciExecuteStr: code context: 20 env: 0.
 	^ (oop isNumber and: [ oop > 20 ])
-		ifTrue: [ self inspectOop: oop ]
+		ifTrue: [ GbsInspector inspect: oop session: session. true ]
 		ifFalse: [ false ]
 ]
 
@@ -954,73 +810,65 @@ GbsBrowser >> inspectAllInstances [
 	| className oop |
 	className := self selectedClassName.
 	className ifNil: [ ^ false ].
-	oop := session repository allInstancesOopOfNamed: className.
+	oop := session serverInterface apiGciExecuteStr: '((System myUserProfile symbolList objectNamed: #', className, ') allInstances)' context: 20 env: 0.
 	(oop isNumber and: [ oop > 20 ]) ifFalse: [ ^ false ].
-	^ self inspectOop: oop
+	GbsInspector inspect: oop session: session.
+	^ true
 ]
 
 { #category : 'actions' }
 GbsBrowser >> inspectClass [
-	| className object oop |
+	| className oop |
 	className := self selectedClassName.
 	className ifNil: [ ^ false ].
-	object := session namedObjectAt: className ifAbsent: [ nil ].
-	oop := (object isKindOf: GbsProxy)
-		ifTrue: [ object oop ]
-		ifFalse: [ nil ].
+	oop := session serverInterface apiGciExecuteStr: '(System myUserProfile symbolList objectNamed: #', className, ')' context: 20 env: 0.
 	(oop isNumber and: [ oop > 20 ]) ifFalse: [ ^ false ].
-	^ self inspectOop: oop
+	GbsInspector inspect: oop session: session.
+	^ true
 ]
 
 { #category : 'actions' }
 GbsBrowser >> inspectDictionary [
-	| name object oop |
+	| name oop |
 	name := self selectedDictionaryName.
 	name ifNil: [ ^ false ].
-	object := session namedObjectAt: name ifAbsent: [ nil ].
-	oop := (object isKindOf: GbsProxy)
-		ifTrue: [ object oop ]
-		ifFalse: [ nil ].
+	oop := session serverInterface apiGciExecuteStr: '(System myUserProfile symbolList objectNamed: #', name, ')' context: 20 env: 0.
 	(oop isNumber and: [ oop > 20 ]) ifFalse: [ ^ false ].
-	^ self inspectOop: oop
+	GbsInspector inspect: oop session: session.
+	^ true
 ]
 
 { #category : 'actions' }
 GbsBrowser >> inspectMethod [
-	| methodObject oop |
-	methodObject := self selectedUnboundMethodObject.
-	methodObject ifNil: [ ^ false ].
-	oop := methodObject oop.
+	| className selector script oop |
+	className := self selectedClassName.
+	selector := self selectedMethodSelector.
+	(className isNil or: [ selector isNil ]) ifTrue: [ ^ false ].
+	script := '(System myUserProfile symbolList objectNamed: #', className, ') compiledMethodAt: #', selector asString.
+	oop := session serverInterface apiGciExecuteStr: script context: 20 env: 0.
 	(oop isNumber and: [ oop > 20 ]) ifFalse: [ ^ false ].
-	^ self inspectOop: oop
-]
-
-{ #category : 'actions' }
-GbsBrowser >> invokeSelectedMethod [
-	| methodObject invocationArguments result |
-	methodObject := self selectedMethodObject.
-	methodObject ifNil: [
-		self inform: 'No method selected!'.
-		^ false ].
-	methodObject classSide ifFalse: [
-		self inform: 'Browser invocation only supports class-side methods. Use the debugger to bind an instance receiver.'.
-		^ false ].
-	invocationArguments := self invocationArgumentsForMethodObject: methodObject.
-	invocationArguments ifNil: [ ^ false ].
-	result := [ methodObject callWithArguments: invocationArguments ] on: Error do: [ :ex |
-		self inform: 'GemStone invoke failed: ', ex messageText.
-		^ false ].
-	self inform: 'GemStone method result: ', result printString.
+	GbsInspector inspect: oop session: session.
 	^ true
 ]
 
 { #category : 'actions' }
 GbsBrowser >> loadDictionaries [
-	| dicts |
-	dicts := [ session fetchRemoteDictionaries ] on: Error do: [ #() ].
-	dicts := (dicts ifNil: [ #() ] ifNotNil: [ dicts ])
-		collect: [ :each | each asString trimBoth ]
-		thenReject: #isEmpty.
+	"Fetches the user's SymbolList (Dictionaries) from GemStone"
+	| script rawData dicts |
+	script := '[
+		| stream |
+		stream := WriteStream on: String new.
+		System myUserProfile symbolList do: [ :dict | stream nextPutAll: dict name asString; lf ].
+		stream contents
+	] value'.
+	
+	rawData := session executeAndFetch: script.
+	rawData := rawData
+		ifNil: [ '' ]
+		ifNotNil: [ rawData asString ].
+	
+	"Parse and trim the C-strings safely"
+	dicts := (rawData splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty.
 	dictionariesList items: dicts.
 ]
 
@@ -1050,7 +898,6 @@ GbsBrowser >> menuClass [
 			group addItem: [ :item | item name: 'File Out Methods As ...'; action: [ self deferAction: [ self fileOutClassMethods ] ] ] ];
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Browse Class'; action: [ self deferAction: [ self browseClass ] ] ].
-			group addItem: [ :item | item name: 'Browse Class Info'; action: [ self deferAction: [ self browseClassInfo ] ] ].
 			group addItem: [ :item | item name: 'Browse Hierarchy'; action: [ self deferAction: [ self browseHierarchy ] ] ].
 			group addItem: [ :item | item name: 'Browse Versions'; action: [ self deferAction: [ self browseVersions ] ] ].
 			group addItem: [ :item | item name: 'Browse References'; action: [ self deferAction: [ self browseClassReferences ] ] ] ];
@@ -1137,9 +984,7 @@ GbsBrowser >> menuMethod [
 			group addItem: [ :item | item name: 'File Out As ...'; action: [ self deferAction: [ self fileOutMethod ] ] ] ];
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Browse'; action: [ self deferAction: [ self browseMethod ] ] ].
-			group addItem: [ :item | item name: 'Browse Method Info'; action: [ self deferAction: [ self browseMethodInfo ] ] ].
-			group addItem: [ :item | item name: 'Browse Hierarchy'; action: [ self deferAction: [ self browseHierarchy ] ] ].
-			group addItem: [ :item | item name: 'Invoke in GemStone'; action: [ self deferAction: [ self invokeSelectedMethod ] ] ] ];
+			group addItem: [ :item | item name: 'Browse Hierarchy'; action: [ self deferAction: [ self browseHierarchy ] ] ] ];
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Browse Senders'; action: [ self deferAction: [ self querySenders ] ] ].
 			group addItem: [ :item | item name: 'Browse Implementors'; action: [ self deferAction: [ self queryImplementors ] ] ].
@@ -1156,28 +1001,14 @@ GbsBrowser >> menuMethod [
 
 { #category : 'menus' }
 GbsBrowser >> menuSession [
-	| menu |
-	menu := self newMenu
+	^ self newMenu
 		addGroup: [ :group |
 			group addItem: [ :item | item name: self autoCommitMenuLabel; action: [ self deferAction: [ self toggleAutoCommit ] ] ] ];
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Commit Transaction'; action: [ self deferAction: [ self commitSession ] ] ].
 			group addItem: [ :item | item name: 'Abort Transaction'; action: [ self deferAction: [ self abortSession ] ] ].
 			group addItem: [ :item | item name: 'Begin Transaction'; action: [ self deferAction: [ self beginSessionTransaction ] ] ] ];
-		addGroup: [ :group |
-			group addItem: [ :item | item name: 'Named Object Cache Report'; action: [ self deferAction: [ self browseNamedObjectCacheReport ] ] ].
-			group addItem: [ :item | item name: 'Clear Named Object Cache'; action: [ self deferAction: [ self clearNamedObjectCache ] ] ].
-			group addItem: [ :item | item name: 'Typed Wrapper Autoload Report'; action: [ self deferAction: [ self browseTypedWrapperAutoloadReport ] ] ].
-			group addItem: [ :item | item name: 'Typed Wrapper Lifecycle Report'; action: [ self deferAction: [ self browseTypedWrapperLifecycleReport ] ] ].
-			group addItem: [ :item | item name: 'Stale Typed Wrapper Report'; action: [ self deferAction: [ self browseStaleTypedWrapperLifecycleReport ] ] ].
-			group addItem: [ :item | item name: 'Refresh Stale Typed Wrappers'; action: [ self deferAction: [ self refreshStaleTypedWrappers ] ] ].
-			group addItem: [ :item | item name: 'Refresh All Typed Wrappers'; action: [ self deferAction: [ self refreshAllTypedWrappers ] ] ].
-			group addItem: [ :item | item name: 'Inspect Session State Key...'; action: [ self deferAction: [ self browsePromptedSessionStateKey ] ] ].
-			group addItem: [ :item | item name: 'Session State Keys Report...'; action: [ self deferAction: [ self browsePromptedSessionStateKeysReport ] ] ].
-			group addItem: [ :item | item name: 'Objects In Memory Report...'; action: [ self deferAction: [ self browseObjectsInMemoryReport ] ] ].
-			self addExtensionSessionMenuItemsTo: group ];
-		yourself.
-	^ menu
+		yourself
 ]
 
 { #category : 'menus' }
@@ -1194,13 +1025,26 @@ GbsBrowser >> menuWindow [
 
 { #category : 'actions' }
 GbsBrowser >> methodSelected: selectorName [
-	| methodObject rawSource |
+	| script rawSource className metaString |
 	
 	selectorName ifNil: [ ^ sourceText text: '' ].
-	methodObject := self selectedUnboundMethodObjectForSelector: selectorName asSymbol.
-	methodObject ifNil: [ ^ self ].
-	rawSource := methodObject sourceCode.
-	sourceText text: (rawSource ifNil: [ '' ] ifNotNil: [ rawSource asString ]).
+	className := classesList selection selectedItem.
+	className ifNil: [ ^ self ].
+	
+	"The Metaclass switch!"
+	metaString := (metaCheckbox state == true) ifTrue: [ ' class' ] ifFalse: [ '' ].
+	
+	script := '[
+		| cls meth |
+		cls := (System myUserProfile symbolList objectNamed: #', className, ')', metaString, '.
+		cls ifNil: [ ^ '''' ].
+		meth := cls compiledMethodAt: #''', selectorName, ''' ifAbsent: [ nil ].
+		meth ifNil: [ '''' ] ifNotNil: [ meth sourceString ]
+	] value'.
+	
+	rawSource := session executeAndFetch: script.
+	(rawSource beginsWith: 'Error:') ifTrue: [ rawSource := 'Could not fetch source code.' ].
+	sourceText text: rawSource.
 ]
 
 { #category : 'private' }
@@ -1281,15 +1125,6 @@ GbsBrowser >> normalizeSelectorQuery: rawInput [
 ]
 
 { #category : 'private' }
-GbsBrowser >> openMethodObject: aMethodObject [
-	aMethodObject ifNil: [ ^ false ].
-	^ self
-		selectClassNamed: aMethodObject ownerName
-		classSide: aMethodObject isClassSide
-		method: aMethodObject selector asString
-]
-
-{ #category : 'private' }
 GbsBrowser >> openMethodReference: referenceString [
 	| split classPart selectorPart classSide className |
 	(referenceString includesSubstring: '>>') ifFalse: [ ^ false ].
@@ -1340,167 +1175,34 @@ GbsBrowser >> promptSelectorAndDo: oneArgBlock [
 
 { #category : 'actions' }
 GbsBrowser >> protocolSelected: protocolName [
-	| mirror protocolEntries selectors entry |
+	| script rawData selectors className metaString |
 	
 	protocolName ifNil: [ ^ methodsList items: #(); yourself. sourceText text: '' ].
-	mirror := self selectedClassMirror.
-	mirror ifNil: [ ^ self ].
-	protocolEntries := self classSideSelected
-		ifTrue: [ mirror classProtocols ]
-		ifFalse: [ mirror instanceProtocols ].
-	selectors := protocolName = '-- all --'
-		ifTrue: [
-			(self classSideSelected
-				ifTrue: [ mirror classSelectors ]
-				ifFalse: [ mirror instanceSelectors ]) ]
-		ifFalse: [
-			entry := protocolEntries
-				detect: [ :each | (each at: 1 ifAbsent: [ '' ]) asString = protocolName asString ]
-				ifNone: [ nil ].
-			entry
-				ifNil: [ #() ]
-				ifNotNil: [ entry at: 2 ifAbsent: [ #() ] ] ].
-	selectors := selectors collect: [ :each | each asString ].
+	className := classesList selection selectedItem.
+	className ifNil: [ ^ self ].
+	
+	"The Metaclass switch!"
+	metaString := (metaCheckbox state == true) ifTrue: [ ' class' ] ifFalse: [ '' ].
+	
+	script := '[
+		| cls stream sels |
+		cls := (System myUserProfile symbolList objectNamed: #', className, ')', metaString, '.
+		stream := WriteStream on: String new.
+		cls ifNotNil: [
+			sels := ''', protocolName, ''' = ''-- all --''
+				ifTrue: [ cls selectors ]
+				ifFalse: [ cls selectorsIn: #''', protocolName, ''' ].
+			sels asSortedCollection do: [ :sel | stream nextPutAll: sel asString; lf ].
+		].
+		stream contents
+	] value'.
+	
+	rawData := session executeAndFetch: script.
+	rawData := rawData
+		ifNil: [ '' ]
+		ifNotNil: [ rawData asString ].
+	selectors := (rawData splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty.
 	methodsList items: selectors.
-]
-
-{ #category : 'private' }
-GbsBrowser >> classSideSelected [
-	^ metaCheckbox notNil
-		and: [ (metaCheckbox respondsTo: #state)
-		and: [ metaCheckbox state == true ] ]
-]
-
-{ #category : 'private' }
-GbsBrowser >> infoValueForDisplay: anObject [
-	anObject ifNil: [ ^ '<none>' ].
-	^ anObject asString
-]
-
-{ #category : 'private' }
-GbsBrowser >> inform: aString [
-	UIManager default inform: aString.
-	^ aString
-]
-
-{ #category : 'private' }
-GbsBrowser >> inspectOop: anOop [
-	GbsInspector inspect: anOop session: session.
-	^ true
-]
-
-{ #category : 'private' }
-GbsBrowser >> methodInfoTextForMirror: aMirror [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: 'Method: ';
-			nextPutAll: (self infoValueForDisplay: aMirror ownerName);
-			nextPutAll: '>>';
-			nextPutAll: (self infoValueForDisplay: aMirror selector);
-			lf;
-			nextPutAll: 'Side: ';
-			nextPutAll: (aMirror classSide ifTrue: [ 'class' ] ifFalse: [ 'instance' ]);
-			lf;
-			nextPutAll: 'Owner: ';
-			nextPutAll: (self infoValueForDisplay: aMirror ownerName);
-			lf;
-			nextPutAll: 'Selector: ';
-			nextPutAll: (self infoValueForDisplay: aMirror selector);
-			lf;
-			nextPutAll: 'Binding: ';
-			nextPutAll: ((aMirror respondsTo: #isBound)
-				ifTrue: [ aMirror isBound ifTrue: [ 'bound' ] ifFalse: [ 'unbound' ] ]
-				ifFalse: [ 'n/a' ]);
-			lf;
-			nextPutAll: 'Arity: ';
-			nextPutAll: (self infoValueForDisplay: ((aMirror respondsTo: #arity)
-				ifTrue: [ aMirror arity ]
-				ifFalse: [ nil ]));
-			lf;
-			nextPutAll: 'Protocol: ';
-			nextPutAll: (self infoValueForDisplay: aMirror protocol);
-			lf;
-			nextPutAll: 'Package: ';
-			nextPutAll: (self infoValueForDisplay: aMirror packageName);
-			lf;
-			nextPutAll: 'Source location: ';
-			nextPutAll: (self infoValueForDisplay: aMirror sourceLocation);
-			lf;
-			nextPutAll: 'Version: ';
-			nextPutAll: (self versionSummaryCurrent: aMirror version total: aMirror numberOfVersions);
-			lf;
-			nextPutAll: 'OOP: ';
-			nextPutAll: (self infoValueForDisplay: aMirror oop) ]
-]
-
-{ #category : 'private' }
-GbsBrowser >> selectedClassMirror [
-	| className |
-	className := self selectedClassName.
-	className ifNil: [ ^ nil ].
-	^ session classMirrorOfNamed: className
-]
-
-{ #category : 'private' }
-GbsBrowser >> selectedMethodMirror [
-	| selector |
-	selector := self selectedMethodSelector.
-	selector ifNil: [ ^ nil ].
-	^ self selectedMethodMirrorForSelector: selector
-]
-
-{ #category : 'private' }
-GbsBrowser >> selectedMethodMirrorForSelector: aSelector [
-	| className |
-	className := self selectedClassName.
-	className ifNil: [ ^ nil ].
-	^ self classSideSelected
-		ifTrue: [ session classMethodMirrorForClassNamed: className selector: aSelector ]
-		ifFalse: [ session methodMirrorForClassNamed: className selector: aSelector ]
-]
-
-{ #category : 'private' }
-GbsBrowser >> selectedMethodObject [
-	| selector |
-	selector := self selectedMethodSelector.
-	selector ifNil: [ ^ nil ].
-	^ self selectedMethodObjectForSelector: selector
-]
-
-{ #category : 'private' }
-GbsBrowser >> selectedMethodObjectForSelector: aSelector [
-	| className |
-	className := self selectedClassName.
-	className ifNil: [ ^ nil ].
-	^ self classSideSelected
-		ifTrue: [ session classMethodObjectForClassNamed: className selector: aSelector ]
-		ifFalse: [ session methodObjectForClassNamed: className selector: aSelector ]
-]
-
-{ #category : 'private' }
-GbsBrowser >> selectedUnboundMethodObject [
-	| selector |
-	selector := self selectedMethodSelector.
-	selector ifNil: [ ^ nil ].
-	^ self selectedUnboundMethodObjectForSelector: selector
-]
-
-{ #category : 'private' }
-GbsBrowser >> selectedUnboundMethodObjectForSelector: aSelector [
-	| className |
-	className := self selectedClassName.
-	className ifNil: [ ^ nil ].
-	^ self classSideSelected
-		ifTrue: [ session classUnboundMethodObjectForClassNamed: className selector: aSelector ]
-		ifFalse: [ session unboundMethodObjectForClassNamed: className selector: aSelector ]
-]
-
-{ #category : 'private' }
-GbsBrowser >> versionSummaryCurrent: currentVersion total: totalVersions [
-	(currentVersion isNil and: [ totalVersions isNil ]) ifTrue: [ ^ '<none>' ].
-	currentVersion ifNil: [ ^ 'of ', (self infoValueForDisplay: totalVersions) ].
-	totalVersions ifNil: [ ^ currentVersion asString ].
-	^ currentVersion asString, ' of ', totalVersions asString
 ]
 
 { #category : 'actions' }
@@ -1650,30 +1352,6 @@ GbsBrowser >> queryResultsTitleForSelector: selectorString mode: modeString coun
 	^ sessionPart, modePart, selectorString asString, ' (', aCount asString, ')'
 ]
 
-{ #category : 'private' }
-GbsBrowser >> parseSessionStateKeysFrom: aStringOrNil [
-	| trimmed tokens keys |
-	(aStringOrNil isNil or: [ aStringOrNil trimBoth isEmpty ]) ifTrue: [ ^ nil ].
-	trimmed := aStringOrNil trimBoth.
-	tokens := (trimmed findTokens: ',') collect: #trimBoth thenReject: #isEmpty.
-	tokens isEmpty ifTrue: [ ^ nil ].
-	keys := tokens collect: [ :each |
-		[ each asInteger ] on: Error do: [ ^ nil ] ].
-	^ keys asArray
-]
-
-{ #category : 'private' }
-GbsBrowser >> requestPositiveInteger: promptString initialAnswer: defaultString [
-	| rawValue |
-	rawValue := self uiRequest: promptString initialAnswer: defaultString.
-	(rawValue isNil or: [ rawValue trimBoth isEmpty ]) ifTrue: [ ^ nil ].
-	^ [ | value |
-		value := rawValue trimBoth asInteger.
-		value > 0 ifTrue: [ value ] ifFalse: [ nil ] ]
-		on: Error
-		do: [ nil ]
-]
-
 { #category : 'actions' }
 GbsBrowser >> querySenders [
 	^ self queryMethodsForSelectorPrompt: 'Senders of selector:' mode: 'senders'
@@ -1759,20 +1437,6 @@ GbsBrowser >> queryServerMethodsForSelector: selectorName mode: modeString rootC
 
 { #category : 'private' }
 GbsBrowser >> queryServerMethodsForSelector: selectorName mode: modeString rootClassName: rootClassName hierarchyScope: scopeString [
-	(#('hierarchyImplementors' 'hierarchySenders') includes: modeString) ifTrue: [
-		^ [ modeString = 'hierarchySenders'
-			ifTrue: [
-				session
-					hierarchySenderMethodReferenceStringsForSelector: selectorName asString trimBoth
-					rootClassName: rootClassName
-					scope: scopeString ]
-			ifFalse: [
-				session
-					hierarchyImplementorMethodReferenceStringsForSelector: selectorName asString trimBoth
-					rootClassName: rootClassName
-					scope: scopeString ] ]
-			on: Error
-			do: [ :ex | self queryServerMethodsByScanningForSelector: selectorName mode: modeString rootClassName: rootClassName hierarchyScope: scopeString ] ].
 	((#('implementors' 'senders' 'references') includes: modeString)
 		and: [ Smalltalk includesKey: #GbsClassicLauncher ]) ifTrue: [
 		^ [ GbsClassicLauncher

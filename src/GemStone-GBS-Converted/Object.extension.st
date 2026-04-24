@@ -1,41 +1,6 @@
 Extension { #name : 'Object' }
 
 { #category : '*GemStone-GBS-Converted' }
-Object >> addExtensionEntryMenuItemsTo: aMenu [
-	^ self
-]
-
-{ #category : '*GemStone-GBS-Converted' }
-Object >> addExtensionMethodMenuItemsTo: aMenuGroup [
-	^ self
-]
-
-{ #category : '*GemStone-GBS-Converted' }
-Object >> addExtensionPreviewMenuItemsTo: aMenu [
-	^ self
-]
-
-{ #category : '*GemStone-GBS-Converted' }
-Object >> addExtensionReportOptionsToLabels: labels actions: actions [
-	^ self
-]
-
-{ #category : '*GemStone-GBS-Converted' }
-Object >> addExtensionSessionMenuItemsTo: aMenuGroup [
-	^ self
-]
-
-{ #category : '*GemStone-GBS-Converted' }
-Object >> addExtensionWorkspaceMenuItemsTo: aMenuGroup [
-	^ self
-]
-
-{ #category : '*GemStone-GBS-Converted' }
-Object >> configureExtensionStructuredInspector: presenter [
-	^ self
-]
-
-{ #category : '*GemStone-GBS-Converted' }
 Object >> gbxConsiderModified [
 	"Best-effort Pharo port of the VW dirty-mark hook. If the receiver does not
 	participate in the GemBuilder replicate/proxy protocol, this is a no-op."

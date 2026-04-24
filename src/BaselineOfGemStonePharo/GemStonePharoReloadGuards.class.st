@@ -280,24 +280,35 @@ GemStonePharoReloadGuards >> checkCoreOnlyFor: baselineContract workingCopyNamed
 					to: logBlock ] ].
 
 	baselineContract coreOnlySelectorChecks do: [ :spec |
-		| classSymbol selector shouldExist cls |
+		| classSymbol side selector shouldExist cls behavior label |
 		classSymbol := spec first.
-		selector := spec second.
-		shouldExist := spec third.
+		side := spec size >= 4
+			ifTrue: [ spec second ]
+			ifFalse: [ #instance ].
+		selector := spec size >= 4
+			ifTrue: [ spec third ]
+			ifFalse: [ spec second ].
+		shouldExist := spec size >= 4
+			ifTrue: [ spec fourth ]
+			ifFalse: [ spec third ].
 		cls := Smalltalk at: classSymbol ifAbsent: [ nil ].
+		behavior := side = #class
+			ifTrue: [ cls ifNil: [ nil ] ifNotNil: [ cls class ] ]
+			ifFalse: [ cls ].
+		label := classSymbol asString, (side = #class ifTrue: [ ' class' ] ifFalse: [ '' ]).
 		cls
 			ifNil: [
 				failures := true.
 				self
-					log: 'CORE_ONLY_CHECK_FAIL selector ', classSymbol asString, '>>#', selector asString, ' class missing'
+					log: 'CORE_ONLY_CHECK_FAIL selector ', label, '>>#', selector asString, ' class missing'
 					to: logBlock ]
 			ifNotNil: [
-				((cls includesSelector: selector) = shouldExist)
-					ifTrue: [ self log: 'CORE_ONLY_CHECK_OK selector ', classSymbol asString, '>>#', selector asString to: logBlock ]
+				((behavior includesSelector: selector) = shouldExist)
+					ifTrue: [ self log: 'CORE_ONLY_CHECK_OK selector ', label, '>>#', selector asString to: logBlock ]
 					ifFalse: [
 						failures := true.
 						self
-							log: 'CORE_ONLY_CHECK_FAIL selector ', classSymbol asString, '>>#', selector asString,
+							log: 'CORE_ONLY_CHECK_FAIL selector ', label, '>>#', selector asString,
 								(shouldExist ifTrue: [ ' should exist' ] ifFalse: [ ' should be absent' ])
 							to: logBlock ] ] ].
 

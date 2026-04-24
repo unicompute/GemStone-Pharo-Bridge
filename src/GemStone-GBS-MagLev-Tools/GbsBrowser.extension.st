@@ -202,20 +202,3 @@ GbsBrowser >> browseMaglevFinalizerRegistryReport [
 	self inform: session objectSpaceDiagnostics finalizerRegistryReport text.
 	^ true
 ]
-
-{ #category : '*GemStone-GBS-MagLev-Tools' }
-GbsBrowser >> invocationArgumentsForMethodObject: aMethodObject [
-	| argumentCount input |
-	aMethodObject ifNil: [ ^ nil ].
-	argumentCount := aMethodObject selector numArgs.
-	argumentCount = 0 ifTrue: [ ^ #() ].
-	input := self
-		uiRequest: (GbsRemoteMethodObject
-			invocationPromptForSelector: aMethodObject selector
-			argumentCount: argumentCount)
-		initialAnswer: (GbsRemoteMethodObject defaultArgumentInputForCount: argumentCount).
-	input ifNil: [ ^ nil ].
-	^ GbsRemoteMethodObject
-		argumentsFromInput: input
-		expectedCount: argumentCount
-]

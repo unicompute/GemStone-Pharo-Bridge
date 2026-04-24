@@ -32,9 +32,11 @@ The clean reload lane loads the helper package, hands bootstrap unload/cache-war
   Verify the Smalltalk core without optional MagLev production packages and without deleted legacy surface.
 - `bootstrap-smoke`
   Prove that a clean image can micro-bootstrap the helper package and load the requested group before post-load checks run.
+- `original-tests`
+  Verify the original/base production and original/base test layer without the generic Core or optional MagLev overlays. This lane proves the base unit layer only.
 - `full`
   Verify the steady-state developer load plus the live GemStone lane.
 - `artifact-freshness`
   Verify that the generated contract artifacts and marker-managed doc sections are already up to date.
 - `verify`
-  Run core-only, bootstrap-smoke, full, artifact-freshness, then the summary-renderer smoke check.
+  Run core-only, bootstrap-smoke, original-tests, full, artifact-freshness, then the summary-renderer smoke check.

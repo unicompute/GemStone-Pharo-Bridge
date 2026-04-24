@@ -7,13 +7,7 @@ Class {
 		'parameters',
 		'pollingProcess',
 		'serverInterface',
-		'sessionId',
-		'materializationProfile',
-		'proxyCache',
-		'namedObjectCache',
-		'namedObjectAutoloadRegistry',
-		'repositoryRootCache',
-		'repositoryRootLifecycleVersion'
+		'sessionId'
 	],
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'
@@ -134,15 +128,8 @@ GbsSession >> abortTransaction [
   self isLoggedIn ifFalse: [ GbsError signal: 'Not logged in.' ].
 
   result := self gciAbort.
-  ((result = 1) or: [ result = true ]) ifFalse: [
-    "Some local stones report a falsey GCI abort result even though the
-    abort succeeds. Fall back to an explicit Smalltalk abortTransaction
-    before treating the connection as broken."
-    [ self evaluate: 'System abortTransaction. true' ]
-      on: Error
-      do: [ GbsError signal: 'Failed to abort transaction.' ] ].
-  GbsSessionManager invalidateStaleTypedWrapperClassesForSession: self.
-  self invalidateRepositoryRoots.
+  result = 1 ifFalse: [ "Abort rarely fails unless the connection is dead, but we should catch it."
+    GbsError signal: 'Failed to abort transaction.' ].
   ^ true
 ]
 
@@ -211,6 +198,12 @@ GbsSession >> checkSignals [
 ]
 
 { #category : 'transactions' }
+GbsSession >> commit [
+    "Compatibility alias used by older GBS examples."
+    ^ self commitTransaction
+]
+
+{ #category : 'transactions' }
 GbsSession >> commitTransaction [
 	"Attempts to commit. Returns true if successful, false if there is a conflict.
 	 You can extend this later to raise a GbsTransactionConflictError."
@@ -218,28 +211,7 @@ GbsSession >> commitTransaction [
 	self isLoggedIn ifFalse: [ GbsError signal: 'Not logged in.' ].
 	
 	result := self gciCommit.
-	result = 1 ifTrue: [
-		GbsSessionManager invalidateStaleTypedWrapperClassesForSession: self.
-		self invalidateRepositoryRoots ].
 	^ result = 1
-]
-
-{ #category : 'transactions' }
-GbsSession >> commitTransactionOrSignalConflict [
-	(self commitTransaction)
-		ifTrue: [ ^ true ].
-	GbsCommitConflictError signal: 'GemStone commit conflict.'
-]
-
-{ #category : 'transactions' }
-GbsSession >> commitTransactionWithRetryCount: aRetryCount [
-	| retries attempts |
-	retries := (aRetryCount ifNil: [ 0 ] ifNotNil: [ aRetryCount asInteger ]) max: 0.
-	attempts := retries + 1.
-	1 to: attempts do: [ :attempt |
-		(self commitTransaction) ifTrue: [ ^ true ].
-		attempt < attempts ifTrue: [ self abortTransaction ] ].
-	GbsCommitConflictError signal: 'GemStone commit conflict after ', attempts printString, ' attempts.'
 ]
 
 { #category : 'transactions' }
@@ -251,11 +223,6 @@ GbsSession >> beginTransaction [
 { #category : 'transactions' }
 GbsSession >> inTransaction [
 	^ self evaluateSystemSelector: #inTransaction withArguments: #()
-]
-
-{ #category : 'transactions' }
-GbsSession >> needsCommit [
-	^ self evaluateSystemSelector: #needsCommit withArguments: #()
 ]
 
 { #category : 'transactions' }
@@ -317,12 +284,6 @@ GbsSession >> removeLock: anObject [
 ]
 
 { #category : 'lock status' }
-GbsSession >> readLock: anObject [
-	self executeSystemSelector: #readLock: withArguments: { anObject }.
-	^ self
-]
-
-{ #category : 'lock status' }
 GbsSession >> removeLockAll: aCollection [
 	self executeSystemSelector: #removeLockAll: withArguments: { aCollection }.
 	^ self
@@ -351,12 +312,6 @@ GbsSession >> systemLocks [
 			at: association key
 			put: (self materializeSessionLocks: association value) ].
 	^ localLocks
-]
-
-{ #category : 'lock status' }
-GbsSession >> writeLock: anObject [
-	self executeSystemSelector: #writeLock: withArguments: { anObject }.
-	^ self
 ]
 
 { #category : 'lock status' }
@@ -409,22 +364,6 @@ GbsSession >> executeScriptAndFetchObject: aString [
 	self checkForError.
 
 	^ self fetchObject: resultOop asInteger
-]
-
-{ #category : 'execution' }
-GbsSession >> executeScriptAndReturnOop: aString [
-	| resultOop |
-	self validateReadyForExecution: aString.
-
-	resultOop := self serverInterface
-		apiGciExecuteStr: aString
-		context: 20
-		env: 0.
-
-	resultOop = 1 ifTrue: [ ^ self handleGciError ].
-	self checkForError.
-
-	^ resultOop asInteger
 ]
 
 { #category : 'evaluating' }
@@ -520,74 +459,49 @@ GbsSession >> fetchLastError [
 
 { #category : 'marshaling' }
 GbsSession >> fetchObject: anOop [
-	^ self
-		fetchObject: anOop
-		withProfile: self materializationProfile
-		depth: 0
-		seen: IdentitySet new
-]
+	| i szPtr sz buf str classOop |
+	"1. Literal / Immediate Checks"
+	anOop = 20 ifTrue: [ ^ nil ]. 
+	anOop = 268 ifTrue: [ ^ true ]. 
+	anOop = 12 ifTrue: [ ^ false ]. 
+	(anOop bitAnd: 7) = 2 ifTrue: [ ^ (anOop bitShift: -3) ]. "SmallInteger"
 
-{ #category : 'marshaling' }
-GbsSession >> fetchObject: anOop withProfile: aProfile depth: anInteger seen: seenOops [
-	^ aProfile
-		materializeOop: anOop
-		inSession: self
-		depth: anInteger
-		seen: seenOops
-]
+	i := GbsServerInterface uniqueInstance.
 
-{ #category : 'materialization' }
-GbsSession >> fetchProfile [
-	^ self materializationProfile
-]
+	"2. String Check (Class 74753)"
+	(i apiGciIsKindOfClass: anOop isKindOf: 74753) = 1 ifTrue: [
+		szPtr := i apiGciFetchSize: anOop.
+		sz := szPtr asInteger. (sz <= 0) ifTrue: [ ^ '' ].
+		buf := ExternalAddress allocate: sz + 1.
+		[ i apiGciFetchChars: anOop startingAt: 1 into: buf size: sz + 1. 
+		  str := String new: sz. 
+		  1 to: sz do: [ :x | str at: x put: (buf unsignedByteAt: x) asCharacter ]. 
+		] ensure: [ buf free ].
+		^ str 
+	].
 
-{ #category : 'materialization' }
-GbsSession >> fetchProfile: aProfile [
-	^ self materializationProfile: aProfile
-]
+	"3. DateTime Marshaling"
+	(i apiGciIsKindOfClass: anOop isKindOf: 74241) = 1 ifTrue: [
+		str := self evaluate: '(Object _objectForOop: ', anOop printString, ') asString'.
+		^ DateAndTime readFrom: str readStream.
+	].
 
-{ #category : 'materialization' }
-GbsSession >> fetchByReference [
-	self materializationProfile: GbsProxyOnlyMaterializationProfile new.
-	^ self
-]
+	"4. Array Marshaling (Recursive)"
+	(i apiGciIsKindOfClass: anOop isKindOf: 66817) = 1 ifTrue: [
+		szPtr := i apiGciFetchSize: anOop.
+		sz := szPtr asInteger.
+		(sz > 0 and: [ sz < 100 ]) ifTrue: [ | localArray |
+			localArray := Array new: sz.
+			1 to: sz do: [ :idx | | elementOop |
+				elementOop := self evaluate: '(Object _objectForOop: ', anOop printString, ') at: ', idx printString.
+				localArray at: idx put: elementOop.
+			].
+			^ localArray
+		].
+	].
 
-{ #category : 'materialization' }
-GbsSession >> fetchDeep [
-	self materializationProfile: GbsDeepMaterializationProfile new.
-	^ self
-]
-
-{ #category : 'materialization' }
-GbsSession >> fetchLegacy [
-	self materializationProfile: GbsLegacyMaterializationProfile new.
-	^ self
-]
-
-{ #category : 'materialization' }
-GbsSession >> fetchShallow [
-	self materializationProfile: GbsShallowMaterializationProfile new.
-	^ self
-]
-
-{ #category : 'materialization' }
-GbsSession >> materializationProfile [
-	^ materializationProfile ifNil: [ materializationProfile := GbsLegacyMaterializationProfile new ]
-]
-
-{ #category : 'materialization' }
-GbsSession >> materializationProfile: aProfile [
-	materializationProfile := aProfile ifNil: [ GbsLegacyMaterializationProfile new ].
-	^ materializationProfile
-]
-
-{ #category : 'materialization' }
-GbsSession >> withMaterializationProfile: aProfile do: aBlock [
-	| previousProfile result |
-	previousProfile := self materializationProfile.
-	self materializationProfile: aProfile.
-	result := [ aBlock value ] ensure: [ self materializationProfile: previousProfile ].
-	^ result
+	"Default: Return a Proxy (FIXED: Removed 'new')"
+	^ GbsProxy oop: anOop session: self
 ]
 
 { #category : 'accessing' }
@@ -612,199 +526,7 @@ GbsSession >> fetchRemoteClassNamesIn: dictionaryName [
   rawString := self evaluate: script.
 
   "2. Splitting it on the client creates a local Array, which IS a Collection"
-	^ rawString splitOn: ','
-]
-
-{ #category : 'materialization' }
-GbsSession >> isImmediateOop: anOop [
-	anOop = 20 ifTrue: [ ^ true ].
-	(anOop = 28 or: [ anOop = 268 ]) ifTrue: [ ^ true ].
-	(anOop = 12 or: [ anOop = 140 ]) ifTrue: [ ^ true ].
-	((anOop bitAnd: 7) = 2 or: [ (anOop bitAnd: 7) = 6 ]) ifTrue: [ ^ true ].
-	^ false
-]
-
-{ #category : 'materialization' }
-GbsSession >> materializeArrayOop: anOop withProfile: aProfile depth: anInteger seen: seenOops [
-	| size localArray |
-	size := self remoteSizeForOop: anOop.
-	localArray := Array new: size.
-	1 to: size do: [ :index |
-		localArray
-			at: index
-			put: (self
-				fetchObject: (self remoteArrayElementOopAt: index ofOop: anOop)
-				withProfile: aProfile
-				depth: anInteger + 1
-				seen: seenOops) ].
-	^ localArray
-]
-
-{ #category : 'materialization' }
-GbsSession >> materializeAssociationOop: anOop withProfile: aProfile depth: anInteger seen: seenOops [
-	| pair |
-	pair := self
-		materializeArrayOop: (self remoteAssociationPairOopFor: anOop)
-		withProfile: aProfile
-		depth: anInteger
-		seen: seenOops.
-	^ Association
-		key: (pair at: 1 ifAbsent: [ nil ])
-		value: (pair at: 2 ifAbsent: [ nil ])
-]
-
-{ #category : 'materialization' }
-GbsSession >> materializeByteArrayOop: anOop withProfile: aProfile depth: anInteger seen: seenOops [
-	| bytes |
-	bytes := self
-		materializeArrayOop: (self remoteCollectionAsArrayOop: anOop)
-		withProfile: aProfile
-		depth: anInteger
-		seen: seenOops.
-	^ ByteArray withAll: bytes
-]
-
-{ #category : 'materialization' }
-GbsSession >> materializeDictionaryOop: anOop identityKeys: useIdentity withProfile: aProfile depth: anInteger seen: seenOops [
-	| associations dictionary |
-	associations := self
-		materializeArrayOop: (self remoteDictionaryAssociationsAsArrayOop: anOop)
-		withProfile: aProfile
-		depth: anInteger
-		seen: seenOops.
-	dictionary := useIdentity
-		ifTrue: [ IdentityDictionary new ]
-		ifFalse: [ Dictionary new ].
-	associations do: [ :each |
-		dictionary
-			at: each key
-			put: each value ].
-	^ dictionary
-]
-
-{ #category : 'materialization' }
-GbsSession >> materializeSequenceableCollectionOop: anOop using: aBlock withProfile: aProfile depth: anInteger seen: seenOops [
-	| localArray |
-	localArray := self
-		materializeArrayOop: (self remoteCollectionAsArrayOop: anOop)
-		withProfile: aProfile
-		depth: anInteger
-		seen: seenOops.
-	^ aBlock value: localArray
-]
-
-{ #category : 'materialization' }
-GbsSession >> proxyForOop: anOop [
-	^ self proxyForOop: anOop usingClass: GbsProxy
-]
-
-{ #category : 'materialization' }
-GbsSession >> proxyForOop: anOop serverClassName: aClassName [
-	| cachedProxy wrapperClass |
-	cachedProxy := self cachedProxyForOop: anOop.
-	cachedProxy ifNotNil: [ ^ cachedProxy ].
-	wrapperClass := GbsSessionManager typedWrapperClassForServerClassNamed: aClassName.
-	wrapperClass ifNil: [ ^ self proxyForOop: anOop ].
-	^ self proxyForOop: anOop usingClass: wrapperClass
-]
-
-{ #category : 'materialization' }
-GbsSession >> proxyForOop: anOop usingClass: proxyClass [
-	| cachedProxy proxy |
-	cachedProxy := self cachedProxyForOop: anOop.
-	cachedProxy ifNotNil: [ ^ cachedProxy ].
-	proxy := proxyClass oop: anOop session: self.
-	self proxyCache at: anOop put: { proxy }.
-	^ proxy
-]
-
-{ #category : 'materialization' }
-GbsSession >> cachedProxyForOop: anOop [
-	| entry |
-	entry := self proxyCache at: anOop ifAbsent: [ nil ].
-	entry ifNil: [ ^ nil ].
-	^ entry first
-]
-
-{ #category : 'materialization' }
-GbsSession >> clearProxyCache [
-	proxyCache := WeakValueDictionary new.
-	^ proxyCache
-]
-
-{ #category : 'named-objects' }
-GbsSession >> clearNamedObjectCache [
-	namedObjectCache := Dictionary new.
-	^ namedObjectCache
-]
-
-{ #category : 'materialization' }
-GbsSession >> proxyCache [
-	^ proxyCache ifNil: [ proxyCache := WeakValueDictionary new ]
-]
-
-{ #category : 'materialization' }
-GbsSession >> remoteArrayElementOopAt: anInteger ofOop: anOop [
-	^ self executeScriptAndReturnOop: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '(Object _objectForOop: ';
-			nextPutAll: anOop printString;
-			nextPutAll: ') at: ';
-			nextPutAll: anInteger printString ])
-]
-
-{ #category : 'materialization' }
-GbsSession >> remoteAssociationPairOopFor: anOop [
-	^ self executeScriptAndReturnOop: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '| assoc | assoc := Object _objectForOop: ';
-			nextPutAll: anOop printString;
-			nextPutAll: '. Array with: assoc key with: assoc value' ])
-]
-
-{ #category : 'materialization' }
-GbsSession >> remoteClassNameForOop: anOop [
-	^ self executeAndFetch: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '(Object _objectForOop: ';
-			nextPutAll: anOop printString;
-			nextPutAll: ') class name asString' ])
-]
-
-{ #category : 'materialization' }
-GbsSession >> remoteCollectionAsArrayOop: anOop [
-	^ self executeScriptAndReturnOop: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '(Object _objectForOop: ';
-			nextPutAll: anOop printString;
-			nextPutAll: ') asArray' ])
-]
-
-{ #category : 'materialization' }
-GbsSession >> remoteDictionaryAssociationsAsArrayOop: anOop [
-	^ self executeScriptAndReturnOop: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '(Object _objectForOop: ';
-			nextPutAll: anOop printString;
-			nextPutAll: ') associations asArray' ])
-]
-
-{ #category : 'materialization' }
-GbsSession >> remoteSizeForOop: anOop [
-	^ self executeScriptAndFetchObject: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '(Object _objectForOop: ';
-			nextPutAll: anOop printString;
-			nextPutAll: ') size' ])
-]
-
-{ #category : 'materialization' }
-GbsSession >> remoteStringValueForOop: anOop [
-	^ self executeAndFetch: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '(Object _objectForOop: ';
-			nextPutAll: anOop printString;
-			nextPutAll: ') asString' ])
+  ^ rawString splitOn: ','
 ]
 
 { #category : 'browser backend' }
@@ -862,21 +584,11 @@ GbsSession >> fetchRemoteUsers [
 GbsSession >> fetchTranscriptLogs [
 	| rawText |
 	
-	rawText := self executeAndFetch: '[
-		| fetched log text |
-		fetched := (Transcript respondsTo: #fetchAndClear)
-			ifTrue: [ [ Transcript fetchAndClear ] on: Error do: [ nil ] ]
-			ifFalse: [ nil ].
-		fetched ifNotNil: [ ^ fetched ifNil: [ '''' ] ].
-		log := SessionTemps current at: #PharoTranscriptLog ifAbsent: [ OrderedCollection new ].
-		text := String streamContents: [ :stream |
-			log do: [ :each |
-				stream nextPutAll: each asString.
-				stream cr ] ].
-		SessionTemps current at: #PharoTranscriptLog put: OrderedCollection new.
-		text
-	] value'.
-
+	"1. Use our proven pipeline which correctly passes 20 (nil) as the context"
+	rawText := self executeAndFetch: 'Transcript fetchAndClear'.
+	
+	"2. If GemStone returns nil (no new logs), executeAndFetch returns an Error string. 
+	    We intercept that here and cleanly return an empty string to the UI."
 	(rawText beginsWith: 'Error:') ifTrue: [ ^ '' ].
 	
 	^ rawText
@@ -1040,12 +752,6 @@ GbsSession >> handleInterSessionSignalMessage: anErrorMessage exceptionOop: anEx
 GbsSession >> initialize [
 	super initialize.
 	isLoggedIn := false.
-	materializationProfile := GbsLegacyMaterializationProfile new.
-	proxyCache := WeakValueDictionary new.
-	namedObjectCache := Dictionary new.
-	namedObjectAutoloadRegistry := Dictionary new.
-	repositoryRootCache := Dictionary new.
-	repositoryRootLifecycleVersion := 0
 ]
 
 { #category : 'testing' }
@@ -1250,14 +956,8 @@ GbsSession >> loginStone: stoneName user: username password: password [
           Transcript show: '[GemStone Login Error]'; cr.
           Transcript show: '  Stone: ', stoneName; cr.
           Transcript show: '  User: ', username; cr.
-          Transcript
-			show: '  Error Number: ';
-			show: ([ errorStruct number printString ] on: Exception do: [ 'n/a' ]);
-			cr.
-          Transcript
-			show: '  Error Message: ';
-			show: ([ errorStruct message ] on: Exception do: [ 'Unknown login failure' ]);
-			cr.
+          Transcript show: '  Error Number: ', errorStruct number printString; cr.
+          Transcript show: '  Error Message: ', errorStruct message; cr.
           
           "Interpret the error message for netldi issues"
           interpretedError := self interpretLoginError: errorStruct.
@@ -1290,10 +990,6 @@ GbsSession >> resetAfterLogout [
 	isLoggedIn := false.
 	sessionOop := nil.
 	sessionId := nil.
-	self clearProxyCache.
-	self clearNamedObjectCache.
-	GbsSessionManager clearTypedWrapperAutoloadRegistrationsForSession: self.
-	self invalidateRepositoryRoots.
 	parameters ifNotNil: [
 		parameters sessionId: nil.
 		parameters class currentSession == self ifTrue: [
@@ -1315,11 +1011,6 @@ GbsSession >> marshalArgumentToScript: anObject [
 
 { #category : 'marshaling' }
 GbsSession >> marshalArgumentToScript: anObject visited: visited [
-	"If the argument is another proxy, preserve its remote identity before
-	asking any generic type questions that could forward remotely."
-	(anObject isKindOf: GbsProxy) ifTrue: [
-		^ '(Object _objectForOop: ', anObject oop asString, ')' ].
-
 	anObject isInteger ifTrue: [ ^ anObject asString ].
 	anObject isFloat ifTrue: [ ^ anObject printString ].
 	anObject class == Fraction ifTrue: [
@@ -1331,6 +1022,10 @@ GbsSession >> marshalArgumentToScript: anObject visited: visited [
 	anObject isCharacter ifTrue: [
 		^ '(Character value: ', anObject asInteger printString, ')' ].
 	anObject isString ifTrue: [ ^ self marshalStringLiteralToScript: anObject ].
+
+	"If the argument is another Proxy, look up its remote pointer!"
+	(anObject isKindOf: GbsProxy) ifTrue: [
+		^ '(Object _objectForOop: ', anObject oop asString, ')' ].
 
 	^ self marshalComplexArgumentToScript: anObject visited: visited
 ]
@@ -1511,7 +1206,7 @@ GbsSession >> resultFor: anOop [
   ( anOop bitAnd: 7 ) = 6 ifTrue: [ ^ Character codePoint: ( anOop bitShift: -3 ) ].
 
   "If it's not a primitive, it's a complex object. Return a Proxy."
-  ^ self proxyForOop: anOop
+  ^ GbsProxy oop: anOop session: self
 ]
 
 { #category : 'accessing' }
@@ -1565,668 +1260,6 @@ GbsSession >> globals [
 	^ self sessionForwarderFor: #Globals
 ]
 
-{ #category : 'repository' }
-GbsSession >> loadedClasses [
-	^ self repository loadedClasses
-]
-
-{ #category : 'repository' }
-GbsSession >> classHistoryOf: aClassOrName [
-	^ self repository classHistoryOf: aClassOrName
-]
-
-{ #category : 'repository' }
-GbsSession >> classMethodMirrorForClass: aClassOrName selector: aSelector [
-	^ self
-		repository
-		classMethodMirrorForClass: aClassOrName
-		selector: aSelector
-]
-
-{ #category : 'repository' }
-GbsSession >> classMethodMirrorForClassNamed: aClassName selector: aSelector [
-	^ self
-		repository
-		classMethodMirrorForClassNamed: aClassName
-		selector: aSelector
-]
-
-{ #category : 'repository' }
-GbsSession >> classMethodObjectForClass: aClassOrName selector: aSelector [
-	^ self
-		repository
-		classMethodObjectForClass: aClassOrName
-		selector: aSelector
-]
-
-{ #category : 'repository' }
-GbsSession >> classUnboundMethodObjectForClass: aClassOrName selector: aSelector [
-	^ self
-		repository
-		classUnboundMethodObjectForClass: aClassOrName
-		selector: aSelector
-]
-
-{ #category : 'repository' }
-GbsSession >> classMethodObjectForClassNamed: aClassName selector: aSelector [
-	^ self
-		repository
-		classMethodObjectForClassNamed: aClassName
-		selector: aSelector
-]
-
-{ #category : 'repository' }
-GbsSession >> classUnboundMethodObjectForClassNamed: aClassName selector: aSelector [
-	^ self
-		repository
-		classUnboundMethodObjectForClassNamed: aClassName
-		selector: aSelector
-]
-
-{ #category : 'repository' }
-GbsSession >> classMirrorOf: aClassOrName [
-	^ self repository classMirrorOf: aClassOrName
-]
-
-{ #category : 'repository' }
-GbsSession >> classMirrorOfNamed: aClassName [
-	^ self repository classMirrorOfNamed: aClassName
-]
-
-{ #category : 'repository' }
-GbsSession >> namespaceMirrors [
-	^ self repository namespaceMirrors
-]
-
-{ #category : 'repository' }
-GbsSession >> namespaceMirrorAtSymbolListIndex: anInteger [
-	^ self repository namespaceMirrorAtSymbolListIndex: anInteger
-]
-
-{ #category : 'repository' }
-GbsSession >> topLevelNamespaceMirror [
-	^ self repository topLevelNamespaceMirror
-]
-
-{ #category : 'repository' }
-GbsSession >> namespaceMirrorForClass: aClassOrName [
-	^ self repository namespaceMirrorForClass: aClassOrName
-]
-
-{ #category : 'repository' }
-GbsSession >> namespaceMirrorForClassNamed: aClassName [
-	^ self repository namespaceMirrorForClassNamed: aClassName
-]
-
-{ #category : 'repository' }
-GbsSession >> namespaceMirrorForObject: anObjectOrProxy [
-	^ self repository namespaceMirrorForObject: anObjectOrProxy
-]
-
-{ #category : 'repository' }
-GbsSession >> namespaceMirrorForFullName: aString [
-	^ self repository namespaceMirrorForFullName: aString
-]
-
-{ #category : 'repository' }
-GbsSession >> implementorMethodReferenceStringsForSelector: aSelectorOrString [
-	^ self repository implementorMethodReferenceStringsForSelector: aSelectorOrString
-]
-
-{ #category : 'repository' }
-GbsSession >> hierarchyImplementorMethodReferenceStringsForSelector: aSelectorOrString rootClassName: aRootClassName scope: aScopeString [
-	^ self repository
-		hierarchyImplementorMethodReferenceStringsForSelector: aSelectorOrString
-		rootClassName: aRootClassName
-		scope: aScopeString
-]
-
-{ #category : 'repository' }
-GbsSession >> hierarchyImplementorMethodReferenceStringsForSelector: aSelectorOrString rootClassName: aRootClassName scope: aScopeString includeClassSide: includeClassSideBoolean [
-	^ self repository
-		hierarchyImplementorMethodReferenceStringsForSelector: aSelectorOrString
-		rootClassName: aRootClassName
-		scope: aScopeString
-		includeClassSide: includeClassSideBoolean
-]
-
-{ #category : 'repository' }
-GbsSession >> hierarchySenderMethodReferenceStringsForSelector: aSelectorOrString rootClassName: aRootClassName scope: aScopeString [
-	^ self repository
-		hierarchySenderMethodReferenceStringsForSelector: aSelectorOrString
-		rootClassName: aRootClassName
-		scope: aScopeString
-]
-
-{ #category : 'repository' }
-GbsSession >> hierarchySenderMethodReferenceStringsForSelector: aSelectorOrString rootClassName: aRootClassName scope: aScopeString includeClassSide: includeClassSideBoolean [
-	^ self repository
-		hierarchySenderMethodReferenceStringsForSelector: aSelectorOrString
-		rootClassName: aRootClassName
-		scope: aScopeString
-		includeClassSide: includeClassSideBoolean
-]
-
-{ #category : 'repository' }
-GbsSession >> methodReferenceStringsToObject: anObject [
-	^ self repository methodReferenceStringsToObject: anObject
-]
-
-{ #category : 'repository' }
-GbsSession >> methodReferenceStringsToSymbol: aSymbolOrString [
-	^ self repository methodReferenceStringsToSymbol: aSymbolOrString
-]
-
-{ #category : 'repository' }
-GbsSession >> senderMethodReferenceStringsForSelector: aSelectorOrString [
-	^ self repository senderMethodReferenceStringsForSelector: aSelectorOrString
-]
-
-{ #category : 'repository' }
-GbsSession >> listInstancesOf: aClassOrName [
-	^ self repository listInstancesOf: aClassOrName
-]
-
-{ #category : 'repository' }
-GbsSession >> listInstancesOf: aClassOrName allowAbort: aBoolean [
-	^ self repository listInstancesOf: aClassOrName allowAbort: aBoolean
-]
-
-{ #category : 'repository' }
-GbsSession >> listInstancesOf: aClassOrName limit: aSmallInteger [
-	^ self repository listInstancesOf: aClassOrName limit: aSmallInteger
-]
-
-{ #category : 'repository' }
-GbsSession >> listInstancesOf: aClassOrName limit: aSmallInteger allowAbort: aBoolean [
-	^ self
-		repository
-		listInstancesOf: aClassOrName
-		limit: aSmallInteger
-		allowAbort: aBoolean
-]
-
-{ #category : 'repository' }
-GbsSession >> migrateInstancesFrom: aSourceClassOrName to: aTargetClassOrName [
-	^ self
-		repository
-		migrateInstancesFrom: aSourceClassOrName
-		to: aTargetClassOrName
-]
-
-{ #category : 'repository' }
-GbsSession >> previewMigrationFrom: aSourceClassOrName to: aTargetClassOrName [
-	^ self
-		repository
-		previewMigrationFrom: aSourceClassOrName
-		to: aTargetClassOrName
-]
-
-{ #category : 'repository' }
-GbsSession >> previewMigrationFrom: aSourceClassOrName to: aTargetClassOrName allowAbort: aBoolean [
-	^ self
-		repository
-		previewMigrationFrom: aSourceClassOrName
-		to: aTargetClassOrName
-		allowAbort: aBoolean
-]
-
-{ #category : 'repository' }
-GbsSession >> previewMigrationWithSubclassesOf: aTopClassOrName [
-	^ self repository previewMigrationWithSubclassesOf: aTopClassOrName
-]
-
-{ #category : 'repository' }
-GbsSession >> previewMigrationWithSubclassesOf: aTopClassOrName allowAbort: aBoolean [
-	^ self
-		repository
-		previewMigrationWithSubclassesOf: aTopClassOrName
-		allowAbort: aBoolean
-]
-
-{ #category : 'repository' }
-GbsSession >> migrateInstancesFrom: aSourceClassOrName to: aTargetClassOrName allowAbort: aBoolean [
-	^ self
-		repository
-		migrateInstancesFrom: aSourceClassOrName
-		to: aTargetClassOrName
-		allowAbort: aBoolean
-]
-
-{ #category : 'repository' }
-GbsSession >> migrateInstancesWithSubclassesOf: aTopClassOrName [
-	^ self repository migrateInstancesWithSubclassesOf: aTopClassOrName
-]
-
-{ #category : 'repository' }
-GbsSession >> migrateInstancesWithSubclassesOf: aTopClassOrName allowAbort: aBoolean [
-	^ self
-		repository
-		migrateInstancesWithSubclassesOf: aTopClassOrName
-		allowAbort: aBoolean
-]
-
-{ #category : 'repository' }
-GbsSession >> chunkedMigrationRunnerFrom: aSourceClassOrName to: aTargetClassOrName [
-	^ GbsChunkedMigrationRunner
-		on: self
-		source: aSourceClassOrName
-		target: aTargetClassOrName
-]
-
-{ #category : 'repository' }
-GbsSession >> methodMirrorForClass: aClassOrName selector: aSelector [
-	^ self
-		repository
-		methodMirrorForClass: aClassOrName
-		selector: aSelector
-]
-
-{ #category : 'repository' }
-GbsSession >> methodMirrorForClassNamed: aClassName selector: aSelector [
-	^ self
-		repository
-		methodMirrorForClassNamed: aClassName
-		selector: aSelector
-]
-
-{ #category : 'repository' }
-GbsSession >> methodObjectForClass: aClassOrName selector: aSelector [
-	^ self
-		repository
-		methodObjectForClass: aClassOrName
-		selector: aSelector
-]
-
-{ #category : 'repository' }
-GbsSession >> unboundMethodObjectForClass: aClassOrName selector: aSelector [
-	^ self
-		repository
-		unboundMethodObjectForClass: aClassOrName
-		selector: aSelector
-]
-
-{ #category : 'repository' }
-GbsSession >> methodObjectForClassNamed: aClassName selector: aSelector [
-	^ self
-		repository
-		methodObjectForClassNamed: aClassName
-		selector: aSelector
-]
-
-{ #category : 'repository' }
-GbsSession >> unboundMethodObjectForClassNamed: aClassName selector: aSelector [
-	^ self
-		repository
-		unboundMethodObjectForClassNamed: aClassName
-		selector: aSelector
-]
-
-{ #category : 'named-objects' }
-GbsSession >> namedObjectAt: aName [
-	^ self
-		namedObjectAt: aName
-		ifAbsent: [ self error: aName asString , ' not defined' ]
-]
-
-{ #category : 'named-objects' }
-GbsSession >> namedObjectAt: aName ifAbsent: aBlock [
-	| symbol targetSymbol cached |
-	symbol := self normalizedNamedObjectName: aName.
-	cached := self namedObjectCache at: symbol ifAbsent: [ nil ].
-	cached ifNotNil: [ ^ cached ].
-	targetSymbol := self namedObjectAutoloadTargetFor: symbol.
-	cached := self namedObjectCache at: targetSymbol ifAbsent: [ nil ].
-	cached ifNotNil: [
-		symbol ~= targetSymbol ifTrue: [ self namedObjectCache at: symbol put: cached ].
-		^ cached ].
-	cached := self resolveSymbol: targetSymbol ifAbsent: [ ^ aBlock value ].
-	self namedObjectCache at: targetSymbol put: cached.
-	symbol ~= targetSymbol ifTrue: [ self namedObjectCache at: symbol put: cached ].
-	^ cached
-]
-
-{ #category : 'named-objects' }
-GbsSession >> namedObjectCache [
-	^ namedObjectCache ifNil: [ namedObjectCache := Dictionary new ]
-]
-
-{ #category : 'named-objects' }
-GbsSession >> clearNamedObjectCache [
-	namedObjectCache := Dictionary new.
-	^ self
-]
-
-{ #category : 'named-objects' }
-GbsSession >> namedObjectAutoloadRegistry [
-	^ namedObjectAutoloadRegistry ifNil: [ namedObjectAutoloadRegistry := Dictionary new ]
-]
-
-{ #category : 'named-objects' }
-GbsSession >> clearNamedObjectAutoloads [
-	namedObjectAutoloadRegistry := Dictionary new.
-	^ self
-]
-
-{ #category : 'named-objects' }
-GbsSession >> registerNamedObjectAutoload: aName [
-	^ self registerNamedObjectAutoload: aName remote: aName
-]
-
-{ #category : 'named-objects' }
-GbsSession >> registerNamedObjectAutoload: localName remote: remoteName [
-	| localSymbol remoteSymbol |
-	localSymbol := self normalizedNamedObjectName: localName.
-	remoteSymbol := self normalizedNamedObjectName: remoteName.
-	self namedObjectAutoloadRegistry at: localSymbol put: remoteSymbol.
-	^ remoteSymbol
-]
-
-{ #category : 'named-objects' }
-GbsSession >> unregisterNamedObjectAutoload: aName [
-	self
-		namedObjectAutoloadRegistry
-		removeKey: (self normalizedNamedObjectName: aName)
-		ifAbsent: [ ].
-	^ self
-]
-
-{ #category : 'named-objects' }
-GbsSession >> hasNamedObjectAutoloadNamed: aName [
-	^ self
-		namedObjectAutoloadRegistry
-		includesKey: (self normalizedNamedObjectName: aName)
-]
-
-{ #category : 'named-objects' }
-GbsSession >> namedObjectAutoloadTargetFor: aName [
-	| symbol |
-	symbol := self normalizedNamedObjectName: aName.
-	^ self namedObjectAutoloadRegistry at: symbol ifAbsent: [ symbol ]
-]
-
-{ #category : 'named-objects' }
-GbsSession >> namedObjectAutoloadEntries [
-	^ self namedObjectAutoloadRegistry associations asArray sort: [ :a :b |
-		a key asString <= b key asString ]
-]
-
-{ #category : 'named-objects' }
-GbsSession >> namedObjectAutoloadKeys [
-	^ (self namedObjectAutoloadEntries collect: [ :each | each key ]) asArray
-]
-
-{ #category : 'named-objects' }
-GbsSession >> namedObjectAutoloadReportText [
-	| entries |
-	entries := self namedObjectAutoloadEntries.
-	entries isEmpty ifTrue: [ ^ 'No named-object autoload registrations.' ].
-	^ String streamContents: [ :stream |
-		stream nextPutAll: 'Named Object Autoload'; cr; cr.
-		entries do: [ :association |
-			stream
-				nextPutAll: association key asString;
-				nextPutAll: ' -> ';
-					nextPutAll: association value asString;
-					cr ] ]
-]
-
-{ #category : 'named-objects' }
-GbsSession >> hasCachedNamedObjectNamed: aName [
-	| symbol |
-	symbol := self normalizedNamedObjectName: aName.
-	^ self namedObjectCache includesKey: symbol
-]
-
-{ #category : 'named-objects' }
-GbsSession >> normalizedNamedObjectName: aName [
-	^ aName isSymbol
-		ifTrue: [ aName ]
-		ifFalse: [ aName asString asSymbol ]
-]
-
-{ #category : 'named-objects' }
-GbsSession >> namedObjectCacheEntries [
-	^ self namedObjectCache associations asArray sort: [ :a :b | a key asString <= b key asString ]
-]
-
-{ #category : 'named-objects' }
-GbsSession >> namedObjectCacheKeys [
-	^ (self namedObjectCacheEntries collect: [ :each | each key ]) asArray
-]
-
-{ #category : 'named-objects' }
-GbsSession >> namedObjectCacheReportText [
-	| entries |
-	entries := self namedObjectCacheEntries.
-	entries isEmpty ifTrue: [ ^ 'No named objects cached.' ].
-	^ String streamContents: [ :stream |
-		stream nextPutAll: 'Named Object Cache'; cr; cr.
-		entries do: [ :association |
-			| value |
-			value := association value.
-			stream nextPutAll: association key asString.
-			(value respondsTo: #oop)
-				ifTrue: [
-					stream
-						nextPutAll: ' -> oop ';
-						nextPutAll: value oop asString ]
-				ifFalse: [
-					stream
-						nextPutAll: ' -> ';
-						nextPutAll: value printString ].
-			stream cr ] ]
-]
-
-{ #category : 'object space' }
-GbsSession >> objectForOop: anOop [
-	^ self resultFor: anOop
-]
-
-{ #category : 'object space' }
-GbsSession >> objectSpace [
-	^ GbsObjectSpaceFacade on: self
-]
-
-{ #category : 'object space' }
-GbsSession >> objectSpaceDiagnostics [
-	^ GbsObjectSpaceDiagnosticsFacade on: self
-]
-
-{ #category : 'object space' }
-GbsSession >> objectSpaceDiagnosticsReport [
-	^ self objectSpaceDiagnostics report
-]
-
-{ #category : 'typed wrappers' }
-GbsSession >> typedWrapperLifecycleEntries [
-	^ GbsSessionManager typedWrapperLifecycleEntriesForSession: self
-]
-
-{ #category : 'typed wrappers' }
-GbsSession >> typedWrapperLifecycleObjects [
-	^ GbsSessionManager typedWrapperLifecycleObjectsForSession: self
-]
-
-{ #category : 'typed wrappers' }
-GbsSession >> typedWrapperLifecycleReport [
-	^ GbsSessionManager typedWrapperLifecycleReportForSession: self
-]
-
-{ #category : 'typed wrappers' }
-GbsSession >> typedWrapperLifecycleReportText [
-	^ GbsSessionManager typedWrapperLifecycleReportTextForSession: self
-]
-
-{ #category : 'typed wrappers' }
-GbsSession >> invalidateStaleTypedWrapperClasses [
-	^ GbsSessionManager invalidateStaleTypedWrapperClassesForSession: self
-]
-
-{ #category : 'typed wrappers' }
-GbsSession >> refreshStaleTypedWrapperClasses [
-	^ GbsSessionManager refreshStaleTypedWrapperClassesForSession: self
-]
-
-{ #category : 'typed wrappers' }
-GbsSession >> refreshAllTypedWrapperClasses [
-	^ GbsSessionManager refreshAllTypedWrapperClassesForSession: self
-]
-
-{ #category : 'object space' }
-GbsSession >> defineFinalizerFor: anObject do: aBlock [
-	^ self objectSpace defineFinalizerFor: anObject do: aBlock
-]
-
-{ #category : 'object space' }
-GbsSession >> eachObjectDo: aBlock [
-	^ self objectSpace eachObjectDo: aBlock
-]
-
-{ #category : 'object space' }
-GbsSession >> eachObjectDo: aBlock batchSize: aSmallInteger [
-	^ self objectSpace eachObjectDo: aBlock batchSize: aSmallInteger
-]
-
-{ #category : 'object space' }
-GbsSession >> eachObjectOf: aClassOrName do: aBlock [
-	^ self objectSpace eachObjectOf: aClassOrName do: aBlock
-]
-
-{ #category : 'object space' }
-GbsSession >> eachObjectOf: aClassOrName do: aBlock batchSize: aSmallInteger [
-	^ self
-		objectSpace
-		eachObjectOf: aClassOrName
-		do: aBlock
-		batchSize: aSmallInteger
-]
-
-{ #category : 'object space' }
-GbsSession >> allSubclassesOf: aClassOrName [
-	^ self objectSpace allSubclassesOf: aClassOrName
-]
-
-{ #category : 'object space' }
-GbsSession >> allSubclassesOfNamed: aClassName [
-	^ self objectSpace allSubclassesOfNamed: aClassName
-]
-
-{ #category : 'object space' }
-GbsSession >> instancesInMemoryOf: aClassOrName [
-	^ self objectSpace instancesInMemoryOf: aClassOrName
-]
-
-{ #category : 'object space' }
-GbsSession >> instancesInMemoryOf: aClassOrName from: aStartIndex limit: aLimit [
-	^ self
-		objectSpace
-		instancesInMemoryOf: aClassOrName
-		from: aStartIndex
-		limit: aLimit
-]
-
-{ #category : 'object space' }
-GbsSession >> instancesInMemoryOfNamed: aClassName [
-	^ self objectSpace instancesInMemoryOfNamed: aClassName
-]
-
-{ #category : 'object space' }
-GbsSession >> hasFinalizerFor: anObject [
-	^ self objectSpace hasFinalizerFor: anObject
-]
-
-{ #category : 'object space' }
-GbsSession >> loadedClassesIncludingModules [
-	^ self objectSpace loadedClassesIncludingModules
-]
-
-{ #category : 'object space' }
-GbsSession >> loadedClassesIncludingModules: aBoolean [
-	^ self objectSpace loadedClassesIncludingModules: aBoolean
-]
-
-{ #category : 'object space' }
-GbsSession >> sessionStateAt: aKey [
-	^ self objectSpace sessionStateAt: aKey
-]
-
-{ #category : 'object space' }
-GbsSession >> sessionStateAt: aKey ifAbsent: aBlock [
-	^ self objectSpace sessionStateAt: aKey ifAbsent: aBlock
-]
-
-{ #category : 'object space' }
-GbsSession >> sessionStateAt: aKey put: anObject [
-	^ self objectSpace sessionStateAt: aKey put: anObject
-]
-
-{ #category : 'object space' }
-GbsSession >> referencesTo: anObject [
-	^ self objectSpace referencesTo: anObject
-]
-
-{ #category : 'object space' }
-GbsSession >> referencesToOop: anOop [
-	^ self objectSpace referencesToOop: anOop
-]
-
-{ #category : 'object space' }
-GbsSession >> objectsInMemory [
-	^ self objectSpace objectsInMemory
-]
-
-{ #category : 'object space' }
-GbsSession >> objectsInMemoryFrom: aStartIndex limit: aLimit [
-	^ self objectSpace objectsInMemoryFrom: aStartIndex limit: aLimit
-]
-
-{ #category : 'object space' }
-GbsSession >> objectsInMemoryMatching: aBlock [
-	^ self objectSpace objectsInMemoryMatching: aBlock
-]
-
-{ #category : 'object space' }
-GbsSession >> objectsInMemoryMatching: aBlock limit: aLimit batchSize: aBatchSize [
-	^ self
-		objectSpace
-		objectsInMemoryMatching: aBlock
-		limit: aLimit
-		batchSize: aBatchSize
-]
-
-{ #category : 'object space' }
-GbsSession >> objectsInMemoryOf: aClassOrName from: aStartIndex limit: aLimit [
-	^ self
-		objectSpace
-		objectsInMemoryOf: aClassOrName
-		from: aStartIndex
-		limit: aLimit
-]
-
-{ #category : 'object space' }
-GbsSession >> objectsInMemoryOf: aClassOrName matching: aBlock [
-	^ self
-		objectSpace
-		objectsInMemoryOf: aClassOrName
-		matching: aBlock
-]
-
-{ #category : 'object space' }
-GbsSession >> objectsInMemoryOf: aClassOrName matching: aBlock limit: aLimit batchSize: aBatchSize [
-	^ self
-		objectSpace
-		objectsInMemoryOf: aClassOrName
-		matching: aBlock
-		limit: aLimit
-		batchSize: aBatchSize
-]
-
-{ #category : 'object space' }
-GbsSession >> undefineFinalizerFor: anObject [
-	^ self objectSpace undefineFinalizerFor: anObject
-]
-
 { #category : 'named-objects' }
 GbsSession >> published [
 	"VisualWorks/VAST-style convenience accessor."
@@ -2234,59 +1267,11 @@ GbsSession >> published [
 ]
 
 { #category : 'named-objects' }
-GbsSession >> bridgeRoot [
-	^ GbsBridgeRootFacade on: self
-]
-
-{ #category : 'repository' }
-GbsSession >> repository [
-	^ GbsRepositoryFacade on: self
-]
-
-{ #category : 'repository' }
-GbsSession >> repositoryRootCache [
-	^ repositoryRootCache ifNil: [ repositoryRootCache := Dictionary new ]
-]
-
-{ #category : 'repository' }
-GbsSession >> repositoryRootLifecycleVersion [
-	^ repositoryRootLifecycleVersion ifNil: [ repositoryRootLifecycleVersion := 0 ]
-]
-
-{ #category : 'repository' }
-GbsSession >> invalidateRepositoryRoots [
-	repositoryRootLifecycleVersion := self repositoryRootLifecycleVersion + 1.
-	repositoryRootCache := Dictionary new.
-	^ self
-]
-
-{ #category : 'repository' }
-GbsSession >> repositoryRootFacadeForKey: aRootKey path: aCollection [
-	| normalizedPath cacheKey facade |
-	normalizedPath := aCollection ifNil: [ #() ] ifNotNil: [ aCollection asArray ].
-	cacheKey := { aRootKey. normalizedPath }.
-	facade := self repositoryRootCache at: cacheKey ifAbsent: [ nil ].
-	facade ifNotNil: [ ^ facade ].
-	facade := GbsRepositoryRootFacade
-		on: self
-		rootKey: aRootKey
-		path: normalizedPath.
-	self repositoryRootCache at: cacheKey put: facade.
-	^ facade
-]
-
-{ #category : 'named-objects' }
 GbsSession >> sessionForwarderFor: aSymbol [
 	"Answer an explicit forwarder/proxy for the named GemStone object in the current session."
 	^ self
-		namedObjectAt: aSymbol
+		uncachedForwarderAt: aSymbol
 		ifAbsent: [ self error: aSymbol printString , ' not defined' ]
-]
-
-{ #category : 'materialization' }
-GbsSession >> materializeRuntimeValue: anObject [
-	anObject ifNil: [ ^ nil ].
-	^ anObject
 ]
 
 { #category : 'named-objects' }
@@ -2328,33 +1313,6 @@ GbsSession >> userGlobals [
 	^ self sessionForwarderFor: #UserGlobals
 ]
 
-{ #category : 'named-objects' }
-GbsSession >> smalltalk [
-	^ GbsSmalltalkFacade on: self
-]
-
-{ #category : 'named-objects' }
-GbsSession >> symbolDictionaryNamed: aName [
-	^ GbsSymbolDictionaryFacade on: self name: aName
-]
-
-{ #category : 'object space' }
-GbsSession >> objectSpaceRepository [
-	^ GbsObjectSpaceRepositoryFacade on: self
-]
-
-{ #category : 'transactions' }
-GbsSession >> withCommitRetryCount: aRetryCount do: aBlock [
-	| retries attempts result |
-	retries := (aRetryCount ifNil: [ 0 ] ifNotNil: [ aRetryCount asInteger ]) max: 0.
-	attempts := retries + 1.
-	1 to: attempts do: [ :attempt |
-		result := aBlock value.
-		(self commitTransaction) ifTrue: [ ^ result ].
-		attempt < attempts ifTrue: [ self abortTransaction ] ].
-	GbsCommitConflictError signal: 'GemStone commit conflict after ', attempts printString, ' attempts.'
-]
-
 { #category : 'error handling' }
 GbsSession >> interpretLoginError: anErrorStruct [
     "Interpret login error and provide user-friendly messages for netldi issues"
@@ -2390,10 +1348,9 @@ To fix this, start netldi on the GemStone server:
 
 Original error: ', originalMsg ].
     
-	(errorMsgLower includesSubstring: 'no such') ifTrue: [
-		((errorMsgLower includesSubstring: 'stn')
-			or: [ errorMsgLower includesSubstring: 'stone' ]) ifTrue: [
-			^ 'Cannot find the GemStone stone.
+    (errorMsgLower includesSubstring: 'no such') ifTrue: [
+        (errorMsgLower includesSubstring: 'stn' or: [ errorMsgLower includesSubstring: 'stone' ]) ifTrue: [
+            ^ 'Cannot find the GemStone stone.
 
 Please check that the stone exists and netldi is running.
 
@@ -2420,12 +1377,9 @@ To start netldi:
 
 Original error: ', originalMsg ].
     
-	(errorMsgLower includesSubstring: 'login') ifTrue: [
-		((errorMsgLower includesSubstring: 'fail')
-			or: [
-				(errorMsgLower includesSubstring: 'denied')
-					or: [ errorMsgLower includesSubstring: 'disabled' ] ]) ifTrue: [
-			^ 'GemStone login failed.
+    (errorMsgLower includesSubstring: 'login') ifTrue: [
+        (errorMsgLower includesSubstring: 'fail' or: [ errorMsgLower includesSubstring: 'denied' or: [ errorMsgLower includesSubstring: 'disabled' ] ]) ifTrue: [
+            ^ 'GemStone login failed.
 
 Please check your username and password, or verify that logins are enabled.
 

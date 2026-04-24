@@ -13,9 +13,10 @@ This section is generated from `GemStonePharoContract` and rewritten by `make gr
 
 ### Package Layout
 
-- core production: `GemStone-GBS-Converted`, `GemStone-GBS-Tools`
+- original/base production: `GemStone-GBS-Converted`, `GemStone-GBS-Tools`
+- generic overlay production: `GemStone-GBS-Core`, `GemStone-GBS-Core-Tools`
 - optional MagLev production: `GemStone-GBS-MagLev`, `GemStone-GBS-MagLev-Tools`
-- active tests: `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-Tests`
+- test layers: `GemStone-Pharo-Tests`, `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-MagLev-Tests`
 
 ### Active Root API
 
@@ -25,6 +26,7 @@ This section is generated from `GemStonePharoContract` and rewritten by `make gr
 
 ### Baseline Groups
 
+- `Original`, `Original-Tests`
 - `Core-Only`, `Core`, `Core-Tools`, `Core-Tests`
 - `MagLev-Core`, `MagLev-Tools`, `MagLev`
 - `Tools`, `All-Tests`, `Tests`, `Full`, `default`
@@ -41,6 +43,9 @@ Top-level `make verify` sequencing is owned by `GemStonePharoVerifyRunner`; lane
 - `bootstrap-smoke`
   Prove that a clean image can micro-bootstrap the helper package and load the requested group before post-load checks run.
   load group: `Core-Tests`
+- `original-tests`
+  Verify the original/base production and original/base test layer without the generic Core or optional MagLev overlays. This lane proves the base unit layer only.
+  load group: `Original-Tests`
 - `full`
   Verify the steady-state developer load plus the live GemStone lane.
   load group: `Full`
@@ -48,8 +53,16 @@ Top-level `make verify` sequencing is owned by `GemStonePharoVerifyRunner`; lane
   Verify that the generated contract artifacts and marker-managed doc sections are already up to date.
   load group: `default`
 - `verify`
-  Run core-only, bootstrap-smoke, full, artifact-freshness, then the summary-renderer smoke check.
+  Run core-only, bootstrap-smoke, original-tests, full, artifact-freshness, then the summary-renderer smoke check.
   load group: `composite`
+
+### Expected Original-layer Test Exceptions
+
+`make original-drift` reports the original/base production layer as clean and currently accepts only these test-layer exceptions:
+- `src/GemStone-Pharo-Tests/GbsTranscriptTest.class.st`
+  Keeps a pragmatic runtime-dependent transcript skip for the current live GemStone runtime.
+- `src/GemStone-Pharo-Tests/MockGbsSession.class.st`
+  Keeps a test-only login-failure shortcut so the restored base GbsSession production file stays clean.
 
 ### Generated Contract Artifacts
 

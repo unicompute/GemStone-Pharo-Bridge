@@ -16,17 +16,25 @@ GemStonePharoReloadBootstrapperTest >> setUp [
 		log: [ :line | ]
 ]
 
+{ #category : 'private' }
+GemStonePharoReloadBootstrapperTest >> expectedPackageNamesToUnload [
+	^ #(
+		'GemStone-Pharo-Tests'
+		'GemStone-Pharo-MagLev-Tests'
+		'GemStone-Pharo-Core-Tests'
+		'GemStone-GBS-MagLev-Tools'
+		'GemStone-GBS-MagLev'
+		'GemStone-GBS-Core-Tools'
+		'GemStone-GBS-Tools'
+		'GemStone-GBS-Core'
+		'GemStone-GBS-Converted')
+]
+
 { #category : 'tests' }
 GemStonePharoReloadBootstrapperTest >> testPackageNamesToUnloadDeriveFromContractInReverseDependencyOrder [
 	self
 		assert: GemStonePharoReloadBootstrapper new packageNamesToUnload
-		equals: #(
-			'GemStone-Pharo-Tests'
-			'GemStone-Pharo-Core-Tests'
-			'GemStone-GBS-MagLev-Tools'
-			'GemStone-GBS-Tools'
-			'GemStone-GBS-MagLev'
-			'GemStone-GBS-Converted')
+		equals: self expectedPackageNamesToUnload
 ]
 
 { #category : 'tests' }
@@ -35,13 +43,7 @@ GemStonePharoReloadBootstrapperTest >> testRunBootstrapReloadExecutesBootstrapSt
 	bootstrapper := GemStonePharoReloadBootstrapperTestBootstrapper
 		onEnvironment: (Dictionary newFromPairs: { 'GBS_LOAD_GROUP'. 'Full' })
 		log: [ :line | ].
-	expectedPackages := #(
-		'GemStone-Pharo-Tests'
-		'GemStone-Pharo-Core-Tests'
-		'GemStone-GBS-MagLev-Tools'
-		'GemStone-GBS-Tools'
-		'GemStone-GBS-MagLev'
-		'GemStone-GBS-Converted').
+	expectedPackages := self expectedPackageNamesToUnload.
 
 	self assert: bootstrapper runBootstrapReload.
 	self

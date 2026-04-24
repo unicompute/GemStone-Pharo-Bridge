@@ -259,28 +259,38 @@
       </thead>
       <tbody>
         <tr>
+          <td><code>Original</code></td>
+          <td><code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Tools</code></td>
+          <td>original/base production packages only</td>
+        </tr>
+        <tr>
+          <td><code>Original-Tests</code></td>
+          <td><code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-Pharo-Tests</code></td>
+          <td>original/base production packages plus the original/base test layer</td>
+        </tr>
+        <tr>
           <td><code>Core</code></td>
-          <td><code>GemStone-GBS-Converted</code></td>
+          <td><code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Core</code></td>
           <td>Smalltalk core bridge only</td>
         </tr>
         <tr>
           <td><code>Core-Tests</code></td>
-          <td><code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-Pharo-Core-Tests</code></td>
-          <td>Smalltalk core, generic tools, and the core-only test suite</td>
+          <td><code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Core</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-Core-Tools</code>, <code>GemStone-Pharo-Core-Tests</code></td>
+          <td>Smalltalk core, generic tool overlays, and the core-only test suite</td>
         </tr>
         <tr>
           <td><code>MagLev</code></td>
-          <td><code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-MagLev</code>, <code>GemStone-GBS-MagLev-Tools</code></td>
+          <td><code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Core</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-Core-Tools</code>, <code>GemStone-GBS-MagLev</code>, <code>GemStone-GBS-MagLev-Tools</code></td>
           <td>convenience alias for the MagLev production stack</td>
         </tr>
         <tr>
           <td><code>Tests</code></td>
-          <td><code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-Tests</code></td>
-          <td>convenience alias for all active test packages</td>
+          <td><code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-MagLev-Tests</code>, <code>GemStone-Pharo-Tests</code></td>
+          <td>convenience alias for all active core and MagLev-aware test packages</td>
         </tr>
         <tr>
           <td><code>default</code></td>
-          <td><code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-MagLev</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-MagLev-Tools</code>, <code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-Tests</code></td>
+          <td><code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Core</code>, <code>GemStone-GBS-MagLev</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-Core-Tools</code>, <code>GemStone-GBS-MagLev-Tools</code>, <code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-MagLev-Tests</code>, <code>GemStone-Pharo-Tests</code></td>
           <td>alias for `Full`</td>
         </tr>
       </tbody>
@@ -797,9 +807,16 @@ Object thisMessageDoesNotExist</code></pre>
     <ul>
       <li><strong><code>core-only</code></strong>: Verify the Smalltalk core without optional MagLev production packages and without deleted legacy surface.</li>
       <li><strong><code>bootstrap-smoke</code></strong>: Prove that a clean image can micro-bootstrap the helper package and load the requested group before post-load checks run.</li>
+      <li><strong><code>original-tests</code></strong>: Verify the original/base production and original/base test layer without the generic Core or optional MagLev overlays. This lane proves the base unit layer only.</li>
       <li><strong><code>full</code></strong>: Verify the steady-state developer load plus the live GemStone lane.</li>
       <li><strong><code>artifact-freshness</code></strong>: Verify that the generated contract artifacts and marker-managed doc sections are already up to date.</li>
-      <li><strong><code>verify</code></strong>: Run core-only, bootstrap-smoke, full, artifact-freshness, then the summary-renderer smoke check.</li>
+      <li><strong><code>verify</code></strong>: Run core-only, bootstrap-smoke, original-tests, full, artifact-freshness, then the summary-renderer smoke check.</li>
+    </ul>
+    <h3>Expected Original-layer Test Exceptions</h3>
+    <p><code>make original-drift</code> reports the original/base production layer as clean and currently accepts only these test-layer exceptions:</p>
+    <ul>
+      <li><code>src/GemStone-Pharo-Tests/GbsTranscriptTest.class.st</code>: Keeps a pragmatic runtime-dependent transcript skip for the current live GemStone runtime.</li>
+      <li><code>src/GemStone-Pharo-Tests/MockGbsSession.class.st</code>: Keeps a test-only login-failure shortcut so the restored base GbsSession production file stays clean.</li>
     </ul>
     <h3>Generated operator reference</h3>
     <p>
@@ -810,7 +827,9 @@ Object thisMessageDoesNotExist</code></pre>
     </p>
     <h3>Recommended entry point</h3>
     <pre><code>make help
+make original-drift
 make core-only
+make original-tests
 make full
 make verify
 make artifact-freshness</code></pre>

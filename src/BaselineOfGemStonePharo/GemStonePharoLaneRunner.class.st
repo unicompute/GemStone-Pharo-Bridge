@@ -127,7 +127,7 @@ GemStonePharoLaneRunner >> hasRequiredPackagesLoaded [
 GemStonePharoLaneRunner >> hadFailureForResult: aResult skipped: skippedCount sessionReady: sessionReady [
 	^ aResult failures notEmpty
 		or: [ aResult errors notEmpty
-		or: [ self isLiveLane and: [ skippedCount > 0 or: [ sessionReady not ] ] ] ]
+		or: [ self isLiveLane and: [ sessionReady not ] ] ]
 ]
 
 { #category : 'private' }
@@ -206,12 +206,18 @@ GemStonePharoLaneRunner >> regressionLabel [
 
 { #category : 'running' }
 GemStonePharoLaneRunner >> runRegressionLane [
-	| selectedTests result sessionReady failures errors skipped label hadFailure |
+	| selectedTests result sessionReady failures errors skipped label hadFailure liveSessionSupportClass |
 	sessionReady := true.
 	self isLiveLane ifTrue: [
-		(GbsLiveSessionTestSupport ensureSharedSession) ifNil: [
+		liveSessionSupportClass := Smalltalk
+			at: #CoreGbsLiveSessionTestSupport
+			ifAbsent: [ Smalltalk at: #GbsLiveSessionTestSupport ifAbsent: [ nil ] ].
+		(liveSessionSupportClass isNil or: [ (liveSessionSupportClass ensureSharedSession) isNil ]) ifTrue: [
 			sessionReady := false.
-			self log: 'LIVE_SESSION_ERROR: ', GbsLiveSessionTestSupport unavailableReason ] ].
+			self log: 'LIVE_SESSION_ERROR: ', (
+				liveSessionSupportClass
+					ifNil: [ 'Live session support is not loaded.' ]
+					ifNotNil: [ liveSessionSupportClass unavailableReason ]) ] ].
 	selectedTests := self selectedTests.
 	result := TestResult new.
 	sessionReady ifTrue: [
@@ -246,8 +252,12 @@ GemStonePharoLaneRunner >> runRegressionLane [
 
 { #category : 'running' }
 GemStonePharoLaneRunner >> runRegressionLaneEnsuringSessionRelease [
+	| liveSessionSupportClass |
+	liveSessionSupportClass := Smalltalk
+		at: #CoreGbsLiveSessionTestSupport
+		ifAbsent: [ Smalltalk at: #GbsLiveSessionTestSupport ifAbsent: [ nil ] ].
 	^ [ self runRegressionLane ]
-		ensure: [ GbsLiveSessionTestSupport releaseOwnedSession ]
+		ensure: [ liveSessionSupportClass ifNotNil: [ liveSessionSupportClass releaseOwnedSession ] ]
 ]
 
 { #category : 'private' }

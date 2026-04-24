@@ -92,6 +92,40 @@ GemStonePharoVerificationRunnerTest >> testFullLaneSkipsPreflightAndLiveWithoutC
 ]
 
 { #category : 'tests' }
+GemStonePharoVerificationRunnerTest >> testOriginalTestsLaneRunsUnitOnlyEvenWhenCredentialsExist [
+	runner
+		environment: (Dictionary newFromPairs: {
+			'GBS_VERIFY_LANE'. 'original-tests'.
+			'GS_USER'. 'DataCurator'.
+			'GS_PASS'. 'swordfish' });
+		laneRunBlock: [ :laneName :packageFilter |
+			laneCalls add: { laneName. packageFilter }.
+			true ].
+
+	self assert: runner runVerificationLane.
+	self assert: laneCalls asArray equals: #(#('unit' 'GemStone-Pharo-Tests')).
+	self assert: (logLines includes: 'ORIGINAL_TESTS_LIVE_SKIPPED: Original-Tests lane proves the base/original unit layer only.').
+	self assert: (logLines anySatisfy: [ :each |
+		each includesSubstring: 'ORIGINAL_TESTS_SUMMARY result=OK code=ORIGINAL_TESTS_CHECK_OK reload=ok unit=ok preflight=skipped live=skipped' ]).
+	self assert: (logLines includes: 'ORIGINAL_TESTS_CHECK_OK')
+]
+
+{ #category : 'tests' }
+GemStonePharoVerificationRunnerTest >> testOriginalTestsLaneSkipsLiveRegardlessOfCredentials [
+	runner
+		environment: (Dictionary newFromPairs: { 'GBS_VERIFY_LANE'. 'original-tests' });
+		laneRunBlock: [ :laneName :packageFilter |
+			laneCalls add: { laneName. packageFilter }.
+			true ].
+
+	self assert: runner runVerificationLane.
+	self assert: laneCalls asArray equals: #(#('unit' 'GemStone-Pharo-Tests')).
+	self assert: (logLines includes: 'ORIGINAL_TESTS_LIVE_SKIPPED: Original-Tests lane proves the base/original unit layer only.').
+	self assert: (logLines anySatisfy: [ :each |
+		each includesSubstring: 'ORIGINAL_TESTS_SUMMARY result=OK code=ORIGINAL_TESTS_CHECK_OK reload=ok unit=ok preflight=skipped live=skipped' ])
+]
+
+{ #category : 'tests' }
 GemStonePharoVerificationRunnerTest >> testLaneNameDefaultsToFull [
 	self
 		assert: (GemStonePharoVerificationRunner laneNameFromEnvironment: Dictionary new)

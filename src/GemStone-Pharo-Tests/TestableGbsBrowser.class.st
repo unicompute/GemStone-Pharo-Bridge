@@ -13,10 +13,7 @@ Class {
 		'lastQueriedSelector',
 		'lastQueriedMode',
 		'lastQueriedRootClass',
-		'lastQueriedHierarchyScope',
-		'lastInspectedOop',
-		'lastProvenanceGraph',
-		'lastObjectLog'
+		'lastQueriedHierarchyScope'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -58,11 +55,6 @@ TestableGbsBrowser >> inform: aString [
 { #category : 'actions' }
 TestableGbsBrowser >> protocolSelected: protocolName [
 	lastProtocolSelected := protocolName
-]
-
-{ #category : 'testing' }
-TestableGbsBrowser >> runSuperProtocolSelected: protocolName [
-	^ super protocolSelected: protocolName
 ]
 
 { #category : 'testing' }
@@ -125,12 +117,6 @@ TestableGbsBrowser >> openMethodReference: referenceString [
 ]
 
 { #category : 'private' }
-TestableGbsBrowser >> inspectOop: anOop [
-	lastInspectedOop := anOop.
-	^ true
-]
-
-{ #category : 'private' }
 TestableGbsBrowser >> openQueryResults: references title: titleString [
 	| selected |
 	references isEmpty ifTrue: [ ^ false ].
@@ -138,20 +124,6 @@ TestableGbsBrowser >> openQueryResults: references title: titleString [
 	selected := self uiChooseFrom: references title: titleString.
 	selected = 0 ifTrue: [ ^ false ].
 	^ self openMethodReference: (references at: selected)
-]
-
-{ #category : 'private' }
-TestableGbsBrowser >> openRubyRuntimeProvenanceBrowserFor: aGraph title: aTitle [
-	lastProvenanceGraph := aGraph.
-	lastInfoMessage := aTitle.
-	^ true
-]
-
-{ #category : 'private' }
-TestableGbsBrowser >> openObjectLogBrowserFor: anObjectLog title: aTitle [
-	lastObjectLog := anObjectLog.
-	lastInfoMessage := aTitle.
-	^ true
 ]
 
 { #category : 'accessing' }
@@ -192,19 +164,4 @@ TestableGbsBrowser >> lastQueriedRootClass [
 { #category : 'accessing' }
 TestableGbsBrowser >> lastQueriedHierarchyScope [
 	^ lastQueriedHierarchyScope
-]
-
-{ #category : 'accessing' }
-TestableGbsBrowser >> lastInspectedOop [
-	^ lastInspectedOop
-]
-
-{ #category : 'accessing' }
-TestableGbsBrowser >> lastProvenanceGraph [
-	^ lastProvenanceGraph
-]
-
-{ #category : 'accessing' }
-TestableGbsBrowser >> lastObjectLog [
-	^ lastObjectLog
 ]

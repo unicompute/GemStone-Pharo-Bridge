@@ -1,4 +1,4 @@
-.PHONY: help core-only bootstrap-smoke full verify graph-artifacts artifact-freshness
+.PHONY: help core-only original-tests bootstrap-smoke full verify graph-artifacts artifact-freshness original-drift
 
 PHARO_IMAGE ?= /Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image
 PHARO_WORK_DIR ?= /Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean
@@ -9,6 +9,10 @@ help:
 		"" \
 		"  make core-only" \
 		"    Load only the Smalltalk core and run GemStone-Pharo-Core-Tests." \
+		"" \
+		"  make original-tests" \
+		"    Load only the original/base production and original/base tests." \
+		"    The live lane runs only when GS_USER and GS_PASS are set." \
 		"" \
 		"  make bootstrap-smoke" \
 		"    Prove the micro-bootstrap path loads helper classes and the requested load group into a clean image." \
@@ -26,6 +30,9 @@ help:
 		"  make artifact-freshness" \
 		"    Verify that generated contract artifacts in doc/ are up to date." \
 		"" \
+		"  make original-drift" \
+		"    Show the remaining drift in the original package roots relative to 56b6db3." \
+		"" \
 		"Variables:" \
 		"  PHARO_IMAGE=$(PHARO_IMAGE)" \
 		"  PHARO_WORK_DIR=$(PHARO_WORK_DIR)" \
@@ -33,6 +40,9 @@ help:
 
 core-only:
 	bash ./scripts/run_core_only_clean_reload.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
+
+original-tests:
+	bash ./scripts/run_original_tests_clean_reload.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
 
 bootstrap-smoke:
 	bash ./scripts/run_bootstrap_smoke.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
@@ -48,3 +58,6 @@ graph-artifacts:
 
 artifact-freshness:
 	bash ./scripts/run_verify_contract_artifacts.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
+
+original-drift:
+	bash ./scripts/report_original_layer_drift.sh

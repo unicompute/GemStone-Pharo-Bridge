@@ -3,19 +3,30 @@ digraph GemStonePharoBridge {
   node [shape=box];
 
   "GemStone-GBS-Converted";
-  "GemStone-GBS-MagLev";
+  "GemStone-GBS-Core";
   "GemStone-GBS-Tools";
+  "GemStone-GBS-Core-Tools";
+  "GemStone-GBS-MagLev";
   "GemStone-GBS-MagLev-Tools";
   "GemStone-Pharo-Core-Tests";
+  "GemStone-Pharo-MagLev-Tests";
   "GemStone-Pharo-Tests";
 
-  "GemStone-GBS-Converted" -> "GemStone-GBS-MagLev";
+  "GemStone-GBS-Converted" -> "GemStone-GBS-Core";
   "GemStone-GBS-Converted" -> "GemStone-GBS-Tools";
+  "GemStone-GBS-Core" -> "GemStone-GBS-Core-Tools";
+  "GemStone-GBS-Tools" -> "GemStone-GBS-Core-Tools";
+  "GemStone-GBS-Converted" -> "GemStone-GBS-MagLev";
+  "GemStone-GBS-Core" -> "GemStone-GBS-MagLev";
   "GemStone-GBS-Tools" -> "GemStone-GBS-MagLev-Tools";
   "GemStone-GBS-MagLev" -> "GemStone-GBS-MagLev-Tools";
   "GemStone-GBS-Converted" -> "GemStone-Pharo-Core-Tests";
+  "GemStone-GBS-Core" -> "GemStone-Pharo-Core-Tests";
   "GemStone-GBS-Tools" -> "GemStone-Pharo-Core-Tests";
-  "GemStone-Pharo-Core-Tests" -> "GemStone-Pharo-Tests";
-  "GemStone-GBS-MagLev" -> "GemStone-Pharo-Tests";
-  "GemStone-GBS-MagLev-Tools" -> "GemStone-Pharo-Tests";
+  "GemStone-GBS-Core-Tools" -> "GemStone-Pharo-Core-Tests";
+  "GemStone-Pharo-Core-Tests" -> "GemStone-Pharo-MagLev-Tests";
+  "GemStone-GBS-MagLev" -> "GemStone-Pharo-MagLev-Tests";
+  "GemStone-GBS-MagLev-Tools" -> "GemStone-Pharo-MagLev-Tests";
+  "GemStone-GBS-Converted" -> "GemStone-Pharo-Tests";
+  "GemStone-GBS-Tools" -> "GemStone-Pharo-Tests";
 }
