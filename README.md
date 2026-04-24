@@ -33,6 +33,15 @@ This section is generated from `GemStonePharoContract` and rewritten by `make gr
 
 See [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md) for the human-facing switch matrix and [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md) for the exact package graph and group membership.
 
+### Switching Between Original and MagLev
+
+Use a clean reload each time instead of incrementally loading one stack on top of the other in the same image.
+
+- switch to the original/base production stack: `make original PHARO_IMAGE="..." PHARO_WORK_DIR="..."`
+- switch to the original/base test stack: `make original-tests PHARO_IMAGE="..." PHARO_WORK_DIR="..."`
+- switch to the full MagLev developer stack: `make full PHARO_IMAGE="..." PHARO_WORK_DIR="..." GS_USER=... GS_PASS=... GS_NETLDI_HOST=... GS_NETLDI_NAME_OR_PORT=... GEMSTONE=...`
+- if you want the MagLev production stack without the full verify lane, clean-reload the `MagLev` load group directly through `GBS_LOAD_GROUP=MagLev` and `scripts/clean_reload_gemstone.st`
+
 ### Verification Lanes
 
 Top-level `make verify` sequencing is owned by `GemStonePharoVerifyRunner`; lane-local unit/live/preflight execution is owned by `GemStonePharoVerificationRunner`.
