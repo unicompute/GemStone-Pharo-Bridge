@@ -31,7 +31,7 @@ This section is generated from `GemStonePharoContract` and rewritten by `make gr
 - `MagLev-Core`, `MagLev-Tools`, `MagLev`
 - `Tools`, `All-Tests`, `Tests`, `Full`, `default`
 
-See [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md) for the exact package graph and group membership.
+See [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md) for the human-facing switch matrix and [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md) for the exact package graph and group membership.
 
 ### Verification Lanes
 
@@ -43,6 +43,12 @@ Top-level `make verify` sequencing is owned by `GemStonePharoVerifyRunner`; lane
 - `bootstrap-smoke`
   Prove that a clean image can micro-bootstrap the helper package and load the requested group before post-load checks run.
   load group: `Core-Tests`
+- `original`
+  Verify that the original/base production layer reloads cleanly without the generic Core or optional MagLev overlays.
+  load group: `Original`
+- `original-drift`
+  Verify that the original/base production layer stays clean relative to `56b6db3...`, allowing only the explicit accepted test-layer exceptions.
+  load group: `Original-Tests`
 - `original-tests`
   Verify the original/base production and original/base test layer without the generic Core or optional MagLev overlays. This lane proves the base unit layer only.
   load group: `Original-Tests`
@@ -53,20 +59,21 @@ Top-level `make verify` sequencing is owned by `GemStonePharoVerifyRunner`; lane
   Verify that the generated contract artifacts and marker-managed doc sections are already up to date.
   load group: `default`
 - `verify`
-  Run core-only, bootstrap-smoke, original-tests, full, artifact-freshness, then the summary-renderer smoke check.
+  Run core-only, bootstrap-smoke, original, original-drift, original-tests, full, artifact-freshness, then the summary-renderer smoke check.
   load group: `composite`
 
 ### Expected Original-layer Test Exceptions
 
 `make original-drift` reports the original/base production layer as clean and currently accepts only these test-layer exceptions:
-- `src/GemStone-Pharo-Tests/GbsTranscriptTest.class.st`
-  Keeps a pragmatic runtime-dependent transcript skip for the current live GemStone runtime.
+- `src/GemStone-Pharo-Tests/GciError.extension.st`
+  Adds a tiny test-only GciError number accessor shim so the restored base login-error path can run without production drift.
 - `src/GemStone-Pharo-Tests/MockGbsSession.class.st`
-  Keeps a test-only login-failure shortcut so the restored base GbsSession production file stays clean.
+  Keeps only a narrow interpretLoginError override so the restored base GbsSession production file stays clean.
 
 ### Generated Contract Artifacts
 
 Standalone generated artifacts:
+- [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md)
 - [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md)
 - [doc/PACKAGE-GRAPH.dot](doc/PACKAGE-GRAPH.dot)
 - [doc/PACKAGE-GRAPH.svg](doc/PACKAGE-GRAPH.svg)
@@ -92,6 +99,10 @@ In-place generated doc sections:
   Deleted legacy surface is absent from the active source roots, scripts, and selected docs.
 - `NO_COMPATIBILITY_PROOF_OK`
   Deleted package, class, selector, and method-package ownership surface is absent from the loaded image.
+
+CI uses the same steady-state gate through `make verify` in `.github/workflows/verify.yml`.
+<!-- END GENERATED:README-BODY -->
+om the loaded image.
 
 CI uses the same steady-state gate through `make verify` in `.github/workflows/verify.yml`.
 <!-- END GENERATED:README-BODY -->

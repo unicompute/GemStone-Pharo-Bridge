@@ -69,10 +69,16 @@ CoreGbsLiveSessionTestSupport class >> ensureTranscriptProxyInstalledOn: aSessio
 	aSession ifNil: [ ^ false ].
 	script := '
 	| tempDict proxyClass |
-	proxyClass := Smalltalk at: #Transcript ifAbsent: [ nil ].
-	(proxyClass isNil or: [ proxyClass isBehavior not ]) ifTrue: [
+	tempDict := System myUserProfile symbolList
+		detect: [ :each |
+			(each respondsTo: #name)
+				and: [ each name = #PharoSessionGlobals ] ]
+		ifNone: [ nil ].
+	tempDict ifNil: [
 		tempDict := SymbolDictionary new name: #PharoSessionGlobals.
-		System myUserProfile insertDictionary: tempDict at: 1.
+		System myUserProfile insertDictionary: tempDict at: 1 ].
+	proxyClass := tempDict at: #Transcript ifAbsent: [ nil ].
+	(proxyClass isNil or: [ proxyClass isBehavior not ]) ifTrue: [
 		proxyClass := Object subclass: <quote>PharoTranscriptProxy<quote>
 			instVarNames: #()
 			classVars: #()
@@ -82,12 +88,12 @@ CoreGbsLiveSessionTestSupport class >> ensureTranscriptProxyInstalledOn: aSessio
 			options: #().
 		tempDict at: #Transcript put: proxyClass ].
 	proxyClass class compileMethod: <quote>show: aString
-		currentLine := (currentLine ifNil: [ <quote><quote> ]), aString asString.<quote> category: <quote>logging<quote>.
+		currentLine := (currentLine ifNil: [ String new ]), aString asString.<quote> category: <quote>logging<quote>.
 	proxyClass class compileMethod: <quote>cr
 		| log |
 		log := UserGlobals at: #PharoTranscriptLog ifAbsentPut: [ OrderedCollection new ].
-		log add: (currentLine ifNil: [ <quote><quote> ]).
-		currentLine := <quote><quote>.<quote> category: <quote>logging<quote>.
+		log add: (currentLine ifNil: [ String new ]).
+		currentLine := String new.<quote> category: <quote>logging<quote>.
 	proxyClass class compileMethod: <quote>fetchAndClear
 		| log text |
 		log := UserGlobals at: #PharoTranscriptLog ifAbsentPut: [ OrderedCollection new ].
@@ -101,6 +107,29 @@ CoreGbsLiveSessionTestSupport class >> ensureTranscriptProxyInstalledOn: aSessio
 	true
 	' copyReplaceAll: '<quote>' with: ''''.
 	^ [ aSession evaluate: script ] on: Error do: [ false ]
+]
+
+{ #category : 'private' }
+CoreGbsLiveSessionTestSupport class >> installDelegatesOnOriginalSupportClass [
+	| originalSupport sources |
+	originalSupport := Smalltalk at: #GbsLiveSessionTestSupport ifAbsent: [ ^ self ].
+	sources := {
+		'ensureSharedSession
+	^ CoreGbsLiveSessionTestSupport ensureSharedSession'.
+		'ensureTranscriptProxyInstalledOn: aSession
+	^ CoreGbsLiveSessionTestSupport ensureTranscriptProxyInstalledOn: aSession'.
+		'missingCredentialsReason
+	^ CoreGbsLiveSessionTestSupport missingCredentialsReason'.
+		'releaseOwnedSession
+	^ CoreGbsLiveSessionTestSupport releaseOwnedSession'.
+		'sessionIsUsable: aSession
+	^ CoreGbsLiveSessionTestSupport sessionIsUsable: aSession'.
+		'unavailableReason
+	^ CoreGbsLiveSessionTestSupport unavailableReason' }.
+	sources do: [ :source |
+		originalSupport class
+			compile: source
+			classified: '*GemStone-Pharo-Core-Tests' ]
 ]
 
 { #category : 'private' }

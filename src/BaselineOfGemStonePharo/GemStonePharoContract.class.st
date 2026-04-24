@@ -87,6 +87,7 @@ GemStonePharoContract >> forbiddenPackageRequirementSpecs [
 { #category : 'contracts' }
 GemStonePharoContract >> generatedContractArtifactSpecs [
 	^ {
+		{ 'doc/LOAD-MATRIX.md'. self generatedLoadMatrixMarkdown }.
 		{ 'doc/PACKAGE-GRAPH.md'. self generatedPackageGraphMarkdown }.
 		{ 'doc/PACKAGE-GRAPH.dot'. self generatedPackageGraphDot }.
 		{ 'doc/PACKAGE-GRAPH.svg'. self generatedPackageGraphSvg }.
@@ -203,6 +204,51 @@ GemStonePharoContract >> generatedPackageGraphMarkdown [
 						do: [ :member | inner nextPutAll: '`'; nextPutAll: member; nextPutAll: '`' ]
 						separatedBy: [ inner nextPutAll: ', ' ] ]);
 				cr ] ]
+]
+
+{ #category : 'contracts' }
+GemStonePharoContract >> generatedLoadMatrixMarkdown [
+	^ String streamContents: [ :stream |
+		stream
+			nextPutAll: '# Load Matrix'; cr; cr;
+			nextPutAll: 'Generated from `GemStonePharoContract` group and lane contracts.'; cr; cr;
+			nextPutAll: '| Load group | Base prod | Base tests | Core overlay | Core tools | Core tests | MagLev overlay | MagLev tools | MagLev tests | Typical use |'; cr;
+			nextPutAll: '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |'; cr.
+		self loadMatrixGroupNames do: [ :groupName |
+			| members description |
+			members := (self groupMemberSpecs detect: [ :each | each first = groupName ]) second asSet.
+			description := self groupDescriptionSpecs at: groupName ifAbsent: [ 'load group' ].
+			stream
+				nextPutAll: '| `';
+				nextPutAll: groupName;
+				nextPutAll: '` | ';
+				nextPutAll: (self loadMatrixMarkerFor: (members includes: 'GemStone-GBS-Converted'));
+				nextPutAll: ' | ';
+				nextPutAll: (self loadMatrixMarkerFor: (members includes: 'GemStone-Pharo-Tests'));
+				nextPutAll: ' | ';
+				nextPutAll: (self loadMatrixMarkerFor: (members includes: 'GemStone-GBS-Core'));
+				nextPutAll: ' | ';
+				nextPutAll: (self loadMatrixMarkerFor: (members includes: 'GemStone-GBS-Core-Tools'));
+				nextPutAll: ' | ';
+				nextPutAll: (self loadMatrixMarkerFor: (members includes: 'GemStone-Pharo-Core-Tests'));
+				nextPutAll: ' | ';
+				nextPutAll: (self loadMatrixMarkerFor: (members includes: 'GemStone-GBS-MagLev'));
+				nextPutAll: ' | ';
+				nextPutAll: (self loadMatrixMarkerFor: (members includes: 'GemStone-GBS-MagLev-Tools'));
+				nextPutAll: ' | ';
+				nextPutAll: (self loadMatrixMarkerFor: (members includes: 'GemStone-Pharo-MagLev-Tests'));
+				nextPutAll: ' | ';
+				nextPutAll: description;
+				nextPutAll: ' |';
+				cr ].
+		stream cr;
+			nextPutAll: '## Switch Recipes'; cr; cr;
+			nextPutAll: '- base/original bridge: `Original`'; cr;
+			nextPutAll: '- base/original bridge with base tests: `Original-Tests`'; cr;
+			nextPutAll: '- base plus generic Smalltalk overlay: `Core`, `Core-Tools`, `Core-Tests`'; cr;
+			nextPutAll: '- base plus generic overlay plus optional MagLev production: `MagLev`'; cr;
+			nextPutAll: '- full developer load: `Full` / `default`'; cr; cr;
+			nextPutAll: 'See [PACKAGE-GRAPH.md](./PACKAGE-GRAPH.md) for exact package membership and [VERIFICATION-LANES.md](./VERIFICATION-LANES.md) for the proof lanes that exercise these loads.'; cr ]
 ]
 
 { #category : 'contracts' }
@@ -530,6 +576,8 @@ GemStonePharoContract >> generatedUserManualReferenceHtml [
 				cr ].
 		stream
 			nextPutAll: '  </ul>'; cr;
+			nextPutAll: '  <h2>Load Matrix</h2>'; cr;
+			nextPutAll: '  <p>A generated switch matrix for the layered model is available at <code>doc/LOAD-MATRIX.md</code>.</p>'; cr;
 			nextPutAll: '  <h2>Verification Lanes</h2>'; cr;
 			nextPutAll: '  <ul>'; cr.
 		self verificationLaneSpecs do: [ :each |
@@ -559,6 +607,7 @@ GemStonePharoContract >> generatedUserManualReferenceHtml [
 			nextPutAll: '  <pre><code>make help'; cr;
 			nextPutAll: 'make original-drift'; cr;
 			nextPutAll: 'make core-only'; cr;
+			nextPutAll: 'make original'; cr;
 			nextPutAll: 'make original-tests'; cr;
 			nextPutAll: 'make full'; cr;
 			nextPutAll: 'make verify'; cr;
@@ -650,10 +699,10 @@ GemStonePharoContract >> groupMemberSpecs [
 		{ 'MagLev-Tools'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') }.
 		{ 'MagLev'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') }.
 		{ 'Tools'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools') }.
-		{ 'All-Tests'. #('GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests' 'GemStone-Pharo-Tests') }.
-		{ 'Tests'. #('GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests' 'GemStone-Pharo-Tests') }.
-		{ 'Full'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev-Tools' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests' 'GemStone-Pharo-Tests') }.
-		{ 'default'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev-Tools' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests' 'GemStone-Pharo-Tests') } }
+		{ 'All-Tests'. #('GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests') }.
+		{ 'Tests'. #('GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests') }.
+		{ 'Full'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev-Tools' 'GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests') }.
+		{ 'default'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev-Tools' 'GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests') } }
 ]
 
 { #category : 'contracts' }
@@ -685,6 +734,7 @@ GemStonePharoContract >> noCompatibilitySecondarySourceScanFiles [
 		'doc/ARCHITECTURE.md'
 		'doc/GemStone-Pharo-Bridge-User-Manual.html'
 		'doc/LIVE-PREFLIGHT-POLICY.md'
+		'doc/LOAD-MATRIX.md'
 		'doc/PACKAGE-GRAPH.dot'
 		'doc/PACKAGE-GRAPH.md'
 		'doc/PACKAGE-GRAPH.svg'
@@ -702,6 +752,8 @@ GemStonePharoContract >> noCompatibilitySecondarySourceScanFiles [
 		'scripts/run_bootstrap_smoke.sh'
 		'scripts/run_clean_reload_and_regressions.sh'
 		'scripts/run_core_only_clean_reload.sh'
+		'scripts/run_original_drift.sh'
+		'scripts/run_original_clean_reload.sh'
 		'scripts/run_generate_contract_artifacts.sh'
 		'scripts/run_live_preflight.sh'
 		'scripts/run_live_preflight_via_runner.st'
@@ -1552,7 +1604,7 @@ GemStonePharoContract >> reloadEnvironmentVariableSpecs [
 	^ {
 		{ 'GBS_LOAD_GROUP'. 'Metacello load group to reload before post-load checks run. Defaults to `default`.' }.
 		{ 'GBS_RELOAD_CHECK_MODE'. 'Reload proof mode. Defaults to `default` and supports `core-only`.' }.
-		{ 'GBS_VERIFY_LANE'. 'Optional verification lane to run in the same Smalltalk process after the reload proof. Supports `core-only` and `full`.' }.
+		{ 'GBS_VERIFY_LANE'. 'Optional verification lane to run in the same Smalltalk process after the reload proof. Supports `core-only`, `original`, `original-tests`, and `full`.' }.
 		{ 'GBS_GENERATE_CONTRACT_ARTIFACTS'. 'When `1`, regenerate the contract-driven documentation after reload.' }.
 		{ 'GBS_VERIFY_CONTRACT_ARTIFACTS'. 'When `1`, verify that the contract-driven documentation is already fresh.' } }
 ]
@@ -1590,17 +1642,19 @@ GemStonePharoContract >> verificationLaneSpecs [
 	^ {
 		{ 'core-only'. 'Verify the Smalltalk core without optional MagLev production packages and without deleted legacy surface.'. 'Core-Tests'. #('GemStone-Pharo-Core-Tests'). #('ARCHITECTURE_BOUNDARY_OK' 'PACKAGE_OWNERSHIP_DRIFT_OK' 'NO_COMPAT_SOURCE_SCAN_OK' 'NO_COMPATIBILITY_PROOF_OK' 'BRIDGE_UNIT_REGRESSION_OK' 'BRIDGE_CORE_ONLY_CHECK_OK') }.
 		{ 'bootstrap-smoke'. 'Prove that a clean image can micro-bootstrap the helper package and load the requested group before post-load checks run.'. 'Core-Tests'. #('GemStonePharoReloadBootstrapper' 'GemStonePharoReloadRunner' 'GemStone-Pharo-Core-Tests'). #('CORE_ONLY_CLEAN_RELOAD_DONE' 'BOOTSTRAP_SMOKE_OK' 'BOOTSTRAP_SMOKE_DONE') }.
+		{ 'original'. 'Verify that the original/base production layer reloads cleanly without the generic Core or optional MagLev overlays.'. 'Original'. #('GemStone-GBS-Converted' 'GemStone-GBS-Tools'). #('ARCHITECTURE_BOUNDARY_OK' 'PACKAGE_OWNERSHIP_DRIFT_SKIPPED' 'NO_COMPAT_SOURCE_SCAN_OK' 'NO_COMPATIBILITY_PROOF_OK' 'ORIGINAL_CHECK_OK') }.
+		{ 'original-drift'. 'Verify that the original/base production layer stays clean relative to `56b6db3...`, allowing only the explicit accepted test-layer exceptions.'. 'Original-Tests'. #('GemStone-GBS-Converted' 'GemStone-GBS-Tools' 'GemStone-Pharo-Tests'). #('ORIGINAL_LAYER_DRIFT_EXPECTED_ONLY') }.
 		{ 'original-tests'. 'Verify the original/base production and original/base test layer without the generic Core or optional MagLev overlays. This lane proves the base unit layer only.'. 'Original-Tests'. #('GemStone-Pharo-Tests'). #('ARCHITECTURE_BOUNDARY_OK' 'NO_COMPAT_SOURCE_SCAN_OK' 'NO_COMPATIBILITY_PROOF_OK' 'BRIDGE_UNIT_REGRESSION_OK' 'ORIGINAL_TESTS_CHECK_OK') }.
 		{ 'full'. 'Verify the steady-state developer load plus the live GemStone lane.'. 'Full'. #('GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests' 'GemStone-Pharo-Tests'). #('ARCHITECTURE_BOUNDARY_OK' 'PACKAGE_OWNERSHIP_DRIFT_OK' 'NO_COMPAT_SOURCE_SCAN_OK' 'NO_COMPATIBILITY_PROOF_OK' 'BRIDGE_UNIT_REGRESSION_OK' 'BRIDGE_LIVE_REGRESSION_OK' 'CLEAN_RELOAD_AND_REGRESSION_RUN_DONE') }.
-		{ 'artifact-freshness'. 'Verify that the generated contract artifacts and marker-managed doc sections are already up to date.'. 'default'. #('README.md' 'doc/ARCHITECTURE.md' 'doc/GemStone-Pharo-Bridge-User-Manual.html' 'doc/PACKAGE-GRAPH.md' 'doc/PACKAGE-GRAPH.dot' 'doc/PACKAGE-GRAPH.svg' 'doc/LIVE-PREFLIGHT-POLICY.md' 'doc/RELOAD-POLICY.md' 'doc/TESTING.md' 'doc/USER-MANUAL-REFERENCE.html' 'doc/OWNERSHIP-CONTRACT.md' 'doc/VERIFICATION-LANES.md'). #('NO_COMPAT_SOURCE_SCAN_OK' 'CONTRACT_ARTIFACTS_FRESH_OK') }.
-		{ 'verify'. 'Run core-only, bootstrap-smoke, original-tests, full, artifact-freshness, then the summary-renderer smoke check.'. 'composite'. #('core-only' 'bootstrap-smoke' 'original-tests' 'full' 'artifact-freshness' 'summary-renderer'). #('All lane success markers above') } }
+		{ 'artifact-freshness'. 'Verify that the generated contract artifacts and marker-managed doc sections are already up to date.'. 'default'. #('README.md' 'doc/ARCHITECTURE.md' 'doc/GemStone-Pharo-Bridge-User-Manual.html' 'doc/LOAD-MATRIX.md' 'doc/PACKAGE-GRAPH.md' 'doc/PACKAGE-GRAPH.dot' 'doc/PACKAGE-GRAPH.svg' 'doc/LIVE-PREFLIGHT-POLICY.md' 'doc/RELOAD-POLICY.md' 'doc/TESTING.md' 'doc/USER-MANUAL-REFERENCE.html' 'doc/OWNERSHIP-CONTRACT.md' 'doc/VERIFICATION-LANES.md'). #('NO_COMPAT_SOURCE_SCAN_OK' 'CONTRACT_ARTIFACTS_FRESH_OK') }.
+		{ 'verify'. 'Run core-only, bootstrap-smoke, original, original-drift, original-tests, full, artifact-freshness, then the summary-renderer smoke check.'. 'composite'. #('core-only' 'bootstrap-smoke' 'original' 'original-drift' 'original-tests' 'full' 'artifact-freshness' 'summary-renderer'). #('All lane success markers above') } }
 ]
 
 { #category : 'contracts' }
 GemStonePharoContract >> originalLayerExpectedExceptionSpecs [
 	^ {
-		{ 'src/GemStone-Pharo-Tests/GbsTranscriptTest.class.st'. 'Keeps a pragmatic runtime-dependent transcript skip for the current live GemStone runtime.' }.
-		{ 'src/GemStone-Pharo-Tests/MockGbsSession.class.st'. 'Keeps a test-only login-failure shortcut so the restored base GbsSession production file stays clean.' } }
+		{ 'src/GemStone-Pharo-Tests/GciError.extension.st'. 'Adds a tiny test-only GciError number accessor shim so the restored base login-error path can run without production drift.' }.
+		{ 'src/GemStone-Pharo-Tests/MockGbsSession.class.st'. 'Keeps only a narrow interpretLoginError override so the restored base GbsSession production file stays clean.' } }
 ]
 
 { #category : 'contracts' }
@@ -1644,7 +1698,11 @@ GemStonePharoContract >> generatedArchitectureBodyMarkdown [
 			stream
 				nextPutAll: '- `'; nextPutAll: each first; nextPutAll: '`'; cr;
 				nextPutAll: '  '; nextPutAll: each second; cr ].
+		stream cr; nextPutAll: '## Layered Load Matrix'; cr; cr;
+			nextPutAll: '- [LOAD-MATRIX.md](./LOAD-MATRIX.md)'; cr;
+			nextPutAll: '  generated group-by-group view of the base/original, generic core, and optional MagLev loading model'; cr.
 		stream cr; nextPutAll: '## Review Artifacts'; cr; cr;
+			nextPutAll: '- [LOAD-MATRIX.md](./LOAD-MATRIX.md)'; cr;
 			nextPutAll: '- [PACKAGE-GRAPH.md](./PACKAGE-GRAPH.md)'; cr;
 			nextPutAll: '- [OWNERSHIP-CONTRACT.md](./OWNERSHIP-CONTRACT.md)'; cr;
 			nextPutAll: '- [RELOAD-POLICY.md](./RELOAD-POLICY.md)'; cr;
@@ -1671,7 +1729,7 @@ GemStonePharoContract >> generatedReadmeBodyMarkdown [
 			nextPutAll: '- `MagLev-Core`, `MagLev-Tools`, `MagLev`'; cr;
 			nextPutAll: '- `Tools`, `All-Tests`, `Tests`, `Full`, `default`'; cr;
 			cr;
-			nextPutAll: 'See [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md) for the exact package graph and group membership.'; cr.
+			nextPutAll: 'See [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md) for the human-facing switch matrix and [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md) for the exact package graph and group membership.'; cr.
 		stream cr; nextPutAll: '### Verification Lanes'; cr; cr;
 			nextPutAll: 'Top-level `make verify` sequencing is owned by `GemStonePharoVerifyRunner`; lane-local unit/live/preflight execution is owned by `GemStonePharoVerificationRunner`.'; cr; cr.
 		self verificationLaneSpecs do: [ :each |
@@ -1687,6 +1745,7 @@ GemStonePharoContract >> generatedReadmeBodyMarkdown [
 				nextPutAll: '  '; nextPutAll: each second; cr ].
 		stream cr; nextPutAll: '### Generated Contract Artifacts'; cr; cr;
 			nextPutAll: 'Standalone generated artifacts:'; cr;
+			nextPutAll: '- [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md)'; cr;
 			nextPutAll: '- [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md)'; cr;
 			nextPutAll: '- [doc/PACKAGE-GRAPH.dot](doc/PACKAGE-GRAPH.dot)'; cr;
 			nextPutAll: '- [doc/PACKAGE-GRAPH.svg](doc/PACKAGE-GRAPH.svg)'; cr;
@@ -1742,6 +1801,7 @@ GemStonePharoContract >> generatedTestingBodyMarkdown [
 			nextPutAll: 'make help'; cr;
 			nextPutAll: 'make core-only'; cr;
 			nextPutAll: 'make original-drift'; cr;
+			nextPutAll: 'make original'; cr;
 			nextPutAll: 'make original-tests'; cr;
 			nextPutAll: 'make full'; cr;
 			nextPutAll: 'make verify'; cr;
@@ -1756,6 +1816,7 @@ GemStonePharoContract >> generatedTestingBodyMarkdown [
 					nextPutAll: '- `'; nextPutAll: each first; nextPutAll: '`'; cr;
 					nextPutAll: '  '; nextPutAll: each second; cr ].
 		stream cr; nextPutAll: '## Generated Contract Artifacts'; cr; cr;
+			nextPutAll: '- [LOAD-MATRIX.md](./LOAD-MATRIX.md)'; cr;
 			nextPutAll: '- [PACKAGE-GRAPH.md](./PACKAGE-GRAPH.md)'; cr;
 			nextPutAll: '- [PACKAGE-GRAPH.dot](./PACKAGE-GRAPH.dot)'; cr;
 			nextPutAll: '- [PACKAGE-GRAPH.svg](./PACKAGE-GRAPH.svg)'; cr;
@@ -1807,6 +1868,7 @@ GemStonePharoContract >> generatedUserManualOverviewHtml [
 		stream
 			nextPutAll: '      </tbody>'; cr;
 			nextPutAll: '    </table>'; cr;
+			nextPutAll: '    <p>A generated switch matrix is also available at <code>doc/LOAD-MATRIX.md</code> for the base/original, core, and MagLev load combinations.</p>'; cr;
 			nextPutAll: '    <p>The active core root API is <code>bridgeRoot</code>, backed by <code>#GbsBridgeRoot</code> and <code>GbsBridgeRootFacade</code>.</p>'; cr ]
 ]
 
@@ -1845,10 +1907,12 @@ GemStonePharoContract >> generatedUserManualTestingHtml [
 			nextPutAll: '      active load groups, verification lanes, live GemStone environment variables, the'; cr;
 			nextPutAll: '      <code>bridgeRoot</code> API, and the no-compatibility proof.'; cr;
 			nextPutAll: '    </p>'; cr;
+			nextPutAll: '    <p>A generated layered switch matrix is available at <code>doc/LOAD-MATRIX.md</code>.</p>'; cr;
 			nextPutAll: '    <h3>Recommended entry point</h3>'; cr;
 			nextPutAll: '    <pre><code>make help'; cr;
 			nextPutAll: 'make original-drift'; cr;
 			nextPutAll: 'make core-only'; cr;
+			nextPutAll: 'make original'; cr;
 			nextPutAll: 'make original-tests'; cr;
 			nextPutAll: 'make full'; cr;
 			nextPutAll: 'make verify'; cr;
@@ -1885,6 +1949,18 @@ GemStonePharoContract >> groupDescriptionSpecs [
 		'Tests'. 'convenience alias for all active core and MagLev-aware test packages'.
 		'Full'. 'full developer load'.
 		'default'. 'alias for `Full`' }
+]
+
+{ #category : 'contracts' }
+GemStonePharoContract >> loadMatrixGroupNames [
+	^ #('Original' 'Original-Tests' 'Core' 'Core-Tools' 'Core-Tests' 'MagLev' 'Full')
+]
+
+{ #category : 'contracts' }
+GemStonePharoContract >> loadMatrixMarkerFor: aBoolean [
+	^ aBoolean
+		ifTrue: [ 'yes' ]
+		ifFalse: [ 'no' ]
 ]
 
 { #category : 'contracts' }

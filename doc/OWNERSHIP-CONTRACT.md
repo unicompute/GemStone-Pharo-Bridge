@@ -722,6 +722,7 @@ Secondary source files:
 - `doc/ARCHITECTURE.md`
 - `doc/GemStone-Pharo-Bridge-User-Manual.html`
 - `doc/LIVE-PREFLIGHT-POLICY.md`
+- `doc/LOAD-MATRIX.md`
 - `doc/PACKAGE-GRAPH.dot`
 - `doc/PACKAGE-GRAPH.md`
 - `doc/PACKAGE-GRAPH.svg`
@@ -739,6 +740,8 @@ Secondary source files:
 - `scripts/run_bootstrap_smoke.sh`
 - `scripts/run_clean_reload_and_regressions.sh`
 - `scripts/run_core_only_clean_reload.sh`
+- `scripts/run_original_drift.sh`
+- `scripts/run_original_clean_reload.sh`
 - `scripts/run_generate_contract_artifacts.sh`
 - `scripts/run_live_preflight.sh`
 - `scripts/run_live_preflight_via_runner.st`

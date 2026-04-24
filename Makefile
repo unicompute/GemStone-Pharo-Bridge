@@ -1,4 +1,4 @@
-.PHONY: help core-only original-tests bootstrap-smoke full verify graph-artifacts artifact-freshness original-drift
+.PHONY: help core-only original original-tests bootstrap-smoke full verify graph-artifacts artifact-freshness original-drift
 
 PHARO_IMAGE ?= /Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image
 PHARO_WORK_DIR ?= /Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean
@@ -9,6 +9,9 @@ help:
 		"" \
 		"  make core-only" \
 		"    Load only the Smalltalk core and run GemStone-Pharo-Core-Tests." \
+		"" \
+		"  make original" \
+		"    Load only the original/base production packages and prove the base production layer reloads cleanly." \
 		"" \
 		"  make original-tests" \
 		"    Load only the original/base production and original/base tests." \
@@ -22,7 +25,7 @@ help:
 		"    The live lane runs only when GS_USER and GS_PASS are set." \
 		"" \
 		"  make verify" \
-		"    Run core-only, bootstrap-smoke, full, artifact-freshness, then the summary-renderer smoke check." \
+		"    Run core-only, bootstrap-smoke, original, original-drift, original-tests, full, artifact-freshness, then the summary-renderer smoke check." \
 		"" \
 		"  make graph-artifacts" \
 		"    Regenerate package-graph and verification-lane artifacts in doc/." \
@@ -40,6 +43,9 @@ help:
 
 core-only:
 	bash ./scripts/run_core_only_clean_reload.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
+
+original:
+	bash ./scripts/run_original_clean_reload.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
 
 original-tests:
 	bash ./scripts/run_original_tests_clean_reload.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
@@ -60,4 +66,4 @@ artifact-freshness:
 	bash ./scripts/run_verify_contract_artifacts.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
 
 original-drift:
-	bash ./scripts/report_original_layer_drift.sh
+	bash ./scripts/run_original_drift.sh

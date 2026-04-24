@@ -166,6 +166,13 @@ GemStonePharoLaneRunner >> laneSpec [
 ]
 
 { #category : 'private' }
+GemStonePharoLaneRunner >> liveSessionSupportClass [
+	^ Smalltalk
+		at: #GbsLiveSessionTestSupport
+		ifAbsent: [ Smalltalk at: #CoreGbsLiveSessionTestSupport ifAbsent: [ nil ] ]
+]
+
+{ #category : 'private' }
 GemStonePharoLaneRunner >> log: aString [
 	logBlock value: aString
 ]
@@ -209,19 +216,16 @@ GemStonePharoLaneRunner >> runRegressionLane [
 	| selectedTests result sessionReady failures errors skipped label hadFailure liveSessionSupportClass |
 	sessionReady := true.
 	self isLiveLane ifTrue: [
-		liveSessionSupportClass := Smalltalk
-			at: #CoreGbsLiveSessionTestSupport
-			ifAbsent: [ Smalltalk at: #GbsLiveSessionTestSupport ifAbsent: [ nil ] ].
-		(liveSessionSupportClass isNil or: [ (liveSessionSupportClass ensureSharedSession) isNil ]) ifTrue: [
-			sessionReady := false.
-			self log: 'LIVE_SESSION_ERROR: ', (
-				liveSessionSupportClass
-					ifNil: [ 'Live session support is not loaded.' ]
-					ifNotNil: [ liveSessionSupportClass unavailableReason ]) ] ].
+		liveSessionSupportClass := self liveSessionSupportClass.
+		sessionReady := self sessionReadyForLiveSupportClass: liveSessionSupportClass ].
 	selectedTests := self selectedTests.
 	result := TestResult new.
 	sessionReady ifTrue: [
-		selectedTests do: [ :testCase | testCase run: result ] ].
+		selectedTests do: [ :testCase |
+			(self isLiveLane
+				and: [ (self sessionReadyForLiveSupportClass: liveSessionSupportClass) not ]) ifTrue: [
+				sessionReady := false ].
+			sessionReady ifTrue: [ testCase run: result ] ] ].
 	failures := result failures size.
 	errors := result errors size.
 	skipped := (result respondsTo: #skippedCount)
@@ -253,11 +257,36 @@ GemStonePharoLaneRunner >> runRegressionLane [
 { #category : 'running' }
 GemStonePharoLaneRunner >> runRegressionLaneEnsuringSessionRelease [
 	| liveSessionSupportClass |
-	liveSessionSupportClass := Smalltalk
-		at: #CoreGbsLiveSessionTestSupport
-		ifAbsent: [ Smalltalk at: #GbsLiveSessionTestSupport ifAbsent: [ nil ] ].
+	liveSessionSupportClass := self liveSessionSupportClass.
 	^ [ self runRegressionLane ]
 		ensure: [ liveSessionSupportClass ifNotNil: [ liveSessionSupportClass releaseOwnedSession ] ]
+]
+
+{ #category : 'private' }
+GemStonePharoLaneRunner >> sessionReadyForLiveSupportClass: liveSessionSupportClass [
+	| session |
+	liveSessionSupportClass ifNil: [
+		self log: 'LIVE_SESSION_ERROR: Live session support is not loaded.'.
+		^ false ].
+	session := liveSessionSupportClass ensureSharedSession.
+	session ifNil: [
+		self log: 'LIVE_SESSION_ERROR: ', liveSessionSupportClass unavailableReason.
+		^ false ].
+	(session respondsTo: #abortTransaction)
+		ifTrue: [ [ session abortTransaction ] on: Error do: [ ] ].
+	(self ensureTranscriptProxyInstalledOn: session)
+		ifFalse: [
+			self log: 'LIVE_SESSION_ERROR: transcript proxy installation failed.'.
+			^ false ].
+	^ true
+]
+
+{ #category : 'private' }
+GemStonePharoLaneRunner >> ensureTranscriptProxyInstalledOn: aSession [
+	^ (GemStonePharoVerificationRunner
+		onEnvironment: self environment
+		log: logBlock)
+		ensureTranscriptProxyInstalledOn: aSession
 ]
 
 { #category : 'private' }

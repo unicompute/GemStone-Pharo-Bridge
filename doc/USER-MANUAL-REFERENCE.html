@@ -29,30 +29,35 @@
     <li><code>MagLev-Tools</code> -> <code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Core</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-Core-Tools</code>, <code>GemStone-GBS-MagLev</code>, <code>GemStone-GBS-MagLev-Tools</code></li>
     <li><code>MagLev</code> -> <code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Core</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-Core-Tools</code>, <code>GemStone-GBS-MagLev</code>, <code>GemStone-GBS-MagLev-Tools</code></li>
     <li><code>Tools</code> -> <code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Core</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-Core-Tools</code></li>
-    <li><code>All-Tests</code> -> <code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-MagLev-Tests</code>, <code>GemStone-Pharo-Tests</code></li>
-    <li><code>Tests</code> -> <code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-MagLev-Tests</code>, <code>GemStone-Pharo-Tests</code></li>
-    <li><code>Full</code> -> <code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Core</code>, <code>GemStone-GBS-MagLev</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-Core-Tools</code>, <code>GemStone-GBS-MagLev-Tools</code>, <code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-MagLev-Tests</code>, <code>GemStone-Pharo-Tests</code></li>
-    <li><code>default</code> -> <code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Core</code>, <code>GemStone-GBS-MagLev</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-Core-Tools</code>, <code>GemStone-GBS-MagLev-Tools</code>, <code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-MagLev-Tests</code>, <code>GemStone-Pharo-Tests</code></li>
+    <li><code>All-Tests</code> -> <code>GemStone-Pharo-Tests</code>, <code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-MagLev-Tests</code></li>
+    <li><code>Tests</code> -> <code>GemStone-Pharo-Tests</code>, <code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-MagLev-Tests</code></li>
+    <li><code>Full</code> -> <code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Core</code>, <code>GemStone-GBS-MagLev</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-Core-Tools</code>, <code>GemStone-GBS-MagLev-Tools</code>, <code>GemStone-Pharo-Tests</code>, <code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-MagLev-Tests</code></li>
+    <li><code>default</code> -> <code>GemStone-GBS-Converted</code>, <code>GemStone-GBS-Core</code>, <code>GemStone-GBS-MagLev</code>, <code>GemStone-GBS-Tools</code>, <code>GemStone-GBS-Core-Tools</code>, <code>GemStone-GBS-MagLev-Tools</code>, <code>GemStone-Pharo-Tests</code>, <code>GemStone-Pharo-Core-Tests</code>, <code>GemStone-Pharo-MagLev-Tests</code></li>
   </ul>
+  <h2>Load Matrix</h2>
+  <p>A generated switch matrix for the layered model is available at <code>doc/LOAD-MATRIX.md</code>.</p>
   <h2>Verification Lanes</h2>
   <ul>
     <li><strong><code>core-only</code></strong>: Verify the Smalltalk core without optional MagLev production packages and without deleted legacy surface.</li>
     <li><strong><code>bootstrap-smoke</code></strong>: Prove that a clean image can micro-bootstrap the helper package and load the requested group before post-load checks run.</li>
+    <li><strong><code>original</code></strong>: Verify that the original/base production layer reloads cleanly without the generic Core or optional MagLev overlays.</li>
+    <li><strong><code>original-drift</code></strong>: Verify that the original/base production layer stays clean relative to `56b6db3...`, allowing only the explicit accepted test-layer exceptions.</li>
     <li><strong><code>original-tests</code></strong>: Verify the original/base production and original/base test layer without the generic Core or optional MagLev overlays. This lane proves the base unit layer only.</li>
     <li><strong><code>full</code></strong>: Verify the steady-state developer load plus the live GemStone lane.</li>
     <li><strong><code>artifact-freshness</code></strong>: Verify that the generated contract artifacts and marker-managed doc sections are already up to date.</li>
-    <li><strong><code>verify</code></strong>: Run core-only, bootstrap-smoke, original-tests, full, artifact-freshness, then the summary-renderer smoke check.</li>
+    <li><strong><code>verify</code></strong>: Run core-only, bootstrap-smoke, original, original-drift, original-tests, full, artifact-freshness, then the summary-renderer smoke check.</li>
   </ul>
   <h2>Expected Original-layer Test Exceptions</h2>
   <p><code>make original-drift</code> reports the original/base production layer as clean and currently accepts only these test-layer exceptions:</p>
   <ul>
-    <li><code>src/GemStone-Pharo-Tests/GbsTranscriptTest.class.st</code>: Keeps a pragmatic runtime-dependent transcript skip for the current live GemStone runtime.</li>
-    <li><code>src/GemStone-Pharo-Tests/MockGbsSession.class.st</code>: Keeps a test-only login-failure shortcut so the restored base GbsSession production file stays clean.</li>
+    <li><code>src/GemStone-Pharo-Tests/GciError.extension.st</code>: Adds a tiny test-only GciError number accessor shim so the restored base login-error path can run without production drift.</li>
+    <li><code>src/GemStone-Pharo-Tests/MockGbsSession.class.st</code>: Keeps only a narrow interpretLoginError override so the restored base GbsSession production file stays clean.</li>
   </ul>
   <h2>Recommended Entry Points</h2>
   <pre><code>make help
 make original-drift
 make core-only
+make original
 make original-tests
 make full
 make verify

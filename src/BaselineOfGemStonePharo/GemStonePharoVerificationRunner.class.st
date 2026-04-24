@@ -5,6 +5,7 @@ Class {
 		'environment',
 		'logBlock',
 		'laneRunBlock',
+		'originalTestsPreparationBlock',
 		'preflightRunBlock',
 		'imagePathBlock',
 		'gslistOutputBlock',
@@ -62,6 +63,22 @@ GemStonePharoVerificationRunner >> defaultPreflightResult [
 ]
 
 { #category : 'private' }
+GemStonePharoVerificationRunner >> defaultPrepareOriginalTestsSession [
+	| liveSessionSupportClass session |
+	liveSessionSupportClass := Smalltalk
+		at: #GbsLiveSessionTestSupport
+		ifAbsent: [ nil ].
+	liveSessionSupportClass ifNil: [ ^ true ].
+	session := [ liveSessionSupportClass ensureSharedSession ]
+		on: Error
+		do: [ :ex |
+			self log: 'ORIGINAL_TESTS_SESSION_PREP_ERROR: ', ex messageText.
+			nil ].
+	session ifNil: [ ^ true ].
+	^ self ensureTranscriptProxyInstalledOn: session
+]
+
+{ #category : 'private' }
 GemStonePharoVerificationRunner >> defaultRunRegressionLaneNamed: laneName packageFilter: packageFilter [
 	| laneEnvironment |
 	laneEnvironment := Dictionary new.
@@ -83,6 +100,21 @@ GemStonePharoVerificationRunner >> emitCoreOnlySummaryResult: result code: code 
 	self log: (result = 'OK'
 		ifTrue: [ 'BRIDGE_CORE_ONLY_CHECK_OK' ]
 		ifFalse: [ 'BRIDGE_CORE_ONLY_CHECK_FAILED' ])
+]
+
+{ #category : 'private' }
+GemStonePharoVerificationRunner >> emitOriginalSummaryResult: result code: code unitStatus: unitStatus preflightStatus: preflightStatus liveStatus: liveStatus [
+	self
+		log: 'ORIGINAL_SUMMARY result=', result,
+			' code=', code,
+			' reload=ok',
+			' unit=', unitStatus,
+			' preflight=', preflightStatus,
+			' live=', liveStatus,
+			' work_image=', self imagePath.
+	self log: (result = 'OK'
+		ifTrue: [ 'ORIGINAL_CHECK_OK' ]
+		ifFalse: [ 'ORIGINAL_CHECK_FAILED' ])
 ]
 
 { #category : 'private' }
@@ -130,6 +162,15 @@ GemStonePharoVerificationRunner >> environmentAt: aString ifAbsent: aBlock [
 	^ [ self environment at: aString ifAbsent: aBlock ]
 		on: Error
 		do: [ aBlock value ]
+]
+
+{ #category : 'private' }
+GemStonePharoVerificationRunner >> ensureTranscriptProxyInstalledOn: aSession [
+	^ [ (aSession evaluate: self transcriptProxyInstallScript) = true ]
+		on: Error
+		do: [ :ex |
+			self log: 'ORIGINAL_TESTS_SESSION_PREP_ERROR: ', ex messageText.
+			false ]
 ]
 
 { #category : 'private' }
@@ -420,6 +461,30 @@ GemStonePharoVerificationRunner >> preflightRunBlock: aBlock [
 ]
 
 { #category : 'private' }
+GemStonePharoVerificationRunner >> originalTestsPreparationBlock: aBlock [
+	originalTestsPreparationBlock := aBlock
+]
+
+{ #category : 'private' }
+GemStonePharoVerificationRunner >> prepareOriginalTestsSession [
+	^ originalTestsPreparationBlock
+		ifNil: [ self defaultPrepareOriginalTestsSession ]
+		ifNotNil: [ originalTestsPreparationBlock value ]
+]
+
+{ #category : 'private' }
+GemStonePharoVerificationRunner >> releaseOriginalTestsSession [
+	| liveSessionSupportClass |
+	liveSessionSupportClass := Smalltalk
+		at: #GbsLiveSessionTestSupport
+		ifAbsent: [ nil ].
+	liveSessionSupportClass ifNil: [ ^ self ].
+	[ liveSessionSupportClass releaseOwnedSession ]
+		on: Error
+		do: [ :ex | self log: 'ORIGINAL_TESTS_SESSION_RELEASE_ERROR: ', ex messageText ]
+]
+
+{ #category : 'private' }
 GemStonePharoVerificationRunner >> summaryJsonEnabled [
 	^ GemStonePharoReloadRunner
 		booleanFlagNamed: 'GBS_JSON_SUMMARY'
@@ -481,9 +546,20 @@ GemStonePharoVerificationRunner >> runFullVerification [
 			liveStatus: 'skipped'.
 		^ false ].
 
-	liveOk := self
-		runRegressionLaneNamed: 'live'
-		packageFilter: nil.
+	(self prepareOriginalTestsSession) ifFalse: [
+		self
+			emitFullSummaryResult: 'FAIL'
+			code: 'LIVE_REGRESSION_SESSION_PREP_FAILED'
+			unitStatus: 'ok'
+			preflightStatus: 'ok'
+			liveStatus: 'skipped'.
+		^ false ].
+
+	liveOk := [
+		self
+			runRegressionLaneNamed: 'live'
+			packageFilter: nil ]
+		ensure: [ self releaseOriginalTestsSession ].
 	liveOk
 		ifTrue: [
 			self
@@ -503,27 +579,49 @@ GemStonePharoVerificationRunner >> runFullVerification [
 ]
 
 { #category : 'private' }
-GemStonePharoVerificationRunner >> runOriginalTestsVerification [
-	| unitOk |
-	unitOk := self
-		runRegressionLaneNamed: 'unit'
-		packageFilter: 'GemStone-Pharo-Tests'.
-	unitOk ifFalse: [
-		self
-			emitOriginalTestsSummaryResult: 'FAIL'
-			code: 'ORIGINAL_TESTS_UNIT_REGRESSION_FAILED'
-			unitStatus: 'failed'
-			preflightStatus: 'skipped'
-			liveStatus: 'skipped'.
-		^ false ].
-	self log: 'ORIGINAL_TESTS_LIVE_SKIPPED: Original-Tests lane proves the base/original unit layer only.'.
+GemStonePharoVerificationRunner >> runOriginalVerification [
+	self log: 'ORIGINAL_LIVE_SKIPPED: Original lane proves the base/original production load only.'.
 	self
-		emitOriginalTestsSummaryResult: 'OK'
-		code: 'ORIGINAL_TESTS_CHECK_OK'
-		unitStatus: 'ok'
+		emitOriginalSummaryResult: 'OK'
+		code: 'ORIGINAL_CHECK_OK'
+		unitStatus: 'skipped'
 		preflightStatus: 'skipped'
 		liveStatus: 'skipped'.
 	^ true
+]
+
+{ #category : 'private' }
+GemStonePharoVerificationRunner >> runOriginalTestsVerification [
+	| unitOk |
+	^ [
+		(self prepareOriginalTestsSession) ifFalse: [
+			self
+				emitOriginalTestsSummaryResult: 'FAIL'
+				code: 'ORIGINAL_TESTS_SESSION_PREP_FAILED'
+				unitStatus: 'skipped'
+				preflightStatus: 'skipped'
+				liveStatus: 'skipped'.
+			^ false ].
+		unitOk := self
+			runRegressionLaneNamed: 'unit'
+			packageFilter: 'GemStone-Pharo-Tests'.
+		unitOk ifFalse: [
+			self
+				emitOriginalTestsSummaryResult: 'FAIL'
+				code: 'ORIGINAL_TESTS_UNIT_REGRESSION_FAILED'
+				unitStatus: 'failed'
+				preflightStatus: 'skipped'
+				liveStatus: 'skipped'.
+			^ false ].
+		self log: 'ORIGINAL_TESTS_LIVE_SKIPPED: Original-Tests lane proves the base/original unit layer only.'.
+		self
+			emitOriginalTestsSummaryResult: 'OK'
+			code: 'ORIGINAL_TESTS_CHECK_OK'
+			unitStatus: 'ok'
+			preflightStatus: 'skipped'
+			liveStatus: 'skipped'.
+		true ]
+		ensure: [ self releaseOriginalTestsSession ]
 ]
 
 { #category : 'private' }
@@ -641,6 +739,7 @@ GemStonePharoVerificationRunner >> runRegressionLaneNamed: laneName packageFilte
 { #category : 'running' }
 GemStonePharoVerificationRunner >> runVerificationLane [
 	self laneName = 'core-only' ifTrue: [ ^ self runCoreOnlyVerification ].
+	self laneName = 'original' ifTrue: [ ^ self runOriginalVerification ].
 	self laneName = 'original-tests' ifTrue: [ ^ self runOriginalTestsVerification ].
 	self laneName = 'full' ifTrue: [ ^ self runFullVerification ].
 	self
@@ -657,6 +756,49 @@ GemStonePharoVerificationRunner >> shellQuoted: aString [
 	escaped := escaped copyReplaceAll: '$' with: '\$'.
 	escaped := escaped copyReplaceAll: '`' with: '\`'.
 	^ '"' , escaped , '"'
+]
+
+{ #category : 'private' }
+GemStonePharoVerificationRunner >> transcriptProxyInstallScript [
+	^ '
+	| tempDict proxyClass |
+	tempDict := System myUserProfile symbolList
+		detect: [ :each |
+			(each respondsTo: #name)
+				and: [ each name = #PharoSessionGlobals ] ]
+		ifNone: [ nil ].
+	tempDict ifNil: [
+		tempDict := SymbolDictionary new name: #PharoSessionGlobals.
+		System myUserProfile insertDictionary: tempDict at: 1 ].
+	proxyClass := tempDict at: #Transcript ifAbsent: [ nil ].
+	(proxyClass isNil or: [ proxyClass isBehavior not ]) ifTrue: [
+		proxyClass := Object subclass: <quote>PharoTranscriptProxy<quote>
+			instVarNames: #()
+			classVars: #()
+			classInstVars: #(<quote>currentLine<quote>)
+			poolDictionaries: #()
+			inDictionary: tempDict
+			options: #().
+		tempDict at: #Transcript put: proxyClass ].
+	proxyClass class compileMethod: <quote>show: aString
+		currentLine := (currentLine ifNil: [ String new ]), aString asString.<quote> category: <quote>logging<quote>.
+	proxyClass class compileMethod: <quote>cr
+		| log |
+		log := UserGlobals at: #PharoTranscriptLog ifAbsentPut: [ OrderedCollection new ].
+		log add: (currentLine ifNil: [ String new ]).
+		currentLine := String new.<quote> category: <quote>logging<quote>.
+	proxyClass class compileMethod: <quote>fetchAndClear
+		| log text |
+		log := UserGlobals at: #PharoTranscriptLog ifAbsentPut: [ OrderedCollection new ].
+		text := String streamContents: [ :stream |
+			log do: [ :each |
+				stream nextPutAll: each asString.
+				stream cr ] ].
+		UserGlobals at: #PharoTranscriptLog put: OrderedCollection new.
+		^ text<quote> category: <quote>logging<quote>.
+	UserGlobals at: #PharoTranscriptLog put: OrderedCollection new.
+	true
+	' copyReplaceAll: '<quote>' with: ''''
 ]
 
 { #category : 'private' }

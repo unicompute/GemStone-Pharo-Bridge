@@ -10,7 +10,7 @@ packages=(
 )
 
 expected_files=(
-  "src/GemStone-Pharo-Tests/GbsTranscriptTest.class.st"
+  "src/GemStone-Pharo-Tests/GciError.extension.st"
   "src/GemStone-Pharo-Tests/MockGbsSession.class.st"
 )
 
@@ -107,11 +107,11 @@ if [ "${#unexpected_files[@]}" -eq 0 ]; then
   done
 
   printf 'ORIGINAL_LAYER_DRIFT_EXPECTED file=%s reason=%s\n' \
-    'src/GemStone-Pharo-Tests/GbsTranscriptTest.class.st' \
-    'live GemStone transcript fetch is runtime-dependent on this stone, so the strict base assertion remains a pragmatic skip'
+    'src/GemStone-Pharo-Tests/GciError.extension.st' \
+    'Original-Tests adds a tiny test-only GciError number accessor shim so the restored base login-error path can run without production drift'
   printf 'ORIGINAL_LAYER_DRIFT_EXPECTED file=%s reason=%s\n' \
     'src/GemStone-Pharo-Tests/MockGbsSession.class.st' \
-    'Original-Tests keeps a test-only login-failure shortcut here so the restored base GbsSession production file stays clean'
+    'Original-Tests keeps only a narrow interpretLoginError override here so the restored base GbsSession production file stays clean'
   exit 0
 fi
 

@@ -55,9 +55,11 @@ jobs:
         with:
           name: generated-contract-artifacts
           path: |
+            doc/LOAD-MATRIX.md
             doc/PACKAGE-GRAPH.md
             doc/PACKAGE-GRAPH.dot
             doc/PACKAGE-GRAPH.svg
+            doc/OWNERSHIP-CONTRACT.md
             doc/RELOAD-POLICY.md
             doc/VERIFICATION-LANES.md
           if-no-files-found: error

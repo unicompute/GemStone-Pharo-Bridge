@@ -14,22 +14,9 @@ MockGbsSession >> initialize [
 	isLoggedIn := true
 ]
 
-{ #category : 'initialization' }
-MockGbsSession >> loginStone: stoneName user: username password: password [
-	| initSuccess loginSuccess errorStruct |
-	initSuccess := self gciInit.
-	initSuccess ifFalse: [ ^ GbsError signal: 'Failed to initialize GemStone GCI library.' ].
-	loginSuccess := self
-		gciLoginStone: stoneName
-		hostUser: ''
-		hostPass: ''
-		gsUser: username
-		gsPass: password.
-	loginSuccess ifFalse: [
-		errorStruct := GciError new.
-		(self gciErr: errorStruct) ifTrue: [ ^ self signalError: errorStruct ].
-		^ GbsError signal: 'Unknown login failure. Please check your GemStone connection parameters.' ].
-	isLoggedIn := true
+{ #category : 'error handling' }
+MockGbsSession >> interpretLoginError: anErrorStruct [
+	^ anErrorStruct message
 ]
 
 { #category : 'accessing' }

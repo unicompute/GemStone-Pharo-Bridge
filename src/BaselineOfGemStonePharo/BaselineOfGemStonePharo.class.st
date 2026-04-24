@@ -178,6 +178,12 @@ BaselineOfGemStonePharo >> postload: loader package: packageSpec [
 	self class environment
 		at: #GbxToolsOverrideSpec
 		ifPresent: [ :toolsSpec | toolsSpec apply ].
+	self class environment
+		at: #CoreGbsLiveSessionTestSupport
+		ifPresent: [ :supportClass |
+			[ supportClass installDelegatesOnOriginalSupportClass ]
+				on: Error
+				do: [ ] ].
 	self repairUndeclaredGlobals
 ]
 

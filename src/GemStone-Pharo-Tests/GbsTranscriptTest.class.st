@@ -26,6 +26,5 @@ GbsTranscriptTest >> testLiveTranscriptFetch [
 	
 	"4. Assertions: Did the text come back across the FFI bridge?"
 	self assert: transcriptText isString description: 'The fetched logs must be a String'.
-	(transcriptText includesSubstring: 'TDD Hello') ifFalse: [
-		self skip: 'Remote Transcript fetch returned no transcript text on this GemStone runtime.' ].
+	self assert: (transcriptText includesSubstring: 'TDD Hello') description: 'The Transcript text was missing or empty!'.
 ]

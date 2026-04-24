@@ -16,6 +16,7 @@ GemStonePharoContractTest >> testGeneratedContractArtifactSpecsExcludeDeprecated
 	paths := self contract generatedContractArtifactSpecs collect: [ :each | each first ].
 
 	self deny: (paths includes: 'doc/DEPRECATED-ALIASES.md').
+	self assert: (paths includes: 'doc/LOAD-MATRIX.md').
 	self assert: (paths includes: 'doc/PACKAGE-GRAPH.md').
 	self assert: (paths includes: 'doc/PACKAGE-GRAPH.dot').
 	self assert: (paths includes: 'doc/PACKAGE-GRAPH.svg').
@@ -49,6 +50,22 @@ GemStonePharoContractTest >> testGeneratedPackageGraphMarkdownMentionsRenderedSv
 	self deny: (markdown includesSubstring: '`GemStone-GBS-Compatibility`').
 	self deny: (markdown includesSubstring: '`GemStone-Pharo-Compatibility-Tests`').
 	self assert: (markdown includesSubstring: '## Load Groups')
+]
+
+{ #category : 'tests' }
+GemStonePharoContractTest >> testGeneratedLoadMatrixMarkdownDescribesLayeredSwitchModel [
+	| markdown |
+	markdown := self contract generatedLoadMatrixMarkdown.
+
+	self assert: (markdown includesSubstring: '# Load Matrix').
+	self assert: (markdown includesSubstring: '| Load group | Base prod | Base tests | Core overlay |').
+	self assert: (markdown includesSubstring: '`Original`').
+	self assert: (markdown includesSubstring: '`Core-Tests`').
+	self assert: (markdown includesSubstring: '`MagLev`').
+	self assert: (markdown includesSubstring: '`Full`').
+	self assert: (markdown includesSubstring: '## Switch Recipes').
+	self assert: (markdown includesSubstring: '[PACKAGE-GRAPH.md](./PACKAGE-GRAPH.md)').
+	self assert: (markdown includesSubstring: '[VERIFICATION-LANES.md](./VERIFICATION-LANES.md)')
 ]
 
 { #category : 'tests' }
@@ -100,6 +117,7 @@ GemStonePharoContractTest >> testGeneratedReloadPolicyMarkdownDescribesEnvModesA
 	self assert: (markdown includesSubstring: '## Reload Modes').
 	self assert: (markdown includesSubstring: '`core-only`').
 	self assert: (markdown includesSubstring: '## Verification Lanes').
+	self assert: (markdown includesSubstring: '`original`').
 	self assert: (markdown includesSubstring: '`full`')
 ]
 
@@ -113,7 +131,10 @@ GemStonePharoContractTest >> testGeneratedUserManualReferenceHtmlDescribesBridge
 	self assert: (html includesSubstring: 'Active Load Groups').
 	self assert: (html includesSubstring: '<code>Full</code>').
 	self assert: (html includesSubstring: 'Verification Lanes').
+	self assert: (html includesSubstring: '<code>original</code>').
 	self assert: (html includesSubstring: '<code>full</code>').
+	self assert: (html includesSubstring: 'doc/LOAD-MATRIX.md').
+	self assert: (html includesSubstring: 'make original').
 	self assert: (html includesSubstring: '<code>make verify</code>').
 	self assert: (html includesSubstring: 'GemStonePharoVerifyRunner').
 	self assert: (html includesSubstring: 'GS_NETLDI_NAME_OR_PORT').
@@ -180,6 +201,7 @@ GemStonePharoContractTest >> testNoCompatibilitySpecsCoverDeletedPackagesClasses
 	self assert: (sourceSnippets includes: 'GbsSession >> persistentRoot [').
 	self assert: (sourceSnippets includes: 'GBSM class >> rootAt:put: [').
 	self assert: (secondaryFiles includes: 'doc/LIVE-PREFLIGHT-POLICY.md').
+	self assert: (secondaryFiles includes: 'doc/LOAD-MATRIX.md').
 	self assert: (secondaryFiles includes: 'doc/PACKAGE-GRAPH.dot').
 	self assert: (secondaryFiles includes: 'doc/PACKAGE-GRAPH.md').
 	self assert: (secondaryFiles includes: 'doc/PACKAGE-GRAPH.svg').
@@ -198,6 +220,8 @@ GemStonePharoContractTest >> testNoCompatibilitySpecsCoverDeletedPackagesClasses
 	self assert: (secondaryFiles includes: 'scripts/run_live_preflight_via_runner.st').
 	self assert: (secondaryFiles includes: 'scripts/test_render_lane_json_summaries.sh').
 	self assert: (secondaryFiles includes: 'scripts/render_lane_json_summaries.sh').
+	self assert: (secondaryFiles includes: 'scripts/run_original_drift.sh').
+	self assert: (secondaryFiles includes: 'scripts/run_original_clean_reload.sh').
 	self assert: (secondaryFiles includes: 'scripts/run_verify.sh').
 	self assert: (secondaryFiles includes: 'scripts/run_verify_via_runner.st').
 	self assert: (secondaryFiles includes: '.github/workflows/verify.yml').
@@ -734,10 +758,14 @@ GemStonePharoContractTest >> testPackageRequirementSpecsOnlyReferenceKnownPackag
 
 { #category : 'tests' }
 GemStonePharoContractTest >> testVerificationLaneSpecsReflectSteadyStateLaneSet [
-	| laneNames bootstrapLane originalTestsLane fullLane verifyLane artifactLane |
+	| laneNames bootstrapLane originalLane originalDriftLane originalTestsLane fullLane verifyLane artifactLane |
 	laneNames := self contract verificationLaneSpecs collect: [ :each | each first ].
 	bootstrapLane := self contract verificationLaneSpecs
 		detect: [ :each | each first = 'bootstrap-smoke' ].
+	originalLane := self contract verificationLaneSpecs
+		detect: [ :each | each first = 'original' ].
+	originalDriftLane := self contract verificationLaneSpecs
+		detect: [ :each | each first = 'original-drift' ].
 	originalTestsLane := self contract verificationLaneSpecs
 		detect: [ :each | each first = 'original-tests' ].
 	fullLane := self contract verificationLaneSpecs
@@ -747,13 +775,20 @@ GemStonePharoContractTest >> testVerificationLaneSpecsReflectSteadyStateLaneSet 
 	artifactLane := self contract verificationLaneSpecs
 		detect: [ :each | each first = 'artifact-freshness' ].
 
-	self assert: laneNames asSet equals: #('core-only' 'bootstrap-smoke' 'original-tests' 'full' 'artifact-freshness' 'verify') asSet.
+	self assert: laneNames asSet equals: #('core-only' 'bootstrap-smoke' 'original' 'original-drift' 'original-tests' 'full' 'artifact-freshness' 'verify') asSet.
 	self deny: (laneNames includes: 'compatibility-only').
 	self deny: (laneNames includes: 'retirement-preview').
 	self assert: ((self contract verificationLaneSpecs detect: [ :each | each first = 'core-only' ]) fifth includes: 'NO_COMPATIBILITY_PROOF_OK').
 	self assert: bootstrapLane third equals: 'Core-Tests'.
 	self assert: (bootstrapLane fifth includes: 'BOOTSTRAP_SMOKE_OK').
 	self assert: (bootstrapLane fifth includes: 'BOOTSTRAP_SMOKE_DONE').
+	self assert: originalLane third equals: 'Original'.
+	self assert: originalLane fourth equals: #('GemStone-GBS-Converted' 'GemStone-GBS-Tools').
+	self assert: (originalLane fifth includes: 'PACKAGE_OWNERSHIP_DRIFT_SKIPPED').
+	self assert: (originalLane fifth includes: 'ORIGINAL_CHECK_OK').
+	self assert: originalDriftLane third equals: 'Original-Tests'.
+	self assert: originalDriftLane fourth equals: #('GemStone-GBS-Converted' 'GemStone-GBS-Tools' 'GemStone-Pharo-Tests').
+	self assert: (originalDriftLane fifth includes: 'ORIGINAL_LAYER_DRIFT_EXPECTED_ONLY').
 	self assert: originalTestsLane third equals: 'Original-Tests'.
 	self assert: originalTestsLane fourth equals: #('GemStone-Pharo-Tests').
 	self assert: (originalTestsLane fifth includes: 'ORIGINAL_TESTS_CHECK_OK').
@@ -763,8 +798,9 @@ GemStonePharoContractTest >> testVerificationLaneSpecsReflectSteadyStateLaneSet 
 	self assert: (fullLane fifth includes: 'NO_COMPAT_SOURCE_SCAN_OK').
 	self assert: (fullLane fifth includes: 'NO_COMPATIBILITY_PROOF_OK').
 	self assert: (artifactLane fourth includes: 'doc/LIVE-PREFLIGHT-POLICY.md').
+	self assert: (artifactLane fourth includes: 'doc/LOAD-MATRIX.md').
 	self assert: (artifactLane fourth includes: 'doc/RELOAD-POLICY.md').
 	self assert: (artifactLane fourth includes: 'doc/USER-MANUAL-REFERENCE.html').
 	self assert: (artifactLane fourth includes: 'doc/OWNERSHIP-CONTRACT.md').
-	self assert: verifyLane fourth equals: #('core-only' 'bootstrap-smoke' 'original-tests' 'full' 'artifact-freshness' 'summary-renderer')
+	self assert: verifyLane fourth equals: #('core-only' 'bootstrap-smoke' 'original' 'original-drift' 'original-tests' 'full' 'artifact-freshness' 'summary-renderer')
 ]

@@ -96,6 +96,10 @@ GemStonePharoVerifyRunner >> emitSummaryJsonResult: result code: code [
 			nextPutAll: (self jsonEscape: (self statusForStepNamed: 'core-only'));
 			nextPutAll: '","bootstrap_smoke":"';
 			nextPutAll: (self jsonEscape: (self statusForStepNamed: 'bootstrap-smoke'));
+			nextPutAll: '","original":"';
+			nextPutAll: (self jsonEscape: (self statusForStepNamed: 'original'));
+			nextPutAll: '","original_drift":"';
+			nextPutAll: (self jsonEscape: (self statusForStepNamed: 'original-drift'));
 			nextPutAll: '","original_tests":"';
 			nextPutAll: (self jsonEscape: (self statusForStepNamed: 'original-tests'));
 			nextPutAll: '","full":"';
@@ -115,6 +119,8 @@ GemStonePharoVerifyRunner >> emitSummaryResult: result code: code [
 			' code=', code,
 			' core_only=', (self statusForStepNamed: 'core-only'),
 			' bootstrap_smoke=', (self statusForStepNamed: 'bootstrap-smoke'),
+			' original=', (self statusForStepNamed: 'original'),
+			' original_drift=', (self statusForStepNamed: 'original-drift'),
 			' original_tests=', (self statusForStepNamed: 'original-tests'),
 			' full=', (self statusForStepNamed: 'full'),
 			' artifact_freshness=', (self statusForStepNamed: 'artifact-freshness'),
@@ -144,6 +150,8 @@ GemStonePharoVerifyRunner >> environmentAt: aString ifAbsent: aBlock [
 GemStonePharoVerifyRunner >> failureCodeForStepNamed: stepName [
 	stepName = 'core-only' ifTrue: [ ^ 'CORE_ONLY_FAILED' ].
 	stepName = 'bootstrap-smoke' ifTrue: [ ^ 'BOOTSTRAP_SMOKE_FAILED' ].
+	stepName = 'original' ifTrue: [ ^ 'ORIGINAL_FAILED' ].
+	stepName = 'original-drift' ifTrue: [ ^ 'ORIGINAL_DRIFT_FAILED' ].
 	stepName = 'original-tests' ifTrue: [ ^ 'ORIGINAL_TESTS_FAILED' ].
 	stepName = 'full' ifTrue: [ ^ 'FULL_FAILED' ].
 	stepName = 'artifact-freshness' ifTrue: [ ^ 'ARTIFACT_FRESHNESS_FAILED' ].
@@ -240,6 +248,14 @@ GemStonePharoVerifyRunner >> shellCommandForStepNamed: stepName [
 			' && bash ./scripts/run_bootstrap_smoke.sh ',
 			(self shellQuoted: imagePath), ' ',
 			(self shellQuoted: workDir) ].
+	stepName = 'original' ifTrue: [
+		^ 'cd ', (self shellQuoted: repoRoot),
+			' && bash ./scripts/run_original_clean_reload.sh ',
+			(self shellQuoted: imagePath), ' ',
+			(self shellQuoted: workDir) ].
+	stepName = 'original-drift' ifTrue: [
+		^ 'cd ', (self shellQuoted: repoRoot),
+			' && bash ./scripts/run_original_drift.sh' ].
 	stepName = 'original-tests' ifTrue: [
 		^ 'cd ', (self shellQuoted: repoRoot),
 			' && bash ./scripts/run_original_tests_clean_reload.sh ',
@@ -296,6 +312,8 @@ GemStonePharoVerifyRunner >> stepStatuses [
 GemStonePharoVerifyRunner >> successMarkerForStepNamed: stepName [
 	stepName = 'core-only' ifTrue: [ ^ 'BRIDGE_CORE_ONLY_CHECK_OK' ].
 	stepName = 'bootstrap-smoke' ifTrue: [ ^ 'BOOTSTRAP_SMOKE_DONE' ].
+	stepName = 'original' ifTrue: [ ^ 'ORIGINAL_CHECK_OK' ].
+	stepName = 'original-drift' ifTrue: [ ^ 'ORIGINAL_LAYER_DRIFT_EXPECTED_ONLY' ].
 	stepName = 'original-tests' ifTrue: [ ^ 'ORIGINAL_TESTS_CHECK_OK' ].
 	stepName = 'full' ifTrue: [ ^ 'CLEAN_RELOAD_AND_REGRESSION_RUN_DONE' ].
 	stepName = 'artifact-freshness' ifTrue: [ ^ 'CONTRACT_ARTIFACT_FRESHNESS_CHECK_OK' ].

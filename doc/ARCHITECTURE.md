@@ -35,15 +35,25 @@ This section is generated from `GemStonePharoContract`.
 ## Expected Original-layer Test Exceptions
 
 The original/base production layer is clean. `make original-drift` currently reports only these accepted test-layer exceptions:
-- `src/GemStone-Pharo-Tests/GbsTranscriptTest.class.st`
-  Keeps a pragmatic runtime-dependent transcript skip for the current live GemStone runtime.
+- `src/GemStone-Pharo-Tests/GciError.extension.st`
+  Adds a tiny test-only GciError number accessor shim so the restored base login-error path can run without production drift.
 - `src/GemStone-Pharo-Tests/MockGbsSession.class.st`
-  Keeps a test-only login-failure shortcut so the restored base GbsSession production file stays clean.
+  Keeps only a narrow interpretLoginError override so the restored base GbsSession production file stays clean.
+
+## Layered Load Matrix
+
+- [LOAD-MATRIX.md](./LOAD-MATRIX.md)
+  generated group-by-group view of the base/original, generic core, and optional MagLev loading model
 
 ## Review Artifacts
 
+- [LOAD-MATRIX.md](./LOAD-MATRIX.md)
 - [PACKAGE-GRAPH.md](./PACKAGE-GRAPH.md)
 - [OWNERSHIP-CONTRACT.md](./OWNERSHIP-CONTRACT.md)
+- [RELOAD-POLICY.md](./RELOAD-POLICY.md)
+- [LIVE-PREFLIGHT-POLICY.md](./LIVE-PREFLIGHT-POLICY.md)
+<!-- END GENERATED:ARCHITECTURE-BODY -->
+TRACT.md)
 - [RELOAD-POLICY.md](./RELOAD-POLICY.md)
 - [LIVE-PREFLIGHT-POLICY.md](./LIVE-PREFLIGHT-POLICY.md)
 <!-- END GENERATED:ARCHITECTURE-BODY -->

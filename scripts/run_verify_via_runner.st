@@ -18,12 +18,12 @@ runnerClass ifNil: [
 
 runnerClass
 	ifNil: [
-		logLine value: 'VERIFY_SUMMARY result=FAIL code=VERIFY_RUNNER_FAILED core_only=failed bootstrap_smoke=skipped full=skipped artifact_freshness=skipped summary_renderer=skipped' ]
+		logLine value: 'VERIFY_SUMMARY result=FAIL code=VERIFY_RUNNER_FAILED core_only=failed bootstrap_smoke=skipped original=skipped original_drift=skipped original_tests=skipped full=skipped artifact_freshness=skipped summary_renderer=skipped' ]
 	ifNotNil: [
 		[ runnerClass runOnEnvironment: Smalltalk os environment log: logLine ]
 			on: Error
 			do: [ :ex |
 				logLine value: 'VERIFY_RUNNER_FAILED: ', ex messageText.
-				logLine value: 'VERIFY_SUMMARY result=FAIL code=VERIFY_RUNNER_FAILED core_only=failed bootstrap_smoke=skipped full=skipped artifact_freshness=skipped summary_renderer=skipped' ] ].
+				logLine value: 'VERIFY_SUMMARY result=FAIL code=VERIFY_RUNNER_FAILED core_only=failed bootstrap_smoke=skipped original=skipped original_drift=skipped original_tests=skipped full=skipped artifact_freshness=skipped summary_renderer=skipped' ] ].
 
 Smalltalk snapshot: false andQuit: true.

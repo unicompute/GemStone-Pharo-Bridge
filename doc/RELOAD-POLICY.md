@@ -13,7 +13,7 @@ The clean reload lane loads the helper package, hands bootstrap unload/cache-war
 - `GBS_RELOAD_CHECK_MODE`
   Reload proof mode. Defaults to `default` and supports `core-only`.
 - `GBS_VERIFY_LANE`
-  Optional verification lane to run in the same Smalltalk process after the reload proof. Supports `core-only` and `full`.
+  Optional verification lane to run in the same Smalltalk process after the reload proof. Supports `core-only`, `original`, `original-tests`, and `full`.
 - `GBS_GENERATE_CONTRACT_ARTIFACTS`
   When `1`, regenerate the contract-driven documentation after reload.
 - `GBS_VERIFY_CONTRACT_ARTIFACTS`
@@ -32,6 +32,10 @@ The clean reload lane loads the helper package, hands bootstrap unload/cache-war
   Verify the Smalltalk core without optional MagLev production packages and without deleted legacy surface.
 - `bootstrap-smoke`
   Prove that a clean image can micro-bootstrap the helper package and load the requested group before post-load checks run.
+- `original`
+  Verify that the original/base production layer reloads cleanly without the generic Core or optional MagLev overlays.
+- `original-drift`
+  Verify that the original/base production layer stays clean relative to `56b6db3...`, allowing only the explicit accepted test-layer exceptions.
 - `original-tests`
   Verify the original/base production and original/base test layer without the generic Core or optional MagLev overlays. This lane proves the base unit layer only.
 - `full`
@@ -39,4 +43,4 @@ The clean reload lane loads the helper package, hands bootstrap unload/cache-war
 - `artifact-freshness`
   Verify that the generated contract artifacts and marker-managed doc sections are already up to date.
 - `verify`
-  Run core-only, bootstrap-smoke, original-tests, full, artifact-freshness, then the summary-renderer smoke check.
+  Run core-only, bootstrap-smoke, original, original-drift, original-tests, full, artifact-freshness, then the summary-renderer smoke check.

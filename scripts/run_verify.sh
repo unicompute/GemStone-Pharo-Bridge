@@ -20,7 +20,7 @@ summary_line="$(printf '%s\n' "${output}" | grep 'VERIFY_SUMMARY result=' | tail
 json_payload="$(printf '%s\n' "${output}" | sed -n 's/^VERIFY_SUMMARY_JSON //p' | tail -1)"
 
 if [[ -z "${summary_line}" ]]; then
-  echo "VERIFY_SUMMARY result=FAIL code=VERIFY_RUNNER_FAILED core_only=failed bootstrap_smoke=skipped full=skipped artifact_freshness=skipped summary_renderer=skipped"
+  echo "VERIFY_SUMMARY result=FAIL code=VERIFY_RUNNER_FAILED core_only=failed bootstrap_smoke=skipped original=skipped original_drift=skipped original_tests=skipped full=skipped artifact_freshness=skipped summary_renderer=skipped"
   exit 1
 fi
 
@@ -28,6 +28,9 @@ RESULT="$(extract_summary_field result)"
 CODE="$(extract_summary_field code)"
 CORE_STATUS="$(extract_summary_field core_only)"
 BOOTSTRAP_STATUS="$(extract_summary_field bootstrap_smoke)"
+ORIGINAL_STATUS="$(extract_summary_field original)"
+ORIGINAL_DRIFT_STATUS="$(extract_summary_field original_drift)"
+ORIGINAL_TESTS_STATUS="$(extract_summary_field original_tests)"
 FULL_STATUS="$(extract_summary_field full)"
 ARTIFACT_STATUS="$(extract_summary_field artifact_freshness)"
 RENDERER_STATUS="$(extract_summary_field summary_renderer)"
@@ -41,6 +44,9 @@ gbs_append_summary_line "- result: \`${RESULT}\`"
 gbs_append_summary_line "- code: \`${CODE}\`"
 gbs_append_summary_line "- core-only: \`${CORE_STATUS}\`"
 gbs_append_summary_line "- bootstrap-smoke: \`${BOOTSTRAP_STATUS}\`"
+gbs_append_summary_line "- original: \`${ORIGINAL_STATUS}\`"
+gbs_append_summary_line "- original-drift: \`${ORIGINAL_DRIFT_STATUS}\`"
+gbs_append_summary_line "- original-tests: \`${ORIGINAL_TESTS_STATUS}\`"
 gbs_append_summary_line "- full: \`${FULL_STATUS}\`"
 gbs_append_summary_line "- artifact-freshness: \`${ARTIFACT_STATUS}\`"
 gbs_append_summary_line "- summary-renderer: \`${RENDERER_STATUS}\`"
