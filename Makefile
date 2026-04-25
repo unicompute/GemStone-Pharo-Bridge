@@ -1,4 +1,4 @@
-.PHONY: help core-only original original-tests bootstrap-smoke full verify graph-artifacts artifact-freshness original-drift
+.PHONY: help core-only original original-tests bootstrap-smoke full verify graph-artifacts artifact-freshness original-drift maglev-doc-pdfs
 
 PHARO_IMAGE ?= /Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image
 PHARO_WORK_DIR ?= /Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean
@@ -29,6 +29,9 @@ help:
 		"" \
 		"  make graph-artifacts" \
 		"    Regenerate package-graph and verification-lane artifacts in doc/." \
+		"" \
+		"  make maglev-doc-pdfs" \
+		"    Generate PDF files for the MagLev branch usage guide and operator reference." \
 		"" \
 		"  make artifact-freshness" \
 		"    Verify that generated contract artifacts in doc/ are up to date." \
@@ -61,6 +64,9 @@ verify:
 
 graph-artifacts:
 	bash ./scripts/run_generate_contract_artifacts.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
+
+maglev-doc-pdfs:
+	bash ./scripts/generate_maglev_doc_pdfs.sh
 
 artifact-freshness:
 	bash ./scripts/run_verify_contract_artifacts.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"

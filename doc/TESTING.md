@@ -101,6 +101,7 @@ Accepted environment variables:
 ## Generated Contract Artifacts
 
 - [LOAD-MATRIX.md](./LOAD-MATRIX.md)
+- [MAGLEV-BRANCH-USAGE.md](./MAGLEV-BRANCH-USAGE.md)
 - [PACKAGE-GRAPH.md](./PACKAGE-GRAPH.md)
 - [PACKAGE-GRAPH.dot](./PACKAGE-GRAPH.dot)
 - [PACKAGE-GRAPH.svg](./PACKAGE-GRAPH.svg)

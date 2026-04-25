@@ -45,9 +45,15 @@ The original/base production layer is clean. `make original-drift` currently rep
 - [LOAD-MATRIX.md](./LOAD-MATRIX.md)
   generated group-by-group view of the base/original, generic core, and optional MagLev loading model
 
+## MagLev Usage Guide
+
+- [MAGLEV-BRANCH-USAGE.md](./MAGLEV-BRANCH-USAGE.md)
+  generated guide for loading the MagLev branch from local disk or GitHub and for using the classic session API on the layered branch
+
 ## Review Artifacts
 
 - [LOAD-MATRIX.md](./LOAD-MATRIX.md)
+- [MAGLEV-BRANCH-USAGE.md](./MAGLEV-BRANCH-USAGE.md)
 - [PACKAGE-GRAPH.md](./PACKAGE-GRAPH.md)
 - [OWNERSHIP-CONTRACT.md](./OWNERSHIP-CONTRACT.md)
 - [RELOAD-POLICY.md](./RELOAD-POLICY.md)

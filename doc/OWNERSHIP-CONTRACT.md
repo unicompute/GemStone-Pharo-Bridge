@@ -723,6 +723,7 @@ Secondary source files:
 - `doc/GemStone-Pharo-Bridge-User-Manual.html`
 - `doc/LIVE-PREFLIGHT-POLICY.md`
 - `doc/LOAD-MATRIX.md`
+- `doc/MAGLEV-BRANCH-USAGE.md`
 - `doc/PACKAGE-GRAPH.dot`
 - `doc/PACKAGE-GRAPH.md`
 - `doc/PACKAGE-GRAPH.svg`

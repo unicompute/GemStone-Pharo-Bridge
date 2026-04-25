@@ -31,7 +31,7 @@ This section is generated from `GemStonePharoContract` and rewritten by `make gr
 - `MagLev-Core`, `MagLev-Tools`, `MagLev`
 - `Tools`, `All-Tests`, `Tests`, `Full`, `default`
 
-See [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md) for the human-facing switch matrix and [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md) for the exact package graph and group membership.
+See [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md) for the human-facing switch matrix, [doc/MAGLEV-BRANCH-USAGE.md](doc/MAGLEV-BRANCH-USAGE.md) for local/GitHub loading and session examples, and [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md) for the exact package graph and group membership.
 
 ### Switching Between Original and MagLev
 
@@ -41,6 +41,8 @@ Use a clean reload each time instead of incrementally loading one stack on top o
 - switch to the original/base test stack: `make original-tests PHARO_IMAGE="..." PHARO_WORK_DIR="..."`
 - switch to the full MagLev developer stack: `make full PHARO_IMAGE="..." PHARO_WORK_DIR="..." GS_USER=... GS_PASS=... GS_NETLDI_HOST=... GS_NETLDI_NAME_OR_PORT=... GEMSTONE=...`
 - if you want the MagLev production stack without the full verify lane, clean-reload the `MagLev` load group directly through `GBS_LOAD_GROUP=MagLev` and `scripts/clean_reload_gemstone.st`
+
+See [doc/MAGLEV-BRANCH-USAGE.md](doc/MAGLEV-BRANCH-USAGE.md) for supported Metacello load snippets and the classic session example.
 
 ### Verification Lanes
 
@@ -83,6 +85,7 @@ Top-level `make verify` sequencing is owned by `GemStonePharoVerifyRunner`; lane
 
 Standalone generated artifacts:
 - [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md)
+- [doc/MAGLEV-BRANCH-USAGE.md](doc/MAGLEV-BRANCH-USAGE.md)
 - [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md)
 - [doc/PACKAGE-GRAPH.dot](doc/PACKAGE-GRAPH.dot)
 - [doc/PACKAGE-GRAPH.svg](doc/PACKAGE-GRAPH.svg)

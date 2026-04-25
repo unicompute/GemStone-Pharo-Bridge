@@ -88,6 +88,7 @@ GemStonePharoContract >> forbiddenPackageRequirementSpecs [
 GemStonePharoContract >> generatedContractArtifactSpecs [
 	^ {
 		{ 'doc/LOAD-MATRIX.md'. self generatedLoadMatrixMarkdown }.
+		{ 'doc/MAGLEV-BRANCH-USAGE.md'. self generatedMaglevBranchUsageMarkdown }.
 		{ 'doc/PACKAGE-GRAPH.md'. self generatedPackageGraphMarkdown }.
 		{ 'doc/PACKAGE-GRAPH.dot'. self generatedPackageGraphDot }.
 		{ 'doc/PACKAGE-GRAPH.svg'. self generatedPackageGraphSvg }.
@@ -495,6 +496,93 @@ GemStonePharoContract >> generatedLivePreflightPolicyMarkdown [
 ]
 
 { #category : 'contracts' }
+GemStonePharoContract >> generatedMaglevBranchUsageMarkdown [
+	^ String streamContents: [ :stream |
+		stream
+			nextPutAll: '# Using the MagLev Branch'; cr; cr;
+			nextPutAll: 'Generated from `GemStonePharoContract` load-group and steady-state API contracts.'; cr; cr;
+			nextPutAll: '## Which Load Group To Use'; cr; cr;
+			nextPutAll: '- `Original`'; cr;
+			nextPutAll: '  original/base production packages only'; cr;
+			nextPutAll: '- `Original-Tests`'; cr;
+			nextPutAll: '  original/base production plus the original/base tests'; cr;
+			nextPutAll: '- `MagLev`'; cr;
+			nextPutAll: '  the MagLev production stack: base/original + generic core overlays + MagLev overlays'; cr;
+			nextPutAll: '- `Full`'; cr;
+			nextPutAll: '  the full developer stack, including MagLev-aware test packages'; cr; cr;
+			nextPutAll: '## Load From Local Disk'; cr; cr;
+			nextPutAll: '```smalltalk'; cr;
+			nextPutAll: 'Metacello new'; cr;
+			nextPutAll: '  baseline: ''GemStonePharo'';'; cr;
+			nextPutAll: '  repository: ''tonel:///absolute/path/to/GemStone-Pharo-Bridge/src'';'; cr;
+			nextPutAll: '  load: ''MagLev''.'; cr;
+			nextPutAll: '```'; cr; cr;
+			nextPutAll: 'Use `load: ''Full''` if you want the full developer/test stack instead of only the MagLev production stack.'; cr; cr;
+			nextPutAll: '## Load From GitHub'; cr; cr;
+			nextPutAll: '```smalltalk'; cr;
+			nextPutAll: 'Metacello new'; cr;
+			nextPutAll: '  baseline: ''GemStonePharo'';'; cr;
+			nextPutAll: '  repository: ''github://unicompute/GemStone-Pharo-Bridge:maglev/src'';'; cr;
+			nextPutAll: '  load: ''MagLev''.'; cr;
+			nextPutAll: '```'; cr; cr;
+			nextPutAll: 'Use `load: ''Full''` from the same repository if you want the MagLev-aware test packages as well.'; cr; cr;
+			nextPutAll: '## Clean Switching'; cr; cr;
+			nextPutAll: 'Use a fresh image or the clean-reload path each time. Do not incrementally load `Original` and then `MagLev` into the same already-mutated image.'; cr; cr;
+			nextPutAll: 'Common wrapper entry points:'; cr;
+			nextPutAll: '- `make original PHARO_IMAGE="..." PHARO_WORK_DIR="..."`'; cr;
+			nextPutAll: '- `make original-tests PHARO_IMAGE="..." PHARO_WORK_DIR="..."`'; cr;
+			nextPutAll: '- `make full PHARO_IMAGE="..." PHARO_WORK_DIR="..." GS_USER=... GS_PASS=... GS_NETLDI_HOST=... GS_NETLDI_NAME_OR_PORT=... GEMSTONE=...`'; cr; cr;
+			nextPutAll: '## Does The Classic Session Example Still Work?'; cr; cr;
+			nextPutAll: 'Yes.'; cr; cr;
+			nextPutAll: '- `GbsSessionParameters>>login` still returns a `GbsSession`'; cr;
+			nextPutAll: '- `GbsSession>>userGlobals` still exists'; cr;
+			nextPutAll: '- `GbsSession>>commit` is still present as a compatibility alias for `commitTransaction`'; cr;
+			nextPutAll: '- `GbsSession>>disconnect` still exists'; cr; cr;
+			nextPutAll: 'This classic example still works on the MagLev branch:'; cr; cr;
+			nextPutAll: '```smalltalk'; cr;
+			nextPutAll: '| session dict |'; cr;
+			nextPutAll: 'session := GbsSessionParameters new'; cr;
+			nextPutAll: '            name: ''Simple Session'';'; cr;
+			nextPutAll: '            gemStoneName: ''gs64stone'';'; cr;
+			nextPutAll: '            username: ''DataCurator'';'; cr;
+			nextPutAll: '            password: ''swordfish'';'; cr;
+			nextPutAll: '            login.'; cr; cr;
+			nextPutAll: 'dict := Dictionary new.'; cr;
+			nextPutAll: 'dict at: ''name'' put: ''Tariq''.'; cr;
+			nextPutAll: 'dict at: ''amount'' put: 100.'; cr;
+			nextPutAll: 'dict at: ''currency'' put: ''GBP''.'; cr; cr;
+			nextPutAll: 'session userGlobals at: #MyTestDict put: dict.'; cr;
+			nextPutAll: 'session commit.'; cr; cr;
+			nextPutAll: 'session disconnect.'; cr;
+			nextPutAll: '```'; cr; cr;
+			nextPutAll: 'A better MagLev-oriented version for new code is:'; cr; cr;
+			nextPutAll: '```smalltalk'; cr;
+			nextPutAll: '| session payload |'; cr;
+			nextPutAll: 'session := GbsSessionParameters new'; cr;
+			nextPutAll: '    name: ''MagLev Session'';'; cr;
+			nextPutAll: '    gemStoneName: ''gs64stone'';'; cr;
+			nextPutAll: '    username: ''DataCurator'';'; cr;
+			nextPutAll: '    password: ''swordfish'';'; cr;
+			nextPutAll: '    "Optional but clearer for explicit routing:"'; cr;
+			nextPutAll: '    netldiHostOrIp: ''localhost'';'; cr;
+			nextPutAll: '    netldiNameOrPort: ''50377'';'; cr;
+			nextPutAll: '    login.'; cr; cr;
+			nextPutAll: '['; cr;
+			nextPutAll: '    payload := Dictionary new'; cr;
+			nextPutAll: '        at: ''name'' put: ''Tariq'';'; cr;
+			nextPutAll: '        at: ''amount'' put: 100;'; cr;
+			nextPutAll: '        at: ''currency'' put: ''GBP'';'; cr;
+			nextPutAll: '        yourself.'; cr; cr;
+			nextPutAll: '    session bridgeRoot at: #MyTestDict put: payload.'; cr;
+			nextPutAll: '    session commitTransactionOrSignalConflict'; cr;
+			nextPutAll: '] ensure: ['; cr;
+			nextPutAll: '    session disconnect'; cr;
+			nextPutAll: '].'; cr;
+			nextPutAll: '```'; cr; cr;
+			nextPutAll: 'For new code, prefer `bridgeRoot` over direct `UserGlobals` writes, and prefer `commitTransactionOrSignalConflict` or `commitTransactionWithRetryCount:` over the older `commit` alias when you want explicit transaction behavior.'; cr ]
+]
+
+{ #category : 'contracts' }
 GemStonePharoContract >> generatedReloadPolicyMarkdown [
 	^ String streamContents: [ :stream |
 		stream
@@ -578,6 +666,8 @@ GemStonePharoContract >> generatedUserManualReferenceHtml [
 			nextPutAll: '  </ul>'; cr;
 			nextPutAll: '  <h2>Load Matrix</h2>'; cr;
 			nextPutAll: '  <p>A generated switch matrix for the layered model is available at <code>doc/LOAD-MATRIX.md</code>.</p>'; cr;
+			nextPutAll: '  <h2>Using the MagLev Branch</h2>'; cr;
+			nextPutAll: '  <p>See <code>doc/MAGLEV-BRANCH-USAGE.md</code> for supported Metacello load snippets from local disk and GitHub, clean-switch guidance, and the classic session example.</p>'; cr;
 			nextPutAll: '  <h2>Verification Lanes</h2>'; cr;
 			nextPutAll: '  <ul>'; cr.
 		self verificationLaneSpecs do: [ :each |
@@ -735,6 +825,7 @@ GemStonePharoContract >> noCompatibilitySecondarySourceScanFiles [
 		'doc/GemStone-Pharo-Bridge-User-Manual.html'
 		'doc/LIVE-PREFLIGHT-POLICY.md'
 		'doc/LOAD-MATRIX.md'
+		'doc/MAGLEV-BRANCH-USAGE.md'
 		'doc/PACKAGE-GRAPH.dot'
 		'doc/PACKAGE-GRAPH.md'
 		'doc/PACKAGE-GRAPH.svg'
@@ -1701,8 +1792,12 @@ GemStonePharoContract >> generatedArchitectureBodyMarkdown [
 		stream cr; nextPutAll: '## Layered Load Matrix'; cr; cr;
 			nextPutAll: '- [LOAD-MATRIX.md](./LOAD-MATRIX.md)'; cr;
 			nextPutAll: '  generated group-by-group view of the base/original, generic core, and optional MagLev loading model'; cr.
+		stream cr; nextPutAll: '## MagLev Usage Guide'; cr; cr;
+			nextPutAll: '- [MAGLEV-BRANCH-USAGE.md](./MAGLEV-BRANCH-USAGE.md)'; cr;
+			nextPutAll: '  generated guide for loading the MagLev branch from local disk or GitHub and for using the classic session API on the layered branch'; cr.
 		stream cr; nextPutAll: '## Review Artifacts'; cr; cr;
 			nextPutAll: '- [LOAD-MATRIX.md](./LOAD-MATRIX.md)'; cr;
+			nextPutAll: '- [MAGLEV-BRANCH-USAGE.md](./MAGLEV-BRANCH-USAGE.md)'; cr;
 			nextPutAll: '- [PACKAGE-GRAPH.md](./PACKAGE-GRAPH.md)'; cr;
 			nextPutAll: '- [OWNERSHIP-CONTRACT.md](./OWNERSHIP-CONTRACT.md)'; cr;
 			nextPutAll: '- [RELOAD-POLICY.md](./RELOAD-POLICY.md)'; cr;
@@ -1729,13 +1824,15 @@ GemStonePharoContract >> generatedReadmeBodyMarkdown [
 			nextPutAll: '- `MagLev-Core`, `MagLev-Tools`, `MagLev`'; cr;
 			nextPutAll: '- `Tools`, `All-Tests`, `Tests`, `Full`, `default`'; cr;
 			cr;
-			nextPutAll: 'See [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md) for the human-facing switch matrix and [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md) for the exact package graph and group membership.'; cr.
+			nextPutAll: 'See [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md) for the human-facing switch matrix, [doc/MAGLEV-BRANCH-USAGE.md](doc/MAGLEV-BRANCH-USAGE.md) for local/GitHub loading and session examples, and [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md) for the exact package graph and group membership.'; cr.
 		stream cr; nextPutAll: '### Switching Between Original and MagLev'; cr; cr;
 			nextPutAll: 'Use a clean reload each time instead of incrementally loading one stack on top of the other in the same image.'; cr; cr;
 			nextPutAll: '- switch to the original/base production stack: `make original PHARO_IMAGE="..." PHARO_WORK_DIR="..."`'; cr;
 			nextPutAll: '- switch to the original/base test stack: `make original-tests PHARO_IMAGE="..." PHARO_WORK_DIR="..."`'; cr;
 			nextPutAll: '- switch to the full MagLev developer stack: `make full PHARO_IMAGE="..." PHARO_WORK_DIR="..." GS_USER=... GS_PASS=... GS_NETLDI_HOST=... GS_NETLDI_NAME_OR_PORT=... GEMSTONE=...`'; cr;
-			nextPutAll: '- if you want the MagLev production stack without the full verify lane, clean-reload the `MagLev` load group directly through `GBS_LOAD_GROUP=MagLev` and `scripts/clean_reload_gemstone.st`'; cr.
+			nextPutAll: '- if you want the MagLev production stack without the full verify lane, clean-reload the `MagLev` load group directly through `GBS_LOAD_GROUP=MagLev` and `scripts/clean_reload_gemstone.st`'; cr;
+			cr;
+			nextPutAll: 'See [doc/MAGLEV-BRANCH-USAGE.md](doc/MAGLEV-BRANCH-USAGE.md) for supported Metacello load snippets and the classic session example.'; cr.
 		stream cr; nextPutAll: '### Verification Lanes'; cr; cr;
 			nextPutAll: 'Top-level `make verify` sequencing is owned by `GemStonePharoVerifyRunner`; lane-local unit/live/preflight execution is owned by `GemStonePharoVerificationRunner`.'; cr; cr.
 		self verificationLaneSpecs do: [ :each |
@@ -1752,6 +1849,7 @@ GemStonePharoContract >> generatedReadmeBodyMarkdown [
 		stream cr; nextPutAll: '### Generated Contract Artifacts'; cr; cr;
 			nextPutAll: 'Standalone generated artifacts:'; cr;
 			nextPutAll: '- [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md)'; cr;
+			nextPutAll: '- [doc/MAGLEV-BRANCH-USAGE.md](doc/MAGLEV-BRANCH-USAGE.md)'; cr;
 			nextPutAll: '- [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md)'; cr;
 			nextPutAll: '- [doc/PACKAGE-GRAPH.dot](doc/PACKAGE-GRAPH.dot)'; cr;
 			nextPutAll: '- [doc/PACKAGE-GRAPH.svg](doc/PACKAGE-GRAPH.svg)'; cr;
@@ -1823,6 +1921,7 @@ GemStonePharoContract >> generatedTestingBodyMarkdown [
 					nextPutAll: '  '; nextPutAll: each second; cr ].
 		stream cr; nextPutAll: '## Generated Contract Artifacts'; cr; cr;
 			nextPutAll: '- [LOAD-MATRIX.md](./LOAD-MATRIX.md)'; cr;
+			nextPutAll: '- [MAGLEV-BRANCH-USAGE.md](./MAGLEV-BRANCH-USAGE.md)'; cr;
 			nextPutAll: '- [PACKAGE-GRAPH.md](./PACKAGE-GRAPH.md)'; cr;
 			nextPutAll: '- [PACKAGE-GRAPH.dot](./PACKAGE-GRAPH.dot)'; cr;
 			nextPutAll: '- [PACKAGE-GRAPH.svg](./PACKAGE-GRAPH.svg)'; cr;
@@ -1875,6 +1974,7 @@ GemStonePharoContract >> generatedUserManualOverviewHtml [
 			nextPutAll: '      </tbody>'; cr;
 			nextPutAll: '    </table>'; cr;
 			nextPutAll: '    <p>A generated switch matrix is also available at <code>doc/LOAD-MATRIX.md</code> for the base/original, core, and MagLev load combinations.</p>'; cr;
+			nextPutAll: '    <p>For the practical loading and usage guide, including local disk and GitHub Metacello snippets plus the classic session example, see <code>doc/MAGLEV-BRANCH-USAGE.md</code>.</p>'; cr;
 			nextPutAll: '    <p>The active core root API is <code>bridgeRoot</code>, backed by <code>#GbsBridgeRoot</code> and <code>GbsBridgeRootFacade</code>.</p>'; cr ]
 ]
 

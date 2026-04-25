@@ -17,6 +17,7 @@ GemStonePharoContractTest >> testGeneratedContractArtifactSpecsExcludeDeprecated
 
 	self deny: (paths includes: 'doc/DEPRECATED-ALIASES.md').
 	self assert: (paths includes: 'doc/LOAD-MATRIX.md').
+	self assert: (paths includes: 'doc/MAGLEV-BRANCH-USAGE.md').
 	self assert: (paths includes: 'doc/PACKAGE-GRAPH.md').
 	self assert: (paths includes: 'doc/PACKAGE-GRAPH.dot').
 	self assert: (paths includes: 'doc/PACKAGE-GRAPH.svg').
@@ -66,6 +67,24 @@ GemStonePharoContractTest >> testGeneratedLoadMatrixMarkdownDescribesLayeredSwit
 	self assert: (markdown includesSubstring: '## Switch Recipes').
 	self assert: (markdown includesSubstring: '[PACKAGE-GRAPH.md](./PACKAGE-GRAPH.md)').
 	self assert: (markdown includesSubstring: '[VERIFICATION-LANES.md](./VERIFICATION-LANES.md)')
+]
+
+{ #category : 'tests' }
+GemStonePharoContractTest >> testGeneratedMaglevBranchUsageMarkdownDescribesLoadsAndClassicSessionExample [
+	| markdown |
+	markdown := self contract generatedMaglevBranchUsageMarkdown.
+
+	self assert: (markdown includesSubstring: '# Using the MagLev Branch').
+	self assert: (markdown includesSubstring: 'repository: ''tonel:///absolute/path/to/GemStone-Pharo-Bridge/src'';').
+	self assert: (markdown includesSubstring: 'repository: ''github://unicompute/GemStone-Pharo-Bridge:maglev/src'';').
+	self assert: (markdown includesSubstring: 'load: ''MagLev''').
+	self assert: (markdown includesSubstring: 'load: ''Full''').
+	self assert: (markdown includesSubstring: 'GbsSessionParameters new').
+	self assert: (markdown includesSubstring: 'session userGlobals at: #MyTestDict put: dict.').
+	self assert: (markdown includesSubstring: 'session commit.').
+	self assert: (markdown includesSubstring: 'session bridgeRoot at: #MyTestDict put: payload.').
+	self assert: (markdown includesSubstring: 'commitTransactionOrSignalConflict').
+	self assert: (markdown includesSubstring: 'commitTransactionWithRetryCount:')
 ]
 
 { #category : 'tests' }
@@ -130,6 +149,7 @@ GemStonePharoContractTest >> testGeneratedUserManualReferenceHtmlDescribesBridge
 	self assert: (html includesSubstring: '<code>bridgeRoot</code>').
 	self assert: (html includesSubstring: 'Active Load Groups').
 	self assert: (html includesSubstring: '<code>Full</code>').
+	self assert: (html includesSubstring: 'doc/MAGLEV-BRANCH-USAGE.md').
 	self assert: (html includesSubstring: 'Verification Lanes').
 	self assert: (html includesSubstring: '<code>original</code>').
 	self assert: (html includesSubstring: '<code>full</code>').
@@ -202,6 +222,7 @@ GemStonePharoContractTest >> testNoCompatibilitySpecsCoverDeletedPackagesClasses
 	self assert: (sourceSnippets includes: 'GBSM class >> rootAt:put: [').
 	self assert: (secondaryFiles includes: 'doc/LIVE-PREFLIGHT-POLICY.md').
 	self assert: (secondaryFiles includes: 'doc/LOAD-MATRIX.md').
+	self assert: (secondaryFiles includes: 'doc/MAGLEV-BRANCH-USAGE.md').
 	self assert: (secondaryFiles includes: 'doc/PACKAGE-GRAPH.dot').
 	self assert: (secondaryFiles includes: 'doc/PACKAGE-GRAPH.md').
 	self assert: (secondaryFiles includes: 'doc/PACKAGE-GRAPH.svg').
