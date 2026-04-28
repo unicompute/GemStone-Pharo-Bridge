@@ -612,6 +612,13 @@ GbsRemoteDebugger >> contextSelected: selectedItem [
 		"Try to get from cached sourceString"
 		context sourceString ifNil: [ '' ]
 	]).
+	((context respondsTo: #isExecutedCodeFrame)
+		and: [
+			context isExecutedCodeFrame
+				and: [ sourceCode isString and: [ sourceCode isEmpty not ] ] ]) ifTrue: [
+		(service notNil and: [ service respondsTo: #restartSourceString: ])
+			ifTrue: [ service restartSourceString: sourceCode ]
+	].
 	self applyBreakpointEmphasisFor: context.
 	self applySourceMapHighlightFor: context.
 	self syncBreakpointMarker.
@@ -919,7 +926,7 @@ GbsRemoteDebugger >> executeMenu [
 	^ self newMenu
 		addGroup: [ :group |
 			group addItem: [ :item | item name: 'Step Into'; action: [ self stepInto ] ].
-			group addItem: [ :item | item name: 'Step'; action: [ self stepInto ] ].
+			group addItem: [ :item | item name: 'Step'; action: [ self step ] ].
 			group addItem: [ :item | item name: 'Step Over'; action: [ self stepOver ] ].
 			group addItem: [ :item | item name: 'Restart'; action: [ self restart ] ].
 			group addItem: [ :item | item name: 'Run'; action: [ self resume ] ].
@@ -1459,7 +1466,7 @@ GbsRemoteDebugger >> gsBrowseQueryFor: aSelector hierarchyOnly: hierarchyOnly se
 
 { #category : 'private' }
 GbsRemoteDebugger >> gsDebugIt [
-	| code errorText processCandidate |
+	| code errorText processCandidate debugger |
 	session ifNil: [ ^ false ].
 	code := self selectedSourceOrAll.
 	code isEmpty ifTrue: [ ^ false ].
@@ -1471,10 +1478,11 @@ GbsRemoteDebugger >> gsDebugIt [
 		processCandidate := self processOopFromGbsError: ex.
 		(processCandidate isNumber and: [ processCandidate > 20 ])
 			ifTrue: [
-				self class
+				debugger := self class
 					openOn: errorText
 					process: processCandidate
 					session: session.
+				debugger setInitialSourceCode: code.
 				true
 			]
 			ifFalse: [ UIManager default inform: errorText. false ]
@@ -1740,7 +1748,7 @@ GbsRemoteDebugger >> jumpToCaret [
 
 { #category : 'accessing' }
 GbsRemoteDebugger >> label: aString [
-	errorMessageLabel ifNotNil: [ errorMessageLabel label: aString ]
+	errorMessageLabel ifNotNil: [ errorMessageLabel label: (self presenterTextFrom: aString) ]
 ]
 
 { #category : 'private' }
@@ -1877,13 +1885,6 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	(index <= 0 or: [ index > contextList size ]) ifTrue: [ ^ self ].
 	context := contextList at: index.
 
-	"CRITICAL FIX for second restart bug: Mark context as restarted BEFORE updating UI.
-	This ensures step=1 is set before the display reads the step point value.
-	The server may report old step point, so we force it to 1 locally."
-	(context respondsTo: #markAsExecutedCodeFrame) ifTrue: [
-		context markAsExecutedCodeFrame
-	].
-
 	service ifNotNil: [
 		(service respondsTo: #currentContext:)
 			ifTrue: [ service currentContext: context ].
@@ -1894,11 +1895,8 @@ GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
 	(stackList respondsTo: #selectIndex:)
 		ifTrue: [ stackList selectIndex: index ].
 
-	"Now update UI - context now has step=1"
 	self contextSelected: context.
 	self moveSourceCursorToStart.
-	
-	"Force UI refresh to ensure Step=1 is displayed"
 	self refreshUiState
 ]
 
@@ -2025,6 +2023,15 @@ GbsRemoteDebugger >> processOopFromGbsError: anError [
 			ifFalse: [ nil ]
 	].
 	^ candidate
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> presenterTextFrom: aValue [
+	aValue ifNil: [ ^ '' ].
+	(aValue isString or: [ aValue isSymbol ]) ifTrue: [ ^ aValue asString ].
+	(aValue respondsTo: #asLocalString) ifTrue: [ ^ aValue asLocalString asString ].
+	(aValue respondsTo: #asString) ifTrue: [ ^ aValue asString ].
+	^ aValue printString
 ]
 
 { #category : 'private' }
@@ -2238,20 +2245,110 @@ GbsRemoteDebugger >> resolveExecutedFrameLevelFromServer [
 { #category : 'private' }
 GbsRemoteDebugger >> restart [
 	| didRestart |
-	didRestart := self safeServiceCall: [ service restart ] default: false.
-	didRestart ifFalse: [ didRestart := self restartUsingDirectTrimFromExecutedFrame ].
-	didRestart ifTrue: [
-		self fetchStackFrames.
-		self normalizeRestartSelectionAndPosition.
-		"Ensure server PC is at step 1 after restart"
-		self ensureServerPCToStepOneAfterRestart.
+	didRestart := self restartUsingCurrentProcessAndRefresh.
+	(didRestart and: [ self restartNeedsServerRewind ]) ifTrue: [
+		^ self restartUsingFreshFaultedProcess
 	].
 	^ didRestart
 ]
 
 { #category : 'private' }
+GbsRemoteDebugger >> restartUsingCurrentProcessAndRefresh [
+	| didRestart hasServiceRestart |
+	hasServiceRestart := service notNil and: [ service respondsTo: #restart ].
+	didRestart := hasServiceRestart
+		ifTrue: [ self safeServiceCall: [ service restart ] default: false ]
+		ifFalse: [ self restartUsingDirectTrimFromExecutedFrame ].
+	didRestart ifTrue: [
+		self fetchStackFrames.
+		self ensureServerPCToStepOneAfterRestart.
+		self fetchStackFrames.
+		self normalizeRestartSelectionAndPosition.
+	].
+	^ didRestart
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartUsingFreshFaultedProcess [
+	| code errorText newProcessOop didRestart |
+	session ifNil: [ ^ false ].
+	code := self restartReplaySourceCode.
+	code isEmpty ifTrue: [ ^ false ].
+
+	errorText := nil.
+	newProcessOop := nil.
+	[
+		session execute: code.
+		^ false
+	] on: GbsError do: [ :ex |
+		errorText := self presenterTextFrom: ex messageText.
+		newProcessOop := self processOopFromGbsError: ex
+	].
+
+	((newProcessOop isNumber and: [ newProcessOop > 20 ]) not) ifTrue: [ ^ false ].
+
+	self safeServiceCall: [ service terminate ] default: false.
+	processOop := newProcessOop.
+	self label: errorText.
+	service ifNotNil: [
+		(service respondsTo: #processOop:)
+			ifTrue: [ service processOop: newProcessOop ].
+		(service respondsTo: #label:)
+			ifTrue: [ service label: errorText ].
+		(service respondsTo: #initializeForDebugging)
+			ifTrue: [ service initializeForDebugging ]
+	].
+
+	didRestart := self restartUsingCurrentProcessAndRefresh.
+	^ didRestart
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartReplayContext [
+	| contexts |
+	contexts := contextList ifNil: [ #() ].
+	^ contexts
+		detect: [ :ctx |
+			(ctx respondsTo: #isExecutedCodeFrame)
+				and: [ ctx isExecutedCodeFrame ] ]
+		ifNone: [
+			(service notNil and: [ service respondsTo: #contextList ])
+				ifTrue: [
+					(service contextList ifNil: [ #() ])
+						detect: [ :ctx |
+							(ctx respondsTo: #isExecutedCodeFrame)
+								and: [ ctx isExecutedCodeFrame ] ]
+						ifNone: [ nil ] ]
+				ifFalse: [ nil ] ]
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartReplaySourceCode [
+	| context source |
+	source := (service notNil and: [ service respondsTo: #restartSourceString ])
+		ifTrue: [ [ service restartSourceString ] on: Error do: [ '' ] ]
+		ifFalse: [ '' ].
+	(source isString and: [ source isEmpty not ]) ifTrue: [ ^ source ].
+	context := self restartReplayContext.
+	context ifNotNil: [
+		source := (context respondsTo: #sourceString)
+			ifTrue: [ [ context sourceString ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		(source isString and: [ source isEmpty not ]) ifTrue: [ ^ source ].
+		source := (context respondsTo: #sourceCode)
+			ifTrue: [ [ context sourceCode ] on: Error do: [ nil ] ]
+			ifFalse: [ nil ].
+		(source isString and: [ source isEmpty not ]) ifTrue: [ ^ source ] ].
+	^ self selectedSourceOrAll
+]
+
+{ #category : 'private' }
 GbsRemoteDebugger >> restartNeedsServerRewind [
-	| executed step |
+	| replayNeeded executed step |
+	replayNeeded := self
+		safeServiceCall: [ service restartNeedsFreshFaultReplay ]
+		default: nil.
+	replayNeeded ifNotNil: [ ^ replayNeeded ].
 	(contextList isNil or: [ contextList isEmpty ]) ifTrue: [ ^ false ].
 	executed := contextList
 		detect: [ :ctx |
@@ -2713,6 +2810,8 @@ GbsRemoteDebugger >> setInitialSourceCode: aString [
 	"Set the source code for the first (top) context - the code that was being executed"
 	| topContext |
 
+	(service notNil and: [ service respondsTo: #restartSourceString: ])
+		ifTrue: [ service restartSourceString: (aString ifNil: [ '' ] ifNotNil: [ :text | text asString ]) ].
 	contextList ifEmpty: [ ^ self ].
 	topContext := contextList at: 1.
 
@@ -2901,24 +3000,36 @@ GbsRemoteDebugger >> stackReportString [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> step [
-	^ self stepInto
+	| didStep hasServiceStep |
+	hasServiceStep := service notNil and: [ service respondsTo: #step ].
+	didStep := hasServiceStep
+		ifTrue: [ self safeServiceCall: [ service step ] default: false ]
+		ifFalse: [ false ].
+	(hasServiceStep not and: [ didStep not ]) ifTrue: [
+		^ self stepInto
+	].
+	didStep ifTrue: [ self fetchStackFrames ].
+	^ didStep
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> stepInto [
-	| didStep |
-	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
-		"CRITICAL: Reset server PC to step 1 before stepping from restarted frame"
-		self resetServerPCToStepOneIfNeeded.
-		didStep := self directStepOverExecutedFrame: true.
-		didStep ifTrue: [ self fetchStackFrames ].
-		^ didStep
-	].
-	didStep := self safeServiceCall: [ service stepInto ] default: false.
-	didStep ifFalse: [
-		didStep := self
-			directStepWithPrimarySelector: '_stepIntoInFrame:'
-			fallbackSelector: nil
+	| didStep hasServiceStep |
+	hasServiceStep := service notNil and: [ service respondsTo: #stepInto ].
+	didStep := hasServiceStep
+		ifTrue: [ self safeServiceCall: [ service stepInto ] default: false ]
+		ifFalse: [ false ].
+	(hasServiceStep not and: [ didStep not ]) ifTrue: [
+		(self currentSelectedContextIsExecutedCodeFrame)
+			ifTrue: [
+				"Only fall back to direct executed-code stepping when the service path
+				is unavailable. The service normalizes single-step jumps after restart."
+				self resetServerPCToStepOneIfNeeded.
+				didStep := self directStepOverExecutedFrame: true ]
+			ifFalse: [
+				didStep := self
+					directStepWithPrimarySelector: '_stepIntoInFrame:'
+					fallbackSelector: nil ]
 	].
 	didStep ifTrue: [ self fetchStackFrames ].
 	^ didStep
@@ -2926,22 +3037,20 @@ GbsRemoteDebugger >> stepInto [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> stepOver [
-	| didStep |
-	(self currentSelectedContextIsExecutedCodeFrame) ifTrue: [
-		"CRITICAL: Reset server PC to step 1 before stepping from restarted frame"
-		self resetServerPCToStepOneIfNeeded.
-		didStep := self directStepOverExecutedFrame: false.
-		didStep ifTrue: [ self fetchStackFrames ].
-		^ didStep
-	].
-	didStep := self safeServiceCall: [ service stepOver ] default: false.
-	didStep ifFalse: [
+	| didStep hasServiceStep |
+	hasServiceStep := service notNil and: [ service respondsTo: #stepOver ].
+	didStep := hasServiceStep
+		ifTrue: [ self safeServiceCall: [ service stepOver ] default: false ]
+		ifFalse: [ false ].
+	(hasServiceStep not and: [ didStep not ]) ifTrue: [
 		(self currentSelectedContextIsExecutedCodeFrame)
+			ifTrue: [
+				self resetServerPCToStepOneIfNeeded.
+				didStep := self directStepOverExecutedFrame: false ]
 			ifFalse: [
 				didStep := self
 					directStepWithPrimarySelector: '_stepOverInFrame:'
-					fallbackSelector: nil
-			]
+					fallbackSelector: nil ]
 	].
 	didStep ifTrue: [ self fetchStackFrames ].
 	^ didStep

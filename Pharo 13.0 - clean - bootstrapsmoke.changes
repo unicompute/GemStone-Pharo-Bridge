@@ -1,0 +1,41 @@
+| source |
+
+source := [ '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/micro_bootstrap_reload.st' asFileReference contents ]
+	on: Error
+	do: [ :ex |
+		Transcript show: 'LOAD_ERROR: ', ex messageText; cr.
+		nil ].
+
+source ifNotNil: [ Smalltalk compiler evaluate: source ].
+Smalltalk snapshot: true andQuit: true.
+!----End fileIn----!----QUIT/NOSAVE----2026-04-28T12:07:28.113905+01:00 Pharo 13.0 - clean - bootstrapsmoke.image priorSource: 341957257!----QUIT/NOSAVE----2026-04-28T12:07:28.114901+01:00 Pharo 13.0 - clean - bootstrapsmoke.image priorSource: 341957257!| source |
+
+source := [ '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/micro_bootstrap_reload.st' asFileReference contents ]
+	on: Error
+	do: [ :ex |
+		Transcript show: 'LOAD_ERROR: ', ex messageText; cr.
+		nil ].
+
+source ifNotNil: [ Smalltalk compiler evaluate: source ].
+Smalltalk snapshot: true andQuit: true.
+!----End fileIn----!----QUIT/NOSAVE----2026-04-28T12:07:28.474154+01:00 Pharo 13.0 - clean - bootstrapsmoke.image priorSource: 341957257!----QUIT/NOSAVE----2026-04-28T12:07:28.474687+01:00 Pharo 13.0 - clean - bootstrapsmoke.image priorSource: 341957257!| source |
+
+source := [ '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/micro_bootstrap_reload.st' asFileReference contents ]
+	on: Error
+	do: [ :ex |
+		Transcript show: 'LOAD_ERROR: ', ex messageText; cr.
+		nil ].
+
+source ifNotNil: [ Smalltalk compiler evaluate: source ].
+Smalltalk snapshot: true andQuit: true.
+!----End fileIn----!----QUIT/NOSAVE----2026-04-28T12:07:29.648236+01:00 Pharo 13.0 - clean - bootstrapsmoke.image priorSource: 341957257!----QUIT/NOSAVE----2026-04-28T12:07:29.648849+01:00 Pharo 13.0 - clean - bootstrapsmoke.image priorSource: 341957257!| source |
+
+source := [ '/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/micro_bootstrap_reload.st' asFileReference contents ]
+	on: Error
+	do: [ :ex |
+		Transcript show: 'LOAD_ERROR: ', ex messageText; cr.
+		nil ].
+
+source ifNotNil: [ Smalltalk compiler evaluate: source ].
+Smalltalk snapshot: true andQuit: true.
+!----End fileIn----!----QUIT/NOSAVE----2026-04-28T12:07:30.817688+01:00 Pharo 13.0 - clean - bootstrapsmoke.image priorSource: 341957257!----QUIT/NOSAVE----2026-04-28T12:07:30.818234+01:00 Pharo 13.0 - clean - bootstrapsmoke.image priorSource: 341957257!

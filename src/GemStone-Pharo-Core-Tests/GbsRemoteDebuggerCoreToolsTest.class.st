@@ -23,6 +23,22 @@ GbsRemoteDebuggerCoreToolsTest >> requireRemoteDebuggerSelector: aSelector [
 		self skip: 'Requires GemStone-GBS-MagLev debugger extensions.' ]
 ]
 
+{ #category : 'private' }
+GbsRemoteDebuggerCoreToolsTest >> restartExecutedActivationForProcess: processOop stepPoint: stepPoint source: sourceText [
+	| activation |
+	activation := GbxActivation new.
+	activation
+		processOop: processOop;
+		level: 1;
+		methodClass: 'nil';
+		selector: #unboundMethod;
+		sourceString: sourceText;
+		sourceOffsets: #(1 6);
+		quickStepPoint: stepPoint;
+		ipOffset: 1.
+	^ activation
+]
+
 { #category : 'tests' }
 GbsRemoteDebuggerCoreToolsTest >> testBrowsePromptedSessionStateKeyRejectsNonNumericInput [
 	| session |
@@ -708,6 +724,298 @@ GbsRemoteDebuggerCoreToolsTest >> testRestartUsingDirectTrimFromExecutedFrameUse
 
 	self assert: debugger restartUsingDirectTrimFromExecutedFrame.
 	self assert: sawTrim
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerCoreToolsTest >> testRestartUsesFreshFaultedProcessWhenExecutedFrameNeedsServerRewind [
+	| session source oldContext staleExecutedContext restartedContext stackList sourceText executedScripts restartCalls |
+	session := CoreMockGbsSession new.
+	source := '1+1.', String lf, '1/0'.
+	executedScripts := OrderedCollection new.
+	restartCalls := 0.
+	oldContext := self
+		restartExecutedActivationForProcess: 9001
+		stepPoint: 2
+		source: source.
+	staleExecutedContext := self
+		restartExecutedActivationForProcess: 9001
+		stepPoint: 2
+		source: source.
+	restartedContext := self
+		restartExecutedActivationForProcess: 9501
+		stepPoint: 1
+		source: source.
+	service currentContext: oldContext.
+	service contextList: { oldContext }.
+	service onRestartDo: [ :fakeService |
+		restartCalls := restartCalls + 1.
+		restartCalls = 1
+			ifTrue: [
+				fakeService contextList: { staleExecutedContext }.
+				fakeService currentContext: staleExecutedContext ]
+			ifFalse: [
+				fakeService contextList: { restartedContext }.
+				fakeService currentContext: restartedContext ]
+	].
+	session stubs
+		at: #execute
+		put: [ :script |
+			executedScripts add: script.
+			(GbsError new
+				messageText: 'boom';
+				serverProcessOop: 9501;
+				yourself) signal ].
+	stackList := GbxFakeListPresenterForRemoteDebugger new.
+	stackList selectIndex: 1.
+	sourceText := GbxFakeTextPresenterForRemoteDebugger new.
+	sourceText
+		text: source;
+		selectionInterval: (1 to: 1).
+	debugger
+		session: session;
+		processOop: 9001.
+	debugger instVarNamed: 'stackList' put: stackList.
+	debugger instVarNamed: 'sourceText' put: sourceText.
+	debugger instVarNamed: 'contextList' put: { oldContext }.
+
+	self assert: debugger restart.
+	self assert: restartCalls equals: 2.
+	self assert: executedScripts asArray equals: { source }.
+	self assert: debugger processOop equals: 9501.
+	self assert: service processOop equals: 9501.
+	self assert: service terminateCalls equals: 1.
+	self assert: service initializeForDebuggingCalls equals: 1.
+	self assert: service restartCalls equals: 2.
+	self assert: service resetServerPCToStepOneCalls >= 1.
+	self assert: service currentContext printString equals: 'GS: Executed code @1 line 1'.
+	self assert: (debugger instVarNamed: 'contextList') first printString equals: 'GS: Executed code @1 line 1'.
+	self assert: stackList selectedIndex equals: 1.
+	self assert: sourceText text equals: source
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerCoreToolsTest >> testRestartUsesFreshFaultedProcessWhenSelectedFrameIsNotExecutedCode [
+	| session source selectedContext staleExecutedContext restartedContext stackList sourceText executedScripts restartCalls |
+	session := CoreMockGbsSession new.
+	source := '1+1.', String lf, '1/0'.
+	executedScripts := OrderedCollection new.
+	restartCalls := 0.
+	selectedContext := GbxActivation new.
+	selectedContext
+		processOop: 9001;
+		level: 1;
+		methodClass: 'SmallInteger';
+		selector: #/;
+		sourceString: source;
+		sourceOffsets: #(1 6);
+		quickStepPoint: 1;
+		ipOffset: 1.
+	staleExecutedContext := self
+		restartExecutedActivationForProcess: 9001
+		stepPoint: 2
+		source: source.
+	restartedContext := self
+		restartExecutedActivationForProcess: 9501
+		stepPoint: 1
+		source: source.
+	service currentContext: selectedContext.
+	service contextList: { selectedContext. staleExecutedContext }.
+	service onRestartDo: [ :fakeService |
+		restartCalls := restartCalls + 1.
+		restartCalls = 1
+			ifTrue: [
+				fakeService contextList: { selectedContext. staleExecutedContext }.
+				fakeService currentContext: selectedContext ]
+			ifFalse: [
+				fakeService contextList: { restartedContext }.
+				fakeService currentContext: restartedContext ] ].
+	session stubs
+		at: #execute
+		put: [ :script |
+			executedScripts add: script.
+			(GbsError new
+				messageText: 'boom';
+				serverProcessOop: 9501;
+				yourself) signal ].
+	stackList := GbxFakeListPresenterForRemoteDebugger new.
+	stackList selectIndex: 1.
+	sourceText := GbxFakeTextPresenterForRemoteDebugger new.
+	sourceText
+		text: source;
+		selectionInterval: (1 to: 1).
+	debugger
+		session: session;
+		processOop: 9001.
+	debugger instVarNamed: 'stackList' put: stackList.
+	debugger instVarNamed: 'sourceText' put: sourceText.
+	debugger instVarNamed: 'contextList' put: { selectedContext. staleExecutedContext }.
+
+	self assert: debugger restart.
+	self assert: restartCalls equals: 2.
+	self assert: executedScripts asArray equals: { source }.
+	self assert: debugger processOop equals: 9501.
+	self assert: service currentContext printString equals: 'GS: Executed code @1 line 1'
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerCoreToolsTest >> testRestartUsesFreshFaultedProcessWhenServiceSignalsReplayEvenThoughDisplayedStepIsOne [
+	| session source oldContext displayedStepOneContext restartedContext stackList sourceText executedScripts restartCalls |
+	session := CoreMockGbsSession new.
+	source := '1+1.', String lf, '1/0'.
+	executedScripts := OrderedCollection new.
+	restartCalls := 0.
+	oldContext := self
+		restartExecutedActivationForProcess: 9001
+		stepPoint: 3
+		source: source.
+	displayedStepOneContext := self
+		restartExecutedActivationForProcess: 9001
+		stepPoint: 1
+		source: source.
+	restartedContext := self
+		restartExecutedActivationForProcess: 9501
+		stepPoint: 1
+		source: source.
+	service currentContext: oldContext.
+	service contextList: { oldContext }.
+	service onRestartDo: [ :fakeService |
+		restartCalls := restartCalls + 1.
+		restartCalls = 1
+			ifTrue: [
+				fakeService contextList: { displayedStepOneContext }.
+				fakeService currentContext: displayedStepOneContext.
+				fakeService restartNeedsFreshFaultReplay: true ]
+			ifFalse: [
+				fakeService contextList: { restartedContext }.
+				fakeService currentContext: restartedContext.
+				fakeService restartNeedsFreshFaultReplay: false ] ].
+	session stubs
+		at: #execute
+		put: [ :script |
+			executedScripts add: script.
+			(GbsError new
+				messageText: 'boom';
+				serverProcessOop: 9501;
+				yourself) signal ].
+	stackList := GbxFakeListPresenterForRemoteDebugger new.
+	stackList selectIndex: 1.
+	sourceText := GbxFakeTextPresenterForRemoteDebugger new.
+	sourceText
+		text: source;
+		selectionInterval: (1 to: 1).
+	debugger
+		session: session;
+		processOop: 9001.
+	debugger instVarNamed: 'stackList' put: stackList.
+	debugger instVarNamed: 'sourceText' put: sourceText.
+	debugger instVarNamed: 'contextList' put: { oldContext }.
+
+	self assert: debugger restart.
+	self assert: restartCalls equals: 2.
+	self assert: executedScripts asArray equals: { source }.
+	self assert: debugger processOop equals: 9501.
+	self assert: service currentContext printString equals: 'GS: Executed code @1 line 1'
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerCoreToolsTest >> testRestartUsesExecutedSourceInsteadOfSelectedWidgetTextForReplay [
+	| session source oldContext displayedStepOneContext restartedContext stackList sourceText executedScripts |
+	session := CoreMockGbsSession new.
+	source := '1+1.', String lf, '1/0'.
+	executedScripts := OrderedCollection new.
+	oldContext := self
+		restartExecutedActivationForProcess: 9001
+		stepPoint: 3
+		source: source.
+	displayedStepOneContext := self
+		restartExecutedActivationForProcess: 9001
+		stepPoint: 1
+		source: source.
+	restartedContext := self
+		restartExecutedActivationForProcess: 9501
+		stepPoint: 1
+		source: source.
+	service currentContext: oldContext.
+	service contextList: { oldContext }.
+	service onRestartDo: [ :fakeService |
+		(fakeService restartCalls = 1)
+			ifTrue: [
+				fakeService contextList: { displayedStepOneContext }.
+				fakeService currentContext: displayedStepOneContext.
+				fakeService restartNeedsFreshFaultReplay: true ]
+			ifFalse: [
+				fakeService contextList: { restartedContext }.
+				fakeService currentContext: restartedContext.
+				fakeService restartNeedsFreshFaultReplay: false ] ].
+	session stubs
+		at: #execute
+		put: [ :script |
+			executedScripts add: script.
+			(GbsError new
+				messageText: 'boom';
+				serverProcessOop: 9501;
+				yourself) signal ].
+	stackList := GbxFakeListPresenterForRemoteDebugger new.
+	stackList selectIndex: 1.
+	sourceText := GbxFakeTextPresenterForRemoteDebugger new.
+	sourceText
+		text: source;
+		selectedText: '1+1.';
+		selectionInterval: (1 to: 4).
+	debugger
+		session: session;
+		processOop: 9001.
+	debugger instVarNamed: 'stackList' put: stackList.
+	debugger instVarNamed: 'sourceText' put: sourceText.
+	debugger instVarNamed: 'contextList' put: { oldContext }.
+
+	self assert: debugger restart.
+	self assert: executedScripts asArray equals: { source }.
+	self assert: debugger processOop equals: 9501
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerCoreToolsTest >> testRestartWithFreshFaultedProcessReturnsFalseWhenErrorHasNoProcessOop [
+	| session source oldContext staleExecutedContext stackList sourceText |
+	session := CoreMockGbsSession new.
+	source := '1+1.', String lf, '1/0'.
+	oldContext := self
+		restartExecutedActivationForProcess: 9001
+		stepPoint: 2
+		source: source.
+	staleExecutedContext := self
+		restartExecutedActivationForProcess: 9001
+		stepPoint: 2
+		source: source.
+	service currentContext: oldContext.
+	service contextList: { oldContext }.
+	service onRestartDo: [ :fakeService |
+		fakeService contextList: { staleExecutedContext }.
+		fakeService currentContext: staleExecutedContext ].
+	session stubs
+		at: #execute
+		put: [ :script |
+			(GbsError new
+				messageText: 'boom';
+				yourself) signal ].
+	stackList := GbxFakeListPresenterForRemoteDebugger new.
+	stackList selectIndex: 1.
+	sourceText := GbxFakeTextPresenterForRemoteDebugger new.
+	sourceText
+		text: source;
+		selectionInterval: (1 to: 1).
+	debugger
+		session: session;
+		processOop: 9001.
+	debugger instVarNamed: 'stackList' put: stackList.
+	debugger instVarNamed: 'sourceText' put: sourceText.
+	debugger instVarNamed: 'contextList' put: { oldContext }.
+
+	self deny: debugger restart.
+	self assert: debugger processOop equals: 9001.
+	self assert: service processOop isNil.
+	self assert: service terminateCalls equals: 0.
+	self assert: service restartCalls equals: 1
 ]
 
 { #category : 'tests' }

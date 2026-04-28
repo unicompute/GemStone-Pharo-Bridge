@@ -23,7 +23,9 @@ Class {
 		'doStepIntoBlock',
 		'dontUpdateInspectors',
 		'lastCompileError',
-		'restartHomeResetPasses'
+		'restartHomeResetPasses',
+		'restartHomeLevel',
+		'restartSourceString'
 	],
 	#category : 'GemStone-GBS-Tools',
 	#package : 'GemStone-GBS-Tools'
@@ -87,6 +89,18 @@ GbxDebuggerService >> asBooleanResult: raw default: defaultBoolean [
 	(#('true' '1' 'yes' 'ok') includes: value) ifTrue: [ ^ true ].
 	(#('false' '0' 'no' 'nil' '') includes: value) ifTrue: [ ^ false ].
 	^ defaultBoolean
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> actualServerQuickStepPointAfterRestart [
+	| step |
+	step := self actualServerQuickStepPointAtLevel: 1.
+	(step isNumber and: [ step > 0 ]) ifTrue: [ ^ step ].
+	step := self actualServerQuickStepPointAtLevel: self resolvedRestartHomeLevel.
+	(step isNumber and: [ step > 0 ]) ifTrue: [ ^ step ].
+	step := self currentStepPoint.
+	(step isNumber and: [ step > 0 ]) ifTrue: [ ^ step ].
+	^ 0
 ]
 
 { #category : 'private-step points' }
@@ -708,7 +722,7 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	beginning."
 	| lvl resolvedHomeLevel script result |
 	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ 1 ].
-	resolvedHomeLevel := self restartLevelFromServerStack.
+	resolvedHomeLevel := self resolvedRestartHomeLevel.
 	(resolvedHomeLevel isNumber and: [ resolvedHomeLevel > 0 ])
 		ifTrue: [ lvl := resolvedHomeLevel ].
 	
@@ -1240,6 +1254,8 @@ GbxDebuggerService >> initialize [
 	dontUpdateInspectors := false.
 	lastCompileError := nil.
 	restartHomeResetPasses := 0.
+	restartHomeLevel := nil.
+	restartSourceString := nil.
 ]
 
 { #category : 'initialization' }
@@ -1252,6 +1268,10 @@ GbxDebuggerService >> initializeForDebugging [
 		currentContext := contexts first.
 	].
 	self updateSourceMapFromCurrentContext.
+	restartHomeLevel := self restartLevelFromServerStack.
+	(restartSourceString isNil or: [ restartSourceString isEmpty ]) ifTrue: [
+		restartSourceString := self sourceStringForRestartContext: currentContext
+	].
 ]
 
 { #category : 'inspector' }
@@ -1319,6 +1339,18 @@ GbxDebuggerService >> isExecutedCodeAtStepOne [
 		and: [ (self currentStepPoint ifNil: [ 0 ]) = 1 ]
 ]
 
+{ #category : 'private' }
+GbxDebuggerService >> restartNeedsFreshFaultReplay [
+	| step |
+	(self isCurrentExecutedCodeFrame or: [
+		self contextList anySatisfy: [ :each |
+			(each respondsTo: #isExecutedCodeFrame)
+				and: [ each isExecutedCodeFrame ] ] ]) ifFalse: [ ^ false ].
+	step := self actualServerQuickStepPointAfterRestart.
+	self logRestartText: 'restartNeedsFreshFaultReplay actualStep=', step asString.
+	^ step > 1
+]
+
 { #category : 'testing' }
 GbxDebuggerService >> isMethodContextSelected [
 	currentContext ifNil: [ ^ false ].
@@ -1368,7 +1400,7 @@ GbxDebuggerService >> label [
 
 { #category : 'accessing' }
 GbxDebuggerService >> label: aString [
-	label := aString
+	label := self presenterTextFrom: aString
 ]
 
 { #category : 'evaluation' }
@@ -1588,6 +1620,15 @@ GbxDebuggerService >> pendingMessage [
 ]
 
 { #category : 'private' }
+GbxDebuggerService >> presenterTextFrom: aValue [
+	aValue ifNil: [ ^ '' ].
+	(aValue isString or: [ aValue isSymbol ]) ifTrue: [ ^ aValue asString ].
+	(aValue respondsTo: #asLocalString) ifTrue: [ ^ aValue asLocalString asString ].
+	(aValue respondsTo: #asString) ifTrue: [ ^ aValue asString ].
+	^ aValue printString
+]
+
+{ #category : 'private' }
 GbxDebuggerService >> prepareForDebugging [
 	"Prepare the debugger for a new debugging session"
 	self initializeForDebugging.
@@ -1616,7 +1657,18 @@ GbxDebuggerService >> processOop [
 
 { #category : 'accessing' }
 GbxDebuggerService >> processOop: anOop [
-	processOop := anOop
+	processOop := anOop.
+	restartHomeLevel := nil
+]
+
+{ #category : 'accessing' }
+GbxDebuggerService >> restartSourceString [
+	^ restartSourceString ifNil: [ '' ]
+]
+
+{ #category : 'accessing' }
+GbxDebuggerService >> restartSourceString: aString [
+	restartSourceString := aString
 ]
 
 { #category : 'variables' }
@@ -1758,13 +1810,7 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	closely, especially for repeated restart cycles."
 	| script result level |
 
-	level := self restartLevelFromServerStack.
-	(level isNil or: [ level <= 0 ]) ifTrue: [
-		level := self currentContextLevel.
-		(level isNil or: [ level <= 0 ]) ifTrue: [ level := 1 ] ].
-
-	"Always use the top server context level for restart"
-	level := 1.
+	level := self resolvedRestartHomeLevel.
 
 	script := '[
 		| obj proc tc restartLevel stackReport fullEntry quick |
@@ -1943,6 +1989,20 @@ GbxDebuggerService >> restartLevelFromServerStack [
 ]
 
 { #category : 'private' }
+GbxDebuggerService >> resolvedRestartHomeLevel [
+	| resolved |
+	(restartHomeLevel isNumber and: [ restartHomeLevel > 0 ]) ifTrue: [ ^ restartHomeLevel ].
+	resolved := self restartLevelFromServerStack.
+	(resolved isNumber and: [ resolved > 0 ]) ifTrue: [
+		restartHomeLevel := resolved.
+		^ resolved
+	].
+	resolved := self currentContextLevel.
+	(resolved isNumber and: [ resolved > 0 ]) ifTrue: [ ^ resolved ].
+	^ 1
+]
+
+{ #category : 'private' }
 GbxDebuggerService >> restartTargetContext [
 	| contexts |
 	contexts := self contextList.
@@ -1962,6 +2022,20 @@ GbxDebuggerService >> restartTargetContext [
 						or: [ selectorName = '<unknown>'
 						or: [ selectorName isEmpty ] ] ] ] ]
 		ifNone: [ contexts first ]
+]
+
+{ #category : 'private' }
+GbxDebuggerService >> sourceStringForRestartContext: aContext [
+	| source |
+	aContext ifNil: [ ^ '' ].
+	source := (aContext respondsTo: #sourceString)
+		ifTrue: [ [ aContext sourceString ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	(source isString and: [ source isEmpty not ]) ifTrue: [ ^ source ].
+	source := (aContext respondsTo: #sourceCode)
+		ifTrue: [ [ aContext sourceCode ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	^ source ifNil: [ '' ]
 ]
 
 { #category : 'process control' }
@@ -2220,6 +2294,48 @@ GbxDebuggerService >> serverStepOverFrameLevel: levelValue [
 	^ true
 ]
 
+{ #category : 'private' }
+GbxDebuggerService >> serverStepWithSelectorChain: selectorChain level: levelValue [
+	| result script selectorScript |
+	(self canExecuteOnDebugProcess) ifFalse: [ ^ false ].
+	levelValue ifNil: [ ^ false ].
+	selectorChain ifNil: [ ^ false ].
+	selectorChain isEmpty ifTrue: [ ^ false ].
+	selectorScript := String streamContents: [ :stream |
+		selectorChain do: [ :selectorSymbol |
+			stream
+				nextPutAll: '(proc respondsTo: #'; nextPutAll: selectorSymbol asString; nextPutAll: ') ifTrue: [';
+				nextPutAll: ' selector := #'; nextPutAll: selectorSymbol asString; nextPutAll: '.';
+				nextPutAll: ' ok := [ proc perform: selector with: stepLevel ] on: Error do: [ nil ].';
+				nextPutAll: ' ok isNil ifFalse: [ ^ ''true'' ] ].' ] ].
+	script := '[
+		| obj proc stepLevel ok selector |
+		obj := Object _objectForOop: ', processOop asString, '.
+		obj isNil ifTrue: [ ^ ''false'' ].
+		proc := obj.
+		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+			proc := [ obj process ] on: Error do: [ nil ]
+		].
+		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+			| top |
+			top := [ obj topContext ] on: Error do: [ nil ].
+			(top notNil and: [ top respondsTo: #process ])
+				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+		].
+		(proc isNil or: [ (proc respondsTo: #perform:with:) not ]) ifTrue: [ ^ ''false'' ].
+		stepLevel := ', levelValue asString, '.
+	', selectorScript, '
+		''false''
+	] value'.
+	result := self executeDebugScript: script.
+	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
+	self selectTopServerContext.
+	^ true
+]
+
 { #category : 'accessing' }
 GbxDebuggerService >> session [
 	^ session
@@ -2334,14 +2450,14 @@ GbxDebuggerService >> stackForCopySimple [
 ]
 
 { #category : 'stepping' }
-GbxDebuggerService >> stepInto [
-	"VW parity: step-into on server contexts is implemented by _stepOverInFrame:
-	with the step-through flag in the high bit of level."
+GbxDebuggerService >> step [
 	| level before |
 	before := self currentStepPoint.
 	level := self effectiveServerStepLevel.
 	level ifNil: [ level := 1 ].
-	(self serverStepOverFrameLevel: (level bitOr: 16r100000000))
+	(self
+		serverStepWithSelectorChain: #(step: stepIntoFromLevel: _stepIntoInFrame: gciStepIntoFromLevel:)
+		level: level)
 		ifTrue: [ ^ self normalizeExecutedCodeSingleStepFrom: before ].
 	^ false
 ]
@@ -2378,7 +2494,22 @@ GbxDebuggerService >> stepOver [
 	before := self currentStepPoint.
 	level := self effectiveServerStepLevel.
 	level ifNil: [ level := 1 ].
-	(self serverStepOverFrameLevel: level)
+	(self
+		serverStepWithSelectorChain: #(stepOverFromLevel: _stepOverInFrame: gciStepOverFromLevel:)
+		level: level)
+		ifTrue: [ ^ self normalizeExecutedCodeSingleStepFrom: before ].
+	^ false
+]
+
+{ #category : 'stepping' }
+GbxDebuggerService >> stepInto [
+	| level before |
+	before := self currentStepPoint.
+	level := self effectiveServerStepLevel.
+	level ifNil: [ level := 1 ].
+	(self
+		serverStepWithSelectorChain: #(stepIntoFromLevel: _stepIntoInFrame: gciStepIntoFromLevel: step:)
+		level: level)
 		ifTrue: [ ^ self normalizeExecutedCodeSingleStepFrom: before ].
 	^ false
 ]
@@ -2412,8 +2543,7 @@ GbxDebuggerService >> synchronizeServerProgramCounterAfterRestart [
 	"After restart, force server-side process PC to align with displayed restart frame."
 	| level script result |
 	(self isCurrentExecutedCodeFrame) ifFalse: [ ^ false ].
-	level := self currentContextLevel.
-	(level isNumber and: [ level > 0 ]) ifFalse: [ level := 1 ].
+	level := self resolvedRestartHomeLevel.
 	script := '[
 		| obj proc |
 		obj := Object _objectForOop: ', processOop asString, '.

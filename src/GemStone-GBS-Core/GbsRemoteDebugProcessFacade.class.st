@@ -100,6 +100,25 @@ GbsRemoteDebugProcessFacade >> currentReceiverOopAtLevel: levelValue [
 ]
 
 { #category : 'querying' }
+GbsRemoteDebugProcessFacade >> quickStepPointAtLevel: levelValue [
+	| raw |
+	levelValue ifNil: [ ^ nil ].
+	raw := self executeScriptBody: '[
+		| stackReport fullEntry quick |
+		stackReport := [ proc _gsiStackReportFromLevel: ', levelValue asString, ' toLevel: ', levelValue asString, ' ] on: Error do: [ nil ].
+		(stackReport notNil and: [ stackReport size >= 2 ]) ifFalse: [ ^ ''0'' ].
+		fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+		fullEntry ifNil: [ ^ ''0'' ].
+		quick := [ fullEntry at: 5 ] on: Error do: [ 0 ].
+		quick ifNil: [ quick := 0 ].
+		quick asString
+	] value'.
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	raw ifNil: [ ^ nil ].
+	^ [ raw asInteger ] on: Error do: [ nil ]
+]
+
+{ #category : 'querying' }
 GbsRemoteDebugProcessFacade >> fullSourceAtLevel: levelValue [
 	| raw |
 	levelValue ifNil: [ ^ '' ].

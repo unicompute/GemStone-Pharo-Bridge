@@ -297,6 +297,238 @@ GbsRemoteDebuggerPresenterTest >> testRestartDelegatesToService [
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testLabelNormalizesByteArrayForPresenter [
+	| fakeLabel bytes |
+	fakeLabel := GbxFakeLabelPresenterForRemoteDebugger new.
+	bytes := #[98 111 111 109].
+	debugger instVarNamed: 'errorMessageLabel' put: fakeLabel.
+
+	debugger label: bytes.
+
+	self assert: fakeLabel label isString.
+	self assert: fakeLabel label equals: bytes asString
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testSetInitialSourceCodeStoresStableRestartSourceOnService [
+	| executedContext fakeList |
+	executedContext := GbxFakeContextForRemoteDebugger new
+		methodClass: 'nil';
+		selector: #nil;
+		sourceString: '';
+		processOop: 222;
+		level: 1;
+		quickStepPoint: 1;
+		tempNamesAndValues: Dictionary new;
+		yourself.
+	service currentContext: executedContext.
+	service contextList: { executedContext }.
+	fakeList := GbxFakeListPresenterForRemoteDebugger new.
+	fakeList selectIndex: 1.
+	debugger instVarNamed: 'stackList' put: fakeList.
+	debugger instVarNamed: 'contextList' put: { executedContext }.
+
+	debugger setInitialSourceCode: '1+1.', String lf, '1/0'.
+
+	self assert: service restartSourceString equals: '1+1.', String lf, '1/0'
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testRestartDoesNotFallBackToDirectTrimWhenServiceExistsButFails [
+	| trackingDebugger trackingService |
+	trackingDebugger := GbxFallbackTrackingRemoteDebugger new.
+	trackingService := GbxFakeServiceForRemoteDebugger new.
+	trackingService onRestartDo: [ Error signal: 'restart failed' ].
+	trackingDebugger service: trackingService.
+
+	self deny: trackingDebugger restart.
+	self assert: trackingService restartCalls equals: 1.
+	self assert: trackingDebugger directRestartFallbackCalls equals: 0
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testStepIntoExecutedCodeDelegatesToServiceBeforeDirectFallback [
+	| executedContext fakeList fakeText |
+	executedContext := GbxFakeContextForRemoteDebugger new
+		methodClass: 'nil';
+		selector: #nil;
+		sourceString: '1+1.', String lf, '1/0';
+		processOop: 222;
+		level: 1;
+		quickStepPoint: 1;
+		tempNamesAndValues: Dictionary new;
+		yourself.
+	service currentContext: executedContext.
+	service contextList: { executedContext }.
+	service onStepIntoDo: [ executedContext quickStepPoint: 2 ].
+	fakeList := GbxFakeListPresenterForRemoteDebugger new.
+	fakeList selectIndex: 1.
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: executedContext sourceString.
+	debugger instVarNamed: 'stackList' put: fakeList.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+	debugger instVarNamed: 'contextList' put: { executedContext }.
+
+	self assert: debugger stepInto.
+	self assert: service stepIntoCalls equals: 1.
+	self assert: executedContext quickStepPoint equals: 2
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testStepDelegatesToServiceBeforeStepIntoFallback [
+	| executedContext fakeList fakeText |
+	executedContext := GbxFakeContextForRemoteDebugger new
+		methodClass: 'nil';
+		selector: #nil;
+		sourceString: '1+1.', String lf, '1/0';
+		processOop: 222;
+		level: 1;
+		quickStepPoint: 1;
+		tempNamesAndValues: Dictionary new;
+		yourself.
+	service currentContext: executedContext.
+	service contextList: { executedContext }.
+	service onStepDo: [ executedContext quickStepPoint: 2 ].
+	fakeList := GbxFakeListPresenterForRemoteDebugger new.
+	fakeList selectIndex: 1.
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: executedContext sourceString.
+	debugger instVarNamed: 'stackList' put: fakeList.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+	debugger instVarNamed: 'contextList' put: { executedContext }.
+
+	self assert: debugger step.
+	self assert: service stepCalls equals: 1.
+	self assert: service stepIntoCalls equals: 0.
+	self assert: executedContext quickStepPoint equals: 2
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testStepDoesNotFallBackToStepIntoWhenServiceExistsButFails [
+	| executedContext fakeList fakeText trackingDebugger trackingService |
+	trackingDebugger := GbxFallbackTrackingRemoteDebugger new.
+	trackingService := GbxFakeServiceForRemoteDebugger new.
+	trackingDebugger service: trackingService.
+	executedContext := GbxFakeContextForRemoteDebugger new
+		methodClass: 'nil';
+		selector: #nil;
+		sourceString: '1+1.', String lf, '1/0';
+		processOop: 222;
+		level: 1;
+		quickStepPoint: 1;
+		tempNamesAndValues: Dictionary new;
+		yourself.
+	trackingService currentContext: executedContext.
+	trackingService contextList: { executedContext }.
+	trackingService onStepDo: [ Error signal: 'step failed' ].
+	fakeList := GbxFakeListPresenterForRemoteDebugger new.
+	fakeList selectIndex: 1.
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: executedContext sourceString.
+	trackingDebugger instVarNamed: 'stackList' put: fakeList.
+	trackingDebugger instVarNamed: 'sourceText' put: fakeText.
+	trackingDebugger instVarNamed: 'contextList' put: { executedContext }.
+
+	self deny: trackingDebugger step.
+	self assert: trackingService stepCalls equals: 1.
+	self assert: trackingService stepIntoCalls equals: 0.
+	self assert: trackingDebugger directExecutedStepFallbackCalls equals: 0.
+	self assert: trackingDebugger directFrameStepFallbackCalls equals: 0
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testStepIntoDoesNotFallBackToDirectStepWhenServiceExistsButFails [
+	| executedContext fakeList fakeText trackingDebugger trackingService |
+	trackingDebugger := GbxFallbackTrackingRemoteDebugger new.
+	trackingService := GbxFakeServiceForRemoteDebugger new.
+	trackingDebugger service: trackingService.
+	executedContext := GbxFakeContextForRemoteDebugger new
+		methodClass: 'nil';
+		selector: #nil;
+		sourceString: '1+1.', String lf, '1/0';
+		processOop: 222;
+		level: 1;
+		quickStepPoint: 1;
+		tempNamesAndValues: Dictionary new;
+		yourself.
+	trackingService currentContext: executedContext.
+	trackingService contextList: { executedContext }.
+	trackingService onStepIntoDo: [ Error signal: 'step into failed' ].
+	fakeList := GbxFakeListPresenterForRemoteDebugger new.
+	fakeList selectIndex: 1.
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: executedContext sourceString.
+	trackingDebugger instVarNamed: 'stackList' put: fakeList.
+	trackingDebugger instVarNamed: 'sourceText' put: fakeText.
+	trackingDebugger instVarNamed: 'contextList' put: { executedContext }.
+
+	self deny: trackingDebugger stepInto.
+	self assert: trackingService stepIntoCalls equals: 1.
+	self assert: trackingDebugger directExecutedStepFallbackCalls equals: 0.
+	self assert: trackingDebugger directFrameStepFallbackCalls equals: 0
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testStepOverExecutedCodeDelegatesToServiceBeforeDirectFallback [
+	| executedContext fakeList fakeText |
+	executedContext := GbxFakeContextForRemoteDebugger new
+		methodClass: 'nil';
+		selector: #nil;
+		sourceString: '1+1.', String lf, '1/0';
+		processOop: 222;
+		level: 1;
+		quickStepPoint: 1;
+		tempNamesAndValues: Dictionary new;
+		yourself.
+	service currentContext: executedContext.
+	service contextList: { executedContext }.
+	service onStepOverDo: [ executedContext quickStepPoint: 2 ].
+	fakeList := GbxFakeListPresenterForRemoteDebugger new.
+	fakeList selectIndex: 1.
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: executedContext sourceString.
+	debugger instVarNamed: 'stackList' put: fakeList.
+	debugger instVarNamed: 'sourceText' put: fakeText.
+	debugger instVarNamed: 'contextList' put: { executedContext }.
+
+	self assert: debugger stepOver.
+	self assert: service stepOverCalls equals: 1.
+	self assert: executedContext quickStepPoint equals: 2
+]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testStepOverDoesNotFallBackToDirectStepWhenServiceExistsButFails [
+	| executedContext fakeList fakeText trackingDebugger trackingService |
+	trackingDebugger := GbxFallbackTrackingRemoteDebugger new.
+	trackingService := GbxFakeServiceForRemoteDebugger new.
+	trackingDebugger service: trackingService.
+	executedContext := GbxFakeContextForRemoteDebugger new
+		methodClass: 'nil';
+		selector: #nil;
+		sourceString: '1+1.', String lf, '1/0';
+		processOop: 222;
+		level: 1;
+		quickStepPoint: 1;
+		tempNamesAndValues: Dictionary new;
+		yourself.
+	trackingService currentContext: executedContext.
+	trackingService contextList: { executedContext }.
+	trackingService onStepOverDo: [ Error signal: 'step over failed' ].
+	fakeList := GbxFakeListPresenterForRemoteDebugger new.
+	fakeList selectIndex: 1.
+	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText text: executedContext sourceString.
+	trackingDebugger instVarNamed: 'stackList' put: fakeList.
+	trackingDebugger instVarNamed: 'sourceText' put: fakeText.
+	trackingDebugger instVarNamed: 'contextList' put: { executedContext }.
+
+	self deny: trackingDebugger stepOver.
+	self assert: trackingService stepOverCalls equals: 1.
+	self assert: trackingDebugger directExecutedStepFallbackCalls equals: 0.
+	self assert: trackingDebugger directFrameStepFallbackCalls equals: 0
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testRestartPromotesExecutedCodeFrameToTopAndSelectsSourceStart [
 	| firstContext executedContext fakeList fakeText |
 	firstContext := GbxFakeContextForRemoteDebugger new

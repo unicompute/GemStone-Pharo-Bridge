@@ -1,6 +1,11 @@
 Extension { #name : 'GbxDebuggerService' }
 
 { #category : '*GemStone-GBS-Core-Tools' }
+GbxDebuggerService >> actualServerQuickStepPointAtLevel: levelValue [
+	^ self remoteDebugProcess quickStepPointAtLevel: levelValue
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
 GbxDebuggerService >> canExecuteOnDebugProcess [
 	| activeProcessOop |
 	activeProcessOop := self currentProcessOop.
@@ -38,7 +43,7 @@ GbxDebuggerService >> cutbackGsTo: gsContext [
 	beginning."
 	| lvl resolvedHomeLevel result |
 	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ 1 ].
-	resolvedHomeLevel := self restartLevelFromServerStack.
+	resolvedHomeLevel := self resolvedRestartHomeLevel.
 	(resolvedHomeLevel isNumber and: [ resolvedHomeLevel > 0 ])
 		ifTrue: [ lvl := resolvedHomeLevel ].
 	result := self remoteDebugProcess trimStackToLevel: lvl.
@@ -89,13 +94,7 @@ GbxDebuggerService >> resetServerPCToStepOne [
 	closely, especially for repeated restart cycles."
 	| result level |
 
-	level := self restartLevelFromServerStack.
-	(level isNil or: [ level <= 0 ]) ifTrue: [
-		level := self currentContextLevel.
-		(level isNil or: [ level <= 0 ]) ifTrue: [ level := 1 ] ].
-
-	"Always use the top server context level for restart"
-	level := 1.
+	level := self resolvedRestartHomeLevel.
 
 	result := self remoteDebugProcess resetProgramCounterToStepOneAtLevel: level.
 	self logRestartText: 'resetServerPCToStepOne level=', level asString, ' result=', result printString.
@@ -187,8 +186,7 @@ GbxDebuggerService >> synchronizeServerProgramCounterAfterRestart [
 	"After restart, force server-side process PC to align with displayed restart frame."
 	| level result |
 	(self isCurrentExecutedCodeFrame) ifFalse: [ ^ false ].
-	level := self currentContextLevel.
-	(level isNumber and: [ level > 0 ]) ifFalse: [ level := 1 ].
+	level := self resolvedRestartHomeLevel.
 	result := self remoteDebugProcess synchronizeProgramCounterAtLevel: level.
 	result ifTrue: [
 		self selectTopServerContext.
