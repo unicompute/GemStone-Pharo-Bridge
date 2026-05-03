@@ -1,4 +1,4 @@
-| env stone user pass serviceName params session code processOop debugger service listPresenter textPresenter tablePresenter topAfterRestart topAfterStep |
+| env stone user pass serviceName netldiHost netldiNameOrPort params session code processOop debugger service listPresenter textPresenter tablePresenter topAfterRestart topAfterStep |
 [
 	[ Metacello new
 		baseline: 'GemStonePharo';
@@ -12,6 +12,8 @@
 	user := env at: 'GS_USER' ifAbsent: [ '' ].
 	pass := env at: 'GS_PASS' ifAbsent: [ '' ].
 	serviceName := env at: 'GS_SERVICE' ifAbsent: [ 'gemnetobject' ].
+	netldiHost := env at: 'GS_NETLDI_HOST' ifAbsent: [ '' ].
+	netldiNameOrPort := env at: 'GS_NETLDI_NAME_OR_PORT' ifAbsent: [ '' ].
 
 	(user isEmpty or: [ pass isEmpty ]) ifTrue: [
 		Transcript show: 'ERROR: set GS_USER and GS_PASS environment variables'; cr.
@@ -24,6 +26,8 @@
 		username: user;
 		password: pass;
 		gemService: serviceName.
+	netldiHost isEmpty ifFalse: [ params netldiHostOrIp: netldiHost ].
+	netldiNameOrPort isEmpty ifFalse: [ params netldiNameOrPort: netldiNameOrPort ].
 
 	session := [ params login ] on: Error do: [ :ex |
 		Transcript show: 'LOGIN_ERROR: ', ex messageText; cr.

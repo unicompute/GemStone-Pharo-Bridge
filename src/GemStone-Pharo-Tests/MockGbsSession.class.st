@@ -14,6 +14,11 @@ MockGbsSession >> initialize [
 	isLoggedIn := true
 ]
 
+{ #category : 'error handling' }
+MockGbsSession >> interpretLoginError: anErrorStruct [
+	^ anErrorStruct message
+]
+
 { #category : 'accessing' }
 MockGbsSession >> apiGciExecute: aString context: anInteger [
 	"Intercept the actual FFI call used by execute:"

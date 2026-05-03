@@ -17,6 +17,7 @@ Class {
 		'toggleBreakPointCalls',
 		'toggleGlueHidingCalls',
 		'restartCalls',
+		'stepCalls',
 		'stepIntoCalls',
 		'stepOverCalls',
 		'pauseCalls',
@@ -36,8 +37,10 @@ Class {
 		'contextList',
 		'currentContext',
 		'onRestartBlock',
+		'onStepBlock',
 		'onStepOverBlock',
-		'onStepIntoBlock'
+		'onStepIntoBlock',
+		'restartSourceString'
 	],
 	#category : 'GemStone-Pharo-Tests',
 	#package : 'GemStone-Pharo-Tests'
@@ -189,6 +192,13 @@ GbxFakeServiceForRemoteDebugger >> restart [
 ]
 
 { #category : 'stepping' }
+GbxFakeServiceForRemoteDebugger >> step [
+	stepCalls := self stepCalls + 1.
+	onStepBlock ifNotNil: [ onStepBlock value ].
+	^ true
+]
+
+{ #category : 'stepping' }
 GbxFakeServiceForRemoteDebugger >> stepInto [
 	stepIntoCalls := self stepIntoCalls + 1.
 	onStepIntoBlock ifNotNil: [ onStepIntoBlock value ].
@@ -270,6 +280,11 @@ GbxFakeServiceForRemoteDebugger >> toggleGlueHidingCalls [
 { #category : 'process control' }
 GbxFakeServiceForRemoteDebugger >> restartCalls [
 	^ restartCalls ifNil: [ 0 ]
+]
+
+{ #category : 'stepping' }
+GbxFakeServiceForRemoteDebugger >> stepCalls [
+	^ stepCalls ifNil: [ 0 ]
 ]
 
 { #category : 'stepping' }
@@ -432,9 +447,24 @@ GbxFakeServiceForRemoteDebugger >> currentContext: aContext [
 	currentContext := aContext
 ]
 
+{ #category : 'accessing' }
+GbxFakeServiceForRemoteDebugger >> restartSourceString [
+	^ restartSourceString ifNil: [ '' ]
+]
+
+{ #category : 'accessing' }
+GbxFakeServiceForRemoteDebugger >> restartSourceString: aString [
+	restartSourceString := aString
+]
+
 { #category : 'stepping' }
 GbxFakeServiceForRemoteDebugger >> onRestartDo: aBlock [
 	onRestartBlock := aBlock
+]
+
+{ #category : 'stepping' }
+GbxFakeServiceForRemoteDebugger >> onStepDo: aBlock [
+	onStepBlock := aBlock
 ]
 
 { #category : 'stepping' }
