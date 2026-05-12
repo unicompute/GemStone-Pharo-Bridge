@@ -118,7 +118,3 @@ When users report connection errors, they should now see:
 3. The original error message for debugging
 
 No more generic "Login Failed" messages!
-
----
-
-**See Also:** `NETLDI_ERROR_HANDLING.md` for complete documentation

@@ -1808,67 +1808,103 @@ GemStonePharoContract >> generatedArchitectureBodyMarkdown [
 GemStonePharoContract >> generatedReadmeBodyMarkdown [
 	^ String streamContents: [ :stream |
 		stream
-			nextPutAll: '## Steady-state Contract Summary'; cr; cr;
-			nextPutAll: 'This section is generated from `GemStonePharoContract` and rewritten by `make graph-artifacts`.'; cr; cr;
-			nextPutAll: '### Package Layout'; cr; cr;
-			nextPutAll: '- original/base production: `GemStone-GBS-Converted`, `GemStone-GBS-Tools`'; cr;
-			nextPutAll: '- generic overlay production: `GemStone-GBS-Core`, `GemStone-GBS-Core-Tools`'; cr;
-			nextPutAll: '- optional MagLev production: `GemStone-GBS-MagLev`, `GemStone-GBS-MagLev-Tools`'; cr;
-			nextPutAll: '- test layers: `GemStone-Pharo-Tests`, `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-MagLev-Tests`'; cr; cr;
-			nextPutAll: '### Active Root API'; cr; cr.
-		self activeRootApiSpecs do: [ :each |
-			stream nextPutAll: '- `'; nextPutAll: each; nextPutAll: '`'; cr ].
-		stream cr; nextPutAll: '### Baseline Groups'; cr; cr;
-			nextPutAll: '- `Original`, `Original-Tests`'; cr;
-			nextPutAll: '- `Core-Only`, `Core`, `Core-Tools`, `Core-Tests`'; cr;
-			nextPutAll: '- `MagLev-Core`, `MagLev-Tools`, `MagLev`'; cr;
-			nextPutAll: '- `Tools`, `All-Tests`, `Tests`, `Full`, `default`'; cr;
-			cr;
-			nextPutAll: 'See [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md) for the human-facing switch matrix, [doc/MAGLEV-BRANCH-USAGE.md](doc/MAGLEV-BRANCH-USAGE.md) for local/GitHub loading and session examples, and [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md) for the exact package graph and group membership.'; cr.
-		stream cr; nextPutAll: '### Switching Between Original and MagLev'; cr; cr;
-			nextPutAll: 'Use a clean reload each time instead of incrementally loading one stack on top of the other in the same image.'; cr; cr;
-			nextPutAll: '- switch to the original/base production stack: `make original PHARO_IMAGE="..." PHARO_WORK_DIR="..."`'; cr;
-			nextPutAll: '- switch to the original/base test stack: `make original-tests PHARO_IMAGE="..." PHARO_WORK_DIR="..."`'; cr;
-			nextPutAll: '- switch to the full MagLev developer stack: `make full PHARO_IMAGE="..." PHARO_WORK_DIR="..." GS_USER=... GS_PASS=... GS_NETLDI_HOST=... GS_NETLDI_NAME_OR_PORT=... GEMSTONE=...`'; cr;
-			nextPutAll: '- if you want the MagLev production stack without the full verify lane, clean-reload the `MagLev` load group directly through `GBS_LOAD_GROUP=MagLev` and `scripts/clean_reload_gemstone.st`'; cr;
-			cr;
-			nextPutAll: 'See [doc/MAGLEV-BRANCH-USAGE.md](doc/MAGLEV-BRANCH-USAGE.md) for supported Metacello load snippets and the classic session example.'; cr.
-		stream cr; nextPutAll: '### Verification Lanes'; cr; cr;
-			nextPutAll: 'Top-level `make verify` sequencing is owned by `GemStonePharoVerifyRunner`; lane-local unit/live/preflight execution is owned by `GemStonePharoVerificationRunner`.'; cr; cr.
-		self verificationLaneSpecs do: [ :each |
-			stream
-				nextPutAll: '- `'; nextPutAll: each first; nextPutAll: '`'; cr;
-				nextPutAll: '  '; nextPutAll: each second; cr;
-				nextPutAll: '  load group: `'; nextPutAll: each third; nextPutAll: '`'; cr ].
-		stream cr; nextPutAll: '### Expected Original-layer Test Exceptions'; cr; cr;
-			nextPutAll: '`make original-drift` reports the original/base production layer as clean and currently accepts only these test-layer exceptions:'; cr.
-		self originalLayerExpectedExceptionSpecs do: [ :each |
-			stream
-				nextPutAll: '- `'; nextPutAll: each first; nextPutAll: '`'; cr;
-				nextPutAll: '  '; nextPutAll: each second; cr ].
-		stream cr; nextPutAll: '### Generated Contract Artifacts'; cr; cr;
-			nextPutAll: 'Standalone generated artifacts:'; cr;
-			nextPutAll: '- [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md)'; cr;
-			nextPutAll: '- [doc/MAGLEV-BRANCH-USAGE.md](doc/MAGLEV-BRANCH-USAGE.md)'; cr;
-			nextPutAll: '- [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md)'; cr;
-			nextPutAll: '- [doc/PACKAGE-GRAPH.dot](doc/PACKAGE-GRAPH.dot)'; cr;
-			nextPutAll: '- [doc/PACKAGE-GRAPH.svg](doc/PACKAGE-GRAPH.svg)'; cr;
-			nextPutAll: '- [doc/LIVE-PREFLIGHT-POLICY.md](doc/LIVE-PREFLIGHT-POLICY.md)'; cr;
-			nextPutAll: '- [doc/RELOAD-POLICY.md](doc/RELOAD-POLICY.md)'; cr;
-			nextPutAll: '- [doc/USER-MANUAL-REFERENCE.html](doc/USER-MANUAL-REFERENCE.html)'; cr;
-			nextPutAll: '- [doc/OWNERSHIP-CONTRACT.md](doc/OWNERSHIP-CONTRACT.md)'; cr;
-			nextPutAll: '- [doc/VERIFICATION-LANES.md](doc/VERIFICATION-LANES.md)'; cr;
-			cr;
-			nextPutAll: 'In-place generated doc sections:'; cr.
-		self generatedDocumentationSectionPaths do: [ :each |
-			stream
-				nextPutAll: '- [`'; nextPutAll: each; nextPutAll: '`]('; nextPutAll: each; nextPutAll: ')'; cr ].
-		stream cr; nextPutAll: '### Boundary Guards'; cr; cr.
-		self boundaryGuardSpecs do: [ :each |
-			stream
-				nextPutAll: '- `'; nextPutAll: each first; nextPutAll: '`'; cr;
-				nextPutAll: '  '; nextPutAll: each second; cr ].
-		stream cr; nextPutAll: 'CI uses the same steady-state gate through `make verify` in `.github/workflows/verify.yml`.'; cr ]
+			nextPutAll: '## Quick Start'; cr; cr;
+			nextPutAll: 'Load the MagLev production stack from a local checkout:'; cr; cr;
+			nextPutAll: '```smalltalk'; cr;
+			nextPutAll: 'Metacello new'; cr;
+			nextPutAll: '  baseline: ''GemStonePharo'';'; cr;
+			nextPutAll: '  repository: ''tonel:///Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src'';'; cr;
+			nextPutAll: '  load: ''MagLev''.'; cr;
+			nextPutAll: '```'; cr; cr;
+			nextPutAll: 'Load the same stack from GitHub:'; cr; cr;
+			nextPutAll: '```smalltalk'; cr;
+			nextPutAll: 'Metacello new'; cr;
+			nextPutAll: '  baseline: ''GemStonePharo'';'; cr;
+			nextPutAll: '  repository: ''github://unicompute/GemStone-Pharo-Bridge:maglev/src'';'; cr;
+			nextPutAll: '  load: ''MagLev''.'; cr;
+			nextPutAll: '```'; cr; cr;
+			nextPutAll: 'Use `load: ''Full''` when you want the developer/test stack, including the'; cr;
+			nextPutAll: 'MagLev-aware test packages.'; cr; cr;
+			nextPutAll: '## Load Groups'; cr; cr;
+			nextPutAll: '- `Original`: original/base production packages only'; cr;
+			nextPutAll: '- `Original-Tests`: original/base production plus original/base tests'; cr;
+			nextPutAll: '- `Core`, `Core-Tools`, `Core-Tests`: original/base plus the generic Smalltalk overlay'; cr;
+			nextPutAll: '- `MagLev`: production MagLev stack, including Core and MagLev overlays'; cr;
+			nextPutAll: '- `Full`: full developer stack, including all tests'; cr; cr;
+			nextPutAll: 'The active root API is `bridgeRoot`, `#GbsBridgeRoot`, and'; cr;
+			nextPutAll: '`GbsBridgeRootFacade`.'; cr; cr;
+			nextPutAll: 'See [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md) for exact group membership and'; cr;
+			nextPutAll: '[doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md) for package ownership.'; cr; cr;
+			nextPutAll: '## Clean Switching'; cr; cr;
+			nextPutAll: 'Use a fresh image or the clean-reload scripts when switching between Original,'; cr;
+			nextPutAll: 'Core, and MagLev loads. Do not incrementally load `Original` and then `MagLev`'; cr;
+			nextPutAll: 'into the same already-mutated image.'; cr; cr;
+			nextPutAll: 'Common entry points:'; cr; cr;
+			nextPutAll: '```bash'; cr;
+			nextPutAll: 'make original PHARO_IMAGE="..." PHARO_WORK_DIR="..."'; cr;
+			nextPutAll: 'make original-tests PHARO_IMAGE="..." PHARO_WORK_DIR="..."'; cr;
+			nextPutAll: 'make full PHARO_IMAGE="..." PHARO_WORK_DIR="..." GS_USER=... GS_PASS=... GS_NETLDI_HOST=... GS_NETLDI_NAME_OR_PORT=... GEMSTONE=...'; cr;
+			nextPutAll: 'make verify PHARO_IMAGE="..." PHARO_WORK_DIR="..."'; cr;
+			nextPutAll: '```'; cr; cr;
+			nextPutAll: '## Session Examples'; cr; cr;
+			nextPutAll: 'The classic GBS session style still works:'; cr; cr;
+			nextPutAll: '```smalltalk'; cr;
+			nextPutAll: '| session dict |'; cr;
+			nextPutAll: 'session := GbsSessionParameters new'; cr;
+			nextPutAll: '            name: ''Simple Session'';'; cr;
+			nextPutAll: '            gemStoneName: ''gs64stone'';'; cr;
+			nextPutAll: '            username: ''DataCurator'';'; cr;
+			nextPutAll: '            password: ''swordfish'';'; cr;
+			nextPutAll: '            login.'; cr; cr;
+			nextPutAll: 'dict := Dictionary new.'; cr;
+			nextPutAll: 'dict at: ''name'' put: ''Tariq''.'; cr;
+			nextPutAll: 'dict at: ''amount'' put: 100.'; cr;
+			nextPutAll: 'dict at: ''currency'' put: ''GBP''.'; cr; cr;
+			nextPutAll: 'session userGlobals at: #MyTestDict put: dict.'; cr;
+			nextPutAll: 'session commit.'; cr; cr;
+			nextPutAll: 'session disconnect.'; cr;
+			nextPutAll: '```'; cr; cr;
+			nextPutAll: 'For new code, prefer the bridge root and explicit transaction behavior:'; cr; cr;
+			nextPutAll: '```smalltalk'; cr;
+			nextPutAll: '| session payload |'; cr;
+			nextPutAll: 'session := GbsSessionParameters new'; cr;
+			nextPutAll: '    name: ''MagLev Session'';'; cr;
+			nextPutAll: '    gemStoneName: ''gs64stone'';'; cr;
+			nextPutAll: '    username: ''DataCurator'';'; cr;
+			nextPutAll: '    password: ''swordfish'';'; cr;
+			nextPutAll: '    netldiHostOrIp: ''localhost'';'; cr;
+			nextPutAll: '    netldiNameOrPort: ''50377'';'; cr;
+			nextPutAll: '    login.'; cr; cr;
+			nextPutAll: '['; cr;
+			nextPutAll: '    payload := Dictionary new'; cr;
+			nextPutAll: '        at: ''name'' put: ''Tariq'';'; cr;
+			nextPutAll: '        at: ''amount'' put: 100;'; cr;
+			nextPutAll: '        at: ''currency'' put: ''GBP'';'; cr;
+			nextPutAll: '        yourself.'; cr; cr;
+			nextPutAll: '    session bridgeRoot at: #MyTestDict put: payload.'; cr;
+			nextPutAll: '    session commitTransactionOrSignalConflict'; cr;
+			nextPutAll: '] ensure: ['; cr;
+			nextPutAll: '    session disconnect'; cr;
+			nextPutAll: '].'; cr;
+			nextPutAll: '```'; cr; cr;
+			nextPutAll: 'Prefer `commitTransactionOrSignalConflict` or'; cr;
+			nextPutAll: '`commitTransactionWithRetryCount:` over the older `commit` alias when you want'; cr;
+			nextPutAll: 'explicit transaction behavior.'; cr; cr;
+			nextPutAll: '## Verification'; cr; cr;
+			nextPutAll: '- `make core-only`: verify the Smalltalk core without optional MagLev packages'; cr;
+			nextPutAll: '- `make original`: prove the original/base production layer reloads cleanly'; cr;
+			nextPutAll: '- `make original-tests`: verify original/base production plus original/base tests'; cr;
+			nextPutAll: '- `make full`: run the full developer load and live GemStone lane when credentials are present'; cr;
+			nextPutAll: '- `make verify`: run all maintained lanes and artifact freshness checks'; cr; cr;
+			nextPutAll: 'The live lanes use `GS_USER`, `GS_PASS`, `GS_STONE`, `GS_SERVICE`,'; cr;
+			nextPutAll: '`GS_NETLDI_HOST`, `GS_NETLDI_NAME_OR_PORT`, and `GEMSTONE` when supplied.'; cr; cr;
+			nextPutAll: '## More Documentation'; cr; cr;
+			nextPutAll: '- [doc/MAGLEV-BRANCH-USAGE.md](doc/MAGLEV-BRANCH-USAGE.md): practical MagLev load and session examples'; cr;
+			nextPutAll: '- [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md): load groups and switch recipes'; cr;
+			nextPutAll: '- [doc/VERIFICATION-LANES.md](doc/VERIFICATION-LANES.md): maintained verification lanes'; cr;
+			nextPutAll: '- [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md): architecture notes'; cr;
+			nextPutAll: '- [doc/OWNERSHIP-CONTRACT.md](doc/OWNERSHIP-CONTRACT.md): package and selector ownership contract'; cr;
+			nextPutAll: '- [doc/RELOAD-POLICY.md](doc/RELOAD-POLICY.md): reload policy and generated-artifact expectations'; cr ]
 ]
 
 { #category : 'contracts' }

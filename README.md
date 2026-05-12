@@ -1,120 +1,140 @@
-![Icebeg import](https://github.com/unicompute/GemStone-Pharo-Bridge/blob/master/doc/iceberg.png)
+![Iceberg import](https://github.com/unicompute/GemStone-Pharo-Bridge/blob/master/doc/iceberg.png)
 
 # GemStone-Pharo-Bridge
 
-`GemStone-Pharo-Bridge` is a Smalltalk-first bridge between Pharo and GemStone/S.
+`GemStone-Pharo-Bridge` is a Smalltalk-first bridge between Pharo and
+GemStone/S. It keeps the original GBS surface usable, adds a generic Core
+overlay, and optionally loads MagLev-specific tools and runtime helpers.
 
-The summary below is generated from `GemStonePharoContract`. Refresh it with `make graph-artifacts`, and use `make verify` to prove the repo, load groups, and generated docs are still in sync.
+Use this README for the common paths. The generated contract documents in
+[`doc/`](doc/) keep the full load matrix, package graph, verification lanes, and
+ownership rules.
 
 <!-- BEGIN GENERATED:README-BODY -->
-## Steady-state Contract Summary
+## Quick Start
 
-This section is generated from `GemStonePharoContract` and rewritten by `make graph-artifacts`.
+Load the MagLev production stack from a local checkout:
 
-### Package Layout
+```smalltalk
+Metacello new
+  baseline: 'GemStonePharo';
+  repository: 'tonel:///Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src';
+  load: 'MagLev'.
+```
 
-- original/base production: `GemStone-GBS-Converted`, `GemStone-GBS-Tools`
-- generic overlay production: `GemStone-GBS-Core`, `GemStone-GBS-Core-Tools`
-- optional MagLev production: `GemStone-GBS-MagLev`, `GemStone-GBS-MagLev-Tools`
-- test layers: `GemStone-Pharo-Tests`, `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-MagLev-Tests`
+Load the same stack from GitHub:
 
-### Active Root API
+```smalltalk
+Metacello new
+  baseline: 'GemStonePharo';
+  repository: 'github://unicompute/GemStone-Pharo-Bridge:maglev/src';
+  load: 'MagLev'.
+```
 
-- `bridgeRoot`
-- `#GbsBridgeRoot`
-- `GbsBridgeRootFacade`
+Use `load: 'Full'` when you want the developer/test stack, including the
+MagLev-aware test packages.
 
-### Baseline Groups
+## Load Groups
 
-- `Original`, `Original-Tests`
-- `Core-Only`, `Core`, `Core-Tools`, `Core-Tests`
-- `MagLev-Core`, `MagLev-Tools`, `MagLev`
-- `Tools`, `All-Tests`, `Tests`, `Full`, `default`
+- `Original`: original/base production packages only
+- `Original-Tests`: original/base production plus original/base tests
+- `Core`, `Core-Tools`, `Core-Tests`: original/base plus the generic Smalltalk overlay
+- `MagLev`: production MagLev stack, including Core and MagLev overlays
+- `Full`: full developer stack, including all tests
 
-See [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md) for the human-facing switch matrix, [doc/MAGLEV-BRANCH-USAGE.md](doc/MAGLEV-BRANCH-USAGE.md) for local/GitHub loading and session examples, and [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md) for the exact package graph and group membership.
+The active root API is `bridgeRoot`, `#GbsBridgeRoot`, and
+`GbsBridgeRootFacade`.
 
-### Switching Between Original and MagLev
+See [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md) for exact group membership and
+[doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md) for package ownership.
 
-Use a clean reload each time instead of incrementally loading one stack on top of the other in the same image.
+## Clean Switching
 
-- switch to the original/base production stack: `make original PHARO_IMAGE="..." PHARO_WORK_DIR="..."`
-- switch to the original/base test stack: `make original-tests PHARO_IMAGE="..." PHARO_WORK_DIR="..."`
-- switch to the full MagLev developer stack: `make full PHARO_IMAGE="..." PHARO_WORK_DIR="..." GS_USER=... GS_PASS=... GS_NETLDI_HOST=... GS_NETLDI_NAME_OR_PORT=... GEMSTONE=...`
-- if you want the MagLev production stack without the full verify lane, clean-reload the `MagLev` load group directly through `GBS_LOAD_GROUP=MagLev` and `scripts/clean_reload_gemstone.st`
+Use a fresh image or the clean-reload scripts when switching between Original,
+Core, and MagLev loads. Do not incrementally load `Original` and then `MagLev`
+into the same already-mutated image.
 
-See [doc/MAGLEV-BRANCH-USAGE.md](doc/MAGLEV-BRANCH-USAGE.md) for supported Metacello load snippets and the classic session example.
+Common entry points:
 
-### Verification Lanes
+```bash
+make original PHARO_IMAGE="..." PHARO_WORK_DIR="..."
+make original-tests PHARO_IMAGE="..." PHARO_WORK_DIR="..."
+make full PHARO_IMAGE="..." PHARO_WORK_DIR="..." GS_USER=... GS_PASS=... GS_NETLDI_HOST=... GS_NETLDI_NAME_OR_PORT=... GEMSTONE=...
+make verify PHARO_IMAGE="..." PHARO_WORK_DIR="..."
+```
 
-Top-level `make verify` sequencing is owned by `GemStonePharoVerifyRunner`; lane-local unit/live/preflight execution is owned by `GemStonePharoVerificationRunner`.
+## Session Examples
 
-- `core-only`
-  Verify the Smalltalk core without optional MagLev production packages and without deleted legacy surface.
-  load group: `Core-Tests`
-- `bootstrap-smoke`
-  Prove that a clean image can micro-bootstrap the helper package and load the requested group before post-load checks run.
-  load group: `Core-Tests`
-- `original`
-  Verify that the original/base production layer reloads cleanly without the generic Core or optional MagLev overlays.
-  load group: `Original`
-- `original-drift`
-  Verify that the original/base production layer stays clean relative to `56b6db3...`, allowing only the explicit accepted test-layer exceptions.
-  load group: `Original-Tests`
-- `original-tests`
-  Verify the original/base production and original/base test layer without the generic Core or optional MagLev overlays. This lane proves the base unit layer only.
-  load group: `Original-Tests`
-- `full`
-  Verify the steady-state developer load plus the live GemStone lane.
-  load group: `Full`
-- `artifact-freshness`
-  Verify that the generated contract artifacts and marker-managed doc sections are already up to date.
-  load group: `default`
-- `verify`
-  Run core-only, bootstrap-smoke, original, original-drift, original-tests, full, artifact-freshness, then the summary-renderer smoke check.
-  load group: `composite`
+The classic GBS session style still works:
 
-### Expected Original-layer Test Exceptions
+```smalltalk
+| session dict |
+session := GbsSessionParameters new
+            name: 'Simple Session';
+            gemStoneName: 'gs64stone';
+            username: 'DataCurator';
+            password: 'swordfish';
+            login.
 
-`make original-drift` reports the original/base production layer as clean and currently accepts only these test-layer exceptions:
-- `src/GemStone-Pharo-Tests/GciError.extension.st`
-  Adds a tiny test-only GciError number accessor shim so the restored base login-error path can run without production drift.
-- `src/GemStone-Pharo-Tests/MockGbsSession.class.st`
-  Keeps only a narrow interpretLoginError override so the restored base GbsSession production file stays clean.
+dict := Dictionary new.
+dict at: 'name' put: 'Tariq'.
+dict at: 'amount' put: 100.
+dict at: 'currency' put: 'GBP'.
 
-### Generated Contract Artifacts
+session userGlobals at: #MyTestDict put: dict.
+session commit.
 
-Standalone generated artifacts:
-- [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md)
-- [doc/MAGLEV-BRANCH-USAGE.md](doc/MAGLEV-BRANCH-USAGE.md)
-- [doc/PACKAGE-GRAPH.md](doc/PACKAGE-GRAPH.md)
-- [doc/PACKAGE-GRAPH.dot](doc/PACKAGE-GRAPH.dot)
-- [doc/PACKAGE-GRAPH.svg](doc/PACKAGE-GRAPH.svg)
-- [doc/LIVE-PREFLIGHT-POLICY.md](doc/LIVE-PREFLIGHT-POLICY.md)
-- [doc/RELOAD-POLICY.md](doc/RELOAD-POLICY.md)
-- [doc/USER-MANUAL-REFERENCE.html](doc/USER-MANUAL-REFERENCE.html)
-- [doc/OWNERSHIP-CONTRACT.md](doc/OWNERSHIP-CONTRACT.md)
-- [doc/VERIFICATION-LANES.md](doc/VERIFICATION-LANES.md)
+session disconnect.
+```
 
-In-place generated doc sections:
-- [`README.md`](README.md)
-- [`doc/TESTING.md`](doc/TESTING.md)
-- [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md)
-- [`doc/GemStone-Pharo-Bridge-User-Manual.html`](doc/GemStone-Pharo-Bridge-User-Manual.html)
+For new code, prefer the bridge root and explicit transaction behavior:
 
-### Boundary Guards
+```smalltalk
+| session payload |
+session := GbsSessionParameters new
+    name: 'MagLev Session';
+    gemStoneName: 'gs64stone';
+    username: 'DataCurator';
+    password: 'swordfish';
+    netldiHostOrIp: 'localhost';
+    netldiNameOrPort: '50377';
+    login.
 
-- `ARCHITECTURE_BOUNDARY_OK`
-  Package graph, load-group membership, and forbidden reverse dependencies match the contract.
-- `PACKAGE_OWNERSHIP_DRIFT_OK`
-  Representative class, selector, and split-behavior ownership stay in their allowed packages.
-- `NO_COMPAT_SOURCE_SCAN_OK`
-  Deleted legacy surface is absent from the active source roots, scripts, and selected docs.
-- `NO_COMPATIBILITY_PROOF_OK`
-  Deleted package, class, selector, and method-package ownership surface is absent from the loaded image.
+[
+    payload := Dictionary new
+        at: 'name' put: 'Tariq';
+        at: 'amount' put: 100;
+        at: 'currency' put: 'GBP';
+        yourself.
 
-CI uses the same steady-state gate through `make verify` in `.github/workflows/verify.yml`.
-<!-- END GENERATED:README-BODY -->
-om the loaded image.
+    session bridgeRoot at: #MyTestDict put: payload.
+    session commitTransactionOrSignalConflict
+] ensure: [
+    session disconnect
+].
+```
 
-CI uses the same steady-state gate through `make verify` in `.github/workflows/verify.yml`.
+Prefer `commitTransactionOrSignalConflict` or
+`commitTransactionWithRetryCount:` over the older `commit` alias when you want
+explicit transaction behavior.
+
+## Verification
+
+- `make core-only`: verify the Smalltalk core without optional MagLev packages
+- `make original`: prove the original/base production layer reloads cleanly
+- `make original-tests`: verify original/base production plus original/base tests
+- `make full`: run the full developer load and live GemStone lane when credentials are present
+- `make verify`: run all maintained lanes and artifact freshness checks
+
+The live lanes use `GS_USER`, `GS_PASS`, `GS_STONE`, `GS_SERVICE`,
+`GS_NETLDI_HOST`, `GS_NETLDI_NAME_OR_PORT`, and `GEMSTONE` when supplied.
+
+## More Documentation
+
+- [doc/MAGLEV-BRANCH-USAGE.md](doc/MAGLEV-BRANCH-USAGE.md): practical MagLev load and session examples
+- [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md): load groups and switch recipes
+- [doc/VERIFICATION-LANES.md](doc/VERIFICATION-LANES.md): maintained verification lanes
+- [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md): architecture notes
+- [doc/OWNERSHIP-CONTRACT.md](doc/OWNERSHIP-CONTRACT.md): package and selector ownership contract
+- [doc/RELOAD-POLICY.md](doc/RELOAD-POLICY.md): reload policy and generated-artifact expectations
 <!-- END GENERATED:README-BODY -->
