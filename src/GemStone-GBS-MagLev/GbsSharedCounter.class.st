@@ -50,22 +50,17 @@ GbsSharedCounter >> decrementBy: anInteger [
 { #category : 'mutating' }
 GbsSharedCounter >> decrementBy: anInteger ifLessThan: aGuardInteger then: aBlock [
 	| fired |
-	fired := session executeScriptAndFetchObject: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '| counter fired |
-	counter := System sharedCounter: ';
-			nextPutAll: index printString;
-			nextPutAll: '.
+	fired := (GbsRemoteCommand
+		blockBody: '| counter fired |
+	counter := System sharedCounter: arg1.
 	fired := false.
 	counter
-		decrementBy: ';
-			nextPutAll: anInteger asInteger printString;
-			nextPutAll: '
-		ifLessThan: ';
-			nextPutAll: aGuardInteger asInteger printString;
-			nextPutAll: '
+		decrementBy: arg2
+		ifLessThan: arg3
 		thenExecute: [ fired := true ].
-	fired' ]).
+	fired'
+		literalArguments: { index asInteger. anInteger asInteger. aGuardInteger asInteger })
+		executeAndFetchObjectIn: session.
 	fired == true ifTrue: [ aBlock cull: self ].
 	^ fired == true
 ]

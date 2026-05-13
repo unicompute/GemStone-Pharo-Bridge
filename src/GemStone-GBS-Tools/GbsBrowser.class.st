@@ -84,7 +84,7 @@ GbsBrowser >> addCategory [
 	category := UIManager default request: 'Category name:' initialAnswer: 'new-category'.
 	(category isNil or: [ category isEmpty ]) ifTrue: [ ^ false ].
 	script := '[ | cls | cls := System myUserProfile symbolList objectNamed: #', className, '. cls ifNil: [ ^ false ]. cls addCategory: #''', category trimBoth, '''. true ] value'.
-	[ session executeAndFetch: script context: 20 ] on: Error do: [ ^ false ].
+	[ self fetchRemoteScript: script context: 20 ] on: Error do: [ ^ false ].
 	self maybeAutoCommit.
 	self classSelected: className.
 	^ true
@@ -110,7 +110,7 @@ GbsBrowser >> addClass [
 			inDictionary: dict
 			options: #().
 		cls notNil ] value'.
-	[ session executeAndFetch: script context: 20 ] on: Error do: [ ^ false ].
+	[ self fetchRemoteScript: script context: 20 ] on: Error do: [ ^ false ].
 	self maybeAutoCommit.
 	self dictionarySelected: dictionaryName.
 	^ true
@@ -124,7 +124,7 @@ GbsBrowser >> addClassInstanceVariable [
 	varName := UIManager default request: 'Class instance variable name:' initialAnswer: ''.
 	(varName isNil or: [ varName isEmpty ]) ifTrue: [ ^ false ].
 	script := '[ | cls | cls := System myUserProfile symbolList objectNamed: #', className, '. cls ifNil: [ ^ false ]. (cls class respondsTo: #addInstVarName:) ifFalse: [ ^ false ]. cls class addInstVarName: #''', varName trimBoth, '''. true ] value'.
-	[ session executeAndFetch: script context: 20 ] on: Error do: [ ^ false ].
+	[ self fetchRemoteScript: script context: 20 ] on: Error do: [ ^ false ].
 	self maybeAutoCommit.
 	^ true
 ]
@@ -137,7 +137,7 @@ GbsBrowser >> addClassVariable [
 	varName := UIManager default request: 'Class variable name:' initialAnswer: ''.
 	(varName isNil or: [ varName isEmpty ]) ifTrue: [ ^ false ].
 	script := '[ | cls | cls := System myUserProfile symbolList objectNamed: #', className, '. cls ifNil: [ ^ false ]. (cls respondsTo: #addClassVarName:) ifFalse: [ ^ false ]. cls addClassVarName: #''', varName trimBoth, '''. true ] value'.
-	[ session executeAndFetch: script context: 20 ] on: Error do: [ ^ false ].
+	[ self fetchRemoteScript: script context: 20 ] on: Error do: [ ^ false ].
 	self maybeAutoCommit.
 	^ true
 ]
@@ -148,7 +148,7 @@ GbsBrowser >> addDictionary [
 	name := UIManager default request: 'New Dictionary name:' initialAnswer: ''.
 	(name isNil or: [ name isEmpty ]) ifTrue: [ ^ false ].
 	script := '[ | nm dict sym | nm := #', name trimBoth, '. dict := SymbolDictionary new. dict name: nm asString. sym := System myUserProfile symbolList. sym add: dict. true ] value'.
-	[ session executeAndFetch: script context: 20 ] on: Error do: [ ^ false ].
+	[ self fetchRemoteScript: script context: 20 ] on: Error do: [ ^ false ].
 	self maybeAutoCommit.
 	self loadDictionaries.
 	^ true
@@ -162,7 +162,7 @@ GbsBrowser >> addInstanceVariable [
 	varName := UIManager default request: 'Instance variable name:' initialAnswer: ''.
 	(varName isNil or: [ varName isEmpty ]) ifTrue: [ ^ false ].
 	script := '[ | cls | cls := System myUserProfile symbolList objectNamed: #', className, '. cls ifNil: [ ^ false ]. (cls respondsTo: #addInstVarName:) ifFalse: [ ^ false ]. cls addInstVarName: #''', varName trimBoth, '''. true ] value'.
-	[ session executeAndFetch: script context: 20 ] on: Error do: [ ^ false ].
+	[ self fetchRemoteScript: script context: 20 ] on: Error do: [ ^ false ].
 	self maybeAutoCommit.
 	^ true
 ]
@@ -178,7 +178,7 @@ GbsBrowser >> autoCommitMenuLabel [
 GbsBrowser >> beginSessionTransaction [
 	(session respondsTo: #beginTransaction)
 		ifTrue: [ session beginTransaction. ^ true ].
-	^ [ session executeAndFetch: 'System beginTransaction' context: 20. true ]
+	^ [ self fetchRemoteScript: 'System beginTransaction' context: 20. true ]
 		on: Error
 		do: [ false ]
 ]
@@ -208,7 +208,7 @@ GbsBrowser >> browseClass [
 			ifTrue: [ cls definition asString ]
 			ifFalse: [ cls printString ]
 	] value'.
-	source := session executeAndFetch: script.
+	source := self fetchRemoteScript: script.
 	sourceText text: (source ifNil: [ '' ] ifNotNil: [ source asString ]).
 	^ true
 ]
@@ -229,7 +229,7 @@ GbsBrowser >> browseHierarchy [
 	className := self selectedClassName.
 	className ifNil: [ ^ false ].
 	script := '[ | cls stream | stream := WriteStream on: String new. cls := System myUserProfile symbolList objectNamed: #', className, '. cls ifNotNil: [ cls withAllSuperclasses reverseDo: [ :c | stream nextPutAll: c name asString; lf ] ]. stream contents ] value'.
-	result := session executeAndFetch: script.
+	result := self fetchRemoteScript: script.
 	result ifNil: [ ^ false ].
 	UIManager default inform: result asString.
 	^ true
@@ -301,7 +301,7 @@ GbsBrowser >> browseVersions [
 		].
 		stream contents
 	] value'.
-	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	raw := [ self fetchRemoteScript: script context: 20 ] on: Error do: [ '' ].
 	versions := (raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty.
 	versions isEmpty ifTrue: [ ^ false ].
 	idx := UIManager default chooseFrom: (versions collect: [ :ea | (ea splitOn: Character tab) first ]) title: 'Method Versions'.
@@ -347,7 +347,7 @@ GbsBrowser >> classSelected: className [
 		stream contents
 	] value'.
 	
-	rawData := session executeAndFetch: script.
+	rawData := self fetchRemoteScript: script.
 	rawData := rawData
 		ifNil: [ '' ]
 		ifNotNil: [ rawData asString ].
@@ -418,7 +418,7 @@ GbsBrowser >> compileMethod: newSource [
 			ifFalse: [ ''Success'' ]
 	] value'.
 	
-	rawData := session executeAndFetch: script.
+	rawData := self fetchRemoteScript: script.
 	
 	(rawData beginsWith: 'Error:') 
 		ifTrue: [ self inform: rawData ]
@@ -442,7 +442,7 @@ GbsBrowser >> compileSource: sourceString inClass: className category: categoryN
 		(result isKindOf: Array) ifTrue: [ ^ false ].
 		true
 	] value'.
-	result := [ session executeAndFetch: script context: 20 ] on: Error do: [ nil ].
+	result := [ self fetchRemoteScript: script context: 20 ] on: Error do: [ nil ].
 	^ result notNil and: [ result asString asLowercase ~= 'false' ]
 ]
 
@@ -508,6 +508,19 @@ GbsBrowser >> deferAction: aBlock [
 ]
 
 { #category : 'private' }
+GbsBrowser >> fetchRemoteScript: scriptString [
+	^ self fetchRemoteScript: scriptString context: 20
+]
+
+{ #category : 'private' }
+GbsBrowser >> fetchRemoteScript: scriptString context: contextOop [
+	^ GbsRemoteExecutionDispatcher
+		fetchScript: scriptString
+		in: session
+		context: contextOop
+]
+
+{ #category : 'private' }
 GbsBrowser >> dictionaryNameContainingClassNamed: className [
 	| escapedName script raw |
 	escapedName := className copyReplaceAll: '''' with: ''''''.
@@ -521,7 +534,7 @@ GbsBrowser >> dictionaryNameContainingClassNamed: className [
 				(value isBehavior) ifTrue: [ found := dict name asString ] ] ].
 		found ifNil: [ '''' ] ifNotNil: [ found ]
 	] value'.
-	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	raw := [ self fetchRemoteScript: script context: 20 ] on: Error do: [ '' ].
 	^ raw ifNil: [ '' ] ifNotNil: [ raw asString trimBoth ]
 ]
 
@@ -541,7 +554,7 @@ GbsBrowser >> dictionarySelected: dictName [
 		stream contents
 	] value'.
 	
-	rawData := session executeAndFetch: script.
+	rawData := self fetchRemoteScript: script.
 	rawData := rawData
 		ifNil: [ '' ]
 		ifNotNil: [ rawData asString ].
@@ -598,7 +611,7 @@ GbsBrowser >> fileOutClass [
 			src isEmpty ifFalse: [ stream nextPutAll: src; lf; lf ] ].
 		stream contents
 	] value'.
-	source := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	source := [ self fetchRemoteScript: script context: 20 ] on: Error do: [ '' ].
 	source isEmpty ifTrue: [ ^ false ].
 	defaultPath := self defaultExportPathFor: className, '.st'.
 	path := self requestExportPath: defaultPath.
@@ -622,7 +635,7 @@ GbsBrowser >> fileOutClassMethods [
 			src isEmpty ifFalse: [ stream nextPutAll: src; lf; lf ] ].
 		stream contents
 	] value'.
-	source := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	source := [ self fetchRemoteScript: script context: 20 ] on: Error do: [ '' ].
 	source isEmpty ifTrue: [ ^ false ].
 	defaultPath := self defaultExportPathFor: className, '-methods.st'.
 	path := self requestExportPath: defaultPath.
@@ -651,7 +664,7 @@ GbsBrowser >> fileOutDictionary [
 				src isEmpty ifFalse: [ stream nextPutAll: src; lf; lf ] ] ].
 		stream contents
 	] value'.
-	source := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	source := [ self fetchRemoteScript: script context: 20 ] on: Error do: [ '' ].
 	source isEmpty ifTrue: [ ^ false ].
 	defaultPath := self defaultExportPathFor: dictName, '.st'.
 	path := self requestExportPath: defaultPath.
@@ -679,7 +692,7 @@ GbsBrowser >> fileOutDictionaryMethods [
 				src isEmpty ifFalse: [ stream nextPutAll: src; lf; lf ] ] ].
 		stream contents
 	] value'.
-	source := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	source := [ self fetchRemoteScript: script context: 20 ] on: Error do: [ '' ].
 	source isEmpty ifTrue: [ ^ false ].
 	defaultPath := self defaultExportPathFor: dictName, '-methods.st'.
 	path := self requestExportPath: defaultPath.
@@ -738,7 +751,7 @@ GbsBrowser >> gsDoIt [
 	| code |
 	code := self selectedCodeOrAll.
 	code isEmpty ifTrue: [ ^ false ].
-	^ (session executeAndFetch: code context: 20) notNil
+	^ (self fetchRemoteScript: code context: 20) notNil
 ]
 
 { #category : 'actions' }
@@ -757,7 +770,7 @@ GbsBrowser >> gsPrintIt [
 	| code result currentText |
 	code := self selectedCodeOrAll.
 	code isEmpty ifTrue: [ ^ false ].
-	result := session executeAndFetch: '[ ', code, ' ] value printString' context: 20.
+	result := self fetchRemoteScript: '[ ', code, ' ] value printString' context: 20.
 	result ifNil: [ ^ false ].
 	currentText := sourceText text asString.
 	sourceText text: currentText, ' "', result asString, '"'.
@@ -862,7 +875,7 @@ GbsBrowser >> loadDictionaries [
 		stream contents
 	] value'.
 	
-	rawData := session executeAndFetch: script.
+	rawData := self fetchRemoteScript: script.
 	rawData := rawData
 		ifNil: [ '' ]
 		ifNotNil: [ rawData asString ].
@@ -1042,7 +1055,7 @@ GbsBrowser >> methodSelected: selectorName [
 		meth ifNil: [ '''' ] ifNotNil: [ meth sourceString ]
 	] value'.
 	
-	rawSource := session executeAndFetch: script.
+	rawSource := self fetchRemoteScript: script.
 	(rawSource beginsWith: 'Error:') ifTrue: [ rawSource := 'Could not fetch source code.' ].
 	sourceText text: rawSource.
 ]
@@ -1082,7 +1095,7 @@ GbsBrowser >> moveClassToDictionary [
 		newDict at: #', className, ' put: cls.
 		true
 	] value'.
-	[ session executeAndFetch: script context: 20 ] on: Error do: [ ^ false ].
+	[ self fetchRemoteScript: script context: 20 ] on: Error do: [ ^ false ].
 	self maybeAutoCommit.
 	self loadDictionaries.
 	self selectDictionaryNamed: toDict trimBoth.
@@ -1100,7 +1113,7 @@ GbsBrowser >> moveMethodToCategory [
 	source := sourceText text asString.
 	source isEmpty ifTrue: [
 		script := '[ | cls | cls := System myUserProfile symbolList objectNamed: #', className, '. cls ifNil: [ ^ false ]. (cls compiledMethodAt: #', selector asString, ' ifAbsent: [ ^ false ]) sourceString ] value'.
-		source := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+		source := [ self fetchRemoteScript: script context: 20 ] on: Error do: [ '' ].
 	].
 	category := newCategory trimBoth.
 	(self compileSource: source inClass: className category: category) ifFalse: [ ^ false ].
@@ -1197,7 +1210,7 @@ GbsBrowser >> protocolSelected: protocolName [
 		stream contents
 	] value'.
 	
-	rawData := session executeAndFetch: script.
+	rawData := self fetchRemoteScript: script.
 	rawData := rawData
 		ifNil: [ '' ]
 		ifNotNil: [ rawData asString ].
@@ -1254,7 +1267,7 @@ GbsBrowser >> queryMatchingSelectorsForPattern: rawPattern [
 			do: [ :sel | stream nextPutAll: sel; lf ].
 		stream contents
 	] value'.
-	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	raw := [ self fetchRemoteScript: script context: 20 ] on: Error do: [ '' ].
 	raw isNil ifTrue: [ ^ #() ].
 	^ ((raw asString splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asArray
 ]
@@ -1321,7 +1334,7 @@ GbsBrowser >> queryMethodsWithString [
 		].
 		stream contents
 	] value'.
-	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	raw := [ self fetchRemoteScript: script context: 20 ] on: Error do: [ '' ].
 	raw := raw ifNil: [ '' ] ifNotNil: [ raw asString ].
 	matches := (raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty.
 	matches isEmpty ifTrue: [ ^ self informNotImplemented: 'No methods matched.' ].
@@ -1420,7 +1433,7 @@ GbsBrowser >> queryServerMethodsByScanningForSelector: selectorName mode: modeSt
 		].
 		stream contents
 	] value'.
-	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	raw := [ self fetchRemoteScript: script context: 20 ] on: Error do: [ '' ].
 	raw := raw ifNil: [ '' ] ifNotNil: [ raw asString ].
 	^ ((raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asSortedCollection asArray
 ]
@@ -1515,7 +1528,7 @@ GbsBrowser >> removeCategory [
 		].
 		true
 	] value'.
-	[ session executeAndFetch: script context: 20 ] on: Error do: [ ^ false ].
+	[ self fetchRemoteScript: script context: 20 ] on: Error do: [ ^ false ].
 	self maybeAutoCommit.
 	self classSelected: className.
 	^ true
@@ -1527,7 +1540,7 @@ GbsBrowser >> removeClass [
 	className := self selectedClassName.
 	className ifNil: [ ^ false ].
 	script := '[ | cls | cls := System myUserProfile symbolList objectNamed: #', className, '. cls ifNil: [ ^ false ]. cls removeFromSystem. true ] value'.
-	[ session executeAndFetch: script context: 20 ] on: Error do: [ ^ false ].
+	[ self fetchRemoteScript: script context: 20 ] on: Error do: [ ^ false ].
 	self maybeAutoCommit.
 	self dictionarySelected: self selectedDictionaryName.
 	^ true
@@ -1539,7 +1552,7 @@ GbsBrowser >> removeDictionary [
 	oldName := self selectedDictionaryName.
 	oldName ifNil: [ ^ false ].
 	script := '[ | sym old | sym := System myUserProfile symbolList. old := #', oldName, '. sym removeKey: old ifAbsent: [ ]. true ] value'.
-	[ session executeAndFetch: script context: 20 ] on: Error do: [ ^ false ].
+	[ self fetchRemoteScript: script context: 20 ] on: Error do: [ ^ false ].
 	self maybeAutoCommit.
 	self loadDictionaries.
 	^ true
@@ -1552,7 +1565,7 @@ GbsBrowser >> removeMethod [
 	selector := self selectedMethodSelector.
 	(className isNil or: [ selector isNil ]) ifTrue: [ ^ false ].
 	script := '[ | cls | cls := System myUserProfile symbolList objectNamed: #', className, '. cls ifNil: [ ^ false ]. cls removeSelector: #', selector asString, '. true ] value'.
-	[ session executeAndFetch: script context: 20 ] on: Error do: [ ^ false ].
+	[ self fetchRemoteScript: script context: 20 ] on: Error do: [ ^ false ].
 	self maybeAutoCommit.
 	self protocolSelected: protocolsList selection selectedItem.
 	^ true
@@ -1578,7 +1591,7 @@ GbsBrowser >> renameCategory [
 		].
 		true
 	] value'.
-	[ session executeAndFetch: script context: 20 ] on: Error do: [ ^ false ].
+	[ self fetchRemoteScript: script context: 20 ] on: Error do: [ ^ false ].
 	self maybeAutoCommit.
 	self classSelected: className.
 	^ true
@@ -1592,7 +1605,7 @@ GbsBrowser >> renameDictionary [
 	newName := UIManager default request: 'Rename dictionary to:' initialAnswer: oldName.
 	(newName isNil or: [ newName isEmpty or: [ newName = oldName ] ]) ifTrue: [ ^ false ].
 	script := '[ | sym d old new | sym := System myUserProfile symbolList. old := #', oldName, '. new := #', newName trimBoth, '. d := sym objectNamed: old. d ifNil: [ ^ false ]. sym removeKey: old ifAbsent: [ ]. sym at: new put: d. d name: new asString. true ] value'.
-	[ session executeAndFetch: script context: 20 ] on: Error do: [ ^ false ].
+	[ self fetchRemoteScript: script context: 20 ] on: Error do: [ ^ false ].
 	self maybeAutoCommit.
 	self loadDictionaries.
 	^ true

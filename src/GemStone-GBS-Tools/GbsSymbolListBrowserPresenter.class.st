@@ -1002,11 +1002,14 @@ GbsSymbolListBrowserPresenter >> structuredPreviewForEntryKey: keyName path: pat
 	userName := self selectedUserName.
 	dictName := self selectedDictionaryName.
 	(userName isNil or: [ dictName isNil or: [ keyName isNil ] ]) ifTrue: [ ^ nil ].
-	raw := [ session executeAndFetch: (self
+	raw := [ GbsRemoteExecutionDispatcher
+		fetchScript: (self
 		structuredPreviewScriptForUser: userName
 		dictionary: dictName
 		keyName: keyName
-		path: pathCollection) ]
+		path: pathCollection)
+		in: session
+		context: 20 ]
 		on: Error
 		do: [ :ex | 'string', String lf, 'Inspect entry failed: ', ex messageText ].
 	^ self parsedStructuredPreviewFrom: raw

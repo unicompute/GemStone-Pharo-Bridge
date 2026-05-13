@@ -855,9 +855,10 @@ GbsSessionMagLevTest >> testRemoteMethodObjectToProcBuildsRemoteProcObject [
 	| mockSession methodObject proc |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'receiver := Object _objectForOop: 9001')
+		((script includesSubstring: 'Object _objectForOop: 9001')
+			and: [ script includesSubstring: 'receiver method: selector' ])
 			ifTrue: [
-				self assert: (script includesSubstring: 'receiver method: #foo').
+				self assert: (script includesSubstring: '''foo''').
 				^ '9101' ].
 		(script includesSubstring: 'Object _objectForOop: 9101')
 			ifTrue: [ ^ #('Proc' 0 false 'demo.rb:1' 'proc { foo }') ].

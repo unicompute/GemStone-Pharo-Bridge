@@ -28,6 +28,18 @@ GBSM class >> commitTransactionWithRetryCount: aRetryCount [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GBSM class >> withGemStoneTransactionDo: aBlock [
+	^ self requireCurrentSession withGemStoneTransactionDo: aBlock
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GBSM class >> withGemStoneTransactionRetryCount: aRetryCount do: aBlock [
+	^ self requireCurrentSession
+		withGemStoneTransactionRetryCount: aRetryCount
+		do: aBlock
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GBSM class >> loadedClasses [
 	^ self requireCurrentSession loadedClasses
 ]

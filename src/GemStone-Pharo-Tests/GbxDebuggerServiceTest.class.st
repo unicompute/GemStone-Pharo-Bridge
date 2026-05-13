@@ -62,6 +62,25 @@ GbxDebuggerServiceTest >> testInspectCurrentReceiverUsesDetailedReportOop [
 ]
 
 { #category : 'tests' }
+GbxDebuggerServiceTest >> testInspectorControllerEvaluatesInCurrentFrame [
+	| controller result |
+	session stubs
+		at: #executeAndFetchContext
+		put: [ :script :ctx |
+			(script includesSubstring: '_frameContentsAt:')
+				ifTrue: [ '111' ]
+				ifFalse: [
+					self assert: script equals: 'self printString'.
+					self assert: ctx equals: 111.
+					'printed receiver' ] ].
+	controller := GbxDebuggerInspectorController on: service.
+
+	result := controller evaluateCodeInCurrentFrame: 'self printString'.
+
+	self assert: result equals: 'printed receiver'
+]
+
+{ #category : 'tests' }
 GbxDebuggerServiceTest >> testInspectCurrentFrameUsesFrameContentsOop [
 	| opened |
 	session stubs

@@ -86,7 +86,7 @@ GbsClassicLauncher class >> queryOrganizerMethodsFor: tokenString mode: modeStri
 				stream nextPutAll: cls; nextPutAll: ''>>''; nextPutAll: sel; lf ] ].
 		stream contents
 	] value'.
-	raw := [ aSession executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	raw := [ GbsRemoteExecutionDispatcher fetchScript: script in: aSession context: 20 ] on: Error do: [ '' ].
 	raw := raw ifNil: [ '' ] ifNotNil: [ raw asString ].
 	^ ((raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asSet asArray asSortedCollection asArray
 ]

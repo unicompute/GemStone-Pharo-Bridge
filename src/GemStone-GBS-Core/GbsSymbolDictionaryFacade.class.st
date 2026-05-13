@@ -129,10 +129,11 @@ GbsSymbolDictionaryFacade >> session: aSession [
 
 { #category : 'querying' }
 GbsSymbolDictionaryFacade >> size [
-	^ session executeScriptAndFetchObject: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:root | root ifNil: [ 0 ] ifNotNil: [ root size ] ] value: ';
-			nextPutAll: self rootScript ])
+	^ (GbsRemoteCommand
+		blockBody: 'root ifNil: [ 0 ] ifNotNil: [ root size ]'
+		argumentNames: #('root')
+		argumentScripts: { self rootScript })
+		executeAndFetchObjectIn: session
 ]
 
 { #category : 'querying' }

@@ -106,6 +106,16 @@ GbsMaglevFacade >> withCommitRetryCount: aRetryCount do: aBlock [
 ]
 
 { #category : 'transactions' }
+GbsMaglevFacade >> withGemStoneTransactionDo: aBlock [
+	^ session withGemStoneTransactionDo: aBlock
+]
+
+{ #category : 'transactions' }
+GbsMaglevFacade >> withGemStoneTransactionRetryCount: aRetryCount do: aBlock [
+	^ session withGemStoneTransactionRetryCount: aRetryCount do: aBlock
+]
+
+{ #category : 'transactions' }
 GbsMaglevFacade >> withCommitAndReleaseLocksRetryCount: aRetryCount do: aBlock [
 	^ session withCommitAndReleaseLocksRetryCount: aRetryCount do: aBlock
 ]

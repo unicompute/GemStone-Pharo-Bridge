@@ -26,6 +26,42 @@ gbs_write_json_summary_file() {
   fi
 }
 
+gbs_write_evidence_file() {
+  local filename="${1:-}"
+  local payload="${2:-}"
+  local evidence_dir="${GBS_EVIDENCE_DIR:-${GBS_JSON_SUMMARY_DIR:-}}"
+  if [[ -n "${evidence_dir}" && -n "${filename}" ]]; then
+    mkdir -p "${evidence_dir}"
+    printf '%s\n' "${payload}" > "${evidence_dir}/${filename}"
+  fi
+}
+
+gbs_cleanup_registered_work_images() {
+  local image
+  if [[ "${GBS_KEEP_WORK_IMAGES:-0}" == "1" ]]; then
+    if [[ -n "${GBS_WORK_IMAGES_TO_CLEAN:-}" ]]; then
+      printf 'Keeping Pharo work images because GBS_KEEP_WORK_IMAGES=1\n' >&2
+    fi
+    return 0
+  fi
+
+  while IFS= read -r image; do
+    [[ -n "${image}" ]] || continue
+    rm -f "${image}" "${image%.image}.changes"
+  done <<< "${GBS_WORK_IMAGES_TO_CLEAN:-}"
+}
+
+gbs_register_work_image_cleanup() {
+  local work_image="${1:-}"
+  [[ -n "${work_image}" ]] || return 0
+  if [[ -n "${GBS_WORK_IMAGES_TO_CLEAN:-}" ]]; then
+    GBS_WORK_IMAGES_TO_CLEAN="${GBS_WORK_IMAGES_TO_CLEAN}"$'\n'"${work_image}"
+  else
+    GBS_WORK_IMAGES_TO_CLEAN="${work_image}"
+  fi
+  trap gbs_cleanup_registered_work_images EXIT
+}
+
 gbs_prepare_work_image() {
   local src_image="$1"
   local work_dir="$2"

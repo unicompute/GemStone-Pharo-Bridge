@@ -104,7 +104,7 @@ GbsRemoteUnboundMethodObject >> escapedSourceText: sourceText [
 { #category : 'compiling' }
 GbsRemoteUnboundMethodObject >> executeCompileScript: scriptString [
 	| raw |
-	raw := [ self session executeAndFetch: scriptString context: self session sessionOop ]
+	raw := [ self session fetchRemoteScript: scriptString context: self session sessionOop ]
 		on: Error
 		do: [ nil ].
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].

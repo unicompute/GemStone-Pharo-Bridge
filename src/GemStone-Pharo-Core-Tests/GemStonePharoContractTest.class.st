@@ -317,6 +317,8 @@ GemStonePharoContractTest >> testPackageOwnershipBehaviorFamilySpecsDeriveClassS
 	self assert: (familySpecsByBehavior at: { #GbsPlaygroundActions. #class }) equals: #toolsWithCoreToolsAndMaglevTools.
 	self assert: (familySpecsByBehavior at: { #GbsWorkspace. #instance }) equals: #toolsWithCoreToolsAndMaglevTools.
 	self assert: (familySpecsByBehavior at: { #GbsWorkspace. #class }) equals: #toolsWithCoreToolsAndMaglevTools.
+	self assert: (familySpecsByBehavior at: { #GbsRemoteDebuggerMenuBuilder. #instance }) equals: #toolsOnly.
+	self assert: (familySpecsByBehavior at: { #GbxDebuggerProcessController. #instance }) equals: #toolsOnly.
 	self assert: (familySpecsByBehavior at: { #GbxTrippy. #instance }) equals: #toolsWithCoreToolsAndMaglevTools.
 	self assert: (familySpecsByBehavior at: { #GbsWorkspaceCoreActionsTest. #instance }) equals: #coreTestsOnly.
 	self assert: (familySpecsByBehavior at: { #GbxTrippyCoreToolsTest. #instance }) equals: #coreTestsOnly.
@@ -348,7 +350,10 @@ GemStonePharoContractTest >> testPackageOwnershipSelectorSpecsDeriveExpectedPack
 	self assert: (bySelector at: { #GbsSession. #instance. #commitTransactionOrSignalConflict }) equals: 'GemStone-GBS-Core'.
 	self assert: (bySelector at: { #GbsSession. #instance. #commitTransactionWithRetryCount: }) equals: 'GemStone-GBS-Core'.
 	self assert: (bySelector at: { #GbsSession. #instance. #invalidateRepositoryRoots }) equals: 'GemStone-GBS-Core'.
+	self assert: (bySelector at: { #GbsSession. #instance. #remoteScriptBuilder }) equals: 'GemStone-GBS-Core'.
 	self assert: (bySelector at: { #GbsSession. #instance. #withCommitRetryCount:do: }) equals: 'GemStone-GBS-Core'.
+	self assert: (bySelector at: { #GbsSession. #instance. #withGemStoneTransactionDo: }) equals: 'GemStone-GBS-Core'.
+	self assert: (bySelector at: { #GbsSession. #instance. #withGemStoneTransactionRetryCount:do: }) equals: 'GemStone-GBS-Core'.
 	self assert: (bySelector at: { #GbsSession. #instance. #previewMigrationFrom:to: }) equals: 'GemStone-GBS-Core'.
 	self assert: (bySelector at: { #GbsSession. #instance. #migrateInstancesWithSubclassesOf:allowAbort: }) equals: 'GemStone-GBS-Core'.
 	self assert: (bySelector at: { #GbsSession. #instance. #namedObjectAt: }) equals: 'GemStone-GBS-Core'.
@@ -375,7 +380,11 @@ GemStonePharoContractTest >> testPackageOwnershipSelectorSpecsDeriveExpectedPack
 	self assert: (bySelector at: { #GbsSession. #instance. #objectsInMemory }) equals: 'GemStone-GBS-Core'.
 	self assert: (bySelector at: { #GbsSession. #instance. #undefineFinalizerFor: }) equals: 'GemStone-GBS-Core'.
 	self assert: (bySelector at: { #GBSM. #class. #commitTransactionOrSignalConflict }) equals: 'GemStone-GBS-Core'.
+	self assert: (bySelector at: { #GBSM. #class. #withGemStoneTransactionDo: }) equals: 'GemStone-GBS-Core'.
+	self assert: (bySelector at: { #GBSM. #class. #withGemStoneTransactionRetryCount:do: }) equals: 'GemStone-GBS-Core'.
 	self assert: (bySelector at: { #GBSM. #class. #chunkedMigrationRunnerFrom:to: }) equals: 'GemStone-GBS-Core'.
+	self assert: (bySelector at: { #GbsSmalltalkFacade. #instance. #withGemStoneTransactionDo: }) equals: 'GemStone-GBS-Core'.
+	self assert: (bySelector at: { #GbsSmalltalkFacade. #instance. #withGemStoneTransactionRetryCount:do: }) equals: 'GemStone-GBS-Core'.
 	self assert: (bySelector at: { #GbxClassVersionBrowser. #instance. #previewMigrationTo:allowAbort: }) equals: 'GemStone-GBS-Core'.
 	self assert: (bySelector at: { #GbxClassVersionBrowser. #instance. #executePreviewPlan:allowAbort: }) equals: 'GemStone-GBS-Core'.
 	self assert: (bySelector at: { #GbsPlaygroundActions. #class. #gsInspectItIn: }) equals: 'GemStone-GBS-Core-Tools'.
@@ -439,7 +448,7 @@ GemStonePharoContractTest >> testPackageOwnershipSelectorSpecsDeriveExpectedPack
 	self assert: (bySelector at: { #GbxContextListPolicy. #instance. #updateContextListFromServerContexts: }) equals: 'GemStone-GBS-Core-Tools'.
 	self assert: (bySelector at: { #GbxDebuggerService. #instance. #canExecuteOnDebugProcess }) equals: 'GemStone-GBS-Core-Tools'.
 	self assert: (bySelector at: { #GbxDebuggerService. #instance. #currentProcessOop }) equals: 'GemStone-GBS-Core-Tools'.
-	self assert: (bySelector at: { #GbxDebuggerService. #instance. #legacyCompileLookup }) equals: 'GemStone-GBS-Core-Tools'.
+	self assert: (bySelector at: { #GbxDebuggerService. #instance. #compatibilityCompileLookup }) equals: 'GemStone-GBS-Core-Tools'.
 	self assert: (bySelector at: { #GbxDebuggerService. #instance. #remoteDebugProcess }) equals: 'GemStone-GBS-Core-Tools'.
 	self assert: (bySelector at: { #GbxDebuggerService. #instance. #restartLevelFromServerStack }) equals: 'GemStone-GBS-Core-Tools'.
 	self assert: (bySelector at: { #GbxTrippy. #instance. #buildToolbar }) equals: 'GemStone-GBS-Core-Tools'.
@@ -506,6 +515,7 @@ GemStonePharoContractTest >> testPackageOwnershipClassSpecsCombineDerivedAndExpl
 	self assert: (self contract packageOwnershipDerivedClassSpecs includes: { #GbsReportSection. 'GemStone-GBS-Core' }).
 	self assert: (self contract packageOwnershipDerivedClassSpecs includes: { #GbsRepositoryFacade. 'GemStone-GBS-Core' }).
 	self assert: (self contract packageOwnershipDerivedClassSpecs includes: { #GbsRepositoryRootFacade. 'GemStone-GBS-Core' }).
+	self assert: (self contract packageOwnershipDerivedClassSpecs includes: { #GbsRemoteScriptBuilder. 'GemStone-GBS-Core' }).
 	self assert: (self contract packageOwnershipDerivedClassSpecs includes: { #GbsSmalltalkFacade. 'GemStone-GBS-Core' }).
 	self assert: (self contract packageOwnershipDerivedClassSpecs includes: { #GbsStackSessionStateSlot. 'GemStone-GBS-MagLev' }).
 	self assert: (self contract packageOwnershipDerivedClassSpecs includes: { #GbsSymbolDictionaryFacade. 'GemStone-GBS-Core' }).
@@ -568,6 +578,7 @@ GemStonePharoContractTest >> testPackageOwnershipClassSpecsCombineDerivedAndExpl
 	self assert: (byClass at: #GbsProxyOnlyMaterializationProfile) equals: 'GemStone-GBS-Core'.
 	self assert: (byClass at: #GbsRepositoryFacade) equals: 'GemStone-GBS-Core'.
 	self assert: (byClass at: #GbsRepositoryRootFacade) equals: 'GemStone-GBS-Core'.
+	self assert: (byClass at: #GbsRemoteScriptBuilder) equals: 'GemStone-GBS-Core'.
 	self assert: (byClass at: #GbsSessionStateSlot) equals: 'GemStone-GBS-Core'.
 	self assert: (byClass at: #GbsShallowMaterializationProfile) equals: 'GemStone-GBS-Core'.
 	self assert: (byClass at: #GbsSmalltalkFacade) equals: 'GemStone-GBS-Core'.
@@ -668,6 +679,7 @@ GemStonePharoContractTest >> testCoreOnlyChecksDerivePresenceFromOwnershipAndNoC
 	self assert: (classChecksByName at: #GbsClassHistoryFacade) equals: true.
 	self assert: (classChecksByName at: #GbsRepositoryFacade) equals: true.
 	self assert: (classChecksByName at: #GbsRepositoryRootFacade) equals: true.
+	self assert: (classChecksByName at: #GbsRemoteScriptBuilder) equals: true.
 	self assert: (classChecksByName at: #CoreTestableGbsInspector) equals: true.
 	self assert: (classChecksByName at: #CoreTestableGbsSymbolListBrowserPresenter) equals: true.
 	self assert: (classChecksByName at: #CoreTestableGbxTrippy) equals: true.
@@ -684,7 +696,10 @@ GemStonePharoContractTest >> testCoreOnlyChecksDerivePresenceFromOwnershipAndNoC
 	self assert: (selectorChecksByKey at: { #GbsSession. #commitTransactionOrSignalConflict }) equals: true.
 	self assert: (selectorChecksByKey at: { #GbsSession. #commitTransactionWithRetryCount: }) equals: true.
 	self assert: (selectorChecksByKey at: { #GbsSession. #invalidateRepositoryRoots }) equals: true.
+	self assert: (selectorChecksByKey at: { #GbsSession. #remoteScriptBuilder }) equals: true.
 	self assert: (selectorChecksByKey at: { #GbsSession. #withCommitRetryCount:do: }) equals: true.
+	self assert: (selectorChecksByKey at: { #GbsSession. #withGemStoneTransactionDo: }) equals: true.
+	self assert: (selectorChecksByKey at: { #GbsSession. #withGemStoneTransactionRetryCount:do: }) equals: true.
 	self assert: (selectorChecksByKey at: { #GbsSession. #previewMigrationFrom:to:allowAbort: }) equals: true.
 	self assert: (selectorChecksByKey at: { #GbsSession. #namedObjectAt: }) equals: true.
 	self assert: (selectorChecksByKey at: { #GbsSession. #namedObjectAt:ifAbsent: }) equals: true.
@@ -755,13 +770,17 @@ GemStonePharoContractTest >> testCoreOnlyChecksDerivePresenceFromOwnershipAndNoC
 	self assert: (selectorChecksByKey at: { #GbxDebuggerService. #browseMethod }) equals: true.
 	self assert: (selectorChecksByKey at: { #GbxDebuggerService. #canExecuteOnDebugProcess }) equals: true.
 	self assert: (selectorChecksByKey at: { #GbxDebuggerService. #currentProcessOop }) equals: true.
-	self assert: (selectorChecksByKey at: { #GbxDebuggerService. #legacyCompileLookup }) equals: true.
+	self assert: (selectorChecksByKey at: { #GbxDebuggerService. #compatibilityCompileLookup }) equals: true.
 	self assert: (selectorChecksByKey at: { #GbxDebuggerService. #remoteDebugProcess }) equals: true.
 	self assert: (selectorChecksByKey at: { #GbxDebuggerService. #restartLevelFromServerStack }) equals: true.
 	self assert: (selectorChecksByKey at: { #GbxDebuggerService. #selectedMethodClassName }) equals: true.
 	self assert: (selectorChecksByKey at: { #GbxDebuggerService. #sourceCode }) equals: true.
 	self assert: (selectorChecksByKey at: { #GbxDebuggerService. #selectedRemoteMethodObject }) equals: false.
 	self assert: (selectorChecksByKey at: { #GBSM. #class. #commitTransactionOrSignalConflict }) equals: true.
+	self assert: (selectorChecksByKey at: { #GBSM. #class. #withGemStoneTransactionDo: }) equals: true.
+	self assert: (selectorChecksByKey at: { #GBSM. #class. #withGemStoneTransactionRetryCount:do: }) equals: true.
+	self assert: (selectorChecksByKey at: { #GbsSmalltalkFacade. #withGemStoneTransactionDo: }) equals: true.
+	self assert: (selectorChecksByKey at: { #GbsSmalltalkFacade. #withGemStoneTransactionRetryCount:do: }) equals: true.
 	self assert: (selectorChecksByKey at: { #GbxClassVersionBrowser. #previewMigrationToLatestAllowAbort: }) equals: true.
 	self assert: (selectorChecksByKey at: { #GbsRemoteMethodMirror. #asMethodObject }) equals: true.
 	self assert: (selectorChecksByKey at: { #GbsSession. #rubyRuntime }) equals: false.

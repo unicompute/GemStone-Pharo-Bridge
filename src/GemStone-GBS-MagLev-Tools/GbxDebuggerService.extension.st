@@ -8,7 +8,7 @@ GbxDebuggerService >> correctCurrentSelectorWithSource: sourceText [
 	self clearCompileError.
 	remoteMethod := self selectedRemoteUnboundMethodObject.
 	raw := (remoteMethod isNil or: [ remoteMethod selector = #unboundMethod ])
-		ifTrue: [ self legacyCorrectedCompileResponseForSource: sourceText ]
+		ifTrue: [ self compatibilityCorrectedCompileResponseForSource: sourceText ]
 		ifFalse: [ remoteMethod correctedCompileResponseForSource: sourceText ].
 	raw ifNil: [
 		lastCompileError := 'Correct selector failed: no response from GemStone'.
@@ -27,7 +27,7 @@ GbxDebuggerService >> recompileCurrentMethodWithSource: sourceText [
 	self clearCompileError.
 	remoteMethod := self selectedRemoteUnboundMethodObject.
 	raw := (remoteMethod isNil or: [ remoteMethod selector = #unboundMethod ])
-		ifTrue: [ self legacyRecompileResponseForSource: sourceText ]
+		ifTrue: [ self compatibilityRecompileResponseForSource: sourceText ]
 		ifFalse: [ remoteMethod recompileResponseForSource: sourceText ].
 	raw ifNil: [
 		lastCompileError := 'Compile failed: no response from GemStone'.

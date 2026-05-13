@@ -7,6 +7,7 @@ VM="${PHARO_VM:-/Users/tariq/Documents/Pharo/vms/130-x64/Pharo.app/Contents/MacO
 SRC_IMAGE="${1:-/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image}"
 WORK_DIR="${2:-$(dirname "${SRC_IMAGE}")}"
 WORK_IMAGE="$(gbs_prepare_work_image "${SRC_IMAGE}" "${WORK_DIR}" "bootstrapsmoke")"
+gbs_register_work_image_cleanup "${WORK_IMAGE}"
 JSON_SUMMARY="${GBS_JSON_SUMMARY:-0}"
 LOAD_GROUP="${GBS_BOOTSTRAP_SMOKE_LOAD_GROUP:-Core-Tests}"
 RELOAD_MODE="${GBS_BOOTSTRAP_SMOKE_RELOAD_MODE:-core-only}"

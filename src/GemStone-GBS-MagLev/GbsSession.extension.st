@@ -67,20 +67,18 @@ GbsSession >> rubyPersistentLoadedFeatures [
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> rubyRequireFileNamed: aString [
-	^ self executeScriptAndFetchObject: (String streamContents: [ :stream |
-		stream
-			nextPutAll: 'RubyContext default requireFileNamed: ';
-			nextPutAll: (self marshalArgumentToScript: aString);
-			nextPutAll: ' env: 1' ])
+	^ (GbsRemoteCommand
+		blockBody: 'RubyContext default requireFileNamed: arg1 env: 1'
+		literalArguments: { aString })
+		executeAndFetchObjectIn: self
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> rubyLoadFileNamed: aString [
-	^ self executeScriptAndFetchObject: (String streamContents: [ :stream |
-		stream
-			nextPutAll: 'RubyContext default loadFileNamed: ';
-			nextPutAll: (self marshalArgumentToScript: aString);
-			nextPutAll: ' env: 1' ])
+	^ (GbsRemoteCommand
+		blockBody: 'RubyContext default loadFileNamed: arg1 env: 1'
+		literalArguments: { aString })
+		executeAndFetchObjectIn: self
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
@@ -205,10 +203,10 @@ GbsSession >> withCommitAndReleaseLocksRetryCount: aRetryCount do: aBlock [
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> sharedCounterAt: anIndex [
-	^ self executeScriptAndFetchObject: (String streamContents: [ :stream |
-		stream
-			nextPutAll: 'System sharedCounter: ';
-			nextPutAll: anIndex asInteger printString ])
+	^ (GbsRemoteCommand
+		blockBody: 'System sharedCounter: arg1'
+		literalArguments: { anIndex asInteger })
+		executeAndFetchObjectIn: self
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
@@ -218,32 +216,26 @@ GbsSession >> sessionCount [
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> sharedCounterAt: anIndex put: anInteger [
-	^ self executeScriptAndFetchObject: (String streamContents: [ :stream |
-		stream
-			nextPutAll: 'System sharedCounter: ';
-			nextPutAll: anIndex asInteger printString;
-			nextPutAll: ' setValue: ';
-			nextPutAll: anInteger asInteger printString ])
+	^ (GbsRemoteCommand
+		blockBody: 'System sharedCounter: arg1 setValue: arg2'
+		literalArguments: { anIndex asInteger. anInteger asInteger })
+		executeAndFetchObjectIn: self
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> incrementSharedCounterAt: anIndex by: anInteger [
-	^ self executeScriptAndFetchObject: (String streamContents: [ :stream |
-		stream
-			nextPutAll: 'System sharedCounter: ';
-			nextPutAll: anIndex asInteger printString;
-			nextPutAll: ' incrementBy: ';
-			nextPutAll: anInteger asInteger printString ])
+	^ (GbsRemoteCommand
+		blockBody: 'System sharedCounter: arg1 incrementBy: arg2'
+		literalArguments: { anIndex asInteger. anInteger asInteger })
+		executeAndFetchObjectIn: self
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> decrementSharedCounterAt: anIndex by: anInteger [
-	^ self executeScriptAndFetchObject: (String streamContents: [ :stream |
-		stream
-			nextPutAll: 'System sharedCounter: ';
-			nextPutAll: anIndex asInteger printString;
-			nextPutAll: ' decrementBy: ';
-			nextPutAll: anInteger asInteger printString ])
+	^ (GbsRemoteCommand
+		blockBody: 'System sharedCounter: arg1 decrementBy: arg2'
+		literalArguments: { anIndex asInteger. anInteger asInteger })
+		executeAndFetchObjectIn: self
 ]
 
 { #category : '*GemStone-GBS-MagLev' }

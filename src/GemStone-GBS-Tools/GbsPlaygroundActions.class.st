@@ -135,7 +135,10 @@ GbsPlaygroundActions class >> gsPrintItIn: aPlaygroundPresenter [
 	printScript := '[ ', code, ' ] value printString'.
 	activeSession := self activeSessionOrInform.
 	activeSession ifNil: [ ^ self ].
-	resultString := activeSession executeAndFetch: printScript.
+	resultString := GbsRemoteExecutionDispatcher
+		fetchScript: printScript
+		in: activeSession
+		context: 20.
 	self appendPrintedResult: resultString in: aPlaygroundPresenter.
 	GbsRemoteTranscript drainSessionLogsToWindowsAndLocal: activeSession.
 ]

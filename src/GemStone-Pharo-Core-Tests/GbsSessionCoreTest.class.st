@@ -21,7 +21,7 @@ GbsSessionCoreTest >> materializationMockSession [
 			(script includesSubstring: '9040') ifTrue: [ result := 'String' ].
 			(script includesSubstring: '9056') ifTrue: [ result := 'String' ].
 			(script includesSubstring: '9064') ifTrue: [ result := 'String' ] ].
-		(script includesSubstring: ') asString') ifTrue: [
+		((script includesSubstring: ') asString') or: [ script includesSubstring: 'object asString' ]) ifTrue: [
 			(script includesSubstring: '9040') ifTrue: [ result := 'vip' ].
 			(script includesSubstring: '9056') ifTrue: [ result := 'gold' ].
 			(script includesSubstring: '9064') ifTrue: [ result := 'paid' ] ].
@@ -36,11 +36,11 @@ GbsSessionCoreTest >> materializationMockSession [
 	mockSession stubs at: #executeScriptAndReturnOop put: [ :script | | result |
 		result := nil.
 		(script includesSubstring: '9000') ifTrue: [
-			(script includesSubstring: 'at: 1') ifTrue: [ result := 9040 ].
-			(script includesSubstring: 'at: 2') ifTrue: [ result := 9016 ] ].
+			((script includesSubstring: 'at: 1') or: [ script includesSubstring: 'value: 1' ]) ifTrue: [ result := 9040 ].
+			((script includesSubstring: 'at: 2') or: [ script includesSubstring: 'value: 2' ]) ifTrue: [ result := 9016 ] ].
 		(script includesSubstring: '9016') ifTrue: [
-			(script includesSubstring: 'at: 1') ifTrue: [ result := 9056 ].
-			(script includesSubstring: 'at: 2') ifTrue: [ result := 9064 ] ].
+			((script includesSubstring: 'at: 1') or: [ script includesSubstring: 'value: 1' ]) ifTrue: [ result := 9056 ].
+			((script includesSubstring: 'at: 2') or: [ script includesSubstring: 'value: 2' ]) ifTrue: [ result := 9064 ] ].
 		result ifNil: [ self fail ].
 		result ].
 	^ mockSession
@@ -969,6 +969,78 @@ GbsSessionCoreTest >> testWithCommitRetryCountReplaysBlockAcrossCommitConflict [
 
 	self assert: result equals: 2.
 	self assert: attempts equals: 2
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testWithGemStoneTransactionDoAbortsOnBlockError [
+	| mockSession aborts |
+	mockSession := CoreMockGbsSession new.
+	aborts := 0.
+	mockSession stubs at: #gciAbort put: [
+		aborts := aborts + 1.
+		1 ].
+
+	self
+		should: [
+			mockSession withGemStoneTransactionDo: [
+				Error signal: 'boom' ] ]
+		raise: Error.
+
+	self assert: aborts equals: 1
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testWithGemStoneTransactionDoCommitsAndReturnsResult [
+	| mockSession commits result |
+	mockSession := CoreMockGbsSession new.
+	commits := 0.
+	mockSession stubs at: #gciCommit put: [
+		commits := commits + 1.
+		1 ].
+
+	result := mockSession withGemStoneTransactionDo: [ #committed ].
+
+	self assert: result equals: #committed.
+	self assert: commits equals: 1
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testWithGemStoneTransactionRetryCountReplaysBlockAcrossCommitConflict [
+	| mockSession attempts commits aborts result |
+	mockSession := CoreMockGbsSession new.
+	attempts := 0.
+	aborts := 0.
+	commits := #(0 1) readStream.
+	mockSession stubs at: #gciCommit put: [ commits next ].
+	mockSession stubs at: #gciAbort put: [
+		aborts := aborts + 1.
+		1 ].
+
+	result := mockSession withGemStoneTransactionRetryCount: 1 do: [
+		attempts := attempts + 1.
+		attempts ].
+
+	self assert: result equals: 2.
+	self assert: attempts equals: 2.
+	self assert: aborts equals: 1
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testWithGemStoneTransactionRetryCountSignalsConflictAfterRetries [
+	| mockSession aborts |
+	mockSession := CoreMockGbsSession new.
+	aborts := 0.
+	mockSession stubs at: #gciCommit put: [ 0 ].
+	mockSession stubs at: #gciAbort put: [
+		aborts := aborts + 1.
+		1 ].
+
+	self
+		should: [
+			mockSession withGemStoneTransactionRetryCount: 0 do: [ #dirty ] ]
+		raise: GbsCommitConflictError.
+
+	self assert: aborts equals: 1
 ]
 
 { #category : 'tests' }

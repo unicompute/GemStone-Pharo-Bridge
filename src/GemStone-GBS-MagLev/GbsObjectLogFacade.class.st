@@ -107,18 +107,17 @@ GbsObjectLogFacade >> deleteIndex: anInteger [
 { #category : 'actions' }
 GbsObjectLogFacade >> deleteIndex: anInteger commit: aBoolean [
 	| result |
-	result := session executeScriptAndFetchObject: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '[
+	result := (GbsRemoteCommand
+		blockBody: '[
 		| log index |
 		log := [ ObjectLogEntry objectLog ] on: Error do: [ nil ].
-		index := ';
-			nextPutAll: anInteger asInteger printString;
-			nextPutAll: '.
+		index := arg1.
 		(log isNil or: [ index < 1 or: [ index > log size ] ])
 			ifTrue: [ false ]
 			ifFalse: [ log delete: (log at: index). true ]
-	] value' ]).
+	] value'
+		literalArguments: { anInteger asInteger })
+		executeAndFetchObjectIn: session.
 	(result == true and: [ aBoolean == true ]) ifTrue: [ session commitTransactionOrSignalConflict ].
 	^ result
 ]

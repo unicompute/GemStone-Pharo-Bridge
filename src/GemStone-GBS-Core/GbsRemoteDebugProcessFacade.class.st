@@ -66,7 +66,14 @@ GbsRemoteDebugProcessFacade >> executeScriptBody: bodyString [
 		ifTrue: [ ([ session sessionOop ] on: Error do: [ 20 ]) ifNil: [ 20 ] ]
 		ifFalse: [ 20 ].
 	((contextOop isNumber and: [ contextOop > 20 ]) not) ifTrue: [ contextOop := 20 ].
-	raw := [ session executeAndFetch: (self processScriptForBody: bodyString) context: contextOop ]
+	raw := [
+		session
+			fetchRemoteCommandBody: (self processCommandBodyFor: bodyString)
+			literalBindings: Dictionary new
+			oopBindings: (Dictionary new
+				at: 'obj' put: processOop;
+				yourself)
+			context: contextOop ]
 		on: Error
 		do: [ nil ].
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
@@ -398,13 +405,9 @@ GbsRemoteDebugProcessFacade >> processOop: anOop [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugProcessFacade >> processScriptForBody: bodyString [
-	^ String streamContents: [ :stream |
-		stream nextPutAll: '[
-		| obj proc |
-		obj := Object _objectForOop: '.
-		stream nextPutAll: processOop asString.
-		stream nextPutAll: '.
+GbsRemoteDebugProcessFacade >> processCommandBodyFor: bodyString [
+	^ '
+		| proc |
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
 		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
@@ -420,10 +423,7 @@ GbsRemoteDebugProcessFacade >> processScriptForBody: bodyString [
 				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
 		].
 		proc isNil ifTrue: [ ^ ''false'' ].
-		'.
-		stream nextPutAll: bodyString.
-		stream nextPutAll: '
-	] value' ]
+		', bodyString
 ]
 
 { #category : 'actions' }

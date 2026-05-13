@@ -36,7 +36,10 @@ GbsInspector class >> fetchReflectionStringFor: anOop session: aSession [
 		stream contents
 	] value'.
 	
-	^ aSession executeAndFetch: script.
+	^ GbsRemoteExecutionDispatcher
+		fetchScript: script
+		in: aSession
+		context: 20
 ]
 
 { #category : 'instance creation' }
@@ -98,7 +101,11 @@ GbsInspector >> evaluateCodeInContext: codeString [
 	(codeString isString and: [ codeString isEmpty not ]) ifFalse: [ ^ nil ].
 	session ifNil: [ ^ nil ].
 	contextOop := self evaluationContextOop.
-	raw := [ session executeAndFetch: codeString context: contextOop ] on: Error do: [ nil ].
+	raw := [
+		GbsRemoteExecutionDispatcher
+			fetchScript: codeString
+			in: session
+			context: contextOop ] on: Error do: [ nil ].
 	raw ifNil: [ ^ nil ].
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
 	^ raw
@@ -215,9 +222,23 @@ GbsInspector >> inspectOop: anOop session: aSession context: aContextOop [
 	evaluationContextOop := aContextOop.
 	
 	"1. Get Basic Info"
-	className := session executeAndFetch: '(Object _objectForOop: ', anOop asString, ') class name asString'.
+	className := GbsRemoteExecutionDispatcher
+		fetchCommandBody: 'object class name asString'
+		literalBindings: Dictionary new
+		oopBindings: (Dictionary new
+			at: 'object' put: anOop;
+			yourself)
+		in: session
+		context: 20.
 	classLabel label: 'Remote Class: ', className.
-	printString := session executeAndFetch: '(Object _objectForOop: ', anOop asString, ') printString'.
+	printString := GbsRemoteExecutionDispatcher
+		fetchCommandBody: 'object printString'
+		literalBindings: Dictionary new
+		oopBindings: (Dictionary new
+			at: 'object' put: anOop;
+			yourself)
+		in: session
+		context: 20.
 	
 	"2. Initialize table with 'self'"
 	items := OrderedCollection new.

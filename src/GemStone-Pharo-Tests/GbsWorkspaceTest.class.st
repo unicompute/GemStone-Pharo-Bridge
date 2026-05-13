@@ -138,3 +138,25 @@ GbsWorkspaceTest >> testGsActionAliasesRouteToPrimaryActions [
 	self assert: workspace gsPrintIt.
 	self assert: workspace didPrintIt
 ]
+
+{ #category : 'integration tests' }
+GbsWorkspaceTest >> testLiveDoItOpensRemoteDebuggerForDivideByZero [
+	| workspace liveSession |
+	liveSession := GbsLiveSessionTestSupport ensureSharedSession.
+	(GbsLiveSessionTestSupport sessionIsUsable: liveSession)
+		ifFalse: [ self skip: GbsLiveSessionTestSupport unavailableReason ].
+
+	[
+		GbsSessionParameters currentSession: liveSession.
+		workspace := TestableGbsWorkspace new.
+		workspace textEditor text: '1 / 0'.
+		workspace doIt.
+
+		self assert: workspace debuggerOpened.
+		self
+			assert: (workspace lastOpenedProcessOop isNumber
+				and: [ workspace lastOpenedProcessOop > 20 ])
+			description: 'Expected workspace live 1 / 0 to expose a GemStone debug process OOP'
+	] ensure: [
+		[ liveSession abortTransaction ] on: Error do: [ ] ]
+]

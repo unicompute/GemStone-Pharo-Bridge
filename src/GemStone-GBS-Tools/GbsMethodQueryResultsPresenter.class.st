@@ -593,7 +593,7 @@ GbsMethodQueryResultsPresenter >> showSourceForReference: referenceString [
 		meth := cls compiledMethodAt: #''', (selector copyReplaceAll: '''' with: ''''''), ''' ifAbsent: [ nil ].
 		meth ifNil: [ '''' ] ifNotNil: [ meth sourceString ]
 	] value'.
-	source := [ session executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	source := [ GbsRemoteExecutionDispatcher fetchScript: script in: session context: 20 ] on: Error do: [ '' ].
 	sourceText text: (source ifNil: [ '' ] ifNotNil: [ source asString ]).
 	self updateStatusForReference: referenceString
 ]

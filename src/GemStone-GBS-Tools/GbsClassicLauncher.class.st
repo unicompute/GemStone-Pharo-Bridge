@@ -90,7 +90,7 @@ GbsClassicLauncher class >> browseMethodsWithSubstringOnCurrentSession [
 		].
 		stream contents
 	] value'.
-	raw := [ session executeAndFetch: script context: 20 ] on: Error do: [ :ex |
+	raw := [ self fetchRemoteScript: script in: session context: 20 ] on: Error do: [ :ex |
 		UIManager default inform: 'Browse methods-with-substring failed: ', ex messageText.
 		'' ].
 	references := ((raw asString splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asSortedCollection asArray.
@@ -119,9 +119,7 @@ GbsClassicLauncher class >> browseCurrentUserGlobalsOnCurrentSession [
 	| session userName |
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
-	userName := [ session executeAndFetch: 'System myUserProfile userId asString' ]
-		on: Error
-		do: [ nil ].
+	userName := self currentUserNameIn: session.
 	(userName isNil or: [ userName trimBoth isEmpty ]) ifTrue: [
 		UIManager default inform: 'Could not determine the current GemStone user.'.
 		^ self ].
@@ -139,9 +137,7 @@ GbsClassicLauncher class >> browseSymbolListOnCurrentSession [
 	| session userName |
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
-	userName := [ session executeAndFetch: 'System myUserProfile userId asString' ]
-		on: Error
-		do: [ nil ].
+	userName := self currentUserNameIn: session.
 	(userName isNil or: [ userName trimBoth isEmpty ]) ifTrue: [
 		UIManager default inform: 'Could not determine the current GemStone user.'.
 		^ self ].
@@ -241,9 +237,29 @@ GbsClassicLauncher class >> currentSessionOrInform [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> defaultTrippyOopForSession: aSession [
-	^ [ aSession executeAndFetch: 'GsCurrentSession currentSession asOop asString' ]
+	^ [ self fetchRemoteScript: 'GsCurrentSession currentSession asOop asString' in: aSession ]
 		on: Error
 		do: [ '20' ]
+]
+
+{ #category : 'private' }
+GbsClassicLauncher class >> currentUserNameIn: aSession [
+	^ [ self fetchRemoteScript: 'System myUserProfile userId asString' in: aSession ]
+		on: Error
+		do: [ nil ]
+]
+
+{ #category : 'private' }
+GbsClassicLauncher class >> fetchRemoteScript: scriptString in: aSession [
+	^ self fetchRemoteScript: scriptString in: aSession context: 20
+]
+
+{ #category : 'private' }
+GbsClassicLauncher class >> fetchRemoteScript: scriptString in: aSession context: contextOop [
+	^ GbsRemoteExecutionDispatcher
+		fetchScript: scriptString
+		in: aSession
+		context: contextOop
 ]
 
 { #category : 'menus' }
@@ -708,7 +724,7 @@ GbsClassicLauncher class >> runGarbageCollection [
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
 	[
-		result := session executeAndFetch: 'SystemRepository markForCollection.'.
+		result := self fetchRemoteScript: 'SystemRepository markForCollection.' in: session.
 		UIManager default inform: 'Garbage Collection initiated (', result asString, ' objects marked).'
 	] on: Error do: [ :ex |
 		UIManager default inform: 'GC failed: ', ex messageText
@@ -935,7 +951,7 @@ GbsClassicLauncher class >> queryOrganizerMethodsFor: tokenString mode: modeStri
 				stream nextPutAll: cls; nextPutAll: ''>>''; nextPutAll: sel; lf ] ].
 		stream contents
 	] value'.
-	raw := [ aSession executeAndFetch: script context: 20 ] on: Error do: [ '' ].
+	raw := [ self fetchRemoteScript: script in: aSession context: 20 ] on: Error do: [ '' ].
 	raw := raw ifNil: [ '' ] ifNotNil: [ raw asString ].
 	^ ((raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asSet asArray asSortedCollection asArray
 ]
@@ -1143,10 +1159,23 @@ GbsClassicLauncher >> browserClass [
 ]
 
 { #category : 'private' }
+GbsClassicLauncher >> fetchRemoteScript: scriptString in: aSession [
+	^ self class fetchRemoteScript: scriptString in: aSession
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> isLiveGemStoneSession: anObject [
+	anObject ifNil: [ ^ false ].
+	(anObject respondsTo: #fetchRemoteCommand:context:) ifTrue: [ ^ true ].
+	(anObject respondsTo: #serverInterface) ifTrue: [ ^ true ].
+	^ false
+]
+
+{ #category : 'private' }
 GbsClassicLauncher >> browsingSessionFrom: selectedObject [
 	"Classic launcher list can contain parameter records, but browsers need a live GbsSession."
 	selectedObject ifNil: [ ^ nil ].
-	(selectedObject respondsTo: #executeAndFetch:) ifTrue: [ ^ selectedObject ].
+	(self isLiveGemStoneSession: selectedObject) ifTrue: [ ^ selectedObject ].
 	(selectedObject class name = #GbsSessionParameters)
 		ifTrue: [ ^ GbsSessionParameters currentSession ].
 	^ GbsSessionParameters currentSession
@@ -1516,7 +1545,7 @@ GbsClassicLauncher >> openBrowserForQuery [
 GbsClassicLauncher >> openBrowserOn: aSession dictionary: aDictionaryName [
 	| browser |
 	(self isSessionUsableForBrowsing: aSession) ifFalse: [ ^ false ].
-	((aSession respondsTo: #executeAndFetch:) not) ifTrue: [
+	(self isLiveGemStoneSession: aSession) ifFalse: [
 		self inform: 'Selected item is not a live GemStone session.'.
 		^ false
 	].
@@ -1582,9 +1611,7 @@ GbsClassicLauncher >> openCurrentUserGlobals [
 		self inform: 'Select or log into a GemStone session first.'.
 		^ false
 	].
-	userName := [ session executeAndFetch: 'System myUserProfile userId asString' ]
-		on: Error
-		do: [ nil ].
+	userName := self class currentUserNameIn: session.
 	(userName isNil or: [ userName trimBoth isEmpty ]) ifTrue: [
 		self inform: 'Could not determine the current GemStone user.'.
 		^ false
@@ -1609,9 +1636,7 @@ GbsClassicLauncher >> openSymbolListBrowser [
 		self inform: 'Select or log into a GemStone session first.'.
 		^ false
 	].
-	userName := [ session executeAndFetch: 'System myUserProfile userId asString' ]
-		on: Error
-		do: [ nil ].
+	userName := self class currentUserNameIn: session.
 	(userName isNil or: [ userName trimBoth isEmpty ]) ifTrue: [
 		self inform: 'Could not determine the current GemStone user.'.
 		^ false

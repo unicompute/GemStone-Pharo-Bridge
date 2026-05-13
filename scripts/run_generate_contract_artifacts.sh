@@ -7,6 +7,7 @@ VM="${PHARO_VM:-/Users/tariq/Documents/Pharo/vms/130-x64/Pharo.app/Contents/MacO
 SRC_IMAGE="${1:-/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image}"
 WORK_DIR="${2:-$(dirname "${SRC_IMAGE}")}"
 WORK_IMAGE="$(gbs_prepare_work_image "${SRC_IMAGE}" "${WORK_DIR}" "graphartifacts")"
+gbs_register_work_image_cleanup "${WORK_IMAGE}"
 
 echo "Using work image: ${WORK_IMAGE}"
 

@@ -1275,7 +1275,8 @@ GbsNamespacesPresenterMagLevToolsTest >> testNamespacesRequireSelectedFileUsesRu
 	mockSession := CoreMockGbsSession new.
 	lastScript := ''.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'RubyContext default requireFileNamed: ''foo.rb'' env: 1')
+		((script includesSubstring: 'RubyContext default requireFileNamed:')
+			and: [ script includesSubstring: '''foo.rb''' ])
 			ifTrue: [
 				lastScript := script.
 				^ true ].
@@ -1289,7 +1290,8 @@ GbsNamespacesPresenterMagLevToolsTest >> testNamespacesRequireSelectedFileUsesRu
 	presenter enqueueRequestAnswer: 'foo.rb'.
 
 	self assert: presenter requireSelectedFile.
-	self assert: (lastScript includesSubstring: 'RubyContext default requireFileNamed: ''foo.rb'' env: 1')
+	self assert: (lastScript includesSubstring: 'RubyContext default requireFileNamed:').
+	self assert: (lastScript includesSubstring: '''foo.rb''')
 ]
 
 { #category : 'tests' }
@@ -1337,7 +1339,8 @@ GbsNamespacesPresenterMagLevToolsTest >> testNamespacesLoadSelectedFileUsesRubyR
 	mockSession := CoreMockGbsSession new.
 	lastScript := ''.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'RubyContext default loadFileNamed: ''bar.rb'' env: 1')
+		((script includesSubstring: 'RubyContext default loadFileNamed:')
+			and: [ script includesSubstring: '''bar.rb''' ])
 			ifTrue: [
 				lastScript := script.
 				^ 'loaded' ].
@@ -1351,7 +1354,8 @@ GbsNamespacesPresenterMagLevToolsTest >> testNamespacesLoadSelectedFileUsesRubyR
 	presenter enqueueRequestAnswer: 'bar.rb'.
 
 	self assert: presenter loadSelectedFile.
-	self assert: (lastScript includesSubstring: 'RubyContext default loadFileNamed: ''bar.rb'' env: 1')
+	self assert: (lastScript includesSubstring: 'RubyContext default loadFileNamed:').
+	self assert: (lastScript includesSubstring: '''bar.rb''')
 ]
 
 { #category : 'tests' }
@@ -1504,7 +1508,8 @@ GbsNamespacesPresenterMagLevToolsTest >> testNamespacesRequireSelectedAutoloadUs
 	mockSession := CoreMockGbsSession new.
 	lastScript := ''.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'RubyContext default requireFileNamed: ''lib/lazy_thing.rb'' env: 1')
+		((script includesSubstring: 'RubyContext default requireFileNamed:')
+			and: [ script includesSubstring: '''lib/lazy_thing.rb''' ])
 			ifTrue: [
 				lastScript := script.
 				^ true ].
@@ -1523,7 +1528,8 @@ GbsNamespacesPresenterMagLevToolsTest >> testNamespacesRequireSelectedAutoloadUs
 	presenter instVarNamed: 'autoloadTable' put: fakeAutoloadTable.
 
 	self assert: presenter requireSelectedAutoload.
-	self assert: (lastScript includesSubstring: 'RubyContext default requireFileNamed: ''lib/lazy_thing.rb'' env: 1')
+	self assert: (lastScript includesSubstring: 'RubyContext default requireFileNamed:').
+	self assert: (lastScript includesSubstring: '''lib/lazy_thing.rb''')
 ]
 
 { #category : 'tests' }

@@ -566,6 +566,25 @@ GbsRemoteDebuggerPresenterTest >> testRestartPromotesExecutedCodeFrameToTopAndSe
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerPresenterTest >> testStackNavigatorPrefersLikelyUserFrame [
+	| internalContext userContext navigator |
+	internalContext := GbxFakeContextForRemoteDebugger new
+		methodClass: 'AbstractException';
+		selector: #signal;
+		sourceString: 'signal';
+		yourself.
+	userContext := GbxFakeContextForRemoteDebugger new
+		methodClass: 'Invoice';
+		selector: #total;
+		sourceString: 'total ^ 42';
+		yourself.
+	debugger instVarNamed: 'contextList' put: { internalContext. userContext }.
+	navigator := GbsRemoteDebuggerStackNavigator on: debugger.
+
+	self assert: navigator preferredInitialContextIndex equals: 2
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testMoveSourceCursorToStartSelectsFirstCharacter [
 	| fakeText |
 	fakeText := GbxFakeTextPresenterForRemoteDebugger new.

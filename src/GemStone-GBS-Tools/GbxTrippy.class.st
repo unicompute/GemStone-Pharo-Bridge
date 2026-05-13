@@ -99,7 +99,7 @@ GbxTrippy >> buildItemsForOop: anOop className: className [
 		stream contents
 	] value'.
 	
-	result := session executeAndFetch: script.
+	result := self fetchRemoteScript: script.
 	result ifNotNil: [
 		result splitOn: Character lf do: [ :line |
 			line isNotEmpty ifTrue: [
@@ -166,7 +166,7 @@ GbxTrippy >> doItSelected [
 	oop ifNil: [ ^ self ].
 	
 	script := '(Object _objectForOop: ', oop asString, ') yourself'.
-	result := session executeAndFetch: script.
+	result := self fetchRemoteScript: script.
 	
 	InformDialog inform: 'Do it completed. Result: ', result asString.
 ]
@@ -182,7 +182,7 @@ GbxTrippy >> fetchClassNameForOop: anOop [
 		obj class name
 	] value'.
 	
-	^ session executeAndFetch: script.
+	^ self fetchRemoteScript: script
 ]
 
 { #category : 'fetching' }
@@ -196,7 +196,15 @@ GbxTrippy >> fetchSizeForOop: anOop [
 		obj size
 	] value'.
 	
-	^ session executeAndFetch: script.
+	^ self fetchRemoteScript: script
+]
+
+{ #category : 'fetching' }
+GbxTrippy >> fetchRemoteScript: scriptString [
+	^ GbsRemoteExecutionDispatcher
+		fetchScript: scriptString
+		in: session
+		context: 20
 ]
 
 { #category : 'navigation' }

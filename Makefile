@@ -1,4 +1,4 @@
-.PHONY: help core-only original original-tests bootstrap-smoke full verify graph-artifacts artifact-freshness original-drift maglev-doc-pdfs
+.PHONY: help core-only original original-tests bootstrap-smoke full live-debugger debugger-perf regression-gates verify graph-artifacts artifact-freshness original-drift maglev-doc-pdfs
 
 PHARO_IMAGE ?= /Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image
 PHARO_WORK_DIR ?= /Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean
@@ -24,8 +24,17 @@ help:
 		"    Run the full clean reload and regression lane." \
 		"    The live lane runs only when GS_USER and GS_PASS are set." \
 		"" \
+		"  make live-debugger" \
+		"    Validate live GemStone credentials/netldi/stone, then run debugger/workspace live acceptance tests." \
+		"" \
+		"  make debugger-perf" \
+		"    Validate live GemStone credentials/netldi/stone, then record remote debugger latency baselines." \
+		"" \
+		"  make regression-gates" \
+		"    Enforce debugger size, helper delegation, legacy-alias, and remote-script construction guardrails." \
+		"" \
 		"  make verify" \
-		"    Run core-only, bootstrap-smoke, original, original-drift, original-tests, full, artifact-freshness, then the summary-renderer smoke check." \
+		"    Run regression-gates, core-only, bootstrap-smoke, original, original-drift, original-tests, full, artifact-freshness, then the summary-renderer smoke check." \
 		"" \
 		"  make graph-artifacts" \
 		"    Regenerate package-graph and verification-lane artifacts in doc/." \
@@ -59,7 +68,17 @@ bootstrap-smoke:
 full:
 	./scripts/run_clean_reload_and_regressions.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
 
+live-debugger:
+	bash ./scripts/run_live_debugger.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
+
+debugger-perf:
+	bash ./scripts/run_debugger_performance_baseline.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
+
+regression-gates:
+	bash ./scripts/check_bridge_regression_gates.sh
+
 verify:
+	bash ./scripts/check_bridge_regression_gates.sh
 	bash ./scripts/run_verify.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
 
 graph-artifacts:

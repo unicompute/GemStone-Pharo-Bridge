@@ -102,6 +102,23 @@ GbxDebuggerServiceLiveTest >> requireLiveConnectedSession [
 	session ifNil: [ self skip: GbsLiveSessionTestSupport unavailableReason ]
 ]
 
+{ #category : 'private' }
+GbxDebuggerServiceLiveTest >> withRemoteDebuggerSessionForFaultingScript: sourceString do: aBlock [
+	| remoteDebugger |
+	remoteDebugger := nil.
+	^ [
+		remoteDebugger := self buildHeadlessDebuggerForFaultingScript: sourceString.
+		aBlock value: remoteDebugger
+	] ensure: [
+		remoteDebugger ifNotNil: [
+			[ remoteDebugger terminate ] on: Error do: [ ] ].
+		service ifNotNil: [
+			self assert: ([ service isTerminated ] on: Error do: [ false ])
+				description: 'Expected live debugger cleanup to terminate the GemStone debug process' ].
+		session ifNotNil: [
+			[ session abortTransaction ] on: Error do: [ ] ] ]
+]
+
 { #category : 'running' }
 GbxDebuggerServiceLiveTest >> setUp [
 	super setUp.
@@ -129,29 +146,62 @@ GbxDebuggerServiceLiveTest >> tearDown [
 ]
 
 { #category : 'integration tests' }
+GbxDebuggerServiceLiveTest >> testDebuggerAcceptanceOpensShowsStackSourceProxyAndAbortCleansTransaction [
+	| contexts sourcePresenter sourceText proxy probeExists |
+	self requireLiveConnectedSession.
+
+	self withRemoteDebuggerSessionForFaultingScript: '1 / 0' do: [ :remoteDebugger |
+		debugger := remoteDebugger.
+
+		contexts := debugger instVarNamed: 'contextList'.
+		self assert: contexts notEmpty description: 'Expected live debugger stack frames for 1 / 0'.
+
+		sourcePresenter := debugger instVarNamed: 'sourceText'.
+		sourceText := sourcePresenter text.
+		self assert: sourceText notEmpty description: 'Expected source lookup to populate the debugger source pane'.
+		self
+			assert: ((sourceText includesSubstring: '1 / 0') or: [ sourceText includesSubstring: '1/0' ])
+			description: 'Expected debugger source lookup to include the faulting expression'.
+
+		proxy := session proxyForOop: debugger processOop.
+		self assert: proxy oop equals: debugger processOop.
+
+		session withGemStoneTransactionDo: [
+			session
+				execute: 'UserGlobals removeKey: #GbsDebuggerAcceptanceDirtyProbe ifAbsent: [ ]. true' ].
+		session
+			execute: 'UserGlobals at: #GbsDebuggerAcceptanceDirtyProbe put: ''dirty''. true'.
+		session abortTransaction.
+		probeExists := session evaluate: 'UserGlobals includesKey: #GbsDebuggerAcceptanceDirtyProbe'.
+		self deny: probeExists description: 'Expected abortTransaction to remove uncommitted live debugger probe state' ]
+]
+
+{ #category : 'integration tests' }
 GbxDebuggerServiceLiveTest >> testRepeatedRestartResetsExecutedCodeToStepOneForMultiStatementScript [
 	| executed |
 	self requireLiveConnectedSession.
 
 	self
-		buildHeadlessDebuggerForFaultingScript:
-			'1/1.', String lf, String lf, '1/2.', String lf, String lf, '1/0'.
+		withRemoteDebuggerSessionForFaultingScript:
+			'1/1.', String lf, String lf, '1/2.', String lf, String lf, '1/0'
+		do: [ :remoteDebugger |
+			debugger := remoteDebugger.
 
-	self assert: debugger restart description: 'First restart should succeed'.
-	self assertExecutedCodeStep: 1 line: 1.
+			self assert: debugger restart description: 'First restart should succeed'.
+			self assertExecutedCodeStep: 1 line: 1.
 
-	self assert: debugger stepOver description: 'Step after first restart should advance from the restart anchor'.
-	executed := self executedCodeContext.
-	self assert: executed notNil.
-	self assert: executed quickStepPoint > 1.
-	self assert: executed displayedLineNumber < 5.
+			self assert: debugger stepOver description: 'Step after first restart should advance from the restart anchor'.
+			executed := self executedCodeContext.
+			self assert: executed notNil.
+			self assert: executed quickStepPoint > 1.
+			self assert: executed displayedLineNumber < 5.
 
-	self assert: debugger restart description: 'Second restart should also reset the executed frame'.
-	self assertExecutedCodeStep: 1 line: 1.
+			self assert: debugger restart description: 'Second restart should also reset the executed frame'.
+			self assertExecutedCodeStep: 1 line: 1.
 
-	self assert: debugger stepOver description: 'Step after second restart should again advance from step 1'.
-	executed := self executedCodeContext.
-	self assert: executed notNil.
-	self assert: executed quickStepPoint > 1.
-	self assert: executed displayedLineNumber < 5.
+			self assert: debugger stepOver description: 'Step after second restart should again advance from step 1'.
+			executed := self executedCodeContext.
+			self assert: executed notNil.
+			self assert: executed quickStepPoint > 1.
+			self assert: executed displayedLineNumber < 5 ]
 ]

@@ -196,7 +196,7 @@ GbxDebuggerService >> synchronizeServerProgramCounterAfterRestart [
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
-GbxDebuggerService >> legacyCompileLookup [
+GbxDebuggerService >> compatibilityCompileLookup [
 	| className selector isMeta |
 	className := self selectedMethodClassName.
 	selector := self selectedMethodSelector.
@@ -212,46 +212,45 @@ GbxDebuggerService >> legacyCompileLookup [
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
-GbxDebuggerService >> legacyCompileResponseForSource: sourceText correctingSelector: allowSelectorCorrection [
-	| lookup escapedSource raw |
-	lookup := self legacyCompileLookup.
+GbxDebuggerService >> compatibilityCompileResponseForSource: sourceText correctingSelector: allowSelectorCorrection [
+	| lookup escapedSource raw script |
+	lookup := self compatibilityCompileLookup.
 	lookup ifNil: [ ^ nil ].
 	escapedSource := sourceText
 		ifNil: [ '' ]
 		ifNotNil: [ :each | (each asString copyReplaceAll: String cr with: String lf) copyReplaceAll: '''' with: '''''' ].
-	raw := [ session
-		executeAndFetch: (String streamContents: [ :stream |
-			stream nextPutAll: '[
+	script := String streamContents: [ :stream |
+		stream nextPutAll: '[
 		| cls oldSel protocol result newSel source |
 		cls := Smalltalk at: '.
-			stream nextPutAll: lookup first storeString.
-			stream nextPutAll: ' ifAbsent: [ nil ].
+		stream nextPutAll: lookup first storeString.
+		stream nextPutAll: ' ifAbsent: [ nil ].
 		cls ifNil: [ ^ ''ERROR|Class not found'' ].
 		'.
-			lookup third ifTrue: [ stream nextPutAll: 'cls := cls class.' ].
-			stream nextPutAll: '
+		lookup third ifTrue: [ stream nextPutAll: 'cls := cls class.' ].
+		stream nextPutAll: '
 		oldSel := '.
-			stream nextPutAll: lookup second storeString.
-			stream nextPutAll: '.
+		stream nextPutAll: lookup second storeString.
+		stream nextPutAll: '.
 		source := '''.
-			stream nextPutAll: escapedSource.
-			stream nextPutAll: '''.
+		stream nextPutAll: escapedSource.
+		stream nextPutAll: '''.
 		protocol := '.
-			stream nextPutAll: lookup fourth storeString.
-			stream nextPutAll: '.
+		stream nextPutAll: lookup fourth storeString.
+		stream nextPutAll: '.
 		result := [ cls compileMethod: source category: protocol ] on: Error do: [ :ex | ''ERROR|'', ex description ].
 		(result isString and: [ result beginsWith: ''ERROR|'' ]) ifTrue: [ ^ result ].
 		'.
-			allowSelectorCorrection ifTrue: [
-				stream nextPutAll: '
+		allowSelectorCorrection ifTrue: [
+			stream nextPutAll: '
 		newSel := [ result selector ] on: Error do: [ oldSel ].
 		(newSel ~= oldSel and: [ cls includesSelector: oldSel ]) ifTrue: [
 			[ cls removeSelector: oldSel ] on: Error do: [ :ex | ]
 		].' ].
-			stream nextPutAll: '
+		stream nextPutAll: '
 		''OK''
-	] value' ])
-		context: session sessionOop ]
+	] value' ].
+	raw := [ self fetchRemoteScript: script context: session sessionOop ]
 		on: Error
 		do: [ nil ].
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
@@ -259,11 +258,11 @@ GbxDebuggerService >> legacyCompileResponseForSource: sourceText correctingSelec
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
-GbxDebuggerService >> legacyCorrectedCompileResponseForSource: sourceText [
-	^ self legacyCompileResponseForSource: sourceText correctingSelector: true
+GbxDebuggerService >> compatibilityCorrectedCompileResponseForSource: sourceText [
+	^ self compatibilityCompileResponseForSource: sourceText correctingSelector: true
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
-GbxDebuggerService >> legacyRecompileResponseForSource: sourceText [
-	^ self legacyCompileResponseForSource: sourceText correctingSelector: false
+GbxDebuggerService >> compatibilityRecompileResponseForSource: sourceText [
+	^ self compatibilityCompileResponseForSource: sourceText correctingSelector: false
 ]

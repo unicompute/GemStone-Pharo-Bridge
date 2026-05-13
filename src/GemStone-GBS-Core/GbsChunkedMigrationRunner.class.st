@@ -146,7 +146,7 @@ GbsChunkedMigrationRunner >> migrateChunkScriptForOops: oopCollection [
 
 { #category : 'actions' }
 GbsChunkedMigrationRunner >> prepareCheckpoint [
-	^ session withCommitRetryCount: self maxCommitRetries do: [
+	^ session withGemStoneTransactionRetryCount: self maxCommitRetries do: [
 		| oops |
 		oops := session executeScriptAndFetchObject: self listInstanceOopsScript.
 		oops ifNil: [ oops := #() ].
@@ -172,7 +172,7 @@ GbsChunkedMigrationRunner >> runNextChunk [
 			#migrated -> 0.
 			#remaining -> 0.
 			#committed -> true } asDictionary ].
-	^ session withCommitRetryCount: self maxCommitRetries do: [
+	^ session withGemStoneTransactionRetryCount: self maxCommitRetries do: [
 		batchCount := self chunkSize min: remaining size.
 		batch := (remaining copyFrom: 1 to: batchCount) asArray.
 		migratedCount := session executeScriptAndFetchObject: (self migrateChunkScriptForOops: batch).
@@ -213,7 +213,7 @@ GbsChunkedMigrationRunner >> runToCompletionAndMarkApplied [
 GbsChunkedMigrationRunner >> markAppliedVersion [
 	| versions |
 	version ifNil: [ ^ self ].
-	^ session withCommitRetryCount: self maxCommitRetries do: [
+	^ session withGemStoneTransactionRetryCount: self maxCommitRetries do: [
 		versions := self appliedVersions asOrderedCollection.
 		(versions includes: version) ifFalse: [ versions add: version ].
 		self checkpointRoot at: self appliedVersionsKey put: versions asArray.
@@ -224,7 +224,7 @@ GbsChunkedMigrationRunner >> markAppliedVersion [
 GbsChunkedMigrationRunner >> unmarkAppliedVersion [
 	| versions |
 	version ifNil: [ ^ #() ].
-	^ session withCommitRetryCount: self maxCommitRetries do: [
+	^ session withGemStoneTransactionRetryCount: self maxCommitRetries do: [
 		versions := self appliedVersions asOrderedCollection.
 		versions remove: version ifAbsent: [ ].
 		self checkpointRoot at: self appliedVersionsKey put: versions asArray.

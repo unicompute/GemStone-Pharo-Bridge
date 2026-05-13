@@ -2,18 +2,14 @@ Extension { #name : 'GbsRemoteMethodObject' }
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsRemoteMethodObject >> toProc [
-	| targetProxy rawProcOop procOop |
+	| targetProxy rawProcOop procOop builder |
 	targetProxy := self effectiveReceiverProxy.
-	rawProcOop := self session executeScriptAndFetchObject: (String streamContents: [ :stream |
-		stream nextPutAll: '[
-		| receiver meth proc |
-		receiver := Object _objectForOop: '.
-		stream nextPutAll: targetProxy oop asString.
-		stream nextPutAll: '.
+	builder := GbsRemoteScriptBuilder new.
+	rawProcOop := (GbsRemoteCommand
+		blockBody: '[
+		| meth proc |
 		receiver ifNil: [ ^ ''0'' ].
-		meth := [ receiver method: '.
-		stream nextPutAll: (self session marshalArgumentToScript: self selector asSymbol).
-		stream nextPutAll: ' ] on: Error do: [ nil ].
+		meth := [ receiver method: selector ] on: Error do: [ nil ].
 		meth ifNil: [ ^ ''0'' ].
 		proc := [ (meth respondsTo: #to_proc)
 			ifTrue: [ meth to_proc ]
@@ -22,7 +18,12 @@ GbsRemoteMethodObject >> toProc [
 				ifFalse: [ nil ] ] ] on: Error do: [ nil ].
 		proc ifNil: [ ^ ''0'' ].
 		(Reflection oopOf: proc) asString
-	] value' ]).
+	] value'
+		argumentNames: #('receiver' 'selector')
+		argumentScripts: {
+			builder objectForOop: targetProxy oop.
+			builder literalFor: self selector asSymbol })
+		executeAndFetchObjectIn: self session.
 	rawProcOop ifNil: [ ^ nil ].
 	(rawProcOop respondsTo: #asLocalString) ifTrue: [ rawProcOop := rawProcOop asLocalString ].
 	procOop := [ rawProcOop asString asInteger ]

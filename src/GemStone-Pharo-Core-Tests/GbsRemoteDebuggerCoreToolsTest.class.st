@@ -1096,3 +1096,22 @@ GbsRemoteDebuggerCoreToolsTest >> testFetchFullSourceForUsesRemoteProcessFacade 
 
 	self assert: source equals: 'line1', Character tab asString, 'value', String lf, 'line2', String cr, 'value'
 ]
+
+{ #category : 'tests' }
+GbsRemoteDebuggerCoreToolsTest >> testWithRemoteDebuggerSessionTerminatesAndAborts [
+	| session aborts result |
+	session := CoreMockGbsSession new.
+	aborts := 0.
+	session stubs at: #gciAbort put: [
+		aborts := aborts + 1.
+		1 ].
+	debugger session: session.
+
+	result := debugger withRemoteDebuggerSessionDo: [ :remoteDebugger |
+		self assert: remoteDebugger == debugger.
+		#ok ].
+
+	self assert: result equals: #ok.
+	self assert: service terminateCalls equals: 1.
+	self assert: aborts equals: 1
+]

@@ -164,7 +164,10 @@ GbsWorkspace >> gemStonePrintIt [
 	activeSession ifNil: [ ^ self inform: 'No Session' ].
 	
 	"3. Delegate execution entirely to GbsSession"
-	resultString := activeSession executeAndFetch: printScript.
+	resultString := GbsRemoteExecutionDispatcher
+		fetchScript: printScript
+		in: activeSession
+		context: 20.
 	
 	"4. Append directly to UI textEditor"
 	currentText := textEditor text ifNil: [ '' ].

@@ -56,14 +56,27 @@ GbsInspector >> initializePresenters [
 
 { #category : '*GemStone-GBS-Core-Tools' }
 GbsInspector >> inspectOop: anOop session: aSession context: aContextOop [
-	| className printString rawData parsedItems items |
+	| className printString rawData parsedItems items oopBindings |
 	oop := anOop.
 	session := aSession.
 	evaluationContextOop := aContextOop.
+	oopBindings := Dictionary new
+		at: 'object' put: anOop;
+		yourself.
 
-	className := session executeAndFetch: '(Object _objectForOop: ', anOop asString, ') class name asString'.
+	className := GbsRemoteExecutionDispatcher
+		fetchCommandBody: 'object class name asString'
+		literalBindings: Dictionary new
+		oopBindings: oopBindings
+		in: session
+		context: 20.
 	classLabel label: 'Remote Class: ', className.
-	printString := session executeAndFetch: '(Object _objectForOop: ', anOop asString, ') printString'.
+	printString := GbsRemoteExecutionDispatcher
+		fetchCommandBody: 'object printString'
+		literalBindings: Dictionary new
+		oopBindings: oopBindings
+		in: session
+		context: 20.
 
 	items := OrderedCollection new.
 	items add: { 'self' . printString . anOop }.
@@ -350,7 +363,14 @@ GbsInspector >> requestPositiveInteger: promptString initialAnswer: defaultStrin
 GbsInspector >> remoteClassNameForOop: anOop [
 	session ifNil: [ ^ nil ].
 	(anOop isInteger and: [ anOop > 20 ]) ifFalse: [ ^ nil ].
-	^ [ session executeAndFetch: '(Object _objectForOop: ', anOop asString, ') class name asString' ]
+	^ [ GbsRemoteExecutionDispatcher
+		fetchCommandBody: 'object class name asString'
+		literalBindings: Dictionary new
+		oopBindings: (Dictionary new
+			at: 'object' put: anOop;
+			yourself)
+		in: session
+		context: 20 ]
 		on: Error
 		do: [ nil ]
 ]

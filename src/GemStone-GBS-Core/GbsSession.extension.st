@@ -6,6 +6,64 @@ GbsSession >> bridgeRoot [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> remoteScriptBuilder [
+	^ GbsRemoteScriptBuilder new
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> executeRemoteCommand: aRemoteCommand [
+	^ aRemoteCommand evaluateIn: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> fetchRemoteCommand: aRemoteCommand [
+	^ aRemoteCommand executeAndFetchObjectIn: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> fetchRemoteCommand: aRemoteCommand context: anOop [
+	^ aRemoteCommand executeAndFetchIn: self context: anOop
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> fetchRemoteCommandBody: bodyString literalBindings: literalDictionary oopBindings: oopDictionary context: anOop [
+	^ self
+		fetchRemoteCommand: (GbsRemoteCommand
+			blockBody: bodyString
+			literalBindings: literalDictionary
+			oopBindings: oopDictionary)
+		context: anOop
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> fetchRemoteScript: scriptString context: anOop [
+	"Compatibility helper for existing free-form scripts. New tool paths should prefer
+	fetchRemoteCommandBody:literalBindings:oopBindings:context:."
+	^ self
+		fetchRemoteCommand: (GbsRemoteCommand compatibilityScript: scriptString)
+		context: anOop
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> remoteCommand: aString [
+	"Compatibility constructor for free-form scripts. Prefer GbsRemoteCommand blockBody:* APIs."
+	^ GbsRemoteCommand compatibilityScript: aString
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> returnRemoteCommandOop: aRemoteCommand [
+	^ aRemoteCommand executeAndReturnOopIn: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> returnRemoteCommandBody: bodyString literalBindings: literalDictionary oopBindings: oopDictionary [
+	^ self returnRemoteCommandOop: (GbsRemoteCommand
+		blockBody: bodyString
+		literalBindings: literalDictionary
+		oopBindings: oopDictionary)
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> abortTransaction [
 	"Aborts the current transaction."
 
@@ -247,7 +305,7 @@ GbsSession >> executeScriptAndReturnOop: aString [
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> fetchTranscriptLogs [
 	| rawText |
-	rawText := self executeAndFetch: '[
+	rawText := self fetchRemoteScript: '[
 		| fetched log text |
 		fetched := (Transcript respondsTo: #fetchAndClear)
 			ifTrue: [ [ Transcript fetchAndClear ] on: Error do: [ nil ] ]
@@ -260,7 +318,7 @@ GbsSession >> fetchTranscriptLogs [
 				stream cr ] ].
 		UserGlobals at: #PharoTranscriptLog put: OrderedCollection new.
 		text
-	] value'.
+	] value' context: 20.
 	(rawText beginsWith: 'Error:') ifTrue: [ ^ '' ].
 	^ rawText
 ]
@@ -667,66 +725,61 @@ GbsSession >> proxyCache [
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> remoteArrayElementOopAt: anInteger ofOop: anOop [
-	^ self executeScriptAndReturnOop: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '(Object _objectForOop: ';
-			nextPutAll: anOop printString;
-			nextPutAll: ') at: ';
-			nextPutAll: anInteger printString ])
+	^ self
+		returnRemoteCommandBody: 'object at: index'
+		literalBindings: (Dictionary new
+			at: 'index' put: anInteger;
+			yourself)
+		oopBindings: (Dictionary new
+			at: 'object' put: anOop;
+			yourself)
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> remoteAssociationPairOopFor: anOop [
-	^ self executeScriptAndReturnOop: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '| assoc | assoc := Object _objectForOop: ';
-			nextPutAll: anOop printString;
-			nextPutAll: '. Array with: assoc key with: assoc value' ])
+	^ self
+		returnRemoteCommandBody: 'Array with: assoc key with: assoc value'
+		literalBindings: Dictionary new
+		oopBindings: (Dictionary new
+			at: 'assoc' put: anOop;
+			yourself)
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> remoteClassNameForOop: anOop [
-	^ self executeAndFetch: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '(Object _objectForOop: ';
-			nextPutAll: anOop printString;
-			nextPutAll: ') class name asString' ])
+	^ self
+		fetchRemoteCommandBody: 'object class name asString'
+		literalBindings: Dictionary new
+		oopBindings: (Dictionary new
+			at: 'object' put: anOop;
+			yourself)
+		context: 20
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> remoteCollectionAsArrayOop: anOop [
-	^ self executeScriptAndReturnOop: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '(Object _objectForOop: ';
-			nextPutAll: anOop printString;
-			nextPutAll: ') asArray' ])
+	^ self executeScriptAndReturnOop: (self remoteScriptBuilder objectForOop: anOop) , ' asArray'
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> remoteDictionaryAssociationsAsArrayOop: anOop [
-	^ self executeScriptAndReturnOop: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '(Object _objectForOop: ';
-			nextPutAll: anOop printString;
-			nextPutAll: ') associations asArray' ])
+	^ self executeScriptAndReturnOop: (self remoteScriptBuilder objectForOop: anOop) , ' associations asArray'
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> remoteSizeForOop: anOop [
-	^ self executeScriptAndFetchObject: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '(Object _objectForOop: ';
-			nextPutAll: anOop printString;
-			nextPutAll: ') size' ])
+	^ self executeScriptAndFetchObject: (self remoteScriptBuilder objectForOop: anOop) , ' size'
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> remoteStringValueForOop: anOop [
-	^ self executeAndFetch: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '(Object _objectForOop: ';
-			nextPutAll: anOop printString;
-			nextPutAll: ') asString' ])
+	^ self
+		fetchRemoteCommandBody: 'object asString'
+		literalBindings: Dictionary new
+		oopBindings: (Dictionary new
+			at: 'object' put: anOop;
+			yourself)
+		context: 20
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -955,6 +1008,39 @@ GbsSession >> withCommitRetryCount: aRetryCount do: aBlock [
 		result := aBlock value.
 		(self commitTransaction) ifTrue: [ ^ result ].
 		attempt < attempts ifTrue: [ self abortTransaction ] ].
+	GbsCommitConflictError
+		signal: 'GemStone commit conflict after ', attempts printString, ' attempts.'
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> withGemStoneTransactionDo: aBlock [
+	^ self withGemStoneTransactionRetryCount: 0 do: aBlock
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> withGemStoneTransactionRetryCount: aRetryCount do: aBlock [
+	"Run a block inside the current GemStone transaction boundary.
+	 Commit with explicit conflict signalling, abort after block errors, and
+	 retry the whole block for commit conflicts when requested."
+	| retries attempts result handledConflict |
+	retries := (aRetryCount ifNil: [ 0 ] ifNotNil: [ aRetryCount asInteger ]) max: 0.
+	attempts := retries + 1.
+	1 to: attempts do: [ :attempt |
+		handledConflict := false.
+		[
+			[
+				result := aBlock value.
+				self commitTransactionOrSignalConflict.
+				^ result
+			] on: GbsCommitConflictError do: [ :ex |
+				handledConflict := true.
+				self abortTransaction.
+				attempt = attempts
+					ifTrue: [ ex pass ] ]
+		] on: Error do: [ :ex |
+			handledConflict ifFalse: [
+				[ self abortTransaction ] on: Error do: [ :abortEx | ] ].
+			ex pass ] ].
 	GbsCommitConflictError
 		signal: 'GemStone commit conflict after ', attempts printString, ' attempts.'
 ]

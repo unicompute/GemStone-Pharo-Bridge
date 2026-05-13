@@ -424,9 +424,9 @@ GbsRemoteNamespaceMirror >> retryAutoloadScriptFor: aConstantName usingSourceKin
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsRemoteNamespaceMirror >> supportsAutoload [
-	^ session executeScriptAndFetchObject: (String streamContents: [ :stream |
-		stream nextPutAll: '[:ns | '.
-		stream nextPutAll: 'ns notNil and: [ ns respondsTo: #rubyAutoload:file: ]'.
-		stream nextPutAll: '] value: '.
-		stream nextPutAll: self namespaceExpression ])
+	^ (GbsRemoteCommand
+		blockBody: 'ns notNil and: [ ns respondsTo: #rubyAutoload:file: ]'
+		argumentNames: #('ns')
+		argumentScripts: { self namespaceExpression })
+		executeAndFetchObjectIn: session
 ]

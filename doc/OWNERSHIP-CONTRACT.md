@@ -78,10 +78,15 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GbsPlaygroundMenuTypedWrapperLifecycleReportCommand` instance side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
 - `GbsProxyOnlyMaterializationProfile` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRemoteDebugProcessFacade` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRemoteCommand` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRemoteScriptBuilder` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRemoteAutoloadMirror` instance side -> `maglevOnly` -> `GemStone-GBS-MagLev`
 - `GbsRemoteClassMirror` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRemoteConstantMirror` instance side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
 - `GbsRemoteDebugger` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsRemoteDebuggerMenuBuilder` instance side -> `toolsOnly` -> `GemStone-GBS-Tools`
+- `GbsRemoteDebuggerSourceResolver` instance side -> `toolsOnly` -> `GemStone-GBS-Tools`
+- `GbsRemoteDebuggerStackFetcher` instance side -> `toolsOnly` -> `GemStone-GBS-Tools`
 - `GbsRemoteMethodMirror` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRemoteMethodObject` instance side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
 - `GbsRemoteNamespaceMirror` instance side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
@@ -145,7 +150,10 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GbsSymbolListBrowserPresenter` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
 - `GbsWorkspace` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
 - `GbxContextListPolicy` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbxDebuggerBreakpointController` instance side -> `toolsOnly` -> `GemStone-GBS-Tools`
+- `GbxDebuggerCompileController` instance side -> `toolsOnly` -> `GemStone-GBS-Tools`
 - `GbxDebuggerService` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbxDebuggerProcessController` instance side -> `toolsOnly` -> `GemStone-GBS-Tools`
 - `GbxTrippy` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
 - `GbsBridgeRootFacade` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsBrowser` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
@@ -187,10 +195,15 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GbsPlaygroundMenuTypedWrapperLifecycleReportCommand` class side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
 - `GbsProxyOnlyMaterializationProfile` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRemoteDebugProcessFacade` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRemoteCommand` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsRemoteScriptBuilder` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRemoteAutoloadMirror` class side -> `maglevOnly` -> `GemStone-GBS-MagLev`
 - `GbsRemoteClassMirror` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRemoteConstantMirror` class side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
 - `GbsRemoteDebugger` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbsRemoteDebuggerMenuBuilder` class side -> `toolsOnly` -> `GemStone-GBS-Tools`
+- `GbsRemoteDebuggerSourceResolver` class side -> `toolsOnly` -> `GemStone-GBS-Tools`
+- `GbsRemoteDebuggerStackFetcher` class side -> `toolsOnly` -> `GemStone-GBS-Tools`
 - `GbsRemoteMethodMirror` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRemoteMethodObject` class side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
 - `GbsRemoteNamespaceMirror` class side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
@@ -254,7 +267,10 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GbsSymbolListBrowserPresenter` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
 - `GbsWorkspace` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
 - `GbxContextListPolicy` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbxDebuggerBreakpointController` class side -> `toolsOnly` -> `GemStone-GBS-Tools`
+- `GbxDebuggerCompileController` class side -> `toolsOnly` -> `GemStone-GBS-Tools`
 - `GbxDebuggerService` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
+- `GbxDebuggerProcessController` class side -> `toolsOnly` -> `GemStone-GBS-Tools`
 - `GbxTrippy` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
 - `GBSM` class side -> `convertedWithCoreAndMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
 - `GbsPlaygroundActions` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
@@ -290,7 +306,10 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GbsSession>>#commitTransactionOrSignalConflict` -> `GemStone-GBS-Core`
 - `GbsSession>>#commitTransactionWithRetryCount:` -> `GemStone-GBS-Core`
 - `GbsSession>>#invalidateRepositoryRoots` -> `GemStone-GBS-Core`
+- `GbsSession>>#remoteScriptBuilder` -> `GemStone-GBS-Core`
 - `GbsSession>>#withCommitRetryCount:do:` -> `GemStone-GBS-Core`
+- `GbsSession>>#withGemStoneTransactionDo:` -> `GemStone-GBS-Core`
+- `GbsSession>>#withGemStoneTransactionRetryCount:do:` -> `GemStone-GBS-Core`
 - `GbsSession>>#previewMigrationFrom:to:` -> `GemStone-GBS-Core`
 - `GbsSession>>#previewMigrationFrom:to:allowAbort:` -> `GemStone-GBS-Core`
 - `GbsSession>>#previewMigrationWithSubclassesOf:` -> `GemStone-GBS-Core`
@@ -388,6 +407,8 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GBSM class>>#chunkedMigrationRunnerFrom:to:` -> `GemStone-GBS-Core`
 - `GBSM class>>#commitTransactionOrSignalConflict` -> `GemStone-GBS-Core`
 - `GBSM class>>#commitTransactionWithRetryCount:` -> `GemStone-GBS-Core`
+- `GBSM class>>#withGemStoneTransactionDo:` -> `GemStone-GBS-Core`
+- `GBSM class>>#withGemStoneTransactionRetryCount:do:` -> `GemStone-GBS-Core`
 - `GBSM class>>#previewMigrationFrom:to:` -> `GemStone-GBS-Core`
 - `GBSM class>>#previewMigrationFrom:to:allowAbort:` -> `GemStone-GBS-Core`
 - `GBSM class>>#previewMigrationWithSubclassesOf:` -> `GemStone-GBS-Core`
@@ -397,6 +418,8 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GBSM class>>#migrateInstancesWithSubclassesOf:` -> `GemStone-GBS-Core`
 - `GBSM class>>#migrateInstancesWithSubclassesOf:allowAbort:` -> `GemStone-GBS-Core`
 - `GbsSmalltalkFacade>>#bridgeRoot` -> `GemStone-GBS-Core`
+- `GbsSmalltalkFacade>>#withGemStoneTransactionDo:` -> `GemStone-GBS-Core`
+- `GbsSmalltalkFacade>>#withGemStoneTransactionRetryCount:do:` -> `GemStone-GBS-Core`
 - `GbxClassVersionBrowser>>#classHistory` -> `GemStone-GBS-Core`
 - `GbxClassVersionBrowser>>#classHistory:` -> `GemStone-GBS-Core`
 - `GbxClassVersionBrowser>>#canMigrateInstances` -> `GemStone-GBS-Core`
@@ -624,10 +647,10 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GbxDebuggerService>>#remoteDebugProcess` -> `GemStone-GBS-Core-Tools`
 - `GbxDebuggerService>>#serverStepOverFrameLevel:` -> `GemStone-GBS-Core-Tools`
 - `GbxDebuggerService>>#synchronizeServerProgramCounterAfterRestart` -> `GemStone-GBS-Core-Tools`
-- `GbxDebuggerService>>#legacyCompileLookup` -> `GemStone-GBS-Core-Tools`
-- `GbxDebuggerService>>#legacyCompileResponseForSource:correctingSelector:` -> `GemStone-GBS-Core-Tools`
-- `GbxDebuggerService>>#legacyCorrectedCompileResponseForSource:` -> `GemStone-GBS-Core-Tools`
-- `GbxDebuggerService>>#legacyRecompileResponseForSource:` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#compatibilityCompileLookup` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#compatibilityCompileResponseForSource:correctingSelector:` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#compatibilityCorrectedCompileResponseForSource:` -> `GemStone-GBS-Core-Tools`
+- `GbxDebuggerService>>#compatibilityRecompileResponseForSource:` -> `GemStone-GBS-Core-Tools`
 - `GbxDebuggerService>>#basicReenterServerContext` -> `GemStone-GBS-Tools`
 - `GbxContextListPolicy>>#buildContextListFromServerContexts:` -> `GemStone-GBS-Core-Tools`
 - `GbxContextListPolicy>>#updateContextListFromServerContexts:` -> `GemStone-GBS-Core-Tools`

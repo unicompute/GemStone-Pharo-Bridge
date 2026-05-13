@@ -12,6 +12,7 @@ PREFLIGHT_STATUS="skipped"
 LIVE_STATUS="skipped"
 WORK_DIR="${2:-$(dirname "${SRC_IMAGE}")}"
 WORK_IMAGE="$(gbs_prepare_work_image "${SRC_IMAGE}" "${WORK_DIR}" "original")"
+gbs_register_work_image_cleanup "${WORK_IMAGE}"
 
 emit_summary() {
   local result="$1"

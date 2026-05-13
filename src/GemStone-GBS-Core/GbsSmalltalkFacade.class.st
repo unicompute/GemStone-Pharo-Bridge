@@ -75,6 +75,16 @@ GbsSmalltalkFacade >> commitTransactionWithRetryCount: aRetryCount [
 	^ session commitTransactionWithRetryCount: aRetryCount
 ]
 
+{ #category : 'transactions' }
+GbsSmalltalkFacade >> withGemStoneTransactionDo: aBlock [
+	^ session withGemStoneTransactionDo: aBlock
+]
+
+{ #category : 'transactions' }
+GbsSmalltalkFacade >> withGemStoneTransactionRetryCount: aRetryCount do: aBlock [
+	^ session withGemStoneTransactionRetryCount: aRetryCount do: aBlock
+]
+
 { #category : 'object space' }
 GbsSmalltalkFacade >> objectSpaceRepository [
 	^ session objectSpaceRepository

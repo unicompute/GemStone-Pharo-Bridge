@@ -97,7 +97,10 @@ GbxServerMapTool >> buildFromServer [
 		stream contents
 	] value'.
 	
-	result := session executeAndFetch: script.
+	result := GbsRemoteExecutionDispatcher
+		fetchScript: script
+		in: session
+		context: 20.
 	self parseSegments: result.
 ]
 
