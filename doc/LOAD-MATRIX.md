@@ -9,7 +9,8 @@ Generated from `GemStonePharoContract` group and lane contracts.
 | `Core` | yes | no | yes | no | no | no | no | no | Smalltalk core bridge only |
 | `Core-Tools` | yes | no | yes | yes | no | no | no | no | Smalltalk core plus the original Pharo tools and the generic core-tools overlay |
 | `Core-Tests` | yes | no | yes | yes | yes | no | no | no | Smalltalk core, generic tool overlays, and the core-only test suite |
-| `MagLev` | yes | no | yes | yes | no | yes | yes | no | convenience alias for the MagLev production stack |
+| `MagLev` | yes | no | yes | no | no | yes | no | no | production MagLev runtime without debugger/tool UI packages |
+| `MagLev-Tools` | yes | no | yes | yes | no | yes | yes | no | optional MagLev runtime plus MagLev-specific tool integration |
 | `Full` | yes | yes | yes | yes | yes | yes | yes | yes | full developer load |
 
 ## Switch Recipes
@@ -17,7 +18,8 @@ Generated from `GemStonePharoContract` group and lane contracts.
 - base/original bridge: `Original`
 - base/original bridge with base tests: `Original-Tests`
 - base plus generic Smalltalk overlay: `Core`, `Core-Tools`, `Core-Tests`
-- base plus generic overlay plus optional MagLev production: `MagLev`
+- base plus generic overlay plus optional MagLev runtime: `MagLev`
+- MagLev runtime plus interactive developer tools: `MagLev-Tools`
 - full developer load: `Full` / `default`
 
 See [PACKAGE-GRAPH.md](./PACKAGE-GRAPH.md) for exact package membership and [VERIFICATION-LANES.md](./VERIFICATION-LANES.md) for the proof lanes that exercise these loads.

@@ -2339,7 +2339,15 @@ GbsRemoteDebugger >> restartReplaySourceCode [
 			ifTrue: [ [ context sourceCode ] on: Error do: [ nil ] ]
 			ifFalse: [ nil ].
 		(source isString and: [ source isEmpty not ]) ifTrue: [ ^ source ] ].
-	^ self selectedSourceOrAll
+	^ self restartReplaySourceText
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> restartReplaySourceText [
+	sourceText ifNil: [ ^ '' ].
+	^ (sourceText respondsTo: #text)
+		ifTrue: [ [ sourceText text asString ] on: Error do: [ '' ] ]
+		ifFalse: [ '' ]
 ]
 
 { #category : 'private' }

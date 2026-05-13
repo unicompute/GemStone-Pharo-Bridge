@@ -15,8 +15,10 @@ This section is generated from `GemStonePharoContract`.
 ## Package Layers
 
 - original/base production: `GemStone-GBS-Converted`, `GemStone-GBS-Tools`
-- generic overlay production: `GemStone-GBS-Core`, `GemStone-GBS-Core-Tools`
-- optional MagLev production: `GemStone-GBS-MagLev`, `GemStone-GBS-MagLev-Tools`
+- generic core runtime: `GemStone-GBS-Core`
+- generic developer tooling: `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`
+- optional MagLev runtime: `GemStone-GBS-MagLev`
+- optional MagLev developer tooling: `GemStone-GBS-MagLev-Tools`
 - test layers: `GemStone-Pharo-Tests`, `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-MagLev-Tests`
 
 ## Active Root API

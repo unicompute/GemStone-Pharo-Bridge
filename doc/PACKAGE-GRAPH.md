@@ -35,7 +35,7 @@ Rendered SVG: [PACKAGE-GRAPH.svg](./PACKAGE-GRAPH.svg)
 - `Core-Tests` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`, `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-Pharo-Core-Tests`
 - `MagLev-Core` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
 - `MagLev-Tools` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`, `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev`, `GemStone-GBS-MagLev-Tools`
-- `MagLev` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`, `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev`, `GemStone-GBS-MagLev-Tools`
+- `MagLev` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
 - `Tools` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`, `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`
 - `All-Tests` -> `GemStone-Pharo-Tests`, `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-MagLev-Tests`
 - `Tests` -> `GemStone-Pharo-Tests`, `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-MagLev-Tests`

@@ -694,6 +694,7 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GbsRemoteDebugger>>#addExtensionSessionMenuItemsTo:` -> `GemStone-GBS-MagLev-Tools`
 - `GbsRemoteDebugger>>#browseRubyLoadPathReport` -> `GemStone-GBS-MagLev-Tools`
 - `GbsWorkspace>>#addExtensionWorkspaceMenuItemsTo:` -> `GemStone-GBS-MagLev-Tools`
+- `GbsWorkspace>>#browseObjectLogReport` -> `GemStone-GBS-MagLev-Tools`
 - `GbsStructuredValueInspectorPresenter>>#addExtensionEntryMenuItemsTo:` -> `GemStone-GBS-MagLev-Tools`
 - `GbsSymbolListBrowserPresenter>>#addExtensionEntryMenuItemsTo:` -> `GemStone-GBS-MagLev-Tools`
 - `GbsSymbolListBrowserPresenter>>#addExtensionPreviewMenuItemsTo:` -> `GemStone-GBS-MagLev-Tools`

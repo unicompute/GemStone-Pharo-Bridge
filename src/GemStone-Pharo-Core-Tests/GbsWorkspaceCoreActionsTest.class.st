@@ -21,6 +21,128 @@ GbsWorkspaceCoreActionsTest >> tearDown [
 ]
 
 { #category : 'tests' }
+GbsWorkspaceCoreActionsTest >> testDoAbortUsesSafeTransactionAbort [
+	| workspace mockSession abortCalls |
+	workspace := CoreTestableGbsWorkspace new.
+	mockSession := CoreMockGbsSession new.
+	abortCalls := 0.
+	mockSession stubs
+		at: #gciAbort
+		put: [
+			abortCalls := abortCalls + 1.
+			1 ].
+	GbsSessionParameters currentSession: mockSession.
+
+	workspace doAbort.
+
+	self assert: abortCalls equals: 1.
+	self assert: workspace lastInfoMessage equals: 'GemStone: Aborted and Synced to latest state.'
+]
+
+{ #category : 'tests' }
+GbsWorkspaceCoreActionsTest >> testDoCommitUsesCommitOrSignalConflict [
+	| workspace mockSession commitCalls |
+	workspace := CoreTestableGbsWorkspace new.
+	mockSession := CoreMockGbsSession new.
+	commitCalls := 0.
+	mockSession stubs
+		at: #gciCommit
+		put: [
+			commitCalls := commitCalls + 1.
+			1 ].
+	GbsSessionParameters currentSession: mockSession.
+
+	workspace doCommit.
+
+	self assert: commitCalls equals: 1.
+	self assert: workspace lastInfoMessage equals: 'GemStone: Commit Successful!'
+]
+
+{ #category : 'tests' }
+GbsWorkspaceCoreActionsTest >> testDoCommitReportsConflictFromSignal [
+	| workspace mockSession |
+	workspace := CoreTestableGbsWorkspace new.
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #gciCommit put: [ 0 ].
+	GbsSessionParameters currentSession: mockSession.
+
+	workspace doCommit.
+
+	self assert: (workspace lastInfoMessage includesSubstring: 'Commit Failed (Conflict)')
+]
+
+{ #category : 'tests' }
+GbsWorkspaceCoreActionsTest >> testDoItFallsBackToExceptionOopWhenServerProcessIsUnavailable [
+	| workspace mockSession |
+	workspace := CoreTestableGbsWorkspace new.
+	mockSession := CoreMockGbsSession new.
+	workspace textEditor text: 'Object error: ''boom'''.
+	mockSession stubs
+		at: #execute
+		put: [ :script |
+			self assert: script equals: 'Object error: ''boom'''.
+			(GbsError new
+				messageText: 'boom';
+				tag: 20;
+				serverProcessOop: 20;
+				exceptionOop: 9301;
+				yourself) signal ].
+	GbsSessionParameters currentSession: mockSession.
+
+	workspace doIt.
+
+	self assert: workspace debuggerOpened.
+	self assert: workspace lastOpenedProcessOop equals: 9301
+]
+
+{ #category : 'tests' }
+GbsWorkspaceCoreActionsTest >> testDoItOpensRemoteDebuggerForGemStoneExceptionMetadata [
+	| workspace mockSession |
+	workspace := CoreTestableGbsWorkspace new.
+	mockSession := CoreMockGbsSession new.
+	workspace textEditor text: '1 / 0'.
+	mockSession stubs
+		at: #execute
+		put: [ :script |
+			self assert: script equals: '1 / 0'.
+			(GbsError new
+				messageText: 'ZeroDivide';
+				tag: 20;
+				serverProcessOop: 9201;
+				exceptionOop: 9301;
+				yourself) signal ].
+	GbsSessionParameters currentSession: mockSession.
+
+	workspace doIt.
+
+	self assert: workspace debuggerOpened.
+	self assert: workspace lastOpenedProcessOop equals: 9201
+]
+
+{ #category : 'tests' }
+GbsWorkspaceCoreActionsTest >> testDoItReportsErrorWhenNoRemoteDebugMetadataExists [
+	| workspace mockSession |
+	workspace := CoreTestableGbsWorkspace new.
+	mockSession := CoreMockGbsSession new.
+	workspace textEditor text: '1 / 0'.
+	mockSession stubs
+		at: #execute
+		put: [ :script |
+			(GbsError new
+				messageText: 'local transport failure';
+				tag: 20;
+				serverProcessOop: 20;
+				exceptionOop: nil;
+				yourself) signal ].
+	GbsSessionParameters currentSession: mockSession.
+
+	workspace doIt.
+
+	self deny: workspace debuggerOpened.
+	self assert: workspace lastInfoMessage equals: 'GemStone Error: local transport failure'
+]
+
+{ #category : 'tests' }
 GbsWorkspaceCoreActionsTest >> testGsActionAliasesRouteToPrimaryActions [
 	| workspace |
 	workspace := CoreTestableGbsWorkspaceActions new.

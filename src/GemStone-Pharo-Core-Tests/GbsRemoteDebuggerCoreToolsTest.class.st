@@ -957,7 +957,7 @@ GbsRemoteDebuggerCoreToolsTest >> testRestartUsesExecutedSourceInsteadOfSelected
 				yourself) signal ].
 	stackList := GbxFakeListPresenterForRemoteDebugger new.
 	stackList selectIndex: 1.
-	sourceText := GbxFakeTextPresenterForRemoteDebugger new.
+	sourceText := CoreGbxFakeTextPresenterForRemoteDebugger new.
 	sourceText
 		text: source;
 		selectedText: '1+1.';

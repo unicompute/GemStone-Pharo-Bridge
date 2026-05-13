@@ -9,7 +9,9 @@ Generated from `GemStonePharoContract` load-group and steady-state API contracts
 - `Original-Tests`
   original/base production plus the original/base tests
 - `MagLev`
-  the MagLev production stack: base/original + generic core overlays + MagLev overlays
+  the MagLev production runtime: base/original + generic core + MagLev runtime, without debugger/tool UI packages
+- `MagLev-Tools`
+  the interactive developer stack for GemStone workspace, GbsRemoteDebugger, inspectors, transcript, ObjectLog, and MagLev method tools
 - `Full`
   the full developer stack, including MagLev-aware test packages
 
@@ -22,7 +24,7 @@ Metacello new
   load: 'MagLev'.
 ```
 
-Use `load: 'Full'` if you want the full developer/test stack instead of only the MagLev production stack.
+Use `load: 'MagLev-Tools'` if you want interactive debugging tools. Use `load: 'Full'` if you also want the full developer/test stack.
 
 ## Load From GitHub
 
@@ -33,7 +35,7 @@ Metacello new
   load: 'MagLev'.
 ```
 
-Use `load: 'Full'` from the same repository if you want the MagLev-aware test packages as well.
+Use `load: 'MagLev-Tools'` from the same repository if you want interactive debugging tools, or `load: 'Full'` if you want the MagLev-aware test packages as well.
 
 ## Clean Switching
 

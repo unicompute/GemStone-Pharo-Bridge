@@ -16,7 +16,19 @@ GbsWorkspace >> addExtensionWorkspaceMenuItemsTo: aMenuGroup [
 		action: [ UIManager default defer: [ self browseTopLevelAutoloadRegistrationsReport ] ] ].
 	aMenuGroup addItem: [ :item |
 		item name: 'GS-MagLev Finalizer Registry Report'; icon: (self iconNamed: #smallInspectIt);
-		action: [ UIManager default defer: [ self browseMaglevFinalizerRegistryReport ] ] ]
+		action: [ UIManager default defer: [ self browseMaglevFinalizerRegistryReport ] ] ].
+	aMenuGroup addItem: [ :item |
+		item name: 'GS-ObjectLog Report'; icon: (self iconNamed: #smallInspectIt);
+		action: [ UIManager default defer: [ self browseObjectLogReport ] ] ]
+]
+
+{ #category : '*GemStone-GBS-MagLev-Tools' }
+GbsWorkspace >> browseObjectLogReport [
+	| activeSession |
+	activeSession := self activeSessionForRemoteExecution.
+	activeSession ifNil: [ ^ self inform: 'No Session' ].
+	self inform: activeSession objectLog reportText.
+	^ true
 ]
 
 { #category : '*GemStone-GBS-MagLev-Tools' }

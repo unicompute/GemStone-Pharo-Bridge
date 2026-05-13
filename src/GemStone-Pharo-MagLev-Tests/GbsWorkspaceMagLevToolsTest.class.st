@@ -21,6 +21,22 @@ GbsWorkspaceMagLevToolsTest >> tearDown [
 ]
 
 { #category : 'tests' }
+GbsWorkspaceMagLevToolsTest >> testBrowseObjectLogReportUsesObjectLogFacade [
+	| workspace mockSession |
+	workspace := CoreTestableGbsWorkspace new.
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'ObjectLogEntry objectLog') ifTrue: [
+			^ { { 1. 4. 'Workspace entry'. 1234. '2026-01-01T10:00:00Z'. 'debug'. true. nil. nil } } ].
+		self fail ].
+	GbsSessionParameters currentSession: mockSession.
+
+	self assert: workspace browseObjectLogReport.
+	self assert: (workspace lastInfoMessage includesSubstring: 'ObjectLog').
+	self assert: (workspace lastInfoMessage includesSubstring: 'Workspace entry')
+]
+
+{ #category : 'tests' }
 GbsWorkspaceMagLevToolsTest >> testBrowseRubyLoadPathReportUsesRuntimeReport [
 	| workspace mockSession |
 	workspace := CoreTestableGbsWorkspace new.

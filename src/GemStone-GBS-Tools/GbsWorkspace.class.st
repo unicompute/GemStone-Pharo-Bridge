@@ -46,18 +46,37 @@ GbsWorkspace >> defaultLayout [
 
 { #category : 'actions' }
 GbsWorkspace >> doAbort [
-	GbsSessionParameters currentSession ifNotNil: [ :session |
-		session abort.
+	| session |
+	session := self activeSessionForRemoteExecution.
+	session ifNil: [ ^ self inform: 'No Session - please login to GemStone first' ].
+
+	[
+		(session respondsTo: #abortTransaction)
+			ifTrue: [ session abortTransaction ]
+			ifFalse: [ session abort ].
 		self inform: 'GemStone: Aborted and Synced to latest state.'
-	].
+	] on: Error do: [ :ex |
+		self inform: 'GemStone: Abort Failed: ', ex messageText
+	]
 ]
 
 { #category : 'actions' }
 GbsWorkspace >> doCommit [
-	GbsSessionParameters currentSession ifNotNil: [ :session |
-		session commitTransaction
-			ifTrue: [ self inform: 'GemStone: Commit Successful!' ]
-			ifFalse: [ self inform: 'GemStone: Commit Failed (Conflict)!' ]
+	| session |
+	session := self activeSessionForRemoteExecution.
+	session ifNil: [ ^ self inform: 'No Session - please login to GemStone first' ].
+
+	[
+		(session respondsTo: #commitTransactionOrSignalConflict)
+			ifTrue: [
+				session commitTransactionOrSignalConflict.
+				self inform: 'GemStone: Commit Successful!' ]
+			ifFalse: [
+				session commitTransaction
+					ifTrue: [ self inform: 'GemStone: Commit Successful!' ]
+					ifFalse: [ self inform: 'GemStone: Commit Failed (Conflict)!' ] ]
+	] on: Error do: [ :ex |
+		self inform: 'GemStone: Commit Failed (Conflict): ', ex messageText
 	]
 ]
 

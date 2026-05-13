@@ -78,6 +78,7 @@ GemStonePharoContractTest >> testGeneratedMaglevBranchUsageMarkdownDescribesLoad
 	self assert: (markdown includesSubstring: 'repository: ''tonel:///absolute/path/to/GemStone-Pharo-Bridge/src'';').
 	self assert: (markdown includesSubstring: 'repository: ''github://unicompute/GemStone-Pharo-Bridge:maglev/src'';').
 	self assert: (markdown includesSubstring: 'load: ''MagLev''').
+	self assert: (markdown includesSubstring: 'load: ''MagLev-Tools''').
 	self assert: (markdown includesSubstring: 'load: ''Full''').
 	self assert: (markdown includesSubstring: 'GbsSessionParameters new').
 	self assert: (markdown includesSubstring: 'session userGlobals at: #MyTestDict put: dict.').
@@ -197,6 +198,23 @@ GemStonePharoContractTest >> testGroupMemberSpecsOnlyReferenceKnownPackages [
 	self contract groupMemberSpecs do: [ :spec |
 		self deny: spec second isEmpty.
 		self assert: ((spec second asSet difference: packageNames) isEmpty) ]
+]
+
+{ #category : 'tests' }
+GemStonePharoContractTest >> testMagLevRuntimeGroupExcludesDeveloperTooling [
+	| maglevGroup maglevToolsGroup |
+	maglevGroup := self contract groupMemberSpecs
+		detect: [ :each | each first = 'MagLev' ].
+	maglevToolsGroup := self contract groupMemberSpecs
+		detect: [ :each | each first = 'MagLev-Tools' ].
+
+	self assert: maglevGroup second equals: #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev').
+	self deny: (maglevGroup second includes: 'GemStone-GBS-Tools').
+	self deny: (maglevGroup second includes: 'GemStone-GBS-Core-Tools').
+	self deny: (maglevGroup second includes: 'GemStone-GBS-MagLev-Tools').
+	self assert: (maglevToolsGroup second includes: 'GemStone-GBS-Tools').
+	self assert: (maglevToolsGroup second includes: 'GemStone-GBS-Core-Tools').
+	self assert: (maglevToolsGroup second includes: 'GemStone-GBS-MagLev-Tools')
 ]
 
 { #category : 'tests' }
@@ -436,6 +454,7 @@ GemStonePharoContractTest >> testPackageOwnershipSelectorSpecsDeriveExpectedPack
 	self assert: (bySelector at: { #GbsSession. #instance. #rubyRuntime }) equals: 'GemStone-GBS-MagLev'.
 	self assert: (bySelector at: { #GbsPlaygroundActions. #class. #gsBrowseRubyLoadPathReportIn: }) equals: 'GemStone-GBS-MagLev-Tools'.
 	self assert: (bySelector at: { #GbsWorkspace. #instance. #addExtensionWorkspaceMenuItemsTo: }) equals: 'GemStone-GBS-MagLev-Tools'.
+	self assert: (bySelector at: { #GbsWorkspace. #instance. #browseObjectLogReport }) equals: 'GemStone-GBS-MagLev-Tools'.
 	self assert: (bySelector at: { #GbsRemoteDebugger. #instance. #browseRubyLoadPathReport }) equals: 'GemStone-GBS-MagLev-Tools'
 ]
 
@@ -749,6 +768,7 @@ GemStonePharoContractTest >> testCoreOnlyChecksDerivePresenceFromOwnershipAndNoC
 	self assert: (selectorChecksByKey at: { #GbsRemoteNamespaceMirror. #loadPath }) equals: false.
 	self assert: (selectorChecksByKey at: { #GbsRemoteDebugger. #addExtensionSessionMenuItemsTo: }) equals: false.
 	self assert: (selectorChecksByKey at: { #GbsWorkspace. #addExtensionWorkspaceMenuItemsTo: }) equals: false.
+	self assert: (selectorChecksByKey at: { #GbsWorkspace. #browseObjectLogReport }) equals: false.
 	self deny: (packageChecksByName includesKey: 'GemStone-GBS-Compatibility').
 	self deny: (classChecksByName includesKey: #GbsPersistentRootFacade).
 	self deny: (selectorChecksByKey includesKey: { #GbsSession. #persistentRoot })

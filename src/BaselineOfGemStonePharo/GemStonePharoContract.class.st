@@ -247,7 +247,8 @@ GemStonePharoContract >> generatedLoadMatrixMarkdown [
 			nextPutAll: '- base/original bridge: `Original`'; cr;
 			nextPutAll: '- base/original bridge with base tests: `Original-Tests`'; cr;
 			nextPutAll: '- base plus generic Smalltalk overlay: `Core`, `Core-Tools`, `Core-Tests`'; cr;
-			nextPutAll: '- base plus generic overlay plus optional MagLev production: `MagLev`'; cr;
+			nextPutAll: '- base plus generic overlay plus optional MagLev runtime: `MagLev`'; cr;
+			nextPutAll: '- MagLev runtime plus interactive developer tools: `MagLev-Tools`'; cr;
 			nextPutAll: '- full developer load: `Full` / `default`'; cr; cr;
 			nextPutAll: 'See [PACKAGE-GRAPH.md](./PACKAGE-GRAPH.md) for exact package membership and [VERIFICATION-LANES.md](./VERIFICATION-LANES.md) for the proof lanes that exercise these loads.'; cr ]
 ]
@@ -507,7 +508,9 @@ GemStonePharoContract >> generatedMaglevBranchUsageMarkdown [
 			nextPutAll: '- `Original-Tests`'; cr;
 			nextPutAll: '  original/base production plus the original/base tests'; cr;
 			nextPutAll: '- `MagLev`'; cr;
-			nextPutAll: '  the MagLev production stack: base/original + generic core overlays + MagLev overlays'; cr;
+			nextPutAll: '  the MagLev production runtime: base/original + generic core + MagLev runtime, without debugger/tool UI packages'; cr;
+			nextPutAll: '- `MagLev-Tools`'; cr;
+			nextPutAll: '  the interactive developer stack for GemStone workspace, GbsRemoteDebugger, inspectors, transcript, ObjectLog, and MagLev method tools'; cr;
 			nextPutAll: '- `Full`'; cr;
 			nextPutAll: '  the full developer stack, including MagLev-aware test packages'; cr; cr;
 			nextPutAll: '## Load From Local Disk'; cr; cr;
@@ -517,7 +520,7 @@ GemStonePharoContract >> generatedMaglevBranchUsageMarkdown [
 			nextPutAll: '  repository: ''tonel:///absolute/path/to/GemStone-Pharo-Bridge/src'';'; cr;
 			nextPutAll: '  load: ''MagLev''.'; cr;
 			nextPutAll: '```'; cr; cr;
-			nextPutAll: 'Use `load: ''Full''` if you want the full developer/test stack instead of only the MagLev production stack.'; cr; cr;
+			nextPutAll: 'Use `load: ''MagLev-Tools''` if you want interactive debugging tools. Use `load: ''Full''` if you also want the full developer/test stack.'; cr; cr;
 			nextPutAll: '## Load From GitHub'; cr; cr;
 			nextPutAll: '```smalltalk'; cr;
 			nextPutAll: 'Metacello new'; cr;
@@ -525,7 +528,7 @@ GemStonePharoContract >> generatedMaglevBranchUsageMarkdown [
 			nextPutAll: '  repository: ''github://unicompute/GemStone-Pharo-Bridge:maglev/src'';'; cr;
 			nextPutAll: '  load: ''MagLev''.'; cr;
 			nextPutAll: '```'; cr; cr;
-			nextPutAll: 'Use `load: ''Full''` from the same repository if you want the MagLev-aware test packages as well.'; cr; cr;
+			nextPutAll: 'Use `load: ''MagLev-Tools''` from the same repository if you want interactive debugging tools, or `load: ''Full''` if you want the MagLev-aware test packages as well.'; cr; cr;
 			nextPutAll: '## Clean Switching'; cr; cr;
 			nextPutAll: 'Use a fresh image or the clean-reload path each time. Do not incrementally load `Original` and then `MagLev` into the same already-mutated image.'; cr; cr;
 			nextPutAll: 'Common wrapper entry points:'; cr;
@@ -787,7 +790,7 @@ GemStonePharoContract >> groupMemberSpecs [
 		{ 'Core-Tests'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-Pharo-Core-Tests') }.
 		{ 'MagLev-Core'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev') }.
 		{ 'MagLev-Tools'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') }.
-		{ 'MagLev'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') }.
+		{ 'MagLev'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev') }.
 		{ 'Tools'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools') }.
 		{ 'All-Tests'. #('GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests') }.
 		{ 'Tests'. #('GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests') }.
@@ -1643,6 +1646,7 @@ GemStonePharoContract >> packageOwnershipSelectorFamilySpecs [
 		{ #GbsRemoteDebugger. #instance. #addExtensionSessionMenuItemsTo:. #maglevToolsOnly }.
 		{ #GbsRemoteDebugger. #instance. #browseRubyLoadPathReport. #maglevToolsOnly }.
 		{ #GbsWorkspace. #instance. #addExtensionWorkspaceMenuItemsTo:. #maglevToolsOnly }.
+		{ #GbsWorkspace. #instance. #browseObjectLogReport. #maglevToolsOnly }.
 		{ #GbsStructuredValueInspectorPresenter. #instance. #addExtensionEntryMenuItemsTo:. #maglevToolsOnly }.
 		{ #GbsSymbolListBrowserPresenter. #instance. #addExtensionEntryMenuItemsTo:. #maglevToolsOnly }.
 		{ #GbsSymbolListBrowserPresenter. #instance. #addExtensionPreviewMenuItemsTo:. #maglevToolsOnly }.
@@ -1774,8 +1778,10 @@ GemStonePharoContract >> generatedArchitectureBodyMarkdown [
 			nextPutAll: '- legacy alias surface stays absent from production'; cr; cr;
 			nextPutAll: '## Package Layers'; cr; cr;
 			nextPutAll: '- original/base production: `GemStone-GBS-Converted`, `GemStone-GBS-Tools`'; cr;
-			nextPutAll: '- generic overlay production: `GemStone-GBS-Core`, `GemStone-GBS-Core-Tools`'; cr;
-			nextPutAll: '- optional MagLev production: `GemStone-GBS-MagLev`, `GemStone-GBS-MagLev-Tools`'; cr;
+			nextPutAll: '- generic core runtime: `GemStone-GBS-Core`'; cr;
+			nextPutAll: '- generic developer tooling: `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`'; cr;
+			nextPutAll: '- optional MagLev runtime: `GemStone-GBS-MagLev`'; cr;
+			nextPutAll: '- optional MagLev developer tooling: `GemStone-GBS-MagLev-Tools`'; cr;
 			nextPutAll: '- test layers: `GemStone-Pharo-Tests`, `GemStone-Pharo-Core-Tests`, `GemStone-Pharo-MagLev-Tests`'; cr; cr;
 			nextPutAll: '## Active Root API'; cr; cr.
 		self activeRootApiSpecs do: [ :each |
@@ -1823,13 +1829,16 @@ GemStonePharoContract >> generatedReadmeBodyMarkdown [
 			nextPutAll: '  repository: ''github://unicompute/GemStone-Pharo-Bridge:maglev/src'';'; cr;
 			nextPutAll: '  load: ''MagLev''.'; cr;
 			nextPutAll: '```'; cr; cr;
-			nextPutAll: 'Use `load: ''Full''` when you want the developer/test stack, including the'; cr;
-			nextPutAll: 'MagLev-aware test packages.'; cr; cr;
+			nextPutAll: 'Use `load: ''MagLev-Tools''` for interactive developer tooling, including'; cr;
+			nextPutAll: 'the GemStone workspace, remote debugger, inspectors, transcript, ObjectLog,'; cr;
+			nextPutAll: 'and MagLev-aware method browsers. Use `load: ''Full''` when you also want'; cr;
+			nextPutAll: 'the developer/test stack, including the MagLev-aware test packages.'; cr; cr;
 			nextPutAll: '## Load Groups'; cr; cr;
 			nextPutAll: '- `Original`: original/base production packages only'; cr;
 			nextPutAll: '- `Original-Tests`: original/base production plus original/base tests'; cr;
 			nextPutAll: '- `Core`, `Core-Tools`, `Core-Tests`: original/base plus the generic Smalltalk overlay'; cr;
-			nextPutAll: '- `MagLev`: production MagLev stack, including Core and MagLev overlays'; cr;
+			nextPutAll: '- `MagLev`: production MagLev runtime, excluding debugger/tool UI packages'; cr;
+			nextPutAll: '- `MagLev-Tools`: MagLev runtime plus workspace, debugger, inspectors, ObjectLog, and developer UI tools'; cr;
 			nextPutAll: '- `Full`: full developer stack, including all tests'; cr; cr;
 			nextPutAll: 'The active root API is `bridgeRoot`, `#GbsBridgeRoot`, and'; cr;
 			nextPutAll: '`GbsBridgeRootFacade`.'; cr; cr;
@@ -2085,7 +2094,7 @@ GemStonePharoContract >> groupDescriptionSpecs [
 		'Core-Tests'. 'Smalltalk core, generic tool overlays, and the core-only test suite'.
 		'MagLev-Core'. 'optional MagLev runtime without MagLev-specific tools'.
 		'MagLev-Tools'. 'optional MagLev runtime plus MagLev-specific tool integration'.
-		'MagLev'. 'convenience alias for the MagLev production stack'.
+		'MagLev'. 'production MagLev runtime without debugger/tool UI packages'.
 		'Tools'. 'convenience alias for the generic tools-capable load'.
 		'All-Tests'. 'all active core and MagLev-aware test packages'.
 		'Tests'. 'convenience alias for all active core and MagLev-aware test packages'.
@@ -2095,7 +2104,7 @@ GemStonePharoContract >> groupDescriptionSpecs [
 
 { #category : 'contracts' }
 GemStonePharoContract >> loadMatrixGroupNames [
-	^ #('Original' 'Original-Tests' 'Core' 'Core-Tools' 'Core-Tests' 'MagLev' 'Full')
+	^ #('Original' 'Original-Tests' 'Core' 'Core-Tools' 'Core-Tests' 'MagLev' 'MagLev-Tools' 'Full')
 ]
 
 { #category : 'contracts' }
@@ -2110,10 +2119,10 @@ GemStonePharoContract >> productionPackageSummarySpecs [
 	^ {
 		{ 'GemStone-GBS-Converted'. 'Legacy bridge/session base plus the remaining generic mirrors, repository access, and support code that still lives in the original package.' }.
 		{ 'GemStone-GBS-Core'. 'Generic overlay package for Smalltalk-facing bridge facades and session/manager extensions that can load on top of the original Converted package.' }.
-		{ 'GemStone-GBS-Tools'. 'The original generic Pharo tools and presenters package.' }.
-		{ 'GemStone-GBS-Core-Tools'. 'Generic tool/report overlay package that adds non-MagLev playground and presenter extensions without changing the original Tools package.' }.
+		{ 'GemStone-GBS-Tools'. 'The original generic Pharo developer tools and presenters package; do not include from runtime-only load groups unless tool UI is intentional.' }.
+		{ 'GemStone-GBS-Core-Tools'. 'Generic developer tool/report overlay package that adds non-MagLev playground and presenter extensions without changing the original Tools package.' }.
 		{ 'GemStone-GBS-MagLev'. 'Optional MagLev/Ruby runtime surface: runtime loading, autoload, proc/binding support, ObjectLog, RC wrappers, and MagLev facades.' }.
-		{ 'GemStone-GBS-MagLev-Tools'. 'Optional MagLev/Ruby tool integration for browsers, workspaces, debuggers, and inspectors.' } }
+		{ 'GemStone-GBS-MagLev-Tools'. 'Optional MagLev/Ruby developer tool integration for browsers, workspaces, debuggers, ObjectLog access, and inspectors.' } }
 ]
 
 { #category : 'contracts' }

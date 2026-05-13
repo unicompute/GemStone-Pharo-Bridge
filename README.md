@@ -31,15 +31,18 @@ Metacello new
   load: 'MagLev'.
 ```
 
-Use `load: 'Full'` when you want the developer/test stack, including the
-MagLev-aware test packages.
+Use `load: 'MagLev-Tools'` for interactive developer tooling, including
+the GemStone workspace, remote debugger, inspectors, transcript, ObjectLog,
+and MagLev-aware method browsers. Use `load: 'Full'` when you also want
+the developer/test stack, including the MagLev-aware test packages.
 
 ## Load Groups
 
 - `Original`: original/base production packages only
 - `Original-Tests`: original/base production plus original/base tests
 - `Core`, `Core-Tools`, `Core-Tests`: original/base plus the generic Smalltalk overlay
-- `MagLev`: production MagLev stack, including Core and MagLev overlays
+- `MagLev`: production MagLev runtime, excluding debugger/tool UI packages
+- `MagLev-Tools`: MagLev runtime plus workspace, debugger, inspectors, ObjectLog, and developer UI tools
 - `Full`: full developer stack, including all tests
 
 The active root API is `bridgeRoot`, `#GbsBridgeRoot`, and
