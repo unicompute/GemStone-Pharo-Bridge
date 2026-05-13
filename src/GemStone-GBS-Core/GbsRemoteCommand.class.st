@@ -110,6 +110,33 @@ GbsRemoteCommand class >> blockBody: bodyString literalBindings: literalDictiona
 ]
 
 { #category : 'instance creation' }
+GbsRemoteCommand class >> blockBody: bodyString literalAssignments: literalDictionary oopAssignments: oopDictionary [
+	| builder names scripts |
+	builder := GbsRemoteScriptBuilder new.
+	names := OrderedCollection new.
+	scripts := OrderedCollection new.
+	self
+		keysAndValuesOf: oopDictionary
+		do: [ :name :oop |
+			self validateArgumentName: name.
+			names add: name.
+			scripts add: (builder objectForOop: oop) ].
+	self
+		keysAndValuesOf: literalDictionary
+		do: [ :name :value |
+			self validateArgumentName: name.
+			names add: name.
+			scripts add: (builder literalFor: value) ].
+	^ self
+		blockBody: (self
+		body: bodyString
+		withAssignmentsNamed: names asArray
+		scripts: scripts asArray)
+		argumentNames: #()
+		argumentScripts: #()
+]
+
+{ #category : 'instance creation' }
 GbsRemoteCommand class >> blockBody: bodyString oopArguments: oopCollection [
 	| builder |
 	builder := GbsRemoteScriptBuilder new.
@@ -129,11 +156,148 @@ GbsRemoteCommand class >> blockBody: bodyString oopBindings: aDictionary [
 		argumentScripts: (names collect: [ :each | builder objectForOop: (aDictionary at: each) ])
 ]
 
+{ #category : 'instance creation' }
+GbsRemoteCommand class >> forObjectOop: anOop send: selectorSymbol [
+	^ self
+		forObjectOop: anOop
+		send: selectorSymbol
+		arguments: #()
+]
+
+{ #category : 'instance creation' }
+GbsRemoteCommand class >> forObjectOop: anOop send: selectorSymbol arguments: argumentCollection [
+	^ self
+		blockBody: 'object perform: selector withArguments: arguments'
+		literalBindings: (Dictionary new
+			at: 'arguments' put: argumentCollection asArray;
+			at: 'selector' put: selectorSymbol asSymbol;
+			yourself)
+		oopBindings: (Dictionary new
+			at: 'object' put: anOop;
+			yourself)
+]
+
+{ #category : 'instance creation' }
+GbsRemoteCommand class >> forRepositoryRoot: rootKey path: pathCollection aliasKeys: aliasKeys ensure: ensureBoolean body: bodyString literalBindings: literalDictionary [
+	^ self
+		forRepositoryRoot: rootKey
+		path: pathCollection
+		aliasKeys: aliasKeys
+		ensure: ensureBoolean
+		body: bodyString
+		literalBindings: literalDictionary
+		oopBindings: Dictionary new
+]
+
+{ #category : 'instance creation' }
+GbsRemoteCommand class >> forRepositoryRoot: rootKey path: pathCollection aliasKeys: aliasKeys ensure: ensureBoolean body: bodyString literalBindings: literalDictionary oopBindings: oopDictionary [
+	| bindings preamble |
+	bindings := Dictionary new.
+	self
+		keysAndValuesOf: literalDictionary
+		do: [ :key :value | bindings at: key put: value ].
+	bindings
+		at: 'aliasKeys' put: aliasKeys asArray;
+		at: 'path' put: pathCollection asArray;
+		at: 'rootKey' put: rootKey asSymbol.
+	preamble := ensureBoolean
+		ifTrue: [ self repositoryRootEnsuringPreamble ]
+		ifFalse: [ self repositoryRootReadingPreamble ].
+	^ self
+		blockBody: preamble, bodyString
+		literalBindings: bindings
+		oopBindings: oopDictionary
+]
+
+{ #category : 'instance creation' }
+GbsRemoteCommand class >> forSymbolDictionaryNamed: dictionaryName body: bodyString literalBindings: literalDictionary [
+	| bindings |
+	bindings := Dictionary new.
+	self
+		keysAndValuesOf: literalDictionary
+		do: [ :key :value | bindings at: key put: value ].
+	bindings at: 'dictionaryName' put: dictionaryName asSymbol.
+	^ self
+		blockBody: self symbolDictionaryPreamble, bodyString
+		literalBindings: bindings
+		oopBindings: Dictionary new
+]
+
 { #category : 'private' }
 GbsRemoteCommand class >> keysAndValuesOf: aDictionary do: aBlock [
 	aDictionary ifNil: [ ^ self ].
 	aDictionary keys asArray sorted do: [ :key |
 		aBlock value: key value: (aDictionary at: key) ]
+]
+
+{ #category : 'private' }
+GbsRemoteCommand class >> body: bodyString withAssignmentsNamed: names scripts: scripts [
+	^ String streamContents: [ :stream |
+		names isEmpty ifFalse: [
+			stream nextPutAll: '| '.
+			names do: [ :each |
+				stream
+					nextPutAll: each asString;
+					space ].
+			stream
+				nextPutAll: '|';
+				cr.
+			names doWithIndex: [ :each :index |
+				stream
+					nextPutAll: each asString;
+					nextPutAll: ' := ';
+					nextPutAll: (scripts at: index) asString;
+					nextPutAll: '.';
+					cr ] ].
+		stream nextPutAll: bodyString ]
+]
+
+{ #category : 'private' }
+GbsRemoteCommand class >> repositoryRootEnsuringPreamble [
+	^ '| root current next container |
+	root := UserGlobals
+		at: rootKey
+		ifAbsent: [
+			| existing |
+			existing := nil.
+			aliasKeys do: [ :each |
+				existing ifNil: [
+					existing := UserGlobals at: each ifAbsent: [ nil ] ] ].
+			existing ifNil: [ Dictionary new ] ifNotNil: [ existing ] ].
+	UserGlobals at: rootKey put: root.
+	aliasKeys do: [ :each | UserGlobals at: each put: root ].
+	current := root.
+	path do: [ :each |
+		next := current at: each ifAbsentPut: [ Dictionary new ].
+		(next isKindOf: Dictionary)
+			ifFalse: [ Error signal: ''Repository namespace path contains a non-dictionary value.'' ].
+		current := next ].
+	container := current.
+	'
+]
+
+{ #category : 'private' }
+GbsRemoteCommand class >> repositoryRootReadingPreamble [
+	^ '| root current container |
+	root := UserGlobals
+		at: rootKey
+		ifAbsent: [
+			| existing |
+			existing := nil.
+			aliasKeys do: [ :each |
+				existing ifNil: [
+					existing := UserGlobals at: each ifAbsent: [ nil ] ] ].
+			existing ifNil: [ Dictionary new ] ifNotNil: [ existing ] ].
+	UserGlobals at: rootKey put: root.
+	aliasKeys do: [ :each | UserGlobals at: each put: root ].
+	current := root.
+	path do: [ :each |
+		current ifNotNil: [
+			current := ((current isKindOf: Dictionary) and: [ current includesKey: each ])
+				ifTrue: [ current at: each ]
+				ifFalse: [ nil ] ] ].
+	container := current.
+	'
 ]
 
 { #category : 'instance creation' }
@@ -149,6 +313,17 @@ GbsRemoteCommand class >> script: aString [
 	^ self new
 		script: aString;
 		yourself
+]
+
+{ #category : 'private' }
+GbsRemoteCommand class >> symbolDictionaryPreamble [
+	^ '| association root |
+	association := GsSession currentSession resolveSymbol: dictionaryName.
+	root := association ifNil: [ nil ] ifNotNil: [
+		(association respondsTo: #value)
+			ifTrue: [ association value ]
+			ifFalse: [ association ] ].
+	'
 ]
 
 { #category : 'executing' }

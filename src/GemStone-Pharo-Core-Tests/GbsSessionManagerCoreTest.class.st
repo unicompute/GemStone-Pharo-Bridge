@@ -89,7 +89,8 @@ GbsSessionManagerCoreTest >> testGBSMObjectSpaceDelegatesToCurrentSession [
 	| mockSession loaded subclasses instances references paged filtered |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script = 'SystemRepository _loadedClasses: false') ifTrue: [ ^ #('Invoice') ].
+		((script includesSubstring: 'SystemRepository _loadedClasses: includeModules')
+			and: [ script includesSubstring: 'includeModules := false' ]) ifTrue: [ ^ #('Invoice') ].
 		(script includesSubstring: 'cls allSubclasses asArray') ifTrue: [ ^ #(SubclassOne) ].
 		(script includesSubstring: 'SystemRepository _listInstancesInMemory: { cls }') ifTrue: [ ^ #(11 12) ].
 		(script includesSubstring: 'findReferencesInMemory asArray') ifTrue: [ ^ #(31 32) ].
@@ -247,7 +248,8 @@ GbsSessionManagerCoreTest >> testGBSMBridgeRootAndListInstancesDelegatesToCurren
 		(script includesSubstring: 'SystemRepository listInstances: { cls }') ifTrue: [ ^ #(1 2) ].
 		nil ].
 	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
-		(script includesSubstring: '#GbsBridgeRoot') ifTrue: [ ^ 2001 ].
+		((script includesSubstring: '#GbsBridgeRoot')
+			or: [ script includesSubstring: '''GbsBridgeRoot'' asSymbol' ]) ifTrue: [ ^ 2001 ].
 		self fail ].
 	GBSM currentSession: mockSession.
 

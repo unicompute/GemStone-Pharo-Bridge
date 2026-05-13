@@ -155,7 +155,8 @@ GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListBrowseReferencersFor
 		'9001' ].
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		self assert: mockSession materializationProfile class equals: GbsShallowMaterializationProfile.
-		self assert: script equals: '((Object _objectForOop: 9001)) findReferencesInMemory asArray'.
+		self assert: (script includesSubstring: 'object := (Object _objectForOop: 9001)').
+		self assert: (script includesSubstring: 'object findReferencesInMemory asArray').
 		^ { GbsProxy oop: 9100 session: mockSession } ].
 	fakeUsers := GbxFakeListPresenterForBrowser new.
 	fakeUsers selectedItem: 'DataCurator'.
@@ -291,7 +292,8 @@ GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListBrowseReferencersFor
 		self assert: (script includesSubstring: 'path := #((''dictionary'' ''users''))').
 		'9002' ].
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: script equals: '((Object _objectForOop: 9002)) findReferencesInMemory asArray'.
+		self assert: (script includesSubstring: 'object := (Object _objectForOop: 9002)').
+		self assert: (script includesSubstring: 'object findReferencesInMemory asArray').
 		^ { GbsProxy oop: 9200 session: mockSession } ].
 	fakeUsers := GbxFakeListPresenterForBrowser new.
 	fakeUsers selectedItem: 'DataCurator'.

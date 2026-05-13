@@ -41,9 +41,9 @@ GbsSessionMagLevTest >> testMaglevBridgeRootMaterializesRcAndProcEntries [
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		(script includesSubstring: 'clsName :=') ifTrue: [ ^ #('Proc' 1 false nil nil nil #() #() #()) ].
-		(script includesSubstring: '#counter') ifTrue: [ ^ GbsProxy oop: 7001 session: mockSession ].
-		(script includesSubstring: '#job') ifTrue: [ ^ GbsProxy oop: 7002 session: mockSession ].
-		(script includesSubstring: '#missing') ifTrue: [ ^ nil ].
+		(script includesSubstring: 'counter') ifTrue: [ ^ GbsProxy oop: 7001 session: mockSession ].
+		(script includesSubstring: 'job') ifTrue: [ ^ GbsProxy oop: 7002 session: mockSession ].
+		(script includesSubstring: 'missing') ifTrue: [ ^ nil ].
 		self fail ].
 	mockSession stubs at: #executeAndFetch put: [ :script |
 		(script includesSubstring: '7001') ifTrue: [ ^ 'RcCounter' ].

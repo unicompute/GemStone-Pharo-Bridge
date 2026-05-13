@@ -31,14 +31,20 @@ GbsRepositoryRootFacade class >> on: aSession rootKey: aSymbol path: aCollection
 
 { #category : 'querying' }
 GbsRepositoryRootFacade >> associations [
-	^ session executeScriptAndFetchObject: self associationsScript
+	^ self
+		fetchObjectCommandBody: 'container ifNil: [ #() ] ifNotNil: [ container associations asArray ]'
+		ensure: false
+		literalBindings: Dictionary new
 ]
 
 { #category : 'private' }
 GbsRepositoryRootFacade >> containerProxy [
 	| oop |
 	(self isCacheFresh and: [ cachedProxy notNil ]) ifTrue: [ ^ cachedProxy ].
-	oop := session executeScriptAndReturnOop: self containerScript.
+	oop := self
+		returnOopCommandBody: 'container'
+		ensure: false
+		literalBindings: Dictionary new.
 	(oop isNil or: [ oop = 0 ]) ifTrue: [
 		self invalidate.
 		cachedLifecycleVersion := self currentLifecycleVersion.
@@ -56,13 +62,24 @@ GbsRepositoryRootFacade >> at: aKey [
 { #category : 'querying' }
 GbsRepositoryRootFacade >> at: aKey ifAbsent: aBlock [
 	| result |
-	result := session executeScriptAndFetchObject: (self atScriptFor: aKey).
+	result := self
+		fetchObjectCommandBody: 'container ifNil: [ nil ] ifNotNil: [ container at: key ifAbsent: [ nil ] ]'
+		ensure: false
+		literalBindings: (Dictionary new
+			at: 'key' put: aKey;
+			yourself).
 	^ result ifNil: [ aBlock value ] ifNotNil: [ result ]
 ]
 
 { #category : 'mutating' }
 GbsRepositoryRootFacade >> at: aKey put: aValue [
-	^ session executeScriptAndFetchObject: (self atPutScriptFor: aKey value: aValue)
+	^ self
+		fetchObjectCommandBody: 'container at: key put: value. value'
+		ensure: true
+		literalBindings: (Dictionary new
+			at: 'key' put: aKey;
+			at: 'value' put: aValue;
+			yourself)
 ]
 
 { #category : 'private' }
@@ -71,87 +88,12 @@ GbsRepositoryRootFacade >> aliasRootKeys [
 ]
 
 { #category : 'private' }
-GbsRepositoryRootFacade >> associationsScript [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:container | container ifNil: [ #() ] ifNotNil: [ container associations asArray ]] value: ';
-			nextPutAll: self containerScript ]
-]
-
-{ #category : 'private' }
-GbsRepositoryRootFacade >> atPutScriptFor: aKey value: aValue [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:container :key :value | container at: key put: value. value] value: ';
-			nextPutAll: self ensuringContainerScript;
-			nextPutAll: ' value: ';
-			nextPutAll: (session marshalArgumentToScript: aKey);
-			nextPutAll: ' value: ';
-			nextPutAll: (session marshalArgumentToScript: aValue) ]
-]
-
-{ #category : 'private' }
-GbsRepositoryRootFacade >> atScriptFor: aKey [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:container :key | container ifNil: [ nil ] ifNotNil: [ container at: key ifAbsent: [ nil ] ]] value: ';
-			nextPutAll: self containerScript;
-			nextPutAll: ' value: ';
-			nextPutAll: (session marshalArgumentToScript: aKey) ]
-]
-
-{ #category : 'private' }
-GbsRepositoryRootFacade >> containerScript [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:root :segments | | current |
-	current := root.
-	segments do: [ :each |
-		current ifNotNil: [
-			current := ((current isKindOf: Dictionary) and: [ current includesKey: each ])
-				ifTrue: [ current at: each ]
-				ifFalse: [ nil ] ] ].
-	current ] value: ';
-			nextPutAll: self rootScript;
-			nextPutAll: ' value: ';
-			nextPutAll: (session marshalArgumentToScript: self path) ]
-]
-
-{ #category : 'private' }
-GbsRepositoryRootFacade >> ensuringContainerScript [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:root :segments | | current next |
-	current := root.
-	segments do: [ :each |
-		next := current at: each ifAbsentPut: [ Dictionary new ].
-		(next isKindOf: Dictionary)
-			ifFalse: [ Error signal: ''Repository namespace path contains a non-dictionary value.'' ].
-		current := next ].
-	current ] value: ';
-			nextPutAll: self rootScript;
-			nextPutAll: ' value: ';
-			nextPutAll: (session marshalArgumentToScript: self path) ]
-]
-
-{ #category : 'private' }
-GbsRepositoryRootFacade >> ensureNamespaceScriptFor: aKey [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:container :key | | child |
-	child := container at: key ifAbsentPut: [ Dictionary new ].
-	(child isKindOf: Dictionary)
-		ifFalse: [ Error signal: ''Repository namespace already exists with a non-dictionary value.'' ].
-	child asOop ] value: ';
-			nextPutAll: self ensuringContainerScript;
-			nextPutAll: ' value: ';
-			nextPutAll: (session marshalArgumentToScript: aKey) ]
-]
-
-{ #category : 'private' }
 GbsRepositoryRootFacade >> ensuringContainerProxy [
 	| oop |
-	oop := session executeScriptAndReturnOop: self ensuringContainerScript.
+	oop := self
+		returnOopCommandBody: 'container'
+		ensure: true
+		literalBindings: Dictionary new.
 	(oop isNil or: [ oop = 0 ]) ifTrue: [
 		self invalidate.
 		cachedLifecycleVersion := self currentLifecycleVersion.
@@ -161,17 +103,20 @@ GbsRepositoryRootFacade >> ensuringContainerProxy [
 
 { #category : 'querying' }
 GbsRepositoryRootFacade >> includesKey: aKey [
-	^ session executeScriptAndFetchObject: (self includesKeyScriptFor: aKey)
+	^ self
+		fetchObjectCommandBody: 'container notNil and: [ container includesKey: key ]'
+		ensure: false
+		literalBindings: (Dictionary new
+			at: 'key' put: aKey;
+			yourself)
 ]
 
 { #category : 'private' }
-GbsRepositoryRootFacade >> includesKeyScriptFor: aKey [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:container :key | container notNil and: [ container includesKey: key ]] value: ';
-			nextPutAll: self containerScript;
-			nextPutAll: ' value: ';
-			nextPutAll: (session marshalArgumentToScript: aKey) ]
+GbsRepositoryRootFacade >> fetchObjectCommandBody: bodyString ensure: ensureBoolean literalBindings: literalDictionary [
+	^ session fetchRemoteCommand: (self
+		remoteCommandBody: bodyString
+		ensure: ensureBoolean
+		literalBindings: literalDictionary)
 ]
 
 { #category : 'querying' }
@@ -199,15 +144,10 @@ GbsRepositoryRootFacade >> lockOwners [
 
 { #category : 'querying' }
 GbsRepositoryRootFacade >> keys [
-	^ session executeScriptAndFetchObject: self keysScript
-]
-
-{ #category : 'private' }
-GbsRepositoryRootFacade >> keysScript [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:container | container ifNil: [ #() ] ifNotNil: [ container keys asArray ]] value: ';
-			nextPutAll: self containerScript ]
+	^ self
+		fetchObjectCommandBody: 'container ifNil: [ #() ] ifNotNil: [ container keys asArray ]'
+		ensure: false
+		literalBindings: Dictionary new
 ]
 
 { #category : 'querying' }
@@ -220,22 +160,28 @@ GbsRepositoryRootFacade >> namespaceAt: aKey [
 { #category : 'querying' }
 GbsRepositoryRootFacade >> namespaceAt: aKey ifAbsent: aBlock [
 	| exists |
-	exists := session executeScriptAndFetchObject: (self namespaceExistsScriptFor: aKey).
+	exists := self
+		fetchObjectCommandBody: '| value |
+	container ifNil: [ false ] ifNotNil: [
+		value := container at: key ifAbsent: [ nil ].
+		value notNil and: [ value isKindOf: Dictionary ] ]'
+		ensure: false
+		literalBindings: (Dictionary new
+			at: 'key' put: aKey;
+			yourself).
 	exists ifFalse: [ ^ aBlock value ].
 	^ self namespaceFacadeAt: aKey
 ]
 
 { #category : 'private' }
-GbsRepositoryRootFacade >> namespaceExistsScriptFor: aKey [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:container :key | | value |
-	container ifNil: [ false ] ifNotNil: [
-		value := container at: key ifAbsent: [ nil ].
-		value notNil and: [ value isKindOf: Dictionary ] ]] value: ';
-			nextPutAll: self containerScript;
-			nextPutAll: ' value: ';
-			nextPutAll: (session marshalArgumentToScript: aKey) ]
+GbsRepositoryRootFacade >> remoteCommandBody: bodyString ensure: ensureBoolean literalBindings: literalDictionary [
+	^ GbsRemoteCommand
+		forRepositoryRoot: self rootKey
+		path: self path
+		aliasKeys: self aliasRootKeys
+		ensure: ensureBoolean
+		body: bodyString
+		literalBindings: literalDictionary
 ]
 
 { #category : 'private' }
@@ -324,23 +270,24 @@ GbsRepositoryRootFacade >> removeKey: aKey [
 GbsRepositoryRootFacade >> removeKey: aKey ifAbsent: aBlock [
 	| marker result |
 	marker := '__gbs_missing__'.
-	result := session executeScriptAndFetchObject: (self removeKeyScriptFor: aKey missingMarker: marker).
+	result := self
+		fetchObjectCommandBody: 'container ifNil: [ missingMarker ] ifNotNil: [
+	container removeKey: key ifAbsent: [ missingMarker ] ]'
+		ensure: true
+		literalBindings: (Dictionary new
+			at: 'key' put: aKey;
+			at: 'missingMarker' put: marker;
+			yourself).
 	result = marker ifTrue: [ ^ aBlock value ].
 	^ result
 ]
 
 { #category : 'private' }
-GbsRepositoryRootFacade >> removeKeyScriptFor: aKey missingMarker: aMarkerString [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:container :key | container ifNil: [ ';
-			nextPutAll: aMarkerString storeString;
-			nextPutAll: ' ] ifNotNil: [ container removeKey: key ifAbsent: [ ';
-			nextPutAll: aMarkerString storeString;
-			nextPutAll: ' ] ]] value: ';
-			nextPutAll: self ensuringContainerScript;
-			nextPutAll: ' value: ';
-			nextPutAll: (session marshalArgumentToScript: aKey) ]
+GbsRepositoryRootFacade >> returnOopCommandBody: bodyString ensure: ensureBoolean literalBindings: literalDictionary [
+	^ session returnRemoteCommandOop: (self
+		remoteCommandBody: bodyString
+		ensure: ensureBoolean
+		literalBindings: literalDictionary)
 ]
 
 { #category : 'accessing' }
@@ -351,31 +298,6 @@ GbsRepositoryRootFacade >> rootKey [
 { #category : 'accessing' }
 GbsRepositoryRootFacade >> rootKey: aSymbol [
 	rootKey := aSymbol
-]
-
-{ #category : 'private' }
-GbsRepositoryRootFacade >> rootScript [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:userGlobals :primaryKey :aliasKeys | | root |
-	root := userGlobals
-		at: primaryKey
-		ifAbsent: [
-			| existing |
-			existing := nil.
-			aliasKeys do: [ :each |
-				existing ifNil: [
-					existing := userGlobals at: each ifAbsent: [ nil ] ] ].
-			existing ifNil: [ Dictionary new ] ifNotNil: [ existing ] ].
-	userGlobals at: primaryKey put: root.
-	aliasKeys do: [ :each | userGlobals at: each put: root ].
-	root ]
-	value: UserGlobals
-	value: ';
-			nextPutAll: (session marshalArgumentToScript: self rootKey);
-			nextPutAll: '
-	value: ';
-			nextPutAll: (session marshalArgumentToScript: self aliasRootKeys) ]
 ]
 
 { #category : 'accessing' }
@@ -390,20 +312,24 @@ GbsRepositoryRootFacade >> session: aSession [
 
 { #category : 'querying' }
 GbsRepositoryRootFacade >> size [
-	^ session executeScriptAndFetchObject: self sizeScript
-]
-
-{ #category : 'private' }
-GbsRepositoryRootFacade >> sizeScript [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:container | container ifNil: [ 0 ] ifNotNil: [ container size ]] value: ';
-			nextPutAll: self containerScript ]
+	^ self
+		fetchObjectCommandBody: 'container ifNil: [ 0 ] ifNotNil: [ container size ]'
+		ensure: false
+		literalBindings: Dictionary new
 ]
 
 { #category : 'mutating' }
 GbsRepositoryRootFacade >> ensureNamespaceAt: aKey [
-	session executeScriptAndReturnOop: (self ensureNamespaceScriptFor: aKey).
+	self
+		fetchObjectCommandBody: '| child |
+	child := container at: key ifAbsentPut: [ Dictionary new ].
+	(child isKindOf: Dictionary)
+		ifFalse: [ Error signal: ''Repository namespace already exists with a non-dictionary value.'' ].
+	true'
+		ensure: true
+		literalBindings: (Dictionary new
+			at: 'key' put: aKey;
+			yourself).
 	^ self namespaceFacadeAt: aKey
 ]
 

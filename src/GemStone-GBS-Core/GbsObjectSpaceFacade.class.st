@@ -198,16 +198,20 @@ GbsObjectSpaceFacade >> loadedClassesIncludingModules [
 
 { #category : 'querying' }
 GbsObjectSpaceFacade >> loadedClassesIncludingModules: aBoolean [
-	^ session
-		executeScriptAndFetchObject: (self loadedClassesIncludingModulesScript: aBoolean)
+	^ self
+		fetchCommandBody: 'SystemRepository _loadedClasses: includeModules'
+		literalBindings: (Dictionary new
+			at: 'includeModules' put: aBoolean;
+			yourself)
+		oopBindings: Dictionary new
 ]
 
 { #category : 'private' }
-GbsObjectSpaceFacade >> loadedClassesIncludingModulesScript: aBoolean [
-	^ 'SystemRepository _loadedClasses: '
-		, (aBoolean
-			ifTrue: [ 'true' ]
-			ifFalse: [ 'false' ])
+GbsObjectSpaceFacade >> fetchCommandBody: bodyString literalBindings: literalDictionary oopBindings: oopDictionary [
+	^ session fetchRemoteCommand: (GbsRemoteCommand
+		blockBody: bodyString
+		literalAssignments: literalDictionary
+		oopAssignments: oopDictionary)
 ]
 
 { #category : 'querying' }
@@ -217,28 +221,38 @@ GbsObjectSpaceFacade >> namedObjectAt: aName [
 
 { #category : 'querying' }
 GbsObjectSpaceFacade >> referencesTo: anObject [
-	^ session
-		executeScriptAndFetchObject: (self referencesToScriptFor: anObject)
+	^ self
+		fetchCommandBody: 'object findReferencesInMemory asArray'
+		literalBindings: (Dictionary new
+			at: 'object' put: anObject;
+			yourself)
+		oopBindings: Dictionary new
 ]
 
 { #category : 'querying' }
 GbsObjectSpaceFacade >> referencesToOop: anOop [
-	^ session
-		executeScriptAndFetchObject: (self referencesToScriptForOop: anOop)
+	^ self
+		fetchCommandBody: 'object findReferencesInMemory asArray'
+		literalBindings: Dictionary new
+		oopBindings: (Dictionary new
+			at: 'object' put: anOop;
+			yourself)
 ]
 
 { #category : 'querying' }
 GbsObjectSpaceFacade >> objectsInMemory [
-	^ session
-		executeScriptAndFetchObject: self objectsInMemoryScript
+	^ self objectsInMemoryFrom: 1 limit: 0
 ]
 
 { #category : 'querying' }
 GbsObjectSpaceFacade >> objectsInMemoryFrom: aStartIndex limit: aLimit [
-	^ session
-		executeScriptAndFetchObject: (self
-			objectsInMemoryScriptFrom: aStartIndex
-			limit: aLimit)
+	^ self
+		fetchCommandBody: self objectsInMemoryCommandBody
+		literalBindings: (Dictionary new
+			at: 'limitValue' put: (aLimit max: 0);
+			at: 'startIndex' put: (aStartIndex max: 1);
+			yourself)
+		oopBindings: Dictionary new
 ]
 
 { #category : 'querying' }
@@ -300,17 +314,10 @@ GbsObjectSpaceFacade >> objectsInMemoryOf: aClassOrName matching: aBlock limit: 
 ]
 
 { #category : 'private' }
-GbsObjectSpaceFacade >> objectsInMemoryScript [
-	^ self objectsInMemoryScriptFrom: 1 limit: 0
-]
-
-{ #category : 'private' }
-GbsObjectSpaceFacade >> objectsInMemoryScriptFrom: aStartIndex limit: aLimit [
-	^ '| classes results startIndex limitValue skipCount takeCount |
+GbsObjectSpaceFacade >> objectsInMemoryCommandBody [
+	^ '| classes results skipCount takeCount |
 classes := SystemRepository _loadedClasses: false.
 classes size > 2034 ifTrue: [ classes := classes copyFrom: 1 to: 2034 ].
-startIndex := ', (aStartIndex max: 1) printString, '.
-limitValue := ', (aLimit max: 0) printString, '.
 skipCount := startIndex - 1.
 takeCount := limitValue.
 classes isEmpty ifTrue: [ #() ] ifFalse: [
@@ -347,24 +354,6 @@ GbsObjectSpaceFacade >> repositoryFacade [
 	^ session objectSpaceRepository
 ]
 
-{ #category : 'private' }
-GbsObjectSpaceFacade >> referencesToScriptFor: anObject [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '(';
-			nextPutAll: (session marshalArgumentToScript: anObject);
-			nextPutAll: ') findReferencesInMemory asArray' ]
-]
-
-{ #category : 'private' }
-GbsObjectSpaceFacade >> referencesToScriptForOop: anOop [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '((Object _objectForOop: ';
-			nextPutAll: anOop asString;
-			nextPutAll: ')) findReferencesInMemory asArray' ]
-]
-
 { #category : 'accessing' }
 GbsObjectSpaceFacade >> session [
 	^ session
@@ -380,17 +369,24 @@ GbsObjectSpaceFacade >> sessionStateAt: aKey [
 { #category : 'querying' }
 GbsObjectSpaceFacade >> sessionStateAt: aKey ifAbsent: aBlock [
 	| result |
-	result := session
-		executeScriptAndFetchObject: (self sessionStateAtScriptFor: aKey).
+	result := self
+		fetchCommandBody: self sessionStateAtCommandBody
+		literalBindings: (Dictionary new
+			at: 'key' put: aKey;
+			yourself)
+		oopBindings: Dictionary new.
 	^ result ifNil: [ aBlock value ] ifNotNil: [ result ]
 ]
 
 { #category : 'actions' }
 GbsObjectSpaceFacade >> sessionStateAt: aKey put: anObject [
-	^ session
-		executeScriptAndFetchObject: (self
-			sessionStateAtPutScriptFor: aKey
-			value: anObject)
+	^ self
+		fetchCommandBody: self sessionStateAtPutCommandBody
+		literalBindings: (Dictionary new
+			at: 'key' put: aKey;
+			at: 'value' put: anObject;
+			yourself)
+		oopBindings: Dictionary new
 ]
 
 { #category : 'accessing' }
@@ -399,33 +395,21 @@ GbsObjectSpaceFacade >> session: aSession [
 ]
 
 { #category : 'private' }
-GbsObjectSpaceFacade >> sessionStateAtPutScriptFor: aKey value: anObject [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| key value | key := ';
-			nextPutAll: (session marshalArgumentToScript: aKey);
-			nextPutAll: '. value := ';
-			nextPutAll: (session marshalArgumentToScript: anObject);
-			nextPutAll: '. ';
-			nextPutAll: '(System respondsTo: #sessionStateAt:put:) ';
-			nextPutAll: 'ifTrue: [ System sessionStateAt: key put: value ] ';
-			nextPutAll: 'ifFalse: [ (System respondsTo: #_sessionStateAt:put:) ';
-			nextPutAll: 'ifTrue: [ System _sessionStateAt: key put: value ] ';
-			nextPutAll: 'ifFalse: [ Error signal: ''System does not support sessionStateAt:put:.'' ] ]' ]
+GbsObjectSpaceFacade >> sessionStateAtPutCommandBody [
+	^ '(System respondsTo: #sessionStateAt:put:)
+		ifTrue: [ System sessionStateAt: key put: value ]
+		ifFalse: [ (System respondsTo: #_sessionStateAt:put:)
+			ifTrue: [ System _sessionStateAt: key put: value ]
+			ifFalse: [ Error signal: ''System does not support sessionStateAt:put:.'' ] ]'
 ]
 
 { #category : 'private' }
-GbsObjectSpaceFacade >> sessionStateAtScriptFor: aKey [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| key | key := ';
-			nextPutAll: (session marshalArgumentToScript: aKey);
-			nextPutAll: '. ';
-			nextPutAll: '(System respondsTo: #sessionStateAt:) ';
-			nextPutAll: 'ifTrue: [ System sessionStateAt: key ] ';
-			nextPutAll: 'ifFalse: [ (System respondsTo: #_sessionStateAt:) ';
-			nextPutAll: 'ifTrue: [ System _sessionStateAt: key ] ';
-			nextPutAll: 'ifFalse: [ nil ] ]' ]
+GbsObjectSpaceFacade >> sessionStateAtCommandBody [
+	^ '(System respondsTo: #sessionStateAt:)
+		ifTrue: [ System sessionStateAt: key ]
+		ifFalse: [ (System respondsTo: #_sessionStateAt:)
+			ifTrue: [ System _sessionStateAt: key ]
+			ifFalse: [ nil ] ]'
 ]
 
 { #category : 'private' }

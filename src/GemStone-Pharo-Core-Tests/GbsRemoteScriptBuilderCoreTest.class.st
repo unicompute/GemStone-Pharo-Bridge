@@ -77,6 +77,23 @@ GbsRemoteScriptBuilderCoreTest >> testRemoteCommandBindsNamedLiteralAndOopArgume
 ]
 
 { #category : 'tests' }
+GbsRemoteScriptBuilderCoreTest >> testRemoteCommandBuildsTypedAssignments [
+	| command literals oops |
+	literals := Dictionary new.
+	literals at: 'name' put: 'O''Reilly'.
+	oops := Dictionary new.
+	oops at: 'object' put: 9001.
+	command := GbsRemoteCommand
+		blockBody: 'object at: name'
+		literalAssignments: literals
+		oopAssignments: oops.
+
+	self assert: (command script includesSubstring: 'object := (Object _objectForOop: 9001)').
+	self assert: (command script includesSubstring: 'name := ''O''''Reilly''').
+	self assert: (command script includesSubstring: 'object at: name')
+]
+
+{ #category : 'tests' }
 GbsRemoteScriptBuilderCoreTest >> testRemoteCommandBindsOopArguments [
 	| command |
 	command := GbsRemoteCommand
@@ -100,6 +117,51 @@ GbsRemoteScriptBuilderCoreTest >> testRemoteCommandBindsNamedOopArguments [
 	self
 		assert: command script
 		equals: '[ :object | object class name ] value: (Object _objectForOop: 9001)'
+]
+
+{ #category : 'tests' }
+GbsRemoteScriptBuilderCoreTest >> testRemoteCommandBuildsObjectSend [
+	| command |
+	command := GbsRemoteCommand
+		forObjectOop: 9001
+		send: #at:
+		arguments: #(1).
+
+	self assert: (command script includesSubstring: 'object perform: selector withArguments: arguments').
+	self assert: (command script includesSubstring: 'value: (Object _objectForOop: 9001)').
+	self assert: (command script includesSubstring: '''at:'' asSymbol').
+	self assert: (command script includesSubstring: '{ 1 }')
+]
+
+{ #category : 'tests' }
+GbsRemoteScriptBuilderCoreTest >> testRemoteCommandBuildsRepositoryRootCommand [
+	| command |
+	command := GbsRemoteCommand
+		forRepositoryRoot: #GbsBridgeRoot
+		path: #(tickets active)
+		aliasKeys: #(LegacyRoot)
+		ensure: true
+		body: 'container size'
+		literalBindings: Dictionary new.
+
+	self assert: (command script includesSubstring: 'UserGlobals at: rootKey put: root').
+	self assert: (command script includesSubstring: 'ifAbsentPut: [ Dictionary new ]').
+	self assert: (command script includesSubstring: 'container size').
+	self assert: (command script includesSubstring: '''GbsBridgeRoot'' asSymbol').
+	self assert: (command script includesSubstring: '''tickets'' asSymbol')
+]
+
+{ #category : 'tests' }
+GbsRemoteScriptBuilderCoreTest >> testRemoteCommandBuildsSymbolDictionaryCommand [
+	| command |
+	command := GbsRemoteCommand
+		forSymbolDictionaryNamed: #UserGlobals
+		body: 'root ifNil: [ #() ] ifNotNil: [ root keys asArray ]'
+		literalBindings: Dictionary new.
+
+	self assert: (command script includesSubstring: 'resolveSymbol: dictionaryName').
+	self assert: (command script includesSubstring: 'root ifNil: [ #() ]').
+	self assert: (command script includesSubstring: '''UserGlobals'' asSymbol')
 ]
 
 { #category : 'tests' }

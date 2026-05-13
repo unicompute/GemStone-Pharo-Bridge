@@ -66,6 +66,31 @@ if (( raw_script_count > 0 )); then
   fail "raw String streamContents remote script sites reappeared"
 fi
 
+if rg -n "rootScript|containerScript|ensuringContainerScript|associationsScript|atScriptFor:|atPutScriptFor:|ensureNamespaceScriptFor:|includesKeyScriptFor:|keysScript|namespaceExistsScriptFor:|removeKeyScriptFor:|sizeScript" \
+  src/GemStone-GBS-Core/GbsRepositoryRootFacade.class.st \
+  src/GemStone-GBS-Core/GbsSymbolDictionaryFacade.class.st \
+  src/GemStone-GBS-Core/GbsBridgeRootFacade.class.st >/tmp/gbs-core-facade-helper-gate.$$; then
+  cat /tmp/gbs-core-facade-helper-gate.$$
+  fail "legacy Core facade script-helper method reappeared; use typed GbsRemoteCommand constructors"
+fi
+rm -f /tmp/gbs-core-facade-helper-gate.$$
+
+if rg -n "executeScriptAndFetchObject: \\(self|executeScriptAndReturnOop: \\(self|executeScriptAndFetchObject: .*Script|executeScriptAndReturnOop: .*Script" \
+  src/GemStone-GBS-Core/GbsRepositoryRootFacade.class.st \
+  src/GemStone-GBS-Core/GbsSymbolDictionaryFacade.class.st \
+  src/GemStone-GBS-Core/GbsBridgeRootFacade.class.st >/tmp/gbs-core-facade-execution-gate.$$; then
+  cat /tmp/gbs-core-facade-execution-gate.$$
+  fail "Core facade direct self-built script execution reappeared; use fetchRemoteCommand:/returnRemoteCommandOop:"
+fi
+rm -f /tmp/gbs-core-facade-execution-gate.$$
+
+if rg -n "loadedClassesIncludingModulesScript|objectsInMemoryScript|referencesToScriptFor|sessionStateAtScriptFor|sessionStateAtPutScriptFor" \
+  src/GemStone-GBS-Core/GbsObjectSpaceFacade.class.st >/tmp/gbs-object-space-helper-gate.$$; then
+  cat /tmp/gbs-object-space-helper-gate.$$
+  fail "legacy ObjectSpace script-helper method reappeared; use typed GbsRemoteCommand constructors"
+fi
+rm -f /tmp/gbs-object-space-helper-gate.$$
+
 if rg -l "executeAndFetch:" \
   src/GemStone-GBS-Core \
   src/GemStone-GBS-MagLev \

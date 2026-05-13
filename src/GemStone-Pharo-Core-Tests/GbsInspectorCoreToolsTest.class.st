@@ -157,7 +157,8 @@ GbsInspectorCoreToolsTest >> testBrowseReferencersInMemoryUsesSessionFacadeAndOp
 		at: #executeScriptAndFetchObject
 		put: [ :script |
 			self assert: session materializationProfile class equals: GbsShallowMaterializationProfile.
-			self assert: script equals: '((Object _objectForOop: 456)) findReferencesInMemory asArray'.
+			self assert: (script includesSubstring: 'object := (Object _objectForOop: 456)').
+			self assert: (script includesSubstring: 'object findReferencesInMemory asArray').
 			^ { GbsProxy oop: 9001 session: session } ].
 
 	inspector instVarNamed: 'session' put: session.

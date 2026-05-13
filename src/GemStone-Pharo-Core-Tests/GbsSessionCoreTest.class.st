@@ -837,7 +837,8 @@ GbsSessionCoreTest >> testObjectSpaceLoadedClassesIncludingModulesBuildsExpected
 	| mockSession result |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: script equals: 'SystemRepository _loadedClasses: true'.
+		self assert: (script includesSubstring: 'SystemRepository _loadedClasses: includeModules').
+		self assert: (script includesSubstring: 'includeModules := true').
 		#('Invoice' 'Payments') ].
 
 	result := mockSession objectSpace loadedClassesIncludingModules.
@@ -850,7 +851,8 @@ GbsSessionCoreTest >> testObjectSpaceLoadedClassesIncludingModulesFalseBuildsExp
 	| mockSession result |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: script equals: 'SystemRepository _loadedClasses: false'.
+		self assert: (script includesSubstring: 'SystemRepository _loadedClasses: includeModules').
+		self assert: (script includesSubstring: 'includeModules := false').
 		#('Invoice') ].
 
 	result := mockSession objectSpace loadedClassesIncludingModules: false.
@@ -899,7 +901,8 @@ GbsSessionCoreTest >> testObjectSpaceReferencesToBuildsExpectedScript [
 	mockSession := CoreMockGbsSession new.
 	proxy := GbsProxy oop: 4242 session: mockSession.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: script equals: '((Object _objectForOop: 4242)) findReferencesInMemory asArray'.
+		self assert: (script includesSubstring: 'object := (Object _objectForOop: 4242)').
+		self assert: (script includesSubstring: 'object findReferencesInMemory asArray').
 		^ #(9001 9002) ].
 
 	result := mockSession objectSpace referencesTo: proxy.
@@ -912,7 +915,8 @@ GbsSessionCoreTest >> testObjectSpaceReferencesToOopBuildsExpectedScript [
 	| mockSession result |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: script equals: '((Object _objectForOop: 4242)) findReferencesInMemory asArray'.
+		self assert: (script includesSubstring: 'object := (Object _objectForOop: 4242)').
+		self assert: (script includesSubstring: 'object findReferencesInMemory asArray').
 		^ #(9001) ].
 
 	result := mockSession objectSpace referencesToOop: 4242.
@@ -1859,7 +1863,8 @@ GbsSessionCoreTest >> testRepositoryRootAtIfAbsentEvaluatesFallback [
 	| mockSession result |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: (script includesSubstring: '#GbsBridgeRoot').
+		self assert: ((script includesSubstring: '#GbsBridgeRoot')
+			or: [ script includesSubstring: '''GbsBridgeRoot'' asSymbol' ]).
 		self assert: (script includesSubstring: 'at: key ifAbsent: [ nil ]').
 		nil ].
 
@@ -1873,9 +1878,11 @@ GbsSessionCoreTest >> testRepositoryRootAtPutBuildsExpectedScript [
 	| mockSession result |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: (script includesSubstring: '#GbsBridgeRoot').
+		self assert: ((script includesSubstring: '#GbsBridgeRoot')
+			or: [ script includesSubstring: '''GbsBridgeRoot'' asSymbol' ]).
 		self assert: (script includesSubstring: 'container at: key put: value').
-		self assert: (script includesSubstring: '#ticket').
+		self assert: ((script includesSubstring: '#ticket')
+			or: [ script includesSubstring: '''ticket'' asSymbol' ]).
 		self assert: (script includesSubstring: '''vip''').
 		'vip' ].
 
@@ -1889,7 +1896,8 @@ GbsSessionCoreTest >> testRepositoryRootProxyUsesRootScriptAndReturnsProxy [
 	| mockSession root result |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
-		self assert: (script includesSubstring: '#GbsBridgeRoot').
+		self assert: ((script includesSubstring: '#GbsBridgeRoot')
+			or: [ script includesSubstring: '''GbsBridgeRoot'' asSymbol' ]).
 		2001 ].
 	root := mockSession repository root.
 
@@ -1905,7 +1913,8 @@ GbsSessionCoreTest >> testRepositoryRootProxyRefreshesAfterInvalidation [
 	mockSession := CoreMockGbsSession new.
 	oops := #(2001 2002) readStream.
 	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
-		self assert: (script includesSubstring: '#GbsBridgeRoot').
+		self assert: ((script includesSubstring: '#GbsBridgeRoot')
+			or: [ script includesSubstring: '''GbsBridgeRoot'' asSymbol' ]).
 		oops next ].
 	root := mockSession repository root.
 
@@ -1923,7 +1932,8 @@ GbsSessionCoreTest >> testRepositoryRootKeysBuildExpectedScript [
 	| mockSession result |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: (script includesSubstring: '#GbsBridgeRoot').
+		self assert: ((script includesSubstring: '#GbsBridgeRoot')
+			or: [ script includesSubstring: '''GbsBridgeRoot'' asSymbol' ]).
 		self assert: (script includesSubstring: 'container keys asArray').
 		#(#tickets #users) ].
 
@@ -1936,10 +1946,11 @@ GbsSessionCoreTest >> testRepositoryRootKeysBuildExpectedScript [
 GbsSessionCoreTest >> testRepositoryRootEnsureNamespaceAtReturnsNestedFacade [
 	| mockSession namespace |
 	mockSession := CoreMockGbsSession new.
-	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		self assert: (script includesSubstring: 'at: key ifAbsentPut: [ Dictionary new ]').
-		self assert: (script includesSubstring: '#tickets').
-		3001 ].
+		self assert: ((script includesSubstring: '#tickets')
+			or: [ script includesSubstring: '''tickets'' asSymbol' ]).
+		true ].
 
 	namespace := (mockSession repository root) ensureNamespaceAt: #tickets.
 
@@ -1966,7 +1977,8 @@ GbsSessionCoreTest >> testRepositoryRootNamespaceAtIfAbsentEvaluatesFallback [
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		self assert: (script includesSubstring: 'value isKindOf: Dictionary').
-		self assert: (script includesSubstring: '#tickets').
+		self assert: ((script includesSubstring: '#tickets')
+			or: [ script includesSubstring: '''tickets'' asSymbol' ]).
 		false ].
 
 	result := (mockSession repository root)
@@ -1982,7 +1994,8 @@ GbsSessionCoreTest >> testRepositoryRootWithReadLockDoLocksAndUnlocksContainer [
 	mockSession := CoreMockGbsSession new.
 	scripts := OrderedCollection new.
 	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
-		self assert: (script includesSubstring: '#GbsBridgeRoot').
+		self assert: ((script includesSubstring: '#GbsBridgeRoot')
+			or: [ script includesSubstring: '''GbsBridgeRoot'' asSymbol' ]).
 		4001 ].
 	mockSession stubs at: #execute put: [ :script |
 		scripts add: script.

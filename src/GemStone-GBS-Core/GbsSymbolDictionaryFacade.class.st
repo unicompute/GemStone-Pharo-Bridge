@@ -20,7 +20,12 @@ GbsSymbolDictionaryFacade class >> on: aSession name: aName [
 { #category : 'querying' }
 GbsSymbolDictionaryFacade >> associations [
 	| associations |
-	associations := session executeScriptAndFetchObject: self associationsScript.
+	associations := self fetchObjectCommandBody: '| items |
+	items := OrderedCollection new.
+	root ifNotNil: [
+		root keysAndValuesDo: [ :key :value | items add: (key -> value) ] ].
+	items asArray'
+		literalBindings: Dictionary new.
 	associations ifNil: [ ^ #() ].
 	^ associations collect: [ :each |
 		each key -> (self materializeValue: each value) ]
@@ -36,7 +41,13 @@ GbsSymbolDictionaryFacade >> at: aKey [
 { #category : 'querying' }
 GbsSymbolDictionaryFacade >> at: aKey ifAbsent: aBlock [
 	| result |
-	result := session executeScriptAndFetchObject: (self atScriptFor: aKey).
+	result := self fetchObjectCommandBody: 'root ifNil: [ nil ] ifNotNil: [
+	(root respondsTo: #objectNamed:ifAbsent:)
+		ifTrue: [ root objectNamed: key ifAbsent: [ nil ] ]
+		ifFalse: [ root at: key ifAbsent: [ nil ] ] ]'
+		literalBindings: (Dictionary new
+			at: 'key' put: aKey;
+			yourself).
 	^ result
 		ifNil: [ aBlock value ]
 		ifNotNil: [ self materializeValue: result ]
@@ -45,13 +56,25 @@ GbsSymbolDictionaryFacade >> at: aKey ifAbsent: aBlock [
 { #category : 'mutating' }
 GbsSymbolDictionaryFacade >> at: aKey put: aValue [
 	| result |
-	result := session executeScriptAndFetchObject: (self atPutScriptFor: aKey value: aValue).
+	result := self fetchObjectCommandBody: 'root ifNil: [ nil ] ifNotNil: [
+	root at: key put: value.
+	value ]'
+		literalBindings: (Dictionary new
+			at: 'key' put: aKey;
+			at: 'value' put: aValue;
+			yourself).
 	^ self materializeValue: result
 ]
 
 { #category : 'querying' }
 GbsSymbolDictionaryFacade >> includesKey: aKey [
-	^ session executeScriptAndFetchObject: (self includesKeyScriptFor: aKey)
+	^ self fetchObjectCommandBody: 'root ifNil: [ false ] ifNotNil: [
+	(root respondsTo: #objectNamed:ifAbsent:)
+		ifTrue: [ (root objectNamed: key ifAbsent: [ nil ]) notNil ]
+		ifFalse: [ root includesKey: key ] ]'
+		literalBindings: (Dictionary new
+			at: 'key' put: aKey;
+			yourself)
 ]
 
 { #category : 'querying' }
@@ -61,7 +84,12 @@ GbsSymbolDictionaryFacade >> isEmpty [
 
 { #category : 'querying' }
 GbsSymbolDictionaryFacade >> keys [
-	^ session executeScriptAndFetchObject: self keysScript
+	^ self fetchObjectCommandBody: '| items |
+	items := OrderedCollection new.
+	root ifNotNil: [
+		root keysAndValuesDo: [ :key :value | items add: key ] ].
+	items asArray'
+		literalBindings: Dictionary new
 ]
 
 { #category : 'private' }
@@ -112,7 +140,18 @@ GbsSymbolDictionaryFacade >> removeKey: aKey [
 GbsSymbolDictionaryFacade >> removeKey: aKey ifAbsent: aBlock [
 	| marker result |
 	marker := '__gbs_missing__'.
-	result := session executeScriptAndFetchObject: (self removeKeyScriptFor: aKey missingMarker: marker).
+	result := self fetchObjectCommandBody: '| value |
+	root ifNil: [ missingMarker ] ifNotNil: [
+		value := (root respondsTo: #objectNamed:ifAbsent:)
+			ifTrue: [ root objectNamed: key ifAbsent: [ missingMarker ] ]
+			ifFalse: [ root at: key ifAbsent: [ missingMarker ] ].
+		value = missingMarker ifTrue: [ value ] ifFalse: [
+			root removeKey: key ifAbsent: [ ].
+			value ] ]'
+		literalBindings: (Dictionary new
+			at: 'key' put: aKey;
+			at: 'missingMarker' put: marker;
+			yourself).
 	result = marker ifTrue: [ ^ aBlock value ].
 	^ self materializeValue: result
 ]
@@ -129,11 +168,8 @@ GbsSymbolDictionaryFacade >> session: aSession [
 
 { #category : 'querying' }
 GbsSymbolDictionaryFacade >> size [
-	^ (GbsRemoteCommand
-		blockBody: 'root ifNil: [ 0 ] ifNotNil: [ root size ]'
-		argumentNames: #('root')
-		argumentScripts: { self rootScript })
-		executeAndFetchObjectIn: session
+	^ self fetchObjectCommandBody: 'root ifNil: [ 0 ] ifNotNil: [ root size ]'
+		literalBindings: Dictionary new
 ]
 
 { #category : 'querying' }
@@ -142,106 +178,11 @@ GbsSymbolDictionaryFacade >> values [
 ]
 
 { #category : 'private' }
-GbsSymbolDictionaryFacade >> associationsScript [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:root | | items |
-	items := OrderedCollection new.
-	root ifNotNil: [
-		root keysAndValuesDo: [ :key :value | items add: (key -> value) ] ].
-	items asArray ] value: ';
-			nextPutAll: self rootScript ]
-]
-
-{ #category : 'private' }
-GbsSymbolDictionaryFacade >> atPutScriptFor: aKey value: aValue [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:root :key :value |
-	root ifNil: [ nil ] ifNotNil: [ root at: key put: value. value ] ] value: ';
-			nextPutAll: self rootScript;
-			nextPutAll: ' value: ';
-			nextPutAll: (session marshalArgumentToScript: aKey);
-			nextPutAll: ' value: ';
-			nextPutAll: (session marshalArgumentToScript: aValue) ]
-]
-
-{ #category : 'private' }
-GbsSymbolDictionaryFacade >> atScriptFor: aKey [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:root :key |
-	root ifNil: [ nil ] ifNotNil: [
-		(root respondsTo: #objectNamed:ifAbsent:)
-			ifTrue: [ root objectNamed: key ifAbsent: [ nil ] ]
-			ifFalse: [ root at: key ifAbsent: [ nil ] ] ] ] value: ';
-			nextPutAll: self rootScript;
-			nextPutAll: ' value: ';
-			nextPutAll: (session marshalArgumentToScript: aKey) ]
-]
-
-{ #category : 'private' }
-GbsSymbolDictionaryFacade >> includesKeyScriptFor: aKey [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:root :key |
-	root ifNil: [ false ] ifNotNil: [
-		(root respondsTo: #objectNamed:ifAbsent:)
-			ifTrue: [ (root objectNamed: key ifAbsent: [ nil ]) notNil ]
-			ifFalse: [ root includesKey: key ] ] ] value: ';
-			nextPutAll: self rootScript;
-			nextPutAll: ' value: ';
-			nextPutAll: (session marshalArgumentToScript: aKey) ]
-]
-
-{ #category : 'private' }
-GbsSymbolDictionaryFacade >> keysScript [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:root | | items |
-	items := OrderedCollection new.
-	root ifNotNil: [
-		root keysAndValuesDo: [ :key :value | items add: key ] ].
-	items asArray ] value: ';
-			nextPutAll: self rootScript ]
-]
-
-{ #category : 'private' }
-GbsSymbolDictionaryFacade >> removeKeyScriptFor: aKey missingMarker: aMarkerString [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:root :key | | value |
-	root ifNil: [ ';
-			nextPutAll: aMarkerString storeString;
-			nextPutAll: ' ] ifNotNil: [
-		value := (root respondsTo: #objectNamed:ifAbsent:)
-			ifTrue: [ root objectNamed: key ifAbsent: [ ';
-			nextPutAll: aMarkerString storeString;
-			nextPutAll: ' ] ]
-			ifFalse: [ root at: key ifAbsent: [ ';
-			nextPutAll: aMarkerString storeString;
-			nextPutAll: ' ] ].
-		value = ';
-			nextPutAll: aMarkerString storeString;
-			nextPutAll: ' ifTrue: [ value ] ifFalse: [
-			root removeKey: key ifAbsent: [ ].
-			value ] ] ] value: ';
-			nextPutAll: self rootScript;
-			nextPutAll: ' value: ';
-			nextPutAll: (session marshalArgumentToScript: aKey) ]
-]
-
-{ #category : 'private' }
-GbsSymbolDictionaryFacade >> rootScript [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:symbol | | association |
-	association := GsSession currentSession resolveSymbol: symbol.
-	association ifNil: [ nil ] ifNotNil: [
-		(association respondsTo: #value)
-			ifTrue: [ association value ]
-			ifFalse: [ association ] ] ] value: ';
-			nextPutAll: (session marshalArgumentToScript: dictionaryName asSymbol) ]
+GbsSymbolDictionaryFacade >> fetchObjectCommandBody: bodyString literalBindings: literalDictionary [
+	^ session fetchRemoteCommand: (GbsRemoteCommand
+		forSymbolDictionaryNamed: dictionaryName
+		body: bodyString
+		literalBindings: literalDictionary)
 ]
 
 { #category : 'accessing' }

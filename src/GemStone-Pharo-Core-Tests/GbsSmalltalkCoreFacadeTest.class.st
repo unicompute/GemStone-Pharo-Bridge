@@ -25,7 +25,8 @@ GbsSmalltalkCoreFacadeTest >> testBridgeRootAssociationsScriptUsesNeutralKey [
 	mockSession bridgeRoot associations.
 
 	self assert: scripts size equals: 1.
-	self assert: (scripts first includesSubstring: '#GbsBridgeRoot').
+	self assert: ((scripts first includesSubstring: '#GbsBridgeRoot')
+		or: [ scripts first includesSubstring: '''GbsBridgeRoot'' asSymbol' ]).
 	self deny: (scripts first includesSubstring: '#GbsPersistentRoot')
 ]
 
@@ -52,7 +53,9 @@ GbsSmalltalkCoreFacadeTest >> testBridgeRootMutationScriptsUseNeutralKey [
 	self assert: (bridgeRoot at: #Alpha put: 9) equals: 9.
 	self assert: (bridgeRoot removeKey: #Alpha ifAbsent: [ self fail ]) equals: 9.
 	self assert: scripts size equals: 2.
-	self assert: (scripts allSatisfy: [ :each | each includesSubstring: '#GbsBridgeRoot' ]).
+	self assert: (scripts allSatisfy: [ :each |
+		(each includesSubstring: '#GbsBridgeRoot')
+			or: [ each includesSubstring: '''GbsBridgeRoot'' asSymbol' ] ]).
 	self deny: (scripts anySatisfy: [ :each | each includesSubstring: '#GbsPersistentRoot' ])
 ]
 

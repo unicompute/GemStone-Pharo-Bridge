@@ -29,37 +29,17 @@ GbsBridgeRootFacade >> aliasRootKeys [
 ]
 
 { #category : 'private' }
-GbsBridgeRootFacade >> rootKey [
-	^ #GbsBridgeRoot
+GbsBridgeRootFacade >> fetchObjectCommandBody: bodyString literalBindings: literalDictionary [
+	^ session fetchRemoteCommand: (GbsRemoteCommand
+		forRepositoryRoot: self rootKey
+		path: #()
+		aliasKeys: self aliasRootKeys
+		ensure: true
+		body: bodyString
+		literalBindings: literalDictionary)
 ]
 
 { #category : 'private' }
-GbsBridgeRootFacade >> rootScript [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[:association :primaryKey :aliasKeys | | userGlobals root |
-	userGlobals := association
-		ifNil: [ nil ]
-		ifNotNil: [ (association respondsTo: #value)
-			ifTrue: [ association value ]
-			ifFalse: [ association ] ].
-	userGlobals ifNil: [ nil ] ifNotNil: [
-		root := userGlobals
-			at: primaryKey
-			ifAbsent: [
-				| existing |
-				existing := nil.
-				aliasKeys do: [ :each |
-					existing ifNil: [
-						existing := userGlobals at: each ifAbsent: [ nil ] ] ].
-				existing ifNil: [ Dictionary new ] ifNotNil: [ existing ] ].
-		userGlobals at: primaryKey put: root.
-		aliasKeys do: [ :each | userGlobals at: each put: root ].
-		root ] ]
-	value: (GsSession currentSession resolveSymbol: #UserGlobals)
-	value: ';
-			nextPutAll: (session marshalArgumentToScript: self rootKey);
-			nextPutAll: '
-	value: ';
-			nextPutAll: (session marshalArgumentToScript: self aliasRootKeys) ]
+GbsBridgeRootFacade >> rootKey [
+	^ #GbsBridgeRoot
 ]
