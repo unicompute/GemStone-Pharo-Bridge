@@ -139,7 +139,7 @@ GbsRemoteDebuggerContextPresenter >> selectedContextForInspector [
 { #category : 'private' }
 GbsRemoteDebuggerContextPresenter >> selectedVariableName [
 	| variablesTable selectedItem |
-	variablesTable := debugger instVarNamed: 'variablesTable'.
+	variablesTable := debugger variablesTablePresenter.
 	variablesTable ifNil: [ ^ nil ].
 	selectedItem := (variablesTable respondsTo: #selectedItem)
 		ifTrue: [ variablesTable selectedItem ]

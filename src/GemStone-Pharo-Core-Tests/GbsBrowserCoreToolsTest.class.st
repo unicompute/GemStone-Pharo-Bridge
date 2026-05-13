@@ -215,7 +215,7 @@ GbsBrowserCoreToolsTest >> testBrowseMethodInfoUsesRemoteMethodMirrorMetadata [
 	session := CoreMockGbsSession new.
 	session stubs at: #executeAndFetch put: [ :script | self fail ].
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: (script includesSubstring: 'compiledMethodAt: #foo').
+		self assert: (script includesSubstring: 'value: (''foo'' asSymbol)').
 		^ #(9001 'DemoClass' 'foo' 'testing' 'foo ^ 1' 'Demo-Package' 'DemoClass>>foo' 1 2) ].
 	classes := GbxFakeListPresenterForBrowser new.
 	classes selectedItem: 'DemoClass'.
@@ -250,7 +250,8 @@ GbsBrowserCoreToolsTest >> testBrowseVersionsUsesRemoteMethodMirrorVersionEntrie
 	session stubs at: #executeAndFetch put: [ :script | self fail ].
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
 		self assert: (script includesSubstring: 'respondsTo: #allVersionsOf:').
-		self assert: (script includesSubstring: 'sel := #foo').
+		self assert: (script includesSubstring: 'sel := selectorValue').
+		self assert: (script includesSubstring: 'value: (''foo'' asSymbol)').
 		^ {
 			#('version 1' 'foo ^ 1').
 			#('version 2' 'foo ^ 2') } ].
@@ -375,7 +376,7 @@ GbsBrowserCoreToolsTest >> testInspectMethodUsesRemoteMethodMirror [
 	session := CoreMockGbsSession new.
 	session stubs at: #executeAndFetch put: [ :script | self fail ].
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: (script includesSubstring: 'compiledMethodAt: #foo').
+		self assert: (script includesSubstring: 'value: (''foo'' asSymbol)').
 		^ #(9001 'DemoClass' 'foo' 'testing' 'foo ^ 1' 'Demo-Package' 'DemoClass>>foo' 1 2) ].
 	classes := GbxFakeListPresenterForBrowser new.
 	classes selectedItem: 'DemoClass'.
@@ -400,7 +401,7 @@ GbsBrowserCoreToolsTest >> testInvokeSelectedMethodCallsClassSideMethodObject [
 	session := CoreMockGbsSession new.
 	session stubs at: #executeAndFetch put: [ :script | self fail ].
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #new') ifTrue: [
+		(script includesSubstring: 'value: (''new'' asSymbol)') ifTrue: [
 			^ #(9002 'DemoClass class' 'new' 'instance creation' 'new ^ super new' 'Demo-Package' 'DemoClass class>>new' 1 2) ].
 		(script includesSubstring: 'cls superclass') ifTrue: [
 			^ #(9001 'DemoClass' 'Object' 'Demo-Package' 'Demo-Category' 2 4) ].
@@ -436,7 +437,7 @@ GbsBrowserCoreToolsTest >> testInvokeSelectedMethodPromptsForArguments [
 	session := CoreMockGbsSession new.
 	session stubs at: #executeAndFetch put: [ :script | self fail ].
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #fromAmount:') ifTrue: [
+		(script includesSubstring: 'value: (''fromAmount:'' asSymbol)') ifTrue: [
 			^ #(9003 'DemoMoney class' 'fromAmount:' 'instance creation' 'fromAmount: amount ^ self new' 'Demo-Package' 'DemoMoney class>>fromAmount:' 1 2) ].
 		(script includesSubstring: 'cls superclass') ifTrue: [
 			^ #(9004 'DemoMoney' 'Object' 'Demo-Package' 'Demo-Category' 2 4) ].
@@ -510,7 +511,7 @@ GbsBrowserCoreToolsTest >> testMethodSelectedUsesRemoteMethodMirrorSource [
 	session := CoreMockGbsSession new.
 	session stubs at: #executeAndFetch put: [ :script | self fail ].
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: (script includesSubstring: 'compiledMethodAt: #foo').
+		self assert: (script includesSubstring: 'value: (''foo'' asSymbol)').
 		^ #(9001 'DemoClass' 'foo' 'testing' 'foo ^ 1' 'Demo-Package' 'DemoClass>>foo' 1 2) ].
 	classes := GbxFakeListPresenterForBrowser new.
 	classes selectedItem: 'DemoClass'.
@@ -658,7 +659,8 @@ GbsBrowserCoreToolsTest >> testQueryServerMethodsWithExplicitRootClass [
 	browser := GbsBrowser new.
 	session := CoreMockGbsSession new.
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: (script includesSubstring: 'className := ''Object''').
+		self assert: (script includesSubstring: 'className := rootClassName').
+		self assert: (script includesSubstring: 'value: ''Object''').
 		self assert: (script includesSubstring: 'objectNamed: className asSymbol').
 		^ #('Object>>size') ].
 	browser session: session.

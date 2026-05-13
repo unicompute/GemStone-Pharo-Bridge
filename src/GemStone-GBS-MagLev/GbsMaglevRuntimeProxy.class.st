@@ -7,22 +7,31 @@ Class {
 
 { #category : 'private' }
 GbsMaglevRuntimeProxy >> executeAgainstRemote: bodyString [
+	^ self
+		executeAgainstRemote: bodyString
+		literalBindings: Dictionary new
+]
+
+{ #category : 'private' }
+GbsMaglevRuntimeProxy >> executeAgainstRemote: bodyString literalBindings: literalDictionary [
 	session ifNil: [ ^ nil ].
-	^ (GbsRemoteCommand
+	^ session fetchRemoteCommand: (GbsRemoteCommand
 		blockBody: bodyString
-		argumentNames: #('obj')
-		argumentScripts: { GbsRemoteScriptBuilder objectForOop: self oop })
-		executeAndFetchObjectIn: session
+		literalBindings: literalDictionary
+		oopBindings: (Dictionary new
+			at: 'obj' put: self oop;
+			yourself))
 ]
 
 { #category : 'private' }
 GbsMaglevRuntimeProxy >> executeAgainstRemoteReturningOop: bodyString [
 	session ifNil: [ ^ nil ].
-	^ (GbsRemoteCommand
+	^ session returnRemoteCommandOop: (GbsRemoteCommand
 		blockBody: bodyString
-		argumentNames: #('obj')
-		argumentScripts: { GbsRemoteScriptBuilder objectForOop: self oop })
-		executeAndReturnOopIn: session
+		literalBindings: Dictionary new
+		oopBindings: (Dictionary new
+			at: 'obj' put: self oop;
+			yourself))
 ]
 
 { #category : 'printing' }

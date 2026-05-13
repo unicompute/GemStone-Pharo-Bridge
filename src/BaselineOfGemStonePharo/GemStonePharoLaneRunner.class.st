@@ -240,10 +240,10 @@ GemStonePharoLaneRunner >> runRegressionLane [
 			' SKIP=' , skipped asString.
 	failures > 0 ifTrue: [
 		self log: 'FAILURES:'.
-		result failures do: [ :each | self log: each printString ] ].
+		result failures do: [ :each | self logTestProblem: each ] ].
 	errors > 0 ifTrue: [
 		self log: 'ERRORS:'.
-		result errors do: [ :each | self log: each printString ] ].
+		result errors do: [ :each | self logTestProblem: each ] ].
 	hadFailure := self
 		hadFailureForResult: result
 		skipped: skipped
@@ -252,6 +252,16 @@ GemStonePharoLaneRunner >> runRegressionLane [
 		ifTrue: [ label , '_FAILED' ]
 		ifFalse: [ label , '_OK' ]).
 	^ hadFailure not
+]
+
+{ #category : 'private' }
+GemStonePharoLaneRunner >> logTestProblem: aTestFailure [
+	self log: aTestFailure printString.
+	(aTestFailure respondsTo: #failureString) ifTrue: [
+		| details |
+		details := [ aTestFailure failureString ] on: Error do: [ :ex | ex messageText ].
+		details ifNotNil: [
+			details isEmpty ifFalse: [ self log: details ] ] ]
 ]
 
 { #category : 'running' }

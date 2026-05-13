@@ -209,11 +209,20 @@ GbsRemoteDebuggerPresenterTest >> testApplySourceMapHighlightFallsBackToDisplaye
 
 { #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testContextSelectedFetchesFullSourceForSingleLineNilFrame [
-	| mockSession fakeText fakeTable context rendered |
+	| mockSession fakeText fakeTable context rendered capturedScript sourceBlock |
 	mockSession := MockGbsSession new.
+	sourceBlock := [ :script |
+		capturedScript := script.
+		' | a b |<LF>a := 10.<LF>b := 0.<LF><LF>a / b' ].
 	mockSession stubs
+		at: #executeScriptAndFetchObject
+		put: sourceBlock;
+		at: #executeAndFetch
+		put: sourceBlock;
+		at: #executeAndFetchContext
+		put: [ :script :contextOop | sourceBlock value: script ];
 		at: #evaluate
-		put: ' | a b |<LF>a := 10.<LF>b := 0.<LF><LF>a / b'.
+		put: sourceBlock.
 
 	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
 	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
@@ -238,6 +247,17 @@ GbsRemoteDebuggerPresenterTest >> testContextSelectedFetchesFullSourceForSingleL
 	self assert: (rendered includes: Character lf).
 	self assert: (rendered includesSubstring: 'a / b').
 	self assert: context sourceString equals: rendered.
+	self assert: capturedScript notNil.
+	((Smalltalk at: #GbsRemoteCommand ifAbsent: [ nil ]) notNil
+		and: [ mockSession respondsTo: #fetchRemoteCommand: ])
+		ifTrue: [
+			self assert: (capturedScript includesSubstring: ':obj').
+			self assert: (capturedScript includesSubstring: ':levelValue').
+			self assert: (capturedScript includesSubstring: 'Object _objectForOop: 222').
+			self assert: (capturedScript includesSubstring: 'value: 8') ]
+		ifFalse: [
+			self assert: (capturedScript includesSubstring: 'obj := Object _objectForOop: 222').
+			self assert: (capturedScript includesSubstring: 'toLevel: 8') ].
 ]
 
 { #category : 'tests' }

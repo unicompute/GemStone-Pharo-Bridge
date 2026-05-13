@@ -49,6 +49,15 @@ GbsRemoteDebugProcessFacade >> executeBooleanBody: bodyString [
 ]
 
 { #category : 'private' }
+GbsRemoteDebugProcessFacade >> executeBooleanBody: bodyString literalBindings: literalDictionary [
+	^ self
+		asBooleanResult: (self
+			executeScriptBody: bodyString
+			literalBindings: literalDictionary)
+		default: false
+]
+
+{ #category : 'private' }
 GbsRemoteDebugProcessFacade >> executeOopBody: bodyString [
 	| raw |
 	raw := self executeScriptBody: bodyString.
@@ -59,7 +68,26 @@ GbsRemoteDebugProcessFacade >> executeOopBody: bodyString [
 ]
 
 { #category : 'private' }
+GbsRemoteDebugProcessFacade >> executeOopBody: bodyString literalBindings: literalDictionary [
+	| raw |
+	raw := self
+		executeScriptBody: bodyString
+		literalBindings: literalDictionary.
+	raw ifNil: [ ^ nil ].
+	^ [ raw asInteger ]
+		on: Error
+		do: [ nil ]
+]
+
+{ #category : 'private' }
 GbsRemoteDebugProcessFacade >> executeScriptBody: bodyString [
+	^ self
+		executeScriptBody: bodyString
+		literalBindings: Dictionary new
+]
+
+{ #category : 'private' }
+GbsRemoteDebugProcessFacade >> executeScriptBody: bodyString literalBindings: literalDictionary [
 	| raw contextOop |
 	self canExecute ifFalse: [ ^ nil ].
 	contextOop := (session respondsTo: #sessionOop)
@@ -69,7 +97,7 @@ GbsRemoteDebugProcessFacade >> executeScriptBody: bodyString [
 	raw := [
 		session
 			fetchRemoteCommandBody: (self processCommandBodyFor: bodyString)
-			literalBindings: Dictionary new
+			literalBindings: literalDictionary
 			oopBindings: (Dictionary new
 				at: 'obj' put: processOop;
 				yourself)
@@ -85,10 +113,13 @@ GbsRemoteDebugProcessFacade >> currentFrameOopAtLevel: levelValue [
 	levelValue ifNil: [ ^ nil ].
 	^ self executeOopBody: '[
 		| frameObj |
-		frameObj := [ proc _frameContentsAt: ', levelValue asString, ' ] on: Error do: [ nil ].
+		frameObj := [ proc _frameContentsAt: levelValue ] on: Error do: [ nil ].
 		frameObj ifNil: [ ^ ''0'' ].
 		(Reflection oopOf: frameObj) asString
 	] value'
+		literalBindings: (Dictionary new
+			at: 'levelValue' put: levelValue;
+			yourself)
 ]
 
 { #category : 'querying' }
@@ -96,7 +127,7 @@ GbsRemoteDebugProcessFacade >> currentReceiverOopAtLevel: levelValue [
 	levelValue ifNil: [ ^ nil ].
 	^ self executeOopBody: '[
 		| frame fullEntry receiverObj |
-		frame := [ proc _gsiDebuggerDetailedReportAt: ', levelValue asString, ' ] on: Error do: [ nil ].
+		frame := [ proc _gsiDebuggerDetailedReportAt: levelValue ] on: Error do: [ nil ].
 		frame ifNil: [ ^ ''0'' ].
 		fullEntry := [ frame first ] on: Error do: [ nil ].
 		fullEntry ifNil: [ ^ ''0'' ].
@@ -104,6 +135,9 @@ GbsRemoteDebugProcessFacade >> currentReceiverOopAtLevel: levelValue [
 		receiverObj ifNil: [ ^ ''0'' ].
 		(Reflection oopOf: receiverObj) asString
 	] value'
+		literalBindings: (Dictionary new
+			at: 'levelValue' put: levelValue;
+			yourself)
 ]
 
 { #category : 'querying' }
@@ -112,14 +146,17 @@ GbsRemoteDebugProcessFacade >> quickStepPointAtLevel: levelValue [
 	levelValue ifNil: [ ^ nil ].
 	raw := self executeScriptBody: '[
 		| stackReport fullEntry quick |
-		stackReport := [ proc _gsiStackReportFromLevel: ', levelValue asString, ' toLevel: ', levelValue asString, ' ] on: Error do: [ nil ].
+		stackReport := [ proc _gsiStackReportFromLevel: levelValue toLevel: levelValue ] on: Error do: [ nil ].
 		(stackReport notNil and: [ stackReport size >= 2 ]) ifFalse: [ ^ ''0'' ].
 		fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
 		fullEntry ifNil: [ ^ ''0'' ].
 		quick := [ fullEntry at: 5 ] on: Error do: [ 0 ].
 		quick ifNil: [ quick := 0 ].
 		quick asString
-	] value'.
+	] value'
+		literalBindings: (Dictionary new
+			at: 'levelValue' put: levelValue;
+			yourself).
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
 	raw ifNil: [ ^ nil ].
 	^ [ raw asInteger ] on: Error do: [ nil ]
@@ -131,7 +168,7 @@ GbsRemoteDebugProcessFacade >> fullSourceAtLevel: levelValue [
 	levelValue ifNil: [ ^ '' ].
 	raw := self executeScriptBody: '[
 		| stackReport fullEntry src ctx i |
-		stackReport := [ proc _gsiStackReportFromLevel: ', levelValue asString, ' toLevel: ', levelValue asString, ' ] on: Error do: [ nil ].
+		stackReport := [ proc _gsiStackReportFromLevel: levelValue toLevel: levelValue ] on: Error do: [ nil ].
 		src := ''''.
 		(stackReport notNil and: [ stackReport size >= 2 ]) ifTrue: [
 			fullEntry := stackReport at: 2.
@@ -146,7 +183,7 @@ GbsRemoteDebugProcessFacade >> fullSourceAtLevel: levelValue [
 					ifTrue: [ ctx := proc ] ].
 			ctx ifNotNil: [
 				i := 1.
-				[ i < ', levelValue asString, ' and: [ ctx notNil ] ] whileTrue: [
+				[ i < levelValue and: [ ctx notNil ] ] whileTrue: [
 					ctx := [ ctx sender ] on: Error do: [ nil ].
 					i := i + 1 ].
 				ctx ifNotNil: [
@@ -159,11 +196,16 @@ GbsRemoteDebugProcessFacade >> fullSourceAtLevel: levelValue [
 			copyReplaceAll: String lf with: ''<LF>'';
 			copyReplaceAll: Character tab asString with: ''<TAB>''.
 		src
-	] value'.
+	] value'
+		literalBindings: (Dictionary new
+			at: 'levelValue' put: levelValue;
+			yourself).
 	(raw isNil or: [ raw isEmpty ]) ifTrue: [
-		raw := [ session evaluate: (self fullSourceFallbackScriptAtLevel: levelValue) ]
-			on: Error
-			do: [ '' ].
+		raw := self
+			executeScriptBody: self fullSourceFallbackBody
+			literalBindings: (Dictionary new
+				at: 'levelValue' put: levelValue;
+				yourself).
 		(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ] ].
 	raw ifNil: [ ^ '' ].
 	^ ((raw copyReplaceAll: '<TAB>' with: Character tab asString)
@@ -172,19 +214,11 @@ GbsRemoteDebugProcessFacade >> fullSourceAtLevel: levelValue [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugProcessFacade >> fullSourceFallbackScriptAtLevel: levelValue [
-	^ String streamContents: [ :stream |
-		stream nextPutAll: '[
-		| obj stackReport fullEntry src ctx i |
-		obj := Object _objectForOop: '.
-		stream nextPutAll: processOop asString.
-		stream nextPutAll: '.
+GbsRemoteDebugProcessFacade >> fullSourceFallbackBody [
+	^ '[
+		| stackReport fullEntry src ctx i |
 		obj ifNil: [ ^ '''' ].
-		stackReport := [ obj _gsiStackReportFromLevel: '.
-		stream nextPutAll: levelValue asString.
-		stream nextPutAll: ' toLevel: '.
-		stream nextPutAll: levelValue asString.
-		stream nextPutAll: ' ] on: Error do: [ nil ].
+		stackReport := [ obj _gsiStackReportFromLevel: levelValue toLevel: levelValue ] on: Error do: [ nil ].
 		src := ''''.
 		(stackReport notNil and: [ stackReport size >= 2 ]) ifTrue: [
 			fullEntry := stackReport at: 2.
@@ -200,9 +234,7 @@ GbsRemoteDebugProcessFacade >> fullSourceFallbackScriptAtLevel: levelValue [
 				ifTrue: [ ctx := obj ].
 			ctx ifNotNil: [
 				i := 1.
-				[ i < '.
-		stream nextPutAll: levelValue asString.
-		stream nextPutAll: ' and: [ ctx notNil ] ] whileTrue: [
+				[ i < levelValue and: [ ctx notNil ] ] whileTrue: [
 					ctx := [ ctx sender ] on: Error do: [ nil ].
 					i := i + 1 ].
 				ctx ifNotNil: [
@@ -215,7 +247,7 @@ GbsRemoteDebugProcessFacade >> fullSourceFallbackScriptAtLevel: levelValue [
 			copyReplaceAll: String lf with: ''<LF>'';
 			copyReplaceAll: Character tab asString with: ''<TAB>''.
 		src
-	] value' ]
+	] value'
 ]
 
 { #category : 'querying' }
@@ -366,16 +398,16 @@ GbsRemoteDebugProcessFacade >> isTerminated [
 
 { #category : 'querying' }
 GbsRemoteDebugProcessFacade >> oopForVariableNamed: aVariableName atLevel: levelValue [
-	| escapedName |
+	| variableName |
 	levelValue ifNil: [ ^ nil ].
-	escapedName := aVariableName ifNil: [ '' ] ifNotNil: [ aVariableName asString copyReplaceAll: '''' with: '''''' ].
+	variableName := aVariableName ifNil: [ '' ] ifNotNil: [ aVariableName asString ].
 	^ self executeOopBody: '[
 		| frame fullEntry receiverObj names vals idx value |
-		frame := [ proc _gsiDebuggerDetailedReportAt: ', levelValue asString, ' ] on: Error do: [ nil ].
+		frame := [ proc _gsiDebuggerDetailedReportAt: levelValue ] on: Error do: [ nil ].
 		frame ifNil: [ ^ ''0'' ].
 		fullEntry := [ frame first ] on: Error do: [ nil ].
 		fullEntry ifNil: [ ^ ''0'' ].
-		(''', escapedName, ''' = ''self'') ifTrue: [
+		(variableName = ''self'') ifTrue: [
 			receiverObj := [ fullEntry at: 2 ] on: Error do: [ nil ].
 			receiverObj ifNil: [ ^ ''0'' ].
 			^ (Reflection oopOf: receiverObj) asString
@@ -384,7 +416,7 @@ GbsRemoteDebugProcessFacade >> oopForVariableNamed: aVariableName atLevel: level
 		vals := [ frame at: 8 ] on: Error do: [ #() ].
 		idx := 0.
 		1 to: (names size min: vals size) do: [ :i |
-			(((names at: i) asString = ''', escapedName, ''') and: [ idx = 0 ])
+			(((names at: i) asString = variableName) and: [ idx = 0 ])
 				ifTrue: [ idx := i ]
 		].
 		idx = 0 ifTrue: [ ^ ''0'' ].
@@ -392,6 +424,10 @@ GbsRemoteDebugProcessFacade >> oopForVariableNamed: aVariableName atLevel: level
 		value ifNil: [ ^ ''0'' ].
 		(Reflection oopOf: value) asString
 	] value'
+		literalBindings: (Dictionary new
+			at: 'levelValue' put: levelValue;
+			at: 'variableName' put: variableName;
+			yourself)
 ]
 
 { #category : 'accessing' }
@@ -429,13 +465,22 @@ GbsRemoteDebugProcessFacade >> processCommandBodyFor: bodyString [
 { #category : 'actions' }
 GbsRemoteDebugProcessFacade >> runCommand: commandName [
 	commandName ifNil: [ ^ false ].
-	^ self executeBooleanBody: '[ proc perform: #', commandName asString, ' ] on: Error do: [ ^ ''false'' ]. true'
+	^ self
+		executeBooleanBody: '[ proc perform: commandSelector ] on: Error do: [ ^ ''false'' ]. true'
+		literalBindings: (Dictionary new
+			at: 'commandSelector' put: commandName asString asSymbol;
+			yourself)
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugProcessFacade >> runCommand: commandName withInteger: anInteger [
 	(commandName isNil or: [ anInteger isNil ]) ifTrue: [ ^ false ].
-	^ self executeBooleanBody: '[ proc perform: #', commandName asString, ': with: ', anInteger asString, ' ] on: Error do: [ ^ ''false'' ]. true'
+	^ self
+		executeBooleanBody: '[ proc perform: commandSelector with: commandArgument ] on: Error do: [ ^ ''false'' ]. true'
+		literalBindings: (Dictionary new
+			at: 'commandArgument' put: anInteger;
+			at: 'commandSelector' put: (commandName asString, ':') asSymbol;
+			yourself)
 ]
 
 { #category : 'actions' }
@@ -517,7 +562,7 @@ GbsRemoteDebugProcessFacade >> resetProgramCounterToStepOneAtLevel: levelValue [
 	levelValue ifNil: [ ^ false ].
 	^ self executeBooleanBody: '[
 		| tc restartLevel stackReport fullEntry quick |
-		restartLevel := ', levelValue asString, '.
+		restartLevel := levelValue.
 		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
 			[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ] ].
 		(proc respondsTo: #_gsiStepAtLevel:step:) ifTrue: [
@@ -545,6 +590,9 @@ GbsRemoteDebugProcessFacade >> resetProgramCounterToStepOneAtLevel: levelValue [
 			fullEntry ifNotNil: [ quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ] ] ].
 		(quick <= 1) ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]
 	] value'
+		literalBindings: (Dictionary new
+			at: 'levelValue' put: levelValue;
+			yourself)
 ]
 
 { #category : 'actions' }
@@ -552,7 +600,7 @@ GbsRemoteDebugProcessFacade >> restartUsingTrimAtExecutedFrameLevelOr: levelValu
 	levelValue ifNil: [ ^ false ].
 	^ self executeBooleanBody: '[
 		| restartLevel stackReport fullEntry quick level maxDepth methodOrNil className selectorName |
-		restartLevel := ', levelValue asString, '.
+		restartLevel := levelValue.
 		level := 1.
 		maxDepth := 200.
 		[ level <= maxDepth ] whileTrue: [
@@ -592,6 +640,9 @@ GbsRemoteDebugProcessFacade >> restartUsingTrimAtExecutedFrameLevelOr: levelValu
 						ifTrue: [ [ proc jumpTo: 1 ] on: Error do: [ ] ] ] ].
 		''true''
 	] value'
+		literalBindings: (Dictionary new
+			at: 'levelValue' put: levelValue;
+			yourself)
 ]
 
 { #category : 'accessing' }
@@ -610,11 +661,14 @@ GbsRemoteDebugProcessFacade >> stepOverFrameLevel: levelValue [
 	^ self executeBooleanBody: '[
 		| stepLevel ok |
 		(proc respondsTo: #perform:with:) ifFalse: [ ^ ''false'' ].
-		stepLevel := ', levelValue asString, '.
+		stepLevel := levelValue.
 		ok := [ proc perform: #_stepOverInFrame: with: stepLevel ] on: Error do: [ nil ].
 		ok isNil ifTrue: [ ^ ''false'' ].
 		''true''
 	] value'
+		literalBindings: (Dictionary new
+			at: 'levelValue' put: levelValue;
+			yourself)
 ]
 
 { #category : 'actions' }
@@ -642,23 +696,27 @@ GbsRemoteDebugProcessFacade >> stepOverExecutedFrameLevel: levelValue stepInto: 
 
 { #category : 'actions' }
 GbsRemoteDebugProcessFacade >> performStepSelector: primarySelector fallbackSelector: fallbackSelector atLevel: levelValue [
-	| fallbackText |
+	| fallbackSymbol |
 	(primarySelector isNil or: [ levelValue isNil ]) ifTrue: [ ^ false ].
-	fallbackText := fallbackSelector
-		ifNil: [ '' ]
-		ifNotNil: [ fallbackSelector asString ].
+	fallbackSymbol := fallbackSelector
+		ifNil: [ nil ]
+		ifNotNil: [ fallbackSelector asString asSymbol ].
 	^ self executeBooleanBody: '[
-		| level selector ok |
+		| level ok |
 		(proc respondsTo: #perform:with:) ifFalse: [ ^ ''false'' ].
-		level := ', levelValue asString, '.
-		selector := #', primarySelector asString, '.
-		ok := [ proc perform: selector with: level ] on: Error do: [ nil ].
-		(ok isNil and: [ ''', fallbackText, ''' notEmpty ]) ifTrue: [
-			ok := [ proc perform: #', (fallbackSelector ifNil: [ '_doesNotExist:' ] ifNotNil: [ fallbackSelector asString ]), ' with: level ] on: Error do: [ nil ]
+		level := levelValue.
+		ok := [ proc perform: primarySelectorValue with: level ] on: Error do: [ nil ].
+		(ok isNil and: [ fallbackSelectorValue notNil ]) ifTrue: [
+			ok := [ proc perform: fallbackSelectorValue with: level ] on: Error do: [ nil ]
 		].
 		ok isNil ifTrue: [ ^ ''false'' ].
 		''true''
 	] value'
+		literalBindings: (Dictionary new
+			at: 'fallbackSelectorValue' put: fallbackSymbol;
+			at: 'levelValue' put: levelValue;
+			at: 'primarySelectorValue' put: primarySelector asString asSymbol;
+			yourself)
 ]
 
 { #category : 'actions' }
@@ -666,9 +724,12 @@ GbsRemoteDebugProcessFacade >> synchronizeProgramCounterAtLevel: levelValue [
 	levelValue ifNil: [ ^ false ].
 	^ self executeBooleanBody: '[
 		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
-		[ proc _trimStackToLevel: ', levelValue asString, ' ] on: Error do: [ ^ ''false'' ].
+		[ proc _trimStackToLevel: levelValue ] on: Error do: [ ^ ''false'' ].
 		''true''
 	] value'
+		literalBindings: (Dictionary new
+			at: 'levelValue' put: levelValue;
+			yourself)
 ]
 
 { #category : 'actions' }
@@ -676,9 +737,12 @@ GbsRemoteDebugProcessFacade >> trimStackToLevel: levelValue [
 	levelValue ifNil: [ ^ false ].
 	^ self executeBooleanBody: '[
 		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
-		[ proc _trimStackToLevel: ', levelValue asString, ' ] on: Error do: [ ^ ''false'' ].
+		[ proc _trimStackToLevel: levelValue ] on: Error do: [ ^ ''false'' ].
 		''true''
 	] value'
+		literalBindings: (Dictionary new
+			at: 'levelValue' put: levelValue;
+			yourself)
 ]
 
 { #category : 'actions' }

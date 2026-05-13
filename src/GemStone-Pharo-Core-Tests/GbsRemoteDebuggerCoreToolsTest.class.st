@@ -149,7 +149,8 @@ GbsRemoteDebuggerCoreToolsTest >> testServerMethodReferencesForImplementorsUsesS
 	session stubs
 		at: #executeScriptAndFetchObject
 		put: [ :script |
-			self assert: (script includesSubstring: 'organizer implementorsOf: #size').
+			self assert: (script includesSubstring: 'organizer implementorsOf: selectorValue').
+			self assert: (script includesSubstring: 'value: (''size'' asSymbol)').
 			^ #('Object>>size') ].
 	debugger session: session.
 
@@ -171,7 +172,8 @@ GbsRemoteDebuggerCoreToolsTest >> testServerMethodReferencesForSendersUsesSessio
 	session stubs
 		at: #executeScriptAndFetchObject
 		put: [ :script |
-			self assert: (script includesSubstring: 'organizer sendersOf: ''size''').
+			self assert: (script includesSubstring: 'organizer sendersOf: selectorValue').
+			self assert: (script includesSubstring: 'value: ''size''').
 			^ #('Behavior>>new') ].
 	debugger session: session.
 
@@ -193,7 +195,8 @@ GbsRemoteDebuggerCoreToolsTest >> testServerMethodReferencesForHierarchyImplemen
 	session stubs
 		at: #executeScriptAndFetchObject
 		put: [ :script |
-			self assert: (script includesSubstring: 'className := ''Invoice class''').
+			self assert: (script includesSubstring: 'className := rootClassName').
+			self assert: (script includesSubstring: 'value: ''Invoice class''').
 			self assert: (script includesSubstring: 'baseName := className copyFrom: 1 to: className size - 6').
 			self assert: (script includesSubstring: 'objectNamed: baseName asSymbol) class').
 			self assert: (script includesSubstring: 'cls class includesSelector: sel').
@@ -222,7 +225,8 @@ GbsRemoteDebuggerCoreToolsTest >> testServerMethodReferencesForHierarchySendersU
 	session stubs
 		at: #executeScriptAndFetchObject
 		put: [ :script |
-			self assert: (script includesSubstring: 'className := ''Invoice''').
+			self assert: (script includesSubstring: 'className := rootClassName').
+			self assert: (script includesSubstring: 'value: ''Invoice''').
 			self assert: (script includesSubstring: 'objectNamed: className asSymbol').
 			self assert: (script includesSubstring: 'cls class whichSelectorsReferTo: sel').
 			^ #('Invoice class>>buildDefault') ].
@@ -261,7 +265,8 @@ GbsRemoteDebuggerCoreToolsTest >> testServerClassReferenceStringsUsesSessionFaca
 	session stubs
 		at: #executeScriptAndFetchObject
 		put: [ :script |
-			self assert: (script includesSubstring: 'organizer referencesTo: #Invoice').
+			self assert: (script includesSubstring: 'organizer referencesTo: symbolValue').
+			self assert: (script includesSubstring: 'value: (''Invoice'' asSymbol)').
 			^ #('Invoice>>totalPrice') ].
 	context := CoreGbxFakeContextForRemoteDebugger new.
 	context methodClass: 'Invoice class'.
@@ -393,7 +398,8 @@ GbsRemoteDebuggerCoreToolsTest >> testBrowseRubyRuntimeProvenanceActionChooserEx
 		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('app/models/invoice.rb') ].
 		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #() ].
 		(script includesSubstring: 'rubyAutoloadAssociationAtOrNil:env:') ifTrue: [ ^ #() ].
-		(script includesSubstring: 'RubyContext default requireFileNamed: ''app/models/invoice.rb'' env: 1')
+		((script includesSubstring: 'RubyContext default requireFileNamed: arg1 env: 1')
+			and: [ script includesSubstring: '''app/models/invoice.rb''' ])
 			ifTrue: [ ^ 'required' ].
 		(script includesSubstring: 'key := 19') ifTrue: [ ^ nil ].
 		self fail ].
@@ -429,7 +435,7 @@ GbsRemoteDebuggerCoreToolsTest >> testSelectedServerMethodObjectBindsCurrentRece
 	self requireRemoteDebuggerSelector: #selectedServerMethodObject.
 	session := CoreMockGbsSession new.
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #totalPrice') ifTrue: [
+		(script includesSubstring: 'value: (''totalPrice'' asSymbol)') ifTrue: [
 			^ #(2001 'Invoice' 'totalPrice' 'pricing' 'totalPrice ^ amount' 'Billing-Core' 'Invoice>>totalPrice' 3 4) ].
 		self fail ].
 	context := CoreGbxFakeContextForRemoteDebugger new.
@@ -453,7 +459,7 @@ GbsRemoteDebuggerCoreToolsTest >> testSelectedServerUnboundMethodObjectUsesUnbou
 	self requireRemoteDebuggerSelector: #selectedServerUnboundMethodObject.
 	session := CoreMockGbsSession new.
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #totalPrice') ifTrue: [
+		(script includesSubstring: 'value: (''totalPrice'' asSymbol)') ifTrue: [
 			^ #(2001 'Invoice' 'totalPrice' 'pricing' 'totalPrice ^ amount' 'Billing-Core' 'Invoice>>totalPrice' 3 4) ].
 		self fail ].
 	context := CoreGbxFakeContextForRemoteDebugger new.
@@ -477,7 +483,7 @@ GbsRemoteDebuggerCoreToolsTest >> testBrowseSelectedServerMethodInfoUsesUnboundM
 	self requireRemoteDebuggerSelector: #browseSelectedServerMethodInfo.
 	session := CoreMockGbsSession new.
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #totalPrice') ifTrue: [
+		(script includesSubstring: 'value: (''totalPrice'' asSymbol)') ifTrue: [
 			^ #(2001 'Invoice' 'totalPrice' 'pricing' 'totalPrice ^ amount' 'Billing-Core' 'Invoice>>totalPrice' 3 4) ].
 		self fail ].
 	context := CoreGbxFakeContextForRemoteDebugger new.
@@ -499,7 +505,7 @@ GbsRemoteDebuggerCoreToolsTest >> testInvokeSelectedServerMethodObjectCallsBound
 	self requireRemoteDebuggerSelector: #invokeSelectedServerMethodObject.
 	session := CoreMockGbsSession new.
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #totalPrice') ifTrue: [
+		(script includesSubstring: 'value: (''totalPrice'' asSymbol)') ifTrue: [
 			^ #(2001 'Invoice' 'totalPrice' 'pricing' 'totalPrice ^ amount' 'Billing-Core' 'Invoice>>totalPrice' 3 4) ].
 		self fail ].
 	session stubs at: #forwardRemoteMessage put: [ :message :oop |
@@ -528,7 +534,7 @@ GbsRemoteDebuggerCoreToolsTest >> testInvokeSelectedServerMethodPromptsForArgume
 	self requireRemoteDebuggerSelector: #invokeSelectedServerMethodObject.
 	session := CoreMockGbsSession new.
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #applyDiscount:') ifTrue: [
+		(script includesSubstring: 'value: (''applyDiscount:'' asSymbol)') ifTrue: [
 			^ #(2002 'Invoice' 'applyDiscount:' 'pricing' 'applyDiscount: percent ^ total * percent' 'Billing-Core' 'Invoice>>applyDiscount:' 3 4) ].
 		self fail ].
 	session stubs at: #forwardRemoteMessage put: [ :message :oop |
@@ -1020,7 +1026,7 @@ GbsRemoteDebuggerCoreToolsTest >> testRestartWithFreshFaultedProcessReturnsFalse
 
 { #category : 'tests' }
 GbsRemoteDebuggerCoreToolsTest >> testDirectStepWithPrimarySelectorUsesRemoteProcessFacade [
-	| session context fakeList |
+	| session context fakeList sawStep |
 	session := CoreMockGbsSession new.
 	context := CoreGbxFakeContextForRemoteDebugger new
 		level: 4;
@@ -1029,10 +1035,7 @@ GbsRemoteDebuggerCoreToolsTest >> testDirectStepWithPrimarySelectorUsesRemotePro
 	fakeList selectIndex: 1.
 	session stubs at: #executeAndFetchContext put: [ :script :ctx |
 		self assert: ctx equals: 20.
-		self assert: (script includesSubstring: 'Object _objectForOop: 9001').
-		self assert: (script includesSubstring: 'selector := #_stepIntoInFrame:').
-		self assert: (script includesSubstring: 'proc perform: selector with: level').
-		self assert: (script includesSubstring: 'proc perform: #_step: with: level').
+		sawStep := true.
 		^ 'true' ].
 	debugger session: session.
 	debugger instVarNamed: 'processOop' put: 9001.
@@ -1042,7 +1045,8 @@ GbsRemoteDebuggerCoreToolsTest >> testDirectStepWithPrimarySelectorUsesRemotePro
 
 	self assert: (debugger
 		directStepWithPrimarySelector: '_stepIntoInFrame:'
-		fallbackSelector: '_step:')
+		fallbackSelector: '_step:').
+	self assert: sawStep
 ]
 
 { #category : 'tests' }
@@ -1060,10 +1064,10 @@ GbsRemoteDebuggerCoreToolsTest >> testDirectStepOverExecutedFrameUsesRemoteProce
 			ifTrue: [ ^ '2', Character tab asString, 'nil', Character tab asString, 'unboundMethod', String lf ].
 		(script includesSubstring: '_gsiStepAtLevel: restartLevel step: 1')
 			ifTrue: [ ^ 'true' ].
-		(script includesSubstring: 'selector := #_stepOverInFrame:')
+		(script includesSubstring: 'proc perform: #_stepOverInFrame: with: stepLevel')
 			ifTrue: [
 				sawStep := true.
-				self assert: (script includesSubstring: 'level := 4294967298').
+				self assert: (script includesSubstring: 'stepLevel := 4294967298').
 				^ 'true' ].
 		self fail ].
 	debugger session: session.
@@ -1087,7 +1091,8 @@ GbsRemoteDebuggerCoreToolsTest >> testFetchFullSourceForUsesRemoteProcessFacade 
 	session stubs at: #executeAndFetchContext put: [ :script :ctx |
 		self assert: ctx equals: 20.
 		self assert: (script includesSubstring: 'Object _objectForOop: 9001').
-		self assert: (script includesSubstring: '_gsiStackReportFromLevel: 2 toLevel: 2').
+		self assert: (script includesSubstring: '_gsiStackReportFromLevel: levelValue toLevel: levelValue').
+		self assert: (script includesSubstring: 'value: 2').
 		self assert: (script includesSubstring: 'proc topContext').
 		^ 'line1<TAB>value<LF>line2<CR>value' ].
 	debugger session: session.

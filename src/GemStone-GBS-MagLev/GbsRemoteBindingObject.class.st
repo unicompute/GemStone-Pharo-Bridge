@@ -107,69 +107,60 @@ GbsRemoteBindingObject >> evaluate: aString fileName: aFileName lineNumber: aLin
 	lineValue := aLineNumber
 		ifNil: [ 1 ]
 		ifNotNil: [ [ aLineNumber asInteger ] on: Error do: [ 1 ] ].
-	^ session executeScriptAndFetchObject: (self
-		evaluationScriptFor: sourceText
-		fileName: aFileName
-		lineNumber: lineValue)
-]
-
-{ #category : 'private' }
-GbsRemoteBindingObject >> evaluationScriptFor: aString fileName: aFileName lineNumber: aLineNumber [
-	^ String streamContents: [ :stream |
-		stream nextPutAll: '[
-		| obj binding result |
-		obj := Object _objectForOop: '.
-		stream nextPutAll: procObject oop asString.
-		stream nextPutAll: '.
-		obj ifNil: [ ^ nil ].
-		binding := [ (obj respondsTo: #binding)
-			ifTrue: [ obj binding ]
-			ifFalse: [ nil ] ] on: Error do: [ nil ].
-		binding ifNil: [ ^ nil ].
-		result := binding
+	^ self
+		executeBindingQuery: 'result := binding
 			perform: #eval
-			withArguments: { '.
-		stream nextPutAll: (session marshalArgumentToScript: aString).
-		stream nextPutAll: ' . '.
-		stream nextPutAll: (session marshalArgumentToScript: (aFileName ifNil: [ '<binding>' ] ifNotNil: [ aFileName asString ])).
-		stream nextPutAll: ' . '.
-		stream nextPutAll: (session marshalArgumentToScript: aLineNumber).
-		stream nextPutAll: ' }.
-		result
-	] value' ]
+			withArguments: { sourceText. fileName. lineNumber }.
+		result'
+		literalBindings: (Dictionary new
+			at: 'fileName' put: (aFileName ifNil: [ '<binding>' ] ifNotNil: [ aFileName asString ]);
+			at: 'lineNumber' put: lineValue;
+			at: 'sourceText' put: sourceText;
+			yourself)
 ]
 
 { #category : 'private' }
-GbsRemoteBindingObject >> bindingScriptForBody: bodyString [
-	^ String streamContents: [ :stream |
-		stream nextPutAll: '[
-		| obj binding result |
-		obj := Object _objectForOop: '.
-		stream nextPutAll: procObject oop asString.
-		stream nextPutAll: '.
-		obj ifNil: [ ^ nil ].
-		binding := [ (obj respondsTo: #binding)
-			ifTrue: [ obj binding ]
+GbsRemoteBindingObject >> bindingCommandBodyFor: bodyString [
+	^ '| binding result |
+	proc ifNil: [ nil ] ifNotNil: [
+		binding := [ (proc respondsTo: #binding)
+			ifTrue: [ proc binding ]
 			ifFalse: [ nil ] ] on: Error do: [ nil ].
-		binding ifNil: [ ^ nil ].
-		'.
-		stream nextPutAll: bodyString.
-		stream nextPutAll: '
-	] value' ]
+		binding ifNil: [ nil ] ifNotNil: [
+			', bodyString, ' ] ]'
+]
+
+{ #category : 'private' }
+GbsRemoteBindingObject >> bindingCommandForBody: bodyString literalBindings: literalDictionary [
+	^ GbsRemoteCommand
+		blockBody: (self bindingCommandBodyFor: bodyString)
+		literalBindings: literalDictionary
+		oopBindings: (Dictionary new
+			at: 'proc' put: procObject oop;
+			yourself)
 ]
 
 { #category : 'private' }
 GbsRemoteBindingObject >> executeBindingQuery: bodyString [
+	^ self executeBindingQuery: bodyString literalBindings: Dictionary new
+]
+
+{ #category : 'private' }
+GbsRemoteBindingObject >> executeBindingQuery: bodyString literalBindings: literalDictionary [
 	session ifNil: [ ^ nil ].
 	procObject ifNil: [ ^ nil ].
-	^ session executeScriptAndFetchObject: (self bindingScriptForBody: bodyString)
+	^ session fetchRemoteCommand: (self
+		bindingCommandForBody: bodyString
+		literalBindings: literalDictionary)
 ]
 
 { #category : 'private' }
 GbsRemoteBindingObject >> executeBindingOopQuery: bodyString [
 	session ifNil: [ ^ nil ].
 	procObject ifNil: [ ^ nil ].
-	^ session executeScriptAndReturnOop: (self bindingScriptForBody: bodyString)
+	^ session returnRemoteCommandOop: (self
+		bindingCommandForBody: bodyString
+		literalBindings: Dictionary new)
 ]
 
 { #category : 'testing' }
@@ -237,7 +228,7 @@ GbsRemoteBindingObject >> localValueNamed: aName [
 GbsRemoteBindingObject >> setLocalNamed: aName to: anObject [
 	^ self
 		setLocalNamed: aName
-		toExpression: (session marshalArgumentToScript: anObject)
+		toExpression: (GbsRemoteScriptBuilder literalFor: anObject)
 ]
 
 { #category : 'actions' }

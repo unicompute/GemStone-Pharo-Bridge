@@ -291,7 +291,7 @@ GbsSessionManagerCoreTest >> testGBSMRemoteMirrorDelegatesToCurrentSession [
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		(script includesSubstring: 'cls superclass') ifTrue: [
 			^ #(1001 'Invoice' 'Object' 'Billing-Core' 'Billing-Models' 2 3) ].
-		(script includesSubstring: 'compiledMethodAt: #totalPrice') ifTrue: [
+		(script includesSubstring: 'value: (''totalPrice'' asSymbol)') ifTrue: [
 			^ #(2001 'Invoice' 'totalPrice' 'pricing' 'totalPrice ^ amount' 'Billing-Core' 'Invoice>>totalPrice' 3 4) ].
 		self fail ].
 	GBSM currentSession: mockSession.
@@ -332,7 +332,8 @@ GbsSessionManagerCoreTest >> testGBSMMethodReferenceStringsDelegateToCurrentSess
 	| mockSession references |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: (script includesSubstring: 'organizer referencesTo: #Invoice').
+		self assert: (script includesSubstring: 'organizer referencesTo: symbolValue').
+		self assert: (script includesSubstring: 'value: (''Invoice'' asSymbol)').
 		^ #('Invoice>>totalPrice' 'Invoice class>>new') ].
 	GBSM currentSession: mockSession.
 
@@ -346,9 +347,11 @@ GbsSessionManagerCoreTest >> testGBSMSelectorReferenceQueriesDelegateToCurrentSe
 	| mockSession implementors senders |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'organizer implementorsOf: #size') ifTrue: [
+		((script includesSubstring: 'organizer implementorsOf: selectorValue')
+			and: [ script includesSubstring: 'value: (''size'' asSymbol)' ]) ifTrue: [
 			^ #('Object>>size') ].
-		(script includesSubstring: 'organizer sendersOf: ''size''') ifTrue: [
+		((script includesSubstring: 'organizer sendersOf: selectorValue')
+			and: [ script includesSubstring: 'value: ''size''' ]) ifTrue: [
 			^ #('Behavior>>new') ].
 		self fail ].
 	GBSM currentSession: mockSession.

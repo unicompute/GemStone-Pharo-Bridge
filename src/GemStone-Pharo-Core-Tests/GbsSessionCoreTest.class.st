@@ -1091,9 +1091,9 @@ GbsSessionCoreTest >> testRepositoryMethodMirrorForClassNamedBuildsExpectedScrip
 	| mockSession instanceMirror classMirror |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #totalPrice') ifTrue: [
+		(script includesSubstring: 'value: (''totalPrice'' asSymbol)') ifTrue: [
 			^ #(2001 'Invoice' 'totalPrice' 'pricing' 'totalPrice ^ amount' 'Billing-Core' 'Invoice>>totalPrice' 3 4) ].
-		(script includesSubstring: 'compiledMethodAt: #new') ifTrue: [
+		(script includesSubstring: 'value: (''new'' asSymbol)') ifTrue: [
 			^ #(2002 'Invoice class' 'new' 'instance creation' 'new ^ super new' 'Billing-Core' 'Invoice class>>new' 1 2) ].
 		(script includesSubstring: 'cls superclass') ifTrue: [
 			^ #(1001 'Invoice' 'Object' 'Billing-Core' 'Billing-Models' 2 3) ].
@@ -1140,7 +1140,7 @@ GbsSessionCoreTest >> testRepositoryMethodObjectBindsAndInvokesThroughSession [
 	| mockSession methodObject bound receiver capturedSelector capturedArguments capturedOop result |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #totalPrice') ifTrue: [
+		(script includesSubstring: 'value: (''totalPrice'' asSymbol)') ifTrue: [
 			^ #(2001 'Invoice' 'totalPrice' 'pricing' 'totalPrice ^ amount' 'Billing-Core' 'Invoice>>totalPrice' 3 4) ].
 		self fail ].
 	mockSession stubs at: #forwardRemoteMessage put: [ :message :oop |
@@ -1175,7 +1175,7 @@ GbsSessionCoreTest >> testRepositoryMethodObjectEqualityHashAndBindingIdentity [
 	| mockSession sameMethod sameMethodAgain boundSameReceiver boundSameReceiverAgain boundOtherReceiver receiverOne receiverTwo |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #totalPrice') ifTrue: [
+		(script includesSubstring: 'value: (''totalPrice'' asSymbol)') ifTrue: [
 			^ #(2001 'Invoice' 'totalPrice' 'pricing' 'totalPrice ^ amount' 'Billing-Core' 'Invoice>>totalPrice' 3 4) ].
 		self fail ].
 
@@ -1200,7 +1200,7 @@ GbsSessionCoreTest >> testRepositoryClassMethodObjectUsesClassProxyWhenUnbound [
 	| mockSession methodObject capturedSelector capturedArguments capturedOop result |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #new') ifTrue: [
+		(script includesSubstring: 'value: (''new'' asSymbol)') ifTrue: [
 			^ #(2002 'Invoice class' 'new' 'instance creation' 'new ^ super new' 'Billing-Core' 'Invoice class>>new' 1 2) ].
 		(script includesSubstring: 'cls superclass') ifTrue: [
 			^ #(1001 'Invoice' 'Object' 'Billing-Core' 'Billing-Models' 2 3) ].
@@ -1229,7 +1229,7 @@ GbsSessionCoreTest >> testRepositoryMethodObjectValueConvenienceAndPrintString [
 	| mockSession methodObject bound receiver capturedSelector capturedArguments capturedOop result printed |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #applyDiscount:currency:') ifTrue: [
+		(script includesSubstring: 'value: (''applyDiscount:currency:'' asSymbol)') ifTrue: [
 			^ #(2003 'Invoice' 'applyDiscount:currency:' 'pricing' 'applyDiscount: percent currency: code ^ total' 'Billing-Core' 'Invoice>>applyDiscount:currency:' 2 4) ].
 		self fail ].
 	mockSession stubs at: #forwardRemoteMessage put: [ :message :oop |
@@ -1262,7 +1262,7 @@ GbsSessionCoreTest >> testRepositoryMethodObjectParityDelegatesMirrorMetadata [
 	| mockSession methodObject |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #new') ifTrue: [
+		(script includesSubstring: 'value: (''new'' asSymbol)') ifTrue: [
 			^ #(2002 'Invoice class' 'new' 'instance creation' 'new ^ super new' 'Billing-Core' 'Invoice class>>new' 1 2) ].
 		(script includesSubstring: 'cls superclass') ifTrue: [
 			^ #(1001 'Invoice' 'Object' 'Billing-Core' 'Billing-Models' 2 3) ].
@@ -1285,7 +1285,7 @@ GbsSessionCoreTest >> testRepositoryUnboundMethodObjectDelegatesMirrorMetadataAn
 	| mockSession methodObject bound receiver |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #totalPrice') ifTrue: [
+		(script includesSubstring: 'value: (''totalPrice'' asSymbol)') ifTrue: [
 			^ #(2001 'Invoice' 'totalPrice' 'pricing' 'totalPrice ^ amount' 'Billing-Core' 'Invoice>>totalPrice' 3 4) ].
 		self fail ].
 
@@ -1328,9 +1328,11 @@ GbsSessionCoreTest >> testRepositoryMethodReferenceStringsQueriesBuildExpectedSc
 	mockSession := CoreMockGbsSession new.
 	proxy := GbsProxy oop: 9001 session: mockSession.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'organizer referencesTo: #Invoice') ifTrue: [
+		((script includesSubstring: 'organizer referencesTo: symbolValue')
+			and: [ script includesSubstring: 'value: (''Invoice'' asSymbol)' ]) ifTrue: [
 			^ #('Invoice>>totalPrice' 'Invoice class>>new') ].
-		(script includesSubstring: 'organizer referencesToObject: (Object _objectForOop: 9001)') ifTrue: [
+		((script includesSubstring: 'organizer referencesToObject: targetObject')
+			and: [ script includesSubstring: 'value: (Object _objectForOop: 9001)' ]) ifTrue: [
 			self assert: (script includesSubstring: 'theNonMetaClass').
 			^ #('Order>>invoice') ].
 		self fail ].
@@ -1347,9 +1349,11 @@ GbsSessionCoreTest >> testRepositoryMethodSelectorReferenceQueriesBuildExpectedS
 	| mockSession implementors senders |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'organizer implementorsOf: #size') ifTrue: [
+		((script includesSubstring: 'organizer implementorsOf: selectorValue')
+			and: [ script includesSubstring: 'value: (''size'' asSymbol)' ]) ifTrue: [
 			^ #('Object>>size' 'Behavior>>size') ].
-		(script includesSubstring: 'organizer sendersOf: ''size''') ifTrue: [
+		((script includesSubstring: 'organizer sendersOf: selectorValue')
+			and: [ script includesSubstring: 'value: ''size''' ]) ifTrue: [
 			^ #('Collection>>includes:' 'Behavior>>new') ].
 		self fail ].
 
@@ -1365,8 +1369,8 @@ GbsSessionCoreTest >> testRepositoryHierarchyMethodReferenceQueriesBuildExpected
 	| mockSession implementors senders |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'className := ''Object''') ifFalse: [ self fail ].
-		(script includesSubstring: 'objectNamed: className asSymbol') ifFalse: [ self fail ].
+		(script includesSubstring: 'className := rootClassName') ifFalse: [ self fail ].
+		(script includesSubstring: 'value: ''Object''') ifFalse: [ self fail ].
 		(script includesSubstring: 'scope = ''super''') ifFalse: [ self fail ].
 		(script includesSubstring: 'cls class includesSelector: sel') ifTrue: [
 			self assert: (script includesSubstring: 'stream nextPutAll: cls name asString; nextPutAll: '' class>>''').
@@ -1631,7 +1635,7 @@ GbsSessionCoreTest >> testRepositoryAllInstancesOfNamedBuildsExpectedScript [
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		self assert: (script includesSubstring: 'cls allInstances').
-		self assert: (script includesSubstring: 'objectNamed: name asSymbol').
+		self assert: (script includesSubstring: 'objectNamed: clsName asSymbol').
 		self assert: (script includesSubstring: '''Invoice''').
 		#(1 2 3) ].
 
@@ -1661,7 +1665,8 @@ GbsSessionCoreTest >> testRepositoryListInstancesOfNamedWithLimitBuildsExpectedS
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		(script includesSubstring: '#needsCommit') ifTrue: [ ^ false ].
-		self assert: (script includesSubstring: 'limit: 25').
+		self assert: (script includesSubstring: 'limit: limitValue').
+		self assert: (script includesSubstring: 'value: 25').
 		#(7 8) ].
 
 	result := mockSession repository listInstancesOfNamed: 'Invoice' limit: 25.

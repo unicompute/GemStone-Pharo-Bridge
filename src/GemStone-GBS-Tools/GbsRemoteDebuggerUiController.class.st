@@ -9,29 +9,29 @@ Class {
 GbsRemoteDebuggerUiController class >> defaultLayoutFor: debugger [
 	| varsLeft varsRight varsAll sourceAndVars |
 	varsLeft := SpPanedLayout newHorizontal
-		add: (debugger instVarNamed: 'variablesTable');
-		add: (debugger instVarNamed: 'receiverInfoTable');
+		add: debugger variablesTablePresenter;
+		add: debugger receiverInfoTablePresenter;
 		yourself.
 	varsRight := SpPanedLayout newHorizontal
-		add: (debugger instVarNamed: 'frameInfoTable');
-		add: (debugger instVarNamed: 'processInfoTable');
+		add: debugger frameInfoTablePresenter;
+		add: debugger processInfoTablePresenter;
 		yourself.
 	varsAll := SpPanedLayout newHorizontal
 		add: varsLeft;
 		add: varsRight;
 		yourself.
 	sourceAndVars := SpPanedLayout newVertical
-		add: (debugger instVarNamed: 'sourceText');
+		add: debugger sourceTextPresenter;
 		add: varsAll;
 		yourself.
 	^ SpBoxLayout newVertical
 		spacing: 5;
-		add: (debugger instVarNamed: 'mainMenu') expand: false;
-		add: (debugger instVarNamed: 'errorMessageLabel') expand: false;
+		add: debugger mainMenuPresenter expand: false;
+		add: debugger errorMessageLabelPresenter expand: false;
 		add: (self executionButtonLayoutFor: debugger) expand: false;
 		add: (self inspectionButtonLayoutFor: debugger) expand: false;
 		add: (SpPanedLayout newVertical
-			add: (debugger instVarNamed: 'stackList');
+			add: debugger stackListPresenter;
 			add: sourceAndVars;
 			yourself);
 		yourself
@@ -41,18 +41,18 @@ GbsRemoteDebuggerUiController class >> defaultLayoutFor: debugger [
 GbsRemoteDebuggerUiController class >> executionButtonLayoutFor: debugger [
 	^ SpBoxLayout newHorizontal
 		spacing: 5;
-		add: (debugger instVarNamed: 'stepIntoButton');
-		add: (debugger instVarNamed: 'stepButton');
-		add: (debugger instVarNamed: 'stepOverButton');
-		add: (debugger instVarNamed: 'restartButton');
-		add: (debugger instVarNamed: 'resumeButton');
-		add: (debugger instVarNamed: 'runUntilReturnButton');
-		add: (debugger instVarNamed: 'runWithBreakAgainButton');
-		add: (debugger instVarNamed: 'runToCaretButton');
-		add: (debugger instVarNamed: 'jumpToCaretButton');
-		add: (debugger instVarNamed: 'returnButton');
-		add: (debugger instVarNamed: 'pauseButton');
-		add: (debugger instVarNamed: 'terminateButton');
+		add: debugger stepIntoButtonPresenter;
+		add: debugger stepButtonPresenter;
+		add: debugger stepOverButtonPresenter;
+		add: debugger restartButtonPresenter;
+		add: debugger resumeButtonPresenter;
+		add: debugger runUntilReturnButtonPresenter;
+		add: debugger runWithBreakAgainButtonPresenter;
+		add: debugger runToCaretButtonPresenter;
+		add: debugger jumpToCaretButtonPresenter;
+		add: debugger returnButtonPresenter;
+		add: debugger pauseButtonPresenter;
+		add: debugger terminateButtonPresenter;
 		yourself
 ]
 
@@ -60,34 +60,34 @@ GbsRemoteDebuggerUiController class >> executionButtonLayoutFor: debugger [
 GbsRemoteDebuggerUiController class >> inspectionButtonLayoutFor: debugger [
 	^ SpBoxLayout newHorizontal
 		spacing: 5;
-		add: (debugger instVarNamed: 'inspectReceiverButton');
-		add: (debugger instVarNamed: 'inspectProcessButton');
-		add: (debugger instVarNamed: 'inspectFrameButton');
-		add: (debugger instVarNamed: 'inspectStackButton');
-		add: (debugger instVarNamed: 'inspectVariableButton');
+		add: debugger inspectReceiverButtonPresenter;
+		add: debugger inspectProcessButtonPresenter;
+		add: debugger inspectFrameButtonPresenter;
+		add: debugger inspectStackButtonPresenter;
+		add: debugger inspectVariableButtonPresenter;
 		yourself
 ]
 
 { #category : 'updating' }
 GbsRemoteDebuggerUiController class >> refreshUiStateFor: debugger [
-	self updateButton: (debugger instVarNamed: 'stepIntoButton') enabled: debugger canStepInto.
-	self updateButton: (debugger instVarNamed: 'stepButton') enabled: debugger canStepInto.
-	self updateButton: (debugger instVarNamed: 'stepOverButton') enabled: debugger canStepOver.
-	self updateButton: (debugger instVarNamed: 'stepReturnButton') enabled: debugger canStepReturn.
-	self updateButton: (debugger instVarNamed: 'restartButton') enabled: debugger canRestartExecution.
-	self updateButton: (debugger instVarNamed: 'resumeButton') enabled: debugger canResumeExecution.
-	self updateButton: (debugger instVarNamed: 'runUntilReturnButton') enabled: debugger canStepReturn.
-	self updateButton: (debugger instVarNamed: 'runWithBreakAgainButton') enabled: debugger canRunWithBreakAgainExecution.
-	self updateButton: (debugger instVarNamed: 'runToCaretButton') enabled: debugger canRunToCaret.
-	self updateButton: (debugger instVarNamed: 'jumpToCaretButton') enabled: debugger canJumpToCaret.
-	self updateButton: (debugger instVarNamed: 'returnButton') enabled: debugger canReturnFromFrameExecution.
-	self updateButton: (debugger instVarNamed: 'pauseButton') enabled: debugger canPauseExecution.
-	self updateButton: (debugger instVarNamed: 'terminateButton') enabled: debugger canTerminateExecution.
-	self updateButton: (debugger instVarNamed: 'inspectReceiverButton') enabled: debugger canInspectReceiver.
-	self updateButton: (debugger instVarNamed: 'inspectProcessButton') enabled: debugger canInspectProcess.
-	self updateButton: (debugger instVarNamed: 'inspectFrameButton') enabled: debugger canInspectFrame.
-	self updateButton: (debugger instVarNamed: 'inspectStackButton') enabled: debugger canInspectStack.
-	self updateButton: (debugger instVarNamed: 'inspectVariableButton') enabled: debugger canInspectVariable
+	self updateButton: debugger stepIntoButtonPresenter enabled: debugger canStepInto.
+	self updateButton: debugger stepButtonPresenter enabled: debugger canStepInto.
+	self updateButton: debugger stepOverButtonPresenter enabled: debugger canStepOver.
+	self updateButton: debugger stepReturnButtonPresenter enabled: debugger canStepReturn.
+	self updateButton: debugger restartButtonPresenter enabled: debugger canRestartExecution.
+	self updateButton: debugger resumeButtonPresenter enabled: debugger canResumeExecution.
+	self updateButton: debugger runUntilReturnButtonPresenter enabled: debugger canStepReturn.
+	self updateButton: debugger runWithBreakAgainButtonPresenter enabled: debugger canRunWithBreakAgainExecution.
+	self updateButton: debugger runToCaretButtonPresenter enabled: debugger canRunToCaret.
+	self updateButton: debugger jumpToCaretButtonPresenter enabled: debugger canJumpToCaret.
+	self updateButton: debugger returnButtonPresenter enabled: debugger canReturnFromFrameExecution.
+	self updateButton: debugger pauseButtonPresenter enabled: debugger canPauseExecution.
+	self updateButton: debugger terminateButtonPresenter enabled: debugger canTerminateExecution.
+	self updateButton: debugger inspectReceiverButtonPresenter enabled: debugger canInspectReceiver.
+	self updateButton: debugger inspectProcessButtonPresenter enabled: debugger canInspectProcess.
+	self updateButton: debugger inspectFrameButtonPresenter enabled: debugger canInspectFrame.
+	self updateButton: debugger inspectStackButtonPresenter enabled: debugger canInspectStack.
+	self updateButton: debugger inspectVariableButtonPresenter enabled: debugger canInspectVariable
 ]
 
 { #category : 'converting' }

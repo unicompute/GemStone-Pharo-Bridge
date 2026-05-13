@@ -17,7 +17,11 @@ GbsRcCounter >> increment [
 
 { #category : 'actions' }
 GbsRcCounter >> incrementBy: anInteger [
-	^ self executeAgainstRemote: 'obj incrementBy: ', anInteger asInteger printString
+	^ self
+		executeAgainstRemote: 'obj incrementBy: amount'
+		literalBindings: (Dictionary new
+			at: 'amount' put: anInteger asInteger;
+			yourself)
 ]
 
 { #category : 'actions' }
@@ -27,32 +31,39 @@ GbsRcCounter >> decrement [
 
 { #category : 'actions' }
 GbsRcCounter >> decrementBy: anInteger [
-	^ self executeAgainstRemote: 'obj decrementBy: ', anInteger asInteger printString
+	^ self
+		executeAgainstRemote: 'obj decrementBy: amount'
+		literalBindings: (Dictionary new
+			at: 'amount' put: anInteger asInteger;
+			yourself)
 ]
 
 { #category : 'actions' }
 GbsRcCounter >> decrementBy: anInteger ifLessThan: aGuardInteger then: aBlock [
 	| fired |
-	fired := self executeAgainstRemote: (String streamContents: [ :stream |
-		stream
-			nextPutAll: '| fired |
+	fired := self
+		executeAgainstRemote: '| fired |
 	fired := false.
 	obj
-		decrementBy: ';
-			nextPutAll: anInteger asInteger printString;
-			nextPutAll: '
-		ifLessThan: ';
-			nextPutAll: aGuardInteger asInteger printString;
-			nextPutAll: '
+		decrementBy: amount
+		ifLessThan: guard
 		thenExecute: [ fired := true ].
-	fired' ]).
+	fired'
+		literalBindings: (Dictionary new
+			at: 'amount' put: anInteger asInteger;
+			at: 'guard' put: aGuardInteger asInteger;
+			yourself).
 	fired == true ifTrue: [ aBlock cull: self ].
 	^ fired == true
 ]
 
 { #category : 'actions' }
 GbsRcCounter >> decrementIfNegative: anInteger [
-	^ self executeAgainstRemote: 'obj decrementIfNegative: ', anInteger asInteger printString
+	^ self
+		executeAgainstRemote: 'obj decrementIfNegative: amount'
+		literalBindings: (Dictionary new
+			at: 'amount' put: anInteger asInteger;
+			yourself)
 ]
 
 { #category : 'converting' }

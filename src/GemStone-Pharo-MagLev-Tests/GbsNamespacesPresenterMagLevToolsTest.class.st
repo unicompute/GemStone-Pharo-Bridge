@@ -1300,7 +1300,8 @@ GbsNamespacesPresenterMagLevToolsTest >> testNamespacesRequireSelectedFileInvali
 	mockSession := CoreMockGbsSession new.
 	phase := #before.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'RubyContext default requireFileNamed: ''lazy_thing.rb'' env: 1')
+		((script includesSubstring: 'RubyContext default requireFileNamed: arg1 env: 1')
+			and: [ script includesSubstring: '''lazy_thing.rb''' ])
 			ifTrue: [
 				phase := #after.
 				^ true ].
@@ -1364,7 +1365,8 @@ GbsNamespacesPresenterMagLevToolsTest >> testNamespacesLoadSelectedFileInvalidat
 	mockSession := CoreMockGbsSession new.
 	phase := #before.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'RubyContext default loadFileNamed: ''lazy_thing.rb'' env: 1')
+		((script includesSubstring: 'RubyContext default loadFileNamed: arg1 env: 1')
+			and: [ script includesSubstring: '''lazy_thing.rb''' ])
 			ifTrue: [
 				phase := #after.
 				^ 'loaded' ].
@@ -1543,7 +1545,8 @@ GbsNamespacesPresenterMagLevToolsTest >> testNamespacesRequireSelectedAutoloadIn
 		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
 		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
 		(script includesSubstring: 'System sessionStateAt: key') ifTrue: [ ^ nil ].
-		(script includesSubstring: 'RubyContext default requireFileNamed: ''lib/lazy_thing.rb'' env: 1')
+		((script includesSubstring: 'RubyContext default requireFileNamed: arg1 env: 1')
+			and: [ script includesSubstring: '''lib/lazy_thing.rb''' ])
 			ifTrue: [
 				phase := #after.
 				^ true ].

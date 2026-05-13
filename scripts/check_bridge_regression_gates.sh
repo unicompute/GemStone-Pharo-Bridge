@@ -91,6 +91,110 @@ if rg -n "loadedClassesIncludingModulesScript|objectsInMemoryScript|referencesTo
 fi
 rm -f /tmp/gbs-object-space-helper-gate.$$
 
+if rg -n "loadedClassesScript|migrateInstancesScript|previewMigrationScript|methodReferenceStringsScript|classMetadataScript|methodMetadataScript|versionEntriesScript|protocolEntriesScript|namespaceMirrorEntriesScript" \
+  src/GemStone-GBS-Core/GbsRepositoryFacade.class.st \
+  src/GemStone-GBS-Core/GbsRemoteClassMirror.class.st \
+  src/GemStone-GBS-Core/GbsRemoteMethodMirror.class.st \
+  src/GemStone-GBS-Core/GbsRemoteNamespaceMirror.class.st >/tmp/gbs-core-repository-mirror-helper-gate.$$; then
+  cat /tmp/gbs-core-repository-mirror-helper-gate.$$
+  fail "legacy Repository/mirror script-helper method reappeared; use typed GbsRemoteCommand constructors"
+fi
+rm -f /tmp/gbs-core-repository-mirror-helper-gate.$$
+
+if rg -n "executeScriptAndFetchObject:|executeScriptAndReturnOop:|marshalArgumentToScript:" \
+  src/GemStone-GBS-Core/GbsRepositoryFacade.class.st \
+  src/GemStone-GBS-Core/GbsRemoteClassMirror.class.st \
+  src/GemStone-GBS-Core/GbsRemoteMethodMirror.class.st \
+  src/GemStone-GBS-Core/GbsRemoteNamespaceMirror.class.st >/tmp/gbs-core-repository-mirror-execution-gate.$$; then
+  cat /tmp/gbs-core-repository-mirror-execution-gate.$$
+  fail "Repository/mirror direct remote script execution reappeared; use fetchRemoteCommand:/typed GbsRemoteCommand"
+fi
+rm -f /tmp/gbs-core-repository-mirror-execution-gate.$$
+
+if rg -n "associationsScript|atScriptFor:|atPutScriptFor:|includesKeyScriptFor:|keysScript|removeKeyScriptFor:|rootScript|executeScriptAndFetchObject:|marshalArgumentToScript:" \
+  src/GemStone-GBS-MagLev/GbsMaglevSymbolDictionaryFacade.class.st >/tmp/gbs-maglev-symbol-dictionary-script-gate.$$; then
+  cat /tmp/gbs-maglev-symbol-dictionary-script-gate.$$
+  fail "MagLev symbol dictionary facade reintroduced script helper/direct execution; use typed GbsRemoteCommand constructors"
+fi
+rm -f /tmp/gbs-maglev-symbol-dictionary-script-gate.$$
+
+if rg -n "addEntryScriptUsingSelector|entriesScript|executeScriptAndFetchObject:|marshalArgumentToScript:" \
+  src/GemStone-GBS-MagLev/GbsObjectLogFacade.class.st >/tmp/gbs-maglev-object-log-script-gate.$$; then
+  cat /tmp/gbs-maglev-object-log-script-gate.$$
+  fail "MagLev ObjectLog facade reintroduced script helper/direct execution; use typed GbsRemoteCommand constructors"
+fi
+rm -f /tmp/gbs-maglev-object-log-script-gate.$$
+
+if rg -n "evaluationScriptFor|bindingScriptForBody|executeScriptAndFetchObject:|executeScriptAndReturnOop:|marshalArgumentToScript:" \
+  src/GemStone-GBS-MagLev/GbsRemoteBindingObject.class.st >/tmp/gbs-maglev-binding-script-gate.$$; then
+  cat /tmp/gbs-maglev-binding-script-gate.$$
+  fail "MagLev binding object reintroduced script helper/direct execution; use typed GbsRemoteCommand constructors"
+fi
+rm -f /tmp/gbs-maglev-binding-script-gate.$$
+
+if rg -n "metadataScript|executeScriptAndFetchObject:" \
+  src/GemStone-GBS-MagLev/GbsRemoteProcObject.class.st >/tmp/gbs-maglev-proc-script-gate.$$; then
+  cat /tmp/gbs-maglev-proc-script-gate.$$
+  fail "MagLev remote proc object reintroduced metadata script/direct execution; use typed GbsRemoteCommand constructors"
+fi
+rm -f /tmp/gbs-maglev-proc-script-gate.$$
+
+if rg -n "marshalArgumentToScript:|String streamContents:|executeAndFetchObjectIn:|executeAndReturnOopIn:" \
+  src/GemStone-GBS-MagLev/GbsRcHash.class.st \
+  src/GemStone-GBS-MagLev/GbsRcQueue.class.st \
+  src/GemStone-GBS-MagLev/GbsRcCounter.class.st \
+  src/GemStone-GBS-MagLev/GbsMaglevRuntimeProxy.class.st >/tmp/gbs-maglev-rc-wrapper-script-gate.$$; then
+  cat /tmp/gbs-maglev-rc-wrapper-script-gate.$$
+  fail "MagLev Rc wrapper/base proxy reintroduced argument interpolation or direct command execution; use bound GbsRemoteCommand/session helpers"
+fi
+rm -f /tmp/gbs-maglev-rc-wrapper-script-gate.$$
+
+if rg -n "executeScriptAndFetchObject:|executeScriptAndReturnOop:|marshalArgumentToScript:|String streamContents:" \
+  src/GemStone-GBS-MagLev/GbsRemoteNamespaceMirror.extension.st >/tmp/gbs-maglev-namespace-autoload-script-gate.$$; then
+  cat /tmp/gbs-maglev-namespace-autoload-script-gate.$$
+  fail "MagLev namespace autoload mirror reintroduced direct script builders/execution; use namespace-scoped GbsRemoteCommand helpers"
+fi
+rm -f /tmp/gbs-maglev-namespace-autoload-script-gate.$$
+
+if rg -n "executeScriptAndFetchObject:|executeScriptAndReturnOop:|executeAndFetchObjectIn:|executeAndReturnOopIn:" \
+  src/GemStone-GBS-MagLev/GbsSession.extension.st >/tmp/gbs-maglev-session-direct-execution-gate.$$; then
+  cat /tmp/gbs-maglev-session-direct-execution-gate.$$
+  fail "MagLev session facade reintroduced direct remote execution; use fetchRemoteCommand:/returnRemoteCommandOop:"
+fi
+rm -f /tmp/gbs-maglev-session-direct-execution-gate.$$
+
+if rg -n "executeAndFetchObjectIn:|executeAndReturnOopIn:|executeScriptAndFetchObject:|executeScriptAndReturnOop:" \
+  src/GemStone-GBS-MagLev/GbsSharedCounter.class.st \
+  src/GemStone-GBS-MagLev/GbsRemoteMethodObject.extension.st >/tmp/gbs-maglev-small-wrapper-direct-execution-gate.$$; then
+  cat /tmp/gbs-maglev-small-wrapper-direct-execution-gate.$$
+  fail "MagLev small wrappers reintroduced direct command execution; use session command helpers"
+fi
+rm -f /tmp/gbs-maglev-small-wrapper-direct-execution-gate.$$
+
+if rg -n "correctedCompileScriptForSource|recompileScriptForSource|executeCompileScript:|escapedSourceText:|marshalArgumentToScript:|classExpression" \
+  src/GemStone-GBS-Core/GbsRemoteUnboundMethodObject.class.st >/tmp/gbs-core-unbound-method-script-gate.$$; then
+  cat /tmp/gbs-core-unbound-method-script-gate.$$
+  fail "Remote unbound method compile path reintroduced script construction; use repository class-reference commands"
+fi
+rm -f /tmp/gbs-core-unbound-method-script-gate.$$
+
+if rg -n "levelValue asString|escapedName|fallbackText|session evaluate: \\(self fullSourceFallback|executeScriptAndReturnOop: \\(self remoteScriptBuilder|executeScriptAndFetchObject: \\(self remoteScriptBuilder" \
+  src/GemStone-GBS-Core/GbsRemoteDebugProcessFacade.class.st \
+  src/GemStone-GBS-Core/GbsSession.extension.st >/tmp/gbs-core-bound-debug-session-gate.$$; then
+  cat /tmp/gbs-core-bound-debug-session-gate.$$
+  fail "Core debug/session helper reintroduced direct value interpolation; use bound GbsRemoteCommand helpers"
+fi
+rm -f /tmp/gbs-core-bound-debug-session-gate.$$
+
+if rg -n "String streamContents:" \
+  src/GemStone-GBS-Core/GbsRepositoryFacade.class.st \
+  src/GemStone-GBS-Core/GbsRemoteClassMirror.class.st \
+  src/GemStone-GBS-Core/GbsRemoteMethodMirror.class.st >/tmp/gbs-core-repository-mirror-stream-gate.$$; then
+  cat /tmp/gbs-core-repository-mirror-stream-gate.$$
+  fail "Repository/class/method mirrors reintroduced String streamContents script builders"
+fi
+rm -f /tmp/gbs-core-repository-mirror-stream-gate.$$
+
 if rg -l "executeAndFetch:" \
   src/GemStone-GBS-Core \
   src/GemStone-GBS-MagLev \
@@ -126,6 +230,16 @@ if rg -n "GbsRemoteCommand script:|remoteCommand:" \
   fail "free-form GbsRemoteCommand script usage appeared in tool paths; use bound command APIs or GbsRemoteExecutionDispatcher compatibility"
 fi
 rm -f /tmp/gbs-tool-freeform-command-gate.$$
+
+if rg -n "instVarNamed:" \
+  src/GemStone-GBS-Tools/GbsRemoteDebuggerUiController.class.st \
+  src/GemStone-GBS-Tools/GbxDebuggerServicePresenter.class.st \
+  src/GemStone-GBS-Tools/GbsRemoteDebuggerStackNavigator.class.st \
+  src/GemStone-GBS-Tools/GbsRemoteDebuggerContextPresenter.class.st >/tmp/gbs-debugger-helper-ivar-gate.$$; then
+  cat /tmp/gbs-debugger-helper-ivar-gate.$$
+  fail "debugger helper classes reintroduced instVarNamed: coupling; use explicit presenter/controller APIs"
+fi
+rm -f /tmp/gbs-debugger-helper-ivar-gate.$$
 
 if (( failures > 0 )); then
   printf 'BRIDGE_REGRESSION_GATES_FAIL failures=%s\n' "${failures}" >&2

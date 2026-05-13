@@ -194,7 +194,7 @@ GbsInspectorCoreToolsTest >> testInvokeSelectedObjectMethodPromptsForSelectorAnd
 		self assert: (script includesSubstring: 'Object _objectForOop: 456').
 		'Invoice' ].
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #applyDiscount:') ifTrue: [
+		(script includesSubstring: 'value: (''applyDiscount:'' asSymbol)') ifTrue: [
 			^ #(9004 'Invoice' 'applyDiscount:' 'pricing' 'applyDiscount: percent ^ total * percent' 'Billing-Core' 'Invoice>>applyDiscount:' 3 4) ].
 		self fail ].
 	session stubs at: #forwardRemoteMessage put: [ :message :oop |

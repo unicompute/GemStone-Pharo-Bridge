@@ -24,13 +24,13 @@ GbsRemoteDebuggerStackNavigator >> bookmarkContext [
 		ifTrue: [ stack selectedIndex ]
 		ifFalse: [ nil ].
 	index ifNil: [ ^ false ].
-	debugger instVarNamed: 'bookmarkContextIndex' put: index.
+	debugger bookmarkContextIndex: index.
 	^ true
 ]
 
 { #category : 'actions' }
 GbsRemoteDebuggerStackNavigator >> clearBookmarkContext [
-	debugger instVarNamed: 'bookmarkContextIndex' put: nil.
+	debugger bookmarkContextIndex: nil.
 	^ true
 ]
 

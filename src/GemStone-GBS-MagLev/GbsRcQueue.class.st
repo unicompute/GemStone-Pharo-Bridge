@@ -8,7 +8,11 @@ Class {
 { #category : 'mutating' }
 GbsRcQueue >> add: anObject [
 	| result |
-	result := self executeAgainstRemote: 'obj add: ', (session marshalArgumentToScript: anObject).
+	result := self
+		executeAgainstRemote: 'obj add: value'
+		literalBindings: (Dictionary new
+			at: 'value' put: anObject;
+			yourself).
 	^ session materializeMaglevRuntimeValue: result
 ]
 

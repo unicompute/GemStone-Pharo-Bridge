@@ -168,7 +168,8 @@ GbsMethodQueryResultsPresenterCoreToolsTest >> testClassicLauncherReferencesQuer
 	session stubs
 		at: #executeScriptAndFetchObject
 		put: [ :script |
-			self assert: (script includesSubstring: 'organizer referencesTo: #Invoice').
+			self assert: (script includesSubstring: 'organizer referencesTo: symbolValue').
+			self assert: (script includesSubstring: 'value: (''Invoice'' asSymbol)').
 			^ #('Invoice>>totalPrice' 'Invoice class>>new') ].
 
 	results := GbsClassicLauncher
@@ -189,9 +190,11 @@ GbsMethodQueryResultsPresenterCoreToolsTest >> testClassicLauncherSelectorQuerie
 	session stubs
 		at: #executeScriptAndFetchObject
 		put: [ :script |
-			(script includesSubstring: 'organizer implementorsOf: #size') ifTrue: [
+			((script includesSubstring: 'organizer implementorsOf: selectorValue')
+				and: [ script includesSubstring: 'value: (''size'' asSymbol)' ]) ifTrue: [
 				^ #('Object>>size') ].
-			(script includesSubstring: 'organizer sendersOf: ''size''') ifTrue: [
+			((script includesSubstring: 'organizer sendersOf: selectorValue')
+				and: [ script includesSubstring: 'value: ''size''' ]) ifTrue: [
 				^ #('Behavior>>new') ].
 			self fail ].
 
@@ -224,7 +227,7 @@ GbsMethodQueryResultsPresenterCoreToolsTest >> testBrowseSelectedMethodInfoUsesU
 	presenter := CoreTestableGbsMethodQueryResultsPresenter new.
 	session := CoreMockGbsSession new.
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #at:put:')
+		(script includesSubstring: 'value: (''at:put:'' asSymbol)')
 			ifTrue: [ ^ #(9001 'Object' 'at:put:' 'accessing' 'at: index put: value' 'Kernel' 'Object>>at:put:' 2 4) ].
 		self fail ].
 	presenter
@@ -244,7 +247,7 @@ GbsMethodQueryResultsPresenterCoreToolsTest >> testShowSourceForReferenceUsesRem
 	session := CoreMockGbsSession new.
 	session stubs at: #executeAndFetch put: [ :script | self fail ].
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: (script includesSubstring: 'compiledMethodAt: #size').
+		self assert: (script includesSubstring: 'value: (''size'' asSymbol)').
 		^ #(9001 'Object' 'size' 'accessing' 'size ^ 1' 'Kernel' 'Object>>size' 1 1) ].
 	text := GbxFakeTextPresenterForBrowser new.
 
@@ -262,7 +265,7 @@ GbsMethodQueryResultsPresenterCoreToolsTest >> testBrowseSelectedReferenceUsesMe
 	presenter := CoreTestableGbsMethodQueryResultsPresenter new.
 	session := CoreMockGbsSession new.
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #size') ifTrue: [
+		(script includesSubstring: 'value: (''size'' asSymbol)') ifTrue: [
 			^ #(9001 'Object' 'size' 'accessing' 'size ^ 1' 'Kernel' 'Object>>size' 1 1) ].
 		self fail ].
 	query := GbsNamespaceScopedMethodQuery
@@ -290,8 +293,8 @@ GbsMethodQueryResultsPresenterCoreToolsTest >> testShowSourceForClassSideReferen
 	session := CoreMockGbsSession new.
 	session stubs at: #executeAndFetch put: [ :script | self fail ].
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: (script includesSubstring: 'behavior := cls class').
-		self assert: (script includesSubstring: 'compiledMethodAt: #new').
+		self assert: (script includesSubstring: 'behavior := classSideValue ifTrue: [ cls class ]').
+		self assert: (script includesSubstring: 'value: (''new'' asSymbol)').
 		^ #(9002 'Object class' 'new' 'instance creation' 'new ^ self basicNew' 'Kernel' 'Object class>>new' 1 1) ].
 	text := GbxFakeTextPresenterForBrowser new.
 
@@ -309,7 +312,7 @@ GbsMethodQueryResultsPresenterCoreToolsTest >> testInspectSelectedMethodUsesMeth
 	presenter := CoreTestableGbsMethodQueryResultsPresenter new.
 	session := CoreMockGbsSession new.
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #size') ifTrue: [
+		(script includesSubstring: 'value: (''size'' asSymbol)') ifTrue: [
 			^ #(9001 'Object' 'size' 'accessing' 'size ^ 1' 'Kernel' 'Object>>size' 1 1) ].
 		self fail ].
 
@@ -326,7 +329,7 @@ GbsMethodQueryResultsPresenterCoreToolsTest >> testInvokeSelectedMethodPromptsFo
 	presenter := CoreTestableGbsMethodQueryResultsPresenter new.
 	session := CoreMockGbsSession new.
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'compiledMethodAt: #fromAmount:') ifTrue: [
+		(script includesSubstring: 'value: (''fromAmount:'' asSymbol)') ifTrue: [
 			^ #(9002 'Money class' 'fromAmount:' 'instance creation' 'fromAmount: amount ^ self new' 'Kernel' 'Money class>>fromAmount:' 1 2) ].
 		(script includesSubstring: 'cls superclass') ifTrue: [
 			^ #(9003 'Money' 'Object' 'Kernel' 'Finance' 2 4) ].

@@ -26,18 +26,11 @@ GbsRemoteNamespaceMirror class >> on: aSession expression: anExpressionString [
 GbsRemoteNamespaceMirror class >> on: aSession fullName: aString [
 	^ self
 		on: aSession
-		expression: (String streamContents: [ :stream |
-			stream nextPutAll: '[:fullName | | parts current value | '.
-			stream nextPutAll: 'parts := fullName asString findTokens: ''::''. '.
-			stream nextPutAll: 'current := Object nameSpace: 1. '.
-			stream nextPutAll: 'parts do: [ :each | '.
-			stream nextPutAll: 'current ifNotNil: [ '.
-			stream nextPutAll: 'value := nil. '.
-			stream nextPutAll: '(current respondsTo: #at:) '.
-			stream nextPutAll: 'ifTrue: [ value := [ current at: each asSymbol ] on: Error do: [ nil ] ]. '.
-			stream nextPutAll: 'current := value ] ]. '.
-			stream nextPutAll: 'current ] value: '.
-			stream nextPutAll: (aSession marshalArgumentToScript: aString) ])
+		expression: ((GbsRemoteCommand
+			blockBody: '| parts current value | parts := fullName asString findTokens: ''::''. current := Object nameSpace: 1. parts do: [ :each | current ifNotNil: [ value := nil. (current respondsTo: #at:) ifTrue: [ value := [ current at: each asSymbol ] on: Error do: [ nil ] ]. current := value ] ]. current'
+			literalBindings: (Dictionary new
+				at: 'fullName' put: aString;
+				yourself)) script)
 		symbolListIndex: nil
 		metadata: nil
 ]
@@ -56,7 +49,11 @@ GbsRemoteNamespaceMirror class >> on: aSession expression: anExpressionString sy
 GbsRemoteNamespaceMirror class >> on: aSession symbolListIndex: anInteger [
 	^ self
 		on: aSession
-		expression: 'System myUserProfile symbolList at: ', anInteger printString
+		expression: ((GbsRemoteCommand
+			blockBody: 'System myUserProfile symbolList at: indexValue'
+			literalBindings: (Dictionary new
+				at: 'indexValue' put: anInteger;
+				yourself)) script)
 		symbolListIndex: anInteger
 		metadata: nil
 ]
@@ -74,11 +71,11 @@ GbsRemoteNamespaceMirror class >> on: aSession symbolListIndex: anInteger metada
 GbsRemoteNamespaceMirror class >> on: aSession classOrModule: aClassOrName [
 	^ self
 		on: aSession
-		expression: (String streamContents: [ :stream |
-			stream nextPutAll: '[:cls | '.
-			stream nextPutAll: 'cls ifNil: [ nil ] ifNotNil: [ cls nameSpace: 1 ]'.
-			stream nextPutAll: '] value: '.
-			stream nextPutAll: (aSession repository classExpressionFor: aClassOrName) ])
+		expression: ((aSession repository
+			remoteCommandForClassReferences: { 'cls' -> aClassOrName }
+			body: 'cls ifNil: [ nil ] ifNotNil: [ cls nameSpace: 1 ]'
+			literalAssignments: Dictionary new
+			oopAssignments: Dictionary new) script)
 		symbolListIndex: nil
 		metadata: nil
 ]
@@ -87,9 +84,10 @@ GbsRemoteNamespaceMirror class >> on: aSession classOrModule: aClassOrName [
 GbsRemoteNamespaceMirror class >> on: aSession object: anObjectOrProxy [
 	^ self
 		on: aSession
-		expression: (String streamContents: [ :stream |
-			stream nextPutAll: '[:value | value] value: '.
-			stream nextPutAll: (aSession repository classExpressionFor: anObjectOrProxy) ])
+		expression: ((GbsRemoteCommand
+			blockBody: 'value'
+			argumentNames: #('value')
+			argumentScripts: { aSession repository classExpressionFor: anObjectOrProxy }) script)
 		symbolListIndex: nil
 		metadata: nil
 ]
@@ -166,28 +164,29 @@ GbsRemoteNamespaceMirror >> cachedName [
 { #category : 'querying' }
 GbsRemoteNamespaceMirror >> constantEntries [
 	^ constantEntries ifNil: [
-		constantEntries := session executeScriptAndFetchObject: self constantEntriesScript ]
+		constantEntries := session fetchRemoteCommand: (GbsRemoteCommand compatibilityScript: self constantEntriesScript) ]
 ]
 
 { #category : 'private' }
 GbsRemoteNamespaceMirror >> constantEntriesScript [
-	^ String streamContents: [ :stream |
-		stream nextPutAll: '| ns names entries value valueClassName valueOop valueName valueFullName | '.
-		stream nextPutAll: 'ns := '.
-		stream nextPutAll: self namespaceExpression.
-		stream nextPutAll: '. '.
-		stream nextPutAll: 'ns ifNil: [ #() ] ifNotNil: [ '.
-		stream nextPutAll: 'entries := OrderedCollection new. '.
-		stream nextPutAll: 'names := ((ns respondsTo: #keys) ifTrue: [ ns keys asArray ] ifFalse: [ #() ]) asSortedCollection. '.
-		stream nextPutAll: 'names do: [ :each | '.
-		stream nextPutAll: 'value := nil. valueName := nil. valueFullName := nil. '.
-		stream nextPutAll: '(ns respondsTo: #at:) ifTrue: [ value := [ ns at: each ] on: Error do: [ nil ] ]. '.
-		stream nextPutAll: 'valueClassName := value ifNil: [ nil ] ifNotNil: [ [ value class name asString ] on: Error do: [ nil ] ]. '.
-		stream nextPutAll: 'valueOop := value ifNil: [ nil ] ifNotNil: [ [ value asOop ] on: Error do: [ nil ] ]. '.
-		stream nextPutAll: 'valueName := value ifNil: [ nil ] ifNotNil: [ [ (value respondsTo: #name) ifTrue: [ value name asString ] ifFalse: [ nil ] ] on: Error do: [ nil ] ]. '.
-		stream nextPutAll: 'valueFullName := value ifNil: [ nil ] ifNotNil: [ [ (value respondsTo: #fullName) ifTrue: [ value fullName asString ] ifFalse: [ nil ] ] on: Error do: [ nil ] ]. '.
-		stream nextPutAll: 'entries add: (Array with: each asString with: valueOop with: valueClassName with: nil with: valueName with: valueFullName) ]. '.
-		stream nextPutAll: 'entries asArray ]' ]
+	^ (self namespaceCommandForBody: self constantEntriesCommandBody) script
+]
+
+{ #category : 'private' }
+GbsRemoteNamespaceMirror >> constantEntriesCommandBody [
+	^ '| names entries value valueClassName valueOop valueName valueFullName |
+ns ifNil: [ #() ] ifNotNil: [
+	entries := OrderedCollection new.
+	names := ((ns respondsTo: #keys) ifTrue: [ ns keys asArray ] ifFalse: [ #() ]) asSortedCollection.
+	names do: [ :each |
+		value := nil. valueName := nil. valueFullName := nil.
+		(ns respondsTo: #at:) ifTrue: [ value := [ ns at: each ] on: Error do: [ nil ] ].
+		valueClassName := value ifNil: [ nil ] ifNotNil: [ [ value class name asString ] on: Error do: [ nil ] ].
+		valueOop := value ifNil: [ nil ] ifNotNil: [ [ value asOop ] on: Error do: [ nil ] ].
+		valueName := value ifNil: [ nil ] ifNotNil: [ [ (value respondsTo: #name) ifTrue: [ value name asString ] ifFalse: [ nil ] ] on: Error do: [ nil ] ].
+		valueFullName := value ifNil: [ nil ] ifNotNil: [ [ (value respondsTo: #fullName) ifTrue: [ value fullName asString ] ifFalse: [ nil ] ] on: Error do: [ nil ] ].
+		entries add: (Array with: each asString with: valueOop with: valueClassName with: nil with: valueName with: valueFullName) ].
+	entries asArray ]'
 ]
 
 { #category : 'querying' }
@@ -290,7 +289,7 @@ GbsRemoteNamespaceMirror >> namespaceExpression: aString [
 { #category : 'accessing' }
 GbsRemoteNamespaceMirror >> namespaceMetadata [
 	^ namespaceMetadata ifNil: [
-		namespaceMetadata := session executeScriptAndFetchObject: self namespaceMetadataScript ]
+		namespaceMetadata := self fetchNamespaceBody: self namespaceMetadataCommandBody ]
 ]
 
 { #category : 'accessing' }
@@ -302,16 +301,30 @@ GbsRemoteNamespaceMirror >> namespaceMetadata: anArray [
 
 { #category : 'private' }
 GbsRemoteNamespaceMirror >> namespaceMetadataScript [
-	^ String streamContents: [ :stream |
-		stream nextPutAll: '| ns name fullName myClassName | '.
-		stream nextPutAll: 'ns := '.
-		stream nextPutAll: self namespaceExpression.
-		stream nextPutAll: '. '.
-		stream nextPutAll: 'ns ifNil: [ nil ] ifNotNil: [ '.
-		stream nextPutAll: 'name := [ (ns respondsTo: #name) ifTrue: [ ns name ] ifFalse: [ nil ] ] on: Error do: [ nil ]. '.
-		stream nextPutAll: 'fullName := [ (ns respondsTo: #fullName) ifTrue: [ ns fullName ] ifFalse: [ nil ] ] on: Error do: [ nil ]. '.
-		stream nextPutAll: 'myClassName := [ (ns respondsTo: #myClass) ifTrue: [ ns myClass ifNil: [ nil ] ifNotNil: [ ns myClass name asString ] ] ifFalse: [ nil ] ] on: Error do: [ nil ]. '.
-		stream nextPutAll: 'Array with: ns asOop with: (name ifNil: [ nil ] ifNotNil: [ name asString ]) with: (fullName ifNil: [ nil ] ifNotNil: [ fullName asString ]) with: ns class name asString with: myClassName ]' ]
+	^ (self namespaceCommandForBody: self namespaceMetadataCommandBody) script
+]
+
+{ #category : 'private' }
+GbsRemoteNamespaceMirror >> namespaceMetadataCommandBody [
+	^ '| name fullName myClassName |
+ns ifNil: [ nil ] ifNotNil: [
+	name := [ (ns respondsTo: #name) ifTrue: [ ns name ] ifFalse: [ nil ] ] on: Error do: [ nil ].
+	fullName := [ (ns respondsTo: #fullName) ifTrue: [ ns fullName ] ifFalse: [ nil ] ] on: Error do: [ nil ].
+	myClassName := [ (ns respondsTo: #myClass) ifTrue: [ ns myClass ifNil: [ nil ] ifNotNil: [ ns myClass name asString ] ] ifFalse: [ nil ] ] on: Error do: [ nil ].
+	Array with: ns asOop with: (name ifNil: [ nil ] ifNotNil: [ name asString ]) with: (fullName ifNil: [ nil ] ifNotNil: [ fullName asString ]) with: ns class name asString with: myClassName ]'
+]
+
+{ #category : 'private' }
+GbsRemoteNamespaceMirror >> fetchNamespaceBody: bodyString [
+	^ session fetchRemoteCommand: (self namespaceCommandForBody: bodyString)
+]
+
+{ #category : 'private' }
+GbsRemoteNamespaceMirror >> namespaceCommandForBody: bodyString [
+	^ GbsRemoteCommand
+		blockBody: bodyString
+		argumentNames: #('ns')
+		argumentScripts: { self namespaceExpression }
 ]
 
 { #category : 'querying' }

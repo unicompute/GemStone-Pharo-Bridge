@@ -23,7 +23,10 @@ GbsRemoteClassMirror class >> on: aSession class: aClassOrName [
 { #category : 'accessing' }
 GbsRemoteClassMirror >> classMetadata [
 	^ classMetadata ifNil: [
-		classMetadata := session executeScriptAndFetchObject: self classMetadataScript ]
+		classMetadata := self
+			fetchClassBody: self classMetadataCommandBody
+			literalAssignments: Dictionary new
+			oopAssignments: Dictionary new ]
 ]
 
 { #category : 'accessing' }
@@ -42,19 +45,16 @@ GbsRemoteClassMirror >> classExpression [
 ]
 
 { #category : 'private' }
-GbsRemoteClassMirror >> classMetadataScript [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| cls superclassName packageName categoryName history total versionIndex | cls := ';
-			nextPutAll: self classExpression;
-			nextPutAll: '. cls ifNil: [ nil ] ifNotNil: ['.
-		stream nextPutAll: ' superclassName := [ cls superclass ifNil: [ nil ] ifNotNil: [ cls superclass name asString ] ] on: Error do: [ nil ].'.
-		stream nextPutAll: ' packageName := [ (cls respondsTo: #package) ifTrue: [ cls package ifNil: [ nil ] ifNotNil: [ cls package name asString ] ] ifFalse: [ nil ] ] on: Error do: [ nil ].'.
-		stream nextPutAll: ' categoryName := [ (cls respondsTo: #category) ifTrue: [ cls category asString ] ifFalse: [ nil ] ] on: Error do: [ nil ].'.
-		stream nextPutAll: ' history := [ cls classHistory ] on: Error do: [ #() ].'.
-		stream nextPutAll: ' total := history ifNil: [ nil ] ifNotNil: [ history size ].'.
-		stream nextPutAll: ' versionIndex := (history isNil or: [ history isEmpty ]) ifTrue: [ nil ] ifFalse: [ [ history indexOf: cls ] on: Error do: [ nil ] ].'.
-		stream nextPutAll: ' Array with: cls asOop with: cls name asString with: superclassName with: packageName with: categoryName with: versionIndex with: total ]' ]
+GbsRemoteClassMirror >> classMetadataCommandBody [
+	^ '| superclassName packageName categoryName history total versionIndex |
+cls ifNil: [ nil ] ifNotNil: [
+	superclassName := [ cls superclass ifNil: [ nil ] ifNotNil: [ cls superclass name asString ] ] on: Error do: [ nil ].
+	packageName := [ (cls respondsTo: #package) ifTrue: [ cls package ifNil: [ nil ] ifNotNil: [ cls package name asString ] ] ifFalse: [ nil ] ] on: Error do: [ nil ].
+	categoryName := [ (cls respondsTo: #category) ifTrue: [ cls category asString ] ifFalse: [ nil ] ] on: Error do: [ nil ].
+	history := [ cls classHistory ] on: Error do: [ #() ].
+	total := history ifNil: [ nil ] ifNotNil: [ history size ].
+	versionIndex := (history isNil or: [ history isEmpty ]) ifTrue: [ nil ] ifFalse: [ [ history indexOf: cls ] on: Error do: [ nil ] ].
+	Array with: cls asOop with: cls name asString with: superclassName with: packageName with: categoryName with: versionIndex with: total ]'
 ]
 
 { #category : 'querying' }
@@ -170,22 +170,27 @@ GbsRemoteClassMirror >> packageName [
 
 { #category : 'querying' }
 GbsRemoteClassMirror >> protocolEntriesForClassSide: aBoolean [
-	^ session
-		executeScriptAndFetchObject: (self protocolEntriesScriptForClassSide: aBoolean)
+	^ self
+		fetchClassBody: self protocolEntriesCommandBody
+		literalAssignments: (Dictionary new
+			at: 'classSideValue' put: aBoolean;
+			yourself)
+		oopAssignments: Dictionary new
 ]
 
 { #category : 'private' }
-GbsRemoteClassMirror >> protocolEntriesScriptForClassSide: aBoolean [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| cls behavior byProtocol entries | cls := ';
-			nextPutAll: self classExpression;
-			nextPutAll: '. cls ifNil: [ #() ] ifNotNil: [ behavior := '.
-		aBoolean
-			ifTrue: [ stream nextPutAll: 'cls class' ]
-			ifFalse: [ stream nextPutAll: 'cls' ].
-		stream nextPutAll: '. byProtocol := Dictionary new. behavior methodDict keys asSortedCollection do: [ :eachSelector | | protocol selectors | protocol := [ behavior categoryOfSelector: eachSelector ] on: Error do: [ nil ]. protocol ifNil: [ protocol := ''as yet unclassified'' ]. selectors := byProtocol at: protocol asString ifAbsentPut: [ OrderedCollection new ]. selectors add: eachSelector asString ]. entries := OrderedCollection new. (byProtocol keys asSortedCollection) do: [ :protocol | entries add: (Array with: protocol with: ((byProtocol at: protocol) asSortedCollection asArray)) ]. entries asArray ]'
-	]
+GbsRemoteClassMirror >> protocolEntriesCommandBody [
+	^ '| behavior byProtocol entries | cls ifNil: [ #() ] ifNotNil: [ behavior := classSideValue ifTrue: [ cls class ] ifFalse: [ cls ]. byProtocol := Dictionary new. behavior methodDict keys asSortedCollection do: [ :eachSelector | | protocol selectors | protocol := [ behavior categoryOfSelector: eachSelector ] on: Error do: [ nil ]. protocol ifNil: [ protocol := ''as yet unclassified'' ]. selectors := byProtocol at: protocol asString ifAbsentPut: [ OrderedCollection new ]. selectors add: eachSelector asString ]. entries := OrderedCollection new. (byProtocol keys asSortedCollection) do: [ :protocol | entries add: (Array with: protocol with: ((byProtocol at: protocol) asSortedCollection asArray)) ]. entries asArray ]'
+]
+
+{ #category : 'private' }
+GbsRemoteClassMirror >> fetchClassBody: bodyString literalAssignments: literalDictionary oopAssignments: oopDictionary [
+	^ session repository
+		fetchClassReference: classReference
+		variableName: 'cls'
+		body: bodyString
+		literalAssignments: literalDictionary
+		oopAssignments: oopDictionary
 ]
 
 { #category : 'querying' }

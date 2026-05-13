@@ -308,6 +308,12 @@ GbsRemoteCommand class >> compatibilityScript: aString [
 ]
 
 { #category : 'instance creation' }
+GbsRemoteCommand class >> staticExpression: aString [
+	"Static no-argument remote expression. Use blockBody:* when binding Pharo values."
+	^ self script: aString
+]
+
+{ #category : 'instance creation' }
 GbsRemoteCommand class >> script: aString [
 	"Compatibility-level free-form script constructor. Prefer blockBody:* APIs."
 	^ self new

@@ -305,7 +305,8 @@ GbsSession >> executeScriptAndReturnOop: aString [
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> fetchTranscriptLogs [
 	| rawText |
-	rawText := self fetchRemoteScript: '[
+	rawText := self
+		fetchRemoteCommandBody: '[
 		| fetched log text |
 		fetched := (Transcript respondsTo: #fetchAndClear)
 			ifTrue: [ [ Transcript fetchAndClear ] on: Error do: [ nil ] ]
@@ -318,7 +319,10 @@ GbsSession >> fetchTranscriptLogs [
 				stream cr ] ].
 		UserGlobals at: #PharoTranscriptLog put: OrderedCollection new.
 		text
-	] value' context: 20.
+	] value'
+		literalBindings: Dictionary new
+		oopBindings: Dictionary new
+		context: 20.
 	(rawText beginsWith: 'Error:') ifTrue: [ ^ '' ].
 	^ rawText
 ]
@@ -758,17 +762,31 @@ GbsSession >> remoteClassNameForOop: anOop [
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> remoteCollectionAsArrayOop: anOop [
-	^ self executeScriptAndReturnOop: (self remoteScriptBuilder objectForOop: anOop) , ' asArray'
+	^ self
+		returnRemoteCommandBody: 'object asArray'
+		literalBindings: Dictionary new
+		oopBindings: (Dictionary new
+			at: 'object' put: anOop;
+			yourself)
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> remoteDictionaryAssociationsAsArrayOop: anOop [
-	^ self executeScriptAndReturnOop: (self remoteScriptBuilder objectForOop: anOop) , ' associations asArray'
+	^ self
+		returnRemoteCommandBody: 'object associations asArray'
+		literalBindings: Dictionary new
+		oopBindings: (Dictionary new
+			at: 'object' put: anOop;
+			yourself)
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> remoteSizeForOop: anOop [
-	^ self executeScriptAndFetchObject: (self remoteScriptBuilder objectForOop: anOop) , ' size'
+	^ self fetchRemoteCommand: (GbsRemoteCommand
+		blockBody: 'object size'
+		oopBindings: (Dictionary new
+			at: 'object' put: anOop;
+			yourself))
 ]
 
 { #category : '*GemStone-GBS-Core' }

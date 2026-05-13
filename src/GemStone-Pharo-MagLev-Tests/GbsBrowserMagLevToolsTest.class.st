@@ -99,7 +99,8 @@ GbsBrowserMagLevToolsTest >> testBrowseRubyRuntimeProvenanceActionChooserExecute
 		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('app/models/invoice.rb') ].
 		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #() ].
 		(script includesSubstring: 'rubyAutoloadAssociationAtOrNil:env:') ifTrue: [ ^ #() ].
-		(script includesSubstring: 'RubyContext default requireFileNamed: ''app/models/invoice.rb'' env: 1')
+		((script includesSubstring: 'RubyContext default requireFileNamed: arg1 env: 1')
+			and: [ script includesSubstring: '''app/models/invoice.rb''' ])
 			ifTrue: [ ^ 'required' ].
 		(script includesSubstring: 'key := 19') ifTrue: [ ^ nil ].
 		self fail ].

@@ -2,10 +2,10 @@ Extension { #name : 'GbsRemoteMethodObject' }
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsRemoteMethodObject >> toProc [
-	| targetProxy rawProcOop procOop builder |
+	| targetProxy command rawProcOop procOop builder |
 	targetProxy := self effectiveReceiverProxy.
 	builder := GbsRemoteScriptBuilder new.
-	rawProcOop := (GbsRemoteCommand
+	command := (GbsRemoteCommand
 		blockBody: '[
 		| meth proc |
 		receiver ifNil: [ ^ ''0'' ].
@@ -22,8 +22,8 @@ GbsRemoteMethodObject >> toProc [
 		argumentNames: #('receiver' 'selector')
 		argumentScripts: {
 			builder objectForOop: targetProxy oop.
-			builder literalFor: self selector asSymbol })
-		executeAndFetchObjectIn: self session.
+			builder literalFor: self selector asSymbol }).
+	rawProcOop := self session fetchRemoteCommand: command.
 	rawProcOop ifNil: [ ^ nil ].
 	(rawProcOop respondsTo: #asLocalString) ifTrue: [ rawProcOop := rawProcOop asLocalString ].
 	procOop := [ rawProcOop asString asInteger ]

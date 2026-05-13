@@ -15,11 +15,15 @@ GbsRcHash >> at: aKey [
 { #category : 'querying' }
 GbsRcHash >> at: aKey ifAbsent: aBlock [
 	| result |
-	result := self executeAgainstRemote: '((obj respondsTo: #at:otherwise:)
-		ifTrue: [ obj at: ', (session marshalArgumentToScript: aKey), ' otherwise: nil ]
+	result := self
+		executeAgainstRemote: '((obj respondsTo: #at:otherwise:)
+		ifTrue: [ obj at: key otherwise: nil ]
 		ifFalse: [ (obj respondsTo: #at:ifAbsent:)
-			ifTrue: [ obj at: ', (session marshalArgumentToScript: aKey), ' ifAbsent: [ nil ] ]
-			ifFalse: [ nil ] ])'.
+			ifTrue: [ obj at: key ifAbsent: [ nil ] ]
+			ifFalse: [ nil ] ])'
+		literalBindings: (Dictionary new
+			at: 'key' put: aKey;
+			yourself).
 	^ result
 		ifNil: [ aBlock value ]
 		ifNotNil: [ session materializeMaglevRuntimeValue: result ]
@@ -28,7 +32,13 @@ GbsRcHash >> at: aKey ifAbsent: aBlock [
 { #category : 'mutating' }
 GbsRcHash >> at: aKey put: aValue [
 	| result |
-	result := self executeAgainstRemote: 'obj at: ', (session marshalArgumentToScript: aKey), ' put: ', (session marshalArgumentToScript: aValue), '. obj at: ', (session marshalArgumentToScript: aKey).
+	result := self
+		executeAgainstRemote: 'obj at: key put: value.
+	obj at: key'
+		literalBindings: (Dictionary new
+			at: 'key' put: aKey;
+			at: 'value' put: aValue;
+			yourself).
 	^ session materializeMaglevRuntimeValue: result
 ]
 
@@ -77,9 +87,14 @@ GbsRcHash >> removeKey: aKey [
 GbsRcHash >> removeKey: aKey ifAbsent: aBlock [
 	| marker result |
 	marker := '__gbs_missing__'.
-	result := self executeAgainstRemote: '((obj respondsTo: #removeKey:ifAbsent:)
-		ifTrue: [ obj removeKey: ', (session marshalArgumentToScript: aKey), ' ifAbsent: [ ', marker storeString, ' ] ]
-		ifFalse: [ ', marker storeString, ' ])'.
+	result := self
+		executeAgainstRemote: '((obj respondsTo: #removeKey:ifAbsent:)
+		ifTrue: [ obj removeKey: key ifAbsent: [ missingMarker ] ]
+		ifFalse: [ missingMarker ])'
+		literalBindings: (Dictionary new
+			at: 'key' put: aKey;
+			at: 'missingMarker' put: marker;
+			yourself).
 	result = marker ifTrue: [ ^ aBlock value ].
 	^ session materializeMaglevRuntimeValue: result
 ]

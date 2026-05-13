@@ -17,8 +17,12 @@ GbsRepositoryFacade class >> on: aSession [
 
 { #category : 'querying' }
 GbsRepositoryFacade >> allInstancesOf: aClassOrName [
-	^ session
-		executeScriptAndFetchObject: (self allInstancesScriptFor: aClassOrName)
+	^ self
+		fetchClassReference: aClassOrName
+		variableName: 'cls'
+		body: 'cls ifNil: [ nil ] ifNotNil: [ cls allInstances ]'
+		literalAssignments: Dictionary new
+		oopAssignments: Dictionary new
 ]
 
 { #category : 'querying' }
@@ -99,7 +103,10 @@ GbsRepositoryFacade >> classMirrorOfNamed: aClassName [
 { #category : 'querying' }
 GbsRepositoryFacade >> namespaceMirrors [
 	| rows |
-	rows := session executeScriptAndFetchObject: self namespaceMirrorEntriesScript.
+	rows := self
+		fetchCommandBody: self namespaceMirrorEntriesCommandBody
+		literalAssignments: Dictionary new
+		oopAssignments: Dictionary new.
 	rows ifNil: [ ^ #() ].
 	^ rows collect: [ :each |
 		GbsRemoteNamespaceMirror
@@ -148,22 +155,17 @@ GbsRepositoryFacade >> namespaceMirrorForFullName: aString [
 
 { #category : 'querying' }
 GbsRepositoryFacade >> allInstancesOopOf: aClassOrName [
-	^ session
-		executeScriptAndReturnOop: (self allInstancesScriptFor: aClassOrName)
+	^ self
+		returnOopClassReference: aClassOrName
+		variableName: 'cls'
+		body: 'cls ifNil: [ nil ] ifNotNil: [ cls allInstances ]'
+		literalAssignments: Dictionary new
+		oopAssignments: Dictionary new
 ]
 
 { #category : 'querying' }
 GbsRepositoryFacade >> allInstancesOopOfNamed: aClassName [
 	^ self allInstancesOopOf: aClassName
-]
-
-{ #category : 'private' }
-GbsRepositoryFacade >> allInstancesScriptFor: aClassOrName [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| cls | cls := ';
-			nextPutAll: (self classExpressionFor: aClassOrName);
-			nextPutAll: '. cls ifNil: [ nil ] ifNotNil: [ cls allInstances ]' ]
 ]
 
 { #category : 'private' }
@@ -176,21 +178,126 @@ GbsRepositoryFacade >> classExpressionFor: aClassOrName [
 		aClassOrName class name asString includesSubstring: 'Behavior' ]) ifTrue: [
 		^ self classExpressionFor: aClassOrName name ].
 	((aClassOrName isString) or: [ aClassOrName isSymbol ]) ifTrue: [
-		^ String streamContents: [ :stream |
-			stream
-				nextPutAll: '[:name | System myUserProfile symbolList objectNamed: name asSymbol] value: ';
-				nextPutAll: (session marshalArgumentToScript: aClassOrName) ] ].
+		^ '[:name | System myUserProfile symbolList objectNamed: name asSymbol] value: ',
+			(GbsRemoteScriptBuilder literalFor: aClassOrName) ].
 	self error: 'Unsupported class reference: ', aClassOrName printString
 ]
 
 { #category : 'private' }
-GbsRepositoryFacade >> namespaceMirrorEntriesScript [
+GbsRepositoryFacade >> bindRemoteReference: anObject as: variableName literalAssignments: literalDictionary oopAssignments: oopDictionary [
+	| value |
+	value := anObject.
+	(value respondsTo: #proxy) ifTrue: [ value := value proxy ].
+	(value isKindOf: GbsProxy)
+		ifTrue: [ oopDictionary at: variableName put: value oop ]
+		ifFalse: [ literalDictionary at: variableName put: value ]
+]
+
+{ #category : 'private' }
+GbsRepositoryFacade >> classReferencePreambleFor: aClassOrName variableName: variableName literalAssignments: literalDictionary oopAssignments: oopDictionary tempNames: tempNames [
+	| reference nameBinding |
+	reference := aClassOrName.
+	(reference respondsTo: #proxy) ifTrue: [ reference := reference proxy ].
+	(reference isKindOf: GbsProxy) ifTrue: [
+		oopDictionary at: variableName put: reference oop.
+		^ '' ].
+	(reference isBehavior or: [
+		reference class name asString includesSubstring: 'Behavior' ]) ifTrue: [
+		reference := reference name ].
+	((reference isString) or: [ reference isSymbol ]) ifTrue: [
+		nameBinding := variableName, 'Name'.
+		literalDictionary at: nameBinding put: reference asString.
+		tempNames add: variableName.
+		^ variableName, ' := System myUserProfile symbolList objectNamed: ', nameBinding, ' asSymbol. ' ].
+	self error: 'Unsupported class reference: ', reference printString
+]
+
+{ #category : 'private' }
+GbsRepositoryFacade >> copyDictionary: aDictionary [
+	| copy |
+	copy := Dictionary new.
+	aDictionary ifNil: [ ^ copy ].
+	aDictionary keysAndValuesDo: [ :key :value |
+		copy at: key put: value ].
+	^ copy
+]
+
+{ #category : 'private' }
+GbsRepositoryFacade >> fetchClassReference: aClassOrName variableName: variableName body: bodyString literalAssignments: literalDictionary oopAssignments: oopDictionary [
+	^ self
+		fetchCommandForClassReferences: { variableName -> aClassOrName }
+		body: bodyString
+		literalAssignments: literalDictionary
+		oopAssignments: oopDictionary
+]
+
+{ #category : 'private' }
+GbsRepositoryFacade >> fetchCommandBody: bodyString literalAssignments: literalDictionary oopAssignments: oopDictionary [
+	^ session fetchRemoteCommand: (GbsRemoteCommand
+		blockBody: bodyString
+		literalBindings: literalDictionary
+		oopBindings: oopDictionary)
+]
+
+{ #category : 'private' }
+GbsRepositoryFacade >> fetchCommandForClassReferences: referenceAssociations body: bodyString literalAssignments: literalDictionary oopAssignments: oopDictionary [
+	^ session fetchRemoteCommand: (self
+		remoteCommandForClassReferences: referenceAssociations
+		body: bodyString
+		literalAssignments: literalDictionary
+		oopAssignments: oopDictionary)
+]
+
+{ #category : 'private' }
+GbsRepositoryFacade >> remoteCommandForClassReferences: referenceAssociations body: bodyString literalAssignments: literalDictionary oopAssignments: oopDictionary [
+	| literals oops tempNames preamble |
+	literals := self copyDictionary: literalDictionary.
+	oops := self copyDictionary: oopDictionary.
+	tempNames := OrderedCollection new.
+	preamble := ''.
+	referenceAssociations do: [ :association |
+		preamble := preamble, (self
+			classReferencePreambleFor: association value
+			variableName: association key
+			literalAssignments: literals
+			oopAssignments: oops
+			tempNames: tempNames) ].
+	^ GbsRemoteCommand
+		blockBody: (self tempDeclarationFor: tempNames), preamble, bodyString
+		literalBindings: literals
+		oopBindings: oops
+]
+
+{ #category : 'private' }
+GbsRepositoryFacade >> returnOopClassReference: aClassOrName variableName: variableName body: bodyString literalAssignments: literalDictionary oopAssignments: oopDictionary [
+	^ session returnRemoteCommandOop: (self
+		remoteCommandForClassReferences: { variableName -> aClassOrName }
+		body: bodyString
+		literalAssignments: literalDictionary
+		oopAssignments: oopDictionary)
+]
+
+{ #category : 'private' }
+GbsRepositoryFacade >> tempDeclarationFor: tempNames [
+	| declaration |
+	tempNames isEmpty ifTrue: [ ^ '' ].
+	declaration := '| '.
+	tempNames do: [ :each |
+		declaration := declaration, each asString, ' ' ].
+	^ declaration, '| '
+]
+
+{ #category : 'private' }
+GbsRepositoryFacade >> namespaceMirrorEntriesCommandBody [
 	^ '| sl entries | sl := System myUserProfile symbolList. entries := OrderedCollection new. 1 to: sl size do: [ :index | | ns name fullName myClassName | ns := sl at: index. name := [ (ns respondsTo: #name) ifTrue: [ ns name ] ifFalse: [ nil ] ] on: Error do: [ nil ]. fullName := [ (ns respondsTo: #fullName) ifTrue: [ ns fullName ] ifFalse: [ nil ] ] on: Error do: [ nil ]. myClassName := [ (ns respondsTo: #myClass) ifTrue: [ ns myClass ifNil: [ nil ] ifNotNil: [ ns myClass name asString ] ] ifFalse: [ nil ] ] on: Error do: [ nil ]. entries add: (Array with: index with: ns asOop with: (name ifNil: [ nil ] ifNotNil: [ name asString ]) with: (fullName ifNil: [ nil ] ifNotNil: [ fullName asString ]) with: ns class name asString with: myClassName) ]. entries asArray'
 ]
 
 { #category : 'querying' }
 GbsRepositoryFacade >> loadedClasses [
-	^ session executeScriptAndFetchObject: self loadedClassesScript
+	^ self
+		fetchCommandBody: self loadedClassesCommandBody
+		literalAssignments: Dictionary new
+		oopAssignments: Dictionary new
 ]
 
 { #category : 'mutating' }
@@ -213,10 +320,13 @@ GbsRepositoryFacade >> previewMigrationFrom: aSourceClassOrName to: aTargetClass
 GbsRepositoryFacade >> previewMigrationFrom: aSourceClassOrName to: aTargetClassOrName allowAbort: aBoolean [
 	| rawEntries |
 	self prepareForRepositoryScanAllowAbort: aBoolean.
-	rawEntries := session
-		executeScriptAndFetchObject: (self
-			previewMigrationScriptFrom: aSourceClassOrName
-			to: aTargetClassOrName).
+	rawEntries := self
+		fetchCommandForClassReferences: {
+			'fromClass' -> aSourceClassOrName.
+			'toClass' -> aTargetClassOrName }
+		body: self previewMigrationFromToCommandBody
+		literalAssignments: Dictionary new
+		oopAssignments: Dictionary new.
 	^ GbsMigrationPlan
 		on: session
 		rawEntries: rawEntries
@@ -236,9 +346,12 @@ GbsRepositoryFacade >> previewMigrationWithSubclassesOf: aTopClassOrName [
 GbsRepositoryFacade >> previewMigrationWithSubclassesOf: aTopClassOrName allowAbort: aBoolean [
 	| rawEntries |
 	self prepareForRepositoryScanAllowAbort: aBoolean.
-	rawEntries := session
-		executeScriptAndFetchObject: (self
-			previewMigrationWithSubclassesScriptFor: aTopClassOrName).
+	rawEntries := self
+		fetchClassReference: aTopClassOrName
+		variableName: 'topClass'
+		body: self previewMigrationWithSubclassesCommandBody
+		literalAssignments: Dictionary new
+		oopAssignments: Dictionary new.
 	^ GbsMigrationPlan
 		on: session
 		rawEntries: rawEntries
@@ -250,10 +363,13 @@ GbsRepositoryFacade >> previewMigrationWithSubclassesOf: aTopClassOrName allowAb
 { #category : 'mutating' }
 GbsRepositoryFacade >> migrateInstancesFrom: aSourceClassOrName to: aTargetClassOrName allowAbort: aBoolean [
 	self prepareForRepositoryScanAllowAbort: aBoolean.
-	^ session
-		executeScriptAndFetchObject: (self
-			migrateInstancesScriptFrom: aSourceClassOrName
-			to: aTargetClassOrName)
+	^ self
+		fetchCommandForClassReferences: {
+			'fromClass' -> aSourceClassOrName.
+			'toClass' -> aTargetClassOrName }
+		body: self migrateInstancesFromToCommandBody
+		literalAssignments: Dictionary new
+		oopAssignments: Dictionary new
 ]
 
 { #category : 'mutating' }
@@ -266,9 +382,12 @@ GbsRepositoryFacade >> migrateInstancesWithSubclassesOf: aTopClassOrName [
 { #category : 'mutating' }
 GbsRepositoryFacade >> migrateInstancesWithSubclassesOf: aTopClassOrName allowAbort: aBoolean [
 	self prepareForRepositoryScanAllowAbort: aBoolean.
-	^ session
-		executeScriptAndFetchObject: (self
-			migrateInstancesWithSubclassesScriptFor: aTopClassOrName)
+	^ self
+		fetchClassReference: aTopClassOrName
+		variableName: 'topClass'
+		body: self migrateInstancesWithSubclassesCommandBody
+		literalAssignments: Dictionary new
+		oopAssignments: Dictionary new
 ]
 
 { #category : 'querying' }
@@ -298,8 +417,14 @@ GbsRepositoryFacade >> listInstancesOf: aClassOrName limit: aSmallInteger [
 { #category : 'querying' }
 GbsRepositoryFacade >> listInstancesOf: aClassOrName limit: aSmallInteger allowAbort: aBoolean [
 	self prepareForRepositoryScanAllowAbort: aBoolean.
-	^ session
-		executeScriptAndFetchObject: (self listInstancesScriptFor: aClassOrName limit: aSmallInteger)
+	^ self
+		fetchClassReference: aClassOrName
+		variableName: 'cls'
+		body: self listInstancesCommandBody
+		literalAssignments: (Dictionary new
+			at: 'limitValue' put: aSmallInteger;
+			yourself)
+		oopAssignments: Dictionary new
 ]
 
 { #category : 'querying' }
@@ -373,8 +498,12 @@ GbsRepositoryFacade >> unboundMethodObjectForClassNamed: aClassName selector: aS
 
 { #category : 'querying' }
 GbsRepositoryFacade >> implementorMethodReferenceStringsForSelector: aSelectorOrString [
-	^ session
-		executeScriptAndFetchObject: (self implementorMethodReferenceStringsScriptFor: aSelectorOrString)
+	^ self
+		methodReferenceStringsForSearchBody: '[ organizer implementorsOf: selectorValue ] on: Error do: [ #() ]'
+		literalAssignments: (Dictionary new
+			at: 'selectorValue' put: aSelectorOrString asString asSymbol;
+			yourself)
+		oopAssignments: Dictionary new
 ]
 
 { #category : 'querying' }
@@ -388,14 +517,12 @@ GbsRepositoryFacade >> hierarchyImplementorMethodReferenceStringsForSelector: aS
 
 { #category : 'querying' }
 GbsRepositoryFacade >> hierarchyImplementorMethodReferenceStringsForSelector: aSelectorOrString rootClassName: aRootClassName scope: aScopeString includeClassSide: includeClassSideBoolean [
-	^ session
-		executeScriptAndFetchObject:
-			(self
-				hierarchyMethodReferenceStringsScriptFor: aSelectorOrString
-				rootClassName: aRootClassName
-				scope: aScopeString
-				senders: false
-				includeClassSide: includeClassSideBoolean)
+	^ self
+		hierarchyMethodReferenceStringsForSelector: aSelectorOrString
+		rootClassName: aRootClassName
+		scope: aScopeString
+		senders: false
+		includeClassSide: includeClassSideBoolean
 ]
 
 { #category : 'querying' }
@@ -409,132 +536,127 @@ GbsRepositoryFacade >> hierarchySenderMethodReferenceStringsForSelector: aSelect
 
 { #category : 'querying' }
 GbsRepositoryFacade >> hierarchySenderMethodReferenceStringsForSelector: aSelectorOrString rootClassName: aRootClassName scope: aScopeString includeClassSide: includeClassSideBoolean [
-	^ session
-		executeScriptAndFetchObject:
-			(self
-				hierarchyMethodReferenceStringsScriptFor: aSelectorOrString
-				rootClassName: aRootClassName
-				scope: aScopeString
-				senders: true
-				includeClassSide: includeClassSideBoolean)
+	^ self
+		hierarchyMethodReferenceStringsForSelector: aSelectorOrString
+		rootClassName: aRootClassName
+		scope: aScopeString
+		senders: true
+		includeClassSide: includeClassSideBoolean
 ]
 
 { #category : 'querying' }
 GbsRepositoryFacade >> methodReferenceStringsToObject: anObject [
-	^ session
-		executeScriptAndFetchObject: (self methodReferenceStringsToObjectScriptFor: anObject)
+	| literals oops |
+	literals := Dictionary new.
+	oops := Dictionary new.
+	self
+		bindRemoteReference: anObject
+		as: 'targetObject'
+		literalAssignments: literals
+		oopAssignments: oops.
+	^ self
+		methodReferenceStringsForSearchBody: '[ organizer referencesToObject: targetObject ] on: Error do: [ #() ]'
+		literalAssignments: literals
+		oopAssignments: oops
 ]
 
 { #category : 'querying' }
 GbsRepositoryFacade >> methodReferenceStringsToSymbol: aSymbolOrString [
-	^ session
-		executeScriptAndFetchObject: (self methodReferenceStringsToSymbolScriptFor: aSymbolOrString)
+	^ self
+		methodReferenceStringsForSearchBody: '[ organizer referencesTo: symbolValue ] on: Error do: [ #() ]'
+		literalAssignments: (Dictionary new
+			at: 'symbolValue' put: aSymbolOrString asString asSymbol;
+			yourself)
+		oopAssignments: Dictionary new
 ]
 
 { #category : 'querying' }
 GbsRepositoryFacade >> senderMethodReferenceStringsForSelector: aSelectorOrString [
-	^ session
-		executeScriptAndFetchObject: (self senderMethodReferenceStringsScriptFor: aSelectorOrString)
-]
-
-{ #category : 'private' }
-GbsRepositoryFacade >> implementorMethodReferenceStringsScriptFor: aSelectorOrString [
 	^ self
-		methodReferenceStringsScriptForSearchExpression:
-			(String streamContents: [ :stream |
-				stream
-					nextPutAll: '[ organizer implementorsOf: ';
-					nextPutAll: (session marshalArgumentToScript: aSelectorOrString asString asSymbol);
-					nextPutAll: ' ] on: Error do: [ #() ]' ])
+		methodReferenceStringsForSearchBody: '[ organizer sendersOf: selectorValue ] on: Error do: [ #() ]'
+		literalAssignments: (Dictionary new
+			at: 'selectorValue' put: aSelectorOrString asString;
+			yourself)
+		oopAssignments: Dictionary new
 ]
 
 { #category : 'private' }
-GbsRepositoryFacade >> hierarchyMethodReferenceStringsScriptFor: aSelectorOrString rootClassName: aRootClassName scope: aScopeString senders: sendersOnly includeClassSide: includeClassSideBoolean [
-	| escapedSelector escapedRootClass escapedScope selectorExpr classFilterExpr classSideExpr |
-	escapedSelector := aSelectorOrString asString copyReplaceAll: '''' with: ''''''.
-	escapedRootClass := (aRootClassName ifNil: [ '' ] ifNotNil: [ aRootClassName asString ]) copyReplaceAll: '''' with: ''''''.
-	escapedScope := (aScopeString ifNil: [ 'full' ] ifNotNil: [ aScopeString asString ]) copyReplaceAll: '''' with: ''''''.
-	selectorExpr := sendersOnly
-		ifTrue: [ 'sels := [ cls whichSelectorsReferTo: sel ] on: Error do: [ #() ]' ]
-		ifFalse: [ 'sels := (cls includesSelector: sel) ifTrue: [ Array with: sel ] ifFalse: [ #() ]' ].
-	classFilterExpr := '
-			(rootClass notNil) ifTrue: [
-				| withinHierarchy isSuper isThis isSub |
-				withinHierarchy := (cls withAllSuperclasses includes: rootClass)
-					or: [ rootClass withAllSuperclasses includes: cls ].
-				isSuper := (cls ~~ rootClass) and: [ rootClass withAllSuperclasses includes: cls ].
-				isThis := cls == rootClass.
-				isSub := (cls ~~ rootClass) and: [ cls withAllSuperclasses includes: rootClass ].
-				withinHierarchy ifFalse: [ sels := #() ].
-				withinHierarchy ifTrue: [
-					(scope = ''super'' and: [ isSuper not ]) ifTrue: [ sels := #() ].
-					(scope = ''this'' and: [ isThis not ]) ifTrue: [ sels := #() ].
-					(scope = ''sub'' and: [ isSub not ]) ifTrue: [ sels := #() ] ] ]'.
-	classSideExpr := includeClassSideBoolean
-		ifTrue: [
-			String streamContents: [ :stream |
-				stream
-					nextPutAll: '
-			';
-					nextPutAll: (sendersOnly
-						ifTrue: [ 'sels := [ cls class whichSelectorsReferTo: sel ] on: Error do: [ #() ]' ]
-						ifFalse: [ 'sels := (cls class includesSelector: sel) ifTrue: [ Array with: sel ] ifFalse: [ #() ]' ]);
-					nextPutAll: '.
-			sels do: [ :s |
-				stream nextPutAll: cls name asString; nextPutAll: '' class>>''; nextPutAll: s asString; lf ]' ] ]
-		ifFalse: [ '' ].
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[
-		| sel className classes rootClass scope stream |
-		sel := #''';
-			nextPutAll: escapedSelector;
-			nextPutAll: '''.
-		className := ''';
-			nextPutAll: escapedRootClass;
-			nextPutAll: '''.
-		scope := ''';
-			nextPutAll: escapedScope;
-			nextPutAll: '''.
-		stream := WriteStream on: String new.
-		classes := IdentitySet new.
-		rootClass := nil.
-		className isEmpty ifFalse: [
-			(className endsWith: '' class'')
-				ifTrue: [ | baseName |
-					baseName := className copyFrom: 1 to: className size - 6.
-					rootClass := (System myUserProfile symbolList objectNamed: baseName asSymbol) class ]
-				ifFalse: [ rootClass := (System myUserProfile symbolList objectNamed: className asSymbol) ] ].
-		System myUserProfile symbolList do: [ :dict |
-			dict keysAndValuesDo: [ :k :v | (v isBehavior) ifTrue: [ classes add: v ] ] ].
-		rootClass notNil ifTrue: [
-			classes := (rootClass withAllSuperclasses , rootClass withAllSubclasses) asIdentitySet ].
-		classes asArray do: [ :cls |
-			| sels |
-			';
-			nextPutAll: selectorExpr;
-			nextPutAll: '.
-			';
-			nextPutAll: classFilterExpr;
-			nextPutAll: '.
-			sels do: [ :s |
-				stream nextPutAll: cls name asString; nextPutAll: ''>>''; nextPutAll: s asString; lf ].';
-			nextPutAll: classSideExpr;
-			nextPutAll: '
-		].
-		(stream contents splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty
-	] value' ]
+GbsRepositoryFacade >> hierarchyMethodReferenceStringsForSelector: aSelectorOrString rootClassName: aRootClassName scope: aScopeString senders: sendersOnly includeClassSide: includeClassSideBoolean [
+	^ self
+		fetchCommandBody: self hierarchyMethodReferenceStringsCommandBody
+		literalAssignments: (Dictionary new
+			at: 'selectorValue' put: aSelectorOrString asString asSymbol;
+			at: 'rootClassName' put: (aRootClassName ifNil: [ '' ] ifNotNil: [ aRootClassName asString ]);
+			at: 'scopeValue' put: (aScopeString ifNil: [ 'full' ] ifNotNil: [ aScopeString asString ]);
+			at: 'sendersOnlyValue' put: sendersOnly;
+			at: 'includeClassSideValue' put: includeClassSideBoolean;
+			yourself)
+		oopAssignments: Dictionary new
 ]
 
 { #category : 'private' }
-GbsRepositoryFacade >> methodReferenceStringsScriptForSearchExpression: searchExpression [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| organizer searchResults methods entries |
+GbsRepositoryFacade >> hierarchyMethodReferenceStringsCommandBody [
+	^ '| sel className classes rootClass scope stream sendersOnly includeClassSide |
+sel := selectorValue.
+className := rootClassName.
+scope := scopeValue.
+sendersOnly := sendersOnlyValue.
+includeClassSide := includeClassSideValue.
+stream := WriteStream on: String new.
+classes := IdentitySet new.
+rootClass := nil.
+className isEmpty ifFalse: [
+	(className endsWith: '' class'')
+		ifTrue: [ | baseName |
+			baseName := className copyFrom: 1 to: className size - 6.
+			rootClass := (System myUserProfile symbolList objectNamed: baseName asSymbol) class ]
+		ifFalse: [ rootClass := (System myUserProfile symbolList objectNamed: className asSymbol) ] ].
+System myUserProfile symbolList do: [ :dict |
+	dict keysAndValuesDo: [ :k :v | (v isBehavior) ifTrue: [ classes add: v ] ] ].
+rootClass notNil ifTrue: [
+	classes := (rootClass withAllSuperclasses , rootClass withAllSubclasses) asIdentitySet ].
+classes asArray do: [ :cls |
+	| sels |
+	sels := sendersOnly
+		ifTrue: [ [ cls whichSelectorsReferTo: sel ] on: Error do: [ #() ] ]
+		ifFalse: [ (cls includesSelector: sel) ifTrue: [ Array with: sel ] ifFalse: [ #() ] ].
+	(rootClass notNil) ifTrue: [
+		| withinHierarchy isSuper isThis isSub |
+		withinHierarchy := (cls withAllSuperclasses includes: rootClass)
+			or: [ rootClass withAllSuperclasses includes: cls ].
+		isSuper := (cls ~~ rootClass) and: [ rootClass withAllSuperclasses includes: cls ].
+		isThis := cls == rootClass.
+		isSub := (cls ~~ rootClass) and: [ cls withAllSuperclasses includes: rootClass ].
+		withinHierarchy ifFalse: [ sels := #() ].
+		withinHierarchy ifTrue: [
+			(scope = ''super'' and: [ isSuper not ]) ifTrue: [ sels := #() ].
+			(scope = ''this'' and: [ isThis not ]) ifTrue: [ sels := #() ].
+			(scope = ''sub'' and: [ isSub not ]) ifTrue: [ sels := #() ] ] ].
+	sels do: [ :s |
+		stream nextPutAll: cls name asString; nextPutAll: ''>>''; nextPutAll: s asString; lf ].
+	includeClassSide ifTrue: [
+		| classSels |
+		classSels := sendersOnly
+			ifTrue: [ [ cls class whichSelectorsReferTo: sel ] on: Error do: [ #() ] ]
+			ifFalse: [ (cls class includesSelector: sel) ifTrue: [ Array with: sel ] ifFalse: [ #() ] ].
+		classSels do: [ :s |
+			stream nextPutAll: cls name asString; nextPutAll: '' class>>''; nextPutAll: s asString; lf ] ] ].
+(stream contents splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty'
+]
+
+{ #category : 'private' }
+GbsRepositoryFacade >> methodReferenceStringsForSearchBody: searchBody literalAssignments: literalDictionary oopAssignments: oopDictionary [
+	^ self
+		fetchCommandBody: (self methodReferenceStringsCommandBodyForSearchBody: searchBody)
+		literalAssignments: literalDictionary
+		oopAssignments: oopDictionary
+]
+
+{ #category : 'private' }
+GbsRepositoryFacade >> methodReferenceStringsCommandBodyForSearchBody: searchBody [
+	^ '| organizer searchResults methods entries |
 organizer := ClassOrganizer new.
-searchResults := ';
-			nextPutAll: searchExpression;
-			nextPutAll: '.
+searchResults := ', searchBody, '.
 methods := ((searchResults isArray and: [ searchResults size = 2 ])
 	ifTrue: [ searchResults first ]
 	ifFalse: [ searchResults ]) ifNil: [ #() ].
@@ -558,58 +680,19 @@ methods do: [ :m |
 						ifTrue: [ '' class>>'' ]
 						ifFalse: [ ''>>'' ])
 					, selectorString ] ] ].
-entries asSet asArray asSortedCollection asArray' ]
+entries asSet asArray asSortedCollection asArray'
 ]
 
 { #category : 'private' }
-GbsRepositoryFacade >> methodReferenceStringsToObjectScriptFor: anObject [
-	^ self
-		methodReferenceStringsScriptForSearchExpression:
-			(String streamContents: [ :stream |
-				stream
-					nextPutAll: '[ organizer referencesToObject: ';
-					nextPutAll: (session marshalArgumentToScript: anObject);
-					nextPutAll: ' ] on: Error do: [ #() ]' ])
+GbsRepositoryFacade >> listInstancesCommandBody [
+	^ 'cls ifNil: [ #() ] ifNotNil: [
+	limitValue > 0
+		ifTrue: [ (SystemRepository listInstances: { cls } limit: limitValue) at: 1 ]
+		ifFalse: [ (SystemRepository listInstances: { cls }) at: 1 ] ]'
 ]
 
 { #category : 'private' }
-GbsRepositoryFacade >> methodReferenceStringsToSymbolScriptFor: aSymbolOrString [
-	^ self
-		methodReferenceStringsScriptForSearchExpression:
-			(String streamContents: [ :stream |
-				stream
-					nextPutAll: '[ organizer referencesTo: ';
-					nextPutAll: (session marshalArgumentToScript: aSymbolOrString asString asSymbol);
-					nextPutAll: ' ] on: Error do: [ #() ]' ])
-]
-
-{ #category : 'private' }
-GbsRepositoryFacade >> senderMethodReferenceStringsScriptFor: aSelectorOrString [
-	^ self
-		methodReferenceStringsScriptForSearchExpression:
-			(String streamContents: [ :stream |
-				stream
-					nextPutAll: '[ organizer sendersOf: ';
-					nextPutAll: (session marshalArgumentToScript: aSelectorOrString asString);
-					nextPutAll: ' ] on: Error do: [ #() ]' ])
-]
-
-{ #category : 'private' }
-GbsRepositoryFacade >> listInstancesScriptFor: aClassOrName limit: aSmallInteger [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| cls | cls := ';
-			nextPutAll: (self classExpressionFor: aClassOrName);
-			nextPutAll: '. cls ifNil: [ #() ] ifNotNil: [ (SystemRepository listInstances: { cls }'.
-		aSmallInteger > 0 ifTrue: [
-			stream
-				nextPutAll: ' limit: ';
-				nextPutAll: aSmallInteger printString ].
-		stream nextPutAll: ') at: 1 ]' ]
-]
-
-{ #category : 'private' }
-GbsRepositoryFacade >> loadedClassesScript [
+GbsRepositoryFacade >> loadedClassesCommandBody [
 	^ '[
 		| names |
 		names := Set new.
@@ -621,43 +704,23 @@ GbsRepositoryFacade >> loadedClassesScript [
 ]
 
 { #category : 'private' }
-GbsRepositoryFacade >> migrateInstancesScriptFrom: aSourceClassOrName to: aTargetClassOrName [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| fromClass toClass instances | fromClass := ';
-			nextPutAll: (self classExpressionFor: aSourceClassOrName);
-			nextPutAll: '. toClass := ';
-			nextPutAll: (self classExpressionFor: aTargetClassOrName);
-			nextPutAll: '. (fromClass isNil or: [ toClass isNil ]) ifTrue: [ 0 ] ifFalse: [ fromClass == toClass ifTrue: [ 0 ] ifFalse: [ instances := (SystemRepository listInstances: { fromClass }) at: 1. fromClass migrateInstances: instances to: toClass. instances size ] ]' ]
+GbsRepositoryFacade >> migrateInstancesFromToCommandBody [
+	^ '| instances | (fromClass isNil or: [ toClass isNil ]) ifTrue: [ 0 ] ifFalse: [ fromClass == toClass ifTrue: [ 0 ] ifFalse: [ instances := (SystemRepository listInstances: { fromClass }) at: 1. fromClass migrateInstances: instances to: toClass. instances size ] ]'
 ]
 
 { #category : 'private' }
-GbsRepositoryFacade >> migrateInstancesWithSubclassesScriptFor: aTopClassOrName [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| topClass oldClasses targetClasses instances migratedCount | topClass := ';
-			nextPutAll: (self classExpressionFor: aTopClassOrName);
-			nextPutAll: '. topClass ifNil: [ 0 ] ifNotNil: [ oldClasses := OrderedCollection new. targetClasses := OrderedCollection new. topClass withAllSubclasses do: [ :newClass | 1 to: newClass classHistory size - 1 do: [ :index | oldClasses add: (newClass classHistory at: index). targetClasses add: newClass ] ]. oldClasses isEmpty ifTrue: [ 0 ] ifFalse: [ instances := SystemRepository listInstances: oldClasses asArray. migratedCount := 0. 1 to: oldClasses size do: [ :index | | oldClass migratedInstances | oldClass := oldClasses at: index. migratedInstances := instances at: index. migratedCount := migratedCount + migratedInstances size. oldClass migrateInstances: migratedInstances to: (targetClasses at: index) ]. migratedCount ] ]' ]
+GbsRepositoryFacade >> migrateInstancesWithSubclassesCommandBody [
+	^ '| oldClasses targetClasses instances migratedCount | topClass ifNil: [ 0 ] ifNotNil: [ oldClasses := OrderedCollection new. targetClasses := OrderedCollection new. topClass withAllSubclasses do: [ :newClass | 1 to: newClass classHistory size - 1 do: [ :index | oldClasses add: (newClass classHistory at: index). targetClasses add: newClass ] ]. oldClasses isEmpty ifTrue: [ 0 ] ifFalse: [ instances := SystemRepository listInstances: oldClasses asArray. migratedCount := 0. 1 to: oldClasses size do: [ :index | | oldClass migratedInstances | oldClass := oldClasses at: index. migratedInstances := instances at: index. migratedCount := migratedCount + migratedInstances size. oldClass migrateInstances: migratedInstances to: (targetClasses at: index) ]. migratedCount ] ]'
 ]
 
 { #category : 'private' }
-GbsRepositoryFacade >> previewMigrationScriptFrom: aSourceClassOrName to: aTargetClassOrName [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| fromClass toClass instances history version total | fromClass := ';
-			nextPutAll: (self classExpressionFor: aSourceClassOrName);
-			nextPutAll: '. toClass := ';
-			nextPutAll: (self classExpressionFor: aTargetClassOrName);
-			nextPutAll: '. (fromClass isNil or: [ toClass isNil ]) ifTrue: [ #() ] ifFalse: [ history := [ fromClass classHistory ] on: Error do: [ Array with: fromClass ]. version := [ history indexOf: fromClass ] on: Error do: [ 1 ]. total := history size. instances := (SystemRepository listInstances: { fromClass }) at: 1. Array with: (Array with: fromClass asOop with: fromClass name asString with: version with: total with: toClass asOop with: toClass name asString with: instances size) ]' ]
+GbsRepositoryFacade >> previewMigrationFromToCommandBody [
+	^ '| instances history version total | (fromClass isNil or: [ toClass isNil ]) ifTrue: [ #() ] ifFalse: [ history := [ fromClass classHistory ] on: Error do: [ Array with: fromClass ]. version := [ history indexOf: fromClass ] on: Error do: [ 1 ]. total := history size. instances := (SystemRepository listInstances: { fromClass }) at: 1. Array with: (Array with: fromClass asOop with: fromClass name asString with: version with: total with: toClass asOop with: toClass name asString with: instances size) ]'
 ]
 
 { #category : 'private' }
-GbsRepositoryFacade >> previewMigrationWithSubclassesScriptFor: aTopClassOrName [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| topClass oldClasses targetClasses versionIndices totals instances entries history | topClass := ';
-			nextPutAll: (self classExpressionFor: aTopClassOrName);
-			nextPutAll: '. topClass ifNil: [ #() ] ifNotNil: [ oldClasses := OrderedCollection new. targetClasses := OrderedCollection new. versionIndices := OrderedCollection new. totals := OrderedCollection new. topClass withAllSubclasses do: [ :newClass | history := newClass classHistory. 1 to: history size - 1 do: [ :index | oldClasses add: (history at: index). targetClasses add: newClass. versionIndices add: index. totals add: history size ] ]. oldClasses isEmpty ifTrue: [ #() ] ifFalse: [ instances := SystemRepository listInstances: oldClasses asArray. entries := OrderedCollection new. 1 to: oldClasses size do: [ :index | | oldClass targetClass instanceSet | oldClass := oldClasses at: index. targetClass := targetClasses at: index. instanceSet := instances at: index. entries add: (Array with: oldClass asOop with: oldClass name asString with: (versionIndices at: index) with: (totals at: index) with: targetClass asOop with: targetClass name asString with: instanceSet size) ]. entries asArray ] ]' ]
+GbsRepositoryFacade >> previewMigrationWithSubclassesCommandBody [
+	^ '| oldClasses targetClasses versionIndices totals instances entries history | topClass ifNil: [ #() ] ifNotNil: [ oldClasses := OrderedCollection new. targetClasses := OrderedCollection new. versionIndices := OrderedCollection new. totals := OrderedCollection new. topClass withAllSubclasses do: [ :newClass | history := newClass classHistory. 1 to: history size - 1 do: [ :index | oldClasses add: (history at: index). targetClasses add: newClass. versionIndices add: index. totals add: history size ] ]. oldClasses isEmpty ifTrue: [ #() ] ifFalse: [ instances := SystemRepository listInstances: oldClasses asArray. entries := OrderedCollection new. 1 to: oldClasses size do: [ :index | | oldClass targetClass instanceSet | oldClass := oldClasses at: index. targetClass := targetClasses at: index. instanceSet := instances at: index. entries add: (Array with: oldClass asOop with: oldClass name asString with: (versionIndices at: index) with: (totals at: index) with: targetClass asOop with: targetClass name asString with: instanceSet size) ]. entries asArray ] ]'
 ]
 
 { #category : 'querying' }

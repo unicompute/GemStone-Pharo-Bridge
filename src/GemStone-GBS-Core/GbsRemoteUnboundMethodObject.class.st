@@ -54,57 +54,40 @@ GbsRemoteUnboundMethodObject >> compileProtocol [
 { #category : 'compiling' }
 GbsRemoteUnboundMethodObject >> correctedCompileResponseForSource: sourceText [
 	^ self
-		executeCompileScript: (self correctedCompileScriptForSource: sourceText)
+		executeCompileBody: self correctedCompileCommandBody
+		source: sourceText
+]
+
+{ #category : 'private' }
+GbsRemoteUnboundMethodObject >> correctedCompileCommandBody [
+	^ '| behavior oldSel protocol result newSel |
+	cls ifNil: [ ^ ''ERROR|Class not found'' ].
+	behavior := classSideValue ifTrue: [ cls class ] ifFalse: [ cls ].
+	oldSel := selectorValue.
+	protocol := protocolValue ifNil: [ ''as yet unclassified'' ].
+	result := [ behavior compileMethod: sourceValue category: protocol ] on: Error do: [ :ex | ''ERROR|'', ex description ].
+	(result isString and: [ result beginsWith: ''ERROR|'' ]) ifTrue: [ ^ result ].
+	(result isKindOf: Array) ifTrue: [ ^ ''ERROR|Compilation failed'' ].
+	newSel := [ result selector ] on: Error do: [ oldSel ].
+	(newSel ~= oldSel and: [ behavior includesSelector: oldSel ]) ifTrue: [
+		[ behavior removeSelector: oldSel ] on: Error do: [ :ex | ] ].
+	''OK'''
 ]
 
 { #category : 'compiling' }
-GbsRemoteUnboundMethodObject >> correctedCompileScriptForSource: sourceText [
-	| escapedSource |
-	escapedSource := self escapedSourceText: sourceText.
-	^ String streamContents: [ :stream |
-		stream nextPutAll: '[
-		| cls oldSel protocol result newSel source |
-		cls := '.
-		stream nextPutAll: self mirror classExpression.
-		stream nextPutAll: '.
-		cls ifNil: [ ^ ''ERROR|Class not found'' ].
-		'.
-		self isClassSide ifTrue: [
-			stream nextPutAll: 'cls := cls class.' ].
-		stream nextPutAll: '
-		oldSel := '.
-		stream nextPutAll: (self session marshalArgumentToScript: self selector).
-		stream nextPutAll: '.
-		source := '''.
-		stream nextPutAll: escapedSource.
-		stream nextPutAll: '''.
-		protocol := '.
-		stream nextPutAll: (self session marshalArgumentToScript: self compileProtocol).
-		stream nextPutAll: '.
-		protocol ifNil: [ protocol := ''as yet unclassified'' ].
-		result := [ cls compileMethod: source category: protocol ] on: Error do: [ :ex | ''ERROR|'', ex description ].
-		(result isString and: [ result beginsWith: ''ERROR|'' ]) ifTrue: [ ^ result ].
-		(result isKindOf: Array) ifTrue: [ ^ ''ERROR|Compilation failed'' ].
-		newSel := [ result selector ] on: Error do: [ oldSel ].
-		(newSel ~= oldSel and: [ cls includesSelector: oldSel ]) ifTrue: [
-			[ cls removeSelector: oldSel ] on: Error do: [ :ex | ]
-		].
-		''OK''
-	] value' ]
-]
-
-{ #category : 'compiling' }
-GbsRemoteUnboundMethodObject >> escapedSourceText: sourceText [
-	| text |
-	text := sourceText ifNil: [ '' ] ifNotNil: [ :each | each asString ].
-	text := text copyReplaceAll: String cr with: String lf.
-	^ text copyReplaceAll: '''' with: ''''''
-]
-
-{ #category : 'compiling' }
-GbsRemoteUnboundMethodObject >> executeCompileScript: scriptString [
+GbsRemoteUnboundMethodObject >> executeCompileBody: bodyString source: sourceText [
 	| raw |
-	raw := [ self session fetchRemoteScript: scriptString context: self session sessionOop ]
+	raw := [ self session repository
+		fetchClassReference: mirror classReference
+		variableName: 'cls'
+		body: bodyString
+		literalAssignments: (Dictionary new
+			at: 'classSideValue' put: self isClassSide;
+			at: 'protocolValue' put: self compileProtocol;
+			at: 'selectorValue' put: self selector;
+			at: 'sourceValue' put: (sourceText ifNil: [ '' ] ifNotNil: [ :each | each asString copyReplaceAll: String cr with: String lf ]);
+			yourself)
+		oopAssignments: Dictionary new ]
 		on: Error
 		do: [ nil ].
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
@@ -270,39 +253,20 @@ GbsRemoteUnboundMethodObject >> rebindTo: aReceiver [
 { #category : 'compiling' }
 GbsRemoteUnboundMethodObject >> recompileResponseForSource: sourceText [
 	^ self
-		executeCompileScript: (self recompileScriptForSource: sourceText)
+		executeCompileBody: self recompileCommandBody
+		source: sourceText
 ]
 
-{ #category : 'compiling' }
-GbsRemoteUnboundMethodObject >> recompileScriptForSource: sourceText [
-	| escapedSource |
-	escapedSource := self escapedSourceText: sourceText.
-	^ String streamContents: [ :stream |
-		stream nextPutAll: '[
-		| cls sel protocol result source |
-		cls := '.
-		stream nextPutAll: self mirror classExpression.
-		stream nextPutAll: '.
-		cls ifNil: [ ^ ''ERROR|Class not found'' ].
-		'.
-		self isClassSide ifTrue: [
-			stream nextPutAll: 'cls := cls class.' ].
-		stream nextPutAll: '
-		sel := '.
-		stream nextPutAll: (self session marshalArgumentToScript: self selector).
-		stream nextPutAll: '.
-		source := '''.
-		stream nextPutAll: escapedSource.
-		stream nextPutAll: '''.
-		protocol := '.
-		stream nextPutAll: (self session marshalArgumentToScript: self compileProtocol).
-		stream nextPutAll: '.
-		protocol ifNil: [ protocol := ''as yet unclassified'' ].
-		result := [ cls compileMethod: source category: protocol ] on: Error do: [ :ex | ''ERROR|'', ex description ].
-		(result isString and: [ result beginsWith: ''ERROR|'' ]) ifTrue: [ ^ result ].
-		(result isKindOf: Array) ifTrue: [ ^ ''ERROR|Compilation failed'' ].
-		''OK''
-	] value' ]
+{ #category : 'private' }
+GbsRemoteUnboundMethodObject >> recompileCommandBody [
+	^ '| behavior protocol result |
+	cls ifNil: [ ^ ''ERROR|Class not found'' ].
+	behavior := classSideValue ifTrue: [ cls class ] ifFalse: [ cls ].
+	protocol := protocolValue ifNil: [ ''as yet unclassified'' ].
+	result := [ behavior compileMethod: sourceValue category: protocol ] on: Error do: [ :ex | ''ERROR|'', ex description ].
+	(result isString and: [ result beginsWith: ''ERROR|'' ]) ifTrue: [ ^ result ].
+	(result isKindOf: Array) ifTrue: [ ^ ''ERROR|Compilation failed'' ].
+	''OK'''
 ]
 
 { #category : 'querying' }

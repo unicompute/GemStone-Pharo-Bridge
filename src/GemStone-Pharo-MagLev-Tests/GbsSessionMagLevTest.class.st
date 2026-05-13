@@ -22,8 +22,12 @@ GbsSessionMagLevTest >> testMaglevFacadeExposesBridgeRootAndSharedCounters [
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		script = 'System transactionLevel' ifTrue: [ ^ 2 ].
-		script = 'System sharedCounter: 3' ifTrue: [ ^ 41 ].
-		script = 'System sharedCounter: 3 incrementBy: 2' ifTrue: [ ^ 43 ].
+		((script includesSubstring: 'System sharedCounter: arg1')
+			and: [ script includesSubstring: 'value: 3' ])
+			ifTrue: [ ^ 41 ].
+		((script includesSubstring: 'System sharedCounter: arg1 incrementBy: arg2')
+			and: [ script includesSubstring: 'value: 3 value: 2' ])
+			ifTrue: [ ^ 43 ].
 		self fail ].
 
 	maglev := mockSession maglev.
@@ -137,6 +141,59 @@ GbsSessionMagLevTest >> testMaglevFacadeExposesSymbolDictionaryFacades [
 ]
 
 { #category : 'tests' }
+GbsSessionMagLevTest >> testMaglevSymbolDictionaryFacadeUsesBoundRemoteCommands [
+	| mockSession facade scripts associations removed |
+	mockSession := CoreMockGbsSession new.
+	scripts := OrderedCollection new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		scripts add: script.
+		(script includesSubstring: 'items add: (key -> value)')
+			ifTrue: [ { #alpha -> 'one'. #beta -> 'two' } ]
+			ifFalse: [
+				(script includesSubstring: 'root includesKey: key')
+					ifTrue: [ true ]
+					ifFalse: [
+				(script includesSubstring: 'root objectNamed: key ifAbsent: [ nil ]')
+					ifTrue: [ 'one' ]
+					ifFalse: [
+						(script includesSubstring: 'root at: key put: value')
+							ifTrue: [ 'two' ]
+							ifFalse: [
+										(script includesSubstring: 'items add: key')
+											ifTrue: [ #(#alpha #beta) ]
+											ifFalse: [
+												(script includesSubstring: 'root size')
+													ifTrue: [ 2 ]
+													ifFalse: [
+														(script includesSubstring: 'root removeKey: key ifAbsent:')
+															ifTrue: [ 'removed' ]
+															ifFalse: [ self fail ] ] ] ] ] ] ] ].
+
+	facade := GbsMaglevSymbolDictionaryFacade on: mockSession name: #UserGlobals.
+	associations := facade associations.
+
+	self assert: associations size equals: 2.
+	self assert: associations first key equals: #alpha.
+	self assert: associations first value equals: 'one'.
+	self assert: (facade at: #alpha) equals: 'one'.
+	self assert: (facade at: #beta put: 'two') equals: 'two'.
+	self assert: (facade includesKey: #alpha).
+	self assert: facade keys equals: #(#alpha #beta).
+	self assert: facade size equals: 2.
+	removed := facade removeKey: #alpha ifAbsent: [ #missing ].
+	self assert: removed equals: 'removed'.
+
+	self assert: scripts size equals: 7.
+	scripts do: [ :each |
+		self assert: (each includesSubstring: 'resolveSymbol: dictionaryName').
+		self assert: (each includesSubstring: ':dictionaryName').
+		self deny: (each includesSubstring: 'resolveSymbol: #UserGlobals') ].
+	self assert: ((scripts at: 2) includesSubstring: ':key').
+	self assert: ((scripts at: 3) includesSubstring: ':value').
+	self assert: ((scripts at: 7) includesSubstring: ':missingMarker')
+]
+
+{ #category : 'tests' }
 GbsSessionMagLevTest >> testMaterializeMaglevRuntimeValueMapsGsDictionaryAndGenericObject [
 	| mockSession dictionary object |
 	mockSession := CoreMockGbsSession new.
@@ -159,9 +216,13 @@ GbsSessionMagLevTest >> testObjectLogFacadeWritesTaggedEntriesAndCommits [
 	mockSession := CoreMockGbsSession new.
 	commitCount := 0.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: 'ObjectLogEntry info:') ifTrue: [
+		(script includesSubstring: 'ObjectLogEntry perform: selector withArguments:') ifTrue: [
 			self assert: (script includesSubstring: '''Tagged entry''').
+			self assert: (script includesSubstring: '''info:object:'' asSymbol').
+			self assert: (script includesSubstring: ':selector').
+			self assert: (script includesSubstring: ':label').
 			self assert: (script includesSubstring: 'entry tag:').
+			self assert: (script includesSubstring: ':tag').
 			self assert: (script includesSubstring: '''runtime''').
 			^ true ].
 		self fail ].
@@ -261,7 +322,7 @@ GbsSessionMagLevTest >> testRepositoryNamespaceMirrorForObjectBuildsExactObjectE
 	| mockSession proxy namespace |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: (script includesSubstring: '[:value | value] value:').
+		self assert: (script includesSubstring: ':value | value').
 		self assert: (script includesSubstring: '_objectForOop: 7101').
 		self deny: (script includesSubstring: 'nameSpace: 1').
 		^ #(8001 'Accounting' 'Accounting' 'RubyNameSpace' 'Module') ].
@@ -278,7 +339,7 @@ GbsSessionMagLevTest >> testRepositoryNamespaceMirrorParentNamespaceUsesContaini
 	| mockSession namespace parent |
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
-		(script includesSubstring: '[:value | value] value:')
+		(script includesSubstring: ':value | value')
 			ifTrue: [ ^ #(8101 'Accounting::Invoice' 'Accounting::Invoice' 'RubyNameSpace' 'Class') ].
 		(script includesSubstring: 'cls ifNil: [ nil ] ifNotNil: [ cls nameSpace: 1 ]')
 			ifTrue: [
@@ -340,9 +401,11 @@ GbsSessionMagLevTest >> testRubyLoadRequireAndLoadedFeaturesBuildExpectedScripts
 		script = 'RubyContext default transientLoadedFeatures: 1' ifTrue: [ ^ #('foo.rb') ].
 		script = 'RubyContext default persistentLoadedFeatures: 1' ifTrue: [ ^ #('persisted.rb') ].
 		script = 'RubyContext clear_persistent_LOADED_FEATURES' ifTrue: [ ^ true ].
-		(script includesSubstring: 'RubyContext default requireFileNamed: ''foo'' env: 1')
+		((script includesSubstring: 'RubyContext default requireFileNamed: arg1 env: 1')
+			and: [ script includesSubstring: '''foo''' ])
 			ifTrue: [ ^ true ].
-		(script includesSubstring: 'RubyContext default loadFileNamed: ''bar.rb'' env: 1')
+		((script includesSubstring: 'RubyContext default loadFileNamed: arg1 env: 1')
+			and: [ script includesSubstring: '''bar.rb''' ])
 			ifTrue: [ ^ 'loaded' ].
 		self fail ].
 
@@ -927,7 +990,8 @@ GbsSessionMagLevTest >> testProcBindingObjectEvaluatesRubySourceAndLocals [
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		(script includesSubstring: 'Object _objectForOop: 9001')
 			ifFalse: [ self fail ].
-		(script includesSubstring: 'perform: #eval withArguments:')
+		((script includesSubstring: 'perform: #eval')
+			and: [ script includesSubstring: 'withArguments:' ])
 			ifTrue: [
 				self assert: (script includesSubstring: '''demo.rb''').
 				self assert: (script includesSubstring: '12 }').
@@ -958,7 +1022,8 @@ GbsSessionMagLevTest >> testProcBindingObjectSupportsLocalMutationAndLexicalMeta
 			ifTrue: [ ^ 'Demo::Closures' ].
 		(script includesSubstring: 'binding forModuleEval')
 			ifTrue: [ ^ true ].
-		(script includesSubstring: 'perform: #eval withArguments:')
+		((script includesSubstring: 'perform: #eval')
+			and: [ script includesSubstring: 'withArguments:' ])
 			ifTrue: [
 				(script includesSubstring: 'invoice = (99)')
 					ifTrue: [ ^ 99 ].

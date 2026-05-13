@@ -52,33 +52,31 @@ GbsSession >> execBlockObjectForOop: anOop [
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> rubyLoadPath [
-	^ self executeScriptAndFetchObject: 'RubyFile loadPath: 1'
+	^ self fetchRemoteCommand: (GbsRemoteCommand staticExpression: 'RubyFile loadPath: 1')
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> rubyLoadedFeatures [
-	^ self executeScriptAndFetchObject: 'RubyContext default transientLoadedFeatures: 1'
+	^ self fetchRemoteCommand: (GbsRemoteCommand staticExpression: 'RubyContext default transientLoadedFeatures: 1')
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> rubyPersistentLoadedFeatures [
-	^ self executeScriptAndFetchObject: 'RubyContext default persistentLoadedFeatures: 1'
+	^ self fetchRemoteCommand: (GbsRemoteCommand staticExpression: 'RubyContext default persistentLoadedFeatures: 1')
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> rubyRequireFileNamed: aString [
-	^ (GbsRemoteCommand
+	^ self fetchRemoteCommand: (GbsRemoteCommand
 		blockBody: 'RubyContext default requireFileNamed: arg1 env: 1'
 		literalArguments: { aString })
-		executeAndFetchObjectIn: self
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> rubyLoadFileNamed: aString [
-	^ (GbsRemoteCommand
+	^ self fetchRemoteCommand: (GbsRemoteCommand
 		blockBody: 'RubyContext default loadFileNamed: arg1 env: 1'
 		literalArguments: { aString })
-		executeAndFetchObjectIn: self
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
@@ -134,7 +132,7 @@ GbsSession >> rubyResolvedRelativePath: aString relativeTo: aBasePath [
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> clearPersistentRubyLoadedFeatures [
-	^ self executeScriptAndFetchObject: 'RubyContext clear_persistent_LOADED_FEATURES'
+	^ self fetchRemoteCommand: (GbsRemoteCommand staticExpression: 'RubyContext clear_persistent_LOADED_FEATURES')
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
@@ -169,17 +167,17 @@ GbsSession >> maglevSymbolDictionaryNamed: aName [
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> beginNestedTransaction [
-	^ self executeScriptAndFetchObject: 'System begin_nested_transaction'
+	^ self fetchRemoteCommand: (GbsRemoteCommand staticExpression: 'System begin_nested_transaction')
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> transactionLevel [
-	^ self executeScriptAndFetchObject: 'System transactionLevel'
+	^ self fetchRemoteCommand: (GbsRemoteCommand staticExpression: 'System transactionLevel')
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> commitAndReleaseLocks [
-	^ self executeScriptAndFetchObject: 'System commitAndReleaseLocks'
+	^ self fetchRemoteCommand: (GbsRemoteCommand staticExpression: 'System commitAndReleaseLocks')
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
@@ -203,59 +201,55 @@ GbsSession >> withCommitAndReleaseLocksRetryCount: aRetryCount do: aBlock [
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> sharedCounterAt: anIndex [
-	^ (GbsRemoteCommand
+	^ self fetchRemoteCommand: (GbsRemoteCommand
 		blockBody: 'System sharedCounter: arg1'
 		literalArguments: { anIndex asInteger })
-		executeAndFetchObjectIn: self
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> sessionCount [
-	^ self executeScriptAndFetchObject: 'System sessionCount'
+	^ self fetchRemoteCommand: (GbsRemoteCommand staticExpression: 'System sessionCount')
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> sharedCounterAt: anIndex put: anInteger [
-	^ (GbsRemoteCommand
+	^ self fetchRemoteCommand: (GbsRemoteCommand
 		blockBody: 'System sharedCounter: arg1 setValue: arg2'
 		literalArguments: { anIndex asInteger. anInteger asInteger })
-		executeAndFetchObjectIn: self
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> incrementSharedCounterAt: anIndex by: anInteger [
-	^ (GbsRemoteCommand
+	^ self fetchRemoteCommand: (GbsRemoteCommand
 		blockBody: 'System sharedCounter: arg1 incrementBy: arg2'
 		literalArguments: { anIndex asInteger. anInteger asInteger })
-		executeAndFetchObjectIn: self
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> decrementSharedCounterAt: anIndex by: anInteger [
-	^ (GbsRemoteCommand
+	^ self fetchRemoteCommand: (GbsRemoteCommand
 		blockBody: 'System sharedCounter: arg1 decrementBy: arg2'
 		literalArguments: { anIndex asInteger. anInteger asInteger })
-		executeAndFetchObjectIn: self
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> newRcCounter [
 	| oop |
-	oop := self executeScriptAndReturnOop: 'RcCounter new'.
+	oop := self returnRemoteCommandOop: (GbsRemoteCommand staticExpression: 'RcCounter new').
 	^ self rcCounterForOop: oop
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> newRcHash [
 	| oop |
-	oop := self executeScriptAndReturnOop: 'RcKeyValueDictionary new'.
+	oop := self returnRemoteCommandOop: (GbsRemoteCommand staticExpression: 'RcKeyValueDictionary new').
 	^ self rcHashForOop: oop
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
 GbsSession >> newRcQueue [
 	| oop |
-	oop := self executeScriptAndReturnOop: 'RcQueue new'.
+	oop := self returnRemoteCommandOop: (GbsRemoteCommand staticExpression: 'RcQueue new').
 	^ self rcQueueForOop: oop
 ]
 

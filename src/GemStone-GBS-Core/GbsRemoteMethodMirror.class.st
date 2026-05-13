@@ -77,43 +77,34 @@ GbsRemoteMethodMirror >> exists [
 { #category : 'accessing' }
 GbsRemoteMethodMirror >> methodMetadata [
 	^ methodMetadata ifNil: [
-		methodMetadata := session executeScriptAndFetchObject: self methodMetadataScript ]
+		methodMetadata := self
+			fetchMethodBody: self methodMetadataCommandBody
+			literalAssignments: (Dictionary new
+				at: 'selectorValue' put: self selector asSymbol;
+				at: 'selectorString' put: self selector asString;
+				at: 'classSideValue' put: self classSide;
+				yourself)
+			oopAssignments: Dictionary new ]
 ]
 
 { #category : 'private' }
-GbsRemoteMethodMirror >> methodMetadataScript [
-	| selectorScript selectorStringScript |
-	selectorScript := session marshalArgumentToScript: self selector asSymbol.
-	selectorStringScript := session marshalArgumentToScript: self selector asString.
-	^ String streamContents: [ :stream |
-		stream nextPutAll: '| cls behavior meth source protocol ownerName packageName methodVersions versionIndex sourceLocation | cls := '.
-		stream nextPutAll: self classExpression.
-		stream nextPutAll: '. cls ifNil: [ nil ] ifNotNil: [ behavior := '.
-		stream nextPutAll: self behaviorExpression.
-		stream nextPutAll: '. meth := behavior compiledMethodAt: '.
-		stream nextPutAll: selectorScript.
-		stream nextPutAll: ' ifAbsent: [ nil ]. meth ifNil: [ nil ] ifNotNil: ['.
-		stream nextPutAll: ' protocol := [ behavior categoryOfSelector: '.
-		stream nextPutAll: selectorScript.
-		stream nextPutAll: ' ] on: Error do: [ nil ].'.
-		stream nextPutAll: ' protocol ifNil: [ protocol := ''as yet unclassified'' ].'.
-		stream nextPutAll: ' source := [ meth sourceString ] on: Error do: [ [ meth sourceCode ] on: Error do: [ [ meth printString ] on: Error do: [ nil ] ] ].'.
-		stream nextPutAll: ' ownerName := cls name asString.'.
-		self classSide ifTrue: [
-			stream nextPutAll: ' ownerName := ownerName , '' class''.' ].
-		stream nextPutAll: ' packageName := [ (behavior respondsTo: #package) ifTrue: [ behavior package ifNil: [ nil ] ifNotNil: [ behavior package name asString ] ] ifFalse: [ nil ] ] on: Error do: [ nil ].'.
-		stream nextPutAll: ' methodVersions := [ (behavior respondsTo: #allVersionsOf:) ifTrue: [ behavior allVersionsOf: '.
-		stream nextPutAll: selectorScript.
-		stream nextPutAll: ' ] ifFalse: [ #() ] ] on: Error do: [ #() ].'.
-		stream nextPutAll: ' versionIndex := (methodVersions isNil or: [ methodVersions isEmpty ]) ifTrue: [ nil ] ifFalse: [ [ methodVersions indexOf: meth ] on: Error do: [ nil ] ].'.
-		stream nextPutAll: ' sourceLocation := [ meth sourcePositionAsString ] on: Error do: [ nil ].'.
-		stream nextPutAll: ' sourceLocation ifNil: [ sourceLocation := ownerName , ''>>'' , '.
-		stream nextPutAll: selectorStringScript.
-		stream nextPutAll: ' ].'.
-		stream nextPutAll: ' Array with: meth asOop with: ownerName with: '.
-		stream nextPutAll: selectorStringScript.
-		stream nextPutAll: ' with: protocol asString with: source with: packageName with: sourceLocation with: versionIndex with: (methodVersions ifNil: [ nil ] ifNotNil: [ methodVersions size ]) ] ]'
-	]
+GbsRemoteMethodMirror >> methodMetadataCommandBody [
+	^ '| behavior meth source protocol ownerName packageName methodVersions versionIndex sourceLocation |
+cls ifNil: [ nil ] ifNotNil: [
+	behavior := classSideValue ifTrue: [ cls class ] ifFalse: [ cls ].
+	meth := behavior compiledMethodAt: selectorValue ifAbsent: [ nil ].
+	meth ifNil: [ nil ] ifNotNil: [
+		protocol := [ behavior categoryOfSelector: selectorValue ] on: Error do: [ nil ].
+		protocol ifNil: [ protocol := ''as yet unclassified'' ].
+		source := [ meth sourceString ] on: Error do: [ [ meth sourceCode ] on: Error do: [ [ meth printString ] on: Error do: [ nil ] ] ].
+		ownerName := cls name asString.
+		classSideValue ifTrue: [ ownerName := ownerName , '' class'' ].
+		packageName := [ (behavior respondsTo: #package) ifTrue: [ behavior package ifNil: [ nil ] ifNotNil: [ behavior package name asString ] ] ifFalse: [ nil ] ] on: Error do: [ nil ].
+		methodVersions := [ (behavior respondsTo: #allVersionsOf:) ifTrue: [ behavior allVersionsOf: selectorValue ] ifFalse: [ #() ] ] on: Error do: [ #() ].
+		versionIndex := (methodVersions isNil or: [ methodVersions isEmpty ]) ifTrue: [ nil ] ifFalse: [ [ methodVersions indexOf: meth ] on: Error do: [ nil ] ].
+		sourceLocation := [ meth sourcePositionAsString ] on: Error do: [ nil ].
+		sourceLocation ifNil: [ sourceLocation := ownerName , ''>>'' , selectorString ].
+		Array with: meth asOop with: ownerName with: selectorString with: protocol asString with: source with: packageName with: sourceLocation with: versionIndex with: (methodVersions ifNil: [ nil ] ifNotNil: [ methodVersions size ]) ] ]'
 ]
 
 { #category : 'querying' }
@@ -220,20 +211,26 @@ GbsRemoteMethodMirror >> version [
 
 { #category : 'querying' }
 GbsRemoteMethodMirror >> versionEntries [
-	^ session executeScriptAndFetchObject: self versionEntriesScript
+	^ self
+		fetchMethodBody: self versionEntriesCommandBody
+		literalAssignments: (Dictionary new
+			at: 'selectorValue' put: self selector asSymbol;
+			at: 'classSideValue' put: self classSide;
+			yourself)
+		oopAssignments: Dictionary new
 ]
 
 { #category : 'private' }
-GbsRemoteMethodMirror >> versionEntriesScript [
-	| selectorScript |
-	selectorScript := session marshalArgumentToScript: self selector asSymbol.
-	^ String streamContents: [ :stream |
-		stream nextPutAll: '| cls behavior sel versions entries meth src label | cls := '.
-		stream nextPutAll: self classExpression.
-		stream nextPutAll: '. cls ifNil: [ #() ] ifNotNil: [ behavior := '.
-		stream nextPutAll: self behaviorExpression.
-		stream nextPutAll: '. sel := '.
-		stream nextPutAll: selectorScript.
-		stream nextPutAll: '. entries := OrderedCollection new. versions := [ (behavior respondsTo: #allVersionsOf:) ifTrue: [ behavior allVersionsOf: sel ] ifFalse: [ #() ] ] on: Error do: [ #() ]. versions isEmpty ifTrue: [ meth := behavior compiledMethodAt: sel ifAbsent: [ nil ]. meth ifNotNil: [ src := [ meth sourceString ] on: Error do: [ [ meth sourceCode ] on: Error do: [ '''' ] ]. src isEmpty ifFalse: [ entries add: (Array with: ''version 1'' with: src) ] ] ] ifFalse: [ 1 to: versions size do: [ :ix | meth := versions at: ix. src := [ meth sourceString ] on: Error do: [ [ meth sourceCode ] on: Error do: [ '''' ] ]. label := ''version '', ix asString. entries add: (Array with: label with: src) ] ]. entries asArray ]'
-	]
+GbsRemoteMethodMirror >> versionEntriesCommandBody [
+	^ '| behavior sel versions entries meth src label | cls ifNil: [ #() ] ifNotNil: [ behavior := classSideValue ifTrue: [ cls class ] ifFalse: [ cls ]. sel := selectorValue. entries := OrderedCollection new. versions := [ (behavior respondsTo: #allVersionsOf:) ifTrue: [ behavior allVersionsOf: sel ] ifFalse: [ #() ] ] on: Error do: [ #() ]. versions isEmpty ifTrue: [ meth := behavior compiledMethodAt: sel ifAbsent: [ nil ]. meth ifNotNil: [ src := [ meth sourceString ] on: Error do: [ [ meth sourceCode ] on: Error do: [ '''' ] ]. src isEmpty ifFalse: [ entries add: (Array with: ''version 1'' with: src) ] ] ] ifFalse: [ 1 to: versions size do: [ :ix | meth := versions at: ix. src := [ meth sourceString ] on: Error do: [ [ meth sourceCode ] on: Error do: [ '''' ] ]. label := ''version '', ix asString. entries add: (Array with: label with: src) ] ]. entries asArray ]'
+]
+
+{ #category : 'private' }
+GbsRemoteMethodMirror >> fetchMethodBody: bodyString literalAssignments: literalDictionary oopAssignments: oopDictionary [
+	^ session repository
+		fetchClassReference: classReference
+		variableName: 'cls'
+		body: bodyString
+		literalAssignments: literalDictionary
+		oopAssignments: oopDictionary
 ]

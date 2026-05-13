@@ -141,7 +141,7 @@ GbsRemoteProcObject >> localNames [
 { #category : 'querying' }
 GbsRemoteProcObject >> metadata [
 	metadata ifNil: [
-		metadata := session executeScriptAndFetchObject: self metadataScript ].
+		metadata := session fetchRemoteCommand: self metadataCommand ].
 	^ metadata
 ]
 
@@ -159,27 +159,43 @@ GbsRemoteProcObject >> metadataAt: anIndex ifAbsent: aBlock [
 ]
 
 { #category : 'private' }
-GbsRemoteProcObject >> metadataScript [
-	^ String streamContents: [ :stream |
-		stream nextPutAll: '['.
-		stream nextPutAll: ' | obj clsName arityValue isExec sourceLocation sourceText receiverObj receiverOop bindingContext localNames localOops localDisplays names values limit localValue | '.
-		stream nextPutAll: 'obj := Object _objectForOop: '.
-		stream nextPutAll: self oop asString.
-		stream nextPutAll: '. '.
-		stream nextPutAll: 'obj ifNil: [ ^ nil ]. '.
-		stream nextPutAll: 'clsName := [ obj class name asString ] on: Error do: [ nil ]. '.
-		stream nextPutAll: 'arityValue := [ obj arity ] on: Error do: [ [ obj numArgs ] on: Error do: [ nil ] ]. '.
-		stream nextPutAll: 'isExec := clsName notNil and: [ (clsName = ''ExecBlock'') or: [ clsName beginsWith: ''ExecBlock'' ] ]. '.
-		stream nextPutAll: 'sourceLocation := [ obj sourcePositionAsString ] on: Error do: [ nil ]. '.
-		stream nextPutAll: 'sourceText := [ obj sourceString ] on: Error do: [ [ obj sourceCode ] on: Error do: [ nil ] ]. '.
-		stream nextPutAll: 'receiverObj := [ (obj respondsTo: #receiver) ifTrue: [ obj receiver ] ifFalse: [ (obj respondsTo: #selfValue) ifTrue: [ obj selfValue ] ifFalse: [ nil ] ] ] on: Error do: [ nil ]. '.
-		stream nextPutAll: 'receiverOop := receiverObj ifNil: [ nil ] ifNotNil: [ [ Reflection oopOf: receiverObj ] on: Error do: [ nil ] ]. '.
-		stream nextPutAll: 'bindingContext := [ (obj respondsTo: #context) ifTrue: [ obj context ] ifFalse: [ (obj respondsTo: #homeContext) ifTrue: [ obj homeContext ] ifFalse: [ nil ] ] ] on: Error do: [ nil ]. '.
-		stream nextPutAll: 'localNames := OrderedCollection new. localOops := OrderedCollection new. localDisplays := OrderedCollection new. '.
-		stream nextPutAll: 'bindingContext ifNotNil: [ [ names := (bindingContext respondsTo: #tempNames) ifTrue: [ bindingContext tempNames ] ifFalse: [ #() ]. values := (bindingContext respondsTo: #temps) ifTrue: [ bindingContext temps ] ifFalse: [ #() ]. limit := names size min: values size. 1 to: limit do: [ :i | localValue := [ values at: i ] on: Error do: [ nil ]. localNames add: ((names at: i) asString). localOops add: (localValue ifNil: [ nil ] ifNotNil: [ [ Reflection oopOf: localValue ] on: Error do: [ nil ] ]). localDisplays add: (localValue ifNil: [ nil ] ifNotNil: [ [ localValue printString ] on: Error do: [ nil ] ]) ] ] on: Error do: [ ] ]. '.
-		stream nextPutAll: 'Array with: clsName with: arityValue with: isExec with: sourceLocation with: sourceText with: receiverOop with: localNames asArray with: localOops asArray with: localDisplays asArray'.
-		stream nextPutAll: ' ] value'
-	]
+GbsRemoteProcObject >> metadataCommand [
+	^ GbsRemoteCommand
+		blockBody: '| clsName arityValue isExec sourceLocation sourceText receiverObj receiverOop bindingContext localNames localOops localDisplays names values limit localValue |
+	obj ifNil: [ nil ] ifNotNil: [
+		clsName := [ obj class name asString ] on: Error do: [ nil ].
+		arityValue := [ obj arity ] on: Error do: [ [ obj numArgs ] on: Error do: [ nil ] ].
+		isExec := clsName notNil and: [ (clsName = ''ExecBlock'') or: [ clsName beginsWith: ''ExecBlock'' ] ].
+		sourceLocation := [ obj sourcePositionAsString ] on: Error do: [ nil ].
+		sourceText := [ obj sourceString ] on: Error do: [ [ obj sourceCode ] on: Error do: [ nil ] ].
+		receiverObj := [ (obj respondsTo: #receiver) ifTrue: [ obj receiver ] ifFalse: [ (obj respondsTo: #selfValue) ifTrue: [ obj selfValue ] ifFalse: [ nil ] ] ] on: Error do: [ nil ].
+		receiverOop := receiverObj ifNil: [ nil ] ifNotNil: [ [ Reflection oopOf: receiverObj ] on: Error do: [ nil ] ].
+		bindingContext := [ (obj respondsTo: #context) ifTrue: [ obj context ] ifFalse: [ (obj respondsTo: #homeContext) ifTrue: [ obj homeContext ] ifFalse: [ nil ] ] ] on: Error do: [ nil ].
+		localNames := OrderedCollection new.
+		localOops := OrderedCollection new.
+		localDisplays := OrderedCollection new.
+		bindingContext ifNotNil: [
+			[ names := (bindingContext respondsTo: #tempNames) ifTrue: [ bindingContext tempNames ] ifFalse: [ #() ].
+			values := (bindingContext respondsTo: #temps) ifTrue: [ bindingContext temps ] ifFalse: [ #() ].
+			limit := names size min: values size.
+			1 to: limit do: [ :i |
+				localValue := [ values at: i ] on: Error do: [ nil ].
+				localNames add: ((names at: i) asString).
+				localOops add: (localValue ifNil: [ nil ] ifNotNil: [ [ Reflection oopOf: localValue ] on: Error do: [ nil ] ]).
+				localDisplays add: (localValue ifNil: [ nil ] ifNotNil: [ [ localValue printString ] on: Error do: [ nil ] ]) ] ] on: Error do: [ ] ].
+		Array
+			with: clsName
+			with: arityValue
+			with: isExec
+			with: sourceLocation
+			with: sourceText
+			with: receiverOop
+			with: localNames asArray
+			with: localOops asArray
+			with: localDisplays asArray ]'
+		oopBindings: (Dictionary new
+			at: 'obj' put: self oop;
+			yourself)
 ]
 
 { #category : 'querying' }

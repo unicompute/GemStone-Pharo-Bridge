@@ -87,7 +87,8 @@ GbsSmalltalkCoreFacadeTest >> testRemoteNamespaceMirrorCachesConstantEntriesAfte
 	fetchCount := 0.
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		fetchCount := fetchCount + 1.
-		self assert: (script includesSubstring: 'ns := mockNamespace').
+		self assert: (script includesSubstring: ':ns').
+		self assert: (script includesSubstring: 'value: mockNamespace').
 		^ {
 			{ 'Alpha'. 1001. 'Dictionary'. nil. 'Alpha'. 'Object::Alpha' }.
 			{ 'Beta'. nil. nil. nil. nil. nil } } ].

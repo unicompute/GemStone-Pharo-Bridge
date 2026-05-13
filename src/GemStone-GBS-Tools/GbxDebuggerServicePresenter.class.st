@@ -58,8 +58,8 @@ GbxDebuggerServicePresenter class >> presenterTextFrom: aValue [
 { #category : 'context' }
 GbxDebuggerServicePresenter class >> recomputeContextListFor: service [
 	| contextStackPolicy currentContext contexts refreshed |
-	contextStackPolicy := service instVarNamed: 'contextStackPolicy'.
-	currentContext := service instVarNamed: 'currentContext'.
+	contextStackPolicy := service contextStackPolicy.
+	currentContext := service currentContext.
 	contextStackPolicy ifNil: [
 		service updateSourceMapFromCurrentContext.
 		service notifyContextChanged.
@@ -67,14 +67,14 @@ GbxDebuggerServicePresenter class >> recomputeContextListFor: service [
 	contextStackPolicy computeContextList.
 	contexts := contextStackPolicy contextList.
 	currentContext isNil
-		ifTrue: [ contexts ifNotEmpty: [ :list | service instVarNamed: 'currentContext' put: list first ] ]
+		ifTrue: [ contexts ifNotEmpty: [ :list | service currentContext: list first ] ]
 		ifFalse: [
 			refreshed := contexts
 				detect: [ :each | (each == currentContext) or: [ each = currentContext ] ]
 				ifNone: [ nil ].
 			refreshed
-				ifNil: [ contexts ifNotEmpty: [ :list | service instVarNamed: 'currentContext' put: list first ] ]
-				ifNotNil: [ service instVarNamed: 'currentContext' put: refreshed ] ].
+				ifNil: [ contexts ifNotEmpty: [ :list | service currentContext: list first ] ]
+				ifNotNil: [ service currentContext: refreshed ] ].
 	service updateSourceMapFromCurrentContext.
 	service notifyContextChanged
 ]

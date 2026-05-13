@@ -24,45 +24,21 @@ GbsObjectLogFacade >> browserRows [
 { #category : 'actions' }
 GbsObjectLogFacade >> addEntryUsingSelector: aSelector label: aString object: anObject tag: aTag commit: aBoolean [
 	| result |
-	result := session executeScriptAndFetchObject: (self
-		addEntryScriptUsingSelector: aSelector
-		label: aString
-		object: anObject
-		tag: aTag).
+	result := self
+		fetchObjectLogCommandBody: '| entry |
+	entry := ObjectLogEntry perform: selector withArguments: { label. object }.
+	tag ifNotNil: [
+		[ entry tag: tag ] on: Error do: [ ] ].
+	entry addToLog.
+	true'
+		literalBindings: (Dictionary new
+			at: 'label' put: aString;
+			at: 'selector' put: (aSelector asString, ':object:') asSymbol;
+			at: 'tag' put: aTag;
+			yourself)
+		objectBinding: anObject.
 	aBoolean == true ifTrue: [ session commitTransactionOrSignalConflict ].
 	^ result == true
-]
-
-{ #category : 'private' }
-GbsObjectLogFacade >> addEntryScriptUsingSelector: aSelector label: aString object: anObject tag: aTag [
-	| objectScript |
-	objectScript := anObject
-		ifNil: [ 'nil' ]
-		ifNotNil: [
-			(anObject respondsTo: #oop)
-				ifTrue: [ '(Object _objectForOop: ', anObject oop printString, ')' ]
-				ifFalse: [ session marshalArgumentToScript: anObject ] ].
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '[ | entry object |
-	object := ';
-			nextPutAll: objectScript;
-			nextPutAll: '.
-	entry := ObjectLogEntry ';
-			nextPutAll: aSelector asString;
-			nextPutAll: ': ';
-			nextPutAll: (session marshalArgumentToScript: aString);
-			nextPutAll: ' object: object.
-	'.
-		aTag ifNotNil: [
-			stream
-				nextPutAll: '[ entry tag: ';
-				nextPutAll: (session marshalArgumentToScript: aTag);
-				nextPutAll: ' ] on: Error do: [ ].
-	' ].
-		stream
-			nextPutAll: 'entry addToLog.
-	true ] value' ]
 ]
 
 { #category : 'actions' }
@@ -73,11 +49,12 @@ GbsObjectLogFacade >> clear [
 { #category : 'actions' }
 GbsObjectLogFacade >> clearCommit: aBoolean [
 	| result |
-	result := session executeScriptAndFetchObject: '[
+	result := self fetchObjectLogCommandBody: '
 		| log |
 		log := [ ObjectLogEntry objectLog ] on: Error do: [ nil ].
 		log ifNil: [ false ] ifNotNil: [ log removeAll. true ]
-	] value'.
+	'
+		literalBindings: Dictionary new.
 	(result == true and: [ aBoolean == true ]) ifTrue: [ session commitTransactionOrSignalConflict ].
 	^ result
 ]
@@ -107,17 +84,17 @@ GbsObjectLogFacade >> deleteIndex: anInteger [
 { #category : 'actions' }
 GbsObjectLogFacade >> deleteIndex: anInteger commit: aBoolean [
 	| result |
-	result := (GbsRemoteCommand
-		blockBody: '[
+	result := self fetchObjectLogCommandBody: '
 		| log index |
 		log := [ ObjectLogEntry objectLog ] on: Error do: [ nil ].
-		index := arg1.
+		index := entryIndex.
 		(log isNil or: [ index < 1 or: [ index > log size ] ])
 			ifTrue: [ false ]
 			ifFalse: [ log delete: (log at: index). true ]
-	] value'
-		literalArguments: { anInteger asInteger })
-		executeAndFetchObjectIn: session.
+	'
+		literalBindings: (Dictionary new
+			at: 'entryIndex' put: anInteger asInteger;
+			yourself).
 	(result == true and: [ aBoolean == true ]) ifTrue: [ session commitTransactionOrSignalConflict ].
 	^ result
 ]
@@ -125,7 +102,34 @@ GbsObjectLogFacade >> deleteIndex: anInteger commit: aBoolean [
 { #category : 'querying' }
 GbsObjectLogFacade >> entries [
 	| rows |
-	rows := session executeScriptAndFetchObject: self entriesScript.
+	rows := self fetchObjectLogCommandBody: '
+		| log rows |
+		log := [ ObjectLogEntry objectLog ] on: Error do: [ nil ].
+		log ifNil: [ #() ] ifNotNil: [
+			rows := OrderedCollection new.
+			1 to: log size do: [ :index |
+				| entry object objectOop stamp tagValue taggedValue |
+				entry := log at: index.
+				object := [ entry object ] on: Error do: [ nil ].
+				objectOop := object
+					ifNil: [ nil ]
+					ifNotNil: [ [ Reflection oopOf: object ] on: Error do: [ nil ] ].
+				stamp := [ entry stamp printString ] on: Error do: [ [ entry timestamp printString ] on: Error do: [ nil ] ].
+				tagValue := [ entry tag ] on: Error do: [ nil ].
+				taggedValue := [ entry hasTag ] on: Error do: [ false ].
+				rows add: (Array
+					with: index
+					with: ([ entry priority ] on: Error do: [ nil ])
+					with: ([ entry label ] on: Error do: [ '''' ])
+					with: ([ entry pid ] on: Error do: [ nil ])
+					with: stamp
+					with: tagValue
+					with: taggedValue
+					with: objectOop
+					with: (object ifNil: [ nil ] ifNotNil: [ [ object printString ] on: Error do: [ nil ] ])) ].
+			rows asArray ]
+	'
+		literalBindings: Dictionary new.
 	rows ifNil: [ ^ #() ].
 	^ rows collect: [ :each |
 		GbsObjectLogEntry
@@ -142,34 +146,27 @@ GbsObjectLogFacade >> entries [
 ]
 
 { #category : 'private' }
-GbsObjectLogFacade >> entriesScript [
-	^ '[
-		| log rows |
-		log := [ ObjectLogEntry objectLog ] on: Error do: [ nil ].
-		log ifNil: [ ^ #() ].
-		rows := OrderedCollection new.
-		1 to: log size do: [ :index |
-			| entry object objectOop stamp tagValue taggedValue |
-			entry := log at: index.
-			object := [ entry object ] on: Error do: [ nil ].
-			objectOop := object
-				ifNil: [ nil ]
-				ifNotNil: [ [ Reflection oopOf: object ] on: Error do: [ nil ] ].
-			stamp := [ entry stamp printString ] on: Error do: [ [ entry timestamp printString ] on: Error do: [ nil ] ].
-			tagValue := [ entry tag ] on: Error do: [ nil ].
-			taggedValue := [ entry hasTag ] on: Error do: [ false ].
-			rows add: (Array
-				with: index
-				with: ([ entry priority ] on: Error do: [ nil ])
-				with: ([ entry label ] on: Error do: [ '''' ])
-				with: ([ entry pid ] on: Error do: [ nil ])
-				with: stamp
-				with: tagValue
-				with: taggedValue
-				with: objectOop
-				with: (object ifNil: [ nil ] ifNotNil: [ [ object printString ] on: Error do: [ nil ] ])) ].
-		rows asArray
-	] value'
+GbsObjectLogFacade >> fetchObjectLogCommandBody: bodyString literalBindings: literalDictionary [
+	^ session fetchRemoteCommand: (GbsRemoteCommand
+		blockBody: bodyString
+		literalBindings: literalDictionary)
+]
+
+{ #category : 'private' }
+GbsObjectLogFacade >> fetchObjectLogCommandBody: bodyString literalBindings: literalDictionary objectBinding: anObject [
+	| literalBindings oopBindings |
+	literalBindings := literalDictionary copy.
+	oopBindings := Dictionary new.
+	anObject
+		ifNil: [ literalBindings at: 'object' put: nil ]
+		ifNotNil: [
+			(anObject respondsTo: #oop)
+				ifTrue: [ oopBindings at: 'object' put: anObject oop ]
+				ifFalse: [ literalBindings at: 'object' put: anObject ] ].
+	^ session fetchRemoteCommand: (GbsRemoteCommand
+		blockBody: bodyString
+		literalBindings: literalBindings
+		oopBindings: oopBindings)
 ]
 
 { #category : 'querying' }
