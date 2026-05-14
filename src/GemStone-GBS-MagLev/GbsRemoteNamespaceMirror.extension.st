@@ -33,11 +33,6 @@ GbsRemoteNamespaceMirror >> autoloadConstantMirrors [
 ]
 
 { #category : '*GemStone-GBS-MagLev' }
-GbsRemoteNamespaceMirror >> constantEntriesScript [
-	^ (self namespaceCommandForBody: self constantEntriesCommandBody) script
-]
-
-{ #category : '*GemStone-GBS-MagLev' }
 GbsRemoteNamespaceMirror >> constantEntriesCommandBody [
 	^ '| names entries assoc value autoloadFile valueClassName valueOop valueName valueFullName |
 ns ifNil: [ #() ] ifNotNil: [

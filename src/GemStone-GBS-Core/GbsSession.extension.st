@@ -7,85 +7,69 @@ GbsSession >> bridgeRoot [
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> remoteScriptBuilder [
-	^ GbsRemoteScriptBuilder new
+	^ self commandExecutor remoteScriptBuilder
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> commandExecutor [
+	^ GbsSessionCommandExecutor on: self
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> executeRemoteCommand: aRemoteCommand [
-	^ aRemoteCommand evaluateIn: self
+	^ self commandExecutor executeRemoteCommand: aRemoteCommand
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> fetchRemoteCommand: aRemoteCommand [
-	^ aRemoteCommand executeAndFetchObjectIn: self
+	^ self commandExecutor fetchRemoteCommand: aRemoteCommand
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> fetchRemoteCommand: aRemoteCommand context: anOop [
-	^ aRemoteCommand executeAndFetchIn: self context: anOop
+	^ self commandExecutor fetchRemoteCommand: aRemoteCommand context: anOop
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> fetchRemoteCommandBody: bodyString literalBindings: literalDictionary oopBindings: oopDictionary context: anOop [
-	^ self
-		fetchRemoteCommand: (GbsRemoteCommand
-			blockBody: bodyString
-			literalBindings: literalDictionary
-			oopBindings: oopDictionary)
+	^ self commandExecutor
+		fetchRemoteCommandBody: bodyString
+		literalBindings: literalDictionary
+		oopBindings: oopDictionary
 		context: anOop
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> fetchRemoteScript: scriptString context: anOop [
-	"Compatibility helper for existing free-form scripts. New tool paths should prefer
-	fetchRemoteCommandBody:literalBindings:oopBindings:context:."
-	^ self
-		fetchRemoteCommand: (GbsRemoteCommand compatibilityScript: scriptString)
-		context: anOop
+	^ self commandExecutor fetchRemoteScript: scriptString context: anOop
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> remoteCommand: aString [
-	"Compatibility constructor for free-form scripts. Prefer GbsRemoteCommand blockBody:* APIs."
-	^ GbsRemoteCommand compatibilityScript: aString
+	^ self commandExecutor remoteCommand: aString
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> returnRemoteCommandOop: aRemoteCommand [
-	^ aRemoteCommand executeAndReturnOopIn: self
+	^ self commandExecutor returnRemoteCommandOop: aRemoteCommand
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> returnRemoteCommandBody: bodyString literalBindings: literalDictionary oopBindings: oopDictionary [
-	^ self returnRemoteCommandOop: (GbsRemoteCommand
-		blockBody: bodyString
+	^ self commandExecutor
+		returnRemoteCommandBody: bodyString
 		literalBindings: literalDictionary
-		oopBindings: oopDictionary)
+		oopBindings: oopDictionary
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> abortTransaction [
-	"Aborts the current transaction."
-
-	| result |
-	self isLoggedIn ifFalse: [ GbsError signal: 'Not logged in.' ].
-
-	result := self gciAbort.
-	((result = 1) or: [ result = true ]) ifFalse: [
-		"Some local stones report a falsey GCI abort result even though the
-		abort succeeds. Fall back to an explicit Smalltalk abortTransaction
-		before treating the connection as broken."
-		[ self evaluate: 'System abortTransaction. true' ]
-			on: Error
-			do: [ GbsError signal: 'Failed to abort transaction.' ] ].
-	GbsSessionManager invalidateStaleTypedWrapperClassesForSession: self.
-	self invalidateRepositoryRoots.
-	^ true
+	^ self transactionCoordinator abortTransaction
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> needsCommit [
-	^ self evaluateSystemSelector: #needsCommit withArguments: #()
+	^ self transactionCoordinator needsCommit
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -111,227 +95,127 @@ GbsSession >> loadedClasses [
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> namedObjectAt: aName [
-	^ self
-		namedObjectAt: aName
-		ifAbsent: [ self error: aName asString , ' not defined' ]
+	^ self namedObjectRegistry namedObjectAt: aName
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> namedObjectAt: aName ifAbsent: aBlock [
-	| symbol targetSymbol cached |
-	symbol := self normalizedNamedObjectName: aName.
-	cached := self namedObjectCache at: symbol ifAbsent: [ nil ].
-	cached ifNotNil: [ ^ cached ].
-	targetSymbol := self namedObjectAutoloadTargetFor: symbol.
-	cached := self namedObjectCache at: targetSymbol ifAbsent: [ nil ].
-	cached ifNotNil: [
-		symbol ~= targetSymbol ifTrue: [ self namedObjectCache at: symbol put: cached ].
-		^ cached ].
-	cached := self resolveSymbol: targetSymbol ifAbsent: [ ^ aBlock value ].
-	self namedObjectCache at: targetSymbol put: cached.
-	symbol ~= targetSymbol ifTrue: [ self namedObjectCache at: symbol put: cached ].
-	^ cached
+	^ self namedObjectRegistry namedObjectAt: aName ifAbsent: aBlock
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> namedObjectRegistry [
+	^ GbsSessionNamedObjectRegistry on: self
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> namedObjectCache [
-	^ (self class weakRegistryNamed: #GbsSessionNamedObjectCaches)
-		at: self
-		ifAbsentPut: [ Dictionary new ]
+	^ self namedObjectRegistry namedObjectCache
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> clearNamedObjectCache [
-	(self class weakRegistryNamed: #GbsSessionNamedObjectCaches)
-		at: self
-		put: Dictionary new.
-	^ self
+	^ self namedObjectRegistry clearNamedObjectCache
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> namedObjectAutoloadRegistry [
-	^ (self class weakRegistryNamed: #GbsSessionNamedObjectAutoloadRegistries)
-		at: self
-		ifAbsentPut: [ Dictionary new ]
+	^ self namedObjectRegistry namedObjectAutoloadRegistry
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> clearNamedObjectAutoloads [
-	(self class weakRegistryNamed: #GbsSessionNamedObjectAutoloadRegistries)
-		at: self
-		put: Dictionary new.
-	^ self
+	^ self namedObjectRegistry clearNamedObjectAutoloads
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> readLock: anObject [
-	self executeSystemSelector: #readLock: withArguments: { anObject }.
-	^ self
+	^ self transactionCoordinator readLock: anObject
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> writeLock: anObject [
-	self executeSystemSelector: #writeLock: withArguments: { anObject }.
-	^ self
+	^ self transactionCoordinator writeLock: anObject
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> registerNamedObjectAutoload: aName [
-	^ self registerNamedObjectAutoload: aName remote: aName
+	^ self namedObjectRegistry registerNamedObjectAutoload: aName
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> registerNamedObjectAutoload: localName remote: remoteName [
-	| localSymbol remoteSymbol |
-	localSymbol := self normalizedNamedObjectName: localName.
-	remoteSymbol := self normalizedNamedObjectName: remoteName.
-	self namedObjectAutoloadRegistry at: localSymbol put: remoteSymbol.
-	^ remoteSymbol
+	^ self namedObjectRegistry registerNamedObjectAutoload: localName remote: remoteName
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> unregisterNamedObjectAutoload: aName [
-	self
-		namedObjectAutoloadRegistry
-		removeKey: (self normalizedNamedObjectName: aName)
-		ifAbsent: [ ].
-	^ self
+	^ self namedObjectRegistry unregisterNamedObjectAutoload: aName
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> hasNamedObjectAutoloadNamed: aName [
-	^ self
-		namedObjectAutoloadRegistry
-		includesKey: (self normalizedNamedObjectName: aName)
+	^ self namedObjectRegistry hasNamedObjectAutoloadNamed: aName
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> namedObjectAutoloadTargetFor: aName [
-	| symbol |
-	symbol := self normalizedNamedObjectName: aName.
-	^ self namedObjectAutoloadRegistry at: symbol ifAbsent: [ symbol ]
+	^ self namedObjectRegistry namedObjectAutoloadTargetFor: aName
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> namedObjectAutoloadEntries [
-	^ self namedObjectAutoloadRegistry associations asArray sort: [ :a :b |
-		a key asString <= b key asString ]
+	^ self namedObjectRegistry namedObjectAutoloadEntries
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> namedObjectAutoloadKeys [
-	^ (self namedObjectAutoloadEntries collect: [ :each | each key ]) asArray
+	^ self namedObjectRegistry namedObjectAutoloadKeys
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> namedObjectAutoloadReportText [
-	| entries |
-	entries := self namedObjectAutoloadEntries.
-	entries isEmpty ifTrue: [ ^ 'No named-object autoload registrations.' ].
-	^ String streamContents: [ :stream |
-		stream nextPutAll: 'Named Object Autoload'; cr; cr.
-		entries do: [ :association |
-			stream
-				nextPutAll: association key asString;
-				nextPutAll: ' -> ';
-				nextPutAll: association value asString;
-				cr ] ]
+	^ self namedObjectRegistry namedObjectAutoloadReportText
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> hasCachedNamedObjectNamed: aName [
-	| symbol |
-	symbol := self normalizedNamedObjectName: aName.
-	^ self namedObjectCache includesKey: symbol
+	^ self namedObjectRegistry hasCachedNamedObjectNamed: aName
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> normalizedNamedObjectName: aName [
-	^ aName isSymbol
-		ifTrue: [ aName ]
-		ifFalse: [ aName asString asSymbol ]
+	^ self namedObjectRegistry normalizedNamedObjectName: aName
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> namedObjectCacheEntries [
-	^ self namedObjectCache associations asArray sort: [ :a :b |
-		a key asString <= b key asString ]
+	^ self namedObjectRegistry namedObjectCacheEntries
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> namedObjectCacheKeys [
-	^ (self namedObjectCacheEntries collect: [ :each | each key ]) asArray
+	^ self namedObjectRegistry namedObjectCacheKeys
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> namedObjectCacheReportText [
-	| entries |
-	entries := self namedObjectCacheEntries.
-	entries isEmpty ifTrue: [ ^ 'No named objects cached.' ].
-	^ String streamContents: [ :stream |
-		stream nextPutAll: 'Named Object Cache'; cr; cr.
-		entries do: [ :association |
-			| value |
-			value := association value.
-			stream nextPutAll: association key asString.
-			(value respondsTo: #oop)
-				ifTrue: [
-					stream
-						nextPutAll: ' -> oop ';
-						nextPutAll: value oop asString ]
-				ifFalse: [
-					stream
-						nextPutAll: ' -> ';
-						nextPutAll: value printString ].
-			stream cr ] ]
+	^ self namedObjectRegistry namedObjectCacheReportText
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> executeScriptAndReturnOop: aString [
-	| resultOop |
-	self validateReadyForExecution: aString.
-
-	resultOop := self serverInterface
-		apiGciExecuteStr: aString
-		context: 20
-		env: 0.
-
-	resultOop = 1 ifTrue: [ ^ self handleGciError ].
-	self checkForError.
-
-	^ resultOop asInteger
+	^ self commandExecutor executeScriptAndReturnOop: aString
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> executeWorkspaceScriptAndReturnOop: aString [
-	"Explicit escape hatch for user-authored workspace/playground Inspect It code.
-	Do not use this for bridge-generated scripts; use GbsRemoteCommand instead."
-	^ self executeScriptAndReturnOop: aString
+	^ self commandExecutor executeWorkspaceScriptAndReturnOop: aString
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> fetchTranscriptLogs [
-	| rawText |
-	rawText := self
-		fetchRemoteCommandBody: '[
-		| fetched log text |
-		fetched := (Transcript respondsTo: #fetchAndClear)
-			ifTrue: [ [ Transcript fetchAndClear ] on: Error do: [ nil ] ]
-			ifFalse: [ nil ].
-		fetched ifNotNil: [ ^ fetched ifNil: [ '''' ] ].
-		log := UserGlobals at: #PharoTranscriptLog ifAbsent: [ OrderedCollection new ].
-		text := String streamContents: [ :stream |
-			log do: [ :each |
-				stream nextPutAll: each asString.
-				stream cr ] ].
-		UserGlobals at: #PharoTranscriptLog put: OrderedCollection new.
-		text
-	] value'
-		literalBindings: Dictionary new
-		oopBindings: Dictionary new
-		context: 20.
-	(rawText beginsWith: 'Error:') ifTrue: [ ^ '' ].
-	^ rawText
+	^ self commandExecutor fetchTranscriptLogs
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -993,81 +877,37 @@ GbsSession >> classHistoryOf: aClassOrName [
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> commitTransaction [
-	"Attempts to commit. Returns true if successful, false if there is a conflict.
-	 You can extend this later to raise a GbsTransactionConflictError."
-	| result |
-	self isLoggedIn ifFalse: [ GbsError signal: 'Not logged in.' ].
-
-	result := self gciCommit.
-	result = 1 ifTrue: [
-		GbsSessionManager invalidateStaleTypedWrapperClassesForSession: self.
-		self invalidateRepositoryRoots ].
-	^ result = 1
+	^ self transactionCoordinator commitTransaction
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> commitTransactionOrSignalConflict [
-	(self commitTransaction)
-		ifTrue: [ ^ true ].
-	GbsCommitConflictError signal: 'GemStone commit conflict.'
+	^ self transactionCoordinator commitTransactionOrSignalConflict
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> commitTransactionWithRetryCount: aRetryCount [
-	| retries attempts |
-	retries := (aRetryCount ifNil: [ 0 ] ifNotNil: [ aRetryCount asInteger ]) max: 0.
-	attempts := retries + 1.
-	1 to: attempts do: [ :attempt |
-		(self commitTransaction) ifTrue: [ ^ true ].
-		attempt < attempts ifTrue: [ self abortTransaction ] ].
-	GbsCommitConflictError
-		signal: 'GemStone commit conflict after ', attempts printString, ' attempts.'
+	^ self transactionCoordinator commitTransactionWithRetryCount: aRetryCount
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> withCommitRetryCount: aRetryCount do: aBlock [
-	| retries attempts result |
-	retries := (aRetryCount ifNil: [ 0 ] ifNotNil: [ aRetryCount asInteger ]) max: 0.
-	attempts := retries + 1.
-	1 to: attempts do: [ :attempt |
-		result := aBlock value.
-		(self commitTransaction) ifTrue: [ ^ result ].
-		attempt < attempts ifTrue: [ self abortTransaction ] ].
-	GbsCommitConflictError
-		signal: 'GemStone commit conflict after ', attempts printString, ' attempts.'
+	^ self transactionCoordinator withCommitRetryCount: aRetryCount do: aBlock
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> withGemStoneTransactionDo: aBlock [
-	^ self withGemStoneTransactionRetryCount: 0 do: aBlock
+	^ self transactionCoordinator withGemStoneTransactionDo: aBlock
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> withGemStoneTransactionRetryCount: aRetryCount do: aBlock [
-	"Run a block inside the current GemStone transaction boundary.
-	 Commit with explicit conflict signalling, abort after block errors, and
-	 retry the whole block for commit conflicts when requested."
-	| retries attempts result handledConflict |
-	retries := (aRetryCount ifNil: [ 0 ] ifNotNil: [ aRetryCount asInteger ]) max: 0.
-	attempts := retries + 1.
-	1 to: attempts do: [ :attempt |
-		handledConflict := false.
-		[
-			[
-				result := aBlock value.
-				self commitTransactionOrSignalConflict.
-				^ result
-			] on: GbsCommitConflictError do: [ :ex |
-				handledConflict := true.
-				self abortTransaction.
-				attempt = attempts
-					ifTrue: [ ex pass ] ]
-		] on: Error do: [ :ex |
-			handledConflict ifFalse: [
-				[ self abortTransaction ] on: Error do: [ :abortEx | ] ].
-			ex pass ] ].
-	GbsCommitConflictError
-		signal: 'GemStone commit conflict after ', attempts printString, ' attempts.'
+	^ self transactionCoordinator withGemStoneTransactionRetryCount: aRetryCount do: aBlock
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> transactionCoordinator [
+	^ GbsSessionTransactionCoordinator on: self
 ]
 
 { #category : '*GemStone-GBS-Core' }

@@ -164,12 +164,7 @@ GbsRemoteNamespaceMirror >> cachedName [
 { #category : 'querying' }
 GbsRemoteNamespaceMirror >> constantEntries [
 	^ constantEntries ifNil: [
-		constantEntries := session fetchRemoteCommand: (GbsRemoteCommand compatibilityScript: self constantEntriesScript) ]
-]
-
-{ #category : 'private' }
-GbsRemoteNamespaceMirror >> constantEntriesScript [
-	^ (self namespaceCommandForBody: self constantEntriesCommandBody) script
+		constantEntries := self fetchNamespaceBody: self constantEntriesCommandBody ]
 ]
 
 { #category : 'private' }
@@ -297,11 +292,6 @@ GbsRemoteNamespaceMirror >> namespaceMetadata: anArray [
 	namespaceMetadata := anArray
 		ifNil: [ nil ]
 		ifNotNil: [ anArray asArray ]
-]
-
-{ #category : 'private' }
-GbsRemoteNamespaceMirror >> namespaceMetadataScript [
-	^ (self namespaceCommandForBody: self namespaceMetadataCommandBody) script
 ]
 
 { #category : 'private' }

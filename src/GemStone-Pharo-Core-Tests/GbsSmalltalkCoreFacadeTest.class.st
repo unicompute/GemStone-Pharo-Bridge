@@ -104,25 +104,25 @@ GbsSmalltalkCoreFacadeTest >> testRemoteNamespaceMirrorCachesConstantEntriesAfte
 ]
 
 { #category : 'tests' }
-GbsSmalltalkCoreFacadeTest >> testRemoteNamespaceMirrorConstantEntriesScriptStaysGeneric [
-	| namespace script activePackage |
-	activePackage := [ (GbsRemoteNamespaceMirror >> #constantEntriesScript) package name ]
+GbsSmalltalkCoreFacadeTest >> testRemoteNamespaceMirrorConstantEntriesCommandBodyStaysGeneric [
+	| namespace body activePackage |
+	activePackage := [ (GbsRemoteNamespaceMirror >> #constantEntriesCommandBody) package name ]
 		on: Error
 		do: [ nil ].
-	activePackage = 'GemStone-GBS-Converted'
+	activePackage = 'GemStone-GBS-Core'
 		ifFalse: [ self skip: 'MagLev namespace override is active in this lane' ].
 	namespace := GbsRemoteNamespaceMirror
 		on: mockSession
 		expression: 'mockNamespace'
 		symbolListIndex: nil
 		metadata: nil.
-	script := namespace constantEntriesScript.
+	body := namespace constantEntriesCommandBody.
 
-	self assert: (script includesSubstring: 'ns respondsTo: #keys').
-	self assert: (script includesSubstring: 'ns respondsTo: #at:').
-	self deny: (script includesSubstring: '_rubyConstants').
-	self deny: (script includesSubstring: 'rubyConstAssociationAt:').
-	self deny: (script includesSubstring: 'autoload')
+	self assert: (body includesSubstring: 'ns respondsTo: #keys').
+	self assert: (body includesSubstring: 'ns respondsTo: #at:').
+	self deny: (body includesSubstring: '_rubyConstants').
+	self deny: (body includesSubstring: 'rubyConstAssociationAt:').
+	self deny: (body includesSubstring: 'autoload')
 ]
 
 { #category : 'tests' }

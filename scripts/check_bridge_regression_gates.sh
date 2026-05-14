@@ -26,6 +26,10 @@ check_max_lines() {
 
 check_max_lines "src/GemStone-GBS-Tools/GbsRemoteDebugger.class.st" 1500 "GbsRemoteDebugger"
 check_max_lines "src/GemStone-GBS-Tools/GbxDebuggerService.class.st" 1500 "GbxDebuggerService"
+check_max_lines "src/GemStone-GBS-Core/GbsSession.extension.st" 1300 "GbsSessionCoreExtension"
+check_max_lines "src/GemStone-GBS-Core/GbsSessionCommandExecutor.class.st" 200 "GbsSessionCommandExecutor"
+check_max_lines "src/GemStone-GBS-Core/GbsSessionNamedObjectRegistry.class.st" 250 "GbsSessionNamedObjectRegistry"
+check_max_lines "src/GemStone-GBS-Core/GbsSessionTransactionCoordinator.class.st" 200 "GbsSessionTransactionCoordinator"
 check_max_lines "src/BaselineOfGemStonePharo/GemStonePharoContract.class.st" 600 "GemStonePharoContract"
 check_max_lines "src/BaselineOfGemStonePharo/GemStonePharoDocRenderer.class.st" 1200 "GemStonePharoDocRenderer"
 check_max_lines "src/BaselineOfGemStonePharo/GemStonePharoPackageContract.class.st" 900 "GemStonePharoPackageContract"
@@ -123,6 +127,14 @@ if rg -n "loadedClassesScript|migrateInstancesScript|previewMigrationScript|meth
   fail "legacy Repository/mirror script-helper method reappeared; use typed GbsRemoteCommand constructors"
 fi
 rm -f /tmp/gbs-core-repository-mirror-helper-gate.$$
+
+if rg -n "constantEntriesScript|namespaceMetadataScript|compatibilityScript: self constantEntriesScript" \
+  src/GemStone-GBS-Core/GbsRemoteNamespaceMirror.class.st \
+  src/GemStone-GBS-MagLev/GbsRemoteNamespaceMirror.extension.st >/tmp/gbs-namespace-shim-gate.$$; then
+  cat /tmp/gbs-namespace-shim-gate.$$
+  fail "namespace mirror script shim reappeared; fetch command bodies through fetchNamespaceBody:/GbsRemoteCommand"
+fi
+rm -f /tmp/gbs-namespace-shim-gate.$$
 
 if rg -n "executeScriptAndFetchObject:|executeScriptAndReturnOop:|marshalArgumentToScript:" \
   src/GemStone-GBS-Core/GbsRepositoryFacade.class.st \
