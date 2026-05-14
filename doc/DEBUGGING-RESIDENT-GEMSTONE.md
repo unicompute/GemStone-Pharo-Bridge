@@ -43,6 +43,14 @@ Use `GBS_KEEP_WORK_IMAGES=1` only when debugging failed lanes. Otherwise the scr
 
 ## Commands
 
+Check whether the live environment is ready without launching Pharo:
+
+```sh
+make live-env-check
+```
+
+This emits `LIVE_ENV_SUMMARY`. If `GBS_JSON_SUMMARY=1` is set, it also writes `live-env-summary.json`.
+
 Run the live debugger acceptance lane:
 
 ```sh

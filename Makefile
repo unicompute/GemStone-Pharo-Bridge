@@ -1,4 +1,4 @@
-.PHONY: help core-only original original-tests bootstrap-smoke full live-debugger debugger-perf regression-gates verify graph-artifacts artifact-freshness original-drift maglev-doc-pdfs
+.PHONY: help core-only original original-tests bootstrap-smoke full live-env-check live-debugger debugger-perf regression-gates verify graph-artifacts artifact-freshness original-drift maglev-doc-pdfs
 
 PHARO_IMAGE ?= /Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image
 PHARO_WORK_DIR ?= /Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean
@@ -23,6 +23,9 @@ help:
 		"  make full" \
 		"    Run the full clean reload and regression lane." \
 		"    The live lane runs only when GS_USER and GS_PASS are set." \
+		"" \
+		"  make live-env-check" \
+		"    Validate live GemStone environment variables without launching Pharo." \
 		"" \
 		"  make live-debugger" \
 		"    Validate live GemStone credentials/netldi/stone, then run debugger/workspace live acceptance tests." \
@@ -68,6 +71,9 @@ bootstrap-smoke:
 
 full:
 	./scripts/run_clean_reload_and_regressions.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
+
+live-env-check:
+	bash ./scripts/check_live_env.sh
 
 live-debugger:
 	bash ./scripts/run_live_debugger.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
