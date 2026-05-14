@@ -201,10 +201,10 @@ GbsRemoteScriptBuilderCoreTest >> testSessionRemoteCommandApisDelegateFetchExecu
 			#contextFetched ].
 
 	self
-		assert: (session fetchRemoteCommand: (session remoteCommand: '2 + 2'))
+		assert: (session fetchRemoteCommand: (GbsRemoteCommand staticExpression: '2 + 2'))
 		equals: #fetched.
 	self
-		assert: (session fetchRemoteCommand: (session remoteCommand: '3 + 3') context: 20)
+		assert: (session fetchRemoteCommand: (GbsRemoteCommand staticExpression: '3 + 3') context: 20)
 		equals: #contextFetched
 ]
 

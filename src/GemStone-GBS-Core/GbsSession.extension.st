@@ -51,11 +51,6 @@ GbsSession >> fetchRemoteScript: scriptString context: anOop [
 ]
 
 { #category : '*GemStone-GBS-Core' }
-GbsSession >> remoteCommand: aString [
-	^ self commandExecutor remoteCommand: aString
-]
-
-{ #category : '*GemStone-GBS-Core' }
 GbsSession >> returnRemoteCommandOop: aRemoteCommand [
 	^ self commandExecutor returnRemoteCommandOop: aRemoteCommand
 ]

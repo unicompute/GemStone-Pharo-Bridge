@@ -187,6 +187,12 @@ if rg -n "executeRemoteCommand:|evaluateIn:" \
 fi
 rm -f /tmp/gbs-freeform-execute-command-gate.$$
 
+if rg -n "remoteCommand:" src >/tmp/gbs-remote-command-shim-gate.$$; then
+  cat /tmp/gbs-remote-command-shim-gate.$$
+  fail "remoteCommand: compatibility shim reappeared; construct GbsRemoteCommand explicitly"
+fi
+rm -f /tmp/gbs-remote-command-shim-gate.$$
+
 if rg -n "loadedClassesScript|migrateInstancesScript|previewMigrationScript|methodReferenceStringsScript|classMetadataScript|methodMetadataScript|versionEntriesScript|protocolEntriesScript|namespaceMirrorEntriesScript" \
   src/GemStone-GBS-Core/GbsRepositoryFacade.class.st \
   src/GemStone-GBS-Core/GbsRemoteClassMirror.class.st \
@@ -427,7 +433,6 @@ rm -f /tmp/gbs-tool-freeform-command-gate.$$
 if rg -n "compatibilityScript:|remoteCommand:" src \
   | grep -v "src/GemStone-GBS-Core/GbsRemoteCommand.class.st" \
   | grep -v "src/GemStone-GBS-Core/GbsSessionCommandExecutor.class.st" \
-  | grep -v "src/GemStone-GBS-Core/GbsSession.extension.st" \
   | grep -v "src/GemStone-Pharo-.*-Tests/" >/tmp/gbs-freeform-compat-api-gate.$$; then
   cat /tmp/gbs-freeform-compat-api-gate.$$
   fail "free-form compatibility command API gained new callers; keep it isolated to session compatibility helpers"

@@ -60,12 +60,6 @@ GbsSessionCommandExecutor >> fetchRemoteScript: scriptString context: anOop [
 ]
 
 { #category : 'commands' }
-GbsSessionCommandExecutor >> remoteCommand: aString [
-	"Compatibility constructor for free-form scripts. Prefer GbsRemoteCommand blockBody:* APIs."
-	^ GbsRemoteCommand compatibilityScript: aString
-]
-
-{ #category : 'commands' }
 GbsSessionCommandExecutor >> returnRemoteCommandOop: aRemoteCommand [
 	^ aRemoteCommand executeAndReturnOopIn: session
 ]
