@@ -26,10 +26,13 @@ check_max_lines() {
 
 check_max_lines "src/GemStone-GBS-Tools/GbsRemoteDebugger.class.st" 1500 "GbsRemoteDebugger"
 check_max_lines "src/GemStone-GBS-Tools/GbxDebuggerService.class.st" 1500 "GbxDebuggerService"
-check_max_lines "src/GemStone-GBS-Core/GbsSession.extension.st" 1300 "GbsSessionCoreExtension"
+check_max_lines "src/GemStone-GBS-Core/GbsSession.extension.st" 1000 "GbsSessionCoreExtension"
 check_max_lines "src/GemStone-GBS-Core/GbsSessionCommandExecutor.class.st" 200 "GbsSessionCommandExecutor"
 check_max_lines "src/GemStone-GBS-Core/GbsSessionNamedObjectRegistry.class.st" 250 "GbsSessionNamedObjectRegistry"
 check_max_lines "src/GemStone-GBS-Core/GbsSessionTransactionCoordinator.class.st" 200 "GbsSessionTransactionCoordinator"
+check_max_lines "src/GemStone-GBS-Core/GbsSessionMaterializer.class.st" 400 "GbsSessionMaterializer"
+check_max_lines "src/GemStone-GBS-Core/GbsSessionLoginCoordinator.class.st" 200 "GbsSessionLoginCoordinator"
+check_max_lines "src/GemStone-GBS-Core/GbsSessionScriptMarshaller.class.st" 100 "GbsSessionScriptMarshaller"
 check_max_lines "src/BaselineOfGemStonePharo/GemStonePharoContract.class.st" 600 "GemStonePharoContract"
 check_max_lines "src/BaselineOfGemStonePharo/GemStonePharoDocRenderer.class.st" 1200 "GemStonePharoDocRenderer"
 check_max_lines "src/BaselineOfGemStonePharo/GemStonePharoPackageContract.class.st" 900 "GemStonePharoPackageContract"
@@ -246,6 +249,14 @@ if rg -n "executeAndFetch:" \
   fail "direct executeAndFetch: reappeared in debugger service/controller paths; use GbsRemoteCommand"
 fi
 rm -f /tmp/gbs-debugger-direct-fetch-gate.$$
+
+if rg -n "String streamContents:|executeDebugScript:" \
+  src/GemStone-GBS-Tools/GbxDebuggerProcessController.class.st \
+  src/GemStone-GBS-Tools/GbxDebuggerRestartController.class.st >/tmp/gbs-debugger-controller-command-gate.$$; then
+  cat /tmp/gbs-debugger-controller-command-gate.$$
+  fail "debugger restart/process controllers reintroduced raw script builders; use GbsRemoteExecutionDispatcher bound command APIs"
+fi
+rm -f /tmp/gbs-debugger-controller-command-gate.$$
 
 if rg -l "executeAndFetch:" \
   src/GemStone-GBS-Tools \

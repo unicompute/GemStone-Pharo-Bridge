@@ -29,34 +29,24 @@ GbxDebuggerRestartController >> actualServerQuickStepPointAfterRestart [
 
 { #category : 'server state' }
 GbxDebuggerRestartController >> actualServerQuickStepPointAtLevel: levelValue [
-	| raw script processOop |
+	| raw processOop |
 	processOop := service processOop.
 	(service session isNil or: [ processOop isNil ]) ifTrue: [ ^ 0 ].
 	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ 0 ].
-	script := String streamContents: [ :stream |
-		stream
-			nextPutAll: '[
-	| obj proc stackReport fullEntry quick |
-	obj := Object _objectForOop: ';
-			nextPutAll: processOop asString;
-			nextPutAll: '.
-	obj isNil ifTrue: [ ^ ''0'' ].
-	proc := obj.
-	((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-		(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ] ].
-	(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) ifTrue: [ ^ ''0'' ].
-	stackReport := [ proc _gsiStackReportFromLevel: ';
-			nextPutAll: levelValue asString;
-			nextPutAll: ' toLevel: ';
-			nextPutAll: levelValue asString;
-			nextPutAll: ' ] on: Error do: [ nil ].
+	raw := [ self
+		fetchProcessCommandBody: '[
+	| stackReport fullEntry quick |
+	(proc respondsTo: #_gsiStackReportFromLevel:toLevel:) ifFalse: [ ^ ''0'' ].
+	stackReport := [ proc _gsiStackReportFromLevel: levelValue toLevel: levelValue ] on: Error do: [ nil ].
 	(stackReport isNil or: [ stackReport size < 2 ]) ifTrue: [ ^ ''0'' ].
 	fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
 	fullEntry ifNil: [ ^ ''0'' ].
 	quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ].
 	quick asString
-] value' ].
-	raw := [ service fetchRemoteScript: script context: 20 ]
+] value'
+		literalAssignments: (Dictionary new
+			at: 'levelValue' put: levelValue;
+			yourself) ]
 		on: Error
 		do: [ nil ].
 	raw ifNil: [ ^ 0 ].
@@ -104,16 +94,44 @@ GbxDebuggerRestartController >> cutbackGsProcessesAbove: clientContext [
 
 { #category : 'cutback' }
 GbxDebuggerRestartController >> cutbackGsTo: gsContext [
-	| lvl resolvedHomeLevel script result processOop |
+	| lvl resolvedHomeLevel result processOop |
 	processOop := service processOop.
+	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ false ].
 	lvl := (gsContext respondsTo: #level) ifTrue: [ gsContext level ] ifFalse: [ 1 ].
 	resolvedHomeLevel := service resolvedRestartHomeLevel.
 	(resolvedHomeLevel isNumber and: [ resolvedHomeLevel > 0 ])
 		ifTrue: [ lvl := resolvedHomeLevel ].
-	
-	script := '[
-		| obj proc |
-		obj := Object _objectForOop: ', processOop asString, '.
+	result := self
+		fetchProcessCommandBody: '[
+		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
+		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ^ ''false'' ].
+		''true''
+	] value'
+		literalAssignments: (Dictionary new
+			at: 'restartLevel' put: lvl;
+			yourself).
+	service logRestartText: 'cutbackGsTo level=', lvl asString, ' result=', result printString.
+	^ service asBooleanResult: result default: false
+]
+
+{ #category : 'private' }
+GbxDebuggerRestartController >> fetchProcessCommandBody: bodyString literalAssignments: literalDictionary [
+	^ [ GbsRemoteExecutionDispatcher
+		fetchCommandBody: (self processCommandBodyFor: bodyString)
+		literalAssignments: literalDictionary
+		oopAssignments: (Dictionary new
+			at: 'obj' put: service processOop;
+			yourself)
+		in: service session
+		context: 20 ]
+		on: Error
+		do: [ nil ]
+]
+
+{ #category : 'private' }
+GbxDebuggerRestartController >> processCommandBodyFor: bodyString [
+	^ '
+		| proc |
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
 		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
@@ -128,15 +146,8 @@ GbxDebuggerRestartController >> cutbackGsTo: gsContext [
 			(top notNil and: [ top respondsTo: #process ])
 				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
 		].
-		
-		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
-		[ proc _trimStackToLevel: ', lvl asString, ' ] on: Error do: [ ^ ''false'' ].
-		''true''
-	] value'.
-
-	result := service executeDebugScript: script.
-	service logRestartText: 'cutbackGsTo level=', lvl asString, ' result=', result printString.
-	^ service asBooleanResult: result default: false
+		proc isNil ifTrue: [ ^ ''false'' ].
+		', bodyString
 ]
 
 { #category : 'cutback' }
@@ -313,31 +324,18 @@ GbxDebuggerRestartController >> sourceStringForRestartContext: aContext [
 
 { #category : 'private' }
 GbxDebuggerRestartController >> synchronizeServerProgramCounterAfterRestart [
-	| level script result |
+	| level result |
 	service isCurrentExecutedCodeFrame ifFalse: [ ^ false ].
 	level := service resolvedRestartHomeLevel.
-	script := '[
-		| obj proc |
-		obj := Object _objectForOop: ', service processOop asString, '.
-		obj isNil ifTrue: [ ^ ''false'' ].
-		proc := obj.
-		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ]
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
-			| top |
-			top := [ obj topContext ] on: Error do: [ nil ].
-			(top notNil and: [ top respondsTo: #process ])
-				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
-		].
+	result := self
+		fetchProcessCommandBody: '[
 		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
-		[ proc _trimStackToLevel: ', level asString, ' ] on: Error do: [ ^ ''false'' ].
+		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ^ ''false'' ].
 		''true''
-	] value'.
-	result := service executeDebugScript: script.
+	] value'
+		literalAssignments: (Dictionary new
+			at: 'restartLevel' put: level;
+			yourself).
 	(service asBooleanResult: result default: false) ifTrue: [
 		service selectTopServerContext.
 		^ true ].

@@ -34,19 +34,30 @@ GbxDebuggerProcessController >> currentContext [
 GbxDebuggerProcessController >> isTerminated [
 	| result |
 	self canExecuteOnDebugProcess ifFalse: [ ^ true ].
-	result := self executeDebugScript: '[
-		| proc |
-		proc := Object _objectForOop: ', self processOop asString, '.
-		proc ifNil: [ ^ ''true'' ].
-		proc isTerminated
-	] value'.
+	result := self fetchProcessCommandBody: 'proc isTerminated'.
 	result ifNil: [ ^ true ].
 	^ self asBooleanResult: result default: true
 ]
 
 { #category : 'private' }
-GbxDebuggerProcessController >> executeDebugScript: scriptString [
-	^ service executeDebugScript: scriptString
+GbxDebuggerProcessController >> fetchProcessCommandBody: bodyString [
+	^ self
+		fetchProcessCommandBody: bodyString
+		literalAssignments: Dictionary new
+]
+
+{ #category : 'private' }
+GbxDebuggerProcessController >> fetchProcessCommandBody: bodyString literalAssignments: literalDictionary [
+	^ [ GbsRemoteExecutionDispatcher
+		fetchCommandBody: (self processCommandBodyFor: bodyString)
+		literalAssignments: literalDictionary
+		oopAssignments: (Dictionary new
+			at: 'obj' put: self processOop;
+			yourself)
+		in: service session
+		context: 20 ]
+		on: Error
+		do: [ nil ]
 ]
 
 { #category : 'process control' }
@@ -75,30 +86,13 @@ GbxDebuggerProcessController >> processOop [
 { #category : 'process control' }
 GbxDebuggerProcessController >> resetServerPCToStepOne [
 	"Force the debugged server process to restart at method entry (step=1)."
-	| script result level |
+	| result level |
 
 	level := service resolvedRestartHomeLevel.
 
-	script := '[
-		| obj proc tc restartLevel stackReport fullEntry quick |
-		obj := Object _objectForOop: ', self processOop asString, '.
-		obj isNil ifTrue: [ ^ ''false'' ].
-		proc := obj.
-		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ]
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
-			| top |
-			top := [ obj topContext ] on: Error do: [ nil ].
-			(top notNil and: [ top respondsTo: #process ])
-				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
-		].
-		proc isNil ifTrue: [ ^ ''false'' ].
-		restartLevel := ', level asString, '.
-
+	result := self
+		fetchProcessCommandBody: '[
+		| tc stackReport fullEntry quick |
 		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
 			[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ]
 		].
@@ -142,9 +136,11 @@ GbxDebuggerProcessController >> resetServerPCToStepOne [
 			]
 		].
 		(quick <= 1) ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]
-	] value'.
+	] value'
+		literalAssignments: (Dictionary new
+			at: 'restartLevel' put: level;
+			yourself).
 
-	result := self executeDebugScript: script.
 	service logRestartText: 'resetServerPCToStepOne level=', level asString, ' result=', result printString.
 	^ self asBooleanResult: result default: false
 ]
@@ -153,25 +149,8 @@ GbxDebuggerProcessController >> resetServerPCToStepOne [
 GbxDebuggerProcessController >> restartLevelFromServerStack [
 	| raw lines |
 	self canExecuteOnDebugProcess ifFalse: [ ^ nil ].
-	raw := self executeDebugScript: '[
-		| obj proc stream maxDepth level stackReport fullEntry methodOrNil className selectorName |
-		obj := Object _objectForOop: ', self processOop asString, '.
-		obj isNil ifTrue: [ ^ '''' ].
-		proc := obj.
-		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [
-				proc := [ obj serverProcess ] on: Error do: [ nil ]
-			]
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ]
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
-			| top |
-			top := [ obj topContext ] on: Error do: [ nil ].
-			(top notNil and: [ top respondsTo: #process ])
-				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
-		].
+	raw := self fetchProcessCommandBody: '[
+		| stream maxDepth level stackReport fullEntry methodOrNil className selectorName |
 		(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ])
 			ifTrue: [ ^ '''' ].
 		stream := WriteStream on: String new.
@@ -228,33 +207,19 @@ GbxDebuggerProcessController >> resume [
 
 { #category : 'process control' }
 GbxDebuggerProcessController >> runDebugProcessCommand: commandName recompute: shouldRecompute [
-	| result script wasServerContext |
+	| result wasServerContext |
 	self canExecuteOnDebugProcess ifFalse: [ ^ false ].
 	wasServerContext := (self currentContext notNil
 		and: [ (self currentContext respondsTo: #gbxIsServerContext)
 		and: [ self currentContext gbxIsServerContext ] ]).
-	script := '[
-		| obj proc |
-		obj := Object _objectForOop: ', self processOop asString, '.
-		obj isNil ifTrue: [ ^ ''false'' ].
-		proc := obj.
-		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ]
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
-			| top |
-			top := [ obj topContext ] on: Error do: [ nil ].
-			(top notNil and: [ top respondsTo: #process ])
-				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
-		].
-		proc isNil ifTrue: [ ^ ''false'' ].
-		proc ', commandName, '.
+	result := self
+		fetchProcessCommandBody: '[
+		[ proc perform: commandSelector ] on: Error do: [ ^ ''false'' ].
 		true
-	] value'.
-	result := self executeDebugScript: script.
+	] value'
+		literalAssignments: (Dictionary new
+			at: 'commandSelector' put: commandName asString asSymbol;
+			yourself).
 	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
 	shouldRecompute ifTrue: [
 		wasServerContext
@@ -266,34 +231,21 @@ GbxDebuggerProcessController >> runDebugProcessCommand: commandName recompute: s
 
 { #category : 'process control' }
 GbxDebuggerProcessController >> runDebugProcessCommand: commandName withInteger: anInteger recompute: shouldRecompute [
-	| result script wasServerContext |
+	| result wasServerContext |
 	self canExecuteOnDebugProcess ifFalse: [ ^ false ].
 	anInteger ifNil: [ ^ false ].
 	wasServerContext := (self currentContext notNil
 		and: [ (self currentContext respondsTo: #gbxIsServerContext)
 		and: [ self currentContext gbxIsServerContext ] ]).
-	script := '[
-		| obj proc |
-		obj := Object _objectForOop: ', self processOop asString, '.
-		obj isNil ifTrue: [ ^ ''false'' ].
-		proc := obj.
-		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ]
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
-			| top |
-			top := [ obj topContext ] on: Error do: [ nil ].
-			(top notNil and: [ top respondsTo: #process ])
-				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
-		].
-		proc isNil ifTrue: [ ^ ''false'' ].
-		[ proc perform: #', commandName, ': with: ', anInteger asString, ' ] on: Error do: [ ^ ''false'' ].
+	result := self
+		fetchProcessCommandBody: '[
+		[ proc perform: commandSelector with: commandArgument ] on: Error do: [ ^ ''false'' ].
 		true
-	] value'.
-	result := self executeDebugScript: script.
+	] value'
+		literalAssignments: (Dictionary new
+			at: 'commandArgument' put: anInteger;
+			at: 'commandSelector' put: (commandName asString, ':') asSymbol;
+			yourself).
 	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
 	shouldRecompute ifTrue: [
 		wasServerContext
@@ -322,33 +274,20 @@ GbxDebuggerProcessController >> runWithBreakAgain [
 
 { #category : 'process control' }
 GbxDebuggerProcessController >> serverStepOverFrameLevel: levelValue [
-	| result script |
+	| result |
 	self canExecuteOnDebugProcess ifFalse: [ ^ false ].
 	levelValue ifNil: [ ^ false ].
-	script := '[
-		| obj proc stepLevel ok |
-		obj := Object _objectForOop: ', self processOop asString, '.
-		obj isNil ifTrue: [ ^ ''false'' ].
-		proc := obj.
-		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ]
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
-			| top |
-			top := [ obj topContext ] on: Error do: [ nil ].
-			(top notNil and: [ top respondsTo: #process ])
-				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
-		].
+	result := self
+		fetchProcessCommandBody: '[
+		| ok |
 		(proc isNil or: [ (proc respondsTo: #perform:with:) not ]) ifTrue: [ ^ ''false'' ].
-		stepLevel := ', levelValue asString, '.
 		ok := [ proc perform: #_stepOverInFrame: with: stepLevel ] on: Error do: [ nil ].
 		ok isNil ifTrue: [ ^ ''false'' ].
 		''true''
-	] value'.
-	result := self executeDebugScript: script.
+	] value'
+		literalAssignments: (Dictionary new
+			at: 'stepLevel' put: levelValue;
+			yourself).
 	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
 	service selectTopServerContext.
 	^ true
@@ -356,21 +295,35 @@ GbxDebuggerProcessController >> serverStepOverFrameLevel: levelValue [
 
 { #category : 'process control' }
 GbxDebuggerProcessController >> serverStepWithSelectorChain: selectorChain level: levelValue [
-	| result script selectorScript |
+	| result |
 	self canExecuteOnDebugProcess ifFalse: [ ^ false ].
 	levelValue ifNil: [ ^ false ].
 	selectorChain ifNil: [ ^ false ].
 	selectorChain isEmpty ifTrue: [ ^ false ].
-	selectorScript := String streamContents: [ :stream |
-		selectorChain do: [ :selectorSymbol |
-			stream
-				nextPutAll: '(proc respondsTo: #'; nextPutAll: selectorSymbol asString; nextPutAll: ') ifTrue: [';
-				nextPutAll: ' selector := #'; nextPutAll: selectorSymbol asString; nextPutAll: '.';
-				nextPutAll: ' ok := [ proc perform: selector with: stepLevel ] on: Error do: [ nil ].';
-				nextPutAll: ' ok isNil ifFalse: [ ^ ''true'' ] ].' ] ].
-	script := '[
-		| obj proc stepLevel ok selector |
-		obj := Object _objectForOop: ', self processOop asString, '.
+	result := self
+		fetchProcessCommandBody: '[
+		| ok selector |
+		(proc isNil or: [ (proc respondsTo: #perform:with:) not ]) ifTrue: [ ^ ''false'' ].
+		selectorChain do: [ :candidateSelector |
+			(proc respondsTo: candidateSelector) ifTrue: [
+				selector := candidateSelector.
+				ok := [ proc perform: selector with: stepLevel ] on: Error do: [ nil ].
+				ok isNil ifFalse: [ ^ ''true'' ] ] ].
+		''false''
+	] value'
+		literalAssignments: (Dictionary new
+			at: 'selectorChain' put: selectorChain asArray;
+			at: 'stepLevel' put: levelValue;
+			yourself).
+	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
+	service selectTopServerContext.
+	^ true
+]
+
+{ #category : 'private' }
+GbxDebuggerProcessController >> processCommandBodyFor: bodyString [
+	^ '
+		| proc |
 		obj isNil ifTrue: [ ^ ''false'' ].
 		proc := obj.
 		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
@@ -385,15 +338,8 @@ GbxDebuggerProcessController >> serverStepWithSelectorChain: selectorChain level
 			(top notNil and: [ top respondsTo: #process ])
 				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
 		].
-		(proc isNil or: [ (proc respondsTo: #perform:with:) not ]) ifTrue: [ ^ ''false'' ].
-		stepLevel := ', levelValue asString, '.
-	', selectorScript, '
-		''false''
-	] value'.
-	result := self executeDebugScript: script.
-	(self asBooleanResult: result default: false) ifFalse: [ ^ false ].
-	service selectTopServerContext.
-	^ true
+		proc isNil ifTrue: [ ^ ''false'' ].
+		', bodyString
 ]
 
 { #category : 'accessing' }

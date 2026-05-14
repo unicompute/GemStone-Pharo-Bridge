@@ -43,6 +43,49 @@ GbsRemoteExecutionDispatcher class >> fetchCommandBody: bodyString literalBindin
 		context: contextOop
 ]
 
+{ #category : 'execution' }
+GbsRemoteExecutionDispatcher class >> fetchCommandBody: bodyString literalAssignments: literalDictionary oopAssignments: oopDictionary in: aSession context: contextOop [
+	| commandClass command |
+	commandClass := Smalltalk at: #GbsRemoteCommand ifAbsent: [ nil ].
+	(commandClass notNil and: [ aSession respondsTo: #fetchRemoteCommand:context: ])
+		ifTrue: [
+			command := commandClass
+				blockBody: bodyString
+				literalAssignments: literalDictionary
+				oopAssignments: oopDictionary.
+			^ aSession fetchRemoteCommand: command context: contextOop ].
+	^ self
+		fetchScriptUsingOriginalCompatibility:
+			(self
+				compatibilityCommandScriptForBody: bodyString
+				literalAssignments: literalDictionary
+				oopAssignments: oopDictionary)
+		in: aSession
+		context: contextOop
+]
+
+{ #category : 'private' }
+GbsRemoteExecutionDispatcher class >> body: bodyString withAssignmentsNamed: names scripts: scripts [
+	^ String streamContents: [ :stream |
+		names isEmpty ifFalse: [
+			stream nextPutAll: '| '.
+			names do: [ :each |
+				stream
+					nextPutAll: each asString;
+					space ].
+			stream
+				nextPutAll: '|';
+				cr.
+			names doWithIndex: [ :each :index |
+				stream
+					nextPutAll: each asString;
+					nextPutAll: ' := ';
+					nextPutAll: (scripts at: index) asString;
+					nextPutAll: '.';
+					cr ] ].
+		stream nextPutAll: bodyString ]
+]
+
 { #category : 'private' }
 GbsRemoteExecutionDispatcher class >> compatibilityCommandScriptForBody: bodyString literalBindings: literalDictionary oopBindings: oopDictionary [
 	| names scripts |
@@ -62,6 +105,30 @@ GbsRemoteExecutionDispatcher class >> compatibilityCommandScriptForBody: bodyStr
 		commandScriptForBody: bodyString
 		argumentNames: names asArray
 		argumentScripts: scripts asArray
+]
+
+{ #category : 'private' }
+GbsRemoteExecutionDispatcher class >> compatibilityCommandScriptForBody: bodyString literalAssignments: literalDictionary oopAssignments: oopDictionary [
+	| names scripts |
+	names := OrderedCollection new.
+	scripts := OrderedCollection new.
+	self
+		keysAndValuesOf: oopDictionary
+		do: [ :name :oop |
+			names add: name.
+			scripts add: (self objectScriptForOop: oop) ].
+	self
+		keysAndValuesOf: literalDictionary
+		do: [ :name :value |
+			names add: name.
+			scripts add: (self literalScriptForCompatibility: value) ].
+	^ self
+		commandScriptForBody: (self
+			body: bodyString
+			withAssignmentsNamed: names asArray
+			scripts: scripts asArray)
+		argumentNames: #()
+		argumentScripts: #()
 ]
 
 { #category : 'private' }
@@ -114,6 +181,8 @@ GbsRemoteExecutionDispatcher class >> literalScriptForCompatibility: anObject [
 	anObject isString ifTrue: [
 		^ '''' , (anObject copyReplaceAll: '''' with: '''''') , '''' ].
 	anObject isNumber ifTrue: [ ^ anObject printString ].
+	(anObject isArray or: [ anObject isKindOf: OrderedCollection ]) ifTrue: [
+		^ '{ ' , (' . ' join: (anObject collect: [ :each | self literalScriptForCompatibility: each ])) , ' }' ].
 	self error: 'Unsupported Original compatibility literal: ', anObject class name
 ]
 

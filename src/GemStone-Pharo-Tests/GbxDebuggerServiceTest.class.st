@@ -494,8 +494,8 @@ GbxDebuggerServiceTest >> testStepIntoUsesServerStepOverFrameWithStepIntoFlag [
 	didStep := service stepInto.
 
 	self assert: didStep.
-	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'selector := #stepIntoFromLevel:' ]).
-	self assert: (scripts anySatisfy: [ :each | each includesSubstring: '#_stepIntoInFrame:' ])
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'stepIntoFromLevel:' ]).
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: '_stepIntoInFrame:' ])
 ]
 
 { #category : 'tests' }
@@ -515,14 +515,14 @@ GbxDebuggerServiceTest >> testStepOverUsesServerStepOverFrameWithCurrentLevel [
 		at: #executeAndFetchContext
 		put: [ :script :ctx |
 			scripts add: script.
-			(script includesSubstring: 'selector := #stepOverFromLevel:')
+			(script includesSubstring: 'stepOverFromLevel:')
 				ifTrue: [ 'true' ]
 				ifFalse: [ '' ] ].
 
 	didStep := service stepOver.
 
 	self assert: didStep.
-	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'selector := #stepOverFromLevel:' ]).
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'stepOverFromLevel:' ]).
 	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'stepLevel := 3' ])
 ]
 
@@ -548,7 +548,7 @@ GbxDebuggerServiceTest >> testStepIntoUsesServerStepOverForExecutedCodeFrame [
 	didStep := service stepInto.
 
 	self assert: didStep.
-	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'selector := #stepIntoFromLevel:' ]).
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'stepIntoFromLevel:' ]).
 	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'stepLevel := 3' ])
 ]
 
@@ -569,15 +569,15 @@ GbxDebuggerServiceTest >> testStepUsesServerSelectorChainForExecutedCodeFrame [
 		at: #executeAndFetchContext
 		put: [ :script :ctx |
 			scripts add: script.
-			(script includesSubstring: 'selector := #step:')
+			(script includesSubstring: 'step:')
 				ifTrue: [ 'true' ]
 				ifFalse: [ '' ] ].
 
 	didStep := service step.
 
 	self assert: didStep.
-	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'selector := #step:' ]).
-	self assert: (scripts anySatisfy: [ :each | each includesSubstring: '#stepIntoFromLevel:' ]).
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'step:' ]).
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'stepIntoFromLevel:' ]).
 	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'stepLevel := 3' ])
 ]
 
@@ -670,7 +670,7 @@ GbxDebuggerServiceTest >> testStepIntoUsesResolvedExecutedCodeLevelWhenAvailable
 	didStep := service stepInto.
 
 	self assert: didStep.
-	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'selector := #stepIntoFromLevel:' ]).
+	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'stepIntoFromLevel:' ]).
 	self assert: (scripts anySatisfy: [ :each | each includesSubstring: 'stepLevel := 7' ])
 ]
 
@@ -907,7 +907,7 @@ GbxDebuggerServiceTest >> testRestartNeedsFreshFaultReplayUsesActualServerStepNo
 	session stubs
 		at: #executeAndFetchContext
 		put: [ :script :ctx |
-			(script includesSubstring: '_gsiStackReportFromLevel: 1 toLevel: 1')
+			(script includesSubstring: '_gsiStackReportFromLevel:')
 				ifTrue: [ ^ '4' ].
 			(script includesSubstring: 'WriteStream on: String new')
 				ifTrue: [ ^ '1', Character tab asString, 'AbstractException', Character tab asString, 'signal', String lf,
@@ -934,7 +934,7 @@ GbxDebuggerServiceTest >> testRestartNeedsFreshFaultReplayIsFalseAtActualStepOne
 	session stubs
 		at: #executeAndFetchContext
 		put: [ :script :ctx |
-			(script includesSubstring: '_gsiStackReportFromLevel: 1 toLevel: 1')
+			(script includesSubstring: '_gsiStackReportFromLevel:')
 				ifTrue: [ ^ '1' ].
 			'' ].
 
