@@ -42,9 +42,12 @@ extract_summary_field() {
   printf '%s\n' "${line}" | sed -n "s/.* ${field}=\\([^ ]*\\).*/\\1/p" | tail -1
 }
 
-if [[ -z "${GS_USER:-}" || -z "${GS_PASS:-}" ]]; then
-  emit_summary "FAIL" "LIVE_DEBUGGER_MISSING_CREDENTIALS"
-  echo "Set GS_USER and GS_PASS before running make live-debugger." >&2
+MISSING_LIVE_ENV="$(gbs_missing_required_live_env_vars)"
+if [[ -n "${MISSING_LIVE_ENV}" ]]; then
+  emit_summary "FAIL" "LIVE_DEBUGGER_MISSING_ENV"
+  gbs_append_summary_line "- live env: \`$(gbs_live_env_status_line "${MISSING_LIVE_ENV}")\`"
+  echo "Missing required live debugger environment: ${MISSING_LIVE_ENV}" >&2
+  echo "Set the missing variables before running make live-debugger." >&2
   exit 2
 fi
 

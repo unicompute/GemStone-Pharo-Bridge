@@ -173,9 +173,12 @@ write_trend_report() {
   gbs_append_summary_line "- trend report: \`${report_file}\`"
 }
 
-if [[ -z "${GS_USER:-}" || -z "${GS_PASS:-}" ]]; then
-  emit_summary "FAIL" "DEBUGGER_PERF_MISSING_CREDENTIALS"
-  echo "Set GS_USER and GS_PASS before running make debugger-perf." >&2
+MISSING_LIVE_ENV="$(gbs_missing_required_live_env_vars)"
+if [[ -n "${MISSING_LIVE_ENV}" ]]; then
+  emit_summary "FAIL" "DEBUGGER_PERF_MISSING_ENV"
+  gbs_append_summary_line "- live env: \`$(gbs_live_env_status_line "${MISSING_LIVE_ENV}")\`"
+  echo "Missing required debugger performance environment: ${MISSING_LIVE_ENV}" >&2
+  echo "Set the missing variables before running make debugger-perf." >&2
   exit 2
 fi
 

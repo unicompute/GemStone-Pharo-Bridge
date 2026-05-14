@@ -36,6 +36,43 @@ gbs_write_evidence_file() {
   fi
 }
 
+gbs_required_live_env_vars() {
+  printf '%s\n' \
+    GS_USER \
+    GS_PASS \
+    GEMSTONE \
+    GS_NETLDI_HOST \
+    GS_NETLDI_NAME_OR_PORT
+}
+
+gbs_missing_required_live_env_vars() {
+  local var
+  local missing=""
+  while IFS= read -r var; do
+    [[ -n "${var}" ]] || continue
+    if [[ -z "${!var:-}" ]]; then
+      if [[ -n "${missing}" ]]; then
+        missing="${missing},${var}"
+      else
+        missing="${var}"
+      fi
+    fi
+  done < <(gbs_required_live_env_vars)
+  printf '%s\n' "${missing}"
+}
+
+gbs_live_env_status_line() {
+  local missing="${1:-$(gbs_missing_required_live_env_vars)}"
+  printf 'required=%s missing=%s stone=%s service=%s host=%s net=%s gemstone=%s\n' \
+    "$(gbs_required_live_env_vars | paste -sd, -)" \
+    "${missing:-none}" \
+    "${GS_STONE:-gs64stone}" \
+    "${GS_SERVICE:-gemnetobject}" \
+    "${GS_NETLDI_HOST:-unset}" \
+    "${GS_NETLDI_NAME_OR_PORT:-unset}" \
+    "${GEMSTONE:-unset}"
+}
+
 gbs_cleanup_registered_work_images() {
   local image
   if [[ "${GBS_KEEP_WORK_IMAGES:-0}" == "1" ]]; then

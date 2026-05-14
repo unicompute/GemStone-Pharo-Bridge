@@ -23,6 +23,7 @@ Set live GemStone credentials before running live debugger lanes:
 ```sh
 export GS_USER='DataCurator'
 export GS_PASS='...'
+export GEMSTONE='/path/to/GemStone64Bit'
 export GS_STONE='gs64stone'
 export GS_SERVICE='gemstone'
 export GS_NETLDI_HOST='localhost'
@@ -32,7 +33,6 @@ export GS_NETLDI_NAME_OR_PORT='netldi'
 The lane also respects:
 
 ```sh
-export GEMSTONE='/path/to/GemStone64Bit'
 export GBS_JSON_SUMMARY=1
 export GBS_JSON_SUMMARY_DIR="$PWD/tmp/debugger-json"
 export GBS_EVIDENCE_DIR="$PWD/tmp/debugger-evidence"
@@ -107,7 +107,9 @@ The expected behavior is:
 
 ## Failure Modes
 
-`LIVE_DEBUGGER_MISSING_CREDENTIALS` means `GS_USER` or `GS_PASS` is missing.
+`LIVE_DEBUGGER_MISSING_ENV` means one or more required live variables is missing: `GS_USER`, `GS_PASS`, `GEMSTONE`, `GS_NETLDI_HOST`, or `GS_NETLDI_NAME_OR_PORT`.
+
+`DEBUGGER_PERF_MISSING_ENV` means the same live GemStone environment is missing before collecting performance evidence.
 
 `LIVE_DEBUGGER_PREFLIGHT_FAILED` means the credentials, stone, or netldi configuration did not pass the live preflight. Fix the GemStone connection before inspecting debugger failures.
 

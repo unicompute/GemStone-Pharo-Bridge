@@ -51,7 +51,8 @@ help:
 		"Variables:" \
 		"  PHARO_IMAGE=$(PHARO_IMAGE)" \
 		"  PHARO_WORK_DIR=$(PHARO_WORK_DIR)" \
-		"  Optional live env: GS_USER GS_PASS GS_STONE GS_SERVICE GS_NETLDI_HOST GS_NETLDI_NAME_OR_PORT GEMSTONE"
+		"  Required live env: GS_USER GS_PASS GEMSTONE GS_NETLDI_HOST GS_NETLDI_NAME_OR_PORT" \
+		"  Optional live env: GS_STONE GS_SERVICE"
 
 core-only:
 	bash ./scripts/run_core_only_clean_reload.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
