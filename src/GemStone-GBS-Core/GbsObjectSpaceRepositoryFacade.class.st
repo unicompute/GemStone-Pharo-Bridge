@@ -25,14 +25,14 @@ GbsObjectSpaceRepositoryFacade >> allInstancesOfNamed: aClassName [
 	^ self allInstancesOf: aClassName
 ]
 
-{ #category : 'private' }
-GbsObjectSpaceRepositoryFacade >> classExpressionFor: aClassOrName [
-	^ session repository classExpressionFor: aClassOrName
-]
-
 { #category : 'querying' }
 GbsObjectSpaceRepositoryFacade >> countInstancesOf: aClassOrName [
-	^ session executeScriptAndFetchObject: (self countInstancesScriptFor: aClassOrName)
+	^ session repository
+		fetchClassReference: aClassOrName
+		variableName: 'cls'
+		body: self countInstancesCommandBody
+		literalAssignments: Dictionary new
+		oopAssignments: Dictionary new
 ]
 
 { #category : 'querying' }
@@ -41,12 +41,11 @@ GbsObjectSpaceRepositoryFacade >> countInstancesOfNamed: aClassName [
 ]
 
 { #category : 'private' }
-GbsObjectSpaceRepositoryFacade >> countInstancesScriptFor: aClassOrName [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| cls instances | cls := ';
-			nextPutAll: (self classExpressionFor: aClassOrName);
-			nextPutAll: '. cls ifNil: [ 0 ] ifNotNil: [ instances := (SystemRepository listInstances: { cls }) at: 1. instances size ]' ]
+GbsObjectSpaceRepositoryFacade >> countInstancesCommandBody [
+	^ '| instances |
+cls ifNil: [ 0 ] ifNotNil: [
+	instances := (SystemRepository listInstances: { cls }) at: 1.
+	instances size ]'
 ]
 
 { #category : 'querying' }
@@ -59,7 +58,12 @@ GbsObjectSpaceRepositoryFacade >> eachInstanceOf: aClassOrName do: aBlock batchS
 
 { #category : 'querying' }
 GbsObjectSpaceRepositoryFacade >> instanceOopsOf: aClassOrName [
-	^ session executeScriptAndFetchObject: (self instanceOopsScriptFor: aClassOrName)
+	^ session repository
+		fetchClassReference: aClassOrName
+		variableName: 'cls'
+		body: self instanceOopsCommandBody
+		literalAssignments: Dictionary new
+		oopAssignments: Dictionary new
 ]
 
 { #category : 'querying' }
@@ -68,12 +72,11 @@ GbsObjectSpaceRepositoryFacade >> instanceOopsOfNamed: aClassName [
 ]
 
 { #category : 'private' }
-GbsObjectSpaceRepositoryFacade >> instanceOopsScriptFor: aClassOrName [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| cls instances | cls := ';
-			nextPutAll: (self classExpressionFor: aClassOrName);
-			nextPutAll: '. cls ifNil: [ #() ] ifNotNil: [ instances := (SystemRepository listInstances: { cls }) at: 1. instances collect: [ :each | each asOop ] ]' ]
+GbsObjectSpaceRepositoryFacade >> instanceOopsCommandBody [
+	^ '| instances |
+cls ifNil: [ #() ] ifNotNil: [
+	instances := (SystemRepository listInstances: { cls }) at: 1.
+	instances collect: [ :each | each asOop ] ]'
 ]
 
 { #category : 'querying' }

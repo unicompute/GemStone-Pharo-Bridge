@@ -819,8 +819,9 @@ GbsSessionCoreTest >> testObjectSpaceInstancesInMemoryOfNamedFromLimitBuildsExpe
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		self assert: (script includesSubstring: 'SystemRepository _listInstancesInMemory: { cls }').
 		self assert: (script includesSubstring: '''Invoice''').
-		self assert: (script includesSubstring: 'startIndex := 2').
-		self assert: (script includesSubstring: 'limitValue := 1').
+		self assert: (script includesSubstring: ':startIndex').
+		self assert: (script includesSubstring: ':limitValue').
+		self assert: (script includesSubstring: 'value: 1 value: 2').
 		#(12) ].
 
 	result := mockSession

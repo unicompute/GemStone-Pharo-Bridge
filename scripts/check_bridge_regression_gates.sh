@@ -84,12 +84,21 @@ if rg -n "executeScriptAndFetchObject: \\(self|executeScriptAndReturnOop: \\(sel
 fi
 rm -f /tmp/gbs-core-facade-execution-gate.$$
 
-if rg -n "loadedClassesIncludingModulesScript|objectsInMemoryScript|referencesToScriptFor|sessionStateAtScriptFor|sessionStateAtPutScriptFor" \
-  src/GemStone-GBS-Core/GbsObjectSpaceFacade.class.st >/tmp/gbs-object-space-helper-gate.$$; then
+if rg -n "loadedClassesIncludingModulesScript|objectsInMemoryScript|referencesToScriptFor|sessionStateAtScriptFor|sessionStateAtPutScriptFor|allSubclassesScriptFor|instancesInMemoryScriptFor|countInstancesScriptFor|instanceOopsScriptFor|classExpressionFor:" \
+  src/GemStone-GBS-Core/GbsObjectSpaceFacade.class.st \
+  src/GemStone-GBS-Core/GbsObjectSpaceRepositoryFacade.class.st >/tmp/gbs-object-space-helper-gate.$$; then
   cat /tmp/gbs-object-space-helper-gate.$$
   fail "legacy ObjectSpace script-helper method reappeared; use typed GbsRemoteCommand constructors"
 fi
 rm -f /tmp/gbs-object-space-helper-gate.$$
+
+if rg -n "executeScriptAndFetchObject:|executeScriptAndReturnOop:|marshalArgumentToScript:" \
+  src/GemStone-GBS-Core/GbsObjectSpaceFacade.class.st \
+  src/GemStone-GBS-Core/GbsObjectSpaceRepositoryFacade.class.st >/tmp/gbs-object-space-execution-gate.$$; then
+  cat /tmp/gbs-object-space-execution-gate.$$
+  fail "ObjectSpace direct remote script execution reappeared; use fetchRemoteCommand:/typed GbsRemoteCommand"
+fi
+rm -f /tmp/gbs-object-space-execution-gate.$$
 
 if rg -n "loadedClassesScript|migrateInstancesScript|previewMigrationScript|methodReferenceStringsScript|classMetadataScript|methodMetadataScript|versionEntriesScript|protocolEntriesScript|namespaceMirrorEntriesScript" \
   src/GemStone-GBS-Core/GbsRepositoryFacade.class.st \

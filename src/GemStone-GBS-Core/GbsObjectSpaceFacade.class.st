@@ -122,8 +122,12 @@ GbsObjectSpaceFacade >> hasFinalizerFor: anObject [
 
 { #category : 'querying' }
 GbsObjectSpaceFacade >> allSubclassesOf: aClassOrName [
-	^ session
-		executeScriptAndFetchObject: (self allSubclassesScriptFor: aClassOrName)
+	^ self repository
+		fetchClassReference: aClassOrName
+		variableName: 'cls'
+		body: self allSubclassesCommandBody
+		literalAssignments: Dictionary new
+		oopAssignments: Dictionary new
 ]
 
 { #category : 'querying' }
@@ -132,32 +136,29 @@ GbsObjectSpaceFacade >> allSubclassesOfNamed: aClassName [
 ]
 
 { #category : 'private' }
-GbsObjectSpaceFacade >> allSubclassesScriptFor: aClassOrName [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| cls | cls := ';
-			nextPutAll: (self classExpressionFor: aClassOrName);
-			nextPutAll: '. cls ifNil: [ #() ] ifNotNil: [ cls allSubclasses asArray ]' ]
-]
-
-{ #category : 'private' }
-GbsObjectSpaceFacade >> classExpressionFor: aClassOrName [
-	^ self repository classExpressionFor: aClassOrName
+GbsObjectSpaceFacade >> allSubclassesCommandBody [
+	^ 'cls ifNil: [ #() ] ifNotNil: [ cls allSubclasses asArray ]'
 ]
 
 { #category : 'querying' }
 GbsObjectSpaceFacade >> instancesInMemoryOf: aClassOrName [
-	^ session
-		executeScriptAndFetchObject: (self instancesInMemoryScriptFor: aClassOrName)
+	^ self
+		instancesInMemoryOf: aClassOrName
+		from: 1
+		limit: 0
 ]
 
 { #category : 'querying' }
 GbsObjectSpaceFacade >> instancesInMemoryOf: aClassOrName from: aStartIndex limit: aLimit [
-	^ session
-		executeScriptAndFetchObject: (self
-			instancesInMemoryScriptFor: aClassOrName
-			from: aStartIndex
-			limit: aLimit)
+	^ self repository
+		fetchClassReference: aClassOrName
+		variableName: 'cls'
+		body: self instancesInMemoryCommandBody
+		literalAssignments: (Dictionary new
+			at: 'limitValue' put: (aLimit max: 0);
+			at: 'startIndex' put: (aStartIndex max: 1);
+			yourself)
+		oopAssignments: Dictionary new
 ]
 
 { #category : 'querying' }
@@ -166,24 +167,20 @@ GbsObjectSpaceFacade >> instancesInMemoryOfNamed: aClassName [
 ]
 
 { #category : 'private' }
-GbsObjectSpaceFacade >> instancesInMemoryScriptFor: aClassOrName [
-	^ self
-		instancesInMemoryScriptFor: aClassOrName
-		from: 1
-		limit: 0
-]
-
-{ #category : 'private' }
-GbsObjectSpaceFacade >> instancesInMemoryScriptFor: aClassOrName from: aStartIndex limit: aLimit [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| cls objects startIndex limitValue skip take | cls := ';
-			nextPutAll: (self classExpressionFor: aClassOrName);
-			nextPutAll: '. startIndex := ';
-			nextPutAll: (aStartIndex max: 1) printString;
-			nextPutAll: '. limitValue := ';
-			nextPutAll: (aLimit max: 0) printString;
-			nextPutAll: '. skip := startIndex - 1. take := limitValue. cls ifNil: [ #() ] ifNotNil: [ objects := (SystemRepository _listInstancesInMemory: { cls }) at: 1. skip > 0 ifTrue: [ skip >= objects size ifTrue: [ objects := #() ] ifFalse: [ objects := objects copyFrom: skip + 1 to: objects size ] ]. take > 0 ifTrue: [ take < objects size ifTrue: [ objects := objects copyFrom: 1 to: take ] ]. objects ]' ]
+GbsObjectSpaceFacade >> instancesInMemoryCommandBody [
+	^ '| objects skip take |
+skip := startIndex - 1.
+take := limitValue.
+cls ifNil: [ #() ] ifNotNil: [
+	objects := (SystemRepository _listInstancesInMemory: { cls }) at: 1.
+	skip > 0 ifTrue: [
+		skip >= objects size
+			ifTrue: [ objects := #() ]
+			ifFalse: [ objects := objects copyFrom: skip + 1 to: objects size ] ].
+	take > 0 ifTrue: [
+		take < objects size ifTrue: [
+			objects := objects copyFrom: 1 to: take ] ].
+	objects ]'
 ]
 
 { #category : 'querying' }
