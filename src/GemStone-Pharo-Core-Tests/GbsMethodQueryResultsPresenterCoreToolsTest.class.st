@@ -212,6 +212,32 @@ GbsMethodQueryResultsPresenterCoreToolsTest >> testClassicLauncherSelectorQuerie
 ]
 
 { #category : 'tests' }
+GbsMethodQueryResultsPresenterCoreToolsTest >> testClassicLauncherFallbackQueryUsesBoundCommand [
+	| session results |
+	session := CoreMockGbsSession new.
+	session stubs
+		at: #executeScriptAndFetchObject
+		put: [ :script | #() ].
+	session stubs at: #executeAndFetchContext put: [ :script :ctx |
+		self assert: ctx equals: 20.
+		self assert: (script includesSubstring: ':mode').
+		self assert: (script includesSubstring: ':token').
+		self assert: (script includesSubstring: 'value: ''senders''').
+		self assert: (script includesSubstring: 'value: ''size''').
+		self deny: (script includesSubstring: 'token := ''size''').
+		self deny: (script includesSubstring: 'mode := ''senders''').
+		self assert: (script includesSubstring: 'org sendersOf: token asString').
+		^ 'Behavior>>new', String lf ].
+
+	results := GbsClassicLauncher
+		queryOrganizerMethodsFor: 'size'
+		mode: 'senders'
+		inSession: session.
+
+	self assert: results equals: #('Behavior>>new')
+]
+
+{ #category : 'tests' }
 GbsMethodQueryResultsPresenterCoreToolsTest >> testBrowseReferencesUsesSelectedOwnerClassName [
 	| presenter |
 	presenter := CoreTestableGbsMethodQueryResultsPresenter new.

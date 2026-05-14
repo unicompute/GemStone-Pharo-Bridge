@@ -38,7 +38,7 @@ GbsClassicLauncher class >> openNamespacesOnCurrentSession [
 
 { #category : '*GemStone-GBS-Core-Tools' }
 GbsClassicLauncher class >> queryOrganizerMethodsFor: tokenString mode: modeString inSession: aSession [
-	| raw normalized escapedToken escapedMode script |
+	| raw normalized |
 	modeString = 'implementors' ifTrue: [
 		(aSession respondsTo: #implementorMethodReferenceStringsForSelector:)
 			ifTrue: [
@@ -57,38 +57,10 @@ GbsClassicLauncher class >> queryOrganizerMethodsFor: tokenString mode: modeStri
 				raw := aSession methodReferenceStringsToSymbol: tokenString.
 				normalized := GbsMethodQueryResultsPresenter new normalizeReferences: raw.
 				normalized isEmpty ifFalse: [ ^ normalized ] ] ].
-	escapedToken := tokenString copyReplaceAll: '''' with: ''''''.
-	escapedMode := modeString copyReplaceAll: '''' with: ''''''.
-	script := '[
-		| token mode org methods searchResults stream |
-		token := ''', escapedToken, '''.
-		mode := ''', escapedMode, '''.
-		org := ClassOrganizer new.
-		methods := #().
-		mode = ''implementors'' ifTrue: [
-			methods := [ org implementorsOf: token asSymbol ] on: Error do: [ #() ] ].
-		mode = ''senders'' ifTrue: [
-			searchResults := [ org sendersOf: token asString ] on: Error do: [ #() ].
-			methods := (searchResults isArray and: [ searchResults isEmpty not ])
-				ifTrue: [ searchResults first ]
-				ifFalse: [ searchResults ] ].
-		mode = ''references'' ifTrue: [
-			searchResults := [ org referencesTo: token asSymbol ] on: Error do: [ #() ].
-			methods := (searchResults isArray and: [ searchResults isEmpty not ])
-				ifTrue: [ searchResults first ]
-				ifFalse: [ searchResults ] ].
-		stream := WriteStream on: String new.
-		(methods ifNil: [ #() ]) do: [ :m |
-			| cls sel |
-			cls := [ m inClass name asString ] on: Error do: [ '''' ].
-			sel := [ m selector asString ] on: Error do: [ '''' ].
-			(cls isEmpty or: [ sel isEmpty ]) ifFalse: [
-				stream nextPutAll: cls; nextPutAll: ''>>''; nextPutAll: sel; lf ] ].
-		stream contents
-	] value'.
-	raw := [ GbsRemoteExecutionDispatcher fetchScript: script in: aSession context: 20 ] on: Error do: [ '' ].
-	raw := raw ifNil: [ '' ] ifNotNil: [ raw asString ].
-	^ ((raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asSet asArray asSortedCollection asArray
+	^ self
+		queryOrganizerMethodReferencesFallbackFor: tokenString
+		mode: modeString
+		inSession: aSession
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }

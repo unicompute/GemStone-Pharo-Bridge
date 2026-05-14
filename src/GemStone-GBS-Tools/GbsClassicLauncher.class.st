@@ -65,16 +65,17 @@ GbsClassicLauncher class >> browseImplementorsOnCurrentSession [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> browseMethodsWithSubstringOnCurrentSession [
-	| session pattern worker references presenterClass sessionPart title script raw |
+	| session pattern worker references presenterClass sessionPart title raw |
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
 	pattern := UIManager default request: 'Methods with source substring:' initialAnswer: ''.
 	(pattern isNil or: [ pattern trimBoth isEmpty ]) ifTrue: [ ^ self ].
 	worker := GbsBrowser new.
 	worker session: session.
-	script := '[
-		| classes stream p |
-		p := ''', (pattern trimBoth copyReplaceAll: '''' with: ''''''), '''.
+	raw := [
+		self
+			fetchRemoteCommandBody: '
+		| classes stream |
 		stream := WriteStream on: String new.
 		classes := IdentitySet new.
 		System myUserProfile symbolList do: [ :dict |
@@ -83,14 +84,18 @@ GbsClassicLauncher class >> browseMethodsWithSubstringOnCurrentSession [
 			cls selectors do: [ :sel |
 				| src |
 				src := [ (cls compiledMethodAt: sel) sourceString ] on: Error do: [ '''' ].
-				(src includesSubstring: p) ifTrue: [
+				(src includesSubstring: pattern) ifTrue: [
 					stream nextPutAll: cls name asString; nextPutAll: ''>>''; nextPutAll: sel asString; lf
 				]
 			]
 		].
 		stream contents
-	] value'.
-	raw := [ self fetchRemoteScript: script in: session context: 20 ] on: Error do: [ :ex |
+	'
+			literalBindings: (Dictionary new
+				at: 'pattern' put: pattern trimBoth;
+				yourself)
+			in: session
+			context: 20 ] on: Error do: [ :ex |
 		UIManager default inform: 'Browse methods-with-substring failed: ', ex messageText.
 		'' ].
 	references := ((raw asString splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asSortedCollection asArray.
@@ -237,16 +242,35 @@ GbsClassicLauncher class >> currentSessionOrInform [
 
 { #category : 'menus' }
 GbsClassicLauncher class >> defaultTrippyOopForSession: aSession [
-	^ [ self fetchRemoteScript: 'GsCurrentSession currentSession asOop asString' in: aSession ]
+	^ [ self fetchRemoteCommandBody: 'GsCurrentSession currentSession asOop asString' in: aSession ]
 		on: Error
 		do: [ '20' ]
 ]
 
 { #category : 'private' }
 GbsClassicLauncher class >> currentUserNameIn: aSession [
-	^ [ self fetchRemoteScript: 'System myUserProfile userId asString' in: aSession ]
+	^ [ self fetchRemoteCommandBody: 'System myUserProfile userId asString' in: aSession ]
 		on: Error
 		do: [ nil ]
+]
+
+{ #category : 'private' }
+GbsClassicLauncher class >> fetchRemoteCommandBody: bodyString in: aSession [
+	^ self
+		fetchRemoteCommandBody: bodyString
+		literalBindings: Dictionary new
+		in: aSession
+		context: 20
+]
+
+{ #category : 'private' }
+GbsClassicLauncher class >> fetchRemoteCommandBody: bodyString literalBindings: literalDictionary in: aSession context: contextOop [
+	^ GbsRemoteExecutionDispatcher
+		fetchCommandBody: bodyString
+		literalBindings: literalDictionary
+		oopBindings: Dictionary new
+		in: aSession
+		context: contextOop
 ]
 
 { #category : 'private' }
@@ -724,7 +748,7 @@ GbsClassicLauncher class >> runGarbageCollection [
 	session := self currentSessionOrInform.
 	session ifNil: [ ^ self ].
 	[
-		result := self fetchRemoteScript: 'SystemRepository markForCollection.' in: session.
+		result := self fetchRemoteCommandBody: 'SystemRepository markForCollection.' in: session.
 		UIManager default inform: 'Garbage Collection initiated (', result asString, ' objects marked).'
 	] on: Error do: [ :ex |
 		UIManager default inform: 'GC failed: ', ex messageText
@@ -921,13 +945,32 @@ GbsClassicLauncher class >> performBrowseQueryWithPrompt: promptString mode: mod
 
 { #category : 'menus' }
 GbsClassicLauncher class >> queryOrganizerMethodsFor: tokenString mode: modeString inSession: aSession [
-	| escapedToken escapedMode script raw |
-	escapedToken := tokenString copyReplaceAll: '''' with: ''''''.
-	escapedMode := modeString copyReplaceAll: '''' with: ''''''.
-	script := '[
-		| token mode org methods searchResults stream |
-		token := ''', escapedToken, '''.
-		mode := ''', escapedMode, '''.
+	^ self
+		queryOrganizerMethodReferencesFallbackFor: tokenString
+		mode: modeString
+		inSession: aSession
+]
+
+{ #category : 'private' }
+GbsClassicLauncher class >> queryOrganizerMethodReferencesFallbackFor: tokenString mode: modeString inSession: aSession [
+	| raw |
+	raw := [
+		self
+			fetchRemoteCommandBody: self queryOrganizerMethodsCommandBody
+			literalBindings: (Dictionary new
+				at: 'mode' put: modeString;
+				at: 'token' put: tokenString;
+				yourself)
+			in: aSession
+			context: 20 ] on: Error do: [ '' ].
+	raw := raw ifNil: [ '' ] ifNotNil: [ raw asString ].
+	^ ((raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asSet asArray asSortedCollection asArray
+]
+
+{ #category : 'private' }
+GbsClassicLauncher class >> queryOrganizerMethodsCommandBody [
+	^ '
+		| org methods searchResults stream |
 		org := ClassOrganizer new.
 		methods := #().
 		mode = ''implementors'' ifTrue: [
@@ -950,10 +993,7 @@ GbsClassicLauncher class >> queryOrganizerMethodsFor: tokenString mode: modeStri
 			(cls isEmpty or: [ sel isEmpty ]) ifFalse: [
 				stream nextPutAll: cls; nextPutAll: ''>>''; nextPutAll: sel; lf ] ].
 		stream contents
-	] value'.
-	raw := [ self fetchRemoteScript: script in: aSession context: 20 ] on: Error do: [ '' ].
-	raw := raw ifNil: [ '' ] ifNotNil: [ raw asString ].
-	^ ((raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asSet asArray asSortedCollection asArray
+	'
 ]
 
 { #category : 'utilities' }

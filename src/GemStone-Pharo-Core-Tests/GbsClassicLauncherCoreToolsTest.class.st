@@ -240,6 +240,26 @@ GbsClassicLauncherCoreToolsTest >> testClearNamedObjectCacheClearsSelectedSessio
 ]
 
 { #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testClassicLauncherStaticUtilitiesUseBoundCommands [
+	| session trippyOop userName |
+	session := CoreMockGbsSession new.
+	session stubs at: #executeAndFetchContext put: [ :script :ctx |
+		self assert: ctx equals: 20.
+		self assert: (script beginsWith: '[ ').
+		(script includesSubstring: 'GsCurrentSession currentSession asOop asString') ifTrue: [
+			^ '9001' ].
+		(script includesSubstring: 'System myUserProfile userId asString') ifTrue: [
+			^ 'DataCurator' ].
+		self fail ].
+
+	trippyOop := GbsClassicLauncher defaultTrippyOopForSession: session.
+	userName := GbsClassicLauncher currentUserNameIn: session.
+
+	self assert: trippyOop equals: '9001'.
+	self assert: userName equals: 'DataCurator'
+]
+
+{ #category : 'tests' }
 GbsClassicLauncherCoreToolsTest >> testInspectCurrentUserGlobalsUsesSelectedSessionNamedObjectProxy [
 	| session cache |
 	session := CoreMockGbsSession new.

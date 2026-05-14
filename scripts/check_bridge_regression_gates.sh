@@ -135,6 +135,14 @@ if rg -n "escapedSelector|escapedClass|sel := #|className := ''',|fetchRemoteScr
 fi
 rm -f /tmp/gbs-method-navigator-command-gate.$$
 
+if rg -n "escapedToken|escapedMode|token := ''',|mode := ''',|p := ''',|GbsRemoteExecutionDispatcher fetchScript: script|fetchRemoteScript: 'GsCurrentSession|fetchRemoteScript: 'System myUserProfile|fetchRemoteScript: 'SystemRepository markForCollection|fetchRemoteScript: script in: .*context: 20" \
+  src/GemStone-GBS-Tools/GbsClassicLauncher.class.st \
+  src/GemStone-GBS-Core-Tools/GbsClassicLauncher.extension.st >/tmp/gbs-classic-launcher-command-gate.$$; then
+  cat /tmp/gbs-classic-launcher-command-gate.$$
+  fail "Classic launcher reintroduced query/static script interpolation or raw script fetch; use bound command helpers"
+fi
+rm -f /tmp/gbs-classic-launcher-command-gate.$$
+
 if rg -n "loadedClassesScript|migrateInstancesScript|previewMigrationScript|methodReferenceStringsScript|classMetadataScript|methodMetadataScript|versionEntriesScript|protocolEntriesScript|namespaceMirrorEntriesScript" \
   src/GemStone-GBS-Core/GbsRepositoryFacade.class.st \
   src/GemStone-GBS-Core/GbsRemoteClassMirror.class.st \
