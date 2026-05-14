@@ -233,5 +233,38 @@ GbsBrowserTest >> testQueryMethodsWithStringUsesOpenQueryResultsPath [
 
 	self assert: browser queryMethodsWithString.
 	self assert: (capturedScript includesSubstring: 'init').
+	self assert: (capturedScript includesSubstring: ':pattern').
+	self assert: (capturedScript includesSubstring: 'value: ''init''').
+	self deny: (capturedScript includesSubstring: 'p := ''init''').
 	self assert: browser lastOpenedReference equals: 'Behavior>>initialize'
+]
+
+{ #category : 'tests' }
+GbsBrowserTest >> testQueryServerMethodsByScanningUsesBoundCommand [
+	| browser session capturedScript results |
+	browser := GbsBrowser new.
+	session := MockGbsSession new.
+	session stubs at: #executeAndFetchContext put: [ :script :context |
+		capturedScript := script.
+		self assert: context equals: 20.
+		'Object>>size' ].
+	browser session: session.
+
+	results := browser
+		queryServerMethodsByScanningForSelector: 'size'
+		mode: 'hierarchyImplementors'
+		rootClassName: 'Object'
+		hierarchyScope: 'super'.
+
+	self assert: results equals: #('Object>>size').
+	self assert: (capturedScript includesSubstring: ':hierarchyScope').
+	self assert: (capturedScript includesSubstring: ':mode').
+	self assert: (capturedScript includesSubstring: ':rootClassName').
+	self assert: (capturedScript includesSubstring: ':selectorName').
+	self assert: (capturedScript includesSubstring: 'value: ''super''').
+	self assert: (capturedScript includesSubstring: 'value: ''hierarchyImplementors''').
+	self assert: (capturedScript includesSubstring: 'value: ''Object''').
+	self assert: (capturedScript includesSubstring: 'value: ''size''').
+	self deny: (capturedScript includesSubstring: 'objectNamed: #Object').
+	self deny: (capturedScript includesSubstring: 'sel := #''size''')
 ]

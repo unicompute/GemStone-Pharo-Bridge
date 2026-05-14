@@ -521,6 +521,16 @@ GbsBrowser >> fetchRemoteScript: scriptString context: contextOop [
 ]
 
 { #category : 'private' }
+GbsBrowser >> fetchRemoteCommandBody: bodyString literalBindings: literalDictionary context: contextOop [
+	^ GbsRemoteExecutionDispatcher
+		fetchCommandBody: bodyString
+		literalBindings: literalDictionary
+		oopBindings: Dictionary new
+		in: session
+		context: contextOop
+]
+
+{ #category : 'private' }
 GbsBrowser >> dictionaryNameContainingClassNamed: className [
 	| escapedName script raw |
 	escapedName := className copyReplaceAll: '''' with: ''''''.
@@ -1249,13 +1259,12 @@ GbsBrowser >> queryImplementors [
 
 { #category : 'private' }
 GbsBrowser >> queryMatchingSelectorsForPattern: rawPattern [
-	| pattern escaped script raw |
+	| pattern script raw |
 	pattern := rawPattern asString trimBoth.
 	pattern isEmpty ifTrue: [ ^ #() ].
-	escaped := (pattern copyWithout: $*) copyReplaceAll: '''' with: ''''''.
 	script := '[
 		| token all stream |
-		token := ''', escaped, '''.
+		token := pattern.
 		all := Set new.
 		System myUserProfile symbolList do: [ :dict |
 			dict keysAndValuesDo: [ :k :v |
@@ -1267,7 +1276,15 @@ GbsBrowser >> queryMatchingSelectorsForPattern: rawPattern [
 			do: [ :sel | stream nextPutAll: sel; lf ].
 		stream contents
 	] value'.
-	raw := [ self fetchRemoteScript: script context: 20 ] on: Error do: [ '' ].
+	raw := [
+		self
+			fetchRemoteCommandBody: script
+			literalBindings: (Dictionary new
+				at: 'pattern' put: (pattern copyWithout: $*);
+				yourself)
+			context: 20 ]
+		on: Error
+		do: [ '' ].
 	raw isNil ifTrue: [ ^ #() ].
 	^ ((raw asString splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asArray
 ]
@@ -1318,7 +1335,7 @@ GbsBrowser >> queryMethodsWithString [
 	(pattern isNil or: [ pattern isEmpty ]) ifTrue: [ ^ false ].
 	script := '[
 		| classes stream p |
-		p := ''', (pattern copyReplaceAll: '''' with: ''''''), '''.
+		p := pattern.
 		stream := WriteStream on: String new.
 		classes := IdentitySet new.
 		System myUserProfile symbolList do: [ :dict |
@@ -1334,7 +1351,15 @@ GbsBrowser >> queryMethodsWithString [
 		].
 		stream contents
 	] value'.
-	raw := [ self fetchRemoteScript: script context: 20 ] on: Error do: [ '' ].
+	raw := [
+		self
+			fetchRemoteCommandBody: script
+			literalBindings: (Dictionary new
+				at: 'pattern' put: pattern;
+				yourself)
+			context: 20 ]
+		on: Error
+		do: [ '' ].
 	raw := raw ifNil: [ '' ] ifNotNil: [ raw asString ].
 	matches := (raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty.
 	matches isEmpty ifTrue: [ ^ self informNotImplemented: 'No methods matched.' ].
@@ -1382,25 +1407,38 @@ GbsBrowser >> queryServerMethodsByScanningForSelector: selectorName mode: modeSt
 
 { #category : 'private' }
 GbsBrowser >> queryServerMethodsByScanningForSelector: selectorName mode: modeString rootClassName: rootClassName hierarchyScope: scopeString [
-	| escapedSelector selectedClassName escapedClass escapedToken escapedScope script raw selectorExpr classFilterExpr |
-	escapedSelector := selectorName copyReplaceAll: '''' with: ''''''.
-	escapedToken := escapedSelector.
+	| selectedClassName normalizedScope script raw |
 	selectedClassName := rootClassName ifNil: [ self selectedClassName ifNil: [ '' ] ].
-	escapedClass := selectedClassName copyReplaceAll: '''' with: ''''''.
-	escapedScope := (scopeString ifNil: [ 'full' ] ifNotNil: [ scopeString asString ]) copyReplaceAll: '''' with: ''''''.
-	selectorExpr := (modeString = 'implementors' or: [ modeString = 'hierarchyImplementors' ])
-		ifTrue: [ 'sels := (cls includesSelector: sel) ifTrue: [ Array with: sel ] ifFalse: [ #() ]' ]
-		ifFalse: [
-			'sels := OrderedCollection new.
-			[ cls selectors do: [ :candidate |
-				| src |
-				src := [ (cls compiledMethodAt: candidate) sourceString ] on: Error do: [ '''' ].
-				(src notNil and: [ src asString includesSubstring: token ]) ifTrue: [ sels add: candidate ] ] ]
-				on: Error
-				do: [ ]' ].
-	classFilterExpr := (modeString = 'hierarchySenders' or: [ modeString = 'hierarchyImplementors' ])
-		ifTrue: [ '
-			(rootClass notNil) ifTrue: [
+	normalizedScope := scopeString ifNil: [ 'full' ] ifNotNil: [ scopeString asString ].
+	script := '[
+		| sel token classes stream rootClass scope |
+		sel := selectorName asSymbol.
+		token := selectorName asString.
+		scope := hierarchyScope.
+		stream := WriteStream on: String new.
+		classes := IdentitySet new.
+		rootClass := rootClassName isEmpty
+			ifTrue: [ nil ]
+			ifFalse: [ System myUserProfile symbolList objectNamed: rootClassName asSymbol ].
+		System myUserProfile symbolList do: [ :dict |
+			dict keysAndValuesDo: [ :k :v | (v isBehavior) ifTrue: [ classes add: v ] ] ].
+		classes asArray do: [ :cls |
+			| sels |
+			(mode = ''implementors'' or: [ mode = ''hierarchyImplementors'' ])
+				ifTrue: [
+					sels := (cls includesSelector: sel)
+						ifTrue: [ Array with: sel ]
+						ifFalse: [ #() ] ]
+				ifFalse: [
+					sels := OrderedCollection new.
+					[ cls selectors do: [ :candidate |
+						| src |
+						src := [ (cls compiledMethodAt: candidate) sourceString ] on: Error do: [ '''' ].
+						(src notNil and: [ src asString includesSubstring: token ]) ifTrue: [ sels add: candidate ] ] ]
+						on: Error
+						do: [ ] ].
+			((mode = ''hierarchySenders'' or: [ mode = ''hierarchyImplementors'' ])
+				and: [ rootClass notNil ]) ifTrue: [
 				| withinHierarchy isSuper isThis isSub |
 				withinHierarchy := (cls withAllSuperclasses includes: rootClass)
 					or: [ rootClass withAllSuperclasses includes: cls ].
@@ -1411,29 +1449,23 @@ GbsBrowser >> queryServerMethodsByScanningForSelector: selectorName mode: modeSt
 				withinHierarchy ifTrue: [
 					(scope = ''super'' and: [ isSuper not ]) ifTrue: [ sels := #() ].
 					(scope = ''this'' and: [ isThis not ]) ifTrue: [ sels := #() ].
-					(scope = ''sub'' and: [ isSub not ]) ifTrue: [ sels := #() ] ] ]' ]
-		ifFalse: [ '' ].
-	script := '[
-		| sel token classes stream rootClass scope |
-		sel := #''', escapedSelector, '''.
-		token := ''', escapedToken, '''.
-		scope := ''', escapedScope, '''.
-		stream := WriteStream on: String new.
-		classes := IdentitySet new.
-		rootClass := ', (selectedClassName isEmpty
-			ifTrue: [ 'nil' ]
-			ifFalse: [ 'System myUserProfile symbolList objectNamed: #', escapedClass ]), '.
-		System myUserProfile symbolList do: [ :dict |
-			dict keysAndValuesDo: [ :k :v | (v isBehavior) ifTrue: [ classes add: v ] ] ].
-		classes asArray do: [ :cls |
-			| sels |
-			', selectorExpr, '.
-			', classFilterExpr, '.
+					(scope = ''sub'' and: [ isSub not ]) ifTrue: [ sels := #() ] ] ].
 			sels do: [ :s | stream nextPutAll: cls name asString; nextPutAll: ''>>''; nextPutAll: s asString; lf ].
 		].
 		stream contents
 	] value'.
-	raw := [ self fetchRemoteScript: script context: 20 ] on: Error do: [ '' ].
+	raw := [
+		self
+			fetchRemoteCommandBody: script
+			literalBindings: (Dictionary new
+				at: 'hierarchyScope' put: normalizedScope;
+				at: 'mode' put: modeString asString;
+				at: 'rootClassName' put: selectedClassName asString;
+				at: 'selectorName' put: selectorName asString;
+				yourself)
+			context: 20 ]
+		on: Error
+		do: [ '' ].
 	raw := raw ifNil: [ '' ] ifNotNil: [ raw asString ].
 	^ ((raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty) asSortedCollection asArray
 ]

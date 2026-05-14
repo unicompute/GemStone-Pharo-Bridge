@@ -650,6 +650,9 @@ GbsBrowserCoreToolsTest >> testQueryMethodsWithStringUsesOpenQueryResultsPath [
 
 	self assert: browser queryMethodsWithString.
 	self assert: (capturedScript includesSubstring: 'init').
+	self assert: (capturedScript includesSubstring: ':pattern').
+	self assert: (capturedScript includesSubstring: 'value: ''init''').
+	self deny: (capturedScript includesSubstring: 'p := ''init''').
 	self assert: browser lastOpenedReference equals: 'Behavior>>initialize'
 ]
 

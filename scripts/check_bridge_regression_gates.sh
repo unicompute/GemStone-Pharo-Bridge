@@ -143,6 +143,13 @@ if rg -n "escapedToken|escapedMode|token := ''',|mode := ''',|p := ''',|GbsRemot
 fi
 rm -f /tmp/gbs-classic-launcher-command-gate.$$
 
+if rg -n "escapedSelector|escapedToken|escapedScope|selectorExpr|classFilterExpr|token := ''',|p := ''',|sel := #'''" \
+  src/GemStone-GBS-Tools/GbsBrowser.class.st >/tmp/gbs-browser-query-command-gate.$$; then
+  cat /tmp/gbs-browser-query-command-gate.$$
+  fail "GbsBrowser query/search paths reintroduced selector/pattern interpolation; use bound command helpers"
+fi
+rm -f /tmp/gbs-browser-query-command-gate.$$
+
 if rg -n "loadedClassesScript|migrateInstancesScript|previewMigrationScript|methodReferenceStringsScript|classMetadataScript|methodMetadataScript|versionEntriesScript|protocolEntriesScript|namespaceMirrorEntriesScript" \
   src/GemStone-GBS-Core/GbsRepositoryFacade.class.st \
   src/GemStone-GBS-Core/GbsRemoteClassMirror.class.st \
