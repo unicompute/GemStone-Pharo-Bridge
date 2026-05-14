@@ -6,7 +6,7 @@ This runbook covers the optional debugger tooling used to debug resident GemSton
 
 The debugger tooling is split so production-safe bridge code stays separate from UI-heavy MagLev tools:
 
-- `GbsRemoteCommand` and `GbsRemoteScriptBuilder` are the standard remote execution layer. They centralize command construction, literal/OOP binding, and session execution through `executeRemoteCommand:` and `fetchRemoteCommand:`.
+- `GbsRemoteCommand` and `GbsRemoteScriptBuilder` are the standard remote execution layer. They centralize command construction, literal/OOP binding, and session execution through `fetchRemoteCommand:`.
 - `GbxDebuggerService` owns the live GemStone debug process: context discovery, stepping, restart/replay, breakpoint state, and compilation. Inspector-facing operations live in `GbxDebuggerInspectorController`.
 - `GbsRemoteDebugger` is the Spec presenter. It wires the window, buttons, menus, and high-level user actions, while focused helpers handle stack fetching, stack navigation, source lookup, context presentation, source-pane actions, menus, inspector actions, and process control.
 - `GbsRemoteExecutionDispatcher` is the only Original compatibility boundary for remote fetch fallback. Core/MagLev paths use `GbsRemoteCommand`; Original-only fallback remains isolated there.

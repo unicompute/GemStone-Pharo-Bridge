@@ -31,11 +31,6 @@ GbsSessionCommandExecutor >> remoteScriptBuilder [
 ]
 
 { #category : 'commands' }
-GbsSessionCommandExecutor >> executeRemoteCommand: aRemoteCommand [
-	^ aRemoteCommand evaluateIn: session
-]
-
-{ #category : 'commands' }
 GbsSessionCommandExecutor >> fetchRemoteCommand: aRemoteCommand [
 	^ aRemoteCommand executeAndFetchObjectIn: session
 ]

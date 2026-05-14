@@ -187,13 +187,11 @@ GbsRemoteScriptBuilderCoreTest >> testRemoteCommandRejectsUnsafeArgumentNames [
 ]
 
 { #category : 'tests' }
-GbsRemoteScriptBuilderCoreTest >> testSessionRemoteCommandApisDelegateExecution [
+GbsRemoteScriptBuilderCoreTest >> testSessionRemoteCommandApisDelegateFetchExecution [
 	| session |
 	session := CoreMockGbsSession new.
 	session stubs
-		at: #evaluate put: [ :script |
-			self assert: script equals: '1 + 1'.
-			#evaluated ];
+		at: #evaluate put: [ self fail: 'Remote commands should not use raw evaluate:.' ];
 		at: #executeScriptAndFetchObject put: [ :script |
 			self assert: script equals: '2 + 2'.
 			#fetched ];
@@ -202,9 +200,6 @@ GbsRemoteScriptBuilderCoreTest >> testSessionRemoteCommandApisDelegateExecution 
 			self assert: contextOop equals: 20.
 			#contextFetched ].
 
-	self
-		assert: (session executeRemoteCommand: (session remoteCommand: '1 + 1'))
-		equals: #evaluated.
 	self
 		assert: (session fetchRemoteCommand: (session remoteCommand: '2 + 2'))
 		equals: #fetched.

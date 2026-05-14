@@ -177,6 +177,16 @@ if rg -n "session evaluate:" \
 fi
 rm -f /tmp/gbs-core-tools-session-evaluate-gate.$$
 
+if rg -n "executeRemoteCommand:|evaluateIn:" \
+  src/GemStone-GBS-Core \
+  src/GemStone-GBS-Tools \
+  src/GemStone-GBS-Core-Tools \
+  src/GemStone-GBS-MagLev-Tools >/tmp/gbs-freeform-execute-command-gate.$$; then
+  cat /tmp/gbs-freeform-execute-command-gate.$$
+  fail "free-form executeRemoteCommand:/evaluateIn: API reappeared; use fetchRemoteCommand: with GbsRemoteCommand"
+fi
+rm -f /tmp/gbs-freeform-execute-command-gate.$$
+
 if rg -n "loadedClassesScript|migrateInstancesScript|previewMigrationScript|methodReferenceStringsScript|classMetadataScript|methodMetadataScript|versionEntriesScript|protocolEntriesScript|namespaceMirrorEntriesScript" \
   src/GemStone-GBS-Core/GbsRepositoryFacade.class.st \
   src/GemStone-GBS-Core/GbsRemoteClassMirror.class.st \

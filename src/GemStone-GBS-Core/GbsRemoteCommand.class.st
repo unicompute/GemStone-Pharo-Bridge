@@ -333,11 +333,6 @@ GbsRemoteCommand class >> symbolDictionaryPreamble [
 ]
 
 { #category : 'executing' }
-GbsRemoteCommand >> evaluateIn: aSession [
-	^ aSession evaluate: script
-]
-
-{ #category : 'executing' }
 GbsRemoteCommand >> executeAndFetchIn: aSession context: anOop [
 	^ aSession executeAndFetch: script context: anOop
 ]

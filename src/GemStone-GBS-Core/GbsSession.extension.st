@@ -31,11 +31,6 @@ GbsSession >> scriptMarshaller [
 ]
 
 { #category : '*GemStone-GBS-Core' }
-GbsSession >> executeRemoteCommand: aRemoteCommand [
-	^ self commandExecutor executeRemoteCommand: aRemoteCommand
-]
-
-{ #category : '*GemStone-GBS-Core' }
 GbsSession >> fetchRemoteCommand: aRemoteCommand [
 	^ self commandExecutor fetchRemoteCommand: aRemoteCommand
 ]
