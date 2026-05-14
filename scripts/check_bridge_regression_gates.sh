@@ -281,6 +281,13 @@ if rg -n "executeAndFetch:" \
 fi
 rm -f /tmp/gbs-debugger-direct-fetch-gate.$$
 
+if rg -n "Object _objectForOop: ',|procOop asString|lvl asString|escapedName|\\^ self evaluateOopFromScript: script" \
+  src/GemStone-GBS-Tools/GbxDebuggerInspectorController.class.st >/tmp/gbs-debugger-inspector-command-gate.$$; then
+  cat /tmp/gbs-debugger-inspector-command-gate.$$
+  fail "debugger inspector reintroduced generated script interpolation; use GbsRemoteExecutionDispatcher bound command APIs"
+fi
+rm -f /tmp/gbs-debugger-inspector-command-gate.$$
+
 if rg -n "String streamContents:|executeDebugScript:" \
   src/GemStone-GBS-Tools/GbxDebuggerProcessController.class.st \
   src/GemStone-GBS-Tools/GbxDebuggerRestartController.class.st >/tmp/gbs-debugger-controller-command-gate.$$; then

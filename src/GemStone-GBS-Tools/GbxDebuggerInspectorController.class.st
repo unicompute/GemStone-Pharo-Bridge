@@ -54,19 +54,25 @@ GbxDebuggerInspectorController >> currentExecutionContextOop [
 
 { #category : 'accessing' }
 GbxDebuggerInspectorController >> currentFrameOop [
-	| procOop lvl script |
+	| procOop lvl body |
 	procOop := self currentProcessOop.
 	lvl := self currentContextLevel.
 	(procOop isNil or: [ lvl isNil ]) ifTrue: [ ^ nil ].
-	script := '[
-		| proc frameObj |
-		proc := Object _objectForOop: ', procOop asString, '.
+	body := '
+		| frameObj |
 		proc ifNil: [ ^ ''0'' ].
-		frameObj := [ proc _frameContentsAt: ', lvl asString, ' ] on: Error do: [ nil ].
+		frameObj := [ proc _frameContentsAt: levelValue ] on: Error do: [ nil ].
 		frameObj ifNil: [ ^ ''0'' ].
 		(Reflection oopOf: frameObj) asString
-	] value'.
-	^ self evaluateOopFromScript: script
+	'.
+	^ self
+		evaluateOopFromCommandBody: body
+		literalBindings: (Dictionary new
+			at: 'levelValue' put: lvl;
+			yourself)
+		oopBindings: (Dictionary new
+			at: 'proc' put: procOop;
+			yourself)
 ]
 
 { #category : 'accessing' }
@@ -79,23 +85,29 @@ GbxDebuggerInspectorController >> currentProcessOop [
 
 { #category : 'accessing' }
 GbxDebuggerInspectorController >> currentReceiverOop [
-	| procOop lvl script |
+	| procOop lvl body |
 	procOop := self currentProcessOop.
 	lvl := self currentContextLevel.
 	(procOop isNil or: [ lvl isNil ]) ifTrue: [ ^ nil ].
-	script := '[
-		| proc frame fullEntry receiverObj |
-		proc := Object _objectForOop: ', procOop asString, '.
+	body := '
+		| frame fullEntry receiverObj |
 		proc ifNil: [ ^ ''0'' ].
-		frame := [ proc _gsiDebuggerDetailedReportAt: ', lvl asString, ' ] on: Error do: [ nil ].
+		frame := [ proc _gsiDebuggerDetailedReportAt: levelValue ] on: Error do: [ nil ].
 		frame ifNil: [ ^ ''0'' ].
 		fullEntry := [ frame first ] on: Error do: [ nil ].
 		fullEntry ifNil: [ ^ ''0'' ].
 		receiverObj := [ fullEntry at: 2 ] on: Error do: [ nil ].
 		receiverObj ifNil: [ ^ ''0'' ].
 		(Reflection oopOf: receiverObj) asString
-	] value'.
-	^ self evaluateOopFromScript: script
+	'.
+	^ self
+		evaluateOopFromCommandBody: body
+		literalBindings: (Dictionary new
+			at: 'levelValue' put: lvl;
+			yourself)
+		oopBindings: (Dictionary new
+			at: 'proc' put: procOop;
+			yourself)
 ]
 
 { #category : 'evaluation' }
@@ -116,6 +128,25 @@ GbxDebuggerInspectorController >> evaluateOopFromScript: scriptString [
 	| raw |
 	service isSessionUsable ifFalse: [ ^ nil ].
 	raw := [ service fetchRemoteScript: scriptString context: 20 ] on: Error do: [ nil ].
+	raw ifNil: [ ^ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	(raw isString and: [ raw = 'nil' or: [ raw beginsWith: 'Error:' ] ]) ifTrue: [ ^ nil ].
+	^ [ raw asInteger ] on: Error do: [ nil ]
+]
+
+{ #category : 'evaluation' }
+GbxDebuggerInspectorController >> evaluateOopFromCommandBody: bodyString literalBindings: literalDictionary oopBindings: oopDictionary [
+	| raw |
+	service isSessionUsable ifFalse: [ ^ nil ].
+	raw := [
+		GbsRemoteExecutionDispatcher
+			fetchCommandBody: bodyString
+			literalBindings: literalDictionary
+			oopBindings: oopDictionary
+			in: service session
+			context: 20 ]
+		on: Error
+		do: [ nil ].
 	raw ifNil: [ ^ nil ].
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
 	(raw isString and: [ raw = 'nil' or: [ raw beginsWith: 'Error:' ] ]) ifTrue: [ ^ nil ].
@@ -171,20 +202,19 @@ GbxDebuggerInspectorController >> inspectorClass [
 
 { #category : 'inspecting' }
 GbxDebuggerInspectorController >> oopForVariableNamed: aVariableName [
-	| procOop lvl escapedName script |
+	| procOop lvl variableName body |
 	procOop := self currentProcessOop.
 	lvl := self currentContextLevel.
 	(procOop isNil or: [ lvl isNil ]) ifTrue: [ ^ nil ].
-	escapedName := aVariableName copyReplaceAll: '''' with: ''''''.
-	script := '[
-		| proc frame fullEntry receiverObj names vals idx value |
-		proc := Object _objectForOop: ', procOop asString, '.
+	variableName := aVariableName asString.
+	body := '
+		| frame fullEntry receiverObj names vals idx value |
 		proc ifNil: [ ^ ''0'' ].
-		frame := [ proc _gsiDebuggerDetailedReportAt: ', lvl asString, ' ] on: Error do: [ nil ].
+		frame := [ proc _gsiDebuggerDetailedReportAt: levelValue ] on: Error do: [ nil ].
 		frame ifNil: [ ^ ''0'' ].
 		fullEntry := [ frame first ] on: Error do: [ nil ].
 		fullEntry ifNil: [ ^ ''0'' ].
-		(''', escapedName, ''' = ''self'') ifTrue: [
+		(variableName = ''self'') ifTrue: [
 			receiverObj := [ fullEntry at: 2 ] on: Error do: [ nil ].
 			receiverObj ifNil: [ ^ ''0'' ].
 			^ (Reflection oopOf: receiverObj) asString
@@ -193,15 +223,23 @@ GbxDebuggerInspectorController >> oopForVariableNamed: aVariableName [
 		vals := [ frame at: 8 ] on: Error do: [ #() ].
 		idx := 0.
 		1 to: (names size min: vals size) do: [ :i |
-			(((names at: i) asString = ''', escapedName, ''') and: [ idx = 0 ])
+			(((names at: i) asString = variableName) and: [ idx = 0 ])
 				ifTrue: [ idx := i ]
 		].
 		idx = 0 ifTrue: [ ^ ''0'' ].
 		value := [ vals at: idx ] on: Error do: [ nil ].
 		value ifNil: [ ^ ''0'' ].
 		(Reflection oopOf: value) asString
-	] value'.
-	^ self evaluateOopFromScript: script
+	'.
+	^ self
+		evaluateOopFromCommandBody: body
+		literalBindings: (Dictionary new
+			at: 'levelValue' put: lvl;
+			at: 'variableName' put: variableName;
+			yourself)
+		oopBindings: (Dictionary new
+			at: 'proc' put: procOop;
+			yourself)
 ]
 
 { #category : 'inspecting' }
