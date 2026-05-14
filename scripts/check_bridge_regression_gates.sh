@@ -158,6 +158,15 @@ if rg -n "session evaluate: \\(self (inspectDictionaryScriptForUser|dictionaries
 fi
 rm -f /tmp/gbs-symbol-list-command-gate.$$
 
+if rg -n "session evaluate:" \
+  src/GemStone-GBS-Tools/GbsNamespacesPresenter.class.st \
+  src/GemStone-GBS-Tools/GbsUserListPresenter.class.st \
+  src/GemStone-GBS-Tools/GbsCreateUserPresenter.class.st >/tmp/gbs-admin-presenter-command-gate.$$; then
+  cat /tmp/gbs-admin-presenter-command-gate.$$
+  fail "admin presenter read paths reintroduced raw evaluate: calls; use GbsRemoteExecutionDispatcher bound command helpers"
+fi
+rm -f /tmp/gbs-admin-presenter-command-gate.$$
+
 if rg -n "loadedClassesScript|migrateInstancesScript|previewMigrationScript|methodReferenceStringsScript|classMetadataScript|methodMetadataScript|versionEntriesScript|protocolEntriesScript|namespaceMirrorEntriesScript" \
   src/GemStone-GBS-Core/GbsRepositoryFacade.class.st \
   src/GemStone-GBS-Core/GbsRemoteClassMirror.class.st \

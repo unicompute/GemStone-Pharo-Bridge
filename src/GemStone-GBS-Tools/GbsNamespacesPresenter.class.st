@@ -82,6 +82,16 @@ GbsNamespacesPresenter >> isSessionUsable [
 ]
 
 { #category : 'private' }
+GbsNamespacesPresenter >> fetchRemoteCommandBody: bodyString literalBindings: literalDictionary context: contextOop [
+	^ GbsRemoteExecutionDispatcher
+		fetchCommandBody: bodyString
+		literalBindings: literalDictionary
+		oopBindings: Dictionary new
+		in: session
+		context: contextOop
+]
+
+{ #category : 'private' }
 GbsNamespacesPresenter >> namespacesScript [
 	^ '
 	| sl strm |
@@ -124,7 +134,13 @@ GbsNamespacesPresenter >> refreshNamespaces [
 		namespacesTable items: #().
 		^ self
 	].
-	raw := [ session evaluate: self namespacesScript ] on: Error do: [ :ex | self inform: 'Fetch namespaces failed: ', ex messageText. '' ].
+	raw := [
+		self
+			fetchRemoteCommandBody: self namespacesScript
+			literalBindings: Dictionary new
+			context: 20 ]
+		on: Error
+		do: [ :ex | self inform: 'Fetch namespaces failed: ', ex messageText. '' ].
 	rows := self parseRows: raw.
 	namespacesTable items: rows
 ]

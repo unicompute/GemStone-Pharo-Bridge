@@ -280,7 +280,13 @@ GbsCreateUserPresenter >> editSymbolList [
 { #category : 'private' }
 GbsCreateUserPresenter >> fetchAllGroups [
 	| raw |
-	raw := [ session evaluate: self groupsScript ] on: Error do: [ '' ].
+	raw := [
+		self
+			fetchRemoteCommandBody: self groupsScript
+			literalBindings: Dictionary new
+			context: 20 ]
+		on: Error
+		do: [ '' ].
 	(raw isString and: [ raw isNotEmpty ]) ifFalse: [ ^ #() ].
 	^ ((raw splitOn: Character tab) reject: [ :each | each isEmpty ]) asSortedCollection asArray
 ]
@@ -289,7 +295,15 @@ GbsCreateUserPresenter >> fetchAllGroups [
 GbsCreateUserPresenter >> fetchPrivilegesForUser: userName [
 	| script raw map |
 	script := self privilegesScriptForUser: userName.
-	raw := [ session evaluate: script ] on: Error do: [ '' ].
+	raw := [
+		self
+			fetchRemoteCommandBody: script
+			literalBindings: (Dictionary new
+				at: 'userName' put: userName asString;
+				yourself)
+			context: 20 ]
+		on: Error
+		do: [ '' ].
 	map := self defaultPrivilegesDictionary copy.
 	(raw isString and: [ raw isNotEmpty ]) ifFalse: [ ^ map ].
 	raw lines do: [ :line |
@@ -302,6 +316,16 @@ GbsCreateUserPresenter >> fetchPrivilegesForUser: userName [
 		]
 	].
 	^ map
+]
+
+{ #category : 'private' }
+GbsCreateUserPresenter >> fetchRemoteCommandBody: bodyString literalBindings: literalDictionary context: contextOop [
+	^ GbsRemoteExecutionDispatcher
+		fetchCommandBody: bodyString
+		literalBindings: literalDictionary
+		oopBindings: Dictionary new
+		in: session
+		context: contextOop
 ]
 
 { #category : 'layout' }
@@ -458,15 +482,14 @@ GbsCreateUserPresenter >> newGroupFieldWidth [
 
 { #category : 'private' }
 GbsCreateUserPresenter >> privilegesScriptForUser: userName [
-	| userLiteral privilegeArrayLiteral |
-	userLiteral := self literalString: userName.
+	| privilegeArrayLiteral |
 	privilegeArrayLiteral := self literalArrayOfSymbols: self supportedPrivilegeNames.
 	^ '
 	| users user strm groups privilegeNames valueFor |
 	strm := WriteStream on: String new.
 	users := System myUserProfile symbolList objectNamed: #AllUsers.
 	users ifNil: [ ^ '''' ].
-	user := users detect: [ :u | u userId asString = ', userLiteral, ' ] ifNone: [ nil ].
+	user := users detect: [ :u | u userId asString = userName ] ifNone: [ nil ].
 	user ifNil: [ ^ '''' ].
 	groups := (user respondsTo: #groups)
 		ifTrue: [ user groups collect: [ :g | (g respondsTo: #name) ifTrue: [ g name asString ] ifFalse: [ g asString ] ] ]

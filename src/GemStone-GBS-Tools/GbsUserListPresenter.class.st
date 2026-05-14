@@ -143,7 +143,7 @@ GbsUserListPresenter >> fetchGroupsFor: userName [
 	strm := WriteStream on: String new.
 	users := System myUserProfile symbolList objectNamed: #AllUsers.
 	users ifNotNil: [
-		user := users detect: [:u | u userId asString = ''', userName, '''] ifNone: [ nil ].
+		user := users detect: [ :u | u userId asString = userName ] ifNone: [ nil ].
 		user ifNotNil: [
 			user groups do: [:g | strm nextPutAll: g name asString] separatedBy: [strm nextPutAll: '',''].
 		].
@@ -151,7 +151,15 @@ GbsUserListPresenter >> fetchGroupsFor: userName [
 	strm contents'.
 	
 	"2. Fetch and unpack"
-	rawString := [ session evaluate: script ] on: Error do: [ '' ].
+	rawString := [
+		self
+			fetchRemoteCommandBody: script
+			literalBindings: (Dictionary new
+				at: 'userName' put: userName asString;
+				yourself)
+			context: 20 ]
+		on: Error
+		do: [ '' ].
 
 	(rawString isString and: [ rawString isNotEmpty ]) 
 		ifTrue: [ groupNames := (rawString splitOn: ',') reject: #isEmpty ]
@@ -159,6 +167,16 @@ GbsUserListPresenter >> fetchGroupsFor: userName [
 
 	groupList items: groupNames asSortedCollection asArray.
 	userNameField text: userName asString
+]
+
+{ #category : 'private' }
+GbsUserListPresenter >> fetchRemoteCommandBody: bodyString literalBindings: literalDictionary context: contextOop [
+	^ GbsRemoteExecutionDispatcher
+		fetchCommandBody: bodyString
+		literalBindings: literalDictionary
+		oopBindings: Dictionary new
+		in: session
+		context: contextOop
 ]
 
 { #category : 'accessing - deprecated' }
@@ -285,7 +303,13 @@ GbsUserListPresenter >> refreshUserList [
 	].
 	strm contents'.
 	
-	rawString := [ session evaluate: script ] on: Error do: [ '' ].
+	rawString := [
+		self
+			fetchRemoteCommandBody: script
+			literalBindings: Dictionary new
+			context: 20 ]
+		on: Error
+		do: [ '' ].
 	
 	(rawString isString and: [ rawString isNotEmpty ]) 
 		ifTrue: [ userNames := (rawString splitOn: ',') reject: #isEmpty ]
@@ -351,7 +375,7 @@ GbsUserListPresenter >> userInfoTextFor: userName [
 	strm := WriteStream on: String new.
 	users := System myUserProfile symbolList objectNamed: #AllUsers.
 	users ifNotNil: [
-		user := users detect: [ :u | u userId asString = ''', userName, ''' ] ifNone: [ nil ].
+		user := users detect: [ :u | u userId asString = userName ] ifNone: [ nil ].
 		user ifNotNil: [
 			strm
 				nextPutAll: ''User: ''; nextPutAll: user userId asString; cr;
@@ -376,7 +400,15 @@ GbsUserListPresenter >> userInfoTextFor: userName [
 					separatedBy: [ strm nextPutAll: '', '' ].
 				strm cr ] ] ].
 	strm contents'.
-	info := [ session evaluate: script ] on: Error do: [ :ex | 'Could not fetch user info: ', ex messageText ].
+	info := [
+		self
+			fetchRemoteCommandBody: script
+			literalBindings: (Dictionary new
+				at: 'userName' put: userName asString;
+				yourself)
+			context: 20 ]
+		on: Error
+		do: [ :ex | 'Could not fetch user info: ', ex messageText ].
 	creator := GbsCreateUserPresenter new.
 	creator session: session.
 	map := [ creator fetchPrivilegesForUser: userName ] on: Error do: [ Dictionary new ].

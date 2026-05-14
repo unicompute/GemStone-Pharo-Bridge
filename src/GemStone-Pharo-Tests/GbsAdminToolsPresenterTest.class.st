@@ -91,6 +91,42 @@ GbsAdminToolsPresenterTest >> testCreateUserScriptIncludesEscapedCredentials [
 ]
 
 { #category : 'tests' }
+GbsAdminToolsPresenterTest >> testCreateUserFetchAllGroupsUsesBoundCommand [
+	| mockSession groups lastScript |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #evaluate put: [ self fail: 'Create-user group reads should use a bound remote command, not evaluate:.' ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		lastScript := script.
+		'DataCuratorGroup', Character tab asString, 'System', Character tab asString ].
+
+	createUserPresenter session: mockSession.
+	groups := createUserPresenter fetchAllGroups.
+
+	self assert: (lastScript includesSubstring: 'System myUserProfile symbolList objectNamed: #AllUsers').
+	self assert: groups equals: #('DataCuratorGroup' 'System')
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testCreateUserFetchPrivilegesUsesBoundUserName [
+	| mockSession map lastScript |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #evaluate put: [ self fail: 'Create-user privilege reads should use a bound remote command, not evaluate:.' ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		lastScript := script.
+		'DataCurator', Character tab asString, 'true', String lf,
+			'SystemUser', Character tab asString, 'false' ].
+
+	createUserPresenter session: mockSession.
+	map := createUserPresenter fetchPrivilegesForUser: 'Data''Curator'.
+
+	self assert: (lastScript includesSubstring: ':userName').
+	self assert: (lastScript includesSubstring: 'value: ''Data''''Curator''').
+	self deny: (lastScript includesSubstring: '= ''Data''''Curator''').
+	self assert: (map at: #DataCurator).
+	self deny: (map at: #SystemUser)
+]
+
+{ #category : 'tests' }
 GbsAdminToolsPresenterTest >> testNamespacesParseRowsParsesTabSeparatedColumns [
 	| rows |
 	rows := namespacesPresenter parseRows: '1', Character tab asString, 'UserGlobals', Character tab asString, 'SymbolDictionary', String lf, '2', Character tab asString, 'Globals', Character tab asString, 'SymbolDictionary'.
@@ -99,6 +135,32 @@ GbsAdminToolsPresenterTest >> testNamespacesParseRowsParsesTabSeparatedColumns [
 	self assert: (rows first at: 1) equals: '1'.
 	self assert: (rows first at: 2) equals: 'UserGlobals'.
 	self assert: (rows first at: 3) equals: 'SymbolDictionary'
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testNamespacesRefreshUsesBoundCommand [
+	| mockSession lastScript fetchBlock raw rows |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #evaluate put: [ self fail: 'Namespace reads should use a bound remote command, not evaluate:.' ].
+	fetchBlock := [ :script |
+		lastScript := script.
+		'1', Character tab asString, 'UserGlobals', Character tab asString, 'SymbolDictionary' ].
+	mockSession stubs at: #executeAndFetch put: fetchBlock.
+	mockSession stubs at: #executeAndFetchContext put: [ :script :context | fetchBlock value: script ].
+
+	namespacesPresenter instVarNamed: 'session' put: mockSession.
+
+	raw := namespacesPresenter
+		fetchRemoteCommandBody: namespacesPresenter namespacesScript
+		literalBindings: Dictionary new
+		context: 20.
+	rows := namespacesPresenter parseRows: raw.
+
+	self assert: lastScript notNil.
+	self assert: (lastScript includesSubstring: 'System myUserProfile symbolList').
+	self assert: rows size equals: 1.
+	self assert: (rows first at: 2) equals: 'UserGlobals'
 ]
 
 { #category : 'tests' }
@@ -1586,10 +1648,13 @@ GbsAdminToolsPresenterTest >> testSecurityPoliciesCapabilityTransitionsClearDepe
 
 { #category : 'tests' }
 GbsAdminToolsPresenterTest >> testUserListFetchGroupsParsesCsvAndSetsUserField [
-	| mockSession fakeGroupsList fakeTextField |
+	| mockSession fakeGroupsList fakeTextField lastScript |
 	mockSession := MockGbsSession new.
 	mockSession isLoggedIn: true.
-	mockSession stubs at: #evaluate put: 'DataCurator,GcUser'.
+	mockSession stubs at: #evaluate put: [ self fail: 'User group reads should use a bound remote command, not evaluate:.' ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		lastScript := script.
+		'DataCurator,GcUser' ].
 
 	fakeGroupsList := GbxFakeListPresenterForBrowser new.
 	fakeTextField := GbxFakeTextPresenterForRemoteDebugger new.
@@ -1600,16 +1665,21 @@ GbsAdminToolsPresenterTest >> testUserListFetchGroupsParsesCsvAndSetsUserField [
 
 	userListPresenter fetchGroupsFor: 'DataCurator'.
 
+	self assert: (lastScript includesSubstring: ':userName').
+	self assert: (lastScript includesSubstring: 'value: ''DataCurator''').
 	self assert: fakeGroupsList items size equals: 2.
 	self assert: fakeTextField text equals: 'DataCurator'
 ]
 
 { #category : 'tests' }
 GbsAdminToolsPresenterTest >> testUserListRefreshPopulatesUsersAndClearsGroups [
-	| mockSession fakeUserList fakeGroupsList fakeTextField |
+	| mockSession fakeUserList fakeGroupsList fakeTextField lastScript |
 	mockSession := MockGbsSession new.
 	mockSession isLoggedIn: true.
-	mockSession stubs at: #evaluate put: 'DataCurator,GcUser,HostAgentUser'.
+	mockSession stubs at: #evaluate put: [ self fail: 'User list reads should use a bound remote command, not evaluate:.' ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		lastScript := script.
+		'DataCurator,GcUser,HostAgentUser' ].
 
 	fakeUserList := GbxFakeListPresenterForBrowser new.
 	fakeGroupsList := GbxFakeListPresenterForBrowser new.
@@ -1622,9 +1692,30 @@ GbsAdminToolsPresenterTest >> testUserListRefreshPopulatesUsersAndClearsGroups [
 
 	userListPresenter refreshUserList.
 
+	self assert: (lastScript includesSubstring: 'System myUserProfile symbolList objectNamed: #AllUsers').
 	self assert: fakeUserList items size equals: 3.
 	self assert: fakeGroupsList items isEmpty.
 	self assert: fakeTextField text equals: ''
+]
+
+{ #category : 'tests' }
+GbsAdminToolsPresenterTest >> testUserListUserInfoUsesBoundUserName [
+	| mockSession info lastScript |
+	mockSession := MockGbsSession new.
+	mockSession isLoggedIn: true.
+	mockSession stubs at: #evaluate put: [ self fail: 'User info reads should use a bound remote command, not evaluate:.' ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		lastScript := script.
+		(script includesSubstring: 'nextPutAll: ''User: ''')
+			ifTrue: [ 'User: DataCurator', String cr, 'Class: UserProfile' ]
+			ifFalse: [ '' ] ].
+
+	userListPresenter instVarNamed: 'session' put: mockSession.
+	info := userListPresenter userInfoTextFor: 'DataCurator'.
+
+	self assert: (lastScript includesSubstring: ':userName').
+	self assert: (lastScript includesSubstring: 'value: ''DataCurator''').
+	self assert: (info includesSubstring: 'User: DataCurator')
 ]
 
 { #category : 'tests' }
@@ -1696,9 +1787,11 @@ GbsAdminToolsPresenterTest >> testUserInfoRefreshInfoTextIncludesPrivilegesSumma
 	userInfoPresenter ifNil: [ self skip: 'GbsUserInfoPresenter not loaded' ].
 	mockSession := MockGbsSession new.
 	mockSession stubs at: #evaluate put: [ :script |
-		(script includesSubstring: 'privilegeNames do:')
-			ifTrue: [ ^ 'SystemControl', Character tab asString, 'true' ].
 		'User: DataCurator', String lf, 'Class: UserProfile' ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		(script includesSubstring: 'privilegeNames do:')
+			ifTrue: [ 'SystemControl', Character tab asString, 'true' ]
+			ifFalse: [ '' ] ].
 	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
 
 	userInfoPresenter session: mockSession.
