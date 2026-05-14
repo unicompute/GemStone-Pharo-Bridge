@@ -128,14 +128,15 @@ GbxContextListPolicy >> debugger: aDebugger [
 GbxContextListPolicy >> fetchServerContexts [
 	"Fetch server activations using the VW flow:
 	serverCall/error oop -> gbsError -> serverProcess -> stack report."
-	| processOop script rawData contexts |
+	| processOop rawData contexts |
 	
 	processOop := debugger processOop.
 	(processOop isNil or: [ processOop = 20 ]) ifTrue: [ ^ #( ) ].
 	
-	script := '[
-		| obj gbsError gsProcess ctx stream maxDepth level frame stackReport fullEntry methodOrNil className selectorName source ctxOop quickStep offsets offsetsText lineNumber offset |
-		obj := Object _objectForOop: ', processOop asString, '.
+	rawData := [
+		GbsRemoteExecutionDispatcher
+			fetchCommandBody: '
+		| gbsError gsProcess ctx stream maxDepth level frame stackReport fullEntry methodOrNil className selectorName source ctxOop quickStep offsets offsetsText lineNumber offset |
 		obj isNil ifTrue: [ ^ '''' ].
 		stream := WriteStream on: String new.
 		gbsError := nil.
@@ -302,9 +303,13 @@ GbxContextListPolicy >> fetchServerContexts [
 			]
 		].
 		stream contents
-	] value'.
-	
-	rawData := [ debugger session evaluate: script ] on: Error do: [ nil ].
+	'
+			literalBindings: Dictionary new
+			oopBindings: (Dictionary new
+				at: 'obj' put: processOop;
+				yourself)
+			in: debugger session
+			context: 20 ] on: Error do: [ nil ].
 	(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
 	rawData ifNil: [ rawData := '' ].
 	rawData = false ifTrue: [ rawData := '' ].

@@ -121,6 +121,13 @@ if rg -n "versionEntriesScript|executeScriptAndFetchObject:|classExpressionFor:"
 fi
 rm -f /tmp/gbs-class-history-script-gate.$$
 
+if rg -n "Object _objectForOop: ',|processOop asString|debugger session evaluate: script|obj := Object _objectForOop:" \
+  src/GemStone-GBS-Tools/GbxContextListPolicy.class.st >/tmp/gbs-context-list-policy-command-gate.$$; then
+  cat /tmp/gbs-context-list-policy-command-gate.$$
+  fail "Context list policy reintroduced direct process-OOP script interpolation; use bound dispatcher commands"
+fi
+rm -f /tmp/gbs-context-list-policy-command-gate.$$
+
 if rg -n "loadedClassesScript|migrateInstancesScript|previewMigrationScript|methodReferenceStringsScript|classMetadataScript|methodMetadataScript|versionEntriesScript|protocolEntriesScript|namespaceMirrorEntriesScript" \
   src/GemStone-GBS-Core/GbsRepositoryFacade.class.st \
   src/GemStone-GBS-Core/GbsRemoteClassMirror.class.st \

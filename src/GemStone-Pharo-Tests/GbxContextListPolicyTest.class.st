@@ -108,6 +108,46 @@ GbxContextListPolicyTest >> testComputeContextListMergesServerAndClientContexts 
 ]
 
 { #category : 'tests' }
+GbxContextListPolicyTest >> testFetchServerContextsUsesBoundDispatcherCommand [
+	| debugger policy session contexts |
+
+	session := MockGbsSession new.
+	session stubs
+		at: #evaluate
+		put: [ :script | self fail: 'Context list policy should use dispatcher command execution, not evaluate:.' ].
+	session stubs at: #executeAndFetchContext put: [ :script :contextOop |
+		self assert: contextOop equals: 20.
+		self assert: (script includesSubstring: ':obj').
+		self assert: (script includesSubstring: 'value: (Object _objectForOop: 9001)').
+		self deny: (script includesSubstring: 'obj := Object _objectForOop:').
+		self assert: (script includesSubstring: '_gsiStackReportFromLevel: level toLevel: level').
+		^ '1', Character tab asString,
+			'DemoWorker', Character tab asString,
+			'run', Character tab asString,
+			'run', Character tab asString,
+			'9001', Character tab asString,
+			'2', Character tab asString,
+			'1,5,9', Character tab asString,
+			'3', String lf ].
+
+	debugger := GbxFakeDebuggerForPolicy new.
+	debugger
+		session: session;
+		processOop: 9001.
+	policy := GbxContextListPolicy debugger: debugger.
+
+	contexts := policy fetchServerContexts.
+
+	self assert: contexts size equals: 1.
+	self assert: contexts first processOop equals: 9001.
+	self assert: contexts first methodClassOrUnknown equals: 'DemoWorker'.
+	self assert: contexts first selectorOrUnknown equals: #run.
+	self assert: contexts first quickStepPoint equals: 2.
+	self assert: contexts first sourceOffsets equals: #(1 5 9).
+	self assert: contexts first ipOffset equals: 3
+]
+
+{ #category : 'tests' }
 GbxContextListPolicyTest >> testMatchingServerCallMarkerForServerContextReturnsMarkerContext [
 	| debugger policy gsContext gsError topClient glueMarker |
 
