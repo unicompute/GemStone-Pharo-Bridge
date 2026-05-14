@@ -1375,7 +1375,8 @@ GbsAdminToolsPresenterTest >> testSymbolListStructuredPreviewForSelectedPreviewR
 		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].
 	mockSession := MockGbsSession new.
 	mockSession stubs at: #executeAndFetch put: [ :script |
-		(script includesSubstring: 'path := #((''dictionary'' ''users''))')
+		((script includesSubstring: ':previewPath')
+			and: [ script includesSubstring: 'value: { { ''dictionary''. ''users'' } }' ])
 			ifTrue: [ ^ 'collection', String lf, '1', Character tab asString, 'alice', String lf, '2', Character tab asString, 'bob' ].
 		'' ].
 	fakeUsers := GbxFakeListPresenterForBrowser new.
@@ -1439,7 +1440,9 @@ GbsAdminToolsPresenterTest >> testSymbolListRefreshDictionariesPreservesSelected
 		ifNotNil: [ :klass | klass new ]
 		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].
 	mockSession := MockGbsSession new.
-	mockSession stubs at: #evaluate put: [ :script |
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		self assert: (script includesSubstring: ':userName').
+		self assert: (script includesSubstring: 'value: ''DataCurator''').
 		(script includesSubstring: 'symbolList')
 			ifTrue: [ ^ 'UserGlobals', Character tab asString, 'Globals', Character tab asString, 'Published' ].
 		'' ].
@@ -1470,12 +1473,11 @@ GbsAdminToolsPresenterTest >> testSymbolListRefreshEntriesPreservesSelectedEntry
 		ifNotNil: [ :klass | klass new ]
 		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].
 	mockSession := MockGbsSession new.
-	mockSession stubs at: #evaluate put: [ :script |
+	mockSession stubs at: #executeAndFetch put: [ :script |
 		(script includesSubstring: 'keys asSortedCollection')
 			ifTrue: [ ^ 'KeyA', Character tab asString, '1', String lf, 'KeyB', Character tab asString, '2' ].
-		'' ].
-	mockSession stubs at: #executeAndFetch put: [ :script |
-		(script includesSubstring: 'each asString = ''KeyB''')
+		((script includesSubstring: ':keyName')
+			and: [ script includesSubstring: 'value: ''KeyB''' ])
 			ifTrue: [ ^ 'dictionary', String lf, 'users', Character tab asString, 'aDictionary(...)' ].
 		'' ].
 	fakeUsers := GbxFakeListPresenterForBrowser new.
@@ -1508,16 +1510,15 @@ GbsAdminToolsPresenterTest >> testSymbolListRefreshUsersShowsSelectedDictionaryV
 		ifNotNil: [ :klass | klass new ]
 		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].
 	mockSession := MockGbsSession new.
-	mockSession stubs at: #evaluate put: [ :script |
+	mockSession stubs at: #executeAndFetch put: [ :script |
 		(script includesSubstring: 'users do:')
 			ifTrue: [ ^ 'DataCurator', Character tab asString, 'SystemUser' ].
 		(script includesSubstring: '1 to: sl size do:')
 			ifTrue: [ ^ 'UserGlobals', Character tab asString, 'Globals' ].
 		(script includesSubstring: 'keys asSortedCollection')
 			ifTrue: [ ^ 'OkzZuluSeasideState', Character tab asString, 'aDictionary(...)', String lf, 'OtherEntry', Character tab asString, '123' ].
-		'' ].
-	mockSession stubs at: #executeAndFetch put: [ :script |
-		(script includesSubstring: 'each asString = ''OkzZuluSeasideState''')
+		((script includesSubstring: ':keyName')
+			and: [ script includesSubstring: 'value: ''OkzZuluSeasideState''' ])
 			ifTrue: [ ^ 'dictionary', String lf, 'users', Character tab asString, 'aDictionary(...)', String lf, 'events', Character tab asString, 'aDictionary(...)' ].
 		'' ].
 	fakeUsers := GbxFakeListPresenterForBrowser new.

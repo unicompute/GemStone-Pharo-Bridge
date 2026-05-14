@@ -150,6 +150,14 @@ if rg -n "escapedSelector|escapedToken|escapedScope|selectorExpr|classFilterExpr
 fi
 rm -f /tmp/gbs-browser-query-command-gate.$$
 
+if rg -n "session evaluate: \\(self (inspectDictionaryScriptForUser|dictionariesScriptForUser|entriesScriptForUser)|session evaluate: self usersScript|fetchScript: \\(self (structuredPreviewScriptForUser|oopScriptForUser)" \
+  src/GemStone-GBS-Tools/GbsSymbolListBrowserPresenter.class.st \
+  src/GemStone-GBS-Core-Tools/GbsSymbolListBrowserPresenter.extension.st >/tmp/gbs-symbol-list-command-gate.$$; then
+  cat /tmp/gbs-symbol-list-command-gate.$$
+  fail "Symbol list browser read paths reintroduced raw script evaluation; use bound command helpers"
+fi
+rm -f /tmp/gbs-symbol-list-command-gate.$$
+
 if rg -n "loadedClassesScript|migrateInstancesScript|previewMigrationScript|methodReferenceStringsScript|classMetadataScript|methodMetadataScript|versionEntriesScript|protocolEntriesScript|namespaceMirrorEntriesScript" \
   src/GemStone-GBS-Core/GbsRepositoryFacade.class.st \
   src/GemStone-GBS-Core/GbsRemoteClassMirror.class.st \

@@ -119,7 +119,8 @@ GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListStructuredPreviewFor
 	presenter := GbsSymbolListBrowserPresenter new.
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeAndFetch put: [ :script |
-		(script includesSubstring: 'path := #((''dictionary'' ''users''))')
+		((script includesSubstring: ':previewPath')
+			and: [ script includesSubstring: 'value: { { ''dictionary''. ''users'' } }' ])
 			ifTrue: [ ^ 'collection', String lf, '1', Character tab asString, 'alice', String lf, '2', Character tab asString, 'bob' ].
 		'' ].
 	fakeUsers := GbxFakeListPresenterForBrowser new.
@@ -151,7 +152,9 @@ GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListBrowseReferencersFor
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeAndFetch put: [ :script |
 		self assert: (script includesSubstring: '(Reflection oopOf: value) asString').
-		self assert: (script includesSubstring: 'each asString = ''OkzZuluSeasideState''').
+		self assert: (script includesSubstring: ':keyName').
+		self assert: (script includesSubstring: 'value: ''OkzZuluSeasideState''').
+		self deny: (script includesSubstring: 'each asString = ''OkzZuluSeasideState''').
 		'9001' ].
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		self assert: mockSession materializationProfile class equals: GbsShallowMaterializationProfile.
@@ -289,7 +292,8 @@ GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListBrowseReferencersFor
 	presenter := CoreTestableGbsSymbolListBrowserPresenter new.
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeAndFetch put: [ :script |
-		self assert: (script includesSubstring: 'path := #((''dictionary'' ''users''))').
+		self assert: (script includesSubstring: ':previewPath').
+		self assert: (script includesSubstring: 'value: { { ''dictionary''. ''users'' } }').
 		'9002' ].
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		self assert: (script includesSubstring: 'object := (Object _objectForOop: 9002)').
@@ -320,7 +324,9 @@ GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListRefreshDictionariesP
 	| presenter mockSession fakeUsers fakeDicts fakeEntries fakeSelection fakeValue |
 	presenter := GbsSymbolListBrowserPresenter new.
 	mockSession := CoreMockGbsSession new.
-	mockSession stubs at: #evaluate put: [ :script |
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		self assert: (script includesSubstring: ':userName').
+		self assert: (script includesSubstring: 'value: ''DataCurator''').
 		(script includesSubstring: 'symbolList')
 			ifTrue: [ ^ 'UserGlobals', Character tab asString, 'Globals', Character tab asString, 'Published' ].
 		'' ].
@@ -349,12 +355,11 @@ GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListRefreshEntriesPreser
 	| presenter mockSession fakeUsers fakeDicts fakeEntries fakeSelection fakeValue |
 	presenter := GbsSymbolListBrowserPresenter new.
 	mockSession := CoreMockGbsSession new.
-	mockSession stubs at: #evaluate put: [ :script |
+	mockSession stubs at: #executeAndFetch put: [ :script |
 		(script includesSubstring: 'keys asSortedCollection')
 			ifTrue: [ ^ 'KeyA', Character tab asString, '1', String lf, 'KeyB', Character tab asString, '2' ].
-		'' ].
-	mockSession stubs at: #executeAndFetch put: [ :script |
-		(script includesSubstring: 'each asString = ''KeyB''')
+		((script includesSubstring: ':keyName')
+			and: [ script includesSubstring: 'value: ''KeyB''' ])
 			ifTrue: [ ^ 'dictionary', String lf, 'users', Character tab asString, 'aDictionary(...)' ].
 		'' ].
 	fakeUsers := GbxFakeListPresenterForBrowser new.
@@ -385,7 +390,7 @@ GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListRefreshUsersShowsSel
 	| presenter mockSession fakeUsers fakeDicts fakeEntries fakeSelection fakeValue |
 	presenter := GbsSymbolListBrowserPresenter new.
 	mockSession := CoreMockGbsSession new.
-	mockSession stubs at: #evaluate put: [ :script |
+	mockSession stubs at: #executeAndFetch put: [ :script |
 		self assert: mockSession materializationProfile class equals: GbsShallowMaterializationProfile.
 		(script includesSubstring: 'users do:')
 			ifTrue: [ ^ 'DataCurator', Character tab asString, 'SystemUser' ].
@@ -393,10 +398,8 @@ GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListRefreshUsersShowsSel
 			ifTrue: [ ^ 'UserGlobals', Character tab asString, 'Globals' ].
 		(script includesSubstring: 'keys asSortedCollection')
 			ifTrue: [ ^ 'OkzZuluSeasideState', Character tab asString, 'aDictionary(...)', String lf, 'OtherEntry', Character tab asString, '123' ].
-		'' ].
-	mockSession stubs at: #executeAndFetch put: [ :script |
-		self assert: mockSession materializationProfile class equals: GbsShallowMaterializationProfile.
-		(script includesSubstring: 'each asString = ''OkzZuluSeasideState''')
+		((script includesSubstring: ':keyName')
+			and: [ script includesSubstring: 'value: ''OkzZuluSeasideState''' ])
 			ifTrue: [ ^ 'dictionary', String lf, 'users', Character tab asString, 'aDictionary(...)', String lf, 'events', Character tab asString, 'aDictionary(...)' ].
 		'' ].
 	fakeUsers := GbxFakeListPresenterForBrowser new.

@@ -7,7 +7,13 @@ GbsSymbolListBrowserPresenter >> inspectDictionary [
 	dictName := self selectedDictionaryName.
 	(userName isNil or: [ dictName isNil ]) ifTrue: [ ^ self ].
 	raw := self withShallowMaterializationDo: [
-		[ session evaluate: (self inspectDictionaryScriptForUser: userName dictionary: dictName) ]
+		[ self
+			fetchRemoteCommandBody: (self inspectDictionaryScriptForUser: userName dictionary: dictName)
+			literalBindings: (Dictionary new
+				at: 'dictName' put: dictName asString;
+				at: 'userName' put: userName asString;
+				yourself)
+			context: 20 ]
 			on: Error
 			do: [ :ex | 'Inspect dictionary failed: ', ex messageText ] ].
 	UIManager default inform: raw asString
@@ -294,7 +300,12 @@ GbsSymbolListBrowserPresenter >> refreshDictionariesFor: userName [
 		self showSelectedEntryPreview.
 		^ self ].
 	raw := self withShallowMaterializationDo: [
-		[ session evaluate: (self dictionariesScriptForUser: userName asString) ]
+		[ self
+			fetchRemoteCommandBody: (self dictionariesScriptForUser: userName asString)
+			literalBindings: (Dictionary new
+				at: 'userName' put: userName asString;
+				yourself)
+			context: 20 ]
 			on: Error
 			do: [ '' ] ].
 	dicts := (raw isString and: [ raw isNotEmpty ])
@@ -320,7 +331,13 @@ GbsSymbolListBrowserPresenter >> refreshEntriesForDictionary: dictName [
 		self showSelectedEntryPreview.
 		^ self ].
 	raw := self withShallowMaterializationDo: [
-		[ session evaluate: (self entriesScriptForUser: userName dictionary: dictName asString) ]
+		[ self
+			fetchRemoteCommandBody: (self entriesScriptForUser: userName dictionary: dictName asString)
+			literalBindings: (Dictionary new
+				at: 'dictName' put: dictName asString;
+				at: 'userName' put: userName asString;
+				yourself)
+			context: 20 ]
 			on: Error
 			do: [ '' ] ].
 	lines := (raw isString and: [ raw isNotEmpty ])
@@ -345,7 +362,10 @@ GbsSymbolListBrowserPresenter >> refreshEntriesForDictionary: dictName [
 GbsSymbolListBrowserPresenter >> refreshUsers [
 	| raw users defaultUser |
 	raw := self withShallowMaterializationDo: [
-		[ session evaluate: self usersScript ] on: Error do: [ '' ] ].
+		[ self
+			fetchRemoteCommandBody: self usersScript
+			literalBindings: Dictionary new
+			context: 20 ] on: Error do: [ '' ] ].
 	users := (raw isString and: [ raw isNotEmpty ])
 		ifTrue: [ (raw splitOn: Character tab) reject: [ :each | each isEmpty ] ]
 		ifFalse: [ #() ].
@@ -385,13 +405,18 @@ GbsSymbolListBrowserPresenter >> structuredPreviewForEntryKey: keyName path: pat
 	dictName := self selectedDictionaryName.
 	(userName isNil or: [ dictName isNil or: [ keyName isNil ] ]) ifTrue: [ ^ nil ].
 	raw := self withShallowMaterializationDo: [
-		[ GbsRemoteExecutionDispatcher
-			fetchScript: (self
-			structuredPreviewScriptForUser: userName
-			dictionary: dictName
-			keyName: keyName
-			path: pathCollection)
-			in: session
+		[ self
+			fetchRemoteCommandBody: (self
+				structuredPreviewScriptForUser: userName
+				dictionary: dictName
+				keyName: keyName
+				path: pathCollection)
+			literalBindings: (Dictionary new
+				at: 'dictName' put: dictName asString;
+				at: 'keyName' put: keyName asString;
+				at: 'previewPath' put: pathCollection asArray;
+				at: 'userName' put: userName asString;
+				yourself)
 			context: 20 ]
 			on: Error
 			do: [ :ex | 'string', String lf, 'Inspect entry failed: ', ex messageText ] ].
@@ -404,13 +429,18 @@ GbsSymbolListBrowserPresenter >> oopForEntryKey: keyName path: pathCollection [
 	userName := self selectedUserName.
 	dictName := self selectedDictionaryName.
 	(userName isNil or: [ dictName isNil or: [ keyName isNil ] ]) ifTrue: [ ^ nil ].
-	raw := [ GbsRemoteExecutionDispatcher
-		fetchScript: (self
-		oopScriptForUser: userName
-		dictionary: dictName
-		keyName: keyName
-		path: pathCollection)
-		in: session
+	raw := [ self
+		fetchRemoteCommandBody: (self
+			oopScriptForUser: userName
+			dictionary: dictName
+			keyName: keyName
+			path: pathCollection)
+		literalBindings: (Dictionary new
+			at: 'dictName' put: dictName asString;
+			at: 'keyName' put: keyName asString;
+			at: 'previewPath' put: pathCollection asArray;
+			at: 'userName' put: userName asString;
+			yourself)
 		context: 20 ]
 		on: Error
 		do: [ nil ].
@@ -421,27 +451,22 @@ GbsSymbolListBrowserPresenter >> oopForEntryKey: keyName path: pathCollection [
 
 { #category : '*GemStone-GBS-Core-Tools' }
 GbsSymbolListBrowserPresenter >> oopScriptForUser: userName dictionary: dictName keyName: keyName path: pathCollection [
-	| u d k p |
-	u := self literalString: userName.
-	d := self literalString: dictName.
-	k := self literalString: keyName.
-	p := self pathLiteralStringFor: pathCollection.
 	^ '
 	| users user sl dict entryKey value path |
 	users := System myUserProfile symbolList objectNamed: #AllUsers.
 	users ifNil: [ ^ '''' ].
-	user := users detect: [ :x | x userId asString = ', u, ' ] ifNone: [ nil ].
+	user := users detect: [ :x | x userId asString = userName ] ifNone: [ nil ].
 	user ifNil: [ ^ '''' ].
 	sl := user symbolList.
 	dict := sl detect: [ :each |
 		| name |
 		name := (each respondsTo: #name) ifTrue: [ each name asString ] ifFalse: [ each printString ].
-		name = ', d, ' ] ifNone: [ nil ].
+		name = dictName ] ifNone: [ nil ].
 	dict ifNil: [ ^ '''' ].
-	entryKey := dict keys detect: [ :each | each asString = ', k, ' ] ifNone: [ nil ].
+	entryKey := dict keys detect: [ :each | each asString = keyName ] ifNone: [ nil ].
 	entryKey ifNil: [ ^ '''' ].
 	value := dict at: entryKey.
-	path := ', p, '.
+	path := previewPath.
 	path do: [ :step |
 		| stepKind stepLabel assoc items index |
 		stepKind := step first asString.

@@ -234,14 +234,12 @@ GbsSymbolListBrowserPresenter >> defaultLayout [
 
 { #category : 'private' }
 GbsSymbolListBrowserPresenter >> dictionariesScriptForUser: userName [
-	| u |
-	u := self literalString: userName.
 	^ '
 	| users user sl strm |
 	strm := WriteStream on: String new.
 	users := System myUserProfile symbolList objectNamed: #AllUsers.
 	users ifNil: [ ^ '''' ].
-	user := users detect: [ :x | x userId asString = ', u, ' ] ifNone: [ nil ].
+	user := users detect: [ :x | x userId asString = userName ] ifNone: [ nil ].
 	user ifNil: [ ^ '''' ].
 	sl := user symbolList.
 	1 to: sl size do: [ :idx |
@@ -257,21 +255,18 @@ GbsSymbolListBrowserPresenter >> dictionariesScriptForUser: userName [
 
 { #category : 'private' }
 GbsSymbolListBrowserPresenter >> entriesScriptForUser: userName dictionary: dictName [
-	| u d |
-	u := self literalString: userName.
-	d := self literalString: dictName.
 	^ '
 	| users user sl dict strm |
 	strm := WriteStream on: String new.
 	users := System myUserProfile symbolList objectNamed: #AllUsers.
 	users ifNil: [ ^ '''' ].
-	user := users detect: [ :x | x userId asString = ', u, ' ] ifNone: [ nil ].
+	user := users detect: [ :x | x userId asString = userName ] ifNone: [ nil ].
 	user ifNil: [ ^ '''' ].
 	sl := user symbolList.
 	dict := sl detect: [ :each |
 		| name |
 		name := (each respondsTo: #name) ifTrue: [ each name asString ] ifFalse: [ each printString ].
-		name = ', d, ' ] ifNone: [ nil ].
+		name = dictName ] ifNone: [ nil ].
 	dict ifNil: [ ^ '''' ].
 	dict keys asSortedCollection do: [ :k |
 		| v |
@@ -317,27 +312,30 @@ GbsSymbolListBrowserPresenter >> inspectDictionary [
 	userName := self selectedUserName.
 	dictName := self selectedDictionaryName.
 	(userName isNil or: [ dictName isNil ]) ifTrue: [ ^ self ].
-	raw := [ session evaluate: (self inspectDictionaryScriptForUser: userName dictionary: dictName) ]
+	raw := [ self
+		fetchRemoteCommandBody: (self inspectDictionaryScriptForUser: userName dictionary: dictName)
+		literalBindings: (Dictionary new
+			at: 'dictName' put: dictName asString;
+			at: 'userName' put: userName asString;
+			yourself)
+		context: 20 ]
 		on: Error do: [ :ex | 'Inspect dictionary failed: ', ex messageText ].
 	UIManager default inform: raw asString
 ]
 
 { #category : 'private' }
 GbsSymbolListBrowserPresenter >> inspectDictionaryScriptForUser: userName dictionary: dictName [
-	| u d |
-	u := self literalString: userName.
-	d := self literalString: dictName.
 	^ '
 	| users user sl dict |
 	users := System myUserProfile symbolList objectNamed: #AllUsers.
 	users ifNil: [ ^ ''AllUsers not found'' ].
-	user := users detect: [ :x | x userId asString = ', u, ' ] ifNone: [ nil ].
+	user := users detect: [ :x | x userId asString = userName ] ifNone: [ nil ].
 	user ifNil: [ ^ ''User not found'' ].
 	sl := user symbolList.
 	dict := sl detect: [ :each |
 		| name |
 		name := (each respondsTo: #name) ifTrue: [ each name asString ] ifFalse: [ each printString ].
-		name = ', d, ' ] ifNone: [ nil ].
+		name = dictName ] ifNone: [ nil ].
 	dict ifNil: [ ^ ''Dictionary not found'' ].
 	dict printString'
 ]
@@ -394,6 +392,16 @@ GbsSymbolListBrowserPresenter >> inspectSelectedPreviewValue [
 { #category : 'private' }
 GbsSymbolListBrowserPresenter >> literalString: aString [
 	^ '''', (aString copyReplaceAll: '''' with: ''''''), ''''
+]
+
+{ #category : 'private' }
+GbsSymbolListBrowserPresenter >> fetchRemoteCommandBody: bodyString literalBindings: literalDictionary context: contextOop [
+	^ GbsRemoteExecutionDispatcher
+		fetchCommandBody: bodyString
+		literalBindings: literalDictionary
+		oopBindings: Dictionary new
+		in: session
+		context: contextOop
 ]
 
 { #category : 'actions' }
@@ -537,7 +545,12 @@ GbsSymbolListBrowserPresenter >> refreshDictionariesFor: userName [
 		entriesList items: #().
 		self showSelectedEntryPreview.
 		^ self ].
-	raw := [ session evaluate: (self dictionariesScriptForUser: userName asString) ] on: Error do: [ '' ].
+	raw := [ self
+		fetchRemoteCommandBody: (self dictionariesScriptForUser: userName asString)
+		literalBindings: (Dictionary new
+			at: 'userName' put: userName asString;
+			yourself)
+		context: 20 ] on: Error do: [ '' ].
 	dicts := (raw isString and: [ raw isNotEmpty ])
 		ifTrue: [ (raw splitOn: Character tab) reject: [ :each | each isEmpty ] ]
 		ifFalse: [ #() ].
@@ -566,7 +579,13 @@ GbsSymbolListBrowserPresenter >> refreshEntriesForDictionary: dictName [
 		entryValuesByKey := Dictionary new.
 		self showSelectedEntryPreview.
 		^ self ].
-	raw := [ session evaluate: (self entriesScriptForUser: userName dictionary: dictName asString) ]
+	raw := [ self
+		fetchRemoteCommandBody: (self entriesScriptForUser: userName dictionary: dictName asString)
+		literalBindings: (Dictionary new
+			at: 'dictName' put: dictName asString;
+			at: 'userName' put: userName asString;
+			yourself)
+		context: 20 ]
 		on: Error do: [ '' ].
 	lines := (raw isString and: [ raw isNotEmpty ])
 		ifTrue: [ raw lines ]
@@ -608,7 +627,10 @@ GbsSymbolListBrowserPresenter >> refreshEntriesForSelectedDictionary [
 { #category : 'actions' }
 GbsSymbolListBrowserPresenter >> refreshUsers [
 	| raw users defaultUser |
-	raw := [ session evaluate: self usersScript ] on: Error do: [ '' ].
+	raw := [ self
+		fetchRemoteCommandBody: self usersScript
+		literalBindings: Dictionary new
+		context: 20 ] on: Error do: [ '' ].
 	users := (raw isString and: [ raw isNotEmpty ])
 		ifTrue: [ (raw splitOn: Character tab) reject: [ :each | each isEmpty ] ]
 		ifFalse: [ #() ].
@@ -1002,13 +1024,18 @@ GbsSymbolListBrowserPresenter >> structuredPreviewForEntryKey: keyName path: pat
 	userName := self selectedUserName.
 	dictName := self selectedDictionaryName.
 	(userName isNil or: [ dictName isNil or: [ keyName isNil ] ]) ifTrue: [ ^ nil ].
-	raw := [ GbsRemoteExecutionDispatcher
-		fetchScript: (self
-		structuredPreviewScriptForUser: userName
-		dictionary: dictName
-		keyName: keyName
-		path: pathCollection)
-		in: session
+	raw := [ self
+		fetchRemoteCommandBody: (self
+			structuredPreviewScriptForUser: userName
+			dictionary: dictName
+			keyName: keyName
+			path: pathCollection)
+		literalBindings: (Dictionary new
+			at: 'dictName' put: dictName asString;
+			at: 'keyName' put: keyName asString;
+			at: 'previewPath' put: pathCollection asArray;
+			at: 'userName' put: userName asString;
+			yourself)
 		context: 20 ]
 		on: Error
 		do: [ :ex | 'string', String lf, 'Inspect entry failed: ', ex messageText ].
@@ -1038,11 +1065,6 @@ GbsSymbolListBrowserPresenter >> structuredPreviewScriptForUser: userName dictio
 
 { #category : 'private' }
 GbsSymbolListBrowserPresenter >> structuredPreviewScriptForUser: userName dictionary: dictName keyName: keyName path: pathCollection [
-	| u d k p |
-	u := self literalString: userName.
-	d := self literalString: dictName.
-	k := self literalString: keyName.
-	p := self pathLiteralStringFor: pathCollection.
 	^ '
 	| users user sl dict entryKey value path sanitize stream limit index associations items rawString |
 	sanitize := [ :obj |
@@ -1054,18 +1076,18 @@ GbsSymbolListBrowserPresenter >> structuredPreviewScriptForUser: userName dictio
 		string ].
 	users := System myUserProfile symbolList objectNamed: #AllUsers.
 	users ifNil: [ ^ ''string'', String cr, ''AllUsers not found'' ].
-	user := users detect: [ :x | x userId asString = ', u, ' ] ifNone: [ nil ].
+	user := users detect: [ :x | x userId asString = userName ] ifNone: [ nil ].
 	user ifNil: [ ^ ''string'', String cr, ''User not found'' ].
 	sl := user symbolList.
 	dict := sl detect: [ :each |
 		| name |
 		name := (each respondsTo: #name) ifTrue: [ each name asString ] ifFalse: [ each printString ].
-		name = ', d, ' ] ifNone: [ nil ].
+		name = dictName ] ifNone: [ nil ].
 	dict ifNil: [ ^ ''string'', String cr, ''Dictionary not found'' ].
-	entryKey := dict keys detect: [ :each | each asString = ', k, ' ] ifNone: [ nil ].
+	entryKey := dict keys detect: [ :each | each asString = keyName ] ifNone: [ nil ].
 	entryKey ifNil: [ ^ ''string'', String cr, ''Entry not found'' ].
 	value := dict at: entryKey.
-	path := ', p, '.
+	path := previewPath.
 	path do: [ :step |
 		| stepKind stepLabel assoc |
 		stepKind := step first asString.
