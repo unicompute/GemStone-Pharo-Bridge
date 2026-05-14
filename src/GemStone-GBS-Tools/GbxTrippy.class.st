@@ -59,14 +59,13 @@ GbxTrippy >> buildInfoStringForOop: anOop className: className size: size [
 { #category : 'fetching' }
 GbxTrippy >> buildItemsForOop: anOop className: className [
 	"Build items list for an object"
-	| items script result |
+	| items body result |
 	
 	items := OrderedCollection new.
 	
 	"Fetch instance variables or elements"
-	script := '[
-		| obj stream names |
-		obj := Object _objectForOop: ', anOop asString, '.
+	body := '
+		| stream names |
 		stream := WriteStream on: String new.
 		
 		(obj class isVariable) ifTrue: [
@@ -97,9 +96,13 @@ GbxTrippy >> buildItemsForOop: anOop className: className [
 		].
 		
 		stream contents
-	] value'.
+	'.
 	
-	result := self fetchRemoteScript: script.
+	result := self
+		fetchRemoteCommandBody: body
+		oopBindings: (Dictionary new
+			at: 'obj' put: anOop;
+			yourself).
 	result ifNotNil: [
 		result splitOn: Character lf do: [ :line |
 			line isNotEmpty ifTrue: [
@@ -157,7 +160,7 @@ GbxTrippy >> defaultLayout [
 { #category : 'actions' }
 GbxTrippy >> doItSelected [
 	"Execute Do it on selected item"
-	| item oop script result |
+	| item oop result |
 	
 	item := objectTable selectedItem.
 	item ifNil: [ ^ self ].
@@ -165,8 +168,11 @@ GbxTrippy >> doItSelected [
 	oop := item at: 4.
 	oop ifNil: [ ^ self ].
 	
-	script := '(Object _objectForOop: ', oop asString, ') yourself'.
-	result := self fetchRemoteScript: script.
+	result := self
+		fetchRemoteCommandBody: 'obj yourself'
+		oopBindings: (Dictionary new
+			at: 'obj' put: oop;
+			yourself).
 	
 	InformDialog inform: 'Do it completed. Result: ', result asString.
 ]
@@ -174,35 +180,29 @@ GbxTrippy >> doItSelected [
 { #category : 'fetching' }
 GbxTrippy >> fetchClassNameForOop: anOop [
 	"Fetch class name for an OOP"
-	| script |
-	
-	script := '[
-		| obj |
-		obj := Object _objectForOop: ', anOop asString, '.
-		obj class name
-	] value'.
-	
-	^ self fetchRemoteScript: script
+	^ self
+		fetchRemoteCommandBody: 'obj class name'
+		oopBindings: (Dictionary new
+			at: 'obj' put: anOop;
+			yourself)
 ]
 
 { #category : 'fetching' }
 GbxTrippy >> fetchSizeForOop: anOop [
 	"Fetch size for an OOP"
-	| script |
-	
-	script := '[
-		| obj |
-		obj := Object _objectForOop: ', anOop asString, '.
-		obj size
-	] value'.
-	
-	^ self fetchRemoteScript: script
+	^ self
+		fetchRemoteCommandBody: 'obj size'
+		oopBindings: (Dictionary new
+			at: 'obj' put: anOop;
+			yourself)
 ]
 
 { #category : 'fetching' }
-GbxTrippy >> fetchRemoteScript: scriptString [
+GbxTrippy >> fetchRemoteCommandBody: bodyString oopBindings: oopDictionary [
 	^ GbsRemoteExecutionDispatcher
-		fetchScript: scriptString
+		fetchCommandBody: bodyString
+		literalBindings: Dictionary new
+		oopBindings: oopDictionary
 		in: session
 		context: 20
 ]

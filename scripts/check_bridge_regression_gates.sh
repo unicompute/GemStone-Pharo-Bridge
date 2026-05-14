@@ -288,6 +288,21 @@ if rg -n "Object _objectForOop: ',|procOop asString|lvl asString|escapedName|\\^
 fi
 rm -f /tmp/gbs-debugger-inspector-command-gate.$$
 
+if rg -n "executeDebugScript:|evaluateOopFromScript:" \
+  src/GemStone-GBS-Tools/GbxDebuggerService.class.st \
+  src/GemStone-GBS-Tools/GbxDebuggerInspectorController.class.st >/tmp/gbs-debugger-dead-script-api-gate.$$; then
+  cat /tmp/gbs-debugger-dead-script-api-gate.$$
+  fail "dead debugger free-form script API reappeared; use bound command APIs or explicit user-authored evaluation"
+fi
+rm -f /tmp/gbs-debugger-dead-script-api-gate.$$
+
+if rg -n "fetchRemoteScript:|Object _objectForOop: '," \
+  src/GemStone-GBS-Tools/GbxTrippy.class.st >/tmp/gbs-trippy-command-gate.$$; then
+  cat /tmp/gbs-trippy-command-gate.$$
+  fail "GbxTrippy reintroduced generated script interpolation; use GbsRemoteExecutionDispatcher bound command APIs"
+fi
+rm -f /tmp/gbs-trippy-command-gate.$$
+
 if rg -n "String streamContents:|executeDebugScript:" \
   src/GemStone-GBS-Tools/GbxDebuggerProcessController.class.st \
   src/GemStone-GBS-Tools/GbxDebuggerRestartController.class.st >/tmp/gbs-debugger-controller-command-gate.$$; then

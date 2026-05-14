@@ -124,17 +124,6 @@ GbxDebuggerInspectorController >> evaluateCodeInCurrentFrame: codeString [
 ]
 
 { #category : 'evaluation' }
-GbxDebuggerInspectorController >> evaluateOopFromScript: scriptString [
-	| raw |
-	service isSessionUsable ifFalse: [ ^ nil ].
-	raw := [ service fetchRemoteScript: scriptString context: 20 ] on: Error do: [ nil ].
-	raw ifNil: [ ^ nil ].
-	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
-	(raw isString and: [ raw = 'nil' or: [ raw beginsWith: 'Error:' ] ]) ifTrue: [ ^ nil ].
-	^ [ raw asInteger ] on: Error do: [ nil ]
-]
-
-{ #category : 'evaluation' }
 GbxDebuggerInspectorController >> evaluateOopFromCommandBody: bodyString literalBindings: literalDictionary oopBindings: oopDictionary [
 	| raw |
 	service isSessionUsable ifFalse: [ ^ nil ].

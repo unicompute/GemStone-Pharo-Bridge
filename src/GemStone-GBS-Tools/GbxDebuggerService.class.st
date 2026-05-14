@@ -455,23 +455,10 @@ GbxDebuggerService >> evaluateCodeInCurrentFrame: codeString [
 	^ self inspectorController evaluateCodeInCurrentFrame: codeString
 ]
 
-{ #category : 'inspector' }
-GbxDebuggerService >> evaluateOopFromScript: scriptString [
-	^ self inspectorController evaluateOopFromScript: scriptString
-]
-
 { #category : 'private-event processing' }
 GbxDebuggerService >> eventOrder [
 	"Define event processing order for debugger updates"
 	^ #( #contextList #text #pc #label )
-]
-
-{ #category : 'private' }
-GbxDebuggerService >> executeDebugScript: scriptString [
-	self isSessionUsable ifFalse: [ ^ nil ].
-	^ [ self fetchRemoteScript: scriptString context: 20 ]
-		on: Error
-		do: [ nil ]
 ]
 
 { #category : 'private' }
