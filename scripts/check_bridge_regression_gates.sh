@@ -240,6 +240,13 @@ if rg -n "String streamContents:|fetchRemoteScript:" \
 fi
 rm -f /tmp/gbs-debugger-compat-compile-script-gate.$$
 
+if rg -n "fetchRemoteScript:|escapeForScriptLiteral:|escapedSource|script :=" \
+  src/GemStone-GBS-Tools/GbxDebuggerCompileController.class.st >/tmp/gbs-debugger-compile-controller-script-gate.$$; then
+  cat /tmp/gbs-debugger-compile-controller-script-gate.$$
+  fail "debugger compile controller reintroduced ad-hoc remote compile scripts; use GbsRemoteExecutionDispatcher bound command APIs"
+fi
+rm -f /tmp/gbs-debugger-compile-controller-script-gate.$$
+
 if rg -n "levelValue asString|escapedName|fallbackText|session evaluate: \\(self fullSourceFallback|executeScriptAndReturnOop: \\(self remoteScriptBuilder|executeScriptAndFetchObject: \\(self remoteScriptBuilder" \
   src/GemStone-GBS-Core/GbsRemoteDebugProcessFacade.class.st \
   src/GemStone-GBS-Core/GbsSession.extension.st >/tmp/gbs-core-bound-debug-session-gate.$$; then

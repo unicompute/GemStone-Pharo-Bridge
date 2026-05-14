@@ -33,41 +33,11 @@ GbxDebuggerCompileController >> clearCompileError [
 
 { #category : 'evaluation' }
 GbxDebuggerCompileController >> correctCurrentSelectorWithSource: sourceText [
-	| className selector isMeta classLookupName escapedSource script raw |
-	service currentContext ifNil: [ ^ false ].
-	service isSessionUsable ifFalse: [ ^ false ].
+	| raw |
 	self clearCompileError.
-	className := service selectedMethodClassName.
-	selector := service selectedMethodSelector.
-	(className isNil or: [ selector isNil or: [ selector = #unboundMethod ] ]) ifTrue: [ ^ false ].
-
-	isMeta := className asString endsWith: ' class'.
-	classLookupName := isMeta
-		ifTrue: [ (className asString copyFrom: 1 to: className size - 6) ]
-		ifFalse: [ className asString ].
-	escapedSource := service escapeForScriptLiteral: sourceText.
-
-	script := '[
-		| cls oldSel protocol result newSel source |
-		cls := System myUserProfile symbolList objectNamed: #', classLookupName, '.
-		cls ifNil: [ ^ ''ERROR|Class not found'' ].
-		', (isMeta ifTrue: [ 'cls := cls class.' ] ifFalse: [ '' ]), '
-		oldSel := #', selector asString, '.
-		source := ''', escapedSource, '''.
-		protocol := [ cls categoryOfSelector: oldSel ] on: Error do: [ ''as yet unclassified'' ].
-		protocol ifNil: [ protocol := ''as yet unclassified'' ].
-		result := [ cls compileMethod: source category: protocol ] on: Error do: [ :ex | ''ERROR|'', ex description ].
-		(result isString and: [ result beginsWith: ''ERROR|'' ]) ifTrue: [ ^ result ].
-		(result isKindOf: Array) ifTrue: [ ^ ''ERROR|Compilation failed'' ].
-		newSel := [ result selector ] on: Error do: [ oldSel ].
-		(newSel ~= oldSel and: [ cls includesSelector: oldSel ]) ifTrue: [
-			[ cls removeSelector: oldSel ] on: Error do: [ :ex | ]
-		].
-		''OK''
-	] value'.
-
-	raw := [ service fetchRemoteScript: script context: service session sessionOop ] on: Error do: [ nil ].
-	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	raw := self
+		remoteCompileResponseForSource: sourceText
+		correctingSelector: true.
 	raw ifNil: [
 		service compileErrorValue: 'Correct selector failed: no response from GemStone'.
 		^ false ].
@@ -137,37 +107,11 @@ GbxDebuggerCompileController >> normalizedCompileErrorFrom: rawResult [
 
 { #category : 'evaluation' }
 GbxDebuggerCompileController >> recompileCurrentMethodWithSource: sourceText [
-	| className selector isMeta classLookupName escapedSource script raw |
-	service currentContext ifNil: [ ^ false ].
-	service isSessionUsable ifFalse: [ ^ false ].
+	| raw |
 	self clearCompileError.
-	className := service selectedMethodClassName.
-	selector := service selectedMethodSelector.
-	(className isNil or: [ selector isNil or: [ selector = #unboundMethod ] ]) ifTrue: [ ^ false ].
-
-	isMeta := className asString endsWith: ' class'.
-	classLookupName := isMeta
-		ifTrue: [ (className asString copyFrom: 1 to: className size - 6) ]
-		ifFalse: [ className asString ].
-	escapedSource := service escapeForScriptLiteral: sourceText.
-
-	script := '[
-		| cls sel protocol result source |
-		cls := System myUserProfile symbolList objectNamed: #', classLookupName, '.
-		cls ifNil: [ ^ ''ERROR|Class not found'' ].
-		', (isMeta ifTrue: [ 'cls := cls class.' ] ifFalse: [ '' ]), '
-		sel := #', selector asString, '.
-		source := ''', escapedSource, '''.
-		protocol := [ cls categoryOfSelector: sel ] on: Error do: [ ''as yet unclassified'' ].
-		protocol ifNil: [ protocol := ''as yet unclassified'' ].
-		result := [ cls compileMethod: source category: protocol ] on: Error do: [ :ex | ''ERROR|'', ex description ].
-		(result isString and: [ result beginsWith: ''ERROR|'' ]) ifTrue: [ ^ result ].
-		(result isKindOf: Array) ifTrue: [ ^ ''ERROR|Compilation failed'' ].
-		''OK''
-	] value'.
-
-	raw := [ service fetchRemoteScript: script context: service session sessionOop ] on: Error do: [ nil ].
-	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	raw := self
+		remoteCompileResponseForSource: sourceText
+		correctingSelector: false.
 	raw ifNil: [
 		service compileErrorValue: 'Compile failed: no response from GemStone'.
 		^ false ].
@@ -184,4 +128,67 @@ GbxDebuggerCompileController >> service [
 { #category : 'accessing' }
 GbxDebuggerCompileController >> service: aService [
 	service := aService
+]
+
+{ #category : 'private' }
+GbxDebuggerCompileController >> remoteCompileLookup [
+	| className selector isMeta classLookupName |
+	service currentContext ifNil: [ ^ nil ].
+	service isSessionUsable ifFalse: [ ^ nil ].
+	className := service selectedMethodClassName.
+	selector := service selectedMethodSelector.
+	(className isNil or: [ selector isNil or: [ selector = #unboundMethod ] ]) ifTrue: [ ^ nil ].
+
+	isMeta := className asString endsWith: ' class'.
+	classLookupName := isMeta
+		ifTrue: [ className asString allButLast: 6 ]
+		ifFalse: [ className asString ].
+	^ {
+		classLookupName.
+		selector asSymbol.
+		isMeta }
+]
+
+{ #category : 'private' }
+GbxDebuggerCompileController >> remoteCompileResponseForSource: sourceText correctingSelector: allowSelectorCorrection [
+	| lookup body raw |
+	lookup := self remoteCompileLookup.
+	lookup ifNil: [ ^ nil ].
+	body := '
+		| cls oldSel protocol result newSel source |
+		cls := System myUserProfile symbolList objectNamed: className asSymbol.
+		cls ifNil: [ ^ ''ERROR|Class not found'' ].
+		isMeta ifTrue: [ cls := cls class ].
+		oldSel := selector.
+		source := sourceText.
+		protocol := [ cls categoryOfSelector: oldSel ] on: Error do: [ ''as yet unclassified'' ].
+		protocol ifNil: [ protocol := ''as yet unclassified'' ].
+		result := [ cls compileMethod: source category: protocol ] on: Error do: [ :ex | ''ERROR|'', ex description ].
+		(result isString and: [ result beginsWith: ''ERROR|'' ]) ifTrue: [ ^ result ].
+		(result isKindOf: Array) ifTrue: [ ^ ''ERROR|Compilation failed'' ].
+		allowSelectorCorrection ifTrue: [
+			newSel := [ result selector ] on: Error do: [ oldSel ].
+			(newSel ~= oldSel and: [ cls includesSelector: oldSel ]) ifTrue: [
+				[ cls removeSelector: oldSel ] on: Error do: [ :ex | ] ] ].
+		''OK''
+	'.
+	raw := [
+		GbsRemoteExecutionDispatcher
+			fetchCommandBody: body
+			literalBindings: (Dictionary new
+				at: 'allowSelectorCorrection' put: allowSelectorCorrection;
+				at: 'className' put: lookup first;
+				at: 'isMeta' put: lookup third;
+				at: 'selector' put: lookup second;
+				at: 'sourceText' put: (sourceText
+					ifNil: [ '' ]
+					ifNotNil: [ :each | each asString copyReplaceAll: String cr with: String lf ]);
+				yourself)
+			oopBindings: Dictionary new
+			in: service session
+			context: service session sessionOop ]
+		on: Error
+		do: [ nil ].
+	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
+	^ raw
 ]

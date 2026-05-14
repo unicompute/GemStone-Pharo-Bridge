@@ -450,14 +450,6 @@ GbxDebuggerService >> ensureRestartAtStepOne [
 	^ self restartController ensureRestartAtStepOne
 ]
 
-{ #category : 'private' }
-GbxDebuggerService >> escapeForScriptLiteral: aString [
-	| s |
-	s := aString ifNil: [ '' ] ifNotNil: [ :txt | txt asString ].
-	s := s copyReplaceAll: String cr with: String lf.
-	^ s copyReplaceAll: '''' with: ''''''
-]
-
 { #category : 'evaluation' }
 GbxDebuggerService >> evaluateCodeInCurrentFrame: codeString [
 	^ self inspectorController evaluateCodeInCurrentFrame: codeString
