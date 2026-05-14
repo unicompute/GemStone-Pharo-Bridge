@@ -35,7 +35,7 @@ GbsSessionTransactionCoordinator >> abortTransaction [
 		"Some local stones report a falsey GCI abort result even though the
 		abort succeeds. Fall back to an explicit Smalltalk abortTransaction
 		before treating the connection as broken."
-		[ session evaluate: 'System abortTransaction. true' ]
+		[ session evaluateSystemSelector: #abortTransaction withArguments: #() ]
 			on: Error
 			do: [ GbsError signal: 'Failed to abort transaction.' ] ].
 	GbsSessionManager invalidateStaleTypedWrapperClassesForSession: session.

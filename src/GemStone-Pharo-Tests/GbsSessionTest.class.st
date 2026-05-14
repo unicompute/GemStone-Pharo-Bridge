@@ -33,6 +33,21 @@ GbsSessionTest >> testAbortTransaction [
 ]
 
 { #category : 'running' }
+GbsSessionTest >> testAbortTransactionFallbackUsesSystemSelector [
+	| mockSession fallbackScript |
+	mockSession := MockGbsSession new.
+	mockSession instVarNamed: 'isLoggedIn' put: true.
+	mockSession stubs at: #gciAbort put: 0.
+	mockSession stubs at: #evaluate put: [ self fail: 'Abort fallback should use the System selector API, not raw evaluate:.' ].
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		fallbackScript := script.
+		true ].
+
+	self assert: mockSession abortTransaction equals: true.
+	self assert: (fallbackScript includesSubstring: 'abortTransaction')
+]
+
+{ #category : 'running' }
 GbsSessionTest >> testCommitTransaction [
 	| mockSession |
 	mockSession := MockGbsSession new.

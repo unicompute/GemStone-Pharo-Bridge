@@ -35,7 +35,8 @@ GbxDebuggerBrowseController class >> browseMethod: delegate [
 	| newBrowser result classHolder |
 	delegate ifNil: [ ^ nil ].
 	delegate session ifNil: [ ^ nil ].
-	result := delegate session evaluate: '
+	result := GbsRemoteExecutionDispatcher
+		fetchCommandBody: '
 		| method displayClass className sel protocol isMeta result |
 		method := self selector isNil ifTrue:[self homeMethod] ifFalse:[self].
 		displayClass := method inClass thisClass.
@@ -50,7 +51,11 @@ GbxDebuggerBrowseController class >> browseMethod: delegate [
 			add: protocol;
 			add: isMeta.
 		result
-	' context: delegate.
+	'
+		literalBindings: Dictionary new
+		oopBindings: Dictionary new
+		in: delegate session
+		context: delegate.
 	result ifNil: [ ^ nil ].
 	newBrowser := Smalltalk at: #GbxHierarchyBrowser ifAbsent: [ ^ nil ].
 	newBrowser ifNil: [ ^ nil ].

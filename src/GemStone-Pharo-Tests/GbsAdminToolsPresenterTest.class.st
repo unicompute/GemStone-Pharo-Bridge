@@ -171,6 +171,20 @@ GbsAdminToolsPresenterTest >> testSecurityPoliciesLiteralStringEscapesEmbeddedQu
 ]
 
 { #category : 'tests' }
+GbsAdminToolsPresenterTest >> testBreakpointBrowserSourceScriptUsesBoundNames [
+	| presenter script |
+	presenter := GbsBreakpointBrowserPresenter new.
+	script := presenter
+		sourceScriptForClassName: 'Class''A'
+		selector: 'run:''bad'.
+
+	self assert: (script includesSubstring: 'className asSymbol').
+	self assert: (script includesSubstring: 'selectorName asSymbol').
+	self deny: (script includesSubstring: 'Class''''A').
+	self deny: (script includesSubstring: 'run:''''bad')
+]
+
+{ #category : 'tests' }
 GbsAdminToolsPresenterTest >> testSecurityPoliciesParseRowsPadsMissingColumns [
 	| rows row |
 	rows := securityPoliciesPresenter

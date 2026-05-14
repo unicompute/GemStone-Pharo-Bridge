@@ -81,7 +81,7 @@ GbsRemoteTranscript class >> installGemStoneProxy [
 
   "3. Send the pristine script to GemStone safely"
   [
-    session evaluate: script.
+    GbsRemoteExecutionDispatcher fetchScript: script in: session context: 20.
     aGbsRemoteTranscript inform: 'GemStone Transcript Proxy Successfully Installed!'
     ]
     on: Error
@@ -119,7 +119,7 @@ GbsRemoteTranscript class >> installTransientProxy [
 	true
 	' copyReplaceAll: '<quote>' with: ''''.
 
-	session evaluate: script.
+	GbsRemoteExecutionDispatcher fetchScript: script in: session context: 20.
 	self inform: 'Remote Transcript Proxy Installed safely!'.
 ]
 

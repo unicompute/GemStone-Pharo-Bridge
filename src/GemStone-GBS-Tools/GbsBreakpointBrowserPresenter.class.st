@@ -61,6 +61,16 @@ GbsBreakpointBrowserPresenter >> copyMethodSource [
 	Clipboard clipboardText: text
 ]
 
+{ #category : 'private' }
+GbsBreakpointBrowserPresenter >> fetchRemoteCommandBody: bodyString literalBindings: literalDictionary context: contextOop [
+	^ GbsRemoteExecutionDispatcher
+		fetchCommandBody: bodyString
+		literalBindings: literalDictionary
+		oopBindings: Dictionary new
+		in: session
+		context: contextOop
+]
+
 { #category : 'layout' }
 GbsBreakpointBrowserPresenter >> defaultLayout [
 	^ SpBoxLayout newTopToBottom
@@ -184,19 +194,25 @@ GbsBreakpointBrowserPresenter >> sourceForBreakpoint: aBreakpoint [
 	selectorName := self selectorNameFor: aBreakpoint.
 	(className isEmpty or: [ selectorName isEmpty ]) ifTrue: [ ^ '' ].
 	script := self sourceScriptForClassName: className selector: selectorName.
-	^ [ session evaluate: script ] on: Error do: [ :ex | 'Could not fetch source: ', ex messageText ]
+	^ [
+		self
+			fetchRemoteCommandBody: script
+			literalBindings: (Dictionary new
+				at: 'className' put: className asString;
+				at: 'selectorName' put: selectorName asString;
+				yourself)
+			context: 20 ]
+		on: Error
+		do: [ :ex | 'Could not fetch source: ', ex messageText ]
 ]
 
 { #category : 'private' }
 GbsBreakpointBrowserPresenter >> sourceScriptForClassName: className selector: selectorName [
-	| classSymbol selectorSymbol |
-	classSymbol := self literalSymbolName: className.
-	selectorSymbol := self literalSymbolName: selectorName.
 	^ '
 	| cls cm |
-	cls := System myUserProfile symbolList objectNamed: #', classSymbol, '.
+	cls := System myUserProfile symbolList objectNamed: className asSymbol.
 	cls ifNil: [ ^ '''' ].
-	cm := cls compiledMethodAt: #', selectorSymbol, ' ifAbsent: [ nil ].
+	cm := cls compiledMethodAt: selectorName asSymbol ifAbsent: [ nil ].
 	cm ifNil: [ ^ '''' ].
 	(cm respondsTo: #sourceString)
 		ifTrue: [ cm sourceString ]

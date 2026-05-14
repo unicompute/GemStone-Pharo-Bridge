@@ -169,6 +169,14 @@ if rg -n "session evaluate:" \
 fi
 rm -f /tmp/gbs-admin-presenter-command-gate.$$
 
+if rg -n "session evaluate:" \
+  src/GemStone-GBS-Core \
+  src/GemStone-GBS-Tools >/tmp/gbs-core-tools-session-evaluate-gate.$$; then
+  cat /tmp/gbs-core-tools-session-evaluate-gate.$$
+  fail "Core/Tools reintroduced direct session evaluate: calls; use command helpers or explicit workspace compatibility APIs"
+fi
+rm -f /tmp/gbs-core-tools-session-evaluate-gate.$$
+
 if rg -n "loadedClassesScript|migrateInstancesScript|previewMigrationScript|methodReferenceStringsScript|classMetadataScript|methodMetadataScript|versionEntriesScript|protocolEntriesScript|namespaceMirrorEntriesScript" \
   src/GemStone-GBS-Core/GbsRepositoryFacade.class.st \
   src/GemStone-GBS-Core/GbsRemoteClassMirror.class.st \
