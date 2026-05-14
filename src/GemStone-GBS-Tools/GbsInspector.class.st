@@ -18,11 +18,10 @@ Class {
 
 { #category : 'reflection' }
 GbsInspector class >> fetchReflectionStringFor: anOop session: aSession [
-	"Sends the reflection script to GemStone and returns the raw formatted string"
-	| script |
-	script := '[
-		| obj stream names childVal childOop |
-		obj := Object _objectForOop: ', anOop asString, '.
+	"Sends the reflection command to GemStone and returns the raw formatted string"
+	^ GbsRemoteExecutionDispatcher
+		fetchCommandBody: '
+		| stream names childVal childOop |
 		stream := WriteStream on: String new.
 		names := obj class allInstVarNames.
 		1 to: names size do: [ :i |
@@ -34,10 +33,11 @@ GbsInspector class >> fetchReflectionStringFor: anOop session: aSession [
 				nextPutAll: childOop asString; lf.
 		].
 		stream contents
-	] value'.
-	
-	^ GbsRemoteExecutionDispatcher
-		fetchScript: script
+		'
+		literalBindings: Dictionary new
+		oopBindings: (Dictionary new
+			at: 'obj' put: anOop;
+			yourself)
 		in: aSession
 		context: 20
 ]

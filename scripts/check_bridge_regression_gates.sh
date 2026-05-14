@@ -303,6 +303,13 @@ if rg -n "fetchRemoteScript:|Object _objectForOop: '," \
 fi
 rm -f /tmp/gbs-trippy-command-gate.$$
 
+if rg -n "Object _objectForOop: ',|fetchScript: script|anOop asString" \
+  src/GemStone-GBS-Tools/GbsInspector.class.st >/tmp/gbs-inspector-command-gate.$$; then
+  cat /tmp/gbs-inspector-command-gate.$$
+  fail "GbsInspector reintroduced generated OOP reflection scripts; use GbsRemoteExecutionDispatcher bound command APIs"
+fi
+rm -f /tmp/gbs-inspector-command-gate.$$
+
 if rg -n "String streamContents:|executeDebugScript:" \
   src/GemStone-GBS-Tools/GbxDebuggerProcessController.class.st \
   src/GemStone-GBS-Tools/GbxDebuggerRestartController.class.st >/tmp/gbs-debugger-controller-command-gate.$$; then
