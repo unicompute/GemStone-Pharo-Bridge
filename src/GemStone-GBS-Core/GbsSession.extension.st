@@ -303,6 +303,13 @@ GbsSession >> executeScriptAndReturnOop: aString [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> executeWorkspaceScriptAndReturnOop: aString [
+	"Explicit escape hatch for user-authored workspace/playground Inspect It code.
+	Do not use this for bridge-generated scripts; use GbsRemoteCommand instead."
+	^ self executeScriptAndReturnOop: aString
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> fetchTranscriptLogs [
 	| rawText |
 	rawText := self

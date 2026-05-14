@@ -100,6 +100,20 @@ if rg -n "executeScriptAndFetchObject:|executeScriptAndReturnOop:|marshalArgumen
 fi
 rm -f /tmp/gbs-object-space-execution-gate.$$
 
+if rg -n "classExpressionFor:|listInstanceOopsScript|migrateChunkScriptForOops:|executeScriptAndFetchObject:|marshalArgumentToScript:" \
+  src/GemStone-GBS-Core/GbsChunkedMigrationRunner.class.st >/tmp/gbs-chunked-migration-script-gate.$$; then
+  cat /tmp/gbs-chunked-migration-script-gate.$$
+  fail "Chunked migration reintroduced script helper/direct execution; use class-reference GbsRemoteCommand helpers"
+fi
+rm -f /tmp/gbs-chunked-migration-script-gate.$$
+
+if rg -n "versionEntriesScript|executeScriptAndFetchObject:|classExpressionFor:" \
+  src/GemStone-GBS-Core/GbsClassHistoryFacade.class.st >/tmp/gbs-class-history-script-gate.$$; then
+  cat /tmp/gbs-class-history-script-gate.$$
+  fail "Class history facade reintroduced version-entry script helper/direct execution; use class-reference GbsRemoteCommand helpers"
+fi
+rm -f /tmp/gbs-class-history-script-gate.$$
+
 if rg -n "loadedClassesScript|migrateInstancesScript|previewMigrationScript|methodReferenceStringsScript|classMetadataScript|methodMetadataScript|versionEntriesScript|protocolEntriesScript|namespaceMirrorEntriesScript" \
   src/GemStone-GBS-Core/GbsRepositoryFacade.class.st \
   src/GemStone-GBS-Core/GbsRemoteClassMirror.class.st \
@@ -239,6 +253,16 @@ if rg -n "GbsRemoteCommand script:|remoteCommand:" \
   fail "free-form GbsRemoteCommand script usage appeared in tool paths; use bound command APIs or GbsRemoteExecutionDispatcher compatibility"
 fi
 rm -f /tmp/gbs-tool-freeform-command-gate.$$
+
+if rg -n "executeScriptAndReturnOop:|apiGciExecuteStr:" \
+  src/GemStone-GBS-Tools/GbsPlaygroundActions.class.st \
+  src/GemStone-GBS-Tools/GbsWorkspace.class.st \
+  src/GemStone-GBS-Core-Tools/GbsPlaygroundActions.extension.st \
+  src/GemStone-GBS-Core-Tools/GbsWorkspace.extension.st >/tmp/gbs-workspace-execution-api-gate.$$; then
+  cat /tmp/gbs-workspace-execution-api-gate.$$
+  fail "workspace/playground inspect path bypassed executeWorkspaceScriptAndReturnOop:"
+fi
+rm -f /tmp/gbs-workspace-execution-api-gate.$$
 
 if rg -n "instVarNamed:" \
   src/GemStone-GBS-Tools/GbsRemoteDebuggerUiController.class.st \

@@ -258,17 +258,21 @@ GbsPlaygroundCoreActionsTest >> testGsBrowseTypedWrapperLifecycleReportUsesSessi
 ]
 
 { #category : 'tests' }
-GbsPlaygroundCoreActionsTest >> testGsInspectItUsesExecuteScriptAndReturnOop [
+GbsPlaygroundCoreActionsTest >> testGsInspectItUsesWorkspaceExecutionApi [
 	| session presenter |
 	session := CoreMockGbsSession new.
 	presenter := CoreMockGbsPlaygroundPresenter new.
 	presenter selectedText: '42'.
 
 	session stubs
-		at: #executeScriptAndReturnOop
+		at: #executeWorkspaceScriptAndReturnOop
 		put: [ :script |
 			self assert: script equals: '42'.
 			9001 ].
+	session stubs
+		at: #executeScriptAndReturnOop
+		put: [ :script |
+			self fail: 'Playground inspectIt should use executeWorkspaceScriptAndReturnOop:.' ].
 	session stubs
 		at: #apiGciExecuteStrContextEnv
 		put: [ :script :context :env |

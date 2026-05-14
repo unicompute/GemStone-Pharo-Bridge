@@ -38,23 +38,6 @@ GbsChunkedMigrationRunner class >> on: aSession source: aSourceReference target:
 ]
 
 { #category : 'private' }
-GbsChunkedMigrationRunner >> classExpressionFor: aClassOrName [
-	(aClassOrName respondsTo: #proxy) ifTrue: [
-		^ self classExpressionFor: aClassOrName proxy ].
-	(aClassOrName isKindOf: GbsProxy) ifTrue: [
-		^ '(Object _objectForOop: ', aClassOrName oop printString, ')' ].
-	(aClassOrName isBehavior or: [
-		aClassOrName class name asString includesSubstring: 'Behavior' ]) ifTrue: [
-		^ self classExpressionFor: aClassOrName name ].
-	((aClassOrName isString) or: [ aClassOrName isSymbol ]) ifTrue: [
-		^ String streamContents: [ :stream |
-			stream
-				nextPutAll: '[:name | System myUserProfile symbolList objectNamed: name asSymbol] value: ';
-				nextPutAll: (session marshalArgumentToScript: aClassOrName) ] ].
-	self error: 'Unsupported class reference: ', aClassOrName printString
-]
-
-{ #category : 'private' }
 GbsChunkedMigrationRunner >> checkpointRoot [
 	^ session bridgeRoot
 ]
@@ -111,44 +94,50 @@ GbsChunkedMigrationRunner >> hasCheckpoint [
 ]
 
 { #category : 'private' }
-GbsChunkedMigrationRunner >> listInstanceOopsScript [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| cls instances |
-	cls := ';
-			nextPutAll: (self classExpressionFor: self sourceClassReference);
-			nextPutAll: '.
-	cls ifNil: [ #() ] ifNotNil: [
-		instances := (SystemRepository listInstances: { cls }) at: 1.
-		instances collect: [ :each | each asOop ] ]' ]
+GbsChunkedMigrationRunner >> listInstanceOopsCommand [
+	^ session repository
+		remoteCommandForClassReferences: { 'cls' -> self sourceClassReference }
+		body: self listInstanceOopsCommandBody
+		literalAssignments: Dictionary new
+		oopAssignments: Dictionary new
 ]
 
 { #category : 'private' }
-GbsChunkedMigrationRunner >> migrateChunkScriptForOops: oopCollection [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| fromClass toClass instances |
-	fromClass := ';
-			nextPutAll: (self classExpressionFor: self sourceClassReference);
-			nextPutAll: '.
-	toClass := ';
-			nextPutAll: (self classExpressionFor: self targetClassReference);
-			nextPutAll: '.
+GbsChunkedMigrationRunner >> listInstanceOopsCommandBody [
+	^ '| instances |
+	cls ifNil: [ #() ] ifNotNil: [
+		instances := (SystemRepository listInstances: { cls }) at: 1.
+		instances collect: [ :each | each asOop ] ]'
+]
+
+{ #category : 'private' }
+GbsChunkedMigrationRunner >> migrateChunkCommandForOops: oopCollection [
+	^ session repository
+		remoteCommandForClassReferences: {
+			'fromClass' -> self sourceClassReference.
+			'toClass' -> self targetClassReference }
+		body: self migrateChunkCommandBody
+		literalAssignments: (Dictionary new
+			at: 'oops' put: (oopCollection collect: [ :each | each asInteger ]) asArray;
+			yourself)
+		oopAssignments: Dictionary new
+]
+
+{ #category : 'private' }
+GbsChunkedMigrationRunner >> migrateChunkCommandBody [
+	^ '| instances |
 	(fromClass isNil or: [ toClass isNil ]) ifTrue: [ 0 ] ifFalse: [
 		instances := OrderedCollection new.
-		';
-			nextPutAll: (' . ' join: (oopCollection collect: [ :each |
-				'instances add: (Object _objectForOop: ', each asInteger printString, ')' ]));
-			nextPutAll: '.
+		oops do: [ :eachOop | instances add: (Object _objectForOop: eachOop) ].
 		fromClass migrateInstances: instances asArray to: toClass.
-		instances size ]' ]
+		instances size ]'
 ]
 
 { #category : 'actions' }
 GbsChunkedMigrationRunner >> prepareCheckpoint [
 	^ session withGemStoneTransactionRetryCount: self maxCommitRetries do: [
 		| oops |
-		oops := session executeScriptAndFetchObject: self listInstanceOopsScript.
+		oops := session fetchRemoteCommand: self listInstanceOopsCommand.
 		oops ifNil: [ oops := #() ].
 		self checkpointRoot at: self checkpointKey put: oops asArray.
 		{
@@ -175,7 +164,7 @@ GbsChunkedMigrationRunner >> runNextChunk [
 	^ session withGemStoneTransactionRetryCount: self maxCommitRetries do: [
 		batchCount := self chunkSize min: remaining size.
 		batch := (remaining copyFrom: 1 to: batchCount) asArray.
-		migratedCount := session executeScriptAndFetchObject: (self migrateChunkScriptForOops: batch).
+		migratedCount := session fetchRemoteCommand: (self migrateChunkCommandForOops: batch).
 		newRemaining := remaining allButFirst: batchCount.
 		newRemaining isEmpty
 			ifTrue: [ self clearCheckpoint ]

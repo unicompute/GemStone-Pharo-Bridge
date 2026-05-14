@@ -695,14 +695,16 @@ GbsSessionCoreTest >> testChunkedMigrationRunnerBuildsMaglevAlignedScripts [
 		on: mockSession
 		source: #LegacyPoint
 		target: #Point.
-	prepareScript := runner listInstanceOopsScript.
-	chunkScript := runner migrateChunkScriptForOops: #(101 102 103).
+	prepareScript := runner listInstanceOopsCommand script.
+	chunkScript := (runner migrateChunkCommandForOops: #(101 102 103)) script.
 
 	self assert: (prepareScript includesSubstring: 'SystemRepository listInstances').
 	self assert: (prepareScript includesSubstring: 'LegacyPoint').
 	self assert: (chunkScript includesSubstring: 'migrateInstances: instances asArray to: toClass').
+	self assert: (chunkScript includesSubstring: 'oops do:').
 	self assert: (chunkScript includesSubstring: '101').
-	self assert: (chunkScript includesSubstring: 'Point')
+	self assert: (chunkScript includesSubstring: 'Point').
+	self deny: (chunkScript includesSubstring: '(Object _objectForOop: 101)')
 ]
 
 { #category : 'tests' }

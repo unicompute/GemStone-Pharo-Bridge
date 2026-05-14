@@ -236,17 +236,32 @@ GbsClassHistoryFacade >> size [
 
 { #category : 'querying' }
 GbsClassHistoryFacade >> versionEntries [
-	^ session
-		executeScriptAndFetchObject: self versionEntriesScript
+	^ session fetchRemoteCommand: self versionEntriesCommand
 ]
 
 { #category : 'private' }
-GbsClassHistoryFacade >> versionEntriesScript [
-	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| cls history total entries | cls := ';
-			nextPutAll: (session repository classExpressionFor: classReference);
-			nextPutAll: '. cls ifNil: [ #() ] ifNotNil: [ history := cls classHistory. total := history size. entries := OrderedCollection new. history do: [ :each | entries add: (Array with: each asOop with: each name asString with: (history indexOf: each) with: total) ]. entries asArray ]' ]
+GbsClassHistoryFacade >> versionEntriesCommand [
+	^ session repository
+		remoteCommandForClassReferences: { 'cls' -> classReference }
+		body: self versionEntriesCommandBody
+		literalAssignments: Dictionary new
+		oopAssignments: Dictionary new
+]
+
+{ #category : 'private' }
+GbsClassHistoryFacade >> versionEntriesCommandBody [
+	^ '| history total entries |
+	cls ifNil: [ #() ] ifNotNil: [
+		history := cls classHistory.
+		total := history size.
+		entries := OrderedCollection new.
+		history do: [ :each |
+			entries add: (Array
+				with: each asOop
+				with: each name asString
+				with: (history indexOf: each)
+				with: total) ].
+		entries asArray ]'
 ]
 
 { #category : 'private' }

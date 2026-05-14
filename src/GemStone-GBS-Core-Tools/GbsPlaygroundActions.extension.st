@@ -8,7 +8,7 @@ GbsPlaygroundActions class >> gsInspectItIn: aPlaygroundPresenter [
 	activeSession := self activeSessionOrInform.
 	activeSession ifNil: [ ^ self ].
 
-	oop := activeSession executeScriptAndReturnOop: code.
+	oop := activeSession executeWorkspaceScriptAndReturnOop: code.
 	((oop isNumber) and: [ oop > 20 ])
 		ifTrue: [ self inspectOop: oop session: activeSession ]
 		ifFalse: [ UIManager default inform: 'Result is nil or execution failed.' ].

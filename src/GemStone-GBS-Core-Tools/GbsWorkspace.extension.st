@@ -101,7 +101,7 @@ GbsWorkspace >> inspectIt [
 	activeSession := GbsSessionParameters currentSession.
 	activeSession ifNil: [ ^ self inform: 'No Session' ].
 	
-	rawOop := activeSession executeScriptAndReturnOop: script.
+	rawOop := activeSession executeWorkspaceScriptAndReturnOop: script.
 	
 	(rawOop = 1 or: [ rawOop = 20 ]) 
 		ifTrue: [ self inform: 'Result is nil or execution failed.' ]

@@ -121,7 +121,7 @@ GbsPlaygroundActions class >> gsInspectItIn: aPlaygroundPresenter [
 	activeSession := self activeSessionOrInform.
 	activeSession ifNil: [ ^ self ].
 
-	oop := activeSession serverInterface apiGciExecuteStr: code context: 20 env: 0.
+	oop := activeSession executeWorkspaceScriptAndReturnOop: code.
 	((oop isNumber) and: [ oop > 20 ])
 		ifTrue: [ GbsInspector inspect: oop session: activeSession ]
 		ifFalse: [ UIManager default inform: 'Result is nil or execution failed.' ].

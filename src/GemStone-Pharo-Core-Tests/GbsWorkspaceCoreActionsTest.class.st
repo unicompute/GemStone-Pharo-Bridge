@@ -158,17 +158,21 @@ GbsWorkspaceCoreActionsTest >> testGsActionAliasesRouteToPrimaryActions [
 ]
 
 { #category : 'tests' }
-GbsWorkspaceCoreActionsTest >> testInspectItUsesExecuteScriptAndReturnOop [
+GbsWorkspaceCoreActionsTest >> testInspectItUsesWorkspaceExecutionApi [
 	| workspace mockSession |
 	workspace := CoreTestableGbsWorkspace new.
 	mockSession := CoreMockGbsSession new.
 	workspace textEditor text: '42'.
 
 	mockSession stubs
-		at: #executeScriptAndReturnOop
+		at: #executeWorkspaceScriptAndReturnOop
 		put: [ :script |
 			self assert: script equals: '[ 42 ] value'.
 			9001 ].
+	mockSession stubs
+		at: #executeScriptAndReturnOop
+		put: [ :script |
+			self fail: 'Workspace inspectIt should use executeWorkspaceScriptAndReturnOop:.' ].
 	mockSession stubs
 		at: #apiGciExecuteStrContextEnv
 		put: [ :script :context :env |

@@ -277,8 +277,7 @@ GbsWorkspace >> inspectIt [
 	activeSession := GbsSessionParameters currentSession.
 	activeSession ifNil: [ ^ self inform: 'No Session' ].
 	
-	"Use the low-level API to get the RAW OOP, bypassing the GbsProxy conversion"
-	rawOop := GbsServerInterface uniqueInstance apiGciExecuteStr: script context: 20 env: 0.
+	rawOop := activeSession executeWorkspaceScriptAndReturnOop: script.
 	
 	(rawOop = 1 or: [ rawOop = 20 ]) 
 		ifTrue: [ self inform: 'Result is nil or execution failed.' ]

@@ -92,6 +92,14 @@ CoreMockGbsSession >> executeScriptAndReturnOop: script [
 ]
 
 { #category : 'execution' }
+CoreMockGbsSession >> executeWorkspaceScriptAndReturnOop: script [
+	| block |
+	block := self stubs at: #executeWorkspaceScriptAndReturnOop ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: script ].
+	^ super executeWorkspaceScriptAndReturnOop: script
+]
+
+{ #category : 'execution' }
 CoreMockGbsSession >> forwardRemoteMessage: aMessage forOop: targetOop [
 	| block |
 	block := self stubs at: #forwardRemoteMessage ifAbsent: [ nil ].
