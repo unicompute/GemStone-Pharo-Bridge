@@ -244,15 +244,13 @@ GbsRemoteDebuggerMethodNavigator >> service [
 
 { #category : 'remote browsing' }
 GbsRemoteDebuggerMethodNavigator >> serverMethodReferencesFor: aSelector hierarchyOnly: hierarchyOnly senders: sendersOnly [
-	| className escapedSelector escapedClass script raw |
+	| className raw |
 	debugger session ifNil: [ ^ #( ) ].
 	className := self selectedServerClassName.
-	escapedSelector := aSelector asString copyReplaceAll: '''' with: ''''''.
-	escapedClass := (className ifNil: [ '' ]) asString copyReplaceAll: '''' with: ''''''.
-	script := '[
-		| sel className classes target root stream |
-		sel := #''', escapedSelector, '''.
-		className := ''', escapedClass, '''.
+	raw := [
+		GbsRemoteExecutionDispatcher
+			fetchCommandBody: '
+		| classes root stream |
 		stream := WriteStream on: String new.
 		classes := IdentitySet new.
 		System myUserProfile symbolList do: [ :dict |
@@ -265,25 +263,32 @@ GbsRemoteDebuggerMethodNavigator >> serverMethodReferencesFor: aSelector hierarc
 					baseName := className copyFrom: 1 to: className size - 6.
 					root := (System myUserProfile symbolList objectNamed: baseName asSymbol) class ]
 				ifFalse: [ root := (System myUserProfile symbolList objectNamed: className asSymbol) ] ].
-		', (hierarchyOnly
-			ifTrue: [ 'root notNil ifTrue: [
-				classes := (root withAllSuperclasses , root withAllSubclasses) asIdentitySet ]' ]
-			ifFalse: [ '' ]), '.
+		hierarchyOnly ifTrue: [
+			root notNil ifTrue: [
+				classes := (root withAllSuperclasses , root withAllSubclasses) asIdentitySet ] ].
 		classes asArray do: [ :cls |
 			| sels |
-			', (sendersOnly
-				ifTrue: [ 'sels := [ cls whichSelectorsReferTo: sel ] on: Error do: [ #() ]' ]
-				ifFalse: [ 'sels := (cls includesSelector: sel) ifTrue: [ Array with: sel ] ifFalse: [ #() ]' ]), '.
+			sendersOnly
+				ifTrue: [ sels := [ cls whichSelectorsReferTo: selector ] on: Error do: [ #() ] ]
+				ifFalse: [ sels := (cls includesSelector: selector) ifTrue: [ Array with: selector ] ifFalse: [ #() ] ].
 			sels do: [ :s |
 				stream nextPutAll: cls name asString; nextPutAll: ''>>''; nextPutAll: s asString; lf ].
-			', (sendersOnly
-				ifTrue: [ 'sels := [ cls class whichSelectorsReferTo: sel ] on: Error do: [ #() ]' ]
-				ifFalse: [ 'sels := (cls class includesSelector: sel) ifTrue: [ Array with: sel ] ifFalse: [ #() ]' ]), '.
+			sendersOnly
+				ifTrue: [ sels := [ cls class whichSelectorsReferTo: selector ] on: Error do: [ #() ] ]
+				ifFalse: [ sels := (cls class includesSelector: selector) ifTrue: [ Array with: selector ] ifFalse: [ #() ] ].
 			sels do: [ :s |
 				stream nextPutAll: cls name asString; nextPutAll: '' class>>''; nextPutAll: s asString; lf ] ].
 		stream contents
-	] value'.
-	raw := [ debugger fetchRemoteScript: script context: 20 ] on: Error do: [ '' ].
+	'
+			literalBindings: (Dictionary new
+				at: 'className' put: (className ifNil: [ '' ]) asString;
+				at: 'hierarchyOnly' put: hierarchyOnly;
+				at: 'selector' put: aSelector asSymbol;
+				at: 'sendersOnly' put: sendersOnly;
+				yourself)
+			oopBindings: Dictionary new
+			in: debugger session
+			context: 20 ] on: Error do: [ '' ].
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
 	^ (raw splitOn: Character lf) collect: #trimBoth thenReject: #isEmpty
 ]

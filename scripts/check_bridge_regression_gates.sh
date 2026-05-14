@@ -128,6 +128,13 @@ if rg -n "Object _objectForOop: ',|processOop asString|debugger session evaluate
 fi
 rm -f /tmp/gbs-context-list-policy-command-gate.$$
 
+if rg -n "escapedSelector|escapedClass|sel := #|className := ''',|fetchRemoteScript: script context:" \
+  src/GemStone-GBS-Tools/GbsRemoteDebuggerMethodNavigator.class.st >/tmp/gbs-method-navigator-command-gate.$$; then
+  cat /tmp/gbs-method-navigator-command-gate.$$
+  fail "Debugger method navigator reintroduced selector/class interpolation or raw script fetch; use bound dispatcher commands"
+fi
+rm -f /tmp/gbs-method-navigator-command-gate.$$
+
 if rg -n "loadedClassesScript|migrateInstancesScript|previewMigrationScript|methodReferenceStringsScript|classMetadataScript|methodMetadataScript|versionEntriesScript|protocolEntriesScript|namespaceMirrorEntriesScript" \
   src/GemStone-GBS-Core/GbsRepositoryFacade.class.st \
   src/GemStone-GBS-Core/GbsRemoteClassMirror.class.st \

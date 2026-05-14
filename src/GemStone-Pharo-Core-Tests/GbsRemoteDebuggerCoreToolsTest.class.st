@@ -245,6 +245,45 @@ GbsRemoteDebuggerCoreToolsTest >> testServerMethodReferencesForHierarchySendersU
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerCoreToolsTest >> testMethodNavigatorServerReferencesUseBoundDispatcherCommand [
+	| session references context navigator |
+	session := CoreMockGbsSession new.
+	session stubs
+		at: #evaluate
+		put: [ :script | self fail: 'Method navigator should use dispatcher command execution, not evaluate:.' ].
+	session stubs
+		at: #executeAndFetch
+		put: [ :script | self fail: 'Method navigator should fetch with an explicit remote context.' ].
+	session stubs at: #executeAndFetchContext put: [ :script :ctx |
+		self assert: ctx equals: 20.
+		self assert: (script includesSubstring: ':className').
+		self assert: (script includesSubstring: ':hierarchyOnly').
+		self assert: (script includesSubstring: ':selector').
+		self assert: (script includesSubstring: ':sendersOnly').
+		self assert: (script includesSubstring: 'value: ''Invoice class''').
+		self assert: (script includesSubstring: 'value: true').
+		self assert: (script includesSubstring: 'value: (''new'' asSymbol)').
+		self assert: (script includesSubstring: 'value: false').
+		self deny: (script includesSubstring: 'sel := #').
+		self deny: (script includesSubstring: 'className := ''Invoice class''').
+		self assert: (script includesSubstring: 'cls class includesSelector: selector').
+		^ 'Invoice class>>new', String lf ].
+	context := CoreGbxFakeContextForRemoteDebugger new.
+	context methodClass: 'Invoice class'.
+	context selector: #new.
+	service currentContext: context.
+	debugger session: session.
+	navigator := GbsRemoteDebuggerMethodNavigator on: debugger.
+
+	references := navigator
+		serverMethodReferencesFor: #new
+		hierarchyOnly: true
+		senders: false.
+
+	self assert: references equals: #('Invoice class>>new')
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerCoreToolsTest >> testSelectedServerReferenceTargetNameStripsClassSideSuffix [
 	| context |
 	context := CoreGbxFakeContextForRemoteDebugger new.
