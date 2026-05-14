@@ -216,8 +216,8 @@ GbsAdminToolsPresenterTest >> testSecurityPoliciesMembersScriptIncludesSelectedG
 		membersScriptForPolicyName: 'Policy''A'
 		groupName: 'Group''B'.
 
-	self assert: (script includesSubstring: '''Policy''''A''').
-	self assert: (script includesSubstring: '''Group''''B''')
+	self assert: (script includesSubstring: '= policyName').
+	self assert: (script includesSubstring: 'at: groupName')
 ]
 
 { #category : 'tests' }
@@ -226,7 +226,8 @@ GbsAdminToolsPresenterTest >> testSecurityPoliciesRefreshSelectedPolicyMembersUs
 	mockSession := MockGbsSession new.
 	mockSession isLoggedIn: true.
 	lastScript := ''.
-	mockSession stubs at: #evaluate put: [ :script |
+	mockSession stubs at: #evaluate put: [ self fail: 'Security policy member reads should use a bound remote command, not evaluate:.' ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
 		lastScript := script.
 		'DataCurator', String lf, 'GcUser' ].
 
@@ -247,7 +248,8 @@ GbsAdminToolsPresenterTest >> testSecurityPoliciesRefreshSelectedPolicyMembersUs
 
 	securityPoliciesPresenter refreshSelectedPolicyMembers.
 
-	self assert: (lastScript includesSubstring: '''DataCuratorGroup''').
+	self assert: (lastScript includesSubstring: ':groupName').
+	self assert: (lastScript includesSubstring: 'value: ''DataCuratorGroup''').
 	self assert: fakeMembers items size equals: 2.
 	self assert: fakeMembers items first equals: 'DataCurator'
 ]
@@ -434,18 +436,23 @@ GbsAdminToolsPresenterTest >> testSecurityPoliciesRefreshAllPreservesSelectedPol
 	| mockSession fakePolicies fakeGroups fakeMembers |
 	mockSession := MockGbsSession new.
 	mockSession isLoggedIn: true.
-	mockSession stubs at: #evaluate put: [ :script |
+	mockSession stubs at: #evaluate put: [ self fail: 'Security policy refresh reads should use a bound remote command, not evaluate:.' ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
 		(script includesSubstring: 'allPolicies do:')
 			ifTrue: [
 				^ 'Current', Character tab asString, 'Default', Character tab asString, 'PolicyA', Character tab asString, 'OwnerA', Character tab asString, 'write', Character tab asString, 'read', Character tab asString, '1', Character tab asString, 'No', String lf,
 					'', Character tab asString, '', Character tab asString, 'PolicyB', Character tab asString, 'OwnerB', Character tab asString, 'read', Character tab asString, 'read', Character tab asString, '2', Character tab asString, 'Yes' ].
-		(script includesSubstring: '= ''PolicyA''')
+		((script includesSubstring: 'groups keysAndValuesDo:')
+			and: [ script includesSubstring: 'value: ''PolicyA''' ])
 			ifTrue: [ ^ 'GroupA', Character tab asString, 'write' ].
-		(script includesSubstring: '= ''PolicyB''')
+		((script includesSubstring: 'groups keysAndValuesDo:')
+			and: [ script includesSubstring: 'value: ''PolicyB''' ])
 			ifTrue: [ ^ 'GroupB', Character tab asString, 'read' ].
-		(script includesSubstring: 'GroupA')
+		((script includesSubstring: 'grp members do:')
+			and: [ script includesSubstring: 'value: ''GroupA''' ])
 			ifTrue: [ ^ 'UserA' ].
-		(script includesSubstring: 'GroupB')
+		((script includesSubstring: 'grp members do:')
+			and: [ script includesSubstring: 'value: ''GroupB''' ])
 			ifTrue: [ ^ 'UserB' ].
 		^ '' ].
 
@@ -470,12 +477,13 @@ GbsAdminToolsPresenterTest >> testSecurityPoliciesRefreshGroupsAndMembersPreserv
 	| mockSession fakePolicies fakeGroups fakeMembers |
 	mockSession := MockGbsSession new.
 	mockSession isLoggedIn: true.
-	mockSession stubs at: #evaluate put: [ :script |
-		(script includesSubstring: '= ''PolicyA''')
+	mockSession stubs at: #evaluate put: [ self fail: 'Security policy group/member reads should use a bound remote command, not evaluate:.' ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		(script includesSubstring: 'value: ''PolicyA''')
 			ifTrue: [
-				(script includesSubstring: 'GroupA')
+				(script includesSubstring: 'value: ''GroupA''')
 					ifTrue: [ ^ 'User1', String lf, 'User2' ].
-				(script includesSubstring: 'GroupB')
+				(script includesSubstring: 'value: ''GroupB''')
 					ifTrue: [ ^ 'UserB1', String lf, 'UserB2' ].
 				^ 'GroupA', Character tab asString, 'write', String lf,
 					'GroupB', Character tab asString, 'read' ].
@@ -1177,14 +1185,19 @@ GbsAdminToolsPresenterTest >> testConnectorBrowserInvalidPostActionsDisableButto
 
 { #category : 'tests' }
 GbsAdminToolsPresenterTest >> testUserInfoFetchGroupsForUserParsesCsv [
-	| mockSession groups |
+	| mockSession groups lastScript |
 	userInfoPresenter ifNil: [ self skip: 'GbsUserInfoPresenter not loaded' ].
 	mockSession := MockGbsSession new.
-	mockSession stubs at: #evaluate put: 'DataCuratorGroup,Subscribers'.
+	mockSession stubs at: #evaluate put: [ self fail: 'User info group reads should use a bound remote command, not evaluate:.' ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		lastScript := script.
+		'DataCuratorGroup,Subscribers' ].
 	userInfoPresenter session: mockSession.
 
 	groups := userInfoPresenter fetchGroupsForUser: 'DataCurator'.
 
+	self assert: (lastScript includesSubstring: ':userName').
+	self assert: (lastScript includesSubstring: 'value: ''DataCurator''').
 	self assert: groups size equals: 2.
 	self assert: (groups includes: 'DataCuratorGroup').
 	self assert: (groups includes: 'Subscribers')
@@ -1192,10 +1205,15 @@ GbsAdminToolsPresenterTest >> testUserInfoFetchGroupsForUserParsesCsv [
 
 { #category : 'tests' }
 GbsAdminToolsPresenterTest >> testUserInfoRefreshInfoTextUpdatesTextPresenter [
-	| mockSession fakeText |
+	| mockSession fakeText lastScript |
 	userInfoPresenter ifNil: [ self skip: 'GbsUserInfoPresenter not loaded' ].
 	mockSession := MockGbsSession new.
-	mockSession stubs at: #evaluate put: 'User: DataCurator', String lf, 'Class: UserProfile'.
+	mockSession stubs at: #evaluate put: [ self fail: 'User info refresh should use a bound remote command, not evaluate:.' ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		lastScript := script.
+		(script includesSubstring: 'privilegeNames do:')
+			ifTrue: [ '' ]
+			ifFalse: [ 'User: DataCurator', String lf, 'Class: UserProfile' ] ].
 	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
 
 	userInfoPresenter session: mockSession.
@@ -1205,6 +1223,8 @@ GbsAdminToolsPresenterTest >> testUserInfoRefreshInfoTextUpdatesTextPresenter [
 
 	userInfoPresenter refreshInfoText.
 
+	self assert: (lastScript includesSubstring: ':userName').
+	self assert: (lastScript includesSubstring: 'value: ''DataCurator''').
 	self assert: (fakeText text includesSubstring: 'User: DataCurator').
 	self assert: (fakeText text includesSubstring: 'Class: UserProfile')
 ]
@@ -1219,7 +1239,8 @@ GbsAdminToolsPresenterTest >> testUserInfoEditPrivilegesPersistsUpdatedPrivilege
 	executedScript := ''.
 	capturedUser := nil.
 	capturedInitial := nil.
-	mockSession stubs at: #evaluate put: [ :script |
+	mockSession stubs at: #evaluate put: [ self fail: 'User info privilege workflow reads should use bound remote commands, not evaluate:.' ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
 		(script includesSubstring: 'privilegeNames do:')
 			ifTrue: [ ^ 'SystemControl', Character tab asString, 'false' ].
 		(script includesSubstring: 'String streamContents')
@@ -1786,12 +1807,11 @@ GbsAdminToolsPresenterTest >> testUserInfoRefreshInfoTextIncludesPrivilegesSumma
 	| mockSession fakeText |
 	userInfoPresenter ifNil: [ self skip: 'GbsUserInfoPresenter not loaded' ].
 	mockSession := MockGbsSession new.
-	mockSession stubs at: #evaluate put: [ :script |
-		'User: DataCurator', String lf, 'Class: UserProfile' ].
+	mockSession stubs at: #evaluate put: [ self fail: 'User info refresh should use a bound remote command, not evaluate:.' ].
 	mockSession stubs at: #executeAndFetch put: [ :script |
 		(script includesSubstring: 'privilegeNames do:')
 			ifTrue: [ 'SystemControl', Character tab asString, 'true' ]
-			ifFalse: [ '' ] ].
+			ifFalse: [ 'User: DataCurator', String lf, 'Class: UserProfile' ] ].
 	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
 
 	userInfoPresenter session: mockSession.

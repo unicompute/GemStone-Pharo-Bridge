@@ -161,7 +161,9 @@ rm -f /tmp/gbs-symbol-list-command-gate.$$
 if rg -n "session evaluate:" \
   src/GemStone-GBS-Tools/GbsNamespacesPresenter.class.st \
   src/GemStone-GBS-Tools/GbsUserListPresenter.class.st \
-  src/GemStone-GBS-Tools/GbsCreateUserPresenter.class.st >/tmp/gbs-admin-presenter-command-gate.$$; then
+  src/GemStone-GBS-Tools/GbsCreateUserPresenter.class.st \
+  src/GemStone-GBS-Tools/GbsUserInfoPresenter.class.st \
+  src/GemStone-GBS-Tools/GbsSecurityPoliciesPresenter.class.st >/tmp/gbs-admin-presenter-command-gate.$$; then
   cat /tmp/gbs-admin-presenter-command-gate.$$
   fail "admin presenter read paths reintroduced raw evaluate: calls; use GbsRemoteExecutionDispatcher bound command helpers"
 fi

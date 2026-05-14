@@ -154,7 +154,7 @@ GbsUserInfoPresenter >> fetchGroupsForUser: aUserName [
 	| users user names |
 	users := System myUserProfile symbolList objectNamed: #AllUsers.
 	users ifNil: [ ^ '''' ].
-	user := users detect: [ :u | u userId asString = ''', aUserName, ''' ] ifNone: [ nil ].
+	user := users detect: [ :u | u userId asString = userName ] ifNone: [ nil ].
 	user ifNil: [ ^ '''' ].
 	names := (user respondsTo: #groups)
 		ifTrue: [ user groups collect: [ :g | (g respondsTo: #name) ifTrue: [ g name asString ] ifFalse: [ g asString ] ] ]
@@ -163,10 +163,28 @@ GbsUserInfoPresenter >> fetchGroupsForUser: aUserName [
 		names asSortedCollection
 			do: [ :n | s nextPutAll: n asString ]
 			separatedBy: [ s nextPut: $, ] ]'.
-	raw := [ session evaluate: script ] on: Error do: [ '' ].
+	raw := [
+		self
+			fetchRemoteCommandBody: script
+			literalBindings: (Dictionary new
+				at: 'userName' put: aUserName asString;
+				yourself)
+			context: 20 ]
+		on: Error
+		do: [ '' ].
 	(raw isString and: [ raw isNotEmpty ])
 		ifTrue: [ ^ (raw splitOn: $,) reject: [ :each | each isEmpty ] ].
 	^ #()
+]
+
+{ #category : 'private' }
+GbsUserInfoPresenter >> fetchRemoteCommandBody: bodyString literalBindings: literalDictionary context: contextOop [
+	^ GbsRemoteExecutionDispatcher
+		fetchCommandBody: bodyString
+		literalBindings: literalDictionary
+		oopBindings: Dictionary new
+		in: session
+		context: contextOop
 ]
 
 { #category : 'private' }
@@ -329,7 +347,7 @@ GbsUserInfoPresenter >> refreshInfoText [
 	strm := WriteStream on: String new.
 	users := System myUserProfile symbolList objectNamed: #AllUsers.
 	users ifNotNil: [
-		user := users detect: [ :u | u userId asString = ''', userName, ''' ] ifNone: [ nil ].
+		user := users detect: [ :u | u userId asString = userName ] ifNone: [ nil ].
 		user ifNotNil: [
 			strm
 				nextPutAll: ''User: ''; nextPutAll: user userId asString; cr;
@@ -343,7 +361,15 @@ GbsUserInfoPresenter >> refreshInfoText [
 					separatedBy: [ strm nextPutAll: '', '' ].
 				strm cr ] ] ].
 	strm contents'.
-	raw := [ session evaluate: script ] on: Error do: [ infoText ].
+	raw := [
+		self
+			fetchRemoteCommandBody: script
+			literalBindings: (Dictionary new
+				at: 'userName' put: userName asString;
+				yourself)
+			context: 20 ]
+		on: Error
+		do: [ infoText ].
 	infoText := raw ifNil: [ infoText ] ifNotNil: [ raw asString ].
 	infoText := infoText, self privilegeSummaryText.
 	self updateInfoDisplay

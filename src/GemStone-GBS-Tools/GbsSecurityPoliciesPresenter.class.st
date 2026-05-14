@@ -309,6 +309,16 @@ GbsSecurityPoliciesPresenter >> fullReportText [
 ]
 
 { #category : 'private' }
+GbsSecurityPoliciesPresenter >> fetchRemoteCommandBody: bodyString literalBindings: literalDictionary context: contextOop [
+	^ GbsRemoteExecutionDispatcher
+		fetchCommandBody: bodyString
+		literalBindings: literalDictionary
+		oopBindings: Dictionary new
+		in: session
+		context: contextOop
+]
+
+{ #category : 'private' }
 GbsSecurityPoliciesPresenter >> groupOopScriptForPolicyName: policyName groupName: groupName [
 	| p g |
 	p := self literalString: policyName.
@@ -349,8 +359,6 @@ GbsSecurityPoliciesPresenter >> groupReportText [
 
 { #category : 'private' }
 GbsSecurityPoliciesPresenter >> groupsScriptForPolicyName: policyName [
-	| nameLiteral |
-	nameLiteral := self literalString: policyName.
 	^ '
 	| allPolicies policy strm groups |
 	strm := WriteStream on: String new.
@@ -366,7 +374,7 @@ GbsSecurityPoliciesPresenter >> groupsScriptForPolicyName: policyName [
 			ifFalse: [ resolved ] ].
 	allPolicies ifNil: [ ^ '''' ].
 	policy := allPolicies
-		detect: [ :p | ((p respondsTo: #name) ifTrue: [ p name asString ] ifFalse: [ p printString ]) = ', nameLiteral, ' ]
+		detect: [ :p | ((p respondsTo: #name) ifTrue: [ p name asString ] ifFalse: [ p printString ]) = policyName ]
 		ifNone: [ nil ].
 	policy ifNil: [ ^ '''' ].
 	(policy respondsTo: #groups) ifFalse: [ ^ '''' ].
@@ -533,9 +541,6 @@ GbsSecurityPoliciesPresenter >> memberReportText [
 
 { #category : 'private' }
 GbsSecurityPoliciesPresenter >> membersScriptForPolicyName: policyName groupName: groupName [
-	| nameLiteral groupLiteral |
-	nameLiteral := self literalString: policyName.
-	groupLiteral := self literalString: groupName.
 	^ '
 	| allPolicies policy strm allGroups grp |
 	strm := WriteStream on: String new.
@@ -551,19 +556,19 @@ GbsSecurityPoliciesPresenter >> membersScriptForPolicyName: policyName groupName
 			ifFalse: [ resolved ] ].
 	allPolicies ifNil: [ ^ '''' ].
 	policy := allPolicies
-		detect: [ :p | ((p respondsTo: #name) ifTrue: [ p name asString ] ifFalse: [ p printString ]) = ', nameLiteral, ' ]
+		detect: [ :p | ((p respondsTo: #name) ifTrue: [ p name asString ] ifFalse: [ p printString ]) = policyName ]
 		ifNone: [ nil ].
 	policy ifNil: [ ^ '''' ].
 	(policy respondsTo: #groups) ifFalse: [ ^ '''' ].
 	allGroups := System myUserProfile symbolList objectNamed: #AllGroups.
 	grp := nil.
 	(policy groups respondsTo: #at:ifAbsent:)
-		ifTrue: [ grp := policy groups at: ', groupLiteral, ' ifAbsent: [ nil ] ].
+		ifTrue: [ grp := policy groups at: groupName ifAbsent: [ nil ] ].
 	grp ifNil: [
 		(policy groups respondsTo: #detect:ifNone:)
 			ifTrue: [
 				grp := policy groups
-					detect: [ :each | (each respondsTo: #name) and: [ each name asString = ', groupLiteral, ' ] ]
+					detect: [ :each | (each respondsTo: #name) and: [ each name asString = groupName ] ]
 					ifNone: [ nil ] ] ].
 	grp ifNil: [ ^ '''' ].
 	(allGroups notNil and: [ grp isString ])
@@ -735,7 +740,13 @@ GbsSecurityPoliciesPresenter >> refreshAll [
 		^ self
 	].
 	previousPolicyName := self selectedPolicyName.
-	raw := [ session evaluate: self securityPoliciesScript ] on: Error do: [ :ex | self inform: 'Fetch security policies failed: ', ex messageText. '' ].
+	raw := [
+		self
+			fetchRemoteCommandBody: self securityPoliciesScript
+			literalBindings: Dictionary new
+			context: 20 ]
+		on: Error
+		do: [ :ex | self inform: 'Fetch security policies failed: ', ex messageText. '' ].
 	policies := self parseRows: raw expectedColumns: 8.
 	policiesTable items: policies.
 	groupsTable items: #().
@@ -770,7 +781,15 @@ GbsSecurityPoliciesPresenter >> refreshGroupsAndMembersForPolicyName: policyName
 		groupsTable items: #().
 		membersList items: #().
 		^ self ].
-	rawGroup := [ session evaluate: (self groupsScriptForPolicyName: policyName) ] on: Error do: [ '' ].
+	rawGroup := [
+		self
+			fetchRemoteCommandBody: (self groupsScriptForPolicyName: policyName)
+			literalBindings: (Dictionary new
+				at: 'policyName' put: policyName asString;
+				yourself)
+			context: 20 ]
+		on: Error
+		do: [ '' ].
 	groups := self parseRows: rawGroup expectedColumns: 2.
 	groupsTable items: groups.
 	membersList items: #().
@@ -800,7 +819,14 @@ GbsSecurityPoliciesPresenter >> refreshMembersForPolicyName: policyName groupNam
 	previousMemberName := self selectedMemberName.
 	((policyName isNil or: [ policyName isEmpty ]) or: [ groupName isNil or: [ groupName isEmpty ] ])
 		ifTrue: [ membersList items: #(). ^ self ].
-	rawMembers := [ session evaluate: (self membersScriptForPolicyName: policyName groupName: groupName) ]
+	rawMembers := [
+		self
+			fetchRemoteCommandBody: (self membersScriptForPolicyName: policyName groupName: groupName)
+			literalBindings: (Dictionary new
+				at: 'groupName' put: groupName asString;
+				at: 'policyName' put: policyName asString;
+				yourself)
+			context: 20 ]
 		on: Error
 		do: [ '' ].
 	members := (rawMembers isString ifTrue: [ rawMembers lines ] ifFalse: [ #() ]).
