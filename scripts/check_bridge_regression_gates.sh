@@ -325,6 +325,13 @@ if rg -n "String streamContents:|executeDebugScript:" \
 fi
 rm -f /tmp/gbs-debugger-controller-command-gate.$$
 
+if rg -n "fullSourceCompatibilityScriptForProcessOop:|Object _objectForOop: ',|processOop asInteger|levelValue asInteger|session evaluate:" \
+  src/GemStone-GBS-Tools/GbsRemoteDebuggerSourceResolver.class.st >/tmp/gbs-debugger-source-resolver-command-gate.$$; then
+  cat /tmp/gbs-debugger-source-resolver-command-gate.$$
+  fail "debugger source resolver reintroduced local compatibility script construction; use GbsRemoteExecutionDispatcher bound command APIs"
+fi
+rm -f /tmp/gbs-debugger-source-resolver-command-gate.$$
+
 if rg -l "executeAndFetch:" \
   src/GemStone-GBS-Tools \
   src/GemStone-GBS-Core-Tools \

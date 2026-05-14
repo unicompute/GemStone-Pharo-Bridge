@@ -1103,6 +1103,33 @@ GbsRemoteDebuggerCoreToolsTest >> testFetchFullSourceForUsesRemoteProcessFacade 
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerCoreToolsTest >> testSourceResolverUsesDispatcherBoundCommand [
+	| session context resolver source |
+	session := CoreMockGbsSession new.
+	context := CoreGbxFakeContextForRemoteDebugger new
+		processOop: 9001;
+		level: 2;
+		yourself.
+	session stubs
+		at: #evaluate
+		put: [ self fail: 'Source resolver should use dispatcher command execution, not evaluate:.' ].
+	session stubs at: #executeAndFetchContext put: [ :script :ctx |
+		self assert: ctx equals: 20.
+		self assert: (script includesSubstring: ':obj').
+		self assert: (script includesSubstring: ':levelValue').
+		self assert: (script includesSubstring: 'value: (Object _objectForOop: 9001)').
+		self assert: (script includesSubstring: 'value: 2').
+		self deny: (script includesSubstring: 'obj := Object _objectForOop:').
+		'line1<TAB>value<LF>line2' ].
+	debugger session: session.
+	resolver := GbsRemoteDebuggerSourceResolver on: debugger.
+
+	source := resolver fetchFullSourceFor: context.
+
+	self assert: source equals: 'line1', Character tab asString, 'value', String lf, 'line2'
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerCoreToolsTest >> testWithRemoteDebuggerSessionTerminatesAndAborts [
 	| session aborts result |
 	session := CoreMockGbsSession new.
