@@ -621,6 +621,32 @@ GbsRemoteDebuggerCoreToolsTest >> testFetchContextsDirectlyUsesRemoteProcessFaca
 ]
 
 { #category : 'tests' }
+GbsRemoteDebuggerCoreToolsTest >> testStackFetcherUsesDispatcherBoundCommand [
+	| session fetcher contexts |
+	session := CoreMockGbsSession new.
+	session stubs
+		at: #evaluate
+		put: [ self fail: 'Stack fetcher should use dispatcher command execution, not evaluate:.' ].
+	session stubs at: #executeAndFetchContext put: [ :script :ctx |
+		self assert: ctx equals: 20.
+		self assert: (script includesSubstring: ':obj').
+		self assert: (script includesSubstring: 'value: (Object _objectForOop: 9001)').
+		self deny: (script includesSubstring: 'obj := Object _objectForOop:').
+		self assert: (script includesSubstring: '_gsiStackReportFromLevel: level toLevel: level').
+		^ '1', Character tab asString, 'DemoWorker', Character tab asString, 'run', Character tab asString, 'run', Character tab asString, '2', Character tab asString, '1,5,9', Character tab asString, '3', String lf ].
+	debugger
+		session: session;
+		processOop: 9001.
+	fetcher := GbsRemoteDebuggerStackFetcher on: debugger.
+
+	contexts := fetcher fetchContextsDirectly.
+
+	self assert: contexts size equals: 1.
+	self assert: contexts first processOop equals: 9001.
+	self assert: contexts first selectorOrUnknown equals: #run
+]
+
+{ #category : 'tests' }
 GbsRemoteDebuggerCoreToolsTest >> testReturnFromFrameUsesRemoteProcessFacadeWhenServiceMissing [
 	| session fakeList sawStepReturn |
 	session := CoreMockGbsSession new.

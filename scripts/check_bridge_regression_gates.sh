@@ -332,6 +332,13 @@ if rg -n "fullSourceCompatibilityScriptForProcessOop:|Object _objectForOop: ',|p
 fi
 rm -f /tmp/gbs-debugger-source-resolver-command-gate.$$
 
+if rg -n "stackReportScriptForProcessOop:|Object _objectForOop: ',|processOop asString|session evaluate:" \
+  src/GemStone-GBS-Tools/GbsRemoteDebuggerStackFetcher.class.st >/tmp/gbs-debugger-stack-fetcher-command-gate.$$; then
+  cat /tmp/gbs-debugger-stack-fetcher-command-gate.$$
+  fail "debugger stack fetcher reintroduced local OOP script construction; use GbsRemoteExecutionDispatcher bound command APIs"
+fi
+rm -f /tmp/gbs-debugger-stack-fetcher-command-gate.$$
+
 if rg -l "executeAndFetch:" \
   src/GemStone-GBS-Tools \
   src/GemStone-GBS-Core-Tools \

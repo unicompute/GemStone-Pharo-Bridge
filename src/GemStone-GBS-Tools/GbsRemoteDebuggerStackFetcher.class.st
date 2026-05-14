@@ -86,7 +86,7 @@ GbsRemoteDebuggerStackFetcher >> fetchContextsDirectly [
 	processOop = 0 ifTrue: [ ^ #( ) ].
 
 	[
-		rawData := session evaluate: (self stackReportScriptForProcessOop: processOop).
+		rawData := self stackReportIn: session processOop: processOop.
 		(rawData respondsTo: #asLocalString) ifTrue: [ rawData := rawData asLocalString ].
 		rawData ifNil: [ rawData := '' ].
 	] on: Error do: [ :ex |
@@ -105,91 +105,107 @@ GbsRemoteDebuggerStackFetcher >> fetchContextsDirectly [
 ]
 
 { #category : 'private' }
-GbsRemoteDebuggerStackFetcher >> stackReportScriptForProcessOop: processOop [
-	^ '[
-		| obj ctx proc stream depth level stackReport fullEntry selectorName methodName className quickStep offsets offsetsText lineNumber sourceText offset |
-		obj := Object _objectForOop: ', processOop asString, '.
+GbsRemoteDebuggerStackFetcher >> stackReportCommandBody [
+	^ '
+		| ctx proc stream depth level stackReport fullEntry selectorName methodName className quickStep offsets offsetsText lineNumber sourceText offset |
 		stream := WriteStream on: String new.
-		obj ifNil: [ ^ '''' ].
-		ctx := nil.
-		proc := nil.
-		(obj respondsTo: #sender) ifTrue: [ ctx := obj ].
-		(ctx isNil and: [ obj respondsTo: #topContext ])
-			ifTrue: [ ctx := [ obj topContext ] on: Error do: [ nil ] ].
-		(ctx isNil and: [ obj respondsTo: #process ])
-			ifTrue: [ proc := [ obj process ] on: Error do: [ nil ] ].
-		(proc isNil and: [ obj respondsTo: #_gsiStackReportFromLevel:toLevel: ])
-			ifTrue: [ proc := obj ].
-		(ctx isNil and: [ proc notNil and: [ proc respondsTo: #topContext ] ])
-			ifTrue: [ ctx := [ proc topContext ] on: Error do: [ nil ] ].
+		obj ifNotNil: [
+			ctx := nil.
+			proc := nil.
+			(obj respondsTo: #sender) ifTrue: [ ctx := obj ].
+			(ctx isNil and: [ obj respondsTo: #topContext ])
+				ifTrue: [ ctx := [ obj topContext ] on: Error do: [ nil ] ].
+			(ctx isNil and: [ obj respondsTo: #process ])
+				ifTrue: [ proc := [ obj process ] on: Error do: [ nil ] ].
+			(proc isNil and: [ obj respondsTo: #_gsiStackReportFromLevel:toLevel: ])
+				ifTrue: [ proc := obj ].
+			(ctx isNil and: [ proc notNil and: [ proc respondsTo: #topContext ] ])
+				ifTrue: [ ctx := [ proc topContext ] on: Error do: [ nil ] ].
 
-		(proc notNil and: [ proc respondsTo: #_gsiStackReportFromLevel:toLevel: ]) ifTrue: [
-			level := 1.
-			[ level <= 30 ] whileTrue: [
-				stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
-				(stackReport isNil or: [ stackReport size < 2 ])
-					ifTrue: [ level := 31 ]
-					ifFalse: [
-						fullEntry := stackReport at: 2.
-						className := [ fullEntry first inClass name ] on: Error do: [ ''<unknown>'' ].
-						selectorName := [ (fullEntry at: 4) asString ] on: Error do: [ ''<unknown>'' ].
-						methodName := [ (fullEntry first selector) asString ] on: Error do: [ ''<unknown>'' ].
-						quickStep := [ (fullEntry at: 5) ] on: Error do: [ 0 ].
-						quickStep ifNil: [ quickStep := 0 ].
-						offsets := [ fullEntry at: 6 ] on: Error do: [ #() ].
-						offsets ifNil: [ offsets := #() ].
-						offsetsText := String streamContents: [ :offsetStream |
-							1 to: offsets size do: [ :idx |
-								| raw |
-								raw := offsets at: idx.
-								raw isNil
-									ifTrue: [ offsetStream nextPutAll: ''nil'' ]
-									ifFalse: [ offsetStream nextPutAll: raw asString ].
-								idx < offsets size ifTrue: [ offsetStream nextPut: $, ]
-							]
-						].
-						lineNumber := 0.
-						sourceText := [ (fullEntry at: 9) asString ] on: Error do: [ '''' ].
-						sourceText ifNil: [ sourceText := '''' ].
-						(quickStep isNumber and: [ quickStep > 0 and: [ quickStep <= offsets size ] ]) ifTrue: [
-							offset := [ (offsets at: quickStep) asInteger ] on: Error do: [ nil ].
-							(offset isNumber and: [ offset > 0 ]) ifTrue: [
-								lineNumber := 1.
-								1 to: ((offset - 1) min: sourceText size) do: [ :i |
-									| ch |
-									ch := sourceText at: i.
-									(ch = Character lf or: [ ch = Character cr ]) ifTrue: [ lineNumber := lineNumber + 1 ]
+			(proc notNil and: [ proc respondsTo: #_gsiStackReportFromLevel:toLevel: ]) ifTrue: [
+				level := 1.
+				[ level <= 30 ] whileTrue: [
+					stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
+					(stackReport isNil or: [ stackReport size < 2 ])
+						ifTrue: [ level := 31 ]
+						ifFalse: [
+							fullEntry := stackReport at: 2.
+							className := [ fullEntry first inClass name ] on: Error do: [ ''<unknown>'' ].
+							selectorName := [ (fullEntry at: 4) asString ] on: Error do: [ ''<unknown>'' ].
+							methodName := [ (fullEntry first selector) asString ] on: Error do: [ ''<unknown>'' ].
+							quickStep := [ (fullEntry at: 5) ] on: Error do: [ 0 ].
+							quickStep ifNil: [ quickStep := 0 ].
+							offsets := [ fullEntry at: 6 ] on: Error do: [ #() ].
+							offsets ifNil: [ offsets := #() ].
+							offsetsText := String streamContents: [ :offsetStream |
+								1 to: offsets size do: [ :idx |
+									| raw |
+									raw := offsets at: idx.
+									raw isNil
+										ifTrue: [ offsetStream nextPutAll: ''nil'' ]
+										ifFalse: [ offsetStream nextPutAll: raw asString ].
+									idx < offsets size ifTrue: [ offsetStream nextPut: $, ]
 								]
-							]
-						].
-						stream
-							nextPutAll: level asString; tab;
-							nextPutAll: className; tab;
-							nextPutAll: selectorName; tab;
-							nextPutAll: methodName; tab;
-							nextPutAll: quickStep asString; tab;
-							nextPutAll: offsetsText; tab;
-							nextPutAll: lineNumber asString;
-							lf.
-						level := level + 1
+							].
+							lineNumber := 0.
+							sourceText := [ (fullEntry at: 9) asString ] on: Error do: [ '''' ].
+							sourceText ifNil: [ sourceText := '''' ].
+							(quickStep isNumber and: [ quickStep > 0 and: [ quickStep <= offsets size ] ]) ifTrue: [
+								offset := [ (offsets at: quickStep) asInteger ] on: Error do: [ nil ].
+								(offset isNumber and: [ offset > 0 ]) ifTrue: [
+									lineNumber := 1.
+									1 to: ((offset - 1) min: sourceText size) do: [ :i |
+										| ch |
+										ch := sourceText at: i.
+										(ch = Character lf or: [ ch = Character cr ]) ifTrue: [ lineNumber := lineNumber + 1 ]
+									]
+								]
+							].
+							stream
+								nextPutAll: level asString; tab;
+								nextPutAll: className; tab;
+								nextPutAll: selectorName; tab;
+								nextPutAll: methodName; tab;
+								nextPutAll: quickStep asString; tab;
+								nextPutAll: offsetsText; tab;
+								nextPutAll: lineNumber asString;
+								lf.
+							level := level + 1
+						]
+				].
+			].
+
+			stream position = 0 ifTrue: [
+				ctx
+					ifNil: [ stream nextPutAll: ''<ctx is nil>'' ]
+					ifNotNil: [
+						depth := 0.
+						[ ctx notNil and: [ depth < 30 ] ] whileTrue: [
+							className := [ ctx method inClass name ] on: Error do: [ ''<unknown>'' ].
+							depth := depth + 1.
+							stream
+								nextPutAll: depth asString; tab;
+								nextPutAll: className; tab;
+								nextPutAll: (([ ctx selector asString ] on: Error do: [ ''<unknown>'' ])); tab;
+								nextPutAll: (([ ctx method ifNil: [ ''<unknown>'' ] ifNotNil: [ :m | m selector asString ] ] on: Error do: [ ''<unknown>'' ]));
+								lf.
+							ctx := [ ctx sender ] on: Error do: [ nil ].
+						]
 					]
 			].
-			stream position > 0 ifTrue: [ ^ stream contents ].
-		].
-
-		ctx ifNil: [ ^ ''<ctx is nil>'' ].
-		depth := 0.
-		[ ctx notNil and: [ depth < 30 ] ] whileTrue: [
-			className := [ ctx method inClass name ] on: Error do: [ ''<unknown>'' ].
-			depth := depth + 1.
-			stream
-				nextPutAll: depth asString; tab;
-				nextPutAll: className; tab;
-				nextPutAll: (([ ctx selector asString ] on: Error do: [ ''<unknown>'' ])); tab;
-				nextPutAll: (([ ctx method ifNil: [ ''<unknown>'' ] ifNotNil: [ :m | m selector asString ] ] on: Error do: [ ''<unknown>'' ]));
-				lf.
-			ctx := [ ctx sender ] on: Error do: [ nil ].
 		].
 		stream contents
-	] value'
+	'
+]
+
+{ #category : 'private' }
+GbsRemoteDebuggerStackFetcher >> stackReportIn: aSession processOop: processOop [
+	^ GbsRemoteExecutionDispatcher
+		fetchCommandBody: self stackReportCommandBody
+		literalBindings: Dictionary new
+		oopBindings: (Dictionary new
+			at: 'obj' put: processOop;
+			yourself)
+		in: aSession
+		context: 20
 ]
