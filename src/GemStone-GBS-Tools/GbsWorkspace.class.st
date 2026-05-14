@@ -286,52 +286,60 @@ GbsWorkspace >> inspectIt [
 
 { #category : 'private' }
 GbsWorkspace >> isDebuggerStackCandidateOop: anOop session: aSession [
-	| script answer |
+	| answer |
 
 	(anOop isNil or: [ anOop = 0 or: [ anOop = 20 ] ]) ifTrue: [ ^ false ].
 	aSession ifNil: [ ^ false ].
 	(aSession respondsTo: #isLoggedIn)
 		ifTrue: [ ([ aSession isLoggedIn == true ] on: Error do: [ false ]) ifFalse: [ ^ false ] ].
 
-	script := '[
-		| obj proc ctx stackReport |
-		obj := Object _objectForOop: ', anOop asString, '.
-		obj isNil ifTrue: [ ^ false ].
+	answer := [
+		GbsRemoteExecutionDispatcher
+			fetchCommandBody: '
+				| proc ctx stackReport isCandidate |
+				isCandidate := false.
+				obj isNil ifFalse: [
+					"Prefer a process and verify it has at least frame 1"
+					proc := nil.
+					(obj respondsTo: #_gsiStackReportFromLevel:toLevel:) ifTrue: [ proc := obj ].
+					proc isNil ifTrue: [
+						(obj respondsTo: #serverProcess)
+							ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ]
+					].
+					proc isNil ifTrue: [
+						(obj respondsTo: #process)
+							ifTrue: [ proc := [ obj process ] on: Error do: [ nil ] ]
+					].
+					proc isNil ifTrue: [
+						(obj respondsTo: #topContext) ifTrue: [
+							ctx := [ obj topContext ] on: Error do: [ nil ].
+							(ctx notNil and: [ ctx respondsTo: #process ])
+								ifTrue: [ proc := [ ctx process ] on: Error do: [ nil ] ].
+						]
+					].
+					proc notNil ifTrue: [
+						stackReport := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
+						(stackReport notNil and: [ stackReport size >= 2 ]) ifTrue: [ isCandidate := true ].
+					].
 
-		"Prefer a process and verify it has at least frame 1"
-		proc := nil.
-		(obj respondsTo: #_gsiStackReportFromLevel:toLevel:) ifTrue: [ proc := obj ].
-		proc isNil ifTrue: [
-			(obj respondsTo: #serverProcess)
-				ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ]
-		].
-		proc isNil ifTrue: [
-			(obj respondsTo: #process)
-				ifTrue: [ proc := [ obj process ] on: Error do: [ nil ] ]
-		].
-		proc isNil ifTrue: [
-			(obj respondsTo: #topContext) ifTrue: [
-				ctx := [ obj topContext ] on: Error do: [ nil ].
-				(ctx notNil and: [ ctx respondsTo: #process ])
-					ifTrue: [ proc := [ ctx process ] on: Error do: [ nil ] ].
-			]
-		].
-		proc notNil ifTrue: [
-			stackReport := [ proc _gsiStackReportFromLevel: 1 toLevel: 1 ] on: Error do: [ nil ].
-			(stackReport notNil and: [ stackReport size >= 2 ]) ifTrue: [ ^ true ].
-		].
-
-		"Fallback: context sender chain must have at least one frame"
-		ctx := nil.
-		(obj respondsTo: #sender) ifTrue: [ ctx := obj ].
-		(ctx isNil and: [ obj respondsTo: #topContext ])
-			ifTrue: [ ctx := [ obj topContext ] on: Error do: [ nil ] ].
-		ctx notNil ifTrue: [ ^ true ].
-
-		false
-	] value'.
-
-	answer := [ aSession evaluate: script ] on: Error do: [ false ].
+					"Fallback: context sender chain must have at least one frame"
+					isCandidate ifFalse: [
+						ctx := nil.
+						(obj respondsTo: #sender) ifTrue: [ ctx := obj ].
+						(ctx isNil and: [ obj respondsTo: #topContext ])
+							ifTrue: [ ctx := [ obj topContext ] on: Error do: [ nil ] ].
+						ctx notNil ifTrue: [ isCandidate := true ].
+					].
+				].
+				isCandidate
+			'
+			literalBindings: Dictionary new
+			oopBindings: (Dictionary new
+				at: 'obj' put: anOop;
+				yourself)
+			in: aSession
+			context: 20
+	] on: Error do: [ false ].
 	^ (answer == true or: [ answer = 'true' ])
 ]
 

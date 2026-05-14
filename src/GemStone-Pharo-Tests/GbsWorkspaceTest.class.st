@@ -139,6 +139,30 @@ GbsWorkspaceTest >> testGsActionAliasesRouteToPrimaryActions [
 	self assert: workspace didPrintIt
 ]
 
+{ #category : 'tests' }
+GbsWorkspaceTest >> testStackCandidateProbeUsesBoundCommand [
+	| workspace mockSession capturedScript capturedContext answer |
+
+	workspace := TestableGbsWorkspace new.
+	mockSession := MockGbsSession new.
+	mockSession stubs
+		at: #evaluate
+		put: [ self fail: 'Stack candidate probing should use a bound remote command, not evaluate:.' ].
+	mockSession stubs
+		at: #executeAndFetchContext
+		put: [ :script :context |
+			capturedScript := script.
+			capturedContext := context.
+			'true' ].
+
+	answer := workspace isDebuggerStackCandidateOop: 9001 session: mockSession.
+
+	self assert: answer.
+	self assert: capturedContext equals: 20.
+	self assert: (capturedScript includesSubstring: 'value: (Object _objectForOop: 9001)').
+	self deny: (capturedScript includesSubstring: 'obj := Object _objectForOop:')
+]
+
 { #category : 'integration tests' }
 GbsWorkspaceTest >> testLiveDoItOpensRemoteDebuggerForDivideByZero [
 	| workspace liveSession |

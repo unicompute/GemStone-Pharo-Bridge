@@ -310,6 +310,13 @@ if rg -n "Object _objectForOop: ',|fetchScript: script|anOop asString" \
 fi
 rm -f /tmp/gbs-inspector-command-gate.$$
 
+if rg -n "Object _objectForOop: ',|anOop asString|aSession evaluate: script" \
+  src/GemStone-GBS-Tools/GbsWorkspace.class.st >/tmp/gbs-workspace-stack-probe-command-gate.$$; then
+  cat /tmp/gbs-workspace-stack-probe-command-gate.$$
+  fail "GbsWorkspace reintroduced generated stack-probe scripts; use GbsRemoteExecutionDispatcher bound command APIs"
+fi
+rm -f /tmp/gbs-workspace-stack-probe-command-gate.$$
+
 if rg -n "String streamContents:|executeDebugScript:" \
   src/GemStone-GBS-Tools/GbxDebuggerProcessController.class.st \
   src/GemStone-GBS-Tools/GbxDebuggerRestartController.class.st >/tmp/gbs-debugger-controller-command-gate.$$; then
