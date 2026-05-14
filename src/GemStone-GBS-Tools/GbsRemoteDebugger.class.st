@@ -74,12 +74,7 @@ GbsRemoteDebugger class >> openOn: anErrorString process: processOop session: aS
 
 { #category : 'actions' }
 GbsRemoteDebugger >> abortGemStoneTransaction [
-	session ifNil: [ ^ false ].
-	^ [ session abortTransaction. true ]
-		on: Error
-		do: [ :ex |
-			self inform: 'GemStone abortTransaction failed: ', ex messageText.
-			false ]
+	^ self executionController abortGemStoneTransaction
 ]
 
 { #category : 'actions' }
@@ -356,6 +351,11 @@ GbsRemoteDebugger >> contextList [
 	^ contextList
 ]
 
+{ #category : 'accessing' }
+GbsRemoteDebugger >> contextList: aCollection [
+	contextList := aCollection
+]
+
 { #category : 'private' }
 GbsRemoteDebugger >> contextPresenter [
 	^ GbsRemoteDebuggerContextPresenter on: self
@@ -395,23 +395,7 @@ GbsRemoteDebugger >> editMenu [
 
 { #category : 'private' }
 GbsRemoteDebugger >> ensureServerPCToStepOneAfterRestart [
-	"After restart, ensure server PC is at step 1.
-	Called before stepping to ensure correct behavior.
-	
-	Note: _trimStackToLevel: already resets to step=1, so this is a verification/backup step."
-	| context |
-	contextList ifNil: [ ^ self ].
-	contextList ifEmpty: [ ^ self ].
-
-	context := contextList
-		detect: [ :each |
-			(each respondsTo: #isExecutedCodeFrame)
-				and: [ each isExecutedCodeFrame ] ]
-		ifNone: [ nil ].
-	context ifNil: [ ^ self ].
-
-	"Force server to jump to step 1 (backup if trim didn't set it)"
-	self forceServerJumpToStepPoint1
+	^ self processControl ensureServerPCToStepOneAfterRestart
 ]
 
 { #category : 'menus' }
@@ -437,112 +421,19 @@ GbsRemoteDebugger >> fetchRemoteScript: scriptString context: contextOop [
 		context: contextOop
 ]
 
-{ #category : 'actions' }
-GbsRemoteDebugger >> fetchStackFrames [
-	| contexts |
-
-	"Check if we have captured stack data"
-	stackData ifNotNil: [
-		^ self fetchStackFramesFromData
-	].
-
-	contexts := #( ).
-	service ifNotNil: [
-		[
-			(service respondsTo: #recomputeContextList)
-				ifTrue: [ service recomputeContextList ].
-			contexts := service contextList
-		] on: Error do: [ contexts := #( ) ]
-	].
-
-	contexts ifEmpty: [
-		contexts := self fetchContextsDirectly
-	].
-	contexts ifEmpty: [
-		| resolved |
-		resolved := self resolveDebugProcessOopFromCurrentProcessOop.
-		((resolved isNumber and: [ resolved > 20 ]) and: [ resolved ~= processOop ]) ifTrue: [
-			processOop := resolved.
-			(service notNil and: [ service respondsTo: #processOop: ])
-				ifTrue: [ [ service processOop: resolved ] on: Error do: [ ] ].
-			contexts := self fetchContextsDirectly.
-		].
-	].
-
-	contextList := contexts ifNil: [ #( ) ].
-	contextList ifEmpty: [
-		stackList items: { self noStackFramesFallbackMessage }.
-		self setSourceText: ''.
-		self clearSourceHighlight.
-		self setVariableTableItems: #().
-		self setReceiverInfoItems: #().
-		self setFrameInfoItems: #().
-		self setProcessInfoItems: #().
-		self refreshUiState.
-		^ self
-	].
-	stackList items: (contextList collect: [ :ctx | ctx printString ]).
-
-	contextList ifNotEmpty: [
-		| preferredIndex |
-		"We no longer unconditionally mark the first context here.
-		Executed code frames are identified by their class/selector in printString.
-		Special marking/resetting for Restart is handled in normalizeRestartSelectionAndPosition."
-		preferredIndex := self preferredInitialContextIndex.
-		stackList selectIndex: preferredIndex.
-		self contextSelected: (contextList at: preferredIndex)
-	].
-	self refreshUiState.
+{ #category : 'private' }
+GbsRemoteDebugger >> executionController [
+	^ GbsRemoteDebuggerExecutionController on: self
 ]
 
-{ #category : 'private' }
-GbsRemoteDebugger >> noStackFramesFallbackMessage [
-	| oopText |
-	oopText := (processOop isNil or: [ processOop = 0 ])
-		ifTrue: [ 'unknown process' ]
-		ifFalse: [ 'process oop ', processOop asString ].
-	^ 'No GemStone stack frames available for ', oopText, '. The server did not expose a context; abort the transaction before retrying if this debugger was opened from a failed remote evaluation.'
+{ #category : 'actions' }
+GbsRemoteDebugger >> fetchStackFrames [
+	^ self stackLoader fetchStackFrames
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> fetchStackFramesFromData [
-	"Build context list from captured stack data"
-	| contexts index |
-	
-	index := 0.
-	contexts := stackData splitOn: $^ thenCollect: [ :frameStr |
-		| parts activation |
-		parts := frameStr splitOn: $|.
-		parts size >= 3 ifTrue: [
-			index := index + 1.
-			activation := GbxActivation new.
-			(activation respondsTo: #session:)
-				ifTrue: [ activation session: session ]
-				ifFalse: [ activation instVarNamed: 'session' put: session ].
-			activation
-				processOop: 0;
-				level: index;
-				selector: (parts at: 1) asSymbol;
-				gsMethodId: (parts at: 2);
-				sourceString: (parts at: 3);
-				yourself
-		]
-	] thenSelect: #isNotNil.
-	
-	contextList := contexts.
-	stackList items: (contexts collect: [ :ctx | ctx printString ]).
-
-	contexts ifNotEmpty: [
-		| preferredIndex firstContext |
-		"Mark first frame as executed code frame so it shows 'GS: Executed code @...'"
-		firstContext := contexts at: 1.
-		(firstContext respondsTo: #markAsExecutedCodeFrame) ifTrue: [
-			firstContext markAsExecutedCodeFrame.
-		].
-		preferredIndex := self preferredInitialContextIndex.
-		stackList selectIndex: preferredIndex.
-		self contextSelected: (contexts at: preferredIndex)
-	].
+	^ self stackLoader fetchStackFramesFromData
 ]
 
 { #category : 'private' }
@@ -552,17 +443,7 @@ GbsRemoteDebugger >> firstUserContextIndex [
 
 { #category : 'private' }
 GbsRemoteDebugger >> forceExecutedFrameToStepOneAfterRestart [
-	| context step didJump |
-	service ifNil: [ ^ self ].
-	context := self safeServiceCall: [ service currentContext ] default: nil.
-	context ifNil: [ ^ self ].
-	((context respondsTo: #isExecutedCodeFrame) and: [ context isExecutedCodeFrame ]) ifFalse: [ ^ self ].
-	step := (context respondsTo: #quickStepPoint)
-		ifTrue: [ [ context quickStepPoint asInteger ] on: Error do: [ 0 ] ]
-		ifFalse: [ 0 ].
-	step <= 1 ifTrue: [ ^ self ].
-	didJump := self safeServiceCall: [ service jumpToStepPoint: 1 ] default: false.
-	didJump ifTrue: [ self fetchStackFrames ].
+	^ self processControl forceExecutedFrameToStepOneAfterRestart
 ]
 
 { #category : 'private' }
@@ -864,12 +745,7 @@ GbsRemoteDebugger >> isLikelyUserFrame: aContext [
 
 { #category : 'private' }
 GbsRemoteDebugger >> jumpToCaret [
-	| stepPoint didJump |
-	stepPoint := self selectedStepPointFromCaret.
-	stepPoint ifNil: [ ^ false ].
-	didJump := self safeServiceCall: [ service jumpToStepPoint: stepPoint ] default: false.
-	didJump ifTrue: [ self fetchStackFrames ].
-	^ didJump
+	^ self executionController jumpToCaret
 ]
 
 { #category : 'accessing' }
@@ -987,13 +863,7 @@ GbsRemoteDebugger >> openServerMethodReference: aReferenceString [
 
 { #category : 'private' }
 GbsRemoteDebugger >> pauseProcess [
-	| didPause |
-	didPause := self safeServiceCall: [ service pause ] default: false.
-	didPause ifTrue: [
-		self fetchStackFrames.
-		self normalizePauseLandingSelection.
-	].
-	^ didPause
+	^ self executionController pauseProcess
 ]
 
 { #category : 'private' }
@@ -1018,22 +888,13 @@ GbsRemoteDebugger >> processOop: anOop [
 ]
 
 { #category : 'private' }
+GbsRemoteDebugger >> processOopSilently: anOop [
+	processOop := anOop
+]
+
+{ #category : 'private' }
 GbsRemoteDebugger >> processOopFromGbsError: anError [
-	| candidate |
-	candidate := (anError respondsTo: #serverProcessOop)
-		ifTrue: [ anError serverProcessOop ]
-		ifFalse: [ nil ].
-	((candidate isNumber and: [ candidate > 20 ]) not) ifTrue: [
-		candidate := (anError respondsTo: #exceptionOop)
-			ifTrue: [ anError exceptionOop ]
-			ifFalse: [ nil ]
-	].
-	((candidate isNumber and: [ candidate > 20 ]) not) ifTrue: [
-		candidate := (anError respondsTo: #tag)
-			ifTrue: [ anError tag ]
-			ifFalse: [ nil ]
-	].
-	^ candidate
+	^ self processControl processOopFromGbsError: anError
 ]
 
 { #category : 'private' }
@@ -1114,46 +975,27 @@ GbsRemoteDebugger >> restartController [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> resume [
-	self safeServiceCall: [ service resume ] default: false.
-	self withWindowDo: [ :window | window close ]
+	^ self executionController resume
 ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> returnFromFrame [
-	(service notNil and: [ service respondsTo: #returnFromFrame ]) ifTrue: [
-		| didReturn |
-		didReturn := self safeServiceCall: [ service returnFromFrame ] default: false.
-		didReturn ifTrue: [ self fetchStackFrames ].
-		^ didReturn
-	].
-	^ self stepReturn
+	^ self executionController returnFromFrame
 ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> runToCaret [
-	| stepPoint didRun |
-	stepPoint := self selectedStepPointFromCaret.
-	stepPoint ifNil: [ ^ false ].
-	didRun := self safeServiceCall: [ service runToStepPoint: stepPoint ] default: false.
-	didRun ifTrue: [ self fetchStackFrames ].
-	^ didRun
+	^ self executionController runToCaret
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> runUntilReturn [
-	^ self stepReturn
+	^ self executionController runUntilReturn
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> runWithBreakAgain [
-	| didRun |
-	didRun := self safeServiceCall: [
-		(service respondsTo: #runWithBreakAgain)
-			ifTrue: [ service runWithBreakAgain ]
-			ifFalse: [ service resume ]
-	] default: false.
-	didRun ifTrue: [ self fetchStackFrames ].
-	^ didRun
+	^ self executionController runWithBreakAgain
 ]
 
 { #category : 'private' }
@@ -1337,6 +1179,16 @@ GbsRemoteDebugger >> stackData: anArray [
 ]
 
 { #category : 'accessing' }
+GbsRemoteDebugger >> stackData [
+	^ stackData
+]
+
+{ #category : 'private' }
+GbsRemoteDebugger >> stackLoader [
+	^ GbsRemoteDebuggerStackLoader on: self
+]
+
+{ #category : 'accessing' }
 GbsRemoteDebugger >> stackListPresenter [
 	^ stackList
 ]
@@ -1361,68 +1213,22 @@ GbsRemoteDebugger >> stackReportString [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> step [
-	| didStep hasServiceStep |
-	hasServiceStep := service notNil and: [ service respondsTo: #step ].
-	didStep := hasServiceStep
-		ifTrue: [ self safeServiceCall: [ service step ] default: false ]
-		ifFalse: [ false ].
-	(hasServiceStep not and: [ didStep not ]) ifTrue: [
-		^ self stepInto
-	].
-	didStep ifTrue: [ self fetchStackFrames ].
-	^ didStep
+	^ self executionController step
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> stepInto [
-	| didStep hasServiceStep |
-	hasServiceStep := service notNil and: [ service respondsTo: #stepInto ].
-	didStep := hasServiceStep
-		ifTrue: [ self safeServiceCall: [ service stepInto ] default: false ]
-		ifFalse: [ false ].
-	(hasServiceStep not and: [ didStep not ]) ifTrue: [
-		(self currentSelectedContextIsExecutedCodeFrame)
-			ifTrue: [
-				"Only fall back to direct executed-code stepping when the service path
-				is unavailable. The service normalizes single-step jumps after restart."
-				self resetServerPCToStepOneIfNeeded.
-				didStep := self directStepOverExecutedFrame: true ]
-			ifFalse: [
-				didStep := self
-					directStepWithPrimarySelector: '_stepIntoInFrame:'
-					fallbackSelector: nil ]
-	].
-	didStep ifTrue: [ self fetchStackFrames ].
-	^ didStep
+	^ self executionController stepInto
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> stepOver [
-	| didStep hasServiceStep |
-	hasServiceStep := service notNil and: [ service respondsTo: #stepOver ].
-	didStep := hasServiceStep
-		ifTrue: [ self safeServiceCall: [ service stepOver ] default: false ]
-		ifFalse: [ false ].
-	(hasServiceStep not and: [ didStep not ]) ifTrue: [
-		(self currentSelectedContextIsExecutedCodeFrame)
-			ifTrue: [
-				self resetServerPCToStepOneIfNeeded.
-				didStep := self directStepOverExecutedFrame: false ]
-			ifFalse: [
-				didStep := self
-					directStepWithPrimarySelector: '_stepOverInFrame:'
-					fallbackSelector: nil ]
-	].
-	didStep ifTrue: [ self fetchStackFrames ].
-	^ didStep
+	^ self executionController stepOver
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> stepReturn [
-	| didStep |
-	didStep := self safeServiceCall: [ service stepReturn ] default: false.
-	didStep ifTrue: [ self fetchStackFrames ].
-	^ didStep
+	^ self executionController stepReturn
 ]
 
 { #category : 'private' }
@@ -1440,34 +1246,22 @@ GbsRemoteDebugger >> syncBreakpointMarker [
 
 { #category : 'actions' }
 GbsRemoteDebugger >> terminate [
-	self safeServiceCall: [ service terminate ] default: false.
-	self withWindowDo: [ :window | window close ]
+	^ self executionController terminate
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> closeRemoteDebuggerSession [
-	| leaked |
-	self safeServiceCall: [ service terminate ] default: false.
-	self abortGemStoneTransaction.
-	leaked := self remoteDebugProcessStillActive.
-	leaked ifTrue: [
-		(UIManager default respondsTo: #inform:)
-			ifTrue: [ UIManager default inform: 'GemStone debug process still appears active after cleanup.' ] ].
-	self withWindowDo: [ :window | window close ].
-	^ leaked not
+	^ self executionController closeRemoteDebuggerSession
 ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> remoteDebugProcessStillActive [
-	service ifNil: [ ^ false ].
-	(service respondsTo: #isTerminated) ifFalse: [ ^ false ].
-	^ [ service isTerminated not ] on: Error do: [ false ]
+	^ self executionController remoteDebugProcessStillActive
 ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> withRemoteDebuggerSessionDo: aBlock [
-	^ [ aBlock value: self ]
-		ensure: [ self closeRemoteDebuggerSession ]
+	^ self executionController withRemoteDebuggerSessionDo: aBlock
 ]
 
 { #category : 'actions' }

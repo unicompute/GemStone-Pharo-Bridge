@@ -141,6 +141,20 @@ GbsRemoteDebuggerProcessControl >> directStepWithPrimarySelector: primarySelecto
 	^ self booleanFromRemoteValue: raw
 ]
 
+{ #category : 'stepping' }
+GbsRemoteDebuggerProcessControl >> ensureServerPCToStepOneAfterRestart [
+	| context |
+	debugger contextList ifNil: [ ^ debugger ].
+	debugger contextList ifEmpty: [ ^ debugger ].
+	context := debugger contextList
+		detect: [ :each |
+			(each respondsTo: #isExecutedCodeFrame)
+				and: [ each isExecutedCodeFrame ] ]
+		ifNone: [ nil ].
+	context ifNil: [ ^ debugger ].
+	^ self forceServerJumpToStepPoint1
+]
+
 { #category : 'private' }
 GbsRemoteDebuggerProcessControl >> fetchRemoteCommandBody: bodyString literalBindings: literalDictionary oopBindings: oopDictionary context: contextOop [
 	^ GbsRemoteExecutionDispatcher
@@ -257,6 +271,22 @@ GbsRemoteDebuggerProcessControl >> forceServerJumpToStepPoint1 [
 	^ self booleanFromRemoteValue: raw
 ]
 
+{ #category : 'stepping' }
+GbsRemoteDebuggerProcessControl >> forceExecutedFrameToStepOneAfterRestart [
+	| context step didJump |
+	self service ifNil: [ ^ debugger ].
+	context := debugger safeServiceCall: [ self service currentContext ] default: nil.
+	context ifNil: [ ^ debugger ].
+	((context respondsTo: #isExecutedCodeFrame) and: [ context isExecutedCodeFrame ]) ifFalse: [ ^ debugger ].
+	step := (context respondsTo: #quickStepPoint)
+		ifTrue: [ [ context quickStepPoint asInteger ] on: Error do: [ 0 ] ]
+		ifFalse: [ 0 ].
+	step <= 1 ifTrue: [ ^ debugger ].
+	didJump := debugger safeServiceCall: [ self service jumpToStepPoint: 1 ] default: false.
+	didJump ifTrue: [ debugger fetchStackFrames ].
+	^ debugger
+]
+
 { #category : 'private' }
 GbsRemoteDebuggerProcessControl >> hasValidRemoteProcess [
 	^ self session notNil
@@ -268,6 +298,23 @@ GbsRemoteDebuggerProcessControl >> hasValidRemoteProcess [
 { #category : 'accessing' }
 GbsRemoteDebuggerProcessControl >> processOop [
 	^ debugger processOop
+]
+
+{ #category : 'private' }
+GbsRemoteDebuggerProcessControl >> processOopFromGbsError: anError [
+	| candidate |
+	candidate := (anError respondsTo: #serverProcessOop)
+		ifTrue: [ anError serverProcessOop ]
+		ifFalse: [ nil ].
+	((candidate isNumber and: [ candidate > 20 ]) not) ifTrue: [
+		candidate := (anError respondsTo: #exceptionOop)
+			ifTrue: [ anError exceptionOop ]
+			ifFalse: [ nil ] ].
+	((candidate isNumber and: [ candidate > 20 ]) not) ifTrue: [
+		candidate := (anError respondsTo: #tag)
+			ifTrue: [ anError tag ]
+			ifFalse: [ nil ] ].
+	^ candidate
 ]
 
 { #category : 'resolving' }

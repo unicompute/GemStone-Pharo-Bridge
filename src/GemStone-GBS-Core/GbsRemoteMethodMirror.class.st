@@ -57,18 +57,6 @@ GbsRemoteMethodMirror >> classSide: aBoolean [
 	classSide := aBoolean == true
 ]
 
-{ #category : 'private' }
-GbsRemoteMethodMirror >> classExpression [
-	^ session repository classExpressionFor: classReference
-]
-
-{ #category : 'private' }
-GbsRemoteMethodMirror >> behaviorExpression [
-	^ self classSide
-		ifTrue: [ 'cls class' ]
-		ifFalse: [ 'cls' ]
-]
-
 { #category : 'querying' }
 GbsRemoteMethodMirror >> exists [
 	^ self methodMetadata notNil

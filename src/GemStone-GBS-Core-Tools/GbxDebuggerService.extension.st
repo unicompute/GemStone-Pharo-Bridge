@@ -213,44 +213,40 @@ GbxDebuggerService >> compatibilityCompileLookup [
 
 { #category : '*GemStone-GBS-Core-Tools' }
 GbxDebuggerService >> compatibilityCompileResponseForSource: sourceText correctingSelector: allowSelectorCorrection [
-	| lookup escapedSource raw script |
+	| lookup raw body |
 	lookup := self compatibilityCompileLookup.
 	lookup ifNil: [ ^ nil ].
-	escapedSource := sourceText
-		ifNil: [ '' ]
-		ifNotNil: [ :each | (each asString copyReplaceAll: String cr with: String lf) copyReplaceAll: '''' with: '''''' ].
-	script := String streamContents: [ :stream |
-		stream nextPutAll: '[
+	body := '
 		| cls oldSel protocol result newSel source |
-		cls := Smalltalk at: '.
-		stream nextPutAll: lookup first storeString.
-		stream nextPutAll: ' ifAbsent: [ nil ].
+		cls := Smalltalk at: className ifAbsent: [ nil ].
 		cls ifNil: [ ^ ''ERROR|Class not found'' ].
-		'.
-		lookup third ifTrue: [ stream nextPutAll: 'cls := cls class.' ].
-		stream nextPutAll: '
-		oldSel := '.
-		stream nextPutAll: lookup second storeString.
-		stream nextPutAll: '.
-		source := '''.
-		stream nextPutAll: escapedSource.
-		stream nextPutAll: '''.
-		protocol := '.
-		stream nextPutAll: lookup fourth storeString.
-		stream nextPutAll: '.
+		isMeta ifTrue: [ cls := cls class ].
+		oldSel := selector.
+		source := sourceText.
+		protocol := methodProtocol.
 		result := [ cls compileMethod: source category: protocol ] on: Error do: [ :ex | ''ERROR|'', ex description ].
 		(result isString and: [ result beginsWith: ''ERROR|'' ]) ifTrue: [ ^ result ].
-		'.
 		allowSelectorCorrection ifTrue: [
-			stream nextPutAll: '
-		newSel := [ result selector ] on: Error do: [ oldSel ].
-		(newSel ~= oldSel and: [ cls includesSelector: oldSel ]) ifTrue: [
-			[ cls removeSelector: oldSel ] on: Error do: [ :ex | ]
-		].' ].
-		stream nextPutAll: '
+			newSel := [ result selector ] on: Error do: [ oldSel ].
+			(newSel ~= oldSel and: [ cls includesSelector: oldSel ]) ifTrue: [
+				[ cls removeSelector: oldSel ] on: Error do: [ :ex | ] ] ].
 		''OK''
-	] value' ].
-	raw := [ self fetchRemoteScript: script context: session sessionOop ]
+	'.
+	raw := [
+		session
+			fetchRemoteCommandBody: body
+			literalBindings: (Dictionary new
+				at: 'allowSelectorCorrection' put: allowSelectorCorrection;
+				at: 'className' put: lookup first;
+				at: 'isMeta' put: lookup third;
+				at: 'methodProtocol' put: lookup fourth;
+				at: 'selector' put: lookup second;
+				at: 'sourceText' put: (sourceText
+					ifNil: [ '' ]
+					ifNotNil: [ :each | each asString copyReplaceAll: String cr with: String lf ]);
+				yourself)
+			oopBindings: Dictionary new
+			context: session sessionOop ]
 		on: Error
 		do: [ nil ].
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].

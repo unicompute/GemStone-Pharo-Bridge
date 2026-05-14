@@ -169,21 +169,6 @@ GbsRepositoryFacade >> allInstancesOopOfNamed: aClassName [
 ]
 
 { #category : 'private' }
-GbsRepositoryFacade >> classExpressionFor: aClassOrName [
-	(aClassOrName respondsTo: #proxy) ifTrue: [
-		^ self classExpressionFor: aClassOrName proxy ].
-	(aClassOrName isKindOf: GbsProxy) ifTrue: [
-		^ '(Object _objectForOop: ', aClassOrName oop printString, ')' ].
-	(aClassOrName isBehavior or: [
-		aClassOrName class name asString includesSubstring: 'Behavior' ]) ifTrue: [
-		^ self classExpressionFor: aClassOrName name ].
-	((aClassOrName isString) or: [ aClassOrName isSymbol ]) ifTrue: [
-		^ '[:name | System myUserProfile symbolList objectNamed: name asSymbol] value: ',
-			(GbsRemoteScriptBuilder literalFor: aClassOrName) ].
-	self error: 'Unsupported class reference: ', aClassOrName printString
-]
-
-{ #category : 'private' }
 GbsRepositoryFacade >> bindRemoteReference: anObject as: variableName literalAssignments: literalDictionary oopAssignments: oopDictionary [
 	| value |
 	value := anObject.

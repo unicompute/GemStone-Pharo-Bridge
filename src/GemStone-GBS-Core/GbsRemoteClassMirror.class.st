@@ -40,11 +40,6 @@ GbsRemoteClassMirror >> classReference: aClassOrName [
 ]
 
 { #category : 'private' }
-GbsRemoteClassMirror >> classExpression [
-	^ session repository classExpressionFor: classReference
-]
-
-{ #category : 'private' }
 GbsRemoteClassMirror >> classMetadataCommandBody [
 	^ '| superclassName packageName categoryName history total versionIndex |
 cls ifNil: [ nil ] ifNotNil: [

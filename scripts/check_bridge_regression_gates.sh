@@ -24,8 +24,8 @@ check_max_lines() {
   fi
 }
 
-check_max_lines "src/GemStone-GBS-Tools/GbsRemoteDebugger.class.st" 1500 "GbsRemoteDebugger"
-check_max_lines "src/GemStone-GBS-Tools/GbxDebuggerService.class.st" 1500 "GbxDebuggerService"
+check_max_lines "src/GemStone-GBS-Tools/GbsRemoteDebugger.class.st" 1300 "GbsRemoteDebugger"
+check_max_lines "src/GemStone-GBS-Tools/GbxDebuggerService.class.st" 1300 "GbxDebuggerService"
 check_max_lines "src/GemStone-GBS-Core/GbsSession.extension.st" 1000 "GbsSessionCoreExtension"
 check_max_lines "src/GemStone-GBS-Core/GbsSessionCommandExecutor.class.st" 200 "GbsSessionCommandExecutor"
 check_max_lines "src/GemStone-GBS-Core/GbsSessionNamedObjectRegistry.class.st" 250 "GbsSessionNamedObjectRegistry"
@@ -131,6 +131,16 @@ if rg -n "loadedClassesScript|migrateInstancesScript|previewMigrationScript|meth
 fi
 rm -f /tmp/gbs-core-repository-mirror-helper-gate.$$
 
+if rg -n "classExpressionFor:|>> classExpression|>> behaviorExpression" \
+  src/GemStone-GBS-Core/GbsRepositoryFacade.class.st \
+  src/GemStone-GBS-Core/GbsRemoteClassMirror.class.st \
+  src/GemStone-GBS-Core/GbsRemoteMethodMirror.class.st \
+  src/GemStone-GBS-Core/GbsRemoteNamespaceMirror.class.st >/tmp/gbs-core-class-expression-gate.$$; then
+  cat /tmp/gbs-core-class-expression-gate.$$
+  fail "Core mirror class-expression compatibility helper reappeared; use bound class-reference commands"
+fi
+rm -f /tmp/gbs-core-class-expression-gate.$$
+
 if rg -n "constantEntriesScript|namespaceMetadataScript|compatibilityScript: self constantEntriesScript" \
   src/GemStone-GBS-Core/GbsRemoteNamespaceMirror.class.st \
   src/GemStone-GBS-MagLev/GbsRemoteNamespaceMirror.extension.st >/tmp/gbs-namespace-shim-gate.$$; then
@@ -148,6 +158,13 @@ if rg -n "executeScriptAndFetchObject:|executeScriptAndReturnOop:|marshalArgumen
   fail "Repository/mirror direct remote script execution reappeared; use fetchRemoteCommand:/typed GbsRemoteCommand"
 fi
 rm -f /tmp/gbs-core-repository-mirror-execution-gate.$$
+
+if rg -n "String streamContents:" \
+  src/GemStone-GBS-Core/GbsRemoteConstantMirror.class.st >/tmp/gbs-core-constant-mirror-stream-gate.$$; then
+  cat /tmp/gbs-core-constant-mirror-stream-gate.$$
+  fail "Remote constant mirror reintroduced a remote namespace expression string builder; use typed GbsRemoteCommand constructors"
+fi
+rm -f /tmp/gbs-core-constant-mirror-stream-gate.$$
 
 if rg -n "associationsScript|atScriptFor:|atPutScriptFor:|includesKeyScriptFor:|keysScript|removeKeyScriptFor:|rootScript|executeScriptAndFetchObject:|marshalArgumentToScript:" \
   src/GemStone-GBS-MagLev/GbsMaglevSymbolDictionaryFacade.class.st >/tmp/gbs-maglev-symbol-dictionary-script-gate.$$; then
@@ -216,6 +233,13 @@ if rg -n "correctedCompileScriptForSource|recompileScriptForSource|executeCompil
 fi
 rm -f /tmp/gbs-core-unbound-method-script-gate.$$
 
+if rg -n "String streamContents:|fetchRemoteScript:" \
+  src/GemStone-GBS-Core-Tools/GbxDebuggerService.extension.st >/tmp/gbs-debugger-compat-compile-script-gate.$$; then
+  cat /tmp/gbs-debugger-compat-compile-script-gate.$$
+  fail "debugger compatibility compile path reintroduced raw script construction; use bound GbsRemoteCommand"
+fi
+rm -f /tmp/gbs-debugger-compat-compile-script-gate.$$
+
 if rg -n "levelValue asString|escapedName|fallbackText|session evaluate: \\(self fullSourceFallback|executeScriptAndReturnOop: \\(self remoteScriptBuilder|executeScriptAndFetchObject: \\(self remoteScriptBuilder" \
   src/GemStone-GBS-Core/GbsRemoteDebugProcessFacade.class.st \
   src/GemStone-GBS-Core/GbsSession.extension.st >/tmp/gbs-core-bound-debug-session-gate.$$; then
@@ -276,6 +300,16 @@ if rg -n "GbsRemoteCommand script:|remoteCommand:" \
   fail "free-form GbsRemoteCommand script usage appeared in tool paths; use bound command APIs or GbsRemoteExecutionDispatcher compatibility"
 fi
 rm -f /tmp/gbs-tool-freeform-command-gate.$$
+
+if rg -n "compatibilityScript:|remoteCommand:" src \
+  | grep -v "src/GemStone-GBS-Core/GbsRemoteCommand.class.st" \
+  | grep -v "src/GemStone-GBS-Core/GbsSessionCommandExecutor.class.st" \
+  | grep -v "src/GemStone-GBS-Core/GbsSession.extension.st" \
+  | grep -v "src/GemStone-Pharo-.*-Tests/" >/tmp/gbs-freeform-compat-api-gate.$$; then
+  cat /tmp/gbs-freeform-compat-api-gate.$$
+  fail "free-form compatibility command API gained new callers; keep it isolated to session compatibility helpers"
+fi
+rm -f /tmp/gbs-freeform-compat-api-gate.$$
 
 if rg -n "executeScriptAndReturnOop:|apiGciExecuteStr:" \
   src/GemStone-GBS-Tools/GbsPlaygroundActions.class.st \

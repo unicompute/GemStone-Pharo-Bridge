@@ -84,10 +84,24 @@ GbsRemoteNamespaceMirror class >> on: aSession classOrModule: aClassOrName [
 GbsRemoteNamespaceMirror class >> on: aSession object: anObjectOrProxy [
 	^ self
 		on: aSession
+		expression: ((aSession repository
+			remoteCommandForClassReferences: { 'value' -> anObjectOrProxy }
+			body: 'value'
+			literalAssignments: Dictionary new
+			oopAssignments: Dictionary new) script)
+		symbolListIndex: nil
+		metadata: nil
+]
+
+{ #category : 'instance creation' }
+GbsRemoteNamespaceMirror class >> on: aSession objectOop: anOop [
+	^ self
+		on: aSession
 		expression: ((GbsRemoteCommand
 			blockBody: 'value'
-			argumentNames: #('value')
-			argumentScripts: { aSession repository classExpressionFor: anObjectOrProxy }) script)
+			oopBindings: (Dictionary new
+				at: 'value' put: anOop;
+				yourself)) script)
 		symbolListIndex: nil
 		metadata: nil
 ]

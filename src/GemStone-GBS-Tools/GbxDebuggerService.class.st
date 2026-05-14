@@ -96,13 +96,7 @@ GbxDebuggerService >> actualServerQuickStepPointAtLevel: levelValue [
 
 { #category : 'private-step points' }
 GbxDebuggerService >> basicJumpToCaret [
-	"Jump to caret position without executing code.
-	Not supported for server frames - use runToStepPoint instead."
-	| targetStepPoint |
-	targetStepPoint := self earliestSelectedStepPoint.
-	targetStepPoint ifNil: [ ^ false ].
-	
-	^ self jumpToStepPoint: targetStepPoint
+	^ self stepPointController basicJumpToCaret
 ]
 
 { #category : 'actions' }
@@ -112,85 +106,17 @@ GbxDebuggerService >> basicReenterServerContext [
 
 { #category : 'private-GS execution' }
 GbxDebuggerService >> basicSendIntoServer [
-	"Send when the next send will take us from client to server.
-	Requests single step and handles GbsError for rtErrStep."
-	| gbsErr initial |
-	self requestServerSingleStep.
-	
-	[ self privateStep ]
-		on: Error "ContextEmergencyError in VW"
-		do: [ :ex |
-			gbsErr := ex parameter.
-			(gbsErr isNil or: [ 
-				(gbsErr respondsTo: #creator) ifFalse: [ true ]
-				ifTrue: [ gbsErr creator ~~ (self gbsErrorClass signalFor: #rtErrStep) ]
-			]) ifTrue: [
-				ex pass "Pass non-rtErrStep errors up"
-			]
-		].
-	
-	gbsErr ifNotNil: [
-		"Server method didn't stop for single step (simple method).
-		Put new contexts on stack and update selection."
-		initial := (gbsErr respondsTo: #initialContext)
-			ifTrue: [ [ gbsErr initialContext ] on: Error do: [ nil ] ]
-			ifFalse: [ nil ].
-		initial ifNotNil: [ currentContext := initial ].
-		self selectTopServerContext
-	]
+	^ self serverExecutionController basicSendIntoServer
 ]
 
 { #category : 'private-GS execution' }
 GbxDebuggerService >> basicServerStepInLevel: level [
-	"The selected context is a server context. Perform a step in the
-	given level of that context's GsProcess.
-	Level should be the level of the selected context, or if top context
-	is selected and level is 0, do a send."
-	| gbsError scContext |
-	gbsError := currentContext gbsError.
-	gbsError ifNil: [ ^ self ].
-	
-	gbsError stepLevel: level.
-	
-	"Internally select the serverCall context for the selected context"
-	currentContext := scContext := currentContext serverCallContext.
-	scContext ifNil: [ ^ self ].
-	
-	self resetPCSelection.
-	
-	"Step until right after the send of #stepOrContinueAfter (PC=31)"
-	self stepUntilPC: 31.
-	
-	(currentContext == scContext) ifFalse: [
-		"Entering client-side exception handler - stop now"
-		^ self
-	].
-	
-	"Step until assign result, back to loop head (PC=10)"
-	self stepUntilPC: 10.
-	
-	(scContext respondsTo: #gbxResult) ifTrue: [
-		(scContext gbxResult respondsTo: #gbxIsGSError) ifTrue: [
-			scContext gbxResult gbxIsGSError
-				ifTrue: [ self selectTopServerContext ]
-				ifFalse: [ self stepOutOfServerIntoClient ]
-		] ifFalse: [
-			self stepOutOfServerIntoClient
-		]
-	] ifFalse: [
-		self stepOutOfServerIntoClient
-	]
+	^ self serverExecutionController basicServerStepInLevel: level
 ]
 
 { #category : 'private-step points' }
 GbxDebuggerService >> basicSkipToCaret [
-	"Run to caret position using step points.
-	Steps until targetStepPoint is reached."
-	| targetStepPoint |
-	targetStepPoint := self earliestSelectedStepPoint.
-	targetStepPoint ifNil: [ ^ false ].
-	
-	^ self runToStepPoint: targetStepPoint
+	^ self stepPointController basicSkipToCaret
 ]
 
 { #category : 'breakpoint support' }
@@ -378,42 +304,12 @@ GbxDebuggerService >> compileErrorValue: aString [
 
 { #category : 'private-step points' }
 GbxDebuggerService >> closestLeftStepPoint [
-	"Find the closest step point strictly left of (before) the current selection.
-	Returns the step point number or nil if none found."
-	| map currentStep candidates |
-	map := self sourceMap.
-	map ifEmpty: [ ^ nil ].
-	currentStep := self currentStepPoint.
-	currentStep ifNil: [ ^ nil ].
-	
-	candidates := map select: [ :assoc |
-		(assoc respondsTo: #key) and: [
-			assoc key isNumber and: [ assoc key < currentStep ]
-		]
-	].
-	candidates ifEmpty: [ ^ nil ].
-	
-	^ (candidates collect: [ :assoc | assoc key ]) max
+	^ self stepPointController closestLeftStepPoint
 ]
 
 { #category : 'private-step points' }
 GbxDebuggerService >> closestRightStepPoint [
-	"Find the closest step point strictly right of (after) the current selection.
-	Returns the step point number or nil if none found."
-	| map currentStep candidates |
-	map := self sourceMap.
-	map ifEmpty: [ ^ nil ].
-	currentStep := self currentStepPoint.
-	currentStep ifNil: [ ^ nil ].
-	
-	candidates := map select: [ :assoc |
-		(assoc respondsTo: #key) and: [
-			assoc key isNumber and: [ assoc key > currentStep ]
-		]
-	].
-	candidates ifEmpty: [ ^ nil ].
-	
-	^ (candidates collect: [ :assoc | assoc key ]) min
+	^ self stepPointController closestRightStepPoint
 ]
 
 { #category : 'accessing' }
@@ -489,57 +385,12 @@ GbxDebuggerService >> currentReceiverOop [
 
 { #category : 'source code' }
 GbxDebuggerService >> currentSourceSelectionInterval [
-	| map stepPoint entry |
-	map := self sourceMap.
-	(map isCollection and: [ map isEmpty not ]) ifFalse: [
-		selectionRange := nil.
-		^ nil
-	].
-
-	stepPoint := self currentStepPoint.
-	stepPoint ifNotNil: [
-		"Find exact match first"
-		entry := map
-			detect: [ :assoc | (assoc respondsTo: #key) and: [ assoc key = stepPoint ] ]
-			ifNone: [ nil ].
-			
-		"Fallback: find the highest step point number <= current stepPoint"
-		entry ifNil: [
-			| candidates maxKey |
-			candidates := map select: [ :assoc | (assoc respondsTo: #key) and: [ assoc key <= stepPoint ] ].
-			maxKey := ((map collect: [ :assoc | assoc key ]) select: [ :k | k isNumber ])
-				ifEmpty: [ nil ]
-				ifNotEmpty: [ :keys | keys max ].
-			(candidates isNotEmpty and: [ maxKey isNumber and: [ stepPoint <= maxKey ] ]) ifTrue: [
-				entry := candidates last. "Assuming map is sorted by key"
-			]
-		].
-
-		entry ifNotNil: [
-			selectionRange := entry value.
-			^ selectionRange
-		]
-	].
-
-	selectionRange := map first value.
-	^ selectionRange
+	^ self stepPointController currentSourceSelectionInterval
 ]
 
 { #category : 'source code' }
 GbxDebuggerService >> currentStepPoint [
-	| raw |
-	currentContext ifNil: [ ^ nil ].
-	raw := (currentContext respondsTo: #stepPoint)
-		ifTrue: [ currentContext stepPoint ]
-		ifFalse: [
-			(currentContext respondsTo: #quickStepPoint)
-				ifTrue: [ currentContext quickStepPoint ]
-				ifFalse: [ nil ]
-		].
-	raw ifNil: [ ^ nil ].
-	raw := [ raw asInteger ] on: Error do: [ nil ].
-	(raw isNil or: [ raw <= 0 ]) ifTrue: [ ^ nil ].
-	^ raw
+	^ self stepPointController currentStepPoint
 ]
 
 { #category : 'actions' }
@@ -576,54 +427,17 @@ GbxDebuggerService >> cutbackToGsProcessOf: gsContext [
 
 { #category : 'private-step points' }
 GbxDebuggerService >> earliestOverlappingStepPoint [
-	"Find the lowest step point whose range overlaps the current selection.
-	Returns the step point number or nil if none found."
-	| map selectionStart selectionEnd |
-	map := self sourceMap.
-	map ifEmpty: [ ^ nil ].
-	selectionRange ifNil: [ ^ nil ].
-	
-	selectionStart := selectionRange first.
-	selectionEnd := selectionRange last.
-	
-	map do: [ :assoc |
-		(assoc respondsTo: #key) and: [
-			(assoc respondsTo: #value) and: [
-				assoc value isInterval and: [
-					assoc value first <= selectionEnd and: [
-						assoc value last >= selectionStart
-					]
-				]
-			]
-		] ifTrue: [ ^ assoc key ]
-	].
-	^ nil
+	^ self stepPointController earliestOverlappingStepPoint
 ]
 
 { #category : 'private-step points' }
 GbxDebuggerService >> earliestSelectedStepPoint [
-	"Get the earliest step point for the current selection.
-	Tries overlap first, then neighbor step points."
-	| stepPoint |
-	stepPoint := self earliestOverlappingStepPoint.
-	stepPoint ifNotNil: [ ^ stepPoint ].
-	
-	"No overlap - find closest neighbor"
-	stepPoint := self closestRightStepPoint.
-	stepPoint ifNil: [ stepPoint := self closestLeftStepPoint ].
-	^ stepPoint
+	^ self stepPointController earliestSelectedStepPoint
 ]
 
 { #category : 'private' }
 GbxDebuggerService >> effectiveServerStepLevel [
-	| level resolved step |
-	level := self currentContextLevel.
-	(self isCurrentExecutedCodeFrame and: [ (step := self currentStepPoint) = 1 ]) ifTrue: [ ^ 1 ].
-	(level isNumber and: [ level > 0 ]) ifTrue: [ ^ level ].
-	(self isCurrentExecutedCodeFrame not) ifTrue: [ ^ level ].
-	resolved := self restartLevelFromServerStack.
-	(resolved isNumber and: [ resolved > 0 ]) ifTrue: [ ^ resolved ].
-	^ level
+	^ self stepPointController effectiveServerStepLevel
 ]
 
 { #category : 'stack manipulation' }
@@ -1032,6 +846,11 @@ GbxDebuggerService >> restartController [
 ]
 
 { #category : 'private' }
+GbxDebuggerService >> serverExecutionController [
+	^ GbxDebuggerServerExecutionController on: self
+]
+
+{ #category : 'private' }
 GbxDebuggerService >> prepareForDebugging [
 	"Prepare the debugger for a new debugging session"
 	self initializeForDebugging.
@@ -1314,6 +1133,16 @@ GbxDebuggerService >> serverStepWithSelectorChain: selectorChain level: levelVal
 ]
 
 { #category : 'accessing' }
+GbxDebuggerService >> selectionRange [
+	^ selectionRange
+]
+
+{ #category : 'accessing' }
+GbxDebuggerService >> selectionRange: anInterval [
+	selectionRange := anInterval
+]
+
+{ #category : 'accessing' }
 GbxDebuggerService >> session [
 	^ session
 ]
@@ -1335,7 +1164,6 @@ GbxDebuggerService >> setBreakPointIn: aTextWidget [
 
 { #category : 'source code' }
 GbxDebuggerService >> sourceCode [
-	"Get the source code for the current context"
 	currentContext ifNil: [ ^ '' ].
 	^ currentContext sourceCode
 ]
@@ -1363,9 +1191,13 @@ GbxDebuggerService >> stepController [
 	^ GbxDebuggerStepController on: self
 ]
 
+{ #category : 'private' }
+GbxDebuggerService >> stepPointController [
+	^ GbxDebuggerStepPointController on: self
+]
+
 { #category : 'actions' }
 GbxDebuggerService >> stackForCopy [
-	"Get stack string for copying using GbxContextDumpPolicy"
 	| cp |
 	cp := Smalltalk at: #GbxContextDumpPolicy ifAbsent: [ ^ self stackForCopySimple ].
 	cp := cp new.
@@ -1386,27 +1218,7 @@ GbxDebuggerService >> step [
 
 { #category : 'private-GS execution' }
 GbxDebuggerService >> stepOutOfServerIntoClient [
-	| itsSender aContext |
-	itsSender := currentContext.
-	
-	[ 
-		aContext := itsSender.
-		itsSender := itsSender sender.
-		(aContext respondsTo: #gbxIsGsBottomGlue) 
-			and: [ aContext gbxIsGsBottomGlue 
-			and: [ itsSender notNil 
-			and: [ (itsSender respondsTo: #gbxIsGsBottomGlue) 
-				ifTrue: [ itsSender gbxIsGsBottomGlue not ]
-				ifFalse: [ true ]
-			]]]
-	] whileTrue.
-	
-	itsSender ifNotNil: [
-		currentContext := itsSender.
-		sourceMap := currentContext visibleSourceMap.
-		self stepOver.
-		self selectContext: currentContext
-	]
+	^ self serverExecutionController stepOutOfServerIntoClient
 ]
 
 { #category : 'stepping' }
@@ -1458,14 +1270,12 @@ GbxDebuggerService >> toggleBreakPointIn: aTextWidget [
 
 { #category : 'private' }
 GbxDebuggerService >> toggleGlueHiding [
-	"Toggle visibility of GBS glue contexts"
 	self glueIsHidden: self glueIsHidden not.
 	self recomputeContextList.
 ]
 
 { #category : 'accessing' }
 GbxDebuggerService >> topContext [
-	"Best-effort client top context for mixed client/server stack logic."
 	^ thisContext sender
 ]
 
@@ -1486,6 +1296,4 @@ GbxDebuggerService >> updateSourceMapFromCurrentContext [
 
 { #category : 'context list' }
 GbxDebuggerService >> updateStackList: aList [
-	"Update the stack list in the UI"
-	"Called by context policy"
 ]

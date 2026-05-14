@@ -48,20 +48,14 @@ GbsRemoteConstantMirror >> targetDisplayName [
 
 { #category : 'querying' }
 GbsRemoteConstantMirror >> targetNamespaceMirror [
-	| fullName oopValue expression |
+	| fullName oopValue |
 	self hasValue ifFalse: [ ^ nil ].
 	fullName := self valueFullName.
 	oopValue := self oop.
 	oopValue ifNotNil: [
-		expression := String streamContents: [ :stream |
-			stream
-				nextPutAll: 'System _objectForOop: ';
-				nextPutAll: oopValue printString ].
 		^ GbsRemoteNamespaceMirror
 			on: self session
-			expression: expression
-			symbolListIndex: nil
-			metadata: nil ].
+			objectOop: oopValue ].
 	fullName ifNotNil: [
 		^ GbsRemoteNamespaceMirror
 			on: self session
