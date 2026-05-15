@@ -43,6 +43,23 @@ export GBS_KEEP_WORK_IMAGES=1
 
 Use `GBS_KEEP_WORK_IMAGES=1` only when debugging failed lanes. Otherwise the scripts delete temporary `.image` and `.changes` files automatically.
 
+## CI Acceptance
+
+The self-hosted `verify` workflow treats live GemStone debugger evidence as mandatory. The runner must have these GitHub variables configured: `PHARO_IMAGE`, `PHARO_WORK_DIR`, `GEMSTONE`, `GS_STONE`, `GS_NETLDI_HOST`, and `GS_NETLDI_NAME_OR_PORT`. It must also have `GS_USER` and `GS_PASS` as GitHub secrets.
+
+`GS_SERVICE` is optional for the shell scripts and defaults to `gemnetobject`, but set it as a GitHub variable when the runner needs a non-default service name.
+
+The workflow fails before the long verification lane if mandatory live configuration is missing. It then runs:
+
+```text
+make live-env-check
+make verify
+make live-debugger
+make debugger-perf
+```
+
+The live debugger evidence artifact is required, not best-effort. Missing evidence means the run is invalid, even if the non-live tests passed.
+
 ## Commands
 
 Check whether the live environment is ready without launching Pharo:

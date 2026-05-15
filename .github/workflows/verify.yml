@@ -40,27 +40,24 @@ jobs:
         run: |
           test -n "${PHARO_IMAGE}" || { echo "PHARO_IMAGE is not set"; exit 1; }
           test -n "${PHARO_WORK_DIR}" || { echo "PHARO_WORK_DIR is not set"; exit 1; }
+          mkdir -p "${GBS_JSON_SUMMARY_DIR}" "${GBS_EVIDENCE_DIR}" "$(dirname "${GBS_DEBUGGER_PERF_TRENDS}")"
+
+      - name: Validate mandatory live debugger configuration
+        run: |
+          test -n "${GS_USER}" || { echo "GS_USER is required for live debugger CI"; exit 1; }
+          test -n "${GS_PASS}" || { echo "GS_PASS is required for live debugger CI"; exit 1; }
+          test -n "${GEMSTONE}" || { echo "GEMSTONE is required for live debugger CI"; exit 1; }
+          test -n "${GS_STONE}" || { echo "GS_STONE is required for live debugger CI"; exit 1; }
+          test -n "${GS_NETLDI_HOST}" || { echo "GS_NETLDI_HOST is required for live debugger CI"; exit 1; }
+          test -n "${GS_NETLDI_NAME_OR_PORT}" || { echo "GS_NETLDI_NAME_OR_PORT is required for live debugger CI"; exit 1; }
+
+      - name: Run live GemStone environment check
+        run: make live-env-check
 
       - name: Run verify lane
         run: make verify
 
-      - name: Validate live debugger credential pair
-        if: ${{ env.GS_USER != '' || env.GS_PASS != '' }}
-        run: |
-          test -n "${GS_USER}" || { echo "GS_USER is required when GS_PASS is configured"; exit 1; }
-          test -n "${GS_PASS}" || { echo "GS_PASS is required when GS_USER is configured"; exit 1; }
-          test -n "${GEMSTONE}" || { echo "GEMSTONE is required for live debugger CI"; exit 1; }
-          test -n "${GS_STONE}" || { echo "GS_STONE is required for live debugger CI"; exit 1; }
-          test -n "${GS_SERVICE}" || { echo "GS_SERVICE is required for live debugger CI"; exit 1; }
-          test -n "${GS_NETLDI_HOST}" || { echo "GS_NETLDI_HOST is required for live debugger CI"; exit 1; }
-          test -n "${GS_NETLDI_NAME_OR_PORT}" || { echo "GS_NETLDI_NAME_OR_PORT is required for live debugger CI"; exit 1; }
-
-      - name: Run live debugger evidence lane
-        if: ${{ env.GS_USER != '' && env.GS_PASS != '' }}
-        run: make live-debugger
-
       - name: Restore debugger performance trend history
-        if: ${{ env.GS_USER != '' && env.GS_PASS != '' }}
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/gbs-debugger-performance-trends
@@ -69,12 +66,14 @@ jobs:
             debugger-performance-trends-${{ runner.os }}-${{ github.ref_name }}-
             debugger-performance-trends-${{ runner.os }}-
 
+      - name: Run live debugger evidence lane
+        run: make live-debugger
+
       - name: Run debugger performance evidence lane
-        if: ${{ env.GS_USER != '' && env.GS_PASS != '' }}
         run: make debugger-perf
 
       - name: Save debugger performance trend history
-        if: ${{ always() && env.GS_USER != '' && env.GS_PASS != '' }}
+        if: always()
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.temp }}/gbs-debugger-performance-trends
@@ -124,4 +123,4 @@ jobs:
           path: |
             ${{ runner.temp }}/gbs-evidence
             ${{ runner.temp }}/gbs-debugger-performance-trends
-          if-no-files-found: warn
+          if-no-files-found: error
