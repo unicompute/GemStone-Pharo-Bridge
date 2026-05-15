@@ -119,11 +119,12 @@ export GBS_DEBUGGER_OPEN_MAX_MS=10000
 export GBS_DEBUGGER_STACK_FETCH_MAX_MS=5000
 export GBS_DEBUGGER_SOURCE_LOOKUP_MAX_MS=5000
 export GBS_DEBUGGER_PROXY_INSPECT_MAX_MS=5000
-export GBS_DEBUGGER_PERF_REGRESSION_PERCENT=50
+export GBS_DEBUGGER_PERF_REGRESSION_PERCENT=35
+export GBS_DEBUGGER_PERF_REGRESSION_MIN_DELTA_MS=50
 export GBS_DEBUGGER_PERF_TRENDS="$PWD/tmp/debugger-performance-trends.jsonl"
 ```
 
-Lower them after collecting stable CI baselines. `GBS_DEBUGGER_PERF_TRENDS` should point to a persisted path on the self-hosted runner if you want cross-run trend comparison. Without it, the lane still writes a JSONL sample into the evidence directory, but that directory is normally per-run.
+Lower them after collecting stable CI baselines. Trend regression uses the percentage threshold or the minimum millisecond delta, whichever is larger, because very small timings are noisy on a shared self-hosted runner. `GBS_DEBUGGER_PERF_TRENDS` should point to a persisted path on the self-hosted runner if you want cross-run trend comparison. Without it, the lane still writes a JSONL sample into the evidence directory, but that directory is normally per-run.
 
 ## What The Live Lane Proves
 

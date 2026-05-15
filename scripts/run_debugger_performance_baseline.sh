@@ -13,6 +13,7 @@ STACK_FETCH_MAX_MS="${GBS_DEBUGGER_STACK_FETCH_MAX_MS:-4000}"
 SOURCE_LOOKUP_MAX_MS="${GBS_DEBUGGER_SOURCE_LOOKUP_MAX_MS:-4000}"
 PROXY_INSPECT_MAX_MS="${GBS_DEBUGGER_PROXY_INSPECT_MAX_MS:-4000}"
 TREND_REGRESSION_PERCENT="${GBS_DEBUGGER_PERF_REGRESSION_PERCENT:-35}"
+TREND_REGRESSION_MIN_DELTA_MS="${GBS_DEBUGGER_PERF_REGRESSION_MIN_DELTA_MS:-50}"
 
 emit_summary() {
   local result="$1"
@@ -96,14 +97,24 @@ check_trend_metric() {
   local label="$1"
   local current="$2"
   local previous="$3"
-  local allowed
+  local percent_allowed absolute_allowed allowed
   [[ "${previous}" =~ ^[0-9]+$ ]] || return 0
   [[ "${current}" =~ ^[0-9]+$ ]] || return 0
   (( previous > 0 )) || return 0
-  allowed=$(( previous + (previous * TREND_REGRESSION_PERCENT / 100) ))
+  if [[ ! "${TREND_REGRESSION_MIN_DELTA_MS}" =~ ^[0-9]+$ ]]; then
+    emit_summary "FAIL" "DEBUGGER_PERF_BAD_TREND_MIN_DELTA" "${OPEN_MS:-0}" "${STACK_FETCH_MS:-0}" "${SOURCE_LOOKUP_MS:-0}" "${PROXY_INSPECT_MS:-0}"
+    echo "Debugger performance minimum trend delta is not a non-negative integer: ${TREND_REGRESSION_MIN_DELTA_MS}" >&2
+    exit 1
+  fi
+  percent_allowed=$(( previous + (previous * TREND_REGRESSION_PERCENT / 100) ))
+  absolute_allowed=$(( previous + TREND_REGRESSION_MIN_DELTA_MS ))
+  allowed="${percent_allowed}"
+  if (( absolute_allowed > allowed )); then
+    allowed="${absolute_allowed}"
+  fi
   if (( current > allowed )); then
     emit_summary "FAIL" "DEBUGGER_PERF_${label}_TREND_REGRESSION" "${OPEN_MS:-0}" "${STACK_FETCH_MS:-0}" "${SOURCE_LOOKUP_MS:-0}" "${PROXY_INSPECT_MS:-0}"
-    echo "Debugger performance trend regression ${label}: current=${current}ms previous=${previous}ms allowed=${allowed}ms (${TREND_REGRESSION_PERCENT}%)." >&2
+    echo "Debugger performance trend regression ${label}: current=${current}ms previous=${previous}ms allowed=${allowed}ms (${TREND_REGRESSION_PERCENT}% or +${TREND_REGRESSION_MIN_DELTA_MS}ms)." >&2
     exit 1
   fi
 }
@@ -122,7 +133,7 @@ check_trend_regression() {
   check_trend_metric "STACK_FETCH" "${STACK_FETCH_MS}" "${previous_stack}"
   check_trend_metric "SOURCE_LOOKUP" "${SOURCE_LOOKUP_MS}" "${previous_source}"
   check_trend_metric "PROXY_INSPECT" "${PROXY_INSPECT_MS}" "${previous_proxy}"
-  gbs_append_summary_line "- trend comparison: previous sample from \`${trend_file}\`, threshold \`${TREND_REGRESSION_PERCENT}%\`"
+  gbs_append_summary_line "- trend comparison: previous sample from \`${trend_file}\`, threshold \`${TREND_REGRESSION_PERCENT}%\` or \`+${TREND_REGRESSION_MIN_DELTA_MS} ms\`, whichever is larger"
 }
 
 write_trend_sample() {
@@ -153,7 +164,7 @@ write_trend_report() {
   mkdir -p "$(dirname "${report_file}")"
   {
     printf '# Debugger Performance Trend\n\n'
-    printf 'Regression threshold: `%s%%` over the previous sample.\n\n' "${TREND_REGRESSION_PERCENT}"
+    printf 'Regression threshold: `%s%%` over the previous sample or `+%s ms`, whichever is larger.\n\n' "${TREND_REGRESSION_PERCENT}" "${TREND_REGRESSION_MIN_DELTA_MS}"
     printf '| Timestamp | Open Debugger | Stack Fetch | Source Lookup | Proxy Inspect |\n'
     printf '| --- | ---: | ---: | ---: | ---: |\n'
     grep -v '^[[:space:]]*$' "${trend_file}" | tail -20 | while IFS= read -r line; do
