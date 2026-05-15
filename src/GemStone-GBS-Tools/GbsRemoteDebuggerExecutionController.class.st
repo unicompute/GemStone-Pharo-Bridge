@@ -28,10 +28,15 @@ GbsRemoteDebuggerExecutionController >> debugger: aDebugger [
 { #category : 'actions' }
 GbsRemoteDebuggerExecutionController >> abortGemStoneTransaction [
 	debugger session ifNil: [ ^ false ].
+	(([ debugger session inTransaction ] on: Exception do: [ true ]) = false)
+		ifTrue: [ ^ true ].
 	^ [ debugger session abortTransaction. true ]
-		on: Error
+		on: Exception
 		do: [ :ex |
-			debugger inform: 'GemStone abortTransaction failed: ', ex messageText.
+			Transcript
+				show: 'GemStone abortTransaction failed: ';
+				show: (([ ex messageText ] on: Exception do: [ ex printString ]) ifNil: [ ex printString ]) asString;
+				cr.
 			false ]
 ]
 
@@ -137,7 +142,7 @@ GbsRemoteDebuggerExecutionController >> stepInto [
 	didStep := hasServiceStep
 		ifTrue: [ debugger safeServiceCall: [ debugger service stepInto ] default: false ]
 		ifFalse: [ false ].
-	(hasServiceStep not and: [ didStep not ]) ifTrue: [
+	didStep ifFalse: [
 		debugger currentSelectedContextIsExecutedCodeFrame
 			ifTrue: [
 				debugger resetServerPCToStepOneIfNeeded.
@@ -157,7 +162,7 @@ GbsRemoteDebuggerExecutionController >> stepOver [
 	didStep := hasServiceStep
 		ifTrue: [ debugger safeServiceCall: [ debugger service stepOver ] default: false ]
 		ifFalse: [ false ].
-	(hasServiceStep not and: [ didStep not ]) ifTrue: [
+	didStep ifFalse: [
 		debugger currentSelectedContextIsExecutedCodeFrame
 			ifTrue: [
 				debugger resetServerPCToStepOneIfNeeded.
@@ -181,6 +186,11 @@ GbsRemoteDebuggerExecutionController >> stepReturn [
 { #category : 'actions' }
 GbsRemoteDebuggerExecutionController >> terminate [
 	debugger safeServiceCall: [ debugger service terminate ] default: false.
+	debugger service ifNotNil: [
+		[ debugger service processOop: nil ] on: Exception do: [ ].
+		[ debugger service instVarNamed: 'processOop' put: nil ] on: Exception do: [ ] ].
+	[ debugger processOopSilently: nil ] on: Exception do: [ ].
+	self abortGemStoneTransaction.
 	debugger withWindowDo: [ :window | window close ]
 ]
 

@@ -29,9 +29,10 @@ GbsRemoteDebuggerRestartController >> debugger: aDebugger [
 GbsRemoteDebuggerRestartController >> restart [
 	| didRestart |
 	didRestart := self restartUsingCurrentProcessAndRefresh.
-	(didRestart and: [ self restartNeedsServerRewind ])
+	didRestart ifFalse: [ ^ self restartUsingFreshFaultedProcess ].
+	self restartNeedsServerRewind
 		ifTrue: [ ^ self restartUsingFreshFaultedProcess ].
-	^ didRestart
+	^ true
 ]
 
 { #category : 'restart' }
@@ -108,6 +109,8 @@ GbsRemoteDebuggerRestartController >> restartUsingCurrentProcessAndRefresh [
 	didRestart := hasServiceRestart
 		ifTrue: [ debugger safeServiceCall: [ debugger service restart ] default: false ]
 		ifFalse: [ debugger restartUsingDirectTrimFromExecutedFrame ].
+	(didRestart not and: [ hasServiceRestart ])
+		ifTrue: [ didRestart := debugger restartUsingDirectTrimFromExecutedFrame ].
 	didRestart ifTrue: [
 		debugger fetchStackFrames.
 		debugger ensureServerPCToStepOneAfterRestart.
@@ -124,6 +127,8 @@ GbsRemoteDebuggerRestartController >> restartUsingFreshFaultedProcess [
 	code isEmpty ifTrue: [ ^ false ].
 	errorText := nil.
 	newProcessOop := nil.
+	debugger safeServiceCall: [ debugger service terminate ] default: false.
+	[ debugger session abortTransaction ] on: Error do: [ ].
 	[
 		debugger session execute: code.
 		^ false
@@ -131,7 +136,6 @@ GbsRemoteDebuggerRestartController >> restartUsingFreshFaultedProcess [
 		errorText := debugger presenterTextFrom: ex messageText.
 		newProcessOop := debugger processOopFromGbsError: ex ].
 	((newProcessOop isNumber and: [ newProcessOop > 20 ]) not) ifTrue: [ ^ false ].
-	debugger safeServiceCall: [ debugger service terminate ] default: false.
 	debugger processOop: newProcessOop.
 	debugger label: errorText.
 	debugger service ifNotNil: [
@@ -141,6 +145,7 @@ GbsRemoteDebuggerRestartController >> restartUsingFreshFaultedProcess [
 			ifTrue: [ debugger service label: errorText ].
 		(debugger service respondsTo: #initializeForDebugging)
 			ifTrue: [ debugger service initializeForDebugging ] ].
+	debugger setInitialSourceCode: code.
 	didRestart := self restartUsingCurrentProcessAndRefresh.
 	^ didRestart
 ]

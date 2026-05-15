@@ -36,6 +36,13 @@ gbs_write_evidence_file() {
   fi
 }
 
+gbs_normalize_live_env_vars() {
+  export GS_USER="${GS_USER:-${GS_USERNAME:-}}"
+  export GS_PASS="${GS_PASS:-${GS_PASSWORD:-}}"
+  export GS_NETLDI_HOST="${GS_NETLDI_HOST:-${GS_HOST:-}}"
+  export GS_NETLDI_NAME_OR_PORT="${GS_NETLDI_NAME_OR_PORT:-${GS_NETLDI:-}}"
+}
+
 gbs_required_live_env_vars() {
   printf '%s\n' \
     GS_USER \
@@ -72,6 +79,8 @@ gbs_live_env_status_line() {
     "${GS_NETLDI_NAME_OR_PORT:-unset}" \
     "${GEMSTONE:-unset}"
 }
+
+gbs_normalize_live_env_vars
 
 gbs_cleanup_registered_work_images() {
   local image

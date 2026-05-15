@@ -30,6 +30,8 @@ export GS_NETLDI_HOST='localhost'
 export GS_NETLDI_NAME_OR_PORT='netldi'
 ```
 
+The scripts also accept these aliases and normalize them before preflight: `GS_USERNAME` for `GS_USER`, `GS_PASSWORD` for `GS_PASS`, `GS_HOST` for `GS_NETLDI_HOST`, and `GS_NETLDI` for `GS_NETLDI_NAME_OR_PORT`.
+
 The lane also respects:
 
 ```sh

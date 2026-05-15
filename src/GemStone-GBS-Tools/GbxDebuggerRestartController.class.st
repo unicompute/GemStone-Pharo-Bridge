@@ -34,16 +34,19 @@ GbxDebuggerRestartController >> actualServerQuickStepPointAtLevel: levelValue [
 	(service session isNil or: [ processOop isNil ]) ifTrue: [ ^ 0 ].
 	(processOop isNumber and: [ processOop > 20 ]) ifFalse: [ ^ 0 ].
 	raw := [ self
-		fetchProcessCommandBody: '[
+		fetchProcessCommandBody: '
 	| stackReport fullEntry quick |
-	(proc respondsTo: #_gsiStackReportFromLevel:toLevel:) ifFalse: [ ^ ''0'' ].
-	stackReport := [ proc _gsiStackReportFromLevel: levelValue toLevel: levelValue ] on: Error do: [ nil ].
-	(stackReport isNil or: [ stackReport size < 2 ]) ifTrue: [ ^ ''0'' ].
-	fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
-	fullEntry ifNil: [ ^ ''0'' ].
-	quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ].
-	quick asString
-] value'
+	(proc respondsTo: #_gsiStackReportFromLevel:toLevel:)
+		ifFalse: [ ''0'' ]
+		ifTrue: [
+			stackReport := [ proc _gsiStackReportFromLevel: levelValue toLevel: levelValue ] on: Error do: [ nil ].
+			(stackReport isNil or: [ stackReport size < 2 ])
+				ifTrue: [ ''0'' ]
+				ifFalse: [
+					fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ].
+					fullEntry ifNil: [ ''0'' ] ifNotNil: [
+						quick := [ (fullEntry at: 5) asInteger ] on: Error do: [ 0 ].
+						quick asString ] ] ]'
 		literalAssignments: (Dictionary new
 			at: 'levelValue' put: levelValue;
 			yourself) ]
@@ -102,11 +105,13 @@ GbxDebuggerRestartController >> cutbackGsTo: gsContext [
 	(resolvedHomeLevel isNumber and: [ resolvedHomeLevel > 0 ])
 		ifTrue: [ lvl := resolvedHomeLevel ].
 	result := self
-		fetchProcessCommandBody: '[
-		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
-		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ^ ''false'' ].
-		''true''
-	] value'
+		fetchProcessCommandBody: '
+		(proc respondsTo: #_trimStackToLevel:)
+			ifFalse: [ ''false'' ]
+			ifTrue: [
+				[ proc _trimStackToLevel: restartLevel. ''true'' ]
+					on: Error
+					do: [ ''false'' ] ]'
 		literalAssignments: (Dictionary new
 			at: 'restartLevel' put: lvl;
 			yourself).
@@ -125,29 +130,38 @@ GbxDebuggerRestartController >> fetchProcessCommandBody: bodyString literalAssig
 		in: service session
 		context: 20 ]
 		on: Error
-		do: [ nil ]
+		do: [ :ex |
+			Transcript
+				show: 'GBS_REMOTE_PROCESS_COMMAND_ERROR ';
+				show: (([ ex messageText ] on: Error do: [ ex printString ]) ifNil: [ ex printString ]) asString;
+				cr.
+			nil ]
 ]
 
 { #category : 'private' }
 GbxDebuggerRestartController >> processCommandBodyFor: bodyString [
 	^ '
 		| proc |
-		obj isNil ifTrue: [ ^ ''false'' ].
-		proc := obj.
-		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ]
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
-			| top |
-			top := [ obj topContext ] on: Error do: [ nil ].
-			(top notNil and: [ top respondsTo: #process ])
-				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
-		].
-		proc isNil ifTrue: [ ^ ''false'' ].
-		', bodyString
+		proc := nil.
+		obj notNil ifTrue: [
+			proc := obj.
+			((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+				(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+			].
+			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+				proc := [ obj process ] on: Error do: [ nil ]
+			].
+			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+				| top |
+				top := [ obj topContext ] on: Error do: [ nil ].
+				(top notNil and: [ top respondsTo: #process ])
+					ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+			] ].
+		proc isNil
+			ifTrue: [ ''false'' ]
+			ifFalse: [
+		', bodyString, '
+			]'
 ]
 
 { #category : 'cutback' }
@@ -328,11 +342,13 @@ GbxDebuggerRestartController >> synchronizeServerProgramCounterAfterRestart [
 	service isCurrentExecutedCodeFrame ifFalse: [ ^ false ].
 	level := service resolvedRestartHomeLevel.
 	result := self
-		fetchProcessCommandBody: '[
-		(proc respondsTo: #_trimStackToLevel:) ifFalse: [ ^ ''false'' ].
-		[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ^ ''false'' ].
-		''true''
-	] value'
+		fetchProcessCommandBody: '
+		(proc respondsTo: #_trimStackToLevel:)
+			ifFalse: [ ''false'' ]
+			ifTrue: [
+				[ proc _trimStackToLevel: restartLevel. ''true'' ]
+					on: Error
+					do: [ ''false'' ] ]'
 		literalAssignments: (Dictionary new
 			at: 'restartLevel' put: level;
 			yourself).

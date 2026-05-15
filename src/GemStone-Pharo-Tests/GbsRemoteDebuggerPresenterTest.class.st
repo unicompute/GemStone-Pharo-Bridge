@@ -354,7 +354,7 @@ GbsRemoteDebuggerPresenterTest >> testSetInitialSourceCodeStoresStableRestartSou
 ]
 
 { #category : 'tests' }
-GbsRemoteDebuggerPresenterTest >> testRestartDoesNotFallBackToDirectTrimWhenServiceExistsButFails [
+GbsRemoteDebuggerPresenterTest >> testRestartFallsBackToDirectTrimWhenServiceExistsButFails [
 	| trackingDebugger trackingService |
 	trackingDebugger := GbxFallbackTrackingRemoteDebugger new.
 	trackingService := GbxFakeServiceForRemoteDebugger new.
@@ -363,7 +363,7 @@ GbsRemoteDebuggerPresenterTest >> testRestartDoesNotFallBackToDirectTrimWhenServ
 
 	self deny: trackingDebugger restart.
 	self assert: trackingService restartCalls equals: 1.
-	self assert: trackingDebugger directRestartFallbackCalls equals: 0
+	self assert: trackingDebugger directRestartFallbackCalls equals: 1
 ]
 
 { #category : 'tests' }
@@ -457,7 +457,7 @@ GbsRemoteDebuggerPresenterTest >> testStepDoesNotFallBackToStepIntoWhenServiceEx
 ]
 
 { #category : 'tests' }
-GbsRemoteDebuggerPresenterTest >> testStepIntoDoesNotFallBackToDirectStepWhenServiceExistsButFails [
+GbsRemoteDebuggerPresenterTest >> testStepIntoFallsBackToDirectStepWhenServiceExistsButFails [
 	| executedContext fakeList fakeText trackingDebugger trackingService |
 	trackingDebugger := GbxFallbackTrackingRemoteDebugger new.
 	trackingService := GbxFakeServiceForRemoteDebugger new.
@@ -485,7 +485,7 @@ GbsRemoteDebuggerPresenterTest >> testStepIntoDoesNotFallBackToDirectStepWhenSer
 	self deny: trackingDebugger stepInto.
 	self assert: trackingService stepIntoCalls equals: 1.
 	self assert: trackingDebugger directExecutedStepFallbackCalls equals: 0.
-	self assert: trackingDebugger directFrameStepFallbackCalls equals: 0
+	self assert: trackingDebugger directFrameStepFallbackCalls equals: 1
 ]
 
 { #category : 'tests' }
@@ -517,7 +517,7 @@ GbsRemoteDebuggerPresenterTest >> testStepOverExecutedCodeDelegatesToServiceBefo
 ]
 
 { #category : 'tests' }
-GbsRemoteDebuggerPresenterTest >> testStepOverDoesNotFallBackToDirectStepWhenServiceExistsButFails [
+GbsRemoteDebuggerPresenterTest >> testStepOverFallsBackToDirectStepWhenServiceExistsButFails [
 	| executedContext fakeList fakeText trackingDebugger trackingService |
 	trackingDebugger := GbxFallbackTrackingRemoteDebugger new.
 	trackingService := GbxFakeServiceForRemoteDebugger new.
@@ -545,7 +545,7 @@ GbsRemoteDebuggerPresenterTest >> testStepOverDoesNotFallBackToDirectStepWhenSer
 	self deny: trackingDebugger stepOver.
 	self assert: trackingService stepOverCalls equals: 1.
 	self assert: trackingDebugger directExecutedStepFallbackCalls equals: 0.
-	self assert: trackingDebugger directFrameStepFallbackCalls equals: 0
+	self assert: trackingDebugger directFrameStepFallbackCalls equals: 1
 ]
 
 { #category : 'tests' }

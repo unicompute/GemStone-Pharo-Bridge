@@ -99,23 +99,26 @@ GbsSessionCommandExecutor >> executeWorkspaceScriptAndReturnOop: aString [
 GbsSessionCommandExecutor >> fetchTranscriptLogs [
 	| rawText |
 	rawText := self
-		fetchRemoteCommandBody: '[
+		fetchRemoteCommandBody: '
 		| fetched log text |
 		fetched := (Transcript respondsTo: #fetchAndClear)
 			ifTrue: [ [ Transcript fetchAndClear ] on: Error do: [ nil ] ]
 			ifFalse: [ nil ].
-		fetched ifNotNil: [ ^ fetched ifNil: [ '''' ] ].
-		log := UserGlobals at: #PharoTranscriptLog ifAbsent: [ OrderedCollection new ].
-		text := String streamContents: [ :stream |
-			log do: [ :each |
-				stream nextPutAll: each asString.
-				stream cr ] ].
-		UserGlobals at: #PharoTranscriptLog put: OrderedCollection new.
-		text
-	] value'
+		fetched
+			ifNil: [
+				log := UserGlobals at: #PharoTranscriptLog ifAbsent: [ OrderedCollection new ].
+				text := String streamContents: [ :stream |
+					log do: [ :each |
+						stream nextPutAll: each asString.
+						stream cr ] ].
+				UserGlobals at: #PharoTranscriptLog put: OrderedCollection new.
+				text ]
+			ifNotNil: [ fetched asString ]'
 		literalBindings: Dictionary new
 		oopBindings: Dictionary new
 		context: 20.
+	rawText ifNil: [ ^ '' ].
+	rawText := rawText asString.
 	(rawText beginsWith: 'Error:') ifTrue: [ ^ '' ].
 	^ rawText
 ]

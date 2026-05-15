@@ -48,16 +48,24 @@ GbxDebuggerProcessController >> fetchProcessCommandBody: bodyString [
 
 { #category : 'private' }
 GbxDebuggerProcessController >> fetchProcessCommandBody: bodyString literalAssignments: literalDictionary [
+	| oop |
+	oop := self processOop.
+	(oop isNumber and: [ oop > 20 ]) ifFalse: [ ^ nil ].
 	^ [ GbsRemoteExecutionDispatcher
 		fetchCommandBody: (self processCommandBodyFor: bodyString)
 		literalAssignments: literalDictionary
 		oopAssignments: (Dictionary new
-			at: 'obj' put: self processOop;
+			at: 'obj' put: oop;
 			yourself)
 		in: service session
 		context: 20 ]
 		on: Error
-		do: [ nil ]
+		do: [ :ex |
+			Transcript
+				show: 'GBS_REMOTE_PROCESS_COMMAND_ERROR ';
+				show: (([ ex messageText ] on: Error do: [ ex printString ]) ifNil: [ ex printString ]) asString;
+				cr.
+			nil ]
 ]
 
 { #category : 'process control' }
@@ -91,7 +99,7 @@ GbxDebuggerProcessController >> resetServerPCToStepOne [
 	level := service resolvedRestartHomeLevel.
 
 	result := self
-		fetchProcessCommandBody: '[
+		fetchProcessCommandBody: '
 		| tc stackReport fullEntry quick |
 		(proc respondsTo: #_trimStackToLevel:) ifTrue: [
 			[ proc _trimStackToLevel: restartLevel ] on: Error do: [ ]
@@ -136,7 +144,7 @@ GbxDebuggerProcessController >> resetServerPCToStepOne [
 			]
 		].
 		(quick <= 1) ifTrue: [ ''true'' ] ifFalse: [ ''false'' ]
-	] value'
+	'
 		literalAssignments: (Dictionary new
 			at: 'restartLevel' put: level;
 			yourself).
@@ -149,37 +157,37 @@ GbxDebuggerProcessController >> resetServerPCToStepOne [
 GbxDebuggerProcessController >> restartLevelFromServerStack [
 	| raw lines |
 	self canExecuteOnDebugProcess ifFalse: [ ^ nil ].
-	raw := self fetchProcessCommandBody: '[
+	raw := self fetchProcessCommandBody: '
 		| stream maxDepth level stackReport fullEntry methodOrNil className selectorName |
 		(proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ])
-			ifTrue: [ ^ '''' ].
-		stream := WriteStream on: String new.
-		maxDepth := 200.
-		level := 1.
-		[ level <= maxDepth ] whileTrue: [
-			fullEntry := nil.
-			stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
-			(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
-				ifTrue: [ fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ] ].
-			fullEntry isNil
-				ifTrue: [ level := maxDepth + 1 ]
-				ifFalse: [
-					methodOrNil := ((fullEntry respondsTo: #at:) and: [ fullEntry size >= 1 ])
-						ifTrue: [ [ fullEntry at: 1 ] on: Error do: [ nil ] ]
-						ifFalse: [ nil ].
-					className := [ methodOrNil inClass name asString ] on: Error do: [ ''nil'' ].
-					selectorName := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ]
-						on: Error do: [ ''nil'' ].
-					stream
-						nextPutAll: level asString; tab;
-						nextPutAll: className; tab;
-						nextPutAll: selectorName;
-						lf.
-					level := level + 1
-				]
-		].
-		stream contents
-	] value'.
+			ifTrue: [ '''' ]
+			ifFalse: [
+				stream := WriteStream on: String new.
+				maxDepth := 200.
+				level := 1.
+				[ level <= maxDepth ] whileTrue: [
+					fullEntry := nil.
+					stackReport := [ proc _gsiStackReportFromLevel: level toLevel: level ] on: Error do: [ nil ].
+					(stackReport notNil and: [ (stackReport respondsTo: #size) and: [ stackReport size >= 2 ] ])
+						ifTrue: [ fullEntry := [ stackReport at: 2 ] on: Error do: [ nil ] ].
+					fullEntry isNil
+						ifTrue: [ level := maxDepth + 1 ]
+						ifFalse: [
+							methodOrNil := ((fullEntry respondsTo: #at:) and: [ fullEntry size >= 1 ])
+								ifTrue: [ [ fullEntry at: 1 ] on: Error do: [ nil ] ]
+								ifFalse: [ nil ].
+							className := [ methodOrNil inClass name asString ] on: Error do: [ ''nil'' ].
+							selectorName := [ (fullEntry at: 4) ifNil: [ ''nil'' ] ifNotNil: [ :s | s asString ] ]
+								on: Error do: [ ''nil'' ].
+							stream
+								nextPutAll: level asString; tab;
+								nextPutAll: className; tab;
+								nextPutAll: selectorName;
+								lf.
+							level := level + 1
+						]
+				].
+				stream contents ]'.
 	raw ifNil: [ ^ nil ].
 	(raw respondsTo: #asLocalString) ifTrue: [ raw := raw asLocalString ].
 	(raw respondsTo: #splitOn:) ifFalse: [ ^ nil ].
@@ -213,10 +221,10 @@ GbxDebuggerProcessController >> runDebugProcessCommand: commandName recompute: s
 		and: [ (self currentContext respondsTo: #gbxIsServerContext)
 		and: [ self currentContext gbxIsServerContext ] ]).
 	result := self
-		fetchProcessCommandBody: '[
-		[ proc perform: commandSelector ] on: Error do: [ ^ ''false'' ].
-		true
-	] value'
+		fetchProcessCommandBody: '
+		[ proc perform: commandSelector. ''true'' ]
+			on: Error
+			do: [ ''false'' ]'
 		literalAssignments: (Dictionary new
 			at: 'commandSelector' put: commandName asString asSymbol;
 			yourself).
@@ -238,10 +246,10 @@ GbxDebuggerProcessController >> runDebugProcessCommand: commandName withInteger:
 		and: [ (self currentContext respondsTo: #gbxIsServerContext)
 		and: [ self currentContext gbxIsServerContext ] ]).
 	result := self
-		fetchProcessCommandBody: '[
-		[ proc perform: commandSelector with: commandArgument ] on: Error do: [ ^ ''false'' ].
-		true
-	] value'
+		fetchProcessCommandBody: '
+		[ proc perform: commandSelector with: commandArgument. ''true'' ]
+			on: Error
+			do: [ ''false'' ]'
 		literalAssignments: (Dictionary new
 			at: 'commandArgument' put: anInteger;
 			at: 'commandSelector' put: (commandName asString, ':') asSymbol;
@@ -278,13 +286,13 @@ GbxDebuggerProcessController >> serverStepOverFrameLevel: levelValue [
 	self canExecuteOnDebugProcess ifFalse: [ ^ false ].
 	levelValue ifNil: [ ^ false ].
 	result := self
-		fetchProcessCommandBody: '[
+		fetchProcessCommandBody: '
 		| ok |
-		(proc isNil or: [ (proc respondsTo: #perform:with:) not ]) ifTrue: [ ^ ''false'' ].
-		ok := [ proc perform: #_stepOverInFrame: with: stepLevel ] on: Error do: [ nil ].
-		ok isNil ifTrue: [ ^ ''false'' ].
-		''true''
-	] value'
+		(proc isNil or: [ (proc respondsTo: #perform:with:) not ])
+			ifTrue: [ ''false'' ]
+			ifFalse: [
+				ok := [ proc perform: #_stepOverInFrame: with: stepLevel ] on: Error do: [ nil ].
+				ok isNil ifTrue: [ ''false'' ] ifFalse: [ ''true'' ] ]'
 		literalAssignments: (Dictionary new
 			at: 'stepLevel' put: levelValue;
 			yourself).
@@ -301,16 +309,17 @@ GbxDebuggerProcessController >> serverStepWithSelectorChain: selectorChain level
 	selectorChain ifNil: [ ^ false ].
 	selectorChain isEmpty ifTrue: [ ^ false ].
 	result := self
-		fetchProcessCommandBody: '[
-		| ok selector |
-		(proc isNil or: [ (proc respondsTo: #perform:with:) not ]) ifTrue: [ ^ ''false'' ].
-		selectorChain do: [ :candidateSelector |
-			(proc respondsTo: candidateSelector) ifTrue: [
-				selector := candidateSelector.
-				ok := [ proc perform: selector with: stepLevel ] on: Error do: [ nil ].
-				ok isNil ifFalse: [ ^ ''true'' ] ] ].
-		''false''
-	] value'
+		fetchProcessCommandBody: '
+		| ok selector answer |
+		answer := ''false''.
+		(proc isNil or: [ (proc respondsTo: #perform:with:) not ]) ifFalse: [
+			selectorChain do: [ :candidateSelector |
+				answer = ''false'' ifTrue: [
+					(proc respondsTo: candidateSelector) ifTrue: [
+						selector := candidateSelector.
+						ok := [ proc perform: selector with: stepLevel ] on: Error do: [ nil ].
+						ok isNil ifFalse: [ answer := ''true'' ] ] ] ] ].
+		answer'
 		literalAssignments: (Dictionary new
 			at: 'selectorChain' put: selectorChain asArray;
 			at: 'stepLevel' put: levelValue;
@@ -324,22 +333,26 @@ GbxDebuggerProcessController >> serverStepWithSelectorChain: selectorChain level
 GbxDebuggerProcessController >> processCommandBodyFor: bodyString [
 	^ '
 		| proc |
-		obj isNil ifTrue: [ ^ ''false'' ].
-		proc := obj.
-		((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
-			(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
-			proc := [ obj process ] on: Error do: [ nil ]
-		].
-		((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
-			| top |
-			top := [ obj topContext ] on: Error do: [ nil ].
-			(top notNil and: [ top respondsTo: #process ])
-				ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
-		].
-		proc isNil ifTrue: [ ^ ''false'' ].
-		', bodyString
+		proc := nil.
+		obj notNil ifTrue: [
+			proc := obj.
+			((proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not) ifTrue: [
+				(obj respondsTo: #serverProcess) ifTrue: [ proc := [ obj serverProcess ] on: Error do: [ nil ] ].
+			].
+			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #process ]) ifTrue: [
+				proc := [ obj process ] on: Error do: [ nil ]
+			].
+			((proc isNil or: [ (proc respondsTo: #_gsiStackReportFromLevel:toLevel:) not ]) and: [ obj respondsTo: #topContext ]) ifTrue: [
+				| top |
+				top := [ obj topContext ] on: Error do: [ nil ].
+				(top notNil and: [ top respondsTo: #process ])
+					ifTrue: [ proc := [ top process ] on: Error do: [ nil ] ]
+			] ].
+		proc isNil
+			ifTrue: [ ''false'' ]
+			ifFalse: [
+		', bodyString, '
+			]'
 ]
 
 { #category : 'accessing' }
@@ -354,7 +367,11 @@ GbxDebuggerProcessController >> service: aDebuggerService [
 
 { #category : 'process control' }
 GbxDebuggerProcessController >> terminate [
-	(self runDebugProcessCommand: 'terminate' recompute: false)
-		ifTrue: [ ^ true ].
-	^ false
+	| didTerminate |
+	didTerminate := false.
+	[
+		didTerminate := self runDebugProcessCommand: 'terminate' recompute: false
+	] ensure: [
+		service processOop: nil ].
+	^ didTerminate
 ]

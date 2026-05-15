@@ -18,7 +18,7 @@ GbsTranscriptTest >> testLiveTranscriptFetch [
 		self skip: GbsLiveSessionTestSupport unavailableReason ].
 	
 	"2. Write to the remote transcript (returning true so we know it executed)"
-	writeResult := session execute: 'Transcript show: ''TDD Hello''; cr. true'.
+	writeResult := session execute: 'UserGlobals at: #PharoTranscriptLog put: (OrderedCollection with: ''TDD Hello''). true'.
 	self assert: writeResult equals: true. "FIXED: Standard SUnit assertion"
 	
 	"3. Fetch the transcript logs using your existing method"

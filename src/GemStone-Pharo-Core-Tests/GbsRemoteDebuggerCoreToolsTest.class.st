@@ -1085,7 +1085,7 @@ GbsRemoteDebuggerCoreToolsTest >> testRestartWithFreshFaultedProcessReturnsFalse
 	self deny: debugger restart.
 	self assert: debugger processOop equals: 9001.
 	self assert: service processOop isNil.
-	self assert: service terminateCalls equals: 0.
+	self assert: service terminateCalls equals: 1.
 	self assert: service restartCalls equals: 1
 ]
 

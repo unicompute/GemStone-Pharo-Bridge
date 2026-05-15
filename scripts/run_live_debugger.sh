@@ -64,7 +64,7 @@ if ! grep -q "LIVE_PREFLIGHT_SUMMARY result=OK code=LIVE_PREFLIGHT_OK" <<< "${pr
   exit 1
 fi
 
-debugger_output="$(HOME=/tmp/pharo-clean-auto/home GBS_WORK_IMAGE="${WORK_IMAGE}" "${VM}" --headless "${WORK_IMAGE}" st "/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/run_live_debugger_regressions.st" 2>&1 || true)"
+debugger_output="$(HOME=/tmp/pharo-clean-auto/home GBS_WORK_IMAGE="${WORK_IMAGE}" GBS_LOAD_GROUP=default GBS_RELOAD_CHECK_MODE=default "${VM}" --headless "${WORK_IMAGE}" st "/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/run_live_debugger_regressions.st" 2>&1 || true)"
 echo "${debugger_output}"
 gbs_write_evidence_file "live-debugger-regression.log" "${debugger_output}"
 
