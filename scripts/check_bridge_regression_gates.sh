@@ -259,6 +259,15 @@ if rg -n "evaluationScriptFor|bindingScriptForBody|executeScriptAndFetchObject:|
 fi
 rm -f /tmp/gbs-maglev-binding-script-gate.$$
 
+safe_binding_local_name_count="$(
+  { rg -n "isSafeBindingLocalName: localName" src/GemStone-GBS-MagLev/GbsRemoteBindingObject.class.st || true; } \
+    | wc -l | tr -d ' '
+)"
+printf 'BRIDGE_MAGLEV_BINDING_LOCAL_NAME_GATE count=%s min=2\n' "${safe_binding_local_name_count}"
+if (( safe_binding_local_name_count < 2 )); then
+  fail "MagLev binding local lookup/mutation must validate local names before eval"
+fi
+
 if rg -n "metadataScript|executeScriptAndFetchObject:" \
   src/GemStone-GBS-MagLev/GbsRemoteProcObject.class.st >/tmp/gbs-maglev-proc-script-gate.$$; then
   cat /tmp/gbs-maglev-proc-script-gate.$$

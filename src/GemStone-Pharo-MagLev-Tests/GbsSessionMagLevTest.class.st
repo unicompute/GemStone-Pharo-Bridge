@@ -1045,6 +1045,26 @@ GbsSessionMagLevTest >> testProcBindingObjectSupportsLocalMutationAndLexicalMeta
 ]
 
 { #category : 'tests' }
+GbsSessionMagLevTest >> testProcBindingObjectRejectsUnsafeLocalNameEvaluation [
+	| mockSession proc binding unsafeName |
+	unsafeName := 'invoice; Kernel.exit'.
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'Object _objectForOop: 9001')
+			ifTrue: [
+				^ #('Proc' 1 false 'demo.rb:12' 'proc { invoice }' 9101 #('invoice; Kernel.exit') #(nil) #('blocked')) ].
+		(script includesSubstring: 'perform: #eval')
+			ifTrue: [ self fail ].
+		self fail ].
+
+	proc := mockSession procObjectForOop: 9001.
+	binding := proc bindingObject.
+
+	self assert: (binding localValueNamed: unsafeName) isNil.
+	self assert: (binding setLocalNamed: unsafeName to: 99) isNil
+]
+
+{ #category : 'tests' }
 GbsSessionMagLevTest >> testProcBindingObjectBuildsClosureIdentityAndText [
 	| mockSession proc binding |
 	mockSession := CoreMockGbsSession new.

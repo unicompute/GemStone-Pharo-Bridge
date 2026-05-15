@@ -183,6 +183,15 @@ GbsRemoteBindingObject >> hasReceiver [
 	^ self receiverOop notNil
 ]
 
+{ #category : 'private' }
+GbsRemoteBindingObject >> isSafeBindingLocalName: aString [
+	| name |
+	aString ifNil: [ ^ false ].
+	name := aString asString.
+	(name isEmpty or: [ name first isDigit ]) ifTrue: [ ^ false ].
+	^ name allSatisfy: [ :ch | ch isAlphaNumeric or: [ ch = $_ ] ]
+]
+
 { #category : 'querying' }
 GbsRemoteBindingObject >> forModuleEval [
 	| raw |
@@ -221,6 +230,7 @@ GbsRemoteBindingObject >> localValueNamed: aName [
 	aName ifNil: [ ^ nil ].
 	localName := aName asString.
 	(self localNames includes: localName) ifFalse: [ ^ nil ].
+	(self isSafeBindingLocalName: localName) ifFalse: [ ^ nil ].
 	^ self evaluate: localName
 ]
 
@@ -237,6 +247,7 @@ GbsRemoteBindingObject >> setLocalNamed: aName toExpression: anExpressionString 
 	aName ifNil: [ ^ nil ].
 	localName := aName asString.
 	(self localNames includes: localName) ifFalse: [ ^ nil ].
+	(self isSafeBindingLocalName: localName) ifFalse: [ ^ nil ].
 	expressionText := anExpressionString
 		ifNil: [ 'nil' ]
 		ifNotNil: [ anExpressionString asString ].
