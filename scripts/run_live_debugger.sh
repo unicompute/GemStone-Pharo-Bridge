@@ -75,6 +75,18 @@ if [[ -z "${summary_line}" ]]; then
   exit 1
 fi
 
+if grep -q "LIVE_DEBUGGER_CLEANUP_WARN" <<< "${debugger_output}"; then
+  emit_summary "FAIL" "LIVE_DEBUGGER_CLEANUP_WARN"
+  echo "Live debugger cleanup warning detected; refusing to accept leaked or unverifiable debug process cleanup." >&2
+  exit 1
+fi
+
+if grep -q "GBS_REMOTE_PROCESS_COMMAND_ERROR" <<< "${debugger_output}"; then
+  emit_summary "FAIL" "LIVE_DEBUGGER_PROCESS_COMMAND_ERROR"
+  echo "Live debugger remote process command error detected." >&2
+  exit 1
+fi
+
 RESULT="$(extract_summary_field "${summary_line}" result)"
 CODE="$(extract_summary_field "${summary_line}" code)"
 RUN_COUNT="$(extract_summary_field "${summary_line}" run)"

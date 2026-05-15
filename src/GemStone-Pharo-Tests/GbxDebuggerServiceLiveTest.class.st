@@ -106,7 +106,7 @@ GbxDebuggerServiceLiveTest >> requireLiveConnectedSession [
 
 { #category : 'private' }
 GbxDebuggerServiceLiveTest >> withRemoteDebuggerSessionForFaultingScript: sourceString do: aBlock [
-	| remoteDebugger |
+	| remoteDebugger processOopAfterCleanup |
 	remoteDebugger := nil.
 	^ [
 		remoteDebugger := self buildHeadlessDebuggerForFaultingScript: sourceString.
@@ -115,7 +115,9 @@ GbxDebuggerServiceLiveTest >> withRemoteDebuggerSessionForFaultingScript: source
 		remoteDebugger ifNotNil: [
 			[ remoteDebugger terminate ] on: Error do: [ ] ].
 		service ifNotNil: [
-			([ service isTerminated ] on: Error do: [ false ]) ifFalse: [
+			processOopAfterCleanup := [ service processOop ] on: Error do: [ nil ].
+			(processOopAfterCleanup notNil
+				and: [ ([ service isTerminated ] on: Error do: [ false ]) not ]) ifTrue: [
 				Transcript show: 'LIVE_DEBUGGER_CLEANUP_WARN debug process termination could not be verified'; cr ] ].
 		session ifNotNil: [
 			[ session abortTransaction ] on: Error do: [ ] ] ]

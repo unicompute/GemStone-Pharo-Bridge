@@ -125,6 +125,10 @@ The expected behavior is:
 
 `LIVE_DEBUGGER_RUNNER_FAILED` means the Pharo runner did not emit the expected summary line. Check `live-debugger-regression.log`.
 
+`LIVE_DEBUGGER_CLEANUP_WARN` means a live debugger test left cleanup in an unverifiable state. Treat it as a leak risk until the debug process has been terminated or the process OOP has been explicitly cleared.
+
+`LIVE_DEBUGGER_PROCESS_COMMAND_ERROR` means a remote process command failed during debugger acceptance. This is gated because restart/step/terminate failures can otherwise look like a passing UI test with noisy logs.
+
 `DEBUGGER_PERF_*_THRESHOLD_EXCEEDED` means a measured latency exceeded the configured threshold. Compare the evidence log against the previous baseline before changing code or raising limits.
 
 ## Cleanup Rules
@@ -138,7 +142,7 @@ self
     self assert: (debugger instVarNamed: 'contextList') notEmpty ].
 ```
 
-The cleanup boundary terminates the debugger process, verifies the process is terminated when GemStone can report it, and aborts the session transaction.
+The cleanup boundary terminates the debugger process, verifies the process is terminated when GemStone can report it, accepts an explicitly cleared process OOP as a clean shutdown boundary, and aborts the session transaction.
 
 ## Production Loading
 
