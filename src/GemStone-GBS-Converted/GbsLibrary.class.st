@@ -52,7 +52,7 @@ GbsLibrary class >> macLibraryName [
 		libDir := home asFileReference / 'lib'.
 		(self findLibrary: 'libgcirpc-*-64.dylib' in: libDir) ifNotNil: [ :path | 
 			^ MacLibraryName := path ] ].
-	^ MacLibraryName := './libgcirpc-3.7.4.3-64.dylib'
+	^ MacLibraryName := '/opt/gemstone/product/lib/libgcirpc-3.7.5-64.dylib'
 ]
 
 { #category : 'accessing - platform' }
@@ -65,7 +65,7 @@ GbsLibrary class >> unixLibraryName [
 		libDir := home asFileReference / 'lib'.
 		(self findLibrary: 'libgcirpc-*-64.so' in: libDir) ifNotNil: [ :path | 
 			^ UnixLibraryName := path ] ].
-	^ UnixLibraryName := 'libgcirpc-3.7.4.3-64.so'
+	^ UnixLibraryName := '/opt/gemstone/product/lib/libgcirpc-3.7.5-64.so'
 ]
 
 { #category : 'accessing - platform' }
@@ -81,7 +81,7 @@ GbsLibrary class >> win32LibraryName [
 		libDir := home asFileReference / 'bin'.
 		(self findLibrary: 'libgcirpc-*-64.dll' in: libDir) ifNotNil: [ :path | 
 			^ Win32LibraryName := path ] ].
-	^ Win32LibraryName := 'libgcirpc-3.7.4.3-64.dll'
+	^ Win32LibraryName := '/opt/gemstone/product/lib/libgcirpc-3.7.5-64.dll'
 ]
 
 { #category : 'as yet unclassified' }

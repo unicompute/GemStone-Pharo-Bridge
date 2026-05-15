@@ -136,7 +136,7 @@ GbsLauncher >> initializePresenters [
 	inputUser := self newTextInput text: 'DataCurator'.
 	inputPass := self newTextInput text: 'swordfish'; bePassword.
 	inputLibPath := self newTextInput 
-		text: '/Users/tariq/GemStone64Bit3.7.4.3-arm64.Darwin/lib/libgcirpc-3.7.4.3-64.dylib';
+		text: '/opt/gemstone/product/lib/libgcirpc-3.7.5-64.dylib';
 		placeholder: 'Path to libgcirpc.dylib'.
 
 	"2. Login Buttons"
