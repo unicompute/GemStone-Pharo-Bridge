@@ -21,26 +21,31 @@ jobs:
       GS_NETLDI_NAME_OR_PORT: ${{ vars.GS_NETLDI_NAME_OR_PORT }}
       GS_USER: ${{ secrets.GS_USER }}
       GS_PASS: ${{ secrets.GS_PASS }}
-      GBS_SUMMARY_FILE: ${{ github.step_summary }}
       GBS_JSON_SUMMARY: "1"
-      GBS_JSON_SUMMARY_DIR: ${{ runner.temp }}/gbs-json
-      GBS_EVIDENCE_DIR: ${{ runner.temp }}/gbs-evidence
       GBS_DEBUGGER_OPEN_MAX_MS: ${{ vars.GBS_DEBUGGER_OPEN_MAX_MS }}
       GBS_DEBUGGER_STACK_FETCH_MAX_MS: ${{ vars.GBS_DEBUGGER_STACK_FETCH_MAX_MS }}
       GBS_DEBUGGER_SOURCE_LOOKUP_MAX_MS: ${{ vars.GBS_DEBUGGER_SOURCE_LOOKUP_MAX_MS }}
       GBS_DEBUGGER_PROXY_INSPECT_MAX_MS: ${{ vars.GBS_DEBUGGER_PROXY_INSPECT_MAX_MS }}
-      GBS_DEBUGGER_PERF_TRENDS: ${{ runner.temp }}/gbs-debugger-performance-trends/debugger-performance-trends.jsonl
-      GBS_DEBUGGER_PERF_REPORT: ${{ runner.temp }}/gbs-debugger-performance-trends/debugger-performance-trend-report.md
       GBS_DEBUGGER_PERF_REGRESSION_PERCENT: ${{ vars.GBS_DEBUGGER_PERF_REGRESSION_PERCENT }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Configure evidence paths
+        run: |
+          {
+            echo "GBS_SUMMARY_FILE=${GITHUB_STEP_SUMMARY}"
+            echo "GBS_JSON_SUMMARY_DIR=${RUNNER_TEMP}/gbs-json"
+            echo "GBS_EVIDENCE_DIR=${RUNNER_TEMP}/gbs-evidence"
+            echo "GBS_DEBUGGER_PERF_TRENDS=${RUNNER_TEMP}/gbs-debugger-performance-trends/debugger-performance-trends.jsonl"
+            echo "GBS_DEBUGGER_PERF_REPORT=${RUNNER_TEMP}/gbs-debugger-performance-trends/debugger-performance-trend-report.md"
+          } >> "${GITHUB_ENV}"
+          mkdir -p "${RUNNER_TEMP}/gbs-json" "${RUNNER_TEMP}/gbs-evidence" "${RUNNER_TEMP}/gbs-debugger-performance-trends"
+
       - name: Validate runner configuration
         run: |
           test -n "${PHARO_IMAGE}" || { echo "PHARO_IMAGE is not set"; exit 1; }
           test -n "${PHARO_WORK_DIR}" || { echo "PHARO_WORK_DIR is not set"; exit 1; }
-          mkdir -p "${GBS_JSON_SUMMARY_DIR}" "${GBS_EVIDENCE_DIR}" "$(dirname "${GBS_DEBUGGER_PERF_TRENDS}")"
 
       - name: Validate mandatory live debugger configuration
         run: |
