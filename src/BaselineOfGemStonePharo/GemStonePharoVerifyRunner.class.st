@@ -80,6 +80,9 @@ GemStonePharoVerifyRunner >> defaultRunStepNamed: stepName [
 		commandOutputForBashScript: (self shellCommandForStepNamed: stepName)
 		onErrorLabel: 'VERIFY_RUNNER_STEP_FAILED'.
 	self logOutput: output.
+	stepName = 'original-drift' ifTrue: [
+		^ (output includesSubstring: 'ORIGINAL_LAYER_DRIFT_OK')
+			or: [ output includesSubstring: 'ORIGINAL_LAYER_DRIFT_EXPECTED_ONLY' ] ].
 	^ output includesSubstring: (self successMarkerForStepNamed: stepName)
 ]
 
@@ -313,7 +316,7 @@ GemStonePharoVerifyRunner >> successMarkerForStepNamed: stepName [
 	stepName = 'core-only' ifTrue: [ ^ 'BRIDGE_CORE_ONLY_CHECK_OK' ].
 	stepName = 'bootstrap-smoke' ifTrue: [ ^ 'BOOTSTRAP_SMOKE_DONE' ].
 	stepName = 'original' ifTrue: [ ^ 'ORIGINAL_CHECK_OK' ].
-	stepName = 'original-drift' ifTrue: [ ^ 'ORIGINAL_LAYER_DRIFT_EXPECTED_ONLY' ].
+	stepName = 'original-drift' ifTrue: [ ^ 'ORIGINAL_LAYER_DRIFT_OK' ].
 	stepName = 'original-tests' ifTrue: [ ^ 'ORIGINAL_TESTS_CHECK_OK' ].
 	stepName = 'full' ifTrue: [ ^ 'CLEAN_RELOAD_AND_REGRESSION_RUN_DONE' ].
 	stepName = 'artifact-freshness' ifTrue: [ ^ 'CONTRACT_ARTIFACT_FRESHNESS_CHECK_OK' ].

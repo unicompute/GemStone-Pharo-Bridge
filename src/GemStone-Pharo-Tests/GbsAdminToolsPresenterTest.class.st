@@ -1467,6 +1467,8 @@ GbsAdminToolsPresenterTest >> testSymbolListCanOperateOnSelectedPreviewRowRequir
 { #category : 'tests' }
 GbsAdminToolsPresenterTest >> testSymbolListStructuredPreviewForSelectedPreviewRowUsesSelectedRowLabel [
 	| presenter mockSession fakeUsers fakeDicts fakeEntries fakeValue result |
+	(Smalltalk includesKey: #GbsRemoteCommand)
+		ifFalse: [ self skip: 'Structured preview command binding is covered by the Core tools lane.' ].
 	presenter := (Smalltalk at: #GbsSymbolListBrowserPresenter ifAbsent: [ nil ])
 		ifNotNil: [ :klass | klass new ]
 		ifNil: [ self skip: 'GbsSymbolListBrowserPresenter not loaded' ].

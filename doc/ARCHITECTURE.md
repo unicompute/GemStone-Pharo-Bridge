@@ -37,6 +37,12 @@ This section is generated from `GemStonePharoContract`.
 ## Expected Original-layer Test Exceptions
 
 The original/base production layer is clean. `make original-drift` currently reports only these accepted test-layer exceptions:
+- `src/GemStone-Pharo-Tests/GbsAdminToolsPresenterTest.class.st`
+  Skips Core-command structured-preview assertions in the Original-Tests lane, where Core is intentionally absent.
+- `src/GemStone-Pharo-Tests/GbsRemoteDebuggerPresenterTest.class.st`
+  Skips Core-command source lookup assertions in the Original-Tests lane, where Core is intentionally absent.
+- `src/GemStone-Pharo-Tests/GbsSessionTest.class.st`
+  Skips Core transaction-coordinator assertions in the Original-Tests lane, where Core is intentionally absent.
 - `src/GemStone-Pharo-Tests/GciError.extension.st`
   Adds a tiny test-only GciError number accessor shim so the restored base login-error path can run without production drift.
 - `src/GemStone-Pharo-Tests/MockGbsSession.class.st`

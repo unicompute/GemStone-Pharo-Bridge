@@ -35,6 +35,8 @@ GbsSessionTest >> testAbortTransaction [
 { #category : 'running' }
 GbsSessionTest >> testAbortTransactionFallbackUsesSystemSelector [
 	| mockSession fallbackScript |
+	(Smalltalk includesKey: #GbsSessionTransactionCoordinator)
+		ifFalse: [ self skip: 'Abort fallback through System selector is covered by the Core lane.' ].
 	mockSession := MockGbsSession new.
 	mockSession instVarNamed: 'isLoggedIn' put: true.
 	mockSession stubs at: #gciAbort put: 0.

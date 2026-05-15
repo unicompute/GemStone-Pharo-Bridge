@@ -28,11 +28,11 @@ Verify that the original/base production layer reloads cleanly without the gener
 
 ## original-drift
 
-Verify that the original/base production layer stays clean relative to `56b6db3...`, allowing only the explicit accepted test-layer exceptions.
+Verify that the original/base production layer stays clean relative to the current accepted baseline `8a8e15c...`, allowing only the explicit accepted test-layer exceptions.
 
 - load group: `Original-Tests`
 - targets: `GemStone-GBS-Converted`, `GemStone-GBS-Tools`, `GemStone-Pharo-Tests`
-- success markers: `ORIGINAL_LAYER_DRIFT_EXPECTED_ONLY`
+- success markers: `ORIGINAL_LAYER_DRIFT_OK`, `ORIGINAL_LAYER_DRIFT_EXPECTED_ONLY`
 
 ## original-tests
 
@@ -69,6 +69,12 @@ Run core-only, bootstrap-smoke, original, original-drift, original-tests, full, 
 ## Expected Original-layer Test Exceptions
 
 `make original-drift` currently reports the original/base production layer as clean and accepts only these test-layer exceptions:
+- `src/GemStone-Pharo-Tests/GbsAdminToolsPresenterTest.class.st`
+  Skips Core-command structured-preview assertions in the Original-Tests lane, where Core is intentionally absent.
+- `src/GemStone-Pharo-Tests/GbsRemoteDebuggerPresenterTest.class.st`
+  Skips Core-command source lookup assertions in the Original-Tests lane, where Core is intentionally absent.
+- `src/GemStone-Pharo-Tests/GbsSessionTest.class.st`
+  Skips Core transaction-coordinator assertions in the Original-Tests lane, where Core is intentionally absent.
 - `src/GemStone-Pharo-Tests/GciError.extension.st`
   Adds a tiny test-only GciError number accessor shim so the restored base login-error path can run without production drift.
 - `src/GemStone-Pharo-Tests/MockGbsSession.class.st`

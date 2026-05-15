@@ -848,6 +848,7 @@ GemStonePharoContractTest >> testVerificationLaneSpecsReflectSteadyStateLaneSet 
 	self assert: (originalLane fifth includes: 'ORIGINAL_CHECK_OK').
 	self assert: originalDriftLane third equals: 'Original-Tests'.
 	self assert: originalDriftLane fourth equals: #('GemStone-GBS-Converted' 'GemStone-GBS-Tools' 'GemStone-Pharo-Tests').
+	self assert: (originalDriftLane fifth includes: 'ORIGINAL_LAYER_DRIFT_OK').
 	self assert: (originalDriftLane fifth includes: 'ORIGINAL_LAYER_DRIFT_EXPECTED_ONLY').
 	self assert: originalTestsLane third equals: 'Original-Tests'.
 	self assert: originalTestsLane fourth equals: #('GemStone-Pharo-Tests').

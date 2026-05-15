@@ -210,6 +210,8 @@ GbsRemoteDebuggerPresenterTest >> testApplySourceMapHighlightFallsBackToDisplaye
 { #category : 'tests' }
 GbsRemoteDebuggerPresenterTest >> testContextSelectedFetchesFullSourceForSingleLineNilFrame [
 	| mockSession fakeText fakeTable context rendered capturedScript sourceBlock |
+	(Smalltalk includesKey: #GbsRemoteCommand)
+		ifFalse: [ self skip: 'Remote command source lookup is covered by the Core tools lane.' ].
 	mockSession := MockGbsSession new.
 	sourceBlock := [ :script |
 		capturedScript := script.
