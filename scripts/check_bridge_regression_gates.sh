@@ -24,8 +24,8 @@ check_max_lines() {
   fi
 }
 
-check_max_lines "src/GemStone-GBS-Tools/GbsRemoteDebugger.class.st" 1300 "GbsRemoteDebugger"
-check_max_lines "src/GemStone-GBS-Tools/GbxDebuggerService.class.st" 1300 "GbxDebuggerService"
+check_max_lines "src/GemStone-GBS-Tools/GbsRemoteDebugger.class.st" 1050 "GbsRemoteDebugger"
+check_max_lines "src/GemStone-GBS-Tools/GbxDebuggerService.class.st" 1050 "GbxDebuggerService"
 check_max_lines "src/GemStone-GBS-Core/GbsSession.extension.st" 1000 "GbsSessionCoreExtension"
 check_max_lines "src/GemStone-GBS-Core/GbsSessionCommandExecutor.class.st" 200 "GbsSessionCommandExecutor"
 check_max_lines "src/GemStone-GBS-Core/GbsSessionNamedObjectRegistry.class.st" 250 "GbsSessionNamedObjectRegistry"

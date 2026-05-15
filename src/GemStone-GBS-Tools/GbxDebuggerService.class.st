@@ -65,9 +65,7 @@ GbxDebuggerService class >> openOn: anErrorString process: processOop session: a
 ]
 
 { #category : 'doIt/accept/explain' }
-GbxDebuggerService >> acceptTextFrom: textController [
-	^ self compileController acceptTextFrom: textController
-]
+GbxDebuggerService >> acceptTextFrom: textController [ ^ self compileController acceptTextFrom: textController ]
 
 { #category : 'private' }
 GbxDebuggerService >> asBooleanResult: raw default: defaultBoolean [
@@ -85,69 +83,43 @@ GbxDebuggerService >> asBooleanResult: raw default: defaultBoolean [
 ]
 
 { #category : 'private' }
-GbxDebuggerService >> actualServerQuickStepPointAfterRestart [
-	^ self restartController actualServerQuickStepPointAfterRestart
-]
+GbxDebuggerService >> actualServerQuickStepPointAfterRestart [ ^ self restartController actualServerQuickStepPointAfterRestart ]
 
 { #category : 'private' }
-GbxDebuggerService >> actualServerQuickStepPointAtLevel: levelValue [
-	^ self restartController actualServerQuickStepPointAtLevel: levelValue
-]
+GbxDebuggerService >> actualServerQuickStepPointAtLevel: levelValue [ ^ self restartController actualServerQuickStepPointAtLevel: levelValue ]
 
 { #category : 'private-step points' }
-GbxDebuggerService >> basicJumpToCaret [
-	^ self stepPointController basicJumpToCaret
-]
+GbxDebuggerService >> basicJumpToCaret [ ^ self stepPointController basicJumpToCaret ]
 
 { #category : 'actions' }
-GbxDebuggerService >> basicReenterServerContext [
-	^ self restartController basicReenterServerContext
-]
+GbxDebuggerService >> basicReenterServerContext [ ^ self restartController basicReenterServerContext ]
 
 { #category : 'private-GS execution' }
-GbxDebuggerService >> basicSendIntoServer [
-	^ self serverExecutionController basicSendIntoServer
-]
+GbxDebuggerService >> basicSendIntoServer [ ^ self serverExecutionController basicSendIntoServer ]
 
 { #category : 'private-GS execution' }
-GbxDebuggerService >> basicServerStepInLevel: level [
-	^ self serverExecutionController basicServerStepInLevel: level
-]
+GbxDebuggerService >> basicServerStepInLevel: level [ ^ self serverExecutionController basicServerStepInLevel: level ]
 
 { #category : 'private-step points' }
-GbxDebuggerService >> basicSkipToCaret [
-	^ self stepPointController basicSkipToCaret
-]
+GbxDebuggerService >> basicSkipToCaret [ ^ self stepPointController basicSkipToCaret ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> breakpoint: aBreakPoint matchesSelection: anInterval [
-	^ self breakpointController breakpoint: aBreakPoint matchesSelection: anInterval
-]
+GbxDebuggerService >> breakpoint: aBreakPoint matchesSelection: anInterval [ ^ self breakpointController breakpoint: aBreakPoint matchesSelection: anInterval ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> breakpointClass [
-	^ Smalltalk at: #GbxBreakPoint ifAbsent: [ nil ]
-]
+GbxDebuggerService >> breakpointClass [ ^ Smalltalk at: #GbxBreakPoint ifAbsent: [ nil ] ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> breakpointIntervalsInCurrentMethod [
-	^ self breakpointController breakpointIntervalsInCurrentMethod
-]
+GbxDebuggerService >> breakpointIntervalsInCurrentMethod [ ^ self breakpointController breakpointIntervalsInCurrentMethod ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> breakpointSummaryString [
-	^ self breakpointController breakpointSummaryString
-]
+GbxDebuggerService >> breakpointSummaryString [ ^ self breakpointController breakpointSummaryString ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> breakpointToRemoveIn: aTextWidget from: breakpoints [
-	^ self breakpointController breakpointToRemoveIn: aTextWidget from: breakpoints
-]
+GbxDebuggerService >> breakpointToRemoveIn: aTextWidget from: breakpoints [ ^ self breakpointController breakpointToRemoveIn: aTextWidget from: breakpoints ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> breakpointsInSelectedMethod [
-	^ self breakpointController breakpointsInSelectedMethod
-]
+GbxDebuggerService >> breakpointsInSelectedMethod [ ^ self breakpointController breakpointsInSelectedMethod ]
 
 { #category : 'actions-browsing' }
 GbxDebuggerService >> browseClass [
@@ -169,14 +141,10 @@ GbxDebuggerService >> browseMethod [
 ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> browserClass [
-	^ Smalltalk at: #GbxBrowser ifAbsent: [ nil ]
-]
+GbxDebuggerService >> browserClass [ ^ Smalltalk at: #GbxBrowser ifAbsent: [ nil ] ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> breakpointController [
-	^ GbxDebuggerBreakpointController on: self
-]
+GbxDebuggerService >> breakpointController [ ^ GbxDebuggerBreakpointController on: self ]
 
 { #category : 'private' }
 GbxDebuggerService >> canExecuteOnDebugProcess [
@@ -185,54 +153,34 @@ GbxDebuggerService >> canExecuteOnDebugProcess [
 ]
 
 { #category : 'inspector' }
-GbxDebuggerService >> canInspectCurrentFrame [
-	^ self inspectorController canInspectCurrentFrame
-]
+GbxDebuggerService >> canInspectCurrentFrame [ ^ self inspectorController canInspectCurrentFrame ]
 
 { #category : 'inspector' }
-GbxDebuggerService >> canInspectCurrentProcess [
-	^ self inspectorController canInspectCurrentProcess
-]
+GbxDebuggerService >> canInspectCurrentProcess [ ^ self inspectorController canInspectCurrentProcess ]
 
 { #category : 'inspector' }
-GbxDebuggerService >> canInspectCurrentReceiver [
-	^ self inspectorController canInspectCurrentReceiver
-]
+GbxDebuggerService >> canInspectCurrentReceiver [ ^ self inspectorController canInspectCurrentReceiver ]
 
 { #category : 'testing' }
-GbxDebuggerService >> canIssueContextCommand [
-	^ currentContext isNotNil and: [ self isTerminated not ]
-]
+GbxDebuggerService >> canIssueContextCommand [ ^ currentContext isNotNil and: [ self isTerminated not ] ]
 
 { #category : 'testing' }
-GbxDebuggerService >> canJumpToStepPoint [
-	^ self canIssueContextCommand
-]
+GbxDebuggerService >> canJumpToStepPoint [ ^ self canIssueContextCommand ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> canManageBreakPoints [
-	^ self breakpointController canManageBreakPoints
-]
+GbxDebuggerService >> canManageBreakPoints [ ^ self breakpointController canManageBreakPoints ]
 
 { #category : 'testing' }
-GbxDebuggerService >> canPause [
-	^ self canResume
-]
+GbxDebuggerService >> canPause [ ^ self canResume ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> canRemoveAllBreakPoints [
-	^ self breakpointController canRemoveAllBreakPoints
-]
+GbxDebuggerService >> canRemoveAllBreakPoints [ ^ self breakpointController canRemoveAllBreakPoints ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> canRemoveBreakPoint [
-	^ self breakpointController canRemoveBreakPoint
-]
+GbxDebuggerService >> canRemoveBreakPoint [ ^ self breakpointController canRemoveBreakPoint ]
 
 { #category : 'testing' }
-GbxDebuggerService >> canResume [
-	^ self isTerminated not
-]
+GbxDebuggerService >> canResume [ ^ self isTerminated not ]
 
 { #category : 'testing' }
 GbxDebuggerService >> canReturnFromFrame [
@@ -243,59 +191,37 @@ GbxDebuggerService >> canReturnFromFrame [
 ]
 
 { #category : 'testing' }
-GbxDebuggerService >> canRunToStepPoint [
-	^ self canIssueContextCommand
-]
+GbxDebuggerService >> canRunToStepPoint [ ^ self canIssueContextCommand ]
 
 { #category : 'testing' }
-GbxDebuggerService >> canRunWithBreakAgain [
-	^ self canResume and: [ self canIssueContextCommand ]
-]
+GbxDebuggerService >> canRunWithBreakAgain [ ^ self canResume and: [ self canIssueContextCommand ] ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> canSetBreakPoint [
-	^ self breakpointController canSetBreakPoint
-]
+GbxDebuggerService >> canSetBreakPoint [ ^ self breakpointController canSetBreakPoint ]
 
 { #category : 'testing' }
-GbxDebuggerService >> canStepInto [
-	^ self canIssueContextCommand
-]
+GbxDebuggerService >> canStepInto [ ^ self canIssueContextCommand ]
 
 { #category : 'testing' }
-GbxDebuggerService >> canStepOver [
-	^ self canIssueContextCommand
-]
+GbxDebuggerService >> canStepOver [ ^ self canIssueContextCommand ]
 
 { #category : 'testing' }
-GbxDebuggerService >> canStepReturn [
-	^ self canIssueContextCommand
-]
+GbxDebuggerService >> canStepReturn [ ^ self canIssueContextCommand ]
 
 { #category : 'testing' }
-GbxDebuggerService >> canTerminate [
-	^ self isTerminated not
-]
+GbxDebuggerService >> canTerminate [ ^ self isTerminated not ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> canToggleBreakPoint [
-	^ self breakpointController canToggleBreakPoint
-]
+GbxDebuggerService >> canToggleBreakPoint [ ^ self breakpointController canToggleBreakPoint ]
 
 { #category : 'evaluation' }
-GbxDebuggerService >> clearCompileError [
-	^ self compileController clearCompileError
-]
+GbxDebuggerService >> clearCompileError [ ^ self compileController clearCompileError ]
 
 { #category : 'private' }
-GbxDebuggerService >> compileController [
-	^ GbxDebuggerCompileController on: self
-]
+GbxDebuggerService >> compileController [ ^ GbxDebuggerCompileController on: self ]
 
 { #category : 'private' }
-GbxDebuggerService >> compileErrorValue [
-	^ lastCompileError
-]
+GbxDebuggerService >> compileErrorValue [ ^ lastCompileError ]
 
 { #category : 'private' }
 GbxDebuggerService >> compileErrorValue: aString [
@@ -303,14 +229,10 @@ GbxDebuggerService >> compileErrorValue: aString [
 ]
 
 { #category : 'private-step points' }
-GbxDebuggerService >> closestLeftStepPoint [
-	^ self stepPointController closestLeftStepPoint
-]
+GbxDebuggerService >> closestLeftStepPoint [ ^ self stepPointController closestLeftStepPoint ]
 
 { #category : 'private-step points' }
-GbxDebuggerService >> closestRightStepPoint [
-	^ self stepPointController closestRightStepPoint
-]
+GbxDebuggerService >> closestRightStepPoint [ ^ self stepPointController closestRightStepPoint ]
 
 { #category : 'accessing' }
 GbxDebuggerService >> contextList [
@@ -319,14 +241,10 @@ GbxDebuggerService >> contextList [
 ]
 
 { #category : 'accessing' }
-GbxDebuggerService >> contextStackPolicy [
-	^ contextStackPolicy
-]
+GbxDebuggerService >> contextStackPolicy [ ^ contextStackPolicy ]
 
 { #category : 'evaluation' }
-GbxDebuggerService >> correctCurrentSelectorWithSource: sourceText [
-	^ self compileController correctCurrentSelectorWithSource: sourceText
-]
+GbxDebuggerService >> correctCurrentSelectorWithSource: sourceText [ ^ self compileController correctCurrentSelectorWithSource: sourceText ]
 
 { #category : 'context list' }
 GbxDebuggerService >> correctSelectedContextIfGlue [
@@ -343,14 +261,10 @@ GbxDebuggerService >> correctSelectedContextIfGlue [
 ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> currentBreakPointList [
-	^ self breakpointController currentBreakPointList
-]
+GbxDebuggerService >> currentBreakPointList [ ^ self breakpointController currentBreakPointList ]
 
 { #category : 'accessing' }
-GbxDebuggerService >> currentContext [
-	^ currentContext
-]
+GbxDebuggerService >> currentContext [ ^ currentContext ]
 
 { #category : 'accessing' }
 GbxDebuggerService >> currentContext: aContext [
@@ -359,59 +273,37 @@ GbxDebuggerService >> currentContext: aContext [
 ]
 
 { #category : 'inspector' }
-GbxDebuggerService >> currentContextLevel [
-	^ self inspectorController currentContextLevel
-]
+GbxDebuggerService >> currentContextLevel [ ^ self inspectorController currentContextLevel ]
 
 { #category : 'evaluation' }
-GbxDebuggerService >> currentExecutionContextOop [
-	^ self inspectorController currentExecutionContextOop
-]
+GbxDebuggerService >> currentExecutionContextOop [ ^ self inspectorController currentExecutionContextOop ]
 
 { #category : 'inspector' }
-GbxDebuggerService >> currentFrameOop [
-	^ self inspectorController currentFrameOop
-]
+GbxDebuggerService >> currentFrameOop [ ^ self inspectorController currentFrameOop ]
 
 { #category : 'inspector' }
-GbxDebuggerService >> currentProcessOop [
-	^ self inspectorController currentProcessOop
-]
+GbxDebuggerService >> currentProcessOop [ ^ self inspectorController currentProcessOop ]
 
 { #category : 'inspector' }
-GbxDebuggerService >> currentReceiverOop [
-	^ self inspectorController currentReceiverOop
-]
+GbxDebuggerService >> currentReceiverOop [ ^ self inspectorController currentReceiverOop ]
 
 { #category : 'source code' }
-GbxDebuggerService >> currentSourceSelectionInterval [
-	^ self stepPointController currentSourceSelectionInterval
-]
+GbxDebuggerService >> currentSourceSelectionInterval [ ^ self stepPointController currentSourceSelectionInterval ]
 
 { #category : 'source code' }
-GbxDebuggerService >> currentStepPoint [
-	^ self stepPointController currentStepPoint
-]
+GbxDebuggerService >> currentStepPoint [ ^ self stepPointController currentStepPoint ]
 
 { #category : 'actions' }
-GbxDebuggerService >> cutbackClientContextsAbove: gsContext [
-	^ self restartController cutbackClientContextsAbove: gsContext
-]
+GbxDebuggerService >> cutbackClientContextsAbove: gsContext [ ^ self restartController cutbackClientContextsAbove: gsContext ]
 
 { #category : 'actions' }
-GbxDebuggerService >> cutbackGsProcessesAbove: clientContext [
-	^ self restartController cutbackGsProcessesAbove: clientContext
-]
+GbxDebuggerService >> cutbackGsProcessesAbove: clientContext [ ^ self restartController cutbackGsProcessesAbove: clientContext ]
 
 { #category : 'actions' }
-GbxDebuggerService >> cutbackGsTo: gsContext [
-	^ self restartController cutbackGsTo: gsContext
-]
+GbxDebuggerService >> cutbackGsTo: gsContext [ ^ self restartController cutbackGsTo: gsContext ]
 
 { #category : 'actions' }
-GbxDebuggerService >> cutbackTo: aContext finishWith: aBlock [
-	^ self restartController cutbackTo: aContext finishWith: aBlock
-]
+GbxDebuggerService >> cutbackTo: aContext finishWith: aBlock [ ^ self restartController cutbackTo: aContext finishWith: aBlock ]
 
 { #category : 'actions' }
 GbxDebuggerService >> cutbackToGsContext: gsContext finishWith: finishBlockArg [
@@ -421,39 +313,25 @@ GbxDebuggerService >> cutbackToGsContext: gsContext finishWith: finishBlockArg [
 ]
 
 { #category : 'actions' }
-GbxDebuggerService >> cutbackToGsProcessOf: gsContext [
-	^ self restartController cutbackToGsProcessOf: gsContext
-]
+GbxDebuggerService >> cutbackToGsProcessOf: gsContext [ ^ self restartController cutbackToGsProcessOf: gsContext ]
 
 { #category : 'private-step points' }
-GbxDebuggerService >> earliestOverlappingStepPoint [
-	^ self stepPointController earliestOverlappingStepPoint
-]
+GbxDebuggerService >> earliestOverlappingStepPoint [ ^ self stepPointController earliestOverlappingStepPoint ]
 
 { #category : 'private-step points' }
-GbxDebuggerService >> earliestSelectedStepPoint [
-	^ self stepPointController earliestSelectedStepPoint
-]
+GbxDebuggerService >> earliestSelectedStepPoint [ ^ self stepPointController earliestSelectedStepPoint ]
 
 { #category : 'private' }
-GbxDebuggerService >> effectiveServerStepLevel [
-	^ self stepPointController effectiveServerStepLevel
-]
+GbxDebuggerService >> effectiveServerStepLevel [ ^ self stepPointController effectiveServerStepLevel ]
 
 { #category : 'stack manipulation' }
-GbxDebuggerService >> emergencyRestart: ex [
-	^ self restartController emergencyRestart: ex
-]
+GbxDebuggerService >> emergencyRestart: ex [ ^ self restartController emergencyRestart: ex ]
 
 { #category : 'private' }
-GbxDebuggerService >> ensureRestartAtStepOne [
-	^ self restartController ensureRestartAtStepOne
-]
+GbxDebuggerService >> ensureRestartAtStepOne [ ^ self restartController ensureRestartAtStepOne ]
 
 { #category : 'evaluation' }
-GbxDebuggerService >> evaluateCodeInCurrentFrame: codeString [
-	^ self inspectorController evaluateCodeInCurrentFrame: codeString
-]
+GbxDebuggerService >> evaluateCodeInCurrentFrame: codeString [ ^ self inspectorController evaluateCodeInCurrentFrame: codeString ]
 
 { #category : 'private-event processing' }
 GbxDebuggerService >> eventOrder [
@@ -489,9 +367,7 @@ GbxDebuggerService >> firstServerContextAbove: clientContext [
 ]
 
 { #category : 'private' }
-GbxDebuggerService >> forceRestartPositionToMethodStart [
-	^ self restartController forceRestartPositionToMethodStart
-]
+GbxDebuggerService >> forceRestartPositionToMethodStart [ ^ self restartController forceRestartPositionToMethodStart ]
 
 { #category : 'private-GS execution' }
 GbxDebuggerService >> gbsErrorClass [
@@ -500,14 +376,10 @@ GbxDebuggerService >> gbsErrorClass [
 ]
 
 { #category : 'actions-browsing' }
-GbxDebuggerService >> gbxBrowseClass: aDelegate [
-	^ GbxDebuggerBrowseController browseClass: aDelegate
-]
+GbxDebuggerService >> gbxBrowseClass: aDelegate [ ^ GbxDebuggerBrowseController browseClass: aDelegate ]
 
 { #category : 'actions-browsing' }
-GbxDebuggerService >> gbxBrowseMethod: delegate [
-	^ GbxDebuggerBrowseController browseMethod: delegate
-]
+GbxDebuggerService >> gbxBrowseMethod: delegate [ ^ GbxDebuggerBrowseController browseMethod: delegate ]
 
 { #category : 'doIt/accept/explain' }
 GbxDebuggerService >> gbxMethodChanged: newSource [
@@ -537,14 +409,10 @@ GbxDebuggerService >> gbxMethodChanged: newSource [
 ]
 
 { #category : 'doIt/accept/explain' }
-GbxDebuggerService >> gbxRecompileMethod: sourceText notifying: requestor [
-	^ self compileController gbxRecompileMethod: sourceText notifying: requestor
-]
+GbxDebuggerService >> gbxRecompileMethod: sourceText notifying: requestor [ ^ self compileController gbxRecompileMethod: sourceText notifying: requestor ]
 
 { #category : 'accessing' }
-GbxDebuggerService >> glueIsHidden [
-	^ contextStackPolicy glueIsHidden
-]
+GbxDebuggerService >> glueIsHidden [ ^ contextStackPolicy glueIsHidden ]
 
 { #category : 'accessing' }
 GbxDebuggerService >> glueIsHidden: aBoolean [
@@ -583,9 +451,7 @@ GbxDebuggerService >> gsPrintIt: codeString [
 ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> hasBreakPointIn: aTextWidget [
-	^ self breakpointController hasBreakPointIn: aTextWidget
-]
+GbxDebuggerService >> hasBreakPointIn: aTextWidget [ ^ self breakpointController hasBreakPointIn: aTextWidget ]
 
 { #category : 'testing' }
 GbxDebuggerService >> hasLoopControlContext [
@@ -594,9 +460,7 @@ GbxDebuggerService >> hasLoopControlContext [
 ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> highlightBreakPointsIn: aText [
-	^ self breakpointController highlightBreakPointsIn: aText
-]
+GbxDebuggerService >> highlightBreakPointsIn: aText [ ^ self breakpointController highlightBreakPointsIn: aText ]
 
 { #category : 'doIt/accept/explain' }
 GbxDebuggerService >> homeContextForCutback [
@@ -634,34 +498,22 @@ GbxDebuggerService >> initializeForDebugging [
 ]
 
 { #category : 'inspector' }
-GbxDebuggerService >> inspectCurrentFrame [
-	^ self inspectorController inspectCurrentFrame
-]
+GbxDebuggerService >> inspectCurrentFrame [ ^ self inspectorController inspectCurrentFrame ]
 
 { #category : 'inspector' }
-GbxDebuggerService >> inspectCurrentProcess [
-	^ self inspectorController inspectCurrentProcess
-]
+GbxDebuggerService >> inspectCurrentProcess [ ^ self inspectorController inspectCurrentProcess ]
 
 { #category : 'inspector' }
-GbxDebuggerService >> inspectCurrentReceiver [
-	^ self inspectorController inspectCurrentReceiver
-]
+GbxDebuggerService >> inspectCurrentReceiver [ ^ self inspectorController inspectCurrentReceiver ]
 
 { #category : 'inspector' }
-GbxDebuggerService >> inspectVariableNamed: aVariableName [
-	^ self inspectorController inspectVariableNamed: aVariableName
-]
+GbxDebuggerService >> inspectVariableNamed: aVariableName [ ^ self inspectorController inspectVariableNamed: aVariableName ]
 
 { #category : 'inspector' }
-GbxDebuggerService >> inspectorClass [
-	^ GbsInspector
-]
+GbxDebuggerService >> inspectorClass [ ^ GbsInspector ]
 
 { #category : 'private' }
-GbxDebuggerService >> inspectorController [
-	^ GbxDebuggerInspectorController on: self
-]
+GbxDebuggerService >> inspectorController [ ^ GbxDebuggerInspectorController on: self ]
 
 { #category : 'private' }
 GbxDebuggerService >> isCurrentExecutedCodeFrame [
@@ -682,9 +534,7 @@ GbxDebuggerService >> isExecutedCodeAtStepOne [
 ]
 
 { #category : 'private' }
-GbxDebuggerService >> restartNeedsFreshFaultReplay [
-	^ self restartController restartNeedsFreshFaultReplay
-]
+GbxDebuggerService >> restartNeedsFreshFaultReplay [ ^ self restartController restartNeedsFreshFaultReplay ]
 
 { #category : 'testing' }
 GbxDebuggerService >> isMethodContextSelected [
@@ -704,9 +554,7 @@ GbxDebuggerService >> isSessionUsable [
 ]
 
 { #category : 'process control' }
-GbxDebuggerService >> isTerminated [
-	^ self processController isTerminated
-]
+GbxDebuggerService >> isTerminated [ ^ self processController isTerminated ]
 
 { #category : 'process control' }
 GbxDebuggerService >> jumpToStepPoint: aStepPoint [
@@ -719,9 +567,7 @@ GbxDebuggerService >> jumpToStepPoint: aStepPoint [
 ]
 
 { #category : 'accessing' }
-GbxDebuggerService >> label [
-	^ label
-]
+GbxDebuggerService >> label [ ^ label ]
 
 { #category : 'accessing' }
 GbxDebuggerService >> label: aString [
@@ -729,9 +575,7 @@ GbxDebuggerService >> label: aString [
 ]
 
 { #category : 'evaluation' }
-GbxDebuggerService >> lastCompileError [
-	^ self compileController lastCompileError
-]
+GbxDebuggerService >> lastCompileError [ ^ self compileController lastCompileError ]
 
 { #category : 'private' }
 GbxDebuggerService >> logRestartState: labelString context: aContext [
@@ -746,9 +590,7 @@ GbxDebuggerService >> logRestartText: aString [
 ]
 
 { #category : 'private' }
-GbxDebuggerService >> markCurrentContextAsRestarted [
-	^ self restartController markCurrentContextAsRestarted
-]
+GbxDebuggerService >> markCurrentContextAsRestarted [ ^ self restartController markCurrentContextAsRestarted ]
 
 { #category : 'private' }
 GbxDebuggerService >> normalizeExecutedCodeSingleStepFrom: previousStepPoint [
@@ -769,14 +611,10 @@ GbxDebuggerService >> normalizeExecutedCodeSingleStepFrom: previousStepPoint [
 ]
 
 { #category : 'evaluation' }
-GbxDebuggerService >> normalizedCompileErrorFrom: rawResult [
-	^ self compileController normalizedCompileErrorFrom: rawResult
-]
+GbxDebuggerService >> normalizedCompileErrorFrom: rawResult [ ^ self compileController normalizedCompileErrorFrom: rawResult ]
 
 { #category : 'stack accessing' }
-GbxDebuggerService >> notifierStackStringOfSize: n [
-	^ GbxDebuggerServicePresenter notifierStackStringOfSize: n for: self
-]
+GbxDebuggerService >> notifierStackStringOfSize: n [ ^ GbxDebuggerServicePresenter notifierStackStringOfSize: n for: self ]
 
 { #category : 'context list' }
 GbxDebuggerService >> notifyContextChanged [
@@ -785,49 +623,31 @@ GbxDebuggerService >> notifyContextChanged [
 ]
 
 { #category : 'inspector' }
-GbxDebuggerService >> oopForVariableNamed: aVariableName [
-	^ self inspectorController oopForVariableNamed: aVariableName
-]
+GbxDebuggerService >> oopForVariableNamed: aVariableName [ ^ self inspectorController oopForVariableNamed: aVariableName ]
 
 { #category : 'inspector' }
-GbxDebuggerService >> openInspectorOnOop: anOop [
-	^ self inspectorController openInspectorOnOop: anOop
-]
+GbxDebuggerService >> openInspectorOnOop: anOop [ ^ self inspectorController openInspectorOnOop: anOop ]
 
 { #category : 'private-inspectors' }
-GbxDebuggerService >> openInspectors [
-	^ self inspectorController openInspectors
-]
+GbxDebuggerService >> openInspectors [ ^ self inspectorController openInspectors ]
 
 { #category : 'process control' }
-GbxDebuggerService >> pause [
-	^ self processController pause
-]
+GbxDebuggerService >> pause [ ^ self processController pause ]
 
 { #category : 'private-support' }
-GbxDebuggerService >> pendingMessage [
-	^ GbxDebuggerServicePresenter pendingMessageForContext: currentContext
-]
+GbxDebuggerService >> pendingMessage [ ^ GbxDebuggerServicePresenter pendingMessageForContext: currentContext ]
 
 { #category : 'private' }
-GbxDebuggerService >> presenterTextFrom: aValue [
-	^ GbxDebuggerServicePresenter presenterTextFrom: aValue
-]
+GbxDebuggerService >> presenterTextFrom: aValue [ ^ GbxDebuggerServicePresenter presenterTextFrom: aValue ]
 
 { #category : 'private' }
-GbxDebuggerService >> processController [
-	^ GbxDebuggerProcessController on: self
-]
+GbxDebuggerService >> processController [ ^ GbxDebuggerProcessController on: self ]
 
 { #category : 'private' }
-GbxDebuggerService >> restartController [
-	^ GbxDebuggerRestartController on: self
-]
+GbxDebuggerService >> restartController [ ^ GbxDebuggerRestartController on: self ]
 
 { #category : 'private' }
-GbxDebuggerService >> serverExecutionController [
-	^ GbxDebuggerServerExecutionController on: self
-]
+GbxDebuggerService >> serverExecutionController [ ^ GbxDebuggerServerExecutionController on: self ]
 
 { #category : 'private' }
 GbxDebuggerService >> prepareForDebugging [
@@ -852,9 +672,7 @@ GbxDebuggerService >> processEvents [
 ]
 
 { #category : 'accessing' }
-GbxDebuggerService >> processOop [
-	^ processOop
-]
+GbxDebuggerService >> processOop [ ^ processOop ]
 
 { #category : 'accessing' }
 GbxDebuggerService >> processOop: anOop [
@@ -863,9 +681,7 @@ GbxDebuggerService >> processOop: anOop [
 ]
 
 { #category : 'accessing' }
-GbxDebuggerService >> restartSourceString [
-	^ restartSourceString ifNil: [ '' ]
-]
+GbxDebuggerService >> restartSourceString [ ^ restartSourceString ifNil: [ '' ] ]
 
 { #category : 'accessing' }
 GbxDebuggerService >> restartSourceString: aString [
@@ -887,29 +703,19 @@ GbxDebuggerService >> receiverClass [
 ]
 
 { #category : 'evaluation' }
-GbxDebuggerService >> recompileCurrentMethodWithSource: sourceText [
-	^ self compileController recompileCurrentMethodWithSource: sourceText
-]
+GbxDebuggerService >> recompileCurrentMethodWithSource: sourceText [ ^ self compileController recompileCurrentMethodWithSource: sourceText ]
 
 { #category : 'context list' }
-GbxDebuggerService >> recomputeContextList [
-	^ GbxDebuggerServicePresenter recomputeContextListFor: self
-]
+GbxDebuggerService >> recomputeContextList [ ^ GbxDebuggerServicePresenter recomputeContextListFor: self ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> removeAllBreakPoints [
-	^ self breakpointController removeAllBreakPoints
-]
+GbxDebuggerService >> removeAllBreakPoints [ ^ self breakpointController removeAllBreakPoints ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> removeBreakIn: aTextWidget [
-	^ self breakpointController removeBreakIn: aTextWidget
-]
+GbxDebuggerService >> removeBreakIn: aTextWidget [ ^ self breakpointController removeBreakIn: aTextWidget ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> removeBreakPoint [
-	^ self breakpointController removeBreakPoint
-]
+GbxDebuggerService >> removeBreakPoint [ ^ self breakpointController removeBreakPoint ]
 
 { #category : 'private-GS execution' }
 GbxDebuggerService >> requestServerSingleStep [
@@ -928,19 +734,13 @@ GbxDebuggerService >> resetPCSelection [
 ]
 
 { #category : 'private' }
-GbxDebuggerService >> resetServerPCToStepOne [
-	^ self processController resetServerPCToStepOne
-]
+GbxDebuggerService >> resetServerPCToStepOne [ ^ self processController resetServerPCToStepOne ]
 
 { #category : 'process control' }
-GbxDebuggerService >> restart [
-	^ self restartController restart
-]
+GbxDebuggerService >> restart [ ^ self restartController restart ]
 
 { #category : 'private' }
-GbxDebuggerService >> restartLevelFromServerStack [
-	^ self processController restartLevelFromServerStack
-]
+GbxDebuggerService >> restartLevelFromServerStack [ ^ self processController restartLevelFromServerStack ]
 
 { #category : 'private' }
 GbxDebuggerService >> resolvedRestartHomeLevel [
@@ -957,19 +757,13 @@ GbxDebuggerService >> resolvedRestartHomeLevel [
 ]
 
 { #category : 'private' }
-GbxDebuggerService >> restartTargetContext [
-	^ self restartController restartTargetContext
-]
+GbxDebuggerService >> restartTargetContext [ ^ self restartController restartTargetContext ]
 
 { #category : 'private' }
-GbxDebuggerService >> sourceStringForRestartContext: aContext [
-	^ self restartController sourceStringForRestartContext: aContext
-]
+GbxDebuggerService >> sourceStringForRestartContext: aContext [ ^ self restartController sourceStringForRestartContext: aContext ]
 
 { #category : 'process control' }
-GbxDebuggerService >> resume [
-	^ self processController resume
-]
+GbxDebuggerService >> resume [ ^ self processController resume ]
 
 { #category : 'process control' }
 GbxDebuggerService >> returnFromFrame [
@@ -993,14 +787,10 @@ GbxDebuggerService >> runDebugProcessCommand: commandName withInteger: anInteger
 ]
 
 { #category : 'process control' }
-GbxDebuggerService >> runToStepPoint: aStepPoint [
-	^ self processController runToStepPoint: aStepPoint
-]
+GbxDebuggerService >> runToStepPoint: aStepPoint [ ^ self processController runToStepPoint: aStepPoint ]
 
 { #category : 'process control' }
-GbxDebuggerService >> runWithBreakAgain [
-	^ self processController runWithBreakAgain
-]
+GbxDebuggerService >> runWithBreakAgain [ ^ self processController runWithBreakAgain ]
 
 { #category : 'private-event processing' }
 GbxDebuggerService >> scheduleContextListUpdate [
@@ -1085,24 +875,16 @@ GbxDebuggerService >> selectTopServerContext [
 ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> selectedMethodClassName [
-	^ self breakpointController selectedMethodClassName
-]
+GbxDebuggerService >> selectedMethodClassName [ ^ self breakpointController selectedMethodClassName ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> selectedMethodSelector [
-	^ self breakpointController selectedMethodSelector
-]
+GbxDebuggerService >> selectedMethodSelector [ ^ self breakpointController selectedMethodSelector ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> selectionIntervalForTextWidget: aTextWidget [
-	^ self breakpointController selectionIntervalForTextWidget: aTextWidget
-]
+GbxDebuggerService >> selectionIntervalForTextWidget: aTextWidget [ ^ self breakpointController selectionIntervalForTextWidget: aTextWidget ]
 
 { #category : 'private' }
-GbxDebuggerService >> serverStepOverFrameLevel: levelValue [
-	^ self processController serverStepOverFrameLevel: levelValue
-]
+GbxDebuggerService >> serverStepOverFrameLevel: levelValue [ ^ self processController serverStepOverFrameLevel: levelValue ]
 
 { #category : 'private' }
 GbxDebuggerService >> serverStepWithSelectorChain: selectorChain level: levelValue [
@@ -1112,9 +894,7 @@ GbxDebuggerService >> serverStepWithSelectorChain: selectorChain level: levelVal
 ]
 
 { #category : 'accessing' }
-GbxDebuggerService >> selectionRange [
-	^ selectionRange
-]
+GbxDebuggerService >> selectionRange [ ^ selectionRange ]
 
 { #category : 'accessing' }
 GbxDebuggerService >> selectionRange: anInterval [
@@ -1122,9 +902,7 @@ GbxDebuggerService >> selectionRange: anInterval [
 ]
 
 { #category : 'accessing' }
-GbxDebuggerService >> session [
-	^ session
-]
+GbxDebuggerService >> session [ ^ session ]
 
 { #category : 'accessing' }
 GbxDebuggerService >> session: aSession [
@@ -1132,14 +910,10 @@ GbxDebuggerService >> session: aSession [
 ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> setBreakPoint [
-	^ self breakpointController setBreakPoint
-]
+GbxDebuggerService >> setBreakPoint [ ^ self breakpointController setBreakPoint ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> setBreakPointIn: aTextWidget [
-	^ self breakpointController setBreakPointIn: aTextWidget
-]
+GbxDebuggerService >> setBreakPointIn: aTextWidget [ ^ self breakpointController setBreakPointIn: aTextWidget ]
 
 { #category : 'source code' }
 GbxDebuggerService >> sourceCode [
@@ -1156,24 +930,16 @@ GbxDebuggerService >> sourceMap [
 ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> sourceMatchesCurrentMethodIn: aTextWidget [
-	^ self breakpointController sourceMatchesCurrentMethodIn: aTextWidget
-]
+GbxDebuggerService >> sourceMatchesCurrentMethodIn: aTextWidget [ ^ self breakpointController sourceMatchesCurrentMethodIn: aTextWidget ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> sourceOffsetForBreakPoint: aBreakPoint [
-	^ self breakpointController sourceOffsetForBreakPoint: aBreakPoint
-]
+GbxDebuggerService >> sourceOffsetForBreakPoint: aBreakPoint [ ^ self breakpointController sourceOffsetForBreakPoint: aBreakPoint ]
 
 { #category : 'private' }
-GbxDebuggerService >> stepController [
-	^ GbxDebuggerStepController on: self
-]
+GbxDebuggerService >> stepController [ ^ GbxDebuggerStepController on: self ]
 
 { #category : 'private' }
-GbxDebuggerService >> stepPointController [
-	^ GbxDebuggerStepPointController on: self
-]
+GbxDebuggerService >> stepPointController [ ^ GbxDebuggerStepPointController on: self ]
 
 { #category : 'actions' }
 GbxDebuggerService >> stackForCopy [
@@ -1186,44 +952,28 @@ GbxDebuggerService >> stackForCopy [
 ]
 
 { #category : 'actions' }
-GbxDebuggerService >> stackForCopySimple [
-	^ GbxDebuggerServicePresenter stackForCopySimpleFor: self
-]
+GbxDebuggerService >> stackForCopySimple [ ^ GbxDebuggerServicePresenter stackForCopySimpleFor: self ]
 
 { #category : 'stepping' }
-GbxDebuggerService >> step [
-	^ self stepController step
-]
+GbxDebuggerService >> step [ ^ self stepController step ]
 
 { #category : 'private-GS execution' }
-GbxDebuggerService >> stepOutOfServerIntoClient [
-	^ self serverExecutionController stepOutOfServerIntoClient
-]
+GbxDebuggerService >> stepOutOfServerIntoClient [ ^ self serverExecutionController stepOutOfServerIntoClient ]
 
 { #category : 'stepping' }
-GbxDebuggerService >> stepOver [
-	^ self stepController stepOver
-]
+GbxDebuggerService >> stepOver [ ^ self stepController stepOver ]
 
 { #category : 'stepping' }
-GbxDebuggerService >> stepInto [
-	^ self stepController stepInto
-]
+GbxDebuggerService >> stepInto [ ^ self stepController stepInto ]
 
 { #category : 'stepping' }
-GbxDebuggerService >> stepReturn [
-	^ self stepController stepReturn
-]
+GbxDebuggerService >> stepReturn [ ^ self stepController stepReturn ]
 
 { #category : 'stepping' }
-GbxDebuggerService >> stepUntilPC: stopPC [
-	^ self stepController stepUntilPC: stopPC
-]
+GbxDebuggerService >> stepUntilPC: stopPC [ ^ self stepController stepUntilPC: stopPC ]
 
 { #category : 'private' }
-GbxDebuggerService >> synchronizeServerProgramCounterAfterRestart [
-	^ self restartController synchronizeServerProgramCounterAfterRestart
-]
+GbxDebuggerService >> synchronizeServerProgramCounterAfterRestart [ ^ self restartController synchronizeServerProgramCounterAfterRestart ]
 
 { #category : 'variables' }
 GbxDebuggerService >> tempNamesAndValues [
@@ -1233,19 +983,13 @@ GbxDebuggerService >> tempNamesAndValues [
 ]
 
 { #category : 'process control' }
-GbxDebuggerService >> terminate [
-	^ self processController terminate
-]
+GbxDebuggerService >> terminate [ ^ self processController terminate ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> toggleBreakPoint [
-	^ self breakpointController toggleBreakPoint
-]
+GbxDebuggerService >> toggleBreakPoint [ ^ self breakpointController toggleBreakPoint ]
 
 { #category : 'breakpoint support' }
-GbxDebuggerService >> toggleBreakPointIn: aTextWidget [
-	^ self breakpointController toggleBreakPointIn: aTextWidget
-]
+GbxDebuggerService >> toggleBreakPointIn: aTextWidget [ ^ self breakpointController toggleBreakPointIn: aTextWidget ]
 
 { #category : 'private' }
 GbxDebuggerService >> toggleGlueHiding [
@@ -1254,9 +998,7 @@ GbxDebuggerService >> toggleGlueHiding [
 ]
 
 { #category : 'accessing' }
-GbxDebuggerService >> topContext [
-	^ thisContext sender
-]
+GbxDebuggerService >> topContext [ ^ thisContext sender ]
 
 { #category : 'private-event processing' }
 GbxDebuggerService >> updatePrecomputedContextList [

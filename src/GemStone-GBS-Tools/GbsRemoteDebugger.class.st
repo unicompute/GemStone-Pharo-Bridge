@@ -73,109 +73,67 @@ GbsRemoteDebugger class >> openOn: anErrorString process: processOop session: aS
 ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> abortGemStoneTransaction [
-	^ self executionController abortGemStoneTransaction
-]
+GbsRemoteDebugger >> abortGemStoneTransaction [ ^ self executionController abortGemStoneTransaction ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> acceptSourceEdits [
-	^ self sourcePaneController acceptSourceEdits
-]
+GbsRemoteDebugger >> acceptSourceEdits [ ^ self sourcePaneController acceptSourceEdits ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> applyBreakpointEmphasisFor: aContext [
-	^ self sourcePaneController applyBreakpointEmphasisFor: aContext
-]
+GbsRemoteDebugger >> applyBreakpointEmphasisFor: aContext [ ^ self sourcePaneController applyBreakpointEmphasisFor: aContext ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> applySourceMapHighlightFor: aContext [
-	^ self sourcePaneController applySourceMapHighlightFor: aContext
-]
+GbsRemoteDebugger >> applySourceMapHighlightFor: aContext [ ^ self sourcePaneController applySourceMapHighlightFor: aContext ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> bookmarkContext [
-	^ self stackNavigator bookmarkContext
-]
+GbsRemoteDebugger >> bookmarkContext [ ^ self stackNavigator bookmarkContext ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> browseLocalHierarchyImplementors [
-	^ self methodNavigator browseLocalHierarchyImplementors
-]
+GbsRemoteDebugger >> browseLocalHierarchyImplementors [ ^ self methodNavigator browseLocalHierarchyImplementors ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> browseLocalHierarchyImplementorsFor: aSelector [
-	^ self methodNavigator browseLocalHierarchyImplementorsFor: aSelector
-]
+GbsRemoteDebugger >> browseLocalHierarchyImplementorsFor: aSelector [ ^ self methodNavigator browseLocalHierarchyImplementorsFor: aSelector ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> browseLocalHierarchySenders [
-	^ self methodNavigator browseLocalHierarchySenders
-]
+GbsRemoteDebugger >> browseLocalHierarchySenders [ ^ self methodNavigator browseLocalHierarchySenders ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> browseLocalHierarchySendersFor: aSelector [
-	^ self methodNavigator browseLocalHierarchySendersFor: aSelector
-]
+GbsRemoteDebugger >> browseLocalHierarchySendersFor: aSelector [ ^ self methodNavigator browseLocalHierarchySendersFor: aSelector ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> browseLocalImplementors [
-	^ self methodNavigator browseLocalImplementors
-]
+GbsRemoteDebugger >> browseLocalImplementors [ ^ self methodNavigator browseLocalImplementors ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> browseLocalImplementorsFor: aSelector [
-	^ self methodNavigator browseLocalImplementorsFor: aSelector
-]
+GbsRemoteDebugger >> browseLocalImplementorsFor: aSelector [ ^ self methodNavigator browseLocalImplementorsFor: aSelector ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> browseLocalSenders [
-	^ self methodNavigator browseLocalSenders
-]
+GbsRemoteDebugger >> browseLocalSenders [ ^ self methodNavigator browseLocalSenders ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> browseLocalSendersFor: aSelector [
-	^ self methodNavigator browseLocalSendersFor: aSelector
-]
+GbsRemoteDebugger >> browseLocalSendersFor: aSelector [ ^ self methodNavigator browseLocalSendersFor: aSelector ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> browseSelectedMethod [
-	^ self methodNavigator browseSelectedMethod
-]
+GbsRemoteDebugger >> browseSelectedMethod [ ^ self methodNavigator browseSelectedMethod ]
 
 { #category : 'menus' }
-GbsRemoteDebugger >> buildMenuBar [
-	^ self menuBuilder buildMenuBar
-]
+GbsRemoteDebugger >> buildMenuBar [ ^ self menuBuilder buildMenuBar ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> canAcceptRecompile [
-	^ self safeServiceCall: [ service currentContext notNil ] default: false
-]
+GbsRemoteDebugger >> canAcceptRecompile [ ^ self safeServiceCall: [ service currentContext notNil ] default: false ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> canInspectFrame [
-	^ self inspectorActions canInspectFrame
-]
+GbsRemoteDebugger >> canInspectFrame [ ^ self inspectorActions canInspectFrame ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> canInspectProcess [
-	^ self inspectorActions canInspectProcess
-]
+GbsRemoteDebugger >> canInspectProcess [ ^ self inspectorActions canInspectProcess ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> canInspectReceiver [
-	^ self inspectorActions canInspectReceiver
-]
+GbsRemoteDebugger >> canInspectReceiver [ ^ self inspectorActions canInspectReceiver ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> canInspectStack [
-	^ self inspectorActions canInspectStack
-]
+GbsRemoteDebugger >> canInspectStack [ ^ self inspectorActions canInspectStack ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> canInspectVariable [
-	^ self inspectorActions canInspectVariable
-]
+GbsRemoteDebugger >> canInspectVariable [ ^ self inspectorActions canInspectVariable ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> canJumpToCaret [
@@ -193,19 +151,13 @@ GbsRemoteDebugger >> canPauseExecution [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> canRemoveAllBreakpoints [
-	^ self safeServiceCall: [ service canRemoveAllBreakPoints ] default: false
-]
+GbsRemoteDebugger >> canRemoveAllBreakpoints [ ^ self safeServiceCall: [ service canRemoveAllBreakPoints ] default: false ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> canRemoveBreakpoint [
-	^ self safeServiceCall: [ service canRemoveBreakPoint ] default: false
-]
+GbsRemoteDebugger >> canRemoveBreakpoint [ ^ self safeServiceCall: [ service canRemoveBreakPoint ] default: false ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> canRestartExecution [
-	^ self canStepInto
-]
+GbsRemoteDebugger >> canRestartExecution [ ^ self canStepInto ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> canResumeExecution [
@@ -237,9 +189,7 @@ GbsRemoteDebugger >> canRunWithBreakAgainExecution [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> canSetBreakpoint [
-	^ self safeServiceCall: [ service canSetBreakPoint ] default: false
-]
+GbsRemoteDebugger >> canSetBreakpoint [ ^ self safeServiceCall: [ service canSetBreakPoint ] default: false ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> canStepInto [
@@ -270,9 +220,7 @@ GbsRemoteDebugger >> canTerminateExecution [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> canToggleBreakpoint [
-	^ self safeServiceCall: [ service canToggleBreakPoint ] default: false
-]
+GbsRemoteDebugger >> canToggleBreakpoint [ ^ self safeServiceCall: [ service canToggleBreakPoint ] default: false ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> chooseMethodReferenceFrom: references title: aTitle [
@@ -285,9 +233,7 @@ GbsRemoteDebugger >> chooseMethodReferenceFrom: references title: aTitle [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> clearBookmarkContext [
-	^ self stackNavigator clearBookmarkContext
-]
+GbsRemoteDebugger >> clearBookmarkContext [ ^ self stackNavigator clearBookmarkContext ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> clearServiceCompileError [
@@ -297,9 +243,7 @@ GbsRemoteDebugger >> clearServiceCompileError [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> clearSourceHighlight [
-	^ self sourcePaneController clearSourceHighlight
-]
+GbsRemoteDebugger >> clearSourceHighlight [ ^ self sourcePaneController clearSourceHighlight ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> configureMenuItem: aMenuGroup named: labelText action: actionBlock enabled: enabledBoolean [
@@ -312,9 +256,7 @@ GbsRemoteDebugger >> configureMenuItem: aMenuGroup named: labelText action: acti
 ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> contextSelected: selectedItem [
-	^ self contextPresenter contextSelected: selectedItem
-]
+GbsRemoteDebugger >> contextSelected: selectedItem [ ^ self contextPresenter contextSelected: selectedItem ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> copyStackReport [
@@ -326,9 +268,7 @@ GbsRemoteDebugger >> copyStackReport [
 ]
 
 { #category : 'menus' }
-GbsRemoteDebugger >> correctMenu [
-	^ self menuBuilder correctMenu
-]
+GbsRemoteDebugger >> correctMenu [ ^ self menuBuilder correctMenu ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> correctSelector [
@@ -347,9 +287,7 @@ GbsRemoteDebugger >> correctSelector [
 ]
 
 { #category : 'accessing' }
-GbsRemoteDebugger >> contextList [
-	^ contextList
-]
+GbsRemoteDebugger >> contextList [ ^ contextList ]
 
 { #category : 'accessing' }
 GbsRemoteDebugger >> contextList: aCollection [
@@ -357,29 +295,19 @@ GbsRemoteDebugger >> contextList: aCollection [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> contextPresenter [
-	^ GbsRemoteDebuggerContextPresenter on: self
-]
+GbsRemoteDebugger >> contextPresenter [ ^ GbsRemoteDebuggerContextPresenter on: self ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> currentSelectedContextIsExecutedCodeFrame [
-	^ self stackNavigator currentSelectedContextIsExecutedCodeFrame
-]
+GbsRemoteDebugger >> currentSelectedContextIsExecutedCodeFrame [ ^ self stackNavigator currentSelectedContextIsExecutedCodeFrame ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> currentSelectedFrameLevel [
-	^ self stackNavigator currentSelectedFrameLevel
-]
+GbsRemoteDebugger >> currentSelectedFrameLevel [ ^ self stackNavigator currentSelectedFrameLevel ]
 
 { #category : 'layout' }
-GbsRemoteDebugger >> defaultLayout [
-	^ GbsRemoteDebuggerUiController defaultLayoutFor: self
-]
+GbsRemoteDebugger >> defaultLayout [ ^ GbsRemoteDebuggerUiController defaultLayoutFor: self ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> directStepOverExecutedFrame: stepIntoBoolean [
-	^ self processControl directStepOverExecutedFrame: stepIntoBoolean
-]
+GbsRemoteDebugger >> directStepOverExecutedFrame: stepIntoBoolean [ ^ self processControl directStepOverExecutedFrame: stepIntoBoolean ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> directStepWithPrimarySelector: primarySelector fallbackSelector: fallbackSelector [
@@ -389,29 +317,19 @@ GbsRemoteDebugger >> directStepWithPrimarySelector: primarySelector fallbackSele
 ]
 
 { #category : 'menus' }
-GbsRemoteDebugger >> editMenu [
-	^ self menuBuilder editMenu
-]
+GbsRemoteDebugger >> editMenu [ ^ self menuBuilder editMenu ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> ensureServerPCToStepOneAfterRestart [
-	^ self processControl ensureServerPCToStepOneAfterRestart
-]
+GbsRemoteDebugger >> ensureServerPCToStepOneAfterRestart [ ^ self processControl ensureServerPCToStepOneAfterRestart ]
 
 { #category : 'menus' }
-GbsRemoteDebugger >> executeMenu [
-	^ self menuBuilder executeMenu
-]
+GbsRemoteDebugger >> executeMenu [ ^ self menuBuilder executeMenu ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> fetchContextsDirectly [
-	^ (GbsRemoteDebuggerStackFetcher on: self) fetchContextsDirectly
-]
+GbsRemoteDebugger >> fetchContextsDirectly [ ^ (GbsRemoteDebuggerStackFetcher on: self) fetchContextsDirectly ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> fetchFullSourceFor: aContext [
-	^ (GbsRemoteDebuggerSourceResolver on: self) fetchFullSourceFor: aContext
-]
+GbsRemoteDebugger >> fetchFullSourceFor: aContext [ ^ (GbsRemoteDebuggerSourceResolver on: self) fetchFullSourceFor: aContext ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> fetchRemoteScript: scriptString context: contextOop [
@@ -422,79 +340,49 @@ GbsRemoteDebugger >> fetchRemoteScript: scriptString context: contextOop [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> executionController [
-	^ GbsRemoteDebuggerExecutionController on: self
-]
+GbsRemoteDebugger >> executionController [ ^ GbsRemoteDebuggerExecutionController on: self ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> fetchStackFrames [
-	^ self stackLoader fetchStackFrames
-]
+GbsRemoteDebugger >> fetchStackFrames [ ^ self stackLoader fetchStackFrames ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> fetchStackFramesFromData [
-	^ self stackLoader fetchStackFramesFromData
-]
+GbsRemoteDebugger >> fetchStackFramesFromData [ ^ self stackLoader fetchStackFramesFromData ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> firstUserContextIndex [
-	^ self stackNavigator preferredInitialContextIndex
-]
+GbsRemoteDebugger >> firstUserContextIndex [ ^ self stackNavigator preferredInitialContextIndex ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> forceExecutedFrameToStepOneAfterRestart [
-	^ self processControl forceExecutedFrameToStepOneAfterRestart
-]
+GbsRemoteDebugger >> forceExecutedFrameToStepOneAfterRestart [ ^ self processControl forceExecutedFrameToStepOneAfterRestart ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> forceServerJumpToStepPoint1 [
-	^ self processControl forceServerJumpToStepPoint1
-]
+GbsRemoteDebugger >> forceServerJumpToStepPoint1 [ ^ self processControl forceServerJumpToStepPoint1 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> formatSource [
-	^ self sourcePaneController formatSource
-]
+GbsRemoteDebugger >> formatSource [ ^ self sourcePaneController formatSource ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> gsBrowseAllHierarchyImplementors [
-	^ self methodNavigator gsBrowseAllHierarchyImplementors
-]
+GbsRemoteDebugger >> gsBrowseAllHierarchyImplementors [ ^ self methodNavigator gsBrowseAllHierarchyImplementors ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> gsBrowseAllHierarchyImplementorsFor: aSelector [
-	^ self methodNavigator gsBrowseAllHierarchyImplementorsFor: aSelector
-]
+GbsRemoteDebugger >> gsBrowseAllHierarchyImplementorsFor: aSelector [ ^ self methodNavigator gsBrowseAllHierarchyImplementorsFor: aSelector ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> gsBrowseAllHierarchyReferences [
-	^ self methodNavigator gsBrowseAllHierarchyReferences
-]
+GbsRemoteDebugger >> gsBrowseAllHierarchyReferences [ ^ self methodNavigator gsBrowseAllHierarchyReferences ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> gsBrowseAllHierarchyReferencesFor: aSelector [
-	^ self methodNavigator gsBrowseAllHierarchyReferencesFor: aSelector
-]
+GbsRemoteDebugger >> gsBrowseAllHierarchyReferencesFor: aSelector [ ^ self methodNavigator gsBrowseAllHierarchyReferencesFor: aSelector ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> gsBrowseAllImplementors [
-	^ self methodNavigator gsBrowseAllImplementors
-]
+GbsRemoteDebugger >> gsBrowseAllImplementors [ ^ self methodNavigator gsBrowseAllImplementors ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> gsBrowseAllImplementorsFor: aSelector [
-	^ self methodNavigator gsBrowseAllImplementorsFor: aSelector
-]
+GbsRemoteDebugger >> gsBrowseAllImplementorsFor: aSelector [ ^ self methodNavigator gsBrowseAllImplementorsFor: aSelector ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> gsBrowseAllReferences [
-	^ self methodNavigator gsBrowseAllReferences
-]
+GbsRemoteDebugger >> gsBrowseAllReferences [ ^ self methodNavigator gsBrowseAllReferences ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> gsBrowseAllReferencesFor: aSelector [
-	^ self methodNavigator gsBrowseAllReferencesFor: aSelector
-]
+GbsRemoteDebugger >> gsBrowseAllReferencesFor: aSelector [ ^ self methodNavigator gsBrowseAllReferencesFor: aSelector ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> gsBrowseQueryFor: aSelector hierarchyOnly: hierarchyOnly senders: sendersOnly [
@@ -538,19 +426,13 @@ GbsRemoteDebugger >> gsDoIt [
 ]
 
 { #category : 'menus' }
-GbsRemoteDebugger >> gsHierarchyImplementorsQuerySubMenu [
-	^ self selectorQuerySubMenuUsing: [ :sel | self gsBrowseAllHierarchyImplementorsFor: sel ]
-]
+GbsRemoteDebugger >> gsHierarchyImplementorsQuerySubMenu [ ^ self selectorQuerySubMenuUsing: [ :sel | self gsBrowseAllHierarchyImplementorsFor: sel ] ]
 
 { #category : 'menus' }
-GbsRemoteDebugger >> gsHierarchySendersQuerySubMenu [
-	^ self selectorQuerySubMenuUsing: [ :sel | self gsBrowseAllHierarchyReferencesFor: sel ]
-]
+GbsRemoteDebugger >> gsHierarchySendersQuerySubMenu [ ^ self selectorQuerySubMenuUsing: [ :sel | self gsBrowseAllHierarchyReferencesFor: sel ] ]
 
 { #category : 'menus' }
-GbsRemoteDebugger >> gsImplementorsQuerySubMenu [
-	^ self selectorQuerySubMenuUsing: [ :sel | self gsBrowseAllImplementorsFor: sel ]
-]
+GbsRemoteDebugger >> gsImplementorsQuerySubMenu [ ^ self selectorQuerySubMenuUsing: [ :sel | self gsBrowseAllImplementorsFor: sel ] ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> gsInspectIt [
@@ -574,14 +456,10 @@ GbsRemoteDebugger >> gsPrintIt [
 ]
 
 { #category : 'menus' }
-GbsRemoteDebugger >> gsSendersQuerySubMenu [
-	^ self selectorQuerySubMenuUsing: [ :sel | self gsBrowseAllReferencesFor: sel ]
-]
+GbsRemoteDebugger >> gsSendersQuerySubMenu [ ^ self selectorQuerySubMenuUsing: [ :sel | self gsBrowseAllReferencesFor: sel ] ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> highlightSourceLineFromCompileError: errorMessage [
-	^ self sourcePaneController highlightSourceLineFromCompileError: errorMessage
-]
+GbsRemoteDebugger >> highlightSourceLineFromCompileError: errorMessage [ ^ self sourcePaneController highlightSourceLineFromCompileError: errorMessage ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> informUnsupported: aString [
@@ -695,34 +573,22 @@ GbsRemoteDebugger >> initializePresenters [
 ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> inspectFrame [
-	^ self inspectorActions inspectFrame
-]
+GbsRemoteDebugger >> inspectFrame [ ^ self inspectorActions inspectFrame ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> inspectProcess [
-	^ self inspectorActions inspectProcess
-]
+GbsRemoteDebugger >> inspectProcess [ ^ self inspectorActions inspectProcess ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> inspectReceiver [
-	^ self inspectorActions inspectReceiver
-]
+GbsRemoteDebugger >> inspectReceiver [ ^ self inspectorActions inspectReceiver ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> inspectStack [
-	^ self inspectorActions inspectStack
-]
+GbsRemoteDebugger >> inspectStack [ ^ self inspectorActions inspectStack ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> inspectVariable [
-	^ self inspectorActions inspectVariable
-]
+GbsRemoteDebugger >> inspectVariable [ ^ self inspectorActions inspectVariable ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> inspectorActions [
-	^ GbsRemoteDebuggerInspectorActions on: self
-]
+GbsRemoteDebugger >> inspectorActions [ ^ GbsRemoteDebuggerInspectorActions on: self ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> integerFromSourceMapKey: rawKey [
@@ -734,19 +600,13 @@ GbsRemoteDebugger >> integerFromSourceMapKey: rawKey [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> isExecutedCodeFrame: aContext [
-	^ self stackNavigator isExecutedCodeFrame: aContext
-]
+GbsRemoteDebugger >> isExecutedCodeFrame: aContext [ ^ self stackNavigator isExecutedCodeFrame: aContext ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> isLikelyUserFrame: aContext [
-	^ self stackNavigator isLikelyUserFrame: aContext
-]
+GbsRemoteDebugger >> isLikelyUserFrame: aContext [ ^ self stackNavigator isLikelyUserFrame: aContext ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> jumpToCaret [
-	^ self executionController jumpToCaret
-]
+GbsRemoteDebugger >> jumpToCaret [ ^ self executionController jumpToCaret ]
 
 { #category : 'accessing' }
 GbsRemoteDebugger >> label: aString [
@@ -754,9 +614,7 @@ GbsRemoteDebugger >> label: aString [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> localBehaviorFromServerClassName: classNameString [
-	^ self methodNavigator localBehaviorFromServerClassName: classNameString
-]
+GbsRemoteDebugger >> localBehaviorFromServerClassName: classNameString [ ^ self methodNavigator localBehaviorFromServerClassName: classNameString ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> localDebugIt [
@@ -778,19 +636,13 @@ GbsRemoteDebugger >> localDoIt [
 ]
 
 { #category : 'menus' }
-GbsRemoteDebugger >> localHierarchyImplementorsQuerySubMenu [
-	^ self selectorQuerySubMenuUsing: [ :sel | self browseLocalHierarchyImplementorsFor: sel ]
-]
+GbsRemoteDebugger >> localHierarchyImplementorsQuerySubMenu [ ^ self selectorQuerySubMenuUsing: [ :sel | self browseLocalHierarchyImplementorsFor: sel ] ]
 
 { #category : 'menus' }
-GbsRemoteDebugger >> localHierarchySendersQuerySubMenu [
-	^ self selectorQuerySubMenuUsing: [ :sel | self browseLocalHierarchySendersFor: sel ]
-]
+GbsRemoteDebugger >> localHierarchySendersQuerySubMenu [ ^ self selectorQuerySubMenuUsing: [ :sel | self browseLocalHierarchySendersFor: sel ] ]
 
 { #category : 'menus' }
-GbsRemoteDebugger >> localImplementorsQuerySubMenu [
-	^ self selectorQuerySubMenuUsing: [ :sel | self browseLocalImplementorsFor: sel ]
-]
+GbsRemoteDebugger >> localImplementorsQuerySubMenu [ ^ self selectorQuerySubMenuUsing: [ :sel | self browseLocalImplementorsFor: sel ] ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> localInspectIt [
@@ -817,69 +669,43 @@ GbsRemoteDebugger >> localPrintIt [
 ]
 
 { #category : 'menus' }
-GbsRemoteDebugger >> localSendersQuerySubMenu [
-	^ self selectorQuerySubMenuUsing: [ :sel | self browseLocalSendersFor: sel ]
-]
+GbsRemoteDebugger >> localSendersQuerySubMenu [ ^ self selectorQuerySubMenuUsing: [ :sel | self browseLocalSendersFor: sel ] ]
 
 { #category : 'menus' }
-GbsRemoteDebugger >> methodMenu [
-	^ self menuBuilder methodMenu
-]
+GbsRemoteDebugger >> methodMenu [ ^ self menuBuilder methodMenu ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> menuBuilder [
-	^ GbsRemoteDebuggerMenuBuilder on: self
-]
+GbsRemoteDebugger >> menuBuilder [ ^ GbsRemoteDebuggerMenuBuilder on: self ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> methodNavigator [
-	^ GbsRemoteDebuggerMethodNavigator on: self
-]
+GbsRemoteDebugger >> methodNavigator [ ^ GbsRemoteDebuggerMethodNavigator on: self ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> sourcePaneController [
-	^ GbsRemoteDebuggerSourcePaneController on: self
-]
+GbsRemoteDebugger >> sourcePaneController [ ^ GbsRemoteDebuggerSourcePaneController on: self ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> moveSourceCursorToStart [
-	^ self sourcePaneController moveSourceCursorToStart
-]
+GbsRemoteDebugger >> moveSourceCursorToStart [ ^ self sourcePaneController moveSourceCursorToStart ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> normalizePauseLandingSelection [
-	^ self stackNavigator normalizePauseLandingSelection
-]
+GbsRemoteDebugger >> normalizePauseLandingSelection [ ^ self stackNavigator normalizePauseLandingSelection ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [
-	^ self stackNavigator normalizeRestartSelectionAndPosition
-]
+GbsRemoteDebugger >> normalizeRestartSelectionAndPosition [ ^ self stackNavigator normalizeRestartSelectionAndPosition ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> openServerMethodReference: aReferenceString [
-	^ self methodNavigator openServerMethodReference: aReferenceString
-]
+GbsRemoteDebugger >> openServerMethodReference: aReferenceString [ ^ self methodNavigator openServerMethodReference: aReferenceString ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> pauseProcess [
-	^ self executionController pauseProcess
-]
+GbsRemoteDebugger >> pauseProcess [ ^ self executionController pauseProcess ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> placeCaretAt: anIndex inTextPresenter: aTextPresenter [
-	^ self sourcePaneController placeCaretAt: anIndex inTextPresenter: aTextPresenter
-]
+GbsRemoteDebugger >> placeCaretAt: anIndex inTextPresenter: aTextPresenter [ ^ self sourcePaneController placeCaretAt: anIndex inTextPresenter: aTextPresenter ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> preferredInitialContextIndex [
-	^ self stackNavigator preferredInitialContextIndex
-]
+GbsRemoteDebugger >> preferredInitialContextIndex [ ^ self stackNavigator preferredInitialContextIndex ]
 
 { #category : 'accessing' }
-GbsRemoteDebugger >> processOop [
-	^ processOop
-]
+GbsRemoteDebugger >> processOop [ ^ processOop ]
 
 { #category : 'accessing' }
 GbsRemoteDebugger >> processOop: anOop [
@@ -893,29 +719,19 @@ GbsRemoteDebugger >> processOopSilently: anOop [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> processOopFromGbsError: anError [
-	^ self processControl processOopFromGbsError: anError
-]
+GbsRemoteDebugger >> processOopFromGbsError: anError [ ^ self processControl processOopFromGbsError: anError ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> processControl [
-	^ GbsRemoteDebuggerProcessControl on: self
-]
+GbsRemoteDebugger >> processControl [ ^ GbsRemoteDebuggerProcessControl on: self ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> presenterTextFrom: aValue [
-	^ GbsRemoteDebuggerUiController presenterTextFrom: aValue
-]
+GbsRemoteDebugger >> presenterTextFrom: aValue [ ^ GbsRemoteDebuggerUiController presenterTextFrom: aValue ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> refreshUiState [
-	^ GbsRemoteDebuggerUiController refreshUiStateFor: self
-]
+GbsRemoteDebugger >> refreshUiState [ ^ GbsRemoteDebuggerUiController refreshUiStateFor: self ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> reinforceSourceCaretVisibility [
-	^ self sourcePaneController reinforceSourceCaretVisibility
-]
+GbsRemoteDebugger >> reinforceSourceCaretVisibility [ ^ self sourcePaneController reinforceSourceCaretVisibility ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> removeAllBreakPoints [
@@ -949,54 +765,34 @@ GbsRemoteDebugger >> resetServerPCToStepOneIfNeeded [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> resolveDebugProcessOopFromCurrentProcessOop [
-	^ self processControl resolveDebugProcessOopFromCurrentProcessOop
-]
+GbsRemoteDebugger >> resolveDebugProcessOopFromCurrentProcessOop [ ^ self processControl resolveDebugProcessOopFromCurrentProcessOop ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> resolveExecutedFrameLevelFromServer [
-	^ self processControl resolveExecutedFrameLevelFromServer
-]
+GbsRemoteDebugger >> resolveExecutedFrameLevelFromServer [ ^ self processControl resolveExecutedFrameLevelFromServer ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> restart [
-	^ self restartController restart
-]
+GbsRemoteDebugger >> restart [ ^ self restartController restart ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> restartUsingDirectTrimFromExecutedFrame [
-	^ self processControl restartUsingDirectTrimFromExecutedFrame
-]
+GbsRemoteDebugger >> restartUsingDirectTrimFromExecutedFrame [ ^ self processControl restartUsingDirectTrimFromExecutedFrame ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> restartController [
-	^ GbsRemoteDebuggerRestartController on: self
-]
+GbsRemoteDebugger >> restartController [ ^ GbsRemoteDebuggerRestartController on: self ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> resume [
-	^ self executionController resume
-]
+GbsRemoteDebugger >> resume [ ^ self executionController resume ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> returnFromFrame [
-	^ self executionController returnFromFrame
-]
+GbsRemoteDebugger >> returnFromFrame [ ^ self executionController returnFromFrame ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> runToCaret [
-	^ self executionController runToCaret
-]
+GbsRemoteDebugger >> runToCaret [ ^ self executionController runToCaret ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> runUntilReturn [
-	^ self executionController runUntilReturn
-]
+GbsRemoteDebugger >> runUntilReturn [ ^ self executionController runUntilReturn ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> runWithBreakAgain [
-	^ self executionController runWithBreakAgain
-]
+GbsRemoteDebugger >> runWithBreakAgain [ ^ self executionController runWithBreakAgain ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> safeServiceCall: aBlock default: defaultValue [
@@ -1013,59 +809,37 @@ GbsRemoteDebugger >> selectAndRevealFrom: startIndex to: endIndex inTextPresente
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> selectHomeContext [
-	^ self stackNavigator selectHomeContext
-]
+GbsRemoteDebugger >> selectHomeContext [ ^ self stackNavigator selectHomeContext ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> selectLineNumber: lineNumber inTextPresenter: aTextPresenter [
-	^ self sourcePaneController selectLineNumber: lineNumber inTextPresenter: aTextPresenter
-]
+GbsRemoteDebugger >> selectLineNumber: lineNumber inTextPresenter: aTextPresenter [ ^ self sourcePaneController selectLineNumber: lineNumber inTextPresenter: aTextPresenter ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> selectedContextForInspector [
-	^ self contextPresenter selectedContextForInspector
-]
+GbsRemoteDebugger >> selectedContextForInspector [ ^ self contextPresenter selectedContextForInspector ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> selectedServerClassName [
-	^ self methodNavigator selectedServerClassName
-]
+GbsRemoteDebugger >> selectedServerClassName [ ^ self methodNavigator selectedServerClassName ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> selectedServerMethodReference [
-	^ self methodNavigator selectedServerMethodReference
-]
+GbsRemoteDebugger >> selectedServerMethodReference [ ^ self methodNavigator selectedServerMethodReference ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> selectedServerSelector [
-	^ self methodNavigator selectedServerSelector
-]
+GbsRemoteDebugger >> selectedServerSelector [ ^ self methodNavigator selectedServerSelector ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> selectedSourceOrAll [
-	^ self sourcePaneController selectedSourceOrAll
-]
+GbsRemoteDebugger >> selectedSourceOrAll [ ^ self sourcePaneController selectedSourceOrAll ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> selectedStepPointFromCaret [
-	^ self sourcePaneController selectedStepPointFromCaret
-]
+GbsRemoteDebugger >> selectedStepPointFromCaret [ ^ self sourcePaneController selectedStepPointFromCaret ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> selectedVariableName [
-	^ self contextPresenter selectedVariableName
-]
+GbsRemoteDebugger >> selectedVariableName [ ^ self contextPresenter selectedVariableName ]
 
 { #category : 'menus' }
-GbsRemoteDebugger >> selectorCandidatesForQueryMenus [
-	^ self methodNavigator selectorCandidatesForQueryMenus
-]
+GbsRemoteDebugger >> selectorCandidatesForQueryMenus [ ^ self methodNavigator selectorCandidatesForQueryMenus ]
 
 { #category : 'menus' }
-GbsRemoteDebugger >> selectorQuerySubMenuUsing: aBlock [
-	^ self methodNavigator selectorQuerySubMenuUsing: aBlock
-]
+GbsRemoteDebugger >> selectorQuerySubMenuUsing: aBlock [ ^ self methodNavigator selectorQuerySubMenuUsing: aBlock ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> serverMethodReferencesFor: aSelector hierarchyOnly: hierarchyOnly senders: sendersOnly [
@@ -1076,9 +850,7 @@ GbsRemoteDebugger >> serverMethodReferencesFor: aSelector hierarchyOnly: hierarc
 ]
 
 { #category : 'accessing' }
-GbsRemoteDebugger >> service [
-	^ service
-]
+GbsRemoteDebugger >> service [ ^ service ]
 
 { #category : 'accessing' }
 GbsRemoteDebugger >> service: aService [
@@ -1086,9 +858,7 @@ GbsRemoteDebugger >> service: aService [
 ]
 
 { #category : 'accessing' }
-GbsRemoteDebugger >> session [
-	^ session
-]
+GbsRemoteDebugger >> session [ ^ session ]
 
 { #category : 'accessing' }
 GbsRemoteDebugger >> session: aSession [
@@ -1109,9 +879,7 @@ GbsRemoteDebugger >> setFrameInfoItems: aCollection [
 ]
 
 { #category : 'accessing' }
-GbsRemoteDebugger >> setInitialSourceCode: aString [
-	^ self sourcePaneController setInitialSourceCode: aString
-]
+GbsRemoteDebugger >> setInitialSourceCode: aString [ ^ self sourcePaneController setInitialSourceCode: aString ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> setProcessInfoItems: aCollection [
@@ -1128,9 +896,7 @@ GbsRemoteDebugger >> setReceiverInfoItems: aCollection [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> setSourceText: aString [
-	^ self sourcePaneController setSourceText: aString
-]
+GbsRemoteDebugger >> setSourceText: aString [ ^ self sourcePaneController setSourceText: aString ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> setVariableTableItems: aCollection [
@@ -1142,14 +908,10 @@ GbsRemoteDebugger >> setVariableTableItems: aCollection [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> showCompileErrorInSourcePane [
-	^ self sourcePaneController showCompileErrorInSourcePane
-]
+GbsRemoteDebugger >> showCompileErrorInSourcePane [ ^ self sourcePaneController showCompileErrorInSourcePane ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> showContainingPackage [
-	^ self methodNavigator showContainingPackage
-]
+GbsRemoteDebugger >> showContainingPackage [ ^ self methodNavigator showContainingPackage ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> showMoreContexts [
@@ -1158,19 +920,13 @@ GbsRemoteDebugger >> showMoreContexts [
 ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> sourceMapFor: aContext [
-	^ self sourcePaneController sourceMapFor: aContext
-]
+GbsRemoteDebugger >> sourceMapFor: aContext [ ^ self sourcePaneController sourceMapFor: aContext ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> sourceMenu [
-	^ self menuBuilder sourceMenu
-]
+GbsRemoteDebugger >> sourceMenu [ ^ self menuBuilder sourceMenu ]
 
 { #category : 'accessing' }
-GbsRemoteDebugger >> sourceTextPresenter [
-	^ sourceText
-]
+GbsRemoteDebugger >> sourceTextPresenter [ ^ sourceText ]
 
 { #category : 'accessing' }
 GbsRemoteDebugger >> stackData: anArray [
@@ -1179,29 +935,19 @@ GbsRemoteDebugger >> stackData: anArray [
 ]
 
 { #category : 'accessing' }
-GbsRemoteDebugger >> stackData [
-	^ stackData
-]
+GbsRemoteDebugger >> stackData [ ^ stackData ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> stackLoader [
-	^ GbsRemoteDebuggerStackLoader on: self
-]
+GbsRemoteDebugger >> stackLoader [ ^ GbsRemoteDebuggerStackLoader on: self ]
 
 { #category : 'accessing' }
-GbsRemoteDebugger >> stackListPresenter [
-	^ stackList
-]
+GbsRemoteDebugger >> stackListPresenter [ ^ stackList ]
 
 { #category : 'menus' }
-GbsRemoteDebugger >> stackMenu [
-	^ self menuBuilder stackMenu
-]
+GbsRemoteDebugger >> stackMenu [ ^ self menuBuilder stackMenu ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> stackNavigator [
-	^ GbsRemoteDebuggerStackNavigator on: self
-]
+GbsRemoteDebugger >> stackNavigator [ ^ GbsRemoteDebuggerStackNavigator on: self ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> stackReportString [
@@ -1212,24 +958,16 @@ GbsRemoteDebugger >> stackReportString [
 ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> step [
-	^ self executionController step
-]
+GbsRemoteDebugger >> step [ ^ self executionController step ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> stepInto [
-	^ self executionController stepInto
-]
+GbsRemoteDebugger >> stepInto [ ^ self executionController stepInto ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> stepOver [
-	^ self executionController stepOver
-]
+GbsRemoteDebugger >> stepOver [ ^ self executionController stepOver ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> stepReturn [
-	^ self executionController stepReturn
-]
+GbsRemoteDebugger >> stepReturn [ ^ self executionController stepReturn ]
 
 { #category : 'private' }
 GbsRemoteDebugger >> syncBreakpointMarker [
@@ -1245,24 +983,16 @@ GbsRemoteDebugger >> syncBreakpointMarker [
 ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> terminate [
-	^ self executionController terminate
-]
+GbsRemoteDebugger >> terminate [ ^ self executionController terminate ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> closeRemoteDebuggerSession [
-	^ self executionController closeRemoteDebuggerSession
-]
+GbsRemoteDebugger >> closeRemoteDebuggerSession [ ^ self executionController closeRemoteDebuggerSession ]
 
 { #category : 'private' }
-GbsRemoteDebugger >> remoteDebugProcessStillActive [
-	^ self executionController remoteDebugProcessStillActive
-]
+GbsRemoteDebugger >> remoteDebugProcessStillActive [ ^ self executionController remoteDebugProcessStillActive ]
 
 { #category : 'actions' }
-GbsRemoteDebugger >> withRemoteDebuggerSessionDo: aBlock [
-	^ self executionController withRemoteDebuggerSessionDo: aBlock
-]
+GbsRemoteDebugger >> withRemoteDebuggerSessionDo: aBlock [ ^ self executionController withRemoteDebuggerSessionDo: aBlock ]
 
 { #category : 'actions' }
 GbsRemoteDebugger >> toggleBreakPoint [
