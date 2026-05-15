@@ -76,7 +76,7 @@ session := GbsSessionParameters new
             name: 'Simple Session';
             gemStoneName: 'gs64stone';
             username: 'DataCurator';
-            password: 'swordfish';
+            password: '...';
             login.
 
 dict := Dictionary new.
@@ -98,7 +98,7 @@ session := GbsSessionParameters new
     name: 'MagLev Session';
     gemStoneName: 'gs64stone';
     username: 'DataCurator';
-    password: 'swordfish';
+    password: '...';
     netldiHostOrIp: 'localhost';
     netldiNameOrPort: '50377';
     login.

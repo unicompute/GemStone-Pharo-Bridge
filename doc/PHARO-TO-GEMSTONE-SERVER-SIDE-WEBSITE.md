@@ -751,7 +751,7 @@ session := GbsSessionParameters new
 	name: 'OkZulu Debug Session';
 	gemStoneName: 'gs64stone';
 	username: 'DataCurator';
-	password: 'swordfish';
+	password: '...';
 	netldiHostOrIp: 'localhost';
 	netldiNameOrPort: '50377';
 	login.

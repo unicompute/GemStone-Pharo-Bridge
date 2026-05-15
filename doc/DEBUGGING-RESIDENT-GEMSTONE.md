@@ -60,6 +60,19 @@ make debugger-perf
 
 The live debugger evidence artifact is required, not best-effort. Missing evidence means the run is invalid, even if the non-live tests passed.
 
+Use the setup helper to make the remaining CI requirements explicit:
+
+```sh
+scripts/setup_github_self_hosted_runner.sh --check
+scripts/setup_github_self_hosted_runner.sh --set-vars
+export GS_USER='DataCurator'
+export GS_PASS='...'
+scripts/setup_github_self_hosted_runner.sh --set-secrets
+scripts/setup_github_self_hosted_runner.sh --configure-runner --install-service --start-service
+```
+
+The helper writes repo variables, writes `GS_USER` / `GS_PASS` as GitHub secrets from the current environment, and registers a macOS ARM64 self-hosted runner for this repository. It does not print `GS_PASS`.
+
 ## Commands
 
 Check whether the live environment is ready without launching Pharo:

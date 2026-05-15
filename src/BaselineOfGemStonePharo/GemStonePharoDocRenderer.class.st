@@ -614,7 +614,7 @@ GemStonePharoDocRenderer >> generatedMaglevBranchUsageMarkdown [
 			nextPutAll: '            name: ''Simple Session'';'; cr;
 			nextPutAll: '            gemStoneName: ''gs64stone'';'; cr;
 			nextPutAll: '            username: ''DataCurator'';'; cr;
-			nextPutAll: '            password: ''swordfish'';'; cr;
+			nextPutAll: '            password: ''...'';'; cr;
 			nextPutAll: '            login.'; cr; cr;
 			nextPutAll: 'dict := Dictionary new.'; cr;
 			nextPutAll: 'dict at: ''name'' put: ''Tariq''.'; cr;
@@ -631,7 +631,7 @@ GemStonePharoDocRenderer >> generatedMaglevBranchUsageMarkdown [
 			nextPutAll: '    name: ''MagLev Session'';'; cr;
 			nextPutAll: '    gemStoneName: ''gs64stone'';'; cr;
 			nextPutAll: '    username: ''DataCurator'';'; cr;
-			nextPutAll: '    password: ''swordfish'';'; cr;
+			nextPutAll: '    password: ''...'';'; cr;
 			nextPutAll: '    "Optional but clearer for explicit routing:"'; cr;
 			nextPutAll: '    netldiHostOrIp: ''localhost'';'; cr;
 			nextPutAll: '    netldiNameOrPort: ''50377'';'; cr;
@@ -785,7 +785,7 @@ GemStonePharoDocRenderer >> generatedUserManualReferenceHtml [
 		stream
 			nextPutAll: '  </ul>'; cr;
 			nextPutAll: '  <pre><code>GS_USER=''DataCurator'' \'; cr;
-			nextPutAll: 'GS_PASS=''swordfish'' \'; cr;
+			nextPutAll: 'GS_PASS=''...'' \'; cr;
 			nextPutAll: 'GS_NETLDI_HOST=''localhost'' \'; cr;
 			nextPutAll: 'GS_NETLDI_NAME_OR_PORT=''50377'' \'; cr;
 			nextPutAll: 'GEMSTONE=''/Users/tariq/GemStone64Bit3.7.5-arm64.Darwin'' \'; cr;
@@ -942,7 +942,7 @@ GemStonePharoDocRenderer >> generatedReadmeBodyMarkdown [
 			nextPutAll: '            name: ''Simple Session'';'; cr;
 			nextPutAll: '            gemStoneName: ''gs64stone'';'; cr;
 			nextPutAll: '            username: ''DataCurator'';'; cr;
-			nextPutAll: '            password: ''swordfish'';'; cr;
+			nextPutAll: '            password: ''...'';'; cr;
 			nextPutAll: '            login.'; cr; cr;
 			nextPutAll: 'dict := Dictionary new.'; cr;
 			nextPutAll: 'dict at: ''name'' put: ''Tariq''.'; cr;
@@ -959,7 +959,7 @@ GemStonePharoDocRenderer >> generatedReadmeBodyMarkdown [
 			nextPutAll: '    name: ''MagLev Session'';'; cr;
 			nextPutAll: '    gemStoneName: ''gs64stone'';'; cr;
 			nextPutAll: '    username: ''DataCurator'';'; cr;
-			nextPutAll: '    password: ''swordfish'';'; cr;
+			nextPutAll: '    password: ''...'';'; cr;
 			nextPutAll: '    netldiHostOrIp: ''localhost'';'; cr;
 			nextPutAll: '    netldiNameOrPort: ''50377'';'; cr;
 			nextPutAll: '    login.'; cr; cr;
@@ -1149,7 +1149,7 @@ GemStonePharoDocRenderer >> generatedUserManualTestingHtml [
 			nextPutAll: 'make artifact-freshness</code></pre>'; cr;
 			nextPutAll: '    <h3>Known-good live example</h3>'; cr;
 			nextPutAll: '    <pre><code>GS_USER=''DataCurator'' \'; cr;
-			nextPutAll: 'GS_PASS=''swordfish'' \'; cr;
+			nextPutAll: 'GS_PASS=''...'' \'; cr;
 			nextPutAll: 'GS_NETLDI_HOST=''localhost'' \'; cr;
 			nextPutAll: 'GS_NETLDI_NAME_OR_PORT=''50377'' \'; cr;
 			nextPutAll: 'GEMSTONE=''/Users/tariq/GemStone64Bit3.7.5-arm64.Darwin'' \'; cr;
