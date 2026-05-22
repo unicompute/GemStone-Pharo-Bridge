@@ -12,7 +12,19 @@ Class {
 
 { #category : 'accessing - platform' }
 GbsLibrary class >> gemstoneHome [
-	| environment fallback |
+	| configured fallback |
+	configured := self environmentAt: 'GEMSTONE'.
+	(configured notNil and: [ configured notEmpty ]) ifTrue: [ ^ configured ].
+	fallback := '/opt/gemstone/product' asFileReference.
+	^ fallback exists ifTrue: [ fallback fullName ] ifFalse: [ nil ]
+]
+
+{ #category : 'accessing - platform' }
+GbsLibrary class >> environmentAt: aKey [
+	| environment |
+	environment := [ Smalltalk os environment ] on: Error do: [ nil ].
+	environment ifNotNil: [
+		^ [ environment at: aKey ifAbsent: [ nil ] ] on: Error do: [ nil ] ].
 	environment := (Smalltalk globals at: #OSEnvironment ifAbsent: [ nil ])
 		ifNil: [ nil ]
 		ifNotNil: [ :envClass |
@@ -22,12 +34,8 @@ GbsLibrary class >> gemstoneHome [
 					(envClass respondsTo: #default)
 						ifTrue: [ [ envClass default ] on: Error do: [ nil ] ]
 						ifFalse: [ nil ] ] ].
-	environment ifNil: [
-		environment := [ Smalltalk os environment ] on: Error do: [ nil ] ].
-	environment ifNotNil: [
-		^ environment at: 'GEMSTONE' ifAbsent: [ nil ] ].
-	fallback := '/opt/gemstone/product' asFileReference.
-	^ fallback exists ifTrue: [ fallback fullName ] ifFalse: [ nil ]
+	environment ifNil: [ ^ nil ].
+	^ environment at: aKey ifAbsent: [ nil ]
 ]
 
 { #category : 'accessing - platform' }
@@ -52,7 +60,7 @@ GbsLibrary class >> macLibraryName [
 		libDir := home asFileReference / 'lib'.
 		(self findLibrary: 'libgcirpc-*-64.dylib' in: libDir) ifNotNil: [ :path | 
 			^ MacLibraryName := path ] ].
-	^ MacLibraryName := '/opt/gemstone/product/lib/libgcirpc-3.7.5-64.dylib'
+	^ '/opt/gemstone/product/lib/libgcirpc-3.7.5-64.dylib'
 ]
 
 { #category : 'accessing - platform' }
@@ -65,7 +73,7 @@ GbsLibrary class >> unixLibraryName [
 		libDir := home asFileReference / 'lib'.
 		(self findLibrary: 'libgcirpc-*-64.so' in: libDir) ifNotNil: [ :path | 
 			^ UnixLibraryName := path ] ].
-	^ UnixLibraryName := '/opt/gemstone/product/lib/libgcirpc-3.7.5-64.so'
+	^ '/opt/gemstone/product/lib/libgcirpc-3.7.5-64.so'
 ]
 
 { #category : 'accessing - platform' }
@@ -81,12 +89,29 @@ GbsLibrary class >> win32LibraryName [
 		libDir := home asFileReference / 'bin'.
 		(self findLibrary: 'libgcirpc-*-64.dll' in: libDir) ifNotNil: [ :path | 
 			^ Win32LibraryName := path ] ].
-	^ Win32LibraryName := '/opt/gemstone/product/lib/libgcirpc-3.7.5-64.dll'
+	^ '/opt/gemstone/product/lib/libgcirpc-3.7.5-64.dll'
 ]
 
 { #category : 'as yet unclassified' }
 GbsLibrary class >> macLibraryName: aString [
 	MacLibraryName := aString
+]
+
+{ #category : 'accessing - platform' }
+GbsLibrary class >> resetLibraryNames [
+	MacLibraryName := nil.
+	UnixLibraryName := nil.
+	Win32LibraryName := nil
+]
+
+{ #category : 'accessing - platform' }
+GbsLibrary class >> unixLibraryName: aString [
+	UnixLibraryName := aString
+]
+
+{ #category : 'accessing - platform' }
+GbsLibrary class >> win32LibraryName: aString [
+	Win32LibraryName := aString
 ]
 
 { #category : 'accessing - platform' }
