@@ -36,11 +36,11 @@ GbsSessionParameters >> fetchTranscriptLogs [
 GbsSessionParameters >> handleLoginError: interface [
 	"Handle login failure with specific error messages for netldi and connection issues"
 	| errorMessage rawErrMsg errNum hasError buffer |
-	buffer := ExternalAddress allocate: 2168.
+	buffer := ExternalAddress allocate: 4096.
 	[
 		hasError := interface apiGciErr: buffer.
 		(hasError = 1 or: [ hasError == true ]) ifTrue: [
-			errNum := buffer signedLongAt: 5.
+			errNum := buffer signedLongAt: 105.
 			rawErrMsg := self ensureCleanString: (self readErrorMessageFrom: buffer) ] ]
 		ensure: [ buffer free ].
 	Transcript show: '[GemStone Login Error]'; cr.
@@ -90,6 +90,14 @@ GbsSessionParameters >> interpretErrorMessage: aString errorNumber: anErrorNumbe
 	originalMsg isEmpty ifTrue: [
 		^ self netldiErrorMessage ].
 	errorMsgLower := originalMsg asLowercase.
+	anErrorNumber = 4042 ifTrue: [
+		^ 'GemStone could not start a remote Gem through netldi.
+
+Netldi is reachable, but it rejected or failed the gemnetobject request. On Linux this commonly means the GemStone host username/password were not supplied or are invalid.
+
+Set hostUsername/hostPassword on GbsSessionParameters, or export OKZ_GEMSTONE_HOST_USERNAME and OKZ_GEMSTONE_HOST_PASSWORD before starting Pharo.
+
+Original error: ', originalMsg ].
 	(errorMsgLower includesSubstring: 'connection refused') ifTrue: [
 		^ 'Cannot connect to GemStone netldi daemon.
 

@@ -264,7 +264,7 @@ GbsSessionParameters >> logArg: aValue [ logArg := aValue
 
 { #category : 'connection' }
 GbsSessionParameters >> login [
-    | interface outBuf stonePtr userPtr servicePtr emptyPtr result serviceString hostPtr netPtr |
+    | interface result serviceString hostUserString hostPasswordString netldiString setNetError setNetResult executedSessionInit |
 
     "UI State Check"
     self isConnected ifTrue: [ ^ self inform: 'Already Connected' ].
@@ -272,69 +272,55 @@ GbsSessionParameters >> login [
     interface := GbsServerInterface uniqueInstance.
     interface apiGciInit.
 
-    "1. DYNAMIC SERVICE: Use the value from the text field (default to gemnetobject)"
     serviceString := (self gemService isNil or: [ self gemService isEmpty ])
         ifTrue: [ 'gemnetobject' ]
         ifFalse: [ self gemService ].
+    hostUserString := self hostUsername ifNil: [ '' ].
+    hostPasswordString := self hostPassword ifNil: [ '' ].
+    netldiString := self netldiNameOrPort ifNil: [ '' ].
 
-    "2. ALLOCATE (Your Manual FFI Code)"
-    outBuf := ExternalAddress allocate: 1024.
-    stonePtr := ExternalAddress allocate: gemStoneName size + 1.
-    userPtr := ExternalAddress allocate: username size + 1.
-    servicePtr := ExternalAddress allocate: serviceString size + 1.
-    emptyPtr := ExternalAddress allocate: 1.
-    
-    "Allocate host and net pointers for netldi configuration"
-    hostPtr := ExternalAddress allocate: 256.
-    netPtr := ExternalAddress allocate: 256.
-
+    setNetError := ExternalAddress allocate: 4096.
+    executedSessionInit := ExternalAddress allocate: 4.
     [
-        "3. COPY STRINGS (Your Manual Loop Logic)"
-        1 to: gemStoneName size do: [ :i | stonePtr byteAt: i put: ( gemStoneName at: i ) asInteger ].
-        stonePtr byteAt: gemStoneName size + 1 put: 0.
+        1 to: 4096 do: [ :i | setNetError byteAt: i put: 0 ].
+        1 to: 4 do: [ :i | executedSessionInit byteAt: i put: 0 ].
 
-        1 to: username size do: [ :i | userPtr byteAt: i put: ( username at: i ) asInteger ].
-        userPtr byteAt: username size + 1 put: 0.
+        setNetResult := netldiString isEmpty
+            ifTrue: [
+                interface
+                    apiGciSetNetEx_: gemStoneName
+                    hostUser: hostUserString
+                    hostPassword: hostPasswordString
+                    service: serviceString
+                    encrypted: 0
+                    error: setNetError
+                    size: 4096 ]
+            ifFalse: [
+                interface
+                    apiGciSetNetEx__: gemStoneName
+                    hostUser: hostUserString
+                    hostPassword: hostPasswordString
+                    service: serviceString
+                    encrypted: 0
+                    error: setNetError
+                    size: 4096
+                    netldi: netldiString ].
 
-        "Use the serviceString instead of the hardcoded array"
-        1 to: serviceString size do: [ :i | servicePtr byteAt: i put: ( serviceString at: i ) asInteger ].
-        servicePtr byteAt: serviceString size + 1 put: 0.
-
-        emptyPtr byteAt: 1 put: 0.
-        
-        "Copy netldi host and port if configured"
-        self netldiHostOrIp ifNotNil: [ :host |
-            1 to: host size do: [ :i | hostPtr byteAt: i put: ( host at: i ) asInteger ].
-            hostPtr byteAt: host size + 1 put: 0 ].
-        
-        self netldiNameOrPort ifNotNil: [ :port |
-            1 to: port size do: [ :i | netPtr byteAt: i put: ( port at: i ) asInteger ].
-            netPtr byteAt: port size + 1 put: 0 ].
-
-        "4. ENCRYPT & LOGIN (Your Logic)"
-        interface apiGciEncrypt: password into: outBuf size: 1024.
-        interface
-            apiGciSetNet: stonePtr
-            host: (self netldiHostOrIp ifNil: [ emptyPtr ] ifNotNil: [ hostPtr ])
-            net: (self netldiNameOrPort ifNil: [ emptyPtr ] ifNotNil: [ netPtr ])
-            service: servicePtr.
+        setNetResult = 1 ifFalse: [
+            self error: (setNetError readString ifEmpty: [ 'Invalid GemStone network parameters' ]) ].
 
         result := interface
-                    apiGciLoginEx: userPtr
-                    password: outBuf
-                    flags: 3
-                    context: 0.
+            apiGciLoginEx_: username
+            password: password
+            flags: 0
+            haltOn: -1
+            executedSessionInit: executedSessionInit.
 
         result = 1 ifFalse: [
             self handleLoginError: interface ]
     ] ensure: [
-        outBuf free.
-        stonePtr free.
-        userPtr free.
-        servicePtr free.
-        emptyPtr free.
-        hostPtr free.
-        netPtr free
+        setNetError free.
+        executedSessionInit free
     ].
 
 	    "5. UI STATE UPDATES (Crucial for Launcher)"
@@ -361,11 +347,11 @@ GbsSessionParameters >> handleLoginError: interface [
     | errorMessage rawErrMsg errNum hasError buffer |
     
     "First, try to read the raw error message from GCI"
-    buffer := ExternalAddress allocate: 2168.
+    buffer := ExternalAddress allocate: 4096.
     [
         hasError := interface apiGciErr: buffer.
         (hasError = 1 or: [ hasError == true ]) ifTrue: [
-            errNum := buffer signedLongAt: 5.
+            errNum := buffer signedLongAt: 105.
             rawErrMsg := self readErrorMessageFrom: buffer ]
     ] ensure: [ buffer free ].
     
@@ -387,42 +373,30 @@ GbsSessionParameters >> handleLoginError: interface [
 
 { #category : 'connection' }
 GbsSessionParameters >> readErrorMessageFrom: aBuffer [
-    "Try to read error message from buffer using multiple strategies"
-    | msg cleaned |
-    
-    "Strategy 1: Read bytes directly from offset 112 (most reliable)"
-    [ | bytes strEnd |
-      bytes := ByteArray new: 1024.
-      1 to: 1024 do: [ :i |
-          bytes at: i put: (aBuffer + 112) byteAt: i - 1 ].
-      strEnd := bytes indexOf: 0.
-      strEnd > 1 ifTrue: [
-          msg := self convertBytesToString: (bytes copyFrom: 1 to: strEnd - 1).
-          msg trimBoth isEmpty ifFalse: [ ^ msg ] ] ]
-        on: Error do: [ ].
-    
-    "Strategy 2: Try readString at offset 112"
-    [ msg := (aBuffer + 112) readString.
-      msg ifNotNil: [ :raw | 
-          cleaned := self ensureCleanString: raw.
-          cleaned trimBoth isEmpty ifFalse: [ ^ cleaned ] ] ] 
-        on: Error do: [ ].
-    
-    "Strategy 3: Try readString at offset 113"
-    [ msg := (aBuffer + 113) readString.
-      msg ifNotNil: [ :raw | 
-          cleaned := self ensureCleanString: raw.
-          cleaned trimBoth isEmpty ifFalse: [ ^ cleaned ] ] ] 
-        on: Error do: [ ].
-    
-    "Strategy 4: Try readString at offset 114"
-    [ msg := (aBuffer + 114) readString.
-      msg ifNotNil: [ :raw | 
-          cleaned := self ensureCleanString: raw.
-          cleaned trimBoth isEmpty ifFalse: [ ^ cleaned ] ] ] 
-        on: Error do: [ ].
-    
-    ^ nil
+    "GciErrSType has had alignment-sensitive changes across GemStone builds.
+    Scan for the first useful printable C string instead of relying on one
+    offset."
+    | best bestSize current currentSize byte |
+    best := ''.
+    bestSize := 0.
+    current := WriteStream on: String new.
+    currentSize := 0.
+
+    1 to: 3000 do: [ :i |
+        byte := [ aBuffer byteAt: i ] on: Error do: [ 0 ].
+        ((byte between: 32 and: 126) or: [ byte = 10 or: [ byte = 13 or: [ byte = 9 ] ] ])
+            ifTrue: [
+                current nextPut: (Character codePoint: byte).
+                currentSize := currentSize + 1 ]
+            ifFalse: [
+                currentSize > bestSize ifTrue: [
+                    best := current contents.
+                    bestSize := currentSize ].
+                current := WriteStream on: String new.
+                currentSize := 0 ] ].
+    currentSize > bestSize ifTrue: [ best := current contents ].
+    best := self ensureCleanString: best.
+    ^ best isEmpty ifTrue: [ nil ] ifFalse: [ best ]
 ]
 
 { #category : 'connection' }
@@ -482,6 +456,15 @@ GbsSessionParameters >> interpretErrorMessage: aString errorNumber: anErrorNumbe
         ^ self netldiErrorMessage ].
     
     errorMsgLower := originalMsg asLowercase.
+    
+    anErrorNumber = 4042 ifTrue: [
+        ^ 'GemStone could not start a remote Gem through netldi.
+
+Netldi is reachable, but it rejected or failed the gemnetobject request. On Linux this commonly means the GemStone host username/password were not supplied or are invalid.
+
+Set hostUsername/hostPassword on GbsSessionParameters, or export OKZ_GEMSTONE_HOST_USERNAME and OKZ_GEMSTONE_HOST_PASSWORD before starting Pharo.
+
+Original error: ', originalMsg ].
     
     "Check for netldi-specific errors"
     (errorMsgLower includesSubstring: 'connection refused') ifTrue: [

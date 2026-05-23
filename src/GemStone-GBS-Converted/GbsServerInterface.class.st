@@ -233,6 +233,15 @@ GbsServerInterface >> apiGciLoginEx: user pass: password flags: flags context: c
            options: #( + optNonThreaded )
 ]
 
+{ #category : 'api - login' }
+GbsServerInterface >> apiGciLoginEx_: user password: password flags: flags haltOn: haltOn executedSessionInit: executedSessionInit [
+    <primitive: #primitiveNativeCall error: errorCode>
+    ^ self
+        ffiCall: #(int GciLoginEx_(String user, String password, uint flags, int haltOn, void* executedSessionInit))
+        module: libraryPath
+        options: #( + optNonThreaded )
+]
+
 { #category : 'api' }
 GbsServerInterface >> apiGciLoginEx: u password: p flags: f context: c [ ^ self ffiCall: #(int GciLoginEx(void* u, void* p, int f, void* c))
 ]
@@ -278,6 +287,24 @@ GbsServerInterface >> apiGciSetNet: aStone [
 
 { #category : 'api' }
 GbsServerInterface >> apiGciSetNet: st host: h net: n service: s [ ^ self ffiCall: #(void GciSetNet(void* st, void* h, void* n, void* s))
+]
+
+{ #category : 'api - login' }
+GbsServerInterface >> apiGciSetNetEx_: stone hostUser: hostUser hostPassword: hostPassword service: service encrypted: encrypted error: errString size: maxErrSize [
+    <primitive: #primitiveNativeCall error: errorCode>
+    ^ self
+        ffiCall: #(int GciSetNetEx_(String stone, String hostUser, String hostPassword, String service, int encrypted, void* errString, uint64 maxErrSize))
+        module: libraryPath
+        options: #( + optNonThreaded )
+]
+
+{ #category : 'api - login' }
+GbsServerInterface >> apiGciSetNetEx__: stone hostUser: hostUser hostPassword: hostPassword service: service encrypted: encrypted error: errString size: maxErrSize netldi: netldiName [
+    <primitive: #primitiveNativeCall error: errorCode>
+    ^ self
+        ffiCall: #(int GciSetNetEx__(String stone, String hostUser, String hostPassword, String service, int encrypted, void* errString, uint64 maxErrSize, String netldiName))
+        module: libraryPath
+        options: #( + optNonThreaded )
 ]
 
 { #category : 'api - login' }
