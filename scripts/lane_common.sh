@@ -137,6 +137,72 @@ gbs_human_bytes() {
   }'
 }
 
+gbs_expected_sources_name_for_image() {
+  local src_image="${1:-}"
+  local expected="${GBS_EXPECTED_SOURCES_NAME:-}"
+  if [[ -n "${expected}" ]]; then
+    printf '%s\n' "${expected}"
+    return 0
+  fi
+  [[ -n "${src_image}" && -f "${src_image}" ]] || return 0
+  strings "${src_image}" 2>/dev/null \
+    | grep -Eo 'Pharo[^[:space:]/]+\.sources' \
+    | tail -1
+}
+
+gbs_find_sources_file_named() {
+  local src_dir="${1:-}"
+  local expected="${2:-}"
+  local image_root candidate
+  [[ -n "${src_dir}" && -n "${expected}" ]] || return 0
+  if [[ -f "${src_dir}/${expected}" ]]; then
+    printf '%s\n' "${src_dir}/${expected}"
+    return 0
+  fi
+  image_root="$(dirname "${src_dir}")"
+  candidate="$(find "${image_root}" -maxdepth 3 -name "${expected}" -type f -print -quit 2>/dev/null || true)"
+  [[ -n "${candidate}" ]] && printf '%s\n' "${candidate}"
+}
+
+gbs_first_available_sources_file() {
+  local work_dir="${1:-}"
+  local src_dir="${2:-}"
+  local image_root candidate
+  for candidate in "${work_dir}"/Pharo*.sources "${src_dir}"/Pharo*.sources; do
+    [[ -f "${candidate}" ]] || continue
+    printf '%s\n' "${candidate}"
+    return 0
+  done
+  image_root="$(dirname "${src_dir}")"
+  candidate="$(find "${image_root}" -maxdepth 3 -name 'Pharo*.sources' -type f -print -quit 2>/dev/null || true)"
+  [[ -n "${candidate}" ]] && printf '%s\n' "${candidate}"
+}
+
+gbs_prepare_sources_files() {
+  local src_image="$1"
+  local work_dir="$2"
+  local src_dir expected candidate src_dir_real work_dir_real
+
+  src_dir="$(dirname "${src_image}")"
+  src_dir_real="$(cd "${src_dir}" && pwd -P)"
+  work_dir_real="$(cd "${work_dir}" && pwd -P)"
+  if [[ "${src_dir_real}" != "${work_dir_real}" ]] && ls "${src_dir}"/Pharo*.sources >/dev/null 2>&1; then
+    cp -f "${src_dir}"/Pharo*.sources "${work_dir}/" || true
+  fi
+
+  expected="$(gbs_expected_sources_name_for_image "${src_image}")"
+  [[ -n "${expected}" ]] || return 0
+  [[ -f "${work_dir}/${expected}" ]] && return 0
+
+  candidate="$(gbs_find_sources_file_named "${src_dir}" "${expected}")"
+  if [[ -z "${candidate}" ]]; then
+    candidate="$(gbs_first_available_sources_file "${work_dir}" "${src_dir}")"
+  fi
+  [[ -n "${candidate}" ]] || return 0
+
+  ln -sf "${candidate}" "${work_dir}/${expected}" 2>/dev/null || cp -f "${candidate}" "${work_dir}/${expected}" || true
+}
+
 gbs_prepare_work_image_preflight() {
   local src_image="$1"
   local work_dir="$2"
@@ -203,9 +269,7 @@ gbs_prepare_work_image() {
   if [[ -f "${src_changes}" ]]; then
     cp -f "${src_changes}" "${work_changes}"
   fi
-  if ls "${src_dir}"/Pharo*.sources >/dev/null 2>&1; then
-    cp -f "${src_dir}"/Pharo*.sources "${work_dir}/" || true
-  fi
+  gbs_prepare_sources_files "${src_image}" "${work_dir}"
 
   printf '%s\n' "${work_image}"
 }

@@ -28,6 +28,7 @@ GbsSessionMaterializer >> clearProxyCache [
 	(session class weakRegistryNamed: #GbsSessionProxyCaches)
 		at: session
 		put: WeakValueDictionary new.
+	self clearTypedWrapperClassCache.
 	^ self proxyCache
 ]
 
@@ -58,6 +59,7 @@ GbsSessionMaterializer >> fetchObject: anOop [
 
 { #category : 'fetching' }
 GbsSessionMaterializer >> fetchObject: anOop withProfile: aProfile depth: anInteger seen: seenOops [
+	self checkMaterializationDepth: anInteger.
 	^ aProfile
 		materializeOop: anOop
 		inSession: session
@@ -189,6 +191,7 @@ GbsSessionMaterializer >> materializeDictionaryOop: anOop identityKeys: useIdent
 
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeOops: oopCollection withProfile: aProfile depth: anInteger seen: seenOops [
+	self checkMaterializationDepth: anInteger.
 	(aProfile isKindOf: GbsProxyOnlyMaterializationProfile) ifTrue: [
 		^ self materializeProxyOnlyOops: oopCollection withProfile: aProfile ].
 	^ self
@@ -200,12 +203,11 @@ GbsSessionMaterializer >> materializeOops: oopCollection withProfile: aProfile d
 
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeProxyOnlyOops: oopCollection withProfile: aProfile [
-	| results assigned missing classNames wrapperClasses |
+	| results assigned missing classNames |
 	results := Array new: oopCollection size.
 	assigned := Array new: oopCollection size.
 	1 to: assigned size do: [ :index | assigned at: index put: false ].
 	missing := OrderedCollection new.
-	wrapperClasses := Dictionary new.
 	self incrementMaterializationMetric: #proxyBatchItems by: oopCollection size.
 	oopCollection doWithIndex: [ :oop :index |
 		(self isImmediateOop: oop)
@@ -241,17 +243,7 @@ GbsSessionMaterializer >> materializeProxyOnlyOops: oopCollection withProfile: a
 						ifNil: [ self proxyForOop: oop ]
 						ifNotNil: [
 							| wrapperClass |
-							(wrapperClasses includesKey: className)
-								ifTrue: [ wrapperClass := wrapperClasses at: className ]
-								ifFalse: [
-									self incrementMaterializationMetric: #wrapperLookupCalls.
-									wrapperClass := self
-										recordMillisecondsForMetric: #wrapperLookupMs
-										during: [
-											GbsSessionManager
-												typedWrapperClassForServerClassNamed: className
-												forSession: session ].
-									wrapperClasses at: className put: wrapperClass ].
+							wrapperClass := self typedWrapperClassForServerClassName: className.
 							wrapperClass
 								ifNil: [ self proxyForOop: oop ]
 								ifNotNil: [ self proxyForOop: oop usingClass: wrapperClass ] ] ].
@@ -316,9 +308,7 @@ GbsSessionMaterializer >> proxyForOop: anOop serverClassName: aClassName [
 	| cachedProxy wrapperClass |
 	cachedProxy := self cachedProxyForOop: anOop.
 	cachedProxy ifNotNil: [ ^ cachedProxy ].
-	wrapperClass := GbsSessionManager
-		typedWrapperClassForServerClassNamed: aClassName
-		forSession: session.
+	wrapperClass := self typedWrapperClassForServerClassName: aClassName.
 	wrapperClass ifNil: [ ^ self proxyForOop: anOop ].
 	^ self proxyForOop: anOop usingClass: wrapperClass
 ]

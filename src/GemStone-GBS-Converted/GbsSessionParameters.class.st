@@ -274,6 +274,104 @@ GbsSessionParameters class >> valueFromDictionary: aDictionary atAny: keyCollect
 	^ absentBlock value
 ]
 
+{ #category : 'security' }
+GbsSessionParameters class >> keychainServiceName [
+	^ 'GemStone-Pharo-Bridge.sessionParameters'
+]
+
+{ #category : 'security' }
+GbsSessionParameters class >> keychainStore [
+	^ Smalltalk globals
+		at: #GbsSessionParametersKeychainStore
+		ifAbsent: [ nil ]
+]
+
+{ #category : 'security' }
+GbsSessionParameters class >> keychainShellQuote: aString [
+	| value quote |
+	value := aString ifNil: [ '' ] ifNotNil: [ aString asString ].
+	(value includes: $') ifTrue: [
+		self error: 'Keychain command values containing single quotes are not supported by this backend.' ].
+	quote := String with: $'.
+	^ quote, value, quote
+]
+
+{ #category : 'security' }
+GbsSessionParameters class >> keychainCommandStatus: commandString [
+	| libc |
+	libc := Smalltalk at: #LibC ifAbsent: [ ^ -1 ].
+	^ [ libc system: commandString ]
+		on: Error
+		do: [ -1 ]
+]
+
+{ #category : 'security' }
+GbsSessionParameters class >> removeTrailingLineEndingsFrom: aString [
+	| value |
+	value := aString ifNil: [ '' ] ifNotNil: [ aString asString ].
+	[ value notEmpty and: [ value last = Character lf or: [ value last = Character cr ] ] ]
+		whileTrue: [ value := value allButLast ].
+	^ value
+]
+
+{ #category : 'security' }
+GbsSessionParameters class >> keychainSecretAt: accountName [
+	| store file command status secret |
+	store := self keychainStore.
+	store ifNotNil: [ ^ store at: accountName ifAbsent: [ nil ] ].
+	file := FileLocator temp / ('gbs-keychain-', 1000000 atRandom asString, '.txt').
+	command := '/usr/bin/security find-generic-password -w -s ',
+		(self keychainShellQuote: self keychainServiceName),
+		' -a ',
+		(self keychainShellQuote: accountName),
+		' > ',
+		(self keychainShellQuote: file fullName),
+		' 2>/dev/null'.
+	[
+		status := self keychainCommandStatus: command.
+		status = 0 ifFalse: [ ^ nil ].
+		secret := file exists
+			ifTrue: [ self removeTrailingLineEndingsFrom: file contents ]
+			ifFalse: [ nil ].
+		^ secret
+	] ensure: [ file deleteIfAbsent: [ ] ]
+]
+
+{ #category : 'security' }
+GbsSessionParameters class >> keychainSecretAt: accountName put: secretString [
+	| store command status |
+	store := self keychainStore.
+	store ifNotNil: [
+		store at: accountName put: secretString.
+		^ secretString ].
+	command := '/usr/bin/security add-generic-password -U -s ',
+		(self keychainShellQuote: self keychainServiceName),
+		' -a ',
+		(self keychainShellQuote: accountName),
+		' -w ',
+		(self keychainShellQuote: secretString),
+		' >/dev/null 2>&1'.
+	status := self keychainCommandStatus: command.
+	status = 0 ifFalse: [ self error: 'Could not store GemStone session secret in macOS Keychain.' ].
+	^ secretString
+]
+
+{ #category : 'security' }
+GbsSessionParameters class >> deleteKeychainSecretAt: accountName [
+	| store command |
+	store := self keychainStore.
+	store ifNotNil: [
+		store removeKey: accountName ifAbsent: [ ].
+		^ self ].
+	command := '/usr/bin/security delete-generic-password -s ',
+		(self keychainShellQuote: self keychainServiceName),
+		' -a ',
+		(self keychainShellQuote: accountName),
+		' >/dev/null 2>&1'.
+	self keychainCommandStatus: command.
+	^ self
+]
+
 { #category : 'polling' }
 GbsSessionParameters class >> togglePolling [ 
     ^ self pollingEnabled: self pollingEnabled not
@@ -395,6 +493,7 @@ GbsSessionParameters >> exportDictionary [
 
 { #category : 'persistence' }
 GbsSessionParameters >> exportDictionaryIncludingSecrets: includeSecrets [
+	includeSecrets ifTrue: [ self restoreRememberedSecretsFromKeychain ].
 	self normalizeConnectionFields.
 	^ Dictionary new
 		at: 'format' put: self class exportFormatIdentifier;
@@ -592,6 +691,7 @@ GbsSessionParameters >> login [
 
     "UI State Check"
     self isConnected ifTrue: [ ^ self inform: 'Already Connected' ].
+    self restoreRememberedSecretsFromKeychain.
     self validateForLogin.
 
     interface := GbsServerInterface uniqueInstance.
@@ -991,6 +1091,54 @@ GbsSessionParameters >> password [ ^ password
 
 { #category : 'accessing' }
 GbsSessionParameters >> password: aValue [ password := aValue
+]
+
+{ #category : 'security' }
+GbsSessionParameters >> keychainAccountForSecretNamed: secretName [
+	self normalizeConnectionFields.
+	^ String streamContents: [ :stream |
+		stream
+			nextPutAll: self name;
+			nextPut: $|;
+			nextPutAll: self gemStoneName;
+			nextPut: $|;
+			nextPutAll: self username;
+			nextPut: $|;
+			nextPutAll: secretName asString ]
+]
+
+{ #category : 'security' }
+GbsSessionParameters >> storeRememberedSecretsInKeychain [
+	(gsRemember == true and: [ password notNil and: [ password isEmpty not ] ]) ifTrue: [
+		self class
+			keychainSecretAt: (self keychainAccountForSecretNamed: #gemStonePassword)
+			put: password.
+		password := nil ].
+	(hostRemember == true and: [ hostPassword notNil and: [ hostPassword isEmpty not ] ]) ifTrue: [
+		self class
+			keychainSecretAt: (self keychainAccountForSecretNamed: #hostPassword)
+			put: hostPassword.
+		hostPassword := nil ].
+	^ self
+]
+
+{ #category : 'security' }
+GbsSessionParameters >> restoreRememberedSecretsFromKeychain [
+	| restored |
+	(gsRemember == true and: [ password isNil or: [ password isEmpty ] ]) ifTrue: [
+		restored := self class keychainSecretAt: (self keychainAccountForSecretNamed: #gemStonePassword).
+		restored ifNotNil: [ password := restored ] ].
+	(hostRemember == true and: [ hostPassword isNil or: [ hostPassword isEmpty ] ]) ifTrue: [
+		restored := self class keychainSecretAt: (self keychainAccountForSecretNamed: #hostPassword).
+		restored ifNotNil: [ hostPassword := restored ] ].
+	^ self
+]
+
+{ #category : 'security' }
+GbsSessionParameters >> deleteRememberedSecretsFromKeychain [
+	self class deleteKeychainSecretAt: (self keychainAccountForSecretNamed: #gemStonePassword).
+	self class deleteKeychainSecretAt: (self keychainAccountForSecretNamed: #hostPassword).
+	^ self
 ]
 
 { #category : 'accessing' }

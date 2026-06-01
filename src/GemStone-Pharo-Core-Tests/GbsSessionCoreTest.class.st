@@ -121,6 +121,20 @@ GbsSessionCoreTest >> encodedStringBatchLineForOop: anOop value: aString [
 ]
 
 { #category : 'running' }
+GbsSessionCoreTest >> encodedSmallIntegerOop: anInteger [
+	^ (anInteger bitShift: 3) + 2
+]
+
+{ #category : 'running' }
+GbsSessionCoreTest >> encodedStructuredStringSlotsFor: aString [
+	| slots |
+	slots := OrderedCollection with: (self encodedSmallIntegerOop: aString size).
+	aString do: [ :character |
+		slots add: (self encodedSmallIntegerOop: character codePoint) ].
+	^ slots asArray
+]
+
+{ #category : 'running' }
 GbsSessionCoreTest >> setUp [
 	super setUp.
 	previousObjectSpaceFinalizationRegistry := Smalltalk globals
@@ -355,6 +369,224 @@ GbsSessionCoreTest >> testFetchDeepPreservesRepeatedNestedArrayIdentity [
 	metrics := mockSession materializationMetrics.
 	self assert: (metrics at: #frontierSlotBatchObjectCount ifAbsent: [ 0 ]) equals: 1.
 	self assert: (metrics at: #scalarStringBatchObjectCount ifAbsent: [ 0 ]) equals: 1
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testClassNameBatchUsesStructuredBuffer [
+	| mockSession slots classNames bufferCalls metrics |
+	mockSession := CoreMockGbsSession new.
+	slots := OrderedCollection new.
+	slots addAll: (self encodedStructuredStringSlotsFor: 'Array').
+	slots addAll: (self encodedStructuredStringSlotsFor: 'String').
+	bufferCalls := 0.
+	mockSession stubs at: #supportsStructuredMaterializationBatchBuffers put: true.
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		self assert: (script includesSubstring: 'buffer := Array new: total').
+		bufferCalls := bufferCalls + 1.
+		9900 ].
+	mockSession stubs at: #executeAndFetch put: [ :script | self fail ].
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		oop = 9900 ifTrue: [ slots size ] ifFalse: [ self fail ] ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+		self assert: oop equals: 9900.
+		self assert: start equals: 1.
+		self assert: count equals: slots size.
+		slots asArray ].
+
+	classNames := mockSession materializer remoteReader
+		remoteClassNamesForOops: #(9100 9040).
+
+	self assert: (classNames at: 9100) equals: 'Array'.
+	self assert: (classNames at: 9040) equals: 'String'.
+	self assert: bufferCalls equals: 1.
+	metrics := mockSession materializationMetrics.
+	self assert: (metrics at: #structuredBatchBufferFetchCalls ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #structuredBatchFallbacks ifAbsent: [ 0 ]) equals: 0
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFetchDeepPreservesCyclicArrayIdentity [
+	| mockSession result |
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #executeAndFetch put: [ :script | | response |
+		response := nil.
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object class name asString' ]) ifTrue: [
+			(script includesSubstring: '9040') ifTrue: [
+				response := '9040', Character tab asString, 'String', Character lf asString ] ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'text := object asString' ]) ifTrue: [
+			response := self encodedStringBatchLineForOop: 9040 value: 'self' ].
+		response ifNil: [
+			(script includesSubstring: 'class name asString') ifTrue: [
+				(script includesSubstring: '9000') ifTrue: [ response := 'Array' ].
+				(script includesSubstring: '9040') ifTrue: [ response := 'String' ] ] ].
+		response ifNil: [ self fail ].
+		response ].
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		oop = 9000 ifTrue: [ 2 ] ifFalse: [ self fail ] ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+		self assert: oop equals: 9000.
+		self assert: start equals: 1.
+		self assert: count equals: 2.
+		#(9000 9040) ].
+	mockSession fetchDeep.
+
+	result := mockSession fetchObject: 9000.
+
+	self assert: result first == result.
+	self assert: result second equals: 'self'
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFetchDeepPreservesCyclicDictionaryIdentity [
+	| mockSession result |
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #executeAndFetch put: [ :script | | response |
+		response := nil.
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object class name asString' ]) ifTrue: [
+			(script includesSubstring: '9040') ifTrue: [
+				response := '9040', Character tab asString, 'String', Character lf asString ] ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'text := object asString' ]) ifTrue: [
+			response := self encodedStringBatchLineForOop: 9040 value: 'self' ].
+		response ifNil: [
+			(script includesSubstring: 'class name asString') ifTrue: [
+				(script includesSubstring: '9100') ifTrue: [ response := 'Dictionary' ].
+				(script includesSubstring: '9040') ifTrue: [ response := 'String' ] ] ].
+		response ifNil: [ self fail ].
+		response ].
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		(script includesSubstring: 'pairs := Array new: object size * 2')
+			ifTrue: [ 9200 ]
+			ifFalse: [ Error signal: 'No return-OOP stub for this script.' ] ].
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		oop = 9200 ifTrue: [ 2 ] ifFalse: [ self fail ] ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+		self assert: oop equals: 9200.
+		self assert: start equals: 1.
+		self assert: count equals: 2.
+		#(9040 9100) ].
+	mockSession fetchDeep.
+
+	result := mockSession fetchObject: 9100.
+
+	self assert: (result at: 'self') == result
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFetchDeepPreservesCyclicSetIdentity [
+	| mockSession result |
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #supportsStructuredMaterializationBatchBuffers put: true.
+	mockSession stubs at: #executeAndFetch put: [ :script | | response |
+		response := nil.
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object class name asString' ]) ifTrue: [
+			(script includesSubstring: '9040') ifTrue: [
+				response := '9040', Character tab asString, 'String', Character lf asString ] ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'text := object asString' ]) ifTrue: [
+			response := self encodedStringBatchLineForOop: 9040 value: 'marker' ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object size asString' ]) ifTrue: [
+			(script includesSubstring: '9310') ifTrue: [
+				response := '9310', Character tab asString, '2', Character tab asString,
+					'9300', Character tab asString, '9040', Character lf asString ] ].
+		response ifNil: [
+			(script includesSubstring: 'class name asString') ifTrue: [
+				(script includesSubstring: '9300') ifTrue: [ response := 'Set' ].
+				(script includesSubstring: '9040') ifTrue: [ response := 'String' ] ] ].
+		response ifNil: [ self fail ].
+		response ].
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		| response |
+		response := nil.
+		((script includesSubstring: 'buffer := Array new: oops size')
+			and: [ script includesSubstring: 'object asArray' ]) ifTrue: [ response := 9390 ].
+		(response isNil and: [ script includesSubstring: 'object asArray' ]) ifTrue: [ response := 9310 ].
+		response ifNil: [ Error signal: 'No return-OOP stub for this script.' ].
+		response ].
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		oop = 9390 ifTrue: [ 1 ] ifFalse: [ self fail ] ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+		self assert: oop equals: 9390.
+		self assert: start equals: 1.
+		self assert: count equals: 1.
+		#(9310) ].
+	mockSession fetchDeep.
+
+	result := mockSession fetchObject: 9300.
+
+	self assert: (result anySatisfy: [ :each | each == result ]).
+	self assert: (result includes: 'marker')
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testMaterializationMaxObjectsRaisesClearError [
+	| mockSession previous hadPrevious raised |
+	mockSession := self materializationMockSession.
+	hadPrevious := Smalltalk globals includesKey: #GbsMaterializationMaxObjects.
+	previous := Smalltalk globals at: #GbsMaterializationMaxObjects ifAbsent: [ nil ].
+	raised := false.
+	[
+		Smalltalk globals at: #GbsMaterializationMaxObjects put: 1.
+		mockSession fetchDeep.
+		[ mockSession fetchObject: 9000 ]
+			on: Error
+			do: [ :ex |
+				raised := true.
+				self assert: (ex messageText includesSubstring: 'GBS_MATERIALIZATION_MAX_OBJECTS') ].
+		self assert: raised
+	] ensure: [
+		hadPrevious
+			ifTrue: [ Smalltalk globals at: #GbsMaterializationMaxObjects put: previous ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationMaxObjects ifAbsent: [ ] ] ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testMaterializationMaxDepthRaisesClearError [
+	| mockSession previous hadPrevious raised |
+	mockSession := self materializationMockSession.
+	hadPrevious := Smalltalk globals includesKey: #GbsMaterializationMaxDepth.
+	previous := Smalltalk globals at: #GbsMaterializationMaxDepth ifAbsent: [ nil ].
+	raised := false.
+	[
+		Smalltalk globals at: #GbsMaterializationMaxDepth put: 1.
+		mockSession fetchDeep.
+		[ mockSession fetchObject: 9000 ]
+			on: Error
+			do: [ :ex |
+				raised := true.
+				self assert: (ex messageText includesSubstring: 'GBS_MATERIALIZATION_MAX_DEPTH') ].
+		self assert: raised
+	] ensure: [
+		hadPrevious
+			ifTrue: [ Smalltalk globals at: #GbsMaterializationMaxDepth put: previous ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationMaxDepth ifAbsent: [ ] ] ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testMaterializationMaxBatchBytesRaisesClearError [
+	| mockSession previous hadPrevious raised |
+	mockSession := CoreMockGbsSession new.
+	hadPrevious := Smalltalk globals includesKey: #GbsMaterializationMaxBatchBytes.
+	previous := Smalltalk globals at: #GbsMaterializationMaxBatchBytes ifAbsent: [ nil ].
+	raised := false.
+	[
+		Smalltalk globals at: #GbsMaterializationMaxBatchBytes put: 1.
+		[ mockSession materializer remoteReader
+			parseClassNameLines: '9000', Character tab asString, 'Array', Character lf asString ]
+			on: Error
+			do: [ :ex |
+				raised := true.
+				self assert: (ex messageText includesSubstring: 'GBS_MATERIALIZATION_MAX_BATCH_BYTES') ].
+		self assert: raised
+	] ensure: [
+		hadPrevious
+			ifTrue: [ Smalltalk globals at: #GbsMaterializationMaxBatchBytes put: previous ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationMaxBatchBytes ifAbsent: [ ] ] ]
 ]
 
 { #category : 'tests' }
@@ -717,6 +949,22 @@ GbsSessionCoreTest >> testFetchShallowClassNameBatchSizeIsConfigurable [
 		self assert: (metrics at: #classNameBatchCalls ifAbsent: [ 0 ]) equals: 3.
 		self assert: (metrics at: #classNameBatchOopCount ifAbsent: [ 0 ]) equals: 5.
 		self assert: (metrics at: #classNameFallbackCalls ifAbsent: [ 0 ]) equals: 0
+	] ensure: [
+		hadBatchSize
+			ifTrue: [ Smalltalk globals at: #GbsMaterializationBatchSize put: previousBatchSize ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationBatchSize ifAbsent: [ ] ] ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testMaterializationBatchSizeZeroUsesDefault [
+	| mockSession previousBatchSize hadBatchSize |
+	mockSession := CoreMockGbsSession new.
+	hadBatchSize := Smalltalk globals includesKey: #GbsMaterializationBatchSize.
+	previousBatchSize := Smalltalk globals at: #GbsMaterializationBatchSize ifAbsent: [ nil ].
+	[
+		Smalltalk globals at: #GbsMaterializationBatchSize put: 0.
+
+		self assert: mockSession materializationBatchSize equals: 1000
 	] ensure: [
 		hadBatchSize
 			ifTrue: [ Smalltalk globals at: #GbsMaterializationBatchSize put: previousBatchSize ]

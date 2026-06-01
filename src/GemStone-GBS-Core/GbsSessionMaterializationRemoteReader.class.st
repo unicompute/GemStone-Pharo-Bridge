@@ -100,6 +100,7 @@ GbsSessionMaterializationRemoteReader >> parseOopPairLines: aString [
 { #category : 'private' }
 GbsSessionMaterializationRemoteReader >> parseClassNameLines: aString [
 	| classNames |
+	self checkMaterializationBatchBytes: aString asString size label: 'class-name text batch'.
 	classNames := Dictionary new.
 	aString asString lines do: [ :line |
 		line isEmpty ifFalse: [
@@ -113,6 +114,7 @@ GbsSessionMaterializationRemoteReader >> parseClassNameLines: aString [
 { #category : 'private' }
 GbsSessionMaterializationRemoteReader >> parseArrayElementOopLines: aString [
 	| elementOopsByOop |
+	self checkMaterializationBatchBytes: aString asString size label: 'array-element text batch'.
 	elementOopsByOop := Dictionary new.
 	aString asString lines do: [ :line |
 		line isEmpty ifFalse: [
@@ -134,6 +136,7 @@ GbsSessionMaterializationRemoteReader >> parseArrayElementOopLines: aString [
 { #category : 'private' }
 GbsSessionMaterializationRemoteReader >> parseOopValueLines: aString [
 	| valuesByOop |
+	self checkMaterializationBatchBytes: aString asString size label: 'OOP-value text batch'.
 	valuesByOop := Dictionary new.
 	aString asString lines do: [ :line |
 		line isEmpty ifFalse: [
@@ -149,6 +152,7 @@ GbsSessionMaterializationRemoteReader >> parseOopValueLines: aString [
 { #category : 'private' }
 GbsSessionMaterializationRemoteReader >> parseStringValueLines: aString [
 	| valuesByOop |
+	self checkMaterializationBatchBytes: aString asString size label: 'string-value text batch'.
 	valuesByOop := Dictionary new.
 	aString asString lines do: [ :line |
 		line isEmpty ifFalse: [
@@ -168,6 +172,7 @@ GbsSessionMaterializationRemoteReader >> parseStringValueLines: aString [
 { #category : 'private' }
 GbsSessionMaterializationRemoteReader >> parseByteArrayValueLines: aString [
 	| valuesByOop |
+	self checkMaterializationBatchBytes: aString asString size label: 'byte-array text batch'.
 	valuesByOop := Dictionary new.
 	aString asString lines do: [ :line |
 		line isEmpty ifFalse: [
@@ -187,6 +192,7 @@ GbsSessionMaterializationRemoteReader >> parseByteArrayValueLines: aString [
 { #category : 'private' }
 GbsSessionMaterializationRemoteReader >> parseAssociationOopPairLines: aString [
 	| pairsByOop |
+	self checkMaterializationBatchBytes: aString asString size label: 'association-pair text batch'.
 	pairsByOop := Dictionary new.
 	aString asString lines do: [ :line |
 		line isEmpty ifFalse: [
@@ -202,6 +208,7 @@ GbsSessionMaterializationRemoteReader >> parseAssociationOopPairLines: aString [
 { #category : 'private' }
 GbsSessionMaterializationRemoteReader >> parseDictionaryAssociationOopPairLines: aString [
 	| pairsByOop |
+	self checkMaterializationBatchBytes: aString asString size label: 'dictionary-pair text batch'.
 	pairsByOop := Dictionary new.
 	aString asString lines do: [ :line |
 		line isEmpty ifFalse: [
@@ -234,6 +241,202 @@ GbsSessionMaterializationRemoteReader >> oopPairsFromFlatOops: oopArray [
 				oopArray at: (index * 2) - 1.
 				oopArray at: index * 2 } ].
 	^ pairs
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> checkMaterializationBatchBytes: byteCount label: aString [
+	^ session materializer checkMaterializationBatchBytes: byteCount label: aString
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> integerFromStructuredBatchSlotOop: anOop [
+	(session isImmediateOop: anOop) ifFalse: [
+		self error: 'Expected an immediate integer in a structured materialization batch.' ].
+	^ session resultFor: anOop
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> structuredBatchSlotsForBody: bodyString oopCollection: oopCollection [
+	| bufferOop slots |
+	self structuredBatchBuffersEnabled ifFalse: [
+		self error: 'Structured materialization batch buffers are disabled for this session.' ].
+	bufferOop := session
+		returnRemoteCommandBody: bodyString
+		literalBindings: (Dictionary new
+			at: 'oops' put: oopCollection asArray;
+			yourself)
+		oopBindings: Dictionary new.
+	slots := self rawArrayElementOopsForOop: bufferOop.
+	self incrementMaterializationMetric: #structuredBatchBufferFetchCalls.
+	self incrementMaterializationMetric: #structuredBatchBufferOopCount by: slots size.
+	^ slots
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> structuredBatchBuffersEnabled [
+	(session respondsTo: #supportsStructuredMaterializationBatchBuffers)
+		ifTrue: [ ^ session supportsStructuredMaterializationBatchBuffers ].
+	^ true
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> rawArrayElementOopsForOop: anOop [
+	| size buffer fetched oops |
+	size := (session serverInterface apiGciFetchSize: anOop) asInteger.
+	size = 0 ifTrue: [ ^ #() ].
+	self
+		checkMaterializationBatchBytes: size * 8
+		label: 'structured batch OOP buffer'.
+	buffer := ExternalAddress allocate: size * 8.
+	^ [
+		fetched := session serverInterface
+			apiGciFetchOops: anOop
+			startingAt: 1
+			into: buffer
+			size: size.
+		(fetched isCollection and: [ fetched isString not ])
+			ifTrue: [ fetched asArray ]
+			ifFalse: [
+				oops := Array new: size.
+				1 to: size do: [ :index |
+					oops
+						at: index
+						put: ((buffer
+							integerAt: 1 + ((index - 1) * 8)
+							size: 8
+							signed: false) asInteger) ].
+				oops ] ]
+		ensure: [ buffer free ]
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> classNameDictionaryFromStructuredSlots: slots forOops: oopCollection [
+	| classNames offset |
+	classNames := Dictionary new.
+	offset := 1.
+	oopCollection do: [ :oop |
+		| size value |
+		offset > slots size ifTrue: [ self error: 'Structured class-name batch ended early.' ].
+		size := self integerFromStructuredBatchSlotOop: (slots at: offset).
+		offset := offset + 1.
+		offset + size - 1 > slots size ifTrue: [ self error: 'Structured class-name batch is missing character codes.' ].
+		value := String streamContents: [ :stream |
+			1 to: size do: [ :index |
+				stream nextPut: (Character codePoint: (self integerFromStructuredBatchSlotOop: (slots at: offset))).
+				offset := offset + 1 ] ].
+		classNames at: oop put: value ].
+	offset = (slots size + 1) ifFalse: [ self error: 'Structured class-name batch has trailing data.' ].
+	^ classNames
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> arrayElementOopDictionaryFromStructuredSlots: slots forOops: oopCollection [
+	| elementOopsByOop offset |
+	elementOopsByOop := Dictionary new.
+	offset := 1.
+	oopCollection do: [ :oop |
+		| size elementOops |
+		offset > slots size ifTrue: [ self error: 'Structured array-element batch ended early.' ].
+		size := self integerFromStructuredBatchSlotOop: (slots at: offset).
+		offset := offset + 1.
+		offset + size - 1 > slots size ifTrue: [ self error: 'Structured array-element batch is missing element OOPs.' ].
+		elementOops := Array new: size.
+		1 to: size do: [ :index |
+			elementOops at: index put: (slots at: offset).
+			offset := offset + 1 ].
+		elementOopsByOop at: oop put: elementOops ].
+	offset = (slots size + 1) ifFalse: [ self error: 'Structured array-element batch has trailing data.' ].
+	^ elementOopsByOop
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> oopValueDictionaryFromStructuredSlots: slots forOops: oopCollection [
+	| valuesByOop |
+	slots size = oopCollection size ifFalse: [ self error: 'Structured OOP-value batch size mismatch.' ].
+	valuesByOop := Dictionary new.
+	oopCollection doWithIndex: [ :oop :index |
+		valuesByOop at: oop put: (slots at: index) ].
+	^ valuesByOop
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> associationOopPairDictionaryFromStructuredSlots: slots forOops: oopCollection [
+	| pairsByOop offset |
+	slots size = (oopCollection size * 2) ifFalse: [ self error: 'Structured association-pair batch size mismatch.' ].
+	pairsByOop := Dictionary new.
+	offset := 1.
+	oopCollection do: [ :oop |
+		pairsByOop
+			at: oop
+			put: {
+				slots at: offset.
+				slots at: offset + 1 }.
+		offset := offset + 2 ].
+	^ pairsByOop
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> dictionaryAssociationOopPairDictionaryFromStructuredSlots: slots forOops: oopCollection [
+	| pairsByOop offset |
+	pairsByOop := Dictionary new.
+	offset := 1.
+	oopCollection do: [ :oop |
+		| size pairs |
+		offset > slots size ifTrue: [ self error: 'Structured dictionary-pair batch ended early.' ].
+		size := self integerFromStructuredBatchSlotOop: (slots at: offset).
+		offset := offset + 1.
+		offset + (size * 2) - 1 > slots size ifTrue: [ self error: 'Structured dictionary-pair batch is missing key/value OOPs.' ].
+		pairs := Array new: size.
+		1 to: size do: [ :index |
+			pairs
+				at: index
+				put: {
+					slots at: offset.
+					slots at: offset + 1 }.
+			offset := offset + 2 ].
+		pairsByOop at: oop put: pairs ].
+	offset = (slots size + 1) ifFalse: [ self error: 'Structured dictionary-pair batch has trailing data.' ].
+	^ pairsByOop
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> stringValueDictionaryFromStructuredSlots: slots forOops: oopCollection [
+	| valuesByOop offset |
+	valuesByOop := Dictionary new.
+	offset := 1.
+	oopCollection do: [ :oop |
+		| size value |
+		offset > slots size ifTrue: [ self error: 'Structured string batch ended early.' ].
+		size := self integerFromStructuredBatchSlotOop: (slots at: offset).
+		offset := offset + 1.
+		offset + size - 1 > slots size ifTrue: [ self error: 'Structured string batch is missing character codes.' ].
+		value := String streamContents: [ :stream |
+			1 to: size do: [ :index |
+				stream nextPut: (Character codePoint: (self integerFromStructuredBatchSlotOop: (slots at: offset))).
+				offset := offset + 1 ] ].
+		valuesByOop at: oop put: value ].
+	offset = (slots size + 1) ifFalse: [ self error: 'Structured string batch has trailing data.' ].
+	^ valuesByOop
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> byteArrayValueDictionaryFromStructuredSlots: slots forOops: oopCollection [
+	| valuesByOop offset |
+	valuesByOop := Dictionary new.
+	offset := 1.
+	oopCollection do: [ :oop |
+		| size value |
+		offset > slots size ifTrue: [ self error: 'Structured byte-array batch ended early.' ].
+		size := self integerFromStructuredBatchSlotOop: (slots at: offset).
+		offset := offset + 1.
+		offset + size - 1 > slots size ifTrue: [ self error: 'Structured byte-array batch is missing byte values.' ].
+		value := ByteArray new: size.
+		1 to: size do: [ :index |
+			value at: index put: (self integerFromStructuredBatchSlotOop: (slots at: offset)).
+			offset := offset + 1 ].
+		valuesByOop at: oop put: value ].
+	offset = (slots size + 1) ifFalse: [ self error: 'Structured byte-array batch has trailing data.' ].
+	^ valuesByOop
 ]
 
 { #category : 'remote access' }
@@ -320,8 +523,32 @@ GbsSessionMaterializationRemoteReader >> remoteArrayElementOopsDictionaryForOops
 	fetched := self
 		recordMillisecondsForMetric: #frontierSlotFetchMs
 		during: [
-			self parseArrayElementOopLines: (session
-				fetchRemoteCommandBody: '| stream object |
+			[
+				self arrayElementOopDictionaryFromStructuredSlots: (self
+					structuredBatchSlotsForBody: '| sizes total buffer offset object |
+sizes := Array new: oops size.
+total := 0.
+1 to: oops size do: [ :oopIndex |
+	object := Object _objectForOop: (oops at: oopIndex).
+	sizes at: oopIndex put: object size.
+	total := total + object size + 1 ].
+buffer := Array new: total.
+offset := 1.
+1 to: oops size do: [ :oopIndex |
+	object := Object _objectForOop: (oops at: oopIndex).
+	buffer at: offset put: object size.
+	offset := offset + 1.
+	1 to: object size do: [ :index |
+		buffer at: offset put: (object at: index).
+		offset := offset + 1 ] ].
+buffer'
+					oopCollection: oopCollection)
+					forOops: oopCollection ]
+				on: Error
+				do: [
+					self incrementMaterializationMetric: #structuredBatchFallbacks.
+					self parseArrayElementOopLines: (session
+						fetchRemoteCommandBody: '| stream object |
 stream := WriteStream on: String new.
 oops do: [ :oop |
 	object := Object _objectForOop: oop.
@@ -335,11 +562,11 @@ oops do: [ :oop |
 			nextPutAll: (object at: index) asOop asString ].
 	stream nextPut: Character lf ].
 stream contents'
-				literalBindings: (Dictionary new
-					at: 'oops' put: oopCollection asArray;
-					yourself)
-				oopBindings: Dictionary new
-				context: 20) ].
+						literalBindings: (Dictionary new
+							at: 'oops' put: oopCollection asArray;
+							yourself)
+						oopBindings: Dictionary new
+						context: 20) ] ].
 	total := 0.
 	fetched valuesDo: [ :each | total := total + each size ].
 	self incrementMaterializationMetric: #frontierSlotBatchOopCount by: total.
@@ -465,8 +692,24 @@ GbsSessionMaterializationRemoteReader >> remoteAssociationOopPairDictionaryForOo
 	^ self
 		recordMillisecondsForMetric: #associationPairBatchMs
 		during: [
-			self parseAssociationOopPairLines: (session
-				fetchRemoteCommandBody: '| stream assoc |
+			[
+				self associationOopPairDictionaryFromStructuredSlots: (self
+					structuredBatchSlotsForBody: '| buffer offset assoc |
+buffer := Array new: oops size * 2.
+offset := 1.
+oops do: [ :oop |
+	assoc := Object _objectForOop: oop.
+	buffer at: offset put: assoc key.
+	buffer at: offset + 1 put: assoc value.
+	offset := offset + 2 ].
+buffer'
+					oopCollection: oopCollection)
+					forOops: oopCollection ]
+				on: Error
+				do: [
+					self incrementMaterializationMetric: #structuredBatchFallbacks.
+					self parseAssociationOopPairLines: (session
+						fetchRemoteCommandBody: '| stream assoc |
 stream := WriteStream on: String new.
 oops do: [ :oop |
 	assoc := Object _objectForOop: oop.
@@ -478,11 +721,11 @@ oops do: [ :oop |
 		nextPutAll: assoc value asOop asString;
 		nextPut: Character lf ].
 stream contents'
-				literalBindings: (Dictionary new
-					at: 'oops' put: oopCollection asArray;
-					yourself)
-				oopBindings: Dictionary new
-				context: 20) ]
+						literalBindings: (Dictionary new
+							at: 'oops' put: oopCollection asArray;
+							yourself)
+						oopBindings: Dictionary new
+						context: 20) ] ]
 ]
 
 { #category : 'remote access' }
@@ -577,8 +820,37 @@ GbsSessionMaterializationRemoteReader >> remoteClassNameDictionaryForOops: oopCo
 	^ self
 		recordMillisecondsForMetric: #classNameBatchMs
 		during: [
-			self parseClassNameLines: (session
-				fetchRemoteCommandBody: '| stream object |
+			[
+				self classNameDictionaryFromStructuredSlots: (self
+					structuredBatchSlotsForBody: '| sizes total buffer offset object text char code |
+sizes := Array new: oops size.
+total := 0.
+1 to: oops size do: [ :oopIndex |
+	object := Object _objectForOop: (oops at: oopIndex).
+	text := object class name asString.
+	sizes at: oopIndex put: text size.
+	total := total + text size + 1 ].
+buffer := Array new: total.
+offset := 1.
+1 to: oops size do: [ :oopIndex |
+	object := Object _objectForOop: (oops at: oopIndex).
+	text := object class name asString.
+	buffer at: offset put: text size.
+	offset := offset + 1.
+	1 to: text size do: [ :index |
+		char := text at: index.
+		code := [ char asInteger ] on: Error do: [
+			[ char codePoint ] on: Error do: [ char asciiValue ] ].
+		buffer at: offset put: code.
+		offset := offset + 1 ] ].
+buffer'
+					oopCollection: oopCollection)
+					forOops: oopCollection ]
+				on: Error
+				do: [
+					self incrementMaterializationMetric: #structuredBatchFallbacks.
+					self parseClassNameLines: (session
+						fetchRemoteCommandBody: '| stream object |
 stream := WriteStream on: String new.
 oops do: [ :oop |
 	object := Object _objectForOop: oop.
@@ -592,7 +864,7 @@ stream contents'
 					at: 'oops' put: oopCollection asArray;
 					yourself)
 				oopBindings: Dictionary new
-				context: 20) ]
+				context: 20) ] ]
 ]
 
 { #category : 'remote access' }
@@ -692,8 +964,21 @@ GbsSessionMaterializationRemoteReader >> remoteCollectionAsArrayOopDictionaryFor
 	^ self
 		recordMillisecondsForMetric: #collectionArrayBatchMs
 		during: [
-			self parseOopValueLines: (session
-				fetchRemoteCommandBody: '| stream object array |
+			[
+				self oopValueDictionaryFromStructuredSlots: (self
+					structuredBatchSlotsForBody: '| buffer object |
+buffer := Array new: oops size.
+1 to: oops size do: [ :oopIndex |
+	object := Object _objectForOop: (oops at: oopIndex).
+	buffer at: oopIndex put: object asArray ].
+buffer'
+					oopCollection: oopCollection)
+					forOops: oopCollection ]
+				on: Error
+				do: [
+					self incrementMaterializationMetric: #structuredBatchFallbacks.
+					self parseOopValueLines: (session
+						fetchRemoteCommandBody: '| stream object array |
 stream := WriteStream on: String new.
 oops do: [ :oop |
 	object := Object _objectForOop: oop.
@@ -708,7 +993,7 @@ stream contents'
 					at: 'oops' put: oopCollection asArray;
 					yourself)
 				oopBindings: Dictionary new
-				context: 20) ]
+				context: 20) ] ]
 ]
 
 { #category : 'remote access' }
@@ -821,8 +1106,33 @@ GbsSessionMaterializationRemoteReader >> remoteDictionaryAssociationOopPairDicti
 	fetched := self
 		recordMillisecondsForMetric: #dictionaryPairBatchMs
 		during: [
-			self parseDictionaryAssociationOopPairLines: (session
-				fetchRemoteCommandBody: '| stream object |
+			[
+				self dictionaryAssociationOopPairDictionaryFromStructuredSlots: (self
+					structuredBatchSlotsForBody: '| sizes total buffer offset object |
+sizes := Array new: oops size.
+total := 0.
+1 to: oops size do: [ :oopIndex |
+	object := Object _objectForOop: (oops at: oopIndex).
+	sizes at: oopIndex put: object size.
+	total := total + (object size * 2) + 1 ].
+buffer := Array new: total.
+offset := 1.
+1 to: oops size do: [ :oopIndex |
+	object := Object _objectForOop: (oops at: oopIndex).
+	buffer at: offset put: object size.
+	offset := offset + 1.
+	object associations do: [ :assoc |
+		buffer at: offset put: assoc key.
+		buffer at: offset + 1 put: assoc value.
+		offset := offset + 2 ] ].
+buffer'
+					oopCollection: oopCollection)
+					forOops: oopCollection ]
+				on: Error
+				do: [
+					self incrementMaterializationMetric: #structuredBatchFallbacks.
+					self parseDictionaryAssociationOopPairLines: (session
+						fetchRemoteCommandBody: '| stream object |
 stream := WriteStream on: String new.
 oops do: [ :oop |
 	object := Object _objectForOop: oop.
@@ -838,11 +1148,11 @@ oops do: [ :oop |
 			nextPutAll: assoc value asOop asString ].
 	stream nextPut: Character lf ].
 stream contents'
-				literalBindings: (Dictionary new
-					at: 'oops' put: oopCollection asArray;
-					yourself)
-				oopBindings: Dictionary new
-				context: 20) ].
+						literalBindings: (Dictionary new
+							at: 'oops' put: oopCollection asArray;
+							yourself)
+						oopBindings: Dictionary new
+						context: 20) ] ].
 	total := 0.
 	fetched valuesDo: [ :each | total := total + each size ].
 	self incrementMaterializationMetric: #dictionaryPairBatchPairCount by: total.
@@ -969,8 +1279,37 @@ GbsSessionMaterializationRemoteReader >> remoteStringValueDictionaryForOops: oop
 	^ self
 		recordMillisecondsForMetric: #scalarStringBatchMs
 		during: [
-			self parseStringValueLines: (session
-				fetchRemoteCommandBody: '| stream object text char code |
+			[
+				self stringValueDictionaryFromStructuredSlots: (self
+					structuredBatchSlotsForBody: '| sizes total buffer offset object text char code |
+sizes := Array new: oops size.
+total := 0.
+1 to: oops size do: [ :oopIndex |
+	object := Object _objectForOop: (oops at: oopIndex).
+	text := object asString.
+	sizes at: oopIndex put: text size.
+	total := total + text size + 1 ].
+buffer := Array new: total.
+offset := 1.
+1 to: oops size do: [ :oopIndex |
+	object := Object _objectForOop: (oops at: oopIndex).
+	text := object asString.
+	buffer at: offset put: text size.
+	offset := offset + 1.
+	1 to: text size do: [ :index |
+		char := text at: index.
+		code := [ char asInteger ] on: Error do: [
+			[ char codePoint ] on: Error do: [ char asciiValue ] ].
+		buffer at: offset put: code.
+		offset := offset + 1 ] ].
+buffer'
+					oopCollection: oopCollection)
+					forOops: oopCollection ]
+				on: Error
+				do: [
+					self incrementMaterializationMetric: #structuredBatchFallbacks.
+					self parseStringValueLines: (session
+						fetchRemoteCommandBody: '| stream object text char code |
 stream := WriteStream on: String new.
 oops do: [ :oop |
 	object := Object _objectForOop: oop.
@@ -988,11 +1327,11 @@ oops do: [ :oop |
 			nextPutAll: code asString ].
 	stream nextPut: Character lf ].
 stream contents'
-				literalBindings: (Dictionary new
-					at: 'oops' put: oopCollection asArray;
-					yourself)
-				oopBindings: Dictionary new
-				context: 20) ]
+						literalBindings: (Dictionary new
+							at: 'oops' put: oopCollection asArray;
+							yourself)
+						oopBindings: Dictionary new
+						context: 20) ] ]
 ]
 
 { #category : 'remote access' }
@@ -1050,8 +1389,32 @@ GbsSessionMaterializationRemoteReader >> remoteByteArrayValueDictionaryForOops: 
 	^ self
 		recordMillisecondsForMetric: #scalarByteArrayBatchMs
 		during: [
-			self parseByteArrayValueLines: (session
-				fetchRemoteCommandBody: '| stream object |
+			[
+				self byteArrayValueDictionaryFromStructuredSlots: (self
+					structuredBatchSlotsForBody: '| sizes total buffer offset object |
+sizes := Array new: oops size.
+total := 0.
+1 to: oops size do: [ :oopIndex |
+	object := Object _objectForOop: (oops at: oopIndex).
+	sizes at: oopIndex put: object size.
+	total := total + object size + 1 ].
+buffer := Array new: total.
+offset := 1.
+1 to: oops size do: [ :oopIndex |
+	object := Object _objectForOop: (oops at: oopIndex).
+	buffer at: offset put: object size.
+	offset := offset + 1.
+	1 to: object size do: [ :index |
+		buffer at: offset put: (object at: index) asInteger.
+		offset := offset + 1 ] ].
+buffer'
+					oopCollection: oopCollection)
+					forOops: oopCollection ]
+				on: Error
+				do: [
+					self incrementMaterializationMetric: #structuredBatchFallbacks.
+					self parseByteArrayValueLines: (session
+						fetchRemoteCommandBody: '| stream object |
 stream := WriteStream on: String new.
 oops do: [ :oop |
 	object := Object _objectForOop: oop.
@@ -1065,11 +1428,11 @@ oops do: [ :oop |
 			nextPutAll: (object at: index) asInteger asString ].
 	stream nextPut: Character lf ].
 stream contents'
-				literalBindings: (Dictionary new
-					at: 'oops' put: oopCollection asArray;
-					yourself)
-				oopBindings: Dictionary new
-				context: 20) ]
+						literalBindings: (Dictionary new
+							at: 'oops' put: oopCollection asArray;
+							yourself)
+						oopBindings: Dictionary new
+						context: 20) ] ]
 ]
 
 { #category : 'remote access' }

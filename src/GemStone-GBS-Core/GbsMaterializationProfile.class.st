@@ -14,46 +14,15 @@ GbsMaterializationProfile >> materializeCollectionClassNamed: className oop: anO
 			depth: anInteger
 			seen: seenOops ].
 	className = 'OrderedCollection' ifTrue: [
-		^ aSession
-			materializeSequenceableCollectionOop: anOop
-			using: [ :items | items asOrderedCollection ]
-			withProfile: (self nestedProfileForDepth: anInteger)
-			depth: anInteger
-			seen: seenOops ].
+		^ self materializeSequenceableCollectionClassNamed: className oop: anOop inSession: aSession depth: anInteger seen: seenOops ].
 	className = 'SortedCollection' ifTrue: [
-		^ aSession
-			materializeSequenceableCollectionOop: anOop
-			using: [ :items | items asSortedCollection ]
-			withProfile: (self nestedProfileForDepth: anInteger)
-			depth: anInteger
-			seen: seenOops ].
+		^ self materializeSequenceableCollectionClassNamed: className oop: anOop inSession: aSession depth: anInteger seen: seenOops ].
 	className = 'Bag' ifTrue: [
-		^ aSession
-			materializeSequenceableCollectionOop: anOop
-			using: [ :items | | bag |
-				bag := Bag new.
-				items do: [ :each | bag add: each ].
-				bag ]
-			withProfile: (self nestedProfileForDepth: anInteger)
-			depth: anInteger
-			seen: seenOops ].
+		^ self materializeSequenceableCollectionClassNamed: className oop: anOop inSession: aSession depth: anInteger seen: seenOops ].
 	className = 'Set' ifTrue: [
-		^ aSession
-			materializeSequenceableCollectionOop: anOop
-			using: [ :items | items asSet ]
-			withProfile: (self nestedProfileForDepth: anInteger)
-			depth: anInteger
-			seen: seenOops ].
+		^ self materializeSequenceableCollectionClassNamed: className oop: anOop inSession: aSession depth: anInteger seen: seenOops ].
 	className = 'IdentitySet' ifTrue: [
-		^ aSession
-			materializeSequenceableCollectionOop: anOop
-			using: [ :items | | set |
-				set := IdentitySet new.
-				items do: [ :each | set add: each ].
-				set ]
-			withProfile: (self nestedProfileForDepth: anInteger)
-			depth: anInteger
-			seen: seenOops ].
+		^ self materializeSequenceableCollectionClassNamed: className oop: anOop inSession: aSession depth: anInteger seen: seenOops ].
 	className = 'Dictionary' ifTrue: [
 		^ aSession
 			materializeDictionaryOop: anOop
@@ -75,6 +44,19 @@ GbsMaterializationProfile >> materializeCollectionClassNamed: className oop: anO
 			depth: anInteger
 			seen: seenOops ].
 	^ aSession proxyForOop: anOop serverClassName: className
+]
+
+{ #category : 'materialization' }
+GbsMaterializationProfile >> materializeSequenceableCollectionClassNamed: className oop: anOop inSession: aSession depth: anInteger seen: seenOops [
+	^ (aSession materializer
+		materializeSequenceableCollectionOops: { anOop }
+		classNames: (Dictionary new
+			at: anOop put: className;
+			yourself)
+		withProfile: (self nestedProfileForDepth: anInteger)
+		depth: anInteger
+		seen: seenOops)
+			at: anOop
 ]
 
 { #category : 'materialization' }

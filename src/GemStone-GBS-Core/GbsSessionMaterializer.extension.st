@@ -16,18 +16,72 @@ GbsSessionMaterializer >> incrementMaterializationMetric: aSymbol by: anInteger 
 
 { #category : 'metrics' }
 GbsSessionMaterializer >> materializationBatchSize [
+	| batchSize |
+	batchSize := self
+		materializationLimitFromGlobal: #GbsMaterializationBatchSize
+		environmentName: 'GBS_MATERIALIZATION_BATCH_SIZE'
+		default: 1000.
+	^ batchSize <= 0 ifTrue: [ 1000 ] ifFalse: [ batchSize ]
+]
+
+{ #category : 'metrics' }
+GbsSessionMaterializer >> materializationLimitFromGlobal: globalSymbol environmentName: environmentName default: defaultValue [
 	| raw value env |
 	raw := Smalltalk globals
-		at: #GbsMaterializationBatchSize
+		at: globalSymbol
 		ifAbsent: [
 			env := [ Smalltalk os environment ]
 				on: Error
 				do: [ Dictionary new ].
-			env at: 'GBS_MATERIALIZATION_BATCH_SIZE' ifAbsent: [ 1000 ] ].
+			env at: environmentName ifAbsent: [ defaultValue ] ].
 	value := [ raw asInteger ]
 		on: Error
-		do: [ 1000 ].
-	^ value <= 0 ifTrue: [ 1000 ] ifFalse: [ value ]
+		do: [ defaultValue ].
+	^ value < 0 ifTrue: [ defaultValue ] ifFalse: [ value ]
+]
+
+{ #category : 'limits' }
+GbsSessionMaterializer >> materializationMaxBatchBytes [
+	^ self
+		materializationLimitFromGlobal: #GbsMaterializationMaxBatchBytes
+		environmentName: 'GBS_MATERIALIZATION_MAX_BATCH_BYTES'
+		default: 0
+]
+
+{ #category : 'limits' }
+GbsSessionMaterializer >> materializationMaxDepth [
+	^ self
+		materializationLimitFromGlobal: #GbsMaterializationMaxDepth
+		environmentName: 'GBS_MATERIALIZATION_MAX_DEPTH'
+		default: 0
+]
+
+{ #category : 'limits' }
+GbsSessionMaterializer >> materializationMaxObjects [
+	^ self
+		materializationLimitFromGlobal: #GbsMaterializationMaxObjects
+		environmentName: 'GBS_MATERIALIZATION_MAX_OBJECTS'
+		default: 0
+]
+
+{ #category : 'limits' }
+GbsSessionMaterializer >> checkMaterializationBatchBytes: byteCount label: aString [
+	| maxBytes |
+	maxBytes := self materializationMaxBatchBytes.
+	(maxBytes > 0 and: [ byteCount > maxBytes ]) ifTrue: [
+		self error: 'Materialization batch "', aString asString, '" is ', byteCount asString,
+			' bytes, exceeding GBS_MATERIALIZATION_MAX_BATCH_BYTES=', maxBytes asString ].
+	^ byteCount
+]
+
+{ #category : 'limits' }
+GbsSessionMaterializer >> checkMaterializationDepth: anInteger [
+	| maxDepth |
+	maxDepth := self materializationMaxDepth.
+	(maxDepth > 0 and: [ anInteger > maxDepth ]) ifTrue: [
+		self error: 'Materialization depth ', anInteger asString,
+			' exceeds GBS_MATERIALIZATION_MAX_DEPTH=', maxDepth asString ].
+	^ anInteger
 ]
 
 { #category : 'metrics' }
@@ -72,7 +126,14 @@ GbsSessionMaterializer >> materializedObjectForOop: anOop ifPresent: aBlock [
 
 { #category : 'cache' }
 GbsSessionMaterializer >> rememberMaterializedObject: anObject forOop: anOop [
-	self materializedObjectCache at: anOop put: anObject.
+	| cache maxObjects |
+	cache := self materializedObjectCache.
+	(cache includesKey: anOop) ifFalse: [
+		maxObjects := self materializationMaxObjects.
+		(maxObjects > 0 and: [ cache size + 1 > maxObjects ]) ifTrue: [
+			self error: 'Materialization object count ', (cache size + 1) asString,
+				' exceeds GBS_MATERIALIZATION_MAX_OBJECTS=', maxObjects asString ] ].
+	cache at: anOop put: anObject.
 	^ anObject
 ]
 
@@ -110,6 +171,22 @@ GbsSessionMaterializer >> materializeSequenceableItems: items className: classNa
 		items do: [ :each | set add: each ].
 		^ set ].
 	^ items
+]
+
+{ #category : 'materializing' }
+GbsSessionMaterializer >> emptySequenceableCollectionForClassNamed: className [
+	className = 'OrderedCollection' ifTrue: [ ^ OrderedCollection new ].
+	className = 'SortedCollection' ifTrue: [ ^ SortedCollection new ].
+	className = 'Bag' ifTrue: [ ^ Bag new ].
+	className = 'Set' ifTrue: [ ^ Set new ].
+	className = 'IdentitySet' ifTrue: [ ^ IdentitySet new ].
+	^ OrderedCollection new
+]
+
+{ #category : 'materializing' }
+GbsSessionMaterializer >> fillSequenceableCollection: aCollection withItems: items className: className [
+	items do: [ :each | aCollection add: each ].
+	^ aCollection
 ]
 
 { #category : 'materializing' }
@@ -222,16 +299,19 @@ GbsSessionMaterializer >> materializeSequenceableCollectionOops: oopCollection c
 	flatElementOops := OrderedCollection new.
 	spans := Dictionary new.
 	oopCollection do: [ :oop |
-		| arrayOop elementOops start |
+		| arrayOop elementOops start className materialized |
 		arrayOop := arrayOopsByOop
 			at: oop
 			ifAbsent: [ self remoteCollectionAsArrayOop: oop ].
 		elementOops := elementOopsByArrayOop
 			at: arrayOop
 			ifAbsent: [ self remoteArrayElementOopsForOop: arrayOop ].
+		className := classNames at: oop.
+		materialized := self emptySequenceableCollectionForClassNamed: className.
+		self rememberMaterializedObject: materialized forOop: oop.
 		seenOops add: oop.
 		start := flatElementOops size + 1.
-		spans at: oop put: { start. elementOops size }.
+		spans at: oop put: { start. elementOops size. materialized. className }.
 		flatElementOops addAll: elementOops ].
 	materializedFlat := flatElementOops isEmpty
 		ifTrue: [ #() ]
@@ -251,12 +331,46 @@ GbsSessionMaterializer >> materializeSequenceableCollectionOops: oopCollection c
 			items
 				at: elementIndex
 				put: (materializedFlat at: span first + elementIndex - 1) ].
-		materialized := self
-			materializeSequenceableItems: items
-			className: (classNames at: oop).
-		self rememberMaterializedObject: materialized forOop: oop.
+		materialized := span third.
+		self
+			fillSequenceableCollection: materialized
+			withItems: items
+			className: span fourth.
 		materializedByOop at: oop put: materialized ].
 	^ materializedByOop
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializer >> clearTypedWrapperClassCache [
+	(session class weakRegistryNamed: #GbsSessionTypedWrapperClassCaches)
+		at: session
+		put: Dictionary new.
+	^ self typedWrapperClassCache
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializer >> typedWrapperClassCache [
+	^ (session class weakRegistryNamed: #GbsSessionTypedWrapperClassCaches)
+		at: session
+		ifAbsentPut: [ Dictionary new ]
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializer >> typedWrapperClassForServerClassName: className [
+	| cache wrapperClass |
+	cache := self typedWrapperClassCache.
+	(cache includesKey: className) ifTrue: [
+		self incrementMaterializationMetric: #wrapperCacheHits.
+		^ cache at: className ].
+	self incrementMaterializationMetric: #wrapperLookupCalls.
+	wrapperClass := self
+		recordMillisecondsForMetric: #wrapperLookupMs
+		during: [
+			GbsSessionManager
+				typedWrapperClassForServerClassNamed: className
+				forSession: session ].
+	cache at: className put: wrapperClass.
+	^ wrapperClass
 ]
 
 { #category : 'materializing' }

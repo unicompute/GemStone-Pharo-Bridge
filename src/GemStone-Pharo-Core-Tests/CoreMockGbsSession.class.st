@@ -237,6 +237,11 @@ CoreMockGbsSession >> serverInterface [
 	^ self
 ]
 
+{ #category : 'materialization' }
+CoreMockGbsSession >> supportsStructuredMaterializationBatchBuffers [
+	^ self stubs at: #supportsStructuredMaterializationBatchBuffers ifAbsent: [ false ]
+]
+
 { #category : 'accessing' }
 CoreMockGbsSession >> stubs [
 	^ stubs ifNil: [ stubs := Dictionary new ]

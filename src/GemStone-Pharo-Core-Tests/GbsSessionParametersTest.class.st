@@ -155,6 +155,69 @@ GbsSessionParametersTest >> testExportDictionaryIncludingSecretsIncludesPassword
 ]
 
 { #category : 'tests' }
+GbsSessionParametersTest >> testRememberedSecretsCanRoundTripThroughKeychainStore [
+	| previousStore store params |
+	previousStore := Smalltalk globals
+		at: #GbsSessionParametersKeychainStore
+		ifAbsent: [ nil ].
+	store := Dictionary new.
+	[
+		Smalltalk globals at: #GbsSessionParametersKeychainStore put: store.
+		params := GbsSessionParameters new.
+		params
+			name: 'Production';
+			gemStoneName: 'gs64stone';
+			username: 'DataCurator';
+			gsRemember: true;
+			password: 'gs-secret';
+			hostUsername: 'host-user';
+			hostRemember: true;
+			hostPassword: 'host-secret'.
+
+		params storeRememberedSecretsInKeychain.
+
+		self assert: params password isNil.
+		self assert: params hostPassword isNil.
+		self assert: store size equals: 2.
+
+		params restoreRememberedSecretsFromKeychain.
+
+		self assert: params password equals: 'gs-secret'.
+		self assert: params hostPassword equals: 'host-secret'
+	] ensure: [
+		previousStore
+			ifNil: [ Smalltalk globals removeKey: #GbsSessionParametersKeychainStore ifAbsent: [ ] ]
+			ifNotNil: [ Smalltalk globals at: #GbsSessionParametersKeychainStore put: previousStore ] ]
+]
+
+{ #category : 'tests' }
+GbsSessionParametersTest >> testSecretExportRestoresRememberedSecretsFromKeychainStore [
+	| previousStore store params exported |
+	previousStore := Smalltalk globals
+		at: #GbsSessionParametersKeychainStore
+		ifAbsent: [ nil ].
+	store := Dictionary new.
+	[
+		Smalltalk globals at: #GbsSessionParametersKeychainStore put: store.
+		params := GbsSessionParameters new.
+		params
+			name: 'Production';
+			gemStoneName: 'gs64stone';
+			username: 'DataCurator';
+			gsRemember: true;
+			password: 'gs-secret'.
+		params storeRememberedSecretsInKeychain.
+
+		exported := params exportDictionaryIncludingSecrets: true.
+
+		self assert: (exported at: 'password') equals: 'gs-secret'
+	] ensure: [
+		previousStore
+			ifNil: [ Smalltalk globals removeKey: #GbsSessionParametersKeychainStore ifAbsent: [ ] ]
+			ifNotNil: [ Smalltalk globals at: #GbsSessionParametersKeychainStore put: previousStore ] ]
+]
+
+{ #category : 'tests' }
 GbsSessionParametersTest >> testExportDictionaryNormalizesFieldsAndOmitsSessionId [
 	| params exported |
 	params := GbsSessionParameters new.
