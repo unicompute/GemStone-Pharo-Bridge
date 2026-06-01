@@ -108,6 +108,81 @@ gbs_register_work_image_cleanup() {
   trap gbs_cleanup_registered_work_images EXIT
 }
 
+gbs_file_size_bytes() {
+  local file="${1:-}"
+  if [[ -z "${file}" || ! -f "${file}" ]]; then
+    printf '0\n'
+    return 0
+  fi
+  stat -f '%z' "${file}" 2>/dev/null || stat -c '%s' "${file}" 2>/dev/null || wc -c < "${file}"
+}
+
+gbs_available_bytes_for_dir() {
+  local dir="${1:-.}"
+  mkdir -p "${dir}"
+  df -Pk "${dir}" | awk 'NR == 2 { printf "%.0f\n", $4 * 1024 }'
+}
+
+gbs_human_bytes() {
+  local bytes="${1:-0}"
+  awk -v bytes="${bytes}" 'BEGIN {
+    split("B KiB MiB GiB TiB", units, " ");
+    value = bytes + 0;
+    unit = 1;
+    while (value >= 1024 && unit < 5) {
+      value = value / 1024;
+      unit++;
+    }
+    printf "%.1f %s", value, units[unit];
+  }'
+}
+
+gbs_prepare_work_image_preflight() {
+  local src_image="$1"
+  local work_dir="$2"
+  local src_dir src_changes source_file src_dir_real work_dir_real
+  local image_size changes_size sources_size required margin available
+
+  if [[ ! -f "${src_image}" ]]; then
+    echo "Pharo source image does not exist: ${src_image}" >&2
+    return 1
+  fi
+
+  src_dir="$(dirname "${src_image}")"
+  src_changes="${src_image%.image}.changes"
+  image_size="$(gbs_file_size_bytes "${src_image}")"
+  changes_size="$(gbs_file_size_bytes "${src_changes}")"
+  sources_size=0
+  src_dir_real="$(cd "${src_dir}" && pwd -P)"
+  work_dir_real="$(cd "${work_dir}" && pwd -P)"
+  if [[ "${src_dir_real}" != "${work_dir_real}" ]]; then
+    for source_file in "${src_dir}"/Pharo*.sources; do
+      [[ -f "${source_file}" ]] || continue
+      sources_size=$((sources_size + $(gbs_file_size_bytes "${source_file}")))
+    done
+  fi
+  margin="${GBS_WORK_IMAGE_MIN_FREE_BYTES:-268435456}"
+  required=$((image_size + changes_size + sources_size + margin))
+  available="$(gbs_available_bytes_for_dir "${work_dir}")"
+
+  if (( available < required )); then
+    {
+      echo "Not enough free disk space to prepare the Pharo work image."
+      echo "  work dir: ${work_dir}"
+      echo "  available: $(gbs_human_bytes "${available}")"
+      echo "  required:  $(gbs_human_bytes "${required}")"
+      echo "  image:     $(gbs_human_bytes "${image_size}") ${src_image}"
+      if [[ -f "${src_changes}" ]]; then
+        echo "  changes:   $(gbs_human_bytes "${changes_size}") ${src_changes}"
+      fi
+      echo "  sources:   $(gbs_human_bytes "${sources_size}")"
+      echo "  margin:    $(gbs_human_bytes "${margin}")"
+      echo "Free space, reduce the source .changes file, choose another PHARO_WORK_DIR, or set GBS_WORK_IMAGE_MIN_FREE_BYTES for this lane."
+    } >&2
+    return 1
+  fi
+}
+
 gbs_prepare_work_image() {
   local src_image="$1"
   local work_dir="$2"
@@ -121,6 +196,7 @@ gbs_prepare_work_image() {
   work_changes="${work_image%.image}.changes"
 
   mkdir -p "${work_dir}"
+  gbs_prepare_work_image_preflight "${src_image}" "${work_dir}"
   mkdir -p "${work_dir}/pharo-local/ombu-sessions"
   mkdir -p /tmp/pharo-clean-auto/home
   cp -f "${src_image}" "${work_image}"

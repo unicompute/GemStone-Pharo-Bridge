@@ -2,6 +2,8 @@
 
 This guide keeps only the minimal hand-written entry context. The lane descriptions, guard list, and artifact references below are generated from `GemStonePharoContract`.
 
+Materialization benchmark operations, metrics, batch tuning, and trend artifacts are documented in [MATERIALIZATION-OPERATIONS.md](./MATERIALIZATION-OPERATIONS.md).
+
 <!-- BEGIN GENERATED:TESTING-BODY -->
 This section is generated from `GemStonePharoContract`.
 

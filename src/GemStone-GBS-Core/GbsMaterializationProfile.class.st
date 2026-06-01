@@ -81,6 +81,7 @@ GbsMaterializationProfile >> materializeCollectionClassNamed: className oop: anO
 GbsMaterializationProfile >> materializeOop: anOop inSession: aSession depth: anInteger seen: seenOops [
 	| className |
 	(aSession isImmediateOop: anOop) ifTrue: [ ^ aSession resultFor: anOop ].
+	aSession materializedObjectForOop: anOop ifPresent: [ :object | ^ object ].
 	(seenOops includes: anOop) ifTrue: [ ^ aSession proxyForOop: anOop ].
 	className := aSession remoteClassNameForOop: anOop.
 	(self shouldMaterializeScalarClassNamed: className) ifTrue: [

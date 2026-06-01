@@ -121,6 +121,12 @@ GBSM class >> typedWrapperLifecycleReportText [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GBSM class >> typedWrapperCompatibilityReportText [
+	^ GbsSessionManager
+		typedWrapperCompatibilityReportTextForSession: self currentSession
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GBSM class >> invalidateStaleTypedWrapperClasses [
 	^ GbsSessionManager
 		invalidateStaleTypedWrapperClassesForSession: self currentSession

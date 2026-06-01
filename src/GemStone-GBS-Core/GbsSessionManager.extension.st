@@ -313,6 +313,71 @@ GbsSessionManager class >> typedWrapperLifecycleReportTextForSession: aSession [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSessionManager class >> typedWrapperCompatibilityEntriesForSession: aSession [
+	^ (self typedWrapperLifecycleObjectsForSession: aSession collect: [ :entry |
+		| cachedDecision reason |
+		cachedDecision := self
+			typedWrapperFreshnessDecisionFor: entry wrapperClass
+			server: entry serverName
+			session: aSession.
+		reason := self
+			typedWrapperCompatibilityReasonForEntry: entry
+			cachedDecision: cachedDecision.
+		{
+			entry wrapperName.
+			entry serverName.
+			entry remoteVersionString.
+			cachedDecision ifNil: [ 'uncached' ] ifNotNil: [ cachedDecision asString ].
+			entry status asString.
+			reason
+		} ]) asArray sort: [ :a :b |
+			(a second = b second)
+				ifTrue: [ a first <= b first ]
+				ifFalse: [ a second <= b second ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSessionManager class >> typedWrapperCompatibilityReasonForEntry: anEntry cachedDecision: cachedDecision [
+	anEntry source ~= 'remote' ifTrue: [ ^ 'client generated wrapper' ].
+	anEntry status = #missingRemote ifTrue: [ ^ 'remote class unavailable' ].
+	cachedDecision = true ifTrue: [ ^ 'server version differs' ].
+	cachedDecision = false ifTrue: [ ^ 'cached current decision' ].
+	anEntry localVersion ifNil: [ ^ 'local metadata missing' ].
+	^ anEntry status asString
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSessionManager class >> typedWrapperCompatibilityReportText [
+	^ self typedWrapperCompatibilityReportTextForSession: GbsSessionParameters currentSession
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSessionManager class >> typedWrapperCompatibilityReportTextForSession: aSession [
+	| entries |
+	entries := self typedWrapperCompatibilityEntriesForSession: aSession.
+	^ String streamContents: [ :stream |
+		stream nextPutAll: 'Typed Wrapper Compatibility'; cr; cr.
+		stream
+			nextPutAll: 'Wrapper'; tab;
+			nextPutAll: 'Server'; tab;
+			nextPutAll: 'Server Version'; tab;
+			nextPutAll: 'Cached Freshness'; tab;
+			nextPutAll: 'Status'; tab;
+			nextPutAll: 'Invalidation Reason'; cr.
+		entries
+			ifEmpty: [ stream nextPutAll: 'No typed wrappers generated.'; cr ]
+			ifNotEmpty: [
+				entries do: [ :each |
+					stream
+						nextPutAll: (each at: 1); tab;
+						nextPutAll: (each at: 2); tab;
+						nextPutAll: (each at: 3); tab;
+						nextPutAll: (each at: 4); tab;
+						nextPutAll: (each at: 5); tab;
+						nextPutAll: (each at: 6); cr ] ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSessionManager class >> typedWrapperLifecycleObjectsForSession: aSession [
 	^ (self typedWrapperClasses collect: [ :wrapperClass |
 		| remoteMirror status |
@@ -736,15 +801,7 @@ GbsSessionManager class >> shouldRefreshTypedWrapperClass: wrapperClass server: 
 	(wrapperClass respondsTo: #generatedForwardingSource) ifFalse: [ ^ false ].
 	wrapperClass generatedForwardingSource ~= #remote ifTrue: [ ^ true ].
 	cache := self typedWrapperFreshnessCacheForSession: aSession.
-	cacheKey := {
-		wrapperClass name.
-		serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
-		(wrapperClass respondsTo: #serverBehaviorVersion)
-			ifTrue: [ wrapperClass serverBehaviorVersion ]
-			ifFalse: [ nil ].
-		(wrapperClass respondsTo: #serverBehaviorNumberOfVersions)
-			ifTrue: [ wrapperClass serverBehaviorNumberOfVersions ]
-			ifFalse: [ nil ] }.
+	cacheKey := self typedWrapperFreshnessCacheKeyFor: wrapperClass server: serverClassName.
 	(cache includesKey: cacheKey) ifTrue: [ ^ cache at: cacheKey ].
 	remoteMirror := [ aSession classMirrorOfNamed: serverClassName ]
 		on: Error
@@ -841,6 +898,28 @@ GbsSessionManager class >> typedWrapperFreshnessCacheForSession: aSession [
 	^ (aSession class weakRegistryNamed: #GbsSessionTypedWrapperFreshnessCaches)
 		at: aSession
 		ifAbsentPut: [ Dictionary new ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSessionManager class >> typedWrapperFreshnessCacheKeyFor: wrapperClass server: serverClassName [
+	^ {
+		wrapperClass name.
+		serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+		(wrapperClass respondsTo: #serverBehaviorVersion)
+			ifTrue: [ wrapperClass serverBehaviorVersion ]
+			ifFalse: [ nil ].
+		(wrapperClass respondsTo: #serverBehaviorNumberOfVersions)
+			ifTrue: [ wrapperClass serverBehaviorNumberOfVersions ]
+			ifFalse: [ nil ] }
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSessionManager class >> typedWrapperFreshnessDecisionFor: wrapperClass server: serverClassName session: aSession [
+	| cache cacheKey |
+	aSession ifNil: [ ^ nil ].
+	cache := self typedWrapperFreshnessCacheForSession: aSession.
+	cacheKey := self typedWrapperFreshnessCacheKeyFor: wrapperClass server: serverClassName.
+	^ cache at: cacheKey ifAbsent: [ nil ]
 ]
 
 { #category : '*GemStone-GBS-Core' }

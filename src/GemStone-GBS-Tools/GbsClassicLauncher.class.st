@@ -1304,21 +1304,15 @@ GbsClassicLauncher >> doAbort [
 
 { #category : 'actions' }
 GbsClassicLauncher >> doAddParameter [
-	| newParam editor window |
+	| newParam |
 	newParam := GbsSessionParameters new.
 	newParam name: (GbsSessionParameters uniqueNameFor: newParam name excluding: nil).
-	editor := GbsSessionParametersEditor new.
-	editor setModel: newParam.
-	
-	"Pass the save action to the editor"
-	editor onAccept: [ 
+	self
+		openParameterEditorOn: newParam
+		accept: [
 		GbsSessionParameters addParameter: newParam.
 		self refreshAllSelectingParameter: newParam.
 	].
-	
-	"Open as a standard window (No double buttons)"
-	window := editor open.
-	window centered.
 ]
 
 { #category : 'actions' }
@@ -1344,6 +1338,11 @@ GbsClassicLauncher >> doCommit [
 			ifTrue: [ self inform: 'GemStone: Commit Successful!' ]
 			ifFalse: [ self inform: 'GemStone: Commit Failed (Conflict)!' ]
 	].
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> confirmSecretExport [
+	^ UIManager default confirm: 'Export stored GemStone and host passwords in this file?'
 ]
 
 { #category : 'actions' }
@@ -1381,16 +1380,11 @@ GbsClassicLauncher >> doDeleteParameter [
 { #category : 'actions' }
 GbsClassicLauncher >> doEditParameter [
 	self selectedParameter ifNotNil: [ :param |
-		| editor window |
-		editor := GbsSessionParametersEditor new.
-		editor setModel: param.
-		
-		editor onAccept: [ 
+		self
+			openParameterEditorOn: param
+			accept: [
 			self refreshAllSelectingParameter: param.
 		].
-		
-		window := editor open.
-		window centered.
 		^ true ].
 	self inform: 'Please select a configuration first.'.
 	^ false
@@ -1407,6 +1401,21 @@ GbsClassicLauncher >> doExportParameters [
 		^ true
 	] on: Error do: [ :ex |
 		self inform: 'Export session parameters failed: ', ex messageText.
+		^ false ]
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> doExportParametersIncludingSecrets [
+	| file count |
+	(self confirmSecretExport) ifFalse: [ ^ false ].
+	file := self requestParameterExportFile.
+	file ifNil: [ ^ false ].
+	[
+		count := self exportSessionParametersToFile: file includingSecrets: true.
+		self inform: 'Exported ', count asString, ' session parameter configuration(s) including stored secrets.'.
+		^ true
+	] on: Error do: [ :ex |
+		self inform: 'Export session parameters with secrets failed: ', ex messageText.
 		^ false ]
 ]
 
@@ -1456,6 +1465,11 @@ GbsClassicLauncher >> doLoginRpc [
 
 { #category : 'actions' }
 GbsClassicLauncher >> exportSessionParametersToFile: aFileReference [
+	^ self exportSessionParametersToFile: aFileReference includingSecrets: false
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> exportSessionParametersToFile: aFileReference includingSecrets: includeSecrets [
 	| file count |
 	file := aFileReference asFileReference.
 	GbsSessionParameters allParameters do: [ :each | each validateForStorage ].
@@ -1464,7 +1478,7 @@ GbsClassicLauncher >> exportSessionParametersToFile: aFileReference [
 		file parent ensureCreateDirectory ].
 	file ensureDelete.
 	file writeStreamDo: [ :stream |
-		stream nextPutAll: GbsSessionParameters exportAllParametersString ].
+		stream nextPutAll: (GbsSessionParameters exportAllParametersStringIncludingSecrets: includeSecrets) ].
 	^ count
 ]
 
@@ -1862,6 +1876,17 @@ GbsClassicLauncher >> requestSymbolDictionaryName [
 	^ UIManager default
 		request: 'Symbol Dictionary name (optional):'
 		initialAnswer: ''
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> openParameterEditorOn: aParameter accept: acceptBlock [
+	| editor window |
+	editor := GbsSessionParametersEditor new.
+	editor setModel: aParameter.
+	editor onAccept: acceptBlock.
+	window := editor open.
+	window centered.
+	^ editor
 ]
 
 { #category : 'private' }

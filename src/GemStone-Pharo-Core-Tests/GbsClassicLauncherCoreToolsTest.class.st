@@ -326,6 +326,26 @@ GbsClassicLauncherCoreToolsTest >> testSessionParametersEditorDoesNotDisplayOrRe
 ]
 
 { #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testSessionParametersEditorDetectsUnsavedChanges [
+	| params editor nameField |
+	params := GbsSessionParameters new.
+	params
+		name: 'Production';
+		username: 'DataCurator'.
+	editor := GbsSessionParametersEditor new.
+	editor setModel: params.
+
+	self deny: editor hasUnsavedChanges.
+
+	nameField := editor instVarNamed: 'nameField'.
+	nameField text: 'Production Copy'.
+
+	self assert: editor hasUnsavedChanges.
+	editor updateModel.
+	self deny: editor hasUnsavedChanges
+]
+
+{ #category : 'tests' }
 GbsClassicLauncherCoreToolsTest >> testSessionParametersEditorValidationReportsDuplicateConfigurationName [
 	| previous existing params editor message |
 	previous := GbsSessionParameters allParameters copy.
@@ -348,6 +368,227 @@ GbsClassicLauncherCoreToolsTest >> testSessionParametersEditorValidationReportsD
 
 		self assert: (message includesSubstring: 'already exists')
 	] ensure: [
+		GbsSessionParameters allParameters
+			removeAll;
+			addAll: previous ]
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testDoAddParameterAcceptAddsRefreshesAndSelectsNewConfiguration [
+	| previous added |
+	previous := GbsSessionParameters allParameters copy.
+	[
+		GbsSessionParameters allParameters removeAll.
+
+		launcher doAddParameter.
+		added := launcher lastEditorModel.
+		added username: 'DataCurator'.
+		self assert: GbsSessionParameters allParameters isEmpty.
+
+		launcher acceptLastParameterEditor.
+
+		self assert: GbsSessionParameters allParameters size equals: 1.
+		self assert: GbsSessionParameters allParameters first == added.
+		self assert: launcher lastSelectedParameter == added
+	] ensure: [
+		GbsSessionParameters allParameters
+			removeAll;
+			addAll: previous ]
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testDoEditParameterAcceptRefreshesAndKeepsSelection [
+	| previous params |
+	previous := GbsSessionParameters allParameters copy.
+	[
+		GbsSessionParameters allParameters removeAll.
+		params := GbsSessionParameters new.
+		params
+			name: 'Production';
+			username: 'DataCurator'.
+		GbsSessionParameters addParameter: params.
+		launcher selectedParameter: params.
+
+		self assert: launcher doEditParameter.
+		self assert: launcher lastEditorModel == params.
+		launcher acceptLastParameterEditor.
+
+		self assert: launcher lastSelectedParameter == params.
+		self assert: launcher refreshCount > 0
+	] ensure: [
+		GbsSessionParameters allParameters
+			removeAll;
+			addAll: previous ]
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testDoCopyParameterRenamesCopyClearsSessionAndSelectsIt [
+	| previous params copy |
+	previous := GbsSessionParameters allParameters copy.
+	[
+		GbsSessionParameters allParameters removeAll.
+		params := GbsSessionParameters new.
+		params
+			name: 'Production';
+			username: 'DataCurator';
+			sessionId: 123.
+		GbsSessionParameters addParameter: params.
+		launcher selectedParameter: params.
+
+		self assert: launcher doCopyParameter.
+
+		self assert: GbsSessionParameters allParameters size equals: 2.
+		copy := GbsSessionParameters allParameters second.
+		self assert: copy name equals: 'Production (copy)'.
+		self assert: copy sessionId isNil.
+		self assert: launcher lastSelectedParameter == copy
+	] ensure: [
+		GbsSessionParameters allParameters
+			removeAll;
+			addAll: previous ]
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testDoDeleteParameterRefreshesAndSelectsReplacement [
+	| previous first second |
+	previous := GbsSessionParameters allParameters copy.
+	[
+		GbsSessionParameters allParameters removeAll.
+		first := GbsSessionParameters new
+			name: 'One';
+			username: 'DataCurator';
+			yourself.
+		second := GbsSessionParameters new
+			name: 'Two';
+			username: 'GcUser';
+			yourself.
+		GbsSessionParameters addParameter: first.
+		GbsSessionParameters addParameter: second.
+		launcher selectedParameter: first.
+
+		self assert: launcher doDeleteParameter.
+
+		self assert: GbsSessionParameters allParameters size equals: 1.
+		self assert: GbsSessionParameters allParameters first == second.
+		self assert: launcher lastSelectedParameter == second
+	] ensure: [
+		GbsSessionParameters allParameters
+			removeAll;
+			addAll: previous ]
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testDoExportParametersWritesRedactedConfigurationFile [
+	| previous params file exported |
+	(Smalltalk includesKey: #STON) ifFalse: [ self skip: 'STON is not available in this image.' ].
+	previous := GbsSessionParameters allParameters copy.
+	file := FileLocator temp / ('gbs-session-parameters-export-core-', 1000000 atRandom asString, '.ston').
+	[
+		GbsSessionParameters allParameters removeAll.
+		params := GbsSessionParameters new.
+		params
+			name: 'Production';
+			username: 'DataCurator';
+			password: 'secret'.
+		GbsSessionParameters addParameter: params.
+		CoreTestableGbsClassicLauncher enqueueRequestAnswer: file fullName.
+
+		self assert: launcher doExportParameters.
+
+		exported := GbsSessionParameters parametersFromExportString: file contents.
+		self assert: exported size equals: 1.
+		self assert: exported first name equals: 'Production'.
+		self assert: exported first password isNil.
+		self assert: launcher infoMessages last equals: 'Exported 1 session parameter configuration(s).'
+	] ensure: [
+		file ensureDelete.
+		GbsSessionParameters allParameters
+			removeAll;
+			addAll: previous ]
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testDoExportParametersIncludingSecretsRequiresConfirmation [
+	| previous params file |
+	(Smalltalk includesKey: #STON) ifFalse: [ self skip: 'STON is not available in this image.' ].
+	previous := GbsSessionParameters allParameters copy.
+	file := FileLocator temp / ('gbs-session-parameters-secret-export-core-', 1000000 atRandom asString, '.ston').
+	[
+		GbsSessionParameters allParameters removeAll.
+		params := GbsSessionParameters new.
+		params
+			name: 'Production';
+			username: 'DataCurator';
+			password: 'secret';
+			gsRemember: true.
+		GbsSessionParameters addParameter: params.
+		launcher secretExportConfirmation: false.
+		CoreTestableGbsClassicLauncher enqueueRequestAnswer: file fullName.
+
+		self deny: launcher doExportParametersIncludingSecrets.
+		self deny: file exists.
+		self assert: launcher infoMessages isEmpty
+	] ensure: [
+		file ensureDelete.
+		GbsSessionParameters allParameters
+			removeAll;
+			addAll: previous ]
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testDoExportParametersIncludingSecretsWritesStoredSecrets [
+	| previous params file exported |
+	(Smalltalk includesKey: #STON) ifFalse: [ self skip: 'STON is not available in this image.' ].
+	previous := GbsSessionParameters allParameters copy.
+	file := FileLocator temp / ('gbs-session-parameters-secret-export-core-', 1000000 atRandom asString, '.ston').
+	[
+		GbsSessionParameters allParameters removeAll.
+		params := GbsSessionParameters new.
+		params
+			name: 'Production';
+			username: 'DataCurator';
+			password: 'secret';
+			gsRemember: true.
+		GbsSessionParameters addParameter: params.
+		launcher secretExportConfirmation: true.
+		CoreTestableGbsClassicLauncher enqueueRequestAnswer: file fullName.
+
+		self assert: launcher doExportParametersIncludingSecrets.
+
+		exported := GbsSessionParameters parametersFromExportString: file contents.
+		self assert: exported first password equals: 'secret'.
+		self assert: launcher infoMessages last equals: 'Exported 1 session parameter configuration(s) including stored secrets.'
+	] ensure: [
+		file ensureDelete.
+		GbsSessionParameters allParameters
+			removeAll;
+			addAll: previous ]
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testDoImportParametersAppendsRefreshesAndSelectsImportedConfiguration [
+	| previous params file |
+	(Smalltalk includesKey: #STON) ifFalse: [ self skip: 'STON is not available in this image.' ].
+	previous := GbsSessionParameters allParameters copy.
+	file := FileLocator temp / ('gbs-session-parameters-import-core-', 1000000 atRandom asString, '.ston').
+	[
+		GbsSessionParameters allParameters removeAll.
+		params := GbsSessionParameters new.
+		params
+			name: 'Imported';
+			username: 'GcUser'.
+		file writeStreamDo: [ :stream | stream nextPutAll: params exportString ].
+		CoreTestableGbsClassicLauncher enqueueRequestAnswer: file fullName.
+
+		self assert: launcher doImportParameters.
+
+		self assert: GbsSessionParameters allParameters size equals: 1.
+		self assert: GbsSessionParameters allParameters first name equals: 'Imported'.
+		self assert: GbsSessionParameters allParameters first username equals: 'GcUser'.
+		self assert: launcher lastSelectedParameter == GbsSessionParameters allParameters first.
+		self assert: launcher infoMessages last equals: 'Imported 1 session parameter configuration(s).'
+	] ensure: [
+		file ensureDelete.
 		GbsSessionParameters allParameters
 			removeAll;
 			addAll: previous ]

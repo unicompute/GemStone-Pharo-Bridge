@@ -38,19 +38,22 @@ GbsSessionMaterializer >> clearRemoteClassNameCache [
 
 { #category : 'fetching' }
 GbsSessionMaterializer >> fetchObject: anOop [
+	self resetMaterializedObjectCache.
 	self resetMaterializationMetrics.
 	self incrementMaterializationMetric: #rootFetches.
-	^ self
-		recordMillisecondsForMetric: #rootFetchMs
-		during: [
-			self
-				recordMillisecondsForMetric: #fetchTotalMs
-				during: [
-					self
-						fetchObject: anOop
-						withProfile: self materializationProfile
-						depth: 0
-						seen: IdentitySet new ] ]
+	^ [
+		self
+			recordMillisecondsForMetric: #rootFetchMs
+			during: [
+				self
+					recordMillisecondsForMetric: #fetchTotalMs
+					during: [
+						self
+							fetchObject: anOop
+							withProfile: self materializationProfile
+							depth: 0
+							seen: IdentitySet new ] ]
+	] ensure: [ self resetMaterializedObjectCache ]
 ]
 
 { #category : 'fetching' }
@@ -107,47 +110,64 @@ GbsSessionMaterializer >> isImmediateOop: anOop [
 
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeArrayOop: anOop withProfile: aProfile depth: anInteger seen: seenOops [
-	| elementOops |
+	| elementOops materialized materializedElements |
+	self materializedObjectForOop: anOop ifPresent: [ :object | ^ object ].
 	elementOops := self remoteArrayElementOopsForOop: anOop.
-	^ self
+	materialized := Array new: elementOops size.
+	self rememberMaterializedObject: materialized forOop: anOop.
+	seenOops add: anOop.
+	materializedElements := self
 		materializeOops: elementOops
 		withProfile: aProfile
 		depth: anInteger + 1
-		seen: seenOops
+		seen: seenOops.
+	1 to: elementOops size do: [ :index |
+		materialized at: index put: (materializedElements at: index) ].
+	^ materialized
 ]
 
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeAssociationOop: anOop withProfile: aProfile depth: anInteger seen: seenOops [
-	| pair materialized |
+	| pair materialized association |
+	self materializedObjectForOop: anOop ifPresent: [ :object | ^ object ].
 	pair := self remoteAssociationOopPairForOop: anOop.
+	seenOops add: anOop.
 	materialized := self
 		materializeOops: pair
 		withProfile: aProfile
 		depth: anInteger + 1
 		seen: seenOops.
-	^ Association
+	association := Association
 		key: materialized first
-		value: materialized second
+		value: materialized second.
+	self rememberMaterializedObject: association forOop: anOop.
+	^ association
 ]
 
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeByteArrayOop: anOop withProfile: aProfile depth: anInteger seen: seenOops [
-	| bytes |
+	| bytes byteArray |
+	self materializedObjectForOop: anOop ifPresent: [ :object | ^ object ].
 	bytes := self
 		materializeArrayOop: (self remoteCollectionAsArrayOop: anOop)
 		withProfile: aProfile
 		depth: anInteger
 		seen: seenOops.
-	^ ByteArray withAll: bytes
+	byteArray := ByteArray withAll: bytes.
+	self rememberMaterializedObject: byteArray forOop: anOop.
+	^ byteArray
 ]
 
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeDictionaryOop: anOop identityKeys: useIdentity withProfile: aProfile depth: anInteger seen: seenOops [
 	| associationPairs dictionary keyOops valueOops keys values |
+	self materializedObjectForOop: anOop ifPresent: [ :object | ^ object ].
 	associationPairs := self remoteDictionaryAssociationOopPairsForOop: anOop.
 	dictionary := useIdentity
 		ifTrue: [ IdentityDictionary new ]
 		ifFalse: [ Dictionary new ].
+	self rememberMaterializedObject: dictionary forOop: anOop.
+	seenOops add: anOop.
 	keyOops := associationPairs collect: [ :each | each at: 1 ].
 	valueOops := associationPairs collect: [ :each | each at: 2 ].
 	keys := self
@@ -171,12 +191,11 @@ GbsSessionMaterializer >> materializeDictionaryOop: anOop identityKeys: useIdent
 GbsSessionMaterializer >> materializeOops: oopCollection withProfile: aProfile depth: anInteger seen: seenOops [
 	(aProfile isKindOf: GbsProxyOnlyMaterializationProfile) ifTrue: [
 		^ self materializeProxyOnlyOops: oopCollection withProfile: aProfile ].
-	^ oopCollection collect: [ :each |
-		self
-			fetchObject: each
-			withProfile: aProfile
-			depth: anInteger
-			seen: seenOops ] as: Array
+	^ self
+		materializeFrontierOops: oopCollection
+		withProfile: aProfile
+		depth: anInteger
+		seen: seenOops
 ]
 
 { #category : 'materializing' }

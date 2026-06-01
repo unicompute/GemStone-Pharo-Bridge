@@ -46,8 +46,401 @@ GbsSessionMaterializer >> recordMillisecondsForMetric: aSymbol during: aBlock [
 	] ensure: [
 		elapsed := Time millisecondClockValue - start.
 		elapsed < 0 ifTrue: [ elapsed := elapsed + 86400000 ].
-		self incrementMaterializationMetric: aSymbol by: elapsed ].
+	self incrementMaterializationMetric: aSymbol by: elapsed ].
 	^ result
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializer >> materializedObjectCache [
+	^ (session class weakRegistryNamed: #GbsSessionMaterializedObjectCaches)
+		at: session
+		ifAbsentPut: [ Dictionary new ]
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializer >> materializedObjectForOop: anOop [
+	^ self materializedObjectCache at: anOop ifAbsent: [ nil ]
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializer >> materializedObjectForOop: anOop ifPresent: aBlock [
+	| cache |
+	cache := self materializedObjectCache.
+	(cache includesKey: anOop) ifTrue: [ ^ aBlock value: (cache at: anOop) ].
+	^ nil
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializer >> rememberMaterializedObject: anObject forOop: anOop [
+	self materializedObjectCache at: anOop put: anObject.
+	^ anObject
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializer >> resetMaterializedObjectCache [
+	(session class weakRegistryNamed: #GbsSessionMaterializedObjectCaches)
+		at: session
+		put: Dictionary new.
+	^ self materializedObjectCache
+]
+
+{ #category : 'materializing' }
+GbsSessionMaterializer >> materializationKindForClassNamed: className [
+	className = 'Array' ifTrue: [ ^ #array ].
+	(#('OrderedCollection' 'SortedCollection' 'Bag' 'Set' 'IdentitySet') includes: className)
+		ifTrue: [ ^ #sequenceable ].
+	(#('Dictionary' 'IdentityDictionary') includes: className) ifTrue: [ ^ #dictionary ].
+	className = 'Association' ifTrue: [ ^ #association ].
+	^ #proxy
+]
+
+{ #category : 'materializing' }
+GbsSessionMaterializer >> materializeSequenceableItems: items className: className [
+	className = 'OrderedCollection' ifTrue: [ ^ items asOrderedCollection ].
+	className = 'SortedCollection' ifTrue: [ ^ items asSortedCollection ].
+	className = 'Bag' ifTrue: [
+		| bag |
+		bag := Bag new.
+		items do: [ :each | bag add: each ].
+		^ bag ].
+	className = 'Set' ifTrue: [ ^ items asSet ].
+	className = 'IdentitySet' ifTrue: [
+		| set |
+		set := IdentitySet new.
+		items do: [ :each | set add: each ].
+		^ set ].
+	^ items
+]
+
+{ #category : 'materializing' }
+GbsSessionMaterializer >> materializeScalarOops: oopCollection classNames: classNames [
+	| stringOops byteArrayOops stringValues byteArrayValues materialized |
+	stringOops := OrderedCollection new.
+	byteArrayOops := OrderedCollection new.
+	oopCollection do: [ :oop |
+		(classNames at: oop) = 'ByteArray'
+			ifTrue: [ byteArrayOops add: oop ]
+			ifFalse: [ stringOops add: oop ] ].
+	stringValues := stringOops isEmpty
+		ifTrue: [ Dictionary new ]
+		ifFalse: [ self remoteStringValuesForOops: stringOops ].
+	byteArrayValues := byteArrayOops isEmpty
+		ifTrue: [ Dictionary new ]
+		ifFalse: [ self remoteByteArrayValuesForOops: byteArrayOops ].
+	materialized := Dictionary new.
+	oopCollection do: [ :oop |
+		| className value |
+		className := classNames at: oop.
+		className = 'ByteArray'
+			ifTrue: [
+				value := byteArrayValues
+					at: oop
+					ifAbsent: [
+						self
+							materializeByteArrayOop: oop
+							withProfile: GbsProxyOnlyMaterializationProfile new
+							depth: 0
+							seen: IdentitySet new ] ]
+			ifFalse: [
+				value := stringValues
+					at: oop
+					ifAbsent: [ self remoteStringValueForOop: oop ].
+				(className = 'Symbol' or: [ className = 'DoubleByteSymbol' ]) ifTrue: [
+					value := value asSymbol ].
+				className = 'DateTime' ifTrue: [
+					value := DateAndTime readFrom: value readStream ] ].
+		self rememberMaterializedObject: value forOop: oop.
+		materialized at: oop put: value ].
+	^ materialized
+]
+
+{ #category : 'materializing' }
+GbsSessionMaterializer >> materializeArrayOops: oopCollection withProfile: aProfile depth: anInteger seen: seenOops [
+	| results assigned uniqueOops elementOopsByOop flatElementOops spans materializedFlat offset |
+	results := Array new: oopCollection size.
+	assigned := Array new: oopCollection size.
+	1 to: assigned size do: [ :index | assigned at: index put: false ].
+	uniqueOops := OrderedCollection new.
+	oopCollection doWithIndex: [ :oop :index |
+		(self materializedObjectForOop: oop ifPresent: [ :object |
+			results at: index put: object.
+			assigned at: index put: true.
+			true ]) ifNil: [
+			(uniqueOops includes: oop) ifFalse: [ uniqueOops add: oop ] ] ].
+	uniqueOops isEmpty ifTrue: [ ^ results ].
+	elementOopsByOop := self remoteArrayElementOopsForOops: uniqueOops.
+	flatElementOops := OrderedCollection new.
+	spans := Dictionary new.
+	uniqueOops do: [ :oop |
+		| elementOops materialized start |
+		elementOops := elementOopsByOop
+			at: oop
+			ifAbsent: [ self remoteArrayElementOopsForOop: oop ].
+		seenOops add: oop.
+		materialized := Array new: elementOops size.
+		self rememberMaterializedObject: materialized forOop: oop.
+		start := flatElementOops size + 1.
+		spans at: oop put: { start. elementOops size. materialized }.
+		flatElementOops addAll: elementOops ].
+	materializedFlat := flatElementOops isEmpty
+		ifTrue: [ #() ]
+		ifFalse: [
+			self
+				materializeOops: flatElementOops asArray
+				withProfile: aProfile
+				depth: anInteger + 1
+				seen: seenOops ].
+	uniqueOops do: [ :oop |
+		| span size materialized |
+		span := spans at: oop.
+		offset := span first.
+		size := span second.
+		materialized := span third.
+		1 to: size do: [ :elementIndex |
+			materialized
+				at: elementIndex
+				put: (materializedFlat at: offset + elementIndex - 1) ] ].
+	oopCollection doWithIndex: [ :oop :index |
+		(assigned at: index) ifFalse: [
+			results at: index put: (self materializedObjectForOop: oop).
+			assigned at: index put: true ] ].
+	^ results
+]
+
+{ #category : 'materializing' }
+GbsSessionMaterializer >> materializeSequenceableCollectionOops: oopCollection classNames: classNames withProfile: aProfile depth: anInteger seen: seenOops [
+	| arrayOopsByOop arrayOops elementOopsByArrayOop flatElementOops spans materializedFlat materializedByOop |
+	arrayOopsByOop := self remoteCollectionAsArrayOopsForOops: oopCollection.
+	arrayOops := OrderedCollection new.
+	oopCollection do: [ :oop |
+		| arrayOop |
+		arrayOop := arrayOopsByOop
+			at: oop
+			ifAbsent: [ self remoteCollectionAsArrayOop: oop ].
+		arrayOops add: arrayOop ].
+	elementOopsByArrayOop := self remoteArrayElementOopsForOops: arrayOops.
+	flatElementOops := OrderedCollection new.
+	spans := Dictionary new.
+	oopCollection do: [ :oop |
+		| arrayOop elementOops start |
+		arrayOop := arrayOopsByOop
+			at: oop
+			ifAbsent: [ self remoteCollectionAsArrayOop: oop ].
+		elementOops := elementOopsByArrayOop
+			at: arrayOop
+			ifAbsent: [ self remoteArrayElementOopsForOop: arrayOop ].
+		seenOops add: oop.
+		start := flatElementOops size + 1.
+		spans at: oop put: { start. elementOops size }.
+		flatElementOops addAll: elementOops ].
+	materializedFlat := flatElementOops isEmpty
+		ifTrue: [ #() ]
+		ifFalse: [
+			self
+				materializeOops: flatElementOops asArray
+				withProfile: aProfile
+				depth: anInteger + 1
+				seen: seenOops ].
+	materializedByOop := Dictionary new.
+	oopCollection do: [ :oop |
+		| span size items materialized |
+		span := spans at: oop.
+		size := span second.
+		items := Array new: size.
+		1 to: size do: [ :elementIndex |
+			items
+				at: elementIndex
+				put: (materializedFlat at: span first + elementIndex - 1) ].
+		materialized := self
+			materializeSequenceableItems: items
+			className: (classNames at: oop).
+		self rememberMaterializedObject: materialized forOop: oop.
+		materializedByOop at: oop put: materialized ].
+	^ materializedByOop
+]
+
+{ #category : 'materializing' }
+GbsSessionMaterializer >> materializeDictionaryOops: oopCollection classNames: classNames withProfile: aProfile depth: anInteger seen: seenOops [
+	| associationPairsByOop dictionaries flatKeyOops flatValueOops spans keys values |
+	associationPairsByOop := self remoteDictionaryAssociationOopPairsForOops: oopCollection.
+	dictionaries := Dictionary new.
+	flatKeyOops := OrderedCollection new.
+	flatValueOops := OrderedCollection new.
+	spans := Dictionary new.
+	oopCollection do: [ :oop |
+		| className dictionary pairs start |
+		className := classNames at: oop.
+		dictionary := className = 'IdentityDictionary'
+			ifTrue: [ IdentityDictionary new ]
+			ifFalse: [ Dictionary new ].
+		self rememberMaterializedObject: dictionary forOop: oop.
+		dictionaries at: oop put: dictionary.
+		seenOops add: oop.
+		pairs := associationPairsByOop
+			at: oop
+			ifAbsent: [ self remoteDictionaryAssociationOopPairsForOop: oop ].
+		start := flatKeyOops size + 1.
+		spans at: oop put: { start. pairs size }.
+		pairs do: [ :pair |
+			flatKeyOops add: pair first.
+			flatValueOops add: pair second ] ].
+	keys := flatKeyOops isEmpty
+		ifTrue: [ #() ]
+		ifFalse: [
+			self
+				materializeOops: flatKeyOops asArray
+				withProfile: aProfile
+				depth: anInteger + 1
+				seen: seenOops ].
+	values := flatValueOops isEmpty
+		ifTrue: [ #() ]
+		ifFalse: [
+			self
+				materializeOops: flatValueOops asArray
+				withProfile: aProfile
+				depth: anInteger + 1
+				seen: seenOops ].
+	oopCollection do: [ :oop |
+		| span dictionary |
+		span := spans at: oop.
+		dictionary := dictionaries at: oop.
+		1 to: span second do: [ :index |
+			dictionary
+				at: (keys at: span first + index - 1)
+				put: (values at: span first + index - 1) ] ].
+	^ dictionaries
+]
+
+{ #category : 'materializing' }
+GbsSessionMaterializer >> materializeAssociationOops: oopCollection withProfile: aProfile depth: anInteger seen: seenOops [
+	| pairByOop flatOops materializedFlat materializedByOop |
+	pairByOop := self remoteAssociationOopPairsForOops: oopCollection.
+	flatOops := OrderedCollection new.
+	oopCollection do: [ :oop |
+		| pair |
+		seenOops add: oop.
+		pair := pairByOop
+			at: oop
+			ifAbsent: [ self remoteAssociationOopPairForOop: oop ].
+		flatOops addAll: pair ].
+	materializedFlat := flatOops isEmpty
+		ifTrue: [ #() ]
+		ifFalse: [
+			self
+				materializeOops: flatOops asArray
+				withProfile: aProfile
+				depth: anInteger + 1
+				seen: seenOops ].
+	materializedByOop := Dictionary new.
+	oopCollection doWithIndex: [ :oop :index |
+		| offset association |
+		offset := (index - 1) * 2.
+		association := Association
+			key: (materializedFlat at: offset + 1)
+			value: (materializedFlat at: offset + 2).
+		self rememberMaterializedObject: association forOop: oop.
+		materializedByOop at: oop put: association ].
+	^ materializedByOop
+]
+
+{ #category : 'materializing' }
+GbsSessionMaterializer >> materializeFrontierOops: oopCollection withProfile: aProfile depth: anInteger seen: seenOops [
+	| results assigned missing classNames scalarOops arrayOops sequenceableOops dictionaryOops associationOops scalarObjects nestedProfile |
+	results := Array new: oopCollection size.
+	assigned := Array new: oopCollection size.
+	1 to: assigned size do: [ :index | assigned at: index put: false ].
+	missing := OrderedCollection new.
+	oopCollection doWithIndex: [ :oop :index |
+		(self isImmediateOop: oop)
+			ifTrue: [
+				results at: index put: (self resultFor: oop).
+				assigned at: index put: true ]
+			ifFalse: [
+				(self materializedObjectForOop: oop ifPresent: [ :object |
+					results at: index put: object.
+					assigned at: index put: true.
+					true ]) ifNil: [
+					(seenOops includes: oop)
+						ifTrue: [
+							results at: index put: (self proxyForOop: oop).
+							assigned at: index put: true ]
+						ifFalse: [
+							(missing includes: oop) ifFalse: [ missing add: oop ] ] ] ] ].
+	classNames := missing isEmpty
+		ifTrue: [ Dictionary new ]
+		ifFalse: [ self remoteClassNamesForOops: missing ].
+	scalarOops := OrderedCollection new.
+	arrayOops := OrderedCollection new.
+	sequenceableOops := OrderedCollection new.
+	dictionaryOops := OrderedCollection new.
+	associationOops := OrderedCollection new.
+	oopCollection doWithIndex: [ :oop :index |
+		(assigned at: index) ifFalse: [
+			| className kind |
+			className := classNames at: oop ifAbsent: [ self remoteClassNameForOop: oop ].
+			(aProfile shouldMaterializeScalarClassNamed: className)
+				ifTrue: [
+					(scalarOops includes: oop) ifFalse: [ scalarOops add: oop ] ]
+				ifFalse: [
+					(aProfile shouldMaterializeCollectionClassNamed: className depth: anInteger)
+						ifFalse: [
+							results at: index put: (self proxyForOop: oop serverClassName: className).
+							assigned at: index put: true ]
+						ifTrue: [
+							kind := self materializationKindForClassNamed: className.
+							kind = #array ifTrue: [
+								(arrayOops includes: oop) ifFalse: [ arrayOops add: oop ] ].
+							kind = #sequenceable ifTrue: [
+								(sequenceableOops includes: oop) ifFalse: [ sequenceableOops add: oop ] ].
+							kind = #dictionary ifTrue: [
+								(dictionaryOops includes: oop) ifFalse: [ dictionaryOops add: oop ] ].
+							kind = #association ifTrue: [
+								(associationOops includes: oop) ifFalse: [ associationOops add: oop ] ].
+							kind = #proxy ifTrue: [
+								results at: index put: (self proxyForOop: oop serverClassName: className).
+								assigned at: index put: true ] ] ] ] ].
+	scalarOops isEmpty ifFalse: [
+		scalarObjects := self materializeScalarOops: scalarOops classNames: classNames.
+		scalarObjects associationsDo: [ :association |
+			self rememberMaterializedObject: association value forOop: association key ] ].
+	nestedProfile := aProfile nestedProfileForDepth: anInteger.
+	arrayOops isEmpty ifFalse: [
+		self
+			materializeArrayOops: arrayOops asArray
+			withProfile: nestedProfile
+			depth: anInteger
+			seen: seenOops ].
+	sequenceableOops isEmpty ifFalse: [
+		self
+			materializeSequenceableCollectionOops: sequenceableOops asArray
+			classNames: classNames
+			withProfile: nestedProfile
+			depth: anInteger
+			seen: seenOops ].
+	dictionaryOops isEmpty ifFalse: [
+		self
+			materializeDictionaryOops: dictionaryOops asArray
+			classNames: classNames
+			withProfile: nestedProfile
+			depth: anInteger
+			seen: seenOops ].
+	associationOops isEmpty ifFalse: [
+		self
+			materializeAssociationOops: associationOops asArray
+			withProfile: nestedProfile
+			depth: anInteger
+			seen: seenOops ].
+	oopCollection doWithIndex: [ :oop :index |
+		(assigned at: index) ifFalse: [
+			self materializedObjectForOop: oop ifPresent: [ :object |
+				results at: index put: object.
+				assigned at: index put: true ].
+			(assigned at: index) ifFalse: [
+				| className |
+				className := classNames at: oop ifAbsent: [ self remoteClassNameForOop: oop ].
+				results at: index put: (self proxyForOop: oop serverClassName: className).
+				assigned at: index put: true ] ] ].
+	^ results
 ]
 
 { #category : 'remote access' }
@@ -61,8 +454,23 @@ GbsSessionMaterializer >> remoteArrayElementOopsForOop: anOop [
 ]
 
 { #category : 'remote access' }
+GbsSessionMaterializer >> remoteArrayElementOopsForOops: oopCollection [
+	^ self remoteReader remoteArrayElementOopsForOops: oopCollection
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializer >> remoteAssociationOopPairsForOops: oopCollection [
+	^ self remoteReader remoteAssociationOopPairsForOops: oopCollection
+]
+
+{ #category : 'remote access' }
 GbsSessionMaterializer >> remoteAssociationOopPairForOop: anOop [
 	^ self remoteReader remoteAssociationOopPairForOop: anOop
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializer >> remoteByteArrayValuesForOops: oopCollection [
+	^ self remoteReader remoteByteArrayValuesForOops: oopCollection
 ]
 
 { #category : 'remote access' }
@@ -86,8 +494,18 @@ GbsSessionMaterializer >> remoteCollectionAsArrayOop: anOop [
 ]
 
 { #category : 'remote access' }
+GbsSessionMaterializer >> remoteCollectionAsArrayOopsForOops: oopCollection [
+	^ self remoteReader remoteCollectionAsArrayOopsForOops: oopCollection
+]
+
+{ #category : 'remote access' }
 GbsSessionMaterializer >> remoteDictionaryAssociationOopPairsForOop: anOop [
 	^ self remoteReader remoteDictionaryAssociationOopPairsForOop: anOop
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializer >> remoteDictionaryAssociationOopPairsForOops: oopCollection [
+	^ self remoteReader remoteDictionaryAssociationOopPairsForOops: oopCollection
 ]
 
 { #category : 'remote access' }
@@ -103,6 +521,11 @@ GbsSessionMaterializer >> remoteSizeForOop: anOop [
 { #category : 'remote access' }
 GbsSessionMaterializer >> remoteStringValueForOop: anOop [
 	^ self remoteReader remoteStringValueForOop: anOop
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializer >> remoteStringValuesForOops: oopCollection [
+	^ self remoteReader remoteStringValuesForOops: oopCollection
 ]
 
 { #category : 'metrics' }

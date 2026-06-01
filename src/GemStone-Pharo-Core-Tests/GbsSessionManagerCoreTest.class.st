@@ -896,6 +896,37 @@ GbsSessionManagerCoreTest >> testTypedWrapperLifecycleReportObjectExposesStructu
 ]
 
 { #category : 'tests' }
+GbsSessionManagerCoreTest >> testTypedWrapperCompatibilityReportShowsCachedFreshnessDecision [
+	| mockSession wrapperClass version report |
+	version := 2.
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'history :=') ifTrue: [
+			^ { 5001. 'RemoteLedger'. 'Object'. nil. nil. version. version + 2 } ].
+		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+			^ #(
+				#('accessing' #('size'))
+				#('payments' #('approvePayment:' 'cancelPayment'))) ].
+		self fail ].
+	GBSM currentSession: mockSession.
+
+	wrapperClass := GbsSessionManager
+		generateTypedWrapperForClient: 'ByteArray'
+		server: 'RemoteLedger'.
+	version := 4.
+	GbsSessionManager clearTypedWrapperFreshnessCacheForSession: mockSession.
+	report := GbsSessionManager typedWrapperCompatibilityReportTextForSession: mockSession.
+
+	self assert: (report includesSubstring: 'Typed Wrapper Compatibility').
+	self assert: (report includesSubstring: wrapperClass name asString).
+	self assert: (report includesSubstring: 'RemoteLedger').
+	self assert: (report includesSubstring: '4/6').
+	self assert: (report includesSubstring: 'true').
+	self assert: (report includesSubstring: 'server version differs').
+	self assert: (mockSession typedWrapperCompatibilityReportText includesSubstring: 'Cached Freshness')
+]
+
+{ #category : 'tests' }
 GbsSessionManagerCoreTest >> testTypedProxyLifecycleHelpersExposeStructuredStatus [
 	| mockSession wrapperClass version entry |
 	version := 2.

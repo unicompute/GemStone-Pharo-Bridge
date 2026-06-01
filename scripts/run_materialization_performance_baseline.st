@@ -1,6 +1,7 @@
-| loadFailed supportClass proxyClass session env integerEnv millisecondsToRun metricValue arraySize dictionarySize shallowSize arrayOop dictionaryOop shallowOop arrayResult dictionaryResult shallowResult arrayMs dictionaryMs shallowMs shallowMetrics |
+| loadFailed supportClass proxyClass session env integerEnv millisecondsToRun metricValue arraySize dictionarySize shallowSize mixedSize arrayOop dictionaryOop shallowOop mixedOop arrayResult dictionaryResult shallowResult mixedResult arrayMs dictionaryMs shallowMs mixedMs shallowMetrics mixedMetrics fixtureKey cleanupFixture |
 [
   loadFailed := false.
+  cleanupFixture := [ ].
   [ Metacello new
       baseline: 'GemStonePharo';
       repository: 'tonel:///Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src';
@@ -36,6 +37,8 @@
       arraySize := integerEnv value: 'GBS_MATERIALIZATION_ARRAY_SIZE' value: 1200.
       dictionarySize := integerEnv value: 'GBS_MATERIALIZATION_DICTIONARY_SIZE' value: 700.
       shallowSize := integerEnv value: 'GBS_MATERIALIZATION_SHALLOW_SIZE' value: 500.
+      mixedSize := integerEnv value: 'GBS_MATERIALIZATION_MIXED_SIZE' value: 120.
+      fixtureKey := #GbsMaterializationPerfFixture.
 
       supportClass := Smalltalk
         at: #GbsLiveSessionTestSupport
@@ -48,14 +51,29 @@
       session := supportClass ensureSharedSession.
       (supportClass sessionIsUsable: session) ifFalse: [
         Error signal: supportClass unavailableReason ].
+      cleanupFixture := [
+        session ifNotNil: [
+          [ session
+              fetchRemoteCommandBody: 'UserGlobals removeKey: fixtureKey ifAbsent: [ nil ]. nil'
+              literalBindings: (Dictionary new
+                at: 'fixtureKey' put: fixtureKey;
+                yourself)
+              oopBindings: Dictionary new
+              context: 20 ]
+            on: Error
+            do: [ ] ] ].
 
       [
+        cleanupFixture value.
         arrayOop := session
-          returnRemoteCommandBody: '| array |
+          returnRemoteCommandBody: '| fixture array |
+fixture := UserGlobals at: fixtureKey ifAbsentPut: [ Dictionary new ].
 array := Array new: size.
 1 to: size do: [ :index | array at: index put: index ].
+fixture at: #array put: array.
 array'
           literalBindings: (Dictionary new
+            at: 'fixtureKey' put: fixtureKey;
             at: 'size' put: arraySize;
             yourself)
           oopBindings: Dictionary new.
@@ -70,11 +88,14 @@ array'
             Error signal: 'Array materialization produced an unexpected result.' ].
 
         dictionaryOop := session
-          returnRemoteCommandBody: '| dictionary |
+          returnRemoteCommandBody: '| fixture dictionary |
+fixture := UserGlobals at: fixtureKey ifAbsentPut: [ Dictionary new ].
 dictionary := Dictionary new.
 1 to: size do: [ :index | dictionary at: index put: index + size ].
+fixture at: #dictionary put: dictionary.
 dictionary'
           literalBindings: (Dictionary new
+            at: 'fixtureKey' put: fixtureKey;
             at: 'size' put: dictionarySize;
             yourself)
           oopBindings: Dictionary new.
@@ -89,11 +110,14 @@ dictionary'
             Error signal: 'Dictionary materialization produced an unexpected result.' ].
 
         shallowOop := session
-          returnRemoteCommandBody: '| root |
+          returnRemoteCommandBody: '| fixture root |
+fixture := UserGlobals at: fixtureKey ifAbsentPut: [ Dictionary new ].
 root := Array new: size.
 1 to: size do: [ :index | root at: index put: (Array with: index with: index + 1) ].
+fixture at: #shallow put: root.
 root'
           literalBindings: (Dictionary new
+            at: 'fixtureKey' put: fixtureKey;
             at: 'size' put: shallowSize;
             yourself)
           oopBindings: Dictionary new.
@@ -108,14 +132,57 @@ root'
           and: [ shallowResult last oop notNil ] ]) ifFalse: [
             Error signal: 'Shallow materialization produced an unexpected result.' ].
 
+        mixedOop := session
+          returnRemoteCommandBody: '| fixture root shared ordered nestedSet nestedDictionary bytes unsupported |
+fixture := UserGlobals at: fixtureKey ifAbsentPut: [ Dictionary new ].
+shared := Array with: ''shared'' with: (ByteArray withAll: #(1 2 3 4)).
+ordered := OrderedCollection new.
+1 to: size do: [ :index |
+  ordered add: (Array with: index asString with: shared) ].
+nestedSet := Set new.
+nestedSet add: shared; add: ''marker''.
+nestedDictionary := Dictionary new.
+nestedDictionary
+  at: #shared put: shared;
+  at: #set put: nestedSet.
+bytes := ByteArray withAll: #(5 6 7).
+unsupported := Object new.
+root := Dictionary new.
+root
+  at: #ordered put: ordered;
+  at: #dictionary put: nestedDictionary;
+  at: #bytes put: bytes;
+  at: #proxy put: unsupported;
+  at: #again put: shared.
+fixture at: #mixed put: root.
+root'
+          literalBindings: (Dictionary new
+            at: 'fixtureKey' put: fixtureKey;
+            at: 'size' put: mixedSize;
+            yourself)
+          oopBindings: Dictionary new.
+
+        [ session clearProxyCache. session clearRemoteClassNameCache ] on: Error do: [ ].
+        session fetchDeep.
+        mixedMs := millisecondsToRun value: [
+          mixedResult := session fetchObject: mixedOop ].
+        mixedMetrics := session materializationMetrics copy.
+        (((mixedResult at: #ordered) size = mixedSize)
+          and: [ ((mixedResult at: #ordered) first second) == (mixedResult at: #again)
+          and: [ ((mixedResult at: #bytes) = (ByteArray withAll: #(5 6 7)))
+          and: [ (mixedResult at: #proxy) isKindOf: proxyClass ] ] ]) ifFalse: [
+            Error signal: 'Mixed graph materialization produced an unexpected result.' ].
+
         Transcript
           show: 'MATERIALIZATION_PERF_BASELINE result=OK code=MATERIALIZATION_PERF_OK',
             ' array_ms=', arrayMs asString,
             ' dictionary_ms=', dictionaryMs asString,
             ' shallow_ms=', shallowMs asString,
+            ' mixed_ms=', mixedMs asString,
             ' array_size=', arraySize asString,
             ' dictionary_size=', dictionarySize asString,
             ' shallow_size=', shallowSize asString,
+            ' mixed_size=', mixedSize asString,
             ' shallow_root_ms=', (metricValue value: shallowMetrics value: #rootFetchMs) asString,
             ' shallow_slot_ms=', (metricValue value: shallowMetrics value: #slotFetchMs) asString,
             ' shallow_class_name_batch_ms=', (metricValue value: shallowMetrics value: #classNameBatchMs) asString,
@@ -124,9 +191,14 @@ root'
             ' shallow_slot_batches=', (metricValue value: shallowMetrics value: #slotBatchCalls) asString,
             ' shallow_class_name_batches=', (metricValue value: shallowMetrics value: #classNameBatchCalls) asString,
             ' shallow_proxy_creations=', (metricValue value: shallowMetrics value: #proxyCreations) asString,
-            ' shallow_wrapper_lookups=', (metricValue value: shallowMetrics value: #wrapperLookupCalls) asString;
+            ' shallow_wrapper_lookups=', (metricValue value: shallowMetrics value: #wrapperLookupCalls) asString,
+            ' mixed_collection_array_batches=', (metricValue value: mixedMetrics value: #collectionArrayBatchCalls) asString,
+            ' mixed_dictionary_pair_batches=', (metricValue value: mixedMetrics value: #dictionaryPairBatchCalls) asString,
+            ' mixed_scalar_string_batches=', (metricValue value: mixedMetrics value: #scalarStringBatchCalls) asString,
+            ' mixed_scalar_byte_array_batches=', (metricValue value: mixedMetrics value: #scalarByteArrayBatchCalls) asString;
           cr.
       ] ensure: [
+        cleanupFixture value.
         [ session abortTransaction ] on: Error do: [ ].
         [ supportClass releaseOwnedSession ] on: Error do: [ ] ]
     ] on: Error do: [ :ex |

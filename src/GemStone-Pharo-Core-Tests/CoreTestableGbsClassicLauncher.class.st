@@ -9,7 +9,13 @@ Class {
 		'lastOpenedDictionary',
 		'openBrowserCalls',
 		'lastInspectedOop',
-		'lastInspectedSession'
+		'lastInspectedSession',
+		'forcedParameter',
+		'lastSelectedParameter',
+		'refreshCount',
+		'lastEditorModel',
+		'lastEditorAcceptBlock',
+		'secretExportConfirmation'
 	],
 	#classVars : [
 		'ChooseAnswers',
@@ -121,6 +127,26 @@ CoreTestableGbsClassicLauncher >> forcedSession: anObject [
 	forcedSession := anObject
 ]
 
+{ #category : 'accessing' }
+CoreTestableGbsClassicLauncher >> forcedParameter: anObject [
+	forcedParameter := anObject
+]
+
+{ #category : 'private' }
+CoreTestableGbsClassicLauncher >> confirmSecretExport [
+	^ secretExportConfirmation ifNil: [ false ]
+]
+
+{ #category : 'accessing' }
+CoreTestableGbsClassicLauncher >> secretExportConfirmation: aBoolean [
+	secretExportConfirmation := aBoolean
+]
+
+{ #category : 'accessing' }
+CoreTestableGbsClassicLauncher >> selectedParameter: anObject [
+	self forcedParameter: anObject
+]
+
 { #category : 'private' }
 CoreTestableGbsClassicLauncher >> requestSymbolDictionaryName [
 	^ requestedDictionaryName ifNil: [ '' ]
@@ -180,4 +206,50 @@ CoreTestableGbsClassicLauncher >> lastInspectedOop [
 { #category : 'accessing' }
 CoreTestableGbsClassicLauncher >> lastInspectedSession [
 	^ lastInspectedSession
+]
+
+{ #category : 'accessing' }
+CoreTestableGbsClassicLauncher >> lastSelectedParameter [
+	^ lastSelectedParameter
+]
+
+{ #category : 'accessing' }
+CoreTestableGbsClassicLauncher >> lastEditorModel [
+	^ lastEditorModel
+]
+
+{ #category : 'accessing' }
+CoreTestableGbsClassicLauncher >> openParameterEditorOn: aParameter accept: acceptBlock [
+	lastEditorModel := aParameter.
+	lastEditorAcceptBlock := acceptBlock.
+	^ aParameter
+]
+
+{ #category : 'testing' }
+CoreTestableGbsClassicLauncher >> acceptLastParameterEditor [
+	lastEditorAcceptBlock ifNotNil: [ lastEditorAcceptBlock value ].
+	^ lastEditorModel
+]
+
+{ #category : 'actions' }
+CoreTestableGbsClassicLauncher >> refreshAll [
+	refreshCount := self refreshCount + 1.
+	^ self
+]
+
+{ #category : 'actions' }
+CoreTestableGbsClassicLauncher >> refreshAllSelectingParameter: aParameter [
+	lastSelectedParameter := aParameter.
+	self refreshAll.
+	^ self
+]
+
+{ #category : 'accessing' }
+CoreTestableGbsClassicLauncher >> refreshCount [
+	^ refreshCount ifNil: [ 0 ]
+]
+
+{ #category : 'private' }
+CoreTestableGbsClassicLauncher >> selectedParameter [
+	^ forcedParameter
 ]

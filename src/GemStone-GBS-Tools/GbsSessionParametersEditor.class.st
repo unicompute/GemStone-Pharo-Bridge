@@ -102,7 +102,7 @@ GbsSessionParametersEditor >> initializePresenters [
 
 	"Explicit OK/Cancel Buttons"
 	btnOk := self newButton label: 'OK'; icon: (self iconNamed: #smallOk); action: [ self doAccept ].
-	btnCancel := self newButton label: 'Cancel'; icon: (self iconNamed: #smallCancel); action: [ self delete ].
+	btnCancel := self newButton label: 'Cancel'; icon: (self iconNamed: #smallCancel); action: [ self doCancel ].
 ]
 
 { #category : 'initialization' }
@@ -175,6 +175,37 @@ GbsSessionParametersEditor >> updateModel [
 	model netldiNameOrPort: (self optionalTextFrom: netldiPortField).
 	model netObject: (self optionalTextFrom: netObjField).
 	model normalizeConnectionFields
+]
+
+{ #category : 'actions' }
+GbsSessionParametersEditor >> doCancel [
+	(self hasUnsavedChanges and: [ self confirmDiscardUnsavedChanges not ])
+		ifTrue: [ ^ false ].
+	self delete.
+	^ true
+]
+
+{ #category : 'validation' }
+GbsSessionParametersEditor >> confirmDiscardUnsavedChanges [
+	^ UIManager default confirm: 'Discard unsaved changes to this session configuration?'
+]
+
+{ #category : 'validation' }
+GbsSessionParametersEditor >> hasUnsavedChanges [
+	model ifNil: [ ^ false ].
+	(self normalizedTextFrom: nameField) ~= (model name ifNil: [ '' ]) ifTrue: [ ^ true ].
+	(self normalizedTextFrom: stoneField) ~= (model gemStoneName ifNil: [ '' ]) ifTrue: [ ^ true ].
+	(self normalizedTextFrom: userField) ~= (model username ifNil: [ '' ]) ifTrue: [ ^ true ].
+	gsRemCheck state ~= model gsRemember ifTrue: [ ^ true ].
+	(gsRemCheck state == true and: [ passField text ~= (model password ifNil: [ '' ]) ]) ifTrue: [ ^ true ].
+	(self optionalTextFrom: hostUserField) ~= model hostUsername ifTrue: [ ^ true ].
+	hostRemCheck state ~= model hostRemember ifTrue: [ ^ true ].
+	(hostRemCheck state == true and: [ hostPassField text ~= (model hostPassword ifNil: [ '' ]) ]) ifTrue: [ ^ true ].
+	(self normalizedTextFrom: serviceField) ~= (model gemService ifNil: [ '' ]) ifTrue: [ ^ true ].
+	(self optionalTextFrom: netldiHostField) ~= model netldiHostOrIp ifTrue: [ ^ true ].
+	(self optionalTextFrom: netldiPortField) ~= model netldiNameOrPort ifTrue: [ ^ true ].
+	(self optionalTextFrom: netObjField) ~= model netObject ifTrue: [ ^ true ].
+	^ false
 ]
 
 { #category : 'validation' }

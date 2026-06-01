@@ -15,16 +15,57 @@ GbsSessionCoreTest >> materializationMockSession [
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #executeAndFetch put: [ :script | | result |
 		result := nil.
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'text := object asString' ]) ifTrue: [
+			result := String streamContents: [ :stream |
+				#(
+					(9040 'vip')
+					(9056 'gold')
+					(9064 'paid')) do: [ :entry |
+					(script includesSubstring: entry first asString) ifTrue: [
+						stream
+							nextPutAll: (self encodedStringBatchLineForOop: entry first value: entry second) ] ] ] ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object class name asString' ]) ifTrue: [
+			result := String streamContents: [ :stream |
+				(script includesSubstring: '9016') ifTrue: [
+					stream
+						nextPutAll: '9016';
+						nextPut: Character tab;
+						nextPutAll: 'Array';
+						nextPut: Character lf ].
+				#(9040 9056 9064) do: [ :oop |
+					(script includesSubstring: oop asString) ifTrue: [
+						stream
+							nextPutAll: oop asString;
+							nextPut: Character tab;
+							nextPutAll: 'String';
+							nextPut: Character lf ] ] ] ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object size asString' ]) ifTrue: [
+			result := String streamContents: [ :stream |
+				(script includesSubstring: '9016') ifTrue: [
+					stream
+						nextPutAll: '9016';
+						nextPut: Character tab;
+						nextPutAll: '2';
+						nextPut: Character tab;
+						nextPutAll: '9056';
+						nextPut: Character tab;
+						nextPutAll: '9064';
+						nextPut: Character lf ] ] ].
+		result ifNil: [
 		(script includesSubstring: 'class name asString') ifTrue: [
 			(script includesSubstring: '9000') ifTrue: [ result := 'Array' ].
 			(script includesSubstring: '9016') ifTrue: [ result := 'Array' ].
 			(script includesSubstring: '9040') ifTrue: [ result := 'String' ].
 			(script includesSubstring: '9056') ifTrue: [ result := 'String' ].
-			(script includesSubstring: '9064') ifTrue: [ result := 'String' ] ].
+			(script includesSubstring: '9064') ifTrue: [ result := 'String' ] ] ].
+		result ifNil: [
 		((script includesSubstring: ') asString') or: [ script includesSubstring: 'object asString' ]) ifTrue: [
 			(script includesSubstring: '9040') ifTrue: [ result := 'vip' ].
 			(script includesSubstring: '9056') ifTrue: [ result := 'gold' ].
-			(script includesSubstring: '9064') ifTrue: [ result := 'paid' ] ].
+			(script includesSubstring: '9064') ifTrue: [ result := 'paid' ] ] ].
 		result ifNil: [ self fail ].
 		result ].
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script | | result |
@@ -63,6 +104,20 @@ GbsSessionCoreTest >> materializationMockSession [
 		result ifNil: [ self fail ].
 		result ].
 	^ mockSession
+]
+
+{ #category : 'running' }
+GbsSessionCoreTest >> encodedStringBatchLineForOop: anOop value: aString [
+	^ String streamContents: [ :stream |
+		stream
+			nextPutAll: anOop asString;
+			nextPut: Character tab;
+			nextPutAll: aString size asString.
+		aString do: [ :character |
+			stream
+				nextPut: Character tab;
+				nextPutAll: character codePoint asString ].
+		stream nextPut: Character lf ]
 ]
 
 { #category : 'running' }
@@ -217,6 +272,195 @@ GbsSessionCoreTest >> testFetchDeepUsesBulkArrayOopFetch [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testFetchDeepBatchesNestedArrayFrontierSlots [
+	| mockSession result metrics |
+	mockSession := self materializationMockSession.
+	mockSession fetchDeep.
+
+	result := mockSession fetchObject: 9000.
+
+	self assert: result equals: #('vip' #('gold' 'paid')).
+	metrics := mockSession materializationMetrics.
+	self assert: (metrics at: #slotBatchCalls ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #frontierSlotBatchCalls ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #frontierSlotBatchObjectCount ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #frontierSlotBatchOopCount ifAbsent: [ 0 ]) equals: 2.
+	self assert: (metrics at: #classNameBatchCalls ifAbsent: [ 0 ]) equals: 2.
+	self assert: (metrics at: #classNameBatchOopCount ifAbsent: [ 0 ]) equals: 4
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFetchDeepBatchesScalarStringValues [
+	| mockSession result metrics |
+	mockSession := self materializationMockSession.
+	mockSession fetchDeep.
+
+	result := mockSession fetchObject: 9000.
+
+	self assert: result equals: #('vip' #('gold' 'paid')).
+	metrics := mockSession materializationMetrics.
+	self assert: (metrics at: #scalarStringBatchCalls ifAbsent: [ 0 ]) equals: 2.
+	self assert: (metrics at: #scalarStringBatchObjectCount ifAbsent: [ 0 ]) equals: 3.
+	self assert: (metrics at: #scalarStringFallbackCalls ifAbsent: [ 0 ]) equals: 0
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFetchDeepPreservesRepeatedNestedArrayIdentity [
+	| mockSession result metrics |
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #executeAndFetch put: [ :script | | response |
+		response := nil.
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'text := object asString' ]) ifTrue: [
+			response := self encodedStringBatchLineForOop: 9056 value: 'shared' ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object class name asString' ]) ifTrue: [
+			response := String streamContents: [ :stream |
+				(script includesSubstring: '9016') ifTrue: [
+					stream
+						nextPutAll: '9016';
+						nextPut: Character tab;
+						nextPutAll: 'Array';
+						nextPut: Character lf ].
+				(script includesSubstring: '9056') ifTrue: [
+					stream
+						nextPutAll: '9056';
+						nextPut: Character tab;
+						nextPutAll: 'String';
+						nextPut: Character lf ] ] ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object size asString' ]) ifTrue: [
+			response := '9016', Character tab asString, '1', Character tab asString, '9056', Character lf asString ].
+		response ifNil: [
+			(script includesSubstring: 'class name asString') ifTrue: [
+				(script includesSubstring: '9000') ifTrue: [ response := 'Array' ].
+				(script includesSubstring: '9016') ifTrue: [ response := 'Array' ].
+				(script includesSubstring: '9056') ifTrue: [ response := 'String' ] ] ].
+		response ifNil: [ self fail ].
+		response ].
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		oop = 9000 ifTrue: [ 2 ] ifFalse: [ self fail ] ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+		self assert: oop equals: 9000.
+		self assert: start equals: 1.
+		self assert: count equals: 2.
+		#(9016 9016) ].
+	mockSession fetchDeep.
+
+	result := mockSession fetchObject: 9000.
+
+	self assert: result size equals: 2.
+	self assert: result first == result second.
+	self assert: result first equals: #('shared').
+	metrics := mockSession materializationMetrics.
+	self assert: (metrics at: #frontierSlotBatchObjectCount ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #scalarStringBatchObjectCount ifAbsent: [ 0 ]) equals: 1
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFetchDeepBatchesNestedNonArrayCollections [
+	| mockSession result ordered dictionary association metrics |
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #executeAndFetch put: [ :script | | response |
+		response := nil.
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'text := object asString' ]) ifTrue: [
+			response := String streamContents: [ :stream |
+				stream
+					nextPutAll: (self encodedStringBatchLineForOop: 9040 value: 'vip');
+					nextPutAll: (self encodedStringBatchLineForOop: 9056 value: 'gold') ] ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object class name asString' ]) ifTrue: [
+			response := String streamContents: [ :stream |
+				#(
+					(9100 'OrderedCollection')
+					(9200 'Dictionary')
+					(9300 'Association')
+					(9040 'String')
+					(9056 'String')) do: [ :entry |
+					(script includesSubstring: entry first asString) ifTrue: [
+						stream
+							nextPutAll: entry first asString;
+							nextPut: Character tab;
+							nextPutAll: entry second;
+							nextPut: Character lf ] ] ] ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'array := object asArray' ]) ifTrue: [
+			response := '9100', Character tab asString, '9110', Character lf asString ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object size asString' ]) ifTrue: [
+			response := '9110', Character tab asString, '2', Character tab asString, '9040', Character tab asString, '9056', Character lf asString ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object associations do:' ]) ifTrue: [
+			response := '9200', Character tab asString, '1', Character tab asString, '9040', Character tab asString, '9056', Character lf asString ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'assoc := Object _objectForOop' ]) ifTrue: [
+			response := '9300', Character tab asString, '9040', Character tab asString, '9056', Character lf asString ].
+		response ifNil: [
+			(script includesSubstring: 'class name asString') ifTrue: [
+				(script includesSubstring: '9000') ifTrue: [ response := 'Array' ] ] ].
+		response ifNil: [ self fail ].
+		response ].
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		oop = 9000 ifTrue: [ 3 ] ifFalse: [ self fail ] ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+		self assert: oop equals: 9000.
+		self assert: start equals: 1.
+		self assert: count equals: 3.
+		#(9100 9200 9300) ].
+	mockSession fetchDeep.
+
+	result := mockSession fetchObject: 9000.
+	ordered := result first.
+	dictionary := result second.
+	association := result third.
+
+	self assert: ordered asArray equals: #('vip' 'gold').
+	self assert: (dictionary at: 'vip') equals: 'gold'.
+	self assert: association key equals: 'vip'.
+	self assert: association value equals: 'gold'.
+	metrics := mockSession materializationMetrics.
+	self assert: (metrics at: #collectionArrayBatchCalls ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #dictionaryPairBatchCalls ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #associationPairBatchCalls ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #scalarStringBatchObjectCount ifAbsent: [ 0 ]) equals: 2
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFetchDeepBatchesScalarByteArrays [
+	| mockSession result metrics |
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #executeAndFetch put: [ :script | | response |
+		response := nil.
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: '(object at: index) asInteger asString' ]) ifTrue: [
+			response := '9400', Character tab asString, '3', Character tab asString, '1', Character tab asString, '2', Character tab asString, '3', Character lf asString ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object class name asString' ]) ifTrue: [
+			response := '9400', Character tab asString, 'ByteArray', Character lf asString ].
+		response ifNil: [
+			(script includesSubstring: 'class name asString') ifTrue: [
+				(script includesSubstring: '9000') ifTrue: [ response := 'Array' ] ] ].
+		response ifNil: [ self fail ].
+		response ].
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		oop = 9000 ifTrue: [ 1 ] ifFalse: [ self fail ] ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+		self assert: oop equals: 9000.
+		self assert: start equals: 1.
+		self assert: count equals: 1.
+		#(9400) ].
+	mockSession fetchDeep.
+
+	result := mockSession fetchObject: 9000.
+
+	self assert: result first equals: (ByteArray withAll: #(1 2 3)).
+	metrics := mockSession materializationMetrics.
+	self assert: (metrics at: #scalarByteArrayBatchCalls ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #scalarByteArrayBatchObjectCount ifAbsent: [ 0 ]) equals: 1
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testRemoteArrayElementOopsAreCachedPerSession [
 	| mockSession first second sizeFetches oopFetches |
 	mockSession := CoreMockGbsSession new.
@@ -252,17 +496,40 @@ GbsSessionCoreTest >> testFetchDeepDictionaryUsesFlattenedOopPairFetch [
 		oop = 9100 ifTrue: [ 9910 ] ifFalse: [
 			(#(9040 9056 9064) includes: oop) ifTrue: [ 9901 ] ifFalse: [ self fail ] ] ].
 	mockSession stubs at: #executeAndFetch put: [ :script | | result |
-		(script includesSubstring: 'Character tab') ifTrue: [
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'text := object asString' ]) ifTrue: [
+			result := String streamContents: [ :stream |
+				#(
+					(9040 'vip')
+					(9056 'gold')
+					(9064 'paid')) do: [ :entry |
+					(script includesSubstring: entry first asString) ifTrue: [
+						stream
+							nextPutAll: (self encodedStringBatchLineForOop: entry first value: entry second) ] ] ] ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object class name asString' ]) ifTrue: [
+			result := String streamContents: [ :stream |
+				#(9040 9056 9064) do: [ :oop |
+					(script includesSubstring: oop asString) ifTrue: [
+						stream
+							nextPutAll: oop asString;
+							nextPut: Character tab;
+							nextPutAll: 'String';
+							nextPut: Character lf ] ] ] ].
+		((script includesSubstring: 'Character tab')
+			and: [ (script includesSubstring: 'object class name asString') not
+			and: [ (script includesSubstring: 'text := object asString') not ] ]) ifTrue: [
 			pairStringScripts := pairStringScripts + 1.
 			self fail ].
-		result := nil.
+		result ifNil: [
 		(script includesSubstring: 'classObject name asString') ifTrue: [
 			(script includesSubstring: '9910') ifTrue: [ result := 'Dictionary' ].
-			(script includesSubstring: '9901') ifTrue: [ result := 'String' ] ].
+			(script includesSubstring: '9901') ifTrue: [ result := 'String' ] ] ].
+		result ifNil: [
 		((script includesSubstring: ') asString') or: [ script includesSubstring: 'object asString' ]) ifTrue: [
 			(script includesSubstring: '9040') ifTrue: [ result := 'vip' ].
 			(script includesSubstring: '9056') ifTrue: [ result := 'gold' ].
-			(script includesSubstring: '9064') ifTrue: [ result := 'paid' ] ].
+			(script includesSubstring: '9064') ifTrue: [ result := 'paid' ] ] ].
 		result ifNil: [ self fail ].
 		result ].
 	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
@@ -497,13 +764,95 @@ GbsSessionCoreTest >> testFetchShallowFallsBackWhenClassNameBatchFails [
 	self assert: result size equals: 3.
 	self assert: (result allSatisfy: [ :each | each isKindOf: GbsTypedProxy ]).
 	self assert: (result collect: [ :each | each oop ]) equals: #(9100 9112 9120).
-	self assert: bulkClassNameFetches equals: 1.
+	self assert: bulkClassNameFetches equals: 5.
 	self assert: fallbackClassNameFetches equals: 3.
 	metrics := mockSession materializationMetrics.
-	self assert: (metrics at: #classNameBatchCalls ifAbsent: [ 0 ]) equals: 1.
-	self assert: (metrics at: #classNameBatchFallbacks ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #classNameBatchCalls ifAbsent: [ 0 ]) equals: 5.
+	self assert: (metrics at: #classNameBatchFallbacks ifAbsent: [ 0 ]) equals: 5.
+	self assert: (metrics at: #classNameBatchSplits ifAbsent: [ 0 ]) equals: 2.
 	self assert: (metrics at: #classNameFallbackCalls ifAbsent: [ 0 ]) equals: 3.
 	self assert: (metrics at: #classNameObjectCalls ifAbsent: [ 0 ]) equals: 3
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testClassNameBatchSplitsAdaptivelyBeforePerObjectFallback [
+	| mockSession classNames batchCalls metrics |
+	mockSession := CoreMockGbsSession new.
+	batchCalls := 0.
+	mockSession stubs at: #executeAndFetch put: [ :script | | response |
+		response := nil.
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object class name asString' ]) ifTrue: [
+			batchCalls := batchCalls + 1.
+			((script includesSubstring: '9100')
+				and: [ (script includesSubstring: '9112')
+				and: [ (script includesSubstring: '9120')
+				and: [ script includesSubstring: '9128' ] ] ]) ifTrue: [
+				Error signal: 'Simulated oversized class-name batch.' ].
+			response := String streamContents: [ :stream |
+				#(9100 9112 9120 9128) do: [ :oop |
+					(script includesSubstring: oop asString) ifTrue: [
+						stream
+							nextPutAll: oop asString;
+							nextPut: Character tab;
+							nextPutAll: 'Array';
+							nextPut: Character lf ] ] ] ].
+		response ifNil: [ self fail ].
+		response ].
+
+	classNames := mockSession materializer remoteReader
+		remoteClassNamesForOops: #(9100 9112 9120 9128).
+
+	self assert: (classNames at: 9100) equals: 'Array'.
+	self assert: (classNames at: 9128) equals: 'Array'.
+	self assert: batchCalls equals: 3.
+	metrics := mockSession materializationMetrics.
+	self assert: (metrics at: #classNameBatchCalls ifAbsent: [ 0 ]) equals: 3.
+	self assert: (metrics at: #classNameBatchFallbacks ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #classNameBatchSplits ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #classNameFallbackCalls ifAbsent: [ 0 ]) equals: 0
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFrontierSlotBatchSplitsAdaptivelyBeforeSingleArrayFallback [
+	| mockSession elementOops batchCalls metrics |
+	mockSession := CoreMockGbsSession new.
+	batchCalls := 0.
+	mockSession stubs at: #executeAndFetch put: [ :script | | response |
+		response := nil.
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object size asString' ]) ifTrue: [
+			batchCalls := batchCalls + 1.
+			((script includesSubstring: '9100')
+				and: [ (script includesSubstring: '9112')
+				and: [ (script includesSubstring: '9120')
+				and: [ script includesSubstring: '9128' ] ] ]) ifTrue: [
+				Error signal: 'Simulated oversized slot batch.' ].
+			response := String streamContents: [ :stream |
+				#(9100 9112 9120 9128) doWithIndex: [ :oop :index |
+					(script includesSubstring: oop asString) ifTrue: [
+						stream
+							nextPutAll: oop asString;
+							nextPut: Character tab;
+							nextPutAll: '1';
+							nextPut: Character tab;
+							nextPutAll: (9040 + index) asString;
+							nextPut: Character lf ] ] ] ].
+		response ifNil: [ self fail ].
+		response ].
+
+	elementOops := mockSession materializer remoteReader
+		remoteArrayElementOopsForOops: #(9100 9112 9120 9128).
+
+	self assert: (elementOops at: 9100) equals: #(9041).
+	self assert: (elementOops at: 9128) equals: #(9044).
+	self assert: batchCalls equals: 3.
+	metrics := mockSession materializationMetrics.
+	self assert: (metrics at: #frontierSlotBatchCalls ifAbsent: [ 0 ]) equals: 3.
+	self assert: (metrics at: #frontierSlotBatchFallbacks ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #frontierSlotBatchSplits ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #frontierSlotFallbackCalls ifAbsent: [ 0 ]) equals: 0.
+	self assert: (metrics at: #frontierSlotBatchOopCount ifAbsent: [ 0 ]) equals: 4
 ]
 
 { #category : 'tests' }
@@ -2478,6 +2827,37 @@ GbsSessionCoreTest >> testReconnectCreatesFreshProxyIdentityMap [
 
 	self deny: second == first.
 	self assert: second session == mockSession
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testResetAfterLogoutClearsProxyCacheAndMaterializationMetrics [
+	| mockSession proxy |
+	mockSession := CoreMockGbsSession new.
+	mockSession instVarNamed: 'isLoggedIn' put: true.
+	proxy := mockSession resultFor: 1001.
+	mockSession materializationMetrics at: #slotBatchCalls put: 3.
+
+	self assert: (mockSession cachedProxyForOop: 1001) == proxy.
+	self deny: mockSession materializationMetrics isEmpty.
+
+	mockSession resetAfterLogout.
+
+	self assert: (mockSession cachedProxyForOop: 1001) isNil.
+	self assert: mockSession materializationMetrics isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testRepeatedReconnectCyclesDoNotAccumulateProxyCacheEntries [
+	| mockSession proxy oop |
+	mockSession := CoreMockGbsSession new.
+	1 to: 3 do: [ :index |
+		mockSession instVarNamed: 'isLoggedIn' put: true.
+		oop := 1001 + (index * 8).
+		proxy := mockSession resultFor: oop.
+		self assert: proxy session == mockSession.
+		self assert: (mockSession cachedProxyForOop: oop) == proxy.
+		mockSession resetAfterLogout.
+		self assert: (mockSession cachedProxyForOop: oop) isNil ].
 ]
 
 { #category : 'tests' }

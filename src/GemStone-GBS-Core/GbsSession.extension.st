@@ -41,6 +41,26 @@ GbsSession >> resetMaterializationMetrics [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> materializedObjectForOop: anOop [
+	^ self materializer materializedObjectForOop: anOop
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> materializedObjectForOop: anOop ifPresent: aBlock [
+	^ self materializer materializedObjectForOop: anOop ifPresent: aBlock
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> rememberMaterializedObject: anObject forOop: anOop [
+	^ self materializer rememberMaterializedObject: anObject forOop: anOop
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> resetMaterializedObjectCache [
+	^ self materializer resetMaterializedObjectCache
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> scriptMarshaller [
 	^ GbsSessionScriptMarshaller on: self
 ]
@@ -288,6 +308,11 @@ GbsSession >> typedWrapperLifecycleReport [
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> typedWrapperLifecycleReportText [
 	^ GbsSessionManager typedWrapperLifecycleReportTextForSession: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> typedWrapperCompatibilityReportText [
+	^ GbsSessionManager typedWrapperCompatibilityReportTextForSession: self
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -899,7 +924,9 @@ GbsSession >> repositoryRootLifecycleVersion [
 GbsSession >> resetAfterLogout [
 	self resetConnectionStateAfterLogout.
 	self clearProxyCache.
+	self resetMaterializedObjectCache.
 	self materializer clearRemoteClassNameCache.
+	self resetMaterializationMetrics.
 	GbsSessionManager clearTypedWrapperFreshnessCacheForSession: self.
 	self clearNamedObjectCache.
 	GbsSessionManager clearTypedWrapperAutoloadRegistrationsForSession: self.
