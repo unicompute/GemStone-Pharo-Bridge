@@ -214,6 +214,7 @@ GemStonePharoPackageContract >> packageOwnershipInstanceBehaviorFamilySpecs [
 		{ #GbsRemoteUnboundMethodObject. #instance. #coreOnly }.
 		{ #GbsRubyRuntimeFacade. #instance. #maglevOnly }.
 		{ #GbsSession. #instance. #convertedWithCoreAndMaglev }.
+		{ #GbsSessionMaterializationRemoteReader. #instance. #coreOnly }.
 		{ #GbsSessionStateSlot. #instance. #coreOnly }.
 		{ #GbsShallowMaterializationProfile. #instance. #coreOnly }.
 		{ #GbsSmalltalkFacade. #instance. #coreWithMaglev }.
@@ -242,8 +243,13 @@ GemStonePharoPackageContract >> packageOwnershipInstanceBehaviorFamilySpecs [
 		{ #CoreTestableGbsMethodQueryResultsPresenter. #instance. #coreTestsOnly }.
 		{ #CoreTestableGbsRemoteDebugger. #instance. #coreTestsOnly }.
 		{ #CoreTestableGbsBrowser. #instance. #coreTestsOnly }.
+		{ #CoreGbxFakeCheckBoxForBrowser. #instance. #coreTestsOnly }.
 		{ #CoreGbxFakeServiceForRemoteDebugger. #instance. #coreTestsOnly }.
 		{ #CoreGbxFakeContextForRemoteDebugger. #instance. #coreTestsOnly }.
+		{ #CoreGbxFakeListPresenterForBrowser. #instance. #coreTestsOnly }.
+		{ #CoreGbxFakeListPresenterForRemoteDebugger. #instance. #coreTestsOnly }.
+		{ #CoreGbxFakeTablePresenterForRemoteDebugger. #instance. #coreTestsOnly }.
+		{ #CoreGbxFakeTextPresenterForBrowser. #instance. #coreTestsOnly }.
 		{ #CoreTestableGbsInspector. #instance. #coreTestsOnly }.
 		{ #CoreTestableGbsSymbolListBrowserPresenter. #instance. #coreTestsOnly }.
 		{ #CoreTestableGbxTrippy. #instance. #coreTestsOnly }.

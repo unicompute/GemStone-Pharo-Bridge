@@ -260,6 +260,29 @@ GbsClassicLauncherCoreToolsTest >> testClassicLauncherStaticUtilitiesUseBoundCom
 ]
 
 { #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testSessionParametersEditorRoundTripsNetldiFields [
+	| params editor hostField portField |
+	params := GbsSessionParameters new.
+	params
+		netldiHostOrIp: 'localhost';
+		netldiNameOrPort: '50377'.
+	editor := GbsSessionParametersEditor new.
+	editor setModel: params.
+	hostField := editor instVarNamed: 'netldiHostField'.
+	portField := editor instVarNamed: 'netldiPortField'.
+
+	self assert: hostField text equals: 'localhost'.
+	self assert: portField text equals: '50377'.
+
+	hostField text: 'gemstone.example.com'.
+	portField text: 'gs64ldi'.
+	editor updateModel.
+
+	self assert: params netldiHostOrIp equals: 'gemstone.example.com'.
+	self assert: params netldiNameOrPort equals: 'gs64ldi'
+]
+
+{ #category : 'tests' }
 GbsClassicLauncherCoreToolsTest >> testInspectCurrentUserGlobalsUsesSelectedSessionNamedObjectProxy [
 	| session cache |
 	session := CoreMockGbsSession new.

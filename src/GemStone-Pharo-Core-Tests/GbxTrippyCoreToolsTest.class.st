@@ -110,7 +110,7 @@ GbxTrippyCoreToolsTest >> testBrowseReferencersInMemoryUsesSessionFacadeAndOpens
 	| trippy session table |
 	trippy := CoreTestableGbxTrippy new.
 	session := CoreMockGbsSession new.
-	table := GbxFakeTablePresenterForRemoteDebugger new.
+	table := CoreGbxFakeTablePresenterForRemoteDebugger new.
 	table selectedItem: { 'child'. 'Array'. 'value'. 456 }.
 	session stubs
 		at: #executeScriptAndFetchObject

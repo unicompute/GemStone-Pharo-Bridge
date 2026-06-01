@@ -11,7 +11,7 @@ Object >> gbxConsiderModified [
 	isImmutable := (self respondsTo: #gbxIsImmutable)
 		ifTrue: [ [ self gbxIsImmutable ] on: Error do: [ false ] ]
 		ifFalse: [ false ].
-	isImmutable ifFalse: [ ^ self ].
+	isImmutable ifTrue: [ ^ self ].
 	(self respondsTo: #gbxDelegate) ifFalse: [ ^ self ].
 	delegate := [ self gbxDelegate ] on: Error do: [ nil ].
 	(delegate notNil and: [ delegate respondsTo: #markStDirty: ])

@@ -189,9 +189,9 @@ GbsBrowserCoreToolsTest >> testBrowseClassInfoUsesRemoteClassMirrorMetadata [
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
 		self assert: (script includesSubstring: 'superclassName').
 		^ #(9001 'DemoClass' 'Object' 'Demo-Package' 'Demo-Category' 2 4) ].
-	classes := GbxFakeListPresenterForBrowser new.
+	classes := CoreGbxFakeListPresenterForBrowser new.
 	classes selectedItem: 'DemoClass'.
-	meta := GbxFakeCheckBoxForBrowser new.
+	meta := CoreGbxFakeCheckBoxForBrowser new.
 	meta state: false.
 
 	browser session: session.
@@ -217,11 +217,11 @@ GbsBrowserCoreToolsTest >> testBrowseMethodInfoUsesRemoteMethodMirrorMetadata [
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
 		self assert: (script includesSubstring: 'value: (''foo'' asSymbol)').
 		^ #(9001 'DemoClass' 'foo' 'testing' 'foo ^ 1' 'Demo-Package' 'DemoClass>>foo' 1 2) ].
-	classes := GbxFakeListPresenterForBrowser new.
+	classes := CoreGbxFakeListPresenterForBrowser new.
 	classes selectedItem: 'DemoClass'.
-	methods := GbxFakeListPresenterForBrowser new.
+	methods := CoreGbxFakeListPresenterForBrowser new.
 	methods selectedItem: 'foo'.
-	meta := GbxFakeCheckBoxForBrowser new.
+	meta := CoreGbxFakeCheckBoxForBrowser new.
 	meta state: false.
 
 	browser session: session.
@@ -255,13 +255,13 @@ GbsBrowserCoreToolsTest >> testBrowseVersionsUsesRemoteMethodMirrorVersionEntrie
 		^ {
 			#('version 1' 'foo ^ 1').
 			#('version 2' 'foo ^ 2') } ].
-	classes := GbxFakeListPresenterForBrowser new.
+	classes := CoreGbxFakeListPresenterForBrowser new.
 	classes selectedItem: 'DemoClass'.
-	methods := GbxFakeListPresenterForBrowser new.
+	methods := CoreGbxFakeListPresenterForBrowser new.
 	methods selectedItem: 'foo'.
-	meta := GbxFakeCheckBoxForBrowser new.
+	meta := CoreGbxFakeCheckBoxForBrowser new.
 	meta state: false.
-	text := GbxFakeTextPresenterForBrowser new.
+	text := CoreGbxFakeTextPresenterForBrowser new.
 
 	browser session: session.
 	browser instVarNamed: 'classesList' put: classes.
@@ -286,10 +286,10 @@ GbsBrowserCoreToolsTest >> testClassSelectedUsesRemoteClassMirrorProtocols [
 		^ {
 			#('accessing' #('alpha' 'beta')).
 			#('testing' #('gamma')) } ].
-	protocols := GbxFakeListPresenterForBrowser new.
-	methods := GbxFakeListPresenterForBrowser new.
-	text := GbxFakeTextPresenterForBrowser new.
-	meta := GbxFakeCheckBoxForBrowser new.
+	protocols := CoreGbxFakeListPresenterForBrowser new.
+	methods := CoreGbxFakeListPresenterForBrowser new.
+	text := CoreGbxFakeTextPresenterForBrowser new.
+	meta := CoreGbxFakeCheckBoxForBrowser new.
 	meta state: false.
 
 	browser session: session.
@@ -315,11 +315,11 @@ GbsBrowserCoreToolsTest >> testCompileMethodCompilesSelectedClassAndProtocol [
 		'Success'
 	].
 
-	classes := GbxFakeListPresenterForBrowser new.
+	classes := CoreGbxFakeListPresenterForBrowser new.
 	classes selectedItem: 'DemoClass'.
-	protocols := GbxFakeListPresenterForBrowser new.
+	protocols := CoreGbxFakeListPresenterForBrowser new.
 	protocols selectedItem: 'testing'.
-	meta := GbxFakeCheckBoxForBrowser new.
+	meta := CoreGbxFakeCheckBoxForBrowser new.
 	meta state: false.
 
 	browser session: session.
@@ -341,7 +341,7 @@ GbsBrowserCoreToolsTest >> testGsDoItUsesSelectedTextOrWholeSource [
 	session := CoreMockGbsSession new.
 	session stubs at: #executeAndFetchContext put: [ :script :ctx | 'ok' ].
 
-	text := GbxFakeTextPresenterForBrowser new.
+	text := CoreGbxFakeTextPresenterForBrowser new.
 	text
 		text: '1 + 1';
 		selectedText: '2 + 2'.
@@ -359,7 +359,7 @@ GbsBrowserCoreToolsTest >> testGsPrintItAppendsResult [
 	session := CoreMockGbsSession new.
 	session stubs at: #executeAndFetchContext put: [ :script :ctx | '42' ].
 
-	text := GbxFakeTextPresenterForBrowser new.
+	text := CoreGbxFakeTextPresenterForBrowser new.
 	text text: '21+21'.
 
 	browser session: session.
@@ -378,11 +378,11 @@ GbsBrowserCoreToolsTest >> testInspectMethodUsesRemoteMethodMirror [
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
 		self assert: (script includesSubstring: 'value: (''foo'' asSymbol)').
 		^ #(9001 'DemoClass' 'foo' 'testing' 'foo ^ 1' 'Demo-Package' 'DemoClass>>foo' 1 2) ].
-	classes := GbxFakeListPresenterForBrowser new.
+	classes := CoreGbxFakeListPresenterForBrowser new.
 	classes selectedItem: 'DemoClass'.
-	methods := GbxFakeListPresenterForBrowser new.
+	methods := CoreGbxFakeListPresenterForBrowser new.
 	methods selectedItem: 'foo'.
-	meta := GbxFakeCheckBoxForBrowser new.
+	meta := CoreGbxFakeCheckBoxForBrowser new.
 	meta state: false.
 
 	browser session: session.
@@ -411,11 +411,11 @@ GbsBrowserCoreToolsTest >> testInvokeSelectedMethodCallsClassSideMethodObject [
 		capturedArguments := message arguments.
 		capturedOop := oop.
 		#created ].
-	classes := GbxFakeListPresenterForBrowser new.
+	classes := CoreGbxFakeListPresenterForBrowser new.
 	classes selectedItem: 'DemoClass'.
-	methods := GbxFakeListPresenterForBrowser new.
+	methods := CoreGbxFakeListPresenterForBrowser new.
 	methods selectedItem: 'new'.
-	meta := GbxFakeCheckBoxForBrowser new.
+	meta := CoreGbxFakeCheckBoxForBrowser new.
 	meta state: true.
 
 	browser session: session.
@@ -447,11 +447,11 @@ GbsBrowserCoreToolsTest >> testInvokeSelectedMethodPromptsForArguments [
 		capturedArguments := message arguments.
 		capturedOop := oop.
 		#created ].
-	classes := GbxFakeListPresenterForBrowser new.
+	classes := CoreGbxFakeListPresenterForBrowser new.
 	classes selectedItem: 'DemoMoney'.
-	methods := GbxFakeListPresenterForBrowser new.
+	methods := CoreGbxFakeListPresenterForBrowser new.
 	methods selectedItem: 'fromAmount:'.
-	meta := GbxFakeCheckBoxForBrowser new.
+	meta := CoreGbxFakeCheckBoxForBrowser new.
 	meta state: true.
 
 	browser session: session.
@@ -471,11 +471,11 @@ GbsBrowserCoreToolsTest >> testInvokeSelectedMethodRejectsInstanceSideMethods [
 	| browser session classes methods meta |
 	browser := CoreTestableGbsBrowser new.
 	session := CoreMockGbsSession new.
-	classes := GbxFakeListPresenterForBrowser new.
+	classes := CoreGbxFakeListPresenterForBrowser new.
 	classes selectedItem: 'DemoClass'.
-	methods := GbxFakeListPresenterForBrowser new.
+	methods := CoreGbxFakeListPresenterForBrowser new.
 	methods selectedItem: 'foo'.
-	meta := GbxFakeCheckBoxForBrowser new.
+	meta := CoreGbxFakeCheckBoxForBrowser new.
 	meta state: false.
 
 	browser session: session.
@@ -494,7 +494,7 @@ GbsBrowserCoreToolsTest >> testLoadDictionariesUsesSessionFetchRemoteDictionarie
 	session := CoreMockGbsSession new.
 	session stubs at: #evaluate put: 'Globals, UserGlobals , Published'.
 	session stubs at: #executeAndFetch put: [ :script | self fail ].
-	dictionaries := GbxFakeListPresenterForBrowser new.
+	dictionaries := CoreGbxFakeListPresenterForBrowser new.
 
 	browser session: session.
 	browser instVarNamed: 'dictionariesList' put: dictionaries.
@@ -513,11 +513,11 @@ GbsBrowserCoreToolsTest >> testMethodSelectedUsesRemoteMethodMirrorSource [
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
 		self assert: (script includesSubstring: 'value: (''foo'' asSymbol)').
 		^ #(9001 'DemoClass' 'foo' 'testing' 'foo ^ 1' 'Demo-Package' 'DemoClass>>foo' 1 2) ].
-	classes := GbxFakeListPresenterForBrowser new.
+	classes := CoreGbxFakeListPresenterForBrowser new.
 	classes selectedItem: 'DemoClass'.
-	meta := GbxFakeCheckBoxForBrowser new.
+	meta := CoreGbxFakeCheckBoxForBrowser new.
 	meta state: false.
-	text := GbxFakeTextPresenterForBrowser new.
+	text := CoreGbxFakeTextPresenterForBrowser new.
 
 	browser session: session.
 	browser instVarNamed: 'classesList' put: classes.
@@ -550,10 +550,10 @@ GbsBrowserCoreToolsTest >> testProtocolSelectedUsesRemoteClassMirrorSelectors [
 		^ {
 			#('accessing' #('alpha' 'beta')).
 			#('testing' #('gamma')) } ].
-	classes := GbxFakeListPresenterForBrowser new.
+	classes := CoreGbxFakeListPresenterForBrowser new.
 	classes selectedItem: 'DemoClass'.
-	methods := GbxFakeListPresenterForBrowser new.
-	meta := GbxFakeCheckBoxForBrowser new.
+	methods := CoreGbxFakeListPresenterForBrowser new.
+	meta := CoreGbxFakeCheckBoxForBrowser new.
 	meta state: false.
 
 	browser session: session.
@@ -572,7 +572,7 @@ GbsBrowserCoreToolsTest >> testProtocolSelectedUsesRemoteClassMirrorSelectors [
 GbsBrowserCoreToolsTest >> testQueryHierarchyImplementorsInSuperScope [
 	| browser classes |
 	browser := CoreTestableGbsBrowser new.
-	classes := GbxFakeListPresenterForBrowser new.
+	classes := CoreGbxFakeListPresenterForBrowser new.
 	classes selectedItem: 'Object'.
 	browser instVarNamed: 'classesList' put: classes.
 	browser enqueueRequestAnswer: 'size'.
@@ -587,7 +587,7 @@ GbsBrowserCoreToolsTest >> testQueryHierarchyImplementorsInSuperScope [
 GbsBrowserCoreToolsTest >> testQueryHierarchyImplementorsUsesHierarchyMode [
 	| browser classes |
 	browser := CoreTestableGbsBrowser new.
-	classes := GbxFakeListPresenterForBrowser new.
+	classes := CoreGbxFakeListPresenterForBrowser new.
 	classes selectedItem: 'Object'.
 	browser instVarNamed: 'classesList' put: classes.
 	browser enqueueRequestAnswer: 'size'.
@@ -612,7 +612,7 @@ GbsBrowserCoreToolsTest >> testQueryHierarchyRequiresSelectedClass [
 GbsBrowserCoreToolsTest >> testQueryHierarchySendersUsesHierarchyMode [
 	| browser classes |
 	browser := CoreTestableGbsBrowser new.
-	classes := GbxFakeListPresenterForBrowser new.
+	classes := CoreGbxFakeListPresenterForBrowser new.
 	classes selectedItem: 'Object'.
 	browser instVarNamed: 'classesList' put: classes.
 	browser enqueueRequestAnswer: 'size'.

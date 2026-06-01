@@ -33,6 +33,15 @@ GbsSessionCoreTest >> materializationMockSession [
 		(script includesSubstring: '9016') ifTrue: [ result := 2 ].
 		result ifNil: [ self fail ].
 		result ].
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		(oop = 9000 or: [ oop = 9016 ])
+			ifTrue: [ 2 ]
+			ifFalse: [ self fail ] ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+		self assert: start equals: 1.
+		self assert: count equals: 2.
+		oop = 9000 ifTrue: [ #(9040 9016) ] ifFalse: [
+			oop = 9016 ifTrue: [ #(9056 9064) ] ifFalse: [ self fail ] ] ].
 	mockSession stubs at: #executeScriptAndReturnOop put: [ :script | | result |
 		result := nil.
 		(script includesSubstring: '9000') ifTrue: [
@@ -122,6 +131,24 @@ GbsSessionCoreTest >> testFetchByReferenceFallsBackToPlainProxyForUnknownClass [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testFetchByReferenceCachesRemoteClassNameForRepeatedOop [
+	| mockSession classNameFetches first second |
+	mockSession := CoreMockGbsSession new.
+	classNameFetches := 0.
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		self assert: (script includesSubstring: 'class name asString').
+		classNameFetches := classNameFetches + 1.
+		'Invoice' ].
+	mockSession fetchByReference.
+
+	first := mockSession fetchObject: 9500.
+	second := mockSession fetchObject: 9500.
+
+	self assert: first == second.
+	self assert: classNameFetches equals: 1
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testFetchDeepMaterializesNestedArraysRecursively [
 	| mockSession result nested |
 	mockSession := self materializationMockSession.
@@ -134,6 +161,22 @@ GbsSessionCoreTest >> testFetchDeepMaterializesNestedArraysRecursively [
 	self assert: (result at: 1) equals: 'vip'.
 	self assert: nested class equals: Array.
 	self assert: nested equals: #('gold' 'paid')
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFetchDeepUsesBulkArrayOopFetch [
+	| mockSession result returnOopCommands |
+	mockSession := self materializationMockSession.
+	returnOopCommands := 0.
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		returnOopCommands := returnOopCommands + 1.
+		self fail ].
+	mockSession fetchDeep.
+
+	result := mockSession fetchObject: 9000.
+
+	self assert: result equals: #('vip' #('gold' 'paid')).
+	self assert: returnOopCommands equals: 0
 ]
 
 { #category : 'tests' }

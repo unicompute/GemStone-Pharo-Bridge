@@ -97,7 +97,7 @@ GbsStructuredValueInspectorPresenterCoreToolsTest >> testBrowseTypedWrapperLifec
 GbsStructuredValueInspectorPresenterCoreToolsTest >> testBrowseReferencersDelegatesReferencersBlockWithSelectedRow [
 	| presenter fakeTable selected |
 	presenter := GbsStructuredValueInspectorPresenter new.
-	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeTable := CoreGbxFakeTablePresenterForRemoteDebugger new.
 	fakeTable selectedItem: { 'users'. 'aDictionary(...)' }.
 
 	presenter instVarNamed: 'table' put: fakeTable.

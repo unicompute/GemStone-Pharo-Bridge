@@ -95,6 +95,32 @@ GbxRemainingPortTest >> testConcurrentIdentityDictionaryAndReplicatorManager [
 	self assert: manager numberOfReplicators equals: 0
 ]
 
+{ #category : 'tests - replication' }
+GbxRemainingPortTest >> testConsiderModifiedMarksMutableReplicatedObjectsDirty [
+	| previousConfiguration configuration delegate fixture |
+	previousConfiguration := Smalltalk globals at: #GbsCurrentConfiguration ifAbsent: [ nil ].
+	[
+		configuration := GbsConfiguration new initializeDefaults; yourself.
+		configuration autoMarkDirty: true.
+		GbsConfiguration current: configuration.
+		delegate := GbxDirtyMarkingDelegate new.
+		fixture := GbxDirtyMarkingFixture new
+			delegate: delegate;
+			immutable: false;
+			yourself.
+
+		fixture gbxConsiderModified.
+		self assert: delegate markedObjects asArray equals: { fixture }.
+
+		fixture immutable: true.
+		fixture gbxConsiderModified.
+		self assert: delegate markedObjects size equals: 1
+	] ensure: [
+		previousConfiguration
+			ifNil: [ Smalltalk globals removeKey: #GbsCurrentConfiguration ifAbsent: [ ] ]
+			ifNotNil: [ Smalltalk globals at: #GbsCurrentConfiguration put: previousConfiguration ] ]
+]
+
 { #category : 'tests - debugger' }
 GbxRemainingPortTest >> testContextDumpPolicyAndDebuggerClient [
 	| context service client dump stackString |

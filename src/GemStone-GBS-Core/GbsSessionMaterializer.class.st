@@ -31,6 +31,11 @@ GbsSessionMaterializer >> clearProxyCache [
 	^ self proxyCache
 ]
 
+{ #category : 'cache' }
+GbsSessionMaterializer >> clearRemoteClassNameCache [
+	^ self remoteReader clearRemoteClassNameCache
+]
+
 { #category : 'fetching' }
 GbsSessionMaterializer >> fetchObject: anOop [
 	^ self
@@ -94,14 +99,14 @@ GbsSessionMaterializer >> isImmediateOop: anOop [
 
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeArrayOop: anOop withProfile: aProfile depth: anInteger seen: seenOops [
-	| size localArray |
-	size := self remoteSizeForOop: anOop.
-	localArray := Array new: size.
-	1 to: size do: [ :index |
+	| elementOops localArray |
+	elementOops := self remoteArrayElementOopsForOop: anOop.
+	localArray := Array new: elementOops size.
+	elementOops doWithIndex: [ :elementOop :index |
 		localArray
 			at: index
 			put: (self
-				fetchObject: (self remoteArrayElementOopAt: index ofOop: anOop)
+				fetchObject: elementOop
 				withProfile: aProfile
 				depth: anInteger + 1
 				seen: seenOops) ].
@@ -111,14 +116,18 @@ GbsSessionMaterializer >> materializeArrayOop: anOop withProfile: aProfile depth
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeAssociationOop: anOop withProfile: aProfile depth: anInteger seen: seenOops [
 	| pair |
-	pair := self
-		materializeArrayOop: (self remoteAssociationPairOopFor: anOop)
-		withProfile: aProfile
-		depth: anInteger
-		seen: seenOops.
+	pair := self remoteAssociationOopPairForOop: anOop.
 	^ Association
-		key: (pair at: 1 ifAbsent: [ nil ])
-		value: (pair at: 2 ifAbsent: [ nil ])
+		key: (self
+			fetchObject: (pair at: 1)
+			withProfile: aProfile
+			depth: anInteger + 1
+			seen: seenOops)
+		value: (self
+			fetchObject: (pair at: 2)
+			withProfile: aProfile
+			depth: anInteger + 1
+			seen: seenOops)
 ]
 
 { #category : 'materializing' }
@@ -134,19 +143,23 @@ GbsSessionMaterializer >> materializeByteArrayOop: anOop withProfile: aProfile d
 
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeDictionaryOop: anOop identityKeys: useIdentity withProfile: aProfile depth: anInteger seen: seenOops [
-	| associations dictionary |
-	associations := self
-		materializeArrayOop: (self remoteDictionaryAssociationsAsArrayOop: anOop)
-		withProfile: aProfile
-		depth: anInteger
-		seen: seenOops.
+	| associationPairs dictionary |
+	associationPairs := self remoteDictionaryAssociationOopPairsForOop: anOop.
 	dictionary := useIdentity
 		ifTrue: [ IdentityDictionary new ]
 		ifFalse: [ Dictionary new ].
-	associations do: [ :each |
+	associationPairs do: [ :each |
 		dictionary
-			at: each key
-			put: each value ].
+			at: (self
+				fetchObject: (each at: 1)
+				withProfile: aProfile
+				depth: anInteger + 1
+				seen: seenOops)
+			put: (self
+				fetchObject: (each at: 2)
+				withProfile: aProfile
+				depth: anInteger + 1
+				seen: seenOops) ].
 	^ dictionary
 ]
 
@@ -223,75 +236,57 @@ GbsSessionMaterializer >> proxyForOop: anOop usingClass: proxyClass [
 
 { #category : 'remote access' }
 GbsSessionMaterializer >> remoteArrayElementOopAt: anInteger ofOop: anOop [
-	^ session
-		returnRemoteCommandBody: 'object at: index'
-		literalBindings: (Dictionary new
-			at: 'index' put: anInteger;
-			yourself)
-		oopBindings: (Dictionary new
-			at: 'object' put: anOop;
-			yourself)
+	^ self remoteReader remoteArrayElementOopAt: anInteger ofOop: anOop
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializer >> remoteArrayElementOopsForOop: anOop [
+	^ self remoteReader remoteArrayElementOopsForOop: anOop
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializer >> remoteAssociationOopPairForOop: anOop [
+	^ self remoteReader remoteAssociationOopPairForOop: anOop
 ]
 
 { #category : 'remote access' }
 GbsSessionMaterializer >> remoteAssociationPairOopFor: anOop [
-	^ session
-		returnRemoteCommandBody: 'Array with: assoc key with: assoc value'
-		literalBindings: Dictionary new
-		oopBindings: (Dictionary new
-			at: 'assoc' put: anOop;
-			yourself)
+	^ self remoteReader remoteAssociationPairOopFor: anOop
 ]
 
 { #category : 'remote access' }
 GbsSessionMaterializer >> remoteClassNameForOop: anOop [
-	^ session
-		fetchRemoteCommandBody: 'object class name asString'
-		literalBindings: Dictionary new
-		oopBindings: (Dictionary new
-			at: 'object' put: anOop;
-			yourself)
-		context: 20
+	^ self remoteReader remoteClassNameForOop: anOop
 ]
 
 { #category : 'remote access' }
 GbsSessionMaterializer >> remoteCollectionAsArrayOop: anOop [
-	^ session
-		returnRemoteCommandBody: 'object asArray'
-		literalBindings: Dictionary new
-		oopBindings: (Dictionary new
-			at: 'object' put: anOop;
-			yourself)
+	^ self remoteReader remoteCollectionAsArrayOop: anOop
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializer >> remoteDictionaryAssociationOopPairsForOop: anOop [
+	^ self remoteReader remoteDictionaryAssociationOopPairsForOop: anOop
 ]
 
 { #category : 'remote access' }
 GbsSessionMaterializer >> remoteDictionaryAssociationsAsArrayOop: anOop [
-	^ session
-		returnRemoteCommandBody: 'object associations asArray'
-		literalBindings: Dictionary new
-		oopBindings: (Dictionary new
-			at: 'object' put: anOop;
-			yourself)
+	^ self remoteReader remoteDictionaryAssociationsAsArrayOop: anOop
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializer >> remoteReader [
+	^ GbsSessionMaterializationRemoteReader on: session
 ]
 
 { #category : 'remote access' }
 GbsSessionMaterializer >> remoteSizeForOop: anOop [
-	^ session fetchRemoteCommand: (GbsRemoteCommand
-		blockBody: 'object size'
-		oopBindings: (Dictionary new
-			at: 'object' put: anOop;
-			yourself))
+	^ self remoteReader remoteSizeForOop: anOop
 ]
 
 { #category : 'remote access' }
 GbsSessionMaterializer >> remoteStringValueForOop: anOop [
-	^ session
-		fetchRemoteCommandBody: 'object asString'
-		literalBindings: Dictionary new
-		oopBindings: (Dictionary new
-			at: 'object' put: anOop;
-			yourself)
-		context: 20
+	^ self remoteReader remoteStringValueForOop: anOop
 ]
 
 { #category : 'runtime' }

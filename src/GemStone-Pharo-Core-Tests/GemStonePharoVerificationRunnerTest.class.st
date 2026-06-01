@@ -222,13 +222,19 @@ GemStonePharoVerificationRunnerTest >> testImagePathPrefersExplicitWorkImageEnvi
 
 { #category : 'tests' }
 GemStonePharoVerificationRunnerTest >> testCoreLiveSupportReinstallsDelegatesOnOriginalSupportClass [
+	| originalSupport |
+	originalSupport := Smalltalk
+		at: #GbsLiveSessionTestSupport
+		ifAbsent: [
+			self skip: 'GbsLiveSessionTestSupport is loaded only with the original test package' ].
+
 	CoreGbsLiveSessionTestSupport installDelegatesOnOriginalSupportClass.
 
 	self
-		assert: ((GbsLiveSessionTestSupport class >> #ensureSharedSession) package name)
+		assert: ((originalSupport class >> #ensureSharedSession) package name)
 		equals: 'GemStone-Pharo-Core-Tests'.
 	self
-		assert: ((GbsLiveSessionTestSupport class >> #unavailableReason) package name)
+		assert: ((originalSupport class >> #unavailableReason) package name)
 		equals: 'GemStone-Pharo-Core-Tests'
 ]
 

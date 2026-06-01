@@ -599,7 +599,7 @@ GbsRemoteDebuggerCoreToolsTest >> testInvokeSelectedServerMethodPromptsForArgume
 { #category : 'tests' }
 GbsRemoteDebuggerCoreToolsTest >> testRunToCaretUsesRemoteProcessFacadeWhenServiceMissing [
 	| fakeText session context fakeList sawRun |
-	fakeText := GbxFakeTextPresenterForRemoteDebugger new.
+	fakeText := CoreGbxFakeTextPresenterForRemoteDebugger new.
 	fakeText text: 'abcde'.
 	fakeText selectionInterval: (3 to: 3).
 	session := CoreMockGbsSession new.
@@ -620,7 +620,7 @@ GbsRemoteDebuggerCoreToolsTest >> testRunToCaretUsesRemoteProcessFacadeWhenServi
 		processOop: 9001;
 		visibleSourceMap: { 2 -> (2 to: 4) };
 		yourself.
-	fakeList := GbxFakeListPresenterForRemoteDebugger new.
+	fakeList := CoreGbxFakeListPresenterForRemoteDebugger new.
 	fakeList selectIndex: 1.
 	debugger
 		session: session;
@@ -701,7 +701,7 @@ GbsRemoteDebuggerCoreToolsTest >> testReturnFromFrameUsesRemoteProcessFacadeWhen
 			ifTrue: [ ^ '9001' ].
 		self fail ].
 	session stubs at: #evaluate put: [ :script | '' ].
-	fakeList := GbxFakeListPresenterForRemoteDebugger new.
+	fakeList := CoreGbxFakeListPresenterForRemoteDebugger new.
 	debugger
 		session: session;
 		processOop: 9001.
@@ -836,9 +836,9 @@ GbsRemoteDebuggerCoreToolsTest >> testRestartUsesFreshFaultedProcessWhenExecuted
 				messageText: 'boom';
 				serverProcessOop: 9501;
 				yourself) signal ].
-	stackList := GbxFakeListPresenterForRemoteDebugger new.
+	stackList := CoreGbxFakeListPresenterForRemoteDebugger new.
 	stackList selectIndex: 1.
-	sourceText := GbxFakeTextPresenterForRemoteDebugger new.
+	sourceText := CoreGbxFakeTextPresenterForRemoteDebugger new.
 	sourceText
 		text: source;
 		selectionInterval: (1 to: 1).
@@ -908,9 +908,9 @@ GbsRemoteDebuggerCoreToolsTest >> testRestartUsesFreshFaultedProcessWhenSelected
 				messageText: 'boom';
 				serverProcessOop: 9501;
 				yourself) signal ].
-	stackList := GbxFakeListPresenterForRemoteDebugger new.
+	stackList := CoreGbxFakeListPresenterForRemoteDebugger new.
 	stackList selectIndex: 1.
-	sourceText := GbxFakeTextPresenterForRemoteDebugger new.
+	sourceText := CoreGbxFakeTextPresenterForRemoteDebugger new.
 	sourceText
 		text: source;
 		selectionInterval: (1 to: 1).
@@ -968,9 +968,9 @@ GbsRemoteDebuggerCoreToolsTest >> testRestartUsesFreshFaultedProcessWhenServiceS
 				messageText: 'boom';
 				serverProcessOop: 9501;
 				yourself) signal ].
-	stackList := GbxFakeListPresenterForRemoteDebugger new.
+	stackList := CoreGbxFakeListPresenterForRemoteDebugger new.
 	stackList selectIndex: 1.
-	sourceText := GbxFakeTextPresenterForRemoteDebugger new.
+	sourceText := CoreGbxFakeTextPresenterForRemoteDebugger new.
 	sourceText
 		text: source;
 		selectionInterval: (1 to: 1).
@@ -1026,7 +1026,7 @@ GbsRemoteDebuggerCoreToolsTest >> testRestartUsesExecutedSourceInsteadOfSelected
 				messageText: 'boom';
 				serverProcessOop: 9501;
 				yourself) signal ].
-	stackList := GbxFakeListPresenterForRemoteDebugger new.
+	stackList := CoreGbxFakeListPresenterForRemoteDebugger new.
 	stackList selectIndex: 1.
 	sourceText := CoreGbxFakeTextPresenterForRemoteDebugger new.
 	sourceText
@@ -1069,9 +1069,9 @@ GbsRemoteDebuggerCoreToolsTest >> testRestartWithFreshFaultedProcessReturnsFalse
 			(GbsError new
 				messageText: 'boom';
 				yourself) signal ].
-	stackList := GbxFakeListPresenterForRemoteDebugger new.
+	stackList := CoreGbxFakeListPresenterForRemoteDebugger new.
 	stackList selectIndex: 1.
-	sourceText := GbxFakeTextPresenterForRemoteDebugger new.
+	sourceText := CoreGbxFakeTextPresenterForRemoteDebugger new.
 	sourceText
 		text: source;
 		selectionInterval: (1 to: 1).
@@ -1096,7 +1096,7 @@ GbsRemoteDebuggerCoreToolsTest >> testDirectStepWithPrimarySelectorUsesRemotePro
 	context := CoreGbxFakeContextForRemoteDebugger new
 		level: 4;
 		yourself.
-	fakeList := GbxFakeListPresenterForRemoteDebugger new.
+	fakeList := CoreGbxFakeListPresenterForRemoteDebugger new.
 	fakeList selectIndex: 1.
 	session stubs at: #executeAndFetchContext put: [ :script :ctx |
 		self assert: ctx equals: 20.
@@ -1121,7 +1121,7 @@ GbsRemoteDebuggerCoreToolsTest >> testDirectStepOverExecutedFrameUsesRemoteProce
 	context := CoreGbxFakeContextForRemoteDebugger new
 		level: 2;
 		yourself.
-	fakeList := GbxFakeListPresenterForRemoteDebugger new.
+	fakeList := CoreGbxFakeListPresenterForRemoteDebugger new.
 	fakeList selectIndex: 1.
 	session stubs at: #executeAndFetchContext put: [ :script :ctx |
 		self assert: ctx equals: 20.

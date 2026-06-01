@@ -137,7 +137,7 @@ GbsInspectorCoreToolsTest >> testBrowseTypedWrapperLifecycleReportUsesSessionLif
 GbsInspectorCoreToolsTest >> testSelectedInspectableOopPrefersSelectedTableRow [
 	| inspector fakeTable |
 	inspector := GbsInspector new.
-	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeTable := CoreGbxFakeTablePresenterForRemoteDebugger new.
 	fakeTable selectedItem: { 'child'. 'aChild'. 456 }.
 
 	inspector instVarNamed: 'oop' put: 123.
@@ -151,7 +151,7 @@ GbsInspectorCoreToolsTest >> testBrowseReferencersInMemoryUsesSessionFacadeAndOp
 	| inspector session fakeTable |
 	inspector := CoreTestableGbsInspector new.
 	session := CoreMockGbsSession new.
-	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeTable := CoreGbxFakeTablePresenterForRemoteDebugger new.
 	fakeTable selectedItem: { 'child'. 'aChild'. 456 }.
 	session stubs
 		at: #executeScriptAndFetchObject
@@ -188,7 +188,7 @@ GbsInspectorCoreToolsTest >> testInvokeSelectedObjectMethodPromptsForSelectorAnd
 	| inspector session fakeTable capturedSelector capturedArguments capturedOop |
 	inspector := CoreTestableGbsInspector new.
 	session := CoreMockGbsSession new.
-	fakeTable := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeTable := CoreGbxFakeTablePresenterForRemoteDebugger new.
 	fakeTable selectedItem: { 'child'. 'anInvoice'. 456 }.
 	session stubs at: #executeAndFetch put: [ :script |
 		self assert: (script includesSubstring: 'Object _objectForOop: 456').

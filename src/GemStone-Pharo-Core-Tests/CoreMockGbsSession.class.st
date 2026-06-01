@@ -32,6 +32,22 @@ CoreMockGbsSession >> apiGciExecuteStr: scriptString context: contextOop env: en
 ]
 
 { #category : 'accessing' }
+CoreMockGbsSession >> apiGciFetchOops: anOop startingAt: startIndex into: aBuffer size: numOops [
+	| block |
+	block := self stubs at: #apiGciFetchOops ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: anOop cull: startIndex cull: aBuffer cull: numOops ].
+	self error: 'No apiGciFetchOops stub configured.'
+]
+
+{ #category : 'accessing' }
+CoreMockGbsSession >> apiGciFetchSize: anOop [
+	| block |
+	block := self stubs at: #apiGciFetchSize ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: anOop ].
+	self error: 'No apiGciFetchSize stub configured.'
+]
+
+{ #category : 'accessing' }
 CoreMockGbsSession >> apiGciErr: errorStruct [
 	^ self gciErr: errorStruct
 ]

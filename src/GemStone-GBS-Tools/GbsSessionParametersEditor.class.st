@@ -11,6 +11,8 @@ Class {
 		'hostPassField',
 		'serviceField',
 		'hostRemCheck',
+		'netldiHostField',
+		'netldiPortField',
 		'netObjField',
 		'x509Button',
 		'model',
@@ -38,12 +40,14 @@ GbsSessionParametersEditor >> defaultLayout [
 		add: (SpBoxLayout newVertical
 			borderWidth: 10;
 			add: (self newLabel label: 'Host connection') asPresenter;
-			add: hostUserField;
+			add: (self newLabel label: 'Host username'); add: hostUserField;
 			add: (self newLabel label: 'Host password'); add: hostPassField;
-			add: (self newLabel label: 'Gem Service'); add: serviceField;
+			add: (self newLabel label: 'Gem service'); add: serviceField;
+			add: (self newLabel label: 'NetLDI host/IP'); add: netldiHostField;
+			add: (self newLabel label: 'NetLDI name/port'); add: netldiPortField;
 			add: hostRemCheck;
 			yourself);
-		add: (SpBoxLayout newHorizontal add: 'gemnetobject:' width: 80; add: netObjField; yourself) height: 30;
+		add: (SpBoxLayout newHorizontal add: 'Net object:' width: 80; add: netObjField; yourself) height: 30;
 		add: x509Button height: 30;
 		
 		"Footer: Buttons"
@@ -73,6 +77,8 @@ GbsSessionParametersEditor >> initializePresenters [
 	hostUserField := self newTextInput.
 	hostPassField := self newTextInput bePassword.
 	serviceField := self newTextInput text: 'gemnetobject'.
+	netldiHostField := self newTextInput placeholder: 'optional host or IP'.
+	netldiPortField := self newTextInput placeholder: 'optional name or port'.
 	hostRemCheck := self newCheckBox label: 'Remember'.
 	
 	netObjField := self newTextInput.
@@ -87,7 +93,7 @@ GbsSessionParametersEditor >> initializePresenters [
 GbsSessionParametersEditor >> initializeWindow: aWindow [
 	aWindow 
 		title: 'GemStone Session Parameters Editor';
-		initialExtent: 400@600.
+		initialExtent: 430@680.
 ]
 
 { #category : 'accessing' }
@@ -124,6 +130,8 @@ GbsSessionParametersEditor >> setModel: aParam [
 	hostUserField text: (model hostUsername ifNil: ['']).
 	hostPassField text: (model hostPassword ifNil: ['']).
 	serviceField text: model gemService.
+	netldiHostField text: (model netldiHostOrIp ifNil: ['']).
+	netldiPortField text: (model netldiNameOrPort ifNil: ['']).
 	hostRemCheck state: model hostRemember.
 	netObjField text: (model netObject ifNil: ['']).
 ]
@@ -138,6 +146,8 @@ GbsSessionParametersEditor >> updateModel [
 	model hostUsername: hostUserField text.
 	model hostPassword: hostPassField text.
 	model gemService: serviceField text.
+	model netldiHostOrIp: netldiHostField text.
+	model netldiNameOrPort: netldiPortField text.
 	model hostRemember: hostRemCheck state.
 	model netObject: netObjField text.
 ]

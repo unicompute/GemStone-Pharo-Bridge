@@ -9,9 +9,9 @@ Class {
 GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListCapabilityPredicatesTrackSelectionState [
 	| presenter fakeUsers fakeDicts fakeEntries |
 	presenter := GbsSymbolListBrowserPresenter new.
-	fakeUsers := GbxFakeListPresenterForBrowser new.
-	fakeDicts := GbxFakeListPresenterForBrowser new.
-	fakeEntries := GbxFakeListPresenterForBrowser new.
+	fakeUsers := CoreGbxFakeListPresenterForBrowser new.
+	fakeDicts := CoreGbxFakeListPresenterForBrowser new.
+	fakeEntries := CoreGbxFakeListPresenterForBrowser new.
 
 	presenter instVarNamed: 'userDropList' put: fakeUsers.
 	presenter instVarNamed: 'dictionariesList' put: fakeDicts.
@@ -76,14 +76,14 @@ GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListShowEntryForKeyPopul
 		(script includesSubstring: 'entryKey := dict keys detect:')
 			ifTrue: [ ^ 'dictionary', String lf, 'mediaAssets', Character tab asString, 'aDictionary()', String lf, 'users', Character tab asString, 'aDictionary(...)' ].
 		'' ].
-	fakeUsers := GbxFakeListPresenterForBrowser new.
+	fakeUsers := CoreGbxFakeListPresenterForBrowser new.
 	fakeUsers selectedItem: 'DataCurator'.
-	fakeDicts := GbxFakeListPresenterForBrowser new.
+	fakeDicts := CoreGbxFakeListPresenterForBrowser new.
 	fakeDicts selectedItem: 'UserGlobals'.
-	fakeEntries := GbxFakeListPresenterForBrowser new.
+	fakeEntries := CoreGbxFakeListPresenterForBrowser new.
 	fakeEntries selectedItem: 'OkzZuluSeasideState'.
-	fakeSelection := GbxFakeTextPresenterForRemoteDebugger new.
-	fakeValue := GbxFakeListPresenterForBrowser new.
+	fakeSelection := CoreGbxFakeTextPresenterForRemoteDebugger new.
+	fakeValue := CoreGbxFakeListPresenterForBrowser new.
 
 	presenter instVarNamed: 'session' put: mockSession.
 	presenter instVarNamed: 'userDropList' put: fakeUsers.
@@ -102,7 +102,7 @@ GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListShowEntryForKeyPopul
 GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListCanOperateOnSelectedPreviewRowRequiresStructuredSelection [
 	| presenter fakeValue |
 	presenter := GbsSymbolListBrowserPresenter new.
-	fakeValue := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeValue := CoreGbxFakeTablePresenterForRemoteDebugger new.
 	fakeValue selectedItem: { 'mediaAssets'. 'aDictionary()' }.
 
 	presenter instVarNamed: 'valueText' put: fakeValue.
@@ -123,13 +123,13 @@ GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListStructuredPreviewFor
 			and: [ script includesSubstring: 'value: { { ''dictionary''. ''users'' } }' ])
 			ifTrue: [ ^ 'collection', String lf, '1', Character tab asString, 'alice', String lf, '2', Character tab asString, 'bob' ].
 		'' ].
-	fakeUsers := GbxFakeListPresenterForBrowser new.
+	fakeUsers := CoreGbxFakeListPresenterForBrowser new.
 	fakeUsers selectedItem: 'DataCurator'.
-	fakeDicts := GbxFakeListPresenterForBrowser new.
+	fakeDicts := CoreGbxFakeListPresenterForBrowser new.
 	fakeDicts selectedItem: 'UserGlobals'.
-	fakeEntries := GbxFakeListPresenterForBrowser new.
+	fakeEntries := CoreGbxFakeListPresenterForBrowser new.
 	fakeEntries selectedItem: 'OkzZuluSeasideState'.
-	fakeValue := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeValue := CoreGbxFakeTablePresenterForRemoteDebugger new.
 	fakeValue selectedItem: { 'users'. 'aDictionary(...)' }.
 
 	presenter instVarNamed: 'session' put: mockSession.
@@ -161,11 +161,11 @@ GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListBrowseReferencersFor
 		self assert: (script includesSubstring: 'object := (Object _objectForOop: 9001)').
 		self assert: (script includesSubstring: 'object findReferencesInMemory asArray').
 		^ { GbsProxy oop: 9100 session: mockSession } ].
-	fakeUsers := GbxFakeListPresenterForBrowser new.
+	fakeUsers := CoreGbxFakeListPresenterForBrowser new.
 	fakeUsers selectedItem: 'DataCurator'.
-	fakeDicts := GbxFakeListPresenterForBrowser new.
+	fakeDicts := CoreGbxFakeListPresenterForBrowser new.
 	fakeDicts selectedItem: 'UserGlobals'.
-	fakeEntries := GbxFakeListPresenterForBrowser new.
+	fakeEntries := CoreGbxFakeListPresenterForBrowser new.
 	fakeEntries selectedItem: 'OkzZuluSeasideState'.
 
 	presenter instVarNamed: 'session' put: mockSession.
@@ -299,13 +299,13 @@ GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListBrowseReferencersFor
 		self assert: (script includesSubstring: 'object := (Object _objectForOop: 9002)').
 		self assert: (script includesSubstring: 'object findReferencesInMemory asArray').
 		^ { GbsProxy oop: 9200 session: mockSession } ].
-	fakeUsers := GbxFakeListPresenterForBrowser new.
+	fakeUsers := CoreGbxFakeListPresenterForBrowser new.
 	fakeUsers selectedItem: 'DataCurator'.
-	fakeDicts := GbxFakeListPresenterForBrowser new.
+	fakeDicts := CoreGbxFakeListPresenterForBrowser new.
 	fakeDicts selectedItem: 'UserGlobals'.
-	fakeEntries := GbxFakeListPresenterForBrowser new.
+	fakeEntries := CoreGbxFakeListPresenterForBrowser new.
 	fakeEntries selectedItem: 'OkzZuluSeasideState'.
-	fakeValue := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeValue := CoreGbxFakeTablePresenterForRemoteDebugger new.
 	fakeValue selectedItem: { 'users'. 'aDictionary(...)' }.
 
 	presenter instVarNamed: 'session' put: mockSession.
@@ -330,13 +330,13 @@ GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListRefreshDictionariesP
 		(script includesSubstring: 'symbolList')
 			ifTrue: [ ^ 'UserGlobals', Character tab asString, 'Globals', Character tab asString, 'Published' ].
 		'' ].
-	fakeUsers := GbxFakeListPresenterForBrowser new.
+	fakeUsers := CoreGbxFakeListPresenterForBrowser new.
 	fakeUsers selectedItem: 'DataCurator'.
-	fakeDicts := GbxFakeListPresenterForBrowser new.
+	fakeDicts := CoreGbxFakeListPresenterForBrowser new.
 	fakeDicts selectedItem: 'Globals'.
-	fakeEntries := GbxFakeListPresenterForBrowser new.
-	fakeSelection := GbxFakeTextPresenterForRemoteDebugger new.
-	fakeValue := GbxFakeListPresenterForBrowser new.
+	fakeEntries := CoreGbxFakeListPresenterForBrowser new.
+	fakeSelection := CoreGbxFakeTextPresenterForRemoteDebugger new.
+	fakeValue := CoreGbxFakeListPresenterForBrowser new.
 
 	presenter instVarNamed: 'session' put: mockSession.
 	presenter instVarNamed: 'userDropList' put: fakeUsers.
@@ -362,14 +362,14 @@ GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListRefreshEntriesPreser
 			and: [ script includesSubstring: 'value: ''KeyB''' ])
 			ifTrue: [ ^ 'dictionary', String lf, 'users', Character tab asString, 'aDictionary(...)' ].
 		'' ].
-	fakeUsers := GbxFakeListPresenterForBrowser new.
+	fakeUsers := CoreGbxFakeListPresenterForBrowser new.
 	fakeUsers selectedItem: 'DataCurator'.
-	fakeDicts := GbxFakeListPresenterForBrowser new.
+	fakeDicts := CoreGbxFakeListPresenterForBrowser new.
 	fakeDicts selectedItem: 'UserGlobals'.
-	fakeEntries := GbxFakeListPresenterForBrowser new.
+	fakeEntries := CoreGbxFakeListPresenterForBrowser new.
 	fakeEntries selectedItem: 'KeyB'.
-	fakeSelection := GbxFakeTextPresenterForRemoteDebugger new.
-	fakeValue := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeSelection := CoreGbxFakeTextPresenterForRemoteDebugger new.
+	fakeValue := CoreGbxFakeTablePresenterForRemoteDebugger new.
 
 	presenter instVarNamed: 'session' put: mockSession.
 	presenter instVarNamed: 'userDropList' put: fakeUsers.
@@ -402,11 +402,11 @@ GbsSymbolListBrowserPresenterCoreToolsTest >> testSymbolListRefreshUsersShowsSel
 			and: [ script includesSubstring: 'value: ''OkzZuluSeasideState''' ])
 			ifTrue: [ ^ 'dictionary', String lf, 'users', Character tab asString, 'aDictionary(...)', String lf, 'events', Character tab asString, 'aDictionary(...)' ].
 		'' ].
-	fakeUsers := GbxFakeListPresenterForBrowser new.
-	fakeDicts := GbxFakeListPresenterForBrowser new.
-	fakeEntries := GbxFakeListPresenterForBrowser new.
-	fakeSelection := GbxFakeTextPresenterForRemoteDebugger new.
-	fakeValue := GbxFakeTablePresenterForRemoteDebugger new.
+	fakeUsers := CoreGbxFakeListPresenterForBrowser new.
+	fakeDicts := CoreGbxFakeListPresenterForBrowser new.
+	fakeEntries := CoreGbxFakeListPresenterForBrowser new.
+	fakeSelection := CoreGbxFakeTextPresenterForRemoteDebugger new.
+	fakeValue := CoreGbxFakeTablePresenterForRemoteDebugger new.
 
 	presenter instVarNamed: 'session' put: mockSession.
 	presenter instVarNamed: 'targetUserName' put: 'DataCurator'.

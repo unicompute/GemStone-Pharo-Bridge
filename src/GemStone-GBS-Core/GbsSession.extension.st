@@ -887,6 +887,7 @@ GbsSession >> resetAfterLogout [
 	sessionOop := nil.
 	sessionId := nil.
 	self clearProxyCache.
+	self materializer clearRemoteClassNameCache.
 	self clearNamedObjectCache.
 	GbsSessionManager clearTypedWrapperAutoloadRegistrationsForSession: self.
 	self invalidateRepositoryRoots.

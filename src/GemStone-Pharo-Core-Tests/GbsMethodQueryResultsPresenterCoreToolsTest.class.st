@@ -275,7 +275,7 @@ GbsMethodQueryResultsPresenterCoreToolsTest >> testShowSourceForReferenceUsesRem
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
 		self assert: (script includesSubstring: 'value: (''size'' asSymbol)').
 		^ #(9001 'Object' 'size' 'accessing' 'size ^ 1' 'Kernel' 'Object>>size' 1 1) ].
-	text := GbxFakeTextPresenterForBrowser new.
+	text := CoreGbxFakeTextPresenterForBrowser new.
 
 	presenter session: session.
 	presenter instVarNamed: 'sourceText' put: text.
@@ -322,7 +322,7 @@ GbsMethodQueryResultsPresenterCoreToolsTest >> testShowSourceForClassSideReferen
 		self assert: (script includesSubstring: 'behavior := classSideValue ifTrue: [ cls class ]').
 		self assert: (script includesSubstring: 'value: (''new'' asSymbol)').
 		^ #(9002 'Object class' 'new' 'instance creation' 'new ^ self basicNew' 'Kernel' 'Object class>>new' 1 1) ].
-	text := GbxFakeTextPresenterForBrowser new.
+	text := CoreGbxFakeTextPresenterForBrowser new.
 
 	presenter session: session.
 	presenter instVarNamed: 'sourceText' put: text.

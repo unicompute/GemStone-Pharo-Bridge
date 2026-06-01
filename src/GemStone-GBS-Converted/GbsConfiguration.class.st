@@ -87,6 +87,17 @@ GbsConfiguration class >> removeInvalidConnectors [
 	^ true
 ]
 
+{ #category : 'accessing' }
+GbsConfiguration >> autoMarkDirty [
+	self initializeDefaults.
+	^ autoMarkDirty
+]
+
+{ #category : 'accessing' }
+GbsConfiguration >> autoMarkDirty: aBoolean [
+	autoMarkDirty := aBoolean
+]
+
 { #category : 'initialization' }
 GbsConfiguration >> initializeDefaults [
 	libraryName ifNil: [ libraryName := '' ].
