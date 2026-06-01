@@ -222,6 +222,93 @@ GbsSessionParametersTest >> testImportLegacyDictionaryAliases [
 ]
 
 { #category : 'tests' }
+GbsSessionParametersTest >> testImportParametersFromBadStonRaisesError [
+	(Smalltalk includesKey: #STON) ifFalse: [ self skip: 'STON is not available in this image.' ].
+
+	self
+		should: [ GbsSessionParameters parametersFromExportString: '{ this is not valid STON' ]
+		raise: Error
+]
+
+{ #category : 'tests' }
+GbsSessionParametersTest >> testImportParametersFromLegacyBundleWithoutMetadata [
+	| bundle exported imported |
+	(Smalltalk includesKey: #STON) ifFalse: [ self skip: 'STON is not available in this image.' ].
+	bundle := Dictionary new
+		at: 'parameters' put: {
+			Dictionary new
+				at: 'configurationName' put: ' Legacy ';
+				at: 'stoneName' put: ' gs64stone ';
+				at: 'userId' put: ' DataCurator ';
+				yourself };
+		yourself.
+	exported := STON toString: bundle.
+
+	imported := GbsSessionParameters parametersFromExportString: exported.
+
+	self assert: imported size equals: 1.
+	self assert: imported first name equals: 'Legacy'.
+	self assert: imported first gemStoneName equals: 'gs64stone'.
+	self assert: imported first username equals: 'DataCurator'
+]
+
+{ #category : 'tests' }
+GbsSessionParametersTest >> testImportParametersFromLegacyBundleRenamesDuplicateNames [
+	| previous bundle exported imported |
+	(Smalltalk includesKey: #STON) ifFalse: [ self skip: 'STON is not available in this image.' ].
+	previous := GbsSessionParameters allParameters copy.
+	[
+		GbsSessionParameters allParameters removeAll.
+		bundle := Dictionary new
+			at: 'parameters' put: {
+				Dictionary new
+					at: 'configurationName' put: 'Legacy';
+					at: 'stoneName' put: 'gs64stone';
+					at: 'userId' put: 'DataCurator';
+					yourself.
+				Dictionary new
+					at: 'configurationName' put: ' Legacy ';
+					at: 'stoneName' put: 'gs64stone';
+					at: 'userId' put: 'GcUser';
+					yourself };
+			yourself.
+		exported := STON toString: bundle.
+
+		imported := GbsSessionParameters importParametersFromExportString: exported.
+
+		self assert: imported size equals: 2.
+		self assert: imported first name equals: 'Legacy'.
+		self assert: imported second name equals: 'Legacy (2)'.
+		self assert: GbsSessionParameters allParameters second name equals: 'Legacy (2)'
+	] ensure: [
+		GbsSessionParameters allParameters
+			removeAll;
+			addAll: previous ]
+]
+
+{ #category : 'tests' }
+GbsSessionParametersTest >> testImportParametersFromBundleRejectsMissingRequiredFields [
+	| bundle exported |
+	(Smalltalk includesKey: #STON) ifFalse: [ self skip: 'STON is not available in this image.' ].
+	bundle := Dictionary new
+		at: 'parameters' put: {
+			Dictionary new
+				at: 'name' put: 'Incomplete';
+				at: 'gemStoneName' put: '';
+				at: 'username' put: '';
+				yourself };
+		yourself.
+	exported := STON toString: bundle.
+
+	self
+		should: [ GbsSessionParameters importParametersFromExportString: exported ]
+		raise: Error
+		withExceptionDo: [ :ex |
+			self assert: (ex messageText includesSubstring: 'GemStone stone name is required.').
+			self assert: (ex messageText includesSubstring: 'GemStone username is required.') ]
+]
+
+{ #category : 'tests' }
 GbsSessionParametersTest >> testImportParametersFromExportStringAppendsImportedConfigurations [
 	| previous params exported imported |
 	(Smalltalk includesKey: #STON) ifFalse: [ self skip: 'STON is not available in this image.' ].

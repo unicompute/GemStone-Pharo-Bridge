@@ -39,6 +39,45 @@ GbsSessionMaterializationRemoteReader >> clearRemoteClassNameCache [
 ]
 
 { #category : 'private' }
+GbsSessionMaterializationRemoteReader >> batchesForOops: oopCollection [
+	| batches batch batchSize |
+	batchSize := self materializationBatchSize.
+	batches := OrderedCollection new.
+	batch := OrderedCollection new.
+	oopCollection do: [ :oop |
+		batch add: oop.
+		batch size >= batchSize ifTrue: [
+			batches add: batch asArray.
+			batch := OrderedCollection new ] ].
+	batch isEmpty ifFalse: [ batches add: batch asArray ].
+	^ batches asArray
+]
+
+{ #category : 'metrics' }
+GbsSessionMaterializationRemoteReader >> incrementMaterializationMetric: aSymbol [
+	^ session materializer incrementMaterializationMetric: aSymbol
+]
+
+{ #category : 'metrics' }
+GbsSessionMaterializationRemoteReader >> incrementMaterializationMetric: aSymbol by: anInteger [
+	^ session materializer incrementMaterializationMetric: aSymbol by: anInteger
+]
+
+{ #category : 'metrics' }
+GbsSessionMaterializationRemoteReader >> materializationBatchSize [
+	^ [ session materializationBatchSize ]
+		on: Error
+		do: [ 1000 ]
+]
+
+{ #category : 'metrics' }
+GbsSessionMaterializationRemoteReader >> recordMillisecondsForMetric: aSymbol during: aBlock [
+	^ session materializer
+		recordMillisecondsForMetric: aSymbol
+		during: aBlock
+]
+
+{ #category : 'private' }
 GbsSessionMaterializationRemoteReader >> parseOopPairLine: aString [
 	| parts |
 	parts := aString asString splitOn: Character tab.
@@ -84,14 +123,18 @@ GbsSessionMaterializationRemoteReader >> oopPairsFromFlatOops: oopArray [
 
 { #category : 'remote access' }
 GbsSessionMaterializationRemoteReader >> remoteArrayElementOopAt: anInteger ofOop: anOop [
-	^ session
-		returnRemoteCommandBody: 'object at: index'
-		literalBindings: (Dictionary new
-			at: 'index' put: anInteger;
-			yourself)
-		oopBindings: (Dictionary new
-			at: 'object' put: anOop;
-			yourself)
+	self incrementMaterializationMetric: #slotCommandCalls.
+	^ self
+		recordMillisecondsForMetric: #slotFetchMs
+		during: [
+			session
+				returnRemoteCommandBody: 'object at: index'
+				literalBindings: (Dictionary new
+					at: 'index' put: anInteger;
+					yourself)
+				oopBindings: (Dictionary new
+					at: 'object' put: anOop;
+					yourself) ]
 ]
 
 { #category : 'remote access' }
@@ -119,6 +162,7 @@ GbsSessionMaterializationRemoteReader >> remoteArrayElementOopsCache [
 { #category : 'remote access' }
 GbsSessionMaterializationRemoteReader >> remoteArrayElementOopsViaCommandsForOop: anOop size: size [
 	| oops |
+	self incrementMaterializationMetric: #slotFallbackCalls.
 	oops := Array new: size.
 	1 to: size do: [ :index |
 		oops at: index put: (self remoteArrayElementOopAt: index ofOop: anOop) ].
@@ -128,24 +172,30 @@ GbsSessionMaterializationRemoteReader >> remoteArrayElementOopsViaCommandsForOop
 { #category : 'remote access' }
 GbsSessionMaterializationRemoteReader >> remoteArrayElementOopsViaGciForOop: anOop size: size [
 	| buffer fetched oops |
+	self incrementMaterializationMetric: #slotBatchCalls.
+	self incrementMaterializationMetric: #slotBatchOopCount by: size.
 	buffer := ExternalAddress allocate: size * 8.
-	[
-		fetched := session serverInterface
-			apiGciFetchOops: anOop
-			startingAt: 1
-			into: buffer
-			size: size.
-		(fetched isCollection and: [ fetched isString not ])
-			ifTrue: [ ^ fetched asArray ].
-		oops := Array new: size.
-		1 to: size do: [ :index |
-			oops
-				at: index
-				put: ((buffer
-					integerAt: 1 + ((index - 1) * 8)
-					size: 8
-					signed: false) asInteger) ].
-		^ oops
+	^ [
+		self
+			recordMillisecondsForMetric: #slotFetchMs
+			during: [
+				fetched := session serverInterface
+					apiGciFetchOops: anOop
+					startingAt: 1
+					into: buffer
+					size: size.
+				(fetched isCollection and: [ fetched isString not ])
+					ifTrue: [ fetched asArray ]
+					ifFalse: [
+						oops := Array new: size.
+						1 to: size do: [ :index |
+							oops
+								at: index
+								put: ((buffer
+									integerAt: 1 + ((index - 1) * 8)
+									size: 8
+									signed: false) asInteger) ].
+						oops ] ]
 	] ensure: [ buffer free ]
 ]
 
@@ -190,13 +240,17 @@ GbsSessionMaterializationRemoteReader >> remoteClassNameForClassOop: classOop [
 	^ self remoteClassNameByClassOopCache
 		at: classOop
 		ifAbsentPut: [
-			session
-				fetchRemoteCommandBody: 'classObject name asString'
-				literalBindings: Dictionary new
-				oopBindings: (Dictionary new
-					at: 'classObject' put: classOop;
-					yourself)
-				context: 20 ]
+			self incrementMaterializationMetric: #classNameByClassOopCalls.
+			self
+				recordMillisecondsForMetric: #classNameByClassOopMs
+				during: [
+					session
+						fetchRemoteCommandBody: 'classObject name asString'
+						literalBindings: Dictionary new
+						oopBindings: (Dictionary new
+							at: 'classObject' put: classOop;
+							yourself)
+						context: 20 ] ]
 ]
 
 { #category : 'cache' }
@@ -211,19 +265,28 @@ GbsSessionMaterializationRemoteReader >> remoteClassNameForObjectOop: anOop [
 	^ self remoteClassNameCache
 		at: anOop
 		ifAbsentPut: [
-			session
-				fetchRemoteCommandBody: 'object class name asString'
-				literalBindings: Dictionary new
-				oopBindings: (Dictionary new
-					at: 'object' put: anOop;
-					yourself)
-					context: 20 ]
+			self incrementMaterializationMetric: #classNameObjectCalls.
+			self
+				recordMillisecondsForMetric: #classNameObjectMs
+				during: [
+					session
+						fetchRemoteCommandBody: 'object class name asString'
+						literalBindings: Dictionary new
+						oopBindings: (Dictionary new
+							at: 'object' put: anOop;
+							yourself)
+							context: 20 ] ]
 ]
 
 { #category : 'remote access' }
 GbsSessionMaterializationRemoteReader >> remoteClassNameDictionaryForOops: oopCollection [
-	^ self parseClassNameLines: (session
-		fetchRemoteCommandBody: '| stream object |
+	self incrementMaterializationMetric: #classNameBatchCalls.
+	self incrementMaterializationMetric: #classNameBatchOopCount by: oopCollection size.
+	^ self
+		recordMillisecondsForMetric: #classNameBatchMs
+		during: [
+			self parseClassNameLines: (session
+				fetchRemoteCommandBody: '| stream object |
 stream := WriteStream on: String new.
 oops do: [ :oop |
 	object := Object _objectForOop: oop.
@@ -233,16 +296,16 @@ oops do: [ :oop |
 		nextPutAll: object class name asString;
 		nextPut: Character lf ].
 stream contents'
-		literalBindings: (Dictionary new
-			at: 'oops' put: oopCollection asArray;
-			yourself)
-		oopBindings: Dictionary new
-		context: 20)
+				literalBindings: (Dictionary new
+					at: 'oops' put: oopCollection asArray;
+					yourself)
+				oopBindings: Dictionary new
+				context: 20) ]
 ]
 
 { #category : 'remote access' }
 GbsSessionMaterializationRemoteReader >> remoteClassNamesForOops: oopCollection [
-	| result cache missing fetched |
+	| result cache missing batches |
 	result := Dictionary new.
 	cache := self remoteClassNameCache.
 	missing := OrderedCollection new.
@@ -253,19 +316,29 @@ GbsSessionMaterializationRemoteReader >> remoteClassNamesForOops: oopCollection 
 				(missing includes: oop) ifFalse: [
 					missing add: oop ] ] ].
 	missing isEmpty ifTrue: [ ^ result ].
-	fetched := [ self remoteClassNameDictionaryForOops: missing ]
-		on: Error
-		do: [ nil ].
-	fetched
-		ifNil: [
-			missing do: [ :oop |
-				result at: oop put: (self remoteClassNameForOop: oop) ] ]
-		ifNotNil: [
-			missing do: [ :oop |
-				| className |
-				className := fetched at: oop ifAbsent: [ self remoteClassNameForOop: oop ].
-				cache at: oop put: className.
-				result at: oop put: className ] ].
+	batches := self batchesForOops: missing.
+	batches do: [ :batch |
+		| fetched |
+		fetched := [ self remoteClassNameDictionaryForOops: batch ]
+			on: Error
+			do: [
+				self incrementMaterializationMetric: #classNameBatchFallbacks.
+				nil ].
+		fetched
+			ifNil: [
+				self incrementMaterializationMetric: #classNameFallbackCalls by: batch size.
+				batch do: [ :oop |
+					result at: oop put: (self remoteClassNameForOop: oop) ] ]
+			ifNotNil: [
+				batch do: [ :oop |
+					| className |
+					className := fetched
+						at: oop
+						ifAbsent: [
+							self incrementMaterializationMetric: #classNameFallbackCalls.
+							self remoteClassNameForOop: oop ].
+					cache at: oop put: className.
+					result at: oop put: className ] ] ].
 	^ result
 ]
 
@@ -290,7 +363,11 @@ GbsSessionMaterializationRemoteReader >> remoteCollectionAsArrayOop: anOop [
 GbsSessionMaterializationRemoteReader >> remoteClassOopForOop: anOop [
 	^ self remoteClassOopCache
 		at: anOop
-		ifAbsentPut: [ (session serverInterface apiGciGetClass: anOop) asInteger ]
+		ifAbsentPut: [
+			self incrementMaterializationMetric: #classOopCalls.
+			self
+				recordMillisecondsForMetric: #classOopMs
+				during: [ (session serverInterface apiGciGetClass: anOop) asInteger ] ]
 ]
 
 { #category : 'cache' }
@@ -370,12 +447,16 @@ GbsSessionMaterializationRemoteReader >> remoteSizeForOop: anOop [
 	^ self remoteSizeCache
 		at: anOop
 		ifAbsentPut: [
-			[ (session serverInterface apiGciFetchSize: anOop) asInteger ] on: Error do: [
-				session fetchRemoteCommand: (GbsRemoteCommand
-					blockBody: 'object size'
-					oopBindings: (Dictionary new
-						at: 'object' put: anOop;
-						yourself)) ] ]
+			self incrementMaterializationMetric: #sizeFetchCalls.
+			self
+				recordMillisecondsForMetric: #sizeFetchMs
+				during: [
+					[ (session serverInterface apiGciFetchSize: anOop) asInteger ] on: Error do: [
+						session fetchRemoteCommand: (GbsRemoteCommand
+							blockBody: 'object size'
+							oopBindings: (Dictionary new
+								at: 'object' put: anOop;
+								yourself)) ] ] ]
 ]
 
 { #category : 'cache' }

@@ -26,6 +26,21 @@ GbsSession >> materializer [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> materializationBatchSize [
+	^ self materializer materializationBatchSize
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> materializationMetrics [
+	^ self materializer materializationMetrics
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> resetMaterializationMetrics [
+	^ self materializer resetMaterializationMetrics
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> scriptMarshaller [
 	^ GbsSessionScriptMarshaller on: self
 ]
@@ -885,6 +900,7 @@ GbsSession >> resetAfterLogout [
 	self resetConnectionStateAfterLogout.
 	self clearProxyCache.
 	self materializer clearRemoteClassNameCache.
+	GbsSessionManager clearTypedWrapperFreshnessCacheForSession: self.
 	self clearNamedObjectCache.
 	GbsSessionManager clearTypedWrapperAutoloadRegistrationsForSession: self.
 	self invalidateRepositoryRoots

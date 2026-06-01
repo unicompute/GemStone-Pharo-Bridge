@@ -39,6 +39,7 @@ GbsSessionTransactionCoordinator >> abortTransaction [
 			on: Error
 			do: [ GbsError signal: 'Failed to abort transaction.' ] ].
 	GbsSessionManager invalidateStaleTypedWrapperClassesForSession: session.
+	GbsSessionManager clearTypedWrapperFreshnessCacheForSession: session.
 	session materializer clearRemoteClassNameCache.
 	session invalidateRepositoryRoots.
 	^ true
@@ -69,6 +70,7 @@ GbsSessionTransactionCoordinator >> commitTransaction [
 	result := session gciCommit.
 	result = 1 ifTrue: [
 		GbsSessionManager invalidateStaleTypedWrapperClassesForSession: session.
+		GbsSessionManager clearTypedWrapperFreshnessCacheForSession: session.
 		session materializer clearRemoteClassNameCache.
 		session invalidateRepositoryRoots ].
 	^ result = 1

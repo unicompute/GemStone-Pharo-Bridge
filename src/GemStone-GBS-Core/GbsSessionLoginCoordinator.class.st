@@ -141,6 +141,7 @@ GbsSessionLoginCoordinator >> resetSessionStateForLoginAttempt [
 	session sessionId: nil.
 	(session respondsTo: #clearProxyCache) ifTrue: [ session clearProxyCache ].
 	(session respondsTo: #clearNamedObjectCache) ifTrue: [ session clearNamedObjectCache ].
+	GbsSessionManager clearTypedWrapperFreshnessCacheForSession: session.
 	(session respondsTo: #materializer) ifTrue: [
 		[ session materializer clearRemoteClassNameCache ]
 			on: Error

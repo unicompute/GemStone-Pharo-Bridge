@@ -38,11 +38,19 @@ GbsSessionMaterializer >> clearRemoteClassNameCache [
 
 { #category : 'fetching' }
 GbsSessionMaterializer >> fetchObject: anOop [
+	self resetMaterializationMetrics.
+	self incrementMaterializationMetric: #rootFetches.
 	^ self
-		fetchObject: anOop
-		withProfile: self materializationProfile
-		depth: 0
-		seen: IdentitySet new
+		recordMillisecondsForMetric: #rootFetchMs
+		during: [
+			self
+				recordMillisecondsForMetric: #fetchTotalMs
+				during: [
+					self
+						fetchObject: anOop
+						withProfile: self materializationProfile
+						depth: 0
+						seen: IdentitySet new ] ]
 ]
 
 { #category : 'fetching' }
@@ -179,6 +187,7 @@ GbsSessionMaterializer >> materializeProxyOnlyOops: oopCollection withProfile: a
 	1 to: assigned size do: [ :index | assigned at: index put: false ].
 	missing := OrderedCollection new.
 	wrapperClasses := Dictionary new.
+	self incrementMaterializationMetric: #proxyBatchItems by: oopCollection size.
 	oopCollection doWithIndex: [ :oop :index |
 		(self isImmediateOop: oop)
 			ifTrue: [
@@ -189,6 +198,7 @@ GbsSessionMaterializer >> materializeProxyOnlyOops: oopCollection withProfile: a
 				cachedProxy := self cachedProxyForOop: oop.
 				cachedProxy
 					ifNotNil: [
+						self incrementMaterializationMetric: #proxyCacheHits.
 						results at: index put: cachedProxy.
 						assigned at: index put: true ]
 					ifNil: [
@@ -212,12 +222,17 @@ GbsSessionMaterializer >> materializeProxyOnlyOops: oopCollection withProfile: a
 						ifNil: [ self proxyForOop: oop ]
 						ifNotNil: [
 							| wrapperClass |
-							wrapperClass := wrapperClasses
-								at: className
-								ifAbsentPut: [
-									GbsSessionManager
-										typedWrapperClassForServerClassNamed: className
-										forSession: session ].
+							(wrapperClasses includesKey: className)
+								ifTrue: [ wrapperClass := wrapperClasses at: className ]
+								ifFalse: [
+									self incrementMaterializationMetric: #wrapperLookupCalls.
+									wrapperClass := self
+										recordMillisecondsForMetric: #wrapperLookupMs
+										during: [
+											GbsSessionManager
+												typedWrapperClassForServerClassNamed: className
+												forSession: session ].
+									wrapperClasses at: className put: wrapperClass ].
 							wrapperClass
 								ifNil: [ self proxyForOop: oop ]
 								ifNotNil: [ self proxyForOop: oop usingClass: wrapperClass ] ] ].
@@ -293,70 +308,21 @@ GbsSessionMaterializer >> proxyForOop: anOop serverClassName: aClassName [
 GbsSessionMaterializer >> proxyForOop: anOop usingClass: proxyClass [
 	| cachedProxy proxy |
 	cachedProxy := self cachedProxyForOop: anOop.
-	cachedProxy ifNotNil: [ ^ cachedProxy ].
-	proxy := proxyClass oop: anOop session: session.
-	self proxyCache at: anOop put: { proxy }.
-	^ proxy
-]
-
-{ #category : 'remote access' }
-GbsSessionMaterializer >> remoteArrayElementOopAt: anInteger ofOop: anOop [
-	^ self remoteReader remoteArrayElementOopAt: anInteger ofOop: anOop
-]
-
-{ #category : 'remote access' }
-GbsSessionMaterializer >> remoteArrayElementOopsForOop: anOop [
-	^ self remoteReader remoteArrayElementOopsForOop: anOop
-]
-
-{ #category : 'remote access' }
-GbsSessionMaterializer >> remoteAssociationOopPairForOop: anOop [
-	^ self remoteReader remoteAssociationOopPairForOop: anOop
-]
-
-{ #category : 'remote access' }
-GbsSessionMaterializer >> remoteAssociationPairOopFor: anOop [
-	^ self remoteReader remoteAssociationPairOopFor: anOop
-]
-
-{ #category : 'remote access' }
-GbsSessionMaterializer >> remoteClassNameForOop: anOop [
-	^ self remoteReader remoteClassNameForOop: anOop
-]
-
-{ #category : 'remote access' }
-GbsSessionMaterializer >> remoteClassNamesForOops: oopCollection [
-	^ self remoteReader remoteClassNamesForOops: oopCollection
-]
-
-{ #category : 'remote access' }
-GbsSessionMaterializer >> remoteCollectionAsArrayOop: anOop [
-	^ self remoteReader remoteCollectionAsArrayOop: anOop
-]
-
-{ #category : 'remote access' }
-GbsSessionMaterializer >> remoteDictionaryAssociationOopPairsForOop: anOop [
-	^ self remoteReader remoteDictionaryAssociationOopPairsForOop: anOop
-]
-
-{ #category : 'remote access' }
-GbsSessionMaterializer >> remoteDictionaryAssociationsAsArrayOop: anOop [
-	^ self remoteReader remoteDictionaryAssociationsAsArrayOop: anOop
+	cachedProxy ifNotNil: [
+		self incrementMaterializationMetric: #proxyCacheHits.
+		^ cachedProxy ].
+	^ self
+		recordMillisecondsForMetric: #proxyConstructionMs
+		during: [
+			proxy := proxyClass oop: anOop session: session.
+			self proxyCache at: anOop put: { proxy }.
+			self incrementMaterializationMetric: #proxyCreations.
+			proxy ]
 ]
 
 { #category : 'remote access' }
 GbsSessionMaterializer >> remoteReader [
 	^ GbsSessionMaterializationRemoteReader on: session
-]
-
-{ #category : 'remote access' }
-GbsSessionMaterializer >> remoteSizeForOop: anOop [
-	^ self remoteReader remoteSizeForOop: anOop
-]
-
-{ #category : 'remote access' }
-GbsSessionMaterializer >> remoteStringValueForOop: anOop [
-	^ self remoteReader remoteStringValueForOop: anOop
 ]
 
 { #category : 'runtime' }

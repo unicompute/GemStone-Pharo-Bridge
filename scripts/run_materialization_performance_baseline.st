@@ -1,4 +1,4 @@
-| loadFailed supportClass proxyClass session env integerEnv millisecondsToRun arraySize dictionarySize shallowSize arrayOop dictionaryOop shallowOop arrayResult dictionaryResult shallowResult arrayMs dictionaryMs shallowMs |
+| loadFailed supportClass proxyClass session env integerEnv millisecondsToRun metricValue arraySize dictionarySize shallowSize arrayOop dictionaryOop shallowOop arrayResult dictionaryResult shallowResult arrayMs dictionaryMs shallowMs shallowMetrics |
 [
   loadFailed := false.
   [ Metacello new
@@ -28,6 +28,10 @@
         elapsed := Time millisecondClockValue - start.
         elapsed < 0 ifTrue: [ elapsed := elapsed + 86400000 ].
         elapsed ].
+      metricValue := [ :metrics :key |
+        metrics
+          at: key
+          ifAbsent: [ 0 ] ].
 
       arraySize := integerEnv value: 'GBS_MATERIALIZATION_ARRAY_SIZE' value: 1200.
       dictionarySize := integerEnv value: 'GBS_MATERIALIZATION_DICTIONARY_SIZE' value: 700.
@@ -98,6 +102,7 @@ root'
         session fetchShallow.
         shallowMs := millisecondsToRun value: [
           shallowResult := session fetchObject: shallowOop ].
+        shallowMetrics := session materializationMetrics copy.
         ((shallowResult size = shallowSize)
           and: [ (shallowResult first isKindOf: proxyClass)
           and: [ shallowResult last oop notNil ] ]) ifFalse: [
@@ -110,7 +115,16 @@ root'
             ' shallow_ms=', shallowMs asString,
             ' array_size=', arraySize asString,
             ' dictionary_size=', dictionarySize asString,
-            ' shallow_size=', shallowSize asString;
+            ' shallow_size=', shallowSize asString,
+            ' shallow_root_ms=', (metricValue value: shallowMetrics value: #rootFetchMs) asString,
+            ' shallow_slot_ms=', (metricValue value: shallowMetrics value: #slotFetchMs) asString,
+            ' shallow_class_name_batch_ms=', (metricValue value: shallowMetrics value: #classNameBatchMs) asString,
+            ' shallow_proxy_ms=', (metricValue value: shallowMetrics value: #proxyConstructionMs) asString,
+            ' shallow_wrapper_ms=', (metricValue value: shallowMetrics value: #wrapperLookupMs) asString,
+            ' shallow_slot_batches=', (metricValue value: shallowMetrics value: #slotBatchCalls) asString,
+            ' shallow_class_name_batches=', (metricValue value: shallowMetrics value: #classNameBatchCalls) asString,
+            ' shallow_proxy_creations=', (metricValue value: shallowMetrics value: #proxyCreations) asString,
+            ' shallow_wrapper_lookups=', (metricValue value: shallowMetrics value: #wrapperLookupCalls) asString;
           cr.
       ] ensure: [
         [ session abortTransaction ] on: Error do: [ ].

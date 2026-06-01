@@ -2,7 +2,8 @@ Extension { #name : 'GbsSessionManager' }
 
 { #category : '*GemStone-GBS-Core' }
 GbsSessionManager class >> clearAllTypedWrapperClasses [
-	Smalltalk globals at: #GbsTypedWrapperRegistry put: Dictionary new
+	Smalltalk globals at: #GbsTypedWrapperRegistry put: Dictionary new.
+	self clearTypedWrapperFreshnessCaches
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -11,7 +12,8 @@ GbsSessionManager class >> clearTypedWrapperClassForClient: clientClassName serv
 	key := self connectorObjectKeyForClient: clientClassName server: serverClassName.
 	registry := self typedWrapperRegistry copy.
 	registry removeKey: key ifAbsent: [ ].
-	Smalltalk globals at: #GbsTypedWrapperRegistry put: registry
+	Smalltalk globals at: #GbsTypedWrapperRegistry put: registry.
+	self clearTypedWrapperFreshnessCaches
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -378,6 +380,7 @@ GbsSessionManager class >> generateTypedWrapperForClient: clientClassName server
 		setTypedWrapperClass: wrapperClass
 		forClient: clientName
 		server: serverName.
+	self clearTypedWrapperFreshnessCacheForSession: aSession.
 	^ wrapperClass
 ]
 
@@ -421,6 +424,7 @@ GbsSessionManager class >> setTypedWrapperClass: wrapperClass forClient: clientC
 	registry := self typedWrapperRegistry copy.
 	registry at: key put: wrapperClass.
 	Smalltalk globals at: #GbsTypedWrapperRegistry put: registry.
+	self clearTypedWrapperFreshnessCaches.
 	^ wrapperClass
 ]
 
@@ -432,7 +436,8 @@ GbsSessionManager class >> resetConnectorState [
 	Smalltalk globals at: #GbsConnectorClassMappingRegistry put: Dictionary new.
 	Smalltalk globals at: #GbsConnectorPostConnectActionRegistry put: Dictionary new.
 	Smalltalk globals at: #GbsSessionConnectorRegistry put: Dictionary new.
-	Smalltalk globals at: #GbsTypedWrapperRegistry put: Dictionary new
+	Smalltalk globals at: #GbsTypedWrapperRegistry put: Dictionary new.
+	self clearTypedWrapperFreshnessCaches
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -482,6 +487,7 @@ GbsSessionManager class >> registerTypedWrapperAutoloadClient: clientClassName s
 	(pairs anySatisfy: [ :pair | pair first = c and: [ pair second = s ] ])
 		ifFalse: [ pairs add: { c. s } ].
 	self typedWrapperExplicitAutoloadPairRegistry: pairs.
+	self clearTypedWrapperFreshnessCaches.
 	^ { c. s }
 ]
 
@@ -505,6 +511,7 @@ GbsSessionManager class >> registerTypedWrapperAutoloadClient: clientClassName s
 		ifFalse: [ pairs add: { c. s } ].
 	pairRegistry at: sessionKey put: pairs.
 	Smalltalk globals at: #GbsSessionTypedWrapperAutoloadPairRegistry put: pairRegistry.
+	self clearTypedWrapperFreshnessCacheForSession: aSession.
 	^ { c. s }
 ]
 
@@ -523,6 +530,7 @@ GbsSessionManager class >> unregisterTypedWrapperAutoloadClient: clientClassName
 		(pair first = c and: [ pair second = s ])
 			or: [ pair first = s and: [ pair second = c ] ] ].
 	self typedWrapperExplicitAutoloadPairRegistry: pairs.
+	self clearTypedWrapperFreshnessCaches.
 	^ self
 ]
 
@@ -546,6 +554,7 @@ GbsSessionManager class >> unregisterTypedWrapperAutoloadClient: clientClassName
 			or: [ pair first = s and: [ pair second = c ] ] ].
 	pairRegistry at: sessionKey put: pairs.
 	Smalltalk globals at: #GbsSessionTypedWrapperAutoloadPairRegistry put: pairRegistry.
+	self clearTypedWrapperFreshnessCacheForSession: aSession.
 	^ self
 ]
 
@@ -553,6 +562,7 @@ GbsSessionManager class >> unregisterTypedWrapperAutoloadClient: clientClassName
 GbsSessionManager class >> clearTypedWrapperAutoloadRegistrations [
 	self typedWrapperExplicitAutoloadRegistry: Dictionary new.
 	self typedWrapperExplicitAutoloadPairRegistry: OrderedCollection new.
+	self clearTypedWrapperFreshnessCaches.
 	^ self
 ]
 
@@ -566,6 +576,24 @@ GbsSessionManager class >> clearTypedWrapperAutoloadRegistrationsForSession: aSe
 	pairRegistry := self sessionTypedWrapperExplicitAutoloadPairRegistry copy.
 	pairRegistry removeKey: sessionKey ifAbsent: [ ].
 	Smalltalk globals at: #GbsSessionTypedWrapperAutoloadPairRegistry put: pairRegistry.
+	self clearTypedWrapperFreshnessCacheForSession: aSession.
+	^ self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSessionManager class >> clearTypedWrapperFreshnessCacheForSession: aSession [
+	aSession ifNil: [ ^ self ].
+	(aSession class weakRegistryNamed: #GbsSessionTypedWrapperFreshnessCaches)
+		at: aSession
+		put: Dictionary new.
+	^ self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSessionManager class >> clearTypedWrapperFreshnessCaches [
+	Smalltalk globals
+		at: #GbsSessionTypedWrapperFreshnessCaches
+		put: WeakKeyDictionary new.
 	^ self
 ]
 
@@ -703,18 +731,33 @@ GbsSessionManager class >> shouldRefreshTypedWrapperClass: wrapperClass server: 
 
 { #category : '*GemStone-GBS-Core' }
 GbsSessionManager class >> shouldRefreshTypedWrapperClass: wrapperClass server: serverClassName session: aSession [
-	| remoteMirror |
+	| remoteMirror cache cacheKey shouldRefresh |
 	aSession ifNil: [ ^ false ].
 	(wrapperClass respondsTo: #generatedForwardingSource) ifFalse: [ ^ false ].
 	wrapperClass generatedForwardingSource ~= #remote ifTrue: [ ^ true ].
+	cache := self typedWrapperFreshnessCacheForSession: aSession.
+	cacheKey := {
+		wrapperClass name.
+		serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+		(wrapperClass respondsTo: #serverBehaviorVersion)
+			ifTrue: [ wrapperClass serverBehaviorVersion ]
+			ifFalse: [ nil ].
+		(wrapperClass respondsTo: #serverBehaviorNumberOfVersions)
+			ifTrue: [ wrapperClass serverBehaviorNumberOfVersions ]
+			ifFalse: [ nil ] }.
+	(cache includesKey: cacheKey) ifTrue: [ ^ cache at: cacheKey ].
 	remoteMirror := [ aSession classMirrorOfNamed: serverClassName ]
 		on: Error
 		do: [ nil ].
-	remoteMirror ifNil: [ ^ false ].
-	^ (wrapperClass respondsTo: #serverBehaviorVersion)
+	remoteMirror ifNil: [
+		cache at: cacheKey put: false.
+		^ false ].
+	shouldRefresh := (wrapperClass respondsTo: #serverBehaviorVersion)
 		and: [ (wrapperClass serverBehaviorVersion ~= remoteMirror version)
 		or: [ (wrapperClass respondsTo: #serverBehaviorNumberOfVersions)
-		and: [ wrapperClass serverBehaviorNumberOfVersions ~= remoteMirror numberOfVersions ] ] ]
+		and: [ wrapperClass serverBehaviorNumberOfVersions ~= remoteMirror numberOfVersions ] ] ].
+	cache at: cacheKey put: shouldRefresh.
+	^ shouldRefresh
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -741,6 +784,7 @@ GbsSessionManager class >> invalidateTypedWrapperClass: wrapperClass [
 		compile: 'serverBehaviorNumberOfVersions
 	^ nil'
 		classified: 'generated metadata'.
+	self clearTypedWrapperFreshnessCaches.
 	^ wrapperClass
 ]
 
@@ -771,6 +815,7 @@ GbsSessionManager class >> refreshStaleTypedWrapperClassesForSession: aSession [
 			generateTypedWrapperForClient: each clientBehaviorName
 			server: each serverBehaviorName ] ]
 		ensure: [ GbsSessionParameters currentSession: previousSession ].
+	self clearTypedWrapperFreshnessCacheForSession: aSession.
 	^ refreshed ifNil: [ #() ]
 ]
 
@@ -786,7 +831,16 @@ GbsSessionManager class >> refreshAllTypedWrapperClassesForSession: aSession [
 			generateTypedWrapperForClient: each clientBehaviorName
 			server: each serverBehaviorName ] ]
 		ensure: [ GbsSessionParameters currentSession: previousSession ].
+	self clearTypedWrapperFreshnessCacheForSession: aSession.
 	^ refreshed ifNil: [ #() ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSessionManager class >> typedWrapperFreshnessCacheForSession: aSession [
+	aSession ifNil: [ ^ Dictionary new ].
+	^ (aSession class weakRegistryNamed: #GbsSessionTypedWrapperFreshnessCaches)
+		at: aSession
+		ifAbsentPut: [ Dictionary new ]
 ]
 
 { #category : '*GemStone-GBS-Core' }

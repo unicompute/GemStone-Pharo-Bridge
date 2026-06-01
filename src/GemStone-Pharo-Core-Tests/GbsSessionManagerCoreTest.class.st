@@ -784,6 +784,51 @@ GbsSessionManagerCoreTest >> testTypedWrapperLookupRefreshesRemoteWrapperWhenVer
 ]
 
 { #category : 'tests' }
+GbsSessionManagerCoreTest >> testTypedWrapperFreshnessChecksAreCachedUntilTransactionBoundary [
+	| mockSession wrapperClass version mirrorFetches |
+	version := 2.
+	mirrorFetches := 0.
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		(script includesSubstring: 'history :=') ifTrue: [
+			mirrorFetches := mirrorFetches + 1.
+			^ { 5001. 'RemoteLedger'. 'Object'. nil. nil. version. version + 2 } ].
+		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+			^ #(
+				#('accessing' #('size'))
+				#('payments' #('approvePayment:' 'cancelPayment'))) ].
+		self fail ].
+	GBSM currentSession: mockSession.
+
+	wrapperClass := GbsSessionManager
+		generateTypedWrapperForClient: 'ByteArray'
+		server: 'RemoteLedger'.
+	self deny: (GbsSessionManager
+		shouldRefreshTypedWrapperClass: wrapperClass
+		server: 'RemoteLedger'
+		session: mockSession).
+	self deny: (GbsSessionManager
+		shouldRefreshTypedWrapperClass: wrapperClass
+		server: 'RemoteLedger'
+		session: mockSession).
+	self assert: mirrorFetches equals: 2.
+
+	mockSession commitTransaction.
+	self deny: (GbsSessionManager
+		shouldRefreshTypedWrapperClass: wrapperClass
+		server: 'RemoteLedger'
+		session: mockSession).
+	self assert: mirrorFetches equals: 3.
+
+	mockSession abortTransaction.
+	self deny: (GbsSessionManager
+		shouldRefreshTypedWrapperClass: wrapperClass
+		server: 'RemoteLedger'
+		session: mockSession).
+	self assert: mirrorFetches equals: 4
+]
+
+{ #category : 'tests' }
 GbsSessionManagerCoreTest >> testTypedWrapperLifecycleEntriesReflectCurrentAndStaleStatus [
 	| mockSession wrapperClass version currentRow staleRow |
 	version := 2.
@@ -805,6 +850,7 @@ GbsSessionManagerCoreTest >> testTypedWrapperLifecycleEntriesReflectCurrentAndSt
 		detect: [ :each | each third = wrapperClass name asString ].
 
 	version := 3.
+	GbsSessionManager clearTypedWrapperFreshnessCacheForSession: mockSession.
 	staleRow := (GbsSessionManager typedWrapperLifecycleEntriesForSession: mockSession)
 		detect: [ :each | each third = wrapperClass name asString ].
 
@@ -835,6 +881,7 @@ GbsSessionManagerCoreTest >> testTypedWrapperLifecycleReportObjectExposesStructu
 		generateTypedWrapperForClient: 'ByteArray'
 		server: 'RemoteLedger'.
 	version := 3.
+	GbsSessionManager clearTypedWrapperFreshnessCacheForSession: mockSession.
 	report := GbsSessionManager typedWrapperLifecycleReportForSession: mockSession.
 	entry := report entries
 		detect: [ :each | each wrapperClass == wrapperClass ]
@@ -867,6 +914,7 @@ GbsSessionManagerCoreTest >> testTypedProxyLifecycleHelpersExposeStructuredStatu
 		generateTypedWrapperForClient: 'ByteArray'
 		server: 'RemoteLedger'.
 	version := 3.
+	GbsSessionManager clearTypedWrapperFreshnessCacheForSession: mockSession.
 	entry := wrapperClass lifecycleEntryForSession: mockSession.
 
 	self assert: entry notNil.

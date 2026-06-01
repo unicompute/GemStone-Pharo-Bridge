@@ -343,7 +343,7 @@ GbsSessionCoreTest >> testFetchShallowLeavesNestedArrayAsProxy [
 
 { #category : 'tests' }
 GbsSessionCoreTest >> testFetchShallowBatchesNestedProxyClassNames [
-	| mockSession result classOopFetches bulkClassNameFetches |
+	| mockSession result classOopFetches bulkClassNameFetches metrics |
 	mockSession := CoreMockGbsSession new.
 	classOopFetches := OrderedCollection new.
 	bulkClassNameFetches := 0.
@@ -390,7 +390,120 @@ GbsSessionCoreTest >> testFetchShallowBatchesNestedProxyClassNames [
 	self assert: (result allSatisfy: [ :each | each isKindOf: GbsTypedProxy ]).
 	self assert: (result collect: [ :each | each oop ]) equals: #(9100 9112 9120).
 	self assert: classOopFetches asArray equals: #(9000).
-	self assert: bulkClassNameFetches equals: 1
+	self assert: bulkClassNameFetches equals: 1.
+	metrics := mockSession materializationMetrics.
+	self assert: (metrics at: #rootFetches ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #slotBatchCalls ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #classNameBatchCalls ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #wrapperLookupCalls ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #proxyCreations ifAbsent: [ 0 ]) equals: 3
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFetchShallowClassNameBatchSizeIsConfigurable [
+	| mockSession result bulkClassNameFetches previousBatchSize hadBatchSize metrics |
+	mockSession := CoreMockGbsSession new.
+	bulkClassNameFetches := 0.
+	hadBatchSize := Smalltalk globals includesKey: #GbsMaterializationBatchSize.
+	previousBatchSize := Smalltalk globals at: #GbsMaterializationBatchSize ifAbsent: [ nil ].
+	[
+		Smalltalk globals at: #GbsMaterializationBatchSize put: 2.
+		GbsSessionManager initializeFastConnectors.
+		mockSession stubs at: #apiGciGetClass put: [ :oop |
+			oop = 9000
+				ifTrue: [ 5000 ]
+				ifFalse: [ self fail ] ].
+		mockSession stubs at: #executeAndFetch put: [ :script | | response |
+			(script includesSubstring: 'classObject name asString') ifTrue: [
+				self assert: (script includesSubstring: '5000').
+				response := 'Array' ].
+			(script includesSubstring: 'objectNamed: clsName asSymbol') ifTrue: [
+				response := { 5000. 'Array'. 'Object'. nil. nil. 1. 1 } ].
+			(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+				response := #() ].
+			(script includesSubstring: 'oops do:') ifTrue: [
+				bulkClassNameFetches := bulkClassNameFetches + 1.
+				response := String streamContents: [ :stream |
+					#(9100 9112 9120 9128 9136) do: [ :oop |
+						stream
+							nextPutAll: oop asString;
+							nextPut: Character tab;
+							nextPutAll: 'Array';
+							nextPut: Character lf ] ] ].
+			response ifNil: [ self fail ].
+			response ].
+		mockSession stubs at: #apiGciFetchSize put: [ :oop |
+			oop = 9000 ifTrue: [ 5 ] ifFalse: [ self fail ] ].
+		mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+			self assert: oop equals: 9000.
+			self assert: start equals: 1.
+			self assert: count equals: 5.
+			#(9100 9112 9120 9128 9136) ].
+		mockSession fetchShallow.
+
+		result := mockSession fetchObject: 9000.
+
+		self assert: result size equals: 5.
+		self assert: (result allSatisfy: [ :each | each isKindOf: GbsTypedProxy ]).
+		self assert: bulkClassNameFetches equals: 3.
+		metrics := mockSession materializationMetrics.
+		self assert: (metrics at: #classNameBatchCalls ifAbsent: [ 0 ]) equals: 3.
+		self assert: (metrics at: #classNameBatchOopCount ifAbsent: [ 0 ]) equals: 5.
+		self assert: (metrics at: #classNameFallbackCalls ifAbsent: [ 0 ]) equals: 0
+	] ensure: [
+		hadBatchSize
+			ifTrue: [ Smalltalk globals at: #GbsMaterializationBatchSize put: previousBatchSize ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationBatchSize ifAbsent: [ ] ] ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFetchShallowFallsBackWhenClassNameBatchFails [
+	| mockSession result bulkClassNameFetches fallbackClassNameFetches metrics |
+	mockSession := CoreMockGbsSession new.
+	bulkClassNameFetches := 0.
+	fallbackClassNameFetches := 0.
+	GbsSessionManager initializeFastConnectors.
+	mockSession stubs at: #apiGciGetClass put: [ :oop |
+		oop = 9000
+			ifTrue: [ 5000 ]
+			ifFalse: [ Error signal: 'Simulated per-object class OOP failure.' ] ].
+	mockSession stubs at: #executeAndFetch put: [ :script | | response |
+		(script includesSubstring: 'classObject name asString') ifTrue: [
+			self assert: (script includesSubstring: '5000').
+			response := 'Array' ].
+		(script includesSubstring: 'objectNamed: clsName asSymbol') ifTrue: [
+			response := { 5000. 'Array'. 'Object'. nil. nil. 1. 1 } ].
+		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+			response := #() ].
+		(script includesSubstring: 'oops do:') ifTrue: [
+			bulkClassNameFetches := bulkClassNameFetches + 1.
+			Error signal: 'Simulated oversized class-name batch.' ].
+		(script includesSubstring: 'object class name asString') ifTrue: [
+			fallbackClassNameFetches := fallbackClassNameFetches + 1.
+			response := 'Array' ].
+		response ifNil: [ self fail ].
+		response ].
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		oop = 9000 ifTrue: [ 3 ] ifFalse: [ self fail ] ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+		self assert: oop equals: 9000.
+		self assert: start equals: 1.
+		self assert: count equals: 3.
+		#(9100 9112 9120) ].
+	mockSession fetchShallow.
+
+	result := mockSession fetchObject: 9000.
+
+	self assert: result size equals: 3.
+	self assert: (result allSatisfy: [ :each | each isKindOf: GbsTypedProxy ]).
+	self assert: (result collect: [ :each | each oop ]) equals: #(9100 9112 9120).
+	self assert: bulkClassNameFetches equals: 1.
+	self assert: fallbackClassNameFetches equals: 3.
+	metrics := mockSession materializationMetrics.
+	self assert: (metrics at: #classNameBatchCalls ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #classNameBatchFallbacks ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #classNameFallbackCalls ifAbsent: [ 0 ]) equals: 3.
+	self assert: (metrics at: #classNameObjectCalls ifAbsent: [ 0 ]) equals: 3
 ]
 
 { #category : 'tests' }
