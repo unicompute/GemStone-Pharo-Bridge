@@ -219,7 +219,9 @@ GbsSessionMaterializer >> proxyForOop: anOop serverClassName: aClassName [
 	| cachedProxy wrapperClass |
 	cachedProxy := self cachedProxyForOop: anOop.
 	cachedProxy ifNotNil: [ ^ cachedProxy ].
-	wrapperClass := GbsSessionManager typedWrapperClassForServerClassNamed: aClassName.
+	wrapperClass := GbsSessionManager
+		typedWrapperClassForServerClassNamed: aClassName
+		forSession: session.
 	wrapperClass ifNil: [ ^ self proxyForOop: anOop ].
 	^ self proxyForOop: anOop usingClass: wrapperClass
 ]

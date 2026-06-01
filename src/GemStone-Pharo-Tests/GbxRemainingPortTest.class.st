@@ -131,6 +131,132 @@ GbxRemainingPortTest >> testConsiderModifiedMarksMutableReplicatedObjectsDirty [
 ]
 
 { #category : 'tests - replication' }
+GbxRemainingPortTest >> testSessionDirtyPoolTracksActiveStoreTraversals [
+	| session traversal |
+	session := GbsSession new.
+	traversal := Object new.
+
+	session addStoreTraversal: traversal.
+	self assert: (session activeStoreTraversals includes: traversal).
+
+	session removeStoreTraversal: traversal.
+	self deny: (session activeStoreTraversals includes: traversal)
+]
+
+{ #category : 'tests - replication' }
+GbxRemainingPortTest >> testStoreTraversalFlushExportsPackedObjectsAfterServerAccepts [
+	| session buffer traversal delegate object remaining |
+	session := GbxFakeStoreTraversalSession new.
+	buffer := GbxFakeTraversalBuffer new.
+	traversal := GbxStoreTraversal for: (GbxFakeTraversalInteraction
+		serverInterface: (GbxFakeTraversalServerInterface
+			session: session
+			buffer: buffer)).
+	delegate := GbxFakeReplicationDelegate new.
+	object := GbxFakeReplicatedObject new
+		delegate: delegate;
+		yourself.
+
+	traversal packed: object.
+	traversal flushBufferToServer.
+	remaining := OrderedCollection new.
+	traversal emptyPackedNotYetAcceptedInto: remaining.
+
+	self assert: session storedBuffers asArray equals: { buffer }.
+	self assert: delegate exportedCount equals: 1.
+	self assert: buffer emptyCount equals: 1.
+	self assert: remaining isEmpty
+]
+
+{ #category : 'tests - replication' }
+GbxRemainingPortTest >> testStoreTraversalPackCreatesUnmappedReplicatorInsideSetAside [
+	| session buffer traversal delegate object |
+	session := GbxFakeStoreTraversalSession new.
+	buffer := GbxFakeTraversalBuffer new.
+	traversal := GbxStoreTraversal for: (GbxFakeTraversalInteraction
+		serverInterface: (GbxFakeTraversalServerInterface
+			session: session
+			buffer: buffer)).
+	delegate := GbxFakeReplicationDelegate new dirty: true; yourself.
+	object := GbxFakeReplicatedObject new
+		delegate: delegate;
+		basicClass: GbxFakeReplicatedObject;
+		replicatorClass: GbxFakeUnmappedReplicator;
+		yourself.
+
+	traversal pack: object.
+
+	self assert: session setAsideCount equals: 1.
+	self assert: session lastCreatedReplicator storeCount equals: 1.
+	self assert: session lastCreatedReplicator storedObjects asArray equals: { object }
+]
+
+{ #category : 'tests - replication' }
+GbxRemainingPortTest >> testStoreTraversalPackSkipsCleanObjects [
+	| session buffer traversal delegate object replicator |
+	session := GbxFakeStoreTraversalSession new.
+	buffer := GbxFakeTraversalBuffer new.
+	traversal := GbxStoreTraversal for: (GbxFakeTraversalInteraction
+		serverInterface: (GbxFakeTraversalServerInterface
+			session: session
+			buffer: buffer)).
+	replicator := GbxFakeStoreReplicator new.
+	session addReplicator: replicator forClient: GbxFakeReplicatedObject.
+	delegate := GbxFakeReplicationDelegate new dirty: false; yourself.
+	object := GbxFakeReplicatedObject new
+		delegate: delegate;
+		basicClass: GbxFakeReplicatedObject;
+		yourself.
+
+	traversal pack: object.
+
+	self assert: replicator storeCount equals: 0.
+	self assert: session setAsideCount equals: 0
+]
+
+{ #category : 'tests - replication' }
+GbxRemainingPortTest >> testStoreTraversalPackUsesRegisteredReplicatorForDirtyObjects [
+	| session buffer traversal delegate object replicator |
+	session := GbxFakeStoreTraversalSession new.
+	buffer := GbxFakeTraversalBuffer new.
+	traversal := GbxStoreTraversal for: (GbxFakeTraversalInteraction
+		serverInterface: (GbxFakeTraversalServerInterface
+			session: session
+			buffer: buffer)).
+	replicator := GbxFakeStoreReplicator new.
+	session addReplicator: replicator forClient: GbxFakeReplicatedObject.
+	delegate := GbxFakeReplicationDelegate new dirty: true; yourself.
+	object := GbxFakeReplicatedObject new
+		delegate: delegate;
+		basicClass: GbxFakeReplicatedObject;
+		yourself.
+
+	traversal pack: object.
+
+	self assert: replicator storeCount equals: 1.
+	self assert: replicator storedObjects asArray equals: { object }.
+	self assert: session setAsideCount equals: 0
+]
+
+{ #category : 'tests - replication' }
+GbxRemainingPortTest >> testStoreTraversalRegistersAndReleasesWithSession [
+	| session buffer traversal |
+	session := GbxFakeStoreTraversalSession new.
+	buffer := GbxFakeTraversalBuffer new.
+	traversal := GbxStoreTraversal for: (GbxFakeTraversalInteraction
+		serverInterface: (GbxFakeTraversalServerInterface
+			session: session
+			buffer: buffer)).
+
+	self assert: session addedTraversals asArray equals: { traversal }.
+
+	traversal release.
+
+	self assert: session removedTraversals asArray equals: { traversal }.
+	self assert: buffer unlockCount equals: 1
+]
+
+{ #category : 'tests - replication' }
 GbxRemainingPortTest >> testRuntimeCollectionMutationsMarkReplicatedCollectionsDirty [
 	| previousConfiguration configuration delegate ordered dictionary set |
 	self ensureRuntimeOverridesInstalled.

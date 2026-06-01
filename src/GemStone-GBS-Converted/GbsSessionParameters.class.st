@@ -53,6 +53,37 @@ GbsSessionParameters class >> allSessions [
 	^ Sessions ifNil: [ Sessions := OrderedCollection new ]
 ]
 
+{ #category : 'persistence' }
+GbsSessionParameters class >> exportAllParameters [
+	^ self exportAllParametersIncludingSecrets: false
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters class >> exportAllParametersIncludingSecrets: includeSecrets [
+	^ self allParameters collect: [ :each |
+		each exportDictionaryIncludingSecrets: includeSecrets ] as: Array
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters class >> exportFormatIdentifier [
+	^ 'GemStone-Pharo-Bridge.sessionParameters.v1'
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters class >> fromExportDictionary: aDictionary [
+	^ self new
+		applyExportDictionary: aDictionary;
+		yourself
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters class >> importParameterFromExportDictionary: aDictionary [
+	| parameter |
+	parameter := self fromExportDictionary: aDictionary.
+	self addParameter: parameter.
+	^ parameter
+]
+
 { #category : 'accessing' }
 GbsSessionParameters class >> currentSession [
 	^ CurrentSession
@@ -89,6 +120,14 @@ GbsSessionParameters class >> removeParameter: aParam [
 	self allParameters remove: aParam ifAbsent: [ ]
 ]
 
+{ #category : 'persistence' }
+GbsSessionParameters class >> replaceAllParametersFromExportDictionaries: dictionaries [
+	| imported |
+	imported := dictionaries collect: [ :each | self fromExportDictionary: each ].
+	AllParameters := imported asOrderedCollection.
+	^ AllParameters
+]
+
 { #category : 'polling' }
 GbsSessionParameters class >> togglePolling [ 
     ^ self pollingEnabled: self pollingEnabled not
@@ -107,6 +146,47 @@ GbsSessionParameters >> abortTransaction [
     self isConnected ifTrue: [ 
         GbsServerInterface uniqueInstance abort: sessionId 
     ].
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters >> applyExportDictionary: aDictionary [
+	name := self exportValueFrom: aDictionary at: 'name' ifAbsent: [ name ].
+	gemStoneName := self exportValueFrom: aDictionary at: 'gemStoneName' ifAbsent: [ gemStoneName ].
+	username := self exportValueFrom: aDictionary at: 'username' ifAbsent: [ username ].
+	password := self exportValueFrom: aDictionary at: 'password' ifAbsent: [ password ].
+	gsRemember := self booleanExportValueFrom: aDictionary at: 'gsRemember' default: gsRemember.
+	hostUsername := self exportValueFrom: aDictionary at: 'hostUsername' ifAbsent: [ hostUsername ].
+	hostPassword := self exportValueFrom: aDictionary at: 'hostPassword' ifAbsent: [ hostPassword ].
+	gemService := self exportValueFrom: aDictionary at: 'gemService' ifAbsent: [ gemService ].
+	hostRemember := self booleanExportValueFrom: aDictionary at: 'hostRemember' default: hostRemember.
+	netObject := self exportValueFrom: aDictionary at: 'netObject' ifAbsent: [ netObject ].
+	isX509 := self booleanExportValueFrom: aDictionary at: 'isX509' default: isX509.
+	displayUsername := self exportValueFrom: aDictionary at: 'displayUsername' ifAbsent: [ displayUsername ].
+	caCert := self exportValueFrom: aDictionary at: 'caCert' ifAbsent: [ caCert ].
+	cert := self exportValueFrom: aDictionary at: 'cert' ifAbsent: [ cert ].
+	privateKey := self exportValueFrom: aDictionary at: 'privateKey' ifAbsent: [ privateKey ].
+	netldiHostOrIp := self exportValueFrom: aDictionary at: 'netldiHostOrIp' ifAbsent: [ netldiHostOrIp ].
+	netldiNameOrPort := self exportValueFrom: aDictionary at: 'netldiNameOrPort' ifAbsent: [ netldiNameOrPort ].
+	dirArg := self exportValueFrom: aDictionary at: 'dirArg' ifAbsent: [ dirArg ].
+	extraGemArgs := self exportValueFrom: aDictionary at: 'extraGemArgs' ifAbsent: [ extraGemArgs ].
+	logArg := self exportValueFrom: aDictionary at: 'logArg' ifAbsent: [ logArg ].
+	self normalizeConnectionFields.
+	^ self
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters >> booleanExportValueFrom: aDictionary at: aKey default: defaultBoolean [
+	| value normalized |
+	value := self exportValueFrom: aDictionary at: aKey ifAbsent: [ defaultBoolean ].
+	value ifNil: [ ^ defaultBoolean ].
+	(value == true or: [ value == false ]) ifTrue: [ ^ value ].
+	value = 1 ifTrue: [ ^ true ].
+	value = 0 ifTrue: [ ^ false ].
+	value isString ifTrue: [
+		normalized := value trimBoth asLowercase.
+		(#('true' 'yes' '1' 'on') includes: normalized) ifTrue: [ ^ true ].
+		(#('false' 'no' '0' 'off') includes: normalized) ifTrue: [ ^ false ] ].
+	^ defaultBoolean
 ]
 
 { #category : 'accessing' }
@@ -155,6 +235,46 @@ GbsSessionParameters >> evaluate: aString [
     ^ GbsServerInterface uniqueInstance 
         execute: aString 
         inSession: sessionId.
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters >> exportDictionary [
+	^ self exportDictionaryIncludingSecrets: false
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters >> exportDictionaryIncludingSecrets: includeSecrets [
+	self normalizeConnectionFields.
+	^ Dictionary new
+		at: 'format' put: self class exportFormatIdentifier;
+		at: 'name' put: self name;
+		at: 'gemStoneName' put: self gemStoneName;
+		at: 'username' put: self username;
+		at: 'password' put: (includeSecrets ifTrue: [ self password ] ifFalse: [ nil ]);
+		at: 'gsRemember' put: self gsRemember;
+		at: 'hostUsername' put: self hostUsername;
+		at: 'hostPassword' put: (includeSecrets ifTrue: [ self hostPassword ] ifFalse: [ nil ]);
+		at: 'gemService' put: self gemService;
+		at: 'hostRemember' put: self hostRemember;
+		at: 'netObject' put: self netObject;
+		at: 'isX509' put: self isX509;
+		at: 'displayUsername' put: self displayUsername;
+		at: 'caCert' put: self caCert;
+		at: 'cert' put: self cert;
+		at: 'privateKey' put: self privateKey;
+		at: 'netldiHostOrIp' put: self netldiHostOrIp;
+		at: 'netldiNameOrPort' put: self netldiNameOrPort;
+		at: 'dirArg' put: self dirArg;
+		at: 'extraGemArgs' put: self extraGemArgs;
+		at: 'logArg' put: self logArg;
+		yourself
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters >> exportValueFrom: aDictionary at: aKey ifAbsent: absentBlock [
+	(aDictionary includesKey: aKey) ifTrue: [ ^ aDictionary at: aKey ].
+	(aDictionary includesKey: aKey asSymbol) ifTrue: [ ^ aDictionary at: aKey asSymbol ].
+	^ absentBlock value
 ]
 
 { #category : 'evaluating' }
@@ -296,7 +416,7 @@ GbsSessionParameters >> login [
     serviceString := self gemService.
     hostUserString := self hostUsername ifNil: [ '' ].
     hostPasswordString := self hostPassword ifNil: [ '' ].
-    netldiString := self netldiNameOrPort ifNil: [ '' ].
+    netldiString := self netldiRoutingString.
 
     setNetError := ExternalAddress allocate: 4096.
     executedSessionInit := ExternalAddress allocate: 4.
@@ -609,6 +729,8 @@ GbsSessionParameters >> loginValidationMessages [
 		messages add: 'GemStone username is required.' ].
 	self gemService isEmpty ifTrue: [
 		messages add: 'Gem service is required.' ].
+	(self netldiHostOrIp notNil and: [ self netldiNameOrPort isNil ]) ifTrue: [
+		messages add: 'NetLDI host/IP requires a NetLDI name or port.' ].
 	^ messages asArray
 ]
 
@@ -668,6 +790,15 @@ GbsSessionParameters >> netldiNameOrPort [ ^ netldiNameOrPort
 
 { #category : 'accessing' }
 GbsSessionParameters >> netldiNameOrPort: aValue [ netldiNameOrPort := aValue
+]
+
+{ #category : 'validation' }
+GbsSessionParameters >> netldiRoutingString [
+	self normalizeConnectionFields.
+	self netldiNameOrPort ifNil: [ ^ '' ].
+	self netldiHostOrIp ifNil: [ ^ self netldiNameOrPort ].
+	(self netldiNameOrPort includes: $#) ifTrue: [ ^ self netldiNameOrPort ].
+	^ self netldiHostOrIp, '#', self netldiNameOrPort
 ]
 
 { #category : 'accessing' }

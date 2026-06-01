@@ -29,6 +29,16 @@ GbsSessionCoreTest >> materializationMockSession [
 		result ].
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script | | result |
 		result := nil.
+		(script includesSubstring: 'history :=') ifTrue: [
+			^ {
+				5001.
+				((script includesSubstring: '''String''') ifTrue: [ 'String' ] ifFalse: [ 'Array' ]).
+				'Object'.
+				nil.
+				nil.
+				1.
+				1 } ].
+		(script includesSubstring: 'behavior methodDict keys') ifTrue: [ ^ #() ].
 		(script includesSubstring: '9000') ifTrue: [ result := 2 ].
 		(script includesSubstring: '9016') ifTrue: [ result := 2 ].
 		result ifNil: [ self fail ].
@@ -454,6 +464,20 @@ GbsSessionCoreTest >> testProxyIdentityMapReusesTypedWrapperForRepeatedTypedLook
 
 	self assert: first == second.
 	self assert: (first isKindOf: GbsTypedProxy)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testClearProxyCacheAllowsTypedWrapperRecreation [
+	| first second |
+	GbsSessionManager initializeFastConnectors.
+	first := session proxyForOop: 1001 serverClassName: 'Dictionary'.
+
+	session clearProxyCache.
+	second := session proxyForOop: 1001 serverClassName: 'Dictionary'.
+
+	self deny: first == second.
+	self assert: (second isKindOf: GbsTypedProxy).
+	self assert: second session == session
 ]
 
 { #category : 'tests' }
@@ -2191,6 +2215,29 @@ GbsSessionCoreTest >> testLogoutClearsProxyIdentityMap [
 	mockSession logout.
 
 	self assert: (mockSession cachedProxyForOop: 1001) isNil
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testResetAfterLogoutClearsConvertedLifecycleRegistriesWhenCoreLoaded [
+	| mockSession dirtyPool replicatorManager traversal |
+	mockSession := CoreMockGbsSession new.
+	mockSession instVarNamed: 'isLoggedIn' put: true.
+	traversal := Object new.
+	mockSession addStoreTraversal: traversal.
+	dirtyPool := mockSession dirtyPool.
+	replicatorManager := mockSession replicatorManager.
+	mockSession class notificationActionFor: mockSession put: [ #notification ].
+	mockSession class sessionSignalActionFor: mockSession put: [ #signal ].
+	mockSession class signaledAbortActionFor: mockSession put: [ #abort ].
+
+	mockSession resetAfterLogout.
+
+	self deny: mockSession dirtyPool == dirtyPool.
+	self deny: mockSession replicatorManager == replicatorManager.
+	self deny: (mockSession activeStoreTraversals includes: traversal).
+	self assert: (mockSession class notificationActionFor: mockSession) isNil.
+	self assert: (mockSession class sessionSignalActionFor: mockSession) isNil.
+	self assert: (mockSession class signaledAbortActionFor: mockSession) isNil
 ]
 
 { #category : 'tests' }

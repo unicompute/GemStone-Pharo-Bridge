@@ -529,6 +529,76 @@ GbsSessionManagerCoreTest >> testTypedWrapperLookupAutoloadsSessionScopedConnect
 ]
 
 { #category : 'tests' }
+GbsSessionManagerCoreTest >> testTypedWrapperLookupForSessionDoesNotDependOnCurrentSession [
+	| targetSession currentSession wrapperClass |
+	targetSession := CoreMockGbsSession new.
+	currentSession := CoreMockGbsSession new.
+	GbsSessionManager clearAllTypedWrapperClasses.
+	GbsSessionManager fastConnectorRegistry: Dictionary new.
+	GbsSessionManager
+		registerTypedWrapperAutoloadClient: 'ByteArray'
+		server: 'RemoteSessionScopedLedger'
+		forSession: targetSession.
+	GbsSessionParameters currentSession: currentSession.
+
+	wrapperClass := GbsSessionManager
+		typedWrapperClassForServerClassNamed: 'RemoteSessionScopedLedger'
+		forSession: targetSession.
+
+	self assert: wrapperClass notNil.
+	self assert: wrapperClass clientBehaviorName equals: 'ByteArray'.
+	self assert: wrapperClass serverBehaviorName equals: 'RemoteSessionScopedLedger'.
+	self assert: GbsSessionParameters currentSession == currentSession
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testTypedWrapperLookupForSessionPrefersSessionScopedAutoloadOverExistingServerWrapper [
+	| targetSession existingWrapper wrapperClass |
+	targetSession := CoreMockGbsSession new.
+	GbsSessionManager clearAllTypedWrapperClasses.
+	GbsSessionManager fastConnectorRegistry: Dictionary new.
+	existingWrapper := GbsSessionManager
+		generateTypedWrapperForClient: 'Array'
+		server: 'RemoteSessionScopedShared'.
+	GbsSessionManager
+		registerTypedWrapperAutoloadClient: 'ByteArray'
+		server: 'RemoteSessionScopedShared'
+		forSession: targetSession.
+
+	wrapperClass := GbsSessionManager
+		typedWrapperClassForServerClassNamed: 'RemoteSessionScopedShared'
+		forSession: targetSession.
+
+	self deny: wrapperClass == existingWrapper.
+	self assert: wrapperClass clientBehaviorName equals: 'ByteArray'.
+	self assert: wrapperClass serverBehaviorName equals: 'RemoteSessionScopedShared'
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testProxyMaterializationUsesSessionScopedTypedWrapperWhenCurrentSessionDiffers [
+	| targetSession currentSession proxy |
+	targetSession := CoreMockGbsSession new.
+	currentSession := CoreMockGbsSession new.
+	GbsSessionManager clearAllTypedWrapperClasses.
+	GbsSessionManager fastConnectorRegistry: Dictionary new.
+	GbsSessionManager
+		registerTypedWrapperAutoloadClient: 'ByteArray'
+		server: 'RemoteSessionScopedProxy'
+		forSession: targetSession.
+	GbsSessionParameters currentSession: currentSession.
+
+	proxy := targetSession
+		proxyForOop: 1001
+		serverClassName: 'RemoteSessionScopedProxy'.
+
+	self assert: (proxy isKindOf: GbsTypedProxy).
+	self assert: proxy clientBehaviorName equals: 'ByteArray'.
+	self assert: proxy serverBehaviorName equals: 'RemoteSessionScopedProxy'.
+	self assert: proxy session == targetSession.
+	self assert: GbsSessionParameters currentSession == currentSession
+]
+
+{ #category : 'tests' }
 GbsSessionManagerCoreTest >> testTypedWrapperRegistryEntriesAndReportTextExposeAutoloadState [
 	| wrapperClass entries report row |
 	GbsSessionManager fastConnectorRegistry: (Dictionary new

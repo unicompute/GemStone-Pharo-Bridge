@@ -287,6 +287,35 @@ GbsSessionTest >> testLogoutClearsAttachedParameterState [
 ]
 
 { #category : 'tests' }
+GbsSessionTest >> testResetAfterLogoutClearsConvertedLifecycleRegistries [
+	| mockSession dirtyPool replicatorManager traversal |
+	mockSession := MockGbsSession new.
+	mockSession
+		instVarNamed: 'isLoggedIn' put: true;
+		sessionId: 77;
+		sessionOop: 77.
+	traversal := Object new.
+	mockSession addStoreTraversal: traversal.
+	dirtyPool := mockSession dirtyPool.
+	replicatorManager := mockSession replicatorManager.
+	mockSession class notificationActionFor: mockSession put: [ #notification ].
+	mockSession class sessionSignalActionFor: mockSession put: [ #signal ].
+	mockSession class signaledAbortActionFor: mockSession put: [ #abort ].
+
+	mockSession resetAfterLogout.
+
+	self deny: mockSession isLoggedIn.
+	self assert: mockSession sessionId isNil.
+	self assert: mockSession sessionOop isNil.
+	self deny: mockSession dirtyPool == dirtyPool.
+	self deny: mockSession replicatorManager == replicatorManager.
+	self deny: (mockSession activeStoreTraversals includes: traversal).
+	self assert: (mockSession class notificationActionFor: mockSession) isNil.
+	self assert: (mockSession class sessionSignalActionFor: mockSession) isNil.
+	self assert: (mockSession class signaledAbortActionFor: mockSession) isNil
+]
+
+{ #category : 'tests' }
 GbsSessionTest >> testLogoutTreatsNilFfiReturnAsSuccess [
 	| mockSession |
 	mockSession := MockGbsSession new.

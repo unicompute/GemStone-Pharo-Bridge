@@ -1,4 +1,4 @@
-.PHONY: help core-only original original-tests bootstrap-smoke full live-env-check live-debugger debugger-perf regression-gates verify graph-artifacts artifact-freshness original-drift maglev-doc-pdfs
+.PHONY: help core-only original original-tests bootstrap-smoke full live-env-check live-debugger debugger-perf materialization-perf regression-gates verify graph-artifacts artifact-freshness original-drift maglev-doc-pdfs
 
 PHARO_IMAGE ?= /Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image
 PHARO_WORK_DIR ?= /Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean
@@ -32,6 +32,9 @@ help:
 		"" \
 		"  make debugger-perf" \
 		"    Validate live GemStone credentials/netldi/stone, then record remote debugger latency baselines." \
+		"" \
+		"  make materialization-perf" \
+		"    Validate live GemStone credentials/netldi/stone, then record object materialization latency baselines." \
 		"" \
 		"  make regression-gates" \
 		"    Enforce debugger size, helper delegation, legacy-alias, and remote-script construction guardrails." \
@@ -80,6 +83,9 @@ live-debugger:
 
 debugger-perf:
 	bash ./scripts/run_debugger_performance_baseline.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
+
+materialization-perf:
+	bash ./scripts/run_materialization_performance_baseline.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
 
 regression-gates:
 	bash ./scripts/check_bridge_regression_gates.sh

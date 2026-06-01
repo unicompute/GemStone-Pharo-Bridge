@@ -358,6 +358,14 @@ GbsSessionManager class >> typedWrapperLifecycleReportForSession: aSession [
 
 { #category : '*GemStone-GBS-Core' }
 GbsSessionManager class >> generateTypedWrapperForClient: clientClassName server: serverClassName [
+	^ self
+		generateTypedWrapperForClient: clientClassName
+		server: serverClassName
+		forSession: GbsSessionParameters currentSession
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSessionManager class >> generateTypedWrapperForClient: clientClassName server: serverClassName forSession: aSession [
 	| clientName serverName wrapperClass |
 	clientName := clientClassName ifNil: [ '' ] ifNotNil: [ clientClassName asString ].
 	serverName := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
@@ -365,7 +373,7 @@ GbsSessionManager class >> generateTypedWrapperForClient: clientClassName server
 	wrapperClass := GbsTypedWrapperBuilder
 		generateWrapperForClient: clientName
 		server: serverName
-		session: GbsSessionParameters currentSession.
+		session: aSession.
 	self
 		setTypedWrapperClass: wrapperClass
 		forClient: clientName
@@ -563,17 +571,29 @@ GbsSessionManager class >> clearTypedWrapperAutoloadRegistrationsForSession: aSe
 
 { #category : '*GemStone-GBS-Core' }
 GbsSessionManager class >> typedWrapperClassForClient: clientClassName server: serverClassName [
+	^ self
+		typedWrapperClassForClient: clientClassName
+		server: serverClassName
+		forSession: GbsSessionParameters currentSession
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSessionManager class >> typedWrapperClassForClient: clientClassName server: serverClassName forSession: aSession [
 	| key registry wrapperClass className |
 	key := self connectorObjectKeyForClient: clientClassName server: serverClassName.
 	registry := self typedWrapperRegistry.
 	wrapperClass := registry at: key ifAbsent: [ nil ].
 	(wrapperClass notNil and: [ wrapperClass inheritsFrom: GbsTypedProxy ])
 		ifTrue: [
-			(self shouldRefreshTypedWrapperClass: wrapperClass server: serverClassName)
+			(self
+				shouldRefreshTypedWrapperClass: wrapperClass
+				server: serverClassName
+				session: aSession)
 				ifTrue: [
 					^ self
 						generateTypedWrapperForClient: clientClassName
-						server: serverClassName ].
+						server: serverClassName
+						forSession: aSession ].
 			^ wrapperClass ].
 	className := GbsTypedWrapperBuilder
 		wrapperClassNameForClient: clientClassName
@@ -585,17 +605,25 @@ GbsSessionManager class >> typedWrapperClassForClient: clientClassName server: s
 				setTypedWrapperClass: wrapperClass
 				forClient: clientClassName
 				server: serverClassName.
-			(self shouldRefreshTypedWrapperClass: wrapperClass server: serverClassName)
+			(self
+				shouldRefreshTypedWrapperClass: wrapperClass
+				server: serverClassName
+				session: aSession)
 				ifTrue: [
 					^ self
 						generateTypedWrapperForClient: clientClassName
-						server: serverClassName ].
+						server: serverClassName
+						forSession: aSession ].
 			^ wrapperClass ].
-	(self shouldAutoloadTypedWrapperForClient: clientClassName server: serverClassName)
+	(self
+		shouldAutoloadTypedWrapperForClient: clientClassName
+		server: serverClassName
+		usingRegistry: (self typedWrapperAutoloadRegistryForSession: aSession))
 		ifTrue: [
 			^ self
 				generateTypedWrapperForClient: clientClassName
-				server: serverClassName ].
+				server: serverClassName
+				forSession: aSession ].
 	^ nil
 ]
 
@@ -611,28 +639,40 @@ GbsSessionManager class >> typedWrapperClassForClient: clientClassName server: s
 
 { #category : '*GemStone-GBS-Core' }
 GbsSessionManager class >> typedWrapperClassForServerClassNamed: serverClassName [
+	^ self
+		typedWrapperClassForServerClassNamed: serverClassName
+		forSession: GbsSessionParameters currentSession
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSessionManager class >> typedWrapperClassForServerClassNamed: serverClassName forSession: aSession [
 	| serverName clientName wrapperClass registry |
 	serverName := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
 	serverName isEmpty ifTrue: [ ^ nil ].
+	registry := self typedWrapperAutoloadRegistryForSession: aSession.
+	clientName := registry at: serverName ifAbsent: [ nil ].
+	clientName ifNotNil: [
+		^ self
+			typedWrapperClassForClient: clientName
+			server: serverName
+			forSession: aSession ].
 	wrapperClass := self typedWrapperRegistry values
 		detect: [ :each |
 			(each respondsTo: #serverBehaviorName)
 				and: [ each serverBehaviorName = serverName ] ]
 		ifNone: [ nil ].
 	wrapperClass ifNotNil: [
-		(self shouldRefreshTypedWrapperClass: wrapperClass server: serverName)
+		(self
+			shouldRefreshTypedWrapperClass: wrapperClass
+			server: serverName
+			session: aSession)
 			ifTrue: [
 				^ self
 					generateTypedWrapperForClient: wrapperClass clientBehaviorName
-					server: serverName ].
+					server: serverName
+					forSession: aSession ].
 			^ wrapperClass ].
-	registry := self typedWrapperAutoloadRegistryForSession: GbsSessionParameters currentSession.
-	clientName := registry at: serverName ifAbsent: [ nil ].
-	clientName ifNil: [ ^ nil ].
-	^ self
-		typedWrapperClassForClient: clientName
-		server: serverName
-		ifAbsentGenerate: [ self generateTypedWrapperForClient: clientName server: serverName ]
+	^ nil
 ]
 
 { #category : '*GemStone-GBS-Core' }

@@ -882,18 +882,10 @@ GbsSession >> repositoryRootLifecycleVersion [
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> resetAfterLogout [
-	self stopPolling.
-	isLoggedIn := false.
-	sessionOop := nil.
-	sessionId := nil.
+	self resetConnectionStateAfterLogout.
 	self clearProxyCache.
 	self materializer clearRemoteClassNameCache.
 	self clearNamedObjectCache.
 	GbsSessionManager clearTypedWrapperAutoloadRegistrationsForSession: self.
-	self invalidateRepositoryRoots.
-	parameters ifNotNil: [
-		parameters sessionId: nil.
-		parameters class currentSession == self ifTrue: [
-			parameters class currentSession: nil ].
-		parameters class unregisterSession: parameters ]
+	self invalidateRepositoryRoots
 ]

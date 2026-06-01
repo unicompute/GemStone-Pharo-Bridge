@@ -120,6 +120,16 @@ GbsSession >> abort [
     ^ true.
 ]
 
+{ #category : 'replication' }
+GbsSession >> activeStoreTraversals [
+	^ self dirtyPool activeStoreTraversals
+]
+
+{ #category : 'replication' }
+GbsSession >> addStoreTraversal: aTraversal [
+	^ self dirtyPool addStoreTraversal: aTraversal
+]
+
 { #category : 'transactions' }
 GbsSession >> abortTransaction [
   "Aborts the current transaction."
@@ -131,6 +141,78 @@ GbsSession >> abortTransaction [
   result = 1 ifFalse: [ "Abort rarely fails unless the connection is dead, but we should catch it."
     GbsError signal: 'Failed to abort transaction.' ].
   ^ true
+]
+
+{ #category : 'replication' }
+GbsSession >> dirtyPool [
+	^ (self class weakRegistryNamed: #GbsSessionDirtyPools)
+		at: self
+		ifAbsentPut: [ GbxDirtyPool forSession: self ]
+]
+
+{ #category : 'actions' }
+GbsSession >> resetAttachedParametersAfterLogout [
+	parameters ifNotNil: [
+		parameters sessionId: nil.
+		parameters class currentSession == self ifTrue: [
+			parameters class currentSession: nil ].
+		parameters class unregisterSession: parameters ]
+]
+
+{ #category : 'actions' }
+GbsSession >> resetConvertedSessionStateAfterLogout [
+	self class clearNotificationActionFor: self.
+	self class clearSessionSignalActionFor: self.
+	self class clearSignaledAbortActionFor: self.
+	(self class weakRegistryNamed: #GbsSessionDirtyPools)
+		removeKey: self
+		ifAbsent: [ ].
+	(self class weakRegistryNamed: #GbsSessionReplicatorManagers)
+		removeKey: self
+		ifAbsent: [ ]
+]
+
+{ #category : 'actions' }
+GbsSession >> resetConnectionStateAfterLogout [
+	self stopPolling.
+	isLoggedIn := false.
+	sessionOop := nil.
+	sessionId := nil.
+	self resetConvertedSessionStateAfterLogout.
+	self resetAttachedParametersAfterLogout
+]
+
+{ #category : 'replication' }
+GbsSession >> removeStoreTraversal: aTraversal [
+	^ self dirtyPool removeStoreTraversal: aTraversal
+]
+
+{ #category : 'replication' }
+GbsSession >> replicatorForClientBehavior: aBehavior ifAbsent: aBlock [
+	^ self replicatorManager replicatorForClientBehavior: aBehavior ifAbsent: aBlock
+]
+
+{ #category : 'replication' }
+GbsSession >> replicatorForServerBehavior: aBehavior ifAbsent: aBlock [
+	^ self replicatorManager replicatorForServerBehavior: aBehavior ifAbsent: aBlock
+]
+
+{ #category : 'replication' }
+GbsSession >> replicatorManager [
+	^ (self class weakRegistryNamed: #GbsSessionReplicatorManagers)
+		at: self
+		ifAbsentPut: [ GbxReplicatorManager newForSession: self ]
+]
+
+{ #category : 'replication' }
+GbsSession >> setAsideDirtyWhile: aBlock [
+	^ self dirtyPool setAsideDirtyWhile: aBlock
+]
+
+{ #category : 'replication' }
+GbsSession >> storeTraversalBuffer: aBuffer [
+	self serverInterface ifNil: [ self error: 'No server interface is available for store traversal.' ].
+	^ self serverInterface storeTraversalBuffer: aBuffer
 ]
 
 { #category : 'evaluating' }
@@ -997,15 +1079,7 @@ GbsSession >> logout [
 
 { #category : 'actions' }
 GbsSession >> resetAfterLogout [
-	self stopPolling.
-	isLoggedIn := false.
-	sessionOop := nil.
-	sessionId := nil.
-	parameters ifNotNil: [
-		parameters sessionId: nil.
-		parameters class currentSession == self ifTrue: [
-			parameters class currentSession: nil ].
-		parameters class unregisterSession: parameters ]
+	self resetConnectionStateAfterLogout
 ]
 
 { #category : 'actions' }
