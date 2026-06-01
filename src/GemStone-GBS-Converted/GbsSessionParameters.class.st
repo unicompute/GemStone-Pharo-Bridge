@@ -59,6 +59,16 @@ GbsSessionParameters class >> exportAllParameters [
 ]
 
 { #category : 'persistence' }
+GbsSessionParameters class >> exportAllParametersString [
+	^ self exportAllParametersStringIncludingSecrets: false
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters class >> exportAllParametersStringIncludingSecrets: includeSecrets [
+	^ self exportObjectStringFor: (self exportAllParametersIncludingSecrets: includeSecrets)
+]
+
+{ #category : 'persistence' }
 GbsSessionParameters class >> exportAllParametersIncludingSecrets: includeSecrets [
 	^ self allParameters collect: [ :each |
 		each exportDictionaryIncludingSecrets: includeSecrets ] as: Array
@@ -70,10 +80,34 @@ GbsSessionParameters class >> exportFormatIdentifier [
 ]
 
 { #category : 'persistence' }
+GbsSessionParameters class >> exportObjectFromString: aString [
+	| ston |
+	ston := Smalltalk at: #STON ifAbsent: [
+		self error: 'STON support is required to import GemStone session parameters.' ].
+	^ ston fromString: aString
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters class >> exportObjectStringFor: anObject [
+	| ston |
+	ston := Smalltalk at: #STON ifAbsent: [
+		self error: 'STON support is required to export GemStone session parameters.' ].
+	^ ston toString: anObject
+]
+
+{ #category : 'persistence' }
 GbsSessionParameters class >> fromExportDictionary: aDictionary [
 	^ self new
 		applyExportDictionary: aDictionary;
 		yourself
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters class >> importParametersFromExportString: aString [
+	| imported |
+	imported := self parametersFromExportString: aString.
+	imported do: [ :each | self addParameter: each ].
+	^ imported
 ]
 
 { #category : 'persistence' }
@@ -110,6 +144,19 @@ GbsSessionParameters class >> pollingEnabled: aBoolean [
 
 ]
 
+{ #category : 'persistence' }
+GbsSessionParameters class >> parametersFromExportObject: anObject [
+	anObject isDictionary ifTrue: [ ^ { self fromExportDictionary: anObject } ].
+	(anObject isCollection and: [ anObject isString not ]) ifTrue: [
+		^ anObject collect: [ :each | self fromExportDictionary: each ] as: Array ].
+	self error: 'Session parameter export must contain a dictionary or collection of dictionaries.'
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters class >> parametersFromExportString: aString [
+	^ self parametersFromExportObject: (self exportObjectFromString: aString)
+]
+
 { #category : 'registry' }
 GbsSessionParameters class >> registerSession: aSession [
 	self allSessions add: aSession
@@ -125,6 +172,12 @@ GbsSessionParameters class >> replaceAllParametersFromExportDictionaries: dictio
 	| imported |
 	imported := dictionaries collect: [ :each | self fromExportDictionary: each ].
 	AllParameters := imported asOrderedCollection.
+	^ AllParameters
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters class >> replaceAllParametersFromExportString: aString [
+	AllParameters := (self parametersFromExportString: aString) asOrderedCollection.
 	^ AllParameters
 ]
 
@@ -268,6 +321,16 @@ GbsSessionParameters >> exportDictionaryIncludingSecrets: includeSecrets [
 		at: 'extraGemArgs' put: self extraGemArgs;
 		at: 'logArg' put: self logArg;
 		yourself
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters >> exportString [
+	^ self exportStringIncludingSecrets: false
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters >> exportStringIncludingSecrets: includeSecrets [
+	^ self class exportObjectStringFor: (self exportDictionaryIncludingSecrets: includeSecrets)
 ]
 
 { #category : 'persistence' }

@@ -1381,6 +1381,35 @@ GbsClassicLauncher >> doEditParameter [
 ]
 
 { #category : 'actions' }
+GbsClassicLauncher >> doExportParameters [
+	| file count |
+	file := self requestParameterExportFile.
+	file ifNil: [ ^ false ].
+	[
+		count := self exportSessionParametersToFile: file.
+		self inform: 'Exported ', count asString, ' session parameter configuration(s).'.
+		^ true
+	] on: Error do: [ :ex |
+		self inform: 'Export session parameters failed: ', ex messageText.
+		^ false ]
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> doImportParameters [
+	| file count |
+	file := self requestParameterImportFile.
+	file ifNil: [ ^ false ].
+	[
+		count := self importSessionParametersFromFile: file.
+		self refreshAll.
+		self inform: 'Imported ', count asString, ' session parameter configuration(s).'.
+		^ true
+	] on: Error do: [ :ex |
+		self inform: 'Import session parameters failed: ', ex messageText.
+		^ false ]
+]
+
+{ #category : 'actions' }
 GbsClassicLauncher >> doLoginRpc [
 	| session |
     parametersList selection selectedItem ifNotNil: [ :params |
@@ -1407,6 +1436,24 @@ GbsClassicLauncher >> doLoginRpc [
             ]
         ].
     ] ifNil: [ self inform: 'Please select a configuration first.' ].
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> exportSessionParametersToFile: aFileReference [
+	| file count |
+	file := aFileReference asFileReference.
+	count := GbsSessionParameters allParameters size.
+	file ensureDelete.
+	file writeStreamDo: [ :stream |
+		stream nextPutAll: GbsSessionParameters exportAllParametersString ].
+	^ count
+]
+
+{ #category : 'actions' }
+GbsClassicLauncher >> importSessionParametersFromFile: aFileReference [
+	| imported |
+	imported := GbsSessionParameters importParametersFromExportString: aFileReference asFileReference contents.
+	^ imported size
 ]
 
 { #category : 'actions' }
@@ -1532,9 +1579,12 @@ GbsClassicLauncher >> menuBrowse [
 { #category : 'menus' }
 GbsClassicLauncher >> menuParameters [
     ^ self newMenu
-        addItem: [ :item | item name: 'Add...'; action: [ self inform: 'Add Parameter' ] ];
-        addItem: [ :item | item name: 'Edit'; action: [ self inform: 'Edit Parameter' ] ];
-        addItem: [ :item | item name: 'Delete'; action: [ self inform: 'Delete Parameter' ] ];
+        addItem: [ :item | item name: 'Add...'; action: [ self doAddParameter ] ];
+        addItem: [ :item | item name: 'Copy'; action: [ self doCopyParameter ] ];
+        addItem: [ :item | item name: 'Edit'; action: [ self doEditParameter ] ];
+        addItem: [ :item | item name: 'Delete'; action: [ self doDeleteParameter ] ];
+        addItem: [ :item | item name: 'Export All...'; action: [ self doExportParameters ] ];
+        addItem: [ :item | item name: 'Import...'; action: [ self doImportParameters ] ];
         yourself.
 ]
 
@@ -1781,6 +1831,29 @@ GbsClassicLauncher >> requestSymbolDictionaryName [
 	^ UIManager default
 		request: 'Symbol Dictionary name (optional):'
 		initialAnswer: ''
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> requestParameterExportFile [
+	^ self sessionParameterFileReferenceFromPath: (self class
+		uiRequest: 'Export session parameters to STON file:'
+		initialAnswer: 'gbs-session-parameters.ston')
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> requestParameterImportFile [
+	^ self sessionParameterFileReferenceFromPath: (self class
+		uiRequest: 'Import session parameters from STON file:'
+		initialAnswer: 'gbs-session-parameters.ston')
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> sessionParameterFileReferenceFromPath: pathString [
+	| normalized |
+	pathString ifNil: [ ^ nil ].
+	normalized := pathString asString trimBoth.
+	normalized isEmpty ifTrue: [ ^ nil ].
+	^ normalized asFileReference
 ]
 
 { #category : 'private' }

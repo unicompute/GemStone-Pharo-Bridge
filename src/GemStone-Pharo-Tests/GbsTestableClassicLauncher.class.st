@@ -124,6 +124,11 @@ GbsTestableClassicLauncher >> requestSymbolDictionaryName [
 	^ requestedDictionaryName ifNil: [ '' ]
 ]
 
+{ #category : 'actions' }
+GbsTestableClassicLauncher >> refreshAll [
+	^ self
+]
+
 { #category : 'accessing' }
 GbsTestableClassicLauncher >> requestedDictionaryName: aString [
 	requestedDictionaryName := aString

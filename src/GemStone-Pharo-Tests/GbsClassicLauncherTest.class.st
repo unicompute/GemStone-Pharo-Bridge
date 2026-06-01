@@ -148,3 +148,61 @@ GbsClassicLauncherTest >> testBrowsingSessionFromParametersUsesCurrentSession [
 
 	self assert: (launcher browsingSessionFrom: params) == liveSession
 ]
+
+{ #category : 'tests' }
+GbsClassicLauncherTest >> testDoExportParametersWritesRedactedConfigurationFile [
+	| previous params file exported |
+	(Smalltalk includesKey: #STON) ifFalse: [ self skip: 'STON is not available in this image.' ].
+	previous := GbsSessionParameters allParameters copy.
+	file := FileLocator temp / ('gbs-session-parameters-export-', 1000000 atRandom asString, '.ston').
+	[
+		GbsSessionParameters allParameters removeAll.
+		params := GbsSessionParameters new.
+		params
+			name: 'Production';
+			username: 'DataCurator';
+			password: 'secret'.
+		GbsSessionParameters addParameter: params.
+		GbsTestableClassicLauncher enqueueRequestAnswer: file fullName.
+
+		self assert: launcher doExportParameters.
+
+		exported := GbsSessionParameters parametersFromExportString: file contents.
+		self assert: exported size equals: 1.
+		self assert: exported first name equals: 'Production'.
+		self assert: exported first password isNil.
+		self assert: launcher infoMessages last equals: 'Exported 1 session parameter configuration(s).'
+	] ensure: [
+		file ensureDelete.
+		GbsSessionParameters allParameters
+			removeAll;
+			addAll: previous ]
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherTest >> testDoImportParametersAppendsConfigurationFromFile [
+	| previous params file |
+	(Smalltalk includesKey: #STON) ifFalse: [ self skip: 'STON is not available in this image.' ].
+	previous := GbsSessionParameters allParameters copy.
+	file := FileLocator temp / ('gbs-session-parameters-import-', 1000000 atRandom asString, '.ston').
+	[
+		GbsSessionParameters allParameters removeAll.
+		params := GbsSessionParameters new.
+		params
+			name: 'Imported';
+			username: 'GcUser'.
+		file writeStreamDo: [ :stream | stream nextPutAll: params exportString ].
+		GbsTestableClassicLauncher enqueueRequestAnswer: file fullName.
+
+		self assert: launcher doImportParameters.
+
+		self assert: GbsSessionParameters allParameters size equals: 1.
+		self assert: GbsSessionParameters allParameters first name equals: 'Imported'.
+		self assert: GbsSessionParameters allParameters first username equals: 'GcUser'.
+		self assert: launcher infoMessages last equals: 'Imported 1 session parameter configuration(s).'
+	] ensure: [
+		file ensureDelete.
+		GbsSessionParameters allParameters
+			removeAll;
+			addAll: previous ]
+]

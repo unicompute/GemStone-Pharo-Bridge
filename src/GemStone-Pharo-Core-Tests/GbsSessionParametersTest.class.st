@@ -106,6 +106,37 @@ GbsSessionParametersTest >> testExportAllParametersCanRoundTripWithoutRuntimeSes
 ]
 
 { #category : 'tests' }
+GbsSessionParametersTest >> testExportAllParametersStringRoundTripsAndRedactsSecrets [
+	| previous params exported imported |
+	(Smalltalk includesKey: #STON) ifFalse: [ self skip: 'STON is not available in this image.' ].
+	previous := GbsSessionParameters allParameters copy.
+	[
+		GbsSessionParameters allParameters removeAll.
+		params := GbsSessionParameters new.
+		params
+			name: 'Exported';
+			username: 'DataCurator';
+			password: 'secret';
+			hostPassword: 'host-secret';
+			sessionId: 9001.
+		GbsSessionParameters addParameter: params.
+
+		exported := GbsSessionParameters exportAllParametersString.
+		imported := GbsSessionParameters parametersFromExportString: exported.
+
+		self assert: imported size equals: 1.
+		self assert: imported first name equals: 'Exported'.
+		self assert: imported first username equals: 'DataCurator'.
+		self assert: imported first password isNil.
+		self assert: imported first hostPassword isNil.
+		self assert: imported first sessionId isNil
+	] ensure: [
+		GbsSessionParameters allParameters
+			removeAll;
+			addAll: previous ]
+]
+
+{ #category : 'tests' }
 GbsSessionParametersTest >> testExportDictionaryIncludingSecretsIncludesPasswords [
 	| params exported |
 	params := GbsSessionParameters new.
@@ -156,6 +187,31 @@ GbsSessionParametersTest >> testExportDictionaryRedactsSecretsByDefault [
 
 	self assert: (exported at: 'password') isNil.
 	self assert: (exported at: 'hostPassword') isNil
+]
+
+{ #category : 'tests' }
+GbsSessionParametersTest >> testImportParametersFromExportStringAppendsImportedConfigurations [
+	| previous params exported imported |
+	(Smalltalk includesKey: #STON) ifFalse: [ self skip: 'STON is not available in this image.' ].
+	previous := GbsSessionParameters allParameters copy.
+	[
+		GbsSessionParameters allParameters removeAll.
+		params := GbsSessionParameters new.
+		params
+			name: 'Imported';
+			username: 'GcUser'.
+		exported := params exportString.
+
+		imported := GbsSessionParameters importParametersFromExportString: exported.
+
+		self assert: imported size equals: 1.
+		self assert: GbsSessionParameters allParameters size equals: 1.
+		self assert: GbsSessionParameters allParameters first name equals: 'Imported'.
+		self assert: GbsSessionParameters allParameters first username equals: 'GcUser'
+	] ensure: [
+		GbsSessionParameters allParameters
+			removeAll;
+			addAll: previous ]
 ]
 
 { #category : 'tests' }
