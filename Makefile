@@ -98,6 +98,7 @@ regression-gates:
 	bash ./scripts/check_bridge_regression_gates.sh
 
 verify:
+	bash ./scripts/test_lane_common_preflight.sh
 	bash ./scripts/check_bridge_regression_gates.sh
 	bash ./scripts/run_verify.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
 

@@ -191,6 +191,25 @@ GbsSessionParametersTest >> testRememberedSecretsCanRoundTripThroughKeychainStor
 ]
 
 { #category : 'tests' }
+GbsSessionParametersTest >> testKeychainShellQuoteHandlesSingleQuotes [
+	| expected |
+	expected := String streamContents: [ :stream |
+		stream
+			nextPut: $';
+			nextPut: $a;
+			nextPut: $';
+			nextPut: $\;
+			nextPut: $';
+			nextPut: $';
+			nextPut: $b;
+			nextPut: $' ].
+
+	self
+		assert: (GbsSessionParameters keychainShellQuote: 'a''b')
+		equals: expected
+]
+
+{ #category : 'tests' }
 GbsSessionParametersTest >> testSecretExportRestoresRememberedSecretsFromKeychainStore [
 	| previousStore store params exported |
 	previousStore := Smalltalk globals
@@ -210,7 +229,8 @@ GbsSessionParametersTest >> testSecretExportRestoresRememberedSecretsFromKeychai
 
 		exported := params exportDictionaryIncludingSecrets: true.
 
-		self assert: (exported at: 'password') equals: 'gs-secret'
+		self assert: (exported at: 'password') equals: 'gs-secret'.
+		self assert: params password isNil
 	] ensure: [
 		previousStore
 			ifNil: [ Smalltalk globals removeKey: #GbsSessionParametersKeychainStore ifAbsent: [ ] ]

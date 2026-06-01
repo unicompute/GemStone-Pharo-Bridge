@@ -288,12 +288,20 @@ GbsSessionParameters class >> keychainStore [
 
 { #category : 'security' }
 GbsSessionParameters class >> keychainShellQuote: aString [
-	| value quote |
+	| value |
 	value := aString ifNil: [ '' ] ifNotNil: [ aString asString ].
-	(value includes: $') ifTrue: [
-		self error: 'Keychain command values containing single quotes are not supported by this backend.' ].
-	quote := String with: $'.
-	^ quote, value, quote
+	^ String streamContents: [ :stream |
+		stream nextPut: $'.
+		value do: [ :character |
+			character = $'
+				ifTrue: [
+					stream
+						nextPut: $';
+						nextPut: $\;
+						nextPut: $';
+						nextPut: $' ]
+				ifFalse: [ stream nextPut: character ] ].
+		stream nextPut: $' ]
 ]
 
 { #category : 'security' }
@@ -339,21 +347,26 @@ GbsSessionParameters class >> keychainSecretAt: accountName [
 
 { #category : 'security' }
 GbsSessionParameters class >> keychainSecretAt: accountName put: secretString [
-	| store command status |
+	| store file command status |
 	store := self keychainStore.
 	store ifNotNil: [
 		store at: accountName put: secretString.
 		^ secretString ].
-	command := '/usr/bin/security add-generic-password -U -s ',
-		(self keychainShellQuote: self keychainServiceName),
-		' -a ',
-		(self keychainShellQuote: accountName),
-		' -w ',
-		(self keychainShellQuote: secretString),
-		' >/dev/null 2>&1'.
-	status := self keychainCommandStatus: command.
-	status = 0 ifFalse: [ self error: 'Could not store GemStone session secret in macOS Keychain.' ].
-	^ secretString
+	file := FileLocator temp / ('gbs-keychain-secret-', 1000000 atRandom asString, '.txt').
+	[
+		file writeStreamDo: [ :stream | stream nextPutAll: secretString asString ].
+		self keychainCommandStatus: 'chmod 600 ', (self keychainShellQuote: file fullName).
+		command := '/bin/sh -c ', (self keychainShellQuote: (
+			'secret="$(cat ', (self keychainShellQuote: file fullName), ')"; ',
+			'exec /usr/bin/security add-generic-password -U -s ',
+			(self keychainShellQuote: self keychainServiceName),
+			' -a ',
+			(self keychainShellQuote: accountName),
+			' -w "$secret" >/dev/null 2>&1')).
+		status := self keychainCommandStatus: command.
+		status = 0 ifFalse: [ self error: 'Could not store GemStone session secret in macOS Keychain.' ].
+		^ secretString
+	] ensure: [ file deleteIfAbsent: [ ] ]
 ]
 
 { #category : 'security' }
@@ -493,32 +506,41 @@ GbsSessionParameters >> exportDictionary [
 
 { #category : 'persistence' }
 GbsSessionParameters >> exportDictionaryIncludingSecrets: includeSecrets [
+	| hadPassword hadHostPassword exported |
+	hadPassword := password notNil.
+	hadHostPassword := hostPassword notNil.
 	includeSecrets ifTrue: [ self restoreRememberedSecretsFromKeychain ].
-	self normalizeConnectionFields.
-	^ Dictionary new
-		at: 'format' put: self class exportFormatIdentifier;
-		at: 'schemaVersion' put: 1;
-		at: 'name' put: self name;
-		at: 'gemStoneName' put: self gemStoneName;
-		at: 'username' put: self username;
-		at: 'password' put: (includeSecrets ifTrue: [ self password ] ifFalse: [ nil ]);
-		at: 'gsRemember' put: self gsRemember;
-		at: 'hostUsername' put: self hostUsername;
-		at: 'hostPassword' put: (includeSecrets ifTrue: [ self hostPassword ] ifFalse: [ nil ]);
-		at: 'gemService' put: self gemService;
-		at: 'hostRemember' put: self hostRemember;
-		at: 'netObject' put: self netObject;
-		at: 'isX509' put: self isX509;
-		at: 'displayUsername' put: self displayUsername;
-		at: 'caCert' put: self caCert;
-		at: 'cert' put: self cert;
-		at: 'privateKey' put: self privateKey;
-		at: 'netldiHostOrIp' put: self netldiHostOrIp;
-		at: 'netldiNameOrPort' put: self netldiNameOrPort;
-		at: 'dirArg' put: self dirArg;
-		at: 'extraGemArgs' put: self extraGemArgs;
-		at: 'logArg' put: self logArg;
-		yourself
+	[
+		self normalizeConnectionFields.
+		exported := Dictionary new
+			at: 'format' put: self class exportFormatIdentifier;
+			at: 'schemaVersion' put: 1;
+			at: 'name' put: self name;
+			at: 'gemStoneName' put: self gemStoneName;
+			at: 'username' put: self username;
+			at: 'password' put: (includeSecrets ifTrue: [ self password ] ifFalse: [ nil ]);
+			at: 'gsRemember' put: self gsRemember;
+			at: 'hostUsername' put: self hostUsername;
+			at: 'hostPassword' put: (includeSecrets ifTrue: [ self hostPassword ] ifFalse: [ nil ]);
+			at: 'gemService' put: self gemService;
+			at: 'hostRemember' put: self hostRemember;
+			at: 'netObject' put: self netObject;
+			at: 'isX509' put: self isX509;
+			at: 'displayUsername' put: self displayUsername;
+			at: 'caCert' put: self caCert;
+			at: 'cert' put: self cert;
+			at: 'privateKey' put: self privateKey;
+			at: 'netldiHostOrIp' put: self netldiHostOrIp;
+			at: 'netldiNameOrPort' put: self netldiNameOrPort;
+			at: 'dirArg' put: self dirArg;
+			at: 'extraGemArgs' put: self extraGemArgs;
+			at: 'logArg' put: self logArg;
+			yourself.
+		^ exported
+	] ensure: [
+		includeSecrets ifTrue: [
+			hadPassword ifFalse: [ password := nil ].
+			hadHostPassword ifFalse: [ hostPassword := nil ] ] ]
 ]
 
 { #category : 'persistence' }

@@ -192,10 +192,14 @@ root'
             ' shallow_class_name_batches=', (metricValue value: shallowMetrics value: #classNameBatchCalls) asString,
             ' shallow_proxy_creations=', (metricValue value: shallowMetrics value: #proxyCreations) asString,
             ' shallow_wrapper_lookups=', (metricValue value: shallowMetrics value: #wrapperLookupCalls) asString,
+            ' shallow_structured_byte_fetches=', (metricValue value: shallowMetrics value: #structuredBatchByteFetchCalls) asString,
+            ' shallow_structured_byte_fallbacks=', (metricValue value: shallowMetrics value: #structuredByteBatchFallbacks) asString,
             ' mixed_collection_array_batches=', (metricValue value: mixedMetrics value: #collectionArrayBatchCalls) asString,
             ' mixed_dictionary_pair_batches=', (metricValue value: mixedMetrics value: #dictionaryPairBatchCalls) asString,
             ' mixed_scalar_string_batches=', (metricValue value: mixedMetrics value: #scalarStringBatchCalls) asString,
-            ' mixed_scalar_byte_array_batches=', (metricValue value: mixedMetrics value: #scalarByteArrayBatchCalls) asString;
+            ' mixed_scalar_byte_array_batches=', (metricValue value: mixedMetrics value: #scalarByteArrayBatchCalls) asString,
+            ' mixed_structured_byte_fetches=', (metricValue value: mixedMetrics value: #structuredBatchByteFetchCalls) asString,
+            ' mixed_structured_byte_fallbacks=', (metricValue value: mixedMetrics value: #structuredByteBatchFallbacks) asString;
           cr.
       ] ensure: [
         cleanupFixture value.

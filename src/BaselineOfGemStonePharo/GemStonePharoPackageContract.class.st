@@ -337,6 +337,7 @@ GemStonePharoPackageContract >> packageOwnershipExplicitClassFamilySpecs [
 GemStonePharoPackageContract >> packageOwnershipExplicitClassGroupSpecs [
 	^ {
 		{ #GbsCommitConflictError. #(''). #coreOnly }.
+		{ #GbsMaterializationLimitError. #(''). #coreOnly }.
 		{ #GbsRc. #('Counter' 'Hash' 'Queue'). #maglevOnly }.
 		{ #GbsSharedCounter. #(''). #maglevOnly }.
 		{ #GbsGs. #('Object' 'Dictionary'). #maglevOnly }.

@@ -40,6 +40,14 @@ CoreMockGbsSession >> apiGciFetchOops: anOop startingAt: startIndex into: aBuffe
 ]
 
 { #category : 'accessing' }
+CoreMockGbsSession >> apiGciFetchBytes: anOop startingAt: startIndex into: aBuffer size: numBytes [
+	| block |
+	block := self stubs at: #apiGciFetchBytes ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: anOop cull: startIndex cull: aBuffer cull: numBytes ].
+	self error: 'No apiGciFetchBytes stub configured.'
+]
+
+{ #category : 'accessing' }
 CoreMockGbsSession >> apiGciFetchSize: anOop [
 	| block |
 	block := self stubs at: #apiGciFetchSize ifAbsent: [ nil ].
@@ -240,6 +248,11 @@ CoreMockGbsSession >> serverInterface [
 { #category : 'materialization' }
 CoreMockGbsSession >> supportsStructuredMaterializationBatchBuffers [
 	^ self stubs at: #supportsStructuredMaterializationBatchBuffers ifAbsent: [ false ]
+]
+
+{ #category : 'materialization' }
+CoreMockGbsSession >> supportsStructuredMaterializationBatchBytes [
+	^ self stubs at: #supportsStructuredMaterializationBatchBytes ifAbsent: [ false ]
 ]
 
 { #category : 'accessing' }

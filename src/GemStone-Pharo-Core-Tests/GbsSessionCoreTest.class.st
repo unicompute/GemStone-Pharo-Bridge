@@ -135,6 +135,44 @@ GbsSessionCoreTest >> encodedStructuredStringSlotsFor: aString [
 ]
 
 { #category : 'running' }
+GbsSessionCoreTest >> putUint32: anInteger into: byteArray at: offset [
+	byteArray at: offset put: ((anInteger bitShift: -24) bitAnd: 255).
+	byteArray at: offset + 1 put: ((anInteger bitShift: -16) bitAnd: 255).
+	byteArray at: offset + 2 put: ((anInteger bitShift: -8) bitAnd: 255).
+	byteArray at: offset + 3 put: (anInteger bitAnd: 255).
+	^ offset + 4
+]
+
+{ #category : 'running' }
+GbsSessionCoreTest >> encodedPackedStringPayloadFor: stringCollection [
+	| total bytes offset |
+	total := 0.
+	stringCollection do: [ :each | total := total + 4 + (each size * 4) ].
+	bytes := ByteArray new: total.
+	offset := 1.
+	stringCollection do: [ :each |
+		offset := self putUint32: each size into: bytes at: offset.
+		each do: [ :character |
+			offset := self putUint32: character codePoint into: bytes at: offset ] ].
+	^ bytes
+]
+
+{ #category : 'running' }
+GbsSessionCoreTest >> encodedPackedByteArrayPayloadFor: byteArrayCollection [
+	| total bytes offset |
+	total := 0.
+	byteArrayCollection do: [ :each | total := total + 4 + each size ].
+	bytes := ByteArray new: total.
+	offset := 1.
+	byteArrayCollection do: [ :each |
+		offset := self putUint32: each size into: bytes at: offset.
+		each do: [ :byte |
+			bytes at: offset put: byte.
+			offset := offset + 1 ] ].
+	^ bytes
+]
+
+{ #category : 'running' }
 GbsSessionCoreTest >> setUp [
 	super setUp.
 	previousObjectSpaceFinalizationRegistry := Smalltalk globals
@@ -405,6 +443,39 @@ GbsSessionCoreTest >> testClassNameBatchUsesStructuredBuffer [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testClassNameBatchUsesStructuredBytePayload [
+	| mockSession bytes classNames byteCalls metrics |
+	mockSession := CoreMockGbsSession new.
+	bytes := self encodedPackedStringPayloadFor: #('Array' 'String').
+	byteCalls := 0.
+	mockSession stubs at: #supportsStructuredMaterializationBatchBytes put: true.
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		self assert: (script includesSubstring: 'buffer := ByteArray new: total').
+		byteCalls := byteCalls + 1.
+		9910 ].
+	mockSession stubs at: #executeAndFetch put: [ :script | self fail ].
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		oop = 9910 ifTrue: [ bytes size ] ifFalse: [ self fail ] ].
+	mockSession stubs at: #apiGciFetchBytes put: [ :oop :start :buffer :count |
+		self assert: oop equals: 9910.
+		self assert: start equals: 1.
+		self assert: count equals: bytes size.
+		bytes ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count | self fail ].
+
+	classNames := mockSession materializer remoteReader
+		remoteClassNamesForOops: #(9100 9040).
+
+	self assert: (classNames at: 9100) equals: 'Array'.
+	self assert: (classNames at: 9040) equals: 'String'.
+	self assert: byteCalls equals: 1.
+	metrics := mockSession materializationMetrics.
+	self assert: (metrics at: #structuredBatchByteFetchCalls ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #structuredBatchBufferFetchCalls ifAbsent: [ 0 ]) equals: 0.
+	self assert: (metrics at: #structuredBatchFallbacks ifAbsent: [ 0 ]) equals: 0
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testFetchDeepPreservesCyclicArrayIdentity [
 	| mockSession result |
 	mockSession := CoreMockGbsSession new.
@@ -524,6 +595,91 @@ GbsSessionCoreTest >> testFetchDeepPreservesCyclicSetIdentity [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testFetchDeepPreservesCyclicAssociationIdentity [
+	| mockSession result |
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #supportsStructuredMaterializationBatchBuffers put: true.
+	mockSession stubs at: #executeAndFetch put: [ :script | | response |
+		response := nil.
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object class name asString' ]) ifTrue: [
+			(script includesSubstring: '9040') ifTrue: [
+				response := '9040', Character tab asString, 'String', Character lf asString ] ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'text := object asString' ]) ifTrue: [
+			response := self encodedStringBatchLineForOop: 9040 value: 'self' ].
+		response ifNil: [
+			(script includesSubstring: 'class name asString') ifTrue: [
+				(script includesSubstring: '9500') ifTrue: [ response := 'Association' ].
+				(script includesSubstring: '9040') ifTrue: [ response := 'String' ] ] ].
+		response ifNil: [ self fail ].
+		response ].
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		((script includesSubstring: 'buffer := Array new: oops size * 2')
+			or: [ script includesSubstring: 'Array with: assoc key with: assoc value' ])
+			ifTrue: [ 9510 ]
+			ifFalse: [ Error signal: 'No return-OOP stub for this script.' ] ].
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		oop = 9510 ifTrue: [ 2 ] ifFalse: [ self fail ] ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+		self assert: oop equals: 9510.
+		self assert: start equals: 1.
+		self assert: count equals: 2.
+		#(9040 9500) ].
+	mockSession fetchDeep.
+
+	result := mockSession fetchObject: 9500.
+
+	self assert: result key equals: 'self'.
+	self assert: result value == result
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFetchDeepBatchesScalarByteArraysThroughBytePayload [
+	| mockSession result bytes metrics |
+	mockSession := CoreMockGbsSession new.
+	bytes := self encodedPackedByteArrayPayloadFor: { ByteArray withAll: #(1 2 3) }.
+	mockSession stubs at: #supportsStructuredMaterializationBatchBytes put: true.
+	mockSession stubs at: #executeAndFetch put: [ :script | | response |
+		response := nil.
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object class name asString' ]) ifTrue: [
+			response := '9400', Character tab asString, 'ByteArray', Character lf asString ].
+		response ifNil: [
+			(script includesSubstring: 'class name asString') ifTrue: [
+				(script includesSubstring: '9000') ifTrue: [ response := 'Array' ].
+				(script includesSubstring: '9400') ifTrue: [ response := 'ByteArray' ] ] ].
+		response ifNil: [ self fail ].
+		response ].
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		((script includesSubstring: 'buffer := ByteArray new: total')
+			and: [ script includesSubstring: 'object size' ])
+			ifTrue: [ 9410 ]
+			ifFalse: [ Error signal: 'No return-OOP stub for this script.' ] ].
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		oop = 9000 ifTrue: [ 1 ] ifFalse: [
+			oop = 9410 ifTrue: [ bytes size ] ifFalse: [ self fail ] ] ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+		self assert: oop equals: 9000.
+		self assert: start equals: 1.
+		self assert: count equals: 1.
+		#(9400) ].
+	mockSession stubs at: #apiGciFetchBytes put: [ :oop :start :buffer :count |
+		self assert: oop equals: 9410.
+		self assert: start equals: 1.
+		self assert: count equals: bytes size.
+		bytes ].
+	mockSession fetchDeep.
+
+	result := mockSession fetchObject: 9000.
+
+	self assert: result first equals: (ByteArray withAll: #(1 2 3)).
+	metrics := mockSession materializationMetrics.
+	self assert: (metrics at: #structuredBatchByteFetchCalls ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #scalarByteArrayBatchCalls ifAbsent: [ 0 ]) equals: 1
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testMaterializationMaxObjectsRaisesClearError [
 	| mockSession previous hadPrevious raised |
 	mockSession := self materializationMockSession.
@@ -534,10 +690,10 @@ GbsSessionCoreTest >> testMaterializationMaxObjectsRaisesClearError [
 		Smalltalk globals at: #GbsMaterializationMaxObjects put: 1.
 		mockSession fetchDeep.
 		[ mockSession fetchObject: 9000 ]
-			on: Error
+			on: GbsMaterializationLimitError
 			do: [ :ex |
 				raised := true.
-				self assert: (ex messageText includesSubstring: 'GBS_MATERIALIZATION_MAX_OBJECTS') ].
+				self assert: ex limitKind equals: #objects ].
 		self assert: raised
 	] ensure: [
 		hadPrevious
@@ -556,10 +712,10 @@ GbsSessionCoreTest >> testMaterializationMaxDepthRaisesClearError [
 		Smalltalk globals at: #GbsMaterializationMaxDepth put: 1.
 		mockSession fetchDeep.
 		[ mockSession fetchObject: 9000 ]
-			on: Error
+			on: GbsMaterializationLimitError
 			do: [ :ex |
 				raised := true.
-				self assert: (ex messageText includesSubstring: 'GBS_MATERIALIZATION_MAX_DEPTH') ].
+				self assert: ex limitKind equals: #depth ].
 		self assert: raised
 	] ensure: [
 		hadPrevious
@@ -578,15 +734,38 @@ GbsSessionCoreTest >> testMaterializationMaxBatchBytesRaisesClearError [
 		Smalltalk globals at: #GbsMaterializationMaxBatchBytes put: 1.
 		[ mockSession materializer remoteReader
 			parseClassNameLines: '9000', Character tab asString, 'Array', Character lf asString ]
-			on: Error
+			on: GbsMaterializationLimitError
 			do: [ :ex |
 				raised := true.
-				self assert: (ex messageText includesSubstring: 'GBS_MATERIALIZATION_MAX_BATCH_BYTES') ].
+				self assert: ex limitKind equals: #batchBytes ].
 		self assert: raised
 	] ensure: [
 		hadPrevious
 			ifTrue: [ Smalltalk globals at: #GbsMaterializationMaxBatchBytes put: previous ]
 			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationMaxBatchBytes ifAbsent: [ ] ] ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testMaterializationMaxFrontierOopsRaisesTypedError [
+	| mockSession previous hadPrevious raised |
+	mockSession := self materializationMockSession.
+	hadPrevious := Smalltalk globals includesKey: #GbsMaterializationMaxFrontierOops.
+	previous := Smalltalk globals at: #GbsMaterializationMaxFrontierOops ifAbsent: [ nil ].
+	raised := false.
+	[
+		Smalltalk globals at: #GbsMaterializationMaxFrontierOops put: 1.
+		mockSession fetchDeep.
+		[ mockSession fetchObject: 9000 ]
+			on: GbsMaterializationLimitError
+			do: [ :ex |
+				raised := true.
+				self assert: ex limitKind equals: #frontierOops.
+				self assert: ex observedValue equals: 2 ].
+		self assert: raised
+	] ensure: [
+		hadPrevious
+			ifTrue: [ Smalltalk globals at: #GbsMaterializationMaxFrontierOops put: previous ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationMaxFrontierOops ifAbsent: [ ] ] ]
 ]
 
 { #category : 'tests' }

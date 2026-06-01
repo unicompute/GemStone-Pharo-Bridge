@@ -133,16 +133,17 @@ GbsSessionMaterializer >> materializeAssociationOop: anOop withProfile: aProfile
 	| pair materialized association |
 	self materializedObjectForOop: anOop ifPresent: [ :object | ^ object ].
 	pair := self remoteAssociationOopPairForOop: anOop.
+	association := Association new.
+	self rememberMaterializedObject: association forOop: anOop.
 	seenOops add: anOop.
 	materialized := self
 		materializeOops: pair
 		withProfile: aProfile
 		depth: anInteger + 1
 		seen: seenOops.
-	association := Association
-		key: materialized first
+	association
+		key: materialized first;
 		value: materialized second.
-	self rememberMaterializedObject: association forOop: anOop.
 	^ association
 ]
 
@@ -192,6 +193,9 @@ GbsSessionMaterializer >> materializeDictionaryOop: anOop identityKeys: useIdent
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeOops: oopCollection withProfile: aProfile depth: anInteger seen: seenOops [
 	self checkMaterializationDepth: anInteger.
+	self
+		checkMaterializationFrontierSize: oopCollection size
+		label: 'materialization request'.
 	(aProfile isKindOf: GbsProxyOnlyMaterializationProfile) ifTrue: [
 		^ self materializeProxyOnlyOops: oopCollection withProfile: aProfile ].
 	^ self

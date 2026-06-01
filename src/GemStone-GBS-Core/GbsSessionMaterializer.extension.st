@@ -57,6 +57,14 @@ GbsSessionMaterializer >> materializationMaxDepth [
 ]
 
 { #category : 'limits' }
+GbsSessionMaterializer >> materializationMaxFrontierOops [
+	^ self
+		materializationLimitFromGlobal: #GbsMaterializationMaxFrontierOops
+		environmentName: 'GBS_MATERIALIZATION_MAX_FRONTIER_OOPS'
+		default: 0
+]
+
+{ #category : 'limits' }
 GbsSessionMaterializer >> materializationMaxObjects [
 	^ self
 		materializationLimitFromGlobal: #GbsMaterializationMaxObjects
@@ -69,8 +77,11 @@ GbsSessionMaterializer >> checkMaterializationBatchBytes: byteCount label: aStri
 	| maxBytes |
 	maxBytes := self materializationMaxBatchBytes.
 	(maxBytes > 0 and: [ byteCount > maxBytes ]) ifTrue: [
-		self error: 'Materialization batch "', aString asString, '" is ', byteCount asString,
-			' bytes, exceeding GBS_MATERIALIZATION_MAX_BATCH_BYTES=', maxBytes asString ].
+		GbsMaterializationLimitError
+			signalKind: #batchBytes
+			observed: byteCount
+			limit: maxBytes
+			label: aString ].
 	^ byteCount
 ]
 
@@ -79,9 +90,25 @@ GbsSessionMaterializer >> checkMaterializationDepth: anInteger [
 	| maxDepth |
 	maxDepth := self materializationMaxDepth.
 	(maxDepth > 0 and: [ anInteger > maxDepth ]) ifTrue: [
-		self error: 'Materialization depth ', anInteger asString,
-			' exceeds GBS_MATERIALIZATION_MAX_DEPTH=', maxDepth asString ].
+		GbsMaterializationLimitError
+			signalKind: #depth
+			observed: anInteger
+			limit: maxDepth
+			label: 'object graph depth' ].
 	^ anInteger
+]
+
+{ #category : 'limits' }
+GbsSessionMaterializer >> checkMaterializationFrontierSize: oopCount label: aString [
+	| maxOops |
+	maxOops := self materializationMaxFrontierOops.
+	(maxOops > 0 and: [ oopCount > maxOops ]) ifTrue: [
+		GbsMaterializationLimitError
+			signalKind: #frontierOops
+			observed: oopCount
+			limit: maxOops
+			label: aString ].
+	^ oopCount
 ]
 
 { #category : 'metrics' }
@@ -131,8 +158,11 @@ GbsSessionMaterializer >> rememberMaterializedObject: anObject forOop: anOop [
 	(cache includesKey: anOop) ifFalse: [
 		maxObjects := self materializationMaxObjects.
 		(maxObjects > 0 and: [ cache size + 1 > maxObjects ]) ifTrue: [
-			self error: 'Materialization object count ', (cache size + 1) asString,
-				' exceeds GBS_MATERIALIZATION_MAX_OBJECTS=', maxObjects asString ] ].
+			GbsMaterializationLimitError
+				signalKind: #objects
+				observed: cache size + 1
+				limit: maxObjects
+				label: 'materialized object cache' ] ].
 	cache at: anOop put: anObject.
 	^ anObject
 ]
@@ -234,6 +264,9 @@ GbsSessionMaterializer >> materializeScalarOops: oopCollection classNames: class
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeArrayOops: oopCollection withProfile: aProfile depth: anInteger seen: seenOops [
 	| results assigned uniqueOops elementOopsByOop flatElementOops spans materializedFlat offset |
+	self
+		checkMaterializationFrontierSize: oopCollection size
+		label: 'array batch roots'.
 	results := Array new: oopCollection size.
 	assigned := Array new: oopCollection size.
 	1 to: assigned size do: [ :index | assigned at: index put: false ].
@@ -263,6 +296,9 @@ GbsSessionMaterializer >> materializeArrayOops: oopCollection withProfile: aProf
 		ifTrue: [ #() ]
 		ifFalse: [
 			self
+				checkMaterializationFrontierSize: flatElementOops size
+				label: 'array batch elements'.
+			self
 				materializeOops: flatElementOops asArray
 				withProfile: aProfile
 				depth: anInteger + 1
@@ -287,6 +323,9 @@ GbsSessionMaterializer >> materializeArrayOops: oopCollection withProfile: aProf
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeSequenceableCollectionOops: oopCollection classNames: classNames withProfile: aProfile depth: anInteger seen: seenOops [
 	| arrayOopsByOop arrayOops elementOopsByArrayOop flatElementOops spans materializedFlat materializedByOop |
+	self
+		checkMaterializationFrontierSize: oopCollection size
+		label: 'sequenceable collection batch roots'.
 	arrayOopsByOop := self remoteCollectionAsArrayOopsForOops: oopCollection.
 	arrayOops := OrderedCollection new.
 	oopCollection do: [ :oop |
@@ -316,6 +355,9 @@ GbsSessionMaterializer >> materializeSequenceableCollectionOops: oopCollection c
 	materializedFlat := flatElementOops isEmpty
 		ifTrue: [ #() ]
 		ifFalse: [
+			self
+				checkMaterializationFrontierSize: flatElementOops size
+				label: 'sequenceable collection elements'.
 			self
 				materializeOops: flatElementOops asArray
 				withProfile: aProfile
@@ -376,6 +418,9 @@ GbsSessionMaterializer >> typedWrapperClassForServerClassName: className [
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeDictionaryOops: oopCollection classNames: classNames withProfile: aProfile depth: anInteger seen: seenOops [
 	| associationPairsByOop dictionaries flatKeyOops flatValueOops spans keys values |
+	self
+		checkMaterializationFrontierSize: oopCollection size
+		label: 'dictionary batch roots'.
 	associationPairsByOop := self remoteDictionaryAssociationOopPairsForOops: oopCollection.
 	dictionaries := Dictionary new.
 	flatKeyOops := OrderedCollection new.
@@ -402,6 +447,9 @@ GbsSessionMaterializer >> materializeDictionaryOops: oopCollection classNames: c
 		ifTrue: [ #() ]
 		ifFalse: [
 			self
+				checkMaterializationFrontierSize: flatKeyOops size
+				label: 'dictionary keys'.
+			self
 				materializeOops: flatKeyOops asArray
 				withProfile: aProfile
 				depth: anInteger + 1
@@ -409,6 +457,9 @@ GbsSessionMaterializer >> materializeDictionaryOops: oopCollection classNames: c
 	values := flatValueOops isEmpty
 		ifTrue: [ #() ]
 		ifFalse: [
+			self
+				checkMaterializationFrontierSize: flatValueOops size
+				label: 'dictionary values'.
 			self
 				materializeOops: flatValueOops asArray
 				withProfile: aProfile
@@ -427,12 +478,19 @@ GbsSessionMaterializer >> materializeDictionaryOops: oopCollection classNames: c
 
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeAssociationOops: oopCollection withProfile: aProfile depth: anInteger seen: seenOops [
-	| pairByOop flatOops materializedFlat materializedByOop |
+	| pairByOop flatOops materializedFlat materializedByOop associationsByOop |
+	self
+		checkMaterializationFrontierSize: oopCollection size
+		label: 'association batch roots'.
 	pairByOop := self remoteAssociationOopPairsForOops: oopCollection.
 	flatOops := OrderedCollection new.
+	associationsByOop := Dictionary new.
 	oopCollection do: [ :oop |
-		| pair |
+		| pair association |
 		seenOops add: oop.
+		association := Association new.
+		self rememberMaterializedObject: association forOop: oop.
+		associationsByOop at: oop put: association.
 		pair := pairByOop
 			at: oop
 			ifAbsent: [ self remoteAssociationOopPairForOop: oop ].
@@ -440,6 +498,9 @@ GbsSessionMaterializer >> materializeAssociationOops: oopCollection withProfile:
 	materializedFlat := flatOops isEmpty
 		ifTrue: [ #() ]
 		ifFalse: [
+			self
+				checkMaterializationFrontierSize: flatOops size
+				label: 'association key/value pairs'.
 			self
 				materializeOops: flatOops asArray
 				withProfile: aProfile
@@ -449,10 +510,10 @@ GbsSessionMaterializer >> materializeAssociationOops: oopCollection withProfile:
 	oopCollection doWithIndex: [ :oop :index |
 		| offset association |
 		offset := (index - 1) * 2.
-		association := Association
-			key: (materializedFlat at: offset + 1)
+		association := associationsByOop at: oop.
+		association
+			key: (materializedFlat at: offset + 1);
 			value: (materializedFlat at: offset + 2).
-		self rememberMaterializedObject: association forOop: oop.
 		materializedByOop at: oop put: association ].
 	^ materializedByOop
 ]
@@ -460,6 +521,9 @@ GbsSessionMaterializer >> materializeAssociationOops: oopCollection withProfile:
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeFrontierOops: oopCollection withProfile: aProfile depth: anInteger seen: seenOops [
 	| results assigned missing classNames scalarOops arrayOops sequenceableOops dictionaryOops associationOops scalarObjects nestedProfile |
+	self
+		checkMaterializationFrontierSize: oopCollection size
+		label: 'materialization frontier'.
 	results := Array new: oopCollection size.
 	assigned := Array new: oopCollection size.
 	1 to: assigned size do: [ :index | assigned at: index put: false ].
