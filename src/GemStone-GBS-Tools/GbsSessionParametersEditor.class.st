@@ -62,8 +62,24 @@ GbsSessionParametersEditor >> defaultLayout [
 { #category : 'actions' }
 GbsSessionParametersEditor >> doAccept [
 	self updateModel.
+	self validationErrorMessage ifNotNil: [ :message |
+		self inform: message.
+		^ false ].
 	acceptBlock ifNotNil: [ acceptBlock value ].
 	self delete.
+	^ true
+]
+
+{ #category : 'private' }
+GbsSessionParametersEditor >> normalizedTextFrom: aTextInput [
+	^ (aTextInput text ifNil: [ '' ]) asString trimBoth
+]
+
+{ #category : 'private' }
+GbsSessionParametersEditor >> optionalTextFrom: aTextInput [
+	| text |
+	text := self normalizedTextFrom: aTextInput.
+	^ text isEmpty ifTrue: [ nil ] ifFalse: [ text ]
 ]
 
 { #category : 'initialization' }
@@ -138,16 +154,28 @@ GbsSessionParametersEditor >> setModel: aParam [
 
 { #category : 'actions' }
 GbsSessionParametersEditor >> updateModel [
-	model name: nameField text.
-	model gemStoneName: stoneField text.
-	model username: userField text.
+	model name: (self normalizedTextFrom: nameField).
+	model gemStoneName: (self normalizedTextFrom: stoneField).
+	model username: (self normalizedTextFrom: userField).
 	model password: passField text.
 	model gsRemember: gsRemCheck state.
-	model hostUsername: hostUserField text.
+	model hostUsername: (self optionalTextFrom: hostUserField).
 	model hostPassword: hostPassField text.
 	model gemService: serviceField text.
-	model netldiHostOrIp: netldiHostField text.
-	model netldiNameOrPort: netldiPortField text.
+	model netldiHostOrIp: (self optionalTextFrom: netldiHostField).
+	model netldiNameOrPort: (self optionalTextFrom: netldiPortField).
 	model hostRemember: hostRemCheck state.
-	model netObject: netObjField text.
+	model netObject: (self optionalTextFrom: netObjField).
+	model normalizeConnectionFields
+]
+
+{ #category : 'validation' }
+GbsSessionParametersEditor >> validationErrorMessage [
+	| messages |
+	model ifNil: [ ^ 'No GemStone session configuration is loaded.' ].
+	messages := OrderedCollection new.
+	(model name ifNil: [ '' ]) isEmpty ifTrue: [
+		messages add: 'Configuration name is required.' ].
+	messages addAll: model loginValidationMessages.
+	^ model validationMessageFrom: messages
 ]

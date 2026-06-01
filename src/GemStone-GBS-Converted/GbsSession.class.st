@@ -492,10 +492,21 @@ GbsSession >> fetchObject: anOop [
 		sz := szPtr asInteger.
 		(sz > 0 and: [ sz < 100 ]) ifTrue: [ | localArray |
 			localArray := Array new: sz.
-			1 to: sz do: [ :idx | | elementOop |
-				elementOop := self evaluate: '(Object _objectForOop: ', anOop printString, ') at: ', idx printString.
-				localArray at: idx put: elementOop.
-			].
+			[
+				buf := ExternalAddress allocate: sz * 8.
+				[
+					i apiGciFetchOops: anOop startingAt: 1 into: buf size: sz.
+					1 to: sz do: [ :idx | | elementOop |
+						elementOop := (buf
+							integerAt: 1 + ((idx - 1) * 8)
+							size: 8
+							signed: false) asInteger.
+						localArray at: idx put: (self fetchObject: elementOop) ]
+				] ensure: [ buf free ]
+			] on: Error do: [
+				1 to: sz do: [ :idx | | element |
+					element := self evaluate: '(Object _objectForOop: ', anOop printString, ') at: ', idx printString.
+					localArray at: idx put: element ] ].
 			^ localArray
 		].
 	].

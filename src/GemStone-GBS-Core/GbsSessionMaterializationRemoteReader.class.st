@@ -20,6 +20,12 @@ GbsSessionMaterializationRemoteReader >> clearRemoteClassNameCache [
 	(session class weakRegistryNamed: #GbsSessionRemoteClassNameCaches)
 		at: session
 		put: Dictionary new.
+	(session class weakRegistryNamed: #GbsSessionRemoteClassNameByClassOopCaches)
+		at: session
+		put: Dictionary new.
+	(session class weakRegistryNamed: #GbsSessionRemoteClassOopCaches)
+		at: session
+		put: Dictionary new.
 	^ self remoteClassNameCache
 ]
 
@@ -38,6 +44,20 @@ GbsSessionMaterializationRemoteReader >> parseOopPairLines: aString [
 	aString asString lines do: [ :line |
 		line isEmpty ifFalse: [ pairs add: (self parseOopPairLine: line) ] ].
 	^ pairs asArray
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> oopPairsFromFlatOops: oopArray [
+	| pairs |
+	oopArray size even ifFalse: [ self error: 'Expected an even number of OOP values.' ].
+	pairs := Array new: oopArray size // 2.
+	1 to: pairs size do: [ :index |
+		pairs
+			at: index
+			put: {
+				oopArray at: (index * 2) - 1.
+				oopArray at: index * 2 } ].
+	^ pairs
 ]
 
 { #category : 'remote access' }
@@ -97,7 +117,9 @@ GbsSessionMaterializationRemoteReader >> remoteArrayElementOopsViaGciForOop: anO
 
 { #category : 'remote access' }
 GbsSessionMaterializationRemoteReader >> remoteAssociationOopPairForOop: anOop [
-	^ [ self parseOopPairLine: (session
+	^ [ self remoteArrayElementOopsForOop: (self remoteAssociationPairOopFor: anOop) ]
+		on: Error
+		do: [ self parseOopPairLine: (session
 		fetchRemoteCommandBody: '| stream |
 stream := WriteStream on: String new.
 stream
@@ -110,8 +132,6 @@ stream contents'
 			at: 'assoc' put: anOop;
 			yourself)
 		context: 20) ]
-		on: Error
-		do: [ self remoteArrayElementOopsForOop: (self remoteAssociationPairOopFor: anOop) ]
 ]
 
 { #category : 'remote access' }
@@ -126,6 +146,34 @@ GbsSessionMaterializationRemoteReader >> remoteAssociationPairOopFor: anOop [
 
 { #category : 'remote access' }
 GbsSessionMaterializationRemoteReader >> remoteClassNameForOop: anOop [
+	^ [ self remoteClassNameForClassOop: (self remoteClassOopForOop: anOop) ]
+		on: Error
+		do: [ self remoteClassNameForObjectOop: anOop ]
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteClassNameForClassOop: classOop [
+	^ self remoteClassNameByClassOopCache
+		at: classOop
+		ifAbsentPut: [
+			session
+				fetchRemoteCommandBody: 'classObject name asString'
+				literalBindings: Dictionary new
+				oopBindings: (Dictionary new
+					at: 'classObject' put: classOop;
+					yourself)
+				context: 20 ]
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializationRemoteReader >> remoteClassNameByClassOopCache [
+	^ (session class weakRegistryNamed: #GbsSessionRemoteClassNameByClassOopCaches)
+		at: session
+		ifAbsentPut: [ Dictionary new ]
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteClassNameForObjectOop: anOop [
 	^ self remoteClassNameCache
 		at: anOop
 		ifAbsentPut: [
@@ -156,9 +204,27 @@ GbsSessionMaterializationRemoteReader >> remoteCollectionAsArrayOop: anOop [
 ]
 
 { #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteClassOopForOop: anOop [
+	^ self remoteClassOopCache
+		at: anOop
+		ifAbsentPut: [ (session serverInterface apiGciGetClass: anOop) asInteger ]
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializationRemoteReader >> remoteClassOopCache [
+	^ (session class weakRegistryNamed: #GbsSessionRemoteClassOopCaches)
+		at: session
+		ifAbsentPut: [ Dictionary new ]
+]
+
+{ #category : 'remote access' }
 GbsSessionMaterializationRemoteReader >> remoteDictionaryAssociationOopPairsForOop: anOop [
-	^ [ self parseOopPairLines: (session
-		fetchRemoteCommandBody: '| stream |
+	^ [ self oopPairsFromFlatOops: (self
+		remoteArrayElementOopsForOop: (self remoteDictionaryAssociationPairsArrayOopFor: anOop)) ]
+		on: Error
+		do: [
+			[ self parseOopPairLines: (session
+				fetchRemoteCommandBody: '| stream |
 stream := WriteStream on: String new.
 object associations do: [ :assoc |
 	stream
@@ -171,11 +237,29 @@ stream contents'
 		oopBindings: (Dictionary new
 			at: 'object' put: anOop;
 			yourself)
-		context: 20) ]
-		on: Error
-		do: [ | associationOops |
-			associationOops := self remoteArrayElementOopsForOop: (self remoteDictionaryAssociationsAsArrayOop: anOop).
-			associationOops collect: [ :each | self remoteAssociationOopPairForOop: each ] ]
+				context: 20) ]
+				on: Error
+				do: [
+					| associationOops |
+					associationOops := self remoteArrayElementOopsForOop: (self remoteDictionaryAssociationsAsArrayOop: anOop).
+					associationOops collect: [ :each | self remoteAssociationOopPairForOop: each ] ] ]
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteDictionaryAssociationPairsArrayOopFor: anOop [
+	^ session
+		returnRemoteCommandBody: '| pairs index |
+pairs := Array new: object size * 2.
+index := 1.
+object associations do: [ :assoc |
+	pairs at: index put: assoc key.
+	pairs at: index + 1 put: assoc value.
+	index := index + 2 ].
+pairs'
+		literalBindings: Dictionary new
+		oopBindings: (Dictionary new
+			at: 'object' put: anOop;
+			yourself)
 ]
 
 { #category : 'remote access' }

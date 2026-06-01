@@ -61,30 +61,112 @@ GbxRuntimeOverrideSpec class >> bagRemoveKeyIfAbsentSource [
 ]
 
 { #category : 'generated' }
-GbxRuntimeOverrideSpec class >> identityDictionaryAtPutOverrideSource [
+GbxRuntimeOverrideSpec class >> dictionaryAtPutOverrideSource [
 	^ 'at: key put: anObject
-	"Set the value at key to be anObject. If key is not found, create a
-	new entry for key and set its value to anObject. Answer anObject."
+	"Set the value at key to be anObject.  If key is not found, create a
+	new entry for key and set is value to anObject. Answer anObject."
 
 	| index assoc |
 	index := self findElementOrNil: key.
 	assoc := array at: index.
 	assoc
 		ifNil: [ self atNewIndex: index put: (Association key: key value: anObject) ]
-		ifNotNil: [
-			assoc value: anObject.
-			self gbxConsiderModified ].
+		ifNotNil: [ assoc value: anObject ].
+	self gbxConsiderModified.
 	^ anObject'
 ]
 
 { #category : 'generated' }
-GbxRuntimeOverrideSpec class >> identityDictionaryAtPutSource [
+GbxRuntimeOverrideSpec class >> dictionaryAtPutSource [
 	^ (Dictionary >> #at:put:) sourceCode asString
+]
+
+{ #category : 'generated' }
+GbxRuntimeOverrideSpec class >> orderedCollectionAddOverrideSource [
+	^ 'add: newObject
+	"Add a new object at the end of the collection, and returns the object itself"
+	"((OrderedCollection new add: 42; yourself) add: 43; yourself) asArray >>> #(42 43)"
+
+	"Add returns the object itself"
+	"(OrderedCollection new add: 42) >>> 42"
+
+	"You may want to use yourself to return the collection itself"
+	"(OrderedCollection new add: 42; yourself) class >>> OrderedCollection"
+	"(OrderedCollection new add: 42; yourself) size >>> 1"
+	self addLast: newObject.
+	self gbxConsiderModified.
+	^ newObject'
+]
+
+{ #category : 'generated' }
+GbxRuntimeOverrideSpec class >> orderedCollectionAddSource [
+	^ (OrderedCollection >> #add:) sourceCode asString
+]
+
+{ #category : 'generated' }
+GbxRuntimeOverrideSpec class >> orderedCollectionRemoveIfAbsentOverrideSource [
+	^ 'remove: oldObject ifAbsent: absentBlock
+
+	| index |
+	index := firstIndex.
+	[ index <= lastIndex ]
+		whileTrue: [
+			oldObject = (array at: index)
+				ifTrue: [
+					self removeIndex: index.
+					self gbxConsiderModified.
+					^ oldObject ]
+				ifFalse: [ index := index + 1 ] ].
+	^ absentBlock value'
+]
+
+{ #category : 'generated' }
+GbxRuntimeOverrideSpec class >> orderedCollectionRemoveIfAbsentSource [
+	^ (OrderedCollection >> #remove:ifAbsent:) sourceCode asString
 ]
 
 { #category : 'accessing' }
 GbxRuntimeOverrideSpec class >> overridesPackageName [
 	^ 'GbsRuntimeOverrides'
+]
+
+{ #category : 'generated' }
+GbxRuntimeOverrideSpec class >> setAddOverrideSource [
+	^ 'add: newObject
+	"Include newObject as one of the receiver''s elements, but only if
+	not already present. Answer newObject."
+
+	| index |
+	index := self scanFor: newObject.
+	(array at: index)
+		ifNil: [
+			self atNewIndex: index put: newObject asCollectionElement.
+			self gbxConsiderModified ].
+	^ newObject'
+]
+
+{ #category : 'generated' }
+GbxRuntimeOverrideSpec class >> setAddSource [
+	^ (Set >> #add:) sourceCode asString
+]
+
+{ #category : 'generated' }
+GbxRuntimeOverrideSpec class >> setRemoveIfAbsentOverrideSource [
+	^ 'remove: oldObject ifAbsent: aBlock
+
+	| index |
+	index := self findElementOrNil: oldObject.
+	(array at: index) ifNil: [ ^ aBlock value ].
+	array at: index put: nil.
+	tally := tally - 1.
+	self fixCollisionsFrom: index.
+	self gbxConsiderModified.
+	^ oldObject'
+]
+
+{ #category : 'generated' }
+GbxRuntimeOverrideSpec class >> setRemoveIfAbsentSource [
+	^ (Set >> #remove:ifAbsent:) sourceCode asString
 ]
 
 { #category : 'generated' }
@@ -129,9 +211,29 @@ GbxRuntimeOverrideSpec class >> spec93 [
 							from: self bagRemoveKeyIfAbsentSource
 							to: self bagRemoveKeyIfAbsentOverrideSource);
 				add: (GbxMethodOverride
-							behavior: IdentityDictionary
+							behavior: Dictionary
 							selector: #at:put:
-							from: self identityDictionaryAtPutSource
-							to: self identityDictionaryAtPutOverrideSource);
+							from: self dictionaryAtPutSource
+							to: self dictionaryAtPutOverrideSource);
+				add: (GbxMethodOverride
+							behavior: OrderedCollection
+							selector: #add:
+							from: self orderedCollectionAddSource
+							to: self orderedCollectionAddOverrideSource);
+				add: (GbxMethodOverride
+							behavior: OrderedCollection
+							selector: #remove:ifAbsent:
+							from: self orderedCollectionRemoveIfAbsentSource
+							to: self orderedCollectionRemoveIfAbsentOverrideSource);
+				add: (GbxMethodOverride
+							behavior: Set
+							selector: #add:
+							from: self setAddSource
+							to: self setAddOverrideSource);
+				add: (GbxMethodOverride
+							behavior: Set
+							selector: #remove:ifAbsent:
+							from: self setRemoveIfAbsentSource
+							to: self setRemoveIfAbsentOverrideSource);
 				yourself)
 ]

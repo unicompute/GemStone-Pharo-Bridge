@@ -60,7 +60,9 @@ GbxOverrideToolsTest >> testBaselineHooksRoundTripRuntimeOverrides [
 	baseline postload: nil package: nil.
 	overriddenSource := (Bag >> #add:withOccurrences:) sourceCode asString.
 
-	self assert: (GbxOverrideUtility allOverridesInPackage: GbxRuntimeOverrideSpec overridesPackageName) size equals: 4.
+	self
+		assert: (GbxOverrideUtility allOverridesInPackage: GbxRuntimeOverrideSpec overridesPackageName) size
+		equals: GbxRuntimeOverrideSpec spec methodOverrides size.
 	self assert: (overriddenSource includesSubstring: 'gbxConsiderModified').
 	self deny: overriddenSource equals: originalSource.
 
@@ -98,20 +100,24 @@ GbxOverrideToolsTest >> testBaselineHooksRoundTripToolsOverrides [
 
 { #category : 'tests' }
 GbxOverrideToolsTest >> testConcreteRuntimeOverrideSpecProvidesExpectedRuntimeOverrides [
-	| spec selectors |
+	| spec selectorPairs |
 	spec := GbxRuntimeOverrideSpec spec.
-	selectors := spec methodOverrides collect: [ :each | each selector ].
+	selectorPairs := spec methodOverrides collect: [ :each | { each behavior. each selector } ].
 
 	self assert: GbxRuntimeOverrideSpec specMethodSelector equals: #spec93.
 	self assert: GbxRuntimeOverrideSpec overridesPackageName equals: 'GbsRuntimeOverrides'.
 	self assert: spec packageName equals: 'GbsRuntimeOverrides'.
 	self assert: spec classOverrides isEmpty.
 	self assert: spec variableOverrides isEmpty.
-	self assert: spec methodOverrides size equals: 4.
-	self assert: (selectors includes: #add:withOccurrences:).
-	self assert: (selectors includes: #remove:ifAbsent:).
-	self assert: (selectors includes: #removeKey:ifAbsent:).
-	self assert: (selectors includes: #at:put:)
+	self assert: spec methodOverrides size equals: 8.
+	self assert: (selectorPairs includes: { Bag. #add:withOccurrences: }).
+	self assert: (selectorPairs includes: { Bag. #remove:ifAbsent: }).
+	self assert: (selectorPairs includes: { Bag. #removeKey:ifAbsent: }).
+	self assert: (selectorPairs includes: { Dictionary. #at:put: }).
+	self assert: (selectorPairs includes: { OrderedCollection. #add: }).
+	self assert: (selectorPairs includes: { OrderedCollection. #remove:ifAbsent: }).
+	self assert: (selectorPairs includes: { Set. #add: }).
+	self assert: (selectorPairs includes: { Set. #remove:ifAbsent: })
 ]
 
 { #category : 'tests' }

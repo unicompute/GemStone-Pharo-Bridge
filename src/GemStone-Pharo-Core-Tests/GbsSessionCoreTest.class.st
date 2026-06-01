@@ -149,6 +149,33 @@ GbsSessionCoreTest >> testFetchByReferenceCachesRemoteClassNameForRepeatedOop [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testFetchByReferenceCachesRemoteClassNameForSharedClassOop [
+	| mockSession classOopFetches classNameFetches first second |
+	mockSession := CoreMockGbsSession new.
+	classOopFetches := 0.
+	classNameFetches := 0.
+	mockSession stubs at: #apiGciGetClass put: [ :oop |
+		self assert: (#(9500 9501) includes: oop).
+		classOopFetches := classOopFetches + 1.
+		9900 ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		self assert: (script includesSubstring: 'classObject name asString').
+		classNameFetches := classNameFetches + 1.
+		'Invoice' ].
+	mockSession fetchByReference.
+
+	first := mockSession fetchObject: 9500.
+	second := mockSession fetchObject: 9501.
+
+	self assert: first class equals: GbsProxy.
+	self assert: first oop equals: 9500.
+	self assert: second class equals: GbsProxy.
+	self assert: second oop equals: 9501.
+	self assert: classOopFetches equals: 2.
+	self assert: classNameFetches equals: 1
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testFetchDeepMaterializesNestedArraysRecursively [
 	| mockSession result nested |
 	mockSession := self materializationMockSession.
@@ -177,6 +204,50 @@ GbsSessionCoreTest >> testFetchDeepUsesBulkArrayOopFetch [
 
 	self assert: result equals: #('vip' #('gold' 'paid')).
 	self assert: returnOopCommands equals: 0
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFetchDeepDictionaryUsesFlattenedOopPairFetch [
+	| mockSession result pairArrayCommands pairStringScripts |
+	mockSession := CoreMockGbsSession new.
+	pairArrayCommands := 0.
+	pairStringScripts := 0.
+	mockSession stubs at: #apiGciGetClass put: [ :oop |
+		oop = 9100 ifTrue: [ 9910 ] ifFalse: [
+			(#(9040 9056 9064) includes: oop) ifTrue: [ 9901 ] ifFalse: [ self fail ] ] ].
+	mockSession stubs at: #executeAndFetch put: [ :script | | result |
+		(script includesSubstring: 'Character tab') ifTrue: [
+			pairStringScripts := pairStringScripts + 1.
+			self fail ].
+		result := nil.
+		(script includesSubstring: 'classObject name asString') ifTrue: [
+			(script includesSubstring: '9910') ifTrue: [ result := 'Dictionary' ].
+			(script includesSubstring: '9901') ifTrue: [ result := 'String' ] ].
+		((script includesSubstring: ') asString') or: [ script includesSubstring: 'object asString' ]) ifTrue: [
+			(script includesSubstring: '9040') ifTrue: [ result := 'vip' ].
+			(script includesSubstring: '9056') ifTrue: [ result := 'gold' ].
+			(script includesSubstring: '9064') ifTrue: [ result := 'paid' ] ].
+		result ifNil: [ self fail ].
+		result ].
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		self assert: (script includesSubstring: 'pairs := Array new: object size * 2').
+		pairArrayCommands := pairArrayCommands + 1.
+		9200 ].
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		oop = 9200 ifTrue: [ 4 ] ifFalse: [ self fail ] ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+		self assert: oop equals: 9200.
+		self assert: start equals: 1.
+		self assert: count equals: 4.
+		#(9040 9056 9064 9040) ].
+	mockSession fetchDeep.
+
+	result := mockSession fetchObject: 9100.
+
+	self assert: (result at: 'vip') equals: 'gold'.
+	self assert: (result at: 'paid') equals: 'vip'.
+	self assert: pairArrayCommands equals: 1.
+	self assert: pairStringScripts equals: 0
 ]
 
 { #category : 'tests' }

@@ -229,6 +229,26 @@ GbsSessionParameters >> hostUsername [ ^ hostUsername
 GbsSessionParameters >> hostUsername: aValue [ hostUsername := aValue
 ]
 
+{ #category : 'validation' }
+GbsSessionParameters >> connectionSummary [
+	self normalizeConnectionFields.
+	^ String streamContents: [ :stream |
+		stream
+			nextPutAll: self username;
+			nextPutAll: '@';
+			nextPutAll: self gemStoneName;
+			nextPutAll: ' via ';
+			nextPutAll: self gemService.
+		self netldiHostOrIp ifNotNil: [ :host |
+			stream
+				nextPutAll: ' netldiHost=';
+				nextPutAll: host ].
+		self netldiNameOrPort ifNotNil: [ :netldi |
+			stream
+				nextPutAll: ' netldi=';
+				nextPutAll: netldi ] ]
+]
+
 { #category : 'initialization' }
 GbsSessionParameters >> initialize [
 	super initialize.
@@ -268,13 +288,12 @@ GbsSessionParameters >> login [
 
     "UI State Check"
     self isConnected ifTrue: [ ^ self inform: 'Already Connected' ].
+    self validateForLogin.
 
     interface := GbsServerInterface uniqueInstance.
     interface apiGciInit.
 
-    serviceString := (self gemService isNil or: [ self gemService isEmpty ])
-        ifTrue: [ 'gemnetobject' ]
-        ifFalse: [ self gemService ].
+    serviceString := self gemService.
     hostUserString := self hostUsername ifNil: [ '' ].
     hostPasswordString := self hostPassword ifNil: [ '' ].
     netldiString := self netldiNameOrPort ifNil: [ '' ].
@@ -425,15 +444,24 @@ To fix this, start netldi on the GemStone server:
   startnetldi -a ', self gemStoneName, ' -g username
 
 If netldi is already running, check:
-• Stone name is correct: ', self gemStoneName, '
-• Network connectivity to the GemStone server
-• Firewall settings are not blocking the connection'
+* Stone name is correct: ', self gemStoneName, '
+* Network connectivity to the GemStone server
+* Firewall settings are not blocking the connection'
 ]
 
 { #category : 'connection' }
 GbsSessionParameters >> interpretErrorMessage: aString errorNumber: anErrorNumber [
     "Interpret error messages and provide user-friendly explanations for common issues"
     | errorMsgLower originalMsg |
+
+    anErrorNumber = 4051 ifTrue: [
+        ^ 'GemStone login failed.
+
+The username or password is invalid or expired.
+
+Original error: ', ((aString isNil or: [ aString asString trimBoth isEmpty ])
+            ifTrue: [ '(no message returned by GCI)' ]
+            ifFalse: [ aString asString trimBoth ]) ].
     
     "Handle nil or empty messages - likely netldi not running"
     (aString isNil or: [ aString trimBoth isEmpty ]) ifTrue: [
@@ -565,12 +593,57 @@ GbsSessionParameters >> logout [
     ].
 ]
 
+{ #category : 'validation' }
+GbsSessionParameters >> loginValidationErrorMessage [
+	^ self validationMessageFrom: self loginValidationMessages
+]
+
+{ #category : 'validation' }
+GbsSessionParameters >> loginValidationMessages [
+	| messages |
+	self normalizeConnectionFields.
+	messages := OrderedCollection new.
+	self gemStoneName isEmpty ifTrue: [
+		messages add: 'GemStone stone name is required.' ].
+	self username isEmpty ifTrue: [
+		messages add: 'GemStone username is required.' ].
+	self gemService isEmpty ifTrue: [
+		messages add: 'Gem service is required.' ].
+	^ messages asArray
+]
+
 { #category : 'accessing' }
 GbsSessionParameters >> name [ ^ name
 ]
 
 { #category : 'accessing' }
 GbsSessionParameters >> name: aValue [ name := aValue
+]
+
+{ #category : 'validation' }
+GbsSessionParameters >> normalizeConnectionFields [
+	name := self normalizedConnectionString: name.
+	gemStoneName := self normalizedConnectionString: gemStoneName.
+	username := self normalizedConnectionString: username.
+	gemService := self normalizedConnectionString: gemService.
+	gemService isEmpty ifTrue: [ gemService := 'gemnetobject' ].
+	hostUsername := self normalizedOptionalConnectionString: hostUsername.
+	netObject := self normalizedOptionalConnectionString: netObject.
+	netldiHostOrIp := self normalizedOptionalConnectionString: netldiHostOrIp.
+	netldiNameOrPort := self normalizedOptionalConnectionString: netldiNameOrPort
+]
+
+{ #category : 'validation' }
+GbsSessionParameters >> normalizedConnectionString: aValue [
+	aValue ifNil: [ ^ '' ].
+	^ aValue asString trimBoth
+]
+
+{ #category : 'validation' }
+GbsSessionParameters >> normalizedOptionalConnectionString: aValue [
+	| normalized |
+	normalized := self normalizedConnectionString: aValue.
+	^ normalized isEmpty ifTrue: [ nil ] ifFalse: [ normalized ]
 ]
 
 { #category : 'accessing' }
@@ -636,4 +709,23 @@ GbsSessionParameters >> username [ ^ username
 
 { #category : 'accessing' }
 GbsSessionParameters >> username: aValue [ username := aValue
+]
+
+{ #category : 'validation' }
+GbsSessionParameters >> validateForLogin [
+	self loginValidationErrorMessage ifNotNil: [ :message | self error: message ].
+	^ true
+]
+
+{ #category : 'validation' }
+GbsSessionParameters >> validationMessageFrom: messages [
+	| first |
+	messages isEmpty ifTrue: [ ^ nil ].
+	first := true.
+	^ String streamContents: [ :stream |
+		messages do: [ :each |
+			first
+				ifTrue: [ first := false ]
+				ifFalse: [ stream cr ].
+			stream nextPutAll: each ] ]
 ]

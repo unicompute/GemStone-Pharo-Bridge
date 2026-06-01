@@ -48,6 +48,14 @@ CoreMockGbsSession >> apiGciFetchSize: anOop [
 ]
 
 { #category : 'accessing' }
+CoreMockGbsSession >> apiGciGetClass: anOop [
+	| block |
+	block := self stubs at: #apiGciGetClass ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: anOop ].
+	self error: 'No apiGciGetClass stub configured.'
+]
+
+{ #category : 'accessing' }
 CoreMockGbsSession >> apiGciErr: errorStruct [
 	^ self gciErr: errorStruct
 ]

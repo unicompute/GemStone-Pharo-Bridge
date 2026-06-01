@@ -18,6 +18,15 @@ GbxRemainingPortTest >> setUp [
 	previousInteractionCount := GBSM sessionsInInteractionCount.
 ]
 
+{ #category : 'private' }
+GbxRemainingPortTest >> ensureRuntimeOverridesInstalled [
+	(GbxOverrideUtility allOverridesInPackage: GbxRuntimeOverrideSpec overridesPackageName) size
+		= GbxRuntimeOverrideSpec spec methodOverrides size
+		ifTrue: [ ^ self ].
+	GbxOverrideUtility removeAllOverridesFromPackage: GbxRuntimeOverrideSpec overridesPackageName.
+	GbxRuntimeOverrideSpec apply
+]
+
 { #category : 'running' }
 GbxRemainingPortTest >> tearDown [
 	GBSM clientMap: previousClientMap.
@@ -115,6 +124,46 @@ GbxRemainingPortTest >> testConsiderModifiedMarksMutableReplicatedObjectsDirty [
 		fixture immutable: true.
 		fixture gbxConsiderModified.
 		self assert: delegate markedObjects size equals: 1
+	] ensure: [
+		previousConfiguration
+			ifNil: [ Smalltalk globals removeKey: #GbsCurrentConfiguration ifAbsent: [ ] ]
+			ifNotNil: [ Smalltalk globals at: #GbsCurrentConfiguration put: previousConfiguration ] ]
+]
+
+{ #category : 'tests - replication' }
+GbxRemainingPortTest >> testRuntimeCollectionMutationsMarkReplicatedCollectionsDirty [
+	| previousConfiguration configuration delegate ordered dictionary set |
+	self ensureRuntimeOverridesInstalled.
+	previousConfiguration := Smalltalk globals at: #GbsCurrentConfiguration ifAbsent: [ nil ].
+	[
+		configuration := GbsConfiguration new initializeDefaults; yourself.
+		configuration autoMarkDirty: true.
+		GbsConfiguration current: configuration.
+		delegate := GbxDirtyMarkingDelegate new.
+		ordered := GbxDirtyOrderedCollectionFixture new
+			delegate: delegate;
+			immutable: false;
+			yourself.
+		dictionary := GbxDirtyDictionaryFixture new
+			delegate: delegate;
+			immutable: false;
+			yourself.
+		set := GbxDirtySetFixture new
+			delegate: delegate;
+			immutable: false;
+			yourself.
+
+		ordered add: #alpha.
+		ordered remove: #alpha ifAbsent: [ self fail ].
+		dictionary at: #alpha put: #beta.
+		dictionary at: #alpha put: #gamma.
+		set add: #alpha.
+		set add: #alpha.
+		set remove: #alpha ifAbsent: [ self fail ].
+
+		self assert: ((delegate markedObjects select: [ :each | each == ordered ]) size) equals: 2.
+		self assert: ((delegate markedObjects select: [ :each | each == dictionary ]) size) equals: 2.
+		self assert: ((delegate markedObjects select: [ :each | each == set ]) size) equals: 2
 	] ensure: [
 		previousConfiguration
 			ifNil: [ Smalltalk globals removeKey: #GbsCurrentConfiguration ifAbsent: [ ] ]

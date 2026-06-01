@@ -274,12 +274,53 @@ GbsClassicLauncherCoreToolsTest >> testSessionParametersEditorRoundTripsNetldiFi
 	self assert: hostField text equals: 'localhost'.
 	self assert: portField text equals: '50377'.
 
-	hostField text: 'gemstone.example.com'.
-	portField text: 'gs64ldi'.
+	hostField text: ' gemstone.example.com '.
+	portField text: ' gs64ldi '.
 	editor updateModel.
 
 	self assert: params netldiHostOrIp equals: 'gemstone.example.com'.
 	self assert: params netldiNameOrPort equals: 'gs64ldi'
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testSessionParametersEditorValidationReportsMissingRequiredFields [
+	| params editor message |
+	params := GbsSessionParameters new.
+	params
+		name: ' ';
+		gemStoneName: ' ';
+		username: ' '.
+	editor := GbsSessionParametersEditor new.
+	editor setModel: params.
+	editor updateModel.
+
+	message := editor validationErrorMessage.
+
+	self assert: (message includesSubstring: 'Configuration name is required.').
+	self assert: (message includesSubstring: 'GemStone stone name is required.').
+	self assert: (message includesSubstring: 'GemStone username is required.')
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testLoginErrorMessageIncludesConnectionSummary [
+	| params message exception |
+	params := GbsSessionParameters new.
+	params
+		username: ' DataCurator ';
+		gemStoneName: ' gs64stone ';
+		gemService: ' gemnetobject ';
+		netldiHostOrIp: ' gemstone.example.com ';
+		netldiNameOrPort: ' 50377 '.
+	exception := Error new
+		messageText: 'Connection refused';
+		yourself.
+
+	message := launcher loginErrorMessageFor: params exception: exception.
+
+	self assert: (message includesSubstring: 'Login failed for DataCurator@gs64stone via gemnetobject').
+	self assert: (message includesSubstring: 'netldiHost=gemstone.example.com').
+	self assert: (message includesSubstring: 'netldi=50377').
+	self assert: (message includesSubstring: 'Connection refused')
 ]
 
 { #category : 'tests' }

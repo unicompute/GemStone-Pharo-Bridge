@@ -1388,6 +1388,7 @@ GbsClassicLauncher >> doLoginRpc [
         "Show progress"
         UIManager default showWaitCursorWhile: [ 
             [
+                params validateForLogin.
                 "Use the SELECTED object to login"
                 session := params login.
                 
@@ -1401,8 +1402,8 @@ GbsClassicLauncher >> doLoginRpc [
                     ].
                 
             ] on: Error do: [ :ex | 
-                self inform: 'Login Error: ', ex messageText.
-                ex inspect. 
+                self inform: (self loginErrorMessageFor: params exception: ex).
+                self refreshAll
             ]
         ].
     ] ifNil: [ self inform: 'Please select a configuration first.' ].
@@ -1492,6 +1493,15 @@ GbsClassicLauncher >> isSessionUsableForBrowsing: aSession [
 	(aSession respondsTo: #isLoggedIn)
 		ifTrue: [ ^ [ aSession isLoggedIn == true ] on: Error do: [ false ] ].
 	^ true
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> loginErrorMessageFor: params exception: anException [
+	| detail |
+	detail := [ anException messageText ] on: Error do: [ anException asString ].
+	(detail isNil or: [ detail asString isEmpty ]) ifTrue: [
+		detail := anException asString ].
+	^ 'Login failed for ', params connectionSummary, String cr, detail asString
 ]
 
 { #category : 'actions' }
