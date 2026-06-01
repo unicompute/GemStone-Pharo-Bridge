@@ -107,7 +107,7 @@ GbsSessionParametersTest >> testExportAllParametersCanRoundTripWithoutRuntimeSes
 
 { #category : 'tests' }
 GbsSessionParametersTest >> testExportAllParametersStringRoundTripsAndRedactsSecrets [
-	| previous params exported imported |
+	| previous params exported imported exportObject |
 	(Smalltalk includesKey: #STON) ifFalse: [ self skip: 'STON is not available in this image.' ].
 	previous := GbsSessionParameters allParameters copy.
 	[
@@ -121,11 +121,15 @@ GbsSessionParametersTest >> testExportAllParametersStringRoundTripsAndRedactsSec
 			sessionId: 9001.
 		GbsSessionParameters addParameter: params.
 
-		exported := GbsSessionParameters exportAllParametersString.
-		imported := GbsSessionParameters parametersFromExportString: exported.
+			exported := GbsSessionParameters exportAllParametersString.
+			exportObject := STON fromString: exported.
+			imported := GbsSessionParameters parametersFromExportString: exported.
 
-		self assert: imported size equals: 1.
-		self assert: imported first name equals: 'Exported'.
+			self assert: (exportObject at: 'format') equals: GbsSessionParameters exportBundleFormatIdentifier.
+			self assert: (exportObject at: 'schemaVersion') equals: 2.
+			self deny: (exportObject at: 'includesSecrets').
+			self assert: imported size equals: 1.
+			self assert: imported first name equals: 'Exported'.
 		self assert: imported first username equals: 'DataCurator'.
 		self assert: imported first password isNil.
 		self assert: imported first hostPassword isNil.
@@ -187,6 +191,34 @@ GbsSessionParametersTest >> testExportDictionaryRedactsSecretsByDefault [
 
 	self assert: (exported at: 'password') isNil.
 	self assert: (exported at: 'hostPassword') isNil
+	]
+
+{ #category : 'tests' }
+GbsSessionParametersTest >> testImportLegacyDictionaryAliases [
+	| legacy params |
+	legacy := Dictionary new
+		at: 'configurationName' put: ' Legacy ';
+		at: 'stoneName' put: ' gs64stone ';
+		at: 'userId' put: ' DataCurator ';
+		at: 'rememberPassword' put: 'true';
+		at: 'hostUser' put: ' host-user ';
+		at: 'hostPass' put: 'host-secret';
+		at: 'rememberHostPassword' put: 'yes';
+		at: 'service' put: ' gemnetobject ';
+		at: 'netldiHost' put: ' gemstone.example.com ';
+		at: 'netldiPort' put: ' 50377 ';
+		yourself.
+
+	params := GbsSessionParameters fromExportDictionary: legacy.
+
+	self assert: params name equals: 'Legacy'.
+	self assert: params gemStoneName equals: 'gs64stone'.
+	self assert: params username equals: 'DataCurator'.
+	self assert: params gsRemember.
+	self assert: params hostUsername equals: 'host-user'.
+	self assert: params hostPassword equals: 'host-secret'.
+	self assert: params hostRemember.
+	self assert: params netldiRoutingString equals: 'gemstone.example.com#50377'
 ]
 
 { #category : 'tests' }
@@ -212,6 +244,53 @@ GbsSessionParametersTest >> testImportParametersFromExportStringAppendsImportedC
 		GbsSessionParameters allParameters
 			removeAll;
 			addAll: previous ]
+	]
+
+{ #category : 'tests' }
+GbsSessionParametersTest >> testImportParametersFromExportStringRenamesDuplicates [
+	| previous existing importedParam exported imported |
+	(Smalltalk includesKey: #STON) ifFalse: [ self skip: 'STON is not available in this image.' ].
+	previous := GbsSessionParameters allParameters copy.
+	[
+		GbsSessionParameters allParameters removeAll.
+		existing := GbsSessionParameters new.
+		existing
+			name: 'Production';
+			username: 'DataCurator'.
+		GbsSessionParameters addParameter: existing.
+		importedParam := GbsSessionParameters new.
+		importedParam
+			name: 'Production';
+			username: 'GcUser'.
+		exported := importedParam exportString.
+
+		imported := GbsSessionParameters importParametersFromExportString: exported.
+
+		self assert: imported size equals: 1.
+		self assert: imported first name equals: 'Production (2)'.
+		self assert: GbsSessionParameters allParameters second name equals: 'Production (2)'
+	] ensure: [
+		GbsSessionParameters allParameters
+			removeAll;
+			addAll: previous ]
+]
+
+{ #category : 'tests' }
+GbsSessionParametersTest >> testImportParametersFromExportStringRejectsInvalidConfiguration [
+	| invalid exported |
+	(Smalltalk includesKey: #STON) ifFalse: [ self skip: 'STON is not available in this image.' ].
+	invalid := Dictionary new
+		at: 'name' put: 'Missing User';
+		at: 'gemStoneName' put: 'gs64stone';
+		at: 'username' put: '';
+		yourself.
+	exported := STON toString: invalid.
+
+	self
+		should: [ GbsSessionParameters importParametersFromExportString: exported ]
+		raise: Error
+		withExceptionDo: [ :ex |
+			self assert: (ex messageText includesSubstring: 'GemStone username is required.') ]
 ]
 
 { #category : 'tests' }

@@ -103,6 +103,7 @@ Common issues:
 { #category : 'login' }
 GbsSessionLoginCoordinator >> loginStone: stoneName user: username password: password [
 	| initSuccess loginSuccess errorStruct interpretedError |
+	self resetSessionStateForLoginAttempt.
 	initSuccess := session gciInit.
 	initSuccess ifFalse: [ ^ GbsError signal: 'Failed to initialize GemStone GCI library.' ].
 	loginSuccess := session
@@ -131,6 +132,19 @@ GbsSessionLoginCoordinator >> loginStone: stoneName user: username password: pas
 			^ GbsError signal: interpretedError ].
 		^ GbsError signal: 'Unknown login failure. Please check your GemStone connection parameters.' ].
 	session isLoggedIn: true
+]
+
+{ #category : 'login' }
+GbsSessionLoginCoordinator >> resetSessionStateForLoginAttempt [
+	session isLoggedIn: false.
+	session sessionOop: nil.
+	session sessionId: nil.
+	(session respondsTo: #clearProxyCache) ifTrue: [ session clearProxyCache ].
+	(session respondsTo: #clearNamedObjectCache) ifTrue: [ session clearNamedObjectCache ].
+	(session respondsTo: #materializer) ifTrue: [
+		[ session materializer clearRemoteClassNameCache ]
+			on: Error
+			do: [ ] ]
 ]
 
 { #category : 'accessing' }

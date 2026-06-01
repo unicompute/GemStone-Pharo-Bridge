@@ -1,4 +1,4 @@
-| env stone user pass serviceName netldiHost netldiNameOrPort probeScript params session result |
+| env stone user pass serviceName netldiHost netldiNameOrPort probeScript libraryClass interfaceClass paramsClass params session result |
 [
 	[ Metacello new
 		baseline: 'GemStonePharo';
@@ -20,8 +20,15 @@
 		Transcript show: 'PROBE_ERROR: set GS_USER and GS_PASS'; cr.
 		Smalltalk snapshot: false andQuit: true ].
 
-	Transcript show: 'PROBE_GEMSTONE_HOME: ', (GbsLibrary gemstoneHome ifNil: [ '(nil)' ]); cr.
-	Transcript show: 'PROBE_GCI_LIBRARY: ', GbsServerInterface uniqueInstance libraryPath; cr.
+	libraryClass := Smalltalk at: #GbsLibrary ifAbsent: [ nil ].
+	interfaceClass := Smalltalk at: #GbsServerInterface ifAbsent: [ nil ].
+	paramsClass := Smalltalk at: #GbsSessionParameters ifAbsent: [ nil ].
+	(interfaceClass isNil or: [ paramsClass isNil ]) ifTrue: [
+		Transcript show: 'PROBE_ERROR: GemStone classes were not loaded'; cr.
+		Smalltalk snapshot: false andQuit: true ].
+
+	Transcript show: 'PROBE_GEMSTONE_HOME: ', (libraryClass ifNil: [ '(nil)' ] ifNotNil: [ libraryClass gemstoneHome ifNil: [ '(nil)' ] ]); cr.
+	Transcript show: 'PROBE_GCI_LIBRARY: ', interfaceClass uniqueInstance libraryPath; cr.
 	Transcript
 		show: 'PROBE_CONFIG stone=' , stone
 			, ' service=' , serviceName
@@ -29,7 +36,7 @@
 			, ' net=' , (netldiNameOrPort ifEmpty: [ '(implicit)' ]);
 		cr.
 
-	params := GbsSessionParameters new.
+	params := paramsClass new.
 	params
 		gemStoneName: stone;
 		username: user;
@@ -57,6 +64,7 @@
 		ifTrue: [ Transcript show: 'PROBE_EVAL_RESULT: nil'; cr ]
 		ifFalse: [ Transcript show: 'PROBE_EVAL_RESULT: ', result printString; cr ].
 ] ensure: [
-	[ GbsSessionParameters currentSession ifNotNil: [ :s | s logout ] ] on: Error do: [ ].
+	[ (Smalltalk at: #GbsSessionParameters ifAbsent: [ nil ]) ifNotNil: [ :class |
+		class currentSession ifNotNil: [ :s | s logout ] ] ] on: Error do: [ ].
 	Smalltalk snapshot: false andQuit: true
 ].

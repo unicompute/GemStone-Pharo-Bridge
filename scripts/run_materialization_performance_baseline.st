@@ -1,4 +1,4 @@
-| loadFailed supportClass session env integerEnv millisecondsToRun arraySize dictionarySize shallowSize arrayOop dictionaryOop shallowOop arrayResult dictionaryResult shallowResult arrayMs dictionaryMs shallowMs |
+| loadFailed supportClass proxyClass session env integerEnv millisecondsToRun arraySize dictionarySize shallowSize arrayOop dictionaryOop shallowOop arrayResult dictionaryResult shallowResult arrayMs dictionaryMs shallowMs |
 [
   loadFailed := false.
   [ Metacello new
@@ -38,6 +38,9 @@
         ifAbsent: [ Smalltalk at: #CoreGbsLiveSessionTestSupport ifAbsent: [ nil ] ].
       supportClass ifNil: [
         Error signal: 'Missing live session support class.' ].
+      proxyClass := Smalltalk at: #GbsProxy ifAbsent: [ nil ].
+      proxyClass ifNil: [
+        Error signal: 'Missing proxy class.' ].
       session := supportClass ensureSharedSession.
       (supportClass sessionIsUsable: session) ifFalse: [
         Error signal: supportClass unavailableReason ].
@@ -96,7 +99,7 @@ root'
         shallowMs := millisecondsToRun value: [
           shallowResult := session fetchObject: shallowOop ].
         ((shallowResult size = shallowSize)
-          and: [ (shallowResult first isKindOf: GbsProxy)
+          and: [ (shallowResult first isKindOf: proxyClass)
           and: [ shallowResult last oop notNil ] ]) ifFalse: [
             Error signal: 'Shallow materialization produced an unexpected result.' ].
 

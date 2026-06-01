@@ -8,9 +8,14 @@ SRC_IMAGE="${1:-/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.
 WORK_DIR="${2:-$(dirname "${SRC_IMAGE}")}"
 WORK_IMAGE="not-created"
 JSON_SUMMARY="${GBS_JSON_SUMMARY:-0}"
-ARRAY_MAX_MS="${GBS_MATERIALIZATION_ARRAY_MAX_MS:-5000}"
-DICTIONARY_MAX_MS="${GBS_MATERIALIZATION_DICTIONARY_MAX_MS:-6000}"
-SHALLOW_MAX_MS="${GBS_MATERIALIZATION_SHALLOW_MAX_MS:-6000}"
+THRESHOLD_FILE="${GBS_MATERIALIZATION_THRESHOLDS_FILE:-./scripts/materialization_performance_thresholds.env}"
+if [[ -f "${THRESHOLD_FILE}" ]]; then
+  # shellcheck disable=SC1090
+  . "${THRESHOLD_FILE}"
+fi
+ARRAY_MAX_MS="${GBS_MATERIALIZATION_ARRAY_MAX_MS:-${MATERIALIZATION_ARRAY_MAX_MS:-5000}}"
+DICTIONARY_MAX_MS="${GBS_MATERIALIZATION_DICTIONARY_MAX_MS:-${MATERIALIZATION_DICTIONARY_MAX_MS:-6000}}"
+SHALLOW_MAX_MS="${GBS_MATERIALIZATION_SHALLOW_MAX_MS:-${MATERIALIZATION_SHALLOW_MAX_MS:-6000}}"
 
 emit_summary() {
   local result="$1"
@@ -22,9 +27,9 @@ emit_summary() {
   local dictionary_size="${7:-0}"
   local shallow_size="${8:-0}"
   local json_payload=""
-  echo "MATERIALIZATION_PERF_SUMMARY result=${result} code=${code} array_ms=${array_ms} dictionary_ms=${dictionary_ms} shallow_ms=${shallow_ms} array_size=${array_size} dictionary_size=${dictionary_size} shallow_size=${shallow_size} work_image=${WORK_IMAGE}"
+  echo "MATERIALIZATION_PERF_SUMMARY result=${result} code=${code} array_ms=${array_ms} dictionary_ms=${dictionary_ms} shallow_ms=${shallow_ms} array_size=${array_size} dictionary_size=${dictionary_size} shallow_size=${shallow_size} array_max_ms=${ARRAY_MAX_MS} dictionary_max_ms=${DICTIONARY_MAX_MS} shallow_max_ms=${SHALLOW_MAX_MS} threshold_file=${THRESHOLD_FILE} work_image=${WORK_IMAGE}"
   if [[ "${JSON_SUMMARY}" == "1" ]]; then
-    printf -v json_payload '{"result":"%s","code":"%s","array_ms":"%s","dictionary_ms":"%s","shallow_ms":"%s","array_size":"%s","dictionary_size":"%s","shallow_size":"%s","work_image":"%s"}' \
+    printf -v json_payload '{"result":"%s","code":"%s","array_ms":"%s","dictionary_ms":"%s","shallow_ms":"%s","array_size":"%s","dictionary_size":"%s","shallow_size":"%s","array_max_ms":"%s","dictionary_max_ms":"%s","shallow_max_ms":"%s","threshold_file":"%s","work_image":"%s"}' \
       "$(gbs_json_escape "${result}")" \
       "$(gbs_json_escape "${code}")" \
       "$(gbs_json_escape "${array_ms}")" \
@@ -33,6 +38,10 @@ emit_summary() {
       "$(gbs_json_escape "${array_size}")" \
       "$(gbs_json_escape "${dictionary_size}")" \
       "$(gbs_json_escape "${shallow_size}")" \
+      "$(gbs_json_escape "${ARRAY_MAX_MS}")" \
+      "$(gbs_json_escape "${DICTIONARY_MAX_MS}")" \
+      "$(gbs_json_escape "${SHALLOW_MAX_MS}")" \
+      "$(gbs_json_escape "${THRESHOLD_FILE}")" \
       "$(gbs_json_escape "${WORK_IMAGE}")"
     printf 'MATERIALIZATION_PERF_SUMMARY_JSON %s\n' "${json_payload}"
     gbs_write_json_summary_file "materialization-performance-summary.json" "${json_payload}"
@@ -43,12 +52,49 @@ emit_summary() {
   gbs_append_summary_line "- array fetch: \`${array_ms} ms\` for \`${array_size}\` elements"
   gbs_append_summary_line "- dictionary fetch: \`${dictionary_ms} ms\` for \`${dictionary_size}\` associations"
   gbs_append_summary_line "- shallow nested fetch: \`${shallow_ms} ms\` for \`${shallow_size}\` nested arrays"
+  gbs_append_summary_line "- thresholds: array \`${ARRAY_MAX_MS} ms\`, dictionary \`${DICTIONARY_MAX_MS} ms\`, shallow \`${SHALLOW_MAX_MS} ms\`"
+  gbs_append_summary_line "- threshold file: \`${THRESHOLD_FILE}\`"
 }
 
 extract_summary_field() {
   local line="$1"
   local field="$2"
   printf '%s\n' "${line}" | sed -n "s/.* ${field}=\\([^ ]*\\).*/\\1/p" | tail -1
+}
+
+materialization_required_live_env_vars() {
+  printf '%s\n' \
+    GS_USER \
+    GS_PASS \
+    GEMSTONE
+}
+
+materialization_missing_required_live_env_vars() {
+  local var
+  local missing=""
+  while IFS= read -r var; do
+    [[ -n "${var}" ]] || continue
+    if [[ -z "${!var:-}" ]]; then
+      if [[ -n "${missing}" ]]; then
+        missing="${missing},${var}"
+      else
+        missing="${var}"
+      fi
+    fi
+  done < <(materialization_required_live_env_vars)
+  printf '%s\n' "${missing}"
+}
+
+materialization_live_env_status_line() {
+  local missing="${1:-$(materialization_missing_required_live_env_vars)}"
+  printf 'required=%s missing=%s stone=%s service=%s host=%s net=%s gemstone=%s\n' \
+    "$(materialization_required_live_env_vars | paste -sd, -)" \
+    "${missing:-none}" \
+    "${GS_STONE:-gs64stone}" \
+    "${GS_SERVICE:-gemnetobject}" \
+    "${GS_NETLDI_HOST:-implicit}" \
+    "${GS_NETLDI_NAME_OR_PORT:-implicit}" \
+    "${GEMSTONE:-unset}"
 }
 
 check_latency_threshold() {
@@ -72,10 +118,10 @@ check_latency_threshold() {
   fi
 }
 
-MISSING_LIVE_ENV="$(gbs_missing_required_live_env_vars)"
+MISSING_LIVE_ENV="$(materialization_missing_required_live_env_vars)"
 if [[ -n "${MISSING_LIVE_ENV}" ]]; then
   emit_summary "FAIL" "MATERIALIZATION_PERF_MISSING_ENV"
-  gbs_append_summary_line "- live env: \`$(gbs_live_env_status_line "${MISSING_LIVE_ENV}")\`"
+  gbs_append_summary_line "- live env: \`$(materialization_live_env_status_line "${MISSING_LIVE_ENV}")\`"
   echo "Missing required materialization performance environment: ${MISSING_LIVE_ENV}" >&2
   echo "Set the missing variables before running make materialization-perf." >&2
   exit 2

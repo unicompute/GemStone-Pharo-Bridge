@@ -39,6 +39,7 @@ GbsProxy >> asLocalString [
 	 and then brings those characters across the FFI boundary into a native Pharo String."
 	
 	| script |
+	self ensureSessionIsUsable.
 	"We use _objectForOop: to look up the exact object on the server, then send it #asString"
 	script := '(Object _objectForOop: ', self oop printString, ') asString'.
 	
@@ -57,9 +58,18 @@ GbsProxy >> class [
 GbsProxy >> doesNotUnderstand: aMessage [
   "Only forward if we have an active session"
 
-  session ifNil: [ ^ super doesNotUnderstand: aMessage ].
+  self ensureSessionIsUsable.
 
   ^ session forwardRemoteMessage: aMessage forOop: self oop
+]
+
+{ #category : 'testing' }
+GbsProxy >> ensureSessionIsUsable [
+	session ifNil: [
+		GbsError signal: 'GemStone proxy has no session.' ].
+	((session respondsTo: #isLoggedIn) and: [ session isLoggedIn ~= true ]) ifTrue: [
+		GbsError signal: 'GemStone proxy session is disconnected.' ].
+	^ true
 ]
 
 { #category : 'collections' }
@@ -186,7 +196,7 @@ GbsProxy >> respondsTo: aSymbol [ ^ GbsProxy includesSelector: aSymbol
 { #category : 'collections' }
 GbsProxy >> objectNamed: aName ifAbsent: aBlock [
 	| script result |
-	session ifNil: [ ^ aBlock value ].
+	[ self ensureSessionIsUsable ] on: GbsError do: [ ^ aBlock value ].
 	script := String streamContents: [ :stream |
 		stream
 			nextPutAll: '(Object _objectForOop: ';

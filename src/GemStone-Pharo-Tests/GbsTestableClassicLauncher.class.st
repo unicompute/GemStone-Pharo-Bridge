@@ -7,7 +7,9 @@ Class {
 		'infoMessages',
 		'lastOpenedSession',
 		'lastOpenedDictionary',
-		'openBrowserCalls'
+		'openBrowserCalls',
+		'selectedParameter',
+		'lastSelectedParameter'
 	],
 	#classVars : [
 		'ChooseAnswers',
@@ -129,9 +131,30 @@ GbsTestableClassicLauncher >> refreshAll [
 	^ self
 ]
 
+{ #category : 'actions' }
+GbsTestableClassicLauncher >> refreshAllSelectingParameter: aParameter [
+	lastSelectedParameter := aParameter.
+	^ self
+]
+
 { #category : 'accessing' }
 GbsTestableClassicLauncher >> requestedDictionaryName: aString [
 	requestedDictionaryName := aString
+]
+
+{ #category : 'private' }
+GbsTestableClassicLauncher >> selectedParameter [
+	^ selectedParameter
+]
+
+{ #category : 'accessing' }
+GbsTestableClassicLauncher >> selectedParameter: aParameter [
+	selectedParameter := aParameter
+]
+
+{ #category : 'accessing' }
+GbsTestableClassicLauncher >> lastSelectedParameter [
+	^ lastSelectedParameter
 ]
 
 { #category : 'private' }

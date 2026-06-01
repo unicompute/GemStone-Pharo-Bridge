@@ -1306,13 +1306,14 @@ GbsClassicLauncher >> doAbort [
 GbsClassicLauncher >> doAddParameter [
 	| newParam editor window |
 	newParam := GbsSessionParameters new.
+	newParam name: (GbsSessionParameters uniqueNameFor: newParam name excluding: nil).
 	editor := GbsSessionParametersEditor new.
 	editor setModel: newParam.
 	
 	"Pass the save action to the editor"
 	editor onAccept: [ 
 		GbsSessionParameters addParameter: newParam.
-		self refreshAll.
+		self refreshAllSelectingParameter: newParam.
 	].
 	
 	"Open as a standard window (No double buttons)"
@@ -1347,37 +1348,52 @@ GbsClassicLauncher >> doCommit [
 
 { #category : 'actions' }
 GbsClassicLauncher >> doCopyParameter [
-    parametersList selection selectedItem ifNotNil: [ :param |
-        | newParam |
-        newParam := param copy.
-        newParam name: param name, ' (copy)'.
-        GbsSessionParameters addParameter: newParam.
-        self refreshAll.
-    ].
+	| param newParam |
+	param := self selectedParameter.
+	param ifNil: [
+		self inform: 'Please select a configuration first.'.
+		^ false ].
+	newParam := param copy.
+	newParam sessionId: nil.
+	newParam name: (GbsSessionParameters uniqueNameFor: param name, ' (copy)' excluding: nil).
+	GbsSessionParameters addParameter: newParam.
+	self refreshAllSelectingParameter: newParam.
+	self inform: 'Copied session parameter configuration "', newParam name, '".'.
+	^ true
 ]
 
 { #category : 'actions' }
 GbsClassicLauncher >> doDeleteParameter [
-    parametersList selection selectedItem ifNotNil: [ :param |
-        GbsSessionParameters removeParameter: param.
-        self refreshAll.
-    ].
+	| param index targetIndex replacement |
+	param := self selectedParameter.
+	param ifNil: [
+		self inform: 'Please select a configuration first.'.
+		^ false ].
+	index := GbsSessionParameters allParameters indexOf: param ifAbsent: [ 0 ].
+	GbsSessionParameters removeParameter: param.
+	targetIndex := (index max: 1) min: GbsSessionParameters allParameters size.
+	replacement := GbsSessionParameters allParameters at: targetIndex ifAbsent: [ nil ].
+	self refreshAllSelectingParameter: replacement.
+	self inform: 'Deleted session parameter configuration "', param name, '".'.
+	^ true
 ]
 
 { #category : 'actions' }
 GbsClassicLauncher >> doEditParameter [
-	parametersList selection selectedItem ifNotNil: [ :param |
+	self selectedParameter ifNotNil: [ :param |
 		| editor window |
 		editor := GbsSessionParametersEditor new.
 		editor setModel: param.
 		
 		editor onAccept: [ 
-			self refreshAll. 
+			self refreshAllSelectingParameter: param.
 		].
 		
 		window := editor open.
 		window centered.
-	].
+		^ true ].
+	self inform: 'Please select a configuration first.'.
+	^ false
 ]
 
 { #category : 'actions' }
@@ -1396,13 +1412,13 @@ GbsClassicLauncher >> doExportParameters [
 
 { #category : 'actions' }
 GbsClassicLauncher >> doImportParameters [
-	| file count |
+	| file imported |
 	file := self requestParameterImportFile.
 	file ifNil: [ ^ false ].
 	[
-		count := self importSessionParametersFromFile: file.
-		self refreshAll.
-		self inform: 'Imported ', count asString, ' session parameter configuration(s).'.
+		imported := self importSessionParametersFromFile: file.
+		self refreshAllSelectingParameter: (imported ifEmpty: [ nil ] ifNotEmpty: [ imported first ]).
+		self inform: 'Imported ', imported size asString, ' session parameter configuration(s).'.
 		^ true
 	] on: Error do: [ :ex |
 		self inform: 'Import session parameters failed: ', ex messageText.
@@ -1442,7 +1458,10 @@ GbsClassicLauncher >> doLoginRpc [
 GbsClassicLauncher >> exportSessionParametersToFile: aFileReference [
 	| file count |
 	file := aFileReference asFileReference.
+	GbsSessionParameters allParameters do: [ :each | each validateForStorage ].
 	count := GbsSessionParameters allParameters size.
+	(file respondsTo: #parent) ifTrue: [
+		file parent ensureCreateDirectory ].
 	file ensureDelete.
 	file writeStreamDo: [ :stream |
 		stream nextPutAll: GbsSessionParameters exportAllParametersString ].
@@ -1451,9 +1470,11 @@ GbsClassicLauncher >> exportSessionParametersToFile: aFileReference [
 
 { #category : 'actions' }
 GbsClassicLauncher >> importSessionParametersFromFile: aFileReference [
-	| imported |
-	imported := GbsSessionParameters importParametersFromExportString: aFileReference asFileReference contents.
-	^ imported size
+	| file |
+	file := aFileReference asFileReference.
+	file exists ifFalse: [
+		self error: 'Session parameter import file does not exist: ', file fullName ].
+	^ GbsSessionParameters importParametersFromExportString: file contents
 ]
 
 { #category : 'actions' }
@@ -1820,6 +1841,16 @@ GbsClassicLauncher >> refreshAll [
 ]
 
 { #category : 'actions' }
+GbsClassicLauncher >> refreshAllSelectingParameter: aParameter [
+	self refreshAll.
+	aParameter ifNotNil: [
+		(parametersList notNil and: [ parametersList respondsTo: #selectItem: ]) ifTrue: [
+			[ parametersList selectItem: aParameter ] on: Error do: [ ] ] ].
+	(parametersList notNil and: [ sessionList notNil ]) ifTrue: [
+		self updateButtonStates ]
+]
+
+{ #category : 'actions' }
 GbsClassicLauncher >> refreshSessionList [
     sessionList items: GbsSessionParameters allSessions.
     parametersList items: GbsSessionParameters allParameters. "Assuming this collection exists"
@@ -1854,6 +1885,13 @@ GbsClassicLauncher >> sessionParameterFileReferenceFromPath: pathString [
 	normalized := pathString asString trimBoth.
 	normalized isEmpty ifTrue: [ ^ nil ].
 	^ normalized asFileReference
+]
+
+{ #category : 'private' }
+GbsClassicLauncher >> selectedParameter [
+	(parametersList notNil and: [ parametersList respondsTo: #selection ]) ifTrue: [
+		^ [ parametersList selection selectedItem ] on: Error do: [ nil ] ].
+	^ nil
 ]
 
 { #category : 'private' }

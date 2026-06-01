@@ -40,7 +40,10 @@ Class {
 
 { #category : 'registry' }
 GbsSessionParameters class >> addParameter: aParam [
-	self allParameters add: aParam
+	| prepared |
+	prepared := self prepareImportedParameters: { aParam } replacingExisting: false.
+	self allParameters add: prepared first.
+	^ prepared first
 ]
 
 { #category : 'accessing' }
@@ -65,13 +68,29 @@ GbsSessionParameters class >> exportAllParametersString [
 
 { #category : 'persistence' }
 GbsSessionParameters class >> exportAllParametersStringIncludingSecrets: includeSecrets [
-	^ self exportObjectStringFor: (self exportAllParametersIncludingSecrets: includeSecrets)
+	^ self exportObjectStringFor: (self exportAllParametersObjectIncludingSecrets: includeSecrets)
 ]
 
 { #category : 'persistence' }
 GbsSessionParameters class >> exportAllParametersIncludingSecrets: includeSecrets [
 	^ self allParameters collect: [ :each |
 		each exportDictionaryIncludingSecrets: includeSecrets ] as: Array
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters class >> exportAllParametersObjectIncludingSecrets: includeSecrets [
+	^ Dictionary new
+		at: 'format' put: self exportBundleFormatIdentifier;
+		at: 'schemaVersion' put: 2;
+		at: 'exportedAt' put: DateAndTime now asString;
+		at: 'includesSecrets' put: includeSecrets;
+		at: 'parameters' put: (self exportAllParametersIncludingSecrets: includeSecrets);
+		yourself
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters class >> exportBundleFormatIdentifier [
+	^ 'GemStone-Pharo-Bridge.sessionParameters.bundle'
 ]
 
 { #category : 'persistence' }
@@ -105,8 +124,8 @@ GbsSessionParameters class >> fromExportDictionary: aDictionary [
 { #category : 'persistence' }
 GbsSessionParameters class >> importParametersFromExportString: aString [
 	| imported |
-	imported := self parametersFromExportString: aString.
-	imported do: [ :each | self addParameter: each ].
+	imported := self prepareImportedParameters: (self parametersFromExportString: aString) replacingExisting: false.
+	self allParameters addAll: imported.
 	^ imported
 ]
 
@@ -114,8 +133,7 @@ GbsSessionParameters class >> importParametersFromExportString: aString [
 GbsSessionParameters class >> importParameterFromExportDictionary: aDictionary [
 	| parameter |
 	parameter := self fromExportDictionary: aDictionary.
-	self addParameter: parameter.
-	^ parameter
+	^ self addParameter: parameter
 ]
 
 { #category : 'accessing' }
@@ -146,6 +164,14 @@ GbsSessionParameters class >> pollingEnabled: aBoolean [
 
 { #category : 'persistence' }
 GbsSessionParameters class >> parametersFromExportObject: anObject [
+	| nestedParameters |
+	anObject isDictionary ifTrue: [
+		nestedParameters := self
+			valueFromDictionary: anObject
+			atAny: #('parameters' 'sessionParameters')
+			ifAbsent: [ nil ].
+		nestedParameters ifNotNil: [
+			^ self parametersFromExportObject: nestedParameters ] ].
 	anObject isDictionary ifTrue: [ ^ { self fromExportDictionary: anObject } ].
 	(anObject isCollection and: [ anObject isString not ]) ifTrue: [
 		^ anObject collect: [ :each | self fromExportDictionary: each ] as: Array ].
@@ -170,15 +196,82 @@ GbsSessionParameters class >> removeParameter: aParam [
 { #category : 'persistence' }
 GbsSessionParameters class >> replaceAllParametersFromExportDictionaries: dictionaries [
 	| imported |
-	imported := dictionaries collect: [ :each | self fromExportDictionary: each ].
+	imported := self
+		prepareImportedParameters: (dictionaries collect: [ :each | self fromExportDictionary: each ])
+		replacingExisting: true.
 	AllParameters := imported asOrderedCollection.
 	^ AllParameters
 ]
 
 { #category : 'persistence' }
 GbsSessionParameters class >> replaceAllParametersFromExportString: aString [
-	AllParameters := (self parametersFromExportString: aString) asOrderedCollection.
+	AllParameters := (self
+		prepareImportedParameters: (self parametersFromExportString: aString)
+		replacingExisting: true) asOrderedCollection.
 	^ AllParameters
+]
+
+{ #category : 'validation' }
+GbsSessionParameters class >> normalizedParameterName: aString [
+	| normalized |
+	normalized := aString ifNil: [ '' ] ifNotNil: [ aString asString trimBoth ].
+	^ normalized isEmpty ifTrue: [ 'New Config' ] ifFalse: [ normalized ]
+]
+
+{ #category : 'validation' }
+GbsSessionParameters class >> parameterNameKeyFor: aString [
+	^ (self normalizedParameterName: aString) asLowercase
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters class >> prepareImportedParameters: parameters replacingExisting: replaceExisting [
+	| prepared usedNames |
+	prepared := parameters asOrderedCollection.
+	prepared do: [ :each | each validateForStorage ].
+	usedNames := Dictionary new.
+	replaceExisting ifFalse: [
+		self allParameters do: [ :each |
+			usedNames at: (self parameterNameKeyFor: each name) put: true ] ].
+	prepared do: [ :each |
+		| base candidate index |
+		base := self normalizedParameterName: each name.
+		candidate := base.
+		index := 2.
+		[ usedNames includesKey: (self parameterNameKeyFor: candidate) ] whileTrue: [
+			candidate := base, ' (', index asString, ')'.
+			index := index + 1 ].
+		each name: candidate.
+		usedNames at: (self parameterNameKeyFor: candidate) put: true ].
+	^ prepared asArray
+]
+
+{ #category : 'validation' }
+GbsSessionParameters class >> hasParameterNamed: aString excluding: excludedParameter [
+	| key |
+	key := self parameterNameKeyFor: aString.
+	^ self allParameters anySatisfy: [ :each |
+		each ~~ excludedParameter and: [
+			(self parameterNameKeyFor: each name) = key ] ]
+]
+
+{ #category : 'validation' }
+GbsSessionParameters class >> uniqueNameFor: aString excluding: excludedParameter [
+	| base candidate index |
+	base := self normalizedParameterName: aString.
+	candidate := base.
+	index := 2.
+	[ self hasParameterNamed: candidate excluding: excludedParameter ] whileTrue: [
+		candidate := base, ' (', index asString, ')'.
+		index := index + 1 ].
+	^ candidate
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters class >> valueFromDictionary: aDictionary atAny: keyCollection ifAbsent: absentBlock [
+	keyCollection do: [ :key |
+		(aDictionary includesKey: key) ifTrue: [ ^ aDictionary at: key ].
+		(aDictionary includesKey: key asSymbol) ifTrue: [ ^ aDictionary at: key asSymbol ] ].
+	^ absentBlock value
 ]
 
 { #category : 'polling' }
@@ -203,34 +296,39 @@ GbsSessionParameters >> abortTransaction [
 
 { #category : 'persistence' }
 GbsSessionParameters >> applyExportDictionary: aDictionary [
-	name := self exportValueFrom: aDictionary at: 'name' ifAbsent: [ name ].
-	gemStoneName := self exportValueFrom: aDictionary at: 'gemStoneName' ifAbsent: [ gemStoneName ].
-	username := self exportValueFrom: aDictionary at: 'username' ifAbsent: [ username ].
-	password := self exportValueFrom: aDictionary at: 'password' ifAbsent: [ password ].
-	gsRemember := self booleanExportValueFrom: aDictionary at: 'gsRemember' default: gsRemember.
-	hostUsername := self exportValueFrom: aDictionary at: 'hostUsername' ifAbsent: [ hostUsername ].
-	hostPassword := self exportValueFrom: aDictionary at: 'hostPassword' ifAbsent: [ hostPassword ].
-	gemService := self exportValueFrom: aDictionary at: 'gemService' ifAbsent: [ gemService ].
-	hostRemember := self booleanExportValueFrom: aDictionary at: 'hostRemember' default: hostRemember.
-	netObject := self exportValueFrom: aDictionary at: 'netObject' ifAbsent: [ netObject ].
-	isX509 := self booleanExportValueFrom: aDictionary at: 'isX509' default: isX509.
-	displayUsername := self exportValueFrom: aDictionary at: 'displayUsername' ifAbsent: [ displayUsername ].
-	caCert := self exportValueFrom: aDictionary at: 'caCert' ifAbsent: [ caCert ].
-	cert := self exportValueFrom: aDictionary at: 'cert' ifAbsent: [ cert ].
-	privateKey := self exportValueFrom: aDictionary at: 'privateKey' ifAbsent: [ privateKey ].
-	netldiHostOrIp := self exportValueFrom: aDictionary at: 'netldiHostOrIp' ifAbsent: [ netldiHostOrIp ].
-	netldiNameOrPort := self exportValueFrom: aDictionary at: 'netldiNameOrPort' ifAbsent: [ netldiNameOrPort ].
-	dirArg := self exportValueFrom: aDictionary at: 'dirArg' ifAbsent: [ dirArg ].
-	extraGemArgs := self exportValueFrom: aDictionary at: 'extraGemArgs' ifAbsent: [ extraGemArgs ].
-	logArg := self exportValueFrom: aDictionary at: 'logArg' ifAbsent: [ logArg ].
+	name := self exportValueFrom: aDictionary atAny: #('name' 'configurationName' 'label') ifAbsent: [ name ].
+	gemStoneName := self exportValueFrom: aDictionary atAny: #('gemStoneName' 'stoneName' 'stone') ifAbsent: [ gemStoneName ].
+	username := self exportValueFrom: aDictionary atAny: #('username' 'userId' 'user') ifAbsent: [ username ].
+	password := self exportValueFrom: aDictionary atAny: #('password' 'gemStonePassword') ifAbsent: [ password ].
+	gsRemember := self booleanExportValueFrom: aDictionary atAny: #('gsRemember' 'rememberPassword') default: gsRemember.
+	hostUsername := self exportValueFrom: aDictionary atAny: #('hostUsername' 'hostUser') ifAbsent: [ hostUsername ].
+	hostPassword := self exportValueFrom: aDictionary atAny: #('hostPassword' 'hostPass') ifAbsent: [ hostPassword ].
+	gemService := self exportValueFrom: aDictionary atAny: #('gemService' 'service' 'gemnetobject') ifAbsent: [ gemService ].
+	hostRemember := self booleanExportValueFrom: aDictionary atAny: #('hostRemember' 'rememberHostPassword') default: hostRemember.
+	netObject := self exportValueFrom: aDictionary atAny: #('netObject' 'netObjectName') ifAbsent: [ netObject ].
+	isX509 := self booleanExportValueFrom: aDictionary atAny: #('isX509' 'x509') default: isX509.
+	displayUsername := self exportValueFrom: aDictionary atAny: #('displayUsername' 'displayUser') ifAbsent: [ displayUsername ].
+	caCert := self exportValueFrom: aDictionary atAny: #('caCert' 'caCertificate') ifAbsent: [ caCert ].
+	cert := self exportValueFrom: aDictionary atAny: #('cert' 'certificate') ifAbsent: [ cert ].
+	privateKey := self exportValueFrom: aDictionary atAny: #('privateKey' 'key') ifAbsent: [ privateKey ].
+	netldiHostOrIp := self exportValueFrom: aDictionary atAny: #('netldiHostOrIp' 'netldiHost' 'netldiHostIp') ifAbsent: [ netldiHostOrIp ].
+	netldiNameOrPort := self exportValueFrom: aDictionary atAny: #('netldiNameOrPort' 'netldiName' 'netldiPort' 'netldi') ifAbsent: [ netldiNameOrPort ].
+	dirArg := self exportValueFrom: aDictionary atAny: #('dirArg' 'directory') ifAbsent: [ dirArg ].
+	extraGemArgs := self exportValueFrom: aDictionary atAny: #('extraGemArgs' 'extraArgs') ifAbsent: [ extraGemArgs ].
+	logArg := self exportValueFrom: aDictionary atAny: #('logArg' 'logFile') ifAbsent: [ logArg ].
 	self normalizeConnectionFields.
 	^ self
 ]
 
 { #category : 'persistence' }
 GbsSessionParameters >> booleanExportValueFrom: aDictionary at: aKey default: defaultBoolean [
+	^ self booleanExportValueFrom: aDictionary atAny: { aKey } default: defaultBoolean
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters >> booleanExportValueFrom: aDictionary atAny: keyCollection default: defaultBoolean [
 	| value normalized |
-	value := self exportValueFrom: aDictionary at: aKey ifAbsent: [ defaultBoolean ].
+	value := self exportValueFrom: aDictionary atAny: keyCollection ifAbsent: [ defaultBoolean ].
 	value ifNil: [ ^ defaultBoolean ].
 	(value == true or: [ value == false ]) ifTrue: [ ^ value ].
 	value = 1 ifTrue: [ ^ true ].
@@ -300,6 +398,7 @@ GbsSessionParameters >> exportDictionaryIncludingSecrets: includeSecrets [
 	self normalizeConnectionFields.
 	^ Dictionary new
 		at: 'format' put: self class exportFormatIdentifier;
+		at: 'schemaVersion' put: 1;
 		at: 'name' put: self name;
 		at: 'gemStoneName' put: self gemStoneName;
 		at: 'username' put: self username;
@@ -335,8 +434,14 @@ GbsSessionParameters >> exportStringIncludingSecrets: includeSecrets [
 
 { #category : 'persistence' }
 GbsSessionParameters >> exportValueFrom: aDictionary at: aKey ifAbsent: absentBlock [
-	(aDictionary includesKey: aKey) ifTrue: [ ^ aDictionary at: aKey ].
-	(aDictionary includesKey: aKey asSymbol) ifTrue: [ ^ aDictionary at: aKey asSymbol ].
+	^ self exportValueFrom: aDictionary atAny: { aKey } ifAbsent: absentBlock
+]
+
+{ #category : 'persistence' }
+GbsSessionParameters >> exportValueFrom: aDictionary atAny: keyCollection ifAbsent: absentBlock [
+	keyCollection do: [ :key |
+		(aDictionary includesKey: key) ifTrue: [ ^ aDictionary at: key ].
+		(aDictionary includesKey: key asSymbol) ifTrue: [ ^ aDictionary at: key asSymbol ] ].
 	^ absentBlock value
 ]
 
@@ -427,9 +532,25 @@ GbsSessionParameters >> connectionSummary [
 				nextPutAll: ' netldiHost=';
 				nextPutAll: host ].
 		self netldiNameOrPort ifNotNil: [ :netldi |
-			stream
-				nextPutAll: ' netldi=';
-				nextPutAll: netldi ] ]
+				stream
+					nextPutAll: ' netldi=';
+					nextPutAll: netldi ] ]
+]
+
+{ #category : 'validation' }
+GbsSessionParameters >> configurationValidationErrorMessage [
+	^ self validationMessageFrom: self configurationValidationMessages
+]
+
+{ #category : 'validation' }
+GbsSessionParameters >> configurationValidationMessages [
+	| messages |
+	self normalizeConnectionFields.
+	messages := OrderedCollection new.
+	self name isEmpty ifTrue: [
+		messages add: 'Configuration name is required.' ].
+	messages addAll: self loginValidationMessages.
+	^ messages asArray
 ]
 
 { #category : 'initialization' }
@@ -908,6 +1029,13 @@ GbsSessionParameters >> username: aValue [ username := aValue
 { #category : 'validation' }
 GbsSessionParameters >> validateForLogin [
 	self loginValidationErrorMessage ifNotNil: [ :message | self error: message ].
+	^ true
+]
+
+{ #category : 'validation' }
+GbsSessionParameters >> validateForStorage [
+	self configurationValidationErrorMessage ifNotNil: [ :message |
+		self error: 'Invalid GemStone session configuration:', String cr, message ].
 	^ true
 ]
 

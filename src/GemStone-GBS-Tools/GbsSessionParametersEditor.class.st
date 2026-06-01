@@ -141,10 +141,14 @@ GbsSessionParametersEditor >> setModel: aParam [
 	nameField text: model name.
 	stoneField text: model gemStoneName.
 	userField text: (model username ifNil: ['']).
-	passField text: (model password ifNil: ['']).
+	passField text: ((model gsRemember == true and: [ model password notNil ])
+		ifTrue: [ model password ]
+		ifFalse: [ '' ]).
 	gsRemCheck state: model gsRemember.
 	hostUserField text: (model hostUsername ifNil: ['']).
-	hostPassField text: (model hostPassword ifNil: ['']).
+	hostPassField text: ((model hostRemember == true and: [ model hostPassword notNil ])
+		ifTrue: [ model hostPassword ]
+		ifFalse: [ '' ]).
 	serviceField text: model gemService.
 	netldiHostField text: (model netldiHostOrIp ifNil: ['']).
 	netldiPortField text: (model netldiNameOrPort ifNil: ['']).
@@ -157,14 +161,18 @@ GbsSessionParametersEditor >> updateModel [
 	model name: (self normalizedTextFrom: nameField).
 	model gemStoneName: (self normalizedTextFrom: stoneField).
 	model username: (self normalizedTextFrom: userField).
-	model password: passField text.
 	model gsRemember: gsRemCheck state.
+	model password: (model gsRemember == true
+		ifTrue: [ passField text ]
+		ifFalse: [ nil ]).
 	model hostUsername: (self optionalTextFrom: hostUserField).
-	model hostPassword: hostPassField text.
+	model hostRemember: hostRemCheck state.
+	model hostPassword: (model hostRemember == true
+		ifTrue: [ hostPassField text ]
+		ifFalse: [ nil ]).
 	model gemService: serviceField text.
 	model netldiHostOrIp: (self optionalTextFrom: netldiHostField).
 	model netldiNameOrPort: (self optionalTextFrom: netldiPortField).
-	model hostRemember: hostRemCheck state.
 	model netObject: (self optionalTextFrom: netObjField).
 	model normalizeConnectionFields
 ]
@@ -173,9 +181,8 @@ GbsSessionParametersEditor >> updateModel [
 GbsSessionParametersEditor >> validationErrorMessage [
 	| messages |
 	model ifNil: [ ^ 'No GemStone session configuration is loaded.' ].
-	messages := OrderedCollection new.
-	(model name ifNil: [ '' ]) isEmpty ifTrue: [
-		messages add: 'Configuration name is required.' ].
-	messages addAll: model loginValidationMessages.
+	messages := model configurationValidationMessages asOrderedCollection.
+	(GbsSessionParameters hasParameterNamed: model name excluding: model) ifTrue: [
+		messages add: 'A session parameter configuration named "', model name, '" already exists.' ].
 	^ model validationMessageFrom: messages
 ]

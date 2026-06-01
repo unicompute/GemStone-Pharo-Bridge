@@ -1031,6 +1031,9 @@ GbsSession >> loginStone: stoneName user: username password: password [
   "Initializes GCI and attempts to log into the specified Stone"
 
   | initSuccess loginSuccess errorStruct interpretedError |
+  isLoggedIn := false.
+  sessionOop := nil.
+  sessionId := nil.
   initSuccess := self gciInit.
   initSuccess ifFalse: [ ^ GbsError signal: 'Failed to initialize GemStone GCI library.' ].
 

@@ -199,7 +199,66 @@ GbsClassicLauncherTest >> testDoImportParametersAppendsConfigurationFromFile [
 		self assert: GbsSessionParameters allParameters size equals: 1.
 		self assert: GbsSessionParameters allParameters first name equals: 'Imported'.
 		self assert: GbsSessionParameters allParameters first username equals: 'GcUser'.
+		self assert: launcher lastSelectedParameter == GbsSessionParameters allParameters first.
 		self assert: launcher infoMessages last equals: 'Imported 1 session parameter configuration(s).'
+	] ensure: [
+		file ensureDelete.
+		GbsSessionParameters allParameters
+			removeAll;
+			addAll: previous ]
+	]
+
+{ #category : 'tests' }
+GbsClassicLauncherTest >> testDoCopyParameterRenamesDuplicateAndSelectsCopy [
+	| previous params copy |
+	previous := GbsSessionParameters allParameters copy.
+	[
+		GbsSessionParameters allParameters removeAll.
+		params := GbsSessionParameters new.
+		params
+			name: 'Production';
+			username: 'DataCurator';
+			sessionId: 123.
+		GbsSessionParameters addParameter: params.
+		launcher selectedParameter: params.
+
+		self assert: launcher doCopyParameter.
+
+		self assert: GbsSessionParameters allParameters size equals: 2.
+		copy := GbsSessionParameters allParameters second.
+		self assert: copy name equals: 'Production (copy)'.
+		self assert: copy sessionId isNil.
+		self assert: launcher lastSelectedParameter == copy
+	] ensure: [
+		GbsSessionParameters allParameters
+			removeAll;
+			addAll: previous ]
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherTest >> testDoImportParametersRenamesDuplicateConfiguration [
+	| previous existing imported file |
+	(Smalltalk includesKey: #STON) ifFalse: [ self skip: 'STON is not available in this image.' ].
+	previous := GbsSessionParameters allParameters copy.
+	file := FileLocator temp / ('gbs-session-parameters-import-duplicate-', 1000000 atRandom asString, '.ston').
+	[
+		GbsSessionParameters allParameters removeAll.
+		existing := GbsSessionParameters new.
+		existing
+			name: 'Production';
+			username: 'DataCurator'.
+		GbsSessionParameters addParameter: existing.
+		imported := GbsSessionParameters new.
+		imported
+			name: 'Production';
+			username: 'GcUser'.
+		file writeStreamDo: [ :stream | stream nextPutAll: imported exportString ].
+		GbsTestableClassicLauncher enqueueRequestAnswer: file fullName.
+
+		self assert: launcher doImportParameters.
+
+		self assert: GbsSessionParameters allParameters second name equals: 'Production (2)'.
+		self assert: launcher lastSelectedParameter == GbsSessionParameters allParameters second
 	] ensure: [
 		file ensureDelete.
 		GbsSessionParameters allParameters

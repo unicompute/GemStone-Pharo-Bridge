@@ -217,6 +217,32 @@ GbsSessionCoreTest >> testFetchDeepUsesBulkArrayOopFetch [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testRemoteArrayElementOopsAreCachedPerSession [
+	| mockSession first second sizeFetches oopFetches |
+	mockSession := CoreMockGbsSession new.
+	sizeFetches := 0.
+	oopFetches := 0.
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		self assert: oop equals: 9000.
+		sizeFetches := sizeFetches + 1.
+		2 ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+		self assert: oop equals: 9000.
+		self assert: start equals: 1.
+		self assert: count equals: 2.
+		oopFetches := oopFetches + 1.
+		#(9040 9016) ].
+
+	first := mockSession materializer remoteReader remoteArrayElementOopsForOop: 9000.
+	second := mockSession materializer remoteReader remoteArrayElementOopsForOop: 9000.
+
+	self assert: first equals: #(9040 9016).
+	self assert: second equals: first.
+	self assert: sizeFetches equals: 1.
+	self assert: oopFetches equals: 1
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testFetchDeepDictionaryUsesFlattenedOopPairFetch [
 	| mockSession result pairArrayCommands pairStringScripts |
 	mockSession := CoreMockGbsSession new.
@@ -261,6 +287,35 @@ GbsSessionCoreTest >> testFetchDeepDictionaryUsesFlattenedOopPairFetch [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testRemoteDictionaryAssociationPairsAreCachedPerSession [
+	| mockSession first second pairArrayCommands oopFetches |
+	mockSession := CoreMockGbsSession new.
+	pairArrayCommands := 0.
+	oopFetches := 0.
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		self assert: (script includesSubstring: 'pairs := Array new: object size * 2').
+		pairArrayCommands := pairArrayCommands + 1.
+		9200 ].
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		self assert: oop equals: 9200.
+		4 ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+		self assert: oop equals: 9200.
+		self assert: start equals: 1.
+		self assert: count equals: 4.
+		oopFetches := oopFetches + 1.
+		#(9040 9056 9064 9040) ].
+
+	first := mockSession materializer remoteReader remoteDictionaryAssociationOopPairsForOop: 9100.
+	second := mockSession materializer remoteReader remoteDictionaryAssociationOopPairsForOop: 9100.
+
+	self assert: first equals: #((9040 9056) (9064 9040)).
+	self assert: second equals: first.
+	self assert: pairArrayCommands equals: 1.
+	self assert: oopFetches equals: 1
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testFetchLegacyMaterializesArraysRecursively [
 	| mockSession result |
 	mockSession := self materializationMockSession.
@@ -284,6 +339,58 @@ GbsSessionCoreTest >> testFetchShallowLeavesNestedArrayAsProxy [
 	self assert: (result at: 1) equals: 'vip'.
 	self assert: (nested isKindOf: GbsTypedProxy).
 	self assert: nested oop equals: 9016
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFetchShallowBatchesNestedProxyClassNames [
+	| mockSession result classOopFetches bulkClassNameFetches |
+	mockSession := CoreMockGbsSession new.
+	classOopFetches := OrderedCollection new.
+	bulkClassNameFetches := 0.
+	GbsSessionManager initializeFastConnectors.
+	mockSession stubs at: #apiGciGetClass put: [ :oop |
+		classOopFetches add: oop.
+		oop = 9000
+			ifTrue: [ 5000 ]
+			ifFalse: [ self fail ] ].
+	mockSession stubs at: #executeAndFetch put: [ :script | | response |
+		(script includesSubstring: 'classObject name asString') ifTrue: [
+			self assert: (script includesSubstring: '5000').
+			response := 'Array' ].
+		(script includesSubstring: 'objectNamed: clsName asSymbol') ifTrue: [
+			response := { 5000. 'Array'. 'Object'. nil. nil. 1. 1 } ].
+		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+			response := #() ].
+		(script includesSubstring: 'oops do:') ifTrue: [
+			bulkClassNameFetches := bulkClassNameFetches + 1.
+			self assert: (script includesSubstring: '9100').
+			self assert: (script includesSubstring: '9112').
+			self assert: (script includesSubstring: '9120').
+			response := String streamContents: [ :stream |
+				#(9100 9112 9120) do: [ :oop |
+					stream
+						nextPutAll: oop asString;
+						nextPut: Character tab;
+						nextPutAll: 'Array';
+						nextPut: Character lf ] ] ].
+		response ifNil: [ self fail ].
+		response ].
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		oop = 9000 ifTrue: [ 3 ] ifFalse: [ self fail ] ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+		self assert: oop equals: 9000.
+		self assert: start equals: 1.
+		self assert: count equals: 3.
+		#(9100 9112 9120) ].
+	mockSession fetchShallow.
+
+	result := mockSession fetchObject: 9000.
+
+	self assert: result size equals: 3.
+	self assert: (result allSatisfy: [ :each | each isKindOf: GbsTypedProxy ]).
+	self assert: (result collect: [ :each | each oop ]) equals: #(9100 9112 9120).
+	self assert: classOopFetches asArray equals: #(9000).
+	self assert: bulkClassNameFetches equals: 1
 ]
 
 { #category : 'tests' }
@@ -2215,6 +2322,49 @@ GbsSessionCoreTest >> testLogoutClearsProxyIdentityMap [
 	mockSession logout.
 
 	self assert: (mockSession cachedProxyForOop: 1001) isNil
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFailedLoginLeavesSessionLoggedOut [
+	| mockSession |
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #gciLogin put: false.
+
+	self
+		should: [ mockSession loginStone: 'gs64stone' user: 'DataCurator' password: 'bad' ]
+		raise: GbsError.
+	self deny: mockSession isLoggedIn
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testProxyForwardingAfterDisconnectSignalsClearError [
+	| mockSession proxy |
+	mockSession := CoreMockGbsSession new.
+	mockSession instVarNamed: 'isLoggedIn' put: true.
+	proxy := GbsProxy oop: 1001 session: mockSession.
+
+	mockSession resetAfterLogout.
+
+	self
+		should: [ proxy size ]
+		raise: GbsError
+		withExceptionDo: [ :ex |
+			self assert: (ex messageText includesSubstring: 'disconnected') ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testReconnectCreatesFreshProxyIdentityMap [
+	| mockSession first second |
+	mockSession := CoreMockGbsSession new.
+	mockSession instVarNamed: 'isLoggedIn' put: true.
+	first := mockSession resultFor: 1001.
+
+	mockSession resetAfterLogout.
+	mockSession instVarNamed: 'isLoggedIn' put: true.
+	second := mockSession resultFor: 1001.
+
+	self deny: second == first.
+	self assert: second session == mockSession
 ]
 
 { #category : 'tests' }

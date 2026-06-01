@@ -302,6 +302,58 @@ GbsClassicLauncherCoreToolsTest >> testSessionParametersEditorValidationReportsM
 ]
 
 { #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testSessionParametersEditorDoesNotDisplayOrRetainPasswordsUnlessRemembered [
+	| params editor passField hostPassField |
+	params := GbsSessionParameters new.
+	params
+		username: 'DataCurator';
+		password: 'secret';
+		hostPassword: 'host-secret';
+		gsRemember: false;
+		hostRemember: false.
+	editor := GbsSessionParametersEditor new.
+	editor setModel: params.
+	passField := editor instVarNamed: 'passField'.
+	hostPassField := editor instVarNamed: 'hostPassField'.
+
+	self assert: passField text equals: ''.
+	self assert: hostPassField text equals: ''.
+
+	editor updateModel.
+
+	self assert: params password isNil.
+	self assert: params hostPassword isNil
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testSessionParametersEditorValidationReportsDuplicateConfigurationName [
+	| previous existing params editor message |
+	previous := GbsSessionParameters allParameters copy.
+	[
+		GbsSessionParameters allParameters removeAll.
+		existing := GbsSessionParameters new.
+		existing
+			name: 'Production';
+			username: 'DataCurator'.
+		GbsSessionParameters addParameter: existing.
+		params := GbsSessionParameters new.
+		params
+			name: 'Production';
+			username: 'GcUser'.
+		editor := GbsSessionParametersEditor new.
+		editor setModel: params.
+		editor updateModel.
+
+		message := editor validationErrorMessage.
+
+		self assert: (message includesSubstring: 'already exists')
+	] ensure: [
+		GbsSessionParameters allParameters
+			removeAll;
+			addAll: previous ]
+]
+
+{ #category : 'tests' }
 GbsClassicLauncherCoreToolsTest >> testLoginErrorMessageIncludesConnectionSummary [
 	| params message exception |
 	params := GbsSessionParameters new.
