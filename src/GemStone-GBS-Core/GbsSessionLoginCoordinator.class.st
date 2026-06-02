@@ -131,11 +131,14 @@ GbsSessionLoginCoordinator >> loginStone: stoneName user: username password: pas
 			session signalError: errorStruct.
 			^ GbsError signal: interpretedError ].
 		^ GbsError signal: 'Unknown login failure. Please check your GemStone connection parameters.' ].
-	session isLoggedIn: true
+	session isLoggedIn: true.
+	(GbsSessionEventController forSession: session) startIfEnabledFromPolicy.
+	^ true
 ]
 
 { #category : 'login' }
 GbsSessionLoginCoordinator >> resetSessionStateForLoginAttempt [
+	GbsSessionEventController resetForSession: session.
 	session isLoggedIn: false.
 	session sessionOop: nil.
 	session sessionId: nil.

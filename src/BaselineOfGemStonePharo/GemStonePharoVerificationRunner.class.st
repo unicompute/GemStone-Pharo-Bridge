@@ -166,11 +166,21 @@ GemStonePharoVerificationRunner >> environmentAt: aString ifAbsent: aBlock [
 
 { #category : 'private' }
 GemStonePharoVerificationRunner >> ensureTranscriptProxyInstalledOn: aSession [
+	self drainPendingSessionErrorFrom: aSession.
 	^ [ (aSession evaluate: self transcriptProxyInstallScript) = true ]
 		on: Error
 		do: [ :ex |
 			self log: 'ORIGINAL_TESTS_SESSION_PREP_ERROR: ', ex messageText.
 			false ]
+]
+
+{ #category : 'private' }
+GemStonePharoVerificationRunner >> drainPendingSessionErrorFrom: aSession [
+	(aSession respondsTo: #checkForError) ifFalse: [ ^ self ].
+	[ aSession checkForError ]
+		on: Error
+		do: [ :ex | nil ].
+	^ self
 ]
 
 { #category : 'private' }

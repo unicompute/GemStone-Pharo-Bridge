@@ -113,6 +113,14 @@ CoreMockGbsSession >> apiGciErr: errorStruct [
 	^ self gciErr: errorStruct
 ]
 
+{ #category : 'error handling' }
+CoreMockGbsSession >> checkForError [
+	| block |
+	block := self stubs at: #checkForError ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block value ].
+	^ nil
+]
+
 { #category : 'execution' }
 CoreMockGbsSession >> evaluate: aString [
 	| value |
@@ -269,7 +277,10 @@ CoreMockGbsSession >> gciLogout [
 
 { #category : 'accessing' }
 CoreMockGbsSession >> gciPollForSignal [
-	^ self stubs at: #gciPollForSignal ifAbsent: [ 0 ]
+	| value |
+	value := self stubs at: #gciPollForSignal ifAbsent: [ 0 ].
+	(value respondsTo: #value) ifTrue: [ ^ value value ].
+	^ value
 ]
 
 { #category : 'accessing' }
@@ -338,6 +349,19 @@ CoreMockGbsSession >> materializationTraversalReportsForOops: oopCollection leve
 { #category : 'materialization' }
 CoreMockGbsSession >> supportsMaterializationTraversalBufferTransport [
 	^ self stubs at: #supportsMaterializationTraversalBufferTransport ifAbsent: [ false ]
+]
+
+{ #category : 'dirty store traversal' }
+CoreMockGbsSession >> storeTraversalBuffer: aBuffer [
+	| block |
+	block := self stubs at: #storeTraversalBuffer ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: aBuffer ].
+	^ true
+]
+
+{ #category : 'dirty store traversal' }
+CoreMockGbsSession >> supportsDirtyStoreTraversalBufferTransport [
+	^ self stubs at: #supportsDirtyStoreTraversalBufferTransport ifAbsent: [ false ]
 ]
 
 { #category : 'accessing' }

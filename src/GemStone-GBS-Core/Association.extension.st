@@ -3,7 +3,7 @@ Extension { #name : 'Association' }
 { #category : '*GemStone-GBS-Core' }
 Association >> key: anObject [
 	key := anObject.
-	self gbsConsiderModified.
+	self gbxConsiderModified.
 	^ anObject
 ]
 
@@ -16,13 +16,13 @@ Association >> gbxDelegate [
 Association >> key: keyObject value: valueObject [
 	key := keyObject.
 	value := valueObject.
-	self gbsConsiderModified.
+	self gbxConsiderModified.
 	^ self
 ]
 
 { #category : '*GemStone-GBS-Core' }
 Association >> value: anObject [
 	value := anObject.
-	self gbsConsiderModified.
+	self gbxConsiderModified.
 	^ anObject
 ]

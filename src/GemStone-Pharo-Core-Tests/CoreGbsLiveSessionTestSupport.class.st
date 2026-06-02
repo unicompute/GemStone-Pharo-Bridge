@@ -45,12 +45,12 @@ CoreGbsLiveSessionTestSupport class >> ensureSharedSession [
 	netldiHost isEmpty ifFalse: [ params netldiHostOrIp: netldiHost ].
 	netldiNameOrPort isEmpty ifFalse: [ params netldiNameOrPort: netldiNameOrPort ].
 
-	session := [ params login ] on: Error do: [ :ex |
+	session := [ self withInteractiveNotificationsAnsweredDo: [ params login ] ] on: Error do: [ :ex |
 		lastUnavailableReason := 'Live GemStone login failed: ', ex messageText.
 		nil ].
 
 	(self sessionIsUsable: session) ifFalse: [
-		[ params logout ] on: Error do: [ ].
+		[ self withInteractiveNotificationsAnsweredDo: [ params logout ] ] on: Error do: [ ].
 		GbsSessionParameters currentSession: currentSession.
 		ownedParameters := nil.
 		ownedSession := nil.
@@ -67,6 +67,7 @@ CoreGbsLiveSessionTestSupport class >> ensureSharedSession [
 CoreGbsLiveSessionTestSupport class >> ensureTranscriptProxyInstalledOn: aSession [
 	| script |
 	aSession ifNil: [ ^ false ].
+	self drainPendingSessionErrorFrom: aSession.
 	script := '
 	| tempDict proxyClass |
 	tempDict := System myUserProfile symbolList
@@ -110,6 +111,15 @@ CoreGbsLiveSessionTestSupport class >> ensureTranscriptProxyInstalledOn: aSessio
 ]
 
 { #category : 'private' }
+CoreGbsLiveSessionTestSupport class >> drainPendingSessionErrorFrom: aSession [
+	(aSession respondsTo: #checkForError) ifFalse: [ ^ self ].
+	[ aSession checkForError ]
+		on: Error
+		do: [ :ex | nil ].
+	^ self
+]
+
+{ #category : 'private' }
 CoreGbsLiveSessionTestSupport class >> installDelegatesOnOriginalSupportClass [
 	| originalSupport sources |
 	originalSupport := Smalltalk at: #GbsLiveSessionTestSupport ifAbsent: [ ^ self ].
@@ -140,6 +150,16 @@ CoreGbsLiveSessionTestSupport class >> envAt: key ifAbsent: aBlock [
 ]
 
 { #category : 'private' }
+CoreGbsLiveSessionTestSupport class >> withInteractiveNotificationsAnsweredDo: aBlock [
+	| notificationClass |
+	notificationClass := Smalltalk at: #ProvideAnswerNotification ifAbsent: [ nil ].
+	notificationClass ifNil: [ ^ aBlock value ].
+	^ [ aBlock value ]
+		on: notificationClass
+		do: [ :notification | notification resume: true ]
+]
+
+{ #category : 'private' }
 CoreGbsLiveSessionTestSupport class >> osEnvironment [
 	^ [ Smalltalk os environment ]
 		on: Error
@@ -167,7 +187,7 @@ CoreGbsLiveSessionTestSupport class >> releaseOwnedSession [
 	previousCurrentSession := nil.
 	lastUnavailableReason := nil.
 
-	[ params logout ] on: Error do: [ ].
+	[ self withInteractiveNotificationsAnsweredDo: [ params logout ] ] on: Error do: [ ].
 	GbsSessionParameters currentSession: priorSession
 ]
 

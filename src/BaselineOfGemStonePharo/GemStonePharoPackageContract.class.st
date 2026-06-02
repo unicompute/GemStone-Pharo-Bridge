@@ -164,6 +164,7 @@ GemStonePharoPackageContract >> packageOwnershipInstanceBehaviorFamilySpecs [
 		{ #GbsChunkedMigrationRunner. #instance. #coreOnly }.
 		{ #GbsCompilerStateSessionStateSlot. #instance. #maglevOnly }.
 		{ #GbsDeepMaterializationProfile. #instance. #coreOnly }.
+		{ #GbsDirtyStoreTraversalBuffer. #instance. #coreOnly }.
 		{ #GbsFinalizerRegistrySessionStateSlot. #instance. #maglevOnly }.
 		{ #GbsInspector. #instance. #toolsWithCoreToolsAndMaglevTools }.
 		{ #GbsLegacyMaterializationProfile. #instance. #coreOnly }.
@@ -215,6 +216,8 @@ GemStonePharoPackageContract >> packageOwnershipInstanceBehaviorFamilySpecs [
 		{ #GbsRemoteUnboundMethodObject. #instance. #coreOnly }.
 		{ #GbsRubyRuntimeFacade. #instance. #maglevOnly }.
 		{ #GbsSession. #instance. #convertedWithCoreAndMaglev }.
+		{ #GbsSessionEventController. #instance. #coreOnly }.
+		{ #GbsSessionLifecycleManager. #instance. #coreOnly }.
 		{ #GbsSessionMaterializationRemoteReader. #instance. #coreOnly }.
 		{ #GbsSessionStateSlot. #instance. #coreOnly }.
 		{ #GbsShallowMaterializationProfile. #instance. #coreOnly }.

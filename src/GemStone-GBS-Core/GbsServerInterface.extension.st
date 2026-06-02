@@ -25,9 +25,25 @@ GbsServerInterface >> apiGciFree: anExternalAddress [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> apiGciGetClass: anOop [
+	^ self
+		ffiCall: #(uint64 GciFetchClass(uint64 anOop))
+		module: libraryPath
+		options: #( + optNonThreaded )
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> apiGciMoreTraversal: traversalBuffer [
 	^ self
 		ffiCall: #(int GciMoreTraversal(void* traversalBuffer))
+		module: libraryPath
+		options: #( + optNonThreaded )
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> apiGciStoreTrav: traversalBuffer flags: flags [
+	^ self
+		ffiCall: #(void GciStoreTrav(void *traversalBuffer, int flags))
 		module: libraryPath
 		options: #( + optNonThreaded )
 ]
@@ -38,4 +54,19 @@ GbsServerInterface >> apiGciTraverseOops: oopBuffer count: oopCount into: traver
 		ffiCall: #(int GciTraverseObjs(void* oopBuffer, int oopCount, void* traversalBuffer, int traversalLevel))
 		module: libraryPath
 		options: #( + optNonThreaded )
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> storeTraversalBuffer: aBuffer [
+	(aBuffer respondsTo: #withNativeTraversalBufferOn:do:) ifFalse: [
+		GbsError signal: 'Dirty store traversal buffer is not backed by a native GCI traversal buffer.' ].
+	^ aBuffer
+		withNativeTraversalBufferOn: self
+		do: [ :nativeBuffer |
+			self apiGciStoreTrav: nativeBuffer flags: aBuffer flags ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> supportsDirtyStoreTraversalBufferTransport [
+	^ true
 ]

@@ -188,6 +188,11 @@ GbsDirtyReplicateStoreTraversal >> dirtyObjects [
 	^ GbsMaterializedObjectDirtyTracker dirtyObjectsForSession: session
 ]
 
+{ #category : 'private - flushing' }
+GbsDirtyReplicateStoreTraversal >> dirtyStoreTraversalBufferForEntries: entries [
+	^ GbsDirtyStoreTraversalBuffer entries: entries session: session
+]
+
 { #category : 'private - entries' }
 GbsDirtyReplicateStoreTraversal >> entriesForDirtyObjects [
 	| entries |
@@ -213,8 +218,23 @@ GbsDirtyReplicateStoreTraversal >> flush [
 
 { #category : 'private - flushing' }
 GbsDirtyReplicateStoreTraversal >> flushEntries: entries [
+	(self shouldUseBinaryStoreTraversalBufferForEntries: entries) ifTrue: [
+		^ self flushEntriesWithBinaryStoreTraversalBuffer: entries ].
+	self transportRequiresBinary ifTrue: [
+		(self dirtyStoreTraversalBufferForEntries: entries) canProduceNativeTraversalBuffer ifFalse: [
+			self error: 'Dirty store traversal buffer transport is required, but this dirty batch cannot be encoded natively. Native dirty store traversal currently supports mapped Arrays, Associations, and OrderedCollections with OOP-addressable values.' ].
+		self error: 'Dirty store traversal buffer transport is required but unavailable.' ].
 	session addStoreTraversal: self.
 	^ [ session returnRemoteCommandOop: (self remoteCommandForEntries: entries) ]
+		ensure: [ session removeStoreTraversal: self ]
+]
+
+{ #category : 'private - flushing' }
+GbsDirtyReplicateStoreTraversal >> flushEntriesWithBinaryStoreTraversalBuffer: entries [
+	| buffer |
+	buffer := self dirtyStoreTraversalBufferForEntries: entries.
+	session addStoreTraversal: self.
+	^ [ session serverInterface storeTraversalBuffer: buffer ]
 		ensure: [ session removeStoreTraversal: self ]
 ]
 
@@ -228,6 +248,7 @@ GbsDirtyReplicateStoreTraversal >> kindForObject: anObject [
 	(anObject isKindOf: Association) ifTrue: [ ^ #association ].
 	(anObject isKindOf: Dictionary) ifTrue: [ ^ #dictionary ].
 	(anObject isKindOf: Array) ifTrue: [ ^ #array ].
+	anObject class == OrderedCollection ifTrue: [ ^ #orderedCollection ].
 	(anObject isKindOf: Bag) ifTrue: [ ^ #collection ].
 	(anObject isKindOf: Set) ifTrue: [ ^ #collection ].
 	(anObject isKindOf: OrderedCollection) ifTrue: [ ^ #collection ].
@@ -350,6 +371,11 @@ GbsDirtyReplicateStoreTraversal >> oopForObject: anObject [
 	^ GbsMaterializedObjectDirtyTracker oopForObject: anObject inSession: session
 ]
 
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> replicationPolicy [
+	^ [ GbsReplicationPolicy forSession: session ] on: Error do: [ nil ]
+]
+
 { #category : 'private - commands' }
 GbsDirtyReplicateStoreTraversal >> remoteCommandForEntries: entries [
 	| argumentNames argumentScripts body |
@@ -392,6 +418,37 @@ GbsDirtyReplicateStoreTraversal >> shouldMarshalConstructedObject: anObject [
 	(anObject class == IdentityDictionary) ifTrue: [ ^ true ].
 	(anObject class == Association) ifTrue: [ ^ true ].
 	^ false
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> shouldUseBinaryStoreTraversalBufferForEntries: entries [
+	| transport server buffer |
+	entries isEmpty ifTrue: [ ^ false ].
+	transport := self storeTraversalTransport.
+	((transport = #binary) or: [ transport = #binaryRequired ]) ifFalse: [ ^ false ].
+	server := [ session serverInterface ] on: Error do: [ nil ].
+	server ifNil: [ ^ false ].
+	(server respondsTo: #supportsDirtyStoreTraversalBufferTransport) ifFalse: [ ^ false ].
+	(server supportsDirtyStoreTraversalBufferTransport == true) ifFalse: [ ^ false ].
+	(server respondsTo: #storeTraversalBuffer:) ifFalse: [ ^ false ].
+	buffer := self dirtyStoreTraversalBufferForEntries: entries.
+	^ buffer canProduceNativeTraversalBuffer
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> storeTraversalTransport [
+	| policy |
+	policy := self replicationPolicy.
+	policy ifNil: [ ^ 'script' ].
+	(policy respondsTo: #storeTraversalTransport) ifFalse: [ ^ 'script' ].
+	(policy respondsTo: #storeTraversalTransportSymbol) ifTrue: [
+		^ policy storeTraversalTransportSymbol ].
+	^ (policy storeTraversalTransport ifNil: [ 'script' ]) asSymbol
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> transportRequiresBinary [
+	^ self storeTraversalTransport = #binaryRequired
 ]
 
 { #category : 'private - names' }

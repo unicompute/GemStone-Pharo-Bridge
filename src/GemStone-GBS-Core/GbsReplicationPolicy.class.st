@@ -5,8 +5,14 @@ Class {
 		'autoMarkDirty',
 		'blockReplicationPolicy',
 		'defaultFaultPolicy',
+		'asyncSignalPollingEnabled',
+		'eventPollingFrequency',
+		'eventPriority',
 		'faultLevelRpc',
+		'freeOopBatchSize',
 		'freeSlotsOnStubbing',
+		'serverMapMode',
+		'storeTraversalTransport',
 		'traversalBufferSize'
 	],
 	#category : 'GemStone-GBS-Core',
@@ -47,6 +53,16 @@ GbsReplicationPolicy class >> resetForSession: aSession [
 ]
 
 { #category : 'accessing' }
+GbsReplicationPolicy >> asyncSignalPollingEnabled [
+	^ asyncSignalPollingEnabled
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> asyncSignalPollingEnabled: aBoolean [
+	asyncSignalPollingEnabled := aBoolean
+]
+
+{ #category : 'accessing' }
 GbsReplicationPolicy >> autoMarkDirty [
 	^ autoMarkDirty
 ]
@@ -63,7 +79,19 @@ GbsReplicationPolicy >> blockReplicationPolicy [
 
 { #category : 'accessing' }
 GbsReplicationPolicy >> blockReplicationPolicy: aString [
+	self
+		validatePolicyValue: aString
+		allowed: #(#replicate #callback)
+		label: 'Block replication policy'.
 	blockReplicationPolicy := aString
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> blockReplicationPolicySymbol [
+	^ self
+		normalizedPolicySymbolFrom: blockReplicationPolicy
+		allowed: #(#replicate #callback)
+		default: #replicate
 ]
 
 { #category : 'accessing' }
@@ -73,7 +101,42 @@ GbsReplicationPolicy >> defaultFaultPolicy [
 
 { #category : 'accessing' }
 GbsReplicationPolicy >> defaultFaultPolicy: aString [
+	self
+		validatePolicyValue: aString
+		allowed: #(#lazy #immediate #eager)
+		label: 'Default fault policy'.
 	defaultFaultPolicy := aString
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> defaultFaultPolicySymbol [
+	| symbol |
+	symbol := self
+		normalizedPolicySymbolFrom: defaultFaultPolicy
+		allowed: #(#lazy #immediate #eager)
+		default: #lazy.
+	symbol = #eager ifTrue: [ ^ #immediate ].
+	^ symbol
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> eventPollingFrequency [
+	^ eventPollingFrequency
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> eventPollingFrequency: anInteger [
+	eventPollingFrequency := anInteger
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> eventPriority [
+	^ eventPriority
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> eventPriority: anInteger [
+	eventPriority := anInteger
 ]
 
 { #category : 'accessing' }
@@ -84,6 +147,16 @@ GbsReplicationPolicy >> faultLevelRpc [
 { #category : 'accessing' }
 GbsReplicationPolicy >> faultLevelRpc: anInteger [
 	faultLevelRpc := anInteger
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> freeOopBatchSize [
+	^ freeOopBatchSize
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> freeOopBatchSize: anInteger [
+	freeOopBatchSize := anInteger
 ]
 
 { #category : 'accessing' }
@@ -106,10 +179,60 @@ GbsReplicationPolicy >> initializeFromConfiguration: aConfiguration [
 	autoMarkDirty := self valueAt: #autoMarkDirty fromConfiguration: aConfiguration default: true.
 	blockReplicationPolicy := self valueAt: #blockReplicationPolicy fromConfiguration: aConfiguration default: 'replicate'.
 	defaultFaultPolicy := self valueAt: #defaultFaultPolicy fromConfiguration: aConfiguration default: 'lazy'.
+	asyncSignalPollingEnabled := self valueAt: #asyncSignalPollingEnabled fromConfiguration: aConfiguration default: false.
+	eventPollingFrequency := self valueAt: #eventPollingFrequency fromConfiguration: aConfiguration default: 300.
+	eventPriority := self valueAt: #eventPriority fromConfiguration: aConfiguration default: 3.
 	faultLevelRpc := self valueAt: #faultLevelRpc fromConfiguration: aConfiguration default: 4.
+	freeOopBatchSize := self valueAt: #freeOopBatchSize fromConfiguration: aConfiguration default: 256.
 	freeSlotsOnStubbing := self valueAt: #freeSlotsOnStubbing fromConfiguration: aConfiguration default: true.
+	serverMapMode := self valueAt: #serverMapMode fromConfiguration: aConfiguration default: 'weak'.
+	storeTraversalTransport := self valueAt: #storeTraversalTransport fromConfiguration: aConfiguration default: 'script'.
 	traversalBufferSize := self valueAt: #traversalBufferSize fromConfiguration: aConfiguration default: 250000.
 	^ self
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> serverMapMode [
+	^ serverMapMode
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> serverMapMode: aString [
+	self
+		validatePolicyValue: aString
+		allowed: #(#weak #strong)
+		label: 'Server map mode'.
+	serverMapMode := aString
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> serverMapModeSymbol [
+	^ self
+		normalizedPolicySymbolFrom: serverMapMode
+		allowed: #(#weak #strong)
+		default: #weak
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> storeTraversalTransport [
+	^ storeTraversalTransport
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> storeTraversalTransport: aString [
+	self
+		validatePolicyValue: aString
+		allowed: #(#script #binary #binaryRequired)
+		label: 'Store traversal transport'.
+	storeTraversalTransport := aString
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> storeTraversalTransportSymbol [
+	^ self
+		normalizedPolicySymbolFrom: storeTraversalTransport
+		allowed: #(#script #binary #binaryRequired)
+		default: #script
 ]
 
 { #category : 'accessing' }
@@ -123,6 +246,15 @@ GbsReplicationPolicy >> traversalBufferSize: anInteger [
 ]
 
 { #category : 'private' }
+GbsReplicationPolicy >> normalizedPolicySymbolFrom: aValue allowed: allowedSymbols default: defaultSymbol [
+	| symbol |
+	aValue ifNil: [ ^ defaultSymbol ].
+	symbol := aValue asSymbol.
+	(allowedSymbols includes: symbol) ifFalse: [ ^ defaultSymbol ].
+	^ symbol
+]
+
+{ #category : 'private' }
 GbsReplicationPolicy >> valueAt: selector fromConfiguration: aConfiguration default: defaultValue [
 	aConfiguration ifNil: [ ^ defaultValue ].
 	(aConfiguration respondsTo: selector) ifTrue: [
@@ -130,4 +262,13 @@ GbsReplicationPolicy >> valueAt: selector fromConfiguration: aConfiguration defa
 	(aConfiguration respondsTo: #valueAt:ifAbsent:) ifTrue: [
 		^ aConfiguration valueAt: selector ifAbsent: defaultValue ].
 	^ defaultValue
+]
+
+{ #category : 'private' }
+GbsReplicationPolicy >> validatePolicyValue: aValue allowed: allowedSymbols label: labelString [
+	| symbol |
+	aValue ifNil: [ ^ self ].
+	symbol := aValue asSymbol.
+	(allowedSymbols includes: symbol) ifTrue: [ ^ self ].
+	self error: labelString, ' must be one of ', allowedSymbols printString
 ]

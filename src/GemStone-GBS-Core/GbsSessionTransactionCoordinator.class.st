@@ -38,8 +38,18 @@ GbsSessionTransactionCoordinator >> abortTransaction [
 		[ session evaluateSystemSelector: #abortTransaction withArguments: #() ]
 			on: Error
 			do: [ GbsError signal: 'Failed to abort transaction.' ] ].
+	self drainPendingAbortError.
 	self resetClientStateAfterSuccessfulTransaction.
 	^ true
+]
+
+{ #category : 'transactions' }
+GbsSessionTransactionCoordinator >> drainPendingAbortError [
+	(session respondsTo: #checkForError) ifFalse: [ ^ self ].
+	[ session checkForError ]
+		on: Error
+		do: [ :ex | nil ].
+	^ self
 ]
 
 { #category : 'transactions' }

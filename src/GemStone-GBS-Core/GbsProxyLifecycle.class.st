@@ -7,6 +7,7 @@ Class {
 
 { #category : 'tracking' }
 GbsProxyLifecycle class >> currentGenerationForSession: aSession [
+	(self supportsLifecycleRegistriesForSession: aSession) ifFalse: [ ^ 0 ].
 	^ (aSession class weakRegistryNamed: #GbsSessionProxyLifecycleGenerations)
 		at: aSession
 		ifAbsentPut: [ 0 ]
@@ -23,6 +24,7 @@ GbsProxyLifecycle class >> generationForProxy: aProxy inSession: aSession [
 { #category : 'tracking' }
 GbsProxyLifecycle class >> invalidateSession: aSession [
 	| registry generation |
+	(self supportsLifecycleRegistriesForSession: aSession) ifFalse: [ ^ 0 ].
 	registry := aSession class weakRegistryNamed: #GbsSessionProxyLifecycleGenerations.
 	generation := (registry at: aSession ifAbsent: [ 0 ]) + 1.
 	registry at: aSession put: generation.
@@ -47,6 +49,7 @@ GbsProxyLifecycle class >> newIdentityRegistry [
 
 { #category : 'registries' }
 GbsProxyLifecycle class >> proxyGenerationRegistryForSession: aSession [
+	(self supportsLifecycleRegistriesForSession: aSession) ifFalse: [ ^ nil ].
 	^ (aSession class weakRegistryNamed: #GbsSessionProxyLifecycleProxyGenerations)
 		at: aSession
 		ifAbsentPut: [ self newIdentityRegistry ]
@@ -54,6 +57,7 @@ GbsProxyLifecycle class >> proxyGenerationRegistryForSession: aSession [
 
 { #category : 'registries' }
 GbsProxyLifecycle class >> proxyGenerationRegistryForSessionIfPresent: aSession [
+	(self supportsLifecycleRegistriesForSession: aSession) ifFalse: [ ^ nil ].
 	^ (aSession class weakRegistryNamed: #GbsSessionProxyLifecycleProxyGenerations)
 		at: aSession
 		ifAbsent: [ nil ]
@@ -61,9 +65,18 @@ GbsProxyLifecycle class >> proxyGenerationRegistryForSessionIfPresent: aSession 
 
 { #category : 'tracking' }
 GbsProxyLifecycle class >> registerProxy: aProxy forSession: aSession [
+	| registry |
 	aSession ifNil: [ ^ aProxy ].
-	(self proxyGenerationRegistryForSession: aSession)
+	registry := self proxyGenerationRegistryForSession: aSession.
+	registry ifNil: [ ^ aProxy ].
+	registry
 		at: aProxy
 		put: (self currentGenerationForSession: aSession).
 	^ aProxy
+]
+
+{ #category : 'testing' }
+GbsProxyLifecycle class >> supportsLifecycleRegistriesForSession: aSession [
+	aSession ifNil: [ ^ false ].
+	^ aSession class respondsTo: #weakRegistryNamed:
 ]

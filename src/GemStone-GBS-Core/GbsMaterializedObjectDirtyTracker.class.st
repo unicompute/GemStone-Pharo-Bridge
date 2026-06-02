@@ -67,7 +67,7 @@ GbsMaterializedObjectDirtyTracker class >> isSuspendedForSession: aSession [
 { #category : 'dirty tracking' }
 GbsMaterializedObjectDirtyTracker class >> markObject: anObject dirtyInSession: aSession [
 	(self isSuspendedForSession: aSession) ifTrue: [ ^ anObject ].
-	(self policyAllowsAutoMarkDirtyForSession: aSession) ifFalse: [ ^ anObject ].
+	(self policyAllowsAutoMarkDirtyFor: anObject inSession: aSession) ifFalse: [ ^ anObject ].
 	(self oopForObject: anObject inSession: aSession) ifNil: [ ^ anObject ].
 	aSession dirtyPool markDirty: anObject.
 	^ anObject
@@ -105,6 +105,18 @@ GbsMaterializedObjectDirtyTracker class >> oopForObject: anObject inSession: aSe
 ]
 
 { #category : 'dirty tracking' }
+GbsMaterializedObjectDirtyTracker class >> policyAllowsAutoMarkDirtyFor: anObject inSession: aSession [
+	| manager scheme |
+	(self policyAllowsAutoMarkDirtyForSession: aSession) ifFalse: [ ^ false ].
+	manager := [ GbxClampManager forSession: aSession ] on: Error do: [ nil ].
+	manager ifNil: [ ^ true ].
+	scheme := manager replicationSchemeFor: anObject.
+	scheme ifNil: [ ^ true ].
+	(scheme respondsTo: #shouldAutoMarkDirty) ifFalse: [ ^ true ].
+	^ scheme shouldAutoMarkDirty
+]
+
+{ #category : 'dirty tracking' }
 GbsMaterializedObjectDirtyTracker class >> policyAllowsAutoMarkDirtyForSession: aSession [
 	| policy |
 	policy := [ GbsReplicationPolicy forSession: aSession ] on: Error do: [ nil ].
@@ -123,6 +135,7 @@ GbsMaterializedObjectDirtyTracker class >> registerObject: anObject forSession: 
 GbsMaterializedObjectDirtyTracker class >> registerObject: anObject oop: anOop session: aSession [
 	(self canTrackObject: anObject) ifFalse: [ ^ anObject ].
 	(self objectOopRegistryForSession: aSession) at: anObject put: anOop.
+	GbsSessionLifecycleManager rememberObject: anObject oop: anOop session: aSession.
 	self registerObject: anObject forSession: aSession.
 	^ anObject
 ]
@@ -144,6 +157,7 @@ GbsMaterializedObjectDirtyTracker class >> resetForSession: aSession [
 	(aSession class weakRegistryNamed: #GbsSessionDirtyPools)
 		removeKey: aSession
 		ifAbsent: [ ].
+	GbsSessionLifecycleManager resetForSession: aSession.
 	^ aSession
 ]
 

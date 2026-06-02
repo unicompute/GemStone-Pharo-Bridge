@@ -4,7 +4,7 @@ Extension { #name : 'Array' }
 Array >> at: index put: value [
 	| result |
 	result := self basicAt: index put: value.
-	self gbsConsiderModified.
+	self gbxConsiderModified.
 	^ result
 ]
 
@@ -12,4 +12,3 @@ Array >> at: index put: value [
 Array >> gbxDelegate [
 	^ GbsMaterializedObjectDirtyTracker delegateForObject: self
 ]
-

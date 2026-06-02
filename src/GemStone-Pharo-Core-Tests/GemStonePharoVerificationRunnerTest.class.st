@@ -251,6 +251,28 @@ GemStonePharoVerificationRunnerTest >> testTranscriptProxyInstallScriptUsesDedic
 ]
 
 { #category : 'tests' }
+GemStonePharoVerificationRunnerTest >> testTranscriptProxyInstallDrainsPendingSessionErrorBeforeEvaluating [
+	| session drained evaluated |
+	session := CoreMockGbsSession new.
+	drained := false.
+	evaluated := false.
+	session stubs
+		at: #checkForError put: [
+			drained
+				ifFalse: [
+					drained := true.
+					Error signal: 'stale GemStone error' ]
+				ifTrue: [ nil ] ];
+		at: #evaluate put: [ :script |
+			evaluated := drained.
+			true ].
+
+	self assert: (runner ensureTranscriptProxyInstalledOn: session).
+	self assert: drained.
+	self assert: evaluated
+]
+
+{ #category : 'tests' }
 GemStonePharoVerificationRunnerTest >> testStandalonePreflightFailsWhenTopazLoginFails [
 	| gciCalled result |
 	gciCalled := false.
