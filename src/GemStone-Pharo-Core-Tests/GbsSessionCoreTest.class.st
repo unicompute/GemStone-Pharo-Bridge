@@ -427,6 +427,30 @@ GbsSessionCoreTest >> testReplicationPolicyCanDisableAutoMarkDirtyForSession [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testReplicationPolicyResetAfterLogout [
+	| mockSession policy |
+	mockSession := CoreMockGbsSession new.
+	policy := GbsReplicationPolicy forSession: mockSession.
+	policy autoMarkDirty: false.
+
+	mockSession resetAfterLogout.
+
+	self deny: (GbsReplicationPolicy forSession: mockSession) == policy.
+	self assert: (GbsReplicationPolicy forSession: mockSession) autoMarkDirty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testTraversalBufferSizeCanComeFromReplicationPolicy [
+	| mockSession reader policy |
+	mockSession := CoreMockGbsSession new.
+	reader := GbsMaterializationTraversalBufferReader on: mockSession.
+	policy := GbsReplicationPolicy forSession: mockSession.
+	policy traversalBufferSize: 4096.
+
+	self assert: reader traversalBufferBytesFromReplicationPolicy equals: 4096
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testReplicationPolicyIsSessionScoped [
 	| disabledSession enabledSession disabledArray enabledArray |
 	disabledSession := CoreMockGbsSession new.
@@ -1236,6 +1260,26 @@ GbsSessionCoreTest >> testRemoteCollectionAsArrayOopIsCached [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testRemoteCollectionElementOopsAvoidsAsArrayConversion [
+	| mockSession reader fetched metrics |
+	mockSession := CoreMockGbsSession new.
+	reader := mockSession materializer remoteReader.
+	mockSession stubs at: #returnRemoteCommandBody put: [ :body :literalBindings :oopBindings | self fail ].
+	mockSession stubs at: #executeAndFetch put: [ :script |
+		self deny: (script includesSubstring: 'object asArray').
+		self assert: (script includesSubstring: 'object do: [ :each | count := count + 1 ]').
+		'9100', Character tab asString, '2', Character tab asString,
+			'9040', Character tab asString, '9056', Character lf asString ].
+
+	fetched := reader remoteCollectionElementOopsForOops: #(9100).
+
+	self assert: (fetched at: 9100) equals: #(9040 9056).
+	metrics := mockSession materializationMetrics.
+	self assert: (metrics at: #collectionElementBatchCalls ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #collectionArrayBatchCalls ifAbsent: [ 0 ]) equals: 0
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testTraversalBufferSizeIsAlignedAndMinimumBounded [
 	| mockSession reader previous hadPrevious |
 	mockSession := CoreMockGbsSession new.
@@ -1373,7 +1417,6 @@ GbsSessionCoreTest >> testFetchDeepPreservesCyclicDictionaryIdentity [
 GbsSessionCoreTest >> testFetchDeepPreservesCyclicSetIdentity [
 	| mockSession result |
 	mockSession := CoreMockGbsSession new.
-	mockSession stubs at: #supportsStructuredMaterializationBatchBuffers put: true.
 	mockSession stubs at: #executeAndFetch put: [ :script | | response |
 		response := nil.
 		((script includesSubstring: 'oops do:')
@@ -1384,9 +1427,9 @@ GbsSessionCoreTest >> testFetchDeepPreservesCyclicSetIdentity [
 			and: [ script includesSubstring: 'text := object asString' ]) ifTrue: [
 			response := self encodedStringBatchLineForOop: 9040 value: 'marker' ].
 		((script includesSubstring: 'oops do:')
-			and: [ script includesSubstring: 'object size asString' ]) ifTrue: [
-			(script includesSubstring: '9310') ifTrue: [
-				response := '9310', Character tab asString, '2', Character tab asString,
+			and: [ script includesSubstring: 'object do: [ :each | count := count + 1 ]' ]) ifTrue: [
+			(script includesSubstring: '9300') ifTrue: [
+				response := '9300', Character tab asString, '2', Character tab asString,
 					'9300', Character tab asString, '9040', Character lf asString ] ].
 		response ifNil: [
 			(script includesSubstring: 'class name asString') ifTrue: [
@@ -1394,21 +1437,6 @@ GbsSessionCoreTest >> testFetchDeepPreservesCyclicSetIdentity [
 				(script includesSubstring: '9040') ifTrue: [ response := 'String' ] ] ].
 		response ifNil: [ self fail ].
 		response ].
-	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
-		| response |
-		response := nil.
-		((script includesSubstring: 'buffer := Array new: oops size')
-			and: [ script includesSubstring: 'object asArray' ]) ifTrue: [ response := 9390 ].
-		(response isNil and: [ script includesSubstring: 'object asArray' ]) ifTrue: [ response := 9310 ].
-		response ifNil: [ Error signal: 'No return-OOP stub for this script.' ].
-		response ].
-	mockSession stubs at: #apiGciFetchSize put: [ :oop |
-		oop = 9390 ifTrue: [ 1 ] ifFalse: [ self fail ] ].
-	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
-		self assert: oop equals: 9390.
-		self assert: start equals: 1.
-		self assert: count equals: 1.
-		#(9310) ].
 	mockSession fetchDeep.
 
 	result := mockSession fetchObject: 9300.
@@ -1791,11 +1819,8 @@ GbsSessionCoreTest >> testFetchDeepBatchesNestedNonArrayCollections [
 							nextPutAll: entry second;
 							nextPut: Character lf ] ] ] ].
 		((script includesSubstring: 'oops do:')
-			and: [ script includesSubstring: 'array := object asArray' ]) ifTrue: [
-			response := '9100', Character tab asString, '9110', Character lf asString ].
-		((script includesSubstring: 'oops do:')
-			and: [ script includesSubstring: 'object size asString' ]) ifTrue: [
-			response := '9110', Character tab asString, '2', Character tab asString, '9040', Character tab asString, '9056', Character lf asString ].
+			and: [ script includesSubstring: 'object do: [ :each | count := count + 1 ]' ]) ifTrue: [
+			response := '9100', Character tab asString, '2', Character tab asString, '9040', Character tab asString, '9056', Character lf asString ].
 		((script includesSubstring: 'oops do:')
 			and: [ script includesSubstring: 'object associations do:' ]) ifTrue: [
 			response := '9200', Character tab asString, '1', Character tab asString, '9040', Character tab asString, '9056', Character lf asString ].
@@ -1826,7 +1851,8 @@ GbsSessionCoreTest >> testFetchDeepBatchesNestedNonArrayCollections [
 	self assert: association key equals: 'vip'.
 	self assert: association value equals: 'gold'.
 	metrics := mockSession materializationMetrics.
-	self assert: (metrics at: #collectionArrayBatchCalls ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #collectionElementBatchCalls ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #collectionArrayBatchCalls ifAbsent: [ 0 ]) equals: 0.
 	self assert: (metrics at: #dictionaryPairBatchCalls ifAbsent: [ 0 ]) equals: 1.
 	self assert: (metrics at: #associationPairBatchCalls ifAbsent: [ 0 ]) equals: 1.
 	self assert: (metrics at: #scalarStringBatchObjectCount ifAbsent: [ 0 ]) equals: 2
@@ -4255,6 +4281,54 @@ GbsSessionCoreTest >> testAbortTransactionInvalidatesRepositoryRoots [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testCommitTransactionClearsDirtyReplicatesAndMaterializedIdentity [
+	| mockSession first second |
+	mockSession := self materializationMockSession.
+	mockSession fetchDeep.
+	first := mockSession fetchObject: 9000.
+	first at: 1 put: 'changed'.
+	self assert: (mockSession dirtyMaterializedObjectOops asSet includes: 9000).
+
+	self assert: mockSession commitTransaction.
+	second := mockSession fetchObject: 9000.
+
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty.
+	self deny: second == first
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testAbortTransactionClearsDirtyReplicatesAndMaterializedIdentity [
+	| mockSession first second |
+	mockSession := self materializationMockSession.
+	mockSession fetchDeep.
+	first := mockSession fetchObject: 9000.
+	first at: 1 put: 'changed'.
+	self assert: (mockSession dirtyMaterializedObjectOops asSet includes: 9000).
+
+	self assert: mockSession abortTransaction.
+	second := mockSession fetchObject: 9000.
+
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty.
+	self deny: second == first
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFailedCommitKeepsDirtyReplicatesAndMaterializedIdentity [
+	| mockSession first second |
+	mockSession := self materializationMockSession.
+	mockSession stubs at: #gciCommit put: 0.
+	mockSession fetchDeep.
+	first := mockSession fetchObject: 9000.
+	first at: 1 put: 'changed'.
+
+	self deny: mockSession commitTransaction.
+	second := mockSession fetchObject: 9000.
+
+	self assert: (mockSession dirtyMaterializedObjectOops asSet includes: 9000).
+	self assert: second == first
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testExecuteScriptAndReturnOopUsesServerInterface [
 	| mockSession result |
 	mockSession := CoreMockGbsSession new.
@@ -4325,6 +4399,37 @@ GbsSessionCoreTest >> testReconnectCreatesFreshProxyIdentityMap [
 
 	self deny: second == first.
 	self assert: second session == mockSession
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testOldProxyAfterReconnectSignalsStaleLifecycleError [
+	| mockSession oldProxy |
+	mockSession := CoreMockGbsSession new.
+	mockSession instVarNamed: 'isLoggedIn' put: true.
+	oldProxy := mockSession resultFor: 1001.
+
+	mockSession resetAfterLogout.
+	mockSession instVarNamed: 'isLoggedIn' put: true.
+
+	self
+		should: [ oldProxy ensureSessionIsUsable ]
+		raise: GbsError
+		withExceptionDo: [ :ex |
+			self assert: (ex messageText includesSubstring: 'previous session lifecycle') ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFreshProxyAfterReconnectUsesCurrentLifecycle [
+	| mockSession proxy |
+	mockSession := CoreMockGbsSession new.
+	mockSession instVarNamed: 'isLoggedIn' put: true.
+	proxy := mockSession resultFor: 1001.
+
+	mockSession resetAfterLogout.
+	mockSession instVarNamed: 'isLoggedIn' put: true.
+	proxy := mockSession resultFor: 1001.
+
+	self assert: proxy ensureSessionIsUsable
 ]
 
 { #category : 'tests' }

@@ -1,6 +1,15 @@
 Extension { #name : 'GbsProxy' }
 
 { #category : '*GemStone-GBS-Core' }
+GbsProxy class >> oop: anInteger session: aGbsSession [
+	| proxy |
+	proxy := self basicNew.
+	proxy oop: anInteger.
+	proxy session: aGbsSession.
+	^ GbsProxyLifecycle registerProxy: proxy forSession: aGbsSession
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsProxy >> == anObject [
 	"Direct identity check using the Pharo identity primitive"
 
@@ -15,6 +24,17 @@ GbsProxy >> == anObject [
 { #category : '*GemStone-GBS-Core' }
 GbsProxy >> class [
 	^ super class
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsProxy >> ensureSessionIsUsable [
+	session ifNil: [
+		GbsError signal: 'GemStone proxy has no session.' ].
+	((session respondsTo: #isLoggedIn) and: [ session isLoggedIn ~= true ]) ifTrue: [
+		GbsError signal: 'GemStone proxy session is disconnected.' ].
+	(GbsProxyLifecycle isProxyCurrent: self forSession: session) ifFalse: [
+		GbsError signal: 'GemStone proxy belongs to a previous session lifecycle.' ].
+	^ true
 ]
 
 { #category : '*GemStone-GBS-Core' }

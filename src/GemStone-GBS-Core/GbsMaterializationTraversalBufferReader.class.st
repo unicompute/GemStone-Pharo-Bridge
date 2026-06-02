@@ -184,12 +184,23 @@ GbsMaterializationTraversalBufferReader >> traversalBufferBytes [
 				do: [ Dictionary new ].
 			env
 				at: 'GBS_MATERIALIZATION_TRAVERSAL_BUFFER_BYTES'
-				ifAbsent: [ self defaultTraversalBufferBytes ] ].
+				ifAbsent: [ self traversalBufferBytesFromReplicationPolicy ] ].
 	value := [ raw asInteger ]
 		on: Error
 		do: [ self defaultTraversalBufferBytes ].
 	value < 2048 ifTrue: [ value := 2048 ].
 	^ self alignedByteCount: value
+]
+
+{ #category : 'accessing' }
+GbsMaterializationTraversalBufferReader >> traversalBufferBytesFromReplicationPolicy [
+	| policy |
+	policy := [ GbsReplicationPolicy forSession: session ]
+		on: Error
+		do: [ nil ].
+	(policy notNil and: [ policy respondsTo: #traversalBufferSize ]) ifTrue: [
+		^ policy traversalBufferSize ].
+	^ self defaultTraversalBufferBytes
 ]
 
 { #category : 'private' }

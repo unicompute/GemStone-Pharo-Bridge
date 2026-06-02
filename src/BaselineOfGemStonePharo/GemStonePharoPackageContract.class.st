@@ -194,6 +194,7 @@ GemStonePharoPackageContract >> packageOwnershipInstanceBehaviorFamilySpecs [
 		{ #GbsPlaygroundMenuSessionStateKeysReportCommand. #instance. #coreToolsOnly }.
 		{ #GbsPlaygroundMenuStaleTypedWrapperReportCommand. #instance. #coreToolsOnly }.
 		{ #GbsPlaygroundMenuTypedWrapperLifecycleReportCommand. #instance. #coreToolsOnly }.
+		{ #GbsProxyLifecycle. #instance. #coreOnly }.
 		{ #GbsProxyOnlyMaterializationProfile. #instance. #coreOnly }.
 		{ #GbsRemoteDebugProcessFacade. #instance. #coreOnly }.
 		{ #GbsRemoteCommand. #instance. #coreOnly }.

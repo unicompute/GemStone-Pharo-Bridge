@@ -289,11 +289,12 @@ GbsSessionMaterializer >> materializeRuntimeValue: anObject [
 
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeSequenceableCollectionOop: anOop using: aBlock withProfile: aProfile depth: anInteger seen: seenOops [
-	| localArray |
+	| elementOops localArray |
+	elementOops := self remoteCollectionElementOopsForOop: anOop.
 	localArray := self
-		materializeArrayOop: (self remoteCollectionAsArrayOop: anOop)
+		materializeOops: elementOops
 		withProfile: aProfile
-		depth: anInteger
+		depth: anInteger + 1
 		seen: seenOops.
 	^ aBlock value: localArray
 ]

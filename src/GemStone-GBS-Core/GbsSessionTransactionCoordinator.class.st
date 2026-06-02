@@ -38,11 +38,19 @@ GbsSessionTransactionCoordinator >> abortTransaction [
 		[ session evaluateSystemSelector: #abortTransaction withArguments: #() ]
 			on: Error
 			do: [ GbsError signal: 'Failed to abort transaction.' ] ].
+	self resetClientStateAfterSuccessfulTransaction.
+	^ true
+]
+
+{ #category : 'transactions' }
+GbsSessionTransactionCoordinator >> resetClientStateAfterSuccessfulTransaction [
 	GbsSessionManager invalidateStaleTypedWrapperClassesForSession: session.
 	GbsSessionManager clearTypedWrapperFreshnessCacheForSession: session.
 	session materializer clearRemoteClassNameCache.
 	session invalidateRepositoryRoots.
-	^ true
+	session resetMaterializedObjectDirtyTracking.
+	session resetMaterializedObjectCache.
+	^ session
 ]
 
 { #category : 'transactions' }
@@ -69,10 +77,7 @@ GbsSessionTransactionCoordinator >> commitTransaction [
 
 	result := session gciCommit.
 	result = 1 ifTrue: [
-		GbsSessionManager invalidateStaleTypedWrapperClassesForSession: session.
-		GbsSessionManager clearTypedWrapperFreshnessCacheForSession: session.
-		session materializer clearRemoteClassNameCache.
-		session invalidateRepositoryRoots ].
+		self resetClientStateAfterSuccessfulTransaction ].
 	^ result = 1
 ]
 

@@ -35,6 +35,9 @@ GbsSessionMaterializationRemoteReader >> clearRemoteClassNameCache [
 	(session class weakRegistryNamed: #GbsSessionRemoteCollectionAsArrayOopCaches)
 		at: session
 		put: Dictionary new.
+	(session class weakRegistryNamed: #GbsSessionRemoteCollectionElementOopsCaches)
+		at: session
+		put: Dictionary new.
 	(session class weakRegistryNamed: #GbsSessionRemoteDictionaryAssociationOopPairCaches)
 		at: session
 		put: Dictionary new.
@@ -116,8 +119,18 @@ GbsSessionMaterializationRemoteReader >> parseClassNameLines: aString [
 
 { #category : 'private' }
 GbsSessionMaterializationRemoteReader >> parseArrayElementOopLines: aString [
+	^ self parseElementOopLines: aString label: 'array-element text batch'
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> parseCollectionElementOopLines: aString [
+	^ self parseElementOopLines: aString label: 'collection-element text batch'
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> parseElementOopLines: aString label: labelString [
 	| elementOopsByOop |
-	self checkMaterializationBatchBytes: aString asString size label: 'array-element text batch'.
+	self checkMaterializationBatchBytes: aString asString size label: labelString.
 	elementOopsByOop := Dictionary new.
 	aString asString lines do: [ :line |
 		line isEmpty ifFalse: [
@@ -1411,6 +1424,141 @@ GbsSessionMaterializationRemoteReader >> remoteCollectionAsArrayOopCache [
 	^ (session class weakRegistryNamed: #GbsSessionRemoteCollectionAsArrayOopCaches)
 		at: session
 		ifAbsentPut: [ Dictionary new ]
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteCollectionElementOopsForOop: anOop [
+	^ self remoteCollectionElementOopsCache
+		at: anOop
+		ifAbsentPut: [
+			[ (self remoteCollectionElementOopDictionaryForOops: { anOop }) at: anOop ]
+				on: Error
+				do: [ self remoteCollectionElementOopsViaAsArrayForOop: anOop ] ]
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteCollectionElementOopsForOops: oopCollection [
+	| result cache missing batches |
+	result := Dictionary new.
+	cache := self remoteCollectionElementOopsCache.
+	missing := OrderedCollection new.
+	oopCollection do: [ :oop |
+		(cache includesKey: oop)
+			ifTrue: [ result at: oop put: (cache at: oop) ]
+			ifFalse: [
+				(missing includes: oop) ifFalse: [ missing add: oop ] ] ].
+	missing isEmpty ifTrue: [ ^ result ].
+	batches := self batchesForOops: missing.
+	batches do: [ :batch |
+		| fetched |
+		fetched := self remoteCollectionElementOopDictionaryForOopsAdaptive: batch.
+		batch do: [ :oop |
+			| elementOops |
+			elementOops := fetched
+				at: oop
+				ifAbsent: [ self remoteCollectionElementOopsViaAsArrayForOop: oop ].
+			cache at: oop put: elementOops.
+			result at: oop put: elementOops ] ].
+	^ result
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializationRemoteReader >> remoteCollectionElementOopsCache [
+	^ (session class weakRegistryNamed: #GbsSessionRemoteCollectionElementOopsCaches)
+		at: session
+		ifAbsentPut: [ Dictionary new ]
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteCollectionElementOopDictionaryForOops: oopCollection [
+	| fetched total |
+	self incrementMaterializationMetric: #collectionElementBatchCalls.
+	self incrementMaterializationMetric: #collectionElementBatchObjectCount by: oopCollection size.
+	fetched := self
+		recordMillisecondsForMetric: #collectionElementBatchMs
+		during: [
+			[
+				self arrayElementOopDictionaryFromStructuredSlots: (self
+					structuredBatchSlotsForBody: '| sizes total buffer offset object count |
+sizes := Array new: oops size.
+total := 0.
+1 to: oops size do: [ :oopIndex |
+	object := Object _objectForOop: (oops at: oopIndex).
+	count := 0.
+	object do: [ :each | count := count + 1 ].
+	sizes at: oopIndex put: count.
+	total := total + count + 1 ].
+buffer := Array new: total.
+offset := 1.
+1 to: oops size do: [ :oopIndex |
+	object := Object _objectForOop: (oops at: oopIndex).
+	buffer at: offset put: (sizes at: oopIndex).
+	offset := offset + 1.
+	object do: [ :each |
+		buffer at: offset put: each.
+		offset := offset + 1 ] ].
+buffer'
+					oopCollection: oopCollection)
+					forOops: oopCollection ]
+				on: Error
+				do: [
+					self incrementMaterializationMetric: #structuredBatchFallbacks.
+					self parseCollectionElementOopLines: (session
+						fetchRemoteCommandBody: '| stream object count |
+stream := WriteStream on: String new.
+oops do: [ :oop |
+	object := Object _objectForOop: oop.
+	count := 0.
+	object do: [ :each | count := count + 1 ].
+	stream
+		nextPutAll: oop asString;
+		nextPut: Character tab;
+		nextPutAll: count asString.
+	object do: [ :each |
+		stream
+			nextPut: Character tab;
+			nextPutAll: each asOop asString ].
+	stream nextPut: Character lf ].
+stream contents'
+						literalBindings: (Dictionary new
+							at: 'oops' put: oopCollection asArray;
+							yourself)
+						oopBindings: Dictionary new
+						context: 20) ] ].
+	total := 0.
+	fetched valuesDo: [ :each | total := total + each size ].
+	self incrementMaterializationMetric: #collectionElementBatchOopCount by: total.
+	^ fetched
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteCollectionElementOopDictionaryForOopsAdaptive: oopCollection [
+	^ [ self remoteCollectionElementOopDictionaryForOops: oopCollection ]
+		on: Error
+		do: [ :ex |
+			| left right merged splitIndex singleton |
+			self incrementMaterializationMetric: #collectionElementBatchFallbacks.
+			oopCollection size <= 1 ifTrue: [
+				singleton := Dictionary new.
+				singleton
+					at: oopCollection first
+					put: (self remoteCollectionElementOopsViaAsArrayForOop: oopCollection first).
+				singleton ] ifFalse: [
+				self incrementMaterializationMetric: #collectionElementBatchSplits.
+				splitIndex := oopCollection size // 2.
+				left := oopCollection copyFrom: 1 to: splitIndex.
+				right := oopCollection copyFrom: splitIndex + 1 to: oopCollection size.
+				merged := self remoteCollectionElementOopDictionaryForOopsAdaptive: left.
+				(self remoteCollectionElementOopDictionaryForOopsAdaptive: right)
+					associationsDo: [ :association |
+						merged at: association key put: association value ].
+				merged ] ]
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteCollectionElementOopsViaAsArrayForOop: anOop [
+	self incrementMaterializationMetric: #collectionElementFallbackCalls.
+	^ self remoteArrayElementOopsForOop: (self remoteCollectionAsArrayOop: anOop)
 ]
 
 { #category : 'remote access' }

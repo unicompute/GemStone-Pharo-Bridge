@@ -426,29 +426,18 @@ GbsSessionMaterializer >> materializeArrayOops: oopCollection withProfile: aProf
 
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeSequenceableCollectionOops: oopCollection classNames: classNames withProfile: aProfile depth: anInteger seen: seenOops [
-	| arrayOopsByOop arrayOops elementOopsByArrayOop flatElementOops spans materializedFlat materializedByOop |
+	| elementOopsByOop flatElementOops spans materializedFlat materializedByOop |
 	self
 		checkMaterializationFrontierSize: oopCollection size
 		label: 'sequenceable collection batch roots'.
-	arrayOopsByOop := self remoteCollectionAsArrayOopsForOops: oopCollection.
-	arrayOops := OrderedCollection new.
-	oopCollection do: [ :oop |
-		| arrayOop |
-		arrayOop := arrayOopsByOop
-			at: oop
-			ifAbsent: [ self remoteCollectionAsArrayOop: oop ].
-		arrayOops add: arrayOop ].
-	elementOopsByArrayOop := self remoteArrayElementOopsForOops: arrayOops.
+	elementOopsByOop := self remoteCollectionElementOopsForOops: oopCollection.
 	flatElementOops := OrderedCollection new.
 	spans := Dictionary new.
 	oopCollection do: [ :oop |
-		| arrayOop elementOops start className materialized |
-		arrayOop := arrayOopsByOop
+		| elementOops start className materialized |
+		elementOops := elementOopsByOop
 			at: oop
-			ifAbsent: [ self remoteCollectionAsArrayOop: oop ].
-		elementOops := elementOopsByArrayOop
-			at: arrayOop
-			ifAbsent: [ self remoteArrayElementOopsForOop: arrayOop ].
+			ifAbsent: [ self remoteCollectionElementOopsForOop: oop ].
 		className := classNames at: oop.
 		materialized := self emptySequenceableCollectionForClassNamed: className.
 		self rememberMaterializedObject: materialized forOop: oop.
@@ -807,6 +796,16 @@ GbsSessionMaterializer >> remoteCollectionAsArrayOop: anOop [
 { #category : 'remote access' }
 GbsSessionMaterializer >> remoteCollectionAsArrayOopsForOops: oopCollection [
 	^ self remoteReader remoteCollectionAsArrayOopsForOops: oopCollection
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializer >> remoteCollectionElementOopsForOop: anOop [
+	^ self remoteReader remoteCollectionElementOopsForOop: anOop
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializer >> remoteCollectionElementOopsForOops: oopCollection [
+	^ self remoteReader remoteCollectionElementOopsForOops: oopCollection
 ]
 
 { #category : 'remote access' }

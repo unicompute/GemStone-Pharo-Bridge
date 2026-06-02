@@ -985,11 +985,13 @@ GbsSession >> repositoryRootLifecycleVersion [
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> resetAfterLogout [
 	self resetConnectionStateAfterLogout.
+	GbsProxyLifecycle invalidateSession: self.
 	self clearProxyCache.
 	self resetMaterializedObjectDirtyTracking.
 	self resetMaterializedObjectCache.
 	self materializer clearRemoteClassNameCache.
 	self resetMaterializationMetrics.
+	GbsReplicationPolicy resetForSession: self.
 	GbsSessionManager clearTypedWrapperFreshnessCacheForSession: self.
 	self clearNamedObjectCache.
 	GbsSessionManager clearTypedWrapperAutoloadRegistrationsForSession: self.
