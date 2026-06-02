@@ -66,6 +66,24 @@ GbsSession >> scriptMarshaller [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> forwardRemoteMessage: aMessage forOop: targetOop [
+	| script argStrings argsArrayString |
+	aMessage arguments isEmpty ifTrue: [
+		script := '(Object _objectForOop: ', targetOop printString, ') perform: #', aMessage selector asString.
+		^ self evaluate: script ].
+
+	argStrings := [
+		aMessage arguments collect: [ :each | self marshalArgumentToScript: each ] ]
+		on: Error
+		do: [ :ex |
+			self error: ((ex messageText ifNil: [ ex printString ]) withBlanksTrimmed),
+				' Forwarded selector: ', aMessage selector asString ].
+	argsArrayString := '{ ', (' . ' join: argStrings), ' }'.
+	script := '(Object _objectForOop: ', targetOop printString, ') perform: #', aMessage selector asString, ' withArguments: ', argsArrayString.
+	^ self evaluate: script
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> fetchRemoteCommand: aRemoteCommand [
 	^ self commandExecutor fetchRemoteCommand: aRemoteCommand
 ]

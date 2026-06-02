@@ -1,6 +1,23 @@
 Extension { #name : 'GbsSessionParameters' }
 
 { #category : '*GemStone-GBS-Core' }
+GbsSessionParameters class >> nativeKeychainBackend [
+	| backend |
+	(Smalltalk globals
+		at: #GbsSessionParametersPreferNativeKeychain
+		ifAbsent: [ false ]) ifFalse: [ ^ nil ].
+	backend := Smalltalk globals
+		at: #GbsNativeMacOSKeychainBackend
+		ifAbsent: [
+			Smalltalk
+				at: #GbsNativeMacOSKeychainBackend
+				ifAbsent: [ nil ] ].
+	backend ifNil: [ ^ nil ].
+	((backend respondsTo: #isAvailable) and: [ backend isAvailable not ]) ifTrue: [ ^ nil ].
+	^ backend
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSessionParameters >> ensureCleanString: aString [
 	| source |
 	aString ifNil: [ ^ '' ].

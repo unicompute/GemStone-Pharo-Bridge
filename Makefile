@@ -55,7 +55,7 @@ help:
 		"    Verify that generated contract artifacts in doc/ are up to date." \
 		"" \
 		"  make original-drift" \
-		"    Show the remaining drift in the original package roots relative to 56b6db3." \
+		"    Show the remaining drift in the original package roots relative to f2c8c23." \
 		"" \
 		"Variables:" \
 		"  PHARO_IMAGE=$(PHARO_IMAGE)" \

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-BASE_SHA="${1:-8a8e15cb0a5b3d0a83bcd4cd7131d839e69796cf}"
+BASE_SHA="${1:-f2c8c23d4f72dbfe47ae4092a9536e48c6d9789f}"
 
 packages=(
   "GemStone-GBS-Converted"
@@ -9,13 +9,7 @@ packages=(
   "GemStone-Pharo-Tests"
 )
 
-expected_files=(
-  "src/GemStone-Pharo-Tests/GbsAdminToolsPresenterTest.class.st"
-  "src/GemStone-Pharo-Tests/GbsRemoteDebuggerPresenterTest.class.st"
-  "src/GemStone-Pharo-Tests/GbsSessionTest.class.st"
-  "src/GemStone-Pharo-Tests/GciError.extension.st"
-  "src/GemStone-Pharo-Tests/MockGbsSession.class.st"
-)
+expected_files=()
 
 changed_files=()
 base_files=()
@@ -109,21 +103,6 @@ if [ "${#unexpected_files[@]}" -eq 0 ]; then
     done
   done
 
-  printf 'ORIGINAL_LAYER_DRIFT_EXPECTED file=%s reason=%s\n' \
-    'src/GemStone-Pharo-Tests/GbsAdminToolsPresenterTest.class.st' \
-    'Original-Tests skips Core-command structured-preview assertions when the Core package is intentionally absent'
-  printf 'ORIGINAL_LAYER_DRIFT_EXPECTED file=%s reason=%s\n' \
-    'src/GemStone-Pharo-Tests/GbsRemoteDebuggerPresenterTest.class.st' \
-    'Original-Tests skips Core-command source lookup assertions when the Core package is intentionally absent'
-  printf 'ORIGINAL_LAYER_DRIFT_EXPECTED file=%s reason=%s\n' \
-    'src/GemStone-Pharo-Tests/GbsSessionTest.class.st' \
-    'Original-Tests skips Core transaction-coordinator assertions when the Core package is intentionally absent'
-  printf 'ORIGINAL_LAYER_DRIFT_EXPECTED file=%s reason=%s\n' \
-    'src/GemStone-Pharo-Tests/GciError.extension.st' \
-    'Original-Tests adds a tiny test-only GciError number accessor shim so the restored base login-error path can run without production drift'
-  printf 'ORIGINAL_LAYER_DRIFT_EXPECTED file=%s reason=%s\n' \
-    'src/GemStone-Pharo-Tests/MockGbsSession.class.st' \
-    'Original-Tests keeps only a narrow interpretLoginError override here so the restored base GbsSession production file stays clean'
   exit 0
 fi
 

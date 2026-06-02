@@ -30,7 +30,11 @@ GbsSessionScriptMarshaller >> marshalArgumentToScript: anObject visited: visited
 	anObject isCharacter ifTrue: [
 		^ '(Character value: ', anObject asInteger printString, ')' ].
 	anObject isString ifTrue: [ ^ session marshalStringLiteralToScript: anObject ].
-	^ session marshalComplexArgumentToScript: anObject visited: visited
+	^ [ session marshalComplexArgumentToScript: anObject visited: visited ]
+		on: Error
+		do: [ :ex |
+			self error: ((ex messageText ifNil: [ ex printString ]) withBlanksTrimmed),
+				' Argument class: ', anObject class name ]
 ]
 
 { #category : 'accessing' }

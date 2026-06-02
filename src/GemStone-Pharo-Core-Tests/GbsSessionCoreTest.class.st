@@ -817,6 +817,41 @@ GbsSessionCoreTest >> testStructuredBatchBytesCanUseTraversalTransportHook [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testStructuredBatchBytesTracksTraversalTransportFallback [
+	| mockSession previousTransport hadTransport bytes result metrics |
+	mockSession := CoreMockGbsSession new.
+	bytes := self encodedPackedStringPayloadFor: #('String').
+	hadTransport := Smalltalk globals includesKey: #GbsMaterializationByteTransport.
+	previousTransport := Smalltalk globals at: #GbsMaterializationByteTransport ifAbsent: [ nil ].
+	[
+		Smalltalk globals at: #GbsMaterializationByteTransport put: 'traversal'.
+		mockSession stubs at: #supportsStructuredMaterializationBatchBytes put: true.
+		mockSession stubs at: #supportsMaterializationTraversalByteTransport put: false.
+		mockSession stubs at: #returnRemoteCommandBody put: [ :body :literalBindings :oopBindings | 9400 ].
+		mockSession stubs at: #apiGciFetchSize put: [ :oop |
+			oop = 9400 ifTrue: [ bytes size ] ifFalse: [ self fail ] ].
+		mockSession stubs at: #apiGciFetchBytes put: [ :oop :start :buffer :count |
+			self assert: oop equals: 9400.
+			self assert: start equals: 1.
+			self assert: count equals: bytes size.
+			bytes ].
+
+		result := mockSession materializer remoteReader
+			structuredBatchBytesForBody: 'ByteArray new'
+			oopCollection: #(9040)
+			label: 'test traversal fallback byte batch'.
+
+		self assert: result equals: bytes.
+		metrics := mockSession materializationMetrics.
+		self assert: (metrics at: #structuredTraversalByteFallbacks ifAbsent: [ 0 ]) equals: 1.
+		self assert: (metrics at: #structuredBatchByteFetchCalls ifAbsent: [ 0 ]) equals: 1
+	] ensure: [
+		hadTransport
+			ifTrue: [ Smalltalk globals at: #GbsMaterializationByteTransport put: previousTransport ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationByteTransport ifAbsent: [ ] ] ]
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testMaterializationMaxObjectsRaisesClearError [
 	| mockSession previous hadPrevious raised |
 	mockSession := self materializationMockSession.
@@ -1211,6 +1246,9 @@ GbsSessionCoreTest >> testFetchShallowBatchesNestedProxyClassNames [
 	self assert: (metrics at: #slotBatchCalls ifAbsent: [ 0 ]) equals: 1.
 	self assert: (metrics at: #classNameBatchCalls ifAbsent: [ 0 ]) equals: 1.
 	self assert: (metrics at: #wrapperLookupCalls ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #wrapperLookupMisses ifAbsent: [ 0 ]) equals: 1.
+	self assert: ((metrics at: #wrapperLookupClassCounts) at: 'Array') equals: 1.
+	self assert: ((metrics at: #wrapperLookupTypedClassCounts) at: 'Array') equals: 1.
 	self assert: (metrics at: #proxyCreations ifAbsent: [ 0 ]) equals: 3
 ]
 

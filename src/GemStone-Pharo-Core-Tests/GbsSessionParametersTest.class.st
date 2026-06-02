@@ -225,6 +225,50 @@ GbsSessionParametersTest >> testRememberedSecretsCanUseKeychainBackendProtocol [
 ]
 
 { #category : 'tests' }
+GbsSessionParametersTest >> testNativeKeychainBackendIsPreferredWhenEnabled [
+	| previousBackend hadBackend previousStore hadStore previousPreference hadPreference backend |
+	hadBackend := Smalltalk globals includesKey: #GbsSessionParametersKeychainBackend.
+	previousBackend := Smalltalk globals at: #GbsSessionParametersKeychainBackend ifAbsent: [ nil ].
+	hadStore := Smalltalk globals includesKey: #GbsSessionParametersKeychainStore.
+	previousStore := Smalltalk globals at: #GbsSessionParametersKeychainStore ifAbsent: [ nil ].
+	hadPreference := Smalltalk globals includesKey: #GbsSessionParametersPreferNativeKeychain.
+	previousPreference := Smalltalk globals at: #GbsSessionParametersPreferNativeKeychain ifAbsent: [ nil ].
+	[
+		Smalltalk globals removeKey: #GbsSessionParametersKeychainBackend ifAbsent: [ ].
+		Smalltalk globals removeKey: #GbsSessionParametersKeychainStore ifAbsent: [ ].
+		Smalltalk globals at: #GbsSessionParametersPreferNativeKeychain put: true.
+
+		backend := GbsSessionParameters keychainBackend.
+
+		GbsNativeMacOSKeychainBackend isAvailable
+			ifTrue: [ self assert: backend equals: GbsNativeMacOSKeychainBackend ]
+			ifFalse: [ self assert: backend isNil ]
+	] ensure: [
+		hadBackend
+			ifTrue: [ Smalltalk globals at: #GbsSessionParametersKeychainBackend put: previousBackend ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsSessionParametersKeychainBackend ifAbsent: [ ] ].
+		hadStore
+			ifTrue: [ Smalltalk globals at: #GbsSessionParametersKeychainStore put: previousStore ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsSessionParametersKeychainStore ifAbsent: [ ] ].
+		hadPreference
+			ifTrue: [ Smalltalk globals at: #GbsSessionParametersPreferNativeKeychain put: previousPreference ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsSessionParametersPreferNativeKeychain ifAbsent: [ ] ] ]
+]
+
+{ #category : 'tests' }
+GbsSessionParametersTest >> testNativeKeychainBackendUsesSecurityFramework [
+	| backend bytes string |
+	backend := GbsNativeMacOSKeychainBackend new.
+	bytes := backend utf8BytesFor: 'secret'.
+	string := backend stringFromUTF8Bytes: bytes.
+
+	self assert: (backend securityLibraryName includesSubstring: 'Security.framework').
+	self assert: backend pointerSize equals: 8.
+	self assert: bytes equals: #[115 101 99 114 101 116].
+	self assert: string equals: 'secret'
+]
+
+{ #category : 'tests' }
 GbsSessionParametersTest >> testKeychainShellQuoteHandlesSingleQuotes [
 	| expected |
 	expected := String streamContents: [ :stream |

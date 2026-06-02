@@ -869,7 +869,7 @@ GemStonePharoPackageContract >> packageRequirementSpecs [
 		{ 'GemStone-GBS-MagLev'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core') }.
 		{ 'GemStone-GBS-MagLev-Tools'. #('GemStone-GBS-Tools' 'GemStone-GBS-MagLev') }.
 		{ 'GemStone-Pharo-Core-Tests'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools') }.
-		{ 'GemStone-Pharo-MagLev-Tests'. #('GemStone-Pharo-Core-Tests' 'GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') }.
+		{ 'GemStone-Pharo-MagLev-Tests'. #('GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') }.
 		{ 'GemStone-Pharo-Tests'. #('GemStone-GBS-Converted' 'GemStone-GBS-Tools') } }
 ]
 

@@ -15,6 +15,17 @@ GbsSessionMaterializer >> incrementMaterializationMetric: aSymbol by: anInteger 
 ]
 
 { #category : 'metrics' }
+GbsSessionMaterializer >> incrementMaterializationMetric: metricSymbol forClassName: className [
+	| metrics values key count |
+	metrics := self materializationMetrics.
+	values := metrics at: metricSymbol ifAbsentPut: [ Dictionary new ].
+	key := className ifNil: [ '<nil>' ] ifNotNil: [ className asString ].
+	count := values at: key ifAbsent: [ 0 ].
+	values at: key put: count + 1.
+	^ values
+]
+
+{ #category : 'metrics' }
 GbsSessionMaterializer >> materializationBatchSize [
 	| batchSize |
 	batchSize := self
@@ -443,14 +454,24 @@ GbsSessionMaterializer >> typedWrapperClassForServerClassName: className [
 	cache := self typedWrapperClassCache.
 	(cache includesKey: className) ifTrue: [
 		self incrementMaterializationMetric: #wrapperCacheHits.
+		self incrementMaterializationMetric: #wrapperCacheHitClassCounts forClassName: className.
 		^ cache at: className ].
 	self incrementMaterializationMetric: #wrapperLookupCalls.
+	self incrementMaterializationMetric: #wrapperLookupMisses.
+	self incrementMaterializationMetric: #wrapperLookupClassCounts forClassName: className.
 	wrapperClass := self
 		recordMillisecondsForMetric: #wrapperLookupMs
 		during: [
 			GbsSessionManager
 				typedWrapperClassForServerClassNamed: className
 				forSession: session ].
+	wrapperClass
+		ifNil: [
+			self incrementMaterializationMetric: #wrapperLookupNilResults.
+			self incrementMaterializationMetric: #wrapperLookupNilClassCounts forClassName: className ]
+		ifNotNil: [
+			self incrementMaterializationMetric: #wrapperLookupTypedResults.
+			self incrementMaterializationMetric: #wrapperLookupTypedClassCounts forClassName: className ].
 	cache at: className put: wrapperClass.
 	^ wrapperClass
 ]

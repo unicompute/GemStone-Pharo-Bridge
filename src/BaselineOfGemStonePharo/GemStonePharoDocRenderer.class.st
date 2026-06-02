@@ -749,19 +749,8 @@ GemStonePharoDocRenderer >> generatedUserManualReferenceHtml [
 				cr ].
 		stream
 			nextPutAll: '  </ul>'; cr;
-			nextPutAll: '  <h2>Expected Original-layer Test Exceptions</h2>'; cr;
-			nextPutAll: '  <p><code>make original-drift</code> reports the original/base production layer as clean and currently accepts only these test-layer exceptions:</p>'; cr;
-			nextPutAll: '  <ul>'; cr.
-		self originalLayerExpectedExceptionSpecs do: [ :each |
-			stream
-				nextPutAll: '    <li><code>';
-				nextPutAll: each first;
-				nextPutAll: '</code>: ';
-				nextPutAll: each second;
-				nextPutAll: '</li>';
-				cr ].
-		stream
-			nextPutAll: '  </ul>'; cr;
+			nextPutAll: '  <h2>Accepted Original-layer Baseline</h2>'; cr;
+			nextPutAll: '  <p><code>make original-drift</code> compares the original/base production and test layer with <code>f2c8c23...</code>. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.</p>'; cr;
 			nextPutAll: '  <h2>Recommended Entry Points</h2>'; cr;
 			nextPutAll: '  <pre><code>make help'; cr;
 			nextPutAll: 'make original-drift'; cr;
@@ -832,17 +821,8 @@ GemStonePharoDocRenderer >> generatedVerificationLanesMarkdown [
 						separatedBy: [ inner nextPutAll: ', ' ] ]);
 				cr; cr ].
 		stream
-			nextPutAll: '## Expected Original-layer Test Exceptions'; cr; cr;
-			nextPutAll: '`make original-drift` currently reports the original/base production layer as clean and accepts only these test-layer exceptions:'; cr.
-		self originalLayerExpectedExceptionSpecs do: [ :each |
-			stream
-				nextPutAll: '- `';
-				nextPutAll: each first;
-				nextPutAll: '`';
-				cr;
-				nextPutAll: '  ';
-				nextPutAll: each second;
-				cr ] ]
+			nextPutAll: '## Accepted Original-layer Baseline'; cr; cr;
+			nextPutAll: '`make original-drift` compares the original/base production and test layer with `f2c8c23...`. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.'; cr ]
 ]
 
 { #category : 'contracts' }
@@ -851,7 +831,7 @@ GemStonePharoDocRenderer >> generatedArchitectureBodyMarkdown [
 		stream
 			nextPutAll: 'This section is generated from `GemStonePharoContract`.'; cr; cr;
 			nextPutAll: '## Design Goal'; cr; cr;
-			nextPutAll: '- `56b6db3...` original production/test packages remain the base layer'; cr;
+			nextPutAll: '- `f2c8c23...` original production/test packages are the accepted base layer'; cr;
 			nextPutAll: '- `Pharo <-> GemStone Smalltalk` is the primary layer'; cr;
 			nextPutAll: '- MagLev/Ruby behavior is optional'; cr;
 			nextPutAll: '- legacy alias surface stays absent from production'; cr; cr;
@@ -868,12 +848,8 @@ GemStonePharoDocRenderer >> generatedArchitectureBodyMarkdown [
 		stream cr; nextPutAll: '## Verification Guards'; cr; cr.
 		self boundaryGuardSpecs do: [ :each |
 			stream nextPutAll: '- `'; nextPutAll: each first; nextPutAll: '`'; cr ].
-		stream cr; nextPutAll: '## Expected Original-layer Test Exceptions'; cr; cr;
-			nextPutAll: 'The original/base production layer is clean. `make original-drift` currently reports only these accepted test-layer exceptions:'; cr.
-		self originalLayerExpectedExceptionSpecs do: [ :each |
-			stream
-				nextPutAll: '- `'; nextPutAll: each first; nextPutAll: '`'; cr;
-				nextPutAll: '  '; nextPutAll: each second; cr ].
+		stream cr; nextPutAll: '## Accepted Original-layer Baseline'; cr; cr;
+			nextPutAll: '`make original-drift` compares the original/base production and test layer with `f2c8c23...`. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.'; cr.
 		stream cr; nextPutAll: '## Layered Load Matrix'; cr; cr;
 			nextPutAll: '- [LOAD-MATRIX.md](./LOAD-MATRIX.md)'; cr;
 			nextPutAll: '  generated group-by-group view of the base/original, generic core, and optional MagLev loading model'; cr.
@@ -1018,12 +994,8 @@ GemStonePharoDocRenderer >> generatedTestingBodyMarkdown [
 						do: [ :marker | inner nextPutAll: '`'; nextPutAll: marker; nextPutAll: '`' ]
 						separatedBy: [ inner nextPutAll: ', ' ] ]);
 				cr ].
-		stream cr; nextPutAll: '## Expected Original-layer Test Exceptions'; cr; cr;
-			nextPutAll: '`make original-drift` currently reports the original/base production layer as clean and accepts only these test-layer exceptions:'; cr.
-		self originalLayerExpectedExceptionSpecs do: [ :each |
-			stream
-				nextPutAll: '- `'; nextPutAll: each first; nextPutAll: '`'; cr;
-				nextPutAll: '  '; nextPutAll: each second; cr ].
+		stream cr; nextPutAll: '## Accepted Original-layer Baseline'; cr; cr;
+			nextPutAll: '`make original-drift` compares the original/base production and test layer with `f2c8c23...`. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.'; cr.
 		stream cr; nextPutAll: '## Wrapper Entry Points'; cr; cr;
 			nextPutAll: '```bash'; cr;
 			nextPutAll: 'make help'; cr;
@@ -1118,18 +1090,8 @@ GemStonePharoDocRenderer >> generatedUserManualTestingHtml [
 				nextPutAll: '</li>'; cr ].
 		stream
 			nextPutAll: '    </ul>'; cr;
-			nextPutAll: '    <h3>Expected Original-layer Test Exceptions</h3>'; cr;
-			nextPutAll: '    <p><code>make original-drift</code> reports the original/base production layer as clean and currently accepts only these test-layer exceptions:</p>'; cr;
-			nextPutAll: '    <ul>'; cr.
-		self originalLayerExpectedExceptionSpecs do: [ :each |
-			stream
-				nextPutAll: '      <li><code>';
-				nextPutAll: each first;
-				nextPutAll: '</code>: ';
-				nextPutAll: each second;
-				nextPutAll: '</li>'; cr ].
-		stream
-			nextPutAll: '    </ul>'; cr;
+			nextPutAll: '    <h3>Accepted Original-layer Baseline</h3>'; cr;
+			nextPutAll: '    <p><code>make original-drift</code> compares the original/base production and test layer with <code>f2c8c23...</code>. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.</p>'; cr;
 			nextPutAll: '    <h3>Generated operator reference</h3>'; cr;
 			nextPutAll: '    <p>'; cr;
 			nextPutAll: '      The contract generates a human-facing steady-state operator reference at'; cr;

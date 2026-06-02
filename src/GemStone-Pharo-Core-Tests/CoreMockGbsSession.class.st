@@ -139,6 +139,18 @@ CoreMockGbsSession >> forwardRemoteMessage: aMessage forOop: targetOop [
 	^ super forwardRemoteMessage: aMessage forOop: targetOop
 ]
 
+{ #category : 'execution' }
+CoreMockGbsSession >> returnRemoteCommandBody: bodyString literalBindings: literalDictionary oopBindings: oopDictionary [
+	| block |
+	block := self stubs at: #returnRemoteCommandBody ifAbsent: [ nil ].
+	block ifNotNil: [
+		^ block cull: bodyString cull: literalDictionary cull: oopDictionary ].
+	^ super
+		returnRemoteCommandBody: bodyString
+		literalBindings: literalDictionary
+		oopBindings: oopDictionary
+]
+
 { #category : 'typed wrappers' }
 CoreMockGbsSession >> refreshAllTypedWrapperClasses [
 	| block |

@@ -817,6 +817,15 @@ GemStonePharoContractTest >> testPackageRequirementSpecsOnlyReferenceKnownPackag
 ]
 
 { #category : 'tests' }
+GemStonePharoContractTest >> testMagLevTestsLoadOriginalTestHelpersBeforeMagLevTests [
+	| maglevTestSpec |
+	maglevTestSpec := self contract packageRequirementSpecs
+		detect: [ :each | each first = 'GemStone-Pharo-MagLev-Tests' ].
+
+	self assert: (maglevTestSpec second includes: 'GemStone-Pharo-Tests')
+]
+
+{ #category : 'tests' }
 GemStonePharoContractTest >> testVerificationLaneSpecsReflectSteadyStateLaneSet [
 	| laneNames bootstrapLane originalLane originalDriftLane originalTestsLane fullLane verifyLane artifactLane |
 	laneNames := self contract verificationLaneSpecs collect: [ :each | each first ].
