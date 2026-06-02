@@ -635,6 +635,112 @@ GbsSessionCoreTest >> testFetchDeepPreservesCyclicAssociationIdentity [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testFetchDeepPreservesRepeatedAssociationIdentityInMixedGraph [
+	| mockSession result |
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #executeAndFetch put: [ :script | | response |
+		response := nil.
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object class name asString' ]) ifTrue: [
+			response := String streamContents: [ :stream |
+				#(
+					(9500 'Association')
+					(9040 'String')
+					(9056 'String')) do: [ :entry |
+					(script includesSubstring: entry first asString) ifTrue: [
+						stream
+							nextPutAll: entry first asString;
+							nextPut: Character tab;
+							nextPutAll: entry second;
+							nextPut: Character lf ] ] ] ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'text := object asString' ]) ifTrue: [
+			response := String streamContents: [ :stream |
+				stream
+					nextPutAll: (self encodedStringBatchLineForOop: 9040 value: 'key');
+					nextPutAll: (self encodedStringBatchLineForOop: 9056 value: 'value') ] ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'assoc := Object _objectForOop' ]) ifTrue: [
+			response := '9500', Character tab asString, '9040', Character tab asString, '9056', Character lf asString ].
+		response ifNil: [
+			(script includesSubstring: 'class name asString') ifTrue: [
+				(script includesSubstring: '9000') ifTrue: [ response := 'Array' ].
+				(script includesSubstring: '9500') ifTrue: [ response := 'Association' ].
+				(script includesSubstring: '9040') ifTrue: [ response := 'String' ].
+				(script includesSubstring: '9056') ifTrue: [ response := 'String' ] ] ].
+		response ifNil: [ self fail ].
+		response ].
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		oop = 9000 ifTrue: [ 2 ] ifFalse: [ self fail ] ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+		self assert: oop equals: 9000.
+		self assert: start equals: 1.
+		self assert: count equals: 2.
+		#(9500 9500) ].
+	mockSession fetchDeep.
+
+	result := mockSession fetchObject: 9000.
+
+	self assert: result first == result second.
+	self assert: result first key equals: 'key'.
+	self assert: result second value equals: 'value'
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFetchDeepPreservesMutualDictionaryAssociationCycle [
+	| mockSession result association |
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		Error signal: 'Force text fallback for dictionary pair extraction.' ].
+	mockSession stubs at: #executeAndFetch put: [ :script | | response |
+		response := nil.
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object class name asString' ]) ifTrue: [
+			response := String streamContents: [ :stream |
+				#(
+					(9500 'Association')
+					(9040 'String')
+					(9048 'String')) do: [ :entry |
+					(script includesSubstring: entry first asString) ifTrue: [
+						stream
+							nextPutAll: entry first asString;
+							nextPut: Character tab;
+							nextPutAll: entry second;
+							nextPut: Character lf ] ] ] ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'text := object asString' ]) ifTrue: [
+			response := String streamContents: [ :stream |
+				stream
+					nextPutAll: (self encodedStringBatchLineForOop: 9040 value: 'assoc');
+					nextPutAll: (self encodedStringBatchLineForOop: 9048 value: 'dict') ] ].
+		((script includesSubstring: 'object associations do:')
+			and: [ (script includesSubstring: 'oops do:') not ]) ifTrue: [
+			response := '9040', Character tab asString, '9500', Character lf asString ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'object associations do:' ]) ifTrue: [
+			response := '9100', Character tab asString, '1', Character tab asString,
+				'9040', Character tab asString, '9500', Character lf asString ].
+		((script includesSubstring: 'oops do:')
+			and: [ script includesSubstring: 'assoc := Object _objectForOop' ]) ifTrue: [
+			response := '9500', Character tab asString, '9048', Character tab asString, '9100', Character lf asString ].
+		response ifNil: [
+			(script includesSubstring: 'class name asString') ifTrue: [
+				(script includesSubstring: '9100') ifTrue: [ response := 'Dictionary' ].
+				(script includesSubstring: '9500') ifTrue: [ response := 'Association' ].
+				(script includesSubstring: '9040') ifTrue: [ response := 'String' ].
+				(script includesSubstring: '9048') ifTrue: [ response := 'String' ] ] ].
+		response ifNil: [ self fail ].
+		response ].
+	mockSession fetchDeep.
+
+	result := mockSession fetchObject: 9100.
+	association := result at: 'assoc'.
+
+	self assert: association key equals: 'dict'.
+	self assert: association value == result
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testFetchDeepBatchesScalarByteArraysThroughBytePayload [
 	| mockSession result bytes metrics |
 	mockSession := CoreMockGbsSession new.
@@ -677,6 +783,37 @@ GbsSessionCoreTest >> testFetchDeepBatchesScalarByteArraysThroughBytePayload [
 	metrics := mockSession materializationMetrics.
 	self assert: (metrics at: #structuredBatchByteFetchCalls ifAbsent: [ 0 ]) equals: 1.
 	self assert: (metrics at: #scalarByteArrayBatchCalls ifAbsent: [ 0 ]) equals: 1
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testStructuredBatchBytesCanUseTraversalTransportHook [
+	| mockSession previousTransport hadTransport bytes result metrics bindings |
+	mockSession := CoreMockGbsSession new.
+	bytes := self encodedPackedStringPayloadFor: #('String').
+	hadTransport := Smalltalk globals includesKey: #GbsMaterializationByteTransport.
+	previousTransport := Smalltalk globals at: #GbsMaterializationByteTransport ifAbsent: [ nil ].
+	[
+		Smalltalk globals at: #GbsMaterializationByteTransport put: 'traversal'.
+		mockSession stubs at: #supportsStructuredMaterializationBatchBytes put: true.
+		mockSession stubs at: #supportsMaterializationTraversalByteTransport put: true.
+		mockSession stubs at: #materializationTraversalBytesForBody put: [ :body :literalBindings :label |
+			bindings := literalBindings.
+			bytes ].
+
+		result := mockSession materializer remoteReader
+			structuredBatchBytesForBody: 'ByteArray new'
+			oopCollection: #(9040)
+			label: 'test traversal byte batch'.
+
+		self assert: result equals: bytes.
+		self assert: (bindings at: 'oops') equals: #(9040).
+		metrics := mockSession materializationMetrics.
+		self assert: (metrics at: #structuredTraversalByteFetchCalls ifAbsent: [ 0 ]) equals: 1.
+		self assert: (metrics at: #structuredBatchByteFetchCalls ifAbsent: [ 0 ]) equals: 0
+	] ensure: [
+		hadTransport
+			ifTrue: [ Smalltalk globals at: #GbsMaterializationByteTransport put: previousTransport ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationByteTransport ifAbsent: [ ] ] ]
 ]
 
 { #category : 'tests' }
@@ -1145,6 +1282,36 @@ GbsSessionCoreTest >> testMaterializationBatchSizeZeroUsesDefault [
 
 		self assert: mockSession materializationBatchSize equals: 1000
 	] ensure: [
+		hadBatchSize
+			ifTrue: [ Smalltalk globals at: #GbsMaterializationBatchSize put: previousBatchSize ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationBatchSize ifAbsent: [ ] ] ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testMaterializationLimitsPreferSessionParameters [
+	| mockSession params previousSession previousBatchSize hadBatchSize |
+	mockSession := CoreMockGbsSession new.
+	params := GbsSessionParameters new.
+	params
+		materializationBatchSize: '25';
+		materializationMaxObjects: '3';
+		materializationMaxDepth: '4';
+		materializationMaxBatchBytes: '512';
+		materializationMaxFrontierOops: '9'.
+	previousSession := GbsSessionParameters currentSession.
+	hadBatchSize := Smalltalk globals includesKey: #GbsMaterializationBatchSize.
+	previousBatchSize := Smalltalk globals at: #GbsMaterializationBatchSize ifAbsent: [ nil ].
+	[
+		Smalltalk globals at: #GbsMaterializationBatchSize put: 999.
+		mockSession parameters: params.
+
+		self assert: mockSession materializationBatchSize equals: 25.
+		self assert: mockSession materializer materializationMaxObjects equals: 3.
+		self assert: mockSession materializer materializationMaxDepth equals: 4.
+		self assert: mockSession materializer materializationMaxBatchBytes equals: 512.
+		self assert: mockSession materializer materializationMaxFrontierOops equals: 9
+	] ensure: [
+		GbsSessionParameters currentSession: previousSession.
 		hadBatchSize
 			ifTrue: [ Smalltalk globals at: #GbsMaterializationBatchSize put: previousBatchSize ]
 			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationBatchSize ifAbsent: [ ] ] ]

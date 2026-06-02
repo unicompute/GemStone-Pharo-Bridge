@@ -22,6 +22,11 @@ Class {
 		'dirArg',
 		'extraGemArgs',
 		'logArg',
+		'materializationBatchSize',
+		'materializationMaxObjects',
+		'materializationMaxDepth',
+		'materializationMaxBatchBytes',
+		'materializationMaxFrontierOops',
 		'sessionId'
 	],
 	#classVars : [
@@ -287,6 +292,70 @@ GbsSessionParameters class >> keychainStore [
 ]
 
 { #category : 'security' }
+GbsSessionParameters class >> keychainBackend [
+	^ Smalltalk globals
+		at: #GbsSessionParametersKeychainBackend
+		ifAbsent: [
+			self keychainStore
+				ifNotNil: [ :store | store ]
+				ifNil: [ self nativeKeychainBackend ] ]
+]
+
+{ #category : 'security' }
+GbsSessionParameters class >> nativeKeychainBackend [
+	(Smalltalk globals
+		at: #GbsSessionParametersPreferNativeKeychain
+		ifAbsent: [ false ]) ifFalse: [ ^ nil ].
+	^ Smalltalk globals
+		at: #GbsNativeMacOSKeychainBackend
+		ifAbsent: [
+			Smalltalk
+				at: #GbsNativeMacOSKeychainBackend
+				ifAbsent: [ nil ] ]
+]
+
+{ #category : 'security' }
+GbsSessionParameters class >> secretFromKeychainBackend: backend account: accountName [
+	(backend respondsTo: #secretAt:service:) ifTrue: [
+		^ backend secretAt: accountName service: self keychainServiceName ].
+	(backend respondsTo: #keychainSecretAt:service:) ifTrue: [
+		^ backend keychainSecretAt: accountName service: self keychainServiceName ].
+	(backend respondsTo: #at:ifAbsent:) ifTrue: [
+		^ backend at: accountName ifAbsent: [ nil ] ].
+	self error: 'Unsupported GemStone session Keychain backend.'
+]
+
+{ #category : 'security' }
+GbsSessionParameters class >> storeSecretInKeychainBackend: backend account: accountName value: secretString [
+	(backend respondsTo: #secretAt:put:service:) ifTrue: [
+		^ backend
+			secretAt: accountName
+			put: secretString
+			service: self keychainServiceName ].
+	(backend respondsTo: #keychainSecretAt:put:service:) ifTrue: [
+		^ backend
+			keychainSecretAt: accountName
+			put: secretString
+			service: self keychainServiceName ].
+	(backend respondsTo: #at:put:) ifTrue: [
+		backend at: accountName put: secretString.
+		^ secretString ].
+	self error: 'Unsupported GemStone session Keychain backend.'
+]
+
+{ #category : 'security' }
+GbsSessionParameters class >> deleteSecretInKeychainBackend: backend account: accountName [
+	(backend respondsTo: #deleteSecretAt:service:) ifTrue: [
+		^ backend deleteSecretAt: accountName service: self keychainServiceName ].
+	(backend respondsTo: #deleteKeychainSecretAt:service:) ifTrue: [
+		^ backend deleteKeychainSecretAt: accountName service: self keychainServiceName ].
+	(backend respondsTo: #removeKey:ifAbsent:) ifTrue: [
+		backend removeKey: accountName ifAbsent: [ ].
+		^ self ].
+	self error: 'Unsupported GemStone session Keychain backend.'
+]
+
+{ #category : 'security' }
 GbsSessionParameters class >> keychainShellQuote: aString [
 	| value |
 	value := aString ifNil: [ '' ] ifNotNil: [ aString asString ].
@@ -324,9 +393,16 @@ GbsSessionParameters class >> removeTrailingLineEndingsFrom: aString [
 
 { #category : 'security' }
 GbsSessionParameters class >> keychainSecretAt: accountName [
-	| store file command status secret |
-	store := self keychainStore.
-	store ifNotNil: [ ^ store at: accountName ifAbsent: [ nil ] ].
+	| backend |
+	backend := self keychainBackend.
+	backend ifNotNil: [
+		^ self secretFromKeychainBackend: backend account: accountName ].
+	^ self shellKeychainSecretAt: accountName
+]
+
+{ #category : 'security' }
+GbsSessionParameters class >> shellKeychainSecretAt: accountName [
+	| file command status secret |
 	file := FileLocator temp / ('gbs-keychain-', 1000000 atRandom asString, '.txt').
 	command := '/usr/bin/security find-generic-password -w -s ',
 		(self keychainShellQuote: self keychainServiceName),
@@ -347,11 +423,19 @@ GbsSessionParameters class >> keychainSecretAt: accountName [
 
 { #category : 'security' }
 GbsSessionParameters class >> keychainSecretAt: accountName put: secretString [
-	| store file command status |
-	store := self keychainStore.
-	store ifNotNil: [
-		store at: accountName put: secretString.
-		^ secretString ].
+	| backend |
+	backend := self keychainBackend.
+	backend ifNotNil: [
+		^ self
+			storeSecretInKeychainBackend: backend
+			account: accountName
+			value: secretString ].
+	^ self shellKeychainSecretAt: accountName put: secretString
+]
+
+{ #category : 'security' }
+GbsSessionParameters class >> shellKeychainSecretAt: accountName put: secretString [
+	| file command status |
 	file := FileLocator temp / ('gbs-keychain-secret-', 1000000 atRandom asString, '.txt').
 	[
 		file writeStreamDo: [ :stream | stream nextPutAll: secretString asString ].
@@ -371,11 +455,16 @@ GbsSessionParameters class >> keychainSecretAt: accountName put: secretString [
 
 { #category : 'security' }
 GbsSessionParameters class >> deleteKeychainSecretAt: accountName [
-	| store command |
-	store := self keychainStore.
-	store ifNotNil: [
-		store removeKey: accountName ifAbsent: [ ].
-		^ self ].
+	| backend |
+	backend := self keychainBackend.
+	backend ifNotNil: [
+		^ self deleteSecretInKeychainBackend: backend account: accountName ].
+	^ self deleteShellKeychainSecretAt: accountName
+]
+
+{ #category : 'security' }
+GbsSessionParameters class >> deleteShellKeychainSecretAt: accountName [
+	| command |
 	command := '/usr/bin/security delete-generic-password -s ',
 		(self keychainShellQuote: self keychainServiceName),
 		' -a ',
@@ -427,6 +516,11 @@ GbsSessionParameters >> applyExportDictionary: aDictionary [
 	dirArg := self exportValueFrom: aDictionary atAny: #('dirArg' 'directory') ifAbsent: [ dirArg ].
 	extraGemArgs := self exportValueFrom: aDictionary atAny: #('extraGemArgs' 'extraArgs') ifAbsent: [ extraGemArgs ].
 	logArg := self exportValueFrom: aDictionary atAny: #('logArg' 'logFile') ifAbsent: [ logArg ].
+	materializationBatchSize := self exportValueFrom: aDictionary atAny: #('materializationBatchSize' 'materializationBatchLimit') ifAbsent: [ materializationBatchSize ].
+	materializationMaxObjects := self exportValueFrom: aDictionary atAny: #('materializationMaxObjects' 'materializationObjectLimit') ifAbsent: [ materializationMaxObjects ].
+	materializationMaxDepth := self exportValueFrom: aDictionary atAny: #('materializationMaxDepth' 'materializationDepthLimit') ifAbsent: [ materializationMaxDepth ].
+	materializationMaxBatchBytes := self exportValueFrom: aDictionary atAny: #('materializationMaxBatchBytes' 'materializationBatchByteLimit') ifAbsent: [ materializationMaxBatchBytes ].
+	materializationMaxFrontierOops := self exportValueFrom: aDictionary atAny: #('materializationMaxFrontierOops' 'materializationFrontierLimit') ifAbsent: [ materializationMaxFrontierOops ].
 	self normalizeConnectionFields.
 	^ self
 ]
@@ -535,6 +629,11 @@ GbsSessionParameters >> exportDictionaryIncludingSecrets: includeSecrets [
 			at: 'dirArg' put: self dirArg;
 			at: 'extraGemArgs' put: self extraGemArgs;
 			at: 'logArg' put: self logArg;
+			at: 'materializationBatchSize' put: (self materializationExportValueFrom: materializationBatchSize);
+			at: 'materializationMaxObjects' put: (self materializationExportValueFrom: materializationMaxObjects);
+			at: 'materializationMaxDepth' put: (self materializationExportValueFrom: materializationMaxDepth);
+			at: 'materializationMaxBatchBytes' put: (self materializationExportValueFrom: materializationMaxBatchBytes);
+			at: 'materializationMaxFrontierOops' put: (self materializationExportValueFrom: materializationMaxFrontierOops);
 			yourself.
 		^ exported
 	] ensure: [
@@ -671,6 +770,31 @@ GbsSessionParameters >> configurationValidationMessages [
 	self name isEmpty ifTrue: [
 		messages add: 'Configuration name is required.' ].
 	messages addAll: self loginValidationMessages.
+	self
+		validateMaterializationLimit: materializationBatchSize
+		label: 'Materialization batch size'
+		allowZero: false
+		into: messages.
+	self
+		validateMaterializationLimit: materializationMaxObjects
+		label: 'Materialization max objects'
+		allowZero: true
+		into: messages.
+	self
+		validateMaterializationLimit: materializationMaxDepth
+		label: 'Materialization max depth'
+		allowZero: true
+		into: messages.
+	self
+		validateMaterializationLimit: materializationMaxBatchBytes
+		label: 'Materialization max batch bytes'
+		allowZero: true
+		into: messages.
+	self
+		validateMaterializationLimit: materializationMaxFrontierOops
+		label: 'Materialization max frontier OOPs'
+		allowZero: true
+		into: messages.
 	^ messages asArray
 ]
 
@@ -683,6 +807,90 @@ GbsSessionParameters >> initialize [
 	gsRemember := false.
 	hostRemember := false.
 	isX509 := false.
+]
+
+{ #category : 'materialization settings' }
+GbsSessionParameters >> materializationIntegerFrom: aValue ifInvalid: invalidBlock [
+	| text |
+	aValue ifNil: [ ^ nil ].
+	aValue isInteger ifTrue: [ ^ aValue ].
+	text := aValue asString trimBoth.
+	text isEmpty ifTrue: [ ^ nil ].
+	(text allSatisfy: [ :character | character isDigit ]) ifFalse: [
+		^ invalidBlock value ].
+	^ text asInteger
+]
+
+{ #category : 'materialization settings' }
+GbsSessionParameters >> materializationExportValueFrom: aValue [
+	^ self
+		materializationIntegerFrom: aValue
+		ifInvalid: [ aValue ]
+]
+
+{ #category : 'materialization settings' }
+GbsSessionParameters >> validateMaterializationLimit: aValue label: label allowZero: allowZero into: messages [
+	| value |
+	value := self
+		materializationIntegerFrom: aValue
+		ifInvalid: [
+			messages add: label, ' must be a non-negative integer.'.
+			^ self ].
+	value ifNil: [ ^ self ].
+	(value < 0 or: [ allowZero not and: [ value = 0 ] ]) ifTrue: [
+		messages add: label, (allowZero
+			ifTrue: [ ' must be a non-negative integer.' ]
+			ifFalse: [ ' must be a positive integer.' ]) ]
+]
+
+{ #category : 'materialization settings' }
+GbsSessionParameters >> materializationBatchSize [
+	^ materializationBatchSize
+]
+
+{ #category : 'materialization settings' }
+GbsSessionParameters >> materializationBatchSize: aValue [
+	materializationBatchSize := aValue
+]
+
+{ #category : 'materialization settings' }
+GbsSessionParameters >> materializationMaxObjects [
+	^ materializationMaxObjects
+]
+
+{ #category : 'materialization settings' }
+GbsSessionParameters >> materializationMaxObjects: aValue [
+	materializationMaxObjects := aValue
+]
+
+{ #category : 'materialization settings' }
+GbsSessionParameters >> materializationMaxDepth [
+	^ materializationMaxDepth
+]
+
+{ #category : 'materialization settings' }
+GbsSessionParameters >> materializationMaxDepth: aValue [
+	materializationMaxDepth := aValue
+]
+
+{ #category : 'materialization settings' }
+GbsSessionParameters >> materializationMaxBatchBytes [
+	^ materializationMaxBatchBytes
+]
+
+{ #category : 'materialization settings' }
+GbsSessionParameters >> materializationMaxBatchBytes: aValue [
+	materializationMaxBatchBytes := aValue
+]
+
+{ #category : 'materialization settings' }
+GbsSessionParameters >> materializationMaxFrontierOops [
+	^ materializationMaxFrontierOops
+]
+
+{ #category : 'materialization settings' }
+GbsSessionParameters >> materializationMaxFrontierOops: aValue [
+	materializationMaxFrontierOops := aValue
 ]
 
 { #category : 'testing' }

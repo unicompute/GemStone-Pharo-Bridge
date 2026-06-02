@@ -131,3 +131,76 @@ jobs:
             ${{ runner.temp }}/gbs-evidence
             ${{ runner.temp }}/gbs-debugger-performance-trends
           if-no-files-found: error
+
+  materialization-perf-live:
+    runs-on: self-hosted
+    env:
+      PHARO_IMAGE: ${{ vars.PHARO_IMAGE }}
+      PHARO_WORK_DIR: ${{ vars.PHARO_WORK_DIR }}
+      GEMSTONE: ${{ vars.GEMSTONE }}
+      GS_STONE: ${{ vars.GS_STONE }}
+      GS_SERVICE: ${{ vars.GS_SERVICE }}
+      GS_NETLDI_HOST: ${{ vars.GS_NETLDI_HOST }}
+      GS_NETLDI_NAME_OR_PORT: ${{ vars.GS_NETLDI_NAME_OR_PORT }}
+      GS_USER: ${{ secrets.GS_USER }}
+      GS_PASS: ${{ secrets.GS_PASS }}
+      GBS_JSON_SUMMARY: "1"
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Configure evidence paths
+        run: |
+          {
+            echo "GBS_SUMMARY_FILE=${GITHUB_STEP_SUMMARY}"
+            echo "GBS_JSON_SUMMARY_DIR=${RUNNER_TEMP}/gbs-materialization-json"
+            echo "GBS_EVIDENCE_DIR=${RUNNER_TEMP}/gbs-materialization-evidence"
+            echo "GBS_MATERIALIZATION_PERF_TRENDS=${RUNNER_TEMP}/gbs-materialization-performance-trends/materialization-performance-trends.jsonl"
+            echo "GBS_MATERIALIZATION_PERF_REPORT=${RUNNER_TEMP}/gbs-materialization-performance-trends/materialization-performance-trend-report.md"
+          } >> "${GITHUB_ENV}"
+          mkdir -p "${RUNNER_TEMP}/gbs-materialization-json" "${RUNNER_TEMP}/gbs-materialization-evidence" "${RUNNER_TEMP}/gbs-materialization-performance-trends"
+
+      - name: Restore materialization performance trend history
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/gbs-materialization-performance-trends
+          key: materialization-performance-trends-${{ runner.os }}-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            materialization-performance-trends-${{ runner.os }}-${{ github.ref_name }}-
+            materialization-performance-trends-${{ runner.os }}-
+
+      - name: Run optional live materialization performance lane
+        run: |
+          missing=()
+          for var in PHARO_IMAGE PHARO_WORK_DIR GEMSTONE GS_USER GS_PASS; do
+            if [[ -z "${!var:-}" ]]; then
+              missing+=("${var}")
+            fi
+          done
+          if (( ${#missing[@]} > 0 )); then
+            echo "Skipping live materialization performance lane; missing ${missing[*]}."
+            echo "### Materialization Performance Baseline" >> "${GITHUB_STEP_SUMMARY}"
+            echo "- result: \`SKIP\`" >> "${GITHUB_STEP_SUMMARY}"
+            echo "- missing: \`${missing[*]}\`" >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+          make materialization-perf
+
+      - name: Save materialization performance trend history
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/gbs-materialization-performance-trends
+          key: materialization-performance-trends-${{ runner.os }}-${{ github.ref_name }}-${{ github.run_id }}
+
+      - name: Upload materialization performance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: materialization-performance-evidence
+          path: |
+            ${{ runner.temp }}/gbs-materialization-json
+            ${{ runner.temp }}/gbs-materialization-evidence
+            ${{ runner.temp }}/gbs-materialization-performance-trends
+          if-no-files-found: ignore

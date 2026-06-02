@@ -191,6 +191,40 @@ GbsSessionParametersTest >> testRememberedSecretsCanRoundTripThroughKeychainStor
 ]
 
 { #category : 'tests' }
+GbsSessionParametersTest >> testRememberedSecretsCanUseKeychainBackendProtocol [
+	| previousBackend backend params account |
+	previousBackend := Smalltalk globals
+		at: #GbsSessionParametersKeychainBackend
+		ifAbsent: [ nil ].
+	backend := CoreFakeKeychainBackend new.
+	[
+		Smalltalk globals at: #GbsSessionParametersKeychainBackend put: backend.
+		params := GbsSessionParameters new.
+		params
+			name: 'Production';
+			gemStoneName: 'gs64stone';
+			username: 'DataCurator';
+			gsRemember: true;
+			password: 'gs-secret'.
+		account := params keychainAccountForSecretNamed: #gemStonePassword.
+
+		params storeRememberedSecretsInKeychain.
+		self assert: params password isNil.
+		self assert: (backend secretAt: account service: GbsSessionParameters keychainServiceName) equals: 'gs-secret'.
+		self assert: (backend services includes: GbsSessionParameters keychainServiceName).
+
+		params restoreRememberedSecretsFromKeychain.
+		self assert: params password equals: 'gs-secret'.
+
+		params deleteRememberedSecretsFromKeychain.
+		self assert: (backend secretAt: account service: GbsSessionParameters keychainServiceName) isNil
+	] ensure: [
+		previousBackend
+			ifNil: [ Smalltalk globals removeKey: #GbsSessionParametersKeychainBackend ifAbsent: [ ] ]
+			ifNotNil: [ Smalltalk globals at: #GbsSessionParametersKeychainBackend put: previousBackend ] ]
+]
+
+{ #category : 'tests' }
 GbsSessionParametersTest >> testKeychainShellQuoteHandlesSingleQuotes [
 	| expected |
 	expected := String streamContents: [ :stream |
@@ -260,6 +294,49 @@ GbsSessionParametersTest >> testExportDictionaryNormalizesFieldsAndOmitsSessionI
 	self assert: (exported at: 'netldiHostOrIp') equals: 'gemstone.example.com'.
 	self assert: (exported at: 'netldiNameOrPort') equals: '50377'.
 	self deny: (exported includesKey: 'sessionId')
+]
+
+{ #category : 'tests' }
+GbsSessionParametersTest >> testExportDictionaryIncludesMaterializationSafetySettings [
+	| params exported imported |
+	params := GbsSessionParameters new.
+	params
+		name: 'Production';
+		username: 'DataCurator';
+		materializationBatchSize: '250';
+		materializationMaxObjects: '1000';
+		materializationMaxDepth: '12';
+		materializationMaxBatchBytes: '4096';
+		materializationMaxFrontierOops: '300'.
+
+	exported := params exportDictionary.
+	imported := GbsSessionParameters fromExportDictionary: exported.
+
+	self assert: (exported at: 'materializationBatchSize') equals: 250.
+	self assert: (exported at: 'materializationMaxObjects') equals: 1000.
+	self assert: (exported at: 'materializationMaxDepth') equals: 12.
+	self assert: (exported at: 'materializationMaxBatchBytes') equals: 4096.
+	self assert: (exported at: 'materializationMaxFrontierOops') equals: 300.
+	self assert: imported materializationBatchSize equals: 250.
+	self assert: imported materializationMaxObjects equals: 1000.
+	self assert: imported materializationMaxDepth equals: 12.
+	self assert: imported materializationMaxBatchBytes equals: 4096.
+	self assert: imported materializationMaxFrontierOops equals: 300
+]
+
+{ #category : 'tests' }
+GbsSessionParametersTest >> testConfigurationValidationRejectsInvalidMaterializationSettings [
+	| params message |
+	params := GbsSessionParameters new.
+	params
+		username: 'DataCurator';
+		materializationBatchSize: '0';
+		materializationMaxObjects: 'abc'.
+
+	message := params configurationValidationErrorMessage.
+
+	self assert: (message includesSubstring: 'Materialization batch size must be a positive integer.').
+	self assert: (message includesSubstring: 'Materialization max objects must be a non-negative integer.')
 ]
 
 { #category : 'tests' }

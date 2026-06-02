@@ -18,10 +18,46 @@ GbsSessionMaterializer >> incrementMaterializationMetric: aSymbol by: anInteger 
 GbsSessionMaterializer >> materializationBatchSize [
 	| batchSize |
 	batchSize := self
-		materializationLimitFromGlobal: #GbsMaterializationBatchSize
+		materializationLimitFromSessionSelector: #materializationBatchSize
+		global: #GbsMaterializationBatchSize
 		environmentName: 'GBS_MATERIALIZATION_BATCH_SIZE'
 		default: 1000.
 	^ batchSize <= 0 ifTrue: [ 1000 ] ifFalse: [ batchSize ]
+]
+
+{ #category : 'metrics' }
+GbsSessionMaterializer >> materializationLimitFromSessionSelector: selector global: globalSymbol environmentName: environmentName default: defaultValue [
+	| raw |
+	raw := self materializationSessionLimitFor: selector.
+	raw ifNotNil: [
+		^ self normalizedMaterializationLimitFrom: raw default: defaultValue ].
+	^ self
+		materializationLimitFromGlobal: globalSymbol
+		environmentName: environmentName
+		default: defaultValue
+]
+
+{ #category : 'metrics' }
+GbsSessionMaterializer >> materializationSessionLimitFor: selector [
+	| parameters |
+	parameters := [
+		(session respondsTo: #parameters)
+			ifTrue: [ session parameters ]
+			ifFalse: [ nil ] ]
+		on: Error
+		do: [ nil ].
+	parameters ifNil: [ ^ nil ].
+	(parameters respondsTo: selector) ifFalse: [ ^ nil ].
+	^ parameters perform: selector
+]
+
+{ #category : 'metrics' }
+GbsSessionMaterializer >> normalizedMaterializationLimitFrom: rawValue default: defaultValue [
+	| value |
+	value := [ rawValue asInteger ]
+		on: Error
+		do: [ defaultValue ].
+	^ value < 0 ifTrue: [ defaultValue ] ifFalse: [ value ]
 ]
 
 { #category : 'metrics' }
@@ -43,7 +79,8 @@ GbsSessionMaterializer >> materializationLimitFromGlobal: globalSymbol environme
 { #category : 'limits' }
 GbsSessionMaterializer >> materializationMaxBatchBytes [
 	^ self
-		materializationLimitFromGlobal: #GbsMaterializationMaxBatchBytes
+		materializationLimitFromSessionSelector: #materializationMaxBatchBytes
+		global: #GbsMaterializationMaxBatchBytes
 		environmentName: 'GBS_MATERIALIZATION_MAX_BATCH_BYTES'
 		default: 0
 ]
@@ -51,7 +88,8 @@ GbsSessionMaterializer >> materializationMaxBatchBytes [
 { #category : 'limits' }
 GbsSessionMaterializer >> materializationMaxDepth [
 	^ self
-		materializationLimitFromGlobal: #GbsMaterializationMaxDepth
+		materializationLimitFromSessionSelector: #materializationMaxDepth
+		global: #GbsMaterializationMaxDepth
 		environmentName: 'GBS_MATERIALIZATION_MAX_DEPTH'
 		default: 0
 ]
@@ -59,7 +97,8 @@ GbsSessionMaterializer >> materializationMaxDepth [
 { #category : 'limits' }
 GbsSessionMaterializer >> materializationMaxFrontierOops [
 	^ self
-		materializationLimitFromGlobal: #GbsMaterializationMaxFrontierOops
+		materializationLimitFromSessionSelector: #materializationMaxFrontierOops
+		global: #GbsMaterializationMaxFrontierOops
 		environmentName: 'GBS_MATERIALIZATION_MAX_FRONTIER_OOPS'
 		default: 0
 ]
@@ -67,7 +106,8 @@ GbsSessionMaterializer >> materializationMaxFrontierOops [
 { #category : 'limits' }
 GbsSessionMaterializer >> materializationMaxObjects [
 	^ self
-		materializationLimitFromGlobal: #GbsMaterializationMaxObjects
+		materializationLimitFromSessionSelector: #materializationMaxObjects
+		global: #GbsMaterializationMaxObjects
 		environmentName: 'GBS_MATERIALIZATION_MAX_OBJECTS'
 		default: 0
 ]

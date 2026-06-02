@@ -277,6 +277,15 @@ GbsSessionMaterializationRemoteReader >> structuredBatchBytesForBody: bodyString
 	| bufferOop bytes |
 	self structuredBatchBytesEnabled ifFalse: [
 		self error: 'Structured materialization byte payloads are disabled for this session.' ].
+	self prefersTraversalByteTransport ifTrue: [
+		self traversalByteTransportAvailable
+			ifTrue: [
+				^ self
+					traversalBatchBytesForBody: bodyString
+					oopCollection: oopCollection
+					label: aString ]
+			ifFalse: [
+				self incrementMaterializationMetric: #structuredTraversalByteFallbacks ] ].
 	bufferOop := session
 		returnRemoteCommandBody: bodyString
 		literalBindings: (Dictionary new
@@ -286,6 +295,50 @@ GbsSessionMaterializationRemoteReader >> structuredBatchBytesForBody: bodyString
 	bytes := self rawBytesForOop: bufferOop label: aString.
 	self incrementMaterializationMetric: #structuredBatchByteFetchCalls.
 	self incrementMaterializationMetric: #structuredBatchByteCount by: bytes size.
+	^ bytes
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> prefersTraversalByteTransport [
+	^ self structuredBatchByteTransport = #traversal
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> structuredBatchByteTransport [
+	| raw env normalized |
+	raw := Smalltalk globals
+		at: #GbsMaterializationByteTransport
+		ifAbsent: [
+			env := [ Smalltalk os environment ]
+				on: Error
+				do: [ Dictionary new ].
+			env at: 'GBS_MATERIALIZATION_BYTE_TRANSPORT' ifAbsent: [ 'gci-bytes' ] ].
+	normalized := raw asString asLowercase copyReplaceAll: '_' with: '-'.
+	(#('traversal' 'traversal-buffer') includes: normalized)
+		ifTrue: [ ^ #traversal ].
+	^ #gciBytes
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> traversalByteTransportAvailable [
+	(session respondsTo: #supportsMaterializationTraversalByteTransport) ifTrue: [
+		session supportsMaterializationTraversalByteTransport ifFalse: [ ^ false ] ].
+	^ session respondsTo: #materializationTraversalBytesForBody:literalBindings:label:
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> traversalBatchBytesForBody: bodyString oopCollection: oopCollection label: aString [
+	| bytes |
+	bytes := session
+		materializationTraversalBytesForBody: bodyString
+		literalBindings: (Dictionary new
+			at: 'oops' put: oopCollection asArray;
+			yourself)
+		label: aString.
+	bytes := ByteArray withAll: bytes.
+	self checkMaterializationBatchBytes: bytes size label: aString.
+	self incrementMaterializationMetric: #structuredTraversalByteFetchCalls.
+	self incrementMaterializationMetric: #structuredTraversalByteCount by: bytes size.
 	^ bytes
 ]
 

@@ -1275,6 +1275,11 @@ GbsSession >> marshalStringLiteralToScript: aString [
 ]
 
 { #category : 'accessing' }
+GbsSession >> parameters [
+	^ parameters
+]
+
+{ #category : 'accessing' }
 GbsSession >> parameters: p [ parameters := p. GbsSessionParameters classPool at: #CurrentSession put: self
 ]
 

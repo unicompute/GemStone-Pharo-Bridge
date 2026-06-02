@@ -15,6 +15,11 @@ Class {
 		'netldiPortField',
 		'netObjField',
 		'x509Button',
+		'matBatchField',
+		'matMaxObjectsField',
+		'matMaxDepthField',
+		'matMaxBatchBytesField',
+		'matMaxFrontierOopsField',
 		'model',
 		'btnOk',
 		'btnCancel',
@@ -49,6 +54,15 @@ GbsSessionParametersEditor >> defaultLayout [
 			yourself);
 		add: (SpBoxLayout newHorizontal add: 'Net object:' width: 80; add: netObjField; yourself) height: 30;
 		add: x509Button height: 30;
+		add: (SpBoxLayout newVertical
+			borderWidth: 10;
+			add: (self newLabel label: 'Materialization safety') asPresenter;
+			add: (SpBoxLayout newHorizontal add: 'Batch size:' width: 130; add: matBatchField; yourself) height: 30;
+			add: (SpBoxLayout newHorizontal add: 'Max objects:' width: 130; add: matMaxObjectsField; yourself) height: 30;
+			add: (SpBoxLayout newHorizontal add: 'Max depth:' width: 130; add: matMaxDepthField; yourself) height: 30;
+			add: (SpBoxLayout newHorizontal add: 'Max batch bytes:' width: 130; add: matMaxBatchBytesField; yourself) height: 30;
+			add: (SpBoxLayout newHorizontal add: 'Max frontier OOPs:' width: 130; add: matMaxFrontierOopsField; yourself) height: 30;
+			yourself);
 		
 		"Footer: Buttons"
 		add: (SpBoxLayout newHorizontal
@@ -82,6 +96,12 @@ GbsSessionParametersEditor >> optionalTextFrom: aTextInput [
 	^ text isEmpty ifTrue: [ nil ] ifFalse: [ text ]
 ]
 
+{ #category : 'private' }
+GbsSessionParametersEditor >> materializationTextFrom: aValue [
+	aValue ifNil: [ ^ '' ].
+	^ aValue asString trimBoth
+]
+
 { #category : 'initialization' }
 GbsSessionParametersEditor >> initializePresenters [
 	nameField := self newTextInput placeholder: 'Configuration Name'.
@@ -99,6 +119,11 @@ GbsSessionParametersEditor >> initializePresenters [
 	
 	netObjField := self newTextInput.
 	x509Button := self newButton label: 'X509...'; icon: (self iconNamed: #smallConfiguration); action: [ self openX509Settings ].
+	matBatchField := self newTextInput placeholder: '1000'.
+	matMaxObjectsField := self newTextInput placeholder: '0 = unlimited'.
+	matMaxDepthField := self newTextInput placeholder: '0 = unlimited'.
+	matMaxBatchBytesField := self newTextInput placeholder: '0 = unlimited'.
+	matMaxFrontierOopsField := self newTextInput placeholder: '0 = unlimited'.
 
 	"Explicit OK/Cancel Buttons"
 	btnOk := self newButton label: 'OK'; icon: (self iconNamed: #smallOk); action: [ self doAccept ].
@@ -109,7 +134,7 @@ GbsSessionParametersEditor >> initializePresenters [
 GbsSessionParametersEditor >> initializeWindow: aWindow [
 	aWindow 
 		title: 'GemStone Session Parameters Editor';
-		initialExtent: 430@680.
+		initialExtent: 460@820.
 ]
 
 { #category : 'accessing' }
@@ -154,6 +179,11 @@ GbsSessionParametersEditor >> setModel: aParam [
 	netldiPortField text: (model netldiNameOrPort ifNil: ['']).
 	hostRemCheck state: model hostRemember.
 	netObjField text: (model netObject ifNil: ['']).
+	matBatchField text: (self materializationTextFrom: model materializationBatchSize).
+	matMaxObjectsField text: (self materializationTextFrom: model materializationMaxObjects).
+	matMaxDepthField text: (self materializationTextFrom: model materializationMaxDepth).
+	matMaxBatchBytesField text: (self materializationTextFrom: model materializationMaxBatchBytes).
+	matMaxFrontierOopsField text: (self materializationTextFrom: model materializationMaxFrontierOops).
 ]
 
 { #category : 'actions' }
@@ -174,6 +204,11 @@ GbsSessionParametersEditor >> updateModel [
 	model netldiHostOrIp: (self optionalTextFrom: netldiHostField).
 	model netldiNameOrPort: (self optionalTextFrom: netldiPortField).
 	model netObject: (self optionalTextFrom: netObjField).
+	model materializationBatchSize: (self optionalTextFrom: matBatchField).
+	model materializationMaxObjects: (self optionalTextFrom: matMaxObjectsField).
+	model materializationMaxDepth: (self optionalTextFrom: matMaxDepthField).
+	model materializationMaxBatchBytes: (self optionalTextFrom: matMaxBatchBytesField).
+	model materializationMaxFrontierOops: (self optionalTextFrom: matMaxFrontierOopsField).
 	model normalizeConnectionFields
 ]
 
@@ -205,6 +240,11 @@ GbsSessionParametersEditor >> hasUnsavedChanges [
 	(self optionalTextFrom: netldiHostField) ~= model netldiHostOrIp ifTrue: [ ^ true ].
 	(self optionalTextFrom: netldiPortField) ~= model netldiNameOrPort ifTrue: [ ^ true ].
 	(self optionalTextFrom: netObjField) ~= model netObject ifTrue: [ ^ true ].
+	(self normalizedTextFrom: matBatchField) ~= (self materializationTextFrom: model materializationBatchSize) ifTrue: [ ^ true ].
+	(self normalizedTextFrom: matMaxObjectsField) ~= (self materializationTextFrom: model materializationMaxObjects) ifTrue: [ ^ true ].
+	(self normalizedTextFrom: matMaxDepthField) ~= (self materializationTextFrom: model materializationMaxDepth) ifTrue: [ ^ true ].
+	(self normalizedTextFrom: matMaxBatchBytesField) ~= (self materializationTextFrom: model materializationMaxBatchBytes) ifTrue: [ ^ true ].
+	(self normalizedTextFrom: matMaxFrontierOopsField) ~= (self materializationTextFrom: model materializationMaxFrontierOops) ifTrue: [ ^ true ].
 	^ false
 ]
 

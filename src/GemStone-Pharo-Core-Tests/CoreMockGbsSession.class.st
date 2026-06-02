@@ -255,6 +255,20 @@ CoreMockGbsSession >> supportsStructuredMaterializationBatchBytes [
 	^ self stubs at: #supportsStructuredMaterializationBatchBytes ifAbsent: [ false ]
 ]
 
+{ #category : 'materialization' }
+CoreMockGbsSession >> supportsMaterializationTraversalByteTransport [
+	^ self stubs at: #supportsMaterializationTraversalByteTransport ifAbsent: [ false ]
+]
+
+{ #category : 'materialization' }
+CoreMockGbsSession >> materializationTraversalBytesForBody: bodyString literalBindings: literalDictionary label: aString [
+	| block |
+	block := self stubs at: #materializationTraversalBytesForBody ifAbsent: [ nil ].
+	block ifNotNil: [
+		^ block cull: bodyString cull: literalDictionary cull: aString ].
+	self error: 'No materialization traversal byte transport stub configured.'
+]
+
 { #category : 'accessing' }
 CoreMockGbsSession >> stubs [
 	^ stubs ifNil: [ stubs := Dictionary new ]
