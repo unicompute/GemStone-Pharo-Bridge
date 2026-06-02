@@ -299,8 +299,34 @@ GbsSessionMaterializationRemoteReader >> structuredBatchBytesForBody: bodyString
 ]
 
 { #category : 'private' }
+GbsSessionMaterializationRemoteReader >> traversalBufferReportsForOops: oopCollection level: traversalLevel label: aString [
+	| reports |
+	self traversalBufferTransportAvailable ifFalse: [
+		self error: 'GCI traversal-buffer materialization transport is not available for this session.' ].
+	reports := session
+		materializationTraversalReportsForOops: oopCollection asArray
+		level: traversalLevel
+		label: aString.
+	self incrementMaterializationMetric: #structuredTraversalBufferFetchCalls.
+	self incrementMaterializationMetric: #structuredTraversalReportCount by: reports size.
+	^ reports
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> traversalBufferTransportAvailable [
+	(session respondsTo: #supportsMaterializationTraversalBufferTransport) ifTrue: [
+		session supportsMaterializationTraversalBufferTransport ifFalse: [ ^ false ] ].
+	^ session respondsTo: #materializationTraversalReportsForOops:level:label:
+]
+
+{ #category : 'private' }
 GbsSessionMaterializationRemoteReader >> prefersTraversalByteTransport [
-	^ self structuredBatchByteTransport = #traversal
+	^ self structuredBatchByteTransport = #traversalByte
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> prefersTraversalBufferTransport [
+	^ self structuredBatchByteTransport = #traversalBuffer
 ]
 
 { #category : 'private' }
@@ -312,10 +338,10 @@ GbsSessionMaterializationRemoteReader >> structuredBatchByteTransport [
 			env := [ Smalltalk os environment ]
 				on: Error
 				do: [ Dictionary new ].
-			env at: 'GBS_MATERIALIZATION_BYTE_TRANSPORT' ifAbsent: [ 'gci-bytes' ] ].
+			env at: 'GBS_MATERIALIZATION_BYTE_TRANSPORT' ifAbsent: [ 'traversal-buffer' ] ].
 	normalized := raw asString asLowercase copyReplaceAll: '_' with: '-'.
-	(#('traversal' 'traversal-buffer') includes: normalized)
-		ifTrue: [ ^ #traversal ].
+	normalized = 'traversal-buffer' ifTrue: [ ^ #traversalBuffer ].
+	normalized = 'traversal' ifTrue: [ ^ #traversalByte ].
 	^ #gciBytes
 ]
 
@@ -409,6 +435,17 @@ GbsSessionMaterializationRemoteReader >> rawBytesForOop: anOop label: aString [
 					bytes at: index put: (buffer unsignedByteAt: index) ].
 				bytes ] ]
 		ensure: [ buffer free ]
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> rawStringForOop: anOop label: aString [
+	^ self stringFromBytes: (self rawBytesForOop: anOop label: aString)
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> stringFromBytes: byteArray [
+	^ String streamContents: [ :stream |
+		byteArray do: [ :byte | stream nextPut: byte asCharacter ] ]
 ]
 
 { #category : 'private' }
@@ -933,13 +970,29 @@ GbsSessionMaterializationRemoteReader >> remoteClassNameForClassOop: classOop [
 			self
 				recordMillisecondsForMetric: #classNameByClassOopMs
 				during: [
-					session
-						fetchRemoteCommandBody: 'classObject name asString'
-						literalBindings: Dictionary new
-						oopBindings: (Dictionary new
-							at: 'classObject' put: classOop;
-							yourself)
-						context: 20 ] ]
+					[ self remoteClassNameForClassOopViaGci: classOop ]
+						on: Error
+						do: [ self remoteClassNameForClassOopViaCommand: classOop ] ] ]
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteClassNameForClassOopViaCommand: classOop [
+	^ session
+		fetchRemoteCommandBody: 'classObject name asString'
+		literalBindings: Dictionary new
+		oopBindings: (Dictionary new
+			at: 'classObject' put: classOop;
+			yourself)
+		context: 20
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteClassNameForClassOopViaGci: classOop [
+	| nameOop |
+	(session serverInterface respondsTo: #apiGciFetchNameOfClass:) ifFalse: [
+		self error: 'GciFetchNameOfClass is not available.' ].
+	nameOop := session serverInterface apiGciFetchNameOfClass: classOop.
+	^ self rawStringForOop: nameOop label: 'class-name GCI fetch'
 ]
 
 { #category : 'cache' }
@@ -971,6 +1024,13 @@ GbsSessionMaterializationRemoteReader >> remoteClassNameForObjectOop: anOop [
 GbsSessionMaterializationRemoteReader >> remoteClassNameDictionaryForOops: oopCollection [
 	self incrementMaterializationMetric: #classNameBatchCalls.
 	self incrementMaterializationMetric: #classNameBatchOopCount by: oopCollection size.
+	self prefersTraversalBufferTransport ifTrue: [
+		[
+			^ self
+				recordMillisecondsForMetric: #classNameBatchMs
+				during: [ self remoteClassNameDictionaryFromTraversalForOops: oopCollection ] ]
+			on: Error
+			do: [ self incrementMaterializationMetric: #structuredTraversalBufferFallbacks ] ].
 	^ self
 		recordMillisecondsForMetric: #classNameBatchMs
 		during: [
@@ -1053,6 +1113,24 @@ stream contents'
 					yourself)
 				oopBindings: Dictionary new
 				context: 20) ] ] ]
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteClassNameDictionaryFromTraversalForOops: oopCollection [
+	| reports classNames |
+	reports := self
+		traversalBufferReportsForOops: oopCollection
+		level: 1
+		label: 'class-name traversal batch'.
+	classNames := Dictionary new.
+	oopCollection do: [ :oop |
+		| report |
+		report := reports at: oop ifAbsent: [
+			self error: 'GCI traversal class-name batch did not include requested OOP.' ].
+		classNames
+			at: oop
+			put: (self remoteClassNameForClassOop: report classOop) ].
+	^ classNames
 ]
 
 { #category : 'remote access' }
@@ -1464,6 +1542,13 @@ GbsSessionMaterializationRemoteReader >> remoteStringValuesForOops: oopCollectio
 GbsSessionMaterializationRemoteReader >> remoteStringValueDictionaryForOops: oopCollection [
 	self incrementMaterializationMetric: #scalarStringBatchCalls.
 	self incrementMaterializationMetric: #scalarStringBatchObjectCount by: oopCollection size.
+	self prefersTraversalBufferTransport ifTrue: [
+		[
+			^ self
+				recordMillisecondsForMetric: #scalarStringBatchMs
+				during: [ self remoteStringValueDictionaryFromTraversalForOops: oopCollection ] ]
+			on: Error
+			do: [ self incrementMaterializationMetric: #structuredTraversalBufferFallbacks ] ].
 	^ self
 		recordMillisecondsForMetric: #scalarStringBatchMs
 		during: [
@@ -1582,6 +1667,24 @@ GbsSessionMaterializationRemoteReader >> remoteStringValueDictionaryForOopsAdapt
 ]
 
 { #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteStringValueDictionaryFromTraversalForOops: oopCollection [
+	| reports values |
+	reports := self
+		traversalBufferReportsForOops: oopCollection
+		level: 1
+		label: 'string-value traversal batch'.
+	values := Dictionary new.
+	oopCollection do: [ :oop |
+		| report |
+		report := reports at: oop ifAbsent: [
+			self error: 'GCI traversal string batch did not include requested OOP.' ].
+		report hasByteValue ifFalse: [
+			self error: 'GCI traversal string batch returned a non-byte object report.' ].
+		values at: oop put: (self stringFromBytes: report valueBytes) ].
+	^ values
+]
+
+{ #category : 'remote access' }
 GbsSessionMaterializationRemoteReader >> remoteByteArrayValuesForOops: oopCollection [
 	| result batches |
 	result := Dictionary new.
@@ -1608,6 +1711,13 @@ GbsSessionMaterializationRemoteReader >> remoteByteArrayValuesForOops: oopCollec
 GbsSessionMaterializationRemoteReader >> remoteByteArrayValueDictionaryForOops: oopCollection [
 	self incrementMaterializationMetric: #scalarByteArrayBatchCalls.
 	self incrementMaterializationMetric: #scalarByteArrayBatchObjectCount by: oopCollection size.
+	self prefersTraversalBufferTransport ifTrue: [
+		[
+			^ self
+				recordMillisecondsForMetric: #scalarByteArrayBatchMs
+				during: [ self remoteByteArrayValueDictionaryFromTraversalForOops: oopCollection ] ]
+			on: Error
+			do: [ self incrementMaterializationMetric: #structuredTraversalBufferFallbacks ] ].
 	^ self
 		recordMillisecondsForMetric: #scalarByteArrayBatchMs
 		during: [
@@ -1714,6 +1824,24 @@ GbsSessionMaterializationRemoteReader >> remoteByteArrayValueDictionaryForOopsAd
 					associationsDo: [ :association |
 						merged at: association key put: association value ].
 				merged ] ]
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteByteArrayValueDictionaryFromTraversalForOops: oopCollection [
+	| reports values |
+	reports := self
+		traversalBufferReportsForOops: oopCollection
+		level: 1
+		label: 'byte-array traversal batch'.
+	values := Dictionary new.
+	oopCollection do: [ :oop |
+		| report |
+		report := reports at: oop ifAbsent: [
+			self error: 'GCI traversal byte-array batch did not include requested OOP.' ].
+		report hasByteValue ifFalse: [
+			self error: 'GCI traversal byte-array batch returned a non-byte object report.' ].
+		values at: oop put: report valueBytes ].
+	^ values
 ]
 
 { #category : 'accessing' }

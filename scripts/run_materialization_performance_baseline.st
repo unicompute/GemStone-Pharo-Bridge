@@ -264,7 +264,9 @@ root'
             ' shallow_wrapper_nil_results=', (metricValue value: shallowMetrics value: #wrapperLookupNilResults) asString,
             ' shallow_structured_byte_fetches=', (metricValue value: shallowMetrics value: #structuredBatchByteFetchCalls) asString,
             ' shallow_structured_traversal_byte_fetches=', (metricValue value: shallowMetrics value: #structuredTraversalByteFetchCalls) asString,
-            ' shallow_structured_byte_fallbacks=', ((metricValue value: shallowMetrics value: #structuredByteBatchFallbacks) + (metricValue value: shallowMetrics value: #structuredTraversalByteFallbacks)) asString,
+            ' shallow_structured_traversal_buffer_fetches=', (metricValue value: shallowMetrics value: #structuredTraversalBufferFetchCalls) asString,
+            ' shallow_structured_traversal_buffer_reports=', (metricValue value: shallowMetrics value: #structuredTraversalReportCount) asString,
+            ' shallow_structured_byte_fallbacks=', ((metricValue value: shallowMetrics value: #structuredByteBatchFallbacks) + (metricValue value: shallowMetrics value: #structuredTraversalByteFallbacks) + (metricValue value: shallowMetrics value: #structuredTraversalBufferFallbacks)) asString,
             ' mixed_collection_array_batches=', (metricValue value: mixedMetrics value: #collectionArrayBatchCalls) asString,
             ' mixed_dictionary_pair_batches=', (metricValue value: mixedMetrics value: #dictionaryPairBatchCalls) asString,
             ' mixed_scalar_string_batches=', (metricValue value: mixedMetrics value: #scalarStringBatchCalls) asString,
@@ -275,7 +277,9 @@ root'
             ' mixed_wrapper_nil_results=', (metricValue value: mixedMetrics value: #wrapperLookupNilResults) asString,
             ' mixed_structured_byte_fetches=', (metricValue value: mixedMetrics value: #structuredBatchByteFetchCalls) asString,
             ' mixed_structured_traversal_byte_fetches=', (metricValue value: mixedMetrics value: #structuredTraversalByteFetchCalls) asString,
-            ' mixed_structured_byte_fallbacks=', ((metricValue value: mixedMetrics value: #structuredByteBatchFallbacks) + (metricValue value: mixedMetrics value: #structuredTraversalByteFallbacks)) asString;
+            ' mixed_structured_traversal_buffer_fetches=', (metricValue value: mixedMetrics value: #structuredTraversalBufferFetchCalls) asString,
+            ' mixed_structured_traversal_buffer_reports=', (metricValue value: mixedMetrics value: #structuredTraversalReportCount) asString,
+            ' mixed_structured_byte_fallbacks=', ((metricValue value: mixedMetrics value: #structuredByteBatchFallbacks) + (metricValue value: mixedMetrics value: #structuredTraversalByteFallbacks) + (metricValue value: mixedMetrics value: #structuredTraversalBufferFallbacks)) asString;
           cr.
       ] ensure: [
         cleanupFixture value.

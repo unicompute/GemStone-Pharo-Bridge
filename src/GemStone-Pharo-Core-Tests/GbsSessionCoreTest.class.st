@@ -173,6 +173,32 @@ GbsSessionCoreTest >> encodedPackedByteArrayPayloadFor: byteArrayCollection [
 ]
 
 { #category : 'running' }
+GbsSessionCoreTest >> traversalByteReportForOop: oop classOop: classOop bytes: byteArray [
+	^ GbsMaterializationTraversalReport new
+		oop: oop;
+		classOop: classOop;
+		objectFormat: 1;
+		indexedSize: byteArray size;
+		namedSize: 0;
+		firstOffset: 1;
+		valueBytes: byteArray;
+		yourself
+]
+
+{ #category : 'running' }
+GbsSessionCoreTest >> traversalPointerReportForOop: oop classOop: classOop oops: oopArray [
+	^ GbsMaterializationTraversalReport new
+		oop: oop;
+		classOop: classOop;
+		objectFormat: 0;
+		indexedSize: oopArray size;
+		namedSize: 0;
+		firstOffset: 1;
+		valueOops: oopArray;
+		yourself
+]
+
+{ #category : 'running' }
 GbsSessionCoreTest >> setUp [
 	super setUp.
 	previousObjectSpaceFinalizationRegistry := Smalltalk globals
@@ -473,6 +499,123 @@ GbsSessionCoreTest >> testClassNameBatchUsesStructuredBytePayload [
 	self assert: (metrics at: #structuredBatchByteFetchCalls ifAbsent: [ 0 ]) equals: 1.
 	self assert: (metrics at: #structuredBatchBufferFetchCalls ifAbsent: [ 0 ]) equals: 0.
 	self assert: (metrics at: #structuredBatchFallbacks ifAbsent: [ 0 ]) equals: 0
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testClassNameBatchUsesGciTraversalBuffer [
+	| mockSession reports classNames traversalCalls metrics previousTransport hadTransport |
+	mockSession := CoreMockGbsSession new.
+	reports := Dictionary new.
+	reports
+		at: 9100 put: (self traversalPointerReportForOop: 9100 classOop: 7000 oops: #());
+		at: 9040 put: (self traversalByteReportForOop: 9040 classOop: 7001 bytes: (ByteArray withAll: #(118 105 112))).
+	traversalCalls := 0.
+	hadTransport := Smalltalk globals includesKey: #GbsMaterializationByteTransport.
+	previousTransport := Smalltalk globals at: #GbsMaterializationByteTransport ifAbsent: [ nil ].
+	[
+		Smalltalk globals at: #GbsMaterializationByteTransport put: 'traversal-buffer'.
+		mockSession stubs at: #supportsMaterializationTraversalBufferTransport put: true.
+		mockSession stubs at: #materializationTraversalReportsForOops put: [ :oops :level :label |
+			traversalCalls := traversalCalls + 1.
+			self assert: oops equals: #(9100 9040).
+			self assert: level equals: 1.
+			self assert: label equals: 'class-name traversal batch'.
+			reports ].
+		mockSession stubs at: #apiGciFetchNameOfClass put: [ :classOop |
+			classOop = 7000 ifTrue: [ 8000 ] ifFalse: [
+				classOop = 7001 ifTrue: [ 8001 ] ifFalse: [ self fail ] ] ].
+		mockSession stubs at: #apiGciFetchSize put: [ :oop |
+			oop = 8000 ifTrue: [ 5 ] ifFalse: [
+				oop = 8001 ifTrue: [ 6 ] ifFalse: [ self fail ] ] ].
+		mockSession stubs at: #apiGciFetchBytes put: [ :oop :start :buffer :count |
+			self assert: start equals: 1.
+			oop = 8000 ifTrue: [
+				self assert: count equals: 5.
+				ByteArray withAll: #(65 114 114 97 121) ] ifFalse: [
+				oop = 8001 ifTrue: [
+					self assert: count equals: 6.
+					ByteArray withAll: #(83 116 114 105 110 103) ] ifFalse: [ self fail ] ] ].
+		mockSession stubs at: #executeScriptAndReturnOop put: [ :script | self fail ].
+		mockSession stubs at: #executeAndFetch put: [ :script | self fail ].
+
+		classNames := mockSession materializer remoteReader
+			remoteClassNamesForOops: #(9100 9040).
+
+		self assert: (classNames at: 9100) equals: 'Array'.
+		self assert: (classNames at: 9040) equals: 'String'.
+		self assert: traversalCalls equals: 1.
+		metrics := mockSession materializationMetrics.
+		self assert: (metrics at: #structuredTraversalBufferFetchCalls ifAbsent: [ 0 ]) equals: 1.
+		self assert: (metrics at: #structuredBatchByteFetchCalls ifAbsent: [ 0 ]) equals: 0.
+		self assert: (metrics at: #structuredTraversalBufferFallbacks ifAbsent: [ 0 ]) equals: 0
+	] ensure: [
+		hadTransport
+			ifTrue: [ Smalltalk globals at: #GbsMaterializationByteTransport put: previousTransport ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationByteTransport ifAbsent: [ ] ] ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testScalarStringsUseGciTraversalBuffer [
+	| mockSession reports values metrics previousTransport hadTransport |
+	mockSession := CoreMockGbsSession new.
+	reports := Dictionary new.
+	reports at: 9040 put: (self traversalByteReportForOop: 9040 classOop: 7001 bytes: (ByteArray withAll: #(118 105 112))).
+	hadTransport := Smalltalk globals includesKey: #GbsMaterializationByteTransport.
+	previousTransport := Smalltalk globals at: #GbsMaterializationByteTransport ifAbsent: [ nil ].
+	[
+		Smalltalk globals at: #GbsMaterializationByteTransport put: 'traversal-buffer'.
+		mockSession stubs at: #supportsMaterializationTraversalBufferTransport put: true.
+		mockSession stubs at: #materializationTraversalReportsForOops put: [ :oops :level :label |
+			self assert: oops equals: #(9040).
+			self assert: level equals: 1.
+			self assert: label equals: 'string-value traversal batch'.
+			reports ].
+		mockSession stubs at: #executeScriptAndReturnOop put: [ :script | self fail ].
+		mockSession stubs at: #executeAndFetch put: [ :script | self fail ].
+
+		values := mockSession materializer remoteReader remoteStringValuesForOops: #(9040).
+
+		self assert: (values at: 9040) equals: 'vip'.
+		metrics := mockSession materializationMetrics.
+		self assert: (metrics at: #structuredTraversalBufferFetchCalls ifAbsent: [ 0 ]) equals: 1.
+		self assert: (metrics at: #structuredBatchByteFetchCalls ifAbsent: [ 0 ]) equals: 0.
+		self assert: (metrics at: #structuredTraversalBufferFallbacks ifAbsent: [ 0 ]) equals: 0
+	] ensure: [
+		hadTransport
+			ifTrue: [ Smalltalk globals at: #GbsMaterializationByteTransport put: previousTransport ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationByteTransport ifAbsent: [ ] ] ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testScalarByteArraysUseGciTraversalBuffer [
+	| mockSession reports values metrics previousTransport hadTransport |
+	mockSession := CoreMockGbsSession new.
+	reports := Dictionary new.
+	reports at: 9400 put: (self traversalByteReportForOop: 9400 classOop: 7002 bytes: (ByteArray withAll: #(1 2 3))).
+	hadTransport := Smalltalk globals includesKey: #GbsMaterializationByteTransport.
+	previousTransport := Smalltalk globals at: #GbsMaterializationByteTransport ifAbsent: [ nil ].
+	[
+		Smalltalk globals at: #GbsMaterializationByteTransport put: 'traversal-buffer'.
+		mockSession stubs at: #supportsMaterializationTraversalBufferTransport put: true.
+		mockSession stubs at: #materializationTraversalReportsForOops put: [ :oops :level :label |
+			self assert: oops equals: #(9400).
+			self assert: level equals: 1.
+			self assert: label equals: 'byte-array traversal batch'.
+			reports ].
+		mockSession stubs at: #executeScriptAndReturnOop put: [ :script | self fail ].
+		mockSession stubs at: #executeAndFetch put: [ :script | self fail ].
+
+		values := mockSession materializer remoteReader remoteByteArrayValuesForOops: #(9400).
+
+		self assert: (values at: 9400) equals: (ByteArray withAll: #(1 2 3)).
+		metrics := mockSession materializationMetrics.
+		self assert: (metrics at: #structuredTraversalBufferFetchCalls ifAbsent: [ 0 ]) equals: 1.
+		self assert: (metrics at: #structuredBatchByteFetchCalls ifAbsent: [ 0 ]) equals: 0.
+		self assert: (metrics at: #structuredTraversalBufferFallbacks ifAbsent: [ 0 ]) equals: 0
+	] ensure: [
+		hadTransport
+			ifTrue: [ Smalltalk globals at: #GbsMaterializationByteTransport put: previousTransport ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationByteTransport ifAbsent: [ ] ] ]
 ]
 
 { #category : 'tests' }

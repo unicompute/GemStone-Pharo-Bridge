@@ -36,6 +36,14 @@ GbsSession >> materializationMetrics [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> materializationTraversalReportsForOops: oopCollection level: traversalLevel label: labelString [
+	^ (GbsMaterializationTraversalBufferReader on: self)
+		reportsForOops: oopCollection
+		level: traversalLevel
+		label: labelString
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> resetMaterializationMetrics [
 	^ self materializer resetMaterializationMetrics
 ]
@@ -385,6 +393,11 @@ GbsSession >> materializationProfile [
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> materializationProfile: aProfile [
 	^ self materializer materializationProfile: aProfile
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> supportsMaterializationTraversalBufferTransport [
+	^ (GbsMaterializationTraversalBufferReader on: self) isAvailable
 ]
 
 { #category : '*GemStone-GBS-Core' }

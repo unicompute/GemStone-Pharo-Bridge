@@ -48,6 +48,14 @@ CoreMockGbsSession >> apiGciFetchBytes: anOop startingAt: startIndex into: aBuff
 ]
 
 { #category : 'accessing' }
+CoreMockGbsSession >> apiGciFetchNameOfClass: classOop [
+	| block |
+	block := self stubs at: #apiGciFetchNameOfClass ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: classOop ].
+	self error: 'No apiGciFetchNameOfClass stub configured.'
+]
+
+{ #category : 'accessing' }
 CoreMockGbsSession >> apiGciFetchSize: anOop [
 	| block |
 	block := self stubs at: #apiGciFetchSize ifAbsent: [ nil ].
@@ -279,6 +287,20 @@ CoreMockGbsSession >> materializationTraversalBytesForBody: bodyString literalBi
 	block ifNotNil: [
 		^ block cull: bodyString cull: literalDictionary cull: aString ].
 	self error: 'No materialization traversal byte transport stub configured.'
+]
+
+{ #category : 'materialization' }
+CoreMockGbsSession >> materializationTraversalReportsForOops: oopCollection level: traversalLevel label: aString [
+	| block |
+	block := self stubs at: #materializationTraversalReportsForOops ifAbsent: [ nil ].
+	block ifNotNil: [
+		^ block cull: oopCollection cull: traversalLevel cull: aString ].
+	self error: 'No materialization traversal-buffer transport stub configured.'
+]
+
+{ #category : 'materialization' }
+CoreMockGbsSession >> supportsMaterializationTraversalBufferTransport [
+	^ self stubs at: #supportsMaterializationTraversalBufferTransport ifAbsent: [ false ]
 ]
 
 { #category : 'accessing' }
