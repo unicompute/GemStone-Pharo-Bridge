@@ -32,7 +32,10 @@ GbsMaterializationTraversalBufferReader >> byteArrayFromBuffer: traversalBuffer 
 { #category : 'private' }
 GbsMaterializationTraversalBufferReader >> checkAvailable [
 	(self isAvailable) ifFalse: [
-		self error: 'GCI traversal-buffer transport is not available for this session.' ]
+		GbsMaterializationTraversalError
+			signalKind: #unavailable
+			label: 'traversal-buffer transport'
+			message: 'GCI traversal-buffer transport is not available for this session.' ]
 ]
 
 { #category : 'constants' }
@@ -91,10 +94,19 @@ GbsMaterializationTraversalBufferReader >> parseReportsFromBuffer: traversalBuff
 		report := self reportAt: traversalBuffer offset: offset.
 		reports at: report oop put: report.
 		used := self objectReportUsedBytesAt: traversalBuffer offset: offset.
-		used <= 0 ifTrue: [ self error: 'Invalid GCI traversal object report size.' ].
+		used <= 0 ifTrue: [
+			GbsMaterializationTraversalError
+				signalKind: #invalidReportSize
+				label: labelString
+				observed: used
+				message: 'Invalid GCI traversal object report size.' ].
 		offset := offset + used ].
 	offset = limit ifFalse: [
-		self error: 'GCI traversal buffer ended on a non-report boundary.' ].
+		GbsMaterializationTraversalError
+			signalKind: #reportBoundary
+			label: labelString
+			observed: offset - limit
+			message: 'GCI traversal buffer ended on a non-report boundary.' ].
 	^ reports
 ]
 
@@ -203,7 +215,10 @@ GbsMaterializationTraversalBufferReader >> withTraversalBufferDo: aBlock [
 		(buffer respondsTo: #isNull)
 			ifTrue: [ buffer isNull ]
 			ifFalse: [ buffer = 0 ] ]) ifTrue: [
-		self error: 'GCI traversal buffer allocation failed.' ].
+		GbsMaterializationTraversalError
+			signalKind: #allocationFailed
+			label: 'traversal-buffer allocation'
+			message: 'GCI traversal buffer allocation failed.' ].
 	^ [ aBlock value: buffer ]
 		ensure: [ session serverInterface apiGciFree: buffer ]
 ]

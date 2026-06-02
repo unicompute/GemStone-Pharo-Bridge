@@ -740,7 +740,7 @@ GbsSessionManagerCoreTest >> testGeneratedTypedWrapperStoresRemoteVersionMetadat
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		(script includesSubstring: 'history :=') ifTrue: [
 			^ #(5001 'RemoteLedger' 'Object' nil nil 2 4) ].
-		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+		(script includesSubstring: 'methodDict keys asSortedCollection') ifTrue: [
 			^ #(
 				#('accessing' #('size'))
 				#('payments' #('approvePayment:' 'cancelPayment'))) ].
@@ -764,7 +764,7 @@ GbsSessionManagerCoreTest >> testTypedWrapperLookupRefreshesRemoteWrapperWhenVer
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		(script includesSubstring: 'history :=') ifTrue: [
 			^ { 5001. 'RemoteLedger'. 'Object'. nil. nil. version. version + 2 } ].
-		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+		(script includesSubstring: 'methodDict keys asSortedCollection') ifTrue: [
 			^ #(
 				#('accessing' #('size'))
 				#('payments' #('approvePayment:' 'cancelPayment'))) ].
@@ -793,7 +793,7 @@ GbsSessionManagerCoreTest >> testTypedWrapperFreshnessChecksAreCachedUntilTransa
 		(script includesSubstring: 'history :=') ifTrue: [
 			mirrorFetches := mirrorFetches + 1.
 			^ { 5001. 'RemoteLedger'. 'Object'. nil. nil. version. version + 2 } ].
-		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+		(script includesSubstring: 'methodDict keys asSortedCollection') ifTrue: [
 			^ #(
 				#('accessing' #('size'))
 				#('payments' #('approvePayment:' 'cancelPayment'))) ].
@@ -836,7 +836,7 @@ GbsSessionManagerCoreTest >> testTypedWrapperLifecycleEntriesReflectCurrentAndSt
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		(script includesSubstring: 'history :=') ifTrue: [
 			^ { 5001. 'RemoteLedger'. 'Object'. nil. nil. version. version + 2 } ].
-		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+		(script includesSubstring: 'methodDict keys asSortedCollection') ifTrue: [
 			^ #(
 				#('accessing' #('size'))
 				#('payments' #('approvePayment:' 'cancelPayment'))) ].
@@ -870,7 +870,7 @@ GbsSessionManagerCoreTest >> testTypedWrapperLifecycleReportObjectExposesStructu
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		(script includesSubstring: 'history :=') ifTrue: [
 			^ { 5001. 'RemoteLedger'. 'Object'. nil. nil. version. version + 2 } ].
-		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+		(script includesSubstring: 'methodDict keys asSortedCollection') ifTrue: [
 			^ #(
 				#('accessing' #('size'))
 				#('payments' #('approvePayment:' 'cancelPayment'))) ].
@@ -903,7 +903,7 @@ GbsSessionManagerCoreTest >> testTypedWrapperCompatibilityReportShowsCachedFresh
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		(script includesSubstring: 'history :=') ifTrue: [
 			^ { 5001. 'RemoteLedger'. 'Object'. nil. nil. version. version + 2 } ].
-		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+		(script includesSubstring: 'methodDict keys asSortedCollection') ifTrue: [
 			^ #(
 				#('accessing' #('size'))
 				#('payments' #('approvePayment:' 'cancelPayment'))) ].
@@ -934,7 +934,7 @@ GbsSessionManagerCoreTest >> testTypedProxyLifecycleHelpersExposeStructuredStatu
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		(script includesSubstring: 'history :=') ifTrue: [
 			^ { 5001. 'RemoteLedger'. 'Object'. nil. nil. version. version + 2 } ].
-		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+		(script includesSubstring: 'methodDict keys asSortedCollection') ifTrue: [
 			^ #(
 				#('accessing' #('size'))
 				#('payments' #('approvePayment:' 'cancelPayment'))) ].
@@ -965,7 +965,7 @@ GbsSessionManagerCoreTest >> testInvalidateStaleTypedWrapperClassesClearsLocalVe
 		put: [ :script |
 			(script includesSubstring: 'history :=') ifTrue: [
 				^ { 5001. 'RemoteLedger'. 'Object'. nil. nil. version. version + 2 } ].
-			(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+			(script includesSubstring: 'methodDict keys asSortedCollection') ifTrue: [
 				^ #(
 					#('accessing' #('size'))
 					#('payments' #('approvePayment:' 'cancelPayment'))) ].
@@ -994,7 +994,7 @@ GbsSessionManagerCoreTest >> testRefreshStaleTypedWrapperClassesForSessionRegene
 	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
 		(script includesSubstring: 'history :=') ifTrue: [
 			^ { 5001. 'RemoteLedger'. 'Object'. nil. nil. version. version + 2 } ].
-		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+		(script includesSubstring: 'methodDict keys asSortedCollection') ifTrue: [
 			^ #(
 				#('accessing' #('size'))
 				#('payments' #('approvePayment:' 'cancelPayment'))) ].
@@ -1023,7 +1023,7 @@ GbsSessionManagerCoreTest >> testRefreshAllTypedWrapperClassesForSessionRegenera
 		(script includesSubstring: 'history :=') ifTrue: [
 			(script includesSubstring: '''RemoteLedger''') ifTrue: [ ^ { 5001. 'RemoteLedger'. 'Object'. nil. nil. version. version + 2 } ].
 			(script includesSubstring: '''RemoteInvoice''') ifTrue: [ ^ { 5002. 'RemoteInvoice'. 'Object'. nil. nil. version + 1. version + 3 } ] ].
-		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+		(script includesSubstring: 'methodDict keys asSortedCollection') ifTrue: [
 			^ #(#('accessing' #('size'))) ].
 		self fail ].
 	GBSM currentSession: mockSession.

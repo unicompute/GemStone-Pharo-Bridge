@@ -32,6 +32,9 @@ GbsSessionMaterializationRemoteReader >> clearRemoteClassNameCache [
 	(session class weakRegistryNamed: #GbsSessionRemoteArrayElementOopsCaches)
 		at: session
 		put: Dictionary new.
+	(session class weakRegistryNamed: #GbsSessionRemoteCollectionAsArrayOopCaches)
+		at: session
+		put: Dictionary new.
 	(session class weakRegistryNamed: #GbsSessionRemoteDictionaryAssociationOopPairCaches)
 		at: session
 		put: Dictionary new.
@@ -247,16 +250,28 @@ GbsSessionMaterializationRemoteReader >> oopPairsFromFlatOops: oopArray [
 GbsSessionMaterializationRemoteReader >> oopValuesFromTraversalReport: report absoluteOffset: absoluteOffset count: count label: labelString [
 	| firstOffset relativeStart valueOops values |
 	report hasOopValue ifFalse: [
-		self error: 'GCI traversal ', labelString, ' returned a non-OOP object report.' ].
+		GbsMaterializationTraversalError
+			signalKind: #unexpectedReportFormat
+			label: labelString
+			observed: report objectFormat
+			message: 'GCI traversal ', labelString, ' returned a non-OOP object report.' ].
 	count = 0 ifTrue: [ ^ #() ].
 	firstOffset := report firstOffset.
 	firstOffset <= 0 ifTrue: [ firstOffset := 1 ].
 	relativeStart := absoluteOffset - firstOffset + 1.
 	relativeStart < 1 ifTrue: [
-		self error: 'GCI traversal ', labelString, ' report starts after the requested slot range.' ].
+		GbsMaterializationTraversalError
+			signalKind: #slotRange
+			label: labelString
+			observed: relativeStart
+			message: 'GCI traversal ', labelString, ' report starts after the requested slot range.' ].
 	valueOops := report valueOops.
 	relativeStart + count - 1 > valueOops size ifTrue: [
-		self error: 'GCI traversal ', labelString, ' report ended before the requested slot range.' ].
+		GbsMaterializationTraversalError
+			signalKind: #slotRange
+			label: labelString
+			observed: valueOops size
+			message: 'GCI traversal ', labelString, ' report ended before the requested slot range.' ].
 	values := Array new: count.
 	1 to: count do: [ :index |
 		values at: index put: (valueOops at: relativeStart + index - 1) ].
@@ -478,11 +493,48 @@ GbsSessionMaterializationRemoteReader >> stringFromBytes: byteArray [
 ]
 
 { #category : 'private' }
+GbsSessionMaterializationRemoteReader >> stringFromSwizzledBytes: byteArray width: byteWidth label: labelString [
+	| remainder |
+	remainder := byteArray size \\ byteWidth.
+	remainder = 0 ifFalse: [
+		GbsMaterializationTraversalError
+			signalKind: #byteSwizzleSize
+			label: labelString
+			observed: byteArray size
+			message: 'GCI traversal string byte size is not aligned to the byte-swizzle width.' ].
+	^ String streamContents: [ :stream |
+		1 to: byteArray size by: byteWidth do: [ :offset |
+			| codePoint |
+			codePoint := 0.
+			1 to: byteWidth do: [ :byteIndex |
+				codePoint := codePoint + ((byteArray at: offset + byteIndex - 1) bitShift: 8 * (byteIndex - 1)) ].
+			stream nextPut: (Character codePoint: codePoint) ] ]
+]
+
+{ #category : 'private' }
 GbsSessionMaterializationRemoteReader >> stringFromTraversalReport: report [
 	report hasByteValue ifFalse: [
-		self error: 'GCI traversal string batch returned a non-byte object report.' ].
-	report byteSwizzle = 0 ifFalse: [
-		self error: 'GCI traversal string batch requires byte-swizzle decoding; using scalar fallback.' ].
+		GbsMaterializationTraversalError
+			signalKind: #unexpectedReportFormat
+			label: 'string traversal batch'
+			observed: report objectFormat
+			message: 'GCI traversal string batch returned a non-byte object report.' ].
+	report byteSwizzle = 1 ifTrue: [
+		^ self
+			stringFromSwizzledBytes: report valueBytes
+			width: 2
+			label: 'string traversal batch' ].
+	report byteSwizzle = 2 ifTrue: [
+		^ self
+			stringFromSwizzledBytes: report valueBytes
+			width: 4
+			label: 'string traversal batch' ].
+	report byteSwizzle = 3 ifTrue: [
+		GbsMaterializationTraversalError
+			signalKind: #unsupportedByteSwizzle
+			label: 'string traversal batch'
+			observed: report byteSwizzle
+			message: 'GCI traversal string batch uses unsupported 8-byte byte-swizzle decoding.' ].
 	^ self stringFromBytes: report valueBytes
 ]
 
@@ -1315,19 +1367,30 @@ GbsSessionMaterializationRemoteReader >> remoteClassNameCache [
 
 { #category : 'remote access' }
 GbsSessionMaterializationRemoteReader >> remoteCollectionAsArrayOop: anOop [
-	^ session
-		returnRemoteCommandBody: 'object asArray'
-		literalBindings: Dictionary new
-		oopBindings: (Dictionary new
-			at: 'object' put: anOop;
-			yourself)
+	^ self remoteCollectionAsArrayOopCache
+		at: anOop
+		ifAbsentPut: [
+			session
+				returnRemoteCommandBody: 'object asArray'
+				literalBindings: Dictionary new
+				oopBindings: (Dictionary new
+					at: 'object' put: anOop;
+					yourself) ]
 ]
 
 { #category : 'remote access' }
 GbsSessionMaterializationRemoteReader >> remoteCollectionAsArrayOopsForOops: oopCollection [
-	| result batches |
+	| result cache missing batches |
 	result := Dictionary new.
-	batches := self batchesForOops: oopCollection.
+	cache := self remoteCollectionAsArrayOopCache.
+	missing := OrderedCollection new.
+	oopCollection do: [ :oop |
+		(cache includesKey: oop)
+			ifTrue: [ result at: oop put: (cache at: oop) ]
+			ifFalse: [
+				(missing includes: oop) ifFalse: [ missing add: oop ] ] ].
+	missing isEmpty ifTrue: [ ^ result ].
+	batches := self batchesForOops: missing.
 	batches do: [ :batch |
 		| fetched |
 		fetched := self remoteCollectionAsArrayOopDictionaryForOopsAdaptive: batch.
@@ -1338,8 +1401,16 @@ GbsSessionMaterializationRemoteReader >> remoteCollectionAsArrayOopsForOops: oop
 				ifAbsent: [
 					self incrementMaterializationMetric: #collectionArrayFallbackCalls.
 					self remoteCollectionAsArrayOop: oop ].
+			cache at: oop put: arrayOop.
 			result at: oop put: arrayOop ] ].
 	^ result
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializationRemoteReader >> remoteCollectionAsArrayOopCache [
+	^ (session class weakRegistryNamed: #GbsSessionRemoteCollectionAsArrayOopCaches)
+		at: session
+		ifAbsentPut: [ Dictionary new ]
 ]
 
 { #category : 'remote access' }

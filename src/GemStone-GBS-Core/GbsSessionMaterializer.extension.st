@@ -215,6 +215,8 @@ GbsSessionMaterializer >> rememberMaterializedObject: anObject forOop: anOop [
 				limit: maxObjects
 				label: 'materialized object cache' ] ].
 	cache at: anOop put: anObject.
+	(session respondsTo: #registerMaterializedObject:forOop:) ifTrue: [
+		session registerMaterializedObject: anObject forOop: anOop ].
 	^ anObject
 ]
 
@@ -354,16 +356,17 @@ GbsSessionMaterializer >> materializeArrayOops: oopCollection withProfile: aProf
 				withProfile: aProfile
 				depth: anInteger + 1
 				seen: seenOops ].
-	uniqueOops do: [ :oop |
-		| span size materialized |
-		span := spans at: oop.
-		offset := span first.
-		size := span second.
-		materialized := span third.
-		1 to: size do: [ :elementIndex |
-			materialized
-				at: elementIndex
-				put: (materializedFlat at: offset + elementIndex - 1) ] ].
+	self withDirtyTrackingSuspendedDo: [
+		uniqueOops do: [ :oop |
+			| span size materialized |
+			span := spans at: oop.
+			offset := span first.
+			size := span second.
+			materialized := span third.
+			1 to: size do: [ :elementIndex |
+				materialized
+					at: elementIndex
+					put: (materializedFlat at: offset + elementIndex - 1) ] ] ].
 	oopCollection doWithIndex: [ :oop :index |
 		(assigned at: index) ifFalse: [
 			results at: index put: (self materializedObjectForOop: oop).
@@ -415,22 +418,30 @@ GbsSessionMaterializer >> materializeSequenceableCollectionOops: oopCollection c
 				depth: anInteger + 1
 				seen: seenOops ].
 	materializedByOop := Dictionary new.
-	oopCollection do: [ :oop |
-		| span size items materialized |
-		span := spans at: oop.
-		size := span second.
-		items := Array new: size.
-		1 to: size do: [ :elementIndex |
-			items
-				at: elementIndex
-				put: (materializedFlat at: span first + elementIndex - 1) ].
-		materialized := span third.
-		self
-			fillSequenceableCollection: materialized
-			withItems: items
-			className: span fourth.
-		materializedByOop at: oop put: materialized ].
+	self withDirtyTrackingSuspendedDo: [
+		oopCollection do: [ :oop |
+			| span size items materialized |
+			span := spans at: oop.
+			size := span second.
+			items := Array new: size.
+			1 to: size do: [ :elementIndex |
+				items
+					at: elementIndex
+					put: (materializedFlat at: span first + elementIndex - 1) ].
+			materialized := span third.
+			self
+				fillSequenceableCollection: materialized
+				withItems: items
+				className: span fourth.
+			materializedByOop at: oop put: materialized ] ].
 	^ materializedByOop
+]
+
+{ #category : 'materializing' }
+GbsSessionMaterializer >> withDirtyTrackingSuspendedDo: aBlock [
+	(session respondsTo: #withDirtyTrackingSuspendedDo:) ifTrue: [
+		^ session withDirtyTrackingSuspendedDo: aBlock ].
+	^ aBlock value
 ]
 
 { #category : 'cache' }
@@ -456,6 +467,15 @@ GbsSessionMaterializer >> typedWrapperClassForServerClassName: className [
 		self incrementMaterializationMetric: #wrapperCacheHits.
 		self incrementMaterializationMetric: #wrapperCacheHitClassCounts forClassName: className.
 		^ cache at: className ].
+	wrapperClass := GbsSessionManager
+		materializationFastTypedWrapperClassForServerClassNamed: className.
+	wrapperClass ifNotNil: [
+		self incrementMaterializationMetric: #wrapperFastConnectorHits.
+		self incrementMaterializationMetric: #wrapperFastConnectorClassCounts forClassName: className.
+		self incrementMaterializationMetric: #wrapperLookupTypedResults.
+		self incrementMaterializationMetric: #wrapperLookupTypedClassCounts forClassName: className.
+		cache at: className put: wrapperClass.
+		^ wrapperClass ].
 	self incrementMaterializationMetric: #wrapperLookupCalls.
 	self incrementMaterializationMetric: #wrapperLookupMisses.
 	self incrementMaterializationMetric: #wrapperLookupClassCounts forClassName: className.
@@ -526,14 +546,15 @@ GbsSessionMaterializer >> materializeDictionaryOops: oopCollection classNames: c
 				withProfile: aProfile
 				depth: anInteger + 1
 				seen: seenOops ].
-	oopCollection do: [ :oop |
-		| span dictionary |
-		span := spans at: oop.
-		dictionary := dictionaries at: oop.
-		1 to: span second do: [ :index |
-			dictionary
-				at: (keys at: span first + index - 1)
-				put: (values at: span first + index - 1) ] ].
+	self withDirtyTrackingSuspendedDo: [
+		oopCollection do: [ :oop |
+			| span dictionary |
+			span := spans at: oop.
+			dictionary := dictionaries at: oop.
+			1 to: span second do: [ :index |
+				dictionary
+					at: (keys at: span first + index - 1)
+					put: (values at: span first + index - 1) ] ] ].
 	^ dictionaries
 ]
 
@@ -568,14 +589,15 @@ GbsSessionMaterializer >> materializeAssociationOops: oopCollection withProfile:
 				depth: anInteger + 1
 				seen: seenOops ].
 	materializedByOop := Dictionary new.
-	oopCollection doWithIndex: [ :oop :index |
-		| offset association |
-		offset := (index - 1) * 2.
-		association := associationsByOop at: oop.
-		association
-			key: (materializedFlat at: offset + 1);
-			value: (materializedFlat at: offset + 2).
-		materializedByOop at: oop put: association ].
+	self withDirtyTrackingSuspendedDo: [
+		oopCollection doWithIndex: [ :oop :index |
+			| offset association |
+			offset := (index - 1) * 2.
+			association := associationsByOop at: oop.
+			association
+				key: (materializedFlat at: offset + 1);
+				value: (materializedFlat at: offset + 2).
+			materializedByOop at: oop put: association ] ].
 	^ materializedByOop
 ]
 

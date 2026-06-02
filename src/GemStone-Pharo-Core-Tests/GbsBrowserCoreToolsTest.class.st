@@ -281,7 +281,8 @@ GbsBrowserCoreToolsTest >> testClassSelectedUsesRemoteClassMirrorProtocols [
 	session := CoreMockGbsSession new.
 	session stubs at: #executeAndFetch put: [ :script | self fail ].
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: (script includesSubstring: 'behavior methodDict keys asSortedCollection').
+		self assert: (script includesSubstring: 'methodDictForEnv: 0').
+		self assert: (script includesSubstring: 'methodDict keys asSortedCollection').
 		self deny: (script includesSubstring: 'behavior := cls class').
 		^ {
 			#('accessing' #('alpha' 'beta')).
@@ -540,13 +541,27 @@ GbsBrowserCoreToolsTest >> testOpenQueryResultsChoosesFromMultipleReferences [
 ]
 
 { #category : 'tests' }
+GbsBrowserCoreToolsTest >> testRemoteClassMirrorProtocolCommandUsesMethodDictForEnvFallback [
+	| body |
+	body := GbsRemoteClassMirror new protocolEntriesCommandBody.
+
+	self assert: (body includesSubstring: 'respondsTo: #methodDictForEnv:').
+	self assert: (body includesSubstring: 'methodDictForEnv: 0').
+	self assert: (body includesSubstring: '[ behavior methodDict ] on: Error do:').
+	self assert: (body includesSubstring: 'methodDict ifNil: [ methodDict := Dictionary new ]').
+	self assert: (body includesSubstring: 'methodDict keys asSortedCollection').
+	self deny: (body includesSubstring: 'behavior methodDict keys asSortedCollection')
+]
+
+{ #category : 'tests' }
 GbsBrowserCoreToolsTest >> testProtocolSelectedUsesRemoteClassMirrorSelectors [
 	| browser session classes methods meta |
 	browser := CoreTestableGbsBrowser new.
 	session := CoreMockGbsSession new.
 	session stubs at: #executeAndFetch put: [ :script | self fail ].
 	session stubs at: #executeScriptAndFetchObject put: [ :script |
-		self assert: (script includesSubstring: 'behavior methodDict keys asSortedCollection').
+		self assert: (script includesSubstring: 'methodDictForEnv: 0').
+		self assert: (script includesSubstring: 'methodDict keys asSortedCollection').
 		^ {
 			#('accessing' #('alpha' 'beta')).
 			#('testing' #('gamma')) } ].

@@ -1,4 +1,4 @@
-| loadFailed supportClass proxyClass session env integerEnv millisecondsToRun metricValue arraySize dictionarySize shallowSize mixedSize arrayOop dictionaryOop shallowOop mixedOop arrayResult dictionaryResult shallowResult mixedResult arrayMs dictionaryMs shallowMs mixedMs shallowMetrics mixedMetrics fixtureKey cleanupFixture phase |
+| loadFailed supportClass proxyClass session env integerEnv millisecondsToRun metricValue arraySize dictionarySize shallowSize mixedSize businessSize arrayOop dictionaryOop shallowOop mixedOop businessOop arrayResult dictionaryResult shallowResult mixedResult businessResult arrayMs dictionaryMs shallowMs mixedMs businessMs shallowMetrics mixedMetrics businessMetrics fixtureKey cleanupFixture phase |
 [
   loadFailed := false.
   cleanupFixture := [ ].
@@ -39,6 +39,7 @@
       dictionarySize := integerEnv value: 'GBS_MATERIALIZATION_DICTIONARY_SIZE' value: 700.
       shallowSize := integerEnv value: 'GBS_MATERIALIZATION_SHALLOW_SIZE' value: 500.
       mixedSize := integerEnv value: 'GBS_MATERIALIZATION_MIXED_SIZE' value: 120.
+      businessSize := integerEnv value: 'GBS_MATERIALIZATION_BUSINESS_SIZE' value: 80.
       fixtureKey := #GbsMaterializationPerfFixture.
 
       supportClass := Smalltalk
@@ -239,16 +240,111 @@ root'
           and: [ (((mixedResult at: #customers) first at: #payload) isKindOf: ByteArray) ] ] ] ] ] ]) ifFalse: [
             Error signal: 'Mixed graph materialization produced an unexpected result.' ].
 
+        phase := 'business-fixture'.
+        businessOop := session
+          returnRemoteCommandBody: '| fixture root shared customers orders catalog audit unicodeText |
+fixture := UserGlobals at: fixtureKey ifAbsentPut: [ Dictionary new ].
+shared := Dictionary new.
+shared
+  at: #name put: ''shared account profile'';
+  at: #payload put: (ByteArray withAll: #(11 12 13 14)).
+customers := OrderedCollection new.
+orders := OrderedCollection new.
+catalog := Dictionary new.
+audit := OrderedCollection new.
+unicodeText := String with: (Character codePoint: 16r03DA).
+1 to: size do: [ :index |
+  | customer order lineItems tags payload sku product |
+  sku := ''SKU-'', index printString.
+  payload := ByteArray withAll: {
+    index \\ 256.
+    (index * 3) \\ 256.
+    (index * 7) \\ 256.
+    (index * 11) \\ 256 }.
+  tags := Set new.
+  tags
+    add: #active;
+    add: (''tier-'', (index \\ 4) printString);
+    add: shared.
+  lineItems := OrderedCollection new.
+  lineItems
+    add: (Association key: #sku value: sku);
+    add: (Association key: #payload value: payload);
+    add: (Association key: #shared value: shared).
+  customer := Dictionary new.
+  customer
+    at: #id put: index;
+    at: #name put: (''Customer '', index printString);
+    at: #tags put: tags;
+    at: #payload put: payload;
+    at: #orders put: OrderedCollection new;
+    at: #shared put: shared;
+    at: #unicode put: unicodeText.
+  order := Dictionary new.
+  order
+    at: #number put: (''ORD-'', index printString);
+    at: #customer put: customer;
+    at: #lineItems put: lineItems;
+    at: #status put: #open;
+    at: #notes put: (''Order note '', index printString).
+  (customer at: #orders) add: order.
+  product := Dictionary new.
+  product
+    at: #sku put: sku;
+    at: #name put: (''Product '', index printString);
+    at: #payload put: payload;
+    at: #shared put: shared.
+  customers add: customer.
+  orders add: order.
+  catalog at: sku put: product.
+  audit add: (Association key: (''event-'', index printString) value: order) ].
+root := Dictionary new.
+root
+  at: #customers put: customers;
+  at: #orders put: orders;
+  at: #catalog put: catalog;
+  at: #audit put: audit;
+  at: #shared put: shared;
+  at: #unicode put: unicodeText;
+  at: #proxy put: Object new.
+root at: #self put: root.
+fixture at: #business put: root.
+root'
+          literalBindings: (Dictionary new
+            at: 'fixtureKey' put: fixtureKey;
+            at: 'size' put: businessSize;
+            yourself)
+          oopBindings: Dictionary new.
+
+        [ session clearProxyCache. session clearRemoteClassNameCache ] on: Error do: [ ].
+        phase := 'business-fetch-mode'.
+        session fetchDeep.
+        phase := 'business-materialization'.
+        businessMs := millisecondsToRun value: [
+          businessResult := session fetchObject: businessOop ].
+        businessMetrics := session materializationMetrics copy.
+        phase := 'business-verification'.
+        (((businessResult at: #self) == businessResult)
+          and: [ ((businessResult at: #customers) size = businessSize)
+          and: [ ((((businessResult at: #orders) first) at: #customer) == ((businessResult at: #customers) first))
+          and: [ (((((businessResult at: #customers) first) at: #orders) first) == ((businessResult at: #orders) first))
+          and: [ ((((businessResult at: #catalog) at: 'SKU-1') at: #shared) == (businessResult at: #shared))
+          and: [ ((businessResult at: #unicode) size = 1)
+          and: [ ((businessResult at: #proxy) isKindOf: proxyClass) ] ] ] ] ] ]) ifFalse: [
+            Error signal: 'Business graph materialization produced an unexpected result.' ].
+
         Transcript
           show: 'MATERIALIZATION_PERF_BASELINE result=OK code=MATERIALIZATION_PERF_OK',
             ' array_ms=', arrayMs asString,
             ' dictionary_ms=', dictionaryMs asString,
             ' shallow_ms=', shallowMs asString,
             ' mixed_ms=', mixedMs asString,
+            ' business_ms=', businessMs asString,
             ' array_size=', arraySize asString,
             ' dictionary_size=', dictionarySize asString,
             ' shallow_size=', shallowSize asString,
             ' mixed_size=', mixedSize asString,
+            ' business_size=', businessSize asString,
             ' shallow_root_ms=', (metricValue value: shallowMetrics value: #rootFetchMs) asString,
             ' shallow_slot_ms=', (metricValue value: shallowMetrics value: #slotFetchMs) asString,
             ' shallow_class_name_batch_ms=', (metricValue value: shallowMetrics value: #classNameBatchMs) asString,
@@ -260,6 +356,7 @@ root'
             ' shallow_wrapper_lookups=', (metricValue value: shallowMetrics value: #wrapperLookupCalls) asString,
             ' shallow_wrapper_cache_hits=', (metricValue value: shallowMetrics value: #wrapperCacheHits) asString,
             ' shallow_wrapper_lookup_misses=', (metricValue value: shallowMetrics value: #wrapperLookupMisses) asString,
+            ' shallow_wrapper_fast_connector_hits=', (metricValue value: shallowMetrics value: #wrapperFastConnectorHits) asString,
             ' shallow_wrapper_typed_results=', (metricValue value: shallowMetrics value: #wrapperLookupTypedResults) asString,
             ' shallow_wrapper_nil_results=', (metricValue value: shallowMetrics value: #wrapperLookupNilResults) asString,
             ' shallow_structured_byte_fetches=', (metricValue value: shallowMetrics value: #structuredBatchByteFetchCalls) asString,
@@ -273,13 +370,26 @@ root'
             ' mixed_scalar_byte_array_batches=', (metricValue value: mixedMetrics value: #scalarByteArrayBatchCalls) asString,
             ' mixed_wrapper_cache_hits=', (metricValue value: mixedMetrics value: #wrapperCacheHits) asString,
             ' mixed_wrapper_lookup_misses=', (metricValue value: mixedMetrics value: #wrapperLookupMisses) asString,
+            ' mixed_wrapper_fast_connector_hits=', (metricValue value: mixedMetrics value: #wrapperFastConnectorHits) asString,
             ' mixed_wrapper_typed_results=', (metricValue value: mixedMetrics value: #wrapperLookupTypedResults) asString,
             ' mixed_wrapper_nil_results=', (metricValue value: mixedMetrics value: #wrapperLookupNilResults) asString,
             ' mixed_structured_byte_fetches=', (metricValue value: mixedMetrics value: #structuredBatchByteFetchCalls) asString,
             ' mixed_structured_traversal_byte_fetches=', (metricValue value: mixedMetrics value: #structuredTraversalByteFetchCalls) asString,
             ' mixed_structured_traversal_buffer_fetches=', (metricValue value: mixedMetrics value: #structuredTraversalBufferFetchCalls) asString,
             ' mixed_structured_traversal_buffer_reports=', (metricValue value: mixedMetrics value: #structuredTraversalReportCount) asString,
-            ' mixed_structured_byte_fallbacks=', ((metricValue value: mixedMetrics value: #structuredByteBatchFallbacks) + (metricValue value: mixedMetrics value: #structuredTraversalByteFallbacks) + (metricValue value: mixedMetrics value: #structuredTraversalBufferFallbacks)) asString;
+            ' mixed_structured_byte_fallbacks=', ((metricValue value: mixedMetrics value: #structuredByteBatchFallbacks) + (metricValue value: mixedMetrics value: #structuredTraversalByteFallbacks) + (metricValue value: mixedMetrics value: #structuredTraversalBufferFallbacks)) asString,
+            ' business_collection_array_batches=', (metricValue value: businessMetrics value: #collectionArrayBatchCalls) asString,
+            ' business_dictionary_pair_batches=', (metricValue value: businessMetrics value: #dictionaryPairBatchCalls) asString,
+            ' business_scalar_string_batches=', (metricValue value: businessMetrics value: #scalarStringBatchCalls) asString,
+            ' business_scalar_byte_array_batches=', (metricValue value: businessMetrics value: #scalarByteArrayBatchCalls) asString,
+            ' business_wrapper_cache_hits=', (metricValue value: businessMetrics value: #wrapperCacheHits) asString,
+            ' business_wrapper_lookup_misses=', (metricValue value: businessMetrics value: #wrapperLookupMisses) asString,
+            ' business_wrapper_fast_connector_hits=', (metricValue value: businessMetrics value: #wrapperFastConnectorHits) asString,
+            ' business_structured_byte_fetches=', (metricValue value: businessMetrics value: #structuredBatchByteFetchCalls) asString,
+            ' business_structured_traversal_byte_fetches=', (metricValue value: businessMetrics value: #structuredTraversalByteFetchCalls) asString,
+            ' business_structured_traversal_buffer_fetches=', (metricValue value: businessMetrics value: #structuredTraversalBufferFetchCalls) asString,
+            ' business_structured_traversal_buffer_reports=', (metricValue value: businessMetrics value: #structuredTraversalReportCount) asString,
+            ' business_structured_byte_fallbacks=', ((metricValue value: businessMetrics value: #structuredByteBatchFallbacks) + (metricValue value: businessMetrics value: #structuredTraversalByteFallbacks) + (metricValue value: businessMetrics value: #structuredTraversalBufferFallbacks)) asString;
           cr.
       ] ensure: [
         cleanupFixture value.

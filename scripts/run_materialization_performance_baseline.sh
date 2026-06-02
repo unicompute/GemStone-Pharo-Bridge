@@ -17,6 +17,7 @@ ARRAY_MAX_MS="${GBS_MATERIALIZATION_ARRAY_MAX_MS:-${MATERIALIZATION_ARRAY_MAX_MS
 DICTIONARY_MAX_MS="${GBS_MATERIALIZATION_DICTIONARY_MAX_MS:-${MATERIALIZATION_DICTIONARY_MAX_MS:-6000}}"
 SHALLOW_MAX_MS="${GBS_MATERIALIZATION_SHALLOW_MAX_MS:-${MATERIALIZATION_SHALLOW_MAX_MS:-6000}}"
 MIXED_MAX_MS="${GBS_MATERIALIZATION_MIXED_MAX_MS:-${MATERIALIZATION_MIXED_MAX_MS:-8000}}"
+BUSINESS_MAX_MS="${GBS_MATERIALIZATION_BUSINESS_MAX_MS:-${MATERIALIZATION_BUSINESS_MAX_MS:-250}}"
 SHALLOW_SLOT_BATCHES_MAX="${GBS_MATERIALIZATION_SHALLOW_SLOT_BATCHES_MAX:-${MATERIALIZATION_SHALLOW_SLOT_BATCHES_MAX:-4}}"
 SHALLOW_CLASS_NAME_BATCHES_MAX="${GBS_MATERIALIZATION_SHALLOW_CLASS_NAME_BATCHES_MAX:-${MATERIALIZATION_SHALLOW_CLASS_NAME_BATCHES_MAX:-4}}"
 MIXED_COLLECTION_ARRAY_BATCHES_MAX="${GBS_MATERIALIZATION_MIXED_COLLECTION_ARRAY_BATCHES_MAX:-${MATERIALIZATION_MIXED_COLLECTION_ARRAY_BATCHES_MAX:-8}}"
@@ -35,6 +36,12 @@ SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MAX="${GBS_MATERIALIZATION_SHALLOW_S
 MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MAX="${GBS_MATERIALIZATION_MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MAX:-${MATERIALIZATION_MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MAX:-60}}"
 SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX="${GBS_MATERIALIZATION_SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX:-${MATERIALIZATION_SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX:-800}}"
 MIXED_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX="${GBS_MATERIALIZATION_MIXED_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX:-${MATERIALIZATION_MIXED_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX:-6000}}"
+BUSINESS_STRUCTURED_BYTE_FALLBACKS_MAX="${GBS_MATERIALIZATION_BUSINESS_STRUCTURED_BYTE_FALLBACKS_MAX:-${MATERIALIZATION_BUSINESS_STRUCTURED_BYTE_FALLBACKS_MAX:-0}}"
+BUSINESS_STRUCTURED_BYTE_FETCHES_MAX="${GBS_MATERIALIZATION_BUSINESS_STRUCTURED_BYTE_FETCHES_MAX:-${MATERIALIZATION_BUSINESS_STRUCTURED_BYTE_FETCHES_MAX:-0}}"
+BUSINESS_STRUCTURED_TRAVERSAL_BYTE_FETCHES_MAX="${GBS_MATERIALIZATION_BUSINESS_STRUCTURED_TRAVERSAL_BYTE_FETCHES_MAX:-${MATERIALIZATION_BUSINESS_STRUCTURED_TRAVERSAL_BYTE_FETCHES_MAX:-0}}"
+BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MIN="${GBS_MATERIALIZATION_BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MIN:-${MATERIALIZATION_BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MIN:-1}}"
+BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MAX="${GBS_MATERIALIZATION_BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MAX:-${MATERIALIZATION_BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MAX:-40}}"
+BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX="${GBS_MATERIALIZATION_BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX:-${MATERIALIZATION_BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX:-4000}}"
 TREND_REGRESSION_PERCENT="${GBS_MATERIALIZATION_PERF_REGRESSION_PERCENT:-35}"
 TREND_REGRESSION_MIN_DELTA_MS="${GBS_MATERIALIZATION_PERF_REGRESSION_MIN_DELTA_MS:-50}"
 
@@ -64,19 +71,22 @@ emit_summary() {
   local mixed_scalar_byte_array_batches="${23:-0}"
   local json_payload=""
   local markdown_payload=""
-  echo "MATERIALIZATION_PERF_SUMMARY result=${result} code=${code} array_ms=${array_ms} dictionary_ms=${dictionary_ms} shallow_ms=${shallow_ms} mixed_ms=${mixed_ms} array_size=${array_size} dictionary_size=${dictionary_size} shallow_size=${shallow_size} mixed_size=${mixed_size} shallow_root_ms=${shallow_root_ms} shallow_slot_ms=${shallow_slot_ms} shallow_class_name_batch_ms=${shallow_class_name_batch_ms} shallow_proxy_ms=${shallow_proxy_ms} shallow_wrapper_ms=${shallow_wrapper_ms} shallow_slot_batches=${shallow_slot_batches} shallow_class_name_batches=${shallow_class_name_batches} shallow_proxy_creations=${shallow_proxy_creations} shallow_wrapper_lookups=${shallow_wrapper_lookups} mixed_collection_array_batches=${mixed_collection_array_batches} mixed_dictionary_pair_batches=${mixed_dictionary_pair_batches} mixed_scalar_string_batches=${mixed_scalar_string_batches} mixed_scalar_byte_array_batches=${mixed_scalar_byte_array_batches} array_max_ms=${ARRAY_MAX_MS} dictionary_max_ms=${DICTIONARY_MAX_MS} shallow_max_ms=${SHALLOW_MAX_MS} mixed_max_ms=${MIXED_MAX_MS} threshold_file=${THRESHOLD_FILE} work_image=${WORK_IMAGE}"
+  echo "MATERIALIZATION_PERF_SUMMARY result=${result} code=${code} array_ms=${array_ms} dictionary_ms=${dictionary_ms} shallow_ms=${shallow_ms} mixed_ms=${mixed_ms} business_ms=${BUSINESS_MS:-0} array_size=${array_size} dictionary_size=${dictionary_size} shallow_size=${shallow_size} mixed_size=${mixed_size} business_size=${BUSINESS_SIZE:-0} shallow_root_ms=${shallow_root_ms} shallow_slot_ms=${shallow_slot_ms} shallow_class_name_batch_ms=${shallow_class_name_batch_ms} shallow_proxy_ms=${shallow_proxy_ms} shallow_wrapper_ms=${shallow_wrapper_ms} shallow_slot_batches=${shallow_slot_batches} shallow_class_name_batches=${shallow_class_name_batches} shallow_proxy_creations=${shallow_proxy_creations} shallow_wrapper_lookups=${shallow_wrapper_lookups} mixed_collection_array_batches=${mixed_collection_array_batches} mixed_dictionary_pair_batches=${mixed_dictionary_pair_batches} mixed_scalar_string_batches=${mixed_scalar_string_batches} mixed_scalar_byte_array_batches=${mixed_scalar_byte_array_batches} array_max_ms=${ARRAY_MAX_MS} dictionary_max_ms=${DICTIONARY_MAX_MS} shallow_max_ms=${SHALLOW_MAX_MS} mixed_max_ms=${MIXED_MAX_MS} business_max_ms=${BUSINESS_MAX_MS} threshold_file=${THRESHOLD_FILE} work_image=${WORK_IMAGE}"
   echo "MATERIALIZATION_PERF_TRANSPORT_SUMMARY shallow_structured_byte_fetches=${SHALLOW_STRUCTURED_BYTE_FETCHES:-0} shallow_structured_byte_fetches_max=${SHALLOW_STRUCTURED_BYTE_FETCHES_MAX} shallow_structured_traversal_byte_fetches=${SHALLOW_STRUCTURED_TRAVERSAL_BYTE_FETCHES:-0} shallow_structured_traversal_byte_fetches_max=${SHALLOW_STRUCTURED_TRAVERSAL_BYTE_FETCHES_MAX} shallow_structured_traversal_buffer_fetches=${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_FETCHES:-0} shallow_structured_traversal_buffer_fetches_min=${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MIN} shallow_structured_traversal_buffer_fetches_max=${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MAX} shallow_structured_traversal_buffer_reports=${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_REPORTS:-0} shallow_structured_traversal_buffer_reports_max=${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX} shallow_structured_byte_fallbacks=${SHALLOW_STRUCTURED_BYTE_FALLBACKS:-0} shallow_structured_byte_fallbacks_max=${SHALLOW_STRUCTURED_BYTE_FALLBACKS_MAX} mixed_structured_byte_fetches=${MIXED_STRUCTURED_BYTE_FETCHES:-0} mixed_structured_byte_fetches_max=${MIXED_STRUCTURED_BYTE_FETCHES_MAX} mixed_structured_traversal_byte_fetches=${MIXED_STRUCTURED_TRAVERSAL_BYTE_FETCHES:-0} mixed_structured_traversal_byte_fetches_max=${MIXED_STRUCTURED_TRAVERSAL_BYTE_FETCHES_MAX} mixed_structured_traversal_buffer_fetches=${MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES:-0} mixed_structured_traversal_buffer_fetches_min=${MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MIN} mixed_structured_traversal_buffer_fetches_max=${MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MAX} mixed_structured_traversal_buffer_reports=${MIXED_STRUCTURED_TRAVERSAL_BUFFER_REPORTS:-0} mixed_structured_traversal_buffer_reports_max=${MIXED_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX} mixed_structured_byte_fallbacks=${MIXED_STRUCTURED_BYTE_FALLBACKS:-0} mixed_structured_byte_fallbacks_max=${MIXED_STRUCTURED_BYTE_FALLBACKS_MAX}"
-  printf -v json_payload '{"result":"%s","code":"%s","array_ms":"%s","dictionary_ms":"%s","shallow_ms":"%s","mixed_ms":"%s","array_size":"%s","dictionary_size":"%s","shallow_size":"%s","mixed_size":"%s","shallow_root_ms":"%s","shallow_slot_ms":"%s","shallow_class_name_batch_ms":"%s","shallow_proxy_ms":"%s","shallow_wrapper_ms":"%s","shallow_slot_batches":"%s","shallow_class_name_batches":"%s","shallow_proxy_creations":"%s","shallow_wrapper_lookups":"%s","mixed_collection_array_batches":"%s","mixed_dictionary_pair_batches":"%s","mixed_scalar_string_batches":"%s","mixed_scalar_byte_array_batches":"%s","array_max_ms":"%s","dictionary_max_ms":"%s","shallow_max_ms":"%s","mixed_max_ms":"%s","threshold_file":"%s","work_image":"%s"}' \
+  echo "MATERIALIZATION_PERF_BUSINESS_SUMMARY business_ms=${BUSINESS_MS:-0} business_size=${BUSINESS_SIZE:-0} business_max_ms=${BUSINESS_MAX_MS} business_collection_array_batches=${BUSINESS_COLLECTION_ARRAY_BATCHES:-0} business_dictionary_pair_batches=${BUSINESS_DICTIONARY_PAIR_BATCHES:-0} business_scalar_string_batches=${BUSINESS_SCALAR_STRING_BATCHES:-0} business_scalar_byte_array_batches=${BUSINESS_SCALAR_BYTE_ARRAY_BATCHES:-0} business_wrapper_fast_connector_hits=${BUSINESS_WRAPPER_FAST_CONNECTOR_HITS:-0} business_structured_byte_fetches=${BUSINESS_STRUCTURED_BYTE_FETCHES:-0} business_structured_byte_fetches_max=${BUSINESS_STRUCTURED_BYTE_FETCHES_MAX} business_structured_traversal_byte_fetches=${BUSINESS_STRUCTURED_TRAVERSAL_BYTE_FETCHES:-0} business_structured_traversal_byte_fetches_max=${BUSINESS_STRUCTURED_TRAVERSAL_BYTE_FETCHES_MAX} business_structured_traversal_buffer_fetches=${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES:-0} business_structured_traversal_buffer_fetches_min=${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MIN} business_structured_traversal_buffer_fetches_max=${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MAX} business_structured_traversal_buffer_reports=${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_REPORTS:-0} business_structured_traversal_buffer_reports_max=${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX} business_structured_byte_fallbacks=${BUSINESS_STRUCTURED_BYTE_FALLBACKS:-0} business_structured_byte_fallbacks_max=${BUSINESS_STRUCTURED_BYTE_FALLBACKS_MAX}"
+  printf -v json_payload '{"result":"%s","code":"%s","array_ms":"%s","dictionary_ms":"%s","shallow_ms":"%s","mixed_ms":"%s","business_ms":"%s","array_size":"%s","dictionary_size":"%s","shallow_size":"%s","mixed_size":"%s","business_size":"%s","shallow_root_ms":"%s","shallow_slot_ms":"%s","shallow_class_name_batch_ms":"%s","shallow_proxy_ms":"%s","shallow_wrapper_ms":"%s","shallow_slot_batches":"%s","shallow_class_name_batches":"%s","shallow_proxy_creations":"%s","shallow_wrapper_lookups":"%s","mixed_collection_array_batches":"%s","mixed_dictionary_pair_batches":"%s","mixed_scalar_string_batches":"%s","mixed_scalar_byte_array_batches":"%s","business_collection_array_batches":"%s","business_dictionary_pair_batches":"%s","business_scalar_string_batches":"%s","business_scalar_byte_array_batches":"%s","business_wrapper_fast_connector_hits":"%s","business_structured_traversal_buffer_fetches":"%s","business_structured_traversal_buffer_reports":"%s","business_structured_byte_fallbacks":"%s","array_max_ms":"%s","dictionary_max_ms":"%s","shallow_max_ms":"%s","mixed_max_ms":"%s","business_max_ms":"%s","threshold_file":"%s","work_image":"%s"}' \
     "$(gbs_json_escape "${result}")" \
     "$(gbs_json_escape "${code}")" \
     "$(gbs_json_escape "${array_ms}")" \
     "$(gbs_json_escape "${dictionary_ms}")" \
     "$(gbs_json_escape "${shallow_ms}")" \
     "$(gbs_json_escape "${mixed_ms}")" \
+    "$(gbs_json_escape "${BUSINESS_MS:-0}")" \
     "$(gbs_json_escape "${array_size}")" \
     "$(gbs_json_escape "${dictionary_size}")" \
     "$(gbs_json_escape "${shallow_size}")" \
     "$(gbs_json_escape "${mixed_size}")" \
+    "$(gbs_json_escape "${BUSINESS_SIZE:-0}")" \
     "$(gbs_json_escape "${shallow_root_ms}")" \
     "$(gbs_json_escape "${shallow_slot_ms}")" \
     "$(gbs_json_escape "${shallow_class_name_batch_ms}")" \
@@ -90,10 +100,19 @@ emit_summary() {
     "$(gbs_json_escape "${mixed_dictionary_pair_batches}")" \
     "$(gbs_json_escape "${mixed_scalar_string_batches}")" \
     "$(gbs_json_escape "${mixed_scalar_byte_array_batches}")" \
+    "$(gbs_json_escape "${BUSINESS_COLLECTION_ARRAY_BATCHES:-0}")" \
+    "$(gbs_json_escape "${BUSINESS_DICTIONARY_PAIR_BATCHES:-0}")" \
+    "$(gbs_json_escape "${BUSINESS_SCALAR_STRING_BATCHES:-0}")" \
+    "$(gbs_json_escape "${BUSINESS_SCALAR_BYTE_ARRAY_BATCHES:-0}")" \
+    "$(gbs_json_escape "${BUSINESS_WRAPPER_FAST_CONNECTOR_HITS:-0}")" \
+    "$(gbs_json_escape "${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES:-0}")" \
+    "$(gbs_json_escape "${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_REPORTS:-0}")" \
+    "$(gbs_json_escape "${BUSINESS_STRUCTURED_BYTE_FALLBACKS:-0}")" \
     "$(gbs_json_escape "${ARRAY_MAX_MS}")" \
     "$(gbs_json_escape "${DICTIONARY_MAX_MS}")" \
     "$(gbs_json_escape "${SHALLOW_MAX_MS}")" \
     "$(gbs_json_escape "${MIXED_MAX_MS}")" \
+    "$(gbs_json_escape "${BUSINESS_MAX_MS}")" \
     "$(gbs_json_escape "${THRESHOLD_FILE}")" \
     "$(gbs_json_escape "${WORK_IMAGE}")"
   if [[ "${JSON_SUMMARY}" == "1" ]]; then
@@ -109,10 +128,12 @@ emit_summary() {
     "- dictionary fetch: \`${dictionary_ms} ms\` for \`${dictionary_size}\` associations" \
     "- shallow nested fetch: \`${shallow_ms} ms\` for \`${shallow_size}\` nested arrays" \
     "- mixed graph fetch: \`${mixed_ms} ms\` for \`${mixed_size}\` repeated nested entries" \
+    "- business graph fetch: \`${BUSINESS_MS:-0} ms\` for \`${BUSINESS_SIZE:-0}\` domain entries" \
     "- shallow submetrics: root \`${shallow_root_ms} ms\`, slots \`${shallow_slot_ms} ms\`, class-name batch \`${shallow_class_name_batch_ms} ms\`, proxy construction \`${shallow_proxy_ms} ms\`, wrapper lookup \`${shallow_wrapper_ms} ms\`" \
     "- shallow call counts: slot batches \`${shallow_slot_batches}\`, class-name batches \`${shallow_class_name_batches}\`, proxy creations \`${shallow_proxy_creations}\`, wrapper lookups \`${shallow_wrapper_lookups}\`" \
     "- mixed call counts: collection-array batches \`${mixed_collection_array_batches}\`, dictionary-pair batches \`${mixed_dictionary_pair_batches}\`, string batches \`${mixed_scalar_string_batches}\`, byte-array batches \`${mixed_scalar_byte_array_batches}\`" \
-    "- thresholds: array \`${ARRAY_MAX_MS} ms\`, dictionary \`${DICTIONARY_MAX_MS} ms\`, shallow \`${SHALLOW_MAX_MS} ms\`, mixed \`${MIXED_MAX_MS} ms\`" \
+    "- business call counts: collection-array batches \`${BUSINESS_COLLECTION_ARRAY_BATCHES:-0}\`, dictionary-pair batches \`${BUSINESS_DICTIONARY_PAIR_BATCHES:-0}\`, string batches \`${BUSINESS_SCALAR_STRING_BATCHES:-0}\`, byte-array batches \`${BUSINESS_SCALAR_BYTE_ARRAY_BATCHES:-0}\`, fast-wrapper hits \`${BUSINESS_WRAPPER_FAST_CONNECTOR_HITS:-0}\`" \
+    "- thresholds: array \`${ARRAY_MAX_MS} ms\`, dictionary \`${DICTIONARY_MAX_MS} ms\`, shallow \`${SHALLOW_MAX_MS} ms\`, mixed \`${MIXED_MAX_MS} ms\`, business \`${BUSINESS_MAX_MS} ms\`" \
     "- threshold file: \`${THRESHOLD_FILE}\`" \
     "- work image: \`${WORK_IMAGE}\`" \
     "" \
@@ -125,11 +146,22 @@ emit_summary() {
   gbs_append_summary_line "- dictionary fetch: \`${dictionary_ms} ms\` for \`${dictionary_size}\` associations"
   gbs_append_summary_line "- shallow nested fetch: \`${shallow_ms} ms\` for \`${shallow_size}\` nested arrays"
   gbs_append_summary_line "- mixed graph fetch: \`${mixed_ms} ms\` for \`${mixed_size}\` repeated nested entries"
+  gbs_append_summary_line "- business graph fetch: \`${BUSINESS_MS:-0} ms\` for \`${BUSINESS_SIZE:-0}\` domain entries"
   gbs_append_summary_line "- shallow submetrics: root \`${shallow_root_ms} ms\`, slots \`${shallow_slot_ms} ms\`, class-name batch \`${shallow_class_name_batch_ms} ms\`, proxy construction \`${shallow_proxy_ms} ms\`, wrapper lookup \`${shallow_wrapper_ms} ms\`"
   gbs_append_summary_line "- shallow call counts: slot batches \`${shallow_slot_batches}\`, class-name batches \`${shallow_class_name_batches}\`, proxy creations \`${shallow_proxy_creations}\`, wrapper lookups \`${shallow_wrapper_lookups}\`"
   gbs_append_summary_line "- mixed call counts: collection-array batches \`${mixed_collection_array_batches}\`, dictionary-pair batches \`${mixed_dictionary_pair_batches}\`, string batches \`${mixed_scalar_string_batches}\`, byte-array batches \`${mixed_scalar_byte_array_batches}\`"
-  gbs_append_summary_line "- thresholds: array \`${ARRAY_MAX_MS} ms\`, dictionary \`${DICTIONARY_MAX_MS} ms\`, shallow \`${SHALLOW_MAX_MS} ms\`, mixed \`${MIXED_MAX_MS} ms\`"
+  gbs_append_summary_line "- business call counts: collection-array batches \`${BUSINESS_COLLECTION_ARRAY_BATCHES:-0}\`, dictionary-pair batches \`${BUSINESS_DICTIONARY_PAIR_BATCHES:-0}\`, string batches \`${BUSINESS_SCALAR_STRING_BATCHES:-0}\`, byte-array batches \`${BUSINESS_SCALAR_BYTE_ARRAY_BATCHES:-0}\`, fast-wrapper hits \`${BUSINESS_WRAPPER_FAST_CONNECTOR_HITS:-0}\`"
+  gbs_append_summary_line "- thresholds: array \`${ARRAY_MAX_MS} ms\`, dictionary \`${DICTIONARY_MAX_MS} ms\`, shallow \`${SHALLOW_MAX_MS} ms\`, mixed \`${MIXED_MAX_MS} ms\`, business \`${BUSINESS_MAX_MS} ms\`"
   gbs_append_summary_line "- threshold file: \`${THRESHOLD_FILE}\`"
+}
+
+print_materialization_live_excerpt() {
+  local output="$1"
+  if [[ "${GBS_VERBOSE_LIVE_OUTPUT:-0}" == "1" ]]; then
+    printf '%s\n' "${output}"
+    return 0
+  fi
+  printf '%s\n' "${output}" | grep -E '^(Using work image:|LIVE_PREFLIGHT_(BEGIN|SUMMARY|OK|FAIL|SKIP|STONE_OK|NETLDI_OK|TOPAZ_LOGIN_OK|GCI_LOGIN_OK|MISSING_ENV)|PROBE_(CONFIG|LOGIN_OK|EVAL_RESULT)|MATERIALIZATION_PERF_(BASELINE|SUMMARY|TRANSPORT_SUMMARY|BUSINESS_SUMMARY|BASELINE_OK))' || true
 }
 
 extract_summary_field() {
@@ -290,7 +322,7 @@ check_trend_metric() {
 
 check_trend_regression() {
   local trend_file previous_line
-  local previous_array previous_dictionary previous_shallow previous_mixed previous_root previous_slot previous_class_name previous_proxy previous_wrapper
+  local previous_array previous_dictionary previous_shallow previous_mixed previous_business previous_root previous_slot previous_class_name previous_proxy previous_wrapper
   trend_file="$(trend_file_path)"
   [[ -n "${trend_file}" && -f "${trend_file}" ]] || return 0
   previous_line="$(grep -v '^[[:space:]]*$' "${trend_file}" | tail -1 || true)"
@@ -299,6 +331,7 @@ check_trend_regression() {
   previous_dictionary="$(json_line_number_field "${previous_line}" dictionary_ms)"
   previous_shallow="$(json_line_number_field "${previous_line}" shallow_ms)"
   previous_mixed="$(json_line_number_field "${previous_line}" mixed_ms)"
+  previous_business="$(json_line_number_field "${previous_line}" business_ms)"
   previous_root="$(json_line_number_field "${previous_line}" shallow_root_ms)"
   previous_slot="$(json_line_number_field "${previous_line}" shallow_slot_ms)"
   previous_class_name="$(json_line_number_field "${previous_line}" shallow_class_name_batch_ms)"
@@ -308,6 +341,7 @@ check_trend_regression() {
   check_trend_metric "DICTIONARY" "${DICTIONARY_MS}" "${previous_dictionary}"
   check_trend_metric "SHALLOW" "${SHALLOW_MS}" "${previous_shallow}"
   check_trend_metric "MIXED" "${MIXED_MS}" "${previous_mixed}"
+  check_trend_metric "BUSINESS" "${BUSINESS_MS}" "${previous_business}"
   check_trend_metric "SHALLOW_ROOT" "${SHALLOW_ROOT_MS}" "${previous_root}"
   check_trend_metric "SHALLOW_SLOT" "${SHALLOW_SLOT_MS}" "${previous_slot}"
   check_trend_metric "SHALLOW_CLASS_NAME_BATCH" "${SHALLOW_CLASS_NAME_BATCH_MS}" "${previous_class_name}"
@@ -322,12 +356,13 @@ write_trend_sample() {
   [[ -n "${trend_file}" ]] || return 0
   mkdir -p "$(dirname "${trend_file}")"
   timestamp="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-  printf '{"timestamp":"%s","array_ms":%s,"dictionary_ms":%s,"shallow_ms":%s,"mixed_ms":%s,"shallow_root_ms":%s,"shallow_slot_ms":%s,"shallow_class_name_batch_ms":%s,"shallow_proxy_ms":%s,"shallow_wrapper_ms":%s,"shallow_slot_batches":%s,"shallow_class_name_batches":%s,"shallow_proxy_creations":%s,"shallow_wrapper_lookups":%s,"mixed_collection_array_batches":%s,"mixed_dictionary_pair_batches":%s,"mixed_scalar_string_batches":%s,"mixed_scalar_byte_array_batches":%s,"shallow_structured_byte_fetches":%s,"shallow_structured_traversal_byte_fetches":%s,"shallow_structured_traversal_buffer_fetches":%s,"shallow_structured_traversal_buffer_reports":%s,"shallow_structured_byte_fallbacks":%s,"mixed_structured_byte_fetches":%s,"mixed_structured_traversal_byte_fetches":%s,"mixed_structured_traversal_buffer_fetches":%s,"mixed_structured_traversal_buffer_reports":%s,"mixed_structured_byte_fallbacks":%s,"array_max_ms":%s,"dictionary_max_ms":%s,"shallow_max_ms":%s,"mixed_max_ms":%s}\n' \
+  printf '{"timestamp":"%s","array_ms":%s,"dictionary_ms":%s,"shallow_ms":%s,"mixed_ms":%s,"business_ms":%s,"shallow_root_ms":%s,"shallow_slot_ms":%s,"shallow_class_name_batch_ms":%s,"shallow_proxy_ms":%s,"shallow_wrapper_ms":%s,"shallow_slot_batches":%s,"shallow_class_name_batches":%s,"shallow_proxy_creations":%s,"shallow_wrapper_lookups":%s,"mixed_collection_array_batches":%s,"mixed_dictionary_pair_batches":%s,"mixed_scalar_string_batches":%s,"mixed_scalar_byte_array_batches":%s,"business_collection_array_batches":%s,"business_dictionary_pair_batches":%s,"business_scalar_string_batches":%s,"business_scalar_byte_array_batches":%s,"business_wrapper_fast_connector_hits":%s,"shallow_structured_byte_fetches":%s,"shallow_structured_traversal_byte_fetches":%s,"shallow_structured_traversal_buffer_fetches":%s,"shallow_structured_traversal_buffer_reports":%s,"shallow_structured_byte_fallbacks":%s,"mixed_structured_byte_fetches":%s,"mixed_structured_traversal_byte_fetches":%s,"mixed_structured_traversal_buffer_fetches":%s,"mixed_structured_traversal_buffer_reports":%s,"mixed_structured_byte_fallbacks":%s,"business_structured_byte_fetches":%s,"business_structured_traversal_byte_fetches":%s,"business_structured_traversal_buffer_fetches":%s,"business_structured_traversal_buffer_reports":%s,"business_structured_byte_fallbacks":%s,"array_max_ms":%s,"dictionary_max_ms":%s,"shallow_max_ms":%s,"mixed_max_ms":%s,"business_max_ms":%s}\n' \
     "${timestamp}" \
     "${ARRAY_MS}" \
     "${DICTIONARY_MS}" \
     "${SHALLOW_MS}" \
     "${MIXED_MS}" \
+    "${BUSINESS_MS}" \
     "${SHALLOW_ROOT_MS}" \
     "${SHALLOW_SLOT_MS}" \
     "${SHALLOW_CLASS_NAME_BATCH_MS}" \
@@ -341,6 +376,11 @@ write_trend_sample() {
     "${MIXED_DICTIONARY_PAIR_BATCHES}" \
     "${MIXED_SCALAR_STRING_BATCHES}" \
     "${MIXED_SCALAR_BYTE_ARRAY_BATCHES}" \
+    "${BUSINESS_COLLECTION_ARRAY_BATCHES}" \
+    "${BUSINESS_DICTIONARY_PAIR_BATCHES}" \
+    "${BUSINESS_SCALAR_STRING_BATCHES}" \
+    "${BUSINESS_SCALAR_BYTE_ARRAY_BATCHES}" \
+    "${BUSINESS_WRAPPER_FAST_CONNECTOR_HITS}" \
     "${SHALLOW_STRUCTURED_BYTE_FETCHES}" \
     "${SHALLOW_STRUCTURED_TRAVERSAL_BYTE_FETCHES}" \
     "${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_FETCHES}" \
@@ -351,15 +391,21 @@ write_trend_sample() {
     "${MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES}" \
     "${MIXED_STRUCTURED_TRAVERSAL_BUFFER_REPORTS}" \
     "${MIXED_STRUCTURED_BYTE_FALLBACKS}" \
+    "${BUSINESS_STRUCTURED_BYTE_FETCHES}" \
+    "${BUSINESS_STRUCTURED_TRAVERSAL_BYTE_FETCHES}" \
+    "${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES}" \
+    "${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_REPORTS}" \
+    "${BUSINESS_STRUCTURED_BYTE_FALLBACKS}" \
     "${ARRAY_MAX_MS}" \
     "${DICTIONARY_MAX_MS}" \
     "${SHALLOW_MAX_MS}" \
-    "${MIXED_MAX_MS}" >> "${trend_file}"
+    "${MIXED_MAX_MS}" \
+    "${BUSINESS_MAX_MS}" >> "${trend_file}"
   gbs_append_summary_line "- trend sample: \`${trend_file}\`"
 }
 
 write_trend_report() {
-  local trend_file report_file line timestamp array dictionary shallow mixed root slot class_name proxy wrapper
+  local trend_file report_file line timestamp array dictionary shallow mixed business root slot class_name proxy wrapper
   trend_file="$(trend_file_path)"
   [[ -n "${trend_file}" && -f "${trend_file}" ]] || return 0
   report_file="${GBS_MATERIALIZATION_PERF_REPORT:-$(dirname "${trend_file}")/materialization-performance-trend-report.md}"
@@ -367,25 +413,27 @@ write_trend_report() {
   {
     printf '# Materialization Performance Trend\n\n'
     printf 'Regression threshold: `%s%%` over the previous sample or `+%s ms`, whichever is larger.\n\n' "${TREND_REGRESSION_PERCENT}" "${TREND_REGRESSION_MIN_DELTA_MS}"
-    printf '| Timestamp | Array | Dictionary | Shallow | Mixed | Root | Slots | Class Names | Proxy | Wrapper |\n'
-    printf '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n'
+    printf '| Timestamp | Array | Dictionary | Shallow | Mixed | Business | Root | Slots | Class Names | Proxy | Wrapper |\n'
+    printf '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n'
     grep -v '^[[:space:]]*$' "${trend_file}" | tail -20 | while IFS= read -r line; do
       timestamp="$(json_line_string_field "${line}" timestamp)"
       array="$(json_line_number_field "${line}" array_ms)"
       dictionary="$(json_line_number_field "${line}" dictionary_ms)"
       shallow="$(json_line_number_field "${line}" shallow_ms)"
       mixed="$(json_line_number_field "${line}" mixed_ms)"
+      business="$(json_line_number_field "${line}" business_ms)"
       root="$(json_line_number_field "${line}" shallow_root_ms)"
       slot="$(json_line_number_field "${line}" shallow_slot_ms)"
       class_name="$(json_line_number_field "${line}" shallow_class_name_batch_ms)"
       proxy="$(json_line_number_field "${line}" shallow_proxy_ms)"
       wrapper="$(json_line_number_field "${line}" shallow_wrapper_ms)"
-      printf '| %s | %s ms | %s ms | %s ms | %s ms | %s ms | %s ms | %s ms | %s ms | %s ms |\n' \
+      printf '| %s | %s ms | %s ms | %s ms | %s ms | %s ms | %s ms | %s ms | %s ms | %s ms | %s ms |\n' \
         "${timestamp:-unknown}" \
         "${array:-0}" \
         "${dictionary:-0}" \
         "${shallow:-0}" \
         "${mixed:-0}" \
+        "${business:-0}" \
         "${root:-0}" \
         "${slot:-0}" \
         "${class_name:-0}" \
@@ -410,7 +458,7 @@ gbs_register_work_image_cleanup "${WORK_IMAGE}"
 
 echo "Using work image: ${WORK_IMAGE}"
 preflight_output="$(bash ./scripts/run_live_preflight.sh "${WORK_IMAGE}" 2>&1 || true)"
-echo "${preflight_output}"
+print_materialization_live_excerpt "${preflight_output}"
 gbs_write_evidence_file "materialization-performance-preflight.log" "${preflight_output}"
 if ! grep -q "LIVE_PREFLIGHT_SUMMARY result=OK code=LIVE_PREFLIGHT_OK" <<< "${preflight_output}"; then
   emit_summary "FAIL" "MATERIALIZATION_PERF_PREFLIGHT_FAILED"
@@ -419,12 +467,13 @@ if ! grep -q "LIVE_PREFLIGHT_SUMMARY result=OK code=LIVE_PREFLIGHT_OK" <<< "${pr
 fi
 
 perf_output="$(HOME=/tmp/pharo-clean-auto/home GBS_WORK_IMAGE="${WORK_IMAGE}" "${VM}" --headless "${WORK_IMAGE}" st "/Users/tariq/src/gemtools/GemStone-Pharo-Bridge/scripts/run_materialization_performance_baseline.st" 2>&1 || true)"
-echo "${perf_output}"
+print_materialization_live_excerpt "${perf_output}"
 gbs_write_evidence_file "materialization-performance-baseline.log" "${perf_output}"
 
 summary_line="$(printf '%s\n' "${perf_output}" | grep 'MATERIALIZATION_PERF_BASELINE result=' | tail -1 || true)"
 if [[ -z "${summary_line}" ]]; then
   emit_summary "FAIL" "MATERIALIZATION_PERF_RUNNER_FAILED"
+  [[ "${GBS_VERBOSE_LIVE_OUTPUT:-0}" == "1" ]] || printf '%s\n' "${perf_output}" >&2
   echo "Materialization performance runner did not emit MATERIALIZATION_PERF_BASELINE." >&2
   exit 1
 fi
@@ -435,10 +484,12 @@ ARRAY_MS="$(extract_summary_field "${summary_line}" array_ms)"
 DICTIONARY_MS="$(extract_summary_field "${summary_line}" dictionary_ms)"
 SHALLOW_MS="$(extract_summary_field "${summary_line}" shallow_ms)"
 MIXED_MS="$(extract_summary_field "${summary_line}" mixed_ms)"
+BUSINESS_MS="$(extract_summary_field "${summary_line}" business_ms)"
 ARRAY_SIZE="$(extract_summary_field "${summary_line}" array_size)"
 DICTIONARY_SIZE="$(extract_summary_field "${summary_line}" dictionary_size)"
 SHALLOW_SIZE="$(extract_summary_field "${summary_line}" shallow_size)"
 MIXED_SIZE="$(extract_summary_field "${summary_line}" mixed_size)"
+BUSINESS_SIZE="$(extract_summary_field "${summary_line}" business_size)"
 SHALLOW_ROOT_MS="$(extract_summary_field "${summary_line}" shallow_root_ms)"
 SHALLOW_SLOT_MS="$(extract_summary_field "${summary_line}" shallow_slot_ms)"
 SHALLOW_CLASS_NAME_BATCH_MS="$(extract_summary_field "${summary_line}" shallow_class_name_batch_ms)"
@@ -450,6 +501,7 @@ SHALLOW_PROXY_CREATIONS="$(extract_summary_field "${summary_line}" shallow_proxy
 SHALLOW_WRAPPER_LOOKUPS="$(extract_summary_field "${summary_line}" shallow_wrapper_lookups)"
 SHALLOW_WRAPPER_CACHE_HITS="$(extract_summary_field "${summary_line}" shallow_wrapper_cache_hits)"
 SHALLOW_WRAPPER_LOOKUP_MISSES="$(extract_summary_field "${summary_line}" shallow_wrapper_lookup_misses)"
+SHALLOW_WRAPPER_FAST_CONNECTOR_HITS="$(extract_summary_field "${summary_line}" shallow_wrapper_fast_connector_hits)"
 SHALLOW_WRAPPER_TYPED_RESULTS="$(extract_summary_field "${summary_line}" shallow_wrapper_typed_results)"
 SHALLOW_WRAPPER_NIL_RESULTS="$(extract_summary_field "${summary_line}" shallow_wrapper_nil_results)"
 MIXED_COLLECTION_ARRAY_BATCHES="$(extract_summary_field "${summary_line}" mixed_collection_array_batches)"
@@ -458,6 +510,7 @@ MIXED_SCALAR_STRING_BATCHES="$(extract_summary_field "${summary_line}" mixed_sca
 MIXED_SCALAR_BYTE_ARRAY_BATCHES="$(extract_summary_field "${summary_line}" mixed_scalar_byte_array_batches)"
 MIXED_WRAPPER_CACHE_HITS="$(extract_summary_field "${summary_line}" mixed_wrapper_cache_hits)"
 MIXED_WRAPPER_LOOKUP_MISSES="$(extract_summary_field "${summary_line}" mixed_wrapper_lookup_misses)"
+MIXED_WRAPPER_FAST_CONNECTOR_HITS="$(extract_summary_field "${summary_line}" mixed_wrapper_fast_connector_hits)"
 MIXED_WRAPPER_TYPED_RESULTS="$(extract_summary_field "${summary_line}" mixed_wrapper_typed_results)"
 MIXED_WRAPPER_NIL_RESULTS="$(extract_summary_field "${summary_line}" mixed_wrapper_nil_results)"
 SHALLOW_STRUCTURED_BYTE_FETCHES="$(extract_summary_field "${summary_line}" shallow_structured_byte_fetches)"
@@ -470,9 +523,23 @@ MIXED_STRUCTURED_TRAVERSAL_BYTE_FETCHES="$(extract_summary_field "${summary_line
 MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES="$(extract_summary_field "${summary_line}" mixed_structured_traversal_buffer_fetches)"
 MIXED_STRUCTURED_TRAVERSAL_BUFFER_REPORTS="$(extract_summary_field "${summary_line}" mixed_structured_traversal_buffer_reports)"
 MIXED_STRUCTURED_BYTE_FALLBACKS="$(extract_summary_field "${summary_line}" mixed_structured_byte_fallbacks)"
+BUSINESS_COLLECTION_ARRAY_BATCHES="$(extract_summary_field "${summary_line}" business_collection_array_batches)"
+BUSINESS_DICTIONARY_PAIR_BATCHES="$(extract_summary_field "${summary_line}" business_dictionary_pair_batches)"
+BUSINESS_SCALAR_STRING_BATCHES="$(extract_summary_field "${summary_line}" business_scalar_string_batches)"
+BUSINESS_SCALAR_BYTE_ARRAY_BATCHES="$(extract_summary_field "${summary_line}" business_scalar_byte_array_batches)"
+BUSINESS_WRAPPER_CACHE_HITS="$(extract_summary_field "${summary_line}" business_wrapper_cache_hits)"
+BUSINESS_WRAPPER_LOOKUP_MISSES="$(extract_summary_field "${summary_line}" business_wrapper_lookup_misses)"
+BUSINESS_WRAPPER_FAST_CONNECTOR_HITS="$(extract_summary_field "${summary_line}" business_wrapper_fast_connector_hits)"
+BUSINESS_STRUCTURED_BYTE_FETCHES="$(extract_summary_field "${summary_line}" business_structured_byte_fetches)"
+BUSINESS_STRUCTURED_TRAVERSAL_BYTE_FETCHES="$(extract_summary_field "${summary_line}" business_structured_traversal_byte_fetches)"
+BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES="$(extract_summary_field "${summary_line}" business_structured_traversal_buffer_fetches)"
+BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_REPORTS="$(extract_summary_field "${summary_line}" business_structured_traversal_buffer_reports)"
+BUSINESS_STRUCTURED_BYTE_FALLBACKS="$(extract_summary_field "${summary_line}" business_structured_byte_fallbacks)"
 
 MIXED_MS="${MIXED_MS:-0}"
+BUSINESS_MS="${BUSINESS_MS:-0}"
 MIXED_SIZE="${MIXED_SIZE:-0}"
+BUSINESS_SIZE="${BUSINESS_SIZE:-0}"
 SHALLOW_ROOT_MS="${SHALLOW_ROOT_MS:-0}"
 SHALLOW_SLOT_MS="${SHALLOW_SLOT_MS:-0}"
 SHALLOW_CLASS_NAME_BATCH_MS="${SHALLOW_CLASS_NAME_BATCH_MS:-0}"
@@ -484,6 +551,7 @@ SHALLOW_PROXY_CREATIONS="${SHALLOW_PROXY_CREATIONS:-0}"
 SHALLOW_WRAPPER_LOOKUPS="${SHALLOW_WRAPPER_LOOKUPS:-0}"
 SHALLOW_WRAPPER_CACHE_HITS="${SHALLOW_WRAPPER_CACHE_HITS:-0}"
 SHALLOW_WRAPPER_LOOKUP_MISSES="${SHALLOW_WRAPPER_LOOKUP_MISSES:-0}"
+SHALLOW_WRAPPER_FAST_CONNECTOR_HITS="${SHALLOW_WRAPPER_FAST_CONNECTOR_HITS:-0}"
 SHALLOW_WRAPPER_TYPED_RESULTS="${SHALLOW_WRAPPER_TYPED_RESULTS:-0}"
 SHALLOW_WRAPPER_NIL_RESULTS="${SHALLOW_WRAPPER_NIL_RESULTS:-0}"
 MIXED_COLLECTION_ARRAY_BATCHES="${MIXED_COLLECTION_ARRAY_BATCHES:-0}"
@@ -492,6 +560,7 @@ MIXED_SCALAR_STRING_BATCHES="${MIXED_SCALAR_STRING_BATCHES:-0}"
 MIXED_SCALAR_BYTE_ARRAY_BATCHES="${MIXED_SCALAR_BYTE_ARRAY_BATCHES:-0}"
 MIXED_WRAPPER_CACHE_HITS="${MIXED_WRAPPER_CACHE_HITS:-0}"
 MIXED_WRAPPER_LOOKUP_MISSES="${MIXED_WRAPPER_LOOKUP_MISSES:-0}"
+MIXED_WRAPPER_FAST_CONNECTOR_HITS="${MIXED_WRAPPER_FAST_CONNECTOR_HITS:-0}"
 MIXED_WRAPPER_TYPED_RESULTS="${MIXED_WRAPPER_TYPED_RESULTS:-0}"
 MIXED_WRAPPER_NIL_RESULTS="${MIXED_WRAPPER_NIL_RESULTS:-0}"
 SHALLOW_STRUCTURED_BYTE_FETCHES="${SHALLOW_STRUCTURED_BYTE_FETCHES:-0}"
@@ -504,12 +573,25 @@ MIXED_STRUCTURED_TRAVERSAL_BYTE_FETCHES="${MIXED_STRUCTURED_TRAVERSAL_BYTE_FETCH
 MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES="${MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES:-0}"
 MIXED_STRUCTURED_TRAVERSAL_BUFFER_REPORTS="${MIXED_STRUCTURED_TRAVERSAL_BUFFER_REPORTS:-0}"
 MIXED_STRUCTURED_BYTE_FALLBACKS="${MIXED_STRUCTURED_BYTE_FALLBACKS:-0}"
+BUSINESS_COLLECTION_ARRAY_BATCHES="${BUSINESS_COLLECTION_ARRAY_BATCHES:-0}"
+BUSINESS_DICTIONARY_PAIR_BATCHES="${BUSINESS_DICTIONARY_PAIR_BATCHES:-0}"
+BUSINESS_SCALAR_STRING_BATCHES="${BUSINESS_SCALAR_STRING_BATCHES:-0}"
+BUSINESS_SCALAR_BYTE_ARRAY_BATCHES="${BUSINESS_SCALAR_BYTE_ARRAY_BATCHES:-0}"
+BUSINESS_WRAPPER_CACHE_HITS="${BUSINESS_WRAPPER_CACHE_HITS:-0}"
+BUSINESS_WRAPPER_LOOKUP_MISSES="${BUSINESS_WRAPPER_LOOKUP_MISSES:-0}"
+BUSINESS_WRAPPER_FAST_CONNECTOR_HITS="${BUSINESS_WRAPPER_FAST_CONNECTOR_HITS:-0}"
+BUSINESS_STRUCTURED_BYTE_FETCHES="${BUSINESS_STRUCTURED_BYTE_FETCHES:-0}"
+BUSINESS_STRUCTURED_TRAVERSAL_BYTE_FETCHES="${BUSINESS_STRUCTURED_TRAVERSAL_BYTE_FETCHES:-0}"
+BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES="${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES:-0}"
+BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_REPORTS="${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_REPORTS:-0}"
+BUSINESS_STRUCTURED_BYTE_FALLBACKS="${BUSINESS_STRUCTURED_BYTE_FALLBACKS:-0}"
 
 if [[ "${RESULT}" == "OK" && "${CODE}" == "MATERIALIZATION_PERF_OK" ]]; then
   check_latency_threshold "ARRAY" "${ARRAY_MS}" "${ARRAY_MAX_MS}"
   check_latency_threshold "DICTIONARY" "${DICTIONARY_MS}" "${DICTIONARY_MAX_MS}"
   check_latency_threshold "SHALLOW" "${SHALLOW_MS}" "${SHALLOW_MAX_MS}"
   check_latency_threshold "MIXED" "${MIXED_MS}" "${MIXED_MAX_MS}"
+  check_latency_threshold "BUSINESS" "${BUSINESS_MS}" "${BUSINESS_MAX_MS}"
   check_count_threshold "SHALLOW_SLOT_BATCHES" "${SHALLOW_SLOT_BATCHES}" "${SHALLOW_SLOT_BATCHES_MAX}"
   check_count_threshold "SHALLOW_CLASS_NAME_BATCHES" "${SHALLOW_CLASS_NAME_BATCHES}" "${SHALLOW_CLASS_NAME_BATCHES_MAX}"
   check_count_threshold "MIXED_COLLECTION_ARRAY_BATCHES" "${MIXED_COLLECTION_ARRAY_BATCHES}" "${MIXED_COLLECTION_ARRAY_BATCHES_MAX}"
@@ -528,10 +610,16 @@ if [[ "${RESULT}" == "OK" && "${CODE}" == "MATERIALIZATION_PERF_OK" ]]; then
   check_count_threshold "MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES" "${MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES}" "${MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MAX}"
   check_count_threshold "SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_REPORTS" "${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_REPORTS}" "${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX}"
   check_count_threshold "MIXED_STRUCTURED_TRAVERSAL_BUFFER_REPORTS" "${MIXED_STRUCTURED_TRAVERSAL_BUFFER_REPORTS}" "${MIXED_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX}"
+  check_count_threshold "BUSINESS_STRUCTURED_BYTE_FALLBACKS" "${BUSINESS_STRUCTURED_BYTE_FALLBACKS}" "${BUSINESS_STRUCTURED_BYTE_FALLBACKS_MAX}"
+  check_count_threshold "BUSINESS_STRUCTURED_BYTE_FETCHES" "${BUSINESS_STRUCTURED_BYTE_FETCHES}" "${BUSINESS_STRUCTURED_BYTE_FETCHES_MAX}"
+  check_count_threshold "BUSINESS_STRUCTURED_TRAVERSAL_BYTE_FETCHES" "${BUSINESS_STRUCTURED_TRAVERSAL_BYTE_FETCHES}" "${BUSINESS_STRUCTURED_TRAVERSAL_BYTE_FETCHES_MAX}"
+  check_count_floor "BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES" "${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES}" "${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MIN}"
+  check_count_threshold "BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES" "${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES}" "${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MAX}"
+  check_count_threshold "BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_REPORTS" "${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_REPORTS}" "${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX}"
   gbs_append_summary_line "- round-trip count thresholds: shallow slots \`${SHALLOW_SLOT_BATCHES_MAX}\`, shallow class names \`${SHALLOW_CLASS_NAME_BATCHES_MAX}\`, mixed collection arrays \`${MIXED_COLLECTION_ARRAY_BATCHES_MAX}\`, mixed dictionary pairs \`${MIXED_DICTIONARY_PAIR_BATCHES_MAX}\`, mixed string batches \`${MIXED_SCALAR_STRING_BATCHES_MAX}\`, mixed byte-array batches \`${MIXED_SCALAR_BYTE_ARRAY_BATCHES_MAX}\`"
-  gbs_append_summary_line "- structured transport thresholds: old byte fetches shallow/mixed \`${SHALLOW_STRUCTURED_BYTE_FETCHES_MAX}/${MIXED_STRUCTURED_BYTE_FETCHES_MAX}\`, traversal-byte fetches shallow/mixed \`${SHALLOW_STRUCTURED_TRAVERSAL_BYTE_FETCHES_MAX}/${MIXED_STRUCTURED_TRAVERSAL_BYTE_FETCHES_MAX}\`, traversal-buffer fetches shallow \`${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MIN}-${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MAX}\`, mixed \`${MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MIN}-${MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MAX}\`, reports shallow/mixed \`${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX}/${MIXED_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX}\`, fallbacks shallow/mixed \`${SHALLOW_STRUCTURED_BYTE_FALLBACKS_MAX}/${MIXED_STRUCTURED_BYTE_FALLBACKS_MAX}\`"
-  gbs_append_summary_line "- structured transport: shallow traversal-buffer fetches \`${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_FETCHES}\`, reports \`${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_REPORTS}\`, GCI-byte fetches \`${SHALLOW_STRUCTURED_BYTE_FETCHES}\`, traversal-byte fetches \`${SHALLOW_STRUCTURED_TRAVERSAL_BYTE_FETCHES}\`, fallbacks \`${SHALLOW_STRUCTURED_BYTE_FALLBACKS}/${SHALLOW_STRUCTURED_BYTE_FALLBACKS_MAX}\`; mixed traversal-buffer fetches \`${MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES}\`, reports \`${MIXED_STRUCTURED_TRAVERSAL_BUFFER_REPORTS}\`, GCI-byte fetches \`${MIXED_STRUCTURED_BYTE_FETCHES}\`, traversal-byte fetches \`${MIXED_STRUCTURED_TRAVERSAL_BYTE_FETCHES}\`, fallbacks \`${MIXED_STRUCTURED_BYTE_FALLBACKS}/${MIXED_STRUCTURED_BYTE_FALLBACKS_MAX}\`"
-  gbs_append_summary_line "- wrapper lookup profile: shallow lookups \`${SHALLOW_WRAPPER_LOOKUPS}\`, misses \`${SHALLOW_WRAPPER_LOOKUP_MISSES}\`, hits \`${SHALLOW_WRAPPER_CACHE_HITS}\`, typed \`${SHALLOW_WRAPPER_TYPED_RESULTS}\`, nil \`${SHALLOW_WRAPPER_NIL_RESULTS}\`; mixed misses \`${MIXED_WRAPPER_LOOKUP_MISSES}\`, hits \`${MIXED_WRAPPER_CACHE_HITS}\`, typed \`${MIXED_WRAPPER_TYPED_RESULTS}\`, nil \`${MIXED_WRAPPER_NIL_RESULTS}\`"
+  gbs_append_summary_line "- structured transport thresholds: old byte fetches shallow/mixed/business \`${SHALLOW_STRUCTURED_BYTE_FETCHES_MAX}/${MIXED_STRUCTURED_BYTE_FETCHES_MAX}/${BUSINESS_STRUCTURED_BYTE_FETCHES_MAX}\`, traversal-byte fetches shallow/mixed/business \`${SHALLOW_STRUCTURED_TRAVERSAL_BYTE_FETCHES_MAX}/${MIXED_STRUCTURED_TRAVERSAL_BYTE_FETCHES_MAX}/${BUSINESS_STRUCTURED_TRAVERSAL_BYTE_FETCHES_MAX}\`, traversal-buffer fetches shallow \`${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MIN}-${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MAX}\`, mixed \`${MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MIN}-${MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MAX}\`, business \`${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MIN}-${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES_MAX}\`, reports shallow/mixed/business \`${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX}/${MIXED_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX}/${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_REPORTS_MAX}\`, fallbacks shallow/mixed/business \`${SHALLOW_STRUCTURED_BYTE_FALLBACKS_MAX}/${MIXED_STRUCTURED_BYTE_FALLBACKS_MAX}/${BUSINESS_STRUCTURED_BYTE_FALLBACKS_MAX}\`"
+  gbs_append_summary_line "- structured transport: shallow traversal-buffer fetches \`${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_FETCHES}\`, reports \`${SHALLOW_STRUCTURED_TRAVERSAL_BUFFER_REPORTS}\`, GCI-byte fetches \`${SHALLOW_STRUCTURED_BYTE_FETCHES}\`, traversal-byte fetches \`${SHALLOW_STRUCTURED_TRAVERSAL_BYTE_FETCHES}\`, fallbacks \`${SHALLOW_STRUCTURED_BYTE_FALLBACKS}/${SHALLOW_STRUCTURED_BYTE_FALLBACKS_MAX}\`; mixed traversal-buffer fetches \`${MIXED_STRUCTURED_TRAVERSAL_BUFFER_FETCHES}\`, reports \`${MIXED_STRUCTURED_TRAVERSAL_BUFFER_REPORTS}\`, GCI-byte fetches \`${MIXED_STRUCTURED_BYTE_FETCHES}\`, traversal-byte fetches \`${MIXED_STRUCTURED_TRAVERSAL_BYTE_FETCHES}\`, fallbacks \`${MIXED_STRUCTURED_BYTE_FALLBACKS}/${MIXED_STRUCTURED_BYTE_FALLBACKS_MAX}\`; business traversal-buffer fetches \`${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_FETCHES}\`, reports \`${BUSINESS_STRUCTURED_TRAVERSAL_BUFFER_REPORTS}\`, GCI-byte fetches \`${BUSINESS_STRUCTURED_BYTE_FETCHES}\`, traversal-byte fetches \`${BUSINESS_STRUCTURED_TRAVERSAL_BYTE_FETCHES}\`, fallbacks \`${BUSINESS_STRUCTURED_BYTE_FALLBACKS}/${BUSINESS_STRUCTURED_BYTE_FALLBACKS_MAX}\`"
+  gbs_append_summary_line "- wrapper lookup profile: shallow lookups \`${SHALLOW_WRAPPER_LOOKUPS}\`, misses \`${SHALLOW_WRAPPER_LOOKUP_MISSES}\`, hits \`${SHALLOW_WRAPPER_CACHE_HITS}\`, fast connector hits \`${SHALLOW_WRAPPER_FAST_CONNECTOR_HITS}\`, typed \`${SHALLOW_WRAPPER_TYPED_RESULTS}\`, nil \`${SHALLOW_WRAPPER_NIL_RESULTS}\`; mixed misses \`${MIXED_WRAPPER_LOOKUP_MISSES}\`, hits \`${MIXED_WRAPPER_CACHE_HITS}\`, fast connector hits \`${MIXED_WRAPPER_FAST_CONNECTOR_HITS}\`, typed \`${MIXED_WRAPPER_TYPED_RESULTS}\`, nil \`${MIXED_WRAPPER_NIL_RESULTS}\`; business misses \`${BUSINESS_WRAPPER_LOOKUP_MISSES}\`, hits \`${BUSINESS_WRAPPER_CACHE_HITS}\`, fast connector hits \`${BUSINESS_WRAPPER_FAST_CONNECTOR_HITS}\`"
   check_trend_regression
   emit_summary "OK" "MATERIALIZATION_PERF_OK" "${ARRAY_MS}" "${DICTIONARY_MS}" "${SHALLOW_MS}" "${ARRAY_SIZE}" "${DICTIONARY_SIZE}" "${SHALLOW_SIZE}" "${SHALLOW_ROOT_MS}" "${SHALLOW_SLOT_MS}" "${SHALLOW_CLASS_NAME_BATCH_MS}" "${SHALLOW_PROXY_MS}" "${SHALLOW_WRAPPER_MS}" "${SHALLOW_SLOT_BATCHES}" "${SHALLOW_CLASS_NAME_BATCHES}" "${SHALLOW_PROXY_CREATIONS}" "${SHALLOW_WRAPPER_LOOKUPS}" "${MIXED_MS}" "${MIXED_SIZE}" "${MIXED_COLLECTION_ARRAY_BATCHES}" "${MIXED_DICTIONARY_PAIR_BATCHES}" "${MIXED_SCALAR_STRING_BATCHES}" "${MIXED_SCALAR_BYTE_ARRAY_BATCHES}"
   write_trend_sample

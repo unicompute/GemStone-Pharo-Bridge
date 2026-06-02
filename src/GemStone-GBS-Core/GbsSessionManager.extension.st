@@ -279,6 +279,40 @@ GbsSessionManager class >> typedWrapperClassesForServerClassNamed: serverClassNa
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSessionManager class >> materializationFastTypedWrapperClassForServerClassNamed: serverClassName [
+	| serverName clientName key registry wrapperClass className |
+	serverName := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+	serverName isEmpty ifTrue: [ ^ nil ].
+	clientName := self fastConnectorRegistry at: serverName ifAbsent: [ nil ].
+	clientName ifNil: [ ^ nil ].
+	key := self connectorObjectKeyForClient: clientName server: serverName.
+	registry := self typedWrapperRegistry.
+	wrapperClass := registry at: key ifAbsent: [ nil ].
+	(wrapperClass notNil and: [ wrapperClass inheritsFrom: GbsTypedProxy ])
+		ifTrue: [ ^ wrapperClass ].
+	className := GbsTypedWrapperBuilder
+		wrapperClassNameForClient: clientName
+		server: serverName.
+	wrapperClass := Smalltalk globals at: className ifAbsent: [ nil ].
+	(wrapperClass notNil and: [ wrapperClass inheritsFrom: GbsTypedProxy ])
+		ifTrue: [
+			self
+				setTypedWrapperClass: wrapperClass
+				forClient: clientName
+				server: serverName.
+			^ wrapperClass ].
+	wrapperClass := GbsTypedWrapperBuilder
+		generateWrapperForClient: clientName
+		server: serverName
+		session: nil.
+	self
+		setTypedWrapperClass: wrapperClass
+		forClient: clientName
+		server: serverName.
+	^ wrapperClass
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSessionManager class >> typedWrapperLifecycleEntries [
 	^ self typedWrapperLifecycleEntriesForSession: GbsSessionParameters currentSession
 ]

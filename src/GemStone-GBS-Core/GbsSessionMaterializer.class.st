@@ -123,8 +123,9 @@ GbsSessionMaterializer >> materializeArrayOop: anOop withProfile: aProfile depth
 		withProfile: aProfile
 		depth: anInteger + 1
 		seen: seenOops.
-	1 to: elementOops size do: [ :index |
-		materialized at: index put: (materializedElements at: index) ].
+	self withDirtyTrackingSuspendedDo: [
+		1 to: elementOops size do: [ :index |
+			materialized at: index put: (materializedElements at: index) ] ].
 	^ materialized
 ]
 
@@ -141,9 +142,10 @@ GbsSessionMaterializer >> materializeAssociationOop: anOop withProfile: aProfile
 		withProfile: aProfile
 		depth: anInteger + 1
 		seen: seenOops.
-	association
-		key: materialized first;
-		value: materialized second.
+	self withDirtyTrackingSuspendedDo: [
+		association
+			key: materialized first;
+			value: materialized second ].
 	^ association
 ]
 
@@ -183,10 +185,11 @@ GbsSessionMaterializer >> materializeDictionaryOop: anOop identityKeys: useIdent
 		withProfile: aProfile
 		depth: anInteger + 1
 		seen: seenOops.
-	1 to: associationPairs size do: [ :index |
-		dictionary
-			at: (keys at: index)
-			put: (values at: index) ].
+	self withDirtyTrackingSuspendedDo: [
+		1 to: associationPairs size do: [ :index |
+			dictionary
+				at: (keys at: index)
+				put: (values at: index) ] ].
 	^ dictionary
 ]
 

@@ -69,6 +69,36 @@ GbsSession >> resetMaterializedObjectCache [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> dirtyMaterializedObjectOops [
+	^ GbsMaterializedObjectDirtyTracker dirtyOopsForSession: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> isMaterializedObjectDirty: anObject [
+	^ GbsMaterializedObjectDirtyTracker isObject: anObject dirtyInSession: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> registerMaterializedObject: anObject forOop: anOop [
+	^ GbsMaterializedObjectDirtyTracker
+		registerObject: anObject
+		oop: anOop
+		session: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> resetMaterializedObjectDirtyTracking [
+	^ GbsMaterializedObjectDirtyTracker resetForSession: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> withDirtyTrackingSuspendedDo: aBlock [
+	^ GbsMaterializedObjectDirtyTracker
+		withSuspendedForSession: self
+		do: aBlock
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> scriptMarshaller [
 	^ GbsSessionScriptMarshaller on: self
 ]
@@ -956,6 +986,7 @@ GbsSession >> repositoryRootLifecycleVersion [
 GbsSession >> resetAfterLogout [
 	self resetConnectionStateAfterLogout.
 	self clearProxyCache.
+	self resetMaterializedObjectDirtyTracking.
 	self resetMaterializedObjectCache.
 	self materializer clearRemoteClassNameCache.
 	self resetMaterializationMetrics.

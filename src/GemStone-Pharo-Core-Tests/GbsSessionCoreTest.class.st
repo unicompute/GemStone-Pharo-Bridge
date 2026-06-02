@@ -79,7 +79,7 @@ GbsSessionCoreTest >> materializationMockSession [
 				nil.
 				1.
 				1 } ].
-		(script includesSubstring: 'behavior methodDict keys') ifTrue: [ ^ #() ].
+		(script includesSubstring: 'methodDict keys') ifTrue: [ ^ #() ].
 		(script includesSubstring: '9000') ifTrue: [ result := 2 ].
 		(script includesSubstring: '9016') ifTrue: [ result := 2 ].
 		result ifNil: [ self fail ].
@@ -285,7 +285,94 @@ GbsSessionCoreTest >> tearDown [
 	previousObjectSpaceFinalizationRegistry
 		ifNil: [ Smalltalk globals removeKey: #GbsObjectSpaceFinalizationRegistry ifAbsent: [ ] ]
 		ifNotNil: [ Smalltalk globals at: #GbsObjectSpaceFinalizationRegistry put: previousObjectSpaceFinalizationRegistry ].
+	Smalltalk globals removeKey: #GbsMaterializedObjectSessionRegistry ifAbsent: [ ].
 	super tearDown
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationDoesNotMarkDuringMaterialization [
+	| mockSession result nested dirtyOops |
+	mockSession := self materializationMockSession.
+	mockSession fetchDeep.
+
+	result := mockSession fetchObject: 9000.
+	nested := result second.
+
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty.
+	result at: 1 put: 'changed'.
+	nested at: 1 put: 'nested-changed'.
+	dirtyOops := mockSession dirtyMaterializedObjectOops asSet.
+	self assert: (dirtyOops includes: 9000).
+	self assert: (dirtyOops includes: 9016)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationResetUnregistersMaterializedObject [
+	| mockSession array |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 'old'.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+
+	mockSession resetMaterializedObjectDirtyTracking.
+	array at: 1 put: 'new'.
+
+	self deny: (mockSession isMaterializedObjectDirty: array).
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationTracksCollectionMutators [
+	| mockSession array dictionary ordered set bag association dirtyOops |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 'old'.
+	dictionary := Dictionary new.
+	ordered := OrderedCollection new.
+	set := Set new.
+	bag := Bag new.
+	association := Association key: #key value: 'old'.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	mockSession rememberMaterializedObject: dictionary forOop: 9100.
+	mockSession rememberMaterializedObject: ordered forOop: 9200.
+	mockSession rememberMaterializedObject: set forOop: 9300.
+	mockSession rememberMaterializedObject: bag forOop: 9400.
+	mockSession rememberMaterializedObject: association forOop: 9500.
+
+	array at: 1 put: 'new'.
+	dictionary at: #key put: 'value'.
+	ordered add: 'item'.
+	set add: 'item'.
+	bag add: 'item' withOccurrences: 2.
+	association value: 'new'.
+
+	dirtyOops := mockSession dirtyMaterializedObjectOops asSet.
+	#(9000 9100 9200 9300 9400 9500) do: [ :oop |
+		self assert: (dirtyOops includes: oop) ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationTracksSuccessfulRemovalOnly [
+	| mockSession ordered set bag dictionary |
+	mockSession := CoreMockGbsSession new.
+	ordered := OrderedCollection with: 'old'.
+	set := Set with: 'old'.
+	bag := Bag new add: 'old'; yourself.
+	dictionary := Dictionary new at: #old put: 'value'; yourself.
+	mockSession rememberMaterializedObject: ordered forOop: 9200.
+	mockSession rememberMaterializedObject: set forOop: 9300.
+	mockSession rememberMaterializedObject: bag forOop: 9400.
+	mockSession rememberMaterializedObject: dictionary forOop: 9500.
+
+	ordered remove: 'missing' ifAbsent: [ #missing ].
+	set remove: 'missing' ifAbsent: [ #missing ].
+	bag remove: 'missing' ifAbsent: [ #missing ].
+	dictionary removeKey: #missing ifAbsent: [ #missing ].
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty.
+
+	ordered remove: 'old' ifAbsent: [ self fail ].
+	set remove: 'old' ifAbsent: [ self fail ].
+	bag remove: 'old' ifAbsent: [ self fail ].
+	dictionary removeKey: #old ifAbsent: [ self fail ].
+	self assert: (mockSession dirtyMaterializedObjectOops asSet includesAll: #(9200 9300 9400 9500))
 ]
 
 { #category : 'tests' }
@@ -821,7 +908,7 @@ GbsSessionCoreTest >> testTraversalBufferReaderRejectsIncompleteReportBoundary [
 		self finishTraversalBuffer: buffer usedBytes: (nextOffset - 9) - 1.
 		self
 			should: [ reader parseReportsFromBuffer: buffer into: Dictionary new label: 'malformed traversal' ]
-			raise: Error
+			raise: GbsMaterializationTraversalError
 	] ensure: [ buffer free ]
 ]
 
@@ -891,6 +978,26 @@ GbsSessionCoreTest >> testTraversalBufferReaderAppliesBatchByteLimit [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testRemoteCollectionAsArrayOopIsCached [
+	| mockSession reader calls first second |
+	mockSession := CoreMockGbsSession new.
+	reader := mockSession materializer remoteReader.
+	calls := 0.
+	mockSession stubs at: #returnRemoteCommandBody put: [ :body :literalBindings :oopBindings |
+		calls := calls + 1.
+		self assert: (body includesSubstring: 'object asArray').
+		self assert: (oopBindings at: 'object') equals: 9000.
+		9100 ].
+
+	first := reader remoteCollectionAsArrayOop: 9000.
+	second := reader remoteCollectionAsArrayOop: 9000.
+
+	self assert: first equals: 9100.
+	self assert: second equals: 9100.
+	self assert: calls equals: 1
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testTraversalBufferSizeIsAlignedAndMinimumBounded [
 	| mockSession reader previous hadPrevious |
 	mockSession := CoreMockGbsSession new.
@@ -909,15 +1016,48 @@ GbsSessionCoreTest >> testTraversalBufferSizeIsAlignedAndMinimumBounded [
 ]
 
 { #category : 'tests' }
-GbsSessionCoreTest >> testTraversalStringReportRejectsByteSwizzleForScalarFallback [
+GbsSessionCoreTest >> testTraversalStringReportDecodesFourByteSwizzle [
+	| mockSession report result |
+	mockSession := CoreMockGbsSession new.
+	report := self
+		traversalByteReportForOop: 9040
+		classOop: 7001
+		bytes: (ByteArray withAll: #(0 246 1 0)).
+	report byteSwizzle: 2.
+
+	result := mockSession materializer remoteReader stringFromTraversalReport: report.
+
+	self assert: result size equals: 1.
+	self assert: result first equals: (Character codePoint: 16r1F600)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testTraversalStringReportDecodesTwoByteSwizzle [
+	| mockSession report result |
+	mockSession := CoreMockGbsSession new.
+	report := self
+		traversalByteReportForOop: 9040
+		classOop: 7001
+		bytes: (ByteArray withAll: #(65 0 218 3)).
+	report byteSwizzle: 1.
+
+	result := mockSession materializer remoteReader stringFromTraversalReport: report.
+
+	self assert: result size equals: 2.
+	self assert: result first equals: $A.
+	self assert: result second equals: (Character codePoint: 16r03DA)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testTraversalStringReportRejectsUnsupportedEightByteSwizzle [
 	| mockSession report |
 	mockSession := CoreMockGbsSession new.
-	report := self traversalByteReportForOop: 9040 classOop: 7001 bytes: (ByteArray withAll: #(0 65)).
-	report byteSwizzle: 1.
+	report := self traversalByteReportForOop: 9040 classOop: 7001 bytes: (ByteArray withAll: #(65 0 0 0 0 0 0 0)).
+	report byteSwizzle: 3.
 
 	self
 		should: [ mockSession materializer remoteReader stringFromTraversalReport: report ]
-		raise: Error
+		raise: GbsMaterializationTraversalError
 ]
 
 { #category : 'tests' }
@@ -1654,7 +1794,7 @@ GbsSessionCoreTest >> testFetchShallowBatchesNestedProxyClassNames [
 			response := 'Array' ].
 		(script includesSubstring: 'objectNamed: clsName asSymbol') ifTrue: [
 			response := { 5000. 'Array'. 'Object'. nil. nil. 1. 1 } ].
-		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+		(script includesSubstring: 'methodDict keys asSortedCollection') ifTrue: [
 			response := #() ].
 		(script includesSubstring: 'oops do:') ifTrue: [
 			bulkClassNameFetches := bulkClassNameFetches + 1.
@@ -1690,11 +1830,33 @@ GbsSessionCoreTest >> testFetchShallowBatchesNestedProxyClassNames [
 	self assert: (metrics at: #rootFetches ifAbsent: [ 0 ]) equals: 1.
 	self assert: (metrics at: #slotBatchCalls ifAbsent: [ 0 ]) equals: 1.
 	self assert: (metrics at: #classNameBatchCalls ifAbsent: [ 0 ]) equals: 1.
-	self assert: (metrics at: #wrapperLookupCalls ifAbsent: [ 0 ]) equals: 1.
-	self assert: (metrics at: #wrapperLookupMisses ifAbsent: [ 0 ]) equals: 1.
-	self assert: ((metrics at: #wrapperLookupClassCounts) at: 'Array') equals: 1.
+	self assert: (metrics at: #wrapperLookupCalls ifAbsent: [ 0 ]) equals: 0.
+	self assert: (metrics at: #wrapperLookupMisses ifAbsent: [ 0 ]) equals: 0.
+	self assert: (metrics at: #wrapperFastConnectorHits ifAbsent: [ 0 ]) equals: 1.
 	self assert: ((metrics at: #wrapperLookupTypedClassCounts) at: 'Array') equals: 1.
 	self assert: (metrics at: #proxyCreations ifAbsent: [ 0 ]) equals: 3
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testMaterializationFastConnectorWrapperAvoidsRemoteMetadataLookup [
+	| mockSession proxy metadataFetches metrics |
+	GbsSessionManager clearAllTypedWrapperClasses.
+	GbsSessionManager initializeFastConnectors.
+	mockSession := CoreMockGbsSession new.
+	metadataFetches := 0.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		metadataFetches := metadataFetches + 1.
+		self fail ].
+
+	proxy := mockSession proxyForOop: 9100 serverClassName: 'Array'.
+
+	self assert: (proxy isKindOf: GbsTypedProxy).
+	self assert: proxy clientBehaviorName equals: 'Array'.
+	self assert: proxy serverBehaviorName equals: 'Array'.
+	self assert: metadataFetches equals: 0.
+	metrics := mockSession materializationMetrics.
+	self assert: (metrics at: #wrapperFastConnectorHits ifAbsent: [ 0 ]) equals: 1.
+	self assert: (metrics at: #wrapperLookupCalls ifAbsent: [ 0 ]) equals: 0
 ]
 
 { #category : 'tests' }
@@ -1717,7 +1879,7 @@ GbsSessionCoreTest >> testFetchShallowClassNameBatchSizeIsConfigurable [
 				response := 'Array' ].
 			(script includesSubstring: 'objectNamed: clsName asSymbol') ifTrue: [
 				response := { 5000. 'Array'. 'Object'. nil. nil. 1. 1 } ].
-			(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+			(script includesSubstring: 'methodDict keys asSortedCollection') ifTrue: [
 				response := #() ].
 			(script includesSubstring: 'oops do:') ifTrue: [
 				bulkClassNameFetches := bulkClassNameFetches + 1.
@@ -1817,7 +1979,7 @@ GbsSessionCoreTest >> testFetchShallowFallsBackWhenClassNameBatchFails [
 			response := 'Array' ].
 		(script includesSubstring: 'objectNamed: clsName asSymbol') ifTrue: [
 			response := { 5000. 'Array'. 'Object'. nil. nil. 1. 1 } ].
-		(script includesSubstring: 'behavior methodDict keys asSortedCollection') ifTrue: [
+		(script includesSubstring: 'methodDict keys asSortedCollection') ifTrue: [
 			response := #() ].
 		(script includesSubstring: 'oops do:') ifTrue: [
 			bulkClassNameFetches := bulkClassNameFetches + 1.

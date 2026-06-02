@@ -134,6 +134,21 @@ GbsInspectorCoreToolsTest >> testBrowseTypedWrapperLifecycleReportUsesSessionLif
 ]
 
 { #category : 'tests' }
+GbsInspectorCoreToolsTest >> testPropertyStoragePreservesRequestedKey [
+	| inspector invokeButton reportButton |
+	inspector := GbsInspector new.
+	invokeButton := Object new.
+	reportButton := Object new.
+
+	inspector propertyAt: #invokeButton put: invokeButton.
+	inspector propertyAt: #reportButton put: reportButton.
+
+	self assert: ((inspector propertyAt: #invokeButton ifAbsent: [ nil ]) == invokeButton).
+	self assert: ((inspector propertyAt: #reportButton ifAbsent: [ nil ]) == reportButton).
+	self assert: (inspector propertyAt: #missingButton ifAbsent: [ #missing ]) equals: #missing
+]
+
+{ #category : 'tests' }
 GbsInspectorCoreToolsTest >> testSelectedInspectableOopPrefersSelectedTableRow [
 	| inspector fakeTable |
 	inspector := GbsInspector new.

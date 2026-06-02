@@ -134,6 +134,11 @@ jobs:
 
   materialization-perf-live:
     runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix:
+        live_target:
+          - pharo13-gemstone37
     env:
       PHARO_IMAGE: ${{ vars.PHARO_IMAGE }}
       PHARO_WORK_DIR: ${{ vars.PHARO_WORK_DIR }}
@@ -154,21 +159,21 @@ jobs:
         run: |
           {
             echo "GBS_SUMMARY_FILE=${GITHUB_STEP_SUMMARY}"
-            echo "GBS_JSON_SUMMARY_DIR=${RUNNER_TEMP}/gbs-materialization-json"
-            echo "GBS_EVIDENCE_DIR=${RUNNER_TEMP}/gbs-materialization-evidence"
-            echo "GBS_MATERIALIZATION_PERF_TRENDS=${RUNNER_TEMP}/gbs-materialization-performance-trends/materialization-performance-trends.jsonl"
-            echo "GBS_MATERIALIZATION_PERF_REPORT=${RUNNER_TEMP}/gbs-materialization-performance-trends/materialization-performance-trend-report.md"
+            echo "GBS_JSON_SUMMARY_DIR=${RUNNER_TEMP}/gbs-materialization-json-${{ matrix.live_target }}"
+            echo "GBS_EVIDENCE_DIR=${RUNNER_TEMP}/gbs-materialization-evidence-${{ matrix.live_target }}"
+            echo "GBS_MATERIALIZATION_PERF_TRENDS=${RUNNER_TEMP}/gbs-materialization-performance-trends-${{ matrix.live_target }}/materialization-performance-trends.jsonl"
+            echo "GBS_MATERIALIZATION_PERF_REPORT=${RUNNER_TEMP}/gbs-materialization-performance-trends-${{ matrix.live_target }}/materialization-performance-trend-report.md"
           } >> "${GITHUB_ENV}"
-          mkdir -p "${RUNNER_TEMP}/gbs-materialization-json" "${RUNNER_TEMP}/gbs-materialization-evidence" "${RUNNER_TEMP}/gbs-materialization-performance-trends"
+          mkdir -p "${RUNNER_TEMP}/gbs-materialization-json-${{ matrix.live_target }}" "${RUNNER_TEMP}/gbs-materialization-evidence-${{ matrix.live_target }}" "${RUNNER_TEMP}/gbs-materialization-performance-trends-${{ matrix.live_target }}"
 
       - name: Restore materialization performance trend history
         uses: actions/cache/restore@v4
         with:
-          path: ${{ runner.temp }}/gbs-materialization-performance-trends
-          key: materialization-performance-trends-${{ runner.os }}-${{ github.ref_name }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/gbs-materialization-performance-trends-${{ matrix.live_target }}
+          key: materialization-performance-trends-${{ matrix.live_target }}-${{ runner.os }}-${{ github.ref_name }}-${{ github.run_id }}
           restore-keys: |
-            materialization-performance-trends-${{ runner.os }}-${{ github.ref_name }}-
-            materialization-performance-trends-${{ runner.os }}-
+            materialization-performance-trends-${{ matrix.live_target }}-${{ runner.os }}-${{ github.ref_name }}-
+            materialization-performance-trends-${{ matrix.live_target }}-${{ runner.os }}-
 
       - name: Run optional live traversal-buffer materialization lane
         run: |
@@ -185,23 +190,23 @@ jobs:
             echo "- missing: \`${missing[*]}\`" >> "${GITHUB_STEP_SUMMARY}"
             exit 0
           fi
-          echo "Running live materialization performance lane; traversal-buffer fallbacks are hard failures."
+          echo "Running live materialization performance lane for ${{ matrix.live_target }}; traversal-buffer fallbacks are hard failures."
           make materialization-perf
 
       - name: Save materialization performance trend history
         if: always()
         uses: actions/cache/save@v4
         with:
-          path: ${{ runner.temp }}/gbs-materialization-performance-trends
-          key: materialization-performance-trends-${{ runner.os }}-${{ github.ref_name }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/gbs-materialization-performance-trends-${{ matrix.live_target }}
+          key: materialization-performance-trends-${{ matrix.live_target }}-${{ runner.os }}-${{ github.ref_name }}-${{ github.run_id }}
 
       - name: Upload materialization performance evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: materialization-performance-evidence
+          name: materialization-performance-evidence-${{ matrix.live_target }}
           path: |
-            ${{ runner.temp }}/gbs-materialization-json
-            ${{ runner.temp }}/gbs-materialization-evidence
-            ${{ runner.temp }}/gbs-materialization-performance-trends
+            ${{ runner.temp }}/gbs-materialization-json-${{ matrix.live_target }}
+            ${{ runner.temp }}/gbs-materialization-evidence-${{ matrix.live_target }}
+            ${{ runner.temp }}/gbs-materialization-performance-trends-${{ matrix.live_target }}
           if-no-files-found: ignore
