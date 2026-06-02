@@ -207,6 +207,21 @@ GbsMaterializedObjectDirtyTracker class >> unregisterObject: anObject [
 	^ anObject
 ]
 
+{ #category : 'registries' }
+GbsMaterializedObjectDirtyTracker class >> unregisterObject: anObject inSession: aSession [
+	| registry |
+	registry := (aSession class weakRegistryNamed: #GbsSessionMaterializedObjectOopRegistries)
+		at: aSession
+		ifAbsent: [ nil ].
+	registry ifNotNil: [
+		registry removeKey: anObject ifAbsent: [ ] ].
+	[ aSession dirtyPool clearDirtyObjects: { anObject } ]
+		on: Error
+		do: [ :ex | nil ].
+	self unregisterObject: anObject.
+	^ anObject
+]
+
 { #category : 'dirty tracking' }
 GbsMaterializedObjectDirtyTracker class >> withSuspendedForSession: aSession do: aBlock [
 	| previous |

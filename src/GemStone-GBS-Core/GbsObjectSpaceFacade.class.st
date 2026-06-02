@@ -76,6 +76,42 @@ GbsObjectSpaceFacade >> eachObjectDo: aBlock [
 	^ self
 ]
 
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> drainExportSetReleaseOops [
+	^ self drainExportSetReleaseOopsLimit: nil
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> drainExportSetReleaseOopsLimit: anInteger [
+	^ GbsSessionLifecycleManager
+		drainExportSetReleaseOopsForSession: session
+		limit: anInteger
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> drainGcedOops [
+	^ self drainGcedOopsLimit: nil
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> drainGcedOopsLimit: anInteger [
+	^ GbsSessionLifecycleManager
+		drainGcedOopsForSession: session
+		limit: anInteger
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> drainNoLongerReplicatedOops [
+	^ self drainNoLongerReplicatedOopsLimit: nil
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> drainNoLongerReplicatedOopsLimit: anInteger [
+	^ GbsSessionLifecycleManager
+		drainNoLongerReplicatedOopsForSession: session
+		limit: anInteger
+]
+
 { #category : 'querying' }
 GbsObjectSpaceFacade >> eachObjectDo: aBlock batchSize: aSmallInteger [
 	^ self
@@ -118,6 +154,20 @@ GbsObjectSpaceFacade >> finalizerFor: anObject [
 { #category : 'querying' }
 GbsObjectSpaceFacade >> hasFinalizerFor: anObject [
 	^ (self finalizerFor: anObject) notNil
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> forgetObject: anObject [
+	^ GbsSessionLifecycleManager
+		forgetObject: anObject
+		inSession: session
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> forgetObjectForOop: anOop [
+	^ GbsSessionLifecycleManager
+		forgetObjectForOop: anOop
+		inSession: session
 ]
 
 { #category : 'querying' }
@@ -336,6 +386,21 @@ GbsObjectSpaceFacade >> objectForOop: anOop [
 	^ session objectForOop: anOop
 ]
 
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> lifecycleReport [
+	^ GbsSessionLifecycleManager lifecycleReportForSession: session
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> pendingGcedOopCount [
+	^ GbsSessionLifecycleManager pendingGcedOopCountForSession: session
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> pendingNoLongerReplicatedOopCount [
+	^ GbsSessionLifecycleManager pendingNoLongerReplicatedOopCountForSession: session
+]
+
 { #category : 'querying' }
 GbsObjectSpaceFacade >> diagnostics [
 	^ GbsObjectSpaceDiagnosticsFacade on: session
@@ -354,6 +419,11 @@ GbsObjectSpaceFacade >> repositoryFacade [
 { #category : 'accessing' }
 GbsObjectSpaceFacade >> session [
 	^ session
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> serverMapSize [
+	^ GbsSessionLifecycleManager serverMapSizeForSession: session
 ]
 
 { #category : 'querying' }

@@ -1002,6 +1002,78 @@ GbsSessionCoreTest >> testSessionLifecycleManagerTracksServerMapAndFreeOops [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleForgetObjectQueuesNoLongerReplicatedOop [
+	| mockSession array forgotten |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 'old'.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	array at: 1 put: 'new'.
+	self assert: (mockSession isMaterializedObjectDirty: array).
+
+	forgotten := mockSession objectSpace forgetObjectForOop: 9000.
+
+	self assert: forgotten == array.
+	self assert: (GbsSessionLifecycleManager objectForOop: 9000 inSession: mockSession) isNil.
+	self deny: (mockSession isMaterializedObjectDirty: array).
+	self assert: mockSession objectSpace pendingNoLongerReplicatedOopCount equals: 1.
+	self assert: mockSession objectSpace drainNoLongerReplicatedOops equals: #(9000).
+	self assert: mockSession objectSpace drainNoLongerReplicatedOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleFinalizerQueuesGcedOop [
+	| mockSession array finalizer |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 'old'.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	finalizer := mockSession objectSpace finalizerFor: array.
+
+	self assert: finalizer notNil.
+	finalizer finalize.
+
+	self assert: (GbsSessionLifecycleManager objectForOop: 9000 inSession: mockSession) isNil.
+	self assert: mockSession objectSpace pendingGcedOopCount equals: 1.
+	self assert: mockSession objectSpace drainGcedOops equals: #(9000).
+	self assert: mockSession objectSpace drainGcedOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleFinalizerAfterResetDoesNotRequeueOop [
+	| mockSession array finalizer |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 'old'.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	finalizer := mockSession objectSpace finalizerFor: array.
+
+	mockSession resetMaterializedObjectDirtyTracking.
+	finalizer finalize.
+
+	self assert: mockSession objectSpace pendingGcedOopCount equals: 0.
+	self assert: mockSession objectSpace drainGcedOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleSplitsExportReleaseQueuesAndSkipsImmediateOops [
+	| mockSession releaseBatch report |
+	mockSession := CoreMockGbsSession new.
+	GbsSessionLifecycleManager noteNoLongerReplicatedOop: 9000 forSession: mockSession.
+	GbsSessionLifecycleManager noteNoLongerReplicatedOop: 9016 forSession: mockSession.
+	GbsSessionLifecycleManager noteNoLongerReplicatedOop: 9000 forSession: mockSession.
+	GbsSessionLifecycleManager noteGcedOop: 9024 forSession: mockSession.
+	GbsSessionLifecycleManager noteGcedOop: 20 forSession: mockSession.
+
+	report := mockSession objectSpace lifecycleReport.
+	self assert: (report at: #noLongerReplicatedOopQueueSize) equals: 2.
+	self assert: (report at: #gcedOopQueueSize) equals: 1.
+
+	releaseBatch := mockSession objectSpace drainExportSetReleaseOopsLimit: 1.
+	self assert: (releaseBatch at: #noLongerReplicated) equals: #(9000).
+	self assert: (releaseBatch at: #gced) equals: #(9024).
+	self assert: mockSession objectSpace drainNoLongerReplicatedOops equals: #(9016).
+	self assert: mockSession objectSpace drainGcedOops isEmpty
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testDefaultFetchProfileIsLegacy [
 	self assert: session fetchProfile class equals: GbsLegacyMaterializationProfile
 ]
