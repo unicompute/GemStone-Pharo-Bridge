@@ -100,7 +100,7 @@ GbsMaterializationTraversalBufferReader >> parseReportsFromBuffer: traversalBuff
 
 { #category : 'parsing' }
 GbsMaterializationTraversalBufferReader >> reportAt: traversalBuffer offset: offset [
-	| valueSize namedSize objId classOop firstOffset idxSizeBits objectFormat indexedSize valueOffset report |
+	| valueSize namedSize objId classOop firstOffset idxSizeBits objectFormat byteSwizzle indexedSize valueOffset report |
 	valueSize := traversalBuffer integerAt: offset size: 4 signed: true.
 	namedSize := traversalBuffer integerAt: offset + 4 size: 2 signed: true.
 	objId := (traversalBuffer integerAt: offset + 8 size: 8 signed: false) asInteger.
@@ -108,6 +108,7 @@ GbsMaterializationTraversalBufferReader >> reportAt: traversalBuffer offset: off
 	firstOffset := (traversalBuffer integerAt: offset + 24 size: 8 signed: true) asInteger.
 	idxSizeBits := (traversalBuffer integerAt: offset + 32 size: 8 signed: false) asInteger.
 	objectFormat := idxSizeBits bitAnd: 3.
+	byteSwizzle := (idxSizeBits bitAnd: 16r300) bitShift: -8.
 	indexedSize := idxSizeBits bitShift: -24.
 	valueOffset := offset + self objectReportHeaderBytes.
 	report := GbsMaterializationTraversalReport new.
@@ -115,6 +116,7 @@ GbsMaterializationTraversalBufferReader >> reportAt: traversalBuffer offset: off
 		oop: objId;
 		classOop: classOop;
 		objectFormat: objectFormat;
+		byteSwizzle: byteSwizzle;
 		indexedSize: indexedSize;
 		namedSize: namedSize;
 		firstOffset: firstOffset.

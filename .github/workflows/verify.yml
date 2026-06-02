@@ -170,7 +170,7 @@ jobs:
             materialization-performance-trends-${{ runner.os }}-${{ github.ref_name }}-
             materialization-performance-trends-${{ runner.os }}-
 
-      - name: Run optional live materialization performance lane
+      - name: Run optional live traversal-buffer materialization lane
         run: |
           missing=()
           for var in PHARO_IMAGE PHARO_WORK_DIR GEMSTONE GS_USER GS_PASS; do
@@ -185,6 +185,7 @@ jobs:
             echo "- missing: \`${missing[*]}\`" >> "${GITHUB_STEP_SUMMARY}"
             exit 0
           fi
+          echo "Running live materialization performance lane; traversal-buffer fallbacks are hard failures."
           make materialization-perf
 
       - name: Save materialization performance trend history

@@ -5,6 +5,7 @@ Class {
 		'oop',
 		'classOop',
 		'objectFormat',
+		'byteSwizzle',
 		'indexedSize',
 		'namedSize',
 		'firstOffset',
@@ -14,6 +15,16 @@ Class {
 	#category : 'GemStone-GBS-Core',
 	#package : 'GemStone-GBS-Core'
 }
+
+{ #category : 'accessing' }
+GbsMaterializationTraversalReport >> byteSwizzle [
+	^ byteSwizzle ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+GbsMaterializationTraversalReport >> byteSwizzle: anInteger [
+	byteSwizzle := anInteger
+]
 
 { #category : 'accessing' }
 GbsMaterializationTraversalReport >> classOop [

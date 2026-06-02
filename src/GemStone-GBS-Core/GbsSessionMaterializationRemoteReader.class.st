@@ -244,6 +244,35 @@ GbsSessionMaterializationRemoteReader >> oopPairsFromFlatOops: oopArray [
 ]
 
 { #category : 'private' }
+GbsSessionMaterializationRemoteReader >> oopValuesFromTraversalReport: report absoluteOffset: absoluteOffset count: count label: labelString [
+	| firstOffset relativeStart valueOops values |
+	report hasOopValue ifFalse: [
+		self error: 'GCI traversal ', labelString, ' returned a non-OOP object report.' ].
+	count = 0 ifTrue: [ ^ #() ].
+	firstOffset := report firstOffset.
+	firstOffset <= 0 ifTrue: [ firstOffset := 1 ].
+	relativeStart := absoluteOffset - firstOffset + 1.
+	relativeStart < 1 ifTrue: [
+		self error: 'GCI traversal ', labelString, ' report starts after the requested slot range.' ].
+	valueOops := report valueOops.
+	relativeStart + count - 1 > valueOops size ifTrue: [
+		self error: 'GCI traversal ', labelString, ' report ended before the requested slot range.' ].
+	values := Array new: count.
+	1 to: count do: [ :index |
+		values at: index put: (valueOops at: relativeStart + index - 1) ].
+	^ values
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> indexedOopValuesFromTraversalReport: report label: labelString [
+	^ self
+		oopValuesFromTraversalReport: report
+		absoluteOffset: report namedSize + 1
+		count: report indexedSize
+		label: labelString
+]
+
+{ #category : 'private' }
 GbsSessionMaterializationRemoteReader >> checkMaterializationBatchBytes: byteCount label: aString [
 	^ session materializer checkMaterializationBatchBytes: byteCount label: aString
 ]
@@ -446,6 +475,15 @@ GbsSessionMaterializationRemoteReader >> rawStringForOop: anOop label: aString [
 GbsSessionMaterializationRemoteReader >> stringFromBytes: byteArray [
 	^ String streamContents: [ :stream |
 		byteArray do: [ :byte | stream nextPut: byte asCharacter ] ]
+]
+
+{ #category : 'private' }
+GbsSessionMaterializationRemoteReader >> stringFromTraversalReport: report [
+	report hasByteValue ifFalse: [
+		self error: 'GCI traversal string batch returned a non-byte object report.' ].
+	report byteSwizzle = 0 ifFalse: [
+		self error: 'GCI traversal string batch requires byte-swizzle decoding; using scalar fallback.' ].
+	^ self stringFromBytes: report valueBytes
 ]
 
 { #category : 'private' }
@@ -656,9 +694,17 @@ GbsSessionMaterializationRemoteReader >> remoteArrayElementOopsForOop: anOop [
 			size <= 0
 				ifTrue: [ #() ]
 				ifFalse: [
-					[ self remoteArrayElementOopsViaGciForOop: anOop size: size ]
+					[
+						self prefersTraversalBufferTransport
+							ifTrue: [ self remoteArrayElementOopsViaTraversalForOop: anOop ]
+							ifFalse: [ self error: 'Traversal-buffer transport is not selected.' ] ]
 						on: Error
-						do: [ self remoteArrayElementOopsViaCommandsForOop: anOop size: size ] ] ]
+						do: [
+							self prefersTraversalBufferTransport ifTrue: [
+								self incrementMaterializationMetric: #structuredTraversalBufferFallbacks ].
+							[ self remoteArrayElementOopsViaGciForOop: anOop size: size ]
+								on: Error
+								do: [ self remoteArrayElementOopsViaCommandsForOop: anOop size: size ] ] ] ]
 ]
 
 { #category : 'remote access' }
@@ -714,9 +760,16 @@ GbsSessionMaterializationRemoteReader >> remoteArrayElementOopsDictionaryForOops
 	fetched := self
 		recordMillisecondsForMetric: #frontierSlotFetchMs
 		during: [
-			[
-				self arrayElementOopDictionaryFromStructuredSlots: (self
-					structuredBatchSlotsForBody: '| sizes total buffer offset object |
+			| traversalFetched |
+			self prefersTraversalBufferTransport ifTrue: [
+				[
+					traversalFetched := self remoteArrayElementOopsDictionaryFromTraversalForOops: oopCollection ]
+					on: Error
+					do: [ self incrementMaterializationMetric: #structuredTraversalBufferFallbacks ] ].
+			traversalFetched ifNotNil: [ traversalFetched ] ifNil: [
+				[
+					self arrayElementOopDictionaryFromStructuredSlots: (self
+						structuredBatchSlotsForBody: '| sizes total buffer offset object |
 sizes := Array new: oops size.
 total := 0.
 1 to: oops size do: [ :oopIndex |
@@ -733,13 +786,13 @@ offset := 1.
 		buffer at: offset put: (object at: index).
 		offset := offset + 1 ] ].
 buffer'
-					oopCollection: oopCollection)
-					forOops: oopCollection ]
-				on: Error
-				do: [
-					self incrementMaterializationMetric: #structuredBatchFallbacks.
-					self parseArrayElementOopLines: (session
-						fetchRemoteCommandBody: '| stream object |
+						oopCollection: oopCollection)
+						forOops: oopCollection ]
+					on: Error
+					do: [
+						self incrementMaterializationMetric: #structuredBatchFallbacks.
+						self parseArrayElementOopLines: (session
+							fetchRemoteCommandBody: '| stream object |
 stream := WriteStream on: String new.
 oops do: [ :oop |
 	object := Object _objectForOop: oop.
@@ -753,15 +806,36 @@ oops do: [ :oop |
 			nextPutAll: (object at: index) asOop asString ].
 	stream nextPut: Character lf ].
 stream contents'
-						literalBindings: (Dictionary new
-							at: 'oops' put: oopCollection asArray;
-							yourself)
-						oopBindings: Dictionary new
-						context: 20) ] ].
+							literalBindings: (Dictionary new
+								at: 'oops' put: oopCollection asArray;
+								yourself)
+							oopBindings: Dictionary new
+							context: 20) ] ] ].
 	total := 0.
 	fetched valuesDo: [ :each | total := total + each size ].
 	self incrementMaterializationMetric: #frontierSlotBatchOopCount by: total.
 	^ fetched
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteArrayElementOopsDictionaryFromTraversalForOops: oopCollection [
+	| reports elementOopsByOop |
+	self incrementMaterializationMetric: #frontierSlotTraversalBatchCalls.
+	reports := self
+		traversalBufferReportsForOops: oopCollection
+		level: 1
+		label: 'array-element traversal batch'.
+	elementOopsByOop := Dictionary new.
+	oopCollection do: [ :oop |
+		| report |
+		report := reports at: oop ifAbsent: [
+			self error: 'GCI traversal array-element batch did not include requested OOP.' ].
+		elementOopsByOop
+			at: oop
+			put: (self
+				indexedOopValuesFromTraversalReport: report
+				label: 'array-element batch') ].
+	^ elementOopsByOop
 ]
 
 { #category : 'remote access' }
@@ -820,6 +894,13 @@ GbsSessionMaterializationRemoteReader >> remoteArrayElementOopsViaGciForOop: anO
 ]
 
 { #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteArrayElementOopsViaTraversalForOop: anOop [
+	| fetched |
+	fetched := self remoteArrayElementOopsDictionaryFromTraversalForOops: { anOop }.
+	^ fetched at: anOop
+]
+
+{ #category : 'remote access' }
 GbsSessionMaterializationRemoteReader >> remoteAssociationOopPairCache [
 	^ (session class weakRegistryNamed: #GbsSessionRemoteAssociationOopPairCaches)
 		at: session
@@ -831,9 +912,17 @@ GbsSessionMaterializationRemoteReader >> remoteAssociationOopPairForOop: anOop [
 	^ self remoteAssociationOopPairCache
 		at: anOop
 		ifAbsentPut: [
-			[ self remoteArrayElementOopsForOop: (self remoteAssociationPairOopFor: anOop) ]
+			[
+				self prefersTraversalBufferTransport
+					ifTrue: [ (self remoteAssociationOopPairDictionaryFromTraversalForOops: { anOop }) at: anOop ]
+					ifFalse: [ self error: 'Traversal-buffer transport is not selected.' ] ]
 				on: Error
-				do: [ self parseOopPairLine: (session
+				do: [
+					self prefersTraversalBufferTransport ifTrue: [
+						self incrementMaterializationMetric: #structuredTraversalBufferFallbacks ].
+					[ self remoteArrayElementOopsForOop: (self remoteAssociationPairOopFor: anOop) ]
+						on: Error
+						do: [ self parseOopPairLine: (session
 			fetchRemoteCommandBody: '| stream |
 stream := WriteStream on: String new.
 stream
@@ -845,7 +934,7 @@ stream contents'
 			oopBindings: (Dictionary new
 				at: 'assoc' put: anOop;
 				yourself)
-			context: 20) ] ]
+			context: 20) ] ] ]
 ]
 
 { #category : 'remote access' }
@@ -883,9 +972,16 @@ GbsSessionMaterializationRemoteReader >> remoteAssociationOopPairDictionaryForOo
 	^ self
 		recordMillisecondsForMetric: #associationPairBatchMs
 		during: [
-			[
-				self associationOopPairDictionaryFromStructuredSlots: (self
-					structuredBatchSlotsForBody: '| buffer offset assoc |
+			| traversalFetched |
+			self prefersTraversalBufferTransport ifTrue: [
+				[
+					traversalFetched := self remoteAssociationOopPairDictionaryFromTraversalForOops: oopCollection ]
+					on: Error
+					do: [ self incrementMaterializationMetric: #structuredTraversalBufferFallbacks ] ].
+			traversalFetched ifNotNil: [ traversalFetched ] ifNil: [
+				[
+					self associationOopPairDictionaryFromStructuredSlots: (self
+						structuredBatchSlotsForBody: '| buffer offset assoc |
 buffer := Array new: oops size * 2.
 offset := 1.
 oops do: [ :oop |
@@ -894,13 +990,13 @@ oops do: [ :oop |
 	buffer at: offset + 1 put: assoc value.
 	offset := offset + 2 ].
 buffer'
-					oopCollection: oopCollection)
-					forOops: oopCollection ]
-				on: Error
-				do: [
-					self incrementMaterializationMetric: #structuredBatchFallbacks.
-					self parseAssociationOopPairLines: (session
-						fetchRemoteCommandBody: '| stream assoc |
+						oopCollection: oopCollection)
+						forOops: oopCollection ]
+					on: Error
+					do: [
+						self incrementMaterializationMetric: #structuredBatchFallbacks.
+						self parseAssociationOopPairLines: (session
+							fetchRemoteCommandBody: '| stream assoc |
 stream := WriteStream on: String new.
 oops do: [ :oop |
 	assoc := Object _objectForOop: oop.
@@ -912,11 +1008,34 @@ oops do: [ :oop |
 		nextPutAll: assoc value asOop asString;
 		nextPut: Character lf ].
 stream contents'
-						literalBindings: (Dictionary new
-							at: 'oops' put: oopCollection asArray;
-							yourself)
-						oopBindings: Dictionary new
-						context: 20) ] ]
+							literalBindings: (Dictionary new
+								at: 'oops' put: oopCollection asArray;
+								yourself)
+							oopBindings: Dictionary new
+							context: 20) ] ] ]
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteAssociationOopPairDictionaryFromTraversalForOops: oopCollection [
+	| reports pairsByOop |
+	self incrementMaterializationMetric: #associationPairTraversalBatchCalls.
+	reports := self
+		traversalBufferReportsForOops: oopCollection
+		level: 1
+		label: 'association-pair traversal batch'.
+	pairsByOop := Dictionary new.
+	oopCollection do: [ :oop |
+		| report |
+		report := reports at: oop ifAbsent: [
+			self error: 'GCI traversal association-pair batch did not include requested OOP.' ].
+		pairsByOop
+			at: oop
+			put: (self
+				oopValuesFromTraversalReport: report
+				absoluteOffset: 1
+				count: 2
+				label: 'association-pair batch') ].
+	^ pairsByOop
 ]
 
 { #category : 'remote access' }
@@ -1678,9 +1797,7 @@ GbsSessionMaterializationRemoteReader >> remoteStringValueDictionaryFromTraversa
 		| report |
 		report := reports at: oop ifAbsent: [
 			self error: 'GCI traversal string batch did not include requested OOP.' ].
-		report hasByteValue ifFalse: [
-			self error: 'GCI traversal string batch returned a non-byte object report.' ].
-		values at: oop put: (self stringFromBytes: report valueBytes) ].
+		values at: oop put: (self stringFromTraversalReport: report) ].
 	^ values
 ]
 

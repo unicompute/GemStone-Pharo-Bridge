@@ -178,6 +178,7 @@ GbsSessionCoreTest >> traversalByteReportForOop: oop classOop: classOop bytes: b
 		oop: oop;
 		classOop: classOop;
 		objectFormat: 1;
+		byteSwizzle: 0;
 		indexedSize: byteArray size;
 		namedSize: 0;
 		firstOffset: 1;
@@ -187,15 +188,83 @@ GbsSessionCoreTest >> traversalByteReportForOop: oop classOop: classOop bytes: b
 
 { #category : 'running' }
 GbsSessionCoreTest >> traversalPointerReportForOop: oop classOop: classOop oops: oopArray [
+	^ self
+		traversalPointerReportForOop: oop
+		classOop: classOop
+		namedSize: 0
+		indexedSize: oopArray size
+		firstOffset: 1
+		oops: oopArray
+]
+
+{ #category : 'running' }
+GbsSessionCoreTest >> traversalPointerReportForOop: oop classOop: classOop namedSize: namedSize indexedSize: indexedSize firstOffset: firstOffset oops: oopArray [
 	^ GbsMaterializationTraversalReport new
 		oop: oop;
 		classOop: classOop;
 		objectFormat: 0;
-		indexedSize: oopArray size;
-		namedSize: 0;
-		firstOffset: 1;
+		byteSwizzle: 0;
+		indexedSize: indexedSize;
+		namedSize: namedSize;
+		firstOffset: firstOffset;
 		valueOops: oopArray;
 		yourself
+]
+
+{ #category : 'running' }
+GbsSessionCoreTest >> alignedTraversalValueByteCount: byteCount [
+	^ ((byteCount + 7) // 8) * 8
+]
+
+{ #category : 'running' }
+GbsSessionCoreTest >> finishTraversalBuffer: traversalBuffer usedBytes: usedBytes [
+	traversalBuffer
+		integerAt: 5
+		put: usedBytes
+		size: 4
+		signed: false
+]
+
+{ #category : 'running' }
+GbsSessionCoreTest >> writeByteTraversalReportOn: traversalBuffer offset: offset oop: oop classOop: classOop bytes: byteArray byteSwizzle: byteSwizzle [
+	| valueSize alignedSize idxSizeBits valueOffset |
+	valueSize := byteArray size.
+	alignedSize := self alignedTraversalValueByteCount: valueSize.
+	idxSizeBits := (valueSize bitShift: 24) + (byteSwizzle bitShift: 8) + 1.
+	traversalBuffer
+		integerAt: offset put: valueSize size: 4 signed: true;
+		integerAt: offset + 4 put: 0 size: 2 signed: true;
+		integerAt: offset + 8 put: oop size: 8 signed: false;
+		integerAt: offset + 16 put: classOop size: 8 signed: false;
+		integerAt: offset + 24 put: 1 size: 8 signed: true;
+		integerAt: offset + 32 put: idxSizeBits size: 8 signed: false.
+	valueOffset := offset + 40.
+	1 to: valueSize do: [ :index |
+		traversalBuffer unsignedByteAt: valueOffset + index - 1 put: (byteArray at: index) ].
+	^ offset + 40 + alignedSize
+]
+
+{ #category : 'running' }
+GbsSessionCoreTest >> writePointerTraversalReportOn: traversalBuffer offset: offset oop: oop classOop: classOop namedSize: namedSize indexedSize: indexedSize firstOffset: firstOffset oops: oopArray [
+	| valueSize alignedSize idxSizeBits valueOffset |
+	valueSize := oopArray size * 8.
+	alignedSize := self alignedTraversalValueByteCount: valueSize.
+	idxSizeBits := indexedSize bitShift: 24.
+	traversalBuffer
+		integerAt: offset put: valueSize size: 4 signed: true;
+		integerAt: offset + 4 put: namedSize size: 2 signed: true;
+		integerAt: offset + 8 put: oop size: 8 signed: false;
+		integerAt: offset + 16 put: classOop size: 8 signed: false;
+		integerAt: offset + 24 put: firstOffset size: 8 signed: true;
+		integerAt: offset + 32 put: idxSizeBits size: 8 signed: false.
+	valueOffset := offset + 40.
+	oopArray doWithIndex: [ :value :index |
+		traversalBuffer
+			integerAt: valueOffset + ((index - 1) * 8)
+			put: value
+			size: 8
+			signed: false ].
+	^ offset + 40 + alignedSize
 ]
 
 { #category : 'running' }
@@ -616,6 +685,239 @@ GbsSessionCoreTest >> testScalarByteArraysUseGciTraversalBuffer [
 		hadTransport
 			ifTrue: [ Smalltalk globals at: #GbsMaterializationByteTransport put: previousTransport ]
 			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationByteTransport ifAbsent: [ ] ] ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testArraySlotsUseGciTraversalBuffer [
+	| mockSession reports values metrics previousTransport hadTransport |
+	mockSession := CoreMockGbsSession new.
+	reports := Dictionary new.
+	reports at: 9100 put: (self traversalPointerReportForOop: 9100 classOop: 7000 oops: #(101 102 103)).
+	hadTransport := Smalltalk globals includesKey: #GbsMaterializationByteTransport.
+	previousTransport := Smalltalk globals at: #GbsMaterializationByteTransport ifAbsent: [ nil ].
+	[
+		Smalltalk globals at: #GbsMaterializationByteTransport put: 'traversal-buffer'.
+		mockSession stubs at: #supportsMaterializationTraversalBufferTransport put: true.
+		mockSession stubs at: #materializationTraversalReportsForOops put: [ :oops :level :label |
+			self assert: oops equals: #(9100).
+			self assert: level equals: 1.
+			self assert: label equals: 'array-element traversal batch'.
+			reports ].
+		mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count | self fail ].
+		mockSession stubs at: #returnRemoteCommandBody put: [ :body :literalBindings :oopBindings | self fail ].
+
+		values := mockSession materializer remoteReader remoteArrayElementOopsForOops: #(9100).
+
+		self assert: (values at: 9100) equals: #(101 102 103).
+		metrics := mockSession materializationMetrics.
+		self assert: (metrics at: #frontierSlotTraversalBatchCalls ifAbsent: [ 0 ]) equals: 1.
+		self assert: (metrics at: #structuredTraversalBufferFetchCalls ifAbsent: [ 0 ]) equals: 1.
+		self assert: (metrics at: #structuredBatchBufferFetchCalls ifAbsent: [ 0 ]) equals: 0.
+		self assert: (metrics at: #structuredTraversalBufferFallbacks ifAbsent: [ 0 ]) equals: 0
+	] ensure: [
+		hadTransport
+			ifTrue: [ Smalltalk globals at: #GbsMaterializationByteTransport put: previousTransport ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationByteTransport ifAbsent: [ ] ] ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testAssociationPairsUseGciTraversalBuffer [
+	| mockSession reports values metrics previousTransport hadTransport |
+	mockSession := CoreMockGbsSession new.
+	reports := Dictionary new.
+	reports at: 9600 put: (self
+		traversalPointerReportForOop: 9600
+		classOop: 7010
+		namedSize: 2
+		indexedSize: 0
+		firstOffset: 1
+		oops: #(111 222)).
+	hadTransport := Smalltalk globals includesKey: #GbsMaterializationByteTransport.
+	previousTransport := Smalltalk globals at: #GbsMaterializationByteTransport ifAbsent: [ nil ].
+	[
+		Smalltalk globals at: #GbsMaterializationByteTransport put: 'traversal-buffer'.
+		mockSession stubs at: #supportsMaterializationTraversalBufferTransport put: true.
+		mockSession stubs at: #materializationTraversalReportsForOops put: [ :oops :level :label |
+			self assert: oops equals: #(9600).
+			self assert: level equals: 1.
+			self assert: label equals: 'association-pair traversal batch'.
+			reports ].
+		mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count | self fail ].
+		mockSession stubs at: #returnRemoteCommandBody put: [ :body :literalBindings :oopBindings | self fail ].
+
+		values := mockSession materializer remoteReader remoteAssociationOopPairsForOops: #(9600).
+
+		self assert: (values at: 9600) equals: #(111 222).
+		metrics := mockSession materializationMetrics.
+		self assert: (metrics at: #associationPairTraversalBatchCalls ifAbsent: [ 0 ]) equals: 1.
+		self assert: (metrics at: #structuredTraversalBufferFetchCalls ifAbsent: [ 0 ]) equals: 1.
+		self assert: (metrics at: #structuredBatchBufferFetchCalls ifAbsent: [ 0 ]) equals: 0.
+		self assert: (metrics at: #structuredTraversalBufferFallbacks ifAbsent: [ 0 ]) equals: 0
+	] ensure: [
+		hadTransport
+			ifTrue: [ Smalltalk globals at: #GbsMaterializationByteTransport put: previousTransport ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationByteTransport ifAbsent: [ ] ] ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testTraversalBufferReaderContinuesWithMoreTraversal [
+	| mockSession reader reports moreCalls |
+	mockSession := CoreMockGbsSession new.
+	moreCalls := 0.
+	mockSession stubs at: #apiGciTraverseOops put: [ :oopBuffer :oopCount :traversalBuffer :level |
+		| nextOffset |
+		self assert: oopCount equals: 2.
+		self assert: level equals: 1.
+		nextOffset := self
+			writePointerTraversalReportOn: traversalBuffer
+			offset: 9
+			oop: 9100
+			classOop: 7000
+			namedSize: 0
+			indexedSize: 1
+			firstOffset: 1
+			oops: #(101).
+		self finishTraversalBuffer: traversalBuffer usedBytes: nextOffset - 9.
+		0 ].
+	mockSession stubs at: #apiGciMoreTraversal put: [ :traversalBuffer |
+		| nextOffset |
+		moreCalls := moreCalls + 1.
+		nextOffset := self
+			writePointerTraversalReportOn: traversalBuffer
+			offset: 9
+			oop: 9200
+			classOop: 7000
+			namedSize: 0
+			indexedSize: 2
+			firstOffset: 1
+			oops: #(201 202).
+		self finishTraversalBuffer: traversalBuffer usedBytes: nextOffset - 9.
+		1 ].
+	reader := GbsMaterializationTraversalBufferReader on: mockSession.
+
+	reports := reader reportsForOops: #(9100 9200) level: 1 label: 'test traversal'.
+
+	self assert: moreCalls equals: 1.
+	self assert: (reports at: 9100) valueOops equals: #(101).
+	self assert: (reports at: 9200) valueOops equals: #(201 202)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testTraversalBufferReaderRejectsIncompleteReportBoundary [
+	| mockSession reader buffer nextOffset |
+	mockSession := CoreMockGbsSession new.
+	reader := GbsMaterializationTraversalBufferReader on: mockSession.
+	buffer := ExternalAddress allocate: 256.
+	[
+		nextOffset := self
+			writePointerTraversalReportOn: buffer
+			offset: 9
+			oop: 9100
+			classOop: 7000
+			namedSize: 0
+			indexedSize: 2
+			firstOffset: 1
+			oops: #(101 102).
+		self finishTraversalBuffer: buffer usedBytes: (nextOffset - 9) - 1.
+		self
+			should: [ reader parseReportsFromBuffer: buffer into: Dictionary new label: 'malformed traversal' ]
+			raise: Error
+	] ensure: [ buffer free ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testTraversalBufferReaderParsesMixedByteAndOopReports [
+	| mockSession reader buffer nextOffset reports |
+	mockSession := CoreMockGbsSession new.
+	reader := GbsMaterializationTraversalBufferReader on: mockSession.
+	buffer := ExternalAddress allocate: 512.
+	[
+		nextOffset := self
+			writePointerTraversalReportOn: buffer
+			offset: 9
+			oop: 9100
+			classOop: 7000
+			namedSize: 0
+			indexedSize: 2
+			firstOffset: 1
+			oops: #(101 102).
+		nextOffset := self
+			writeByteTraversalReportOn: buffer
+			offset: nextOffset
+			oop: 9040
+			classOop: 7001
+			bytes: (ByteArray withAll: #(118 105 112))
+			byteSwizzle: 0.
+		self finishTraversalBuffer: buffer usedBytes: nextOffset - 9.
+
+		reports := reader parseReportsFromBuffer: buffer into: Dictionary new label: 'mixed traversal'.
+
+		self assert: (reports at: 9100) valueOops equals: #(101 102).
+		self assert: (reports at: 9040) valueBytes equals: (ByteArray withAll: #(118 105 112)).
+		self assert: (reports at: 9040) byteSwizzle equals: 0
+	] ensure: [ buffer free ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testTraversalBufferReaderAppliesBatchByteLimit [
+	| mockSession reader buffer nextOffset previous hadPrevious raised |
+	mockSession := CoreMockGbsSession new.
+	reader := GbsMaterializationTraversalBufferReader on: mockSession.
+	buffer := ExternalAddress allocate: 512.
+	hadPrevious := Smalltalk globals includesKey: #GbsMaterializationMaxBatchBytes.
+	previous := Smalltalk globals at: #GbsMaterializationMaxBatchBytes ifAbsent: [ nil ].
+	raised := false.
+	[
+		Smalltalk globals at: #GbsMaterializationMaxBatchBytes put: 16.
+		nextOffset := self
+			writeByteTraversalReportOn: buffer
+			offset: 9
+			oop: 9040
+			classOop: 7001
+			bytes: (ByteArray new: 64 withAll: 65)
+			byteSwizzle: 0.
+		self finishTraversalBuffer: buffer usedBytes: nextOffset - 9.
+		[ reader parseReportsFromBuffer: buffer into: Dictionary new label: 'large traversal' ]
+			on: GbsMaterializationLimitError
+			do: [ :ex |
+				raised := true.
+				self assert: ex limitKind equals: #batchBytes ].
+		self assert: raised
+	] ensure: [
+		buffer free.
+		hadPrevious
+			ifTrue: [ Smalltalk globals at: #GbsMaterializationMaxBatchBytes put: previous ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationMaxBatchBytes ifAbsent: [ ] ] ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testTraversalBufferSizeIsAlignedAndMinimumBounded [
+	| mockSession reader previous hadPrevious |
+	mockSession := CoreMockGbsSession new.
+	reader := GbsMaterializationTraversalBufferReader on: mockSession.
+	hadPrevious := Smalltalk globals includesKey: #GbsMaterializationTraversalBufferBytes.
+	previous := Smalltalk globals at: #GbsMaterializationTraversalBufferBytes ifAbsent: [ nil ].
+	[
+		Smalltalk globals at: #GbsMaterializationTraversalBufferBytes put: 7.
+		self assert: reader traversalBufferBytes equals: 2048.
+		Smalltalk globals at: #GbsMaterializationTraversalBufferBytes put: 2050.
+		self assert: reader traversalBufferBytes equals: 2056
+	] ensure: [
+		hadPrevious
+			ifTrue: [ Smalltalk globals at: #GbsMaterializationTraversalBufferBytes put: previous ]
+			ifFalse: [ Smalltalk globals removeKey: #GbsMaterializationTraversalBufferBytes ifAbsent: [ ] ] ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testTraversalStringReportRejectsByteSwizzleForScalarFallback [
+	| mockSession report |
+	mockSession := CoreMockGbsSession new.
+	report := self traversalByteReportForOop: 9040 classOop: 7001 bytes: (ByteArray withAll: #(0 65)).
+	report byteSwizzle: 1.
+
+	self
+		should: [ mockSession materializer remoteReader stringFromTraversalReport: report ]
+		raise: Error
 ]
 
 { #category : 'tests' }

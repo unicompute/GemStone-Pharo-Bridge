@@ -15,6 +15,14 @@ CoreMockGbsSession >> initialize [
 ]
 
 { #category : 'accessing' }
+CoreMockGbsSession >> apiGciAllocTravBuf: byteCount [
+	| block |
+	block := self stubs at: #apiGciAllocTravBuf ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: byteCount ].
+	^ ExternalAddress allocate: byteCount
+]
+
+{ #category : 'accessing' }
 CoreMockGbsSession >> apiGciExecute: aString context: anInteger [
 	"Intercept the actual FFI call used by execute:"
 	| errBlock |
@@ -64,11 +72,40 @@ CoreMockGbsSession >> apiGciFetchSize: anOop [
 ]
 
 { #category : 'accessing' }
+CoreMockGbsSession >> apiGciFree: anExternalAddress [
+	| block |
+	block := self stubs at: #apiGciFree ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: anExternalAddress ].
+	anExternalAddress free
+]
+
+{ #category : 'accessing' }
 CoreMockGbsSession >> apiGciGetClass: anOop [
 	| block |
 	block := self stubs at: #apiGciGetClass ifAbsent: [ nil ].
 	block ifNotNil: [ ^ block cull: anOop ].
 	self error: 'No apiGciGetClass stub configured.'
+]
+
+{ #category : 'accessing' }
+CoreMockGbsSession >> apiGciMoreTraversal: traversalBuffer [
+	| block |
+	block := self stubs at: #apiGciMoreTraversal ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: traversalBuffer ].
+	^ 1
+]
+
+{ #category : 'accessing' }
+CoreMockGbsSession >> apiGciTraverseOops: oopBuffer count: oopCount into: traversalBuffer level: traversalLevel [
+	| block |
+	block := self stubs at: #apiGciTraverseOops ifAbsent: [ nil ].
+	block ifNotNil: [
+		^ block
+			cull: oopBuffer
+			cull: oopCount
+			cull: traversalBuffer
+			cull: traversalLevel ].
+	self error: 'No apiGciTraverseOops stub configured.'
 ]
 
 { #category : 'accessing' }
