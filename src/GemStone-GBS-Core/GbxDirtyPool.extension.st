@@ -7,6 +7,13 @@ GbxDirtyPool >> clearDirty [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxDirtyPool >> clearDirtyObjects: aCollection [
+	aCollection do: [ :each |
+		dirtyAwaitingPacking remove: each ifAbsent: [ ] ].
+	^ dirtyAwaitingPacking
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxDirtyPool >> isDirty: anObject [
 	^ dirtyAwaitingPacking includes: anObject
 ]
@@ -16,4 +23,3 @@ GbxDirtyPool >> markDirty: anObject [
 	dirtyAwaitingPacking add: anObject.
 	^ anObject
 ]
-

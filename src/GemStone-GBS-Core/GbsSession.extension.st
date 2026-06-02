@@ -80,10 +80,12 @@ GbsSession >> isMaterializedObjectDirty: anObject [
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> registerMaterializedObject: anObject forOop: anOop [
-	^ GbsMaterializedObjectDirtyTracker
-		registerObject: anObject
-		oop: anOop
-		session: self
+	^ GbsMaterializedObjectDirtyTracker registerObject: anObject oop: anOop session: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> flushDirtyMaterializedObjects [
+	^ GbsMaterializedObjectDirtyTracker flushDirtyForSession: self
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -93,9 +95,7 @@ GbsSession >> resetMaterializedObjectDirtyTracking [
 
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> withDirtyTrackingSuspendedDo: aBlock [
-	^ GbsMaterializedObjectDirtyTracker
-		withSuspendedForSession: self
-		do: aBlock
+	^ GbsMaterializedObjectDirtyTracker withSuspendedForSession: self do: aBlock
 ]
 
 { #category : '*GemStone-GBS-Core' }

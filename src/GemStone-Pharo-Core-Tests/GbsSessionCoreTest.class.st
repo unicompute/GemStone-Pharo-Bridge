@@ -376,6 +376,118 @@ GbsSessionCoreTest >> testDirtyReplicationTracksSuccessfulRemovalOnly [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationFlushKeepsDirtyObjectsWhenRemoteStoreFails [
+	| mockSession array |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 'old'.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	array at: 1 put: 'new'.
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		Error signal: 'remote store failed' ].
+
+	self
+		should: [ mockSession flushDirtyMaterializedObjects ]
+		raise: Error.
+	self assert: (mockSession isMaterializedObjectDirty: array).
+	self assert: (mockSession dirtyMaterializedObjectOops asSet includes: 9000)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationFlushStoresArrayAndClearsDirtyState [
+	| mockSession array capturedScript flushed |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 'old' with: nil.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	array at: 1 put: 'new'.
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		capturedScript := script.
+		268 ].
+
+	flushed := mockSession flushDirtyMaterializedObjects.
+
+	self assert: flushed equals: #(9000).
+	self deny: (mockSession isMaterializedObjectDirty: array).
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty.
+	self assert: (capturedScript includesSubstring: 'object size = 2').
+	self assert: (capturedScript includesSubstring: 'object at: 1 put: value1_1').
+	self assert: (capturedScript includesSubstring: 'value: (Object _objectForOop: 9000)').
+	self assert: (capturedScript includesSubstring: 'value: ''new''')
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationFlushStoresMixedCollectionsInSingleCommand [
+	| mockSession dictionary association ordered set bag capturedScript flushed |
+	mockSession := CoreMockGbsSession new.
+	dictionary := Dictionary new.
+	association := Association key: #status value: 'old'.
+	ordered := OrderedCollection new.
+	set := Set new.
+	bag := Bag new.
+	mockSession rememberMaterializedObject: dictionary forOop: 9100.
+	mockSession rememberMaterializedObject: association forOop: 9200.
+	mockSession rememberMaterializedObject: ordered forOop: 9300.
+	mockSession rememberMaterializedObject: set forOop: 9400.
+	mockSession rememberMaterializedObject: bag forOop: 9500.
+	dictionary at: #customer put: 'Dirk'.
+	association value: 'changed'.
+	ordered add: 'line'.
+	set add: 'unique'.
+	bag add: 'item' withOccurrences: 2.
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		capturedScript := script.
+		268 ].
+
+	flushed := mockSession flushDirtyMaterializedObjects.
+
+	self assert: flushed asSet equals: #(9100 9200 9300 9400 9500) asSet.
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty.
+	#(9100 9200 9300 9400 9500) do: [ :oop |
+		self assert: (capturedScript includesSubstring: 'Object _objectForOop: ', oop asString) ].
+	self assert: (capturedScript includesSubstring: 'object at: key1_1 put: value1_1').
+	self assert: (capturedScript includesSubstring: 'object key: key2 value: value2').
+	self assert: (capturedScript includesSubstring: 'object add: value3_1').
+	self assert: (capturedScript includesSubstring: 'object add: value4_1').
+	self assert: (capturedScript includesSubstring: 'object add: value5_1').
+	self assert: (capturedScript includesSubstring: 'object add: value5_2')
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationFlushTracksActiveStoreTraversalDuringRemoteStore [
+	| mockSession array activeDuringFlush |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 'old'.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	array at: 1 put: 'new'.
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		activeDuringFlush := mockSession activeStoreTraversals size.
+		268 ].
+
+	mockSession flushDirtyMaterializedObjects.
+
+	self assert: activeDuringFlush equals: 1.
+	self assert: mockSession activeStoreTraversals isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationFlushUsesRemoteIdentityForNestedMaterializedObjects [
+	| mockSession root nested capturedScript |
+	mockSession := CoreMockGbsSession new.
+	root := Array with: nil.
+	nested := Array with: 'child'.
+	mockSession rememberMaterializedObject: root forOop: 9000.
+	mockSession rememberMaterializedObject: nested forOop: 9016.
+	root at: 1 put: nested.
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		capturedScript := script.
+		268 ].
+
+	mockSession flushDirtyMaterializedObjects.
+
+	self assert: (capturedScript includesSubstring: 'object at: 1 put: value1_1').
+	self assert: (capturedScript includesSubstring: 'value: (Object _objectForOop: 9016)')
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testDefaultFetchProfileIsLegacy [
 	self assert: session fetchProfile class equals: GbsLegacyMaterializationProfile
 ]

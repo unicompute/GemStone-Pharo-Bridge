@@ -23,6 +23,11 @@ GbsMaterializedObjectDirtyTracker class >> clearDirtyForSession: aSession [
 ]
 
 { #category : 'dirty tracking' }
+GbsMaterializedObjectDirtyTracker class >> clearDirtyObjects: objects forSession: aSession [
+	^ aSession dirtyPool clearDirtyObjects: objects
+]
+
+{ #category : 'dirty tracking' }
 GbsMaterializedObjectDirtyTracker class >> dirtyObjectsForSession: aSession [
 	^ aSession dirtyPool dirtyAwaitingPacking copy
 ]
@@ -36,6 +41,11 @@ GbsMaterializedObjectDirtyTracker class >> dirtyOopsForSession: aSession [
 		oop := self oopForObject: each inSession: aSession.
 		oop ifNotNil: [ oops add: oop ] ].
 	^ oops asArray
+]
+
+{ #category : 'dirty tracking' }
+GbsMaterializedObjectDirtyTracker class >> flushDirtyForSession: aSession [
+	^ GbsDirtyReplicateStoreTraversal flushSession: aSession
 ]
 
 { #category : 'dirty tracking' }
