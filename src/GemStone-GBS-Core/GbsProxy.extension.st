@@ -5,8 +5,11 @@ GbsProxy >> == anObject [
 	"Direct identity check using the Pharo identity primitive"
 
 	<primitive: 110>
-	^ (anObject isKindOf: GbsProxy) and: [
-		self oop = anObject oop and: [ self session == anObject session ] ]
+	((anObject respondsTo: #oop) and: [ anObject respondsTo: #session ])
+		ifFalse: [ ^ false ].
+	^ [ self oop = anObject oop and: [ self session == anObject session ] ]
+		on: Error
+		do: [ false ]
 ]
 
 { #category : '*GemStone-GBS-Core' }

@@ -21,7 +21,7 @@ Rendered SVG: [PACKAGE-GRAPH.svg](./PACKAGE-GRAPH.svg)
 - `GemStone-Pharo-Core-Tests`
   requires: `GemStone-GBS-Converted`, `GemStone-GBS-Core`, `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`
 - `GemStone-Pharo-MagLev-Tests`
-  requires: `GemStone-Pharo-Core-Tests`, `GemStone-GBS-MagLev`, `GemStone-GBS-MagLev-Tools`
+  requires: `GemStone-Pharo-Tests`, `GemStone-Pharo-Core-Tests`, `GemStone-GBS-MagLev`, `GemStone-GBS-MagLev-Tools`
 - `GemStone-Pharo-Tests`
   requires: `GemStone-GBS-Converted`, `GemStone-GBS-Tools`
 

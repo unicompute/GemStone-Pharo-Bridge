@@ -96,6 +96,7 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GbsRemoteUnboundMethodObject` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRubyRuntimeFacade` instance side -> `maglevOnly` -> `GemStone-GBS-MagLev`
 - `GbsSession` instance side -> `convertedWithCoreAndMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsSessionMaterializationRemoteReader` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsSessionStateSlot` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsShallowMaterializationProfile` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsSmalltalkFacade` instance side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
@@ -124,8 +125,13 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `CoreTestableGbsMethodQueryResultsPresenter` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreTestableGbsRemoteDebugger` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreTestableGbsBrowser` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbxFakeCheckBoxForBrowser` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreGbxFakeServiceForRemoteDebugger` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreGbxFakeContextForRemoteDebugger` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbxFakeListPresenterForBrowser` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbxFakeListPresenterForRemoteDebugger` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbxFakeTablePresenterForRemoteDebugger` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbxFakeTextPresenterForBrowser` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreTestableGbsInspector` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreTestableGbsSymbolListBrowserPresenter` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreTestableGbxTrippy` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
@@ -213,6 +219,7 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GbsRemoteUnboundMethodObject` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRubyRuntimeFacade` class side -> `maglevOnly` -> `GemStone-GBS-MagLev`
 - `GbsSession` class side -> `convertedWithCoreAndMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsSessionMaterializationRemoteReader` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsSessionStateSlot` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsShallowMaterializationProfile` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsSmalltalkFacade` class side -> `coreWithMaglev` -> `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
@@ -241,8 +248,13 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `CoreTestableGbsMethodQueryResultsPresenter` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreTestableGbsRemoteDebugger` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreTestableGbsBrowser` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbxFakeCheckBoxForBrowser` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreGbxFakeServiceForRemoteDebugger` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreGbxFakeContextForRemoteDebugger` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbxFakeListPresenterForBrowser` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbxFakeListPresenterForRemoteDebugger` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbxFakeTablePresenterForRemoteDebugger` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbxFakeTextPresenterForBrowser` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreTestableGbsInspector` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreTestableGbsSymbolListBrowserPresenter` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreTestableGbxTrippy` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
@@ -278,6 +290,7 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 ## Explicit Class Ownership
 
 - `GbsCommitConflictError` -> `GemStone-GBS-Core`
+- `GbsMaterializationLimitError` -> `GemStone-GBS-Core`
 - `GbsRcCounter` -> `GemStone-GBS-MagLev`
 - `GbsRcHash` -> `GemStone-GBS-MagLev`
 - `GbsRcQueue` -> `GemStone-GBS-MagLev`

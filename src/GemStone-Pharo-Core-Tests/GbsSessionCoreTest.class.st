@@ -1612,6 +1612,27 @@ GbsSessionCoreTest >> testObjectForOopUsesReferenceSemantics [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testProxyEqualityDoesNotForwardClassPredicate [
+	| mockSession left same differentSession differentOop forwarded |
+	mockSession := CoreMockGbsSession new.
+	left := GbsProxy oop: 1001 session: mockSession.
+	same := GbsProxy oop: 1001 session: mockSession.
+	differentOop := GbsProxy oop: 1002 session: mockSession.
+	differentSession := GbsProxy oop: 1001 session: CoreMockGbsSession new.
+	forwarded := false.
+	mockSession stubs at: #forwardRemoteMessage put: [ :message :oop |
+		forwarded := true.
+		self fail ].
+
+	self assert: left == left.
+	self deny: left == same.
+	self deny: left == differentOop.
+	self deny: left == differentSession.
+	self deny: left == Object new.
+	self deny: forwarded
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testProxyForOopServerClassNameUsesTypedWrapperWhenConnectorExists [
 	| proxy |
 	GbsSessionManager initializeFastConnectors.

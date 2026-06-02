@@ -24,6 +24,7 @@ digraph GemStonePharoBridge {
   "GemStone-GBS-Core" -> "GemStone-Pharo-Core-Tests";
   "GemStone-GBS-Tools" -> "GemStone-Pharo-Core-Tests";
   "GemStone-GBS-Core-Tools" -> "GemStone-Pharo-Core-Tests";
+  "GemStone-Pharo-Tests" -> "GemStone-Pharo-MagLev-Tests";
   "GemStone-Pharo-Core-Tests" -> "GemStone-Pharo-MagLev-Tests";
   "GemStone-GBS-MagLev" -> "GemStone-Pharo-MagLev-Tests";
   "GemStone-GBS-MagLev-Tools" -> "GemStone-Pharo-MagLev-Tests";

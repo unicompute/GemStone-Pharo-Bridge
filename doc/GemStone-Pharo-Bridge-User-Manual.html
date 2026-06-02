@@ -810,21 +810,14 @@ Object thisMessageDoesNotExist</code></pre>
       <li><strong><code>core-only</code></strong>: Verify the Smalltalk core without optional MagLev production packages and without deleted legacy surface.</li>
       <li><strong><code>bootstrap-smoke</code></strong>: Prove that a clean image can micro-bootstrap the helper package and load the requested group before post-load checks run.</li>
       <li><strong><code>original</code></strong>: Verify that the original/base production layer reloads cleanly without the generic Core or optional MagLev overlays.</li>
-      <li><strong><code>original-drift</code></strong>: Verify that the original/base production layer stays clean relative to the current accepted baseline `8a8e15c...`, allowing only the explicit accepted test-layer exceptions.</li>
+      <li><strong><code>original-drift</code></strong>: Verify that the original/base production and test layer stays clean relative to the current accepted baseline `f2c8c23...`; new drift must be relocated outside the original layer or accepted by moving the baseline.</li>
       <li><strong><code>original-tests</code></strong>: Verify the original/base production and original/base test layer without the generic Core or optional MagLev overlays. This lane proves the base unit layer only.</li>
       <li><strong><code>full</code></strong>: Verify the steady-state developer load plus the live GemStone lane.</li>
       <li><strong><code>artifact-freshness</code></strong>: Verify that the generated contract artifacts and marker-managed doc sections are already up to date.</li>
       <li><strong><code>verify</code></strong>: Run core-only, bootstrap-smoke, original, original-drift, original-tests, full, artifact-freshness, then the summary-renderer smoke check.</li>
     </ul>
-    <h3>Expected Original-layer Test Exceptions</h3>
-    <p><code>make original-drift</code> reports the original/base production layer as clean and currently accepts only these test-layer exceptions:</p>
-    <ul>
-      <li><code>src/GemStone-Pharo-Tests/GbsAdminToolsPresenterTest.class.st</code>: Skips Core-command structured-preview assertions in the Original-Tests lane, where Core is intentionally absent.</li>
-      <li><code>src/GemStone-Pharo-Tests/GbsRemoteDebuggerPresenterTest.class.st</code>: Skips Core-command source lookup assertions in the Original-Tests lane, where Core is intentionally absent.</li>
-      <li><code>src/GemStone-Pharo-Tests/GbsSessionTest.class.st</code>: Skips Core transaction-coordinator assertions in the Original-Tests lane, where Core is intentionally absent.</li>
-      <li><code>src/GemStone-Pharo-Tests/GciError.extension.st</code>: Adds a tiny test-only GciError number accessor shim so the restored base login-error path can run without production drift.</li>
-      <li><code>src/GemStone-Pharo-Tests/MockGbsSession.class.st</code>: Keeps only a narrow interpretLoginError override so the restored base GbsSession production file stays clean.</li>
-    </ul>
+    <h3>Accepted Original-layer Baseline</h3>
+    <p><code>make original-drift</code> compares the original/base production and test layer with <code>f2c8c23...</code>. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.</p>
     <h3>Generated operator reference</h3>
     <p>
       The contract generates a human-facing steady-state operator reference at
@@ -947,6 +940,32 @@ GbsRemoteTranscript new open.</code></pre>
       <li>Log in from the Session Browser</li>
       <li>Open a GemStone Workspace</li>
       <li>Evaluate <code>1 + 1</code></li>
+      <li>Evaluate <code>1 / 0</code></li>
+      <li>Open the Symbol List Browser and inspect <code>UserGlobals</code></li>
+      <li>Open the GemStone Browser and browse a class</li>
+    </ol>
+
+    <div class="callout small">
+      This manual is intended to be a working operator guide. For the contract-driven steady-state reference, open
+      <code>doc/USER-MANUAL-REFERENCE.html</code>. For deeper implementation detail, read the baseline, presenter
+      classes, and regression scripts in the repository alongside this document.
+    </div>
+  </section>
+</body>
+</html>
+mplementation detail, read the baseline, presenter
+      classes, and regression scripts in the repository alongside this document.
+    </div>
+  </section>
+</body>
+</html>
+egression scripts in the repository alongside this document.
+    </div>
+  </section>
+</body>
+</html>
+html>
+e <code>1 + 1</code></li>
       <li>Evaluate <code>1 / 0</code></li>
       <li>Open the Symbol List Browser and inspect <code>UserGlobals</code></li>
       <li>Open the GemStone Browser and browse a class</li>

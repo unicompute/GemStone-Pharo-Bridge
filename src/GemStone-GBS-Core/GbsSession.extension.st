@@ -77,7 +77,8 @@ GbsSession >> forwardRemoteMessage: aMessage forOop: targetOop [
 		on: Error
 		do: [ :ex |
 			self error: ((ex messageText ifNil: [ ex printString ]) withBlanksTrimmed),
-				' Forwarded selector: ', aMessage selector asString ].
+				' Forwarded selector: ', aMessage selector asString,
+				' Target oop: ', targetOop asString ].
 	argsArrayString := '{ ', (' . ' join: argStrings), ' }'.
 	script := '(Object _objectForOop: ', targetOop printString, ') perform: #', aMessage selector asString, ' withArguments: ', argsArrayString.
 	^ self evaluate: script

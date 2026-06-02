@@ -25,7 +25,7 @@ This section is generated from `GemStonePharoContract`.
   targets: `GemStone-GBS-Converted`, `GemStone-GBS-Tools`
   success markers: `ARCHITECTURE_BOUNDARY_OK`, `PACKAGE_OWNERSHIP_DRIFT_SKIPPED`, `NO_COMPAT_SOURCE_SCAN_OK`, `NO_COMPATIBILITY_PROOF_OK`, `ORIGINAL_CHECK_OK`
 - `original-drift`
-  Verify that the original/base production layer stays clean relative to the current accepted baseline `8a8e15c...`, allowing only the explicit accepted test-layer exceptions.
+  Verify that the original/base production and test layer stays clean relative to the current accepted baseline `f2c8c23...`; new drift must be relocated outside the original layer or accepted by moving the baseline.
   load group: `Original-Tests`
   targets: `GemStone-GBS-Converted`, `GemStone-GBS-Tools`, `GemStone-Pharo-Tests`
   success markers: `ORIGINAL_LAYER_DRIFT_OK`, `ORIGINAL_LAYER_DRIFT_EXPECTED_ONLY`
@@ -50,19 +50,9 @@ This section is generated from `GemStonePharoContract`.
   targets: `core-only`, `bootstrap-smoke`, `original`, `original-drift`, `original-tests`, `full`, `artifact-freshness`, `summary-renderer`
   success markers: `All lane success markers above`
 
-## Expected Original-layer Test Exceptions
+## Accepted Original-layer Baseline
 
-`make original-drift` currently reports the original/base production layer as clean and accepts only these test-layer exceptions:
-- `src/GemStone-Pharo-Tests/GbsAdminToolsPresenterTest.class.st`
-  Skips Core-command structured-preview assertions in the Original-Tests lane, where Core is intentionally absent.
-- `src/GemStone-Pharo-Tests/GbsRemoteDebuggerPresenterTest.class.st`
-  Skips Core-command source lookup assertions in the Original-Tests lane, where Core is intentionally absent.
-- `src/GemStone-Pharo-Tests/GbsSessionTest.class.st`
-  Skips Core transaction-coordinator assertions in the Original-Tests lane, where Core is intentionally absent.
-- `src/GemStone-Pharo-Tests/GciError.extension.st`
-  Adds a tiny test-only GciError number accessor shim so the restored base login-error path can run without production drift.
-- `src/GemStone-Pharo-Tests/MockGbsSession.class.st`
-  Keeps only a narrow interpretLoginError override so the restored base GbsSession production file stays clean.
+`make original-drift` compares the original/base production and test layer with `f2c8c23...`. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.
 
 ## Wrapper Entry Points
 
@@ -127,6 +117,21 @@ Accepted environment variables:
 ## Steady-state Guards
 
 - `ARCHITECTURE_BOUNDARY_OK`
+  Package graph, load-group membership, and forbidden reverse dependencies match the contract.
+- `PACKAGE_OWNERSHIP_DRIFT_OK`
+  Representative class, selector, and split-behavior ownership stay in their allowed packages.
+- `NO_COMPAT_SOURCE_SCAN_OK`
+  Deleted legacy surface is absent from the active source roots, scripts, and selected docs.
+- `NO_COMPATIBILITY_PROOF_OK`
+  Deleted package, class, selector, and method-package ownership surface is absent from the loaded image.
+
+The active root API throughout the test and reload lanes is `bridgeRoot`.
+<!-- END GENERATED:TESTING-BODY -->
+face is absent from the loaded image.
+
+The active root API throughout the test and reload lanes is `bridgeRoot`.
+<!-- END GENERATED:TESTING-BODY -->
+ECTURE_BOUNDARY_OK`
   Package graph, load-group membership, and forbidden reverse dependencies match the contract.
 - `PACKAGE_OWNERSHIP_DRIFT_OK`
   Representative class, selector, and split-behavior ownership stay in their allowed packages.

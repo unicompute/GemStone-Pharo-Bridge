@@ -229,10 +229,11 @@ root'
         mixedMs := millisecondsToRun value: [
           mixedResult := session fetchObject: mixedOop ].
         mixedMetrics := session materializationMetrics copy.
+        phase := 'mixed-verification'.
         (((mixedResult at: #ordered) size = mixedSize)
           and: [ ((mixedResult at: #ordered) first second) == (mixedResult at: #again)
           and: [ ((mixedResult at: #bytes) = (ByteArray withAll: #(5 6 7)))
-          and: [ (mixedResult at: #proxy) isKindOf: proxyClass
+          and: [ ((mixedResult at: #proxy) isKindOf: proxyClass)
           and: [ (((mixedResult at: #customers) first at: #shared) == (mixedResult at: #again))
           and: [ ((((mixedResult at: #orders) first at: #lines) first value) == (mixedResult at: #again))
           and: [ (((mixedResult at: #customers) first at: #payload) isKindOf: ByteArray) ] ] ] ] ] ]) ifFalse: [

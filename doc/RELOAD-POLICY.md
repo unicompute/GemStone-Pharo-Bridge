@@ -35,7 +35,7 @@ The clean reload lane loads the helper package, hands bootstrap unload/cache-war
 - `original`
   Verify that the original/base production layer reloads cleanly without the generic Core or optional MagLev overlays.
 - `original-drift`
-  Verify that the original/base production layer stays clean relative to the current accepted baseline `8a8e15c...`, allowing only the explicit accepted test-layer exceptions.
+  Verify that the original/base production and test layer stays clean relative to the current accepted baseline `f2c8c23...`; new drift must be relocated outside the original layer or accepted by moving the baseline.
 - `original-tests`
   Verify the original/base production and original/base test layer without the generic Core or optional MagLev overlays. This lane proves the base unit layer only.
 - `full`
