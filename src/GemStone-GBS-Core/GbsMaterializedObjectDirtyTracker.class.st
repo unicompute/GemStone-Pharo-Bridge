@@ -67,6 +67,7 @@ GbsMaterializedObjectDirtyTracker class >> isSuspendedForSession: aSession [
 { #category : 'dirty tracking' }
 GbsMaterializedObjectDirtyTracker class >> markObject: anObject dirtyInSession: aSession [
 	(self isSuspendedForSession: aSession) ifTrue: [ ^ anObject ].
+	(self policyAllowsAutoMarkDirtyForSession: aSession) ifFalse: [ ^ anObject ].
 	(self oopForObject: anObject inSession: aSession) ifNil: [ ^ anObject ].
 	aSession dirtyPool markDirty: anObject.
 	^ anObject
@@ -101,6 +102,15 @@ GbsMaterializedObjectDirtyTracker class >> oopForObject: anObject inSession: aSe
 	^ (self objectOopRegistryForSession: aSession)
 		at: anObject
 		ifAbsent: [ nil ]
+]
+
+{ #category : 'dirty tracking' }
+GbsMaterializedObjectDirtyTracker class >> policyAllowsAutoMarkDirtyForSession: aSession [
+	| policy |
+	policy := [ GbsReplicationPolicy forSession: aSession ] on: Error do: [ nil ].
+	policy ifNil: [ ^ true ].
+	(policy respondsTo: #autoMarkDirty) ifFalse: [ ^ true ].
+	^ policy autoMarkDirty ~~ false
 ]
 
 { #category : 'registries' }

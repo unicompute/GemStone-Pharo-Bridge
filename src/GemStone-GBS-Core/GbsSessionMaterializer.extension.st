@@ -191,19 +191,35 @@ GbsSessionMaterializer >> materializedObjectCache [
 
 { #category : 'cache' }
 GbsSessionMaterializer >> materializedObjectForOop: anOop [
-	^ self materializedObjectCache at: anOop ifAbsent: [ nil ]
+	^ self materializedObjectForOop: anOop ifPresent: [ :object | object ]
 ]
 
 { #category : 'cache' }
 GbsSessionMaterializer >> materializedObjectForOop: anOop ifPresent: aBlock [
-	| cache |
+	| cache object |
 	cache := self materializedObjectCache.
-	(cache includesKey: anOop) ifTrue: [ ^ aBlock value: (cache at: anOop) ].
+	(cache includesKey: anOop) ifTrue: [
+		self incrementMaterializationMetric: #materializedObjectTraversalCacheHits.
+		^ aBlock value: (cache at: anOop) ].
+	object := self persistentMaterializedObjectCache at: anOop ifAbsent: [ nil ].
+	object ifNotNil: [
+		self incrementMaterializationMetric: #materializedObjectSessionCacheHits.
+		self rememberMaterializedObjectInTraversalCache: object forOop: anOop.
+		self registerMaterializedObject: object forOop: anOop.
+		^ aBlock value: object ].
 	^ nil
 ]
 
 { #category : 'cache' }
 GbsSessionMaterializer >> rememberMaterializedObject: anObject forOop: anOop [
+	self rememberMaterializedObjectInTraversalCache: anObject forOop: anOop.
+	self persistentMaterializedObjectCache at: anOop put: anObject.
+	self registerMaterializedObject: anObject forOop: anOop.
+	^ anObject
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializer >> rememberMaterializedObjectInTraversalCache: anObject forOop: anOop [
 	| cache maxObjects |
 	cache := self materializedObjectCache.
 	(cache includesKey: anOop) ifFalse: [
@@ -215,6 +231,11 @@ GbsSessionMaterializer >> rememberMaterializedObject: anObject forOop: anOop [
 				limit: maxObjects
 				label: 'materialized object cache' ] ].
 	cache at: anOop put: anObject.
+	^ anObject
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializer >> registerMaterializedObject: anObject forOop: anOop [
 	(session respondsTo: #registerMaterializedObject:forOop:) ifTrue: [
 		session registerMaterializedObject: anObject forOop: anOop ].
 	^ anObject
@@ -222,10 +243,39 @@ GbsSessionMaterializer >> rememberMaterializedObject: anObject forOop: anOop [
 
 { #category : 'cache' }
 GbsSessionMaterializer >> resetMaterializedObjectCache [
+	self resetMaterializedObjectTraversalCache.
+	self resetPersistentMaterializedObjectCache.
+	^ self materializedObjectCache
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializer >> resetMaterializedObjectTraversalCache [
 	(session class weakRegistryNamed: #GbsSessionMaterializedObjectCaches)
 		at: session
 		put: Dictionary new.
 	^ self materializedObjectCache
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializer >> persistentMaterializedObjectCache [
+	^ (session class weakRegistryNamed: #GbsSessionPersistentMaterializedObjectCaches)
+		at: session
+		ifAbsentPut: [ self weakValueDictionary ]
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializer >> resetPersistentMaterializedObjectCache [
+	(session class weakRegistryNamed: #GbsSessionPersistentMaterializedObjectCaches)
+		at: session
+		put: self weakValueDictionary.
+	^ self persistentMaterializedObjectCache
+]
+
+{ #category : 'cache' }
+GbsSessionMaterializer >> weakValueDictionary [
+	| dictionaryClass |
+	dictionaryClass := Smalltalk globals at: #WeakValueDictionary ifAbsent: [ Dictionary ].
+	^ dictionaryClass new
 ]
 
 { #category : 'materializing' }

@@ -39,7 +39,7 @@ GbsSessionMaterializer >> clearRemoteClassNameCache [
 
 { #category : 'fetching' }
 GbsSessionMaterializer >> fetchObject: anOop [
-	self resetMaterializedObjectCache.
+	self resetMaterializedObjectTraversalCache.
 	self resetMaterializationMetrics.
 	self incrementMaterializationMetric: #rootFetches.
 	^ [
@@ -54,7 +54,7 @@ GbsSessionMaterializer >> fetchObject: anOop [
 							withProfile: self materializationProfile
 							depth: 0
 							seen: IdentitySet new ] ]
-	] ensure: [ self resetMaterializedObjectCache ]
+	] ensure: [ self resetMaterializedObjectTraversalCache ]
 ]
 
 { #category : 'fetching' }
@@ -268,8 +268,13 @@ GbsSessionMaterializer >> materializationProfile [
 
 { #category : 'profiles' }
 GbsSessionMaterializer >> materializationProfile: aProfile [
-	| profile |
+	| profile previous |
 	profile := aProfile ifNil: [ GbsLegacyMaterializationProfile new ].
+	previous := (session class weakRegistryNamed: #GbsSessionMaterializationProfiles)
+		at: session
+		ifAbsent: [ nil ].
+	(previous notNil and: [ previous class ~= profile class ]) ifTrue: [
+		self resetMaterializedObjectCache ].
 	(session class weakRegistryNamed: #GbsSessionMaterializationProfiles)
 		at: session
 		put: profile.

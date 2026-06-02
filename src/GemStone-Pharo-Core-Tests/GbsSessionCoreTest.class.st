@@ -286,6 +286,7 @@ GbsSessionCoreTest >> tearDown [
 		ifNil: [ Smalltalk globals removeKey: #GbsObjectSpaceFinalizationRegistry ifAbsent: [ ] ]
 		ifNotNil: [ Smalltalk globals at: #GbsObjectSpaceFinalizationRegistry put: previousObjectSpaceFinalizationRegistry ].
 	Smalltalk globals removeKey: #GbsMaterializedObjectSessionRegistry ifAbsent: [ ].
+	Smalltalk globals removeKey: #GbsSessionReplicationPolicies ifAbsent: [ ].
 	super tearDown
 ]
 
@@ -373,6 +374,74 @@ GbsSessionCoreTest >> testDirtyReplicationTracksSuccessfulRemovalOnly [
 	bag remove: 'old' ifAbsent: [ self fail ].
 	dictionary removeKey: #old ifAbsent: [ self fail ].
 	self assert: (mockSession dirtyMaterializedObjectOops asSet includesAll: #(9200 9300 9400 9500))
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testReplicationPolicyDefaultsMirrorCompatibilitySettings [
+	| policy |
+	policy := GbsReplicationPolicy default.
+
+	self assert: policy autoMarkDirty.
+	self assert: policy blockReplicationPolicy equals: 'replicate'.
+	self assert: policy defaultFaultPolicy equals: 'lazy'.
+	self assert: policy faultLevelRpc equals: 4.
+	self assert: policy freeSlotsOnStubbing.
+	self assert: policy traversalBufferSize equals: 250000
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testReplicationPolicyCanCopyConvertedConfigurationValues [
+	| configuration policy |
+	configuration := GbsConfiguration new.
+	configuration
+		valueAt: #autoMarkDirty put: false;
+		valueAt: #blockReplicationPolicy put: 'stub';
+		valueAt: #defaultFaultPolicy put: 'eager';
+		valueAt: #faultLevelRpc put: 2;
+		valueAt: #freeSlotsOnStubbing put: false;
+		valueAt: #traversalBufferSize put: 8192.
+
+	policy := GbsReplicationPolicy fromConfiguration: configuration.
+
+	self deny: policy autoMarkDirty.
+	self assert: policy blockReplicationPolicy equals: 'stub'.
+	self assert: policy defaultFaultPolicy equals: 'eager'.
+	self assert: policy faultLevelRpc equals: 2.
+	self deny: policy freeSlotsOnStubbing.
+	self assert: policy traversalBufferSize equals: 8192
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testReplicationPolicyCanDisableAutoMarkDirtyForSession [
+	| mockSession array policy |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 'old'.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	policy := GbsReplicationPolicy forSession: mockSession.
+	policy autoMarkDirty: false.
+
+	array at: 1 put: 'new'.
+
+	self deny: (mockSession isMaterializedObjectDirty: array).
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testReplicationPolicyIsSessionScoped [
+	| disabledSession enabledSession disabledArray enabledArray |
+	disabledSession := CoreMockGbsSession new.
+	enabledSession := CoreMockGbsSession new.
+	disabledArray := Array with: 'old'.
+	enabledArray := Array with: 'old'.
+	disabledSession rememberMaterializedObject: disabledArray forOop: 9000.
+	enabledSession rememberMaterializedObject: enabledArray forOop: 9000.
+	(GbsReplicationPolicy forSession: disabledSession) autoMarkDirty: false.
+
+	disabledArray at: 1 put: 'disabled'.
+	enabledArray at: 1 put: 'enabled'.
+
+	self deny: (disabledSession isMaterializedObjectDirty: disabledArray).
+	self assert: (enabledSession isMaterializedObjectDirty: enabledArray)
 ]
 
 { #category : 'tests' }
@@ -584,6 +653,63 @@ GbsSessionCoreTest >> testFetchByReferenceCachesRemoteClassNameForSharedClassOop
 	self assert: second oop equals: 9501.
 	self assert: classOopFetches equals: 2.
 	self assert: classNameFetches equals: 1
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFetchDeepKeepsMaterializedIdentityAcrossRootFetches [
+	| mockSession first second metrics |
+	mockSession := self materializationMockSession.
+	mockSession fetchDeep.
+
+	first := mockSession fetchObject: 9000.
+	second := mockSession fetchObject: 9000.
+
+	self assert: first == second.
+	self assert: first second == second second.
+	metrics := mockSession materializationMetrics.
+	self assert: (metrics at: #materializedObjectSessionCacheHits ifAbsent: [ 0 ]) equals: 1
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFetchDeepReregistersDirtyTrackingFromMaterializedIdentityCache [
+	| mockSession first second |
+	mockSession := self materializationMockSession.
+	mockSession fetchDeep.
+	first := mockSession fetchObject: 9000.
+	mockSession resetMaterializedObjectDirtyTracking.
+
+	second := mockSession fetchObject: 9000.
+	second at: 1 put: 'changed'.
+
+	self assert: first == second.
+	self assert: (mockSession dirtyMaterializedObjectOops asSet includes: 9000)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testMaterializedIdentityCacheClearsOnExplicitReset [
+	| mockSession first second |
+	mockSession := self materializationMockSession.
+	mockSession fetchDeep.
+	first := mockSession fetchObject: 9000.
+
+	mockSession resetMaterializedObjectCache.
+	second := mockSession fetchObject: 9000.
+
+	self deny: first == second
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testMaterializedIdentityCacheClearsWhenFetchProfileChanges [
+	| mockSession shallowRoot deepRoot |
+	mockSession := self materializationMockSession.
+
+	mockSession fetchShallow.
+	shallowRoot := mockSession fetchObject: 9000.
+	mockSession fetchDeep.
+	deepRoot := mockSession fetchObject: 9000.
+
+	self deny: shallowRoot == deepRoot.
+	self assert: deepRoot second equals: #('gold' 'paid')
 ]
 
 { #category : 'tests' }
