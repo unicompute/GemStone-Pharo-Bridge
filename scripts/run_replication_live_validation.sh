@@ -31,6 +31,10 @@ DOMAIN_CALLBACK_CLAMP_SPECS_MIN="${GBS_REPLICATION_LIVE_DOMAIN_CALLBACK_CLAMP_SP
 DOMAIN_DIRTY_OBJECTS_FLUSHED_MIN="${GBS_REPLICATION_LIVE_DOMAIN_DIRTY_OBJECTS_FLUSHED_MIN:-${REPLICATION_LIVE_DOMAIN_DIRTY_OBJECTS_FLUSHED_MIN:-2}}"
 DOMAIN_NATIVE_DIRTY_STORE_FLUSHES_MIN="${GBS_REPLICATION_LIVE_DOMAIN_NATIVE_DIRTY_STORE_FLUSHES_MIN:-${REPLICATION_LIVE_DOMAIN_NATIVE_DIRTY_STORE_FLUSHES_MIN:-1}}"
 DOMAIN_NATIVE_DIRTY_STORE_ENTRIES_MIN="${GBS_REPLICATION_LIVE_DOMAIN_NATIVE_DIRTY_STORE_ENTRIES_MIN:-${REPLICATION_LIVE_DOMAIN_NATIVE_DIRTY_STORE_ENTRIES_MIN:-2}}"
+DOMAIN_FAULT_RELEASE_QUEUED_MIN="${GBS_REPLICATION_LIVE_DOMAIN_FAULT_RELEASE_QUEUED_MIN:-${REPLICATION_LIVE_DOMAIN_FAULT_RELEASE_QUEUED_MIN:-1}}"
+DOMAIN_FAULT_RELEASE_AFTER_FAULT_MAX="${GBS_REPLICATION_LIVE_DOMAIN_FAULT_RELEASE_AFTER_FAULT_MAX:-${REPLICATION_LIVE_DOMAIN_FAULT_RELEASE_AFTER_FAULT_MAX:-0}}"
+DOMAIN_FAULT_IDENTITY_CLEARED_MIN="${GBS_REPLICATION_LIVE_DOMAIN_FAULT_IDENTITY_CLEARED_MIN:-${REPLICATION_LIVE_DOMAIN_FAULT_IDENTITY_CLEARED_MIN:-1}}"
+DOMAIN_FAULT_IDENTITY_RESTORED_MIN="${GBS_REPLICATION_LIVE_DOMAIN_FAULT_IDENTITY_RESTORED_MIN:-${REPLICATION_LIVE_DOMAIN_FAULT_IDENTITY_RESTORED_MIN:-1}}"
 NATIVE_DIRTY_STORE_FLUSHES_MIN="${GBS_REPLICATION_LIVE_NATIVE_DIRTY_STORE_FLUSHES_MIN:-${REPLICATION_LIVE_NATIVE_DIRTY_STORE_FLUSHES_MIN:-1}}"
 SEMANTIC_DIRTY_STORE_COMMANDS_MAX="${GBS_REPLICATION_LIVE_SEMANTIC_DIRTY_STORE_COMMANDS_MAX:-${REPLICATION_LIVE_SEMANTIC_DIRTY_STORE_COMMANDS_MAX:-0}}"
 SEMANTIC_DIRTY_STORE_ENTRIES_MAX="${GBS_REPLICATION_LIVE_SEMANTIC_DIRTY_STORE_ENTRIES_MAX:-${REPLICATION_LIVE_SEMANTIC_DIRTY_STORE_ENTRIES_MAX:-0}}"
@@ -81,12 +85,16 @@ emit_summary() {
   local domain_dirty_objects="${DOMAIN_DIRTY_OBJECTS:-0}"
   local domain_native_flushes="${DOMAIN_NATIVE_FLUSHES:-0}"
   local domain_native_entries="${DOMAIN_NATIVE_ENTRIES:-0}"
+  local domain_fault_release_queued="${DOMAIN_FAULT_RELEASE_QUEUED:-0}"
+  local domain_fault_release_after_fault="${DOMAIN_FAULT_RELEASE_AFTER_FAULT:-0}"
+  local domain_fault_identity_cleared="${DOMAIN_FAULT_IDENTITY_CLEARED:-0}"
+  local domain_fault_identity_restored="${DOMAIN_FAULT_IDENTITY_RESTORED:-0}"
   local lifecycle_no_longer_queued="${LIFECYCLE_NO_LONGER_QUEUED:-0}"
   local lifecycle_gced_queued="${LIFECYCLE_GCED_QUEUED:-0}"
   local lifecycle_no_longer_acknowledged="${LIFECYCLE_NO_LONGER_ACKNOWLEDGED:-0}"
   local lifecycle_gced_acknowledged="${LIFECYCLE_GCED_ACKNOWLEDGED:-0}"
   local json_payload markdown_payload
-  echo "REPLICATION_LIVE_SUMMARY result=${result} code=${code} connector_ms=${connector_ms} clamped_ms=${clamped_ms} dirty_store_ms=${dirty_store_ms} business_dirty_store_ms=${business_dirty_store_ms} domain_dirty_store_ms=${domain_dirty_store_ms} callback_clamp_specs=${callback_clamp_specs} per_instvar_clamp_entries=${per_instvar_clamp_entries} inherited_replication_spec_fixtures=${inherited_replication_spec_fixtures} connector_pair_count=${connector_pair_count} domain_fixture_count=${domain_fixture_count} domain_per_instvar_clamp_entries=${domain_per_instvar_clamp_entries} domain_callback_clamp_specs=${domain_callback_clamp_specs} domain_dirty_objects_flushed=${domain_dirty_objects} domain_native_dirty_store_flushes=${domain_native_flushes} domain_native_dirty_store_entries=${domain_native_entries} clamped_traversal_fetches=${clamped_fetches} clamped_traversal_fallbacks=${clamped_fallbacks} native_dirty_store_flushes=${native_flushes} semantic_dirty_store_commands=${semantic_commands} semantic_dirty_store_entries=${semantic_entries} semantic_dictionary_entries=${semantic_dictionary_entries} semantic_set_entries=${semantic_set_entries} semantic_bag_entries=${semantic_bag_entries} dirty_objects_flushed=${dirty_objects} business_dirty_objects_flushed=${business_dirty_objects} business_write_fixture_size=${business_fixture_size} export_set_queued_before=${export_before} export_set_queued_after=${export_after} lifecycle_no_longer_queued=${lifecycle_no_longer_queued} lifecycle_gced_queued=${lifecycle_gced_queued} lifecycle_no_longer_acknowledged=${lifecycle_no_longer_acknowledged} lifecycle_gced_acknowledged=${lifecycle_gced_acknowledged} business_export_set_queued_after=${business_export_after} connector_max_ms=${CONNECTOR_MAX_MS} clamped_max_ms=${CLAMPED_MAX_MS} dirty_store_max_ms=${DIRTY_STORE_MAX_MS} business_dirty_store_max_ms=${BUSINESS_DIRTY_STORE_MAX_MS} domain_dirty_store_max_ms=${DOMAIN_DIRTY_STORE_MAX_MS} threshold_file=${THRESHOLD_FILE} work_image=${WORK_IMAGE}"
+  echo "REPLICATION_LIVE_SUMMARY result=${result} code=${code} connector_ms=${connector_ms} clamped_ms=${clamped_ms} dirty_store_ms=${dirty_store_ms} business_dirty_store_ms=${business_dirty_store_ms} domain_dirty_store_ms=${domain_dirty_store_ms} callback_clamp_specs=${callback_clamp_specs} per_instvar_clamp_entries=${per_instvar_clamp_entries} inherited_replication_spec_fixtures=${inherited_replication_spec_fixtures} connector_pair_count=${connector_pair_count} domain_fixture_count=${domain_fixture_count} domain_per_instvar_clamp_entries=${domain_per_instvar_clamp_entries} domain_callback_clamp_specs=${domain_callback_clamp_specs} domain_dirty_objects_flushed=${domain_dirty_objects} domain_native_dirty_store_flushes=${domain_native_flushes} domain_native_dirty_store_entries=${domain_native_entries} domain_fault_release_queued=${domain_fault_release_queued} domain_fault_release_after_fault=${domain_fault_release_after_fault} domain_fault_identity_cleared=${domain_fault_identity_cleared} domain_fault_identity_restored=${domain_fault_identity_restored} clamped_traversal_fetches=${clamped_fetches} clamped_traversal_fallbacks=${clamped_fallbacks} native_dirty_store_flushes=${native_flushes} semantic_dirty_store_commands=${semantic_commands} semantic_dirty_store_entries=${semantic_entries} semantic_dictionary_entries=${semantic_dictionary_entries} semantic_set_entries=${semantic_set_entries} semantic_bag_entries=${semantic_bag_entries} dirty_objects_flushed=${dirty_objects} business_dirty_objects_flushed=${business_dirty_objects} business_write_fixture_size=${business_fixture_size} export_set_queued_before=${export_before} export_set_queued_after=${export_after} lifecycle_no_longer_queued=${lifecycle_no_longer_queued} lifecycle_gced_queued=${lifecycle_gced_queued} lifecycle_no_longer_acknowledged=${lifecycle_no_longer_acknowledged} lifecycle_gced_acknowledged=${lifecycle_gced_acknowledged} business_export_set_queued_after=${business_export_after} connector_max_ms=${CONNECTOR_MAX_MS} clamped_max_ms=${CLAMPED_MAX_MS} dirty_store_max_ms=${DIRTY_STORE_MAX_MS} business_dirty_store_max_ms=${BUSINESS_DIRTY_STORE_MAX_MS} domain_dirty_store_max_ms=${DOMAIN_DIRTY_STORE_MAX_MS} threshold_file=${THRESHOLD_FILE} work_image=${WORK_IMAGE}"
   printf -v json_payload '{"result":"%s","code":"%s","connector_ms":"%s","clamped_ms":"%s","dirty_store_ms":"%s","business_dirty_store_ms":"%s","domain_dirty_store_ms":"%s","callback_clamp_specs":"%s","per_instvar_clamp_entries":"%s","inherited_replication_spec_fixtures":"%s","connector_pair_count":"%s","domain_fixture_count":"%s","domain_per_instvar_clamp_entries":"%s","domain_callback_clamp_specs":"%s","domain_dirty_objects_flushed":"%s","domain_native_dirty_store_flushes":"%s","domain_native_dirty_store_entries":"%s","clamped_traversal_fetches":"%s","clamped_traversal_fallbacks":"%s","native_dirty_store_flushes":"%s","semantic_dirty_store_commands":"%s","semantic_dirty_store_entries":"%s","semantic_dictionary_entries":"%s","semantic_set_entries":"%s","semantic_bag_entries":"%s","dirty_objects_flushed":"%s","business_dirty_objects_flushed":"%s","business_write_fixture_size":"%s","export_set_queued_before":"%s","export_set_queued_after":"%s","lifecycle_no_longer_queued":"%s","lifecycle_gced_queued":"%s","lifecycle_no_longer_acknowledged":"%s","lifecycle_gced_acknowledged":"%s","business_export_set_queued_after":"%s","connector_max_ms":"%s","clamped_max_ms":"%s","dirty_store_max_ms":"%s","business_dirty_store_max_ms":"%s","domain_dirty_store_max_ms":"%s","threshold_file":"%s","work_image":"%s"}' \
     "$(gbs_json_escape "${result}")" \
     "$(gbs_json_escape "${code}")" \
@@ -134,7 +142,7 @@ emit_summary() {
     printf 'REPLICATION_LIVE_SUMMARY_JSON %s\n' "${json_payload}"
   fi
   gbs_write_json_summary_file "replication-live-summary.json" "${json_payload}"
-  printf -v markdown_payload '%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n' \
+  printf -v markdown_payload '%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n' \
     '# Replication Live Validation' \
     "" \
     "- result: \`${result}\`" \
@@ -143,6 +151,7 @@ emit_summary() {
     "- strict parity fixtures: callback clamp specs \`${callback_clamp_specs}\`, per-instvar entries \`${per_instvar_clamp_entries}\`, inherited spec fixtures \`${inherited_replication_spec_fixtures}\`" \
     "- connector manager report: connector pairs \`${connector_pair_count}\`" \
     "- migration-domain fixture: fixtures \`${domain_fixture_count}\`, callback specs \`${domain_callback_clamp_specs}\`, per-instvar entries \`${domain_per_instvar_clamp_entries}\`, native dirty-store \`${domain_dirty_store_ms} ms\`, native flushes \`${domain_native_flushes}\`, native entries \`${domain_native_entries}\`, dirty objects \`${domain_dirty_objects}\`" \
+    "- mapped fault lifecycle: release queued \`${domain_fault_release_queued}\`, after fault \`${domain_fault_release_after_fault}\`, identity cleared \`${domain_fault_identity_cleared}\`, identity restored \`${domain_fault_identity_restored}\`" \
     "- clamped traversal fetch: \`${clamped_ms} ms\`, GciClampedTrav calls \`${clamped_fetches}\`, fallbacks \`${clamped_fallbacks}\`" \
     "- dirty-store flush: \`${dirty_store_ms} ms\`, native flushes \`${native_flushes}\`, semantic commands \`${semantic_commands}\`, semantic entries \`${semantic_entries}\`, dirty objects \`${dirty_objects}\`" \
     "- semantic collection entries: Dictionary \`${semantic_dictionary_entries}\`, Set \`${semantic_set_entries}\`, Bag \`${semantic_bag_entries}\`" \
@@ -162,6 +171,7 @@ emit_summary() {
   gbs_append_summary_line "- strict parity fixtures: callback clamp specs \`${callback_clamp_specs}\`, per-instvar entries \`${per_instvar_clamp_entries}\`, inherited spec fixtures \`${inherited_replication_spec_fixtures}\`"
   gbs_append_summary_line "- connector manager report: connector pairs \`${connector_pair_count}\`"
   gbs_append_summary_line "- migration-domain fixture: fixtures \`${domain_fixture_count}\`, callback specs \`${domain_callback_clamp_specs}\`, per-instvar entries \`${domain_per_instvar_clamp_entries}\`, native dirty-store \`${domain_dirty_store_ms} ms\`, native flushes \`${domain_native_flushes}\`, native entries \`${domain_native_entries}\`, dirty objects \`${domain_dirty_objects}\`"
+  gbs_append_summary_line "- mapped fault lifecycle: release queued \`${domain_fault_release_queued}\`, after fault \`${domain_fault_release_after_fault}\`, identity cleared \`${domain_fault_identity_cleared}\`, identity restored \`${domain_fault_identity_restored}\`"
   gbs_append_summary_line "- clamped traversal fetch: \`${clamped_ms} ms\`, GciClampedTrav calls \`${clamped_fetches}\`, fallbacks \`${clamped_fallbacks}\`"
   gbs_append_summary_line "- dirty-store flush: \`${dirty_store_ms} ms\`, native flushes \`${native_flushes}\`, semantic commands \`${semantic_commands}\`, semantic entries \`${semantic_entries}\`, dirty objects \`${dirty_objects}\`"
   gbs_append_summary_line "- semantic collection entries: Dictionary \`${semantic_dictionary_entries}\`, Set \`${semantic_set_entries}\`, Bag \`${semantic_bag_entries}\`"
@@ -511,6 +521,10 @@ DOMAIN_CALLBACK_CLAMP_SPECS="$(extract_summary_field "${summary_line}" domain_ca
 DOMAIN_DIRTY_OBJECTS="$(extract_summary_field "${summary_line}" domain_dirty_objects_flushed)"
 DOMAIN_NATIVE_FLUSHES="$(extract_summary_field "${summary_line}" domain_native_dirty_store_flushes)"
 DOMAIN_NATIVE_ENTRIES="$(extract_summary_field "${summary_line}" domain_native_dirty_store_entries)"
+DOMAIN_FAULT_RELEASE_QUEUED="$(extract_summary_field "${summary_line}" domain_fault_release_queued)"
+DOMAIN_FAULT_RELEASE_AFTER_FAULT="$(extract_summary_field "${summary_line}" domain_fault_release_after_fault)"
+DOMAIN_FAULT_IDENTITY_CLEARED="$(extract_summary_field "${summary_line}" domain_fault_identity_cleared)"
+DOMAIN_FAULT_IDENTITY_RESTORED="$(extract_summary_field "${summary_line}" domain_fault_identity_restored)"
 NATIVE_FLUSHES="$(extract_summary_field "${summary_line}" native_dirty_store_flushes)"
 SEMANTIC_COMMANDS="$(extract_summary_field "${summary_line}" semantic_dirty_store_commands)"
 SEMANTIC_ENTRIES="$(extract_summary_field "${summary_line}" semantic_dirty_store_entries)"
@@ -552,6 +566,10 @@ check_count_minimum "DOMAIN_CALLBACK_CLAMP_SPECS" "${DOMAIN_CALLBACK_CLAMP_SPECS
 check_count_minimum "DOMAIN_DIRTY_OBJECTS_FLUSHED" "${DOMAIN_DIRTY_OBJECTS}" "${DOMAIN_DIRTY_OBJECTS_FLUSHED_MIN}"
 check_count_minimum "DOMAIN_NATIVE_DIRTY_STORE_FLUSHES" "${DOMAIN_NATIVE_FLUSHES}" "${DOMAIN_NATIVE_DIRTY_STORE_FLUSHES_MIN}"
 check_count_minimum "DOMAIN_NATIVE_DIRTY_STORE_ENTRIES" "${DOMAIN_NATIVE_ENTRIES}" "${DOMAIN_NATIVE_DIRTY_STORE_ENTRIES_MIN}"
+check_count_minimum "DOMAIN_FAULT_RELEASE_QUEUED" "${DOMAIN_FAULT_RELEASE_QUEUED}" "${DOMAIN_FAULT_RELEASE_QUEUED_MIN}"
+check_count_threshold "DOMAIN_FAULT_RELEASE_AFTER_FAULT" "${DOMAIN_FAULT_RELEASE_AFTER_FAULT}" "${DOMAIN_FAULT_RELEASE_AFTER_FAULT_MAX}"
+check_count_minimum "DOMAIN_FAULT_IDENTITY_CLEARED" "${DOMAIN_FAULT_IDENTITY_CLEARED}" "${DOMAIN_FAULT_IDENTITY_CLEARED_MIN}"
+check_count_minimum "DOMAIN_FAULT_IDENTITY_RESTORED" "${DOMAIN_FAULT_IDENTITY_RESTORED}" "${DOMAIN_FAULT_IDENTITY_RESTORED_MIN}"
 check_count_minimum "NATIVE_DIRTY_STORE_FLUSHES" "${NATIVE_FLUSHES}" "${NATIVE_DIRTY_STORE_FLUSHES_MIN}"
 check_count_threshold "SEMANTIC_DIRTY_STORE_COMMANDS" "${SEMANTIC_COMMANDS}" "${SEMANTIC_DIRTY_STORE_COMMANDS_MAX}"
 check_count_threshold "SEMANTIC_DIRTY_STORE_ENTRIES" "${SEMANTIC_ENTRIES}" "${SEMANTIC_DIRTY_STORE_ENTRIES_MAX}"

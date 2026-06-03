@@ -13,6 +13,8 @@ GbsClassConnector >> clientClassConnectorForSession: aSession [
 	connector
 		clientBehaviorName: self stName;
 		serverBehaviorName: self gsName.
+	(client respondsTo: #gbsConnectorIncludesSubclasses) ifTrue: [
+		connector includeSubclasses: client gbsConnectorIncludesSubclasses ].
 	^ connector
 ]
 

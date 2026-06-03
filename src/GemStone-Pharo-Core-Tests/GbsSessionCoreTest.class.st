@@ -107,6 +107,74 @@ GbsSessionCoreTest >> materializationMockSession [
 ]
 
 { #category : 'running' }
+GbsSessionCoreTest >> mappedConnectorMaterializationMockSession [
+	| mockSession manager connector classNameFor integerOop |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: CoreGbsMigrationDomainMappedOrder
+		server: 'RemoteMappedOrder'
+		replicationSpec: CoreGbsMigrationDomainMappedOrder migrationDomainReplicationSpec
+		serverInstVarNames: CoreGbsMigrationDomainMappedOrder migrationDomainServerInstVarNames.
+	connector replicatorClass: CoreGbsCountingReplicator.
+	manager installClientClassConnector: connector.
+	classNameFor := [ :oop |
+		oop = 9900 ifTrue: [ 'RemoteMappedOrder' ] ifFalse: [
+		oop = 9916 ifTrue: [ 'RemoteCustomer' ] ifFalse: [
+		oop = 9924 ifTrue: [ 'Array' ] ifFalse: [ self fail ] ] ] ].
+	integerOop := [ :integer | (integer bitShift: 3) + 2 ].
+	mockSession stubs at: #fetchRemoteCommandBody put: [ :bodyString :literalBindings :oopBindings :contextOop |
+		| result |
+		result := nil.
+		((bodyString includesSubstring: 'oops do:')
+			and: [ bodyString includesSubstring: 'object class name asString' ]) ifTrue: [
+			result := String streamContents: [ :stream |
+				(literalBindings at: 'oops') do: [ :oop |
+					stream
+						nextPutAll: oop asString;
+						nextPut: Character tab;
+						nextPutAll: (classNameFor value: oop);
+						nextPut: Character lf ] ] ].
+		((bodyString includesSubstring: 'oops do:')
+			and: [ bodyString includesSubstring: 'object size asString' ]) ifTrue: [
+			result := String streamContents: [ :stream |
+				(literalBindings at: 'oops') do: [ :oop |
+					oop = 9924 ifFalse: [ self fail ].
+					stream
+						nextPutAll: oop asString;
+						nextPut: Character tab;
+						nextPutAll: '2';
+						nextPut: Character tab;
+						nextPutAll: (integerOop value: 1) asString;
+						nextPut: Character tab;
+						nextPutAll: (integerOop value: 2) asString;
+						nextPut: Character lf ] ] ].
+		(bodyString includesSubstring: 'object class name asString') ifTrue: [
+			result := classNameFor value: (oopBindings at: 'object') ].
+		result ifNil: [ self fail ].
+		result ].
+	mockSession stubs at: #apiGciFetchSize put: [ :oop |
+		oop = 9900 ifTrue: [ 5 ] ifFalse: [
+		oop = 9924 ifTrue: [ 2 ] ifFalse: [ self fail ] ] ].
+	mockSession stubs at: #apiGciFetchOops put: [ :oop :start :buffer :count |
+		self assert: start equals: 1.
+		oop = 9900 ifTrue: [
+			self assert: count equals: 5.
+			{
+				9916.
+				9924.
+				20.
+				(integerOop value: 321).
+				(integerOop value: 19) } ] ifFalse: [
+		oop = 9924 ifTrue: [
+			self assert: count equals: 2.
+			{
+				(integerOop value: 1).
+				(integerOop value: 2) } ] ifFalse: [ self fail ] ] ].
+	^ mockSession
+]
+
+{ #category : 'running' }
 GbsSessionCoreTest >> encodedStringBatchLineForOop: anOop value: aString [
 	^ String streamContents: [ :stream |
 		stream
@@ -352,6 +420,36 @@ GbsSessionCoreTest >> testDirtyReplicationTracksCollectionMutators [
 	dirtyOops := mockSession dirtyMaterializedObjectOops asSet.
 	#(9000 9100 9200 9300 9400 9500) do: [ :oop |
 		self assert: (dirtyOops includes: oop) ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationTracksVWMutationCompatibilitySelector [
+	| mockSession manager connector order array dirtyOops |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: CoreGbsMigrationDomainMappedOrder
+		server: 'GbsMigrationLiveMappedOrder'
+		replicationSpec: CoreGbsMigrationDomainMappedOrder migrationDomainReplicationSpec
+		serverInstVarNames: CoreGbsMigrationDomainMappedOrder migrationDomainServerInstVarNames.
+	connector replicatorClass: GbxPointerObjectReplicator.
+	manager installClientClassConnector: connector.
+	order := CoreGbsMigrationDomainMappedOrder basicNew.
+	array := Array with: 'old'.
+	mockSession rememberMaterializedObject: order forOop: 9008.
+	mockSession rememberMaterializedObject: array forOop: 9016.
+
+	order gbxMutationAt: 4 value: #clientOnlyCache noModError: nil.
+	array gbxMutationAt: 1 value: 'new' noModError: nil.
+	self assert: (order instVarAt: 4) equals: #clientOnlyCache.
+	self assert: array first equals: 'new'.
+	dirtyOops := mockSession dirtyMaterializedObjectOops asSet.
+	self deny: (dirtyOops includes: 9008).
+	self assert: (dirtyOops includes: 9016).
+
+	order gbxMutationAt: 3 value: 123 noModError: nil.
+	self assert: (order instVarAt: 3) equals: 123.
+	self assert: (mockSession dirtyMaterializedObjectOops asSet includes: 9008)
 ]
 
 { #category : 'tests' }
@@ -2624,6 +2722,48 @@ GbsSessionCoreTest >> testFetchByReferenceFallsBackToPlainProxyForUnknownClass [
 
 	self assert: result class equals: GbsProxy.
 	self assert: result oop equals: 9500
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testFetchDeepMaterializesMappedConnectorObjectUsingServerInstVarMap [
+	| mockSession order lineItems customerProxy |
+	mockSession := self mappedConnectorMaterializationMockSession.
+	mockSession fetchDeep.
+
+	order := mockSession fetchObject: 9900.
+	lineItems := order instVarAt: 2.
+	customerProxy := order instVarAt: 1.
+
+	self assert: order class equals: CoreGbsMigrationDomainMappedOrder.
+	self assert: customerProxy class equals: GbsProxy.
+	self assert: customerProxy oop equals: 9916.
+	self assert: lineItems equals: #(1 2).
+	self assert: (order instVarAt: 3) equals: 321.
+	self assert: (order instVarAt: 4) isNil.
+	self assert: (order instVarAt: 5) equals: 19.
+	self assert: (mockSession materializedObjectForOop: 9900) == order.
+	self assert: (GbsSessionLifecycleManager objectForOop: 9900 inSession: mockSession) == order
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleFaultProxyFetchesMappedConnectorObjectAndCancelsRelease [
+	| mockSession first proxy refreshed |
+	mockSession := self mappedConnectorMaterializationMockSession.
+	mockSession fetchDeep.
+	first := mockSession fetchObject: 9900.
+	proxy := mockSession stubMaterializedObjectForOop: 9900.
+	self assert: mockSession objectSpace pendingNoLongerReplicatedOops equals: #(9900).
+	self assert: (mockSession materializer materializedObjectForOop: 9900) isNil.
+
+	refreshed := proxy fault.
+
+	self deny: refreshed == first.
+	self assert: refreshed class equals: CoreGbsMigrationDomainMappedOrder.
+	self assert: ((refreshed instVarAt: 1) isKindOf: GbsProxy).
+	self assert: (refreshed instVarAt: 2) equals: #(1 2).
+	self assert: (refreshed instVarAt: 3) equals: 321.
+	self assert: mockSession objectSpace pendingNoLongerReplicatedOops isEmpty.
+	self assert: (GbsSessionLifecycleManager objectForOop: 9900 inSession: mockSession) == refreshed
 ]
 
 { #category : 'tests' }

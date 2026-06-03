@@ -1,4 +1,4 @@
-| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass dirtyTrackerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator connectorPairCount scheme clampSpecOop connectorMs clampedOop clampedResult clampedMs clampedMetrics callbackSelector callbackBehaviorName domainBehaviorName domainCustomerBehaviorName applicationCallbackBehaviorName domainFixtureClass domainScheme domainCallbackScheme domainCallbackSpecOop domainCallbackVerifiedOop domainCallbackVerified domainOrderOop domainCustomerOop domainLineItemsOop domainOrder domainCustomerProxy domainLineItems domainDirtyObjectsFlushed domainDirtyStoreMs domainFlushed domainDirtyStoreReport domainNativeDirtyStoreFlushes domainNativeDirtyStoreEntries domainVerifiedOop domainVerified domainFixtureCount domainPerInstvarClampEntries domainCallbackClampSpecs mappedDomainBehaviorName inheritedMappedDomainBehaviorName mappedDomainFixtureClass mappedDomainReplicator mappedDomainScheme mappedDomainOrderOop mappedDomainCustomerOop mappedDomainLineItemsOop mappedDomainOrder mappedDomainCustomerProxy mappedDomainLineItems mappedDomainDirtyObjectsFlushed mappedDomainDirtyStoreMs mappedDomainFlushed mappedDomainDirtyStoreReport mappedDomainVerifiedOop mappedDomainVerified callbackScheme callbackClampSpecOop callbackVerifiedOop callbackVerified perInstvarClampEntries callbackClampSpecs inheritedFixtureClass pointerReplicatorClass inheritedConnector inheritedReplicator inheritedReplicationSpecFixtures policy previousTransport previousProfile dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseGcedObject releaseNoLongerObject exportBefore exportAfter lifecycleReport lifecycleNoLongerQueued lifecycleGcedQueued lifecycleNoLongerAcknowledged lifecycleGcedAcknowledged dirtyStoreMs flushed dirtyStoreReport semanticDirtyStoreCommands semanticDirtyStoreEntries semanticDictionaryEntries semanticSetEntries semanticBagEntries verified verifiedOop nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed businessRootOop businessRoot businessFixtureSize businessDirtyObjectsFlushed businessDirtyStoreMs businessFlushed businessExportAfter businessVerifiedOop businessVerified |
+| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass dirtyTrackerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator connectorPairCount scheme clampSpecOop connectorMs clampedOop clampedResult clampedMs clampedMetrics callbackSelector callbackBehaviorName domainBehaviorName domainCustomerBehaviorName applicationCallbackBehaviorName domainFixtureClass domainScheme domainCallbackScheme domainCallbackSpecOop domainCallbackVerifiedOop domainCallbackVerified domainOrderOop domainCustomerOop domainLineItemsOop domainOrder domainCustomerProxy domainLineItems domainDirtyObjectsFlushed domainDirtyStoreMs domainFlushed domainDirtyStoreReport domainNativeDirtyStoreFlushes domainNativeDirtyStoreEntries domainVerifiedOop domainVerified domainFixtureCount domainPerInstvarClampEntries domainCallbackClampSpecs mappedDomainBehaviorName inheritedMappedDomainBehaviorName mappedDomainFixtureClass mappedDomainReplicator mappedDomainScheme mappedDomainOrderOop mappedDomainCustomerOop mappedDomainLineItemsOop mappedDomainOrder mappedDomainCustomerProxy mappedDomainLineItems mappedDomainDirtyObjectsFlushed mappedDomainDirtyStoreMs mappedDomainFlushed mappedDomainDirtyStoreReport mappedDomainVerifiedOop mappedDomainVerified domainFaultReleaseBefore domainFaultReleaseQueued domainFaultReleaseAfterFault domainFaultIdentityCleared domainFaultIdentityRestored mappedDomainFaultProxy mappedDomainFaultRefetched callbackScheme callbackClampSpecOop callbackVerifiedOop callbackVerified perInstvarClampEntries callbackClampSpecs inheritedFixtureClass pointerReplicatorClass inheritedConnector inheritedReplicator inheritedReplicationSpecFixtures policy previousTransport previousProfile dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseGcedObject releaseNoLongerObject exportBefore exportAfter lifecycleReport lifecycleNoLongerQueued lifecycleGcedQueued lifecycleNoLongerAcknowledged lifecycleGcedAcknowledged dirtyStoreMs flushed dirtyStoreReport semanticDirtyStoreCommands semanticDirtyStoreEntries semanticDictionaryEntries semanticSetEntries semanticBagEntries verified verifiedOop nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed businessRootOop businessRoot businessFixtureSize businessDirtyObjectsFlushed businessDirtyStoreMs businessFlushed businessExportAfter businessVerifiedOop businessVerified |
 [
   loadFailed := false.
   cleanupFixture := [ ].
@@ -177,6 +177,10 @@ true'
         [ session clearProxyCache. session clearRemoteClassNameCache ] on: Error do: [ ].
         session resetMaterializedObjectDirtyTracking.
         session fetchDeep.
+        domainFaultReleaseQueued := 0.
+        domainFaultReleaseAfterFault := 0.
+        domainFaultIdentityCleared := 0.
+        domainFaultIdentityRestored := 0.
 
         manager := session replicatorManager.
 
@@ -909,6 +913,39 @@ status'
         mappedDomainVerified := session resultFor: mappedDomainVerifiedOop.
         mappedDomainVerified = 57 ifFalse: [
           Error signal: 'Mapped migration-domain dirty-store validation failed status=', mappedDomainVerified asString, ' oop=', mappedDomainVerifiedOop asString, ' (58=class 59=customer 60=items 61=unmapped 62=amount 63=audit).' ].
+
+        phase := 'migration-domain-mapped-fault-stub-lifecycle'.
+        domainFaultReleaseBefore := session objectSpace pendingNoLongerReplicatedOopCount.
+        mappedDomainFaultProxy := session stubMaterializedObjectForOop: mappedDomainOrderOop.
+        domainFaultReleaseQueued := session objectSpace pendingNoLongerReplicatedOopCount - domainFaultReleaseBefore.
+        domainFaultReleaseQueued <= 0 ifTrue: [
+          Error signal: 'Mapped migration-domain stubbing did not queue a no-longer-replicated release.' ].
+        (session materializer materializedObjectForOop: mappedDomainOrderOop) isNil ifFalse: [
+          Error signal: 'Mapped migration-domain stubbing did not clear materialized identity cache.' ].
+        domainFaultIdentityCleared := 1.
+        mappedDomainFaultRefetched := mappedDomainFaultProxy fault.
+        domainFaultReleaseAfterFault := session objectSpace pendingNoLongerReplicatedOopCount - domainFaultReleaseBefore.
+        domainFaultReleaseAfterFault = 0 ifFalse: [
+          Error signal: 'Mapped migration-domain fault did not cancel the pending no-longer-replicated release.' ].
+        mappedDomainFaultRefetched == mappedDomainOrder ifTrue: [
+          Error signal: 'Mapped migration-domain fault reused the stubbed materialized object.' ].
+        mappedDomainFaultRefetched class == mappedDomainFixtureClass ifFalse: [
+          Error signal: 'Mapped migration-domain fault did not materialize the connector client class.' ].
+        (((mappedDomainFaultRefetched instVarAt: 1) respondsTo: #oop) and: [
+          (mappedDomainFaultRefetched instVarAt: 1) respondsTo: #session ]) ifFalse: [
+          Error signal: 'Mapped migration-domain fault did not preserve the forwarder slot as a proxy.' ].
+        (mappedDomainFaultRefetched instVarAt: 2) asArray = #(1 2 4) ifFalse: [
+          Error signal: 'Mapped migration-domain fault did not materialize line items from the live server object.' ].
+        (mappedDomainFaultRefetched instVarAt: 3) = 654 ifFalse: [
+          Error signal: 'Mapped migration-domain fault did not restore the mapped amount slot.' ].
+        (mappedDomainFaultRefetched instVarAt: 4) isNil ifFalse: [
+          Error signal: 'Mapped migration-domain fault populated an unmapped client-only slot.' ].
+        (mappedDomainFaultRefetched instVarAt: 5) = #mappedValidated ifFalse: [
+          Error signal: 'Mapped migration-domain fault did not restore the mapped audit slot.' ].
+        (session materializer materializedObjectForOop: mappedDomainOrderOop) == mappedDomainFaultRefetched ifFalse: [
+          Error signal: 'Mapped migration-domain fault did not restore materialized identity cache.' ].
+        domainFaultIdentityRestored := 1.
+        domainFixtureCount := domainFixtureCount + 1.
         session resetMaterializedObjectDirtyTracking.
 
         phase := 'migration-domain-inherited-instvar-map-fixture'.
@@ -1417,6 +1454,10 @@ root'
             ' domain_dirty_objects_flushed=', domainFlushed size asString,
             ' domain_native_dirty_store_flushes=', domainNativeDirtyStoreFlushes asString,
             ' domain_native_dirty_store_entries=', domainNativeDirtyStoreEntries asString,
+            ' domain_fault_release_queued=', domainFaultReleaseQueued asString,
+            ' domain_fault_release_after_fault=', domainFaultReleaseAfterFault asString,
+            ' domain_fault_identity_cleared=', domainFaultIdentityCleared asString,
+            ' domain_fault_identity_restored=', domainFaultIdentityRestored asString,
             ' clamped_traversal_fetches=', clampedFetches asString,
             ' clamped_traversal_fallbacks=', clampedFallbacks asString,
             ' native_dirty_store_flushes=', nativeDirtyStoreFlushes asString,
@@ -1462,6 +1503,10 @@ root'
           ' domain_dirty_objects_flushed=', (domainDirtyObjectsFlushed ifNil: [ 0 ]) asString,
           ' domain_native_dirty_store_flushes=', (domainNativeDirtyStoreFlushes ifNil: [ 0 ]) asString,
           ' domain_native_dirty_store_entries=', (domainNativeDirtyStoreEntries ifNil: [ 0 ]) asString,
+          ' domain_fault_release_queued=', (domainFaultReleaseQueued ifNil: [ 0 ]) asString,
+          ' domain_fault_release_after_fault=', (domainFaultReleaseAfterFault ifNil: [ 0 ]) asString,
+          ' domain_fault_identity_cleared=', (domainFaultIdentityCleared ifNil: [ 0 ]) asString,
+          ' domain_fault_identity_restored=', (domainFaultIdentityRestored ifNil: [ 0 ]) asString,
           ' clamped_traversal_fetches=', (clampedFetches ifNil: [ 0 ]) asString,
           ' clamped_traversal_fallbacks=', (clampedFallbacks ifNil: [ 0 ]) asString,
           ' native_dirty_store_flushes=', (nativeDirtyStoreFlushes ifNil: [ 0 ]) asString,

@@ -68,15 +68,22 @@ GbsMaterializationProfile >> materializeOop: anOop inSession: aSession depth: an
 	className := aSession remoteClassNameForOop: anOop.
 	(self shouldMaterializeScalarClassNamed: className) ifTrue: [
 		^ self materializeScalarClassNamed: className oop: anOop inSession: aSession ].
-	(self shouldMaterializeCollectionClassNamed: className depth: anInteger) ifFalse: [
-		^ aSession proxyForOop: anOop serverClassName: className ].
-	seenOops add: anOop.
-	^ self
-		materializeCollectionClassNamed: className
-		oop: anOop
-		inSession: aSession
-		depth: anInteger
-		seen: seenOops
+	(self shouldMaterializeCollectionClassNamed: className depth: anInteger) ifTrue: [
+		seenOops add: anOop.
+		^ self
+			materializeCollectionClassNamed: className
+			oop: anOop
+			inSession: aSession
+			depth: anInteger
+			seen: seenOops ].
+	(self shouldMaterializeMappedClassNamed: className inSession: aSession) ifTrue: [
+		^ aSession materializer
+			materializeMappedObjectOop: anOop
+			className: className
+			withProfile: self
+			depth: anInteger
+			seen: seenOops ].
+	^ aSession proxyForOop: anOop serverClassName: className
 ]
 
 { #category : 'materialization' }
@@ -145,6 +152,11 @@ GbsMaterializationProfile >> replicationSchemeInSession: aSession [
 
 { #category : 'materialization' }
 GbsMaterializationProfile >> shouldMaterializeCollectionClassNamed: className depth: anInteger [
+	^ false
+]
+
+{ #category : 'materialization' }
+GbsMaterializationProfile >> shouldMaterializeMappedClassNamed: className inSession: aSession [
 	^ false
 ]
 

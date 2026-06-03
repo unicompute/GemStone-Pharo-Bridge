@@ -17,7 +17,7 @@ CoreGbsCountingReplicator >> initialize [
 { #category : 'initialization' }
 CoreGbsCountingReplicator >> initializeServerOffsets [
 	serverOffsetRefreshCount := self serverOffsetRefreshCount + 1.
-	^ self
+	^ super initializeServerOffsets
 ]
 
 { #category : 'accessing' }

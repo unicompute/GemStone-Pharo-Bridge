@@ -183,15 +183,17 @@ GbxClampManager >> release [
 
 { #category : '*GemStone-GBS-Core' }
 GbxClampManager >> removeClampsForReplicator: aReplicator [
-	| clientClass serverClass |
+	| clientClass clientClasses serverClass |
 	clientClass := self clientClassForReplicator: aReplicator.
+	clientClasses := self clientClassesForReplicator: aReplicator fallback: clientClass.
 	serverClass := self serverClassForReplicator: aReplicator.
 	serverClass ifNotNil: [ classClamps removeKey: serverClass ifAbsent: [ ] ].
-	clientClass ifNotNil: [
-		classClamps removeKey: clientClass ifAbsent: [ ].
-		identityClamps removeKey: clientClass ifAbsent: [ ].
-		self knownReplicationSchemes do: [ :scheme |
-			scheme removeArtefactsForClass: clientClass ] ].
+	clientClasses do: [ :eachClientClass |
+		eachClientClass ifNotNil: [
+			classClamps removeKey: eachClientClass ifAbsent: [ ].
+			identityClamps removeKey: eachClientClass ifAbsent: [ ].
+			self knownReplicationSchemes do: [ :scheme |
+				scheme removeArtefactsForClass: eachClientClass ] ] ].
 	^ aReplicator
 ]
 
@@ -266,6 +268,18 @@ GbxClampManager >> clientClassForReplicator: aReplicator [
 	^ (aReplicator respondsTo: #clientClass)
 		ifTrue: [ aReplicator clientClass ]
 		ifFalse: [ nil ]
+]
+
+{ #category : '*GemStone-GBS-Core-private' }
+GbxClampManager >> clientClassesForReplicator: aReplicator fallback: fallbackClass [
+	(manager notNil and: [ manager respondsTo: #clientBehaviorsForReplicator: ]) ifTrue: [
+		| clientClasses |
+		clientClasses := [ manager clientBehaviorsForReplicator: aReplicator ]
+			on: Error
+			do: [ #() ].
+		clientClasses isEmpty ifFalse: [ ^ clientClasses ] ].
+	fallbackClass ifNil: [ ^ #() ].
+	^ { fallbackClass }
 ]
 
 { #category : '*GemStone-GBS-Core-private' }

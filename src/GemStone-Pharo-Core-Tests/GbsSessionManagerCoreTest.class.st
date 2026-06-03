@@ -403,6 +403,50 @@ GbsSessionManagerCoreTest >> testReplicatorManagerSecondaryClientMappingSharesPr
 ]
 
 { #category : 'tests' }
+GbsSessionManagerCoreTest >> testClientClassConnectorAliasesSubclassesAndDedupesClassVersionRefresh [
+	| mockSession manager connector replicator baseline report |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: CoreGbsMigrationDomainMappedOrder
+		server: 'GbsMigrationLiveMappedOrder'
+		replicationSpec: CoreGbsMigrationDomainMappedOrder migrationDomainReplicationSpec
+		serverInstVarNames: CoreGbsMigrationDomainMappedOrder migrationDomainServerInstVarNames.
+	connector
+		includeSubclasses: true;
+		replicatorClass: CoreGbsCountingReplicator.
+
+	replicator := manager installClientClassConnector: connector.
+	report := manager connectorManagerReport.
+	baseline := replicator serverOffsetRefreshCount.
+
+	self assert: (manager
+		replicatorForClientBehavior: CoreGbsMigrationDomainMappedOrder
+		ifAbsent: [ nil ]) == replicator.
+	self assert: (manager
+		replicatorForClientBehavior: CoreGbsMigrationDomainInheritedMappedOrder
+		ifAbsent: [ nil ]) == replicator.
+	self assert: manager currentReplicators equals: { replicator }.
+	self assert: manager numberOfReplicators equals: 1.
+	self assert: (report at: #clientMapSize) >= 2.
+	self assert: (report at: #clientAliasCount) >= 1.
+
+	manager changedSelector: #classVersion inClass: CoreGbsMigrationDomainMappedOrder.
+
+	self assert: replicator serverOffsetRefreshCount equals: baseline + 1.
+
+	manager
+		removeReplicatorForClientBehavior: CoreGbsMigrationDomainMappedOrder
+		andServerBehavior: 'GbsMigrationLiveMappedOrder'.
+	self assert: (manager
+		replicatorForClientBehavior: CoreGbsMigrationDomainMappedOrder
+		ifAbsent: [ nil ]) isNil.
+	self assert: (manager
+		replicatorForClientBehavior: CoreGbsMigrationDomainInheritedMappedOrder
+		ifAbsent: [ nil ]) isNil
+]
+
+{ #category : 'tests' }
 GbsSessionManagerCoreTest >> testReplicatorManagerRemovingPrimaryRemovesSecondaryMappingsAndDeferredInstvarRequest [
 	| mockSession manager connector replicator removed |
 	mockSession := CoreMockGbsSession new.

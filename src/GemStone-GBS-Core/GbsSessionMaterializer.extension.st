@@ -675,7 +675,7 @@ GbsSessionMaterializer >> materializeAssociationOops: oopCollection withProfile:
 
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeFrontierOops: oopCollection withProfile: aProfile depth: anInteger seen: seenOops [
-	| results assigned missing classNames scalarOops arrayOops sequenceableOops dictionaryOops associationOops scalarObjects nestedProfile |
+	| results assigned missing classNames scalarOops arrayOops sequenceableOops dictionaryOops associationOops mappedObjectOops scalarObjects nestedProfile |
 	self
 		checkMaterializationFrontierSize: oopCollection size
 		label: 'materialization frontier'.
@@ -707,6 +707,7 @@ GbsSessionMaterializer >> materializeFrontierOops: oopCollection withProfile: aP
 	sequenceableOops := OrderedCollection new.
 	dictionaryOops := OrderedCollection new.
 	associationOops := OrderedCollection new.
+	mappedObjectOops := OrderedCollection new.
 	oopCollection doWithIndex: [ :oop :index |
 		(assigned at: index) ifFalse: [
 			| className kind |
@@ -716,9 +717,6 @@ GbsSessionMaterializer >> materializeFrontierOops: oopCollection withProfile: aP
 					(scalarOops includes: oop) ifFalse: [ scalarOops add: oop ] ]
 				ifFalse: [
 					(aProfile shouldMaterializeCollectionClassNamed: className depth: anInteger)
-						ifFalse: [
-							results at: index put: (self proxyForOop: oop serverClassName: className).
-							assigned at: index put: true ]
 						ifTrue: [
 							kind := self materializationKindForClassNamed: className.
 							kind = #array ifTrue: [
@@ -731,7 +729,14 @@ GbsSessionMaterializer >> materializeFrontierOops: oopCollection withProfile: aP
 								(associationOops includes: oop) ifFalse: [ associationOops add: oop ] ].
 							kind = #proxy ifTrue: [
 								results at: index put: (self proxyForOop: oop serverClassName: className).
-								assigned at: index put: true ] ] ] ] ].
+								assigned at: index put: true ] ]
+						ifFalse: [
+							(aProfile shouldMaterializeMappedClassNamed: className inSession: session)
+								ifTrue: [
+									(mappedObjectOops includes: oop) ifFalse: [ mappedObjectOops add: oop ] ]
+								ifFalse: [
+									results at: index put: (self proxyForOop: oop serverClassName: className).
+									assigned at: index put: true ] ] ] ] ].
 	scalarOops isEmpty ifFalse: [
 		scalarObjects := self materializeScalarOops: scalarOops classNames: classNames.
 		scalarObjects associationsDo: [ :association |
@@ -763,6 +768,13 @@ GbsSessionMaterializer >> materializeFrontierOops: oopCollection withProfile: aP
 			withProfile: nestedProfile
 			depth: anInteger
 			seen: seenOops ].
+	mappedObjectOops do: [ :oop |
+		self
+			materializeMappedObjectOop: oop
+			className: (classNames at: oop ifAbsent: [ self remoteClassNameForOop: oop ])
+			withProfile: aProfile
+			depth: anInteger
+			seen: seenOops ].
 	oopCollection doWithIndex: [ :oop :index |
 		(assigned at: index) ifFalse: [
 			self materializedObjectForOop: oop ifPresent: [ :object |
@@ -774,6 +786,88 @@ GbsSessionMaterializer >> materializeFrontierOops: oopCollection withProfile: aP
 				results at: index put: (self proxyForOop: oop serverClassName: className).
 				assigned at: index put: true ] ] ].
 	^ results
+]
+
+{ #category : 'materializing' }
+GbsSessionMaterializer >> materializeMappedObjectOop: anOop className: className withProfile: aProfile depth: anInteger seen: seenOops [
+	| replicator clientClass offsets clientSlotCount serverSlotOops materialized groups |
+	self materializedObjectForOop: anOop ifPresent: [ :object | ^ object ].
+	replicator := self mappedReplicatorForServerClassName: className.
+	((replicator isNil or: [ (replicator respondsTo: #clientClass) not ])
+		or: [ (replicator respondsTo: #serverToClientOffsets) not ]) ifTrue: [
+			^ self proxyForOop: anOop serverClassName: className ].
+	clientClass := replicator clientClass.
+	(clientClass isNil or: [ (clientClass respondsTo: #basicNew) not ]) ifTrue: [
+		^ self proxyForOop: anOop serverClassName: className ].
+	offsets := replicator serverToClientOffsets.
+	offsets isEmpty ifTrue: [
+		^ self proxyForOop: anOop serverClassName: className ].
+	clientSlotCount := (clientClass respondsTo: #allInstVarNames)
+		ifTrue: [ clientClass allInstVarNames size ]
+		ifFalse: [ 0 ].
+	materialized := clientClass basicNew.
+	self rememberMaterializedObject: materialized forOop: anOop.
+	seenOops add: anOop.
+	serverSlotOops := self remoteNamedInstVarOopsForOop: anOop count: offsets size.
+	serverSlotOops size < offsets size ifTrue: [
+		GbsError signal: 'Mapped object ', className asString, ' has fewer server slots than the connector mapping expects.' ].
+	groups := OrderedCollection new.
+	1 to: offsets size do: [ :serverIndex |
+		| clientIndex nestedProfile group |
+		clientIndex := offsets at: serverIndex.
+		clientIndex ifNotNil: [
+			(clientIndex between: 1 and: clientSlotCount) ifFalse: [
+				GbsError signal: 'Mapped object ', className asString, ' has an invalid client slot mapping.' ].
+			nestedProfile := aProfile
+				nestedProfileForNamedSlot: serverIndex
+				ofClassNamed: clientClass name
+				inSession: session
+				depth: anInteger.
+			group := groups
+				detect: [ :entry | entry first class == nestedProfile class ]
+				ifNone: [
+					| entry |
+					entry := {
+						nestedProfile.
+						OrderedCollection new.
+						OrderedCollection new }.
+					groups add: entry.
+					entry ].
+			group second add: (serverSlotOops at: serverIndex).
+			group third add: clientIndex ] ].
+	self withDirtyTrackingSuspendedDo: [
+		groups do: [ :group |
+			| values |
+			values := self
+				materializeOops: group second asArray
+				withProfile: group first
+				depth: anInteger + 1
+				seen: seenOops.
+			group third doWithIndex: [ :clientIndex :valueIndex |
+				materialized instVarAt: clientIndex put: (values at: valueIndex) ] ] ].
+	^ materialized
+]
+
+{ #category : 'materializing' }
+GbsSessionMaterializer >> mappedReplicatorForServerClassName: className [
+	| manager replicator classNameString |
+	className ifNil: [ ^ nil ].
+	manager := [ session replicatorManager ] on: Error do: [ nil ].
+	manager ifNil: [ ^ nil ].
+	(manager respondsTo: #replicatorForServerBehavior:ifAbsent:) ifFalse: [ ^ nil ].
+	replicator := manager
+		replicatorForServerBehavior: className
+		ifAbsent: [ nil ].
+	replicator ifNotNil: [ ^ replicator ].
+	(manager respondsTo: #serverMap) ifFalse: [ ^ nil ].
+	classNameString := className asString.
+	manager serverMap keysAndValuesDo: [ :serverBehavior :mappedReplicator |
+		| serverBehaviorName |
+		serverBehaviorName := (manager respondsTo: #connectorNameForBehavior:)
+			ifTrue: [ manager connectorNameForBehavior: serverBehavior ]
+			ifFalse: [ serverBehavior asString ].
+		serverBehaviorName = classNameString ifTrue: [ ^ mappedReplicator ] ].
+	^ nil
 ]
 
 { #category : 'remote access' }
@@ -839,6 +933,11 @@ GbsSessionMaterializer >> remoteCollectionElementOopsForOop: anOop [
 { #category : 'remote access' }
 GbsSessionMaterializer >> remoteCollectionElementOopsForOops: oopCollection [
 	^ self remoteReader remoteCollectionElementOopsForOops: oopCollection
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializer >> remoteNamedInstVarOopsForOop: anOop count: anInteger [
+	^ self remoteReader remoteNamedInstVarOopsForOop: anOop count: anInteger
 ]
 
 { #category : 'remote access' }

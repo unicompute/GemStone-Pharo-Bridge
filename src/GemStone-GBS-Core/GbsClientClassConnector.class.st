@@ -6,6 +6,7 @@ Class {
 		'clientBehaviorName',
 		'serverBehavior',
 		'serverBehaviorName',
+		'includeSubclasses',
 		'serverInstVarNames',
 		'replicationSpec',
 		'replicatorClass'
@@ -52,9 +53,10 @@ GbsClientClassConnector >> clientBehaviorName: aString [
 
 { #category : 'installing' }
 GbsClientClassConnector >> installInReplicatorManager: aReplicatorManager [
-	| replicator session |
+	| replicator session clientBehaviors |
 	aReplicatorManager ifNil: [ ^ nil ].
 	session := aReplicatorManager session.
+	clientBehaviors := self resolvedClientBehaviors.
 	self removeConflictingReplicatorsIn: aReplicatorManager.
 	replicator := self newReplicatorFor: aReplicatorManager.
 	self configureReplicator: replicator manager: aReplicatorManager.
@@ -62,12 +64,26 @@ GbsClientClassConnector >> installInReplicatorManager: aReplicatorManager [
 		atClient: self resolvedClientBehavior
 		andServer: self resolvedServerBehavior
 		put: replicator.
+	self
+		registerClientAliases: clientBehaviors
+		forReplicator: replicator
+		in: aReplicatorManager.
 	self registerConnectorStateIn: aReplicatorManager.
 	self
 		updateClampMetadataIn: aReplicatorManager
 		forReplicator: replicator.
 	self markDeferredServerInstVarUpdateFor: replicator in: aReplicatorManager.
 	^ replicator
+]
+
+{ #category : 'accessing' }
+GbsClientClassConnector >> includeSubclasses [
+	^ includeSubclasses == true
+]
+
+{ #category : 'accessing' }
+GbsClientClassConnector >> includeSubclasses: aBoolean [
+	includeSubclasses := aBoolean == true
 ]
 
 { #category : 'private' }
@@ -125,17 +141,16 @@ GbsClientClassConnector >> newReplicatorFor: aReplicatorManager [
 
 { #category : 'private' }
 GbsClientClassConnector >> removeConflictingReplicatorsIn: aReplicatorManager [
-	| conflicts client server |
+	| conflicts server |
 	(aReplicatorManager respondsTo: #removeReplicator:) ifFalse: [ ^ self ].
 	conflicts := OrderedCollection new.
-	client := self resolvedClientBehavior.
 	server := self resolvedServerBehavior.
-	(client notNil and: [ aReplicatorManager respondsTo: #replicatorForClientBehavior:ifAbsent: ])
-		ifTrue: [
+	(aReplicatorManager respondsTo: #replicatorForClientBehavior:ifAbsent:) ifTrue: [
+		self resolvedClientBehaviors do: [ :client |
 			(aReplicatorManager
 			replicatorForClientBehavior: client
 			ifAbsent: [ nil ]) ifNotNil: [ :replicator |
-				self addReplicator: replicator toConflictList: conflicts ] ].
+				self addReplicator: replicator toConflictList: conflicts ] ] ].
 	(server notNil and: [ aReplicatorManager respondsTo: #replicatorForServerBehavior:ifAbsent: ])
 		ifTrue: [
 			(aReplicatorManager
@@ -146,6 +161,16 @@ GbsClientClassConnector >> removeConflictingReplicatorsIn: aReplicatorManager [
 		self unregisterConnectorPairForReplicator: replicator manager: aReplicatorManager.
 		aReplicatorManager removeReplicator: replicator ].
 	^ self
+]
+
+{ #category : 'private' }
+GbsClientClassConnector >> registerClientAliases: clientBehaviors forReplicator: aReplicator in: aReplicatorManager [
+	clientBehaviors do: [ :clientBehavior |
+		clientBehavior == self resolvedClientBehavior ifFalse: [
+			aReplicatorManager
+				atClient: clientBehavior
+				put: aReplicator ] ].
+	^ aReplicator
 ]
 
 { #category : 'private' }
@@ -196,6 +221,20 @@ GbsClientClassConnector >> replicatorClass: aClass [
 { #category : 'private' }
 GbsClientClassConnector >> resolvedClientBehavior [
 	^ self resolvedBehaviorFrom: clientBehavior
+]
+
+{ #category : 'private' }
+GbsClientClassConnector >> resolvedClientBehaviors [
+	| primary behaviors |
+	primary := self resolvedClientBehavior.
+	primary ifNil: [ ^ #() ].
+	behaviors := OrderedCollection with: primary.
+	self includeSubclasses ifTrue: [
+		(primary respondsTo: #allSubclasses) ifTrue: [
+			primary allSubclasses do: [ :subclass |
+				(behaviors anySatisfy: [ :each | each == subclass ])
+					ifFalse: [ behaviors add: subclass ] ] ] ].
+	^ behaviors asArray
 ]
 
 { #category : 'private' }

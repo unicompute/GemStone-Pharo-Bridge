@@ -10,3 +10,8 @@ GbsDeepMaterializationProfile >> shouldMaterializeCollectionClassNamed: classNam
 	^ #('Array' 'OrderedCollection' 'SortedCollection' 'Bag' 'Set' 'IdentitySet' 'Dictionary' 'IdentityDictionary' 'Association')
 		includes: className
 ]
+
+{ #category : 'materialization' }
+GbsDeepMaterializationProfile >> shouldMaterializeMappedClassNamed: className inSession: aSession [
+	^ (aSession materializer mappedReplicatorForServerClassName: className) notNil
+]

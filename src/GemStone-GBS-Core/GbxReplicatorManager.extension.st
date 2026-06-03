@@ -21,17 +21,19 @@ GbxReplicatorManager >> clientClassConnectorForClientBehavior: clientBehavior se
 
 { #category : '*GemStone-GBS-Core' }
 GbxReplicatorManager >> changedSelector: aSelector inClass: aClass [
-	| behavior |
+	| behavior refreshedReplicators |
 	behavior := (aClass respondsTo: #soleInstance)
 		ifTrue: [ aClass soleInstance ]
 		ifFalse: [ aClass ].
+	refreshedReplicators := IdentitySet new.
 	aClass withAllSubclasses do: [ :class |
 		| replicator mappedBehavior |
 		mappedBehavior := (class respondsTo: #soleInstance)
 			ifTrue: [ class soleInstance ]
 			ifFalse: [ class ].
 		replicator := self replicatorForClientBehavior: mappedBehavior ifAbsent: [ nil ].
-		replicator ifNotNil: [
+		(replicator notNil and: [ (refreshedReplicators includes: replicator) not ]) ifTrue: [
+			refreshedReplicators add: replicator.
 			(self selectorRequiresServerOffsetRefresh: aSelector) ifTrue: [
 				(replicator respondsTo: #initializeServerOffsets) ifTrue: [
 					replicator initializeServerOffsets ] ].
@@ -118,6 +120,7 @@ GbxReplicatorManager >> connectorManagerReport [
 		at: #clientMapSize put: clientMap size;
 		at: #serverMapSize put: serverMap size;
 		at: #replicatorCount put: self numberOfReplicators;
+		at: #clientAliasCount put: (clientMap size - self numberOfReplicators max: 0);
 		at: #connectorPairCount put: pairs size;
 		at: #connectedConnectorPairCount put: (connectionRows count: [ :row | row at: #connected ifAbsent: [ false ] ]);
 		at: #disconnectedConnectorPairCount put: (connectionRows count: [ :row | (row at: #connected ifAbsent: [ false ]) not ]);
@@ -145,6 +148,7 @@ GbxReplicatorManager >> connectorManagerReportText [
 			clientMapSize
 			serverMapSize
 			replicatorCount
+			clientAliasCount
 			connectorPairCount
 			connectedConnectorPairCount
 			disconnectedConnectorPairCount

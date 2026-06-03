@@ -1476,7 +1476,36 @@ GbsSessionMaterializationRemoteReader >> remoteCollectionElementOopsForOops: oop
 				ifAbsent: [ self remoteCollectionElementOopsViaAsArrayForOop: oop ].
 			cache at: oop put: elementOops.
 			result at: oop put: elementOops ] ].
-	^ result
+		^ result
+]
+
+{ #category : 'remote access' }
+GbsSessionMaterializationRemoteReader >> remoteNamedInstVarOopsForOop: anOop count: slotCount [
+	| normalized fetched |
+	normalized := slotCount asInteger max: 0.
+	normalized = 0 ifTrue: [ ^ #() ].
+	self incrementMaterializationMetric: #mappedNamedSlotFetchCalls.
+	self incrementMaterializationMetric: #mappedNamedSlotFetchOopCount by: normalized.
+	^ self
+		recordMillisecondsForMetric: #mappedNamedSlotFetchMs
+		during: [
+			[
+				fetched := self rawArrayElementOopsForOop: anOop.
+				fetched size < normalized ifTrue: [
+					self error: 'Mapped named-slot GCI fetch returned fewer OOPs than requested.' ].
+				fetched copyFrom: 1 to: normalized ]
+					on: Error
+					do: [
+						self incrementMaterializationMetric: #mappedNamedSlotFallbackCalls.
+						(1 to: normalized) collect: [ :index |
+							session
+								returnRemoteCommandBody: 'object instVarAt: index'
+								literalBindings: (Dictionary new
+									at: 'index' put: index;
+									yourself)
+								oopBindings: (Dictionary new
+									at: 'object' put: anOop;
+									yourself) ] ] ]
 ]
 
 { #category : 'cache' }

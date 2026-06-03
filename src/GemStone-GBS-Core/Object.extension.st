@@ -17,6 +17,14 @@ Object >> gbsConsiderModifiedAt: slotIndex [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+Object >> gbsBasicAt: index put: anObject [
+	| result |
+	result := self basicAt: index put: anObject.
+	self gbxConsiderModified.
+	^ result
+]
+
+{ #category : '*GemStone-GBS-Core' }
 Object >> gbsInstVarAt: slotIndex put: anObject [
 	self instVarAt: slotIndex put: anObject.
 	self gbsConsiderModifiedAt: slotIndex.
@@ -24,8 +32,29 @@ Object >> gbsInstVarAt: slotIndex put: anObject [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+Object >> gbxBasicAt: index put: anObject [
+	^ self gbsBasicAt: index put: anObject
+]
+
+{ #category : '*GemStone-GBS-Core' }
 Object >> gbxConsiderModifiedAt: slotIndex [
 	^ self gbsConsiderModifiedAt: slotIndex
+]
+
+{ #category : '*GemStone-GBS-Core' }
+Object >> gbxMutationAt: slotIndex value: anObject noModError: ignoredError [
+	| namedSize indexedIndex |
+	slotIndex isInteger ifFalse: [
+		self gbxConsiderModified.
+		^ anObject ].
+	namedSize := [ self class instSize ] on: Error do: [ 0 ].
+	slotIndex <= namedSize ifTrue: [
+		^ self gbsInstVarAt: slotIndex put: anObject ].
+	indexedIndex := slotIndex - namedSize.
+	indexedIndex > 0 ifTrue: [
+		^ self gbsBasicAt: indexedIndex put: anObject ].
+	self gbxConsiderModified.
+	^ anObject
 ]
 
 { #category : '*GemStone-GBS-Core' }
