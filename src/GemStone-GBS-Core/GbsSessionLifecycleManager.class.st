@@ -116,6 +116,47 @@ GbsSessionLifecycleManager class >> flushExportSetReleaseOopsForSession: aSessio
 		yourself
 ]
 
+{ #category : 'export set' }
+GbsSessionLifecycleManager class >> flushAllExportSetReleaseOopsForSession: aSession limit: anInteger [
+	| releaseBatch noLongerReplicated gced allOops |
+	self incrementLifecycleCounter: #exportSetFlushAllCallCount forSession: aSession.
+	releaseBatch := self pendingExportSetReleaseOopsForSession: aSession limit: anInteger.
+	noLongerReplicated := releaseBatch at: #noLongerReplicated ifAbsent: [ #() ].
+	gced := releaseBatch at: #gced ifAbsent: [ #() ].
+	allOops := noLongerReplicated asArray, gced asArray.
+	allOops isEmpty ifFalse: [
+		self releaseOops: allOops forSession: aSession.
+		self acknowledgeNoLongerReplicatedOops: noLongerReplicated forSession: aSession.
+		self acknowledgeGcedOops: gced forSession: aSession ].
+	self
+		lifecycleCounterAt: #lastExportSetAllReleasedCount
+		put: allOops size
+		forSession: aSession.
+	self
+		lifecycleCounterAt: #lastExportSetNoLongerReleasedCount
+		put: noLongerReplicated size
+		forSession: aSession.
+	self
+		lifecycleCounterAt: #lastExportSetGcedReleasedCount
+		put: gced size
+		forSession: aSession.
+	self
+		lifecycleCounterAt: #lastExportSetGcedQueueSize
+		put: (self pendingGcedOopCountForSession: aSession)
+		forSession: aSession.
+	self
+		lifecycleCounterAt: #lastExportSetNoLongerQueueSize
+		put: (self pendingNoLongerReplicatedOopCountForSession: aSession)
+		forSession: aSession.
+	^ Dictionary new
+		at: #noLongerReplicatedReleased put: noLongerReplicated;
+		at: #gcedReleased put: gced;
+		at: #releasedOops put: allOops;
+		at: #gcedOopQueueSize put: (self pendingGcedOopCountForSession: aSession);
+		at: #noLongerReplicatedOopQueueSize put: (self pendingNoLongerReplicatedOopCountForSession: aSession);
+		yourself
+]
+
 { #category : 'diagnostics' }
 GbsSessionLifecycleManager class >> exportSetReleaseFlushReportTextFor: aDictionary [
 	| gcedReleased noLongerReplicatedPending |
@@ -399,6 +440,7 @@ GbsSessionLifecycleManager class >> lifecycleReportCounterKeys [
 		gcedOopsDrainedCount
 		exportSetDrainCallCount
 		exportSetFlushCallCount
+		exportSetFlushAllCallCount
 		gcedFlushCallCount
 		releaseOopsCallCount
 		releaseOopsReleasedCount
@@ -410,6 +452,15 @@ GbsSessionLifecycleManager class >> lifecycleReportCounterKeys [
 		ignoredFinalizerNotificationCount
 		serverMapStrongWindowEnterCount
 		serverMapStrongWindowExitCount
+		transactionPrepareForCommitCallCount
+		transactionDirtyFlushBeforeCommitCount
+		transactionExportSetFlushBeforeCommitCount
+		transactionPrepareForCommitFailureCount
+		transactionResetCount
+		transactionCommitResetCount
+		transactionAbortResetCount
+		lastExportSetAllReleasedCount
+		lastExportSetNoLongerReleasedCount
 		lastExportSetGcedReleasedCount
 		lastExportSetNoLongerPendingCount
 		lastExportSetGcedQueueSize
@@ -798,6 +849,25 @@ GbsSessionLifecycleManager class >> removeFirst: count fromQueue: queue [
 
 { #category : 'lifecycle' }
 GbsSessionLifecycleManager class >> resetForSession: aSession [
+	self resetTrackedObjectsForSession: aSession preserveCounters: false.
+	GbsSessionEventController resetForSession: aSession.
+	GbxClampManager resetForSession: aSession.
+	^ aSession
+]
+
+{ #category : 'lifecycle' }
+GbsSessionLifecycleManager class >> resetAfterTransactionForSession: aSession reason: reasonSymbol [
+	self resetTrackedObjectsForSession: aSession preserveCounters: true.
+	self incrementLifecycleCounter: #transactionResetCount forSession: aSession.
+	reasonSymbol = #commit ifTrue: [
+		self incrementLifecycleCounter: #transactionCommitResetCount forSession: aSession ].
+	reasonSymbol = #abort ifTrue: [
+		self incrementLifecycleCounter: #transactionAbortResetCount forSession: aSession ].
+	^ aSession
+]
+
+{ #category : 'lifecycle' }
+GbsSessionLifecycleManager class >> resetTrackedObjectsForSession: aSession preserveCounters: preserveCounters [
 	(aSession class weakRegistryNamed: #GbsSessionServerMaps)
 		removeKey: aSession
 		ifAbsent: [ ].
@@ -816,12 +886,35 @@ GbsSessionLifecycleManager class >> resetForSession: aSession [
 	(aSession class weakRegistryNamed: #GbsSessionLifecycleFinalizerTokens)
 		removeKey: aSession
 		ifAbsent: [ ].
-	(aSession class weakRegistryNamed: #GbsSessionLifecycleCounters)
-		removeKey: aSession
-		ifAbsent: [ ].
-	GbsSessionEventController resetForSession: aSession.
-	GbxClampManager resetForSession: aSession.
+	preserveCounters ifFalse: [
+		(aSession class weakRegistryNamed: #GbsSessionLifecycleCounters)
+			removeKey: aSession
+			ifAbsent: [ ] ].
 	^ aSession
+]
+
+{ #category : 'transactions' }
+GbsSessionLifecycleManager class >> prepareForCommitInSession: aSession [
+	| policy dirtyObjects releaseSummary |
+	self incrementLifecycleCounter: #transactionPrepareForCommitCallCount forSession: aSession.
+	policy := [ GbsReplicationPolicy forSession: aSession ] on: Error do: [ nil ].
+	(policy notNil and: [ policy storeDirtyOnCommit == true ]) ifFalse: [ ^ Dictionary new ].
+	^ [
+		dirtyObjects := [ GbsMaterializedObjectDirtyTracker dirtyObjectsForSession: aSession ]
+			on: Error
+			do: [ #() ].
+		dirtyObjects isEmpty ifFalse: [
+			aSession flushDirtyMaterializedObjects.
+			self incrementLifecycleCounter: #transactionDirtyFlushBeforeCommitCount forSession: aSession ].
+		releaseSummary := Dictionary new.
+		(self pendingExportSetReleaseOopCountForSession: aSession) > 0 ifTrue: [
+			releaseSummary := self flushAllExportSetReleaseOopsForSession: aSession limit: nil.
+			self incrementLifecycleCounter: #transactionExportSetFlushBeforeCommitCount forSession: aSession ].
+		releaseSummary ]
+			on: Error
+			do: [ :ex |
+				self incrementLifecycleCounter: #transactionPrepareForCommitFailureCount forSession: aSession.
+				ex pass ]
 ]
 
 { #category : 'server map' }

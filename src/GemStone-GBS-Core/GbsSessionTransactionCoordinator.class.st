@@ -39,7 +39,7 @@ GbsSessionTransactionCoordinator >> abortTransaction [
 			on: Error
 			do: [ GbsError signal: 'Failed to abort transaction.' ] ].
 	self drainPendingAbortError.
-	self resetClientStateAfterSuccessfulTransaction.
+	self resetClientStateAfterSuccessfulTransactionBoundary: #abort.
 	^ true
 ]
 
@@ -54,13 +54,23 @@ GbsSessionTransactionCoordinator >> drainPendingAbortError [
 
 { #category : 'transactions' }
 GbsSessionTransactionCoordinator >> resetClientStateAfterSuccessfulTransaction [
+	^ self resetClientStateAfterSuccessfulTransactionBoundary: #commit
+]
+
+{ #category : 'transactions' }
+GbsSessionTransactionCoordinator >> resetClientStateAfterSuccessfulTransactionBoundary: reasonSymbol [
 	GbsSessionManager invalidateStaleTypedWrapperClassesForSession: session.
 	GbsSessionManager clearTypedWrapperFreshnessCacheForSession: session.
 	session materializer clearRemoteClassNameCache.
 	session invalidateRepositoryRoots.
-	session resetMaterializedObjectDirtyTracking.
+	GbsMaterializedObjectDirtyTracker resetAfterTransactionForSession: session reason: reasonSymbol.
 	session resetMaterializedObjectCache.
 	^ session
+]
+
+{ #category : 'transactions' }
+GbsSessionTransactionCoordinator >> prepareClientStateBeforeCommit [
+	^ GbsSessionLifecycleManager prepareForCommitInSession: session
 ]
 
 { #category : 'transactions' }
@@ -85,9 +95,10 @@ GbsSessionTransactionCoordinator >> commitTransaction [
 	| result |
 	session isLoggedIn ifFalse: [ GbsError signal: 'Not logged in.' ].
 
+	self prepareClientStateBeforeCommit.
 	result := session gciCommit.
 	result = 1 ifTrue: [
-		self resetClientStateAfterSuccessfulTransaction ].
+		self resetClientStateAfterSuccessfulTransactionBoundary: #commit ].
 	^ result = 1
 ]
 

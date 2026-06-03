@@ -23,7 +23,7 @@ GbsSettingsPresenter >> bridgeBooleanAt: ivarName default: defaultBoolean [
 { #category : '*GemStone-GBS-Core-Tools' }
 GbsSettingsPresenter >> bridgeConfigurationValueAt: ivarName default: defaultValue [
 	configuration ifNil: [ ^ defaultValue ].
-	(#(asyncSignalPollingEnabled freeOopBatchSize serverMapMode storeTraversalTransport) includes: ivarName) ifTrue: [
+	(#(asyncSignalPollingEnabled freeOopBatchSize serverMapMode storeDirtyOnCommit storeTraversalTransport) includes: ivarName) ifTrue: [
 		^ [ configuration perform: ivarName ] on: Error do: [ defaultValue ] ].
 	^ configuration valueAt: ivarName ifAbsent: defaultValue
 ]
@@ -52,7 +52,7 @@ GbsSettingsPresenter >> bridgeFormattedIntegerValueAt: ivarName default: default
 GbsSettingsPresenter >> bridgeSetConfigurationValueAt: aKey put: aValue [
 	| setter |
 	configuration ifNil: [ configuration := GbsConfiguration current ].
-	(#(asyncSignalPollingEnabled freeOopBatchSize serverMapMode storeTraversalTransport) includes: aKey) ifTrue: [
+	(#(asyncSignalPollingEnabled freeOopBatchSize serverMapMode storeDirtyOnCommit storeTraversalTransport) includes: aKey) ifTrue: [
 		setter := (aKey asString, ':') asSymbol.
 		^ configuration perform: setter with: aValue ].
 	^ configuration valueAt: aKey put: aValue
@@ -110,6 +110,9 @@ GbsSettingsPresenter >> defaultLayout [
 		add: (self textRowLabel: 'defaultFaultPolicy' field: defaultFaultPolicyDrop) expand: false;
 		add: (self textRowLabel: 'faultLevelRpc' field: faultLevelRpcField) expand: false;
 		add: (self yesNoRowLabel: 'freeSlotsOnStubbing' yes: freeSlotsOnStubbingYes no: freeSlotsOnStubbingNo) expand: false;
+		add: (self yesNoRowLabel: 'storeDirtyOnCommit'
+			yes: (self bridgeControlAt: #storeDirtyOnCommitYes)
+			no: (self bridgeControlAt: #storeDirtyOnCommitNo)) expand: false;
 		add: (self textRowLabel: 'storeTraversalTransport' field: (self bridgeControlAt: #storeTraversalTransportDrop)) expand: false;
 		add: (self textRowLabel: 'serverMapMode' field: (self bridgeControlAt: #serverMapModeDrop)) expand: false;
 		add: (self textRowLabel: 'freeOopBatchSize' field: (self bridgeControlAt: #freeOopBatchSizeField)) expand: false;
@@ -164,6 +167,8 @@ GbsSettingsPresenter >> initializePresenters [
 	blockReplicationPolicyDrop items: (GbsReplicationPolicy legalValuesForSetting: #blockReplicationPolicy).
 	defaultFaultPolicyDrop items: (GbsReplicationPolicy legalValuesForSetting: #defaultFaultPolicy).
 	self bridgeControlAt: #freeOopBatchSizeField put: self newTextInput.
+	self bridgeControlAt: #storeDirtyOnCommitYes put: (self newRadioButton label: 'Yes').
+	self bridgeControlAt: #storeDirtyOnCommitNo put: (self newRadioButton label: 'No').
 	self bridgeControlAt: #storeTraversalTransportDrop put: self newDropList.
 	self bridgeControlAt: #serverMapModeDrop put: self newDropList.
 	(self bridgeControlAt: #storeTraversalTransportDrop) items: (GbsReplicationPolicy legalValuesForSetting: #storeTraversalTransport).
@@ -238,6 +243,8 @@ GbsSettingsPresenter >> loadFromConfiguration [
 	self setYesNo: { autoMarkDirtyYes. autoMarkDirtyNo } value: (self bridgeBooleanAt: #autoMarkDirty default: true).
 	self setYesNo: { blockReplicationEnabledYes. blockReplicationEnabledNo } value: (self bridgeBooleanAt: #blockReplicationEnabled default: true).
 	self setYesNo: { freeSlotsOnStubbingYes. freeSlotsOnStubbingNo } value: (self bridgeBooleanAt: #freeSlotsOnStubbing default: true).
+	self setYesNo: { (self bridgeControlAt: #storeDirtyOnCommitYes). (self bridgeControlAt: #storeDirtyOnCommitNo) }
+		value: (self bridgeBooleanAt: #storeDirtyOnCommit default: false).
 	self setYesNo: { (self bridgeControlAt: #asyncSignalPollingEnabledYes). (self bridgeControlAt: #asyncSignalPollingEnabledNo) }
 		value: (self bridgeBooleanAt: #asyncSignalPollingEnabled default: false).
 	self setYesNo: { blockingProtocolRpcYes. blockingProtocolRpcNo } value: (self bridgeBooleanAt: #blockingProtocolRpc default: false).
@@ -310,6 +317,7 @@ GbsSettingsPresenter >> updateConfigurationFromPresenters [
 		bridgeSetConfigurationValueAt: #stubDebugging put: (self yesNoValueFor: { stubDebuggingYes. stubDebuggingNo });
 		bridgeSetConfigurationValueAt: #autoMarkDirty put: (self yesNoValueFor: { autoMarkDirtyYes. autoMarkDirtyNo });
 		bridgeSetConfigurationValueAt: #blockReplicationEnabled put: (self yesNoValueFor: { blockReplicationEnabledYes. blockReplicationEnabledNo });
+		bridgeSetConfigurationValueAt: #storeDirtyOnCommit put: (self yesNoValueFor: { (self bridgeControlAt: #storeDirtyOnCommitYes). (self bridgeControlAt: #storeDirtyOnCommitNo) });
 		bridgeSetConfigurationValueAt: #asyncSignalPollingEnabled put: (self yesNoValueFor: { (self bridgeControlAt: #asyncSignalPollingEnabledYes). (self bridgeControlAt: #asyncSignalPollingEnabledNo) });
 		bridgeSetConfigurationValueAt: #freeSlotsOnStubbing put: (self yesNoValueFor: { freeSlotsOnStubbingYes. freeSlotsOnStubbingNo });
 		bridgeSetConfigurationValueAt: #blockingProtocolRpc put: (self yesNoValueFor: { blockingProtocolRpcYes. blockingProtocolRpcNo });

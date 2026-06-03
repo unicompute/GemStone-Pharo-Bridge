@@ -12,6 +12,7 @@ Class {
 		'freeOopBatchSize',
 		'freeSlotsOnStubbing',
 		'serverMapMode',
+		'storeDirtyOnCommit',
 		'storeTraversalTransport',
 		'traversalBufferSize'
 	],
@@ -100,6 +101,7 @@ GbsReplicationPolicy class >> settingSpecifications [
 	self addSetting: #defaultFaultPolicy category: #replication default: 'lazy' legalValues: #('lazy' 'immediate' 'eager' 'none') help: 'Default policy used when a proxy or stub is faulted into a local replicate.' to: specs.
 	self addSetting: #faultLevelRpc category: #replication default: 4 legalValues: #() help: 'Fallback RPC fault level used by compatibility paths that ask the server to expand object graphs.' to: specs.
 	self addSetting: #freeSlotsOnStubbing category: #lifecycle default: true legalValues: #(true false) help: 'Clear local object slots when a materialized object is replaced with a stub.' to: specs.
+	self addSetting: #storeDirtyOnCommit category: #replication default: false legalValues: #(true false) help: 'Flush dirty replicated objects and pending export-set releases before a successful GemStone commit.' to: specs.
 	self addSetting: #storeTraversalTransport category: #replication default: 'script' legalValues: #('script' 'binary' 'binaryRequired') help: 'Transport used for dirty writes: script fallback, native binary when possible, or native binary required.' to: specs.
 	self addSetting: #serverMapMode category: #lifecycle default: 'weak' legalValues: #('weak' 'strong') help: 'Client-side server map retention mode. Native store traversal temporarily uses a strong window even when the steady-state map is weak.' to: specs.
 	self addSetting: #freeOopBatchSize category: #lifecycle default: 256 legalValues: #() help: 'Maximum number of pending no-longer-replicated or GCed OOPs drained in one lifecycle batch.' to: specs.
@@ -133,6 +135,7 @@ GbsReplicationPolicy >> asDictionary [
 		at: #freeOopBatchSize put: self freeOopBatchSize;
 		at: #freeSlotsOnStubbing put: self freeSlotsOnStubbing;
 		at: #serverMapMode put: self serverMapMode;
+		at: #storeDirtyOnCommit put: self storeDirtyOnCommit;
 		at: #storeTraversalTransport put: self storeTraversalTransport;
 		at: #traversalBufferSize put: self traversalBufferSize;
 		yourself
@@ -262,6 +265,7 @@ GbsReplicationPolicy >> initializeFromConfiguration: aConfiguration [
 	freeOopBatchSize := self valueAt: #freeOopBatchSize fromConfiguration: aConfiguration default: 256.
 	freeSlotsOnStubbing := self valueAt: #freeSlotsOnStubbing fromConfiguration: aConfiguration default: true.
 	serverMapMode := self valueAt: #serverMapMode fromConfiguration: aConfiguration default: 'weak'.
+	storeDirtyOnCommit := self valueAt: #storeDirtyOnCommit fromConfiguration: aConfiguration default: false.
 	storeTraversalTransport := self valueAt: #storeTraversalTransport fromConfiguration: aConfiguration default: 'script'.
 	traversalBufferSize := self valueAt: #traversalBufferSize fromConfiguration: aConfiguration default: 250000.
 	^ self
@@ -301,6 +305,7 @@ GbsReplicationPolicy >> reportText [
 			defaultFaultPolicy
 			faultLevelRpc
 			freeSlotsOnStubbing
+			storeDirtyOnCommit
 			storeTraversalTransport
 			serverMapMode
 			freeOopBatchSize
@@ -327,6 +332,16 @@ GbsReplicationPolicy >> reportValueString: anObject [
 { #category : 'accessing' }
 GbsReplicationPolicy >> storeTraversalTransport [
 	^ storeTraversalTransport
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> storeDirtyOnCommit [
+	^ storeDirtyOnCommit
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> storeDirtyOnCommit: aBoolean [
+	storeDirtyOnCommit := aBoolean
 ]
 
 { #category : 'accessing' }

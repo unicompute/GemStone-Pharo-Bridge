@@ -202,8 +202,8 @@ GbsServerInterface >> supportsNoLongerReplicatedStoreTraversalTransport [
 	^ self nativeGciTransportsEnabled
 		and: [ self supportsNativeStoreTraversalStructLayout
 		and: [ (self respondsTo: #apiGciStoreTravDoTravRefsNlr:nnr:ogoc:ngc:stdArgs:ctArgs:)
-		and: [ self respondsTo: #apiGciAllocTravBuf: ]
-		and: [ self respondsTo: #apiGciFree: ] ] ]
+		and: [ (self respondsTo: #apiGciAllocTravBuf:)
+		and: [ self respondsTo: #apiGciFree: ] ] ] ]
 ]
 
 { #category : '*GemStone-GBS-Core' }

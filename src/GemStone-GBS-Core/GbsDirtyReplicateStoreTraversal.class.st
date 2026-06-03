@@ -756,13 +756,69 @@ GbsDirtyReplicateStoreTraversal >> shouldUseBinaryStoreTraversalBufferForEntries
 
 { #category : 'private - policy' }
 GbsDirtyReplicateStoreTraversal >> nativeStoreTraversalEntriesFor: entries [
-	^ entries reject: [ :entry | self requiresSemanticStoreForEntry: entry ]
+	| nativeEntriesByOop |
+	nativeEntriesByOop := Dictionary new.
+	entries do: [ :entry | | kind nativeEntries |
+		(self semanticDirtyStoreRequestedBy: entry second) ifFalse: [
+			kind := entry at: 3.
+			(#(#set #bag) includes: kind) ifFalse: [
+				nativeEntries := (#(#dictionary #identityDictionary) includes: kind)
+					ifTrue: [
+						self
+							nativeAssociationEntriesForDictionaryEntry: entry
+							ifAbsent: [ #() ] ]
+					ifFalse: [ { entry } ].
+				nativeEntries do: [ :nativeEntry |
+					nativeEntriesByOop
+						at: nativeEntry first
+						ifAbsentPut: [ nativeEntry ] ] ] ] ].
+	^ (nativeEntriesByOop values asSortedCollection: [ :left :right | left first < right first ]) asArray
 ]
 
 { #category : 'private - policy' }
 GbsDirtyReplicateStoreTraversal >> requiresSemanticStoreForEntry: entry [
+	| kind |
 	(self semanticDirtyStoreRequestedBy: entry second) ifTrue: [ ^ true ].
+	kind := entry at: 3.
+	(#(#set #bag) includes: kind) ifTrue: [ ^ true ].
+	(#(#dictionary #identityDictionary) includes: kind) ifTrue: [
+		^ (self
+			nativeAssociationEntriesForDictionaryEntry: entry
+			ifAbsent: [ nil ]) isNil ].
 	^ false
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> nativeAssociationEntriesForDictionaryEntry: entry ifAbsent: absentBlock [
+	| associations buffer nativeEntries |
+	associations := entry second associations asArray.
+	associations isEmpty ifTrue: [ ^ absentBlock value ].
+	buffer := self dirtyStoreTraversalBufferForEntries: { entry }.
+	(self
+		remoteAssociationCountMatchesForDictionaryEntry: entry
+		associations: associations
+		using: buffer) ifFalse: [ ^ absentBlock value ].
+	[ buffer
+		registerRemoteAssociationsForDictionaryEntry: entry
+		associations: associations ]
+		on: Error
+		do: [ ].
+	nativeEntries := OrderedCollection new: associations size.
+	associations do: [ :association | | associationOop |
+		associationOop := [ self oopForObject: association ] on: Error do: [ nil ].
+		associationOop ifNil: [ ^ absentBlock value ].
+		nativeEntries add: { associationOop. association. #association } ].
+	^ nativeEntries asArray
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> remoteAssociationCountMatchesForDictionaryEntry: entry associations: associations using: buffer [
+	| maps remoteAssociationsByKey |
+	maps := [ buffer remoteDictionaryAssociationOopMapsFor: entry first ]
+		on: Error
+		do: [ ^ true ].
+	remoteAssociationsByKey := maps at: #byKeyOop ifAbsent: [ Dictionary new ].
+	^ remoteAssociationsByKey size = associations size
 ]
 
 { #category : 'private - policy' }

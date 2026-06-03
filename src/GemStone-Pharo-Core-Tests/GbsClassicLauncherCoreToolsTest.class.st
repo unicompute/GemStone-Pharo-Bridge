@@ -58,6 +58,8 @@ GbsClassicLauncherCoreToolsTest >> newFakeSettingsPresenterOn: aConfiguration [
 	presenter bridgeControlAt: #freeOopBatchSizeField put: (field value: '256').
 	presenter bridgeControlAt: #serverMapModeDrop put: (drop value: 'weak').
 	presenter bridgeControlAt: #storeTraversalTransportDrop put: (drop value: 'script').
+	presenter bridgeControlAt: #storeDirtyOnCommitYes put: (check value: false).
+	presenter bridgeControlAt: #storeDirtyOnCommitNo put: (check value: true).
 	presenter bridgeControlAt: #asyncSignalPollingEnabledYes put: (check value: false).
 	presenter bridgeControlAt: #asyncSignalPollingEnabledNo put: (check value: true).
 	setPair := [ :yesName :noName :value |
@@ -472,6 +474,8 @@ GbsClassicLauncherCoreToolsTest >> testSettingsPresenterPersistsReplicationLifec
 		presenter selectDrop: (presenter instVarNamed: 'defaultFaultPolicyDrop') value: 'immediate'.
 		presenter selectDrop: (presenter bridgeControlAt: #serverMapModeDrop) value: 'strong'.
 		presenter selectDrop: (presenter bridgeControlAt: #storeTraversalTransportDrop) value: 'binaryRequired'.
+		(presenter bridgeControlAt: #storeDirtyOnCommitYes) state: true.
+		(presenter bridgeControlAt: #storeDirtyOnCommitNo) state: false.
 		(presenter bridgeControlAt: #asyncSignalPollingEnabledYes) state: true.
 		(presenter bridgeControlAt: #asyncSignalPollingEnabledNo) state: false.
 
@@ -484,10 +488,12 @@ GbsClassicLauncherCoreToolsTest >> testSettingsPresenterPersistsReplicationLifec
 		self assert: configuration freeOopBatchSize equals: 64.
 		self assert: configuration serverMapMode equals: 'strong'.
 		self assert: configuration storeTraversalTransport equals: 'binaryRequired'.
+		self assert: configuration storeDirtyOnCommit.
 		self assert: configuration asyncSignalPollingEnabled.
 		self assert: policy blockReplicationPolicySymbol equals: #none.
 		self assert: policy defaultFaultPolicySymbol equals: #immediate.
 		self assert: policy serverMapModeSymbol equals: #strong.
+		self assert: policy storeDirtyOnCommit.
 		self assert: policy storeTraversalTransportSymbol equals: #binaryRequired
 	] ensure: [
 		GbsConfiguration current: previousConfiguration ]

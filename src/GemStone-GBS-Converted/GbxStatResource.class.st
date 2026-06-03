@@ -76,8 +76,8 @@ GbxStatResource >> doesNotUnderstand: aMessage [
 	(aMessage arguments isEmpty and: [ self hasStatNamed: selectorString ])
 		ifTrue: [ ^ self valueOfStatNamed: selectorString ].
 	((aMessage arguments size = 1)
-		and: [ selectorString last = $: ]
-		and: [ self hasStatNamed: selectorString allButLast ])
+		and: [ selectorString last = $:
+		and: [ self hasStatNamed: selectorString allButLast ] ])
 		ifTrue: [ ^ self setStatNamed: selectorString allButLast value: aMessage arguments first ].
 	^ super doesNotUnderstand: aMessage
 ]

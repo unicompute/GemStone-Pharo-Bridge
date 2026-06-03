@@ -64,6 +64,16 @@ GbsConfiguration >> storeTraversalTransport [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsConfiguration >> storeDirtyOnCommit [
+	^ self bridgeValueAt: #storeDirtyOnCommit ifAbsent: false
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsConfiguration >> storeDirtyOnCommit: aBoolean [
+	^ self bridgeValueAt: #storeDirtyOnCommit put: aBoolean
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsConfiguration >> storeTraversalTransport: aString [
 	^ self bridgeValueAt: #storeTraversalTransport put: aString
 ]

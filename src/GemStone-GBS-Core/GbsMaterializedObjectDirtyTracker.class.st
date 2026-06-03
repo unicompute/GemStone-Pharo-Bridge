@@ -169,6 +169,18 @@ GbsMaterializedObjectDirtyTracker class >> registerObject: anObject oop: anOop s
 
 { #category : 'dirty tracking' }
 GbsMaterializedObjectDirtyTracker class >> resetForSession: aSession [
+	^ self resetForSession: aSession preserveLifecycleCounters: false
+]
+
+{ #category : 'dirty tracking' }
+GbsMaterializedObjectDirtyTracker class >> resetAfterTransactionForSession: aSession reason: reasonSymbol [
+	self resetForSession: aSession preserveLifecycleCounters: true.
+	GbsSessionLifecycleManager resetAfterTransactionForSession: aSession reason: reasonSymbol.
+	^ aSession
+]
+
+{ #category : 'dirty tracking' }
+GbsMaterializedObjectDirtyTracker class >> resetForSession: aSession preserveLifecycleCounters: preserveCounters [
 	| registry |
 	registry := (aSession class weakRegistryNamed: #GbsSessionMaterializedObjectOopRegistries)
 		at: aSession
@@ -185,7 +197,9 @@ GbsMaterializedObjectDirtyTracker class >> resetForSession: aSession [
 		removeKey: aSession
 		ifAbsent: [ ].
 	GbsDirtyReplicateStoreTraversal resetDirtyStoreTraversalReportForSession: aSession.
-	GbsSessionLifecycleManager resetForSession: aSession.
+	preserveCounters
+		ifTrue: [ GbsSessionLifecycleManager resetTrackedObjectsForSession: aSession preserveCounters: true ]
+		ifFalse: [ GbsSessionLifecycleManager resetForSession: aSession ].
 	^ aSession
 ]
 
