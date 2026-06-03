@@ -1,4 +1,4 @@
-| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass dirtyTrackerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator connectorPairCount scheme clampSpecOop connectorMs clampedOop clampedResult clampedMs clampedMetrics callbackSelector callbackBehaviorName domainBehaviorName domainCustomerBehaviorName domainFixtureClass domainScheme domainCallbackScheme domainCallbackSpecOop domainCallbackVerifiedOop domainCallbackVerified domainOrderOop domainCustomerOop domainLineItemsOop domainOrder domainCustomerProxy domainLineItems domainDirtyObjectsFlushed domainDirtyStoreMs domainFlushed domainDirtyStoreReport domainNativeDirtyStoreFlushes domainNativeDirtyStoreEntries domainVerifiedOop domainVerified domainFixtureCount domainPerInstvarClampEntries domainCallbackClampSpecs mappedDomainBehaviorName inheritedMappedDomainBehaviorName mappedDomainFixtureClass mappedDomainReplicator mappedDomainScheme mappedDomainOrderOop mappedDomainCustomerOop mappedDomainLineItemsOop mappedDomainOrder mappedDomainCustomerProxy mappedDomainLineItems mappedDomainDirtyObjectsFlushed mappedDomainDirtyStoreMs mappedDomainFlushed mappedDomainDirtyStoreReport mappedDomainVerifiedOop mappedDomainVerified callbackScheme callbackClampSpecOop callbackVerifiedOop callbackVerified perInstvarClampEntries callbackClampSpecs inheritedFixtureClass pointerReplicatorClass inheritedConnector inheritedReplicator inheritedReplicationSpecFixtures policy previousTransport previousProfile dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseGcedObject releaseNoLongerObject exportBefore exportAfter lifecycleReport lifecycleNoLongerQueued lifecycleGcedQueued lifecycleNoLongerAcknowledged lifecycleGcedAcknowledged dirtyStoreMs flushed dirtyStoreReport semanticDirtyStoreCommands semanticDirtyStoreEntries semanticDictionaryEntries semanticSetEntries semanticBagEntries verified verifiedOop nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed businessRootOop businessRoot businessFixtureSize businessDirtyObjectsFlushed businessDirtyStoreMs businessFlushed businessExportAfter businessVerifiedOop businessVerified |
+| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass dirtyTrackerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator connectorPairCount scheme clampSpecOop connectorMs clampedOop clampedResult clampedMs clampedMetrics callbackSelector callbackBehaviorName domainBehaviorName domainCustomerBehaviorName applicationCallbackBehaviorName domainFixtureClass domainScheme domainCallbackScheme domainCallbackSpecOop domainCallbackVerifiedOop domainCallbackVerified domainOrderOop domainCustomerOop domainLineItemsOop domainOrder domainCustomerProxy domainLineItems domainDirtyObjectsFlushed domainDirtyStoreMs domainFlushed domainDirtyStoreReport domainNativeDirtyStoreFlushes domainNativeDirtyStoreEntries domainVerifiedOop domainVerified domainFixtureCount domainPerInstvarClampEntries domainCallbackClampSpecs mappedDomainBehaviorName inheritedMappedDomainBehaviorName mappedDomainFixtureClass mappedDomainReplicator mappedDomainScheme mappedDomainOrderOop mappedDomainCustomerOop mappedDomainLineItemsOop mappedDomainOrder mappedDomainCustomerProxy mappedDomainLineItems mappedDomainDirtyObjectsFlushed mappedDomainDirtyStoreMs mappedDomainFlushed mappedDomainDirtyStoreReport mappedDomainVerifiedOop mappedDomainVerified callbackScheme callbackClampSpecOop callbackVerifiedOop callbackVerified perInstvarClampEntries callbackClampSpecs inheritedFixtureClass pointerReplicatorClass inheritedConnector inheritedReplicator inheritedReplicationSpecFixtures policy previousTransport previousProfile dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseGcedObject releaseNoLongerObject exportBefore exportAfter lifecycleReport lifecycleNoLongerQueued lifecycleGcedQueued lifecycleNoLongerAcknowledged lifecycleGcedAcknowledged dirtyStoreMs flushed dirtyStoreReport semanticDirtyStoreCommands semanticDirtyStoreEntries semanticDictionaryEntries semanticSetEntries semanticBagEntries verified verifiedOop nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed businessRootOop businessRoot businessFixtureSize businessDirtyObjectsFlushed businessDirtyStoreMs businessFlushed businessExportAfter businessVerifiedOop businessVerified |
 [
   loadFailed := false.
   cleanupFixture := [ ].
@@ -100,6 +100,24 @@ tempDict ifNotNil: [
 true'
                 literalBindings: (Dictionary new
                   at: 'behaviorName' put: domainCustomerBehaviorName;
+                  yourself)
+                oopBindings: Dictionary new
+                context: 20 ]
+              on: Error
+              do: [ ] ].
+          applicationCallbackBehaviorName ifNotNil: [
+            [ session
+                fetchRemoteCommandBody: '| tempDict |
+tempDict := System myUserProfile symbolList
+	detect: [ :each |
+		(each respondsTo: #name)
+			and: [ each name = #PharoSessionGlobals ] ]
+	ifNone: [ nil ].
+tempDict ifNotNil: [
+	tempDict removeKey: behaviorName asSymbol ifAbsent: [ nil ] ].
+true'
+                literalBindings: (Dictionary new
+                  at: 'behaviorName' put: applicationCallbackBehaviorName;
                   yourself)
                 oopBindings: Dictionary new
                 context: 20 ]
@@ -352,11 +370,12 @@ association'
         phase := 'migration-domain-server-fixture'.
         domainBehaviorName := 'GbsMigrationLiveOrder'.
         domainCustomerBehaviorName := 'GbsMigrationLiveCustomer'.
+        applicationCallbackBehaviorName := 'GbsMigrationLiveInsuranceClaim'.
         domainFixtureClass := Smalltalk
           at: #CoreGbsMigrationDomainOrder
           ifAbsent: [ Error signal: 'Missing migration-domain order fixture class.' ].
         session
-          fetchRemoteCommandBody: '| tempDict orderClass customerClass orderName customerName |
+          fetchRemoteCommandBody: '| tempDict orderClass customerClass claimClass orderName customerName claimName |
 tempDict := System myUserProfile symbolList
 	detect: [ :each |
 		(each respondsTo: #name)
@@ -367,8 +386,10 @@ tempDict ifNil: [
 	System myUserProfile insertDictionary: tempDict at: 1 ].
 orderName := orderClassName asSymbol.
 customerName := customerClassName asSymbol.
+claimName := claimClassName asSymbol.
 tempDict removeKey: orderName ifAbsent: [ nil ].
 tempDict removeKey: customerName ifAbsent: [ nil ].
+tempDict removeKey: claimName ifAbsent: [ nil ].
 customerClass := Object subclass: customerClassName
 	instVarNames: #(''name'' ''tier'')
 	classVars: #()
@@ -383,20 +404,34 @@ orderClass := Object subclass: orderClassName
 	poolDictionaries: #()
 	inDictionary: tempDict
 	options: #().
+claimClass := Object subclass: claimClassName
+	instVarNames: #(''claimNumber'' ''policy'' ''claimant'' ''documents'' ''severity'' ''riskProfile'' ''payload'' ''workflowState'')
+	classVars: #()
+	classInstVars: #()
+	poolDictionaries: #()
+	inDictionary: tempDict
+	options: #().
 tempDict at: customerName put: customerClass.
 tempDict at: orderName put: orderClass.
+tempDict at: claimName put: claimClass.
 Object compileMethod: objectCallbackSource category: #''gbs-live-validation''.
 orderClass compileMethod: callbackSource category: #''gbs-live-validation''.
+claimClass compileMethod: claimCallbackSource category: #''gbs-live-validation''.
 true'
           literalBindings: (Dictionary new
             at: 'orderClassName' put: domainBehaviorName;
             at: 'customerClassName' put: domainCustomerBehaviorName;
+            at: 'claimClassName' put: applicationCallbackBehaviorName;
             at: 'objectCallbackSource' put: 'migrationDomainCallbackReplicationSpecGbsClampCallback
 	^ nil';
             at: 'callbackSource' put: 'migrationDomainCallbackReplicationSpecGbsClampCallback
 	^ (self instVarAt: 3) = 999
 		ifTrue: [ #(false -1 0 nil 0 nil) ]
 		ifFalse: [ #(false -2 1 nil 0 nil) ]';
+            at: 'claimCallbackSource' put: 'migrationDomainCallbackReplicationSpecGbsClampCallback
+	^ (self instVarAt: 5) = #critical
+		ifTrue: [ #(false -2 1 0 nil -1 0 1 nil) ]
+		ifFalse: [ #(false 0 0 0 nil 0 0 0 nil) ]';
             yourself)
           oopBindings: Dictionary new
           context: 20.
@@ -408,7 +443,9 @@ true'
           replicationSpec: domainFixtureClass migrationDomainReplicationSpec
           serverInstVarNames: domainFixtureClass migrationDomainServerInstVarNames.
         connector replicatorClass: pointerReplicatorClass.
+        phase := 'migration-domain-connector-install'.
         manager installClientClassConnector: connector.
+        phase := 'migration-domain-connector-levels'.
         domainScheme := manager currentReplicationScheme.
         (domainScheme instVarLevelsForClass: domainFixtureClass) = { false. -2. 1. nil. 0. nil } ifFalse: [
           Error signal: 'Migration-domain per-instvar levels did not match VW policy shape.' ].
@@ -421,15 +458,19 @@ true'
             #(#customer #forwarder)
             #(#indexable_part #replicate))) ifFalse: [
               Error signal: 'Migration-domain transitive closure spec did not match VW filtering rules.' ].
+        phase := 'migration-domain-connector-clamp-entries'.
         domainPerInstvarClampEntries := domainScheme serverClampInstVarLevelEntries size.
         domainPerInstvarClampEntries <= perInstvarClampEntries ifTrue: [
           Error signal: 'Migration-domain connector did not add server clamp instvar entries.' ].
+        phase := 'migration-domain-callback-scheme'.
         domainCallbackScheme := manager replicationSchemeForSet: #migrationDomainCallbackReplicationSpec.
+        phase := 'migration-domain-callback-clamp-spec'.
         domainCallbackSpecOop := clampSyncClass
           clampSpecOopForScheme: domainCallbackScheme
           session: session.
         (domainCallbackSpecOop isNil or: [ domainCallbackSpecOop <= 20 ]) ifTrue: [
           Error signal: 'Migration-domain callback clamp specification was not installed.' ].
+        phase := 'migration-domain-callback-clamp-verify'.
         domainCallbackVerifiedOop := session
           returnRemoteCommandBody: '| spec selector status |
 spec := object.
@@ -514,6 +555,81 @@ status'
         (clampedResult isNil or: [ clampedResult oop ~= clampedOop ]) ifTrue: [
           Error signal: 'Migration-domain callback traversal did not return an object report for the live callback fixture.' ].
         domainFixtureCount := 1.
+
+        phase := 'migration-domain-application-callback-traversal'.
+        clampedOop := session
+          returnRemoteCommandBody: '| fixture tempDict claimClass claim documents payload risk workflow |
+fixture := UserGlobals at: fixtureKey ifAbsentPut: [ Dictionary new ].
+tempDict := System myUserProfile symbolList
+	detect: [ :each |
+		(each respondsTo: #name)
+			and: [ each name = #PharoSessionGlobals ] ]
+	ifNone: [ nil ].
+claimClass := tempDict at: claimClassName asSymbol.
+documents := OrderedCollection new.
+documents
+	add: (Association key: #estimate value: 42500);
+	add: (Association key: #adjuster value: #assigned).
+payload := ByteArray new: 4.
+payload
+	at: 1 put: 1;
+	at: 2 put: 127;
+	at: 3 put: 128;
+	at: 4 put: 255.
+risk := Dictionary new.
+risk
+	at: #score put: 91;
+	at: #flags put: #(fire largeLoss manualReview).
+workflow := Array with: #opened with: #fieldInspection with: #reserveReview.
+claim := claimClass new.
+claim
+	instVarAt: 1 put: #CLM20260603;
+	instVarAt: 2 put: #POLICY778;
+	instVarAt: 3 put: #businessAccount;
+	instVarAt: 4 put: documents;
+	instVarAt: 5 put: #critical;
+	instVarAt: 6 put: risk;
+	instVarAt: 7 put: payload;
+	instVarAt: 8 put: workflow.
+fixture at: #applicationCallbackClaim put: claim.
+claim'
+          literalBindings: (Dictionary new
+            at: 'fixtureKey' put: fixtureKey;
+            at: 'claimClassName' put: applicationCallbackBehaviorName;
+            yourself)
+          oopBindings: Dictionary new.
+        domainCallbackVerifiedOop := session
+          returnRemoteCommandBody: '| levels status |
+levels := object migrationDomainCallbackReplicationSpecGbsClampCallback.
+status := 86.
+(levels = #(false -2 1 0 nil -1 0 1 nil)) ifFalse: [ status := 87 ].
+status'
+          literalBindings: Dictionary new
+          oopBindings: (Dictionary new
+            at: 'object' put: clampedOop;
+            yourself).
+        domainCallbackVerified := session resultFor: domainCallbackVerifiedOop.
+        domainCallbackVerified = 86 ifFalse: [
+          Error signal: 'Application-domain callback method did not return the expected dynamic traversal levels for the live claim fixture.' ].
+        session resetMaterializationMetrics.
+        manager
+          usingReplicationSpecSet: #migrationDomainCallbackReplicationSpec
+          do: [
+            clampedResult := (((Smalltalk at: #GbsMaterializationTraversalBufferReader) on: session)
+              reportsForOops: { clampedOop }
+              level: 1
+              label: 'migration-domain-application-callback-traversal')
+                at: clampedOop
+                ifAbsent: [ nil ] ].
+        clampedFetches := metricValue value: session materializationMetrics value: #clampedTraversalBufferFetchCalls.
+        clampedFallbacks := metricValue value: session materializationMetrics value: #structuredTraversalBufferFallbacks.
+        clampedFetches <= 0 ifTrue: [
+          Error signal: 'Application-domain callback traversal did not use clamped traversal-buffer transport.' ].
+        clampedFallbacks = 0 ifFalse: [
+          Error signal: 'Application-domain callback traversal fell back from traversal-buffer transport.' ].
+        (clampedResult isNil or: [ clampedResult oop ~= clampedOop ]) ifTrue: [
+          Error signal: 'Application-domain callback traversal did not return an object report for the live claim fixture.' ].
+        domainFixtureCount := domainFixtureCount + 1.
 
         phase := 'migration-domain-dirty-store-fixture'.
         domainOrderOop := session
@@ -1080,13 +1196,13 @@ root'
           Error signal: 'Dirty-store traversal flushed fewer objects than expected.' ].
         nativeDirtyStoreFlushes <= 0 ifTrue: [
           Error signal: 'Dirty-store traversal did not use the native store traversal buffer.' ].
-        semanticDirtyStoreCommands <= 0 ifTrue: [
-          Error signal: 'Dirty-store traversal did not use the semantic collection command path.' ].
-        semanticDirtyStoreEntries < 3 ifTrue: [
-          Error signal: 'Dirty-store traversal did not report all semantic Dictionary/Set/Bag entries.' ].
-        ((semanticDictionaryEntries <= 0) or: [
-          (semanticSetEntries <= 0) or: [ semanticBagEntries <= 0 ] ]) ifTrue: [
-          Error signal: 'Dirty-store traversal did not exercise dictionary, set, and bag semantic entries.' ].
+        semanticDirtyStoreCommands = 0 ifFalse: [
+          Error signal: 'Dirty-store traversal unexpectedly used the semantic collection command path.' ].
+        semanticDirtyStoreEntries = 0 ifFalse: [
+          Error signal: 'Dirty-store traversal reported semantic Dictionary/Set/Bag entries.' ].
+        ((semanticDictionaryEntries = 0) and: [
+          (semanticSetEntries = 0) and: [ semanticBagEntries = 0 ] ]) ifFalse: [
+          Error signal: 'Dirty-store traversal unexpectedly fell back for dictionary, set, or bag entries.' ].
         exportAfter := session objectSpace pendingExportSetReleaseOopCount.
         exportAfter = 0 ifFalse: [
           Error signal: 'Export-set release queues were not acknowledged after native dirty-store flush.' ].
@@ -1127,7 +1243,7 @@ root'
         businessRootOop := session
           returnRemoteCommandBody: '| fixture root |
 fixture := UserGlobals at: fixtureKey ifAbsentPut: [ Dictionary new ].
-root := Array new: 12.
+root := Array new: 18.
 1 to: 4 do: [ :index |
   root
     at: index
@@ -1141,6 +1257,21 @@ root := Array new: 12.
   ordered := OrderedCollection new.
   ordered add: index; add: index + 30.
   root at: index put: ordered ].
+13 to: 14 do: [ :index |
+  | dictionary |
+  dictionary := Dictionary new.
+  dictionary at: #business put: index + 40.
+  root at: index put: dictionary ].
+15 to: 16 do: [ :index |
+  | set |
+  set := Set new.
+  set add: index + 50.
+  root at: index put: set ].
+17 to: 18 do: [ :index |
+  | bag |
+  bag := Bag new.
+  bag add: index + 60 withOccurrences: 2.
+  root at: index put: bag ].
 fixture at: #businessDirtyRoot put: root.
 root'
           literalBindings: (Dictionary new
@@ -1151,7 +1282,7 @@ root'
         session fetchDeep.
         businessRoot := session fetchObject: businessRootOop.
         businessFixtureSize := businessRoot size.
-        businessFixtureSize = 12 ifFalse: [
+        businessFixtureSize = 18 ifFalse: [
           Error signal: 'Business dirty-store fixture did not materialize the expected root size.' ].
 
         phase := 'business-dirty-store-flush'.
@@ -1165,6 +1296,20 @@ root'
         9 to: 12 do: [ :index |
           (businessRoot at: index)
             add: index + 300 ].
+        13 to: 14 do: [ :index |
+          (((businessRoot at: index)
+            associationAt: #business
+            ifAbsent: [ Error signal: 'Business dictionary association missing.' ])
+              value: index + 400).
+          dirtyTrackerClass
+            markObject: (businessRoot at: index)
+            dirtyInSession: session ].
+        15 to: 16 do: [ :index |
+          (businessRoot at: index)
+            add: index + 500 ].
+        17 to: 18 do: [ :index |
+          (businessRoot at: index)
+            add: index + 600 ].
         businessDirtyObjectsFlushed := session dirtyMaterializedObjectOops size.
         businessDirtyObjectsFlushed < businessFixtureSize ifTrue: [
           Error signal: 'Expected the business dirty-store fixture to mark all roots dirty before flush.' ].
@@ -1188,6 +1333,15 @@ root'
 	9 to: 12 do: [ :index |
 	  (status = 23 and: [ ((root at: index) asArray last) = (index + 300) ]) ifFalse: [
 	    status = 23 ifTrue: [ status := 33 ] ] ].
+	13 to: 14 do: [ :index |
+	  (status = 23 and: [ ((root at: index) at: #business) = (index + 400) ]) ifFalse: [
+	    status = 23 ifTrue: [ status := 34 ] ] ].
+	15 to: 16 do: [ :index |
+	  (status = 23 and: [ (root at: index) includes: index + 500 ]) ifFalse: [
+	    status = 23 ifTrue: [ status := 35 ] ] ].
+	17 to: 18 do: [ :index |
+	  (status = 23 and: [ ((root at: index) occurrencesOf: index + 600) = 1 ]) ifFalse: [
+	    status = 23 ifTrue: [ status := 36 ] ] ].
 	status'
           literalBindings: Dictionary new
           oopBindings: (Dictionary new
@@ -1195,7 +1349,7 @@ root'
             yourself).
         businessVerified := session resultFor: businessVerifiedOop.
         businessVerified = 23 ifFalse: [
-          Error signal: 'Business dirty-store traversal did not update the remote fixture status=', businessVerified asString, ' oop=', businessVerifiedOop asString, ' (31=array 32=association 33=ordered).' ].
+          Error signal: 'Business dirty-store traversal did not update the remote fixture status=', businessVerified asString, ' oop=', businessVerifiedOop asString, ' (31=array 32=association 33=ordered 34=dictionary 35=set 36=bag).' ].
 
         phase := 'migration-domain-mapped-lifecycle-abort'.
         session resetMaterializedObjectDirtyTracking.

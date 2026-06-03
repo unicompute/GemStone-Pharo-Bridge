@@ -149,7 +149,7 @@ GbsDirtyStoreTraversalLiveTest >> testNativeDirtyStoreTraversalFlushesMappedOrde
 ]
 
 { #category : 'integration tests' }
-GbsDirtyStoreTraversalLiveTest >> testBinaryRequiredDirtyStoreFlushesSemanticDictionarySetAndBag [
+GbsDirtyStoreTraversalLiveTest >> testBinaryRequiredDirtyStoreFlushesNativeDictionarySetAndBag [
 	| support session policy previousTransport previousProfile rootOop root dictionary set bag flushed report verifiedOop verified |
 	support := self liveSessionSupportClass.
 	session := support ensureSharedSession.
@@ -194,10 +194,12 @@ Array with: dictionary with: set with: bag'.
 		report := session dirtyStoreTraversalReport.
 		self assert: flushed size >= 3.
 		self assert: session dirtyMaterializedObjectOops isEmpty.
-		self assert: (report at: #semanticCommandCount) equals: 1.
-		self assert: (report at: #semanticDictionaryEntryCount) equals: 1.
-		self assert: (report at: #semanticSetEntryCount) equals: 1.
-		self assert: (report at: #semanticBagEntryCount) equals: 1.
+		self assert: (report at: #nativeFlushCount) equals: 1.
+		self assert: (report at: #nativeEntryCount) >= 3.
+		self assert: (report at: #semanticCommandCount) equals: 0.
+		self assert: (report at: #semanticDictionaryEntryCount) equals: 0.
+		self assert: (report at: #semanticSetEntryCount) equals: 0.
+		self assert: (report at: #semanticBagEntryCount) equals: 0.
 
 		verifiedOop := session
 			returnRemoteCommandBody: '| root status |

@@ -161,13 +161,13 @@ GbsSettingsPresenter >> initializePresenters [
 	eventPriorityField := self newTextInput.
 	blockReplicationPolicyDrop := self newDropList.
 	defaultFaultPolicyDrop := self newDropList.
-	blockReplicationPolicyDrop items: #( 'replicate' 'callback' 'stub' 'none' ).
-	defaultFaultPolicyDrop items: #( 'lazy' 'immediate' 'eager' 'none' ).
+	blockReplicationPolicyDrop items: (GbsReplicationPolicy legalValuesForSetting: #blockReplicationPolicy).
+	defaultFaultPolicyDrop items: (GbsReplicationPolicy legalValuesForSetting: #defaultFaultPolicy).
 	self bridgeControlAt: #freeOopBatchSizeField put: self newTextInput.
 	self bridgeControlAt: #storeTraversalTransportDrop put: self newDropList.
 	self bridgeControlAt: #serverMapModeDrop put: self newDropList.
-	(self bridgeControlAt: #storeTraversalTransportDrop) items: #( 'script' 'binary' 'binaryRequired' ).
-	(self bridgeControlAt: #serverMapModeDrop) items: #( 'weak' 'strong' ).
+	(self bridgeControlAt: #storeTraversalTransportDrop) items: (GbsReplicationPolicy legalValuesForSetting: #storeTraversalTransport).
+	(self bridgeControlAt: #serverMapModeDrop) items: (GbsReplicationPolicy legalValuesForSetting: #serverMapMode).
 
 	browseButton := self newButton
 		label: 'Browse';

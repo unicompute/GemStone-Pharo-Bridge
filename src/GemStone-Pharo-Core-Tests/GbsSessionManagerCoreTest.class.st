@@ -837,6 +837,79 @@ GbsSessionManagerCoreTest >> testClassConnectorConnectRegistersConcreteConnector
 ]
 
 { #category : 'tests' }
+GbsSessionManagerCoreTest >> testClassConnectorSubclassPolicyInstallsClampAndCleansConnectorLifecycle [
+	| mockSession connector manager replicator scheme report connectResult sessionKey connectionKey |
+	GbsSessionManager resetConnectorState.
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		self assert: (script includesSubstring: 'GbsMigrationLiveOrder').
+		'GbsMigrationLiveOrder' ].
+	manager := mockSession replicatorManager.
+	connector := CoreGbsMigrationDomainClassConnector
+		stName: 'CoreGbsMigrationDomainOrder'
+		gsName: 'GbsMigrationLiveOrder'
+		dictionaryName: 'UserGlobals'.
+	connector postConnectAction: 'updateST'.
+
+	connectResult := connector connectInSession: mockSession ifFail: [ :ex |
+		self fail: ex messageText ].
+	replicator := manager
+		replicatorForClientBehavior: CoreGbsMigrationDomainOrder
+		ifAbsent: [ nil ].
+	scheme := manager currentReplicationScheme.
+	report := manager connectorManagerReport.
+	sessionKey := GbsSessionManager sessionKeyForSessionObject: mockSession.
+	connectionKey := GbsSessionManager
+		connectorConnectionKeyForClient: 'CoreGbsMigrationDomainOrder'
+		server: 'GbsMigrationLiveOrder'
+		session: sessionKey.
+
+	self assert: connectResult.
+	self assert: (GbsSessionManager
+		connectorObjectForClient: 'CoreGbsMigrationDomainOrder'
+		server: 'GbsMigrationLiveOrder') == connector.
+	self
+		assert: (GbsSessionManager
+			postConnectActionForConnectorClient: 'CoreGbsMigrationDomainOrder'
+			server: 'GbsMigrationLiveOrder')
+		equals: 'updateST'.
+	self assert: (GbsSessionManager
+		isConnectorClient: 'CoreGbsMigrationDomainOrder'
+		server: 'GbsMigrationLiveOrder'
+		connectedInSession: sessionKey).
+	self assert: replicator class equals: GbxPointerObjectReplicator.
+	self assert: replicator clientClass == CoreGbsMigrationDomainOrder.
+	self assert: replicator serverClass equals: 'GbsMigrationLiveOrder'.
+	self deny: manager needsServerInstVarNames.
+	self
+		assert: (scheme instVarLevelsForClass: CoreGbsMigrationDomainOrder)
+		equals: { false. -2. 1. nil. 0. nil }.
+	self assert: (scheme shouldProxyNamedSlot: 1 ofClass: CoreGbsMigrationDomainOrder).
+	self deny: (scheme shouldProxyNamedSlot: 2 ofClass: CoreGbsMigrationDomainOrder).
+	self assert: (report at: #connectorPairCount) equals: 1.
+
+	connector disconnectInSession: mockSession.
+
+	self assert: (manager
+		replicatorForClientBehavior: CoreGbsMigrationDomainOrder
+		ifAbsent: [ nil ]) isNil.
+	self assert: (manager
+		replicatorForServerBehavior: 'GbsMigrationLiveOrder'
+		ifAbsent: [ nil ]) isNil.
+	self assert: (scheme instVarLevelsForClass: CoreGbsMigrationDomainOrder) isNil.
+	self deny: (connector isConnectedInSession: mockSession).
+	self deny: (GbsSessionManager connectorConnectionRegistry includesKey: connectionKey).
+	self
+		assert: (GbsSessionManager
+			postConnectActionForConnectorClient: 'CoreGbsMigrationDomainOrder'
+			server: 'GbsMigrationLiveOrder')
+		equals: 'none'.
+	self deny: ((GbsSessionManager connectorPairsForSession: mockSession) anySatisfy: [ :pair |
+		pair first = 'CoreGbsMigrationDomainOrder'
+			and: [ pair second = 'GbsMigrationLiveOrder' ] ])
+]
+
+{ #category : 'tests' }
 GbsSessionManagerCoreTest >> testClassConnectorDisconnectRemovesReplicatorAndSessionPair [
 	| mockSession connector manager connectResult |
 	mockSession := CoreMockGbsSession new.

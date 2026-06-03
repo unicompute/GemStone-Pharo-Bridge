@@ -6,7 +6,9 @@ Class {
 		'pollingActive',
 		'pollingProcess',
 		'pollingFrequency',
-		'eventPriority'
+		'eventPriority',
+		'lastPollingError',
+		'pollingErrorCount'
 	],
 	#category : 'GemStone-GBS-Core',
 	#package : 'GemStone-GBS-Core'
@@ -51,15 +53,42 @@ GbsSessionEventController >> eventPriority: anInteger [
 	eventPriority := anInteger
 ]
 
+{ #category : 'polling' }
+GbsSessionEventController >> defaultProcessPriority [
+	^ [ Processor userBackgroundPriority ]
+		on: Error
+		do: [
+			[ Processor lowestPriority ]
+				on: Error
+				do: [ 30 ] ]
+]
+
 { #category : 'initialization' }
 GbsSessionEventController >> initialize [
 	super initialize.
-	pollingActive := false
+	pollingActive := false.
+	pollingErrorCount := 0
 ]
 
 { #category : 'testing' }
 GbsSessionEventController >> isPollingActive [
 	^ pollingActive == true
+]
+
+{ #category : 'testing' }
+GbsSessionEventController >> hasPollingProcess [
+	^ pollingProcess notNil and: [
+		[ pollingProcess isTerminated not ] on: Error do: [ false ] ]
+]
+
+{ #category : 'accessing' }
+GbsSessionEventController >> lastPollingError [
+	^ lastPollingError
+]
+
+{ #category : 'accessing' }
+GbsSessionEventController >> pollingErrorCount [
+	^ pollingErrorCount ifNil: [ 0 ]
 ]
 
 { #category : 'polling' }
@@ -112,6 +141,48 @@ GbsSessionEventController >> pollingFrequency: milliseconds [
 	pollingFrequency := milliseconds
 ]
 
+{ #category : 'polling' }
+GbsSessionEventController >> normalizedPollingFrequency [
+	^ self pollingFrequency max: 1
+]
+
+{ #category : 'polling' }
+GbsSessionEventController >> pollingDelay [
+	^ Delay forMilliseconds: self normalizedPollingFrequency
+]
+
+{ #category : 'polling' }
+GbsSessionEventController >> processPriority [
+	| priority lower upper |
+	priority := self eventPriority.
+	priority isInteger ifFalse: [ ^ self defaultProcessPriority ].
+	lower := [ Processor lowestPriority ] on: Error do: [ nil ].
+	upper := [ Processor highestPriority ] on: Error do: [ nil ].
+	(lower notNil and: [ priority < lower ]) ifTrue: [ ^ lower ].
+	(upper notNil and: [ priority > upper ]) ifTrue: [ ^ upper ].
+	^ priority
+]
+
+{ #category : 'polling' }
+GbsSessionEventController >> handlePollingError: anError [
+	lastPollingError := anError.
+	pollingErrorCount := self pollingErrorCount + 1.
+	((session respondsTo: #isLoggedIn) and: [ session isLoggedIn not ]) ifTrue: [
+		pollingActive := false ].
+	^ anError
+]
+
+{ #category : 'polling' }
+GbsSessionEventController >> pollingLoop [
+	[ pollingActive ] whileTrue: [
+		self pollingDelay wait.
+		pollingActive ifTrue: [
+			[ self pollSignalsOnce ]
+				on: Error
+				do: [ :ex | self handlePollingError: ex ] ] ].
+	^ self
+]
+
 { #category : 'accessing' }
 GbsSessionEventController >> session [
 	^ session
@@ -138,14 +209,30 @@ GbsSessionEventController >> startIfEnabledFromPolicy [
 { #category : 'polling' }
 GbsSessionEventController >> startPolling [
 	pollingActive := true.
+	self startPollingProcess.
+	^ self
+]
+
+{ #category : 'polling' }
+GbsSessionEventController >> startPollingProcess [
+	self hasPollingProcess ifTrue: [ ^ self ].
+	pollingProcess := [
+		[ self pollingLoop ] forkAt: self processPriority ]
+			on: Error
+			do: [
+				[ self pollingLoop ] forkAt: self defaultProcessPriority ].
+	[ pollingProcess name: 'GBS session event detector' ] on: Error do: [ ].
 	^ self
 ]
 
 { #category : 'polling' }
 GbsSessionEventController >> stopPolling [
+	| process |
 	pollingActive := false.
-	pollingProcess ifNotNil: [
-		[ pollingProcess terminate ] on: Error do: [ ].
-		pollingProcess := nil ].
+	process := pollingProcess.
+	pollingProcess := nil.
+	(process notNil and: [
+		[ process ~~ Processor activeProcess ] on: Error do: [ true ] ]) ifTrue: [
+			[ process terminate ] on: Error do: [ ] ].
 	^ self
 ]

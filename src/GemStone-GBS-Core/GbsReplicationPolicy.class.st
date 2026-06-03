@@ -24,6 +24,17 @@ GbsReplicationPolicy class >> default [
 	^ self new initializeDefaults
 ]
 
+{ #category : 'configuration metadata' }
+GbsReplicationPolicy class >> addSetting: key category: category default: defaultValue legalValues: legalValues help: helpText to: specs [
+	specs add: (Dictionary new
+		at: #key put: key;
+		at: #category put: category;
+		at: #default put: defaultValue;
+		at: #legalValues put: legalValues;
+		at: #help put: helpText;
+		yourself)
+]
+
 { #category : 'instance creation' }
 GbsReplicationPolicy class >> forSession: aSession [
 	^ (aSession class weakRegistryNamed: #GbsSessionReplicationPolicies)
@@ -50,6 +61,53 @@ GbsReplicationPolicy class >> resetForSession: aSession [
 	^ (aSession class weakRegistryNamed: #GbsSessionReplicationPolicies)
 		removeKey: aSession
 		ifAbsent: [ nil ]
+]
+
+{ #category : 'configuration metadata' }
+GbsReplicationPolicy class >> settingSpecificationAt: aSymbol [
+	^ self settingSpecifications
+		detect: [ :each | (each at: #key) = aSymbol ]
+		ifNone: [ nil ]
+]
+
+{ #category : 'configuration metadata' }
+GbsReplicationPolicy class >> defaultValueForSetting: aSymbol [
+	^ (self settingSpecificationAt: aSymbol)
+		ifNil: [ nil ]
+		ifNotNil: [ :spec | spec at: #default ]
+]
+
+{ #category : 'configuration metadata' }
+GbsReplicationPolicy class >> helpForSetting: aSymbol [
+	^ (self settingSpecificationAt: aSymbol)
+		ifNil: [ '' ]
+		ifNotNil: [ :spec | spec at: #help ]
+]
+
+{ #category : 'configuration metadata' }
+GbsReplicationPolicy class >> legalValuesForSetting: aSymbol [
+	^ (self settingSpecificationAt: aSymbol)
+		ifNil: [ #() ]
+		ifNotNil: [ :spec | spec at: #legalValues ]
+]
+
+{ #category : 'configuration metadata' }
+GbsReplicationPolicy class >> settingSpecifications [
+	| specs |
+	specs := OrderedCollection new.
+	self addSetting: #autoMarkDirty category: #replication default: true legalValues: #(true false) help: 'Automatically mark replicated client objects dirty when bridge mutation hooks see a local write.' to: specs.
+	self addSetting: #blockReplicationPolicy category: #replication default: 'replicate' legalValues: #('replicate' 'callback' 'stub' 'none') help: 'Default replication behavior for block-like server objects.' to: specs.
+	self addSetting: #defaultFaultPolicy category: #replication default: 'lazy' legalValues: #('lazy' 'immediate' 'eager' 'none') help: 'Default policy used when a proxy or stub is faulted into a local replicate.' to: specs.
+	self addSetting: #faultLevelRpc category: #replication default: 4 legalValues: #() help: 'Fallback RPC fault level used by compatibility paths that ask the server to expand object graphs.' to: specs.
+	self addSetting: #freeSlotsOnStubbing category: #lifecycle default: true legalValues: #(true false) help: 'Clear local object slots when a materialized object is replaced with a stub.' to: specs.
+	self addSetting: #storeTraversalTransport category: #replication default: 'script' legalValues: #('script' 'binary' 'binaryRequired') help: 'Transport used for dirty writes: script fallback, native binary when possible, or native binary required.' to: specs.
+	self addSetting: #serverMapMode category: #lifecycle default: 'weak' legalValues: #('weak' 'strong') help: 'Client-side server map retention mode. Native store traversal temporarily uses a strong window even when the steady-state map is weak.' to: specs.
+	self addSetting: #freeOopBatchSize category: #lifecycle default: 256 legalValues: #() help: 'Maximum number of pending no-longer-replicated or GCed OOPs drained in one lifecycle batch.' to: specs.
+	self addSetting: #traversalBufferSize category: #performance default: 250000 legalValues: #() help: 'Preferred traversal buffer size for native materialization and store traversal paths.' to: specs.
+	self addSetting: #asyncSignalPollingEnabled category: #signals default: false legalValues: #(true false) help: 'Start a background GemStone signal poller after login.' to: specs.
+	self addSetting: #eventPollingFrequency category: #signals default: 300 legalValues: #() help: 'Delay in milliseconds between background GemStone signal polls.' to: specs.
+	self addSetting: #eventPriority category: #signals default: 3 legalValues: #() help: 'Pharo process priority used by the background GemStone signal poller.' to: specs.
+	^ specs asArray
 ]
 
 { #category : 'accessing' }

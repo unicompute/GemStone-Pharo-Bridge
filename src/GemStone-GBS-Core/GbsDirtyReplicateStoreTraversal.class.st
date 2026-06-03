@@ -2,7 +2,8 @@ Class {
 	#name : 'GbsDirtyReplicateStoreTraversal',
 	#superclass : 'Object',
 	#instVars : [
-		'session'
+		'session',
+		'recursiveDirtyReferentEntryCount'
 	],
 	#category : 'GemStone-GBS-Core',
 	#package : 'GemStone-GBS-Core'
@@ -43,6 +44,7 @@ GbsDirtyReplicateStoreTraversal class >> newDirtyStoreTraversalReport [
 		at: #semanticSetEntryCount put: 0;
 		at: #semanticBagEntryCount put: 0;
 		at: #semanticCustomEntryCount put: 0;
+		at: #recursiveDirtyReferentEntryCount put: 0;
 		at: #remoteCommandEntryCount put: 0;
 		at: #nativeFlushCount put: 0;
 		at: #remoteCommandCount put: 0;
@@ -89,7 +91,8 @@ GbsDirtyReplicateStoreTraversal >> beginDirtyStoreReportForEntries: entries [
 		at: #semanticBagEntryCount put: (semanticEntries count: [ :entry |
 			(entry at: 3) = #bag ]);
 		at: #semanticCustomEntryCount put: (semanticEntries count: [ :entry |
-			self semanticDirtyStoreRequestedBy: entry second ]).
+			self semanticDirtyStoreRequestedBy: entry second ]);
+		at: #recursiveDirtyReferentEntryCount put: (recursiveDirtyReferentEntryCount ifNil: [ 0 ]).
 	^ self class
 		setDirtyStoreTraversalReport: report
 		forSession: session
@@ -308,6 +311,35 @@ GbsDirtyReplicateStoreTraversal >> dirtyObjects [
 	^ GbsMaterializedObjectDirtyTracker dirtyObjectsForSession: session
 ]
 
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> dirtyReferentsOf: anObject [
+	| referents |
+	referents := OrderedCollection new.
+	anObject ifNil: [ ^ #() ].
+	(anObject isKindOf: Association) ifTrue: [
+		referents
+			add: anObject key;
+			add: anObject value.
+		^ referents asArray ].
+	(anObject isKindOf: Dictionary) ifTrue: [
+		anObject associationsDo: [ :association |
+			referents
+				add: association;
+				add: association key;
+				add: association value ].
+		^ referents asArray ].
+	((anObject isKindOf: Set)
+		or: [ (anObject isKindOf: Bag)
+		or: [ (anObject isKindOf: OrderedCollection)
+		or: [ anObject isKindOf: Array ] ] ]) ifTrue: [
+			anObject do: [ :each | referents add: each ].
+			^ referents asArray ].
+	(self hasNamedSlotsForObject: anObject) ifTrue: [
+		(self namedSlotFlushMappingsForObject: anObject) do: [ :mapping |
+			referents add: (anObject instVarAt: mapping second) ] ].
+	^ referents asArray
+]
+
 { #category : 'private - flushing' }
 GbsDirtyReplicateStoreTraversal >> dirtyStoreTraversalBufferForEntries: entries [
 	^ GbsDirtyStoreTraversalBuffer entries: entries session: session
@@ -315,25 +347,60 @@ GbsDirtyReplicateStoreTraversal >> dirtyStoreTraversalBufferForEntries: entries 
 
 { #category : 'private - entries' }
 GbsDirtyReplicateStoreTraversal >> entriesForDirtyObjects [
-	| entries |
-	entries := OrderedCollection new.
-	self dirtyObjects do: [ :object | | oop |
-		oop := self oopForObject: object.
-		(oop notNil and: [ GbsMaterializedObjectDirtyTracker canTrackObject: object ])
-			ifTrue: [ entries add: { oop. object. (self kindForObject: object) } ] ].
-	^ (entries asSortedCollection: [ :left :right | left first < right first ]) asArray
+	| entriesByOop dirtySet visited |
+	entriesByOop := Dictionary new.
+	recursiveDirtyReferentEntryCount := 0.
+	dirtySet := IdentitySet new.
+	self dirtyObjects do: [ :object | dirtySet add: object ].
+	visited := IdentitySet new.
+	dirtySet do: [ :object |
+		self
+			addDirtyEntryFor: object
+			dirtySet: dirtySet
+			entriesByOop: entriesByOop
+			visited: visited ].
+	^ (entriesByOop values asSortedCollection: [ :left :right | left first < right first ]) asArray
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> addDirtyEntryFor: anObject dirtySet: dirtySet entriesByOop: entriesByOop visited: visited [
+	| oop |
+	(visited includes: anObject) ifTrue: [ ^ self ].
+	visited add: anObject.
+	oop := self oopForObject: anObject.
+	(oop notNil and: [ GbsMaterializedObjectDirtyTracker canTrackObject: anObject ])
+		ifTrue: [
+			entriesByOop
+				at: oop
+				ifAbsentPut: [ { oop. anObject. (self kindForObject: anObject) } ] ].
+	(self dirtyReferentsOf: anObject) do: [ :referent |
+		(dirtySet includes: referent) ifTrue: [
+			(entriesByOop includesKey: (self oopForObject: referent)) ifFalse: [
+				recursiveDirtyReferentEntryCount := recursiveDirtyReferentEntryCount + 1 ].
+			self
+				addDirtyEntryFor: referent
+				dirtySet: dirtySet
+				entriesByOop: entriesByOop
+				visited: visited ] ].
+	^ self
 ]
 
 { #category : 'flushing' }
 GbsDirtyReplicateStoreTraversal >> flush [
-	| entries |
+	| entries objects |
 	entries := self entriesForDirtyObjects.
 	self beginDirtyStoreReportForEntries: entries.
 	entries isEmpty ifTrue: [ ^ #() ].
-	self flushEntries: entries.
+	objects := entries collect: [ :entry | entry second ].
 	GbsMaterializedObjectDirtyTracker
-		clearDirtyObjects: (entries collect: [ :entry | entry second ])
+		clearDirtyObjects: objects
 		forSession: session.
+	[ self flushEntries: entries ]
+		on: Error
+		do: [ :ex |
+			objects do: [ :object |
+				session dirtyPool markDirty: object ].
+			ex pass ].
 	^ (entries collect: [ :entry | entry first ]) asArray
 ]
 
@@ -347,7 +414,7 @@ GbsDirtyReplicateStoreTraversal >> flushEntries: entries [
 	self transportRequiresBinary ifTrue: [
 		buffer := self dirtyStoreTraversalBufferForEntries: entries.
 		buffer canProduceNativeTraversalBuffer ifFalse: [
-			self error: 'Dirty store traversal buffer transport is required, but this dirty batch cannot be encoded natively. Native dirty store traversal supports mapped Arrays, Associations, OrderedCollections, and named-slot objects with OOP-addressable values. Dictionaries, Sets, and Bags require semantic store commands. Unencodable entries: ', buffer nativeEncodingFailureSummary ].
+			self error: 'Dirty store traversal buffer transport is required, but this dirty batch cannot be encoded natively. Unencodable entries: ', buffer nativeEncodingFailureSummary ].
 		self error: 'Dirty store traversal buffer transport is required but unavailable.' ].
 	^ self flushEntriesWithRemoteCommand: entries
 ]
@@ -378,23 +445,26 @@ GbsDirtyReplicateStoreTraversal >> flushEntriesWithRemoteCommand: entries [
 
 { #category : 'private - flushing' }
 GbsDirtyReplicateStoreTraversal >> flushNativeEntriesWithBinaryStoreTraversalBuffer: entries [
-	| buffer server exportSetReleaseOops |
-	buffer := self dirtyStoreTraversalBufferForEntries: entries.
-	server := session serverInterface.
-	exportSetReleaseOops := self exportSetReleaseOopsForStoreTraversalUsing: server.
-	(server respondsTo: #ensureDirtyObjectsInitialized) ifTrue: [
-		server ensureDirtyObjectsInitialized ].
-	session addStoreTraversal: self.
-	^ [
-		| result |
-		result := self
-			storeTraversalBuffer: buffer
-			on: server
-			releasingExportSetReleaseOops: exportSetReleaseOops.
-		self recordNativeFlushForEntries: entries.
-		result
-	]
-			ensure: [ session removeStoreTraversal: self ]
+	^ GbsSessionLifecycleManager
+		withStrongServerMapForSession: session
+		do: [
+			| buffer server exportSetReleaseOops |
+			buffer := self dirtyStoreTraversalBufferForEntries: entries.
+			server := session serverInterface.
+			exportSetReleaseOops := self exportSetReleaseOopsForStoreTraversalUsing: server.
+			(server respondsTo: #ensureDirtyObjectsInitialized) ifTrue: [
+				server ensureDirtyObjectsInitialized ].
+			session addStoreTraversal: self.
+			[
+				| result |
+				result := self
+					storeTraversalBuffer: buffer
+					on: server
+					releasingExportSetReleaseOops: exportSetReleaseOops.
+				self recordNativeFlushForEntries: entries.
+				result
+			]
+				ensure: [ session removeStoreTraversal: self ] ]
 ]
 
 { #category : 'private - names' }
@@ -692,7 +762,7 @@ GbsDirtyReplicateStoreTraversal >> nativeStoreTraversalEntriesFor: entries [
 { #category : 'private - policy' }
 GbsDirtyReplicateStoreTraversal >> requiresSemanticStoreForEntry: entry [
 	(self semanticDirtyStoreRequestedBy: entry second) ifTrue: [ ^ true ].
-	^ #(#dictionary #identityDictionary #set #bag) includes: (entry at: 3)
+	^ false
 ]
 
 { #category : 'private - policy' }

@@ -408,6 +408,8 @@ GbsSessionLifecycleManager class >> lifecycleReportCounterKeys [
 		finalizerUnregisteredCount
 		finalizedObjectNotificationCount
 		ignoredFinalizerNotificationCount
+		serverMapStrongWindowEnterCount
+		serverMapStrongWindowExitCount
 		lastExportSetGcedReleasedCount
 		lastExportSetNoLongerPendingCount
 		lastExportSetGcedQueueSize
@@ -534,6 +536,42 @@ GbsSessionLifecycleManager class >> newServerMapForSession: aSession [
 		registryClass := Smalltalk globals at: #WeakValueDictionary ifAbsent: [ nil ].
 		registryClass ifNotNil: [ ^ registryClass new ] ].
 	^ Dictionary new
+]
+
+{ #category : 'server map' }
+GbsSessionLifecycleManager class >> withStrongServerMapForSession: aSession do: aBlock [
+	| registry previous strong |
+	registry := aSession class weakRegistryNamed: #GbsSessionServerMaps.
+	previous := registry
+		at: aSession
+		ifAbsent: [ nil ].
+	previous ifNil: [ ^ aBlock value ].
+	(self isWeakServerMap: previous) ifFalse: [ ^ aBlock value ].
+	strong := Dictionary new.
+	self copyLiveEntriesFrom: previous to: strong.
+	registry at: aSession put: strong.
+	self incrementLifecycleCounter: #serverMapStrongWindowEnterCount forSession: aSession.
+	^ [
+		aBlock value
+	] ensure: [
+		| restored |
+		restored := self newServerMapForSession: aSession.
+		self copyLiveEntriesFrom: strong to: restored.
+		registry at: aSession put: restored.
+		self incrementLifecycleCounter: #serverMapStrongWindowExitCount forSession: aSession ]
+]
+
+{ #category : 'private' }
+GbsSessionLifecycleManager class >> copyLiveEntriesFrom: sourceMap to: targetMap [
+	sourceMap keysAndValuesDo: [ :oop :object |
+		object ifNotNil: [
+			targetMap at: oop put: object ] ].
+	^ targetMap
+]
+
+{ #category : 'private' }
+GbsSessionLifecycleManager class >> isWeakServerMap: aMap [
+	^ aMap class name includesSubstring: 'Weak'
 ]
 
 { #category : 'registries' }

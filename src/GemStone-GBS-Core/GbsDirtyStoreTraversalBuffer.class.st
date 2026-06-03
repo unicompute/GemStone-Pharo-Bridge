@@ -265,7 +265,7 @@ GbsDirtyStoreTraversalBuffer >> nativeObjectFormatForEntry: entry [
 
 { #category : 'private - native encoding' }
 GbsDirtyStoreTraversalBuffer >> nativeSupportedKinds [
-	^ #(#array #association #orderedCollection #namedObject)
+	^ #(#array #association #orderedCollection #dictionary #identityDictionary #set #bag #namedObject)
 ]
 
 { #category : 'private - native encoding' }
@@ -310,6 +310,10 @@ GbsDirtyStoreTraversalBuffer >> nativeValuesForEntry: entry [
 		kind = #array ifTrue: [ ^ object asArray ].
 		kind = #association ifTrue: [ ^ { object key. object value } ].
 		kind = #orderedCollection ifTrue: [ ^ object asArray ].
+		kind = #dictionary ifTrue: [ ^ self nativeValuesForDictionaryEntry: entry ].
+		kind = #identityDictionary ifTrue: [ ^ self nativeValuesForIdentityDictionary: object ].
+		kind = #set ifTrue: [ ^ object asArray ].
+		kind = #bag ifTrue: [ ^ object asArray ].
 		kind = #namedObject ifTrue: [ ^ self nativeNamedInstVarValuesFor: object ].
 		self error: 'Native dirty store traversal does not support kind ', kind asString
 ]
@@ -479,6 +483,7 @@ GbsDirtyStoreTraversalBuffer >> remoteScalarOopForValue: anObject ifAbsent: abse
 GbsDirtyStoreTraversalBuffer >> shouldResolveScalarOopFor: anObject [
 	anObject ifNil: [ ^ false ].
 	anObject isSymbol ifTrue: [ ^ true ].
+	anObject isString ifTrue: [ ^ true ].
 	^ false
 ]
 
@@ -514,7 +519,7 @@ GbsDirtyStoreTraversalBuffer >> valueFitsGemStoneSmallInteger: anInteger [
 GbsDirtyStoreTraversalBuffer >> withNativeTraversalBufferOn: serverInterface do: aBlock [
 	| buffer |
 	self canProduceNativeTraversalBuffer ifFalse: [
-		self error: 'Native dirty store traversal can encode only mapped Arrays, Associations, OrderedCollections, and named-slot objects with OOP-addressable values. Dictionaries, Sets, and Bags require semantic store commands.' ].
+		self error: 'Native dirty store traversal can encode only supported mapped objects whose stored values are nil, booleans, SmallIntegers, Characters, registered materialized objects, proxies, or scalar values resolvable to GemStone OOPs. Unencodable entries: ', self nativeEncodingFailureSummary ].
 	buffer := serverInterface apiGciAllocTravBuf: self nativeTraversalBufferBytes.
 	((buffer isNil) or: [
 		(buffer respondsTo: #isNull)

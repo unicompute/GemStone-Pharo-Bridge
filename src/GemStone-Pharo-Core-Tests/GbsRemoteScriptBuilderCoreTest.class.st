@@ -94,6 +94,21 @@ GbsRemoteScriptBuilderCoreTest >> testRemoteCommandBuildsTypedAssignments [
 ]
 
 { #category : 'tests' }
+GbsRemoteScriptBuilderCoreTest >> testRemoteCommandUsesAssignmentsForHighArityGemStoneBlocks [
+	| command |
+	command := GbsRemoteCommand
+		blockBody: '| temp | temp := a + f. temp'
+		argumentNames: #('a' 'b' 'c' 'd' 'e' 'f')
+		argumentScripts: #('1' '2' '3' '4' '5' '6').
+
+	self deny: (command script includesSubstring: 'value: 1 value: 2 value: 3 value: 4 value: 5 value: 6').
+	self assert: (command script includesSubstring: '[ | a b c d e f temp |').
+	self assert: (command script includesSubstring: 'a := 1.').
+	self assert: (command script includesSubstring: 'f := 6.').
+	self assert: (command script includesSubstring: 'temp := a + f. temp ] value')
+]
+
+{ #category : 'tests' }
 GbsRemoteScriptBuilderCoreTest >> testRemoteCommandBindsOopArguments [
 	| command |
 	command := GbsRemoteCommand

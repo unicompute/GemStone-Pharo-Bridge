@@ -157,8 +157,36 @@ GbsServerInterface >> releaseOops: oopCollection [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> nativeGciTransportsEnabled [
+	| environment disabled |
+	environment := [ Smalltalk os environment ] on: Error do: [ nil ].
+	environment ifNil: [ ^ true ].
+	disabled := [ environment at: 'GBS_DISABLE_NATIVE_GCI_TRANSPORT' ifAbsent: [ '0' ] ]
+		on: Error
+		do: [ '0' ].
+	^ disabled asString ~= '1'
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> supportsNativeStoreTraversalStructLayout [
+	| wordSize |
+	wordSize := [ Smalltalk vm wordSize ] on: Error do: [ 8 ].
+	^ wordSize = 8
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> supportsNativeDirtyStoreTraversalFunctions [
+	^ (self respondsTo: #apiGciStoreTrav:flags:)
+		and: [ (self respondsTo: #apiGciDirtyObjsInit)
+		and: [ (self respondsTo: #apiGciAllocTravBuf:)
+		and: [ self respondsTo: #apiGciFree: ] ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> supportsDirtyStoreTraversalBufferTransport [
-	^ true
+	^ self nativeGciTransportsEnabled
+		and: [ self supportsNativeStoreTraversalStructLayout
+		and: [ self supportsNativeDirtyStoreTraversalFunctions ] ]
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -171,13 +199,17 @@ GbsServerInterface >> supportsClampedTraversalTransport [
 
 { #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> supportsNoLongerReplicatedStoreTraversalTransport [
-	^ (self respondsTo: #apiGciStoreTravDoTravRefsNlr:nnr:ogoc:ngc:stdArgs:ctArgs:)
+	^ self nativeGciTransportsEnabled
+		and: [ self supportsNativeStoreTraversalStructLayout
+		and: [ (self respondsTo: #apiGciStoreTravDoTravRefsNlr:nnr:ogoc:ngc:stdArgs:ctArgs:)
 		and: [ self respondsTo: #apiGciAllocTravBuf: ]
+		and: [ self respondsTo: #apiGciFree: ] ] ]
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> supportsReleaseOopsTransport [
-	^ true
+	^ self nativeGciTransportsEnabled
+		and: [ self respondsTo: #apiGciReleaseOops:count: ]
 ]
 
 { #category : '*GemStone-GBS-Core' }

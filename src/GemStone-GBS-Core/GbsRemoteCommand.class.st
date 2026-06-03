@@ -33,6 +33,14 @@ GbsRemoteCommand class >> blockScriptForBody: bodyString argumentNames: argument
 	args size = names size
 		ifFalse: [ self error: 'Remote command argument names and scripts must have the same size' ].
 	names do: [ :each | self validateArgumentName: each ].
+	names size > self maximumBlockValueArgumentCount ifTrue: [
+		^ self
+			blockScriptForBody: (self
+				body: bodyString
+				withAssignmentsNamed: names
+				scripts: args)
+			argumentNames: #()
+			argumentScripts: #() ].
 	^ String streamContents: [ :stream |
 		stream nextPutAll: '['.
 		args
@@ -54,6 +62,11 @@ GbsRemoteCommand class >> blockScriptForBody: bodyString argumentNames: argument
 						ifTrue: [ stream nextPutAll: ' value: ' ]
 						ifFalse: [ stream nextPutAll: ' value: ' ].
 					stream nextPutAll: argScript asString ] ] ]
+]
+
+{ #category : 'private' }
+GbsRemoteCommand class >> maximumBlockValueArgumentCount [
+	^ 5
 ]
 
 { #category : 'private' }
@@ -232,12 +245,29 @@ GbsRemoteCommand class >> keysAndValuesOf: aDictionary do: aBlock [
 
 { #category : 'private' }
 GbsRemoteCommand class >> body: bodyString withAssignmentsNamed: names scripts: scripts [
+	| body rest start stop tempDeclaration |
+	names isEmpty ifTrue: [ ^ bodyString ].
+	body := bodyString asString.
+	rest := body.
+	tempDeclaration := ''.
+	start := 1.
+	[start <= body size and: [ (body at: start) isSeparator ]] whileTrue: [
+		start := start + 1 ].
+	(start <= body size and: [ (body at: start) = $| ]) ifTrue: [
+		stop := body indexOf: $| startingAt: start + 1.
+		stop > 0 ifTrue: [
+			tempDeclaration := (body copyFrom: start + 1 to: stop - 1) withBlanksTrimmed.
+			rest := body copyFrom: stop + 1 to: body size ] ].
 	^ String streamContents: [ :stream |
 		names isEmpty ifFalse: [
 			stream nextPutAll: '| '.
 			names do: [ :each |
 				stream
 					nextPutAll: each asString;
+					space ].
+			tempDeclaration isEmpty ifFalse: [
+				stream
+					nextPutAll: tempDeclaration;
 					space ].
 			stream
 				nextPutAll: '|';
@@ -249,7 +279,7 @@ GbsRemoteCommand class >> body: bodyString withAssignmentsNamed: names scripts: 
 					nextPutAll: (scripts at: index) asString;
 					nextPutAll: '.';
 					cr ] ].
-		stream nextPutAll: bodyString ]
+		stream nextPutAll: rest ]
 ]
 
 { #category : 'private' }

@@ -63,7 +63,7 @@ GbsServerClampSpecificationSynchronizer >> installClampSpecForScheme: aReplicati
 
 { #category : 'scripts' }
 GbsServerClampSpecificationSynchronizer >> serverClampSpecificationScript [
-	^ '| spec instVarLevels identityMapClass setSlot classForName classObject |
+	^ '| spec instVarLevels identityMapClass classForName classObject |
 identityMapClass := GsSession currentSession resolveSymbol: #FastIdentityKeyValueDictionary.
 identityMapClass ifNil: [
 	identityMapClass := GsSession currentSession resolveSymbol: #IdentityKeyValueDictionary ].
@@ -87,18 +87,30 @@ classLevelEntries do: [ :entry |
 	classObject := classForName value: (entry at: 1).
 	classObject ifNotNil: [ instVarLevels at: classObject put: (entry at: 2) ] ].
 spec := ClampSpecification new.
-setSlot := [ :selector :index :value |
-	(spec respondsTo: selector)
-		ifTrue: [ spec perform: selector with: value ]
-		ifFalse: [ spec instVarAt: index put: value ] ].
-setSlot value: #idClamps: value: 1 value: IdentitySet new.
-setSlot value: #classClamps: value: 2 value: IdentitySet new.
-setSlot value: #instVarLevels: value: 3 value: instVarLevels.
-setSlot value: #addSubleafHeaders: value: 4 value: addSubleafHeaders.
-setSlot value: #instVarLevelsSelector: value: 5 value: instVarLevelsSelector.
-setSlot value: #traversalCallBackSelector: value: 6 value: traversalCallBackSelector.
-setSlot value: #valueClamps: value: 7 value: nil.
-setSlot value: #environmentId: value: 8 value: environmentId.
+(spec respondsTo: #idClamps:)
+	ifTrue: [ spec idClamps: IdentitySet new ]
+	ifFalse: [ spec instVarAt: 1 put: IdentitySet new ].
+(spec respondsTo: #classClamps:)
+	ifTrue: [ spec classClamps: IdentitySet new ]
+	ifFalse: [ spec instVarAt: 2 put: IdentitySet new ].
+(spec respondsTo: #instVarLevels:)
+	ifTrue: [ spec instVarLevels: instVarLevels ]
+	ifFalse: [ spec instVarAt: 3 put: instVarLevels ].
+(spec respondsTo: #addSubleafHeaders:)
+	ifTrue: [ spec addSubleafHeaders: addSubleafHeaders ]
+	ifFalse: [ spec instVarAt: 4 put: addSubleafHeaders ].
+(spec respondsTo: #instVarLevelsSelector:)
+	ifTrue: [ spec instVarLevelsSelector: instVarLevelsSelector ]
+	ifFalse: [ spec instVarAt: 5 put: instVarLevelsSelector ].
+(spec respondsTo: #traversalCallBackSelector:)
+	ifTrue: [ spec traversalCallBackSelector: traversalCallBackSelector ]
+	ifFalse: [ spec instVarAt: 6 put: traversalCallBackSelector ].
+(spec respondsTo: #valueClamps:)
+	ifTrue: [ spec valueClamps: nil ]
+	ifFalse: [ spec instVarAt: 7 put: nil ].
+(spec respondsTo: #environmentId:)
+	ifTrue: [ spec environmentId: environmentId ]
+	ifFalse: [ spec instVarAt: 8 put: environmentId ].
 spec'
 ]
 
