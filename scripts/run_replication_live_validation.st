@@ -1,4 +1,4 @@
-| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass dirtyTrackerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator connectorReport connectorPairCount scheme clampSpecOop transitiveSpec connectorMs clampedOop clampedResult clampedMs clampedMetrics callbackSelector callbackBehaviorName schemeBeforeDomain domainBehaviorName domainCustomerBehaviorName domainFixtureClass domainConnector domainScheme domainLevels domainCallbackScheme domainCallbackSpecOop domainCallbackVerifiedOop domainCallbackVerified domainOrderOop domainCustomerOop domainLineItemsOop domainOrder domainCustomerProxy domainLineItems domainDirtyObjectsFlushed domainDirtyStoreMs domainFlushed domainDirtyStoreReport domainNativeDirtyStoreFlushes domainNativeDirtyStoreEntries domainVerifiedOop domainVerified domainFixtureCount domainPerInstvarClampEntries domainCallbackClampSpecs mappedDomainBehaviorName mappedDomainFixtureClass mappedDomainConnector mappedDomainReplicator mappedDomainScheme mappedDomainLevels mappedDomainOrderOop mappedDomainCustomerOop mappedDomainLineItemsOop mappedDomainOrder mappedDomainCustomerProxy mappedDomainLineItems mappedDomainDirtyObjectsFlushed mappedDomainDirtyStoreMs mappedDomainFlushed mappedDomainDirtyStoreReport mappedDomainVerifiedOop mappedDomainVerified callbackScheme callbackClampSpecOop callbackVerifiedOop callbackVerified perInstvarClampEntries callbackClampSpecs inheritedFixtureClass pointerReplicatorClass inheritedConnector inheritedReplicator inheritedScheme inheritedLevels inheritedReplicationSpecFixtures policy previousTransport previousProfile nativeStoreSupported dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseGcedObject releaseNoLongerObject exportBefore exportAfter lifecycleReport lifecycleNoLongerQueued lifecycleGcedQueued lifecycleNoLongerAcknowledged lifecycleGcedAcknowledged dirtyStoreMs flushed dirtyStoreReport semanticDirtyStoreCommands semanticDirtyStoreEntries semanticDictionaryEntries semanticSetEntries semanticBagEntries verified verifiedOop nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed businessRootOop businessRoot businessFixtureSize businessDirtyObjectsFlushed businessDirtyStoreMs businessFlushed businessExportAfter businessVerifiedOop businessVerified |
+| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass dirtyTrackerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator connectorPairCount scheme clampSpecOop connectorMs clampedOop clampedResult clampedMs clampedMetrics callbackSelector callbackBehaviorName domainBehaviorName domainCustomerBehaviorName domainFixtureClass domainScheme domainCallbackScheme domainCallbackSpecOop domainCallbackVerifiedOop domainCallbackVerified domainOrderOop domainCustomerOop domainLineItemsOop domainOrder domainCustomerProxy domainLineItems domainDirtyObjectsFlushed domainDirtyStoreMs domainFlushed domainDirtyStoreReport domainNativeDirtyStoreFlushes domainNativeDirtyStoreEntries domainVerifiedOop domainVerified domainFixtureCount domainPerInstvarClampEntries domainCallbackClampSpecs mappedDomainBehaviorName inheritedMappedDomainBehaviorName mappedDomainFixtureClass mappedDomainReplicator mappedDomainScheme mappedDomainOrderOop mappedDomainCustomerOop mappedDomainLineItemsOop mappedDomainOrder mappedDomainCustomerProxy mappedDomainLineItems mappedDomainDirtyObjectsFlushed mappedDomainDirtyStoreMs mappedDomainFlushed mappedDomainDirtyStoreReport mappedDomainVerifiedOop mappedDomainVerified callbackScheme callbackClampSpecOop callbackVerifiedOop callbackVerified perInstvarClampEntries callbackClampSpecs inheritedFixtureClass pointerReplicatorClass inheritedConnector inheritedReplicator inheritedReplicationSpecFixtures policy previousTransport previousProfile dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseGcedObject releaseNoLongerObject exportBefore exportAfter lifecycleReport lifecycleNoLongerQueued lifecycleGcedQueued lifecycleNoLongerAcknowledged lifecycleGcedAcknowledged dirtyStoreMs flushed dirtyStoreReport semanticDirtyStoreCommands semanticDirtyStoreEntries semanticDictionaryEntries semanticSetEntries semanticBagEntries verified verifiedOop nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed businessRootOop businessRoot businessFixtureSize businessDirtyObjectsFlushed businessDirtyStoreMs businessFlushed businessExportAfter businessVerifiedOop businessVerified |
 [
   loadFailed := false.
   cleanupFixture := [ ].
@@ -123,6 +123,24 @@ true'
                 context: 20 ]
               on: Error
               do: [ ] ].
+          inheritedMappedDomainBehaviorName ifNotNil: [
+            [ session
+                fetchRemoteCommandBody: '| tempDict |
+tempDict := System myUserProfile symbolList
+	detect: [ :each |
+		(each respondsTo: #name)
+			and: [ each name = #PharoSessionGlobals ] ]
+	ifNone: [ nil ].
+tempDict ifNotNil: [
+	tempDict removeKey: behaviorName asSymbol ifAbsent: [ nil ] ].
+true'
+                literalBindings: (Dictionary new
+                  at: 'behaviorName' put: inheritedMappedDomainBehaviorName;
+                  yourself)
+                oopBindings: Dictionary new
+                context: 20 ]
+              on: Error
+              do: [ ] ].
           [ session
               fetchRemoteCommandBody: 'UserGlobals removeKey: fixtureKey ifAbsent: [ nil ]. nil'
               literalBindings: (Dictionary new
@@ -142,8 +160,39 @@ true'
         session resetMaterializedObjectDirtyTracking.
         session fetchDeep.
 
-        phase := 'connector-install'.
         manager := session replicatorManager.
+
+        phase := 'migration-domain-mapped-lifecycle-commit'.
+        mappedDomainFixtureClass := Smalltalk
+          at: #CoreGbsMigrationDomainInheritedMappedOrder
+          ifAbsent: [ Error signal: 'Missing inherited mapped migration-domain order fixture class.' ].
+        pointerReplicatorClass := Smalltalk
+          at: #GbxPointerObjectReplicator
+          ifAbsent: [ Error signal: 'Missing pointer-object replicator class.' ].
+        connector := connectorClass
+          client: mappedDomainFixtureClass
+          server: 'GbsMigrationLiveCommitMappedOrder'
+          replicationSpec: mappedDomainFixtureClass migrationDomainReplicationSpec
+          serverInstVarNames: mappedDomainFixtureClass migrationDomainServerInstVarNames.
+        connector replicatorClass: pointerReplicatorClass.
+        mappedDomainReplicator := manager installClientClassConnector: connector.
+        mappedDomainOrder := mappedDomainFixtureClass basicNew.
+        session rememberMaterializedObject: mappedDomainOrder forOop: 11008.
+        mappedDomainOrder gbsInstVarAt: 6 put: 1.
+        (session dirtyMaterializedObjectOops includes: 11008) ifFalse: [
+          Error signal: 'Mapped lifecycle commit fixture did not mark the mapped object dirty.' ].
+        (session materializedObjectForOop: 11008) == mappedDomainOrder ifFalse: [
+          Error signal: 'Mapped lifecycle commit fixture was not present in the materialized identity cache before commit.' ].
+        session commitTransaction ifFalse: [
+          Error signal: 'Mapped lifecycle commit fixture could not commit the live session.' ].
+        session dirtyMaterializedObjectOops isEmpty ifFalse: [
+          Error signal: 'Mapped lifecycle commit did not clear dirty materialized objects.' ].
+        (session materializedObjectForOop: 11008) isNil ifFalse: [
+          Error signal: 'Mapped lifecycle commit did not clear materialized identity cache.' ].
+        (manager replicatorForClientBehavior: mappedDomainFixtureClass ifAbsent: [ nil ]) == mappedDomainReplicator ifFalse: [
+          Error signal: 'Mapped lifecycle commit unexpectedly discarded the live mapped replicator.' ].
+
+        phase := 'connector-install'.
         connector := connectorClass
           client: Association
           server: Association
@@ -160,17 +209,17 @@ true'
           ifFalse: [ Error signal: 'Installed connector is missing from the client replicator map.' ].
         (manager serverMap at: Association ifAbsent: [ nil ]) == replicator
           ifFalse: [ Error signal: 'Installed connector is missing from the server replicator map.' ].
-        connectorReport := manager connectorManagerReport.
-        connectorPairCount := connectorReport at: #connectorPairCount ifAbsent: [ 0 ].
+        connectorPairCount := (manager connectorManagerReport)
+          at: #connectorPairCount
+          ifAbsent: [ 0 ].
         connectorPairCount <= 0 ifTrue: [
           Error signal: 'Replicator manager report did not expose the installed connector pair.' ].
         scheme := manager currentReplicationScheme.
         scheme hasServerClampMetadata ifFalse: [
           Error signal: 'Installed connector did not update clamp metadata.' ].
-        transitiveSpec := scheme transitiveClosureSpecForReplicationSpec: connector replicationSpec.
-        transitiveSpec = #(
+        ((scheme transitiveClosureSpecForReplicationSpec: connector replicationSpec) = #(
           #(#key #replicate)
-          #(#value #replicate))
+          #(#value #replicate)))
             ifFalse: [ Error signal: 'VisualWorks transitive closure replication spec filtering failed.' ].
 
         phase := 'server-clamp-sync'.
@@ -288,15 +337,13 @@ association'
         inheritedReplicator := manager installClientClassConnector: inheritedConnector.
         inheritedReplicator ifNil: [
           Error signal: 'Inherited replication-spec fixture did not install a replicator.' ].
-        inheritedScheme := manager replicationSchemeForSet: #customerReplicationSpec.
-        inheritedLevels := inheritedScheme instVarLevelsForClass: inheritedFixtureClass.
-        inheritedLevels = { 0. false. nil } ifFalse: [
+        ((manager replicationSchemeForSet: #customerReplicationSpec)
+          instVarLevelsForClass: inheritedFixtureClass) = { 0. false. nil } ifFalse: [
           Error signal: 'Inherited VisualWorks replication spec did not hydrate expected per-instvar levels.' ].
         inheritedReplicationSpecFixtures := 1.
 
         phase := 'dirty-store-fixture'.
-        nativeStoreSupported := session serverInterface supportsDirtyStoreTraversalBufferTransport == true.
-        nativeStoreSupported ifFalse: [
+        session serverInterface supportsDirtyStoreTraversalBufferTransport == true ifFalse: [
           Error signal: 'GemStone server interface does not expose native dirty-store traversal buffer transport.' ].
         policy := replicationPolicyClass forSession: session.
         previousTransport := policy storeTraversalTransport.
@@ -338,28 +385,32 @@ orderClass := Object subclass: orderClassName
 	options: #().
 tempDict at: customerName put: customerClass.
 tempDict at: orderName put: orderClass.
+Object compileMethod: objectCallbackSource category: #''gbs-live-validation''.
 orderClass compileMethod: callbackSource category: #''gbs-live-validation''.
 true'
           literalBindings: (Dictionary new
             at: 'orderClassName' put: domainBehaviorName;
             at: 'customerClassName' put: domainCustomerBehaviorName;
-            at: 'callbackSource' put: 'migrationDomainCallbackReplicationSpecGbsClampCallback
+            at: 'objectCallbackSource' put: 'migrationDomainCallbackReplicationSpecGbsClampCallback
 	^ nil';
+            at: 'callbackSource' put: 'migrationDomainCallbackReplicationSpecGbsClampCallback
+	^ (self instVarAt: 3) = 999
+		ifTrue: [ #(false -1 0 nil 0 nil) ]
+		ifFalse: [ #(false -2 1 nil 0 nil) ]';
             yourself)
           oopBindings: Dictionary new
           context: 20.
 
         phase := 'migration-domain-connector'.
-        domainConnector := connectorClass
+        connector := connectorClass
           client: domainFixtureClass
           server: domainBehaviorName
           replicationSpec: domainFixtureClass migrationDomainReplicationSpec
           serverInstVarNames: domainFixtureClass migrationDomainServerInstVarNames.
-        domainConnector replicatorClass: pointerReplicatorClass.
-        manager installClientClassConnector: domainConnector.
+        connector replicatorClass: pointerReplicatorClass.
+        manager installClientClassConnector: connector.
         domainScheme := manager currentReplicationScheme.
-        domainLevels := domainScheme instVarLevelsForClass: domainFixtureClass.
-        domainLevels = { false. -2. 1. nil. 0. nil } ifFalse: [
+        (domainScheme instVarLevelsForClass: domainFixtureClass) = { false. -2. 1. nil. 0. nil } ifFalse: [
           Error signal: 'Migration-domain per-instvar levels did not match VW policy shape.' ].
         (domainScheme shouldProxyNamedSlot: 1 ofClass: domainFixtureClass) ifFalse: [
           Error signal: 'Migration-domain customer slot was not marked as a forwarder.' ].
@@ -398,6 +449,70 @@ status'
         domainCallbackVerified = 43 ifFalse: [
           Error signal: 'Migration-domain callback clamp specification did not retain the expected selector.' ].
         domainCallbackClampSpecs := 1.
+
+        phase := 'migration-domain-callback-dynamic-traversal'.
+        clampedOop := session
+          returnRemoteCommandBody: '| fixture tempDict orderClass customerClass customer lines order |
+fixture := UserGlobals at: fixtureKey ifAbsentPut: [ Dictionary new ].
+tempDict := System myUserProfile symbolList
+	detect: [ :each |
+		(each respondsTo: #name)
+			and: [ each name = #PharoSessionGlobals ] ]
+	ifNone: [ nil ].
+orderClass := tempDict at: orderClassName asSymbol.
+customerClass := tempDict at: customerClassName asSymbol.
+customer := customerClass new.
+customer
+	instVarAt: 1 put: #callbackCustomer;
+	instVarAt: 2 put: 5.
+lines := OrderedCollection new.
+lines add: 8; add: 9.
+order := orderClass new.
+order
+	instVarAt: 1 put: customer;
+	instVarAt: 2 put: lines;
+	instVarAt: 3 put: 999;
+	instVarAt: 4 put: Dictionary new;
+	instVarAt: 5 put: #callback.
+fixture at: #domainCallbackOrder put: order.
+order'
+          literalBindings: (Dictionary new
+            at: 'fixtureKey' put: fixtureKey;
+            at: 'orderClassName' put: domainBehaviorName;
+            at: 'customerClassName' put: domainCustomerBehaviorName;
+            yourself)
+          oopBindings: Dictionary new.
+        domainCallbackVerifiedOop := session
+          returnRemoteCommandBody: '| levels status |
+levels := object migrationDomainCallbackReplicationSpecGbsClampCallback.
+status := 76.
+(levels = #(false -1 0 nil 0 nil)) ifFalse: [ status := 77 ].
+status'
+          literalBindings: Dictionary new
+          oopBindings: (Dictionary new
+            at: 'object' put: clampedOop;
+            yourself).
+        domainCallbackVerified := session resultFor: domainCallbackVerifiedOop.
+        domainCallbackVerified = 76 ifFalse: [
+          Error signal: 'Migration-domain callback method did not return the dynamic traversal levels for the live object.' ].
+        session resetMaterializationMetrics.
+        manager
+          usingReplicationSpecSet: #migrationDomainCallbackReplicationSpec
+          do: [
+            clampedResult := (((Smalltalk at: #GbsMaterializationTraversalBufferReader) on: session)
+              reportsForOops: { clampedOop }
+              level: 1
+              label: 'migration-domain-callback-traversal')
+                at: clampedOop
+                ifAbsent: [ nil ] ].
+        clampedFetches := metricValue value: session materializationMetrics value: #clampedTraversalBufferFetchCalls.
+        clampedFallbacks := metricValue value: session materializationMetrics value: #structuredTraversalBufferFallbacks.
+        clampedFetches <= 0 ifTrue: [
+          Error signal: 'Migration-domain callback traversal did not use clamped traversal-buffer transport.' ].
+        clampedFallbacks = 0 ifFalse: [
+          Error signal: 'Migration-domain callback traversal fell back from traversal-buffer transport.' ].
+        (clampedResult isNil or: [ clampedResult oop ~= clampedOop ]) ifTrue: [
+          Error signal: 'Migration-domain callback traversal did not return an object report for the live callback fixture.' ].
         domainFixtureCount := 1.
 
         phase := 'migration-domain-dirty-store-fixture'.
@@ -544,16 +659,15 @@ true'
             yourself)
           oopBindings: Dictionary new
           context: 20.
-        mappedDomainConnector := connectorClass
+        connector := connectorClass
           client: mappedDomainFixtureClass
           server: mappedDomainBehaviorName
           replicationSpec: mappedDomainFixtureClass migrationDomainReplicationSpec
           serverInstVarNames: mappedDomainFixtureClass migrationDomainServerInstVarNames.
-        mappedDomainConnector replicatorClass: pointerReplicatorClass.
-        mappedDomainReplicator := manager installClientClassConnector: mappedDomainConnector.
+        connector replicatorClass: pointerReplicatorClass.
+        mappedDomainReplicator := manager installClientClassConnector: connector.
         mappedDomainScheme := manager currentReplicationScheme.
-        mappedDomainLevels := mappedDomainScheme instVarLevelsForClass: mappedDomainFixtureClass.
-        mappedDomainLevels = { false. -2. false. 1. 0. nil } ifFalse: [
+        (mappedDomainScheme instVarLevelsForClass: mappedDomainFixtureClass) = { false. -2. false. 1. 0. nil } ifFalse: [
           Error signal: 'Mapped migration-domain per-instvar levels did not match VW instVarMap policy shape.' ].
         ((mappedDomainReplicator respondsTo: #serverToClientOffsets)
           and: [ mappedDomainReplicator serverToClientOffsets = { 1. 2. nil. 3. 5 } ]) ifFalse: [
@@ -680,6 +794,193 @@ status'
         mappedDomainVerified = 57 ifFalse: [
           Error signal: 'Mapped migration-domain dirty-store validation failed status=', mappedDomainVerified asString, ' oop=', mappedDomainVerifiedOop asString, ' (58=class 59=customer 60=items 61=unmapped 62=amount 63=audit).' ].
         session resetMaterializedObjectDirtyTracking.
+
+        phase := 'migration-domain-inherited-instvar-map-fixture'.
+        inheritedMappedDomainBehaviorName := 'GbsMigrationLiveInheritedMappedOrder'.
+        mappedDomainFixtureClass := Smalltalk
+          at: #CoreGbsMigrationDomainInheritedMappedOrder
+          ifAbsent: [ Error signal: 'Missing inherited mapped migration-domain order fixture class.' ].
+        session
+          fetchRemoteCommandBody: '| tempDict orderClass orderName |
+tempDict := System myUserProfile symbolList
+	detect: [ :each |
+		(each respondsTo: #name)
+			and: [ each name = #PharoSessionGlobals ] ]
+	ifNone: [ nil ].
+tempDict ifNil: [
+	tempDict := SymbolDictionary new name: #PharoSessionGlobals.
+	System myUserProfile insertDictionary: tempDict at: 1 ].
+orderName := orderClassName asSymbol.
+tempDict removeKey: orderName ifAbsent: [ nil ].
+orderClass := Object subclass: orderClassName
+	instVarNames: #(''buyer'' ''items'' ''transientCache'' ''amount'' ''audit'' ''urgency'' ''serverAudit'')
+	classVars: #()
+	classInstVars: #()
+	poolDictionaries: #()
+	inDictionary: tempDict
+	options: #().
+tempDict at: orderName put: orderClass.
+true'
+          literalBindings: (Dictionary new
+            at: 'orderClassName' put: inheritedMappedDomainBehaviorName;
+            yourself)
+          oopBindings: Dictionary new
+          context: 20.
+        connector := connectorClass
+          client: mappedDomainFixtureClass
+          server: inheritedMappedDomainBehaviorName
+          replicationSpec: mappedDomainFixtureClass migrationDomainReplicationSpec
+          serverInstVarNames: mappedDomainFixtureClass migrationDomainServerInstVarNames.
+        connector replicatorClass: pointerReplicatorClass.
+        mappedDomainReplicator := manager installClientClassConnector: connector.
+        mappedDomainScheme := manager currentReplicationScheme.
+        (mappedDomainScheme instVarLevelsForClass: mappedDomainFixtureClass) = { false. -2. false. 1. 0. -1. false. nil } ifFalse: [
+          Error signal: 'Inherited mapped migration-domain per-instvar levels did not match VW instVarMap policy shape.' ].
+        ((mappedDomainReplicator respondsTo: #serverToClientOffsets)
+          and: [ mappedDomainReplicator serverToClientOffsets = { 1. 2. nil. 3. 5. 6. nil } ]) ifFalse: [
+            Error signal: 'Inherited mapped migration-domain server-to-client offsets did not match VW instVarMap semantics.' ].
+        (mappedDomainScheme shouldProxyNamedSlot: 1 ofClass: mappedDomainFixtureClass) ifFalse: [
+          Error signal: 'Inherited mapped migration-domain buyer slot was not marked as a forwarder.' ].
+        ((mappedDomainScheme shouldProxyNamedSlot: 3 ofClass: mappedDomainFixtureClass) or: [
+          mappedDomainScheme shouldProxyNamedSlot: 7 ofClass: mappedDomainFixtureClass ]) ifTrue: [
+          Error signal: 'Inherited mapped migration-domain unmapped slot was unexpectedly marked as a forwarder.' ].
+        domainFixtureCount := domainFixtureCount + 1.
+        domainPerInstvarClampEntries := mappedDomainScheme serverClampInstVarLevelEntries size.
+
+        phase := 'migration-domain-inherited-instvar-map-dirty-store'.
+        mappedDomainOrderOop := session
+          returnRemoteCommandBody: '| fixture tempDict orderClass customerClass order customer lines |
+fixture := UserGlobals at: fixtureKey ifAbsentPut: [ Dictionary new ].
+tempDict := System myUserProfile symbolList
+	detect: [ :each |
+		(each respondsTo: #name)
+			and: [ each name = #PharoSessionGlobals ] ]
+	ifNone: [ nil ].
+orderClass := tempDict at: orderClassName asSymbol.
+customerClass := tempDict at: customerClassName asSymbol.
+customer := customerClass new.
+customer
+	instVarAt: 1 put: #customerC;
+	instVarAt: 2 put: 4.
+lines := OrderedCollection new.
+lines add: 5; add: 6.
+order := orderClass new.
+order
+	instVarAt: 1 put: customer;
+	instVarAt: 2 put: lines;
+	instVarAt: 3 put: Dictionary new;
+	instVarAt: 4 put: 111;
+	instVarAt: 5 put: #created;
+	instVarAt: 6 put: 1;
+	instVarAt: 7 put: #serverOnly.
+fixture
+	at: #inheritedMappedDomainCustomer put: customer;
+	at: #inheritedMappedDomainOrder put: order.
+order'
+          literalBindings: (Dictionary new
+            at: 'fixtureKey' put: fixtureKey;
+            at: 'orderClassName' put: inheritedMappedDomainBehaviorName;
+            at: 'customerClassName' put: domainCustomerBehaviorName;
+            yourself)
+          oopBindings: Dictionary new.
+        mappedDomainCustomerOop := session
+          returnRemoteCommandBody: '(UserGlobals at: fixtureKey) at: #inheritedMappedDomainCustomer'
+          literalBindings: (Dictionary new
+            at: 'fixtureKey' put: fixtureKey;
+            yourself)
+          oopBindings: Dictionary new.
+        mappedDomainLineItemsOop := session
+          returnRemoteCommandBody: '((UserGlobals at: fixtureKey) at: #inheritedMappedDomainOrder) instVarAt: 2'
+          literalBindings: (Dictionary new
+            at: 'fixtureKey' put: fixtureKey;
+            yourself)
+          oopBindings: Dictionary new.
+        session resetMaterializedObjectDirtyTracking.
+        [ session clearProxyCache. session clearRemoteClassNameCache ] on: Error do: [ ].
+        session fetchDeep.
+        mappedDomainLineItems := session fetchObject: mappedDomainLineItemsOop.
+        mappedDomainCustomerProxy := session
+          proxyForOop: mappedDomainCustomerOop
+          serverClassName: domainCustomerBehaviorName.
+        mappedDomainOrder := mappedDomainFixtureClass basicNew.
+        mappedDomainOrder
+          instVarAt: 1 put: mappedDomainCustomerProxy;
+          instVarAt: 2 put: mappedDomainLineItems;
+          instVarAt: 3 put: 111;
+          instVarAt: 4 put: nil;
+          instVarAt: 5 put: #created;
+          instVarAt: 6 put: 1;
+          instVarAt: 7 put: nil.
+        dirtyTrackerClass
+          registerObject: mappedDomainOrder
+          oop: mappedDomainOrderOop
+          session: session.
+        mappedDomainOrder gbsInstVarAt: 7 put: #clientMemo.
+        session dirtyMaterializedObjectOops isEmpty ifFalse: [
+          Error signal: 'Inherited mapped migration-domain client-only instVarMap slot was marked dirty.' ].
+        mappedDomainOrder gbsInstVarAt: 3 put: 777.
+        mappedDomainOrder gbsInstVarAt: 5 put: #inheritedValidated.
+        mappedDomainOrder gbsInstVarAt: 6 put: 9.
+        (session dirtyMaterializedObjectOops includes: mappedDomainOrderOop) ifFalse: [
+          Error signal: 'Inherited mapped migration-domain server-mapped slot did not mark the order dirty.' ].
+        mappedDomainLineItems add: 7.
+        dirtyTrackerClass
+          markObject: mappedDomainLineItems
+          dirtyInSession: session.
+        mappedDomainDirtyObjectsFlushed := session dirtyMaterializedObjectOops size.
+        mappedDomainDirtyObjectsFlushed < 2 ifTrue: [
+          Error signal: 'Inherited mapped migration-domain dirty-store fixture did not mark the order and line-items dirty.' ].
+        mappedDomainDirtyStoreMs := millisecondsToRun value: [
+          mappedDomainFlushed := session flushDirtyMaterializedObjects ].
+        mappedDomainDirtyStoreReport := session dirtyStoreTraversalReport.
+        domainDirtyStoreMs := domainDirtyStoreMs + mappedDomainDirtyStoreMs.
+        domainFlushed := domainFlushed, mappedDomainFlushed.
+        domainDirtyObjectsFlushed := domainDirtyObjectsFlushed + mappedDomainDirtyObjectsFlushed.
+        domainNativeDirtyStoreFlushes := domainNativeDirtyStoreFlushes
+          + (metricValue value: mappedDomainDirtyStoreReport value: #nativeFlushCount).
+        domainNativeDirtyStoreEntries := domainNativeDirtyStoreEntries
+          + (metricValue value: mappedDomainDirtyStoreReport value: #nativeEntryCount).
+        mappedDomainVerifiedOop := session
+          returnRemoteCommandBody: '| order status |
+order := object.
+status := 67.
+(order class name asString = orderClassName) ifFalse: [ status := 68 ].
+(status = 67 and: [ (order instVarAt: 1) class name asString = customerClassName ]) ifFalse: [
+  status = 67 ifTrue: [ status := 69 ] ].
+(status = 67 and: [ (order instVarAt: 2) asArray = #(5 6 7) ]) ifFalse: [
+  status = 67 ifTrue: [ status := 70 ] ].
+(status = 67 and: [ (order instVarAt: 3) isKindOf: Dictionary ]) ifFalse: [
+  status = 67 ifTrue: [ status := 71 ] ].
+(status = 67 and: [ (order instVarAt: 4) = 777 ]) ifFalse: [
+  status = 67 ifTrue: [ status := 72 ] ].
+(status = 67 and: [ (order instVarAt: 5) = #inheritedValidated ]) ifFalse: [
+  status = 67 ifTrue: [ status := 73 ] ].
+(status = 67 and: [ (order instVarAt: 6) = 9 ]) ifFalse: [
+  status = 67 ifTrue: [ status := 74 ] ].
+(status = 67 and: [ (order instVarAt: 7) = #serverOnly ]) ifFalse: [
+  status = 67 ifTrue: [ status := 75 ] ].
+status'
+          literalBindings: (Dictionary new
+            at: 'orderClassName' put: inheritedMappedDomainBehaviorName;
+            at: 'customerClassName' put: domainCustomerBehaviorName;
+            yourself)
+          oopBindings: (Dictionary new
+            at: 'object' put: mappedDomainOrderOop;
+            yourself).
+        mappedDomainVerified := session resultFor: mappedDomainVerifiedOop.
+        mappedDomainVerified = 67 ifFalse: [
+          Error signal: 'Inherited mapped migration-domain dirty-store validation failed status=', mappedDomainVerified asString, ' oop=', mappedDomainVerifiedOop asString, ' (68=class 69=customer 70=items 71=unmapped 72=amount 73=audit 74=urgency 75=serverAudit).' ].
+        session resetMaterializedObjectDirtyTracking.
+
+        phase := 'migration-domain-mapped-class-version-refresh'.
+        mappedDomainReplicator serverInstVarNames: #('buyer' 'items' 'amount' 'audit' 'urgency' 'serverAudit').
+        manager changedSelector: #classVersion inClass: mappedDomainFixtureClass.
+        ((mappedDomainReplicator respondsTo: #serverToClientOffsets)
+          and: [ mappedDomainReplicator serverToClientOffsets = { 1. 2. 3. 5. 6. nil } ]) ifFalse: [
+            Error signal: 'Inherited mapped migration-domain class-version refresh did not update server-to-client offsets.' ].
+        mappedDomainScheme := manager currentReplicationScheme.
+        (mappedDomainScheme instVarLevelsForClass: mappedDomainFixtureClass) = { false. -2. 1. 0. -1. false. nil } ifFalse: [
+          Error signal: 'Inherited mapped migration-domain class-version refresh did not update clamp levels.' ].
 
         phase := 'dirty-store-fixture'.
         dirtyRootOop := session
@@ -895,6 +1196,31 @@ root'
         businessVerified := session resultFor: businessVerifiedOop.
         businessVerified = 23 ifFalse: [
           Error signal: 'Business dirty-store traversal did not update the remote fixture status=', businessVerified asString, ' oop=', businessVerifiedOop asString, ' (31=array 32=association 33=ordered).' ].
+
+        phase := 'migration-domain-mapped-lifecycle-abort'.
+        session resetMaterializedObjectDirtyTracking.
+        mappedDomainOrder := mappedDomainFixtureClass basicNew.
+        mappedDomainOrder
+          instVarAt: 1 put: mappedDomainCustomerProxy;
+          instVarAt: 2 put: mappedDomainLineItems;
+          instVarAt: 3 put: 777;
+          instVarAt: 4 put: nil;
+          instVarAt: 5 put: #inheritedValidated;
+          instVarAt: 6 put: 9;
+          instVarAt: 7 put: nil.
+        session rememberMaterializedObject: mappedDomainOrder forOop: mappedDomainOrderOop.
+        mappedDomainOrder gbsInstVarAt: 6 put: 10.
+        (session dirtyMaterializedObjectOops includes: mappedDomainOrderOop) ifFalse: [
+          Error signal: 'Mapped lifecycle fixture did not mark the refreshed mapped object dirty.' ].
+        (session materializedObjectForOop: mappedDomainOrderOop) == mappedDomainOrder ifFalse: [
+          Error signal: 'Mapped lifecycle fixture was not present in the materialized identity cache before abort.' ].
+        session abortTransaction.
+        session dirtyMaterializedObjectOops isEmpty ifFalse: [
+          Error signal: 'Mapped lifecycle abort did not clear dirty materialized objects.' ].
+        (session materializedObjectForOop: mappedDomainOrderOop) isNil ifFalse: [
+          Error signal: 'Mapped lifecycle abort did not clear materialized identity cache.' ].
+        (manager replicatorForClientBehavior: mappedDomainFixtureClass ifAbsent: [ nil ]) == mappedDomainReplicator ifFalse: [
+          Error signal: 'Mapped lifecycle abort unexpectedly discarded the live mapped replicator.' ].
 
         Transcript
           show: 'REPLICATION_LIVE_VALIDATION result=OK code=REPLICATION_LIVE_OK',

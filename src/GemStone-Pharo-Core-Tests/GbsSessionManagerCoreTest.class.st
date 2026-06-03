@@ -639,6 +639,119 @@ GbsSessionManagerCoreTest >> testReplicatorManagerMigrationDomainNilMappedClient
 ]
 
 { #category : 'tests' }
+GbsSessionManagerCoreTest >> testReplicatorManagerMigrationDomainInheritedInstVarMapExtendsSuperMap [
+	| mockSession manager connector replicator scheme order dirtyBuffer reader |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: CoreGbsMigrationDomainInheritedMappedOrder
+		server: 'GbsMigrationLiveInheritedMappedOrder'
+		replicationSpec: CoreGbsMigrationDomainInheritedMappedOrder migrationDomainReplicationSpec
+		serverInstVarNames: CoreGbsMigrationDomainInheritedMappedOrder migrationDomainServerInstVarNames.
+	connector replicatorClass: GbxPointerObjectReplicator.
+
+	replicator := manager installClientClassConnector: connector.
+	scheme := manager currentReplicationScheme.
+	self assert: replicator serverToClientOffsets equals: { 1. 2. nil. 3. 5. 6. nil }.
+	self
+		assert: (scheme instVarLevelsForClass: CoreGbsMigrationDomainInheritedMappedOrder)
+		equals: { false. -2. false. 1. 0. -1. false. nil }.
+	self assert: (scheme shouldProxyNamedSlot: 1 ofClass: CoreGbsMigrationDomainInheritedMappedOrder).
+	self deny: (scheme shouldProxyNamedSlot: 3 ofClass: CoreGbsMigrationDomainInheritedMappedOrder).
+	self deny: (scheme shouldProxyNamedSlot: 7 ofClass: CoreGbsMigrationDomainInheritedMappedOrder).
+
+	order := CoreGbsMigrationDomainInheritedMappedOrder basicNew.
+	order
+		instVarAt: 1 put: 11;
+		instVarAt: 2 put: 22;
+		instVarAt: 3 put: 33;
+		instVarAt: 4 put: 44;
+		instVarAt: 5 put: 55;
+		instVarAt: 6 put: 66;
+		instVarAt: 7 put: 77.
+	mockSession rememberMaterializedObject: order forOop: 9912.
+	order gbsInstVarAt: 7 put: #clientMemo.
+	self deny: (mockSession isMaterializedObjectDirty: order).
+	order gbsInstVarAt: 6 put: 99.
+	self assert: (mockSession isMaterializedObjectDirty: order).
+	dirtyBuffer := GbsDirtyStoreTraversalBuffer
+		entries: { { 9912. order. #namedObject } }
+		session: mockSession.
+	mockSession stubs at: #apiGciGetClass put: [ :oop |
+		self assert: oop equals: 9912.
+		8800 ].
+	reader := GbsMaterializationTraversalBufferReader on: mockSession.
+	dirtyBuffer
+		withNativeTraversalBufferOn: mockSession
+		do: [ :nativeBuffer | | report |
+			report := reader reportAt: nativeBuffer offset: 9.
+			self assert: report oop equals: 9912.
+			self assert: report classOop equals: 8800.
+			self assert: report namedSize equals: 7.
+			self assert: report indexedSize equals: 0.
+			self assert: report valueOops equals: #(90 178 1 266 442 794 1) ]
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testReplicatorManagerMigrationDomainMappedLifecycleRefreshesClassVersionAndClearsDirtyState [
+	| mockSession manager connector replicator scheme order oldManager |
+	mockSession := CoreMockGbsSession new.
+	mockSession instVarNamed: 'isLoggedIn' put: true.
+	mockSession stubs at: #gciCommit put: 1.
+	mockSession stubs at: #gciAbort put: 1.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: CoreGbsMigrationDomainInheritedMappedOrder
+		server: 'GbsMigrationLiveInheritedMappedOrder'
+		replicationSpec: CoreGbsMigrationDomainInheritedMappedOrder migrationDomainReplicationSpec
+		serverInstVarNames: CoreGbsMigrationDomainInheritedMappedOrder migrationDomainServerInstVarNames.
+	connector replicatorClass: GbxPointerObjectReplicator.
+
+	replicator := manager installClientClassConnector: connector.
+	scheme := manager currentReplicationScheme.
+	self assert: replicator serverToClientOffsets equals: { 1. 2. nil. 3. 5. 6. nil }.
+
+	replicator serverInstVarNames: #('buyer' 'items' 'amount' 'audit' 'urgency' 'serverAudit').
+	manager changedSelector: #classVersion inClass: CoreGbsMigrationDomainInheritedMappedOrder.
+	self assert: replicator serverToClientOffsets equals: { 1. 2. 3. 5. 6. nil }.
+	self
+		assert: (scheme instVarLevelsForClass: CoreGbsMigrationDomainInheritedMappedOrder)
+		equals: { false. -2. 1. 0. -1. false. nil }.
+
+	order := CoreGbsMigrationDomainInheritedMappedOrder basicNew.
+	mockSession rememberMaterializedObject: order forOop: 9928.
+	order gbsInstVarAt: 6 put: 10.
+	self assert: (mockSession isMaterializedObjectDirty: order).
+	self assert: (mockSession materializedObjectForOop: 9928) == order.
+
+	self assert: mockSession commitTransaction.
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty.
+	self assert: (mockSession materializedObjectForOop: 9928) isNil.
+	self assert: mockSession replicatorManager == manager.
+	self assert: (manager replicatorForClientBehavior: CoreGbsMigrationDomainInheritedMappedOrder ifAbsent: [ nil ]) == replicator.
+
+	mockSession rememberMaterializedObject: order forOop: 9944.
+	order gbsInstVarAt: 6 put: 11.
+	self assert: (mockSession isMaterializedObjectDirty: order).
+	self assert: mockSession abortTransaction.
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty.
+	self assert: (mockSession materializedObjectForOop: 9944) isNil.
+	self assert: mockSession replicatorManager == manager.
+
+	mockSession rememberMaterializedObject: order forOop: 9960.
+	order gbsInstVarAt: 6 put: 12.
+	self assert: (mockSession isMaterializedObjectDirty: order).
+	oldManager := mockSession replicatorManager.
+	mockSession resetAfterLogout.
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty.
+	self assert: (mockSession materializedObjectForOop: 9960) isNil.
+	self deny: mockSession replicatorManager == oldManager.
+	self assert: (mockSession replicatorManager
+		replicatorForClientBehavior: CoreGbsMigrationDomainInheritedMappedOrder
+		ifAbsent: [ nil ]) isNil
+]
+
+{ #category : 'tests' }
 GbsSessionManagerCoreTest >> testReplicatorManagerClassVersionChangeRefreshesSubclassReplicatorAndClampMetadata [
 	| mockSession manager connector replicator scheme |
 	mockSession := CoreMockGbsSession new.
