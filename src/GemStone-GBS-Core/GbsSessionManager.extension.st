@@ -7,6 +7,37 @@ GbsSessionManager class >> clearAllTypedWrapperClasses [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSessionManager class >> clearConnectorConnectionStateForClient: clientClassName server: serverClassName sessionKey: sessionKey [
+	| c s key inverseKey registry |
+	c := clientClassName ifNil: [ '' ] ifNotNil: [ clientClassName asString ].
+	s := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+	key := self connectorConnectionKeyForClient: c server: s session: sessionKey.
+	inverseKey := self connectorConnectionKeyForClient: s server: c session: sessionKey.
+	registry := self connectorConnectionRegistry copy.
+	registry removeKey: key ifAbsent: [ ].
+	registry removeKey: inverseKey ifAbsent: [ ].
+	Smalltalk globals at: #GbsConnectorConnectionRegistry put: registry.
+	^ self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSessionManager class >> clearConnectorConnectionStatesForClient: clientClassName server: serverClassName [
+	| c s directPrefix inversePrefix registry keysToRemove |
+	c := clientClassName ifNil: [ '' ] ifNotNil: [ clientClassName asString ].
+	s := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+	directPrefix := c, '->', s, '@'.
+	inversePrefix := s, '->', c, '@'.
+	registry := self connectorConnectionRegistry copy.
+	keysToRemove := registry keys select: [ :key |
+		(key asString beginsWith: directPrefix)
+			or: [ key asString beginsWith: inversePrefix ] ].
+	keysToRemove do: [ :key |
+		registry removeKey: key ifAbsent: [ ] ].
+	Smalltalk globals at: #GbsConnectorConnectionRegistry put: registry.
+	^ self
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSessionManager class >> clearTypedWrapperClassForClient: clientClassName server: serverClassName [
 	| key registry |
 	key := self connectorObjectKeyForClient: clientClassName server: serverClassName.
@@ -532,6 +563,7 @@ GbsSessionManager class >> resetConnectorState [
 	Smalltalk globals at: #GbsFastConnectorRegistry put: Dictionary new.
 	Smalltalk globals at: #GbsConnectorObjectRegistry put: Dictionary new.
 	Smalltalk globals at: #GbsConnectorConnectionRegistry put: Dictionary new.
+	Smalltalk globals at: #GbsConnectorInvalidActionRegistry put: Dictionary new.
 	Smalltalk globals at: #GbsConnectorClassMappingRegistry put: Dictionary new.
 	Smalltalk globals at: #GbsConnectorPostConnectActionRegistry put: Dictionary new.
 	Smalltalk globals at: #GbsSessionConnectorRegistry put: Dictionary new.
@@ -549,6 +581,7 @@ GbsSessionManager class >> removeConnectorClient: clientClassName server: server
 		registry removeKey: c ifAbsent: [ ].
 		registry removeKey: s ifAbsent: [ ] ].
 	self fastConnectorRegistry: registry.
+	self clearConnectorConnectionStatesForClient: c server: s.
 	self clearPostConnectActionForConnectorClient: c server: s.
 	self clearTypedWrapperClassForClient: c server: s.
 	self removeConnectorObjectForClient: c server: s
@@ -566,9 +599,34 @@ GbsSessionManager class >> removeConnectorClient: clientClassName server: server
 	sessionRegistry removeKey: s ifAbsent: [ ].
 	registry at: sessionKey put: sessionRegistry.
 	Smalltalk globals at: #GbsSessionConnectorRegistry put: registry.
+	self clearConnectorConnectionStateForClient: c server: s sessionKey: sessionKey.
 	self clearPostConnectActionForConnectorClient: c server: s.
 	self clearTypedWrapperClassForClient: c server: s.
 	self removeConnectorObjectForClient: c server: s
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSessionManager class >> registerConnectorObject: aConnector forClient: clientClassName server: serverClassName [
+	| c s key registry action |
+	c := clientClassName ifNil: [ '' ] ifNotNil: [ clientClassName asString ].
+	s := serverClassName ifNil: [ '' ] ifNotNil: [ serverClassName asString ].
+	(c isEmpty or: [ s isEmpty ]) ifTrue: [ ^ aConnector ].
+	(aConnector respondsTo: #stName:) ifTrue: [ aConnector stName: c ].
+	(aConnector respondsTo: #gsName:) ifTrue: [ aConnector gsName: s ].
+	(aConnector respondsTo: #connectorClientName:) ifTrue: [ aConnector connectorClientName: c ].
+	(aConnector respondsTo: #connectorServerName:) ifTrue: [ aConnector connectorServerName: s ].
+	(aConnector respondsTo: #postConnectAction) ifTrue: [
+		action := aConnector postConnectAction.
+		action ifNotNil: [
+			self
+				setPostConnectAction: action
+				forConnectorClient: c
+				server: s ] ].
+	key := self connectorObjectKeyForClient: c server: s.
+	registry := self connectorObjectRegistry copy.
+	registry at: key put: aConnector.
+	Smalltalk globals at: #GbsConnectorObjectRegistry put: registry.
+	^ aConnector
 ]
 
 { #category : '*GemStone-GBS-Core' }

@@ -21,6 +21,14 @@ GbsClassConnector >> connectInSession: aSession ifFail: oneArgBlock [
 	| manager connector |
 	^ [
 		manager := aSession replicatorManager.
+		GbsSessionManager
+			registerConnectorObject: self
+			forClient: self stName
+			server: self gsName.
+		GbsSessionManager
+			setPostConnectAction: self postConnectAction
+			forConnectorClient: self stName
+			server: self gsName.
 		connector := self clientClassConnectorForSession: aSession.
 		manager installClientClassConnector: connector.
 		GbsSessionManager

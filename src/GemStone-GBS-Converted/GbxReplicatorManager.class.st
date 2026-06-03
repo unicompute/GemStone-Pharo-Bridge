@@ -103,20 +103,33 @@ GbxReplicatorManager >> removeReplicatorForClientBehavior: clientBehavior andSer
 	replicator ifNil: [
 		clientMap removeKey: clientBehavior ifAbsent: [ ].
 		serverMap removeKey: serverBehavior ifAbsent: [ ].
+		(self respondsTo: #unregisterConnectorPairForClientBehavior:serverBehavior:)
+			ifTrue: [
+				self
+					unregisterConnectorPairForClientBehavior: clientBehavior
+					serverBehavior: serverBehavior ].
 		^ nil ].
 	^ self removeReplicator: replicator
 ]
 
 { #category : 'mapping' }
 GbxReplicatorManager >> removeReplicator: aReplicator [
+	| clientBehaviors serverBehaviors |
 	aReplicator ifNil: [ ^ nil ].
-	(self clientBehaviorsForReplicator: aReplicator) do: [ :behavior |
+	clientBehaviors := self clientBehaviorsForReplicator: aReplicator.
+	serverBehaviors := self serverBehaviorsForReplicator: aReplicator.
+	clientBehaviors do: [ :behavior |
 		clientMap removeKey: behavior ifAbsent: [ ] ].
-	(self serverBehaviorsForReplicator: aReplicator) do: [ :behavior |
+	serverBehaviors do: [ :behavior |
 		serverMap removeKey: behavior ifAbsent: [ ] ].
 	self removeDeferredServerInstVarUpdateFor: aReplicator.
 	(clampManager notNil and: [ clampManager respondsTo: #removeClampsForReplicator: ])
 		ifTrue: [ clampManager removeClampsForReplicator: aReplicator ].
+	(self respondsTo: #unregisterConnectorPairsForClientBehaviors:serverBehaviors:)
+		ifTrue: [
+			self
+				unregisterConnectorPairsForClientBehaviors: clientBehaviors
+				serverBehaviors: serverBehaviors ].
 	^ aReplicator
 ]
 

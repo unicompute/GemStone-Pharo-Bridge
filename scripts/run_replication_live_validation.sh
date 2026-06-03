@@ -17,6 +17,7 @@ CONNECTOR_MAX_MS="${GBS_REPLICATION_LIVE_CONNECTOR_MAX_MS:-${REPLICATION_LIVE_CO
 CLAMPED_MAX_MS="${GBS_REPLICATION_LIVE_CLAMPED_MAX_MS:-${REPLICATION_LIVE_CLAMPED_MAX_MS:-500}}"
 DIRTY_STORE_MAX_MS="${GBS_REPLICATION_LIVE_DIRTY_STORE_MAX_MS:-${REPLICATION_LIVE_DIRTY_STORE_MAX_MS:-2000}}"
 BUSINESS_DIRTY_STORE_MAX_MS="${GBS_REPLICATION_LIVE_BUSINESS_DIRTY_STORE_MAX_MS:-${REPLICATION_LIVE_BUSINESS_DIRTY_STORE_MAX_MS:-3000}}"
+DOMAIN_DIRTY_STORE_MAX_MS="${GBS_REPLICATION_LIVE_DOMAIN_DIRTY_STORE_MAX_MS:-${REPLICATION_LIVE_DOMAIN_DIRTY_STORE_MAX_MS:-500}}"
 CLAMPED_FETCHES_MIN="${GBS_REPLICATION_LIVE_CLAMPED_FETCHES_MIN:-${REPLICATION_LIVE_CLAMPED_FETCHES_MIN:-1}}"
 CLAMPED_FETCHES_MAX="${GBS_REPLICATION_LIVE_CLAMPED_FETCHES_MAX:-${REPLICATION_LIVE_CLAMPED_FETCHES_MAX:-3}}"
 CLAMPED_FALLBACKS_MAX="${GBS_REPLICATION_LIVE_CLAMPED_FALLBACKS_MAX:-${REPLICATION_LIVE_CLAMPED_FALLBACKS_MAX:-0}}"
@@ -24,6 +25,12 @@ CALLBACK_CLAMP_SPECS_MIN="${GBS_REPLICATION_LIVE_CALLBACK_CLAMP_SPECS_MIN:-${REP
 PER_INSTVAR_CLAMP_ENTRIES_MIN="${GBS_REPLICATION_LIVE_PER_INSTVAR_CLAMP_ENTRIES_MIN:-${REPLICATION_LIVE_PER_INSTVAR_CLAMP_ENTRIES_MIN:-1}}"
 INHERITED_REPLICATION_SPEC_FIXTURES_MIN="${GBS_REPLICATION_LIVE_INHERITED_REPLICATION_SPEC_FIXTURES_MIN:-${REPLICATION_LIVE_INHERITED_REPLICATION_SPEC_FIXTURES_MIN:-1}}"
 CONNECTOR_PAIR_COUNT_MIN="${GBS_REPLICATION_LIVE_CONNECTOR_PAIR_COUNT_MIN:-${REPLICATION_LIVE_CONNECTOR_PAIR_COUNT_MIN:-1}}"
+DOMAIN_FIXTURE_COUNT_MIN="${GBS_REPLICATION_LIVE_DOMAIN_FIXTURE_COUNT_MIN:-${REPLICATION_LIVE_DOMAIN_FIXTURE_COUNT_MIN:-1}}"
+DOMAIN_PER_INSTVAR_CLAMP_ENTRIES_MIN="${GBS_REPLICATION_LIVE_DOMAIN_PER_INSTVAR_CLAMP_ENTRIES_MIN:-${REPLICATION_LIVE_DOMAIN_PER_INSTVAR_CLAMP_ENTRIES_MIN:-1}}"
+DOMAIN_CALLBACK_CLAMP_SPECS_MIN="${GBS_REPLICATION_LIVE_DOMAIN_CALLBACK_CLAMP_SPECS_MIN:-${REPLICATION_LIVE_DOMAIN_CALLBACK_CLAMP_SPECS_MIN:-1}}"
+DOMAIN_DIRTY_OBJECTS_FLUSHED_MIN="${GBS_REPLICATION_LIVE_DOMAIN_DIRTY_OBJECTS_FLUSHED_MIN:-${REPLICATION_LIVE_DOMAIN_DIRTY_OBJECTS_FLUSHED_MIN:-2}}"
+DOMAIN_NATIVE_DIRTY_STORE_FLUSHES_MIN="${GBS_REPLICATION_LIVE_DOMAIN_NATIVE_DIRTY_STORE_FLUSHES_MIN:-${REPLICATION_LIVE_DOMAIN_NATIVE_DIRTY_STORE_FLUSHES_MIN:-1}}"
+DOMAIN_NATIVE_DIRTY_STORE_ENTRIES_MIN="${GBS_REPLICATION_LIVE_DOMAIN_NATIVE_DIRTY_STORE_ENTRIES_MIN:-${REPLICATION_LIVE_DOMAIN_NATIVE_DIRTY_STORE_ENTRIES_MIN:-2}}"
 NATIVE_DIRTY_STORE_FLUSHES_MIN="${GBS_REPLICATION_LIVE_NATIVE_DIRTY_STORE_FLUSHES_MIN:-${REPLICATION_LIVE_NATIVE_DIRTY_STORE_FLUSHES_MIN:-1}}"
 SEMANTIC_DIRTY_STORE_COMMANDS_MIN="${GBS_REPLICATION_LIVE_SEMANTIC_DIRTY_STORE_COMMANDS_MIN:-${REPLICATION_LIVE_SEMANTIC_DIRTY_STORE_COMMANDS_MIN:-1}}"
 SEMANTIC_DIRTY_STORE_ENTRIES_MIN="${GBS_REPLICATION_LIVE_SEMANTIC_DIRTY_STORE_ENTRIES_MIN:-${REPLICATION_LIVE_SEMANTIC_DIRTY_STORE_ENTRIES_MIN:-3}}"
@@ -67,23 +74,37 @@ emit_summary() {
   local per_instvar_clamp_entries="${PER_INSTVAR_CLAMP_ENTRIES:-0}"
   local inherited_replication_spec_fixtures="${INHERITED_REPLICATION_SPEC_FIXTURES:-0}"
   local connector_pair_count="${CONNECTOR_PAIR_COUNT:-0}"
+  local domain_fixture_count="${DOMAIN_FIXTURE_COUNT:-0}"
+  local domain_per_instvar_clamp_entries="${DOMAIN_PER_INSTVAR_CLAMP_ENTRIES:-0}"
+  local domain_callback_clamp_specs="${DOMAIN_CALLBACK_CLAMP_SPECS:-0}"
+  local domain_dirty_store_ms="${DOMAIN_DIRTY_STORE_MS:-0}"
+  local domain_dirty_objects="${DOMAIN_DIRTY_OBJECTS:-0}"
+  local domain_native_flushes="${DOMAIN_NATIVE_FLUSHES:-0}"
+  local domain_native_entries="${DOMAIN_NATIVE_ENTRIES:-0}"
   local lifecycle_no_longer_queued="${LIFECYCLE_NO_LONGER_QUEUED:-0}"
   local lifecycle_gced_queued="${LIFECYCLE_GCED_QUEUED:-0}"
   local lifecycle_no_longer_acknowledged="${LIFECYCLE_NO_LONGER_ACKNOWLEDGED:-0}"
   local lifecycle_gced_acknowledged="${LIFECYCLE_GCED_ACKNOWLEDGED:-0}"
   local json_payload markdown_payload
-  echo "REPLICATION_LIVE_SUMMARY result=${result} code=${code} connector_ms=${connector_ms} clamped_ms=${clamped_ms} dirty_store_ms=${dirty_store_ms} business_dirty_store_ms=${business_dirty_store_ms} callback_clamp_specs=${callback_clamp_specs} per_instvar_clamp_entries=${per_instvar_clamp_entries} inherited_replication_spec_fixtures=${inherited_replication_spec_fixtures} connector_pair_count=${connector_pair_count} clamped_traversal_fetches=${clamped_fetches} clamped_traversal_fallbacks=${clamped_fallbacks} native_dirty_store_flushes=${native_flushes} semantic_dirty_store_commands=${semantic_commands} semantic_dirty_store_entries=${semantic_entries} semantic_dictionary_entries=${semantic_dictionary_entries} semantic_set_entries=${semantic_set_entries} semantic_bag_entries=${semantic_bag_entries} dirty_objects_flushed=${dirty_objects} business_dirty_objects_flushed=${business_dirty_objects} business_write_fixture_size=${business_fixture_size} export_set_queued_before=${export_before} export_set_queued_after=${export_after} lifecycle_no_longer_queued=${lifecycle_no_longer_queued} lifecycle_gced_queued=${lifecycle_gced_queued} lifecycle_no_longer_acknowledged=${lifecycle_no_longer_acknowledged} lifecycle_gced_acknowledged=${lifecycle_gced_acknowledged} business_export_set_queued_after=${business_export_after} connector_max_ms=${CONNECTOR_MAX_MS} clamped_max_ms=${CLAMPED_MAX_MS} dirty_store_max_ms=${DIRTY_STORE_MAX_MS} business_dirty_store_max_ms=${BUSINESS_DIRTY_STORE_MAX_MS} threshold_file=${THRESHOLD_FILE} work_image=${WORK_IMAGE}"
-  printf -v json_payload '{"result":"%s","code":"%s","connector_ms":"%s","clamped_ms":"%s","dirty_store_ms":"%s","business_dirty_store_ms":"%s","callback_clamp_specs":"%s","per_instvar_clamp_entries":"%s","inherited_replication_spec_fixtures":"%s","connector_pair_count":"%s","clamped_traversal_fetches":"%s","clamped_traversal_fallbacks":"%s","native_dirty_store_flushes":"%s","semantic_dirty_store_commands":"%s","semantic_dirty_store_entries":"%s","semantic_dictionary_entries":"%s","semantic_set_entries":"%s","semantic_bag_entries":"%s","dirty_objects_flushed":"%s","business_dirty_objects_flushed":"%s","business_write_fixture_size":"%s","export_set_queued_before":"%s","export_set_queued_after":"%s","lifecycle_no_longer_queued":"%s","lifecycle_gced_queued":"%s","lifecycle_no_longer_acknowledged":"%s","lifecycle_gced_acknowledged":"%s","business_export_set_queued_after":"%s","connector_max_ms":"%s","clamped_max_ms":"%s","dirty_store_max_ms":"%s","business_dirty_store_max_ms":"%s","threshold_file":"%s","work_image":"%s"}' \
+  echo "REPLICATION_LIVE_SUMMARY result=${result} code=${code} connector_ms=${connector_ms} clamped_ms=${clamped_ms} dirty_store_ms=${dirty_store_ms} business_dirty_store_ms=${business_dirty_store_ms} domain_dirty_store_ms=${domain_dirty_store_ms} callback_clamp_specs=${callback_clamp_specs} per_instvar_clamp_entries=${per_instvar_clamp_entries} inherited_replication_spec_fixtures=${inherited_replication_spec_fixtures} connector_pair_count=${connector_pair_count} domain_fixture_count=${domain_fixture_count} domain_per_instvar_clamp_entries=${domain_per_instvar_clamp_entries} domain_callback_clamp_specs=${domain_callback_clamp_specs} domain_dirty_objects_flushed=${domain_dirty_objects} domain_native_dirty_store_flushes=${domain_native_flushes} domain_native_dirty_store_entries=${domain_native_entries} clamped_traversal_fetches=${clamped_fetches} clamped_traversal_fallbacks=${clamped_fallbacks} native_dirty_store_flushes=${native_flushes} semantic_dirty_store_commands=${semantic_commands} semantic_dirty_store_entries=${semantic_entries} semantic_dictionary_entries=${semantic_dictionary_entries} semantic_set_entries=${semantic_set_entries} semantic_bag_entries=${semantic_bag_entries} dirty_objects_flushed=${dirty_objects} business_dirty_objects_flushed=${business_dirty_objects} business_write_fixture_size=${business_fixture_size} export_set_queued_before=${export_before} export_set_queued_after=${export_after} lifecycle_no_longer_queued=${lifecycle_no_longer_queued} lifecycle_gced_queued=${lifecycle_gced_queued} lifecycle_no_longer_acknowledged=${lifecycle_no_longer_acknowledged} lifecycle_gced_acknowledged=${lifecycle_gced_acknowledged} business_export_set_queued_after=${business_export_after} connector_max_ms=${CONNECTOR_MAX_MS} clamped_max_ms=${CLAMPED_MAX_MS} dirty_store_max_ms=${DIRTY_STORE_MAX_MS} business_dirty_store_max_ms=${BUSINESS_DIRTY_STORE_MAX_MS} domain_dirty_store_max_ms=${DOMAIN_DIRTY_STORE_MAX_MS} threshold_file=${THRESHOLD_FILE} work_image=${WORK_IMAGE}"
+  printf -v json_payload '{"result":"%s","code":"%s","connector_ms":"%s","clamped_ms":"%s","dirty_store_ms":"%s","business_dirty_store_ms":"%s","domain_dirty_store_ms":"%s","callback_clamp_specs":"%s","per_instvar_clamp_entries":"%s","inherited_replication_spec_fixtures":"%s","connector_pair_count":"%s","domain_fixture_count":"%s","domain_per_instvar_clamp_entries":"%s","domain_callback_clamp_specs":"%s","domain_dirty_objects_flushed":"%s","domain_native_dirty_store_flushes":"%s","domain_native_dirty_store_entries":"%s","clamped_traversal_fetches":"%s","clamped_traversal_fallbacks":"%s","native_dirty_store_flushes":"%s","semantic_dirty_store_commands":"%s","semantic_dirty_store_entries":"%s","semantic_dictionary_entries":"%s","semantic_set_entries":"%s","semantic_bag_entries":"%s","dirty_objects_flushed":"%s","business_dirty_objects_flushed":"%s","business_write_fixture_size":"%s","export_set_queued_before":"%s","export_set_queued_after":"%s","lifecycle_no_longer_queued":"%s","lifecycle_gced_queued":"%s","lifecycle_no_longer_acknowledged":"%s","lifecycle_gced_acknowledged":"%s","business_export_set_queued_after":"%s","connector_max_ms":"%s","clamped_max_ms":"%s","dirty_store_max_ms":"%s","business_dirty_store_max_ms":"%s","domain_dirty_store_max_ms":"%s","threshold_file":"%s","work_image":"%s"}' \
     "$(gbs_json_escape "${result}")" \
     "$(gbs_json_escape "${code}")" \
     "$(gbs_json_escape "${connector_ms}")" \
     "$(gbs_json_escape "${clamped_ms}")" \
     "$(gbs_json_escape "${dirty_store_ms}")" \
     "$(gbs_json_escape "${business_dirty_store_ms}")" \
+    "$(gbs_json_escape "${domain_dirty_store_ms}")" \
     "$(gbs_json_escape "${callback_clamp_specs}")" \
     "$(gbs_json_escape "${per_instvar_clamp_entries}")" \
     "$(gbs_json_escape "${inherited_replication_spec_fixtures}")" \
     "$(gbs_json_escape "${connector_pair_count}")" \
+    "$(gbs_json_escape "${domain_fixture_count}")" \
+    "$(gbs_json_escape "${domain_per_instvar_clamp_entries}")" \
+    "$(gbs_json_escape "${domain_callback_clamp_specs}")" \
+    "$(gbs_json_escape "${domain_dirty_objects}")" \
+    "$(gbs_json_escape "${domain_native_flushes}")" \
+    "$(gbs_json_escape "${domain_native_entries}")" \
     "$(gbs_json_escape "${clamped_fetches}")" \
     "$(gbs_json_escape "${clamped_fallbacks}")" \
     "$(gbs_json_escape "${native_flushes}")" \
@@ -106,13 +127,14 @@ emit_summary() {
     "$(gbs_json_escape "${CLAMPED_MAX_MS}")" \
     "$(gbs_json_escape "${DIRTY_STORE_MAX_MS}")" \
     "$(gbs_json_escape "${BUSINESS_DIRTY_STORE_MAX_MS}")" \
+    "$(gbs_json_escape "${DOMAIN_DIRTY_STORE_MAX_MS}")" \
     "$(gbs_json_escape "${THRESHOLD_FILE}")" \
     "$(gbs_json_escape "${WORK_IMAGE}")"
   if [[ "${JSON_SUMMARY}" == "1" ]]; then
     printf 'REPLICATION_LIVE_SUMMARY_JSON %s\n' "${json_payload}"
   fi
   gbs_write_json_summary_file "replication-live-summary.json" "${json_payload}"
-  printf -v markdown_payload '%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n' \
+  printf -v markdown_payload '%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n' \
     '# Replication Live Validation' \
     "" \
     "- result: \`${result}\`" \
@@ -120,13 +142,14 @@ emit_summary() {
     "- connector install: \`${connector_ms} ms\`" \
     "- strict parity fixtures: callback clamp specs \`${callback_clamp_specs}\`, per-instvar entries \`${per_instvar_clamp_entries}\`, inherited spec fixtures \`${inherited_replication_spec_fixtures}\`" \
     "- connector manager report: connector pairs \`${connector_pair_count}\`" \
+    "- migration-domain fixture: fixtures \`${domain_fixture_count}\`, callback specs \`${domain_callback_clamp_specs}\`, per-instvar entries \`${domain_per_instvar_clamp_entries}\`, native dirty-store \`${domain_dirty_store_ms} ms\`, native flushes \`${domain_native_flushes}\`, native entries \`${domain_native_entries}\`, dirty objects \`${domain_dirty_objects}\`" \
     "- clamped traversal fetch: \`${clamped_ms} ms\`, GciClampedTrav calls \`${clamped_fetches}\`, fallbacks \`${clamped_fallbacks}\`" \
     "- dirty-store flush: \`${dirty_store_ms} ms\`, native flushes \`${native_flushes}\`, semantic commands \`${semantic_commands}\`, semantic entries \`${semantic_entries}\`, dirty objects \`${dirty_objects}\`" \
     "- semantic collection entries: Dictionary \`${semantic_dictionary_entries}\`, Set \`${semantic_set_entries}\`, Bag \`${semantic_bag_entries}\`" \
     "- business dirty-store flush: \`${business_dirty_store_ms} ms\`, dirty objects \`${business_dirty_objects}\`, fixture size \`${business_fixture_size}\`" \
     "- export-set queues: before \`${export_before}\`, after \`${export_after}\`, business after \`${business_export_after}\`" \
     "- lifecycle counters: no-longer queued \`${lifecycle_no_longer_queued}\`, gced queued \`${lifecycle_gced_queued}\`, no-longer acknowledged \`${lifecycle_no_longer_acknowledged}\`, gced acknowledged \`${lifecycle_gced_acknowledged}\`" \
-    "- thresholds: connector \`${CONNECTOR_MAX_MS} ms\`, clamped \`${CLAMPED_MAX_MS} ms\`, dirty-store \`${DIRTY_STORE_MAX_MS} ms\`, business dirty-store \`${BUSINESS_DIRTY_STORE_MAX_MS} ms\`" \
+    "- thresholds: connector \`${CONNECTOR_MAX_MS} ms\`, clamped \`${CLAMPED_MAX_MS} ms\`, dirty-store \`${DIRTY_STORE_MAX_MS} ms\`, business dirty-store \`${BUSINESS_DIRTY_STORE_MAX_MS} ms\`, domain dirty-store \`${DOMAIN_DIRTY_STORE_MAX_MS} ms\`" \
     "- threshold file: \`${THRESHOLD_FILE}\`" \
     "- work image: \`${WORK_IMAGE}\`" \
     "" \
@@ -138,13 +161,14 @@ emit_summary() {
   gbs_append_summary_line "- connector install: \`${connector_ms} ms\`"
   gbs_append_summary_line "- strict parity fixtures: callback clamp specs \`${callback_clamp_specs}\`, per-instvar entries \`${per_instvar_clamp_entries}\`, inherited spec fixtures \`${inherited_replication_spec_fixtures}\`"
   gbs_append_summary_line "- connector manager report: connector pairs \`${connector_pair_count}\`"
+  gbs_append_summary_line "- migration-domain fixture: fixtures \`${domain_fixture_count}\`, callback specs \`${domain_callback_clamp_specs}\`, per-instvar entries \`${domain_per_instvar_clamp_entries}\`, native dirty-store \`${domain_dirty_store_ms} ms\`, native flushes \`${domain_native_flushes}\`, native entries \`${domain_native_entries}\`, dirty objects \`${domain_dirty_objects}\`"
   gbs_append_summary_line "- clamped traversal fetch: \`${clamped_ms} ms\`, GciClampedTrav calls \`${clamped_fetches}\`, fallbacks \`${clamped_fallbacks}\`"
   gbs_append_summary_line "- dirty-store flush: \`${dirty_store_ms} ms\`, native flushes \`${native_flushes}\`, semantic commands \`${semantic_commands}\`, semantic entries \`${semantic_entries}\`, dirty objects \`${dirty_objects}\`"
   gbs_append_summary_line "- semantic collection entries: Dictionary \`${semantic_dictionary_entries}\`, Set \`${semantic_set_entries}\`, Bag \`${semantic_bag_entries}\`"
   gbs_append_summary_line "- business dirty-store flush: \`${business_dirty_store_ms} ms\`, dirty objects \`${business_dirty_objects}\`, fixture size \`${business_fixture_size}\`"
   gbs_append_summary_line "- export-set queues: before \`${export_before}\`, after \`${export_after}\`, business after \`${business_export_after}\`"
   gbs_append_summary_line "- lifecycle counters: no-longer queued \`${lifecycle_no_longer_queued}\`, gced queued \`${lifecycle_gced_queued}\`, no-longer acknowledged \`${lifecycle_no_longer_acknowledged}\`, gced acknowledged \`${lifecycle_gced_acknowledged}\`"
-  gbs_append_summary_line "- thresholds: connector \`${CONNECTOR_MAX_MS} ms\`, clamped \`${CLAMPED_MAX_MS} ms\`, dirty-store \`${DIRTY_STORE_MAX_MS} ms\`, business dirty-store \`${BUSINESS_DIRTY_STORE_MAX_MS} ms\`"
+  gbs_append_summary_line "- thresholds: connector \`${CONNECTOR_MAX_MS} ms\`, clamped \`${CLAMPED_MAX_MS} ms\`, dirty-store \`${DIRTY_STORE_MAX_MS} ms\`, business dirty-store \`${BUSINESS_DIRTY_STORE_MAX_MS} ms\`, domain dirty-store \`${DOMAIN_DIRTY_STORE_MAX_MS} ms\`"
 }
 
 extract_summary_field() {
@@ -295,7 +319,7 @@ check_trend_metric() {
 }
 
 check_trend_regression() {
-  local trend_file previous_line previous_connector previous_clamped previous_dirty previous_business
+  local trend_file previous_line previous_connector previous_clamped previous_dirty previous_business previous_domain
   trend_file="$(trend_file_path)"
   [[ -n "${trend_file}" && -f "${trend_file}" ]] || return 0
   previous_line="$(grep -v '^[[:space:]]*$' "${trend_file}" | tail -1 || true)"
@@ -304,10 +328,12 @@ check_trend_regression() {
   previous_clamped="$(json_line_number_field "${previous_line}" clamped_ms)"
   previous_dirty="$(json_line_number_field "${previous_line}" dirty_store_ms)"
   previous_business="$(json_line_number_field "${previous_line}" business_dirty_store_ms)"
+  previous_domain="$(json_line_number_field "${previous_line}" domain_dirty_store_ms)"
   check_trend_metric "CONNECTOR" "${CONNECTOR_MS}" "${previous_connector}"
   check_trend_metric "CLAMPED" "${CLAMPED_MS}" "${previous_clamped}"
   check_trend_metric "DIRTY_STORE" "${DIRTY_STORE_MS}" "${previous_dirty}"
   check_trend_metric "BUSINESS_DIRTY_STORE" "${BUSINESS_DIRTY_STORE_MS}" "${previous_business}"
+  check_trend_metric "DOMAIN_DIRTY_STORE" "${DOMAIN_DIRTY_STORE_MS}" "${previous_domain}"
   gbs_append_summary_line "- trend comparison: previous sample from \`${trend_file}\`, threshold \`${TREND_REGRESSION_PERCENT}%\` or \`+${TREND_REGRESSION_MIN_DELTA_MS} ms\`, whichever is larger"
 }
 
@@ -317,16 +343,23 @@ write_trend_sample() {
   [[ -n "${trend_file}" ]] || return 0
   mkdir -p "$(dirname "${trend_file}")"
   timestamp="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-  printf '{"timestamp":"%s","connector_ms":%s,"clamped_ms":%s,"dirty_store_ms":%s,"business_dirty_store_ms":%s,"callback_clamp_specs":%s,"per_instvar_clamp_entries":%s,"inherited_replication_spec_fixtures":%s,"connector_pair_count":%s,"clamped_traversal_fetches":%s,"clamped_traversal_fallbacks":%s,"native_dirty_store_flushes":%s,"semantic_dirty_store_commands":%s,"semantic_dirty_store_entries":%s,"semantic_dictionary_entries":%s,"semantic_set_entries":%s,"semantic_bag_entries":%s,"dirty_objects_flushed":%s,"business_dirty_objects_flushed":%s,"business_write_fixture_size":%s,"export_set_queued_after":%s,"lifecycle_no_longer_queued":%s,"lifecycle_gced_queued":%s,"lifecycle_no_longer_acknowledged":%s,"lifecycle_gced_acknowledged":%s,"business_export_set_queued_after":%s,"connector_max_ms":%s,"clamped_max_ms":%s,"dirty_store_max_ms":%s,"business_dirty_store_max_ms":%s}\n' \
+  printf '{"timestamp":"%s","connector_ms":%s,"clamped_ms":%s,"dirty_store_ms":%s,"business_dirty_store_ms":%s,"domain_dirty_store_ms":%s,"callback_clamp_specs":%s,"per_instvar_clamp_entries":%s,"inherited_replication_spec_fixtures":%s,"connector_pair_count":%s,"domain_fixture_count":%s,"domain_per_instvar_clamp_entries":%s,"domain_callback_clamp_specs":%s,"domain_dirty_objects_flushed":%s,"domain_native_dirty_store_flushes":%s,"domain_native_dirty_store_entries":%s,"clamped_traversal_fetches":%s,"clamped_traversal_fallbacks":%s,"native_dirty_store_flushes":%s,"semantic_dirty_store_commands":%s,"semantic_dirty_store_entries":%s,"semantic_dictionary_entries":%s,"semantic_set_entries":%s,"semantic_bag_entries":%s,"dirty_objects_flushed":%s,"business_dirty_objects_flushed":%s,"business_write_fixture_size":%s,"export_set_queued_after":%s,"lifecycle_no_longer_queued":%s,"lifecycle_gced_queued":%s,"lifecycle_no_longer_acknowledged":%s,"lifecycle_gced_acknowledged":%s,"business_export_set_queued_after":%s,"connector_max_ms":%s,"clamped_max_ms":%s,"dirty_store_max_ms":%s,"business_dirty_store_max_ms":%s,"domain_dirty_store_max_ms":%s}\n' \
     "${timestamp}" \
     "${CONNECTOR_MS}" \
     "${CLAMPED_MS}" \
     "${DIRTY_STORE_MS}" \
     "${BUSINESS_DIRTY_STORE_MS}" \
+    "${DOMAIN_DIRTY_STORE_MS}" \
     "${CALLBACK_CLAMP_SPECS}" \
     "${PER_INSTVAR_CLAMP_ENTRIES}" \
     "${INHERITED_REPLICATION_SPEC_FIXTURES}" \
     "${CONNECTOR_PAIR_COUNT}" \
+    "${DOMAIN_FIXTURE_COUNT}" \
+    "${DOMAIN_PER_INSTVAR_CLAMP_ENTRIES}" \
+    "${DOMAIN_CALLBACK_CLAMP_SPECS}" \
+    "${DOMAIN_DIRTY_OBJECTS}" \
+    "${DOMAIN_NATIVE_FLUSHES}" \
+    "${DOMAIN_NATIVE_ENTRIES}" \
     "${CLAMPED_FETCHES}" \
     "${CLAMPED_FALLBACKS}" \
     "${NATIVE_FLUSHES}" \
@@ -347,12 +380,13 @@ write_trend_sample() {
     "${CONNECTOR_MAX_MS}" \
     "${CLAMPED_MAX_MS}" \
     "${DIRTY_STORE_MAX_MS}" \
-    "${BUSINESS_DIRTY_STORE_MAX_MS}" >> "${trend_file}"
+    "${BUSINESS_DIRTY_STORE_MAX_MS}" \
+    "${DOMAIN_DIRTY_STORE_MAX_MS}" >> "${trend_file}"
   gbs_append_summary_line "- trend sample: \`${trend_file}\`"
 }
 
 write_trend_report() {
-  local trend_file report_file line timestamp connector clamped dirty business dirty_objects business_objects fixture_size fallbacks semantic_commands semantic_entries
+  local trend_file report_file line timestamp connector clamped dirty business domain dirty_objects business_objects domain_objects fixture_size fallbacks semantic_commands semantic_entries
   trend_file="$(trend_file_path)"
   [[ -n "${trend_file}" && -f "${trend_file}" ]] || return 0
   report_file="${GBS_REPLICATION_LIVE_REPORT:-$(dirname "${trend_file}")/replication-live-trend-report.md}"
@@ -360,30 +394,34 @@ write_trend_report() {
   {
     printf '# Replication Live Trend\n\n'
     printf 'Regression threshold: `%s%%` over the previous sample or `+%s ms`, whichever is larger.\n\n' "${TREND_REGRESSION_PERCENT}" "${TREND_REGRESSION_MIN_DELTA_MS}"
-    printf '| Timestamp | Connector | Clamped | Dirty Store | Business Dirty Store | Semantic Commands | Semantic Entries | Dirty Objects | Business Objects | Fixture Size | Fallbacks |\n'
-    printf '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n'
+    printf '| Timestamp | Connector | Clamped | Dirty Store | Business Dirty Store | Domain Dirty Store | Semantic Commands | Semantic Entries | Dirty Objects | Business Objects | Domain Objects | Fixture Size | Fallbacks |\n'
+    printf '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n'
     grep -v '^[[:space:]]*$' "${trend_file}" | tail -20 | while IFS= read -r line; do
       timestamp="$(json_line_string_field "${line}" timestamp)"
       connector="$(json_line_number_field "${line}" connector_ms)"
       clamped="$(json_line_number_field "${line}" clamped_ms)"
       dirty="$(json_line_number_field "${line}" dirty_store_ms)"
       business="$(json_line_number_field "${line}" business_dirty_store_ms)"
+      domain="$(json_line_number_field "${line}" domain_dirty_store_ms)"
       semantic_commands="$(json_line_number_field "${line}" semantic_dirty_store_commands)"
       semantic_entries="$(json_line_number_field "${line}" semantic_dirty_store_entries)"
       dirty_objects="$(json_line_number_field "${line}" dirty_objects_flushed)"
       business_objects="$(json_line_number_field "${line}" business_dirty_objects_flushed)"
+      domain_objects="$(json_line_number_field "${line}" domain_dirty_objects_flushed)"
       fixture_size="$(json_line_number_field "${line}" business_write_fixture_size)"
       fallbacks="$(json_line_number_field "${line}" clamped_traversal_fallbacks)"
-      printf '| %s | %s ms | %s ms | %s ms | %s ms | %s | %s | %s | %s | %s | %s |\n' \
+      printf '| %s | %s ms | %s ms | %s ms | %s ms | %s ms | %s | %s | %s | %s | %s | %s | %s |\n' \
         "${timestamp:-unknown}" \
         "${connector:-0}" \
         "${clamped:-0}" \
         "${dirty:-0}" \
         "${business:-0}" \
+        "${domain:-0}" \
         "${semantic_commands:-0}" \
         "${semantic_entries:-0}" \
         "${dirty_objects:-0}" \
         "${business_objects:-0}" \
+        "${domain_objects:-0}" \
         "${fixture_size:-0}" \
         "${fallbacks:-0}"
     done
@@ -460,12 +498,19 @@ CONNECTOR_MS="$(extract_summary_field "${summary_line}" connector_ms)"
 CLAMPED_MS="$(extract_summary_field "${summary_line}" clamped_ms)"
 DIRTY_STORE_MS="$(extract_summary_field "${summary_line}" dirty_store_ms)"
 BUSINESS_DIRTY_STORE_MS="$(extract_summary_field "${summary_line}" business_dirty_store_ms)"
+DOMAIN_DIRTY_STORE_MS="$(extract_summary_field "${summary_line}" domain_dirty_store_ms)"
 CLAMPED_FETCHES="$(extract_summary_field "${summary_line}" clamped_traversal_fetches)"
 CLAMPED_FALLBACKS="$(extract_summary_field "${summary_line}" clamped_traversal_fallbacks)"
 CALLBACK_CLAMP_SPECS="$(extract_summary_field "${summary_line}" callback_clamp_specs)"
 PER_INSTVAR_CLAMP_ENTRIES="$(extract_summary_field "${summary_line}" per_instvar_clamp_entries)"
 INHERITED_REPLICATION_SPEC_FIXTURES="$(extract_summary_field "${summary_line}" inherited_replication_spec_fixtures)"
 CONNECTOR_PAIR_COUNT="$(extract_summary_field "${summary_line}" connector_pair_count)"
+DOMAIN_FIXTURE_COUNT="$(extract_summary_field "${summary_line}" domain_fixture_count)"
+DOMAIN_PER_INSTVAR_CLAMP_ENTRIES="$(extract_summary_field "${summary_line}" domain_per_instvar_clamp_entries)"
+DOMAIN_CALLBACK_CLAMP_SPECS="$(extract_summary_field "${summary_line}" domain_callback_clamp_specs)"
+DOMAIN_DIRTY_OBJECTS="$(extract_summary_field "${summary_line}" domain_dirty_objects_flushed)"
+DOMAIN_NATIVE_FLUSHES="$(extract_summary_field "${summary_line}" domain_native_dirty_store_flushes)"
+DOMAIN_NATIVE_ENTRIES="$(extract_summary_field "${summary_line}" domain_native_dirty_store_entries)"
 NATIVE_FLUSHES="$(extract_summary_field "${summary_line}" native_dirty_store_flushes)"
 SEMANTIC_COMMANDS="$(extract_summary_field "${summary_line}" semantic_dirty_store_commands)"
 SEMANTIC_ENTRIES="$(extract_summary_field "${summary_line}" semantic_dirty_store_entries)"
@@ -493,6 +538,7 @@ check_latency_threshold "CONNECTOR" "${CONNECTOR_MS}" "${CONNECTOR_MAX_MS}"
 check_latency_threshold "CLAMPED" "${CLAMPED_MS}" "${CLAMPED_MAX_MS}"
 check_latency_threshold "DIRTY_STORE" "${DIRTY_STORE_MS}" "${DIRTY_STORE_MAX_MS}"
 check_latency_threshold "BUSINESS_DIRTY_STORE" "${BUSINESS_DIRTY_STORE_MS}" "${BUSINESS_DIRTY_STORE_MAX_MS}"
+check_latency_threshold "DOMAIN_DIRTY_STORE" "${DOMAIN_DIRTY_STORE_MS}" "${DOMAIN_DIRTY_STORE_MAX_MS}"
 check_count_minimum "CLAMPED_FETCHES" "${CLAMPED_FETCHES}" "${CLAMPED_FETCHES_MIN}"
 check_count_threshold "CLAMPED_FETCHES" "${CLAMPED_FETCHES}" "${CLAMPED_FETCHES_MAX}"
 check_count_threshold "CLAMPED_FALLBACKS" "${CLAMPED_FALLBACKS}" "${CLAMPED_FALLBACKS_MAX}"
@@ -500,6 +546,12 @@ check_count_minimum "CALLBACK_CLAMP_SPECS" "${CALLBACK_CLAMP_SPECS}" "${CALLBACK
 check_count_minimum "PER_INSTVAR_CLAMP_ENTRIES" "${PER_INSTVAR_CLAMP_ENTRIES}" "${PER_INSTVAR_CLAMP_ENTRIES_MIN}"
 check_count_minimum "INHERITED_REPLICATION_SPEC_FIXTURES" "${INHERITED_REPLICATION_SPEC_FIXTURES}" "${INHERITED_REPLICATION_SPEC_FIXTURES_MIN}"
 check_count_minimum "CONNECTOR_PAIR_COUNT" "${CONNECTOR_PAIR_COUNT}" "${CONNECTOR_PAIR_COUNT_MIN}"
+check_count_minimum "DOMAIN_FIXTURE_COUNT" "${DOMAIN_FIXTURE_COUNT}" "${DOMAIN_FIXTURE_COUNT_MIN}"
+check_count_minimum "DOMAIN_PER_INSTVAR_CLAMP_ENTRIES" "${DOMAIN_PER_INSTVAR_CLAMP_ENTRIES}" "${DOMAIN_PER_INSTVAR_CLAMP_ENTRIES_MIN}"
+check_count_minimum "DOMAIN_CALLBACK_CLAMP_SPECS" "${DOMAIN_CALLBACK_CLAMP_SPECS}" "${DOMAIN_CALLBACK_CLAMP_SPECS_MIN}"
+check_count_minimum "DOMAIN_DIRTY_OBJECTS_FLUSHED" "${DOMAIN_DIRTY_OBJECTS}" "${DOMAIN_DIRTY_OBJECTS_FLUSHED_MIN}"
+check_count_minimum "DOMAIN_NATIVE_DIRTY_STORE_FLUSHES" "${DOMAIN_NATIVE_FLUSHES}" "${DOMAIN_NATIVE_DIRTY_STORE_FLUSHES_MIN}"
+check_count_minimum "DOMAIN_NATIVE_DIRTY_STORE_ENTRIES" "${DOMAIN_NATIVE_ENTRIES}" "${DOMAIN_NATIVE_DIRTY_STORE_ENTRIES_MIN}"
 check_count_minimum "NATIVE_DIRTY_STORE_FLUSHES" "${NATIVE_FLUSHES}" "${NATIVE_DIRTY_STORE_FLUSHES_MIN}"
 check_count_minimum "SEMANTIC_DIRTY_STORE_COMMANDS" "${SEMANTIC_COMMANDS}" "${SEMANTIC_DIRTY_STORE_COMMANDS_MIN}"
 check_count_minimum "SEMANTIC_DIRTY_STORE_ENTRIES" "${SEMANTIC_ENTRIES}" "${SEMANTIC_DIRTY_STORE_ENTRIES_MIN}"

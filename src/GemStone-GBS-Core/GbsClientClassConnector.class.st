@@ -62,16 +62,7 @@ GbsClientClassConnector >> installInReplicatorManager: aReplicatorManager [
 		atClient: self resolvedClientBehavior
 		andServer: self resolvedServerBehavior
 		put: replicator.
-	session
-		ifNil: [
-			GbsSessionManager
-				addConnectorClient: self clientBehaviorName
-				server: self serverBehaviorName ]
-		ifNotNil: [
-			GbsSessionManager
-				addConnectorClient: self clientBehaviorName
-				server: self serverBehaviorName
-				forSession: session ].
+	self registerConnectorStateIn: aReplicatorManager.
 	self updateClampMetadataIn: aReplicatorManager.
 	self markDeferredServerInstVarUpdateFor: replicator in: aReplicatorManager.
 	^ replicator
@@ -152,6 +143,29 @@ GbsClientClassConnector >> removeConflictingReplicatorsIn: aReplicatorManager [
 	conflicts do: [ :replicator |
 		self unregisterConnectorPairForReplicator: replicator manager: aReplicatorManager.
 		aReplicatorManager removeReplicator: replicator ].
+	^ self
+]
+
+{ #category : 'private' }
+GbsClientClassConnector >> registerConnectorStateIn: aReplicatorManager [
+	| session sessionKey |
+	session := aReplicatorManager session.
+	sessionKey := GbsSessionManager sessionKeyForSessionObject: session.
+	session
+		ifNil: [
+			GbsSessionManager
+				addConnectorClient: self clientBehaviorName
+				server: self serverBehaviorName ]
+		ifNotNil: [
+			GbsSessionManager
+				addConnectorClient: self clientBehaviorName
+				server: self serverBehaviorName
+				forSession: session ].
+	GbsSessionManager
+		setConnectorClient: self clientBehaviorName
+		server: self serverBehaviorName
+		connected: true
+		inSession: sessionKey.
 	^ self
 ]
 

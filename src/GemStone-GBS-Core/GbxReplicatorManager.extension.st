@@ -56,19 +56,76 @@ GbxReplicatorManager >> connectorBehaviorNamesFromMap: aDictionary [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorConnectionStateStringsForRows: rows [
+	^ rows collect: [ :row |
+		self connectorConnectionStringForReportRow: row ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorConnectionStringForReportRow: row [
+	| clientName serverName action connected |
+	clientName := row at: #client ifAbsent: [ '' ].
+	serverName := row at: #server ifAbsent: [ '' ].
+	action := row at: #postConnectAction ifAbsent: [ 'none' ].
+	connected := row at: #connected ifAbsent: [ false ].
+	^ clientName asString,
+		'->',
+		serverName asString,
+		' ',
+		(connected ifTrue: [ 'connected' ] ifFalse: [ 'disconnected' ]),
+		' postConnect=',
+		action asString
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorConnectionRowsForReport [
+	| sessionKey rows |
+	sessionKey := GbsSessionManager sessionKeyForSessionObject: self session.
+	rows := OrderedCollection new.
+	self connectorPairsForReport do: [ :pair |
+		| clientName serverName connector action connected |
+		clientName := pair at: 1 ifAbsent: [ '' ].
+		serverName := pair at: 2 ifAbsent: [ '' ].
+		connector := GbsSessionManager
+			connectorObjectForClient: clientName
+			server: serverName.
+		action := (connector notNil and: [ connector respondsTo: #postConnectAction ])
+			ifTrue: [ connector postConnectAction ]
+			ifFalse: [
+				GbsSessionManager
+					postConnectActionForConnectorClient: clientName
+					server: serverName ].
+		connected := GbsSessionManager
+			isConnectorClient: clientName
+			server: serverName
+			connectedInSession: sessionKey.
+		rows add: (Dictionary new
+			at: #client put: clientName asString;
+			at: #server put: serverName asString;
+			at: #connected put: connected;
+			at: #postConnectAction put: action asString;
+			yourself) ].
+	^ rows asArray
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxReplicatorManager >> connectorManagerReport [
-	| report pairs clamps |
+	| report pairs clamps connectionRows |
 	pairs := self connectorPairsForReport.
 	clamps := [ self identityClamps ] on: Error do: [ #() ].
+	connectionRows := self connectorConnectionRowsForReport.
 	report := Dictionary new
 		at: #clientMapSize put: clientMap size;
 		at: #serverMapSize put: serverMap size;
 		at: #replicatorCount put: self numberOfReplicators;
 		at: #connectorPairCount put: pairs size;
+		at: #connectedConnectorPairCount put: (connectionRows count: [ :row | row at: #connected ifAbsent: [ false ] ]);
+		at: #disconnectedConnectorPairCount put: (connectionRows count: [ :row | (row at: #connected ifAbsent: [ false ]) not ]);
 		at: #needsServerInstVarNames put: self needsServerInstVarNames;
 		at: #deferredServerInstVarReplicatorCount put: self replicatorsNeedingServerInstVarNames size;
 		at: #clientBehaviorNames put: (self connectorBehaviorNamesFromMap: clientMap);
 		at: #serverBehaviorNames put: (self connectorBehaviorNamesFromMap: serverMap);
+		at: #connectorConnectionStates put: (self connectorConnectionStateStringsForRows: connectionRows);
 		at: #currentReplicationSpecSet put: self defaultReplicationSpecSet;
 		at: #identityClampCount put: clamps size;
 		yourself.
@@ -89,10 +146,13 @@ GbxReplicatorManager >> connectorManagerReportText [
 			serverMapSize
 			replicatorCount
 			connectorPairCount
+			connectedConnectorPairCount
+			disconnectedConnectorPairCount
 			needsServerInstVarNames
 			deferredServerInstVarReplicatorCount
 			currentReplicationSpecSet
 			identityClampCount
+			connectorConnectionStates
 			clientBehaviorNames
 			serverBehaviorNames) do: [ :key |
 				stream
@@ -260,6 +320,36 @@ GbxReplicatorManager >> setReplicatorForClient: secondaryBehavior sameAsReplicat
 		ifAbsent: [ self error: 'Attempted second mapping without first mapping present.' ].
 	self atClient: secondaryBehavior put: replicator.
 	^ replicator
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> unregisterConnectorPairForClientBehavior: clientBehavior serverBehavior: serverBehavior [
+	| session clientName serverName |
+	clientName := self connectorNameForBehavior: clientBehavior.
+	serverName := self connectorNameForBehavior: serverBehavior.
+	(clientName isEmpty or: [ serverName isEmpty ]) ifTrue: [ ^ self ].
+	session := self session.
+	session
+		ifNil: [
+			GbsSessionManager
+				removeConnectorClient: clientName
+				server: serverName ]
+		ifNotNil: [
+			GbsSessionManager
+				removeConnectorClient: clientName
+				server: serverName
+				forSession: session ].
+	^ self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> unregisterConnectorPairsForClientBehaviors: clientBehaviors serverBehaviors: serverBehaviors [
+	clientBehaviors do: [ :clientBehavior |
+		serverBehaviors do: [ :serverBehavior |
+			self
+				unregisterConnectorPairForClientBehavior: clientBehavior
+				serverBehavior: serverBehavior ] ].
+	^ self
 ]
 
 { #category : '*GemStone-GBS-Core' }

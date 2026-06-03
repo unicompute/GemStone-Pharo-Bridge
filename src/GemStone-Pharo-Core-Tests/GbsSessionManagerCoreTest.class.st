@@ -518,6 +518,43 @@ GbsSessionManagerCoreTest >> testReplicatorManagerNamedCallbackSchemeInstallsSer
 ]
 
 { #category : 'tests' }
+GbsSessionManagerCoreTest >> testReplicatorManagerMigrationDomainSpecCoversForwarderMinMaxStubNilAndCallback [
+	| mockSession manager connector scheme callbackScheme closure |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: CoreGbsMigrationDomainOrder
+		server: 'GbsMigrationLiveOrder'
+		replicationSpec: CoreGbsMigrationDomainOrder migrationDomainReplicationSpec
+		serverInstVarNames: CoreGbsMigrationDomainOrder migrationDomainServerInstVarNames.
+	connector replicatorClass: GbxPointerObjectReplicator.
+
+	manager installClientClassConnector: connector.
+	scheme := manager currentReplicationScheme.
+	closure := scheme transitiveClosureSpecForReplicationSpec:
+		CoreGbsMigrationDomainOrder migrationDomainReplicationSpec.
+
+	self
+		assert: (scheme instVarLevelsForClass: CoreGbsMigrationDomainOrder)
+		equals: { false. -2. 1. nil. 0. nil }.
+	self assert: (scheme shouldProxyNamedSlot: 1 ofClass: CoreGbsMigrationDomainOrder).
+	self deny: (scheme shouldProxyNamedSlot: 2 ofClass: CoreGbsMigrationDomainOrder).
+	self deny: (scheme shouldProxyIndexedInstvarsOfClass: CoreGbsMigrationDomainOrder).
+	self
+		assert: closure
+		equals: #(
+			#(#customer #forwarder)
+			#(#indexable_part #replicate)).
+
+	callbackScheme := manager replicationSchemeForSet: #migrationDomainCallbackReplicationSpec.
+	self
+		assert: callbackScheme clamp instVarLevelsSelector
+		equals: #migrationDomainCallbackReplicationSpecGbsClampCallback.
+	self assert: callbackScheme hasServerClampMetadata.
+	self assert: (callbackScheme instVarLevelsForClass: CoreGbsMigrationDomainOrder) isNil
+]
+
+{ #category : 'tests' }
 GbsSessionManagerCoreTest >> testReplicatorManagerClassVersionChangeRefreshesSubclassReplicatorAndClampMetadata [
 	| mockSession manager connector replicator scheme |
 	mockSession := CoreMockGbsSession new.
@@ -575,6 +612,34 @@ GbsSessionManagerCoreTest >> testClassConnectorConnectsThroughReplicatorManager 
 ]
 
 { #category : 'tests' }
+GbsSessionManagerCoreTest >> testClassConnectorConnectRegistersConcreteConnectorObjectActionAndReportState [
+	| mockSession connector manager report registered connectResult |
+	GbsSessionManager resetConnectorState.
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script | 'RemoteArray' ].
+	manager := mockSession replicatorManager.
+	connector := GbsClassConnector
+		stName: 'Array'
+		gsName: 'RemoteArray'
+		dictionaryName: 'UserGlobals'.
+	connector postConnectAction: 'updateST'.
+
+	connectResult := connector connectInSession: mockSession ifFail: [ :ex |
+		self fail: ex messageText ].
+	registered := GbsSessionManager
+		connectorObjectForClient: 'Array'
+		server: 'RemoteArray'.
+	report := manager connectorManagerReport.
+
+	self assert: connectResult.
+	self assert: registered == connector.
+	self assert: (report at: #connectorPairCount) equals: 1.
+	self assert: (report at: #connectedConnectorPairCount) equals: 1.
+	self assert: (report at: #disconnectedConnectorPairCount) equals: 0.
+	self assert: ((report at: #connectorConnectionStates) includes: 'Array->RemoteArray connected postConnect=updateST')
+]
+
+{ #category : 'tests' }
 GbsSessionManagerCoreTest >> testClassConnectorDisconnectRemovesReplicatorAndSessionPair [
 	| mockSession connector manager connectResult |
 	mockSession := CoreMockGbsSession new.
@@ -594,6 +659,35 @@ GbsSessionManagerCoreTest >> testClassConnectorDisconnectRemovesReplicatorAndSes
 	self assert: (manager replicatorForClientBehavior: Array ifAbsent: [ nil ]) isNil.
 	self assert: (manager replicatorForServerBehavior: 'RemoteArray' ifAbsent: [ nil ]) isNil.
 	self deny: (connector isConnectedInSession: mockSession).
+	self deny: ((GbsSessionManager connectorPairsForSession: mockSession) anySatisfy: [ :pair |
+		pair first = 'Array' and: [ pair second = 'RemoteArray' ] ])
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testReplicatorManagerDirectRemoveClearsSessionConnectorPairAndConnectionState [
+	| mockSession connector manager sessionKey connectionKey connectResult |
+	GbsSessionManager resetConnectorState.
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script | 'RemoteArray' ].
+	manager := mockSession replicatorManager.
+	connector := GbsClassConnector stName: 'Array' gsName: 'RemoteArray'.
+	connectResult := connector connectInSession: mockSession ifFail: [ :ex |
+		self fail: ex messageText ].
+	sessionKey := GbsSessionManager sessionKeyForSessionObject: mockSession.
+	connectionKey := GbsSessionManager
+		connectorConnectionKeyForClient: 'Array'
+		server: 'RemoteArray'
+		session: sessionKey.
+
+	self assert: connectResult.
+	self assert: (GbsSessionManager connectorConnectionRegistry includesKey: connectionKey).
+
+	manager
+		removeClientClassConnectorForClientBehavior: Array
+		serverBehavior: 'RemoteArray'.
+
+	self assert: (manager connectorManagerReport at: #connectorPairCount) equals: 0.
+	self deny: (GbsSessionManager connectorConnectionRegistry includesKey: connectionKey).
 	self deny: ((GbsSessionManager connectorPairsForSession: mockSession) anySatisfy: [ :pair |
 		pair first = 'Array' and: [ pair second = 'RemoteArray' ] ])
 ]
