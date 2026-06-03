@@ -295,6 +295,31 @@ GemStonePharoVerificationRunnerTest >> testStandalonePreflightFailsWhenTopazLogi
 ]
 
 { #category : 'tests' }
+GemStonePharoVerificationRunnerTest >> testStandalonePreflightFailsWhenTopazReportsFatalRouteError [
+	| gciCalled result |
+	gciCalled := false.
+	runner
+		environment: (Dictionary newFromPairs: {
+			'GS_USER'. 'DataCurator'.
+			'GS_PASS'. 'swordfish' });
+		gslistOutputBlock: [ '' ];
+		topazOutputBlock: [
+			'GemStone: Error         Fatal', String lf,
+			'The connection to the Stone Repository monitor was refused:', String lf,
+			'Error connecting to stone: rejectCode: NotFound', String lf,
+			'LOGOUT can''t be used prior to logging in.' ];
+		gciProbeOutputBlock: [ gciCalled := true. 'PROBE_LOGIN_OK sessionId=1' ].
+
+	result := runner runStandalonePreflight.
+
+	self assert: result first equals: #failed.
+	self assert: result second equals: 'LIVE_PREFLIGHT_ROUTE_FAILED'.
+	self deny: gciCalled.
+	self assert: (logLines anySatisfy: [ :each |
+		each includesSubstring: 'LIVE_PREFLIGHT_SUMMARY result=FAIL code=LIVE_PREFLIGHT_ROUTE_FAILED' ])
+]
+
+{ #category : 'tests' }
 GemStonePharoVerificationRunnerTest >> testStandalonePreflightReturnsOkWhenTopazAndGciSucceed [
 	| result |
 	runner

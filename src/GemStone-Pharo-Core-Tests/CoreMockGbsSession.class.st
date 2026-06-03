@@ -112,6 +112,14 @@ CoreMockGbsSession >> apiGciReleaseOops: oopBuffer count: oopCount [
 	^ true
 ]
 
+{ #category : 'dirty store traversal' }
+CoreMockGbsSession >> ensureDirtyObjectsInitialized [
+	| block |
+	block := self stubs at: #ensureDirtyObjectsInitialized ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block value ].
+	^ true
+]
+
 { #category : 'accessing' }
 CoreMockGbsSession >> apiGciStoreTravDoTravRefsNlr: noLongerBuffer nnr: noLongerCount ogoc: gcedBuffer ngc: gcedCount stdArgs: stdArgs ctArgs: ctArgs [
 	| block |
@@ -225,6 +233,19 @@ CoreMockGbsSession >> forwardRemoteMessage: aMessage forOop: targetOop [
 ]
 
 { #category : 'execution' }
+CoreMockGbsSession >> fetchRemoteCommandBody: bodyString literalBindings: literalDictionary oopBindings: oopDictionary context: anOop [
+	| block |
+	block := self stubs at: #fetchRemoteCommandBody ifAbsent: [ nil ].
+	block ifNotNil: [
+		^ block cull: bodyString cull: literalDictionary cull: oopDictionary cull: anOop ].
+	^ super
+		fetchRemoteCommandBody: bodyString
+		literalBindings: literalDictionary
+		oopBindings: oopDictionary
+		context: anOop
+]
+
+{ #category : 'execution' }
 CoreMockGbsSession >> returnRemoteCommandBody: bodyString literalBindings: literalDictionary oopBindings: oopDictionary [
 	| block |
 	block := self stubs at: #returnRemoteCommandBody ifAbsent: [ nil ].
@@ -234,6 +255,14 @@ CoreMockGbsSession >> returnRemoteCommandBody: bodyString literalBindings: liter
 		returnRemoteCommandBody: bodyString
 		literalBindings: literalDictionary
 		oopBindings: oopDictionary
+]
+
+{ #category : 'execution' }
+CoreMockGbsSession >> serverObjectCanUnderstand: aSelector [
+	| block |
+	block := self stubs at: #serverObjectCanUnderstand ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: aSelector ].
+	^ true
 ]
 
 { #category : 'lifecycle' }

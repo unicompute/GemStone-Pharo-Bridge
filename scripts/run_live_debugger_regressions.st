@@ -69,7 +69,7 @@
 	              ifNil: [ ex printString ]
 	              ifNotNil: [ message asString ].
 	            Transcript show: '  exception-class=', ex class name; cr.
-	            Transcript show: '  message=', message withBlanksTrimmed; cr.
+	            Transcript show: '  message=', message asString withBlanksTrimmed; cr.
 	            context := [ ex signalerContext ] on: Error do: [ nil ].
 	            depth := 0.
 	            [ context notNil and: [ depth < 12 ] ] whileTrue: [

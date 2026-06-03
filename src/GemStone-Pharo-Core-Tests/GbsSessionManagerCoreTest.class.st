@@ -232,6 +232,27 @@ GbsSessionManagerCoreTest >> testClientClassConnectorUpdatesClampMetadata [
 ]
 
 { #category : 'tests' }
+GbsSessionManagerCoreTest >> testClampManagerForSessionSharesReplicatorManagerClampMetadata [
+	| mockSession manager connector sessionClamp levels |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: Association
+		server: 'RemoteAssociation'
+		replicationSpec: #(
+			#(#key #forwarder)
+			#(#value #min 2))
+		serverInstVarNames: #('key' 'value').
+
+	manager installClientClassConnector: connector.
+	sessionClamp := GbxClampManager forSession: mockSession.
+	levels := sessionClamp currentReplicationScheme instVarLevelsForClass: Association.
+
+	self assert: sessionClamp == manager clampManager.
+	self assert: levels equals: { false. -2. nil }
+]
+
+{ #category : 'tests' }
 GbsSessionManagerCoreTest >> testClientClassConnectorCallbackReplicationSpecEnablesServerClampCallback [
 	| mockSession manager connector scheme |
 	mockSession := CoreMockGbsSession new.
@@ -247,9 +268,9 @@ GbsSessionManagerCoreTest >> testClientClassConnectorCallbackReplicationSpecEnab
 
 	self
 		assert: scheme clamp instVarLevelsSelector
-		equals: #_gbsTraversalCallback.
+		equals: #replicateGbsClampCallback.
 	self assert: scheme hasServerClampMetadata.
-	self assert: (scheme serverClampSpecificationFingerprint includes: #_gbsTraversalCallback)
+	self assert: (scheme serverClampSpecificationFingerprint includes: #replicateGbsClampCallback)
 ]
 
 { #category : 'tests' }

@@ -114,7 +114,7 @@ GbsSession >> forwardRemoteMessage: aMessage forOop: targetOop [
 		aMessage arguments collect: [ :each | self marshalArgumentToScript: each ] ]
 		on: Error
 		do: [ :ex |
-			self error: ((ex messageText ifNil: [ ex printString ]) withBlanksTrimmed),
+				self error: ((ex messageText ifNil: [ ex printString ]) asString withBlanksTrimmed),
 				' Forwarded selector: ', aMessage selector asString,
 				' Target oop: ', targetOop asString ].
 	argsArrayString := '{ ', (' . ' join: argStrings), ' }'.
@@ -150,6 +150,17 @@ GbsSession >> returnRemoteCommandOop: aRemoteCommand [
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> returnRemoteCommandBody: bodyString literalBindings: literalDictionary oopBindings: oopDictionary [
 	^ self commandExecutor returnRemoteCommandBody: bodyString literalBindings: literalDictionary oopBindings: oopDictionary
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> serverObjectCanUnderstand: aSelector [
+	^ self
+		fetchRemoteCommandBody: 'Object canUnderstand: selector'
+		literalBindings: (Dictionary new
+			at: 'selector' put: aSelector asSymbol;
+			yourself)
+		oopBindings: Dictionary new
+		context: 20
 ]
 
 { #category : '*GemStone-GBS-Core' }

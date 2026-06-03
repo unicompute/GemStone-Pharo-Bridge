@@ -78,6 +78,56 @@ GbsSessionParametersTest >> testConnectionSummaryIncludesNormalizedNetworkFields
 ]
 
 { #category : 'tests' }
+GbsSessionParametersTest >> testGciGemServiceStringBuildsNrsForHostAndNetldi [
+	| params |
+	params := GbsSessionParameters new.
+	params
+		gemService: 'gemnetobject';
+		netldiHostOrIp: ' 127.0.0.1 ';
+		netldiNameOrPort: ' 50377 '.
+
+	self assert: params netldiRoutingString equals: ''.
+	self
+		assert: params gciGemServiceString
+		equals: '!@127.0.0.1#netldi:50377#task!gemnetobject'
+]
+
+{ #category : 'tests' }
+GbsSessionParametersTest >> testGciGemServiceStringLeavesExplicitNrsServiceUntouched [
+	| params service |
+	service := '!@127.0.0.1#netldi:50377#task!gemnetobject'.
+	params := GbsSessionParameters new.
+	params
+		gemService: service;
+		netldiHostOrIp: '127.0.0.1';
+		netldiNameOrPort: '50377'.
+
+	self assert: params gciGemServiceString equals: service
+]
+
+{ #category : 'tests' }
+GbsSessionParametersTest >> testGciGemServiceStringTreatsLegacyHostHashNetldiAsNrsRoute [
+	| params |
+	params := GbsSessionParameters new.
+	params netldiNameOrPort: '127.0.0.1#50377'.
+
+	self assert: params netldiRoutingString equals: ''.
+	self
+		assert: params gciGemServiceString
+		equals: '!@127.0.0.1#netldi:50377#task!gemnetobject'
+]
+
+{ #category : 'tests' }
+GbsSessionParametersTest >> testNetldiRoutingStringUsesBareNetldiNameWithoutNrsWrapping [
+	| params |
+	params := GbsSessionParameters new.
+	params netldiNameOrPort: '50377'.
+
+	self assert: params netldiRoutingString equals: '50377'.
+	self assert: params gciGemServiceString equals: 'gemnetobject'
+]
+
+{ #category : 'tests' }
 GbsSessionParametersTest >> testApplyExportDictionaryAcceptsSymbolKeysAndIgnoresSessionId [
 	| params exported |
 	params := GbsSessionParameters new.
@@ -454,7 +504,10 @@ GbsSessionParametersTest >> testImportLegacyDictionaryAliases [
 	self assert: params hostUsername equals: 'host-user'.
 	self assert: params hostPassword equals: 'host-secret'.
 	self assert: params hostRemember.
-	self assert: params netldiRoutingString equals: 'gemstone.example.com#50377'
+	self assert: params netldiRoutingString equals: ''.
+	self
+		assert: params gciGemServiceString
+		equals: '!@gemstone.example.com#netldi:50377#task!gemnetobject'
 ]
 
 { #category : 'tests' }
@@ -660,7 +713,10 @@ GbsSessionParametersTest >> testImportFromExportDictionaryRestoresConnectionFiel
 	self assert: params caCert equals: '/certs/ca.pem'.
 	self assert: params cert equals: '/certs/client.pem'.
 	self assert: params privateKey equals: '/certs/client.key'.
-	self assert: params netldiRoutingString equals: 'gemstone.example.com#50377'.
+	self assert: params netldiRoutingString equals: ''.
+	self
+		assert: params gciGemServiceString
+		equals: '!@gemstone.example.com#netldi:50377#task!gemnetobject'.
 	self assert: params dirArg equals: '/tmp/gem'.
 	self assert: params extraGemArgs equals: '-T'.
 	self assert: params logArg equals: '/tmp/gem.log'.
@@ -694,14 +750,17 @@ GbsSessionParametersTest >> testNormalizeConnectionFieldsDefaultsServiceAndClear
 ]
 
 { #category : 'tests' }
-GbsSessionParametersTest >> testNetldiRoutingStringCombinesHostAndNameForGci [
+GbsSessionParametersTest >> testNetldiRoutingStringUsesNrsServiceWhenHostAndNameArePresent [
 	| params |
 	params := GbsSessionParameters new.
 	params
 		netldiHostOrIp: ' gemstone.example.com ';
 		netldiNameOrPort: ' 50377 '.
 
-	self assert: params netldiRoutingString equals: 'gemstone.example.com#50377'
+	self assert: params netldiRoutingString equals: ''.
+	self
+		assert: params gciGemServiceString
+		equals: '!@gemstone.example.com#netldi:50377#task!gemnetobject'
 ]
 
 { #category : 'tests' }

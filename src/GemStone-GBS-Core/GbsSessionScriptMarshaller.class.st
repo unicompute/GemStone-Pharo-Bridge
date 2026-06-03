@@ -33,7 +33,7 @@ GbsSessionScriptMarshaller >> marshalArgumentToScript: anObject visited: visited
 	^ [ session marshalComplexArgumentToScript: anObject visited: visited ]
 		on: Error
 		do: [ :ex |
-			self error: ((ex messageText ifNil: [ ex printString ]) withBlanksTrimmed),
+			self error: ((ex messageText ifNil: [ ex printString ]) asString withBlanksTrimmed),
 				' Argument class: ', anObject class name ]
 ]
 

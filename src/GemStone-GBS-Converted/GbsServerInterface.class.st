@@ -2,7 +2,8 @@ Class {
 	#name : 'GbsServerInterface',
 	#superclass : 'Object',
 	#instVars : [
-		'libraryPath'
+		'libraryPath',
+		'dirtyObjectsInitialized'
 	],
 	#classInstVars : [
 		'UniqueInstance'
@@ -451,7 +452,8 @@ GbsServerInterface >> executeAndFetchString: aString [
 { #category : 'initialization' }
 GbsServerInterface >> initialize [
 	super initialize.
-	libraryPath := self defaultLibraryPath
+	libraryPath := self defaultLibraryPath.
+	dirtyObjectsInitialized := false
 ]
 
 { #category : 'private' }
@@ -513,6 +515,7 @@ GbsServerInterface >> gciLogin: aService user: aUser password: aPassword [
 	| encBuffer session |
 	encBuffer := ExternalAddress allocate: 1024.
 	[
+		self resetDirtyObjectsInitialization.
 		self apiGciInit. "Ensure library is initialized"
 		self apiGciEncrypt: aPassword into: encBuffer.
 		session := self apiGciLogin: aService user: aUser pass: encBuffer.

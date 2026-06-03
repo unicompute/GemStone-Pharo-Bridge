@@ -697,6 +697,25 @@ GbsSessionParameters >> gemService [ ^ gemService
 GbsSessionParameters >> gemService: aValue [ gemService := aValue
 ]
 
+{ #category : 'validation' }
+GbsSessionParameters >> gciGemServiceString [
+	| netldiHost netldiName |
+	self normalizeConnectionFields.
+	(self gemService beginsWith: '!') ifTrue: [ ^ self gemService ].
+	netldiHost := self netldiHostForGciService.
+	netldiName := self netldiNameForGciService.
+	(netldiHost isNil or: [ netldiName isNil ]) ifTrue: [ ^ self gemService ].
+	^ String streamContents: [ :stream |
+		stream
+			nextPut: $!;
+			nextPut: $@;
+			nextPutAll: (self nrsEscapedIdentifier: netldiHost);
+			nextPutAll: '#netldi:';
+			nextPutAll: (self nrsEscapedIdentifier: netldiName);
+			nextPutAll: '#task!';
+			nextPutAll: self gemService ]
+]
+
 { #category : 'accessing' }
 GbsSessionParameters >> gemStoneName [ ^ gemStoneName
 ]
@@ -924,10 +943,11 @@ GbsSessionParameters >> login [
     self restoreRememberedSecretsFromKeychain.
     self validateForLogin.
 
-    interface := GbsServerInterface uniqueInstance.
-    interface apiGciInit.
+	interface := GbsServerInterface uniqueInstance.
+	interface resetDirtyObjectsInitialization.
+	interface apiGciInit.
 
-    serviceString := self gemService.
+    serviceString := self gciGemServiceString.
     hostUserString := self hostUsername ifNil: [ '' ].
     hostPasswordString := self hostPassword ifNil: [ '' ].
     netldiString := self netldiRoutingString.
@@ -1307,12 +1327,44 @@ GbsSessionParameters >> netldiNameOrPort: aValue [ netldiNameOrPort := aValue
 ]
 
 { #category : 'validation' }
+GbsSessionParameters >> netldiHostForGciService [
+	self normalizeConnectionFields.
+	self netldiHostOrIp ifNotNil: [ ^ self netldiHostOrIp ].
+	(self netldiNameOrPort notNil and: [ self netldiNameOrPort includes: $# ]) ifTrue: [
+		^ (self netldiNameOrPort copyUpTo: $#) ifEmpty: [ nil ] ].
+	^ nil
+]
+
+{ #category : 'validation' }
+GbsSessionParameters >> netldiNameForGciService [
+	| hashIndex |
+	self normalizeConnectionFields.
+	self netldiNameOrPort ifNil: [ ^ nil ].
+	hashIndex := self netldiNameOrPort indexOf: $#.
+	hashIndex = 0 ifTrue: [ ^ self netldiNameOrPort ].
+	^ (self netldiNameOrPort copyFrom: hashIndex + 1 to: self netldiNameOrPort size)
+		ifEmpty: [ nil ]
+]
+
+{ #category : 'validation' }
 GbsSessionParameters >> netldiRoutingString [
 	self normalizeConnectionFields.
 	self netldiNameOrPort ifNil: [ ^ '' ].
+	self netldiHostForGciService ifNotNil: [ ^ '' ].
 	self netldiHostOrIp ifNil: [ ^ self netldiNameOrPort ].
 	(self netldiNameOrPort includes: $#) ifTrue: [ ^ self netldiNameOrPort ].
 	^ self netldiHostOrIp, '#', self netldiNameOrPort
+]
+
+{ #category : 'validation' }
+GbsSessionParameters >> nrsEscapedIdentifier: aString [
+	| source |
+	source := self normalizedConnectionString: aString.
+	^ String streamContents: [ :stream |
+		source do: [ :each |
+			((each isSeparator) or: [ '!#$@^' includes: each ]) ifTrue: [
+				stream nextPut: $^ ].
+			stream nextPut: each ] ]
 ]
 
 { #category : 'accessing' }

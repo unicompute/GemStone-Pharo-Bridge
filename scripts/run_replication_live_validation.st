@@ -1,4 +1,4 @@
-| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator scheme clampSpecOop transitiveSpec connectorMs clampedOop clampedResult clampedMs clampedMetrics policy previousTransport previousProfile nativeStoreSupported dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseNoLongerObject releaseGcedObject exportBefore exportAfter dirtyStoreMs flushed verified nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed |
+| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator scheme clampSpecOop transitiveSpec connectorMs clampedOop clampedResult clampedMs clampedMetrics policy previousTransport previousProfile nativeStoreSupported dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseNoLongerObject releaseGcedObject exportBefore exportAfter dirtyStoreMs flushed verified verifiedOop nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed |
 [
   loadFailed := false.
   cleanupFixture := [ ].
@@ -227,22 +227,30 @@ root'
         exportAfter := session objectSpace pendingExportSetReleaseOopCount.
         exportAfter = 0 ifFalse: [
           Error signal: 'Export-set release queues were not acknowledged after native dirty-store flush.' ].
-        verified := session
-          fetchRemoteCommandBody: '| root |
-root := object.
-(((root at: 1) at: 2) = 42)
-  and: [ ((root at: 2) value = 77)
-  and: [ (root at: 3) asArray = #(10 20 30)
-  and: [ ((root at: 4) at: #customer) = 44
-  and: [ ((root at: 5) includes: 13)
-  and: [ ((root at: 6) occurrencesOf: 14) = 1 ] ] ] ] ]'
+        verifiedOop := session
+          returnRemoteCommandBody: '| root status |
+	root := object.
+	status := 7.
+	(((root at: 1) at: 2) = 42) ifFalse: [ status := 11 ].
+	(status = 7 and: [ (root at: 2) value = 77 ]) ifFalse: [
+	  status = 7 ifTrue: [ status := 12 ] ].
+	(status = 7 and: [ (root at: 3) asArray = #(10 20 30) ]) ifFalse: [
+	  status = 7 ifTrue: [ status := 13 ] ].
+	(status = 7 and: [ ((root at: 4) at: #customer) = 44 ]) ifFalse: [
+	  status = 7 ifTrue: [ status := 14 ] ].
+	(status = 7 and: [ (root at: 5) includes: 13 ]) ifFalse: [
+	  status = 7 ifTrue: [ status := 15 ] ].
+	(status = 7 and: [ ((root at: 6) occurrencesOf: 14) = 1 ]) ifFalse: [
+	  status = 7 ifTrue: [ status := 16 ] ].
+	status'
           literalBindings: Dictionary new
-          oopBindings: (Dictionary new
-            at: 'object' put: dirtyRootOop;
-            yourself)
-          context: 20.
-        verified ifFalse: [
-          Error signal: 'Dirty-store traversal did not update the remote fixture.' ].
+	          oopBindings: (Dictionary new
+	            at: 'object' put: dirtyRootOop;
+	            yourself)
+	          .
+        verified := session resultFor: verifiedOop.
+        verified = 7 ifFalse: [
+          Error signal: 'Dirty-store traversal did not update the remote fixture status=', verified asString, ' oop=', verifiedOop asString, ' (11=array 12=association 13=ordered 14=dictionary 15=set 16=bag).' ].
 
         Transcript
           show: 'REPLICATION_LIVE_VALIDATION result=OK code=REPLICATION_LIVE_OK',
@@ -277,7 +285,7 @@ root := object.
           ' export_set_queued_before=', (exportBefore ifNil: [ 0 ]) asString,
           ' export_set_queued_after=', (exportAfter ifNil: [ 0 ]) asString,
           ' message=';
-        show: (ex messageText ifNil: [ ex printString ]) withBlanksTrimmed;
+        show: (ex messageText ifNil: [ ex printString ]) asString withBlanksTrimmed;
         show: ' phase=';
         show: (phase ifNil: [ 'unknown' ]);
         cr ] ].

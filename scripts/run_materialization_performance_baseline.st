@@ -444,7 +444,7 @@ association'
     ] on: Error do: [ :ex |
       Transcript
         show: 'MATERIALIZATION_PERF_BASELINE result=FAIL code=MATERIALIZATION_PERF_RUN_FAILED array_ms=0 dictionary_ms=0 shallow_ms=0 array_size=0 dictionary_size=0 shallow_size=0 message=';
-        show: (ex messageText ifNil: [ ex printString ]) withBlanksTrimmed;
+        show: (ex messageText ifNil: [ ex printString ]) asString withBlanksTrimmed;
         show: ' phase=';
         show: (phase ifNil: [ 'unknown' ]);
         cr ] ].

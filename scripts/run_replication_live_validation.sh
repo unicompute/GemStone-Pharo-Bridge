@@ -195,6 +195,31 @@ write_trend_sample() {
   gbs_append_summary_line "- trend sample: \`${trend_file}\`"
 }
 
+replication_preflight_failure_code() {
+  local preflight_summary="$1"
+  local preflight_code="$2"
+  local host_auth="$3"
+  if [[ "${preflight_code}" == "LIVE_PREFLIGHT_GCI_ROUTE_FAILED" && "${host_auth}" == "unset" ]]; then
+    printf '%s\n' "REPLICATION_LIVE_GCI_HOST_AUTH_REQUIRED"
+    return 0
+  fi
+  printf '%s\n' "REPLICATION_LIVE_PREFLIGHT_FAILED"
+}
+
+print_replication_preflight_failure_hint() {
+  local preflight_code="$1"
+  local host_auth="$2"
+  if [[ "${preflight_code}" == "LIVE_PREFLIGHT_GCI_ROUTE_FAILED" && "${host_auth}" == "unset" ]]; then
+    {
+      echo "Live preflight reached GemStone with Topaz, but Pharo GCI could not route through netldi."
+      echo "Host authentication is unset. Set OKZ_GEMSTONE_HOST_USERNAME and OKZ_GEMSTONE_HOST_PASSWORD,"
+      echo "or aliases GS_HOST_USERNAME and GS_HOST_PASSWORD, then rerun make replication-live."
+    } >&2
+    return 0
+  fi
+  echo "Live preflight failed or skipped; refusing to validate replication paths against an unknown GemStone session." >&2
+}
+
 MISSING_LIVE_ENV="$(replication_missing_required_live_env_vars)"
 if [[ -n "${MISSING_LIVE_ENV}" ]]; then
   emit_summary "FAIL" "REPLICATION_LIVE_MISSING_ENV"
@@ -212,8 +237,13 @@ preflight_output="$(bash ./scripts/run_live_preflight.sh "${WORK_IMAGE}" 2>&1 ||
 print_replication_live_excerpt "${preflight_output}"
 gbs_write_evidence_file "replication-live-preflight.log" "${preflight_output}"
 if ! grep -q "LIVE_PREFLIGHT_SUMMARY result=OK code=LIVE_PREFLIGHT_OK" <<< "${preflight_output}"; then
-  emit_summary "FAIL" "REPLICATION_LIVE_PREFLIGHT_FAILED"
-  echo "Live preflight failed or skipped; refusing to validate replication paths against an unknown GemStone session." >&2
+  preflight_summary_line="$(printf '%s\n' "${preflight_output}" | grep 'LIVE_PREFLIGHT_SUMMARY result=' | tail -1 || true)"
+  PREFLIGHT_CODE="$(extract_summary_field "${preflight_summary_line}" code)"
+  PREFLIGHT_HOST_AUTH="$(extract_summary_field "${preflight_summary_line}" host_auth)"
+  [[ -n "${PREFLIGHT_CODE}" ]] || PREFLIGHT_CODE="LIVE_PREFLIGHT_RUNNER_FAILED"
+  [[ -n "${PREFLIGHT_HOST_AUTH}" ]] || PREFLIGHT_HOST_AUTH="$(gbs_live_host_auth_status)"
+  emit_summary "FAIL" "$(replication_preflight_failure_code "${preflight_summary_line}" "${PREFLIGHT_CODE}" "${PREFLIGHT_HOST_AUTH}")"
+  print_replication_preflight_failure_hint "${PREFLIGHT_CODE}" "${PREFLIGHT_HOST_AUTH}"
   exit 1
 fi
 

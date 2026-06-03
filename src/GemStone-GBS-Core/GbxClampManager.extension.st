@@ -2,6 +2,11 @@ Extension { #name : 'GbxClampManager' }
 
 { #category : '*GemStone-GBS-Core' }
 GbxClampManager class >> forSession: aSession [
+	| replicatorManager clampManager |
+	replicatorManager := [ aSession replicatorManager ] on: Error do: [ nil ].
+	clampManager := replicatorManager ifNotNil: [
+		[ replicatorManager clampManager ] on: Error do: [ nil ] ].
+	clampManager ifNotNil: [ ^ clampManager ].
 	^ (aSession class weakRegistryNamed: #GbsSessionClampManagers)
 		at: aSession
 		ifAbsentPut: [ self new ]

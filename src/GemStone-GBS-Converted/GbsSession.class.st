@@ -16,8 +16,9 @@ Class {
 { #category : 'as yet unclassified' }
 GbsSession class >> loginWithUser: aUser password: aPass stone: aStone [
     | interface sessionID servicePtr userPtr passPtr |
-    interface := GbsServerInterface uniqueInstance.
-    interface apiGciInit.
+	interface := GbsServerInterface uniqueInstance.
+	interface resetDirtyObjectsInitialization.
+	interface apiGciInit.
     
     servicePtr := ExternalAddress fromString: aStone.
     userPtr := ExternalAddress fromString: aUser.
@@ -175,6 +176,9 @@ GbsSession >> resetConvertedSessionStateAfterLogout [
 { #category : 'actions' }
 GbsSession >> resetConnectionStateAfterLogout [
 	self stopPolling.
+	serverInterface ifNotNil: [
+		(serverInterface respondsTo: #resetDirtyObjectsInitialization) ifTrue: [
+			serverInterface resetDirtyObjectsInitialization ] ].
 	isLoggedIn := false.
 	sessionOop := nil.
 	sessionId := nil.

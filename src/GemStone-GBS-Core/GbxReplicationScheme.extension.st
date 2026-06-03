@@ -71,6 +71,23 @@ GbxReplicationScheme >> hasServerClampMetadata [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> clampByCallbackSelector [
+	^ (self selector asString, 'GbsClampCallback') asSymbol
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> determineInstVarLevelsSelectorForClampByCallback: aBoolean inSession: aSession [
+	| clampByCallbackSelector |
+	aBoolean ifFalse: [ ^ nil ].
+	self selector = #transitiveClosureSpec ifTrue: [ ^ nil ].
+	clampByCallbackSelector := self clampByCallbackSelector.
+	self
+		validateClampByCallbackSelector: clampByCallbackSelector
+		inSession: aSession.
+	^ clampByCallbackSelector
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxReplicationScheme >> initialize [
 	super initialize.
 	indexedInstvarsShouldBeForwardersDict := IdentityDictionary new.
@@ -237,9 +254,9 @@ GbxReplicationScheme >> shouldStub [
 
 { #category : '*GemStone-GBS-Core' }
 GbxReplicationScheme >> updateForClampingByCallback: aBoolean inSession: aSession [
-	self clamp instVarLevelsSelector: (aBoolean
-		ifTrue: [ self traversalCallbackSelectorForSession: aSession ]
-		ifFalse: [ nil ])
+	self clamp instVarLevelsSelector: (self
+		determineInstVarLevelsSelectorForClampByCallback: aBoolean
+		inSession: aSession)
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -290,6 +307,16 @@ GbxReplicationScheme >> traversalCallbackSelectorForSession: aSession [
 	(policy notNil and: [ policy respondsTo: #traversalCallBackSelector ]) ifTrue: [
 		^ policy traversalCallBackSelector ].
 	^ self clamp traversalCallBackSelector
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> validateClampByCallbackSelector: clampByCallbackSelector inSession: aSession [
+	aSession ifNil: [ ^ self ].
+	(aSession respondsTo: #serverObjectCanUnderstand:) ifFalse: [ ^ self ].
+	([ aSession serverObjectCanUnderstand: clampByCallbackSelector ]
+		on: Error
+		do: [ :ex | ex pass ]) ifTrue: [ ^ self ].
+	self error: 'The configuration option #clampByCallback for the replication scheme "', self selector asString, '" requires the default server method Object>>#', clampByCallbackSelector asString, ' to exist.'
 ]
 
 { #category : '*GemStone-GBS-Core' }

@@ -74,7 +74,7 @@ GbsDirtyReplicateStoreTraversal >> appendAssociationFlushFor: anAssociation entr
 { #category : 'private - appending' }
 GbsDirtyReplicateStoreTraversal >> appendCollectionFlushFor: aCollection entryIndex: entryIndex to: stream names: argumentNames scripts: argumentScripts [
 	stream
-		nextPutAll: 'object removeAll.';
+		nextPutAll: 'object asArray do: [ :each | object remove: each ifAbsent: [ ] ].';
 		cr.
 	aCollection asArray doWithIndex: [ :each :index | | valueName |
 		valueName := self
@@ -85,6 +85,28 @@ GbsDirtyReplicateStoreTraversal >> appendCollectionFlushFor: aCollection entryIn
 		stream
 			nextPutAll: 'object add: ';
 			nextPutAll: valueName;
+			nextPutAll: '.';
+				cr ]
+]
+
+{ #category : 'private - appending' }
+GbsDirtyReplicateStoreTraversal >> appendBagFlushFor: aBag entryIndex: entryIndex to: stream names: argumentNames scripts: argumentScripts [
+	| elements |
+	stream
+		nextPutAll: 'object asSet do: [ :each | 1 to: (object occurrencesOf: each) do: [ :ignored | object remove: each ifAbsent: [ ] ] ].';
+		cr.
+	elements := aBag asSet asArray.
+	elements doWithIndex: [ :each :index | | valueName |
+		valueName := self
+			addArgumentNamed: (self valueArgumentNameForEntry: entryIndex element: index)
+			value: each
+			toNames: argumentNames
+			scripts: argumentScripts.
+		stream
+			nextPutAll: 'object add: ';
+			nextPutAll: valueName;
+			nextPutAll: ' withOccurrences: ';
+			nextPutAll: (aBag occurrencesOf: each) printString;
 			nextPutAll: '.';
 			cr ]
 ]
@@ -168,16 +190,23 @@ GbsDirtyReplicateStoreTraversal >> appendFlushForEntry: entry index: entryIndex 
 			to: stream
 			names: argumentNames
 			scripts: argumentScripts ].
-	(entry at: 3) = #namedObject ifTrue: [
+		(entry at: 3) = #namedObject ifTrue: [
+			^ self
+				appendNamedObjectFlushFor: entry second
+				entryIndex: entryIndex
+				to: stream
+				names: argumentNames
+				scripts: argumentScripts ].
+		(entry at: 3) = #bag ifTrue: [
+			^ self
+				appendBagFlushFor: entry second
+				entryIndex: entryIndex
+				to: stream
+				names: argumentNames
+				scripts: argumentScripts ].
 		^ self
-			appendNamedObjectFlushFor: entry second
+			appendCollectionFlushFor: entry second
 			entryIndex: entryIndex
-			to: stream
-			names: argumentNames
-			scripts: argumentScripts ].
-	^ self
-		appendCollectionFlushFor: entry second
-		entryIndex: entryIndex
 		to: stream
 		names: argumentNames
 		scripts: argumentScripts
@@ -196,9 +225,6 @@ GbsDirtyReplicateStoreTraversal >> argumentScriptFor: anObject visited: visited 
 { #category : 'private - commands' }
 GbsDirtyReplicateStoreTraversal >> bodyForEntries: entries argumentNames: argumentNames argumentScripts: argumentScripts [
 	^ String streamContents: [ :stream |
-		stream
-			nextPutAll: '| object |';
-			cr.
 		entries doWithIndex: [ :entry :entryIndex |
 			self
 				appendFlushForEntry: entry
@@ -244,23 +270,47 @@ GbsDirtyReplicateStoreTraversal >> flush [
 
 { #category : 'private - flushing' }
 GbsDirtyReplicateStoreTraversal >> flushEntries: entries [
+	| buffer |
 	(self shouldUseBinaryStoreTraversalBufferForEntries: entries) ifTrue: [
 		^ self flushEntriesWithBinaryStoreTraversalBuffer: entries ].
+	(self semanticStoreEntriesFor: entries) size = entries size ifTrue: [
+		^ self flushEntriesWithRemoteCommand: entries ].
 	self transportRequiresBinary ifTrue: [
-		(self dirtyStoreTraversalBufferForEntries: entries) canProduceNativeTraversalBuffer ifFalse: [
-			self error: 'Dirty store traversal buffer transport is required, but this dirty batch cannot be encoded natively. Native dirty store traversal supports mapped Arrays, Associations, OrderedCollections, Dictionaries with mapped associations, IdentityDictionaries, Sets, Bags, and named-slot objects with OOP-addressable values.' ].
+		buffer := self dirtyStoreTraversalBufferForEntries: entries.
+		buffer canProduceNativeTraversalBuffer ifFalse: [
+			self error: 'Dirty store traversal buffer transport is required, but this dirty batch cannot be encoded natively. Native dirty store traversal supports mapped Arrays, Associations, OrderedCollections, and named-slot objects with OOP-addressable values. Dictionaries, Sets, and Bags require semantic store commands. Unencodable entries: ', buffer nativeEncodingFailureSummary ].
 		self error: 'Dirty store traversal buffer transport is required but unavailable.' ].
+	^ self flushEntriesWithRemoteCommand: entries
+]
+
+{ #category : 'private - flushing' }
+GbsDirtyReplicateStoreTraversal >> flushEntriesWithBinaryStoreTraversalBuffer: entries [
+	| nativeEntries semanticEntries result |
+	nativeEntries := self nativeStoreTraversalEntriesFor: entries.
+	semanticEntries := self semanticStoreEntriesFor: entries.
+	nativeEntries isEmpty ifTrue: [
+		^ self flushEntriesWithRemoteCommand: semanticEntries ].
+	result := self flushNativeEntriesWithBinaryStoreTraversalBuffer: nativeEntries.
+	semanticEntries isEmpty ifFalse: [
+		self flushEntriesWithRemoteCommand: semanticEntries ].
+	^ result
+]
+
+{ #category : 'private - flushing' }
+GbsDirtyReplicateStoreTraversal >> flushEntriesWithRemoteCommand: entries [
 	session addStoreTraversal: self.
 	^ [ session returnRemoteCommandOop: (self remoteCommandForEntries: entries) ]
 		ensure: [ session removeStoreTraversal: self ]
 ]
 
 { #category : 'private - flushing' }
-GbsDirtyReplicateStoreTraversal >> flushEntriesWithBinaryStoreTraversalBuffer: entries [
+GbsDirtyReplicateStoreTraversal >> flushNativeEntriesWithBinaryStoreTraversalBuffer: entries [
 	| buffer server exportSetReleaseOops |
 	buffer := self dirtyStoreTraversalBufferForEntries: entries.
 	server := session serverInterface.
 	exportSetReleaseOops := self exportSetReleaseOopsForStoreTraversalUsing: server.
+	(server respondsTo: #ensureDirtyObjectsInitialized) ifTrue: [
+		server ensureDirtyObjectsInitialized ].
 	session addStoreTraversal: self.
 	^ [
 		self
@@ -268,7 +318,7 @@ GbsDirtyReplicateStoreTraversal >> flushEntriesWithBinaryStoreTraversalBuffer: e
 			on: server
 			releasingExportSetReleaseOops: exportSetReleaseOops
 	]
-		ensure: [ session removeStoreTraversal: self ]
+			ensure: [ session removeStoreTraversal: self ]
 ]
 
 { #category : 'private - names' }
@@ -442,17 +492,24 @@ GbsDirtyReplicateStoreTraversal >> replicationPolicy [
 
 { #category : 'private - commands' }
 GbsDirtyReplicateStoreTraversal >> remoteCommandForEntries: entries [
-	| argumentNames argumentScripts body |
+	| argumentNames argumentScripts body assignmentNames assignmentScripts |
 	argumentNames := OrderedCollection new.
 	argumentScripts := OrderedCollection new.
 	body := self
 		bodyForEntries: entries
 		argumentNames: argumentNames
 		argumentScripts: argumentScripts.
+	assignmentNames := OrderedCollection with: 'object'.
+	assignmentNames addAll: argumentNames.
+	assignmentScripts := OrderedCollection with: 'nil'.
+	assignmentScripts addAll: argumentScripts.
 	^ GbsRemoteCommand
-		blockBody: body
-		argumentNames: argumentNames asArray
-		argumentScripts: argumentScripts asArray
+		blockBody: (GbsRemoteCommand
+			body: body
+			withAssignmentsNamed: assignmentNames asArray
+			scripts: assignmentScripts asArray)
+		argumentNames: #()
+		argumentScripts: #()
 ]
 
 { #category : 'private - arguments' }
@@ -486,17 +543,34 @@ GbsDirtyReplicateStoreTraversal >> shouldMarshalConstructedObject: anObject [
 
 { #category : 'private - policy' }
 GbsDirtyReplicateStoreTraversal >> shouldUseBinaryStoreTraversalBufferForEntries: entries [
-	| transport server buffer |
+	| transport server buffer nativeEntries |
 	entries isEmpty ifTrue: [ ^ false ].
 	transport := self storeTraversalTransport.
 	((transport = #binary) or: [ transport = #binaryRequired ]) ifFalse: [ ^ false ].
+	nativeEntries := self nativeStoreTraversalEntriesFor: entries.
+	nativeEntries isEmpty ifTrue: [ ^ false ].
 	server := [ session serverInterface ] on: Error do: [ nil ].
 	server ifNil: [ ^ false ].
 	(server respondsTo: #supportsDirtyStoreTraversalBufferTransport) ifFalse: [ ^ false ].
 	(server supportsDirtyStoreTraversalBufferTransport == true) ifFalse: [ ^ false ].
 	(server respondsTo: #storeTraversalBuffer:) ifFalse: [ ^ false ].
-	buffer := self dirtyStoreTraversalBufferForEntries: entries.
+	buffer := self dirtyStoreTraversalBufferForEntries: nativeEntries.
 	^ buffer canProduceNativeTraversalBuffer
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> nativeStoreTraversalEntriesFor: entries [
+	^ entries reject: [ :entry | self requiresSemanticStoreForEntry: entry ]
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> requiresSemanticStoreForEntry: entry [
+	^ #(#dictionary #identityDictionary #set #bag) includes: (entry at: 3)
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> semanticStoreEntriesFor: entries [
+	^ entries select: [ :entry | self requiresSemanticStoreForEntry: entry ]
 ]
 
 { #category : 'private - flushing' }
@@ -510,19 +584,37 @@ GbsDirtyReplicateStoreTraversal >> storeTraversalBuffer: aBuffer on: serverInter
 		^ serverInterface storeTraversalBuffer: aBuffer ].
 	(gcedOops isEmpty and: [
 		serverInterface respondsTo: #storeTraversalBuffer:releasingNoLongerReplicatedOops: ]) ifTrue: [
-		result := serverInterface
-			storeTraversalBuffer: aBuffer
-			releasingNoLongerReplicatedOops: noLongerReplicatedOops.
+		result := [
+			serverInterface
+				storeTraversalBuffer: aBuffer
+				releasingNoLongerReplicatedOops: noLongerReplicatedOops ]
+			on: GbsError
+			do: [ :ex |
+				self
+					storeTraversalBuffer: aBuffer
+					on: serverInterface
+					fallbackFromCombinedReleaseError: ex
+					noLongerReplicatedOops: noLongerReplicatedOops
+					gcedOops: #() ].
 		GbsSessionLifecycleManager
 			acknowledgeNoLongerReplicatedOops: noLongerReplicatedOops
 			forSession: session.
 		^ result ].
 	(serverInterface respondsTo: #storeTraversalBuffer:releasingNoLongerReplicatedOops:gcedOops:) ifFalse: [
 		^ serverInterface storeTraversalBuffer: aBuffer ].
-	result := serverInterface
-		storeTraversalBuffer: aBuffer
-		releasingNoLongerReplicatedOops: noLongerReplicatedOops
-		gcedOops: gcedOops.
+	result := [
+		serverInterface
+			storeTraversalBuffer: aBuffer
+			releasingNoLongerReplicatedOops: noLongerReplicatedOops
+			gcedOops: gcedOops ]
+		on: GbsError
+		do: [ :ex |
+			self
+				storeTraversalBuffer: aBuffer
+				on: serverInterface
+				fallbackFromCombinedReleaseError: ex
+				noLongerReplicatedOops: noLongerReplicatedOops
+				gcedOops: gcedOops ].
 	GbsSessionLifecycleManager
 		acknowledgeNoLongerReplicatedOops: noLongerReplicatedOops
 		forSession: session.
@@ -530,6 +622,18 @@ GbsDirtyReplicateStoreTraversal >> storeTraversalBuffer: aBuffer on: serverInter
 		acknowledgeGcedOops: gcedOops
 		forSession: session.
 	^ result
+]
+
+{ #category : 'private - flushing' }
+GbsDirtyReplicateStoreTraversal >> storeTraversalBuffer: aBuffer on: serverInterface fallbackFromCombinedReleaseError: anError noLongerReplicatedOops: noLongerReplicatedOops gcedOops: gcedOops [
+	| releaseOops |
+	(anError messageText includesSubstring: 'GciStoreTravDoTravRefs_ failed')
+		ifFalse: [ anError pass ].
+	serverInterface storeTraversalBuffer: aBuffer.
+	releaseOops := noLongerReplicatedOops asArray, gcedOops asArray.
+	releaseOops isEmpty ifFalse: [
+		GbsSessionLifecycleManager releaseOops: releaseOops forSession: session ].
+	^ 1
 ]
 
 { #category : 'private - policy' }

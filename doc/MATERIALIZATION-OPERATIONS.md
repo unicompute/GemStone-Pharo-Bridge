@@ -160,9 +160,9 @@ The lane validates three production-relevant paths against a real GemStone sessi
 
 - VisualWorks-style `GbsClientClassConnector` installation into the session replicator manager, including client/server maps and server clamp specification synchronization.
 - Clamped Association materialization through `GciClampedTrav`, with traversal-buffer fallback count required to remain zero.
-- Native dirty-store traversal for a migration-shaped root graph, with Array, Association, and OrderedCollection mutations flushed in one dirty batch and valid exported OOP release queues acknowledged only after the native store call succeeds.
+- Mixed dirty-store traversal for a migration-shaped root graph, with Array, Association, OrderedCollection, and named-slot mutations using native dirty-store buffers where safe, while Dictionary, Set, and Bag mutations are flushed through a batched semantic server command. Exported OOP release queues are acknowledged only after the native store call succeeds.
 
-Thresholds are configured through `scripts/replication_live_thresholds.env` or direct `GBS_REPLICATION_LIVE_*` environment variables. The defaults require at least one clamped traversal fetch, zero clamped fallbacks, at least one native dirty-store flush, at least three dirty objects flushed, and zero export-set release queue entries remaining after the flush.
+Thresholds are configured through `scripts/replication_live_thresholds.env` or direct `GBS_REPLICATION_LIVE_*` environment variables. The defaults require at least one clamped traversal fetch, zero clamped fallbacks, at least one native dirty-store flush, at least six dirty objects flushed, and zero export-set release queue entries remaining after the flush.
 
 ## Artifacts
 

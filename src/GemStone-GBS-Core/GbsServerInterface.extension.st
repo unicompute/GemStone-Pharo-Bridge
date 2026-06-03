@@ -9,6 +9,14 @@ GbsServerInterface >> apiGciAllocTravBuf: byteCount [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> apiGciDirtyObjsInit [
+	^ self
+		ffiCall: #(void GciDirtyObjsInit())
+		module: libraryPath
+		options: #( + optNonThreaded )
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> apiGciClampedTravOops: oopBuffer count: oopCount spec: clampedTraversalArgs [
 	^ self
 		ffiCall: #(int GciClampedTrav(void* oopBuffer, int oopCount, void* clampedTraversalArgs))
@@ -81,9 +89,23 @@ GbsServerInterface >> apiGciTraverseOops: oopBuffer count: oopCount into: traver
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> ensureDirtyObjectsInitialized [
+	dirtyObjectsInitialized == true ifTrue: [ ^ true ].
+	self apiGciDirtyObjsInit.
+	dirtyObjectsInitialized := true.
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> resetDirtyObjectsInitialization [
+	dirtyObjectsInitialized := false
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> storeTraversalBuffer: aBuffer [
 	(aBuffer respondsTo: #withNativeTraversalBufferOn:do:) ifFalse: [
 		GbsError signal: 'Dirty store traversal buffer is not backed by a native GCI traversal buffer.' ].
+	self ensureDirtyObjectsInitialized.
 	^ aBuffer
 		withNativeTraversalBufferOn: self
 		do: [ :nativeBuffer |
@@ -103,6 +125,7 @@ GbsServerInterface >> storeTraversalBuffer: aBuffer releasingNoLongerReplicatedO
 	| arguments result |
 	(aBuffer respondsTo: #withNativeTraversalBufferOn:do:) ifFalse: [
 		GbsError signal: 'Dirty store traversal buffer is not backed by a native GCI traversal buffer.' ].
+	self ensureDirtyObjectsInitialized.
 	arguments := GbsStoreTravDoTravRefsArguments
 		storeTraversalBuffer: aBuffer
 		noLongerReplicatedOops: noLongerOopCollection

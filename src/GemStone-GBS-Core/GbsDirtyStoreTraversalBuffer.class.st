@@ -144,6 +144,48 @@ GbsDirtyStoreTraversalBuffer >> nativeHeaderBytes [
 	^ 8
 ]
 
+{ #category : 'native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeEncodingFailureDescriptions [
+	| descriptions |
+	descriptions := OrderedCollection new.
+	entries do: [ :entry |
+		(self canProduceNativeTraversalReportForEntry: entry) ifFalse: [
+			descriptions add: (self nativeEncodingFailureDescriptionForEntry: entry) ] ].
+	^ descriptions asArray
+]
+
+{ #category : 'native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeEncodingFailureDescriptionForEntry: entry [
+	| values missing |
+	values := [ self nativeValuesForEntry: entry ]
+		on: Error
+		do: [ :ex |
+			^ 'oop=', entry first asString,
+				' kind=', (entry at: 3) asString,
+				' class=', entry second class name,
+				' valuesError=', ex messageText ].
+	missing := values select: [ :each |
+		each notNil and: [
+			(self oopForValue: each ifAbsent: [ nil ]) isNil ] ].
+	missing isEmpty ifTrue: [
+		^ 'oop=', entry first asString,
+			' kind=', (entry at: 3) asString,
+			' class=', entry second class name,
+			' unsupported native entry shape' ].
+	^ 'oop=', entry first asString,
+		' kind=', (entry at: 3) asString,
+		' class=', entry second class name,
+		' missingValues=', (self nativeValueDescriptionListFor: missing)
+]
+
+{ #category : 'native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeEncodingFailureSummary [
+	| descriptions |
+	descriptions := self nativeEncodingFailureDescriptions.
+	descriptions isEmpty ifTrue: [ ^ 'none' ].
+	^ self nativeValueDescriptionListFor: descriptions
+]
+
 { #category : 'private - native encoding' }
 GbsDirtyStoreTraversalBuffer >> nativeLogicalByteCount [
 	^ (self nativeUsedBytes max: 2040)
@@ -209,12 +251,30 @@ GbsDirtyStoreTraversalBuffer >> nativeObjectFormatForEntry: entry [
 
 { #category : 'private - native encoding' }
 GbsDirtyStoreTraversalBuffer >> nativeSupportedKinds [
-	^ #(#array #association #orderedCollection #dictionary #identityDictionary #set #bag #namedObject)
+	^ #(#array #association #orderedCollection #namedObject)
 ]
 
 { #category : 'private - native encoding' }
 GbsDirtyStoreTraversalBuffer >> nativeValueByteCountForEntry: entry [
 	^ (self nativeValuesForEntry: entry) size * 8
+]
+
+{ #category : 'native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeValueDescriptionFor: anObject [
+	| text |
+	text := [ anObject printString ] on: Error do: [ '<unprintable>' ].
+	text size > 80 ifTrue: [ text := (text copyFrom: 1 to: 80), '...' ].
+	^ anObject class name, '(', text, ')'
+]
+
+{ #category : 'native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeValueDescriptionListFor: aCollection [
+	^ String streamContents: [ :stream |
+		aCollection doWithIndex: [ :each :index |
+			index > 1 ifTrue: [ stream nextPutAll: '; ' ].
+			(each isString and: [ each includesSubstring: 'oop=' ])
+				ifTrue: [ stream nextPutAll: each ]
+				ifFalse: [ stream nextPutAll: (self nativeValueDescriptionFor: each) ] ] ]
 ]
 
 { #category : 'private - native encoding' }
@@ -233,15 +293,21 @@ GbsDirtyStoreTraversalBuffer >> nativeValuesForEntry: entry [
 	| object kind |
 	object := entry second.
 	kind := entry at: 3.
-	kind = #array ifTrue: [ ^ object asArray ].
-	kind = #association ifTrue: [ ^ { object key. object value } ].
-	kind = #orderedCollection ifTrue: [ ^ object asArray ].
-	kind = #dictionary ifTrue: [ ^ object associations asArray ].
-	kind = #identityDictionary ifTrue: [ ^ self nativeValuesForIdentityDictionary: object ].
-	kind = #set ifTrue: [ ^ object asArray ].
-	kind = #bag ifTrue: [ ^ object asArray ].
-	kind = #namedObject ifTrue: [ ^ self nativeNamedInstVarValuesFor: object ].
-	self error: 'Native dirty store traversal does not support kind ', kind asString
+		kind = #array ifTrue: [ ^ object asArray ].
+		kind = #association ifTrue: [ ^ { object key. object value } ].
+		kind = #orderedCollection ifTrue: [ ^ object asArray ].
+		kind = #namedObject ifTrue: [ ^ self nativeNamedInstVarValuesFor: object ].
+		self error: 'Native dirty store traversal does not support kind ', kind asString
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeValuesForDictionaryEntry: entry [
+	| associations |
+	associations := entry second associations asArray.
+	(associations anySatisfy: [ :association |
+		(self oopForValue: association ifAbsent: [ nil ]) isNil ]) ifTrue: [
+			self registerRemoteAssociationsForDictionaryEntry: entry associations: associations ].
+	^ associations
 ]
 
 { #category : 'private - native encoding' }
@@ -261,7 +327,128 @@ GbsDirtyStoreTraversalBuffer >> oopForValue: anObject ifAbsent: absentBlock [
 	((anObject respondsTo: #oop) and: [
 		(anObject respondsTo: #session) not or: [ anObject session == session ] ]) ifTrue: [
 		^ anObject oop ].
+	(self shouldResolveScalarOopFor: anObject) ifTrue: [
+		^ self remoteScalarOopForValue: anObject ifAbsent: absentBlock ].
 	^ absentBlock value
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> registerRemoteAssociationsForDictionaryEntry: entry associations: associations [
+	| associationMaps associationOopByKeyOop associationOopByScalarKey |
+	associationMaps := [ self remoteDictionaryAssociationOopMapsFor: entry first ]
+		on: Error
+		do: [ ^ self ].
+	associationOopByKeyOop := associationMaps at: #byKeyOop ifAbsent: [ Dictionary new ].
+	associationOopByScalarKey := associationMaps at: #byScalarKey ifAbsent: [ Dictionary new ].
+	associations do: [ :association | | keyOop associationOop |
+		keyOop := self oopForValue: association key ifAbsent: [ nil ].
+		associationOop := keyOop
+			ifNil: [ nil ]
+			ifNotNil: [ associationOopByKeyOop at: keyOop ifAbsent: [ nil ] ].
+		associationOop ifNil: [
+			(self scalarDictionaryKeyLookupKeyFor: association key) ifNotNil: [ :scalarKey |
+				associationOop := associationOopByScalarKey at: scalarKey ifAbsent: [ nil ] ] ].
+		associationOop ifNotNil: [
+			GbsMaterializedObjectDirtyTracker
+				registerObject: association
+				oop: associationOop
+				session: session ] ]
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> remoteDictionaryAssociationOopMapsFor: dictionaryOop [
+	| text byKeyOop byScalarKey |
+	session ifNil: [ ^ Dictionary new ].
+	text := session
+		fetchRemoteCommandBody: '| stream |
+stream := WriteStream on: String new.
+object associations do: [ :assoc |
+	stream
+		nextPutAll: assoc key asOop asString;
+		nextPut: Character tab;
+		nextPutAll: assoc asOop asString;
+		nextPut: Character tab;
+		nextPutAll: assoc key class name asString;
+		nextPut: Character tab;
+		nextPutAll: assoc key asString;
+		nextPut: Character lf ].
+stream contents'
+		literalBindings: Dictionary new
+		oopBindings: (Dictionary new
+			at: 'object' put: dictionaryOop;
+			yourself)
+		context: 20.
+	byKeyOop := Dictionary new.
+	byScalarKey := Dictionary new.
+	text asString lines do: [ :line |
+		line isEmpty ifFalse: [ | parts |
+			parts := line asString splitOn: Character tab.
+			parts size >= 2 ifTrue: [ | associationOop |
+				associationOop := self unsignedOopForSignedOop: parts second asInteger.
+				byKeyOop
+					at: (self unsignedOopForSignedOop: parts first asInteger)
+					put: associationOop.
+				parts size >= 4 ifTrue: [
+					(self
+						scalarDictionaryKeyLookupKeyForClassName: parts third
+						value: parts fourth) ifNotNil: [ :scalarKey |
+							byScalarKey at: scalarKey put: associationOop ] ] ] ] ].
+	^ Dictionary new
+		at: #byKeyOop put: byKeyOop;
+		at: #byScalarKey put: byScalarKey;
+		yourself
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> scalarDictionaryKeyLookupKeyFor: anObject [
+	anObject isSymbol ifTrue: [ ^ { 'Symbol'. anObject asString } ].
+	anObject isString ifTrue: [ ^ { 'String'. anObject asString } ].
+	^ nil
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> scalarDictionaryKeyLookupKeyForClassName: className value: valueString [
+	((#('Symbol' 'DoubleByteSymbol') includes: className) and: [ valueString notNil ]) ifTrue: [
+		^ { 'Symbol'. valueString asString } ].
+	((#('String' 'DoubleByteString') includes: className) and: [ valueString notNil ]) ifTrue: [
+		^ { 'String'. valueString asString } ].
+	^ nil
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> scalarOopCache [
+	session ifNil: [ ^ Dictionary new ].
+	^ (session class weakRegistryNamed: #GbsSessionDirtyStoreScalarOopCaches)
+		at: session
+		ifAbsentPut: [ Dictionary new ]
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> remoteScalarOopForValue: anObject ifAbsent: absentBlock [
+	| key |
+	session ifNil: [ ^ absentBlock value ].
+	key := self scalarDictionaryKeyLookupKeyFor: anObject.
+	key ifNil: [ ^ absentBlock value ].
+	^ self scalarOopCache
+		at: key
+		ifAbsentPut: [
+			| oop |
+			oop := [ session
+				returnRemoteCommandBody: 'value'
+				literalBindings: (Dictionary new
+					at: 'value' put: anObject;
+					yourself)
+				oopBindings: Dictionary new ]
+				on: Error
+				do: [ ^ absentBlock value ].
+			self unsignedOopForSignedOop: oop asInteger ]
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> shouldResolveScalarOopFor: anObject [
+	anObject ifNil: [ ^ false ].
+	anObject isSymbol ifTrue: [ ^ true ].
+	^ false
 ]
 
 { #category : 'accessing' }
@@ -296,7 +483,7 @@ GbsDirtyStoreTraversalBuffer >> valueFitsGemStoneSmallInteger: anInteger [
 GbsDirtyStoreTraversalBuffer >> withNativeTraversalBufferOn: serverInterface do: aBlock [
 	| buffer |
 	self canProduceNativeTraversalBuffer ifFalse: [
-		self error: 'Native dirty store traversal can encode only mapped Arrays, Associations, OrderedCollections, Dictionaries with mapped associations, IdentityDictionaries, Sets, Bags, and named-slot objects with OOP-addressable values.' ].
+		self error: 'Native dirty store traversal can encode only mapped Arrays, Associations, OrderedCollections, and named-slot objects with OOP-addressable values. Dictionaries, Sets, and Bags require semantic store commands.' ].
 	buffer := serverInterface apiGciAllocTravBuf: self nativeTraversalBufferBytes.
 	((buffer isNil) or: [
 		(buffer respondsTo: #isNull)

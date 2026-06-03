@@ -49,6 +49,6 @@
     ] on: Error do: [ :ex |
       Transcript
         show: 'DEBUGGER_PERF_BASELINE result=FAIL code=DEBUGGER_PERF_RUN_FAILED open_ms=0 stack_fetch_ms=0 source_lookup_ms=0 proxy_inspect_ms=0 message=';
-        show: (ex messageText ifNil: [ ex printString ]) withBlanksTrimmed;
+        show: (ex messageText ifNil: [ ex printString ]) asString withBlanksTrimmed;
         cr ] ].
 ] ensure: [ Smalltalk snapshot: false andQuit: true ].

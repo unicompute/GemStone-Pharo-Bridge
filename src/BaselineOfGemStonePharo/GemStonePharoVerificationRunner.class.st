@@ -244,15 +244,29 @@ GemStonePharoVerificationRunner >> classifyTopazFailureOutput: output [
 		or: [ (lowered includesSubstring: 'invalid userid')
 		or: [ lowered includesSubstring: 'invalid user' ] ] ])
 		ifTrue: [ ^ 'LIVE_PREFLIGHT_AUTH_FAILED' ].
-	((lowered includesSubstring: 'netldi')
-		or: [ (lowered includesSubstring: 'unable to connect')
-		or: [ (lowered includesSubstring: 'cannot connect')
-		or: [ lowered includesSubstring: 'connection refused' ] ] ])
-		ifTrue: [ ^ 'LIVE_PREFLIGHT_ROUTE_FAILED' ].
+		((lowered includesSubstring: 'netldi')
+			or: [ (lowered includesSubstring: 'unable to connect')
+			or: [ (lowered includesSubstring: 'cannot connect')
+			or: [ (lowered includesSubstring: 'connection refused')
+			or: [ (lowered includesSubstring: 'error connecting to stone')
+			or: [ lowered includesSubstring: 'connection to the stone repository monitor was refused' ] ] ] ] ])
+			ifTrue: [ ^ 'LIVE_PREFLIGHT_ROUTE_FAILED' ].
 	((lowered includesSubstring: 'stone')
 		and: [ lowered includesSubstring: 'does not exist' ])
 		ifTrue: [ ^ 'LIVE_PREFLIGHT_STONE_NOT_FOUND' ].
 	^ 'LIVE_PREFLIGHT_TOPAZ_LOGIN_FAILED'
+]
+
+{ #category : 'private' }
+GemStonePharoVerificationRunner >> topazOutputIndicatesLoginFailure: output [
+	| lowered |
+	lowered := output asLowercase.
+	^ (lowered includesSubstring: 'login failed')
+		or: [ (lowered includesSubstring: 'gemstone: error')
+		or: [ (lowered includesSubstring: ' error         fatal')
+		or: [ (lowered includesSubstring: 'error connecting to stone')
+		or: [ (lowered includesSubstring: 'connection to the stone repository monitor was refused')
+		or: [ lowered includesSubstring: 'can''t be used prior to logging in' ] ] ] ] ]
 ]
 
 { #category : 'private' }
@@ -723,7 +737,7 @@ GemStonePharoVerificationRunner >> runStandalonePreflight [
 
 	topazOutput := self topazOutput.
 	self logOutput: topazOutput.
-	((topazOutput asLowercase includesSubstring: 'login failed'))
+	(self topazOutputIndicatesLoginFailure: topazOutput)
 		ifTrue: [
 			topazStatus := 'failed'.
 			failureCode := self classifyTopazFailureOutput: topazOutput.
