@@ -20,6 +20,20 @@ GbxPointerObjectReplicator >> initializeForServerInstVarNames: aCollection [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxPointerObjectReplicator >> dirtyStoreKindFor: anObject inTraversal: aTraversal [
+	^ #namedObject
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxPointerObjectReplicator >> packDirtyReferentsOf: anObject inTraversal: aTraversal [
+	| referents |
+	referents := OrderedCollection new.
+	(self namedInstVarValuesInServerOrderFor: anObject unmappedValue: nil) do: [ :value |
+		value ifNotNil: [ referents add: value ] ].
+	^ referents asArray
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxPointerObjectReplicator >> initializeServerOffsets [
 	| clientNames explicitMappings clientNamesMappedToNil offsets |
 	clientNames := self normalizedClientInstVarNames.

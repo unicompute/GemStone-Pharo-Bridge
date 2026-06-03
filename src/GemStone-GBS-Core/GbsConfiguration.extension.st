@@ -49,6 +49,16 @@ GbsConfiguration >> freeOopBatchSize: anInteger [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsConfiguration >> freeOopAllocationBatchSize [
+	^ self bridgeValueAt: #freeOopAllocationBatchSize ifAbsent: 2000
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsConfiguration >> freeOopAllocationBatchSize: anInteger [
+	^ self bridgeValueAt: #freeOopAllocationBatchSize put: anInteger
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsConfiguration >> serverMapMode [
 	^ self bridgeValueAt: #serverMapMode ifAbsent: 'weak'
 ]

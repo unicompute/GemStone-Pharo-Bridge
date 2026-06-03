@@ -211,6 +211,44 @@ GbsSessionManagerCoreTest >> testClientClassConnectorInstallsReplicatorAndSessio
 ]
 
 { #category : 'tests' }
+GbsSessionManagerCoreTest >> testConnectorPairsForSessionPreservesConnectorObjectDirection [
+	| mockSession pairs |
+	mockSession := CoreMockGbsSession new.
+	GbsSessionManager
+		addConnectorClient: 'Array'
+		server: 'RemoteArray'
+		forSession: mockSession.
+
+	pairs := GbsSessionManager connectorPairsForSession: mockSession.
+
+	self assert: (pairs includes: { 'Array'. 'RemoteArray' }).
+	self deny: (pairs includes: { 'RemoteArray'. 'Array' })
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testClientClassConnectorExposesUpdateGsAndVersionVerificationHooks [
+	| mockSession connector script versionReport |
+	mockSession := CoreMockGbsSession new.
+	connector := GbsClientClassConnector
+		client: Array
+		server: 'RemoteArray'
+		replicationSpec: #replicate
+		serverInstVarNames: #('first' 'second').
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :generatedScript |
+		script := generatedScript.
+		7000 ].
+
+	self assert: (connector updateGSInSession: mockSession) equals: 7000.
+	versionReport := connector verifyClassVersionsInSession: mockSession.
+
+	self assert: (script includesSubstring: 'Object subclass: className').
+	self assert: (script includesSubstring: '#(''first'' ''second'')').
+	self assert: (versionReport at: #client) equals: 'Array'.
+	self assert: (versionReport at: #server) equals: 'RemoteArray'.
+	self assert: (versionReport includesKey: #versionMatches)
+]
+
+{ #category : 'tests' }
 GbsSessionManagerCoreTest >> testReplicatorManagerCompatibilityAliasesInstallAndReportConnectorState [
 	| mockSession manager connector replicator report text removed |
 	mockSession := CoreMockGbsSession new.

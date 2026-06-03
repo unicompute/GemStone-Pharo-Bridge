@@ -56,6 +56,7 @@ GbsClassicLauncherCoreToolsTest >> newFakeSettingsPresenterOn: aConfiguration [
 		instVarNamed: 'blockReplicationPolicyDrop' put: (drop value: 'replicate');
 		instVarNamed: 'defaultFaultPolicyDrop' put: (drop value: 'lazy').
 	presenter bridgeControlAt: #freeOopBatchSizeField put: (field value: '256').
+	presenter bridgeControlAt: #freeOopAllocationBatchSizeField put: (field value: '2000').
 	presenter bridgeControlAt: #serverMapModeDrop put: (drop value: 'weak').
 	presenter bridgeControlAt: #storeTraversalTransportDrop put: (drop value: 'script').
 	presenter bridgeControlAt: #storeDirtyOnCommitYes put: (check value: false).
@@ -470,6 +471,7 @@ GbsClassicLauncherCoreToolsTest >> testSettingsPresenterPersistsReplicationLifec
 		presenter := self newFakeSettingsPresenterOn: configuration.
 
 		(presenter bridgeControlAt: #freeOopBatchSizeField) text: '64'.
+		(presenter bridgeControlAt: #freeOopAllocationBatchSizeField) text: '512'.
 		presenter selectDrop: (presenter instVarNamed: 'blockReplicationPolicyDrop') value: 'none'.
 		presenter selectDrop: (presenter instVarNamed: 'defaultFaultPolicyDrop') value: 'immediate'.
 		presenter selectDrop: (presenter bridgeControlAt: #serverMapModeDrop) value: 'strong'.
@@ -486,6 +488,7 @@ GbsClassicLauncherCoreToolsTest >> testSettingsPresenterPersistsReplicationLifec
 		self assert: (configuration valueAt: #blockReplicationPolicy ifAbsent: nil) equals: 'none'.
 		self assert: (configuration valueAt: #defaultFaultPolicy ifAbsent: nil) equals: 'immediate'.
 		self assert: configuration freeOopBatchSize equals: 64.
+		self assert: configuration freeOopAllocationBatchSize equals: 512.
 		self assert: configuration serverMapMode equals: 'strong'.
 		self assert: configuration storeTraversalTransport equals: 'binaryRequired'.
 		self assert: configuration storeDirtyOnCommit.
@@ -493,6 +496,7 @@ GbsClassicLauncherCoreToolsTest >> testSettingsPresenterPersistsReplicationLifec
 		self assert: policy blockReplicationPolicySymbol equals: #none.
 		self assert: policy defaultFaultPolicySymbol equals: #immediate.
 		self assert: policy serverMapModeSymbol equals: #strong.
+		self assert: policy freeOopAllocationBatchSize equals: 512.
 		self assert: policy storeDirtyOnCommit.
 		self assert: policy storeTraversalTransportSymbol equals: #binaryRequired
 	] ensure: [

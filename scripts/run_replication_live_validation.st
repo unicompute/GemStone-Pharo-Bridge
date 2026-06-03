@@ -1233,14 +1233,14 @@ root'
           Error signal: 'Dirty-store traversal flushed fewer objects than expected.' ].
         nativeDirtyStoreFlushes <= 0 ifTrue: [
           Error signal: 'Dirty-store traversal did not use the native store traversal buffer.' ].
-        semanticDirtyStoreCommands = 1 ifFalse: [
-          Error signal: 'Dirty-store traversal should use one semantic collection command for Set/Bag updates.' ].
-        semanticDirtyStoreEntries = 2 ifFalse: [
-          Error signal: 'Dirty-store traversal should report semantic Set and Bag entries only.' ].
-        semanticDictionaryEntries = 0 ifFalse: [
-          Error signal: 'Dirty-store traversal unexpectedly fell back for Dictionary entries.' ].
-        ((semanticSetEntries = 1) and: [ semanticBagEntries = 1 ]) ifFalse: [
-          Error signal: 'Dirty-store traversal did not report the expected semantic Set/Bag entries.' ].
+        semanticDirtyStoreCommands = 0 ifFalse: [
+          Error signal: 'Dirty-store traversal unexpectedly used semantic collection commands.' ].
+        semanticDirtyStoreEntries = 0 ifFalse: [
+          Error signal: 'Dirty-store traversal unexpectedly reported semantic collection entries.' ].
+        ((semanticDictionaryEntries = 0)
+          and: [ semanticSetEntries = 0
+          and: [ semanticBagEntries = 0 ] ]) ifFalse: [
+          Error signal: 'Dirty-store traversal unexpectedly fell back for Dictionary, Set, or Bag entries.' ].
         exportAfter := session objectSpace pendingExportSetReleaseOopCount.
         exportAfter = 0 ifFalse: [
           Error signal: 'Export-set release queues were not acknowledged after native dirty-store flush.' ].

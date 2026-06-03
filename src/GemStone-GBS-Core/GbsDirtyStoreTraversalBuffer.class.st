@@ -214,10 +214,13 @@ GbsDirtyStoreTraversalBuffer >> nativeUsedBytes [
 
 { #category : 'private - native encoding' }
 GbsDirtyStoreTraversalBuffer >> nativeIndexedSizeForEntry: entry [
-	| kind |
+	| kind object |
 	kind := entry at: 3.
 	kind = #association ifTrue: [ ^ 0 ].
 	kind = #namedObject ifTrue: [ ^ 0 ].
+	(#(#set #bag) includes: kind) ifTrue: [
+		object := entry second.
+		^ object size ].
 	^ (self nativeValuesForEntry: entry) size
 ]
 
@@ -241,6 +244,8 @@ GbsDirtyStoreTraversalBuffer >> nativeNamedSizeForEntry: entry [
 	kind := entry at: 3.
 	kind = #association ifTrue: [ ^ 2 ].
 	kind = #namedObject ifTrue: [ ^ self nativeNamedSizeForObject: entry second ].
+	kind = #set ifTrue: [ ^ 5 ].
+	kind = #bag ifTrue: [ ^ 6 ].
 	^ 0
 ]
 
@@ -312,10 +317,37 @@ GbsDirtyStoreTraversalBuffer >> nativeValuesForEntry: entry [
 		kind = #orderedCollection ifTrue: [ ^ object asArray ].
 		kind = #dictionary ifTrue: [ ^ self nativeValuesForDictionaryEntry: entry ].
 		kind = #identityDictionary ifTrue: [ ^ self nativeValuesForIdentityDictionary: object ].
-		kind = #set ifTrue: [ ^ object asArray ].
-		kind = #bag ifTrue: [ ^ object asArray ].
+		kind = #set ifTrue: [ ^ self nativeValuesForSetEntry: entry ].
+		kind = #bag ifTrue: [ ^ self nativeValuesForBagEntry: entry ].
 		kind = #namedObject ifTrue: [ ^ self nativeNamedInstVarValuesFor: object ].
 		self error: 'Native dirty store traversal does not support kind ', kind asString
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeValuesForSetEntry: entry [
+	^ { nil. nil. nil. nil. nil }, entry second asArray
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeValuesForBagEntry: entry [
+	| values |
+	values := OrderedCollection new: entry second size + 6.
+	6 timesRepeat: [ values add: nil ].
+	entry second asSet do: [ :each |
+		1 to: (entry second occurrencesOf: each) do: [ :ignored |
+			values add: each ] ].
+	^ values asArray
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> classOopForEntry: entry serverInterface: serverInterface [
+	| explicitClassOop oop |
+	explicitClassOop := entry size >= 5
+		ifTrue: [ entry at: 5 ]
+		ifFalse: [ nil ].
+	explicitClassOop ifNotNil: [ ^ explicitClassOop asInteger ].
+	oop := entry first.
+	^ (serverInterface apiGciGetClass: oop) asInteger
 ]
 
 { #category : 'private - native encoding' }
@@ -570,7 +602,7 @@ GbsDirtyStoreTraversalBuffer >> writePointerReportForEntry: entry on: traversalB
 GbsDirtyStoreTraversalBuffer >> writePointerReportForEntry: entry values: values namedSize: namedSize indexedSize: indexedSize on: traversalBuffer offset: offset serverInterface: serverInterface [
 	| oop classOop valueOops valueSize alignedSize valueOffset idxSizeBits objectFormat |
 	oop := entry first.
-	classOop := (serverInterface apiGciGetClass: oop) asInteger.
+	classOop := self classOopForEntry: entry serverInterface: serverInterface.
 	valueOops := values collect: [ :each |
 		self oopForValue: each ifAbsent: [
 			self error: 'Native dirty store traversal cannot encode value: ', each printString ] ].

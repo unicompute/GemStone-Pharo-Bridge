@@ -23,7 +23,7 @@ GbsSettingsPresenter >> bridgeBooleanAt: ivarName default: defaultBoolean [
 { #category : '*GemStone-GBS-Core-Tools' }
 GbsSettingsPresenter >> bridgeConfigurationValueAt: ivarName default: defaultValue [
 	configuration ifNil: [ ^ defaultValue ].
-	(#(asyncSignalPollingEnabled freeOopBatchSize serverMapMode storeDirtyOnCommit storeTraversalTransport) includes: ivarName) ifTrue: [
+	(#(asyncSignalPollingEnabled freeOopAllocationBatchSize freeOopBatchSize serverMapMode storeDirtyOnCommit storeTraversalTransport) includes: ivarName) ifTrue: [
 		^ [ configuration perform: ivarName ] on: Error do: [ defaultValue ] ].
 	^ configuration valueAt: ivarName ifAbsent: defaultValue
 ]
@@ -52,7 +52,7 @@ GbsSettingsPresenter >> bridgeFormattedIntegerValueAt: ivarName default: default
 GbsSettingsPresenter >> bridgeSetConfigurationValueAt: aKey put: aValue [
 	| setter |
 	configuration ifNil: [ configuration := GbsConfiguration current ].
-	(#(asyncSignalPollingEnabled freeOopBatchSize serverMapMode storeDirtyOnCommit storeTraversalTransport) includes: aKey) ifTrue: [
+	(#(asyncSignalPollingEnabled freeOopAllocationBatchSize freeOopBatchSize serverMapMode storeDirtyOnCommit storeTraversalTransport) includes: aKey) ifTrue: [
 		setter := (aKey asString, ':') asSymbol.
 		^ configuration perform: setter with: aValue ].
 	^ configuration valueAt: aKey put: aValue
@@ -115,6 +115,7 @@ GbsSettingsPresenter >> defaultLayout [
 			no: (self bridgeControlAt: #storeDirtyOnCommitNo)) expand: false;
 		add: (self textRowLabel: 'storeTraversalTransport' field: (self bridgeControlAt: #storeTraversalTransportDrop)) expand: false;
 		add: (self textRowLabel: 'serverMapMode' field: (self bridgeControlAt: #serverMapModeDrop)) expand: false;
+		add: (self textRowLabel: 'freeOopAllocationBatchSize' field: (self bridgeControlAt: #freeOopAllocationBatchSizeField)) expand: false;
 		add: (self textRowLabel: 'freeOopBatchSize' field: (self bridgeControlAt: #freeOopBatchSizeField)) expand: false;
 		add: (self sectionTitle: 'ServerCommunication') expand: false;
 		add: (self yesNoRowLabel: 'blockingProtocolRpc' yes: blockingProtocolRpcYes no: blockingProtocolRpcNo) expand: false;
@@ -167,6 +168,7 @@ GbsSettingsPresenter >> initializePresenters [
 	blockReplicationPolicyDrop items: (GbsReplicationPolicy legalValuesForSetting: #blockReplicationPolicy).
 	defaultFaultPolicyDrop items: (GbsReplicationPolicy legalValuesForSetting: #defaultFaultPolicy).
 	self bridgeControlAt: #freeOopBatchSizeField put: self newTextInput.
+	self bridgeControlAt: #freeOopAllocationBatchSizeField put: self newTextInput.
 	self bridgeControlAt: #storeDirtyOnCommitYes put: (self newRadioButton label: 'Yes').
 	self bridgeControlAt: #storeDirtyOnCommitNo put: (self newRadioButton label: 'No').
 	self bridgeControlAt: #storeTraversalTransportDrop put: self newDropList.
@@ -226,6 +228,7 @@ GbsSettingsPresenter >> loadFromConfiguration [
 	eventPollingField text: (self bridgeStringValueAt: #eventPollingFrequency default: 300).
 	eventPriorityField text: (self bridgeStringValueAt: #eventPriority default: 3).
 	(self bridgeControlAt: #freeOopBatchSizeField) text: (self bridgeStringValueAt: #freeOopBatchSize default: 256).
+	(self bridgeControlAt: #freeOopAllocationBatchSizeField) text: (self bridgeStringValueAt: #freeOopAllocationBatchSize default: 2000).
 	self selectDrop: blockReplicationPolicyDrop value: (self bridgeStringValueAt: #blockReplicationPolicy default: 'replicate').
 	self selectDrop: defaultFaultPolicyDrop value: (self bridgeStringValueAt: #defaultFaultPolicy default: 'lazy').
 	self selectDrop: (self bridgeControlAt: #storeTraversalTransportDrop) value: (self bridgeStringValueAt: #storeTraversalTransport default: 'script').
@@ -298,6 +301,7 @@ GbsSettingsPresenter >> updateConfigurationFromPresenters [
 		bridgeSetConfigurationValueAt: #faultLevelRpc put: (self integerFromField: faultLevelRpcField default: 4);
 		bridgeSetConfigurationValueAt: #socketWaitTimeout put: (self integerFromField: delayInterruptField default: 10);
 		bridgeSetConfigurationValueAt: #traversalBufferSize put: (self integerFromField: traversalBufferField default: 250000);
+		bridgeSetConfigurationValueAt: #freeOopAllocationBatchSize put: (self integerFromField: (self bridgeControlAt: #freeOopAllocationBatchSizeField) default: 2000);
 		bridgeSetConfigurationValueAt: #freeOopBatchSize put: (self integerFromField: (self bridgeControlAt: #freeOopBatchSizeField) default: 256);
 		bridgeSetConfigurationValueAt: #eventPollingFrequency put: (self integerFromField: eventPollingField default: 300);
 		bridgeSetConfigurationValueAt: #eventPriority put: (self integerFromField: eventPriorityField default: 3);
@@ -337,6 +341,7 @@ GbsSettingsPresenter >> validationErrorMessage [
 	self integerFromField: faultLevelRpcField default: 4 label: 'faultLevelRpc' minimum: -1 messages: messages.
 	self integerFromField: delayInterruptField default: 10 label: 'delayInterruptPeriod' minimum: 0 messages: messages.
 	self integerFromField: traversalBufferField default: 250000 label: 'traversalBufferSize' minimum: 1 messages: messages.
+	self integerFromField: (self bridgeControlAt: #freeOopAllocationBatchSizeField) default: 2000 label: 'freeOopAllocationBatchSize' minimum: 1 messages: messages.
 	self integerFromField: (self bridgeControlAt: #freeOopBatchSizeField) default: 256 label: 'freeOopBatchSize' minimum: 0 messages: messages.
 	self integerFromField: eventPollingField default: 300 label: 'eventPollingFrequency' minimum: 0 messages: messages.
 	self integerFromField: eventPriorityField default: 3 label: 'eventPriority' minimum: 0 messages: messages.

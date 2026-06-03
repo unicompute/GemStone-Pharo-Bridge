@@ -89,6 +89,30 @@ GbsSession >> registerMaterializedObject: anObject forOop: anOop [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> registerNewMaterializedObject: anObject [
+	^ GbsMaterializedObjectDirtyTracker registerNewObject: anObject session: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> freeOopStream [
+	^ (self class weakRegistryNamed: #GbsSessionFreeOopStreams)
+		at: self
+		ifAbsentPut: [ GbxFreeOopStream for: self ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> getFreeOop [
+	^ self freeOopStream nextFreeOop
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> getFreeOops: numberOfOops [
+	numberOfOops <= 0 ifTrue: [ ^ #() ].
+	self serverInterface ifNil: [ self error: 'No server interface is available for free OOP allocation.' ].
+	^ self serverInterface getFreeOops: numberOfOops
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> flushDirtyMaterializedObjects [
 	^ GbsMaterializedObjectDirtyTracker flushDirtyForSession: self
 ]

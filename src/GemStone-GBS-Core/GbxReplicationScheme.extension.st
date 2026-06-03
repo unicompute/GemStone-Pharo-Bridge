@@ -35,6 +35,7 @@ GbxReplicationScheme >> clamp: aClamp [
 { #category : '*GemStone-GBS-Core' }
 GbxReplicationScheme >> dictionaryFormOfReplicationSpec: replicationSpec [
 	| specs |
+	(replicationSpec isSymbol) ifTrue: [ ^ Dictionary new ].
 	specs := Dictionary new.
 	replicationSpec do: [ :specArray |
 		(specArray size between: 2 and: 3)
@@ -291,6 +292,8 @@ GbxReplicationScheme >> updateInstVarLevels: instVarLevels forwarderOffsets: for
 GbxReplicationScheme >> updateInstVarLevelsForClass: aClass serverInstVarNames: serverInstVarNames replicationSpec: replicationSpec [
 	| specs namedLevels indexedSpec forwarderOffsets forwardIndexed |
 	replicationSpec ifNil: [ ^ self removeArtefactsForClass: aClass ].
+	(replicationSpec isSymbol and: [ replicationSpec ~= #callback ]) ifTrue: [
+		^ self removeArtefactsForClass: aClass ].
 	replicationSpec = #callback ifTrue: [
 		^ self
 			updateInstVarLevels: nil
@@ -322,6 +325,8 @@ GbxReplicationScheme >> updateInstVarLevelsForClass: aClass serverInstVarNames: 
 GbxReplicationScheme >> updateInstVarLevelsForClass: aClass serverInstVarNames: serverInstVarNames serverToClientOffsets: serverToClientOffsets replicationSpec: replicationSpec [
 	| clientInstVarNames specs namedLevels indexedSpec forwarderOffsets forwardIndexed |
 	replicationSpec ifNil: [ ^ self removeArtefactsForClass: aClass ].
+	(replicationSpec isSymbol and: [ replicationSpec ~= #callback ]) ifTrue: [
+		^ self removeArtefactsForClass: aClass ].
 	serverToClientOffsets ifNil: [
 		^ self
 			updateInstVarLevelsForClass: aClass
@@ -405,6 +410,7 @@ GbxReplicationScheme >> validateClampByCallbackSelector: clampByCallbackSelector
 { #category : '*GemStone-GBS-Core' }
 GbxReplicationScheme >> transitiveClosureSpecForReplicationSpec: replicationSpec [
 	replicationSpec ifNil: [ ^ #() ].
+	replicationSpec isSymbol ifTrue: [ ^ #() ].
 	replicationSpec = #callback ifTrue: [ ^ #() ].
 	^ replicationSpec select: [ :specArray |
 		| operator |

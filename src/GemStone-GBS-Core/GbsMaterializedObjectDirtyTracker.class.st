@@ -167,6 +167,14 @@ GbsMaterializedObjectDirtyTracker class >> registerObject: anObject oop: anOop s
 	^ anObject
 ]
 
+{ #category : 'registries' }
+GbsMaterializedObjectDirtyTracker class >> registerNewObject: anObject session: aSession [
+	(self canTrackObject: anObject) ifFalse: [ ^ anObject ].
+	self registerObject: anObject forSession: aSession.
+	aSession dirtyPool markDirty: anObject.
+	^ anObject
+]
+
 { #category : 'dirty tracking' }
 GbsMaterializedObjectDirtyTracker class >> resetForSession: aSession [
 	^ self resetForSession: aSession preserveLifecycleCounters: false

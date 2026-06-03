@@ -89,6 +89,22 @@ CoreMockGbsSession >> apiGciFree: anExternalAddress [
 ]
 
 { #category : 'accessing' }
+CoreMockGbsSession >> apiGciGetFreeOops: oopCount into: oopBuffer [
+	| block oops |
+	block := self stubs at: #apiGciGetFreeOops ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: oopCount cull: oopBuffer ].
+	oops := self stubs at: #getFreeOops ifAbsent: [ nil ].
+	oops ifNil: [ self error: 'No getFreeOops stub configured.' ].
+	1 to: oopCount do: [ :index |
+		oopBuffer
+			integerAt: 1 + ((index - 1) * 8)
+			put: (oops at: index)
+			size: 8
+			signed: false ].
+	^ true
+]
+
+{ #category : 'accessing' }
 CoreMockGbsSession >> apiGciGetClass: anOop [
 	| block |
 	block := self stubs at: #apiGciGetClass ifAbsent: [ nil ].
@@ -363,6 +379,18 @@ CoreMockGbsSession >> gciPollForSignal [
 	^ value
 ]
 
+{ #category : 'free oops' }
+CoreMockGbsSession >> getFreeOops: oopCount [
+	| block oops |
+	block := self stubs at: #getFreeOops ifAbsent: [ nil ].
+	block ifNotNil: [
+		(block respondsTo: #cull:) ifTrue: [ ^ block cull: oopCount ].
+		^ block ].
+	oops := OrderedCollection new: oopCount.
+	1 to: oopCount do: [ :index | oops add: 123000 + (index * 8) ].
+	^ oops asArray
+]
+
 { #category : 'accessing' }
 CoreMockGbsSession >> sendInterrupt [
 	| block |
@@ -463,6 +491,19 @@ CoreMockGbsSession >> supportsDirtyStoreTraversalBufferTransport [
 	^ self stubs at: #supportsDirtyStoreTraversalBufferTransport ifAbsent: [ false ]
 ]
 
+{ #category : 'dirty store traversal' }
+CoreMockGbsSession >> nativeStoreTraversalCapabilityReport [
+	^ Dictionary new
+		at: #nativeGciTransportsEnabled put: true;
+		at: #oopWidth put: 64;
+		at: #storeTraversalStructLayoutSupported put: true;
+		at: #dirtyStoreTraversalFunctionsSupported put: true;
+		at: #freeOopAllocationSupported put: self supportsFreeOopAllocationTransport;
+		at: #dirtyStoreTraversalBufferTransportSupported put: self supportsDirtyStoreTraversalBufferTransport;
+		at: #noLongerReplicatedStoreTraversalTransportSupported put: self supportsNoLongerReplicatedStoreTraversalTransport;
+		yourself
+]
+
 { #category : 'materialization' }
 CoreMockGbsSession >> supportsClampedTraversalTransport [
 	^ self stubs at: #supportsClampedTraversalTransport ifAbsent: [ false ]
@@ -476,6 +517,11 @@ CoreMockGbsSession >> supportsNoLongerReplicatedStoreTraversalTransport [
 { #category : 'lifecycle' }
 CoreMockGbsSession >> supportsReleaseOopsTransport [
 	^ self stubs at: #supportsReleaseOopsTransport ifAbsent: [ false ]
+]
+
+{ #category : 'free oops' }
+CoreMockGbsSession >> supportsFreeOopAllocationTransport [
+	^ self stubs at: #supportsFreeOopAllocationTransport ifAbsent: [ true ]
 ]
 
 { #category : 'accessing' }

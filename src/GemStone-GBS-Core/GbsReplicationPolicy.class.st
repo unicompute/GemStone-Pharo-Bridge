@@ -9,6 +9,7 @@ Class {
 		'eventPollingFrequency',
 		'eventPriority',
 		'faultLevelRpc',
+		'freeOopAllocationBatchSize',
 		'freeOopBatchSize',
 		'freeSlotsOnStubbing',
 		'serverMapMode',
@@ -93,6 +94,52 @@ GbsReplicationPolicy class >> legalValuesForSetting: aSymbol [
 ]
 
 { #category : 'configuration metadata' }
+GbsReplicationPolicy class >> templateNamed: aSymbol [
+	| policy |
+	policy := self default.
+	aSymbol = #production ifTrue: [
+		policy
+			storeTraversalTransport: 'binary';
+			storeDirtyOnCommit: true;
+			asyncSignalPollingEnabled: true;
+			serverMapMode: 'weak'.
+		^ policy ].
+	aSymbol = #migration ifTrue: [
+		policy
+			storeTraversalTransport: 'binaryRequired';
+			storeDirtyOnCommit: true;
+			defaultFaultPolicy: 'lazy';
+			blockReplicationPolicy: 'replicate';
+			freeOopAllocationBatchSize: 2000.
+		^ policy ].
+	aSymbol = #debug ifTrue: [
+		policy
+			storeTraversalTransport: 'script';
+			storeDirtyOnCommit: false;
+			asyncSignalPollingEnabled: false.
+		^ policy ].
+	^ policy
+]
+
+{ #category : 'configuration metadata' }
+GbsReplicationPolicy class >> templateNames [
+	^ #(default production migration debug)
+]
+
+{ #category : 'configuration metadata' }
+GbsReplicationPolicy class >> fromDictionary: aDictionary [
+	| policy settings |
+	policy := self default.
+	settings := aDictionary at: #settings ifAbsent: [ aDictionary ].
+	settings keysAndValuesDo: [ :key :value |
+		| setter |
+		setter := (key asString, ':') asSymbol.
+		(policy respondsTo: setter) ifTrue: [
+			policy perform: setter with: value ] ].
+	^ policy
+]
+
+{ #category : 'configuration metadata' }
 GbsReplicationPolicy class >> settingSpecifications [
 	| specs |
 	specs := OrderedCollection new.
@@ -105,11 +152,20 @@ GbsReplicationPolicy class >> settingSpecifications [
 	self addSetting: #storeTraversalTransport category: #replication default: 'script' legalValues: #('script' 'binary' 'binaryRequired') help: 'Transport used for dirty writes: script fallback, native binary when possible, or native binary required.' to: specs.
 	self addSetting: #serverMapMode category: #lifecycle default: 'weak' legalValues: #('weak' 'strong') help: 'Client-side server map retention mode. Native store traversal temporarily uses a strong window even when the steady-state map is weak.' to: specs.
 	self addSetting: #freeOopBatchSize category: #lifecycle default: 256 legalValues: #() help: 'Maximum number of pending no-longer-replicated or GCed OOPs drained in one lifecycle batch.' to: specs.
+	self addSetting: #freeOopAllocationBatchSize category: #lifecycle default: 2000 legalValues: #() help: 'Number of free OOPs fetched per allocation batch for newly replicated client objects.' to: specs.
 	self addSetting: #traversalBufferSize category: #performance default: 250000 legalValues: #() help: 'Preferred traversal buffer size for native materialization and store traversal paths.' to: specs.
 	self addSetting: #asyncSignalPollingEnabled category: #signals default: false legalValues: #(true false) help: 'Start a background GemStone signal poller after login.' to: specs.
 	self addSetting: #eventPollingFrequency category: #signals default: 300 legalValues: #() help: 'Delay in milliseconds between background GemStone signal polls.' to: specs.
 	self addSetting: #eventPriority category: #signals default: 3 legalValues: #() help: 'Pharo process priority used by the background GemStone signal poller.' to: specs.
 	^ specs asArray
+]
+
+{ #category : 'configuration metadata' }
+GbsReplicationPolicy >> exportDictionary [
+	^ Dictionary new
+		at: #version put: 1;
+		at: #settings put: self asDictionary;
+		yourself
 ]
 
 { #category : 'accessing' }
@@ -132,6 +188,7 @@ GbsReplicationPolicy >> asDictionary [
 		at: #eventPollingFrequency put: self eventPollingFrequency;
 		at: #eventPriority put: self eventPriority;
 		at: #faultLevelRpc put: self faultLevelRpc;
+		at: #freeOopAllocationBatchSize put: self freeOopAllocationBatchSize;
 		at: #freeOopBatchSize put: self freeOopBatchSize;
 		at: #freeSlotsOnStubbing put: self freeSlotsOnStubbing;
 		at: #serverMapMode put: self serverMapMode;
@@ -229,6 +286,16 @@ GbsReplicationPolicy >> faultLevelRpc: anInteger [
 ]
 
 { #category : 'accessing' }
+GbsReplicationPolicy >> freeOopAllocationBatchSize [
+	^ freeOopAllocationBatchSize
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> freeOopAllocationBatchSize: anInteger [
+	freeOopAllocationBatchSize := anInteger
+]
+
+{ #category : 'accessing' }
 GbsReplicationPolicy >> freeOopBatchSize [
 	^ freeOopBatchSize
 ]
@@ -262,6 +329,7 @@ GbsReplicationPolicy >> initializeFromConfiguration: aConfiguration [
 	eventPollingFrequency := self valueAt: #eventPollingFrequency fromConfiguration: aConfiguration default: 300.
 	eventPriority := self valueAt: #eventPriority fromConfiguration: aConfiguration default: 3.
 	faultLevelRpc := self valueAt: #faultLevelRpc fromConfiguration: aConfiguration default: 4.
+	freeOopAllocationBatchSize := self valueAt: #freeOopAllocationBatchSize fromConfiguration: aConfiguration default: 2000.
 	freeOopBatchSize := self valueAt: #freeOopBatchSize fromConfiguration: aConfiguration default: 256.
 	freeSlotsOnStubbing := self valueAt: #freeSlotsOnStubbing fromConfiguration: aConfiguration default: true.
 	serverMapMode := self valueAt: #serverMapMode fromConfiguration: aConfiguration default: 'weak'.
@@ -308,6 +376,7 @@ GbsReplicationPolicy >> reportText [
 			storeDirtyOnCommit
 			storeTraversalTransport
 			serverMapMode
+			freeOopAllocationBatchSize
 			freeOopBatchSize
 			traversalBufferSize
 			asyncSignalPollingEnabled
@@ -327,6 +396,38 @@ GbsReplicationPolicy >> reportValueString: anObject [
 	anObject == false ifTrue: [ ^ 'false' ].
 	anObject isSymbol ifTrue: [ ^ anObject asString ].
 	^ anObject printString
+]
+
+{ #category : 'diagnostics' }
+GbsReplicationPolicy >> diffFromDefaults [
+	| defaults diff |
+	defaults := self class default asDictionary.
+	diff := OrderedCollection new.
+	self asDictionary keysAndValuesDo: [ :key :value |
+		(defaults at: key ifAbsent: [ nil ]) = value ifFalse: [
+			diff add: (Dictionary new
+				at: #key put: key;
+				at: #default put: (defaults at: key ifAbsent: [ nil ]);
+				at: #value put: value;
+				yourself) ] ].
+	^ diff asArray
+]
+
+{ #category : 'diagnostics' }
+GbsReplicationPolicy >> diffFromDefaultsText [
+	| diff |
+	diff := self diffFromDefaults.
+	diff isEmpty ifTrue: [ ^ 'Replication Policy matches defaults.' ].
+	^ String streamContents: [ :stream |
+		stream nextPutAll: 'Replication Policy Diff'; cr; cr.
+		diff do: [ :entry |
+			stream
+				nextPutAll: (entry at: #key) asString;
+				nextPutAll: ': ';
+				nextPutAll: (self reportValueString: (entry at: #default));
+				nextPutAll: ' -> ';
+				nextPutAll: (self reportValueString: (entry at: #value));
+				cr ] ]
 ]
 
 { #category : 'accessing' }

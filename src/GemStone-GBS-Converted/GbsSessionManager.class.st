@@ -248,19 +248,33 @@ GbsSessionManager class >> connectorPairsForGroup: aConnectorGroup [
 
 { #category : 'connector groups' }
 GbsSessionManager class >> connectorPairsForSession: aSession [
-	| sessionKey registry pairs seen |
+	| sessionKey registry pairs seen objectRegistry |
 	sessionKey := self sessionKeyForSessionObject: aSession.
 	registry := self sessionConnectorRegistry at: sessionKey ifAbsent: [ Dictionary new ].
+	objectRegistry := self connectorObjectRegistry.
 	pairs := OrderedCollection new.
 	seen := Set new.
 	registry keysAndValuesDo: [ :clientName :serverName |
-		| c s pairKey inverseKey |
+		| c s pairClient pairServer directKey inverseKey pairKey |
 		c := clientName asString.
 		s := serverName asString.
-		pairKey := c, '->', s.
-		inverseKey := s, '->', c.
-		((seen includes: pairKey) or: [ seen includes: inverseKey ]) ifFalse: [
-			pairs add: { c. s }.
+		directKey := self connectorObjectKeyForClient: c server: s.
+		inverseKey := self connectorObjectKeyForClient: s server: c.
+		(objectRegistry includesKey: directKey)
+			ifTrue: [
+				pairClient := c.
+				pairServer := s ]
+			ifFalse: [
+				(objectRegistry includesKey: inverseKey)
+					ifTrue: [
+						pairClient := s.
+						pairServer := c ]
+					ifFalse: [
+						pairClient := c.
+						pairServer := s ] ].
+		pairKey := pairClient, '->', pairServer.
+		(seen includes: pairKey) ifFalse: [
+			pairs add: { pairClient. pairServer }.
 			seen add: pairKey ] ].
 	^ pairs asArray
 ]

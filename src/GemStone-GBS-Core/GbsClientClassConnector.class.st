@@ -342,3 +342,70 @@ GbsClientClassConnector >> updateClampMetadataIn: aReplicatorManager forReplicat
 		serverInstVarNames: self serverInstVarNames
 		replicationSpec: replicationSpec
 ]
+
+{ #category : 'class updating' }
+GbsClientClassConnector >> updateSTInSession: aSession [
+	| clientName serverName |
+	clientName := self clientBehaviorName.
+	serverName := self serverBehaviorName.
+	(clientName isEmpty or: [ serverName isEmpty ]) ifTrue: [
+		self error: 'Client and server behavior names are required for client-class generation.' ].
+	^ GbsSessionManager
+		generateTypedWrapperForClient: clientName
+		server: serverName
+		forSession: aSession
+]
+
+{ #category : 'class updating' }
+GbsClientClassConnector >> updateGSInSession: aSession [
+	aSession ifNil: [ self error: 'A GemStone session is required for server-class generation.' ].
+	^ aSession executeScriptAndReturnOop: self updateGSScript
+]
+
+{ #category : 'class updating' }
+GbsClientClassConnector >> updateGSScript [
+	| className instVars |
+	className := self serverBehaviorName.
+	className isEmpty ifTrue: [
+		self error: 'A server behavior name is required for server-class generation.' ].
+	instVars := self serverInstVarNames.
+	^ String streamContents: [ :stream |
+		stream
+			nextPutAll: '| class className instVars |';
+			cr;
+			nextPutAll: 'className := ';
+			nextPutAll: className printString;
+			nextPutAll: ' asSymbol.';
+			cr;
+			nextPutAll: 'instVars := ';
+			nextPutAll: instVars printString;
+			nextPutAll: '.';
+			cr;
+			nextPutAll: 'class := GsSession currentSession resolveSymbol: className.';
+			cr;
+			nextPutAll: 'class ifNil: [ class := Object subclass: className instVarNames: instVars classVars: #() classInstVars: #() poolDictionaries: #() inDictionary: UserGlobals ].';
+			cr;
+			nextPutAll: 'class asOop' ]
+]
+
+{ #category : 'class updating' }
+GbsClientClassConnector >> verifyClassVersionsInSession: aSession [
+	| clientClass serverName serverMirror clientVersion serverVersion |
+	clientClass := self resolvedClientBehavior.
+	serverName := self serverBehaviorName.
+	clientVersion := (clientClass notNil and: [ clientClass respondsTo: #classVersion ])
+		ifTrue: [ [ clientClass classVersion ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	serverMirror := (aSession notNil and: [ serverName isEmpty not ])
+		ifTrue: [ [ aSession classMirrorOfNamed: serverName ] on: Error do: [ nil ] ]
+		ifFalse: [ nil ].
+	serverVersion := serverMirror ifNil: [ nil ] ifNotNil: [
+		[ serverMirror version ] on: Error do: [ nil ] ].
+	^ Dictionary new
+		at: #client put: self clientBehaviorName;
+		at: #server put: serverName;
+		at: #clientVersion put: clientVersion;
+		at: #serverVersion put: serverVersion;
+		at: #versionMatches put: (clientVersion isNil or: [ serverVersion isNil or: [ clientVersion = serverVersion ] ]);
+		yourself
+]

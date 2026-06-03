@@ -41,6 +41,14 @@ GbsServerInterface >> apiGciFree: anExternalAddress [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> apiGciGetFreeOops: oopCount into: oopBuffer [
+	^ self
+		ffiCall: #(void GciGetFreeOops(int oopCount, void* oopBuffer))
+		module: libraryPath
+		options: #( + optNonThreaded )
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> apiGciGetClass: anOop [
 	^ self
 		ffiCall: #(uint64 GciFetchClass(uint64 anOop))
@@ -99,6 +107,21 @@ GbsServerInterface >> ensureDirtyObjectsInitialized [
 { #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> resetDirtyObjectsInitialization [
 	dirtyObjectsInitialized := false
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> getFreeOops: oopCount [
+	| buffer oops |
+	oopCount <= 0 ifTrue: [ ^ #() ].
+	(self supportsFreeOopAllocationTransport) ifFalse: [
+		GbsError signal: 'GCI free-OOP allocation transport is not available.' ].
+	buffer := ExternalAddress allocate: oopCount * 8.
+	^ [
+		self apiGciGetFreeOops: oopCount into: buffer.
+		oops := (1 to: oopCount) collect: [ :index |
+			(buffer integerAt: 1 + ((index - 1) * 8) size: 8 signed: false) asInteger ].
+		oops asArray
+	] ensure: [ buffer free ]
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -175,6 +198,24 @@ GbsServerInterface >> supportsNativeStoreTraversalStructLayout [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> nativeGciOopWidth [
+	^ ([ Smalltalk vm wordSize ] on: Error do: [ 8 ]) * 8
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> nativeStoreTraversalCapabilityReport [
+	^ Dictionary new
+		at: #nativeGciTransportsEnabled put: self nativeGciTransportsEnabled;
+		at: #oopWidth put: self nativeGciOopWidth;
+		at: #storeTraversalStructLayoutSupported put: self supportsNativeStoreTraversalStructLayout;
+		at: #dirtyStoreTraversalFunctionsSupported put: self supportsNativeDirtyStoreTraversalFunctions;
+		at: #freeOopAllocationSupported put: self supportsFreeOopAllocationTransport;
+		at: #dirtyStoreTraversalBufferTransportSupported put: self supportsDirtyStoreTraversalBufferTransport;
+		at: #noLongerReplicatedStoreTraversalTransportSupported put: self supportsNoLongerReplicatedStoreTraversalTransport;
+		yourself
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> supportsNativeDirtyStoreTraversalFunctions [
 	^ (self respondsTo: #apiGciStoreTrav:flags:)
 		and: [ (self respondsTo: #apiGciDirtyObjsInit)
@@ -187,6 +228,13 @@ GbsServerInterface >> supportsDirtyStoreTraversalBufferTransport [
 	^ self nativeGciTransportsEnabled
 		and: [ self supportsNativeStoreTraversalStructLayout
 		and: [ self supportsNativeDirtyStoreTraversalFunctions ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> supportsFreeOopAllocationTransport [
+	^ self nativeGciTransportsEnabled
+		and: [ self nativeGciOopWidth = 64
+		and: [ self respondsTo: #apiGciGetFreeOops:into: ] ]
 ]
 
 { #category : '*GemStone-GBS-Core' }

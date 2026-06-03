@@ -234,6 +234,7 @@ GbsSessionLifecycleManager class >> forgetObjectForOop: anOop inSession: aSessio
 GbsSessionLifecycleManager class >> forgetObjectForOop: anOop inSession: aSession reason: reasonSymbol [
 	| map object |
 	self incrementLifecycleCounter: #forgetRequestedOopCount forSession: aSession.
+	self recordServerMapTombstoneOop: anOop reason: reasonSymbol forSession: aSession.
 	map := self serverMapForSession: aSession.
 	object := map at: anOop ifAbsent: [ nil ].
 	map removeKey: anOop ifAbsent: [ ].
@@ -384,6 +385,8 @@ GbsSessionLifecycleManager class >> lifecycleReportForSession: aSession [
 	| report |
 	report := Dictionary new
 		at: #serverMapSize put: (self serverMapSizeForSession: aSession);
+		at: #serverMapTombstoneCount put: (self serverMapTombstonesForSession: aSession) size;
+		at: #packedButNotAcceptedCount put: (self packedButNotAcceptedOopsForSession: aSession) size;
 		at: #serverMapMode put: (self serverMapModeForSession: aSession);
 		at: #gcedOopQueueSize put: (self pendingGcedOopCountForSession: aSession);
 		at: #noLongerReplicatedOopQueueSize put: (self pendingNoLongerReplicatedOopCountForSession: aSession);
@@ -409,6 +412,8 @@ GbsSessionLifecycleManager class >> lifecycleReportTextForSession: aSession [
 		#(
 			serverMapMode
 			serverMapSize
+			serverMapTombstoneCount
+			packedButNotAcceptedCount
 			gcedOopQueueSize
 			noLongerReplicatedOopQueueSize
 			exportSetReleaseOopQueueSize
@@ -452,6 +457,10 @@ GbsSessionLifecycleManager class >> lifecycleReportCounterKeys [
 		ignoredFinalizerNotificationCount
 		serverMapStrongWindowEnterCount
 		serverMapStrongWindowExitCount
+		serverMapTombstoneCount
+		allocatedFreeOopCount
+		packedButNotAcceptedOopCount
+		packedAcceptedOopCount
 		transactionPrepareForCommitCallCount
 		transactionDirtyFlushBeforeCommitCount
 		transactionExportSetFlushBeforeCommitCount
@@ -508,6 +517,13 @@ GbsSessionLifecycleManager class >> newIdentityRegistry [
 { #category : 'free oops' }
 GbsSessionLifecycleManager class >> noteFreeOop: anOop forSession: aSession [
 	^ self noteGcedOop: anOop forSession: aSession
+]
+
+{ #category : 'free oops' }
+GbsSessionLifecycleManager class >> noteAllocatedFreeOop: anOop forSession: aSession [
+	(self isExportableOop: anOop) ifFalse: [ ^ nil ].
+	self incrementLifecycleCounter: #allocatedFreeOopCount forSession: aSession.
+	^ anOop
 ]
 
 { #category : 'free oops' }
@@ -871,6 +887,15 @@ GbsSessionLifecycleManager class >> resetTrackedObjectsForSession: aSession pres
 	(aSession class weakRegistryNamed: #GbsSessionServerMaps)
 		removeKey: aSession
 		ifAbsent: [ ].
+	(aSession class weakRegistryNamed: #GbsSessionServerMapTombstones)
+		removeKey: aSession
+		ifAbsent: [ ].
+	(aSession class weakRegistryNamed: #GbsSessionPackedButNotAcceptedOops)
+		removeKey: aSession
+		ifAbsent: [ ].
+	(aSession class weakRegistryNamed: #GbsSessionFreeOopStreams)
+		removeKey: aSession
+		ifAbsent: [ ].
 	(aSession class weakRegistryNamed: #GbsSessionFreeOopQueues)
 		removeKey: aSession
 		ifAbsent: [ ].
@@ -922,6 +947,63 @@ GbsSessionLifecycleManager class >> serverMapForSession: aSession [
 	^ (aSession class weakRegistryNamed: #GbsSessionServerMaps)
 		at: aSession
 		ifAbsentPut: [ self newServerMapForSession: aSession ]
+]
+
+{ #category : 'server map' }
+GbsSessionLifecycleManager class >> serverMapTombstonesForSession: aSession [
+	^ (aSession class weakRegistryNamed: #GbsSessionServerMapTombstones)
+		at: aSession
+		ifAbsentPut: [ OrderedCollection new ]
+]
+
+{ #category : 'server map' }
+GbsSessionLifecycleManager class >> recordServerMapTombstoneOop: anOop reason: reasonSymbol forSession: aSession [
+	(self isExportableOop: anOop) ifFalse: [ ^ nil ].
+	(self serverMapTombstonesForSession: aSession)
+		add: (Dictionary new
+			at: #oop put: anOop;
+			at: #reason put: reasonSymbol;
+			yourself).
+	self incrementLifecycleCounter: #serverMapTombstoneCount forSession: aSession.
+	^ anOop
+]
+
+{ #category : 'server map' }
+GbsSessionLifecycleManager class >> packedButNotAcceptedOopsForSession: aSession [
+	^ (aSession class weakRegistryNamed: #GbsSessionPackedButNotAcceptedOops)
+		at: aSession
+		ifAbsentPut: [ OrderedCollection new ]
+]
+
+{ #category : 'server map' }
+GbsSessionLifecycleManager class >> notePackedDirtyStoreEntries: entries forSession: aSession [
+	| queue |
+	queue := self packedButNotAcceptedOopsForSession: aSession.
+	entries do: [ :entry |
+		| oop |
+		oop := entry first.
+		(self isExportableOop: oop) ifTrue: [
+			(queue includes: oop) ifFalse: [
+				queue add: oop.
+				self incrementLifecycleCounter: #packedButNotAcceptedOopCount forSession: aSession ] ] ].
+	^ queue asArray
+]
+
+{ #category : 'server map' }
+GbsSessionLifecycleManager class >> acknowledgePackedDirtyStoreEntries: entries forSession: aSession [
+	| queue accepted |
+	queue := self packedButNotAcceptedOopsForSession: aSession.
+	accepted := OrderedCollection new.
+	entries do: [ :entry |
+		| oop |
+		oop := entry first.
+		(queue remove: oop ifAbsent: [ nil ]) ifNotNil: [
+			accepted add: oop ] ].
+	self
+		incrementLifecycleCounter: #packedAcceptedOopCount
+		by: accepted size
+		forSession: aSession.
+	^ accepted asArray
 ]
 
 { #category : 'diagnostics' }

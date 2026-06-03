@@ -230,6 +230,21 @@ GbxReplicatorManager >> installClientClassConnector: aConnector [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> updateSTForClientClassConnector: aConnector [
+	^ aConnector updateSTInSession: self session
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> updateGSForClientClassConnector: aConnector [
+	^ aConnector updateGSInSession: self session
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> verifyClassVersionsForClientClassConnector: aConnector [
+	^ aConnector verifyClassVersionsInSession: self session
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxReplicatorManager >> installClientClassConnectorForClientBehavior: clientBehavior serverBehavior: serverBehavior [
 	^ self installClientClassConnector:
 		(self

@@ -490,6 +490,7 @@ GbsSessionCoreTest >> testReplicationPolicyDefaultsMirrorCompatibilitySettings [
 	self assert: policy eventPollingFrequency equals: 300.
 	self assert: policy eventPriority equals: 3.
 	self assert: policy faultLevelRpc equals: 4.
+	self assert: policy freeOopAllocationBatchSize equals: 2000.
 	self assert: policy freeOopBatchSize equals: 256.
 	self assert: policy freeSlotsOnStubbing.
 	self assert: policy serverMapMode equals: 'weak'.
@@ -506,11 +507,27 @@ GbsSessionCoreTest >> testReplicationPolicySettingSpecificationsExposeDefaultsLe
 
 	self assert: (specs anySatisfy: [ :each | (each at: #key) = #serverMapMode ]).
 	self assert: (specs anySatisfy: [ :each | (each at: #key) = #storeDirtyOnCommit ]).
+	self assert: (specs anySatisfy: [ :each | (each at: #key) = #freeOopAllocationBatchSize ]).
 	self assert: (GbsReplicationPolicy defaultValueForSetting: #storeTraversalTransport) equals: 'script'.
 	self assert: (GbsReplicationPolicy defaultValueForSetting: #storeDirtyOnCommit) equals: false.
 	self assert: (GbsReplicationPolicy legalValuesForSetting: #storeTraversalTransport) equals: #('script' 'binary' 'binaryRequired').
 	self assert: (transportSpec at: #category) equals: #replication.
 	self assert: ((GbsReplicationPolicy helpForSetting: #storeTraversalTransport) includesSubstring: 'dirty writes')
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testReplicationPolicyTemplatesAndDiffExportProfiles [
+	| policy exported imported diffText |
+	policy := GbsReplicationPolicy templateNamed: #migration.
+	exported := policy exportDictionary.
+	imported := GbsReplicationPolicy fromDictionary: exported.
+	diffText := imported diffFromDefaultsText.
+
+	self assert: (GbsReplicationPolicy templateNames includes: #migration).
+	self assert: imported storeTraversalTransport equals: 'binaryRequired'.
+	self assert: imported storeDirtyOnCommit.
+	self assert: (exported at: #version) equals: 1.
+	self assert: (diffText includesSubstring: 'storeTraversalTransport')
 ]
 
 { #category : 'tests' }
@@ -525,6 +542,7 @@ GbsSessionCoreTest >> testReplicationPolicyCanCopyConvertedConfigurationValues [
 		valueAt: #eventPollingFrequency put: 125;
 		valueAt: #eventPriority put: 6;
 		valueAt: #faultLevelRpc put: 2;
+		freeOopAllocationBatchSize: 512;
 		freeOopBatchSize: 64;
 		valueAt: #freeSlotsOnStubbing put: false;
 		serverMapMode: 'strong';
@@ -541,6 +559,7 @@ GbsSessionCoreTest >> testReplicationPolicyCanCopyConvertedConfigurationValues [
 	self assert: policy eventPollingFrequency equals: 125.
 	self assert: policy eventPriority equals: 6.
 	self assert: policy faultLevelRpc equals: 2.
+	self assert: policy freeOopAllocationBatchSize equals: 512.
 	self assert: policy freeOopBatchSize equals: 64.
 	self deny: policy freeSlotsOnStubbing.
 	self assert: policy serverMapMode equals: 'strong'.
@@ -1270,6 +1289,94 @@ GbsSessionCoreTest >> testDirtyReplicationFlushUsesBinaryStoreTraversalBufferWhe
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationUsesReplicatorStoreTraversalHooks [
+	| mockSession manager connector replicator point capturedBuffer report |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: Point
+		server: 'RemotePoint'
+		replicationSpec: #replicate
+		serverInstVarNames: #('x' 'y').
+	connector replicatorClass: CoreGbsCountingReplicator.
+	replicator := manager installClientClassConnector: connector.
+	point := 1 @ 2.
+	mockSession rememberMaterializedObject: point forOop: 9800.
+	(GbsReplicationPolicy forSession: mockSession) storeTraversalTransport: 'binaryRequired'.
+	mockSession dirtyPool markDirty: point.
+	mockSession stubs at: #supportsDirtyStoreTraversalBufferTransport put: true.
+	mockSession stubs at: #apiGciGetClass put: [ :oop | 7600 ].
+	mockSession stubs at: #storeTraversalBuffer put: [ :buffer |
+		capturedBuffer := buffer.
+		268 ].
+
+	mockSession flushDirtyMaterializedObjects.
+	report := mockSession dirtyStoreTraversalReport.
+
+	self assert: replicator storeCount equals: 1.
+	self assert: replicator dirtyReferentPackCount equals: 1.
+	self assert: (capturedBuffer entries first at: 4) == replicator.
+	self assert: (report at: #perReplicatorStoreEntryCount) equals: 1.
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationAllocatesFreeOopForNewRegisteredObject [
+	| mockSession array capturedBuffer report lifecycleReport classLookupCount |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 1 with: true.
+	(GbsReplicationPolicy forSession: mockSession)
+		storeTraversalTransport: 'binaryRequired';
+		freeOopAllocationBatchSize: 1.
+	mockSession registerNewMaterializedObject: array.
+	classLookupCount := 0.
+	mockSession stubs
+		at: #supportsDirtyStoreTraversalBufferTransport put: true;
+		at: #getFreeOops put: [ :count |
+			self assert: count equals: 1.
+			#(123456) ];
+		at: #returnRemoteCommandBody put: [ :body :literalBindings :oopBindings |
+			classLookupCount := classLookupCount + 1.
+			self assert: (literalBindings at: 'className') equals: 'Array'.
+			7000 ];
+		at: #apiGciGetClass put: [ :oop | self fail ];
+		at: #storeTraversalBuffer put: [ :buffer |
+			capturedBuffer := buffer.
+			268 ].
+
+	mockSession flushDirtyMaterializedObjects.
+	report := mockSession dirtyStoreTraversalReport.
+	lifecycleReport := GbsSessionLifecycleManager lifecycleReportForSession: mockSession.
+
+	self assert: classLookupCount equals: 1.
+	self assert: capturedBuffer entries first first equals: 123456.
+	self assert: (capturedBuffer entries first at: 5) equals: 7000.
+	self assert: (capturedBuffer entries first at: 6).
+	self assert: (GbsMaterializedObjectDirtyTracker oopForObject: array inSession: mockSession) equals: 123456.
+	self assert: (report at: #newObjectEntryCount) equals: 1.
+	self assert: (report at: #freeOopAllocationCount) equals: 1.
+	self assert: (lifecycleReport at: #allocatedFreeOopCount) equals: 1.
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testNativeGciCapabilityReportExposesStoreTraversalGuards [
+	| mockSession report |
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs
+		at: #supportsDirtyStoreTraversalBufferTransport put: true;
+		at: #supportsNoLongerReplicatedStoreTraversalTransport put: true;
+		at: #supportsFreeOopAllocationTransport put: true.
+
+	report := mockSession nativeStoreTraversalCapabilityReport.
+
+	self assert: (report at: #oopWidth) equals: 64.
+	self assert: (report at: #dirtyStoreTraversalBufferTransportSupported).
+	self assert: (report at: #freeOopAllocationSupported).
+	self assert: (report includesKey: #storeTraversalStructLayoutSupported)
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testDirtyReplicationBinaryStoreTraversalInitializesDirtyObjectsBeforeStore [
 	| mockSession array initializedBeforeStore |
 	mockSession := CoreMockGbsSession new.
@@ -1317,6 +1424,22 @@ GbsSessionCoreTest >> testDirtyReplicationFlushUsesBinaryStoreTraversalBufferFor
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationClassOopLookupDecodesSmallIntegerResult [
+	| mockSession traversal encodedClassOop |
+	mockSession := CoreMockGbsSession new.
+	encodedClassOop := (79361 bitShift: 3) + 2.
+	mockSession stubs at: #returnRemoteCommandBody put: [ :body :literalBindings :oopBindings |
+		(literalBindings at: 'className') = 'KeyValueDictionary'
+			ifTrue: [ encodedClassOop ]
+			ifFalse: [ self fail ] ].
+	traversal := GbsDirtyReplicateStoreTraversal forSession: mockSession.
+
+	self
+		assert: (traversal classOopForServerBehavior: 'KeyValueDictionary')
+		equals: 79361
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testDirtyReplicationBinaryStoreTraversalUsesNativeStandardCollections [
 	| mockSession dictionary dictionaryAssociation identityDictionary identityAssociation set bag point capturedBuffer capturedScripts flushed report kinds associationEntryCount |
 	mockSession := CoreMockGbsSession new.
@@ -1349,6 +1472,10 @@ GbsSessionCoreTest >> testDirtyReplicationBinaryStoreTraversalUsesNativeStandard
 				(oopBindings at: 'object') = 9400
 					ifTrue: [ '18', Character tab asString, '9408', Character tab asString, 'SmallInteger', Character tab asString, '2', String lf ]
 					ifFalse: [ self fail ] ] ].
+	mockSession stubs at: #returnRemoteCommandBody put: [ :body :literalBindings :oopBindings |
+		(literalBindings at: 'className') = 'Association'
+			ifTrue: [ 7800 ]
+			ifFalse: [ self fail ] ].
 	mockSession stubs at: #storeTraversalBuffer put: [ :buffer |
 		capturedBuffer := buffer.
 		268 ].
@@ -1364,19 +1491,19 @@ GbsSessionCoreTest >> testDirtyReplicationBinaryStoreTraversalUsesNativeStandard
 	self assert: flushed asSet equals: #(9300 9400 9500 9600 9700) asSet.
 	self assert: capturedBuffer class equals: GbsDirtyStoreTraversalBuffer.
 	self assert: capturedBuffer canProduceNativeTraversalBuffer.
-	self assert: kinds equals: #(#association #namedObject) asSet.
+	self assert: kinds equals: #(#association #set #bag #namedObject) asSet.
 	self assert: associationEntryCount equals: 2.
 	self assert: (report at: #totalEntries) equals: 5.
-	self assert: (report at: #nativeEntryCount) equals: 3.
-	self assert: (report at: #semanticEntryCount) equals: 2.
+	self assert: (report at: #nativeEntryCount) equals: 5.
+	self assert: (report at: #semanticEntryCount) equals: 0.
 	self assert: (report at: #semanticDictionaryEntryCount) equals: 0.
-	self assert: (report at: #semanticSetEntryCount) equals: 1.
-	self assert: (report at: #semanticBagEntryCount) equals: 1.
+	self assert: (report at: #semanticSetEntryCount) equals: 0.
+	self assert: (report at: #semanticBagEntryCount) equals: 0.
 	self assert: (report at: #nativeFlushCount) equals: 1.
-	self assert: (report at: #remoteCommandCount) equals: 1.
-	self assert: (report at: #remoteCommandEntryCount) equals: 2.
-	self assert: (report at: #semanticCommandCount) equals: 1.
-	self assert: capturedScripts size equals: 1.
+	self assert: (report at: #remoteCommandCount) equals: 0.
+	self assert: (report at: #remoteCommandEntryCount) equals: 0.
+	self assert: (report at: #semanticCommandCount) equals: 0.
+	self assert: capturedScripts isEmpty.
 	self assert: mockSession dirtyMaterializedObjectOops isEmpty
 ]
 
@@ -1455,6 +1582,10 @@ GbsSessionCoreTest >> testDirtyReplicationBinaryRequiredFlushesNativeCollections
 				(oopBindings at: 'object') = 9400
 					ifTrue: [ '18', Character tab asString, '9408', Character tab asString, 'SmallInteger', Character tab asString, '2', String lf ]
 					ifFalse: [ self fail ] ] ].
+	mockSession stubs at: #returnRemoteCommandBody put: [ :body :literalBindings :oopBindings |
+		(literalBindings at: 'className') = 'Association'
+			ifTrue: [ 7800 ]
+			ifFalse: [ self fail ] ].
 	mockSession stubs at: #storeTraversalBuffer put: [ :buffer |
 		capturedBuffer := buffer.
 		268 ].
@@ -1470,19 +1601,19 @@ GbsSessionCoreTest >> testDirtyReplicationBinaryRequiredFlushesNativeCollections
 	self assert: flushed asSet equals: #(9300 9308 9400 9408 9500 9600) asSet.
 	self assert: capturedBuffer class equals: GbsDirtyStoreTraversalBuffer.
 	self assert: capturedBuffer canProduceNativeTraversalBuffer.
-	self assert: kinds equals: #(#association) asSet.
+	self assert: kinds equals: #(#association #set #bag) asSet.
 	self assert: associationEntryCount equals: 2.
 	self assert: (report at: #totalEntries) equals: 6.
-	self assert: (report at: #nativeEntryCount) equals: 2.
-	self assert: (report at: #semanticEntryCount) equals: 2.
+	self assert: (report at: #nativeEntryCount) equals: 4.
+	self assert: (report at: #semanticEntryCount) equals: 0.
 	self assert: (report at: #semanticDictionaryEntryCount) equals: 0.
-	self assert: (report at: #semanticSetEntryCount) equals: 1.
-	self assert: (report at: #semanticBagEntryCount) equals: 1.
+	self assert: (report at: #semanticSetEntryCount) equals: 0.
+	self assert: (report at: #semanticBagEntryCount) equals: 0.
 	self assert: (report at: #nativeFlushCount) equals: 1.
-	self assert: (report at: #remoteCommandEntryCount) equals: 2.
-	self assert: (report at: #remoteCommandCount) equals: 1.
-	self assert: (report at: #semanticCommandCount) equals: 1.
-	self assert: capturedScripts size equals: 1.
+	self assert: (report at: #remoteCommandEntryCount) equals: 0.
+	self assert: (report at: #remoteCommandCount) equals: 0.
+	self assert: (report at: #semanticCommandCount) equals: 0.
+	self assert: capturedScripts isEmpty.
 	self assert: mockSession dirtyMaterializedObjectOops isEmpty
 ]
 
@@ -1923,7 +2054,7 @@ GbsSessionCoreTest >> testDirtyStoreTraversalBufferProducesNativeIdentityDiction
 GbsSessionCoreTest >> testDirtyStoreTraversalBufferProducesNativeSetReport [
 	| mockSession set dirtyBuffer reader |
 	mockSession := CoreMockGbsSession new.
-	set := Set with: 1 with: nil.
+	set := Set with: 1 with: 2.
 	mockSession rememberMaterializedObject: set forOop: 9400.
 	dirtyBuffer := GbsDirtyStoreTraversalBuffer
 		entries: { { 9400. set. #set } }
@@ -1938,14 +2069,15 @@ GbsSessionCoreTest >> testDirtyStoreTraversalBufferProducesNativeSetReport [
 		withNativeTraversalBufferOn: mockSession
 		do: [ :nativeBuffer | | usedBytes report |
 			usedBytes := nativeBuffer integerAt: 5 size: 4 signed: false.
-			self assert: usedBytes equals: 56.
+			self assert: usedBytes equals: 96.
 			report := reader reportAt: nativeBuffer offset: 9.
 			self assert: report oop equals: 9400.
 			self assert: report classOop equals: 7400.
 			self assert: report objectFormat equals: 2.
-			self assert: report namedSize equals: 0.
+			self assert: report namedSize equals: 5.
 			self assert: report indexedSize equals: 2.
-			self assert: report valueOops asSet equals: #(10 20) asSet ]
+			self assert: (report valueOops first: 5) equals: #(20 20 20 20 20).
+			self assert: (report valueOops allButFirst: 5) asSet equals: #(10 18) asSet ]
 ]
 
 { #category : 'tests' }
@@ -1969,14 +2101,14 @@ GbsSessionCoreTest >> testDirtyStoreTraversalBufferProducesNativeBagReport [
 		withNativeTraversalBufferOn: mockSession
 		do: [ :nativeBuffer | | usedBytes report |
 			usedBytes := nativeBuffer integerAt: 5 size: 4 signed: false.
-			self assert: usedBytes equals: 56.
+			self assert: usedBytes equals: 104.
 			report := reader reportAt: nativeBuffer offset: 9.
 			self assert: report oop equals: 9500.
 			self assert: report classOop equals: 7500.
 			self assert: report objectFormat equals: 2.
-			self assert: report namedSize equals: 0.
+			self assert: report namedSize equals: 6.
 			self assert: report indexedSize equals: 2.
-			self assert: report valueOops equals: #(18 18) ]
+			self assert: report valueOops equals: #(20 20 20 20 20 20 18 18) ]
 ]
 
 { #category : 'tests' }
@@ -2181,6 +2313,27 @@ GbsSessionCoreTest >> testSessionEventControllerPollOnceSignalsTransactionBacklo
 	controller startPolling.
 
 	self should: [ controller pollOnce ] raise: TransactionBacklog
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionEventControllerModelsAsyncAbortAndFatalSessionDeathHandlers [
+	| mockSession controller events |
+	mockSession := CoreMockGbsSession new.
+	events := OrderedCollection new.
+	controller := GbsSessionEventController forSession: mockSession.
+	controller
+		asyncAbortStartAction: [ :session | events add: #start ];
+		asyncAbortFinishAction: [ :session | events add: #finish ];
+		fatalSessionDeathAction: [ :error :session | events add: error messageText ].
+
+	controller handleAsyncAbortDuring: [
+		self assert: controller isUnwindingAsyncAbort.
+		#done ].
+	mockSession instVarNamed: 'isLoggedIn' put: false.
+	controller handlePollingError: (Error new messageText: 'session died'; yourself).
+
+	self deny: controller isUnwindingAsyncAbort.
+	self assert: events asArray equals: #(start finish 'session died')
 ]
 
 { #category : 'tests' }

@@ -26,6 +26,27 @@ GbxObjectReplicator >> initializeServerOffsets [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxObjectReplicator >> dirtyStoreKindFor: anObject inTraversal: aTraversal [
+	^ aTraversal defaultKindForObject: anObject
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxObjectReplicator >> dirtyStoreServerClassOopFor: anObject inTraversal: aTraversal [
+	self serverClass ifNil: [ ^ nil ].
+	^ aTraversal classOopForServerBehavior: self serverClass
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxObjectReplicator >> packDirtyReferentsOf: anObject inTraversal: aTraversal [
+	^ aTraversal defaultDirtyReferentsOf: anObject
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxObjectReplicator >> store: anObject inTraversal: aTraversal [
+	^ aTraversal dirtyStoreEntryFor: anObject replicator: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxObjectReplicator >> isComplete [
 	^ true
 ]

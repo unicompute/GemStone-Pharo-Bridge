@@ -8,7 +8,13 @@ Class {
 		'pollingFrequency',
 		'eventPriority',
 		'lastPollingError',
-		'pollingErrorCount'
+		'pollingErrorCount',
+		'eventHandlers',
+		'pollingSemaphore',
+		'asyncAbortStartAction',
+		'asyncAbortFinishAction',
+		'fatalSessionDeathAction',
+		'isUnwindingAsyncAbort'
 	],
 	#category : 'GemStone-GBS-Core',
 	#package : 'GemStone-GBS-Core'
@@ -67,7 +73,9 @@ GbsSessionEventController >> defaultProcessPriority [
 GbsSessionEventController >> initialize [
 	super initialize.
 	pollingActive := false.
-	pollingErrorCount := 0
+	pollingErrorCount := 0.
+	eventHandlers := Dictionary new.
+	isUnwindingAsyncAbort := false
 ]
 
 { #category : 'testing' }
@@ -127,8 +135,28 @@ GbsSessionEventController >> pollGemStoneErrorIfPresent [
 
 { #category : 'polling' }
 GbsSessionEventController >> pollSignalsOnce [
+	^ self pollingCritical: [ self pollSignalsOnceUnlocked ]
+]
+
+{ #category : 'polling' }
+GbsSessionEventController >> pollSignalsOnceUnlocked [
 	((session respondsTo: #isLoggedIn) and: [ session isLoggedIn not ]) ifTrue: [ ^ nil ].
 	^ self handlePollResult: session gciPollForSignal
+]
+
+{ #category : 'polling' }
+GbsSessionEventController >> pollingCritical: aBlock [
+	| semaphore |
+	semaphore := self pollingSemaphore.
+	semaphore ifNil: [ ^ aBlock value ].
+	^ semaphore critical: aBlock
+]
+
+{ #category : 'polling' }
+GbsSessionEventController >> pollingSemaphore [
+	pollingSemaphore ifNil: [
+		pollingSemaphore := [ Semaphore forMutualExclusion ] on: Error do: [ nil ] ].
+	^ pollingSemaphore
 ]
 
 { #category : 'accessing' }
@@ -168,8 +196,76 @@ GbsSessionEventController >> handlePollingError: anError [
 	lastPollingError := anError.
 	pollingErrorCount := self pollingErrorCount + 1.
 	((session respondsTo: #isLoggedIn) and: [ session isLoggedIn not ]) ifTrue: [
-		pollingActive := false ].
+		pollingActive := false.
+		self handleFatalSessionDeath: anError ].
 	^ anError
+]
+
+{ #category : 'event handling' }
+GbsSessionEventController >> asyncAbortStartAction: aBlock [
+	asyncAbortStartAction := aBlock
+]
+
+{ #category : 'event handling' }
+GbsSessionEventController >> asyncAbortFinishAction: aBlock [
+	asyncAbortFinishAction := aBlock
+]
+
+{ #category : 'event handling' }
+GbsSessionEventController >> fatalSessionDeathAction: aBlock [
+	fatalSessionDeathAction := aBlock
+]
+
+{ #category : 'event handling' }
+GbsSessionEventController >> onEvent: eventSymbol do: aBlock [
+	aBlock
+		ifNil: [ eventHandlers removeKey: eventSymbol ifAbsent: [ ] ]
+		ifNotNil: [ eventHandlers at: eventSymbol put: aBlock ].
+	^ aBlock
+]
+
+{ #category : 'event handling' }
+GbsSessionEventController >> eventHandlerAt: eventSymbol [
+	^ eventHandlers at: eventSymbol ifAbsent: [ nil ]
+]
+
+{ #category : 'event handling' }
+GbsSessionEventController >> handleEvent: eventSymbol payload: anObject default: defaultBlock [
+	| handler |
+	handler := self eventHandlerAt: eventSymbol.
+	handler ifNil: [ ^ defaultBlock value ].
+	^ handler cull: anObject cull: session
+]
+
+{ #category : 'event handling' }
+GbsSessionEventController >> beginAsyncAbort [
+	isUnwindingAsyncAbort := true.
+	asyncAbortStartAction ifNotNil: [ asyncAbortStartAction cull: session ].
+	^ self
+]
+
+{ #category : 'event handling' }
+GbsSessionEventController >> finishAsyncAbort [
+	^ [
+		asyncAbortFinishAction ifNotNil: [ asyncAbortFinishAction cull: session ] ]
+		ensure: [ isUnwindingAsyncAbort := false ]
+]
+
+{ #category : 'event handling' }
+GbsSessionEventController >> isUnwindingAsyncAbort [
+	^ isUnwindingAsyncAbort == true
+]
+
+{ #category : 'event handling' }
+GbsSessionEventController >> handleAsyncAbortDuring: aBlock [
+	self beginAsyncAbort.
+	^ [ aBlock value ] ensure: [ self finishAsyncAbort ]
+]
+
+{ #category : 'event handling' }
+GbsSessionEventController >> handleFatalSessionDeath: anError [
+	fatalSessionDeathAction ifNotNil: [ fatalSessionDeathAction cull: anError cull: session ].
+	^ self
 ]
 
 { #category : 'polling' }

@@ -3,7 +3,8 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'session',
-		'recursiveDirtyReferentEntryCount'
+		'recursiveDirtyReferentEntryCount',
+		'nativeEntryExpansionCache'
 	],
 	#category : 'GemStone-GBS-Core',
 	#package : 'GemStone-GBS-Core'
@@ -49,6 +50,9 @@ GbsDirtyReplicateStoreTraversal class >> newDirtyStoreTraversalReport [
 		at: #nativeFlushCount put: 0;
 		at: #remoteCommandCount put: 0;
 		at: #semanticCommandCount put: 0;
+		at: #perReplicatorStoreEntryCount put: 0;
+		at: #newObjectEntryCount put: 0;
+		at: #freeOopAllocationCount put: 0;
 		yourself
 ]
 
@@ -92,7 +96,10 @@ GbsDirtyReplicateStoreTraversal >> beginDirtyStoreReportForEntries: entries [
 			(entry at: 3) = #bag ]);
 		at: #semanticCustomEntryCount put: (semanticEntries count: [ :entry |
 			self semanticDirtyStoreRequestedBy: entry second ]);
-		at: #recursiveDirtyReferentEntryCount put: (recursiveDirtyReferentEntryCount ifNil: [ 0 ]).
+		at: #recursiveDirtyReferentEntryCount put: (recursiveDirtyReferentEntryCount ifNil: [ 0 ]);
+		at: #perReplicatorStoreEntryCount put: (entries count: [ :entry | self entryHasReplicator: entry ]);
+		at: #newObjectEntryCount put: (entries count: [ :entry | self entryIsNewObject: entry ]);
+		at: #freeOopAllocationCount put: (entries count: [ :entry | self entryIsNewObject: entry ]).
 	^ self class
 		setDirtyStoreTraversalReport: report
 		forSession: session
@@ -313,6 +320,15 @@ GbsDirtyReplicateStoreTraversal >> dirtyObjects [
 
 { #category : 'private - entries' }
 GbsDirtyReplicateStoreTraversal >> dirtyReferentsOf: anObject [
+	| replicator |
+	replicator := self replicatorForObject: anObject.
+	(replicator notNil and: [ replicator respondsTo: #packDirtyReferentsOf:inTraversal: ]) ifTrue: [
+		^ replicator packDirtyReferentsOf: anObject inTraversal: self ].
+	^ self defaultDirtyReferentsOf: anObject
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> defaultDirtyReferentsOf: anObject [
 	| referents |
 	referents := OrderedCollection new.
 	anObject ifNil: [ ^ #() ].
@@ -364,15 +380,17 @@ GbsDirtyReplicateStoreTraversal >> entriesForDirtyObjects [
 
 { #category : 'private - entries' }
 GbsDirtyReplicateStoreTraversal >> addDirtyEntryFor: anObject dirtySet: dirtySet entriesByOop: entriesByOop visited: visited [
-	| oop |
+	| entry oop |
 	(visited includes: anObject) ifTrue: [ ^ self ].
 	visited add: anObject.
-	oop := self oopForObject: anObject.
-	(oop notNil and: [ GbsMaterializedObjectDirtyTracker canTrackObject: anObject ])
+	entry := self dirtyStoreEntryFor: anObject.
+	entry ifNotNil: [
+		oop := entry first ].
+	(entry notNil and: [ GbsMaterializedObjectDirtyTracker canTrackObject: anObject ])
 		ifTrue: [
 			entriesByOop
 				at: oop
-				ifAbsentPut: [ { oop. anObject. (self kindForObject: anObject) } ] ].
+				ifAbsentPut: [ entry ] ].
 	(self dirtyReferentsOf: anObject) do: [ :referent |
 		(dirtySet includes: referent) ifTrue: [
 			(entriesByOop includesKey: (self oopForObject: referent)) ifFalse: [
@@ -407,6 +425,9 @@ GbsDirtyReplicateStoreTraversal >> flush [
 { #category : 'private - flushing' }
 GbsDirtyReplicateStoreTraversal >> flushEntries: entries [
 	| buffer |
+	(self entriesRequireBinaryStoreTraversal: entries) ifTrue: [
+		self ensureBinaryStoreTraversalAvailableForEntries: entries.
+		^ self flushEntriesWithBinaryStoreTraversalBuffer: entries ].
 	(self shouldUseBinaryStoreTraversalBufferForEntries: entries) ifTrue: [
 		^ self flushEntriesWithBinaryStoreTraversalBuffer: entries ].
 	(self semanticStoreEntriesFor: entries) size = entries size ifTrue: [
@@ -455,6 +476,9 @@ GbsDirtyReplicateStoreTraversal >> flushNativeEntriesWithBinaryStoreTraversalBuf
 			(server respondsTo: #ensureDirtyObjectsInitialized) ifTrue: [
 				server ensureDirtyObjectsInitialized ].
 			session addStoreTraversal: self.
+			GbsSessionLifecycleManager
+				notePackedDirtyStoreEntries: entries
+				forSession: session.
 			[
 				| result |
 				result := self
@@ -462,6 +486,9 @@ GbsDirtyReplicateStoreTraversal >> flushNativeEntriesWithBinaryStoreTraversalBuf
 					on: server
 					releasingExportSetReleaseOops: exportSetReleaseOops.
 				self recordNativeFlushForEntries: entries.
+				GbsSessionLifecycleManager
+					acknowledgePackedDirtyStoreEntries: entries
+					forSession: session.
 				result
 			]
 				ensure: [ session removeStoreTraversal: self ] ]
@@ -474,6 +501,18 @@ GbsDirtyReplicateStoreTraversal >> keyArgumentNameForEntry: entryIndex element: 
 
 { #category : 'private - entries' }
 GbsDirtyReplicateStoreTraversal >> kindForObject: anObject [
+	^ self kindForObject: anObject replicator: (self replicatorForObject: anObject)
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> kindForObject: anObject replicator: aReplicator [
+	(aReplicator notNil and: [ aReplicator respondsTo: #dirtyStoreKindFor:inTraversal: ]) ifTrue: [
+		^ aReplicator dirtyStoreKindFor: anObject inTraversal: self ].
+	^ self defaultKindForObject: anObject
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> defaultKindForObject: anObject [
 	(anObject isKindOf: Association) ifTrue: [ ^ #association ].
 	(anObject isKindOf: IdentityDictionary) ifTrue: [ ^ #identityDictionary ].
 	(anObject isKindOf: Dictionary) ifTrue: [ ^ #dictionary ].
@@ -648,6 +687,138 @@ GbsDirtyReplicateStoreTraversal >> oopForObject: anObject [
 	^ GbsMaterializedObjectDirtyTracker oopForObject: anObject inSession: session
 ]
 
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> dirtyStoreEntryFor: anObject [
+	| replicator |
+	replicator := self replicatorForObject: anObject.
+	(replicator notNil and: [ replicator respondsTo: #store:inTraversal: ]) ifTrue: [
+		^ replicator store: anObject inTraversal: self ].
+	^ self dirtyStoreEntryFor: anObject replicator: replicator
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> dirtyStoreEntryFor: anObject replicator: aReplicator [
+	| oop classOop isNew allocation |
+	(GbsMaterializedObjectDirtyTracker canTrackObject: anObject) ifFalse: [ ^ nil ].
+	oop := self oopForObject: anObject.
+	classOop := nil.
+	isNew := false.
+	oop ifNil: [
+		(self shouldAllocateOopForNewDirtyObject: anObject replicator: aReplicator) ifFalse: [ ^ nil ].
+		classOop := self classOopForNewObject: anObject replicator: aReplicator.
+		classOop ifNil: [
+			self error: 'Cannot dirty-store new ', anObject class name, ' because no GemStone class OOP could be resolved.' ].
+		allocation := self allocateOopForNewDirtyObject: anObject.
+		oop := allocation.
+		isNew := true ].
+	^ {
+		oop.
+		anObject.
+		(self kindForObject: anObject replicator: aReplicator).
+		aReplicator.
+		classOop.
+		isNew }
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> shouldAllocateOopForNewDirtyObject: anObject replicator: aReplicator [
+	(GbsMaterializedObjectDirtyTracker canTrackObject: anObject) ifFalse: [ ^ false ].
+	(GbsMaterializedObjectDirtyTracker sessionTrackingObject: anObject) == session ifTrue: [ ^ true ].
+	^ false
+]
+
+{ #category : 'private - free oops' }
+GbsDirtyReplicateStoreTraversal >> allocateOopForNewDirtyObject: anObject [
+	| oop |
+	oop := self freeOopStream nextFreeOop.
+	GbsMaterializedObjectDirtyTracker
+		registerObject: anObject
+		oop: oop
+		session: session.
+	GbsSessionLifecycleManager noteAllocatedFreeOop: oop forSession: session.
+	^ oop
+]
+
+{ #category : 'private - free oops' }
+GbsDirtyReplicateStoreTraversal >> freeOopStream [
+	(session respondsTo: #freeOopStream) ifTrue: [ ^ session freeOopStream ].
+	^ GbxFreeOopStream for: session
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> classOopForNewObject: anObject replicator: aReplicator [
+	| classOop |
+	(aReplicator notNil and: [ aReplicator respondsTo: #dirtyStoreServerClassOopFor:inTraversal: ]) ifTrue: [
+		classOop := aReplicator dirtyStoreServerClassOopFor: anObject inTraversal: self.
+		classOop ifNotNil: [ ^ classOop ] ].
+	^ self classOopForServerBehavior: anObject class
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> classOopForServerBehavior: aBehaviorOrName [
+	| name key |
+	aBehaviorOrName ifNil: [ ^ nil ].
+	aBehaviorOrName isInteger ifTrue: [ ^ aBehaviorOrName ].
+	name := ((aBehaviorOrName isString) or: [ aBehaviorOrName isSymbol ])
+		ifTrue: [ aBehaviorOrName asString ]
+		ifFalse: [
+			((aBehaviorOrName isKindOf: Behavior)
+				or: [
+					(aBehaviorOrName respondsTo: #isBehavior)
+						and: [ aBehaviorOrName isBehavior ] ])
+				ifTrue: [ aBehaviorOrName name asString ]
+				ifFalse: [
+					((aBehaviorOrName respondsTo: #oop) and: [ aBehaviorOrName oop notNil ]) ifTrue: [
+						^ aBehaviorOrName oop ].
+					(aBehaviorOrName respondsTo: #name)
+						ifTrue: [ aBehaviorOrName name asString ]
+						ifFalse: [ aBehaviorOrName asString ] ] ].
+	name isEmpty ifTrue: [ ^ nil ].
+	key := { #serverClassOop. name }.
+	^ self classOopCache
+		at: key
+		ifAbsentPut: [
+			| oop |
+			oop := [ session
+				returnRemoteCommandBody: '| class |
+class := System myUserProfile symbolList objectNamed: className asSymbol.
+class ifNil: [ class := GsSession currentSession resolveSymbol: className asSymbol ].
+class ifNil: [ nil ] ifNotNil: [ class asOop ]'
+				literalBindings: (Dictionary new
+					at: 'className' put: name;
+					yourself)
+				oopBindings: Dictionary new ]
+				on: Error
+				do: [ ^ nil ].
+			oop := self remoteSmallIntegerValueFromResultOop: oop.
+			(oop isNil or: [ oop = 20 ]) ifTrue: [ ^ nil ].
+			self unsignedOopForSignedOop: oop asInteger ]
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> remoteSmallIntegerValueFromResultOop: resultOop [
+	resultOop ifNil: [ ^ nil ].
+	((resultOop isInteger) and: [ (resultOop bitAnd: 7) = 2 ]) ifFalse: [
+		^ resultOop ].
+	^ [ session resultFor: resultOop ]
+		on: Error
+		do: [
+			(resultOop - 2) // 8 ]
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> classOopCache [
+	^ (session class weakRegistryNamed: #GbsSessionDirtyStoreClassOopCaches)
+		at: session
+		ifAbsentPut: [ Dictionary new ]
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> unsignedOopForSignedOop: anInteger [
+	anInteger >= 0 ifTrue: [ ^ anInteger ].
+	^ (1 bitShift: 64) + anInteger
+]
+
 { #category : 'private - reporting' }
 GbsDirtyReplicateStoreTraversal >> recordNativeFlushForEntries: entries [
 	self incrementDirtyStoreReportAt: #nativeFlushCount by: 1.
@@ -664,6 +835,11 @@ GbsDirtyReplicateStoreTraversal >> recordRemoteCommandForEntries: entries [
 
 { #category : 'private - entries' }
 GbsDirtyReplicateStoreTraversal >> replicatorForNamedObject: anObject [
+	^ self replicatorForObject: anObject
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> replicatorForObject: anObject [
 	(session notNil and: [ session respondsTo: #replicatorForClient:ifAbsent: ]) ifFalse: [
 		^ nil ].
 	^ [ session
@@ -741,6 +917,7 @@ GbsDirtyReplicateStoreTraversal >> shouldMarshalConstructedObject: anObject [
 GbsDirtyReplicateStoreTraversal >> shouldUseBinaryStoreTraversalBufferForEntries: entries [
 	| transport server buffer nativeEntries |
 	entries isEmpty ifTrue: [ ^ false ].
+	(self entriesRequireBinaryStoreTraversal: entries) ifTrue: [ ^ true ].
 	transport := self storeTraversalTransport.
 	((transport = #binary) or: [ transport = #binaryRequired ]) ifFalse: [ ^ false ].
 	nativeEntries := self nativeStoreTraversalEntriesFor: entries.
@@ -756,59 +933,138 @@ GbsDirtyReplicateStoreTraversal >> shouldUseBinaryStoreTraversalBufferForEntries
 
 { #category : 'private - policy' }
 GbsDirtyReplicateStoreTraversal >> nativeStoreTraversalEntriesFor: entries [
-	| nativeEntriesByOop |
-	nativeEntriesByOop := Dictionary new.
-	entries do: [ :entry | | kind nativeEntries |
-		(self semanticDirtyStoreRequestedBy: entry second) ifFalse: [
+	| nativeEntries seenOops |
+	nativeEntries := OrderedCollection new.
+	seenOops := Set new.
+	entries do: [ :entry | | kind expansionEntries |
+		(self requiresSemanticStoreForEntry: entry) ifFalse: [
 			kind := entry at: 3.
-			(#(#set #bag) includes: kind) ifFalse: [
-				nativeEntries := (#(#dictionary #identityDictionary) includes: kind)
-					ifTrue: [
-						self
-							nativeAssociationEntriesForDictionaryEntry: entry
-							ifAbsent: [ #() ] ]
-					ifFalse: [ { entry } ].
-				nativeEntries do: [ :nativeEntry |
-					nativeEntriesByOop
-						at: nativeEntry first
-						ifAbsentPut: [ nativeEntry ] ] ] ] ].
-	^ (nativeEntriesByOop values asSortedCollection: [ :left :right | left first < right first ]) asArray
+			expansionEntries := (#(#dictionary #identityDictionary) includes: kind)
+				ifTrue: [
+					self
+						nativeAssociationEntriesForDictionaryEntry: entry
+						ifAbsent: [ #() ] ]
+				ifFalse: [
+					(#(#set #bag) includes: kind)
+						ifTrue: [
+								self
+									nativeStructuralEntriesForHashedCollectionEntry: entry
+									ifAbsent: [ #() ] ]
+							ifFalse: [ { entry } ] ].
+			expansionEntries do: [ :nativeEntry |
+				(seenOops includes: nativeEntry first) ifFalse: [
+					seenOops add: nativeEntry first.
+					nativeEntries add: nativeEntry ] ] ] ].
+	^ nativeEntries asArray
 ]
 
 { #category : 'private - policy' }
 GbsDirtyReplicateStoreTraversal >> requiresSemanticStoreForEntry: entry [
 	| kind |
 	(self semanticDirtyStoreRequestedBy: entry second) ifTrue: [ ^ true ].
+	(self entryIsNewObject: entry) ifTrue: [ ^ false ].
 	kind := entry at: 3.
-	(#(#set #bag) includes: kind) ifTrue: [ ^ true ].
 	(#(#dictionary #identityDictionary) includes: kind) ifTrue: [
-		^ (self
-			nativeAssociationEntriesForDictionaryEntry: entry
-			ifAbsent: [ nil ]) isNil ].
+		^ (self canNativeStoreDictionaryEntry: entry) not ].
 	^ false
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> nativeStructuralEntriesForHashedCollectionEntry: entry ifAbsent: absentBlock [
+	^ self nativeEntryExpansionCache
+		at: entry first
+		ifAbsentPut: [
+			self
+				buildNativeStructuralEntriesForHashedCollectionEntry: entry
+				ifAbsent: absentBlock ]
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> nativeEntryExpansionCache [
+	^ nativeEntryExpansionCache ifNil: [ nativeEntryExpansionCache := Dictionary new ]
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> buildNativeStructuralEntriesForHashedCollectionEntry: entry ifAbsent: absentBlock [
+	^ { entry }
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> canNativeStoreDictionaryEntry: entry [
+	| associations buffer |
+	(self entryIsNewObject: entry) ifTrue: [ ^ true ].
+	associations := entry second associations asArray.
+	associations isEmpty ifTrue: [ ^ true ].
+	buffer := self dirtyStoreTraversalBufferForEntries: { entry }.
+	(self dictionaryAssociationsAreMapped: associations) ifFalse: [
+		[ buffer
+			registerRemoteAssociationsForDictionaryEntry: entry
+			associations: associations ]
+			on: Error
+			do: [ ^ false ] ].
+	(self
+		remoteAssociationCountMatchesForDictionaryEntry: entry
+		associations: associations
+		using: buffer) ifFalse: [ ^ false ].
+	^ self dictionaryAssociationsAreMapped: associations
 ]
 
 { #category : 'private - policy' }
 GbsDirtyReplicateStoreTraversal >> nativeAssociationEntriesForDictionaryEntry: entry ifAbsent: absentBlock [
 	| associations buffer nativeEntries |
 	associations := entry second associations asArray.
-	associations isEmpty ifTrue: [ ^ absentBlock value ].
+	associations isEmpty ifTrue: [
+		^ (self entryIsNewObject: entry)
+			ifTrue: [ { entry } ]
+			ifFalse: [ #() ] ].
 	buffer := self dirtyStoreTraversalBufferForEntries: { entry }.
-	(self
-		remoteAssociationCountMatchesForDictionaryEntry: entry
-		associations: associations
-		using: buffer) ifFalse: [ ^ absentBlock value ].
-	[ buffer
-		registerRemoteAssociationsForDictionaryEntry: entry
-		associations: associations ]
-		on: Error
-		do: [ ].
-	nativeEntries := OrderedCollection new: associations size.
-	associations do: [ :association | | associationOop |
+	(self dictionaryAssociationsAreMapped: associations) ifFalse: [
+		[ buffer
+			registerRemoteAssociationsForDictionaryEntry: entry
+			associations: associations ]
+			on: Error
+			do: [ ] ].
+	(self entryIsNewObject: entry)
+		ifTrue: [
+			nativeEntries := OrderedCollection new: associations size + 1.
+			]
+		ifFalse: [ nativeEntries := OrderedCollection new: associations size ].
+	associations do: [ :association | | associationOop associationWasNew |
+		associationWasNew := false.
 		associationOop := [ self oopForObject: association ] on: Error do: [ nil ].
-		associationOop ifNil: [ ^ absentBlock value ].
-		nativeEntries add: { associationOop. association. #association } ].
+		associationOop ifNil: [
+			(self entryIsNewObject: entry)
+				ifTrue: [
+					associationOop := self tryAllocateDictionaryAssociation: association ifAbsent: [ ^ absentBlock value ].
+					associationWasNew := true ]
+				ifFalse: [ ^ absentBlock value ] ].
+		nativeEntries add: {
+			associationOop.
+			association.
+			#association.
+			nil.
+				(associationWasNew ifTrue: [ self classOopForServerBehavior: 'Association' ] ifFalse: [ nil ]).
+				associationWasNew } ].
+	(self entryIsNewObject: entry) ifTrue: [
+		nativeEntries add: entry ].
 	^ nativeEntries asArray
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> dictionaryAssociationsAreMapped: associations [
+	^ associations allSatisfy: [ :association |
+		(self oopForObject: association) notNil ]
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> tryAllocateDictionaryAssociation: association ifAbsent: absentBlock [
+	| classOop oop |
+	(GbsMaterializedObjectDirtyTracker canTrackObject: association) ifFalse: [ ^ absentBlock value ].
+	classOop := self classOopForServerBehavior: 'Association'.
+	classOop ifNil: [ ^ absentBlock value ].
+	GbsMaterializedObjectDirtyTracker registerObject: association forSession: session.
+	oop := self allocateOopForNewDirtyObject: association.
+	^ oop
 ]
 
 { #category : 'private - policy' }
@@ -832,6 +1088,38 @@ GbsDirtyReplicateStoreTraversal >> semanticDirtyStoreRequestedBy: anObject [
 { #category : 'private - policy' }
 GbsDirtyReplicateStoreTraversal >> semanticStoreEntriesFor: entries [
 	^ entries select: [ :entry | self requiresSemanticStoreForEntry: entry ]
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> entriesRequireBinaryStoreTraversal: entries [
+	^ entries anySatisfy: [ :entry | self entryIsNewObject: entry ]
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> ensureBinaryStoreTraversalAvailableForEntries: entries [
+	| server buffer |
+	server := [ session serverInterface ] on: Error do: [ nil ].
+	server ifNil: [ self error: 'Dirty store traversal buffer transport is required for newly replicated objects, but no server interface is available.' ].
+	(server respondsTo: #supportsDirtyStoreTraversalBufferTransport) ifFalse: [
+		self error: 'Dirty store traversal buffer transport is required for newly replicated objects, but the server interface has no capability probe.' ].
+	(server supportsDirtyStoreTraversalBufferTransport == true) ifFalse: [
+		self error: 'Dirty store traversal buffer transport is required for newly replicated objects, but native GCI store traversal is unavailable.' ].
+	(server respondsTo: #storeTraversalBuffer:) ifFalse: [
+		self error: 'Dirty store traversal buffer transport is required for newly replicated objects, but no storeTraversalBuffer: transport is installed.' ].
+	buffer := self dirtyStoreTraversalBufferForEntries: (self nativeStoreTraversalEntriesFor: entries).
+	buffer canProduceNativeTraversalBuffer ifFalse: [
+		self error: 'Dirty store traversal buffer transport is required for newly replicated objects, but this batch cannot be encoded natively. Unencodable entries: ', buffer nativeEncodingFailureSummary ].
+	^ true
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> entryHasReplicator: entry [
+	^ entry size >= 4 and: [ (entry at: 4) notNil ]
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> entryIsNewObject: entry [
+	^ entry size >= 6 and: [ (entry at: 6) == true ]
 ]
 
 { #category : 'private - flushing' }
