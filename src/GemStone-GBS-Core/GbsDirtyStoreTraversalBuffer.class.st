@@ -217,7 +217,8 @@ GbsDirtyStoreTraversalBuffer >> nativeIndexedSizeForEntry: entry [
 	| kind object |
 	kind := entry at: 3.
 	kind = #association ifTrue: [ ^ 0 ].
-	kind = #namedObject ifTrue: [ ^ 0 ].
+	kind = #namedObject ifTrue: [
+		^ self nativeIndexedSizeForNamedObject: entry second ].
 	(#(#set #bag) includes: kind) ifTrue: [
 		object := entry second.
 		^ object size ].
@@ -225,9 +226,31 @@ GbsDirtyStoreTraversalBuffer >> nativeIndexedSizeForEntry: entry [
 ]
 
 { #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeIndexedSizeForNamedObject: anObject [
+	| replicator |
+	replicator := self replicatorForNamedObject: anObject.
+	(replicator notNil and: [ replicator respondsTo: #dirtyStoreIndexedSizeFor: ]) ifTrue: [
+		^ replicator dirtyStoreIndexedSizeFor: anObject ].
+	^ 0
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeIndexableValuesForNamedObject: anObject [
+	| replicator |
+	replicator := self replicatorForNamedObject: anObject.
+	(replicator notNil and: [ replicator respondsTo: #dirtyStoreIndexableValuesFor: ]) ifTrue: [
+		^ replicator dirtyStoreIndexableValuesFor: anObject ].
+	^ #()
+]
+
+{ #category : 'private - native encoding' }
 GbsDirtyStoreTraversalBuffer >> nativeNamedInstVarValuesFor: anObject [
 	| replicator |
 	replicator := self replicatorForNamedObject: anObject.
+	(replicator notNil and: [ replicator respondsTo: #dirtyStoreNamedValuesFor:unmappedValue: ]) ifTrue: [
+		^ replicator
+			dirtyStoreNamedValuesFor: anObject
+			unmappedValue: self oopIllegalValueMarker ].
 	(replicator notNil and: [
 		(replicator respondsTo: #usesInstVarMap)
 			and: [ replicator usesInstVarMap ] ]) ifTrue: [
@@ -253,6 +276,9 @@ GbsDirtyStoreTraversalBuffer >> nativeNamedSizeForEntry: entry [
 GbsDirtyStoreTraversalBuffer >> nativeNamedSizeForObject: anObject [
 	| replicator serverNamedSize names |
 	replicator := self replicatorForNamedObject: anObject.
+	(replicator notNil and: [ replicator respondsTo: #dirtyStoreNamedSizeFor: ]) ifTrue: [
+		serverNamedSize := replicator dirtyStoreNamedSizeFor: anObject.
+		serverNamedSize > 0 ifTrue: [ ^ serverNamedSize ] ].
 	(replicator notNil and: [
 		(replicator respondsTo: #usesInstVarMap)
 			and: [ replicator usesInstVarMap ] ]) ifTrue: [
@@ -319,8 +345,14 @@ GbsDirtyStoreTraversalBuffer >> nativeValuesForEntry: entry [
 		kind = #identityDictionary ifTrue: [ ^ self nativeValuesForIdentityDictionary: object ].
 		kind = #set ifTrue: [ ^ self nativeValuesForSetEntry: entry ].
 		kind = #bag ifTrue: [ ^ self nativeValuesForBagEntry: entry ].
-		kind = #namedObject ifTrue: [ ^ self nativeNamedInstVarValuesFor: object ].
+		kind = #namedObject ifTrue: [ ^ self nativeValuesForNamedObject: object ].
 		self error: 'Native dirty store traversal does not support kind ', kind asString
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeValuesForNamedObject: anObject [
+	^ (self nativeNamedInstVarValuesFor: anObject),
+		(self nativeIndexableValuesForNamedObject: anObject)
 ]
 
 { #category : 'private - native encoding' }

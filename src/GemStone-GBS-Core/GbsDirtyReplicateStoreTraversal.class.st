@@ -219,17 +219,36 @@ GbsDirtyReplicateStoreTraversal >> appendDictionaryFlushFor: aDictionary entryIn
 
 { #category : 'private - appending' }
 GbsDirtyReplicateStoreTraversal >> appendNamedObjectFlushFor: anObject entryIndex: entryIndex to: stream names: argumentNames scripts: argumentScripts [
+	| namedValues indexableValues namedSize |
+	namedValues := self namedSlotFlushValuesForObject: anObject.
 	(self namedSlotFlushMappingsForObject: anObject) do: [ :mapping | | serverIndex clientIndex valueName |
 		serverIndex := mapping first.
 		clientIndex := mapping second.
 		valueName := self
 			addArgumentNamed: (self valueArgumentNameForEntry: entryIndex element: serverIndex)
-			value: (anObject instVarAt: clientIndex)
+			value: (namedValues
+				ifNil: [ anObject instVarAt: clientIndex ]
+				ifNotNil: [ namedValues at: serverIndex ifAbsent: [ anObject instVarAt: clientIndex ] ])
 			toNames: argumentNames
 			scripts: argumentScripts.
 		stream
 			nextPutAll: 'object instVarAt: ';
 			nextPutAll: serverIndex printString;
+			nextPutAll: ' put: ';
+			nextPutAll: valueName;
+			nextPutAll: '.';
+			cr ].
+	indexableValues := self indexableFlushValuesForObject: anObject.
+	namedSize := self namedSlotCountForObject: anObject.
+	indexableValues doWithIndex: [ :value :index | | valueName |
+		valueName := self
+			addArgumentNamed: (self valueArgumentNameForEntry: entryIndex element: namedSize + index)
+			value: value
+			toNames: argumentNames
+			scripts: argumentScripts.
+		stream
+			nextPutAll: 'object at: ';
+			nextPutAll: index printString;
 			nextPutAll: ' put: ';
 			nextPutAll: valueName;
 			nextPutAll: '.';
@@ -424,19 +443,16 @@ GbsDirtyReplicateStoreTraversal >> flush [
 
 { #category : 'private - flushing' }
 GbsDirtyReplicateStoreTraversal >> flushEntries: entries [
-	| buffer |
 	(self entriesRequireBinaryStoreTraversal: entries) ifTrue: [
+		self ensureBinaryStoreTraversalAvailableForEntries: entries.
+		^ self flushEntriesWithBinaryStoreTraversalBuffer: entries ].
+	self transportRequiresBinary ifTrue: [
 		self ensureBinaryStoreTraversalAvailableForEntries: entries.
 		^ self flushEntriesWithBinaryStoreTraversalBuffer: entries ].
 	(self shouldUseBinaryStoreTraversalBufferForEntries: entries) ifTrue: [
 		^ self flushEntriesWithBinaryStoreTraversalBuffer: entries ].
 	(self semanticStoreEntriesFor: entries) size = entries size ifTrue: [
 		^ self flushEntriesWithRemoteCommand: entries ].
-	self transportRequiresBinary ifTrue: [
-		buffer := self dirtyStoreTraversalBufferForEntries: entries.
-		buffer canProduceNativeTraversalBuffer ifFalse: [
-			self error: 'Dirty store traversal buffer transport is required, but this dirty batch cannot be encoded natively. Unencodable entries: ', buffer nativeEncodingFailureSummary ].
-		self error: 'Dirty store traversal buffer transport is required but unavailable.' ].
 	^ self flushEntriesWithRemoteCommand: entries
 ]
 
@@ -680,6 +696,24 @@ GbsDirtyReplicateStoreTraversal >> namedSlotFlushMappingsForObject: anObject [
 		^ mappings asArray ].
 	^ (1 to: (self namedSlotCountForObject: anObject)) collect: [ :index |
 		{ index. index } ]
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> namedSlotFlushValuesForObject: anObject [
+	| replicator |
+	replicator := self replicatorForNamedObject: anObject.
+	(replicator notNil and: [ replicator respondsTo: #dirtyStoreNamedValuesFor:unmappedValue: ]) ifTrue: [
+		^ replicator dirtyStoreNamedValuesFor: anObject unmappedValue: nil ].
+	^ nil
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> indexableFlushValuesForObject: anObject [
+	| replicator |
+	replicator := self replicatorForNamedObject: anObject.
+	(replicator notNil and: [ replicator respondsTo: #dirtyStoreIndexableValuesFor: ]) ifTrue: [
+		^ replicator dirtyStoreIndexableValuesFor: anObject ].
+	^ #()
 ]
 
 { #category : 'private - tracking' }
@@ -926,6 +960,7 @@ GbsDirtyReplicateStoreTraversal >> shouldUseBinaryStoreTraversalBufferForEntries
 	server ifNil: [ ^ false ].
 	(server respondsTo: #supportsDirtyStoreTraversalBufferTransport) ifFalse: [ ^ false ].
 	(server supportsDirtyStoreTraversalBufferTransport == true) ifFalse: [ ^ false ].
+	(self supportsNativeStoreTraversalReportShapeOn: server) ifFalse: [ ^ false ].
 	(server respondsTo: #storeTraversalBuffer:) ifFalse: [ ^ false ].
 	buffer := self dirtyStoreTraversalBufferForEntries: nativeEntries.
 	^ buffer canProduceNativeTraversalBuffer
@@ -1099,17 +1134,31 @@ GbsDirtyReplicateStoreTraversal >> entriesRequireBinaryStoreTraversal: entries [
 GbsDirtyReplicateStoreTraversal >> ensureBinaryStoreTraversalAvailableForEntries: entries [
 	| server buffer |
 	server := [ session serverInterface ] on: Error do: [ nil ].
-	server ifNil: [ self error: 'Dirty store traversal buffer transport is required for newly replicated objects, but no server interface is available.' ].
+	server ifNil: [ self error: 'Dirty store traversal buffer transport is required, but no server interface is available.' ].
 	(server respondsTo: #supportsDirtyStoreTraversalBufferTransport) ifFalse: [
-		self error: 'Dirty store traversal buffer transport is required for newly replicated objects, but the server interface has no capability probe.' ].
+		self error: 'Dirty store traversal buffer transport is required, but the server interface has no capability probe.' ].
 	(server supportsDirtyStoreTraversalBufferTransport == true) ifFalse: [
-		self error: 'Dirty store traversal buffer transport is required for newly replicated objects, but native GCI store traversal is unavailable.' ].
+		self error: 'Dirty store traversal buffer transport is required, but native GCI store traversal is unavailable.' ].
+	(self supportsNativeStoreTraversalReportShapeOn: server) ifFalse: [
+		self error: 'Dirty store traversal buffer transport is required, but the native GCI store traversal report shape is unsupported for this GemStone/GCI version.' ].
 	(server respondsTo: #storeTraversalBuffer:) ifFalse: [
-		self error: 'Dirty store traversal buffer transport is required for newly replicated objects, but no storeTraversalBuffer: transport is installed.' ].
+		self error: 'Dirty store traversal buffer transport is required, but no storeTraversalBuffer: transport is installed.' ].
 	buffer := self dirtyStoreTraversalBufferForEntries: (self nativeStoreTraversalEntriesFor: entries).
 	buffer canProduceNativeTraversalBuffer ifFalse: [
-		self error: 'Dirty store traversal buffer transport is required for newly replicated objects, but this batch cannot be encoded natively. Unencodable entries: ', buffer nativeEncodingFailureSummary ].
+		self error: 'Dirty store traversal buffer transport is required, but this batch cannot be encoded natively. Unencodable entries: ', buffer nativeEncodingFailureSummary ].
 	^ true
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> supportsNativeStoreTraversalReportShapeOn: serverInterface [
+	| policy |
+	policy := self replicationPolicy.
+	(policy notNil and: [
+		(policy respondsTo: #nativeStoreTraversalShapeValidationEnabled)
+			and: [ policy nativeStoreTraversalShapeValidationEnabled == false ] ]) ifTrue: [
+		^ true ].
+	(serverInterface respondsTo: #supportsNativeStoreTraversalReportShape) ifFalse: [ ^ false ].
+	^ serverInterface supportsNativeStoreTraversalReportShape == true
 ]
 
 { #category : 'private - entries' }

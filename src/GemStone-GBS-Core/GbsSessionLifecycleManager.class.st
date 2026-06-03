@@ -257,10 +257,16 @@ GbsSessionLifecycleManager class >> forgetObjectForOop: anOop inSession: aSessio
 
 { #category : 'faulting' }
 GbsSessionLifecycleManager class >> faultObjectForOop: anOop inSession: aSession [
+	| oldObject refreshedObject |
 	(self faultingAllowedForSession: aSession) ifFalse: [
 		GbsError signal: 'Faulting is disabled by the session replication policy.' ].
+	oldObject := self objectForOop: anOop inSession: aSession.
+	self invokePreFaultHookFor: oldObject inSession: aSession.
 	self forgetMaterializedObjectForOop: anOop inSession: aSession.
-	^ aSession fetchObject: anOop
+	refreshedObject := aSession fetchObject: anOop.
+	self incrementLifecycleCounter: #faultedObjectCount forSession: aSession.
+	self invokePostFaultHookFor: refreshedObject inSession: aSession.
+	^ refreshedObject
 ]
 
 { #category : 'faulting' }
@@ -455,6 +461,11 @@ GbsSessionLifecycleManager class >> lifecycleReportCounterKeys [
 		finalizerUnregisteredCount
 		finalizedObjectNotificationCount
 		ignoredFinalizerNotificationCount
+		faultedObjectCount
+		preFaultHookCount
+		postFaultHookCount
+		stubbedObjectCount
+		freeSlotsOnStubbingSkippedByObjectCount
 		serverMapStrongWindowEnterCount
 		serverMapStrongWindowExitCount
 		serverMapTombstoneCount
@@ -811,6 +822,30 @@ GbsSessionLifecycleManager class >> removeOop: anOop fromQueue: queue [
 	^ removed
 ]
 
+{ #category : 'faulting' }
+GbsSessionLifecycleManager class >> invokePreFaultHookFor: anObject inSession: aSession [
+	anObject ifNil: [ ^ nil ].
+	(anObject respondsTo: #preFaultInSession:) ifTrue: [
+		self incrementLifecycleCounter: #preFaultHookCount forSession: aSession.
+		^ anObject preFaultInSession: aSession ].
+	(anObject respondsTo: #preFault) ifTrue: [
+		self incrementLifecycleCounter: #preFaultHookCount forSession: aSession.
+		^ anObject preFault ].
+	^ nil
+]
+
+{ #category : 'faulting' }
+GbsSessionLifecycleManager class >> invokePostFaultHookFor: anObject inSession: aSession [
+	anObject ifNil: [ ^ nil ].
+	(anObject respondsTo: #postFaultInSession:) ifTrue: [
+		self incrementLifecycleCounter: #postFaultHookCount forSession: aSession.
+		^ anObject postFaultInSession: aSession ].
+	(anObject respondsTo: #postFault) ifTrue: [
+		self incrementLifecycleCounter: #postFaultHookCount forSession: aSession.
+		^ anObject postFault ].
+	^ nil
+]
+
 { #category : 'stubbing' }
 GbsSessionLifecycleManager class >> shouldFreeSlotsOnStubbingForSession: aSession [
 	| policy |
@@ -818,6 +853,20 @@ GbsSessionLifecycleManager class >> shouldFreeSlotsOnStubbingForSession: aSessio
 	policy ifNil: [ ^ true ].
 	(policy respondsTo: #freeSlotsOnStubbing) ifFalse: [ ^ true ].
 	^ policy freeSlotsOnStubbing ~~ false
+]
+
+{ #category : 'stubbing' }
+GbsSessionLifecycleManager class >> shouldFreeSlotsOnStubbingFor: anObject inSession: aSession [
+	| classSide objectPolicy |
+	anObject ifNil: [ ^ self shouldFreeSlotsOnStubbingForSession: aSession ].
+	classSide := anObject class class.
+	(classSide includesSelector: #freeSlotsOnStubbing) ifTrue: [
+		objectPolicy := [ anObject freeSlotsOnStubbing ] on: Error do: [ nil ].
+		objectPolicy == false ifTrue: [
+			self incrementLifecycleCounter: #freeSlotsOnStubbingSkippedByObjectCount forSession: aSession.
+			^ false ].
+		objectPolicy == true ifTrue: [ ^ true ] ].
+	^ self shouldFreeSlotsOnStubbingForSession: aSession
 ]
 
 { #category : 'stubbing' }
@@ -838,11 +887,12 @@ GbsSessionLifecycleManager class >> stubObjectForOop: anOop inSession: aSession 
 	object
 		ifNil: [ self forgetMaterializedObjectForOop: anOop inSession: aSession ]
 		ifNotNil: [
+			self incrementLifecycleCounter: #stubbedObjectCount forSession: aSession.
 			self
 				forgetObjectForOop: anOop
 				inSession: aSession
 				reason: #noLongerReplicated.
-			(self shouldFreeSlotsOnStubbingForSession: aSession) ifTrue: [
+			(self shouldFreeSlotsOnStubbingFor: object inSession: aSession) ifTrue: [
 				self freeSlotsOf: object inSession: aSession ] ].
 	^ aSession objectForOop: anOop
 ]

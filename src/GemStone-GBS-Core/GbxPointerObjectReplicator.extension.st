@@ -25,10 +25,84 @@ GbxPointerObjectReplicator >> dirtyStoreKindFor: anObject inTraversal: aTraversa
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxPointerObjectReplicator >> dirtyStoreIndexedSizeFor: anObject [
+	^ (self dirtyStoreIndexableValuesFor: anObject) size
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxPointerObjectReplicator >> dirtyStoreIndexableValuesFor: anObject [
+	| buffer |
+	buffer := self
+		dirtyStoreValueBufferFor: anObject
+		selector: #gbsStoreIndexableValues
+		fallbackSelector: #indexableValues.
+	buffer == anObject ifTrue: [ ^ #() ].
+	^ self dirtyStoreValuesFromBuffer: buffer
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxPointerObjectReplicator >> dirtyStoreNamedSizeFor: anObject [
+	^ self serverNamedSize
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxPointerObjectReplicator >> dirtyStoreNamedValuesFor: anObject unmappedValue: unmappedValue [
+	| buffer values serverSize |
+	buffer := self
+		dirtyStoreValueBufferFor: anObject
+		selector: #gbsStoreNamedValues
+		fallbackSelector: #namedValues.
+	buffer == anObject ifTrue: [
+		^ self
+			namedInstVarValuesInServerOrderFor: anObject
+			unmappedValue: unmappedValue ].
+	values := self dirtyStoreValuesFromBuffer: buffer.
+	serverSize := self serverNamedSize.
+	^ (1 to: serverSize) collect: [ :index |
+		index <= values size
+			ifTrue: [ values at: index ]
+			ifFalse: [ unmappedValue ] ]
+]
+
+{ #category : '*GemStone-GBS-Core-private' }
+GbxPointerObjectReplicator >> dirtyStoreValueBufferFor: anObject selector: primarySelector fallbackSelector: fallbackSelector [
+	| buffer bufferSelector |
+	(anObject respondsTo: primarySelector) ifTrue: [
+		buffer := [ anObject perform: primarySelector ] on: Error do: [ anObject ].
+		buffer == anObject ifFalse: [ ^ buffer ] ].
+	bufferSelector := primarySelector = #gbsStoreNamedValues
+		ifTrue: [ #namedValuesBuffer ]
+		ifFalse: [ #indexableValuesBuffer ].
+	(anObject respondsTo: bufferSelector) ifTrue: [
+		buffer := [ anObject perform: bufferSelector ] on: Error do: [ anObject ].
+		buffer == anObject ifFalse: [ ^ buffer ] ].
+	(anObject respondsTo: fallbackSelector) ifTrue: [
+		^ [ anObject perform: fallbackSelector ] on: Error do: [ anObject ] ].
+	^ anObject
+]
+
+{ #category : '*GemStone-GBS-Core-private' }
+GbxPointerObjectReplicator >> dirtyStoreValuesFor: anObject unmappedValue: unmappedValue [
+	^ (self dirtyStoreNamedValuesFor: anObject unmappedValue: unmappedValue),
+		(self dirtyStoreIndexableValuesFor: anObject)
+]
+
+{ #category : '*GemStone-GBS-Core-private' }
+GbxPointerObjectReplicator >> dirtyStoreValuesFromBuffer: buffer [
+	buffer ifNil: [ ^ #() ].
+	(buffer isCollection and: [
+		(buffer isString or: [ buffer isKindOf: ByteArray ]) not ]) ifTrue: [
+			^ buffer asArray ].
+	((buffer respondsTo: #size) and: [ buffer respondsTo: #at: ]) ifTrue: [
+		^ (1 to: buffer size) collect: [ :index | buffer at: index ] ].
+	^ { buffer }
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxPointerObjectReplicator >> packDirtyReferentsOf: anObject inTraversal: aTraversal [
 	| referents |
 	referents := OrderedCollection new.
-	(self namedInstVarValuesInServerOrderFor: anObject unmappedValue: nil) do: [ :value |
+	(self dirtyStoreValuesFor: anObject unmappedValue: nil) do: [ :value |
 		value ifNotNil: [ referents add: value ] ].
 	^ referents asArray
 ]

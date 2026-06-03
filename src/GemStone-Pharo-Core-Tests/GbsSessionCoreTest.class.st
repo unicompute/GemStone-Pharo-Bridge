@@ -496,6 +496,7 @@ GbsSessionCoreTest >> testReplicationPolicyDefaultsMirrorCompatibilitySettings [
 	self assert: policy serverMapMode equals: 'weak'.
 	self deny: policy storeDirtyOnCommit.
 	self assert: policy storeTraversalTransport equals: 'script'.
+	self assert: policy nativeStoreTraversalShapeValidationEnabled.
 	self assert: policy traversalBufferSize equals: 250000
 ]
 
@@ -508,9 +509,12 @@ GbsSessionCoreTest >> testReplicationPolicySettingSpecificationsExposeDefaultsLe
 	self assert: (specs anySatisfy: [ :each | (each at: #key) = #serverMapMode ]).
 	self assert: (specs anySatisfy: [ :each | (each at: #key) = #storeDirtyOnCommit ]).
 	self assert: (specs anySatisfy: [ :each | (each at: #key) = #freeOopAllocationBatchSize ]).
+	self assert: (specs anySatisfy: [ :each | (each at: #key) = #nativeStoreTraversalShapeValidationEnabled ]).
 	self assert: (GbsReplicationPolicy defaultValueForSetting: #storeTraversalTransport) equals: 'script'.
 	self assert: (GbsReplicationPolicy defaultValueForSetting: #storeDirtyOnCommit) equals: false.
+	self assert: (GbsReplicationPolicy defaultValueForSetting: #nativeStoreTraversalShapeValidationEnabled) equals: true.
 	self assert: (GbsReplicationPolicy legalValuesForSetting: #storeTraversalTransport) equals: #('script' 'binary' 'binaryRequired').
+	self assert: (GbsReplicationPolicy legalValuesForSetting: #nativeStoreTraversalShapeValidationEnabled) equals: #(true false).
 	self assert: (transportSpec at: #category) equals: #replication.
 	self assert: ((GbsReplicationPolicy helpForSetting: #storeTraversalTransport) includesSubstring: 'dirty writes')
 ]
@@ -1210,6 +1214,27 @@ GbsSessionCoreTest >> testDirtyReplicationBinaryTransportFallsBackToScriptWhenUn
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationBinaryTransportFallsBackToScriptWhenNativeReportShapeUnsupported [
+	| mockSession array capturedScript |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 'old'.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	(GbsReplicationPolicy forSession: mockSession) storeTraversalTransport: 'binary'.
+	mockSession stubs
+		at: #supportsDirtyStoreTraversalBufferTransport put: true;
+		at: #supportsNativeStoreTraversalReportShape put: false.
+	array at: 1 put: 'new'.
+	mockSession stubs at: #storeTraversalBuffer put: [ :buffer | self fail ].
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		capturedScript := script.
+		268 ].
+
+	mockSession flushDirtyMaterializedObjects.
+
+	self assert: (capturedScript includesSubstring: 'object at: 1 put: value1_1')
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testDirtyReplicationBinaryTransportRequiredKeepsDirtyObjectsWhenUnavailable [
 	| mockSession array |
 	mockSession := CoreMockGbsSession new.
@@ -1221,6 +1246,26 @@ GbsSessionCoreTest >> testDirtyReplicationBinaryTransportRequiredKeepsDirtyObjec
 	self
 		should: [ mockSession flushDirtyMaterializedObjects ]
 		raise: Error.
+	self assert: (mockSession isMaterializedObjectDirty: array)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationBinaryTransportRequiredRejectsUnsupportedNativeReportShape [
+	| mockSession array |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 'old'.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	(GbsReplicationPolicy forSession: mockSession) storeTraversalTransport: 'binaryRequired'.
+	mockSession stubs
+		at: #supportsDirtyStoreTraversalBufferTransport put: true;
+		at: #supportsNativeStoreTraversalReportShape put: false.
+	array at: 1 put: 'new'.
+
+	self
+		should: [ mockSession flushDirtyMaterializedObjects ]
+		raise: Error
+		withExceptionDo: [ :ex |
+			self assert: (ex messageText includesSubstring: 'report shape is unsupported') ].
 	self assert: (mockSession isMaterializedObjectDirty: array)
 ]
 
@@ -1373,7 +1418,9 @@ GbsSessionCoreTest >> testNativeGciCapabilityReportExposesStoreTraversalGuards [
 	self assert: (report at: #oopWidth) equals: 64.
 	self assert: (report at: #dirtyStoreTraversalBufferTransportSupported).
 	self assert: (report at: #freeOopAllocationSupported).
-	self assert: (report includesKey: #storeTraversalStructLayoutSupported)
+	self assert: (report includesKey: #storeTraversalStructLayoutSupported).
+	self assert: (report at: #storeTraversalReportShapeSupported).
+	self assert: ((report at: #storeTraversalReportShape) at: #objectReportHeaderBytes) equals: 40
 ]
 
 { #category : 'tests' }
@@ -2140,6 +2187,48 @@ GbsSessionCoreTest >> testDirtyStoreTraversalBufferProducesNativeNamedObjectRepo
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testDirtyStoreTraversalBufferUsesCustomMappedNamedAndIndexableValues [
+	| mockSession manager connector replicator order dirtyBuffer reader |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: CoreGbsCustomStoreMappedOrder
+		server: 'RemoteMappedOrder'
+		replicationSpec: CoreGbsCustomStoreMappedOrder migrationDomainReplicationSpec
+		serverInstVarNames: CoreGbsCustomStoreMappedOrder migrationDomainServerInstVarNames.
+	connector replicatorClass: CoreGbsCountingReplicator.
+	replicator := manager installClientClassConnector: connector.
+	order := CoreGbsCustomStoreMappedOrder basicNew.
+	order
+		instVarAt: 1 put: 11;
+		instVarAt: 2 put: 22;
+		instVarAt: 3 put: 33;
+		instVarAt: 4 put: 44;
+		instVarAt: 5 put: 55.
+	mockSession rememberMaterializedObject: order forOop: 9700.
+	dirtyBuffer := GbsDirtyStoreTraversalBuffer
+		entries: { { 9700. order. #namedObject. replicator } }
+		session: mockSession.
+	mockSession stubs at: #apiGciGetClass put: [ :oop |
+		self assert: oop equals: 9700.
+		7600 ].
+	reader := GbsMaterializationTraversalBufferReader on: mockSession.
+
+	dirtyBuffer
+		withNativeTraversalBufferOn: mockSession
+		do: [ :nativeBuffer | | usedBytes report |
+			usedBytes := nativeBuffer integerAt: 5 size: 4 signed: false.
+			self assert: usedBytes equals: 96.
+			report := reader reportAt: nativeBuffer offset: 9.
+			self assert: report oop equals: 9700.
+			self assert: report classOop equals: 7600.
+			self assert: report objectFormat equals: 0.
+			self assert: report namedSize equals: 5.
+			self assert: report indexedSize equals: 2.
+			self assert: report valueOops equals: #(90 178 20 1066 442 266 450) ]
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testDirtyReplicationFlushStoresArrayAndClearsDirtyState [
 	| mockSession array capturedScript flushed |
 	mockSession := CoreMockGbsSession new.
@@ -2337,6 +2426,38 @@ GbsSessionCoreTest >> testSessionEventControllerModelsAsyncAbortAndFatalSessionD
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testSessionEventControllerDispatchesSignalAbortAndFatalEvents [
+	| mockSession controller events |
+	mockSession := CoreMockGbsSession new.
+	events := OrderedCollection new.
+	mockSession stubs
+		at: #gciPollForSignal put: 1;
+		at: #checkForError put: [ nil ].
+	controller := GbsSessionEventController forSession: mockSession.
+	controller
+		onEvent: #almostOutOfMemory do: [ :payload :session | events add: #almostOutOfMemory ];
+		onEvent: #asyncAbortStart do: [ :payload :session | events add: #asyncAbortStart ];
+		onEvent: #asyncAbortFinish do: [ :payload :session | events add: #asyncAbortFinish ];
+		onEvent: #pollingError do: [ :error :session | events add: #pollingError ];
+		onEvent: #fatalSessionDeath do: [ :error :session | events add: #fatalSessionDeath ].
+
+	[
+		controller handleAsyncAbortDuring: [ #done ].
+		controller startPolling.
+		self should: [ controller pollOnce ] raise: AlmostOutOfMemory.
+		mockSession instVarNamed: 'isLoggedIn' put: false.
+		controller handlePollingError: (Error new messageText: 'session died'; yourself) ]
+			ensure: [ controller stopPolling ].
+
+	self assert: events asArray equals: #(
+		asyncAbortStart
+		asyncAbortFinish
+		almostOutOfMemory
+		pollingError
+		fatalSessionDeath)
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testSessionEventControllerBackgroundProcessPollsAndStops [
 	| mockSession controller pollCount |
 	mockSession := CoreMockGbsSession new.
@@ -2457,6 +2578,36 @@ GbsSessionCoreTest >> testSessionLifecycleStubForOopHonorsFreeSlotsOnStubbingPol
 	self assert: array second equals: 'nested'.
 	self assert: (GbsSessionLifecycleManager objectForOop: 9000 inSession: mockSession) isNil.
 	self assert: mockSession objectSpace pendingNoLongerReplicatedOops equals: #(9000)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleFaultHooksAndObjectStubbingPolicy [
+	| mockSession oldObject refreshedObject proxy report |
+	mockSession := CoreMockGbsSession new.
+	oldObject := CoreGbsFaultLifecycleFixture new.
+	oldObject payload: 'old'.
+	refreshedObject := CoreGbsFaultLifecycleFixture new.
+	refreshedObject payload: 'fresh'.
+	mockSession rememberMaterializedObject: oldObject forOop: 9900.
+	mockSession stubs at: #fetchObject put: [ :oop |
+		self assert: oop equals: 9900.
+		mockSession rememberMaterializedObject: refreshedObject forOop: oop.
+		refreshedObject ].
+
+	self assert: (mockSession faultObjectForOop: 9900) == refreshedObject.
+	proxy := mockSession stubMaterializedObject: refreshedObject.
+	report := GbsSessionLifecycleManager lifecycleReportForSession: mockSession.
+
+	self assert: oldObject events asArray equals: #(preFault).
+	self assert: refreshedObject events asArray equals: #(postFault).
+	self assert: proxy class equals: GbsProxy.
+	self assert: proxy oop equals: 9900.
+	self assert: refreshedObject payload equals: 'fresh'.
+	self assert: (report at: #faultedObjectCount) equals: 1.
+	self assert: (report at: #preFaultHookCount) equals: 1.
+	self assert: (report at: #postFaultHookCount) equals: 1.
+	self assert: (report at: #stubbedObjectCount) equals: 1.
+	self assert: (report at: #freeSlotsOnStubbingSkippedByObjectCount) equals: 1
 ]
 
 { #category : 'tests' }

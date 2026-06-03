@@ -42,6 +42,28 @@ GbxObjectReplicator >> packDirtyReferentsOf: anObject inTraversal: aTraversal [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxObjectReplicator >> dirtyStoreIndexedSizeFor: anObject [
+	^ 0
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxObjectReplicator >> dirtyStoreIndexableValuesFor: anObject [
+	^ #()
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxObjectReplicator >> dirtyStoreNamedSizeFor: anObject [
+	(anObject class respondsTo: #allInstVarNames) ifFalse: [ ^ 0 ].
+	^ ([ anObject class allInstVarNames ] on: Error do: [ #() ]) size
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxObjectReplicator >> dirtyStoreNamedValuesFor: anObject unmappedValue: unmappedValue [
+	^ (1 to: (self dirtyStoreNamedSizeFor: anObject)) collect: [ :index |
+		anObject instVarAt: index ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxObjectReplicator >> store: anObject inTraversal: aTraversal [
 	^ aTraversal dirtyStoreEntryFor: anObject replicator: self
 ]

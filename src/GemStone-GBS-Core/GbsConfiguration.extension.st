@@ -59,6 +59,16 @@ GbsConfiguration >> freeOopAllocationBatchSize: anInteger [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsConfiguration >> nativeStoreTraversalShapeValidationEnabled [
+	^ self bridgeValueAt: #nativeStoreTraversalShapeValidationEnabled ifAbsent: true
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsConfiguration >> nativeStoreTraversalShapeValidationEnabled: aBoolean [
+	^ self bridgeValueAt: #nativeStoreTraversalShapeValidationEnabled put: aBoolean
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsConfiguration >> serverMapMode [
 	^ self bridgeValueAt: #serverMapMode ifAbsent: 'weak'
 ]

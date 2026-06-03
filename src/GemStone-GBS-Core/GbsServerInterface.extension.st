@@ -198,6 +198,32 @@ GbsServerInterface >> supportsNativeStoreTraversalStructLayout [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> nativeStoreTraversalReportShape [
+	^ Dictionary new
+		at: #bufferHeaderBytes put: 8;
+		at: #objectReportHeaderBytes put: 40;
+		at: #oopBytes put: 8;
+		at: #pointerObjectFormat put: 0;
+		at: #nonSequenceableCollectionObjectFormat put: 2;
+		at: #setNamedSize put: 5;
+		at: #bagNamedSize put: 6;
+		yourself
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> supportsNativeStoreTraversalReportShape [
+	| shape |
+	self supportsNativeStoreTraversalStructLayout ifFalse: [ ^ false ].
+	self nativeGciOopWidth = 64 ifFalse: [ ^ false ].
+	shape := self nativeStoreTraversalReportShape.
+	^ (shape at: #bufferHeaderBytes ifAbsent: [ 0 ]) = 8
+		and: [ (shape at: #objectReportHeaderBytes ifAbsent: [ 0 ]) = 40
+		and: [ (shape at: #oopBytes ifAbsent: [ 0 ]) = 8
+		and: [ (shape at: #setNamedSize ifAbsent: [ 0 ]) = 5
+		and: [ (shape at: #bagNamedSize ifAbsent: [ 0 ]) = 6 ] ] ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> nativeGciOopWidth [
 	^ ([ Smalltalk vm wordSize ] on: Error do: [ 8 ]) * 8
 ]
@@ -208,6 +234,8 @@ GbsServerInterface >> nativeStoreTraversalCapabilityReport [
 		at: #nativeGciTransportsEnabled put: self nativeGciTransportsEnabled;
 		at: #oopWidth put: self nativeGciOopWidth;
 		at: #storeTraversalStructLayoutSupported put: self supportsNativeStoreTraversalStructLayout;
+		at: #storeTraversalReportShapeSupported put: self supportsNativeStoreTraversalReportShape;
+		at: #storeTraversalReportShape put: self nativeStoreTraversalReportShape;
 		at: #dirtyStoreTraversalFunctionsSupported put: self supportsNativeDirtyStoreTraversalFunctions;
 		at: #freeOopAllocationSupported put: self supportsFreeOopAllocationTransport;
 		at: #dirtyStoreTraversalBufferTransportSupported put: self supportsDirtyStoreTraversalBufferTransport;

@@ -240,6 +240,14 @@ CoreMockGbsSession >> executeWorkspaceScriptAndReturnOop: script [
 	^ super executeWorkspaceScriptAndReturnOop: script
 ]
 
+{ #category : 'materialization' }
+CoreMockGbsSession >> fetchObject: anOop [
+	| block |
+	block := self stubs at: #fetchObject ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: anOop ].
+	^ super fetchObject: anOop
+]
+
 { #category : 'execution' }
 CoreMockGbsSession >> forwardRemoteMessage: aMessage forOop: targetOop [
 	| block |
@@ -492,11 +500,31 @@ CoreMockGbsSession >> supportsDirtyStoreTraversalBufferTransport [
 ]
 
 { #category : 'dirty store traversal' }
+CoreMockGbsSession >> supportsNativeStoreTraversalReportShape [
+	^ self stubs at: #supportsNativeStoreTraversalReportShape ifAbsent: [ true ]
+]
+
+{ #category : 'dirty store traversal' }
+CoreMockGbsSession >> nativeStoreTraversalReportShape [
+	^ Dictionary new
+		at: #bufferHeaderBytes put: 8;
+		at: #objectReportHeaderBytes put: 40;
+		at: #oopBytes put: 8;
+		at: #pointerObjectFormat put: 0;
+		at: #nonSequenceableCollectionObjectFormat put: 2;
+		at: #setNamedSize put: 5;
+		at: #bagNamedSize put: 6;
+		yourself
+]
+
+{ #category : 'dirty store traversal' }
 CoreMockGbsSession >> nativeStoreTraversalCapabilityReport [
 	^ Dictionary new
 		at: #nativeGciTransportsEnabled put: true;
 		at: #oopWidth put: 64;
 		at: #storeTraversalStructLayoutSupported put: true;
+		at: #storeTraversalReportShapeSupported put: self supportsNativeStoreTraversalReportShape;
+		at: #storeTraversalReportShape put: self nativeStoreTraversalReportShape;
 		at: #dirtyStoreTraversalFunctionsSupported put: true;
 		at: #freeOopAllocationSupported put: self supportsFreeOopAllocationTransport;
 		at: #dirtyStoreTraversalBufferTransportSupported put: self supportsDirtyStoreTraversalBufferTransport;

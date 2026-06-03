@@ -44,6 +44,11 @@ GbsProxy >> fault [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsProxy >> faultToLevel: levelOrNil [
+	^ self fault
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsProxy >> isKindOf: aClass [
 	"Shield this from doesNotUnderstand:"
 	(aClass respondsTo: #inheritsFrom:) ifFalse: [ ^ false ].
@@ -58,4 +63,9 @@ GbsProxy >> isMemberOf: aClass [
 { #category : '*GemStone-GBS-Core' }
 GbsProxy >> respondsTo: aSymbol [
 	^ self class canUnderstand: aSymbol
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsProxy >> stubYourself [
+	^ self
 ]

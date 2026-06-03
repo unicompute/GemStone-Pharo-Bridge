@@ -12,6 +12,7 @@ Class {
 		'freeOopAllocationBatchSize',
 		'freeOopBatchSize',
 		'freeSlotsOnStubbing',
+		'nativeStoreTraversalShapeValidationEnabled',
 		'serverMapMode',
 		'storeDirtyOnCommit',
 		'storeTraversalTransport',
@@ -153,6 +154,7 @@ GbsReplicationPolicy class >> settingSpecifications [
 	self addSetting: #serverMapMode category: #lifecycle default: 'weak' legalValues: #('weak' 'strong') help: 'Client-side server map retention mode. Native store traversal temporarily uses a strong window even when the steady-state map is weak.' to: specs.
 	self addSetting: #freeOopBatchSize category: #lifecycle default: 256 legalValues: #() help: 'Maximum number of pending no-longer-replicated or GCed OOPs drained in one lifecycle batch.' to: specs.
 	self addSetting: #freeOopAllocationBatchSize category: #lifecycle default: 2000 legalValues: #() help: 'Number of free OOPs fetched per allocation batch for newly replicated client objects.' to: specs.
+	self addSetting: #nativeStoreTraversalShapeValidationEnabled category: #performance default: true legalValues: #(true false) help: 'Validate native GCI dirty-store traversal report layout and collection shapes before using binary dirty writes.' to: specs.
 	self addSetting: #traversalBufferSize category: #performance default: 250000 legalValues: #() help: 'Preferred traversal buffer size for native materialization and store traversal paths.' to: specs.
 	self addSetting: #asyncSignalPollingEnabled category: #signals default: false legalValues: #(true false) help: 'Start a background GemStone signal poller after login.' to: specs.
 	self addSetting: #eventPollingFrequency category: #signals default: 300 legalValues: #() help: 'Delay in milliseconds between background GemStone signal polls.' to: specs.
@@ -191,6 +193,7 @@ GbsReplicationPolicy >> asDictionary [
 		at: #freeOopAllocationBatchSize put: self freeOopAllocationBatchSize;
 		at: #freeOopBatchSize put: self freeOopBatchSize;
 		at: #freeSlotsOnStubbing put: self freeSlotsOnStubbing;
+		at: #nativeStoreTraversalShapeValidationEnabled put: self nativeStoreTraversalShapeValidationEnabled;
 		at: #serverMapMode put: self serverMapMode;
 		at: #storeDirtyOnCommit put: self storeDirtyOnCommit;
 		at: #storeTraversalTransport put: self storeTraversalTransport;
@@ -315,6 +318,16 @@ GbsReplicationPolicy >> freeSlotsOnStubbing: aBoolean [
 	freeSlotsOnStubbing := aBoolean
 ]
 
+{ #category : 'accessing' }
+GbsReplicationPolicy >> nativeStoreTraversalShapeValidationEnabled [
+	^ nativeStoreTraversalShapeValidationEnabled ifNil: [ true ]
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> nativeStoreTraversalShapeValidationEnabled: aBoolean [
+	nativeStoreTraversalShapeValidationEnabled := aBoolean
+]
+
 { #category : 'initialization' }
 GbsReplicationPolicy >> initializeDefaults [
 	^ self initializeFromConfiguration: ([ GbsConfiguration current ] on: Error do: [ nil ])
@@ -332,6 +345,7 @@ GbsReplicationPolicy >> initializeFromConfiguration: aConfiguration [
 	freeOopAllocationBatchSize := self valueAt: #freeOopAllocationBatchSize fromConfiguration: aConfiguration default: 2000.
 	freeOopBatchSize := self valueAt: #freeOopBatchSize fromConfiguration: aConfiguration default: 256.
 	freeSlotsOnStubbing := self valueAt: #freeSlotsOnStubbing fromConfiguration: aConfiguration default: true.
+	nativeStoreTraversalShapeValidationEnabled := self valueAt: #nativeStoreTraversalShapeValidationEnabled fromConfiguration: aConfiguration default: true.
 	serverMapMode := self valueAt: #serverMapMode fromConfiguration: aConfiguration default: 'weak'.
 	storeDirtyOnCommit := self valueAt: #storeDirtyOnCommit fromConfiguration: aConfiguration default: false.
 	storeTraversalTransport := self valueAt: #storeTraversalTransport fromConfiguration: aConfiguration default: 'script'.
@@ -378,6 +392,7 @@ GbsReplicationPolicy >> reportText [
 			serverMapMode
 			freeOopAllocationBatchSize
 			freeOopBatchSize
+			nativeStoreTraversalShapeValidationEnabled
 			traversalBufferSize
 			asyncSignalPollingEnabled
 			eventPollingFrequency

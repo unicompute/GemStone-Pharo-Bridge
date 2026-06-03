@@ -102,11 +102,15 @@ GbsSessionEventController >> pollingErrorCount [
 { #category : 'polling' }
 GbsSessionEventController >> handlePositivePollResult: signalResult [
 	| handled |
-	signalResult = 4 ifTrue: [ ^ TransactionBacklog signal ].
+	signalResult = 4 ifTrue: [
+		self handleEvent: #transactionBacklog payload: signalResult default: [ nil ].
+		^ TransactionBacklog signal ].
 	handled := self pollGemStoneErrorIfPresent.
 	handled ifNotNil: [ ^ handled ].
-	signalResult = 1 ifTrue: [ ^ AlmostOutOfMemory signal ].
-	^ signalResult
+	signalResult = 1 ifTrue: [
+		self handleEvent: #almostOutOfMemory payload: signalResult default: [ nil ].
+		^ AlmostOutOfMemory signal ].
+	^ self handleEvent: #gemSignal payload: signalResult default: [ signalResult ]
 ]
 
 { #category : 'polling' }
@@ -195,6 +199,7 @@ GbsSessionEventController >> processPriority [
 GbsSessionEventController >> handlePollingError: anError [
 	lastPollingError := anError.
 	pollingErrorCount := self pollingErrorCount + 1.
+	self handleEvent: #pollingError payload: anError default: [ nil ].
 	((session respondsTo: #isLoggedIn) and: [ session isLoggedIn not ]) ifTrue: [
 		pollingActive := false.
 		self handleFatalSessionDeath: anError ].
@@ -240,6 +245,7 @@ GbsSessionEventController >> handleEvent: eventSymbol payload: anObject default:
 { #category : 'event handling' }
 GbsSessionEventController >> beginAsyncAbort [
 	isUnwindingAsyncAbort := true.
+	self handleEvent: #asyncAbortStart payload: nil default: [ nil ].
 	asyncAbortStartAction ifNotNil: [ asyncAbortStartAction cull: session ].
 	^ self
 ]
@@ -247,6 +253,7 @@ GbsSessionEventController >> beginAsyncAbort [
 { #category : 'event handling' }
 GbsSessionEventController >> finishAsyncAbort [
 	^ [
+		self handleEvent: #asyncAbortFinish payload: nil default: [ nil ].
 		asyncAbortFinishAction ifNotNil: [ asyncAbortFinishAction cull: session ] ]
 		ensure: [ isUnwindingAsyncAbort := false ]
 ]
@@ -264,6 +271,7 @@ GbsSessionEventController >> handleAsyncAbortDuring: aBlock [
 
 { #category : 'event handling' }
 GbsSessionEventController >> handleFatalSessionDeath: anError [
+	self handleEvent: #fatalSessionDeath payload: anError default: [ nil ].
 	fatalSessionDeathAction ifNotNil: [ fatalSessionDeathAction cull: anError cull: session ].
 	^ self
 ]
