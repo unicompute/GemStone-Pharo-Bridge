@@ -27,6 +27,8 @@ The VisualWorks implementation treats `replicationSpec` as both a client-side re
 - `GbxReplicationScheme` validates clamp-by-callback selectors against live GemStone sessions via `Object canUnderstand:` before installing the selector into the server clamp specification.
 - `GbsDirtyReplicateStoreTraversal` can use native dirty-store buffers and native `GciStoreTravDoTravRefs_` coordination for queued no-longer-replicated and GCed OOPs.
 - `GbsSessionLifecycleManager` tracks session server maps, no-longer-replicated queues, GCed OOP queues, finalizer tokens, and release transport availability.
+- `GbxReplicatorManager` now treats the replicator as the lifecycle unit for client aliases, server aliases, deferred server-instvar updates, and clamp artefacts, so secondary client mappings and server removals clean up consistently.
+- `GbxClampManager` now updates callback metadata, named replication schemes, and removal cleanup across all known schemes instead of only the currently active scheme.
 - `make replication-live` validates connector install, server clamp synchronization, clamped traversal, native dirty-store flush, and export-set queue acknowledgement against a live GemStone session.
 
 ## Remaining Parity Watchpoints
@@ -35,4 +37,4 @@ The VisualWorks implementation treats `replicationSpec` as both a client-side re
 - Per-instvar traversal semantics should be validated against domain classes with explicit `instVarMap` nil mappings and inherited replication specs.
 - VAST `faultLevelRpc` compatibility is represented in the policy surface, but deeper fault transition behavior still needs migration-shaped live tests.
 - The native dirty-store buffer currently covers mapped Arrays, Associations, OrderedCollections, and named-slot objects with OOP-addressable values. Dictionaries, Sets, Bags, and custom/domain objects needing richer semantic policy still use script or higher-level conversion paths.
-- Strict VisualWorks-style client-class connector manager behavior is approximated in Pharo's converted replicator manager; a complete VW replicator-manager clone remains future work if exact parity is required.
+- A complete VisualWorks replicator-manager clone may still expose deeper server-side callback and class-version hooks, but the Pharo manager now covers the core connector alias, removal, deferred-instvar, and multi-scheme clamp lifecycle semantics.

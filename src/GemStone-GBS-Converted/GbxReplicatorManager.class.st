@@ -44,8 +44,22 @@ GbxReplicatorManager >> clientMap [
 ]
 
 { #category : 'accessing' }
+GbxReplicatorManager >> clientBehaviorsForReplicator: aReplicator [
+	| behaviors |
+	behaviors := OrderedCollection new.
+	clientMap keysAndValuesDo: [ :behavior :replicator |
+		replicator == aReplicator ifTrue: [ behaviors add: behavior ] ].
+	^ behaviors asArray
+]
+
+{ #category : 'accessing' }
 GbxReplicatorManager >> currentReplicators [
-	^ clientMap values
+	| replicators |
+	replicators := OrderedCollection new.
+	clientMap values do: [ :replicator |
+		(replicators anySatisfy: [ :each | each == replicator ])
+			ifFalse: [ replicators add: replicator ] ].
+	^ replicators asArray
 ]
 
 { #category : 'accessing' }
@@ -77,22 +91,48 @@ GbxReplicatorManager >> newClampManagerFor: aSession [
 
 { #category : 'accessing' }
 GbxReplicatorManager >> numberOfReplicators [
-	^ clientMap size
+	^ self currentReplicators size
 ]
 
 { #category : 'mapping' }
 GbxReplicatorManager >> removeReplicatorForClientBehavior: clientBehavior andServerBehavior: serverBehavior [
-	| clientReplicator serverReplicator |
-	clientReplicator := clientMap removeKey: clientBehavior ifAbsent: [ nil ].
-	serverReplicator := serverMap removeKey: serverBehavior ifAbsent: [ nil ].
+	| clientReplicator serverReplicator replicator |
+	clientReplicator := clientMap at: clientBehavior ifAbsent: [ nil ].
+	serverReplicator := serverMap at: serverBehavior ifAbsent: [ nil ].
+	replicator := clientReplicator ifNil: [ serverReplicator ].
+	replicator ifNil: [
+		clientMap removeKey: clientBehavior ifAbsent: [ ].
+		serverMap removeKey: serverBehavior ifAbsent: [ ].
+		^ nil ].
+	^ self removeReplicator: replicator
+]
+
+{ #category : 'mapping' }
+GbxReplicatorManager >> removeReplicator: aReplicator [
+	aReplicator ifNil: [ ^ nil ].
+	(self clientBehaviorsForReplicator: aReplicator) do: [ :behavior |
+		clientMap removeKey: behavior ifAbsent: [ ] ].
+	(self serverBehaviorsForReplicator: aReplicator) do: [ :behavior |
+		serverMap removeKey: behavior ifAbsent: [ ] ].
+	self removeDeferredServerInstVarUpdateFor: aReplicator.
 	(clampManager notNil and: [ clampManager respondsTo: #removeClampsForReplicator: ])
-		ifTrue: [ clientReplicator ifNotNil: [ clampManager removeClampsForReplicator: clientReplicator ] ].
-	^ clientReplicator ifNil: [ serverReplicator ]
+		ifTrue: [ clampManager removeClampsForReplicator: aReplicator ].
+	^ aReplicator
+]
+
+{ #category : 'deferred updates' }
+GbxReplicatorManager >> removeDeferredServerInstVarUpdateFor: aReplicator [
+	replicatorsNeedingServerInstVarNames :=
+		(replicatorsNeedingServerInstVarNames reject: [ :each | each == aReplicator ])
+			asOrderedCollection.
+	needServerInstVarNames := replicatorsNeedingServerInstVarNames isEmpty not
 ]
 
 { #category : 'mapping' }
 GbxReplicatorManager >> removeReplicatorForServerBehavior: serverBehavior [
-	^ serverMap removeKey: serverBehavior ifAbsent: [ nil ]
+	| replicator |
+	replicator := serverMap at: serverBehavior ifAbsent: [ ^ nil ].
+	^ self removeReplicator: replicator
 ]
 
 { #category : 'lookup' }
@@ -125,8 +165,18 @@ GbxReplicatorManager >> replicatorForServerBehavior: aBehavior ifAbsentPut: aBlo
 
 { #category : 'deferred updates' }
 GbxReplicatorManager >> serverInstVarNamesNeededByReplicator: aReplicator [
-	replicatorsNeedingServerInstVarNames add: aReplicator.
-	needServerInstVarNames := true
+	(replicatorsNeedingServerInstVarNames anySatisfy: [ :each | each == aReplicator ])
+		ifFalse: [ replicatorsNeedingServerInstVarNames add: aReplicator ].
+	needServerInstVarNames := replicatorsNeedingServerInstVarNames isEmpty not
+]
+
+{ #category : 'accessing' }
+GbxReplicatorManager >> serverBehaviorsForReplicator: aReplicator [
+	| behaviors |
+	behaviors := OrderedCollection new.
+	serverMap keysAndValuesDo: [ :behavior :replicator |
+		replicator == aReplicator ifTrue: [ behaviors add: behavior ] ].
+	^ behaviors asArray
 ]
 
 { #category : 'accessing' }

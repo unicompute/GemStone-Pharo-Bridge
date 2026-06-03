@@ -287,7 +287,80 @@ GbsSessionManagerCoreTest >> testReplicatorManagerSecondaryClientMappingSharesPr
 	self assert: secondary == replicator.
 	self assert: (manager replicatorForClientBehavior: Array ifAbsent: [ nil ]) == replicator.
 	self assert: (manager replicatorForClientBehavior: OrderedCollection ifAbsent: [ nil ]) == replicator.
-	self assert: (manager replicatorForServerBehavior: 'RemoteArray' ifAbsent: [ nil ]) == replicator
+	self assert: (manager replicatorForServerBehavior: 'RemoteArray' ifAbsent: [ nil ]) == replicator.
+	self assert: manager currentReplicators equals: { replicator }.
+	self assert: manager numberOfReplicators equals: 1
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testReplicatorManagerRemovingPrimaryRemovesSecondaryMappingsAndDeferredInstvarRequest [
+	| mockSession manager connector replicator removed |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: Array
+		server: 'RemoteArray'
+		replicationSpec: #(#(#indexable_part #forwarder))
+		serverInstVarNames: #().
+
+	replicator := manager installClientClassConnector: connector.
+	manager
+		setReplicatorForClient: OrderedCollection
+		sameAsReplicatorForClient: Array.
+	manager markServerInstVarNamesNeededByReplicator: replicator.
+	self assert: manager needsServerInstVarNames.
+
+	removed := manager
+		removeReplicatorForClientBehavior: Array
+		andServerBehavior: 'RemoteArray'.
+
+	self assert: removed == replicator.
+	self assert: (manager replicatorForClientBehavior: Array ifAbsent: [ nil ]) isNil.
+	self assert: (manager replicatorForClientBehavior: OrderedCollection ifAbsent: [ nil ]) isNil.
+	self assert: (manager replicatorForServerBehavior: 'RemoteArray' ifAbsent: [ nil ]) isNil.
+	self deny: manager needsServerInstVarNames.
+	self assert: manager replicatorsNeedingServerInstVarNames isEmpty.
+	self assert: manager currentReplicators isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testReplicatorManagerRemovingServerBehaviorRemovesClientAliases [
+	| mockSession manager replicator removed |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	replicator := manager mapReplicatorForClientBehavior: Array serverBehavior: 'RemoteArray'.
+	manager
+		setReplicatorForClient: OrderedCollection
+		sameAsReplicatorForClient: Array.
+
+	removed := manager removeReplicatorForServerBehavior: 'RemoteArray'.
+
+	self assert: removed == replicator.
+	self assert: (manager replicatorForClientBehavior: Array ifAbsent: [ nil ]) isNil.
+	self assert: (manager replicatorForClientBehavior: OrderedCollection ifAbsent: [ nil ]) isNil.
+	self assert: (manager replicatorForServerBehavior: 'RemoteArray' ifAbsent: [ nil ]) isNil
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testReplicatorManagerNamedReplicationSchemeHydratesExistingReplicators [
+	| mockSession manager connector scheme |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: CoreGbsReplicationSpecFixture
+		server: 'RemoteFixture'
+		replicationSpec: nil
+		serverInstVarNames: #('key' 'value').
+	connector replicatorClass: GbxPointerObjectReplicator.
+
+	manager installClientClassConnector: connector.
+	scheme := manager replicationSchemeForSet: #customerReplicationSpec.
+
+	self
+		assert: (scheme instVarLevelsForClass: CoreGbsReplicationSpecFixture)
+		equals: { false. -2. nil }.
+	self assert: (scheme shouldProxyNamedSlot: 1 ofClass: CoreGbsReplicationSpecFixture).
+	self deny: (scheme shouldProxyNamedSlot: 2 ofClass: CoreGbsReplicationSpecFixture)
 ]
 
 { #category : 'tests' }
@@ -366,6 +439,32 @@ GbsSessionManagerCoreTest >> testReplicatorManagerRemoveConnectorClearsClampMeta
 	self assert: (scheme instVarLevelsForClass: Association) isNil.
 	self assert: (manager replicatorForClientBehavior: Association ifAbsent: [ nil ]) isNil.
 	self assert: (manager replicatorForServerBehavior: 'RemoteAssociation' ifAbsent: [ nil ]) isNil
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testReplicatorManagerRemoveConnectorClearsClampMetadataInAllSchemes [
+	| mockSession manager connector defaultScheme namedScheme |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: CoreGbsReplicationSpecFixture
+		server: 'RemoteFixture'
+		replicationSpec: CoreGbsReplicationSpecFixture replicationSpec
+		serverInstVarNames: #('key' 'value').
+	connector replicatorClass: GbxPointerObjectReplicator.
+
+	manager installClientClassConnector: connector.
+	defaultScheme := manager currentReplicationScheme.
+	namedScheme := manager replicationSchemeForSet: #customerReplicationSpec.
+	self assert: (defaultScheme instVarLevelsForClass: CoreGbsReplicationSpecFixture) notNil.
+	self assert: (namedScheme instVarLevelsForClass: CoreGbsReplicationSpecFixture) notNil.
+
+	manager
+		removeReplicatorForClientBehavior: CoreGbsReplicationSpecFixture
+		andServerBehavior: 'RemoteFixture'.
+
+	self assert: (defaultScheme instVarLevelsForClass: CoreGbsReplicationSpecFixture) isNil.
+	self assert: (namedScheme instVarLevelsForClass: CoreGbsReplicationSpecFixture) isNil
 ]
 
 { #category : 'tests' }

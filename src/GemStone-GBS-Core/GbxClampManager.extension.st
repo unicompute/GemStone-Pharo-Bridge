@@ -45,14 +45,24 @@ GbxClampManager >> classClamps [
 
 { #category : '*GemStone-GBS-Core' }
 GbxClampManager >> changedClampByCallback [
+	self knownReplicationSchemes do: [ :scheme |
+		scheme
+			updateForClampingByCallback: true
+			inSession: self session ].
 	^ self currentReplicationScheme
-		updateForClampingByCallback: true
-		inSession: self session
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbxClampManager >> changedSelector: aSelector forReplicator: aReplicator [
-	(#(replicationSpec transitiveClosureSpec instVarMap) includes: aSelector) ifTrue: [
+	| scheme |
+	aSelector = #instancesAreForwarders ifTrue: [
+		^ self updateClassClampForReplicator: aReplicator ].
+	aSelector = #instVarMap ifTrue: [
+		^ self updateClampsForReplicators: { aReplicator } ].
+	scheme := self replicationSchemeNamed: aSelector.
+	scheme ifNotNil: [
+		^ self updateInstVarLevelsOfScheme: scheme forReplicators: { aReplicator } ].
+	(#(replicationSpec transitiveClosureSpec) includes: aSelector) ifTrue: [
 		^ self updateClassClampForReplicator: aReplicator ].
 	^ aReplicator
 ]
@@ -149,10 +159,17 @@ GbxClampManager >> replicationSchemeNamed: aKey put: aScheme [
 
 { #category : '*GemStone-GBS-Core' }
 GbxClampManager >> replicationSchemeForSet: setSelector [
+	| scheme |
 	setSelector ifNil: [ ^ GbxNullReplicationScheme new ].
-	^ replicationSchemes
-		at: setSelector
-		ifAbsentPut: [ GbxReplicationScheme selector: setSelector ]
+	scheme := replicationSchemes at: setSelector ifAbsent: [ nil ].
+	scheme ifNotNil: [ ^ scheme ].
+	scheme := GbxReplicationScheme selector: setSelector.
+	replicationSchemes at: setSelector put: scheme.
+	manager ifNotNil: [
+		self
+			updateInstVarLevelsOfScheme: scheme
+			forReplicators: manager currentReplicators ].
+	^ scheme
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -171,7 +188,10 @@ GbxClampManager >> removeClampsForReplicator: aReplicator [
 	serverClass := self serverClassForReplicator: aReplicator.
 	serverClass ifNotNil: [ classClamps removeKey: serverClass ifAbsent: [ ] ].
 	clientClass ifNotNil: [
-		self currentReplicationScheme removeArtefactsForClass: clientClass ].
+		classClamps removeKey: clientClass ifAbsent: [ ].
+		identityClamps removeKey: clientClass ifAbsent: [ ].
+		self knownReplicationSchemes do: [ :scheme |
+			scheme removeArtefactsForClass: clientClass ] ].
 	^ aReplicator
 ]
 
@@ -199,9 +219,7 @@ GbxClampManager >> updateClassClampForReplicator: aReplicator [
 	scheme := self currentReplicationScheme.
 	clientClass := self clientClassForReplicator: aReplicator.
 	serverClass := self serverClassForReplicator: aReplicator.
-	(clientClass notNil and: [
-		(clientClass respondsTo: #instancesAreForwarders)
-			and: [ [ clientClass instancesAreForwarders ] on: Error do: [ false ] ] ]) ifTrue: [
+	(self replicatorUsesClassClamp: aReplicator) ifTrue: [
 				serverClass ifNotNil: [ classClamps at: serverClass put: scheme ].
 				scheme removeArtefactsForClass: clientClass.
 				^ scheme ].
@@ -214,6 +232,8 @@ GbxClampManager >> updateClassClampForReplicator: aReplicator [
 { #category : '*GemStone-GBS-Core' }
 GbxClampManager >> updateClampsForReplicators: aCollection [
 	aCollection do: [ :each | self updateClassClampForReplicator: each ].
+	self knownReplicationSchemes do: [ :scheme |
+		self updateInstVarLevelsOfScheme: scheme forReplicators: aCollection ].
 	^ aCollection
 ]
 
@@ -249,8 +269,43 @@ GbxClampManager >> clientClassForReplicator: aReplicator [
 ]
 
 { #category : '*GemStone-GBS-Core-private' }
+GbxClampManager >> knownReplicationSchemes [
+	| schemes |
+	schemes := OrderedCollection new.
+	defaultReplicationScheme ifNotNil: [ schemes add: defaultReplicationScheme ].
+	replicationSchemes do: [ :scheme |
+		(schemes anySatisfy: [ :each | each == scheme ])
+			ifFalse: [ schemes add: scheme ] ].
+	^ schemes asArray
+]
+
+{ #category : '*GemStone-GBS-Core-private' }
+GbxClampManager >> replicatorUsesClassClamp: aReplicator [
+	| clientClass |
+	clientClass := self clientClassForReplicator: aReplicator.
+	clientClass ifNil: [ ^ false ].
+	(clientClass respondsTo: #instancesAreForwarders) ifFalse: [ ^ false ].
+	^ [ clientClass instancesAreForwarders ] on: Error do: [ false ]
+]
+
+{ #category : '*GemStone-GBS-Core-private' }
 GbxClampManager >> serverClassForReplicator: aReplicator [
 	^ (aReplicator respondsTo: #serverClass)
 		ifTrue: [ aReplicator serverClass ]
 		ifFalse: [ nil ]
+]
+
+{ #category : '*GemStone-GBS-Core-private' }
+GbxClampManager >> updateInstVarLevelsOfScheme: aScheme forReplicators: replicators [
+	replicators do: [ :replicator |
+		| clientClass |
+		clientClass := self clientClassForReplicator: replicator.
+		(self replicatorUsesClassClamp: replicator)
+			ifTrue: [
+				clientClass ifNotNil: [
+					aScheme removeArtefactsForClass: clientClass ] ]
+			ifFalse: [
+				(replicator respondsTo: #updateInstVarLevelsOfScheme:) ifTrue: [
+					replicator updateInstVarLevelsOfScheme: aScheme ] ] ].
+	^ aScheme
 ]
