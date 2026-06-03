@@ -1,4 +1,4 @@
-| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator scheme clampSpecOop transitiveSpec connectorMs clampedOop clampedResult clampedMs clampedMetrics policy previousTransport previousProfile nativeStoreSupported dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseNoLongerObject releaseGcedObject exportBefore exportAfter dirtyStoreMs flushed verified verifiedOop nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed |
+| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator scheme clampSpecOop transitiveSpec connectorMs clampedOop clampedResult clampedMs clampedMetrics policy previousTransport previousProfile nativeStoreSupported dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseNoLongerObject releaseGcedObject exportBefore exportAfter dirtyStoreMs flushed verified verifiedOop nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed businessRootOop businessRoot businessFixtureSize businessDirtyObjectsFlushed businessDirtyStoreMs businessFlushed businessExportAfter businessVerifiedOop businessVerified |
 [
   loadFailed := false.
   cleanupFixture := [ ].
@@ -252,17 +252,96 @@ root'
         verified = 7 ifFalse: [
           Error signal: 'Dirty-store traversal did not update the remote fixture status=', verified asString, ' oop=', verifiedOop asString, ' (11=array 12=association 13=ordered 14=dictionary 15=set 16=bag).' ].
 
+        phase := 'business-dirty-store-fixture'.
+        session resetMaterializedObjectDirtyTracking.
+        businessRootOop := session
+          returnRemoteCommandBody: '| fixture root |
+fixture := UserGlobals at: fixtureKey ifAbsentPut: [ Dictionary new ].
+root := Array new: 12.
+1 to: 4 do: [ :index |
+  root
+    at: index
+    put: (Array with: index with: index + 10 with: nil) ].
+5 to: 8 do: [ :index |
+  root
+    at: index
+    put: (Association key: index value: index + 20) ].
+9 to: 12 do: [ :index |
+  | ordered |
+  ordered := OrderedCollection new.
+  ordered add: index; add: index + 30.
+  root at: index put: ordered ].
+fixture at: #businessDirtyRoot put: root.
+root'
+          literalBindings: (Dictionary new
+            at: 'fixtureKey' put: fixtureKey;
+            yourself)
+          oopBindings: Dictionary new.
+        [ session clearProxyCache. session clearRemoteClassNameCache ] on: Error do: [ ].
+        session fetchDeep.
+        businessRoot := session fetchObject: businessRootOop.
+        businessFixtureSize := businessRoot size.
+        businessFixtureSize = 12 ifFalse: [
+          Error signal: 'Business dirty-store fixture did not materialize the expected root size.' ].
+
+        phase := 'business-dirty-store-flush'.
+        1 to: 4 do: [ :index |
+          (businessRoot at: index)
+            at: 3
+            put: index + 100 ].
+        5 to: 8 do: [ :index |
+          (businessRoot at: index)
+            value: index + 200 ].
+        9 to: 12 do: [ :index |
+          (businessRoot at: index)
+            add: index + 300 ].
+        businessDirtyObjectsFlushed := session dirtyMaterializedObjectOops size.
+        businessDirtyObjectsFlushed < businessFixtureSize ifTrue: [
+          Error signal: 'Expected the business dirty-store fixture to mark all roots dirty before flush.' ].
+        businessDirtyStoreMs := millisecondsToRun value: [
+          businessFlushed := session flushDirtyMaterializedObjects ].
+        businessFlushed size < businessFixtureSize ifTrue: [
+          Error signal: 'Business dirty-store traversal flushed fewer objects than expected.' ].
+        businessExportAfter := session objectSpace pendingExportSetReleaseOopCount.
+        businessExportAfter = 0 ifFalse: [
+          Error signal: 'Export-set release queues were not empty after business dirty-store flush.' ].
+        businessVerifiedOop := session
+          returnRemoteCommandBody: '| root status |
+	root := object.
+	status := 23.
+	1 to: 4 do: [ :index |
+	  (status = 23 and: [ ((root at: index) at: 3) = (index + 100) ]) ifFalse: [
+	    status = 23 ifTrue: [ status := 31 ] ] ].
+	5 to: 8 do: [ :index |
+	  (status = 23 and: [ (root at: index) value = (index + 200) ]) ifFalse: [
+	    status = 23 ifTrue: [ status := 32 ] ] ].
+	9 to: 12 do: [ :index |
+	  (status = 23 and: [ ((root at: index) asArray last) = (index + 300) ]) ifFalse: [
+	    status = 23 ifTrue: [ status := 33 ] ] ].
+	status'
+          literalBindings: Dictionary new
+          oopBindings: (Dictionary new
+            at: 'object' put: businessRootOop;
+            yourself).
+        businessVerified := session resultFor: businessVerifiedOop.
+        businessVerified = 23 ifFalse: [
+          Error signal: 'Business dirty-store traversal did not update the remote fixture status=', businessVerified asString, ' oop=', businessVerifiedOop asString, ' (31=array 32=association 33=ordered).' ].
+
         Transcript
           show: 'REPLICATION_LIVE_VALIDATION result=OK code=REPLICATION_LIVE_OK',
             ' connector_ms=', connectorMs asString,
             ' clamped_ms=', clampedMs asString,
             ' dirty_store_ms=', dirtyStoreMs asString,
+            ' business_dirty_store_ms=', businessDirtyStoreMs asString,
             ' clamped_traversal_fetches=', clampedFetches asString,
             ' clamped_traversal_fallbacks=', clampedFallbacks asString,
             ' native_dirty_store_flushes=', nativeDirtyStoreFlushes asString,
             ' dirty_objects_flushed=', flushed size asString,
+            ' business_dirty_objects_flushed=', businessFlushed size asString,
+            ' business_write_fixture_size=', businessFixtureSize asString,
             ' export_set_queued_before=', exportBefore asString,
             ' export_set_queued_after=', exportAfter asString,
+            ' business_export_set_queued_after=', businessExportAfter asString,
             ' clamp_spec_oop=', clampSpecOop asString;
           cr ]
         ensure: [
@@ -278,12 +357,16 @@ root'
           ' connector_ms=', (connectorMs ifNil: [ 0 ]) asString,
           ' clamped_ms=', (clampedMs ifNil: [ 0 ]) asString,
           ' dirty_store_ms=', (dirtyStoreMs ifNil: [ 0 ]) asString,
+          ' business_dirty_store_ms=', (businessDirtyStoreMs ifNil: [ 0 ]) asString,
           ' clamped_traversal_fetches=', (clampedFetches ifNil: [ 0 ]) asString,
           ' clamped_traversal_fallbacks=', (clampedFallbacks ifNil: [ 0 ]) asString,
           ' native_dirty_store_flushes=', (nativeDirtyStoreFlushes ifNil: [ 0 ]) asString,
           ' dirty_objects_flushed=', (dirtyObjectsFlushed ifNil: [ 0 ]) asString,
+          ' business_dirty_objects_flushed=', (businessDirtyObjectsFlushed ifNil: [ 0 ]) asString,
+          ' business_write_fixture_size=', (businessFixtureSize ifNil: [ 0 ]) asString,
           ' export_set_queued_before=', (exportBefore ifNil: [ 0 ]) asString,
           ' export_set_queued_after=', (exportAfter ifNil: [ 0 ]) asString,
+          ' business_export_set_queued_after=', (businessExportAfter ifNil: [ 0 ]) asString,
           ' message=';
         show: (ex messageText ifNil: [ ex printString ]) asString withBlanksTrimmed;
         show: ' phase=';

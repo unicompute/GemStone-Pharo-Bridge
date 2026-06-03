@@ -251,6 +251,7 @@ jobs:
             echo "GBS_JSON_SUMMARY_DIR=${RUNNER_TEMP}/gbs-replication-json-${{ matrix.live_target }}"
             echo "GBS_EVIDENCE_DIR=${RUNNER_TEMP}/gbs-replication-evidence-${{ matrix.live_target }}"
             echo "GBS_REPLICATION_LIVE_TRENDS=${RUNNER_TEMP}/gbs-replication-live-trends-${{ matrix.live_target }}/replication-live-trends.jsonl"
+            echo "GBS_REPLICATION_LIVE_REPORT=${RUNNER_TEMP}/gbs-replication-live-trends-${{ matrix.live_target }}/replication-live-trend-report.md"
           } >> "${GITHUB_ENV}"
           mkdir -p "${RUNNER_TEMP}/gbs-replication-json-${{ matrix.live_target }}" "${RUNNER_TEMP}/gbs-replication-evidence-${{ matrix.live_target }}" "${RUNNER_TEMP}/gbs-replication-live-trends-${{ matrix.live_target }}"
 

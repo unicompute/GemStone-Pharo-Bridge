@@ -161,8 +161,9 @@ The lane validates three production-relevant paths against a real GemStone sessi
 - VisualWorks-style `GbsClientClassConnector` installation into the session replicator manager, including client/server maps and server clamp specification synchronization.
 - Clamped Association materialization through `GciClampedTrav`, with traversal-buffer fallback count required to remain zero.
 - Mixed dirty-store traversal for a migration-shaped root graph, with Array, Association, OrderedCollection, and named-slot mutations using native dirty-store buffers where safe, while Dictionary, Set, and Bag mutations are flushed through a batched semantic server command. Exported OOP release queues are acknowledged only after the native store call succeeds.
+- A larger business-write fixture with twelve materialized Array, Association, and OrderedCollection roots. The lane mutates all twelve, flushes them through the dirty-store traversal path, and verifies the remote fixture state before recording the write-path timing.
 
-Thresholds are configured through `scripts/replication_live_thresholds.env` or direct `GBS_REPLICATION_LIVE_*` environment variables. The defaults require at least one clamped traversal fetch, zero clamped fallbacks, at least one native dirty-store flush, at least six dirty objects flushed, and zero export-set release queue entries remaining after the flush.
+Thresholds are configured through `scripts/replication_live_thresholds.env` or direct `GBS_REPLICATION_LIVE_*` environment variables. The defaults require at least one clamped traversal fetch, zero clamped fallbacks, at least one native dirty-store flush, at least six mixed dirty objects flushed, at least twelve business dirty objects flushed, and zero export-set release queue entries remaining after both flushes. Trend regression uses `GBS_REPLICATION_LIVE_REGRESSION_PERCENT` or `GBS_REPLICATION_LIVE_REGRESSION_MIN_DELTA_MS`, whichever allows the larger drift over the previous persisted sample.
 
 ## Artifacts
 
@@ -182,8 +183,9 @@ The replication lane writes separate artifacts:
 - `replication-live-summary.json`
 - `replication-live-summary.md`
 - `replication-live-trends.jsonl`, when `GBS_REPLICATION_LIVE_TRENDS` or `GBS_EVIDENCE_DIR` is set
+- `replication-live-trend-report.md`, when a replication trend path is available
 
-Use the summary JSON for machine checks and the Markdown summary for CI job summaries. The materialization lane also writes a trend report for quick human review of the last 20 samples.
+Use the summary JSON for machine checks and the Markdown summary for CI job summaries. The materialization and replication live lanes also write trend reports for quick human review of the last 20 samples.
 
 ## Typed Wrapper Compatibility
 
