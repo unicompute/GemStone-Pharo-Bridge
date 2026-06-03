@@ -62,6 +62,24 @@ GbsReplicationPolicy >> asyncSignalPollingEnabled: aBoolean [
 	asyncSignalPollingEnabled := aBoolean
 ]
 
+{ #category : 'diagnostics' }
+GbsReplicationPolicy >> asDictionary [
+	^ Dictionary new
+		at: #autoMarkDirty put: self autoMarkDirty;
+		at: #blockReplicationPolicy put: self blockReplicationPolicy;
+		at: #defaultFaultPolicy put: self defaultFaultPolicy;
+		at: #asyncSignalPollingEnabled put: self asyncSignalPollingEnabled;
+		at: #eventPollingFrequency put: self eventPollingFrequency;
+		at: #eventPriority put: self eventPriority;
+		at: #faultLevelRpc put: self faultLevelRpc;
+		at: #freeOopBatchSize put: self freeOopBatchSize;
+		at: #freeSlotsOnStubbing put: self freeSlotsOnStubbing;
+		at: #serverMapMode put: self serverMapMode;
+		at: #storeTraversalTransport put: self storeTraversalTransport;
+		at: #traversalBufferSize put: self traversalBufferSize;
+		yourself
+]
+
 { #category : 'accessing' }
 GbsReplicationPolicy >> autoMarkDirty [
 	^ autoMarkDirty
@@ -81,7 +99,7 @@ GbsReplicationPolicy >> blockReplicationPolicy [
 GbsReplicationPolicy >> blockReplicationPolicy: aString [
 	self
 		validatePolicyValue: aString
-		allowed: #(#replicate #callback)
+		allowed: #(#replicate #callback #stub #none)
 		label: 'Block replication policy'.
 	blockReplicationPolicy := aString
 ]
@@ -90,7 +108,7 @@ GbsReplicationPolicy >> blockReplicationPolicy: aString [
 GbsReplicationPolicy >> blockReplicationPolicySymbol [
 	^ self
 		normalizedPolicySymbolFrom: blockReplicationPolicy
-		allowed: #(#replicate #callback)
+		allowed: #(#replicate #callback #stub #none)
 		default: #replicate
 ]
 
@@ -103,7 +121,7 @@ GbsReplicationPolicy >> defaultFaultPolicy [
 GbsReplicationPolicy >> defaultFaultPolicy: aString [
 	self
 		validatePolicyValue: aString
-		allowed: #(#lazy #immediate #eager)
+		allowed: #(#lazy #immediate #eager #none)
 		label: 'Default fault policy'.
 	defaultFaultPolicy := aString
 ]
@@ -113,7 +131,7 @@ GbsReplicationPolicy >> defaultFaultPolicySymbol [
 	| symbol |
 	symbol := self
 		normalizedPolicySymbolFrom: defaultFaultPolicy
-		allowed: #(#lazy #immediate #eager)
+		allowed: #(#lazy #immediate #eager #none)
 		default: #lazy.
 	symbol = #eager ifTrue: [ ^ #immediate ].
 	^ symbol
@@ -211,6 +229,41 @@ GbsReplicationPolicy >> serverMapModeSymbol [
 		normalizedPolicySymbolFrom: serverMapMode
 		allowed: #(#weak #strong)
 		default: #weak
+]
+
+{ #category : 'diagnostics' }
+GbsReplicationPolicy >> reportText [
+	| report |
+	report := self asDictionary.
+	^ String streamContents: [ :stream |
+		stream nextPutAll: 'Replication Policy'; cr; cr.
+		#(
+			autoMarkDirty
+			blockReplicationPolicy
+			defaultFaultPolicy
+			faultLevelRpc
+			freeSlotsOnStubbing
+			storeTraversalTransport
+			serverMapMode
+			freeOopBatchSize
+			traversalBufferSize
+			asyncSignalPollingEnabled
+			eventPollingFrequency
+			eventPriority) do: [ :key |
+				stream
+					nextPutAll: key asString;
+					nextPutAll: '=';
+					nextPutAll: (self reportValueString: (report at: key));
+					cr ] ]
+]
+
+{ #category : 'private' }
+GbsReplicationPolicy >> reportValueString: anObject [
+	anObject ifNil: [ ^ 'nil' ].
+	anObject == true ifTrue: [ ^ 'true' ].
+	anObject == false ifTrue: [ ^ 'false' ].
+	anObject isSymbol ifTrue: [ ^ anObject asString ].
+	^ anObject printString
 ]
 
 { #category : 'accessing' }

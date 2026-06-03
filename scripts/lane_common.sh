@@ -41,6 +41,20 @@ gbs_normalize_live_env_vars() {
   export GS_PASS="${GS_PASS:-${GS_PASSWORD:-}}"
   export GS_NETLDI_HOST="${GS_NETLDI_HOST:-${GS_HOST:-}}"
   export GS_NETLDI_NAME_OR_PORT="${GS_NETLDI_NAME_OR_PORT:-${GS_NETLDI:-}}"
+  export OKZ_GEMSTONE_HOST_USERNAME="${OKZ_GEMSTONE_HOST_USERNAME:-${GS_HOST_USERNAME:-${GS_NETLDI_HOST_USERNAME:-}}}"
+  export OKZ_GEMSTONE_HOST_PASSWORD="${OKZ_GEMSTONE_HOST_PASSWORD:-${GS_HOST_PASSWORD:-${GS_NETLDI_HOST_PASSWORD:-}}}"
+}
+
+gbs_live_host_auth_status() {
+  if [[ -n "${OKZ_GEMSTONE_HOST_USERNAME:-}" && -n "${OKZ_GEMSTONE_HOST_PASSWORD:-}" ]]; then
+    printf 'set\n'
+    return 0
+  fi
+  if [[ -n "${OKZ_GEMSTONE_HOST_USERNAME:-}" || -n "${OKZ_GEMSTONE_HOST_PASSWORD:-}" ]]; then
+    printf 'partial\n'
+    return 0
+  fi
+  printf 'unset\n'
 }
 
 gbs_required_live_env_vars() {
@@ -70,14 +84,15 @@ gbs_missing_required_live_env_vars() {
 
 gbs_live_env_status_line() {
   local missing="${1:-$(gbs_missing_required_live_env_vars)}"
-  printf 'required=%s missing=%s stone=%s service=%s host=%s net=%s gemstone=%s\n' \
+  printf 'required=%s missing=%s stone=%s service=%s host=%s net=%s gemstone=%s host_auth=%s\n' \
     "$(gbs_required_live_env_vars | paste -sd, -)" \
     "${missing:-none}" \
     "${GS_STONE:-gs64stone}" \
     "${GS_SERVICE:-gemnetobject}" \
     "${GS_NETLDI_HOST:-unset}" \
     "${GS_NETLDI_NAME_OR_PORT:-unset}" \
-    "${GEMSTONE:-unset}"
+    "${GEMSTONE:-unset}" \
+    "$(gbs_live_host_auth_status)"
 }
 
 gbs_normalize_live_env_vars

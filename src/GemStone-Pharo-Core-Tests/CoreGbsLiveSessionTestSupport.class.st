@@ -13,7 +13,7 @@ Class {
 
 { #category : 'private' }
 CoreGbsLiveSessionTestSupport class >> ensureSharedSession [
-	| currentSession user pass stone service netldiHost netldiNameOrPort params session |
+	| currentSession env user pass stone service netldiHost netldiNameOrPort params session |
 	currentSession := GbsSessionParameters currentSession.
 	(self sessionIsUsable: currentSession) ifTrue: [
 		[ self ensureTranscriptProxyInstalledOn: currentSession ] on: Error do: [ ].
@@ -25,16 +25,17 @@ CoreGbsLiveSessionTestSupport class >> ensureSharedSession [
 		lastUnavailableReason := nil.
 		^ ownedSession ].
 
-	user := self envAt: 'GS_USER' ifAbsent: [ '' ].
-	pass := self envAt: 'GS_PASS' ifAbsent: [ '' ].
+	env := self osEnvironment.
+	user := self envAtAny: #('GS_USER' 'GS_USERNAME') in: env ifAbsent: [ '' ].
+	pass := self envAtAny: #('GS_PASS' 'GS_PASSWORD') in: env ifAbsent: [ '' ].
 	((user isEmpty) or: [ pass isEmpty ]) ifTrue: [
 		lastUnavailableReason := self missingCredentialsReason.
 		^ nil ].
 
-	stone := self envAt: 'GS_STONE' ifAbsent: [ 'gs64stone' ].
-	service := self envAt: 'GS_SERVICE' ifAbsent: [ 'gemnetobject' ].
-	netldiHost := self envAt: 'GS_NETLDI_HOST' ifAbsent: [ '' ].
-	netldiNameOrPort := self envAt: 'GS_NETLDI_NAME_OR_PORT' ifAbsent: [ '' ].
+	stone := self envAtAny: #('GS_STONE') in: env ifAbsent: [ 'gs64stone' ].
+	service := self envAtAny: #('GS_SERVICE') in: env ifAbsent: [ 'gemnetobject' ].
+	netldiHost := self envAtAny: #('GS_NETLDI_HOST' 'GS_HOST') in: env ifAbsent: [ '' ].
+	netldiNameOrPort := self envAtAny: #('GS_NETLDI_NAME_OR_PORT' 'GS_NETLDI') in: env ifAbsent: [ '' ].
 	previousCurrentSession := currentSession.
 	params := GbsSessionParameters new.
 	params
@@ -44,6 +45,7 @@ CoreGbsLiveSessionTestSupport class >> ensureSharedSession [
 		gemService: service.
 	netldiHost isEmpty ifFalse: [ params netldiHostOrIp: netldiHost ].
 	netldiNameOrPort isEmpty ifFalse: [ params netldiNameOrPort: netldiNameOrPort ].
+	self configureHostCredentialsOn: params fromEnvironment: env.
 
 	session := [ self withInteractiveNotificationsAnsweredDo: [ params login ] ] on: Error do: [ :ex |
 		lastUnavailableReason := 'Live GemStone login failed: ', ex messageText.
@@ -61,6 +63,22 @@ CoreGbsLiveSessionTestSupport class >> ensureSharedSession [
 	[ self ensureTranscriptProxyInstalledOn: session ] on: Error do: [ ].
 	lastUnavailableReason := nil.
 	^ session
+]
+
+{ #category : 'private' }
+CoreGbsLiveSessionTestSupport class >> configureHostCredentialsOn: params fromEnvironment: env [
+	| hostUser hostPassword |
+	hostUser := self
+		envAtAny: #('OKZ_GEMSTONE_HOST_USERNAME' 'GS_HOST_USERNAME' 'GS_NETLDI_HOST_USERNAME')
+		in: env
+		ifAbsent: [ '' ].
+	hostPassword := self
+		envAtAny: #('OKZ_GEMSTONE_HOST_PASSWORD' 'GS_HOST_PASSWORD' 'GS_NETLDI_HOST_PASSWORD')
+		in: env
+		ifAbsent: [ '' ].
+	hostUser isEmpty ifFalse: [ params hostUsername: hostUser ].
+	hostPassword isEmpty ifFalse: [ params hostPassword: hostPassword ].
+	^ params
 ]
 
 { #category : 'private' }
@@ -147,6 +165,21 @@ CoreGbsLiveSessionTestSupport class >> envAt: key ifAbsent: aBlock [
 	^ [ (self osEnvironment at: key ifAbsent: aBlock) asString ]
 		on: Error
 		do: [ aBlock value ]
+]
+
+{ #category : 'private' }
+CoreGbsLiveSessionTestSupport class >> envAtAny: keys in: env ifAbsent: aBlock [
+	keys do: [ :key | | value |
+		value := [
+			env
+				at: key
+				ifAbsent: [ nil ] ]
+			on: Error
+			do: [ nil ].
+		value ifNotNil: [
+			value := [ value asString trimBoth ] on: Error do: [ '' ].
+			value isEmpty ifFalse: [ ^ value ] ] ].
+	^ aBlock value
 ]
 
 { #category : 'private' }

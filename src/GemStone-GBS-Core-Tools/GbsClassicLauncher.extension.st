@@ -129,6 +129,30 @@ GbsClassicLauncher >> browseSessionStateReport [
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
+GbsClassicLauncher >> browseSessionLifecycleReport [
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	self inform: session objectSpace lifecycleReportText.
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
+GbsClassicLauncher >> browseReplicationPolicyReport [
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	self inform: (GbsReplicationPolicy forSession: session) reportText.
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
 GbsClassicLauncher >> browsePromptedSessionStateKeysReport [
 	| session rawKeys keys |
 	session := self sessionForBrowsing.
@@ -239,6 +263,22 @@ GbsClassicLauncher >> clearNamedObjectCache [
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
+GbsClassicLauncher >> flushExportSetReleaseOops [
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	[
+		self inform: session objectSpace flushExportSetReleaseOopsReportText.
+		^ true
+	] on: Error do: [ :ex |
+		self inform: 'Could not flush export-set release OOPs: ', ex messageText.
+		^ false ]
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
 GbsClassicLauncher >> menuSession [
 	| menu |
 	menu := self newMenu
@@ -248,6 +288,9 @@ GbsClassicLauncher >> menuSession [
 		addItem: [ :item | item name: 'Abort'; action: [ self doAbort ] ];
 		addItem: [ :item | item name: 'Named Object Cache Report'; action: [ self browseNamedObjectCacheReport ] ];
 		addItem: [ :item | item name: 'Clear Named Object Cache'; action: [ self clearNamedObjectCache ] ];
+		addItem: [ :item | item name: 'Replication Policy Report'; action: [ self browseReplicationPolicyReport ] ];
+		addItem: [ :item | item name: 'Session Lifecycle Report'; action: [ self browseSessionLifecycleReport ] ];
+		addItem: [ :item | item name: 'Flush GC Exported OOPs'; action: [ self flushExportSetReleaseOops ] ];
 		addItem: [ :item | item name: 'Typed Wrapper Autoload Report'; action: [ self browseTypedWrapperAutoloadReport ] ];
 		addItem: [ :item | item name: 'Typed Wrapper Lifecycle Report'; action: [ self browseTypedWrapperLifecycleReport ] ];
 		addItem: [ :item | item name: 'Stale Typed Wrapper Report'; action: [ self browseStaleTypedWrapperLifecycleReport ] ];

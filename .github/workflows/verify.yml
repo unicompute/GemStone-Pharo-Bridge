@@ -21,6 +21,8 @@ jobs:
       GS_NETLDI_NAME_OR_PORT: ${{ vars.GS_NETLDI_NAME_OR_PORT }}
       GS_USER: ${{ secrets.GS_USER }}
       GS_PASS: ${{ secrets.GS_PASS }}
+      OKZ_GEMSTONE_HOST_USERNAME: ${{ secrets.OKZ_GEMSTONE_HOST_USERNAME }}
+      OKZ_GEMSTONE_HOST_PASSWORD: ${{ secrets.OKZ_GEMSTONE_HOST_PASSWORD }}
       GBS_JSON_SUMMARY: "1"
       GBS_DEBUGGER_OPEN_MAX_MS: ${{ vars.GBS_DEBUGGER_OPEN_MAX_MS }}
       GBS_DEBUGGER_STACK_FETCH_MAX_MS: ${{ vars.GBS_DEBUGGER_STACK_FETCH_MAX_MS }}
@@ -57,6 +59,10 @@ jobs:
           test -n "${GS_STONE}" || { echo "GS_STONE is required for live debugger CI"; exit 1; }
           test -n "${GS_NETLDI_HOST}" || { echo "GS_NETLDI_HOST is required for live debugger CI"; exit 1; }
           test -n "${GS_NETLDI_NAME_OR_PORT}" || { echo "GS_NETLDI_NAME_OR_PORT is required for live debugger CI"; exit 1; }
+          if [[ -n "${OKZ_GEMSTONE_HOST_USERNAME}" || -n "${OKZ_GEMSTONE_HOST_PASSWORD}" ]]; then
+            test -n "${OKZ_GEMSTONE_HOST_USERNAME}" || { echo "OKZ_GEMSTONE_HOST_USERNAME is required when host auth password is set"; exit 1; }
+            test -n "${OKZ_GEMSTONE_HOST_PASSWORD}" || { echo "OKZ_GEMSTONE_HOST_PASSWORD is required when host auth username is set"; exit 1; }
+          fi
 
       - name: Run live GemStone environment check
         run: make live-env-check
@@ -149,6 +155,8 @@ jobs:
       GS_NETLDI_NAME_OR_PORT: ${{ vars.GS_NETLDI_NAME_OR_PORT }}
       GS_USER: ${{ secrets.GS_USER }}
       GS_PASS: ${{ secrets.GS_PASS }}
+      OKZ_GEMSTONE_HOST_USERNAME: ${{ secrets.OKZ_GEMSTONE_HOST_USERNAME }}
+      OKZ_GEMSTONE_HOST_PASSWORD: ${{ secrets.OKZ_GEMSTONE_HOST_PASSWORD }}
       GBS_JSON_SUMMARY: "1"
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     steps:
@@ -209,4 +217,84 @@ jobs:
             ${{ runner.temp }}/gbs-materialization-json-${{ matrix.live_target }}
             ${{ runner.temp }}/gbs-materialization-evidence-${{ matrix.live_target }}
             ${{ runner.temp }}/gbs-materialization-performance-trends-${{ matrix.live_target }}
+          if-no-files-found: ignore
+
+  replication-live:
+    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix:
+        live_target:
+          - pharo13-gemstone37
+    env:
+      PHARO_IMAGE: ${{ vars.PHARO_IMAGE }}
+      PHARO_WORK_DIR: ${{ vars.PHARO_WORK_DIR }}
+      GEMSTONE: ${{ vars.GEMSTONE }}
+      GS_STONE: ${{ vars.GS_STONE }}
+      GS_SERVICE: ${{ vars.GS_SERVICE }}
+      GS_NETLDI_HOST: ${{ vars.GS_NETLDI_HOST }}
+      GS_NETLDI_NAME_OR_PORT: ${{ vars.GS_NETLDI_NAME_OR_PORT }}
+      GS_USER: ${{ secrets.GS_USER }}
+      GS_PASS: ${{ secrets.GS_PASS }}
+      OKZ_GEMSTONE_HOST_USERNAME: ${{ secrets.OKZ_GEMSTONE_HOST_USERNAME }}
+      OKZ_GEMSTONE_HOST_PASSWORD: ${{ secrets.OKZ_GEMSTONE_HOST_PASSWORD }}
+      GBS_JSON_SUMMARY: "1"
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Configure evidence paths
+        run: |
+          {
+            echo "GBS_SUMMARY_FILE=${GITHUB_STEP_SUMMARY}"
+            echo "GBS_JSON_SUMMARY_DIR=${RUNNER_TEMP}/gbs-replication-json-${{ matrix.live_target }}"
+            echo "GBS_EVIDENCE_DIR=${RUNNER_TEMP}/gbs-replication-evidence-${{ matrix.live_target }}"
+            echo "GBS_REPLICATION_LIVE_TRENDS=${RUNNER_TEMP}/gbs-replication-live-trends-${{ matrix.live_target }}/replication-live-trends.jsonl"
+          } >> "${GITHUB_ENV}"
+          mkdir -p "${RUNNER_TEMP}/gbs-replication-json-${{ matrix.live_target }}" "${RUNNER_TEMP}/gbs-replication-evidence-${{ matrix.live_target }}" "${RUNNER_TEMP}/gbs-replication-live-trends-${{ matrix.live_target }}"
+
+      - name: Restore replication live trend history
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/gbs-replication-live-trends-${{ matrix.live_target }}
+          key: replication-live-trends-${{ matrix.live_target }}-${{ runner.os }}-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            replication-live-trends-${{ matrix.live_target }}-${{ runner.os }}-${{ github.ref_name }}-
+            replication-live-trends-${{ matrix.live_target }}-${{ runner.os }}-
+
+      - name: Run optional live replication lane
+        run: |
+          missing=()
+          for var in PHARO_IMAGE PHARO_WORK_DIR GEMSTONE GS_USER GS_PASS; do
+            if [[ -z "${!var:-}" ]]; then
+              missing+=("${var}")
+            fi
+          done
+          if (( ${#missing[@]} > 0 )); then
+            echo "Skipping live replication lane; missing ${missing[*]}."
+            echo "### Replication Live Validation" >> "${GITHUB_STEP_SUMMARY}"
+            echo "- result: \`SKIP\`" >> "${GITHUB_STEP_SUMMARY}"
+            echo "- missing: \`${missing[*]}\`" >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+          echo "Running live replication lane for ${{ matrix.live_target }}; connector/clamp and native dirty-store fallbacks are hard failures."
+          make replication-live
+
+      - name: Save replication live trend history
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/gbs-replication-live-trends-${{ matrix.live_target }}
+          key: replication-live-trends-${{ matrix.live_target }}-${{ runner.os }}-${{ github.ref_name }}-${{ github.run_id }}
+
+      - name: Upload replication live evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: replication-live-evidence-${{ matrix.live_target }}
+          path: |
+            ${{ runner.temp }}/gbs-replication-json-${{ matrix.live_target }}
+            ${{ runner.temp }}/gbs-replication-evidence-${{ matrix.live_target }}
+            ${{ runner.temp }}/gbs-replication-live-trends-${{ matrix.live_target }}
           if-no-files-found: ignore

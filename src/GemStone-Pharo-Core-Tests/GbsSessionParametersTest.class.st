@@ -30,6 +30,38 @@ GbsSessionParametersTest >> testInterpretErrorMessageTreatsInvalidPasswordTextAs
 ]
 
 { #category : 'tests' }
+GbsSessionParametersTest >> testLiveSessionSupportAppliesHostCredentialsFromOkzEnvironment [
+	| params env |
+	params := GbsSessionParameters new.
+	env := Dictionary newFromPairs: {
+		'OKZ_GEMSTONE_HOST_USERNAME'. ' host-user '.
+		'OKZ_GEMSTONE_HOST_PASSWORD'. ' host-secret ' }.
+
+	CoreGbsLiveSessionTestSupport
+		configureHostCredentialsOn: params
+		fromEnvironment: env.
+
+	self assert: params hostUsername equals: 'host-user'.
+	self assert: params hostPassword equals: 'host-secret'
+]
+
+{ #category : 'tests' }
+GbsSessionParametersTest >> testLiveSessionSupportAppliesHostCredentialsFromShortAliases [
+	| params env |
+	params := GbsSessionParameters new.
+	env := Dictionary newFromPairs: {
+		'GS_HOST_USERNAME'. 'host-user'.
+		'GS_HOST_PASSWORD'. 'host-secret' }.
+
+	CoreGbsLiveSessionTestSupport
+		configureHostCredentialsOn: params
+		fromEnvironment: env.
+
+	self assert: params hostUsername equals: 'host-user'.
+	self assert: params hostPassword equals: 'host-secret'
+]
+
+{ #category : 'tests' }
 GbsSessionParametersTest >> testConnectionSummaryIncludesNormalizedNetworkFields [
 	| params summary |
 	params := GbsSessionParameters new.

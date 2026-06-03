@@ -14,6 +14,8 @@ GS_STONE_VALUE="${GS_STONE:-gs64stone}"
 GS_SERVICE_VALUE="${GS_SERVICE:-gemnetobject}"
 GS_NETLDI_HOST_VALUE="${GS_NETLDI_HOST:-localhost}"
 GS_NETLDI_NAME_OR_PORT_VALUE="${GS_NETLDI_NAME_OR_PORT:-netldi}"
+OKZ_GEMSTONE_HOST_USERNAME_VALUE="${OKZ_GEMSTONE_HOST_USERNAME:-${GS_HOST_USERNAME:-}}"
+OKZ_GEMSTONE_HOST_PASSWORD_VALUE="${OKZ_GEMSTONE_HOST_PASSWORD:-${GS_HOST_PASSWORD:-}}"
 
 DO_CHECK=0
 DO_SET_VARS=0
@@ -30,7 +32,7 @@ Usage: scripts/setup_github_self_hosted_runner.sh [options]
 Options:
   --check             Print current repo variables/secrets/runners.
   --set-vars          Set non-secret GitHub Actions variables for live CI.
-  --set-secrets       Set GS_USER/GS_PASS secrets from the current environment.
+  --set-secrets       Set GS_USER/GS_PASS secrets and optional host-auth secrets from the current environment.
   --configure-runner  Download/configure a local self-hosted runner for this repo.
   --install-service   Install the configured runner as a macOS LaunchAgent.
   --start-service     Start the LaunchAgent runner service.
@@ -40,9 +42,9 @@ Options:
 Environment overrides:
   GBS_GITHUB_REPO, GBS_RUNNER_DIR, GBS_RUNNER_NAME, GBS_RUNNER_LABELS, GBS_RUNNER_WORK
   PHARO_IMAGE, PHARO_WORK_DIR, GEMSTONE, GS_STONE, GS_SERVICE, GS_NETLDI_HOST, GS_NETLDI_NAME_OR_PORT
-  GS_USER, GS_PASS
+  GS_USER, GS_PASS, optional OKZ_GEMSTONE_HOST_USERNAME, OKZ_GEMSTONE_HOST_PASSWORD
 
-This script never prints GS_PASS. If --set-secrets is used, GS_USER and GS_PASS must already be exported.
+This script never prints passwords. If --set-secrets is used, GS_USER and GS_PASS must already be exported.
 USAGE
 }
 
@@ -67,6 +69,17 @@ set_repo_secret_from_env() {
     echo "Missing ${name}; export it before --set-secrets." >&2
     exit 2
   }
+  printf '%s' "$value" | gh secret set "$name" --repo "$REPO" >/dev/null
+  echo "SET_REPO_SECRET ${name}"
+}
+
+set_repo_optional_secret() {
+  local name="$1"
+  local value="$2"
+  if [[ -z "${value}" ]]; then
+    echo "SKIP_REPO_SECRET ${name} unset"
+    return 0
+  fi
   printf '%s' "$value" | gh secret set "$name" --repo "$REPO" >/dev/null
   echo "SET_REPO_SECRET ${name}"
 }
@@ -183,6 +196,8 @@ fi
 if [[ "$DO_SET_SECRETS" -eq 1 ]]; then
   set_repo_secret_from_env GS_USER
   set_repo_secret_from_env GS_PASS
+  set_repo_optional_secret OKZ_GEMSTONE_HOST_USERNAME "$OKZ_GEMSTONE_HOST_USERNAME_VALUE"
+  set_repo_optional_secret OKZ_GEMSTONE_HOST_PASSWORD "$OKZ_GEMSTONE_HOST_PASSWORD_VALUE"
 fi
 
 if [[ "$DO_CONFIGURE" -eq 1 ]]; then

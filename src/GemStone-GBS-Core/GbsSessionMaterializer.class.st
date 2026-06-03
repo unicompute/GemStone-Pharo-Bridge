@@ -112,15 +112,19 @@ GbsSessionMaterializer >> isImmediateOop: anOop [
 
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeArrayOop: anOop withProfile: aProfile depth: anInteger seen: seenOops [
-	| elementOops materialized materializedElements |
+	| elementOops materialized materializedElements nestedProfile |
 	self materializedObjectForOop: anOop ifPresent: [ :object | ^ object ].
 	elementOops := self remoteArrayElementOopsForOop: anOop.
 	materialized := Array new: elementOops size.
 	self rememberMaterializedObject: materialized forOop: anOop.
 	seenOops add: anOop.
+	nestedProfile := aProfile
+		nestedProfileForIndexedPartOfClassNamed: 'Array'
+		inSession: session
+		depth: anInteger.
 	materializedElements := self
 		materializeOops: elementOops
-		withProfile: aProfile
+		withProfile: nestedProfile
 		depth: anInteger + 1
 		seen: seenOops.
 	self withDirtyTrackingSuspendedDo: [
@@ -131,17 +135,33 @@ GbsSessionMaterializer >> materializeArrayOop: anOop withProfile: aProfile depth
 
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeAssociationOop: anOop withProfile: aProfile depth: anInteger seen: seenOops [
-	| pair materialized association |
+	| pair materialized association keyProfile valueProfile |
 	self materializedObjectForOop: anOop ifPresent: [ :object | ^ object ].
 	pair := self remoteAssociationOopPairForOop: anOop.
 	association := Association new.
 	self rememberMaterializedObject: association forOop: anOop.
 	seenOops add: anOop.
-	materialized := self
-		materializeOops: pair
-		withProfile: aProfile
-		depth: anInteger + 1
-		seen: seenOops.
+	keyProfile := aProfile
+		nestedProfileForNamedSlot: 1
+		ofClassNamed: 'Association'
+		inSession: session
+		depth: anInteger.
+	valueProfile := aProfile
+		nestedProfileForNamedSlot: 2
+		ofClassNamed: 'Association'
+		inSession: session
+		depth: anInteger.
+	materialized := {
+		(self
+			materializeOops: { pair first }
+			withProfile: keyProfile
+			depth: anInteger + 1
+			seen: seenOops) first.
+		(self
+			materializeOops: { pair second }
+			withProfile: valueProfile
+			depth: anInteger + 1
+			seen: seenOops) first }.
 	self withDirtyTrackingSuspendedDo: [
 		association
 			key: materialized first;

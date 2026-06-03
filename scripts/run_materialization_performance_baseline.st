@@ -1,4 +1,4 @@
-| loadFailed supportClass proxyClass session env integerEnv millisecondsToRun metricValue arraySize dictionarySize shallowSize mixedSize businessSize arrayOop dictionaryOop shallowOop mixedOop businessOop arrayResult dictionaryResult shallowResult mixedResult businessResult arrayMs dictionaryMs shallowMs mixedMs businessMs shallowMetrics mixedMetrics businessMetrics fixtureKey cleanupFixture phase |
+| loadFailed supportClass proxyClass clampManagerClass session env integerEnv millisecondsToRun metricValue arraySize dictionarySize shallowSize mixedSize businessSize arrayOop dictionaryOop shallowOop mixedOop businessOop clampedOop arrayResult dictionaryResult shallowResult mixedResult businessResult clampedResult arrayMs dictionaryMs shallowMs mixedMs businessMs clampedMs shallowMetrics mixedMetrics businessMetrics clampedMetrics fixtureKey cleanupFixture phase |
 [
   loadFailed := false.
   cleanupFixture := [ ].
@@ -50,6 +50,9 @@
       proxyClass := Smalltalk at: #GbsProxy ifAbsent: [ nil ].
       proxyClass ifNil: [
         Error signal: 'Missing proxy class.' ].
+      clampManagerClass := Smalltalk at: #GbxClampManager ifAbsent: [ nil ].
+      clampManagerClass ifNil: [
+        Error signal: 'Missing clamp manager class.' ].
       session := supportClass ensureSharedSession.
       (supportClass sessionIsUsable: session) ifFalse: [
         Error signal: supportClass unavailableReason ].
@@ -333,6 +336,43 @@ root'
           and: [ ((businessResult at: #proxy) isKindOf: proxyClass) ] ] ] ] ] ]) ifFalse: [
             Error signal: 'Business graph materialization produced an unexpected result.' ].
 
+        phase := 'clamped-fixture'.
+        clampedOop := session
+          returnRemoteCommandBody: '| fixture association |
+fixture := UserGlobals at: fixtureKey ifAbsentPut: [ Dictionary new ].
+association := Association key: 101 value: 202.
+fixture at: #clamped put: association.
+association'
+          literalBindings: (Dictionary new
+            at: 'fixtureKey' put: fixtureKey;
+            yourself)
+          oopBindings: Dictionary new.
+
+        [ session clearProxyCache. session clearRemoteClassNameCache ] on: Error do: [ ].
+        phase := 'clamped-fetch-mode'.
+        session fetchDeep.
+        (clampManagerClass forSession: session) defaultReplicationScheme
+          updateInstVarLevelsForClass: Association
+          serverInstVarNames: #('key' 'value')
+          replicationSpec: #(
+            #(#key #replicate)
+            #(#value #replicate)).
+        phase := 'clamped-materialization'.
+        clampedMs := millisecondsToRun value: [
+          clampedResult := session fetchObject: clampedOop ].
+        clampedMetrics := session materializationMetrics copy.
+        phase := 'clamped-verification'.
+        ((clampedResult key = 101)
+          and: [ clampedResult value = 202 ]) ifFalse: [
+            Error signal: 'Clamped materialization produced an unexpected result.' ].
+        (metricValue value: clampedMetrics value: #clampedTraversalBufferFetchCalls) <= 0 ifTrue: [
+          Error signal: 'Clamped materialization did not use GciClampedTrav.' ].
+        (metricValue value: clampedMetrics value: #structuredTraversalBufferFallbacks) = 0 ifFalse: [
+          Error signal: 'Clamped materialization fell back from traversal-buffer transport',
+            ' association_pair_traversal_fallbacks=', (metricValue value: clampedMetrics value: #associationPairTraversalBufferFallbacks) asString,
+            ' traversal_fetches=', (metricValue value: clampedMetrics value: #structuredTraversalBufferFetchCalls) asString,
+            ' clamped_fetches=', (metricValue value: clampedMetrics value: #clampedTraversalBufferFetchCalls) asString ].
+
         Transcript
           show: 'MATERIALIZATION_PERF_BASELINE result=OK code=MATERIALIZATION_PERF_OK',
             ' array_ms=', arrayMs asString,
@@ -340,6 +380,7 @@ root'
             ' shallow_ms=', shallowMs asString,
             ' mixed_ms=', mixedMs asString,
             ' business_ms=', businessMs asString,
+            ' clamped_ms=', clampedMs asString,
             ' array_size=', arraySize asString,
             ' dictionary_size=', dictionarySize asString,
             ' shallow_size=', shallowSize asString,
@@ -389,7 +430,12 @@ root'
             ' business_structured_traversal_byte_fetches=', (metricValue value: businessMetrics value: #structuredTraversalByteFetchCalls) asString,
             ' business_structured_traversal_buffer_fetches=', (metricValue value: businessMetrics value: #structuredTraversalBufferFetchCalls) asString,
             ' business_structured_traversal_buffer_reports=', (metricValue value: businessMetrics value: #structuredTraversalReportCount) asString,
-            ' business_structured_byte_fallbacks=', ((metricValue value: businessMetrics value: #structuredByteBatchFallbacks) + (metricValue value: businessMetrics value: #structuredTraversalByteFallbacks) + (metricValue value: businessMetrics value: #structuredTraversalBufferFallbacks)) asString;
+            ' business_structured_byte_fallbacks=', ((metricValue value: businessMetrics value: #structuredByteBatchFallbacks) + (metricValue value: businessMetrics value: #structuredTraversalByteFallbacks) + (metricValue value: businessMetrics value: #structuredTraversalBufferFallbacks)) asString,
+            ' clamped_gci_traversal_fetches=', (metricValue value: clampedMetrics value: #clampedTraversalBufferFetchCalls) asString,
+            ' clamped_structured_traversal_buffer_fetches=', (metricValue value: clampedMetrics value: #structuredTraversalBufferFetchCalls) asString,
+            ' clamped_structured_traversal_buffer_reports=', (metricValue value: clampedMetrics value: #structuredTraversalReportCount) asString,
+            ' clamped_structured_traversal_buffer_fallbacks=', (metricValue value: clampedMetrics value: #structuredTraversalBufferFallbacks) asString,
+            ' clamped_association_pair_traversal_fallbacks=', (metricValue value: clampedMetrics value: #associationPairTraversalBufferFallbacks) asString;
           cr.
       ] ensure: [
         cleanupFixture value.

@@ -119,6 +119,7 @@ GemStonePharoContractTest >> testGeneratedLivePreflightPolicyMarkdownDescribesEn
 	self assert: (markdown includesSubstring: 'topaz-login').
 	self assert: (markdown includesSubstring: '## Summary Fields').
 	self assert: (markdown includesSubstring: 'stone_status').
+	self assert: (markdown includesSubstring: 'host_auth').
 	self assert: (markdown includesSubstring: '## Result Codes').
 	self assert: (markdown includesSubstring: 'LIVE_PREFLIGHT_GCI_ROUTE_FAILED')
 ]

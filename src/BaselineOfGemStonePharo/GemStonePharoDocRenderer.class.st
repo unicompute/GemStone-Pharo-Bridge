@@ -600,7 +600,7 @@ GemStonePharoDocRenderer >> generatedMaglevBranchUsageMarkdown [
 			nextPutAll: 'Common wrapper entry points:'; cr;
 			nextPutAll: '- `make original PHARO_IMAGE="..." PHARO_WORK_DIR="..."`'; cr;
 			nextPutAll: '- `make original-tests PHARO_IMAGE="..." PHARO_WORK_DIR="..."`'; cr;
-			nextPutAll: '- `make full PHARO_IMAGE="..." PHARO_WORK_DIR="..." GS_USER=... GS_PASS=... GS_NETLDI_HOST=... GS_NETLDI_NAME_OR_PORT=... GEMSTONE=...`'; cr; cr;
+			nextPutAll: '- `make full PHARO_IMAGE="..." PHARO_WORK_DIR="..." GS_USER=... GS_PASS=... GS_NETLDI_HOST=... GS_NETLDI_NAME_OR_PORT=... OKZ_GEMSTONE_HOST_USERNAME=... OKZ_GEMSTONE_HOST_PASSWORD=... GEMSTONE=...`'; cr; cr;
 			nextPutAll: '## Does The Classic Session Example Still Work?'; cr; cr;
 			nextPutAll: 'Yes.'; cr; cr;
 			nextPutAll: '- `GbsSessionParameters>>login` still returns a `GbsSession`'; cr;
@@ -777,6 +777,8 @@ GemStonePharoDocRenderer >> generatedUserManualReferenceHtml [
 			nextPutAll: 'GS_PASS=''...'' \'; cr;
 			nextPutAll: 'GS_NETLDI_HOST=''localhost'' \'; cr;
 			nextPutAll: 'GS_NETLDI_NAME_OR_PORT=''50377'' \'; cr;
+			nextPutAll: 'OKZ_GEMSTONE_HOST_USERNAME=''host-user'' \'; cr;
+			nextPutAll: 'OKZ_GEMSTONE_HOST_PASSWORD=''...'' \'; cr;
 			nextPutAll: 'GEMSTONE=''/Users/tariq/GemStone64Bit3.7.5-arm64.Darwin'' \'; cr;
 			nextPutAll: 'make full</code></pre>'; cr;
 			nextPutAll: '  <h2>No-compatibility Proof</h2>'; cr;
@@ -907,7 +909,7 @@ GemStonePharoDocRenderer >> generatedReadmeBodyMarkdown [
 			nextPutAll: '```bash'; cr;
 			nextPutAll: 'make original PHARO_IMAGE="..." PHARO_WORK_DIR="..."'; cr;
 			nextPutAll: 'make original-tests PHARO_IMAGE="..." PHARO_WORK_DIR="..."'; cr;
-			nextPutAll: 'make full PHARO_IMAGE="..." PHARO_WORK_DIR="..." GS_USER=... GS_PASS=... GS_NETLDI_HOST=... GS_NETLDI_NAME_OR_PORT=... GEMSTONE=...'; cr;
+			nextPutAll: 'make full PHARO_IMAGE="..." PHARO_WORK_DIR="..." GS_USER=... GS_PASS=... GS_NETLDI_HOST=... GS_NETLDI_NAME_OR_PORT=... OKZ_GEMSTONE_HOST_USERNAME=... OKZ_GEMSTONE_HOST_PASSWORD=... GEMSTONE=...'; cr;
 			nextPutAll: 'make verify PHARO_IMAGE="..." PHARO_WORK_DIR="..."'; cr;
 			nextPutAll: '```'; cr; cr;
 			nextPutAll: '## Session Examples'; cr; cr;
@@ -961,7 +963,8 @@ GemStonePharoDocRenderer >> generatedReadmeBodyMarkdown [
 			nextPutAll: '- `make full`: run the full developer load and live GemStone lane when credentials are present'; cr;
 			nextPutAll: '- `make verify`: run all maintained lanes and artifact freshness checks'; cr; cr;
 			nextPutAll: 'The live lanes use `GS_USER`, `GS_PASS`, `GS_STONE`, `GS_SERVICE`,'; cr;
-			nextPutAll: '`GS_NETLDI_HOST`, `GS_NETLDI_NAME_OR_PORT`, and `GEMSTONE` when supplied.'; cr; cr;
+			nextPutAll: '`GS_NETLDI_HOST`, `GS_NETLDI_NAME_OR_PORT`, `OKZ_GEMSTONE_HOST_USERNAME`,'; cr;
+			nextPutAll: '`OKZ_GEMSTONE_HOST_PASSWORD`, and `GEMSTONE` when supplied.'; cr; cr;
 			nextPutAll: '## More Documentation'; cr; cr;
 			nextPutAll: '- [doc/MAGLEV-BRANCH-USAGE.md](doc/MAGLEV-BRANCH-USAGE.md): practical MagLev load and session examples'; cr;
 			nextPutAll: '- [doc/LOAD-MATRIX.md](doc/LOAD-MATRIX.md): load groups and switch recipes'; cr;
@@ -1114,6 +1117,8 @@ GemStonePharoDocRenderer >> generatedUserManualTestingHtml [
 			nextPutAll: 'GS_PASS=''...'' \'; cr;
 			nextPutAll: 'GS_NETLDI_HOST=''localhost'' \'; cr;
 			nextPutAll: 'GS_NETLDI_NAME_OR_PORT=''50377'' \'; cr;
+			nextPutAll: 'OKZ_GEMSTONE_HOST_USERNAME=''host-user'' \'; cr;
+			nextPutAll: 'OKZ_GEMSTONE_HOST_PASSWORD=''...'' \'; cr;
 			nextPutAll: 'GEMSTONE=''/Users/tariq/GemStone64Bit3.7.5-arm64.Darwin'' \'; cr;
 			nextPutAll: 'make full</code></pre>'; cr;
 			nextPutAll: '    <h3>No-compatibility proof</h3>'; cr;

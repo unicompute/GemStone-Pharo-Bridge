@@ -53,6 +53,17 @@ GbsMaterializationTraversalBufferReader >> isAvailable [
 		and: [ interface respondsTo: #apiGciMoreTraversal: ] ] ]
 ]
 
+{ #category : 'traversal' }
+GbsMaterializationTraversalBufferReader >> clampedTraversalSpecOop [
+	| manager scheme |
+	manager := [ GbxClampManager forSession: session ] on: Error do: [ ^ nil ].
+	scheme := [ manager currentReplicationScheme ] on: Error do: [ ^ nil ].
+	scheme ifNil: [ ^ nil ].
+	^ GbsServerClampSpecificationSynchronizer
+		clampSpecOopForScheme: scheme
+		session: session
+]
+
 { #category : 'constants' }
 GbsMaterializationTraversalBufferReader >> objectReportHeaderBytes [
 	^ 40
@@ -140,6 +151,24 @@ GbsMaterializationTraversalBufferReader >> reportAt: traversalBuffer offset: off
 
 { #category : 'traversal' }
 GbsMaterializationTraversalBufferReader >> reportsForOops: oopCollection level: traversalLevel label: labelString [
+	^ self
+		reportsForOops: oopCollection
+		level: traversalLevel
+		label: labelString
+		useClampedTraversal: true
+]
+
+{ #category : 'traversal' }
+GbsMaterializationTraversalBufferReader >> plainReportsForOops: oopCollection level: traversalLevel label: labelString [
+	^ self
+		reportsForOops: oopCollection
+		level: traversalLevel
+		label: labelString
+		useClampedTraversal: false
+]
+
+{ #category : 'traversal' }
+GbsMaterializationTraversalBufferReader >> reportsForOops: oopCollection level: traversalLevel label: labelString useClampedTraversal: useClampedTraversal [
 	| reports completed |
 	oopCollection isEmpty ifTrue: [ ^ Dictionary new ].
 	self checkAvailable.
@@ -149,11 +178,12 @@ GbsMaterializationTraversalBufferReader >> reportsForOops: oopCollection level: 
 			self
 				withOopBufferFor: oopCollection
 				do: [ :oopBuffer |
-					completed := session serverInterface
-						apiGciTraverseOops: oopBuffer
+					completed := self
+						traverseOops: oopBuffer
 						count: oopCollection size
 						into: traversalBuffer
-						level: traversalLevel.
+						level: traversalLevel
+						useClampedTraversal: useClampedTraversal.
 					session checkForError.
 					self parseReportsFromBuffer: traversalBuffer into: reports label: labelString.
 					[ completed = 0 or: [ completed == false ] ] whileTrue: [
@@ -201,6 +231,50 @@ GbsMaterializationTraversalBufferReader >> traversalBufferBytesFromReplicationPo
 	(policy notNil and: [ policy respondsTo: #traversalBufferSize ]) ifTrue: [
 		^ policy traversalBufferSize ].
 	^ self defaultTraversalBufferBytes
+]
+
+{ #category : 'traversal' }
+GbsMaterializationTraversalBufferReader >> traverseOops: oopBuffer count: oopCount into: traversalBuffer level: traversalLevel [
+	^ self
+		traverseOops: oopBuffer
+		count: oopCount
+		into: traversalBuffer
+		level: traversalLevel
+		useClampedTraversal: true
+]
+
+{ #category : 'traversal' }
+GbsMaterializationTraversalBufferReader >> traverseOops: oopBuffer count: oopCount into: traversalBuffer level: traversalLevel useClampedTraversal: useClampedTraversal [
+	| clampSpecOop |
+	clampSpecOop := useClampedTraversal
+		ifTrue: [ self clampedTraversalSpecOop ]
+		ifFalse: [ nil ].
+	(useClampedTraversal and: [ self supportsClampedTraversal and: [ clampSpecOop notNil ] ]) ifTrue: [
+		session materializer incrementMaterializationMetric: #clampedTraversalBufferFetchCalls.
+		^ (GbsClampedTraversalArguments
+			clampSpecOop: clampSpecOop
+			traversalBuffer: traversalBuffer
+			level: traversalLevel
+			retrievalFlags: 0)
+				withNativeBufferDo: [ :clampedArgs |
+					session serverInterface
+						apiGciClampedTravOops: oopBuffer
+						count: oopCount
+						spec: clampedArgs ] ].
+	^ session serverInterface
+		apiGciTraverseOops: oopBuffer
+		count: oopCount
+		into: traversalBuffer
+		level: traversalLevel
+]
+
+{ #category : 'testing' }
+GbsMaterializationTraversalBufferReader >> supportsClampedTraversal [
+	| interface |
+	interface := session serverInterface.
+	(interface respondsTo: #supportsClampedTraversalTransport) ifTrue: [
+		^ interface supportsClampedTraversalTransport == true ].
+	^ interface respondsTo: #apiGciClampedTravOops:count:spec:
 ]
 
 { #category : 'private' }

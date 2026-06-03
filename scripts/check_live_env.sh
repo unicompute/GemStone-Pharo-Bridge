@@ -11,9 +11,11 @@ emit_live_env_summary() {
   local result="$1"
   local code="$2"
   local json_payload=""
+  local host_auth_status
+  host_auth_status="$(gbs_live_host_auth_status)"
   echo "LIVE_ENV_SUMMARY result=${result} code=${code} ${STATUS_LINE}"
   if [[ "${JSON_SUMMARY}" == "1" ]]; then
-    printf -v json_payload '{"result":"%s","code":"%s","required":"%s","missing":"%s","stone":"%s","service":"%s","host":"%s","net":"%s","gemstone":"%s"}' \
+    printf -v json_payload '{"result":"%s","code":"%s","required":"%s","missing":"%s","stone":"%s","service":"%s","host":"%s","net":"%s","gemstone":"%s","host_auth":"%s"}' \
       "$(gbs_json_escape "${result}")" \
       "$(gbs_json_escape "${code}")" \
       "$(gbs_required_live_env_vars | paste -sd, -)" \
@@ -22,7 +24,8 @@ emit_live_env_summary() {
       "$(gbs_json_escape "${GS_SERVICE:-gemnetobject}")" \
       "$(gbs_json_escape "${GS_NETLDI_HOST:-unset}")" \
       "$(gbs_json_escape "${GS_NETLDI_NAME_OR_PORT:-unset}")" \
-      "$(gbs_json_escape "${GEMSTONE:-unset}")"
+      "$(gbs_json_escape "${GEMSTONE:-unset}")" \
+      "$(gbs_json_escape "${host_auth_status}")"
     printf 'LIVE_ENV_SUMMARY_JSON %s\n' "${json_payload}"
     gbs_write_json_summary_file "live-env-summary.json" "${json_payload}"
   fi

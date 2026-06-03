@@ -356,6 +356,20 @@ GbsSessionMaterializationRemoteReader >> structuredBatchBytesForBody: bodyString
 ]
 
 { #category : 'private' }
+GbsSessionMaterializationRemoteReader >> plainTraversalBufferReportsForOops: oopCollection level: traversalLevel label: aString [
+	| reports |
+	self traversalBufferTransportAvailable ifFalse: [
+		self error: 'GCI traversal-buffer materialization transport is not available for this session.' ].
+	reports := (GbsMaterializationTraversalBufferReader on: session)
+		plainReportsForOops: oopCollection asArray
+		level: traversalLevel
+		label: aString.
+	self incrementMaterializationMetric: #structuredTraversalBufferFetchCalls.
+	self incrementMaterializationMetric: #structuredTraversalReportCount by: reports size.
+	^ reports
+]
+
+{ #category : 'private' }
 GbsSessionMaterializationRemoteReader >> traversalBufferReportsForOops: oopCollection level: traversalLevel label: aString [
 	| reports |
 	self traversalBufferTransportAvailable ifFalse: [
@@ -984,7 +998,8 @@ GbsSessionMaterializationRemoteReader >> remoteAssociationOopPairForOop: anOop [
 				on: Error
 				do: [
 					self prefersTraversalBufferTransport ifTrue: [
-						self incrementMaterializationMetric: #structuredTraversalBufferFallbacks ].
+						self incrementMaterializationMetric: #structuredTraversalBufferFallbacks.
+						self incrementMaterializationMetric: #associationPairTraversalBufferFallbacks ].
 					[ self remoteArrayElementOopsForOop: (self remoteAssociationPairOopFor: anOop) ]
 						on: Error
 						do: [ self parseOopPairLine: (session
@@ -1042,7 +1057,9 @@ GbsSessionMaterializationRemoteReader >> remoteAssociationOopPairDictionaryForOo
 				[
 					traversalFetched := self remoteAssociationOopPairDictionaryFromTraversalForOops: oopCollection ]
 					on: Error
-					do: [ self incrementMaterializationMetric: #structuredTraversalBufferFallbacks ] ].
+					do: [
+						self incrementMaterializationMetric: #structuredTraversalBufferFallbacks.
+						self incrementMaterializationMetric: #associationPairTraversalBufferFallbacks ] ].
 			traversalFetched ifNotNil: [ traversalFetched ] ifNil: [
 				[
 					self associationOopPairDictionaryFromStructuredSlots: (self
@@ -1303,7 +1320,7 @@ stream contents'
 GbsSessionMaterializationRemoteReader >> remoteClassNameDictionaryFromTraversalForOops: oopCollection [
 	| reports classNames |
 	reports := self
-		traversalBufferReportsForOops: oopCollection
+		plainTraversalBufferReportsForOops: oopCollection
 		level: 1
 		label: 'class-name traversal batch'.
 	classNames := Dictionary new.
@@ -2008,7 +2025,7 @@ GbsSessionMaterializationRemoteReader >> remoteStringValueDictionaryForOopsAdapt
 GbsSessionMaterializationRemoteReader >> remoteStringValueDictionaryFromTraversalForOops: oopCollection [
 	| reports values |
 	reports := self
-		traversalBufferReportsForOops: oopCollection
+		plainTraversalBufferReportsForOops: oopCollection
 		level: 1
 		label: 'string-value traversal batch'.
 	values := Dictionary new.
@@ -2166,7 +2183,7 @@ GbsSessionMaterializationRemoteReader >> remoteByteArrayValueDictionaryForOopsAd
 GbsSessionMaterializationRemoteReader >> remoteByteArrayValueDictionaryFromTraversalForOops: oopCollection [
 	| reports values |
 	reports := self
-		traversalBufferReportsForOops: oopCollection
+		plainTraversalBufferReportsForOops: oopCollection
 		level: 1
 		label: 'byte-array traversal batch'.
 	values := Dictionary new.

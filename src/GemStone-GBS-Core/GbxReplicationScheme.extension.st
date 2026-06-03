@@ -24,12 +24,23 @@ GbxReplicationScheme class >> stub [
 
 { #category : '*GemStone-GBS-Core' }
 GbxReplicationScheme >> clamp [
-	^ clamp
+	^ clamp ifNil: [ clamp := GbxClampSpecification new ]
 ]
 
 { #category : '*GemStone-GBS-Core' }
 GbxReplicationScheme >> clamp: aClamp [
 	clamp := aClamp
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> dictionaryFormOfReplicationSpec: replicationSpec [
+	| specs |
+	specs := Dictionary new.
+	replicationSpec do: [ :specArray |
+		(specArray size between: 2 and: 3)
+			ifFalse: [ self error: 'Each element of a replication spec should be a two- or three-element array.' ].
+		specs at: specArray first asString put: specArray ].
+	^ specs
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -44,6 +55,22 @@ GbxReplicationScheme >> forwarderOffsetsFor: aClass put: offsets [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> forwarderOffsetsForClass: aClass [
+	^ self forwarderOffsetsFor: aClass
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> forwarderOffsetsForClass: aClass put: offsets [
+	^ self forwarderOffsetsFor: aClass put: offsets
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> hasServerClampMetadata [
+	^ self serverClampInstVarLevelEntries isEmpty not
+		or: [ self clamp instVarLevelsSelector notNil ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxReplicationScheme >> initialize [
 	super initialize.
 	indexedInstvarsShouldBeForwardersDict := IdentityDictionary new.
@@ -55,6 +82,40 @@ GbxReplicationScheme >> initialize [
 { #category : '*GemStone-GBS-Core' }
 GbxReplicationScheme >> invalidate [
 	isValid := false
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> indexedInstvarsShouldBeForwardersInClass: aClass [
+	^ indexedInstvarsShouldBeForwardersDict
+		at: aClass
+		ifAbsent: [ false ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> indexedInstvarsShouldBeForwardersInClass: aClass put: aBoolean [
+	indexedInstvarsShouldBeForwardersDict at: aClass put: aBoolean.
+	^ aBoolean
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> instVarLevelForReplicationSpec: rawInstVarLevelsSpec [
+	| operator level |
+	operator := (rawInstVarLevelsSpec at: 2) asSymbol.
+	operator = #forwarder ifTrue: [ ^ false ].
+	operator = #stub ifTrue: [ ^ 0 ].
+	operator = #replicate ifTrue: [ ^ nil ].
+	operator = #max ifTrue: [
+		level := rawInstVarLevelsSpec at: 3.
+		^ level < 0 ifTrue: [ 0 ] ifFalse: [ level ] ].
+	operator = #min ifTrue: [
+		level := rawInstVarLevelsSpec at: 3.
+		^ level <= 0 ifTrue: [ nil ] ifFalse: [ level negated ] ].
+	self error: 'Illegal operator "', operator asString, '" in a replicationSpec.'
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> instVarLevelsForClass: aClass [
+	^ self clamp instVarLevelsForClass: aClass
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -78,6 +139,36 @@ GbxReplicationScheme >> isStub [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> removeArtefactsForClass: aClass [
+	^ self
+		updateInstVarLevels: nil
+		forwarderOffsets: nil
+		forwardIndexedPart: nil
+		forClass: aClass
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> replaceForwarderOffsetsForClass: aClass with: offsets [
+	offsets
+		ifNil: [ forwarderOffsetsDict removeKey: aClass ifAbsent: [ ] ]
+		ifNotNil: [ forwarderOffsetsDict at: aClass put: offsets asArray ].
+	^ offsets
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> replaceIndexedInstvarsShoudBeForwardersForClass: aClass with: aBooleanOrNil [
+	aBooleanOrNil
+		ifNil: [ indexedInstvarsShouldBeForwardersDict removeKey: aClass ifAbsent: [ ] ]
+		ifNotNil: [ indexedInstvarsShouldBeForwardersDict at: aClass put: aBooleanOrNil ].
+	^ aBooleanOrNil
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> replaceInstVarLevelsForClass: aClass with: levelsArray [
+	^ self clamp replaceInstVarLevelsForClass: aClass with: levelsArray
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxReplicationScheme >> selector [
 	^ selector
 ]
@@ -88,8 +179,49 @@ GbxReplicationScheme >> selector: aSelector [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> serverClampInstVarLevelEntries [
+	| entries |
+	entries := OrderedCollection new.
+	self clamp instVarLevels associationsDo: [ :association |
+		association value ifNotNil: [
+			entries add: {
+				association key name asString.
+				association value asArray } ] ].
+	^ (entries asArray sorted: [ :left :right | left first < right first ])
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> serverClampSpecificationFingerprint [
+	^ {
+		self selector.
+		self serverClampInstVarLevelEntries.
+		self clamp addSubleafHeaders.
+		self clamp environmentId.
+		self clamp instVarLevelsSelector.
+		self clamp traversalCallBackSelector }
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxReplicationScheme >> shouldAutoMarkDirty [
 	^ self shouldReplicate
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> shouldBeForwarderForReplicationSpec: rawInstVarLevelsSpec [
+	^ (rawInstVarLevelsSpec at: 2) asSymbol = #forwarder
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> shouldProxyIndexedInstvarsOfClass: aClass [
+	^ self indexedInstvarsShouldBeForwardersInClass: aClass
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> shouldProxyNamedSlot: slotIndex ofClass: aClass [
+	| offsets |
+	offsets := self forwarderOffsetsForClass: aClass.
+	(slotIndex between: 1 and: offsets size) ifFalse: [ ^ false ].
+	^ offsets at: slotIndex
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -101,4 +233,73 @@ GbxReplicationScheme >> shouldReplicate [
 { #category : '*GemStone-GBS-Core' }
 GbxReplicationScheme >> shouldStub [
 	^ self isValid and: [ self isStub ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> updateForClampingByCallback: aBoolean inSession: aSession [
+	self clamp instVarLevelsSelector: (aBoolean
+		ifTrue: [ self traversalCallbackSelectorForSession: aSession ]
+		ifFalse: [ nil ])
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> updateInstVarLevels: instVarLevels forwarderOffsets: forwarderOffsets forwardIndexedPart: indexedShouldBeForwarders forClass: aClass [
+	self
+		replaceInstVarLevelsForClass: aClass with: instVarLevels;
+		replaceForwarderOffsetsForClass: aClass with: forwarderOffsets;
+		replaceIndexedInstvarsShoudBeForwardersForClass: aClass
+			with: indexedShouldBeForwarders.
+	^ instVarLevels
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> updateInstVarLevelsForClass: aClass serverInstVarNames: serverInstVarNames replicationSpec: replicationSpec [
+	| specs namedLevels indexedSpec forwarderOffsets forwardIndexed |
+	replicationSpec ifNil: [ ^ self removeArtefactsForClass: aClass ].
+	replicationSpec = #callback ifTrue: [
+		^ self
+			updateInstVarLevels: nil
+			forwarderOffsets: (Array new: serverInstVarNames size withAll: false)
+			forwardIndexedPart: false
+			forClass: aClass ].
+	specs := self dictionaryFormOfReplicationSpec: replicationSpec.
+	namedLevels := serverInstVarNames collect: [ :name |
+		| spec |
+		spec := specs at: name asString ifAbsent: [ nil ].
+		spec ifNil: [ nil ] ifNotNil: [ self instVarLevelForReplicationSpec: spec ] ].
+	indexedSpec := specs at: 'indexable_part' ifAbsent: [ nil ].
+	forwarderOffsets := serverInstVarNames collect: [ :name |
+		| spec |
+		spec := specs at: name asString ifAbsent: [ nil ].
+		spec notNil and: [ self shouldBeForwarderForReplicationSpec: spec ] ].
+	forwardIndexed := indexedSpec notNil and: [
+		self shouldBeForwarderForReplicationSpec: indexedSpec ].
+	^ self
+		updateInstVarLevels: (namedLevels copyWith:
+			(indexedSpec ifNil: [ nil ] ifNotNil: [
+				self instVarLevelForReplicationSpec: indexedSpec ]))
+		forwarderOffsets: forwarderOffsets
+		forwardIndexedPart: forwardIndexed
+		forClass: aClass
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> traversalCallbackSelectorForSession: aSession [
+	| policy |
+	policy := [ GbsReplicationPolicy forSession: aSession ] on: Error do: [ nil ].
+	(policy notNil and: [ policy respondsTo: #traversalCallBackSelector ]) ifTrue: [
+		^ policy traversalCallBackSelector ].
+	^ self clamp traversalCallBackSelector
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> transitiveClosureSpecForReplicationSpec: replicationSpec [
+	replicationSpec ifNil: [ ^ #() ].
+	replicationSpec = #callback ifTrue: [ ^ #() ].
+	^ replicationSpec select: [ :specArray |
+		| operator |
+		specArray size < 2 ifTrue: [
+			self error: 'Each element of a replication spec should include an instvar name and operator.' ].
+		operator := (specArray at: 2) asSymbol.
+		(#(#min #max #stub) includes: operator) not ]
 ]

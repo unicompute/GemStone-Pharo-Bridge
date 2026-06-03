@@ -19,7 +19,7 @@ runnerClass ifNil: [
 runnerClass
 	ifNil: [
 		logLine value: 'LIVE_PREFLIGHT_FAILED missing GemStonePharoVerificationRunner'.
-		logLine value: 'LIVE_PREFLIGHT_SUMMARY result=FAIL code=LIVE_PREFLIGHT_RUNNER_FAILED stone=gs64stone service=gemnetobject host=implicit net=implicit stone_status=unknown netldi_status=unknown topaz=failed gci=failed' ]
+		logLine value: 'LIVE_PREFLIGHT_SUMMARY result=FAIL code=LIVE_PREFLIGHT_RUNNER_FAILED stone=gs64stone service=gemnetobject host=implicit net=implicit stone_status=unknown netldi_status=unknown topaz=failed gci=failed host_auth=unknown' ]
 	ifNotNil: [
 		[ result := runnerClass
 			runPreflightOnEnvironment: Smalltalk os environment
@@ -28,7 +28,7 @@ runnerClass
 			on: Error
 			do: [ :ex |
 				logLine value: 'LIVE_PREFLIGHT_FAILED: ', ex messageText.
-				logLine value: 'LIVE_PREFLIGHT_SUMMARY result=FAIL code=LIVE_PREFLIGHT_RUNNER_FAILED stone=gs64stone service=gemnetobject host=implicit net=implicit stone_status=unknown netldi_status=unknown topaz=failed gci=failed'.
+				logLine value: 'LIVE_PREFLIGHT_SUMMARY result=FAIL code=LIVE_PREFLIGHT_RUNNER_FAILED stone=gs64stone service=gemnetobject host=implicit net=implicit stone_status=unknown netldi_status=unknown topaz=failed gci=failed host_auth=unknown'.
 				result := { #failed. 'LIVE_PREFLIGHT_RUNNER_FAILED' } ] ].
 
 Smalltalk snapshot: false andQuit: true.

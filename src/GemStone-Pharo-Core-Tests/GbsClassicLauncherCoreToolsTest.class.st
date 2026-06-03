@@ -23,6 +23,66 @@ GbsClassicLauncherCoreToolsTest >> tearDown [
 	super tearDown
 ]
 
+{ #category : 'helpers' }
+GbsClassicLauncherCoreToolsTest >> newFakeSettingsPresenterOn: aConfiguration [
+	| presenter field check drop setPair |
+	field := [ :value |
+		| fake |
+		fake := CoreGbxFakeTextPresenterForBrowser new.
+		fake text: value.
+		fake ].
+	check := [ :value |
+		| fake |
+		fake := CoreGbxFakeCheckBoxForBrowser new.
+		fake state: value.
+		fake ].
+	drop := [ :value |
+		| fake |
+		fake := CoreFakeDropList new.
+		fake selectedItem: value.
+		fake ].
+	presenter := GbsSettingsPresenter basicNew.
+	presenter configuration: aConfiguration.
+	presenter
+		instVarNamed: 'libraryField' put: (field value: '');
+		instVarNamed: 'initialCacheSizeField' put: (field value: '5,003');
+		instVarNamed: 'initialDirtyPoolField' put: (field value: '157');
+		instVarNamed: 'haltOnErrorField' put: (field value: '-1');
+		instVarNamed: 'faultLevelRpcField' put: (field value: '4');
+		instVarNamed: 'delayInterruptField' put: (field value: '10');
+		instVarNamed: 'traversalBufferField' put: (field value: '250,000');
+		instVarNamed: 'eventPollingField' put: (field value: '300');
+		instVarNamed: 'eventPriorityField' put: (field value: '3');
+		instVarNamed: 'blockReplicationPolicyDrop' put: (drop value: 'replicate');
+		instVarNamed: 'defaultFaultPolicyDrop' put: (drop value: 'lazy').
+	presenter bridgeControlAt: #freeOopBatchSizeField put: (field value: '256').
+	presenter bridgeControlAt: #serverMapModeDrop put: (drop value: 'weak').
+	presenter bridgeControlAt: #storeTraversalTransportDrop put: (drop value: 'script').
+	presenter bridgeControlAt: #asyncSignalPollingEnabledYes put: (check value: false).
+	presenter bridgeControlAt: #asyncSignalPollingEnabledNo put: (check value: true).
+	setPair := [ :yesName :noName :value |
+		presenter instVarNamed: yesName put: (check value: value).
+		presenter instVarNamed: noName put: (check value: value not) ].
+	setPair value: 'bulkLoadYes' value: 'bulkLoadNo' value: false.
+	setPair value: 'generateClassConnectorsYes' value: 'generateClassConnectorsNo' value: true.
+	setPair value: 'generateClientClassesYes' value: 'generateClientClassesNo' value: true.
+	setPair value: 'generateServerClassesYes' value: 'generateServerClassesNo' value: true.
+	setPair value: 'connectorNillingYes' value: 'connectorNillingNo' value: true.
+	setPair value: 'connectVerificationYes' value: 'connectVerificationNo' value: true.
+	setPair value: 'removeInvalidConnectorsYes' value: 'removeInvalidConnectorsNo' value: true.
+	setPair value: 'assertionChecksYes' value: 'assertionChecksNo' value: false.
+	setPair value: 'forwarderDebuggingYes' value: 'forwarderDebuggingNo' value: false.
+	setPair value: 'stubDebuggingYes' value: 'stubDebuggingNo' value: false.
+	setPair value: 'autoMarkDirtyYes' value: 'autoMarkDirtyNo' value: true.
+	setPair value: 'blockReplicationEnabledYes' value: 'blockReplicationEnabledNo' value: true.
+	setPair value: 'freeSlotsOnStubbingYes' value: 'freeSlotsOnStubbingNo' value: true.
+	setPair value: 'blockingProtocolRpcYes' value: 'blockingProtocolRpcNo' value: false.
+	setPair value: 'fullCompressionYes' value: 'fullCompressionNo' value: false.
+	setPair value: 'confirmYes' value: 'confirmNo' value: true.
+	setPair value: 'verboseYes' value: 'verboseNo' value: true.
+	^ presenter
+]
+
 { #category : 'tests' }
 GbsClassicLauncherCoreToolsTest >> testBrowseNamedObjectCacheReportUsesSelectedSessionCacheText [
 	| session cache |
@@ -69,6 +129,25 @@ GbsClassicLauncherCoreToolsTest >> testBrowseTypedWrapperLifecycleReportUsesSele
 	self assert: launcher browseTypedWrapperLifecycleReport.
 	self assert: launcher infoMessages size equals: 1.
 	self assert: (launcher infoMessages first includesSubstring: 'Typed Wrapper Lifecycle').
+	self assert: GbsSessionParameters currentSession == session
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testBrowseReplicationPolicyReportUsesSelectedSession [
+	| session policy |
+	session := CoreMockGbsSession new.
+	session isLoggedIn: true.
+	policy := GbsReplicationPolicy forSession: session.
+	policy
+		storeTraversalTransport: 'binaryRequired';
+		serverMapMode: 'strong'.
+	launcher forcedSession: session.
+
+	self assert: launcher browseReplicationPolicyReport.
+	self assert: launcher infoMessages size equals: 1.
+	self assert: (launcher infoMessages first includesSubstring: 'Replication Policy').
+	self assert: (launcher infoMessages first includesSubstring: 'storeTraversalTransport=''binaryRequired''').
+	self assert: (launcher infoMessages first includesSubstring: 'serverMapMode=''strong''').
 	self assert: GbsSessionParameters currentSession == session
 ]
 
@@ -240,6 +319,80 @@ GbsClassicLauncherCoreToolsTest >> testClearNamedObjectCacheClearsSelectedSessio
 ]
 
 { #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testBrowseSessionLifecycleReportUsesSelectedSessionLifecycle [
+	| session array message |
+	session := CoreMockGbsSession new.
+	session isLoggedIn: true.
+	session stubs at: #supportsReleaseOopsTransport put: true.
+	(GbsReplicationPolicy forSession: session)
+		freeOopBatchSize: 64;
+		serverMapMode: 'strong'.
+	array := Array with: 'mapped'.
+	session rememberMaterializedObject: array forOop: 9000.
+	GbsSessionLifecycleManager noteGcedOop: 9016 forSession: session.
+	GbsSessionLifecycleManager noteNoLongerReplicatedOop: 9024 forSession: session.
+	launcher forcedSession: session.
+
+	self assert: launcher browseSessionLifecycleReport.
+	self assert: launcher infoMessages size equals: 1.
+	message := launcher infoMessages first.
+	self assert: (message includesSubstring: 'Session Lifecycle').
+	self assert: (message includesSubstring: 'serverMapMode=strong').
+	self assert: (message includesSubstring: 'serverMapSize=1').
+	self assert: (message includesSubstring: 'gcedOopQueueSize=1').
+	self assert: (message includesSubstring: 'noLongerReplicatedOopQueueSize=1').
+	self assert: (message includesSubstring: 'freeOopDrainLimit=64').
+	self assert: (message includesSubstring: 'releaseOopsTransportAvailable=true').
+	self assert: (message includesSubstring: 'noLongerReplicatedStoreTraversalTransportAvailable=false').
+	self assert: GbsSessionParameters currentSession == session
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testFlushExportSetReleaseOopsReportsReleasedAndPendingQueues [
+	| session released message |
+	session := CoreMockGbsSession new.
+	session isLoggedIn: true.
+	session stubs at: #supportsReleaseOopsTransport put: true.
+	released := nil.
+	session stubs at: #releaseOops put: [ :oops |
+		released := oops asArray.
+		true ].
+	GbsSessionLifecycleManager noteGcedOop: 9000 forSession: session.
+	GbsSessionLifecycleManager noteGcedOop: 9016 forSession: session.
+	GbsSessionLifecycleManager noteNoLongerReplicatedOop: 9024 forSession: session.
+	launcher forcedSession: session.
+
+	self assert: launcher flushExportSetReleaseOops.
+	self assert: released equals: #(9000 9016).
+	self assert: launcher infoMessages size equals: 1.
+	message := launcher infoMessages first.
+	self assert: (message includesSubstring: 'Export Set Release Flush').
+	self assert: (message includesSubstring: 'gcedReleased=2').
+	self assert: (message includesSubstring: 'gcedReleasedOops=9000, 9016').
+	self assert: (message includesSubstring: 'noLongerReplicatedPending=1').
+	self assert: (message includesSubstring: 'noLongerReplicatedPendingOops=9024').
+	self assert: (message includesSubstring: 'gcedOopQueueSize=0').
+	self assert: (message includesSubstring: 'noLongerReplicatedOopQueueSize=1').
+	self assert: session objectSpace pendingGcedOopCount equals: 0.
+	self assert: session objectSpace pendingNoLongerReplicatedOopCount equals: 1.
+	self assert: GbsSessionParameters currentSession == session
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testFlushExportSetReleaseOopsReportsFailureWithoutDrainingQueue [
+	| session |
+	session := CoreMockGbsSession new.
+	session isLoggedIn: true.
+	GbsSessionLifecycleManager noteGcedOop: 9000 forSession: session.
+	launcher forcedSession: session.
+
+	self deny: launcher flushExportSetReleaseOops.
+	self assert: (launcher infoMessages first includesSubstring: 'Could not flush export-set release OOPs').
+	self assert: session objectSpace pendingGcedOops equals: #(9000).
+	self assert: GbsSessionParameters currentSession == session
+]
+
+{ #category : 'tests' }
 GbsClassicLauncherCoreToolsTest >> testClassicLauncherStaticUtilitiesUseBoundCommands [
 	| session trippyOop userName |
 	session := CoreMockGbsSession new.
@@ -280,6 +433,52 @@ GbsClassicLauncherCoreToolsTest >> testSessionParametersEditorRoundTripsNetldiFi
 
 	self assert: params netldiHostOrIp equals: 'gemstone.example.com'.
 	self assert: params netldiNameOrPort equals: 'gs64ldi'
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testSettingsPresenterPersistsReplicationLifecyclePolicyControls [
+	| previousConfiguration configuration presenter policy |
+	previousConfiguration := GbsConfiguration current.
+	[
+		configuration := GbsConfiguration new.
+		configuration initializeDefaults.
+		presenter := self newFakeSettingsPresenterOn: configuration.
+
+		(presenter bridgeControlAt: #freeOopBatchSizeField) text: '64'.
+		presenter selectDrop: (presenter instVarNamed: 'blockReplicationPolicyDrop') value: 'none'.
+		presenter selectDrop: (presenter instVarNamed: 'defaultFaultPolicyDrop') value: 'immediate'.
+		presenter selectDrop: (presenter bridgeControlAt: #serverMapModeDrop) value: 'strong'.
+		presenter selectDrop: (presenter bridgeControlAt: #storeTraversalTransportDrop) value: 'binaryRequired'.
+		(presenter bridgeControlAt: #asyncSignalPollingEnabledYes) state: true.
+		(presenter bridgeControlAt: #asyncSignalPollingEnabledNo) state: false.
+
+		self assert: presenter validationErrorMessage isNil.
+		presenter updateConfigurationFromPresenters.
+		policy := GbsReplicationPolicy fromConfiguration: configuration.
+
+		self assert: (configuration valueAt: #blockReplicationPolicy ifAbsent: nil) equals: 'none'.
+		self assert: (configuration valueAt: #defaultFaultPolicy ifAbsent: nil) equals: 'immediate'.
+		self assert: configuration freeOopBatchSize equals: 64.
+		self assert: configuration serverMapMode equals: 'strong'.
+		self assert: configuration storeTraversalTransport equals: 'binaryRequired'.
+		self assert: configuration asyncSignalPollingEnabled.
+		self assert: policy blockReplicationPolicySymbol equals: #none.
+		self assert: policy defaultFaultPolicySymbol equals: #immediate.
+		self assert: policy serverMapModeSymbol equals: #strong.
+		self assert: policy storeTraversalTransportSymbol equals: #binaryRequired
+	] ensure: [
+		GbsConfiguration current: previousConfiguration ]
+]
+
+{ #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testSettingsPresenterValidationReportsInvalidIntegerFields [
+	| presenter message |
+	presenter := self newFakeSettingsPresenterOn: GbsConfiguration new.
+	(presenter bridgeControlAt: #freeOopBatchSizeField) text: 'not-a-number'.
+
+	message := presenter validationErrorMessage.
+
+	self assert: (message includesSubstring: 'freeOopBatchSize must be an integer.')
 ]
 
 { #category : 'tests' }

@@ -19,7 +19,7 @@ summary_line="$(printf '%s\n' "${output}" | grep 'LIVE_PREFLIGHT_SUMMARY result=
 json_payload="$(printf '%s\n' "${output}" | sed -n 's/^LIVE_PREFLIGHT_SUMMARY_JSON //p' | tail -1)"
 
 if [[ -z "${summary_line}" ]]; then
-  echo "LIVE_PREFLIGHT_SUMMARY result=FAIL code=LIVE_PREFLIGHT_RUNNER_FAILED stone=${GS_STONE:-gs64stone} service=${GS_SERVICE:-gemnetobject} host=${GS_NETLDI_HOST:-implicit} net=${GS_NETLDI_NAME_OR_PORT:-implicit} stone_status=unknown netldi_status=unknown topaz=failed gci=failed"
+  echo "LIVE_PREFLIGHT_SUMMARY result=FAIL code=LIVE_PREFLIGHT_RUNNER_FAILED stone=${GS_STONE:-gs64stone} service=${GS_SERVICE:-gemnetobject} host=${GS_NETLDI_HOST:-implicit} net=${GS_NETLDI_NAME_OR_PORT:-implicit} stone_status=unknown netldi_status=unknown topaz=failed gci=failed host_auth=$(gbs_live_host_auth_status)"
   exit 1
 fi
 
@@ -33,6 +33,8 @@ STONE_STATUS="$(extract_summary_field stone_status)"
 NETLDI_STATUS="$(extract_summary_field netldi_status)"
 TOPAZ_STATUS="$(extract_summary_field topaz)"
 GCI_STATUS="$(extract_summary_field gci)"
+HOST_AUTH_STATUS="$(extract_summary_field host_auth)"
+[[ -n "${HOST_AUTH_STATUS}" ]] || HOST_AUTH_STATUS="$(gbs_live_host_auth_status)"
 
 if [[ "${JSON_SUMMARY}" == "1" && -n "${json_payload}" ]]; then
   gbs_write_json_summary_file "live-preflight-summary.json" "${json_payload}"
@@ -49,6 +51,7 @@ gbs_append_summary_line "- stone-status: \`${STONE_STATUS}\`"
 gbs_append_summary_line "- netldi-status: \`${NETLDI_STATUS}\`"
 gbs_append_summary_line "- topaz: \`${TOPAZ_STATUS}\`"
 gbs_append_summary_line "- gci: \`${GCI_STATUS}\`"
+gbs_append_summary_line "- host-auth: \`${HOST_AUTH_STATUS}\`"
 
 if [[ "${CODE}" == "LIVE_PREFLIGHT_OK" || "${CODE}" == "LIVE_PREFLIGHT_SKIPPED" ]]; then
   exit 0

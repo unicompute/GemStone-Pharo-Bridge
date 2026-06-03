@@ -62,7 +62,7 @@ Common entry points:
 ```bash
 make original PHARO_IMAGE="..." PHARO_WORK_DIR="..."
 make original-tests PHARO_IMAGE="..." PHARO_WORK_DIR="..."
-make full PHARO_IMAGE="..." PHARO_WORK_DIR="..." GS_USER=... GS_PASS=... GS_NETLDI_HOST=... GS_NETLDI_NAME_OR_PORT=... GEMSTONE=...
+make full PHARO_IMAGE="..." PHARO_WORK_DIR="..." GS_USER=... GS_PASS=... GS_NETLDI_HOST=... GS_NETLDI_NAME_OR_PORT=... OKZ_GEMSTONE_HOST_USERNAME=... OKZ_GEMSTONE_HOST_PASSWORD=... GEMSTONE=...
 make verify PHARO_IMAGE="..." PHARO_WORK_DIR="..."
 ```
 
@@ -130,7 +130,8 @@ explicit transaction behavior.
 - `make verify`: run all maintained lanes and artifact freshness checks
 
 The live lanes use `GS_USER`, `GS_PASS`, `GS_STONE`, `GS_SERVICE`,
-`GS_NETLDI_HOST`, `GS_NETLDI_NAME_OR_PORT`, and `GEMSTONE` when supplied.
+`GS_NETLDI_HOST`, `GS_NETLDI_NAME_OR_PORT`, `OKZ_GEMSTONE_HOST_USERNAME`,
+`OKZ_GEMSTONE_HOST_PASSWORD`, and `GEMSTONE` when supplied.
 
 ## More Documentation
 
@@ -139,5 +140,8 @@ The live lanes use `GS_USER`, `GS_PASS`, `GS_STONE`, `GS_SERVICE`,
 - [doc/VERIFICATION-LANES.md](doc/VERIFICATION-LANES.md): maintained verification lanes
 - [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md): architecture notes
 - [doc/OWNERSHIP-CONTRACT.md](doc/OWNERSHIP-CONTRACT.md): package and selector ownership contract
+- [doc/RELOAD-POLICY.md](doc/RELOAD-POLICY.md): reload policy and generated-artifact expectations
+<!-- END GENERATED:README-BODY -->
+tract
 - [doc/RELOAD-POLICY.md](doc/RELOAD-POLICY.md): reload policy and generated-artifact expectations
 <!-- END GENERATED:README-BODY -->

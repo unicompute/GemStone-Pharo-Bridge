@@ -21,6 +21,10 @@ Both the standalone preflight script and the in-process full verification lane d
   Optional explicit host for netldi routing.
 - `GS_NETLDI_NAME_OR_PORT`
   Optional explicit netldi name or port, for example `gs64ldi` or `50377`.
+- `OKZ_GEMSTONE_HOST_USERNAME`
+  Optional host username for netldi remote gem startup when host authentication is required.
+- `OKZ_GEMSTONE_HOST_PASSWORD`
+  Optional host password for netldi remote gem startup when host authentication is required.
 - `GEMSTONE`
   Optional explicit GemStone client home used by the GCI probe.
 
@@ -47,6 +51,7 @@ Both the standalone preflight script and the in-process full verification lane d
 - `netldi_status`
 - `topaz`
 - `gci`
+- `host_auth`
 
 ## Result Codes
 

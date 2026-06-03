@@ -44,7 +44,7 @@ Use a fresh image or the clean-reload path each time. Do not incrementally load 
 Common wrapper entry points:
 - `make original PHARO_IMAGE="..." PHARO_WORK_DIR="..."`
 - `make original-tests PHARO_IMAGE="..." PHARO_WORK_DIR="..."`
-- `make full PHARO_IMAGE="..." PHARO_WORK_DIR="..." GS_USER=... GS_PASS=... GS_NETLDI_HOST=... GS_NETLDI_NAME_OR_PORT=... GEMSTONE=...`
+- `make full PHARO_IMAGE="..." PHARO_WORK_DIR="..." GS_USER=... GS_PASS=... GS_NETLDI_HOST=... GS_NETLDI_NAME_OR_PORT=... OKZ_GEMSTONE_HOST_USERNAME=... OKZ_GEMSTONE_HOST_PASSWORD=... GEMSTONE=...`
 
 ## Does The Classic Session Example Still Work?
 

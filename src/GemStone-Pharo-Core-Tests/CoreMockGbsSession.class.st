@@ -23,6 +23,15 @@ CoreMockGbsSession >> apiGciAllocTravBuf: byteCount [
 ]
 
 { #category : 'accessing' }
+CoreMockGbsSession >> apiGciClampedTravOops: oopBuffer count: oopCount spec: clampedTraversalArgs [
+	| block |
+	block := self stubs at: #apiGciClampedTravOops ifAbsent: [ nil ].
+	block ifNotNil: [
+		^ block cull: oopBuffer cull: oopCount cull: clampedTraversalArgs ].
+	self error: 'No apiGciClampedTravOops stub configured.'
+]
+
+{ #category : 'accessing' }
 CoreMockGbsSession >> apiGciExecute: aString context: anInteger [
 	"Intercept the actual FFI call used by execute:"
 	| errBlock |
@@ -92,6 +101,29 @@ CoreMockGbsSession >> apiGciMoreTraversal: traversalBuffer [
 	| block |
 	block := self stubs at: #apiGciMoreTraversal ifAbsent: [ nil ].
 	block ifNotNil: [ ^ block cull: traversalBuffer ].
+	^ 1
+]
+
+{ #category : 'accessing' }
+CoreMockGbsSession >> apiGciReleaseOops: oopBuffer count: oopCount [
+	| block |
+	block := self stubs at: #apiGciReleaseOops ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: oopBuffer cull: oopCount ].
+	^ true
+]
+
+{ #category : 'accessing' }
+CoreMockGbsSession >> apiGciStoreTravDoTravRefsNlr: noLongerBuffer nnr: noLongerCount ogoc: gcedBuffer ngc: gcedCount stdArgs: stdArgs ctArgs: ctArgs [
+	| block |
+	block := self stubs at: #apiGciStoreTravDoTravRefs ifAbsent: [ nil ].
+	block ifNotNil: [
+		^ block valueWithArguments: {
+			noLongerBuffer.
+			noLongerCount.
+			gcedBuffer.
+			gcedCount.
+			stdArgs.
+			ctArgs } ].
 	^ 1
 ]
 
@@ -202,6 +234,17 @@ CoreMockGbsSession >> returnRemoteCommandBody: bodyString literalBindings: liter
 		returnRemoteCommandBody: bodyString
 		literalBindings: literalDictionary
 		oopBindings: oopDictionary
+]
+
+{ #category : 'lifecycle' }
+CoreMockGbsSession >> releaseOops: oopCollection [
+	| block |
+	block := self stubs at: #releaseOops ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: oopCollection ].
+	^ self
+		withOopBufferFor: oopCollection
+		do: [ :oopBuffer |
+			self apiGciReleaseOops: oopBuffer count: oopCollection size ]
 ]
 
 { #category : 'typed wrappers' }
@@ -360,11 +403,60 @@ CoreMockGbsSession >> storeTraversalBuffer: aBuffer [
 ]
 
 { #category : 'dirty store traversal' }
+CoreMockGbsSession >> storeTraversalBuffer: aBuffer releasingNoLongerReplicatedOops: oopCollection [
+	| block |
+	block := self stubs at: #storeTraversalBufferReleasingNoLongerReplicatedOops ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: aBuffer cull: oopCollection ].
+	self error: 'No no-longer-replicated store traversal transport stub configured.'
+]
+
+{ #category : 'dirty store traversal' }
+CoreMockGbsSession >> storeTraversalBuffer: aBuffer releasingNoLongerReplicatedOops: noLongerOopCollection gcedOops: gcedOopCollection [
+	| block |
+	block := self stubs at: #storeTraversalBufferReleasingExportSetOops ifAbsent: [ nil ].
+	block ifNotNil: [
+		^ block cull: aBuffer cull: noLongerOopCollection cull: gcedOopCollection ].
+	^ self
+		storeTraversalBuffer: aBuffer
+		releasingNoLongerReplicatedOops: noLongerOopCollection
+]
+
+{ #category : 'dirty store traversal' }
 CoreMockGbsSession >> supportsDirtyStoreTraversalBufferTransport [
 	^ self stubs at: #supportsDirtyStoreTraversalBufferTransport ifAbsent: [ false ]
+]
+
+{ #category : 'materialization' }
+CoreMockGbsSession >> supportsClampedTraversalTransport [
+	^ self stubs at: #supportsClampedTraversalTransport ifAbsent: [ false ]
+]
+
+{ #category : 'dirty store traversal' }
+CoreMockGbsSession >> supportsNoLongerReplicatedStoreTraversalTransport [
+	^ self stubs at: #supportsNoLongerReplicatedStoreTraversalTransport ifAbsent: [ false ]
+]
+
+{ #category : 'lifecycle' }
+CoreMockGbsSession >> supportsReleaseOopsTransport [
+	^ self stubs at: #supportsReleaseOopsTransport ifAbsent: [ false ]
 ]
 
 { #category : 'accessing' }
 CoreMockGbsSession >> stubs [
 	^ stubs ifNil: [ stubs := Dictionary new ]
+]
+
+{ #category : 'private' }
+CoreMockGbsSession >> withOopBufferFor: oopCollection do: aBlock [
+	| buffer |
+	buffer := ExternalAddress allocate: oopCollection size * 8.
+	^ [
+		oopCollection doWithIndex: [ :oop :index |
+			buffer
+				integerAt: 1 + ((index - 1) * 8)
+				put: oop
+				size: 8
+				signed: false ].
+		aBlock value: buffer
+	] ensure: [ buffer free ]
 ]

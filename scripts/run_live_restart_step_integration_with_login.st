@@ -1,4 +1,4 @@
-| env stone user pass serviceName netldiHost netldiNameOrPort params session code processOop debugger service listPresenter textPresenter tablePresenter topAfterRestart topAfterStep |
+| env envAtAny stone user pass serviceName netldiHost netldiNameOrPort hostUser hostPassword params session code processOop debugger service listPresenter textPresenter tablePresenter topAfterRestart topAfterStep |
 [
 	[ Metacello new
 		baseline: 'GemStonePharo';
@@ -8,12 +8,23 @@
 			Smalltalk snapshot: false andQuit: true ].
 
 	env := [ Smalltalk os environment ] on: Error do: [ Dictionary new ].
-	stone := env at: 'GS_STONE' ifAbsent: [ 'gs64stone' ].
-	user := env at: 'GS_USER' ifAbsent: [ '' ].
-	pass := env at: 'GS_PASS' ifAbsent: [ '' ].
-	serviceName := env at: 'GS_SERVICE' ifAbsent: [ 'gemnetobject' ].
-	netldiHost := env at: 'GS_NETLDI_HOST' ifAbsent: [ '' ].
-	netldiNameOrPort := env at: 'GS_NETLDI_NAME_OR_PORT' ifAbsent: [ '' ].
+	envAtAny := [ :keys :default | | value |
+		value := default.
+		keys do: [ :key | | raw |
+			value = default ifTrue: [
+				raw := [ env at: key ifAbsent: [ nil ] ] on: Error do: [ nil ].
+				raw ifNotNil: [
+					raw := [ raw asString trimBoth ] on: Error do: [ '' ].
+					raw isEmpty ifFalse: [ value := raw ] ] ] ].
+		value ].
+	stone := envAtAny value: #('GS_STONE') value: 'gs64stone'.
+	user := envAtAny value: #('GS_USER' 'GS_USERNAME') value: ''.
+	pass := envAtAny value: #('GS_PASS' 'GS_PASSWORD') value: ''.
+	serviceName := envAtAny value: #('GS_SERVICE') value: 'gemnetobject'.
+	netldiHost := envAtAny value: #('GS_NETLDI_HOST' 'GS_HOST') value: ''.
+	netldiNameOrPort := envAtAny value: #('GS_NETLDI_NAME_OR_PORT' 'GS_NETLDI') value: ''.
+	hostUser := envAtAny value: #('OKZ_GEMSTONE_HOST_USERNAME' 'GS_HOST_USERNAME' 'GS_NETLDI_HOST_USERNAME') value: ''.
+	hostPassword := envAtAny value: #('OKZ_GEMSTONE_HOST_PASSWORD' 'GS_HOST_PASSWORD' 'GS_NETLDI_HOST_PASSWORD') value: ''.
 
 	(user isEmpty or: [ pass isEmpty ]) ifTrue: [
 		Transcript show: 'ERROR: set GS_USER and GS_PASS environment variables'; cr.
@@ -28,6 +39,8 @@
 		gemService: serviceName.
 	netldiHost isEmpty ifFalse: [ params netldiHostOrIp: netldiHost ].
 	netldiNameOrPort isEmpty ifFalse: [ params netldiNameOrPort: netldiNameOrPort ].
+	hostUser isEmpty ifFalse: [ params hostUsername: hostUser ].
+	hostPassword isEmpty ifFalse: [ params hostPassword: hostPassword ].
 
 	session := [ params login ] on: Error do: [ :ex |
 		Transcript show: 'LOGIN_ERROR: ', ex messageText; cr.

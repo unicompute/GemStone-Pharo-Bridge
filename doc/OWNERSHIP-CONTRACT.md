@@ -46,6 +46,7 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GbsChunkedMigrationRunner` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsCompilerStateSessionStateSlot` instance side -> `maglevOnly` -> `GemStone-GBS-MagLev`
 - `GbsDeepMaterializationProfile` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsDirtyStoreTraversalBuffer` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsFinalizerRegistrySessionStateSlot` instance side -> `maglevOnly` -> `GemStone-GBS-MagLev`
 - `GbsInspector` instance side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
 - `GbsLegacyMaterializationProfile` instance side -> `coreOnly` -> `GemStone-GBS-Core`
@@ -76,6 +77,7 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GbsPlaygroundMenuSessionStateKeysReportCommand` instance side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
 - `GbsPlaygroundMenuStaleTypedWrapperReportCommand` instance side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
 - `GbsPlaygroundMenuTypedWrapperLifecycleReportCommand` instance side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsProxyLifecycle` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsProxyOnlyMaterializationProfile` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRemoteDebugProcessFacade` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRemoteCommand` instance side -> `coreOnly` -> `GemStone-GBS-Core`
@@ -96,6 +98,8 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GbsRemoteUnboundMethodObject` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRubyRuntimeFacade` instance side -> `maglevOnly` -> `GemStone-GBS-MagLev`
 - `GbsSession` instance side -> `convertedWithCoreAndMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsSessionEventController` instance side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsSessionLifecycleManager` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsSessionMaterializationRemoteReader` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsSessionStateSlot` instance side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsShallowMaterializationProfile` instance side -> `coreOnly` -> `GemStone-GBS-Core`
@@ -169,6 +173,7 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GbsChunkedMigrationRunner` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsCompilerStateSessionStateSlot` class side -> `maglevOnly` -> `GemStone-GBS-MagLev`
 - `GbsDeepMaterializationProfile` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsDirtyStoreTraversalBuffer` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsFinalizerRegistrySessionStateSlot` class side -> `maglevOnly` -> `GemStone-GBS-MagLev`
 - `GbsInspector` class side -> `toolsWithCoreToolsAndMaglevTools` -> `GemStone-GBS-Tools`, `GemStone-GBS-Core-Tools`, `GemStone-GBS-MagLev-Tools`
 - `GbsLegacyMaterializationProfile` class side -> `coreOnly` -> `GemStone-GBS-Core`
@@ -199,6 +204,7 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GbsPlaygroundMenuSessionStateKeysReportCommand` class side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
 - `GbsPlaygroundMenuStaleTypedWrapperReportCommand` class side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
 - `GbsPlaygroundMenuTypedWrapperLifecycleReportCommand` class side -> `coreToolsOnly` -> `GemStone-GBS-Core-Tools`
+- `GbsProxyLifecycle` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsProxyOnlyMaterializationProfile` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRemoteDebugProcessFacade` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRemoteCommand` class side -> `coreOnly` -> `GemStone-GBS-Core`
@@ -219,6 +225,8 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `GbsRemoteUnboundMethodObject` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsRubyRuntimeFacade` class side -> `maglevOnly` -> `GemStone-GBS-MagLev`
 - `GbsSession` class side -> `convertedWithCoreAndMaglev` -> `GemStone-GBS-Converted`, `GemStone-GBS-Core`, `GemStone-GBS-MagLev`
+- `GbsSessionEventController` class side -> `coreOnly` -> `GemStone-GBS-Core`
+- `GbsSessionLifecycleManager` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsSessionMaterializationRemoteReader` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsSessionStateSlot` class side -> `coreOnly` -> `GemStone-GBS-Core`
 - `GbsShallowMaterializationProfile` class side -> `coreOnly` -> `GemStone-GBS-Core`

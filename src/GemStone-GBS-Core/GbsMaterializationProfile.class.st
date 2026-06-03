@@ -97,8 +97,50 @@ GbsMaterializationProfile >> materializeScalarClassNamed: className oop: anOop i
 ]
 
 { #category : 'materialization' }
+GbsMaterializationProfile >> materializationClassNamed: className [
+	className ifNil: [ ^ nil ].
+	^ Smalltalk globals
+		at: className asSymbol
+		ifAbsent: [ nil ]
+]
+
+{ #category : 'materialization' }
 GbsMaterializationProfile >> nestedProfileForDepth: anInteger [
 	^ self
+]
+
+{ #category : 'materialization' }
+GbsMaterializationProfile >> nestedProfileForIndexedPartOfClassNamed: className inSession: aSession depth: anInteger [
+	| class scheme |
+	class := self materializationClassNamed: className.
+	class ifNil: [ ^ self nestedProfileForDepth: anInteger ].
+	scheme := self replicationSchemeInSession: aSession.
+	((scheme notNil and: [
+		scheme respondsTo: #shouldProxyIndexedInstvarsOfClass: ]) and: [
+		scheme shouldProxyIndexedInstvarsOfClass: class ]) ifTrue: [
+		^ GbsProxyOnlyMaterializationProfile new ].
+	^ self nestedProfileForDepth: anInteger
+]
+
+{ #category : 'materialization' }
+GbsMaterializationProfile >> nestedProfileForNamedSlot: slotIndex ofClassNamed: className inSession: aSession depth: anInteger [
+	| class scheme |
+	class := self materializationClassNamed: className.
+	class ifNil: [ ^ self nestedProfileForDepth: anInteger ].
+	scheme := self replicationSchemeInSession: aSession.
+	((scheme notNil and: [
+		scheme respondsTo: #shouldProxyNamedSlot:ofClass: ]) and: [
+		scheme shouldProxyNamedSlot: slotIndex ofClass: class ]) ifTrue: [
+		^ GbsProxyOnlyMaterializationProfile new ].
+	^ self nestedProfileForDepth: anInteger
+]
+
+{ #category : 'materialization' }
+GbsMaterializationProfile >> replicationSchemeInSession: aSession [
+	| manager |
+	manager := [ GbxClampManager forSession: aSession ] on: Error do: [ nil ].
+	manager ifNil: [ ^ nil ].
+	^ [ manager currentReplicationScheme ] on: Error do: [ nil ]
 ]
 
 { #category : 'materialization' }

@@ -316,7 +316,34 @@ GemStonePharoVerificationRunnerTest >> testStandalonePreflightReturnsOkWhenTopaz
 	self assert: (logLines includes: 'LIVE_PREFLIGHT_TOPAZ_LOGIN_OK').
 	self assert: (logLines includes: 'LIVE_PREFLIGHT_GCI_LOGIN_OK').
 	self assert: (logLines anySatisfy: [ :each |
-		each includesSubstring: 'LIVE_PREFLIGHT_SUMMARY result=OK code=LIVE_PREFLIGHT_OK stone=gs64stone service=gemnetobject host=implicit net=implicit stone_status=ok netldi_status=ok topaz=ok gci=ok' ])
+		each includesSubstring: 'LIVE_PREFLIGHT_SUMMARY result=OK code=LIVE_PREFLIGHT_OK stone=gs64stone service=gemnetobject host=implicit net=implicit stone_status=ok netldi_status=ok topaz=ok gci=ok host_auth=unset' ])
+]
+
+{ #category : 'tests' }
+GemStonePharoVerificationRunnerTest >> testStandalonePreflightReportsHostAuthAndAcceptsCredentialAliases [
+	| result |
+	runner
+		environment: (Dictionary newFromPairs: {
+			'GS_STONE'. 'gs64stone'.
+			'GS_SERVICE'. 'gemnetobject'.
+			'GS_USERNAME'. 'DataCurator'.
+			'GS_PASSWORD'. 'swordfish'.
+			'GS_HOST'. '127.0.0.1'.
+			'GS_NETLDI'. '50377'.
+			'OKZ_GEMSTONE_HOST_USERNAME'. 'host-user'.
+			'OKZ_GEMSTONE_HOST_PASSWORD'. 'host-secret' });
+		gslistOutputBlock: [ 'OK 3.7.5 tariq 84598 50377 Apr 16 14:57 Netldi gs64ldi', String lf, 'OK 3.7.5 tariq 84672 54551 Apr 16 14:59 Stone gs64stone' ];
+		topazOutputBlock: [ 'successful topaz login' ];
+		gciProbeOutputBlock: [ 'PROBE_LOGIN_OK sessionId=1' ].
+
+	result := runner runStandalonePreflight.
+
+	self assert: result first equals: #ok.
+	self assert: result second equals: 'LIVE_PREFLIGHT_OK'.
+	self assert: (logLines anySatisfy: [ :each |
+		each includesSubstring: 'LIVE_PREFLIGHT_BEGIN stone=gs64stone service=gemnetobject host=127.0.0.1 net=50377 host_auth=set' ]).
+	self assert: (logLines anySatisfy: [ :each |
+		each includesSubstring: 'LIVE_PREFLIGHT_SUMMARY result=OK code=LIVE_PREFLIGHT_OK stone=gs64stone service=gemnetobject host=127.0.0.1 net=50377 stone_status=ok netldi_status=ok topaz=ok gci=ok host_auth=set' ])
 ]
 
 { #category : 'tests' }

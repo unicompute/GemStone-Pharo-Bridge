@@ -385,7 +385,7 @@ GemStonePharoContract >> livePreflightStepSpecs [
 
 { #category : 'contracts' }
 GemStonePharoContract >> livePreflightSummaryFields [
-	^ #('result' 'code' 'stone' 'service' 'host' 'net' 'stone_status' 'netldi_status' 'topaz' 'gci')
+	^ #('result' 'code' 'stone' 'service' 'host' 'net' 'stone_status' 'netldi_status' 'topaz' 'gci' 'host_auth')
 ]
 
 { #category : 'contracts' }

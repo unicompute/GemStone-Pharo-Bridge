@@ -52,8 +52,8 @@ GemStonePharoVerificationRunner class >> runPreflightOnEnvironment: anEnvironmen
 { #category : 'private' }
 GemStonePharoVerificationRunner >> credentialsAvailable [
 	| user pass |
-	user := (self environmentAt: 'GS_USER' ifAbsent: [ '' ]) trimBoth.
-	pass := (self environmentAt: 'GS_PASS' ifAbsent: [ '' ]) trimBoth.
+	user := (self environmentAtAny: #('GS_USER' 'GS_USERNAME') ifAbsent: [ '' ]) trimBoth.
+	pass := (self environmentAtAny: #('GS_PASS' 'GS_PASSWORD') ifAbsent: [ '' ]) trimBoth.
 	^ user isNotEmpty and: [ pass isNotEmpty ]
 ]
 
@@ -165,6 +165,18 @@ GemStonePharoVerificationRunner >> environmentAt: aString ifAbsent: aBlock [
 ]
 
 { #category : 'private' }
+GemStonePharoVerificationRunner >> environmentAtAny: keys ifAbsent: aBlock [
+	keys do: [ :key | | value |
+		value := [ self environment at: key ifAbsent: [ nil ] ]
+			on: Error
+			do: [ nil ].
+		value ifNotNil: [
+			value := [ value asString trimBoth ] on: Error do: [ '' ].
+			value isEmpty ifFalse: [ ^ value ] ] ].
+	^ aBlock value
+]
+
+{ #category : 'private' }
 GemStonePharoVerificationRunner >> ensureTranscriptProxyInstalledOn: aSession [
 	self drainPendingSessionErrorFrom: aSession.
 	^ [ (aSession evaluate: self transcriptProxyInstallScript) = true ]
@@ -255,19 +267,23 @@ GemStonePharoVerificationRunner >> defaultGciProbeOutput [
 				nextPutAll: '; GS_STONE=';
 				nextPutAll: (self shellQuoted: (self environmentAt: 'GS_STONE' ifAbsent: [ 'gs64stone' ]));
 				nextPutAll: '; GS_USER=';
-				nextPutAll: (self shellQuoted: (self environmentAt: 'GS_USER' ifAbsent: [ '' ]));
+				nextPutAll: (self shellQuoted: (self environmentAtAny: #('GS_USER' 'GS_USERNAME') ifAbsent: [ '' ]));
 				nextPutAll: '; GS_PASS=';
-				nextPutAll: (self shellQuoted: (self environmentAt: 'GS_PASS' ifAbsent: [ '' ]));
+				nextPutAll: (self shellQuoted: (self environmentAtAny: #('GS_PASS' 'GS_PASSWORD') ifAbsent: [ '' ]));
 				nextPutAll: '; GS_SERVICE=';
 				nextPutAll: (self shellQuoted: (self environmentAt: 'GS_SERVICE' ifAbsent: [ 'gemnetobject' ]));
 				nextPutAll: '; GS_NETLDI_HOST=';
-				nextPutAll: (self shellQuoted: (self environmentAt: 'GS_NETLDI_HOST' ifAbsent: [ '' ]));
+				nextPutAll: (self shellQuoted: (self environmentAtAny: #('GS_NETLDI_HOST' 'GS_HOST') ifAbsent: [ '' ]));
 				nextPutAll: '; GS_NETLDI_NAME_OR_PORT=';
-				nextPutAll: (self shellQuoted: (self environmentAt: 'GS_NETLDI_NAME_OR_PORT' ifAbsent: [ '' ]));
+				nextPutAll: (self shellQuoted: (self environmentAtAny: #('GS_NETLDI_NAME_OR_PORT' 'GS_NETLDI') ifAbsent: [ '' ]));
+				nextPutAll: '; OKZ_GEMSTONE_HOST_USERNAME=';
+				nextPutAll: (self shellQuoted: (self environmentAtAny: #('OKZ_GEMSTONE_HOST_USERNAME' 'GS_HOST_USERNAME' 'GS_NETLDI_HOST_USERNAME') ifAbsent: [ '' ]));
+				nextPutAll: '; OKZ_GEMSTONE_HOST_PASSWORD=';
+				nextPutAll: (self shellQuoted: (self environmentAtAny: #('OKZ_GEMSTONE_HOST_PASSWORD' 'GS_HOST_PASSWORD' 'GS_NETLDI_HOST_PASSWORD') ifAbsent: [ '' ]));
 				nextPutAll: '; GEMSTONE_HOME=';
 				nextPutAll: (self shellQuoted: (self environmentAt: 'GEMSTONE' ifAbsent: [ '' ]));
 				nextPutAll: '; mkdir -p /tmp/pharo-clean-auto/home; HOME=/tmp/pharo-clean-auto/home ';
-				nextPutAll: 'GS_STONE="${GS_STONE}" GS_USER="${GS_USER}" GS_PASS="${GS_PASS}" GS_SERVICE="${GS_SERVICE}" GS_NETLDI_HOST="${GS_NETLDI_HOST}" GS_NETLDI_NAME_OR_PORT="${GS_NETLDI_NAME_OR_PORT}" GEMSTONE="${GEMSTONE_HOME}" ';
+				nextPutAll: 'GS_STONE="${GS_STONE}" GS_USER="${GS_USER}" GS_PASS="${GS_PASS}" GS_SERVICE="${GS_SERVICE}" GS_NETLDI_HOST="${GS_NETLDI_HOST}" GS_NETLDI_NAME_OR_PORT="${GS_NETLDI_NAME_OR_PORT}" OKZ_GEMSTONE_HOST_USERNAME="${OKZ_GEMSTONE_HOST_USERNAME}" OKZ_GEMSTONE_HOST_PASSWORD="${OKZ_GEMSTONE_HOST_PASSWORD}" GEMSTONE="${GEMSTONE_HOME}" ';
 				nextPutAll: '"${VM}" --headless "${WORK_IMAGE}" st ';
 				nextPutAll: (self shellQuoted: self class repoRootPath , '/scripts/probe_live_login.st') ])
 		onErrorLabel: 'LIVE_PREFLIGHT_GCI_PROBE_FAILED'
@@ -292,15 +308,15 @@ GemStonePharoVerificationRunner >> defaultTopazOutput [
 		commandOutputForBashScript: (String streamContents: [ :stream |
 			stream
 				nextPutAll: 'USER_NAME=';
-				nextPutAll: (self shellQuoted: (self environmentAt: 'GS_USER' ifAbsent: [ '' ]));
+				nextPutAll: (self shellQuoted: (self environmentAtAny: #('GS_USER' 'GS_USERNAME') ifAbsent: [ '' ]));
 				nextPutAll: '; PASSWORD=';
-				nextPutAll: (self shellQuoted: (self environmentAt: 'GS_PASS' ifAbsent: [ '' ]));
+				nextPutAll: (self shellQuoted: (self environmentAtAny: #('GS_PASS' 'GS_PASSWORD') ifAbsent: [ '' ]));
 				nextPutAll: '; STONE=';
 				nextPutAll: (self shellQuoted: (self environmentAt: 'GS_STONE' ifAbsent: [ 'gs64stone' ]));
 				nextPutAll: '; NETLDI_HOST=';
-				nextPutAll: (self shellQuoted: (self environmentAt: 'GS_NETLDI_HOST' ifAbsent: [ '' ]));
+				nextPutAll: (self shellQuoted: (self environmentAtAny: #('GS_NETLDI_HOST' 'GS_HOST') ifAbsent: [ '' ]));
 				nextPutAll: '; NETLDI_NAME_OR_PORT=';
-				nextPutAll: (self shellQuoted: (self environmentAt: 'GS_NETLDI_NAME_OR_PORT' ifAbsent: [ '' ]));
+				nextPutAll: (self shellQuoted: (self environmentAtAny: #('GS_NETLDI_NAME_OR_PORT' 'GS_NETLDI') ifAbsent: [ '' ]));
 				nextPutAll: '; GEMSTONE_HOME=';
 				nextPutAll: (self shellQuoted: (self environmentAt: 'GEMSTONE' ifAbsent: [ '' ]));
 				nextPutAll: '; topaz_bin="${GEMSTONE_HOME:+${GEMSTONE_HOME}/bin/topaz}"; ';
@@ -328,9 +344,9 @@ GemStonePharoVerificationRunner >> emitPreflightSummaryJsonResult: result code: 
 			nextPutAll: '","service":"';
 			nextPutAll: (self jsonEscape: (self environmentAt: 'GS_SERVICE' ifAbsent: [ 'gemnetobject' ]));
 			nextPutAll: '","host":"';
-			nextPutAll: (self jsonEscape: ((self environmentAt: 'GS_NETLDI_HOST' ifAbsent: [ '' ]) ifEmpty: [ 'implicit' ]));
+			nextPutAll: (self jsonEscape: ((self environmentAtAny: #('GS_NETLDI_HOST' 'GS_HOST') ifAbsent: [ '' ]) ifEmpty: [ 'implicit' ]));
 			nextPutAll: '","net":"';
-			nextPutAll: (self jsonEscape: ((self environmentAt: 'GS_NETLDI_NAME_OR_PORT' ifAbsent: [ '' ]) ifEmpty: [ 'implicit' ]));
+			nextPutAll: (self jsonEscape: ((self environmentAtAny: #('GS_NETLDI_NAME_OR_PORT' 'GS_NETLDI') ifAbsent: [ '' ]) ifEmpty: [ 'implicit' ]));
 			nextPutAll: '","stone_status":"';
 			nextPutAll: (self jsonEscape: stoneStatus);
 			nextPutAll: '","netldi_status":"';
@@ -339,6 +355,8 @@ GemStonePharoVerificationRunner >> emitPreflightSummaryJsonResult: result code: 
 			nextPutAll: (self jsonEscape: topazStatus);
 			nextPutAll: '","gci":"';
 			nextPutAll: (self jsonEscape: gciStatus);
+			nextPutAll: '","host_auth":"';
+			nextPutAll: (self jsonEscape: self hostAuthStatus);
 			nextPutAll: '"}' ].
 	self log: 'LIVE_PREFLIGHT_SUMMARY_JSON ', payload
 ]
@@ -350,12 +368,13 @@ GemStonePharoVerificationRunner >> emitPreflightSummaryResult: result code: code
 			' code=', code,
 			' stone=', (self environmentAt: 'GS_STONE' ifAbsent: [ 'gs64stone' ]),
 			' service=', (self environmentAt: 'GS_SERVICE' ifAbsent: [ 'gemnetobject' ]),
-			' host=', ((self environmentAt: 'GS_NETLDI_HOST' ifAbsent: [ '' ]) ifEmpty: [ 'implicit' ]),
-			' net=', ((self environmentAt: 'GS_NETLDI_NAME_OR_PORT' ifAbsent: [ '' ]) ifEmpty: [ 'implicit' ]),
+			' host=', ((self environmentAtAny: #('GS_NETLDI_HOST' 'GS_HOST') ifAbsent: [ '' ]) ifEmpty: [ 'implicit' ]),
+			' net=', ((self environmentAtAny: #('GS_NETLDI_NAME_OR_PORT' 'GS_NETLDI') ifAbsent: [ '' ]) ifEmpty: [ 'implicit' ]),
 			' stone_status=', stoneStatus,
 			' netldi_status=', netldiStatus,
 			' topaz=', topazStatus,
-			' gci=', gciStatus.
+			' gci=', gciStatus,
+			' host_auth=', self hostAuthStatus.
 	self summaryJsonEnabled ifTrue: [
 		self
 			emitPreflightSummaryJsonResult: result
@@ -388,6 +407,20 @@ GemStonePharoVerificationRunner >> gslistOutput [
 { #category : 'private' }
 GemStonePharoVerificationRunner >> gslistOutputBlock: aBlock [
 	gslistOutputBlock := aBlock
+]
+
+{ #category : 'private' }
+GemStonePharoVerificationRunner >> hostAuthStatus [
+	| hostUser hostPassword |
+	hostUser := self
+		environmentAtAny: #('OKZ_GEMSTONE_HOST_USERNAME' 'GS_HOST_USERNAME' 'GS_NETLDI_HOST_USERNAME')
+		ifAbsent: [ '' ].
+	hostPassword := self
+		environmentAtAny: #('OKZ_GEMSTONE_HOST_PASSWORD' 'GS_HOST_PASSWORD' 'GS_NETLDI_HOST_PASSWORD')
+		ifAbsent: [ '' ].
+	(hostUser isNotEmpty and: [ hostPassword isNotEmpty ]) ifTrue: [ ^ 'set' ].
+	(hostUser isNotEmpty or: [ hostPassword isNotEmpty ]) ifTrue: [ ^ 'partial' ].
+	^ 'unset'
 ]
 
 { #category : 'private' }
@@ -664,8 +697,9 @@ GemStonePharoVerificationRunner >> runStandalonePreflight [
 	self
 		log: 'LIVE_PREFLIGHT_BEGIN stone=', stoneName,
 			' service=', (self environmentAt: 'GS_SERVICE' ifAbsent: [ 'gemnetobject' ]),
-			' host=', ((self environmentAt: 'GS_NETLDI_HOST' ifAbsent: [ '' ]) ifEmpty: [ '(implicit)' ]),
-			' net=', ((self environmentAt: 'GS_NETLDI_NAME_OR_PORT' ifAbsent: [ '' ]) ifEmpty: [ '(implicit)' ]).
+			' host=', ((self environmentAtAny: #('GS_NETLDI_HOST' 'GS_HOST') ifAbsent: [ '' ]) ifEmpty: [ '(implicit)' ]),
+			' net=', ((self environmentAtAny: #('GS_NETLDI_NAME_OR_PORT' 'GS_NETLDI') ifAbsent: [ '' ]) ifEmpty: [ '(implicit)' ]),
+			' host_auth=', self hostAuthStatus.
 
 	gslistOutput := self gslistOutput.
 	self logOutput: gslistOutput.

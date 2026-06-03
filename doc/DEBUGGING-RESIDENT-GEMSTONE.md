@@ -31,6 +31,7 @@ export GS_NETLDI_NAME_OR_PORT='netldi'
 ```
 
 The scripts also accept these aliases and normalize them before preflight: `GS_USERNAME` for `GS_USER`, `GS_PASSWORD` for `GS_PASS`, `GS_HOST` for `GS_NETLDI_HOST`, and `GS_NETLDI` for `GS_NETLDI_NAME_OR_PORT`.
+When netldi requires host authentication for remote gem startup, export `OKZ_GEMSTONE_HOST_USERNAME` and `OKZ_GEMSTONE_HOST_PASSWORD`; the Pharo GCI preflight and live test support pass those through to `GbsSessionParameters`.
 
 The lane also respects:
 
@@ -45,7 +46,7 @@ Use `GBS_KEEP_WORK_IMAGES=1` only when debugging failed lanes. Otherwise the scr
 
 ## CI Acceptance
 
-The self-hosted `verify` workflow treats live GemStone debugger evidence as mandatory. The runner must have these GitHub variables configured: `PHARO_IMAGE`, `PHARO_WORK_DIR`, `GEMSTONE`, `GS_STONE`, `GS_NETLDI_HOST`, and `GS_NETLDI_NAME_OR_PORT`. It must also have `GS_USER` and `GS_PASS` as GitHub secrets.
+The self-hosted `verify` workflow treats live GemStone debugger evidence as mandatory. The runner must have these GitHub variables configured: `PHARO_IMAGE`, `PHARO_WORK_DIR`, `GEMSTONE`, `GS_STONE`, `GS_NETLDI_HOST`, and `GS_NETLDI_NAME_OR_PORT`. It must also have `GS_USER`, `GS_PASS`, and, when netldi host authentication is required, `OKZ_GEMSTONE_HOST_USERNAME` and `OKZ_GEMSTONE_HOST_PASSWORD` as GitHub secrets.
 
 `GS_SERVICE` is optional for the shell scripts and defaults to `gemnetobject`, but set it as a GitHub variable when the runner needs a non-default service name.
 

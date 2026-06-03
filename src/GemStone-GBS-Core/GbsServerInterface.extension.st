@@ -9,6 +9,14 @@ GbsServerInterface >> apiGciAllocTravBuf: byteCount [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> apiGciClampedTravOops: oopBuffer count: oopCount spec: clampedTraversalArgs [
+	^ self
+		ffiCall: #(int GciClampedTrav(void* oopBuffer, int oopCount, void* clampedTraversalArgs))
+		module: libraryPath
+		options: #( + optNonThreaded )
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> apiGciFetchNameOfClass: classOop [
 	^ self
 		ffiCall: #(uint64 GciFetchNameOfClass(uint64 classOop))
@@ -41,9 +49,25 @@ GbsServerInterface >> apiGciMoreTraversal: traversalBuffer [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> apiGciReleaseOops: oopBuffer count: oopCount [
+	^ self
+		ffiCall: #(void GciReleaseOops(void* oopBuffer, int oopCount))
+		module: libraryPath
+		options: #( + optNonThreaded )
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> apiGciStoreTrav: traversalBuffer flags: flags [
 	^ self
 		ffiCall: #(void GciStoreTrav(void *traversalBuffer, int flags))
+		module: libraryPath
+		options: #( + optNonThreaded )
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> apiGciStoreTravDoTravRefsNlr: noLongerBuffer nnr: noLongerCount ogoc: gcedBuffer ngc: gcedCount stdArgs: stdArgs ctArgs: ctArgs [
+	^ self
+		ffiCall: #(int GciStoreTravDoTravRefs_(void* noLongerBuffer, int noLongerCount, void* gcedBuffer, int gcedCount, void* stdArgs, void* ctArgs))
 		module: libraryPath
 		options: #( + optNonThreaded )
 ]
@@ -67,6 +91,83 @@ GbsServerInterface >> storeTraversalBuffer: aBuffer [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> storeTraversalBuffer: aBuffer releasingNoLongerReplicatedOops: oopCollection [
+	^ self
+		storeTraversalBuffer: aBuffer
+		releasingNoLongerReplicatedOops: oopCollection
+		gcedOops: #()
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> storeTraversalBuffer: aBuffer releasingNoLongerReplicatedOops: noLongerOopCollection gcedOops: gcedOopCollection [
+	| arguments result |
+	(aBuffer respondsTo: #withNativeTraversalBufferOn:do:) ifFalse: [
+		GbsError signal: 'Dirty store traversal buffer is not backed by a native GCI traversal buffer.' ].
+	arguments := GbsStoreTravDoTravRefsArguments
+		storeTraversalBuffer: aBuffer
+		noLongerReplicatedOops: noLongerOopCollection
+		gcedOops: gcedOopCollection
+		flags: aBuffer flags.
+	result := arguments
+		withNativeBuffersOn: self
+		do: [ :noLongerBuffer :noLongerCount :gcedBuffer :gcedCount :stdArgs :ctArgs |
+			self
+				apiGciStoreTravDoTravRefsNlr: noLongerBuffer
+				nnr: noLongerCount
+				ogoc: gcedBuffer
+				ngc: gcedCount
+				stdArgs: stdArgs
+				ctArgs: ctArgs ].
+	result = 1 ifFalse: [
+		GbsError signal: 'GciStoreTravDoTravRefs_ failed.' ].
+	^ result
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> releaseOops: oopCollection [
+	oopCollection isEmpty ifTrue: [ ^ oopCollection asArray ].
+	self
+		withOopBufferFor: oopCollection
+		do: [ :oopBuffer |
+			self apiGciReleaseOops: oopBuffer count: oopCollection size ].
+	^ oopCollection asArray
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> supportsDirtyStoreTraversalBufferTransport [
 	^ true
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> supportsClampedTraversalTransport [
+	^ (self respondsTo: #apiGciClampedTravOops:count:spec:)
+		and: [ (self respondsTo: #apiGciAllocTravBuf:)
+		and: [ (self respondsTo: #apiGciMoreTraversal:)
+		and: [ self respondsTo: #apiGciFree: ] ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> supportsNoLongerReplicatedStoreTraversalTransport [
+	^ (self respondsTo: #apiGciStoreTravDoTravRefsNlr:nnr:ogoc:ngc:stdArgs:ctArgs:)
+		and: [ self respondsTo: #apiGciAllocTravBuf: ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> supportsReleaseOopsTransport [
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> withOopBufferFor: oopCollection do: aBlock [
+	| buffer |
+	buffer := ExternalAddress allocate: oopCollection size * 8.
+	^ [
+		oopCollection doWithIndex: [ :oop :index |
+			buffer
+				integerAt: 1 + ((index - 1) * 8)
+				put: oop
+				size: 8
+				signed: false ].
+		aBlock value: buffer
+	] ensure: [ buffer free ]
 ]

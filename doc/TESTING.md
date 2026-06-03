@@ -93,6 +93,10 @@ Accepted environment variables:
   Optional explicit host for netldi routing.
 - `GS_NETLDI_NAME_OR_PORT`
   Optional explicit netldi name or port, for example `gs64ldi` or `50377`.
+- `OKZ_GEMSTONE_HOST_USERNAME`
+  Optional host username for netldi remote gem startup when host authentication is required.
+- `OKZ_GEMSTONE_HOST_PASSWORD`
+  Optional host password for netldi remote gem startup when host authentication is required.
 - `GEMSTONE`
   Optional explicit GemStone client home used by the GCI probe.
 
@@ -146,3 +150,4 @@ face is absent from the loaded image.
 
 The active root API throughout the test and reload lanes is `bridgeRoot`.
 <!-- END GENERATED:TESTING-BODY -->
+-->

@@ -484,6 +484,279 @@ GbsSessionCoreTest >> testClampManagerInvalidatesNamedReplicationSchemeAndRestor
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testReplicationSchemeTransitiveClosureSpecMatchesVisualWorksFiltering [
+	| scheme spec closure |
+	scheme := GbxReplicationScheme replicate.
+	spec := #(
+		#(#name #replicate)
+		#(#address #min 1)
+		#(#orders #max 2)
+		#(#notes #stub)
+		#(#handler #forwarder)
+		#(#indexable_part #forwarder)).
+
+	closure := scheme transitiveClosureSpecForReplicationSpec: spec.
+
+	self assert: closure equals: #(
+		#(#name #replicate)
+		#(#handler #forwarder)
+		#(#indexable_part #forwarder)).
+	self assert: (scheme transitiveClosureSpecForReplicationSpec: #callback) isEmpty.
+	self assert: (scheme transitiveClosureSpecForReplicationSpec: nil) isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testClampSpecificationDefaultsMirrorServerClampMetadata [
+	| clamp |
+	clamp := GbxClampSpecification new.
+
+	self assert: clamp addSubleafHeaders.
+	self assert: clamp traversalCallBackSelector equals: #_gbsTraversalCallback.
+	self assert: clamp environmentId equals: 0.
+	self assert: clamp instVarLevels isEmpty.
+	self assert: clamp instVarLevelsSelector isNil.
+	self assert: clamp valueClamps isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testClampedTraversalArgumentsWriteNativeBuffer [
+	| traversalBuffer arguments |
+	traversalBuffer := ExternalAddress allocate: 64.
+	[
+		arguments := GbsClampedTraversalArguments
+			clampSpecOop: 777
+			traversalBuffer: traversalBuffer
+			level: 3
+			retrievalFlags: 5.
+
+		arguments withNativeBufferDo: [ :buffer |
+			self assert: (buffer integerAt: 1 size: 8 signed: false) asInteger equals: 777.
+			self assert: (buffer integerAt: 9 size: 8 signed: false) asInteger equals: 20.
+			self
+				assert: (buffer integerAt: 17 size: 8 signed: false) asInteger
+				equals: traversalBuffer asInteger.
+			self assert: (buffer integerAt: 25 size: 4 signed: true) equals: 3.
+			self assert: (buffer integerAt: 29 size: 4 signed: true) equals: 5.
+			self assert: (buffer integerAt: 33 size: 4 signed: true) equals: 1 ] ]
+		ensure: [ traversalBuffer free ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testServerClampSpecificationSynchronizerInstallsAndCachesByFingerprint [
+	| mockSession scheme bodies bindings first second third entries |
+	mockSession := CoreMockGbsSession new.
+	bodies := OrderedCollection new.
+	bindings := OrderedCollection new.
+	mockSession stubs
+		at: #returnRemoteCommandBody
+		put: [ :bodyString :literalBindings :oopBindings |
+			bodies add: bodyString.
+			bindings add: literalBindings.
+			7000 + bodies size ].
+	scheme := GbxReplicationScheme selector: #customerReplicationSpec.
+	scheme
+		updateInstVarLevelsForClass: Association
+		serverInstVarNames: #('key' 'value')
+		replicationSpec: #(
+			#(#key #forwarder)
+			#(#value #min 2)).
+
+	first := GbsServerClampSpecificationSynchronizer
+		clampSpecOopForScheme: scheme
+		session: mockSession.
+	second := GbsServerClampSpecificationSynchronizer
+		clampSpecOopForScheme: scheme
+		session: mockSession.
+
+	self assert: first equals: 7001.
+	self assert: second equals: first.
+	self assert: bodies size equals: 1.
+	self assert: (bodies first includesSubstring: 'ClampSpecification new').
+	self assert: (bodies first includesSubstring: '#FastIdentityKeyValueDictionary').
+	entries := bindings first at: 'classLevelEntries'.
+	self assert: entries first first equals: 'Association'.
+	self assert: entries first second equals: { false. -2. nil }.
+
+	scheme
+		updateInstVarLevelsForClass: Array
+		serverInstVarNames: #()
+		replicationSpec: #(#(#indexable_part #forwarder)).
+	third := GbsServerClampSpecificationSynchronizer
+		clampSpecOopForScheme: scheme
+		session: mockSession.
+
+	self assert: third equals: 7002.
+	self assert: bodies size equals: 2
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testTraversalBufferReaderFallsBackToPlainTraversalWithoutClampMetadata [
+	| mockSession clampedCalls plainCalls reports |
+	mockSession := CoreMockGbsSession new.
+	clampedCalls := 0.
+	plainCalls := 0.
+	mockSession stubs
+		at: #supportsClampedTraversalTransport put: true;
+		at: #apiGciClampedTravOops put: [ :oopBuffer :oopCount :clampedArgs |
+			clampedCalls := clampedCalls + 1.
+			1 ];
+		at: #apiGciTraverseOops put: [ :oopBuffer :oopCount :traversalBuffer :level |
+			plainCalls := plainCalls + 1.
+			traversalBuffer integerAt: 5 put: 0 size: 4 signed: false.
+			1 ].
+
+	reports := (GbsMaterializationTraversalBufferReader on: mockSession)
+		reportsForOops: #(9000)
+		level: 1
+		label: 'plain traversal fallback test'.
+
+	self assert: reports isEmpty.
+	self assert: plainCalls equals: 1.
+	self assert: clampedCalls equals: 0
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testTraversalBufferReaderUsesClampedTraversalForSchemeMetadata [
+	| mockSession manager clampedCalls plainCalls capturedClamp capturedLevel reports |
+	mockSession := CoreMockGbsSession new.
+	clampedCalls := 0.
+	plainCalls := 0.
+	mockSession stubs
+		at: #supportsClampedTraversalTransport put: true;
+		at: #returnRemoteCommandBody put: [ :bodyString :literalBindings :oopBindings | 777 ];
+		at: #apiGciTraverseOops put: [ :oopBuffer :oopCount :traversalBuffer :level |
+			plainCalls := plainCalls + 1.
+			traversalBuffer integerAt: 5 put: 0 size: 4 signed: false.
+			1 ];
+		at: #apiGciClampedTravOops put: [ :oopBuffer :oopCount :clampedArgs |
+			| traversalBufferAddress traversalBuffer |
+			clampedCalls := clampedCalls + 1.
+			capturedClamp := (clampedArgs integerAt: 1 size: 8 signed: false) asInteger.
+			capturedLevel := clampedArgs integerAt: 25 size: 4 signed: true.
+			traversalBufferAddress := (clampedArgs integerAt: 17 size: 8 signed: false) asInteger.
+			traversalBuffer := ExternalAddress fromAddress: traversalBufferAddress.
+			traversalBuffer integerAt: 5 put: 0 size: 4 signed: false.
+			1 ].
+	manager := GbxClampManager forSession: mockSession.
+	manager defaultReplicationScheme
+		updateInstVarLevelsForClass: Array
+		serverInstVarNames: #()
+		replicationSpec: #(#(#indexable_part #forwarder)).
+
+	reports := (GbsMaterializationTraversalBufferReader on: mockSession)
+		reportsForOops: #(9000)
+		level: 2
+		label: 'clamped traversal test'.
+
+	self assert: reports isEmpty.
+	self assert: clampedCalls equals: 1.
+	self assert: plainCalls equals: 0.
+	self assert: capturedClamp equals: 777.
+	self assert: capturedLevel equals: 2.
+	self assert: (mockSession materializationMetrics at: #clampedTraversalBufferFetchCalls) equals: 1
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testTraversalBufferReaderPlainReportsBypassClampedSchemeMetadata [
+	| mockSession manager clampedCalls plainCalls reports |
+	mockSession := CoreMockGbsSession new.
+	clampedCalls := 0.
+	plainCalls := 0.
+	mockSession stubs
+		at: #supportsClampedTraversalTransport put: true;
+		at: #returnRemoteCommandBody put: [ :bodyString :literalBindings :oopBindings | 777 ];
+		at: #apiGciTraverseOops put: [ :oopBuffer :oopCount :traversalBuffer :level |
+			plainCalls := plainCalls + 1.
+			traversalBuffer integerAt: 5 put: 0 size: 4 signed: false.
+			1 ];
+		at: #apiGciClampedTravOops put: [ :oopBuffer :oopCount :clampedArgs |
+			clampedCalls := clampedCalls + 1.
+			1 ].
+	manager := GbxClampManager forSession: mockSession.
+	manager defaultReplicationScheme
+		updateInstVarLevelsForClass: Array
+		serverInstVarNames: #()
+		replicationSpec: #(#(#indexable_part #forwarder)).
+
+	reports := (GbsMaterializationTraversalBufferReader on: mockSession)
+		plainReportsForOops: #(9000)
+		level: 1
+		label: 'plain traversal under clamp scheme test'.
+
+	self assert: reports isEmpty.
+	self assert: plainCalls equals: 1.
+	self assert: clampedCalls equals: 0.
+	self assert: (mockSession materializationMetrics at: #clampedTraversalBufferFetchCalls ifAbsent: [ 0 ]) equals: 0
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testReplicationSchemeClampByCallbackTogglesTraversalSelector [
+	| mockSession scheme |
+	mockSession := CoreMockGbsSession new.
+	scheme := GbxReplicationScheme selector: #customerReplicationSpec.
+
+	scheme updateForClampingByCallback: true inSession: mockSession.
+	self assert: scheme clamp instVarLevelsSelector equals: #_gbsTraversalCallback.
+
+	scheme updateForClampingByCallback: false inSession: mockSession.
+	self assert: scheme clamp instVarLevelsSelector isNil
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testReplicationSchemeTranslatesVisualWorksPerInstvarSpecs [
+	| scheme levels |
+	scheme := GbxReplicationScheme selector: #customerReplicationSpec.
+
+	scheme
+		updateInstVarLevelsForClass: Association
+		serverInstVarNames: #('key' 'value')
+		replicationSpec: #(
+			#(#key #forwarder)
+			#(#value #min 3)
+			#(#indexable_part #stub)).
+
+	levels := scheme instVarLevelsForClass: Association.
+	self assert: levels equals: { false. -3. 0 }.
+	self assert: (scheme shouldProxyNamedSlot: 1 ofClass: Association).
+	self deny: (scheme shouldProxyNamedSlot: 2 ofClass: Association).
+	self deny: (scheme shouldProxyIndexedInstvarsOfClass: Association)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testReplicationSchemeTranslatesIndexableForwarderSpec [
+	| scheme levels |
+	scheme := GbxReplicationScheme selector: #customerReplicationSpec.
+
+	scheme
+		updateInstVarLevelsForClass: Array
+		serverInstVarNames: #()
+		replicationSpec: #(#(#indexable_part #forwarder)).
+
+	levels := scheme instVarLevelsForClass: Array.
+	self assert: levels equals: { false }.
+	self assert: (scheme shouldProxyIndexedInstvarsOfClass: Array)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testReplicationSchemeIndexableForwarderSpecKeepsNestedArraysAsProxies [
+	| mockSession result nested manager |
+	mockSession := self materializationMockSession.
+	manager := GbxClampManager forSession: mockSession.
+	manager defaultReplicationScheme
+		updateInstVarLevelsForClass: Array
+		serverInstVarNames: #()
+		replicationSpec: #(#(#indexable_part #forwarder)).
+	mockSession fetchDeep.
+
+	result := mockSession fetchObject: 9000.
+	nested := result second.
+
+	self assert: result first equals: 'vip'.
+	self assert: (nested isKindOf: GbsProxy).
+	self assert: nested oop equals: 9016
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testReplicationPolicyCanDisableAutoMarkDirtyForSession [
 	| mockSession array policy |
 	mockSession := CoreMockGbsSession new.
@@ -547,6 +820,26 @@ GbsSessionCoreTest >> testReplicationPolicyNormalizesSymbolsAndFaultPolicy [
 	self assert: policy storeTraversalTransportSymbol equals: #binaryRequired.
 	self assert: array faultPolicy equals: #immediate.
 	self should: [ policy defaultFaultPolicy: #invalid ] raise: Error
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testReplicationPolicyAcceptsSettingsPresenterPolicyValues [
+	| policy |
+	policy := GbsReplicationPolicy default.
+
+	policy
+		blockReplicationPolicy: #stub;
+		defaultFaultPolicy: #none;
+		serverMapMode: #strong;
+		storeTraversalTransport: #binary.
+
+	self assert: policy blockReplicationPolicySymbol equals: #stub.
+	self assert: policy defaultFaultPolicySymbol equals: #none.
+	self assert: policy serverMapModeSymbol equals: #strong.
+	self assert: policy storeTraversalTransportSymbol equals: #binary.
+
+	policy blockReplicationPolicy: #none.
+	self assert: policy blockReplicationPolicySymbol equals: #none
 ]
 
 { #category : 'tests' }
@@ -723,6 +1016,164 @@ GbsSessionCoreTest >> testDirtyReplicationFlushUsesBinaryStoreTraversalBufferFor
 	self assert: capturedBuffer class equals: GbsDirtyStoreTraversalBuffer.
 	self assert: capturedBuffer canProduceNativeTraversalBuffer.
 	self assert: mockSession dirtyMaterializedObjectOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationBinaryStoreTraversalCarriesNoLongerReplicatedOopsWhenSupported [
+	| mockSession array capturedBuffer capturedNoLonger flushed |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 1.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	(GbsReplicationPolicy forSession: mockSession) storeTraversalTransport: 'binaryRequired'.
+	array at: 1 put: 2.
+	GbsSessionLifecycleManager noteNoLongerReplicatedOop: 9016 forSession: mockSession.
+	GbsSessionLifecycleManager noteNoLongerReplicatedOop: 9032 forSession: mockSession.
+	mockSession stubs at: #supportsDirtyStoreTraversalBufferTransport put: true.
+	mockSession stubs at: #supportsNoLongerReplicatedStoreTraversalTransport put: true.
+	mockSession stubs at: #storeTraversalBufferReleasingNoLongerReplicatedOops put: [ :buffer :oops |
+		capturedBuffer := buffer.
+		capturedNoLonger := oops asArray.
+		268 ].
+
+	flushed := mockSession flushDirtyMaterializedObjects.
+
+	self assert: flushed equals: #(9000).
+	self assert: capturedBuffer class equals: GbsDirtyStoreTraversalBuffer.
+	self assert: capturedNoLonger equals: #(9016 9032).
+	self assert: mockSession objectSpace pendingNoLongerReplicatedOops isEmpty.
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationBinaryStoreTraversalCarriesGcedAndNoLongerReplicatedOopsWhenSupported [
+	| mockSession array capturedBuffer capturedNoLonger capturedGced flushed |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 1.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	(GbsReplicationPolicy forSession: mockSession) storeTraversalTransport: 'binaryRequired'.
+	array at: 1 put: 2.
+	GbsSessionLifecycleManager noteNoLongerReplicatedOop: 9016 forSession: mockSession.
+	GbsSessionLifecycleManager noteGcedOop: 9032 forSession: mockSession.
+	mockSession stubs at: #supportsDirtyStoreTraversalBufferTransport put: true.
+	mockSession stubs at: #supportsNoLongerReplicatedStoreTraversalTransport put: true.
+	mockSession stubs at: #storeTraversalBufferReleasingExportSetOops put: [ :buffer :noLongerOops :gcedOops |
+		capturedBuffer := buffer.
+		capturedNoLonger := noLongerOops asArray.
+		capturedGced := gcedOops asArray.
+		268 ].
+
+	flushed := mockSession flushDirtyMaterializedObjects.
+
+	self assert: flushed equals: #(9000).
+	self assert: capturedBuffer class equals: GbsDirtyStoreTraversalBuffer.
+	self assert: capturedNoLonger equals: #(9016).
+	self assert: capturedGced equals: #(9032).
+	self assert: mockSession objectSpace pendingNoLongerReplicatedOops isEmpty.
+	self assert: mockSession objectSpace pendingGcedOops isEmpty.
+	self assert: mockSession objectSpace pendingExportSetReleaseOopCount equals: 0.
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationBinaryStoreTraversalKeepsNoLongerReplicatedOopsWhenTransportFails [
+	| mockSession array |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 1.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	(GbsReplicationPolicy forSession: mockSession) storeTraversalTransport: 'binaryRequired'.
+	array at: 1 put: 2.
+	GbsSessionLifecycleManager noteNoLongerReplicatedOop: 9016 forSession: mockSession.
+	mockSession stubs at: #supportsDirtyStoreTraversalBufferTransport put: true.
+	mockSession stubs at: #supportsNoLongerReplicatedStoreTraversalTransport put: true.
+	mockSession stubs at: #storeTraversalBufferReleasingNoLongerReplicatedOops put: [ :buffer :oops |
+		Error signal: 'store traversal refs failed' ].
+
+	self
+		should: [ mockSession flushDirtyMaterializedObjects ]
+		raise: Error.
+	self assert: (mockSession isMaterializedObjectDirty: array).
+	self assert: mockSession objectSpace pendingNoLongerReplicatedOops equals: #(9016)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationBinaryStoreTraversalKeepsExportSetOopsWhenTransportFails [
+	| mockSession array |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 1.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	(GbsReplicationPolicy forSession: mockSession) storeTraversalTransport: 'binaryRequired'.
+	array at: 1 put: 2.
+	GbsSessionLifecycleManager noteNoLongerReplicatedOop: 9016 forSession: mockSession.
+	GbsSessionLifecycleManager noteGcedOop: 9032 forSession: mockSession.
+	mockSession stubs at: #supportsDirtyStoreTraversalBufferTransport put: true.
+	mockSession stubs at: #supportsNoLongerReplicatedStoreTraversalTransport put: true.
+	mockSession stubs at: #storeTraversalBufferReleasingExportSetOops put: [ :buffer :noLongerOops :gcedOops |
+		Error signal: 'store traversal refs failed' ].
+
+	self
+		should: [ mockSession flushDirtyMaterializedObjects ]
+		raise: Error.
+	self assert: (mockSession isMaterializedObjectDirty: array).
+	self assert: mockSession objectSpace pendingNoLongerReplicatedOops equals: #(9016).
+	self assert: mockSession objectSpace pendingGcedOops equals: #(9032)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationBinaryStoreTraversalLeavesNoLongerReplicatedOopsWhenUnsupported [
+	| mockSession array capturedBuffer |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 1.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	(GbsReplicationPolicy forSession: mockSession) storeTraversalTransport: 'binaryRequired'.
+	array at: 1 put: 2.
+	GbsSessionLifecycleManager noteNoLongerReplicatedOop: 9016 forSession: mockSession.
+	mockSession stubs at: #supportsDirtyStoreTraversalBufferTransport put: true.
+	mockSession stubs at: #storeTraversalBuffer put: [ :buffer |
+		capturedBuffer := buffer.
+		268 ].
+
+	mockSession flushDirtyMaterializedObjects.
+
+	self assert: capturedBuffer class equals: GbsDirtyStoreTraversalBuffer.
+	self assert: mockSession objectSpace pendingNoLongerReplicatedOops equals: #(9016).
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testStoreTravDoTravRefsArgumentsWriteNativeBuffers [
+	| mockSession array dirtyBuffer arguments |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 1.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	dirtyBuffer := GbsDirtyStoreTraversalBuffer
+		entries: { { 9000. array. #array } }
+		session: mockSession.
+	mockSession stubs at: #apiGciGetClass put: [ :oop |
+		self assert: oop equals: 9000.
+		7000 ].
+	arguments := GbsStoreTravDoTravRefsArguments
+		storeTraversalBuffer: dirtyBuffer
+		noLongerReplicatedOops: #(9016 9032)
+		gcedOops: #(9040)
+		flags: 8.
+
+	arguments
+		withNativeBuffersOn: mockSession
+		do: [ :noLongerBuffer :noLongerCount :gcedBuffer :gcedCount :stdArgs :ctArgs |
+			self assert: noLongerCount equals: 2.
+			self assert: gcedCount equals: 1.
+			self assert: (noLongerBuffer integerAt: 1 size: 8 signed: false) asInteger equals: 9016.
+			self assert: (noLongerBuffer integerAt: 9 size: 8 signed: false) asInteger equals: 9032.
+			self assert: (gcedBuffer integerAt: 1 size: 8 signed: false) asInteger equals: 9040.
+			self assert: (stdArgs integerAt: 1 size: 4 signed: true) equals: 3.
+			self assert: (stdArgs integerAt: 5 size: 4 signed: true) equals: 16.
+			self assert: (stdArgs integerAt: 17 size: 8 signed: false) asInteger equals: 20.
+			self deny: ((stdArgs integerAt: 81 size: 8 signed: false) asInteger = 0).
+			self assert: (stdArgs integerAt: 97 size: 4 signed: true) equals: 8.
+			self assert: (ctArgs integerAt: 1 size: 8 signed: false) asInteger equals: 20.
+			self assert: (ctArgs integerAt: 9 size: 8 signed: false) asInteger equals: 20.
+			self deny: ((ctArgs integerAt: 17 size: 8 signed: false) asInteger = 0).
+			self assert: (ctArgs integerAt: 33 size: 4 signed: true) equals: 1 ]
 ]
 
 { #category : 'tests' }
@@ -1053,6 +1504,59 @@ GbsSessionCoreTest >> testSessionLifecycleFinalizerAfterResetDoesNotRequeueOop [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleStressAcrossTransactionsAndLogoutWithMappedReplicator [
+	| mockSession manager replicator first second oldProxy newManager |
+	mockSession := CoreMockGbsSession new.
+	mockSession instVarNamed: 'isLoggedIn' put: true.
+	mockSession stubs at: #gciCommit put: 1.
+	mockSession stubs at: #gciAbort put: 1.
+	manager := mockSession replicatorManager.
+	replicator := manager mapReplicatorForClientBehavior: Array serverBehavior: Array.
+	manager currentReplicationScheme
+		updateInstVarLevelsForClass: Array
+		serverInstVarNames: #()
+		replicationSpec: #(#(#indexable_part #replicate)).
+
+	first := Array with: 'old'.
+	mockSession rememberMaterializedObject: first forOop: 9000.
+	first at: 1 put: 'changed'.
+	GbsSessionLifecycleManager noteNoLongerReplicatedOop: 9016 forSession: mockSession.
+	GbsSessionLifecycleManager noteGcedOop: 9032 forSession: mockSession.
+	self assert: (mockSession isMaterializedObjectDirty: first).
+	self assert: mockSession objectSpace pendingExportSetReleaseOopCount equals: 2.
+
+	self assert: mockSession commitTransaction.
+	self assert: mockSession replicatorManager == manager.
+	self assert: (manager replicatorForClientBehavior: Array ifAbsent: [ nil ]) == replicator.
+	self deny: (mockSession isMaterializedObjectDirty: first).
+	self assert: (GbsSessionLifecycleManager objectForOop: 9000 inSession: mockSession) isNil.
+	self assert: mockSession objectSpace pendingExportSetReleaseOopCount equals: 0.
+
+	second := Array with: 'again'.
+	mockSession rememberMaterializedObject: second forOop: 9048.
+	second at: 1 put: 'aborted'.
+	GbsSessionLifecycleManager noteGcedOop: 9064 forSession: mockSession.
+	self assert: mockSession abortTransaction.
+	self assert: mockSession replicatorManager == manager.
+	self deny: (mockSession isMaterializedObjectDirty: second).
+	self assert: (GbsSessionLifecycleManager objectForOop: 9048 inSession: mockSession) isNil.
+	self assert: mockSession objectSpace pendingExportSetReleaseOopCount equals: 0.
+
+	oldProxy := mockSession resultFor: 9080.
+	mockSession resetAfterLogout.
+	mockSession instVarNamed: 'isLoggedIn' put: true.
+	newManager := mockSession replicatorManager.
+
+	self deny: newManager == manager.
+	self assert: (newManager replicatorForClientBehavior: Array ifAbsent: [ nil ]) isNil.
+	self
+		should: [ oldProxy ensureSessionIsUsable ]
+		raise: GbsError
+		withExceptionDo: [ :ex |
+			self assert: (ex messageText includesSubstring: 'previous session lifecycle') ]
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testSessionLifecycleSplitsExportReleaseQueuesAndSkipsImmediateOops [
 	| mockSession releaseBatch report |
 	mockSession := CoreMockGbsSession new.
@@ -1065,12 +1569,56 @@ GbsSessionCoreTest >> testSessionLifecycleSplitsExportReleaseQueuesAndSkipsImmed
 	report := mockSession objectSpace lifecycleReport.
 	self assert: (report at: #noLongerReplicatedOopQueueSize) equals: 2.
 	self assert: (report at: #gcedOopQueueSize) equals: 1.
+	self assert: (report at: #exportSetReleaseOopQueueSize) equals: 3.
 
 	releaseBatch := mockSession objectSpace drainExportSetReleaseOopsLimit: 1.
 	self assert: (releaseBatch at: #noLongerReplicated) equals: #(9000).
 	self assert: (releaseBatch at: #gced) equals: #(9024).
 	self assert: mockSession objectSpace drainNoLongerReplicatedOops equals: #(9016).
 	self assert: mockSession objectSpace drainGcedOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleFlushExportSetReleaseOopsReleasesOnlyGcedOops [
+	| mockSession releasedFromBuffer releaseSummary |
+	mockSession := CoreMockGbsSession new.
+	releasedFromBuffer := nil.
+	mockSession stubs at: #supportsReleaseOopsTransport put: true.
+	mockSession stubs at: #apiGciReleaseOops put: [ :oopBuffer :oopCount |
+		releasedFromBuffer := Array new: oopCount.
+		1 to: oopCount do: [ :index |
+			releasedFromBuffer
+				at: index
+				put: ((oopBuffer
+					integerAt: 1 + ((index - 1) * 8)
+					size: 8
+					signed: false) asInteger) ].
+		true ].
+	GbsSessionLifecycleManager noteGcedOop: 9000 forSession: mockSession.
+	GbsSessionLifecycleManager noteGcedOop: 9016 forSession: mockSession.
+	GbsSessionLifecycleManager noteGcedOop: 9032 forSession: mockSession.
+	GbsSessionLifecycleManager noteNoLongerReplicatedOop: 9024 forSession: mockSession.
+
+	releaseSummary := mockSession objectSpace flushExportSetReleaseOopsLimit: 2.
+
+	self assert: releasedFromBuffer equals: #(9000 9016).
+	self assert: (releaseSummary at: #gcedReleased) equals: #(9000 9016).
+	self assert: (releaseSummary at: #noLongerReplicatedPending) equals: #(9024).
+	self assert: mockSession objectSpace pendingGcedOops equals: #(9032).
+	self assert: mockSession objectSpace pendingNoLongerReplicatedOops equals: #(9024)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleFlushGcedOopsKeepsQueueOnTransportFailure [
+	| mockSession |
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #supportsReleaseOopsTransport put: true.
+	mockSession stubs at: #apiGciReleaseOops put: [ :oopBuffer :oopCount |
+		Error signal: 'release failed' ].
+	GbsSessionLifecycleManager noteGcedOop: 9000 forSession: mockSession.
+
+	self should: [ mockSession objectSpace flushGcedOops ] raise: Error.
+	self assert: mockSession objectSpace pendingGcedOops equals: #(9000)
 ]
 
 { #category : 'tests' }
@@ -1414,24 +1962,37 @@ GbsSessionCoreTest >> testClassNameBatchUsesStructuredBytePayload [
 
 { #category : 'tests' }
 GbsSessionCoreTest >> testClassNameBatchUsesGciTraversalBuffer [
-	| mockSession reports classNames traversalCalls metrics previousTransport hadTransport |
+	| mockSession classNames traversalCalls metrics previousTransport hadTransport |
 	mockSession := CoreMockGbsSession new.
-	reports := Dictionary new.
-	reports
-		at: 9100 put: (self traversalPointerReportForOop: 9100 classOop: 7000 oops: #());
-		at: 9040 put: (self traversalByteReportForOop: 9040 classOop: 7001 bytes: (ByteArray withAll: #(118 105 112))).
 	traversalCalls := 0.
 	hadTransport := Smalltalk globals includesKey: #GbsMaterializationByteTransport.
 	previousTransport := Smalltalk globals at: #GbsMaterializationByteTransport ifAbsent: [ nil ].
 	[
 		Smalltalk globals at: #GbsMaterializationByteTransport put: 'traversal-buffer'.
 		mockSession stubs at: #supportsMaterializationTraversalBufferTransport put: true.
-		mockSession stubs at: #materializationTraversalReportsForOops put: [ :oops :level :label |
+		mockSession stubs at: #apiGciTraverseOops put: [ :oopBuffer :oopCount :traversalBuffer :level |
+			| nextOffset |
 			traversalCalls := traversalCalls + 1.
-			self assert: oops equals: #(9100 9040).
+			self assert: oopCount equals: 2.
 			self assert: level equals: 1.
-			self assert: label equals: 'class-name traversal batch'.
-			reports ].
+			nextOffset := self
+				writePointerTraversalReportOn: traversalBuffer
+				offset: 9
+				oop: 9100
+				classOop: 7000
+				namedSize: 0
+				indexedSize: 0
+				firstOffset: 1
+				oops: #().
+			nextOffset := self
+				writeByteTraversalReportOn: traversalBuffer
+				offset: nextOffset
+				oop: 9040
+				classOop: 7001
+				bytes: (ByteArray withAll: #(118 105 112))
+				byteSwizzle: 0.
+			self finishTraversalBuffer: traversalBuffer usedBytes: nextOffset - 9.
+			1 ].
 		mockSession stubs at: #apiGciFetchNameOfClass put: [ :classOop |
 			classOop = 7000 ifTrue: [ 8000 ] ifFalse: [
 				classOop = 7001 ifTrue: [ 8001 ] ifFalse: [ self fail ] ] ].
@@ -1467,20 +2028,26 @@ GbsSessionCoreTest >> testClassNameBatchUsesGciTraversalBuffer [
 
 { #category : 'tests' }
 GbsSessionCoreTest >> testScalarStringsUseGciTraversalBuffer [
-	| mockSession reports values metrics previousTransport hadTransport |
+	| mockSession values metrics previousTransport hadTransport |
 	mockSession := CoreMockGbsSession new.
-	reports := Dictionary new.
-	reports at: 9040 put: (self traversalByteReportForOop: 9040 classOop: 7001 bytes: (ByteArray withAll: #(118 105 112))).
 	hadTransport := Smalltalk globals includesKey: #GbsMaterializationByteTransport.
 	previousTransport := Smalltalk globals at: #GbsMaterializationByteTransport ifAbsent: [ nil ].
 	[
 		Smalltalk globals at: #GbsMaterializationByteTransport put: 'traversal-buffer'.
 		mockSession stubs at: #supportsMaterializationTraversalBufferTransport put: true.
-		mockSession stubs at: #materializationTraversalReportsForOops put: [ :oops :level :label |
-			self assert: oops equals: #(9040).
+		mockSession stubs at: #apiGciTraverseOops put: [ :oopBuffer :oopCount :traversalBuffer :level |
+			| nextOffset |
+			self assert: oopCount equals: 1.
 			self assert: level equals: 1.
-			self assert: label equals: 'string-value traversal batch'.
-			reports ].
+			nextOffset := self
+				writeByteTraversalReportOn: traversalBuffer
+				offset: 9
+				oop: 9040
+				classOop: 7001
+				bytes: (ByteArray withAll: #(118 105 112))
+				byteSwizzle: 0.
+			self finishTraversalBuffer: traversalBuffer usedBytes: nextOffset - 9.
+			1 ].
 		mockSession stubs at: #executeScriptAndReturnOop put: [ :script | self fail ].
 		mockSession stubs at: #executeAndFetch put: [ :script | self fail ].
 
@@ -1499,20 +2066,26 @@ GbsSessionCoreTest >> testScalarStringsUseGciTraversalBuffer [
 
 { #category : 'tests' }
 GbsSessionCoreTest >> testScalarByteArraysUseGciTraversalBuffer [
-	| mockSession reports values metrics previousTransport hadTransport |
+	| mockSession values metrics previousTransport hadTransport |
 	mockSession := CoreMockGbsSession new.
-	reports := Dictionary new.
-	reports at: 9400 put: (self traversalByteReportForOop: 9400 classOop: 7002 bytes: (ByteArray withAll: #(1 2 3))).
 	hadTransport := Smalltalk globals includesKey: #GbsMaterializationByteTransport.
 	previousTransport := Smalltalk globals at: #GbsMaterializationByteTransport ifAbsent: [ nil ].
 	[
 		Smalltalk globals at: #GbsMaterializationByteTransport put: 'traversal-buffer'.
 		mockSession stubs at: #supportsMaterializationTraversalBufferTransport put: true.
-		mockSession stubs at: #materializationTraversalReportsForOops put: [ :oops :level :label |
-			self assert: oops equals: #(9400).
+		mockSession stubs at: #apiGciTraverseOops put: [ :oopBuffer :oopCount :traversalBuffer :level |
+			| nextOffset |
+			self assert: oopCount equals: 1.
 			self assert: level equals: 1.
-			self assert: label equals: 'byte-array traversal batch'.
-			reports ].
+			nextOffset := self
+				writeByteTraversalReportOn: traversalBuffer
+				offset: 9
+				oop: 9400
+				classOop: 7002
+				bytes: (ByteArray withAll: #(1 2 3))
+				byteSwizzle: 0.
+			self finishTraversalBuffer: traversalBuffer usedBytes: nextOffset - 9.
+			1 ].
 		mockSession stubs at: #executeScriptAndReturnOop put: [ :script | self fail ].
 		mockSession stubs at: #executeAndFetch put: [ :script | self fail ].
 

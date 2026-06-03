@@ -69,12 +69,16 @@ make artifact-freshness</code></pre>
     <li><code>GS_SERVICE</code>: Optional service name override. Defaults to `gemnetobject`.</li>
     <li><code>GS_NETLDI_HOST</code>: Optional explicit host for netldi routing.</li>
     <li><code>GS_NETLDI_NAME_OR_PORT</code>: Optional explicit netldi name or port, for example `gs64ldi` or `50377`.</li>
+    <li><code>OKZ_GEMSTONE_HOST_USERNAME</code>: Optional host username for netldi remote gem startup when host authentication is required.</li>
+    <li><code>OKZ_GEMSTONE_HOST_PASSWORD</code>: Optional host password for netldi remote gem startup when host authentication is required.</li>
     <li><code>GEMSTONE</code>: Optional explicit GemStone client home used by the GCI probe.</li>
   </ul>
   <pre><code>GS_USER='DataCurator' \
 GS_PASS='...' \
 GS_NETLDI_HOST='localhost' \
 GS_NETLDI_NAME_OR_PORT='50377' \
+OKZ_GEMSTONE_HOST_USERNAME='host-user' \
+OKZ_GEMSTONE_HOST_PASSWORD='...' \
 GEMSTONE='/Users/tariq/GemStone64Bit3.7.5-arm64.Darwin' \
 make full</code></pre>
   <h2>No-compatibility Proof</h2>

@@ -23,7 +23,7 @@ GbsSettingsPresenter >> bridgeBooleanAt: ivarName default: defaultBoolean [
 { #category : '*GemStone-GBS-Core-Tools' }
 GbsSettingsPresenter >> bridgeConfigurationValueAt: ivarName default: defaultValue [
 	configuration ifNil: [ ^ defaultValue ].
-	(configuration respondsTo: ivarName) ifTrue: [
+	(#(asyncSignalPollingEnabled freeOopBatchSize serverMapMode storeTraversalTransport) includes: ivarName) ifTrue: [
 		^ [ configuration perform: ivarName ] on: Error do: [ defaultValue ] ].
 	^ configuration valueAt: ivarName ifAbsent: defaultValue
 ]
@@ -46,6 +46,16 @@ GbsSettingsPresenter >> bridgeFormattedIntegerValueAt: ivarName default: default
 	raw ifNil: [ raw := defaultInteger ].
 	integerValue := [ raw asInteger ] on: Error do: [ defaultInteger ].
 	^ integerValue asStringWithCommas
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
+GbsSettingsPresenter >> bridgeSetConfigurationValueAt: aKey put: aValue [
+	| setter |
+	configuration ifNil: [ configuration := GbsConfiguration current ].
+	(#(asyncSignalPollingEnabled freeOopBatchSize serverMapMode storeTraversalTransport) includes: aKey) ifTrue: [
+		setter := (aKey asString, ':') asSymbol.
+		^ configuration perform: setter with: aValue ].
+	^ configuration valueAt: aKey put: aValue
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
@@ -151,8 +161,8 @@ GbsSettingsPresenter >> initializePresenters [
 	eventPriorityField := self newTextInput.
 	blockReplicationPolicyDrop := self newDropList.
 	defaultFaultPolicyDrop := self newDropList.
-	blockReplicationPolicyDrop items: #( 'replicate' 'stub' 'none' ).
-	defaultFaultPolicyDrop items: #( 'lazy' 'eager' 'none' ).
+	blockReplicationPolicyDrop items: #( 'replicate' 'callback' 'stub' 'none' ).
+	defaultFaultPolicyDrop items: #( 'lazy' 'immediate' 'eager' 'none' ).
 	self bridgeControlAt: #freeOopBatchSizeField put: self newTextInput.
 	self bridgeControlAt: #storeTraversalTransportDrop put: self newDropList.
 	self bridgeControlAt: #serverMapModeDrop put: self newDropList.
@@ -237,44 +247,103 @@ GbsSettingsPresenter >> loadFromConfiguration [
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
+GbsSettingsPresenter >> integerFromField: aField default: anInteger label: labelString minimum: minimumInteger messages: messages [
+	| raw value |
+	raw := (aField text ifNil: [ '' ]) asString copyWithout: $,.
+	raw := raw trimBoth.
+	raw isEmpty ifTrue: [ ^ anInteger ].
+	value := [ raw asInteger ] on: Error do: [
+		messages add: labelString, ' must be an integer.'.
+		^ anInteger ].
+	value ifNil: [
+		messages add: labelString, ' must be an integer.'.
+		^ anInteger ].
+	value < minimumInteger ifTrue: [
+		messages add: labelString, ' must be at least ', minimumInteger asString, '.' ].
+	^ value
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
 GbsSettingsPresenter >> saveSettings [
+	| validationMessage |
 	configuration ifNil: [ configuration := GbsConfiguration current ].
-	configuration
-		valueAt: #libraryName put: libraryField text asString;
-		valueAt: #clientMapCapacity put: (self integerFromField: initialCacheSizeField default: 5003);
-		valueAt: #initialDirtyPoolSize put: (self integerFromField: initialDirtyPoolField default: 157);
-		valueAt: #faultLevelLnk put: (self integerFromField: haltOnErrorField default: -1);
-		valueAt: #faultLevelRpc put: (self integerFromField: faultLevelRpcField default: 4);
-		valueAt: #socketWaitTimeout put: (self integerFromField: delayInterruptField default: 10);
-		valueAt: #traversalBufferSize put: (self integerFromField: traversalBufferField default: 250000);
-		valueAt: #eventPollingFrequency put: (self integerFromField: eventPollingField default: 300);
-		valueAt: #eventPriority put: (self integerFromField: eventPriorityField default: 3);
-		freeOopBatchSize: (self integerFromField: (self bridgeControlAt: #freeOopBatchSizeField) default: 256);
-		valueAt: #blockReplicationPolicy put: (self selectedDropText: blockReplicationPolicyDrop default: 'replicate');
-		valueAt: #defaultFaultPolicy put: (self selectedDropText: defaultFaultPolicyDrop default: 'lazy');
-		storeTraversalTransport: (self selectedDropText: (self bridgeControlAt: #storeTraversalTransportDrop) default: 'script');
-		serverMapMode: (self selectedDropText: (self bridgeControlAt: #serverMapModeDrop) default: 'weak');
-		valueAt: #bulkLoad put: (self yesNoValueFor: { bulkLoadYes. bulkLoadNo });
-		valueAt: #generateClassConnectors put: (self yesNoValueFor: { generateClassConnectorsYes. generateClassConnectorsNo });
-		valueAt: #generateClientClasses put: (self yesNoValueFor: { generateClientClassesYes. generateClientClassesNo });
-		valueAt: #generateServerClasses put: (self yesNoValueFor: { generateServerClassesYes. generateServerClassesNo });
-		valueAt: #connectorNilling put: (self yesNoValueFor: { connectorNillingYes. connectorNillingNo });
-		valueAt: #connectVerification put: (self yesNoValueFor: { connectVerificationYes. connectVerificationNo });
-		valueAt: #removeInvalidConnectors put: (self yesNoValueFor: { removeInvalidConnectorsYes. removeInvalidConnectorsNo });
-		valueAt: #assertionChecks put: (self yesNoValueFor: { assertionChecksYes. assertionChecksNo });
-		valueAt: #forwarderDebugging put: (self yesNoValueFor: { forwarderDebuggingYes. forwarderDebuggingNo });
-		valueAt: #stubDebugging put: (self yesNoValueFor: { stubDebuggingYes. stubDebuggingNo });
-		valueAt: #autoMarkDirty put: (self yesNoValueFor: { autoMarkDirtyYes. autoMarkDirtyNo });
-		valueAt: #blockReplicationEnabled put: (self yesNoValueFor: { blockReplicationEnabledYes. blockReplicationEnabledNo });
-		valueAt: #freeSlotsOnStubbing put: (self yesNoValueFor: { freeSlotsOnStubbingYes. freeSlotsOnStubbingNo });
-		asyncSignalPollingEnabled: (self yesNoValueFor: { (self bridgeControlAt: #asyncSignalPollingEnabledYes). (self bridgeControlAt: #asyncSignalPollingEnabledNo) });
-		valueAt: #blockingProtocolRpc put: (self yesNoValueFor: { blockingProtocolRpcYes. blockingProtocolRpcNo });
-		valueAt: #fullCompression put: (self yesNoValueFor: { fullCompressionYes. fullCompressionNo });
-		valueAt: #confirm put: (self yesNoValueFor: { confirmYes. confirmNo });
-		valueAt: #verbose put: (self yesNoValueFor: { verboseYes. verboseNo }).
+	validationMessage := self validationErrorMessage.
+	validationMessage ifNotNil: [
+		UIManager default inform: validationMessage.
+		^ false ].
+	self updateConfigurationFromPresenters.
 
 	GbsConfiguration current: configuration.
 	[ GbsServerInterface uniqueInstance libraryPath: (libraryField text asString) ] on: Error do: [ ].
 	UIManager default inform: 'GemBuilder settings saved.'.
-	self closeWindow
+	self closeWindow.
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
+GbsSettingsPresenter >> updateConfigurationFromPresenters [
+	configuration ifNil: [ configuration := GbsConfiguration current ].
+	self
+		bridgeSetConfigurationValueAt: #libraryName put: libraryField text asString;
+		bridgeSetConfigurationValueAt: #clientMapCapacity put: (self integerFromField: initialCacheSizeField default: 5003);
+		bridgeSetConfigurationValueAt: #initialDirtyPoolSize put: (self integerFromField: initialDirtyPoolField default: 157);
+		bridgeSetConfigurationValueAt: #faultLevelLnk put: (self integerFromField: haltOnErrorField default: -1);
+		bridgeSetConfigurationValueAt: #faultLevelRpc put: (self integerFromField: faultLevelRpcField default: 4);
+		bridgeSetConfigurationValueAt: #socketWaitTimeout put: (self integerFromField: delayInterruptField default: 10);
+		bridgeSetConfigurationValueAt: #traversalBufferSize put: (self integerFromField: traversalBufferField default: 250000);
+		bridgeSetConfigurationValueAt: #freeOopBatchSize put: (self integerFromField: (self bridgeControlAt: #freeOopBatchSizeField) default: 256);
+		bridgeSetConfigurationValueAt: #eventPollingFrequency put: (self integerFromField: eventPollingField default: 300);
+		bridgeSetConfigurationValueAt: #eventPriority put: (self integerFromField: eventPriorityField default: 3);
+		bridgeSetConfigurationValueAt: #blockReplicationPolicy put: (self selectedDropText: blockReplicationPolicyDrop default: 'replicate');
+		bridgeSetConfigurationValueAt: #defaultFaultPolicy put: (self selectedDropText: defaultFaultPolicyDrop default: 'lazy');
+		bridgeSetConfigurationValueAt: #serverMapMode put: (self selectedDropText: (self bridgeControlAt: #serverMapModeDrop) default: 'weak');
+		bridgeSetConfigurationValueAt: #storeTraversalTransport put: (self selectedDropText: (self bridgeControlAt: #storeTraversalTransportDrop) default: 'script');
+		bridgeSetConfigurationValueAt: #bulkLoad put: (self yesNoValueFor: { bulkLoadYes. bulkLoadNo });
+		bridgeSetConfigurationValueAt: #generateClassConnectors put: (self yesNoValueFor: { generateClassConnectorsYes. generateClassConnectorsNo });
+		bridgeSetConfigurationValueAt: #generateClientClasses put: (self yesNoValueFor: { generateClientClassesYes. generateClientClassesNo });
+		bridgeSetConfigurationValueAt: #generateServerClasses put: (self yesNoValueFor: { generateServerClassesYes. generateServerClassesNo });
+		bridgeSetConfigurationValueAt: #connectorNilling put: (self yesNoValueFor: { connectorNillingYes. connectorNillingNo });
+		bridgeSetConfigurationValueAt: #connectVerification put: (self yesNoValueFor: { connectVerificationYes. connectVerificationNo });
+		bridgeSetConfigurationValueAt: #removeInvalidConnectors put: (self yesNoValueFor: { removeInvalidConnectorsYes. removeInvalidConnectorsNo });
+		bridgeSetConfigurationValueAt: #assertionChecks put: (self yesNoValueFor: { assertionChecksYes. assertionChecksNo });
+		bridgeSetConfigurationValueAt: #forwarderDebugging put: (self yesNoValueFor: { forwarderDebuggingYes. forwarderDebuggingNo });
+		bridgeSetConfigurationValueAt: #stubDebugging put: (self yesNoValueFor: { stubDebuggingYes. stubDebuggingNo });
+		bridgeSetConfigurationValueAt: #autoMarkDirty put: (self yesNoValueFor: { autoMarkDirtyYes. autoMarkDirtyNo });
+		bridgeSetConfigurationValueAt: #blockReplicationEnabled put: (self yesNoValueFor: { blockReplicationEnabledYes. blockReplicationEnabledNo });
+		bridgeSetConfigurationValueAt: #asyncSignalPollingEnabled put: (self yesNoValueFor: { (self bridgeControlAt: #asyncSignalPollingEnabledYes). (self bridgeControlAt: #asyncSignalPollingEnabledNo) });
+		bridgeSetConfigurationValueAt: #freeSlotsOnStubbing put: (self yesNoValueFor: { freeSlotsOnStubbingYes. freeSlotsOnStubbingNo });
+		bridgeSetConfigurationValueAt: #blockingProtocolRpc put: (self yesNoValueFor: { blockingProtocolRpcYes. blockingProtocolRpcNo });
+		bridgeSetConfigurationValueAt: #fullCompression put: (self yesNoValueFor: { fullCompressionYes. fullCompressionNo });
+		bridgeSetConfigurationValueAt: #confirm put: (self yesNoValueFor: { confirmYes. confirmNo });
+		bridgeSetConfigurationValueAt: #verbose put: (self yesNoValueFor: { verboseYes. verboseNo }).
+	^ configuration
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
+GbsSettingsPresenter >> validationErrorMessage [
+	| messages policy |
+	messages := OrderedCollection new.
+	self integerFromField: initialCacheSizeField default: 5003 label: 'clientMapCapacity' minimum: 1 messages: messages.
+	self integerFromField: initialDirtyPoolField default: 157 label: 'initialDirtyPoolSize' minimum: 0 messages: messages.
+	self integerFromField: haltOnErrorField default: -1 label: 'haltOnError' minimum: -1 messages: messages.
+	self integerFromField: faultLevelRpcField default: 4 label: 'faultLevelRpc' minimum: -1 messages: messages.
+	self integerFromField: delayInterruptField default: 10 label: 'delayInterruptPeriod' minimum: 0 messages: messages.
+	self integerFromField: traversalBufferField default: 250000 label: 'traversalBufferSize' minimum: 1 messages: messages.
+	self integerFromField: (self bridgeControlAt: #freeOopBatchSizeField) default: 256 label: 'freeOopBatchSize' minimum: 0 messages: messages.
+	self integerFromField: eventPollingField default: 300 label: 'eventPollingFrequency' minimum: 0 messages: messages.
+	self integerFromField: eventPriorityField default: 3 label: 'eventPriority' minimum: 0 messages: messages.
+	policy := GbsReplicationPolicy default.
+	[ policy blockReplicationPolicy: (self selectedDropText: blockReplicationPolicyDrop default: 'replicate') ]
+		on: Error do: [ :ex | messages add: ex messageText ].
+	[ policy defaultFaultPolicy: (self selectedDropText: defaultFaultPolicyDrop default: 'lazy') ]
+		on: Error do: [ :ex | messages add: ex messageText ].
+	[ policy serverMapMode: (self selectedDropText: (self bridgeControlAt: #serverMapModeDrop) default: 'weak') ]
+		on: Error do: [ :ex | messages add: ex messageText ].
+	[ policy storeTraversalTransport: (self selectedDropText: (self bridgeControlAt: #storeTraversalTransportDrop) default: 'script') ]
+		on: Error do: [ :ex | messages add: ex messageText ].
+	messages isEmpty ifTrue: [ ^ nil ].
+	^ String streamContents: [ :stream |
+		stream nextPutAll: 'Cannot save GemBuilder settings:'; cr.
+		messages do: [ :message |
+			stream nextPutAll: '- '; nextPutAll: message; cr ] ]
 ]

@@ -39,6 +39,20 @@ GbxClampManager >> classClamps [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxClampManager >> changedClampByCallback [
+	^ self currentReplicationScheme
+		updateForClampingByCallback: true
+		inSession: self session
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxClampManager >> changedSelector: aSelector forReplicator: aReplicator [
+	(#(replicationSpec transitiveClosureSpec instVarMap) includes: aSelector) ifTrue: [
+		^ self updateClassClampForReplicator: aReplicator ].
+	^ aReplicator
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxClampManager >> currentReplicationScheme [
 	^ self threadSpecificReplicationScheme ifNil: [ self defaultReplicationScheme ]
 ]
@@ -62,6 +76,11 @@ GbxClampManager >> defaultReplicationSpecSet [
 GbxClampManager >> defaultReplicationSpecSet: aSymbol [
 	defaultReplicationScheme := self replicationSchemeForSet: aSymbol.
 	^ defaultReplicationScheme
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxClampManager >> endingInteraction [
+	^ self
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -141,9 +160,25 @@ GbxClampManager >> release [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxClampManager >> removeClampsForReplicator: aReplicator [
+	| clientClass serverClass |
+	clientClass := self clientClassForReplicator: aReplicator.
+	serverClass := self serverClassForReplicator: aReplicator.
+	serverClass ifNotNil: [ classClamps removeKey: serverClass ifAbsent: [ ] ].
+	clientClass ifNotNil: [
+		self currentReplicationScheme removeArtefactsForClass: clientClass ].
+	^ aReplicator
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxClampManager >> session [
 	manager ifNil: [ ^ nil ].
 	^ manager session
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxClampManager >> startingInteraction [
+	^ self
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -151,6 +186,30 @@ GbxClampManager >> threadSpecificReplicationScheme [
 	^ threadSpecificSchemes
 		at: Processor activeProcess
 		ifAbsent: [ nil ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxClampManager >> updateClassClampForReplicator: aReplicator [
+	| clientClass serverClass scheme |
+	scheme := self currentReplicationScheme.
+	clientClass := self clientClassForReplicator: aReplicator.
+	serverClass := self serverClassForReplicator: aReplicator.
+	(clientClass notNil and: [
+		(clientClass respondsTo: #instancesAreForwarders)
+			and: [ [ clientClass instancesAreForwarders ] on: Error do: [ false ] ] ]) ifTrue: [
+				serverClass ifNotNil: [ classClamps at: serverClass put: scheme ].
+				scheme removeArtefactsForClass: clientClass.
+				^ scheme ].
+	serverClass ifNotNil: [ classClamps removeKey: serverClass ifAbsent: [ ] ].
+	(aReplicator respondsTo: #updateInstVarLevelsOfScheme:) ifTrue: [
+		aReplicator updateInstVarLevelsOfScheme: scheme ].
+	^ scheme
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxClampManager >> updateClampsForReplicators: aCollection [
+	aCollection do: [ :each | self updateClassClampForReplicator: each ].
+	^ aCollection
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -175,4 +234,18 @@ GbxClampManager >> usingReplicationSpecSet: setSelector do: aBlock [
 		hadPrevious
 			ifTrue: [ threadSpecificSchemes at: key put: previous ]
 			ifFalse: [ threadSpecificSchemes removeKey: key ifAbsent: [ ] ] ]
+]
+
+{ #category : '*GemStone-GBS-Core-private' }
+GbxClampManager >> clientClassForReplicator: aReplicator [
+	^ (aReplicator respondsTo: #clientClass)
+		ifTrue: [ aReplicator clientClass ]
+		ifFalse: [ nil ]
+]
+
+{ #category : '*GemStone-GBS-Core-private' }
+GbxClampManager >> serverClassForReplicator: aReplicator [
+	^ (aReplicator respondsTo: #serverClass)
+		ifTrue: [ aReplicator serverClass ]
+		ifFalse: [ nil ]
 ]

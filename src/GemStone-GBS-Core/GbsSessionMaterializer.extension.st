@@ -366,7 +366,7 @@ GbsSessionMaterializer >> materializeScalarOops: oopCollection classNames: class
 
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeArrayOops: oopCollection withProfile: aProfile depth: anInteger seen: seenOops [
-	| results assigned uniqueOops elementOopsByOop flatElementOops spans materializedFlat offset |
+	| results assigned uniqueOops elementOopsByOop flatElementOops spans materializedFlat offset nestedProfile |
 	self
 		checkMaterializationFrontierSize: oopCollection size
 		label: 'array batch roots'.
@@ -398,12 +398,16 @@ GbsSessionMaterializer >> materializeArrayOops: oopCollection withProfile: aProf
 	materializedFlat := flatElementOops isEmpty
 		ifTrue: [ #() ]
 		ifFalse: [
+			nestedProfile := aProfile
+				nestedProfileForIndexedPartOfClassNamed: 'Array'
+				inSession: session
+				depth: anInteger.
 			self
 				checkMaterializationFrontierSize: flatElementOops size
 				label: 'array batch elements'.
 			self
 				materializeOops: flatElementOops asArray
-				withProfile: aProfile
+				withProfile: nestedProfile
 				depth: anInteger + 1
 				seen: seenOops ].
 	self withDirtyTrackingSuspendedDo: [
@@ -599,12 +603,13 @@ GbsSessionMaterializer >> materializeDictionaryOops: oopCollection classNames: c
 
 { #category : 'materializing' }
 GbsSessionMaterializer >> materializeAssociationOops: oopCollection withProfile: aProfile depth: anInteger seen: seenOops [
-	| pairByOop flatOops materializedFlat materializedByOop associationsByOop |
+	| pairByOop flatKeyOops flatValueOops materializedKeys materializedValues materializedByOop associationsByOop keyProfile valueProfile |
 	self
 		checkMaterializationFrontierSize: oopCollection size
 		label: 'association batch roots'.
 	pairByOop := self remoteAssociationOopPairsForOops: oopCollection.
-	flatOops := OrderedCollection new.
+	flatKeyOops := OrderedCollection new.
+	flatValueOops := OrderedCollection new.
 	associationsByOop := Dictionary new.
 	oopCollection do: [ :oop |
 		| pair association |
@@ -615,27 +620,48 @@ GbsSessionMaterializer >> materializeAssociationOops: oopCollection withProfile:
 		pair := pairByOop
 			at: oop
 			ifAbsent: [ self remoteAssociationOopPairForOop: oop ].
-		flatOops addAll: pair ].
-	materializedFlat := flatOops isEmpty
+		flatKeyOops add: pair first.
+		flatValueOops add: pair second ].
+	keyProfile := aProfile
+		nestedProfileForNamedSlot: 1
+		ofClassNamed: 'Association'
+		inSession: session
+		depth: anInteger.
+	valueProfile := aProfile
+		nestedProfileForNamedSlot: 2
+		ofClassNamed: 'Association'
+		inSession: session
+		depth: anInteger.
+	materializedKeys := flatKeyOops isEmpty
 		ifTrue: [ #() ]
 		ifFalse: [
 			self
-				checkMaterializationFrontierSize: flatOops size
-				label: 'association key/value pairs'.
+				checkMaterializationFrontierSize: flatKeyOops size
+				label: 'association keys'.
 			self
-				materializeOops: flatOops asArray
-				withProfile: aProfile
+				materializeOops: flatKeyOops asArray
+				withProfile: keyProfile
+				depth: anInteger + 1
+				seen: seenOops ].
+	materializedValues := flatValueOops isEmpty
+		ifTrue: [ #() ]
+		ifFalse: [
+			self
+				checkMaterializationFrontierSize: flatValueOops size
+				label: 'association values'.
+			self
+				materializeOops: flatValueOops asArray
+				withProfile: valueProfile
 				depth: anInteger + 1
 				seen: seenOops ].
 	materializedByOop := Dictionary new.
 	self withDirtyTrackingSuspendedDo: [
 		oopCollection doWithIndex: [ :oop :index |
-			| offset association |
-			offset := (index - 1) * 2.
+			| association |
 			association := associationsByOop at: oop.
 			association
-				key: (materializedFlat at: offset + 1);
-				value: (materializedFlat at: offset + 2).
+				key: (materializedKeys at: index);
+				value: (materializedValues at: index).
 			materializedByOop at: oop put: association ] ].
 	^ materializedByOop
 ]

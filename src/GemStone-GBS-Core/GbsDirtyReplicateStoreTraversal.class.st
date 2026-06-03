@@ -231,10 +231,17 @@ GbsDirtyReplicateStoreTraversal >> flushEntries: entries [
 
 { #category : 'private - flushing' }
 GbsDirtyReplicateStoreTraversal >> flushEntriesWithBinaryStoreTraversalBuffer: entries [
-	| buffer |
+	| buffer server exportSetReleaseOops |
 	buffer := self dirtyStoreTraversalBufferForEntries: entries.
+	server := session serverInterface.
+	exportSetReleaseOops := self exportSetReleaseOopsForStoreTraversalUsing: server.
 	session addStoreTraversal: self.
-	^ [ session serverInterface storeTraversalBuffer: buffer ]
+	^ [
+		self
+			storeTraversalBuffer: buffer
+			on: server
+			releasingExportSetReleaseOops: exportSetReleaseOops
+	]
 		ensure: [ session removeStoreTraversal: self ]
 ]
 
@@ -253,6 +260,21 @@ GbsDirtyReplicateStoreTraversal >> kindForObject: anObject [
 	(anObject isKindOf: Set) ifTrue: [ ^ #collection ].
 	(anObject isKindOf: OrderedCollection) ifTrue: [ ^ #collection ].
 	self error: 'Unsupported dirty materialized object class: ', anObject class name
+]
+
+{ #category : 'private - lifecycle' }
+GbsDirtyReplicateStoreTraversal >> exportSetReleaseOopsForStoreTraversalUsing: serverInterface [
+	| releaseOops |
+	(self supportsNoLongerReplicatedStoreTraversalOn: serverInterface) ifFalse: [ ^ #() ].
+	releaseOops := GbsSessionLifecycleManager
+		pendingExportSetReleaseOopsForSession: session
+		limit: nil.
+	(serverInterface respondsTo: #storeTraversalBuffer:releasingNoLongerReplicatedOops:gcedOops:) ifTrue: [
+		^ releaseOops ].
+	^ Dictionary new
+		at: #noLongerReplicated put: (releaseOops at: #noLongerReplicated ifAbsent: [ #() ]);
+		at: #gced put: #();
+		yourself
 ]
 
 { #category : 'private - marshaling' }
@@ -435,6 +457,39 @@ GbsDirtyReplicateStoreTraversal >> shouldUseBinaryStoreTraversalBufferForEntries
 	^ buffer canProduceNativeTraversalBuffer
 ]
 
+{ #category : 'private - flushing' }
+GbsDirtyReplicateStoreTraversal >> storeTraversalBuffer: aBuffer on: serverInterface releasingExportSetReleaseOops: releaseDictionary [
+	| noLongerReplicatedOops gcedOops result |
+	(releaseDictionary isNil or: [ releaseDictionary isEmpty ]) ifTrue: [
+		^ serverInterface storeTraversalBuffer: aBuffer ].
+	noLongerReplicatedOops := releaseDictionary at: #noLongerReplicated ifAbsent: [ #() ].
+	gcedOops := releaseDictionary at: #gced ifAbsent: [ #() ].
+	(noLongerReplicatedOops isEmpty and: [ gcedOops isEmpty ]) ifTrue: [
+		^ serverInterface storeTraversalBuffer: aBuffer ].
+	(gcedOops isEmpty and: [
+		serverInterface respondsTo: #storeTraversalBuffer:releasingNoLongerReplicatedOops: ]) ifTrue: [
+		result := serverInterface
+			storeTraversalBuffer: aBuffer
+			releasingNoLongerReplicatedOops: noLongerReplicatedOops.
+		GbsSessionLifecycleManager
+			acknowledgeNoLongerReplicatedOops: noLongerReplicatedOops
+			forSession: session.
+		^ result ].
+	(serverInterface respondsTo: #storeTraversalBuffer:releasingNoLongerReplicatedOops:gcedOops:) ifFalse: [
+		^ serverInterface storeTraversalBuffer: aBuffer ].
+	result := serverInterface
+		storeTraversalBuffer: aBuffer
+		releasingNoLongerReplicatedOops: noLongerReplicatedOops
+		gcedOops: gcedOops.
+	GbsSessionLifecycleManager
+		acknowledgeNoLongerReplicatedOops: noLongerReplicatedOops
+		forSession: session.
+	GbsSessionLifecycleManager
+		acknowledgeGcedOops: gcedOops
+		forSession: session.
+	^ result
+]
+
 { #category : 'private - policy' }
 GbsDirtyReplicateStoreTraversal >> storeTraversalTransport [
 	| policy |
@@ -449,6 +504,13 @@ GbsDirtyReplicateStoreTraversal >> storeTraversalTransport [
 { #category : 'private - policy' }
 GbsDirtyReplicateStoreTraversal >> transportRequiresBinary [
 	^ self storeTraversalTransport = #binaryRequired
+]
+
+{ #category : 'private - lifecycle' }
+GbsDirtyReplicateStoreTraversal >> supportsNoLongerReplicatedStoreTraversalOn: serverInterface [
+	(serverInterface respondsTo: #storeTraversalBuffer:releasingNoLongerReplicatedOops:) ifFalse: [ ^ false ].
+	(serverInterface respondsTo: #supportsNoLongerReplicatedStoreTraversalTransport) ifFalse: [ ^ false ].
+	^ serverInterface supportsNoLongerReplicatedStoreTraversalTransport == true
 ]
 
 { #category : 'private - names' }

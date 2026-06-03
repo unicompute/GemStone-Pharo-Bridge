@@ -39,4 +39,23 @@ printf 'sources\n' > "${OTHER_IMAGE_DIR}/Pharo13.1-64bit-e84a2d1.sources"
 gbs_prepare_sources_files "${SRC_IMAGE}" "${WORK_DIR}"
 [[ -e "${WORK_DIR}/Pharo13.1-64bit-e84a2d1.sources" ]] || fail "expected sources file was not prepared"
 
+(
+  unset OKZ_GEMSTONE_HOST_USERNAME OKZ_GEMSTONE_HOST_PASSWORD GS_HOST_USERNAME GS_HOST_PASSWORD GS_NETLDI_HOST_USERNAME GS_NETLDI_HOST_PASSWORD
+  [[ "$(gbs_live_host_auth_status)" == "unset" ]] || fail "expected unset host auth status"
+  export OKZ_GEMSTONE_HOST_USERNAME="host-user"
+  [[ "$(gbs_live_host_auth_status)" == "partial" ]] || fail "expected partial host auth status"
+  export OKZ_GEMSTONE_HOST_PASSWORD="host-secret"
+  [[ "$(gbs_live_host_auth_status)" == "set" ]] || fail "expected set host auth status"
+)
+
+(
+  unset OKZ_GEMSTONE_HOST_USERNAME OKZ_GEMSTONE_HOST_PASSWORD
+  export GS_HOST_USERNAME="alias-user"
+  export GS_HOST_PASSWORD="alias-secret"
+  gbs_normalize_live_env_vars
+  [[ "${OKZ_GEMSTONE_HOST_USERNAME}" == "alias-user" ]] || fail "expected host username alias to normalize"
+  [[ "${OKZ_GEMSTONE_HOST_PASSWORD}" == "alias-secret" ]] || fail "expected host password alias to normalize"
+  [[ "$(gbs_live_env_status_line)" == *"host_auth=set"* ]] || fail "expected host_auth in live env status line"
+)
+
 echo "lane_common preflight tests passed"

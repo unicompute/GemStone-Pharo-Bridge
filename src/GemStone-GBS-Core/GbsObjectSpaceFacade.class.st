@@ -112,6 +112,41 @@ GbsObjectSpaceFacade >> drainNoLongerReplicatedOopsLimit: anInteger [
 		limit: anInteger
 ]
 
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> flushExportSetReleaseOops [
+	^ self flushExportSetReleaseOopsLimit: nil
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> flushExportSetReleaseOopsLimit: anInteger [
+	^ GbsSessionLifecycleManager
+		flushExportSetReleaseOopsForSession: session
+		limit: anInteger
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> flushExportSetReleaseOopsReportText [
+	^ self flushExportSetReleaseOopsReportTextLimit: nil
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> flushExportSetReleaseOopsReportTextLimit: anInteger [
+	^ GbsSessionLifecycleManager
+		exportSetReleaseFlushReportTextFor: (self flushExportSetReleaseOopsLimit: anInteger)
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> flushGcedOops [
+	^ self flushGcedOopsLimit: nil
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> flushGcedOopsLimit: anInteger [
+	^ GbsSessionLifecycleManager
+		flushGcedOopsForSession: session
+		limit: anInteger
+]
+
 { #category : 'querying' }
 GbsObjectSpaceFacade >> eachObjectDo: aBlock batchSize: aSmallInteger [
 	^ self
@@ -392,13 +427,59 @@ GbsObjectSpaceFacade >> lifecycleReport [
 ]
 
 { #category : 'lifecycle' }
+GbsObjectSpaceFacade >> lifecycleReportText [
+	^ GbsSessionLifecycleManager lifecycleReportTextForSession: session
+]
+
+{ #category : 'lifecycle' }
 GbsObjectSpaceFacade >> pendingGcedOopCount [
 	^ GbsSessionLifecycleManager pendingGcedOopCountForSession: session
 ]
 
 { #category : 'lifecycle' }
+GbsObjectSpaceFacade >> pendingExportSetReleaseOopCount [
+	^ GbsSessionLifecycleManager pendingExportSetReleaseOopCountForSession: session
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> pendingExportSetReleaseOops [
+	^ self pendingExportSetReleaseOopsLimit: nil
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> pendingExportSetReleaseOopsLimit: anInteger [
+	^ GbsSessionLifecycleManager
+		pendingExportSetReleaseOopsForSession: session
+		limit: anInteger
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> pendingGcedOops [
+	^ self pendingGcedOopsLimit: nil
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> pendingGcedOopsLimit: anInteger [
+	^ GbsSessionLifecycleManager
+		pendingGcedOopsForSession: session
+		limit: anInteger
+]
+
+{ #category : 'lifecycle' }
 GbsObjectSpaceFacade >> pendingNoLongerReplicatedOopCount [
 	^ GbsSessionLifecycleManager pendingNoLongerReplicatedOopCountForSession: session
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> pendingNoLongerReplicatedOops [
+	^ self pendingNoLongerReplicatedOopsLimit: nil
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> pendingNoLongerReplicatedOopsLimit: anInteger [
+	^ GbsSessionLifecycleManager
+		pendingNoLongerReplicatedOopsForSession: session
+		limit: anInteger
 ]
 
 { #category : 'querying' }
