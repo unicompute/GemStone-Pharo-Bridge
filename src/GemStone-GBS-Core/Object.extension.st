@@ -6,6 +6,29 @@ Object >> gbsConsiderModified [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+Object >> gbsConsiderModifiedAt: slotIndex [
+	| session |
+	session := GbsMaterializedObjectDirtyTracker sessionTrackingObject: self.
+	session ifNil: [ ^ self gbsConsiderModified ].
+	^ GbsMaterializedObjectDirtyTracker
+		markObject: self
+		dirtyAtNamedSlot: slotIndex
+		inSession: session
+]
+
+{ #category : '*GemStone-GBS-Core' }
+Object >> gbsInstVarAt: slotIndex put: anObject [
+	self instVarAt: slotIndex put: anObject.
+	self gbsConsiderModifiedAt: slotIndex.
+	^ anObject
+]
+
+{ #category : '*GemStone-GBS-Core' }
+Object >> gbxConsiderModifiedAt: slotIndex [
+	^ self gbsConsiderModifiedAt: slotIndex
+]
+
+{ #category : '*GemStone-GBS-Core' }
 Object >> faultPolicy [
 	| session policy |
 	session := GbsMaterializedObjectDirtyTracker sessionTrackingObject: self.

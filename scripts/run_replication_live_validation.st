@@ -1,4 +1,4 @@
-| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass dirtyTrackerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator connectorReport connectorPairCount scheme clampSpecOop transitiveSpec connectorMs clampedOop clampedResult clampedMs clampedMetrics callbackSelector callbackBehaviorName schemeBeforeDomain domainBehaviorName domainCustomerBehaviorName domainFixtureClass domainConnector domainScheme domainLevels domainCallbackScheme domainCallbackSpecOop domainCallbackVerifiedOop domainCallbackVerified domainOrderOop domainCustomerOop domainLineItemsOop domainOrder domainCustomerProxy domainLineItems domainDirtyObjectsFlushed domainDirtyStoreMs domainFlushed domainDirtyStoreReport domainNativeDirtyStoreFlushes domainNativeDirtyStoreEntries domainVerifiedOop domainVerified domainFixtureCount domainPerInstvarClampEntries domainCallbackClampSpecs callbackScheme callbackClampSpecOop callbackVerifiedOop callbackVerified perInstvarClampEntries callbackClampSpecs inheritedFixtureClass pointerReplicatorClass inheritedConnector inheritedReplicator inheritedScheme inheritedLevels inheritedReplicationSpecFixtures policy previousTransport previousProfile nativeStoreSupported dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseGcedObject releaseNoLongerObject exportBefore exportAfter lifecycleReport lifecycleNoLongerQueued lifecycleGcedQueued lifecycleNoLongerAcknowledged lifecycleGcedAcknowledged dirtyStoreMs flushed dirtyStoreReport semanticDirtyStoreCommands semanticDirtyStoreEntries semanticDictionaryEntries semanticSetEntries semanticBagEntries verified verifiedOop nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed businessRootOop businessRoot businessFixtureSize businessDirtyObjectsFlushed businessDirtyStoreMs businessFlushed businessExportAfter businessVerifiedOop businessVerified |
+| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass dirtyTrackerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator connectorReport connectorPairCount scheme clampSpecOop transitiveSpec connectorMs clampedOop clampedResult clampedMs clampedMetrics callbackSelector callbackBehaviorName schemeBeforeDomain domainBehaviorName domainCustomerBehaviorName domainFixtureClass domainConnector domainScheme domainLevels domainCallbackScheme domainCallbackSpecOop domainCallbackVerifiedOop domainCallbackVerified domainOrderOop domainCustomerOop domainLineItemsOop domainOrder domainCustomerProxy domainLineItems domainDirtyObjectsFlushed domainDirtyStoreMs domainFlushed domainDirtyStoreReport domainNativeDirtyStoreFlushes domainNativeDirtyStoreEntries domainVerifiedOop domainVerified domainFixtureCount domainPerInstvarClampEntries domainCallbackClampSpecs mappedDomainBehaviorName mappedDomainFixtureClass mappedDomainConnector mappedDomainReplicator mappedDomainScheme mappedDomainLevels mappedDomainOrderOop mappedDomainCustomerOop mappedDomainLineItemsOop mappedDomainOrder mappedDomainCustomerProxy mappedDomainLineItems mappedDomainDirtyObjectsFlushed mappedDomainDirtyStoreMs mappedDomainFlushed mappedDomainDirtyStoreReport mappedDomainVerifiedOop mappedDomainVerified callbackScheme callbackClampSpecOop callbackVerifiedOop callbackVerified perInstvarClampEntries callbackClampSpecs inheritedFixtureClass pointerReplicatorClass inheritedConnector inheritedReplicator inheritedScheme inheritedLevels inheritedReplicationSpecFixtures policy previousTransport previousProfile nativeStoreSupported dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseGcedObject releaseNoLongerObject exportBefore exportAfter lifecycleReport lifecycleNoLongerQueued lifecycleGcedQueued lifecycleNoLongerAcknowledged lifecycleGcedAcknowledged dirtyStoreMs flushed dirtyStoreReport semanticDirtyStoreCommands semanticDirtyStoreEntries semanticDictionaryEntries semanticSetEntries semanticBagEntries verified verifiedOop nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed businessRootOop businessRoot businessFixtureSize businessDirtyObjectsFlushed businessDirtyStoreMs businessFlushed businessExportAfter businessVerifiedOop businessVerified |
 [
   loadFailed := false.
   cleanupFixture := [ ].
@@ -100,6 +100,24 @@ tempDict ifNotNil: [
 true'
                 literalBindings: (Dictionary new
                   at: 'behaviorName' put: domainCustomerBehaviorName;
+                  yourself)
+                oopBindings: Dictionary new
+                context: 20 ]
+              on: Error
+              do: [ ] ].
+          mappedDomainBehaviorName ifNotNil: [
+            [ session
+                fetchRemoteCommandBody: '| tempDict |
+tempDict := System myUserProfile symbolList
+	detect: [ :each |
+		(each respondsTo: #name)
+			and: [ each name = #PharoSessionGlobals ] ]
+	ifNone: [ nil ].
+tempDict ifNotNil: [
+	tempDict removeKey: behaviorName asSymbol ifAbsent: [ nil ] ].
+true'
+                literalBindings: (Dictionary new
+                  at: 'behaviorName' put: mappedDomainBehaviorName;
                   yourself)
                 oopBindings: Dictionary new
                 context: 20 ]
@@ -494,6 +512,173 @@ status'
         domainVerified := session resultFor: domainVerifiedOop.
         domainVerified = 47 ifFalse: [
           Error signal: 'Migration-domain dirty-store validation failed status=', domainVerified asString, ' oop=', domainVerifiedOop asString, ' (48=class 49=customer 50=lineItems 51=total 52=cache 53=auditTrail).' ].
+
+        phase := 'migration-domain-instvar-map-fixture'.
+        mappedDomainBehaviorName := 'GbsMigrationLiveMappedOrder'.
+        mappedDomainFixtureClass := Smalltalk
+          at: #CoreGbsMigrationDomainMappedOrder
+          ifAbsent: [ Error signal: 'Missing mapped migration-domain order fixture class.' ].
+        session
+          fetchRemoteCommandBody: '| tempDict orderClass orderName |
+tempDict := System myUserProfile symbolList
+	detect: [ :each |
+		(each respondsTo: #name)
+			and: [ each name = #PharoSessionGlobals ] ]
+	ifNone: [ nil ].
+tempDict ifNil: [
+	tempDict := SymbolDictionary new name: #PharoSessionGlobals.
+	System myUserProfile insertDictionary: tempDict at: 1 ].
+orderName := orderClassName asSymbol.
+tempDict removeKey: orderName ifAbsent: [ nil ].
+orderClass := Object subclass: orderClassName
+	instVarNames: #(''buyer'' ''items'' ''transientCache'' ''amount'' ''audit'')
+	classVars: #()
+	classInstVars: #()
+	poolDictionaries: #()
+	inDictionary: tempDict
+	options: #().
+tempDict at: orderName put: orderClass.
+true'
+          literalBindings: (Dictionary new
+            at: 'orderClassName' put: mappedDomainBehaviorName;
+            yourself)
+          oopBindings: Dictionary new
+          context: 20.
+        mappedDomainConnector := connectorClass
+          client: mappedDomainFixtureClass
+          server: mappedDomainBehaviorName
+          replicationSpec: mappedDomainFixtureClass migrationDomainReplicationSpec
+          serverInstVarNames: mappedDomainFixtureClass migrationDomainServerInstVarNames.
+        mappedDomainConnector replicatorClass: pointerReplicatorClass.
+        mappedDomainReplicator := manager installClientClassConnector: mappedDomainConnector.
+        mappedDomainScheme := manager currentReplicationScheme.
+        mappedDomainLevels := mappedDomainScheme instVarLevelsForClass: mappedDomainFixtureClass.
+        mappedDomainLevels = { false. -2. false. 1. 0. nil } ifFalse: [
+          Error signal: 'Mapped migration-domain per-instvar levels did not match VW instVarMap policy shape.' ].
+        ((mappedDomainReplicator respondsTo: #serverToClientOffsets)
+          and: [ mappedDomainReplicator serverToClientOffsets = { 1. 2. nil. 3. 5 } ]) ifFalse: [
+            Error signal: 'Mapped migration-domain server-to-client offsets did not match VW instVarMap semantics.' ].
+        (mappedDomainScheme shouldProxyNamedSlot: 1 ofClass: mappedDomainFixtureClass) ifFalse: [
+          Error signal: 'Mapped migration-domain buyer slot was not marked as a forwarder.' ].
+        (mappedDomainScheme shouldProxyNamedSlot: 3 ofClass: mappedDomainFixtureClass) ifTrue: [
+          Error signal: 'Mapped migration-domain unmapped cache slot was unexpectedly marked as a forwarder.' ].
+        domainFixtureCount := domainFixtureCount + 1.
+        domainPerInstvarClampEntries := mappedDomainScheme serverClampInstVarLevelEntries size.
+
+        phase := 'migration-domain-instvar-map-dirty-store'.
+        mappedDomainOrderOop := session
+          returnRemoteCommandBody: '| fixture tempDict orderClass customerClass order customer lines |
+fixture := UserGlobals at: fixtureKey ifAbsentPut: [ Dictionary new ].
+tempDict := System myUserProfile symbolList
+	detect: [ :each |
+		(each respondsTo: #name)
+			and: [ each name = #PharoSessionGlobals ] ]
+	ifNone: [ nil ].
+orderClass := tempDict at: orderClassName asSymbol.
+customerClass := tempDict at: customerClassName asSymbol.
+customer := customerClass new.
+customer
+	instVarAt: 1 put: #customerB;
+	instVarAt: 2 put: 3.
+lines := OrderedCollection new.
+lines add: 1; add: 2.
+order := orderClass new.
+order
+	instVarAt: 1 put: customer;
+	instVarAt: 2 put: lines;
+	instVarAt: 3 put: Dictionary new;
+	instVarAt: 4 put: 321;
+	instVarAt: 5 put: #created.
+fixture
+	at: #mappedDomainCustomer put: customer;
+	at: #mappedDomainOrder put: order.
+order'
+          literalBindings: (Dictionary new
+            at: 'fixtureKey' put: fixtureKey;
+            at: 'orderClassName' put: mappedDomainBehaviorName;
+            at: 'customerClassName' put: domainCustomerBehaviorName;
+            yourself)
+          oopBindings: Dictionary new.
+        mappedDomainCustomerOop := session
+          returnRemoteCommandBody: '(UserGlobals at: fixtureKey) at: #mappedDomainCustomer'
+          literalBindings: (Dictionary new
+            at: 'fixtureKey' put: fixtureKey;
+            yourself)
+          oopBindings: Dictionary new.
+        mappedDomainLineItemsOop := session
+          returnRemoteCommandBody: '((UserGlobals at: fixtureKey) at: #mappedDomainOrder) instVarAt: 2'
+          literalBindings: (Dictionary new
+            at: 'fixtureKey' put: fixtureKey;
+            yourself)
+          oopBindings: Dictionary new.
+        session resetMaterializedObjectDirtyTracking.
+        [ session clearProxyCache. session clearRemoteClassNameCache ] on: Error do: [ ].
+        session fetchDeep.
+        mappedDomainLineItems := session fetchObject: mappedDomainLineItemsOop.
+        mappedDomainCustomerProxy := session
+          proxyForOop: mappedDomainCustomerOop
+          serverClassName: domainCustomerBehaviorName.
+        mappedDomainOrder := mappedDomainFixtureClass basicNew.
+        mappedDomainOrder
+          instVarAt: 1 put: mappedDomainCustomerProxy;
+          instVarAt: 2 put: mappedDomainLineItems;
+          instVarAt: 3 put: 321;
+          instVarAt: 4 put: nil;
+          instVarAt: 5 put: #created.
+        dirtyTrackerClass
+          registerObject: mappedDomainOrder
+          oop: mappedDomainOrderOop
+          session: session.
+        mappedDomainOrder gbsInstVarAt: 4 put: #clientOnlyCache.
+        session dirtyMaterializedObjectOops isEmpty ifFalse: [
+          Error signal: 'Mapped migration-domain client-only instVarMap slot was marked dirty.' ].
+        mappedDomainOrder gbsInstVarAt: 3 put: 654.
+        mappedDomainOrder gbsInstVarAt: 5 put: #mappedValidated.
+        (session dirtyMaterializedObjectOops includes: mappedDomainOrderOop) ifFalse: [
+          Error signal: 'Mapped migration-domain server-mapped slot did not mark the order dirty.' ].
+        mappedDomainLineItems add: 4.
+        dirtyTrackerClass
+          markObject: mappedDomainLineItems
+          dirtyInSession: session.
+        mappedDomainDirtyObjectsFlushed := session dirtyMaterializedObjectOops size.
+        mappedDomainDirtyObjectsFlushed < 2 ifTrue: [
+          Error signal: 'Mapped migration-domain dirty-store fixture did not mark the order and line-items dirty.' ].
+        mappedDomainDirtyStoreMs := millisecondsToRun value: [
+          mappedDomainFlushed := session flushDirtyMaterializedObjects ].
+        mappedDomainDirtyStoreReport := session dirtyStoreTraversalReport.
+        domainDirtyStoreMs := domainDirtyStoreMs + mappedDomainDirtyStoreMs.
+        domainFlushed := domainFlushed, mappedDomainFlushed.
+        domainDirtyObjectsFlushed := domainDirtyObjectsFlushed + mappedDomainDirtyObjectsFlushed.
+        domainNativeDirtyStoreFlushes := domainNativeDirtyStoreFlushes
+          + (metricValue value: mappedDomainDirtyStoreReport value: #nativeFlushCount).
+        domainNativeDirtyStoreEntries := domainNativeDirtyStoreEntries
+          + (metricValue value: mappedDomainDirtyStoreReport value: #nativeEntryCount).
+        mappedDomainVerifiedOop := session
+          returnRemoteCommandBody: '| order status |
+order := object.
+status := 57.
+(order class name asString = orderClassName) ifFalse: [ status := 58 ].
+(status = 57 and: [ (order instVarAt: 1) class name asString = customerClassName ]) ifFalse: [
+  status = 57 ifTrue: [ status := 59 ] ].
+(status = 57 and: [ (order instVarAt: 2) asArray = #(1 2 4) ]) ifFalse: [
+  status = 57 ifTrue: [ status := 60 ] ].
+(status = 57 and: [ (order instVarAt: 3) isKindOf: Dictionary ]) ifFalse: [
+  status = 57 ifTrue: [ status := 61 ] ].
+(status = 57 and: [ (order instVarAt: 4) = 654 ]) ifFalse: [
+  status = 57 ifTrue: [ status := 62 ] ].
+(status = 57 and: [ (order instVarAt: 5) = #mappedValidated ]) ifFalse: [
+  status = 57 ifTrue: [ status := 63 ] ].
+status'
+          literalBindings: (Dictionary new
+            at: 'orderClassName' put: mappedDomainBehaviorName;
+            at: 'customerClassName' put: domainCustomerBehaviorName;
+            yourself)
+          oopBindings: (Dictionary new
+            at: 'object' put: mappedDomainOrderOop;
+            yourself).
+        mappedDomainVerified := session resultFor: mappedDomainVerifiedOop.
+        mappedDomainVerified = 57 ifFalse: [
+          Error signal: 'Mapped migration-domain dirty-store validation failed status=', mappedDomainVerified asString, ' oop=', mappedDomainVerifiedOop asString, ' (58=class 59=customer 60=items 61=unmapped 62=amount 63=audit).' ].
         session resetMaterializedObjectDirtyTracking.
 
         phase := 'dirty-store-fixture'.

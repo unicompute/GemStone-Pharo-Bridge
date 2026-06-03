@@ -209,17 +209,17 @@ GbsDirtyReplicateStoreTraversal >> appendDictionaryFlushFor: aDictionary entryIn
 
 { #category : 'private - appending' }
 GbsDirtyReplicateStoreTraversal >> appendNamedObjectFlushFor: anObject entryIndex: entryIndex to: stream names: argumentNames scripts: argumentScripts [
-	| slotCount |
-	slotCount := self namedSlotCountForObject: anObject.
-	1 to: slotCount do: [ :index | | valueName |
+	(self namedSlotFlushMappingsForObject: anObject) do: [ :mapping | | serverIndex clientIndex valueName |
+		serverIndex := mapping first.
+		clientIndex := mapping second.
 		valueName := self
-			addArgumentNamed: (self valueArgumentNameForEntry: entryIndex element: index)
-			value: (anObject instVarAt: index)
+			addArgumentNamed: (self valueArgumentNameForEntry: entryIndex element: serverIndex)
+			value: (anObject instVarAt: clientIndex)
 			toNames: argumentNames
 			scripts: argumentScripts.
 		stream
 			nextPutAll: 'object instVarAt: ';
-			nextPutAll: index printString;
+			nextPutAll: serverIndex printString;
 			nextPutAll: ' put: ';
 			nextPutAll: valueName;
 			nextPutAll: '.';
@@ -556,6 +556,23 @@ GbsDirtyReplicateStoreTraversal >> namedSlotCountForObject: anObject [
 	^ names size
 ]
 
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> namedSlotFlushMappingsForObject: anObject [
+	| replicator offsets mappings |
+	replicator := self replicatorForNamedObject: anObject.
+	(replicator notNil and: [
+		(replicator respondsTo: #usesInstVarMap)
+			and: [ replicator usesInstVarMap ] ]) ifTrue: [
+		offsets := replicator serverToClientOffsets.
+		mappings := OrderedCollection new.
+		offsets doWithIndex: [ :clientIndex :serverIndex |
+			clientIndex ifNotNil: [
+				mappings add: { serverIndex. clientIndex } ] ].
+		^ mappings asArray ].
+	^ (1 to: (self namedSlotCountForObject: anObject)) collect: [ :index |
+		{ index. index } ]
+]
+
 { #category : 'private - tracking' }
 GbsDirtyReplicateStoreTraversal >> oopForObject: anObject [
 	^ GbsMaterializedObjectDirtyTracker oopForObject: anObject inSession: session
@@ -573,6 +590,17 @@ GbsDirtyReplicateStoreTraversal >> recordRemoteCommandForEntries: entries [
 	self incrementDirtyStoreReportAt: #remoteCommandEntryCount by: entries size.
 	(entries anySatisfy: [ :entry | self requiresSemanticStoreForEntry: entry ])
 		ifTrue: [ self incrementDirtyStoreReportAt: #semanticCommandCount by: 1 ]
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> replicatorForNamedObject: anObject [
+	(session notNil and: [ session respondsTo: #replicatorForClient:ifAbsent: ]) ifFalse: [
+		^ nil ].
+	^ [ session
+		replicatorForClient: anObject
+		ifAbsent: [ nil ] ]
+		on: Error
+		do: [ nil ]
 ]
 
 { #category : 'private - policy' }

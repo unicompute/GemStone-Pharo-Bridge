@@ -223,6 +223,14 @@ GbsDirtyStoreTraversalBuffer >> nativeIndexedSizeForEntry: entry [
 
 { #category : 'private - native encoding' }
 GbsDirtyStoreTraversalBuffer >> nativeNamedInstVarValuesFor: anObject [
+	| replicator |
+	replicator := self replicatorForNamedObject: anObject.
+	(replicator notNil and: [
+		(replicator respondsTo: #usesInstVarMap)
+			and: [ replicator usesInstVarMap ] ]) ifTrue: [
+			^ replicator
+				namedInstVarValuesInServerOrderFor: anObject
+				unmappedValue: self oopIllegalValueMarker ].
 	^ ((1 to: (self nativeNamedSizeForObject: anObject)) collect: [ :index |
 		anObject instVarAt: index ]) asArray
 ]
@@ -238,7 +246,13 @@ GbsDirtyStoreTraversalBuffer >> nativeNamedSizeForEntry: entry [
 
 { #category : 'private - native encoding' }
 GbsDirtyStoreTraversalBuffer >> nativeNamedSizeForObject: anObject [
-	| names |
+	| replicator serverNamedSize names |
+	replicator := self replicatorForNamedObject: anObject.
+	(replicator notNil and: [
+		(replicator respondsTo: #usesInstVarMap)
+			and: [ replicator usesInstVarMap ] ]) ifTrue: [
+		serverNamedSize := replicator serverNamedSize.
+		serverNamedSize > 0 ifTrue: [ ^ serverNamedSize ] ].
 	names := [ anObject class allInstVarNames ] on: Error do: [ #() ].
 	^ names size
 ]
@@ -313,6 +327,7 @@ GbsDirtyStoreTraversalBuffer >> nativeValuesForDictionaryEntry: entry [
 { #category : 'private - native encoding' }
 GbsDirtyStoreTraversalBuffer >> oopForValue: anObject ifAbsent: absentBlock [
 	| oop |
+	anObject == self oopIllegalValueMarker ifTrue: [ ^ 1 ].
 	anObject ifNil: [ ^ 20 ].
 	anObject == true ifTrue: [ ^ 268 ].
 	anObject == false ifTrue: [ ^ 12 ].
@@ -330,6 +345,11 @@ GbsDirtyStoreTraversalBuffer >> oopForValue: anObject ifAbsent: absentBlock [
 	(self shouldResolveScalarOopFor: anObject) ifTrue: [
 		^ self remoteScalarOopForValue: anObject ifAbsent: absentBlock ].
 	^ absentBlock value
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> oopIllegalValueMarker [
+	^ #GbsDirtyStoreTraversalOopIllegal
 ]
 
 { #category : 'private - native encoding' }
@@ -397,6 +417,17 @@ stream contents'
 		at: #byKeyOop put: byKeyOop;
 		at: #byScalarKey put: byScalarKey;
 		yourself
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> replicatorForNamedObject: anObject [
+	(session notNil and: [ session respondsTo: #replicatorForClient:ifAbsent: ]) ifFalse: [
+		^ nil ].
+	^ [ session
+		replicatorForClient: anObject
+		ifAbsent: [ nil ] ]
+		on: Error
+		do: [ nil ]
 ]
 
 { #category : 'private - native encoding' }

@@ -319,6 +319,55 @@ GbxReplicationScheme >> updateInstVarLevelsForClass: aClass serverInstVarNames: 
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> updateInstVarLevelsForClass: aClass serverInstVarNames: serverInstVarNames serverToClientOffsets: serverToClientOffsets replicationSpec: replicationSpec [
+	| clientInstVarNames specs namedLevels indexedSpec forwarderOffsets forwardIndexed |
+	replicationSpec ifNil: [ ^ self removeArtefactsForClass: aClass ].
+	serverToClientOffsets ifNil: [
+		^ self
+			updateInstVarLevelsForClass: aClass
+			serverInstVarNames: serverInstVarNames
+			replicationSpec: replicationSpec ].
+	replicationSpec = #callback ifTrue: [
+		^ self
+			updateInstVarLevels: nil
+			forwarderOffsets: (Array new: serverInstVarNames size withAll: false)
+			forwardIndexedPart: false
+			forClass: aClass ].
+	clientInstVarNames := (aClass respondsTo: #allInstVarNames)
+		ifTrue: [ aClass allInstVarNames collect: [ :each | each asString ] ]
+		ifFalse: [ #() ].
+	specs := self dictionaryFormOfReplicationSpec: replicationSpec.
+	namedLevels := serverToClientOffsets collect: [ :clientIndex |
+		| spec |
+		clientIndex
+			ifNil: [ false ]
+			ifNotNil: [
+				spec := specs
+					at: (clientInstVarNames at: clientIndex ifAbsent: [ '' ])
+					ifAbsent: [ nil ].
+				spec ifNil: [ nil ] ifNotNil: [ self instVarLevelForReplicationSpec: spec ] ] ].
+	indexedSpec := specs at: 'indexable_part' ifAbsent: [ nil ].
+	forwarderOffsets := serverToClientOffsets collect: [ :clientIndex |
+		| spec |
+		clientIndex
+			ifNil: [ false ]
+			ifNotNil: [
+				spec := specs
+					at: (clientInstVarNames at: clientIndex ifAbsent: [ '' ])
+					ifAbsent: [ nil ].
+				spec notNil and: [ self shouldBeForwarderForReplicationSpec: spec ] ] ].
+	forwardIndexed := indexedSpec notNil and: [
+		self shouldBeForwarderForReplicationSpec: indexedSpec ].
+	^ self
+		updateInstVarLevels: (namedLevels copyWith:
+			(indexedSpec ifNil: [ nil ] ifNotNil: [
+				self instVarLevelForReplicationSpec: indexedSpec ]))
+		forwarderOffsets: forwarderOffsets
+		forwardIndexedPart: forwardIndexed
+		forClass: aClass
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxReplicationScheme >> traversalCallbackSelectorForSession: aSession [
 	| policy |
 	policy := [ GbsReplicationPolicy forSession: aSession ] on: Error do: [ nil ].

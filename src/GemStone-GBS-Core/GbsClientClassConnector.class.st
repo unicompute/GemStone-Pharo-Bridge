@@ -63,7 +63,9 @@ GbsClientClassConnector >> installInReplicatorManager: aReplicatorManager [
 		andServer: self resolvedServerBehavior
 		put: replicator.
 	self registerConnectorStateIn: aReplicatorManager.
-	self updateClampMetadataIn: aReplicatorManager.
+	self
+		updateClampMetadataIn: aReplicatorManager
+		forReplicator: replicator.
 	self markDeferredServerInstVarUpdateFor: replicator in: aReplicatorManager.
 	^ replicator
 ]
@@ -266,6 +268,13 @@ GbsClientClassConnector >> unregisterConnectorPairForReplicator: aReplicator man
 
 { #category : 'private' }
 GbsClientClassConnector >> updateClampMetadataIn: aReplicatorManager [
+	^ self
+		updateClampMetadataIn: aReplicatorManager
+		forReplicator: nil
+]
+
+{ #category : 'private' }
+GbsClientClassConnector >> updateClampMetadataIn: aReplicatorManager forReplicator: aReplicator [
 	| scheme clientClass |
 	replicationSpec ifNil: [ ^ self ].
 	(aReplicatorManager respondsTo: #currentReplicationScheme) ifFalse: [ ^ self ].
@@ -281,7 +290,15 @@ GbsClientClassConnector >> updateClampMetadataIn: aReplicatorManager [
 		^ self ].
 	clientClass := self resolvedClientBehavior.
 	clientClass ifNil: [ ^ self ].
-	scheme
+	(aReplicator notNil and: [
+		(aReplicator respondsTo: #usesInstVarMap)
+			and: [ aReplicator usesInstVarMap ] ]) ifTrue: [
+		^ scheme
+			updateInstVarLevelsForClass: clientClass
+			serverInstVarNames: self serverInstVarNames
+			serverToClientOffsets: aReplicator serverToClientOffsets
+			replicationSpec: replicationSpec ].
+	^ scheme
 		updateInstVarLevelsForClass: clientClass
 		serverInstVarNames: self serverInstVarNames
 		replicationSpec: replicationSpec

@@ -555,6 +555,90 @@ GbsSessionManagerCoreTest >> testReplicatorManagerMigrationDomainSpecCoversForwa
 ]
 
 { #category : 'tests' }
+GbsSessionManagerCoreTest >> testReplicatorManagerMigrationDomainInstVarMapRemapsClampAndDirtyStoreOrder [
+	| mockSession manager connector replicator scheme order traversal mappings dirtyBuffer reader |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: CoreGbsMigrationDomainMappedOrder
+		server: 'GbsMigrationLiveMappedOrder'
+		replicationSpec: CoreGbsMigrationDomainMappedOrder migrationDomainReplicationSpec
+		serverInstVarNames: CoreGbsMigrationDomainMappedOrder migrationDomainServerInstVarNames.
+	connector replicatorClass: GbxPointerObjectReplicator.
+
+	replicator := manager installClientClassConnector: connector.
+	scheme := manager currentReplicationScheme.
+
+	self assert: replicator serverToClientOffsets equals: { 1. 2. nil. 3. 5 }.
+	self
+		assert: (scheme instVarLevelsForClass: CoreGbsMigrationDomainMappedOrder)
+		equals: { false. -2. false. 1. 0. nil }.
+	self assert: (scheme shouldProxyNamedSlot: 1 ofClass: CoreGbsMigrationDomainMappedOrder).
+	self deny: (scheme shouldProxyNamedSlot: 2 ofClass: CoreGbsMigrationDomainMappedOrder).
+	self deny: (scheme shouldProxyNamedSlot: 3 ofClass: CoreGbsMigrationDomainMappedOrder).
+	self deny: (scheme shouldProxyIndexedInstvarsOfClass: CoreGbsMigrationDomainMappedOrder).
+
+	order := CoreGbsMigrationDomainMappedOrder basicNew.
+	order
+		instVarAt: 1 put: 11;
+		instVarAt: 2 put: 22;
+		instVarAt: 3 put: 33;
+		instVarAt: 4 put: 44;
+		instVarAt: 5 put: 55.
+	mockSession rememberMaterializedObject: order forOop: 9700.
+	traversal := GbsDirtyReplicateStoreTraversal forSession: mockSession.
+	mappings := traversal namedSlotFlushMappingsForObject: order.
+	self assert: mappings equals: {
+		{ 1. 1 }.
+		{ 2. 2 }.
+		{ 4. 3 }.
+		{ 5. 5 } }.
+	dirtyBuffer := GbsDirtyStoreTraversalBuffer
+		entries: { { 9700. order. #namedObject } }
+		session: mockSession.
+	mockSession stubs at: #apiGciGetClass put: [ :oop |
+		self assert: oop equals: 9700.
+		7700 ].
+	reader := GbsMaterializationTraversalBufferReader on: mockSession.
+
+	dirtyBuffer
+		withNativeTraversalBufferOn: mockSession
+		do: [ :nativeBuffer | | report |
+			report := reader reportAt: nativeBuffer offset: 9.
+			self assert: report oop equals: 9700.
+			self assert: report classOop equals: 7700.
+			self assert: report namedSize equals: 5.
+			self assert: report indexedSize equals: 0.
+			self assert: report valueOops equals: #(90 178 1 266 442) ]
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testReplicatorManagerMigrationDomainNilMappedClientSlotDoesNotDirtyReplicate [
+	| mockSession manager connector order |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: CoreGbsMigrationDomainMappedOrder
+		server: 'GbsMigrationLiveMappedOrder'
+		replicationSpec: CoreGbsMigrationDomainMappedOrder migrationDomainReplicationSpec
+		serverInstVarNames: CoreGbsMigrationDomainMappedOrder migrationDomainServerInstVarNames.
+	connector replicatorClass: GbxPointerObjectReplicator.
+	manager installClientClassConnector: connector.
+
+	order := CoreGbsMigrationDomainMappedOrder basicNew.
+	mockSession rememberMaterializedObject: order forOop: 9816.
+	order gbsInstVarAt: 4 put: #clientOnlyCache.
+	self assert: (order instVarAt: 4) equals: #clientOnlyCache.
+	self deny: (mockSession isMaterializedObjectDirty: order).
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty.
+
+	order gbsInstVarAt: 3 put: 777.
+	self assert: (order instVarAt: 3) equals: 777.
+	self assert: (mockSession isMaterializedObjectDirty: order).
+	self assert: mockSession dirtyMaterializedObjectOops equals: #(9816)
+]
+
+{ #category : 'tests' }
 GbsSessionManagerCoreTest >> testReplicatorManagerClassVersionChangeRefreshesSubclassReplicatorAndClampMetadata [
 	| mockSession manager connector replicator scheme |
 	mockSession := CoreMockGbsSession new.

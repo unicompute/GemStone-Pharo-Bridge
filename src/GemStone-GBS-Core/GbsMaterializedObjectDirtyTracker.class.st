@@ -83,6 +83,13 @@ GbsMaterializedObjectDirtyTracker class >> markObject: anObject dirtyInSession: 
 ]
 
 { #category : 'dirty tracking' }
+GbsMaterializedObjectDirtyTracker class >> markObject: anObject dirtyAtNamedSlot: slotIndex inSession: aSession [
+	(self shouldIgnoreDirtyMarkFor: anObject namedSlot: slotIndex inSession: aSession) ifTrue: [
+		^ anObject ].
+	^ self markObject: anObject dirtyInSession: aSession
+]
+
+{ #category : 'dirty tracking' }
 GbsMaterializedObjectDirtyTracker class >> markStDirty: anObject [
 	| session |
 	session := self sessionTrackingObject: anObject.
@@ -132,6 +139,17 @@ GbsMaterializedObjectDirtyTracker class >> policyAllowsAutoMarkDirtyForSession: 
 	policy ifNil: [ ^ true ].
 	(policy respondsTo: #autoMarkDirty) ifFalse: [ ^ true ].
 	^ policy autoMarkDirty ~~ false
+]
+
+{ #category : 'private' }
+GbsMaterializedObjectDirtyTracker class >> replicatorForObject: anObject inSession: aSession [
+	(aSession notNil and: [ aSession respondsTo: #replicatorForClient:ifAbsent: ]) ifFalse: [
+		^ nil ].
+	^ [ aSession
+		replicatorForClient: anObject
+		ifAbsent: [ nil ] ]
+		on: Error
+		do: [ nil ]
 ]
 
 { #category : 'registries' }
@@ -191,6 +209,22 @@ GbsMaterializedObjectDirtyTracker class >> sessionTrackingObject: anObject [
 	registry := self sessionRegistryIfPresent.
 	registry ifNil: [ ^ nil ].
 	^ registry at: anObject ifAbsent: [ nil ]
+]
+
+{ #category : 'testing' }
+GbsMaterializedObjectDirtyTracker class >> shouldIgnoreDirtyMarkFor: anObject namedSlot: slotIndex inSession: aSession [
+	| replicator offsets |
+	slotIndex ifNil: [ ^ false ].
+	slotIndex isInteger ifFalse: [ ^ false ].
+	replicator := self replicatorForObject: anObject inSession: aSession.
+	(replicator notNil and: [
+		(replicator respondsTo: #usesInstVarMap)
+			and: [ replicator usesInstVarMap ] ]) ifFalse: [
+		^ false ].
+	(replicator respondsTo: #serverToClientOffsets) ifFalse: [ ^ false ].
+	offsets := [ replicator serverToClientOffsets ] on: Error do: [ #() ].
+	offsets isEmpty ifTrue: [ ^ false ].
+	^ (offsets includes: slotIndex) not
 ]
 
 { #category : 'dirty tracking' }

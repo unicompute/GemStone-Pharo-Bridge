@@ -18,6 +18,16 @@ CoreGbsMigrationDomainOrder class >> migrationDomainCallbackReplicationSpec [
 ]
 
 { #category : 'replication' }
+CoreGbsMigrationDomainOrder class >> migrationDomainInstVarMap [
+	^ #(
+		#(#customer #buyer)
+		#(#lineItems #items)
+		#(#total #amount)
+		#(#auditTrail #audit)
+		#(#transientCache nil))
+]
+
+{ #category : 'replication' }
 CoreGbsMigrationDomainOrder class >> migrationDomainReplicationSpec [
 	^ #(
 		#(#customer #forwarder)
@@ -30,6 +40,11 @@ CoreGbsMigrationDomainOrder class >> migrationDomainReplicationSpec [
 { #category : 'replication' }
 CoreGbsMigrationDomainOrder class >> migrationDomainServerInstVarNames [
 	^ #('customer' 'lineItems' 'total' 'transientCache' 'auditTrail')
+]
+
+{ #category : 'replication' }
+CoreGbsMigrationDomainOrder class >> migrationDomainServerInstVarNamesWithInstVarMap [
+	^ #('buyer' 'items' 'transientCache' 'amount' 'audit')
 ]
 
 { #category : 'replication' }

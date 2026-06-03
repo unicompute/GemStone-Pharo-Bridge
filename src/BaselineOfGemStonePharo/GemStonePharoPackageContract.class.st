@@ -263,6 +263,7 @@ GemStonePharoPackageContract >> packageOwnershipInstanceBehaviorFamilySpecs [
 		{ #CoreGbsLiveSessionTestSupport. #instance. #coreTestsOnly }.
 		{ #CoreTestableGbsWorkspaceActions. #instance. #coreTestsOnly }.
 		{ #CoreGbsMigrationDomainOrder. #instance. #coreTestsOnly }.
+		{ #CoreGbsMigrationDomainMappedOrder. #instance. #coreTestsOnly }.
 		{ #GbsBrowserMagLevToolsTest. #instance. #maglevTestsOnly }.
 		{ #GbsClassicLauncherMagLevToolsTest. #instance. #maglevTestsOnly }.
 		{ #GbsInspectorMagLevToolsTest. #instance. #maglevTestsOnly }.
