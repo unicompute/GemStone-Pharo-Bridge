@@ -12,27 +12,44 @@ GbsSessionLifecycleManager class >> drainFreeOopsForSession: aSession limit: anI
 
 { #category : 'export set' }
 GbsSessionLifecycleManager class >> acknowledgeNoLongerReplicatedOops: oopCollection forSession: aSession [
-	^ self
+	| acknowledged |
+	acknowledged := self
 		acknowledgeOops: oopCollection
 		inQueue: (self noLongerReplicatedOopQueueForSession: aSession)
-		label: 'No-longer-replicated'
+		label: 'No-longer-replicated'.
+	self
+		incrementLifecycleCounter: #noLongerReplicatedOopsAcknowledgedCount
+		by: acknowledged size
+		forSession: aSession.
+	^ acknowledged
 ]
 
 { #category : 'export set' }
 GbsSessionLifecycleManager class >> cancelNoLongerReplicatedOop: anOop forSession: aSession [
-	^ self removeOop: anOop fromQueue: (self noLongerReplicatedOopQueueForSession: aSession)
+	| removed |
+	removed := self removeOop: anOop fromQueue: (self noLongerReplicatedOopQueueForSession: aSession).
+	removed ifTrue: [
+		self incrementLifecycleCounter: #noLongerReplicatedOopsCancelledCount forSession: aSession ].
+	^ removed
 ]
 
 { #category : 'free oops' }
 GbsSessionLifecycleManager class >> acknowledgeGcedOops: oopCollection forSession: aSession [
-	^ self
+	| acknowledged |
+	acknowledged := self
 		acknowledgeOops: oopCollection
 		inQueue: (self gcedOopQueueForSession: aSession)
-		label: 'GCed'
+		label: 'GCed'.
+	self
+		incrementLifecycleCounter: #gcedOopsAcknowledgedCount
+		by: acknowledged size
+		forSession: aSession.
+	^ acknowledged
 ]
 
 { #category : 'export set' }
 GbsSessionLifecycleManager class >> drainExportSetReleaseOopsForSession: aSession limit: anInteger [
+	self incrementLifecycleCounter: #exportSetDrainCallCount forSession: aSession.
 	^ Dictionary new
 		at: #noLongerReplicated put: (self drainNoLongerReplicatedOopsForSession: aSession limit: anInteger);
 		at: #gced put: (self drainGcedOopsForSession: aSession limit: anInteger);
@@ -47,6 +64,10 @@ GbsSessionLifecycleManager class >> drainGcedOopsForSession: aSession limit: anI
 		pendingOopsInQueue: queue
 		limit: (self normalizedDrainLimit: anInteger forSession: aSession).
 	self removeFirst: drained size fromQueue: queue.
+	self
+		incrementLifecycleCounter: #gcedOopsDrainedCount
+		by: drained size
+		forSession: aSession.
 	^ drained
 ]
 
@@ -58,14 +79,35 @@ GbsSessionLifecycleManager class >> drainNoLongerReplicatedOopsForSession: aSess
 		pendingOopsInQueue: queue
 		limit: (self normalizedDrainLimit: anInteger forSession: aSession).
 	self removeFirst: drained size fromQueue: queue.
+	self
+		incrementLifecycleCounter: #noLongerReplicatedOopsDrainedCount
+		by: drained size
+		forSession: aSession.
 	^ drained
 ]
 
 { #category : 'export set' }
 GbsSessionLifecycleManager class >> flushExportSetReleaseOopsForSession: aSession limit: anInteger [
 	| released pendingNoLonger |
+	self incrementLifecycleCounter: #exportSetFlushCallCount forSession: aSession.
 	released := self flushGcedOopsForSession: aSession limit: anInteger.
 	pendingNoLonger := self pendingNoLongerReplicatedOopsForSession: aSession limit: anInteger.
+	self
+		lifecycleCounterAt: #lastExportSetGcedReleasedCount
+		put: released size
+		forSession: aSession.
+	self
+		lifecycleCounterAt: #lastExportSetNoLongerPendingCount
+		put: pendingNoLonger size
+		forSession: aSession.
+	self
+		lifecycleCounterAt: #lastExportSetGcedQueueSize
+		put: (self pendingGcedOopCountForSession: aSession)
+		forSession: aSession.
+	self
+		lifecycleCounterAt: #lastExportSetNoLongerQueueSize
+		put: (self pendingNoLongerReplicatedOopCountForSession: aSession)
+		forSession: aSession.
 	^ Dictionary new
 		at: #gcedReleased put: released;
 		at: #noLongerReplicatedPending put: pendingNoLonger;
@@ -107,6 +149,7 @@ GbsSessionLifecycleManager class >> exportSetReleaseFlushReportTextFor: aDiction
 { #category : 'free oops' }
 GbsSessionLifecycleManager class >> flushGcedOopsForSession: aSession limit: anInteger [
 	| queue released |
+	self incrementLifecycleCounter: #gcedFlushCallCount forSession: aSession.
 	queue := self gcedOopQueueForSession: aSession.
 	released := self
 		pendingOopsInQueue: queue
@@ -149,18 +192,24 @@ GbsSessionLifecycleManager class >> forgetObjectForOop: anOop inSession: aSessio
 { #category : 'server map' }
 GbsSessionLifecycleManager class >> forgetObjectForOop: anOop inSession: aSession reason: reasonSymbol [
 	| map object |
+	self incrementLifecycleCounter: #forgetRequestedOopCount forSession: aSession.
 	map := self serverMapForSession: aSession.
 	object := map at: anOop ifAbsent: [ nil ].
 	map removeKey: anOop ifAbsent: [ ].
 	self forgetMaterializedObjectForOop: anOop inSession: aSession.
 	object ifNotNil: [
+		self incrementLifecycleCounter: #forgottenMaterializedObjectCount forSession: aSession.
 		self unregisterFinalizerForObject: object session: aSession.
 		GbsMaterializedObjectDirtyTracker
 			unregisterObject: object
 			inSession: aSession ].
 	reasonSymbol = #gced
-		ifTrue: [ self noteGcedOop: anOop forSession: aSession ]
-		ifFalse: [ self noteNoLongerReplicatedOop: anOop forSession: aSession ].
+		ifTrue: [
+			self incrementLifecycleCounter: #gcedForgetRequestedOopCount forSession: aSession.
+			self noteGcedOop: anOop forSession: aSession ]
+		ifFalse: [
+			self incrementLifecycleCounter: #noLongerReplicatedForgetRequestedOopCount forSession: aSession.
+			self noteNoLongerReplicatedOop: anOop forSession: aSession ].
 	^ object
 ]
 
@@ -291,7 +340,8 @@ GbsSessionLifecycleManager class >> isExportableOop: anOop [
 
 { #category : 'diagnostics' }
 GbsSessionLifecycleManager class >> lifecycleReportForSession: aSession [
-	^ Dictionary new
+	| report |
+	report := Dictionary new
 		at: #serverMapSize put: (self serverMapSizeForSession: aSession);
 		at: #serverMapMode put: (self serverMapModeForSession: aSession);
 		at: #gcedOopQueueSize put: (self pendingGcedOopCountForSession: aSession);
@@ -300,7 +350,10 @@ GbsSessionLifecycleManager class >> lifecycleReportForSession: aSession [
 		at: #freeOopDrainLimit put: (self freeOopDrainLimitForSession: aSession);
 		at: #releaseOopsTransportAvailable put: (self releaseOopsTransportAvailableForSession: aSession);
 		at: #noLongerReplicatedStoreTraversalTransportAvailable put: (self noLongerReplicatedStoreTraversalTransportAvailableForSession: aSession);
-		yourself
+		yourself.
+	(self lifecycleCountersForSession: aSession) keysAndValuesDo: [ :key :value |
+		report at: key put: value ].
+	^ report
 ]
 
 { #category : 'diagnostics' }
@@ -321,7 +374,74 @@ GbsSessionLifecycleManager class >> lifecycleReportTextForSession: aSession [
 			freeOopDrainLimit
 			releaseOopsTransportAvailable
 			noLongerReplicatedStoreTraversalTransportAvailable) do: [ :key |
-				self writeReportKey: key from: report on: stream ] ]
+				self writeReportKey: key from: report on: stream ].
+		stream cr.
+		stream nextPutAll: 'Lifecycle Counters'; cr.
+		self lifecycleReportCounterKeys do: [ :key |
+			self writeReportKey: key from: report on: stream ] ]
+]
+
+{ #category : 'diagnostics' }
+GbsSessionLifecycleManager class >> lifecycleReportCounterKeys [
+	^ #(
+		rememberedOopCount
+		remappedOopCount
+		forgetRequestedOopCount
+		forgottenMaterializedObjectCount
+		noLongerReplicatedForgetRequestedOopCount
+		gcedForgetRequestedOopCount
+		noLongerReplicatedOopsQueuedCount
+		gcedOopsQueuedCount
+		noLongerReplicatedOopsCancelledCount
+		noLongerReplicatedOopsAcknowledgedCount
+		gcedOopsAcknowledgedCount
+		noLongerReplicatedOopsDrainedCount
+		gcedOopsDrainedCount
+		exportSetDrainCallCount
+		exportSetFlushCallCount
+		gcedFlushCallCount
+		releaseOopsCallCount
+		releaseOopsReleasedCount
+		releaseOopsFailureCount
+		finalizerRegisteredCount
+		finalizerDeactivatedCount
+		finalizerUnregisteredCount
+		finalizedObjectNotificationCount
+		ignoredFinalizerNotificationCount
+		lastExportSetGcedReleasedCount
+		lastExportSetNoLongerPendingCount
+		lastExportSetGcedQueueSize
+		lastExportSetNoLongerQueueSize)
+]
+
+{ #category : 'registries' }
+GbsSessionLifecycleManager class >> lifecycleCountersForSession: aSession [
+	^ (aSession class weakRegistryNamed: #GbsSessionLifecycleCounters)
+		at: aSession
+		ifAbsentPut: [ self newLifecycleCounters ]
+]
+
+{ #category : 'private' }
+GbsSessionLifecycleManager class >> lifecycleCounterAt: aSymbol put: anInteger forSession: aSession [
+	(self lifecycleCountersForSession: aSession)
+		at: aSymbol
+		put: anInteger.
+	^ anInteger
+]
+
+{ #category : 'private' }
+GbsSessionLifecycleManager class >> incrementLifecycleCounter: aSymbol forSession: aSession [
+	^ self incrementLifecycleCounter: aSymbol by: 1 forSession: aSession
+]
+
+{ #category : 'private' }
+GbsSessionLifecycleManager class >> incrementLifecycleCounter: aSymbol by: anInteger forSession: aSession [
+	| counters value |
+	anInteger = 0 ifTrue: [ ^ self lifecycleCountersForSession: aSession ].
+	counters := self lifecycleCountersForSession: aSession.
+	value := (counters at: aSymbol ifAbsent: [ 0 ]) + anInteger.
+	counters at: aSymbol put: value.
+	^ value
 ]
 
 { #category : 'registries' }
@@ -339,12 +459,33 @@ GbsSessionLifecycleManager class >> noteFreeOop: anOop forSession: aSession [
 
 { #category : 'free oops' }
 GbsSessionLifecycleManager class >> noteGcedOop: anOop forSession: aSession [
-	^ self noteOop: anOop inQueue: (self gcedOopQueueForSession: aSession)
+	| queue wasPending result |
+	queue := self gcedOopQueueForSession: aSession.
+	wasPending := queue includes: anOop.
+	result := self noteOop: anOop inQueue: queue.
+	(result notNil and: [ wasPending not ]) ifTrue: [
+		self incrementLifecycleCounter: #gcedOopsQueuedCount forSession: aSession ].
+	^ result
 ]
 
 { #category : 'export set' }
 GbsSessionLifecycleManager class >> noteNoLongerReplicatedOop: anOop forSession: aSession [
-	^ self noteOop: anOop inQueue: (self noLongerReplicatedOopQueueForSession: aSession)
+	| queue wasPending result |
+	queue := self noLongerReplicatedOopQueueForSession: aSession.
+	wasPending := queue includes: anOop.
+	result := self noteOop: anOop inQueue: queue.
+	(result notNil and: [ wasPending not ]) ifTrue: [
+		self incrementLifecycleCounter: #noLongerReplicatedOopsQueuedCount forSession: aSession ].
+	^ result
+]
+
+{ #category : 'private' }
+GbsSessionLifecycleManager class >> newLifecycleCounters [
+	| counters |
+	counters := Dictionary new.
+	self lifecycleReportCounterKeys do: [ :key |
+		counters at: key put: 0 ].
+	^ counters
 ]
 
 { #category : 'private' }
@@ -464,6 +605,7 @@ GbsSessionLifecycleManager class >> pendingOopsInQueue: queue limit: limit [
 GbsSessionLifecycleManager class >> deactivateFinalizerToken: aToken session: aSession [
 	(self activeFinalizerTokensForSessionIfPresent: aSession)
 		ifNotNil: [ :tokens | tokens remove: aToken ifAbsent: [ ] ].
+	self incrementLifecycleCounter: #finalizerDeactivatedCount forSession: aSession.
 	^ aToken
 ]
 
@@ -486,6 +628,7 @@ GbsSessionLifecycleManager class >> registerFinalizerForObject: anObject oop: an
 				oop: anOop
 				session: aSession
 				token: token ].
+	self incrementLifecycleCounter: #finalizerRegisteredCount forSession: aSession.
 	^ anObject
 ]
 
@@ -493,9 +636,14 @@ GbsSessionLifecycleManager class >> registerFinalizerForObject: anObject oop: an
 GbsSessionLifecycleManager class >> noteFinalizedObject: anObject oop: anOop session: aSession token: aToken [
 	| tokens |
 	tokens := self activeFinalizerTokensForSessionIfPresent: aSession.
-	tokens ifNil: [ ^ nil ].
-	(tokens includes: aToken) ifFalse: [ ^ nil ].
+	tokens ifNil: [
+		self incrementLifecycleCounter: #ignoredFinalizerNotificationCount forSession: aSession.
+		^ nil ].
+	(tokens includes: aToken) ifFalse: [
+		self incrementLifecycleCounter: #ignoredFinalizerNotificationCount forSession: aSession.
+		^ nil ].
 	tokens remove: aToken ifAbsent: [ ].
+	self incrementLifecycleCounter: #finalizedObjectNotificationCount forSession: aSession.
 	^ self
 		forgetObjectForOop: anOop
 		inSession: aSession
@@ -504,10 +652,16 @@ GbsSessionLifecycleManager class >> noteFinalizedObject: anObject oop: anOop ses
 
 { #category : 'server map' }
 GbsSessionLifecycleManager class >> rememberObject: anObject oop: anOop session: aSession [
+	| map replacing |
 	(anObject isNil or: [ anOop isNil ]) ifTrue: [ ^ anObject ].
 	(self isExportableOop: anOop) ifFalse: [ ^ anObject ].
 	self cancelNoLongerReplicatedOop: anOop forSession: aSession.
-	(self serverMapForSession: aSession) at: anOop put: anObject.
+	map := self serverMapForSession: aSession.
+	replacing := map includesKey: anOop.
+	map at: anOop put: anObject.
+	self incrementLifecycleCounter: #rememberedOopCount forSession: aSession.
+	replacing ifTrue: [
+		self incrementLifecycleCounter: #remappedOopCount forSession: aSession ].
 	(GbsMaterializedObjectDirtyTracker canTrackObject: anObject) ifTrue: [
 		self registerFinalizerForObject: anObject oop: anOop session: aSession ].
 	^ anObject
@@ -517,8 +671,18 @@ GbsSessionLifecycleManager class >> rememberObject: anObject oop: anOop session:
 GbsSessionLifecycleManager class >> releaseOops: oopArray forSession: aSession [
 	(self releaseOopsTransportAvailableForSession: aSession) ifFalse: [
 		GbsError signal: 'GCI release-oops transport is not available for this session.' ].
-	aSession serverInterface releaseOops: oopArray.
-	(aSession respondsTo: #checkForError) ifTrue: [ aSession checkForError ].
+	[
+		aSession serverInterface releaseOops: oopArray.
+		(aSession respondsTo: #checkForError) ifTrue: [ aSession checkForError ] ]
+		on: Error
+		do: [ :ex |
+			self incrementLifecycleCounter: #releaseOopsFailureCount forSession: aSession.
+			ex pass ].
+	self incrementLifecycleCounter: #releaseOopsCallCount forSession: aSession.
+	self
+		incrementLifecycleCounter: #releaseOopsReleasedCount
+		by: oopArray size
+		forSession: aSession.
 	^ oopArray
 ]
 
@@ -614,6 +778,9 @@ GbsSessionLifecycleManager class >> resetForSession: aSession [
 	(aSession class weakRegistryNamed: #GbsSessionLifecycleFinalizerTokens)
 		removeKey: aSession
 		ifAbsent: [ ].
+	(aSession class weakRegistryNamed: #GbsSessionLifecycleCounters)
+		removeKey: aSession
+		ifAbsent: [ ].
 	GbsSessionEventController resetForSession: aSession.
 	GbxClampManager resetForSession: aSession.
 	^ aSession
@@ -649,6 +816,8 @@ GbsSessionLifecycleManager class >> unregisterFinalizerForObject: anObject sessi
 		ifNotNil: [ :registry |
 			token := registry removeKey: anObject ifAbsent: [ nil ] ].
 	token ifNotNil: [ self deactivateFinalizerToken: token session: aSession ].
+	token ifNotNil: [
+		self incrementLifecycleCounter: #finalizerUnregisteredCount forSession: aSession ].
 	^ anObject
 ]
 

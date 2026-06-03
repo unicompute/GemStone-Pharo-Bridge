@@ -1,4 +1,4 @@
-| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator scheme clampSpecOop transitiveSpec connectorMs clampedOop clampedResult clampedMs clampedMetrics policy previousTransport previousProfile nativeStoreSupported dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseNoLongerObject releaseGcedObject exportBefore exportAfter dirtyStoreMs flushed verified verifiedOop nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed businessRootOop businessRoot businessFixtureSize businessDirtyObjectsFlushed businessDirtyStoreMs businessFlushed businessExportAfter businessVerifiedOop businessVerified |
+| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator connectorReport connectorPairCount scheme clampSpecOop transitiveSpec connectorMs clampedOop clampedResult clampedMs clampedMetrics callbackSelector callbackBehaviorName callbackScheme callbackClampSpecOop callbackVerifiedOop callbackVerified perInstvarClampEntries callbackClampSpecs inheritedFixtureClass pointerReplicatorClass inheritedConnector inheritedReplicator inheritedScheme inheritedLevels inheritedReplicationSpecFixtures policy previousTransport previousProfile nativeStoreSupported dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseGcedObject releaseNoLongerObject exportBefore exportAfter lifecycleReport lifecycleNoLongerQueued lifecycleGcedQueued lifecycleNoLongerAcknowledged lifecycleGcedAcknowledged dirtyStoreMs flushed dirtyStoreReport semanticDirtyStoreCommands semanticDirtyStoreEntries semanticDictionaryEntries semanticSetEntries semanticBagEntries verified verifiedOop nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed businessRootOop businessRoot businessFixtureSize businessDirtyObjectsFlushed businessDirtyStoreMs businessFlushed businessExportAfter businessVerifiedOop businessVerified |
 [
   loadFailed := false.
   cleanupFixture := [ ].
@@ -48,6 +48,24 @@
         Error signal: supportClass unavailableReason ].
       cleanupFixture := [
         session ifNotNil: [
+          callbackBehaviorName ifNotNil: [
+            [ session
+                fetchRemoteCommandBody: '| tempDict |
+tempDict := System myUserProfile symbolList
+	detect: [ :each |
+		(each respondsTo: #name)
+			and: [ each name = #PharoSessionGlobals ] ]
+	ifNone: [ nil ].
+tempDict ifNotNil: [
+	tempDict removeKey: behaviorName asSymbol ifAbsent: [ nil ] ].
+true'
+                literalBindings: (Dictionary new
+                  at: 'behaviorName' put: callbackBehaviorName;
+                  yourself)
+                oopBindings: Dictionary new
+                context: 20 ]
+              on: Error
+              do: [ ] ].
           [ session
               fetchRemoteCommandBody: 'UserGlobals removeKey: fixtureKey ifAbsent: [ nil ]. nil'
               literalBindings: (Dictionary new
@@ -85,6 +103,10 @@
           ifFalse: [ Error signal: 'Installed connector is missing from the client replicator map.' ].
         (manager serverMap at: Association ifAbsent: [ nil ]) == replicator
           ifFalse: [ Error signal: 'Installed connector is missing from the server replicator map.' ].
+        connectorReport := manager connectorManagerReport.
+        connectorPairCount := connectorReport at: #connectorPairCount ifAbsent: [ 0 ].
+        connectorPairCount <= 0 ifTrue: [
+          Error signal: 'Replicator manager report did not expose the installed connector pair.' ].
         scheme := manager currentReplicationScheme.
         scheme hasServerClampMetadata ifFalse: [
           Error signal: 'Installed connector did not update clamp metadata.' ].
@@ -100,6 +122,71 @@
           session: session.
         (clampSpecOop isNil or: [ clampSpecOop <= 20 ]) ifTrue: [
           Error signal: 'Server clamp specification was not installed.' ].
+        perInstvarClampEntries := scheme serverClampInstVarLevelEntries size.
+        perInstvarClampEntries <= 0 ifTrue: [
+          Error signal: 'Per-instvar clamp metadata was not populated for the migration connector fixture.' ].
+
+        phase := 'callback-clamp-sync'.
+        callbackSelector := #gbsMigrationReplicationSpecGbsClampCallback.
+        callbackBehaviorName := 'GbsReplicationLiveCallbackFixture'.
+        session
+          fetchRemoteCommandBody: '| tempDict callbackClass |
+tempDict := System myUserProfile symbolList
+	detect: [ :each |
+		(each respondsTo: #name)
+			and: [ each name = #PharoSessionGlobals ] ]
+	ifNone: [ nil ].
+tempDict ifNil: [
+	tempDict := SymbolDictionary new name: #PharoSessionGlobals.
+	System myUserProfile insertDictionary: tempDict at: 1 ].
+callbackClass := tempDict at: behaviorName asSymbol ifAbsent: [ nil ].
+(callbackClass isNil or: [ callbackClass isBehavior not ]) ifTrue: [
+	callbackClass := Object subclass: behaviorName
+		instVarNames: #()
+		classVars: #()
+		classInstVars: #()
+		poolDictionaries: #()
+		inDictionary: tempDict
+		options: #().
+	tempDict at: behaviorName asSymbol put: callbackClass ].
+callbackClass compileMethod: source category: #''gbs-live-validation''.
+true'
+          literalBindings: (Dictionary new
+            at: 'behaviorName' put: callbackBehaviorName;
+            at: 'source' put: 'gbsMigrationReplicationSpecGbsClampCallback
+	^ nil';
+            yourself)
+          oopBindings: Dictionary new
+          context: 20.
+        callbackScheme := manager replicationSchemeForSet: #gbsMigrationReplicationSpec.
+        callbackScheme
+          updateForClampingByCallback: true
+          inSession: session
+          serverBehavior: callbackBehaviorName.
+        callbackClampSpecOop := clampSyncClass
+          clampSpecOopForScheme: callbackScheme
+          session: session.
+        (callbackClampSpecOop isNil or: [ callbackClampSpecOop <= 20 ]) ifTrue: [
+          Error signal: 'Callback clamp specification was not installed.' ].
+        callbackVerifiedOop := session
+          returnRemoteCommandBody: '| spec selector status |
+spec := object.
+status := 17.
+selector := nil.
+[ selector := spec instVarLevelsSelector ] on: Error do: [ :ignored |
+  [ selector := spec instVarAt: 5 ] on: Error do: [ :ignored2 | nil ] ].
+selector = expectedSelector ifFalse: [ status := 18 ].
+status'
+          literalBindings: (Dictionary new
+            at: 'expectedSelector' put: callbackSelector;
+            yourself)
+          oopBindings: (Dictionary new
+            at: 'object' put: callbackClampSpecOop;
+            yourself).
+        callbackVerified := session resultFor: callbackVerifiedOop.
+        callbackVerified = 17 ifFalse: [
+          Error signal: 'Callback clamp specification did not retain the expected server callback selector.' ].
+        callbackClampSpecs := 1.
 
         phase := 'clamped-fixture'.
         clampedOop := session
@@ -127,6 +214,28 @@ association'
           Error signal: 'Clamped connector materialization did not use GciClampedTrav.' ].
         clampedFallbacks = 0 ifFalse: [
           Error signal: 'Clamped connector materialization fell back from traversal-buffer transport.' ].
+
+        phase := 'inherited-replication-spec-fixture'.
+        inheritedFixtureClass := Smalltalk
+          at: #CoreGbsInheritedReplicationSpecFixture
+          ifAbsent: [ Error signal: 'Missing inherited replication-spec fixture class.' ].
+        pointerReplicatorClass := Smalltalk
+          at: #GbxPointerObjectReplicator
+          ifAbsent: [ Error signal: 'Missing pointer-object replicator class.' ].
+        inheritedConnector := connectorClass
+          client: inheritedFixtureClass
+          server: 'RemoteInheritedMigrationFixture'
+          replicationSpec: nil
+          serverInstVarNames: #('key' 'value').
+        inheritedConnector replicatorClass: pointerReplicatorClass.
+        inheritedReplicator := manager installClientClassConnector: inheritedConnector.
+        inheritedReplicator ifNil: [
+          Error signal: 'Inherited replication-spec fixture did not install a replicator.' ].
+        inheritedScheme := manager replicationSchemeForSet: #customerReplicationSpec.
+        inheritedLevels := inheritedScheme instVarLevelsForClass: inheritedFixtureClass.
+        inheritedLevels = { 0. false. nil } ifFalse: [
+          Error signal: 'Inherited VisualWorks replication spec did not hydrate expected per-instvar levels.' ].
+        inheritedReplicationSpecFixtures := 1.
 
         phase := 'dirty-store-fixture'.
         nativeStoreSupported := session serverInterface supportsDirtyStoreTraversalBufferTransport == true.
@@ -221,12 +330,34 @@ root'
           Error signal: 'Expected at least six dirty materialized objects before flush.' ].
         dirtyStoreMs := millisecondsToRun value: [
           flushed := session flushDirtyMaterializedObjects ].
-        nativeDirtyStoreFlushes := 1.
+        dirtyStoreReport := session dirtyStoreTraversalReport.
+        nativeDirtyStoreFlushes := metricValue value: dirtyStoreReport value: #nativeFlushCount.
+        semanticDirtyStoreCommands := metricValue value: dirtyStoreReport value: #semanticCommandCount.
+        semanticDirtyStoreEntries := metricValue value: dirtyStoreReport value: #semanticEntryCount.
+        semanticDictionaryEntries := metricValue value: dirtyStoreReport value: #semanticDictionaryEntryCount.
+        semanticSetEntries := metricValue value: dirtyStoreReport value: #semanticSetEntryCount.
+        semanticBagEntries := metricValue value: dirtyStoreReport value: #semanticBagEntryCount.
         flushed size < 6 ifTrue: [
           Error signal: 'Dirty-store traversal flushed fewer objects than expected.' ].
+        nativeDirtyStoreFlushes <= 0 ifTrue: [
+          Error signal: 'Dirty-store traversal did not use the native store traversal buffer.' ].
+        semanticDirtyStoreCommands <= 0 ifTrue: [
+          Error signal: 'Dirty-store traversal did not use the semantic collection command path.' ].
+        semanticDirtyStoreEntries < 3 ifTrue: [
+          Error signal: 'Dirty-store traversal did not report all semantic Dictionary/Set/Bag entries.' ].
+        ((semanticDictionaryEntries <= 0) or: [
+          (semanticSetEntries <= 0) or: [ semanticBagEntries <= 0 ] ]) ifTrue: [
+          Error signal: 'Dirty-store traversal did not exercise dictionary, set, and bag semantic entries.' ].
         exportAfter := session objectSpace pendingExportSetReleaseOopCount.
         exportAfter = 0 ifFalse: [
           Error signal: 'Export-set release queues were not acknowledged after native dirty-store flush.' ].
+        lifecycleReport := session objectSpace lifecycleReport.
+        lifecycleNoLongerQueued := lifecycleReport at: #noLongerReplicatedOopsQueuedCount ifAbsent: [ 0 ].
+        lifecycleGcedQueued := lifecycleReport at: #gcedOopsQueuedCount ifAbsent: [ 0 ].
+        lifecycleNoLongerAcknowledged := lifecycleReport at: #noLongerReplicatedOopsAcknowledgedCount ifAbsent: [ 0 ].
+        lifecycleGcedAcknowledged := lifecycleReport at: #gcedOopsAcknowledgedCount ifAbsent: [ 0 ].
+        ((lifecycleNoLongerAcknowledged <= 0) or: [ lifecycleGcedAcknowledged <= 0 ]) ifTrue: [
+          Error signal: 'Lifecycle report did not record export-set acknowledgement counters.' ].
         verifiedOop := session
           returnRemoteCommandBody: '| root status |
 	root := object.
@@ -333,14 +464,27 @@ root'
             ' clamped_ms=', clampedMs asString,
             ' dirty_store_ms=', dirtyStoreMs asString,
             ' business_dirty_store_ms=', businessDirtyStoreMs asString,
+            ' callback_clamp_specs=', callbackClampSpecs asString,
+            ' per_instvar_clamp_entries=', perInstvarClampEntries asString,
+            ' inherited_replication_spec_fixtures=', inheritedReplicationSpecFixtures asString,
+            ' connector_pair_count=', connectorPairCount asString,
             ' clamped_traversal_fetches=', clampedFetches asString,
             ' clamped_traversal_fallbacks=', clampedFallbacks asString,
             ' native_dirty_store_flushes=', nativeDirtyStoreFlushes asString,
+            ' semantic_dirty_store_commands=', semanticDirtyStoreCommands asString,
+            ' semantic_dirty_store_entries=', semanticDirtyStoreEntries asString,
+            ' semantic_dictionary_entries=', semanticDictionaryEntries asString,
+            ' semantic_set_entries=', semanticSetEntries asString,
+            ' semantic_bag_entries=', semanticBagEntries asString,
             ' dirty_objects_flushed=', flushed size asString,
             ' business_dirty_objects_flushed=', businessFlushed size asString,
             ' business_write_fixture_size=', businessFixtureSize asString,
             ' export_set_queued_before=', exportBefore asString,
             ' export_set_queued_after=', exportAfter asString,
+            ' lifecycle_no_longer_queued=', lifecycleNoLongerQueued asString,
+            ' lifecycle_gced_queued=', lifecycleGcedQueued asString,
+            ' lifecycle_no_longer_acknowledged=', lifecycleNoLongerAcknowledged asString,
+            ' lifecycle_gced_acknowledged=', lifecycleGcedAcknowledged asString,
             ' business_export_set_queued_after=', businessExportAfter asString,
             ' clamp_spec_oop=', clampSpecOop asString;
           cr ]
@@ -358,14 +502,27 @@ root'
           ' clamped_ms=', (clampedMs ifNil: [ 0 ]) asString,
           ' dirty_store_ms=', (dirtyStoreMs ifNil: [ 0 ]) asString,
           ' business_dirty_store_ms=', (businessDirtyStoreMs ifNil: [ 0 ]) asString,
+          ' callback_clamp_specs=', (callbackClampSpecs ifNil: [ 0 ]) asString,
+          ' per_instvar_clamp_entries=', (perInstvarClampEntries ifNil: [ 0 ]) asString,
+          ' inherited_replication_spec_fixtures=', (inheritedReplicationSpecFixtures ifNil: [ 0 ]) asString,
+          ' connector_pair_count=', (connectorPairCount ifNil: [ 0 ]) asString,
           ' clamped_traversal_fetches=', (clampedFetches ifNil: [ 0 ]) asString,
           ' clamped_traversal_fallbacks=', (clampedFallbacks ifNil: [ 0 ]) asString,
           ' native_dirty_store_flushes=', (nativeDirtyStoreFlushes ifNil: [ 0 ]) asString,
+          ' semantic_dirty_store_commands=', (semanticDirtyStoreCommands ifNil: [ 0 ]) asString,
+          ' semantic_dirty_store_entries=', (semanticDirtyStoreEntries ifNil: [ 0 ]) asString,
+          ' semantic_dictionary_entries=', (semanticDictionaryEntries ifNil: [ 0 ]) asString,
+          ' semantic_set_entries=', (semanticSetEntries ifNil: [ 0 ]) asString,
+          ' semantic_bag_entries=', (semanticBagEntries ifNil: [ 0 ]) asString,
           ' dirty_objects_flushed=', (dirtyObjectsFlushed ifNil: [ 0 ]) asString,
           ' business_dirty_objects_flushed=', (businessDirtyObjectsFlushed ifNil: [ 0 ]) asString,
           ' business_write_fixture_size=', (businessFixtureSize ifNil: [ 0 ]) asString,
           ' export_set_queued_before=', (exportBefore ifNil: [ 0 ]) asString,
           ' export_set_queued_after=', (exportAfter ifNil: [ 0 ]) asString,
+          ' lifecycle_no_longer_queued=', (lifecycleNoLongerQueued ifNil: [ 0 ]) asString,
+          ' lifecycle_gced_queued=', (lifecycleGcedQueued ifNil: [ 0 ]) asString,
+          ' lifecycle_no_longer_acknowledged=', (lifecycleNoLongerAcknowledged ifNil: [ 0 ]) asString,
+          ' lifecycle_gced_acknowledged=', (lifecycleGcedAcknowledged ifNil: [ 0 ]) asString,
           ' business_export_set_queued_after=', (businessExportAfter ifNil: [ 0 ]) asString,
           ' message=';
         show: (ex messageText ifNil: [ ex printString ]) asString withBlanksTrimmed;

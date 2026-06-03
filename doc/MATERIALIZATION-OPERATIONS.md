@@ -146,6 +146,8 @@ The lifecycle facade exposes two levels of release coordination:
 
 `GbsClientClassConnector` provides the Pharo compatibility surface for VisualWorks-style client/server class connector setup. Installing one in a session's `GbxReplicatorManager` registers the connector pair with `GbsSessionManager`, installs a converted replicator in the client/server maps, and updates the active clamp scheme from per-instvar replication specs or a `#callback` clamp spec.
 
+Use `session dirtyStoreTraversalReport` after `session flushDirtyMaterializedObjects` to inspect the write-path split. The report includes total dirty entries, native binary entries/flushes, remote command entries, semantic command count, Dictionary/Set/Bag semantic entry counts, and custom semantic entry counts for objects that opt into `gbsDirtyStoreRequiresSemanticCommand`. `session resetMaterializedObjectDirtyTracking` clears this report.
+
 ## Live Replication Lane
 
 Run the live connector/clamp/dirty-store validation with:
@@ -156,14 +158,15 @@ make replication-live
 
 Required live environment is the same minimal set used by `make materialization-perf`: `GS_USER`, `GS_PASS`, and `GEMSTONE`. The usual optional stone, netldi, and host-auth environment variables are honored by the shared live preflight.
 
-The lane validates three production-relevant paths against a real GemStone session:
+The lane validates four production-relevant paths against a real GemStone session:
 
 - VisualWorks-style `GbsClientClassConnector` installation into the session replicator manager, including client/server maps and server clamp specification synchronization.
+- Strict parity fixtures for static per-instvar clamp metadata, server callback clamp selector synchronization, and inherited named replication-spec selectors.
 - Clamped Association materialization through `GciClampedTrav`, with traversal-buffer fallback count required to remain zero.
 - Mixed dirty-store traversal for a migration-shaped root graph, with Array, Association, OrderedCollection, and named-slot mutations using native dirty-store buffers where safe, while Dictionary, Set, and Bag mutations are flushed through a batched semantic server command. Exported OOP release queues are acknowledged only after the native store call succeeds.
 - A larger business-write fixture with twelve materialized Array, Association, and OrderedCollection roots. The lane mutates all twelve, flushes them through the dirty-store traversal path, and verifies the remote fixture state before recording the write-path timing.
 
-Thresholds are configured through `scripts/replication_live_thresholds.env` or direct `GBS_REPLICATION_LIVE_*` environment variables. The defaults require at least one clamped traversal fetch, zero clamped fallbacks, at least one native dirty-store flush, at least six mixed dirty objects flushed, at least twelve business dirty objects flushed, and zero export-set release queue entries remaining after both flushes. Trend regression uses `GBS_REPLICATION_LIVE_REGRESSION_PERCENT` or `GBS_REPLICATION_LIVE_REGRESSION_MIN_DELTA_MS`, whichever allows the larger drift over the previous persisted sample.
+Thresholds are configured through `scripts/replication_live_thresholds.env` or direct `GBS_REPLICATION_LIVE_*` environment variables. The defaults require at least one callback clamp spec, at least one per-instvar clamp entry, at least one inherited replication-spec fixture, at least one clamped traversal fetch, zero clamped fallbacks, at least one native dirty-store flush, at least one semantic dirty-store command, at least three semantic Dictionary/Set/Bag entries, at least six mixed dirty objects flushed, at least twelve business dirty objects flushed, and zero export-set release queue entries remaining after both flushes. Trend regression uses `GBS_REPLICATION_LIVE_REGRESSION_PERCENT` or `GBS_REPLICATION_LIVE_REGRESSION_MIN_DELTA_MS`, whichever allows the larger drift over the previous persisted sample.
 
 ## Artifacts
 

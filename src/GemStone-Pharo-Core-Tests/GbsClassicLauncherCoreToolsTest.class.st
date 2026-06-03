@@ -152,6 +152,29 @@ GbsClassicLauncherCoreToolsTest >> testBrowseReplicationPolicyReportUsesSelected
 ]
 
 { #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testBrowseReplicatorManagerReportUsesSelectedSession [
+	| session manager message |
+	session := CoreMockGbsSession new.
+	session isLoggedIn: true.
+	manager := session replicatorManager.
+	manager
+		installClientClassConnectorForClientBehavior: Association
+		serverBehavior: 'RemoteAssociation'
+		replicationSpec: #(#(#key #replicate))
+		serverInstVarNames: #('key' 'value').
+	launcher forcedSession: session.
+
+	self assert: launcher browseReplicatorManagerReport.
+	self assert: launcher infoMessages size equals: 1.
+	message := launcher infoMessages first.
+	self assert: (message includesSubstring: 'Replicator Manager').
+	self assert: (message includesSubstring: 'replicatorCount=1').
+	self assert: (message includesSubstring: 'clientBehaviorNames=Association').
+	self assert: (message includesSubstring: 'serverBehaviorNames=RemoteAssociation').
+	self assert: GbsSessionParameters currentSession == session
+]
+
+{ #category : 'tests' }
 GbsClassicLauncherCoreToolsTest >> testBrowseStaleTypedWrapperLifecycleReportUsesSelectedSession [
 	| session stale current |
 	session := CoreMockGbsSession new.

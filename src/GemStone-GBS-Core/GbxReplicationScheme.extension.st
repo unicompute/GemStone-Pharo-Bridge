@@ -77,13 +77,22 @@ GbxReplicationScheme >> clampByCallbackSelector [
 
 { #category : '*GemStone-GBS-Core' }
 GbxReplicationScheme >> determineInstVarLevelsSelectorForClampByCallback: aBoolean inSession: aSession [
+	^ self
+		determineInstVarLevelsSelectorForClampByCallback: aBoolean
+		inSession: aSession
+		serverBehavior: nil
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> determineInstVarLevelsSelectorForClampByCallback: aBoolean inSession: aSession serverBehavior: serverBehavior [
 	| clampByCallbackSelector |
 	aBoolean ifFalse: [ ^ nil ].
 	self selector = #transitiveClosureSpec ifTrue: [ ^ nil ].
 	clampByCallbackSelector := self clampByCallbackSelector.
 	self
 		validateClampByCallbackSelector: clampByCallbackSelector
-		inSession: aSession.
+		inSession: aSession
+		serverBehavior: serverBehavior.
 	^ clampByCallbackSelector
 ]
 
@@ -254,9 +263,18 @@ GbxReplicationScheme >> shouldStub [
 
 { #category : '*GemStone-GBS-Core' }
 GbxReplicationScheme >> updateForClampingByCallback: aBoolean inSession: aSession [
+	^ self
+		updateForClampingByCallback: aBoolean
+		inSession: aSession
+		serverBehavior: nil
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> updateForClampingByCallback: aBoolean inSession: aSession serverBehavior: serverBehavior [
 	self clamp instVarLevelsSelector: (self
 		determineInstVarLevelsSelectorForClampByCallback: aBoolean
-		inSession: aSession)
+		inSession: aSession
+		serverBehavior: serverBehavior)
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -311,7 +329,23 @@ GbxReplicationScheme >> traversalCallbackSelectorForSession: aSession [
 
 { #category : '*GemStone-GBS-Core' }
 GbxReplicationScheme >> validateClampByCallbackSelector: clampByCallbackSelector inSession: aSession [
+	^ self
+		validateClampByCallbackSelector: clampByCallbackSelector
+		inSession: aSession
+		serverBehavior: nil
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> validateClampByCallbackSelector: clampByCallbackSelector inSession: aSession serverBehavior: serverBehavior [
 	aSession ifNil: [ ^ self ].
+	((serverBehavior notNil
+		and: [ aSession respondsTo: #serverBehavior:canUnderstand: ])
+		and: [
+			[ aSession
+				serverBehavior: serverBehavior
+				canUnderstand: clampByCallbackSelector ]
+				on: Error
+				do: [ :ex | ex pass ] ]) ifTrue: [ ^ self ].
 	(aSession respondsTo: #serverObjectCanUnderstand:) ifFalse: [ ^ self ].
 	([ aSession serverObjectCanUnderstand: clampByCallbackSelector ]
 		on: Error

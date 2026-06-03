@@ -38,6 +38,20 @@ GbxObjectReplicator >> replicationSpec [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxObjectReplicator >> replicationSpecForScheme: aReplicationScheme [
+	| selector |
+	clientClass ifNil: [ ^ #() ].
+	aReplicationScheme ifNil: [ ^ self replicationSpec ].
+	(aReplicationScheme respondsTo: #selector) ifFalse: [ ^ self replicationSpec ].
+	selector := aReplicationScheme selector.
+	(selector = #replicate or: [ selector = #replicationSpec ]) ifTrue: [
+		^ self replicationSpec ].
+	(clientClass respondsTo: selector) ifTrue: [
+		^ clientClass perform: selector ].
+	^ self replicationSpec
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxObjectReplicator >> serverClass [
 	^ serverClass
 ]
@@ -54,9 +68,18 @@ GbxObjectReplicator >> serverInstVarNames [
 
 { #category : '*GemStone-GBS-Core' }
 GbxObjectReplicator >> updateInstVarLevelsOfScheme: aReplicationScheme [
+	| replicationSpec |
 	clientClass ifNil: [ ^ aReplicationScheme ].
+	replicationSpec := self replicationSpecForScheme: aReplicationScheme.
+	replicationSpec = #callback ifTrue: [
+		aReplicationScheme removeArtefactsForClass: clientClass.
+		aReplicationScheme
+			updateForClampingByCallback: true
+			inSession: self session
+			serverBehavior: self serverClass.
+		^ aReplicationScheme ].
 	^ aReplicationScheme
 		updateInstVarLevelsForClass: clientClass
 		serverInstVarNames: self serverInstVarNames
-		replicationSpec: self replicationSpec
+		replicationSpec: replicationSpec
 ]

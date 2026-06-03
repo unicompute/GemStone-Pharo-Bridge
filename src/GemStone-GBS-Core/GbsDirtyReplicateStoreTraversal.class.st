@@ -20,11 +20,79 @@ GbsDirtyReplicateStoreTraversal class >> flushSession: aSession [
 	^ (self forSession: aSession) flush
 ]
 
+{ #category : 'reporting' }
+GbsDirtyReplicateStoreTraversal class >> dirtyStoreTraversalReportForSession: aSession [
+	aSession ifNil: [ ^ self newDirtyStoreTraversalReport ].
+	^ (self dirtyStoreTraversalReportStorageForSession: aSession) copy
+]
+
+{ #category : 'private - reporting' }
+GbsDirtyReplicateStoreTraversal class >> dirtyStoreTraversalReportStorageForSession: aSession [
+	^ (aSession class weakRegistryNamed: #GbsSessionDirtyStoreTraversalReports)
+		at: aSession
+		ifAbsentPut: [ self newDirtyStoreTraversalReport ]
+]
+
+{ #category : 'private - reporting' }
+GbsDirtyReplicateStoreTraversal class >> newDirtyStoreTraversalReport [
+	^ Dictionary new
+		at: #totalEntries put: 0;
+		at: #nativeEntryCount put: 0;
+		at: #semanticEntryCount put: 0;
+		at: #semanticDictionaryEntryCount put: 0;
+		at: #semanticSetEntryCount put: 0;
+		at: #semanticBagEntryCount put: 0;
+		at: #semanticCustomEntryCount put: 0;
+		at: #remoteCommandEntryCount put: 0;
+		at: #nativeFlushCount put: 0;
+		at: #remoteCommandCount put: 0;
+		at: #semanticCommandCount put: 0;
+		yourself
+]
+
+{ #category : 'reporting' }
+GbsDirtyReplicateStoreTraversal class >> resetDirtyStoreTraversalReportForSession: aSession [
+	aSession ifNil: [ ^ self newDirtyStoreTraversalReport ].
+	^ self
+		setDirtyStoreTraversalReport: self newDirtyStoreTraversalReport
+		forSession: aSession
+]
+
+{ #category : 'private - reporting' }
+GbsDirtyReplicateStoreTraversal class >> setDirtyStoreTraversalReport: aDictionary forSession: aSession [
+	aSession ifNil: [ ^ aDictionary ].
+	(aSession class weakRegistryNamed: #GbsSessionDirtyStoreTraversalReports)
+		at: aSession
+		put: aDictionary.
+	^ aDictionary
+]
+
 { #category : 'private - arguments' }
 GbsDirtyReplicateStoreTraversal >> addArgumentNamed: name value: value toNames: argumentNames scripts: argumentScripts [
 	argumentNames add: name.
 	argumentScripts add: (self argumentScriptFor: value visited: IdentitySet new).
 	^ name
+]
+
+{ #category : 'private - reporting' }
+GbsDirtyReplicateStoreTraversal >> beginDirtyStoreReportForEntries: entries [
+	| report semanticEntries |
+	report := self class newDirtyStoreTraversalReport.
+	semanticEntries := self semanticStoreEntriesFor: entries.
+	report
+		at: #totalEntries put: entries size;
+		at: #semanticEntryCount put: semanticEntries size;
+		at: #semanticDictionaryEntryCount put: (semanticEntries count: [ :entry |
+			#(#dictionary #identityDictionary) includes: (entry at: 3) ]);
+		at: #semanticSetEntryCount put: (semanticEntries count: [ :entry |
+			(entry at: 3) = #set ]);
+		at: #semanticBagEntryCount put: (semanticEntries count: [ :entry |
+			(entry at: 3) = #bag ]);
+		at: #semanticCustomEntryCount put: (semanticEntries count: [ :entry |
+			self semanticDirtyStoreRequestedBy: entry second ]).
+	^ self class
+		setDirtyStoreTraversalReport: report
+		forSession: session
 ]
 
 { #category : 'private - appending' }
@@ -260,6 +328,7 @@ GbsDirtyReplicateStoreTraversal >> entriesForDirtyObjects [
 GbsDirtyReplicateStoreTraversal >> flush [
 	| entries |
 	entries := self entriesForDirtyObjects.
+	self beginDirtyStoreReportForEntries: entries.
 	entries isEmpty ifTrue: [ ^ #() ].
 	self flushEntries: entries.
 	GbsMaterializedObjectDirtyTracker
@@ -298,8 +367,12 @@ GbsDirtyReplicateStoreTraversal >> flushEntriesWithBinaryStoreTraversalBuffer: e
 
 { #category : 'private - flushing' }
 GbsDirtyReplicateStoreTraversal >> flushEntriesWithRemoteCommand: entries [
+	| result |
 	session addStoreTraversal: self.
-	^ [ session returnRemoteCommandOop: (self remoteCommandForEntries: entries) ]
+	^ [
+		result := session returnRemoteCommandOop: (self remoteCommandForEntries: entries).
+		self recordRemoteCommandForEntries: entries.
+		result ]
 		ensure: [ session removeStoreTraversal: self ]
 ]
 
@@ -313,10 +386,13 @@ GbsDirtyReplicateStoreTraversal >> flushNativeEntriesWithBinaryStoreTraversalBuf
 		server ensureDirtyObjectsInitialized ].
 	session addStoreTraversal: self.
 	^ [
-		self
+		| result |
+		result := self
 			storeTraversalBuffer: buffer
 			on: server
-			releasingExportSetReleaseOops: exportSetReleaseOops
+			releasingExportSetReleaseOops: exportSetReleaseOops.
+		self recordNativeFlushForEntries: entries.
+		result
 	]
 			ensure: [ session removeStoreTraversal: self ]
 ]
@@ -485,9 +561,31 @@ GbsDirtyReplicateStoreTraversal >> oopForObject: anObject [
 	^ GbsMaterializedObjectDirtyTracker oopForObject: anObject inSession: session
 ]
 
+{ #category : 'private - reporting' }
+GbsDirtyReplicateStoreTraversal >> recordNativeFlushForEntries: entries [
+	self incrementDirtyStoreReportAt: #nativeFlushCount by: 1.
+	self incrementDirtyStoreReportAt: #nativeEntryCount by: entries size
+]
+
+{ #category : 'private - reporting' }
+GbsDirtyReplicateStoreTraversal >> recordRemoteCommandForEntries: entries [
+	self incrementDirtyStoreReportAt: #remoteCommandCount by: 1.
+	self incrementDirtyStoreReportAt: #remoteCommandEntryCount by: entries size.
+	(entries anySatisfy: [ :entry | self requiresSemanticStoreForEntry: entry ])
+		ifTrue: [ self incrementDirtyStoreReportAt: #semanticCommandCount by: 1 ]
+]
+
 { #category : 'private - policy' }
 GbsDirtyReplicateStoreTraversal >> replicationPolicy [
 	^ [ GbsReplicationPolicy forSession: session ] on: Error do: [ nil ]
+]
+
+{ #category : 'private - reporting' }
+GbsDirtyReplicateStoreTraversal >> incrementDirtyStoreReportAt: key by: amount [
+	| report |
+	report := self class dirtyStoreTraversalReportStorageForSession: session.
+	report at: key put: (report at: key ifAbsent: [ 0 ]) + amount.
+	^ report
 ]
 
 { #category : 'private - commands' }
@@ -565,7 +663,16 @@ GbsDirtyReplicateStoreTraversal >> nativeStoreTraversalEntriesFor: entries [
 
 { #category : 'private - policy' }
 GbsDirtyReplicateStoreTraversal >> requiresSemanticStoreForEntry: entry [
+	(self semanticDirtyStoreRequestedBy: entry second) ifTrue: [ ^ true ].
 	^ #(#dictionary #identityDictionary #set #bag) includes: (entry at: 3)
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> semanticDirtyStoreRequestedBy: anObject [
+	(anObject respondsTo: #gbsDirtyStoreRequiresSemanticCommand) ifFalse: [ ^ false ].
+	^ [ anObject gbsDirtyStoreRequiresSemanticCommand == true ]
+		on: Error
+		do: [ false ]
 ]
 
 { #category : 'private - policy' }

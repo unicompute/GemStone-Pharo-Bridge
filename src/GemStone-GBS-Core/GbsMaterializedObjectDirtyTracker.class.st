@@ -166,6 +166,7 @@ GbsMaterializedObjectDirtyTracker class >> resetForSession: aSession [
 	(aSession class weakRegistryNamed: #GbsSessionDirtyPools)
 		removeKey: aSession
 		ifAbsent: [ ].
+	GbsDirtyReplicateStoreTraversal resetDirtyStoreTraversalReportForSession: aSession.
 	GbsSessionLifecycleManager resetForSession: aSession.
 	^ aSession
 ]

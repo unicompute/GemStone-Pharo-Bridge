@@ -265,6 +265,14 @@ CoreMockGbsSession >> serverObjectCanUnderstand: aSelector [
 	^ true
 ]
 
+{ #category : 'execution' }
+CoreMockGbsSession >> serverBehavior: aBehaviorOrName canUnderstand: aSelector [
+	| block |
+	block := self stubs at: #serverBehaviorCanUnderstand ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: aBehaviorOrName cull: aSelector ].
+	^ self serverObjectCanUnderstand: aSelector
+]
+
 { #category : 'lifecycle' }
 CoreMockGbsSession >> releaseOops: oopCollection [
 	| block |

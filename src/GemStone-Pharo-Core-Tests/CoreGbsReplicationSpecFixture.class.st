@@ -10,6 +10,18 @@ Class {
 }
 
 { #category : 'replication' }
+CoreGbsReplicationSpecFixture class >> callbackReplicationSpec [
+	^ #callback
+]
+
+{ #category : 'replication' }
+CoreGbsReplicationSpecFixture class >> customerReplicationSpec [
+	^ #(
+		#(#key #stub)
+		#(#value #forwarder))
+]
+
+{ #category : 'replication' }
 CoreGbsReplicationSpecFixture class >> replicationSpec [
 	^ #(
 		#(#key #forwarder)

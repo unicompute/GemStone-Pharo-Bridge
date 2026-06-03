@@ -13,6 +13,13 @@ GbxReplicatorManager >> clientClassConnectorForClient: clientClassOrName server:
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> clientClassConnectorForClientBehavior: clientBehavior serverBehavior: serverBehavior [
+	^ self
+		clientClassConnectorForClient: clientBehavior
+		server: serverBehavior
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxReplicatorManager >> changedSelector: aSelector inClass: aClass [
 	| behavior |
 	behavior := (aClass respondsTo: #soleInstance)
@@ -25,7 +32,7 @@ GbxReplicatorManager >> changedSelector: aSelector inClass: aClass [
 			ifFalse: [ class ].
 		replicator := self replicatorForClientBehavior: mappedBehavior ifAbsent: [ nil ].
 		replicator ifNotNil: [
-			aSelector = #instVarMap ifTrue: [
+			(self selectorRequiresServerOffsetRefresh: aSelector) ifTrue: [
 				(replicator respondsTo: #initializeServerOffsets) ifTrue: [
 					replicator initializeServerOffsets ] ].
 			(self clampManager respondsTo: #changedSelector:forReplicator:) ifTrue: [
@@ -37,6 +44,92 @@ GbxReplicatorManager >> changedSelector: aSelector inClass: aClass [
 GbxReplicatorManager >> connectReplicator: aReplicator toServerBehavior: serverBehavior [
 	serverMap at: serverBehavior put: aReplicator.
 	^ aReplicator
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorBehaviorNamesFromMap: aDictionary [
+	| names |
+	names := OrderedCollection new.
+	aDictionary keysAndValuesDo: [ :behavior :replicator |
+		names add: (self connectorNameForBehavior: behavior) ].
+	^ names asArray sort
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorManagerReport [
+	| report pairs clamps |
+	pairs := self connectorPairsForReport.
+	clamps := [ self identityClamps ] on: Error do: [ #() ].
+	report := Dictionary new
+		at: #clientMapSize put: clientMap size;
+		at: #serverMapSize put: serverMap size;
+		at: #replicatorCount put: self numberOfReplicators;
+		at: #connectorPairCount put: pairs size;
+		at: #needsServerInstVarNames put: self needsServerInstVarNames;
+		at: #deferredServerInstVarReplicatorCount put: self replicatorsNeedingServerInstVarNames size;
+		at: #clientBehaviorNames put: (self connectorBehaviorNamesFromMap: clientMap);
+		at: #serverBehaviorNames put: (self connectorBehaviorNamesFromMap: serverMap);
+		at: #currentReplicationSpecSet put: self defaultReplicationSpecSet;
+		at: #identityClampCount put: clamps size;
+		yourself.
+	^ report
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorManagerReportText [
+	| report |
+	report := self connectorManagerReport.
+	^ String streamContents: [ :stream |
+		stream
+			nextPutAll: 'Replicator Manager';
+			cr;
+			cr.
+		#(
+			clientMapSize
+			serverMapSize
+			replicatorCount
+			connectorPairCount
+			needsServerInstVarNames
+			deferredServerInstVarReplicatorCount
+			currentReplicationSpecSet
+			identityClampCount
+			clientBehaviorNames
+			serverBehaviorNames) do: [ :key |
+				stream
+					nextPutAll: key asString;
+					nextPutAll: '=';
+					nextPutAll: (self connectorReportValueString: (report at: key ifAbsent: [ nil ]));
+					cr ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorNameForBehavior: aBehaviorOrName [
+	aBehaviorOrName ifNil: [ ^ '' ].
+	(aBehaviorOrName respondsTo: #name) ifTrue: [
+		^ aBehaviorOrName name asString ].
+	^ aBehaviorOrName asString
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorPairsForReport [
+	self session ifNil: [ ^ GbsSessionManager connectorPairs ].
+	^ GbsSessionManager connectorPairsForSession: self session
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorReportValueString: anObject [
+	anObject ifNil: [ ^ 'nil' ].
+	anObject == true ifTrue: [ ^ 'true' ].
+	anObject == false ifTrue: [ ^ 'false' ].
+	anObject isSymbol ifTrue: [ ^ anObject asString ].
+	anObject isString ifTrue: [ ^ anObject ].
+	(anObject isKindOf: Array) ifTrue: [
+		anObject isEmpty ifTrue: [ ^ 'none' ].
+		^ String streamContents: [ :stream |
+			anObject doWithIndex: [ :each :index |
+				index > 1 ifTrue: [ stream nextPutAll: ', ' ].
+				stream nextPutAll: each asString ] ] ].
+	^ anObject printString
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -70,6 +163,24 @@ GbxReplicatorManager >> mapReplicatorForClientBehavior: clientBehavior serverBeh
 { #category : '*GemStone-GBS-Core' }
 GbxReplicatorManager >> installClientClassConnector: aConnector [
 	^ aConnector installInReplicatorManager: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> installClientClassConnectorForClientBehavior: clientBehavior serverBehavior: serverBehavior [
+	^ self installClientClassConnector:
+		(self
+			clientClassConnectorForClientBehavior: clientBehavior
+			serverBehavior: serverBehavior)
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> installClientClassConnectorForClientBehavior: clientBehavior serverBehavior: serverBehavior replicationSpec: aReplicationSpec serverInstVarNames: instVarNames [
+	^ self installClientClassConnector:
+		(GbsClientClassConnector
+			client: clientBehavior
+			server: serverBehavior
+			replicationSpec: aReplicationSpec
+			serverInstVarNames: instVarNames)
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -118,8 +229,27 @@ GbxReplicatorManager >> replicatorsNeedingServerInstVarNames [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> removeClientClassConnectorForClientBehavior: clientBehavior serverBehavior: serverBehavior [
+	^ self
+		removeReplicatorForClientBehavior: clientBehavior
+		andServerBehavior: serverBehavior
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxReplicatorManager >> serverMap [
 	^ serverMap
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> selectorRequiresServerOffsetRefresh: aSelector [
+	^ #(
+		instVarMap
+		instVarNames
+		allInstVarNames
+		classVersion
+		classHistory
+		classFormat
+		instanceVariables) includes: aSelector
 ]
 
 { #category : '*GemStone-GBS-Core' }

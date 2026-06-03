@@ -94,6 +94,16 @@ GbsSession >> flushDirtyMaterializedObjects [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> dirtyStoreTraversalReport [
+	^ GbsDirtyReplicateStoreTraversal dirtyStoreTraversalReportForSession: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> resetDirtyStoreTraversalReport [
+	^ GbsDirtyReplicateStoreTraversal resetDirtyStoreTraversalReportForSession: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> resetMaterializedObjectDirtyTracking [
 	^ GbsMaterializedObjectDirtyTracker resetForSession: self
 ]
@@ -180,12 +190,39 @@ GbsSession >> returnRemoteCommandBody: bodyString literalBindings: literalDictio
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> serverObjectCanUnderstand: aSelector [
 	^ self
-		fetchRemoteCommandBody: 'Object canUnderstand: selector'
-		literalBindings: (Dictionary new
-			at: 'selector' put: aSelector asSymbol;
-			yourself)
-		oopBindings: Dictionary new
-		context: 20
+		fetchRemoteCommand: (GbsRemoteCommand
+			blockBody: 'Object canUnderstand: selector'
+			literalBindings: (Dictionary new
+				at: 'selector' put: aSelector asSymbol;
+				yourself)
+			oopBindings: Dictionary new)
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> serverBehavior: aBehaviorOrName canUnderstand: aSelector [
+	| behaviorName |
+	behaviorName := (aBehaviorOrName respondsTo: #name)
+		ifTrue: [ aBehaviorOrName name asString ]
+		ifFalse: [ aBehaviorOrName asString ].
+	^ self
+		serverBehaviorNamed: behaviorName
+		canUnderstand: aSelector
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> serverBehaviorNamed: behaviorName canUnderstand: aSelector [
+	^ self
+		fetchRemoteCommand: (GbsRemoteCommand
+			blockBody: '| behavior |
+behavior := System myUserProfile symbolList objectNamed: behaviorName asSymbol.
+behavior ifNil: [
+	behavior := GsSession currentSession resolveSymbol: behaviorName asSymbol ].
+behavior notNil and: [ behavior canUnderstand: selector ]'
+			literalBindings: (Dictionary new
+				at: 'behaviorName' put: behaviorName asString;
+				at: 'selector' put: aSelector asSymbol;
+				yourself)
+			oopBindings: Dictionary new)
 ]
 
 { #category : '*GemStone-GBS-Core' }

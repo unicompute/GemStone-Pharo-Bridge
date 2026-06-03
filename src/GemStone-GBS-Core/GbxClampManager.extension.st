@@ -57,7 +57,7 @@ GbxClampManager >> changedSelector: aSelector forReplicator: aReplicator [
 	| scheme |
 	aSelector = #instancesAreForwarders ifTrue: [
 		^ self updateClassClampForReplicator: aReplicator ].
-	aSelector = #instVarMap ifTrue: [
+	(self selectorRequiresClampMetadataRefresh: aSelector) ifTrue: [
 		^ self updateClampsForReplicators: { aReplicator } ].
 	scheme := self replicationSchemeNamed: aSelector.
 	scheme ifNotNil: [
@@ -286,6 +286,18 @@ GbxClampManager >> replicatorUsesClassClamp: aReplicator [
 	clientClass ifNil: [ ^ false ].
 	(clientClass respondsTo: #instancesAreForwarders) ifFalse: [ ^ false ].
 	^ [ clientClass instancesAreForwarders ] on: Error do: [ false ]
+]
+
+{ #category : '*GemStone-GBS-Core-private' }
+GbxClampManager >> selectorRequiresClampMetadataRefresh: aSelector [
+	^ #(
+		instVarMap
+		instVarNames
+		allInstVarNames
+		classVersion
+		classHistory
+		classFormat
+		instanceVariables) includes: aSelector
 ]
 
 { #category : '*GemStone-GBS-Core-private' }

@@ -1,6 +1,13 @@
 Extension { #name : 'GbsSession' }
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> clientClassConnectorForClientBehavior: clientBehavior serverBehavior: serverBehavior [
+	^ self replicatorManager
+		clientClassConnectorForClientBehavior: clientBehavior
+		serverBehavior: serverBehavior
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> connectReplicator: aReplicator toClientBehavior: clientBehavior andServerBehavior: serverBehavior [
 	^ self replicatorManager
 		atClient: clientBehavior
@@ -26,10 +33,29 @@ GbsSession >> disconnectReplicatorForServerBehavior: serverBehavior [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> installClientClassConnectorForClientBehavior: clientBehavior serverBehavior: serverBehavior replicationSpec: aReplicationSpec serverInstVarNames: instVarNames [
+	^ self replicatorManager
+		installClientClassConnectorForClientBehavior: clientBehavior
+		serverBehavior: serverBehavior
+		replicationSpec: aReplicationSpec
+		serverInstVarNames: instVarNames
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> mappedClientClass: clientBehavior toServer: serverBehavior [
 	^ self replicatorManager
 		mapReplicatorForClientBehavior: clientBehavior
 		serverBehavior: serverBehavior
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> replicatorManagerReport [
+	^ self replicatorManager connectorManagerReport
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> replicatorManagerReportText [
+	^ self replicatorManager connectorManagerReportText
 ]
 
 { #category : '*GemStone-GBS-Core' }

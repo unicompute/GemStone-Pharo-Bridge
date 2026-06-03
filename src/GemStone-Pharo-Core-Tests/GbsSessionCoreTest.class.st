@@ -745,6 +745,29 @@ GbsSessionCoreTest >> testReplicationSchemeClampByCallbackRequiresServerObjectMe
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testReplicationSchemeClampByCallbackCanValidateMappedServerBehaviorMethod [
+	| mockSession scheme |
+	mockSession := CoreMockGbsSession new.
+	scheme := GbxReplicationScheme selector: #customerReplicationSpec.
+	mockSession stubs
+		at: #serverBehaviorCanUnderstand
+		put: [ :behavior :selector |
+			behavior = 'RemoteCustomer'
+				and: [ selector = #customerReplicationSpecGbsClampCallback ] ];
+		at: #serverObjectCanUnderstand
+		put: [ :selector | self fail ].
+
+	scheme
+		updateForClampingByCallback: true
+		inSession: mockSession
+		serverBehavior: 'RemoteCustomer'.
+
+	self
+		assert: scheme clamp instVarLevelsSelector
+		equals: #customerReplicationSpecGbsClampCallback
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testReplicationSchemeClampByCallbackSkipsTransitiveClosureSpec [
 	| mockSession scheme |
 	mockSession := CoreMockGbsSession new.
@@ -1119,7 +1142,7 @@ GbsSessionCoreTest >> testDirtyReplicationFlushUsesBinaryStoreTraversalBufferFor
 
 { #category : 'tests' }
 GbsSessionCoreTest >> testDirtyReplicationBinaryStoreTraversalSplitsSemanticCollectionsToScript [
-	| mockSession dictionary dictionaryAssociation set bag point capturedBuffer capturedScript flushed |
+	| mockSession dictionary dictionaryAssociation set bag point capturedBuffer capturedScript flushed report |
 	mockSession := CoreMockGbsSession new.
 	dictionary := Dictionary new.
 	set := Set new.
@@ -1145,11 +1168,21 @@ GbsSessionCoreTest >> testDirtyReplicationBinaryStoreTraversalSplitsSemanticColl
 		268 ].
 
 	flushed := mockSession flushDirtyMaterializedObjects.
+	report := mockSession dirtyStoreTraversalReport.
 
 	self assert: flushed asSet equals: #(9300 9400 9500 9600) asSet.
 	self assert: capturedBuffer class equals: GbsDirtyStoreTraversalBuffer.
 	self assert: capturedBuffer canProduceNativeTraversalBuffer.
 	self assert: (capturedBuffer entries collect: [ :entry | entry at: 3 ]) asSet equals: #(#namedObject) asSet.
+	self assert: (report at: #totalEntries) equals: 4.
+	self assert: (report at: #nativeEntryCount) equals: 1.
+	self assert: (report at: #semanticEntryCount) equals: 3.
+	self assert: (report at: #semanticDictionaryEntryCount) equals: 1.
+	self assert: (report at: #semanticSetEntryCount) equals: 1.
+	self assert: (report at: #semanticBagEntryCount) equals: 1.
+	self assert: (report at: #nativeFlushCount) equals: 1.
+	self assert: (report at: #remoteCommandCount) equals: 1.
+	self assert: (report at: #semanticCommandCount) equals: 1.
 	self assert: (capturedScript includesSubstring: 'Object _objectForOop: 9300').
 	self assert: (capturedScript includesSubstring: 'Object _objectForOop: 9400').
 	self assert: (capturedScript includesSubstring: 'Object _objectForOop: 9500').
@@ -1159,6 +1192,92 @@ GbsSessionCoreTest >> testDirtyReplicationBinaryStoreTraversalSplitsSemanticColl
 	self assert: (capturedScript includesSubstring: 'object add: value2_1').
 	self assert: (capturedScript includesSubstring: 'object asSet do: [ :each | 1 to: (object occurrencesOf: each) do: [ :ignored | object remove: each ifAbsent: [ ] ] ]').
 	self assert: (capturedScript includesSubstring: 'object add: value3_1 withOccurrences: 2').
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationSemanticCustomDomainObjectUsesRemoteCommandPolicy [
+	| mockSession domain capturedBuffer capturedScript flushed report |
+	mockSession := CoreMockGbsSession new.
+	domain := CoreGbsSemanticDirtyStoreFixture new
+		key: #customer;
+		value: 1;
+		yourself.
+	mockSession rememberMaterializedObject: domain forOop: 9700.
+	(GbsReplicationPolicy forSession: mockSession) storeTraversalTransport: 'binaryRequired'.
+	domain value: 2.
+	(Smalltalk at: #GbsMaterializedObjectDirtyTracker)
+		markObject: domain
+		dirtyInSession: mockSession.
+	mockSession stubs at: #supportsDirtyStoreTraversalBufferTransport put: true.
+	mockSession stubs at: #storeTraversalBuffer put: [ :buffer |
+		capturedBuffer := buffer.
+		self fail ].
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		capturedScript := script.
+		268 ].
+
+	flushed := mockSession flushDirtyMaterializedObjects.
+	report := mockSession dirtyStoreTraversalReport.
+
+	self assert: flushed asArray equals: #(9700).
+	self assert: capturedBuffer isNil.
+	self assert: (capturedScript includesSubstring: 'Object _objectForOop: 9700').
+	self assert: (capturedScript includesSubstring: 'object instVarAt: 1 put: value1_1').
+	self assert: (capturedScript includesSubstring: 'object instVarAt: 2 put: value1_2').
+	self assert: (report at: #totalEntries) equals: 1.
+	self assert: (report at: #nativeEntryCount) equals: 0.
+	self assert: (report at: #semanticEntryCount) equals: 1.
+	self assert: (report at: #semanticCustomEntryCount) equals: 1.
+	self assert: (report at: #remoteCommandEntryCount) equals: 1.
+	self assert: (report at: #semanticCommandCount) equals: 1.
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testDirtyReplicationBinaryRequiredFlushesSemanticCollectionsWithReport [
+	| mockSession dictionary set bag capturedBuffer capturedScript flushed report |
+	mockSession := CoreMockGbsSession new.
+	dictionary := Dictionary new
+		at: #customer put: 1;
+		yourself.
+	set := Set with: #old.
+	bag := Bag new
+		add: #old withOccurrences: 2;
+		yourself.
+	mockSession rememberMaterializedObject: dictionary forOop: 9300.
+	mockSession rememberMaterializedObject: set forOop: 9400.
+	mockSession rememberMaterializedObject: bag forOop: 9500.
+	(GbsReplicationPolicy forSession: mockSession) storeTraversalTransport: 'binaryRequired'.
+	dictionary at: #customer put: 44.
+	set add: #new.
+	bag add: #new withOccurrences: 3.
+	mockSession stubs at: #supportsDirtyStoreTraversalBufferTransport put: true.
+	mockSession stubs at: #storeTraversalBuffer put: [ :buffer |
+		capturedBuffer := buffer.
+		self fail ].
+	mockSession stubs at: #executeScriptAndReturnOop put: [ :script |
+		capturedScript := script.
+		268 ].
+
+	flushed := mockSession flushDirtyMaterializedObjects.
+	report := mockSession dirtyStoreTraversalReport.
+
+	self assert: flushed asSet equals: #(9300 9400 9500) asSet.
+	self assert: capturedBuffer isNil.
+	self assert: (capturedScript includesSubstring: 'Object _objectForOop: 9300').
+	self assert: (capturedScript includesSubstring: 'Object _objectForOop: 9400').
+	self assert: (capturedScript includesSubstring: 'Object _objectForOop: 9500').
+	self assert: (report at: #totalEntries) equals: 3.
+	self assert: (report at: #nativeEntryCount) equals: 0.
+	self assert: (report at: #semanticEntryCount) equals: 3.
+	self assert: (report at: #semanticDictionaryEntryCount) equals: 1.
+	self assert: (report at: #semanticSetEntryCount) equals: 1.
+	self assert: (report at: #semanticBagEntryCount) equals: 1.
+	self assert: (report at: #nativeFlushCount) equals: 0.
+	self assert: (report at: #remoteCommandEntryCount) equals: 3.
+	self assert: (report at: #remoteCommandCount) equals: 1.
+	self assert: (report at: #semanticCommandCount) equals: 1.
 	self assert: mockSession dirtyMaterializedObjectOops isEmpty
 ]
 
@@ -2052,6 +2171,40 @@ GbsSessionCoreTest >> testSessionLifecycleSplitsExportReleaseQueuesAndSkipsImmed
 	self assert: (releaseBatch at: #gced) equals: #(9024).
 	self assert: mockSession objectSpace drainNoLongerReplicatedOops equals: #(9016).
 	self assert: mockSession objectSpace drainGcedOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleReportTracksExportSetCountersAndLastFlush [
+	| mockSession object report releaseSummary |
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #supportsReleaseOopsTransport put: true.
+	object := Array with: 'mapped'.
+	mockSession rememberMaterializedObject: object forOop: 9000.
+	GbsSessionLifecycleManager noteNoLongerReplicatedOop: 9016 forSession: mockSession.
+	GbsSessionLifecycleManager noteNoLongerReplicatedOop: 9016 forSession: mockSession.
+	GbsSessionLifecycleManager noteGcedOop: 9032 forSession: mockSession.
+	GbsSessionLifecycleManager noteGcedOop: 20 forSession: mockSession.
+
+	report := mockSession objectSpace lifecycleReport.
+	self assert: (report at: #rememberedOopCount) equals: 1.
+	self assert: (report at: #finalizerRegisteredCount) equals: 1.
+	self assert: (report at: #noLongerReplicatedOopsQueuedCount) equals: 1.
+	self assert: (report at: #gcedOopsQueuedCount) equals: 1.
+	self assert: (report at: #exportSetReleaseOopQueueSize) equals: 2.
+
+	releaseSummary := mockSession objectSpace flushExportSetReleaseOopsLimit: 10.
+	report := mockSession objectSpace lifecycleReport.
+
+	self assert: (releaseSummary at: #gcedReleased) equals: #(9032).
+	self assert: (releaseSummary at: #noLongerReplicatedPending) equals: #(9016).
+	self assert: (report at: #exportSetFlushCallCount) equals: 1.
+	self assert: (report at: #gcedFlushCallCount) equals: 1.
+	self assert: (report at: #releaseOopsCallCount) equals: 1.
+	self assert: (report at: #releaseOopsReleasedCount) equals: 1.
+	self assert: (report at: #lastExportSetGcedReleasedCount) equals: 1.
+	self assert: (report at: #lastExportSetNoLongerPendingCount) equals: 1.
+	self assert: (report at: #lastExportSetGcedQueueSize) equals: 0.
+	self assert: (report at: #lastExportSetNoLongerQueueSize) equals: 1
 ]
 
 { #category : 'tests' }

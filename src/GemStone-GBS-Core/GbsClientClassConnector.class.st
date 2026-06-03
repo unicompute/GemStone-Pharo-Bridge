@@ -55,6 +55,7 @@ GbsClientClassConnector >> installInReplicatorManager: aReplicatorManager [
 	| replicator session |
 	aReplicatorManager ifNil: [ ^ nil ].
 	session := aReplicatorManager session.
+	self removeConflictingReplicatorsIn: aReplicatorManager.
 	replicator := self newReplicatorFor: aReplicatorManager.
 	self configureReplicator: replicator manager: aReplicatorManager.
 	aReplicatorManager
@@ -74,6 +75,14 @@ GbsClientClassConnector >> installInReplicatorManager: aReplicatorManager [
 	self updateClampMetadataIn: aReplicatorManager.
 	self markDeferredServerInstVarUpdateFor: replicator in: aReplicatorManager.
 	^ replicator
+]
+
+{ #category : 'private' }
+GbsClientClassConnector >> addReplicator: aReplicator toConflictList: conflicts [
+	aReplicator ifNil: [ ^ conflicts ].
+	(conflicts anySatisfy: [ :each | each == aReplicator ])
+		ifFalse: [ conflicts add: aReplicator ].
+	^ conflicts
 ]
 
 { #category : 'private' }
@@ -119,6 +128,31 @@ GbsClientClassConnector >> newReplicatorFor: aReplicatorManager [
 					ifTrue: [ aReplicatorManager defaultReplicatorClass ]
 					ifFalse: [ GbxObjectReplicator ] ] ].
 	^ class new
+]
+
+{ #category : 'private' }
+GbsClientClassConnector >> removeConflictingReplicatorsIn: aReplicatorManager [
+	| conflicts client server |
+	(aReplicatorManager respondsTo: #removeReplicator:) ifFalse: [ ^ self ].
+	conflicts := OrderedCollection new.
+	client := self resolvedClientBehavior.
+	server := self resolvedServerBehavior.
+	(client notNil and: [ aReplicatorManager respondsTo: #replicatorForClientBehavior:ifAbsent: ])
+		ifTrue: [
+			(aReplicatorManager
+			replicatorForClientBehavior: client
+			ifAbsent: [ nil ]) ifNotNil: [ :replicator |
+				self addReplicator: replicator toConflictList: conflicts ] ].
+	(server notNil and: [ aReplicatorManager respondsTo: #replicatorForServerBehavior:ifAbsent: ])
+		ifTrue: [
+			(aReplicatorManager
+			replicatorForServerBehavior: server
+			ifAbsent: [ nil ]) ifNotNil: [ :replicator |
+				self addReplicator: replicator toConflictList: conflicts ] ].
+	conflicts do: [ :replicator |
+		self unregisterConnectorPairForReplicator: replicator manager: aReplicatorManager.
+		aReplicatorManager removeReplicator: replicator ].
+	^ self
 ]
 
 { #category : 'accessing' }
@@ -193,6 +227,30 @@ GbsClientClassConnector >> serverInstVarNames: aCollection [
 ]
 
 { #category : 'private' }
+GbsClientClassConnector >> unregisterConnectorPairForReplicator: aReplicator manager: aReplicatorManager [
+	| session clientName serverName |
+	clientName := (aReplicator respondsTo: #clientClass)
+		ifTrue: [ self nameForBehavior: aReplicator clientClass ]
+		ifFalse: [ '' ].
+	serverName := (aReplicator respondsTo: #serverClass)
+		ifTrue: [ self nameForBehavior: aReplicator serverClass ]
+		ifFalse: [ '' ].
+	(clientName isEmpty or: [ serverName isEmpty ]) ifTrue: [ ^ self ].
+	session := aReplicatorManager session.
+	session
+		ifNil: [
+			GbsSessionManager
+				removeConnectorClient: clientName
+				server: serverName ]
+		ifNotNil: [
+			GbsSessionManager
+				removeConnectorClient: clientName
+				server: serverName
+				forSession: session ].
+	^ self
+]
+
+{ #category : 'private' }
 GbsClientClassConnector >> updateClampMetadataIn: aReplicatorManager [
 	| scheme clientClass |
 	replicationSpec ifNil: [ ^ self ].
@@ -202,7 +260,10 @@ GbsClientClassConnector >> updateClampMetadataIn: aReplicatorManager [
 		do: [ nil ].
 	scheme ifNil: [ ^ self ].
 	replicationSpec = #callback ifTrue: [
-		scheme updateForClampingByCallback: true inSession: aReplicatorManager session.
+		scheme
+			updateForClampingByCallback: true
+			inSession: aReplicatorManager session
+			serverBehavior: self resolvedServerBehavior.
 		^ self ].
 	clientClass := self resolvedClientBehavior.
 	clientClass ifNil: [ ^ self ].

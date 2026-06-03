@@ -211,6 +211,45 @@ GbsSessionManagerCoreTest >> testClientClassConnectorInstallsReplicatorAndSessio
 ]
 
 { #category : 'tests' }
+GbsSessionManagerCoreTest >> testReplicatorManagerCompatibilityAliasesInstallAndReportConnectorState [
+	| mockSession manager connector replicator report text removed |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := manager
+		clientClassConnectorForClientBehavior: Association
+		serverBehavior: 'RemoteAssociation'.
+	self assert: connector clientBehavior == Association.
+	self assert: connector serverBehavior equals: 'RemoteAssociation'.
+
+	replicator := manager
+		installClientClassConnectorForClientBehavior: Association
+		serverBehavior: 'RemoteAssociation'
+		replicationSpec: #(#(#key #replicate))
+		serverInstVarNames: #('key' 'value').
+	manager markServerInstVarNamesNeededByReplicator: replicator.
+	report := manager connectorManagerReport.
+	text := manager connectorManagerReportText.
+
+	self assert: (report at: #clientMapSize) equals: 1.
+	self assert: (report at: #serverMapSize) equals: 1.
+	self assert: (report at: #replicatorCount) equals: 1.
+	self assert: (report at: #connectorPairCount) >= 1.
+	self assert: (report at: #needsServerInstVarNames).
+	self assert: (report at: #deferredServerInstVarReplicatorCount) equals: 1.
+	self assert: ((report at: #clientBehaviorNames) includes: 'Association').
+	self assert: ((report at: #serverBehaviorNames) includes: 'RemoteAssociation').
+	self assert: (text includesSubstring: 'Replicator Manager').
+	self assert: (text includesSubstring: 'clientBehaviorNames=Association').
+	self assert: (text includesSubstring: 'serverBehaviorNames=RemoteAssociation').
+
+	removed := manager
+		removeClientClassConnectorForClientBehavior: Association
+		serverBehavior: 'RemoteAssociation'.
+	self assert: removed == replicator.
+	self assert: (manager connectorManagerReport at: #replicatorCount) equals: 0
+]
+
+{ #category : 'tests' }
 GbsSessionManagerCoreTest >> testClientClassConnectorUpdatesClampMetadata [
 	| mockSession manager connector levels |
 	mockSession := CoreMockGbsSession new.
@@ -271,6 +310,77 @@ GbsSessionManagerCoreTest >> testClientClassConnectorCallbackReplicationSpecEnab
 		equals: #replicateGbsClampCallback.
 	self assert: scheme hasServerClampMetadata.
 	self assert: (scheme serverClampSpecificationFingerprint includes: #replicateGbsClampCallback)
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testClientClassConnectorReinstallForSameClientRemovesOldServerMappingAliasesAndPair [
+	| mockSession manager firstConnector secondConnector firstReplicator secondReplicator pairs scheme |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	firstConnector := GbsClientClassConnector
+		client: Association
+		server: 'RemoteAssociationA'
+		replicationSpec: #(#(#key #forwarder))
+		serverInstVarNames: #('key' 'value').
+	secondConnector := GbsClientClassConnector
+		client: Association
+		server: 'RemoteAssociationB'
+		replicationSpec: #(#(#value #forwarder))
+		serverInstVarNames: #('key' 'value').
+
+	firstReplicator := manager installClientClassConnector: firstConnector.
+	manager
+		setReplicatorForClient: OrderedCollection
+		sameAsReplicatorForClient: Association.
+	manager markServerInstVarNamesNeededByReplicator: firstReplicator.
+	self assert: manager needsServerInstVarNames.
+
+	secondReplicator := manager installClientClassConnector: secondConnector.
+	pairs := GbsSessionManager connectorPairsForSession: mockSession.
+	scheme := manager currentReplicationScheme.
+
+	self deny: firstReplicator == secondReplicator.
+	self assert: (manager replicatorForClientBehavior: Association ifAbsent: [ nil ]) == secondReplicator.
+	self assert: (manager replicatorForServerBehavior: 'RemoteAssociationB' ifAbsent: [ nil ]) == secondReplicator.
+	self assert: (manager replicatorForServerBehavior: 'RemoteAssociationA' ifAbsent: [ nil ]) isNil.
+	self assert: (manager replicatorForClientBehavior: OrderedCollection ifAbsent: [ nil ]) isNil.
+	self deny: manager needsServerInstVarNames.
+	self assert: (scheme instVarLevelsForClass: Association) equals: { nil. false. nil }.
+	self deny: (scheme shouldProxyNamedSlot: 1 ofClass: Association).
+	self assert: (scheme shouldProxyNamedSlot: 2 ofClass: Association).
+	self deny: (pairs anySatisfy: [ :pair |
+		(pair includes: 'Association') and: [ pair includes: 'RemoteAssociationA' ] ]).
+	self assert: (pairs anySatisfy: [ :pair |
+		(pair includes: 'Association') and: [ pair includes: 'RemoteAssociationB' ] ])
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testClientClassConnectorReinstallForSameServerRemovesOldClientMappingAndPair [
+	| mockSession manager firstConnector secondConnector secondReplicator pairs |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	firstConnector := GbsClientClassConnector
+		client: Array
+		server: 'RemoteShared'
+		replicationSpec: #(#(#indexable_part #forwarder))
+		serverInstVarNames: #().
+	secondConnector := GbsClientClassConnector
+		client: Association
+		server: 'RemoteShared'
+		replicationSpec: #(#(#key #replicate) #(#value #replicate))
+		serverInstVarNames: #('key' 'value').
+
+	manager installClientClassConnector: firstConnector.
+	secondReplicator := manager installClientClassConnector: secondConnector.
+	pairs := GbsSessionManager connectorPairsForSession: mockSession.
+
+	self assert: (manager replicatorForClientBehavior: Array ifAbsent: [ nil ]) isNil.
+	self assert: (manager replicatorForClientBehavior: Association ifAbsent: [ nil ]) == secondReplicator.
+	self assert: (manager replicatorForServerBehavior: 'RemoteShared' ifAbsent: [ nil ]) == secondReplicator.
+	self deny: (pairs anySatisfy: [ :pair |
+		(pair includes: 'Array') and: [ pair includes: 'RemoteShared' ] ]).
+	self assert: (pairs anySatisfy: [ :pair |
+		(pair includes: 'Association') and: [ pair includes: 'RemoteShared' ] ])
 ]
 
 { #category : 'tests' }
@@ -358,9 +468,82 @@ GbsSessionManagerCoreTest >> testReplicatorManagerNamedReplicationSchemeHydrates
 
 	self
 		assert: (scheme instVarLevelsForClass: CoreGbsReplicationSpecFixture)
+		equals: { 0. false. nil }.
+	self deny: (scheme shouldProxyNamedSlot: 1 ofClass: CoreGbsReplicationSpecFixture).
+	self assert: (scheme shouldProxyNamedSlot: 2 ofClass: CoreGbsReplicationSpecFixture)
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testReplicatorManagerNamedReplicationSchemeUsesInheritedSpecSelector [
+	| mockSession manager connector scheme |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: CoreGbsInheritedReplicationSpecFixture
+		server: 'RemoteInheritedFixture'
+		replicationSpec: nil
+		serverInstVarNames: #('key' 'value').
+	connector replicatorClass: GbxPointerObjectReplicator.
+
+	manager installClientClassConnector: connector.
+	scheme := manager replicationSchemeForSet: #customerReplicationSpec.
+
+	self
+		assert: (scheme instVarLevelsForClass: CoreGbsInheritedReplicationSpecFixture)
+		equals: { 0. false. nil }.
+	self deny: (scheme shouldProxyNamedSlot: 1 ofClass: CoreGbsInheritedReplicationSpecFixture).
+	self assert: (scheme shouldProxyNamedSlot: 2 ofClass: CoreGbsInheritedReplicationSpecFixture)
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testReplicatorManagerNamedCallbackSchemeInstallsServerCallbackSelector [
+	| mockSession manager connector scheme |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: CoreGbsReplicationSpecFixture
+		server: 'RemoteFixture'
+		replicationSpec: nil
+		serverInstVarNames: #('key' 'value').
+	connector replicatorClass: GbxPointerObjectReplicator.
+
+	manager installClientClassConnector: connector.
+	scheme := manager replicationSchemeForSet: #callbackReplicationSpec.
+
+	self
+		assert: scheme clamp instVarLevelsSelector
+		equals: #callbackReplicationSpecGbsClampCallback.
+	self assert: scheme hasServerClampMetadata.
+	self assert: (scheme instVarLevelsForClass: CoreGbsReplicationSpecFixture) isNil
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testReplicatorManagerClassVersionChangeRefreshesSubclassReplicatorAndClampMetadata [
+	| mockSession manager connector replicator scheme |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: CoreGbsInheritedReplicationSpecFixture
+		server: 'RemoteInheritedFixture'
+		replicationSpec: #(
+			#(#key #forwarder)
+			#(#value #min 2))
+		serverInstVarNames: #('key' 'value').
+	connector replicatorClass: CoreGbsCountingReplicator.
+
+	replicator := manager installClientClassConnector: connector.
+	scheme := manager currentReplicationScheme.
+	self assert: replicator serverOffsetRefreshCount equals: 0.
+	self
+		assert: (scheme instVarLevelsForClass: CoreGbsInheritedReplicationSpecFixture)
 		equals: { false. -2. nil }.
-	self assert: (scheme shouldProxyNamedSlot: 1 ofClass: CoreGbsReplicationSpecFixture).
-	self deny: (scheme shouldProxyNamedSlot: 2 ofClass: CoreGbsReplicationSpecFixture)
+
+	manager changedSelector: #classVersion inClass: CoreGbsReplicationSpecFixture.
+
+	self assert: replicator serverOffsetRefreshCount equals: 1.
+	self
+		assert: (scheme instVarLevelsForClass: CoreGbsInheritedReplicationSpecFixture)
+		equals: { false. -2. nil }
 ]
 
 { #category : 'tests' }
