@@ -88,7 +88,7 @@ GbsDirtyStoreTraversalBuffer >> canProduceNativeTraversalBuffer [
 
 { #category : 'native encoding' }
 GbsDirtyStoreTraversalBuffer >> canProduceNativeTraversalReportForEntry: entry [
-	(#(#array #association #orderedCollection) includes: (entry at: 3)) ifFalse: [ ^ false ].
+	(self nativeSupportedKinds includes: (entry at: 3)) ifFalse: [ ^ false ].
 	(self nativeValuesForEntry: entry) do: [ :each |
 		(self oopForValue: each ifAbsent: [ nil ]) ifNil: [
 			each ifNotNil: [ ^ false ] ] ].
@@ -101,7 +101,9 @@ GbsDirtyStoreTraversalBuffer >> elementCountForEntry: entry [
 	object := entry second.
 	kind := entry at: 3.
 	kind = #association ifTrue: [ ^ 2 ].
-	kind = #dictionary ifTrue: [ ^ object size * 2 ].
+	kind = #dictionary ifTrue: [ ^ object size ].
+	kind = #identityDictionary ifTrue: [ ^ object size * 2 ].
+	kind = #namedObject ifTrue: [ ^ self nativeNamedSizeForObject: object ].
 	^ object size
 ]
 
@@ -169,8 +171,61 @@ GbsDirtyStoreTraversalBuffer >> nativeUsedBytes [
 ]
 
 { #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeIndexedSizeForEntry: entry [
+	| kind |
+	kind := entry at: 3.
+	kind = #association ifTrue: [ ^ 0 ].
+	kind = #namedObject ifTrue: [ ^ 0 ].
+	^ (self nativeValuesForEntry: entry) size
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeNamedInstVarValuesFor: anObject [
+	^ ((1 to: (self nativeNamedSizeForObject: anObject)) collect: [ :index |
+		anObject instVarAt: index ]) asArray
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeNamedSizeForEntry: entry [
+	| kind |
+	kind := entry at: 3.
+	kind = #association ifTrue: [ ^ 2 ].
+	kind = #namedObject ifTrue: [ ^ self nativeNamedSizeForObject: entry second ].
+	^ 0
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeNamedSizeForObject: anObject [
+	| names |
+	names := [ anObject class allInstVarNames ] on: Error do: [ #() ].
+	^ names size
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeObjectFormatForEntry: entry [
+	(#(#set #bag) includes: (entry at: 3)) ifTrue: [ ^ 2 ].
+	^ 0
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeSupportedKinds [
+	^ #(#array #association #orderedCollection #dictionary #identityDictionary #set #bag #namedObject)
+]
+
+{ #category : 'private - native encoding' }
 GbsDirtyStoreTraversalBuffer >> nativeValueByteCountForEntry: entry [
 	^ (self nativeValuesForEntry: entry) size * 8
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeValuesForIdentityDictionary: aDictionary [
+	| values |
+	values := OrderedCollection new: aDictionary size * 2.
+	aDictionary keysAndValuesDo: [ :key :value |
+		values
+			add: key;
+			add: value ].
+	^ values asArray
 ]
 
 { #category : 'private - native encoding' }
@@ -181,7 +236,12 @@ GbsDirtyStoreTraversalBuffer >> nativeValuesForEntry: entry [
 	kind = #array ifTrue: [ ^ object asArray ].
 	kind = #association ifTrue: [ ^ { object key. object value } ].
 	kind = #orderedCollection ifTrue: [ ^ object asArray ].
-	self error: 'Native dirty store traversal currently supports Arrays, Associations, and OrderedCollections only.'
+	kind = #dictionary ifTrue: [ ^ object associations asArray ].
+	kind = #identityDictionary ifTrue: [ ^ self nativeValuesForIdentityDictionary: object ].
+	kind = #set ifTrue: [ ^ object asArray ].
+	kind = #bag ifTrue: [ ^ object asArray ].
+	kind = #namedObject ifTrue: [ ^ self nativeNamedInstVarValuesFor: object ].
+	self error: 'Native dirty store traversal does not support kind ', kind asString
 ]
 
 { #category : 'private - native encoding' }
@@ -236,7 +296,7 @@ GbsDirtyStoreTraversalBuffer >> valueFitsGemStoneSmallInteger: anInteger [
 GbsDirtyStoreTraversalBuffer >> withNativeTraversalBufferOn: serverInterface do: aBlock [
 	| buffer |
 	self canProduceNativeTraversalBuffer ifFalse: [
-		self error: 'Native dirty store traversal can encode only mapped Arrays, Associations, and OrderedCollections with OOP-addressable values.' ].
+		self error: 'Native dirty store traversal can encode only mapped Arrays, Associations, OrderedCollections, Dictionaries with mapped associations, IdentityDictionaries, Sets, Bags, and named-slot objects with OOP-addressable values.' ].
 	buffer := serverInterface apiGciAllocTravBuf: self nativeTraversalBufferBytes.
 	((buffer isNil) or: [
 		(buffer respondsTo: #isNull)
@@ -269,16 +329,10 @@ GbsDirtyStoreTraversalBuffer >> writeNativeTraversalBuffer: traversalBuffer serv
 
 { #category : 'private - native encoding' }
 GbsDirtyStoreTraversalBuffer >> writePointerReportForEntry: entry on: traversalBuffer offset: offset serverInterface: serverInterface [
-	| object kind values namedSize indexedSize |
-	object := entry second.
-	kind := entry at: 3.
+	| values namedSize indexedSize |
 	values := self nativeValuesForEntry: entry.
-	namedSize := kind = #association
-		ifTrue: [ 2 ]
-		ifFalse: [ 0 ].
-	indexedSize := kind = #association
-		ifTrue: [ 0 ]
-		ifFalse: [ object size ].
+	namedSize := self nativeNamedSizeForEntry: entry.
+	indexedSize := self nativeIndexedSizeForEntry: entry.
 	^ self
 		writePointerReportForEntry: entry
 		values: values
@@ -291,7 +345,7 @@ GbsDirtyStoreTraversalBuffer >> writePointerReportForEntry: entry on: traversalB
 
 { #category : 'private - native encoding' }
 GbsDirtyStoreTraversalBuffer >> writePointerReportForEntry: entry values: values namedSize: namedSize indexedSize: indexedSize on: traversalBuffer offset: offset serverInterface: serverInterface [
-	| oop classOop valueOops valueSize alignedSize valueOffset idxSizeBits |
+	| oop classOop valueOops valueSize alignedSize valueOffset idxSizeBits objectFormat |
 	oop := entry first.
 	classOop := (serverInterface apiGciGetClass: oop) asInteger.
 	valueOops := values collect: [ :each |
@@ -299,7 +353,8 @@ GbsDirtyStoreTraversalBuffer >> writePointerReportForEntry: entry values: values
 			self error: 'Native dirty store traversal cannot encode value: ', each printString ] ].
 	valueSize := valueOops size * 8.
 	alignedSize := self alignedByteCount: valueSize.
-	idxSizeBits := (indexedSize bitShift: 24) + 16r20.
+	objectFormat := self nativeObjectFormatForEntry: entry.
+	idxSizeBits := (indexedSize bitShift: 24) + 16r20 + objectFormat.
 	traversalBuffer
 		integerAt: offset put: valueSize size: 4 signed: true;
 		integerAt: offset + 4 put: namedSize size: 2 signed: true;

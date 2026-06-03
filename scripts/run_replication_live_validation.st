@@ -136,13 +136,26 @@ association'
         previousTransport := policy storeTraversalTransport.
         previousProfile := session fetchProfile.
         dirtyRootOop := session
-          returnRemoteCommandBody: '| fixture root array association ordered releaseNoLonger releaseGced |
+          returnRemoteCommandBody: '| fixture root array association ordered dictionary set bag releaseNoLonger releaseGced |
 fixture := UserGlobals at: fixtureKey ifAbsentPut: [ Dictionary new ].
 array := Array with: 1 with: 2 with: nil.
 association := Association key: #status value: 2.
 ordered := OrderedCollection new.
 ordered add: 10; add: 20.
-root := Array with: array with: association with: ordered.
+dictionary := Dictionary new.
+dictionary at: #customer put: 3.
+set := Set new.
+set add: 11; add: 12.
+bag := Bag new.
+bag add: 13 withOccurrences: 2.
+root := Array new: 6.
+root
+  at: 1 put: array;
+  at: 2 put: association;
+  at: 3 put: ordered;
+  at: 4 put: dictionary;
+  at: 5 put: set;
+  at: 6 put: bag.
 releaseNoLonger := Array with: 99.
 releaseGced := Array with: 100.
 fixture
@@ -188,13 +201,28 @@ root'
         (dirtyRoot at: 1) at: 2 put: 42.
         (dirtyRoot at: 2) value: 77.
         (dirtyRoot at: 3) add: 30.
+        ((dirtyRoot at: 4)
+          associationAt: #customer
+          ifAbsent: [ Error signal: 'Dictionary association missing from dirty-store fixture.' ])
+            value: 44.
+        (dirtyRoot at: 5) add: 13.
+        (dirtyRoot at: 6) add: 14.
+        (Smalltalk at: #GbsMaterializedObjectDirtyTracker)
+          markObject: (dirtyRoot at: 4)
+          dirtyInSession: session.
+        (Smalltalk at: #GbsMaterializedObjectDirtyTracker)
+          markObject: (dirtyRoot at: 5)
+          dirtyInSession: session.
+        (Smalltalk at: #GbsMaterializedObjectDirtyTracker)
+          markObject: (dirtyRoot at: 6)
+          dirtyInSession: session.
         dirtyObjectsFlushed := session dirtyMaterializedObjectOops size.
-        dirtyObjectsFlushed < 3 ifTrue: [
-          Error signal: 'Expected at least three dirty materialized objects before flush.' ].
+        dirtyObjectsFlushed < 6 ifTrue: [
+          Error signal: 'Expected at least six dirty materialized objects before flush.' ].
         dirtyStoreMs := millisecondsToRun value: [
           flushed := session flushDirtyMaterializedObjects ].
         nativeDirtyStoreFlushes := 1.
-        flushed size < 3 ifTrue: [
+        flushed size < 6 ifTrue: [
           Error signal: 'Dirty-store traversal flushed fewer objects than expected.' ].
         exportAfter := session objectSpace pendingExportSetReleaseOopCount.
         exportAfter = 0 ifFalse: [
@@ -204,7 +232,10 @@ root'
 root := object.
 (((root at: 1) at: 2) = 42)
   and: [ ((root at: 2) value = 77)
-  and: [ (root at: 3) asArray = #(10 20 30) ] ]'
+  and: [ (root at: 3) asArray = #(10 20 30)
+  and: [ ((root at: 4) at: #customer) = 44
+  and: [ ((root at: 5) includes: 13)
+  and: [ ((root at: 6) occurrencesOf: 14) = 1 ] ] ] ] ]'
           literalBindings: Dictionary new
           oopBindings: (Dictionary new
             at: 'object' put: dirtyRootOop;

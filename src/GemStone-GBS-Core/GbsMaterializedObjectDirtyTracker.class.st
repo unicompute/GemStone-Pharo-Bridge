@@ -14,7 +14,16 @@ GbsMaterializedObjectDirtyTracker class >> canTrackObject: anObject [
 	(anObject isKindOf: Set) ifTrue: [ ^ true ].
 	(anObject isKindOf: OrderedCollection) ifTrue: [ ^ true ].
 	(anObject isKindOf: Array) ifTrue: [ ^ true ].
-	^ false
+	^ self hasTrackableNamedSlots: anObject
+]
+
+{ #category : 'testing' }
+GbsMaterializedObjectDirtyTracker class >> hasTrackableNamedSlots: anObject [
+	| names |
+	anObject ifNil: [ ^ false ].
+	(anObject class respondsTo: #allInstVarNames) ifFalse: [ ^ false ].
+	names := [ anObject class allInstVarNames ] on: Error do: [ #() ].
+	^ names isEmpty not
 ]
 
 { #category : 'dirty tracking' }

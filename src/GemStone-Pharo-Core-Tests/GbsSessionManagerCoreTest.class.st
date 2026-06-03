@@ -233,7 +233,7 @@ GbsSessionManagerCoreTest >> testClientClassConnectorUpdatesClampMetadata [
 
 { #category : 'tests' }
 GbsSessionManagerCoreTest >> testClientClassConnectorCallbackReplicationSpecEnablesServerClampCallback [
-	| mockSession manager connector |
+	| mockSession manager connector scheme |
 	mockSession := CoreMockGbsSession new.
 	manager := mockSession replicatorManager.
 	connector := GbsClientClassConnector
@@ -243,10 +243,30 @@ GbsSessionManagerCoreTest >> testClientClassConnectorCallbackReplicationSpecEnab
 		serverInstVarNames: #('key' 'value').
 
 	manager installClientClassConnector: connector.
+	scheme := manager currentReplicationScheme.
 
 	self
-		assert: manager currentReplicationScheme clamp instVarLevelsSelector
-		equals: #_gbsTraversalCallback
+		assert: scheme clamp instVarLevelsSelector
+		equals: #_gbsTraversalCallback.
+	self assert: scheme hasServerClampMetadata.
+	self assert: (scheme serverClampSpecificationFingerprint includes: #_gbsTraversalCallback)
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testReplicatorManagerSecondaryClientMappingSharesPrimaryReplicator [
+	| mockSession manager replicator secondary |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	replicator := manager mapReplicatorForClientBehavior: Array serverBehavior: 'RemoteArray'.
+
+	secondary := manager
+		setReplicatorForClient: OrderedCollection
+		sameAsReplicatorForClient: Array.
+
+	self assert: secondary == replicator.
+	self assert: (manager replicatorForClientBehavior: Array ifAbsent: [ nil ]) == replicator.
+	self assert: (manager replicatorForClientBehavior: OrderedCollection ifAbsent: [ nil ]) == replicator.
+	self assert: (manager replicatorForServerBehavior: 'RemoteArray' ifAbsent: [ nil ]) == replicator
 ]
 
 { #category : 'tests' }

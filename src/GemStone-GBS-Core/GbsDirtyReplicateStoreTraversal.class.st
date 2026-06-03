@@ -118,6 +118,25 @@ GbsDirtyReplicateStoreTraversal >> appendDictionaryFlushFor: aDictionary entryIn
 ]
 
 { #category : 'private - appending' }
+GbsDirtyReplicateStoreTraversal >> appendNamedObjectFlushFor: anObject entryIndex: entryIndex to: stream names: argumentNames scripts: argumentScripts [
+	| slotCount |
+	slotCount := self namedSlotCountForObject: anObject.
+	1 to: slotCount do: [ :index | | valueName |
+		valueName := self
+			addArgumentNamed: (self valueArgumentNameForEntry: entryIndex element: index)
+			value: (anObject instVarAt: index)
+			toNames: argumentNames
+			scripts: argumentScripts.
+		stream
+			nextPutAll: 'object instVarAt: ';
+			nextPutAll: index printString;
+			nextPutAll: ' put: ';
+			nextPutAll: valueName;
+			nextPutAll: '.';
+			cr ]
+]
+
+{ #category : 'private - appending' }
 GbsDirtyReplicateStoreTraversal >> appendFlushForEntry: entry index: entryIndex to: stream names: argumentNames scripts: argumentScripts [
 	| objectName |
 	objectName := 'object' , entryIndex asString.
@@ -142,9 +161,16 @@ GbsDirtyReplicateStoreTraversal >> appendFlushForEntry: entry index: entryIndex 
 			to: stream
 			names: argumentNames
 			scripts: argumentScripts ].
-	(entry at: 3) = #dictionary ifTrue: [
+	(((entry at: 3) = #dictionary) or: [ (entry at: 3) = #identityDictionary ]) ifTrue: [
 		^ self
 			appendDictionaryFlushFor: entry second
+			entryIndex: entryIndex
+			to: stream
+			names: argumentNames
+			scripts: argumentScripts ].
+	(entry at: 3) = #namedObject ifTrue: [
+		^ self
+			appendNamedObjectFlushFor: entry second
 			entryIndex: entryIndex
 			to: stream
 			names: argumentNames
@@ -222,7 +248,7 @@ GbsDirtyReplicateStoreTraversal >> flushEntries: entries [
 		^ self flushEntriesWithBinaryStoreTraversalBuffer: entries ].
 	self transportRequiresBinary ifTrue: [
 		(self dirtyStoreTraversalBufferForEntries: entries) canProduceNativeTraversalBuffer ifFalse: [
-			self error: 'Dirty store traversal buffer transport is required, but this dirty batch cannot be encoded natively. Native dirty store traversal currently supports mapped Arrays, Associations, and OrderedCollections with OOP-addressable values.' ].
+			self error: 'Dirty store traversal buffer transport is required, but this dirty batch cannot be encoded natively. Native dirty store traversal supports mapped Arrays, Associations, OrderedCollections, Dictionaries with mapped associations, IdentityDictionaries, Sets, Bags, and named-slot objects with OOP-addressable values.' ].
 		self error: 'Dirty store traversal buffer transport is required but unavailable.' ].
 	session addStoreTraversal: self.
 	^ [ session returnRemoteCommandOop: (self remoteCommandForEntries: entries) ]
@@ -253,13 +279,20 @@ GbsDirtyReplicateStoreTraversal >> keyArgumentNameForEntry: entryIndex element: 
 { #category : 'private - entries' }
 GbsDirtyReplicateStoreTraversal >> kindForObject: anObject [
 	(anObject isKindOf: Association) ifTrue: [ ^ #association ].
+	(anObject isKindOf: IdentityDictionary) ifTrue: [ ^ #identityDictionary ].
 	(anObject isKindOf: Dictionary) ifTrue: [ ^ #dictionary ].
 	(anObject isKindOf: Array) ifTrue: [ ^ #array ].
 	anObject class == OrderedCollection ifTrue: [ ^ #orderedCollection ].
-	(anObject isKindOf: Bag) ifTrue: [ ^ #collection ].
-	(anObject isKindOf: Set) ifTrue: [ ^ #collection ].
+	(anObject isKindOf: Bag) ifTrue: [ ^ #bag ].
+	(anObject isKindOf: Set) ifTrue: [ ^ #set ].
 	(anObject isKindOf: OrderedCollection) ifTrue: [ ^ #collection ].
+	(self hasNamedSlotsForObject: anObject) ifTrue: [ ^ #namedObject ].
 	self error: 'Unsupported dirty materialized object class: ', anObject class name
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> hasNamedSlotsForObject: anObject [
+	^ (self namedSlotCountForObject: anObject) > 0
 ]
 
 { #category : 'private - lifecycle' }
@@ -386,6 +419,15 @@ GbsDirtyReplicateStoreTraversal >> marshalDictionaryArgumentToScript: aDictionar
 	^ self
 		marshalConstructedObjectExpressionForReceiver: receiverString
 		statements: statements
+]
+
+{ #category : 'private - entries' }
+GbsDirtyReplicateStoreTraversal >> namedSlotCountForObject: anObject [
+	| names |
+	anObject ifNil: [ ^ 0 ].
+	(anObject class respondsTo: #allInstVarNames) ifFalse: [ ^ 0 ].
+	names := [ anObject class allInstVarNames ] on: Error do: [ #() ].
+	^ names size
 ]
 
 { #category : 'private - tracking' }
