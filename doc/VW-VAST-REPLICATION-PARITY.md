@@ -29,12 +29,13 @@ The VisualWorks implementation treats `replicationSpec` as both a client-side re
 - `GbsSessionLifecycleManager` tracks session server maps, no-longer-replicated queues, GCed OOP queues, finalizer tokens, and release transport availability.
 - `GbxReplicatorManager` now treats the replicator as the lifecycle unit for client aliases, server aliases, deferred server-instvar updates, and clamp artefacts, so secondary client mappings and server removals clean up consistently.
 - `GbxClampManager` now updates callback metadata, named replication schemes, and removal cleanup across all known schemes instead of only the currently active scheme.
+- Explicit materialized-object stubbing and fault refresh are available through session/object-space APIs. Stubbing evicts materialized identity caches, unregisters dirty/server-map state, optionally frees local slots according to `freeSlotsOnStubbing`, and queues no-longer-replicated OOPs only for real local replicates. Faulting through a proxy fetches a fresh replicate and cancels a pending no-longer-replicated release for that OOP.
 - `make replication-live` validates connector install, server clamp synchronization, clamped traversal, native dirty-store flush, and export-set queue acknowledgement against a live GemStone session.
 
 ## Remaining Parity Watchpoints
 
 - Full migration-shaped live callback fixtures still need broader coverage for domain classes that implement their own `<replicationSpecSet>GbsClampCallback` methods.
 - Per-instvar traversal semantics should be validated against domain classes with explicit `instVarMap` nil mappings and inherited replication specs.
-- VAST `faultLevelRpc` compatibility is represented in the policy surface, but deeper fault transition behavior still needs migration-shaped live tests.
+- VAST `faultLevelRpc` compatibility is represented in the policy surface, but deeper fault transition behavior still needs migration-shaped live tests and threshold tracking.
 - The native dirty-store buffer currently covers mapped Arrays, Associations, OrderedCollections, and named-slot objects with OOP-addressable values. Dictionaries, Sets, Bags, and custom/domain objects needing richer semantic policy still use script or higher-level conversion paths.
 - A complete VisualWorks replicator-manager clone may still expose deeper server-side callback and class-version hooks, but the Pharo manager now covers the core connector alias, removal, deferred-instvar, and multi-scheme clamp lifecycle semantics.

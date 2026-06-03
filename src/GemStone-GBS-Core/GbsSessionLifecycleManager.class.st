@@ -18,6 +18,11 @@ GbsSessionLifecycleManager class >> acknowledgeNoLongerReplicatedOops: oopCollec
 		label: 'No-longer-replicated'
 ]
 
+{ #category : 'export set' }
+GbsSessionLifecycleManager class >> cancelNoLongerReplicatedOop: anOop forSession: aSession [
+	^ self removeOop: anOop fromQueue: (self noLongerReplicatedOopQueueForSession: aSession)
+]
+
 { #category : 'free oops' }
 GbsSessionLifecycleManager class >> acknowledgeGcedOops: oopCollection forSession: aSession [
 	^ self
@@ -147,6 +152,7 @@ GbsSessionLifecycleManager class >> forgetObjectForOop: anOop inSession: aSessio
 	map := self serverMapForSession: aSession.
 	object := map at: anOop ifAbsent: [ nil ].
 	map removeKey: anOop ifAbsent: [ ].
+	self forgetMaterializedObjectForOop: anOop inSession: aSession.
 	object ifNotNil: [
 		self unregisterFinalizerForObject: object session: aSession.
 		GbsMaterializedObjectDirtyTracker
@@ -158,6 +164,41 @@ GbsSessionLifecycleManager class >> forgetObjectForOop: anOop inSession: aSessio
 	^ object
 ]
 
+{ #category : 'faulting' }
+GbsSessionLifecycleManager class >> faultObjectForOop: anOop inSession: aSession [
+	(self faultingAllowedForSession: aSession) ifFalse: [
+		GbsError signal: 'Faulting is disabled by the session replication policy.' ].
+	self forgetMaterializedObjectForOop: anOop inSession: aSession.
+	^ aSession fetchObject: anOop
+]
+
+{ #category : 'faulting' }
+GbsSessionLifecycleManager class >> faultProxy: aProxy inSession: aSession [
+	(aProxy respondsTo: #session) ifFalse: [
+		GbsError signal: 'Cannot fault an object without a GemStone session.' ].
+	aProxy session == aSession ifFalse: [
+		GbsError signal: 'Cannot fault a proxy from a different GemStone session.' ].
+	^ self faultObjectForOop: aProxy oop inSession: aSession
+]
+
+{ #category : 'faulting' }
+GbsSessionLifecycleManager class >> faultingAllowedForSession: aSession [
+	| policy |
+	policy := [ GbsReplicationPolicy forSession: aSession ] on: Error do: [ nil ].
+	policy ifNil: [ ^ true ].
+	(policy respondsTo: #defaultFaultPolicySymbol) ifFalse: [ ^ true ].
+	^ policy defaultFaultPolicySymbol ~= #none
+]
+
+{ #category : 'private' }
+GbsSessionLifecycleManager class >> forgetMaterializedObjectForOop: anOop inSession: aSession [
+	| materializer |
+	materializer := [ aSession materializer ] on: Error do: [ nil ].
+	(materializer notNil and: [ materializer respondsTo: #forgetMaterializedObjectForOop: ])
+		ifTrue: [ materializer forgetMaterializedObjectForOop: anOop ].
+	^ anOop
+]
+
 { #category : 'free oops' }
 GbsSessionLifecycleManager class >> freeOopDrainLimitForSession: aSession [
 	| policy |
@@ -165,6 +206,37 @@ GbsSessionLifecycleManager class >> freeOopDrainLimitForSession: aSession [
 	(policy notNil and: [ policy respondsTo: #freeOopBatchSize ]) ifTrue: [
 		^ policy freeOopBatchSize max: 0 ].
 	^ 256
+]
+
+{ #category : 'stubbing' }
+GbsSessionLifecycleManager class >> freeSlotsOf: anObject inSession: aSession [
+	(aSession notNil and: [ aSession respondsTo: #withDirtyTrackingSuspendedDo: ])
+		ifTrue: [
+			^ aSession withDirtyTrackingSuspendedDo: [
+				self freeSlotsOfObject: anObject ] ].
+	^ self freeSlotsOfObject: anObject
+]
+
+{ #category : 'private' }
+GbsSessionLifecycleManager class >> freeSlotsOfObject: anObject [
+	anObject ifNil: [ ^ anObject ].
+	(anObject isKindOf: Association) ifTrue: [
+		anObject key: nil value: nil.
+		^ anObject ].
+	(anObject isKindOf: Array) ifTrue: [
+		1 to: anObject size do: [ :index |
+			anObject basicAt: index put: nil ].
+		^ anObject ].
+	((anObject isKindOf: Dictionary)
+		or: [ (anObject isKindOf: Set)
+		or: [ (anObject isKindOf: Bag)
+		or: [ anObject isKindOf: OrderedCollection ] ] ]) ifTrue: [
+			anObject removeAll.
+			^ anObject ].
+	(anObject class respondsTo: #allInstVarNames) ifTrue: [
+		1 to: anObject class allInstVarNames size do: [ :index |
+			anObject instVarAt: index put: nil ] ].
+	^ anObject
 ]
 
 { #category : 'registries' }
@@ -434,6 +506,7 @@ GbsSessionLifecycleManager class >> noteFinalizedObject: anObject oop: anOop ses
 GbsSessionLifecycleManager class >> rememberObject: anObject oop: anOop session: aSession [
 	(anObject isNil or: [ anOop isNil ]) ifTrue: [ ^ anObject ].
 	(self isExportableOop: anOop) ifFalse: [ ^ anObject ].
+	self cancelNoLongerReplicatedOop: anOop forSession: aSession.
 	(self serverMapForSession: aSession) at: anOop put: anObject.
 	(GbsMaterializedObjectDirtyTracker canTrackObject: anObject) ifTrue: [
 		self registerFinalizerForObject: anObject oop: anOop session: aSession ].
@@ -457,6 +530,52 @@ GbsSessionLifecycleManager class >> releaseOopsTransportAvailableForSession: aSe
 	(server respondsTo: #supportsReleaseOopsTransport) ifTrue: [
 		^ server supportsReleaseOopsTransport == true ].
 	^ true
+]
+
+{ #category : 'private' }
+GbsSessionLifecycleManager class >> removeOop: anOop fromQueue: queue [
+	| removed |
+	removed := false.
+	[ queue includes: anOop ] whileTrue: [
+		queue remove: anOop ifAbsent: [ ].
+		removed := true ].
+	^ removed
+]
+
+{ #category : 'stubbing' }
+GbsSessionLifecycleManager class >> shouldFreeSlotsOnStubbingForSession: aSession [
+	| policy |
+	policy := [ GbsReplicationPolicy forSession: aSession ] on: Error do: [ nil ].
+	policy ifNil: [ ^ true ].
+	(policy respondsTo: #freeSlotsOnStubbing) ifFalse: [ ^ true ].
+	^ policy freeSlotsOnStubbing ~~ false
+]
+
+{ #category : 'stubbing' }
+GbsSessionLifecycleManager class >> stubObject: anObject inSession: aSession [
+	| oop |
+	oop := GbsMaterializedObjectDirtyTracker
+		oopForObject: anObject
+		inSession: aSession.
+	oop ifNil: [
+		GbsError signal: 'Object is not a replicated materialized object in this session.' ].
+	^ self stubObjectForOop: oop inSession: aSession
+]
+
+{ #category : 'stubbing' }
+GbsSessionLifecycleManager class >> stubObjectForOop: anOop inSession: aSession [
+	| object |
+	object := self objectForOop: anOop inSession: aSession.
+	object
+		ifNil: [ self forgetMaterializedObjectForOop: anOop inSession: aSession ]
+		ifNotNil: [
+			self
+				forgetObjectForOop: anOop
+				inSession: aSession
+				reason: #noLongerReplicated.
+			(self shouldFreeSlotsOnStubbingForSession: aSession) ifTrue: [
+				self freeSlotsOf: object inSession: aSession ] ].
+	^ aSession objectForOop: anOop
 ]
 
 { #category : 'private' }

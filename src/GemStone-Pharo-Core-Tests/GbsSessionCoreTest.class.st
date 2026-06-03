@@ -1853,6 +1853,101 @@ GbsSessionCoreTest >> testSessionLifecycleForgetObjectQueuesNoLongerReplicatedOo
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleStubMaterializedObjectReturnsProxyAndEvictsReplicate [
+	| mockSession array proxy |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 'old' with: 'nested'.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	array at: 1 put: 'dirty'.
+	self assert: (mockSession isMaterializedObjectDirty: array).
+
+	proxy := mockSession stubMaterializedObject: array.
+
+	self assert: proxy class equals: GbsProxy.
+	self assert: proxy oop equals: 9000.
+	self assert: proxy session == mockSession.
+	self assert: (GbsSessionLifecycleManager objectForOop: 9000 inSession: mockSession) isNil.
+	self deny: (mockSession isMaterializedObjectDirty: array).
+	self assert: mockSession objectSpace pendingNoLongerReplicatedOops equals: #(9000).
+	self assert: (mockSession materializer materializedObjectForOop: 9000) isNil.
+	self assert: array first isNil.
+	self assert: array second isNil
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleStubForOopHonorsFreeSlotsOnStubbingPolicy [
+	| mockSession array proxy |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 'old' with: 'nested'.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	(GbsReplicationPolicy forSession: mockSession) freeSlotsOnStubbing: false.
+
+	proxy := mockSession stubMaterializedObjectForOop: 9000.
+
+	self assert: proxy class equals: GbsProxy.
+	self assert: proxy oop equals: 9000.
+	self assert: array first equals: 'old'.
+	self assert: array second equals: 'nested'.
+	self assert: (GbsSessionLifecycleManager objectForOop: 9000 inSession: mockSession) isNil.
+	self assert: mockSession objectSpace pendingNoLongerReplicatedOops equals: #(9000)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleStubbingUnknownOopDoesNotQueueRelease [
+	| mockSession proxy |
+	mockSession := CoreMockGbsSession new.
+
+	proxy := mockSession stubMaterializedObjectForOop: 9000.
+
+	self assert: proxy class equals: GbsProxy.
+	self assert: proxy oop equals: 9000.
+	self assert: mockSession objectSpace pendingNoLongerReplicatedOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleFaultProxyFetchesFreshObjectAndCancelsNoLongerReplicatedRelease [
+	| mockSession first proxy refreshed |
+	mockSession := self materializationMockSession.
+	mockSession fetchDeep.
+	first := mockSession fetchObject: 9000.
+	proxy := mockSession stubMaterializedObjectForOop: 9000.
+	self assert: mockSession objectSpace pendingNoLongerReplicatedOops equals: #(9000).
+
+	refreshed := proxy fault.
+
+	self deny: refreshed == first.
+	self assert: refreshed first equals: 'vip'.
+	self assert: ((GbsSessionLifecycleManager objectForOop: 9000 inSession: mockSession) == refreshed).
+	self assert: mockSession objectSpace pendingNoLongerReplicatedOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleFaultPolicyNoneRejectsFaults [
+	| mockSession |
+	mockSession := CoreMockGbsSession new.
+	(GbsReplicationPolicy forSession: mockSession) defaultFaultPolicy: 'none'.
+
+	self
+		should: [ mockSession faultObjectForOop: 9000 ]
+		raise: GbsError
+		withExceptionDo: [ :ex |
+			self assert: (ex messageText includesSubstring: 'Faulting is disabled') ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleStubUntrackedObjectSignals [
+	| mockSession object |
+	mockSession := CoreMockGbsSession new.
+	object := Array with: 'local'.
+
+	self
+		should: [ mockSession stubMaterializedObject: object ]
+		raise: GbsError
+		withExceptionDo: [ :ex |
+			self assert: (ex messageText includesSubstring: 'not a replicated materialized object') ]
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testSessionLifecycleFinalizerQueuesGcedOop [
 	| mockSession array finalizer |
 	mockSession := CoreMockGbsSession new.

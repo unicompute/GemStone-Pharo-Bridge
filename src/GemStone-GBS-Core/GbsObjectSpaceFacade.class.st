@@ -205,6 +205,26 @@ GbsObjectSpaceFacade >> forgetObjectForOop: anOop [
 		inSession: session
 ]
 
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> faultObjectForOop: anOop [
+	^ session faultObjectForOop: anOop
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> faultProxy: aProxy [
+	^ session faultProxy: aProxy
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> stubObject: anObject [
+	^ session stubMaterializedObject: anObject
+]
+
+{ #category : 'lifecycle' }
+GbsObjectSpaceFacade >> stubObjectForOop: anOop [
+	^ session stubMaterializedObjectForOop: anOop
+]
+
 { #category : 'querying' }
 GbsObjectSpaceFacade >> allSubclassesOf: aClassOrName [
 	^ self repository

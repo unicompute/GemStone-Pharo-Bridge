@@ -69,6 +69,11 @@ GbsSession >> resetMaterializedObjectCache [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> forgetMaterializedObjectForOop: anOop [
+	^ self materializer forgetMaterializedObjectForOop: anOop
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> dirtyMaterializedObjectOops [
 	^ GbsMaterializedObjectDirtyTracker dirtyOopsForSession: self
 ]
@@ -96,6 +101,26 @@ GbsSession >> resetMaterializedObjectDirtyTracking [
 { #category : '*GemStone-GBS-Core' }
 GbsSession >> withDirtyTrackingSuspendedDo: aBlock [
 	^ GbsMaterializedObjectDirtyTracker withSuspendedForSession: self do: aBlock
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> faultObjectForOop: anOop [
+	^ GbsSessionLifecycleManager faultObjectForOop: anOop inSession: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> faultProxy: aProxy [
+	^ GbsSessionLifecycleManager faultProxy: aProxy inSession: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> stubMaterializedObject: anObject [
+	^ GbsSessionLifecycleManager stubObject: anObject inSession: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> stubMaterializedObjectForOop: anOop [
+	^ GbsSessionLifecycleManager stubObjectForOop: anOop inSession: self
 ]
 
 { #category : '*GemStone-GBS-Core' }

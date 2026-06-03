@@ -211,6 +211,13 @@ GbsSessionMaterializer >> materializedObjectForOop: anOop ifPresent: aBlock [
 ]
 
 { #category : 'cache' }
+GbsSessionMaterializer >> forgetMaterializedObjectForOop: anOop [
+	self materializedObjectCache removeKey: anOop ifAbsent: [ ].
+	self persistentMaterializedObjectCache removeKey: anOop ifAbsent: [ ].
+	^ anOop
+]
+
+{ #category : 'cache' }
 GbsSessionMaterializer >> rememberMaterializedObject: anObject forOop: anOop [
 	self rememberMaterializedObjectInTraversalCache: anObject forOop: anOop.
 	self persistentMaterializedObjectCache at: anOop put: anObject.

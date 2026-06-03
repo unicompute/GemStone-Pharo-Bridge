@@ -38,6 +38,12 @@ GbsProxy >> ensureSessionIsUsable [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsProxy >> fault [
+	self ensureSessionIsUsable.
+	^ session faultProxy: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsProxy >> isKindOf: aClass [
 	"Shield this from doesNotUnderstand:"
 	(aClass respondsTo: #inheritsFrom:) ifFalse: [ ^ false ].
