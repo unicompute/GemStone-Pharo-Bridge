@@ -1222,6 +1222,29 @@ root'
         (manager replicatorForClientBehavior: mappedDomainFixtureClass ifAbsent: [ nil ]) == mappedDomainReplicator ifFalse: [
           Error signal: 'Mapped lifecycle abort unexpectedly discarded the live mapped replicator.' ].
 
+        phase := 'migration-domain-mapped-lifecycle-reconnect'.
+        mappedDomainOrder := mappedDomainFixtureClass basicNew.
+        session rememberMaterializedObject: mappedDomainOrder forOop: 11120.
+        mappedDomainOrder gbsInstVarAt: 6 put: 12.
+        (session dirtyMaterializedObjectOops includes: 11120) ifFalse: [
+          Error signal: 'Mapped lifecycle reconnect fixture did not mark the mapped object dirty before logout.' ].
+        (session materializedObjectForOop: 11120) == mappedDomainOrder ifFalse: [
+          Error signal: 'Mapped lifecycle reconnect fixture was not present in the materialized identity cache before logout.' ].
+        session logout.
+        session dirtyMaterializedObjectOops isEmpty ifFalse: [
+          Error signal: 'Mapped lifecycle logout did not clear dirty materialized objects.' ].
+        (session materializedObjectForOop: 11120) isNil ifFalse: [
+          Error signal: 'Mapped lifecycle logout did not clear materialized identity cache.' ].
+        clampedResult := supportClass ensureSharedSession.
+        (supportClass sessionIsUsable: clampedResult) ifFalse: [
+          Error signal: 'Mapped lifecycle reconnect did not acquire a usable live session.' ].
+        clampedResult == session ifTrue: [
+          Error signal: 'Mapped lifecycle reconnect reused the logged-out live session object.' ].
+        session := clampedResult.
+        manager := session replicatorManager.
+        (manager replicatorForClientBehavior: mappedDomainFixtureClass ifAbsent: [ nil ]) isNil ifFalse: [
+          Error signal: 'Mapped lifecycle reconnect retained the stale mapped replicator in the new live session.' ].
+
         Transcript
           show: 'REPLICATION_LIVE_VALIDATION result=OK code=REPLICATION_LIVE_OK',
             ' connector_ms=', connectorMs asString,
