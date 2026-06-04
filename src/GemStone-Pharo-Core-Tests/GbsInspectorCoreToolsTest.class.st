@@ -119,6 +119,19 @@ GbsInspectorCoreToolsTest >> testBrowseStaleTypedWrapperLifecycleReportUsesSessi
 ]
 
 { #category : 'tests' }
+GbsInspectorCoreToolsTest >> testBrowseSessionEventReportUsesInspectorSessionReport [
+	| inspector session |
+	inspector := CoreTestableGbsInspector new.
+	session := CoreMockGbsSession new.
+	session eventController handleEvent: #gemSignal payload: 7 default: [ nil ].
+	inspector instVarNamed: 'session' put: session.
+
+	self assert: inspector browseSessionEventReport.
+	self assert: (inspector lastInfoMessage includesSubstring: 'Session Event Controller').
+	self assert: (inspector lastInfoMessage includesSubstring: 'lastEvent=gemSignal')
+]
+
+{ #category : 'tests' }
 GbsInspectorCoreToolsTest >> testBrowseTypedWrapperLifecycleReportUsesSessionLifecycleText [
 	| inspector session |
 	inspector := CoreTestableGbsInspector new.

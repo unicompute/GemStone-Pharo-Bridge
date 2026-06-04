@@ -104,15 +104,13 @@ GbsMaterializationTraversalBufferReader >> parseReportsFromBuffer: traversalBuff
 	limit := offset + usedBytes.
 	[ offset < limit ] whileTrue: [
 		| report used |
+		used := self
+			validatedObjectReportUsedBytesAt: traversalBuffer
+			offset: offset
+			limit: limit
+			label: labelString.
 		report := self reportAt: traversalBuffer offset: offset.
 		reports at: report oop put: report.
-		used := self objectReportUsedBytesAt: traversalBuffer offset: offset.
-		used <= 0 ifTrue: [
-			GbsMaterializationTraversalError
-				signalKind: #invalidReportSize
-				label: labelString
-				observed: used
-				message: 'Invalid GCI traversal object report size.' ].
 		offset := offset + used ].
 	offset = limit ifFalse: [
 		GbsMaterializationTraversalError
@@ -121,6 +119,47 @@ GbsMaterializationTraversalBufferReader >> parseReportsFromBuffer: traversalBuff
 			observed: offset - limit
 			message: 'GCI traversal buffer ended on a non-report boundary.' ].
 	^ reports
+]
+
+{ #category : 'parsing' }
+GbsMaterializationTraversalBufferReader >> validatedObjectReportUsedBytesAt: traversalBuffer offset: offset limit: limit label: labelString [
+	| remaining valueSize idxSizeBits objectFormat used |
+	remaining := limit - offset.
+	remaining < self objectReportHeaderBytes ifTrue: [
+		GbsMaterializationTraversalError
+			signalKind: #incompleteReportHeader
+			label: labelString
+			observed: remaining
+			message: 'GCI traversal buffer ended before a complete object report header.' ].
+	valueSize := traversalBuffer integerAt: offset size: 4 signed: true.
+	valueSize < 0 ifTrue: [
+		GbsMaterializationTraversalError
+			signalKind: #negativeValueSize
+			label: labelString
+			observed: valueSize
+			message: 'GCI traversal object report has a negative value size.' ].
+	idxSizeBits := (traversalBuffer integerAt: offset + 32 size: 8 signed: false) asInteger.
+	objectFormat := idxSizeBits bitAnd: 3.
+	(objectFormat ~= 1 and: [ valueSize \\ 8 ~= 0 ]) ifTrue: [
+		GbsMaterializationTraversalError
+			signalKind: #oopPayloadAlignment
+			label: labelString
+			observed: valueSize
+			message: 'GCI traversal OOP object report value size is not 8-byte aligned.' ].
+	used := self objectReportHeaderBytes + (self alignedByteCount: valueSize).
+	used <= 0 ifTrue: [
+		GbsMaterializationTraversalError
+			signalKind: #invalidReportSize
+			label: labelString
+			observed: used
+			message: 'Invalid GCI traversal object report size.' ].
+	(offset + used) > limit ifTrue: [
+		GbsMaterializationTraversalError
+			signalKind: #incompleteReportPayload
+			label: labelString
+			observed: limit - offset
+			message: 'GCI traversal buffer ended before the complete object report payload.' ].
+	^ used
 ]
 
 { #category : 'parsing' }

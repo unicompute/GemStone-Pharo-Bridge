@@ -101,17 +101,28 @@ GbxTrippy >> browseReportChooser [
 	labels := OrderedCollection withAll: #(
 		'Typed Wrapper Lifecycle Report'
 		'Stale Typed Wrapper Report'
+		'Session Event Report'
 		'Session State Keys Report...'
 		'Objects In Memory Report...').
 	actions := OrderedCollection withAll: {
 		[ self browseTypedWrapperLifecycleReport ].
 		[ self browseStaleTypedWrapperLifecycleReport ].
+		[ self browseSessionEventReport ].
 		[ self browsePromptedSessionStateKeysReport ].
 		[ self browseObjectsInMemoryReport ] }.
 	self addExtensionReportOptionsToLabels: labels actions: actions.
 	index := UIManager default chooseFrom: labels title: 'GemStone Reports'.
 	index = 0 ifTrue: [ ^ false ].
 	^ (actions at: index) value
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
+GbxTrippy >> browseSessionEventReport [
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	self inform: session eventControllerReportText.
+	^ true
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }

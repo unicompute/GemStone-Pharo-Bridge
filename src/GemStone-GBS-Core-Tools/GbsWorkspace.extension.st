@@ -83,6 +83,15 @@ GbsWorkspace >> browseStaleTypedWrapperLifecycleReport [
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
+GbsWorkspace >> browseSessionEventReport [
+	| activeSession |
+	activeSession := self activeSessionForRemoteExecution.
+	activeSession ifNil: [ ^ self inform: 'No Session' ].
+	self inform: activeSession eventControllerReportText.
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
 GbsWorkspace >> browseTypedWrapperLifecycleReport [
 	| activeSession |
 	activeSession := self activeSessionForRemoteExecution.
@@ -172,6 +181,9 @@ GbsWorkspace >> workspaceMenu [
 		group addItem: [ :item |
 			item name: 'GS-Stale Typed Wrapper Report'; icon: (self iconNamed: #smallInspectIt);
 			action: [ UIManager default defer: [ self browseStaleTypedWrapperLifecycleReport ] ] ].
+		group addItem: [ :item |
+			item name: 'GS-Session Event Report'; icon: (self iconNamed: #smallInspectIt);
+			action: [ UIManager default defer: [ self browseSessionEventReport ] ] ].
 		group addItem: [ :item |
 			item name: 'GS-Session State Keys Report...'; icon: (self iconNamed: #smallInspectIt);
 			action: [ UIManager default defer: [ self browsePromptedSessionStateKeysReport ] ] ].

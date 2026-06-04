@@ -346,6 +346,15 @@ GbsMethodQueryResultsPresenter >> browseStaleTypedWrapperLifecycleReport [
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
+GbsMethodQueryResultsPresenter >> browseSessionEventReport [
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	self inform: session eventControllerReportText.
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
 GbsMethodQueryResultsPresenter >> browsePromptedSessionStateKey [
 	| rawKey key |
 	session ifNil: [
@@ -444,6 +453,7 @@ GbsMethodQueryResultsPresenter >> menuSession [
 			group addItem: [ :item | item name: 'Typed Wrapper Autoload Report'; action: [ self browseTypedWrapperAutoloadReport ] ].
 			group addItem: [ :item | item name: 'Typed Wrapper Lifecycle Report'; action: [ self browseTypedWrapperLifecycleReport ] ].
 			group addItem: [ :item | item name: 'Stale Typed Wrapper Report'; action: [ self browseStaleTypedWrapperLifecycleReport ] ].
+			group addItem: [ :item | item name: 'Session Event Report'; action: [ self browseSessionEventReport ] ].
 			group addItem: [ :item | item name: 'Session State Keys Report...'; action: [ self browsePromptedSessionStateKeysReport ] ].
 			group addItem: [ :item | item name: 'Objects In Memory Report...'; action: [ self browseObjectsInMemoryReport ] ].
 			group addItem: [ :item | item name: 'Inspect Session State Key...'; action: [ self browsePromptedSessionStateKey ] ].

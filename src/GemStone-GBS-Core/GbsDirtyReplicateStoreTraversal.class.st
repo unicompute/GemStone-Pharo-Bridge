@@ -50,6 +50,10 @@ GbsDirtyReplicateStoreTraversal class >> newDirtyStoreTraversalReport [
 		at: #nativeFlushCount put: 0;
 		at: #remoteCommandCount put: 0;
 		at: #semanticCommandCount put: 0;
+		at: #nativeFallbackCount put: 0;
+		at: #nativeFallbackReason put: nil;
+		at: #nativeFallbackDetails put: nil;
+		at: #nativeCapabilityReport put: nil;
 		at: #perReplicatorStoreEntryCount put: 0;
 		at: #newObjectEntryCount put: 0;
 		at: #freeOopAllocationCount put: 0;
@@ -896,6 +900,33 @@ GbsDirtyReplicateStoreTraversal >> incrementDirtyStoreReportAt: key by: amount [
 	^ report
 ]
 
+{ #category : 'private - reporting' }
+GbsDirtyReplicateStoreTraversal >> recordNativeCapabilityReportFrom: serverInterface [
+	| report capabilityReport |
+	serverInterface ifNil: [ ^ self ].
+	(serverInterface respondsTo: #nativeStoreTraversalCapabilityReport) ifFalse: [ ^ self ].
+	capabilityReport := [
+		serverInterface nativeStoreTraversalCapabilityReport
+	] on: Error do: [ :ex |
+		Dictionary new
+			at: #error put: ex messageText;
+			yourself ].
+	report := self class dirtyStoreTraversalReportStorageForSession: session.
+	report at: #nativeCapabilityReport put: capabilityReport.
+	^ capabilityReport
+]
+
+{ #category : 'private - reporting' }
+GbsDirtyReplicateStoreTraversal >> recordNativeFallbackReason: reasonSymbol details: detailObject [
+	| report |
+	report := self class dirtyStoreTraversalReportStorageForSession: session.
+	report
+		at: #nativeFallbackCount put: (report at: #nativeFallbackCount ifAbsent: [ 0 ]) + 1;
+		at: #nativeFallbackReason put: reasonSymbol;
+		at: #nativeFallbackDetails put: detailObject.
+	^ reasonSymbol
+]
+
 { #category : 'private - commands' }
 GbsDirtyReplicateStoreTraversal >> remoteCommandForEntries: entries [
 	| argumentNames argumentScripts body assignmentNames assignmentScripts |
@@ -955,15 +986,31 @@ GbsDirtyReplicateStoreTraversal >> shouldUseBinaryStoreTraversalBufferForEntries
 	transport := self storeTraversalTransport.
 	((transport = #binary) or: [ transport = #binaryRequired ]) ifFalse: [ ^ false ].
 	nativeEntries := self nativeStoreTraversalEntriesFor: entries.
-	nativeEntries isEmpty ifTrue: [ ^ false ].
+	nativeEntries isEmpty ifTrue: [
+		self recordNativeFallbackReason: #noNativeEntries details: 'No dirty entries can be encoded with the native dirty-store traversal buffer.'.
+		^ false ].
 	server := [ session serverInterface ] on: Error do: [ nil ].
-	server ifNil: [ ^ false ].
-	(server respondsTo: #supportsDirtyStoreTraversalBufferTransport) ifFalse: [ ^ false ].
-	(server supportsDirtyStoreTraversalBufferTransport == true) ifFalse: [ ^ false ].
-	(self supportsNativeStoreTraversalReportShapeOn: server) ifFalse: [ ^ false ].
-	(server respondsTo: #storeTraversalBuffer:) ifFalse: [ ^ false ].
+	server ifNil: [
+		self recordNativeFallbackReason: #noServerInterface details: 'No server interface is available for native dirty-store traversal.'.
+		^ false ].
+	self recordNativeCapabilityReportFrom: server.
+	(server respondsTo: #supportsDirtyStoreTraversalBufferTransport) ifFalse: [
+		self recordNativeFallbackReason: #missingCapabilityProbe details: 'Server interface does not answer supportsDirtyStoreTraversalBufferTransport.'.
+		^ false ].
+	(server supportsDirtyStoreTraversalBufferTransport == true) ifFalse: [
+		self recordNativeFallbackReason: #transportUnsupported details: 'Native dirty-store traversal buffer transport is not supported by this server interface.'.
+		^ false ].
+	(self supportsNativeStoreTraversalReportShapeOn: server) ifFalse: [
+		self recordNativeFallbackReason: #unsupportedReportShape details: 'Native dirty-store traversal report shape is unsupported for this GemStone/GCI version.'.
+		^ false ].
+	(server respondsTo: #storeTraversalBuffer:) ifFalse: [
+		self recordNativeFallbackReason: #missingStoreTraversalBuffer details: 'Server interface does not answer storeTraversalBuffer:.'.
+		^ false ].
 	buffer := self dirtyStoreTraversalBufferForEntries: nativeEntries.
-	^ buffer canProduceNativeTraversalBuffer
+	buffer canProduceNativeTraversalBuffer ifFalse: [
+		self recordNativeFallbackReason: #encodingUnsupported details: buffer nativeEncodingFailureSummary.
+		^ false ].
+	^ true
 ]
 
 { #category : 'private - policy' }
@@ -1134,17 +1181,25 @@ GbsDirtyReplicateStoreTraversal >> entriesRequireBinaryStoreTraversal: entries [
 GbsDirtyReplicateStoreTraversal >> ensureBinaryStoreTraversalAvailableForEntries: entries [
 	| server buffer |
 	server := [ session serverInterface ] on: Error do: [ nil ].
-	server ifNil: [ self error: 'Dirty store traversal buffer transport is required, but no server interface is available.' ].
+	server ifNil: [
+		self recordNativeFallbackReason: #noServerInterface details: 'No server interface is available for native dirty-store traversal.'.
+		self error: 'Dirty store traversal buffer transport is required, but no server interface is available.' ].
+	self recordNativeCapabilityReportFrom: server.
 	(server respondsTo: #supportsDirtyStoreTraversalBufferTransport) ifFalse: [
+		self recordNativeFallbackReason: #missingCapabilityProbe details: 'Server interface does not answer supportsDirtyStoreTraversalBufferTransport.'.
 		self error: 'Dirty store traversal buffer transport is required, but the server interface has no capability probe.' ].
 	(server supportsDirtyStoreTraversalBufferTransport == true) ifFalse: [
+		self recordNativeFallbackReason: #transportUnsupported details: 'Native dirty-store traversal buffer transport is not supported by this server interface.'.
 		self error: 'Dirty store traversal buffer transport is required, but native GCI store traversal is unavailable.' ].
 	(self supportsNativeStoreTraversalReportShapeOn: server) ifFalse: [
+		self recordNativeFallbackReason: #unsupportedReportShape details: 'Native dirty-store traversal report shape is unsupported for this GemStone/GCI version.'.
 		self error: 'Dirty store traversal buffer transport is required, but the native GCI store traversal report shape is unsupported for this GemStone/GCI version.' ].
 	(server respondsTo: #storeTraversalBuffer:) ifFalse: [
+		self recordNativeFallbackReason: #missingStoreTraversalBuffer details: 'Server interface does not answer storeTraversalBuffer:.'.
 		self error: 'Dirty store traversal buffer transport is required, but no storeTraversalBuffer: transport is installed.' ].
 	buffer := self dirtyStoreTraversalBufferForEntries: (self nativeStoreTraversalEntriesFor: entries).
 	buffer canProduceNativeTraversalBuffer ifFalse: [
+		self recordNativeFallbackReason: #encodingUnsupported details: buffer nativeEncodingFailureSummary.
 		self error: 'Dirty store traversal buffer transport is required, but this batch cannot be encoded natively. Unencodable entries: ', buffer nativeEncodingFailureSummary ].
 	^ true
 ]

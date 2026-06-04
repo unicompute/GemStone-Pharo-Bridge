@@ -77,6 +77,15 @@ GbsBrowser >> browseTypedWrapperLifecycleReport [
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
+GbsBrowser >> browseSessionEventReport [
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	self inform: session eventControllerReportText.
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
 GbsBrowser >> browseStaleTypedWrapperLifecycleReport [
 	| report staleEntries |
 	session ifNil: [
@@ -148,6 +157,7 @@ GbsBrowser >> menuSession [
 			group addItem: [ :item | item name: 'Typed Wrapper Autoload Report'; action: [ self deferAction: [ self browseTypedWrapperAutoloadReport ] ] ].
 			group addItem: [ :item | item name: 'Typed Wrapper Lifecycle Report'; action: [ self deferAction: [ self browseTypedWrapperLifecycleReport ] ] ].
 			group addItem: [ :item | item name: 'Stale Typed Wrapper Report'; action: [ self deferAction: [ self browseStaleTypedWrapperLifecycleReport ] ] ].
+			group addItem: [ :item | item name: 'Session Event Report'; action: [ self deferAction: [ self browseSessionEventReport ] ] ].
 			group addItem: [ :item | item name: 'Refresh Stale Typed Wrappers'; action: [ self deferAction: [ self refreshStaleTypedWrappers ] ] ].
 			group addItem: [ :item | item name: 'Refresh All Typed Wrappers'; action: [ self deferAction: [ self refreshAllTypedWrappers ] ] ].
 			group addItem: [ :item | item name: 'Inspect Session State Key...'; action: [ self deferAction: [ self browsePromptedSessionStateKey ] ] ].

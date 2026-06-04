@@ -1390,7 +1390,7 @@ GbsSessionCoreTest >> testDirtyReplicationFlushPreservesFreshDirtyMarkDuringSucc
 
 { #category : 'tests' }
 GbsSessionCoreTest >> testDirtyReplicationBinaryTransportFallsBackToScriptWhenUnavailable [
-	| mockSession array capturedScript |
+	| mockSession array capturedScript report capabilityReport |
 	mockSession := CoreMockGbsSession new.
 	array := Array with: 'old'.
 	mockSession rememberMaterializedObject: array forOop: 9000.
@@ -1401,13 +1401,19 @@ GbsSessionCoreTest >> testDirtyReplicationBinaryTransportFallsBackToScriptWhenUn
 		268 ].
 
 	mockSession flushDirtyMaterializedObjects.
+	report := mockSession dirtyStoreTraversalReport.
+	capabilityReport := report at: #nativeCapabilityReport.
 
-	self assert: (capturedScript includesSubstring: 'object at: 1 put: value1_1')
+	self assert: (capturedScript includesSubstring: 'object at: 1 put: value1_1').
+	self assert: (report at: #nativeFallbackCount) equals: 1.
+	self assert: (report at: #nativeFallbackReason) equals: #transportUnsupported.
+	self assert: ((report at: #nativeFallbackDetails) includesSubstring: 'not supported').
+	self assert: (capabilityReport at: #dirtyStoreTraversalBufferTransportSupported) equals: false
 ]
 
 { #category : 'tests' }
 GbsSessionCoreTest >> testDirtyReplicationBinaryTransportFallsBackToScriptWhenNativeReportShapeUnsupported [
-	| mockSession array capturedScript |
+	| mockSession array capturedScript report capabilityReport |
 	mockSession := CoreMockGbsSession new.
 	array := Array with: 'old'.
 	mockSession rememberMaterializedObject: array forOop: 9000.
@@ -1422,8 +1428,14 @@ GbsSessionCoreTest >> testDirtyReplicationBinaryTransportFallsBackToScriptWhenNa
 		268 ].
 
 	mockSession flushDirtyMaterializedObjects.
+	report := mockSession dirtyStoreTraversalReport.
+	capabilityReport := report at: #nativeCapabilityReport.
 
-	self assert: (capturedScript includesSubstring: 'object at: 1 put: value1_1')
+	self assert: (capturedScript includesSubstring: 'object at: 1 put: value1_1').
+	self assert: (report at: #nativeFallbackCount) equals: 1.
+	self assert: (report at: #nativeFallbackReason) equals: #unsupportedReportShape.
+	self assert: ((report at: #nativeFallbackDetails) includesSubstring: 'report shape').
+	self assert: (capabilityReport at: #storeTraversalReportShapeSupported) equals: false
 ]
 
 { #category : 'tests' }
@@ -1463,7 +1475,7 @@ GbsSessionCoreTest >> testDirtyReplicationBinaryTransportRequiredRejectsUnsuppor
 
 { #category : 'tests' }
 GbsSessionCoreTest >> testDirtyReplicationBinaryTransportFallsBackToScriptWhenBatchCannotEncodeNatively [
-	| mockSession array capturedScript |
+	| mockSession array capturedScript report |
 	mockSession := CoreMockGbsSession new.
 	array := Array with: 'old'.
 	mockSession rememberMaterializedObject: array forOop: 9000.
@@ -1478,8 +1490,13 @@ GbsSessionCoreTest >> testDirtyReplicationBinaryTransportFallsBackToScriptWhenBa
 		268 ].
 
 	mockSession flushDirtyMaterializedObjects.
+	report := mockSession dirtyStoreTraversalReport.
 
-	self assert: (capturedScript includesSubstring: 'object at: 1 put: value1_1')
+	self assert: (capturedScript includesSubstring: 'object at: 1 put: value1_1').
+	self assert: (report at: #nativeFallbackCount) equals: 1.
+	self assert: (report at: #nativeFallbackReason) equals: #encodingUnsupported.
+	self assert: ((report at: #nativeFallbackDetails) includesSubstring: 'oop=9000').
+	self assert: ((report at: #nativeFallbackDetails) includesSubstring: 'missingValues=')
 ]
 
 { #category : 'tests' }
@@ -4004,6 +4021,74 @@ GbsSessionCoreTest >> testTraversalBufferReaderRejectsIncompleteReportBoundary [
 		self
 			should: [ reader parseReportsFromBuffer: buffer into: Dictionary new label: 'malformed traversal' ]
 			raise: GbsMaterializationTraversalError
+	] ensure: [ buffer free ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testTraversalBufferReaderRejectsIncompleteReportHeader [
+	| mockSession reader buffer error |
+	mockSession := CoreMockGbsSession new.
+	reader := GbsMaterializationTraversalBufferReader on: mockSession.
+	buffer := ExternalAddress allocate: 256.
+	[
+		self finishTraversalBuffer: buffer usedBytes: 8.
+		error := nil.
+		[ reader parseReportsFromBuffer: buffer into: Dictionary new label: 'short traversal' ]
+			on: GbsMaterializationTraversalError
+			do: [ :ex | error := ex ].
+		self assert: error notNil.
+		self assert: error errorKind equals: #incompleteReportHeader.
+		self assert: error observedValue equals: 8
+	] ensure: [ buffer free ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testTraversalBufferReaderRejectsNegativeReportValueSize [
+	| mockSession reader buffer error |
+	mockSession := CoreMockGbsSession new.
+	reader := GbsMaterializationTraversalBufferReader on: mockSession.
+	buffer := ExternalAddress allocate: 256.
+	[
+		buffer
+			integerAt: 9 put: -8 size: 4 signed: true;
+			integerAt: 13 put: 0 size: 2 signed: true;
+			integerAt: 17 put: 9100 size: 8 signed: false;
+			integerAt: 25 put: 7000 size: 8 signed: false;
+			integerAt: 33 put: 1 size: 8 signed: true;
+			integerAt: 41 put: 0 size: 8 signed: false.
+		self finishTraversalBuffer: buffer usedBytes: 40.
+		error := nil.
+		[ reader parseReportsFromBuffer: buffer into: Dictionary new label: 'negative traversal' ]
+			on: GbsMaterializationTraversalError
+			do: [ :ex | error := ex ].
+		self assert: error notNil.
+		self assert: error errorKind equals: #negativeValueSize.
+		self assert: error observedValue equals: -8
+	] ensure: [ buffer free ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testTraversalBufferReaderRejectsUnalignedOopReportPayload [
+	| mockSession reader buffer error |
+	mockSession := CoreMockGbsSession new.
+	reader := GbsMaterializationTraversalBufferReader on: mockSession.
+	buffer := ExternalAddress allocate: 256.
+	[
+		buffer
+			integerAt: 9 put: 4 size: 4 signed: true;
+			integerAt: 13 put: 0 size: 2 signed: true;
+			integerAt: 17 put: 9100 size: 8 signed: false;
+			integerAt: 25 put: 7000 size: 8 signed: false;
+			integerAt: 33 put: 1 size: 8 signed: true;
+			integerAt: 41 put: 0 size: 8 signed: false.
+		self finishTraversalBuffer: buffer usedBytes: 48.
+		error := nil.
+		[ reader parseReportsFromBuffer: buffer into: Dictionary new label: 'unaligned traversal' ]
+			on: GbsMaterializationTraversalError
+			do: [ :ex | error := ex ].
+		self assert: error notNil.
+		self assert: error errorKind equals: #oopPayloadAlignment.
+		self assert: error observedValue equals: 4
 	] ensure: [ buffer free ]
 ]
 

@@ -194,16 +194,25 @@ GbsInspector >> browseTypedWrapperLifecycleReport [
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
+GbsInspector >> browseSessionEventReport [
+	session ifNil: [ ^ false ].
+	self inform: session eventControllerReportText.
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
 GbsInspector >> browseReportChooser [
 	| labels actions index |
 	labels := OrderedCollection withAll: #(
 		'Typed Wrapper Lifecycle Report'
 		'Stale Typed Wrapper Report'
+		'Session Event Report'
 		'Session State Keys Report...'
 		'Objects In Memory Report...').
 	actions := OrderedCollection withAll: {
 		[ self browseTypedWrapperLifecycleReport ].
 		[ self browseStaleTypedWrapperLifecycleReport ].
+		[ self browseSessionEventReport ].
 		[ self browsePromptedSessionStateKeysReport ].
 		[ self browseObjectsInMemoryReport ] }.
 	self addExtensionReportOptionsToLabels: labels actions: actions.

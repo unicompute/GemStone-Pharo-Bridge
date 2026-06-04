@@ -255,6 +255,19 @@ GbsWorkspaceCoreActionsTest >> testBrowseStaleTypedWrapperLifecycleReportUsesSes
 ]
 
 { #category : 'tests' }
+GbsWorkspaceCoreActionsTest >> testBrowseSessionEventReportUsesActiveSessionReport [
+	| workspace mockSession |
+	workspace := CoreTestableGbsWorkspace new.
+	mockSession := CoreMockGbsSession new.
+	mockSession eventController handleEvent: #gemSignal payload: 7 default: [ nil ].
+	GbsSessionParameters currentSession: mockSession.
+
+	self assert: workspace browseSessionEventReport.
+	self assert: (workspace lastInfoMessage includesSubstring: 'Session Event Controller').
+	self assert: (workspace lastInfoMessage includesSubstring: 'lastEvent=gemSignal')
+]
+
+{ #category : 'tests' }
 GbsWorkspaceCoreActionsTest >> testBrowsePromptedSessionStateKeysReportUsesDiagnosticsFacade [
 	| workspace mockSession |
 	workspace := CoreTestableGbsWorkspace new.

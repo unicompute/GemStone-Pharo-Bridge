@@ -52,6 +52,20 @@
       Smalltalk globals
         at: #GbsReplicationLiveNativeCapabilityMetrics
         put: (Dictionary new
+          at: #dirtyStoreTraversalTransportSupported
+            put: ((session serverInterface nativeStoreTraversalCapabilityReport
+              at: #dirtyStoreTraversalBufferTransportSupported
+              ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
+          at: #dirtyStoreReportShapeSupported
+            put: ((session serverInterface nativeStoreTraversalCapabilityReport
+              at: #storeTraversalReportShapeSupported
+              ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
+          at: #dirtyStoreFunctionsSupported
+            put: ((session serverInterface nativeStoreTraversalCapabilityReport
+              at: #dirtyStoreTraversalFunctionsSupported
+              ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
+          at: #dirtyStoreOopWidth
+            put: (session serverInterface nativeStoreTraversalCapabilityReport at: #oopWidth ifAbsent: [ 0 ]);
           at: #materializationTraversalTransportSupported
             put: ((session nativeMaterializationTraversalCapabilityReport
               at: #materializationTraversalBufferTransportSupported
@@ -1556,6 +1570,10 @@ root'
             ' connector_class_version_mismatches=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionMismatchCount) asString,
             ' connector_class_version_unknowns=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionUnknownCount) asString,
             ' connector_class_version_errors=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionErrorCount) asString,
+            ' dirty_store_transport_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreTraversalTransportSupported) asString,
+            ' dirty_store_report_shape_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreReportShapeSupported) asString,
+            ' dirty_store_functions_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreFunctionsSupported) asString,
+            ' dirty_store_oop_width=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreOopWidth) asString,
             ' materialization_traversal_transport_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationTraversalTransportSupported) asString,
             ' materialization_report_shape_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationReportShapeSupported) asString,
             ' materialization_oop_width=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationOopWidth) asString,
@@ -1615,6 +1633,10 @@ root'
           ' connector_class_version_mismatches=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionMismatchCount) asString,
           ' connector_class_version_unknowns=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionUnknownCount) asString,
           ' connector_class_version_errors=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionErrorCount) asString,
+          ' dirty_store_transport_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreTraversalTransportSupported) asString,
+          ' dirty_store_report_shape_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreReportShapeSupported) asString,
+          ' dirty_store_functions_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreFunctionsSupported) asString,
+          ' dirty_store_oop_width=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreOopWidth) asString,
           ' materialization_traversal_transport_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationTraversalTransportSupported) asString,
           ' materialization_report_shape_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationReportShapeSupported) asString,
           ' materialization_oop_width=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationOopWidth) asString,

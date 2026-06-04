@@ -42,6 +42,15 @@ GbsRemoteDebugger >> browseStaleTypedWrapperLifecycleReport [
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
+GbsRemoteDebugger >> browseSessionEventReport [
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	self inform: session eventControllerReportText.
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
 GbsRemoteDebugger >> browseSessionStateAtKey: aKey [
 	| sessionStateValue oop |
 	session ifNil: [
@@ -203,6 +212,10 @@ GbsRemoteDebugger >> sessionMenu [
 				item
 					name: 'Stale Typed Wrapper Report';
 					action: [ self browseStaleTypedWrapperLifecycleReport ] ].
+			group addItem: [ :item |
+				item
+					name: 'Session Event Report';
+					action: [ self browseSessionEventReport ] ].
 			group addItem: [ :item |
 				item
 					name: 'Session State Keys Report...';

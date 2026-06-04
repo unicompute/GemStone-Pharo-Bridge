@@ -38,6 +38,15 @@ GbsPlaygroundActions class >> gsBrowseStaleTypedWrapperLifecycleReportIn: aPlayg
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
+GbsPlaygroundActions class >> gsBrowseSessionEventReportIn: aPlaygroundPresenter [
+	| activeSession |
+	activeSession := self activeSessionOrInform.
+	activeSession ifNil: [ ^ false ].
+	self inform: activeSession eventControllerReportText.
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
 GbsPlaygroundActions class >> inspectOop: anOop session: aSession [
 	GbsInspector inspect: anOop session: aSession
 ]

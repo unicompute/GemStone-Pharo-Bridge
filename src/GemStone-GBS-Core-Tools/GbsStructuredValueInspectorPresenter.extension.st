@@ -100,6 +100,14 @@ GbsStructuredValueInspectorPresenter >> browseStaleTypedWrapperLifecycleReport [
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
+GbsStructuredValueInspectorPresenter >> browseSessionEventReport [
+	| reportBlock |
+	reportBlock := self propertyAt: #sessionEventReportBlock ifAbsent: [ nil ].
+	reportBlock ifNil: [ ^ self ].
+	self inform: reportBlock value
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
 GbsStructuredValueInspectorPresenter >> browseTypedWrapperLifecycleReport [
 	| reportBlock |
 	reportBlock := self propertyAt: #typedWrapperLifecycleReportBlock ifAbsent: [ nil ].
@@ -138,6 +146,9 @@ GbsStructuredValueInspectorPresenter >> menuEntry [
 		addItem: [ :item |
 			item name: 'Stale Typed Wrapper Report'; action: [ self browseStaleTypedWrapperLifecycleReport ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: (self propertyAt: #staleTypedWrapperReportBlock ifAbsent: [ nil ]) notNil ] ];
+		addItem: [ :item |
+			item name: 'Session Event Report'; action: [ self browseSessionEventReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: (self propertyAt: #sessionEventReportBlock ifAbsent: [ nil ]) notNil ] ];
 		addItem: [ :item |
 			item name: 'Session State Keys Report...'; action: [ self browsePromptedSessionStateKeysReport ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: (self propertyAt: #sessionStateKeysReportBlock ifAbsent: [ nil ]) notNil ] ];

@@ -86,6 +86,19 @@ GbsBrowserCoreToolsTest >> testBrowseStaleTypedWrapperLifecycleReportUsesStaleEn
 ]
 
 { #category : 'tests' }
+GbsBrowserCoreToolsTest >> testBrowseSessionEventReportUsesBrowserSessionReport [
+	| browser session |
+	browser := CoreTestableGbsBrowser new.
+	session := CoreMockGbsSession new.
+	session eventController handleEvent: #gemSignal payload: 7 default: [ nil ].
+	browser session: session.
+
+	self assert: browser browseSessionEventReport.
+	self assert: (browser lastInfoMessage includesSubstring: 'Session Event Controller').
+	self assert: (browser lastInfoMessage includesSubstring: 'lastEvent=gemSignal')
+]
+
+{ #category : 'tests' }
 GbsBrowserCoreToolsTest >> testBrowsePromptedSessionStateKeyRejectsNonNumericInput [
 	| browser session |
 	browser := CoreTestableGbsBrowser new.

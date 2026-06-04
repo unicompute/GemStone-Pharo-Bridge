@@ -196,10 +196,16 @@ jobs:
             echo "### Materialization Performance Baseline" >> "${GITHUB_STEP_SUMMARY}"
             echo "- result: \`SKIP\`" >> "${GITHUB_STEP_SUMMARY}"
             echo "- missing: \`${missing[*]}\`" >> "${GITHUB_STEP_SUMMARY}"
+            mkdir -p "${GBS_JSON_SUMMARY_DIR}"
+            printf '{"result":"SKIP","code":"MATERIALIZATION_PERF_SKIPPED_MISSING_ENV","missing":"%s","live_target":"%s"}\n' "${missing[*]}" "${{ matrix.live_target }}" > "${GBS_JSON_SUMMARY_DIR}/materialization-performance-summary.json"
             exit 0
           fi
           echo "Running live materialization performance lane for ${{ matrix.live_target }}; traversal-buffer fallbacks are hard failures."
           make materialization-perf
+
+      - name: Render materialization JSON summaries
+        if: always()
+        run: bash ./scripts/render_lane_json_summaries.sh "${{ runner.temp }}/gbs-materialization-json-${{ matrix.live_target }}"
 
       - name: Save materialization performance trend history
         if: always()
@@ -277,10 +283,16 @@ jobs:
             echo "### Replication Live Validation" >> "${GITHUB_STEP_SUMMARY}"
             echo "- result: \`SKIP\`" >> "${GITHUB_STEP_SUMMARY}"
             echo "- missing: \`${missing[*]}\`" >> "${GITHUB_STEP_SUMMARY}"
+            mkdir -p "${GBS_JSON_SUMMARY_DIR}"
+            printf '{"result":"SKIP","code":"REPLICATION_LIVE_SKIPPED_MISSING_ENV","missing":"%s","live_target":"%s"}\n' "${missing[*]}" "${{ matrix.live_target }}" > "${GBS_JSON_SUMMARY_DIR}/replication-live-summary.json"
             exit 0
           fi
           echo "Running live replication lane for ${{ matrix.live_target }}; connector/clamp and native dirty-store fallbacks are hard failures."
           make replication-live
+
+      - name: Render replication JSON summaries
+        if: always()
+        run: bash ./scripts/render_lane_json_summaries.sh "${{ runner.temp }}/gbs-replication-json-${{ matrix.live_target }}"
 
       - name: Save replication live trend history
         if: always()

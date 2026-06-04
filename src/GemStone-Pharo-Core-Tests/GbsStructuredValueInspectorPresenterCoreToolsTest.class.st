@@ -81,6 +81,19 @@ GbsStructuredValueInspectorPresenterCoreToolsTest >> testBrowseStaleTypedWrapper
 ]
 
 { #category : 'tests' }
+GbsStructuredValueInspectorPresenterCoreToolsTest >> testBrowseSessionEventReportUsesConfiguredBlock [
+	| presenter informed |
+	presenter := GbsStructuredValueInspectorPresenter new.
+	presenter
+		propertyAt: #sessionEventReportBlock put: [ 'Session Event Controller', String cr, 'lastEvent=gemSignal' ];
+		propertyAt: #informBlock put: [ :message | informed := message ].
+
+	presenter browseSessionEventReport.
+
+	self assert: informed equals: 'Session Event Controller', String cr, 'lastEvent=gemSignal'
+]
+
+{ #category : 'tests' }
 GbsStructuredValueInspectorPresenterCoreToolsTest >> testBrowseTypedWrapperLifecycleReportUsesConfiguredBlock [
 	| presenter informed |
 	presenter := GbsStructuredValueInspectorPresenter new.

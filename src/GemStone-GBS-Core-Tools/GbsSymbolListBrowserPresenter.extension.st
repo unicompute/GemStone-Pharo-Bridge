@@ -120,6 +120,15 @@ GbsSymbolListBrowserPresenter >> browseStaleTypedWrapperLifecycleReport [
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
+GbsSymbolListBrowserPresenter >> browseSessionEventReport [
+	session ifNil: [
+		self inform: 'No GemStone session available.'.
+		^ false ].
+	self inform: session eventControllerReportText.
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
 GbsSymbolListBrowserPresenter >> browseObjectsInMemoryReport [
 	| start limit |
 	session ifNil: [
@@ -193,6 +202,9 @@ GbsSymbolListBrowserPresenter >> menuEntry [
 			item name: 'Stale Typed Wrapper Report'; action: [ self browseStaleTypedWrapperLifecycleReport ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
 		addItem: [ :item |
+			item name: 'Session Event Report'; action: [ self browseSessionEventReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
+		addItem: [ :item |
 			item name: 'Session State Keys Report...'; action: [ self browsePromptedSessionStateKeysReport ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
 		addItem: [ :item |
@@ -221,6 +233,9 @@ GbsSymbolListBrowserPresenter >> menuPreview [
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
 		addItem: [ :item |
 			item name: 'Stale Typed Wrapper Report'; action: [ self browseStaleTypedWrapperLifecycleReport ].
+			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
+		addItem: [ :item |
+			item name: 'Session Event Report'; action: [ self browseSessionEventReport ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: session notNil ] ];
 		addItem: [ :item |
 			item name: 'Session State Keys Report...'; action: [ self browsePromptedSessionStateKeysReport ].
@@ -279,6 +294,8 @@ GbsSymbolListBrowserPresenter >> openStructuredInspectorForPreview: preview titl
 					staleEntries isEmpty
 						ifTrue: [ 'Typed Wrapper Lifecycle', String cr, String cr, 'No stale typed wrappers.' ]
 						ifFalse: [ (GbsTypedWrapperLifecycleReport entries: staleEntries) text ] ] ];
+				propertyAt: #sessionEventReportBlock
+				put: [ session eventControllerReportText ];
 				propertyAt: #sessionStateKeysReportBlock
 				put: [ :keys | self withShallowMaterializationDo: [
 					session objectSpaceDiagnostics reportTextForKeys: keys ] ];

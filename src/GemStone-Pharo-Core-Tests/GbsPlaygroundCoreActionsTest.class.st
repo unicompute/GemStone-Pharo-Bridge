@@ -244,6 +244,19 @@ GbsPlaygroundCoreActionsTest >> testGsBrowseStaleTypedWrapperLifecycleReportUses
 ]
 
 { #category : 'tests' }
+GbsPlaygroundCoreActionsTest >> testGsBrowseSessionEventReportUsesActiveSessionReport [
+	| session presenter |
+	session := CoreMockGbsSession new.
+	presenter := CoreMockGbsPlaygroundPresenter new.
+	session eventController handleEvent: #gemSignal payload: 7 default: [ nil ].
+	GbsSessionParameters currentSession: session.
+
+	self assert: (playgroundActionsClass gsBrowseSessionEventReportIn: presenter).
+	self assert: (playgroundActionsClass lastInfoMessage includesSubstring: 'Session Event Controller').
+	self assert: (playgroundActionsClass lastInfoMessage includesSubstring: 'lastEvent=gemSignal')
+]
+
+{ #category : 'tests' }
 GbsPlaygroundCoreActionsTest >> testGsBrowseTypedWrapperLifecycleReportUsesSessionLifecycleReport [
 	| session presenter |
 	session := CoreMockGbsSession new.
