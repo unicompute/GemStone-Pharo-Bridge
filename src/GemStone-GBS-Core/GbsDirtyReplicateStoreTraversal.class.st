@@ -442,13 +442,25 @@ GbsDirtyReplicateStoreTraversal >> flush [
 	GbsMaterializedObjectDirtyTracker
 		clearDirtyObjects: objects
 		forSession: session.
-	[ self flushEntries: entries ]
+	[ self flushEntriesIsolatingNestedDirty: entries ]
 		on: Error
 		do: [ :ex |
 			objects do: [ :object |
 				session dirtyPool markDirty: object ].
 			ex pass ].
 	^ (entries collect: [ :entry | entry first ]) asArray
+]
+
+{ #category : 'private - flushing' }
+GbsDirtyReplicateStoreTraversal >> flushEntriesIsolatingNestedDirty: entries [
+	"Flush with an empty top dirty pool so that any objects dirtied while the flush runs server execution
+	(resolving class OOPs, allocating new element objects, fetching dictionary metadata, resolving scalar
+	OOPs) are isolated from this flush's accounting and flushed in their own pass. Matches the VisualWorks
+	store-traversal contract that packing and flushing happen with the dirty pool set aside. Falls back to a
+	direct flush when the session does not provide setAsideDirtyWhile:."
+	(session respondsTo: #setAsideDirtyWhile:) ifFalse: [
+		^ self flushEntries: entries ].
+	^ session setAsideDirtyWhile: [ self flushEntries: entries ]
 ]
 
 { #category : 'private - flushing' }

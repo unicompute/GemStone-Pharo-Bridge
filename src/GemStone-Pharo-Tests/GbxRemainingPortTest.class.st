@@ -368,3 +368,65 @@ GbxRemainingPortTest >> testTrippySupportObjectsWorkHeadlessly [
 	keySelection := dictionaryInspector selection.
 	self assert: keySelection value equals: 'alpha'
 ]
+
+{ #category : 'tests - dirty pool' }
+GbxRemainingPortTest >> testSetAsideDirtyWhileIsolatesNestedDirtyMarks [
+	"Inside the set-aside block the top dirty pool must be empty, even though an object was dirty before."
+	| session pool outer innerTopWasEmpty |
+	session := GbxFakeSetAsideDirtySession new.
+	pool := session dirtyPool.
+	outer := Object new.
+	pool markDirty: outer.
+
+	pool setAsideDirtyWhile: [ innerTopWasEmpty := pool dirtyAwaitingPacking isEmpty ].
+
+	self assert: innerTopWasEmpty.
+	self assert: (pool dirtyAwaitingPacking includes: outer)
+]
+
+{ #category : 'tests - dirty pool' }
+GbxRemainingPortTest >> testSetAsideDirtyWhileRestoresPreviousPool [
+	"After the block, the previous dirty pool (and its objects) must be restored and the stack emptied."
+	| session pool outer |
+	session := GbxFakeSetAsideDirtySession new.
+	pool := session dirtyPool.
+	outer := Object new.
+	pool markDirty: outer.
+
+	pool setAsideDirtyWhile: [ pool markDirty: Object new ].
+
+	self assert: (pool dirtyAwaitingPacking includes: outer).
+	self deny: session flushedObjects isEmpty.
+	self assert: session flushCount equals: 1
+]
+
+{ #category : 'tests - dirty pool' }
+GbxRemainingPortTest >> testSetAsideDirtyWhileFlushesNestedDirtyObjects [
+	"Objects dirtied inside the set-aside block are flushed in their own pass and do not pollute the
+	restored outer pool."
+	| session pool outer nested |
+	session := GbxFakeSetAsideDirtySession new.
+	pool := session dirtyPool.
+	outer := Object new.
+	nested := Object new.
+	pool markDirty: outer.
+
+	pool setAsideDirtyWhile: [ pool markDirty: nested ].
+
+	self assert: (session flushedObjects includes: nested).
+	self deny: (session flushedObjects includes: outer).
+	self assert: (pool dirtyAwaitingPacking includes: outer).
+	self deny: (pool dirtyAwaitingPacking includes: nested)
+]
+
+{ #category : 'tests - dirty pool' }
+GbxRemainingPortTest >> testSetAsideDirtyWhileSkipsFlushWhenNoNestedDirty [
+	"A set-aside block that dirties nothing must not trigger a flush."
+	| session pool |
+	session := GbxFakeSetAsideDirtySession new.
+	pool := session dirtyPool.
+
+	pool setAsideDirtyWhile: [ 42 ].
+
+	self assert: session flushCount equals: 0
+]
