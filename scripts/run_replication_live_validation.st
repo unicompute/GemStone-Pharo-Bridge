@@ -1701,6 +1701,119 @@ root'
         businessVerified = 23 ifFalse: [
           Error signal: 'Business dirty-store traversal did not update the remote fixture status=', businessVerified asString, ' oop=', businessVerifiedOop asString, ' (31=array 32=association 33=ordered 34=dictionary 35=set 36=bag).' ].
 
+        phase := 'unmapped-element-dirty-store-fixture'.
+        "Exercise the Set/Bag native gap: a Set and a Bag that gain brand-new, unmapped element objects.
+        Each added Association has no server OOP yet, so native store traversal must allocate a free OOP and
+        create it server-side in the same flush -- not fall back to the semantic command path."
+        "Reuses the dirtyRootOop/dirtyRoot/releaseNoLongerObject/releaseGcedObject/dirtyStoreReport/verified
+        temps from earlier phases to stay under the Pharo per-method temp limit."
+        session resetMaterializedObjectDirtyTracking.
+        dirtyRootOop := session
+          returnRemoteCommandBody: '| fixture root set bag |
+fixture := UserGlobals at: fixtureKey ifAbsentPut: [ Dictionary new ].
+set := Set new.
+bag := Bag new.
+root := Array new: 2.
+root at: 1 put: set; at: 2 put: bag.
+fixture at: #unmappedRoot put: root.
+root'
+          literalBindings: (Dictionary new
+            at: 'fixtureKey' put: fixtureKey;
+            yourself)
+          oopBindings: Dictionary new.
+        [ session clearProxyCache. session clearRemoteClassNameCache ] on: Error do: [ ].
+        session fetchDeep.
+        dirtyRoot := session fetchObject: dirtyRootOop.
+        dirtyRoot ifNil: [ Error signal: 'Unmapped-element dirty-store fixture did not materialize.' ].
+        releaseNoLongerObject := dirtyRoot at: 1.
+        releaseGcedObject := dirtyRoot at: 2.
+
+        phase := 'unmapped-element-dirty-store-flush'.
+        policy storeTraversalTransport: 'binaryRequired'.
+        releaseNoLongerObject add: (Association key: #setMember value: 71).
+        releaseGcedObject add: (Association key: #bagMember value: 72).
+        dirtyTrackerClass markObject: releaseNoLongerObject dirtyInSession: session.
+        dirtyTrackerClass markObject: releaseGcedObject dirtyInSession: session.
+        session dirtyMaterializedObjectOops size < 2 ifTrue: [
+          Error signal: 'Expected the Set and Bag to be dirty before the unmapped-element flush.' ].
+        session resetDirtyStoreTraversalReport.
+        session flushDirtyMaterializedObjects.
+        dirtyStoreReport := session dirtyStoreTraversalReport.
+        "Element OOPs are allocated during native traversal-buffer expansion (after the per-flush report is
+        seeded), so the dirty-store report's newObjectEntryCount does not see them. The element allocations
+        are instead counted by the session lifecycle allocatedFreeOopCount counter; use that as the signal
+        that the unmapped Set/Bag elements were allocated server objects rather than resolved to existing OOPs."
+        clampedMetrics := Dictionary new
+          at: #nativeFlushes put: (metricValue value: dirtyStoreReport value: #nativeFlushCount);
+          at: #freeOopAllocations put: (metricValue value: (session objectSpace lifecycleReport) value: #allocatedFreeOopCount);
+          at: #semanticSetEntries put: (metricValue value: dirtyStoreReport value: #semanticSetEntryCount);
+          at: #semanticBagEntries put: (metricValue value: dirtyStoreReport value: #semanticBagEntryCount);
+          yourself.
+        Smalltalk globals at: #GbsReplicationLiveUnmappedElementMetrics put: clampedMetrics.
+        (clampedMetrics at: #nativeFlushes) <= 0 ifTrue: [
+          Error signal: 'Unmapped Set/Bag element flush did not use the native store traversal buffer.' ].
+        ((clampedMetrics at: #semanticSetEntries) = 0 and: [ (clampedMetrics at: #semanticBagEntries) = 0 ]) ifFalse: [
+          Error signal: 'Unmapped Set/Bag element flush unexpectedly fell back to the semantic command path.' ].
+        (clampedMetrics at: #freeOopAllocations) < 2 ifTrue: [
+          Error signal: 'Unmapped Set/Bag element flush did not allocate free OOPs for the two added elements.' ].
+        verified := session
+          returnRemoteCommandBody: '| root set bag status |
+root := object.
+set := root at: 1.
+bag := root at: 2.
+status := 41.
+(set detect: [ :each | (each isKindOf: Association) and: [ each key = #setMember and: [ each value = 71 ] ] ] ifNone: [ nil ])
+  isNil ifTrue: [ status := 45 ].
+(status = 41 and: [
+  (bag detect: [ :each | (each isKindOf: Association) and: [ each key = #bagMember and: [ each value = 72 ] ] ] ifNone: [ nil ]) notNil ])
+  ifFalse: [ status = 41 ifTrue: [ status := 46 ] ].
+status'
+          literalBindings: Dictionary new
+          oopBindings: (Dictionary new
+            at: 'object' put: dirtyRootOop;
+            yourself).
+        verified := session resultFor: verified.
+        verified = 41 ifFalse: [
+          Error signal: 'Unmapped Set/Bag element flush did not create the added elements server-side status=', verified asString, ' (45=set 46=bag).' ].
+
+        phase := 'free-oop-object-creation'.
+        "VW-parity object creation from free OOPs via GciCreateByteObj / GciCreateOopObj. Create a byte
+        object (a String) and a pointer object (an Array) whose first slot is a forward reference to the
+        new String, then verify both exist server-side with the expected contents. Reuses the
+        releaseNoLongerObject/releaseGcedObject/dirtyRootOop/verified temps to stay under the temp limit."
+        (session serverInterface supportsObjectCreationTransport) ifFalse: [
+          Error signal: 'Session does not advertise GCI object-creation transport.' ].
+        releaseNoLongerObject := session createObjectClass: 'String' values: 'gbs-created' asByteArray.
+        releaseNoLongerObject ifNil: [ Error signal: 'createObjectClass: String returned nil proxy.' ].
+        releaseGcedObject := session
+          createObjectClass: 'Array'
+          values: { releaseNoLongerObject. 7. nil }.
+        releaseGcedObject ifNil: [ Error signal: 'createObjectClass: Array returned nil proxy.' ].
+        dirtyRootOop := releaseGcedObject oop.
+        Smalltalk globals
+          at: #GbsReplicationLiveObjectCreationMetrics
+          put: (Dictionary new
+            at: #byteObjectOop put: releaseNoLongerObject oop;
+            at: #oopObjectOop put: releaseGcedObject oop;
+            yourself).
+        verified := session
+          returnRemoteCommandBody: '| arr status |
+arr := object.
+status := 51.
+(arr class == Array and: [ arr size = 3 ]) ifFalse: [ status := 55 ].
+(status = 51 and: [ (arr at: 1) = ''gbs-created'' and: [ (arr at: 1) class == String ] ]) ifFalse: [
+  status = 51 ifTrue: [ status := 56 ] ].
+(status = 51 and: [ (arr at: 2) = 7 and: [ (arr at: 3) isNil ] ]) ifFalse: [
+  status = 51 ifTrue: [ status := 57 ] ].
+status'
+          literalBindings: Dictionary new
+          oopBindings: (Dictionary new
+            at: 'object' put: dirtyRootOop;
+            yourself).
+        verified := session resultFor: verified.
+        verified = 51 ifFalse: [
+          Error signal: 'Free-OOP object creation did not produce the expected server objects status=', verified asString, ' (55=array shape 56=string slot 57=int/nil slots).' ].
+
         phase := 'migration-domain-mapped-lifecycle-abort'.
         session resetMaterializedObjectDirtyTracking.
         mappedDomainOrder := mappedDomainFixtureClass basicNew.
@@ -1828,6 +1941,12 @@ root'
             ' lifecycle_no_longer_acknowledged=', lifecycleNoLongerAcknowledged asString,
             ' lifecycle_gced_acknowledged=', lifecycleGcedAcknowledged asString,
             ' business_export_set_queued_after=', businessExportAfter asString,
+            ' unmapped_element_native_dirty_store_flushes=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveUnmappedElementMetrics ifAbsent: [ Dictionary new ]) value: #nativeFlushes) asString,
+            ' unmapped_element_free_oop_allocations=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveUnmappedElementMetrics ifAbsent: [ Dictionary new ]) value: #freeOopAllocations) asString,
+            ' unmapped_element_semantic_set_entries=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveUnmappedElementMetrics ifAbsent: [ Dictionary new ]) value: #semanticSetEntries) asString,
+            ' unmapped_element_semantic_bag_entries=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveUnmappedElementMetrics ifAbsent: [ Dictionary new ]) value: #semanticBagEntries) asString,
+            ' created_byte_object_oop=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveObjectCreationMetrics ifAbsent: [ Dictionary new ]) value: #byteObjectOop) asString,
+            ' created_oop_object_oop=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveObjectCreationMetrics ifAbsent: [ Dictionary new ]) value: #oopObjectOop) asString,
             ' clamp_spec_oop=', clampSpecOop asString;
           cr ]
         ensure: [

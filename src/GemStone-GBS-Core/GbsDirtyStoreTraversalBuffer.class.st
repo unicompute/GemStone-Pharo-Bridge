@@ -112,9 +112,34 @@ GbsDirtyStoreTraversalBuffer >> entries [
 	^ entries
 ]
 
+{ #category : 'native encoding' }
+GbsDirtyStoreTraversalBuffer >> createFlag [
+	"GCI_STORE_TRAV_CREATE (0x2): when a store-traversal object report names an OOP that does not yet
+	exist on the server, create the object with GciCreate semantics and add it to the PureExportSet.
+	Required for new objects allocated from free OOPs (for example unmapped Set/Bag elements); without it
+	GciStoreTrav fails with error 2101 'object does not exist'."
+	^ 2
+]
+
+{ #category : 'native encoding' }
+GbsDirtyStoreTraversalBuffer >> defaultFlags [
+	"GCI_STORE_TRAV_FINISH_UPDATES (0x8) is always set so deferred updates run after the last report.
+	GCI_STORE_TRAV_CREATE (0x2) is added when any entry creates a new object from a free OOP."
+	| value |
+	value := 8.
+	(self entriesIncludeNewObject) ifTrue: [ value := value bitOr: self createFlag ].
+	^ value
+]
+
+{ #category : 'testing' }
+GbsDirtyStoreTraversalBuffer >> entriesIncludeNewObject [
+	^ entries anySatisfy: [ :entry |
+		entry size >= 6 and: [ (entry at: 6) == true ] ]
+]
+
 { #category : 'accessing' }
 GbsDirtyStoreTraversalBuffer >> flags [
-	^ flags ifNil: [ 8 ]
+	^ flags ifNil: [ self defaultFlags ]
 ]
 
 { #category : 'accessing' }
@@ -125,7 +150,7 @@ GbsDirtyStoreTraversalBuffer >> flags: anInteger [
 { #category : 'initialization' }
 GbsDirtyStoreTraversalBuffer >> initializeEntries: dirtyEntries [
 	entries := dirtyEntries asArray.
-	flags := 8.
+	flags := self defaultFlags.
 	payload := self buildPayload
 ]
 

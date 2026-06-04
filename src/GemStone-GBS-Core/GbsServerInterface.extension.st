@@ -49,6 +49,27 @@ GbsServerInterface >> apiGciGetFreeOops: oopCount into: oopBuffer [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> apiGciCreateOopObj: oclass objId: objId values: valuesBuffer numValues: numValues clusterId: clusterId permanent: makePermanent [
+	"GciCreateOopObj(OopType oclass, OopType objId, const OopType *values, int numValues, int clusterId, BoolType makePermanent).
+	objId must be a free OOP from GciGetFreeOop (or OOP_ILLEGAL=1 to let the server assign one).
+	Returns the OOP of the created object."
+	^ self
+		ffiCall: #(uint64 GciCreateOopObj(uint64 oclass, uint64 objId, void* valuesBuffer, int numValues, int clusterId, int makePermanent))
+		module: libraryPath
+		options: #( + optNonThreaded )
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> apiGciCreateByteObj: oclass objId: objId values: valuesBuffer numValues: numValues clusterId: clusterId permanent: makePermanent [
+	"GciCreateByteObj(OopType oclass, OopType objId, const ByteType *values, int64 numValues, int clusterId, BoolType makePermanent).
+	For byte-format classes. Returns the OOP of the created object."
+	^ self
+		ffiCall: #(uint64 GciCreateByteObj(uint64 oclass, uint64 objId, void* valuesBuffer, int64 numValues, int clusterId, int makePermanent))
+		module: libraryPath
+		options: #( + optNonThreaded )
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> apiGciGetSessionId [
 	^ self
 		ffiCall: #(int GciGetSessionId())
@@ -154,6 +175,82 @@ GbsServerInterface >> getFreeOops: oopCount [
 			(buffer integerAt: 1 + ((index - 1) * 8) size: 8 signed: false) asInteger ].
 		oops asArray
 	] ensure: [ buffer free ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> supportsObjectCreationTransport [
+	"GciCreateOopObj/GciCreateByteObj require 64-bit OopType and the free-OOP allocation transport,
+	since a created object's objId is a free OOP."
+	^ self nativeGciTransportsEnabled
+		and: [ self nativeGciOopWidth = 64
+		and: [ (self respondsTo: #apiGciCreateOopObj:objId:values:numValues:clusterId:permanent:)
+		and: [ (self respondsTo: #apiGciCreateByteObj:objId:values:numValues:clusterId:permanent:)
+		and: [ self respondsTo: #apiGciGetFreeOops:into: ] ] ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> createOopObjectOfClass: classOop objId: objId oopValues: oopValues clusterId: clusterId permanent: makePermanent [
+	"Create an Nsc/Oop-format object from a previously allocated free OOP, storing oopValues into its
+	named (then indexable/Nsc) slots. oopValues is a collection of unsigned 64-bit server OOPs; forward
+	references to not-yet-created free OOPs are allowed for pointer values (but not for Symbols). Returns
+	the unsigned OOP of the created object, which equals objId unless objId was OOP_ILLEGAL."
+	| values buffer bufferBytes result |
+	(self supportsObjectCreationTransport) ifFalse: [
+		GbsError signal: 'GCI object-creation transport is not available.' ].
+	values := oopValues asArray.
+	bufferBytes := values size * 8 max: 8.
+	buffer := ExternalAddress allocate: bufferBytes.
+	^ [
+		values doWithIndex: [ :oop :index |
+			buffer integerAt: 1 + ((index - 1) * 8) put: oop size: 8 signed: false ].
+		result := self
+			apiGciCreateOopObj: classOop
+			objId: objId
+			values: (values isEmpty ifTrue: [ ExternalAddress null ] ifFalse: [ buffer ])
+			numValues: values size
+			clusterId: clusterId
+			permanent: (makePermanent ifTrue: [ 1 ] ifFalse: [ 0 ]).
+		self assertCreatedObjectOop: result objId: objId.
+		result asInteger
+	] ensure: [ buffer free ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> createByteObjectOfClass: classOop objId: objId bytes: aByteArray clusterId: clusterId permanent: makePermanent [
+	"Create a byte-format object from a previously allocated free OOP, storing aByteArray as its bytes.
+	Returns the unsigned OOP of the created object."
+	| bytes buffer bufferBytes result |
+	(self supportsObjectCreationTransport) ifFalse: [
+		GbsError signal: 'GCI object-creation transport is not available.' ].
+	bytes := aByteArray asByteArray.
+	bufferBytes := bytes size max: 1.
+	buffer := ExternalAddress allocate: bufferBytes.
+	^ [
+		bytes doWithIndex: [ :byte :index |
+			buffer unsignedByteAt: index put: byte ].
+		result := self
+			apiGciCreateByteObj: classOop
+			objId: objId
+			values: (bytes isEmpty ifTrue: [ ExternalAddress null ] ifFalse: [ buffer ])
+			numValues: bytes size
+			clusterId: clusterId
+			permanent: (makePermanent ifTrue: [ 1 ] ifFalse: [ 0 ]).
+		self assertCreatedObjectOop: result objId: objId.
+		result asInteger
+	] ensure: [ buffer free ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> assertCreatedObjectOop: result objId: objId [
+	"GciCreate* returns the new object's OOP. A return of OOP_ILLEGAL (1) or 0 indicates failure. When a
+	concrete objId (not OOP_ILLEGAL) was requested, the result must equal it."
+	| resultOop |
+	resultOop := result asInteger.
+	((resultOop = 1) or: [ resultOop = 0 ]) ifTrue: [
+		GbsError signal: 'GciCreate failed to create the server object (returned OOP ', resultOop asString, ').' ].
+	(objId ~= 1 and: [ resultOop ~= objId ]) ifTrue: [
+		GbsError signal: 'GciCreate returned OOP ', resultOop asString, ' but the requested free OOP was ', objId asString, '.' ].
+	^ resultOop
 ]
 
 { #category : '*GemStone-GBS-Core' }

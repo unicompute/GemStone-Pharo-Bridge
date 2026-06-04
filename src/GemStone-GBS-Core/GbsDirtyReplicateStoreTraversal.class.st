@@ -1054,7 +1054,31 @@ GbsDirtyReplicateStoreTraversal >> requiresSemanticStoreForEntry: entry [
 	kind := entry at: 3.
 	(#(#dictionary #identityDictionary) includes: kind) ifTrue: [
 		^ (self canNativeStoreDictionaryEntry: entry) not ].
+	(#(#set #bag) includes: kind) ifTrue: [
+		^ (self canNativeStoreHashedCollectionEntry: entry) not ].
 	^ false
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> canNativeStoreHashedCollectionEntry: entry [
+	"A Set/Bag can be stored natively when every distinct element either already resolves to a server OOP
+	or is an unmapped trackable object for which a server class OOP can be resolved (so a free OOP can be
+	allocated for it during the flush). Probe without mutating tracker/free-OOP state: actual allocation
+	happens later in buildNativeStructuralEntriesForHashedCollectionEntry:."
+	(self entryIsNewObject: entry) ifTrue: [ ^ true ].
+	^ (self distinctHashedCollectionElementsFor: entry) allSatisfy: [ :element |
+		(self hashedCollectionElementResolvesToOop: element)
+			or: [ self unmappedHashedCollectionElementIsAllocatable: element ] ]
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> unmappedHashedCollectionElementIsAllocatable: element [
+	"True when an unmapped Set/Bag element could be allocated a server object during the flush. Pure
+	probe: it must not register the object or consume a free OOP."
+	(GbsMaterializedObjectDirtyTracker canTrackObject: element) ifFalse: [ ^ false ].
+	^ ([ self classOopForNewObject: element replicator: (self replicatorForObject: element) ]
+		on: Error
+		do: [ nil ]) notNil
 ]
 
 { #category : 'private - policy' }
@@ -1074,7 +1098,78 @@ GbsDirtyReplicateStoreTraversal >> nativeEntryExpansionCache [
 
 { #category : 'private - policy' }
 GbsDirtyReplicateStoreTraversal >> buildNativeStructuralEntriesForHashedCollectionEntry: entry ifAbsent: absentBlock [
-	^ { entry }
+	"A Set/Bag is stored natively as an NSC pointer report whose varying (indexed) slots hold the
+	element OOPs. Every distinct element must therefore resolve to a server OOP before the buffer can
+	be encoded. Elements that are already mapped (replicates, proxies) or are nil/boolean/SmallInteger/
+	Character/scalar values resolve directly. Elements that are unmapped but trackable domain objects are
+	allocated a free OOP here and emitted as their own native dirty entries, so the server creates them
+	in the same store-traversal flush -- mirroring the Dictionary association-allocation path. If any
+	distinct element is unmapped and cannot be tracked/allocated, native encoding is impossible and we
+	bail to absentBlock so the caller falls back to the semantic command path."
+	| elements newElementEntries seenElements |
+	elements := self distinctHashedCollectionElementsFor: entry.
+	newElementEntries := OrderedCollection new.
+	seenElements := IdentitySet new.
+	elements do: [ :element |
+		(self hashedCollectionElementResolvesToOop: element) ifFalse: [
+			(seenElements includes: element) ifFalse: [
+				| elementEntry |
+				seenElements add: element.
+				elementEntry := self
+					nativeEntryForUnmappedHashedCollectionElement: element
+					ifAbsent: [ ^ absentBlock value ].
+				newElementEntries add: elementEntry ] ] ].
+	^ (newElementEntries asArray), { entry }
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> distinctHashedCollectionElementsFor: entry [
+	"The distinct element objects of a Set/Bag entry. A Bag's repeated elements only need one OOP each,
+	so collapse to identity-distinct elements."
+	| object distinct seen |
+	object := entry second.
+	distinct := OrderedCollection new.
+	seen := IdentitySet new.
+	object do: [ :element |
+		(seen includes: element) ifFalse: [
+			seen add: element.
+			distinct add: element ] ].
+	^ distinct asArray
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> hashedCollectionElementResolvesToOop: element [
+	"True when a Set/Bag element can already be encoded into the native traversal buffer without
+	allocating a new server object: it is either an immediate value (nil/boolean/SmallInteger/Character),
+	a scalar (String/Symbol) the buffer resolves to an OOP, or an object already mapped to a server OOP."
+	element isNil ifTrue: [ ^ true ].
+	(element == true or: [ element == false ]) ifTrue: [ ^ true ].
+	(element isInteger or: [ element isCharacter ]) ifTrue: [ ^ true ].
+	(element isString or: [ element isSymbol ]) ifTrue: [ ^ true ].
+	((element respondsTo: #oop) and: [ element oop notNil ]) ifTrue: [ ^ true ].
+	^ ([ self oopForObject: element ] on: Error do: [ nil ]) notNil
+]
+
+{ #category : 'private - policy' }
+GbsDirtyReplicateStoreTraversal >> nativeEntryForUnmappedHashedCollectionElement: element ifAbsent: absentBlock [
+	"Allocate a free OOP for an unmapped trackable element object and build the native dirty entry that
+	will create it server-side. Returns a new-object entry tagged isNew=true so the buffer writes a full
+	pointer report (named + indexable slots) for the element. Bails to absentBlock when the element cannot
+	be tracked or no server class OOP can be resolved."
+	| classOop oop kind |
+	(GbsMaterializedObjectDirtyTracker canTrackObject: element) ifFalse: [ ^ absentBlock value ].
+	classOop := self classOopForNewObject: element replicator: (self replicatorForObject: element).
+	classOop ifNil: [ ^ absentBlock value ].
+	GbsMaterializedObjectDirtyTracker registerObject: element forSession: session.
+	oop := self allocateOopForNewDirtyObject: element.
+	kind := self kindForObject: element.
+	^ {
+		oop.
+		element.
+		kind.
+		(self replicatorForObject: element).
+		classOop.
+		true }
 ]
 
 { #category : 'private - policy' }
