@@ -480,6 +480,66 @@ GbsSessionTest >> testHandleInterSessionSignalMessageRunsInstalledActionForFirst
 ]
 
 { #category : 'tests' }
+GbsSessionTest >> testHandleInterSessionSignalRunsGemSignalActionWithDecodedTriple [
+	"VW gemSignalAction: path: the three-arg block fires with (sendingSerial, signalNumber, message) for the
+	first signal and each polled successor."
+	| mockSession tripleScript pollScript handled |
+	mockSession := MockGbsSession new.
+	handled := OrderedCollection new.
+	tripleScript := mockSession interSessionSignalTripleScriptForExceptionOop: 77.
+	pollScript := mockSession interSessionSignalTriplePollScript.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = tripleScript ifTrue: [ ^ #(42 15 'hello') ].
+		script = pollScript ifTrue: [ ^ #(43 16 'world') ].
+		nil ].
+
+	mockSession gemSignalAction: [ :serial :number :message |
+		handled add: { serial. number. message } ].
+	mockSession handleInterSessionSignalMessage: 'signal' exceptionOop: 77.
+
+	self assert: handled size equals: 2.
+	self assert: handled first equals: { 42. 15. 'hello' }.
+	self assert: handled second equals: { 43. 16. 'world' }
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testHandleInterSessionSignalDefaultPathSignalsDecodedSignal [
+	"With no handler installed, the default path raises an InterSessionSignal carrying the decoded triple."
+	| mockSession tripleScript caught |
+	mockSession := MockGbsSession new.
+	tripleScript := mockSession interSessionSignalTripleScriptForExceptionOop: 77.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script |
+		script = tripleScript ifTrue: [ ^ #(42 15 'hello') ].
+		nil ].
+
+	caught := nil.
+	[ mockSession handleInterSessionSignalMessage: 'raw' exceptionOop: 77 ]
+		on: InterSessionSignal
+		do: [ :ex | caught := ex. ex resume: nil ].
+
+	self assert: caught sendingSessionSerial equals: 42.
+	self assert: caught signalNumber equals: 15.
+	self assert: caught sentMessage equals: 'hello'.
+	self assert: caught messageText equals: 'hello'
+]
+
+{ #category : 'tests' }
+GbsSessionTest >> testHandleInterSessionSignalDefaultPathFallsBackToRawMessage [
+	"When the signal cannot be decoded, the default path still raises an InterSessionSignal with the raw
+	error message text."
+	| mockSession caught |
+	mockSession := MockGbsSession new.
+	mockSession stubs at: #executeScriptAndFetchObject put: [ :script | nil ].
+
+	caught := nil.
+	[ mockSession handleInterSessionSignalMessage: 'raw-text' exceptionOop: 77 ]
+		on: InterSessionSignal
+		do: [ :ex | caught := ex. ex resume: nil ].
+
+	self assert: caught messageText equals: 'raw-text'
+]
+
+{ #category : 'tests' }
 GbsSessionTest >> testHandleObjectsCommittedNotificationMessageRunsInstalledActionWithIdentitySet [
 	| mockSession changedObjects handled signaledObjectsScript |
 	mockSession := MockGbsSession new.

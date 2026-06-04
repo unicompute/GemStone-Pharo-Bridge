@@ -58,8 +58,28 @@ GbsSession class >> clearSessionSignalActionFor: aSession [
 ]
 
 { #category : 'event handling' }
+GbsSession class >> clearGemSignalActionFor: aSession [
+	self gemSignalActions removeKey: aSession ifAbsent: [ ]
+]
+
+{ #category : 'event handling' }
 GbsSession class >> clearSignaledAbortActionFor: aSession [
 	self signaledAbortActions removeKey: aSession ifAbsent: [ ]
+]
+
+{ #category : 'event handling' }
+GbsSession class >> gemSignalActionFor: aSession [
+	^ self gemSignalActions at: aSession ifAbsent: [ nil ]
+]
+
+{ #category : 'event handling' }
+GbsSession class >> gemSignalActionFor: aSession put: aBlock [
+	self gemSignalActions at: aSession put: aBlock
+]
+
+{ #category : 'event handling' }
+GbsSession class >> gemSignalActions [
+	^ self weakRegistryNamed: #GbsSessionGemSignalActions
 ]
 
 { #category : 'event handling' }
@@ -164,6 +184,7 @@ GbsSession >> resetAttachedParametersAfterLogout [
 GbsSession >> resetConvertedSessionStateAfterLogout [
 	self class clearNotificationActionFor: self.
 	self class clearSessionSignalActionFor: self.
+	self class clearGemSignalActionFor: self.
 	self class clearSignaledAbortActionFor: self.
 	(self class weakRegistryNamed: #GbsSessionDirtyPools)
 		removeKey: self
@@ -863,22 +884,94 @@ GbsSession >> handleSignaledAbortErrorMessage: anErrorMessage [
 
 { #category : 'error handling' }
 GbsSession >> handleInterSessionSignalMessage: anErrorMessage exceptionOop: anExceptionOop [
-	| action sessionSignal |
-	action := self sessionSignalAction.
-	action ifNil: [
-		^ InterSessionSignal signal: anErrorMessage ].
+	| sessionAction gemAction sessionSignal |
+	gemAction := self gemSignalAction.
+	gemAction ifNotNil: [
+		^ self
+			runGemSignalAction: gemAction
+			exceptionOop: anExceptionOop
+			errorMessage: anErrorMessage ].
+
+	sessionAction := self sessionSignalAction.
+	sessionAction ifNil: [
+		^ self signalInterSessionSignalForExceptionOop: anExceptionOop errorMessage: anErrorMessage ].
 
 	^ [
 		sessionSignal := self legacyInterSessionSignalFromExceptionOop: anExceptionOop.
 		sessionSignal ifNil: [
 			sessionSignal := self legacyInterSessionSignalPoll ].
 		[ sessionSignal isNil ] whileFalse: [
-			action value: sessionSignal.
+			sessionAction value: sessionSignal.
 			sessionSignal := self legacyInterSessionSignalPoll ] ]
 		ensure: [
 			[ self enableSignaledGemStoneSessionError ]
 				on: Error
 				do: [ ] ]
+]
+
+{ #category : 'error handling' }
+GbsSession >> runGemSignalAction: aBlock exceptionOop: anExceptionOop errorMessage: anErrorMessage [
+	"VW gemSignalAction: path. Decode the inter-session signal triple (sending serial, signal number,
+	message) and evaluate the three-argument block for the first signal and each polled successor."
+	| triple |
+	^ [
+		triple := self interSessionSignalTripleFromExceptionOop: anExceptionOop errorMessage: anErrorMessage.
+		[ triple isNil ] whileFalse: [
+			aBlock
+				value: (triple at: 1)
+				value: (triple at: 2)
+				value: (triple at: 3).
+			triple := self interSessionSignalTriplePoll ] ]
+		ensure: [
+			[ self enableSignaledGemStoneSessionError ]
+				on: Error
+				do: [ ] ]
+]
+
+{ #category : 'error handling' }
+GbsSession >> signalInterSessionSignalForExceptionOop: anExceptionOop errorMessage: anErrorMessage [
+	"Default path with no handler installed: raise a client InterSessionSignal carrying the decoded triple
+	when it can be fetched, otherwise fall back to the raw error message."
+	| triple |
+	triple := [ self interSessionSignalTripleFromExceptionOop: anExceptionOop errorMessage: anErrorMessage ]
+		on: Error
+		do: [ nil ].
+	triple ifNil: [ ^ InterSessionSignal signal: anErrorMessage ].
+	^ (InterSessionSignal
+		signalNumber: (triple at: 2)
+		message: (triple at: 3)
+		sendingSessionSerial: (triple at: 1))
+		signal: ((triple at: 3) ifNil: [ anErrorMessage ])
+]
+
+{ #category : 'private - event handling' }
+GbsSession >> interSessionSignalTripleFromExceptionOop: anExceptionOop errorMessage: anErrorMessage [
+	"Fetch { sendingSessionSerial. signalNumber. message } for the signal captured in anExceptionOop, in a
+	single server round trip. Answers nil when the exception OOP holds no signal."
+	(anExceptionOop isNil or: [ anExceptionOop = 0 or: [ anExceptionOop = 20 ] ]) ifTrue: [
+		^ self interSessionSignalTriplePoll ].
+	^ self
+		executeScriptAndFetchObject: (self interSessionSignalTripleScriptForExceptionOop: anExceptionOop)
+]
+
+{ #category : 'private - event handling' }
+GbsSession >> interSessionSignalTriplePoll [
+	"Poll for the next pending inter-session signal and answer its decoded triple, or nil when none remain."
+	^ self executeScriptAndFetchObject: self interSessionSignalTriplePollScript
+]
+
+{ #category : 'private - event handling' }
+GbsSession >> interSessionSignalTriplePollScript [
+	^ '| sig | sig := GsCurrentSession currentSession signalFromSession. sig == nil ifTrue: [ nil ] ifFalse: [ Array with: sig sendingSessionSerial with: sig sentInt with: sig sentMessage ]'
+]
+
+{ #category : 'private - event handling' }
+GbsSession >> interSessionSignalTripleScriptForExceptionOop: anExceptionOop [
+	^ String streamContents: [ :stream |
+		stream
+			nextPutAll: '| sig | sig := Object _objectForOop: ';
+			nextPutAll: anExceptionOop printString;
+			nextPutAll: '. sig == nil ifTrue: [ nil ] ifFalse: [ Array with: sig sendingSessionSerial with: sig sentInt with: sig sentMessage ]' ]
 ]
 
 { #category : 'initialization' }
@@ -928,6 +1021,27 @@ GbsSession >> notificationAction: aBlock [
 
 	self class notificationActionFor: self put: aBlock.
 	self enableSignaledObjectsError.
+	^ aBlock
+]
+
+{ #category : 'event handling' }
+GbsSession >> gemSignalAction [
+	^ self class gemSignalActionFor: self
+]
+
+{ #category : 'event handling' }
+GbsSession >> gemSignalAction: aBlock [
+	"VisualWorks-compatible gem-to-gem signal handler. aBlock is a three-argument block evaluated with the
+	sending session serial number (SmallInteger), the signal number (SmallInteger), and the signal message
+	(String) for each received inter-session signal. Pass nil to deinstall. Incompatible with
+	sessionSignalAction: for the same session (VW restriction)."
+	aBlock ifNil: [
+		self class clearGemSignalActionFor: self.
+		[ self disableSignaledGemStoneSessionError ] on: Error do: [ ].
+		^ nil ].
+
+	self class gemSignalActionFor: self put: aBlock.
+	self enableSignaledGemStoneSessionError.
 	^ aBlock
 ]
 
