@@ -571,8 +571,23 @@ CoreMockGbsSession >> nativeStoreTraversalCapabilityReport [
 		at: #nativeGciTransportsEnabled put: true;
 		at: #oopWidth put: 64;
 		at: #storeTraversalStructLayoutSupported put: true;
+		at: #storeTraversalStructLayoutDiagnostics put: (Dictionary new
+			at: #wordSizeBytes put: 8;
+			at: #oopWidth put: 64;
+			at: #expectedOopWidth put: 64;
+			at: #bufferHeaderBytes put: 8;
+			at: #objectReportHeaderBytes put: 40;
+			at: #objectSecurityPolicyIdOffset put: 6;
+			at: #storeTravDoTravRefsArgsBytes put: 104;
+			at: #clampedTraversalArgsBytes put: 40;
+			at: #structLayoutSupported put: true;
+			yourself);
 		at: #storeTraversalReportShapeSupported put: self supportsNativeStoreTraversalReportShape;
 		at: #storeTraversalReportShape put: self nativeStoreTraversalReportShape;
+		at: #materializationTraversalReportShapeSupported put: self supportsMaterializationTraversalReportShape;
+		at: #dictionaryAssociationMetadataTraversalSupported put: self supportsMaterializationTraversalBufferTransport;
+		at: #scalarOopNativeResolutionSupported put: false;
+		at: #scalarOopCommandFallbackRequired put: true;
 		at: #dirtyStoreTraversalFunctionsSupported put: true;
 		at: #freeOopAllocationSupported put: self supportsFreeOopAllocationTransport;
 		at: #dirtyStoreTraversalBufferTransportSupported put: self supportsDirtyStoreTraversalBufferTransport;

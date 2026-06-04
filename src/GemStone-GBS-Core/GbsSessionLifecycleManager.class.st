@@ -427,6 +427,7 @@ GbsSessionLifecycleManager class >> lifecycleReportForSession: aSession [
 		at: #serverMapTombstoneCount put: (self serverMapTombstonesForSession: aSession) size;
 		at: #packedButNotAcceptedCount put: (self packedButNotAcceptedOopsForSession: aSession) size;
 		at: #serverMapMode put: (self serverMapModeForSession: aSession);
+		at: #serverMapLeafCapacity put: (self serverMapLeafCapacityForSession: aSession);
 		at: #gcedOopQueueSize put: (self pendingGcedOopCountForSession: aSession);
 		at: #noLongerReplicatedOopQueueSize put: (self pendingNoLongerReplicatedOopCountForSession: aSession);
 		at: #exportSetReleaseOopQueueSize put: (self pendingExportSetReleaseOopCountForSession: aSession);
@@ -448,8 +449,9 @@ GbsSessionLifecycleManager class >> lifecycleReportTextForSession: aSession [
 			nextPutAll: 'Session Lifecycle';
 			cr;
 			cr.
-		#(
+			#(
 			serverMapMode
+			serverMapLeafCapacity
 			serverMapSize
 			serverMapTombstoneCount
 			packedButNotAcceptedCount
@@ -637,8 +639,9 @@ GbsSessionLifecycleManager class >> normalizedDrainLimit: anInteger forSession: 
 
 { #category : 'registries' }
 GbsSessionLifecycleManager class >> newServerMapForSession: aSession [
-	| policy mode registryClass |
+	| policy mode registryClass capacity |
 	policy := [ GbsReplicationPolicy forSession: aSession ] on: Error do: [ nil ].
+	capacity := self serverMapLeafCapacityForSession: aSession.
 	mode := (policy notNil and: [ policy respondsTo: #serverMapMode ])
 		ifTrue: [
 			(policy respondsTo: #serverMapModeSymbol)
@@ -647,8 +650,16 @@ GbsSessionLifecycleManager class >> newServerMapForSession: aSession [
 		ifFalse: [ #weak ].
 	mode = #weak ifTrue: [
 		registryClass := Smalltalk globals at: #WeakValueDictionary ifAbsent: [ nil ].
-		registryClass ifNotNil: [ ^ registryClass new ] ].
-	^ Dictionary new
+		registryClass ifNotNil: [
+			^ self newServerMapOfClass: registryClass capacity: capacity ] ].
+	^ self newServerMapOfClass: Dictionary capacity: capacity
+]
+
+{ #category : 'registries' }
+GbsSessionLifecycleManager class >> newServerMapOfClass: mapClass capacity: capacity [
+	capacity > 0 ifTrue: [
+		[ ^ mapClass new: capacity ] on: Error do: [ ] ].
+	^ mapClass new
 ]
 
 { #category : 'server map' }
@@ -1058,6 +1069,15 @@ GbsSessionLifecycleManager class >> serverMapForSession: aSession [
 	^ (aSession class weakRegistryNamed: #GbsSessionServerMaps)
 		at: aSession
 		ifAbsentPut: [ self newServerMapForSession: aSession ]
+]
+
+{ #category : 'server map' }
+GbsSessionLifecycleManager class >> serverMapLeafCapacityForSession: aSession [
+	| policy |
+	policy := [ GbsReplicationPolicy forSession: aSession ] on: Error do: [ nil ].
+	(policy notNil and: [ policy respondsTo: #serverMapLeafCapacity ]) ifTrue: [
+		^ policy serverMapLeafCapacity asInteger max: 0 ].
+	^ 300
 ]
 
 { #category : 'server map' }

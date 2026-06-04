@@ -1,6 +1,141 @@
 Extension { #name : 'GbxReplicatorManager' }
 
 { #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager class >> activeManagersDo: aBlock [
+	| sessionClass registry |
+	sessionClass := Smalltalk globals at: #GbsSession ifAbsent: [ ^ self ].
+	registry := [ sessionClass weakRegistryNamed: #GbsSessionReplicatorManagers ]
+		on: Error
+		do: [ ^ self ].
+	registry values do: [ :manager |
+		manager ifNotNil: [
+			[ aBlock value: manager ]
+				on: Error
+				do: [ ] ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager class >> classFromMethodChangeAnnouncement: anAnnouncement [
+	#(classAffected behaviorAffected methodClass affectedClass) do: [ :selector |
+		(anAnnouncement respondsTo: selector) ifTrue: [
+			| value |
+			value := [ anAnnouncement perform: selector ] on: Error do: [ nil ].
+			value ifNotNil: [ ^ value ] ] ].
+	((anAnnouncement respondsTo: #method)
+		and: [ anAnnouncement method respondsTo: #methodClass ]) ifTrue: [
+			^ [ anAnnouncement method methodClass ] on: Error do: [ nil ] ].
+	((anAnnouncement respondsTo: #method)
+		and: [ anAnnouncement method respondsTo: #origin ]) ifTrue: [
+			^ [ anAnnouncement method origin ] on: Error do: [ nil ] ].
+	^ nil
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager class >> handleSystemMethodChangeAnnouncement: anAnnouncement [
+	| selector class |
+	selector := self selectorFromMethodChangeAnnouncement: anAnnouncement.
+	class := self classFromMethodChangeAnnouncement: anAnnouncement.
+	(selector isNil or: [ class isNil ]) ifTrue: [ ^ self ].
+	(self selectorMayAffectReplication: selector) ifFalse: [ ^ self ].
+	self notifyChangedSelector: selector inClass: class
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager class >> installAutomaticMethodChangeInvalidation [
+	| announcerClass announcer eventClasses |
+	(Smalltalk globals at: #GbsReplicatorManagerMethodChangeInvalidationInstalled ifAbsent: [ false ]) == true ifTrue: [
+		^ true ].
+	announcerClass := Smalltalk globals at: #SystemAnnouncer ifAbsent: [ ^ false ].
+	announcer := [ announcerClass uniqueInstance ] on: Error do: [ ^ false ].
+	eventClasses := self methodChangeEventClassesForAutomaticInvalidation.
+	eventClasses isEmpty ifTrue: [ ^ false ].
+	eventClasses do: [ :eventClass |
+		[ announcer weak
+			when: eventClass
+			send: #handleSystemMethodChangeAnnouncement:
+			to: self ]
+			on: Error
+			do: [
+				[ announcer
+					when: eventClass
+					send: #handleSystemMethodChangeAnnouncement:
+					to: self ]
+					on: Error
+					do: [ ] ] ].
+	Smalltalk globals at: #GbsReplicatorManagerMethodChangeInvalidationInstalled put: true.
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager class >> methodChangeEventClassesForAutomaticInvalidation [
+	| classes globals |
+	globals := Smalltalk globals.
+	classes := OrderedCollection new.
+	#(MethodAdded MethodModified MethodRemoved MethodRecategorized ClassModifiedClassDefinition) do: [ :name |
+		(globals at: name ifAbsent: [ nil ]) ifNotNil: [ :eventClass |
+			classes add: eventClass ] ].
+	^ classes asArray
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager class >> notifyChangedSelector: aSelector inClass: aClass [
+	self activeManagersDo: [ :manager |
+		manager changedSelector: aSelector inClass: aClass ].
+	^ aClass
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager class >> selectorFromMethodChangeAnnouncement: anAnnouncement [
+	(anAnnouncement respondsTo: #selector) ifTrue: [
+		^ [ anAnnouncement selector ] on: Error do: [ nil ] ].
+	((anAnnouncement respondsTo: #method)
+		and: [ anAnnouncement method respondsTo: #selector ]) ifTrue: [
+			^ [ anAnnouncement method selector ] on: Error do: [ nil ] ].
+	((anAnnouncement respondsTo: #oldMethod)
+		and: [ anAnnouncement oldMethod respondsTo: #selector ]) ifTrue: [
+			^ [ anAnnouncement oldMethod selector ] on: Error do: [ nil ] ].
+	^ nil
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager class >> selectorMayAffectReplication: aSelector [
+	| selectorText |
+	aSelector ifNil: [ ^ false ].
+	(#(
+		instVarMap
+		instVarNames
+		allInstVarNames
+		classVersion
+		classHistory
+		classFormat
+		instanceVariables
+		replicationSpec
+		replicationSpecSet) includes: aSelector) ifTrue: [ ^ true ].
+	selectorText := aSelector asString asLowercase.
+	^ (selectorText includesSubstring: 'instvarmap')
+		or: [ (selectorText includesSubstring: 'replicationspec')
+		or: [ (selectorText includesSubstring: 'classversion')
+		or: [ selectorText includesSubstring: 'classhistory' ] ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager class >> uninstallAutomaticMethodChangeInvalidation [
+	| announcerClass announcer |
+	announcerClass := Smalltalk globals at: #SystemAnnouncer ifAbsent: [
+		Smalltalk globals
+			removeKey: #GbsReplicatorManagerMethodChangeInvalidationInstalled
+			ifAbsent: [ ].
+		^ false ].
+	announcer := [ announcerClass uniqueInstance ] on: Error do: [ nil ].
+	announcer ifNotNil: [
+		[ announcer unsubscribe: self ] on: Error do: [ ] ].
+	Smalltalk globals
+		removeKey: #GbsReplicatorManagerMethodChangeInvalidationInstalled
+		ifAbsent: [ ].
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxReplicatorManager >> currentReplicationScheme [
 	^ self clampManager currentReplicationScheme
 ]
@@ -388,14 +523,21 @@ GbxReplicatorManager >> serverMap [
 
 { #category : '*GemStone-GBS-Core' }
 GbxReplicatorManager >> selectorRequiresServerOffsetRefresh: aSelector [
-	^ #(
+	(self class selectorMayAffectReplication: aSelector) ifFalse: [ ^ false ].
+	^ (#(
 		instVarMap
 		instVarNames
 		allInstVarNames
 		classVersion
 		classHistory
 		classFormat
-		instanceVariables) includes: aSelector
+		instanceVariables) includes: aSelector)
+		or: [
+			| selectorText |
+			selectorText := aSelector asString asLowercase.
+			(selectorText includesSubstring: 'instvarmap')
+				or: [ (selectorText includesSubstring: 'classversion')
+				or: [ selectorText includesSubstring: 'classhistory' ] ] ]
 ]
 
 { #category : '*GemStone-GBS-Core' }

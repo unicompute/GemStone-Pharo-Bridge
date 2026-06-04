@@ -128,10 +128,13 @@ GbsSessionLoginCoordinator >> loginStone: stoneName user: username password: pas
 				cr.
 			interpretedError := session interpretLoginError: errorStruct.
 			Transcript show: '  Interpreted: ', interpretedError; cr; cr.
-			session signalError: errorStruct.
-			^ GbsError signal: interpretedError ].
-		^ GbsError signal: 'Unknown login failure. Please check your GemStone connection parameters.' ].
+		session signalError: errorStruct.
+		^ GbsError signal: interpretedError ].
+	^ GbsError signal: 'Unknown login failure. Please check your GemStone connection parameters.' ].
 	session isLoggedIn: true.
+	[ GbxReplicatorManager installAutomaticMethodChangeInvalidation ]
+		on: Error
+		do: [ ].
 	(GbsSessionEventController forSession: session) startIfEnabledFromPolicy.
 	^ true
 ]

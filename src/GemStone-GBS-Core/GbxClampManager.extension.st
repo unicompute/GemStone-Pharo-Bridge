@@ -304,6 +304,9 @@ GbxClampManager >> replicatorUsesClassClamp: aReplicator [
 
 { #category : '*GemStone-GBS-Core-private' }
 GbxClampManager >> selectorRequiresClampMetadataRefresh: aSelector [
+	((Smalltalk globals at: #GbxReplicatorManager ifAbsent: [ nil ]) notNil
+		and: [ GbxReplicatorManager selectorMayAffectReplication: aSelector ]) ifTrue: [
+			^ true ].
 	^ #(
 		instVarMap
 		instVarNames

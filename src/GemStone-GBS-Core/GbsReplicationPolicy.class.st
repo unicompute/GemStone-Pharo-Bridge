@@ -13,6 +13,7 @@ Class {
 		'freeOopBatchSize',
 		'freeSlotsOnStubbing',
 		'nativeStoreTraversalShapeValidationEnabled',
+		'serverMapLeafCapacity',
 		'serverMapMode',
 		'strictMutationProtectionEnabled',
 		'storeDirtyOnCommit',
@@ -154,6 +155,7 @@ GbsReplicationPolicy class >> settingSpecifications [
 	self addSetting: #storeDirtyOnCommit category: #replication default: false legalValues: #(true false) help: 'Flush dirty replicated objects and pending export-set releases before a successful GemStone commit.' to: specs.
 	self addSetting: #storeTraversalTransport category: #replication default: 'script' legalValues: #('script' 'binary' 'binaryRequired') help: 'Transport used for dirty writes: script fallback, native binary when possible, or native binary required.' to: specs.
 	self addSetting: #serverMapMode category: #lifecycle default: 'weak' legalValues: #('weak' 'strong') help: 'Client-side server map retention mode. Native store traversal temporarily uses a strong window even when the steady-state map is weak.' to: specs.
+	self addSetting: #serverMapLeafCapacity category: #lifecycle default: 300 legalValues: #() help: 'Initial leaf capacity used when creating client-side server-map dictionaries.' to: specs.
 	self addSetting: #freeOopBatchSize category: #lifecycle default: 256 legalValues: #() help: 'Maximum number of pending no-longer-replicated or GCed OOPs drained in one lifecycle batch.' to: specs.
 	self addSetting: #freeOopAllocationBatchSize category: #lifecycle default: 2000 legalValues: #() help: 'Number of free OOPs fetched per allocation batch for newly replicated client objects.' to: specs.
 	self addSetting: #nativeStoreTraversalShapeValidationEnabled category: #performance default: true legalValues: #(true false) help: 'Validate native GCI dirty-store traversal report layout and collection shapes before using binary dirty writes.' to: specs.
@@ -193,10 +195,11 @@ GbsReplicationPolicy >> asDictionary [
 		at: #eventPriority put: self eventPriority;
 		at: #faultLevelRpc put: self faultLevelRpc;
 		at: #freeOopAllocationBatchSize put: self freeOopAllocationBatchSize;
-		at: #freeOopBatchSize put: self freeOopBatchSize;
-		at: #freeSlotsOnStubbing put: self freeSlotsOnStubbing;
-		at: #nativeStoreTraversalShapeValidationEnabled put: self nativeStoreTraversalShapeValidationEnabled;
-		at: #serverMapMode put: self serverMapMode;
+			at: #freeOopBatchSize put: self freeOopBatchSize;
+			at: #freeSlotsOnStubbing put: self freeSlotsOnStubbing;
+			at: #nativeStoreTraversalShapeValidationEnabled put: self nativeStoreTraversalShapeValidationEnabled;
+			at: #serverMapLeafCapacity put: self serverMapLeafCapacity;
+			at: #serverMapMode put: self serverMapMode;
 		at: #strictMutationProtectionEnabled put: self strictMutationProtectionEnabled;
 		at: #storeDirtyOnCommit put: self storeDirtyOnCommit;
 		at: #storeTraversalTransport put: self storeTraversalTransport;
@@ -349,12 +352,23 @@ GbsReplicationPolicy >> initializeFromConfiguration: aConfiguration [
 	freeOopBatchSize := self valueAt: #freeOopBatchSize fromConfiguration: aConfiguration default: 256.
 	freeSlotsOnStubbing := self valueAt: #freeSlotsOnStubbing fromConfiguration: aConfiguration default: true.
 	nativeStoreTraversalShapeValidationEnabled := self valueAt: #nativeStoreTraversalShapeValidationEnabled fromConfiguration: aConfiguration default: true.
+	serverMapLeafCapacity := self valueAt: #serverMapLeafCapacity fromConfiguration: aConfiguration default: 300.
 	serverMapMode := self valueAt: #serverMapMode fromConfiguration: aConfiguration default: 'weak'.
 	strictMutationProtectionEnabled := self valueAt: #strictMutationProtectionEnabled fromConfiguration: aConfiguration default: false.
 	storeDirtyOnCommit := self valueAt: #storeDirtyOnCommit fromConfiguration: aConfiguration default: false.
 	storeTraversalTransport := self valueAt: #storeTraversalTransport fromConfiguration: aConfiguration default: 'script'.
 	traversalBufferSize := self valueAt: #traversalBufferSize fromConfiguration: aConfiguration default: 250000.
 	^ self
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> serverMapLeafCapacity [
+	^ serverMapLeafCapacity ifNil: [ 300 ]
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> serverMapLeafCapacity: anInteger [
+	serverMapLeafCapacity := anInteger asInteger max: 0
 ]
 
 { #category : 'accessing' }

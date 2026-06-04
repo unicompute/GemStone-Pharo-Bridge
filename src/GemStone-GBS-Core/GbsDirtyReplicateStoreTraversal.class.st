@@ -51,13 +51,17 @@ GbsDirtyReplicateStoreTraversal class >> newDirtyStoreTraversalReport [
 		at: #remoteCommandCount put: 0;
 		at: #semanticCommandCount put: 0;
 		at: #nativeFallbackCount put: 0;
-		at: #nativeFallbackReason put: nil;
-		at: #nativeFallbackDetails put: nil;
-		at: #nativeCapabilityReport put: nil;
-		at: #perReplicatorStoreEntryCount put: 0;
-		at: #newObjectEntryCount put: 0;
-		at: #freeOopAllocationCount put: 0;
-		yourself
+			at: #nativeFallbackReason put: nil;
+			at: #nativeFallbackDetails put: nil;
+			at: #nativeCapabilityReport put: nil;
+			at: #nativeDictionaryMetadataFetchCount put: 0;
+			at: #scriptDictionaryMetadataFallbackCount put: 0;
+			at: #scriptScalarOopFallbackCount put: 0;
+			at: #scalarOopCacheHitCount put: 0;
+			at: #perReplicatorStoreEntryCount put: 0;
+			at: #newObjectEntryCount put: 0;
+			at: #freeOopAllocationCount put: 0;
+			yourself
 ]
 
 { #category : 'reporting' }

@@ -198,6 +198,21 @@ GbsServerInterface >> supportsNativeStoreTraversalStructLayout [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> nativeStoreTraversalStructLayoutDiagnostics [
+	^ Dictionary new
+		at: #wordSizeBytes put: ([ Smalltalk vm wordSize ] on: Error do: [ 8 ]);
+		at: #oopWidth put: self nativeGciOopWidth;
+		at: #expectedOopWidth put: 64;
+		at: #bufferHeaderBytes put: 8;
+		at: #objectReportHeaderBytes put: 40;
+		at: #objectSecurityPolicyIdOffset put: 6;
+		at: #storeTravDoTravRefsArgsBytes put: 104;
+		at: #clampedTraversalArgsBytes put: 40;
+		at: #structLayoutSupported put: self supportsNativeStoreTraversalStructLayout;
+		yourself
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> nativeStoreTraversalReportShape [
 	^ Dictionary new
 		at: #bufferHeaderBytes put: 8;
@@ -254,17 +269,22 @@ GbsServerInterface >> nativeGciOopWidth [
 
 { #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> nativeStoreTraversalCapabilityReport [
-	^ Dictionary new
-		at: #nativeGciTransportsEnabled put: self nativeGciTransportsEnabled;
-		at: #oopWidth put: self nativeGciOopWidth;
-		at: #storeTraversalStructLayoutSupported put: self supportsNativeStoreTraversalStructLayout;
-		at: #storeTraversalReportShapeSupported put: self supportsNativeStoreTraversalReportShape;
-		at: #storeTraversalReportShape put: self nativeStoreTraversalReportShape;
-		at: #dirtyStoreTraversalFunctionsSupported put: self supportsNativeDirtyStoreTraversalFunctions;
-		at: #freeOopAllocationSupported put: self supportsFreeOopAllocationTransport;
-		at: #dirtyStoreTraversalBufferTransportSupported put: self supportsDirtyStoreTraversalBufferTransport;
-		at: #noLongerReplicatedStoreTraversalTransportSupported put: self supportsNoLongerReplicatedStoreTraversalTransport;
-		yourself
+		^ Dictionary new
+			at: #nativeGciTransportsEnabled put: self nativeGciTransportsEnabled;
+			at: #oopWidth put: self nativeGciOopWidth;
+			at: #storeTraversalStructLayoutSupported put: self supportsNativeStoreTraversalStructLayout;
+			at: #storeTraversalStructLayoutDiagnostics put: self nativeStoreTraversalStructLayoutDiagnostics;
+			at: #storeTraversalReportShapeSupported put: self supportsNativeStoreTraversalReportShape;
+			at: #storeTraversalReportShape put: self nativeStoreTraversalReportShape;
+			at: #materializationTraversalReportShapeSupported put: self supportsMaterializationTraversalReportShape;
+			at: #dictionaryAssociationMetadataTraversalSupported put: self supportsDictionaryAssociationMetadataTraversal;
+			at: #scalarOopNativeResolutionSupported put: false;
+			at: #scalarOopCommandFallbackRequired put: true;
+			at: #dirtyStoreTraversalFunctionsSupported put: self supportsNativeDirtyStoreTraversalFunctions;
+			at: #freeOopAllocationSupported put: self supportsFreeOopAllocationTransport;
+			at: #dirtyStoreTraversalBufferTransportSupported put: self supportsDirtyStoreTraversalBufferTransport;
+			at: #noLongerReplicatedStoreTraversalTransportSupported put: self supportsNoLongerReplicatedStoreTraversalTransport;
+			yourself
 ]
 
 { #category : '*GemStone-GBS-Core' }
@@ -296,6 +316,11 @@ GbsServerInterface >> supportsDirtyStoreTraversalBufferTransport [
 	^ self nativeGciTransportsEnabled
 		and: [ self supportsNativeStoreTraversalStructLayout
 		and: [ self supportsNativeDirtyStoreTraversalFunctions ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> supportsDictionaryAssociationMetadataTraversal [
+	^ self supportsMaterializationTraversalBufferTransport
 ]
 
 { #category : '*GemStone-GBS-Core' }

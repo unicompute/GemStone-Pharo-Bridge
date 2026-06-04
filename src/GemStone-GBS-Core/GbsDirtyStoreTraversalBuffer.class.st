@@ -420,6 +420,18 @@ GbsDirtyStoreTraversalBuffer >> oopIllegalValueMarker [
 	^ #GbsDirtyStoreTraversalOopIllegal
 ]
 
+{ #category : 'private - reporting' }
+GbsDirtyStoreTraversalBuffer >> incrementDirtyStoreReportAt: key by: amount [
+	| report |
+	session ifNil: [ ^ self ].
+	report := [ GbsDirtyReplicateStoreTraversal dirtyStoreTraversalReportStorageForSession: session ]
+		on: Error
+		do: [ ^ self ].
+	report
+		at: key
+		put: ((report at: key ifAbsent: [ 0 ]) + amount)
+]
+
 { #category : 'private - native encoding' }
 GbsDirtyStoreTraversalBuffer >> registerRemoteAssociationsForDictionaryEntry: entry associations: associations [
 	| associationMaps associationOopByKeyOop associationOopByScalarKey |
@@ -445,11 +457,73 @@ GbsDirtyStoreTraversalBuffer >> registerRemoteAssociationsForDictionaryEntry: en
 
 { #category : 'private - native encoding' }
 GbsDirtyStoreTraversalBuffer >> remoteDictionaryAssociationOopMapsFor: dictionaryOop [
-	| text byKeyOop byScalarKey |
+	| rootReports dictionaryReport associationOops associationReports keyOops keyReports byKeyOop byScalarKey |
 	session ifNil: [ ^ Dictionary new ].
+	((session respondsTo: #supportsMaterializationTraversalBufferTransport)
+		and: [ session supportsMaterializationTraversalBufferTransport == false ]) ifTrue: [
+			^ self remoteDictionaryAssociationOopMapsViaScriptFor: dictionaryOop ].
+	(session respondsTo: #materializationTraversalReportsForOops:level:label:) ifFalse: [
+		^ self remoteDictionaryAssociationOopMapsViaScriptFor: dictionaryOop ].
+	rootReports := [ session
+		materializationTraversalReportsForOops: { dictionaryOop }
+		level: 1
+		label: 'dirty-store dictionary association metadata' ]
+		on: Error
+		do: [ ^ self remoteDictionaryAssociationOopMapsViaScriptFor: dictionaryOop ].
+	dictionaryReport := rootReports at: dictionaryOop ifAbsent: [
+		^ self remoteDictionaryAssociationOopMapsViaScriptFor: dictionaryOop ].
+	associationOops := dictionaryReport valueOops.
+	associationOops isEmpty ifTrue: [
+		self incrementDirtyStoreReportAt: #nativeDictionaryMetadataFetchCount by: 1.
+		^ Dictionary new
+			at: #byKeyOop put: Dictionary new;
+			at: #byScalarKey put: Dictionary new;
+			yourself ].
+	associationReports := [ session
+		materializationTraversalReportsForOops: associationOops
+		level: 1
+		label: 'dirty-store dictionary association metadata' ]
+		on: Error
+		do: [ ^ self remoteDictionaryAssociationOopMapsViaScriptFor: dictionaryOop ].
+	keyOops := OrderedCollection new: associationOops size.
+	associationOops do: [ :associationOop |
+		(associationReports at: associationOop ifAbsent: [ nil ]) ifNotNil: [ :associationReport |
+			associationReport valueOops isEmpty ifFalse: [
+				keyOops add: associationReport valueOops first ] ] ].
+	keyReports := keyOops isEmpty
+		ifTrue: [ Dictionary new ]
+		ifFalse: [
+			[ session
+				materializationTraversalReportsForOops: keyOops asArray
+				level: 1
+				label: 'dirty-store dictionary scalar-key metadata' ]
+				on: Error
+				do: [ Dictionary new ] ].
+	byKeyOop := Dictionary new.
+	byScalarKey := Dictionary new.
+	associationOops do: [ :associationOop |
+		(associationReports at: associationOop ifAbsent: [ nil ]) ifNotNil: [ :associationReport |
+			associationReport valueOops isEmpty ifFalse: [ | keyOop |
+				keyOop := associationReport valueOops first.
+				byKeyOop at: keyOop put: associationOop.
+				self
+					registerScalarDictionaryKeyFromReport: (keyReports at: keyOop ifAbsent: [ nil ])
+					associationOop: associationOop
+					into: byScalarKey ] ] ].
+	self incrementDirtyStoreReportAt: #nativeDictionaryMetadataFetchCount by: 1.
+	^ Dictionary new
+		at: #byKeyOop put: byKeyOop;
+		at: #byScalarKey put: byScalarKey;
+		yourself
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> remoteDictionaryAssociationOopMapsViaScriptFor: dictionaryOop [
+	| text byKeyOop byScalarKey |
+	self incrementDirtyStoreReportAt: #scriptDictionaryMetadataFallbackCount by: 1.
 	text := session
 		fetchRemoteCommandBody: '| stream |
-stream := WriteStream on: String new.
+	stream := WriteStream on: String new.
 object associations do: [ :assoc |
 	stream
 		nextPutAll: assoc key asOop asString;
@@ -530,8 +604,12 @@ GbsDirtyStoreTraversalBuffer >> remoteScalarOopForValue: anObject ifAbsent: abse
 	key ifNil: [ ^ absentBlock value ].
 	^ self scalarOopCache
 		at: key
-		ifAbsentPut: [
+		ifPresent: [ :oop |
+			self incrementDirtyStoreReportAt: #scalarOopCacheHitCount by: 1.
+			oop ]
+		ifAbsent: [
 			| oop |
+			self incrementDirtyStoreReportAt: #scriptScalarOopFallbackCount by: 1.
 			oop := [ session
 				returnRemoteCommandBody: 'value'
 				literalBindings: (Dictionary new
@@ -540,7 +618,45 @@ GbsDirtyStoreTraversalBuffer >> remoteScalarOopForValue: anObject ifAbsent: abse
 				oopBindings: Dictionary new ]
 				on: Error
 				do: [ ^ absentBlock value ].
-			self unsignedOopForSignedOop: oop asInteger ]
+			oop := self unsignedOopForSignedOop: oop asInteger.
+			self scalarOopCache at: key put: oop.
+			oop ]
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> registerScalarDictionaryKeyFromReport: keyReport associationOop: associationOop into: byScalarKey [
+	keyReport ifNil: [ ^ self ].
+	keyReport hasByteValue ifFalse: [ ^ self ].
+	keyReport byteSwizzle = 0 ifFalse: [ ^ self ].
+	(self
+		scalarDictionaryKeyLookupKeyForClassName: (self scalarClassNameForClassOop: keyReport classOop)
+		value: (self stringFromBytes: keyReport valueBytes)) ifNotNil: [ :scalarKey |
+			byScalarKey at: scalarKey put: associationOop ]
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> scalarClassNameForClassOop: classOop [
+	| oop name |
+	session ifNil: [ ^ '' ].
+	((session respondsTo: #serverInterface)
+		and: [ session serverInterface respondsTo: #apiGciFetchNameOfClass: ]) ifFalse: [
+			^ '' ].
+	oop := [ session serverInterface apiGciFetchNameOfClass: classOop ]
+		on: Error
+		do: [ ^ '' ].
+	name := [ (GbsSessionMaterializationRemoteReader on: session)
+		rawStringForOop: oop
+		label: 'dirty-store scalar-key class name' ]
+		on: Error
+		do: [ ^ '' ].
+	^ name asString
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> stringFromBytes: byteArray [
+	^ String streamContents: [ :stream |
+		byteArray do: [ :byte |
+			stream nextPut: (Character codePoint: byte) ] ]
 ]
 
 { #category : 'private - native encoding' }

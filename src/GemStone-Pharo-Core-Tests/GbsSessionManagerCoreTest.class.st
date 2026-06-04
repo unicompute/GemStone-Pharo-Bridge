@@ -933,8 +933,31 @@ GbsSessionManagerCoreTest >> testReplicatorManagerClassVersionChangeRefreshesSub
 
 	self assert: replicator serverOffsetRefreshCount equals: 1.
 	self
-		assert: (scheme instVarLevelsForClass: CoreGbsInheritedReplicationSpecFixture)
-		equals: { false. -2. nil }
+			assert: (scheme instVarLevelsForClass: CoreGbsInheritedReplicationSpecFixture)
+			equals: { false. -2. nil }
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testReplicatorManagerMethodChangeAnnouncementRefreshesSubclassReplicator [
+	| mockSession manager connector replicator announcement |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: CoreGbsInheritedReplicationSpecFixture
+		server: 'RemoteInheritedFixture'
+		replicationSpec: #replicate
+		serverInstVarNames: #('key' 'value').
+	connector replicatorClass: CoreGbsCountingReplicator.
+	replicator := manager installClientClassConnector: connector.
+	announcement := CoreGbsMethodChangeAnnouncementFixture
+		selector: #classVersion
+		classAffected: CoreGbsReplicationSpecFixture.
+
+	self assert: replicator serverOffsetRefreshCount equals: 0.
+	GbxReplicatorManager handleSystemMethodChangeAnnouncement: announcement.
+
+	self assert: replicator serverOffsetRefreshCount equals: 1.
+	self assert: (GbxReplicatorManager selectorMayAffectReplication: #migrationDomainReplicationSpec)
 ]
 
 { #category : 'tests' }
