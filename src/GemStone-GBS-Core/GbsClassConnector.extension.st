@@ -67,8 +67,28 @@ GbsClassConnector >> isClassConnector [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsClassConnector >> invalidPostConnectActions [
+	| invalid |
+	invalid := OrderedCollection new.
+	(super invalidPostConnectActions ifNil: [ #() ]) do: [ :each |
+		invalid add: each asString asLowercase ].
+	#('forwarder' 'clientforwarder') do: [ :action |
+		(invalid includes: action) ifFalse: [ invalid add: action ] ].
+	^ invalid asArray
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsClassConnector >> isClassConnectorTypeNone [
 	^ self postConnectAction asString asLowercase = 'none'
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsClassConnector >> postConnectAction: anActionString [
+	| normalized |
+	normalized := anActionString ifNil: [ 'none' ] ifNotNil: [ anActionString asString ].
+	(self invalidPostConnectActions includes: normalized asLowercase) ifTrue: [
+		self error: 'Class connectors do not support the ', normalized, ' post-connect action.' ].
+	^ super postConnectAction: normalized
 ]
 
 { #category : '*GemStone-GBS-Core' }

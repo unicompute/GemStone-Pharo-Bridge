@@ -994,6 +994,31 @@ GbsSessionManagerCoreTest >> testClassConnectorConnectRegistersConcreteConnector
 ]
 
 { #category : 'tests' }
+GbsSessionManagerCoreTest >> testClassConnectorRejectsForwarderPostConnectActions [
+	| connector |
+	connector := GbsClassConnector
+		stName: 'Array'
+		gsName: 'RemoteArray'
+		dictionaryName: 'UserGlobals'.
+
+	self assert: (connector invalidPostConnectActions includes: 'forwarder').
+	self assert: (connector invalidPostConnectActions includes: 'clientforwarder').
+	self should: [ connector postConnectAction: 'forwarder' ] raise: Error.
+	self should: [ connector postConnectAction: 'clientForwarder' ] raise: Error.
+	self
+		should: [
+			GbsClassConnector
+				stName: 'Array'
+				gsName: 'RemoteArray'
+				dictionaryName: 'UserGlobals'
+				postConnectAction: 'forwarder' ]
+		raise: Error.
+
+	connector postConnectAction: 'updateST'.
+	self assert: connector postConnectAction equals: 'updateST'
+]
+
+{ #category : 'tests' }
 GbsSessionManagerCoreTest >> testClassConnectorSubclassPolicyInstallsClampAndCleansConnectorLifecycle [
 	| mockSession connector manager replicator scheme report connectResult sessionKey connectionKey |
 	GbsSessionManager resetConnectorState.

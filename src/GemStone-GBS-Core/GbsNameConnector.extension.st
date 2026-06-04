@@ -8,6 +8,16 @@ GbsNameConnector class >> stName: aClientName gsName: aServerName dictionaryName
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsNameConnector class >> stName: aClientName gsName: aServerName dictionaryName: aDictionaryName postConnectAction: anAction [
+	^ self new
+		stName: aClientName
+		gsName: aServerName
+		dictionaryName: aDictionaryName
+		postConnectAction: anAction;
+		yourself
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsNameConnector >> connectorClientName [
 	^ self stName
 ]
@@ -73,6 +83,6 @@ GbsNameConnector >> stName: aClientName gsName: aServerName dictionaryName: aDic
 
 { #category : '*GemStone-GBS-Core' }
 GbsNameConnector >> stName: aClientName gsName: aServerName dictionaryName: aDictionaryName postConnectAction: anAction [
-	postConnectAction := anAction ifNil: [ 'none' ] ifNotNil: [ anAction asString ].
+	self postConnectAction: anAction.
 	^ self stName: aClientName gsName: aServerName dictionaryName: aDictionaryName
 ]
