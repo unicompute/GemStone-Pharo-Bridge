@@ -167,6 +167,73 @@ GbxReplicatorManager >> connectorManagerReportText [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorClassVersionReportForClient: clientName server: serverName [
+	| connector clientConnector |
+	connector := GbsSessionManager
+		connectorObjectForClient: clientName
+		server: serverName.
+	clientConnector := (connector notNil and: [
+		connector respondsTo: #clientClassConnectorForSession: ])
+			ifTrue: [
+				[ connector clientClassConnectorForSession: self session ]
+					on: Error
+					do: [ nil ] ]
+			ifFalse: [ nil ].
+	clientConnector ifNil: [
+		clientConnector := GbsClientClassConnector
+			client: clientName
+			server: serverName ].
+	^ [ clientConnector verifyClassVersionsInSession: self session ]
+		on: Error
+		do: [ :ex |
+			Dictionary new
+				at: #client put: clientName asString;
+				at: #server put: serverName asString;
+				at: #clientVersion put: nil;
+				at: #serverVersion put: nil;
+				at: #versionStatus put: #error;
+				at: #needsUpdate put: false;
+				at: #versionMatches put: true;
+				at: #error put: ex messageText;
+				yourself ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorClassVersionReports [
+	| reports |
+	reports := OrderedCollection new.
+	self connectorPairsForReport do: [ :pair |
+		reports add: (self
+			connectorClassVersionReportForClient: (pair at: 1 ifAbsent: [ '' ])
+			server: (pair at: 2 ifAbsent: [ '' ])) ].
+	^ reports asArray
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorLifecycleReport [
+	| managerReport versionReports |
+	managerReport := self connectorManagerReport.
+	versionReports := self connectorClassVersionReports.
+	^ Dictionary new
+		at: #connectorPairCount put: self connectorPairsForReport size;
+		at: #connectedConnectorPairCount put: (managerReport
+			at: #connectedConnectorPairCount
+			ifAbsent: [ 0 ]);
+		at: #disconnectedConnectorPairCount put: (managerReport
+			at: #disconnectedConnectorPairCount
+			ifAbsent: [ 0 ]);
+		at: #classVersionReports put: versionReports;
+		at: #classVersionReportCount put: versionReports size;
+		at: #classVersionMismatchCount put: (versionReports count: [ :report |
+			(report at: #versionStatus ifAbsent: [ #unknown ]) = #mismatch ]);
+		at: #classVersionUnknownCount put: (versionReports count: [ :report |
+			(report at: #versionStatus ifAbsent: [ #unknown ]) = #unknown ]);
+		at: #classVersionErrorCount put: (versionReports count: [ :report |
+			(report at: #versionStatus ifAbsent: [ #unknown ]) = #error ]);
+		yourself
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxReplicatorManager >> connectorNameForBehavior: aBehaviorOrName [
 	aBehaviorOrName ifNil: [ ^ '' ].
 	(aBehaviorOrName respondsTo: #name) ifTrue: [

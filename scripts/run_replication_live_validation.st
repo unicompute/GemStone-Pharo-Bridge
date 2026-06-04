@@ -1,4 +1,4 @@
-| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass dirtyTrackerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator connectorPairCount scheme clampSpecOop connectorMs clampedOop clampedResult clampedMs clampedMetrics callbackSelector callbackBehaviorName domainBehaviorName domainCustomerBehaviorName applicationCallbackBehaviorName domainFixtureClass domainScheme domainCallbackScheme domainCallbackSpecOop domainCallbackVerifiedOop domainCallbackVerified domainOrderOop domainCustomerOop domainLineItemsOop domainOrder domainCustomerProxy domainLineItems domainDirtyObjectsFlushed domainDirtyStoreMs domainFlushed domainDirtyStoreReport domainNativeDirtyStoreFlushes domainNativeDirtyStoreEntries domainVerifiedOop domainVerified domainFixtureCount domainPerInstvarClampEntries domainCallbackClampSpecs mappedDomainBehaviorName inheritedMappedDomainBehaviorName mappedDomainFixtureClass mappedDomainReplicator mappedDomainScheme mappedDomainOrderOop mappedDomainCustomerOop mappedDomainLineItemsOop mappedDomainOrder mappedDomainCustomerProxy mappedDomainLineItems mappedDomainDirtyObjectsFlushed mappedDomainDirtyStoreMs mappedDomainFlushed mappedDomainDirtyStoreReport mappedDomainVerifiedOop mappedDomainVerified domainFaultReleaseBefore domainFaultReleaseQueued domainFaultReleaseAfterFault domainFaultIdentityCleared domainFaultIdentityRestored mappedDomainFaultProxy mappedDomainFaultRefetched callbackScheme callbackClampSpecOop callbackVerifiedOop callbackVerified perInstvarClampEntries callbackClampSpecs inheritedFixtureClass pointerReplicatorClass inheritedConnector inheritedReplicator inheritedReplicationSpecFixtures policy previousTransport previousProfile dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseGcedObject releaseNoLongerObject exportBefore exportAfter lifecycleReport lifecycleNoLongerQueued lifecycleGcedQueued lifecycleNoLongerAcknowledged lifecycleGcedAcknowledged dirtyStoreMs flushed dirtyStoreReport semanticDirtyStoreCommands semanticDirtyStoreEntries semanticDictionaryEntries semanticSetEntries semanticBagEntries verified verifiedOop nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed businessRootOop businessRoot businessFixtureSize businessDirtyObjectsFlushed businessDirtyStoreMs businessFlushed businessExportAfter businessVerifiedOop businessVerified |
+| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass dirtyTrackerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator connectorPairCount connectorLifecycleReport scheme clampSpecOop connectorMs clampedOop clampedResult clampedMs clampedMetrics callbackSelector callbackBehaviorName domainBehaviorName domainCustomerBehaviorName applicationCallbackBehaviorName domainFixtureClass domainScheme domainCallbackScheme domainCallbackSpecOop domainCallbackVerifiedOop domainCallbackVerified domainOrderOop domainCustomerOop domainLineItemsOop domainOrder domainCustomerProxy domainLineItems domainDirtyObjectsFlushed domainDirtyStoreMs domainFlushed domainDirtyStoreReport domainNativeDirtyStoreFlushes domainNativeDirtyStoreEntries domainVerifiedOop domainVerified domainFixtureCount domainPerInstvarClampEntries domainCallbackClampSpecs mappedDomainBehaviorName inheritedMappedDomainBehaviorName mappedDomainFixtureClass mappedDomainReplicator mappedDomainScheme mappedDomainOrderOop mappedDomainCustomerOop mappedDomainLineItemsOop mappedDomainOrder mappedDomainCustomerProxy mappedDomainLineItems mappedDomainDirtyObjectsFlushed mappedDomainDirtyStoreMs mappedDomainFlushed mappedDomainDirtyStoreReport mappedDomainVerifiedOop mappedDomainVerified domainFaultReleaseBefore domainFaultReleaseQueued domainFaultReleaseAfterFault domainFaultIdentityCleared domainFaultIdentityRestored mappedDomainFaultProxy mappedDomainFaultRefetched callbackScheme callbackClampSpecOop callbackVerifiedOop callbackVerified perInstvarClampEntries callbackClampSpecs inheritedFixtureClass pointerReplicatorClass inheritedConnector inheritedReplicator inheritedReplicationSpecFixtures policy previousTransport previousProfile dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseGcedObject releaseNoLongerObject exportBefore exportAfter lifecycleReport lifecycleNoLongerQueued lifecycleGcedQueued lifecycleNoLongerAcknowledged lifecycleGcedAcknowledged dirtyStoreMs flushed dirtyStoreReport semanticDirtyStoreCommands semanticDirtyStoreEntries semanticDictionaryEntries semanticSetEntries semanticBagEntries verified verifiedOop nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed businessRootOop businessRoot businessFixtureSize businessDirtyObjectsFlushed businessDirtyStoreMs businessFlushed businessExportAfter businessVerifiedOop businessVerified |
 [
   loadFailed := false.
   cleanupFixture := [ ].
@@ -799,6 +799,32 @@ true'
         domainFixtureCount := domainFixtureCount + 1.
         domainPerInstvarClampEntries := mappedDomainScheme serverClampInstVarLevelEntries size.
 
+        phase := 'migration-domain-server-named-instvar-spec'.
+        connector := connectorClass
+          client: mappedDomainFixtureClass
+          server: mappedDomainBehaviorName
+          replicationSpec: #(
+            #(#buyer #forwarder)
+            #(#items #min 2)
+            #(#amount #max 1)
+            #(#audit #stub)
+            #(#indexable_part #replicate))
+          serverInstVarNames: mappedDomainFixtureClass migrationDomainServerInstVarNames.
+        connector replicatorClass: pointerReplicatorClass.
+        mappedDomainReplicator := manager installClientClassConnector: connector.
+        mappedDomainScheme := manager currentReplicationScheme.
+        (mappedDomainScheme instVarLevelsForClass: mappedDomainFixtureClass) = { false. -2. false. 1. 0. nil } ifFalse: [
+          Error signal: 'Mapped migration-domain server-named per-instvar levels did not match VW instVarMap policy shape.' ].
+        ((mappedDomainReplicator respondsTo: #serverToClientOffsets)
+          and: [ mappedDomainReplicator serverToClientOffsets = { 1. 2. nil. 3. 5 } ]) ifFalse: [
+            Error signal: 'Mapped migration-domain server-named spec changed server-to-client offsets unexpectedly.' ].
+        (mappedDomainScheme shouldProxyNamedSlot: 1 ofClass: mappedDomainFixtureClass) ifFalse: [
+          Error signal: 'Mapped migration-domain server-named buyer slot was not marked as a forwarder.' ].
+        (mappedDomainScheme shouldProxyNamedSlot: 3 ofClass: mappedDomainFixtureClass) ifTrue: [
+          Error signal: 'Mapped migration-domain server-named unmapped cache slot was unexpectedly marked as a forwarder.' ].
+        domainFixtureCount := domainFixtureCount + 1.
+        domainPerInstvarClampEntries := mappedDomainScheme serverClampInstVarLevelEntries size.
+
         phase := 'migration-domain-instvar-map-dirty-store'.
         mappedDomainOrderOop := session
           returnRemoteCommandBody: '| fixture tempDict orderClass customerClass order customer lines |
@@ -1134,6 +1160,11 @@ status'
         mappedDomainScheme := manager currentReplicationScheme.
         (mappedDomainScheme instVarLevelsForClass: mappedDomainFixtureClass) = { false. -2. 1. 0. -1. false. nil } ifFalse: [
           Error signal: 'Inherited mapped migration-domain class-version refresh did not update clamp levels.' ].
+        connectorLifecycleReport := manager connectorLifecycleReport.
+        (connectorLifecycleReport at: #classVersionReportCount ifAbsent: [ 0 ]) <= 0 ifTrue: [
+          Error signal: 'Connector lifecycle report did not include class-version reports after class-version refresh.' ].
+        (connectorLifecycleReport at: #classVersionErrorCount ifAbsent: [ 0 ]) = 0 ifFalse: [
+          Error signal: 'Connector lifecycle report contained class-version errors after class-version refresh.' ].
 
         phase := 'dirty-store-fixture'.
         dirtyRootOop := session

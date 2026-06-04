@@ -177,6 +177,14 @@ CoreMockGbsSession >> checkForError [
 	^ nil
 ]
 
+{ #category : 'repository' }
+CoreMockGbsSession >> classMirrorOfNamed: className [
+	| block |
+	block := self stubs at: #classMirrorOfNamed ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: className ].
+	^ super classMirrorOfNamed: className
+]
+
 { #category : 'execution' }
 CoreMockGbsSession >> evaluate: aString [
 	| value |

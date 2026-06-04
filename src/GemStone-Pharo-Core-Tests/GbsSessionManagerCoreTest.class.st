@@ -22,6 +22,11 @@ Class {
 	#package : 'GemStone-Pharo-Core-Tests'
 }
 
+{ #category : 'testing' }
+GbsSessionManagerCoreTest class >> classVersion [
+	^ 3
+]
+
 { #category : 'running' }
 GbsSessionManagerCoreTest >> setUp [
 	super setUp.
@@ -306,6 +311,76 @@ GbsSessionManagerCoreTest >> testClientClassConnectorUpdatesClampMetadata [
 	self assert: levels equals: { false. -2. nil }.
 	self assert: (manager currentReplicationScheme shouldProxyNamedSlot: 1 ofClass: Association).
 	self deny: (manager currentReplicationScheme shouldProxyNamedSlot: 2 ofClass: Association)
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testClientClassConnectorAcceptsServerNamedSpecsForMappedInstVars [
+	| mockSession manager connector replicator levels |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: CoreGbsMigrationDomainMappedOrder
+		server: 'GbsMigrationLiveMappedOrder'
+		replicationSpec: #(
+			#(#buyer #forwarder)
+			#(#items #min 2)
+			#(#amount #max 1)
+			#(#audit #stub)
+			#(#indexable_part #replicate))
+		serverInstVarNames: CoreGbsMigrationDomainMappedOrder migrationDomainServerInstVarNames.
+	connector replicatorClass: GbxPointerObjectReplicator.
+
+	replicator := manager installClientClassConnector: connector.
+	levels := manager currentReplicationScheme
+		instVarLevelsForClass: CoreGbsMigrationDomainMappedOrder.
+
+	self assert: replicator serverToClientOffsets equals: { 1. 2. nil. 3. 5 }.
+	self assert: levels equals: { false. -2. false. 1. 0. nil }.
+	self assert: (manager currentReplicationScheme
+		shouldProxyNamedSlot: 1
+		ofClass: CoreGbsMigrationDomainMappedOrder).
+	self deny: (manager currentReplicationScheme
+		shouldProxyNamedSlot: 3
+		ofClass: CoreGbsMigrationDomainMappedOrder)
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testConnectorLifecycleReportExposesClassVersionMismatch [
+	| mockSession manager connector lifecycleReport versionReports versionReport |
+	GbsSessionManager resetConnectorState.
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #classMirrorOfNamed put: [ :className |
+		GbxClassHolder
+			name: className
+			proxy: nil
+			version: (className = 'RemoteSessionManagerCoreTest'
+				ifTrue: [ 4 ]
+				ifFalse: [ 0 ])
+			numberOfVersions: 4 ].
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: GbsSessionManagerCoreTest
+		server: 'RemoteSessionManagerCoreTest'
+		replicationSpec: #replicate
+		serverInstVarNames: #().
+	manager installClientClassConnector: connector.
+
+	lifecycleReport := manager connectorLifecycleReport.
+	versionReports := lifecycleReport at: #classVersionReports.
+	versionReport := versionReports
+		detect: [ :report |
+			(report at: #server ifAbsent: [ '' ]) = 'RemoteSessionManagerCoreTest' ]
+		ifNone: [ self fail: 'Missing connector class-version row.' ].
+
+	self assert: (lifecycleReport at: #connectorPairCount) equals: 1.
+	self assert: (lifecycleReport at: #classVersionReportCount) equals: 1.
+	self assert: (lifecycleReport at: #classVersionMismatchCount) equals: 1.
+	self assert: (lifecycleReport at: #classVersionUnknownCount) equals: 0.
+	self assert: (lifecycleReport at: #classVersionErrorCount) equals: 0.
+	self assert: (versionReport at: #clientVersion) equals: 3.
+	self assert: (versionReport at: #serverVersion) equals: 4.
+	self assert: (versionReport at: #versionStatus) equals: #mismatch.
+	self assert: (versionReport at: #needsUpdate)
 ]
 
 { #category : 'tests' }

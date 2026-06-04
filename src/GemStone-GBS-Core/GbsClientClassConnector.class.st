@@ -389,8 +389,16 @@ GbsClientClassConnector >> updateGSScript [
 ]
 
 { #category : 'class updating' }
+GbsClientClassConnector >> versionStatusForClientVersion: clientVersion serverVersion: serverVersion [
+	(clientVersion isNil or: [ serverVersion isNil ]) ifTrue: [ ^ #unknown ].
+	^ clientVersion = serverVersion
+		ifTrue: [ #matched ]
+		ifFalse: [ #mismatch ]
+]
+
+{ #category : 'class updating' }
 GbsClientClassConnector >> verifyClassVersionsInSession: aSession [
-	| clientClass serverName serverMirror clientVersion serverVersion |
+	| clientClass serverName serverMirror clientVersion serverVersion status |
 	clientClass := self resolvedClientBehavior.
 	serverName := self serverBehaviorName.
 	clientVersion := (clientClass notNil and: [ clientClass respondsTo: #classVersion ])
@@ -401,11 +409,16 @@ GbsClientClassConnector >> verifyClassVersionsInSession: aSession [
 		ifFalse: [ nil ].
 	serverVersion := serverMirror ifNil: [ nil ] ifNotNil: [
 		[ serverMirror version ] on: Error do: [ nil ] ].
+	status := self
+		versionStatusForClientVersion: clientVersion
+		serverVersion: serverVersion.
 	^ Dictionary new
 		at: #client put: self clientBehaviorName;
 		at: #server put: serverName;
 		at: #clientVersion put: clientVersion;
 		at: #serverVersion put: serverVersion;
-		at: #versionMatches put: (clientVersion isNil or: [ serverVersion isNil or: [ clientVersion = serverVersion ] ]);
+		at: #versionStatus put: status;
+		at: #needsUpdate put: status = #mismatch;
+		at: #versionMatches put: status ~= #mismatch;
 		yourself
 ]

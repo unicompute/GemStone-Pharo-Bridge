@@ -258,6 +258,17 @@ GbxReplicationScheme >> shouldReplicate [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxReplicationScheme >> specIn: specs forServerName: serverName clientIndex: clientIndex clientInstVarNames: clientInstVarNames [
+	| clientName serverKey |
+	clientIndex ifNotNil: [
+		clientName := clientInstVarNames at: clientIndex ifAbsent: [ '' ].
+		clientName isEmpty ifFalse: [
+			(specs at: clientName ifAbsent: [ nil ]) ifNotNil: [ :spec | ^ spec ] ] ].
+	serverKey := serverName ifNil: [ '' ] ifNotNil: [ serverName asString ].
+	^ specs at: serverKey ifAbsent: [ nil ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxReplicationScheme >> shouldStub [
 	^ self isValid and: [ self isStub ]
 ]
@@ -342,25 +353,26 @@ GbxReplicationScheme >> updateInstVarLevelsForClass: aClass serverInstVarNames: 
 		ifTrue: [ aClass allInstVarNames collect: [ :each | each asString ] ]
 		ifFalse: [ #() ].
 	specs := self dictionaryFormOfReplicationSpec: replicationSpec.
-	namedLevels := serverToClientOffsets collect: [ :clientIndex |
-		| spec |
+	namedLevels := (1 to: serverToClientOffsets size) collect: [ :index |
+		| clientIndex spec |
+		clientIndex := serverToClientOffsets at: index.
+		spec := self
+			specIn: specs
+			forServerName: (serverInstVarNames at: index ifAbsent: [ nil ])
+			clientIndex: clientIndex
+			clientInstVarNames: clientInstVarNames.
 		clientIndex
-			ifNil: [ false ]
-			ifNotNil: [
-				spec := specs
-					at: (clientInstVarNames at: clientIndex ifAbsent: [ '' ])
-					ifAbsent: [ nil ].
-				spec ifNil: [ nil ] ifNotNil: [ self instVarLevelForReplicationSpec: spec ] ] ].
+			ifNil: [ spec ifNil: [ false ] ifNotNil: [ self instVarLevelForReplicationSpec: spec ] ]
+			ifNotNil: [ spec ifNil: [ nil ] ifNotNil: [ self instVarLevelForReplicationSpec: spec ] ] ].
 	indexedSpec := specs at: 'indexable_part' ifAbsent: [ nil ].
-	forwarderOffsets := serverToClientOffsets collect: [ :clientIndex |
+	forwarderOffsets := (1 to: serverToClientOffsets size) collect: [ :index |
 		| spec |
-		clientIndex
-			ifNil: [ false ]
-			ifNotNil: [
-				spec := specs
-					at: (clientInstVarNames at: clientIndex ifAbsent: [ '' ])
-					ifAbsent: [ nil ].
-				spec notNil and: [ self shouldBeForwarderForReplicationSpec: spec ] ] ].
+		spec := self
+			specIn: specs
+			forServerName: (serverInstVarNames at: index ifAbsent: [ nil ])
+			clientIndex: (serverToClientOffsets at: index)
+			clientInstVarNames: clientInstVarNames.
+		spec notNil and: [ self shouldBeForwarderForReplicationSpec: spec ] ].
 	forwardIndexed := indexedSpec notNil and: [
 		self shouldBeForwarderForReplicationSpec: indexedSpec ].
 	^ self
