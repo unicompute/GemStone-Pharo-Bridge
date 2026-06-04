@@ -216,18 +216,38 @@ GbsSession >> setAsideDirtyWhile: aBlock [
 { #category : 'replication' }
 GbsSession >> storeTraversalBuffer: aBuffer [
 	self serverInterface ifNil: [ self error: 'No server interface is available for store traversal.' ].
-	^ self serverInterface storeTraversalBuffer: aBuffer
+	^ self withActiveGciSessionDo: [
+		self serverInterface storeTraversalBuffer: aBuffer ]
+]
+
+{ #category : 'private - session activation' }
+GbsSession >> activateGciSession [
+	| result |
+	(sessionId isNil or: [ sessionId = 0 ]) ifTrue: [ ^ self ].
+	self serverInterface ifNil: [ ^ self ].
+	(self serverInterface respondsTo: #apiGciSetSessionId:) ifFalse: [ ^ self ].
+	result := self serverInterface apiGciSetSessionId: sessionId.
+	(result = 1 or: [ result == true ]) ifFalse: [
+		self error: 'Could not activate GemStone GCI session ', sessionId asString ].
+	^ self
+]
+
+{ #category : 'private - session activation' }
+GbsSession >> withActiveGciSessionDo: aBlock [
+	self activateGciSession.
+	^ aBlock value
 ]
 
 { #category : 'evaluating' }
 GbsSession >> basicEvaluate: aString [
 
   | resultOop |
-  resultOop := GbsServerInterface uniqueInstance
-                 apiGciExecuteStr: aString
-                 context: sessionOop
-                 environment: 0.
-  ^ GbsServerInterface uniqueInstance resultFor: resultOop
+  ^ self withActiveGciSessionDo: [
+	  resultOop := GbsServerInterface uniqueInstance
+	                 apiGciExecuteStr: aString
+	                 context: sessionOop
+	                 environment: 0.
+	  GbsServerInterface uniqueInstance resultFor: resultOop ]
 ]
 
 { #category : 'error handling' }
@@ -235,7 +255,8 @@ GbsSession >> checkAndClearError [
 	| buffer errMsg errNum contextOop exceptionOop |
 	buffer := ExternalAddress allocate: 2168.
 	[
-		self serverInterface apiGciErr: buffer.
+		self withActiveGciSessionDo: [
+			self serverInterface apiGciErr: buffer ].
 		contextOop := buffer unsignedLongLongAt: 9.
 		exceptionOop := buffer unsignedLongLongAt: 17.
 		errNum := buffer signedLongAt: 105.
@@ -253,7 +274,8 @@ GbsSession >> checkForError [
 	| buffer result errNum errMsg contextOop exceptionOop |
 	buffer := ExternalAddress allocate: 2168.
 	[
-		result := self serverInterface apiGciErr: buffer.
+		result := self withActiveGciSessionDo: [
+			self serverInterface apiGciErr: buffer ].
 		(result = 1 or: [ result == true ]) ifTrue: [
 			errNum := buffer signedLongAt: 105.
 			contextOop := buffer unsignedLongLongAt: 9.
@@ -413,9 +435,10 @@ GbsSession >> lockKind: anObject [
 
 { #category : 'signalling' }
 GbsSession >> sendSignal: aSignal to: sessionIdOrSerial withMessage: aString [
-	^ self
-		evaluateSystemSelector: #_sendSignal:toSess:withMessage:
-		withArguments: { aSignal. sessionIdOrSerial. aString }
+	^ self executeScriptAndFetchObject:
+		'System _sendSignal: ', aSignal asInteger printString,
+		' toSess: ', sessionIdOrSerial asInteger printString,
+		' withMessage: ', (self marshalArgumentToScript: aString)
 ]
 
 { #category : 'execution' }
@@ -423,17 +446,18 @@ GbsSession >> evaluate: s [
     | resultOop |
     self validateReadyForExecution: s.
 
-    resultOop := self serverInterface
-        apiGciExecuteStr: s
-        context: 20
-        env: 0.
+    ^ self withActiveGciSessionDo: [
+	    resultOop := self serverInterface
+	        apiGciExecuteStr: s
+	        context: 20
+	        env: 0.
 
-    resultOop = 1 ifTrue: [ ^ self handleGciError ].
+	    resultOop = 1 ifTrue: [ ^ self handleGciError ].
 
-    "GemStone may return nil while still leaving a pending runtime error."
-    self checkForError.
+	    "GemStone may return nil while still leaving a pending runtime error."
+	    self checkForError.
 
-    ^ self fetchObject: resultOop asInteger
+	    self fetchObject: resultOop asInteger ]
 ]
 
 { #category : 'execution' }
@@ -441,26 +465,28 @@ GbsSession >> executeScriptAndFetchObject: aString [
 	| resultOop |
 	self validateReadyForExecution: aString.
 
-	resultOop := self serverInterface
-		apiGciExecuteStr: aString
-		context: 20
-		env: 0.
+	^ self withActiveGciSessionDo: [
+		resultOop := self serverInterface
+			apiGciExecuteStr: aString
+			context: 20
+			env: 0.
 
-	resultOop = 1 ifTrue: [ ^ self handleGciError ].
-	self checkForError.
+		resultOop = 1 ifTrue: [ ^ self handleGciError ].
+		self checkForError.
 
-	^ self fetchObject: resultOop asInteger
+		self fetchObject: resultOop asInteger ]
 ]
 
 { #category : 'evaluating' }
 GbsSession >> evaluateAndFetchString: aString [
     | resultOop |
     self validateReadyForExecution: aString.
-    resultOop := GbsServerInterface uniqueInstance 
-        apiGciExecuteStr: aString 
-        context: sessionOop 
-        env: 0.
-    ^ GbsServerInterface uniqueInstance fetchString: resultOop.
+    ^ self withActiveGciSessionDo: [
+	    resultOop := GbsServerInterface uniqueInstance
+	        apiGciExecuteStr: aString
+	        context: sessionOop
+	        env: 0.
+	    GbsServerInterface uniqueInstance fetchString: resultOop ]
 ]
 
 { #category : 'execution' }
@@ -473,6 +499,7 @@ GbsSession >> evaluateBlock: aBlock [
 GbsSession >> evaluateString: aString [
 	| resultOop buffer size |
 	"Use self serverInterface instead of the raw variable!"
+	^ self withActiveGciSessionDo: [
 	resultOop := self serverInterface apiGciExecute: aString context: 20.
 	
 	(resultOop bitAnd: 7) = 2 ifTrue: [ ^ resultOop bitShift: -3 ].
@@ -484,7 +511,7 @@ GbsSession >> evaluateString: aString [
 		size > 0 ifTrue: [ ^ (buffer copyFrom: 1 to: size) asString ].
 	] ensure: [ buffer free ].
 
-	^ resultOop
+	resultOop ]
 ]
 
 { #category : 'execution' }
@@ -492,6 +519,7 @@ GbsSession >> execute: script [
 	| resultOop |
 	self validateReadyForExecution: script.
 
+	^ self withActiveGciSessionDo: [
 	resultOop := GbsServerInterface uniqueInstance
 		apiGciExecuteStr: script context: 20 env: 0.
 
@@ -502,7 +530,7 @@ GbsSession >> execute: script [
 	even when the returned oop is not OOP_ILLEGAL. Always drain/check GciErr."
 	self checkForError.
 
-	^ self resultFor: resultOop
+	self resultFor: resultOop ]
 ]
 
 { #category : 'execution' }
@@ -517,6 +545,7 @@ GbsSession >> executeAndFetch: script context: contextOop [
 	| interface stringOop |
 	self validateReadyForExecution: script.
 
+	^ self withActiveGciSessionDo: [
 	interface := GbsServerInterface uniqueInstance.
 	stringOop := interface apiGciExecuteStr: script context: contextOop env: 0.
 
@@ -524,7 +553,7 @@ GbsSession >> executeAndFetch: script context: contextOop [
 	stringOop = 1 ifTrue: [ ^ 'Error: GemStone Compile Error' ].
 	stringOop = 20 ifTrue: [ ^ 'nil' ].
 
-	^ interface fetchString: stringOop.
+	interface fetchString: stringOop ]
 ]
 
 { #category : 'error handling' }
@@ -532,7 +561,8 @@ GbsSession >> fetchLastError [
 	| errStruct success errorMessage |
 	errStruct := GciErrSType externalNew.
 	[
-		success := GbsServerInterface uniqueInstance apiGciErr: errStruct.
+		success := self withActiveGciSessionDo: [
+			GbsServerInterface uniqueInstance apiGciErr: errStruct ].
 		success ifFalse: [ ^ 'Unknown GemStone Error' ].
 		
 		"Extract the message using your existing struct definition"
@@ -719,7 +749,8 @@ GbsSession >> gciAbort [
 
   "Calls the C-library to abort the transaction. Returns 1 on success."
 
-  ^ self serverInterface apiGciAbortCurrent
+  ^ self withActiveGciSessionDo: [
+	  self serverInterface apiGciAbortCurrent ]
 ]
 
 { #category : 'as yet unclassified' }
@@ -728,23 +759,27 @@ GbsSession >> gciCommit [
 
   "Calls the C-library to commit the transaction. Returns 1 on success."
 
-  ^ self serverInterface apiGciCommit
+  ^ self withActiveGciSessionDo: [
+	  self serverInterface apiGciCommit ]
 ]
 
 { #category : 'ffi' }
 GbsSession >> gciExecute: string context: ctx env: env [
     "String correctly maps to const char*, and we stay on the main thread"
-    ^ self serverInterface apiGciExecuteStr: string context: ctx env: env
+    ^ self withActiveGciSessionDo: [
+	    self serverInterface apiGciExecuteStr: string context: ctx env: env ]
 ]
 
 { #category : 'as yet unclassified' }
 GbsSession >> gciLogout [
-	^ self serverInterface apiGciLogout
+	^ self withActiveGciSessionDo: [
+		self serverInterface apiGciLogout ]
 ]
 
 { #category : 'as yet unclassified' }
 GbsSession >> gciPollForSignal [
-	^ self serverInterface apiGciPollForSignal
+	^ self withActiveGciSessionDo: [
+		self serverInterface apiGciPollForSignal ]
 ]
 
 { #category : 'error handling' }
@@ -752,7 +787,8 @@ GbsSession >> handleGciError [
 	| buffer errMsg errNum contextOop exceptionOop |
 	buffer := ExternalAddress allocate: 2168.
 	[
-		self serverInterface apiGciErr: buffer.
+		self withActiveGciSessionDo: [
+			self serverInterface apiGciErr: buffer ].
 		errNum := buffer signedLongAt: 105.
 		contextOop := buffer unsignedLongLongAt: 9.
 		exceptionOop := buffer unsignedLongLongAt: 17.
@@ -913,6 +949,11 @@ GbsSession >> sessionSignalAction: aBlock [
 ]
 
 { #category : 'event handling' }
+GbsSession >> signalFromGemStoneSession [
+	^ self executeScriptAndFetchObject: 'System _signalFromGemStoneSession'
+]
+
+{ #category : 'event handling' }
 GbsSession >> signaledAbortAction [
 	^ self class signaledAbortActionFor: self
 ]
@@ -933,28 +974,28 @@ GbsSession >> signaledAbortAction: aBlock [
 GbsSession >> disableSignaledObjectsError [
 	self isLoggedIn ifFalse: [ ^ self ].
 	^ [
-		self evaluateSystemSelector: #disableSignaledObjectsError withArguments: #()
+		self evaluate: 'System disableSignaledObjectsError'
 	] on: ObjectsCommittedNotification do: [ :ex | ex return: nil ]
 ]
 
 { #category : 'notification' }
 GbsSession >> enableSignaledObjectsError [
 	self isLoggedIn ifFalse: [ ^ self ].
-	^ self evaluateSystemSelector: #enableSignaledObjectsError withArguments: #()
+	^ self evaluate: 'System enableSignaledObjectsError'
 ]
 
 { #category : 'event handling' }
 GbsSession >> disableSignaledGemStoneSessionError [
 	self isLoggedIn ifFalse: [ ^ self ].
 	^ [
-		self evaluateSystemSelector: #disableSignaledGemStoneSessionError withArguments: #()
+		self evaluate: 'System disableSignaledGemStoneSessionError'
 	] on: InterSessionSignal do: [ :ex | ex return: nil ]
 ]
 
 { #category : 'event handling' }
 GbsSession >> enableSignaledGemStoneSessionError [
 	self isLoggedIn ifFalse: [ ^ self ].
-	^ self evaluateSystemSelector: #enableSignaledGemStoneSessionError withArguments: #()
+	^ self evaluate: 'System enableSignaledGemStoneSessionError'
 ]
 
 { #category : 'event handling' }

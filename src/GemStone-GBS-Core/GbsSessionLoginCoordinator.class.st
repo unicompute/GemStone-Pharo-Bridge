@@ -136,6 +136,9 @@ GbsSessionLoginCoordinator >> loginStone: stoneName user: username password: pas
 		on: Error
 		do: [ ].
 	(GbsSessionEventController forSession: session) startIfEnabledFromPolicy.
+	[ session recordConnectorLoginReportArtifact ]
+		on: Error
+		do: [ ].
 	^ true
 ]
 

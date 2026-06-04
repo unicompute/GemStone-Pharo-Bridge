@@ -215,6 +215,193 @@ GbxReplicatorManager >> connectorConnectionStringForReportRow: row [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorDiagnosticsReport [
+	| rows invalidRows warningRows lifecycle |
+	rows := self connectorDiagnosticsRows.
+	invalidRows := rows select: [ :row |
+		(row at: #invalidReasons ifAbsent: [ #() ]) isEmpty not ].
+	warningRows := rows select: [ :row |
+		(row at: #warnings ifAbsent: [ #() ]) isEmpty not ].
+	lifecycle := self connectorLifecycleReport.
+	^ Dictionary new
+		at: #rowCount put: rows size;
+		at: #invalidCount put: invalidRows size;
+		at: #warningCount put: warningRows size;
+		at: #connectedCount put: (rows count: [ :row | row at: #connected ifAbsent: [ false ] ]);
+		at: #disconnectedCount put: (rows count: [ :row | (row at: #connected ifAbsent: [ false ]) not ]);
+		at: #classVersionMismatchCount put: (lifecycle at: #classVersionMismatchCount ifAbsent: [ 0 ]);
+		at: #classVersionUnknownCount put: (lifecycle at: #classVersionUnknownCount ifAbsent: [ 0 ]);
+		at: #classVersionUnversionedCount put: (lifecycle at: #classVersionUnversionedCount ifAbsent: [ 0 ]);
+		at: #classVersionErrorCount put: (lifecycle at: #classVersionErrorCount ifAbsent: [ 0 ]);
+		at: #rows put: rows;
+		yourself
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorDiagnosticsReportText [
+	| report |
+	report := self connectorDiagnosticsReport.
+	^ String streamContents: [ :stream |
+		stream
+			nextPutAll: 'Connector Diagnostics';
+			cr;
+			cr.
+		#(
+			rowCount
+			invalidCount
+			warningCount
+			connectedCount
+			disconnectedCount
+			classVersionMismatchCount
+			classVersionUnknownCount
+			classVersionUnversionedCount
+			classVersionErrorCount) do: [ :key |
+				stream
+					nextPutAll: key asString;
+					nextPutAll: '=';
+					nextPutAll: (self connectorReportValueString: (report at: key ifAbsent: [ nil ]));
+					cr ].
+		(report at: #rows ifAbsent: [ #() ]) do: [ :row |
+			stream
+				cr;
+				nextPutAll: (row at: #client ifAbsent: [ '' ]);
+				nextPutAll: ' -> ';
+				nextPutAll: (row at: #server ifAbsent: [ '' ]);
+				nextPutAll: ' status=';
+				nextPutAll: (row at: #status ifAbsent: [ #unknown ]) asString;
+				nextPutAll: ' version=';
+				nextPutAll: (row at: #classVersionStatus ifAbsent: [ #unknown ]) asString;
+				nextPutAll: ' reasons=';
+				nextPutAll: (self connectorReportValueString: (row at: #invalidReasons ifAbsent: [ #() ]));
+				nextPutAll: ' warnings=';
+				nextPutAll: (self connectorReportValueString: (row at: #warnings ifAbsent: [ #() ]));
+				cr ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorDiagnosticsRowForConnectionRow: row versionReport: versionReport [
+	| clientName serverName connected clientBehavior serverBehavior clientReplicator serverReplicator versionStatus reasons warnings status |
+	clientName := row at: #client ifAbsent: [ '' ].
+	serverName := row at: #server ifAbsent: [ '' ].
+	connected := row at: #connected ifAbsent: [ false ].
+	clientBehavior := self resolvedClientBehaviorNamed: clientName.
+	serverBehavior := self resolvedClientBehaviorNamed: serverName.
+	clientReplicator := clientBehavior
+		ifNil: [ nil ]
+		ifNotNil: [ self replicatorForClientBehavior: clientBehavior ifAbsent: [ nil ] ].
+	serverReplicator := serverBehavior
+		ifNil: [ self replicatorForServerBehavior: serverName ifAbsent: [ nil ] ]
+		ifNotNil: [
+			self
+				replicatorForServerBehavior: serverBehavior
+				ifAbsent: [ self replicatorForServerBehavior: serverName ifAbsent: [ nil ] ] ].
+	versionStatus := versionReport at: #versionStatus ifAbsent: [ #unknown ].
+	reasons := OrderedCollection new.
+	warnings := OrderedCollection new.
+	connected
+		ifTrue: [
+			clientBehavior ifNil: [ reasons add: #missingClientBehavior ].
+			clientReplicator ifNil: [ reasons add: #missingClientReplicator ].
+			serverReplicator ifNil: [ reasons add: #missingServerReplicator ] ]
+		ifFalse: [
+			warnings add: #disconnected.
+			clientBehavior ifNil: [ warnings add: #disconnectedMissingClientBehavior ].
+			clientReplicator ifNil: [ warnings add: #disconnectedMissingClientReplicator ].
+			serverReplicator ifNil: [ warnings add: #disconnectedMissingServerReplicator ] ].
+	versionStatus = #mismatch ifTrue: [ warnings add: #classVersionMismatch ].
+	versionStatus = #error ifTrue: [ reasons add: #classVersionError ].
+	versionStatus = #unknown ifTrue: [ warnings add: #classVersionUnknown ].
+	status := reasons isEmpty
+		ifTrue: [ warnings isEmpty ifTrue: [ #ready ] ifFalse: [ #warning ] ]
+		ifFalse: [ #invalid ].
+	^ Dictionary new
+		at: #client put: clientName asString;
+		at: #server put: serverName asString;
+		at: #connected put: connected;
+		at: #postConnectAction put: (row at: #postConnectAction ifAbsent: [ 'none' ]);
+		at: #hasClientBehavior put: clientBehavior notNil;
+		at: #hasClientReplicator put: clientReplicator notNil;
+		at: #hasServerReplicator put: serverReplicator notNil;
+		at: #classVersionStatus put: versionStatus;
+		at: #needsUpdate put: (versionReport at: #needsUpdate ifAbsent: [ false ]);
+		at: #invalidReasons put: reasons asArray;
+		at: #warnings put: warnings asArray;
+		at: #status put: status;
+		yourself
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorDiagnosticsRows [
+	^ self connectorConnectionRowsForReport collect: [ :row |
+		| versionReport |
+		versionReport := self
+			connectorClassVersionReportForClient: (row at: #client ifAbsent: [ '' ])
+			server: (row at: #server ifAbsent: [ '' ]).
+		self
+			connectorDiagnosticsRowForConnectionRow: row
+			versionReport: versionReport ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorDiffPreviewReport [
+	| diagnostics rows |
+	diagnostics := self connectorDiagnosticsReport.
+	rows := (diagnostics at: #rows ifAbsent: [ #() ]) collect: [ :row |
+		| action |
+		action := ((row at: #invalidReasons ifAbsent: [ #() ]) includes: #missingClientReplicator)
+			ifTrue: [ #connect ]
+			ifFalse: [
+				((row at: #warnings ifAbsent: [ #() ]) includes: #classVersionMismatch)
+					ifTrue: [ #updateClassVersion ]
+					ifFalse: [
+						(row at: #connected ifAbsent: [ false ])
+							ifTrue: [ #none ]
+							ifFalse: [ #markDisconnected ] ] ].
+		Dictionary new
+			at: #client put: (row at: #client ifAbsent: [ '' ]);
+			at: #server put: (row at: #server ifAbsent: [ '' ]);
+			at: #status put: (row at: #status ifAbsent: [ #unknown ]);
+			at: #recommendedAction put: action;
+			at: #invalidReasons put: (row at: #invalidReasons ifAbsent: [ #() ]);
+			at: #warnings put: (row at: #warnings ifAbsent: [ #() ]);
+			yourself ].
+	^ Dictionary new
+		at: #rowCount put: rows size;
+		at: #actionCount put: (rows count: [ :row | (row at: #recommendedAction ifAbsent: [ #none ]) ~= #none ]);
+		at: #invalidCount put: (diagnostics at: #invalidCount ifAbsent: [ 0 ]);
+		at: #warningCount put: (diagnostics at: #warningCount ifAbsent: [ 0 ]);
+		at: #rows put: rows;
+		yourself
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> connectorDiffPreviewReportText [
+	| report |
+	report := self connectorDiffPreviewReport.
+	^ String streamContents: [ :stream |
+		stream
+			nextPutAll: 'Connector Diff Preview';
+			cr;
+			cr;
+			nextPutAll: 'rowCount=';
+			nextPutAll: (self connectorReportValueString: (report at: #rowCount ifAbsent: [ 0 ]));
+			cr;
+			nextPutAll: 'actionCount=';
+			nextPutAll: (self connectorReportValueString: (report at: #actionCount ifAbsent: [ 0 ]));
+			cr.
+		(report at: #rows ifAbsent: [ #() ]) do: [ :row |
+			stream
+				nextPutAll: (row at: #client ifAbsent: [ '' ]);
+				nextPutAll: ' -> ';
+				nextPutAll: (row at: #server ifAbsent: [ '' ]);
+				nextPutAll: ' action=';
+				nextPutAll: (row at: #recommendedAction ifAbsent: [ #none ]) asString;
+				nextPutAll: ' reasons=';
+				nextPutAll: (self connectorReportValueString: (row at: #invalidReasons ifAbsent: [ #() ]));
+				cr ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbxReplicatorManager >> connectorConnectionRowsForReport [
 	| sessionKey rows |
 	sessionKey := GbsSessionManager sessionKeyForSessionObject: self session.
@@ -363,6 +550,8 @@ GbxReplicatorManager >> connectorLifecycleReport [
 			(report at: #versionStatus ifAbsent: [ #unknown ]) = #mismatch ]);
 		at: #classVersionUnknownCount put: (versionReports count: [ :report |
 			(report at: #versionStatus ifAbsent: [ #unknown ]) = #unknown ]);
+		at: #classVersionUnversionedCount put: (versionReports count: [ :report |
+			(report at: #versionStatus ifAbsent: [ #unknown ]) = #unversioned ]);
 		at: #classVersionErrorCount put: (versionReports count: [ :report |
 			(report at: #versionStatus ifAbsent: [ #unknown ]) = #error ]);
 		yourself
@@ -507,6 +696,15 @@ GbxReplicatorManager >> replicatorClassForClientBehavior: clientBehavior [
 { #category : '*GemStone-GBS-Core' }
 GbxReplicatorManager >> replicatorsNeedingServerInstVarNames [
 	^ replicatorsNeedingServerInstVarNames asArray
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbxReplicatorManager >> resolvedClientBehaviorNamed: behaviorName [
+	behaviorName ifNil: [ ^ nil ].
+	behaviorName asString isEmpty ifTrue: [ ^ nil ].
+	^ Smalltalk globals
+		at: behaviorName asString asSymbol
+		ifAbsent: [ nil ]
 ]
 
 { #category : '*GemStone-GBS-Core' }

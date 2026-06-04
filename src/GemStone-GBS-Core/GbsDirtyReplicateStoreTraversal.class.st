@@ -57,6 +57,8 @@ GbsDirtyReplicateStoreTraversal class >> newDirtyStoreTraversalReport [
 			at: #nativeDictionaryMetadataFetchCount put: 0;
 			at: #scriptDictionaryMetadataFallbackCount put: 0;
 			at: #scriptScalarOopFallbackCount put: 0;
+			at: #nativeScalarOopResolutionCount put: 0;
+			at: #nativeScalarOopResolutionFallbackCount put: 0;
 			at: #scalarOopCacheHitCount put: 0;
 			at: #perReplicatorStoreEntryCount put: 0;
 			at: #newObjectEntryCount put: 0;

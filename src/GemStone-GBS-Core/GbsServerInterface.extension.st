@@ -49,6 +49,14 @@ GbsServerInterface >> apiGciGetFreeOops: oopCount into: oopBuffer [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> apiGciGetSessionId [
+	^ self
+		ffiCall: #(int GciGetSessionId())
+		module: libraryPath
+		options: #( + optNonThreaded )
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> apiGciGetClass: anOop [
 	^ self
 		ffiCall: #(uint64 GciFetchClass(uint64 anOop))
@@ -65,9 +73,33 @@ GbsServerInterface >> apiGciMoreTraversal: traversalBuffer [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> apiGciNewString: aString [
+	^ self
+		ffiCall: #(uint64 GciNewString(String aString))
+		module: libraryPath
+		options: #( + optNonThreaded )
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> apiGciNewSymbol: aString [
+	^ self
+		ffiCall: #(uint64 GciNewSymbol(String aString))
+		module: libraryPath
+		options: #( + optNonThreaded )
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> apiGciReleaseOops: oopBuffer count: oopCount [
 	^ self
 		ffiCall: #(void GciReleaseOops(void* oopBuffer, int oopCount))
+		module: libraryPath
+		options: #( + optNonThreaded )
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> apiGciSetSessionId: sessionId [
+	^ self
+		ffiCall: #(int GciSetSessionId_(int sessionId))
 		module: libraryPath
 		options: #( + optNonThreaded )
 ]
@@ -278,8 +310,8 @@ GbsServerInterface >> nativeStoreTraversalCapabilityReport [
 			at: #storeTraversalReportShape put: self nativeStoreTraversalReportShape;
 			at: #materializationTraversalReportShapeSupported put: self supportsMaterializationTraversalReportShape;
 			at: #dictionaryAssociationMetadataTraversalSupported put: self supportsDictionaryAssociationMetadataTraversal;
-			at: #scalarOopNativeResolutionSupported put: false;
-			at: #scalarOopCommandFallbackRequired put: true;
+			at: #scalarOopNativeResolutionSupported put: self supportsNativeScalarOopResolution;
+			at: #scalarOopCommandFallbackRequired put: self supportsNativeScalarOopResolution not;
 			at: #dirtyStoreTraversalFunctionsSupported put: self supportsNativeDirtyStoreTraversalFunctions;
 			at: #freeOopAllocationSupported put: self supportsFreeOopAllocationTransport;
 			at: #dirtyStoreTraversalBufferTransportSupported put: self supportsDirtyStoreTraversalBufferTransport;
@@ -309,6 +341,13 @@ GbsServerInterface >> supportsNativeDirtyStoreTraversalFunctions [
 		and: [ (self respondsTo: #apiGciDirtyObjsInit)
 		and: [ (self respondsTo: #apiGciAllocTravBuf:)
 		and: [ self respondsTo: #apiGciFree: ] ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> supportsNativeScalarOopResolution [
+	^ self nativeGciTransportsEnabled
+		and: [ (self respondsTo: #apiGciNewString:)
+		and: [ self respondsTo: #apiGciNewSymbol: ] ]
 ]
 
 { #category : '*GemStone-GBS-Core' }

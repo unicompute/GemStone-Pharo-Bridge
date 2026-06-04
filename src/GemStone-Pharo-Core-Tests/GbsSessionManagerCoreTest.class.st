@@ -346,7 +346,7 @@ GbsSessionManagerCoreTest >> testClientClassConnectorAcceptsServerNamedSpecsForM
 
 { #category : 'tests' }
 GbsSessionManagerCoreTest >> testConnectorLifecycleReportExposesClassVersionMismatch [
-	| mockSession manager connector lifecycleReport versionReports versionReport |
+	| mockSession manager connector lifecycleReport versionReports versionReport diagnostics preview previewRow |
 	GbsSessionManager resetConnectorState.
 	mockSession := CoreMockGbsSession new.
 	mockSession stubs at: #classMirrorOfNamed put: [ :className |
@@ -376,11 +376,96 @@ GbsSessionManagerCoreTest >> testConnectorLifecycleReportExposesClassVersionMism
 	self assert: (lifecycleReport at: #classVersionReportCount) equals: 1.
 	self assert: (lifecycleReport at: #classVersionMismatchCount) equals: 1.
 	self assert: (lifecycleReport at: #classVersionUnknownCount) equals: 0.
+	self assert: (lifecycleReport at: #classVersionUnversionedCount) equals: 0.
 	self assert: (lifecycleReport at: #classVersionErrorCount) equals: 0.
 	self assert: (versionReport at: #clientVersion) equals: 3.
 	self assert: (versionReport at: #serverVersion) equals: 4.
 	self assert: (versionReport at: #versionStatus) equals: #mismatch.
-	self assert: (versionReport at: #needsUpdate)
+	self assert: (versionReport at: #needsUpdate).
+
+	diagnostics := manager connectorDiagnosticsReport.
+	preview := manager connectorDiffPreviewReport.
+	previewRow := (preview at: #rows) first.
+	self assert: (diagnostics at: #invalidCount) equals: 0.
+	self assert: (diagnostics at: #warningCount) equals: 1.
+	self assert: (((diagnostics at: #rows) first at: #warnings) includes: #classVersionMismatch).
+	self assert: (previewRow at: #recommendedAction) equals: #updateClassVersion
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testConnectorDiagnosticsDiffPreviewAndLoginArtifactReports [
+	| mockSession manager connector diagnostics preview artifact text |
+	GbsSessionManager resetConnectorState.
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #classMirrorOfNamed put: [ :className |
+		GbxClassHolder
+			name: className
+			proxy: nil
+			version: nil
+			numberOfVersions: 0 ].
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: Association
+		server: 'RemoteAssociation'
+		replicationSpec: #replicate
+		serverInstVarNames: #('key' 'value').
+	manager installClientClassConnector: connector.
+
+	diagnostics := manager connectorDiagnosticsReport.
+	preview := manager connectorDiffPreviewReport.
+	artifact := mockSession recordConnectorLoginReportArtifact.
+	text := mockSession connectorLoginReportArtifactText.
+
+	self assert: (diagnostics at: #rowCount) equals: 1.
+	self assert: (diagnostics at: #invalidCount) equals: 0.
+	self assert: (diagnostics at: #classVersionUnversionedCount) equals: 1.
+	self assert: ((diagnostics at: #rows) first at: #hasClientReplicator).
+	self assert: ((diagnostics at: #rows) first at: #hasServerReplicator).
+	self assert: (manager connectorDiagnosticsReportText includesSubstring: 'Connector Diagnostics').
+	self assert: (preview at: #rowCount) equals: 1.
+	self assert: (preview at: #actionCount) equals: 0.
+	self assert: (manager connectorDiffPreviewReportText includesSubstring: 'Connector Diff Preview').
+	self assert: (artifact includesKey: #connectorDiagnostics).
+	self assert: (artifact includesKey: #connectorDiffPreview).
+	self assert: (artifact includesKey: #nativeStoreTraversalCapabilityReport).
+	self assert: (artifact includesKey: #nativeMaterializationTraversalCapabilityReport).
+	self assert: mockSession lastConnectorLoginReportArtifact == artifact.
+	self assert: (text includesSubstring: 'Connector Login Report')
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testConnectorDiagnosticsFlagsDisconnectedUnmappedRows [
+	| mockSession sessionKey diagnostics row preview previewRow |
+	GbsSessionManager resetConnectorState.
+	mockSession := CoreMockGbsSession new.
+	sessionKey := GbsSessionManager sessionKeyForSessionObject: mockSession.
+	GbsSessionManager
+		addConnectorClient: 'MissingClientForDiagnostics'
+		server: 'MissingServerForDiagnostics'
+		forSession: mockSession.
+	GbsSessionManager
+		setConnectorClient: 'MissingClientForDiagnostics'
+		server: 'MissingServerForDiagnostics'
+		connected: false
+		inSession: sessionKey.
+
+	diagnostics := mockSession connectorDiagnosticsReport.
+	row := (diagnostics at: #rows) first.
+	preview := mockSession connectorDiffPreviewReport.
+	previewRow := (preview at: #rows) first.
+
+	self assert: (diagnostics at: #rowCount) equals: 1.
+	self assert: (diagnostics at: #invalidCount) equals: 0.
+	self assert: (diagnostics at: #warningCount) equals: 1.
+	self assert: (diagnostics at: #classVersionUnversionedCount) equals: 1.
+	self assert: (row at: #invalidReasons) isEmpty.
+	self assert: ((row at: #warnings) includes: #disconnected).
+	self assert: ((row at: #warnings) includes: #disconnectedMissingClientBehavior).
+	self assert: ((row at: #warnings) includes: #disconnectedMissingClientReplicator).
+	self assert: ((row at: #warnings) includes: #disconnectedMissingServerReplicator).
+	self assert: (row at: #classVersionStatus) equals: #unversioned.
+	self assert: (preview at: #actionCount) equals: 1.
+	self assert: (previewRow at: #recommendedAction) equals: #markDisconnected
 ]
 
 { #category : 'tests' }

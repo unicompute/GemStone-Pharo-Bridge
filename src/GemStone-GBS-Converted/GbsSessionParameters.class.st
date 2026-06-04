@@ -936,7 +936,7 @@ GbsSessionParameters >> logArg: aValue [ logArg := aValue
 
 { #category : 'connection' }
 GbsSessionParameters >> login [
-    | interface result serviceString hostUserString hostPasswordString netldiString setNetError setNetResult executedSessionInit |
+    | interface result actualSessionId serviceString hostUserString hostPasswordString netldiString setNetError setNetResult executedSessionInit |
 
     "UI State Check"
     self isConnected ifTrue: [ ^ self inform: 'Already Connected' ].
@@ -997,12 +997,15 @@ GbsSessionParameters >> login [
     ].
 
 	    "5. UI STATE UPDATES (Crucial for Launcher)"
-	    sessionId := result.
+	    actualSessionId := (interface respondsTo: #apiGciGetSessionId)
+	    	ifTrue: [ interface apiGciGetSessionId ]
+	    	ifFalse: [ result ].
+	    sessionId := actualSessionId.
 
 	    "Create the active session wrapper and mark it logged in"
 	    CurrentSession := GbsSession new
-	                        sessionId: result;
-	                        sessionOop: result;
+	                        sessionId: actualSessionId;
+	                        sessionOop: actualSessionId;
 	                        isLoggedIn: true;
 	                        parameters: self;
 	                        yourself.

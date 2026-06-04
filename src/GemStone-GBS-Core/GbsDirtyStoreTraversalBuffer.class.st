@@ -393,6 +393,32 @@ GbsDirtyStoreTraversalBuffer >> nativeValuesForDictionaryEntry: entry [
 ]
 
 { #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> nativeScalarOopForValue: anObject ifAbsent: absentBlock [
+	| serverInterface oop |
+	session ifNil: [ ^ absentBlock value ].
+	((session respondsTo: #serverInterface)
+		and: [ session serverInterface notNil ]) ifFalse: [ ^ absentBlock value ].
+	(self scalarValueCanUseNativeCString: anObject) ifFalse: [ ^ absentBlock value ].
+	serverInterface := session serverInterface.
+	((serverInterface respondsTo: #supportsNativeScalarOopResolution)
+		and: [ serverInterface supportsNativeScalarOopResolution ]) ifFalse: [
+			^ absentBlock value ].
+	oop := [
+		anObject isSymbol
+			ifTrue: [ serverInterface apiGciNewSymbol: anObject asString ]
+			ifFalse: [ serverInterface apiGciNewString: anObject asString ] ]
+		on: Error
+		do: [
+			self incrementDirtyStoreReportAt: #nativeScalarOopResolutionFallbackCount by: 1.
+			^ absentBlock value ].
+	((oop isNil) or: [ oop asInteger = 1 ]) ifTrue: [
+		self incrementDirtyStoreReportAt: #nativeScalarOopResolutionFallbackCount by: 1.
+		^ absentBlock value ].
+	self incrementDirtyStoreReportAt: #nativeScalarOopResolutionCount by: 1.
+	^ self unsignedOopForSignedOop: oop asInteger
+]
+
+{ #category : 'private - native encoding' }
 GbsDirtyStoreTraversalBuffer >> oopForValue: anObject ifAbsent: absentBlock [
 	| oop |
 	anObject == self oopIllegalValueMarker ifTrue: [ ^ 1 ].
@@ -609,6 +635,10 @@ GbsDirtyStoreTraversalBuffer >> remoteScalarOopForValue: anObject ifAbsent: abse
 			oop ]
 		ifAbsent: [
 			| oop |
+			oop := self nativeScalarOopForValue: anObject ifAbsent: [ nil ].
+			oop ifNotNil: [
+				self scalarOopCache at: key put: oop.
+				^ oop ].
 			self incrementDirtyStoreReportAt: #scriptScalarOopFallbackCount by: 1.
 			oop := [ session
 				returnRemoteCommandBody: 'value'
@@ -665,6 +695,18 @@ GbsDirtyStoreTraversalBuffer >> shouldResolveScalarOopFor: anObject [
 	anObject isSymbol ifTrue: [ ^ true ].
 	anObject isString ifTrue: [ ^ true ].
 	^ false
+]
+
+{ #category : 'private - native encoding' }
+GbsDirtyStoreTraversalBuffer >> scalarValueCanUseNativeCString: anObject [
+	| string |
+	((anObject isString) or: [ anObject isSymbol ]) ifFalse: [ ^ false ].
+	string := anObject asString.
+	string do: [ :character |
+		| codePoint |
+		codePoint := character codePoint.
+		(codePoint > 0 and: [ codePoint < 128 ]) ifFalse: [ ^ false ] ].
+	^ true
 ]
 
 { #category : 'accessing' }

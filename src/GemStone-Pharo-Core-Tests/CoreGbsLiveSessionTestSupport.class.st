@@ -148,8 +148,12 @@ CoreGbsLiveSessionTestSupport class >> installDelegatesOnOriginalSupportClass [
 	^ CoreGbsLiveSessionTestSupport ensureTranscriptProxyInstalledOn: aSession'.
 		'missingCredentialsReason
 	^ CoreGbsLiveSessionTestSupport missingCredentialsReason'.
+		'newIndependentSession
+	^ CoreGbsLiveSessionTestSupport newIndependentSession'.
 		'releaseOwnedSession
 	^ CoreGbsLiveSessionTestSupport releaseOwnedSession'.
+		'releaseIndependentSession: aSession
+	^ CoreGbsLiveSessionTestSupport releaseIndependentSession: aSession'.
 		'sessionIsUsable: aSession
 	^ CoreGbsLiveSessionTestSupport sessionIsUsable: aSession'.
 		'unavailableReason
@@ -207,20 +211,76 @@ CoreGbsLiveSessionTestSupport class >> missingCredentialsReason [
 ]
 
 { #category : 'private' }
+CoreGbsLiveSessionTestSupport class >> newIndependentSession [
+	| currentSession params session |
+	currentSession := GbsSessionParameters currentSession.
+	params := self newParametersFromEnvironment.
+	params ifNil: [ ^ nil ].
+	session := [ self withInteractiveNotificationsAnsweredDo: [ params login ] ] on: Error do: [ :ex |
+		lastUnavailableReason := 'Live GemStone secondary login failed: ', ex messageText.
+		nil ].
+	GbsSessionParameters currentSession: currentSession.
+
+	(self sessionIsUsable: session) ifFalse: [
+		[ self withInteractiveNotificationsAnsweredDo: [ params logout ] ] on: Error do: [ ].
+		GbsSessionParameters currentSession: currentSession.
+		^ nil ].
+
+	[ self ensureTranscriptProxyInstalledOn: session ] on: Error do: [ ].
+	lastUnavailableReason := nil.
+	^ session
+]
+
+{ #category : 'private' }
+CoreGbsLiveSessionTestSupport class >> newParametersFromEnvironment [
+	| env user pass stone service netldiHost netldiNameOrPort params |
+	env := self osEnvironment.
+	user := self envAtAny: #('GS_USER' 'GS_USERNAME') in: env ifAbsent: [ '' ].
+	pass := self envAtAny: #('GS_PASS' 'GS_PASSWORD') in: env ifAbsent: [ '' ].
+	((user isEmpty) or: [ pass isEmpty ]) ifTrue: [
+		lastUnavailableReason := self missingCredentialsReason.
+		^ nil ].
+
+	stone := self envAtAny: #('GS_STONE') in: env ifAbsent: [ 'gs64stone' ].
+	service := self envAtAny: #('GS_SERVICE') in: env ifAbsent: [ 'gemnetobject' ].
+	netldiHost := self envAtAny: #('GS_NETLDI_HOST' 'GS_HOST') in: env ifAbsent: [ '' ].
+	netldiNameOrPort := self envAtAny: #('GS_NETLDI_NAME_OR_PORT' 'GS_NETLDI') in: env ifAbsent: [ '' ].
+	params := GbsSessionParameters new.
+	params
+		gemStoneName: stone;
+		username: user;
+		password: pass;
+		gemService: service.
+	netldiHost isEmpty ifFalse: [ params netldiHostOrIp: netldiHost ].
+	netldiNameOrPort isEmpty ifFalse: [ params netldiNameOrPort: netldiNameOrPort ].
+	^ self configureHostCredentialsOn: params fromEnvironment: env
+]
+
+{ #category : 'private' }
+CoreGbsLiveSessionTestSupport class >> releaseIndependentSession: aSession [
+	| currentSession |
+	aSession ifNil: [ ^ self ].
+	currentSession := GbsSessionParameters currentSession.
+	[ self withInteractiveNotificationsAnsweredDo: [ aSession logout ] ] on: Error do: [ ].
+	GbsSessionParameters currentSession: currentSession.
+	^ self
+]
+
+{ #category : 'private' }
 CoreGbsLiveSessionTestSupport class >> releaseOwnedSession [
-	| params priorSession |
+	| session priorSession |
 	ownedParameters ifNil: [
 		lastUnavailableReason := nil.
 		^ self ].
 
-	params := ownedParameters.
+	session := ownedSession.
 	priorSession := previousCurrentSession.
 	ownedParameters := nil.
 	ownedSession := nil.
 	previousCurrentSession := nil.
 	lastUnavailableReason := nil.
 
-	[ self withInteractiveNotificationsAnsweredDo: [ params logout ] ] on: Error do: [ ].
+	[ self withInteractiveNotificationsAnsweredDo: [ session logout ] ] on: Error do: [ ].
 	GbsSessionParameters currentSession: priorSession
 ]
 

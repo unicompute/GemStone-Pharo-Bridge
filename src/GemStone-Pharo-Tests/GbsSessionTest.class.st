@@ -508,7 +508,7 @@ GbsSessionTest >> testLockQueriesAndSignalSendUseCompatibilityScripts [
 		script = (mockSession systemCallScriptForSelector: #lockKind: arguments: { #seat42 }) ifTrue: [ ^ #write ].
 		script = (mockSession systemCallScriptForSelector: #sessionLocks arguments: #()) ifTrue: [ ^ { #(r1 r2). #(w1). #() } ].
 		script = systemLocksScript ifTrue: [ ^ { (Association key: 11 value: { #(read1). #(write1). #() }) } ].
-		script = (mockSession systemCallScriptForSelector: #_sendSignal:toSess:withMessage: arguments: { 15. -42. 'hello' }) ifTrue: [ ^ true ].
+		script = 'System _sendSignal: 15 toSess: -42 withMessage: ''hello''' ifTrue: [ ^ true ].
 		nil ].
 
 	self assert: (mockSession lockOwners: #seat42) equals: #(11 12).

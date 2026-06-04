@@ -390,6 +390,7 @@ GbsClientClassConnector >> updateGSScript [
 
 { #category : 'class updating' }
 GbsClientClassConnector >> versionStatusForClientVersion: clientVersion serverVersion: serverVersion [
+	(clientVersion isNil and: [ serverVersion isNil ]) ifTrue: [ ^ #unversioned ].
 	(clientVersion isNil or: [ serverVersion isNil ]) ifTrue: [ ^ #unknown ].
 	^ clientVersion = serverVersion
 		ifTrue: [ #matched ]
@@ -408,7 +409,10 @@ GbsClientClassConnector >> verifyClassVersionsInSession: aSession [
 		ifTrue: [ [ aSession classMirrorOfNamed: serverName ] on: Error do: [ nil ] ]
 		ifFalse: [ nil ].
 	serverVersion := serverMirror ifNil: [ nil ] ifNotNil: [
-		[ serverMirror version ] on: Error do: [ nil ] ].
+		((serverMirror respondsTo: #numberOfVersions)
+			and: [ ([ serverMirror numberOfVersions ] on: Error do: [ 0 ]) = 0 ])
+				ifTrue: [ nil ]
+				ifFalse: [ [ serverMirror version ] on: Error do: [ nil ] ] ].
 	status := self
 		versionStatusForClientVersion: clientVersion
 		serverVersion: serverVersion.

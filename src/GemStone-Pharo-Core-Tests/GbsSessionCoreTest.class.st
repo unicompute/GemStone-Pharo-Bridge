@@ -2282,6 +2282,48 @@ GbsSessionCoreTest >> testDirtyStoreTraversalBufferResolvesUnmappedSymbolAssocia
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testDirtyStoreTraversalBufferUsesNativeScalarOopResolution [
+	| mockSession association dirtyBuffer reader symbolCalls stringCalls report |
+	mockSession := CoreMockGbsSession new.
+	association := Association key: #status value: 'ready'.
+	mockSession rememberMaterializedObject: association forOop: 9100.
+	symbolCalls := 0.
+	stringCalls := 0.
+	dirtyBuffer := GbsDirtyStoreTraversalBuffer
+		entries: { { 9100. association. #association } }
+		session: mockSession.
+	mockSession stubs
+		at: #supportsNativeScalarOopResolution put: true;
+		at: #apiGciNewSymbol put: [ :value |
+			symbolCalls := symbolCalls + 1.
+			self assert: value equals: 'status'.
+			123456 ];
+		at: #apiGciNewString put: [ :value |
+			stringCalls := stringCalls + 1.
+			self assert: value equals: 'ready'.
+			123464 ];
+		at: #returnRemoteCommandBody put: [ :body :literalBindings :oopBindings |
+			self fail ];
+		at: #apiGciGetClass put: [ :oop |
+			self assert: oop equals: 9100.
+			7100 ].
+	reader := GbsMaterializationTraversalBufferReader on: mockSession.
+
+	self assert: dirtyBuffer canProduceNativeTraversalBuffer.
+	dirtyBuffer
+		withNativeTraversalBufferOn: mockSession
+		do: [ :nativeBuffer |
+			report := reader reportAt: nativeBuffer offset: 9 ].
+
+	self assert: report valueOops equals: #(123456 123464).
+	self assert: symbolCalls equals: 1.
+	self assert: stringCalls equals: 1.
+	report := mockSession dirtyStoreTraversalReport.
+	self assert: (report at: #nativeScalarOopResolutionCount) equals: 2.
+	self assert: (report at: #scriptScalarOopFallbackCount) equals: 0
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testDirtyStoreTraversalBufferRejectsDictionaryWithUnmappedAssociations [
 	| mockSession dictionary dirtyBuffer |
 	mockSession := CoreMockGbsSession new.
@@ -7497,6 +7539,25 @@ GbsSessionCoreTest >> testResetAfterLogoutClearsConvertedLifecycleRegistriesWhen
 	self assert: (mockSession class notificationActionFor: mockSession) isNil.
 	self assert: (mockSession class sessionSignalActionFor: mockSession) isNil.
 	self assert: (mockSession class signaledAbortActionFor: mockSession) isNil
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testGciPollActivatesSessionIdBeforePolling [
+	| session interface activatedIds |
+	session := GbsSession new.
+	interface := CoreMockGbsSession new.
+	activatedIds := OrderedCollection new.
+	interface stubs
+		at: #apiGciSetSessionId put: [ :sessionId | activatedIds add: sessionId. 1 ];
+		at: #apiGciPollForSignal put: [ 0 ].
+	session
+		serverInterface: interface;
+		sessionId: 77;
+		sessionOop: 77;
+		isLoggedIn: true.
+
+	self assert: session gciPollForSignal equals: 0.
+	self assert: activatedIds asArray equals: #(77)
 ]
 
 { #category : 'tests' }

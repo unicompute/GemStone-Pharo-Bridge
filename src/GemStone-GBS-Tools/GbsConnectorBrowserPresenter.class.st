@@ -412,6 +412,33 @@ GbsConnectorBrowserPresenter >> connectorServerNameFor: aConnector [
 	^ ''
 ]
 
+{ #category : 'reports' }
+GbsConnectorBrowserPresenter >> connectorDiagnosticsReportText [
+	| selectedSession |
+	selectedSession := self selectedConnectorSession.
+	(selectedSession notNil and: [ selectedSession respondsTo: #connectorDiagnosticsReportText ]) ifTrue: [
+		^ selectedSession connectorDiagnosticsReportText ].
+	^ 'Connector diagnostics are unavailable for the selected session.'
+]
+
+{ #category : 'reports' }
+GbsConnectorBrowserPresenter >> connectorDiffPreviewReportText [
+	| selectedSession |
+	selectedSession := self selectedConnectorSession.
+	(selectedSession notNil and: [ selectedSession respondsTo: #connectorDiffPreviewReportText ]) ifTrue: [
+		^ selectedSession connectorDiffPreviewReportText ].
+	^ 'Connector diff preview is unavailable for the selected session.'
+]
+
+{ #category : 'reports' }
+GbsConnectorBrowserPresenter >> connectorLoginReportArtifactText [
+	| selectedSession |
+	selectedSession := self selectedConnectorSession.
+	(selectedSession notNil and: [ selectedSession respondsTo: #connectorLoginReportArtifactText ]) ifTrue: [
+		^ selectedSession connectorLoginReportArtifactText ].
+	^ 'Connector login report is unavailable for the selected session.'
+]
+
 { #category : 'private' }
 GbsConnectorBrowserPresenter >> connectorSessionKey [
 	| user stone |
@@ -862,6 +889,12 @@ GbsConnectorBrowserPresenter >> menuConnector [
 		addItem: [ :item |
 			item name: 'Clear Connector Class Override'; action: [ self clearSelectedConnectorClassMapping ].
 			(item respondsTo: #enabled:) ifTrue: [ item enabled: self canSetConnectorClassMapping ] ];
+		addItem: [ :item |
+			item name: 'Diagnostics Report'; action: [ self showConnectorDiagnosticsReport ] ];
+		addItem: [ :item |
+			item name: 'Diff Preview'; action: [ self showConnectorDiffPreviewReport ] ];
+		addItem: [ :item |
+			item name: 'Login Report'; action: [ self showConnectorLoginReport ] ];
 		yourself
 ]
 
@@ -1241,6 +1274,21 @@ GbsConnectorBrowserPresenter >> setConnectionStateForSelectedConnector: stateStr
 			connectedBoolean.
 			self selectedConnectorSessionKey }
 		ifUnavailable: [ nil ]
+]
+
+{ #category : 'reports' }
+GbsConnectorBrowserPresenter >> showConnectorDiagnosticsReport [
+	^ self inform: self connectorDiagnosticsReportText
+]
+
+{ #category : 'reports' }
+GbsConnectorBrowserPresenter >> showConnectorDiffPreviewReport [
+	^ self inform: self connectorDiffPreviewReportText
+]
+
+{ #category : 'reports' }
+GbsConnectorBrowserPresenter >> showConnectorLoginReport [
+	^ self inform: self connectorLoginReportArtifactText
 ]
 
 { #category : 'actions' }

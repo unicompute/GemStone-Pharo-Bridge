@@ -105,6 +105,14 @@ CoreMockGbsSession >> apiGciGetFreeOops: oopCount into: oopBuffer [
 ]
 
 { #category : 'accessing' }
+CoreMockGbsSession >> apiGciGetSessionId [
+	| block |
+	block := self stubs at: #apiGciGetSessionId ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block value ].
+	^ self stubs at: #gciSessionId ifAbsent: [ 1 ]
+]
+
+{ #category : 'accessing' }
 CoreMockGbsSession >> apiGciGetClass: anOop [
 	| block |
 	block := self stubs at: #apiGciGetClass ifAbsent: [ nil ].
@@ -121,11 +129,43 @@ CoreMockGbsSession >> apiGciMoreTraversal: traversalBuffer [
 ]
 
 { #category : 'accessing' }
+CoreMockGbsSession >> apiGciNewString: aString [
+	| block |
+	block := self stubs at: #apiGciNewString ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: aString ].
+	self error: 'No apiGciNewString stub configured.'
+]
+
+{ #category : 'accessing' }
+CoreMockGbsSession >> apiGciNewSymbol: aString [
+	| block |
+	block := self stubs at: #apiGciNewSymbol ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: aString ].
+	self error: 'No apiGciNewSymbol stub configured.'
+]
+
+{ #category : 'accessing' }
+CoreMockGbsSession >> apiGciPollForSignal [
+	| block |
+	block := self stubs at: #apiGciPollForSignal ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block value ].
+	^ self stubs at: #gciPollForSignal ifAbsent: [ 0 ]
+]
+
+{ #category : 'accessing' }
 CoreMockGbsSession >> apiGciReleaseOops: oopBuffer count: oopCount [
 	| block |
 	block := self stubs at: #apiGciReleaseOops ifAbsent: [ nil ].
 	block ifNotNil: [ ^ block cull: oopBuffer cull: oopCount ].
 	^ true
+]
+
+{ #category : 'accessing' }
+CoreMockGbsSession >> apiGciSetSessionId: sessionId [
+	| block |
+	block := self stubs at: #apiGciSetSessionId ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: sessionId ].
+	^ 1
 ]
 
 { #category : 'dirty store traversal' }
@@ -553,6 +593,11 @@ CoreMockGbsSession >> supportsNativeStoreTraversalReportShape [
 ]
 
 { #category : 'dirty store traversal' }
+CoreMockGbsSession >> supportsNativeScalarOopResolution [
+	^ self stubs at: #supportsNativeScalarOopResolution ifAbsent: [ false ]
+]
+
+{ #category : 'dirty store traversal' }
 CoreMockGbsSession >> nativeStoreTraversalReportShape [
 	^ Dictionary new
 		at: #bufferHeaderBytes put: 8;
@@ -586,8 +631,8 @@ CoreMockGbsSession >> nativeStoreTraversalCapabilityReport [
 		at: #storeTraversalReportShape put: self nativeStoreTraversalReportShape;
 		at: #materializationTraversalReportShapeSupported put: self supportsMaterializationTraversalReportShape;
 		at: #dictionaryAssociationMetadataTraversalSupported put: self supportsMaterializationTraversalBufferTransport;
-		at: #scalarOopNativeResolutionSupported put: false;
-		at: #scalarOopCommandFallbackRequired put: true;
+		at: #scalarOopNativeResolutionSupported put: self supportsNativeScalarOopResolution;
+		at: #scalarOopCommandFallbackRequired put: self supportsNativeScalarOopResolution not;
 		at: #dirtyStoreTraversalFunctionsSupported put: true;
 		at: #freeOopAllocationSupported put: self supportsFreeOopAllocationTransport;
 		at: #dirtyStoreTraversalBufferTransportSupported put: self supportsDirtyStoreTraversalBufferTransport;

@@ -49,34 +49,58 @@
       session := supportClass ensureSharedSession.
       (supportClass sessionIsUsable: session) ifFalse: [
         Error signal: supportClass unavailableReason ].
-      Smalltalk globals
-        at: #GbsReplicationLiveNativeCapabilityMetrics
-        put: (Dictionary new
-          at: #dirtyStoreTraversalTransportSupported
-            put: ((session serverInterface nativeStoreTraversalCapabilityReport
-              at: #dirtyStoreTraversalBufferTransportSupported
-              ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
-          at: #dirtyStoreReportShapeSupported
-            put: ((session serverInterface nativeStoreTraversalCapabilityReport
-              at: #storeTraversalReportShapeSupported
-              ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
-          at: #dirtyStoreFunctionsSupported
-            put: ((session serverInterface nativeStoreTraversalCapabilityReport
-              at: #dirtyStoreTraversalFunctionsSupported
-              ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
-          at: #dirtyStoreOopWidth
-            put: (session serverInterface nativeStoreTraversalCapabilityReport at: #oopWidth ifAbsent: [ 0 ]);
-          at: #materializationTraversalTransportSupported
-            put: ((session nativeMaterializationTraversalCapabilityReport
-              at: #materializationTraversalBufferTransportSupported
-              ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
-          at: #materializationReportShapeSupported
-            put: ((session nativeMaterializationTraversalCapabilityReport
-              at: #materializationTraversalReportShapeSupported
-              ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
-          at: #materializationOopWidth
-            put: (session nativeMaterializationTraversalCapabilityReport at: #oopWidth ifAbsent: [ 0 ]);
-          yourself).
+      [
+        | nativeStoreCapabilityReport nativeMaterializationCapabilityReport |
+        nativeStoreCapabilityReport := session serverInterface nativeStoreTraversalCapabilityReport.
+        nativeMaterializationCapabilityReport := session nativeMaterializationTraversalCapabilityReport.
+        Smalltalk globals
+          at: #GbsReplicationLiveNativeCapabilityMetrics
+          put: (Dictionary new
+            at: #dirtyStoreTraversalTransportSupported
+              put: ((nativeStoreCapabilityReport
+                at: #dirtyStoreTraversalBufferTransportSupported
+                ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
+            at: #dirtyStoreReportShapeSupported
+              put: ((nativeStoreCapabilityReport
+                at: #storeTraversalReportShapeSupported
+                ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
+            at: #dirtyStoreFunctionsSupported
+              put: ((nativeStoreCapabilityReport
+                at: #dirtyStoreTraversalFunctionsSupported
+                ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
+            at: #dirtyStoreOopWidth
+              put: (nativeStoreCapabilityReport at: #oopWidth ifAbsent: [ 0 ]);
+            at: #dirtyStoreStructLayoutSupported
+              put: ((nativeStoreCapabilityReport
+                at: #storeTraversalStructLayoutSupported
+                ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
+            at: #dictionaryAssociationMetadataTraversalSupported
+              put: ((nativeStoreCapabilityReport
+                at: #dictionaryAssociationMetadataTraversalSupported
+                ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
+            at: #scalarOopCommandFallbackRequired
+              put: ((nativeStoreCapabilityReport
+                at: #scalarOopCommandFallbackRequired
+                ifAbsent: [ true ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
+            at: #materializationTraversalTransportSupported
+              put: ((nativeMaterializationCapabilityReport
+                at: #materializationTraversalBufferTransportSupported
+                ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
+            at: #materializationReportShapeSupported
+              put: ((nativeMaterializationCapabilityReport
+                at: #materializationTraversalReportShapeSupported
+                ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
+            at: #materializationOopWidth
+              put: (nativeMaterializationCapabilityReport at: #oopWidth ifAbsent: [ 0 ]);
+            at: #materializationMoreTraversalSupported
+              put: ((nativeMaterializationCapabilityReport
+                at: #moreTraversalSupported
+                ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
+            at: #materializationClampedTraversalSupported
+              put: ((nativeMaterializationCapabilityReport
+                at: #clampedTraversalSupported
+                ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
+            yourself) ] value.
       cleanupFixture := [
         session ifNotNil: [
           callbackBehaviorName ifNotNil: [
@@ -218,10 +242,121 @@ true'
             at: #connectorClassVersionReportCount put: 0;
             at: #connectorClassVersionMismatchCount put: 0;
             at: #connectorClassVersionUnknownCount put: 0;
+            at: #connectorClassVersionUnversionedCount put: 0;
             at: #connectorClassVersionErrorCount put: 0;
+            at: #sessionNotificationFixtures put: 0;
+            at: #sessionSignalFixtures put: 0;
+            at: #serverOriginatedAsyncEventFixtures put: 0;
+            at: #asyncAbortLifecycleFixtures put: 0;
+            at: #methodChangeInvalidationInstalled put: 0;
+            at: #connectorDiagnosticsInvalidCount put: 0;
+            at: #connectorDiffPreviewRows put: 0;
+            at: #loginReportArtifactCount put: 0;
             yourself).
 
         manager := session replicatorManager.
+
+        [
+          | eventControllerClass interSessionSignalClass eventController notificationHandled sessionSignalHandled asyncAbortHandled asyncSenderSession receiverSerial serverOriginatedAsyncCount pollUntil |
+          phase := 'async-session-lifecycle-validation'.
+          eventControllerClass := Smalltalk at: #GbsSessionEventController ifAbsent: [ nil ].
+          eventControllerClass ifNil: [
+            Error signal: 'Missing session event controller class.' ].
+          interSessionSignalClass := Smalltalk
+            at: #InterSessionSignal
+            ifAbsent: [ Error signal: 'Missing inter-session signal class.' ].
+          notificationHandled := false.
+          sessionSignalHandled := false.
+          asyncAbortHandled := false.
+          serverOriginatedAsyncCount := 0.
+          eventController := eventControllerClass forSession: session.
+          eventController
+            onEvent: #notifySet
+            do: [ :payload | notificationHandled := payload = #migrationDomainNotifySet ].
+          eventController
+            onEvent: #gemSignal
+            do: [ :payload | sessionSignalHandled := payload = 7201 ].
+          eventController
+            handleEvent: #notifySet
+            payload: #migrationDomainNotifySet
+            default: [ Error signal: 'Notify-set event handler was not installed.' ].
+          eventController
+            handleEvent: #gemSignal
+            payload: 7201
+            default: [ Error signal: 'Gem-to-Gem signal handler was not installed.' ].
+          eventController asyncAbortStartAction: [ :activeSession |
+            asyncAbortHandled := activeSession == session ].
+          eventController handleAsyncAbortDuring: [ true ].
+          notificationHandled ifFalse: [
+            Error signal: 'Async notify-set validation did not invoke the event handler.' ].
+          sessionSignalHandled ifFalse: [
+            Error signal: 'Gem-to-Gem signal validation did not invoke the event handler.' ].
+          asyncAbortHandled ifFalse: [
+            Error signal: 'Async abort validation did not invoke the abort handler.' ].
+          pollUntil := [ :condition :failureMessage |
+            | attempts |
+            attempts := 0.
+            [ condition value ] whileFalse: [
+              attempts := attempts + 1.
+              attempts > 40 ifTrue: [ Error signal: failureMessage ].
+              [ eventController pollSignalsOnceUnlocked ]
+                on: interSessionSignalClass
+                do: [ :ex | ex return: nil ].
+              [ session checkForError ]
+                on: interSessionSignalClass
+                do: [ :ex | ex return: nil ].
+              (Delay forMilliseconds: 100) wait ] ].
+          (supportClass respondsTo: #newIndependentSession) ifFalse: [
+            Error signal: 'Live session support does not provide a second-session fixture.' ].
+          asyncSenderSession := supportClass newIndependentSession.
+          (supportClass sessionIsUsable: asyncSenderSession) ifFalse: [
+            Error signal: 'Could not create a second live GemStone session for server-originated async validation.' ].
+          [
+            [ session abortTransaction ] on: Error do: [ ].
+            [ asyncSenderSession abortTransaction ] on: Error do: [ ].
+            phase := 'server-originated-gem-signal-validation'.
+            sessionSignalHandled := false.
+            receiverSerial := session evaluate: 'GsCurrentSession currentSession serialNumber'.
+            asyncSenderSession
+              sendSignal: 7201
+              to: receiverSerial
+              withMessage: 'GBS replication live validation'.
+            pollUntil
+              value: [
+                sessionSignalHandled ifTrue: [ true ] ifFalse: [ | signal signalNumber |
+                  signal := [ session signalFromGemStoneSession ] on: Error do: [ nil ].
+                  signal ifNil: [
+                    [ eventController pollSignalsOnceUnlocked ]
+                      on: interSessionSignalClass
+                      do: [ :ex | ex return: nil ].
+                    signal := [ session signalFromGemStoneSession ] on: Error do: [ nil ] ].
+                  signal
+                    ifNil: [ false ]
+                    ifNotNil: [
+                      signalNumber := [
+                        (signal respondsTo: #at:)
+                          ifTrue: [ signal at: 2 ]
+                          ifFalse: [ 0 ] ]
+                        on: Error
+                        do: [ 0 ].
+                      signalNumber = 7201 ifFalse: [ false ] ifTrue: [
+                        eventController
+                          handleEvent: #gemSignal
+                          payload: signalNumber
+                          default: [ Error signal: 'Server-originated Gem-to-Gem handler was not installed.' ].
+                        serverOriginatedAsyncCount := serverOriginatedAsyncCount + 1.
+                        true ] ] ] ]
+              value: 'Server-originated Gem-to-Gem validation did not receive the expected signal payload.' ]
+            ensure: [
+              [ supportClass releaseIndependentSession: asyncSenderSession ] on: Error do: [ ] ].
+          Smalltalk globals
+            at: #GbsReplicationLiveStrictParityMetrics
+            put: ((Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
+              at: #sessionNotificationFixtures put: 1;
+              at: #sessionSignalFixtures put: 1;
+              at: #serverOriginatedAsyncEventFixtures put: serverOriginatedAsyncCount;
+              at: #asyncAbortLifecycleFixtures put: 1;
+              yourself) ] value.
 
         phase := 'migration-domain-mapped-lifecycle-commit'.
         mappedDomainFixtureClass := Smalltalk
@@ -1227,6 +1362,8 @@ status'
           put: (connectorLifecycleReport at: #classVersionMismatchCount ifAbsent: [ 0 ]);
           at: #connectorClassVersionUnknownCount
           put: (connectorLifecycleReport at: #classVersionUnknownCount ifAbsent: [ 0 ]);
+          at: #connectorClassVersionUnversionedCount
+          put: (connectorLifecycleReport at: #classVersionUnversionedCount ifAbsent: [ 0 ]);
           at: #connectorClassVersionErrorCount
           put: (connectorLifecycleReport at: #classVersionErrorCount ifAbsent: [ 0 ]).
         (metricValue
@@ -1237,6 +1374,61 @@ status'
           value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
           value: #connectorClassVersionErrorCount) = 0 ifFalse: [
           Error signal: 'Connector lifecycle report contained class-version errors after class-version refresh.' ].
+
+        [
+          | replicatorManagerClass connectorDiagnosticsReport connectorDiffPreviewReport loginReportArtifact methodInvalidationHookInstalled |
+          phase := 'production-connector-tooling-validation'.
+          replicatorManagerClass := Smalltalk at: #GbxReplicatorManager ifAbsent: [ nil ].
+          replicatorManagerClass ifNil: [
+            Error signal: 'Missing replicator manager class.' ].
+          methodInvalidationHookInstalled := [
+            replicatorManagerClass installAutomaticMethodChangeInvalidation
+              ifTrue: [ 1 ]
+              ifFalse: [ 0 ] ]
+            on: Error
+            do: [ 0 ].
+          methodInvalidationHookInstalled = 1 ifFalse: [
+            Error signal: 'Automatic connector method-change invalidation hook was not installed.' ].
+          connectorDiagnosticsReport := manager connectorDiagnosticsReport.
+          connectorDiffPreviewReport := manager connectorDiffPreviewReport.
+          loginReportArtifact := session recordConnectorLoginReportArtifact.
+          (connectorDiagnosticsReport at: #rows ifAbsent: [ #() ]) do: [ :diagnosticRow |
+            Transcript
+              show: 'REPLICATION_LIVE_CONNECTOR_DIAGNOSTIC_ROW',
+                ' client=', (diagnosticRow at: #client ifAbsent: [ '' ]) asString,
+                ' server=', (diagnosticRow at: #server ifAbsent: [ '' ]) asString,
+                ' connected=', (diagnosticRow at: #connected ifAbsent: [ false ]) asString,
+                ' status=', (diagnosticRow at: #status ifAbsent: [ #unknown ]) asString,
+                ' version=', (diagnosticRow at: #classVersionStatus ifAbsent: [ #unknown ]) asString,
+                ' reasons=', (manager connectorReportValueString: (diagnosticRow at: #invalidReasons ifAbsent: [ #() ])),
+                ' warnings=', (manager connectorReportValueString: (diagnosticRow at: #warnings ifAbsent: [ #() ]));
+              cr ].
+          (connectorLifecycleReport at: #classVersionReports ifAbsent: [ #() ]) do: [ :versionRow |
+            Transcript
+              show: 'REPLICATION_LIVE_CONNECTOR_CLASS_VERSION_ROW',
+                ' client=', (versionRow at: #client ifAbsent: [ '' ]) asString,
+                ' server=', (versionRow at: #server ifAbsent: [ '' ]) asString,
+                ' status=', (versionRow at: #versionStatus ifAbsent: [ #unknown ]) asString,
+                ' client_version=', (versionRow at: #clientVersion ifAbsent: [ nil ]) asString,
+                ' server_version=', (versionRow at: #serverVersion ifAbsent: [ nil ]) asString;
+              cr ].
+          (connectorDiagnosticsReport at: #rowCount ifAbsent: [ 0 ]) <= 0 ifTrue: [
+            Error signal: 'Connector diagnostics report did not include installed connector rows.' ].
+          (connectorDiffPreviewReport at: #rowCount ifAbsent: [ 0 ]) <= 0 ifTrue: [
+            Error signal: 'Connector diff preview did not include installed connector rows.' ].
+          ((loginReportArtifact includesKey: #connectorDiagnostics)
+            and: [ (loginReportArtifact includesKey: #connectorDiffPreview)
+            and: [ (loginReportArtifact includesKey: #nativeStoreTraversalCapabilityReport)
+            and: [ loginReportArtifact includesKey: #nativeMaterializationTraversalCapabilityReport ] ] ]) ifFalse: [
+              Error signal: 'Connector login report artifact was missing diagnostics or native capability sections.' ].
+          Smalltalk globals
+            at: #GbsReplicationLiveStrictParityMetrics
+            put: ((Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
+              at: #methodChangeInvalidationInstalled put: methodInvalidationHookInstalled;
+              at: #connectorDiagnosticsInvalidCount put: (connectorDiagnosticsReport at: #invalidCount ifAbsent: [ 0 ]);
+              at: #connectorDiffPreviewRows put: (connectorDiffPreviewReport at: #rowCount ifAbsent: [ 0 ]);
+              at: #loginReportArtifactCount put: 1;
+              yourself) ] value.
 
         phase := 'dirty-store-fixture'.
         dirtyRootOop := session
@@ -1303,6 +1495,7 @@ root'
         policy storeTraversalTransport: 'binaryRequired'.
         previousProfile ifNotNil: [ session fetchProfile: previousProfile ].
         (dirtyRoot at: 1) at: 2 put: 42.
+        (dirtyRoot at: 1) at: 3 put: 'nativeScalarValue'.
         (dirtyRoot at: 2) value: 77.
         (dirtyRoot at: 3) add: 30.
         ((dirtyRoot at: 4)
@@ -1332,6 +1525,12 @@ root'
         semanticDictionaryEntries := metricValue value: dirtyStoreReport value: #semanticDictionaryEntryCount.
         semanticSetEntries := metricValue value: dirtyStoreReport value: #semanticSetEntryCount.
         semanticBagEntries := metricValue value: dirtyStoreReport value: #semanticBagEntryCount.
+        Smalltalk globals
+          at: #GbsReplicationLiveDirtyStoreScalarMetrics
+          put: (Dictionary new
+            at: #scalarOopCommandFallbackCount put: (metricValue value: dirtyStoreReport value: #scriptScalarOopFallbackCount);
+            at: #nativeScalarOopResolutions put: (metricValue value: dirtyStoreReport value: #nativeScalarOopResolutionCount);
+            yourself).
         flushed size < 6 ifTrue: [
           Error signal: 'Dirty-store traversal flushed fewer objects than expected.' ].
         nativeDirtyStoreFlushes <= 0 ifTrue: [
@@ -1344,6 +1543,14 @@ root'
           and: [ semanticSetEntries = 0
           and: [ semanticBagEntries = 0 ] ]) ifFalse: [
           Error signal: 'Dirty-store traversal unexpectedly fell back for Dictionary, Set, or Bag entries.' ].
+        (metricValue
+          value: (Smalltalk globals at: #GbsReplicationLiveDirtyStoreScalarMetrics ifAbsent: [ Dictionary new ])
+          value: #nativeScalarOopResolutions) <= 0 ifTrue: [
+          Error signal: 'Dirty-store traversal did not use native scalar OOP resolution.' ].
+        (metricValue
+          value: (Smalltalk globals at: #GbsReplicationLiveDirtyStoreScalarMetrics ifAbsent: [ Dictionary new ])
+          value: #scalarOopCommandFallbackCount) = 0 ifFalse: [
+          Error signal: 'Dirty-store traversal unexpectedly used script scalar OOP fallback.' ].
         exportAfter := session objectSpace pendingExportSetReleaseOopCount.
         exportAfter = 0 ifFalse: [
           Error signal: 'Export-set release queues were not acknowledged after native dirty-store flush.' ].
@@ -1359,6 +1566,8 @@ root'
 	root := object.
 	status := 7.
 	(((root at: 1) at: 2) = 42) ifFalse: [ status := 11 ].
+	(status = 7 and: [ ((root at: 1) at: 3) = ''nativeScalarValue'' ]) ifFalse: [
+	  status = 7 ifTrue: [ status := 17 ] ].
 	(status = 7 and: [ (root at: 2) value = 77 ]) ifFalse: [
 	  status = 7 ifTrue: [ status := 12 ] ].
 	(status = 7 and: [ (root at: 3) asArray = #(10 20 30) ]) ifFalse: [
@@ -1569,14 +1778,28 @@ root'
             ' connector_class_version_reports=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionReportCount) asString,
             ' connector_class_version_mismatches=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionMismatchCount) asString,
             ' connector_class_version_unknowns=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionUnknownCount) asString,
+            ' connector_class_version_unversioned=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionUnversionedCount) asString,
             ' connector_class_version_errors=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionErrorCount) asString,
+            ' session_notification_fixtures=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #sessionNotificationFixtures) asString,
+            ' session_signal_fixtures=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #sessionSignalFixtures) asString,
+            ' server_originated_async_event_fixtures=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #serverOriginatedAsyncEventFixtures) asString,
+            ' async_abort_lifecycle_fixtures=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #asyncAbortLifecycleFixtures) asString,
+            ' method_change_invalidation_installed=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #methodChangeInvalidationInstalled) asString,
+            ' connector_diagnostics_invalid_count=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorDiagnosticsInvalidCount) asString,
+            ' connector_diff_preview_rows=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorDiffPreviewRows) asString,
+            ' login_report_artifact_count=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #loginReportArtifactCount) asString,
             ' dirty_store_transport_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreTraversalTransportSupported) asString,
             ' dirty_store_report_shape_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreReportShapeSupported) asString,
             ' dirty_store_functions_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreFunctionsSupported) asString,
             ' dirty_store_oop_width=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreOopWidth) asString,
+            ' dirty_store_struct_layout_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreStructLayoutSupported) asString,
+            ' dictionary_association_metadata_traversal_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dictionaryAssociationMetadataTraversalSupported) asString,
+            ' scalar_oop_command_fallback_required=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #scalarOopCommandFallbackRequired) asString,
             ' materialization_traversal_transport_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationTraversalTransportSupported) asString,
             ' materialization_report_shape_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationReportShapeSupported) asString,
             ' materialization_oop_width=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationOopWidth) asString,
+            ' materialization_more_traversal_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationMoreTraversalSupported) asString,
+            ' materialization_clamped_traversal_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationClampedTraversalSupported) asString,
             ' domain_dirty_store_ms=', domainDirtyStoreMs asString,
             ' domain_dirty_objects_flushed=', domainFlushed size asString,
             ' domain_native_dirty_store_flushes=', domainNativeDirtyStoreFlushes asString,
@@ -1593,6 +1816,8 @@ root'
             ' semantic_dictionary_entries=', semanticDictionaryEntries asString,
             ' semantic_set_entries=', semanticSetEntries asString,
             ' semantic_bag_entries=', semanticBagEntries asString,
+            ' scalar_oop_command_fallback_count=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveDirtyStoreScalarMetrics ifAbsent: [ Dictionary new ]) value: #scalarOopCommandFallbackCount) asString,
+            ' native_scalar_oop_resolutions=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveDirtyStoreScalarMetrics ifAbsent: [ Dictionary new ]) value: #nativeScalarOopResolutions) asString,
             ' dirty_objects_flushed=', flushed size asString,
             ' business_dirty_objects_flushed=', businessFlushed size asString,
             ' business_write_fixture_size=', businessFixtureSize asString,
@@ -1632,14 +1857,28 @@ root'
           ' connector_class_version_reports=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionReportCount) asString,
           ' connector_class_version_mismatches=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionMismatchCount) asString,
           ' connector_class_version_unknowns=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionUnknownCount) asString,
+          ' connector_class_version_unversioned=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionUnversionedCount) asString,
           ' connector_class_version_errors=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionErrorCount) asString,
+          ' session_notification_fixtures=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #sessionNotificationFixtures) asString,
+          ' session_signal_fixtures=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #sessionSignalFixtures) asString,
+          ' server_originated_async_event_fixtures=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #serverOriginatedAsyncEventFixtures) asString,
+          ' async_abort_lifecycle_fixtures=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #asyncAbortLifecycleFixtures) asString,
+          ' method_change_invalidation_installed=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #methodChangeInvalidationInstalled) asString,
+          ' connector_diagnostics_invalid_count=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorDiagnosticsInvalidCount) asString,
+          ' connector_diff_preview_rows=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorDiffPreviewRows) asString,
+          ' login_report_artifact_count=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #loginReportArtifactCount) asString,
           ' dirty_store_transport_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreTraversalTransportSupported) asString,
           ' dirty_store_report_shape_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreReportShapeSupported) asString,
           ' dirty_store_functions_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreFunctionsSupported) asString,
           ' dirty_store_oop_width=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreOopWidth) asString,
+          ' dirty_store_struct_layout_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dirtyStoreStructLayoutSupported) asString,
+          ' dictionary_association_metadata_traversal_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #dictionaryAssociationMetadataTraversalSupported) asString,
+          ' scalar_oop_command_fallback_required=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #scalarOopCommandFallbackRequired) asString,
           ' materialization_traversal_transport_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationTraversalTransportSupported) asString,
           ' materialization_report_shape_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationReportShapeSupported) asString,
           ' materialization_oop_width=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationOopWidth) asString,
+          ' materialization_more_traversal_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationMoreTraversalSupported) asString,
+          ' materialization_clamped_traversal_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationClampedTraversalSupported) asString,
           ' domain_dirty_store_ms=', (domainDirtyStoreMs ifNil: [ 0 ]) asString,
           ' domain_dirty_objects_flushed=', (domainDirtyObjectsFlushed ifNil: [ 0 ]) asString,
           ' domain_native_dirty_store_flushes=', (domainNativeDirtyStoreFlushes ifNil: [ 0 ]) asString,
@@ -1656,6 +1895,8 @@ root'
           ' semantic_dictionary_entries=', (semanticDictionaryEntries ifNil: [ 0 ]) asString,
           ' semantic_set_entries=', (semanticSetEntries ifNil: [ 0 ]) asString,
           ' semantic_bag_entries=', (semanticBagEntries ifNil: [ 0 ]) asString,
+          ' scalar_oop_command_fallback_count=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveDirtyStoreScalarMetrics ifAbsent: [ Dictionary new ]) value: #scalarOopCommandFallbackCount) asString,
+          ' native_scalar_oop_resolutions=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveDirtyStoreScalarMetrics ifAbsent: [ Dictionary new ]) value: #nativeScalarOopResolutions) asString,
           ' dirty_objects_flushed=', (dirtyObjectsFlushed ifNil: [ 0 ]) asString,
           ' business_dirty_objects_flushed=', (businessDirtyObjectsFlushed ifNil: [ 0 ]) asString,
           ' business_write_fixture_size=', (businessFixtureSize ifNil: [ 0 ]) asString,

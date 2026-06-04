@@ -32,14 +32,28 @@ DOMAIN_CALLBACK_TRAVERSAL_FIXTURES_MIN="${GBS_REPLICATION_LIVE_DOMAIN_CALLBACK_T
 DOMAIN_FAULT_LIFECYCLE_FIXTURES_MIN="${GBS_REPLICATION_LIVE_DOMAIN_FAULT_LIFECYCLE_FIXTURES_MIN:-${REPLICATION_LIVE_DOMAIN_FAULT_LIFECYCLE_FIXTURES_MIN:-1}}"
 DOMAIN_MAPPED_LIFECYCLE_FIXTURES_MIN="${GBS_REPLICATION_LIVE_DOMAIN_MAPPED_LIFECYCLE_FIXTURES_MIN:-${REPLICATION_LIVE_DOMAIN_MAPPED_LIFECYCLE_FIXTURES_MIN:-3}}"
 CONNECTOR_CLASS_VERSION_REPORTS_MIN="${GBS_REPLICATION_LIVE_CONNECTOR_CLASS_VERSION_REPORTS_MIN:-${REPLICATION_LIVE_CONNECTOR_CLASS_VERSION_REPORTS_MIN:-1}}"
+CONNECTOR_CLASS_VERSION_UNKNOWNS_MAX="${GBS_REPLICATION_LIVE_CONNECTOR_CLASS_VERSION_UNKNOWNS_MAX:-${REPLICATION_LIVE_CONNECTOR_CLASS_VERSION_UNKNOWNS_MAX:-0}}"
 CONNECTOR_CLASS_VERSION_ERRORS_MAX="${GBS_REPLICATION_LIVE_CONNECTOR_CLASS_VERSION_ERRORS_MAX:-${REPLICATION_LIVE_CONNECTOR_CLASS_VERSION_ERRORS_MAX:-0}}"
+SESSION_NOTIFICATION_FIXTURES_MIN="${GBS_REPLICATION_LIVE_SESSION_NOTIFICATION_FIXTURES_MIN:-${REPLICATION_LIVE_SESSION_NOTIFICATION_FIXTURES_MIN:-1}}"
+SESSION_SIGNAL_FIXTURES_MIN="${GBS_REPLICATION_LIVE_SESSION_SIGNAL_FIXTURES_MIN:-${REPLICATION_LIVE_SESSION_SIGNAL_FIXTURES_MIN:-1}}"
+SERVER_ORIGINATED_ASYNC_EVENT_FIXTURES_MIN="${GBS_REPLICATION_LIVE_SERVER_ORIGINATED_ASYNC_EVENT_FIXTURES_MIN:-${REPLICATION_LIVE_SERVER_ORIGINATED_ASYNC_EVENT_FIXTURES_MIN:-1}}"
+ASYNC_ABORT_LIFECYCLE_FIXTURES_MIN="${GBS_REPLICATION_LIVE_ASYNC_ABORT_LIFECYCLE_FIXTURES_MIN:-${REPLICATION_LIVE_ASYNC_ABORT_LIFECYCLE_FIXTURES_MIN:-1}}"
+METHOD_CHANGE_INVALIDATION_INSTALLED_MIN="${GBS_REPLICATION_LIVE_METHOD_CHANGE_INVALIDATION_INSTALLED_MIN:-${REPLICATION_LIVE_METHOD_CHANGE_INVALIDATION_INSTALLED_MIN:-1}}"
+CONNECTOR_DIAGNOSTICS_INVALID_MAX="${GBS_REPLICATION_LIVE_CONNECTOR_DIAGNOSTICS_INVALID_MAX:-${REPLICATION_LIVE_CONNECTOR_DIAGNOSTICS_INVALID_MAX:-999}}"
+CONNECTOR_DIFF_PREVIEW_ROWS_MIN="${GBS_REPLICATION_LIVE_CONNECTOR_DIFF_PREVIEW_ROWS_MIN:-${REPLICATION_LIVE_CONNECTOR_DIFF_PREVIEW_ROWS_MIN:-1}}"
+LOGIN_REPORT_ARTIFACT_COUNT_MIN="${GBS_REPLICATION_LIVE_LOGIN_REPORT_ARTIFACT_COUNT_MIN:-${REPLICATION_LIVE_LOGIN_REPORT_ARTIFACT_COUNT_MIN:-1}}"
 DIRTY_STORE_TRANSPORT_SUPPORTED_MIN="${GBS_REPLICATION_LIVE_DIRTY_STORE_TRANSPORT_SUPPORTED_MIN:-${REPLICATION_LIVE_DIRTY_STORE_TRANSPORT_SUPPORTED_MIN:-1}}"
 DIRTY_STORE_REPORT_SHAPE_SUPPORTED_MIN="${GBS_REPLICATION_LIVE_DIRTY_STORE_REPORT_SHAPE_SUPPORTED_MIN:-${REPLICATION_LIVE_DIRTY_STORE_REPORT_SHAPE_SUPPORTED_MIN:-1}}"
 DIRTY_STORE_FUNCTIONS_SUPPORTED_MIN="${GBS_REPLICATION_LIVE_DIRTY_STORE_FUNCTIONS_SUPPORTED_MIN:-${REPLICATION_LIVE_DIRTY_STORE_FUNCTIONS_SUPPORTED_MIN:-1}}"
 DIRTY_STORE_OOP_WIDTH_MIN="${GBS_REPLICATION_LIVE_DIRTY_STORE_OOP_WIDTH_MIN:-${REPLICATION_LIVE_DIRTY_STORE_OOP_WIDTH_MIN:-64}}"
+DIRTY_STORE_STRUCT_LAYOUT_SUPPORTED_MIN="${GBS_REPLICATION_LIVE_DIRTY_STORE_STRUCT_LAYOUT_SUPPORTED_MIN:-${REPLICATION_LIVE_DIRTY_STORE_STRUCT_LAYOUT_SUPPORTED_MIN:-1}}"
+DICTIONARY_ASSOCIATION_METADATA_TRAVERSAL_SUPPORTED_MIN="${GBS_REPLICATION_LIVE_DICTIONARY_ASSOCIATION_METADATA_TRAVERSAL_SUPPORTED_MIN:-${REPLICATION_LIVE_DICTIONARY_ASSOCIATION_METADATA_TRAVERSAL_SUPPORTED_MIN:-1}}"
+SCALAR_OOP_COMMAND_FALLBACK_REQUIRED_MAX="${GBS_REPLICATION_LIVE_SCALAR_OOP_COMMAND_FALLBACK_REQUIRED_MAX:-${REPLICATION_LIVE_SCALAR_OOP_COMMAND_FALLBACK_REQUIRED_MAX:-0}}"
 MATERIALIZATION_TRAVERSAL_TRANSPORT_SUPPORTED_MIN="${GBS_REPLICATION_LIVE_MATERIALIZATION_TRAVERSAL_TRANSPORT_SUPPORTED_MIN:-${REPLICATION_LIVE_MATERIALIZATION_TRAVERSAL_TRANSPORT_SUPPORTED_MIN:-1}}"
 MATERIALIZATION_REPORT_SHAPE_SUPPORTED_MIN="${GBS_REPLICATION_LIVE_MATERIALIZATION_REPORT_SHAPE_SUPPORTED_MIN:-${REPLICATION_LIVE_MATERIALIZATION_REPORT_SHAPE_SUPPORTED_MIN:-1}}"
 MATERIALIZATION_OOP_WIDTH_MIN="${GBS_REPLICATION_LIVE_MATERIALIZATION_OOP_WIDTH_MIN:-${REPLICATION_LIVE_MATERIALIZATION_OOP_WIDTH_MIN:-64}}"
+MATERIALIZATION_MORE_TRAVERSAL_SUPPORTED_MIN="${GBS_REPLICATION_LIVE_MATERIALIZATION_MORE_TRAVERSAL_SUPPORTED_MIN:-${REPLICATION_LIVE_MATERIALIZATION_MORE_TRAVERSAL_SUPPORTED_MIN:-1}}"
+MATERIALIZATION_CLAMPED_TRAVERSAL_SUPPORTED_MIN="${GBS_REPLICATION_LIVE_MATERIALIZATION_CLAMPED_TRAVERSAL_SUPPORTED_MIN:-${REPLICATION_LIVE_MATERIALIZATION_CLAMPED_TRAVERSAL_SUPPORTED_MIN:-1}}"
 DOMAIN_DIRTY_OBJECTS_FLUSHED_MIN="${GBS_REPLICATION_LIVE_DOMAIN_DIRTY_OBJECTS_FLUSHED_MIN:-${REPLICATION_LIVE_DOMAIN_DIRTY_OBJECTS_FLUSHED_MIN:-2}}"
 DOMAIN_NATIVE_DIRTY_STORE_FLUSHES_MIN="${GBS_REPLICATION_LIVE_DOMAIN_NATIVE_DIRTY_STORE_FLUSHES_MIN:-${REPLICATION_LIVE_DOMAIN_NATIVE_DIRTY_STORE_FLUSHES_MIN:-1}}"
 DOMAIN_NATIVE_DIRTY_STORE_ENTRIES_MIN="${GBS_REPLICATION_LIVE_DOMAIN_NATIVE_DIRTY_STORE_ENTRIES_MIN:-${REPLICATION_LIVE_DOMAIN_NATIVE_DIRTY_STORE_ENTRIES_MIN:-2}}"
@@ -99,14 +113,28 @@ emit_summary() {
   local connector_class_version_reports="${CONNECTOR_CLASS_VERSION_REPORTS:-0}"
   local connector_class_version_mismatches="${CONNECTOR_CLASS_VERSION_MISMATCHES:-0}"
   local connector_class_version_unknowns="${CONNECTOR_CLASS_VERSION_UNKNOWNS:-0}"
+  local connector_class_version_unversioned="${CONNECTOR_CLASS_VERSION_UNVERSIONED:-0}"
   local connector_class_version_errors="${CONNECTOR_CLASS_VERSION_ERRORS:-0}"
+  local session_notification_fixtures="${SESSION_NOTIFICATION_FIXTURES:-0}"
+  local session_signal_fixtures="${SESSION_SIGNAL_FIXTURES:-0}"
+  local server_originated_async_event_fixtures="${SERVER_ORIGINATED_ASYNC_EVENT_FIXTURES:-0}"
+  local async_abort_lifecycle_fixtures="${ASYNC_ABORT_LIFECYCLE_FIXTURES:-0}"
+  local method_change_invalidation_installed="${METHOD_CHANGE_INVALIDATION_INSTALLED:-0}"
+  local connector_diagnostics_invalid_count="${CONNECTOR_DIAGNOSTICS_INVALID_COUNT:-0}"
+  local connector_diff_preview_rows="${CONNECTOR_DIFF_PREVIEW_ROWS:-0}"
+  local login_report_artifact_count="${LOGIN_REPORT_ARTIFACT_COUNT:-0}"
   local dirty_store_transport_supported="${DIRTY_STORE_TRANSPORT_SUPPORTED:-0}"
   local dirty_store_report_shape_supported="${DIRTY_STORE_REPORT_SHAPE_SUPPORTED:-0}"
   local dirty_store_functions_supported="${DIRTY_STORE_FUNCTIONS_SUPPORTED:-0}"
   local dirty_store_oop_width="${DIRTY_STORE_OOP_WIDTH:-0}"
+  local dirty_store_struct_layout_supported="${DIRTY_STORE_STRUCT_LAYOUT_SUPPORTED:-0}"
+  local dictionary_association_metadata_traversal_supported="${DICTIONARY_ASSOCIATION_METADATA_TRAVERSAL_SUPPORTED:-0}"
+  local scalar_oop_command_fallback_required="${SCALAR_OOP_COMMAND_FALLBACK_REQUIRED:-0}"
   local materialization_traversal_transport_supported="${MATERIALIZATION_TRAVERSAL_TRANSPORT_SUPPORTED:-0}"
   local materialization_report_shape_supported="${MATERIALIZATION_REPORT_SHAPE_SUPPORTED:-0}"
   local materialization_oop_width="${MATERIALIZATION_OOP_WIDTH:-0}"
+  local materialization_more_traversal_supported="${MATERIALIZATION_MORE_TRAVERSAL_SUPPORTED:-0}"
+  local materialization_clamped_traversal_supported="${MATERIALIZATION_CLAMPED_TRAVERSAL_SUPPORTED:-0}"
   local domain_dirty_store_ms="${DOMAIN_DIRTY_STORE_MS:-0}"
   local domain_dirty_objects="${DOMAIN_DIRTY_OBJECTS:-0}"
   local domain_native_flushes="${DOMAIN_NATIVE_FLUSHES:-0}"
@@ -120,7 +148,7 @@ emit_summary() {
   local lifecycle_no_longer_acknowledged="${LIFECYCLE_NO_LONGER_ACKNOWLEDGED:-0}"
   local lifecycle_gced_acknowledged="${LIFECYCLE_GCED_ACKNOWLEDGED:-0}"
   local json_payload markdown_payload
-  echo "REPLICATION_LIVE_SUMMARY result=${result} code=${code} connector_ms=${connector_ms} clamped_ms=${clamped_ms} dirty_store_ms=${dirty_store_ms} business_dirty_store_ms=${business_dirty_store_ms} domain_dirty_store_ms=${domain_dirty_store_ms} callback_clamp_specs=${callback_clamp_specs} per_instvar_clamp_entries=${per_instvar_clamp_entries} inherited_replication_spec_fixtures=${inherited_replication_spec_fixtures} connector_pair_count=${connector_pair_count} domain_fixture_count=${domain_fixture_count} domain_per_instvar_clamp_entries=${domain_per_instvar_clamp_entries} domain_callback_clamp_specs=${domain_callback_clamp_specs} domain_callback_traversal_fixtures=${domain_callback_traversal_fixtures} domain_fault_lifecycle_fixtures=${domain_fault_lifecycle_fixtures} domain_mapped_lifecycle_fixtures=${domain_mapped_lifecycle_fixtures} connector_class_version_reports=${connector_class_version_reports} connector_class_version_mismatches=${connector_class_version_mismatches} connector_class_version_unknowns=${connector_class_version_unknowns} connector_class_version_errors=${connector_class_version_errors} dirty_store_transport_supported=${dirty_store_transport_supported} dirty_store_report_shape_supported=${dirty_store_report_shape_supported} dirty_store_functions_supported=${dirty_store_functions_supported} dirty_store_oop_width=${dirty_store_oop_width} materialization_traversal_transport_supported=${materialization_traversal_transport_supported} materialization_report_shape_supported=${materialization_report_shape_supported} materialization_oop_width=${materialization_oop_width} domain_dirty_objects_flushed=${domain_dirty_objects} domain_native_dirty_store_flushes=${domain_native_flushes} domain_native_dirty_store_entries=${domain_native_entries} domain_fault_release_queued=${domain_fault_release_queued} domain_fault_release_after_fault=${domain_fault_release_after_fault} domain_fault_identity_cleared=${domain_fault_identity_cleared} domain_fault_identity_restored=${domain_fault_identity_restored} clamped_traversal_fetches=${clamped_fetches} clamped_traversal_fallbacks=${clamped_fallbacks} native_dirty_store_flushes=${native_flushes} semantic_dirty_store_commands=${semantic_commands} semantic_dirty_store_entries=${semantic_entries} semantic_dictionary_entries=${semantic_dictionary_entries} semantic_set_entries=${semantic_set_entries} semantic_bag_entries=${semantic_bag_entries} dirty_objects_flushed=${dirty_objects} business_dirty_objects_flushed=${business_dirty_objects} business_write_fixture_size=${business_fixture_size} export_set_queued_before=${export_before} export_set_queued_after=${export_after} lifecycle_no_longer_queued=${lifecycle_no_longer_queued} lifecycle_gced_queued=${lifecycle_gced_queued} lifecycle_no_longer_acknowledged=${lifecycle_no_longer_acknowledged} lifecycle_gced_acknowledged=${lifecycle_gced_acknowledged} business_export_set_queued_after=${business_export_after} connector_max_ms=${CONNECTOR_MAX_MS} clamped_max_ms=${CLAMPED_MAX_MS} dirty_store_max_ms=${DIRTY_STORE_MAX_MS} business_dirty_store_max_ms=${BUSINESS_DIRTY_STORE_MAX_MS} domain_dirty_store_max_ms=${DOMAIN_DIRTY_STORE_MAX_MS} threshold_file=${THRESHOLD_FILE} work_image=${WORK_IMAGE}"
+  echo "REPLICATION_LIVE_SUMMARY result=${result} code=${code} connector_ms=${connector_ms} clamped_ms=${clamped_ms} dirty_store_ms=${dirty_store_ms} business_dirty_store_ms=${business_dirty_store_ms} domain_dirty_store_ms=${domain_dirty_store_ms} callback_clamp_specs=${callback_clamp_specs} per_instvar_clamp_entries=${per_instvar_clamp_entries} inherited_replication_spec_fixtures=${inherited_replication_spec_fixtures} connector_pair_count=${connector_pair_count} domain_fixture_count=${domain_fixture_count} domain_per_instvar_clamp_entries=${domain_per_instvar_clamp_entries} domain_callback_clamp_specs=${domain_callback_clamp_specs} domain_callback_traversal_fixtures=${domain_callback_traversal_fixtures} domain_fault_lifecycle_fixtures=${domain_fault_lifecycle_fixtures} domain_mapped_lifecycle_fixtures=${domain_mapped_lifecycle_fixtures} connector_class_version_reports=${connector_class_version_reports} connector_class_version_mismatches=${connector_class_version_mismatches} connector_class_version_unknowns=${connector_class_version_unknowns} connector_class_version_unversioned=${connector_class_version_unversioned} connector_class_version_errors=${connector_class_version_errors} session_notification_fixtures=${session_notification_fixtures} session_signal_fixtures=${session_signal_fixtures} server_originated_async_event_fixtures=${server_originated_async_event_fixtures} async_abort_lifecycle_fixtures=${async_abort_lifecycle_fixtures} method_change_invalidation_installed=${method_change_invalidation_installed} connector_diagnostics_invalid_count=${connector_diagnostics_invalid_count} connector_diff_preview_rows=${connector_diff_preview_rows} login_report_artifact_count=${login_report_artifact_count} dirty_store_transport_supported=${dirty_store_transport_supported} dirty_store_report_shape_supported=${dirty_store_report_shape_supported} dirty_store_functions_supported=${dirty_store_functions_supported} dirty_store_oop_width=${dirty_store_oop_width} dirty_store_struct_layout_supported=${dirty_store_struct_layout_supported} dictionary_association_metadata_traversal_supported=${dictionary_association_metadata_traversal_supported} scalar_oop_command_fallback_required=${scalar_oop_command_fallback_required} materialization_traversal_transport_supported=${materialization_traversal_transport_supported} materialization_report_shape_supported=${materialization_report_shape_supported} materialization_oop_width=${materialization_oop_width} materialization_more_traversal_supported=${materialization_more_traversal_supported} materialization_clamped_traversal_supported=${materialization_clamped_traversal_supported} domain_dirty_objects_flushed=${domain_dirty_objects} domain_native_dirty_store_flushes=${domain_native_flushes} domain_native_dirty_store_entries=${domain_native_entries} domain_fault_release_queued=${domain_fault_release_queued} domain_fault_release_after_fault=${domain_fault_release_after_fault} domain_fault_identity_cleared=${domain_fault_identity_cleared} domain_fault_identity_restored=${domain_fault_identity_restored} clamped_traversal_fetches=${clamped_fetches} clamped_traversal_fallbacks=${clamped_fallbacks} native_dirty_store_flushes=${native_flushes} semantic_dirty_store_commands=${semantic_commands} semantic_dirty_store_entries=${semantic_entries} semantic_dictionary_entries=${semantic_dictionary_entries} semantic_set_entries=${semantic_set_entries} semantic_bag_entries=${semantic_bag_entries} dirty_objects_flushed=${dirty_objects} business_dirty_objects_flushed=${business_dirty_objects} business_write_fixture_size=${business_fixture_size} export_set_queued_before=${export_before} export_set_queued_after=${export_after} lifecycle_no_longer_queued=${lifecycle_no_longer_queued} lifecycle_gced_queued=${lifecycle_gced_queued} lifecycle_no_longer_acknowledged=${lifecycle_no_longer_acknowledged} lifecycle_gced_acknowledged=${lifecycle_gced_acknowledged} business_export_set_queued_after=${business_export_after} connector_max_ms=${CONNECTOR_MAX_MS} clamped_max_ms=${CLAMPED_MAX_MS} dirty_store_max_ms=${DIRTY_STORE_MAX_MS} business_dirty_store_max_ms=${BUSINESS_DIRTY_STORE_MAX_MS} domain_dirty_store_max_ms=${DOMAIN_DIRTY_STORE_MAX_MS} threshold_file=${THRESHOLD_FILE} work_image=${WORK_IMAGE}"
   printf -v json_payload '{"result":"%s","code":"%s","connector_ms":"%s","clamped_ms":"%s","dirty_store_ms":"%s","business_dirty_store_ms":"%s","domain_dirty_store_ms":"%s","callback_clamp_specs":"%s","per_instvar_clamp_entries":"%s","inherited_replication_spec_fixtures":"%s","connector_pair_count":"%s","domain_fixture_count":"%s","domain_per_instvar_clamp_entries":"%s","domain_callback_clamp_specs":"%s","domain_callback_traversal_fixtures":"%s","domain_fault_lifecycle_fixtures":"%s","domain_mapped_lifecycle_fixtures":"%s","connector_class_version_reports":"%s","connector_class_version_mismatches":"%s","connector_class_version_unknowns":"%s","connector_class_version_errors":"%s","dirty_store_transport_supported":"%s","dirty_store_report_shape_supported":"%s","dirty_store_functions_supported":"%s","dirty_store_oop_width":"%s","materialization_traversal_transport_supported":"%s","materialization_report_shape_supported":"%s","materialization_oop_width":"%s","domain_dirty_objects_flushed":"%s","domain_native_dirty_store_flushes":"%s","domain_native_dirty_store_entries":"%s","clamped_traversal_fetches":"%s","clamped_traversal_fallbacks":"%s","native_dirty_store_flushes":"%s","semantic_dirty_store_commands":"%s","semantic_dirty_store_entries":"%s","semantic_dictionary_entries":"%s","semantic_set_entries":"%s","semantic_bag_entries":"%s","dirty_objects_flushed":"%s","business_dirty_objects_flushed":"%s","business_write_fixture_size":"%s","export_set_queued_before":"%s","export_set_queued_after":"%s","lifecycle_no_longer_queued":"%s","lifecycle_gced_queued":"%s","lifecycle_no_longer_acknowledged":"%s","lifecycle_gced_acknowledged":"%s","business_export_set_queued_after":"%s","connector_max_ms":"%s","clamped_max_ms":"%s","dirty_store_max_ms":"%s","business_dirty_store_max_ms":"%s","domain_dirty_store_max_ms":"%s","threshold_file":"%s","work_image":"%s"}' \
     "$(gbs_json_escape "${result}")" \
     "$(gbs_json_escape "${code}")" \
@@ -178,6 +206,8 @@ emit_summary() {
     "$(gbs_json_escape "${DOMAIN_DIRTY_STORE_MAX_MS}")" \
     "$(gbs_json_escape "${THRESHOLD_FILE}")" \
     "$(gbs_json_escape "${WORK_IMAGE}")"
+  json_payload="${json_payload%}}"
+  json_payload="${json_payload},\"connector_class_version_unversioned\":\"$(gbs_json_escape "${connector_class_version_unversioned}")\",\"session_notification_fixtures\":\"$(gbs_json_escape "${session_notification_fixtures}")\",\"session_signal_fixtures\":\"$(gbs_json_escape "${session_signal_fixtures}")\",\"server_originated_async_event_fixtures\":\"$(gbs_json_escape "${server_originated_async_event_fixtures}")\",\"async_abort_lifecycle_fixtures\":\"$(gbs_json_escape "${async_abort_lifecycle_fixtures}")\",\"method_change_invalidation_installed\":\"$(gbs_json_escape "${method_change_invalidation_installed}")\",\"connector_diagnostics_invalid_count\":\"$(gbs_json_escape "${connector_diagnostics_invalid_count}")\",\"connector_diff_preview_rows\":\"$(gbs_json_escape "${connector_diff_preview_rows}")\",\"login_report_artifact_count\":\"$(gbs_json_escape "${login_report_artifact_count}")\",\"dirty_store_struct_layout_supported\":\"$(gbs_json_escape "${dirty_store_struct_layout_supported}")\",\"dictionary_association_metadata_traversal_supported\":\"$(gbs_json_escape "${dictionary_association_metadata_traversal_supported}")\",\"scalar_oop_command_fallback_required\":\"$(gbs_json_escape "${scalar_oop_command_fallback_required}")\",\"materialization_more_traversal_supported\":\"$(gbs_json_escape "${materialization_more_traversal_supported}")\",\"materialization_clamped_traversal_supported\":\"$(gbs_json_escape "${materialization_clamped_traversal_supported}")\"}"
   if [[ "${JSON_SUMMARY}" == "1" ]]; then
     printf 'REPLICATION_LIVE_SUMMARY_JSON %s\n' "${json_payload}"
   fi
@@ -205,9 +235,11 @@ emit_summary() {
     "Generated by \`make replication-live\`."
 markdown_payload="${markdown_payload}
 - migration-domain callback/fault lifecycle fixtures: callback traversals \`${domain_callback_traversal_fixtures}\`, fault lifecycle \`${domain_fault_lifecycle_fixtures}\`, mapped lifecycle \`${domain_mapped_lifecycle_fixtures}\`
-- connector class-version reports: reports \`${connector_class_version_reports}\`, mismatches \`${connector_class_version_mismatches}\`, unknowns \`${connector_class_version_unknowns}\`, errors \`${connector_class_version_errors}\`
-- native dirty-store capability: transport \`${dirty_store_transport_supported}\`, report shape \`${dirty_store_report_shape_supported}\`, functions \`${dirty_store_functions_supported}\`, oop width \`${dirty_store_oop_width}\`
-- native materialization capability: traversal transport \`${materialization_traversal_transport_supported}\`, report shape \`${materialization_report_shape_supported}\`, oop width \`${materialization_oop_width}\`"
+- connector class-version reports: reports \`${connector_class_version_reports}\`, mismatches \`${connector_class_version_mismatches}\`, unknowns \`${connector_class_version_unknowns}\`, unversioned \`${connector_class_version_unversioned}\`, errors \`${connector_class_version_errors}\`
+- async/session lifecycle fixtures: notify sets \`${session_notification_fixtures}\`, Gem-to-Gem signals \`${session_signal_fixtures}\`, server-originated \`${server_originated_async_event_fixtures}\`, async aborts \`${async_abort_lifecycle_fixtures}\`
+- connector tooling diagnostics: method invalidation \`${method_change_invalidation_installed}\`, invalid rows \`${connector_diagnostics_invalid_count}\`, diff preview rows \`${connector_diff_preview_rows}\`, login report artifacts \`${login_report_artifact_count}\`
+- native dirty-store capability: transport \`${dirty_store_transport_supported}\`, report shape \`${dirty_store_report_shape_supported}\`, functions \`${dirty_store_functions_supported}\`, oop width \`${dirty_store_oop_width}\`, struct layout \`${dirty_store_struct_layout_supported}\`, dictionary metadata traversal \`${dictionary_association_metadata_traversal_supported}\`, scalar fallback required \`${scalar_oop_command_fallback_required}\`
+- native materialization capability: traversal transport \`${materialization_traversal_transport_supported}\`, report shape \`${materialization_report_shape_supported}\`, oop width \`${materialization_oop_width}\`, more traversal \`${materialization_more_traversal_supported}\`, clamped traversal \`${materialization_clamped_traversal_supported}\`"
   gbs_write_evidence_file "replication-live-summary.md" "${markdown_payload}"
   gbs_append_summary_line "### Replication Live Validation"
   gbs_append_summary_line "- result: \`${result}\`"
@@ -215,9 +247,11 @@ markdown_payload="${markdown_payload}
   gbs_append_summary_line "- connector install: \`${connector_ms} ms\`"
   gbs_append_summary_line "- strict parity fixtures: callback clamp specs \`${callback_clamp_specs}\`, per-instvar entries \`${per_instvar_clamp_entries}\`, inherited spec fixtures \`${inherited_replication_spec_fixtures}\`"
   gbs_append_summary_line "- connector manager report: connector pairs \`${connector_pair_count}\`"
-  gbs_append_summary_line "- connector class-version reports: reports \`${connector_class_version_reports}\`, mismatches \`${connector_class_version_mismatches}\`, unknowns \`${connector_class_version_unknowns}\`, errors \`${connector_class_version_errors}\`"
-  gbs_append_summary_line "- native dirty-store capability: transport \`${dirty_store_transport_supported}\`, report shape \`${dirty_store_report_shape_supported}\`, functions \`${dirty_store_functions_supported}\`, oop width \`${dirty_store_oop_width}\`"
-  gbs_append_summary_line "- native materialization capability: traversal transport \`${materialization_traversal_transport_supported}\`, report shape \`${materialization_report_shape_supported}\`, oop width \`${materialization_oop_width}\`"
+  gbs_append_summary_line "- connector class-version reports: reports \`${connector_class_version_reports}\`, mismatches \`${connector_class_version_mismatches}\`, unknowns \`${connector_class_version_unknowns}\`, unversioned \`${connector_class_version_unversioned}\`, errors \`${connector_class_version_errors}\`"
+  gbs_append_summary_line "- async/session lifecycle fixtures: notify sets \`${session_notification_fixtures}\`, Gem-to-Gem signals \`${session_signal_fixtures}\`, server-originated \`${server_originated_async_event_fixtures}\`, async aborts \`${async_abort_lifecycle_fixtures}\`"
+  gbs_append_summary_line "- connector tooling diagnostics: method invalidation \`${method_change_invalidation_installed}\`, invalid rows \`${connector_diagnostics_invalid_count}\`, diff preview rows \`${connector_diff_preview_rows}\`, login report artifacts \`${login_report_artifact_count}\`"
+  gbs_append_summary_line "- native dirty-store capability: transport \`${dirty_store_transport_supported}\`, report shape \`${dirty_store_report_shape_supported}\`, functions \`${dirty_store_functions_supported}\`, oop width \`${dirty_store_oop_width}\`, struct layout \`${dirty_store_struct_layout_supported}\`, dictionary metadata traversal \`${dictionary_association_metadata_traversal_supported}\`, scalar fallback required \`${scalar_oop_command_fallback_required}\`"
+  gbs_append_summary_line "- native materialization capability: traversal transport \`${materialization_traversal_transport_supported}\`, report shape \`${materialization_report_shape_supported}\`, oop width \`${materialization_oop_width}\`, more traversal \`${materialization_more_traversal_supported}\`, clamped traversal \`${materialization_clamped_traversal_supported}\`"
   gbs_append_summary_line "- migration-domain fixture: fixtures \`${domain_fixture_count}\`, callback specs \`${domain_callback_clamp_specs}\`, per-instvar entries \`${domain_per_instvar_clamp_entries}\`, native dirty-store \`${domain_dirty_store_ms} ms\`, native flushes \`${domain_native_flushes}\`, native entries \`${domain_native_entries}\`, dirty objects \`${domain_dirty_objects}\`"
   gbs_append_summary_line "- migration-domain callback/fault lifecycle fixtures: callback traversals \`${domain_callback_traversal_fixtures}\`, fault lifecycle \`${domain_fault_lifecycle_fixtures}\`, mapped lifecycle \`${domain_mapped_lifecycle_fixtures}\`"
   gbs_append_summary_line "- mapped fault lifecycle: release queued \`${domain_fault_release_queued}\`, after fault \`${domain_fault_release_after_fault}\`, identity cleared \`${domain_fault_identity_cleared}\`, identity restored \`${domain_fault_identity_restored}\`"
@@ -402,7 +436,7 @@ write_trend_sample() {
   [[ -n "${trend_file}" ]] || return 0
   mkdir -p "$(dirname "${trend_file}")"
   timestamp="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-  printf '{"timestamp":"%s","connector_ms":%s,"clamped_ms":%s,"dirty_store_ms":%s,"business_dirty_store_ms":%s,"domain_dirty_store_ms":%s,"callback_clamp_specs":%s,"per_instvar_clamp_entries":%s,"inherited_replication_spec_fixtures":%s,"connector_pair_count":%s,"domain_fixture_count":%s,"domain_per_instvar_clamp_entries":%s,"domain_callback_clamp_specs":%s,"domain_callback_traversal_fixtures":%s,"domain_fault_lifecycle_fixtures":%s,"domain_mapped_lifecycle_fixtures":%s,"connector_class_version_reports":%s,"connector_class_version_errors":%s,"dirty_store_transport_supported":%s,"dirty_store_report_shape_supported":%s,"dirty_store_functions_supported":%s,"dirty_store_oop_width":%s,"domain_dirty_objects_flushed":%s,"domain_native_dirty_store_flushes":%s,"domain_native_dirty_store_entries":%s,"clamped_traversal_fetches":%s,"clamped_traversal_fallbacks":%s,"native_dirty_store_flushes":%s,"semantic_dirty_store_commands":%s,"semantic_dirty_store_entries":%s,"semantic_dictionary_entries":%s,"semantic_set_entries":%s,"semantic_bag_entries":%s,"dirty_objects_flushed":%s,"business_dirty_objects_flushed":%s,"business_write_fixture_size":%s,"export_set_queued_after":%s,"lifecycle_no_longer_queued":%s,"lifecycle_gced_queued":%s,"lifecycle_no_longer_acknowledged":%s,"lifecycle_gced_acknowledged":%s,"business_export_set_queued_after":%s,"connector_max_ms":%s,"clamped_max_ms":%s,"dirty_store_max_ms":%s,"business_dirty_store_max_ms":%s,"domain_dirty_store_max_ms":%s}\n' \
+  printf '{"timestamp":"%s","connector_ms":%s,"clamped_ms":%s,"dirty_store_ms":%s,"business_dirty_store_ms":%s,"domain_dirty_store_ms":%s,"callback_clamp_specs":%s,"per_instvar_clamp_entries":%s,"inherited_replication_spec_fixtures":%s,"connector_pair_count":%s,"domain_fixture_count":%s,"domain_per_instvar_clamp_entries":%s,"domain_callback_clamp_specs":%s,"domain_callback_traversal_fixtures":%s,"domain_fault_lifecycle_fixtures":%s,"domain_mapped_lifecycle_fixtures":%s,"connector_class_version_reports":%s,"connector_class_version_errors":%s,"session_notification_fixtures":%s,"session_signal_fixtures":%s,"async_abort_lifecycle_fixtures":%s,"method_change_invalidation_installed":%s,"connector_diagnostics_invalid_count":%s,"connector_diff_preview_rows":%s,"login_report_artifact_count":%s,"dirty_store_transport_supported":%s,"dirty_store_report_shape_supported":%s,"dirty_store_functions_supported":%s,"dirty_store_oop_width":%s,"dirty_store_struct_layout_supported":%s,"dictionary_association_metadata_traversal_supported":%s,"scalar_oop_command_fallback_required":%s,"materialization_more_traversal_supported":%s,"materialization_clamped_traversal_supported":%s,"domain_dirty_objects_flushed":%s,"domain_native_dirty_store_flushes":%s,"domain_native_dirty_store_entries":%s,"clamped_traversal_fetches":%s,"clamped_traversal_fallbacks":%s,"native_dirty_store_flushes":%s,"semantic_dirty_store_commands":%s,"semantic_dirty_store_entries":%s,"semantic_dictionary_entries":%s,"semantic_set_entries":%s,"semantic_bag_entries":%s,"dirty_objects_flushed":%s,"business_dirty_objects_flushed":%s,"business_write_fixture_size":%s,"export_set_queued_after":%s,"lifecycle_no_longer_queued":%s,"lifecycle_gced_queued":%s,"lifecycle_no_longer_acknowledged":%s,"lifecycle_gced_acknowledged":%s,"business_export_set_queued_after":%s,"connector_max_ms":%s,"clamped_max_ms":%s,"dirty_store_max_ms":%s,"business_dirty_store_max_ms":%s,"domain_dirty_store_max_ms":%s}\n' \
     "${timestamp}" \
     "${CONNECTOR_MS}" \
     "${CLAMPED_MS}" \
@@ -421,10 +455,22 @@ write_trend_sample() {
     "${DOMAIN_MAPPED_LIFECYCLE_FIXTURES}" \
     "${CONNECTOR_CLASS_VERSION_REPORTS}" \
     "${CONNECTOR_CLASS_VERSION_ERRORS}" \
+    "${SESSION_NOTIFICATION_FIXTURES}" \
+    "${SESSION_SIGNAL_FIXTURES}" \
+    "${ASYNC_ABORT_LIFECYCLE_FIXTURES}" \
+    "${METHOD_CHANGE_INVALIDATION_INSTALLED}" \
+    "${CONNECTOR_DIAGNOSTICS_INVALID_COUNT}" \
+    "${CONNECTOR_DIFF_PREVIEW_ROWS}" \
+    "${LOGIN_REPORT_ARTIFACT_COUNT}" \
     "${DIRTY_STORE_TRANSPORT_SUPPORTED}" \
     "${DIRTY_STORE_REPORT_SHAPE_SUPPORTED}" \
     "${DIRTY_STORE_FUNCTIONS_SUPPORTED}" \
     "${DIRTY_STORE_OOP_WIDTH}" \
+    "${DIRTY_STORE_STRUCT_LAYOUT_SUPPORTED}" \
+    "${DICTIONARY_ASSOCIATION_METADATA_TRAVERSAL_SUPPORTED}" \
+    "${SCALAR_OOP_COMMAND_FALLBACK_REQUIRED}" \
+    "${MATERIALIZATION_MORE_TRAVERSAL_SUPPORTED}" \
+    "${MATERIALIZATION_CLAMPED_TRAVERSAL_SUPPORTED}" \
     "${DOMAIN_DIRTY_OBJECTS}" \
     "${DOMAIN_NATIVE_FLUSHES}" \
     "${DOMAIN_NATIVE_ENTRIES}" \
@@ -454,7 +500,7 @@ write_trend_sample() {
 }
 
 write_trend_report() {
-  local trend_file report_file line timestamp connector clamped dirty business domain dirty_objects business_objects domain_objects fixture_size fallbacks semantic_commands semantic_entries callback_fixtures fault_fixtures lifecycle_fixtures version_errors dirty_transport dirty_shape dirty_functions dirty_oop_width dirty_capability
+  local trend_file report_file line timestamp connector clamped dirty business domain dirty_objects business_objects domain_objects fixture_size fallbacks semantic_commands semantic_entries callback_fixtures fault_fixtures lifecycle_fixtures version_errors session_notifications session_signals async_aborts connector_invalid diff_rows login_artifacts dirty_transport dirty_shape dirty_functions dirty_oop_width dirty_layout dictionary_metadata scalar_fallback materialization_more materialization_clamped dirty_capability connector_tooling async_capability
   trend_file="$(trend_file_path)"
   [[ -n "${trend_file}" && -f "${trend_file}" ]] || return 0
   report_file="${GBS_REPLICATION_LIVE_REPORT:-$(dirname "${trend_file}")/replication-live-trend-report.md}"
@@ -462,8 +508,8 @@ write_trend_report() {
   {
     printf '# Replication Live Trend\n\n'
     printf 'Regression threshold: `%s%%` over the previous sample or `+%s ms`, whichever is larger.\n\n' "${TREND_REGRESSION_PERCENT}" "${TREND_REGRESSION_MIN_DELTA_MS}"
-    printf '| Timestamp | Connector | Clamped | Dirty Store | Business Dirty Store | Domain Dirty Store | Dirty Capability | Callback Fixtures | Fault Fixtures | Lifecycle Fixtures | Version Errors | Semantic Commands | Semantic Entries | Dirty Objects | Business Objects | Domain Objects | Fixture Size | Fallbacks |\n'
-    printf '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n'
+    printf '| Timestamp | Connector | Clamped | Dirty Store | Business Dirty Store | Domain Dirty Store | Dirty Capability | Async Fixtures | Connector Tooling | Callback Fixtures | Fault Fixtures | Lifecycle Fixtures | Version Errors | Semantic Commands | Semantic Entries | Dirty Objects | Business Objects | Domain Objects | Fixture Size | Fallbacks |\n'
+    printf '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n'
     grep -v '^[[:space:]]*$' "${trend_file}" | tail -20 | while IFS= read -r line; do
       timestamp="$(json_line_string_field "${line}" timestamp)"
       connector="$(json_line_number_field "${line}" connector_ms)"
@@ -477,17 +523,30 @@ write_trend_report() {
       fault_fixtures="$(json_line_number_field "${line}" domain_fault_lifecycle_fixtures)"
       lifecycle_fixtures="$(json_line_number_field "${line}" domain_mapped_lifecycle_fixtures)"
       version_errors="$(json_line_number_field "${line}" connector_class_version_errors)"
+      session_notifications="$(json_line_number_field "${line}" session_notification_fixtures)"
+      session_signals="$(json_line_number_field "${line}" session_signal_fixtures)"
+      async_aborts="$(json_line_number_field "${line}" async_abort_lifecycle_fixtures)"
+      connector_invalid="$(json_line_number_field "${line}" connector_diagnostics_invalid_count)"
+      diff_rows="$(json_line_number_field "${line}" connector_diff_preview_rows)"
+      login_artifacts="$(json_line_number_field "${line}" login_report_artifact_count)"
       dirty_transport="$(json_line_number_field "${line}" dirty_store_transport_supported)"
       dirty_shape="$(json_line_number_field "${line}" dirty_store_report_shape_supported)"
       dirty_functions="$(json_line_number_field "${line}" dirty_store_functions_supported)"
       dirty_oop_width="$(json_line_number_field "${line}" dirty_store_oop_width)"
-      dirty_capability="${dirty_transport:-0}/${dirty_shape:-0}/${dirty_functions:-0}/${dirty_oop_width:-0}"
+      dirty_layout="$(json_line_number_field "${line}" dirty_store_struct_layout_supported)"
+      dictionary_metadata="$(json_line_number_field "${line}" dictionary_association_metadata_traversal_supported)"
+      scalar_fallback="$(json_line_number_field "${line}" scalar_oop_command_fallback_required)"
+      materialization_more="$(json_line_number_field "${line}" materialization_more_traversal_supported)"
+      materialization_clamped="$(json_line_number_field "${line}" materialization_clamped_traversal_supported)"
+      dirty_capability="${dirty_transport:-0}/${dirty_shape:-0}/${dirty_functions:-0}/${dirty_oop_width:-0}/layout:${dirty_layout:-0}/dict:${dictionary_metadata:-0}/scalarFallback:${scalar_fallback:-0}/more:${materialization_more:-0}/clamped:${materialization_clamped:-0}"
+      async_capability="${session_notifications:-0}/${session_signals:-0}/${async_aborts:-0}"
+      connector_tooling="${connector_invalid:-0}/${diff_rows:-0}/${login_artifacts:-0}"
       dirty_objects="$(json_line_number_field "${line}" dirty_objects_flushed)"
       business_objects="$(json_line_number_field "${line}" business_dirty_objects_flushed)"
       domain_objects="$(json_line_number_field "${line}" domain_dirty_objects_flushed)"
       fixture_size="$(json_line_number_field "${line}" business_write_fixture_size)"
       fallbacks="$(json_line_number_field "${line}" clamped_traversal_fallbacks)"
-      printf '| %s | %s ms | %s ms | %s ms | %s ms | %s ms | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n' \
+      printf '| %s | %s ms | %s ms | %s ms | %s ms | %s ms | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n' \
         "${timestamp:-unknown}" \
         "${connector:-0}" \
         "${clamped:-0}" \
@@ -495,6 +554,8 @@ write_trend_report() {
         "${business:-0}" \
         "${domain:-0}" \
         "${dirty_capability}" \
+        "${async_capability}" \
+        "${connector_tooling}" \
         "${callback_fixtures:-0}" \
         "${fault_fixtures:-0}" \
         "${lifecycle_fixtures:-0}" \
@@ -544,6 +605,21 @@ if [[ -n "${MISSING_LIVE_ENV}" ]]; then
   echo "Set the missing variables before running make replication-live." >&2
   exit 2
 fi
+
+live_config_summary="$(
+  {
+    printf 'GS_USER=%s\n' "${GS_USER}"
+    printf 'GS_PASS=%s\n' "redacted"
+    printf 'GS_NETLDI_HOST=%s\n' "${GS_NETLDI_HOST}"
+    printf 'GS_NETLDI_NAME_OR_PORT=%s\n' "${GS_NETLDI_NAME_OR_PORT}"
+    printf 'host_auth=%s\n' "$(gbs_live_host_auth_status)"
+    printf 'threshold_file=%s\n' "${THRESHOLD_FILE}"
+    printf 'json_summary=%s\n' "${JSON_SUMMARY}"
+    printf 'native_gci_disabled=%s\n' "${GBS_DISABLE_NATIVE_GCI_TRANSPORT:-0}"
+  }
+)"
+gbs_write_evidence_file "replication-live-config-redacted.env" "${live_config_summary}"
+gbs_append_summary_line '- redacted live config: `replication-live-config-redacted.env`'
 
 WORK_IMAGE="$(gbs_prepare_work_image "${SRC_IMAGE}" "${WORK_DIR}" "replicationlive")"
 gbs_register_work_image_cleanup "${WORK_IMAGE}"
@@ -596,14 +672,28 @@ DOMAIN_MAPPED_LIFECYCLE_FIXTURES="$(extract_summary_field "${summary_line}" doma
 CONNECTOR_CLASS_VERSION_REPORTS="$(extract_summary_field "${summary_line}" connector_class_version_reports)"
 CONNECTOR_CLASS_VERSION_MISMATCHES="$(extract_summary_field "${summary_line}" connector_class_version_mismatches)"
 CONNECTOR_CLASS_VERSION_UNKNOWNS="$(extract_summary_field "${summary_line}" connector_class_version_unknowns)"
+CONNECTOR_CLASS_VERSION_UNVERSIONED="$(extract_summary_field "${summary_line}" connector_class_version_unversioned)"
 CONNECTOR_CLASS_VERSION_ERRORS="$(extract_summary_field "${summary_line}" connector_class_version_errors)"
+SESSION_NOTIFICATION_FIXTURES="$(extract_summary_field "${summary_line}" session_notification_fixtures)"
+SESSION_SIGNAL_FIXTURES="$(extract_summary_field "${summary_line}" session_signal_fixtures)"
+SERVER_ORIGINATED_ASYNC_EVENT_FIXTURES="$(extract_summary_field "${summary_line}" server_originated_async_event_fixtures)"
+ASYNC_ABORT_LIFECYCLE_FIXTURES="$(extract_summary_field "${summary_line}" async_abort_lifecycle_fixtures)"
+METHOD_CHANGE_INVALIDATION_INSTALLED="$(extract_summary_field "${summary_line}" method_change_invalidation_installed)"
+CONNECTOR_DIAGNOSTICS_INVALID_COUNT="$(extract_summary_field "${summary_line}" connector_diagnostics_invalid_count)"
+CONNECTOR_DIFF_PREVIEW_ROWS="$(extract_summary_field "${summary_line}" connector_diff_preview_rows)"
+LOGIN_REPORT_ARTIFACT_COUNT="$(extract_summary_field "${summary_line}" login_report_artifact_count)"
 DIRTY_STORE_TRANSPORT_SUPPORTED="$(extract_summary_field "${summary_line}" dirty_store_transport_supported)"
 DIRTY_STORE_REPORT_SHAPE_SUPPORTED="$(extract_summary_field "${summary_line}" dirty_store_report_shape_supported)"
 DIRTY_STORE_FUNCTIONS_SUPPORTED="$(extract_summary_field "${summary_line}" dirty_store_functions_supported)"
 DIRTY_STORE_OOP_WIDTH="$(extract_summary_field "${summary_line}" dirty_store_oop_width)"
+DIRTY_STORE_STRUCT_LAYOUT_SUPPORTED="$(extract_summary_field "${summary_line}" dirty_store_struct_layout_supported)"
+DICTIONARY_ASSOCIATION_METADATA_TRAVERSAL_SUPPORTED="$(extract_summary_field "${summary_line}" dictionary_association_metadata_traversal_supported)"
+SCALAR_OOP_COMMAND_FALLBACK_REQUIRED="$(extract_summary_field "${summary_line}" scalar_oop_command_fallback_required)"
 MATERIALIZATION_TRAVERSAL_TRANSPORT_SUPPORTED="$(extract_summary_field "${summary_line}" materialization_traversal_transport_supported)"
 MATERIALIZATION_REPORT_SHAPE_SUPPORTED="$(extract_summary_field "${summary_line}" materialization_report_shape_supported)"
 MATERIALIZATION_OOP_WIDTH="$(extract_summary_field "${summary_line}" materialization_oop_width)"
+MATERIALIZATION_MORE_TRAVERSAL_SUPPORTED="$(extract_summary_field "${summary_line}" materialization_more_traversal_supported)"
+MATERIALIZATION_CLAMPED_TRAVERSAL_SUPPORTED="$(extract_summary_field "${summary_line}" materialization_clamped_traversal_supported)"
 DOMAIN_DIRTY_OBJECTS="$(extract_summary_field "${summary_line}" domain_dirty_objects_flushed)"
 DOMAIN_NATIVE_FLUSHES="$(extract_summary_field "${summary_line}" domain_native_dirty_store_flushes)"
 DOMAIN_NATIVE_ENTRIES="$(extract_summary_field "${summary_line}" domain_native_dirty_store_entries)"
@@ -653,14 +743,28 @@ check_count_minimum "DOMAIN_CALLBACK_TRAVERSAL_FIXTURES" "${DOMAIN_CALLBACK_TRAV
 check_count_minimum "DOMAIN_FAULT_LIFECYCLE_FIXTURES" "${DOMAIN_FAULT_LIFECYCLE_FIXTURES}" "${DOMAIN_FAULT_LIFECYCLE_FIXTURES_MIN}"
 check_count_minimum "DOMAIN_MAPPED_LIFECYCLE_FIXTURES" "${DOMAIN_MAPPED_LIFECYCLE_FIXTURES}" "${DOMAIN_MAPPED_LIFECYCLE_FIXTURES_MIN}"
 check_count_minimum "CONNECTOR_CLASS_VERSION_REPORTS" "${CONNECTOR_CLASS_VERSION_REPORTS}" "${CONNECTOR_CLASS_VERSION_REPORTS_MIN}"
+check_count_threshold "CONNECTOR_CLASS_VERSION_UNKNOWNS" "${CONNECTOR_CLASS_VERSION_UNKNOWNS}" "${CONNECTOR_CLASS_VERSION_UNKNOWNS_MAX}"
 check_count_threshold "CONNECTOR_CLASS_VERSION_ERRORS" "${CONNECTOR_CLASS_VERSION_ERRORS}" "${CONNECTOR_CLASS_VERSION_ERRORS_MAX}"
+check_count_minimum "SESSION_NOTIFICATION_FIXTURES" "${SESSION_NOTIFICATION_FIXTURES}" "${SESSION_NOTIFICATION_FIXTURES_MIN}"
+check_count_minimum "SESSION_SIGNAL_FIXTURES" "${SESSION_SIGNAL_FIXTURES}" "${SESSION_SIGNAL_FIXTURES_MIN}"
+check_count_minimum "SERVER_ORIGINATED_ASYNC_EVENT_FIXTURES" "${SERVER_ORIGINATED_ASYNC_EVENT_FIXTURES}" "${SERVER_ORIGINATED_ASYNC_EVENT_FIXTURES_MIN}"
+check_count_minimum "ASYNC_ABORT_LIFECYCLE_FIXTURES" "${ASYNC_ABORT_LIFECYCLE_FIXTURES}" "${ASYNC_ABORT_LIFECYCLE_FIXTURES_MIN}"
+check_count_minimum "METHOD_CHANGE_INVALIDATION_INSTALLED" "${METHOD_CHANGE_INVALIDATION_INSTALLED}" "${METHOD_CHANGE_INVALIDATION_INSTALLED_MIN}"
+check_count_threshold "CONNECTOR_DIAGNOSTICS_INVALID" "${CONNECTOR_DIAGNOSTICS_INVALID_COUNT}" "${CONNECTOR_DIAGNOSTICS_INVALID_MAX}"
+check_count_minimum "CONNECTOR_DIFF_PREVIEW_ROWS" "${CONNECTOR_DIFF_PREVIEW_ROWS}" "${CONNECTOR_DIFF_PREVIEW_ROWS_MIN}"
+check_count_minimum "LOGIN_REPORT_ARTIFACT_COUNT" "${LOGIN_REPORT_ARTIFACT_COUNT}" "${LOGIN_REPORT_ARTIFACT_COUNT_MIN}"
 check_count_minimum "DIRTY_STORE_TRANSPORT_SUPPORTED" "${DIRTY_STORE_TRANSPORT_SUPPORTED}" "${DIRTY_STORE_TRANSPORT_SUPPORTED_MIN}"
 check_count_minimum "DIRTY_STORE_REPORT_SHAPE_SUPPORTED" "${DIRTY_STORE_REPORT_SHAPE_SUPPORTED}" "${DIRTY_STORE_REPORT_SHAPE_SUPPORTED_MIN}"
 check_count_minimum "DIRTY_STORE_FUNCTIONS_SUPPORTED" "${DIRTY_STORE_FUNCTIONS_SUPPORTED}" "${DIRTY_STORE_FUNCTIONS_SUPPORTED_MIN}"
 check_count_minimum "DIRTY_STORE_OOP_WIDTH" "${DIRTY_STORE_OOP_WIDTH}" "${DIRTY_STORE_OOP_WIDTH_MIN}"
+check_count_minimum "DIRTY_STORE_STRUCT_LAYOUT_SUPPORTED" "${DIRTY_STORE_STRUCT_LAYOUT_SUPPORTED}" "${DIRTY_STORE_STRUCT_LAYOUT_SUPPORTED_MIN}"
+check_count_minimum "DICTIONARY_ASSOCIATION_METADATA_TRAVERSAL_SUPPORTED" "${DICTIONARY_ASSOCIATION_METADATA_TRAVERSAL_SUPPORTED}" "${DICTIONARY_ASSOCIATION_METADATA_TRAVERSAL_SUPPORTED_MIN}"
+check_count_threshold "SCALAR_OOP_COMMAND_FALLBACK_REQUIRED" "${SCALAR_OOP_COMMAND_FALLBACK_REQUIRED}" "${SCALAR_OOP_COMMAND_FALLBACK_REQUIRED_MAX}"
 check_count_minimum "MATERIALIZATION_TRAVERSAL_TRANSPORT_SUPPORTED" "${MATERIALIZATION_TRAVERSAL_TRANSPORT_SUPPORTED}" "${MATERIALIZATION_TRAVERSAL_TRANSPORT_SUPPORTED_MIN}"
 check_count_minimum "MATERIALIZATION_REPORT_SHAPE_SUPPORTED" "${MATERIALIZATION_REPORT_SHAPE_SUPPORTED}" "${MATERIALIZATION_REPORT_SHAPE_SUPPORTED_MIN}"
 check_count_minimum "MATERIALIZATION_OOP_WIDTH" "${MATERIALIZATION_OOP_WIDTH}" "${MATERIALIZATION_OOP_WIDTH_MIN}"
+check_count_minimum "MATERIALIZATION_MORE_TRAVERSAL_SUPPORTED" "${MATERIALIZATION_MORE_TRAVERSAL_SUPPORTED}" "${MATERIALIZATION_MORE_TRAVERSAL_SUPPORTED_MIN}"
+check_count_minimum "MATERIALIZATION_CLAMPED_TRAVERSAL_SUPPORTED" "${MATERIALIZATION_CLAMPED_TRAVERSAL_SUPPORTED}" "${MATERIALIZATION_CLAMPED_TRAVERSAL_SUPPORTED_MIN}"
 check_count_minimum "DOMAIN_DIRTY_OBJECTS_FLUSHED" "${DOMAIN_DIRTY_OBJECTS}" "${DOMAIN_DIRTY_OBJECTS_FLUSHED_MIN}"
 check_count_minimum "DOMAIN_NATIVE_DIRTY_STORE_FLUSHES" "${DOMAIN_NATIVE_FLUSHES}" "${DOMAIN_NATIVE_DIRTY_STORE_FLUSHES_MIN}"
 check_count_minimum "DOMAIN_NATIVE_DIRTY_STORE_ENTRIES" "${DOMAIN_NATIVE_ENTRIES}" "${DOMAIN_NATIVE_DIRTY_STORE_ENTRIES_MIN}"
