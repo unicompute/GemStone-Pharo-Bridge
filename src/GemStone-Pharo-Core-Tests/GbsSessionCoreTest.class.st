@@ -479,6 +479,21 @@ GbsSessionCoreTest >> testDirtyReplicationTracksSuccessfulRemovalOnly [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testRuntimeOverrideCollectionMutatorsIncludeStrictMutationGuards [
+	{
+		GbxRuntimeOverrideSpec bagAddWithOccurrencesOverrideSource.
+		GbxRuntimeOverrideSpec bagRemoveIfAbsentOverrideSource.
+		GbxRuntimeOverrideSpec bagRemoveKeyIfAbsentOverrideSource.
+		GbxRuntimeOverrideSpec dictionaryAtPutOverrideSource.
+		GbxRuntimeOverrideSpec orderedCollectionAddOverrideSource.
+		GbxRuntimeOverrideSpec orderedCollectionRemoveIfAbsentOverrideSource.
+		GbxRuntimeOverrideSpec setAddOverrideSource.
+		GbxRuntimeOverrideSpec setRemoveIfAbsentOverrideSource
+	} do: [ :source |
+		self assert: (source includesSubstring: 'gbsEnsureMutationAllowedAt:noModError:') ]
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testReplicationPolicyDefaultsMirrorCompatibilitySettings [
 	| policy |
 	policy := GbsReplicationPolicy default.
@@ -1091,6 +1106,131 @@ GbsSessionCoreTest >> testReplicationPolicyStrictMutationProtectionRejectsStubAn
 	self assert: (mockSession isMaterializedObjectDirty: replicateArray).
 	self deny: (mockSession isMaterializedObjectDirty: stubArray).
 	self deny: (mockSession isMaterializedObjectDirty: noneArray)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testReplicationPolicyStrictMutationProtectionRejectsIndexableForwarderCollectionWrites [
+	| mockSession manager array ordered dictionary set bag |
+	mockSession := CoreMockGbsSession new.
+	array := Array with: 'old'.
+	ordered := OrderedCollection with: 'old'.
+	dictionary := Dictionary new
+		at: #old put: 'value';
+		yourself.
+	set := Set with: 'old'.
+	bag := Bag new
+		add: 'old' withOccurrences: 1;
+		yourself.
+	mockSession rememberMaterializedObject: array forOop: 9000.
+	mockSession rememberMaterializedObject: ordered forOop: 9016.
+	mockSession rememberMaterializedObject: dictionary forOop: 9032.
+	mockSession rememberMaterializedObject: set forOop: 9048.
+	mockSession rememberMaterializedObject: bag forOop: 9064.
+	manager := GbxClampManager forSession: mockSession.
+	manager defaultReplicationScheme
+		updateInstVarLevelsForClass: Array
+		serverInstVarNames: #()
+		replicationSpec: #(#(#indexable_part #forwarder)).
+	manager defaultReplicationScheme
+		updateInstVarLevelsForClass: OrderedCollection
+		serverInstVarNames: #()
+		replicationSpec: #(#(#indexable_part #stub)).
+	manager defaultReplicationScheme
+		updateInstVarLevelsForClass: Dictionary
+		serverInstVarNames: #()
+		replicationSpec: #(#(#indexable_part #forwarder)).
+	manager defaultReplicationScheme
+		updateInstVarLevelsForClass: Set
+		serverInstVarNames: #()
+		replicationSpec: #(#(#indexable_part #forwarder)).
+	manager defaultReplicationScheme
+		updateInstVarLevelsForClass: Bag
+		serverInstVarNames: #()
+		replicationSpec: #(#(#indexable_part #stub)).
+	(GbsReplicationPolicy forSession: mockSession) strictMutationProtectionEnabled: true.
+
+	self
+		should: [ array at: 1 put: 'new' ]
+		raise: GbsError.
+	self
+		should: [ ordered add: 'new' ]
+		raise: GbsError.
+	self
+		should: [ dictionary at: #new put: 'value' ]
+		raise: GbsError.
+	self
+		should: [ set add: 'new' ]
+		raise: GbsError.
+	self
+		should: [ bag add: 'new' withOccurrences: 1 ]
+		raise: GbsError.
+	self assert: array first equals: 'old'.
+	self assert: ordered asArray equals: #('old').
+	self deny: (dictionary includesKey: #new).
+	self deny: (set includes: 'new').
+	self assert: (bag occurrencesOf: 'new') equals: 0.
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testReplicationPolicyStrictMutationProtectionRejectsMappedForwarderStubAndUnmappedSlots [
+	| mockSession manager connector order dirtyOops |
+	mockSession := CoreMockGbsSession new.
+	manager := mockSession replicatorManager.
+	connector := GbsClientClassConnector
+		client: CoreGbsMigrationDomainMappedOrder
+		server: 'GbsMigrationLiveMappedOrder'
+		replicationSpec: CoreGbsMigrationDomainMappedOrder migrationDomainReplicationSpec
+		serverInstVarNames: CoreGbsMigrationDomainMappedOrder migrationDomainServerInstVarNames.
+	connector replicatorClass: GbxPointerObjectReplicator.
+	manager installClientClassConnector: connector.
+	order := CoreGbsMigrationDomainMappedOrder basicNew.
+	order
+		instVarAt: 1 put: #oldCustomer;
+		instVarAt: 2 put: #oldLines;
+		instVarAt: 3 put: 10;
+		instVarAt: 4 put: #oldCache;
+		instVarAt: 5 put: #oldAudit.
+	mockSession rememberMaterializedObject: order forOop: 9008.
+	(GbsReplicationPolicy forSession: mockSession) strictMutationProtectionEnabled: true.
+
+	self
+		should: [
+			order
+				gbxMutationAt: 1
+				value: #newCustomer
+				noModError: nil ]
+		raise: GbsError.
+	self
+		should: [
+			order
+				gbxMutationAt: 4
+				value: #newCache
+				noModError: nil ]
+		raise: GbsError.
+	self
+		should: [
+			order
+				gbxMutationAt: 5
+				value: #newAudit
+				noModError: nil ]
+		raise: GbsError.
+	self assert: (order instVarAt: 1) equals: #oldCustomer.
+	self assert: (order instVarAt: 4) equals: #oldCache.
+	self assert: (order instVarAt: 5) equals: #oldAudit.
+
+	order
+		gbxMutationAt: 2
+		value: #newLines
+		noModError: nil.
+	order
+		gbxMutationAt: 3
+		value: 20
+		noModError: nil.
+	self assert: (order instVarAt: 2) equals: #newLines.
+	self assert: (order instVarAt: 3) equals: 20.
+	dirtyOops := mockSession dirtyMaterializedObjectOops asSet.
+	self assert: (dirtyOops includes: 9008)
 ]
 
 { #category : 'tests' }

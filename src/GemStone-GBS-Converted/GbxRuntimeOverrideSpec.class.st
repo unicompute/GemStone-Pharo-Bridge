@@ -10,6 +10,8 @@ GbxRuntimeOverrideSpec class >> bagAddWithOccurrencesOverrideSource [
 	^ 'add: newObject withOccurrences: anInteger
 	"Add newObject anInteger times to the receiver. Answer newObject."
 
+	(self respondsTo: #gbsEnsureMutationAllowedAt:noModError:) ifTrue: [
+		self gbsEnsureMutationAllowedAt: newObject noModError: nil ].
 	contents at: newObject put: (contents at: newObject ifAbsent: [ 0 ]) + anInteger.
 	self gbxConsiderModified.
 	^ newObject'
@@ -30,6 +32,8 @@ GbxRuntimeOverrideSpec class >> bagRemoveIfAbsentOverrideSource [
 
 	| count |
 	count := contents at: oldObject ifAbsent: [ ^ exceptionBlock value ].
+	(self respondsTo: #gbsEnsureMutationAllowedAt:noModError:) ifTrue: [
+		self gbsEnsureMutationAllowedAt: oldObject noModError: nil ].
 	count = 1
 		ifTrue: [ contents removeKey: oldObject ]
 		ifFalse: [ contents at: oldObject put: count - 1 ].
@@ -50,6 +54,8 @@ GbxRuntimeOverrideSpec class >> bagRemoveKeyIfAbsentOverrideSource [
 	Otherwise, answer the argument, oldObject."
 
 	contents at: oldObject ifAbsent: [ ^ exceptionBlock value ].
+	(self respondsTo: #gbsEnsureMutationAllowedAt:noModError:) ifTrue: [
+		self gbsEnsureMutationAllowedAt: oldObject noModError: nil ].
 	contents removeKey: oldObject.
 	self gbxConsiderModified.
 	^ oldObject'
@@ -67,6 +73,8 @@ GbxRuntimeOverrideSpec class >> dictionaryAtPutOverrideSource [
 	new entry for key and set is value to anObject. Answer anObject."
 
 	| index assoc |
+	(self respondsTo: #gbsEnsureMutationAllowedAt:noModError:) ifTrue: [
+		self gbsEnsureMutationAllowedAt: key noModError: nil ].
 	index := self findElementOrNil: key.
 	assoc := array at: index.
 	assoc
@@ -93,6 +101,8 @@ GbxRuntimeOverrideSpec class >> orderedCollectionAddOverrideSource [
 	"You may want to use yourself to return the collection itself"
 	"(OrderedCollection new add: 42; yourself) class >>> OrderedCollection"
 	"(OrderedCollection new add: 42; yourself) size >>> 1"
+	(self respondsTo: #gbsEnsureMutationAllowedAt:noModError:) ifTrue: [
+		self gbsEnsureMutationAllowedAt: newObject noModError: nil ].
 	self addLast: newObject.
 	self gbxConsiderModified.
 	^ newObject'
@@ -113,6 +123,8 @@ GbxRuntimeOverrideSpec class >> orderedCollectionRemoveIfAbsentOverrideSource [
 		whileTrue: [
 			oldObject = (array at: index)
 				ifTrue: [
+					(self respondsTo: #gbsEnsureMutationAllowedAt:noModError:) ifTrue: [
+						self gbsEnsureMutationAllowedAt: oldObject noModError: nil ].
 					self removeIndex: index.
 					self gbxConsiderModified.
 					^ oldObject ]
@@ -140,6 +152,8 @@ GbxRuntimeOverrideSpec class >> setAddOverrideSource [
 	index := self scanFor: newObject.
 	(array at: index)
 		ifNil: [
+			(self respondsTo: #gbsEnsureMutationAllowedAt:noModError:) ifTrue: [
+				self gbsEnsureMutationAllowedAt: newObject noModError: nil ].
 			self atNewIndex: index put: newObject asCollectionElement.
 			self gbxConsiderModified ].
 	^ newObject'
@@ -157,6 +171,8 @@ GbxRuntimeOverrideSpec class >> setRemoveIfAbsentOverrideSource [
 	| index |
 	index := self findElementOrNil: oldObject.
 	(array at: index) ifNil: [ ^ aBlock value ].
+	(self respondsTo: #gbsEnsureMutationAllowedAt:noModError:) ifTrue: [
+		self gbsEnsureMutationAllowedAt: oldObject noModError: nil ].
 	array at: index put: nil.
 	tally := tally - 1.
 	self fixCollisionsFrom: index.
