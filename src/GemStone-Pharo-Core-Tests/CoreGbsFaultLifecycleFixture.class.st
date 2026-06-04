@@ -35,8 +35,20 @@ CoreGbsFaultLifecycleFixture >> postFaultInSession: aSession [
 	^ self
 ]
 
+{ #category : 'stubbing' }
+CoreGbsFaultLifecycleFixture >> postStubInSession: aSession [
+	self events add: #postStub.
+	^ self
+]
+
 { #category : 'faulting' }
 CoreGbsFaultLifecycleFixture >> preFault [
 	self events add: #preFault.
+	^ self
+]
+
+{ #category : 'stubbing' }
+CoreGbsFaultLifecycleFixture >> preStub [
+	self events add: #preStub.
 	^ self
 ]

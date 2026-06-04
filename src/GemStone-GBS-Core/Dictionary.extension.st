@@ -8,6 +8,8 @@ Dictionary >> gbxDelegate [
 { #category : '*GemStone-GBS-Core' }
 Dictionary >> at: key put: anObject [
 	| index assoc |
+	(self respondsTo: #gbsEnsureMutationAllowedAt:noModError:) ifTrue: [
+		self gbsEnsureMutationAllowedAt: key noModError: nil ].
 	index := self findElementOrNil: key.
 	assoc := array at: index.
 	assoc
@@ -23,6 +25,8 @@ Dictionary >> removeKey: key ifAbsent: aBlock [
 	index := self findElementOrNil: key.
 	assoc := array at: index.
 	assoc ifNil: [ ^ aBlock value ].
+	(self respondsTo: #gbsEnsureMutationAllowedAt:noModError:) ifTrue: [
+		self gbsEnsureMutationAllowedAt: key noModError: nil ].
 	array at: index put: nil.
 	tally := tally - 1.
 	self fixCollisionsFrom: index.

@@ -61,6 +61,10 @@ GbsClassicLauncherCoreToolsTest >> newFakeSettingsPresenterOn: aConfiguration [
 	presenter bridgeControlAt: #storeTraversalTransportDrop put: (drop value: 'script').
 	presenter bridgeControlAt: #storeDirtyOnCommitYes put: (check value: false).
 	presenter bridgeControlAt: #storeDirtyOnCommitNo put: (check value: true).
+	presenter bridgeControlAt: #strictMutationProtectionEnabledYes put: (check value: false).
+	presenter bridgeControlAt: #strictMutationProtectionEnabledNo put: (check value: true).
+	presenter bridgeControlAt: #nativeStoreTraversalShapeValidationEnabledYes put: (check value: true).
+	presenter bridgeControlAt: #nativeStoreTraversalShapeValidationEnabledNo put: (check value: false).
 	presenter bridgeControlAt: #asyncSignalPollingEnabledYes put: (check value: false).
 	presenter bridgeControlAt: #asyncSignalPollingEnabledNo put: (check value: true).
 	setPair := [ :yesName :noName :value |
@@ -478,6 +482,8 @@ GbsClassicLauncherCoreToolsTest >> testSettingsPresenterPersistsReplicationLifec
 		presenter selectDrop: (presenter bridgeControlAt: #storeTraversalTransportDrop) value: 'binaryRequired'.
 		(presenter bridgeControlAt: #storeDirtyOnCommitYes) state: true.
 		(presenter bridgeControlAt: #storeDirtyOnCommitNo) state: false.
+		(presenter bridgeControlAt: #strictMutationProtectionEnabledYes) state: true.
+		(presenter bridgeControlAt: #strictMutationProtectionEnabledNo) state: false.
 		(presenter bridgeControlAt: #asyncSignalPollingEnabledYes) state: true.
 		(presenter bridgeControlAt: #asyncSignalPollingEnabledNo) state: false.
 
@@ -492,12 +498,14 @@ GbsClassicLauncherCoreToolsTest >> testSettingsPresenterPersistsReplicationLifec
 		self assert: configuration serverMapMode equals: 'strong'.
 		self assert: configuration storeTraversalTransport equals: 'binaryRequired'.
 		self assert: configuration storeDirtyOnCommit.
+		self assert: configuration strictMutationProtectionEnabled.
 		self assert: configuration asyncSignalPollingEnabled.
 		self assert: policy blockReplicationPolicySymbol equals: #none.
 		self assert: policy defaultFaultPolicySymbol equals: #immediate.
 		self assert: policy serverMapModeSymbol equals: #strong.
 		self assert: policy freeOopAllocationBatchSize equals: 512.
 		self assert: policy storeDirtyOnCommit.
+		self assert: policy strictMutationProtectionEnabled.
 		self assert: policy storeTraversalTransportSymbol equals: #binaryRequired
 	] ensure: [
 		GbsConfiguration current: previousConfiguration ]

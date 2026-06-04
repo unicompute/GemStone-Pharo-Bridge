@@ -494,6 +494,7 @@ GbsSessionCoreTest >> testReplicationPolicyDefaultsMirrorCompatibilitySettings [
 	self assert: policy freeOopBatchSize equals: 256.
 	self assert: policy freeSlotsOnStubbing.
 	self assert: policy serverMapMode equals: 'weak'.
+	self deny: policy strictMutationProtectionEnabled.
 	self deny: policy storeDirtyOnCommit.
 	self assert: policy storeTraversalTransport equals: 'script'.
 	self assert: policy nativeStoreTraversalShapeValidationEnabled.
@@ -510,11 +511,14 @@ GbsSessionCoreTest >> testReplicationPolicySettingSpecificationsExposeDefaultsLe
 	self assert: (specs anySatisfy: [ :each | (each at: #key) = #storeDirtyOnCommit ]).
 	self assert: (specs anySatisfy: [ :each | (each at: #key) = #freeOopAllocationBatchSize ]).
 	self assert: (specs anySatisfy: [ :each | (each at: #key) = #nativeStoreTraversalShapeValidationEnabled ]).
+	self assert: (specs anySatisfy: [ :each | (each at: #key) = #strictMutationProtectionEnabled ]).
 	self assert: (GbsReplicationPolicy defaultValueForSetting: #storeTraversalTransport) equals: 'script'.
 	self assert: (GbsReplicationPolicy defaultValueForSetting: #storeDirtyOnCommit) equals: false.
 	self assert: (GbsReplicationPolicy defaultValueForSetting: #nativeStoreTraversalShapeValidationEnabled) equals: true.
+	self assert: (GbsReplicationPolicy defaultValueForSetting: #strictMutationProtectionEnabled) equals: false.
 	self assert: (GbsReplicationPolicy legalValuesForSetting: #storeTraversalTransport) equals: #('script' 'binary' 'binaryRequired').
 	self assert: (GbsReplicationPolicy legalValuesForSetting: #nativeStoreTraversalShapeValidationEnabled) equals: #(true false).
+	self assert: (GbsReplicationPolicy legalValuesForSetting: #strictMutationProtectionEnabled) equals: #(true false).
 	self assert: (transportSpec at: #category) equals: #replication.
 	self assert: ((GbsReplicationPolicy helpForSetting: #storeTraversalTransport) includesSubstring: 'dirty writes')
 ]
@@ -550,6 +554,7 @@ GbsSessionCoreTest >> testReplicationPolicyCanCopyConvertedConfigurationValues [
 		freeOopBatchSize: 64;
 		valueAt: #freeSlotsOnStubbing put: false;
 		serverMapMode: 'strong';
+		strictMutationProtectionEnabled: true;
 		storeDirtyOnCommit: true;
 		storeTraversalTransport: 'binaryRequired';
 		valueAt: #traversalBufferSize put: 8192.
@@ -567,6 +572,7 @@ GbsSessionCoreTest >> testReplicationPolicyCanCopyConvertedConfigurationValues [
 	self assert: policy freeOopBatchSize equals: 64.
 	self deny: policy freeSlotsOnStubbing.
 	self assert: policy serverMapMode equals: 'strong'.
+	self assert: policy strictMutationProtectionEnabled.
 	self assert: policy storeDirtyOnCommit.
 	self assert: policy storeTraversalTransport equals: 'binaryRequired'.
 	self assert: policy traversalBufferSize equals: 8192
@@ -1042,6 +1048,49 @@ GbsSessionCoreTest >> testReplicationSchemeModesControlDirtyTracking [
 	self deny: (mockSession isMaterializedObjectDirty: stubArray).
 	self deny: (mockSession isMaterializedObjectDirty: noneArray).
 	self assert: (mockSession isMaterializedObjectDirty: namedSpecArray)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testReplicationPolicyStrictMutationProtectionRejectsStubAndNoneWrites [
+	| mockSession replicateArray stubArray noneArray manager noModErrorEvaluated |
+	mockSession := CoreMockGbsSession new.
+	replicateArray := Array with: 'old'.
+	stubArray := Array with: 'old'.
+	noneArray := Array with: 'old'.
+	mockSession rememberMaterializedObject: replicateArray forOop: 9000.
+	mockSession rememberMaterializedObject: stubArray forOop: 9016.
+	mockSession rememberMaterializedObject: noneArray forOop: 9032.
+	manager := GbxClampManager forSession: mockSession.
+	manager
+		clampObject: replicateArray toScheme: GbxReplicationScheme replicate;
+		clampObject: stubArray toScheme: GbxReplicationScheme stub;
+		clampObject: noneArray toScheme: GbxReplicationScheme none.
+	(GbsReplicationPolicy forSession: mockSession) strictMutationProtectionEnabled: true.
+	noModErrorEvaluated := false.
+
+	self
+		should: [ stubArray at: 1 put: 'new' ]
+		raise: GbsError.
+	self assert: stubArray first equals: 'old'.
+	self
+		should: [
+			stubArray
+				gbxMutationAt: 1
+				value: 'new'
+				noModError: [ noModErrorEvaluated := true ] ]
+		raise: GbsError.
+	self assert: noModErrorEvaluated.
+	self assert: stubArray first equals: 'old'.
+	self
+		should: [ noneArray at: 1 put: 'new' ]
+		raise: GbsError.
+	self assert: noneArray first equals: 'old'.
+
+	replicateArray at: 1 put: 'new'.
+	self assert: replicateArray first equals: 'new'.
+	self assert: (mockSession isMaterializedObjectDirty: replicateArray).
+	self deny: (mockSession isMaterializedObjectDirty: stubArray).
+	self deny: (mockSession isMaterializedObjectDirty: noneArray)
 ]
 
 { #category : 'tests' }
@@ -2599,13 +2648,15 @@ GbsSessionCoreTest >> testSessionLifecycleFaultHooksAndObjectStubbingPolicy [
 	report := GbsSessionLifecycleManager lifecycleReportForSession: mockSession.
 
 	self assert: oldObject events asArray equals: #(preFault).
-	self assert: refreshedObject events asArray equals: #(postFault).
+	self assert: refreshedObject events asArray equals: #(postFault preStub postStub).
 	self assert: proxy class equals: GbsProxy.
 	self assert: proxy oop equals: 9900.
 	self assert: refreshedObject payload equals: 'fresh'.
 	self assert: (report at: #faultedObjectCount) equals: 1.
 	self assert: (report at: #preFaultHookCount) equals: 1.
 	self assert: (report at: #postFaultHookCount) equals: 1.
+	self assert: (report at: #preStubHookCount) equals: 1.
+	self assert: (report at: #postStubHookCount) equals: 1.
 	self assert: (report at: #stubbedObjectCount) equals: 1.
 	self assert: (report at: #freeSlotsOnStubbingSkippedByObjectCount) equals: 1
 ]

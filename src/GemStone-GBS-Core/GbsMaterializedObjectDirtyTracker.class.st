@@ -53,6 +53,17 @@ GbsMaterializedObjectDirtyTracker class >> dirtyOopsForSession: aSession [
 ]
 
 { #category : 'dirty tracking' }
+GbsMaterializedObjectDirtyTracker class >> assertMutationAllowedFor: anObject slot: slotIndex inSession: aSession noModError: noModError [
+	| reason |
+	reason := self mutationDeniedReasonFor: anObject slot: slotIndex inSession: aSession.
+	reason ifNil: [ ^ anObject ].
+	noModError ifNotNil: [
+		(noModError respondsTo: #value) ifTrue: [ noModError value ].
+		(noModError isString) ifTrue: [ GbsError signal: noModError ] ].
+	GbsError signal: reason
+]
+
+{ #category : 'dirty tracking' }
 GbsMaterializedObjectDirtyTracker class >> flushDirtyForSession: aSession [
 	^ GbsDirtyReplicateStoreTraversal flushSession: aSession
 ]
@@ -98,6 +109,41 @@ GbsMaterializedObjectDirtyTracker class >> markStDirty: anObject [
 	^ anObject
 ]
 
+{ #category : 'dirty tracking' }
+GbsMaterializedObjectDirtyTracker class >> mutationDeniedReasonFor: anObject slot: slotIndex inSession: aSession [
+	| manager scheme selector |
+	aSession ifNil: [ ^ nil ].
+	(self strictMutationProtectionEnabledForSession: aSession) ifFalse: [ ^ nil ].
+	(self oopForObject: anObject inSession: aSession) ifNil: [ ^ nil ].
+	manager := [ GbxClampManager forSession: aSession ] on: Error do: [ nil ].
+	manager ifNil: [ ^ nil ].
+	scheme := manager replicationSchemeFor: anObject.
+	scheme ifNil: [ ^ nil ].
+	selector := (scheme respondsTo: #selector)
+		ifTrue: [ scheme selector ]
+		ifFalse: [ nil ].
+	((scheme respondsTo: #isStub) and: [ scheme isStub ]) ifTrue: [
+		^ self mutationDeniedTextForScheme: selector slot: slotIndex ].
+	((scheme respondsTo: #isNone) and: [ scheme isNone ]) ifTrue: [
+		^ self mutationDeniedTextForScheme: selector slot: slotIndex ].
+	^ nil
+]
+
+{ #category : 'dirty tracking' }
+GbsMaterializedObjectDirtyTracker class >> mutationDeniedTextForScheme: schemeSelector slot: slotIndex [
+	^ String streamContents: [ :stream |
+		stream
+			nextPutAll: 'Cannot modify a ';
+			nextPutAll: (schemeSelector ifNil: [ 'non-replicated' ] ifNotNil: [ schemeSelector asString ]);
+			nextPutAll: ' replicated object while strict mutation protection is enabled'.
+		slotIndex ifNotNil: [
+			stream
+				nextPutAll: ' (slot ';
+				nextPutAll: slotIndex asString;
+				nextPutAll: ')' ].
+		stream nextPut: $. ]
+]
+
 { #category : 'registries' }
 GbsMaterializedObjectDirtyTracker class >> newIdentityRegistry [
 	| registryClass |
@@ -139,6 +185,15 @@ GbsMaterializedObjectDirtyTracker class >> policyAllowsAutoMarkDirtyForSession: 
 	policy ifNil: [ ^ true ].
 	(policy respondsTo: #autoMarkDirty) ifFalse: [ ^ true ].
 	^ policy autoMarkDirty ~~ false
+]
+
+{ #category : 'dirty tracking' }
+GbsMaterializedObjectDirtyTracker class >> strictMutationProtectionEnabledForSession: aSession [
+	| policy |
+	policy := [ GbsReplicationPolicy forSession: aSession ] on: Error do: [ nil ].
+	policy ifNil: [ ^ false ].
+	(policy respondsTo: #strictMutationProtectionEnabled) ifFalse: [ ^ false ].
+	^ policy strictMutationProtectionEnabled == true
 ]
 
 { #category : 'private' }

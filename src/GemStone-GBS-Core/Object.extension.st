@@ -17,8 +17,21 @@ Object >> gbsConsiderModifiedAt: slotIndex [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+Object >> gbsEnsureMutationAllowedAt: slotIndex noModError: noModError [
+	| session |
+	session := GbsMaterializedObjectDirtyTracker sessionTrackingObject: self.
+	session ifNil: [ ^ self ].
+	^ GbsMaterializedObjectDirtyTracker
+		assertMutationAllowedFor: self
+		slot: slotIndex
+		inSession: session
+		noModError: noModError
+]
+
+{ #category : '*GemStone-GBS-Core' }
 Object >> gbsBasicAt: index put: anObject [
 	| result |
+	self gbsEnsureMutationAllowedAt: index noModError: nil.
 	result := self basicAt: index put: anObject.
 	self gbxConsiderModified.
 	^ result
@@ -26,6 +39,7 @@ Object >> gbsBasicAt: index put: anObject [
 
 { #category : '*GemStone-GBS-Core' }
 Object >> gbsInstVarAt: slotIndex put: anObject [
+	self gbsEnsureMutationAllowedAt: slotIndex noModError: nil.
 	self instVarAt: slotIndex put: anObject.
 	self gbsConsiderModifiedAt: slotIndex.
 	^ anObject
@@ -44,6 +58,7 @@ Object >> gbxConsiderModifiedAt: slotIndex [
 { #category : '*GemStone-GBS-Core' }
 Object >> gbxMutationAt: slotIndex value: anObject noModError: ignoredError [
 	| namedSize indexedIndex |
+	self gbsEnsureMutationAllowedAt: slotIndex noModError: ignoredError.
 	slotIndex isInteger ifFalse: [
 		self gbxConsiderModified.
 		^ anObject ].
@@ -93,6 +108,7 @@ Object >> freeSlotsOnStubbing [
 { #category : '*GemStone-GBS-Core' }
 Object >> gbsAt: index put: anObject [
 	| result |
+	self gbsEnsureMutationAllowedAt: index noModError: nil.
 	result := self at: index put: anObject.
 	self gbxConsiderModified.
 	^ result

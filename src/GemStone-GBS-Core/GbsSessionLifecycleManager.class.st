@@ -464,6 +464,8 @@ GbsSessionLifecycleManager class >> lifecycleReportCounterKeys [
 		faultedObjectCount
 		preFaultHookCount
 		postFaultHookCount
+		preStubHookCount
+		postStubHookCount
 		stubbedObjectCount
 		freeSlotsOnStubbingSkippedByObjectCount
 		serverMapStrongWindowEnterCount
@@ -847,6 +849,30 @@ GbsSessionLifecycleManager class >> invokePostFaultHookFor: anObject inSession: 
 ]
 
 { #category : 'stubbing' }
+GbsSessionLifecycleManager class >> invokePreStubHookFor: anObject inSession: aSession [
+	anObject ifNil: [ ^ nil ].
+	(anObject respondsTo: #preStubInSession:) ifTrue: [
+		self incrementLifecycleCounter: #preStubHookCount forSession: aSession.
+		^ anObject preStubInSession: aSession ].
+	(anObject respondsTo: #preStub) ifTrue: [
+		self incrementLifecycleCounter: #preStubHookCount forSession: aSession.
+		^ anObject preStub ].
+	^ nil
+]
+
+{ #category : 'stubbing' }
+GbsSessionLifecycleManager class >> invokePostStubHookFor: anObject inSession: aSession [
+	anObject ifNil: [ ^ nil ].
+	(anObject respondsTo: #postStubInSession:) ifTrue: [
+		self incrementLifecycleCounter: #postStubHookCount forSession: aSession.
+		^ anObject postStubInSession: aSession ].
+	(anObject respondsTo: #postStub) ifTrue: [
+		self incrementLifecycleCounter: #postStubHookCount forSession: aSession.
+		^ anObject postStub ].
+	^ nil
+]
+
+{ #category : 'stubbing' }
 GbsSessionLifecycleManager class >> shouldFreeSlotsOnStubbingForSession: aSession [
 	| policy |
 	policy := [ GbsReplicationPolicy forSession: aSession ] on: Error do: [ nil ].
@@ -888,10 +914,12 @@ GbsSessionLifecycleManager class >> stubObjectForOop: anOop inSession: aSession 
 		ifNil: [ self forgetMaterializedObjectForOop: anOop inSession: aSession ]
 		ifNotNil: [
 			self incrementLifecycleCounter: #stubbedObjectCount forSession: aSession.
+			self invokePreStubHookFor: object inSession: aSession.
 			self
 				forgetObjectForOop: anOop
 				inSession: aSession
 				reason: #noLongerReplicated.
+			self invokePostStubHookFor: object inSession: aSession.
 			(self shouldFreeSlotsOnStubbingFor: object inSession: aSession) ifTrue: [
 				self freeSlotsOf: object inSession: aSession ] ].
 	^ aSession objectForOop: anOop

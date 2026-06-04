@@ -23,7 +23,7 @@ GbsSettingsPresenter >> bridgeBooleanAt: ivarName default: defaultBoolean [
 { #category : '*GemStone-GBS-Core-Tools' }
 GbsSettingsPresenter >> bridgeConfigurationValueAt: ivarName default: defaultValue [
 	configuration ifNil: [ ^ defaultValue ].
-	(#(asyncSignalPollingEnabled freeOopAllocationBatchSize freeOopBatchSize nativeStoreTraversalShapeValidationEnabled serverMapMode storeDirtyOnCommit storeTraversalTransport) includes: ivarName) ifTrue: [
+	(#(asyncSignalPollingEnabled freeOopAllocationBatchSize freeOopBatchSize nativeStoreTraversalShapeValidationEnabled serverMapMode storeDirtyOnCommit storeTraversalTransport strictMutationProtectionEnabled) includes: ivarName) ifTrue: [
 		^ [ configuration perform: ivarName ] on: Error do: [ defaultValue ] ].
 	^ configuration valueAt: ivarName ifAbsent: defaultValue
 ]
@@ -52,7 +52,7 @@ GbsSettingsPresenter >> bridgeFormattedIntegerValueAt: ivarName default: default
 GbsSettingsPresenter >> bridgeSetConfigurationValueAt: aKey put: aValue [
 	| setter |
 	configuration ifNil: [ configuration := GbsConfiguration current ].
-	(#(asyncSignalPollingEnabled freeOopAllocationBatchSize freeOopBatchSize nativeStoreTraversalShapeValidationEnabled serverMapMode storeDirtyOnCommit storeTraversalTransport) includes: aKey) ifTrue: [
+	(#(asyncSignalPollingEnabled freeOopAllocationBatchSize freeOopBatchSize nativeStoreTraversalShapeValidationEnabled serverMapMode storeDirtyOnCommit storeTraversalTransport strictMutationProtectionEnabled) includes: aKey) ifTrue: [
 		setter := (aKey asString, ':') asSymbol.
 		^ configuration perform: setter with: aValue ].
 	^ configuration valueAt: aKey put: aValue
@@ -105,6 +105,9 @@ GbsSettingsPresenter >> defaultLayout [
 	rightCol := SpBoxLayout newTopToBottom
 		add: (self sectionTitle: 'Replication') expand: false;
 		add: (self yesNoRowLabel: 'autoMarkDirty' yes: autoMarkDirtyYes no: autoMarkDirtyNo) expand: false;
+		add: (self yesNoRowLabel: 'strictMutationProtection'
+			yes: (self bridgeControlAt: #strictMutationProtectionEnabledYes)
+			no: (self bridgeControlAt: #strictMutationProtectionEnabledNo)) expand: false;
 		add: (self yesNoRowLabel: 'blockReplicationEnabled' yes: blockReplicationEnabledYes no: blockReplicationEnabledNo) expand: false;
 		add: (self textRowLabel: 'blockReplicationPolicy' field: blockReplicationPolicyDrop) expand: false;
 		add: (self textRowLabel: 'defaultFaultPolicy' field: defaultFaultPolicyDrop) expand: false;
@@ -174,6 +177,8 @@ GbsSettingsPresenter >> initializePresenters [
 	self bridgeControlAt: #freeOopAllocationBatchSizeField put: self newTextInput.
 	self bridgeControlAt: #storeDirtyOnCommitYes put: (self newRadioButton label: 'Yes').
 	self bridgeControlAt: #storeDirtyOnCommitNo put: (self newRadioButton label: 'No').
+	self bridgeControlAt: #strictMutationProtectionEnabledYes put: (self newRadioButton label: 'Yes').
+	self bridgeControlAt: #strictMutationProtectionEnabledNo put: (self newRadioButton label: 'No').
 	self bridgeControlAt: #nativeStoreTraversalShapeValidationEnabledYes put: (self newRadioButton label: 'Yes').
 	self bridgeControlAt: #nativeStoreTraversalShapeValidationEnabledNo put: (self newRadioButton label: 'No').
 	self bridgeControlAt: #storeTraversalTransportDrop put: self newDropList.
@@ -249,6 +254,8 @@ GbsSettingsPresenter >> loadFromConfiguration [
 	self setYesNo: { forwarderDebuggingYes. forwarderDebuggingNo } value: (self bridgeBooleanAt: #forwarderDebugging default: false).
 	self setYesNo: { stubDebuggingYes. stubDebuggingNo } value: (self bridgeBooleanAt: #stubDebugging default: false).
 	self setYesNo: { autoMarkDirtyYes. autoMarkDirtyNo } value: (self bridgeBooleanAt: #autoMarkDirty default: true).
+	self setYesNo: { (self bridgeControlAt: #strictMutationProtectionEnabledYes). (self bridgeControlAt: #strictMutationProtectionEnabledNo) }
+		value: (self bridgeBooleanAt: #strictMutationProtectionEnabled default: false).
 	self setYesNo: { blockReplicationEnabledYes. blockReplicationEnabledNo } value: (self bridgeBooleanAt: #blockReplicationEnabled default: true).
 	self setYesNo: { freeSlotsOnStubbingYes. freeSlotsOnStubbingNo } value: (self bridgeBooleanAt: #freeSlotsOnStubbing default: true).
 	self setYesNo: { (self bridgeControlAt: #storeDirtyOnCommitYes). (self bridgeControlAt: #storeDirtyOnCommitNo) }
@@ -327,6 +334,7 @@ GbsSettingsPresenter >> updateConfigurationFromPresenters [
 		bridgeSetConfigurationValueAt: #forwarderDebugging put: (self yesNoValueFor: { forwarderDebuggingYes. forwarderDebuggingNo });
 		bridgeSetConfigurationValueAt: #stubDebugging put: (self yesNoValueFor: { stubDebuggingYes. stubDebuggingNo });
 		bridgeSetConfigurationValueAt: #autoMarkDirty put: (self yesNoValueFor: { autoMarkDirtyYes. autoMarkDirtyNo });
+		bridgeSetConfigurationValueAt: #strictMutationProtectionEnabled put: (self yesNoValueFor: { (self bridgeControlAt: #strictMutationProtectionEnabledYes). (self bridgeControlAt: #strictMutationProtectionEnabledNo) });
 		bridgeSetConfigurationValueAt: #blockReplicationEnabled put: (self yesNoValueFor: { blockReplicationEnabledYes. blockReplicationEnabledNo });
 		bridgeSetConfigurationValueAt: #storeDirtyOnCommit put: (self yesNoValueFor: { (self bridgeControlAt: #storeDirtyOnCommitYes). (self bridgeControlAt: #storeDirtyOnCommitNo) });
 		bridgeSetConfigurationValueAt: #nativeStoreTraversalShapeValidationEnabled put: (self yesNoValueFor: { (self bridgeControlAt: #nativeStoreTraversalShapeValidationEnabledYes). (self bridgeControlAt: #nativeStoreTraversalShapeValidationEnabledNo) });

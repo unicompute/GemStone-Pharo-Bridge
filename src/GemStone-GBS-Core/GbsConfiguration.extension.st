@@ -94,6 +94,16 @@ GbsConfiguration >> storeDirtyOnCommit: aBoolean [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsConfiguration >> strictMutationProtectionEnabled [
+	^ self bridgeValueAt: #strictMutationProtectionEnabled ifAbsent: false
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsConfiguration >> strictMutationProtectionEnabled: aBoolean [
+	^ self bridgeValueAt: #strictMutationProtectionEnabled put: aBoolean
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsConfiguration >> storeTraversalTransport: aString [
 	^ self bridgeValueAt: #storeTraversalTransport put: aString
 ]

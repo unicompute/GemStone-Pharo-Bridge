@@ -14,6 +14,7 @@ Class {
 		'freeSlotsOnStubbing',
 		'nativeStoreTraversalShapeValidationEnabled',
 		'serverMapMode',
+		'strictMutationProtectionEnabled',
 		'storeDirtyOnCommit',
 		'storeTraversalTransport',
 		'traversalBufferSize'
@@ -145,6 +146,7 @@ GbsReplicationPolicy class >> settingSpecifications [
 	| specs |
 	specs := OrderedCollection new.
 	self addSetting: #autoMarkDirty category: #replication default: true legalValues: #(true false) help: 'Automatically mark replicated client objects dirty when bridge mutation hooks see a local write.' to: specs.
+	self addSetting: #strictMutationProtectionEnabled category: #replication default: false legalValues: #(true false) help: 'Reject local writes to objects clamped as stub or none instead of silently ignoring dirty tracking.' to: specs.
 	self addSetting: #blockReplicationPolicy category: #replication default: 'replicate' legalValues: #('replicate' 'callback' 'stub' 'none') help: 'Default replication behavior for block-like server objects.' to: specs.
 	self addSetting: #defaultFaultPolicy category: #replication default: 'lazy' legalValues: #('lazy' 'immediate' 'eager' 'none') help: 'Default policy used when a proxy or stub is faulted into a local replicate.' to: specs.
 	self addSetting: #faultLevelRpc category: #replication default: 4 legalValues: #() help: 'Fallback RPC fault level used by compatibility paths that ask the server to expand object graphs.' to: specs.
@@ -195,6 +197,7 @@ GbsReplicationPolicy >> asDictionary [
 		at: #freeSlotsOnStubbing put: self freeSlotsOnStubbing;
 		at: #nativeStoreTraversalShapeValidationEnabled put: self nativeStoreTraversalShapeValidationEnabled;
 		at: #serverMapMode put: self serverMapMode;
+		at: #strictMutationProtectionEnabled put: self strictMutationProtectionEnabled;
 		at: #storeDirtyOnCommit put: self storeDirtyOnCommit;
 		at: #storeTraversalTransport put: self storeTraversalTransport;
 		at: #traversalBufferSize put: self traversalBufferSize;
@@ -347,6 +350,7 @@ GbsReplicationPolicy >> initializeFromConfiguration: aConfiguration [
 	freeSlotsOnStubbing := self valueAt: #freeSlotsOnStubbing fromConfiguration: aConfiguration default: true.
 	nativeStoreTraversalShapeValidationEnabled := self valueAt: #nativeStoreTraversalShapeValidationEnabled fromConfiguration: aConfiguration default: true.
 	serverMapMode := self valueAt: #serverMapMode fromConfiguration: aConfiguration default: 'weak'.
+	strictMutationProtectionEnabled := self valueAt: #strictMutationProtectionEnabled fromConfiguration: aConfiguration default: false.
 	storeDirtyOnCommit := self valueAt: #storeDirtyOnCommit fromConfiguration: aConfiguration default: false.
 	storeTraversalTransport := self valueAt: #storeTraversalTransport fromConfiguration: aConfiguration default: 'script'.
 	traversalBufferSize := self valueAt: #traversalBufferSize fromConfiguration: aConfiguration default: 250000.
@@ -393,6 +397,7 @@ GbsReplicationPolicy >> reportText [
 			freeOopAllocationBatchSize
 			freeOopBatchSize
 			nativeStoreTraversalShapeValidationEnabled
+			strictMutationProtectionEnabled
 			traversalBufferSize
 			asyncSignalPollingEnabled
 			eventPollingFrequency
@@ -478,6 +483,16 @@ GbsReplicationPolicy >> storeTraversalTransportSymbol [
 ]
 
 { #category : 'accessing' }
+GbsReplicationPolicy >> strictMutationProtectionEnabled [
+	^ strictMutationProtectionEnabled == true
+]
+
+{ #category : 'accessing' }
+GbsReplicationPolicy >> strictMutationProtectionEnabled: aBoolean [
+	strictMutationProtectionEnabled := aBoolean
+]
+
+{ #category : 'accessing' }
 GbsReplicationPolicy >> traversalBufferSize [
 	^ traversalBufferSize
 ]
@@ -497,9 +512,18 @@ GbsReplicationPolicy >> normalizedPolicySymbolFrom: aValue allowed: allowedSymbo
 ]
 
 { #category : 'private' }
+GbsReplicationPolicy >> configuration: aConfiguration hasSpecificAccessorFor: selector [
+	| method |
+	(aConfiguration respondsTo: selector) ifFalse: [ ^ false ].
+	method := [ aConfiguration class lookupSelector: selector ] on: Error do: [ nil ].
+	method ifNil: [ ^ false ].
+	^ method methodClass ~~ Object
+]
+
+{ #category : 'private' }
 GbsReplicationPolicy >> valueAt: selector fromConfiguration: aConfiguration default: defaultValue [
 	aConfiguration ifNil: [ ^ defaultValue ].
-	(aConfiguration respondsTo: selector) ifTrue: [
+	(self configuration: aConfiguration hasSpecificAccessorFor: selector) ifTrue: [
 		^ [ aConfiguration perform: selector ] on: Error do: [ defaultValue ] ].
 	(aConfiguration respondsTo: #valueAt:ifAbsent:) ifTrue: [
 		^ aConfiguration valueAt: selector ifAbsent: defaultValue ].
