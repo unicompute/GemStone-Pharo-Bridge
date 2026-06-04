@@ -2721,6 +2721,29 @@ GbsSessionCoreTest >> testSessionEventControllerRecordsTypedEventHistoryAndRepor
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testSessionEventControllerReportTextIncludesRecentEvents [
+	| mockSession controller text error |
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #checkForError put: [ nil ].
+	controller := mockSession eventController.
+
+	controller handleAsyncAbortDuring: [ #done ].
+	self should: [ controller handlePositivePollResult: 1 ] raise: AlmostOutOfMemory.
+	mockSession instVarNamed: 'isLoggedIn' put: false.
+	error := Error new messageText: 'session died'; yourself.
+	controller handlePollingError: error.
+
+	text := mockSession eventControllerReportText.
+	self assert: (text includesSubstring: 'Session Event Controller').
+	self assert: (text includesSubstring: 'pollingErrorCount=1').
+	self assert: (text includesSubstring: 'lastPollingErrorClass=Error').
+	self assert: (text includesSubstring: 'lastPollingErrorMessage=session died').
+	self assert: (text includesSubstring: 'eventHistoryCount=5').
+	self assert: (text includesSubstring: 'lastEvent=fatalSessionDeath').
+	self assert: (text includesSubstring: 'payloadClass=Error payload=session died')
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testSessionEventControllerKeepsBoundedEventHistory [
 	| controller history |
 	controller := GbsSessionEventController forSession: CoreMockGbsSession new.

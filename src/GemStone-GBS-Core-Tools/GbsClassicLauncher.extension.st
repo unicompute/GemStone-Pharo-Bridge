@@ -141,6 +141,18 @@ GbsClassicLauncher >> browseSessionLifecycleReport [
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
+GbsClassicLauncher >> browseSessionEventReport [
+	| session |
+	session := self sessionForBrowsing.
+	(self isSessionUsableForBrowsing: session) ifFalse: [
+		self inform: 'Select or log into a GemStone session first.'.
+		^ false ].
+	GbsSessionParameters currentSession: session.
+	self inform: session eventControllerReportText.
+	^ true
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
 GbsClassicLauncher >> browseReplicationPolicyReport [
 	| session |
 	session := self sessionForBrowsing.
@@ -303,6 +315,7 @@ GbsClassicLauncher >> menuSession [
 		addItem: [ :item | item name: 'Replication Policy Report'; action: [ self browseReplicationPolicyReport ] ];
 		addItem: [ :item | item name: 'Replicator Manager Report'; action: [ self browseReplicatorManagerReport ] ];
 		addItem: [ :item | item name: 'Session Lifecycle Report'; action: [ self browseSessionLifecycleReport ] ];
+		addItem: [ :item | item name: 'Session Event Report'; action: [ self browseSessionEventReport ] ];
 		addItem: [ :item | item name: 'Flush GC Exported OOPs'; action: [ self flushExportSetReleaseOops ] ];
 		addItem: [ :item | item name: 'Typed Wrapper Autoload Report'; action: [ self browseTypedWrapperAutoloadReport ] ];
 		addItem: [ :item | item name: 'Typed Wrapper Lifecycle Report'; action: [ self browseTypedWrapperLifecycleReport ] ];

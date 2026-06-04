@@ -282,6 +282,39 @@ GbsSessionEventController >> eventReport [
 ]
 
 { #category : 'event history' }
+GbsSessionEventController >> eventReportText [
+	| report |
+	report := self eventReport.
+	^ String streamContents: [ :stream |
+		stream nextPutAll: 'Session Event Controller'; cr.
+		stream nextPutAll: 'pollingActive='; nextPutAll: (report at: #pollingActive) asString; cr.
+		stream nextPutAll: 'hasPollingProcess='; nextPutAll: (report at: #hasPollingProcess) asString; cr.
+		stream nextPutAll: 'pollingFrequency='; nextPutAll: (report at: #pollingFrequency) asString; cr.
+		stream nextPutAll: 'eventPriority='; nextPutAll: (report at: #eventPriority) asString; cr.
+		stream nextPutAll: 'pollingErrorCount='; nextPutAll: (report at: #pollingErrorCount) asString; cr.
+		stream nextPutAll: 'lastPollingErrorClass='; nextPutAll: (self reportValueString: (report at: #lastPollingErrorClass)); cr.
+		stream nextPutAll: 'lastPollingErrorMessage='; nextPutAll: (self reportValueString: (report at: #lastPollingErrorMessage)); cr.
+		stream nextPutAll: 'isUnwindingAsyncAbort='; nextPutAll: (report at: #isUnwindingAsyncAbort) asString; cr.
+		stream nextPutAll: 'eventHistoryCount='; nextPutAll: (report at: #eventHistoryCount) asString; cr.
+		stream nextPutAll: 'lastEvent='; nextPutAll: (self reportValueString: (report at: #lastEvent)); cr.
+		stream cr.
+		stream nextPutAll: 'Recent Events'; cr.
+		(report at: #eventHistory) isEmpty
+			ifTrue: [ stream nextPutAll: '(empty)'; cr ]
+			ifFalse: [
+				(report at: #eventHistory) do: [ :entry |
+					stream
+						nextPutAll: '#'; nextPutAll: (entry at: #sequence) asString;
+						nextPutAll: ' ';
+						nextPutAll: (entry at: #event ifAbsent: [ nil ]) asString;
+						nextPutAll: ' payloadClass=';
+						nextPutAll: (self reportValueString: (entry at: #payloadClass ifAbsent: [ nil ]));
+						nextPutAll: ' payload=';
+						nextPutAll: (self reportValueString: (entry at: #payloadSummary ifAbsent: [ nil ]));
+						cr ] ] ]
+]
+
+{ #category : 'event history' }
 GbsSessionEventController >> maxEventHistorySize [
 	^ 50
 ]
@@ -318,6 +351,12 @@ GbsSessionEventController >> recordEvent: eventSymbol payload: anObject [
 	[ eventHistory size > self maxEventHistorySize ] whileTrue: [
 		eventHistory removeFirst ].
 	^ entry
+]
+
+{ #category : 'event history' }
+GbsSessionEventController >> reportValueString: anObject [
+	anObject ifNil: [ ^ 'nil' ].
+	^ anObject asString
 ]
 
 { #category : 'event handling' }

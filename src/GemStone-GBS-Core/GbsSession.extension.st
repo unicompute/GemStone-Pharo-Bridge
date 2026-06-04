@@ -133,6 +133,11 @@ GbsSession >> eventControllerReport [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> eventControllerReportText [
+	^ self eventController eventReportText
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> nativeMaterializationTraversalCapabilityReport [
 	self serverInterface ifNil: [ self error: 'No server interface is available for materialization traversal.' ].
 	^ self serverInterface nativeMaterializationTraversalCapabilityReport

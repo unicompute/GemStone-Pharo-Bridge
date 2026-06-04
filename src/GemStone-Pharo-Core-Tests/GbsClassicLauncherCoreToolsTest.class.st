@@ -378,6 +378,31 @@ GbsClassicLauncherCoreToolsTest >> testBrowseSessionLifecycleReportUsesSelectedS
 ]
 
 { #category : 'tests' }
+GbsClassicLauncherCoreToolsTest >> testBrowseSessionEventReportUsesSelectedSessionEvents [
+	| session controller message |
+	session := CoreMockGbsSession new.
+	session isLoggedIn: true.
+	session stubs at: #checkForError put: [ nil ].
+	controller := session eventController.
+	controller handleAsyncAbortDuring: [ #done ].
+	self should: [ controller handlePositivePollResult: 1 ] raise: AlmostOutOfMemory.
+	session instVarNamed: 'isLoggedIn' put: false.
+	controller handlePollingError: (Error new messageText: 'session died'; yourself).
+	session isLoggedIn: true.
+	launcher forcedSession: session.
+
+	self assert: launcher browseSessionEventReport.
+	self assert: launcher infoMessages size equals: 1.
+	message := launcher infoMessages first.
+	self assert: (message includesSubstring: 'Session Event Controller').
+	self assert: (message includesSubstring: 'pollingErrorCount=1').
+	self assert: (message includesSubstring: 'lastPollingErrorMessage=session died').
+	self assert: (message includesSubstring: 'eventHistoryCount=5').
+	self assert: (message includesSubstring: 'fatalSessionDeath').
+	self assert: GbsSessionParameters currentSession == session
+]
+
+{ #category : 'tests' }
 GbsClassicLauncherCoreToolsTest >> testFlushExportSetReleaseOopsReportsReleasedAndPendingQueues [
 	| session released message |
 	session := CoreMockGbsSession new.
