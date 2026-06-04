@@ -785,6 +785,7 @@ GbsSessionCoreTest >> testTraversalBufferReaderFallsBackToPlainTraversalWithoutC
 	clampedCalls := 0.
 	plainCalls := 0.
 	mockSession stubs
+		at: #supportsMaterializationTraversalBufferTransport put: true;
 		at: #supportsClampedTraversalTransport put: true;
 		at: #apiGciClampedTravOops put: [ :oopBuffer :oopCount :clampedArgs |
 			clampedCalls := clampedCalls + 1.
@@ -811,6 +812,7 @@ GbsSessionCoreTest >> testTraversalBufferReaderUsesClampedTraversalForSchemeMeta
 	clampedCalls := 0.
 	plainCalls := 0.
 	mockSession stubs
+		at: #supportsMaterializationTraversalBufferTransport put: true;
 		at: #supportsClampedTraversalTransport put: true;
 		at: #returnRemoteCommandBody put: [ :bodyString :literalBindings :oopBindings | 777 ];
 		at: #apiGciTraverseOops put: [ :oopBuffer :oopCount :traversalBuffer :level |
@@ -852,6 +854,7 @@ GbsSessionCoreTest >> testTraversalBufferReaderPlainReportsBypassClampedSchemeMe
 	clampedCalls := 0.
 	plainCalls := 0.
 	mockSession stubs
+		at: #supportsMaterializationTraversalBufferTransport put: true;
 		at: #supportsClampedTraversalTransport put: true;
 		at: #returnRemoteCommandBody put: [ :bodyString :literalBindings :oopBindings | 777 ];
 		at: #apiGciTraverseOops put: [ :oopBuffer :oopCount :traversalBuffer :level |
@@ -1610,6 +1613,47 @@ GbsSessionCoreTest >> testNativeGciCapabilityReportExposesStoreTraversalGuards [
 	self assert: (report includesKey: #storeTraversalStructLayoutSupported).
 	self assert: (report at: #storeTraversalReportShapeSupported).
 	self assert: ((report at: #storeTraversalReportShape) at: #objectReportHeaderBytes) equals: 40
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testNativeGciCapabilityReportExposesMaterializationTraversalGuards [
+	| mockSession report |
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs
+		at: #supportsMaterializationTraversalBufferTransport put: true;
+		at: #supportsClampedTraversalTransport put: true.
+
+	report := mockSession nativeMaterializationTraversalCapabilityReport.
+
+	self assert: (report at: #oopWidth) equals: 64.
+	self assert: (report at: #materializationTraversalBufferTransportSupported).
+	self assert: (report at: #clampedTraversalSupported).
+	self assert: (report at: #traversalBufferAllocationSupported).
+	self assert: (report at: #plainTraversalSupported).
+	self assert: (report at: #moreTraversalSupported).
+	self assert: (report at: #materializationTraversalReportShapeSupported).
+	self assert: ((report at: #materializationTraversalReportShape) at: #bufferHeaderBytes) equals: 8.
+	self assert: ((report at: #materializationTraversalReportShape) at: #objectReportHeaderBytes) equals: 40.
+	self assert: ((report at: #materializationTraversalReportShape) at: #byteObjectFormat) equals: 1
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testTraversalBufferReaderAvailabilityUsesMaterializationCapabilityGuard [
+	| mockSession reader |
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs
+		at: #supportsMaterializationTraversalBufferTransport put: false;
+		at: #apiGciTraverseOops put: [ :oopBuffer :oopCount :traversalBuffer :level | self fail ].
+	reader := GbsMaterializationTraversalBufferReader on: mockSession.
+
+	self deny: reader isAvailable.
+	self
+		should: [
+			reader
+				reportsForOops: #(9000)
+				level: 1
+				label: 'unavailable traversal capability test' ]
+		raise: GbsMaterializationTraversalError
 ]
 
 { #category : 'tests' }
@@ -3828,35 +3872,37 @@ GbsSessionCoreTest >> testTraversalBufferReaderContinuesWithMoreTraversal [
 	| mockSession reader reports moreCalls |
 	mockSession := CoreMockGbsSession new.
 	moreCalls := 0.
-	mockSession stubs at: #apiGciTraverseOops put: [ :oopBuffer :oopCount :traversalBuffer :level |
-		| nextOffset |
-		self assert: oopCount equals: 2.
-		self assert: level equals: 1.
-		nextOffset := self
-			writePointerTraversalReportOn: traversalBuffer
-			offset: 9
-			oop: 9100
-			classOop: 7000
-			namedSize: 0
-			indexedSize: 1
-			firstOffset: 1
-			oops: #(101).
-		self finishTraversalBuffer: traversalBuffer usedBytes: nextOffset - 9.
-		0 ].
-	mockSession stubs at: #apiGciMoreTraversal put: [ :traversalBuffer |
-		| nextOffset |
-		moreCalls := moreCalls + 1.
-		nextOffset := self
-			writePointerTraversalReportOn: traversalBuffer
-			offset: 9
-			oop: 9200
-			classOop: 7000
-			namedSize: 0
-			indexedSize: 2
-			firstOffset: 1
-			oops: #(201 202).
-		self finishTraversalBuffer: traversalBuffer usedBytes: nextOffset - 9.
-		1 ].
+	mockSession stubs
+		at: #supportsMaterializationTraversalBufferTransport put: true;
+		at: #apiGciTraverseOops put: [ :oopBuffer :oopCount :traversalBuffer :level |
+			| nextOffset |
+			self assert: oopCount equals: 2.
+			self assert: level equals: 1.
+			nextOffset := self
+				writePointerTraversalReportOn: traversalBuffer
+				offset: 9
+				oop: 9100
+				classOop: 7000
+				namedSize: 0
+				indexedSize: 1
+				firstOffset: 1
+				oops: #(101).
+			self finishTraversalBuffer: traversalBuffer usedBytes: nextOffset - 9.
+			0 ];
+		at: #apiGciMoreTraversal put: [ :traversalBuffer |
+			| nextOffset |
+			moreCalls := moreCalls + 1.
+			nextOffset := self
+				writePointerTraversalReportOn: traversalBuffer
+				offset: 9
+				oop: 9200
+				classOop: 7000
+				namedSize: 0
+				indexedSize: 2
+				firstOffset: 1
+				oops: #(201 202).
+			self finishTraversalBuffer: traversalBuffer usedBytes: nextOffset - 9.
+			1 ].
 	reader := GbsMaterializationTraversalBufferReader on: mockSession.
 
 	reports := reader reportsForOops: #(9100 9200) level: 1 label: 'test traversal'.

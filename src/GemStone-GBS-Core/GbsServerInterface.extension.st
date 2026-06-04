@@ -211,6 +211,30 @@ GbsServerInterface >> nativeStoreTraversalReportShape [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> materializationTraversalReportShape [
+	^ Dictionary new
+		at: #bufferHeaderBytes put: 8;
+		at: #objectReportHeaderBytes put: 40;
+		at: #oopBytes put: 8;
+		at: #pointerObjectFormat put: 0;
+		at: #byteObjectFormat put: 1;
+		yourself
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> supportsMaterializationTraversalReportShape [
+	| shape |
+	self supportsNativeStoreTraversalStructLayout ifFalse: [ ^ false ].
+	self nativeGciOopWidth = 64 ifFalse: [ ^ false ].
+	shape := self materializationTraversalReportShape.
+	^ (shape at: #bufferHeaderBytes ifAbsent: [ 0 ]) = 8
+		and: [ (shape at: #objectReportHeaderBytes ifAbsent: [ 0 ]) = 40
+		and: [ (shape at: #oopBytes ifAbsent: [ 0 ]) = 8
+		and: [ (shape at: #pointerObjectFormat ifAbsent: [ -1 ]) = 0
+		and: [ (shape at: #byteObjectFormat ifAbsent: [ -1 ]) = 1 ] ] ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> supportsNativeStoreTraversalReportShape [
 	| shape |
 	self supportsNativeStoreTraversalStructLayout ifFalse: [ ^ false ].
@@ -244,6 +268,22 @@ GbsServerInterface >> nativeStoreTraversalCapabilityReport [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> nativeMaterializationTraversalCapabilityReport [
+	^ Dictionary new
+		at: #nativeGciTransportsEnabled put: self nativeGciTransportsEnabled;
+		at: #oopWidth put: self nativeGciOopWidth;
+		at: #traversalStructLayoutSupported put: self supportsNativeStoreTraversalStructLayout;
+		at: #materializationTraversalReportShapeSupported put: self supportsMaterializationTraversalReportShape;
+		at: #materializationTraversalReportShape put: self materializationTraversalReportShape;
+		at: #traversalBufferAllocationSupported put: ((self respondsTo: #apiGciAllocTravBuf:) and: [ self respondsTo: #apiGciFree: ]);
+		at: #plainTraversalSupported put: (self respondsTo: #apiGciTraverseOops:count:into:level:);
+		at: #moreTraversalSupported put: (self respondsTo: #apiGciMoreTraversal:);
+		at: #clampedTraversalSupported put: self supportsClampedTraversalTransport;
+		at: #materializationTraversalBufferTransportSupported put: self supportsMaterializationTraversalBufferTransport;
+		yourself
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> supportsNativeDirtyStoreTraversalFunctions [
 	^ (self respondsTo: #apiGciStoreTrav:flags:)
 		and: [ (self respondsTo: #apiGciDirtyObjsInit)
@@ -259,6 +299,16 @@ GbsServerInterface >> supportsDirtyStoreTraversalBufferTransport [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> supportsMaterializationTraversalBufferTransport [
+	^ self nativeGciTransportsEnabled
+		and: [ self supportsMaterializationTraversalReportShape
+		and: [ (self respondsTo: #apiGciAllocTravBuf:)
+		and: [ (self respondsTo: #apiGciTraverseOops:count:into:level:)
+		and: [ (self respondsTo: #apiGciMoreTraversal:)
+		and: [ self respondsTo: #apiGciFree: ] ] ] ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> supportsFreeOopAllocationTransport [
 	^ self nativeGciTransportsEnabled
 		and: [ self nativeGciOopWidth = 64
@@ -267,10 +317,12 @@ GbsServerInterface >> supportsFreeOopAllocationTransport [
 
 { #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> supportsClampedTraversalTransport [
-	^ (self respondsTo: #apiGciClampedTravOops:count:spec:)
+	^ self nativeGciTransportsEnabled
+		and: [ self supportsMaterializationTraversalReportShape
+		and: [ (self respondsTo: #apiGciClampedTravOops:count:spec:)
 		and: [ (self respondsTo: #apiGciAllocTravBuf:)
 		and: [ (self respondsTo: #apiGciMoreTraversal:)
-		and: [ self respondsTo: #apiGciFree: ] ] ]
+		and: [ self respondsTo: #apiGciFree: ] ] ] ] ]
 ]
 
 { #category : '*GemStone-GBS-Core' }

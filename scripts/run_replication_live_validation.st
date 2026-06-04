@@ -1,4 +1,4 @@
-| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass dirtyTrackerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator connectorPairCount connectorLifecycleReport scheme clampSpecOop connectorMs clampedOop clampedResult clampedMs clampedMetrics callbackSelector callbackBehaviorName domainBehaviorName domainCustomerBehaviorName applicationCallbackBehaviorName domainFixtureClass domainScheme domainCallbackScheme domainCallbackSpecOop domainCallbackVerifiedOop domainCallbackVerified domainOrderOop domainCustomerOop domainLineItemsOop domainOrder domainCustomerProxy domainLineItems domainDirtyObjectsFlushed domainDirtyStoreMs domainFlushed domainDirtyStoreReport domainNativeDirtyStoreFlushes domainNativeDirtyStoreEntries domainVerifiedOop domainVerified domainFixtureCount domainPerInstvarClampEntries domainCallbackClampSpecs mappedDomainBehaviorName inheritedMappedDomainBehaviorName mappedDomainFixtureClass mappedDomainReplicator mappedDomainScheme mappedDomainOrderOop mappedDomainCustomerOop mappedDomainLineItemsOop mappedDomainOrder mappedDomainCustomerProxy mappedDomainLineItems mappedDomainDirtyObjectsFlushed mappedDomainDirtyStoreMs mappedDomainFlushed mappedDomainDirtyStoreReport mappedDomainVerifiedOop mappedDomainVerified domainFaultReleaseBefore domainFaultReleaseQueued domainFaultReleaseAfterFault domainFaultIdentityCleared domainFaultIdentityRestored mappedDomainFaultProxy mappedDomainFaultRefetched callbackScheme callbackClampSpecOop callbackVerifiedOop callbackVerified perInstvarClampEntries callbackClampSpecs inheritedFixtureClass pointerReplicatorClass inheritedConnector inheritedReplicator inheritedReplicationSpecFixtures policy previousTransport previousProfile dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseGcedObject releaseNoLongerObject exportBefore exportAfter lifecycleReport lifecycleNoLongerQueued lifecycleGcedQueued lifecycleNoLongerAcknowledged lifecycleGcedAcknowledged dirtyStoreMs flushed dirtyStoreReport semanticDirtyStoreCommands semanticDirtyStoreEntries semanticDictionaryEntries semanticSetEntries semanticBagEntries verified verifiedOop nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed businessRootOop businessRoot businessFixtureSize businessDirtyObjectsFlushed businessDirtyStoreMs businessFlushed businessExportAfter businessVerifiedOop businessVerified |
+| loadFailed supportClass connectorClass clampSyncClass replicationPolicyClass lifecycleManagerClass dirtyTrackerClass session millisecondsToRun metricValue phase fixtureKey cleanupFixture manager connector replicator connectorPairCount connectorLifecycleReport scheme clampSpecOop connectorMs clampedOop clampedResult clampedMs clampedMetrics callbackSelector callbackBehaviorName domainBehaviorName domainCustomerBehaviorName applicationCallbackBehaviorName domainFixtureClass domainScheme domainCallbackScheme domainCallbackSpecOop domainCallbackVerifiedOop domainCallbackVerified domainOrderOop domainCustomerOop domainLineItemsOop domainOrder domainCustomerProxy domainLineItems domainDirtyObjectsFlushed domainDirtyStoreMs domainFlushed domainDirtyStoreReport domainNativeDirtyStoreFlushes domainNativeDirtyStoreEntries domainVerifiedOop domainVerified domainFixtureCount domainPerInstvarClampEntries domainCallbackClampSpecs mappedDomainBehaviorName inheritedMappedDomainBehaviorName mappedDomainFixtureClass mappedDomainReplicator mappedDomainScheme mappedDomainOrderOop mappedDomainCustomerOop mappedDomainLineItemsOop mappedDomainOrder mappedDomainCustomerProxy mappedDomainLineItems mappedDomainDirtyObjectsFlushed mappedDomainDirtyStoreMs mappedDomainFlushed mappedDomainDirtyStoreReport mappedDomainVerifiedOop mappedDomainVerified domainFaultReleaseBefore domainFaultReleaseQueued domainFaultReleaseAfterFault domainFaultIdentityCleared domainFaultIdentityRestored mappedDomainFaultProxy mappedDomainFaultRefetched callbackScheme callbackClampSpecOop callbackVerifiedOop callbackVerified perInstvarClampEntries callbackClampSpecs inheritedFixtureClass pointerReplicatorClass inheritedConnector inheritedReplicator inheritedReplicationSpecFixtures policy previousTransport previousProfile dirtyRootOop dirtyRoot releaseNoLongerOop releaseGcedOop releaseNoLongerObject releaseGcedObject exportBefore exportAfter lifecycleReport lifecycleNoLongerQueued lifecycleGcedQueued lifecycleNoLongerAcknowledged lifecycleGcedAcknowledged dirtyStoreMs flushed dirtyStoreReport semanticDirtyStoreCommands semanticDirtyStoreEntries semanticDictionaryEntries semanticSetEntries semanticBagEntries verified verifiedOop nativeDirtyStoreFlushes clampedFetches clampedFallbacks dirtyObjectsFlushed businessRootOop businessRoot businessFixtureSize businessDirtyObjectsFlushed businessDirtyStoreMs businessFlushed businessExportAfter businessVerifiedOop businessVerified |
 [
   loadFailed := false.
   cleanupFixture := [ ].
@@ -49,6 +49,20 @@
       session := supportClass ensureSharedSession.
       (supportClass sessionIsUsable: session) ifFalse: [
         Error signal: supportClass unavailableReason ].
+      Smalltalk globals
+        at: #GbsReplicationLiveNativeCapabilityMetrics
+        put: (Dictionary new
+          at: #materializationTraversalTransportSupported
+            put: ((session nativeMaterializationTraversalCapabilityReport
+              at: #materializationTraversalBufferTransportSupported
+              ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
+          at: #materializationReportShapeSupported
+            put: ((session nativeMaterializationTraversalCapabilityReport
+              at: #materializationTraversalReportShapeSupported
+              ifAbsent: [ false ]) ifTrue: [ 1 ] ifFalse: [ 0 ]);
+          at: #materializationOopWidth
+            put: (session nativeMaterializationTraversalCapabilityReport at: #oopWidth ifAbsent: [ 0 ]);
+          yourself).
       cleanupFixture := [
         session ifNotNil: [
           callbackBehaviorName ifNotNil: [
@@ -181,6 +195,17 @@ true'
         domainFaultReleaseAfterFault := 0.
         domainFaultIdentityCleared := 0.
         domainFaultIdentityRestored := 0.
+        Smalltalk globals
+          at: #GbsReplicationLiveStrictParityMetrics
+          put: (Dictionary new
+            at: #domainCallbackTraversalFixtures put: 0;
+            at: #domainFaultLifecycleFixtures put: 0;
+            at: #domainMappedLifecycleFixtures put: 0;
+            at: #connectorClassVersionReportCount put: 0;
+            at: #connectorClassVersionMismatchCount put: 0;
+            at: #connectorClassVersionUnknownCount put: 0;
+            at: #connectorClassVersionErrorCount put: 0;
+            yourself).
 
         manager := session replicatorManager.
 
@@ -213,6 +238,11 @@ true'
           Error signal: 'Mapped lifecycle commit did not clear materialized identity cache.' ].
         (manager replicatorForClientBehavior: mappedDomainFixtureClass ifAbsent: [ nil ]) == mappedDomainReplicator ifFalse: [
           Error signal: 'Mapped lifecycle commit unexpectedly discarded the live mapped replicator.' ].
+        (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
+          at: #domainMappedLifecycleFixtures
+          put: (metricValue
+            value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
+            value: #domainMappedLifecycleFixtures) + 1.
 
         phase := 'connector-install'.
         connector := connectorClass
@@ -558,6 +588,11 @@ status'
           Error signal: 'Migration-domain callback traversal fell back from traversal-buffer transport.' ].
         (clampedResult isNil or: [ clampedResult oop ~= clampedOop ]) ifTrue: [
           Error signal: 'Migration-domain callback traversal did not return an object report for the live callback fixture.' ].
+        (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
+          at: #domainCallbackTraversalFixtures
+          put: (metricValue
+            value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
+            value: #domainCallbackTraversalFixtures) + 1.
         domainFixtureCount := 1.
 
         phase := 'migration-domain-application-callback-traversal'.
@@ -633,6 +668,11 @@ status'
           Error signal: 'Application-domain callback traversal fell back from traversal-buffer transport.' ].
         (clampedResult isNil or: [ clampedResult oop ~= clampedOop ]) ifTrue: [
           Error signal: 'Application-domain callback traversal did not return an object report for the live claim fixture.' ].
+        (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
+          at: #domainCallbackTraversalFixtures
+          put: (metricValue
+            value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
+            value: #domainCallbackTraversalFixtures) + 1.
         domainFixtureCount := domainFixtureCount + 1.
 
         phase := 'migration-domain-dirty-store-fixture'.
@@ -971,6 +1011,11 @@ status'
         (session materializer materializedObjectForOop: mappedDomainOrderOop) == mappedDomainFaultRefetched ifFalse: [
           Error signal: 'Mapped migration-domain fault did not restore materialized identity cache.' ].
         domainFaultIdentityRestored := 1.
+        (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
+          at: #domainFaultLifecycleFixtures
+          put: (metricValue
+            value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
+            value: #domainFaultLifecycleFixtures) + 1.
         domainFixtureCount := domainFixtureCount + 1.
         session resetMaterializedObjectDirtyTracking.
 
@@ -1161,9 +1206,22 @@ status'
         (mappedDomainScheme instVarLevelsForClass: mappedDomainFixtureClass) = { false. -2. 1. 0. -1. false. nil } ifFalse: [
           Error signal: 'Inherited mapped migration-domain class-version refresh did not update clamp levels.' ].
         connectorLifecycleReport := manager connectorLifecycleReport.
-        (connectorLifecycleReport at: #classVersionReportCount ifAbsent: [ 0 ]) <= 0 ifTrue: [
+        (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
+          at: #connectorClassVersionReportCount
+          put: (connectorLifecycleReport at: #classVersionReportCount ifAbsent: [ 0 ]);
+          at: #connectorClassVersionMismatchCount
+          put: (connectorLifecycleReport at: #classVersionMismatchCount ifAbsent: [ 0 ]);
+          at: #connectorClassVersionUnknownCount
+          put: (connectorLifecycleReport at: #classVersionUnknownCount ifAbsent: [ 0 ]);
+          at: #connectorClassVersionErrorCount
+          put: (connectorLifecycleReport at: #classVersionErrorCount ifAbsent: [ 0 ]).
+        (metricValue
+          value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
+          value: #connectorClassVersionReportCount) <= 0 ifTrue: [
           Error signal: 'Connector lifecycle report did not include class-version reports after class-version refresh.' ].
-        (connectorLifecycleReport at: #classVersionErrorCount ifAbsent: [ 0 ]) = 0 ifFalse: [
+        (metricValue
+          value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
+          value: #connectorClassVersionErrorCount) = 0 ifFalse: [
           Error signal: 'Connector lifecycle report contained class-version errors after class-version refresh.' ].
 
         phase := 'dirty-store-fixture'.
@@ -1444,6 +1502,11 @@ root'
           Error signal: 'Mapped lifecycle abort did not clear materialized identity cache.' ].
         (manager replicatorForClientBehavior: mappedDomainFixtureClass ifAbsent: [ nil ]) == mappedDomainReplicator ifFalse: [
           Error signal: 'Mapped lifecycle abort unexpectedly discarded the live mapped replicator.' ].
+        (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
+          at: #domainMappedLifecycleFixtures
+          put: (metricValue
+            value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
+            value: #domainMappedLifecycleFixtures) + 1.
 
         phase := 'migration-domain-mapped-lifecycle-reconnect'.
         mappedDomainOrder := mappedDomainFixtureClass basicNew.
@@ -1467,6 +1530,11 @@ root'
         manager := session replicatorManager.
         (manager replicatorForClientBehavior: mappedDomainFixtureClass ifAbsent: [ nil ]) isNil ifFalse: [
           Error signal: 'Mapped lifecycle reconnect retained the stale mapped replicator in the new live session.' ].
+        (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
+          at: #domainMappedLifecycleFixtures
+          put: (metricValue
+            value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics)
+            value: #domainMappedLifecycleFixtures) + 1.
 
         Transcript
           show: 'REPLICATION_LIVE_VALIDATION result=OK code=REPLICATION_LIVE_OK',
@@ -1481,6 +1549,16 @@ root'
             ' domain_fixture_count=', domainFixtureCount asString,
             ' domain_per_instvar_clamp_entries=', domainPerInstvarClampEntries asString,
             ' domain_callback_clamp_specs=', domainCallbackClampSpecs asString,
+            ' domain_callback_traversal_fixtures=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #domainCallbackTraversalFixtures) asString,
+            ' domain_fault_lifecycle_fixtures=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #domainFaultLifecycleFixtures) asString,
+            ' domain_mapped_lifecycle_fixtures=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #domainMappedLifecycleFixtures) asString,
+            ' connector_class_version_reports=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionReportCount) asString,
+            ' connector_class_version_mismatches=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionMismatchCount) asString,
+            ' connector_class_version_unknowns=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionUnknownCount) asString,
+            ' connector_class_version_errors=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionErrorCount) asString,
+            ' materialization_traversal_transport_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationTraversalTransportSupported) asString,
+            ' materialization_report_shape_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationReportShapeSupported) asString,
+            ' materialization_oop_width=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationOopWidth) asString,
             ' domain_dirty_store_ms=', domainDirtyStoreMs asString,
             ' domain_dirty_objects_flushed=', domainFlushed size asString,
             ' domain_native_dirty_store_flushes=', domainNativeDirtyStoreFlushes asString,
@@ -1530,6 +1608,16 @@ root'
           ' domain_fixture_count=', (domainFixtureCount ifNil: [ 0 ]) asString,
           ' domain_per_instvar_clamp_entries=', (domainPerInstvarClampEntries ifNil: [ 0 ]) asString,
           ' domain_callback_clamp_specs=', (domainCallbackClampSpecs ifNil: [ 0 ]) asString,
+          ' domain_callback_traversal_fixtures=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #domainCallbackTraversalFixtures) asString,
+          ' domain_fault_lifecycle_fixtures=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #domainFaultLifecycleFixtures) asString,
+          ' domain_mapped_lifecycle_fixtures=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #domainMappedLifecycleFixtures) asString,
+          ' connector_class_version_reports=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionReportCount) asString,
+          ' connector_class_version_mismatches=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionMismatchCount) asString,
+          ' connector_class_version_unknowns=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionUnknownCount) asString,
+          ' connector_class_version_errors=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveStrictParityMetrics ifAbsent: [ Dictionary new ]) value: #connectorClassVersionErrorCount) asString,
+          ' materialization_traversal_transport_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationTraversalTransportSupported) asString,
+          ' materialization_report_shape_supported=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationReportShapeSupported) asString,
+          ' materialization_oop_width=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveNativeCapabilityMetrics ifAbsent: [ Dictionary new ]) value: #materializationOopWidth) asString,
           ' domain_dirty_store_ms=', (domainDirtyStoreMs ifNil: [ 0 ]) asString,
           ' domain_dirty_objects_flushed=', (domainDirtyObjectsFlushed ifNil: [ 0 ]) asString,
           ' domain_native_dirty_store_flushes=', (domainNativeDirtyStoreFlushes ifNil: [ 0 ]) asString,

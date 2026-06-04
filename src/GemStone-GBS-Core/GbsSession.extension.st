@@ -123,6 +123,18 @@ GbsSession >> dirtyStoreTraversalReport [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> nativeMaterializationTraversalCapabilityReport [
+	self serverInterface ifNil: [ self error: 'No server interface is available for materialization traversal.' ].
+	^ self serverInterface nativeMaterializationTraversalCapabilityReport
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> nativeStoreTraversalCapabilityReport [
+	self serverInterface ifNil: [ self error: 'No server interface is available for store traversal.' ].
+	^ self serverInterface nativeStoreTraversalCapabilityReport
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> resetDirtyStoreTraversalReport [
 	^ GbsDirtyReplicateStoreTraversal resetDirtyStoreTraversalReportForSession: self
 ]

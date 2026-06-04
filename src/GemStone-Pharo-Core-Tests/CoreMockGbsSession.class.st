@@ -483,6 +483,38 @@ CoreMockGbsSession >> supportsMaterializationTraversalBufferTransport [
 	^ self stubs at: #supportsMaterializationTraversalBufferTransport ifAbsent: [ false ]
 ]
 
+{ #category : 'materialization' }
+CoreMockGbsSession >> materializationTraversalReportShape [
+	^ Dictionary new
+		at: #bufferHeaderBytes put: 8;
+		at: #objectReportHeaderBytes put: 40;
+		at: #oopBytes put: 8;
+		at: #pointerObjectFormat put: 0;
+		at: #byteObjectFormat put: 1;
+		yourself
+]
+
+{ #category : 'materialization' }
+CoreMockGbsSession >> supportsMaterializationTraversalReportShape [
+	^ self stubs at: #supportsMaterializationTraversalReportShape ifAbsent: [ true ]
+]
+
+{ #category : 'materialization' }
+CoreMockGbsSession >> nativeMaterializationTraversalCapabilityReport [
+	^ Dictionary new
+		at: #nativeGciTransportsEnabled put: true;
+		at: #oopWidth put: 64;
+		at: #traversalStructLayoutSupported put: true;
+		at: #materializationTraversalReportShapeSupported put: self supportsMaterializationTraversalReportShape;
+		at: #materializationTraversalReportShape put: self materializationTraversalReportShape;
+		at: #traversalBufferAllocationSupported put: true;
+		at: #plainTraversalSupported put: true;
+		at: #moreTraversalSupported put: true;
+		at: #clampedTraversalSupported put: self supportsClampedTraversalTransport;
+		at: #materializationTraversalBufferTransportSupported put: self supportsMaterializationTraversalBufferTransport;
+		yourself
+]
+
 { #category : 'dirty store traversal' }
 CoreMockGbsSession >> storeTraversalBuffer: aBuffer [
 	| block |

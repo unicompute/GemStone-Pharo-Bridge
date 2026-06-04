@@ -47,6 +47,8 @@ GbsMaterializationTraversalBufferReader >> defaultTraversalBufferBytes [
 GbsMaterializationTraversalBufferReader >> isAvailable [
 	| interface |
 	interface := session serverInterface.
+	(interface respondsTo: #supportsMaterializationTraversalBufferTransport) ifTrue: [
+		^ interface supportsMaterializationTraversalBufferTransport == true ].
 	^ (interface respondsTo: #apiGciAllocTravBuf:)
 		and: [ (interface respondsTo: #apiGciFree:)
 		and: [ (interface respondsTo: #apiGciTraverseOops:count:into:level:)
