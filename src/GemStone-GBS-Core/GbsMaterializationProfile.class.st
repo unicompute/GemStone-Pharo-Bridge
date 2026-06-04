@@ -76,7 +76,10 @@ GbsMaterializationProfile >> materializeOop: anOop inSession: aSession depth: an
 			inSession: aSession
 			depth: anInteger
 			seen: seenOops ].
-	(self shouldMaterializeMappedClassNamed: className inSession: aSession) ifTrue: [
+	(self
+		shouldMaterializeMappedClassNamed: className
+		inSession: aSession
+		depth: anInteger) ifTrue: [
 		^ aSession materializer
 			materializeMappedObjectOop: anOop
 			className: className
@@ -158,6 +161,11 @@ GbsMaterializationProfile >> shouldMaterializeCollectionClassNamed: className de
 { #category : 'materialization' }
 GbsMaterializationProfile >> shouldMaterializeMappedClassNamed: className inSession: aSession [
 	^ false
+]
+
+{ #category : 'materialization' }
+GbsMaterializationProfile >> shouldMaterializeMappedClassNamed: className inSession: aSession depth: anInteger [
+	^ self shouldMaterializeMappedClassNamed: className inSession: aSession
 ]
 
 { #category : 'materialization' }

@@ -58,6 +58,17 @@ GbsSessionMaterializer >> fetchObject: anOop [
 ]
 
 { #category : 'fetching' }
+GbsSessionMaterializer >> fetchObject: anOop toLevel: levelOrNil [
+	| level profile |
+	level := self normalizedFaultLevel: levelOrNil.
+	profile := level = 0
+		ifTrue: [ GbsDeepMaterializationProfile new ]
+		ifFalse: [ GbsLevelMaterializationProfile maxLevel: level ].
+	^ self withMaterializationProfile: profile do: [
+		self fetchObject: anOop ]
+]
+
+{ #category : 'fetching' }
 GbsSessionMaterializer >> fetchObject: anOop withProfile: aProfile depth: anInteger seen: seenOops [
 	self checkMaterializationDepth: anInteger.
 	^ aProfile

@@ -248,6 +248,14 @@ CoreMockGbsSession >> fetchObject: anOop [
 	^ super fetchObject: anOop
 ]
 
+{ #category : 'materialization' }
+CoreMockGbsSession >> faultFetchObjectForOop: anOop level: levelOrNil [
+	| block |
+	block := self stubs at: #faultFetchObjectForOopLevel ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: anOop cull: levelOrNil ].
+	^ super faultFetchObjectForOop: anOop level: levelOrNil
+]
+
 { #category : 'execution' }
 CoreMockGbsSession >> forwardRemoteMessage: aMessage forOop: targetOop [
 	| block |

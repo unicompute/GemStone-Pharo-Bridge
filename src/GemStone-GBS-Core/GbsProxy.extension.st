@@ -45,7 +45,8 @@ GbsProxy >> fault [
 
 { #category : '*GemStone-GBS-Core' }
 GbsProxy >> faultToLevel: levelOrNil [
-	^ self fault
+	self ensureSessionIsUsable.
+	^ session faultProxy: self toLevel: levelOrNil
 ]
 
 { #category : '*GemStone-GBS-Core' }

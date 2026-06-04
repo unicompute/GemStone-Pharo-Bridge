@@ -97,7 +97,10 @@ Object >> faultToLevel: levelOrNil [
 	session ifNil: [ ^ self ].
 	oop := GbsMaterializedObjectDirtyTracker oopForObject: self inSession: session.
 	oop ifNil: [ ^ self ].
-	^ GbsSessionLifecycleManager faultObjectForOop: oop inSession: session
+	^ GbsSessionLifecycleManager
+		faultObjectForOop: oop
+		level: levelOrNil
+		inSession: session
 ]
 
 { #category : '*GemStone-GBS-Core' }

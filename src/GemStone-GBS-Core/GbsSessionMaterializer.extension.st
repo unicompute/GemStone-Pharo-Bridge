@@ -71,6 +71,27 @@ GbsSessionMaterializer >> normalizedMaterializationLimitFrom: rawValue default: 
 	^ value < 0 ifTrue: [ defaultValue ] ifFalse: [ value ]
 ]
 
+{ #category : 'faulting' }
+GbsSessionMaterializer >> normalizedFaultLevel: levelOrNil [
+	| value |
+	levelOrNil ifNil: [ ^ self sessionDefaultFaultLevel ].
+	value := [ levelOrNil asInteger ]
+		on: Error
+		do: [ self sessionDefaultFaultLevel ].
+	^ value <= 0 ifTrue: [ 0 ] ifFalse: [ value ]
+]
+
+{ #category : 'faulting' }
+GbsSessionMaterializer >> sessionDefaultFaultLevel [
+	| policy value |
+	policy := [ GbsReplicationPolicy forSession: session ] on: Error do: [ nil ].
+	value := (policy notNil and: [ policy respondsTo: #faultLevelRpc ])
+		ifTrue: [ policy faultLevelRpc ]
+		ifFalse: [ 4 ].
+	value := [ value asInteger ] on: Error do: [ 4 ].
+	^ value <= 0 ifTrue: [ 0 ] ifFalse: [ value ]
+]
+
 { #category : 'metrics' }
 GbsSessionMaterializer >> materializationLimitFromGlobal: globalSymbol environmentName: environmentName default: defaultValue [
 	| raw value env |

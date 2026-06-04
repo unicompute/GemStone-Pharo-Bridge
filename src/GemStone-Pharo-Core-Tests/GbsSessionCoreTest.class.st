@@ -2831,6 +2831,25 @@ GbsSessionCoreTest >> testSessionLifecycleFaultProxyFetchesFreshObjectAndCancels
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleFaultProxyUsesCurrentFetchProfile [
+	| mockSession first nestedBefore proxy refreshed nestedAfter |
+	mockSession := self materializationMockSession.
+	(GbsReplicationPolicy forSession: mockSession) faultLevelRpc: 1.
+	mockSession fetchDeep.
+	first := mockSession fetchObject: 9000.
+	nestedBefore := first second.
+	proxy := mockSession stubMaterializedObjectForOop: 9000.
+
+	refreshed := proxy fault.
+	nestedAfter := refreshed second.
+
+	self deny: refreshed == first.
+	self assert: nestedAfter class equals: Array.
+	self assert: nestedAfter equals: #('gold' 'paid').
+	self assert: nestedAfter == nestedBefore
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testSessionLifecycleFaultProxyAfterResetRejectsStaleLifecycle [
 	| mockSession proxy |
 	mockSession := self materializationMockSession.
@@ -2862,6 +2881,50 @@ GbsSessionCoreTest >> testSessionLifecycleFaultPolicyNoneRejectsFaults [
 		raise: GbsError
 		withExceptionDo: [ :ex |
 			self assert: (ex messageText includesSubstring: 'Faulting is disabled') ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleFaultProxyToLevelOneMaterializesRootOnly [
+	| mockSession proxy result nested |
+	mockSession := self materializationMockSession.
+	proxy := GbsProxy oop: 9000 session: mockSession.
+
+	result := proxy faultToLevel: 1.
+	nested := result second.
+
+	self assert: result class equals: Array.
+	self assert: result first equals: 'vip'.
+	self assert: (nested isKindOf: GbsProxy).
+	self assert: nested oop equals: 9016.
+	self assert: nested session == mockSession
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleFaultProxyToLevelTwoMaterializesDirectNestedObjects [
+	| mockSession proxy result nested |
+	mockSession := self materializationMockSession.
+	proxy := GbsProxy oop: 9000 session: mockSession.
+
+	result := proxy faultToLevel: 2.
+	nested := result second.
+
+	self assert: result class equals: Array.
+	self assert: nested class equals: Array.
+	self assert: nested equals: #('gold' 'paid')
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionLifecycleFaultUsesConfiguredDefaultFaultLevel [
+	| mockSession proxy result |
+	mockSession := self materializationMockSession.
+	(GbsReplicationPolicy forSession: mockSession) faultLevelRpc: 1.
+	proxy := GbsProxy oop: 9000 session: mockSession.
+
+	result := proxy faultToLevel: nil.
+
+	self assert: result class equals: Array.
+	self assert: (result second isKindOf: GbsProxy).
+	self assert: result second oop equals: 9016
 ]
 
 { #category : 'tests' }

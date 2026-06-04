@@ -257,13 +257,32 @@ GbsSessionLifecycleManager class >> forgetObjectForOop: anOop inSession: aSessio
 
 { #category : 'faulting' }
 GbsSessionLifecycleManager class >> faultObjectForOop: anOop inSession: aSession [
+	^ self
+		faultObjectForOop: anOop
+		inSession: aSession
+		fetchUsing: [ :oop | aSession fetchObject: oop ]
+]
+
+{ #category : 'faulting' }
+GbsSessionLifecycleManager class >> faultObjectForOop: anOop level: levelOrNil inSession: aSession [
+	^ self
+		faultObjectForOop: anOop
+		inSession: aSession
+		fetchUsing: [ :oop |
+			aSession
+				faultFetchObjectForOop: oop
+				level: levelOrNil ]
+]
+
+{ #category : 'faulting' }
+GbsSessionLifecycleManager class >> faultObjectForOop: anOop inSession: aSession fetchUsing: fetchBlock [
 	| oldObject refreshedObject |
 	(self faultingAllowedForSession: aSession) ifFalse: [
 		GbsError signal: 'Faulting is disabled by the session replication policy.' ].
 	oldObject := self objectForOop: anOop inSession: aSession.
 	self invokePreFaultHookFor: oldObject inSession: aSession.
 	self forgetMaterializedObjectForOop: anOop inSession: aSession.
-	refreshedObject := aSession fetchObject: anOop.
+	refreshedObject := fetchBlock value: anOop.
 	self incrementLifecycleCounter: #faultedObjectCount forSession: aSession.
 	self invokePostFaultHookFor: refreshedObject inSession: aSession.
 	^ refreshedObject
@@ -275,7 +294,21 @@ GbsSessionLifecycleManager class >> faultProxy: aProxy inSession: aSession [
 		GbsError signal: 'Cannot fault an object without a GemStone session.' ].
 	aProxy session == aSession ifFalse: [
 		GbsError signal: 'Cannot fault a proxy from a different GemStone session.' ].
-	^ self faultObjectForOop: aProxy oop inSession: aSession
+	^ self
+		faultObjectForOop: aProxy oop
+		inSession: aSession
+]
+
+{ #category : 'faulting' }
+GbsSessionLifecycleManager class >> faultProxy: aProxy level: levelOrNil inSession: aSession [
+	(aProxy respondsTo: #session) ifFalse: [
+		GbsError signal: 'Cannot fault an object without a GemStone session.' ].
+	aProxy session == aSession ifFalse: [
+		GbsError signal: 'Cannot fault a proxy from a different GemStone session.' ].
+	^ self
+		faultObjectForOop: aProxy oop
+		level: levelOrNil
+		inSession: aSession
 ]
 
 { #category : 'faulting' }

@@ -143,8 +143,29 @@ GbsSession >> faultObjectForOop: anOop [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> faultObjectForOop: anOop toLevel: levelOrNil [
+	^ GbsSessionLifecycleManager
+		faultObjectForOop: anOop
+		level: levelOrNil
+		inSession: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> faultProxy: aProxy [
 	^ GbsSessionLifecycleManager faultProxy: aProxy inSession: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> faultProxy: aProxy toLevel: levelOrNil [
+	^ GbsSessionLifecycleManager
+		faultProxy: aProxy
+		level: levelOrNil
+		inSession: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> faultFetchObjectForOop: anOop level: levelOrNil [
+	^ self materializer fetchObject: anOop toLevel: levelOrNil
 ]
 
 { #category : '*GemStone-GBS-Core' }
