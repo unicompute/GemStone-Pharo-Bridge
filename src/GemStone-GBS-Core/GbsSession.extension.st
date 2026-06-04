@@ -123,6 +123,16 @@ GbsSession >> dirtyStoreTraversalReport [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> eventController [
+	^ GbsSessionEventController forSession: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> eventControllerReport [
+	^ self eventController eventReport
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> nativeMaterializationTraversalCapabilityReport [
 	self serverInterface ifNil: [ self error: 'No server interface is available for materialization traversal.' ].
 	^ self serverInterface nativeMaterializationTraversalCapabilityReport

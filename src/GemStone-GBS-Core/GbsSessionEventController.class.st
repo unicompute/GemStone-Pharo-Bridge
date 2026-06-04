@@ -14,7 +14,9 @@ Class {
 		'asyncAbortStartAction',
 		'asyncAbortFinishAction',
 		'fatalSessionDeathAction',
-		'isUnwindingAsyncAbort'
+		'isUnwindingAsyncAbort',
+		'eventHistory',
+		'eventSequence'
 	],
 	#category : 'GemStone-GBS-Core',
 	#package : 'GemStone-GBS-Core'
@@ -75,7 +77,9 @@ GbsSessionEventController >> initialize [
 	pollingActive := false.
 	pollingErrorCount := 0.
 	eventHandlers := Dictionary new.
-	isUnwindingAsyncAbort := false
+	isUnwindingAsyncAbort := false.
+	eventHistory := OrderedCollection new.
+	eventSequence := 0
 ]
 
 { #category : 'testing' }
@@ -237,9 +241,83 @@ GbsSessionEventController >> eventHandlerAt: eventSymbol [
 { #category : 'event handling' }
 GbsSessionEventController >> handleEvent: eventSymbol payload: anObject default: defaultBlock [
 	| handler |
+	self recordEvent: eventSymbol payload: anObject.
 	handler := self eventHandlerAt: eventSymbol.
 	handler ifNil: [ ^ defaultBlock value ].
 	^ handler cull: anObject cull: session
+]
+
+{ #category : 'event history' }
+GbsSessionEventController >> clearEventHistory [
+	eventHistory ifNotNil: [ eventHistory removeAll ].
+	eventSequence := 0.
+	^ self
+]
+
+{ #category : 'event history' }
+GbsSessionEventController >> eventHistory [
+	^ eventHistory
+		ifNil: [ #() ]
+		ifNotNil: [ eventHistory copy asArray ]
+]
+
+{ #category : 'event history' }
+GbsSessionEventController >> eventReport [
+	| history last |
+	history := self eventHistory.
+	last := history isEmpty ifTrue: [ nil ] ifFalse: [ history last ].
+	^ Dictionary new
+		at: #pollingActive put: self isPollingActive;
+		at: #hasPollingProcess put: self hasPollingProcess;
+		at: #pollingFrequency put: self pollingFrequency;
+		at: #eventPriority put: self eventPriority;
+		at: #pollingErrorCount put: self pollingErrorCount;
+		at: #lastPollingErrorClass put: (lastPollingError ifNil: [ nil ] ifNotNil: [ lastPollingError class name ]);
+		at: #lastPollingErrorMessage put: (self payloadSummaryFor: lastPollingError);
+		at: #isUnwindingAsyncAbort put: self isUnwindingAsyncAbort;
+		at: #eventHistoryCount put: history size;
+		at: #lastEvent put: (last ifNil: [ nil ] ifNotNil: [ last at: #event ifAbsent: [ nil ] ]);
+		at: #eventHistory put: history;
+		yourself
+]
+
+{ #category : 'event history' }
+GbsSessionEventController >> maxEventHistorySize [
+	^ 50
+]
+
+{ #category : 'event history' }
+GbsSessionEventController >> payloadSummaryFor: anObject [
+	| summary |
+	anObject ifNil: [ ^ nil ].
+	summary := [
+		(anObject respondsTo: #messageText)
+			ifTrue: [ anObject messageText ifNil: [ anObject printString ] ]
+			ifFalse: [ anObject printString ] ]
+		on: Error
+		do: [ anObject class name ].
+	summary := summary asString.
+	summary size > 200 ifTrue: [ ^ summary first: 200 ].
+	^ summary
+]
+
+{ #category : 'event history' }
+GbsSessionEventController >> recordEvent: eventSymbol payload: anObject [
+	| entry |
+	eventHistory ifNil: [ eventHistory := OrderedCollection new ].
+	eventSequence := (eventSequence ifNil: [ 0 ]) + 1.
+	entry := Dictionary new
+		at: #sequence put: eventSequence;
+		at: #event put: eventSymbol;
+		at: #payloadClass put: (anObject ifNil: [ nil ] ifNotNil: [ anObject class name ]);
+		at: #payloadSummary put: (self payloadSummaryFor: anObject);
+		at: #pollingActive put: self isPollingActive;
+		at: #isUnwindingAsyncAbort put: self isUnwindingAsyncAbort;
+		yourself.
+	eventHistory add: entry.
+	[ eventHistory size > self maxEventHistorySize ] whileTrue: [
+		eventHistory removeFirst ].
+	^ entry
 ]
 
 { #category : 'event handling' }

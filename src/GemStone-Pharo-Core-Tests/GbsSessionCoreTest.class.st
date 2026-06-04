@@ -2691,6 +2691,55 @@ GbsSessionCoreTest >> testSessionEventControllerDispatchesSignalAbortAndFatalEve
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testSessionEventControllerRecordsTypedEventHistoryAndReport [
+	| mockSession controller report history error |
+	mockSession := CoreMockGbsSession new.
+	mockSession stubs at: #checkForError put: [ nil ].
+	controller := mockSession eventController.
+
+	controller handleAsyncAbortDuring: [ #done ].
+	self should: [ controller handlePositivePollResult: 1 ] raise: AlmostOutOfMemory.
+	mockSession instVarNamed: 'isLoggedIn' put: false.
+	error := Error new messageText: 'session died'; yourself.
+	controller handlePollingError: error.
+
+	history := controller eventHistory.
+	self
+		assert: (history collect: [ :entry | entry at: #event ])
+		equals: #(asyncAbortStart asyncAbortFinish almostOutOfMemory pollingError fatalSessionDeath).
+	self assert: ((history at: 4) at: #payloadClass) equals: #Error.
+	self assert: ((history at: 4) at: #payloadSummary) equals: 'session died'.
+	self assert: ((history at: 5) at: #payloadSummary) equals: 'session died'.
+
+	report := mockSession eventControllerReport.
+	self assert: (report at: #pollingActive) equals: false.
+	self assert: (report at: #pollingErrorCount) equals: 1.
+	self assert: (report at: #lastPollingErrorClass) equals: #Error.
+	self assert: (report at: #lastPollingErrorMessage) equals: 'session died'.
+	self assert: (report at: #eventHistoryCount) equals: 5.
+	self assert: (report at: #lastEvent) equals: #fatalSessionDeath
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testSessionEventControllerKeepsBoundedEventHistory [
+	| controller history |
+	controller := GbsSessionEventController forSession: CoreMockGbsSession new.
+
+	1 to: controller maxEventHistorySize + 5 do: [ :index |
+		controller handleEvent: #gemSignal payload: index default: [ nil ] ].
+
+	history := controller eventHistory.
+	self assert: history size equals: controller maxEventHistorySize.
+	self assert: (history first at: #sequence) equals: 6.
+	self assert: (history last at: #sequence) equals: 55.
+	self assert: (controller eventReport at: #eventHistoryCount) equals: controller maxEventHistorySize.
+
+	controller clearEventHistory.
+	self assert: controller eventHistory isEmpty.
+	self assert: (controller eventReport at: #eventHistoryCount) equals: 0
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testSessionEventControllerBackgroundProcessPollsAndStops [
 	| mockSession controller pollCount |
 	mockSession := CoreMockGbsSession new.
