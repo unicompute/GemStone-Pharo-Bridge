@@ -1997,7 +1997,13 @@ GbsSessionCoreTest >> testDirtyReplicationBinaryStoreTraversalCarriesGcedAndNoLo
 	self assert: mockSession objectSpace pendingNoLongerReplicatedOops isEmpty.
 	self assert: mockSession objectSpace pendingGcedOops isEmpty.
 	self assert: mockSession objectSpace pendingExportSetReleaseOopCount equals: 0.
-	self assert: mockSession dirtyMaterializedObjectOops isEmpty
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty.
+	self
+		assert: (mockSession dirtyStoreTraversalReport at: #combinedReleaseSingleTripCount)
+		equals: 1.
+	self
+		assert: (mockSession dirtyStoreTraversalReport at: #combinedReleaseFallbackCount)
+		equals: 0
 ]
 
 { #category : 'tests' }
@@ -2029,7 +2035,13 @@ GbsSessionCoreTest >> testDirtyReplicationBinaryStoreTraversalFallsBackWhenCombi
 	self assert: fallbackBuffer class equals: GbsDirtyStoreTraversalBuffer.
 	self assert: releasedOops equals: #(9016 9032).
 	self assert: mockSession objectSpace pendingExportSetReleaseOopCount equals: 0.
-	self assert: mockSession dirtyMaterializedObjectOops isEmpty
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty.
+	self
+		assert: (mockSession dirtyStoreTraversalReport at: #combinedReleaseFallbackCount)
+		equals: 1.
+	self
+		assert: (mockSession dirtyStoreTraversalReport at: #combinedReleaseSingleTripCount)
+		equals: 0
 ]
 
 { #category : 'tests' }
