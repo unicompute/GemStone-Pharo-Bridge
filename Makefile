@@ -96,6 +96,9 @@ materialization-perf:
 replication-live:
 	bash ./scripts/run_replication_live_validation.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
 
+replication-perf:
+	bash ./scripts/run_replication_performance_baseline.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
+
 lane-preflight-tests:
 	bash ./scripts/test_lane_common_preflight.sh
 
