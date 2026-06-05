@@ -104,6 +104,7 @@ GbsSettingsPresenter >> defaultLayout [
 		yourself.
 	rightCol := SpBoxLayout newTopToBottom
 		add: (self sectionTitle: 'Replication') expand: false;
+		add: self replicationTemplateRow expand: false;
 		add: (self yesNoRowLabel: 'autoMarkDirty' yes: autoMarkDirtyYes no: autoMarkDirtyNo) expand: false;
 		add: (self yesNoRowLabel: 'strictMutationProtection'
 			yes: (self bridgeControlAt: #strictMutationProtectionEnabledYes)
@@ -159,6 +160,18 @@ GbsSettingsPresenter >> defaultLayout [
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
+GbsSettingsPresenter >> replicationTemplateRow [
+	"A row with the replication-policy template picker (Apply template) and a Show-diff button."
+	^ SpBoxLayout newLeftToRight
+		add: (self newLabel label: 'template') expand: false;
+		add: (self bridgeControlAt: #replicationTemplateDrop) expand: true;
+		add: (self bridgeControlAt: #applyTemplateButton) expand: false;
+		add: (self bridgeControlAt: #showDiffButton) expand: false;
+		spacing: 6;
+		yourself
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
 GbsSettingsPresenter >> initializePresenters [
 	libraryField := self newTextInput.
 	initialCacheSizeField := self newTextInput.
@@ -185,6 +198,17 @@ GbsSettingsPresenter >> initializePresenters [
 	self bridgeControlAt: #serverMapModeDrop put: self newDropList.
 	(self bridgeControlAt: #storeTraversalTransportDrop) items: (GbsReplicationPolicy legalValuesForSetting: #storeTraversalTransport).
 	(self bridgeControlAt: #serverMapModeDrop) items: (GbsReplicationPolicy legalValuesForSetting: #serverMapMode).
+
+	self bridgeControlAt: #replicationTemplateDrop put: self newDropList.
+	(self bridgeControlAt: #replicationTemplateDrop) items: self replicationTemplateNames.
+	self bridgeControlAt: #applyTemplateButton put: (self newButton
+		label: 'Apply template';
+		action: [ self applySelectedReplicationTemplate ];
+		yourself).
+	self bridgeControlAt: #showDiffButton put: (self newButton
+		label: 'Show diff';
+		action: [ self showReplicationDiff ];
+		yourself).
 
 	browseButton := self newButton
 		label: 'Browse';
@@ -243,6 +267,7 @@ GbsSettingsPresenter >> loadFromConfiguration [
 	self selectDrop: defaultFaultPolicyDrop value: (self bridgeStringValueAt: #defaultFaultPolicy default: 'lazy').
 	self selectDrop: (self bridgeControlAt: #storeTraversalTransportDrop) value: (self bridgeStringValueAt: #storeTraversalTransport default: 'script').
 	self selectDrop: (self bridgeControlAt: #serverMapModeDrop) value: (self bridgeStringValueAt: #serverMapMode default: 'weak').
+	self selectDrop: (self bridgeControlAt: #replicationTemplateDrop) value: 'default'.
 	self setYesNo: { bulkLoadYes. bulkLoadNo } value: (self bridgeBooleanAt: #bulkLoad default: false).
 	self setYesNo: { generateClassConnectorsYes. generateClassConnectorsNo } value: (self bridgeBooleanAt: #generateClassConnectors default: true).
 	self setYesNo: { generateClientClassesYes. generateClientClassesNo } value: (self bridgeBooleanAt: #generateClientClasses default: true).
@@ -345,6 +370,82 @@ GbsSettingsPresenter >> updateConfigurationFromPresenters [
 		bridgeSetConfigurationValueAt: #confirm put: (self yesNoValueFor: { confirmYes. confirmNo });
 		bridgeSetConfigurationValueAt: #verbose put: (self yesNoValueFor: { verboseYes. verboseNo }).
 	^ configuration
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
+GbsSettingsPresenter >> replicationTemplateNames [
+	"The replication-policy template names available in the template picker."
+	^ (GbsReplicationPolicy templateNames collect: [ :each | each asString ]) asArray
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
+GbsSettingsPresenter >> applyReplicationTemplateNamed: aNameStringOrSymbol [
+	"Populate the replication-policy controls from the named GbsReplicationPolicy template. Only the
+	replication/lifecycle/signal settings covered by templates are touched; the rest of the form is left as
+	the user set it. Answers the applied policy."
+	| policy |
+	aNameStringOrSymbol ifNil: [ ^ nil ].
+	policy := GbsReplicationPolicy templateNamed: aNameStringOrSymbol asSymbol.
+	self selectDrop: (self bridgeControlAt: #storeTraversalTransportDrop) value: policy storeTraversalTransport.
+	self selectDrop: (self bridgeControlAt: #serverMapModeDrop) value: policy serverMapMode.
+	self selectDrop: blockReplicationPolicyDrop value: policy blockReplicationPolicy.
+	self selectDrop: defaultFaultPolicyDrop value: policy defaultFaultPolicy.
+	self setYesNo: { (self bridgeControlAt: #storeDirtyOnCommitYes). (self bridgeControlAt: #storeDirtyOnCommitNo) }
+		value: policy storeDirtyOnCommit.
+	self setYesNo: { (self bridgeControlAt: #asyncSignalPollingEnabledYes). (self bridgeControlAt: #asyncSignalPollingEnabledNo) }
+		value: policy asyncSignalPollingEnabled.
+	(self bridgeControlAt: #freeOopAllocationBatchSizeField) text: policy freeOopAllocationBatchSize asString.
+	^ policy
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
+GbsSettingsPresenter >> currentReplicationPolicyFromPresenters [
+	"Build a GbsReplicationPolicy reflecting the current replication-related control values, so the user can
+	preview the policy (and its diff from defaults) without committing the form."
+	| policy |
+	policy := GbsReplicationPolicy default.
+	policy storeTraversalTransport: (self selectedDropText: (self bridgeControlAt: #storeTraversalTransportDrop) default: 'script').
+	policy serverMapMode: (self selectedDropText: (self bridgeControlAt: #serverMapModeDrop) default: 'weak').
+	policy blockReplicationPolicy: (self selectedDropText: blockReplicationPolicyDrop default: 'replicate').
+	policy defaultFaultPolicy: (self selectedDropText: defaultFaultPolicyDrop default: 'lazy').
+	policy storeDirtyOnCommit: (self yesNoValueFor: { (self bridgeControlAt: #storeDirtyOnCommitYes). (self bridgeControlAt: #storeDirtyOnCommitNo) }).
+	policy asyncSignalPollingEnabled: (self yesNoValueFor: { (self bridgeControlAt: #asyncSignalPollingEnabledYes). (self bridgeControlAt: #asyncSignalPollingEnabledNo) }).
+	policy strictMutationProtectionEnabled: (self yesNoValueFor: { (self bridgeControlAt: #strictMutationProtectionEnabledYes). (self bridgeControlAt: #strictMutationProtectionEnabledNo) }).
+	policy nativeStoreTraversalShapeValidationEnabled: (self yesNoValueFor: { (self bridgeControlAt: #nativeStoreTraversalShapeValidationEnabledYes). (self bridgeControlAt: #nativeStoreTraversalShapeValidationEnabledNo) }).
+	policy autoMarkDirty: (self yesNoValueFor: { autoMarkDirtyYes. autoMarkDirtyNo }).
+	policy freeSlotsOnStubbing: (self yesNoValueFor: { freeSlotsOnStubbingYes. freeSlotsOnStubbingNo }).
+	policy freeOopAllocationBatchSize: (self integerFromField: (self bridgeControlAt: #freeOopAllocationBatchSizeField) default: 2000).
+	policy freeOopBatchSize: (self integerFromField: (self bridgeControlAt: #freeOopBatchSizeField) default: 256).
+	policy faultLevelRpc: (self integerFromField: faultLevelRpcField default: 4).
+	policy traversalBufferSize: (self integerFromField: traversalBufferField default: 250000).
+	policy eventPollingFrequency: (self integerFromField: eventPollingField default: 300).
+	policy eventPriority: (self integerFromField: eventPriorityField default: 3).
+	^ policy
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
+GbsSettingsPresenter >> replicationDiffText [
+	"A human-readable diff of the current replication-policy control values against the policy defaults."
+	^ self currentReplicationPolicyFromPresenters diffFromDefaultsText
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
+GbsSettingsPresenter >> applySelectedReplicationTemplate [
+	"Action for the Apply-template button: apply the template chosen in the template drop."
+	| name |
+	name := self selectedDropText: (self bridgeControlAt: #replicationTemplateDrop) default: nil.
+	name ifNil: [ ^ self ].
+	self applyReplicationTemplateNamed: name.
+	^ self
+]
+
+{ #category : '*GemStone-GBS-Core-Tools' }
+GbsSettingsPresenter >> showReplicationDiff [
+	"Action for the Show-diff button: present the current replication-policy diff from defaults."
+	| text |
+	text := self replicationDiffText.
+	[ UIManager default inform: text ] on: Error do: [ Transcript show: text; cr ].
+	^ text
 ]
 
 { #category : '*GemStone-GBS-Core-Tools' }
