@@ -57,7 +57,9 @@ GbsServerInterface >> apiGciCommit: aSessionId [
 { #category : 'as yet unclassified' }
 GbsServerInterface >> apiGciEncrypt: pass buffer: buf size: size [
     <primitive: #primitiveNativeCall error: errorCode>
-    ^ self ffiCall: #(char* GciEncrypt(char* pass, char* buf, uint64 size))
+    "GCI 3.7.5: char* GciEncrypt(const char* password, char outBuff[], unsigned int outBuffSize).
+    outBuffSize is a 32-bit unsigned int."
+    ^ self ffiCall: #(char* GciEncrypt(char* pass, char* buf, uint size))
         module: libraryPath
         options: #(+ optNonThreaded)
 ]
@@ -65,11 +67,15 @@ GbsServerInterface >> apiGciEncrypt: pass buffer: buf size: size [
 { #category : 'api - password' }
 GbsServerInterface >> apiGciEncrypt: aString into: aBuffer [
     <primitive: #primitiveNativeCall error: errorCode>
-    ^ self ffiCall: #(char* GciEncrypt(char* aString, void* aBuffer, int64 1024)) module: libraryPath
+    "GCI 3.7.5: char* GciEncrypt(const char* password, char outBuff[], unsigned int outBuffSize)."
+    ^ self ffiCall: #(char* GciEncrypt(char* aString, void* aBuffer, uint 1024)) module: libraryPath
 ]
 
 { #category : 'api' }
-GbsServerInterface >> apiGciEncrypt: s into: b size: z [ ^ self ffiCall: #(void* GciEncrypt(String s, void* b, void* z)) module: libraryPath
+GbsServerInterface >> apiGciEncrypt: s into: b size: z [
+    "GCI 3.7.5: char* GciEncrypt(const char* password, char outBuff[], unsigned int outBuffSize). The size
+    argument is a 32-bit unsigned int, not a pointer."
+    ^ self ffiCall: #(char* GciEncrypt(String s, void* b, uint z)) module: libraryPath
 ]
 
 { #category : 'api' }
@@ -221,8 +227,12 @@ GbsServerInterface >> apiGciIsKindOfClass: anObj isKindOf: aClass [
 { #category : 'api - login' }
 GbsServerInterface >> apiGciLogin: gemService user: userId pass: password [
     <primitive: #primitiveNativeCall error: errorCode>
+    "GCI 3.7.5: BoolType GciLogin(const char username[], const char password[]). GciLogin takes only the
+    GemStone username and password -- network parameters come from a prior GciSetNet*. There is no
+    gemService parameter; the first argument is the username. gemService is accepted for caller
+    compatibility but not passed."
     self logGciCall: 'Login attempt for user: ', userId readString.
-    ^ self ffiCall: #(uint64 GciLogin(void* gemService, void* userId, void* password))
+    ^ self ffiCall: #(int GciLogin(void* userId, void* password))
         module: libraryPath
         options: #(+ optNonThreaded)
 ]
@@ -230,9 +240,11 @@ GbsServerInterface >> apiGciLogin: gemService user: userId pass: password [
 { #category : 'api - login' }
 GbsServerInterface >> apiGciLoginEx: user pass: password flags: flags context: context [
     <primitive: #primitiveNativeCall error: errorCode>
-    "Use String so UFFI marshals it safely to C!"
-    ^ self ffiCall: #(bool GciLoginEx(String user, String password, int flags, int64 context)) 
-           module: libraryPath 
+    "GCI 3.7.5: BoolType GciLoginEx(const char username[], const char password[], unsigned int loginFlags,
+    int haltOnErrNum). The fourth argument is haltOnErrNum (a 32-bit int), not a context pointer/int64; the
+    'context:' keyword is retained for caller compatibility but maps to haltOnErrNum."
+    ^ self ffiCall: #(int GciLoginEx(String user, String password, uint flags, int context))
+           module: libraryPath
            options: #( + optNonThreaded )
 ]
 
@@ -246,7 +258,11 @@ GbsServerInterface >> apiGciLoginEx_: user password: password flags: flags haltO
 ]
 
 { #category : 'api' }
-GbsServerInterface >> apiGciLoginEx: u password: p flags: f context: c [ ^ self ffiCall: #(int GciLoginEx(void* u, void* p, int f, void* c))
+GbsServerInterface >> apiGciLoginEx: u password: p flags: f context: c [
+    "GCI 3.7.5: BoolType GciLoginEx(const char username[], const char password[], unsigned int loginFlags,
+    int haltOnErrNum). The fourth argument is a 32-bit int (haltOnErrNum), not a pointer; username/password
+    are C strings, not opaque pointers."
+    ^ self ffiCall: #(int GciLoginEx(void* u, void* p, uint f, int c))
 ]
 
 { #category : 'api - login' }
@@ -289,7 +305,11 @@ GbsServerInterface >> apiGciSetNet: aStone [
 ]
 
 { #category : 'api' }
-GbsServerInterface >> apiGciSetNet: st host: h net: n service: s [ ^ self ffiCall: #(void GciSetNet(void* st, void* h, void* n, void* s))
+GbsServerInterface >> apiGciSetNet: st host: h net: n service: s [
+    "GCI 3.7.5: void GciSetNet(const char StoneName[], const char HostUserId[], const char HostPassword[],
+    const char GemService[]). All four arguments are C strings. The keyword order here is
+    stone/host(user)/net(=hostPassword)/service."
+    ^ self ffiCall: #(void GciSetNet(String st, String h, String n, String s))
 ]
 
 { #category : 'api - login' }
@@ -311,22 +331,23 @@ GbsServerInterface >> apiGciSetNetEx__: stone hostUser: hostUser hostPassword: h
 ]
 
 { #category : 'api - login' }
-GbsServerInterface >> apiGciTsLogin: gemService user: userId pass: password encrypted: isEncrypted remote: isRemote [
+GbsServerInterface >> apiGciTsLoginStone: stoneNrs hostUser: hostUserId hostPassword: hostPassword hostPwEncrypted: hostPwEncrypted gemService: gemServiceNrs gsUser: gsUser gsPassword: gsPassword flags: loginFlags haltOn: haltOnErrNum executedSessionInit: executedSessionInit error: errBuf [
     <primitive: #primitiveNativeCall error: errorCode>
-    ^ self ffiCall: #(uint64 GciTsLogin(
-            char* gemService, 
-            char* userId, 
-            char* password, 
-            int isEncrypted, 
-            int isRemote,
-            int 0, void* 0, int 0, int 0))
+    "GCI 3.7.5 (gcits.hf): GciSession GciTsLogin(const char* StoneNameNrs, const char* HostUserId,
+    const char* HostPassword, BoolType hostPwIsEncrypted, const char* GemServiceNrs,
+    const char* gemstoneUsername, const char* gemstonePassword, unsigned int loginFlags, int haltOnErrNum,
+    BoolType* executedSessionInit, GciErrSType* err). Eleven arguments; the prior binding had only nine and
+    the wrong argument order. Returns a GciSession pointer (NULL on failure)."
+    ^ self ffiCall: #(void* GciTsLogin(String stoneNrs, String hostUserId, String hostPassword, int hostPwEncrypted, String gemServiceNrs, String gsUser, String gsPassword, uint loginFlags, int haltOnErrNum, void* executedSessionInit, void* errBuf))
         module: libraryPath
 ]
 
 { #category : 'api - helpers' }
-GbsServerInterface >> apiGciTsVersion [
+GbsServerInterface >> apiGciTsVersionInto: aBuffer size: bufSize [
     <primitive: #primitiveNativeCall error: errorCode>
-    ^ self ffiCall: #(char* GciTsVersion())
+    "GCI 3.7.5 (gcits.hf): uint GciTsVersion(char* buf, size_t bufSize). The prior no-argument binding did
+    not match the C prototype."
+    ^ self ffiCall: #(uint GciTsVersion(void* aBuffer, uint64 bufSize))
         module: libraryPath
 ]
 
