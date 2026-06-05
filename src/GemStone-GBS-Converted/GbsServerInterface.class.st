@@ -182,7 +182,9 @@ GbsServerInterface >> apiGciFetchChars: anOop startingAt: startIndex into: aBuff
 { #category : 'api - fetching' }
 GbsServerInterface >> apiGciFetchOops: anOop startingAt: startIndex into: aBuffer size: numOops [
     <primitive: #primitiveNativeCall error: errorCode>
-    ^ self ffiCall: #(int64 GciFetchOops(int64 anOop, int64 startIndex, void* aBuffer, int64 numOops))
+    "GCI 3.7.5: int GciFetchOops(OopType, int64 startIndex, OopType[], int numOops). The return value and
+    numOops are 32-bit int (not int64); OopType is uint64."
+    ^ self ffiCall: #(int GciFetchOops(uint64 anOop, int64 startIndex, void* aBuffer, int numOops))
 ]
 
 { #category : 'api - fetching' }
@@ -193,9 +195,12 @@ GbsServerInterface >> apiGciFetchSize: anOop [
 
 { #category : 'ffi' }
 GbsServerInterface >> apiGciGetClass: anOop [
-    "CRITICAL FIX: Added trailing underscore and optNonThreaded to prevent VM SegFaults!"
-    ^ self 
-		ffiCall: #( uint64 GciFetchClass_(uint64 anOop) ) 
+    "GCI 3.7.5: OopType GciFetchClass(OopType theObject). There is no GciFetchClass_ symbol in the GCI
+    library; a trailing underscore here resolves (via GCI_WEAK) to a NULL function pointer. Use the real
+    GciFetchClass and keep optNonThreaded for the linked-session calling convention. The Core overlay binds
+    the same correct selector; this converted definition keeps the Original load working too."
+    ^ self
+		ffiCall: #( uint64 GciFetchClass(uint64 anOop) )
 		module: libraryPath
 		options: #( + optNonThreaded )
 ]
@@ -207,13 +212,10 @@ GbsServerInterface >> apiGciInit [
 ]
 
 { #category : 'api' }
-GbsServerInterface >> apiGciIsKindOfClass: o isKindOf: c [ ^ self ffiCall: #(int GciIsKindOfClass(void* o, void* c))
-]
-
-{ #category : 'ffi' }
-GbsServerInterface >> apiGciIsString: anOop [
-    ^ self ffiCall: #( bool GciIsString ( uint64 anOop ) ) 
-           module: libraryPath
+GbsServerInterface >> apiGciIsKindOfClass: anObj isKindOf: aClass [
+    "GCI 3.7.5: BoolType(=int) GciIsKindOfClass(OopType anObj, OopType aClass). OOPs are uint64, not
+    pointers; binding them as void* is type-incorrect even though it happens to be 8 bytes on LP64."
+    ^ self ffiCall: #(int GciIsKindOfClass(uint64 anObj, uint64 aClass))
 ]
 
 { #category : 'api - login' }
