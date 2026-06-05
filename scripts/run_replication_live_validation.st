@@ -1814,6 +1814,46 @@ status'
         verified = 51 ifFalse: [
           Error signal: 'Free-OOP object creation did not produce the expected server objects status=', verified asString, ' (55=array shape 56=string slot 57=int/nil slots).' ].
 
+        phase := 'export-set-save-release'.
+        "VW-parity explicit export-set save/release: save a materialized object into the gem's PureExportSet
+        via GciSaveObjs, then release it via GciReleaseOops. Asserts the lifecycle counters move and the
+        object is still readable on the server after save. Reuses dirtyRootOop/dirtyRoot/clampedMetrics."
+        session resetMaterializedObjectDirtyTracking.
+        (session serverInterface supportsObjectSaveTransport) ifFalse: [
+          Error signal: 'Session does not advertise GCI object-save transport.' ].
+        dirtyRootOop := session
+          returnRemoteCommandBody: '| fixture obj |
+fixture := UserGlobals at: fixtureKey ifAbsentPut: [ Dictionary new ].
+obj := Array with: #saveReleaseFixture with: 7.
+fixture at: #saveReleaseObject put: obj.
+obj'
+          literalBindings: (Dictionary new at: 'fixtureKey' put: fixtureKey; yourself)
+          oopBindings: Dictionary new.
+        [ session clearProxyCache. session clearRemoteClassNameCache ] on: Error do: [ ].
+        session fetchDeep.
+        dirtyRoot := session fetchObject: dirtyRootOop.
+        dirtyRoot ifNil: [ Error signal: 'Export-set save/release fixture did not materialize.' ].
+        session saveObjects: { dirtyRoot }.
+        clampedMetrics := Dictionary new
+          at: #savedOopCount put: (metricValue value: (session objectSpace lifecycleReport) value: #savedOopCount);
+          at: #saveObjectsCallCount put: (metricValue value: (session objectSpace lifecycleReport) value: #saveObjectsCallCount);
+          yourself.
+        Smalltalk globals at: #GbsReplicationLiveExportSetSaveReleaseMetrics put: clampedMetrics.
+        (clampedMetrics at: #savedOopCount) < 1 ifTrue: [
+          Error signal: 'saveObjects: did not record a saved OOP.' ].
+        (clampedMetrics at: #saveObjectsCallCount) < 1 ifTrue: [
+          Error signal: 'saveObjects: did not record a call.' ].
+        verified := session
+          returnRemoteCommandBody: '(object isKindOf: Array) and: [ (object at: 1) == #saveReleaseFixture and: [ (object at: 2) = 7 ] ]'
+          literalBindings: Dictionary new
+          oopBindings: (Dictionary new at: 'object' put: dirtyRootOop; yourself).
+        (session resultFor: verified) == true ifFalse: [
+          Error signal: 'Saved object was not readable on the server after saveObjects:.' ].
+        session releaseObjects: { dirtyRoot }.
+        clampedMetrics at: #releaseObjectsCallCount put: (metricValue value: (session objectSpace lifecycleReport) value: #releaseObjectsCallCount).
+        (clampedMetrics at: #releaseObjectsCallCount) < 1 ifTrue: [
+          Error signal: 'releaseObjects: did not record a call.' ].
+
         phase := 'migration-domain-mapped-lifecycle-abort'.
         session resetMaterializedObjectDirtyTracking.
         mappedDomainOrder := mappedDomainFixtureClass basicNew.
@@ -1947,6 +1987,8 @@ status'
             ' unmapped_element_semantic_bag_entries=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveUnmappedElementMetrics ifAbsent: [ Dictionary new ]) value: #semanticBagEntries) asString,
             ' created_byte_object_oop=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveObjectCreationMetrics ifAbsent: [ Dictionary new ]) value: #byteObjectOop) asString,
             ' created_oop_object_oop=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveObjectCreationMetrics ifAbsent: [ Dictionary new ]) value: #oopObjectOop) asString,
+            ' export_set_saved_oop_count=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveExportSetSaveReleaseMetrics ifAbsent: [ Dictionary new ]) value: #savedOopCount) asString,
+            ' export_set_release_objects_calls=', (metricValue value: (Smalltalk globals at: #GbsReplicationLiveExportSetSaveReleaseMetrics ifAbsent: [ Dictionary new ]) value: #releaseObjectsCallCount) asString,
             ' clamp_spec_oop=', clampSpecOop asString;
           cr ]
         ensure: [

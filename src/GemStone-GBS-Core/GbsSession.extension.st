@@ -224,6 +224,21 @@ GbsSession >> unsignedOopForSignedOop: anInteger [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> saveObjects: aCollection [
+	"VW-compatible explicit export-set save. Adds the given client objects, proxies, or OOPs to the gem's
+	PureExportSet so they survive in-gem garbage collection for the life of the session. Answers the saved
+	OOPs. See GbsSessionLifecycleManager>>saveObjects:forSession:."
+	^ GbsSessionLifecycleManager saveObjects: aCollection forSession: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> releaseObjects: aCollection [
+	"VW-compatible explicit export-set release. Removes the given client objects, proxies, or OOPs from the
+	gem's PureExportSet, making them eligible for in-gem garbage collection again. Answers the released OOPs."
+	^ GbsSessionLifecycleManager releaseObjects: aCollection forSession: self
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> flushDirtyMaterializedObjects [
 	^ GbsMaterializedObjectDirtyTracker flushDirtyForSession: self
 ]

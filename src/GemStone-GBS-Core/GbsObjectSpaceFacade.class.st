@@ -456,6 +456,18 @@ GbsObjectSpaceFacade >> pendingGcedOopCount [
 	^ GbsSessionLifecycleManager pendingGcedOopCountForSession: session
 ]
 
+{ #category : 'export set' }
+GbsObjectSpaceFacade >> saveObjects: aCollection [
+	"VW-compatible export-set save: add the given objects/proxies/OOPs to the gem's PureExportSet."
+	^ GbsSessionLifecycleManager saveObjects: aCollection forSession: session
+]
+
+{ #category : 'export set' }
+GbsObjectSpaceFacade >> releaseObjects: aCollection [
+	"VW-compatible export-set release: remove the given objects/proxies/OOPs from the gem's PureExportSet."
+	^ GbsSessionLifecycleManager releaseObjects: aCollection forSession: session
+]
+
 { #category : 'lifecycle' }
 GbsObjectSpaceFacade >> pendingExportSetReleaseOopCount [
 	^ GbsSessionLifecycleManager pendingExportSetReleaseOopCountForSession: session

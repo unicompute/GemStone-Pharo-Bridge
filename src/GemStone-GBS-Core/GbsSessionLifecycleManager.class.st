@@ -491,6 +491,9 @@ GbsSessionLifecycleManager class >> lifecycleReportCounterKeys [
 		releaseOopsCallCount
 		releaseOopsReleasedCount
 		releaseOopsFailureCount
+		saveObjectsCallCount
+		savedOopCount
+		releaseObjectsCallCount
 		finalizerRegisteredCount
 		finalizerDeactivatedCount
 		finalizerUnregisteredCount
@@ -855,6 +858,68 @@ GbsSessionLifecycleManager class >> releaseOopsTransportAvailableForSession: aSe
 	(server respondsTo: #releaseOops:) ifFalse: [ ^ false ].
 	(server respondsTo: #supportsReleaseOopsTransport) ifTrue: [
 		^ server supportsReleaseOopsTransport == true ].
+	^ true
+]
+
+{ #category : 'export set' }
+GbsSessionLifecycleManager class >> oopsForObjects: aCollection inSession: aSession [
+	"Resolve a mixed collection of client objects, proxies, or raw OOP integers to server OOPs. Objects with
+	no known OOP are skipped."
+	| oops |
+	oops := OrderedCollection new.
+	aCollection do: [ :each | | oop |
+		oop := each isInteger
+			ifTrue: [ each ]
+			ifFalse: [
+				([ GbsMaterializedObjectDirtyTracker oopForObject: each inSession: aSession ]
+					on: Error do: [ nil ])
+					ifNil: [
+						((each respondsTo: #oop) and: [ each oop notNil ])
+							ifTrue: [ each oop ]
+							ifFalse: [ nil ] ] ].
+		oop ifNotNil: [ oops add: oop ] ].
+	^ oops asArray
+]
+
+{ #category : 'export set' }
+GbsSessionLifecycleManager class >> saveObjects: aCollection forSession: aSession [
+	"VW-compatible explicit export-set save. Resolve the given client objects/proxies/OOPs to server OOPs and
+	add them to the gem's PureExportSet via GciSaveObjs, so they survive in-gem garbage collection for the
+	life of the session. Answers the saved OOPs. Explicitly saving an OOP cancels any pending
+	no-longer-replicated release for it."
+	| oops |
+	(self objectSaveTransportAvailableForSession: aSession) ifFalse: [
+		GbsError signal: 'GCI object-save transport is not available for this session.' ].
+	oops := self oopsForObjects: aCollection inSession: aSession.
+	oops isEmpty ifTrue: [ ^ oops ].
+	oops do: [ :oop | self cancelNoLongerReplicatedOop: oop forSession: aSession ].
+	aSession serverInterface saveObjects: oops.
+	(aSession respondsTo: #checkForError) ifTrue: [ aSession checkForError ].
+	self incrementLifecycleCounter: #saveObjectsCallCount forSession: aSession.
+	self incrementLifecycleCounter: #savedOopCount by: oops size forSession: aSession.
+	^ oops
+]
+
+{ #category : 'export set' }
+GbsSessionLifecycleManager class >> releaseObjects: aCollection forSession: aSession [
+	"VW-compatible explicit export-set release. Resolve the given client objects/proxies/OOPs to server OOPs
+	and release them from the gem's PureExportSet (cancelling a prior saveObjects:), making them eligible for
+	in-gem garbage collection again. Answers the released OOPs."
+	| oops |
+	oops := self oopsForObjects: aCollection inSession: aSession.
+	oops isEmpty ifTrue: [ ^ oops ].
+	self releaseOops: oops forSession: aSession.
+	self incrementLifecycleCounter: #releaseObjectsCallCount forSession: aSession.
+	^ oops
+]
+
+{ #category : 'testing' }
+GbsSessionLifecycleManager class >> objectSaveTransportAvailableForSession: aSession [
+	| server |
+	server := [ aSession serverInterface ] on: Error do: [ ^ false ].
+	(server respondsTo: #saveObjects:) ifFalse: [ ^ false ].
+	(server respondsTo: #supportsObjectSaveTransport) ifTrue: [
+		^ server supportsObjectSaveTransport == true ].
 	^ true
 ]
 

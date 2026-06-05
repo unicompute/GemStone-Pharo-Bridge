@@ -118,6 +118,17 @@ GbsServerInterface >> apiGciReleaseOops: oopBuffer count: oopCount [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> apiGciSaveObjs: oopBuffer count: oopCount [
+	"GCI 3.7.5: void GciSaveObjs(const OopType theOops[], int numOops). Adds each OOP to the gem's
+	PureExportSet, preventing in-gem garbage collection of the cached objects for the life of the session.
+	OopType is uint64; numOops is a 32-bit int."
+	^ self
+		ffiCall: #(void GciSaveObjs(void* oopBuffer, int oopCount))
+		module: libraryPath
+		options: #( + optNonThreaded )
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> apiGciSetSessionId: sessionId [
 	^ self
 		ffiCall: #(int GciSetSessionId_(int sessionId))
@@ -474,6 +485,28 @@ GbsServerInterface >> supportsFreeOopAllocationTransport [
 	^ self nativeGciTransportsEnabled
 		and: [ self nativeGciOopWidth = 64
 		and: [ self respondsTo: #apiGciGetFreeOops:into: ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> supportsObjectSaveTransport [
+	"GciSaveObjs (export-set save) requires the 64-bit GCI transport, mirroring the release/free-OOP gates."
+	^ self nativeGciTransportsEnabled
+		and: [ self nativeGciOopWidth = 64
+		and: [ self respondsTo: #apiGciSaveObjs:count: ] ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsServerInterface >> saveObjects: oopCollection [
+	"Add each OOP in oopCollection to the gem's PureExportSet via GciSaveObjs, so the cached objects survive
+	in-gem garbage collection for the life of the session. Mirrors releaseOops:."
+	oopCollection isEmpty ifTrue: [ ^ oopCollection asArray ].
+	(self supportsObjectSaveTransport) ifFalse: [
+		GbsError signal: 'GCI object-save transport is not available.' ].
+	self
+		withOopBufferFor: oopCollection
+		do: [ :oopBuffer |
+			self apiGciSaveObjs: oopBuffer count: oopCollection size ].
+	^ oopCollection asArray
 ]
 
 { #category : '*GemStone-GBS-Core' }
