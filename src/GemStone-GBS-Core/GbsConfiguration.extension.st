@@ -69,6 +69,16 @@ GbsConfiguration >> nativeStoreTraversalShapeValidationEnabled: aBoolean [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsConfiguration >> serverMapLeafCapacity [
+	^ self bridgeValueAt: #serverMapLeafCapacity ifAbsent: 300
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsConfiguration >> serverMapLeafCapacity: anInteger [
+	^ self bridgeValueAt: #serverMapLeafCapacity put: anInteger
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsConfiguration >> serverMapMode [
 	^ self bridgeValueAt: #serverMapMode ifAbsent: 'weak'
 ]

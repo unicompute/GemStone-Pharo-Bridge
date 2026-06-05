@@ -23,7 +23,7 @@ GbsSettingsPresenter >> bridgeBooleanAt: ivarName default: defaultBoolean [
 { #category : '*GemStone-GBS-Core-Tools' }
 GbsSettingsPresenter >> bridgeConfigurationValueAt: ivarName default: defaultValue [
 	configuration ifNil: [ ^ defaultValue ].
-	(#(asyncSignalPollingEnabled freeOopAllocationBatchSize freeOopBatchSize nativeStoreTraversalShapeValidationEnabled serverMapMode storeDirtyOnCommit storeTraversalTransport strictMutationProtectionEnabled) includes: ivarName) ifTrue: [
+	(#(asyncSignalPollingEnabled freeOopAllocationBatchSize freeOopBatchSize nativeStoreTraversalShapeValidationEnabled serverMapLeafCapacity serverMapMode storeDirtyOnCommit storeTraversalTransport strictMutationProtectionEnabled) includes: ivarName) ifTrue: [
 		^ [ configuration perform: ivarName ] on: Error do: [ defaultValue ] ].
 	^ configuration valueAt: ivarName ifAbsent: defaultValue
 ]
@@ -52,7 +52,7 @@ GbsSettingsPresenter >> bridgeFormattedIntegerValueAt: ivarName default: default
 GbsSettingsPresenter >> bridgeSetConfigurationValueAt: aKey put: aValue [
 	| setter |
 	configuration ifNil: [ configuration := GbsConfiguration current ].
-	(#(asyncSignalPollingEnabled freeOopAllocationBatchSize freeOopBatchSize nativeStoreTraversalShapeValidationEnabled serverMapMode storeDirtyOnCommit storeTraversalTransport strictMutationProtectionEnabled) includes: aKey) ifTrue: [
+	(#(asyncSignalPollingEnabled freeOopAllocationBatchSize freeOopBatchSize nativeStoreTraversalShapeValidationEnabled serverMapLeafCapacity serverMapMode storeDirtyOnCommit storeTraversalTransport strictMutationProtectionEnabled) includes: aKey) ifTrue: [
 		setter := (aKey asString, ':') asSymbol.
 		^ configuration perform: setter with: aValue ].
 	^ configuration valueAt: aKey put: aValue
@@ -122,6 +122,7 @@ GbsSettingsPresenter >> defaultLayout [
 			yes: (self bridgeControlAt: #nativeStoreTraversalShapeValidationEnabledYes)
 			no: (self bridgeControlAt: #nativeStoreTraversalShapeValidationEnabledNo)) expand: false;
 		add: (self textRowLabel: 'serverMapMode' field: (self bridgeControlAt: #serverMapModeDrop)) expand: false;
+		add: (self textRowLabel: 'serverMapLeafCapacity' field: (self bridgeControlAt: #serverMapLeafCapacityField)) expand: false;
 		add: (self textRowLabel: 'freeOopAllocationBatchSize' field: (self bridgeControlAt: #freeOopAllocationBatchSizeField)) expand: false;
 		add: (self textRowLabel: 'freeOopBatchSize' field: (self bridgeControlAt: #freeOopBatchSizeField)) expand: false;
 		add: (self sectionTitle: 'ServerCommunication') expand: false;
@@ -195,6 +196,7 @@ GbsSettingsPresenter >> initializePresenters [
 	self bridgeControlAt: #nativeStoreTraversalShapeValidationEnabledYes put: (self newRadioButton label: 'Yes').
 	self bridgeControlAt: #nativeStoreTraversalShapeValidationEnabledNo put: (self newRadioButton label: 'No').
 	self bridgeControlAt: #storeTraversalTransportDrop put: self newDropList.
+	self bridgeControlAt: #serverMapLeafCapacityField put: self newTextInput.
 	self bridgeControlAt: #serverMapModeDrop put: self newDropList.
 	(self bridgeControlAt: #storeTraversalTransportDrop) items: (GbsReplicationPolicy legalValuesForSetting: #storeTraversalTransport).
 	(self bridgeControlAt: #serverMapModeDrop) items: (GbsReplicationPolicy legalValuesForSetting: #serverMapMode).
@@ -267,6 +269,7 @@ GbsSettingsPresenter >> loadFromConfiguration [
 	self selectDrop: defaultFaultPolicyDrop value: (self bridgeStringValueAt: #defaultFaultPolicy default: 'lazy').
 	self selectDrop: (self bridgeControlAt: #storeTraversalTransportDrop) value: (self bridgeStringValueAt: #storeTraversalTransport default: 'script').
 	self selectDrop: (self bridgeControlAt: #serverMapModeDrop) value: (self bridgeStringValueAt: #serverMapMode default: 'weak').
+	(self bridgeControlAt: #serverMapLeafCapacityField) text: (self bridgeStringValueAt: #serverMapLeafCapacity default: 300).
 	self selectDrop: (self bridgeControlAt: #replicationTemplateDrop) value: 'default'.
 	self setYesNo: { bulkLoadYes. bulkLoadNo } value: (self bridgeBooleanAt: #bulkLoad default: false).
 	self setYesNo: { generateClassConnectorsYes. generateClassConnectorsNo } value: (self bridgeBooleanAt: #generateClassConnectors default: true).
@@ -347,6 +350,7 @@ GbsSettingsPresenter >> updateConfigurationFromPresenters [
 		bridgeSetConfigurationValueAt: #blockReplicationPolicy put: (self selectedDropText: blockReplicationPolicyDrop default: 'replicate');
 		bridgeSetConfigurationValueAt: #defaultFaultPolicy put: (self selectedDropText: defaultFaultPolicyDrop default: 'lazy');
 		bridgeSetConfigurationValueAt: #serverMapMode put: (self selectedDropText: (self bridgeControlAt: #serverMapModeDrop) default: 'weak');
+		bridgeSetConfigurationValueAt: #serverMapLeafCapacity put: (self integerFromField: (self bridgeControlAt: #serverMapLeafCapacityField) default: 300);
 		bridgeSetConfigurationValueAt: #storeTraversalTransport put: (self selectedDropText: (self bridgeControlAt: #storeTraversalTransportDrop) default: 'script');
 		bridgeSetConfigurationValueAt: #bulkLoad put: (self yesNoValueFor: { bulkLoadYes. bulkLoadNo });
 		bridgeSetConfigurationValueAt: #generateClassConnectors put: (self yesNoValueFor: { generateClassConnectorsYes. generateClassConnectorsNo });
@@ -406,6 +410,7 @@ GbsSettingsPresenter >> currentReplicationPolicyFromPresenters [
 	policy := GbsReplicationPolicy default.
 	policy storeTraversalTransport: (self selectedDropText: (self bridgeControlAt: #storeTraversalTransportDrop) default: 'script').
 	policy serverMapMode: (self selectedDropText: (self bridgeControlAt: #serverMapModeDrop) default: 'weak').
+	policy serverMapLeafCapacity: (self integerFromField: (self bridgeControlAt: #serverMapLeafCapacityField) default: 300).
 	policy blockReplicationPolicy: (self selectedDropText: blockReplicationPolicyDrop default: 'replicate').
 	policy defaultFaultPolicy: (self selectedDropText: defaultFaultPolicyDrop default: 'lazy').
 	policy storeDirtyOnCommit: (self yesNoValueFor: { (self bridgeControlAt: #storeDirtyOnCommitYes). (self bridgeControlAt: #storeDirtyOnCommitNo) }).
@@ -460,6 +465,7 @@ GbsSettingsPresenter >> validationErrorMessage [
 	self integerFromField: traversalBufferField default: 250000 label: 'traversalBufferSize' minimum: 1 messages: messages.
 	self integerFromField: (self bridgeControlAt: #freeOopAllocationBatchSizeField) default: 2000 label: 'freeOopAllocationBatchSize' minimum: 1 messages: messages.
 	self integerFromField: (self bridgeControlAt: #freeOopBatchSizeField) default: 256 label: 'freeOopBatchSize' minimum: 0 messages: messages.
+	self integerFromField: (self bridgeControlAt: #serverMapLeafCapacityField) default: 300 label: 'serverMapLeafCapacity' minimum: 0 messages: messages.
 	self integerFromField: eventPollingField default: 300 label: 'eventPollingFrequency' minimum: 0 messages: messages.
 	self integerFromField: eventPriorityField default: 3 label: 'eventPriority' minimum: 0 messages: messages.
 	policy := GbsReplicationPolicy default.

@@ -10,6 +10,17 @@ Class {
 }
 
 { #category : 'tests' }
+GbsSettingsPresenterReplicationTemplateCoreToolsTest >> testServerMapLeafCapacityFieldFlowsToPolicy [
+	"The serverMapLeafCapacity control (newly surfaced on the form) must flow through to the policy built
+	from the presenter."
+	| presenter policy |
+	presenter := GbsSettingsPresenter new.
+	(presenter bridgeControlAt: #serverMapLeafCapacityField) text: '512'.
+	policy := presenter currentReplicationPolicyFromPresenters.
+	self assert: policy serverMapLeafCapacity equals: 512
+]
+
+{ #category : 'tests' }
 GbsSettingsPresenterReplicationTemplateCoreToolsTest >> testTemplateNamesIncludeBuiltInTemplates [
 	| presenter names |
 	presenter := GbsSettingsPresenter new.
