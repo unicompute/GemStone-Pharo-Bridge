@@ -972,6 +972,67 @@ GbsSession >> commitTransactionOrSignalConflict [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsSession >> transactionConflicts [
+	"VW-compatible structured conflict report. Reads System transactionConflicts on the server (a symbol
+	dictionary keyed by conflict-kind symbols whose values are arrays of conflicting objects) and answers a
+	Pharo Dictionary mapping each conflict-kind symbol to an Array of the conflicting server object OOPs.
+	Answers an empty Dictionary when there are no conflicts. The server clears its conflict sets at the start
+	of each commit, so call this after a failed commit and before the next one."
+	| text result |
+	text := [ self transactionConflictsRawText ]
+		on: Error
+		do: [ :ex | ^ Dictionary new ].
+	result := Dictionary new.
+	(text ifNil: [ '' ]) asString lines do: [ :line |
+		line isEmpty ifFalse: [ | parts kind oops |
+			parts := line asString splitOn: Character tab.
+			parts isEmpty ifFalse: [
+				kind := parts first asSymbol.
+				oops := parts size >= 2
+					ifTrue: [
+						(parts second substrings: ' ')
+							inject: OrderedCollection new
+							into: [ :acc :token |
+								token isEmpty ifFalse: [
+									(token = 'index') ifTrue: [ acc add: #indexObject ]
+										ifFalse: [
+											[ acc add: (self unsignedConflictOopFor: token asInteger) ]
+												on: Error do: [ ] ] ].
+								acc ] ]
+					ifFalse: [ OrderedCollection new ].
+				result at: kind put: oops asArray ] ] ].
+	^ result
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> transactionConflictsRawText [
+	"Server-side flatten of System transactionConflicts to <kind>\t<oop oop ...>\n lines."
+	^ self
+		fetchRemoteCommandBody: '| conflicts stream |
+conflicts := System transactionConflicts.
+stream := WriteStream on: String new.
+conflicts keysAndValuesDo: [ :kind :objs |
+	(objs notNil and: [ objs isEmpty not ]) ifTrue: [
+		stream nextPutAll: kind asString; nextPut: Character tab.
+		objs doWithIndex: [ :each :i |
+			i > 1 ifTrue: [ stream nextPut: $  ].
+			((each isKindOf: String) and: [ each = ''index object'' ])
+				ifTrue: [ stream nextPutAll: ''index'' ]
+				ifFalse: [ stream nextPutAll: each asOop asString ] ].
+		stream nextPut: Character lf ] ].
+stream contents'
+		literalBindings: Dictionary new
+		oopBindings: Dictionary new
+		context: 20
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsSession >> unsignedConflictOopFor: anInteger [
+	anInteger >= 0 ifTrue: [ ^ anInteger ].
+	^ (1 bitShift: 64) + anInteger
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsSession >> commitTransactionWithRetryCount: aRetryCount [
 	^ self transactionCoordinator commitTransactionWithRetryCount: aRetryCount
 ]

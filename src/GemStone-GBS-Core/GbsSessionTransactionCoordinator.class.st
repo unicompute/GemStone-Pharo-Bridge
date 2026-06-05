@@ -105,7 +105,25 @@ GbsSessionTransactionCoordinator >> commitTransaction [
 { #category : 'transactions' }
 GbsSessionTransactionCoordinator >> commitTransactionOrSignalConflict [
 	self commitTransaction ifTrue: [ ^ true ].
-	GbsCommitConflictError signal: 'GemStone commit conflict.'
+	self signalConflict: 'GemStone commit conflict.'
+]
+
+{ #category : 'private' }
+GbsSessionTransactionCoordinator >> capturedTransactionConflicts [
+	"Fetch the structured conflict report for the last failed commit. The server clears its conflict sets at
+	the start of the next commit, so this must be read before any subsequent commit. Guarded so a fetch
+	failure never masks the original conflict."
+	(session respondsTo: #transactionConflicts) ifFalse: [ ^ Dictionary new ].
+	^ [ session transactionConflicts ] on: Error do: [ Dictionary new ]
+]
+
+{ #category : 'private' }
+GbsSessionTransactionCoordinator >> signalConflict: aMessage [
+	"Capture the structured conflict report (before any abort, which the caller must defer) and signal a
+	GbsCommitConflictError carrying it."
+	^ GbsCommitConflictError new
+		conflicts: self capturedTransactionConflicts;
+		signal: aMessage
 ]
 
 { #category : 'transactions' }
@@ -115,9 +133,10 @@ GbsSessionTransactionCoordinator >> commitTransactionWithRetryCount: aRetryCount
 	attempts := retries + 1.
 	1 to: attempts do: [ :attempt |
 		self commitTransaction ifTrue: [ ^ true ].
-		attempt < attempts ifTrue: [ self abortTransaction ] ].
-	GbsCommitConflictError
-		signal: 'GemStone commit conflict after ', attempts printString, ' attempts.'
+		"On the final attempt, capture the conflict report before any abort clears it."
+		attempt = attempts
+			ifTrue: [ ^ self signalConflict: 'GemStone commit conflict after ', attempts printString, ' attempts.' ]
+			ifFalse: [ self abortTransaction ] ]
 ]
 
 { #category : 'transactions' }
@@ -128,9 +147,9 @@ GbsSessionTransactionCoordinator >> withCommitRetryCount: aRetryCount do: aBlock
 	1 to: attempts do: [ :attempt |
 		result := aBlock value.
 		self commitTransaction ifTrue: [ ^ result ].
-		attempt < attempts ifTrue: [ self abortTransaction ] ].
-	GbsCommitConflictError
-		signal: 'GemStone commit conflict after ', attempts printString, ' attempts.'
+		attempt = attempts
+			ifTrue: [ ^ self signalConflict: 'GemStone commit conflict after ', attempts printString, ' attempts.' ]
+			ifFalse: [ self abortTransaction ] ]
 ]
 
 { #category : 'transactions' }
@@ -159,6 +178,5 @@ GbsSessionTransactionCoordinator >> withGemStoneTransactionRetryCount: aRetryCou
 			handledConflict ifFalse: [
 				[ self abortTransaction ] on: Error do: [ :abortEx | ] ].
 			ex pass ] ].
-	GbsCommitConflictError
-		signal: 'GemStone commit conflict after ', attempts printString, ' attempts.'
+	self signalConflict: 'GemStone commit conflict after ', attempts printString, ' attempts.'
 ]
