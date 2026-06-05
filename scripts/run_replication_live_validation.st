@@ -1856,27 +1856,51 @@ obj'
 
         phase := 'fault-level-depth'.
         "VAST/VW faultLevelRpc fault-level fetch. fetchObject:toLevel: installs a GbsLevelMaterializationProfile
-        and fetches a nested Array(Array(Array(7))) graph. The fetch must succeed and round-trip the leaf value
-        at every requested level. NOTE: on this materializer the collection-batch traversal does not currently
-        truncate nested collections at maxLevel, so a deeper level materializes at least as deep as a shallower
-        one (monotonic) -- see the fault-level depth watchpoint in doc/VW-VAST-REPLICATION-PARITY.md. Reuses
-        dirtyRootOop/dirtyRoot/releaseNoLongerObject/verified."
+        maxLevel: N and fetches a four-deep nested Array(Array(Array(Array(7)))) graph. The profile truncates
+        the traversal so that exactly N levels are materialized and level N+1 is left as a proxy -- this is
+        verified live across the frontier batch path (Array elements route through materializeArrayOops:),
+        not just the unit-tested predicate. At toLevel: 1 the root is a materialized Array but its direct
+        child is a proxy; at toLevel: 3 the first three levels materialize and the leaf-bearing innermost
+        array is a proxy, while the leaf value still round-trips once that proxy is faulted. Truncation is
+        tested by proxy-ness against GbsProxy (a truncated Array child may come back as a GbsTypedProxy whose
+        isKindOf: Array answers true, so isKindOf: Array cannot distinguish materialized from proxy here).
+        Reuses dirtyRootOop/dirtyRoot/releaseNoLongerObject/verified."
         session resetMaterializedObjectDirtyTracking.
         dirtyRootOop := session
           returnRemoteCommandBody: '| fixture |
 fixture := UserGlobals at: fixtureKey ifAbsentPut: [ Dictionary new ].
-fixture at: #faultLevelRoot put: (Array with: (Array with: (Array with: 7))).
+fixture at: #faultLevelRoot put: (Array with: (Array with: (Array with: (Array with: 7)))).
 fixture at: #faultLevelRoot'
           literalBindings: (Dictionary new at: 'fixtureKey' put: fixtureKey; yourself)
           oopBindings: Dictionary new.
-        [ session clearProxyCache. session clearRemoteClassNameCache ] on: Error do: [ ].
+        "Truncation is detected by proxy class membership in the image only -- GbsProxy>>class returns the
+        local proxy class, so (obj class == GbsProxy or: [obj class inheritsFrom: GbsProxy]) is true for both
+        GbsProxy and GbsTypedProxy without any remote send. (Sending #isKindOf: to a proxy would forward
+        remotely and fail to marshal the class argument; #isKindOf: Array is also unreliable here because a
+        GbsTypedProxy for Array answers isKindOf: Array true.) GbsProxy is resolved via Smalltalk at: because
+        it is in a package not declared in this script's compile scope. No new temps are introduced."
+        [ session clearProxyCache. session clearRemoteClassNameCache.
+          session materializer resetMaterializedObjectCache ] on: Error do: [ ].
         dirtyRoot := session materializer fetchObject: dirtyRootOop toLevel: 1.
-        ((dirtyRoot isKindOf: Array) and: [ (dirtyRoot at: 1) isKindOf: Array ]) ifFalse: [
-          Error signal: 'fetchObject:toLevel: 1 did not materialize the nested array root.' ].
-        [ session clearProxyCache. session clearRemoteClassNameCache ] on: Error do: [ ].
+        ((dirtyRoot class == (Smalltalk at: #GbsProxy))
+          or: [ dirtyRoot class inheritsFrom: (Smalltalk at: #GbsProxy) ]) ifTrue: [
+          Error signal: 'fetchObject:toLevel: 1 did not materialize the root array.' ].
+        ((dirtyRoot at: 1) class == (Smalltalk at: #GbsProxy)
+          or: [ (dirtyRoot at: 1) class inheritsFrom: (Smalltalk at: #GbsProxy) ]) ifFalse: [
+          Error signal: 'fetchObject:toLevel: 1 materialized the child collection (it should be truncated to a proxy).' ].
+        [ session clearProxyCache. session clearRemoteClassNameCache.
+          session materializer resetMaterializedObjectCache ] on: Error do: [ ].
         releaseNoLongerObject := session materializer fetchObject: dirtyRootOop toLevel: 3.
-        (((releaseNoLongerObject at: 1) at: 1) at: 1) = 7 ifFalse: [
-          Error signal: 'fetchObject:toLevel: 3 did not round-trip the nested leaf value.' ].
+        ((((releaseNoLongerObject class inheritsFrom: (Smalltalk at: #GbsProxy)) not
+          and: [ ((releaseNoLongerObject at: 1) class inheritsFrom: (Smalltalk at: #GbsProxy)) not ])
+          and: [ (((releaseNoLongerObject at: 1) at: 1) class inheritsFrom: (Smalltalk at: #GbsProxy)) not ])
+          and: [ (((releaseNoLongerObject at: 1) at: 1) class == (Smalltalk at: #GbsProxy)) not ]) ifFalse: [
+          Error signal: 'fetchObject:toLevel: 3 did not materialize three nested array levels.' ].
+        ((((releaseNoLongerObject at: 1) at: 1) at: 1) class == (Smalltalk at: #GbsProxy)
+          or: [ (((releaseNoLongerObject at: 1) at: 1) at: 1) class inheritsFrom: (Smalltalk at: #GbsProxy) ]) ifFalse: [
+          Error signal: 'fetchObject:toLevel: 3 materialized the fourth level (it should be truncated to a proxy).' ].
+        ((((releaseNoLongerObject at: 1) at: 1) at: 1) at: 1) = 7 ifFalse: [
+          Error signal: 'fetchObject:toLevel: 3 did not round-trip the nested leaf value through the truncated proxy.' ].
         verified := 1.
 
         phase := 'migration-domain-mapped-lifecycle-abort'.

@@ -20,9 +20,10 @@ GbsLevelMaterializationProfileCoreTest >> testMaxLevelDefaultsToOneAndFloorsAtOn
 
 { #category : 'tests' }
 GbsLevelMaterializationProfileCoreTest >> testLevelOneAdmitsDepthZeroOnly [
-	"maxLevel 1: referents are admitted only while traversal depth < 1, i.e. at depth 0. Since the root's
-	direct elements are checked at the root's depth (0), at toLevel: 1 the root and its direct children
-	materialize while grandchildren (checked at depth 1) stay proxies."
+	"maxLevel 1: referents are admitted only while traversal depth < 1, i.e. at depth 0. The root is
+	admitted at depth 0 and materialized; its direct children are evaluated at depth 1, where 1 < 1 is
+	false, so at toLevel: 1 the root materializes and its direct children stay proxies. (Live-confirmed by
+	the fault-level-depth phase: a four-deep Array materializes exactly N levels at toLevel: N.)"
 	| profile |
 	profile := GbsLevelMaterializationProfile maxLevel: 1.
 	self assert: (profile shouldMaterializeCollectionClassNamed: 'Array' depth: 0).
