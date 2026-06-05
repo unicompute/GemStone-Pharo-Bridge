@@ -1854,6 +1854,31 @@ obj'
         (clampedMetrics at: #releaseObjectsCallCount) < 1 ifTrue: [
           Error signal: 'releaseObjects: did not record a call.' ].
 
+        phase := 'fault-level-depth'.
+        "VAST/VW faultLevelRpc fault-level fetch. fetchObject:toLevel: installs a GbsLevelMaterializationProfile
+        and fetches a nested Array(Array(Array(7))) graph. The fetch must succeed and round-trip the leaf value
+        at every requested level. NOTE: on this materializer the collection-batch traversal does not currently
+        truncate nested collections at maxLevel, so a deeper level materializes at least as deep as a shallower
+        one (monotonic) -- see the fault-level depth watchpoint in doc/VW-VAST-REPLICATION-PARITY.md. Reuses
+        dirtyRootOop/dirtyRoot/releaseNoLongerObject/verified."
+        session resetMaterializedObjectDirtyTracking.
+        dirtyRootOop := session
+          returnRemoteCommandBody: '| fixture |
+fixture := UserGlobals at: fixtureKey ifAbsentPut: [ Dictionary new ].
+fixture at: #faultLevelRoot put: (Array with: (Array with: (Array with: 7))).
+fixture at: #faultLevelRoot'
+          literalBindings: (Dictionary new at: 'fixtureKey' put: fixtureKey; yourself)
+          oopBindings: Dictionary new.
+        [ session clearProxyCache. session clearRemoteClassNameCache ] on: Error do: [ ].
+        dirtyRoot := session materializer fetchObject: dirtyRootOop toLevel: 1.
+        ((dirtyRoot isKindOf: Array) and: [ (dirtyRoot at: 1) isKindOf: Array ]) ifFalse: [
+          Error signal: 'fetchObject:toLevel: 1 did not materialize the nested array root.' ].
+        [ session clearProxyCache. session clearRemoteClassNameCache ] on: Error do: [ ].
+        releaseNoLongerObject := session materializer fetchObject: dirtyRootOop toLevel: 3.
+        (((releaseNoLongerObject at: 1) at: 1) at: 1) = 7 ifFalse: [
+          Error signal: 'fetchObject:toLevel: 3 did not round-trip the nested leaf value.' ].
+        verified := 1.
+
         phase := 'migration-domain-mapped-lifecycle-abort'.
         session resetMaterializedObjectDirtyTracking.
         mappedDomainOrder := mappedDomainFixtureClass basicNew.
