@@ -63,6 +63,8 @@ GbsDirtyReplicateStoreTraversal class >> newDirtyStoreTraversalReport [
 			at: #perReplicatorStoreEntryCount put: 0;
 			at: #newObjectEntryCount put: 0;
 			at: #freeOopAllocationCount put: 0;
+			at: #combinedReleaseSingleTripCount put: 0;
+			at: #combinedReleaseFallbackCount put: 0;
 			yourself
 ]
 
@@ -1351,9 +1353,12 @@ GbsDirtyReplicateStoreTraversal >> storeTraversalBuffer: aBuffer on: serverInter
 	(gcedOops isEmpty and: [
 		serverInterface respondsTo: #storeTraversalBuffer:releasingNoLongerReplicatedOops: ]) ifTrue: [
 		result := [
-			serverInterface
+			| r |
+			r := serverInterface
 				storeTraversalBuffer: aBuffer
-				releasingNoLongerReplicatedOops: noLongerReplicatedOops ]
+				releasingNoLongerReplicatedOops: noLongerReplicatedOops.
+			self incrementDirtyStoreReportAt: #combinedReleaseSingleTripCount by: 1.
+			r ]
 			on: GbsError
 			do: [ :ex |
 				self
@@ -1369,10 +1374,13 @@ GbsDirtyReplicateStoreTraversal >> storeTraversalBuffer: aBuffer on: serverInter
 	(serverInterface respondsTo: #storeTraversalBuffer:releasingNoLongerReplicatedOops:gcedOops:) ifFalse: [
 		^ serverInterface storeTraversalBuffer: aBuffer ].
 	result := [
-		serverInterface
+		| r |
+		r := serverInterface
 			storeTraversalBuffer: aBuffer
 			releasingNoLongerReplicatedOops: noLongerReplicatedOops
-			gcedOops: gcedOops ]
+			gcedOops: gcedOops.
+		self incrementDirtyStoreReportAt: #combinedReleaseSingleTripCount by: 1.
+		r ]
 		on: GbsError
 		do: [ :ex |
 			self
@@ -1395,6 +1403,7 @@ GbsDirtyReplicateStoreTraversal >> storeTraversalBuffer: aBuffer on: serverInter
 	| releaseOops |
 	(anError messageText includesSubstring: 'GciStoreTravDoTravRefs_ failed')
 		ifFalse: [ anError pass ].
+	self incrementDirtyStoreReportAt: #combinedReleaseFallbackCount by: 1.
 	serverInterface storeTraversalBuffer: aBuffer.
 	releaseOops := noLongerReplicatedOops asArray, gcedOops asArray.
 	releaseOops isEmpty ifFalse: [

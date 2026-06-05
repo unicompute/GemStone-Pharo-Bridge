@@ -339,6 +339,12 @@ GbsServerInterface >> supportsNativeStoreTraversalStructLayout [
 
 { #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> nativeStoreTraversalStructLayoutDiagnostics [
+	"structLayoutSupported reports the report-shape struct layout (64-bit pointer/report shapes), which is
+	correct and live. It does NOT mean the single-trip GciStoreTravDoTravRefs_ path is usable: that struct is
+	deliberately written oversized (storeTravDoTravRefsArgsBytes = 104 vs the clang-verified 96) so the
+	single-trip call fails and the combined-release flush falls back to a correct store-then-release two-trip
+	path. combinedReleaseSingleTripShipped records that honest state so the capability report does not advertise
+	single-trip readiness that does not exist. See doc/VW-VAST-REPLICATION-PARITY.md (GciStoreTravDoArgs watchpoint)."
 	^ Dictionary new
 		at: #wordSizeBytes put: ([ Smalltalk vm wordSize ] on: Error do: [ 8 ]);
 		at: #oopWidth put: self nativeGciOopWidth;
@@ -347,6 +353,8 @@ GbsServerInterface >> nativeStoreTraversalStructLayoutDiagnostics [
 		at: #objectReportHeaderBytes put: 40;
 		at: #objectSecurityPolicyIdOffset put: 6;
 		at: #storeTravDoTravRefsArgsBytes put: 104;
+		at: #storeTravDoTravRefsArgsBytesClangVerified put: 96;
+		at: #combinedReleaseSingleTripShipped put: false;
 		at: #clampedTraversalArgsBytes put: 40;
 		at: #structLayoutSupported put: self supportsNativeStoreTraversalStructLayout;
 		yourself
@@ -413,6 +421,7 @@ GbsServerInterface >> nativeStoreTraversalCapabilityReport [
 			at: #nativeGciTransportsEnabled put: self nativeGciTransportsEnabled;
 			at: #oopWidth put: self nativeGciOopWidth;
 			at: #storeTraversalStructLayoutSupported put: self supportsNativeStoreTraversalStructLayout;
+			at: #combinedReleaseSingleTripShipped put: false;
 			at: #storeTraversalStructLayoutDiagnostics put: self nativeStoreTraversalStructLayoutDiagnostics;
 			at: #storeTraversalReportShapeSupported put: self supportsNativeStoreTraversalReportShape;
 			at: #storeTraversalReportShape put: self nativeStoreTraversalReportShape;
