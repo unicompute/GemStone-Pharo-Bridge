@@ -255,8 +255,17 @@ GbsSession >> activateGciSession [
 
 { #category : 'private - session activation' }
 GbsSession >> withActiveGciSessionDo: aBlock [
-	self activateGciSession.
-	^ aBlock value
+	"Activate this session's GCI context and run aBlock against it as ONE atomic
+	 unit. The activate (GciSetSessionId_) and whatever GCI calls aBlock makes must
+	 not be separated by another process activating a different session — GCI's
+	 current session is per-process global C state. Serialise the whole pair through
+	 the image-wide GCI mutex so concurrent callers (e.g. Seaside request processes)
+	 queue instead of clobbering each other's current session. The mutex is
+	 reentrant, so nested withActiveGciSessionDo: (error checks inside an executing
+	 block) are safe."
+	^ GbsServerInterface gciCriticalDo: [
+		self activateGciSession.
+		aBlock value ]
 ]
 
 { #category : 'evaluating' }

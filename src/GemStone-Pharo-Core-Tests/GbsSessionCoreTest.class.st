@@ -7573,6 +7573,90 @@ GbsSessionCoreTest >> testGciPollActivatesSessionIdBeforePolling [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testWithActiveGciSessionDoActivatesThenRunsBlock [
+	"The activate (GciSetSessionId_) happens, then the block runs and its value is
+	 returned. Activation and the block are wrapped together in the GCI mutex so
+	 concurrent callers cannot interleave their set-session/execute pairs."
+	| session interface activatedIds blockResult |
+	session := GbsSession new.
+	interface := CoreMockGbsSession new.
+	activatedIds := OrderedCollection new.
+	interface stubs at: #apiGciSetSessionId put: [ :sessionId | activatedIds add: sessionId. 1 ].
+	session
+		serverInterface: interface;
+		sessionId: 77;
+		sessionOop: 77;
+		isLoggedIn: true.
+
+	blockResult := session withActiveGciSessionDo: [ 42 ].
+
+	self assert: blockResult equals: 42.
+	self assert: activatedIds asArray equals: #(77)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testWithActiveGciSessionDoIsReentrant [
+	"Nested GCI access (e.g. an error check inside an executing block) must not
+	 self-deadlock — the GCI mutex is reentrant. If it were a plain Semaphore this
+	 test would hang."
+	| session interface activatedIds innerResult |
+	session := GbsSession new.
+	interface := CoreMockGbsSession new.
+	activatedIds := OrderedCollection new.
+	interface stubs at: #apiGciSetSessionId put: [ :sessionId | activatedIds add: sessionId. 1 ].
+	session
+		serverInterface: interface;
+		sessionId: 77;
+		sessionOop: 77;
+		isLoggedIn: true.
+
+	innerResult := session withActiveGciSessionDo: [
+		session withActiveGciSessionDo: [ #inner ] ].
+
+	self assert: innerResult equals: #inner.
+	self assert: activatedIds asArray equals: #(77 77)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testWithActiveGciSessionDoSerialisesConcurrentCallers [
+	"Two processes each running withActiveGciSessionDo: must NOT interleave their
+	 activate/work pairs — the second waits for the first to finish. Without the GCI
+	 mutex the blocks would interleave (this is the 'Could not activate' bug). We
+	 record an enter/exit trace and assert it is strictly nested-free: each caller's
+	 enter is immediately followed by its own exit."
+	| session interface trace done blockA blockB |
+	session := GbsSession new.
+	interface := CoreMockGbsSession new.
+	interface stubs at: #apiGciSetSessionId put: [ :sessionId | 1 ].
+	session serverInterface: interface; sessionId: 77; sessionOop: 77; isLoggedIn: true.
+
+	trace := OrderedCollection new.
+	done := Semaphore new.
+	blockA := [
+		session withActiveGciSessionDo: [
+			trace add: #enterA.
+			(Delay forMilliseconds: 50) wait.
+			trace add: #exitA ].
+		done signal ].
+	blockB := [
+		session withActiveGciSessionDo: [
+			trace add: #enterB.
+			trace add: #exitB ].
+		done signal ].
+
+	blockA fork.
+	(Delay forMilliseconds: 5) wait.
+	blockB fork.
+	done wait.
+	done wait.
+
+	"Whichever ran first, the trace must be one full pair then the other —
+	 never enterA, enterB, ... — proving serialisation."
+	self assert: (trace asArray = #(enterA exitA enterB exitB)
+		or: [ trace asArray = #(enterB exitB enterA exitA) ])
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testReadAndWriteLockUseCompatibilityScripts [
 	| mockSession scripts |
 	mockSession := CoreMockGbsSession new.
