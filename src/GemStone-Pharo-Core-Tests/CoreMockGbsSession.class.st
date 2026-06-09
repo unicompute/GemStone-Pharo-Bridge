@@ -661,6 +661,17 @@ CoreMockGbsSession >> supportsFreeOopAllocationTransport [
 ]
 
 { #category : 'accessing' }
+CoreMockGbsSession >> logGciCall: aString [
+	"Diagnostic logging sink (real GbsServerInterface writes to Transcript). When a
+	 #logGciCall stub block is configured, forward the message so tests can assert
+	 the failure diagnostic fired; otherwise no-op."
+	| block |
+	block := self stubs at: #logGciCall ifAbsent: [ nil ].
+	block ifNotNil: [ ^ block cull: aString ].
+	^ self
+]
+
+{ #category : 'accessing' }
 CoreMockGbsSession >> stubs [
 	^ stubs ifNil: [ stubs := Dictionary new ]
 ]

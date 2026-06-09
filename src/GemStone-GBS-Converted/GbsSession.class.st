@@ -243,15 +243,38 @@ GbsSession >> storeTraversalBuffer: aBuffer [
 
 { #category : 'private - session activation' }
 GbsSession >> activateGciSession [
-	| result |
+	| result triedSessionId |
 	(sessionId isNil or: [ sessionId = 0 ]) ifTrue: [ ^ self ].
 	self serverInterface ifNil: [ ^ self ].
 	(self serverInterface respondsTo: #apiGciSetSessionId:) ifFalse: [ ^ self ].
+	triedSessionId := sessionId.
 	result := self serverInterface apiGciSetSessionId: sessionId.
 	(result = 1 or: [ result == true ]) ifFalse: [
 		self logActivateGciSessionFailureResult: result.
-		self error: 'Could not activate GemStone GCI session ', sessionId asString ].
+		self markDeadAfterFailedGciActivation.
+		self error: 'Could not activate GemStone GCI session ', triedSessionId asString ].
 	^ self
+]
+
+{ #category : 'private - session activation' }
+GbsSession >> markDeadAfterFailedGciActivation [
+	"GciSetSessionId_ rejected our sessionId: the gem is gone at the GCI level
+	 (the okzulu prod signature is gciCurrentSessionId=0 while this proxy still has
+	 isLoggedIn=true). The proxy is now lying about being alive. Make isLoggedIn
+	 honest so (a) the okzulu session pool discards this session on the
+	 'could not activate' marker and logs in a fresh one instead of re-holding and
+	 retrying a dead proxy, and (b) the isLoggedIn guards on this session
+	 (commit/abort/signal-enable) short-circuit instead of issuing more GCI calls
+	 against a session that no longer exists. We do NOT call gciLogout here — the
+	 GCI session is already gone, so a logout round trip would just fail again; we
+	 only reset the local belief. Guarded so it can never raise out of the activate
+	 failure path."
+	[
+		isLoggedIn := false.
+		sessionOop := nil.
+		sessionId := nil ]
+		on: Error
+		do: [ :e | nil ]
 ]
 
 { #category : 'private - session activation' }

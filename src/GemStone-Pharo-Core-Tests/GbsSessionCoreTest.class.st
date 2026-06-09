@@ -7673,3 +7673,65 @@ GbsSessionCoreTest >> testReadAndWriteLockUseCompatibilityScripts [
 			(mockSession systemCallScriptForSelector: #readLock: arguments: { #seat42 }).
 			(mockSession systemCallScriptForSelector: #writeLock: arguments: { #seat42 }) }
 ]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testActivateGciSessionFailureMarksSessionDeadForPoolDiscard [
+	"Regression for the okzulu prod 'Could not activate' / 'Too many concurrent
+	 connections' hang. When GciSetSessionId_ rejects our sessionId (the live prod
+	 signature is gciCurrentSessionId=0 with the proxy still believing isLoggedIn=true),
+	 the gem is dead at the GCI level. activateGciSession must (1) raise an error whose
+	 text carries the 'could not activate' discard marker the okzulu session pool greps
+	 for, and (2) reset this proxy to not-logged-in so the pool discards it and logs in a
+	 fresh session instead of re-holding and retrying a dead proxy."
+	| serverInterface raised logged |
+	serverInterface := CoreMockGbsSession new.
+	serverInterface stubs at: #apiGciSetSessionId put: [ :anId | 0 ].
+	serverInterface stubs at: #apiGciGetSessionId put: [ 0 ].
+	logged := OrderedCollection new.
+	serverInterface stubs at: #logGciCall put: [ :line | logged add: line ].
+	session
+		instVarNamed: 'serverInterface' put: serverInterface;
+		instVarNamed: 'sessionId' put: 2;
+		instVarNamed: 'sessionOop' put: 2;
+		instVarNamed: 'isLoggedIn' put: true.
+
+	raised := false.
+	[ session activateGciSession ]
+		on: Error
+		do: [ :ex |
+			raised := true.
+			self assert: (ex messageText asLowercase includesSubstring: 'could not activate').
+			"The tried id must survive into the error text even though we nil sessionId."
+			self assert: (ex messageText includesSubstring: '2') ].
+
+	self assert: raised.
+	self deny: session isLoggedIn.
+	self assert: (session instVarNamed: 'sessionId') isNil.
+	self assert: (session instVarNamed: 'sessionOop') isNil.
+	"Diagnostic must fire with the PRE-reset values so the log shows the real signature."
+	self assert: logged size equals: 1.
+	self assert: (logged first includesSubstring: 'ACTIVATE_FAIL').
+	self assert: (logged first includesSubstring: 'triedSessionId=2').
+	self assert: (logged first includesSubstring: 'isLoggedIn=true').
+	self assert: (logged first includesSubstring: 'setSessionIdResult=0')
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testActivateGciSessionSuccessLeavesSessionLoggedIn [
+	"Guard the success path: a live GciSetSessionId_ (returns 1 = true in GS64) must
+	 NOT touch isLoggedIn/sessionId/sessionOop and must not signal."
+	| serverInterface |
+	serverInterface := CoreMockGbsSession new.
+	serverInterface stubs at: #apiGciSetSessionId put: [ :anId | 1 ].
+	session
+		instVarNamed: 'serverInterface' put: serverInterface;
+		instVarNamed: 'sessionId' put: 5;
+		instVarNamed: 'sessionOop' put: 5;
+		instVarNamed: 'isLoggedIn' put: true.
+
+	self shouldnt: [ session activateGciSession ] raise: Error.
+
+	self assert: session isLoggedIn.
+	self assert: (session instVarNamed: 'sessionId') equals: 5.
+	self assert: (session instVarNamed: 'sessionOop') equals: 5
+]
