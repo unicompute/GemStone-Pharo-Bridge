@@ -249,8 +249,34 @@ GbsSession >> activateGciSession [
 	(self serverInterface respondsTo: #apiGciSetSessionId:) ifFalse: [ ^ self ].
 	result := self serverInterface apiGciSetSessionId: sessionId.
 	(result = 1 or: [ result == true ]) ifFalse: [
+		self logActivateGciSessionFailureResult: result.
 		self error: 'Could not activate GemStone GCI session ', sessionId asString ].
 	^ self
+]
+
+{ #category : 'private - session activation' }
+GbsSession >> logActivateGciSessionFailureResult: aResult [
+	"Failure-path-only diagnostic for the okzulu prod 'Could not activate' bug.
+	 Capture, at the exact moment GciSetSessionId_ returns FALSE: the session id we
+	 tried, whether this GBS session believes it is logged in, and what GCI reports
+	 as the actual current session id. This distinguishes a stale/logged-out id from
+	 a recycled-id mismatch from a genuinely-invalid id. No cost on the success path."
+	| gciCurrent |
+	gciCurrent := [
+		(self serverInterface respondsTo: #apiGciGetSessionId)
+			ifTrue: [ self serverInterface apiGciGetSessionId ]
+			ifFalse: [ 'n/a' ] ]
+		on: Error
+		do: [ :e | 'err:', e messageText ].
+	[
+		self serverInterface
+			logGciCall: 'ACTIVATE_FAIL triedSessionId=', sessionId printString,
+				' isLoggedIn=', isLoggedIn printString,
+				' sessionOop=', sessionOop printString,
+				' gciCurrentSessionId=', gciCurrent printString,
+				' setSessionIdResult=', aResult printString ]
+		on: Error
+		do: [ :e | nil ]
 ]
 
 { #category : 'private - session activation' }
