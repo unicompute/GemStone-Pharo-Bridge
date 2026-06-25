@@ -243,20 +243,78 @@ GbsSession >> storeTraversalBuffer: aBuffer [
 
 { #category : 'private - session activation' }
 GbsSession >> activateGciSession [
-	| result |
+	| result triedSessionId |
 	(sessionId isNil or: [ sessionId = 0 ]) ifTrue: [ ^ self ].
 	self serverInterface ifNil: [ ^ self ].
 	(self serverInterface respondsTo: #apiGciSetSessionId:) ifFalse: [ ^ self ].
+	triedSessionId := sessionId.
 	result := self serverInterface apiGciSetSessionId: sessionId.
 	(result = 1 or: [ result == true ]) ifFalse: [
-		self error: 'Could not activate GemStone GCI session ', sessionId asString ].
+		self logActivateGciSessionFailureResult: result.
+		self markDeadAfterFailedGciActivation.
+		self error: 'Could not activate GemStone GCI session ', triedSessionId asString ].
 	^ self
 ]
 
 { #category : 'private - session activation' }
+GbsSession >> markDeadAfterFailedGciActivation [
+	"GciSetSessionId_ rejected our sessionId: the gem is gone at the GCI level
+	 (the okzulu prod signature is gciCurrentSessionId=0 while this proxy still has
+	 isLoggedIn=true). The proxy is now lying about being alive. Make isLoggedIn
+	 honest so (a) the okzulu session pool discards this session on the
+	 'could not activate' marker and logs in a fresh one instead of re-holding and
+	 retrying a dead proxy, and (b) the isLoggedIn guards on this session
+	 (commit/abort/signal-enable) short-circuit instead of issuing more GCI calls
+	 against a session that no longer exists. We do NOT call gciLogout here — the
+	 GCI session is already gone, so a logout round trip would just fail again; we
+	 only reset the local belief. Guarded so it can never raise out of the activate
+	 failure path."
+	[
+		isLoggedIn := false.
+		sessionOop := nil.
+		sessionId := nil ]
+		on: Error
+		do: [ :e | nil ]
+]
+
+{ #category : 'private - session activation' }
+GbsSession >> logActivateGciSessionFailureResult: aResult [
+	"Failure-path-only diagnostic for the okzulu prod 'Could not activate' bug.
+	 Capture, at the exact moment GciSetSessionId_ returns FALSE: the session id we
+	 tried, whether this GBS session believes it is logged in, and what GCI reports
+	 as the actual current session id. This distinguishes a stale/logged-out id from
+	 a recycled-id mismatch from a genuinely-invalid id. No cost on the success path."
+	| gciCurrent |
+	gciCurrent := [
+		(self serverInterface respondsTo: #apiGciGetSessionId)
+			ifTrue: [ self serverInterface apiGciGetSessionId ]
+			ifFalse: [ 'n/a' ] ]
+		on: Error
+		do: [ :e | 'err:', e messageText ].
+	[
+		self serverInterface
+			logGciCall: 'ACTIVATE_FAIL triedSessionId=', sessionId printString,
+				' isLoggedIn=', isLoggedIn printString,
+				' sessionOop=', sessionOop printString,
+				' gciCurrentSessionId=', gciCurrent printString,
+				' setSessionIdResult=', aResult printString ]
+		on: Error
+		do: [ :e | nil ]
+]
+
+{ #category : 'private - session activation' }
 GbsSession >> withActiveGciSessionDo: aBlock [
-	self activateGciSession.
-	^ aBlock value
+	"Activate this session's GCI context and run aBlock against it as ONE atomic
+	 unit. The activate (GciSetSessionId_) and whatever GCI calls aBlock makes must
+	 not be separated by another process activating a different session — GCI's
+	 current session is per-process global C state. Serialise the whole pair through
+	 the image-wide GCI mutex so concurrent callers (e.g. Seaside request processes)
+	 queue instead of clobbering each other's current session. The mutex is
+	 reentrant, so nested withActiveGciSessionDo: (error checks inside an executing
+	 block) are safe."
+	^ GbsServerInterface gciCriticalDo: [
+		self activateGciSession.
+		aBlock value ]
 ]
 
 { #category : 'evaluating' }

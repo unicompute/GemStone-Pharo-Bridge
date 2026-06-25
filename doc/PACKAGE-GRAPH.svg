@@ -24,6 +24,9 @@
   <path d="M 1120 248 C 1160 248, 1170 328, 1210 328" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
   <path d="M 340 68 C 380 68, 1170 248, 1210 248" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
   <path d="M 340 248 C 380 248, 1170 248, 1210 248" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 340 68 C 380 68, 0 68, 40 68" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 340 68 C 380 68, 0 68, 40 68" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 1510 68 C 1550 68, 0 68, 40 68" fill="none" stroke="#5a6470" stroke-width="2" marker-end="url(#arrow)"/>
   <rect x="40" y="40" width="300" height="56" rx="10" ry="10" fill="#d8ecff" stroke="#334155" stroke-width="2"/>
   <text x="56" y="71" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-GBS-Converted</text>
   <rect x="430" y="40" width="300" height="56" rx="10" ry="10" fill="#dff4ff" stroke="#334155" stroke-width="2"/>
@@ -42,4 +45,8 @@
   <text x="1226" y="331" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-Pharo-MagLev-Tests</text>
   <rect x="1210" y="220" width="300" height="56" rx="10" ry="10" fill="#f0e0ff" stroke="#334155" stroke-width="2"/>
   <text x="1226" y="251" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-Pharo-Tests</text>
+  <rect x="40" y="40" width="300" height="56" rx="10" ry="10" fill="#eeeeee" stroke="#334155" stroke-width="2"/>
+  <text x="56" y="71" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-GBS-ThreadSafe</text>
+  <rect x="40" y="40" width="300" height="56" rx="10" ry="10" fill="#eeeeee" stroke="#334155" stroke-width="2"/>
+  <text x="56" y="71" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#102a43">GemStone-Pharo-ThreadSafe-Tests</text>
 </svg>

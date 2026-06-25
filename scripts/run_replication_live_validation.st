@@ -1530,7 +1530,17 @@ root'
           put: (Dictionary new
             at: #scalarOopCommandFallbackCount put: (metricValue value: dirtyStoreReport value: #scriptScalarOopFallbackCount);
             at: #nativeScalarOopResolutions put: (metricValue value: dirtyStoreReport value: #nativeScalarOopResolutionCount);
+            at: #combinedReleaseSingleTripCount put: (metricValue value: dirtyStoreReport value: #combinedReleaseSingleTripCount);
+            at: #combinedReleaseFallbackCount put: (metricValue value: dirtyStoreReport value: #combinedReleaseFallbackCount);
             yourself).
+        "Pin the measured combined-release behavior: the single-trip GciStoreTravDoTravRefs_ struct is
+        deliberately oversized, so every combined-release flush must fall back to the correct two-trip
+        store-then-release path. If single-trip ever starts succeeding here without the store/release split,
+        this assertion fires before the Bag NSC corruption can reach the status=16 verification."
+        (metricValue value: dirtyStoreReport value: #combinedReleaseSingleTripCount) = 0 ifFalse: [
+          Error signal: 'Combined-release single-trip path unexpectedly succeeded; the GciStoreTravDoTravRefs_ struct split has not shipped.' ].
+        (metricValue value: dirtyStoreReport value: #combinedReleaseFallbackCount) >= 1 ifFalse: [
+          Error signal: 'Combined-release flush did not exercise the two-trip fallback as expected.' ].
         flushed size < 6 ifTrue: [
           Error signal: 'Dirty-store traversal flushed fewer objects than expected.' ].
         nativeDirtyStoreFlushes <= 0 ifTrue: [

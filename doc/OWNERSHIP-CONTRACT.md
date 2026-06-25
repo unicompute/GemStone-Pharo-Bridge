@@ -144,6 +144,9 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `CoreMockGbsSession` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreGbsLiveSessionTestSupport` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreTestableGbsWorkspaceActions` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbsMigrationDomainOrder` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbsMigrationDomainMappedOrder` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbsMigrationDomainInheritedMappedOrder` instance side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `GbsBrowserMagLevToolsTest` instance side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
 - `GbsClassicLauncherMagLevToolsTest` instance side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
 - `GbsInspectorMagLevToolsTest` instance side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
@@ -271,6 +274,9 @@ Generated from `GemStonePharoContract` ownership, lane, and no-compatibility con
 - `CoreMockGbsSession` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreGbsLiveSessionTestSupport` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `CoreTestableGbsWorkspaceActions` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbsMigrationDomainOrder` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbsMigrationDomainMappedOrder` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
+- `CoreGbsMigrationDomainInheritedMappedOrder` class side -> `coreTestsOnly` -> `GemStone-Pharo-Core-Tests`
 - `GbsBrowserMagLevToolsTest` class side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
 - `GbsClassicLauncherMagLevToolsTest` class side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`
 - `GbsInspectorMagLevToolsTest` class side -> `maglevTestsOnly` -> `GemStone-Pharo-MagLev-Tests`

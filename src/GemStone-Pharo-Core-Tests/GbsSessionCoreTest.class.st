@@ -1997,7 +1997,13 @@ GbsSessionCoreTest >> testDirtyReplicationBinaryStoreTraversalCarriesGcedAndNoLo
 	self assert: mockSession objectSpace pendingNoLongerReplicatedOops isEmpty.
 	self assert: mockSession objectSpace pendingGcedOops isEmpty.
 	self assert: mockSession objectSpace pendingExportSetReleaseOopCount equals: 0.
-	self assert: mockSession dirtyMaterializedObjectOops isEmpty
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty.
+	self
+		assert: (mockSession dirtyStoreTraversalReport at: #combinedReleaseSingleTripCount)
+		equals: 1.
+	self
+		assert: (mockSession dirtyStoreTraversalReport at: #combinedReleaseFallbackCount)
+		equals: 0
 ]
 
 { #category : 'tests' }
@@ -2029,7 +2035,13 @@ GbsSessionCoreTest >> testDirtyReplicationBinaryStoreTraversalFallsBackWhenCombi
 	self assert: fallbackBuffer class equals: GbsDirtyStoreTraversalBuffer.
 	self assert: releasedOops equals: #(9016 9032).
 	self assert: mockSession objectSpace pendingExportSetReleaseOopCount equals: 0.
-	self assert: mockSession dirtyMaterializedObjectOops isEmpty
+	self assert: mockSession dirtyMaterializedObjectOops isEmpty.
+	self
+		assert: (mockSession dirtyStoreTraversalReport at: #combinedReleaseFallbackCount)
+		equals: 1.
+	self
+		assert: (mockSession dirtyStoreTraversalReport at: #combinedReleaseSingleTripCount)
+		equals: 0
 ]
 
 { #category : 'tests' }
@@ -7561,6 +7573,90 @@ GbsSessionCoreTest >> testGciPollActivatesSessionIdBeforePolling [
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testWithActiveGciSessionDoActivatesThenRunsBlock [
+	"The activate (GciSetSessionId_) happens, then the block runs and its value is
+	 returned. Activation and the block are wrapped together in the GCI mutex so
+	 concurrent callers cannot interleave their set-session/execute pairs."
+	| session interface activatedIds blockResult |
+	session := GbsSession new.
+	interface := CoreMockGbsSession new.
+	activatedIds := OrderedCollection new.
+	interface stubs at: #apiGciSetSessionId put: [ :sessionId | activatedIds add: sessionId. 1 ].
+	session
+		serverInterface: interface;
+		sessionId: 77;
+		sessionOop: 77;
+		isLoggedIn: true.
+
+	blockResult := session withActiveGciSessionDo: [ 42 ].
+
+	self assert: blockResult equals: 42.
+	self assert: activatedIds asArray equals: #(77)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testWithActiveGciSessionDoIsReentrant [
+	"Nested GCI access (e.g. an error check inside an executing block) must not
+	 self-deadlock — the GCI mutex is reentrant. If it were a plain Semaphore this
+	 test would hang."
+	| session interface activatedIds innerResult |
+	session := GbsSession new.
+	interface := CoreMockGbsSession new.
+	activatedIds := OrderedCollection new.
+	interface stubs at: #apiGciSetSessionId put: [ :sessionId | activatedIds add: sessionId. 1 ].
+	session
+		serverInterface: interface;
+		sessionId: 77;
+		sessionOop: 77;
+		isLoggedIn: true.
+
+	innerResult := session withActiveGciSessionDo: [
+		session withActiveGciSessionDo: [ #inner ] ].
+
+	self assert: innerResult equals: #inner.
+	self assert: activatedIds asArray equals: #(77 77)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testWithActiveGciSessionDoSerialisesConcurrentCallers [
+	"Two processes each running withActiveGciSessionDo: must NOT interleave their
+	 activate/work pairs — the second waits for the first to finish. Without the GCI
+	 mutex the blocks would interleave (this is the 'Could not activate' bug). We
+	 record an enter/exit trace and assert it is strictly nested-free: each caller's
+	 enter is immediately followed by its own exit."
+	| session interface trace done blockA blockB |
+	session := GbsSession new.
+	interface := CoreMockGbsSession new.
+	interface stubs at: #apiGciSetSessionId put: [ :sessionId | 1 ].
+	session serverInterface: interface; sessionId: 77; sessionOop: 77; isLoggedIn: true.
+
+	trace := OrderedCollection new.
+	done := Semaphore new.
+	blockA := [
+		session withActiveGciSessionDo: [
+			trace add: #enterA.
+			(Delay forMilliseconds: 50) wait.
+			trace add: #exitA ].
+		done signal ].
+	blockB := [
+		session withActiveGciSessionDo: [
+			trace add: #enterB.
+			trace add: #exitB ].
+		done signal ].
+
+	blockA fork.
+	(Delay forMilliseconds: 5) wait.
+	blockB fork.
+	done wait.
+	done wait.
+
+	"Whichever ran first, the trace must be one full pair then the other —
+	 never enterA, enterB, ... — proving serialisation."
+	self assert: (trace asArray = #(enterA exitA enterB exitB)
+		or: [ trace asArray = #(enterB exitB enterA exitA) ])
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testReadAndWriteLockUseCompatibilityScripts [
 	| mockSession scripts |
 	mockSession := CoreMockGbsSession new.
@@ -7576,4 +7672,66 @@ GbsSessionCoreTest >> testReadAndWriteLockUseCompatibilityScripts [
 		equals: {
 			(mockSession systemCallScriptForSelector: #readLock: arguments: { #seat42 }).
 			(mockSession systemCallScriptForSelector: #writeLock: arguments: { #seat42 }) }
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testActivateGciSessionFailureMarksSessionDeadForPoolDiscard [
+	"Regression for the okzulu prod 'Could not activate' / 'Too many concurrent
+	 connections' hang. When GciSetSessionId_ rejects our sessionId (the live prod
+	 signature is gciCurrentSessionId=0 with the proxy still believing isLoggedIn=true),
+	 the gem is dead at the GCI level. activateGciSession must (1) raise an error whose
+	 text carries the 'could not activate' discard marker the okzulu session pool greps
+	 for, and (2) reset this proxy to not-logged-in so the pool discards it and logs in a
+	 fresh session instead of re-holding and retrying a dead proxy."
+	| serverInterface raised logged |
+	serverInterface := CoreMockGbsSession new.
+	serverInterface stubs at: #apiGciSetSessionId put: [ :anId | 0 ].
+	serverInterface stubs at: #apiGciGetSessionId put: [ 0 ].
+	logged := OrderedCollection new.
+	serverInterface stubs at: #logGciCall put: [ :line | logged add: line ].
+	session
+		instVarNamed: 'serverInterface' put: serverInterface;
+		instVarNamed: 'sessionId' put: 2;
+		instVarNamed: 'sessionOop' put: 2;
+		instVarNamed: 'isLoggedIn' put: true.
+
+	raised := false.
+	[ session activateGciSession ]
+		on: Error
+		do: [ :ex |
+			raised := true.
+			self assert: (ex messageText asLowercase includesSubstring: 'could not activate').
+			"The tried id must survive into the error text even though we nil sessionId."
+			self assert: (ex messageText includesSubstring: '2') ].
+
+	self assert: raised.
+	self deny: session isLoggedIn.
+	self assert: (session instVarNamed: 'sessionId') isNil.
+	self assert: (session instVarNamed: 'sessionOop') isNil.
+	"Diagnostic must fire with the PRE-reset values so the log shows the real signature."
+	self assert: logged size equals: 1.
+	self assert: (logged first includesSubstring: 'ACTIVATE_FAIL').
+	self assert: (logged first includesSubstring: 'triedSessionId=2').
+	self assert: (logged first includesSubstring: 'isLoggedIn=true').
+	self assert: (logged first includesSubstring: 'setSessionIdResult=0')
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testActivateGciSessionSuccessLeavesSessionLoggedIn [
+	"Guard the success path: a live GciSetSessionId_ (returns 1 = true in GS64) must
+	 NOT touch isLoggedIn/sessionId/sessionOop and must not signal."
+	| serverInterface |
+	serverInterface := CoreMockGbsSession new.
+	serverInterface stubs at: #apiGciSetSessionId put: [ :anId | 1 ].
+	session
+		instVarNamed: 'serverInterface' put: serverInterface;
+		instVarNamed: 'sessionId' put: 5;
+		instVarNamed: 'sessionOop' put: 5;
+		instVarNamed: 'isLoggedIn' put: true.
+
+	self shouldnt: [ session activateGciSession ] raise: Error.
+
+	self assert: session isLoggedIn.
+	self assert: (session instVarNamed: 'sessionId') equals: 5.
+	self assert: (session instVarNamed: 'sessionOop') equals: 5
 ]

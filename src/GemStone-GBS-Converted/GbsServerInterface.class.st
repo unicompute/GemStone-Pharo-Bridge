@@ -6,7 +6,8 @@ Class {
 		'dirtyObjectsInitialized'
 	],
 	#classInstVars : [
-		'UniqueInstance'
+		'UniqueInstance',
+		'GciAccessMutex'
 	],
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'
@@ -18,12 +19,36 @@ GbsServerInterface class >> initialize [ UniqueInstance := nil
 
 { #category : 'class initialization' }
 GbsServerInterface class >> reset [
-    "Resets the singleton instance to nil"
+    "Resets the singleton instance to nil. The GCI access mutex is left in place:
+     it is image-wide infrastructure, not per-connection state, and a session may
+     be reconnecting on another process while reset runs."
     UniqueInstance := nil
 ]
 
 { #category : 'accessing' }
 GbsServerInterface class >> uniqueInstance [ ^ UniqueInstance ifNil: [ UniqueInstance := self new ]
+]
+
+{ #category : 'gci serialization' }
+GbsServerInterface class >> gciAccessMutex [
+	"Image-wide lock serialising ALL GCI access. The current GemStone session is
+	 per-process global C state in the non-reentrant libgcirpc, set by
+	 GciSetSessionId_ and read by every subsequent GCI call. Because the bridge
+	 uses optNonThreaded FFI and Pharo schedules concurrent work as green
+	 processes, two callers could otherwise interleave their (set-session, execute)
+	 pairs — one process's GciSetSessionId_ clobbers the global between another's
+	 set and execute, so GciSetSessionId_ returns FALSE ('Could not activate
+	 GemStone GCI session N') or a call runs against the wrong session. Holding this
+	 mutex across each activate->execute makes every GCI interaction atomic.
+
+	 Mutex (reentrant) is required: GCI blocks legitimately nest (e.g. error checks
+	 inside an executing block), and a plain Semaphore would self-deadlock."
+	^ GciAccessMutex ifNil: [ GciAccessMutex := Mutex new ]
+]
+
+{ #category : 'gci serialization' }
+GbsServerInterface class >> gciCriticalDo: aBlock [
+	^ self gciAccessMutex critical: aBlock
 ]
 
 { #category : 'api' }
