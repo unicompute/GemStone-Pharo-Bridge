@@ -21,10 +21,42 @@ GbsConfiguration >> asyncSignalPollingEnabled: aBoolean [
 ]
 
 { #category : '*GemStone-GBS-Core' }
+GbsConfiguration class >> bridgeOnlySettingKeys [
+	"Keys backed by the per-instance bridgeSettings dictionary rather than by a
+	converted instance variable. The converted #valueAt:put:/#valueAt:ifAbsent:
+	store into instVarNamed:, which silently no-ops for these keys (there is no
+	matching ivar), so generic valueAt: access must be routed to the bridge
+	accessors to share one source of truth with the typed accessors and with
+	GbsReplicationPolicy reads."
+	^ #( asyncSignalPollingEnabled freeOopAllocationBatchSize freeOopBatchSize
+		nativeStoreTraversalShapeValidationEnabled serverMapLeafCapacity
+		serverMapMode storeDirtyOnCommit storeTraversalTransport
+		strictMutationProtectionEnabled )
+]
+
+{ #category : '*GemStone-GBS-Core' }
 GbsConfiguration >> bridgeSettings [
 	^ self class bridgeSettingsRegistry
 		at: self
 		ifAbsentPut: [ Dictionary new ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsConfiguration >> valueAt: ivarName ifAbsent: defaultValue [
+	"Route bridge-only keys to the bridge settings dictionary; otherwise use the
+	converted instance-variable behaviour."
+	(self class bridgeOnlySettingKeys includes: ivarName asSymbol)
+		ifTrue: [ ^ self bridgeValueAt: ivarName asSymbol ifAbsent: defaultValue ].
+	^ [ self instVarNamed: ivarName ] on: Error do: [ defaultValue ]
+]
+
+{ #category : '*GemStone-GBS-Core' }
+GbsConfiguration >> valueAt: ivarName put: value [
+	"Route bridge-only keys to the bridge settings dictionary; otherwise use the
+	converted instance-variable behaviour."
+	(self class bridgeOnlySettingKeys includes: ivarName asSymbol)
+		ifTrue: [ ^ self bridgeValueAt: ivarName asSymbol put: value ].
+	^ [ self instVarNamed: ivarName put: value ] on: Error do: [ value ]
 ]
 
 { #category : '*GemStone-GBS-Core' }
