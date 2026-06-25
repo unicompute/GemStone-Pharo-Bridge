@@ -35,7 +35,7 @@ check_max_lines "src/GemStone-GBS-Core/GbsSessionLoginCoordinator.class.st" 200 
 check_max_lines "src/GemStone-GBS-Core/GbsSessionScriptMarshaller.class.st" 100 "GbsSessionScriptMarshaller"
 check_max_lines "src/BaselineOfGemStonePharo/GemStonePharoContract.class.st" 600 "GemStonePharoContract"
 check_max_lines "src/BaselineOfGemStonePharo/GemStonePharoDocRenderer.class.st" 1200 "GemStonePharoDocRenderer"
-check_max_lines "src/BaselineOfGemStonePharo/GemStonePharoPackageContract.class.st" 900 "GemStonePharoPackageContract"
+check_max_lines "src/BaselineOfGemStonePharo/GemStonePharoPackageContract.class.st" 920 "GemStonePharoPackageContract"
 check_max_lines "src/BaselineOfGemStonePharo/GemStonePharoVerificationContract.class.st" 200 "GemStonePharoVerificationContract"
 
 if rg -n "doesNotUnderstand:" \

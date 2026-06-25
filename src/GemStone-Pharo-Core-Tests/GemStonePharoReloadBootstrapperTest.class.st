@@ -19,6 +19,8 @@ GemStonePharoReloadBootstrapperTest >> setUp [
 { #category : 'private' }
 GemStonePharoReloadBootstrapperTest >> expectedPackageNamesToUnload [
 	^ #(
+		'GemStone-Pharo-ThreadSafe-Tests'
+		'GemStone-GBS-ThreadSafe'
 		'GemStone-Pharo-Tests'
 		'GemStone-Pharo-MagLev-Tests'
 		'GemStone-Pharo-Core-Tests'

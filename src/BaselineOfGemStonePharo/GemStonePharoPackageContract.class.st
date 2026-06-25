@@ -108,10 +108,10 @@ GemStonePharoPackageContract >> groupMemberSpecs [
 		{ 'MagLev-Tools'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') }.
 		{ 'MagLev'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev') }.
 		{ 'Tools'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools') }.
-		{ 'All-Tests'. #('GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests') }.
-		{ 'Tests'. #('GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests') }.
-		{ 'Full'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev-Tools' 'GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests') }.
-		{ 'default'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev-Tools' 'GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests') } }
+		{ 'All-Tests'. #('GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests' 'GemStone-Pharo-ThreadSafe-Tests') }.
+		{ 'Tests'. #('GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests' 'GemStone-Pharo-ThreadSafe-Tests') }.
+		{ 'Full'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev-Tools' 'GemStone-GBS-ThreadSafe' 'GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests' 'GemStone-Pharo-ThreadSafe-Tests') }.
+		{ 'default'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev-Tools' 'GemStone-GBS-ThreadSafe' 'GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests' 'GemStone-Pharo-ThreadSafe-Tests') } }
 ]
 
 { #category : 'contracts' }
@@ -877,7 +877,9 @@ GemStonePharoPackageContract >> packageRequirementSpecs [
 		{ 'GemStone-GBS-MagLev-Tools'. #('GemStone-GBS-Tools' 'GemStone-GBS-MagLev') }.
 		{ 'GemStone-Pharo-Core-Tests'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools') }.
 		{ 'GemStone-Pharo-MagLev-Tests'. #('GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') }.
-		{ 'GemStone-Pharo-Tests'. #('GemStone-GBS-Converted' 'GemStone-GBS-Tools') } }
+		{ 'GemStone-Pharo-Tests'. #('GemStone-GBS-Converted' 'GemStone-GBS-Tools') }.
+		{ 'GemStone-GBS-ThreadSafe'. #('GemStone-GBS-Converted') }.
+		{ 'GemStone-Pharo-ThreadSafe-Tests'. #('GemStone-GBS-ThreadSafe' 'GemStone-Pharo-Core-Tests') } }
 ]
 
 { #category : 'contracts' }

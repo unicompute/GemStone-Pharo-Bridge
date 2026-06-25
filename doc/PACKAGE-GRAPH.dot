@@ -11,6 +11,8 @@ digraph GemStonePharoBridge {
   "GemStone-Pharo-Core-Tests";
   "GemStone-Pharo-MagLev-Tests";
   "GemStone-Pharo-Tests";
+  "GemStone-GBS-ThreadSafe";
+  "GemStone-Pharo-ThreadSafe-Tests";
 
   "GemStone-GBS-Converted" -> "GemStone-GBS-Core";
   "GemStone-GBS-Converted" -> "GemStone-GBS-Tools";
@@ -30,4 +32,7 @@ digraph GemStonePharoBridge {
   "GemStone-GBS-MagLev-Tools" -> "GemStone-Pharo-MagLev-Tests";
   "GemStone-GBS-Converted" -> "GemStone-Pharo-Tests";
   "GemStone-GBS-Tools" -> "GemStone-Pharo-Tests";
+  "GemStone-GBS-Converted" -> "GemStone-GBS-ThreadSafe";
+  "GemStone-GBS-ThreadSafe" -> "GemStone-Pharo-ThreadSafe-Tests";
+  "GemStone-Pharo-Core-Tests" -> "GemStone-Pharo-ThreadSafe-Tests";
 }
