@@ -291,8 +291,22 @@ CoreGbsLiveSessionTestSupport class >> sessionIsUsable: aSession [
 	([ aSession isConnected = true ] on: Error do: [ false ]) ifFalse: [ ^ false ].
 	(aSession respondsTo: #isLoggedIn) ifFalse: [ ^ false ].
 	([ aSession isLoggedIn = true ] on: Error do: [ false ]) ifFalse: [ ^ false ].
-	^ (aSession respondsTo: #evaluate:)
-		or: [ aSession respondsTo: #execute: ]
+	((aSession respondsTo: #evaluate:) or: [ aSession respondsTo: #execute: ])
+		ifFalse: [ ^ false ].
+	"isConnected/isLoggedIn are cached ivars that keep saying true after a prior
+	 GciAbort() has left the GCI current session unrecoverable (issue #15): the
+	 proxy lies about being alive. Probe with a real round trip so a contaminated
+	 reused session is rejected and ensureSharedSession logs in fresh instead of
+	 handing back a dead session."
+	^ self sessionPassesLivenessProbe: aSession
+]
+
+{ #category : 'private' }
+CoreGbsLiveSessionTestSupport class >> sessionPassesLivenessProbe: aSession [
+	"Answer true only if aSession can complete a trivial round trip. Cheap and
+	 side-effect free; any error means the session is not usable."
+	(aSession respondsTo: #evaluate:) ifFalse: [ ^ true ].
+	^ [ (aSession evaluate: '6 * 7') = 42 ] on: Error do: [ :ex | false ]
 ]
 
 { #category : 'accessing' }
