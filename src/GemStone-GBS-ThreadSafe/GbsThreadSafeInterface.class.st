@@ -25,7 +25,8 @@ Class {
 	#classVars : [
 		'SessionRegistry',
 		'FfiMutex',
-		'LastFfiLibraryPath'
+		'LastFfiLibraryPath',
+		'LibraryPathOverride'
 	],
 	#pools : [
 		'GbsGciTypes'
@@ -80,6 +81,53 @@ GbsThreadSafeInterface class >> sessionRegistry [
 	"Transient map of GbsSessionParameters -> GbsThreadSafeInterface. Prototype
 	scaffolding so the interface need not live on the converted session class."
 	^ SessionRegistry ifNil: [ SessionRegistry := IdentityDictionary new ]
+]
+
+{ #category : 'library path' }
+GbsThreadSafeInterface class >> libraryPathOverride [
+	"An explicit absolute path to the thread-safe (libgcits) client library, or nil
+	to use the default resolution. Takes precedence over the env var and the
+	stem-swap default -- the escape hatch for multi-version / non-standard installs."
+	^ LibraryPathOverride
+]
+
+{ #category : 'library path' }
+GbsThreadSafeInterface class >> libraryPathOverride: aStringOrNil [
+	LibraryPathOverride := aStringOrNil
+]
+
+{ #category : 'library path' }
+GbsThreadSafeInterface class >> libraryPathFromEnvironment [
+	"An explicit libgcits path from the environment, or nil. Lets a deployment point
+	the thread-safe interface at a specific client library without code changes."
+	| env value |
+	env := [ Smalltalk os environment ] on: Error do: [ :e | nil ].
+	env ifNil: [ ^ nil ].
+	#( 'GS_THREADSAFE_LIBRARY' 'GEMSTONE_THREADSAFE_LIB' ) do: [ :key |
+		value := [ env at: key ifAbsent: [ nil ] ] on: Error do: [ :e | nil ].
+		(value notNil and: [ value isEmpty not ]) ifTrue: [ ^ value ] ].
+	^ nil
+]
+
+{ #category : 'library path' }
+GbsThreadSafeInterface class >> isWindowsPlatform [
+	^ [ Smalltalk os isWindows ] on: Error do: [ :e | false ]
+]
+
+{ #category : 'library path' }
+GbsThreadSafeInterface class >> addLibraryDirectoryToWindowsPath: aLibraryPath [
+	"On Windows the vc-runtime DLLs sit beside the GCI library, so the library's
+	directory must be on PATH for them to load (GemStone bug 48680). No-op elsewhere
+	or when the directory is already present."
+	| dir env path |
+	self isWindowsPlatform ifFalse: [ ^ self ].
+	aLibraryPath ifNil: [ ^ self ].
+	dir := aLibraryPath asFileReference parent pathString.
+	env := [ Smalltalk os environment ] on: Error do: [ :e | nil ].
+	env ifNil: [ ^ self ].
+	path := [ env at: 'PATH' ifAbsent: [ '' ] ] on: Error do: [ :e | '' ].
+	(path includesSubstring: dir) ifTrue: [ ^ self ].
+	[ env at: 'PATH' put: path , ';' , dir ] on: Error do: [ :e | nil ]
 ]
 
 { #category : 'constants' }
@@ -164,12 +212,26 @@ GbsThreadSafeInterface class >> oopToSmallInt: anOop [
 
 { #category : 'accessing' }
 GbsThreadSafeInterface >> gsLibraryPath [
-	"The thread-safe GciTs* symbols live in libgcits, NOT in the legacy libgcirpc
-	that GbsServerInterface loads. Reuse the bridge's resolved path (so we pick up
-	the same GemStone install and version) but swap the rpc/lnk stem for the
-	thread-safe one. This is the libgcits-/libgcirpc- distinction that
-	PharoGemStoneFFI encodes in its fileNameStem."
-	| legacyPath |
+	"Resolve the path to the thread-safe (libgcits) client library, in precedence:
+	   1. an explicit override set via libraryPathOverride:,
+	   2. a GS_THREADSAFE_LIBRARY / GEMSTONE_THREADSAFE_LIB env var,
+	   3. the default: reuse the bridge's resolved legacy path (same install/version)
+	      and swap the rpc/lnk stem for the thread-safe libgcits- stem.
+	The GciTs* symbols live in libgcits, never the legacy libgcirpc/libgcilnk. On
+	Windows the library's directory is added to PATH so the vc-runtime DLLs load."
+	| path |
+	path := self resolveGsLibraryPath.
+	self class addLibraryDirectoryToWindowsPath: path.
+	^ path
+]
+
+{ #category : 'accessing' }
+GbsThreadSafeInterface >> resolveGsLibraryPath [
+	| override fromEnv legacyPath |
+	override := self class libraryPathOverride.
+	(override notNil and: [ override isEmpty not ]) ifTrue: [ ^ override ].
+	fromEnv := self class libraryPathFromEnvironment.
+	fromEnv ifNotNil: [ ^ fromEnv ].
 	legacyPath := GbsServerInterface uniqueInstance libraryPath.
 	legacyPath ifNil: [ ^ nil ].
 	^ (legacyPath
