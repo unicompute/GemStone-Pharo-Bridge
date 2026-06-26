@@ -1146,28 +1146,28 @@ GbsSession >> signaledAbortAction: aBlock [
 GbsSession >> disableSignaledObjectsError [
 	self isLoggedIn ifFalse: [ ^ self ].
 	^ [
-		self evaluate: 'System disableSignaledObjectsError'
+		self evaluateSystemSelector: #disableSignaledObjectsError withArguments: #()
 	] on: ObjectsCommittedNotification do: [ :ex | ex return: nil ]
 ]
 
 { #category : 'notification' }
 GbsSession >> enableSignaledObjectsError [
 	self isLoggedIn ifFalse: [ ^ self ].
-	^ self evaluate: 'System enableSignaledObjectsError'
+	^ self evaluateSystemSelector: #enableSignaledObjectsError withArguments: #()
 ]
 
 { #category : 'event handling' }
 GbsSession >> disableSignaledGemStoneSessionError [
 	self isLoggedIn ifFalse: [ ^ self ].
 	^ [
-		self evaluate: 'System disableSignaledGemStoneSessionError'
+		self evaluateSystemSelector: #disableSignaledGemStoneSessionError withArguments: #()
 	] on: InterSessionSignal do: [ :ex | ex return: nil ]
 ]
 
 { #category : 'event handling' }
 GbsSession >> enableSignaledGemStoneSessionError [
 	self isLoggedIn ifFalse: [ ^ self ].
-	^ self evaluate: 'System enableSignaledGemStoneSessionError'
+	^ self evaluateSystemSelector: #enableSignaledGemStoneSessionError withArguments: #()
 ]
 
 { #category : 'event handling' }
