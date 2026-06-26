@@ -56,6 +56,14 @@ GbsThreadSafeInterface class >> sessionRegistry [
 ]
 
 { #category : 'constants' }
+GbsThreadSafeInterface class >> gciPerformDetach [
+	"GCI perform flag: fork the execution on the gem and detach the client, so the
+	gem keeps running if the client logs out or the socket closes. Requires
+	GemStone 3.7.1+."
+	^ 16r40
+]
+
+{ #category : 'constants' }
 GbsThreadSafeInterface class >> oopClassByteArray [
 	^ 103425
 ]
@@ -192,6 +200,52 @@ GbsThreadSafeInterface >> gciTsAbort: sess gsError: gsError [
 { #category : 'ffi calls' }
 GbsThreadSafeInterface >> gciTsCommit: sess gsError: gsError [
 	^ self ffiCall: #( int32 GciTsCommit(void *sess, GbsGciErrSType *gsError) )
+		module: self gsLibraryPath
+]
+
+{ #category : 'ffi calls' }
+GbsThreadSafeInterface >> gciTsFetchObjInfo: sess object: objId addToExportSet: aBoolean resultInfo: objInfo resultBuffer: resultBuf resultBufferSize: resultBufSize gsError: gsError [
+	"Fetch an object's class/size info plus its bytes in one call. Used to
+	materialize a non-immediate Nb result (String / Symbol / ByteArray)."
+	^ self ffiCall: #( int64 GciTsFetchObjInfo(
+			void *sess,
+			OopType objId,
+			int32 aBoolean,
+			GbsGciTsObjInfo *objInfo,
+			char *resultBuf,
+			size_t resultBufSize,
+			GbsGciErrSType *gsError) )
+		module: self gsLibraryPath
+]
+
+{ #category : 'ffi calls' }
+GbsThreadSafeInterface >> gciTsNbExecute: sess sourceString: src sourceOop: srcOop contextObject: ctx symbolList: symList flags: flags envId: envId gsError: gsError [
+	"Start a non-blocking execute against this session's explicit pointer. Returns
+	immediately; the result is later collected with GciTsNbResult."
+	^ self ffiCall: #( int32 GciTsNbExecute(
+			void *sess,
+			const char *src,
+			OopType srcOop,
+			OopType ctx,
+			OopType symList,
+			int flags,
+			uint16 envId,
+			GbsGciErrSType *gsError) )
+		module: self gsLibraryPath
+]
+
+{ #category : 'ffi calls' }
+GbsThreadSafeInterface >> gciTsNbPoll: sess timeoutMs: timeoutMs gsError: gsError [
+	"Poll a pending non-blocking call. Returns 1 if complete, 0 if still running,
+	-1 on error. Blocks up to timeoutMs (-1 = block forever)."
+	^ self ffiCall: #( int GciTsNbPoll(void *sess, int timeoutMs, GbsGciErrSType *gsError) )
+		module: self gsLibraryPath
+]
+
+{ #category : 'ffi calls' }
+GbsThreadSafeInterface >> gciTsNbResult: sess gsError: gsError [
+	"Collect the result OOP of a completed non-blocking call (oopIllegal on error)."
+	^ self ffiCall: #( int64 GciTsNbResult(void *sess, GbsGciErrSType *gsError) )
 		module: self gsLibraryPath
 ]
 
@@ -335,6 +389,121 @@ GbsThreadSafeInterface >> executeScriptAndReturnOop: sourceString [
 		^ GbsGciTsError signalForError: gsError tracker: tracker ].
 	tracker freeAll.
 	^ gciResult
+]
+
+{ #category : 'execution (nonblocking)' }
+GbsThreadSafeInterface >> executeStringNb: sourceString [
+	"Start non-blocking execution of sourceString. Returns true once started (the
+	server runs it asynchronously); collect the result later with
+	blockAndFetchNbResult / getNbCallStatusWithMaxDelay:. Signals on start failure."
+	^ self executeStringNb: sourceString flags: 0
+]
+
+{ #category : 'execution (nonblocking)' }
+GbsThreadSafeInterface >> executeStringAndDetachNb: sourceString [
+	"Start non-blocking execution of sourceString and tell the gem to stop servicing
+	this client and ignore disconnects -- i.e. fork the work on the server and let
+	the client log out while it keeps running. Returns true once started. Requires
+	GemStone 3.7.1+."
+	^ self executeStringNb: sourceString flags: self class gciPerformDetach
+]
+
+{ #category : 'execution (nonblocking)' }
+GbsThreadSafeInterface >> executeStringNb: sourceString flags: flags [
+	| tracker srcCstring gsError result |
+	self assertLoggedIn.
+	tracker := GbsMemoryTracker new.
+	srcCstring := self convertStringArg: sourceString tracker: tracker.
+	gsError := tracker add: GbsGciErrSType externalNew.
+	result := self
+		gciTsNbExecute: session
+		sourceString: srcCstring getHandle
+		sourceOop: self class oopClassString
+		contextObject: self class oopNil
+		symbolList: self class oopNil
+		flags: flags
+		envId: 0
+		gsError: gsError getHandle.
+	result == 1 ifFalse: [ ^ GbsGciTsError signalForError: gsError tracker: tracker ].
+	tracker freeAll.
+	^ true
+]
+
+{ #category : 'execution (nonblocking)' }
+GbsThreadSafeInterface >> getNbCallStatusWithMaxDelay: delayMs [
+	"Poll a pending non-blocking call, blocking up to delayMs (-1 = forever).
+	Answer true if it has completed, false if still running; signal if the session
+	was terminated."
+	| tracker gsError result |
+	tracker := GbsMemoryTracker new.
+	gsError := tracker add: GbsGciErrSType externalNew.
+	result := self gciTsNbPoll: session timeoutMs: delayMs gsError: gsError getHandle.
+	result == -1 ifTrue: [ ^ GbsGciTsError signalForError: gsError tracker: tracker ].
+	tracker freeAll.
+	result == 1 ifTrue: [ ^ true ].
+	result == 0 ifTrue: [ ^ false ].
+	^ self error: 'Unexpected GciTsNbPoll result: ', result printString
+]
+
+{ #category : 'execution (nonblocking)' }
+GbsThreadSafeInterface >> blockAndFetchNbResult [
+	"Block until a previously-started non-blocking execute completes, then return its
+	result (Boolean / SmallInteger / nil for immediates, or a String / Symbol /
+	ByteArray up to 1024 bytes). Signals on error or oversize result."
+	^ self blockAndFetchNbResultWithMaxSize: 1024
+]
+
+{ #category : 'execution (nonblocking)' }
+GbsThreadSafeInterface >> blockAndFetchNbResultWithMaxSize: maxSize [
+	| tracker gsError resultOop local |
+	self assertLoggedIn.
+	tracker := GbsMemoryTracker new.
+	gsError := tracker add: GbsGciErrSType externalNew.
+	resultOop := self gciTsNbResult: session gsError: gsError getHandle.
+	resultOop == self class oopIllegal ifTrue: [
+		^ GbsGciTsError signalForError: gsError tracker: tracker ].
+	resultOop == self class oopNil ifTrue: [ tracker freeAll. ^ nil ].
+	local := self class asLocalObject: resultOop.
+	local == Object ifTrue: [
+		"Non-immediate result: materialize its bytes via GciTsFetchObjInfo."
+		^ self doFetchResultByteObject: resultOop maxResultSize: maxSize tracker: tracker ].
+	tracker freeAll.
+	^ local
+]
+
+{ #category : 'execution' }
+GbsThreadSafeInterface >> doFetchResultByteObject: oop maxResultSize: maxSize tracker: tracker [
+	"Materialize a byte object (String / Symbol / ByteArray) result via
+	GciTsFetchObjInfo. The tracker owns all C allocations and is freed on every exit."
+	| resultBuf gsError objInfo gciResult classOop |
+	resultBuf := tracker add: (GbsExternalByteString newWithNull: maxSize).
+	gsError := tracker add: GbsGciErrSType externalNew.
+	objInfo := tracker add: GbsGciTsObjInfo externalNew.
+	gciResult := self
+		gciTsFetchObjInfo: session
+		object: oop
+		addToExportSet: 0
+		resultInfo: objInfo getHandle
+		resultBuffer: resultBuf getHandle
+		resultBufferSize: resultBuf size
+		gsError: gsError getHandle.
+	gciResult < 0 ifTrue: [ ^ GbsGciTsError signalForError: gsError tracker: tracker ].
+	gciResult > maxSize ifTrue: [
+		[ self error: ('Result buffer size (' , maxSize asString
+			, ') is too small (Gci returned ' , gciResult asString , ' bytes)') ]
+				ensure: [ tracker freeAll ] ].
+	classOop := objInfo objClass.
+	classOop == self class oopClassByteArray ifTrue: [
+		^ [ resultBuf asByteArrayOfSize: gciResult ] ensure: [ tracker freeAll ] ].
+	(classOop == self class oopClassString or: [ classOop == self class oopClassSymbol ])
+		ifFalse: [
+			[ self error: 'Unexpected result class OOP ', classOop printString ]
+				ensure: [ tracker freeAll ] ].
+	^ [
+		| str |
+		str := resultBuf asByteStringOfSize: gciResult.
+		classOop == self class oopClassSymbol ifTrue: [ str := str asSymbol ].
+		str ] ensure: [ tracker freeAll ]
 ]
 
 { #category : 'execution' }
