@@ -23,7 +23,9 @@ Class {
 		'session'
 	],
 	#classVars : [
-		'SessionRegistry'
+		'SessionRegistry',
+		'FfiMutex',
+		'LastFfiLibraryPath'
 	],
 	#pools : [
 		'GbsGciTypes'
@@ -31,6 +33,31 @@ Class {
 	#category : 'GemStone-GBS-ThreadSafe',
 	#package : 'GemStone-GBS-ThreadSafe'
 }
+
+{ #category : 'ffi version mutex' }
+GbsThreadSafeInterface class >> ffiMutex [
+	"Image-wide lock serialising thread-safe GCI calls against a library-version
+	switch. The compiled FFI methods bind to whichever client library was resolved
+	when they were first run; if the resolved path changes (a different GemStone
+	client-lib version), they must be reset and recompiled. Holding this mutex across
+	the version check + the call keeps that atomic. Ported from PharoGemStoneFFI
+	(GciInterface FfiMutex). Reentrant (Mutex) so nested ffiDo: blocks are safe."
+	^ FfiMutex ifNil: [ FfiMutex := Mutex new ]
+]
+
+{ #category : 'ffi version mutex' }
+GbsThreadSafeInterface class >> resetFfiMethods [
+	"Force the package's compiled FFI methods back to their non-compiled form so the
+	next call rebinds against the currently-resolved client library. Pharo stores the
+	original under the #ffiNonCompiledMethod property when it compiles an ffiCall:.
+	Ported from PharoGemStoneFFI (GciInterface resetFfiMethods)."
+	self package classes do: [ :cls |
+		cls methods do: [ :cm |
+			(cm hasProperty: #ffiNonCompiledMethod) ifTrue: [
+				cm methodClass methodDict
+					at: cm selector
+					put: (cm propertyAt: #ffiNonCompiledMethod) ] ] ]
+]
 
 { #category : 'session registry' }
 GbsThreadSafeInterface class >> interfaceForSession: aSessionParameters [
@@ -148,6 +175,31 @@ GbsThreadSafeInterface >> gsLibraryPath [
 	^ (legacyPath
 		copyReplaceAll: 'libgcirpc-' with: 'libgcits-')
 		copyReplaceAll: 'libgcilnk-' with: 'libgcits-'
+]
+
+{ #category : 'ffi version mutex' }
+GbsThreadSafeInterface >> ffiDo: aBlock [
+	"Run a thread-safe GCI operation under the image-wide FFI mutex, resetting the
+	compiled FFI methods first if the resolved client-library path has changed since
+	the last call. This makes the version check and the call atomic so concurrent
+	callers cannot bind to different library versions. Ported from PharoGemStoneFFI
+	(GciInterface ffiDo:)."
+	^ self class ffiMutex critical: [
+		self checkFfiLibraryVersion.
+		aBlock value ]
+]
+
+{ #category : 'ffi version mutex' }
+GbsThreadSafeInterface >> checkFfiLibraryVersion [
+	"If the resolved client-library path differs from the one the compiled FFI
+	methods were last bound to, reset them so the next call rebinds against the
+	current library. The library path encodes the version (e.g.
+	libgcits-3.7.5-64.dylib), so a path change is a version change."
+	| current |
+	current := self gsLibraryPath.
+	current = LastFfiLibraryPath ifTrue: [ ^ self ].
+	self class resetFfiMethods.
+	LastFfiLibraryPath := current
 ]
 
 { #category : 'testing' }
@@ -296,7 +348,7 @@ GbsThreadSafeInterface >> loginStoneNrs: stoneNrs gemNrs: gemNrs gsUser: gsUser 
 	exHostPw := self convertStringArg: hostPassword tracker: tracker.
 	exBoolPtr := tracker add: (FFIExternalArray externalNewType: 'int32' size: 1).
 	gsError := tracker add: GbsGciErrSType externalNew.
-	result := self
+	result := self ffiDo: [ self
 		gciTsLogin: exStone getHandle
 		hostUserId: exHostUser getHandle
 		hostPassword: exHostPw getHandle
@@ -307,7 +359,7 @@ GbsThreadSafeInterface >> loginStoneNrs: stoneNrs gemNrs: gemNrs gsUser: gsUser 
 		loginFlags: 0
 		haltOnErrorNum: 0
 		executedSessInit: exBoolPtr getHandle
-		err: gsError getHandle.
+		err: gsError getHandle ].
 	result isNull ifTrue: [ ^ GbsGciTsError signalForError: gsError tracker: tracker ].
 	session := result.
 	tracker freeAll.
@@ -321,7 +373,7 @@ GbsThreadSafeInterface >> logout [
 	self isLoggedIn ifFalse: [ ^ self error: 'session is not logged in' ].
 	tracker := GbsMemoryTracker new.
 	gsError := tracker add: GbsGciErrSType externalNew.
-	result := self gciTsLogout: session gsError: gsError.
+	result := self ffiDo: [ self gciTsLogout: session gsError: gsError ].
 	session := nil.
 	result == 1 ifTrue: [ tracker freeAll. ^ true ].
 	^ GbsGciTsError signalForError: gsError tracker: tracker
@@ -333,7 +385,7 @@ GbsThreadSafeInterface >> abort [
 	self assertLoggedIn.
 	tracker := GbsMemoryTracker new.
 	gsError := tracker add: GbsGciErrSType externalNew.
-	result := self gciTsAbort: session gsError: gsError.
+	result := self ffiDo: [ self gciTsAbort: session gsError: gsError ].
 	result == 1 ifTrue: [ tracker freeAll. ^ true ].
 	^ GbsGciTsError signalForError: gsError tracker: tracker
 ]
@@ -344,7 +396,7 @@ GbsThreadSafeInterface >> commit [
 	self assertLoggedIn.
 	tracker := GbsMemoryTracker new.
 	gsError := tracker add: GbsGciErrSType externalNew.
-	result := self gciTsCommit: session gsError: gsError.
+	result := self ffiDo: [ self gciTsCommit: session gsError: gsError ].
 	result == 1 ifTrue: [ tracker freeAll. ^ true ].
 	^ GbsGciTsError signalForError: gsError tracker: tracker
 ]
@@ -375,7 +427,7 @@ GbsThreadSafeInterface >> executeScriptAndReturnOop: sourceString [
 	tracker := GbsMemoryTracker new.
 	srcCstring := self convertStringArg: sourceString tracker: tracker.
 	gsError := tracker add: GbsGciErrSType externalNew.
-	gciResult := self
+	gciResult := self ffiDo: [ self
 		gciTsExecute_: session
 		sourceString: srcCstring getHandle
 		sourceStringSize: srcCstring sizeNoNull
@@ -384,7 +436,7 @@ GbsThreadSafeInterface >> executeScriptAndReturnOop: sourceString [
 		symbolList: self class oopNil
 		flags: 0
 		envId: 0
-		gsError: gsError getHandle.
+		gsError: gsError getHandle ].
 	gciResult == self class oopIllegal ifTrue: [
 		^ GbsGciTsError signalForError: gsError tracker: tracker ].
 	tracker freeAll.
@@ -415,7 +467,7 @@ GbsThreadSafeInterface >> executeStringNb: sourceString flags: flags [
 	tracker := GbsMemoryTracker new.
 	srcCstring := self convertStringArg: sourceString tracker: tracker.
 	gsError := tracker add: GbsGciErrSType externalNew.
-	result := self
+	result := self ffiDo: [ self
 		gciTsNbExecute: session
 		sourceString: srcCstring getHandle
 		sourceOop: self class oopClassString
@@ -423,7 +475,7 @@ GbsThreadSafeInterface >> executeStringNb: sourceString flags: flags [
 		symbolList: self class oopNil
 		flags: flags
 		envId: 0
-		gsError: gsError getHandle.
+		gsError: gsError getHandle ].
 	result == 1 ifFalse: [ ^ GbsGciTsError signalForError: gsError tracker: tracker ].
 	tracker freeAll.
 	^ true
@@ -437,7 +489,7 @@ GbsThreadSafeInterface >> getNbCallStatusWithMaxDelay: delayMs [
 	| tracker gsError result |
 	tracker := GbsMemoryTracker new.
 	gsError := tracker add: GbsGciErrSType externalNew.
-	result := self gciTsNbPoll: session timeoutMs: delayMs gsError: gsError getHandle.
+	result := self ffiDo: [ self gciTsNbPoll: session timeoutMs: delayMs gsError: gsError getHandle ].
 	result == -1 ifTrue: [ ^ GbsGciTsError signalForError: gsError tracker: tracker ].
 	tracker freeAll.
 	result == 1 ifTrue: [ ^ true ].
@@ -459,7 +511,7 @@ GbsThreadSafeInterface >> blockAndFetchNbResultWithMaxSize: maxSize [
 	self assertLoggedIn.
 	tracker := GbsMemoryTracker new.
 	gsError := tracker add: GbsGciErrSType externalNew.
-	resultOop := self gciTsNbResult: session gsError: gsError getHandle.
+	resultOop := self ffiDo: [ self gciTsNbResult: session gsError: gsError getHandle ].
 	resultOop == self class oopIllegal ifTrue: [
 		^ GbsGciTsError signalForError: gsError tracker: tracker ].
 	resultOop == self class oopNil ifTrue: [ tracker freeAll. ^ nil ].
@@ -479,14 +531,14 @@ GbsThreadSafeInterface >> doFetchResultByteObject: oop maxResultSize: maxSize tr
 	resultBuf := tracker add: (GbsExternalByteString newWithNull: maxSize).
 	gsError := tracker add: GbsGciErrSType externalNew.
 	objInfo := tracker add: GbsGciTsObjInfo externalNew.
-	gciResult := self
+	gciResult := self ffiDo: [ self
 		gciTsFetchObjInfo: session
 		object: oop
 		addToExportSet: 0
 		resultInfo: objInfo getHandle
 		resultBuffer: resultBuf getHandle
 		resultBufferSize: resultBuf size
-		gsError: gsError getHandle.
+		gsError: gsError getHandle ].
 	gciResult < 0 ifTrue: [ ^ GbsGciTsError signalForError: gsError tracker: tracker ].
 	gciResult > maxSize ifTrue: [
 		[ self error: ('Result buffer size (' , maxSize asString
@@ -514,7 +566,7 @@ GbsThreadSafeInterface >> executeAndFetchString: sourceString maxResultSize: max
 	srcCstring := self convertStringArg: sourceString tracker: tracker.
 	resultBuf := tracker add: (GbsExternalByteString newWithNull: maxSize).
 	gsError := tracker add: GbsGciErrSType externalNew.
-	gciResult := self
+	gciResult := self ffiDo: [ self
 		gciTsExecuteFetchBytes: session
 		sourceString: srcCstring getHandle
 		sourceStringSize: srcCstring sizeNoNull
@@ -523,7 +575,7 @@ GbsThreadSafeInterface >> executeAndFetchString: sourceString maxResultSize: max
 		symbolList: self class oopNil
 		resultBuffer: resultBuf getHandle
 		resultBufferSize: resultBuf size
-		gsError: gsError getHandle.
+		gsError: gsError getHandle ].
 	gciResult < 0 ifTrue: [ ^ GbsGciTsError signalForError: gsError tracker: tracker ].
 	gciResult > maxSize ifTrue: [
 		[ self error: ('Result buffer size (' , maxSize asString
