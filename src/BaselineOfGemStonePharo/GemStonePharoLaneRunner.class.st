@@ -282,8 +282,11 @@ GemStonePharoLaneRunner >> sessionReadyForLiveSupportClass: liveSessionSupportCl
 	session ifNil: [
 		self log: 'LIVE_SESSION_ERROR: ', liveSessionSupportClass unavailableReason.
 		^ false ].
-	(session respondsTo: #abortTransaction)
-		ifTrue: [ [ session abortTransaction ] on: Error do: [ ] ].
+	"Do NOT abort here as a readiness reset: the legacy linked-GCI GciAbort()
+	 invalidates the session's global current-session id (issue #15), silently
+	 breaking the very next call (the transcript-proxy install) and leaving the lane
+	 unable to run ANY test (CLASSES=N RUN=0). The proxy install below is the real
+	 readiness handshake; each live test resets its own transaction state as needed."
 	(self ensureTranscriptProxyInstalledOn: session)
 		ifFalse: [
 			self log: 'LIVE_SESSION_ERROR: transcript proxy installation failed.'.
