@@ -63,11 +63,22 @@ GbsFastConnector >> clientObjDescription [
 
 { #category : 'printing' }
 GbsFastConnector >> gsDescription [
+	"When created from the class-name registry (connectorObjectForClient:server:),
+	describe by the recorded server class name. Fall back to the identity (server
+	OOP) description for connectors bound directly via stObj:gsObj:."
+	| name |
+	name := self connectorServerName.
+	(name notNil and: [ name isEmpty not ]) ifTrue: [ ^ name ].
 	^ 'oop ', self serverKernelOop printString
 ]
 
 { #category : 'printing' }
 GbsFastConnector >> stDescription [
+	"See gsDescription: prefer the recorded client class name, else the bound
+	client object's identity description."
+	| name |
+	name := self connectorClientName.
+	(name notNil and: [ name isEmpty not ]) ifTrue: [ ^ name ].
 	^ self clientObj printString
 ]
 
