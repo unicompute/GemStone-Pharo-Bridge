@@ -57,6 +57,7 @@ GbsClassicLauncherCoreToolsTest >> newFakeSettingsPresenterOn: aConfiguration [
 		instVarNamed: 'defaultFaultPolicyDrop' put: (drop value: 'lazy').
 	presenter bridgeControlAt: #freeOopBatchSizeField put: (field value: '256').
 	presenter bridgeControlAt: #freeOopAllocationBatchSizeField put: (field value: '2000').
+	presenter bridgeControlAt: #serverMapLeafCapacityField put: (field value: '300').
 	presenter bridgeControlAt: #serverMapModeDrop put: (drop value: 'weak').
 	presenter bridgeControlAt: #storeTraversalTransportDrop put: (drop value: 'script').
 	presenter bridgeControlAt: #storeDirtyOnCommitYes put: (check value: false).
