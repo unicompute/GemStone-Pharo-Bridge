@@ -249,11 +249,26 @@ GbsSession >> activateGciSession [
 	(self serverInterface respondsTo: #apiGciSetSessionId:) ifFalse: [ ^ self ].
 	triedSessionId := sessionId.
 	result := self serverInterface apiGciSetSessionId: sessionId.
-	(result = 1 or: [ result == true ]) ifFalse: [
-		self logActivateGciSessionFailureResult: result.
-		self markDeadAfterFailedGciActivation.
-		self error: 'Could not activate GemStone GCI session ', triedSessionId asString ].
-	^ self
+	(self isSuccessfulGciActivationResult: result) ifTrue: [ ^ self ].
+
+	"GciSetSessionId_ rejected our id. This is fatal only when the gem is really
+	 gone; it is also produced transiently when GCI's per-process current session
+	 was left at 0 by a prior swallowed error (e.g. a guarded probe), and a second
+	 set against the same still-live session succeeds. Retry once: if the gem is
+	 truly gone the retry fails too and we fall through to markDead, preserving the
+	 okzulu dead-session contract; if it was transient we recover instead of killing
+	 a live session."
+	result := self serverInterface apiGciSetSessionId: sessionId.
+	(self isSuccessfulGciActivationResult: result) ifTrue: [ ^ self ].
+
+	self logActivateGciSessionFailureResult: result.
+	self markDeadAfterFailedGciActivation.
+	self error: 'Could not activate GemStone GCI session ', triedSessionId asString
+]
+
+{ #category : 'private - session activation' }
+GbsSession >> isSuccessfulGciActivationResult: aResult [
+	^ aResult = 1 or: [ aResult == true ]
 ]
 
 { #category : 'private - session activation' }
@@ -826,10 +841,29 @@ GbsSession >> forwardRemoteMessage: aMessage forOop: targetOop [
 GbsSession >> gciAbort [
   "GbsSession >> gciAbort"
 
-  "Calls the C-library to abort the transaction. Returns 1 on success."
+  "Calls the C-library to abort the transaction. Returns 1 on success.
+
+   GciAbort() leaves GCI's per-process current session at 0 as a side effect, so
+   the next withActiveGciSessionDo: would see GciSetSessionId_ fail and wrongly
+   mark this still-live session dead. Re-activate within the same critical section
+   to restore the current-session invariant that withActiveGciSessionDo: relies on."
 
   ^ self withActiveGciSessionDo: [
-	  self serverInterface apiGciAbortCurrent ]
+	  | result |
+	  result := self serverInterface apiGciAbortCurrent.
+	  self reactivateGciSessionAfterCurrentSessionReset.
+	  result ]
+]
+
+{ #category : 'private - session activation' }
+GbsSession >> reactivateGciSessionAfterCurrentSessionReset [
+  "Restore this session as GCI's current session after a call (such as GciAbort)
+   that resets the per-process current session to 0. Best-effort: a genuine
+   failure here is left for the next activateGciSession to detect and handle."
+  (sessionId isNil or: [ sessionId = 0 ]) ifTrue: [ ^ self ].
+  self serverInterface ifNil: [ ^ self ].
+  (self serverInterface respondsTo: #apiGciSetSessionId:) ifFalse: [ ^ self ].
+  [ self serverInterface apiGciSetSessionId: sessionId ] on: Error do: [ :e | nil ]
 ]
 
 { #category : 'as yet unclassified' }
