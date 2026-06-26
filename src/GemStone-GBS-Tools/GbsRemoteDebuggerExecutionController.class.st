@@ -157,13 +157,24 @@ GbsRemoteDebuggerExecutionController >> stepInto [
 
 { #category : 'actions' }
 GbsRemoteDebuggerExecutionController >> stepOver [
-	| didStep hasServiceStep |
+	| didStep hasServiceStep executedFrame stepBefore |
+	executedFrame := debugger currentSelectedContextIsExecutedCodeFrame.
+	stepBefore := executedFrame ifTrue: [ self executedFrameStepPoint ] ifFalse: [ nil ].
 	hasServiceStep := debugger service notNil and: [ debugger service respondsTo: #stepOver ].
 	didStep := hasServiceStep
 		ifTrue: [ debugger safeServiceCall: [ debugger service stepOver ] default: false ]
 		ifFalse: [ false ].
+
+	"For an executed-code frame, the real service's stepOverFromLevel: reports
+	 success but does not advance the step point unless the server PC was first
+	 forced to step 1. So even when the service call returns true, fall back to the
+	 direct path if the executed frame did not actually move. (A genuine service
+	 step -- e.g. the in-image fake -- advances the step point and is kept as is.)"
+	(didStep and: [ executedFrame and: [ self executedFrameStepPoint = stepBefore ] ])
+		ifTrue: [ didStep := false ].
+
 	didStep ifFalse: [
-		debugger currentSelectedContextIsExecutedCodeFrame
+		executedFrame
 			ifTrue: [
 				debugger resetServerPCToStepOneIfNeeded.
 				didStep := debugger directStepOverExecutedFrame: false ]
@@ -173,6 +184,20 @@ GbsRemoteDebuggerExecutionController >> stepOver [
 					fallbackSelector: nil ] ].
 	didStep ifTrue: [ debugger fetchStackFrames ].
 	^ didStep
+]
+
+{ #category : 'private' }
+GbsRemoteDebuggerExecutionController >> executedFrameStepPoint [
+	"Best-effort current step point of the executed-code frame, or nil if it cannot
+	 be read. Used to detect whether a service stepOver actually advanced."
+	| ctx |
+	ctx := [ debugger service notNil
+		ifTrue: [ debugger service currentContext ]
+		ifFalse: [ nil ] ] on: Error do: [ :e | nil ].
+	ctx ifNil: [ ^ nil ].
+	^ [ (ctx respondsTo: #quickStepPoint)
+		ifTrue: [ ctx quickStepPoint ]
+		ifFalse: [ nil ] ] on: Error do: [ :e | nil ]
 ]
 
 { #category : 'actions' }
