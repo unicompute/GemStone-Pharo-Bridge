@@ -29,11 +29,16 @@ Class {
 
 { #category : 'field definition' }
 GbsGciTsObjInfo class >> fieldsDesc [
+	"Field types govern only size/alignment; the accessors below apply the correct
+	signedness (objSize/namedSize are read signed). Pharo 13's FFI struct compiler
+	resolves uint64/int32/uint32/uint16 cleanly, but trips
+	(FFIInt64>>externalTypeAlignment subclassResponsibility) on the bare 'int64' and
+	'int' type names, so use uint64 (8 bytes) and int32 (4 bytes) here."
 	^ #(
 		OopType objId;
 		OopType objClass;
-		int64 objSize;
-		int namedSize;
+		uint64 objSize;
+		int32 namedSize;
 		uint32 access;
 		uint16 objectSecurityPolicyId;
 		uint16 _bits;
