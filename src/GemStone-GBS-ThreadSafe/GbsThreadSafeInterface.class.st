@@ -196,6 +196,23 @@ GbsThreadSafeInterface >> gciTsCommit: sess gsError: gsError [
 ]
 
 { #category : 'ffi calls' }
+GbsThreadSafeInterface >> gciTsExecute_: sess sourceString: src sourceStringSize: srcSize sourceOop: srcOop contextObject: ctx symbolList: symList flags: flags envId: envId gsError: gsError [
+	"Execute a source string and return the result OOP (an OopType), without
+	fetching its bytes. The thread-safe counterpart of the legacy GciExecuteStr_."
+	^ self ffiCall: #( int64 GciTsExecute_(
+			void *sess,
+			const char *src,
+			int64 srcSize,
+			OopType srcOop,
+			OopType ctx,
+			OopType symList,
+			int flags,
+			ushort envId,
+			GbsGciErrSType *gsError) )
+		module: self gsLibraryPath
+]
+
+{ #category : 'ffi calls' }
 GbsThreadSafeInterface >> gciTsExecuteFetchBytes: sess sourceString: src sourceStringSize: srcSize sourceOop: srcOop contextObject: ctx symbolList: symList resultBuffer: resultBuf resultBufferSize: resultBufSize gsError: gsError [
 	^ self ffiCall: #( int64 GciTsExecuteFetchBytes(
 			void *sess,
@@ -290,6 +307,34 @@ GbsThreadSafeInterface >> executeAndFetchString: sourceString [
 	(GciExecuteStr -> GciFetchSize_ -> GciFetchBytes_). Signals a GbsGciTsError on
 	failure. Result is truncated to maxSize bytes (default 1024)."
 	^ self executeAndFetchString: sourceString maxResultSize: 1024
+]
+
+{ #category : 'execution' }
+GbsThreadSafeInterface >> executeScriptAndReturnOop: sourceString [
+	"Execute sourceString and return the result object's OOP as a SmallInteger,
+	without materializing it. Thread-safe counterpart of the legacy
+	executeScriptAndReturnOop: -- uses GciTsExecute_ against this session's explicit
+	pointer, so it never touches GCI's global current session. Signals a
+	GbsGciTsError on failure."
+	| tracker srcCstring gsError gciResult |
+	self assertLoggedIn.
+	tracker := GbsMemoryTracker new.
+	srcCstring := self convertStringArg: sourceString tracker: tracker.
+	gsError := tracker add: GbsGciErrSType externalNew.
+	gciResult := self
+		gciTsExecute_: session
+		sourceString: srcCstring getHandle
+		sourceStringSize: srcCstring sizeNoNull
+		sourceOop: self class oopClassString
+		contextObject: self class oopNil
+		symbolList: self class oopNil
+		flags: 0
+		envId: 0
+		gsError: gsError getHandle.
+	gciResult == self class oopIllegal ifTrue: [
+		^ GbsGciTsError signalForError: gsError tracker: tracker ].
+	tracker freeAll.
+	^ gciResult
 ]
 
 { #category : 'execution' }
