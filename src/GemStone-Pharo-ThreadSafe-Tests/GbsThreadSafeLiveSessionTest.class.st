@@ -85,3 +85,44 @@ GbsThreadSafeLiveSessionTest >> testExecuteScriptAndReturnOopForObjectIsValidOop
 	self assert: oop isInteger.
 	self assert: oop > 20
 ]
+
+{ #category : 'integration tests' }
+GbsThreadSafeLiveSessionTest >> testDynamicFetchReturnsLargeByteArrayWithoutTruncation [
+	"Exercise the refetch path above the 8 KiB probe capacity and preserve the
+	remote byte-object type."
+	| result expected |
+	result := self interface executeAndFetchStringDynamic:
+		'ByteArray new: 16384 withAll: 165'.
+	expected := ByteArray new: 16384 withAll: 165.
+	self assert: result class equals: ByteArray.
+	self assert: result equals: expected
+]
+
+{ #category : 'integration tests' }
+GbsThreadSafeLiveSessionTest >> testDynamicFetchReturnsLargeStringWithoutTruncation [
+	"Exercise the refetch path above the 8 KiB probe capacity and verify both
+	ends of the payload by comparing the complete value."
+	| result expected |
+	result := self interface executeAndFetchStringDynamic:
+		'String new: 16384 withAll: $x'.
+	expected := String new: 16384 withAll: $x.
+	self assert: result class equals: ByteString.
+	self assert: result equals: expected
+]
+
+{ #category : 'integration tests' }
+GbsThreadSafeLiveSessionTest >> testDynamicFetchSignalsForNonByteObject [
+	"The dynamic adapter deliberately materializes only immediate and byte-format
+	results; unsupported objects must not masquerade as a legitimate remote nil."
+	self
+		should: [ self interface executeAndFetchStringDynamic: '{ 1 . 2 . 3 }' ]
+		raise: GbsUnsupportedThreadSafeResultError
+]
+
+{ #category : 'integration tests' }
+GbsThreadSafeLiveSessionTest >> testDynamicFetchReturnsSymbolAsSymbol [
+	| result |
+	result := self interface executeAndFetchStringDynamic: '#threadSafeDynamicFetch'.
+	self assert: result isSymbol.
+	self assert: result equals: #threadSafeDynamicFetch
+]

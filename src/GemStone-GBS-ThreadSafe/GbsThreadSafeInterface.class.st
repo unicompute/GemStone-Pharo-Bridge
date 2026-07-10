@@ -6,7 +6,9 @@ session C state (GciSetSessionId_) and therefore needs the image-wide
 GciAccessMutex to stop concurrent green processes clobbering each other, every
 call here takes an explicit GciSession pointer. There is no global to clobber, so
 the 'Could not activate GemStone GCI session N' race cannot occur and distinct
-sessions can run concurrently.
+sessions cannot clobber each other's current-session state. Calls still pass
+through the bridge's FFI library-binding mutex; this class promises session
+correctness, not parallel execution inside one Pharo image.
 
 This is a prototype of the hot path (login / executeAndFetchString / logout /
 commit / abort) wired behind the existing bridge API. It does NOT yet replace the
@@ -15,12 +17,18 @@ full GbsServerInterface surface.
 Instance Variables:
   session - ExternalAddress / ExternalData: the GciSession (void*) returned by
             GciTsLogin. nil until login succeeds.
+  pendingReleaseOops - bounded batch of fetched result OOPs awaiting
+            GciTsReleaseObjs; batching avoids a release round trip per read.
+  releaseQueueMutex - per-interface reentrant lock protecting the release batch
+            across FFI yield points.
 "
 Class {
 	#name : 'GbsThreadSafeInterface',
 	#superclass : 'Object',
 	#instVars : [
-		'session'
+		'session',
+		'pendingReleaseOops',
+		'releaseQueueMutex'
 	],
 	#classVars : [
 		'SessionRegistry',
@@ -188,6 +196,13 @@ GbsThreadSafeInterface class >> oopTrue [
 	^ 268
 ]
 
+{ #category : 'constants' }
+GbsThreadSafeInterface class >> resultOopReleaseBatchSize [
+	"Match GemStone's own GsTsExternalSession batching policy closely enough to
+	bound the PureExportSet without adding a release round trip to every read."
+	^ 100
+]
+
 { #category : 'converting' }
 GbsThreadSafeInterface class >> asLocalObject: anOop [
 	"Answer a local Boolean or SmallInteger for an immediate OOP, or Object when
@@ -318,6 +333,16 @@ GbsThreadSafeInterface >> gciTsCommit: sess gsError: gsError [
 ]
 
 { #category : 'ffi calls' }
+GbsThreadSafeInterface >> gciTsReleaseObjs: sess objects: objects count: count gsError: gsError [
+	^ self ffiCall: #( int32 GciTsReleaseObjs(
+			void *sess,
+			uint64 *objects,
+			int32 count,
+			GbsGciErrSType *gsError) )
+		module: self gsLibraryPath
+]
+
+{ #category : 'ffi calls' }
 GbsThreadSafeInterface >> gciTsFetchObjInfo: sess object: objId addToExportSet: aBoolean resultInfo: objInfo resultBuffer: resultBuf resultBufferSize: resultBufSize gsError: gsError [
 	"Fetch an object's class/size info plus its bytes in one call. Used to
 	materialize a non-immediate Nb result (String / Symbol / ByteArray)."
@@ -424,6 +449,8 @@ GbsThreadSafeInterface >> loginStoneNrs: stoneNrs gemNrs: gemNrs gsUser: gsUser 
 		err: gsError getHandle ].
 	result isNull ifTrue: [ ^ GbsGciTsError signalForError: gsError tracker: tracker ].
 	session := result.
+	pendingReleaseOops := OrderedCollection new.
+	releaseQueueMutex := Mutex new.
 	tracker freeAll.
 	^ true
 ]
@@ -437,7 +464,10 @@ GbsThreadSafeInterface >> logout [
 	gsError := tracker add: GbsGciErrSType externalNew.
 	result := self ffiDo: [ self gciTsLogout: session gsError: gsError ].
 	session := nil.
-	result == 1 ifTrue: [ tracker freeAll. ^ true ].
+	result == 1 ifTrue: [
+		pendingReleaseOops := nil.
+		tracker freeAll.
+		^ true ].
 	^ GbsGciTsError signalForError: gsError tracker: tracker
 ]
 
@@ -650,15 +680,16 @@ GbsThreadSafeInterface >> executeAndFetchString: sourceString maxResultSize: max
 GbsThreadSafeInterface >> executeAndFetchStringDynamic: sourceString [
 	"Execute sourceString and return the result with dynamic buffer sizing.
 	For byte-object results (String/ByteArray/Symbol), fetches the bytes with
-	a buffer that grows as needed — no fixed size cap. For immediate results
+	a buffer that grows as needed. For immediate results
 	(SmallInteger/Boolean/nil), returns the local value. For other objects
-	(class objects, dictionaries, etc.), returns nil — callers should use
-	string scripts that return byte-object results.
+	(class objects, dictionaries, etc.), signals an explicit unsupported-result
+	error so a transport limitation cannot be mistaken for a legitimate remote
+	nil. Callers should use string scripts that return byte-object snapshots.
 
 	This is the primary read primitive for GbsThreadSafeSession. Unlike
 	#executeAndFetchString: (fixed 1024-byte buffer), it handles arbitrarily
-	large snapshots by reading the object size from GciTsFetchObjInfo and
-	reallocating the buffer when needed."
+	large snapshots up to the defensive 64 MiB limit by reading the object size
+	from GciTsFetchObjInfo and reallocating the buffer when needed."
 
 	| tracker |
 	self assertLoggedIn.
@@ -690,59 +721,124 @@ GbsThreadSafeInterface >> executeDynamic: sourceString tracker: tracker [
 	resultOop == self class oopNil ifTrue: [ ^ nil ].
 	local := self class asLocalObject: resultOop.
 	local == Object ifFalse: [ ^ local ].
-	^ self fetchBytesForOop: resultOop tracker: tracker gsError: gsError
+	[ local := self fetchBytesForOop: resultOop tracker: tracker gsError: gsError ]
+		on: Error
+		do: [ :error |
+			"The execute already exported resultOop, even when local fetch/validation
+			fails. Preserve the original fetch error if a threshold-triggered release
+			also fails; flushPendingResultOops keeps the batch intact for retry."
+			[ self queueResultOopForRelease: resultOop ] on: Error do: [ :ignored | ].
+			error pass ].
+	self queueResultOopForRelease: resultOop.
+	^ local
 ]
 
 { #category : 'private' }
 GbsThreadSafeInterface >> fetchBytesForOop: anOop tracker: tracker gsError: gsError [
 	"Fetch a byte object (String/ByteArray/Symbol) by OOP with dynamic buffer
-	sizing. Uses objInfo objSize to allocate the right buffer and refetches if
-	the initial probe buffer is too small. Returns nil for non-byte objects."
+	sizing. GciTsFetchObjInfo's function result reports success/body slots, not
+	the authoritative byte-object length; objInfo objSize is the total byte size.
+	Use objSize to decide whether a second fetch is required and how many bytes
+	to materialize, matching GemStone's GsTsExternalSession implementation.
+	Signals for non-byte objects so they cannot be confused with remote nil."
 
-	| objInfo resultBuf bufSize gciResult classOop |
+	| objInfo resultBuf bufferCapacity requiredSize gciResult classOop |
 	objInfo := tracker add: GbsGciTsObjInfo externalNew.
-	bufSize := 8192.
-	resultBuf := tracker add: (GbsExternalByteString newWithNull: bufSize).
+	bufferCapacity := 8192.
+	resultBuf := tracker add: (GbsExternalByteString new: bufferCapacity).
 	gciResult := self ffiDo: [ self
 		gciTsFetchObjInfo: session
 		object: anOop
 		addToExportSet: 0
 		resultInfo: objInfo getHandle
 		resultBuffer: resultBuf getHandle
-		resultBufferSize: resultBuf size
+		resultBufferSize: bufferCapacity
 		gsError: gsError getHandle ].
 	gciResult < 0 ifTrue: [
 		^ GbsGciTsError signalForError: gsError tracker: tracker ].
+	objInfo objId = anOop ifFalse: [
+		^ self error: 'GciTsFetchObjInfo returned inconsistent object identity.' ].
 	classOop := objInfo objClass.
+	classOop = 0 ifTrue: [
+		^ GbsError signal: 'Thread-safe GCI read access denied for result object.' ].
 	(classOop == self class oopClassString
 		or: [ classOop == self class oopClassByteArray
 		or: [ classOop == self class oopClassSymbol ] ]) ifFalse: [
-		^ nil ].
-	gciResult <= bufSize ifTrue: [
-		classOop == self class oopClassByteArray ifTrue: [
-			^ resultBuf asByteArrayOfSize: gciResult ].
-		^ resultBuf asByteStringOfSize: gciResult ].
-	bufSize := objInfo objSize.
-	(bufSize <= 0 or: [ bufSize > (16 * 1024 * 1024) ]) ifTrue: [
-		^ self error: 'Result object size out of range (' , bufSize asString , ' bytes)' ].
-	resultBuf free.
-	tracker remove: resultBuf ifAbsent: [ nil ].
-	resultBuf := tracker add: (GbsExternalByteString newWithNull: bufSize).
-	gciResult := self ffiDo: [ self
-		gciTsFetchObjInfo: session
-		object: anOop
-		addToExportSet: 0
-		resultInfo: objInfo getHandle
-		resultBuffer: resultBuf getHandle
-		resultBufferSize: resultBuf size
-		gsError: gsError getHandle ].
-	gciResult < 0 ifTrue: [
-		^ GbsGciTsError signalForError: gsError tracker: tracker ].
-	gciResult > bufSize ifTrue: [
-		^ self error: 'Object size changed between probes' ].
+		^ GbsUnsupportedThreadSafeResultError signal:
+			'Thread-safe GCI evaluate returned unsupported non-byte object class OOP '
+			, classOop asString
+			, '; return a String, ByteArray, Symbol, or immediate value instead.' ].
+	requiredSize := objInfo objSize.
+	(requiredSize < 0 or: [ requiredSize > (64 * 1024 * 1024) ]) ifTrue: [
+		^ self error: 'Result object size out of range (' , requiredSize asString , ' bytes)' ].
+	requiredSize > bufferCapacity ifTrue: [
+		resultBuf free.
+		tracker remove: resultBuf ifAbsent: [ nil ].
+		bufferCapacity := requiredSize.
+		resultBuf := tracker add: (GbsExternalByteString new: bufferCapacity).
+		gciResult := self ffiDo: [ self
+			gciTsFetchObjInfo: session
+			object: anOop
+			addToExportSet: 0
+			resultInfo: objInfo getHandle
+			resultBuffer: resultBuf getHandle
+			resultBufferSize: bufferCapacity
+			gsError: gsError getHandle ].
+		gciResult < 0 ifTrue: [
+			^ GbsGciTsError signalForError: gsError tracker: tracker ].
+		(objInfo objSize = requiredSize) ifFalse: [
+			^ self error: 'Result object size changed between fetches' ] ].
 	classOop == self class oopClassByteArray ifTrue: [
-		^ resultBuf asByteArrayOfSize: gciResult ].
-	^ resultBuf asByteStringOfSize: gciResult
+		^ resultBuf asByteArrayOfSize: requiredSize ].
+	classOop == self class oopClassSymbol ifTrue: [
+		^ (resultBuf asByteStringOfSize: requiredSize) asSymbol ].
+	^ resultBuf asByteStringOfSize: requiredSize
+]
+
+{ #category : 'private' }
+GbsThreadSafeInterface >> flushPendingResultOops [
+	"Release one bounded batch of result OOPs. Keep the batch intact on failure
+	so callers can retry or let logout dispose of the session export set."
+	^ self resultOopReleaseMutex critical: [
+		| releaseOops tracker oopBuffer gsError result |
+		pendingReleaseOops ifNil: [ ^ true ].
+		pendingReleaseOops isEmpty ifTrue: [ ^ true ].
+		releaseOops := pendingReleaseOops asArray.
+		tracker := GbsMemoryTracker new.
+		[
+			oopBuffer := tracker add: (FFIExternalArray
+				externalNewType: 'uint64'
+				size: releaseOops size).
+			1 to: releaseOops size do: [ :index |
+				oopBuffer at: index put: (releaseOops at: index) ].
+			gsError := tracker add: GbsGciErrSType externalNew.
+			result := self ffiDo: [ self
+				gciTsReleaseObjs: session
+				objects: oopBuffer getHandle
+				count: releaseOops size
+				gsError: gsError getHandle ].
+			result == 1 ifFalse: [
+				^ GbsGciTsError signalForError: gsError tracker: tracker ].
+			pendingReleaseOops removeAll.
+			true ] ensure: [ tracker freeAll ] ]
+]
+
+{ #category : 'private' }
+GbsThreadSafeInterface >> queueResultOopForRelease: anOop [
+	"GciTsExecute_ exports non-immediate result OOPs. Dynamic evaluation returns
+	fully local bytes (or rejects the shape), so queue every result for bounded,
+	batched release instead of leaking it or paying one extra trip per read."
+	self resultOopReleaseMutex critical: [
+		pendingReleaseOops ifNil: [ pendingReleaseOops := OrderedCollection new ].
+		pendingReleaseOops add: anOop.
+		pendingReleaseOops size >= self class resultOopReleaseBatchSize ifTrue: [
+			self flushPendingResultOops ] ].
+	^ anOop
+]
+
+{ #category : 'private' }
+GbsThreadSafeInterface >> resultOopReleaseMutex [
+	^ releaseQueueMutex ifNil: [ releaseQueueMutex := Mutex new ]
 ]
 
 { #category : 'accessing' }

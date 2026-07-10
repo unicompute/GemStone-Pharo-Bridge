@@ -7,8 +7,9 @@ GciSetSessionId_; concurrent green processes can interleave their
 (set-session, execute) pairs and produce 'Could not activate GemStone GCI session N'
 or run a call against the wrong session. The bridge works around this with the
 image-wide GciAccessMutex. The thread-safe path passes an explicit GciSession
-pointer to every call, so no such global exists and concurrent execution across
-distinct sessions is correct WITHOUT any serializing mutex.
+pointer to every call, so no such global exists and interleaved requests across
+distinct sessions remain session-correct. The bridge may still serialize FFI
+calls for library-binding safety; these tests prove isolation, not throughput.
 
 These are live tests: they require a running stone reachable via GS_USER / GS_PASS
 (and the usual GS_* connection vars). Without credentials they are skipped.
@@ -60,7 +61,7 @@ GbsThreadSafeConcurrencyTest >> testConcurrentExecutesDoNotClobberSessions [
 	"Log in N independent sessions and hammer them concurrently. Each session asks
 	the gem for a value derived from its own index; if the global-session race
 	existed here, calls would fail to activate or return another session's value.
-	No GciAccessMutex is used anywhere on this path."
+	No legacy current-session activation is used on this path."
 	| n results errors processes done |
 	self skipOrCredentials.
 	n := 6.

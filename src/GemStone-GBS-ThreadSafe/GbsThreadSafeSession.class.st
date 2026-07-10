@@ -81,9 +81,10 @@ GbsThreadSafeSession >> evaluateAndFetchString: aString [
 GbsThreadSafeSession >> evaluate: aString [
 	"Execute aString and return the result. For byte-object results
 	(String/ByteArray/Symbol), returns the fetched bytes. For immediate results
-	(SmallInteger/Boolean/nil), returns the local value. For other objects,
-	returns nil. Errors propagate to the caller (callers have their own
-	on: Error do: handlers for retry / discard logic)."
+	(SmallInteger/Boolean/nil), returns the local value. Other object shapes
+	signal GbsUnsupportedThreadSafeResultError instead of masquerading as nil.
+	Errors propagate to the caller (callers have their own on: Error do:
+	handlers for retry / discard logic)."
 
 	^ self interface
 		ifNil: [ self error: 'thread-safe session is not logged in' ]

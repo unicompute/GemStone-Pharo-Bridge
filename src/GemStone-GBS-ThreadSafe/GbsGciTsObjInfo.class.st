@@ -4,9 +4,8 @@ GciTsFetchObjInfo. Carries an object's class OOP and size in one round trip, so
 the bridge no longer needs separate GciFetchClass + GciFetchSize_ calls.
 Ported from PharoGemStoneFFI (GciTsObjInfo). Allocated on the C heap -- must be freed.
 
-NOTE: defined but not yet exercised by this prototype. The hot path uses
-GciTsExecuteFetchBytes (a single round trip that needs no objInfo). This struct is
-the next step -- general object fetch via GciTsFetchObjInfo.
+The dynamic thread-safe evaluate path uses this structure to distinguish byte
+objects from unsupported general objects and to size snapshot result buffers.
 "
 Class {
 	#name : 'GbsGciTsObjInfo',
