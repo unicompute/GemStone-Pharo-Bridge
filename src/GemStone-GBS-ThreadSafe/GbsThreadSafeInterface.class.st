@@ -646,6 +646,105 @@ GbsThreadSafeInterface >> executeAndFetchString: sourceString maxResultSize: max
 	^ [ resultBuf asByteStringOfSize: gciResult ] ensure: [ tracker freeAll ]
 ]
 
+{ #category : 'execution' }
+GbsThreadSafeInterface >> executeAndFetchStringDynamic: sourceString [
+	"Execute sourceString and return the result with dynamic buffer sizing.
+	For byte-object results (String/ByteArray/Symbol), fetches the bytes with
+	a buffer that grows as needed — no fixed size cap. For immediate results
+	(SmallInteger/Boolean/nil), returns the local value. For other objects
+	(class objects, dictionaries, etc.), returns nil — callers should use
+	string scripts that return byte-object results.
+
+	This is the primary read primitive for GbsThreadSafeSession. Unlike
+	#executeAndFetchString: (fixed 1024-byte buffer), it handles arbitrarily
+	large snapshots by reading the object size from GciTsFetchObjInfo and
+	reallocating the buffer when needed."
+
+	| tracker |
+	self assertLoggedIn.
+	tracker := GbsMemoryTracker new.
+	^ [
+		self executeDynamic: sourceString tracker: tracker ]
+		ensure: [ tracker freeAll ]
+]
+
+{ #category : 'private' }
+GbsThreadSafeInterface >> executeDynamic: sourceString tracker: tracker [
+	"Private — caller owns the tracker lifecycle (via ensure: freeAll)."
+
+	| srcCstring gsError resultOop local |
+	srcCstring := self convertStringArg: sourceString tracker: tracker.
+	gsError := tracker add: GbsGciErrSType externalNew.
+	resultOop := self ffiDo: [ self
+		gciTsExecute_: session
+		sourceString: srcCstring getHandle
+		sourceStringSize: srcCstring sizeNoNull
+		sourceOop: self class oopClassString
+		contextObject: self class oopNil
+		symbolList: self class oopNil
+		flags: 0
+		envId: 0
+		gsError: gsError getHandle ].
+	resultOop == self class oopIllegal ifTrue: [
+		^ GbsGciTsError signalForError: gsError tracker: tracker ].
+	resultOop == self class oopNil ifTrue: [ ^ nil ].
+	local := self class asLocalObject: resultOop.
+	local == Object ifFalse: [ ^ local ].
+	^ self fetchBytesForOop: resultOop tracker: tracker gsError: gsError
+]
+
+{ #category : 'private' }
+GbsThreadSafeInterface >> fetchBytesForOop: anOop tracker: tracker gsError: gsError [
+	"Fetch a byte object (String/ByteArray/Symbol) by OOP with dynamic buffer
+	sizing. Uses objInfo objSize to allocate the right buffer and refetches if
+	the initial probe buffer is too small. Returns nil for non-byte objects."
+
+	| objInfo resultBuf bufSize gciResult classOop |
+	objInfo := tracker add: GbsGciTsObjInfo externalNew.
+	bufSize := 8192.
+	resultBuf := tracker add: (GbsExternalByteString newWithNull: bufSize).
+	gciResult := self ffiDo: [ self
+		gciTsFetchObjInfo: session
+		object: anOop
+		addToExportSet: 0
+		resultInfo: objInfo getHandle
+		resultBuffer: resultBuf getHandle
+		resultBufferSize: resultBuf size
+		gsError: gsError getHandle ].
+	gciResult < 0 ifTrue: [
+		^ GbsGciTsError signalForError: gsError tracker: tracker ].
+	classOop := objInfo objClass.
+	(classOop == self class oopClassString
+		or: [ classOop == self class oopClassByteArray
+		or: [ classOop == self class oopClassSymbol ] ]) ifFalse: [
+		^ nil ].
+	gciResult <= bufSize ifTrue: [
+		classOop == self class oopClassByteArray ifTrue: [
+			^ resultBuf asByteArrayOfSize: gciResult ].
+		^ resultBuf asByteStringOfSize: gciResult ].
+	bufSize := objInfo objSize.
+	(bufSize <= 0 or: [ bufSize > (16 * 1024 * 1024) ]) ifTrue: [
+		^ self error: 'Result object size out of range (' , bufSize asString , ' bytes)' ].
+	resultBuf free.
+	tracker remove: resultBuf ifAbsent: [ nil ].
+	resultBuf := tracker add: (GbsExternalByteString newWithNull: bufSize).
+	gciResult := self ffiDo: [ self
+		gciTsFetchObjInfo: session
+		object: anOop
+		addToExportSet: 0
+		resultInfo: objInfo getHandle
+		resultBuffer: resultBuf getHandle
+		resultBufferSize: resultBuf size
+		gsError: gsError getHandle ].
+	gciResult < 0 ifTrue: [
+		^ GbsGciTsError signalForError: gsError tracker: tracker ].
+	gciResult > bufSize ifTrue: [
+		^ self error: 'Object size changed between probes' ].
+	classOop == self class oopClassByteArray ifTrue: [
+		^ resultBuf asByteArrayOfSize: gciResult ].
+	^ resultBuf asByteStringOfSize: gciResult
+]
+
 { #category : 'accessing' }
 GbsThreadSafeInterface >> session [
 	^ session

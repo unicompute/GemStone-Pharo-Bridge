@@ -1,6 +1,19 @@
 Extension { #name : 'GbsSessionParameters' }
 
 { #category : '*GemStone-GBS-ThreadSafe' }
+GbsSessionParameters >> loginThreadSafeSession [
+	"Log in via the thread-safe interface and answer a GbsThreadSafeSession
+	adapter that implements the GbsSession surface. This is the drop-in
+	replacement for #login — callers get a session object that responds to
+	evaluate: / evaluateAndFetchString: / commitTransaction / abortTransaction /
+	logout / isLoggedIn with the same selectors as GbsSession, but all
+	operations route through explicit GciSession pointers (no global current
+	session, no GciAccessMutex, no activation race)."
+
+	^ GbsThreadSafeSession forParameters: self
+]
+
+{ #category : '*GemStone-GBS-ThreadSafe' }
 GbsSessionParameters >> gciTsInterface [
 	"The thread-safe GCI interface bound to this session, or nil if this session
 	was not logged in via loginThreadSafe. Held in a transient registry on
