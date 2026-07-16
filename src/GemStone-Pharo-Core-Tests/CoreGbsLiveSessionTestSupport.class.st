@@ -198,7 +198,7 @@ CoreGbsLiveSessionTestSupport class >> withInteractiveNotificationsAnsweredDo: a
 
 { #category : 'private' }
 CoreGbsLiveSessionTestSupport class >> osEnvironment [
-	^ [ Smalltalk os environment ]
+	^ [ OSEnvironment current ]
 		on: Error
 		do: [ [ OSEnvironment current ]
 			on: Error

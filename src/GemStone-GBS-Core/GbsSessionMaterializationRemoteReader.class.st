@@ -406,7 +406,7 @@ GbsSessionMaterializationRemoteReader >> structuredBatchByteTransport [
 	raw := Smalltalk globals
 		at: #GbsMaterializationByteTransport
 		ifAbsent: [
-			env := [ Smalltalk os environment ]
+			env := [ OSEnvironment current ]
 				on: Error
 				do: [ Dictionary new ].
 			env at: 'GBS_MATERIALIZATION_BYTE_TRANSPORT' ifAbsent: [ 'traversal-buffer' ] ].

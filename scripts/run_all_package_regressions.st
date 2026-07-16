@@ -7,7 +7,7 @@
     ifNil: [ logLine value: 'BRIDGE_REGRESSION_FAILED' ]
     ifNotNil: [
       runnerClass
-        runLoadingBaselineAndRegressionOnEnvironment: Smalltalk os environment
+        runLoadingBaselineAndRegressionOnEnvironment: OSEnvironment current
         log: logLine ].
 ] ensure: [
   Smalltalk snapshot: false andQuit: true ].

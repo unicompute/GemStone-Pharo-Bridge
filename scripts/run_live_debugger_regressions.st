@@ -14,7 +14,7 @@
       ifNil: [ Error signal: 'Missing GemStonePharoReloadBootstrapper after baseline load' ]
       ifNotNil: [
         bootstrapperClass
-          runBootstrapReloadOnEnvironment: Smalltalk os environment
+          runBootstrapReloadOnEnvironment: OSEnvironment current
           log: [ :line | Transcript show: line; cr ] ] ] on: Error do: [ :ex |
         loadFailed := true.
         Transcript show: 'LOAD_ERROR: ', ex messageText; cr ].

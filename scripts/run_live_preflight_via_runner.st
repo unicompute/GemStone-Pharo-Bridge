@@ -22,7 +22,7 @@ runnerClass
 		logLine value: 'LIVE_PREFLIGHT_SUMMARY result=FAIL code=LIVE_PREFLIGHT_RUNNER_FAILED stone=gs64stone service=gemnetobject host=implicit net=implicit stone_status=unknown netldi_status=unknown topaz=failed gci=failed host_auth=unknown' ]
 	ifNotNil: [
 		[ result := runnerClass
-			runPreflightOnEnvironment: Smalltalk os environment
+			runPreflightOnEnvironment: OSEnvironment current
 			log: logLine
 			imagePath: Smalltalk image imageFile asString ]
 			on: Error

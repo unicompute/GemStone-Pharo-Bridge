@@ -3,8 +3,8 @@ set -euo pipefail
 
 . "$(dirname "$0")/lane_common.sh"
 
-VM="${PHARO_VM:-/Users/tariq/Documents/Pharo/vms/130-x64/Pharo.app/Contents/MacOS/Pharo}"
-SRC_IMAGE="${1:-/Users/tariq/Documents/Pharo/images/Pharo 13.0 - qwen/Pharo 13.0 - qwen.image}"
+VM="${PHARO_VM:-/Users/tariq/Documents/Pharo/vms/140-x64/Pharo.app/Contents/MacOS/Pharo}"
+SRC_IMAGE="${1:-/Users/tariq/Documents/Pharo/images/Pharo 14.0 - clean/Pharo 14.0 - clean.image}"
 JSON_SUMMARY="${GBS_JSON_SUMMARY:-0}"
 RELOAD_STATUS="pending"
 UNIT_STATUS="pending"

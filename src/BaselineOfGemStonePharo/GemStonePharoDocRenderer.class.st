@@ -750,7 +750,7 @@ GemStonePharoDocRenderer >> generatedUserManualReferenceHtml [
 		stream
 			nextPutAll: '  </ul>'; cr;
 			nextPutAll: '  <h2>Accepted Original-layer Baseline</h2>'; cr;
-			nextPutAll: '  <p><code>make original-drift</code> compares the original/base production and test layer with <code>f2c8c23...</code>. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.</p>'; cr;
+			nextPutAll: '  <p><code>make original-drift</code> compares the original/base production and test layer with <code>a186465...</code>. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.</p>'; cr;
 			nextPutAll: '  <h2>Recommended Entry Points</h2>'; cr;
 			nextPutAll: '  <pre><code>make help'; cr;
 			nextPutAll: 'make original-drift'; cr;
@@ -824,7 +824,7 @@ GemStonePharoDocRenderer >> generatedVerificationLanesMarkdown [
 				cr; cr ].
 		stream
 			nextPutAll: '## Accepted Original-layer Baseline'; cr; cr;
-			nextPutAll: '`make original-drift` compares the original/base production and test layer with `f2c8c23...`. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.'; cr ]
+			nextPutAll: '`make original-drift` compares the original/base production and test layer with `a186465...`. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.'; cr ]
 ]
 
 { #category : 'contracts' }
@@ -833,7 +833,7 @@ GemStonePharoDocRenderer >> generatedArchitectureBodyMarkdown [
 		stream
 			nextPutAll: 'This section is generated from `GemStonePharoContract`.'; cr; cr;
 			nextPutAll: '## Design Goal'; cr; cr;
-			nextPutAll: '- `f2c8c23...` original production/test packages are the accepted base layer'; cr;
+			nextPutAll: '- `a186465...` original production/test packages are the accepted base layer'; cr;
 			nextPutAll: '- `Pharo <-> GemStone Smalltalk` is the primary layer'; cr;
 			nextPutAll: '- MagLev/Ruby behavior is optional'; cr;
 			nextPutAll: '- legacy alias surface stays absent from production'; cr; cr;
@@ -851,7 +851,7 @@ GemStonePharoDocRenderer >> generatedArchitectureBodyMarkdown [
 		self boundaryGuardSpecs do: [ :each |
 			stream nextPutAll: '- `'; nextPutAll: each first; nextPutAll: '`'; cr ].
 		stream cr; nextPutAll: '## Accepted Original-layer Baseline'; cr; cr;
-			nextPutAll: '`make original-drift` compares the original/base production and test layer with `f2c8c23...`. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.'; cr.
+			nextPutAll: '`make original-drift` compares the original/base production and test layer with `a186465...`. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.'; cr.
 		stream cr; nextPutAll: '## Layered Load Matrix'; cr; cr;
 			nextPutAll: '- [LOAD-MATRIX.md](./LOAD-MATRIX.md)'; cr;
 			nextPutAll: '  generated group-by-group view of the base/original, generic core, and optional MagLev loading model'; cr.
@@ -998,7 +998,7 @@ GemStonePharoDocRenderer >> generatedTestingBodyMarkdown [
 						separatedBy: [ inner nextPutAll: ', ' ] ]);
 				cr ].
 		stream cr; nextPutAll: '## Accepted Original-layer Baseline'; cr; cr;
-			nextPutAll: '`make original-drift` compares the original/base production and test layer with `f2c8c23...`. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.'; cr.
+			nextPutAll: '`make original-drift` compares the original/base production and test layer with `a186465...`. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.'; cr.
 		stream cr; nextPutAll: '## Wrapper Entry Points'; cr; cr;
 			nextPutAll: '```bash'; cr;
 			nextPutAll: 'make help'; cr;
@@ -1094,7 +1094,7 @@ GemStonePharoDocRenderer >> generatedUserManualTestingHtml [
 		stream
 			nextPutAll: '    </ul>'; cr;
 			nextPutAll: '    <h3>Accepted Original-layer Baseline</h3>'; cr;
-			nextPutAll: '    <p><code>make original-drift</code> compares the original/base production and test layer with <code>f2c8c23...</code>. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.</p>'; cr;
+			nextPutAll: '    <p><code>make original-drift</code> compares the original/base production and test layer with <code>a186465...</code>. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.</p>'; cr;
 			nextPutAll: '    <h3>Generated operator reference</h3>'; cr;
 			nextPutAll: '    <p>'; cr;
 			nextPutAll: '      The contract generates a human-facing steady-state operator reference at'; cr;

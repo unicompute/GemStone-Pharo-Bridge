@@ -92,7 +92,7 @@ GemStonePharoLaneRunner >> baselineContract: aContract [
 
 { #category : 'private' }
 GemStonePharoLaneRunner >> environment [
-	^ environment ifNil: [ Smalltalk os environment ]
+	^ environment ifNil: [ OSEnvironment current ]
 ]
 
 { #category : 'private' }

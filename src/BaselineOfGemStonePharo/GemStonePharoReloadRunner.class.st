@@ -126,7 +126,7 @@ GemStonePharoReloadRunner >> emitMissingContractFailure [
 
 { #category : 'private' }
 GemStonePharoReloadRunner >> environment [
-	^ environment ifNil: [ Smalltalk os environment ]
+	^ environment ifNil: [ OSEnvironment current ]
 ]
 
 { #category : 'private' }

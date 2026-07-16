@@ -24,7 +24,7 @@ bootstrapperClass
 		logLine value: 'NO_COMPAT_SOURCE_SCAN_FAILED' ]
 	ifNotNil: [
 		bootstrapperClass
-			runBootstrapReloadOnEnvironment: Smalltalk os environment
+			runBootstrapReloadOnEnvironment: OSEnvironment current
 			log: logLine ].
 
 Smalltalk snapshot: true andQuit: true.

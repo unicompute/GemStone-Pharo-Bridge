@@ -11,7 +11,7 @@ runnerClass := Smalltalk at: #GemStonePharoReloadRunner ifAbsent: [ nil ].
 	logLine value: 'BOOTSTRAP_SMOKE_FAILED'.
 	Smalltalk snapshot: false andQuit: true ].
 
-loadGroup := runnerClass loadGroupNameFromEnvironment: Smalltalk os environment.
+loadGroup := runnerClass loadGroupNameFromEnvironment: OSEnvironment current.
 groupSpec := contract new groupMemberSpecs
 	detect: [ :each | each first = loadGroup ]
 	ifNone: [ nil ].

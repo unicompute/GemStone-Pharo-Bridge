@@ -254,7 +254,7 @@ GbxStatArchiver >> writeHeader [
 		on: Error
 		do: [ :ex | 0 ].
 	directory := FileSystem workingDirectory pathString.
-	platform := [ Smalltalk os platformName ]
+	platform := [ OSPlatform current platformName ]
 		on: Error
 		do: [ :ex | 'unknown' ].
 	imagePath := [ Smalltalk image imageFile asString ]

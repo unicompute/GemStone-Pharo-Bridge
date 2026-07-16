@@ -109,7 +109,7 @@ GbsThreadSafeInterface class >> libraryPathFromEnvironment [
 	"An explicit libgcits path from the environment, or nil. Lets a deployment point
 	the thread-safe interface at a specific client library without code changes."
 	| env value |
-	env := [ Smalltalk os environment ] on: Error do: [ :e | nil ].
+	env := [ OSEnvironment current ] on: Error do: [ :e | nil ].
 	env ifNil: [ ^ nil ].
 	#( 'GS_THREADSAFE_LIBRARY' 'GEMSTONE_THREADSAFE_LIB' ) do: [ :key |
 		value := [ env at: key ifAbsent: [ nil ] ] on: Error do: [ :e | nil ].
@@ -119,7 +119,7 @@ GbsThreadSafeInterface class >> libraryPathFromEnvironment [
 
 { #category : 'library path' }
 GbsThreadSafeInterface class >> isWindowsPlatform [
-	^ [ Smalltalk os isWindows ] on: Error do: [ :e | false ]
+	^ [ OSPlatform current isWindows ] on: Error do: [ :e | false ]
 ]
 
 { #category : 'library path' }
@@ -131,7 +131,7 @@ GbsThreadSafeInterface class >> addLibraryDirectoryToWindowsPath: aLibraryPath [
 	self isWindowsPlatform ifFalse: [ ^ self ].
 	aLibraryPath ifNil: [ ^ self ].
 	dir := aLibraryPath asFileReference parent pathString.
-	env := [ Smalltalk os environment ] on: Error do: [ :e | nil ].
+	env := [ OSEnvironment current ] on: Error do: [ :e | nil ].
 	env ifNil: [ ^ self ].
 	path := [ env at: 'PATH' ifAbsent: [ '' ] ] on: Error do: [ :e | '' ].
 	(path includesSubstring: dir) ifTrue: [ ^ self ].

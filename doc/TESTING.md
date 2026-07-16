@@ -25,7 +25,7 @@ This section is generated from `GemStonePharoContract`.
   targets: `GemStone-GBS-Converted`, `GemStone-GBS-Tools`
   success markers: `ARCHITECTURE_BOUNDARY_OK`, `PACKAGE_OWNERSHIP_DRIFT_SKIPPED`, `NO_COMPAT_SOURCE_SCAN_OK`, `NO_COMPATIBILITY_PROOF_OK`, `ORIGINAL_CHECK_OK`
 - `original-drift`
-  Verify that the original/base production and test layer stays clean relative to the current accepted baseline `f2c8c23...`; new drift must be relocated outside the original layer or accepted by moving the baseline.
+  Verify that the original/base production and test layer stays clean relative to the current accepted baseline `a186465...`; new drift must be relocated outside the original layer or accepted by moving the baseline.
   load group: `Original-Tests`
   targets: `GemStone-GBS-Converted`, `GemStone-GBS-Tools`, `GemStone-Pharo-Tests`
   success markers: `ORIGINAL_LAYER_DRIFT_OK`, `ORIGINAL_LAYER_DRIFT_EXPECTED_ONLY`
@@ -52,7 +52,7 @@ This section is generated from `GemStonePharoContract`.
 
 ## Accepted Original-layer Baseline
 
-`make original-drift` compares the original/base production and test layer with `f2c8c23...`. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.
+`make original-drift` compares the original/base production and test layer with `a186465...`. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.
 
 ## Wrapper Entry Points
 

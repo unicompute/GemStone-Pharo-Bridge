@@ -16,7 +16,7 @@
 			Transcript show: 'LOAD_ERROR: ', ex messageText; cr.
 			Smalltalk snapshot: false andQuit: true ].
 
-	env := [ Smalltalk os environment ] on: Error do: [ Dictionary new ].
+	env := [ OSEnvironment current ] on: Error do: [ Dictionary new ].
 	envAtAny := [ :keys :default | | value |
 		value := default.
 		keys do: [ :key | | raw |

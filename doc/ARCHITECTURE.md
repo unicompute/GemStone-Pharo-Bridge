@@ -7,7 +7,7 @@ This section is generated from `GemStonePharoContract`.
 
 ## Design Goal
 
-- `f2c8c23...` original production/test packages are the accepted base layer
+- `a186465...` original production/test packages are the accepted base layer
 - `Pharo <-> GemStone Smalltalk` is the primary layer
 - MagLev/Ruby behavior is optional
 - legacy alias surface stays absent from production
@@ -36,7 +36,7 @@ This section is generated from `GemStonePharoContract`.
 
 ## Accepted Original-layer Baseline
 
-`make original-drift` compares the original/base production and test layer with `f2c8c23...`. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.
+`make original-drift` compares the original/base production and test layer with `a186465...`. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.
 
 ## Layered Load Matrix
 

@@ -95,7 +95,7 @@ GbsNativeMacOSKeychainBackend >> isAvailable [
 { #category : 'testing' }
 GbsNativeMacOSKeychainBackend >> isMacOS [
 	| os |
-	os := [ Smalltalk os ]
+	os := [ OSPlatform current ]
 		on: Error
 		do: [ nil ].
 	os ifNil: [ ^ self securityLibraryExists ].

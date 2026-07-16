@@ -939,7 +939,7 @@ GbsSessionParameters >> login [
     | interface result actualSessionId serviceString hostUserString hostPasswordString netldiString setNetError setNetResult executedSessionInit |
 
     "UI State Check"
-    self isConnected ifTrue: [ ^ self inform: 'Already Connected' ].
+    self isConnected ifTrue: [ ^ UIManager default inform: 'Already Connected' ].
     self restoreRememberedSecretsFromKeychain.
     self validateForLogin.
 
@@ -1012,7 +1012,7 @@ GbsSessionParameters >> login [
 
     "Register so it appears in the bottom list"
     self class registerSession: self.
-    self inform: 'Login Successful'.
+    UIManager default inform: 'Login Successful'.
 
     ^ CurrentSession
 ]
@@ -1246,7 +1246,7 @@ GbsSessionParameters >> logout [
         "3. Unregister from the Active List"
         self class unregisterSession: self.
         
-        self inform: 'Logged Out'.
+        UIManager default inform: 'Logged Out'.
     ].
 ]
 

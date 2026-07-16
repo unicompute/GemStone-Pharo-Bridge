@@ -369,10 +369,19 @@ GbxRemainingPortTest >> testTrippySupportObjectsWorkHeadlessly [
 	self assert: keySelection value equals: 'alpha'
 ]
 
+{ #category : 'running' }
+GbxRemainingPortTest >> skipUnlessDirtyMarkingLoaded [
+	"GbxDirtyPool>>markDirty: is a GemStone-GBS-Core extension; the original-tests lane
+	loads only the base/original packages, so skip the tests that need it there."
+	(GbxDirtyPool includesSelector: #markDirty:) ifFalse: [
+		self skip: 'GbxDirtyPool>>markDirty: (GemStone-GBS-Core extension) is not loaded' ]
+]
+
 { #category : 'tests - dirty pool' }
 GbxRemainingPortTest >> testSetAsideDirtyWhileIsolatesNestedDirtyMarks [
 	"Inside the set-aside block the top dirty pool must be empty, even though an object was dirty before."
 	| session pool outer innerTopWasEmpty |
+	self skipUnlessDirtyMarkingLoaded.
 	session := GbxFakeSetAsideDirtySession new.
 	pool := session dirtyPool.
 	outer := Object new.
@@ -388,6 +397,7 @@ GbxRemainingPortTest >> testSetAsideDirtyWhileIsolatesNestedDirtyMarks [
 GbxRemainingPortTest >> testSetAsideDirtyWhileRestoresPreviousPool [
 	"After the block, the previous dirty pool (and its objects) must be restored and the stack emptied."
 	| session pool outer |
+	self skipUnlessDirtyMarkingLoaded.
 	session := GbxFakeSetAsideDirtySession new.
 	pool := session dirtyPool.
 	outer := Object new.
@@ -405,6 +415,7 @@ GbxRemainingPortTest >> testSetAsideDirtyWhileFlushesNestedDirtyObjects [
 	"Objects dirtied inside the set-aside block are flushed in their own pass and do not pollute the
 	restored outer pool."
 	| session pool outer nested |
+	self skipUnlessDirtyMarkingLoaded.
 	session := GbxFakeSetAsideDirtySession new.
 	pool := session dirtyPool.
 	outer := Object new.

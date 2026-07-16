@@ -3,7 +3,7 @@ set -euo pipefail
 
 . "$(dirname "$0")/lane_common.sh"
 
-VM="${PHARO_VM:-/Users/tariq/Documents/Pharo/vms/130-x64/Pharo.app/Contents/MacOS/Pharo}"
+VM="${PHARO_VM:-/Users/tariq/Documents/Pharo/vms/140-x64/Pharo.app/Contents/MacOS/Pharo}"
 WORK_IMAGE="${1:?usage: run_live_preflight.sh <work-image>}"
 JSON_SUMMARY="${GBS_JSON_SUMMARY:-0}"
 

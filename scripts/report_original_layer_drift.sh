@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-BASE_SHA="${1:-f2c8c23d4f72dbfe47ae4092a9536e48c6d9789f}"
+BASE_SHA="${1:-a1864654ac0e6001f240a738d6f092de8e8f9764}"
 
 packages=(
   "GemStone-GBS-Converted"
@@ -9,7 +9,18 @@ packages=(
   "GemStone-Pharo-Tests"
 )
 
-expected_files=()
+# Pharo 14 upgrade: deprecated `Smalltalk os environment` / `Smalltalk os` call
+# sites rewritten to `OSEnvironment current` / `OSPlatform current`, plus a
+# lane-layering skip guard for the setAsideDirtyWhile tests.
+expected_files=(
+  "src/GemStone-GBS-Converted/GbsLibrary.class.st"
+  "src/GemStone-GBS-Converted/GbsSessionParameters.class.st"
+  "src/GemStone-GBS-Converted/GbxStatArchiver.class.st"
+  "src/GemStone-GBS-Tools/GbsClassicLauncher.class.st"
+  "src/GemStone-Pharo-Tests/GbsLiveSessionTestSupport.class.st"
+  "src/GemStone-Pharo-Tests/GbxRemainingPortTest.class.st"
+)
+expected_reason="Pharo 14 upgrade: OSEnvironment/OSPlatform/inform: deprecation rewrites and setAsideDirtyWhile lane skip guard"
 
 changed_files=()
 base_files=()
@@ -84,6 +95,9 @@ fi
 
 if [ "${#unexpected_files[@]}" -eq 0 ]; then
   printf 'ORIGINAL_LAYER_DRIFT_EXPECTED_ONLY base=%s files=%s\n' "$BASE_SHA" "${#expected_changed_files[@]}"
+  for file in "${expected_changed_files[@]}"; do
+    printf 'ORIGINAL_LAYER_DRIFT_EXPECTED file=%s reason=%s\n' "$file" "$expected_reason"
+  done
   for package in "${packages[@]}"; do
     package_prefix="src/${package}/"
     package_count=0

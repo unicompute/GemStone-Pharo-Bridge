@@ -22,7 +22,7 @@ GbsLibrary class >> gemstoneHome [
 { #category : 'accessing - platform' }
 GbsLibrary class >> environmentAt: aKey [
 	| environment |
-	environment := [ Smalltalk os environment ] on: Error do: [ nil ].
+	environment := [ OSEnvironment current ] on: Error do: [ nil ].
 	environment ifNotNil: [
 		^ [ environment at: aKey ifAbsent: [ nil ] ] on: Error do: [ nil ] ].
 	environment := (Smalltalk globals at: #OSEnvironment ifAbsent: [ nil ])

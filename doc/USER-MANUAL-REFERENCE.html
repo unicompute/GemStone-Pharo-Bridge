@@ -43,14 +43,14 @@
     <li><strong><code>core-only</code></strong>: Verify the Smalltalk core without optional MagLev production packages and without deleted legacy surface.</li>
     <li><strong><code>bootstrap-smoke</code></strong>: Prove that a clean image can micro-bootstrap the helper package and load the requested group before post-load checks run.</li>
     <li><strong><code>original</code></strong>: Verify that the original/base production layer reloads cleanly without the generic Core or optional MagLev overlays.</li>
-    <li><strong><code>original-drift</code></strong>: Verify that the original/base production and test layer stays clean relative to the current accepted baseline `f2c8c23...`; new drift must be relocated outside the original layer or accepted by moving the baseline.</li>
+    <li><strong><code>original-drift</code></strong>: Verify that the original/base production and test layer stays clean relative to the current accepted baseline `a186465...`; new drift must be relocated outside the original layer or accepted by moving the baseline.</li>
     <li><strong><code>original-tests</code></strong>: Verify the original/base production and original/base test layer without the generic Core or optional MagLev overlays. This lane proves the base unit layer only.</li>
     <li><strong><code>full</code></strong>: Verify the steady-state developer load plus the live GemStone lane.</li>
     <li><strong><code>artifact-freshness</code></strong>: Verify that the generated contract artifacts and marker-managed doc sections are already up to date.</li>
     <li><strong><code>verify</code></strong>: Run core-only, bootstrap-smoke, original, original-drift, original-tests, full, artifact-freshness, then the summary-renderer smoke check.</li>
   </ul>
   <h2>Accepted Original-layer Baseline</h2>
-  <p><code>make original-drift</code> compares the original/base production and test layer with <code>f2c8c23...</code>. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.</p>
+  <p><code>make original-drift</code> compares the original/base production and test layer with <code>a186465...</code>. New drift must either move behind Core/MagLev extensions or be accepted by deliberately moving the baseline.</p>
   <h2>Recommended Entry Points</h2>
   <pre><code>make help
 make original-drift

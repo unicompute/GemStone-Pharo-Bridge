@@ -98,7 +98,7 @@ GbsSessionMaterializer >> materializationLimitFromGlobal: globalSymbol environme
 	raw := Smalltalk globals
 		at: globalSymbol
 		ifAbsent: [
-			env := [ Smalltalk os environment ]
+			env := [ OSEnvironment current ]
 				on: Error
 				do: [ Dictionary new ].
 			env at: environmentName ifAbsent: [ defaultValue ] ].

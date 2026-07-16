@@ -3,7 +3,7 @@ set -euo pipefail
 
 . "$(dirname "$0")/lane_common.sh"
 
-BASE_SHA="${1:-f2c8c23d4f72dbfe47ae4092a9536e48c6d9789f}"
+BASE_SHA="${1:-a1864654ac0e6001f240a738d6f092de8e8f9764}"
 JSON_SUMMARY="${GBS_JSON_SUMMARY:-0}"
 RESULT="FAIL"
 CODE="ORIGINAL_DRIFT_FAILED"

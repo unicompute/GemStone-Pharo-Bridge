@@ -65,7 +65,7 @@ GbsLiveSessionTestSupport class >> envAt: key ifAbsent: aBlock [
 
 { #category : 'private' }
 GbsLiveSessionTestSupport class >> osEnvironment [
-	^ [ Smalltalk os environment ]
+	^ [ OSEnvironment current ]
 		on: Error
 		do: [ [ OSEnvironment current ]
 			on: Error

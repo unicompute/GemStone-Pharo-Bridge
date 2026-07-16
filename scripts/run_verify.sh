@@ -3,9 +3,9 @@ set -euo pipefail
 
 . "$(dirname "$0")/lane_common.sh"
 
-VM="${PHARO_VM:-/Users/tariq/Documents/Pharo/vms/130-x64/Pharo.app/Contents/MacOS/Pharo}"
-PHARO_IMAGE="${1:-/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image}"
-PHARO_WORK_DIR="${2:-/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean}"
+VM="${PHARO_VM:-/Users/tariq/Documents/Pharo/vms/140-x64/Pharo.app/Contents/MacOS/Pharo}"
+PHARO_IMAGE="${1:-/Users/tariq/Documents/Pharo/images/Pharo 14.0 - clean/Pharo 14.0 - clean.image}"
+PHARO_WORK_DIR="${2:-/Users/tariq/Documents/Pharo/images/Pharo 14.0 - clean}"
 JSON_SUMMARY="${GBS_JSON_SUMMARY:-0}"
 
 extract_summary_field() {

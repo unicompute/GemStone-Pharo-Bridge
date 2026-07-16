@@ -250,7 +250,7 @@ GbsMaterializationTraversalBufferReader >> traversalBufferBytes [
 	raw := Smalltalk globals
 		at: #GbsMaterializationTraversalBufferBytes
 		ifAbsent: [
-			env := [ Smalltalk os environment ]
+			env := [ OSEnvironment current ]
 				on: Error
 				do: [ Dictionary new ].
 			env

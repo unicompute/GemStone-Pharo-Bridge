@@ -63,7 +63,7 @@ GemStonePharoReloadBootstrapper >> collectClassNamesToForceRemoveFromPackagesNam
 
 { #category : 'private' }
 GemStonePharoReloadBootstrapper >> environment [
-	^ environment ifNil: [ Smalltalk os environment ]
+	^ environment ifNil: [ OSEnvironment current ]
 ]
 
 { #category : 'private' }

@@ -1,7 +1,7 @@
 .PHONY: help core-only original original-tests bootstrap-smoke full live-env-check live-debugger debugger-perf materialization-perf replication-live lane-preflight-tests regression-gates verify graph-artifacts artifact-freshness original-drift maglev-doc-pdfs
 
-PHARO_IMAGE ?= /Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image
-PHARO_WORK_DIR ?= /Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean
+PHARO_IMAGE ?= /Users/tariq/Documents/Pharo/images/Pharo 14.0 - clean/Pharo 14.0 - clean.image
+PHARO_WORK_DIR ?= /Users/tariq/Documents/Pharo/images/Pharo 14.0 - clean
 
 help:
 	@printf "%s\n" \
@@ -58,7 +58,7 @@ help:
 		"    Verify that generated contract artifacts in doc/ are up to date." \
 		"" \
 		"  make original-drift" \
-		"    Show the remaining drift in the original package roots relative to f2c8c23." \
+		"    Show the remaining drift in the original package roots relative to a186465." \
 		"" \
 		"Variables:" \
 		"  PHARO_IMAGE=$(PHARO_IMAGE)" \

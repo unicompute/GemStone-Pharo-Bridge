@@ -14,12 +14,12 @@ Class {
 
 { #category : 'instance creation' }
 GemStonePharoVerifyRunner class >> defaultSourceImagePath [
-	^ '/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean/Pharo 13.0 - clean.image'
+	^ '/Users/tariq/Documents/Pharo/images/Pharo 14.0 - clean/Pharo 14.0 - clean.image'
 ]
 
 { #category : 'instance creation' }
 GemStonePharoVerifyRunner class >> defaultWorkDirectoryPath [
-	^ '/Users/tariq/Documents/Pharo/images/Pharo 13.0 - clean'
+	^ '/Users/tariq/Documents/Pharo/images/Pharo 14.0 - clean'
 ]
 
 { #category : 'instance creation' }
@@ -134,7 +134,7 @@ GemStonePharoVerifyRunner >> emitSummaryResult: result code: code [
 
 { #category : 'private' }
 GemStonePharoVerifyRunner >> environment [
-	^ environment ifNil: [ Smalltalk os environment ]
+	^ environment ifNil: [ OSEnvironment current ]
 ]
 
 { #category : 'private' }

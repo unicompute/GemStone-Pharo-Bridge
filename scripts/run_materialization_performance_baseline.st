@@ -14,7 +14,7 @@
       show: 'MATERIALIZATION_PERF_BASELINE result=FAIL code=MATERIALIZATION_PERF_LOAD_FAILED array_ms=0 dictionary_ms=0 shallow_ms=0 array_size=0 dictionary_size=0 shallow_size=0';
       cr ] ifFalse: [
     [
-      env := [ Smalltalk os environment ]
+      env := [ OSEnvironment current ]
         on: Error
         do: [ Dictionary new ].
       integerEnv := [ :name :default |

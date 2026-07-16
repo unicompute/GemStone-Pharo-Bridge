@@ -8,7 +8,7 @@
 [ Metacello new baseline: 'GemStonePharo';
 	repository: 'tonel:///Users/tariq/src/gemtools/GemStone-Pharo-Bridge/src';
 	load: 'default' ] on: Error do: [ :ex | Transcript show: 'LOAD_ERROR: ', ex messageText; cr. Smalltalk snapshot: false andQuit: true ].
-env := [ Smalltalk os environment ] on: Error do: [ Dictionary new ].
+env := [ OSEnvironment current ] on: Error do: [ Dictionary new ].
 e2 := [ :keys :default | | v | v := default. keys do: [ :k | | raw | v = default ifTrue: [ raw := [ env at: k ifAbsent: [ nil ] ] on: Error do: [ nil ]. raw ifNotNil: [ raw := [ raw asString trimBoth ] on: Error do: [ '' ]. raw isEmpty ifFalse: [ v := raw ] ] ] ]. v ].
 stone := e2 value: #('GS_STONE') value: 'gs64stone'.
 user := e2 value: #('GS_USER' 'GS_USERNAME') value: ''.

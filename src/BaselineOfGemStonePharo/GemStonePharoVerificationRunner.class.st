@@ -149,7 +149,7 @@ GemStonePharoVerificationRunner >> emitFullSummaryResult: result code: code unit
 
 { #category : 'private' }
 GemStonePharoVerificationRunner >> environment [
-	^ environment ifNil: [ Smalltalk os environment ]
+	^ environment ifNil: [ OSEnvironment current ]
 ]
 
 { #category : 'private' }
@@ -275,7 +275,7 @@ GemStonePharoVerificationRunner >> defaultGciProbeOutput [
 		commandOutputForBashScript: (String streamContents: [ :stream |
 			stream
 				nextPutAll: 'VM=';
-				nextPutAll: (self shellQuoted: (self environmentAt: 'PHARO_VM' ifAbsent: [ '/Users/tariq/Documents/Pharo/vms/130-x64/Pharo.app/Contents/MacOS/Pharo' ]));
+				nextPutAll: (self shellQuoted: (self environmentAt: 'PHARO_VM' ifAbsent: [ '/Users/tariq/Documents/Pharo/vms/140-x64/Pharo.app/Contents/MacOS/Pharo' ]));
 				nextPutAll: '; WORK_IMAGE=';
 				nextPutAll: (self shellQuoted: self imagePath);
 				nextPutAll: '; GS_STONE=';

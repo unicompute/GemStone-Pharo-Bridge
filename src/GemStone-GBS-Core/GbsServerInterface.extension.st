@@ -322,7 +322,7 @@ GbsServerInterface >> releaseOops: oopCollection [
 { #category : '*GemStone-GBS-Core' }
 GbsServerInterface >> nativeGciTransportsEnabled [
 	| environment disabled |
-	environment := [ Smalltalk os environment ] on: Error do: [ nil ].
+	environment := [ OSEnvironment current ] on: Error do: [ nil ].
 	environment ifNil: [ ^ true ].
 	disabled := [ environment at: 'GBS_DISABLE_NATIVE_GCI_TRANSPORT' ifAbsent: [ '0' ] ]
 		on: Error
