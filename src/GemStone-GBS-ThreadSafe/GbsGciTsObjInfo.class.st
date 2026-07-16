@@ -29,10 +29,14 @@ Class {
 { #category : 'field definition' }
 GbsGciTsObjInfo class >> fieldsDesc [
 	"Field types govern only size/alignment; the accessors below apply the correct
-	signedness (objSize/namedSize are read signed). Pharo 13's FFI struct compiler
-	resolves uint64/int32/uint32/uint16 cleanly, but trips
-	(FFIInt64>>externalTypeAlignment subclassResponsibility) on the bare 'int64' and
-	'int' type names, so use uint64 (8 bytes) and int32 (4 bytes) here."
+	signedness (objSize/namedSize are read signed). Historical note: the bare
+	'int64' type name used to trip FFIInt64>>externalTypeAlignment
+	subclassResponsibility -- NOT a Pharo limitation, but the incomplete FFIInt64
+	shadow class the GemStone-GBS-Converted package carried, which silently
+	REPLACED UnifiedFFI's real FFIInt64 image-wide (it also broke Iceberg's
+	libgit structs, found on the Pharo 14 upgrade 2026-07-16). That shadow class
+	is deleted; uint64/int32 stay here because they are correct for
+	size/alignment and proven in production."
 	^ #(
 		OopType objId;
 		OopType objClass;
