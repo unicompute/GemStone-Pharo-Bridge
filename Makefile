@@ -1,4 +1,4 @@
-.PHONY: help core-only original original-tests bootstrap-smoke full live-env-check live-debugger debugger-perf materialization-perf replication-live lane-preflight-tests regression-gates verify graph-artifacts artifact-freshness original-drift maglev-doc-pdfs
+.PHONY: help core-only original original-tests bootstrap-smoke full live-env-check live-debugger debugger-perf materialization-perf replication-live lane-preflight-tests regression-gates verify graph-artifacts artifact-freshness original-drift maglev-doc-pdfs test-bridge
 
 PHARO_IMAGE ?= /Users/tariq/Documents/Pharo/images/Pharo 14.0 - clean/Pharo 14.0 - clean.image
 PHARO_WORK_DIR ?= /Users/tariq/Documents/Pharo/images/Pharo 14.0 - clean
@@ -60,6 +60,9 @@ help:
 		"  make original-drift" \
 		"    Show the remaining drift in the original package roots relative to a186465." \
 		"" \
+		"  make test-bridge" \
+		"    Run the worker-fault live suites (stale reuse, gem death, login churn, typed errors) on both session paths against the live stone." \
+		"" \
 		"Variables:" \
 		"  PHARO_IMAGE=$(PHARO_IMAGE)" \
 		"  PHARO_WORK_DIR=$(PHARO_WORK_DIR)" \
@@ -110,6 +113,9 @@ verify:
 	bash ./scripts/test_lane_common_preflight.sh
 	bash ./scripts/check_bridge_regression_gates.sh
 	bash ./scripts/run_verify.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
+
+test-bridge:
+	bash ./scripts/run_worker_fault_live.sh "$(PHARO_IMAGE)"
 
 graph-artifacts:
 	bash ./scripts/run_generate_contract_artifacts.sh "$(PHARO_IMAGE)" "$(PHARO_WORK_DIR)"
