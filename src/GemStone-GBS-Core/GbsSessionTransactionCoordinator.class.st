@@ -45,10 +45,18 @@ GbsSessionTransactionCoordinator >> abortTransaction [
 
 { #category : 'transactions' }
 GbsSessionTransactionCoordinator >> drainPendingAbortError [
+	"Draining must never fail the abort -- but it must never DISCARD silently
+	 either: the drained error is often the first symptom of a wedged session
+	 (OkZulu bridge audit 2026-07-17: post-abort errors vanished here while a
+	 degraded worker silently lost writes)."
 	(session respondsTo: #checkForError) ifFalse: [ ^ self ].
 	[ session checkForError ]
 		on: Error
-		do: [ :ex | nil ].
+		do: [ :ex |
+			[ Transcript cr; show: 'GBS drainPendingAbortError swallowed: ',
+				(([ ex messageText ifNil: [ ex printString ] ] on: Error do: [ :ignored2 | ex class name ]) asString) ]
+				on: Error
+				do: [ :ignored | nil ] ].
 	^ self
 ]
 

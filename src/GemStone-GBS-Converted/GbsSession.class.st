@@ -1787,3 +1787,14 @@ GbsSession >> validateReadyForExecution: script [
 	self isLoggedIn ifFalse: [
 		GbsError signal: 'Not logged in to GemStone.' ].
 ]
+
+{ #category : 'testing' }
+GbsSession >> passesLivenessProbe [
+	"True only when this session can complete a trivial round trip RIGHT NOW.
+	 The cached isLoggedIn/isConnected flags cannot detect a dead gem or a
+	 contaminated current-session slot (issues #15/#18; OkZulu audit
+	 2026-07-17: stale sessions passed isLoggedIn and failed on first real
+	 call). Cheap and side-effect free; embedders should call this at session
+	 hand-out, throttled."
+	^ [ (self evaluate: '6 * 7') = 42 ] on: Error do: [ :ignored | false ]
+]

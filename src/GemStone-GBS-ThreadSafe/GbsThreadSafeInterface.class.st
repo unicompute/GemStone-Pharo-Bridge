@@ -28,7 +28,8 @@ Class {
 	#instVars : [
 		'session',
 		'pendingReleaseOops',
-		'releaseQueueMutex'
+		'releaseQueueMutex',
+		'resolvedByteClassOops'
 	],
 	#classVars : [
 		'SessionRegistry',
@@ -761,9 +762,7 @@ GbsThreadSafeInterface >> fetchBytesForOop: anOop tracker: tracker gsError: gsEr
 	classOop := objInfo objClass.
 	classOop = 0 ifTrue: [
 		^ GbsError signal: 'Thread-safe GCI read access denied for result object.' ].
-	(classOop == self class oopClassString
-		or: [ classOop == self class oopClassByteArray
-		or: [ classOop == self class oopClassSymbol ] ]) ifFalse: [
+	(self byteResultClassOops includes: classOop) ifFalse: [
 		^ GbsUnsupportedThreadSafeResultError signal:
 			'Thread-safe GCI evaluate returned unsupported non-byte object class OOP '
 			, classOop asString
@@ -844,4 +843,29 @@ GbsThreadSafeInterface >> resultOopReleaseMutex [
 { #category : 'accessing' }
 GbsThreadSafeInterface >> session [
 	^ session
+]
+
+{ #category : 'constants' }
+GbsThreadSafeInterface >> byteResultClassOops [
+	"Class OOPs accepted as byte-object results by the dynamic transport.
+	 Resolved from the LIVE stone on first use: the hardcoded class-side
+	 constants (String=74753 etc.) are build-specific, so on a stone whose
+	 canonical OOPs differ every valid String result raised
+	 GbsUnsupportedThreadSafeResultError (OkZulu bridge audit 2026-07-17).
+	 The accepted set stays String/ByteArray/Symbol -- only the OOP values
+	 are resolved; per-name resolution is guarded and falls back to the
+	 constants so a resolution failure can never make things worse."
+	^ resolvedByteClassOops ifNil: [
+		| oops |
+		oops := Set new.
+		#('String' 'ByteArray' 'Symbol') do: [ :name |
+			[ oops add: (self executeScriptAndReturnOop: name) ]
+				on: Error
+				do: [ :ignored | nil ] ].
+		oops isEmpty ifTrue: [
+			oops
+				add: self class oopClassString;
+				add: self class oopClassByteArray;
+				add: self class oopClassSymbol ].
+		resolvedByteClassOops := oops ]
 ]

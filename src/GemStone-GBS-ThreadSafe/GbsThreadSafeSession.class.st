@@ -187,3 +187,12 @@ GbsThreadSafeSession >> requiresPreProxyResidentRepositorySymbolDispatch [
 
 	^ true
 ]
+
+{ #category : 'testing' }
+GbsThreadSafeSession >> passesLivenessProbe [
+	"True only when this session can complete a trivial round trip RIGHT NOW.
+	 isLoggedIn here is loggedInFlag AND interface session notNil -- neither
+	 detects a dead gem (OkZulu audit 2026-07-17). Cheap round trip; embedders
+	 call this at session hand-out, throttled."
+	^ [ (self evaluate: '6 * 7') = 42 ] on: Error do: [ :ignored | false ]
+]
