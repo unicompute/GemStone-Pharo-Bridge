@@ -932,15 +932,32 @@ GbsSession >> handleGemStoneErrorNumber: anErrorNumber messageText: anErrorMessa
 		ifFalse: [ aContextOop ]).
 	(debugOop isNil or: [ debugOop = 0 ]) ifTrue: [ debugOop := 20 ].
 
-	gbsError := GbsError new
+	gbsError := (self gbsErrorClassForNumber: anErrorNumber) new
 		messageText: anErrorMessage;
 		tag: debugOop;
 		serverProcessOop: aContextOop;
 		exceptionOop: anExceptionOop;
 		yourself.
+	gbsError gemStoneErrorNumber: anErrorNumber.
 	gbsError gemStoneExceptionProxy: nil.
 	gbsError signal
 ]
+
+{ #category : 'error handling' }
+GbsSession >> gbsErrorClassForNumber: anErrorNumber [
+	"Typed dispatch for the GemStone error numbers embedders branch on
+	 (audit 2026-07-17: 29 typed error classes existed but were never
+	 raised, forcing substring classification downstream). Every class
+	 answered here is a GbsError subclass so the tag/serverProcessOop/
+	 exceptionOop/gemStoneErrorNumber protocol is uniform; unknown numbers
+	 stay plain GbsError."
+	anErrorNumber = 2094 ifTrue: [ ^ GbsArgumentTypeError ].
+	anErrorNumber = 2003 ifTrue: [ ^ GbsOffsetError ].
+	anErrorNumber = 2010 ifTrue: [ ^ GbsMessageNotUnderstoodError ].
+	anErrorNumber = 4051 ifTrue: [ ^ GbsAuthenticationError ].
+	^ GbsError
+]
+
 
 { #category : 'error handling' }
 GbsSession >> handleObjectsCommittedNotificationMessage: anErrorMessage [

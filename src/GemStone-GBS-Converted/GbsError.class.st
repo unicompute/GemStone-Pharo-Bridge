@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'gemStoneExceptionProxy',
 		'serverProcessOop',
-		'exceptionOop'
+		'exceptionOop',
+		'gemStoneErrorNumber'
 	],
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'
@@ -152,4 +153,17 @@ GbsError >> serverProcessOop [
 GbsError >> serverProcessOop: anObject [
 
 	serverProcessOop := anObject
+]
+
+{ #category : 'accessing' }
+GbsError >> gemStoneErrorNumber [
+	"The GemStone error number this error was raised for, or nil when the
+	 error did not originate from a decoded GCI error struct. Lets embedders
+	 classify by NUMBER instead of parsing messageText (audit 2026-07-17)."
+	^ gemStoneErrorNumber
+]
+
+{ #category : 'accessing' }
+GbsError >> gemStoneErrorNumber: anIntegerOrNil [
+	gemStoneErrorNumber := anIntegerOrNil
 ]

@@ -56,3 +56,10 @@ GbsGciTsError >> reason [
 GbsGciTsError >> reason: anObject [
 	reason := anObject
 ]
+
+{ #category : 'accessing' }
+GbsGciTsError >> gemStoneErrorNumber [
+	"Uniform selector with GbsError>>gemStoneErrorNumber so embedders
+	 classify by number on BOTH client paths (audit 2026-07-17)."
+	^ number
+]

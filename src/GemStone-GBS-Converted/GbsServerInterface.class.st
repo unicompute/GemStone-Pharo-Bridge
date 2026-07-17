@@ -376,26 +376,6 @@ GbsServerInterface >> apiGciTsVersionInto: aBuffer size: bufSize [
         module: libraryPath
 ]
 
-{ #category : 'error handling' }
-GbsServerInterface >> checkError [
-	"Using your proven 2168-byte buffer logic!"
-	| buffer result errNum errMsg contextOop |
-	buffer := ExternalAddress allocate: 2168.
-	[
-		result := self apiGciErr: buffer.
-		(result = 1 or: [ result == true ]) ifTrue: [
-			errNum := buffer signedLongAt: 5.
-			errMsg := (buffer + 112) readString.
-			"Extract the context OOP from offset 8 (index 9) for debugger"
-			contextOop := buffer unsignedLongLongAt: 9.
-
-			"Signal the error to the UI! tag carries the context for debugger"
-			(GbsError new messageText: errMsg; tag: contextOop) signal.
-		].
-	] ensure: [
-		buffer free
-	].
-]
 
 { #category : 'error handling' }
 GbsServerInterface >> checkForError [
@@ -425,32 +405,7 @@ GbsServerInterface >> checkForError [
 	^ nil
 ]
 
-{ #category : 'as yet unclassified' }
-GbsServerInterface >> checkGciError [
-    | buffer errNum |
-    buffer := ExternalAddress allocate: 2168.
-    [
-        (self apiGciErr: buffer) ifTrue: [
-            errNum := buffer signedLongAt: 5. 
-            Transcript cr; show: '>>> GCI ERROR ', errNum printString, ': ', (buffer + 112) readString.
-        ]
-    ] ensure: [ buffer free ]
-]
 
-{ #category : 'api - errors' }
-GbsServerInterface >> checkGciError: anInterface [
-
-  | buffer errNum |
-  buffer := ExternalAddress allocate: 2168.
-  [
-    ( anInterface apiGciErr: buffer ) ifTrue: [
-        errNum := buffer signedLongAt: 5. "Pharo offset for 32-bit error number"
-        Transcript
-          show: '>>> ERROR ' , errNum printString , ': ';
-          show: ( buffer + 112 ) readString
-        ]
-    ] ensure: [ buffer free ]
-]
 
 { #category : 'execution' }
 GbsServerInterface >> execute: aString inSession: aSessionId [
