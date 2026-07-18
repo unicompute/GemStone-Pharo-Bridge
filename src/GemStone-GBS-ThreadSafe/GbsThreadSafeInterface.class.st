@@ -591,6 +591,53 @@ GbsThreadSafeInterface >> getNbCallStatusWithMaxDelay: delayMs [
 ]
 
 { #category : 'execution (nonblocking)' }
+GbsThreadSafeInterface >> executeAndFetchStringDynamicNb: sourceString timeoutMs: timeoutMs [
+	"P3 (performance plan): execute via GciTsNbExecute and AWAIT completion in a
+	yielding poll loop -- the calling green thread sleeps between polls, so OTHER
+	Pharo processes (other pooled sessions' calls) run concurrently instead of
+	blocking the whole VM behind one FFI call (measured: two 1s server sleeps
+	complete in ~1s wall, linked and RPC). On deadline the session is TERMINATED
+	(hard logout -- there is no safe way to keep a session whose call is still
+	running server-side) and GbsNonblockingTimeoutError raises; the caller's
+	discard/replace machinery takes over. Result fetch uses the same dynamic
+	buffer sizing as executeAndFetchStringDynamic."
+	| startMs elapsedMs tracker gsError resultOop local |
+	self assertLoggedIn.
+	self executeStringNb: sourceString.
+	startMs := Time millisecondClockValue.
+	[ self getNbCallStatusWithMaxDelay: 0 ] whileFalse: [
+		elapsedMs := Time millisecondClockValue - startMs.
+		elapsedMs >= timeoutMs ifTrue: [
+			[ self logoutNoError ] on: Error do: [ :ignored | ].
+			^ GbsNonblockingTimeoutError
+				signalAfterMilliseconds: elapsedMs
+				timeoutMilliseconds: timeoutMs ].
+		(Delay forMilliseconds: 2) wait ].
+	tracker := GbsMemoryTracker new.
+	^ [
+		gsError := tracker add: GbsGciErrSType externalNew.
+		resultOop := self ffiDo: [ self gciTsNbResult: session gsError: gsError getHandle ].
+		resultOop == self class oopIllegal ifTrue: [
+			^ GbsGciTsError signalForError: gsError tracker: tracker ].
+		resultOop == self class oopNil ifTrue: [ ^ nil ].
+		local := self class asLocalObject: resultOop.
+		local == Object ifFalse: [ ^ local ].
+		self fetchBytesForOop: resultOop tracker: tracker gsError: gsError ]
+		ensure: [ tracker freeAll ]
+]
+
+{ #category : 'execution (nonblocking)' }
+GbsThreadSafeInterface >> logoutNoError [
+	"Best-effort logout for deadline enforcement: the gem may still be busy
+	running the abandoned call, so errors here carry no information."
+	| tracker gsError |
+	tracker := GbsMemoryTracker new.
+	gsError := tracker add: GbsGciErrSType externalNew.
+	[ self ffiDo: [ self gciTsLogout: session gsError: gsError getHandle ] ]
+		ensure: [ tracker freeAll ]
+]
+
+{ #category : 'execution (nonblocking)' }
 GbsThreadSafeInterface >> blockAndFetchNbResult [
 	"Block until a previously-started non-blocking execute completes, then return its
 	result (Boolean / SmallInteger / nil for immediates, or a String / Symbol /

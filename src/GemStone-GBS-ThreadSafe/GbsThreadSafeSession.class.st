@@ -30,7 +30,8 @@ Class {
 		'sessionParameters',
 		'loggedInFlag',
 		'localSessionOop',
-		'localSessionId'
+		'localSessionId',
+		'nonblockingTimeoutMs'
 	],
 	#category : 'GemStone-GBS-ThreadSafe',
 	#package : 'GemStone-GBS-ThreadSafe'
@@ -58,6 +59,31 @@ GbsThreadSafeSession >> initializeDefaults [
 	localSessionOop := nil
 ]
 
+{ #category : 'accessing' }
+GbsThreadSafeSession >> nonblockingTimeoutMs [
+	"Per-call deadline in milliseconds. nil (default) = the classic blocking
+	FFI path. When set, evaluate/evaluateAndFetchString run via the
+	nonblocking await path: concurrent calls on OTHER sessions overlap, and a
+	call exceeding the deadline terminates THIS session and raises
+	GbsNonblockingTimeoutError."
+	^ nonblockingTimeoutMs
+]
+
+{ #category : 'accessing' }
+GbsThreadSafeSession >> nonblockingTimeoutMs: anIntegerOrNil [
+	nonblockingTimeoutMs := anIntegerOrNil
+]
+
+{ #category : 'private' }
+GbsThreadSafeSession >> execute: aString onInterface: iface [
+	nonblockingTimeoutMs ifNil: [ ^ iface executeAndFetchStringDynamic: aString ].
+	^ [ iface executeAndFetchStringDynamicNb: aString timeoutMs: nonblockingTimeoutMs ]
+		on: GbsNonblockingTimeoutError
+		do: [ :timeoutError |
+			loggedInFlag := false.
+			timeoutError pass ]
+]
+
 { #category : 'private' }
 GbsThreadSafeSession >> interface [
 	"The thread-safe GCI interface bound to this session's parameters."
@@ -74,7 +100,7 @@ GbsThreadSafeSession >> evaluateAndFetchString: aString [
 
 	^ self interface
 		ifNil: [ self error: 'thread-safe session is not logged in' ]
-		ifNotNil: [ :iface | iface executeAndFetchStringDynamic: aString ]
+		ifNotNil: [ :iface | self execute: aString onInterface: iface ]
 ]
 
 { #category : 'evaluating' }
@@ -88,7 +114,7 @@ GbsThreadSafeSession >> evaluate: aString [
 
 	^ self interface
 		ifNil: [ self error: 'thread-safe session is not logged in' ]
-		ifNotNil: [ :iface | iface executeAndFetchStringDynamic: aString ]
+		ifNotNil: [ :iface | self execute: aString onInterface: iface ]
 ]
 
 { #category : 'transactions' }

@@ -161,3 +161,57 @@ GbsWorkerFaultLiveTest >> testTypedErrorNumbersSurfaceOnThreadSafePath [
 			self assert: ((ex respondsTo: #gemStoneErrorNumber)
 				and: [ ex gemStoneErrorNumber = 2003 ]) ]
 ]
+
+{ #category : 'integration tests' }
+GbsWorkerFaultLiveTest >> testNonblockingEvaluateOverlapsAcrossSessions [
+	"P3: with nonblockingTimeoutMs set, calls on DIFFERENT sessions overlap --
+	 the poll loop yields the VM instead of blocking it behind one FFI call.
+	 Two 1s server sleeps must complete in well under 2s wall."
+	| s1 s2 t0 elapsed results semaphore |
+	s1 := self newLiveSession.
+	s2 := self newLiveSession.
+	s1 nonblockingTimeoutMs: 10000.
+	s2 nonblockingTimeoutMs: 10000.
+	results := Array new: 2.
+	semaphore := Semaphore new.
+	t0 := Time millisecondClockValue.
+	[ results at: 1 put: (s1 evaluate: 'System sleep: 1. ''a'''). semaphore signal ] fork.
+	[ results at: 2 put: (s2 evaluate: 'System sleep: 1. ''b'''). semaphore signal ] fork.
+	semaphore wait; wait.
+	elapsed := Time millisecondClockValue - t0.
+	self assert: (results at: 1) equals: 'a'.
+	self assert: (results at: 2) equals: 'b'.
+	self assert: elapsed < 1800 description: 'expected overlap, got serial: ', elapsed printString, 'ms'
+]
+
+{ #category : 'integration tests' }
+GbsWorkerFaultLiveTest >> testNonblockingEvaluateDeadlineKillsSessionAndSignalsTyped [
+	"P3: a call that blows its deadline raises GbsNonblockingTimeoutError,
+	 the session is terminated (a busy gem cannot be safely reused), and
+	 SIBLING sessions are untouched."
+	| victim sibling raised |
+	victim := self newLiveSession.
+	sibling := self newLiveSession.
+	victim nonblockingTimeoutMs: 500.
+	raised := false.
+	[ victim evaluate: '| n | n := 0. [ true ] whileTrue: [ n := n + 1 ]' ]
+		on: GbsNonblockingTimeoutError
+		do: [ :timeoutError |
+			raised := true.
+			self assert: timeoutError timeoutMilliseconds equals: 500 ].
+	self assert: raised.
+	self deny: ([ victim isLoggedIn ] on: Error do: [ :ignored | false ]).
+	self assert: (sibling evaluate: '2+3') equals: 5
+]
+
+{ #category : 'integration tests' }
+GbsWorkerFaultLiveTest >> testNonblockingEvaluateFetchesLargeResult [
+	"P3: the Nb result path uses the same dynamic buffer sizing as the
+	 blocking path -- envelope-sized results come back intact."
+	| session result |
+	session := self newLiveSession.
+	session nonblockingTimeoutMs: 10000.
+	result := session evaluate: 'String new: 100000 withAll: $x'.
+	self assert: result size equals: 100000.
+	self assert: (result allSatisfy: [ :char | char = $x ])
+]
