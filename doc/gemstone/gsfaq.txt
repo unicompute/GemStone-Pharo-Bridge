@@ -1,0 +1,502 @@
+29/12/2025, 18:00                                                  GemStone FAQ (v.1.0)
+
+    faqs.org                                                                                Search the FAQ Archives
+                                                                                                               Search FAQs
+           Like 411                            GemStone FAQ (v.1.0) 3 - A - B - C - D - E - F - G - H - I - J - K - L - M
+  Font: Monospace                                                                         N-O-P-Q-R-S-T-U-V-W-X-Y-Z
+                                                   [ Usenet FAQs | Web FAQs |
+
+                                               Documents | RFC Index | Houses ]
+
+          Archive-name: databases/GemStone-FAQ
+          Posting-Frequency: monthly
+          Last-modified: Oct 26,1997
+          Version: 1.0
+          URL: http://www.ipass.net/~vmalik/gemstone.html
+
+
+          View all headers
+
+                       See reader questions & answers on this topic! - Help others by sharing your knowledge
+
+        ____________________________________________________________________________
+
+
+        GemStone Frequently Asked Questions
+        Copyright =A9 1994 Vikas Malik
+        All Rights Reserved
+
+
+        This FAQ may be posted to any USENET newsgroup, on-line service, or BBS
+        as long as it is posted in its entirety and includes this copyright=
+         statement.
+
+
+        This FAQ may not be distributed for financial gain.
+
+
+        This FAQ may not be included in commercial collections or compilations
+        without express permission from the author.
+        ____________________________________________________________________________
+
+
+        Vikas Malik - vmalik@ipass.net
+        Knowledge Systems Corporation
+        ____________________________________________________________________________
+
+
+        Contents
+
+
+        Q. What is GemStone?=20
+        Q. How do I spell GemStone?
+        Q. What is the Stone?
+        Q. What is a Gem?
+        Q. What is a Repository?
+        Q. What is the difference between a linked and RPC application?
+        Q. What is GemBuilder?
+        Q. What is GBSM?
+        Q. How do I log into GemStone programmatically?
+        Q. What are the two different types of transaction modes in GemStone?
+        Q. What is a connector?
+        Q. What are the different kinds of connectors?
+        Q. What is the difference between a global connector and a session=
+
+www.faqs.org/faqs/databases/GemStone-FAQ/                                                                                    1/8
+29/12/2025, 18:00                                               GemStone FAQ (v.1.0)
+         connector?
+        Q. Do I need to define a connector for every object in my application?
+        Q. What is a root object?
+        Q    What is a symbol list?
+        Q. What are the names of default symbol dictionaries of a GemStone user?
+        Q. How do I invoke a debugger in GemStone?
+        Q. What is the difference between the terms faulting and flushing?
+        Q. How do I remotely excute code in GemStone from Smalltalk side?
+        Q. What is a forwarder?
+        Q. How do I create a forwarder?
+        Q. What is the difference in results of sending the following messages to a=
+        =20
+        forwarder?
+              aGSForwarder            name   and    aGSForwarder       fwname
+        Q. What is a replicate?
+        Q. What is a stub?
+        Q. How do I control the number of levels to replicate when updating an=
+         object=20
+        from GemStone to Smalltalk?
+        Q. How do I unstub a stub?
+        Q. Can I pass a stub as an argument to a primitive method?
+        Q. How do I ensure that an object is never replicated to contain a stub down=
+         to=20
+        a certain level?
+        Q. How do I convert a replicate into a stub?
+        Q. What is the result of sending a message to a stub?
+        Q. What is the difference between lazy and immediate fault policy?
+        Q. What do I mean by class history of a GemStone class?
+        Q. How do I remove a version of GemStone class?
+        Q. How do I find the latest version of a GemStone class?
+        Q. How do I migrate all the instances of a class to its latest version?
+        Q. How do I remove all the old versions of a class?
+        Q. What is the difference between the results of sending #asLocalObject and=
+        =20
+        #asLocalObjectCopy messages to             aGSObject?
+        Q. How do I mark a Smalltalk object as dirty?
+        Q. How do I mark objects dirty automatically without sending #markDirty in=
+        =20
+        setter methods?
+
+
+
+        Q. What is GemStone?
+        Ans. GemStone is an Object- Oriented database.
+
+
+        Q. How do I spell GemStone?
+        Ans. GemStone is always spelled with upper case S. Some smart recruiters=
+         will=20
+        look for upper case S in your resume.
+
+
+        Q. What is the Stone?
+        Ans. The stone process handles locking and concurrent access to objects in=
+         the=20
+        repository. Each repository is monitored by a single stone.
+
+
+www.faqs.org/faqs/databases/GemStone-FAQ/                                               2/8
+29/12/2025, 18:00                                          GemStone FAQ (v.1.0)
+        Q. What is a Gem?
+        Ans. Gem is the object server for user application. The Gem reads the
+        repository=20
+        as the application accesses objects, and it updates the repository when an
+        application=20
+        commits a transaction. A repository can have more than one Gem process.
+
+
+        Q. What is a Repository?
+        Ans. Repository stores GemStone classes and persistent objects.
+
+
+        Q. What is the difference between a linked and RPC application?
+        Ans. In a linked application, Gem is integarted with the application into a
+        single=20
+        process whereas in a RPC application, Gem runs as a separate process and
+        responds=20
+        to RPCs from the application.
+
+
+        Q. What is GemBuilder?
+        Ans. GemBuilder is a set of classes and primitives installed in client
+        smalltalk=20
+        image to facilitate working with the two object spaces (Smalltalk-Client &=
+        =20
+        GemStone-Server).=20
+
+
+        Q. What is GBSM?
+        Ans. GBSM is global that refers to the sole instance of GbsSessionManager
+        class.=20
+        GBSM manages all known GemStone sessions and keeps track of the current=
+         session.
+
+
+        Q. How do I log into GemStone programmatically?
+        Ans.        GBSM       loginWithParameters: aGbsSessionParameters.
+               or
+               aGbsSessionParameters login.
+
+
+        Q. What are the two different types of transaction modes in GemStone?
+        Ans. 1. Automatic transaction mode: A new transaction begins automatically=
+         when=20
+        one commits or aborts a transaction.
+        2. Manual transaction mode: Transactions begin as a result of explicit=
+         request.
+
+
+        Q. What is a connector?
+        Ans. A connector connects a GemStone object and a client smalltalk object
+        when a=20
+        session logs in to the database.
+
+
+        Q. What are the different kinds of connectors?
+        Ans. 1. Name connector connects a smalltalk object with a GemStone object=
+         based=20
+        on their names (which can be different).
+        2. Fast connector keeps a direct reference to a smalltalk object and a=
+         GemStone=20
+        object id. This makes the connection fast because no resolution is=
+www.faqs.org/faqs/databases/GemStone-FAQ/                                             3/8
+29/12/2025, 18:00                                                GemStone FAQ (v.1.0)
+         necessary.
+
+
+        Q. What is the difference between a global connector and a session=
+         connector?
+        Ans. A global connector connects two objects whenever any session is logged=
+         in=20
+        whereas a session connector connects two objects only when a specific=
+         session=20
+        is logged in.
+
+
+        Q. Do I need to define a connector for every object in my application?
+        Ans No, because a connector connects not only the immediate object but also=
+         all=20
+        those objects that can be reached from it. Define connectors for only the=
+         root=20
+        objects of the persistent subsystems.
+
+
+        Q.What is a root object?
+        Ans. Root objects of an application are the persistent objects from which=
+         all=20
+        other persistent objects can be reached. The most common kinds of root
+        objects are
+        (i) Global variables
+        (ii) Class variables
+        (iii) Class instance variables
+
+
+        Q What is a symbol list?
+        Ans. A symbol list is an array of symbol dictionaries. Symbol list is used=
+         in=20
+        compilation of GemStone code, in order to resolve references to objects by
+        name.=20
+        Each GemStone user has a symbol list. Only objects named in symbol=
+         dictionaries=20
+        in a user=92s symbol list are visible to that user.
+
+
+        Q. What are the names of default symbol dictionaries of a GemStone user?
+        Ans. Globals, UserGlobals, Published and UserClasses.
+
+
+        Q. How do I invoke a debugger in GemStone?
+        Ans. Insert            self pause.          in a GemStone method.
+
+
+        Q. What is the difference between the terms faulting and flushing?
+        Ans. The term faulting refers to moving modified GemStone objects into the
+        client=20
+        Smalltalk , either creating a client Smalltalk replicate or updating an
+        existing=20
+        replicate. The term flushing refers to moving modified client Smalltalk=
+         objects=20
+        into GemStone.
+
+
+        Q. How do I remotely excute code in GemStone from Smalltalk side?
+        Ans.        aGSSession              excute: aString
+               aString contains GemStone smalltalk code.
+
+
+www.faqs.org/faqs/databases/GemStone-FAQ/                                               4/8
+29/12/2025, 18:00                                                    GemStone FAQ (v.1.0)
+               aGSObject         remotePerform: aSelector.
+
+
+        Q. What is a forwarder?
+        Ans. A forwarder is a client smalltalk object whose state and behavior are
+        actually=20
+        in GemStone. The forwarder knows which GemStone object it represents, and
+        responds=20
+        to all messages by passing them to appropriate GemStone object. Forwarders=
+         are=20
+        implemented by class GSForwarder. Its gsObj instance variable points to the
+        proxy=20
+        representing the GemStone object.
+
+
+        GSForwarder implements #doesNotUnderstand: as following.
+        #doesNotUnderstand: aMessage
+
+
+               ^gsObj=20
+                     remotePerform: aMessage selector
+                     withArgs: aMessage arguments
+
+
+        Q. How do I create a forwarder?
+        Ans. 1. aGSConnector                 postConnectAction: #forwader
+        2.    aGSSession           fwat: anObject
+        3.    by implementing               class method #instancesAreForwarders to specify all
+        instances=20
+        of a class are forwarders.
+        4.    by sending #asForwarder message to an instance of GSObject class.
+
+
+        Q. What is the difference in results of sending the following messages to a
+        forwarder?
+               aGSForwarder           name          and    aGSForwarder     fwname.
+        Ans.        aGSForwarder             name     returns a replicate.
+                    aGSForwarder             fwname       returns a forwarder.
+
+
+        Q. What is a replicate?
+        Ans. A replicate is a Smalltalk copy of a GemStone object. Messages sent to=
+        =20
+        replicates require no communication with GemStone for processing.
+
+
+        Q. What is a stub?
+        Ans. A stub is an empty placeholder that knows nothing except which object=
+         it=20
+        represents in GemStone. It is implemented by GSObjectStub class.=20
+
+
+        Q. How do I control the number of levels to replicate when updating an=
+         object=20
+        from GemStone to Smalltalk?
+        Ans. By implementing #defaultGStoSTLevel method of GSSession class. A level=
+         of=20
+        0 means no limit, replicate the entire object. A level of 2 means retrieve=
+         root=20
+        object and each object it references . Objects at level 3 are converted into
+        stubs.
+
+
+www.faqs.org/faqs/databases/GemStone-FAQ/                                                         5/8
+29/12/2025, 18:00                                             GemStone FAQ (v.1.0)
+        Q. How do I unstub a stub?
+        Ans. By sending #fault message to a stub.
+
+
+        Q. Can I pass a stub as an argument to a primitive method?
+        Ans. No.
+
+
+        Q. How do I ensure that an object is never replicated to contain a stub down=
+         to=20
+        a certain level?
+        Ans. Implement class method #noStubLevel. Its return value should be an=
+         integer=20
+        specifying the number of levels to replicate.
+
+
+        Q. How do I convert a replicate into a stub?
+        Ans. By sending #stubYourself message to replicate.
+
+
+        Q. What is the result of sending a message to a stub?
+        Ans. It replicates the GemStone object it represents as a Smalltalk object,
+        then=20
+        become that object and forwards the message. GSObjectStub implements
+        #doesNotUnderstand:=20
+        as following.
+
+
+        #doesNotUnderstand: aMessage
+               ^self fault=20
+                      perform: aMessage selector
+                      withArguments: aMessage arguments.
+
+
+        Q. What is the difference between lazy and immediate fault policy?
+        Ans. In lazy faultPolicy a change initiated in GemStone causes Smalltalk
+        replicate=20
+        to be turned into a stub whereas in immediate faultPolicy a chage initiated
+        in GemStone=20
+        replicates        the client Smalltalk immediately.
+
+
+        Q. What do I mean by class history of a GemStone class?
+        Ans.        GemStone supports multiple versions of a class. It keeps track of=
+         these=20
+        versions in a class history object. Sending #classHistory message to a class=
+        =20
+        returns its class history.
+
+
+        Q. How do I remove a version of GemStone class?
+        Ans=20
+               aClassHistory          removeVersion: aClass
+
+
+        Q. How do I find the latest version of a GemStone class?
+        Ans     aClass classHistory last.
+
+
+        Q. How do I migrate all the instances of a class to its latest version?
+        Ans.        aClass migrateInstancesTo: aClass classHistory last.
+
+
+        Q. How do I remove all the old versions of a class?
+        Ans.=20
+www.faqs.org/faqs/databases/GemStone-FAQ/                                                6/8
+29/12/2025, 18:00                                                            GemStone FAQ (v.1.0)
+              1 to: ( aClass classHistory size - 1)
+                              do: [ :each |=20
+                                   aClass classHistory removeVersion: ( aClass classHistory at: each)].
+
+
+        Q. What is the difference between the results of sending #asLocalObject and=
+        =20
+        #asLocalObjectCopy messages to                        aGSObject?
+        Ans. #asLocalObject returns a replicate. #asLocalObjectCopy returns a local
+        deep=20
+        copy of the GemStone object repesented by the receiver. This resultant=
+         object=20
+        doesn=92t maintain the transparency between Smalltalk and GemStone.
+
+
+        Q. How do I mark a Smalltalk object as dirty?
+        Ans         anObject markDirty. It is generally included in the setter methods=
+         for=20
+        the object.=20
+
+
+        Q. How do I mark objects dirty automatically without sending #markDirty in=
+        =20
+        setter methods?
+        Ans           aClass       markDirtyOnInstVarAssign                 marks the objects of aClass dirty on=
+        =20
+        assignment of instance variables.
+              aClass          markDirtyOnAtPut               marks the objects of aClass dirty if they receive=
+        =20
+        #at:put: messages.
+        *********************************************************************
+
+
+                      _________
+                      \             \
+                       \              \                          ___        __
+                          \             \                        \    \    / |
+                          /\                \                     \    \/   |
+                      O/      \ *****       \____________            \ /    |
+                \ /       ############## ***+++^^^^^^^\                     \
+                    X **################***+++^^^^^^^ \                       \
+                / \       ############## ***+++^^^^^                       \___\
+                                / \              \                \o
+                              O/    \            \
+                                      \              \
+                                        \            \
+                                            \            \
+                                            \_______\            =20
+                                                                =20
+
+
+
+                      I'D      RATHER       BE   FLYING        !!!
+
+
+
+                User Contributions:
+
+
+
+www.faqs.org/faqs/databases/GemStone-FAQ/                                                                           7/8
+29/12/2025, 18:00                                                          GemStone FAQ (v.1.0)
+
+
+                    Comment about this article, ask questions, or add new information about this topic:
+
+
+                    Name:
+
+
+
+
+                    E-mail:
+
+
+
+                      Show my email publicly
+
+
+
+
+                    Public Comment: (50-4000 characters)
+
+
+
+
+                     ✍ Send comment
+
+
+                                                 Archived related questions and answers
+
+
+
+
+                                            [ Usenet FAQs | Web FAQs | Documents | RFC Index ]
+
+
+                                            Send corrections/additions to the FAQ Maintainer:
+                                                     vmalik@ipass.net (Vikas Malik)
+
+
+
+
+                                                  Last Update March 27 2014 @ 02:11 PM
+
+
+
+
+                                                  Some parts © 2025 Advameg, Inc. | Terms of Use
+
+
+
+
+www.faqs.org/faqs/databases/GemStone-FAQ/                                                                 8/8
+
