@@ -5,7 +5,8 @@ Class {
 		'gemStoneExceptionProxy',
 		'serverProcessOop',
 		'exceptionOop',
-		'gemStoneErrorNumber'
+		'gemStoneErrorNumber',
+		'gemStoneErrorArguments'
 	],
 	#category : 'GemStone-GBS-Converted',
 	#package : 'GemStone-GBS-Converted'
@@ -166,4 +167,16 @@ GbsError >> gemStoneErrorNumber [
 { #category : 'accessing' }
 GbsError >> gemStoneErrorNumber: anIntegerOrNil [
 	gemStoneErrorNumber := anIntegerOrNil
+]
+
+{ #category : 'accessing' }
+GbsError >> gemStoneErrorArguments [
+	"The immediate OOP arguments copied from GciErrSType, or an empty array
+	 when this error did not originate from a decoded GCI error struct."
+	^ gemStoneErrorArguments ifNil: [ #() ]
+]
+
+{ #category : 'accessing' }
+GbsError >> gemStoneErrorArguments: aSequenceableCollection [
+	gemStoneErrorArguments := aSequenceableCollection asArray
 ]

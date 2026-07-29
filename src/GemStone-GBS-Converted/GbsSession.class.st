@@ -346,13 +346,14 @@ GbsSession >> basicEvaluate: aString [
 
 { #category : 'error handling' }
 GbsSession >> checkAndClearError [
-	| buffer errMsg errNum contextOop exceptionOop |
+	| buffer errMsg errNum contextOop exceptionOop errorArguments |
 	buffer := ExternalAddress allocate: 2168.
 	[
 		self withActiveGciSessionDo: [
 			self serverInterface apiGciErr: buffer ].
 		contextOop := buffer unsignedLongLongAt: 9.
 		exceptionOop := buffer unsignedLongLongAt: 17.
+		errorArguments := self gemStoneErrorArgumentsFrom: buffer.
 		errNum := buffer signedLongAt: 105.
 		errMsg := (buffer + 113) readString.
 		^ self
@@ -360,12 +361,13 @@ GbsSession >> checkAndClearError [
 			messageText: errMsg
 			contextOop: contextOop
 			exceptionOop: exceptionOop
+			arguments: errorArguments
 	] ensure: [ buffer free ].
 ]
 
 { #category : 'error handling' }
 GbsSession >> checkForError [
-	| buffer result errNum errMsg contextOop exceptionOop |
+	| buffer result errNum errMsg contextOop exceptionOop errorArguments |
 	buffer := ExternalAddress allocate: 2168.
 	[
 		result := self withActiveGciSessionDo: [
@@ -374,12 +376,14 @@ GbsSession >> checkForError [
 			errNum := buffer signedLongAt: 105.
 			contextOop := buffer unsignedLongLongAt: 9.
 			exceptionOop := buffer unsignedLongLongAt: 17.
+			errorArguments := self gemStoneErrorArgumentsFrom: buffer.
 			errMsg := (buffer + 113) readString.
 			^ self
 				handleGemStoneErrorNumber: errNum
 				messageText: errMsg
 				contextOop: contextOop
-				exceptionOop: exceptionOop ].
+				exceptionOop: exceptionOop
+				arguments: errorArguments ].
 	] ensure: [
 		buffer free ].
 
@@ -841,7 +845,8 @@ GbsSession >> forwardRemoteMessage: aMessage forOop: targetOop [
 GbsSession >> gciAbort [
   "GbsSession >> gciAbort"
 
-  "Calls the C-library to abort the transaction. Returns 1 on success.
+  "Calls the C-library to abort the transaction and normalizes its void
+   GemBuilder result to the session API's historical 1-on-success contract.
 
    GciAbort() leaves GCI's per-process current session at 0 as a side effect, so
    the next withActiveGciSessionDo: would see GciSetSessionId_ fail and wrongly
@@ -849,10 +854,9 @@ GbsSession >> gciAbort [
    to restore the current-session invariant that withActiveGciSessionDo: relies on."
 
   ^ self withActiveGciSessionDo: [
-	  | result |
-	  result := self serverInterface apiGciAbortCurrent.
+	  self serverInterface apiGciAbortCurrent.
 	  self reactivateGciSessionAfterCurrentSessionReset.
-	  result ]
+	  1 ]
 ]
 
 { #category : 'private - session activation' }
@@ -897,7 +901,7 @@ GbsSession >> gciPollForSignal [
 
 { #category : 'error handling' }
 GbsSession >> handleGciError [
-	| buffer errMsg errNum contextOop exceptionOop |
+	| buffer errMsg errNum contextOop exceptionOop errorArguments |
 	buffer := ExternalAddress allocate: 2168.
 	[
 		self withActiveGciSessionDo: [
@@ -905,18 +909,30 @@ GbsSession >> handleGciError [
 		errNum := buffer signedLongAt: 105.
 		contextOop := buffer unsignedLongLongAt: 9.
 		exceptionOop := buffer unsignedLongLongAt: 17.
+		errorArguments := self gemStoneErrorArgumentsFrom: buffer.
 		errMsg := (buffer + 113) readString.
 		^ self
 			handleGemStoneErrorNumber: errNum
 			messageText: errMsg
 			contextOop: contextOop
 			exceptionOop: exceptionOop
+			arguments: errorArguments
 	] ensure: [ buffer free ].
 	^ nil
 ]
 
 { #category : 'error handling' }
 GbsSession >> handleGemStoneErrorNumber: anErrorNumber messageText: anErrorMessage contextOop: aContextOop exceptionOop: anExceptionOop [
+	^ self
+		handleGemStoneErrorNumber: anErrorNumber
+		messageText: anErrorMessage
+		contextOop: aContextOop
+		exceptionOop: anExceptionOop
+		arguments: #()
+]
+
+{ #category : 'error handling' }
+GbsSession >> handleGemStoneErrorNumber: anErrorNumber messageText: anErrorMessage contextOop: aContextOop exceptionOop: anExceptionOop arguments: errorArguments [
 	| debugOop gbsError |
 	(#(6008 2748) includes: anErrorNumber) ifTrue: [
 		^ self handleObjectsCommittedNotificationMessage: anErrorMessage ].
@@ -939,8 +955,17 @@ GbsSession >> handleGemStoneErrorNumber: anErrorNumber messageText: anErrorMessa
 		exceptionOop: anExceptionOop;
 		yourself.
 	gbsError gemStoneErrorNumber: anErrorNumber.
+	gbsError gemStoneErrorArguments: errorArguments.
 	gbsError gemStoneExceptionProxy: nil.
 	gbsError signal
+]
+
+{ #category : 'error handling' }
+GbsSession >> gemStoneErrorArgumentsFrom: errorBuffer [
+	| argumentCount |
+	argumentCount := ((errorBuffer signedLongAt: 109) max: 0) min: 10.
+	^ (1 to: argumentCount) collect: [ :index |
+		errorBuffer unsignedLongLongAt: 25 + ((index - 1) * 8) ]
 ]
 
 { #category : 'error handling' }

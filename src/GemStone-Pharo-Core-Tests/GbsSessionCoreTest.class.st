@@ -7554,6 +7554,78 @@ GbsSessionCoreTest >> testResetAfterLogoutClearsConvertedLifecycleRegistriesWhen
 ]
 
 { #category : 'tests' }
+GbsSessionCoreTest >> testGciAbortFfiUsesDocumentedVoidReturn [
+	| source |
+	source := (GbsServerInterface compiledMethodAt: #apiGciAbortCurrent) sourceCode.
+	self assert: (source includesSubstring: '#(void GciAbort())').
+	self deny: (source includesSubstring: '#(int GciAbort())')
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testGciAbortNormalizesVoidResultAndReactivatesSession [
+	| activeSession interface activatedIds abortCount result |
+	activeSession := GbsSession new.
+	interface := CoreMockGbsSession new.
+	activatedIds := OrderedCollection new.
+	abortCount := 0.
+	interface stubs
+		at: #apiGciSetSessionId put: [ :sessionId |
+			activatedIds add: sessionId.
+			1 ];
+		at: #apiGciAbortCurrent put: [
+			abortCount := abortCount + 1.
+			nil ].
+	activeSession
+		serverInterface: interface;
+		sessionId: 77;
+		sessionOop: 77;
+		isLoggedIn: true.
+
+	result := activeSession gciAbort.
+
+	self assert: result equals: 1.
+	self assert: abortCount equals: 1.
+	self
+		assert: activatedIds asArray
+		equals: #(77 77)
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testGemStoneErrorArgumentsReadDocumentedGciErrSTypeSlots [
+	| buffer |
+	buffer := ExternalAddress allocate: 2168.
+	[
+		buffer signedLongAt: 109 put: 2.
+		buffer unsignedLongLongAt: 25 put: 123456.
+		buffer unsignedLongLongAt: 33 put: 7.
+
+		self
+			assert: (GbsSession new gemStoneErrorArgumentsFrom: buffer)
+			equals: #(123456 7)
+	] ensure: [ buffer free ]
+]
+
+{ #category : 'tests' }
+GbsSessionCoreTest >> testTypedOffsetErrorCarriesGciArguments [
+	| raised |
+	raised := false.
+	[
+		GbsSession new
+			handleGemStoneErrorNumber: 2003
+			messageText: 'bad offset'
+			contextOop: 20
+			exceptionOop: 20
+			arguments: #(123456 7)
+	]
+		on: GbsOffsetError
+		do: [ :error |
+			raised := true.
+			self assert: error gemStoneErrorNumber equals: 2003.
+			self assert: error gemStoneErrorArguments equals: #(123456 7) ].
+	self assert: raised
+]
+
+{ #category : 'tests' }
 GbsSessionCoreTest >> testGciPollActivatesSessionIdBeforePolling [
 	| session interface activatedIds |
 	session := GbsSession new.

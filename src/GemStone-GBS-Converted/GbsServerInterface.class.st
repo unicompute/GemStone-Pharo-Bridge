@@ -65,7 +65,11 @@ GbsServerInterface >> apiGciAbort: aSessionId [
 
 { #category : 'api' }
 GbsServerInterface >> apiGciAbortCurrent [
-	^ self ffiCall: #(int GciAbort()) module: libraryPath options: #( + optNonThreaded )
+	"GemBuilder for C 3.7 declares GciAbort(void) as void: it always succeeds
+	 and generates no errors. Do not read an undefined integer return value."
+	^ self
+		ffiCall: #(void GciAbort())
+		module: libraryPath options: #( + optNonThreaded )
 ]
 
 { #category : 'api' }

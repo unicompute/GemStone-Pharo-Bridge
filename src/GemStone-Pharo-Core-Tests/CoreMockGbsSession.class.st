@@ -15,6 +15,13 @@ CoreMockGbsSession >> initialize [
 ]
 
 { #category : 'accessing' }
+CoreMockGbsSession >> apiGciAbortCurrent [
+	| block |
+	block := self stubs at: #apiGciAbortCurrent ifAbsent: [ nil ].
+	^ block ifNil: [ nil ] ifNotNil: [ block value ]
+]
+
+{ #category : 'accessing' }
 CoreMockGbsSession >> apiGciAllocTravBuf: byteCount [
 	| block |
 	block := self stubs at: #apiGciAllocTravBuf ifAbsent: [ nil ].
