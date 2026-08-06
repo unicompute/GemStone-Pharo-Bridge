@@ -445,7 +445,7 @@ GemStonePharoContract >> groupDescriptionSpecs [
 
 { #category : 'contracts' }
 GemStonePharoContract >> loadMatrixGroupNames [
-	^ #('Original' 'Original-Tests' 'Core' 'Core-Tools' 'Core-Tests' 'MagLev' 'MagLev-Tools' 'Full')
+	^ #('Original' 'Original-Tests' 'Core' 'Core-Tools' 'Core-Tests' 'MagLev' 'MagLev-Tools' 'ThreadSafe-Tools' 'Full')
 ]
 
 { #category : 'contracts' }

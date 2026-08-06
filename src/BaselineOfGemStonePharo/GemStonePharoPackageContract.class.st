@@ -108,6 +108,7 @@ GemStonePharoPackageContract >> groupMemberSpecs [
 		{ 'MagLev-Tools'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev' 'GemStone-GBS-MagLev-Tools') }.
 		{ 'MagLev'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev') }.
 		{ 'Tools'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools') }.
+		{ 'ThreadSafe-Tools'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-ThreadSafe') }.
 		{ 'All-Tests'. #('GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests' 'GemStone-Pharo-ThreadSafe-Tests') }.
 		{ 'Tests'. #('GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests' 'GemStone-Pharo-ThreadSafe-Tests') }.
 		{ 'Full'. #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-MagLev' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-MagLev-Tools' 'GemStone-GBS-ThreadSafe' 'GemStone-Pharo-Tests' 'GemStone-Pharo-Core-Tests' 'GemStone-Pharo-MagLev-Tests' 'GemStone-Pharo-ThreadSafe-Tests') }.
@@ -895,6 +896,7 @@ GemStonePharoPackageContract >> groupDescriptionSpecs [
 		'MagLev-Tools'. 'optional MagLev runtime plus MagLev-specific tool integration'.
 		'MagLev'. 'production MagLev runtime without debugger/tool UI packages'.
 		'Tools'. 'convenience alias for the generic tools-capable load'.
+		'ThreadSafe-Tools'. 'generic tools-capable load plus the thread-safe GciTs runtime'.
 		'All-Tests'. 'all active core and MagLev-aware test packages'.
 		'Tests'. 'convenience alias for all active core and MagLev-aware test packages'.
 		'Full'. 'full developer load'.

@@ -167,7 +167,7 @@ GemStonePharoContractTest >> testGeneratedUserManualReferenceHtmlDescribesBridge
 
 { #category : 'tests' }
 GemStonePharoContractTest >> testGroupMemberSpecsReflectCurrentLayeredGroupsAndExcludeRemovedLegacyGroups [
-	| groupNames defaultGroup fullGroup originalGroup originalTestsGroup |
+	| groupNames defaultGroup fullGroup originalGroup originalTestsGroup threadSafeToolsGroup |
 	groupNames := self contract groupMemberSpecs collect: [ :each | each first ].
 	originalGroup := self contract groupMemberSpecs
 		detect: [ :each | each first = 'Original' ].
@@ -177,14 +177,18 @@ GemStonePharoContractTest >> testGroupMemberSpecsReflectCurrentLayeredGroupsAndE
 		detect: [ :each | each first = 'default' ].
 	fullGroup := self contract groupMemberSpecs
 		detect: [ :each | each first = 'Full' ].
+	threadSafeToolsGroup := self contract groupMemberSpecs
+		detect: [ :each | each first = 'ThreadSafe-Tools' ].
 
 	self assert: (groupNames includes: 'Original').
 	self assert: (groupNames includes: 'Original-Tests').
+	self assert: (groupNames includes: 'ThreadSafe-Tools').
 	self deny: (groupNames includes: 'Compatibility').
 	self deny: (groupNames includes: 'Compatibility-Tests').
 	self deny: (groupNames includes: 'Retirement-Preview').
 	self assert: originalGroup second equals: #('GemStone-GBS-Converted' 'GemStone-GBS-Tools').
 	self assert: originalTestsGroup second equals: #('GemStone-GBS-Converted' 'GemStone-GBS-Tools' 'GemStone-Pharo-Tests').
+	self assert: threadSafeToolsGroup second equals: #('GemStone-GBS-Converted' 'GemStone-GBS-Core' 'GemStone-GBS-Tools' 'GemStone-GBS-Core-Tools' 'GemStone-GBS-ThreadSafe').
 	self deny: (defaultGroup second includes: 'GemStone-GBS-Compatibility').
 	self deny: (defaultGroup second includes: 'GemStone-Pharo-Compatibility-Tests').
 	self deny: (fullGroup second includes: 'GemStone-GBS-Compatibility').

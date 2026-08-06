@@ -11,6 +11,7 @@ Generated from `GemStonePharoContract` group and lane contracts.
 | `Core-Tests` | yes | no | yes | yes | yes | no | no | no | Smalltalk core, generic tool overlays, and the core-only test suite |
 | `MagLev` | yes | no | yes | no | no | yes | no | no | production MagLev runtime without debugger/tool UI packages |
 | `MagLev-Tools` | yes | no | yes | yes | no | yes | yes | no | optional MagLev runtime plus MagLev-specific tool integration |
+| `ThreadSafe-Tools` | yes | no | yes | yes | no | no | no | no | generic tools-capable load plus the thread-safe GciTs runtime |
 | `Full` | yes | yes | yes | yes | yes | yes | yes | yes | full developer load |
 
 ## Switch Recipes
