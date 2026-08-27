@@ -75,6 +75,20 @@ GbsSessionManagerCoreTest >> tearDown [
 ]
 
 { #category : 'tests' }
+GbsSessionManagerCoreTest >> testGBSMCurrentSessionIfNoneReturnsFallbackWhenNoSessionIsCurrent [
+	self assert: (GBSM currentSessionIfNone: [ #noSession ]) equals: #noSession
+]
+
+{ #category : 'tests' }
+GbsSessionManagerCoreTest >> testGBSMCurrentSessionIfNoneReturnsCurrentSessionWithoutEvaluatingFallback [
+	| mockSession |
+	mockSession := CoreMockGbsSession new.
+	GBSM currentSession: mockSession.
+
+	self assert: (GBSM currentSessionIfNone: [ self fail ]) == mockSession
+]
+
+{ #category : 'tests' }
 GbsSessionManagerCoreTest >> testGBSMRepositoryAndObjectSpaceDelegatesToCurrentSession [
 	| mockSession repository objectSpace |
 	mockSession := CoreMockGbsSession new.

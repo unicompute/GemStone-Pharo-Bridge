@@ -51,6 +51,13 @@ GBSM class >> currentSession [
 ]
 
 { #category : 'accessing' }
+GBSM class >> currentSessionIfNone: aBlock [
+	^ CurrentSession isNil
+		ifTrue: [ aBlock value ]
+		ifFalse: [ CurrentSession ]
+]
+
+{ #category : 'accessing' }
 GBSM class >> currentSession: aSession [
     CurrentSession := aSession.
 	GbsSessionParameters currentSession: aSession.
