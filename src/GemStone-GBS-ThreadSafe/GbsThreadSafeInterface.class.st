@@ -373,6 +373,18 @@ GbsThreadSafeInterface >> gciTsIsKindOfClass: sess object: obj class: aClass gsE
 ]
 
 { #category : 'ffi calls' }
+GbsThreadSafeInterface >> gciTsIsSubclassOfClass: sess class: aClass subclassOf: aSuperclass gsError: gsError [
+	"GCI 3.7.5: test a class object's inheritance relationship through the
+	explicit thread-safe session."
+	^ self ffiCall: #( int32 GciTsIsSubclassOfClass(
+			void *sess,
+			OopType aClass,
+			OopType aSuperclass,
+			GbsGciErrSType *gsError) )
+		module: self gsLibraryPath
+]
+
+{ #category : 'ffi calls' }
 GbsThreadSafeInterface >> gciTsNbExecute: sess sourceString: src sourceOop: srcOop contextObject: ctx symbolList: symList flags: flags envId: envId gsError: gsError [
 	"Start a non-blocking execute against this session's explicit pointer. Returns
 	immediately; the result is later collected with GciTsNbResult."
@@ -865,6 +877,15 @@ GbsThreadSafeInterface >> isByteResultOop: anOop classOop: classOop tracker: tra
 	(self byteResultClassOops includes: classOop) ifTrue: [ ^ true ].
 	isByteResult := false.
 	self byteResultClassOops do: [ :byteClassOop |
+		kindResult := self ffiDo: [ self
+			gciTsIsSubclassOfClass: session
+			class: classOop
+			subclassOf: byteClassOop
+			gsError: gsError getHandle ].
+		kindResult < 0 ifTrue: [
+			^ GbsGciTsError signalForError: gsError tracker: tracker ].
+		kindResult = 1 ifTrue: [ isByteResult := true ].
+		isByteResult ifTrue: [ ^ true ].
 		kindResult := self ffiDo: [ self
 			gciTsIsKindOfClass: session
 			object: anOop
