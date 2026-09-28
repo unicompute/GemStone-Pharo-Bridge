@@ -180,3 +180,20 @@ GbsError >> gemStoneErrorArguments [
 GbsError >> gemStoneErrorArguments: aSequenceableCollection [
 	gemStoneErrorArguments := aSequenceableCollection asArray
 ]
+
+{ #category : 'printing' }
+GbsError >> defaultDescription [
+	"GCI can supply messageText as a ByteArray. Exception>>defaultDescription
+	passes that object to a String stream, whose ByteString backing store rejects
+	integer bytes. Normalize the bounded diagnostic here so an error can cross
+	GCI without a second failure or an unbounded renderer."
+	| raw limit |
+	raw := [ self messageText ] on: Error do: [ nil ].
+	raw ifNil: [ ^ self class name asString ].
+	(raw isKindOf: ByteArray) ifTrue: [
+		limit := raw size min: 8192.
+		^ String streamContents: [ :stream |
+			1 to: limit do: [ :index |
+				stream nextPut: (Character value: (raw at: index)) ] ] ].
+	^ [ raw asString ] on: Error do: [ self class name asString ]
+]
