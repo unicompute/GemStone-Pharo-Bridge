@@ -359,6 +359,32 @@ GbsThreadSafeInterface >> gciTsFetchObjInfo: sess object: objId addToExportSet: 
 ]
 
 { #category : 'ffi calls' }
+GbsThreadSafeInterface >> gciTsIsKindOfClass: sess object: obj class: aClass gsError: gsError [
+	"GCI 3.7.5: test an object's class relationship through the explicit
+	thread-safe session. This is required for concrete GemStone subclasses of
+	String/ByteArray/Symbol, whose class OOP is not the base-class OOP returned
+	by the bridge's dynamic class lookup."
+	^ self ffiCall: #( int32 GciTsIsKindOfClass(
+			void *sess,
+			OopType obj,
+			OopType aClass,
+			GbsGciErrSType *gsError) )
+		module: self gsLibraryPath
+]
+
+{ #category : 'ffi calls' }
+GbsThreadSafeInterface >> gciTsIsSubclassOfClass: sess class: aClass subclassOf: aSuperclass gsError: gsError [
+	"GCI 3.7.5: test a class object's inheritance relationship through the
+	explicit thread-safe session."
+	^ self ffiCall: #( int32 GciTsIsSubclassOfClass(
+			void *sess,
+			OopType aClass,
+			OopType aSuperclass,
+			GbsGciErrSType *gsError) )
+		module: self gsLibraryPath
+]
+
+{ #category : 'ffi calls' }
 GbsThreadSafeInterface >> gciTsNbExecute: sess sourceString: src sourceOop: srcOop contextObject: ctx symbolList: symList flags: flags envId: envId gsError: gsError [
 	"Start a non-blocking execute against this session's explicit pointer. Returns
 	immediately; the result is later collected with GciTsNbResult."
@@ -809,7 +835,7 @@ GbsThreadSafeInterface >> fetchBytesForOop: anOop tracker: tracker gsError: gsEr
 	classOop := objInfo objClass.
 	classOop = 0 ifTrue: [
 		^ GbsError signal: 'Thread-safe GCI read access denied for result object.' ].
-	(self byteResultClassOops includes: classOop) ifFalse: [
+	(self isByteResultOop: anOop classOop: classOop tracker: tracker gsError: gsError) ifFalse: [
 		^ GbsUnsupportedThreadSafeResultError signal:
 			'Thread-safe GCI evaluate returned unsupported non-byte object class OOP '
 			, classOop asString
@@ -839,6 +865,36 @@ GbsThreadSafeInterface >> fetchBytesForOop: anOop tracker: tracker gsError: gsEr
 	classOop == self class oopClassSymbol ifTrue: [
 		^ (resultBuf asByteStringOfSize: requiredSize) asSymbol ].
 	^ resultBuf asByteStringOfSize: requiredSize
+]
+
+{ #category : 'private' }
+GbsThreadSafeInterface >> isByteResultOop: anOop classOop: classOop tracker: tracker gsError: gsError [
+	"Accept the resolved byte classes and their concrete GemStone subclasses.
+	The exact class check remains the fast path; the thread-safe GCI predicate is
+	used only for an otherwise unknown class OOP, so a legitimate String subclass
+	does not fail before its bytes can be materialized."
+	| kindResult isByteResult |
+	(self byteResultClassOops includes: classOop) ifTrue: [ ^ true ].
+	isByteResult := false.
+	self byteResultClassOops do: [ :byteClassOop |
+		kindResult := self ffiDo: [ self
+			gciTsIsSubclassOfClass: session
+			class: classOop
+			subclassOf: byteClassOop
+			gsError: gsError getHandle ].
+		kindResult < 0 ifTrue: [
+			^ GbsGciTsError signalForError: gsError tracker: tracker ].
+		kindResult = 1 ifTrue: [ isByteResult := true ].
+		isByteResult ifTrue: [ ^ true ].
+		kindResult := self ffiDo: [ self
+			gciTsIsKindOfClass: session
+			object: anOop
+			class: byteClassOop
+			gsError: gsError getHandle ].
+		kindResult < 0 ifTrue: [
+			^ GbsGciTsError signalForError: gsError tracker: tracker ].
+		kindResult = 1 ifTrue: [ isByteResult := true ] ].
+	^ isByteResult
 ]
 
 { #category : 'private' }

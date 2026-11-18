@@ -535,16 +535,7 @@ GbsSessionManager class >> initializeFastConnectors [
 
 { #category : '*GemStone-GBS-Core' }
 GbsSessionManager class >> newFastConnectorRegistry [
-	| registry |
-	registry := Dictionary new.
-	self globalFastConnectorsList do: [ :pair |
-		| clientClass serverClassName |
-		clientClass := Smalltalk globals at: pair first ifAbsent: [ nil ].
-		serverClassName := pair second.
-		clientClass ifNotNil: [
-			registry at: clientClass name put: serverClassName.
-			registry at: serverClassName put: clientClass name ] ].
-	^ registry
+	^ self registerGlobalConnectorsInto: Dictionary new
 ]
 
 { #category : '*GemStone-GBS-Core' }

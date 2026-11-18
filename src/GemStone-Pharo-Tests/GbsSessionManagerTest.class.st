@@ -424,3 +424,64 @@ GbsSessionManagerTest >> testInstanceConnectorDelegatesConnectionState [
 		server: 'ByteArray'
 		connectedInSession: 'DataCurator@gs64stone')
 ]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testVwGlobalConnectorListsAreAvailable [
+	#( #globalFastConnectorsList #clientSpecificGlobalConnectorsList
+	   #exceptionConnectorsList #globalClassConnectorsList ) do: [ :selector |
+		| list |
+		list := GbsSessionManager perform: selector.
+		self deny: list isEmpty.
+		list do: [ :pair |
+			self assert: pair size >= 2.
+			self assert: pair first isSymbol.
+			self assert: pair second isSymbol ].
+		self assert: (GBSM perform: selector) equals: list.
+		self assert: (GbsSessionManager new perform: selector) equals: list ].
+	self
+		assert: GbsSessionManager allGlobalConnectorsList size
+		equals: GbsSessionManager globalFastConnectorsList size
+			+ GbsSessionManager clientSpecificGlobalConnectorsList size
+			+ GbsSessionManager exceptionConnectorsList size
+			+ GbsSessionManager globalClassConnectorsList size
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testVwGlobalConnectorClientClassesExist [
+	| missing |
+	missing := GbsSessionManager allGlobalConnectorsList
+		reject: [ :pair | Smalltalk globals includesKey: pair first ].
+	self assert: missing isEmpty description: [ 'Missing client classes: ', missing printString ]
+]
+
+{ #category : 'tests' }
+GbsSessionManagerTest >> testInitializeFastConnectorsRegistersVwListsWithoutOverwriting [
+	| registry |
+	GbsSessionManager fastConnectorRegistry: Dictionary new.
+	GbsSessionManager initializeFastConnectors.
+	registry := GbsSessionManager fastConnectorRegistry.
+
+	"Established fast mappings still win"
+	self assert: (registry at: #String) equals: #ByteString.
+	self assert: (registry at: #ByteString) equals: #String.
+	self assert: (registry at: #WideString) equals: #DoubleByteString.
+	self assert: (registry at: #IdentitySet) equals: #IdentitySet.
+	self assert: (registry at: #IdentityDictionary) equals: #IdentityDictionary.
+
+	"VW fast-list additions"
+	self assert: (registry at: #GbxIdentityClampSet) equals: #IdentitySet.
+	self assert: (registry at: #IdentityKeyValueDictionary) equals: #IdentityDictionary.
+	self assert: (registry at: #Interval) equals: #Interval.
+	self assert: (registry at: #GbxExecBlock) equals: #ExecBlock.
+
+	"Client-specific list adds only the missing direction"
+	self assert: (registry at: #QuadByteString) equals: #WideString.
+	self assert: (registry at: #CharacterCollection) equals: #String.
+	self assert: (registry at: #ScaledDecimal) equals: #ScaledDecimal.
+
+	"Exception and class connector lists"
+	self assert: (registry at: #ZeroDivide) equals: #ZeroDivide.
+	self assert: (registry at: #NumericError) equals: #ArithmeticError.
+	self assert: (registry at: #CannotReturn) equals: #BlockCannotReturn.
+	self assert: (registry at: #ReadByteStream) equals: #GbsReadByteStream
+]
