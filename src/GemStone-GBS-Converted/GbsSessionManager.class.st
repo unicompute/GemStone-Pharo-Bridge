@@ -325,69 +325,246 @@ GbsSessionManager class >> globalConnectorGroup [
 
 { #category : 'as yet unclassified' }
 GbsSessionManager class >> globalFastConnectorsList [
-    "Returns a list of pairs: #(PharoClassName GemStoneClassName).
-     These classes are replicated by value instead of passed by reference (proxy)."
-    
-    ^ #(
-        "Collections"
-        #(Array Array)
-        #(OrderedCollection OrderedCollection)
-        #(SortedCollection SortedCollection)
-        #(Bag Bag)
-        #(Set Set)
-        #(IdentitySet IdentitySet)
-        #(IdentityDictionary IdentityDictionary)
-        #(ByteArray ByteArray)
-        #(ByteString String)
-        #(WideString DoubleByteString) "Pharo uses WideString, GS uses DoubleByteString"
-        #(Symbol Symbol)
-        #(ByteSymbol Symbol)
-        #(WideSymbol DoubleByteSymbol)
-        #(Dictionary Dictionary)
-        #(Association Association)
-        
-        "Numbers"
-        #(SmallInteger SmallInteger)
-        #(LargePositiveInteger LargePositiveInteger)
-        #(LargeNegativeInteger LargeNegativeInteger)
-        #(SmallFloat64 Float) "Pharo 64-bit immediate float"
-        #(BoxedFloat64 Float) "Pharo 64-bit boxed float"
-        #(Fraction Fraction)
-        
-        "Magnitudes"
-        #(Character Character)
-        #(Date Date)
-        #(Time Time)
-        #(DateAndTime DateTime) "Pharo uses DateAndTime, GS/VW uses DateTime/Timestamp"
-        
-        "Booleans & Nil"
-        #(True True)
-        #(False False)
-        #(UndefinedObject UndefinedObject)
-    )
+	"Answer pairs of #(PharoClientClassName GemStoneServerClassName) for the
+	 global fast connectors (VW GbsKernel #globalFastConnectorsList).
+
+	 The registry built from this list is last-wins, so the VW-parity entries
+	 come first and the established Pharo mappings at the end take precedence
+	 when a client or server name occurs more than once (for example
+	 GbxIdentityClampSet and IdentitySet both map to server IdentitySet, but
+	 server IdentitySet materializes as Pharo IdentitySet).
+
+	 VW entries whose client is a GemStone.Gbs.ServerClasses shadow class
+	 (GsSession, UserProfile, SymbolDictionary, RcQueue, ...) are omitted:
+	 those shadow classes do not exist in Pharo."
+
+	^ #(
+		"VW parity: GBS client classes"
+		#(GbxClampSpecification ClampSpecification)
+		#(GbxClassSet ClassSet)
+		#(GbxExecBlock ExecBlock)
+		#(GbxExecBlock0 ExecBlock0)
+		#(GbxExecBlock1 ExecBlock1)
+		#(GbxExecBlock2 ExecBlock2)
+		#(GbxExecBlock3 ExecBlock3)
+		#(GbxExecBlock4 ExecBlock4)
+		#(GbxExecBlock5 ExecBlock5)
+		#(GbxExecBlockN ExecBlockN)
+		#(GbxFastIdentityKeyValueDictionary FastIdentityKeyValueDictionary)
+		#(GbxGsMethodDictionary GsMethodDictionary)
+		#(GbxUnauthorizedObjectStub UnauthorizedObjectStub)
+		#(GbxIdentityClampSet IdentitySet)
+		#(IdentityDictionary IdentityKeyValueDictionary)
+
+		"VW parity: kernel classes"
+		#(Boolean Boolean)
+		#(Collection Collection)
+		#(Integer Integer)
+		#(Interval Interval)
+		#(Number Number)
+		#(Object Object)
+		#(ReadStream ReadStream)
+		#(WriteStream WriteStream)
+
+		"Collections"
+		#(Array Array)
+		#(OrderedCollection OrderedCollection)
+		#(SortedCollection SortedCollection)
+		#(Bag Bag)
+		#(Set Set)
+		#(IdentitySet IdentitySet)
+		#(IdentityDictionary IdentityDictionary)
+		#(ByteArray ByteArray)
+		#(ByteString String)
+		#(WideString DoubleByteString) "Pharo uses WideString, GS uses DoubleByteString"
+		#(Symbol Symbol)
+		#(ByteSymbol Symbol)
+		#(WideSymbol DoubleByteSymbol)
+		#(Dictionary Dictionary)
+		#(Association Association)
+
+		"Numbers"
+		#(SmallInteger SmallInteger)
+		#(LargePositiveInteger LargePositiveInteger)
+		#(LargeNegativeInteger LargeNegativeInteger)
+		#(SmallFloat64 Float) "Pharo 64-bit immediate float"
+		#(BoxedFloat64 Float) "Pharo 64-bit boxed float"
+		#(Fraction Fraction)
+
+		"Magnitudes"
+		#(Character Character)
+		#(Date Date)
+		#(Time Time)
+		#(DateAndTime DateTime) "Pharo uses DateAndTime, GS/VW uses DateTime/Timestamp"
+
+		"Booleans & Nil"
+		#(True True)
+		#(False False)
+		#(UndefinedObject UndefinedObject)
+	)
+]
+
+{ #category : 'accessing' }
+GbsSessionManager class >> clientSpecificGlobalConnectorsList [
+	"Answer pairs of #(PharoClientClassName GemStoneServerClassName) for the
+	 client-dialect-specific global connectors (VW GbsKernelVW
+	 #clientSpecificGlobalConnectorsList), translated to Pharo class names.
+
+	 Registered after #globalFastConnectorsList without overwriting, so an
+	 entry whose client is already mapped only adds the server->client
+	 direction (e.g. server QuadByteString materializes as Pharo WideString,
+	 while Pharo WideString still stores as DoubleByteString).
+
+	 Omitted from VW: ISOLatin (VW stream encoder), Double, TwoByteString/
+	 TwoByteSymbol and Timestamp (no Pharo class; covered by WideString,
+	 WideSymbol and DateAndTime), and the GsFile/GsProcess/GsSocket/SymbolSet
+	 server shadow classes."
+
+	^ #(
+		#(BlockClosure BlockClosure)
+		#(ByteString String)
+		#(ByteSymbol Symbol)
+		#(WideString QuadByteString) "Pharo WideString holds 32-bit characters"
+		#(WideSymbol QuadByteSymbol)
+		#(ScaledDecimal ScaledDecimal)
+		#(SmallFloat64 SmallDouble) "Pharo analogue of VW (Float SmallFloat)"
+		#(LargePositiveInteger LargeInteger)
+		#(LargeNegativeInteger LargeInteger)
+		#(Metaclass Metaclass)
+		#(PositionableStream PositionableStream)
+		#(SequenceableCollection SequenceableCollection)
+		#(Stream Stream)
+		#(String CharacterCollection)
+	)
+]
+
+{ #category : 'accessing' }
+GbsSessionManager class >> exceptionConnectorsList [
+	"Answer pairs of #(PharoClientClassName GemStoneServerClassName) mapping
+	 exception classes (VW GbsKernel #exceptionConnectorsList). Only meaningful
+	 with GS64 3.0 and later servers. Indentation follows the server class
+	 hierarchy.
+
+	 VW GemStone.Gbs.Exceptions.* clients are the unprefixed classes in
+	 GemStone-GBS-Converted. Pharo has no GenericException, ControlInterrupt
+	 or BreakInterrupt, so AbstractException, ControlInterrupt and Breakpoint
+	 are not mapped."
+
+	^ #(
+		#(Exception Exception)
+			#(Halt Halt)
+			#(Notification Notification)
+				#(Admonition Admonition)
+					#(AlmostOutOfMemory AlmostOutOfMemory)
+					#(AlmostOutOfStack AlmostOutOfStack)
+					#(RepositoryViewLost RepositoryViewLost)
+				#(Deprecated Deprecated)
+				#(FloatingPointException FloatingPointException)
+				#(ObjectsCommittedNotification ObjectsCommittedNotification)
+				#(TransactionBacklog TransactionBacklog)
+			#(Warning Warning)
+				#(InterSessionSignal InterSessionSignal)
+			#(Error Error)
+				#(MessageNotUnderstood MessageNotUnderstood)
+				#(InternalError InternalError)
+				#(GciTransportError GciTransportError)
+				#(CodeError CompileError)
+				#(UserDefinedError UserDefinedError)
+				#(SecurityError SecurityError)
+				#(ThreadError ThreadError)
+				#(ImproperOperation ImproperOperation)
+					#(LookupError LookupError)
+					#(ArgumentError ArgumentError)
+					#(OffsetError OffsetError)
+					#(OutOfRange OutOfRange)
+						#(FloatingPointError FloatingPointError)
+				#(ArgumentTypeError ArgumentTypeError)
+				#(BlockCannotReturn CannotReturn)
+				#(EndOfStream EndOfStream)
+				#(ExternalError ExternalError)
+					#(IOError IOError)
+						#(SocketError SocketError)
+					#(SystemCallError SystemCallError)
+				#(IndexingErrorPreventingCommit IndexingErrorPreventingCommit)
+				#(LockError LockError)
+				#(ArithmeticError NumericError)
+					#(ZeroDivide ZeroDivide)
+				#(RepositoryError RepositoryError)
+				#(TransactionError TransactionError)
+				#(UncontinuableError UncontinuableError)
+				#(SignalBufferFull SignalBufferFull)
+	)
+]
+
+{ #category : 'accessing' }
+GbsSessionManager class >> globalClassConnectorsList [
+	"Answer pairs of #(PharoClientClassName GemStoneServerClassName) for the
+	 global class connectors (VW GbsKernel #globalClassConnectorsList).
+
+	 Only GbsReadByteStream has a Pharo client class. The VW stream entries are
+	 GemStone.Gbs.ServerClasses shadow classes (PositionableStreamLegacy,
+	 ReadStreamPortable, WriteStreamPortable, ...) and Unicode7/16/32, none of
+	 which exist in Pharo. The VW optional symbol dictionary
+	 (GemStone_Legacy_Streams) and condition number (3) are not used here."
+
+	^ #(
+		#(GbsReadByteStream ReadByteStream)
+	)
+]
+
+{ #category : 'accessing' }
+GbsSessionManager class >> additionalGlobalConnectorsLists [
+	"Connector lists registered after #globalFastConnectorsList, in VW order."
+
+	^ {
+		self clientSpecificGlobalConnectorsList.
+		self exceptionConnectorsList.
+		self globalClassConnectorsList }
+]
+
+{ #category : 'accessing' }
+GbsSessionManager class >> allGlobalConnectorsList [
+	"Every global connector pair, fast list first (VW initializeGlobalConnectors order)."
+
+	^ self additionalGlobalConnectorsLists
+		inject: self globalFastConnectorsList
+		into: [ :all :each | all , each ]
+]
+
+{ #category : 'initialization' }
+GbsSessionManager class >> registerGlobalConnectorsInto: aRegistry [
+	"Fill aRegistry with the bidirectional client/server name map.
+	 #globalFastConnectorsList is last-wins (its established entries come last).
+	 The additional lists never overwrite an existing key. Pairs whose Pharo
+	 client class is absent from the image are skipped."
+
+	self globalFastConnectorsList do: [ :pair |
+		self registerConnectorPair: pair into: aRegistry overwrite: true ].
+	self additionalGlobalConnectorsLists do: [ :list |
+		list do: [ :pair |
+			self registerConnectorPair: pair into: aRegistry overwrite: false ] ].
+	^ aRegistry
+]
+
+{ #category : 'initialization' }
+GbsSessionManager class >> registerConnectorPair: pair into: aRegistry overwrite: aBoolean [
+	| clientClass clientName serverName |
+	clientClass := Smalltalk globals at: pair first ifAbsent: [ nil ].
+	clientClass ifNil: [ ^ aRegistry ].
+	clientName := clientClass name.
+	serverName := pair second.
+	(aBoolean or: [ (aRegistry includesKey: clientName) not ])
+		ifTrue: [ aRegistry at: clientName put: serverName ].
+	(aBoolean or: [ (aRegistry includesKey: serverName) not ])
+		ifTrue: [ aRegistry at: serverName put: clientName ].
+	^ aRegistry
 ]
 
 { #category : 'initialization' }
 GbsSessionManager class >> initializeFastConnectors [
-    "Initialize the global registry of classes that should be passed by value."
-    
-    | registry |
-    registry := Dictionary new.
-    
-    self globalFastConnectorsList do: [ :pair |
-        | clientClass serverClassName |
-        clientClass := Smalltalk globals at: pair first ifAbsent: [ nil ].
-        serverClassName := pair second.
-        
-        clientClass ifNotNil: [
-            "Map both directions: Client -> Server, and Server -> Client"
-            registry at: clientClass name put: serverClassName.
-            registry at: serverClassName put: clientClass name.
-        ].
-    ].
+	"Initialize the global registry of client/server connector class names."
 
-    "Store this in your session manager's class instance variable"
-	self fastConnectorRegistry: registry.
+	self fastConnectorRegistry: (self registerGlobalConnectorsInto: Dictionary new).
 	self rebuildConnectorObjectRegistry
 ]
 
@@ -693,6 +870,26 @@ GbsSessionManager >> globalConnectorGroup [
 { #category : 'accessing' }
 GbsSessionManager >> globalFastConnectorsList [
     ^ self class globalFastConnectorsList
+]
+
+{ #category : 'accessing' }
+GbsSessionManager >> clientSpecificGlobalConnectorsList [
+	^ self class clientSpecificGlobalConnectorsList
+]
+
+{ #category : 'accessing' }
+GbsSessionManager >> exceptionConnectorsList [
+	^ self class exceptionConnectorsList
+]
+
+{ #category : 'accessing' }
+GbsSessionManager >> globalClassConnectorsList [
+	^ self class globalClassConnectorsList
+]
+
+{ #category : 'accessing' }
+GbsSessionManager >> allGlobalConnectorsList [
+	^ self class allGlobalConnectorsList
 ]
 
 { #category : 'accessing' }

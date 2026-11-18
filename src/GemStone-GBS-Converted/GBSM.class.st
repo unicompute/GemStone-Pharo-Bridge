@@ -194,3 +194,28 @@ GBSM class >> userClasses [
 GBSM class >> userGlobals [
 	^ self requireCurrentSession userGlobals
 ]
+
+{ #category : 'connectors' }
+GBSM class >> globalFastConnectorsList [
+	^ GbsSessionManager globalFastConnectorsList
+]
+
+{ #category : 'connectors' }
+GBSM class >> clientSpecificGlobalConnectorsList [
+	^ GbsSessionManager clientSpecificGlobalConnectorsList
+]
+
+{ #category : 'connectors' }
+GBSM class >> exceptionConnectorsList [
+	^ GbsSessionManager exceptionConnectorsList
+]
+
+{ #category : 'connectors' }
+GBSM class >> globalClassConnectorsList [
+	^ GbsSessionManager globalClassConnectorsList
+]
+
+{ #category : 'connectors' }
+GBSM class >> allGlobalConnectorsList [
+	^ GbsSessionManager allGlobalConnectorsList
+]
